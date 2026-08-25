@@ -2,19 +2,18 @@
 
 ## 当前目标
 
-当前没有获授权的后续代码任务。Provider identity / capability projection与Tool Activity presentation均已合入`main`并完成相称的安装版复核，状态为`packaged-not-released`；各自任务分支、worktree与临时验证资源均已清理。下一候选仅处于i18n物理domain slices只读认知阶段，尚未开始代码施工。
+E（i18n 物理 domain slices）正在`codex/i18n-domain-slices`收口。唯一逻辑 catalog、locale runtime与公共入口保持不变；最新main的`3,492 × 2`个message的key、value与placeholder已完成零差异迁移。当前是`source-candidate / packaged-pending`，不是Release或当前安装版已采用。
 
 ## 当前协调与下一动作
 
-- D任务最终tip为`221fc09f6b`，通过merge `8cbe57c83b`进入并推送`main`。focused、完整unit、root typecheck、lint、production build及`git diff --check`通过；Browser剩余5项已在untouched main基线复现，不是D引入。
-- exact pushed task implementation SHA生成arm64 DMG SHA-256 `b402bdf084cccb5ddca976b984bbccbef4be918bc155def47bbaaf118729c37a`，DMG内`app.asar` SHA-256 `05010d7f8e8493d92b7c1b447717b2492425924132ccfa6b57e0bc2ad2bd56a4`；真实MiMo OpenAI-compatible链完成首轮与continuation，DeepSeek内置service完成discovery与首轮，中文Composer及英文Composer/Automation均按loaded truth显示三种mode，App重开后状态恢复。
-- 从已推送merge `8cbe57c83b`的clean clone再次生成DMG SHA-256 `f21fa49ea8ad2bfece86f2677699e89d02c699cdb28fd93cf62638a792e9bc04`，DMG内`app.asar` SHA-256 `bf789b11b719532f2f8d2e6c94cbc739696e9b8a7e0a0a79ba56dd9a47569355`；fresh任务profile复证Main、Renderer、Helper和bundled Server隔离，并完成DeepSeek配置、中文mode truth、真实首轮和App重开。凭据只落任务profile的`0600` credential owner，日志和artifact零命中。
-- `/Applications/OmniMind.app`在任务安装验证期间被并行工作替换，当前系统安装版不冒充D候选；main-merge复核使用同一DMG解出的临时packaged App。D本地/远端任务分支与所有`omnimind-d-*`临时资源已清理；这里不把candidate写成released或当前安装版已采用。
-- Tool Activity presentation通过merge `b4871621b3`及其focused test修正`6b3c92c18b`进入并推送`main`；安装版验证已完成，任务本地/远端分支、独立worktree与`omnimind-tool-activity-*`临时资源已清理。当前运行的真实profile OmniMind实例不属于任务资源，未被检查或停止。
+- 实现提交`2b6932218e`把根catalog收为21个稳定产品domain slice；合同提交`636d5476d0`锁定双语精确key与跨domain duplicate拒绝；固定源码证据仍由[`research/omnimind-i18n-system-review.md`](research/omnimind-i18n-system-review.md)拥有。
+- 原始`main@4acfe9763e`迁移前后canonical SHA-256同为`ff18c412a0df82a841dfa80c7d98b1576b6c158363de62202633b73e99774a41`。集成`main@cab8a9ab5b`新增的两项Timeline双语文案后，main与slice candidate的`3,492 × 2`完整catalog SHA-256同为`ddfb5aae536738bb1eaefc814e186ba9e2aee33c0ec9ab7dc31f77bebadfcd37`；变更只进入`timeline`slice，root composer与consumer不变。
+- 最新集成候选`a34a35b565`上的Web unit 330 files / 4,160 tests、root typecheck 7/7、lint（0 errors）与Web production build通过；i18n、Settings、Composer和Reasoning focused Browser 24/24通过。
+- 完整stable Browser的7项失败均已归因于E外基线：5项是既有ChatView Tool Activity折叠时序，2项Terminal暖色断言已在untouched E基座同值复现。E introduced regression当前为0。
+- 下一动作：推送最终任务分支并做面向合并终审；再次确认`origin/main`未变化后合入main，再从精确pushed main merge SHA完成任务profile隔离的packaged locale smoke。
 
 ## Stop-loss
 
-- 不新增Provider god registry、第二health/cache/stream、runtime-mode controller、动态插件系统或capability持久副本。
-- 不用Provider identity或静态`available`推断ready，不让Web/Shared继续拥有runtime capability truth，也不把identity、adapter结构能力、current health、model能力和presentation揉成一个对象。
-- 不夹带Theme、Web Access Provider体系、i18n物理切片或Settings owner再重构；真实Provider-specific composition、health、model、credential和asset责任继续留在各自owner。
-- 当前工作、阻塞和下一动作只在本文件维护；稳定合同进`architecture/`，固定来源证据按`research/README.md`路由，不新增handoff、ledger或研究总账。
+- 不新增runtime locale loader、lazy locale chunk、codegen、翻译平台、第二catalog、第三语言或consumer-side domain map。
+- 不改文案bytes、key taxonomy、locale preference/fallback、Thinking Hints、`PRODUCT_COPY_SOURCES`、Settings、Theme、Web Access、Provider或Composer行为。
+- 当前状态只在本文件维护；稳定合同进`architecture/`，固定source证据按`research/README.md`路由，不新增handoff、ledger或研究总账。
