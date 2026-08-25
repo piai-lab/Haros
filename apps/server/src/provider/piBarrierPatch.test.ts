@@ -34,7 +34,10 @@ const model: Model<any> = {
   maxTokens: 1_024,
 };
 
-function assistant(content: AssistantMessage["content"], stopReason: "toolUse" | "stop"): AssistantMessage {
+function assistant(
+  content: AssistantMessage["content"],
+  stopReason: "toolUse" | "stop",
+): AssistantMessage {
   return {
     role: "assistant",
     api: model.api,
@@ -129,29 +132,56 @@ async function run(input: {
     undefined,
     provider.stream,
   );
-  return { ask, side, sideEffect, secondAsk, secondBarrierEffect, beforeNames, events, messages, provider };
+  return {
+    ask,
+    side,
+    sideEffect,
+    secondAsk,
+    secondBarrierEffect,
+    beforeNames,
+    events,
+    messages,
+    provider,
+  };
 }
 
 describe("Pi interactive barrier patch", () => {
   it.each([
     ["before", ["side_effect", "ask_user"]],
     ["after", ["ask_user", "side_effect"]],
-  ] as const)("blocks every sibling and all sibling hooks when Ask appears %s it", async (_label, order) => {
-    const result = await run({ order, barrierTerminates: false });
+  ] as const)(
+    "blocks every sibling and all sibling hooks when Ask appears %s it",
+    async (_label, order) => {
+      const result = await run({ order, barrierTerminates: false });
 
-    expect(result.ask.execute).toHaveBeenCalledTimes(1);
-    expect(result.side.execute).not.toHaveBeenCalled();
-    expect(result.sideEffect).not.toHaveBeenCalled();
-    expect(result.beforeNames).toEqual(["ask_user"]);
-    expect(result.provider.calls()).toBe(2);
-    expect(result.messages.at(-1)).toMatchObject({ role: "assistant", stopReason: "stop" });
-    expect(
-      result.events.filter((event) => event.type === "tool_execution_end" && event.toolName === "side_effect"),
-    ).toMatchObject([{ isError: true, result: { terminate: true } }]);
-  });
+      expect(result.ask.execute).toHaveBeenCalledTimes(1);
+      expect(result.side.execute).not.toHaveBeenCalled();
+      expect(result.sideEffect).not.toHaveBeenCalled();
+      expect(result.beforeNames).toEqual(["ask_user"]);
+      expect(result.provider.calls()).toBe(2);
+      expect(result.messages.at(-1)).toMatchObject({ role: "assistant", stopReason: "stop" });
+      expect(
+        result.events.filter(
+          (event) => event.type === "tool_execution_end" && event.toolName === "side_effect",
+        ),
+      ).toMatchObject([
+        {
+          isError: true,
+          result: {
+            terminate: true,
+            details: { barrier: { status: "blocked", barrierToolCallId: expect.any(String) } },
+          },
+        },
+      ]);
+    },
+  );
 
   it("executes only the first barrier in source order", async () => {
-    const result = await run({ order: ["ask_user", "side_effect"], barrierTerminates: false, includeSecondBarrier: true });
+    const result = await run({
+      order: ["ask_user", "side_effect"],
+      barrierTerminates: false,
+      includeSecondBarrier: true,
+    });
 
     expect(result.ask.execute).toHaveBeenCalledTimes(1);
     expect(result.secondAsk.execute).not.toHaveBeenCalled();

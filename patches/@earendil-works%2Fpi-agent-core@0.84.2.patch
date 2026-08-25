@@ -2,7 +2,7 @@ diff --git a/dist/agent-loop.js b/dist/agent-loop.js
 index 569149f932..065e7f66bf 100644
 --- a/dist/agent-loop.js
 +++ b/dist/agent-loop.js
-@@ -286,12 +286,76 @@ async function failToolCallsFromTruncatedMessage(toolCalls, emit) {
+@@ -286,12 +286,82 @@ async function failToolCallsFromTruncatedMessage(toolCalls, emit) {
   */
  async function executeToolCalls(currentContext, assistantMessage, config, signal, emit) {
      const toolCalls = assistantMessage.content.filter((c) => c.type === "toolCall");
@@ -58,6 +58,12 @@ index 569149f932..065e7f66bf 100644
 +            toolCall,
 +            result: {
 +                ...createErrorToolResult(`Tool call "${toolCall.name}" was not executed because an interactive barrier requires the model to replan.`),
++                details: {
++                    barrier: {
++                        status: "blocked",
++                        barrierToolCallId: barrierCall.id,
++                    },
++                },
 +                terminate: true,
 +            },
 +            isError: true,
