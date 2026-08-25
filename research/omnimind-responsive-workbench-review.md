@@ -53,7 +53,7 @@
 | 用户截图            | OmniMind Environment 关闭/打开；Codex 宽、中、窄窗口                                                | 可见几何变化、信息层级、连续缩放后的呈现结果                     | 对方内部实现、精确断点、状态 owner                     |
 | 用户录屏            | `录屏2026-08-16 07.46.23.mov`、`录屏2026-08-16 07.50.00.mov`                                        | 每帧窗口宽度、表面退场顺序、同宽度手动开关、过渡时长与往返连续性 | Codex 内部 store、源代码或可机械照搬的常量             |
 | 当前源码            | `ChatView`、`EnvironmentPanel`、`RightDock`、`SingleChatSurface`、`_chat`、`sidebar`、i18n 与 tests | OmniMind 当前真实决策链、常量、状态与测试缺口                    | 安装 App 已获得未来修复                                |
-| 当前原型            | `.zq-ui/responsive-workbench/`                                                                      | 单一方向的可交互几何、响应优先级与视觉 taste                     | production runtime、长会话、真实 Electron/webview 行为 |
+| 历史原型            | Git `44a090f5b66ae5e92cbed889d68592790f278f57:.zq-ui/responsive-workbench/`                           | 单一方向的可交互几何、响应优先级与视觉 taste；当前工作树已退休该本地设计产物 | production runtime、长会话、真实 Electron/webview 行为 |
 | 当前 Codex App 资源 | 本机已安装 App 的中英文资源与用户截图                                                               | 词义已在成熟桌面产品中真实使用                                   | OmniMind 必须机械照抄                                  |
 | 官方公开资料        | [Introducing the Codex app](https://openai.com/index/introducing-the-codex-app/)                    | 线程、worktree、diff/editor 与多任务的产品职责是正式产品事实     | Environment 面板的内部布局算法                         |
 | 推论                | 由以上证据共同推出的目标状态机                                                                      | 可形成可证伪候选                                                 | 未经 production proof 的完成状态                       |
@@ -505,7 +505,7 @@ Local servers 状态：
 
 ## 14. HTML storyboard 证据
 
-`.zq-ui/responsive-workbench/` 先产生过说明型 `adaptive-inspector` 候选，但维护者于 2026-08-15 明确否决该版本，并确认后来更贴近当前 OmniMind 产品 Shell 的 `omnimind-shell-v2` 才是唯一选中方向。旧候选只保留为被拒绝的比较证据，不得进入 production。最新方向具备：
+历史 Git 证据 `44a090f5b66ae5e92cbed889d68592790f278f57:.zq-ui/responsive-workbench/` 先产生过说明型 `adaptive-inspector` 候选，但维护者于 2026-08-15 明确否决该版本，并确认后来更贴近当前 OmniMind 产品 Shell 的 `omnimind-shell-v2` 才是唯一选中方向。该 `.zq-ui` 设计产物已从当前工作树退休并由根忽略规则阻止重新入库；旧候选只作为历史比较证据，不得进入 production。最新方向具备：
 
 - 真实使用 OmniMind logo、Agent/Chat、项目/任务、现有 header/Composer/Environment/Workbench 语言；
 - Environment 标题为“环境信息”，与 Workbench 分离；
