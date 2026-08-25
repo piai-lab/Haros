@@ -248,7 +248,7 @@ import {
   derivePhase,
   deriveTimelineEntries,
   deriveActiveWorkStartedAt,
-  deriveActiveTaskListState,
+  deriveVisibleActiveTaskListState,
   deriveActiveBackgroundTasksState,
   findSidebarProposedPlan,
   findLatestProposedPlan,
@@ -2943,13 +2943,11 @@ export default function ChatView({
       };
     }
 
-    // Only while a turn is live: deriveActiveTaskListState falls back to the latest
-    // unfinished prior-turn list (follow-up turns, reloads mid-turn), but once the
-    // thread is idle the card must clear — providers routinely end a turn without
-    // marking every task completed, and an unfinished list must not linger forever.
-    return latestTurnSettled
-      ? null
-      : deriveActiveTaskListState(threadActivities, activeLatestTurn?.turnId);
+    return deriveVisibleActiveTaskListState({
+      activities: threadActivities,
+      latestTurnId: activeLatestTurn?.turnId,
+      latestTurnSettled,
+    });
   }, [activeLatestTurn?.turnId, latestTurnSettled, showDebugTaskBanner, threadActivities]);
   const activeBackgroundTasks = useMemo(
     () =>

@@ -5,6 +5,7 @@ import {
   buildSourceProposedPlanReference,
   deriveActiveBackgroundTasksState,
   deriveActiveTaskListState,
+  deriveVisibleActiveTaskListState,
   deriveActiveWorkStartedAt,
   findLatestProposedPlan,
   findSidebarProposedPlan,
@@ -189,6 +190,63 @@ describe("deriveActiveTaskListState", () => {
     ];
 
     expect(deriveActiveTaskListState(activities, TurnId.makeUnsafe("turn-1"))).toBeNull();
+  });
+});
+
+describe("deriveVisibleActiveTaskListState", () => {
+  const unfinishedPlan = makeActivity({
+    id: "unfinished-visible-plan",
+    createdAt: "2026-02-23T00:00:01.000Z",
+    kind: "turn.tasks.updated",
+    summary: "Tasks updated",
+    tone: "info",
+    turnId: "turn-visible",
+    payload: {
+      tasks: [{ task: "Verify the owner", status: "inProgress" }],
+    },
+  });
+
+  it("shows the latest unfinished plan only while the owning turn is live", () => {
+    expect(
+      deriveVisibleActiveTaskListState({
+        activities: [unfinishedPlan],
+        latestTurnId: TurnId.makeUnsafe("turn-visible"),
+        latestTurnSettled: false,
+      }),
+    ).toMatchObject({
+      turnId: "turn-visible",
+      tasks: [{ task: "Verify the owner", status: "inProgress" }],
+    });
+
+    expect(
+      deriveVisibleActiveTaskListState({
+        activities: [unfinishedPlan],
+        latestTurnId: TurnId.makeUnsafe("turn-visible"),
+        latestTurnSettled: true,
+      }),
+    ).toBeNull();
+  });
+
+  it("removes a completed plan when the owning turn settles", () => {
+    const completedPlan = makeActivity({
+      id: "completed-visible-plan",
+      createdAt: "2026-02-23T00:00:01.000Z",
+      kind: "turn.tasks.updated",
+      summary: "Tasks updated",
+      tone: "info",
+      turnId: "turn-visible",
+      payload: {
+        tasks: [{ task: "Verify the owner", status: "completed" }],
+      },
+    });
+
+    expect(
+      deriveVisibleActiveTaskListState({
+        activities: [completedPlan],
+        latestTurnId: TurnId.makeUnsafe("turn-visible"),
+        latestTurnSettled: true,
+      }),
+    ).toBeNull();
   });
 });
 

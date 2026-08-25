@@ -312,6 +312,19 @@ export function deriveActiveTaskListState(
     : null;
 }
 
+export function deriveVisibleActiveTaskListState(input: {
+  activities: ReadonlyArray<OrchestrationThreadActivity>;
+  latestTurnId: TurnId | undefined;
+  latestTurnSettled: boolean;
+}): ActiveTaskListState | null {
+  // Providers may finish a turn without completing every task. The historical
+  // task snapshot remains useful to derivation/recovery consumers, but the
+  // Composer banner is live-turn UI and must leave once that turn settles.
+  return input.latestTurnSettled
+    ? null
+    : deriveActiveTaskListState(input.activities, input.latestTurnId);
+}
+
 // Counts still-running background work for the active turn so compact UI can surface agent activity.
 export function deriveActiveBackgroundTasksState(
   activities: ReadonlyArray<OrchestrationThreadActivity>,
