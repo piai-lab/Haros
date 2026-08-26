@@ -16,6 +16,7 @@ export function CredentialSecretControls({
   disabled = false,
   copyDisabled = false,
   clearDisabled = false,
+  clearLabel,
   onToggleVisibility,
   resolveCopyValue,
   onClear,
@@ -24,6 +25,7 @@ export function CredentialSecretControls({
   readonly disabled?: boolean;
   readonly copyDisabled?: boolean;
   readonly clearDisabled?: boolean;
+  readonly clearLabel?: string;
   readonly onToggleVisibility: () => void | Promise<void>;
   readonly resolveCopyValue: () => string | null | Promise<string | null>;
   readonly onClear?: () => void | Promise<void>;
@@ -73,7 +75,7 @@ export function CredentialSecretControls({
           disabled={disabled || clearDisabled}
           onClick={() => void onClear()}
         >
-          {t("settings.clear")}
+          {clearLabel ?? t("settings.clear")}
         </Button>
       ) : null}
     </div>

@@ -342,6 +342,7 @@ const EN_MESSAGES = {
   "settings.modelServiceCredentialSourceUnknown": "Source unavailable",
   "settings.modelServiceCredentialSourceNone": "Not configured",
   "settings.modelServiceStoredApiKey": "Saved API key",
+  "settings.modelServiceRemoveSavedApiKey": "Remove saved key",
   "settings.modelServiceApiKeyHidden": "Hidden. Show or copy the complete saved key.",
   "settings.modelServiceApiKeyVisibleUntilClose":
     "Visible only while these service details remain open.",
@@ -755,6 +756,7 @@ const ZH_CN_MESSAGES = {
   "settings.modelServiceCredentialSourceUnknown": "来源不可用",
   "settings.modelServiceCredentialSourceNone": "尚未配置",
   "settings.modelServiceStoredApiKey": "已保存的 API Key",
+  "settings.modelServiceRemoveSavedApiKey": "移除已保存的 Key",
   "settings.modelServiceApiKeyHidden": "默认隐藏；可以显示或复制完整 Key。",
   "settings.modelServiceApiKeyVisibleUntilClose": "仅在当前服务详情保持打开时显示。",
   "settings.modelServiceApiKeyRevealFailed": "无法读取已保存的 API Key，请重试。",

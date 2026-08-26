@@ -3362,7 +3362,7 @@ describe("ModelsSettingsPanel model services", () => {
     expect(keyInput.element()).toHaveAttribute("type", "text");
 
     await mounted.screen.getByRole("button", { name: "settings.copySecret" }).click();
-    await expect.poll(() => revealApiKey).toHaveBeenCalledTimes(2);
+    await expect.poll(() => revealApiKey).toHaveBeenCalledTimes(1);
     await mounted.screen.getByRole("button", { name: "settings.hideSecret" }).click();
     expect((keyInput.element() as HTMLInputElement).value).not.toContain("test-only-visible-key");
 
@@ -3383,7 +3383,9 @@ describe("ModelsSettingsPanel model services", () => {
       ).value,
     ).not.toContain("test-only-visible-key");
 
-    await mounted.screen.getByRole("button", { name: "settings.clear" }).click();
+    await mounted.screen
+      .getByRole("button", { name: "settings.modelServiceRemoveSavedApiKey" })
+      .click();
     await expect.poll(() => logout).toHaveBeenCalledWith({ serviceId: "deepseek" });
     expect(document.body.textContent).not.toContain("settings.removeApiKeyDescription");
     await expect

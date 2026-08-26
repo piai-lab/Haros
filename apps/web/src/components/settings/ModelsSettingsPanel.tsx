@@ -4117,8 +4117,12 @@ function ActiveModelsSettingsPanel({
                               ).then(() => undefined);
                             }}
                             resolveCopyValue={() =>
-                              readStoredModelServiceApiKey(selectedModelService, "copy")
+                              revealedModelServiceApiKey?.serviceId ===
+                              selectedModelService.serviceId
+                                ? revealedModelServiceApiKey.value
+                                : readStoredModelServiceApiKey(selectedModelService, "copy")
                             }
+                            clearLabel={t("settings.modelServiceRemoveSavedApiKey")}
                             onClear={() => logoutModelService(selectedModelService)}
                           />
                         </div>
