@@ -1917,7 +1917,10 @@ describe("findLastLiveWorkGroupId", () => {
 
 describe("findLiveReasoningEntryId", () => {
   const turnId = TurnId.makeUnsafe("turn-live-reasoning");
-  const reasoning = (id: string): TimelineEntry => ({
+  const reasoning = (
+    id: string,
+    activityKind: "reasoning.updated" | "reasoning.completed" = "reasoning.updated",
+  ): TimelineEntry => ({
     id,
     kind: "work",
     createdAt: "2026-08-26T12:00:00.000Z",
@@ -1927,7 +1930,7 @@ describe("findLiveReasoningEntryId", () => {
       turnId,
       label: "Reasoning",
       tone: "thinking",
-      activityKind: "reasoning.completed",
+      activityKind,
       reasoningEntries: [{ id: `${id}:part`, text: "Public reasoning" }],
     },
   });
@@ -1979,6 +1982,12 @@ describe("findLiveReasoningEntryId", () => {
         ],
         turnId,
       ),
+    ).toBeNull();
+  });
+
+  it("closes reasoning when the same segment reaches its terminal snapshot", () => {
+    expect(
+      findLiveReasoningEntryId([reasoning("reasoning-1", "reasoning.completed")], turnId),
     ).toBeNull();
   });
 

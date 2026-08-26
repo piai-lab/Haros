@@ -1320,6 +1320,30 @@ function ReasoningBodyViewport(props: {
     }
   }, [props.entries, fullHeight, props.isLive]);
 
+  // Streaming Markdown smooths its own text after the parent entry snapshot has
+  // rendered. Observe that inner DOM growth so tail-follow runs when the height
+  // actually changes, while a reader who scrolled upward remains undisturbed.
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport || !props.isLive || fullHeight) {
+      return;
+    }
+    let animationFrame = 0;
+    const observer = new MutationObserver(() => {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(() => {
+        if (followingTailRef.current) {
+          viewport.scrollTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+        }
+      });
+    });
+    observer.observe(viewport, { childList: true, characterData: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(animationFrame);
+    };
+  }, [fullHeight, props.isLive]);
+
   const toggleFullHeight = useCallback(() => {
     if (!props.isLive) {
       return;
@@ -1359,6 +1383,7 @@ function ReasoningBodyViewport(props: {
           props.isLive && fullHeight ? "cursor-pointer" : null,
         )}
         data-reasoning-content="true"
+        aria-busy={props.isLive}
         data-reasoning-scroll-viewport="true"
         data-reasoning-height-state={props.isLive ? (fullHeight ? "full" : "compact") : "settled"}
         onPointerDown={(event) => {
@@ -1406,7 +1431,7 @@ function ReasoningBodyViewport(props: {
               <ChatMarkdown
                 text={entry.text}
                 cwd={props.markdownCwd}
-                isStreaming={false}
+                isStreaming={props.isLive}
                 className="min-w-0 max-w-full leading-relaxed text-muted-foreground/78 [&_*]:max-w-full"
                 style={{
                   fontSize: `${props.textFontSizePx}px`,

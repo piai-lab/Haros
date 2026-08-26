@@ -110,7 +110,10 @@ function truncateDetail(value: string, limit = 180): string {
   return value.length > limit ? `${value.slice(0, limit - 3)}...` : value;
 }
 
-function projectReasoningDetail(value: string): { detail: string; truncated: boolean } {
+function projectReasoningDetail(value: string): {
+  detail: string;
+  truncated: boolean;
+} {
   if (value.length <= MAX_REASONING_ACTIVITY_DETAIL_CHARS) {
     return { detail: value, truncated: false };
   }
@@ -121,7 +124,10 @@ function projectReasoningDetail(value: string): { detail: string; truncated: boo
 }
 
 function reasoningActivityTone(
-  status: Extract<ProviderRuntimeEvent, { type: "item.completed" }>["payload"]["status"],
+  status: Extract<
+    ProviderRuntimeEvent,
+    { type: "item.updated" | "item.completed" }
+  >["payload"]["status"],
 ): "info" | "error" {
   // RuntimeItemStatus has no aborted/cancelled member. Ingestion deliberately
   // settles interrupted turns as `failed`, while provider-declined terminal
@@ -167,7 +173,10 @@ function stringifyJsonLikeFallback(value: unknown): string {
   );
 }
 
-function serializeJsonLike(value: unknown): { readonly text: string; readonly plain: boolean } {
+function serializeJsonLike(value: unknown): {
+  readonly text: string;
+  readonly plain: boolean;
+} {
   const plain = isPlainJsonTree(value, new Set<object>());
   return {
     text: plain ? (JSON.stringify(value) ?? "null") : stringifyJsonLikeFallback(value),
@@ -289,7 +298,10 @@ function truncateJsonValue(
   const retainedEntries = entries.slice(0, options.objectKeys);
   const result: Record<string, unknown> = {};
   for (const [key, entry] of retainedEntries) {
-    result[key] = truncateJsonValue(entry, { ...options, depth: options.depth - 1 });
+    result[key] = truncateJsonValue(entry, {
+      ...options,
+      depth: options.depth - 1,
+    });
   }
   if (entries.length > options.objectKeys) {
     result[ACTIVITY_DATA_TRUNCATION_MARKER] = true;
@@ -525,16 +537,15 @@ export function projectProviderRuntimeActivities(
     typeof runtimeSequence === "number" && Number.isInteger(runtimeSequence) && runtimeSequence >= 0
       ? { sequence: runtimeSequence }
       : {};
-  // Providers whose runtime supplies readable reasoning text only render the completed item.
-  // Empty starts/completions are private/encrypted reasoning boundaries, not
-  // transcript rows. Waiting for the authoritative completion also avoids
-  // per-token activity writes and transcript height churn.
+  // Readable public reasoning has one stable activity throughout its hot/cold
+  // lifecycle. Ingestion bounds hot updates before they reach this projection;
+  // empty/private/encrypted reasoning boundaries still never become rows.
   if (
     (event.provider === "codex" ||
       event.provider === "antigravity" ||
       event.provider === "omnimind" ||
       event.provider === "pi") &&
-    event.type === "item.completed" &&
+    (event.type === "item.updated" || event.type === "item.completed") &&
     event.payload.itemType === "reasoning" &&
     event.itemId !== undefined &&
     readableReasoningDetail(event.payload.detail) !== undefined
@@ -550,7 +561,7 @@ export function projectProviderRuntimeActivities(
         id: EventId.makeUnsafe(`provider-reasoning:${event.threadId}:${reasoningItemId}`),
         createdAt: event.createdAt,
         tone: reasoningActivityTone(event.payload.status),
-        kind: "reasoning.completed",
+        kind: event.type === "item.updated" ? "reasoning.updated" : "reasoning.completed",
         summary: "Reasoning trace",
         payload: toActivityPayload({
           ...(event.payload.status ? { status: event.payload.status } : {}),
@@ -1229,6 +1240,9 @@ export function providerActivityUpdateDedupeKey(
   activity: OrchestrationThreadActivity,
 ): string | undefined {
   const prefix = `${threadId}:${event.provider}:${activity.kind}`;
+  if (activity.kind === "reasoning.updated" || activity.kind === "reasoning.completed") {
+    return `${threadId}:${event.provider}:reasoning:${activity.id}`;
+  }
   if (
     activity.kind === "context-window.updated" ||
     activity.kind === "account.rate-limits.updated"

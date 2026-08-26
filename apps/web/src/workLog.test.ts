@@ -560,6 +560,33 @@ describe("deriveWorkLogEntries", () => {
     expect(entry?.itemType).toBeUndefined();
   });
 
+  it("projects a hot reasoning snapshot with the same readable and truncation semantics", () => {
+    const [entry] = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "reasoning-hot",
+          kind: "reasoning.updated",
+          tone: "info",
+          summary: "Reasoning trace",
+          turnId: TurnId.makeUnsafe("turn-hot"),
+          payload: {
+            status: "inProgress",
+            detail: "A public thought is still growing",
+            data: { toolCallId: "reasoning-hot", reasoningDetailTruncated: true },
+          },
+        }),
+      ],
+      undefined,
+    );
+
+    expect(entry).toMatchObject({
+      activityKind: "reasoning.updated",
+      detail: "A public thought is still growing",
+      reasoningDetailTruncated: true,
+      toolCallId: "reasoning-hot",
+    });
+  });
+
   it("preserves failed reasoning tone from the canonical activity projection", () => {
     const [entry] = deriveWorkLogEntries(
       [

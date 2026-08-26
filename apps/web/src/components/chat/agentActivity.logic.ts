@@ -26,7 +26,7 @@ const REASONING_GROUP_PREFIX = "agent-reasoning";
 export function isReasoningUpdateWorkEntry(
   entry: Pick<WorkLogEntry, "activityKind" | "label" | "toolTitle">,
 ): boolean {
-  if (entry.activityKind === "reasoning.completed") {
+  if (entry.activityKind === "reasoning.updated" || entry.activityKind === "reasoning.completed") {
     return true;
   }
   // Read-only compatibility for activities persisted by older OmniMind builds.
@@ -103,7 +103,7 @@ export function formatAgentActivityReasoningText(entry: WorkLogEntry): string | 
   const candidates = [entry.detail, entry.preview].flatMap((value) =>
     value?.trim() ? [value.trim()] : [],
   );
-  if (entry.activityKind === "reasoning.completed") {
+  if (entry.activityKind === "reasoning.updated" || entry.activityKind === "reasoning.completed") {
     return candidates.find(hasReadableReasoningText) ?? null;
   }
 

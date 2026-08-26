@@ -385,7 +385,7 @@ describe("provider runtime activity projection", () => {
     expect(events.map(projectProviderRuntimeActivities)).toEqual([[], [], []]);
   });
 
-  it("projects only readable completed Codex-family reasoning summaries", () => {
+  it("projects only readable public Codex-family reasoning snapshots", () => {
     const absent = [
       runtimeEvent({
         type: "content.delta",
@@ -417,31 +417,33 @@ describe("provider runtime activity projection", () => {
     expect(absent.map(projectProviderRuntimeActivities)).toEqual([[], [], []]);
 
     for (const provider of ["codex", "antigravity", "omnimind", "pi"] as const) {
-      const [activity] = projectProviderRuntimeActivities(
-        runtimeEvent({
-          type: "item.completed",
-          eventId: `reasoning-${provider}`,
-          provider,
-          turnId: TURN_ID,
-          itemId: RuntimeItemId.makeUnsafe(`reasoning-${provider}`),
+      for (const lifecycle of ["item.updated", "item.completed"] as const) {
+        const [activity] = projectProviderRuntimeActivities(
+          runtimeEvent({
+            type: lifecycle,
+            eventId: `reasoning-${provider}-${lifecycle}`,
+            provider,
+            turnId: TURN_ID,
+            itemId: RuntimeItemId.makeUnsafe(`reasoning-${provider}`),
+            payload: {
+              itemType: "reasoning",
+              status: lifecycle === "item.updated" ? "inProgress" : "completed",
+              detail: "Read the protocol mapping",
+            },
+          }),
+        );
+        expect(activity).toMatchObject({
+          id: `provider-reasoning:${THREAD_ID}:reasoning-${provider}`,
+          tone: "info",
+          kind: lifecycle === "item.updated" ? "reasoning.updated" : "reasoning.completed",
+          summary: "Reasoning trace",
           payload: {
-            itemType: "reasoning",
-            status: "completed",
+            status: lifecycle === "item.updated" ? "inProgress" : "completed",
             detail: "Read the protocol mapping",
+            data: { toolCallId: `reasoning-${provider}` },
           },
-        }),
-      );
-      expect(activity).toMatchObject({
-        id: `provider-reasoning:${THREAD_ID}:reasoning-${provider}`,
-        tone: "info",
-        kind: "reasoning.completed",
-        summary: "Reasoning trace",
-        payload: {
-          status: "completed",
-          detail: "Read the protocol mapping",
-          data: { toolCallId: `reasoning-${provider}` },
-        },
-      });
+        });
+      }
     }
   });
 

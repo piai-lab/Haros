@@ -72,6 +72,7 @@ import {
   AGENT_GATEWAY_CREDENTIAL_ROTATION_REQUIRED,
   AGENT_GATEWAY_TURN_AUTHORITY_RETIRED,
 } from "../../agentGateway/sessionLease.ts";
+import { PROVIDER_INTERRUPT_REASON } from "../providerInterruptSettlement.ts";
 
 const asRequestId = (value: string): ApprovalRequestId => ApprovalRequestId.makeUnsafe(value);
 const asEventId = (value: string): EventId => EventId.makeUnsafe(value);
@@ -584,6 +585,43 @@ const bindingRetryRouting = makeProviderServiceLayer({
 });
 
 staleSettlementRouting.layer("ProviderServiceLive exact stale-terminal settlement", (it) => {
+  it.effect("settles the exact parent turn before retiring an interrupted runtime", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const threadId = asThreadId("thread-interrupt-terminal-before-retirement");
+      staleSettlementPersistedEvents.clear();
+
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      const turn = yield* provider.sendTurn({
+        threadId,
+        input: "stream a partial answer",
+        attachments: [],
+      });
+
+      const defaultStop = staleSettlementRouting.codex.stopSession.getMockImplementation();
+      assert.isDefined(defaultStop);
+      staleSettlementRouting.codex.stopSession.mockImplementationOnce((stoppedThreadId) =>
+        Effect.sync(() => {
+          const terminal = Array.from(staleSettlementPersistedEvents.values()).find(
+            (event) =>
+              event.type === "turn.aborted" &&
+              event.threadId === threadId &&
+              event.turnId === turn.turnId,
+          );
+          assert.isDefined(terminal);
+          assert.deepEqual(terminal.payload, { reason: PROVIDER_INTERRUPT_REASON });
+        }).pipe(Effect.andThen(defaultStop!(stoppedThreadId))),
+      );
+
+      yield* provider.interruptTurn({ threadId });
+      assert.equal(staleSettlementRouting.codex.stopSession.mock.calls.at(-1)?.[0], threadId);
+    }),
+  );
+
   it.effect("keeps current stream deltas on the binding-free fast path", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;
