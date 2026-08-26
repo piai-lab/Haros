@@ -12,6 +12,7 @@ import {
   parsePackagedDesktopArgs,
   resolvePackagedProofUserDataPath,
   resolveNativePackagedDesktopPlatform,
+  selectMacPackagedPayload,
   withPackagedJourneyDebugging,
 } from "./verify-packaged-desktop.ts";
 
@@ -119,6 +120,20 @@ describe("packaged desktop verification", () => {
         sourceCommit,
       ),
     ).toThrow("Packaged source commit mismatch");
+  });
+
+  it("selects the runnable macOS payload emitted by the release matrix", () => {
+    expect(selectMacPackagedPayload(["/assets/OmniMind.dmg"])).toEqual({
+      kind: "dmg",
+      path: "/assets/OmniMind.dmg",
+    });
+    expect(selectMacPackagedPayload(["/assets/OmniMind.dmg", "/assets/OmniMind.zip"])).toEqual({
+      kind: "zip",
+      path: "/assets/OmniMind.zip",
+    });
+    expect(() => selectMacPackagedPayload(["/assets/first.dmg", "/assets/second.dmg"])).toThrow(
+      "at most one macOS ZIP and one DMG",
+    );
   });
 
   it("admits the interaction journey only on its owning macOS lane", () => {

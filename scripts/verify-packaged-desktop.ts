@@ -331,12 +331,59 @@ interface LaunchCommand {
   readonly appArchivePath: string;
 }
 
+export function selectMacPackagedPayload(assetPaths: ReadonlyArray<string>): {
+  readonly kind: "dmg" | "zip";
+  readonly path: string;
+} {
+  const zipAssets = assetPaths.filter((path) => path.endsWith(".zip"));
+  const dmgAssets = assetPaths.filter((path) => path.endsWith(".dmg"));
+  if (zipAssets.length > 1 || dmgAssets.length > 1) {
+    throw new Error(
+      `Expected at most one macOS ZIP and one DMG release asset, found ${zipAssets.length} ZIP and ${dmgAssets.length} DMG.`,
+    );
+  }
+  if (zipAssets[0]) return { kind: "zip", path: zipAssets[0] };
+  if (dmgAssets[0]) return { kind: "dmg", path: dmgAssets[0] };
+  throw new Error("Expected one packaged macOS ZIP or DMG release asset, found none.");
+}
+
 function prepareMacLaunch(assetsDirectory: string, extractionRoot: string): LaunchCommand {
-  const archive = requireSingleAsset(assetsDirectory, ".zip");
-  runCommand("ditto", ["-x", "-k", archive, extractionRoot]);
+  const payload = selectMacPackagedPayload(
+    readdirSync(assetsDirectory)
+      .map((entry) => join(assetsDirectory, entry))
+      .filter((candidate) => statSync(candidate).isFile()),
+  );
+  if (payload.kind === "zip") {
+    runCommand("ditto", ["-x", "-k", payload.path, extractionRoot]);
+  } else {
+    const mountPoint = join(extractionRoot, "mounted-dmg");
+    mkdirSync(mountPoint);
+    runCommand("hdiutil", [
+      "attach",
+      "-readonly",
+      "-nobrowse",
+      "-mountpoint",
+      mountPoint,
+      payload.path,
+    ]);
+    try {
+      const mountedApps = readdirSync(mountPoint).filter((entry) => entry.endsWith(".app"));
+      if (mountedApps.length !== 1) {
+        throw new Error(
+          `Expected one packaged macOS app in ${basename(payload.path)}, found ${mountedApps.length}.`,
+        );
+      }
+      runCommand("ditto", [
+        join(mountPoint, mountedApps[0]!),
+        join(extractionRoot, mountedApps[0]!),
+      ]);
+    } finally {
+      runCommand("hdiutil", ["detach", mountPoint]);
+    }
+  }
   const appBundles = readdirSync(extractionRoot).filter((entry) => entry.endsWith(".app"));
   if (appBundles.length !== 1) {
-    throw new Error(`Expected one packaged macOS app in ${basename(archive)}.`);
+    throw new Error(`Expected one packaged macOS app in ${basename(payload.path)}.`);
   }
   const appBundle = join(extractionRoot, appBundles[0]!);
   const executables = findFiles(join(appBundle, "Contents", "MacOS"), (candidate) =>
