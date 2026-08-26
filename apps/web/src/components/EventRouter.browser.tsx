@@ -380,11 +380,11 @@ function resolveWsRpc(tag: string, body?: unknown): unknown {
       structurallySupported: true,
       status: "ready" as const,
     });
-    const interactionMode = (mode: "default" | "plan" | "debug") => ({
+    const interactionMode = (mode: "default" | "plan" | "debug" | "converge" | "learn") => ({
       mode,
-      structurallySupported: mode === "default",
-      status: mode === "default" ? ("ready" as const) : ("unavailable" as const),
-      ...(mode === "default" ? {} : { reason: "mode-unsupported" as const }),
+      structurallySupported: mode !== "plan",
+      status: mode !== "plan" ? ("ready" as const) : ("unavailable" as const),
+      ...(mode !== "plan" ? {} : { reason: "mode-unsupported" as const }),
     });
     return {
       provider,
@@ -399,6 +399,8 @@ function resolveWsRpc(tag: string, body?: unknown): unknown {
         default: interactionMode("default"),
         plan: interactionMode("plan"),
         debug: interactionMode("debug"),
+        converge: interactionMode("converge"),
+        learn: interactionMode("learn"),
       },
     };
   }

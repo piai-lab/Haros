@@ -11,6 +11,7 @@ import {
   BrainIcon,
   BugIcon,
   ClockIcon,
+  ConvergeIcon,
   DownloadIcon,
   EraserIcon,
   FastModeIcon,
@@ -18,6 +19,7 @@ import {
   GoalIcon,
   InfoIcon,
   ListTodoIcon,
+  LearnIcon,
   type LucideIcon,
   MessageCircleIcon,
   Minimize2,
@@ -66,6 +68,16 @@ export const BUILT_IN_COMPOSER_SLASH_COMMAND_PRESENTATION = {
     titleKey: "composer.command.default",
     descriptionKey: "composer.command.defaultDescription",
     icon: MessageCircleIcon,
+  },
+  converge: {
+    titleKey: "composer.command.converge",
+    descriptionKey: "composer.command.convergeDescription",
+    icon: ConvergeIcon,
+  },
+  learn: {
+    titleKey: "composer.command.learn",
+    descriptionKey: "composer.command.learnDescription",
+    icon: LearnIcon,
   },
   review: {
     titleKey: "composer.command.review",

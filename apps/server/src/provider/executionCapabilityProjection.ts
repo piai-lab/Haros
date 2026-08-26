@@ -7,6 +7,7 @@ import type {
   RuntimeMode,
   ServerProviderStatus,
 } from "@omnimind/contracts";
+import { PROVIDER_INTERACTION_MODES } from "@omnimind/contracts";
 
 import type { ProviderAdapterCapabilities } from "./Services/ProviderAdapter.ts";
 
@@ -16,7 +17,6 @@ type ProviderExecutionStructureCapabilities = Pick<
 >;
 
 const RUNTIME_MODES = ["full-access", "auto", "approval-required"] as const;
-const INTERACTION_MODES = ["default", "plan", "debug"] as const;
 
 function healthDisposition(status: ServerProviderStatus | undefined): {
   readonly status: ProviderExecutionCapabilityStatus;
@@ -89,6 +89,8 @@ export function resolveProviderExecutionCapabilities(input: {
         default: interactionUnsupported("default"),
         plan: interactionUnsupported("plan"),
         debug: interactionUnsupported("debug"),
+        converge: interactionUnsupported("converge"),
+        learn: interactionUnsupported("learn"),
       },
     };
   }
@@ -150,14 +152,17 @@ export function resolveProviderExecutionCapabilities(input: {
     }),
   ) as ProviderExecutionCapabilities["runtimeModes"];
   const interactionModes = Object.fromEntries(
-    INTERACTION_MODES.map((mode) => {
+    PROVIDER_INTERACTION_MODES.map((mode) => {
       if (!input.adapterCapabilities!.supportedInteractionModes?.has(mode)) {
-        return [mode, {
+        return [
           mode,
-          structurallySupported: false,
-          status: "unavailable" as const,
-          reason: "mode-unsupported" as const,
-        }];
+          {
+            mode,
+            structurallySupported: false,
+            status: "unavailable" as const,
+            reason: "mode-unsupported" as const,
+          },
+        ];
       }
       return [mode, { mode, structurallySupported: true, ...health }];
     }),

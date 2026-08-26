@@ -353,7 +353,18 @@ describe("composerSlashCommands", () => {
         canOfferSideCommand: true,
         canOfferExportCommand: true,
       }),
-    ).toEqual(["fork", "side", "export", "goal", "debug", "default", "feedback", "automation"]);
+    ).toEqual([
+      "fork",
+      "side",
+      "export",
+      "goal",
+      "debug",
+      "default",
+      "converge",
+      "learn",
+      "feedback",
+      "automation",
+    ]);
   });
 
   it("omits app-level /fork for claude when the composer cannot offer it", () => {
@@ -473,6 +484,8 @@ describe("composerSlashCommands", () => {
       "plan",
       "debug",
       "default",
+      "converge",
+      "learn",
       "review",
       "fork",
       "side",

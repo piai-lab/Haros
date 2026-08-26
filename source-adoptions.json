@@ -125,6 +125,33 @@
       "licenseFiles": ["LICENSES/pi-coding-agent-MIT.txt"]
     },
     {
+      "id": "noun-project-converge-interaction-mode-icon",
+      "url": "https://thenounproject.com/icon/converge-3918477/",
+      "revision": "noun-project-icon-3918477",
+      "paths": [
+        "apps/web/public/central-icons-reversed/converge.svg",
+        "apps/web/src/lib/icons.tsx"
+      ],
+      "sourcePaths": ["noun-converge-3918477.svg"],
+      "sourceSha256": "eebf4a928d2d943ecd2236fda74d57b9af4f3e193206e21d8be83f6b2057579d",
+      "rights": "The maintainer supplied this Noun Project icon by Adrien Coquet and confirmed a valid royalty-free, attribution-free license for OmniMind adaptation and redistribution. Purchase records and personal license material remain private and are not committed.",
+      "mode": "copied-adapted",
+      "changes": "The selected three-way converge silhouette is redrawn as one 24px Central-style outline asset with currentColor, 1.5px rounded strokes and no original filled paths. It is presentation-only and does not own interaction-mode behavior or capability.",
+      "updatePolicy": "Pinned to Noun Project icon 3918477 and the recorded source digest. Any geometry, source, author or rights change requires maintainer confirmation plus small-size, light/dark and Composer-menu visual revalidation."
+    },
+    {
+      "id": "noun-project-learn-interaction-mode-icon",
+      "url": "https://thenounproject.com/icon/education-8386792/",
+      "revision": "noun-project-icon-8386792",
+      "paths": ["apps/web/public/central-icons-reversed/learn.svg", "apps/web/src/lib/icons.tsx"],
+      "sourcePaths": ["noun-education-8386792.svg"],
+      "sourceSha256": "d388f71e3b27db29988a73999dff99477c92ba084a265dade5d101885677dd68",
+      "rights": "The maintainer supplied this Noun Project icon by Studio Danro and confirmed a valid royalty-free, attribution-free license for OmniMind adaptation and redistribution. Purchase records and personal license material remain private and are not committed.",
+      "mode": "copied-adapted",
+      "changes": "The selected education-cap silhouette is redrawn as one 24px Central-style outline asset with currentColor, 1.5px rounded strokes and no original filled paths. It is presentation-only and does not own learning behavior or capability.",
+      "updatePolicy": "Pinned to Noun Project icon 8386792 and the recorded source digest. Any geometry, source, author or rights change requires maintainer confirmation plus small-size, light/dark and Composer-menu visual revalidation."
+    },
+    {
       "id": "thinking-orbs-composing-20px",
       "url": "https://github.com/Jakubantalik/thinking-orbs.git",
       "revision": "bd204b73c9b6660fad7210b1ad48d9dc2adbb89d",

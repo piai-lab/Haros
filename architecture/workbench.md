@@ -101,6 +101,8 @@ Composer 的 16px 上下文圆环只有一个稳定语义：当前上下文压�
 
 Composer内置Slash Command的技术identity与执行继续属于Shared/runtime owner；Web只拥有一个以canonical command ID为key、穷尽内置命令的presentation descriptor，统一投影双语title、description与icon。Provider动态命令可在缺少产品文案时使用明确标注来源的原生名称或有界humanize fallback；OmniMind内置命令不得落入该fallback，也不得让title switch、description map与icon map成为三张需人肉同步的清单。新增或删除内置命令时，presentation完整性测试必须在简中/英文同时证明可读名称、说明和图标存在；availability与执行行为仍由真实command owner决定，不能把展示descriptor扩成第二Command Registry。
 
+内置列表在 Default 后提供 `/converge` 与 `/learn`。选择后，Composer 用同一穷尽式 mode presentation descriptor 持续显示空心 Central icon 与本地化名称；标签没有 `×`，再次点击当前标签回到 Default，选择另一模式直接替换。标签在发送、流式输出、canonical Ask 等待与回答后都不自行消失，也不在 Approval、Voice 或 Settings 中复制入口。Converge 显示为“收敛 / Converge”，Learn 显示为“学习 / Learn”，后者说明为持续使用清晰模型、实例和必要图解帮助理解；正常 UI 不暴露 Host、Skill 或 Engine 等实现术语。Learn 输出的标准 fenced `mermaid` 继续复用既有 Assistant Timeline renderer，渲染失败时保留可读源码，不建立第二图表系统。
+
 ### Canonical User Input
 
 User Input 是跨 Codex、Claude、Pi、OmniMind Agent 与未来 Engine 的同一产品投影；Provider、Pi Extension、RPC fallback 与第三方 TUI 都不能拥有私有 Ask UI 或定义能力上限。所有 `user-input.requested` 都进入既有 Composer Question surface：复用 Composer 约 736px 内容列、浅色圆角 Question card、安静灰阶、编号选项、逐题分页与必要动作，不新增页面、侧栏、弹窗、问卷后台、大标题、Review 画面或第二 Ask shell。复杂度属于 canonical contract/state，默认画面只显示当前问题与当前必须操作的控件；Preview 只在用户显式请求时于对应选项内展开。

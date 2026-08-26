@@ -129,6 +129,8 @@ export const BotIcon: LucideIcon = centralIconWrapper(AGENT_ROBOT_ICON_NAME);
 // model/thinking selector contract.
 export const ReasoningIcon: LucideIcon = centralIconWrapper("brain-2");
 export const BookIcon: LucideIcon = centralIconWrapper("book-simple");
+export const ConvergeIcon: LucideIcon = centralIconWrapper("converge");
+export const LearnIcon: LucideIcon = centralIconWrapper("learn");
 export const BugIcon = adaptIcon(IconBug);
 export const CameraIcon = adaptIcon(IconCamera);
 export const CheckIcon = adaptIcon(IconCheck);

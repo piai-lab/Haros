@@ -123,6 +123,8 @@ const EN_MESSAGES = {
   "conversation.planModeExit": "Plan mode — click to return to build mode",
   "conversation.planModeExitAction": "Return to Build",
   "conversation.debugModeExit": "Debug mode — click to return to normal build mode",
+  "conversation.convergeModeExit": "Converge — click to return to normal build mode",
+  "conversation.learnModeExit": "Learn — click to return to normal build mode",
   "conversation.stopGeneration": "Stop generation",
   "conversation.stopGenerationDescription":
     "Stop the current response. On Mac, press Ctrl+C to interrupt.",
@@ -300,6 +302,8 @@ const ZH_CN_MESSAGES = {
   "conversation.planModeExit": "规划模式 — 点击返回构建模式",
   "conversation.planModeExitAction": "返回构建模式",
   "conversation.debugModeExit": "调试模式 — 点击返回常规构建模式",
+  "conversation.convergeModeExit": "收敛 — 点击返回常规构建模式",
+  "conversation.learnModeExit": "学习 — 点击返回常规构建模式",
   "conversation.stopGeneration": "停止生成",
   "conversation.stopGenerationDescription": "停止当前回复。在 Mac 上可按 Ctrl+C 中断。",
   "conversation.sending": "正在发送…",

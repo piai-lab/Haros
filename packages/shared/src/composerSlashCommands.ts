@@ -11,6 +11,8 @@ export const BUILT_IN_COMPOSER_SLASH_COMMANDS = [
   "plan",
   "debug",
   "default",
+  "converge",
+  "learn",
   "review",
   "fork",
   "side",
