@@ -34,6 +34,20 @@ export interface BrowserTabStripProps {
   onCreateTab: () => void;
 }
 
+export function resolveBrowserTabPresentationTitle(
+  tab: BrowserTabState,
+  labels: { readonly newTab: string; readonly untitled: string },
+): string {
+  const title = tab.title.trim();
+  // The Browser runtime uses this stable internal title before navigation.
+  // Translate it only on the blank-tab surface; a real page titled “New tab”
+  // must keep its authored identity.
+  if (isBlankBrowserTabUrl(tab) && (title === "" || title === "New tab")) {
+    return labels.newTab;
+  }
+  return title || labels.untitled;
+}
+
 function closeButtonClassName(isActive: boolean) {
   return cn(
     "ml-1 size-5 shrink-0 rounded-sm p-0 text-muted-foreground/70 hover:bg-background/80 hover:text-foreground",
@@ -76,6 +90,10 @@ export function BrowserTabStrip(props: BrowserTabStripProps) {
         {props.tabs.map((tab) => {
           const isActive = tab.id === props.activeTabId;
           const tabIsBlank = isBlankBrowserTabUrl(tab);
+          const presentationTitle = resolveBrowserTabPresentationTitle(tab, {
+            newTab: t("browser.newTab"),
+            untitled: t("browser.untitled"),
+          });
           return (
             <div
               key={tab.id}
@@ -101,7 +119,7 @@ export function BrowserTabStrip(props: BrowserTabStripProps) {
                 className="min-w-0 flex-1 truncate text-left"
                 onClick={() => props.onSelectTab(tab.id)}
               >
-                {tab.title || t("browser.untitled")}
+                {presentationTitle}
               </button>
               <Button
                 type="button"
