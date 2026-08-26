@@ -205,6 +205,26 @@ export function findLastLiveWorkGroupId(rows: ReadonlyArray<MessagesTimelineRow>
   return null;
 }
 
+// Public reasoning is live only while it is the causal tail of the active turn.
+// A following assistant segment, tool activity, or proposed plan closes that
+// reasoning group immediately even though the turn itself may keep running.
+// Keeping this decision on the canonical Timeline sequence prevents every
+// reasoning row in a long active turn from inheriting one coarse `isWorking`
+// boolean and remaining open together.
+export function findLiveReasoningEntryId(
+  timelineEntries: ReadonlyArray<TimelineEntry>,
+  activeTurnId: TurnId | null,
+): string | null {
+  const tail = timelineEntries.at(-1);
+  if (tail?.kind !== "work" || !isReasoningUpdateWorkEntry(tail.entry)) {
+    return null;
+  }
+  if (activeTurnId !== null && tail.entry.turnId !== activeTurnId) {
+    return null;
+  }
+  return tail.entry.id;
+}
+
 export interface TimelineDurationMessage {
   id: string;
   role: "user" | "assistant" | "system";

@@ -228,6 +228,37 @@ function AnswerStageTimeline(props: { settled: boolean }) {
   );
 }
 
+function ReasoningBoundaryTimeline(props: { stage: 0 | 1 | 2 | 3 }) {
+  const turnId = TurnId.makeUnsafe("turn-reasoning-boundary-browser");
+  const timelineEntries: TimelineEntries = [
+    reasoningEntry("reasoning-boundary-1", turnId, "First reasoning group."),
+    ...(props.stage >= 1
+      ? [toolEntry("tool-reasoning-boundary", turnId, { label: "Read boundary source" })]
+      : []),
+    ...(props.stage >= 2
+      ? [reasoningEntry("reasoning-boundary-2", turnId, "Second reasoning group.")]
+      : []),
+    ...(props.stage >= 3
+      ? [
+          assistantEntry("assistant-reasoning-boundary", turnId, "Final answer is streaming.", {
+            streaming: true,
+          }),
+        ]
+      : []),
+  ];
+  return (
+    <MessagesTimeline
+      {...baseTimelineProps}
+      isWorking
+      activeTurnInProgress
+      activeTurnId={turnId}
+      timelineEntries={timelineEntries}
+      expandedWorkGroups={{}}
+      onToggleWorkGroup={() => {}}
+    />
+  );
+}
+
 function AlignedActivityRowsTimeline(props: { theme: "light" | "dark" }) {
   const turnId = TurnId.makeUnsafe("turn-activity-icon-alignment");
   const timelineEntries: TimelineEntries = [
@@ -1138,14 +1169,62 @@ describe("Timeline public reasoning disclosure", () => {
       const triggers = screen.getByRole("button", { name: "Reasoning", exact: true }).elements();
       expect(triggers).toHaveLength(2);
       expect(triggers.map((trigger) => trigger.getAttribute("aria-expanded"))).toEqual([
-        "true",
-        "true",
+        "false",
+        "false",
       ]);
 
       await screen.rerender(<ReducedLiveCausalTimeline settled />);
       await expect
         .poll(() => triggers.map((trigger) => trigger.getAttribute("aria-expanded")))
         .toEqual(["false", "false"]);
+    } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
+  it("keeps only the causal-tail reasoning open and closes it at each visible boundary", async () => {
+    const host = createNarrowHost();
+    const screen = await render(<ReasoningBoundaryTimeline stage={0} />, { container: host });
+
+    try {
+      const firstTrigger = screen.getByRole("button", { name: "Reasoning", exact: true }).element();
+      expect(firstTrigger.getAttribute("aria-expanded")).toBe("true");
+
+      await screen.rerender(<ReasoningBoundaryTimeline stage={1} />);
+      await expect.poll(() => firstTrigger.getAttribute("aria-expanded")).toBe("false");
+      expect(screen.getByRole("button", { name: "Reasoning", exact: true }).element()).toBe(
+        firstTrigger,
+      );
+
+      await screen.rerender(<ReasoningBoundaryTimeline stage={2} />);
+      const liveTriggers = screen
+        .getByRole("button", { name: "Reasoning", exact: true })
+        .elements();
+      expect(liveTriggers.map((trigger) => trigger.getAttribute("aria-expanded"))).toEqual([
+        "false",
+        "true",
+      ]);
+
+      await userEvent.click(liveTriggers[0]!);
+      await expect
+        .poll(() =>
+          screen
+            .getByRole("button", { name: "Reasoning", exact: true })
+            .elements()[0]
+            ?.getAttribute("aria-expanded"),
+        )
+        .toBe("true");
+
+      await screen.rerender(<ReasoningBoundaryTimeline stage={3} />);
+      await expect
+        .poll(() =>
+          screen
+            .getByRole("button", { name: "Reasoning", exact: true })
+            .elements()
+            .map((trigger) => trigger.getAttribute("aria-expanded")),
+        )
+        .toEqual(["true", "false"]);
     } finally {
       await screen.unmount();
       host.remove();
@@ -1253,7 +1332,7 @@ describe("Timeline public reasoning disclosure", () => {
     }
   });
 
-  it("starts answer-stage reasoning open and bounded, then closes it when the turn settles", async () => {
+  it("closes answer-stage reasoning before the final answer streams and keeps it settled", async () => {
     const host = createNarrowHost();
     const screen = await render(<AnswerStageTimeline settled={false} />, {
       container: host,
@@ -1261,11 +1340,8 @@ describe("Timeline public reasoning disclosure", () => {
 
     try {
       const trigger = screen.getByRole("button", { name: "Reasoning", exact: true }).element();
-      expect(trigger.getAttribute("aria-expanded")).toBe("true");
-      expect(
-        document.querySelector<HTMLElement>("[data-reasoning-height-state]")?.dataset
-          .reasoningHeightState,
-      ).toBe("compact");
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      expect(document.querySelector("[data-reasoning-height-toggle='true']")).toBeNull();
       await screen.rerender(<AnswerStageTimeline settled />);
       await expect.poll(() => trigger.getAttribute("aria-expanded")).toBe("false");
       expect(document.querySelector("[data-reasoning-height-toggle='true']")).toBeNull();
@@ -1283,10 +1359,16 @@ describe("Timeline public reasoning disclosure", () => {
 
     try {
       const trigger = screen.getByRole("button", { name: "Reasoning", exact: true }).element();
-      expect(trigger.getAttribute("aria-expanded")).toBe("true");
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
       await userEvent.click(trigger);
-      await userEvent.click(trigger);
-      expect(trigger.getAttribute("aria-expanded")).toBe("true");
+      await expect
+        .poll(() =>
+          screen
+            .getByRole("button", { name: "Reasoning", exact: true })
+            .element()
+            .getAttribute("aria-expanded"),
+        )
+        .toBe("true");
 
       await screen.rerender(<AnswerStageTimeline settled />);
       await settleLayout();

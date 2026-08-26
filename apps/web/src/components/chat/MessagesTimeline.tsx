@@ -97,6 +97,7 @@ import {
   chunkCollapsedTurnItems,
   computeStableMessagesTimelineRows,
   deriveMessagesTimelineRows,
+  findLiveReasoningEntryId,
   findLastLiveWorkGroupId,
   MAX_VISIBLE_WORK_LOG_ENTRIES,
   planWorkEntryRenderChunks,
@@ -710,6 +711,18 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       [groupKey]: open,
     }));
   }, []);
+  // Manual reasoning disclosure choices live at the Timeline owner so they
+  // survive a row moving between standalone, leading, inline, and settled
+  // projections as new causal events arrive. Automatic live-tail defaults are
+  // used only until the user makes an explicit choice for that reasoning group.
+  const [reasoningDisclosureOverrides, setReasoningDisclosureOverrides] = useState<
+    Record<string, boolean>
+  >({});
+  const setReasoningDisclosureOpen = useCallback((entryId: string, open: boolean) => {
+    setReasoningDisclosureOverrides((current) =>
+      current[entryId] === open ? current : { ...current, [entryId]: open },
+    );
+  }, []);
   const [expandedFileChangesByTurnId, setExpandedFileChangesByTurnId] = useState<
     Record<string, boolean>
   >({});
@@ -806,6 +819,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     ],
   );
   const rows = useStableRows(rawRows);
+  const liveReasoningEntryId = useMemo(
+    () =>
+      activeTurnInProgress || isWorking
+        ? findLiveReasoningEntryId(timelineEntries, activeTurnId ?? null)
+        : null,
+    [activeTurnId, activeTurnInProgress, isWorking, timelineEntries],
+  );
   const canRenderForkSourceDivider = forkSource !== null && onOpenThread !== undefined;
   const forkSourceDivider = useMemo(
     () =>
@@ -954,6 +974,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       highlightedMessageId,
       lastLiveWorkGroupId,
       pinnedMessageIds,
+      reasoningDisclosureOverrides,
       settledTurnCollapseTransitions,
       submittingEditedUserMessageId,
       threadMarkersByMessageId,
@@ -972,6 +993,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       highlightedMessageId,
       lastLiveWorkGroupId,
       pinnedMessageIds,
+      reasoningDisclosureOverrides,
       settledTurnCollapseTransitions,
       submittingEditedUserMessageId,
       threadMarkersByMessageId,
@@ -1391,8 +1413,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               chatMetaFontSizePx={appTypographyScale.chatMetaPx}
               textFontSizePx={appTypographyScale.activityPx}
               density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
-              reasoningDefaultOpen={reasoningDisclosureDefaultOpen(workEntry, reasoningTurnIsLive)}
-              reasoningIsLive={reasoningTurnIsLive}
+              reasoningDefaultOpen={reasoningDisclosureDefaultOpen(
+                workEntry,
+                reasoningTurnIsLive && workEntry.id === liveReasoningEntryId,
+              )}
+              reasoningOpenOverride={reasoningDisclosureOverrides[workEntry.id]}
+              onReasoningOpenChange={setReasoningDisclosureOpen}
+              reasoningIsLive={reasoningTurnIsLive && workEntry.id === liveReasoningEntryId}
               markdownCwd={markdownCwd}
               onImageExpand={onImageExpand}
               timestampFormat={timestampFormat}
@@ -1850,8 +1877,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           ) => {
             // A leading work group can still belong to the active turn while the
             // assistant answer streams after it. Keep that turn lifecycle
-            // separate from the tool-tail projection below: leading tools may
-            // collapse, while public reasoning stays live in its bounded viewport.
+            // separate from the causal-tail decision: the turn remains live,
+            // while reasoning closes as soon as a later visible segment exists.
             const reasoningTurnIsLive = row.assistantTurnInProgress === true;
             const renderInlineWorkRow = (workEntry: WorkLogEntry) => (
               <TimelineWorkEntryRow
@@ -1862,9 +1889,11 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
                 reasoningDefaultOpen={reasoningDisclosureDefaultOpen(
                   workEntry,
-                  reasoningTurnIsLive,
+                  reasoningTurnIsLive && workEntry.id === liveReasoningEntryId,
                 )}
-                reasoningIsLive={reasoningTurnIsLive}
+                reasoningOpenOverride={reasoningDisclosureOverrides[workEntry.id]}
+                onReasoningOpenChange={setReasoningDisclosureOpen}
+                reasoningIsLive={reasoningTurnIsLive && workEntry.id === liveReasoningEntryId}
                 fileDiffStatByPath={fileDiffStatByPath}
                 markdownCwd={markdownCwd}
                 onImageExpand={onImageExpand}
@@ -1966,6 +1995,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 textFontSizePx={appTypographyScale.activityPx}
                 density={prefersCompactWorkEntryRow(item.entry) ? "compact" : "default"}
                 reasoningDefaultOpen={reasoningDisclosureDefaultOpen(item.entry, false)}
+                reasoningOpenOverride={reasoningDisclosureOverrides[item.entry.id]}
+                onReasoningOpenChange={setReasoningDisclosureOpen}
                 reasoningIsLive={false}
                 markdownCwd={markdownCwd}
                 onImageExpand={onImageExpand}
