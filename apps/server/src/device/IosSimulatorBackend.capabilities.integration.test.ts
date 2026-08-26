@@ -6,11 +6,11 @@
  * process runner so a broken capability can be simulated without an Xcode that
  * actually broke.
  */
-import { mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { ProcessRunResult } from "../processRunner.ts";
 import {
@@ -25,6 +25,16 @@ import type { HelperClient } from "./helperClient.ts";
 const HELPER_SOURCE_DIR = path.resolve(import.meta.dirname, "..", "..", "native", "device-helper");
 
 const DEVICE = "AAAA-1111";
+const cacheRoots = new Set<string>();
+
+afterEach(async () => {
+  await Promise.all(
+    [...cacheRoots].map(async (cacheRoot) => {
+      await rm(cacheRoot, { recursive: true, force: true });
+      cacheRoots.delete(cacheRoot);
+    }),
+  );
+});
 
 const ok = (stdout: string): ProcessRunResult => ({
   stdout,
@@ -111,6 +121,7 @@ async function capabilityCacheKey(): Promise<string> {
  */
 async function makeBackend(capabilities: Record<string, unknown>) {
   const cacheRoot = await mkdtemp(path.join(tmpdir(), "omnimind-capability-"));
+  cacheRoots.add(cacheRoot);
   // The directory name must match the key the backend derives, or the cache
   // lookup misses and no probe runs. That key is the stubbed `xcodebuild
   // -version` output plus a digest of the helper sources, so it is derived here

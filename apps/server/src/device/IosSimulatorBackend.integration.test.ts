@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { PassThrough } from "node:stream";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ProcessRunResult } from "../processRunner.ts";
 import {
@@ -334,6 +334,17 @@ describe("png dimension reading", () => {
 });
 
 describe("saving a screenshot", () => {
+  const screenshotDirectories = new Set<string>();
+
+  afterEach(async () => {
+    await Promise.all(
+      [...screenshotDirectories].map(async (directory) => {
+        await rm(directory, { recursive: true, force: true });
+        screenshotDirectories.delete(directory);
+      }),
+    );
+  });
+
   const SCREENSHOT_PNG = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
     "base64",
@@ -342,6 +353,7 @@ describe("saving a screenshot", () => {
   /** A backend whose `simctl io screenshot` writes a real PNG to the given path. */
   async function makeScreenshotBackend() {
     const directory = await mkdtemp(path.join(tmpdir(), "omnimind-screenshot-test-"));
+    screenshotDirectories.add(directory);
     const backend = new IosSimulatorBackend({
       platform: "darwin",
       recordingDirectory: directory,

@@ -12,7 +12,12 @@ import path from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { ModelRegistry, ModelRuntime } from "@earendil-works/pi-coding-agent";
-import type { Api, Model } from "@earendil-works/pi-ai";
+import {
+  InMemoryCredentialStore,
+  InMemoryModelsStore,
+  type Api,
+  type Model,
+} from "@earendil-works/pi-ai";
 import { ApprovalRequestId, type ProviderRuntimeEvent, ThreadId } from "@omnimind/contracts";
 import { Cause, Effect, Fiber, Layer, Stream } from "effect";
 import { describe, expect, it, vi } from "vitest";
@@ -1668,10 +1673,22 @@ describe("getPiDiscoverableModels", () => {
 
   it("isolates extension providers between sessions that share an agent directory", async () => {
     const agentDir = mkdtempSync(path.join(tmpdir(), "omnimind-pi-runtime-isolation-"));
+    const isolatedRuntimeSdk = {
+      ModelRuntime: {
+        create: (options?: Parameters<typeof ModelRuntime.create>[0]) =>
+          ModelRuntime.create({
+            ...options,
+            credentials: new InMemoryCredentialStore(),
+            modelsPath: null,
+            modelsStore: new InMemoryModelsStore(),
+            refreshOnCreate: false,
+          }),
+      },
+    } as unknown as Parameters<typeof createPiModelRuntime>[1];
 
     try {
-      const firstRuntime = await createPiModelRuntime(agentDir, { ModelRuntime });
-      const secondRuntime = await createPiModelRuntime(agentDir, { ModelRuntime });
+      const firstRuntime = await createPiModelRuntime(agentDir, isolatedRuntimeSdk);
+      const secondRuntime = await createPiModelRuntime(agentDir, isolatedRuntimeSdk);
       const firstRegistry = new ModelRegistry(firstRuntime);
       const secondRegistry = new ModelRegistry(secondRuntime);
 
@@ -4350,61 +4367,50 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("preserves the exact extension catalog without synthesizing Anthropic models", async () => {
-    const agentDir = mkdtempSync(path.join(tmpdir(), "omnimind-pi-anthropic-"));
-    const modelsPath = path.join(agentDir, "models.json");
-    const authPath = path.join(agentDir, "auth.json");
+    const credentials = new InMemoryCredentialStore();
+    await credentials.modify("anthropic", async () => ({
+      type: "oauth",
+      access: "tok",
+      refresh: "ref",
+      expires: Date.now() + 60_000,
+    }));
 
-    try {
-      writeFileSync(modelsPath, "{}");
-      writeFileSync(
-        authPath,
-        JSON.stringify({
-          anthropic: {
-            type: "oauth",
-            access: "tok",
-            refresh: "ref",
-            expires: Date.now() + 60_000,
-          },
-        }),
-      );
-      const modelRuntime = await ModelRuntime.create({
-        authPath,
-        modelsPath,
-        allowModelNetwork: false,
-      });
-      const registry = new ModelRegistry(modelRuntime);
-      registry.registerProvider("anthropic", {
-        baseUrl: "https://api.anthropic.com",
-        api: "anthropic-messages",
-        apiKey: "test-key",
-        models: [
-          {
-            id: "claude-opus-4-7",
-            name: "Claude Opus 4.7",
-            api: "anthropic-messages",
-            reasoning: true,
-            input: ["text", "image"],
-            cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
-            contextWindow: 1_000_000,
-            maxTokens: 128_000,
-          },
-        ],
-      });
+    const modelRuntime = await ModelRuntime.create({
+      credentials,
+      modelsPath: null,
+      modelsStore: new InMemoryModelsStore(),
+      allowModelNetwork: false,
+    });
+    const registry = new ModelRegistry(modelRuntime);
+    registry.registerProvider("anthropic", {
+      baseUrl: "https://api.anthropic.com",
+      api: "anthropic-messages",
+      apiKey: "test-key",
+      models: [
+        {
+          id: "claude-opus-4-7",
+          name: "Claude Opus 4.7",
+          api: "anthropic-messages",
+          reasoning: true,
+          input: ["text", "image"],
+          cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
+          contextWindow: 1_000_000,
+          maxTokens: 128_000,
+        },
+      ],
+    });
 
-      expect(
-        registry
-          .getAll()
-          .filter((model) => model.provider === "anthropic")
-          .map((model) => model.id),
-      ).toEqual(["claude-opus-4-7"]);
-      const models = getPiDiscoverableModels(registry);
+    expect(
+      registry
+        .getAll()
+        .filter((model) => model.provider === "anthropic")
+        .map((model) => model.id),
+    ).toEqual(["claude-opus-4-7"]);
+    const models = getPiDiscoverableModels(registry);
 
-      expect(
-        models.filter((model) => model.provider === "anthropic").map((model) => model.id),
-      ).toEqual(["claude-opus-4-7"]);
-    } finally {
-      rmSync(agentDir, { recursive: true, force: true });
-    }
+    expect(
+      models.filter((model) => model.provider === "anthropic").map((model) => model.id),
+    ).toEqual(["claude-opus-4-7"]);
   });
 });
 

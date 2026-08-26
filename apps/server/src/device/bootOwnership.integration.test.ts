@@ -1,12 +1,24 @@
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { makeBootOwnershipStore, orphanedBootUdids, processIsAlive } from "./bootOwnership.ts";
 
+const storeDirectories = new Set<string>();
+
+afterEach(async () => {
+  await Promise.all(
+    [...storeDirectories].map(async (directory) => {
+      await rm(directory, { recursive: true, force: true });
+      storeDirectories.delete(directory);
+    }),
+  );
+});
+
 const store = async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "omnimind-boot-own-"));
+  storeDirectories.add(dir);
   return { dir, file: path.join(dir, "ownership.json") };
 };
 

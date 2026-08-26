@@ -353,27 +353,26 @@ function makeManager(input?: {
   ghScenario?: FakeGhScenario;
   textGeneration?: Partial<FakeGitTextGeneration>;
 }) {
-  const { service: gitHubCli, ghCalls } = createGitHubCliWithFakeGh(input?.ghScenario);
-  const textGeneration = createTextGeneration(input?.textGeneration);
-  const ServerConfigLayer = ServerConfig.layerTest(process.cwd(), {
-    prefix: "omnimind-git-manager-test-",
+  return Effect.gen(function* () {
+    const baseDir = yield* makeTempDir("omnimind-git-manager-test-");
+    const { service: gitHubCli, ghCalls } = createGitHubCliWithFakeGh(input?.ghScenario);
+    const textGeneration = createTextGeneration(input?.textGeneration);
+    const ServerConfigLayer = ServerConfig.layerTest(process.cwd(), baseDir);
+
+    const gitCoreLayer = GitCoreLive.pipe(
+      Layer.provideMerge(NodeServices.layer),
+      Layer.provideMerge(ServerConfigLayer),
+    );
+
+    const managerLayer = Layer.mergeAll(
+      Layer.succeed(GitHubCli, gitHubCli),
+      Layer.succeed(TextGeneration, textGeneration),
+      gitCoreLayer,
+    ).pipe(Layer.provideMerge(NodeServices.layer));
+
+    const manager = yield* makeGitManager.pipe(Effect.provide(managerLayer));
+    return { manager, ghCalls };
   });
-
-  const gitCoreLayer = GitCoreLive.pipe(
-    Layer.provideMerge(NodeServices.layer),
-    Layer.provideMerge(ServerConfigLayer),
-  );
-
-  const managerLayer = Layer.mergeAll(
-    Layer.succeed(GitHubCli, gitHubCli),
-    Layer.succeed(TextGeneration, textGeneration),
-    gitCoreLayer,
-  ).pipe(Layer.provideMerge(NodeServices.layer));
-
-  return makeGitManager.pipe(
-    Effect.provide(managerLayer),
-    Effect.map((manager) => ({ manager, ghCalls })),
-  );
 }
 
 const GitManagerTestLayer = GitCoreLive.pipe(
@@ -2537,6 +2536,9 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       yield* runGit(repoDir, ["commit", "-m", "Existing worktree branch"]);
       yield* runGit(repoDir, ["checkout", "main"]);
       const worktreePath = path.join(repoDir, "..", `pr-existing-${Date.now()}`);
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => fs.rmSync(worktreePath, { recursive: true, force: true })),
+      );
       yield* runGit(repoDir, ["worktree", "add", worktreePath, "feature/pr-existing-worktree"]);
 
       const { manager } = yield* makeManager({
@@ -2701,6 +2703,9 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       yield* runGit(repoDir, ["push", "-u", "fork-seed", "feature/pr-reused-fork"]);
       yield* runGit(repoDir, ["checkout", "main"]);
       const worktreePath = path.join(repoDir, "..", `pr-reused-fork-${Date.now()}`);
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => fs.rmSync(worktreePath, { recursive: true, force: true })),
+      );
       yield* runGit(repoDir, ["worktree", "add", worktreePath, "feature/pr-reused-fork"]);
       yield* runGit(worktreePath, ["branch", "--unset-upstream"], true);
 

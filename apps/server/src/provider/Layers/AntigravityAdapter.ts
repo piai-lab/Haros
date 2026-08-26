@@ -128,6 +128,7 @@ type AntigravitySessionContext = ToolSurfaceCounters & {
   readonly turns: StoredTurn[];
   activeTurnId?: TurnId | undefined;
   activeProcess?: ChildProcess | undefined;
+  activeRunDir?: string | undefined;
   activePrompt?: string | undefined;
   eventFile?: string | undefined;
   transcriptPath?: string | undefined;
@@ -1068,6 +1069,15 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
       if (context.gatewaySessionLease === lease) delete context.gatewaySessionLease;
     };
 
+    const cleanupTurnRunDirectory = async (
+      context: AntigravitySessionContext,
+      runDir: string | undefined = context.activeRunDir,
+    ): Promise<void> => {
+      if (!runDir) return;
+      if (context.activeRunDir === runDir) delete context.activeRunDir;
+      await fs.rm(runDir, { recursive: true, force: true }).catch(() => undefined);
+    };
+
     const teardownActiveProcess = (
       context: AntigravitySessionContext,
       method: string,
@@ -1949,7 +1959,9 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             raw: raw("session-restart", { threadId: input.threadId }),
           });
           yield* cancelAgentGatewayTurn(existing.gatewaySessionLease, existing.activeTurnId);
-          yield* teardownActiveProcess(existing, "session/restart");
+          yield* teardownActiveProcess(existing, "session/restart").pipe(
+            Effect.ensuring(Effect.promise(() => cleanupTurnRunDirectory(existing))),
+          );
           releaseTurnGatewayLease(existing);
         }
         const now = new Date().toISOString();
@@ -2071,6 +2083,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
               cause,
             }),
         });
+        context.activeRunDir = runDir;
         const eventFile = path.join(runDir, "hooks.ndjson");
         const logFile = path.join(runDir, "agy.log");
         yield* Effect.tryPromise({
@@ -2091,7 +2104,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
         const gatewayBootstrapToken = gatewaySessionLease?.issueStdioBootstrapToken?.();
         if (gatewaySessionLease && !gatewayBootstrapToken) {
           gatewaySessionLease.release();
-          yield* Effect.promise(() => fs.rm(runDir, { recursive: true, force: true }));
+          yield* Effect.promise(() => cleanupTurnRunDirectory(context, runDir));
           return yield* new ProviderAdapterRequestError({
             provider: PROVIDER,
             method: "turn/prepare",
@@ -2170,7 +2183,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           });
         } catch (cause) {
           releaseTurnGatewayLease(context, gatewaySessionLease);
-          yield* Effect.promise(() => fs.rm(runDir, { recursive: true, force: true }));
+          yield* Effect.promise(() => cleanupTurnRunDirectory(context, runDir));
           return yield* new ProviderAdapterRequestError({
             provider: PROVIDER,
             method: "turn/start",
@@ -2210,7 +2223,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           void (async () => {
             if (!ownsTurn()) {
               releaseTurnGatewayLease(context, gatewaySessionLease);
-              await fs.rm(runDir, { recursive: true, force: true }).catch(() => undefined);
+              await cleanupTurnRunDirectory(context, runDir);
               return;
             }
             // Another path may already have settled (interrupt / stop-hook kill).
@@ -2219,7 +2232,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             await Effect.runPromise(cancelAgentGatewayTurn(gatewaySessionLease, completedTurnId));
             if (!ownsTurn()) {
               releaseTurnGatewayLease(context, gatewaySessionLease);
-              await fs.rm(runDir, { recursive: true, force: true }).catch(() => undefined);
+              await cleanupTurnRunDirectory(context, runDir);
               return;
             }
             // Each `agy -p` invocation owns a fresh gateway session. Revoke it as
@@ -2231,13 +2244,13 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             if (pollInFlightAtClose) {
               await pollInFlightAtClose.catch(() => undefined);
               if (!ownsTurn()) {
-                await fs.rm(runDir, { recursive: true, force: true }).catch(() => undefined);
+                await cleanupTurnRunDirectory(context, runDir);
                 return;
               }
             }
             await pollHookFile(context).catch(() => undefined);
             if (!ownsTurn()) {
-              await fs.rm(runDir, { recursive: true, force: true }).catch(() => undefined);
+              await cleanupTurnRunDirectory(context, runDir);
               return;
             }
             if (!context.sawAssistant && stdout.trim()) {
@@ -2254,7 +2267,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             }
             if (context.turnTerminalEmitted) {
               if (context.activeProcess === child) delete context.activeProcess;
-              await fs.rm(runDir, { recursive: true, force: true }).catch(() => undefined);
+              await cleanupTurnRunDirectory(context, runDir);
               return;
             }
             const interrupted = context.interrupted || signal !== null;
@@ -2267,6 +2280,9 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
                 raw: raw("stderr", { code, stderr }),
               } satisfies ProviderRuntimeEvent);
             }
+            // Completion is the caller-visible lifecycle boundary. Remove the
+            // turn-owned hook directory before publishing that terminal event.
+            await cleanupTurnRunDirectory(context, runDir);
             settleActiveTurn(context, {
               state: interrupted ? "interrupted" : failed ? "failed" : "completed",
               stopReason: interrupted ? "interrupted" : failed ? "error" : "model_stop",
@@ -2277,7 +2293,6 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
                 : {}),
               raw: raw("process-exit", { code, signal, stdout, stderr }),
             });
-            await fs.rm(runDir, { recursive: true, force: true }).catch(() => undefined);
           })();
         });
         return {
@@ -2342,6 +2357,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             }
           }),
         );
+        yield* Effect.promise(() => cleanupTurnRunDirectory(context));
       });
 
     const unsupported = (threadId: ThreadId, method: string) =>
@@ -2365,7 +2381,9 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           raw: raw("session-stop", { threadId }),
         });
         yield* cancelAgentGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
-        yield* teardownActiveProcess(context, "session/stop");
+        yield* teardownActiveProcess(context, "session/stop").pipe(
+          Effect.ensuring(Effect.promise(() => cleanupTurnRunDirectory(context))),
+        );
         releaseTurnGatewayLease(context);
         sessions.delete(threadId);
         offer({

@@ -1,15 +1,25 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, statSync } from "node:fs";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { buildOmniMindSessionExtensions } from "./omnimindSessionExtensions.ts";
+
+const compositionRoots = new Set<string>();
+
+afterEach(() => {
+  for (const root of compositionRoots) {
+    rmSync(root, { recursive: true, force: true });
+    compositionRoots.delete(root);
+  }
+});
 
 describe("bundled OmniMind Web Access composition", () => {
   it("creates canonical config only when the Session extension factory starts", async () => {
     const root = mkdtempSync(join(tmpdir(), "omnimind-web-composition-"));
+    compositionRoots.add(root);
     const agentDir = join(root, "agent");
     const composition = buildOmniMindSessionExtensions({
       agentDir,
@@ -53,6 +63,7 @@ describe("bundled OmniMind Web Access composition", () => {
 
   it("adds Ask User only when the Host supplies the canonical interaction port", async () => {
     const root = mkdtempSync(join(tmpdir(), "omnimind-ask-composition-"));
+    compositionRoots.add(root);
     const withoutPresenter = buildOmniMindSessionExtensions({
       agentDir: join(root, "without"),
       defineTool: (tool) => tool,
