@@ -168,7 +168,8 @@ jobs:
             --assets-dir build-assets \
             --platform "${{ matrix.platform }}" \
             --arch "${{ matrix.arch }}" \
-            --version "${{ needs.preflight.outputs.version }}"
+            --version "${{ needs.preflight.outputs.version }}" \
+            --source-commit "${{ needs.preflight.outputs.source_commit }}"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

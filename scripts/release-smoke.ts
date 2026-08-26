@@ -245,6 +245,11 @@ function verifyReleaseWorkflowSafety(): void {
   );
   assertContains(
     workflow,
+    '--source-commit "${{ needs.preflight.outputs.source_commit }}"',
+    "Expected packaged startup to verify the exact preflight source commit.",
+  );
+  assertContains(
+    workflow,
     "retention-days: 5",
     "Expected temporary cross-platform artifacts to expire after five days.",
   );

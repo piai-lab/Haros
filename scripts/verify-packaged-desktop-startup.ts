@@ -20,6 +20,8 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { extractFile } from "@electron/asar";
+
 export type PackagedDesktopPlatform = "linux" | "mac" | "win";
 
 export interface PackagedDesktopStartupOptions {
@@ -27,6 +29,7 @@ export interface PackagedDesktopStartupOptions {
   readonly platform: PackagedDesktopPlatform;
   readonly arch: string;
   readonly version: string;
+  readonly sourceCommit: string;
   readonly timeoutMs: number;
 }
 
@@ -77,7 +80,14 @@ export function parsePackagedDesktopStartupArgs(
     }
     values.set(name, value);
   }
-  const known = new Set(["--assets-dir", "--platform", "--arch", "--version", "--timeout-ms"]);
+  const known = new Set([
+    "--assets-dir",
+    "--platform",
+    "--arch",
+    "--version",
+    "--source-commit",
+    "--timeout-ms",
+  ]);
   for (const name of values.keys()) {
     if (!known.has(name)) throw new Error(`Unknown packaged startup argument: ${name}.`);
   }
@@ -94,11 +104,16 @@ export function parsePackagedDesktopStartupArgs(
   if (!Number.isInteger(timeoutMs) || timeoutMs < 5_000 || timeoutMs > 180_000) {
     throw new Error("--timeout-ms must be an integer between 5000 and 180000.");
   }
+  const sourceCommit = required("--source-commit").toLowerCase();
+  if (!/^[0-9a-f]{40}$/.test(sourceCommit)) {
+    throw new Error("--source-commit must be a full 40-character Git SHA.");
+  }
   return {
     assetsDirectory: resolve(required("--assets-dir")),
     platform,
     arch: required("--arch"),
     version: required("--version"),
+    sourceCommit,
     timeoutMs,
   };
 }
@@ -151,6 +166,7 @@ interface LaunchCommand {
   readonly command: string;
   readonly args: ReadonlyArray<string>;
   readonly cwd: string;
+  readonly appArchivePath: string;
 }
 
 function prepareMacLaunch(assetsDirectory: string, extractionRoot: string): LaunchCommand {
@@ -167,7 +183,12 @@ function prepareMacLaunch(assetsDirectory: string, extractionRoot: string): Laun
   if (executables.length !== 1) {
     throw new Error(`Expected one macOS main executable, found ${executables.length}.`);
   }
-  return { command: executables[0]!, args: [], cwd: appBundle };
+  return {
+    command: executables[0]!,
+    args: [],
+    cwd: appBundle,
+    appArchivePath: join(appBundle, "Contents", "Resources", "app.asar"),
+  };
 }
 
 function prepareLinuxLaunch(assetsDirectory: string, extractionRoot: string): LaunchCommand {
@@ -185,6 +206,7 @@ function prepareLinuxLaunch(assetsDirectory: string, extractionRoot: string): La
     command: "xvfb-run",
     args: ["-a", appRun, "--no-sandbox", "--disable-gpu"],
     cwd: join(extractionRoot, "squashfs-root"),
+    appArchivePath: join(extractionRoot, "squashfs-root", "resources", "app.asar"),
   };
 }
 
@@ -210,7 +232,24 @@ function prepareWindowsLaunch(assetsDirectory: string, extractionRoot: string): 
   if (executables.length !== 1) {
     throw new Error(`Expected one extracted OmniMind.exe, found ${executables.length}.`);
   }
-  return { command: executables[0]!, args: [], cwd: dirname(executables[0]!) };
+  return {
+    command: executables[0]!,
+    args: [],
+    cwd: dirname(executables[0]!),
+    appArchivePath: join(applicationRoot, "resources", "app.asar"),
+  };
+}
+
+export function assertPackagedSourceCommit(
+  packageJsonContents: string,
+  expectedSourceCommit: string,
+): void {
+  const packageJson = JSON.parse(packageJsonContents) as { omnimindCommitHash?: unknown };
+  if (packageJson.omnimindCommitHash !== expectedSourceCommit) {
+    throw new Error(
+      `Packaged source commit mismatch: expected ${expectedSourceCommit}, got ${String(packageJson.omnimindCommitHash ?? "missing")}.`,
+    );
+  }
 }
 
 function prepareLaunch(
@@ -242,6 +281,8 @@ export function createPackagedDesktopSmokeEnvironment(
     XDG_CACHE_HOME: join(root, "xdg-cache"),
     XDG_DATA_HOME: join(root, "xdg-data"),
     OMNIMIND_HOME: join(root, "omnimind-home"),
+    CODEX_HOME: join(root, "provider-home", "codex"),
+    CLAUDE_CONFIG_DIR: join(root, "provider-home", "claude"),
     TEMP: isolatedTemp,
     TMP: isolatedTemp,
     TMPDIR: isolatedTemp,
@@ -256,6 +297,8 @@ export function createPackagedDesktopSmokeEnvironment(
     env.XDG_CACHE_HOME,
     env.XDG_DATA_HOME,
     env.OMNIMIND_HOME,
+    env.CODEX_HOME,
+    env.CLAUDE_CONFIG_DIR,
     env.TMPDIR,
   ]) {
     if (path) mkdirSync(path, { recursive: true });
@@ -309,16 +352,70 @@ async function terminateProcessTree(child: ChildProcess): Promise<void> {
   await waitForExit(child, 2_000);
 }
 
-function hasStartupProof(logPath: string): boolean {
+function hasStartupProof(logPath: string, expectedLogDirectory: string): boolean {
   try {
     const log = readFileSync(logPath, "utf8");
     return (
       log.includes("app ready") &&
       log.includes("bootstrap main window created") &&
-      log.includes("bootstrap backend ready source=")
+      log.includes("bootstrap backend ready source=") &&
+      log.includes(`runtime log capture enabled logDir=${expectedLogDirectory}`)
     );
   } catch {
     return false;
+  }
+}
+
+async function launchPackagedDesktopOnce(input: {
+  readonly launch: LaunchCommand;
+  readonly env: NodeJS.ProcessEnv;
+  readonly logPath: string;
+  readonly timeoutMs: number;
+  readonly attempt: number;
+}): Promise<void> {
+  let child: ChildProcess | null = null;
+  try {
+    child = spawn(input.launch.command, [...input.launch.args], {
+      cwd: input.launch.cwd,
+      env: input.env,
+      detached: process.platform !== "win32",
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
+
+    const childOutcome: {
+      exited: { code: number | null; signal: NodeJS.Signals | null } | null;
+      launchError: Error | null;
+    } = { exited: null, launchError: null };
+    child.once("exit", (code, signal) => {
+      childOutcome.exited = { code, signal };
+    });
+    child.once("error", (error) => {
+      childOutcome.launchError = error;
+    });
+    child.stdout?.resume();
+    child.stderr?.resume();
+
+    const deadline = Date.now() + input.timeoutMs;
+    const expectedLogDirectory = dirname(input.logPath);
+    while (Date.now() < deadline) {
+      if (hasStartupProof(input.logPath, expectedLogDirectory)) {
+        console.log(`Packaged startup attempt ${input.attempt} reached backend and main window.`);
+        return;
+      }
+      if (childOutcome.launchError) {
+        throw new Error(`Packaged app could not start: ${childOutcome.launchError.message}`);
+      }
+      if (childOutcome.exited) {
+        throw new Error(
+          `Packaged app exited before startup proof (code=${childOutcome.exited.code ?? "null"}, signal=${childOutcome.exited.signal ?? "null"}).`,
+        );
+      }
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 200));
+    }
+    throw new Error(`Packaged startup proof timed out after ${input.timeoutMs}ms.`);
+  } finally {
+    if (child) await terminateProcessTree(child);
   }
 }
 
@@ -343,55 +440,31 @@ export async function verifyPackagedDesktopStartup(
   const extractionRoot = join(temporaryRoot, "payload");
   mkdirSync(extractionRoot, { recursive: true });
 
-  let child: ChildProcess | null = null;
   try {
     const launch = prepareLaunch(options, extractionRoot);
+    if (!existsSync(launch.appArchivePath)) {
+      throw new Error(`Packaged application archive was not found at ${launch.appArchivePath}.`);
+    }
+    assertPackagedSourceCommit(
+      extractFile(launch.appArchivePath, "package.json").toString("utf8"),
+      options.sourceCommit,
+    );
     const env = createPackagedDesktopSmokeEnvironment(join(temporaryRoot, "state"), options);
     const logPath = join(env.OMNIMIND_HOME!, "userdata", "logs", "desktop-main.log");
-    child = spawn(launch.command, [...launch.args], {
-      cwd: launch.cwd,
-      env,
-      detached: process.platform !== "win32",
-      stdio: ["ignore", "pipe", "pipe"],
-      windowsHide: true,
-    });
-
-    const childOutcome: {
-      exited: { code: number | null; signal: NodeJS.Signals | null } | null;
-      launchError: Error | null;
-    } = { exited: null, launchError: null };
-    child.once("exit", (code, signal) => {
-      childOutcome.exited = { code, signal };
-    });
-    child.once("error", (error) => {
-      childOutcome.launchError = error;
-    });
-    child.stdout?.resume();
-    child.stderr?.resume();
-
-    const deadline = Date.now() + options.timeoutMs;
-    while (Date.now() < deadline) {
-      if (hasStartupProof(logPath)) {
-        console.log(
-          `Packaged ${options.platform}/${options.arch} startup smoke passed from isolated state.`,
-        );
-        return;
-      }
-      if (childOutcome.launchError) {
-        throw new Error(`Packaged app could not start: ${childOutcome.launchError.message}`);
-      }
-      if (childOutcome.exited) {
-        throw new Error(
-          `Packaged app exited before startup proof (code=${childOutcome.exited.code ?? "null"}, signal=${childOutcome.exited.signal ?? "null"}).`,
-        );
-      }
-      await new Promise((resolveDelay) => setTimeout(resolveDelay, 200));
+    for (const attempt of [1, 2]) {
+      rmSync(logPath, { force: true });
+      await launchPackagedDesktopOnce({
+        launch,
+        env,
+        logPath,
+        timeoutMs: options.timeoutMs,
+        attempt,
+      });
     }
-    throw new Error(`Packaged startup proof timed out after ${options.timeoutMs}ms.`);
+    console.log(
+      `Packaged ${options.platform}/${options.arch} startup, shutdown, and reopen passed from isolated state at ${options.sourceCommit.slice(0, 12)}.`,
+    );
   } finally {
-    if (child) {
-      await terminateProcessTree(child);
-    }
     try {
       rmSync(temporaryRoot, {
         recursive: true,

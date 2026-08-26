@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  assertPackagedSourceCommit,
   createPackagedDesktopSmokeEnvironment,
   parsePackagedDesktopStartupArgs,
   resolveNativePackagedDesktopPlatform,
@@ -19,6 +20,8 @@ afterEach(() => {
 });
 
 describe("packaged desktop startup verification", () => {
+  const sourceCommit = "1234567890abcdef1234567890abcdef12345678";
+
   it("parses a bounded native payload request", () => {
     expect(
       parsePackagedDesktopStartupArgs([
@@ -30,12 +33,15 @@ describe("packaged desktop startup verification", () => {
         "x64",
         "--version",
         "1.2.3",
+        "--source-commit",
+        sourceCommit,
       ]),
     ).toEqual({
       assetsDirectory: expect.stringMatching(/release-publish$/),
       platform: "linux",
       arch: "x64",
       version: "1.2.3",
+      sourceCommit,
       timeoutMs: 60_000,
     });
 
@@ -49,10 +55,42 @@ describe("packaged desktop startup verification", () => {
         "x64",
         "--version",
         "1.2.3",
+        "--source-commit",
+        sourceCommit,
         "--timeout-ms",
         "4999",
       ]),
     ).toThrow("--timeout-ms must be an integer between 5000 and 180000");
+
+    expect(() =>
+      parsePackagedDesktopStartupArgs([
+        "--assets-dir",
+        "./release-publish",
+        "--platform",
+        "linux",
+        "--arch",
+        "x64",
+        "--version",
+        "1.2.3",
+        "--source-commit",
+        "1234567",
+      ]),
+    ).toThrow("--source-commit must be a full 40-character Git SHA");
+  });
+
+  it("rejects an artifact whose embedded commit differs from the requested source", () => {
+    expect(() =>
+      assertPackagedSourceCommit(
+        JSON.stringify({ omnimindCommitHash: sourceCommit }),
+        sourceCommit,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertPackagedSourceCommit(
+        JSON.stringify({ omnimindCommitHash: "abcdefabcdefabcdefabcdefabcdefabcdefabcd" }),
+        sourceCommit,
+      ),
+    ).toThrow("Packaged source commit mismatch");
   });
 
   it("isolates user state and removes inherited runtime authority", () => {
@@ -87,6 +125,8 @@ describe("packaged desktop startup verification", () => {
       "XDG_CACHE_HOME",
       "XDG_DATA_HOME",
       "OMNIMIND_HOME",
+      "CODEX_HOME",
+      "CLAUDE_CONFIG_DIR",
       "TEMP",
       "TMP",
       "TMPDIR",
