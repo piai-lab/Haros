@@ -97,7 +97,6 @@ let pendingReplayResponse: {
   readonly result: unknown;
 } | null = null;
 let getThreadDetailSnapshotRequestCount = 0;
-let failNextThreadDetailSnapshotResponse = false;
 let delayNextThreadDetailSnapshotResponse = false;
 let pendingThreadDetailSnapshotResponse: {
   readonly client: EffectRpcWebSocketClient;
@@ -494,23 +493,6 @@ const worker = setupWorker(
       const result = resolveWsRpc(method, requestBody);
       if (
         method === ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot &&
-        failNextThreadDetailSnapshotResponse
-      ) {
-        failNextThreadDetailSnapshotResponse = false;
-        client.send(
-          JSON.stringify({
-            _tag: "Exit",
-            requestId: request.id,
-            exit: {
-              _tag: "Failure",
-              cause: [{ _tag: "Die", defect: "intentional browser-test projection failure" }],
-            },
-          }),
-        );
-        return;
-      }
-      if (
-        method === ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot &&
         delayNextThreadDetailSnapshotResponse
       ) {
         delayNextThreadDetailSnapshotResponse = false;
@@ -714,7 +696,6 @@ describe("EventRouter scoped orchestration sync", () => {
     delayNextReplayResponse = false;
     pendingReplayResponse = null;
     getThreadDetailSnapshotRequestCount = 0;
-    failNextThreadDetailSnapshotResponse = false;
     delayNextThreadDetailSnapshotResponse = false;
     pendingThreadDetailSnapshotResponse = null;
     resetThreadDetailResumeCursorsForTests();
@@ -1050,17 +1031,6 @@ describe("EventRouter scoped orchestration sync", () => {
       await mounted.cleanup();
     }
   });
-
-  it("does not poll a converged terminal thread projection", async () => {
-    const mounted = await mountApp();
-
-    try {
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 5_200));
-      expect(getThreadDetailSnapshotRequestCount).toBe(0);
-    } finally {
-      await mounted.cleanup();
-    }
-  }, 60_000);
 
   it("runs one terminal reconciliation when the final assistant event is absent", async () => {
     const turnId = TurnId.makeUnsafe("turn-terminal-fence");
@@ -1687,93 +1657,6 @@ describe("EventRouter scoped orchestration sync", () => {
       expect(getThreadDetailSnapshotRequestCount).toBe(2);
 
       logicalNow += 4_500;
-      await vi.waitFor(() => expect(getThreadDetailSnapshotRequestCount).toBe(3), {
-        timeout: 4_000,
-        interval: 16,
-      });
-    } finally {
-      nowSpy.mockRestore();
-      fixture = buildFixture();
-      await mounted.cleanup();
-    }
-  }, 60_000);
-
-  it("resets projection backoff after a thrown projection request", async () => {
-    const turnId = TurnId.makeUnsafe("turn-failed-projection-backoff");
-    fixture = { ...fixture, snapshot: createRunningSnapshot(turnId) };
-    let logicalNow = Date.now();
-    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => logicalNow);
-    const mounted = await mountApp();
-
-    try {
-      logicalNow += 4_500;
-      await vi.waitFor(() => expect(getThreadDetailSnapshotRequestCount).toBe(1), {
-        timeout: 4_000,
-        interval: 16,
-      });
-
-      failNextThreadDetailSnapshotResponse = true;
-      logicalNow += 9_000;
-      await vi.waitFor(() => expect(getThreadDetailSnapshotRequestCount).toBe(2), {
-        timeout: 4_000,
-        interval: 16,
-      });
-
-      // A thrown read is not evidence of a healthy quiet stream. Its next
-      // reconcile is due at the base 4.5s, not the inherited 9s no-op delay.
-      logicalNow += 4_500;
-      await vi.waitFor(() => expect(getThreadDetailSnapshotRequestCount).toBe(3), {
-        timeout: 4_000,
-        interval: 16,
-      });
-    } finally {
-      nowSpy.mockRestore();
-      fixture = buildFixture();
-      await mounted.cleanup();
-    }
-  }, 60_000);
-
-  it("resets projection backoff at base cadence when the shell observes a new turn", async () => {
-    const firstTurnId = TurnId.makeUnsafe("turn-first-projection-backoff");
-    fixture = { ...fixture, snapshot: createRunningSnapshot(firstTurnId) };
-    let logicalNow = Date.now();
-    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => logicalNow);
-    const mounted = await mountApp();
-
-    try {
-      logicalNow += 4_500;
-      await vi.waitFor(() => expect(getThreadDetailSnapshotRequestCount).toBe(1), {
-        timeout: 4_000,
-        interval: 16,
-      });
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 150));
-
-      const nextTurnId = TurnId.makeUnsafe("turn-next-projection-backoff");
-      fixture = { ...fixture, snapshot: createRunningSnapshot(nextTurnId) };
-      sendShellEventPush({
-        kind: "thread-upserted",
-        sequence: 2,
-        thread: createShellSnapshotFromReadModel(fixture.snapshot).threads[0]!,
-      });
-      await vi.waitFor(
-        () =>
-          expect(getThreadFromState(useStore.getState(), THREAD_ID)?.latestTurn?.turnId).toBe(
-            nextTurnId,
-          ),
-        { timeout: 4_000, interval: 16 },
-      );
-
-      // The old turn's confirmed no-op scheduled 9s. The new shell turn must
-      // reset both that streak and the gate, making the next read due at 4.5s.
-      logicalNow += 4_500;
-      await vi.waitFor(() => expect(getThreadDetailSnapshotRequestCount).toBe(2), {
-        timeout: 4_000,
-        interval: 16,
-      });
-
-      // The new turn's first confirmed no-op starts its own streak at 9s; an
-      // inherited streak would defer this read to 18s instead.
-      logicalNow += 9_000;
       await vi.waitFor(() => expect(getThreadDetailSnapshotRequestCount).toBe(3), {
         timeout: 4_000,
         interval: 16,

@@ -146,15 +146,20 @@ import {
   shouldInvalidateProviderQueriesForEvent,
 } from "./-rootEventInvalidation";
 import { createDesktopProjectRecoveryAttemptGate } from "./-desktopProjectRecoveryAttempt";
+import {
+  projectionReconcileDelayMs,
+  projectionReconcileNoopStreakAfterAttempt,
+  shouldReconcileThreadProjectionState,
+  shouldResetProjectionBackoffForObservedTurn,
+  THREAD_DETAIL_PROJECTION_RECONCILE_INTERVAL_MS,
+} from "./-threadProjectionScheduling";
 
 const SHELL_SNAPSHOT_BOOTSTRAP_FALLBACK_DELAY_MS = 1_500;
 const THREAD_DETAIL_CATCHUP_INTERVAL_MS = 1_500;
-const THREAD_DETAIL_PROJECTION_RECONCILE_INTERVAL_MS = 4_500;
 /** First terminal-fence reconcile runs quickly so post-settle finals are not left hanging. */
 const THREAD_DETAIL_TERMINAL_FENCE_RECONCILE_DELAY_MS = 500;
 const THREAD_DETAIL_PROJECTION_RECONCILE_MAX_CONCURRENCY = 2;
 const THREAD_DETAIL_REPLAY_MAX_NOOP_STREAK = 2;
-const THREAD_DETAIL_PROJECTION_RECONCILE_MAX_NOOP_STREAK = 2;
 const PENDING_SHELL_EVENT_BUFFER_LIMIT = 1_024;
 const PENDING_THREAD_EVENT_BUFFER_LIMIT = 512;
 const IMMEDIATE_ASSISTANT_FLUSH_ID_LIMIT = 512;
@@ -1087,14 +1092,14 @@ function shouldPollThreadDetailCatchup(threadId: ThreadId): boolean {
 
 function shouldReconcileThreadProjection(threadId: ThreadId): boolean {
   const thread = getThreadFromState(useStore.getState(), threadId);
-  return (
-    thread?.session?.orchestrationStatus === "starting" ||
-    thread?.session?.orchestrationStatus === "running" ||
-    thread?.latestTurn?.state === "running" ||
-    thread?.messages.some((message) => message.role === "assistant" && message.streaming) ===
-      true ||
-    hasPendingTurnDispatch(threadId)
-  );
+  return shouldReconcileThreadProjectionState({
+    sessionStatus: thread?.session?.orchestrationStatus,
+    latestTurnState: thread?.latestTurn?.state,
+    hasStreamingAssistant:
+      thread?.messages.some((message) => message.role === "assistant" && message.streaming) ===
+      true,
+    hasPendingDispatch: hasPendingTurnDispatch(threadId),
+  });
 }
 
 /**
@@ -1310,35 +1315,31 @@ function EventRouter() {
     };
     const noteThreadReconcileResult = (threadId: ThreadId, wasNoop: boolean): void => {
       const entry = resolveThreadCatchupBackoff(threadId);
-      entry.reconcileNoopStreak = wasNoop
-        ? Math.min(
-            entry.reconcileNoopStreak + 1,
-            THREAD_DETAIL_PROJECTION_RECONCILE_MAX_NOOP_STREAK,
-          )
-        : 0;
+      entry.reconcileNoopStreak = projectionReconcileNoopStreakAfterAttempt(
+        entry.reconcileNoopStreak,
+        wasNoop ? "noop" : "changed",
+      );
     };
     const nextThreadProjectionReconcileDelayMs = (threadId: ThreadId): number => {
-      if (
+      const forceBaseCadence =
         threadProjectionTerminalFencePending.has(threadId) ||
         isDraftThreadAwaitingProjection(threadId) ||
-        hasPendingTurnDispatch(threadId)
-      ) {
+        hasPendingTurnDispatch(threadId);
+      if (forceBaseCadence) {
         resolveThreadCatchupBackoff(threadId).reconcileNoopStreak = 0;
-        return THREAD_DETAIL_PROJECTION_RECONCILE_INTERVAL_MS;
       }
-      return (
-        THREAD_DETAIL_PROJECTION_RECONCILE_INTERVAL_MS *
-        2 ** resolveThreadCatchupBackoff(threadId).reconcileNoopStreak
-      );
+      return projectionReconcileDelayMs({
+        noopStreak: resolveThreadCatchupBackoff(threadId).reconcileNoopStreak,
+        forceBaseCadence,
+      });
     };
 
     const resetThreadCatchupBackoffForObservedTurn = (
       threadId: ThreadId,
       observedTurnId: string | null,
     ): void => {
-      if (observedTurnId === null) return;
       const entry = threadCatchupBackoffById.get(threadId);
-      if (entry === undefined || entry.turnId === observedTurnId) return;
+      if (!shouldResetProjectionBackoffForObservedTurn(entry?.turnId, observedTurnId)) return;
       threadCatchupBackoffById.set(threadId, {
         turnId: observedTurnId,
         replayNoopStreak: 0,
@@ -1947,7 +1948,11 @@ function EventRouter() {
         }
         if (threadSubscriptionGenerationById.get(threadId) === subscriptionGeneration) {
           if (projectionAttemptFailed) {
-            resolveThreadCatchupBackoff(threadId).reconcileNoopStreak = 0;
+            const entry = resolveThreadCatchupBackoff(threadId);
+            entry.reconcileNoopStreak = projectionReconcileNoopStreakAfterAttempt(
+              entry.reconcileNoopStreak,
+              "failed",
+            );
           }
           // Never retire the fence on a still-running snapshot or one taken at
           // the exact session-set sequence before buffered assistant finals land.
