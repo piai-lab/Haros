@@ -247,6 +247,40 @@ describe("composerDraftStore persisted-state hydration", () => {
     expect(hydrated.draftThreadsByThreadId[threadId]?.interactionMode).toBe("debug");
   });
 
+  for (const interactionMode of ["converge", "learn"] as const) {
+    it(`preserves ${interactionMode} mode in composer and draft-thread state during hydration`, () => {
+      const projectId = ProjectId.makeUnsafe(`project-${interactionMode}-mode`);
+      const threadId = ThreadId.makeUnsafe(`thread-${interactionMode}-mode`);
+
+      const hydrated = normalizeCurrentPersistedComposerDraftStoreState({
+        draftsByThreadId: {
+          [threadId]: {
+            prompt: `Continue in ${interactionMode}`,
+            attachments: [],
+            interactionMode,
+          },
+        },
+        draftThreadsByThreadId: {
+          [threadId]: {
+            projectId,
+            createdAt: "2026-08-26T00:00:00.000Z",
+            runtimeMode: "approval-required",
+            interactionMode,
+            entryPoint: "chat",
+            branch: null,
+            worktreePath: null,
+            workingDirectory: null,
+            envMode: "local",
+          },
+        },
+        projectDraftThreadIdByProjectId: {},
+      });
+
+      expect(hydrated.draftsByThreadId[threadId]?.interactionMode).toBe(interactionMode);
+      expect(hydrated.draftThreadsByThreadId[threadId]?.interactionMode).toBe(interactionMode);
+    });
+  }
+
   it("preserves a staged goal in draft-thread state during hydration and drops blank ones", () => {
     const projectId = ProjectId.makeUnsafe("project-goal");
     const threadId = ThreadId.makeUnsafe("thread-goal");

@@ -71,7 +71,6 @@ import {
   type ReactNode,
   type WheelEvent,
 } from "react";
-import { GoTasklist } from "react-icons/go";
 import { flushSync } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Debouncer, useDebouncedValue } from "@tanstack/react-pacer";
@@ -237,6 +236,7 @@ import {
 } from "../storeSelectors";
 import { buildThreadSubscribeInput } from "../threadDetailResumeCursors";
 import { retainThreadDetailSubscription } from "../threadDetailSubscriptionRetention";
+import { activeInteractionModePresentation } from "../interactionModePresentation";
 import {
   canOfferForkSlashCommand,
   canOfferSideSlashCommand,
@@ -304,7 +304,6 @@ import {
 import PlanSidebar from "./PlanSidebar";
 import TerminalWorkspaceTabs from "./TerminalWorkspaceTabs";
 import {
-  BugIcon,
   ChevronDownIcon,
   ComposerSendArrowIcon,
   LayoutSidebarIcon,
@@ -2061,6 +2060,8 @@ export default function ChatView({
   }, [runtimeMode, threadId]);
   const interactionMode =
     composerDraft.interactionMode ?? activeThread?.interactionMode ?? DEFAULT_INTERACTION_MODE;
+  const activeInteractionMode = activeInteractionModePresentation(interactionMode);
+  const ActiveInteractionModeIcon = activeInteractionMode?.icon ?? null;
   const isServerThread = serverThread !== undefined;
   const isLocalDraftThread = !isServerThread && localDraftThread !== undefined;
   const canCheckoutPullRequestIntoThread = isLocalDraftThread;
@@ -11910,11 +11911,15 @@ export default function ChatView({
               >
                 <ComposerInputBanners
                   roundedTopReset={false}
-                  interactionModeUnavailable={interactionMode === "plan" && !planModeAvailable ? {
-                    message: planModeUnavailableMessage,
-                    exitLabel: t("conversation.planModeExitAction"),
-                    onExit: () => handleInteractionModeChange("default"),
-                  } : null}
+                  interactionModeUnavailable={
+                    interactionMode === "plan" && !planModeAvailable
+                      ? {
+                          message: planModeUnavailableMessage,
+                          exitLabel: t("conversation.planModeExitAction"),
+                          onExit: () => handleInteractionModeChange("default"),
+                        }
+                      : null
+                  }
                   planFollowUp={
                     !activePendingApproval &&
                     pendingUserInputs.length === 0 &&
@@ -12078,26 +12083,18 @@ export default function ChatView({
 
                       {!isVoiceRecording && !isVoiceTranscribing ? (
                         <>
-                          {interactionMode !== "default" ? (
+                          {activeInteractionMode && ActiveInteractionModeIcon ? (
                             <Button
                               variant="ghost"
                               className="shrink-0 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-sm,11px)] font-normal text-[var(--color-text-foreground-secondary)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] sm:px-3"
                               size="sm"
                               type="button"
                               onClick={() => handleInteractionModeChange("default")}
-                              title={t(
-                                interactionMode === "plan"
-                                  ? "conversation.planModeExit"
-                                  : "conversation.debugModeExit",
-                              )}
+                              title={t(activeInteractionMode.exitTitleKey)}
                             >
-                              {interactionMode === "plan" ? (
-                                <GoTasklist className="size-3.5" />
-                              ) : (
-                                <BugIcon className="size-3.5" />
-                              )}
+                              <ActiveInteractionModeIcon className="size-3.5" />
                               <span className="sr-only sm:not-sr-only">
-                                {t(interactionMode === "plan" ? "plan.badge" : "debug.badge")}
+                                {t(activeInteractionMode.badgeKey)}
                               </span>
                             </Button>
                           ) : null}

@@ -4769,6 +4769,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
             default: { mode: "default", structurallySupported: true, status: "ready" },
             plan: { mode: "plan", structurallySupported: true, status: "ready" },
             debug: { mode: "debug", structurallySupported: true, status: "ready" },
+            converge: { mode: "converge", structurallySupported: true, status: "ready" },
+            learn: { mode: "learn", structurallySupported: true, status: "ready" },
           },
         };
       },
@@ -6854,6 +6856,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
             default: { mode: "default", structurallySupported: true, status: "ready" },
             plan: { mode: "plan", structurallySupported: false, status: "unavailable", reason: "mode-unsupported" },
             debug: { mode: "debug", structurallySupported: true, status: "ready" },
+            converge: { mode: "converge", structurallySupported: true, status: "ready" },
+            learn: { mode: "learn", structurallySupported: true, status: "ready" },
           },
         };
       },
@@ -7003,6 +7007,49 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(() => expect(readInteractionMode()).toBe("debug"));
       await runSlashCommand("/default");
       await vi.waitFor(() => expect(readInteractionMode()).toBe("default"));
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps Converge and Learn mutually exclusive until the user clicks the active chip", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-persistent-mode-test" as MessageId,
+        targetText: "persistent mode test",
+      }),
+    });
+
+    try {
+      const readInteractionMode = () =>
+        useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.interactionMode ?? "default";
+      const runSlashCommand = async (command: string) => {
+        useComposerDraftStore.getState().setPrompt(THREAD_ID, command);
+        const composerEditor = await waitForComposerEditor();
+        await vi.waitFor(() => expect(composerEditor.textContent ?? "").toContain(command));
+        const sendButton = await waitForSendButton();
+        expect(sendButton.disabled).toBe(false);
+        sendButton.click();
+      };
+
+      await runSlashCommand("/converge");
+      await vi.waitFor(() => expect(readInteractionMode()).toBe("converge"));
+      await expect
+        .element(page.getByTitle(EN_MESSAGES["conversation.convergeModeExit"]))
+        .toBeInTheDocument();
+
+      await runSlashCommand("/learn");
+      await vi.waitFor(() => expect(readInteractionMode()).toBe("learn"));
+      await expect
+        .element(page.getByTitle(EN_MESSAGES["conversation.convergeModeExit"]))
+        .not.toBeInTheDocument();
+      const learnChip = page.getByTitle(EN_MESSAGES["conversation.learnModeExit"]);
+      await expect.element(learnChip).toBeInTheDocument();
+
+      await learnChip.click();
+      await vi.waitFor(() => expect(readInteractionMode()).toBe("default"));
+      await expect.element(learnChip).not.toBeInTheDocument();
     } finally {
       await mounted.cleanup();
     }

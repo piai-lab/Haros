@@ -95,6 +95,10 @@ import {
 import { attachmentRelativePath } from "../../attachmentStore.ts";
 import { resolveProviderAttachmentPath } from "../../provider/providerAttachmentPaths.ts";
 import { providerExecutionStructure } from "../../provider/providerExecutionStructure.ts";
+import {
+  PROVIDER_CONVERGE_MODE_ENVELOPE,
+  PROVIDER_LEARN_MODE_ENVELOPE,
+} from "../../provider/interactionMode.ts";
 import { PROVIDER_DEBUG_MODE_PROMPT_PREFIX } from "../../provider/debugMode.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { checkpointRefForThreadTurn } from "../../checkpointing/Utils.ts";
@@ -5358,6 +5362,74 @@ describe("ProviderCommandReactor", () => {
     // One scan rechecks the provider's live-turn race before dispatch; the
     // session ensure then performs the only full lookup needed for startup.
     expect(harness.listSessions).toHaveBeenCalledTimes(2);
+  });
+
+  it("projects the current persistent mode once per new dispatch without polluting Product history", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+    const threadId = ThreadId.makeUnsafe("thread-1");
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-converge-dispatch"),
+        threadId,
+        message: {
+          messageId: asMessageId("msg-converge-dispatch"),
+          role: "user",
+          text: "Do not ask; modify the implementation now",
+          attachments: [],
+          skills: [{ name: "implementation", path: "/tmp/implementation-skill" }],
+        },
+        interactionMode: "converge",
+        runtimeMode: "approval-required",
+        createdAt: now,
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+
+    const convergeInput = harness.sendTurn.mock.calls[0]?.[0].input;
+    expect(convergeInput?.split(PROVIDER_CONVERGE_MODE_ENVELOPE)).toHaveLength(2);
+    expect(convergeInput).toContain("Do not ask; modify the implementation now");
+    expect(convergeInput).toContain("implementation Skill");
+    const afterConverge = await readHarnessThread(harness, threadId);
+    expect(afterConverge?.messages.at(-1)?.text).toBe("Do not ask; modify the implementation now");
+    expect(afterConverge?.messages.at(-1)?.text).not.toContain("omnimind_interaction_mode");
+
+    harness.startSession.mockClear();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.interaction-mode.set",
+        commandId: CommandId.makeUnsafe("cmd-switch-converge-to-learn"),
+        threadId,
+        interactionMode: "learn",
+        createdAt: now,
+      }),
+    );
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-learn-dispatch"),
+        threadId,
+        message: {
+          messageId: asMessageId("msg-learn-dispatch"),
+          role: "user",
+          text: "Explain the state transition",
+          attachments: [],
+        },
+        interactionMode: "learn",
+        runtimeMode: "approval-required",
+        createdAt: now,
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 2);
+
+    const learnInput = harness.sendTurn.mock.calls[1]?.[0].input;
+    expect(learnInput?.split(PROVIDER_LEARN_MODE_ENVELOPE)).toHaveLength(2);
+    expect(learnInput).not.toContain(PROVIDER_CONVERGE_MODE_ENVELOPE);
+    expect(harness.startSession).not.toHaveBeenCalled();
+    const afterLearn = await readHarnessThread(harness, threadId);
+    expect(afterLearn?.messages.at(-1)?.text).toBe("Explain the state transition");
   });
 
   it("routes subagent-thread turn starts to the parent session as steers", async () => {

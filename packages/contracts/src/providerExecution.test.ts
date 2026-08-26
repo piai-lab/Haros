@@ -25,6 +25,8 @@ describe("ProviderExecutionCapabilities", () => {
         default: capability("default"),
         plan: capability("plan"),
         debug: capability("debug"),
+        converge: capability("converge"),
+        learn: capability("learn"),
       },
     });
 

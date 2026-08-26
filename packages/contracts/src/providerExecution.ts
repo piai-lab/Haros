@@ -59,6 +59,8 @@ export const ProviderExecutionCapabilities = Schema.Struct({
     default: ProviderInteractionModeCapability,
     plan: ProviderInteractionModeCapability,
     debug: ProviderInteractionModeCapability,
+    converge: ProviderInteractionModeCapability,
+    learn: ProviderInteractionModeCapability,
   }),
 });
 export type ProviderExecutionCapabilities = typeof ProviderExecutionCapabilities.Type;

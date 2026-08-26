@@ -355,7 +355,8 @@ export function useComposerSlashCommands(input: {
         toastManager.add({
           type: "error",
           title: t("composer.goalUpdateFailed"),
-          description: error instanceof Error ? error.message : t("composer.goalUpdateFailedDescription"),
+          description:
+            error instanceof Error ? error.message : t("composer.goalUpdateFailedDescription"),
         });
         return false;
       }
@@ -379,7 +380,8 @@ export function useComposerSlashCommands(input: {
         toastManager.add({
           type: "error",
           title: t(paused ? "composer.goalPauseFailed" : "composer.goalResumeFailed"),
-          description: error instanceof Error ? error.message : t("composer.goalUpdateFailedDescription"),
+          description:
+            error instanceof Error ? error.message : t("composer.goalUpdateFailedDescription"),
         });
         return false;
       }
@@ -392,16 +394,20 @@ export function useComposerSlashCommands(input: {
       const action = parseGoalSlashCommandArgs(args);
       if (action.action === "show") {
         const currentGoal = activeThread?.goal?.trim();
-        toastManager.add(currentGoal
-          ? { type: "info", title: t("composer.goalTitle"), description: currentGoal }
-          : { type: "info", title: t("composer.goalNotSet") });
+        toastManager.add(
+          currentGoal
+            ? { type: "info", title: t("composer.goalTitle"), description: currentGoal }
+            : { type: "info", title: t("composer.goalNotSet") },
+        );
         return;
       }
       if (action.action === "too-long") {
         toastManager.add({
           type: "warning",
           title: t("composer.goalTooLong"),
-          description: t("composer.goalTooLongDescription", { count: THREAD_GOAL_MAX_CHARS.toLocaleString() }),
+          description: t("composer.goalTooLongDescription", {
+            count: THREAD_GOAL_MAX_CHARS.toLocaleString(),
+          }),
         });
         return;
       }
@@ -409,7 +415,10 @@ export function useComposerSlashCommands(input: {
       if (action.action === "pause" || action.action === "resume") {
         const paused = action.action === "pause";
         if (await setThreadGoalPaused(paused)) {
-          toastManager.add({ type: "success", title: t(paused ? "composer.goalPaused" : "composer.goalResumed") });
+          toastManager.add({
+            type: "success",
+            title: t(paused ? "composer.goalPaused" : "composer.goalResumed"),
+          });
         }
         return;
       }
@@ -985,6 +994,8 @@ export function useComposerSlashCommands(input: {
       }
       if (
         slashInvocation.command === "plan" ||
+        slashInvocation.command === "converge" ||
+        slashInvocation.command === "learn" ||
         slashInvocation.command === "debug" ||
         slashInvocation.command === "default"
       ) {
@@ -1125,7 +1136,9 @@ export function useComposerSlashCommands(input: {
             type: "error",
             title: t("workbench.sideChatStartFailed"),
             description:
-              error instanceof Error ? error.message : t("workbench.sideChatStartFailedDescription"),
+              error instanceof Error
+                ? error.message
+                : t("workbench.sideChatStartFailedDescription"),
           });
         }
         return true;
@@ -1228,7 +1241,13 @@ export function useComposerSlashCommands(input: {
         return;
       }
 
-      if (item.command === "plan" || item.command === "debug" || item.command === "default") {
+      if (
+        item.command === "plan" ||
+        item.command === "converge" ||
+        item.command === "learn" ||
+        item.command === "debug" ||
+        item.command === "default"
+      ) {
         void handleInteractionModeChange(item.command);
         const applied = clearSlashCommandFromComposer();
         if (wasPromptReplacementApplied(applied)) {
@@ -1354,7 +1373,9 @@ export function useComposerSlashCommands(input: {
             type: "error",
             title: t("workbench.sideChatStartFailed"),
             description:
-              error instanceof Error ? error.message : t("workbench.sideChatStartFailedDescription"),
+              error instanceof Error
+                ? error.message
+                : t("workbench.sideChatStartFailedDescription"),
           });
         });
       }

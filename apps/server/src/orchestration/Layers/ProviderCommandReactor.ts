@@ -85,6 +85,10 @@ import {
   type SkillInstructionDelivery,
 } from "../../provider/skillPromptInjection.ts";
 import {
+  providerInteractionModeEnvelopeOverheadChars,
+  withProviderInteractionModeEnvelope,
+} from "../../provider/interactionMode.ts";
+import {
   PROVIDER_DEBUG_MODE_PROMPT_PREFIX,
   withProviderDebugModePrompt,
 } from "../../provider/debugMode.ts";
@@ -392,12 +396,6 @@ function appendBoundedManifestLine(input: {
   return true;
 }
 
-function debugModePromptOverheadChars(
-  interactionMode: ProviderInteractionMode | undefined,
-): number {
-  return interactionMode === "debug" ? PROVIDER_DEBUG_MODE_PROMPT_PREFIX.length + 2 : 0;
-}
-
 function withProviderThreadStatePrompts(input: {
   readonly text: string;
   readonly interactionMode?: ProviderInteractionMode | undefined;
@@ -405,17 +403,32 @@ function withProviderThreadStatePrompts(input: {
 }): string {
   return withProviderGoalPrompt({
     goal: input.goal,
-    text: withProviderDebugModePrompt({
+    text: withProviderInteractionModeEnvelope({
       interactionMode: input.interactionMode,
-      text: input.text,
+      text: withProviderDebugModePrompt({
+        interactionMode: input.interactionMode,
+        text: input.text,
+      }),
     }),
   });
 }
 
-function providerPromptOverflowIssue(goalPromptOverheadChars: number): string {
-  return goalPromptOverheadChars > 0
+function debugModePromptOverheadChars(
+  interactionMode: ProviderInteractionMode | undefined,
+): number {
+  return interactionMode === "debug" ? PROVIDER_DEBUG_MODE_PROMPT_PREFIX.length + 2 : 0;
+}
+
+function providerPromptOverflowIssue(input: {
+  readonly goalPromptOverheadChars: number;
+  readonly interactionModePromptOverheadChars: number;
+}): string {
+  if (input.goalPromptOverheadChars > 0 && input.interactionModePromptOverheadChars > 0) {
+    return "The latest message is too long to include the persistent thread goal and interaction mode instructions. Shorten the message and retry.";
+  }
+  return input.goalPromptOverheadChars > 0
     ? "The latest message is too long to include the persistent thread goal. Shorten the message and retry."
-    : "The latest message is too long to include OmniMind Debug mode instructions. Shorten the message and retry.";
+    : "The latest message is too long to include the active OmniMind interaction mode instructions. Shorten the message and retry.";
 }
 
 function isUnknownPendingApprovalRequestError(cause: Cause.Cause<ProviderServiceError>): boolean {
@@ -1787,9 +1800,12 @@ const make = Effect.gen(function* () {
       );
     }
     const dispatchProductSurface = projectKindToProductSurface(dispatchProject.kind);
-    const debugPromptOverheadChars = debugModePromptOverheadChars(input.interactionMode);
+    const interactionModePromptOverheadChars =
+      debugModePromptOverheadChars(input.interactionMode) +
+      providerInteractionModeEnvelopeOverheadChars(input.interactionMode);
     const goalPromptOverheadChars = providerGoalPromptOverheadChars(activeThreadGoal(thread));
-    const providerPromptOverheadChars = debugPromptOverheadChars + goalPromptOverheadChars;
+    const providerPromptOverheadChars =
+      interactionModePromptOverheadChars + goalPromptOverheadChars;
     const threadMentionProjection = yield* resolveThreadMentionPromptProjection({
       mentions: input.mentions,
       snapshotQuery: projectionSnapshotQuery,
@@ -1875,7 +1891,10 @@ const make = Effect.gen(function* () {
         return yield* new ProviderAdapterValidationError({
           provider: steerProvider,
           operation: "thread.turn.start",
-          issue: providerPromptOverflowIssue(goalPromptOverheadChars),
+          issue: providerPromptOverflowIssue({
+            goalPromptOverheadChars,
+            interactionModePromptOverheadChars,
+          }),
         });
       }
       const normalizedSteerInput = toNonEmptyProviderInput(composedSteerInput);
@@ -2087,7 +2106,10 @@ const make = Effect.gen(function* () {
       return yield* new ProviderAdapterValidationError({
         provider: selectedProvider as ProviderKind,
         operation: "thread.turn.start",
-        issue: providerPromptOverflowIssue(goalPromptOverheadChars),
+        issue: providerPromptOverflowIssue({
+          goalPromptOverheadChars,
+          interactionModePromptOverheadChars,
+        }),
       });
     }
     const hasPendingPriorTranscriptBootstrap =

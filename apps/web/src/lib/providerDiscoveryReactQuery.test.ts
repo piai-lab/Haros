@@ -54,6 +54,12 @@ describe("provider execution capability identity", () => {
       default: { mode: "default" as const, structurallySupported: true, status: "ready" as const },
       plan: { mode: "plan" as const, structurallySupported: true, status: "ready" as const },
       debug: { mode: "debug" as const, structurallySupported: true, status: "ready" as const },
+      converge: {
+        mode: "converge" as const,
+        structurallySupported: true,
+        status: "ready" as const,
+      },
+      learn: { mode: "learn" as const, structurallySupported: true, status: "ready" as const },
     },
   };
 

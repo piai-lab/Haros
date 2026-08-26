@@ -5,6 +5,8 @@ const EN_MESSAGES = {
   "composer.command.compact": "Compact Context",
   "composer.command.fast": "Fast Mode",
   "composer.command.plan": "Plan Mode",
+  "composer.command.converge": "Converge",
+  "composer.command.learn": "Learn",
   "composer.command.debug": "Debug",
   "composer.command.default": "Default Mode",
   "composer.command.review": "Code Review",
@@ -31,6 +33,10 @@ const EN_MESSAGES = {
   "composer.command.compactDescription": "Compact the current task context to free space",
   "composer.command.modelDescription": "Switch the response model for this task",
   "composer.command.planDescription": "Switch this task into plan mode",
+  "composer.command.convergeDescription":
+    "Investigate and clarify this task before any implementation",
+  "composer.command.learnDescription":
+    "Keep explaining with clear models, examples, and useful diagrams",
   "composer.command.defaultDescription": "Switch this task back to normal chat mode",
   "composer.command.reviewDescription": "Start a code review for current changes",
   "composer.command.forkDescription": "Fork this task into the main repository or a new worktree",
@@ -173,9 +179,12 @@ const EN_MESSAGES = {
   "composer.addFolderReference": "Add folder reference",
   "composer.planMode": "Plan mode",
   "composer.planModeUnavailableTitle": "Plan mode unavailable",
-  "composer.planModeChecking": "Checking whether the selected Engine can enforce Plan mode. Sending stays off until confirmed.",
-  "composer.planModeUnsupported": "The selected Engine does not support Plan mode. Return to Build mode or choose a compatible Engine.",
-  "composer.planModeUnavailable": "Plan mode is not currently available for the selected Engine. Return to Build mode or try again after the Engine recovers.",
+  "composer.planModeChecking":
+    "Checking whether the selected Engine can enforce Plan mode. Sending stays off until confirmed.",
+  "composer.planModeUnsupported":
+    "The selected Engine does not support Plan mode. Return to Build mode or choose a compatible Engine.",
+  "composer.planModeUnavailable":
+    "Plan mode is not currently available for the selected Engine. Return to Build mode or try again after the Engine recovers.",
   "composer.fast": "Fast",
   "composer.default": "Default",
   "composer.defaultSuffix": " (default)",
@@ -288,6 +297,8 @@ const ZH_CN_MESSAGES = {
   "composer.command.compact": "压缩上下文",
   "composer.command.fast": "快速模式",
   "composer.command.plan": "计划模式",
+  "composer.command.converge": "收敛",
+  "composer.command.learn": "学习",
   "composer.command.debug": "调试",
   "composer.command.default": "默认模式",
   "composer.command.review": "代码审查",
@@ -313,6 +324,8 @@ const ZH_CN_MESSAGES = {
   "composer.command.compactDescription": "压缩当前任务上下文以释放空间",
   "composer.command.modelDescription": "切换当前任务的响应模型",
   "composer.command.planDescription": "将当前任务切换为计划模式",
+  "composer.command.convergeDescription": "先调查并问清当前任务，再进入实施",
+  "composer.command.learnDescription": "持续使用清晰模型、实例和必要图解进行讲解",
   "composer.command.defaultDescription": "将当前任务切回普通对话模式",
   "composer.command.reviewDescription": "审查当前代码更改",
   "composer.command.forkDescription": "将当前任务分叉到主仓库或新的独立工作树",
@@ -447,7 +460,8 @@ const ZH_CN_MESSAGES = {
   "composer.planModeUnavailableTitle": "计划模式不可用",
   "composer.planModeChecking": "正在确认所选引擎能否可靠执行计划模式；确认前不会发送。",
   "composer.planModeUnsupported": "所选引擎不支持计划模式。请返回构建模式，或选择兼容的引擎。",
-  "composer.planModeUnavailable": "所选引擎当前无法使用计划模式。请返回构建模式，或等待引擎恢复后重试。",
+  "composer.planModeUnavailable":
+    "所选引擎当前无法使用计划模式。请返回构建模式，或等待引擎恢复后重试。",
   "composer.fast": "快速",
   "composer.default": "默认",
   "composer.defaultSuffix": "（默认）",

@@ -89,6 +89,8 @@ function shouldKeepBuiltInSlashCommandDespiteNativeCollision(
 ): boolean {
   return (
     command === "debug" ||
+    command === "converge" ||
+    command === "learn" ||
     command === "default" ||
     command === "automation" ||
     command === "export" ||
@@ -113,6 +115,8 @@ export function shouldHideProviderNativeCommandFromComposerMenu(
     normalizedCommand === "remote-control" ||
     normalizedCommand === "automation" ||
     normalizedCommand === "debug" ||
+    normalizedCommand === "converge" ||
+    normalizedCommand === "learn" ||
     normalizedCommand === "default" ||
     (normalizedCommand === "export" && appCommandIsAvailable) ||
     (normalizedCommand === "feedback" && appCommandIsAvailable) ||
@@ -330,6 +334,8 @@ export function getAvailableComposerSlashCommands(input: {
           "plan",
           "debug",
           "default",
+          "converge",
+          "learn",
           ...(input.canOfferReviewCommand ? (["review"] as const) : []),
           ...(input.canOfferForkCommand ? (["fork"] as const) : []),
           ...(input.canOfferSideCommand ? (["side"] as const) : []),
@@ -353,6 +359,8 @@ export function getAvailableComposerSlashCommands(input: {
           "goal",
           "debug",
           "default",
+          "converge",
+          "learn",
           "feedback",
           "automation",
         ];

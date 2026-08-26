@@ -84,7 +84,7 @@ const DIAGNOSTIC_ENUMS = {
   projectKind: ["project", "chat", "studio"],
   environmentMode: ["local", "worktree"],
   runtimeMode: ["approval-required", "auto", "full-access"],
-  interactionMode: ["default", "plan"],
+  interactionMode: ["default", "plan", "debug", "converge", "learn"],
   sessionStatus: ["idle", "starting", "running", "ready", "interrupted", "stopped", "error"],
   latestTurnState: ["running", "interrupted", "completed", "error"],
 } as const satisfies Record<string, readonly string[]>;

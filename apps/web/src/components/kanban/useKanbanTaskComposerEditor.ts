@@ -299,7 +299,13 @@ export function useKanbanTaskComposerEditor(input: UseKanbanTaskComposerEditorIn
         setComposerTrigger(null);
         return;
       }
-      if (item.command === "plan" || item.command === "debug" || item.command === "default") {
+      if (
+        item.command === "plan" ||
+        item.command === "converge" ||
+        item.command === "learn" ||
+        item.command === "debug" ||
+        item.command === "default"
+      ) {
         setInteractionMode(item.command);
         applyComposerTriggerReplacement({ snapshot, trigger, base: "" });
       }

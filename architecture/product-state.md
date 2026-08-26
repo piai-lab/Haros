@@ -16,20 +16,21 @@ Ask 与 Approval 是不同 authority。User Input response 不得修改 `runtime
 
 ## 产品语言到既有事实的映射
 
-| 用户语言            | 直接复用的事实                                                                                      | 明确不新增                                              |
-| ------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| Agent               | folder-backed Synara Project + Thread + Workbench                                                   | `AgentWorkspace`、第二 Conversation/Run store           |
-| Chat                | Synara Home managed Project + Thread + managed `work/`、`outputs/`                                  | 用户 Primary Folder、平行 Chat database                 |
-| Studio              | Synara Studio container、managed workspace、outputs、reactor、draft cwd 与恢复生命周期              | OmniMind Studio 状态机或第二 workspace owner            |
-| Groups              | Synara Space identity/name/order + Thread 的 `groupIds` metadata                                    | 新 `Group` aggregate、Project 标签或 membership ledger  |
-| Send to Agent       | contextual fork 到新的 folder-backed Project Thread，带入完整可见历史与明确引用且不自动执行         | Provider Handoff、native continuation、operation replay |
-| Conversation        | Synara Thread 的用户可见身份                                                                        | Provider Session 的复制品                               |
-| Agent/Provider 选择 | 现有 Provider binding 与 adapter registry；独立 `omnimind` 与 `pi` identities                       | 第二 Provider Registry 或跨 Provider Session            |
-| Extensions / Skills | 既有 PluginLibrary/Skills discovery；有原生 API 时显示 Provider-scoped lifecycle                    | 顶层 Package aggregate、跨 Provider lifecycle authority |
-| 运行模式            | Thread 上既有 `runtimeMode`，随下一次 dispatch 进入当前 Engine 与 Host capability                   | Provider 外再叠一套 permission profile 或逐工具授权账本 |
-| Goal                | Synara Thread 内的持久 objective、计时/暂停/achievement、prompt injection 与 continuation lifecycle | 用逐回合 task list 代替 Goal、另建 Goal DB/daemon       |
-| Todo / 当前步骤     | Provider runtime 的逐回合 `turn.tasks.updated` 全量快照与现有 Composer/Timeline 投影                | 持久 Goal、第二 Todo store 或跨回合成功 authority       |
-| Notepad / 记事本    | 当前 Thread 的既有 `notes` metadata、command/event/projection 与恢复路径                            | Project 级笔记模板、Prompt/规则含义或独立 localStorage  |
+| 用户语言            | 直接复用的事实                                                                                       | 明确不新增                                              |
+| ------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Agent               | folder-backed Synara Project + Thread + Workbench                                                    | `AgentWorkspace`、第二 Conversation/Run store           |
+| Chat                | Synara Home managed Project + Thread + managed `work/`、`outputs/`                                   | 用户 Primary Folder、平行 Chat database                 |
+| Studio              | Synara Studio container、managed workspace、outputs、reactor、draft cwd 与恢复生命周期               | OmniMind Studio 状态机或第二 workspace owner            |
+| Groups              | Synara Space identity/name/order + Thread 的 `groupIds` metadata                                     | 新 `Group` aggregate、Project 标签或 membership ledger  |
+| Send to Agent       | contextual fork 到新的 folder-backed Project Thread，带入完整可见历史与明确引用且不自动执行          | Provider Handoff、native continuation、operation replay |
+| Conversation        | Synara Thread 的用户可见身份                                                                         | Provider Session 的复制品                               |
+| Agent/Provider 选择 | 现有 Provider binding 与 adapter registry；独立 `omnimind` 与 `pi` identities                        | 第二 Provider Registry 或跨 Provider Session            |
+| Extensions / Skills | 既有 PluginLibrary/Skills discovery；有原生 API 时显示 Provider-scoped lifecycle                     | 顶层 Package aggregate、跨 Provider lifecycle authority |
+| 运行模式            | Thread 上既有 `runtimeMode`，随下一次 dispatch 进入当前 Engine 与 Host capability                    | Provider 外再叠一套 permission profile 或逐工具授权账本 |
+| 交互模式            | Thread 上唯一 `interactionMode`：Default、Plan、Debug、Converge、Learn，随 draft、接纳与恢复持久投影 | 第二 mode slot、Prompt Library、自动退出 authority      |
+| Goal                | Synara Thread 内的持久 objective、计时/暂停/achievement、prompt injection 与 continuation lifecycle  | 用逐回合 task list 代替 Goal、另建 Goal DB/daemon       |
+| Todo / 当前步骤     | Provider runtime 的逐回合 `turn.tasks.updated` 全量快照与现有 Composer/Timeline 投影                 | 持久 Goal、第二 Todo store 或跨回合成功 authority       |
+| Notepad / 记事本    | 当前 Thread 的既有 `notes` metadata、command/event/projection 与恢复路径                             | Project 级笔记模板、Prompt/规则含义或独立 localStorage  |
 
 命名映射只允许改变产品呈现，不改变底层唯一 owner。若现有 Synara 类型已经表达同一事实，OmniMind 必须直接复用或最小改名，不能再包装一层“更通用”的状态。
 
@@ -103,6 +104,8 @@ canonical `omnimind` Engine 的 Chat 与 Agent work surfaces 共享 provider-lev
 Composer draft/QueueItem 在 Product Orchestration 接纳前可编辑、删除和排序。Renderer 把用户消息加入本地 Queue 时，QueueItem 即冻结当时 effective `ModelSelection`；后续 Composer 改选 Engine、Model 或 options 不得重写既有 QueueItem。QueueItem 被发送到 Product Orchestration 时，admission command/event 必须再次携带并 durable 保存该 exact selection；非 Composer caller 若省略 selection，Orchestration 必须在 admission 当下解析 Thread 的 effective selection 并冻结，promotion/dispatch 不得重新读取届时可能已变化的 Thread metadata。
 
 接纳后沿用现有 command/event/receipt 与 Provider acceptance 路径，并保持原 Queue order。外层 receipt 只证明产品命令边界，native acceptance/settlement 仍由当前 adapter 证明。Queue 绑定不授权新增 Queue ledger、binding store、`pendingEngine` 或第二套 desired/runtime state。
+
+`interactionMode` 与 draft、queued turn、已接纳 turn 使用同一既有状态链：Composer 的新选择只影响此后接纳的 dispatch，已经排队或运行的 turn 保留接纳时的模式。Converge、Learn 通过 Host prompt 持续作用于后续新 dispatch，但发送、回答、停止或看似完成都不清除 Thread 选择；只有用户再次点击当前 Composer 标签或选择其他模式才切换。全新任务继续从 `default` 开始，不增加全局模式偏好或第二生命周期 owner。
 
 不能为了“更确定”再创建 Run ledger、outbox 或 receipt store。acceptance 不确定时保持 unknown，不退回 editable Queue、不自动换 Provider、不自动 replay。
 
