@@ -167,7 +167,7 @@ describe("composerDraftStore persisted-state hydration", () => {
       {
         id: "assistant-selection-1",
         assistantMessageId: "assistant-message-1",
-        text: "selected assistant text",
+        text: " selected assistant text ",
       },
     ]);
     expect(hydrated.draftsByThreadId[threadId]?.fileComments).toEqual([

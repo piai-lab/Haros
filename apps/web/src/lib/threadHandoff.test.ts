@@ -25,6 +25,39 @@ import {
 } from "./browserAnnotations";
 
 describe("threadHandoff", () => {
+  it("preserves exact assistant selection attachment text in handoff messages", () => {
+    const text = "\r\n  selected text  \r\n";
+    const [imported] = buildThreadHandoffImportedMessages({
+      messages: [
+        {
+          id: MessageId.makeUnsafe("source-user-with-selection"),
+          role: "user",
+          text: "Continue from this selection",
+          attachments: [
+            {
+              type: "assistant-selection",
+              id: "selection-1",
+              assistantMessageId: MessageId.makeUnsafe("assistant-1"),
+              text,
+            },
+          ],
+          createdAt: "2026-08-17T00:00:01.000Z",
+          streaming: false,
+          source: "native",
+        },
+      ],
+    });
+
+    expect(imported?.attachments).toEqual([
+      {
+        type: "assistant-selection",
+        id: "selection-1",
+        assistantMessageId: "assistant-1",
+        text,
+      },
+    ]);
+  });
+
   it("strips source-thread browser annotations and selections from imported messages", () => {
     const sourceMessageId = MessageId.makeUnsafe("source-user-message");
     const annotation: BrowserAnnotationDraft = {
