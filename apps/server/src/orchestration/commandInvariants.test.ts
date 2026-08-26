@@ -187,6 +187,18 @@ describe("commandInvariants", () => {
     expect(threadResumePreconditionViolation(base, precondition)).toBeNull();
     expect(
       threadResumePreconditionViolation(
+        {
+          ...base,
+          latestTurn: {
+            ...base.latestTurn,
+            completedAt: "2026-08-26T00:00:01.000Z",
+          },
+        },
+        precondition,
+      ),
+    ).toBeNull();
+    expect(
+      threadResumePreconditionViolation(
         { ...base, archivedAt: precondition.recordedAt },
         precondition,
       ),

@@ -79,11 +79,11 @@ export function threadResumePreconditionViolation(
   if (threadHasInFlightTurn(thread)) return "turn-in-flight";
   const latestTurn = thread.latestTurn;
   if (!latestTurn || latestTurn.turnId !== precondition.recordedTurnId) return "turn-changed";
-  if (
-    latestTurn.state === "completed" ||
-    latestTurn.state === "error" ||
-    (latestTurn.completedAt !== null && latestTurn.completedAt >= precondition.recordedAt)
-  ) {
+  // Restart reconciliation stamps an interrupted turn's `completedAt` with
+  // the new process start time. That timestamp closes the stale lifecycle; it
+  // is not evidence that the user's work completed after the quit record was
+  // written. Only business-terminal states suppress the one-shot continuation.
+  if (latestTurn.state === "completed" || latestTurn.state === "error") {
     return "turn-completed";
   }
   return null;
