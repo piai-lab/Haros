@@ -13,6 +13,7 @@ import {
   MessageId,
   DEVICE_WS_METHODS,
   ORCHESTRATION_WS_METHODS,
+  PROVIDER_INTERACTION_MODES,
   type OrchestrationReadModel,
   type ProjectId,
   type ProviderExecutionCapabilities,
@@ -1384,6 +1385,12 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
       structurallySupported: true,
       status: "ready" as const,
     });
+    const interactionModes = Object.fromEntries(
+      PROVIDER_INTERACTION_MODES.map((mode) => [
+        mode,
+        { mode, structurallySupported: true, status: "ready" as const },
+      ]),
+    ) as ProviderExecutionCapabilities["interactionModes"];
     return {
       provider: modelSelection.provider,
       model: modelSelection.model,
@@ -1393,11 +1400,7 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
         auto: capability("auto"),
         "approval-required": capability("approval-required"),
       },
-      interactionModes: {
-        default: { mode: "default", structurallySupported: true, status: "ready" },
-        plan: { mode: "plan", structurallySupported: true, status: "ready" },
-        debug: { mode: "debug", structurallySupported: true, status: "ready" },
-      },
+      interactionModes,
     };
   }
   if (tag === WS_METHODS.providerListCommands) {
