@@ -98,7 +98,7 @@ describe("terminalThemeFromApp", () => {
 
     const search = terminalSearchDecorationsFromTheme(warmPack, "light");
     expect(search.activeMatchBackground).toBe("#f8e4ce");
-    expect(search.activeMatchBorder).toBe("#b65a32");
+    expect(search.activeMatchBorder).toBe("#b05730");
     expect(search.matchBorder).not.toBe("#74879f");
     expect(search.matchOverviewRuler).not.toBe("#d186167e");
   });

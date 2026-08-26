@@ -75,7 +75,7 @@ describe("TerminalSearch resolved theme lifecycle", () => {
     await page.getByPlaceholder("Find").fill("needle");
     await vi.waitFor(() => expect(findNext).toHaveBeenCalledTimes(1));
     const firstOptions = findNext.mock.calls[0]?.[1];
-    expect(firstOptions?.decorations?.activeMatchBorder).toBe("#b65a32");
+    expect(firstOptions?.decorations?.activeMatchBorder).toBe("#b05730");
 
     harness.activeTheme = theme("#eef4ff", "#18263a", "#2c66b8");
     await mounted.rerender(

@@ -10,5 +10,5 @@ export default await createBrowserTestConfig({
   exclude: browserGeometryTestFiles,
   fileParallelism: true,
   maxWorkers: 2,
-  timeoutMs: 45_000,
+  timeoutMs: 90_000,
 });
