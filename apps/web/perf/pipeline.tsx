@@ -13,7 +13,9 @@
 //   instrument=1      patch getBoundingClientRect to count layout reads (keep OFF for
 //                     uninstrumented timing runs — instrumented and timing runs are
 //                     separate by design)
-//   animations=off, shimmer=off, scrollFade=off   style cost toggles (see metrics.ts)
+//   diagrams=0|1|5|20, diagramEdges=100|101       settled Mermaid matrix
+//   streamFence=default|plain|mermaid              same-byte streaming comparison
+//   animations=off, shimmer=off, scrollFade=off    style cost toggles (see metrics.ts)
 
 import "../src/index.css";
 
@@ -45,7 +47,13 @@ import {
   type DurationStats,
   type FrameReport,
 } from "./metrics";
-import { assistantText, buildStreamCorpus, isoAt } from "./workload";
+import {
+  assistantText,
+  buildDiagramStreamCorpus,
+  buildMermaidFence,
+  buildStreamCorpus,
+  isoAt,
+} from "./workload";
 
 type TimelineEntries = ComponentProps<typeof ChatTranscriptPane>["timelineEntries"];
 
@@ -60,6 +68,9 @@ type PipelineSnapshot = {
   heapUsedBytes: number | null;
   scrollHeight: number;
   scrollTop: number;
+  mermaidResources: number;
+  mermaidImportMarks: number;
+  diagramFrames: number;
 };
 
 type StreamRunOptions = {
@@ -93,6 +104,9 @@ type RunReport = {
   finalTextMatches: boolean | null;
   heapUsedBytes: number | null;
   domNodeCount: number;
+  mermaidResources: number;
+  mermaidImportMarks: number;
+  diagramFrames: number;
 };
 
 declare global {
@@ -130,6 +144,9 @@ const params = new URLSearchParams(window.location.search);
 const seedMessageCount = Math.max(1, Number(params.get("messages") ?? 200));
 const working = params.get("working") !== "0";
 const instrumentLayout = params.get("instrument") === "1";
+const settledDiagramCount = Math.min(20, Math.max(0, Number(params.get("diagrams") ?? 0)));
+const settledDiagramEdges = Number(params.get("diagramEdges") ?? 100) === 101 ? 101 : 100;
+const streamFence = params.get("streamFence");
 
 installCostToggleStyles();
 
@@ -183,6 +200,13 @@ if (typeof PerformanceObserver !== "undefined") {
 
 function seedStore(messageCount: number): void {
   const messages: ChatMessage[] = [];
+  const assistantIndices =
+    settledDiagramCount === 0
+      ? []
+      : Array.from({ length: messageCount }, (_, index) => index)
+          .filter((index) => index % 2 === 1)
+          .slice(-settledDiagramCount);
+  const mermaidMessageIndices = new Set(assistantIndices);
   for (let index = 0; index < messageCount; index += 1) {
     const role = index % 2 === 0 ? "user" : "assistant";
     messages.push({
@@ -191,7 +215,13 @@ function seedStore(messageCount: number): void {
       text:
         role === "user"
           ? `Representative request ${index}: inspect rendering, scrolling, tools, terminals, and diffs.`
-          : assistantText(index),
+          : mermaidMessageIndices.has(index)
+            ? [
+                `## Diagram workload ${index}`,
+                "",
+                buildMermaidFence(settledDiagramEdges, index),
+              ].join("\n")
+            : assistantText(index),
       createdAt: isoAt(index * 2),
       ...(role === "assistant" ? { completedAt: isoAt(index * 2 + 1) } : {}),
       streaming: false,
@@ -294,6 +324,25 @@ function readStreamedMessageText(): string | null {
 
 let lastDispatchedText = "";
 
+function mermaidResourceCount(): number {
+  return performance
+    .getEntriesByType("resource")
+    .filter((entry) =>
+      /\/(?:mermaid\.core|flowDiagram|sequenceDiagram|classDiagram|stateDiagram|erDiagram|mindmap-definition)-[^/]+\.js/i.test(
+        entry.name,
+      ),
+    ).length;
+}
+
+function mermaidImportMarkCount(): number {
+  return performance.getEntriesByName("omnimind:mermaid-import", "mark").length;
+}
+
+function diagramFrameCount(): number {
+  return document.querySelectorAll("iframe[data-mermaid-frame], .chat-markdown-mermaid__frame")
+    .length;
+}
+
 /** Diagnostic for finalTextMatches failures: where does the stored message diverge
  *  from the last dispatched text? */
 function debugStreamText() {
@@ -332,7 +381,11 @@ async function runStream(options: StreamRunOptions = {}): Promise<RunReport> {
     activityEvery: options.activityEvery ?? 5,
   };
   const expectedBatches = Math.ceil(resolved.durationMs / resolved.batchMs);
-  const corpus = buildStreamCorpus(expectedBatches * resolved.chunkChars + resolved.chunkChars);
+  const corpusLength = expectedBatches * resolved.chunkChars + resolved.chunkChars;
+  const corpus =
+    streamFence === "mermaid" || streamFence === "plain"
+      ? buildDiagramStreamCorpus(corpusLength, streamFence)
+      : buildStreamCorpus(corpusLength);
 
   streamRunIndex += 1;
   STREAM_MESSAGE_ID = MessageId.makeUnsafe(`pipeline-message-streaming-${streamRunIndex}`);
@@ -378,6 +431,9 @@ async function runStream(options: StreamRunOptions = {}): Promise<RunReport> {
     finalTextMatches: storedText === null ? null : storedText === text,
     heapUsedBytes: performance.memory?.usedJSHeapSize ?? null,
     domNodeCount: document.getElementsByTagName("*").length,
+    mermaidResources: mermaidResourceCount(),
+    mermaidImportMarks: mermaidImportMarkCount(),
+    diagramFrames: diagramFrameCount(),
   };
 }
 
@@ -424,6 +480,9 @@ async function runQuiet(options: QuietRunOptions = {}): Promise<RunReport> {
     finalTextMatches: null,
     heapUsedBytes: performance.memory?.usedJSHeapSize ?? null,
     domNodeCount: document.getElementsByTagName("*").length,
+    mermaidResources: mermaidResourceCount(),
+    mermaidImportMarks: mermaidImportMarkCount(),
+    diagramFrames: diagramFrameCount(),
   };
 }
 
@@ -442,6 +501,9 @@ function snapshot(): PipelineSnapshot {
     heapUsedBytes: performance.memory?.usedJSHeapSize ?? null,
     scrollHeight: scrollContainer?.scrollHeight ?? 0,
     scrollTop: scrollContainer?.scrollTop ?? 0,
+    mermaidResources: mermaidResourceCount(),
+    mermaidImportMarks: mermaidImportMarkCount(),
+    diagramFrames: diagramFrameCount(),
   };
 }
 

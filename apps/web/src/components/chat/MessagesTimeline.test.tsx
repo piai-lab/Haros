@@ -344,6 +344,46 @@ describe("MessagesTimeline", () => {
     expect(markup).toContain("katex-display");
   });
 
+  it("opts only the canonical assistant body into Mermaid presentation", async () => {
+    const { MessagesTimeline } = await import("./MessagesTimeline");
+    const mermaid = "```mermaid\ngraph TD\nA-->B\n```";
+    const markup = renderToStaticMarkup(
+      <MessagesTimeline
+        {...makeTimelineBaseProps()}
+        timelineEntries={[
+          {
+            id: "entry-user-mermaid",
+            kind: "message",
+            createdAt: "2026-03-17T19:12:27.000Z",
+            message: {
+              id: MessageId.makeUnsafe("user-mermaid"),
+              role: "user",
+              text: mermaid,
+              createdAt: "2026-03-17T19:12:27.000Z",
+              streaming: false,
+            },
+          },
+          {
+            id: "entry-assistant-mermaid",
+            kind: "message",
+            createdAt: "2026-03-17T19:12:28.000Z",
+            message: {
+              id: MessageId.makeUnsafe("assistant-mermaid"),
+              role: "assistant",
+              text: mermaid,
+              createdAt: "2026-03-17T19:12:28.000Z",
+              streaming: false,
+            },
+          },
+        ]}
+      />,
+    );
+
+    expect(markup.match(/data-mermaid-presentation=/g) ?? []).toHaveLength(1);
+    expect(markup).toContain('data-mermaid-presentation="assistant-mermaid:1"');
+    expect(markup).not.toContain('data-mermaid-presentation="user-mermaid:1"');
+  });
+
   it("renders user message metadata outside the bubble shell", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const markup = renderToStaticMarkup(

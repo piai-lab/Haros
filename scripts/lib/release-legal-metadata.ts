@@ -272,6 +272,8 @@ export function collectReleaseDependencyInventory(options: {
   readonly roots: ReadonlyArray<ReleaseDependencyRoot>;
   readonly repositoryRoot: string;
   readonly target: ReleaseDependencyInventory["target"];
+  readonly includeBundledWorkspaceComponents?: boolean;
+  readonly validateRequiredPiPackages?: boolean;
 }): ReleaseDependencyInventory {
   const legalOverrides = loadLegalOverrides(options.repositoryRoot);
   const byDirectory = new Map<
@@ -285,7 +287,9 @@ export function collectReleaseDependencyInventory(options: {
   >();
   const pending: Array<{ name: string; fromDirectory: string; optional: boolean }> =
     options.roots.map((root) => ({ ...root, optional: false }));
-  for (const descriptor of SERVER_BUNDLED_WORKSPACE_COMPONENTS) {
+  for (const descriptor of options.includeBundledWorkspaceComponents === false
+    ? []
+    : SERVER_BUNDLED_WORKSPACE_COMPONENTS) {
     if (!descriptor.includeInLegalClosure) continue;
     const manifestPath = join(options.repositoryRoot, descriptor.manifestPath);
     if (!existsSync(manifestPath)) continue;
@@ -369,13 +373,19 @@ export function collectReleaseDependencyInventory(options: {
     const name = requiredString(record.manifest.name, "name", record.packageDirectory);
     const version = requiredString(record.manifest.version, "version", record.packageDirectory);
     const id = packageId(name, version);
-    const license = metadataText(record.manifest.license) ?? "UNDECLARED";
+    const override = legalOverrides.get(id);
+    const declaredLicense = metadataText(record.manifest.license);
+    const license = declaredLicense ?? override?.license ?? "UNDECLARED";
     let licenseFiles = packageLicenseFiles(record.packageDirectory);
     if (license === "UNDECLARED") {
       throw new Error(`Release dependency ${id} has no declared license.`);
     }
+    if (!declaredLicense) {
+      // An exact, manifest-bound override owns both the missing metadata and legal text.
+      // Do not silently infer a license identifier from an arbitrary packaged filename.
+      licenseFiles = [];
+    }
     if (licenseFiles.length === 0) {
-      const override = legalOverrides.get(id);
       if (!override) {
         throw new Error(`Release dependency ${id} has no packaged legal text or exact override.`);
       }
@@ -442,7 +452,9 @@ export function collectReleaseDependencyInventory(options: {
   }> = [];
   const serverManifestPath = join(options.repositoryRoot, "apps/server/package.json");
   const serverManifest = existsSync(serverManifestPath) ? readJson(serverManifestPath) : null;
-  for (const descriptor of SERVER_BUNDLED_WORKSPACE_COMPONENTS) {
+  for (const descriptor of options.includeBundledWorkspaceComponents === false
+    ? []
+    : SERVER_BUNDLED_WORKSPACE_COMPONENTS) {
     if (!descriptor.includeInLegalClosure) continue;
     const manifestPath = join(options.repositoryRoot, descriptor.manifestPath);
     if (!existsSync(manifestPath)) continue;
@@ -537,9 +549,11 @@ export function collectReleaseDependencyInventory(options: {
     .toSorted((left, right) => left.id.localeCompare(right.id));
 
   const ids = new Set(components.map((component) => component.id));
-  for (const piName of PI_PACKAGE_NAMES) {
-    if (![...ids].some((id) => id.startsWith(`${piName}@`))) {
-      throw new Error(`Release dependency closure omitted required Pi package ${piName}.`);
+  if (options.validateRequiredPiPackages !== false) {
+    for (const piName of PI_PACKAGE_NAMES) {
+      if (![...ids].some((id) => id.startsWith(`${piName}@`))) {
+        throw new Error(`Release dependency closure omitted required Pi package ${piName}.`);
+      }
     }
   }
   return {
@@ -554,6 +568,70 @@ export function collectReleaseDependencyInventory(options: {
       ]),
     ].toSorted(),
     components,
+  };
+}
+
+export function mergeBundledRuntimeInventory(
+  installed: ReleaseDependencyInventory,
+  bundled: ReleaseDependencyInventory,
+  runtimePath: string,
+): ReleaseDependencyInventory {
+  const normalizedRuntimePath = runtimePath.replace(/^[/\\]+/u, "").replaceAll("\\", "/");
+  if (
+    !normalizedRuntimePath ||
+    normalizedRuntimePath.split("/").includes("..") ||
+    normalizedRuntimePath.endsWith("/")
+  ) {
+    throw new Error(`Bundled runtime receipt path is invalid: ${runtimePath}`);
+  }
+  if (
+    installed.target.kind !== bundled.target.kind ||
+    installed.target.platform !== bundled.target.platform ||
+    installed.target.arch !== bundled.target.arch
+  ) {
+    throw new Error("Bundled runtime inventory target does not match the installed inventory.");
+  }
+
+  const components = new Map(installed.components.map((component) => [component.id, component]));
+  for (const source of bundled.components) {
+    const bundledComponent: ReleaseDependencyComponent = {
+      ...source,
+      locations: [`bundled:${normalizedRuntimePath}`],
+    };
+    const current = components.get(source.id);
+    if (!current) {
+      components.set(source.id, bundledComponent);
+      continue;
+    }
+    if (
+      current.name !== source.name ||
+      current.version !== source.version ||
+      current.license !== source.license ||
+      current.manifestSha256 !== source.manifestSha256
+    ) {
+      throw new Error(`Bundled runtime identity conflicts with installed dependency ${source.id}.`);
+    }
+    const licenseFiles = new Map(
+      [...current.licenseFiles, ...source.licenseFiles].map((file) => [file.sha256, file]),
+    );
+    components.set(source.id, {
+      ...current,
+      locations: [...new Set([...current.locations, ...bundledComponent.locations])].toSorted(),
+      licenseFiles: [...licenseFiles.values()].toSorted((left, right) =>
+        left.name.localeCompare(right.name),
+      ),
+      dependencies: [...new Set([...current.dependencies, ...source.dependencies])].toSorted(),
+    });
+  }
+
+  const mergedComponents = [...components.values()].toSorted((left, right) =>
+    left.id.localeCompare(right.id),
+  );
+  return {
+    ...installed,
+    componentCount: mergedComponents.length,
+    roots: [...new Set([...installed.roots, ...bundled.roots])].toSorted(),
+    components: mergedComponents,
   };
 }
 
@@ -696,13 +774,15 @@ export function renderReleaseLegalMetadata(
   };
 }
 
-export function resolveReleaseDependencyRoots(packageRoot: string): ReleaseDependencyRoot[] {
-  const workspaceManifests = [
-    join(packageRoot, "apps/server/package.json"),
-    join(packageRoot, "apps/desktop/package.json"),
-  ].filter(existsSync);
+function resolveDependencyRootsFromManifests(
+  packageRoot: string,
+  workspaceManifests: ReadonlyArray<string>,
+): ReleaseDependencyRoot[] {
+  const existingWorkspaceManifests = workspaceManifests.filter(existsSync);
   const manifests =
-    workspaceManifests.length > 0 ? workspaceManifests : [join(packageRoot, "package.json")];
+    existingWorkspaceManifests.length > 0
+      ? existingWorkspaceManifests
+      : [join(packageRoot, "package.json")];
   const roots: ReleaseDependencyRoot[] = [];
   for (const manifestPath of manifests) {
     const manifest = readJson(manifestPath);
@@ -716,19 +796,47 @@ export function resolveReleaseDependencyRoots(packageRoot: string): ReleaseDepen
   return roots;
 }
 
+export function resolveReleaseDependencyRoots(packageRoot: string): ReleaseDependencyRoot[] {
+  return resolveDependencyRootsFromManifests(packageRoot, [
+    join(packageRoot, "apps/server/package.json"),
+    join(packageRoot, "apps/desktop/package.json"),
+    join(packageRoot, "apps/web/package.json"),
+  ]);
+}
+
 export function writeReleaseLegalMetadata(options: {
   readonly packageRoot: string;
   readonly repositoryRoot: string;
   readonly outputDirectory: string;
   readonly appVersion: string;
   readonly target: ReleaseDependencyInventory["target"];
+  readonly bundledWebRuntimePath?: string;
 }): ReleaseDependencyInventory {
-  const inventory = collectReleaseDependencyInventory({
+  let inventory = collectReleaseDependencyInventory({
     packageRoot: options.packageRoot,
     roots: resolveReleaseDependencyRoots(options.packageRoot),
     repositoryRoot: options.repositoryRoot,
     target: options.target,
   });
+  if (options.bundledWebRuntimePath) {
+    const webManifestPath = join(options.repositoryRoot, "apps/web/package.json");
+    if (!existsSync(webManifestPath)) {
+      throw new Error("Bundled Web legal closure requires apps/web/package.json.");
+    }
+    const webInventory = collectReleaseDependencyInventory({
+      packageRoot: options.repositoryRoot,
+      roots: resolveDependencyRootsFromManifests(options.repositoryRoot, [webManifestPath]),
+      repositoryRoot: options.repositoryRoot,
+      target: options.target,
+      includeBundledWorkspaceComponents: false,
+      validateRequiredPiPackages: false,
+    });
+    inventory = mergeBundledRuntimeInventory(
+      inventory,
+      webInventory,
+      options.bundledWebRuntimePath,
+    );
+  }
   const rendered = renderReleaseLegalMetadata(inventory, options.appVersion);
   mkdirSync(options.outputDirectory, { recursive: true });
   for (const [name, text] of Object.entries(rendered)) {
