@@ -38,6 +38,10 @@ export async function createBrowserTestConfig(options: BrowserTestConfigOptions)
   return mergeConfig(
     viteConfig,
     defineConfig({
+      // Stable, geometry, and all have different Vitest/Vite configs. Sharing
+      // the default optimizer directory makes switching suites invalidate the
+      // previous suite's dependency cache on every inner-loop run.
+      cacheDir: `node_modules/.vite-browser-${options.suite}`,
       resolve: {
         alias: {
           "~": srcPath,
