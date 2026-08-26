@@ -8,8 +8,11 @@ import {
   acquirePackagedProofLease,
   assertPackagedSourceCommit,
   createPackagedDesktopEnvironment,
+  parseGracefulWindowCloseProof,
   parsePackagedDesktopArgs,
+  resolvePackagedProofUserDataPath,
   resolveNativePackagedDesktopPlatform,
+  withPackagedJourneyDebugging,
 } from "./verify-packaged-desktop.ts";
 
 const temporaryRoots: string[] = [];
@@ -110,10 +113,47 @@ describe("packaged desktop verification", () => {
     ).not.toThrow();
     expect(() =>
       assertPackagedSourceCommit(
-        JSON.stringify({ omnimindCommitHash: "abcdefabcdefabcdefabcdefabcdefabcdefabcd" }),
+        JSON.stringify({
+          omnimindCommitHash: "abcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        }),
         sourceCommit,
       ),
     ).toThrow("Packaged source commit mismatch");
+  });
+
+  it("admits the interaction journey only on its owning macOS lane", () => {
+    expect(
+      parsePackagedDesktopArgs([
+        "--assets-dir",
+        "./release-publish",
+        "--platform",
+        "mac",
+        "--arch",
+        "arm64",
+        "--version",
+        "1.2.3",
+        "--source-commit",
+        sourceCommit,
+        "--proof",
+        "journey",
+      ]).proof,
+    ).toBe("journey");
+    expect(() =>
+      parsePackagedDesktopArgs([
+        "--assets-dir",
+        "./release-publish",
+        "--platform",
+        "linux",
+        "--arch",
+        "x64",
+        "--version",
+        "1.2.3",
+        "--source-commit",
+        sourceCommit,
+        "--proof",
+        "journey",
+      ]),
+    ).toThrow("currently owned by the macOS lane");
   });
 
   it("gives one packaged proof exclusive ownership of the host", () => {
@@ -138,7 +178,11 @@ describe("packaged desktop verification", () => {
     mkdirSync(leaseDirectory);
     writeFileSync(
       join(leaseDirectory, "owner.json"),
-      JSON.stringify({ pid: 2_147_483_647, sourceCommit: "stale", token: "stale" }),
+      JSON.stringify({
+        pid: 2_147_483_647,
+        sourceCommit: "stale",
+        token: "stale",
+      }),
     );
 
     const lease = acquirePackagedProofLease(sourceCommit, root);
@@ -187,6 +231,37 @@ describe("packaged desktop verification", () => {
       expect(env[name]?.startsWith(root)).toBe(true);
       expect(existsSync(env[name]!)).toBe(true);
     }
+    expect(resolvePackagedProofUserDataPath(env)).toBe(
+      join(env.OMNIMIND_HOME!, "electron", "omnimind"),
+    );
+  });
+
+  it("adds ephemeral loopback CDP arguments only to the journey launch", () => {
+    expect(
+      withPackagedJourneyDebugging({
+        command: "/payload/OmniMind",
+        args: ["--existing"],
+        cwd: "/payload",
+        appArchivePath: "/payload/resources/app.asar",
+      }).args,
+    ).toEqual([
+      "--existing",
+      "--remote-debugging-address=127.0.0.1",
+      "--remote-debugging-port=0",
+      "--remote-allow-origins=*",
+    ]);
+  });
+
+  it("requires the product-owned window-close lifecycle to complete", () => {
+    expect(
+      parseGracefulWindowCloseProof(
+        "window-close shutdown start\nwindow-close shutdown complete\n",
+      ),
+    ).toEqual({ shutdownStarted: true, shutdownCompleted: true });
+    expect(parseGracefulWindowCloseProof("SIGTERM shutdown complete\n")).toEqual({
+      shutdownStarted: false,
+      shutdownCompleted: false,
+    });
   });
 
   it("maps Node host platforms to release platform names", () => {

@@ -23,10 +23,18 @@ import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { extractFile } from "@electron/asar";
+import type { CommandId, ProjectId, ThreadId } from "@omnimind/contracts";
+
+import {
+  connectPackagedRendererCdp,
+  type PackagedProofCdpSession,
+} from "./lib/packaged-proof-cdp.ts";
+import { connectPackagedProofRpc, type PackagedProofRpcSession } from "./lib/packaged-proof-rpc.ts";
+import { redactPackagedProofSecrets } from "./lib/packaged-proof-secrets.ts";
 
 export type PackagedDesktopPlatform = "linux" | "mac" | "win";
 
-export type PackagedDesktopProof = "startup";
+export type PackagedDesktopProof = "startup" | "journey";
 
 export interface PackagedDesktopProofOptions {
   readonly assetsDirectory: string;
@@ -247,8 +255,11 @@ export function parsePackagedDesktopArgs(argv: ReadonlyArray<string>): PackagedD
     throw new Error(`Unsupported packaged proof platform: ${platform}.`);
   }
   const proof = required("--proof");
-  if (proof !== "startup") {
+  if (proof !== "startup" && proof !== "journey") {
     throw new Error(`Unsupported packaged proof: ${proof}.`);
+  }
+  if (proof === "journey" && platform !== "mac") {
+    throw new Error("The packaged interaction journey is currently owned by the macOS lane.");
   }
   const timeoutMs = Number(values.get("--timeout-ms") ?? "60000");
   if (!Number.isInteger(timeoutMs) || timeoutMs < 5_000 || timeoutMs > 180_000) {
@@ -300,7 +311,7 @@ function findFiles(root: string, predicate: (path: string) => boolean): string[]
       }
     }
   }
-  return matches.sort((left, right) => left.localeCompare(right));
+  return matches.toSorted((left, right) => left.localeCompare(right));
 }
 
 function requireSingleAsset(directory: string, suffix: string): string {
@@ -395,7 +406,9 @@ export function assertPackagedSourceCommit(
   packageJsonContents: string,
   expectedSourceCommit: string,
 ): void {
-  const packageJson = JSON.parse(packageJsonContents) as { omnimindCommitHash?: unknown };
+  const packageJson = JSON.parse(packageJsonContents) as {
+    omnimindCommitHash?: unknown;
+  };
   if (packageJson.omnimindCommitHash !== expectedSourceCommit) {
     throw new Error(
       `Packaged source commit mismatch: expected ${expectedSourceCommit}, got ${String(packageJson.omnimindCommitHash ?? "missing")}.`,
@@ -465,6 +478,171 @@ export function createPackagedDesktopEnvironment(
   return env;
 }
 
+export function resolvePackagedProofUserDataPath(env: NodeJS.ProcessEnv): string {
+  const productHome = env.OMNIMIND_HOME;
+  if (!productHome) throw new Error("Packaged proof environment has no isolated product home.");
+  return join(productHome, "electron", "omnimind");
+}
+
+export function withPackagedJourneyDebugging(launch: LaunchCommand): LaunchCommand {
+  return {
+    ...launch,
+    args: [
+      ...launch.args,
+      "--remote-debugging-address=127.0.0.1",
+      "--remote-debugging-port=0",
+      // The endpoint is still loopback-only and exists only for this isolated
+      // proof process. Chromium otherwise rejects Node's CDP WebSocket Origin.
+      "--remote-allow-origins=*",
+    ],
+  };
+}
+
+interface BundledServerRuntimeState {
+  readonly version?: unknown;
+  readonly pid?: unknown;
+  readonly port?: unknown;
+  readonly origin?: unknown;
+}
+
+type ProcessParentMap = ReadonlyMap<number, number>;
+
+function readProcessParentMap(): ProcessParentMap {
+  const result =
+    process.platform === "win32"
+      ? spawnSync(
+          "powershell.exe",
+          [
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId | ConvertTo-Json -Compress",
+          ],
+          { encoding: "utf8", shell: false, windowsHide: true },
+        )
+      : spawnSync("ps", ["-axo", "pid=,ppid="], {
+          encoding: "utf8",
+          shell: false,
+        });
+  if (result.status !== 0) {
+    throw new Error("Packaged proof could not inspect its process tree.");
+  }
+  const parents = new Map<number, number>();
+  if (process.platform === "win32") {
+    const parsed = JSON.parse(result.stdout) as
+      | { readonly ProcessId?: unknown; readonly ParentProcessId?: unknown }
+      | ReadonlyArray<{ readonly ProcessId?: unknown; readonly ParentProcessId?: unknown }>;
+    for (const processEntry of Array.isArray(parsed) ? parsed : [parsed]) {
+      const pid = Number(processEntry.ProcessId);
+      const parentPid = Number(processEntry.ParentProcessId);
+      if (Number.isInteger(pid) && pid > 0 && Number.isInteger(parentPid) && parentPid >= 0) {
+        parents.set(pid, parentPid);
+      }
+    }
+  } else {
+    for (const line of result.stdout.split(/\r?\n/u)) {
+      const match = /^\s*(\d+)\s+(\d+)\s*$/u.exec(line);
+      if (match) parents.set(Number(match[1]), Number(match[2]));
+    }
+  }
+  return parents;
+}
+
+function processHasAncestor(
+  parents: ProcessParentMap,
+  pid: number,
+  expectedAncestorPid: number,
+): boolean {
+  let currentPid = pid;
+  for (let depth = 0; depth < 16 && currentPid > 1; depth += 1) {
+    if (currentPid === expectedAncestorPid) return true;
+    const parentPid = parents.get(currentPid);
+    if (parentPid === undefined || parentPid === currentPid) return false;
+    currentPid = parentPid;
+  }
+  return false;
+}
+
+function collectProcessTree(parents: ProcessParentMap, rootPid: number): ReadonlyArray<number> {
+  const owned = new Set([rootPid]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [pid, parentPid] of parents) {
+      if (!owned.has(pid) && owned.has(parentPid)) {
+        owned.add(pid);
+        changed = true;
+      }
+    }
+  }
+  return [...owned];
+}
+
+async function waitForProcessesExit(
+  processIds: ReadonlyArray<number>,
+  timeoutMs: number,
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (processIds.every((pid) => !isProcessAlive(pid))) return true;
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 100));
+  }
+  return processIds.every((pid) => !isProcessAlive(pid));
+}
+
+interface PackagedRuntimeProcessTree {
+  readonly mainPid: number;
+  readonly serverPid: number;
+  readonly processIds: ReadonlyArray<number>;
+}
+
+function assertBundledServerRuntime(
+  omnimindHome: string,
+  launchPid: number,
+  platform: PackagedDesktopPlatform,
+): PackagedRuntimeProcessTree {
+  const runtimeStatePath = join(omnimindHome, "userdata", "server-runtime.json");
+  let state: BundledServerRuntimeState;
+  try {
+    state = JSON.parse(readFileSync(runtimeStatePath, "utf8")) as BundledServerRuntimeState;
+  } catch {
+    throw new Error("Bundled Server runtime state was not available in the isolated profile.");
+  }
+  if (
+    state.version !== 1 ||
+    !Number.isInteger(state.pid) ||
+    !Number.isInteger(state.port) ||
+    typeof state.origin !== "string"
+  ) {
+    throw new Error("Bundled Server runtime state was malformed.");
+  }
+  const origin = new URL(state.origin);
+  if (
+    origin.protocol !== "http:" ||
+    (origin.hostname !== "127.0.0.1" && origin.hostname !== "localhost") ||
+    Number(origin.port) !== state.port
+  ) {
+    throw new Error("Bundled Server runtime state did not describe its loopback endpoint.");
+  }
+  const parents = readProcessParentMap();
+  if (!processHasAncestor(parents, state.pid as number, launchPid)) {
+    throw new Error("Bundled Server process was not owned by the packaged Main process.");
+  }
+  const serverParentPid = parents.get(state.pid as number);
+  if (serverParentPid === undefined || !processHasAncestor(parents, serverParentPid, launchPid)) {
+    throw new Error("Packaged proof could not resolve the bundled Server's Main owner.");
+  }
+  // macOS and Windows launch the packaged executable directly. Linux owns an
+  // xvfb-run wrapper, so its direct Server parent is the narrowest Main PID
+  // available without parsing process names or product internals.
+  const runtimeMainPid = platform === "linux" ? serverParentPid : launchPid;
+  return {
+    mainPid: runtimeMainPid,
+    serverPid: state.pid as number,
+    processIds: collectProcessTree(parents, runtimeMainPid),
+  };
+}
+
 function waitForExit(child: ChildProcess, timeoutMs: number): Promise<boolean> {
   if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve(true);
   return new Promise((resolveExit) => {
@@ -521,9 +699,28 @@ function hasStartupProof(logPath: string, expectedLogDirectory: string): boolean
   }
 }
 
+export function parseGracefulWindowCloseProof(log: string): {
+  readonly shutdownStarted: boolean;
+  readonly shutdownCompleted: boolean;
+} {
+  return {
+    shutdownStarted: log.includes("window-close shutdown start"),
+    shutdownCompleted: log.includes("window-close shutdown complete"),
+  };
+}
+
+function readGracefulWindowCloseProof(
+  logPath: string,
+): ReturnType<typeof parseGracefulWindowCloseProof> {
+  try {
+    return parseGracefulWindowCloseProof(readFileSync(logPath, "utf8"));
+  } catch {
+    return { shutdownStarted: false, shutdownCompleted: false };
+  }
+}
+
 interface PackagedDesktopSession {
   readonly child: ChildProcess;
-  readonly waitForExit: (timeoutMs: number) => Promise<boolean>;
   readonly terminate: () => Promise<void>;
 }
 
@@ -562,7 +759,6 @@ async function launchPackagedDesktopSession(input: {
         console.log(`Packaged startup attempt ${input.attempt} reached backend and main window.`);
         return {
           child,
-          waitForExit: (timeoutMs) => waitForExit(child, timeoutMs),
           terminate: () => terminateProcessTree(child),
         };
       }
@@ -580,6 +776,318 @@ async function launchPackagedDesktopSession(input: {
   } catch (error) {
     await terminateProcessTree(child);
     throw error;
+  }
+}
+
+async function closePackagedStartupSession(input: {
+  readonly platform: PackagedDesktopPlatform;
+  readonly runtimeState: PackagedRuntimeProcessTree;
+}): Promise<void> {
+  if (input.platform === "win") {
+    const result = spawnSync("taskkill", ["/pid", String(input.runtimeState.mainPid), "/t"], {
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    if (result.status !== 0) {
+      throw new Error("Packaged Main rejected the native graceful close request.");
+    }
+  } else {
+    process.kill(input.runtimeState.mainPid, "SIGTERM");
+  }
+  if (!(await waitForProcessesExit(input.runtimeState.processIds, 10_000))) {
+    throw new Error("Packaged process tree did not finish graceful shutdown within 10 seconds.");
+  }
+}
+
+const JOURNEY_THREAD_TITLE_PREFIX = "Packaged proof task";
+const JOURNEY_DRAFT_PREFIX = "Packaged proof draft";
+
+interface PackagedJourneyFixture {
+  readonly projectId: ProjectId;
+  readonly threadId: ThreadId;
+  readonly threadTitle: string;
+  readonly draft: string;
+}
+
+function fixtureExpressionValue(value: string): string {
+  return JSON.stringify(value);
+}
+
+async function waitForRendererCondition(input: {
+  readonly cdp: PackagedProofCdpSession;
+  readonly expression: string;
+  readonly description: string;
+  readonly timeoutMs?: number;
+}): Promise<void> {
+  const deadline = Date.now() + (input.timeoutMs ?? 10_000);
+  let lastError: unknown = null;
+  while (Date.now() < deadline) {
+    try {
+      if (await input.cdp.evaluate<boolean>(input.expression)) return;
+    } catch (error) {
+      lastError = error;
+    }
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 100));
+  }
+  const suffix = lastError
+    ? `: ${redactPackagedProofSecrets(lastError instanceof Error ? lastError.message : String(lastError))}`
+    : "";
+  throw new Error(`Packaged journey timed out waiting for ${input.description}${suffix}`);
+}
+
+async function createPackagedJourneyFixture(input: {
+  readonly rpc: PackagedProofRpcSession;
+  readonly workspaceRoot: string;
+}): Promise<PackagedJourneyFixture> {
+  const suffix = randomUUID();
+  const projectId = `packaged-proof-project-${suffix}` as ProjectId;
+  const threadId = `packaged-proof-thread-${suffix}` as ThreadId;
+  const threadTitle = `${JOURNEY_THREAD_TITLE_PREFIX} ${suffix.slice(0, 8)}`;
+  const draft = `${JOURNEY_DRAFT_PREFIX} ${suffix.slice(0, 8)}`;
+  const createdAt = new Date().toISOString();
+
+  await input.rpc.dispatchCommand({
+    type: "project.create",
+    commandId: randomUUID() as CommandId,
+    projectId,
+    kind: "project",
+    title: "Packaged proof project",
+    workspaceRoot: input.workspaceRoot,
+    createWorkspaceRootIfMissing: true,
+    defaultModelSelection: null,
+    isPinned: true,
+    createdAt,
+  });
+  await input.rpc.dispatchCommand({
+    type: "thread.create",
+    commandId: randomUUID() as CommandId,
+    threadId,
+    projectId,
+    title: threadTitle,
+    modelSelection: { provider: "omnimind", model: "packaged-proof-offline" },
+    runtimeMode: "full-access",
+    interactionMode: "default",
+    envMode: "local",
+    branch: null,
+    worktreePath: null,
+    workingDirectory: input.workspaceRoot,
+    createBranchFlowCompleted: false,
+    isPinned: true,
+    parentThreadId: null,
+    creationSource: "provider_native",
+    createdAt,
+  });
+  return { projectId, threadId, threadTitle, draft };
+}
+
+async function openFixtureThread(
+  cdp: PackagedProofCdpSession,
+  fixture: PackagedJourneyFixture,
+): Promise<void> {
+  const title = fixtureExpressionValue(fixture.threadTitle);
+  const findThreadRow = `Array.from(document.querySelectorAll('[data-thread-item]')).find((candidate) => candidate.textContent?.includes(${title}))`;
+  await waitForRendererCondition({
+    cdp,
+    expression: `Boolean(${findThreadRow})`,
+    description: "the canonical Thread shell projection",
+  });
+  const activated = await cdp.evaluate<boolean>(`(() => {
+    const row = ${findThreadRow};
+    const target = row?.matches('[role="button"]') ? row : row?.querySelector('[role="button"]');
+    if (!(target instanceof HTMLElement)) return false;
+    target.click();
+    return true;
+  })()`);
+  if (!activated) throw new Error("Packaged journey could not activate its projected Thread.");
+}
+
+async function deferFirstRunIfPresent(cdp: PackagedProofCdpSession): Promise<void> {
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
+  const dialogPresent = await cdp.evaluate<boolean>(
+    `Boolean(document.querySelector('[data-testid="first-run-readiness-dialog"]'))`,
+  );
+  if (!dialogPresent) return;
+  const deferred = await cdp.evaluate<boolean>(`(() => {
+    const dialog = document.querySelector('[data-testid="first-run-readiness-dialog"]');
+    const close = Array.from(dialog?.querySelectorAll('button') ?? []).find(
+      (candidate) => candidate.textContent?.trim() === '×'
+    );
+    if (!(close instanceof HTMLButtonElement)) return false;
+    close.click();
+    return true;
+  })()`);
+  if (!deferred) throw new Error("Packaged journey could not defer first-run setup.");
+  await waitForRendererCondition({
+    cdp,
+    expression: `!document.querySelector('[data-testid="first-run-readiness-dialog"]')`,
+    description: "first-run setup to close",
+  });
+}
+
+async function writeAndVerifyJourneyDraft(
+  cdp: PackagedProofCdpSession,
+  fixture: PackagedJourneyFixture,
+): Promise<void> {
+  await waitForRendererCondition({
+    cdp,
+    expression: `(() => {
+      const editor = document.querySelector('[data-testid="composer-editor"]');
+      return editor instanceof HTMLElement && editor.getClientRects().length > 0;
+    })()`,
+    description: "the visible Composer",
+  });
+  const focused = await cdp.evaluate<boolean>(`(() => {
+    const editor = document.querySelector('[data-testid="composer-editor"]');
+    if (!(editor instanceof HTMLElement)) return false;
+    editor.focus();
+    return document.activeElement === editor;
+  })()`);
+  if (!focused) throw new Error("Packaged journey could not focus the Composer.");
+  await cdp.insertText(fixture.draft);
+  const draft = fixtureExpressionValue(fixture.draft);
+  await waitForRendererCondition({
+    cdp,
+    expression: `document.querySelector('[data-testid="composer-editor"]')?.textContent?.includes(${draft}) === true`,
+    description: "the Composer draft",
+  });
+  // The production owner debounces persistence by 300 ms. Wait beyond that
+  // boundary instead of reading or duplicating its localStorage schema.
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 600));
+}
+
+async function verifyRestoredJourneyDraft(
+  cdp: PackagedProofCdpSession,
+  fixture: PackagedJourneyFixture,
+): Promise<void> {
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 700));
+  if (
+    await cdp.evaluate<boolean>(
+      `Boolean(document.querySelector('[data-testid="first-run-readiness-dialog"]'))`,
+    )
+  ) {
+    throw new Error("Packaged first-run defer preference did not survive reopen.");
+  }
+  const draft = fixtureExpressionValue(fixture.draft);
+  await waitForRendererCondition({
+    cdp,
+    expression: `document.querySelector('[data-testid="composer-editor"]')?.textContent?.includes(${draft}) === true`,
+    description: "the persisted Composer draft after reopen",
+  });
+}
+
+async function closePackagedJourneySession(input: {
+  readonly cdp: PackagedProofCdpSession;
+  readonly runtimeState: PackagedRuntimeProcessTree;
+  readonly logPath: string;
+}): Promise<void> {
+  let closeRequested = false;
+  try {
+    closeRequested = await input.cdp.evaluate<boolean>(`(() => {
+      const close = window.desktopBridge?.windowControls?.close;
+      if (typeof close !== 'function') return false;
+      void close();
+      return true;
+    })()`);
+  } finally {
+    input.cdp.close();
+  }
+  if (!closeRequested) {
+    throw new Error("Packaged Renderer exposed no canonical window close control.");
+  }
+
+  // Product Main owns the close lifecycle and may spend most of its bounded
+  // backend timeout reaping children. A signal during that lifecycle does not
+  // add evidence; it can only race the owner. Forced termination belongs to
+  // the caller's failure cleanup and can never turn this proof green.
+  if (!(await waitForProcessesExit(input.runtimeState.processIds, 10_000))) {
+    const quitProof = readGracefulWindowCloseProof(input.logPath);
+    throw new Error(
+      `Packaged process tree did not finish window-close shutdown within 10 seconds (started=${quitProof.shutdownStarted}, completed=${quitProof.shutdownCompleted}, serverAlive=${isProcessAlive(input.runtimeState.serverPid)}).`,
+    );
+  }
+  if (isProcessAlive(input.runtimeState.serverPid)) {
+    throw new Error("Bundled Server remained alive after packaged graceful shutdown.");
+  }
+  const quitProof = readGracefulWindowCloseProof(input.logPath);
+  if (!quitProof.shutdownStarted || !quitProof.shutdownCompleted) {
+    throw new Error(
+      `Packaged Main log did not prove graceful window-close shutdown (started=${quitProof.shutdownStarted}, completed=${quitProof.shutdownCompleted}).`,
+    );
+  }
+}
+
+async function runPackagedJourney(input: {
+  readonly launch: LaunchCommand;
+  readonly env: NodeJS.ProcessEnv;
+  readonly logPath: string;
+  readonly timeoutMs: number;
+  readonly version: string;
+  readonly temporaryRoot: string;
+}): Promise<void> {
+  let fixture: PackagedJourneyFixture | null = null;
+  const userDataPath = resolvePackagedProofUserDataPath(input.env);
+  const journeyLaunch = withPackagedJourneyDebugging(input.launch);
+
+  for (const attempt of [1, 2]) {
+    rmSync(input.logPath, { force: true });
+    rmSync(join(userDataPath, "DevToolsActivePort"), { force: true });
+    const session = await launchPackagedDesktopSession({
+      launch: journeyLaunch,
+      env: input.env,
+      logPath: input.logPath,
+      timeoutMs: input.timeoutMs,
+      attempt,
+    });
+    let cdp: PackagedProofCdpSession | null = null;
+    let rpc: PackagedProofRpcSession | null = null;
+    try {
+      if (!session.child.pid) throw new Error("Packaged Main process has no PID.");
+      const runtimeState = assertBundledServerRuntime(
+        input.env.OMNIMIND_HOME!,
+        session.child.pid,
+        "mac",
+      );
+      cdp = await connectPackagedRendererCdp({
+        userDataPath,
+        timeoutMs: 10_000,
+      });
+      if (attempt === 1) {
+        const rawWsUrl = await cdp.evaluate<string>(`window.desktopBridge?.getWsUrl?.() ?? ''`);
+        if (!rawWsUrl) throw new Error("Packaged Renderer exposed no bundled Server URL.");
+        rpc = await connectPackagedProofRpc({
+          rawWsUrl,
+          clientBuild: input.version,
+        });
+        fixture = await createPackagedJourneyFixture({
+          rpc,
+          workspaceRoot: join(input.temporaryRoot, "workspace"),
+        });
+        await rpc.close();
+        rpc = null;
+      }
+      if (!fixture) throw new Error("Packaged journey fixture was not created.");
+      await openFixtureThread(cdp, fixture);
+      if (attempt === 1) {
+        await deferFirstRunIfPresent(cdp);
+        await writeAndVerifyJourneyDraft(cdp, fixture);
+      } else {
+        await verifyRestoredJourneyDraft(cdp, fixture);
+      }
+      await closePackagedJourneySession({
+        cdp,
+        runtimeState,
+        logPath: input.logPath,
+      });
+      cdp = null;
+      console.log(
+        `Packaged journey attempt ${attempt} proved ${attempt === 1 ? "fixture projection and persistence" : "reopen recovery"}.`,
+      );
+    } catch (error) {
+      await rpc?.close();
+      cdp?.close();
+      await session.terminate();
+      throw error;
+    }
   }
 }
 
@@ -615,19 +1123,44 @@ export async function verifyPackagedDesktop(options: PackagedDesktopProofOptions
     );
     const env = createPackagedDesktopEnvironment(join(temporaryRoot, "state"), options);
     const logPath = join(env.OMNIMIND_HOME!, "userdata", "logs", "desktop-main.log");
-    for (const attempt of [1, 2]) {
-      rmSync(logPath, { force: true });
-      const session = await launchPackagedDesktopSession({
+    if (options.proof === "journey") {
+      await runPackagedJourney({
         launch,
         env,
         logPath,
         timeoutMs: options.timeoutMs,
-        attempt,
+        version: options.version,
+        temporaryRoot,
       });
-      await session.terminate();
+    } else {
+      for (const attempt of [1, 2]) {
+        rmSync(logPath, { force: true });
+        const session = await launchPackagedDesktopSession({
+          launch,
+          env,
+          logPath,
+          timeoutMs: options.timeoutMs,
+          attempt,
+        });
+        try {
+          if (!session.child.pid) throw new Error("Packaged Main process has no PID.");
+          const runtimeState = assertBundledServerRuntime(
+            env.OMNIMIND_HOME!,
+            session.child.pid,
+            options.platform,
+          );
+          await closePackagedStartupSession({
+            platform: options.platform,
+            runtimeState,
+          });
+        } catch (error) {
+          await session.terminate();
+          throw error;
+        }
+      }
     }
     console.log(
-      `Packaged ${options.platform}/${options.arch} startup, shutdown, and reopen passed from isolated state at ${options.sourceCommit.slice(0, 12)}.`,
+      `Packaged ${options.platform}/${options.arch} ${options.proof}, shutdown, and reopen passed from isolated state at ${options.sourceCommit.slice(0, 12)}.`,
     );
   } finally {
     releasePackagedProofResources(temporaryRoot, proofLease);
