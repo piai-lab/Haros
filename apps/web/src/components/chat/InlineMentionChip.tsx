@@ -14,12 +14,19 @@ import type { ProviderMentionReference } from "@omnimind/contracts";
 import { basenameOfPath, pathLooksLikeKnownFile } from "~/file-icons";
 import { openWorkspaceFileReference, useWorkspaceFileOpener } from "~/lib/workspaceFileOpener";
 import {
+  COMPOSER_EDITOR_INLINE_CHIP_CLASS_NAME,
+  COMPOSER_INLINE_LINK_CHIP_CLASS_NAME,
   COMPOSER_INLINE_MENTION_CHIP_CLASS_NAME,
   COMPOSER_INLINE_MENTION_CHIP_INTERACTIVE_CLASS_NAME,
+  type InlineChipSelectionMode,
 } from "../composerInlineChip";
 import { InlineChipContent } from "../InlineChip";
 import { MentionChipIcon, type MentionChipKind } from "./MentionChipIcon";
 import { resolveMentionChipKind } from "~/lib/composerMentions";
+import {
+  transcriptSourceRangeAttributes,
+  type TranscriptSourceRange,
+} from "./transcriptSelectionSource";
 
 interface InlineMentionChipProps {
   path: string;
@@ -34,6 +41,8 @@ interface InlineMentionChipProps {
   onContextMenu?: (event: MouseEvent<HTMLAnchorElement>) => void;
   /** Warm-up hook fired on hover/focus so activating the chip feels instant. */
   onHoverPrefetch?: (() => void) | undefined;
+  selectionMode: InlineChipSelectionMode;
+  sourceRange?: TranscriptSourceRange | undefined;
 }
 
 export function InlineMentionChip(props: InlineMentionChipProps) {
@@ -55,6 +64,7 @@ export function InlineMentionChip(props: InlineMentionChipProps) {
         />
       }
       label={label}
+      selectionMode={props.selectionMode}
     />
   );
 
@@ -86,8 +96,13 @@ export function InlineMentionChip(props: InlineMentionChipProps) {
         : undefined);
     return (
       <a
-        className={COMPOSER_INLINE_MENTION_CHIP_INTERACTIVE_CLASS_NAME}
+        className={
+          props.selectionMode === "document"
+            ? COMPOSER_INLINE_MENTION_CHIP_INTERACTIVE_CLASS_NAME
+            : COMPOSER_INLINE_LINK_CHIP_CLASS_NAME
+        }
         title={props.path}
+        {...(props.sourceRange ? transcriptSourceRangeAttributes(props.sourceRange) : {})}
         {...(href !== undefined ? { href } : {})}
         {...(handleActivate ? { onClick: handleActivate } : {})}
         {...(props.onContextMenu ? { onContextMenu: props.onContextMenu } : {})}
@@ -101,7 +116,15 @@ export function InlineMentionChip(props: InlineMentionChipProps) {
   }
 
   return (
-    <span className={COMPOSER_INLINE_MENTION_CHIP_CLASS_NAME} title={props.path}>
+    <span
+      className={
+        props.selectionMode === "document"
+          ? COMPOSER_INLINE_MENTION_CHIP_CLASS_NAME
+          : COMPOSER_EDITOR_INLINE_CHIP_CLASS_NAME
+      }
+      title={props.path}
+      {...(props.sourceRange ? transcriptSourceRangeAttributes(props.sourceRange) : {})}
+    >
       {inner}
     </span>
   );

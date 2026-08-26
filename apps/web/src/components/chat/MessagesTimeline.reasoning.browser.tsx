@@ -782,9 +782,11 @@ function createNarrowHost(): HTMLDivElement {
 }
 
 function timelineAssistantRowIds(): Array<string | undefined> {
-  return [...document.querySelectorAll<HTMLElement>(
-    "[data-timeline-row-kind='message'][data-message-role='assistant']",
-  )].map((row) => row.dataset.messageId);
+  return [
+    ...document.querySelectorAll<HTMLElement>(
+      "[data-timeline-row-kind='message'][data-message-role='assistant']",
+    ),
+  ].map((row) => row.dataset.messageId);
 }
 
 async function settleLayout(): Promise<void> {
@@ -974,8 +976,8 @@ describe("Timeline public reasoning disclosure", () => {
       const providerText = document.querySelector<HTMLElement>(
         "[data-reasoning-provider-text='true']",
       )!;
-      const textNode = providerText.querySelector("p")?.firstChild;
-      expect(textNode).not.toBeUndefined();
+      const textNode = providerText.querySelector("p [data-transcript-source-start]")?.firstChild;
+      expect(textNode).toBeInstanceOf(Text);
       const selection = window.getSelection()!;
       const range = document.createRange();
       range.setStart(textNode!, 0);

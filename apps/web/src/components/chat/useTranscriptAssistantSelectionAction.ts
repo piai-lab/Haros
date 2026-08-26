@@ -5,6 +5,7 @@
 import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS } from "@omnimind/contracts";
 import {
   useEffect,
+  useCallback,
   useRef,
   useState,
   type MutableRefObject,
@@ -21,15 +22,17 @@ import {
 } from "../../lib/assistantSelections";
 import {
   readTranscriptAssistantSelection,
-  resolveTranscriptSelectionActionLayout,
-  type TranscriptAssistantSelection,
+  resolveSelectionActionAnchor,
+  type TranscriptAssistantSelectionContext,
+  type TranscriptSelectionSnapshot,
 } from "./chatSelectionActions";
 import { useI18n } from "~/i18n";
 
 export interface PendingTranscriptSelectionAction {
-  selection: TranscriptAssistantSelection;
-  left: number;
-  top: number;
+  selection: TranscriptSelectionSnapshot;
+  anchorX: number;
+  selectionTop: number;
+  selectionBottom: number;
   placement: "top" | "bottom";
 }
 
@@ -44,7 +47,10 @@ interface UseTranscriptAssistantSelectionActionOptions {
   addComposerAssistantSelectionToDraft: (
     selection: ComposerAssistantSelectionAttachment,
   ) => boolean;
-  canReferenceAssistantSelection?: (selection: TranscriptAssistantSelection) => boolean;
+  canReferenceAssistantSelection?: (selection: TranscriptSelectionSnapshot) => boolean;
+  resolveAssistantSelectionContext?:
+    | ((assistantMessageId: string) => TranscriptAssistantSelectionContext | null)
+    | undefined;
   scheduleComposerFocus: () => void;
   onMessagesClickCaptureBase: MouseEventHandler<HTMLDivElement>;
   onMessagesPointerDownBase: PointerEventHandler<HTMLDivElement>;
@@ -69,6 +75,7 @@ export function useTranscriptAssistantSelectionAction(
     composerAssistantSelectionsRef,
     addComposerAssistantSelectionToDraft,
     canReferenceAssistantSelection,
+    resolveAssistantSelectionContext,
     scheduleComposerFocus,
     onMessagesClickCaptureBase,
     onMessagesPointerDownBase,
@@ -88,6 +95,10 @@ export function useTranscriptAssistantSelectionAction(
     action: PendingTranscriptSelectionAction;
   } | null>(null);
   const pendingActionThreadIdRef = useRef(threadId);
+  const messagesContainerRef = useRef<HTMLElement | null>(null);
+  const pointerSelectingRef = useRef(false);
+  const selectionCaptureFrameRef = useRef<number | null>(null);
+  const lastPointerRef = useRef({ x: 0, y: 0 });
   useEffect(() => {
     pendingActionThreadIdRef.current = threadId;
   }, [threadId]);
@@ -104,21 +115,68 @@ export function useTranscriptAssistantSelectionAction(
     setPendingTranscriptSelectionAction(null);
   };
 
+  const captureTranscriptSelection = useCallback(
+    (container: HTMLElement | null, pointer: { x: number; y: number }) => {
+      if (selectionCaptureFrameRef.current !== null) {
+        window.cancelAnimationFrame(selectionCaptureFrameRef.current);
+      }
+      selectionCaptureFrameRef.current = window.requestAnimationFrame(() => {
+        selectionCaptureFrameRef.current = null;
+        if (!enabled || !container) {
+          setPendingTranscriptSelectionAction(null);
+          return;
+        }
+
+        const selectionState = readTranscriptAssistantSelection({
+          container,
+          resolveContext: resolveAssistantSelectionContext,
+        });
+        if (
+          !selectionState ||
+          (canReferenceAssistantSelection &&
+            !canReferenceAssistantSelection(selectionState.selection))
+        ) {
+          setPendingTranscriptSelectionAction(null);
+          return;
+        }
+
+        const anchor = resolveSelectionActionAnchor({
+          selectionRect: selectionState.selectionRect,
+          pointer,
+        });
+        setPendingTranscriptSelectionAction({
+          selection: selectionState.selection,
+          ...anchor,
+        });
+      });
+    },
+    [canReferenceAssistantSelection, enabled, resolveAssistantSelectionContext],
+  );
+
   const onMessagesClickCapture: MouseEventHandler<HTMLDivElement> = (event) => {
+    messagesContainerRef.current = event.currentTarget;
     dismissTranscriptSelectionAction();
     onMessagesClickCaptureBase(event);
   };
 
   const onMessagesPointerDown: PointerEventHandler<HTMLDivElement> = (event) => {
+    messagesContainerRef.current = event.currentTarget;
+    lastPointerRef.current = { x: event.clientX, y: event.clientY };
+    pointerSelectingRef.current = true;
     dismissTranscriptSelectionAction();
     onMessagesPointerDownBase(event);
   };
 
   const onMessagesPointerUp: PointerEventHandler<HTMLDivElement> = (event) => {
+    messagesContainerRef.current = event.currentTarget;
+    lastPointerRef.current = { x: event.clientX, y: event.clientY };
+    pointerSelectingRef.current = false;
     onMessagesPointerUpBase(event);
+    captureTranscriptSelection(event.currentTarget, lastPointerRef.current);
   };
 
   const onMessagesPointerCancel: PointerEventHandler<HTMLDivElement> = (event) => {
+    pointerSelectingRef.current = false;
     dismissTranscriptSelectionAction();
     onMessagesPointerCancelBase(event);
   };
@@ -134,6 +192,8 @@ export function useTranscriptAssistantSelectionAction(
   };
 
   const onMessagesTouchStart: TouchEventHandler<HTMLDivElement> = (event) => {
+    messagesContainerRef.current = event.currentTarget;
+    pointerSelectingRef.current = true;
     dismissTranscriptSelectionAction();
     onMessagesTouchStartBase(event);
   };
@@ -144,40 +204,17 @@ export function useTranscriptAssistantSelectionAction(
   };
 
   const onMessagesTouchEnd: TouchEventHandler<HTMLDivElement> = (event) => {
+    messagesContainerRef.current = event.currentTarget;
+    pointerSelectingRef.current = false;
     onMessagesTouchEndBase(event);
+    captureTranscriptSelection(event.currentTarget, lastPointerRef.current);
   };
 
   const onMessagesMouseUp: MouseEventHandler<HTMLDivElement> = (event) => {
-    const container = event.currentTarget;
-    const clientX = event.clientX;
-    const clientY = event.clientY;
-    window.requestAnimationFrame(() => {
-      if (!enabled || !container) {
-        setPendingTranscriptSelectionAction(null);
-        return;
-      }
-
-      const selectionState = readTranscriptAssistantSelection({ container });
-      if (
-        !selectionState ||
-        (canReferenceAssistantSelection &&
-          !canReferenceAssistantSelection(selectionState.selection))
-      ) {
-        setPendingTranscriptSelectionAction(null);
-        return;
-      }
-
-      const layout = resolveTranscriptSelectionActionLayout({
-        selectionRect: selectionState.selectionRect,
-        pointer: { x: clientX, y: clientY },
-      });
-      setPendingTranscriptSelectionAction({
-        selection: selectionState.selection,
-        left: layout.left,
-        top: layout.top,
-        placement: layout.placement,
-      });
-    });
+    messagesContainerRef.current = event.currentTarget;
+    lastPointerRef.current = { x: event.clientX, y: event.clientY };
+    pointerSelectingRef.current = false;
+    captureTranscriptSelection(event.currentTarget, lastPointerRef.current);
   };
 
   const commitTranscriptAssistantSelection = () => {
@@ -211,10 +248,14 @@ export function useTranscriptAssistantSelectionAction(
       return;
     }
 
-    const nextSelection = createAssistantSelectionAttachment(pendingSelection.selection);
+    const attachmentInput = {
+      assistantMessageId: pendingSelection.selection.assistantMessageId,
+      text: pendingSelection.selection.visibleText,
+    };
+    const nextSelection = createAssistantSelectionAttachment(attachmentInput);
     if (!nextSelection) {
       setPendingTranscriptSelectionAction(null);
-      if (getAssistantSelectionValidationError(pendingSelection.selection) === "too-long") {
+      if (getAssistantSelectionValidationError(attachmentInput) === "too-long") {
         toastManager.add({
           type: "warning",
           title: t("selection.tooLong"),
@@ -230,6 +271,50 @@ export function useTranscriptAssistantSelectionAction(
       scheduleComposerFocus();
     }
   };
+
+  useEffect(() => {
+    const action = pendingTranscriptSelectionAction;
+    const markerRange = action?.selection.markerRange;
+    if (!action || !markerRange || !resolveAssistantSelectionContext) {
+      return;
+    }
+    const context = resolveAssistantSelectionContext(action.selection.assistantMessageId);
+    if (
+      context?.markerEnabled === true &&
+      context.rawText.slice(markerRange.startOffset, markerRange.endOffset) ===
+        markerRange.selectedText
+    ) {
+      return;
+    }
+    setPendingTranscriptSelectionAction({
+      ...action,
+      selection: {
+        assistantMessageId: action.selection.assistantMessageId,
+        visibleText: action.selection.visibleText,
+      },
+    });
+  }, [pendingTranscriptSelectionAction, resolveAssistantSelectionContext]);
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    const handleSelectionChange = () => {
+      if (pointerSelectingRef.current) {
+        return;
+      }
+      captureTranscriptSelection(messagesContainerRef.current, lastPointerRef.current);
+    };
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+      if (selectionCaptureFrameRef.current !== null) {
+        window.cancelAnimationFrame(selectionCaptureFrameRef.current);
+        selectionCaptureFrameRef.current = null;
+      }
+    };
+  }, [captureTranscriptSelection, enabled]);
 
   useEffect(() => {
     if (!pendingTranscriptSelectionAction) {
@@ -252,11 +337,9 @@ export function useTranscriptAssistantSelectionAction(
 
     window.addEventListener("pointerdown", handlePointerDown);
     window.addEventListener("resize", handleWindowChange);
-    document.addEventListener("selectionchange", handleWindowChange);
     return () => {
       window.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("resize", handleWindowChange);
-      document.removeEventListener("selectionchange", handleWindowChange);
     };
   }, [pendingTranscriptSelectionAction]);
 

@@ -523,7 +523,6 @@ import {
   scrollTranscriptToSettledEnd,
   stopTranscriptScrollAtCurrentOffset,
 } from "./chat/transcriptScroll";
-import { resolveTranscriptMarkerRange } from "./chat/chatSelectionActions";
 import {
   dispatchThreadMarkerAdd,
   dispatchThreadMarkerDoneSet,
@@ -5565,6 +5564,19 @@ export default function ChatView({
     addComposerAssistantSelectionToDraft,
     canReferenceAssistantSelection: (selection) =>
       !isPendingSetupBubbleId(MessageId.makeUnsafe(selection.assistantMessageId)),
+    resolveAssistantSelectionContext: (assistantMessageId) => {
+      const messageId = MessageId.makeUnsafe(assistantMessageId);
+      if (isPendingSetupBubbleId(messageId)) {
+        return null;
+      }
+      const message = timelineMessages.find((candidate) => candidate.id === messageId);
+      return message
+        ? {
+            rawText: message.text,
+            markerEnabled: !message.streaming,
+          }
+        : null;
+    },
     scheduleComposerFocus,
     onMessagesClickCaptureBase,
     onMessagesPointerCancelBase,
@@ -5597,16 +5609,14 @@ export default function ChatView({
         });
         return;
       }
-      const range = resolveTranscriptMarkerRange({
-        messageText: message.text,
-        selectedText: pendingSelection.selection.text,
-      });
-      if (!range) {
-        toastManager.add({
-          type: "warning",
-          title: t("conversation.markerSelectUnique"),
-          description: t("conversation.markerSelectUniqueDescription"),
-        });
+      const range = pendingSelection.selection.markerRange;
+      if (
+        message.streaming ||
+        !range ||
+        message.text.slice(range.startOffset, range.endOffset) !== range.selectedText
+      ) {
+        dismissTranscriptSelectionAction();
+        window.getSelection()?.removeAllRanges();
         return;
       }
       dismissTranscriptSelectionAction();
@@ -5636,7 +5646,7 @@ export default function ChatView({
         messageId,
         startOffset: range.startOffset,
         endOffset: range.endOffset,
-        selectedText: message.text.slice(range.startOffset, range.endOffset),
+        selectedText: range.selectedText,
         style,
         color,
       }).catch((error) => {
@@ -11910,11 +11920,15 @@ export default function ChatView({
               >
                 <ComposerInputBanners
                   roundedTopReset={false}
-                  interactionModeUnavailable={interactionMode === "plan" && !planModeAvailable ? {
-                    message: planModeUnavailableMessage,
-                    exitLabel: t("conversation.planModeExitAction"),
-                    onExit: () => handleInteractionModeChange("default"),
-                  } : null}
+                  interactionModeUnavailable={
+                    interactionMode === "plan" && !planModeAvailable
+                      ? {
+                          message: planModeUnavailableMessage,
+                          exitLabel: t("conversation.planModeExitAction"),
+                          onExit: () => handleInteractionModeChange("default"),
+                        }
+                      : null
+                  }
                   planFollowUp={
                     !activePendingApproval &&
                     pendingUserInputs.length === 0 &&

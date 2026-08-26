@@ -8,15 +8,26 @@
 import { CentralIcon } from "~/lib/central-icons";
 import {
   COMPOSER_INLINE_CHIP_INLINE_ICON_CLASS_NAME,
+  COMPOSER_EDITOR_INLINE_CHIP_CLASS_NAME,
   COMPOSER_INLINE_SKILL_CHIP_CLASS_NAME,
   COMPOSER_INLINE_SKILL_CHIP_ICON_NAME,
   formatComposerSkillChipLabel,
+  type InlineChipSelectionMode,
 } from "../composerInlineChip";
 import { InlineChipContent } from "../InlineChip";
 
-export const InlineSkillChip = function InlineSkillChip(props: { skillName: string }) {
+export const InlineSkillChip = function InlineSkillChip(props: {
+  skillName: string;
+  selectionMode: InlineChipSelectionMode;
+}) {
   return (
-    <span className={COMPOSER_INLINE_SKILL_CHIP_CLASS_NAME}>
+    <span
+      className={
+        props.selectionMode === "document"
+          ? COMPOSER_INLINE_SKILL_CHIP_CLASS_NAME
+          : COMPOSER_EDITOR_INLINE_CHIP_CLASS_NAME
+      }
+    >
       <InlineChipContent
         icon={
           <CentralIcon
@@ -25,6 +36,7 @@ export const InlineSkillChip = function InlineSkillChip(props: { skillName: stri
           />
         }
         label={formatComposerSkillChipLabel(props.skillName)}
+        selectionMode={props.selectionMode}
       />
     </span>
   );

@@ -32,7 +32,10 @@ import { resolveDiffThemeName, type DiffThemeName } from "../lib/diffRendering";
 import { dedentCode, parseCodeFenceInfo } from "../lib/codeFence";
 import { pathLooksLikeKnownFile } from "../file-icons";
 import { isLocalImageMarkdownSrc } from "../lib/localImageUrls";
-import { repairMarkdownTableDelimiters } from "../lib/markdownTableRepair";
+import {
+  prepareMarkdownTableDelimiters,
+  type MarkdownSourceOffsetProjection,
+} from "../lib/markdownTableRepair";
 import {
   getFileContextMenuPosition,
   showFileReferenceContextMenu,
@@ -77,6 +80,13 @@ import {
   parseComposerChipSegment,
 } from "../lib/remarkComposerChips";
 import { useI18n } from "../i18n";
+import {
+  activeSelectionIntersectsElement,
+  TRANSCRIPT_SOURCE_END_ATTRIBUTE,
+  TRANSCRIPT_SOURCE_START_ATTRIBUTE,
+  transcriptSourceRangeAttributes,
+  type TranscriptSourceRange,
+} from "./chat/transcriptSelectionSource";
 
 const EXTERNAL_HTTP_HREF_PATTERN = /^https?:\/\//i;
 // Trailing `:line` / `:line:col` position suffix on a resolved file link. Kept on
@@ -279,11 +289,23 @@ type MarkdownTextNode = {
     end?: { offset?: number };
   };
 };
+type MarkdownInlineCodeNode = {
+  type: "inlineCode";
+  value: string;
+  position?: MarkdownTextNode["position"];
+  data?: {
+    hProperties?: Record<string, unknown>;
+  };
+};
 type MarkdownParentNode = {
   type?: string;
   children?: MarkdownNode[];
 };
-type MarkdownNode = MarkdownTextNode | MarkdownParentNode | Record<string, unknown>;
+type MarkdownNode =
+  | MarkdownTextNode
+  | MarkdownInlineCodeNode
+  | MarkdownParentNode
+  | Record<string, unknown>;
 type RenderableThreadMarker = ThreadMarker & { className: string };
 type ThreadMarkerFragmentContinuity = {
   readonly continuesBefore: boolean;
@@ -318,33 +340,46 @@ function markerFragmentClassNameFor(
 }
 
 function normalizeRenderableMarkers(input: {
-  text: string;
+  rawText: string;
+  projection: MarkdownSourceOffsetProjection;
   markers: readonly ThreadMarker[] | undefined;
 }): RenderableThreadMarker[] {
   const markers = input.markers ?? [];
   const result: RenderableThreadMarker[] = [];
-  let previousEnd = -1;
+  let previousRawEnd = -1;
   for (const marker of markers.toSorted((left, right) => left.startOffset - right.startOffset)) {
-    if (marker.startOffset < previousEnd) {
+    if (marker.startOffset < previousRawEnd) {
       continue;
     }
-    if (marker.endOffset <= marker.startOffset || marker.endOffset > input.text.length) {
+    if (marker.endOffset <= marker.startOffset || marker.endOffset > input.rawText.length) {
       continue;
     }
-    if (input.text.slice(marker.startOffset, marker.endOffset) !== marker.selectedText) {
+    if (input.rawText.slice(marker.startOffset, marker.endOffset) !== marker.selectedText) {
+      continue;
+    }
+    const renderedStartOffset = input.projection.toRenderedBoundary(marker.startOffset);
+    const renderedEndOffset = input.projection.toRenderedBoundary(marker.endOffset);
+    if (
+      renderedStartOffset === null ||
+      renderedEndOffset === null ||
+      renderedEndOffset <= renderedStartOffset
+    ) {
       continue;
     }
     result.push({
       ...marker,
+      startOffset: renderedStartOffset,
+      endOffset: renderedEndOffset,
       className: markerClassNameFor(marker),
     });
-    previousEnd = marker.endOffset;
+    previousRawEnd = marker.endOffset;
   }
   return result;
 }
 
 function createThreadMarkerRemarkPlugin(input: {
-  text: string;
+  rawText: string;
+  projection: MarkdownSourceOffsetProjection;
   markers: readonly ThreadMarker[] | undefined;
 }) {
   const markers = normalizeRenderableMarkers(input);
@@ -353,6 +388,135 @@ function createThreadMarkerRemarkPlugin(input: {
       return;
     }
     applyThreadMarkersToNode(tree, markers);
+  };
+}
+
+function resolveLinearTextSourceRange(input: {
+  node: MarkdownTextNode;
+  rawText: string;
+  projection: MarkdownSourceOffsetProjection;
+}): TranscriptSourceRange | null {
+  const renderedStart = input.node.position?.start?.offset;
+  const renderedEnd = input.node.position?.end?.offset;
+  if (renderedStart === undefined || renderedEnd === undefined) {
+    return null;
+  }
+  const startOffset = input.projection.toRawBoundary(renderedStart);
+  const endOffset = input.projection.toRawBoundary(renderedEnd);
+  if (startOffset === null || endOffset === null || endOffset <= startOffset) {
+    return null;
+  }
+  const visibleValue = restoreLiteralDollarPlaceholders(input.node.value);
+  return input.rawText.slice(startOffset, endOffset) === visibleValue
+    ? { startOffset, endOffset }
+    : null;
+}
+
+function resolveInlineCodeSourceRange(input: {
+  node: MarkdownInlineCodeNode;
+  rawText: string;
+  projection: MarkdownSourceOffsetProjection;
+}): TranscriptSourceRange | null {
+  const renderedStart = input.node.position?.start?.offset;
+  const renderedEnd = input.node.position?.end?.offset;
+  if (renderedStart === undefined || renderedEnd === undefined) {
+    return null;
+  }
+  const rawStart = input.projection.toRawBoundary(renderedStart);
+  const rawEnd = input.projection.toRawBoundary(renderedEnd);
+  if (rawStart === null || rawEnd === null || rawEnd <= rawStart) {
+    return null;
+  }
+  const rawSlice = input.rawText.slice(rawStart, rawEnd);
+  let delimiterLength = 0;
+  while (rawSlice[delimiterLength] === "`") {
+    delimiterLength += 1;
+  }
+  if (
+    delimiterLength === 0 ||
+    rawSlice.slice(rawSlice.length - delimiterLength) !== "`".repeat(delimiterLength)
+  ) {
+    return null;
+  }
+  const contentStart = delimiterLength;
+  const contentEnd = rawSlice.length - delimiterLength;
+  const rawContent = rawSlice.slice(contentStart, contentEnd);
+  if (rawContent === input.node.value) {
+    return {
+      startOffset: rawStart + contentStart,
+      endOffset: rawStart + contentEnd,
+    };
+  }
+  if (
+    rawContent.startsWith(" ") &&
+    rawContent.endsWith(" ") &&
+    rawContent.trim().length > 0 &&
+    rawContent.slice(1, -1) === input.node.value
+  ) {
+    return {
+      startOffset: rawStart + contentStart + 1,
+      endOffset: rawStart + contentEnd - 1,
+    };
+  }
+  return null;
+}
+
+function createTranscriptSourceRemarkPlugin(input: {
+  rawText: string;
+  projection: MarkdownSourceOffsetProjection;
+}) {
+  return () => (tree: MarkdownNode) => {
+    const visit = (node: MarkdownNode) => {
+      if (
+        !node ||
+        typeof node !== "object" ||
+        !("children" in node) ||
+        !Array.isArray(node.children)
+      ) {
+        return;
+      }
+      const parent = node as MarkdownParentNode;
+      parent.children = (parent.children ?? []).map((child) => {
+        if (child && typeof child === "object" && "type" in child && child.type === "text") {
+          const textNode = child as MarkdownTextNode;
+          const range = resolveLinearTextSourceRange({
+            node: textNode,
+            rawText: input.rawText,
+            projection: input.projection,
+          });
+          if (!range) {
+            return child;
+          }
+          return {
+            type: "transcriptSource",
+            data: {
+              hName: "span",
+              hProperties: transcriptSourceRangeAttributes(range),
+            },
+            children: [child],
+          };
+        }
+        if (child && typeof child === "object" && "type" in child && child.type === "inlineCode") {
+          const inlineCodeNode = child as MarkdownInlineCodeNode;
+          const range = resolveInlineCodeSourceRange({
+            node: inlineCodeNode,
+            rawText: input.rawText,
+            projection: input.projection,
+          });
+          if (range) {
+            inlineCodeNode.data ??= {};
+            inlineCodeNode.data.hProperties = {
+              ...inlineCodeNode.data.hProperties,
+              ...transcriptSourceRangeAttributes(range),
+            };
+          }
+          return child;
+        }
+        visit(child);
+        return child;
+      });
+    };
+    visit(tree);
   };
 }
 
@@ -773,6 +937,38 @@ function nodeToPlainText(node: ReactNode): string {
   return "";
 }
 
+function transcriptSourceRangeFromHastNode(node: unknown): TranscriptSourceRange | null {
+  if (!node || typeof node !== "object") {
+    return null;
+  }
+  const record = node as {
+    properties?: Record<string, unknown>;
+    children?: unknown[];
+  };
+  const properties = record.properties;
+  if (properties) {
+    const rawStart =
+      properties[TRANSCRIPT_SOURCE_START_ATTRIBUTE] ?? properties.dataTranscriptSourceStart;
+    const rawEnd =
+      properties[TRANSCRIPT_SOURCE_END_ATTRIBUTE] ?? properties.dataTranscriptSourceEnd;
+    const startOffset =
+      typeof rawStart === "number" ? rawStart : Number.parseInt(String(rawStart), 10);
+    const endOffset = typeof rawEnd === "number" ? rawEnd : Number.parseInt(String(rawEnd), 10);
+    if (
+      Number.isInteger(startOffset) &&
+      Number.isInteger(endOffset) &&
+      startOffset >= 0 &&
+      endOffset > startOffset
+    ) {
+      return { startOffset, endOffset };
+    }
+  }
+  const childRanges = (record.children ?? [])
+    .map((child) => transcriptSourceRangeFromHastNode(child))
+    .filter((range): range is TranscriptSourceRange => range !== null);
+  return childRanges.length === 1 ? (childRanges[0] ?? null) : null;
+}
+
 function MarkdownTable({ children, className, ...props }: React.ComponentPropsWithoutRef<"table">) {
   const { t } = useI18n();
   const frameRef = useRef<HTMLDivElement>(null);
@@ -913,6 +1109,7 @@ function OpenableFileChip(props: {
   theme: "light" | "dark";
   label?: ReactNode;
   href?: string;
+  sourceRange?: TranscriptSourceRange;
 }) {
   const { t } = useI18n();
   const opener = useWorkspaceFileOpener();
@@ -922,6 +1119,8 @@ function OpenableFileChip(props: {
     <InlineMentionChip
       path={chipPath}
       theme={props.theme}
+      selectionMode="document"
+      {...(props.sourceRange ? { sourceRange: props.sourceRange } : {})}
       href={props.href ?? props.targetPath}
       onActivate={(event) => {
         event.preventDefault();
@@ -930,15 +1129,23 @@ function OpenableFileChip(props: {
         openWorkspaceFileReference(forceExternalEditor ? null : opener, props.targetPath);
       }}
       onContextMenu={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        void showFileReferenceContextMenu({
+        if (activeSelectionIntersectsElement(event.currentTarget)) {
+          return;
+        }
+        const menu = showFileReferenceContextMenu({
           path: chipPath,
           ...(revealPath ? { revealPath } : {}),
           position: getFileContextMenuPosition(event),
           onReferenceInChat: undefined,
+          desktopOnly: true,
           t,
         });
+        if (menu === false) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        void menu;
       }}
       {...(opener?.prefetchFile
         ? { onHoverPrefetch: () => opener.prefetchFile?.(props.targetPath) }
@@ -960,25 +1167,26 @@ function ComposerChipElement(props: {
     return null;
   }
   if (segment.type === "skill") {
-    return <InlineSkillChip skillName={segment.name} />;
+    return <InlineSkillChip skillName={segment.name} selectionMode="document" />;
   }
   if (segment.type === "mention") {
     return (
       <InlineMentionChip
         path={segment.path}
         theme={props.theme}
+        selectionMode="document"
         mentionReferences={props.mentionReferences}
         {...(segment.kind ? { kind: segment.kind } : {})}
       />
     );
   }
   if (segment.type === "agent-mention") {
-    return <InlineAgentChip alias={segment.alias} color={segment.color} />;
+    return <InlineAgentChip alias={segment.alias} color={segment.color} selectionMode="document" />;
   }
   if (segment.type === "slash-command") {
-    return <InlineSlashCommandChip command={segment.command} />;
+    return <InlineSlashCommandChip command={segment.command} selectionMode="document" />;
   }
-  return <InlineLinkChip url={segment.url} interactive />;
+  return <InlineLinkChip url={segment.url} interactive selectionMode="document" />;
 }
 
 interface SuspenseShikiCodeBlockProps {
@@ -1134,6 +1342,10 @@ function ChatMarkdown({
   // the mdast positions parsed from the normalized text.
   const deferredSmoothedText = useDeferredValue(smoothedText);
   const renderedSourceText = isStreaming ? deferredSmoothedText : smoothedText;
+  const preparedAssistantMarkdown = useMemo(
+    () => (isUserVariant ? null : prepareMarkdownTableDelimiters(renderedSourceText)),
+    [isUserVariant, renderedSourceText],
+  );
   // The dollar rewrite exists to disambiguate math from currency; the user
   // variant has no math, so its text must stay byte-for-byte what was typed.
   // Table repair runs first and can change text length, so the thread-marker
@@ -1142,23 +1354,39 @@ function ChatMarkdown({
     () =>
       isUserVariant
         ? renderedSourceText
-        : protectLiteralMarkdownDollars(repairMarkdownTableDelimiters(renderedSourceText)),
-    [isUserVariant, renderedSourceText],
+        : protectLiteralMarkdownDollars(
+            preparedAssistantMarkdown?.renderedText ?? renderedSourceText,
+          ),
+    [isUserVariant, preparedAssistantMarkdown, renderedSourceText],
   );
   const tableIntegrityRemarkPlugin = useMemo(
     () => createTableIntegrityRemarkPlugin(renderedSourceText),
     [renderedSourceText],
   );
-  // Marker offsets are applied against mdast positions, which come from the
-  // repaired text — validate them against the same string. A marker recorded
-  // after a repaired delimiter row fails its `selectedText` check and is
-  // dropped instead of highlighting a shifted range.
+  const transcriptSourceRemarkPlugin = useMemo(
+    () =>
+      !isUserVariant && !isStreaming && preparedAssistantMarkdown
+        ? createTranscriptSourceRemarkPlugin({
+            rawText: renderedSourceText,
+            projection: preparedAssistantMarkdown.projection,
+          })
+        : null,
+    [isStreaming, isUserVariant, preparedAssistantMarkdown, renderedSourceText],
+  );
+  const preparedMarkerMarkdown = useMemo(() => prepareMarkdownTableDelimiters(text), [text]);
+  // Persisted marker offsets always belong to raw message text. Project their
+  // boundaries into the repaired parse source instead of validating them
+  // against a string whose delimiter repair may have shifted later nodes.
   const threadMarkerRemarkPlugin = useMemo(
     () =>
       markers && markers.length > 0
-        ? createThreadMarkerRemarkPlugin({ text: repairMarkdownTableDelimiters(text), markers })
+        ? createThreadMarkerRemarkPlugin({
+            rawText: text,
+            projection: preparedMarkerMarkdown.projection,
+            markers,
+          })
         : null,
-    [markers, text],
+    [markers, preparedMarkerMarkdown, text],
   );
   const composerChipsRemarkPlugin = useMemo(
     () =>
@@ -1184,14 +1412,18 @@ function ChatMarkdown({
         tableIntegrityRemarkPlugin,
       ];
     }
-    const assistantPlugins = threadMarkerRemarkPlugin
-      ? [...MARKDOWN_REMARK_PLUGINS, threadMarkerRemarkPlugin, tableIntegrityRemarkPlugin]
-      : [...MARKDOWN_REMARK_PLUGINS, tableIntegrityRemarkPlugin];
+    const assistantPlugins = [
+      ...MARKDOWN_REMARK_PLUGINS,
+      ...(transcriptSourceRemarkPlugin ? [transcriptSourceRemarkPlugin] : []),
+      ...(threadMarkerRemarkPlugin ? [threadMarkerRemarkPlugin] : []),
+      tableIntegrityRemarkPlugin,
+    ];
     return mermaidOrdinalPlugin ? [...assistantPlugins, mermaidOrdinalPlugin] : assistantPlugins;
   }, [
     composerChipsRemarkPlugin,
     mermaidOrdinalPlugin,
     tableIntegrityRemarkPlugin,
+    transcriptSourceRemarkPlugin,
     threadMarkerRemarkPlugin,
   ]);
   const rehypePlugins = isUserVariant ? USER_MARKDOWN_REHYPE_PLUGINS : MARKDOWN_REHYPE_PLUGINS;
@@ -1231,7 +1463,7 @@ function ChatMarkdown({
             restoredHref === `http://${plainText}` ||
             restoredHref === `https://${plainText}`
           ) {
-            return <InlineLinkChip url={restoredHref} interactive />;
+            return <InlineLinkChip url={restoredHref} interactive selectionMode="document" />;
           }
         }
         const targetPath = isExternalHttp ? null : resolveMarkdownFileLinkTarget(restoredHref, cwd);
@@ -1258,11 +1490,13 @@ function ChatMarkdown({
         // Local file links keep their openable behavior but adopt the shared
         // mention-chip UI (file icon + medium label). The link text is preserved
         // as the label.
+        const sourceRange = transcriptSourceRangeFromHastNode(_node);
         return (
           <OpenableFileChip
             targetPath={targetPath}
             theme={resolvedTheme}
             label={nodeToPlainText(children)}
+            {...(sourceRange ? { sourceRange } : {})}
             {...(restoredHref ? { href: restoredHref } : {})}
           />
         );
@@ -1353,7 +1587,14 @@ function ChatMarkdown({
           const filePath = inlineCodeFilePath(nodeToPlainText(children));
           if (filePath) {
             const targetPath = resolveMarkdownFileLinkTarget(filePath, cwd) ?? filePath;
-            return <OpenableFileChip targetPath={targetPath} theme={resolvedTheme} />;
+            const sourceRange = transcriptSourceRangeFromHastNode(_node);
+            return (
+              <OpenableFileChip
+                targetPath={targetPath}
+                theme={resolvedTheme}
+                {...(sourceRange ? { sourceRange } : {})}
+              />
+            );
           }
         }
         return (

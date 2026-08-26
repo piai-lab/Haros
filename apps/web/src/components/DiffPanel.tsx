@@ -1294,8 +1294,9 @@ export default function DiffPanel({
             />
             {diffSelectionAction.pendingAction ? (
               <TranscriptSelectionAction
-                left={diffSelectionAction.pendingAction.left}
-                top={diffSelectionAction.pendingAction.top}
+                anchorX={diffSelectionAction.pendingAction.anchorX}
+                selectionTop={diffSelectionAction.pendingAction.selectionTop}
+                selectionBottom={diffSelectionAction.pendingAction.selectionBottom}
                 placement={diffSelectionAction.pendingAction.placement}
                 onAddToChat={diffSelectionAction.commit}
               />

@@ -10,6 +10,8 @@ import { describeLinkChip, openExternalLink } from "~/lib/linkChips";
 import {
   COMPOSER_INLINE_CHIP_INLINE_ICON_CLASS_NAME,
   COMPOSER_INLINE_LINK_CHIP_CLASS_NAME,
+  TIMELINE_INLINE_LINK_CHIP_CLASS_NAME,
+  type InlineChipSelectionMode,
 } from "./composerInlineChip";
 import { InlineChipContent } from "./InlineChip";
 import { LinkChipIcon } from "./LinkChipIcon";
@@ -20,16 +22,22 @@ export interface InlineLinkChipProps {
   /** Timeline chips use a button; composer decorator chips use a span. */
   readonly interactive?: boolean;
   readonly className?: string | undefined;
+  readonly selectionMode: InlineChipSelectionMode;
 }
 
 export function InlineLinkChip({
   url,
   interactive: interactiveProp,
   className,
+  selectionMode,
 }: InlineLinkChipProps) {
   const interactive = interactiveProp ?? false;
   const { label } = describeLinkChip(url);
-  const chipClassName = className ?? COMPOSER_INLINE_LINK_CHIP_CLASS_NAME;
+  const chipClassName =
+    className ??
+    (selectionMode === "document"
+      ? TIMELINE_INLINE_LINK_CHIP_CLASS_NAME
+      : COMPOSER_INLINE_LINK_CHIP_CLASS_NAME);
 
   const onClick = (event: MouseEvent) => {
     event.preventDefault();
@@ -41,6 +49,7 @@ export function InlineLinkChip({
     <InlineChipContent
       icon={<LinkChipIcon url={url} className={COMPOSER_INLINE_CHIP_INLINE_ICON_CLASS_NAME} />}
       label={label}
+      selectionMode={selectionMode}
     />
   );
 

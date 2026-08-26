@@ -22,7 +22,7 @@ export const COMPOSER_INLINE_CHIP_ICON_LABEL_GAP_CLASS_NAME = "mr-1";
 // Plain inline flow (not inline-flex) so parsed tokens share the same line box /
 // caret strut as typed text. Icons are inline-block at 1em beside an inline label.
 export const COMPOSER_INLINE_CHIP_BASE_CLASS_NAME = cn(
-  "inline max-w-full select-none align-baseline font-medium",
+  "inline max-w-full align-baseline font-medium",
   COMPOSER_INLINE_CHIP_SIDE_GAP_CLASS_NAME,
   COMPOSER_EDITOR_TEXT_CLASS_NAME,
   COMPOSER_EDITOR_LINE_HEIGHT_CLASS_NAME,
@@ -38,6 +38,7 @@ export type ComposerInlineChipFill = "plain" | "soft";
 // `accent` → skill + file/folder/plugin tokens (shared info color).
 // `neutral`→ generic tokens (foreground color).
 export type ComposerInlineChipTone = "accent" | "neutral";
+export type InlineChipSelectionMode = "atomic" | "document";
 
 const COMPOSER_INLINE_CHIP_FILL_CLASS_NAME: Record<ComposerInlineChipFill, string> = {
   plain: "",
@@ -54,17 +55,23 @@ const COMPOSER_INLINE_CHIP_TONE_SOFT_BG_CLASS_NAME: Record<ComposerInlineChipTon
   accent: "bg-[var(--info)]/10",
   neutral: "bg-[var(--sidebar-accent-active)]",
 };
+const INLINE_CHIP_SELECTION_CLASS_NAME: Record<InlineChipSelectionMode, string> = {
+  atomic: "select-none",
+  document: "select-text",
+};
 
 /** Builds an inline chip class from the shared base plus a fill + tone variant. */
 export function composerInlineChipClassName(options?: {
   fill?: ComposerInlineChipFill;
   tone?: ComposerInlineChipTone;
+  selectionMode?: InlineChipSelectionMode;
   className?: string;
 }): string {
   const fill = options?.fill ?? "plain";
   const tone = options?.tone ?? "accent";
   return cn(
     COMPOSER_INLINE_CHIP_BASE_CLASS_NAME,
+    INLINE_CHIP_SELECTION_CLASS_NAME[options?.selectionMode ?? "atomic"],
     COMPOSER_INLINE_CHIP_TONE_TEXT_CLASS_NAME[tone],
     COMPOSER_INLINE_CHIP_FILL_CLASS_NAME[fill],
     fill === "soft" ? COMPOSER_INLINE_CHIP_TONE_SOFT_BG_CLASS_NAME[tone] : null,
@@ -99,6 +106,7 @@ export const COMPOSER_INLINE_CHIP_INLINE_ICON_CLASS_NAME = cn(
   COMPOSER_INLINE_CHIP_ICON_LABEL_GAP_CLASS_NAME,
 );
 export const COMPOSER_INLINE_CHIP_LABEL_CLASS_NAME = "inline select-none";
+export const TIMELINE_INLINE_CHIP_LABEL_CLASS_NAME = "inline select-text";
 
 // ── Agent token (per-model color is set inline at render time) ─────────
 export const COMPOSER_INLINE_AGENT_CHIP_CLASS_NAME = cn(
@@ -106,6 +114,10 @@ export const COMPOSER_INLINE_AGENT_CHIP_CLASS_NAME = cn(
   COMPOSER_INLINE_CHIP_SIDE_GAP_CLASS_NAME,
   COMPOSER_EDITOR_TEXT_CLASS_NAME,
   COMPOSER_EDITOR_LINE_HEIGHT_CLASS_NAME,
+);
+export const TIMELINE_INLINE_AGENT_CHIP_CLASS_NAME = cn(
+  COMPOSER_INLINE_AGENT_CHIP_CLASS_NAME,
+  "select-text",
 );
 export const COMPOSER_INLINE_AGENT_CHIP_ICON_CLASS_NAME = "size-3 shrink-0";
 
@@ -135,8 +147,12 @@ export function resolveAgentChipColor(color: string | undefined): AgentChipColor
 // ── Sent-message echoes (timeline) ────────────────────────────────────
 // Mirror the in-composer chip exactly (plain, accent color, no fill) so a sent
 // skill/file/folder token reads identically to how it looked while typing.
-export const COMPOSER_INLINE_SKILL_CHIP_CLASS_NAME = COMPOSER_EDITOR_INLINE_CHIP_CLASS_NAME;
-export const COMPOSER_INLINE_MENTION_CHIP_CLASS_NAME = COMPOSER_EDITOR_INLINE_CHIP_CLASS_NAME;
+export const COMPOSER_INLINE_SKILL_CHIP_CLASS_NAME = composerInlineChipClassName({
+  fill: "plain",
+  tone: "accent",
+  selectionMode: "document",
+});
+export const COMPOSER_INLINE_MENTION_CHIP_CLASS_NAME = COMPOSER_INLINE_SKILL_CHIP_CLASS_NAME;
 export const COMPOSER_INLINE_MENTION_CHIP_ICON_CLASS_NAME =
   COMPOSER_INLINE_CHIP_INLINE_ICON_CLASS_NAME;
 
@@ -146,6 +162,14 @@ export const COMPOSER_INLINE_MENTION_CHIP_ICON_CLASS_NAME =
 export const COMPOSER_INLINE_MENTION_CHIP_INTERACTIVE_CLASS_NAME = composerInlineChipClassName({
   fill: "plain",
   tone: "accent",
+  selectionMode: "document",
+  className: "cursor-pointer text-left hover:underline",
+});
+
+export const TIMELINE_INLINE_LINK_CHIP_CLASS_NAME = composerInlineChipClassName({
+  fill: "plain",
+  tone: "accent",
+  selectionMode: "document",
   className: "cursor-pointer text-left hover:underline",
 });
 

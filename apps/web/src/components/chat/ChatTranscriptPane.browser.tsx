@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { ChatTranscriptPane } from "./ChatTranscriptPane";
+import ChatMarkdown from "../ChatMarkdown";
 import { TranscriptSelectionActionLayer } from "./TranscriptSelectionActionLayer";
 import { useTranscriptAssistantSelectionAction } from "./useTranscriptAssistantSelectionAction";
 import { createPanelResizeSession } from "../../lib/panelResize";
@@ -151,6 +152,10 @@ function TranscriptSelectionHarness(props: { onAddSelection: (text: string) => v
       props.onAddSelection(selection.text);
       return true;
     },
+    resolveAssistantSelectionContext: () => ({
+      rawText: "Selectable assistant answer",
+      markerEnabled: true,
+    }),
     scheduleComposerFocus: NOOP,
     onMessagesClickCaptureBase: NOOP,
     onMessagesPointerCancelBase: NOOP,
@@ -167,12 +172,86 @@ function TranscriptSelectionHarness(props: { onAddSelection: (text: string) => v
     <>
       <div data-testid="selection-transcript" onMouseUp={onMessagesMouseUp}>
         <p data-assistant-message-id="assistant-selection-message">
-          <span>Selectable assistant answer</span>
+          <span data-transcript-source-start="0" data-transcript-source-end="27">
+            Selectable assistant answer
+          </span>
         </p>
       </div>
       <TranscriptSelectionActionLayer
         action={pendingTranscriptSelectionAction}
         onHighlight={NOOP}
+        onUnderline={NOOP}
+        onAddToChat={commitTranscriptAssistantSelection}
+      />
+    </>
+  );
+}
+
+const CHIP_SELECTION_RAW_TEXT =
+  "状态入口： [execution-brief.md](execution-brief.md) · **Campaign** · Prompt 研究稿";
+
+function ExactMarkdownSelectionHarness(props: {
+  streaming?: boolean;
+  onAddSelection: (text: string) => void;
+  onMarkerRange: (range: { startOffset: number; endOffset: number; selectedText: string }) => void;
+}) {
+  const composerImagesRef = useRef<readonly []>([]);
+  const composerFilesRef = useRef<readonly []>([]);
+  const composerAssistantSelectionsRef = useRef<readonly []>([]);
+  const {
+    pendingTranscriptSelectionAction,
+    commitTranscriptAssistantSelection,
+    onMessagesClickCapture,
+    onMessagesMouseUp,
+    onMessagesTouchEnd,
+  } = useTranscriptAssistantSelectionAction({
+    threadId: "thread-exact-markdown-selection",
+    enabled: true,
+    composerImagesRef,
+    composerFilesRef,
+    composerAssistantSelectionsRef,
+    addComposerAssistantSelectionToDraft: (selection) => {
+      props.onAddSelection(selection.text);
+      return true;
+    },
+    resolveAssistantSelectionContext: () => ({
+      rawText: CHIP_SELECTION_RAW_TEXT,
+      markerEnabled: !(props.streaming ?? false),
+    }),
+    scheduleComposerFocus: NOOP,
+    onMessagesClickCaptureBase: NOOP,
+    onMessagesPointerCancelBase: NOOP,
+    onMessagesPointerDownBase: NOOP,
+    onMessagesPointerUpBase: NOOP,
+    onMessagesScrollBase: NOOP,
+    onMessagesTouchEndBase: NOOP,
+    onMessagesTouchMoveBase: NOOP,
+    onMessagesTouchStartBase: NOOP,
+    onMessagesWheelBase: NOOP,
+  });
+
+  return (
+    <>
+      <div
+        data-testid="exact-markdown-transcript"
+        onClickCapture={onMessagesClickCapture}
+        onMouseUp={onMessagesMouseUp}
+        onTouchEnd={onMessagesTouchEnd}
+      >
+        <div data-assistant-message-id="assistant-exact-markdown">
+          <ChatMarkdown
+            text={CHIP_SELECTION_RAW_TEXT}
+            cwd="/repo"
+            isStreaming={props.streaming ?? false}
+          />
+        </div>
+      </div>
+      <TranscriptSelectionActionLayer
+        action={pendingTranscriptSelectionAction}
+        onHighlight={() => {
+          const range = pendingTranscriptSelectionAction?.selection.markerRange;
+          if (range) props.onMarkerRange(range);
+        }}
         onUnderline={NOOP}
         onAddToChat={commitTranscriptAssistantSelection}
       />
@@ -262,6 +341,220 @@ describe("ChatTranscriptPane", () => {
 
       expect(addedSelections).toEqual(["Selectable assistant answer"]);
       expect(window.getSelection()?.isCollapsed).toBe(true);
+    } finally {
+      window.getSelection()?.removeAllRanges();
+      await screen.unmount();
+    }
+  });
+
+  it("keeps file-chip labels in the native selection and resolves exact raw marker offsets", async () => {
+    const addedSelections: string[] = [];
+    const markerRanges: Array<{ startOffset: number; endOffset: number; selectedText: string }> =
+      [];
+    const screen = await render(
+      <ExactMarkdownSelectionHarness
+        onAddSelection={(text) => addedSelections.push(text)}
+        onMarkerRange={(range) => markerRanges.push(range)}
+      />,
+    );
+    const originalNativeApi = window.nativeApi;
+    const originalDesktopBridge = window.desktopBridge;
+    try {
+      const showContextMenu = vi.fn(async () => null);
+      window.nativeApi = {
+        contextMenu: { show: showContextMenu },
+        shell: { showInFolder: vi.fn(async () => undefined) },
+      } as never;
+      window.desktopBridge = {} as never;
+      const transcript = screen.container.querySelector<HTMLElement>(
+        '[data-testid="exact-markdown-transcript"]',
+      )!;
+      const messageBody = transcript.querySelector<HTMLElement>("[data-assistant-message-id]")!;
+      const range = document.createRange();
+      range.selectNodeContents(messageBody.querySelector(".chat-markdown")!);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      expect(selection.toString()).toContain("execution-brief.md");
+      expect(selection.toString()).toContain("Campaign");
+      expect(selection.toString()).toContain("Prompt 研究稿");
+      const fileChip = transcript.querySelector<HTMLElement>('a[title*="execution-brief.md"]')!;
+      const selectedContextMenuEvent = new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+      });
+      fileChip.dispatchEvent(selectedContextMenuEvent);
+      expect(selectedContextMenuEvent.defaultPrevented).toBe(false);
+      expect(showContextMenu).not.toHaveBeenCalled();
+      transcript.dispatchEvent(
+        new MouseEvent("mouseup", {
+          bubbles: true,
+          cancelable: true,
+          clientX: 160,
+          clientY: 90,
+        }),
+      );
+
+      await expect.element(page.getByRole("button", { name: "Highlight" })).toBeVisible();
+      const toolbarRect = document
+        .querySelector<HTMLElement>('[role="toolbar"]')!
+        .getBoundingClientRect();
+      expect(toolbarRect.left).toBeGreaterThanOrEqual(8);
+      expect(toolbarRect.right).toBeLessThanOrEqual(window.innerWidth - 8);
+      await page.getByRole("button", { name: "Highlight" }).click();
+      expect(markerRanges).toEqual([
+        {
+          startOffset: 0,
+          endOffset: CHIP_SELECTION_RAW_TEXT.length,
+          selectedText: CHIP_SELECTION_RAW_TEXT,
+        },
+      ]);
+
+      selection.removeAllRanges();
+      const fileMenuEvent = new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+      });
+      fileChip.dispatchEvent(fileMenuEvent);
+      expect(fileMenuEvent.defaultPrevented).toBe(true);
+      expect(showContextMenu).toHaveBeenCalledTimes(1);
+
+      selection.addRange(range);
+      transcript.dispatchEvent(
+        new MouseEvent("mouseup", {
+          bubbles: true,
+          cancelable: true,
+          clientX: 160,
+          clientY: 90,
+        }),
+      );
+      await page.getByRole("button", { name: "Add to Chat" }).click();
+      expect(addedSelections).toEqual(["状态入口： execution-brief.md · Campaign · Prompt 研究稿"]);
+    } finally {
+      if (originalNativeApi) {
+        window.nativeApi = originalNativeApi;
+      } else {
+        delete window.nativeApi;
+      }
+      if (originalDesktopBridge) {
+        window.desktopBridge = originalDesktopBridge;
+      } else {
+        delete window.desktopBridge;
+      }
+      window.getSelection()?.removeAllRanges();
+      await screen.unmount();
+    }
+  });
+
+  it("keeps streaming selections addable while hiding marker actions", async () => {
+    const addedSelections: string[] = [];
+    const screen = await render(
+      <ExactMarkdownSelectionHarness
+        streaming
+        onAddSelection={(text) => addedSelections.push(text)}
+        onMarkerRange={NOOP}
+      />,
+    );
+    try {
+      const transcript = screen.container.querySelector<HTMLElement>(
+        '[data-testid="exact-markdown-transcript"]',
+      )!;
+      const range = document.createRange();
+      range.selectNodeContents(transcript.querySelector(".chat-markdown")!);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      transcript.dispatchEvent(
+        new MouseEvent("mouseup", { bubbles: true, clientX: 160, clientY: 90 }),
+      );
+
+      await expect.element(page.getByRole("button", { name: "Add to Chat" })).toBeVisible();
+      expect(document.querySelector('button[aria-label="Highlight"]')).toBeNull();
+      expect(document.querySelector('button[aria-label="Underline"]')).toBeNull();
+      await page.getByRole("button", { name: "Add to Chat" }).click();
+      expect(addedSelections[0]).toContain("execution-brief.md");
+    } finally {
+      window.getSelection()?.removeAllRanges();
+      await screen.unmount();
+    }
+  });
+
+  it("captures keyboard-style selectionchange and touch-end selections locally", async () => {
+    const addedSelections: string[] = [];
+    const screen = await render(
+      <ExactMarkdownSelectionHarness
+        onAddSelection={(text) => addedSelections.push(text)}
+        onMarkerRange={NOOP}
+      />,
+    );
+    try {
+      const transcript = screen.container.querySelector<HTMLElement>(
+        '[data-testid="exact-markdown-transcript"]',
+      )!;
+      transcript.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      const promptTextNode = Array.from(
+        transcript.querySelectorAll<HTMLElement>("[data-transcript-source-start]"),
+      ).find((element) => element.textContent?.includes("Prompt 研究稿"))?.firstChild;
+      expect(promptTextNode).toBeInstanceOf(Text);
+
+      const selection = window.getSelection()!;
+      const promptText = promptTextNode!.textContent ?? "";
+      const promptStart = promptText.indexOf("Prompt 研究稿");
+      selection.setBaseAndExtent(promptTextNode!, promptText.length, promptTextNode!, promptStart);
+      document.dispatchEvent(new Event("selectionchange"));
+      await expect.element(page.getByRole("button", { name: "Add to Chat" })).toBeVisible();
+      await page.getByRole("button", { name: "Add to Chat" }).click();
+      expect(addedSelections).toEqual(["Prompt 研究稿"]);
+
+      const campaignTextNode = Array.from(
+        transcript.querySelectorAll<HTMLElement>("[data-transcript-source-start]"),
+      ).find((element) => element.textContent === "Campaign")?.firstChild;
+      expect(campaignTextNode).toBeInstanceOf(Text);
+      const touchRange = document.createRange();
+      touchRange.selectNodeContents(campaignTextNode!);
+      selection.removeAllRanges();
+      selection.addRange(touchRange);
+      transcript.dispatchEvent(new Event("touchend", { bubbles: true }));
+      await expect.element(page.getByRole("button", { name: "Add to Chat" })).toBeVisible();
+      await page.getByRole("button", { name: "Add to Chat" }).click();
+      expect(addedSelections).toEqual(["Prompt 研究稿", "Campaign"]);
+    } finally {
+      window.getSelection()?.removeAllRanges();
+      await screen.unmount();
+    }
+  });
+
+  it("removes marker actions when a selected message resumes streaming but keeps the snapshot", async () => {
+    const addedSelections: string[] = [];
+    const renderHarness = (streaming: boolean) => (
+      <ExactMarkdownSelectionHarness
+        streaming={streaming}
+        onAddSelection={(text) => addedSelections.push(text)}
+        onMarkerRange={NOOP}
+      />
+    );
+    const screen = await render(renderHarness(false));
+    try {
+      const transcript = screen.container.querySelector<HTMLElement>(
+        '[data-testid="exact-markdown-transcript"]',
+      )!;
+      const range = document.createRange();
+      range.selectNodeContents(transcript.querySelector(".chat-markdown")!);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      transcript.dispatchEvent(
+        new MouseEvent("mouseup", { bubbles: true, clientX: 160, clientY: 90 }),
+      );
+      await expect.element(page.getByRole("button", { name: "Highlight" })).toBeVisible();
+
+      await screen.rerender(renderHarness(true));
+      await expect.element(page.getByRole("button", { name: "Add to Chat" })).toBeVisible();
+      expect(document.querySelector('button[aria-label="Highlight"]')).toBeNull();
+      expect(document.querySelector('button[aria-label="Underline"]')).toBeNull();
+      await page.getByRole("button", { name: "Add to Chat" }).click();
+      expect(addedSelections[0]).toContain("execution-brief.md");
     } finally {
       window.getSelection()?.removeAllRanges();
       await screen.unmount();

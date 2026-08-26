@@ -1666,7 +1666,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                   ) : null}
                   {!isEditingThisMessage && (
                     <div
-                      className="flex items-center justify-end gap-2 pr-0.5 font-system-ui font-normal text-muted-foreground/45"
+                      className="flex select-none items-center justify-end gap-2 pr-0.5 font-system-ui font-normal text-muted-foreground/45"
                       style={chatMessageFooterStyle}
                     >
                       <p className={cn("tabular-nums", MESSAGE_HOVER_REVEAL_CLASS_NAME)}>
@@ -2337,7 +2337,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                   assistantMeta.length > 0 ||
                   goalAchievement !== null) && (
                   <div
-                    className="mt-0.5 flex items-center gap-2 font-system-ui font-normal text-muted-foreground/45 [&>button:first-child]:-ml-[0.3125em]"
+                    className="mt-0.5 flex select-none items-center gap-2 font-system-ui font-normal text-muted-foreground/45 [&>button:first-child]:-ml-[0.3125em]"
                     style={chatMessageFooterStyle}
                   >
                     {showPinToggle ? (
@@ -3032,7 +3032,9 @@ function renderUserMessageInlineText(
       return segment.text.length > 0 ? [<span key={`${key}:text`}>{segment.text}</span>] : [];
     }
     if (segment.type === "skill") {
-      return [<InlineSkillChip key={`${key}:skill`} skillName={segment.name} />];
+      return [
+        <InlineSkillChip key={`${key}:skill`} skillName={segment.name} selectionMode="document" />,
+      ];
     }
     if (segment.type === "mention") {
       return [
@@ -3040,16 +3042,31 @@ function renderUserMessageInlineText(
           key={`${key}:mention`}
           path={segment.path}
           theme={resolvedTheme}
+          selectionMode="document"
           mentionReferences={mentionReferences}
           {...(segment.kind ? { kind: segment.kind } : {})}
         />,
       ];
     }
     if (segment.type === "agent-mention") {
-      return [<InlineAgentChip key={`${key}:agent`} alias={segment.alias} color={segment.color} />];
+      return [
+        <InlineAgentChip
+          key={`${key}:agent`}
+          alias={segment.alias}
+          color={segment.color}
+          selectionMode="document"
+        />,
+      ];
     }
     if (segment.type === "link") {
-      return [<InlineLinkChip key={`${key}:link`} url={segment.url} interactive />];
+      return [
+        <InlineLinkChip
+          key={`${key}:link`}
+          url={segment.url}
+          interactive
+          selectionMode="document"
+        />,
+      ];
     }
     return [];
   });

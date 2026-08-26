@@ -5,15 +5,13 @@
 
 import { useEffect, useState, type MouseEventHandler } from "react";
 
-import {
-  getActiveSelectionRect,
-  resolveTranscriptSelectionActionLayout,
-} from "./chatSelectionActions";
+import { getActiveSelectionRect, resolveSelectionActionAnchor } from "./chatSelectionActions";
 
 export interface PendingCodeSelectionAction<T> {
   payload: T;
-  left: number;
-  top: number;
+  anchorX: number;
+  selectionTop: number;
+  selectionBottom: number;
   placement: "top" | "bottom";
 }
 
@@ -52,11 +50,11 @@ export function useCodeSelectionAction<T>(options: {
         setPendingAction(null);
         return;
       }
-      const layout = resolveTranscriptSelectionActionLayout({
+      const anchor = resolveSelectionActionAnchor({
         selectionRect: getActiveSelectionRect(),
         pointer,
       });
-      setPendingAction({ payload, ...layout });
+      setPendingAction({ payload, ...anchor });
     });
   };
 

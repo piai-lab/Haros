@@ -159,9 +159,30 @@ describe("ChatMarkdown", () => {
     expect(markup).toContain(
       'href="https://example.com" target="_blank" rel="noopener noreferrer"',
     );
-    expect(markup).toContain("<code>$z$</code>");
+    expect(markup).toMatch(
+      /<code data-transcript-source-start="\d+" data-transcript-source-end="\d+">\$z\$<\/code>/,
+    );
     expect(markup).toContain("const price = &quot;$5&quot;;");
     expect(markup.match(/class="katex"/g) ?? []).toHaveLength(1);
+  });
+
+  it("projects a file chip from its visible label rather than its target path", async () => {
+    const text = "Open [visible label](src/hidden-target.ts) now.";
+    const markup = await renderMarkdown(text, "/repo");
+    const match =
+      /<a[^>]*data-transcript-source-start="(\d+)" data-transcript-source-end="(\d+)"[^>]*>[\s\S]*?<span class="inline select-text">visible label<\/span><\/a>/.exec(
+        markup,
+      );
+
+    expect(match).not.toBeNull();
+    expect(text.slice(Number(match?.[1]), Number(match?.[2]))).toBe("visible label");
+  });
+
+  it("uses source-backed text leaves instead of per-character wrappers", async () => {
+    const text = Array.from({ length: 2_000 }, () => "word").join(" ");
+    const markup = await renderMarkdown(text, undefined);
+
+    expect(markup.match(/data-transcript-source-start=/g) ?? []).toHaveLength(1);
   });
 
   it("renders external assistant links with the shared favicon icon slot", async () => {
@@ -279,9 +300,39 @@ describe("ChatMarkdown", () => {
     expect(markup).toContain("<table>");
     expect(markup).toContain('class="chat-markdown-table-frame"');
     expect(markup).toContain('class="chat-markdown-table-viewport" tabindex="-1"');
-    expect(markup).toContain('<th scope="col">Studio</th>');
-    expect(markup).toContain("<td>Purpose</td>");
+    expect(markup).toMatch(/<th scope="col"><span[^>]*>Studio<\/span><\/th>/);
+    expect(markup).toMatch(/<td><span[^>]*>Purpose<\/span><\/td>/);
     expect(markup).not.toContain("|---|");
+  });
+
+  it("projects raw marker offsets across a repaired table delimiter", async () => {
+    const text = [
+      "| A | B | C |",
+      "|---|---|",
+      "| one | two | three |",
+      "",
+      "Highlight after repaired table.",
+    ].join("\n");
+    const selectedText = "Highlight after repaired table";
+    const startOffset = text.indexOf(selectedText);
+    const marker: ThreadMarker = {
+      id: ThreadMarkerId.makeUnsafe("marker-after-table-repair"),
+      messageId: MessageId.makeUnsafe("assistant-1"),
+      startOffset,
+      endOffset: startOffset + selectedText.length,
+      selectedText,
+      style: "highlight",
+      color: "yellow",
+      label: null,
+      done: false,
+      createdAt: "2026-06-06T00:00:00.000Z",
+      updatedAt: "2026-06-06T00:00:00.000Z",
+    };
+
+    const markup = await renderMarkdown(text, undefined, [marker]);
+
+    expect(markup).toContain('data-thread-marker-id="marker-after-table-repair"');
+    expect(markup).toContain(selectedText);
   });
 
   it("preserves the raw source when a body row contains cells GFM would drop", async () => {

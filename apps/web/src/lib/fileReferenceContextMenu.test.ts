@@ -10,6 +10,10 @@ const harness = vi.hoisted(() => ({
   showContextMenu: vi.fn(),
   showInFolder: vi.fn(),
   toast: vi.fn(),
+  nativeApi: null as {
+    contextMenu: { show: ReturnType<typeof vi.fn> };
+    shell: { showInFolder: ReturnType<typeof vi.fn> };
+  } | null,
 }));
 
 vi.mock("~/hooks/useCopyToClipboard", () => ({
@@ -17,10 +21,7 @@ vi.mock("~/hooks/useCopyToClipboard", () => ({
 }));
 
 vi.mock("~/nativeApi", () => ({
-  readNativeApi: () => ({
-    contextMenu: { show: harness.showContextMenu },
-    shell: { showInFolder: harness.showInFolder },
-  }),
+  readNativeApi: () => harness.nativeApi,
 }));
 
 vi.mock("~/components/ui/toast", () => ({
@@ -48,6 +49,10 @@ beforeEach(() => {
   harness.showContextMenu.mockImplementation(async () => harness.clicked);
   harness.copyText.mockResolvedValue(undefined);
   harness.showInFolder.mockResolvedValue(undefined);
+  harness.nativeApi = {
+    contextMenu: { show: harness.showContextMenu },
+    shell: { showInFolder: harness.showInFolder },
+  };
 });
 
 afterEach(() => {
@@ -88,6 +93,35 @@ describe("getFileContextMenuPosition", () => {
 });
 
 describe("showFileReferenceContextMenu", () => {
+  it("returns false synchronously when no native menu bridge is available", () => {
+    harness.nativeApi = null;
+
+    expect(
+      showFileReferenceContextMenu({
+        path: "src/index.ts",
+        position: { x: 12, y: 34 },
+        onReferenceInChat: undefined,
+        t: en,
+      }),
+    ).toBe(false);
+    expect(harness.showContextMenu).not.toHaveBeenCalled();
+  });
+
+  it("leaves transcript-style browser context menus to the platform", () => {
+    vi.stubGlobal("window", {});
+
+    expect(
+      showFileReferenceContextMenu({
+        path: "src/index.ts",
+        position: { x: 12, y: 34 },
+        onReferenceInChat: undefined,
+        desktopOnly: true,
+        t: en,
+      }),
+    ).toBe(false);
+    expect(harness.showContextMenu).not.toHaveBeenCalled();
+  });
+
   it("keeps reference, ask, reveal, and copy in one localized menu", async () => {
     await showFileReferenceContextMenu({
       path: "src/index.ts",
