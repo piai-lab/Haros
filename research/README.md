@@ -26,6 +26,7 @@
 | 文件 | 只在什么问题下读取 |
 | --- | --- |
 | [`pi-native-product-integration-review.md`](pi-native-product-integration-review.md) | Pi runtime、Project trust、prompt、compaction、package/TUI 边界的 fixed review |
+| [`omnimind-scientist-subagent-cognition.md`](omnimind-scientist-subagent-cognition.md) | 需要理解可安装科学家、OmniMind-owned child、Thread/Session/Agent 区分、完整 Agent 工具与零 Host 工具边界时 |
 | [`omnimind-agent-core-ecosystem-orchestration-review.md`](omnimind-agent-core-ecosystem-orchestration-review.md) | Agent Core、异构协作、Workflow、Search、Memory/Wiki、Prompt/Cache 经济学与 package 候选的 2026-08-12 固定研究 |
 | [`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md) | Pi Extension Registry 与 AgentGateway Host projection 的 owner 证据 |
 | [`pi-native-todo-extension-review.md`](pi-native-todo-extension-review.md) | product-bundled Todo Extension 的 bounded source evidence |
