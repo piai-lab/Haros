@@ -1,6 +1,7 @@
 import "../index.css";
 
 import {
+  DEFAULT_SERVER_SETTINGS_VIEW,
   EventId,
   MessageId,
   DEVICE_WS_METHODS,
@@ -261,6 +262,9 @@ function findThreadDetailFromFixtureSnapshot(threadId: ThreadId): OrchestrationT
 }
 
 function resolveWsRpc(tag: string, body?: unknown): unknown {
+  if (tag === ORCHESTRATION_WS_METHODS.unsubscribeThread) {
+    return undefined;
+  }
   if (tag === ORCHESTRATION_WS_METHODS.getShellSnapshot) {
     return createShellSnapshotFromReadModel(fixture.snapshot);
   }
@@ -288,8 +292,23 @@ function resolveWsRpc(tag: string, body?: unknown): unknown {
   if (tag === WS_METHODS.serverGetConfig) {
     return fixture.serverConfig;
   }
+  if (tag === WS_METHODS.serverGetSettings) {
+    return DEFAULT_SERVER_SETTINGS_VIEW;
+  }
+  if (tag === WS_METHODS.serverGetEnvironment) {
+    return {
+      environmentId: "event-router-browser",
+      label: "EventRouter browser fixture",
+      platform: { os: "darwin", arch: "arm64" },
+      serverVersion: "0.1.0-test",
+      capabilities: { repositoryIdentity: true },
+    };
+  }
   if (tag === WS_METHODS.projectsListDevServers) {
     return { servers: [] };
+  }
+  if (tag === WS_METHODS.projectsDiscoverScripts) {
+    return { targets: [] };
   }
   if (tag === WS_METHODS.automationList) {
     return { definitions: [], runs: [] };
@@ -312,10 +331,81 @@ function resolveWsRpc(tag: string, body?: unknown): unknown {
       pr: null,
     };
   }
+  if (tag === WS_METHODS.gitWorkingTreeDiffStats) {
+    return { additions: 0, deletions: 0, fileCount: 0 };
+  }
+  if (tag === WS_METHODS.pullRequestsReviewRequestCount) {
+    return { count: 0, incomplete: false };
+  }
+  if (tag === WS_METHODS.serverListLocalServers) {
+    return { generatedAt: NOW_ISO, servers: [] };
+  }
+  if (tag === WS_METHODS.serverListProviderUsage) {
+    return [];
+  }
+  if (tag === WS_METHODS.providerListModels) {
+    return { models: [] };
+  }
+  if (tag === WS_METHODS.providerListAgents) {
+    return { source: "browser.fixture", agents: [] };
+  }
+  if (tag === WS_METHODS.omnimindModelServicesList) {
+    return {
+      state: "empty",
+      services: [],
+      connectableServices: [],
+      errorCode: null,
+    };
+  }
+  if (tag === WS_METHODS.providerGetComposerCapabilities) {
+    const request = body as { readonly provider?: string } | null;
+    return {
+      provider: request?.provider ?? "codex",
+      supportsSkillMentions: false,
+      supportsSkillDiscovery: false,
+      supportsNativeSlashCommandDiscovery: false,
+      supportsPluginMentions: false,
+      supportsPluginDiscovery: false,
+      supportsRuntimeModelList: false,
+    };
+  }
+  if (tag === WS_METHODS.providerGetExecutionCapabilities) {
+    const request = body as {
+      readonly modelSelection?: { readonly provider?: string; readonly model?: string };
+    } | null;
+    const provider = request?.modelSelection?.provider ?? "codex";
+    const model = request?.modelSelection?.model ?? "gpt-5";
+    const runtimeMode = (mode: "full-access" | "auto" | "approval-required") => ({
+      mode,
+      structurallySupported: true,
+      status: "ready" as const,
+    });
+    const interactionMode = (mode: "default" | "plan" | "debug") => ({
+      mode,
+      structurallySupported: mode === "default",
+      status: mode === "default" ? ("ready" as const) : ("unavailable" as const),
+      ...(mode === "default" ? {} : { reason: "mode-unsupported" as const }),
+    });
+    return {
+      provider,
+      model,
+      supportsNativeTurnSteering: false,
+      runtimeModes: {
+        "full-access": runtimeMode("full-access"),
+        auto: runtimeMode("auto"),
+        "approval-required": runtimeMode("approval-required"),
+      },
+      interactionModes: {
+        default: interactionMode("default"),
+        plan: interactionMode("plan"),
+        debug: interactionMode("debug"),
+      },
+    };
+  }
   if (tag === WS_METHODS.projectsSearchEntries) {
     return { entries: [], truncated: false };
   }
-  return {};
+  throw new Error(`Unhandled WebSocket method: ${tag}`);
 }
 
 const worker = setupWorker(
@@ -364,6 +454,7 @@ const worker = setupWorker(
         method === WS_METHODS.subscribeOrchestrationDomainEvents ||
         method === WS_METHODS.subscribeProjectDevServerEvents ||
         method === WS_METHODS.subscribeAutomationEvents ||
+        method === WS_METHODS.orchestrationUserInputPresenter ||
         // Left open like the rest: these are infinite subscriptions, and the
         // default below answers with an Exit, which a stream RPC reads as the
         // socket dying and answers with a full reconnect. That loops forever
@@ -631,6 +722,12 @@ describe("EventRouter scoped orchestration sync", () => {
   afterEach(() => {
     resetRetainedThreadDetailSubscriptionsForTests();
     document.body.innerHTML = "";
+  });
+
+  it("fails fast when the fixture receives an unknown WebSocket method", () => {
+    expect(() => resolveWsRpc("UnknownFixtureMethod")).toThrowError(
+      "Unhandled WebSocket method: UnknownFixtureMethod",
+    );
   });
 
   it("coalesces the replayed welcome with the initial subscription bootstrap", async () => {
