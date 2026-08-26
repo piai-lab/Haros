@@ -170,7 +170,7 @@ Server 通过 OmniMind-Agent-scoped typed surface 把 Pi 的 provider/auth/catal
 - provider、auth method/status、known/available model 与 network-refresh capability 来自 Pi ModelRuntime，不由 OmniMind 维护静态供应商/模型 capability 镜像；
 - Model-service discovery 的主入口只消费 Pi runtime 已暴露的 built-in/extension metadata；built-in 与经用户显式 intent、由 Pi 既有 ResourceLoader/Session owner 安全加载的 Extension provider 都是 V1 必达结果。被动页面不执行第三方 Extension，“通过 API 地址连接”只是低频 presentation 分支，Host 不为任何一条路径建立另一套 discovery、registry 或 catalog authority；
 - generic `models.json` 配置只允许 Pi 官方支持的 `openai-completions`、`openai-responses`、`anthropic-messages` 与 `google-generative-ai` 四种协议；其他 protocol/auth/discovery/stream/tool/usage 只能来自真实 Pi Extension，不能由 Host 按品牌或 URL 猜测；
-- 持久 API key 与 OAuth 走 Pi `login()`/`logout()` credential-store lifecycle；runtime API-key override 只用于明确的一次性/未保存操作，不得显示为已保存；
+- 持久 API key 与 OAuth 走 Pi `login()`/`logout()` credential-store lifecycle；用户主动在详情中显示或复制已保存literal API Key时，由同一Server owner串行读取精确credential并通过owner-only、可取消的typed response短时返回，普通query与catalog projection仍保持credential-blind；OAuth、无literal key的credential、环境与command来源拒绝该读取。runtime API-key override只用于明确的一次性/未保存操作，不得显示为已保存；
 - Pi `AuthInteraction` 的 text/secret/select/manual-code prompt 与 info/auth-url/device-code/progress event 通过短生命周期、可取消的 typed bridge 呈现，secret/token 不进入 Product state、query cache、Timeline 或日志；
 - provider-scoped network refresh、last-good catalog 与 cache 语义由 Pi models store/provider implementation 拥有；普通 model-list refetch 不得冒充网络刷新；
 - Settings operation 使用 task-local ModelRuntime，不能把一个全局可变 runtime 注入所有 Thread。credential/config/catalog mutation 不热切当前 turn；每个隔离 Session 在下一次 send admission 前按同一 agentDir 的 process-local mutation revision 刷新自身 runtime snapshot。该 revision 只做失效通知，不是第二持久化真相；
@@ -203,6 +203,10 @@ adapter 把 native event 映射到现有 canonical facts，并保留 Provider/na
 Product command receipt 只证明外层 admission。native acceptance/turn/session reference、interrupt acknowledgement 与 settlement 必须来自当前 adapter；失联时显示 waiting、failed 或 unknown，不自动转交另一 Provider。
 
 restart 优先使用 Provider native resume/session cursor。无法恢复时明确创建 fresh context/new lineage；不能用 Product Timeline 冒充完整 native continuation。
+
+Desktop shutdown token、loopback origin 与本机 Desktop composition共同构成 normal-quit recovery 的 authority；普通 Web、远程 client、Provider 与公共 WebSocket command 均不能制造恢复记录。`/api/desktop/shutdown` 在既有鉴权后可接收一个有界 `resumeIntent`，无 body 时保持原 shutdown 行为。Server 的派生 `quitResumeStatePath` 指向私有 state 目录中的 `quit-resume.json`：同目录临时文件原子替换，目录 `0700`、文件 `0600`，一个 shutdown writer、一个 startup claimant，无查询 API、历史、编辑或迁移生命周期。
+
+恢复启动顺序固定为 projection bootstrap → restart reconciliation（旧运行与旧交互 promise 收口）→ queued-turn reconciliation → 原子 claim → command-ready → 逐条普通 `thread.turn.start`。只允许 Server 注入的 `resumePrecondition` 在最终 serialized dispatch 再检查任务仍存在且可用、没有新 in-flight turn、旧 turn 未自行完成且工作区/Project/exact binding 仍有效；客户端 schema剥离该字段。恢复继续走原 Queue、并发、权限和 Provider Registry；当前精确绑定不可用时走现有失败投影，禁止 silent fallback。
 
 ## Runtime mode：一个任务只有一个自动化边界
 

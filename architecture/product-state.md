@@ -37,7 +37,7 @@ Goal 与 Todo 是两条互补事实。Goal 保存用户明确设定、可跨 tur
 
 ## 用户设置状态边界
 
-用户设置按事实生命周期拥有不同writer，但同一事实只能有一个持久authority：纯浏览器appearance、一次性presentation与明确local-only的交互偏好由Web本地owner保存；跨窗口、Server执行、Provider路径/endpoint、Host工具intent与其他Server-owned设置只由ServerSettings或该能力的专用Server/package owner保存；credential与Provider private state继续属于各自秘密/runtime owner；Desktop图标、原生titlebar、AppSnap listener/shortcut reservation与当前进程native state由Desktop owner保存或执行。页面可以把这些事实组合成一个用户任务视图，但不得建立覆盖全部来源的第二`AppSettings`持久schema、先写localStorage再写Server的dual-write或由浏览器缓存冒充Server成功。ServerSettings只投影credential-blind configured状态；secret mutation后由现有ServerSettings/view串行边界基于fresh snapshot发布同一投影，不把secret写回settings JSON，也不建立第二stream或cache。
+用户设置按事实生命周期拥有不同writer，但同一事实只能有一个持久authority：纯浏览器appearance、一次性presentation与明确local-only的交互偏好由Web本地owner保存；跨窗口、Server执行、Provider路径/endpoint、Host工具intent与其他Server-owned设置只由ServerSettings或该能力的专用Server/package owner保存；credential与Provider private state继续属于各自秘密/runtime owner；Desktop图标、原生titlebar、AppSnap listener/shortcut reservation与当前进程native state由Desktop owner保存或执行。页面可以把这些事实组合成一个用户任务视图，但不得建立覆盖全部来源的第二`AppSettings`持久schema、先写localStorage再写Server的dual-write或由浏览器缓存冒充Server成功。ServerSettings与普通Provider/Composer列表只投影credential-blind configured状态。用户在模型服务详情主动显示或复制自己保存的literal API Key时，现有credential owner可通过owner-only typed seam返回一次短生命周期结果；Renderer不把该值交给Product State、React Query、持久draft、Timeline、事件、日志、诊断或恢复记录，离开详情、替换、清除、重置或卸载页面立即取消在途读取并清空内存值。环境来源只投影变量名，OAuth与command来源不伪装成可查看API Key。secret mutation后由现有ServerSettings/view串行边界基于fresh snapshot发布同一非秘密投影，不把secret写回settings JSON，也不建立第二stream或cache。
 
 本first-public产品不继承旧浏览器mixed settings草稿：旧key不读、不迁移、不改写、不删除，新local-only namespace从产品默认值开始。未来已发行schema若确需迁移，只允许对应幸存owner执行有界、幂等、一次性的legacy读取；成功后旧字段不再参与normal read、mutation、fallback或恢复，失败必须保留真实旧字节并让目标truth保持未提交。不能形成永久migration flag、双向mapper或两份长期可写真相。新增一个Server-owned字段时，合法修改半径应集中在Server schema/owner、typed projection与真实UI consumer，不得再次要求为浏览器localStorage补defaults、normalizer和双向映射。
 
@@ -157,6 +157,10 @@ Product Orchestration 恢复 command/event/projection；Provider adapter 恢复 
 - native Session 丢失：Thread 仍可读，新 Session 明确为 fresh/rebuilt；
 - cancel/interrupt request 只证明已请求，native acknowledgement/terminal event 才证明结果。
 - targeted child interrupt 必须引用 exact child identity；只停止目标 child，不能借已有 Root interrupt path 误杀 parent 或 sibling。Root stop-all 与 child stop 是两种不同语义。
+
+正常退出恢复是同一 Product Orchestration 的一次性输入，不是第二 Product State。只有用户通过窗口关闭或普通 App 退出并确认后，Desktop 才可把 Renderer 的候选快照经受保护的 loopback shutdown route 交给 Server；崩溃、强杀、信号、更新安装、内部重启、bundle swap 与 fatal startup 均不得写恢复记录。记录只保存任务、active turn、精确 `ModelSelection`、Thinking/effort、runtime/interaction/review/delivery mode 与本地化续接文案的白名单字段，不保存凭据、Provider 私有目录、endpoint 或任意原始配置。
+
+Server 在 shutdown 前重新核验只有 `starting / connecting / running` 的用户可见顶层任务可进入记录；queued-only、approval、user-input、terminal、archived/deleted 与 child/subagent 均排除。启动时先 claim 并删除整个私有记录，再按 queued-turn 优先顺序和 serialized dispatch precondition 派发普通用户消息；claim 后失败不重建、不重试。原工作区缺失、不可访问、Project 缺失或 exact binding 不可取得时只写受限双语失败 activity，不能猜路径、退回 Home、切换 Provider/model/Thinking 或制造重复续接。
 
 ## 权限真实性
 

@@ -21,7 +21,7 @@ export function ThreadRunningSpinner({ className }: { className?: string }) {
       viewBox={`0 0 ${CANVAS} ${CANVAS}`}
       fill="none"
       className={cn(
-        "inline-block size-3 shrink-0 animate-spin text-muted-foreground/55 [animation-duration:1.3s] motion-reduce:animate-none",
+        "inline-block size-3 shrink-0 animate-spin-stepped text-muted-foreground/55 motion-reduce:animate-none",
         className,
       )}
     >

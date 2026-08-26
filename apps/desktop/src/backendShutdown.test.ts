@@ -654,32 +654,34 @@ describe("runAfterDesktopShutdown", () => {
 });
 
 describe("shouldDeferDesktopWindowClose", () => {
-  it("keeps Windows windows alive until shutdown or updater handoff is proven", () => {
+  it("keeps every desktop window alive until shutdown or updater handoff is proven", () => {
     expect(
       shouldDeferDesktopWindowClose({
-        platform: "win32",
         shutdownComplete: false,
         updaterHandoffActive: false,
       }),
     ).toBe(true);
     expect(
       shouldDeferDesktopWindowClose({
-        platform: "linux",
         shutdownComplete: false,
         updaterHandoffActive: false,
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       shouldDeferDesktopWindowClose({
-        platform: "win32",
         shutdownComplete: false,
         updaterHandoffActive: true,
       }),
     ).toBe(false);
     expect(
       shouldDeferDesktopWindowClose({
-        platform: "darwin",
         shutdownComplete: false,
+        updaterHandoffActive: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldDeferDesktopWindowClose({
+        shutdownComplete: true,
         updaterHandoffActive: false,
       }),
     ).toBe(false);
@@ -708,6 +710,32 @@ async function closeServer(server: Http.Server): Promise<void> {
 }
 
 describe("startDesktopBackendShutdownRequest", () => {
+  it("sends a bounded resume intent only in the protected request body", async () => {
+    let observedBody = "";
+    let observedContentType = "";
+    const { server, baseUrl } = await listen((request, response) => {
+      observedContentType = request.headers["content-type"] ?? "";
+      request.setEncoding("utf8");
+      request.on("data", (chunk) => (observedBody += chunk));
+      request.on("end", () => response.writeHead(202).end());
+    });
+    try {
+      const body = {
+        resumeIntent: { threadIds: ["thread-a"], continuationPrompt: "continue" },
+      };
+      const pending = startDesktopBackendShutdownRequest({
+        backendHttpUrl: baseUrl,
+        shutdownToken: "desktop-only-token",
+        body,
+      });
+      await expect(pending.outcome).resolves.toEqual({ type: "response", statusCode: 202 });
+      expect(observedContentType).toBe("application/json");
+      expect(JSON.parse(observedBody)).toEqual(body);
+    } finally {
+      await closeServer(server);
+    }
+  });
+
   it("posts only to the loopback shutdown path with the bearer credential", async () => {
     let observedMethod = "";
     let observedUrl = "";

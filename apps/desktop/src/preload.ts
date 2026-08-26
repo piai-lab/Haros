@@ -119,6 +119,18 @@ contextBridge.exposeInMainWorld("desktopBridge", {
       ipcRenderer.removeListener(IPC.menuAction, wrappedListener);
     };
   },
+  onQuitConfirmationRequest: (listener) => {
+    const wrappedListener = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (!payload || typeof payload !== "object") return;
+      const requestId = (payload as { readonly requestId?: unknown }).requestId;
+      if (typeof requestId === "string" && requestId.trim()) listener({ requestId });
+    };
+    ipcRenderer.on(IPC.quitConfirmationRequest, wrappedListener);
+    return () => ipcRenderer.removeListener(IPC.quitConfirmationRequest, wrappedListener);
+  },
+  replyQuitConfirmation: (response) => {
+    ipcRenderer.send(IPC.quitConfirmationResponse, response);
+  },
   getZoomFactor: () => {
     const factor = ipcRenderer.sendSync(IPC.zoomFactor);
     return typeof factor === "number" && Number.isFinite(factor) && factor > 0 ? factor : 1;

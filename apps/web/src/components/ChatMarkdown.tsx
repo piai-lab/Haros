@@ -49,6 +49,7 @@ import {
 } from "../lib/remarkTableIntegrity";
 import { useTheme } from "../hooks/useTheme";
 import { useSmoothStreamedText } from "../hooks/useSmoothStreamedText";
+import { useThrottledStreamingValue } from "../hooks/useThrottledStreamingValue";
 import { openWorkspaceFileReference, useWorkspaceFileOpener } from "../lib/workspaceFileOpener";
 import { resolveMarkdownFileLinkTarget, rewriteMarkdownFileUriHref } from "../markdown-links";
 import type { ExpandedImagePreview } from "./chat/ExpandedImagePreview";
@@ -406,7 +407,10 @@ function splitTextNodeWithMarkers(
     const absoluteFragmentStart = startOffset + markerStart;
     const absoluteFragmentEnd = startOffset + markerEnd;
     if (markerStart > cursor) {
-      nodes.push({ type: "text", value: node.value.slice(cursor, markerStart) });
+      nodes.push({
+        type: "text",
+        value: node.value.slice(cursor, markerStart),
+      });
     }
     nodes.push({
       type: "threadMarker",
@@ -843,9 +847,11 @@ function MarkdownTableIntegrityFallback(props: {
   );
 }
 
-function extractCodeBlock(
-  children: ReactNode,
-): { className: string | undefined; code: string; mermaidOrdinal: number | null } | null {
+function extractCodeBlock(children: ReactNode): {
+  className: string | undefined;
+  code: string;
+  mermaidOrdinal: number | null;
+} | null {
   const childNodes = Children.toArray(children);
   if (childNodes.length !== 1) {
     return null;
@@ -996,12 +1002,37 @@ function getSyntaxHighlightingModulePromise(): Promise<SyntaxHighlightingModule>
   return syntaxHighlightingModulePromise;
 }
 
+const STREAMING_CODE_HIGHLIGHT_INTERVAL_MS = 160;
+const STREAMING_CODE_HIGHLIGHT_MAX_INTERVAL_MS = 1_000;
+const STREAMING_CODE_HIGHLIGHT_BASE_CHARS = 8_000;
+const STREAMING_CODE_HIGHLIGHT_SLOW_CHARS = 80_000;
+
+export function streamingCodeHighlightIntervalMs(codeLength: number): number {
+  if (codeLength <= STREAMING_CODE_HIGHLIGHT_BASE_CHARS) {
+    return STREAMING_CODE_HIGHLIGHT_INTERVAL_MS;
+  }
+  const progress = Math.min(
+    1,
+    (codeLength - STREAMING_CODE_HIGHLIGHT_BASE_CHARS) /
+      (STREAMING_CODE_HIGHLIGHT_SLOW_CHARS - STREAMING_CODE_HIGHLIGHT_BASE_CHARS),
+  );
+  return Math.round(
+    STREAMING_CODE_HIGHLIGHT_INTERVAL_MS +
+      progress * (STREAMING_CODE_HIGHLIGHT_MAX_INTERVAL_MS - STREAMING_CODE_HIGHLIGHT_INTERVAL_MS),
+  );
+}
+
 function SuspenseShikiCodeBlock({
   language,
-  code,
+  code: liveCode,
   themeName,
   isStreaming,
 }: SuspenseShikiCodeBlockProps) {
+  const code = useThrottledStreamingValue(
+    liveCode,
+    isStreaming,
+    streamingCodeHighlightIntervalMs(liveCode.length),
+  );
   const syntaxHighlighting = use(getSyntaxHighlightingModulePromise());
   return (
     <LoadedShikiCodeBlock
@@ -1020,7 +1051,9 @@ function LoadedShikiCodeBlock({
   code,
   themeName,
   isStreaming,
-}: SuspenseShikiCodeBlockProps & { syntaxHighlighting: SyntaxHighlightingModule }) {
+}: SuspenseShikiCodeBlockProps & {
+  syntaxHighlighting: SyntaxHighlightingModule;
+}) {
   const cacheKey = syntaxHighlighting.createSyntaxHighlightCacheKey(code, language, themeName);
   const cachedHighlightedHtml = !isStreaming
     ? syntaxHighlighting.getCachedSyntaxHighlightedHtml(cacheKey)
@@ -1156,7 +1189,10 @@ function ChatMarkdown({
   const threadMarkerRemarkPlugin = useMemo(
     () =>
       markers && markers.length > 0
-        ? createThreadMarkerRemarkPlugin({ text: repairMarkdownTableDelimiters(text), markers })
+        ? createThreadMarkerRemarkPlugin({
+            text: repairMarkdownTableDelimiters(text),
+            markers,
+          })
         : null,
     [markers, text],
   );

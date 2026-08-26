@@ -129,7 +129,24 @@ function reasoningActivityTone(
   return status === "failed" || status === "declined" ? "error" : "info";
 }
 
-function stringifyJsonLike(value: unknown): string {
+function isPlainJsonTree(value: unknown, seen: Set<object>): boolean {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean" ||
+    (typeof value === "number" && Number.isFinite(value))
+  ) {
+    return true;
+  }
+  if (typeof value !== "object" || seen.has(value)) return false;
+  seen.add(value);
+  if (Array.isArray(value)) return value.every((entry) => isPlainJsonTree(entry, seen));
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return false;
+  return Object.values(value).every((entry) => isPlainJsonTree(entry, seen));
+}
+
+function stringifyJsonLikeFallback(value: unknown): string {
   const seen = new WeakSet<object>();
   return (
     JSON.stringify(value, (_key, entry) => {
@@ -148,6 +165,18 @@ function stringifyJsonLike(value: unknown): string {
       return entry;
     }) ?? "null"
   );
+}
+
+function serializeJsonLike(value: unknown): { readonly text: string; readonly plain: boolean } {
+  const plain = isPlainJsonTree(value, new Set<object>());
+  return {
+    text: plain ? (JSON.stringify(value) ?? "null") : stringifyJsonLikeFallback(value),
+    plain,
+  };
+}
+
+function stringifyJsonLike(value: unknown): string {
+  return serializeJsonLike(value).text;
 }
 
 function truncateJsonString(value: string, limit: number): string {
@@ -270,9 +299,10 @@ function truncateJsonValue(
 }
 
 function boundActivityData(value: unknown): unknown {
-  const serialized = stringifyJsonLike(value);
+  const serialization = serializeJsonLike(value);
+  const serialized = serialization.text;
   if (serialized.length <= MAX_ACTIVITY_DATA_JSON_CHARS) {
-    return JSON.parse(serialized);
+    return serialization.plain ? value : JSON.parse(serialized);
   }
 
   const withTruncationMetadata = (bounded: unknown): Record<string, unknown> => {

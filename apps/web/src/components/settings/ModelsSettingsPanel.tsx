@@ -87,6 +87,7 @@ import {
   SettingsSectionShell,
   SettingsSelectPopup,
 } from "./SettingsPanelPrimitives";
+import { CredentialSecretControls } from "./CredentialSecretControls";
 
 interface ModelServiceAuthDialogState {
   readonly serviceId: string;
@@ -376,15 +377,15 @@ function customModelServiceCredentialInput(
 }
 
 function customModelServiceRiskFingerprint(editor: CustomModelServiceEditorState): string {
-  return JSON.stringify({
-    api: editor.api,
-    baseUrl: editor.baseUrl.trim(),
-    models: editor.models.map((model) => ({
-      modelId: model.modelId.trim(),
-      api: model.api ?? null,
-      baseUrl: model.baseUrl?.trim() ?? null,
-    })),
-  });
+  return JSON.stringify(
+    [editor.baseUrl, ...editor.models.map((model) => model.baseUrl ?? editor.baseUrl)]
+      .map((endpoint) => endpoint.trim())
+      .filter(
+        (endpoint, index, endpoints) =>
+          endpoint.length > 0 && endpoints.indexOf(endpoint) === index,
+      )
+      .toSorted(),
+  );
 }
 
 function modelSelectionUsesCustomService(
@@ -631,7 +632,10 @@ function CustomHeaderEditor({
                           onChange(
                             entries.map((current, currentIndex) =>
                               currentIndex === index
-                                ? { ...current, variableName: event.target.value }
+                                ? {
+                                    ...current,
+                                    variableName: event.target.value,
+                                  }
                                 : current,
                             ),
                           )
@@ -842,6 +846,7 @@ function ActiveModelsSettingsPanel({
   const authRequestControllerRef = useRef<AbortController | null>(null);
   const modelServicePostLoginControllerRef = useRef<AbortController | null>(null);
   const modelServiceRefreshControllerRef = useRef<AbortController | null>(null);
+  const modelServiceApiKeyControllerRef = useRef<AbortController | null>(null);
   const customTestControllerRef = useRef<AbortController | null>(null);
   const customDiscoveryControllerRef = useRef<AbortController | null>(null);
   const authRequestIdRef = useRef<string | null>(null);
@@ -902,6 +907,14 @@ function ActiveModelsSettingsPanel({
     ReadonlySet<string>
   >(new Set());
   const [modelServiceMutation, setModelServiceMutation] = useState<string | null>(null);
+  const [revealedModelServiceApiKey, setRevealedModelServiceApiKey] = useState<{
+    readonly serviceId: string;
+    readonly value: string;
+  } | null>(null);
+  const [modelServiceApiKeyAccess, setModelServiceApiKeyAccess] = useState<
+    "reveal" | "copy" | null
+  >(null);
+  const [modelServiceApiKeyError, setModelServiceApiKeyError] = useState<string | null>(null);
   const [modelServiceNotice, setModelServiceNotice] = useState<ModelServiceNotice | null>(null);
   const modelServiceDetailRegionId = useId();
   const customServiceApiKeyInputId = useId();
@@ -990,8 +1003,14 @@ function ActiveModelsSettingsPanel({
         }
         if (!completionIsCurrent()) return false;
         setupTargetServiceIdRef.current = null;
-        onServicePrepared?.({ service: detail.service, models: availableModels });
-        onSetupReady?.({ provider: "omnimind", model: `${service.serviceId}/${model.modelId}` });
+        onServicePrepared?.({
+          service: detail.service,
+          models: availableModels,
+        });
+        onSetupReady?.({
+          provider: "omnimind",
+          model: `${service.serviceId}/${model.modelId}`,
+        });
         return true;
       } catch {
         if (!completionIsCurrent()) return false;
@@ -1057,6 +1076,7 @@ function ActiveModelsSettingsPanel({
       void cancelCurrentAuthRequest();
       modelServicePostLoginControllerRef.current?.abort();
       modelServiceRefreshControllerRef.current?.abort();
+      modelServiceApiKeyControllerRef.current?.abort();
       customTestControllerRef.current?.abort();
       customTestControllerRef.current = null;
       customDiscoveryControllerRef.current?.abort();
@@ -1092,6 +1112,11 @@ function ActiveModelsSettingsPanel({
     setConfirmedCustomServiceEndpoint(null);
     setConfirmedCustomServiceCommands(new Set());
     setModelServiceMutation(null);
+    modelServiceApiKeyControllerRef.current?.abort();
+    modelServiceApiKeyControllerRef.current = null;
+    setRevealedModelServiceApiKey(null);
+    setModelServiceApiKeyAccess(null);
+    setModelServiceApiKeyError(null);
     setModelServiceNotice(null);
   });
   const selectedModelService = modelServiceDetailQuery.data?.service ?? null;
@@ -1192,9 +1217,41 @@ function ActiveModelsSettingsPanel({
     [t],
   );
 
+  const modelServiceCredentialSourceLabel = useCallback(
+    (service: OmniMindModelServiceDescriptor) => {
+      switch (service.authSource) {
+        case "stored":
+          return service.storedCredentialType === "oauth"
+            ? t("settings.modelServiceCredentialSourceOAuth")
+            : t("settings.modelServiceCredentialSourceStored");
+        case "environment":
+          return service.authEnvironmentVariables
+            ? t("settings.modelServiceCredentialSourceEnvironmentNamed", {
+                variable: service.authEnvironmentVariables.join(", "),
+              })
+            : t("settings.modelServiceCredentialSourceEnvironment");
+        case "runtime":
+          return t("settings.modelServiceCredentialSourceRuntime");
+        case "models_json_key":
+          return t("settings.modelServiceCredentialSourceImportedKey");
+        case "models_json_command":
+          return t("settings.modelServiceCredentialSourceCommand");
+        case "fallback":
+          return t("settings.modelServiceCredentialSourceFallback");
+        case "unknown":
+          return t("settings.modelServiceCredentialSourceUnknown");
+        case null:
+          return t("settings.modelServiceCredentialSourceNone");
+      }
+    },
+    [t],
+  );
+
   const invalidateModelServiceConsumers = useCallback(async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: omniMindModelServicesQueryKeys.all }),
+      queryClient.invalidateQueries({
+        queryKey: omniMindModelServicesQueryKeys.all,
+      }),
       queryClient.invalidateQueries({
         queryKey: providerDiscoveryQueryKeys.modelsForProvider("omnimind"),
       }),
@@ -1366,7 +1423,9 @@ function ActiveModelsSettingsPanel({
       }
       const refreshResult =
         result.state === "complete" && completedService.supportsNetworkRefresh
-          ? await refreshModelService(completedService, { preserveNotice: true })
+          ? await refreshModelService(completedService, {
+              preserveNotice: true,
+            })
           : null;
       if (
         completionController.signal.aborted ||
@@ -1427,6 +1486,9 @@ function ActiveModelsSettingsPanel({
       authType: "api_key" | "oauth",
       oauthPromptMode: OmniMindModelServiceOAuthPromptMode = "provider_default",
     ) => {
+      modelServiceApiKeyControllerRef.current?.abort();
+      setRevealedModelServiceApiKey(null);
+      setModelServiceApiKeyError(null);
       await cancelCurrentAuthRequest();
       const controller = new AbortController();
       authRequestControllerRef.current = controller;
@@ -1526,41 +1588,111 @@ function ActiveModelsSettingsPanel({
     });
   }, [applyAuthResult, authDialog?.authType, cancelCurrentAuthRequest]);
 
-  const logoutModelService = useCallback(async () => {
-    const service = logoutService;
-    if (!service) return;
-    const isOAuth = service.storedCredentialType === "oauth";
-    setModelServiceMutation(`logout:${service.serviceId}`);
-    setModelServiceNotice(null);
-    try {
-      const result = await ensureNativeApi().omnimindModelServices.logout({
-        serviceId: service.serviceId,
-        ...(service.origin === "extension" ? { origin: "extension" as const } : {}),
-      });
-      setLogoutService(null);
-      setModelServiceNotice({
-        tone: result.state === "complete" ? "status" : "error",
-        text:
-          result.state === "complete"
-            ? isOAuth
-              ? t("settings.modelServiceSignedOut")
-              : t("settings.modelServiceCredentialRemoved")
-            : isOAuth
-              ? t("settings.modelServiceSignedOutSyncFailed")
-              : t("settings.modelServiceCredentialRemovedSyncFailed"),
-      });
-      await invalidateModelServiceConsumers();
-    } catch {
-      setModelServiceNotice({
-        tone: "error",
-        text: isOAuth
-          ? t("settings.modelServiceSignOutFailed")
-          : t("settings.modelServiceCredentialRemoveFailed"),
-      });
-    } finally {
-      setModelServiceMutation(null);
-    }
-  }, [invalidateModelServiceConsumers, logoutService, t]);
+  const logoutModelService = useCallback(
+    async (requestedService?: OmniMindModelServiceDescriptor) => {
+      const service = requestedService ?? logoutService;
+      if (!service) return;
+      const isOAuth = service.storedCredentialType === "oauth";
+      if (!isOAuth) {
+        modelServiceApiKeyControllerRef.current?.abort();
+        setRevealedModelServiceApiKey(null);
+        setModelServiceApiKeyError(null);
+      }
+      setModelServiceMutation(`logout:${service.serviceId}`);
+      setModelServiceNotice(null);
+      try {
+        const result = await ensureNativeApi().omnimindModelServices.logout({
+          serviceId: service.serviceId,
+          ...(service.origin === "extension" ? { origin: "extension" as const } : {}),
+        });
+        setLogoutService(null);
+        modelServiceApiKeyControllerRef.current?.abort();
+        setRevealedModelServiceApiKey(null);
+        setModelServiceApiKeyError(null);
+        setModelServiceNotice({
+          tone: result.state === "complete" ? "status" : "error",
+          text:
+            result.state === "complete"
+              ? isOAuth
+                ? t("settings.modelServiceSignedOut")
+                : t("settings.modelServiceCredentialRemoved")
+              : isOAuth
+                ? t("settings.modelServiceSignedOutSyncFailed")
+                : t("settings.modelServiceCredentialRemovedSyncFailed"),
+        });
+        await invalidateModelServiceConsumers();
+      } catch {
+        setModelServiceNotice({
+          tone: "error",
+          text: isOAuth
+            ? t("settings.modelServiceSignOutFailed")
+            : t("settings.modelServiceCredentialRemoveFailed"),
+        });
+      } finally {
+        setModelServiceMutation(null);
+      }
+    },
+    [invalidateModelServiceConsumers, logoutService, t],
+  );
+
+  const readStoredModelServiceApiKey = useCallback(
+    async (
+      service: OmniMindModelServiceDescriptor,
+      intent: "reveal" | "copy",
+    ): Promise<string | null> => {
+      modelServiceApiKeyControllerRef.current?.abort();
+      const controller = new AbortController();
+      modelServiceApiKeyControllerRef.current = controller;
+      setModelServiceApiKeyAccess(intent);
+      setModelServiceApiKeyError(null);
+      try {
+        const result = await ensureNativeApi().omnimindModelServices.revealApiKey(
+          { serviceId: service.serviceId },
+          { signal: controller.signal },
+        );
+        if (controller.signal.aborted || modelServiceApiKeyControllerRef.current !== controller) {
+          return null;
+        }
+        if (result.state !== "ready") {
+          setRevealedModelServiceApiKey(null);
+          setModelServiceApiKeyError(
+            result.reason === "not_stored_api_key"
+              ? t("settings.modelServiceApiKeyNoLongerStored")
+              : t("settings.modelServiceApiKeyRevealFailed"),
+          );
+          return null;
+        }
+        if (intent === "reveal") {
+          setRevealedModelServiceApiKey({
+            serviceId: service.serviceId,
+            value: result.apiKey,
+          });
+        }
+        return result.apiKey;
+      } catch {
+        if (controller.signal.aborted || modelServiceApiKeyControllerRef.current !== controller) {
+          return null;
+        }
+        setRevealedModelServiceApiKey(null);
+        setModelServiceApiKeyError(t("settings.modelServiceApiKeyRevealFailed"));
+        return null;
+      } finally {
+        if (modelServiceApiKeyControllerRef.current === controller) {
+          modelServiceApiKeyControllerRef.current = null;
+          setModelServiceApiKeyAccess(null);
+        }
+      }
+    },
+    [t],
+  );
+
+  useEffect(() => {
+    modelServiceApiKeyControllerRef.current?.abort();
+    modelServiceApiKeyControllerRef.current = null;
+    setRevealedModelServiceApiKey(null);
+    setModelServiceApiKeyAccess(null);
+    setModelServiceApiKeyError(null);
+  }, [selectedModelServiceId]);
 
   const updateCustomServiceEditor = useCallback(
     (update: (current: CustomModelServiceEditorState) => CustomModelServiceEditorState) => {
@@ -1607,7 +1739,11 @@ function ActiveModelsSettingsPanel({
                       cost: {
                         ...model.cost,
                         ...(model.cost.tiers
-                          ? { tiers: model.cost.tiers.map((tier) => ({ ...tier })) }
+                          ? {
+                              tiers: model.cost.tiers.map((tier) => ({
+                                ...tier,
+                              })),
+                            }
                           : {}),
                       },
                     }
@@ -1685,7 +1821,10 @@ function ActiveModelsSettingsPanel({
               }
             : current,
         );
-        setModelServiceNotice({ tone: "status", text: t("settings.customApiTestSucceeded") });
+        setModelServiceNotice({
+          tone: "status",
+          text: t("settings.customApiTestSucceeded"),
+        });
       } else {
         setCustomServiceEditor((current) =>
           current && customModelServiceFingerprint(current) === fingerprint
@@ -1732,7 +1871,11 @@ function ActiveModelsSettingsPanel({
     customDiscoveryControllerRef.current?.abort();
     const controller = new AbortController();
     customDiscoveryControllerRef.current = controller;
-    setCustomModelDiscovery({ status: "loading", models: [], selectedModelIds: new Set() });
+    setCustomModelDiscovery({
+      status: "loading",
+      models: [],
+      selectedModelIds: new Set(),
+    });
     setModelServiceNotice(null);
     try {
       const result = await ensureNativeApi().omnimindModelServices.discoverCustom(
@@ -1751,7 +1894,9 @@ function ActiveModelsSettingsPanel({
         });
         setModelServiceNotice({
           tone: "status",
-          text: t("settings.customApiDiscoverySucceeded", { count: result.models.length }),
+          text: t("settings.customApiDiscoverySucceeded", {
+            count: result.models.length,
+          }),
         });
       } else if (result.state !== "cancelled") {
         setCustomModelDiscovery(EMPTY_CUSTOM_MODEL_DISCOVERY);
@@ -1866,7 +2011,10 @@ function ActiveModelsSettingsPanel({
         }
       }
     } catch {
-      setModelServiceNotice({ tone: "error", text: t("settings.customApiSaveFailed") });
+      setModelServiceNotice({
+        tone: "error",
+        text: t("settings.customApiSaveFailed"),
+      });
     } finally {
       setModelServiceMutation(null);
     }
@@ -1952,7 +2100,10 @@ function ActiveModelsSettingsPanel({
         serviceId: service.serviceId,
       });
       if (result.state === "blocked_active_operation") {
-        setModelServiceNotice({ tone: "error", text: t("settings.customApiRemoveBlockedActive") });
+        setModelServiceNotice({
+          tone: "error",
+          text: t("settings.customApiRemoveBlockedActive"),
+        });
         return;
       }
       setRemoveCustomService(null);
@@ -1967,7 +2118,10 @@ function ActiveModelsSettingsPanel({
             : t("settings.customApiRemovedSyncWarning"),
       });
     } catch {
-      setModelServiceNotice({ tone: "error", text: t("settings.customApiRemoveFailed") });
+      setModelServiceNotice({
+        tone: "error",
+        text: t("settings.customApiRemoveFailed"),
+      });
     } finally {
       setModelServiceMutation(null);
     }
@@ -2277,8 +2431,12 @@ function ActiveModelsSettingsPanel({
                           aria-controls={modelServiceDetailRegionId}
                           aria-label={
                             detailOpen
-                              ? t("settings.hideDetailsNamed", { name: instanceLabel })
-                              : t("settings.viewDetailsNamed", { name: instanceLabel })
+                              ? t("settings.hideDetailsNamed", {
+                                  name: instanceLabel,
+                                })
+                              : t("settings.viewDetailsNamed", {
+                                  name: instanceLabel,
+                                })
                           }
                           onClick={() => openModelServiceDetails(service.serviceId, "overview")}
                         >
@@ -2884,7 +3042,10 @@ function ActiveModelsSettingsPanel({
                       scope="provider"
                       entries={customServiceEditor.headers}
                       onChange={(headers) =>
-                        updateCustomServiceEditor((current) => ({ ...current, headers }))
+                        updateCustomServiceEditor((current) => ({
+                          ...current,
+                          headers,
+                        }))
                       }
                     />
                   </details>
@@ -3091,7 +3252,10 @@ function ActiveModelsSettingsPanel({
                                 ...current,
                                 models: current.models.map((entry, modelIndex) =>
                                   modelIndex === index
-                                    ? { ...entry, baseUrl: event.target.value || undefined }
+                                    ? {
+                                        ...entry,
+                                        baseUrl: event.target.value || undefined,
+                                      }
                                     : entry,
                                 ),
                               }))
@@ -3227,7 +3391,10 @@ function ActiveModelsSettingsPanel({
                                             modelIndex === index && entry.cost
                                               ? {
                                                   ...entry,
-                                                  cost: { ...entry.cost, [rate]: value },
+                                                  cost: {
+                                                    ...entry.cost,
+                                                    [rate]: value,
+                                                  },
                                                 }
                                               : entry,
                                           ),
@@ -3401,7 +3568,9 @@ function ActiveModelsSettingsPanel({
                                 ...current,
                                 models: current.models.map((entry, modelIndex) => {
                                   if (modelIndex !== index) return entry;
-                                  const nextMap = { ...entry.thinkingLevelMap };
+                                  const nextMap = {
+                                    ...entry.thinkingLevelMap,
+                                  };
                                   if (value === undefined) delete nextMap[level];
                                   else nextMap[level] = value;
                                   return {
@@ -3867,16 +4036,6 @@ function ActiveModelsSettingsPanel({
                               : t("settings.signInWithBrowser")}
                           </Button>
                         ) : null}
-                        {selectedModelService.storedCredentialType === "api_key" ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={modelServiceMutation !== null || authDialog !== null}
-                            onClick={() => setLogoutService(selectedModelService)}
-                          >
-                            {t("settings.removeApiKey")}
-                          </Button>
-                        ) : null}
                         {selectedModelService.storedCredentialType === "oauth" ? (
                           <Button
                             size="sm"
@@ -3890,6 +4049,86 @@ function ActiveModelsSettingsPanel({
                       </div>
                     }
                   />
+                  <SettingsListRow
+                    title={t("settings.modelServiceCredentialSource")}
+                    description={modelServiceCredentialSourceLabel(selectedModelService)}
+                  />
+                  {selectedModelService.storedCredentialType === "api_key" &&
+                  selectedModelService.authSource === "stored" ? (
+                    <SettingsListRow
+                      align="start"
+                      title={t("settings.modelServiceStoredApiKey")}
+                      description={
+                        <div className="space-y-1">
+                          <p>
+                            {revealedModelServiceApiKey?.serviceId ===
+                            selectedModelService.serviceId
+                              ? t("settings.modelServiceApiKeyVisibleUntilClose")
+                              : t("settings.modelServiceApiKeyHidden")}
+                          </p>
+                          {modelServiceApiKeyError ? (
+                            <p role="alert" className="text-destructive">
+                              {modelServiceApiKeyError}
+                            </p>
+                          ) : null}
+                        </div>
+                      }
+                      actions={
+                        <div className="flex w-full min-w-0 max-w-md flex-col gap-2 sm:flex-row sm:items-center">
+                          <Input
+                            aria-label={t("settings.modelServiceStoredApiKey")}
+                            type={
+                              revealedModelServiceApiKey?.serviceId ===
+                              selectedModelService.serviceId
+                                ? "text"
+                                : "password"
+                            }
+                            readOnly
+                            spellCheck={false}
+                            autoComplete="off"
+                            className="min-w-0 flex-1 font-mono text-xs"
+                            value={
+                              revealedModelServiceApiKey?.serviceId ===
+                              selectedModelService.serviceId
+                                ? revealedModelServiceApiKey.value
+                                : "saved-api-key"
+                            }
+                          />
+                          <CredentialSecretControls
+                            visible={
+                              revealedModelServiceApiKey?.serviceId ===
+                              selectedModelService.serviceId
+                            }
+                            disabled={
+                              modelServiceMutation !== null || modelServiceApiKeyAccess !== null
+                            }
+                            onToggleVisibility={() => {
+                              if (
+                                revealedModelServiceApiKey?.serviceId ===
+                                selectedModelService.serviceId
+                              ) {
+                                setRevealedModelServiceApiKey(null);
+                                setModelServiceApiKeyError(null);
+                                return;
+                              }
+                              return readStoredModelServiceApiKey(
+                                selectedModelService,
+                                "reveal",
+                              ).then(() => undefined);
+                            }}
+                            resolveCopyValue={() =>
+                              revealedModelServiceApiKey?.serviceId ===
+                              selectedModelService.serviceId
+                                ? revealedModelServiceApiKey.value
+                                : readStoredModelServiceApiKey(selectedModelService, "copy")
+                            }
+                            clearLabel={t("settings.modelServiceRemoveSavedApiKey")}
+                            onClear={() => logoutModelService(selectedModelService)}
+                          />
+                        </div>
+                      }
+                    />
+                  ) : null}
                   <SettingsListRow
                     title={t("settings.modelServiceCatalog")}
                     description={t("settings.modelServiceModelCounts", {
@@ -4065,7 +4304,9 @@ function ActiveModelsSettingsPanel({
                       <div className="min-w-0 space-y-1">
                         <span>
                           {event.type === "device_code"
-                            ? t("settings.modelServiceDeviceCode", { code: event.userCode })
+                            ? t("settings.modelServiceDeviceCode", {
+                                code: event.userCode,
+                              })
                             : event.type === "auth_url"
                               ? t("settings.modelServiceOpenOAuth")
                               : event.type === "progress"
@@ -4100,7 +4341,9 @@ function ActiveModelsSettingsPanel({
                               })
                           }
                         >
-                          {t("settings.modelServiceOpenOAuthAt", { host: externalHost })}
+                          {t("settings.modelServiceOpenOAuthAt", {
+                            host: externalHost,
+                          })}
                         </Button>
                       ) : null}
                     </div>
@@ -4179,7 +4422,13 @@ function ActiveModelsSettingsPanel({
                     spellCheck={false}
                     onChange={(event) =>
                       setAuthDialog((current) =>
-                        current ? { ...current, value: event.target.value, error: null } : null,
+                        current
+                          ? {
+                              ...current,
+                              value: event.target.value,
+                              error: null,
+                            }
+                          : null,
                       )
                     }
                     onKeyDown={(event) => {
@@ -4300,20 +4549,11 @@ function ActiveModelsSettingsPanel({
       >
         <AlertDialogPopup>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {logoutService?.storedCredentialType === "oauth"
-                ? t("settings.signOutModelService")
-                : t("settings.removeApiKey")}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{t("settings.signOutModelService")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t(
-                logoutService?.storedCredentialType === "oauth"
-                  ? "settings.signOutModelServiceDescription"
-                  : "settings.removeApiKeyDescription",
-                {
-                  name: logoutService ? modelServiceInstanceLabel(logoutService) : "",
-                },
-              )}
+              {t("settings.signOutModelServiceDescription", {
+                name: logoutService ? modelServiceInstanceLabel(logoutService) : "",
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -4327,12 +4567,8 @@ function ActiveModelsSettingsPanel({
               onClick={() => void logoutModelService()}
             >
               {modelServiceMutation?.startsWith("logout:")
-                ? logoutService?.storedCredentialType === "oauth"
-                  ? t("settings.signingOutModelService")
-                  : t("settings.removingApiKey")
-                : logoutService?.storedCredentialType === "oauth"
-                  ? t("settings.signOutModelService")
-                  : t("settings.removeApiKey")}
+                ? t("settings.signingOutModelService")
+                : t("settings.signOutModelService")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogPopup>

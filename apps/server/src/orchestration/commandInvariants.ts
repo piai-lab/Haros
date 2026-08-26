@@ -12,6 +12,7 @@ import type {
   ProjectId,
   SpaceId,
   ThreadId,
+  TurnId,
 } from "@omnimind/contracts";
 import { THREAD_NOT_ARCHIVED_INVARIANT_MARKER } from "@omnimind/shared/errorMessages";
 import {
@@ -49,6 +50,59 @@ export function threadHasInFlightTurn(thread: {
     session?.status === "running" ||
     thread.latestTurn?.state === "running"
   );
+}
+
+export type ThreadResumePreconditionViolation =
+  | "thread-archived"
+  | "turn-changed"
+  | "turn-completed"
+  | "turn-in-flight";
+
+export interface ThreadResumePrecondition {
+  readonly recordedTurnId: TurnId;
+  readonly recordedAt: string;
+}
+
+/**
+ * Rechecked inside serialized command admission so a queued/new turn cannot
+ * race a planned quit continuation into the same Thread.
+ */
+export function threadResumePreconditionViolation(
+  thread: {
+    readonly archivedAt?: string | null | undefined;
+    readonly session: Pick<OrchestrationSession, "status" | "activeTurnId"> | null;
+    readonly latestTurn: Pick<OrchestrationLatestTurn, "turnId" | "state" | "completedAt"> | null;
+  },
+  precondition: ThreadResumePrecondition,
+): ThreadResumePreconditionViolation | null {
+  if (thread.archivedAt != null) return "thread-archived";
+  if (threadHasInFlightTurn(thread)) return "turn-in-flight";
+  const latestTurn = thread.latestTurn;
+  if (!latestTurn || latestTurn.turnId !== precondition.recordedTurnId) return "turn-changed";
+  // Restart reconciliation stamps an interrupted turn's `completedAt` with
+  // the new process start time. That timestamp closes the stale lifecycle; it
+  // is not evidence that the user's work completed after the quit record was
+  // written. Only business-terminal states suppress the one-shot continuation.
+  if (latestTurn.state === "completed" || latestTurn.state === "error") {
+    return "turn-completed";
+  }
+  return null;
+}
+
+export function threadResumePreconditionDetail(
+  threadId: ThreadId,
+  violation: ThreadResumePreconditionViolation,
+): string {
+  switch (violation) {
+    case "thread-archived":
+      return `Thread '${threadId}' was archived after it was remembered for resume.`;
+    case "turn-changed":
+      return `Thread '${threadId}' received newer work after it was remembered for resume.`;
+    case "turn-completed":
+      return `Thread '${threadId}' finished after it was remembered; there is nothing to resume.`;
+    case "turn-in-flight":
+      return `Thread '${threadId}' already has a turn in flight.`;
+  }
 }
 
 export function checkpointRevertActiveTurnDetail(threadId: ThreadId): string {

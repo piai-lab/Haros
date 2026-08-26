@@ -120,6 +120,7 @@ export const LocalPreferencesSchema = Schema.Struct({
   enableNativeFontSmoothing: Schema.Boolean.pipe(withDefaults(getDefaultNativeFontSmoothing)),
   enableTaskCompletionToasts: Schema.Boolean.pipe(withDefaults(() => true)),
   enableSystemTaskCompletionNotifications: Schema.Boolean.pipe(withDefaults(() => true)),
+  resumeChatsAfterQuit: Schema.Boolean.pipe(withDefaults(() => true)),
   enableAppSnap: Schema.Boolean.pipe(withDefaults(() => false)),
   appSnapShortcut: AppSnapShortcut.pipe(withDefaults(() => DEFAULT_APP_SNAP_SHORTCUT)),
   appSnapPlaySound: Schema.Boolean.pipe(withDefaults(() => true)),
@@ -140,8 +141,15 @@ export const LocalPreferencesSchema = Schema.Struct({
 export type LocalPreferences = typeof LocalPreferencesSchema.Type;
 export type LocalPreferencesPatch = Partial<LocalPreferences>;
 export type LocalPreferenceMutationResult =
-  | { readonly state: "saved" | "unchanged"; readonly preferences: LocalPreferences }
-  | { readonly state: "failed"; readonly preferences: LocalPreferences; readonly error: unknown };
+  | {
+      readonly state: "saved" | "unchanged";
+      readonly preferences: LocalPreferences;
+    }
+  | {
+      readonly state: "failed";
+      readonly preferences: LocalPreferences;
+      readonly error: unknown;
+    };
 
 export const DEFAULT_LOCAL_PREFERENCES: LocalPreferences = LocalPreferencesSchema.makeUnsafe({});
 

@@ -152,6 +152,7 @@ import {
   OmniMindModelServiceCancelLoginInput,
   OmniMindModelServicePollLoginInput,
   OmniMindModelServiceLogoutInput,
+  OmniMindModelServiceRevealApiKeyInput,
   OmniMindModelServiceRefreshInput,
   OmniMindModelServicesGetInput,
   OmniMindModelServicesListInput,
@@ -330,6 +331,7 @@ export const WS_METHODS = {
   omnimindModelServicesAnswerLogin: "omnimindModelServices.answerLogin",
   omnimindModelServicesCancelLogin: "omnimindModelServices.cancelLogin",
   omnimindModelServicesLogout: "omnimindModelServices.logout",
+  omnimindModelServicesRevealApiKey: "omnimindModelServices.revealApiKey",
   omnimindModelServicesRefresh: "omnimindModelServices.refresh",
   omnimindModelServicesDiscoverCustom: "omnimindModelServices.discoverCustom",
   omnimindModelServicesTestCustom: "omnimindModelServices.testCustom",
@@ -590,6 +592,10 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.omnimindModelServicesAnswerLogin, OmniMindModelServiceAnswerLoginInput),
   tagRequestBody(WS_METHODS.omnimindModelServicesCancelLogin, OmniMindModelServiceCancelLoginInput),
   tagRequestBody(WS_METHODS.omnimindModelServicesLogout, OmniMindModelServiceLogoutInput),
+  tagRequestBody(
+    WS_METHODS.omnimindModelServicesRevealApiKey,
+    OmniMindModelServiceRevealApiKeyInput,
+  ),
   tagRequestBody(WS_METHODS.omnimindModelServicesRefresh, OmniMindModelServiceRefreshInput),
   tagRequestBody(
     WS_METHODS.omnimindModelServicesDiscoverCustom,

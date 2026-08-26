@@ -36,6 +36,7 @@ import { resolveCachedEditorIcon } from "./editorAppIcons";
 import { LOCAL_IMAGE_ROUTE_PATH, resolveAllowedLocalPreviewFile } from "./localImageFiles.ts";
 import { ProjectFaviconResolver } from "./project/Services/ProjectFaviconResolver";
 import { OrchestrationEngineService } from "./orchestration/Services/OrchestrationEngine";
+import { clearQuitResumeRecord, prepareQuitResumeForShutdown } from "./orchestration/quitResume";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
 import { threadArchiveChunks, threadArchiveFileName } from "./orchestration/exportThreadArchive";
@@ -52,7 +53,9 @@ import {
 import { ManagedAttachmentRepository } from "./persistence/Services/ManagedAttachments";
 import {
   authorizeDesktopShutdown,
+  DESKTOP_SHUTDOWN_BODY_MAX_BYTES,
   DESKTOP_SHUTDOWN_ROUTE_PATH,
+  parseDesktopShutdownRequestBody,
   type ServerShutdownController,
 } from "./serverShutdown";
 import { resolveFavicon, tryParseHost } from "./siteFaviconCache";
@@ -232,8 +235,48 @@ export function makeDesktopShutdownEffectRouteLayer(shutdownController: ServerSh
         );
       }
 
+      const declaredLength = Number(request.headers["content-length"] ?? "0");
+      const hasBody =
+        (Number.isFinite(declaredLength) && declaredLength > 0) ||
+        request.headers["transfer-encoding"] !== undefined;
+      const rawBody = hasBody
+        ? yield* request.json.pipe(
+            Effect.provideService(
+              HttpServerRequest.MaxBodySize,
+              FileSystem.Size(DESKTOP_SHUTDOWN_BODY_MAX_BYTES),
+            ),
+            Effect.orElseSucceed(() => Symbol.for("invalid-desktop-shutdown-body")),
+          )
+        : undefined;
+      const body = parseDesktopShutdownRequestBody(rawBody);
+      if (body === null) {
+        return HttpServerResponse.jsonUnsafe(
+          { error: "Invalid shutdown request." },
+          { status: 400 },
+        );
+      }
+
+      let resumeRecordedThreadIds: ReadonlyArray<string> = [];
+      if (body.resumeIntent) {
+        resumeRecordedThreadIds = yield* prepareQuitResumeForShutdown(body.resumeIntent).pipe(
+          Effect.catchCause((cause) =>
+            Effect.logWarning("desktop quit resume record could not be written", { cause }).pipe(
+              Effect.as([] as ReadonlyArray<string>),
+            ),
+          ),
+        );
+      } else {
+        yield* clearQuitResumeRecord(config.quitResumeStatePath).pipe(Effect.ignore);
+      }
+
       yield* shutdownController.requestStop;
-      return HttpServerResponse.jsonUnsafe({ accepted: true }, { status: 202 });
+      return HttpServerResponse.jsonUnsafe(
+        {
+          accepted: true,
+          ...(body.resumeIntent ? { resumeRecordedThreadIds } : {}),
+        },
+        { status: 202 },
+      );
     }),
   );
 }

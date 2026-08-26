@@ -122,7 +122,7 @@ import {
   isTerminalProviderRuntimeEvent,
   PROVIDER_RUNTIME_CALLBACK_BUFFER_MAX_BYTES,
   PROVIDER_RUNTIME_CALLBACK_TERMINAL_RESERVE,
-  providerRuntimeEventBytes,
+  type SizedProviderRuntimeEvent,
 } from "../providerRuntimeEventIngress.ts";
 import { clampUsagePercent, nonNegativeFiniteNumber, positiveFiniteNumber } from "../tokenUsage.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
@@ -1014,10 +1014,12 @@ function latestAssistantText(messages: readonly unknown[]): string | undefined {
     const content = message.content;
     if (typeof content === "string") return content;
     if (!Array.isArray(content)) return undefined;
-    return content.flatMap((block) => {
-      const entry = toolRecord(block);
-      return entry?.type === "text" && typeof entry.text === "string" ? [entry.text] : [];
-    }).join("\n\n");
+    return content
+      .flatMap((block) => {
+        const entry = toolRecord(block);
+        return entry?.type === "text" && typeof entry.text === "string" ? [entry.text] : [];
+      })
+      .join("\n\n");
   }
   return undefined;
 }
@@ -1621,21 +1623,21 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           })
         : undefined);
     const runtimeEventIngress = yield* makeBoundedCallbackIngress<
-      ProviderRuntimeEvent,
+      SizedProviderRuntimeEvent,
       never,
       never
     >(
-      (event) =>
-        (nativeEventLogger && event.raw
-          ? nativeEventLogger.write(event.raw, event.threadId).pipe(Effect.ignore)
+      (item) =>
+        (nativeEventLogger && item.event.raw
+          ? nativeEventLogger.write(item.event.raw, item.event.threadId).pipe(Effect.ignore)
           : Effect.void
-        ).pipe(Effect.andThen(Queue.offer(runtimeEventQueue, event)), Effect.asVoid),
+        ).pipe(Effect.andThen(Queue.offer(runtimeEventQueue, item.event)), Effect.asVoid),
       {
         capacity: PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
         maxBufferedBytes: PROVIDER_RUNTIME_CALLBACK_BUFFER_MAX_BYTES,
         terminalReserve: PROVIDER_RUNTIME_CALLBACK_TERMINAL_RESERVE,
-        isTerminal: isTerminalProviderRuntimeEvent,
-        sizeOf: providerRuntimeEventBytes,
+        isTerminal: (item) => isTerminalProviderRuntimeEvent(item.event),
+        sizeOf: (item) => item.bytes,
       },
     );
 
@@ -2449,12 +2451,21 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         context.pendingPromptSubmission = undefined;
       }
       const completionBase = makeEventBase(context);
-      if (provider === "omnimind" && input.state === "completed" && context.activeInteractionMode === "plan" && context.proposedPlanCandidate) {
+      if (
+        provider === "omnimind" &&
+        input.state === "completed" &&
+        context.activeInteractionMode === "plan" &&
+        context.proposedPlanCandidate
+      ) {
         offerRuntimeEvent({
           ...completionBase,
           type: "turn.proposed.completed",
           payload: { planMarkdown: context.proposedPlanCandidate },
-          raw: { source: "pi.sdk.event", messageType: event.type, payload: { source: "proposed_plan" } },
+          raw: {
+            source: "pi.sdk.event",
+            messageType: event.type,
+            payload: { source: "proposed_plan" },
+          },
         } satisfies ProviderRuntimeEvent);
       }
       if (context.gatewaySessionLease && context.gatewayConnection) {
@@ -2923,7 +2934,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             : undefined;
           if (turn) turn.leafId = leafId;
           if (provider === "omnimind" && context.activeInteractionMode === "plan") {
-            context.proposedPlanCandidate = extractProposedPlanMarkdown(latestAssistantText(event.messages));
+            context.proposedPlanCandidate = extractProposedPlanMarkdown(
+              latestAssistantText(event.messages),
+            );
           } else {
             context.proposedPlanCandidate = undefined;
           }
@@ -3264,7 +3277,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         hostProjectionDiagnostics,
         webAccessDiagnostics,
         ...(resolvedHostProjection === undefined ? {} : { hostProjection: resolvedHostProjection }),
-        ...(resolvedPlanModeController === undefined ? {} : { planModeController: resolvedPlanModeController }),
+        ...(resolvedPlanModeController === undefined
+          ? {}
+          : { planModeController: resolvedPlanModeController }),
       };
     };
 
@@ -3977,9 +3992,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           const payload = yield* buildPromptPayload(input);
           const turnId = TurnId.makeUnsafe(crypto.randomUUID());
           const interactionMode = input.interactionMode ?? "default";
-          const promptText = provider === "omnimind"
-            ? withProviderPlanModePrompt({ text: payload.text, interactionMode })
-            : payload.text;
+          const promptText =
+            provider === "omnimind"
+              ? withProviderPlanModePrompt({ text: payload.text, interactionMode })
+              : payload.text;
           context.activeTurnId = turnId;
           context.activeInteractionMode = interactionMode;
           context.proposedPlanCandidate = undefined;
@@ -4099,9 +4115,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           const interactionMode = context.activeTurnId
             ? (context.activeInteractionMode ?? "default")
             : (input.interactionMode ?? "default");
-          const promptText = provider === "omnimind"
-            ? withProviderPlanModePrompt({ text: payload.text, interactionMode })
-            : payload.text;
+          const promptText =
+            provider === "omnimind"
+              ? withProviderPlanModePrompt({ text: payload.text, interactionMode })
+              : payload.text;
           const turnId = context.activeTurnId ?? TurnId.makeUnsafe(crypto.randomUUID());
           if (!context.activeTurnId) {
             context.activeTurnId = turnId;

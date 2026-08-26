@@ -2652,16 +2652,26 @@ export default function ChatView({
       latestTurnState: activeLatestTurnState,
       latestTurnCompletedAt: activeLatestTurnCompletedAt,
     });
-    return entries.map((entry) =>
-      entry.activityKind === "provider.turn.start.failed" &&
-      entry.failureReason === "active-edit-requires-stop"
-        ? {
-            ...entry,
-            label: t("conversation.editRestartRequired"),
-            detail: t("conversation.editRestartRequiredDescription"),
-          }
-        : entry,
-    );
+    return entries.map((entry) => {
+      if (
+        entry.activityKind === "provider.turn.start.failed" &&
+        entry.failureReason === "active-edit-requires-stop"
+      ) {
+        return {
+          ...entry,
+          label: t("conversation.editRestartRequired"),
+          detail: t("conversation.editRestartRequiredDescription"),
+        };
+      }
+      if (entry.activityKind === "quit-resume.failed" && entry.quitResumeFailureReason) {
+        return {
+          ...entry,
+          label: t("conversation.quitResumeFailed"),
+          detail: t(`conversation.quitResumeFailed.${entry.quitResumeFailureReason}`),
+        };
+      }
+      return entry;
+    });
   }, [
     activeLatestTurnCompletedAt,
     activeLatestTurnId,
@@ -11910,11 +11920,15 @@ export default function ChatView({
               >
                 <ComposerInputBanners
                   roundedTopReset={false}
-                  interactionModeUnavailable={interactionMode === "plan" && !planModeAvailable ? {
-                    message: planModeUnavailableMessage,
-                    exitLabel: t("conversation.planModeExitAction"),
-                    onExit: () => handleInteractionModeChange("default"),
-                  } : null}
+                  interactionModeUnavailable={
+                    interactionMode === "plan" && !planModeAvailable
+                      ? {
+                          message: planModeUnavailableMessage,
+                          exitLabel: t("conversation.planModeExitAction"),
+                          onExit: () => handleInteractionModeChange("default"),
+                        }
+                      : null
+                  }
                   planFollowUp={
                     !activePendingApproval &&
                     pendingUserInputs.length === 0 &&

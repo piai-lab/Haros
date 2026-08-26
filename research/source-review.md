@@ -1286,3 +1286,56 @@ and native-steer exactly-once injection, Composer unavailable/pending fail-close
 bilingual preserved-intent exit journey. This is a bounded compatibility closure, not an overall F-20
 verification: the Campaign remains `candidate`, and release signing, notarization and update-feed
 activation remain outside this Slice.
+
+## 23. Synara `57f48ef1` → `a93c47e2` adopted-head closure
+
+The 2026-08-26 intake reviewed every one of the 17 commits after the previously adopted
+`57f48ef1a3354ae7967d4a8f9f83a1105691ede6` through exact candidate
+`a93c47e275870f34ec7aa8cd72f2a0ff6246db7c`. The resulting product candidate is the pushed OmniMind
+commit `dbe793d35accbd81484201e5376c772ba9ed94ea`; this section records source disposition and bounded
+evidence, not a second adoption manifest.
+
+| Synara commit | Disposition | OmniMind result |
+| --- | --- | --- |
+| `c34a5f73` | Adopt applicable remainder | The Antigravity fixture correction was already present; only the still-applicable scratch-symlink cleanup was retained. |
+| `e1750550` | Direct adoption plus existing-owner translation | Canonical Claude ordering and readable Provider/Model picker geometry preserve unknown live models and custom entries, with a 480px viewport bound. |
+| `80e683a0` | Selective direct adoption | Git statistics use a guarded `--numstat -z` path and runtime hot paths remove repeated work without clearing bounded raw diagnostics. Any semantic mismatch falls back to the established correct implementation. |
+| `881ed0d5`, `604bb157` | Direct adoption | Codex discovery idle grace is 15 seconds and resets after every discovery request; active turns are unaffected. |
+| `ba82253` | Direct adoption | Thread spinner uses the 1.3-second, 24-step motion and pauses for reduced motion or hidden Sidebar presentation. |
+| `79e38c04`, `7f21a7e5`, `594af5e8` | Merge carriers | Ancestry only; no independent product behavior. |
+| `377f8edd` | Excluded fixed divergence | Floating Browser is not adopted. The only Browser remains the current Conversation's RightDock runtime, store, partition and cookie session. |
+| `b679bc98`, `aedd6284`, `ca998bf9`, `ac32b620` | Semantic translation | Normal-quit recovery is owned by the protected Desktop shutdown route and Product Orchestration, not a public WebSocket RPC. The bilingual confirmation, default-on local preference, one-shot private record, exact binding and ordinary-user-message resume retain existing Queue, permission and failure semantics. |
+| `97ef2306` | Excluded identity material | README and product/release identity changes are not adopted. |
+| `e443f21d` | Direct adoption within fixed topology | Browser tab strip consumes the existing Thread Browser state, activates new tabs immediately, scrolls only itself and suppresses programmatic address suggestions. |
+| `a93c47e2` | Excluded release carrier | Synara 0.7.3 versioning, changelog/What's New, screenshots/assets, server tarball and release configuration are not OmniMind product changes. |
+
+The same adoption also enables Electron scheme code caching and a bounded Shiki-only streaming
+throttle: first change is immediate, one trailing update is retained, settlement flushes exact content,
+and the maximum interval reaches one second only above 80,000 characters. The proposed stepped working
+shimmer did not obtain independent proof on OmniMind's translucent Composer surface, so the established
+visual remains. Provider-runtime persistence now uses conflict-safe insertion with identity validation;
+UTF-8 sizing, JSON-tree reuse, Claude tool-input parsing and Codex ANSI handling reduce duplicate work
+without changing event content, causal sequence, terminal reserve or diagnostic retention.
+
+Focused Server, Desktop, Web, contracts, Git, Provider, Browser and performance regressions passed before
+packaging. Minimal authorized MiMo and DeepSeek probes each completed a streamed tool journey with exact
+model binding and no observed loss, duplication, reordering or silent fallback. From exact pushed SHA
+`dbe793d35accbd81484201e5376c772ba9ed94ea`, the production DMG and ZIP had SHA-256
+`73f425c104ef0cefb058b675f8222c6d14c8895505c3f588bf1fc57fc7268cef` and
+`0044123c43b095f337b983cf0ef4451e8bafbe8d171b0f145e403976cb9c7e67`; 541 production dependency
+identities were verified and two isolated packaged startup attempts passed.
+
+The packaged journey found and closed two real recovery defects before final evidence: exact binding had
+initially compared admission events with an in-memory session timestamp, and restart reconciliation's
+`interrupted` terminal state had initially been mistaken for business completion. Regression tests now
+fence binding by the causal turn-start admission and permit only reconciled interruption, never a later
+completion/error. A separate packaged presentation check found an English blank-tab title in Chinese;
+the catalog now localizes only genuinely blank tabs while preserving real page titles equal to “New tab”.
+
+The final isolated macOS journey proved one new record produced exactly one additional localized
+continuation with the selected DeepSeek model and Thinking Off, then atomically disappeared after claim.
+The current Conversation's Browser created and focused a second RightDock tab with Chinese labels and no
+Floating Browser entry. A subsequent exact-process `SIGKILL` left no recovery record; reopening the same
+isolated profile added no continuation and started no turn. These artifacts are packaged-not-released:
+they do not assert signing, notarization, Release creation, update-feed activation or installation into a
+real user profile.

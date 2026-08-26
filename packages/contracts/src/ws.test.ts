@@ -126,9 +126,17 @@ it.effect("accepts credential-blind OmniMind model-services requests", () =>
         serviceId: "deepseek",
       },
     });
+    const reveal = yield* decode(WebSocketRequest, {
+      id: "req-model-services-reveal-key",
+      body: {
+        _tag: WS_METHODS.omnimindModelServicesRevealApiKey,
+        serviceId: "deepseek",
+      },
+    });
 
     assert.strictEqual(list.body._tag, WS_METHODS.omnimindModelServicesList);
     assert.strictEqual(get.body._tag, WS_METHODS.omnimindModelServicesGet);
+    assert.strictEqual(reveal.body._tag, WS_METHODS.omnimindModelServicesRevealApiKey);
     if (get.body._tag === WS_METHODS.omnimindModelServicesGet) {
       assert.deepStrictEqual(Object.keys(get.body).sort(), ["_tag", "serviceId"]);
     }

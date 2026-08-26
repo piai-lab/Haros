@@ -97,6 +97,11 @@ export interface WorkLogEntry {
   userInputInteraction?: WorkLogUserInputInteraction;
   askUserProvenanceUnavailable?: boolean;
   failureReason?: ProviderTurnStartFailureReasonValue;
+  quitResumeFailureReason?:
+    | "workspace-missing"
+    | "workspace-unavailable"
+    | "project-unavailable"
+    | "exact-binding-unavailable";
   // Provider-native event type carried through the activity payload (e.g.
   // "background_tasks_changed") so the timeline can pick a specific icon.
   nativeEventType?: string;
@@ -691,6 +696,13 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     ...(reasoningDetailTruncated ? { reasoningDetailTruncated: true } : {}),
     ...(payload && Schema.is(ProviderTurnStartFailureReason)(payload.failureReason)
       ? { failureReason: payload.failureReason }
+      : {}),
+    ...(activity.kind === "quit-resume.failed" &&
+    (payload?.reason === "workspace-missing" ||
+      payload?.reason === "workspace-unavailable" ||
+      payload?.reason === "project-unavailable" ||
+      payload?.reason === "exact-binding-unavailable")
+      ? { quitResumeFailureReason: payload.reason }
       : {}),
   };
   const itemType = extractWorkLogItemType(payload);

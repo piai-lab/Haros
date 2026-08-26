@@ -210,6 +210,35 @@ describe("WebSearchSettingsPanel", () => {
     expect(currentGroup?.querySelector("button")?.textContent).toBe("Set up");
   });
 
+  it("shows, copies, hides, and clears a saved secret only in the draft", async () => {
+    const mutate = vi.fn();
+    const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+    const configured = snapshot({ tavilyKey: "saved-web-search-key" });
+    installApi({
+      open: vi.fn().mockResolvedValue(configured),
+      refresh: vi.fn().mockResolvedValue(configured),
+      mutate,
+    });
+
+    await renderPanel();
+    await page.getByRole("button", { name: "Add service" }).click();
+    await page.getByRole("button", { name: "Edit" }).click();
+    const keyInput = page.getByRole("textbox", { name: "Tavily · API key" });
+    await expect.element(keyInput).toHaveAttribute("type", "password");
+
+    await page.getByRole("button", { name: "Show key" }).click();
+    await expect.element(keyInput).toHaveAttribute("type", "text");
+    await page.getByRole("button", { name: "Copy key" }).click();
+    await expect.poll(() => writeText).toHaveBeenCalledWith("saved-web-search-key");
+    await page.getByRole("button", { name: "Hide key" }).click();
+    await expect.element(keyInput).toHaveAttribute("type", "password");
+
+    await page.getByRole("button", { name: "Clear" }).click();
+    await expect.element(keyInput).toHaveValue("");
+    await expect.element(page.getByRole("button", { name: "Save" })).toBeEnabled();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
   it("preserves a dirty draft when focus discovers an external revision", async () => {
     await page.viewport(1_280, 720);
     const initial = snapshot();

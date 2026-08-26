@@ -919,6 +919,79 @@ describe("OmniMindModelServicesLive", () => {
     await expect(stat(path.join(providerHome, ".pi"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  it("reveals only the exact locally stored API key on explicit request", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    await writeFile(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({
+        deepseek: { type: "api_key", key: "test-only-api-key" },
+        "oauth-service": {
+          type: "oauth",
+          access: "oauth-access-secret",
+          refresh: "oauth-refresh-secret",
+          expires: Date.now() + 60_000,
+        },
+        "keyless-service": { type: "api_key", env: { ACCOUNT_ID: "private-account" } },
+      }),
+      { mode: 0o600 },
+    );
+    const layer = makeTestLayer({ root });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const stored = yield* service.revealApiKey({ serviceId: "deepseek" });
+        const oauth = yield* service.revealApiKey({ serviceId: "oauth-service" });
+        const keyless = yield* service.revealApiKey({ serviceId: "keyless-service" });
+        const missing = yield* service.revealApiKey({ serviceId: "missing-service" });
+        return { stored, oauth, keyless, missing };
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result.stored).toEqual({ state: "ready", apiKey: "test-only-api-key" });
+    expect(result.oauth).toEqual({ state: "unavailable", reason: "not_stored_api_key" });
+    expect(result.keyless).toEqual({ state: "unavailable", reason: "not_stored_api_key" });
+    expect(result.missing).toEqual({ state: "unavailable", reason: "not_stored_api_key" });
+  });
+
+  it("projects only the environment variable name for ambient API-key auth", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    process.env.DEEPSEEK_API_KEY = "ambient-test-secret";
+
+    const result = await loadService({ root });
+    const deepseek = result.list.services.find((entry) => entry.serviceId === "deepseek");
+
+    expect(deepseek).toMatchObject({
+      authState: "configured",
+      authSource: "environment",
+      authEnvironmentVariables: ["DEEPSEEK_API_KEY"],
+      storedCredentialType: null,
+    });
+    expect(JSON.stringify(result)).not.toContain("ambient-test-secret");
+  });
+
+  it("returns a fixed recovery result when saved credential storage cannot be read", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    await writeFile(path.join(agentDir, "auth.json"), "not-json", { mode: 0o600 });
+    const layer = makeTestLayer({ root });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.revealApiKey({ serviceId: "deepseek" });
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(result).toEqual({ state: "unavailable", reason: "credential_unavailable" });
+  });
+
   it("projects a prepared credential runtime without starting another full availability refresh", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);

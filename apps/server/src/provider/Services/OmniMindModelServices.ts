@@ -18,6 +18,8 @@ import type {
   OmniMindModelServicePollLoginInput,
   OmniMindModelServiceLogoutInput,
   OmniMindModelServiceLogoutResult,
+  OmniMindModelServiceRevealApiKeyInput,
+  OmniMindModelServiceRevealApiKeyResult,
   OmniMindModelServiceRefreshInput,
   OmniMindModelServiceRefreshResult,
   OmniMindModelServicesGetInput,
@@ -54,6 +56,9 @@ export interface OmniMindModelServicesShape {
   readonly logout: (
     input: OmniMindModelServiceLogoutInput,
   ) => Effect.Effect<OmniMindModelServiceLogoutResult>;
+  readonly revealApiKey: (
+    input: OmniMindModelServiceRevealApiKeyInput,
+  ) => Effect.Effect<OmniMindModelServiceRevealApiKeyResult>;
   readonly refresh: (
     input: OmniMindModelServiceRefreshInput,
   ) => Effect.Effect<OmniMindModelServiceRefreshResult>;

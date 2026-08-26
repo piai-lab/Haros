@@ -161,6 +161,8 @@ V1 直接保全 Synara 已有能力：
 - Git、commit、push、Pull Request、Kanban、Automations；
 - Browser、Source Control、Side Chat、Subagents 和 Studio outputs；Engine 临时 Web UI 的 Host presentation policy 只由 `[architecture/execution.md](execution.md#扩展与生态)` 定义，Workbench 继续复用当前 Thread 的右侧非模态 Browser。
 
+Browser 始终只存在于当前 Conversation 的 RightDock。Tab strip 是现有 Thread Browser state 的纯展示 consumer：新 Tab 继续调用既有 `browser.newTab({threadId, activate:true})`，复用同一 partition、Cookie、history、权限与 runtime；休眠时只唤醒当前 RightDock runtime。Tab 自动滚动只改变 strip 自身 `scrollLeft`，程序化地址栏聚焦先抑制建议，直到用户输入、点击或方向键。不得增加 Floating Browser、第二 Browser store、第二 Cookie Session、第二 runtime 或平行 route。
+
 同一母体基线还包括持久 Goal、evidence-first Debug、480/960/1440 chat width、暗色 Dock icon 自动切换、本地使用洞察PNG导出，以及 Space→Group 的完整交互结果。它们必须复用现有 Composer/Thread、interaction mode、Settings、Desktop icon、Profile stats 与 Group owners，并在简体中文和英文中同时完整；不能因历史漏移植而降格成 Todo、提示词或另一套 store/API。
 
 持续同步还保留同一批既有 owner 的冰山行为：Workspace 搜索同时覆盖文件和目录，目录结果必须展开祖先链并在现有 Explorer 中 reveal；Engine 图标、安装/登录/受限状态与容量信息继续来自 canonical Provider descriptors、health 和 usage owners；managed Thread 删除只回收产品创建且可安全证明干净的 worktree，遇到脏目录必须保留并准确提示。Windows taskbar 图标切换和 Windows/Linux custom titlebar 复用 Desktop window/icon owner，偏好写入后若重启失败必须回滚；macOS 继续使用原生 titlebar。不得为这些差异另建 Palette、Provider catalog、worktree registry、window state 或第二套 UI。
@@ -288,7 +290,9 @@ Settings 的 **概览 → 添加 → 详情** 仍是 Model services 管理 IA；
 
 技术 authority 与用户语言必须分层。`Model services` 的 overview、添加/编辑、认证、模型列表、进度、Toast、错误和恢复属于 OmniMind 正常产品表面，只使用“模型服务、连接、登录、API Key、模型目录、本机凭据、重新加载”等用户概念；不得用 `Pi`、`Pi-derived`、`ModelRuntime`、`ModelConfig`、`models.json`、`runtime projection`、`credential owner`、内部 provider id、package/module 名或中英混杂术语解释 OmniMind 自身。普通详情中的来源只表达“OmniMind 内置 / 通过 API 地址连接 / 由 OmniMind 扩展提供”；精确文件、模块和 lineage 只在用户主动展开的技术详情、诊断、About、Licenses 或源码归属中出现。独立 stock Pi 仍在用户明确选择该 Engine 或查看其技术详情时准确显示为 `Pi`，不能为了品牌清理而改写其真实 identity。
 
-凭据说明只陈述用户可验证且由当前实现保证的事实，例如“仅保存在这台设备上、用于连接该模型服务、保存后不再显示”；不能用“交给 Pi”“不在 OmniMind 设置中”等实现拓扑制造另一个产品心智，也不能无证据承诺 Keychain、加密级别、云端零接触或其他更强保证。API Key、OAuth、目录刷新与配置重载已经具有不同 typed state 时，应分别给出准确的本地化进度与恢复动作，不能用一个含糊的“等待模型服务”掩盖当前阶段。
+凭据说明只陈述用户可验证且由当前实现保证的事实，例如“仅保存在这台设备上、用于连接该模型服务、可在当前服务详情中主动显示或复制”；不能用“交给 Pi”“不在 OmniMind 设置中”等实现拓扑制造另一个产品心智，也不能无证据承诺 Keychain、加密级别、云端零接触或其他更强保证。用户保存的literal API Key默认密码态隐藏，眼睛、复制、更换与清除复用Web Search Provider同一组控件规则；清除是用户已经明确表达的本地可恢复动作，不再叠加确认框。离开详情或Settings、开始更换、清除、重置与卸载都重新隐藏并清空短时值。环境来源只显示变量名；OAuth、command与其他非literal来源保持各自真实语义，不能出现可查看Key的假入口。API Key、OAuth、目录刷新与配置重载已经具有不同typed state时，应分别给出准确的本地化进度与恢复动作，不能用一个含糊的“等待模型服务”掩盖当前阶段。
+
+用户亲手输入普通API endpoint并明确点击发现、测试或保存后，同一编辑会话按实际endpoint集合记忆确认；只改模型ID、协议、名称、header或其他非endpoint字段不得重新弹出相同地址的确认。实际endpoint集合改变后可重新确认；隐藏command-backed credential/header仍按稳定内容fingerprint确认一次，内容变化后再确认。两者不能共用把无关编辑也算成新风险的宽fingerprint。
 
 typed bridge 只证明结构与秘密边界，不会自动把 Provider 原文变成 OmniMind 产品文案。正常认证对话框的标题、说明、状态、动作和可识别错误必须来自同一 en/zh-CN catalog；URL host、设备代码、模型/服务/选项的真实名称可以保持原文。Provider 的 raw prompt、instructions、progress message、error 或 stack 若对完成操作不可或缺，应以明确 provenance 放在次级说明或可展开技术详情，不能替代本地化主状态，也不能让普通中文路径因上游英文再次中英混杂；若缺少足够 typed 语义，准确保留 provider instruction 并标明来源，而不是猜测翻译或丢失操作信息。
 
@@ -442,6 +446,10 @@ iOS Simulator 作为现有 right dock 的 `device` pane 呈现，不新增顶层
 首发不新增workflow right-dock pane、React Flow/X6、100+ Agent topology或专用identity glyph系统。只有真实dependency facts、规模和用户判断需求证明现有列表/详情不足时，才重开纯projection renderer；它仍不得拥有runtime、editor、store或layout database。
 
 性能以真实 journey/profile 验证：startup、Thread switch、continuous stream、long thread、large list/output、Viewer/Diff、Terminal、watcher storm、background work、memory growth 与 IME。不设任意 100k 字符门槛。
+
+Thread spinner 使用 `1.3s / 24 steps`，`prefers-reduced-motion` 与 hidden Sidebar presentation 均暂停。Streaming code highlight只节流 Shiki 的高成本输入：8,000 字符内约 160ms，随后线性放慢，80,000 字符以上至多每秒一次；第一次变化立即、期间保留 trailing、stream settlement 立即提交完整精确值并清 timer。Working shimmer 继续使用当前已验证视觉；没有真实半透明 Composer surface 证据时不得只因 source timing 替换。Composer Provider/Model picker 使用可读宽度并受 viewport/container 上限约束，480px 与双语长文案不得横向溢出；Claude catalog 的已知模型按 canonical 顺序，未知 live 模型置顶保留，自定义模型留在末尾。
+
+正常退出确认框复用现有 AlertDialog、Checkbox、Spinner、Command 样式和唯一 i18n catalog。没有运行任务时不出现；有任务时列出可滚动任务、`Esc` 取消、`Enter` 退出、焦点锁定和读屏标签完整。“下次启动时自动继续”使用现有 browser-local preference，first-public 默认开启且不为不存在的旧用户建立迁移；退出失败或 Server 未能写记录时不得用 UI 文案承诺一定恢复。
 
 Synara `02c8a6c…` 没有覆盖完整产品面的 i18n catalog；浏览器 locale、零散本地文案和英文默认 UI 不能冒充完整双语。source reset 后只新增一套逻辑上的轻量 OmniMind message catalog；实现按稳定产品域组织slice，域内可再按语言分开物理文件，但不能形成第二套运行时 catalog、Settings 或 localization platform。继续沿用 source 的组件、DOM、focus、geometry 与交互，不为翻译重写 Workbench。
 

@@ -274,6 +274,11 @@ export const OmniMindModelServiceAuthSource = Schema.Literals([
 ]);
 export type OmniMindModelServiceAuthSource = typeof OmniMindModelServiceAuthSource.Type;
 
+const CredentialEnvironmentVariableName = Schema.String.check(
+  Schema.isPattern(/^[A-Za-z_][A-Za-z0-9_]*$/u),
+);
+const BoundedSecret = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(65_536));
+
 export const OmniMindModelServiceAuthState = Schema.Literals([
   "configured",
   "setup_required",
@@ -290,6 +295,11 @@ const OmniMindModelServiceDescriptorFields = {
   authMethods: Schema.Array(OmniMindModelServiceAuthMethod).check(Schema.isMaxLength(2)),
   authState: OmniMindModelServiceAuthState,
   authSource: Schema.NullOr(OmniMindModelServiceAuthSource),
+  authEnvironmentVariables: Schema.optional(
+    Schema.Array(CredentialEnvironmentVariableName)
+      .check(Schema.isMinLength(1))
+      .check(Schema.isMaxLength(8)),
+  ),
   storedCredentialType: Schema.NullOr(OmniMindModelServiceAuthMethodType),
   knownModelCount: NonNegativeInt,
   availableModelCount: NonNegativeInt,
@@ -419,7 +429,10 @@ export const OmniMindModelServiceAuthPrompt = Schema.Union([
 export type OmniMindModelServiceAuthPrompt = typeof OmniMindModelServiceAuthPrompt.Type;
 
 export const OmniMindModelServiceAuthEvent = Schema.Union([
-  Schema.Struct({ type: Schema.Literals(["info", "progress"]), message: BoundedInteractionText }),
+  Schema.Struct({
+    type: Schema.Literals(["info", "progress"]),
+    message: BoundedInteractionText,
+  }),
   Schema.Struct({
     type: Schema.Literal("auth_url"),
     url: Schema.String.check(Schema.isMaxLength(4096), Schema.isPattern(/^https?:\/\//iu)),
@@ -493,7 +506,9 @@ export const OmniMindModelServiceAnswerLoginInput = Schema.Struct({
 });
 export type OmniMindModelServiceAnswerLoginInput = typeof OmniMindModelServiceAnswerLoginInput.Type;
 
-export const OmniMindModelServiceCancelLoginInput = Schema.Struct({ requestId: AuthRequestId });
+export const OmniMindModelServiceCancelLoginInput = Schema.Struct({
+  requestId: AuthRequestId,
+});
 export type OmniMindModelServiceCancelLoginInput = typeof OmniMindModelServiceCancelLoginInput.Type;
 
 export const OmniMindModelServiceLogoutInput = Schema.Struct({
@@ -507,6 +522,21 @@ export const OmniMindModelServiceLogoutResult = Schema.Struct({
 });
 export type OmniMindModelServiceLogoutResult = typeof OmniMindModelServiceLogoutResult.Type;
 
+export const OmniMindModelServiceRevealApiKeyInput = Schema.Struct({
+  serviceId: BoundedIdentifier,
+});
+export type OmniMindModelServiceRevealApiKeyInput =
+  typeof OmniMindModelServiceRevealApiKeyInput.Type;
+export const OmniMindModelServiceRevealApiKeyResult = Schema.Union([
+  Schema.Struct({ state: Schema.Literal("ready"), apiKey: BoundedSecret }),
+  Schema.Struct({
+    state: Schema.Literal("unavailable"),
+    reason: Schema.Literals(["not_stored_api_key", "credential_unavailable"]),
+  }),
+]);
+export type OmniMindModelServiceRevealApiKeyResult =
+  typeof OmniMindModelServiceRevealApiKeyResult.Type;
+
 export const OmniMindModelServiceRefreshInput = Schema.Struct({
   serviceId: BoundedIdentifier,
   origin: Schema.optional(Schema.Literal("extension")),
@@ -518,11 +548,6 @@ export const OmniMindModelServiceRefreshResult = Schema.Struct({
 });
 export type OmniMindModelServiceRefreshResult = typeof OmniMindModelServiceRefreshResult.Type;
 
-const BoundedSecret = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(65_536));
-
-const CredentialEnvironmentVariableName = Schema.String.check(
-  Schema.isPattern(/^[A-Za-z_][A-Za-z0-9_]*$/u),
-);
 const CredentialCommand = Schema.String.check(
   Schema.isMinLength(1),
   Schema.isMaxLength(4_096),
@@ -536,7 +561,10 @@ export const OmniMindCustomModelServiceCredentialInput = Schema.Union([
     type: Schema.Literal("environment"),
     variableName: CredentialEnvironmentVariableName,
   }),
-  Schema.Struct({ type: Schema.Literal("command"), command: CredentialCommand }),
+  Schema.Struct({
+    type: Schema.Literal("command"),
+    command: CredentialCommand,
+  }),
 ]);
 export type OmniMindCustomModelServiceCredentialInput =
   typeof OmniMindCustomModelServiceCredentialInput.Type;

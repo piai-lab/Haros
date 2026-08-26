@@ -99,6 +99,7 @@ function toThreadShell(thread: Thread | ThreadShell): ThreadShell {
     associatedWorktreeRef: thread.associatedWorktreeRef ?? null,
     createBranchFlowCompleted: thread.createBranchFlowCompleted ?? false,
     parentThreadId: thread.parentThreadId ?? null,
+    gatewayOperationId: thread.gatewayOperationId ?? null,
     creationSource: thread.creationSource ?? null,
     sourceThreadId: thread.sourceThreadId ?? null,
     subagentAgentId: thread.subagentAgentId ?? null,
@@ -386,6 +387,7 @@ function sidebarThreadSummariesEqual(
     left.latestTurn === right.latestTurn &&
     left.lastVisitedAt === right.lastVisitedAt &&
     (left.parentThreadId ?? null) === (right.parentThreadId ?? null) &&
+    (left.gatewayOperationId ?? null) === (right.gatewayOperationId ?? null) &&
     (left.subagentAgentId ?? null) === (right.subagentAgentId ?? null) &&
     (left.subagentNickname ?? null) === (right.subagentNickname ?? null) &&
     (left.subagentRole ?? null) === (right.subagentRole ?? null) &&
@@ -429,6 +431,7 @@ function buildSidebarThreadSummary(
     latestTurn: thread.latestTurn,
     lastVisitedAt: thread.lastVisitedAt,
     parentThreadId: thread.parentThreadId ?? null,
+    gatewayOperationId: thread.gatewayOperationId ?? null,
     subagentAgentId: thread.subagentAgentId ?? null,
     subagentNickname: thread.subagentNickname ?? null,
     subagentRole: thread.subagentRole ?? null,
