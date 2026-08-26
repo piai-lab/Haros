@@ -307,6 +307,9 @@ describe("OmniMind Agent Plan lifecycle", () => {
       expect(firstUserMessage).toContain("/reload and inspect the workspace");
       expect(firstUserMessage.startsWith("/reload")).toBe(false);
       expect(firstUserMessage.match(/OmniMind plan mode is active\./g)).toHaveLength(1);
+      expect(firstUserMessage.indexOf("/reload and inspect the workspace")).toBeLessThan(
+        firstUserMessage.indexOf("OmniMind plan mode is active."),
+      );
       const secondUserContent = requestBodies[1]?.messages?.filter((message: any) => message.role === "user").at(-1)?.content;
       expect(JSON.stringify(secondUserContent)).not.toContain("OmniMind plan mode is active.");
       const proposed = events.filter((event) => event.type === "turn.proposed.completed");

@@ -29,7 +29,7 @@ export function withProviderPlanModePrompt(input: {
   }
   const text = input.text.trim();
   return text.length > 0
-    ? `${PROVIDER_PLAN_MODE_PROMPT_PREFIX}\n\nUser request:\n${text}`
+    ? `User request:\n${text}\n\n${PROVIDER_PLAN_MODE_PROMPT_PREFIX}`
     : PROVIDER_PLAN_MODE_PROMPT_PREFIX;
 }
 
