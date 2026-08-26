@@ -205,6 +205,38 @@ describe("quit resume one-shot record", () => {
     );
   });
 
+  it("binds through the persisted active-turn admission when the live session timestamp differs", async () => {
+    const admission = {
+      sequence: 7,
+      type: "thread.turn-start-requested",
+      payload: {
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        messageId: "message-1",
+        modelSelection: { provider: "codex", model: "gpt-5.4" },
+        assistantDeliveryMode: "streaming",
+        runtimeMode: "full-access",
+        interactionMode: "default",
+        createdAt: "2026-08-26T10:00:00.000Z",
+      },
+    } as unknown as OrchestrationEvent;
+    const eventStore = {
+      getThreadHighWaterSequence: () => Effect.succeed(7),
+      readThreadEvents: () => Effect.succeed([admission]),
+    } as unknown as OrchestrationEventStoreShape;
+    const liveThread = runningThread({
+      latestTurn: {
+        ...runningThread().latestTurn!,
+        requestedAt: "2026-08-26T10:00:01.000Z",
+      },
+    });
+
+    await expect(readExactQuitResumeBinding(eventStore, liveThread)).resolves.toMatchObject({
+      modelSelection: { provider: "codex", model: "gpt-5.4" },
+      runtimeMode: "full-access",
+      interactionMode: "default",
+    });
+  });
+
   it("never falls back to Home when the exact workspace cannot be resolved", async () => {
     const workspace = await Fs.mkdtemp(Path.join(Os.tmpdir(), "omnimind-resume-workspace-"));
     temporaryDirectories.push(workspace);

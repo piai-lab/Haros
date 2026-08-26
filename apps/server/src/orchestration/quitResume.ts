@@ -140,14 +140,19 @@ export async function readExactQuitResumeBinding(
       eventTypes: ["thread.turn-start-requested"],
     }),
   );
-  const matching = events.filter(
-    (event) =>
-      event.type === "thread.turn-start-requested" &&
-      event.payload.createdAt === latestTurn.requestedAt,
-  );
-  if (matching.length !== 1) return null;
-  const event = matching[0];
-  if (event?.type !== "thread.turn-start-requested" || event.payload.modelSelection === undefined) {
+  // A thread admits only one active top-level turn; follow-ups remain
+  // `thread.turn-queued` until that turn settles. Therefore the newest start
+  // admission at or before the active session's start fence is the active
+  // turn's exact binding. The in-memory projector intentionally learns the
+  // provider turn id later and may use that session timestamp as requestedAt,
+  // while the durable admission retains the earlier user-dispatch timestamp.
+  const event = events[0];
+  const activeTurnStartFence = latestTurn.startedAt ?? latestTurn.requestedAt;
+  if (
+    event?.type !== "thread.turn-start-requested" ||
+    event.payload.createdAt > activeTurnStartFence ||
+    event.payload.modelSelection === undefined
+  ) {
     return null;
   }
   const providerOptions = sanitizeQuitResumeProviderOptions(event.payload.providerOptions);
