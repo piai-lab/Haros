@@ -3328,8 +3328,10 @@ describe("ProviderRuntimeIngestion", () => {
 
       const stableActivityIdPrefix = `provider-reasoning:thread-1:${itemId}:turn:turn-${provider}-reasoning:segment:`;
       const thread = await waitForThread(harness.engine, (entry) =>
-        entry.activities.some((activity: ProviderRuntimeTestActivity) =>
-          activity.id.startsWith(stableActivityIdPrefix),
+        entry.activities.some(
+          (activity: ProviderRuntimeTestActivity) =>
+            activity.id.startsWith(stableActivityIdPrefix) &&
+            activity.kind === "reasoning.completed",
         ),
       );
 
@@ -3539,8 +3541,10 @@ describe("ProviderRuntimeIngestion", () => {
     const stableActivityIdPrefix =
       "provider-reasoning:thread-1:reasoning-aborted-1:turn:turn-aborted-reasoning:segment:";
     const thread = await waitForThread(harness.engine, (entry) =>
-      entry.activities.some((activity: ProviderRuntimeTestActivity) =>
-        activity.id.startsWith(stableActivityIdPrefix),
+      entry.activities.some(
+        (activity: ProviderRuntimeTestActivity) =>
+          activity.id.startsWith(stableActivityIdPrefix) &&
+          (activity.payload as { status?: unknown }).status === "failed",
       ),
     );
 
@@ -3605,8 +3609,11 @@ describe("ProviderRuntimeIngestion", () => {
 
     const stableActivityIdPrefix = `provider-reasoning:${threadId}:${itemId}:turn:${turnId}:segment:`;
     const thread = await waitForThread(harness.engine, (entry) =>
-      entry.activities.some((activity: ProviderRuntimeTestActivity) =>
-        activity.id.startsWith(stableActivityIdPrefix),
+      entry.activities.some(
+        (activity: ProviderRuntimeTestActivity) =>
+          activity.id.startsWith(stableActivityIdPrefix) &&
+          (activity.payload as { data?: { reasoningDetailTruncated?: unknown } }).data
+            ?.reasoningDetailTruncated === true,
       ),
     );
     expect(
@@ -3657,8 +3664,10 @@ describe("ProviderRuntimeIngestion", () => {
     const stableActivityIdPrefix =
       "provider-reasoning:thread-1:reasoning-failed-turn-1:turn:turn-failed-reasoning:segment:";
     const thread = await waitForThread(harness.engine, (entry) =>
-      entry.activities.some((activity: ProviderRuntimeTestActivity) =>
-        activity.id.startsWith(stableActivityIdPrefix),
+      entry.activities.some(
+        (activity: ProviderRuntimeTestActivity) =>
+          activity.id.startsWith(stableActivityIdPrefix) &&
+          (activity.payload as { status?: unknown }).status === "failed",
       ),
     );
 
@@ -3706,8 +3715,10 @@ describe("ProviderRuntimeIngestion", () => {
     const stableActivityIdPrefix =
       "provider-reasoning:thread-1:reasoning-errored-1:turn:turn-errored-reasoning:segment:";
     const thread = await waitForThread(harness.engine, (entry) =>
-      entry.activities.some((activity: ProviderRuntimeTestActivity) =>
-        activity.id.startsWith(stableActivityIdPrefix),
+      entry.activities.some(
+        (activity: ProviderRuntimeTestActivity) =>
+          activity.id.startsWith(stableActivityIdPrefix) &&
+          (activity.payload as { status?: unknown }).status === "failed",
       ),
     );
 
