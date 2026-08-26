@@ -3173,8 +3173,10 @@ describe("ProviderRuntimeIngestion", () => {
     const stableActivityIdPrefix =
       "provider-reasoning:thread-1:antigravity-reasoning-1:turn:turn-antigravity-reasoning:segment:";
     const thread = await waitForThread(harness.engine, (entry) =>
-      entry.activities.some((activity: ProviderRuntimeTestActivity) =>
-        activity.id.startsWith(stableActivityIdPrefix),
+      entry.activities.some(
+        (activity: ProviderRuntimeTestActivity) =>
+          activity.id.startsWith(stableActivityIdPrefix) &&
+          activity.kind === "reasoning.completed",
       ),
     );
 
@@ -3255,8 +3257,10 @@ describe("ProviderRuntimeIngestion", () => {
     const stableActivityIdPrefix =
       "provider-reasoning:thread-1:reasoning-buffered-1:turn:turn-buffered-reasoning:segment:";
     const thread = await waitForThread(harness.engine, (entry) =>
-      entry.activities.some((activity: ProviderRuntimeTestActivity) =>
-        activity.id.startsWith(stableActivityIdPrefix),
+      entry.activities.some(
+        (activity: ProviderRuntimeTestActivity) =>
+          activity.id.startsWith(stableActivityIdPrefix) &&
+          activity.kind === "reasoning.completed",
       ),
     );
     const reasoningActivities = thread.activities.filter((activity: ProviderRuntimeTestActivity) =>
