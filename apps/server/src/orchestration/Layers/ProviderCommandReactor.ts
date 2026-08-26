@@ -5549,6 +5549,7 @@ const make = Effect.gen(function* () {
   return {
     start,
     drain,
+    reconcileQueuedTurns: recoverQueuedTurnPromotions.pipe(Effect.orDie),
     listBlockingDeliveries,
     reconcileDelivery,
   } satisfies ProviderCommandReactorShape;

@@ -1416,6 +1416,14 @@ export const ThreadTurnStartCommand = Schema.Struct({
     Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
   ),
   sourceProposedPlan: Schema.optional(SourceProposedPlanReference),
+  // Server-only one-shot quit recovery fence. ClientThreadTurnStartCommand
+  // deliberately omits this field, so client decoding strips any spoofed value.
+  resumePrecondition: Schema.optional(
+    Schema.Struct({
+      recordedTurnId: TurnId,
+      recordedAt: IsoDateTime,
+    }),
+  ),
   createdAt: IsoDateTime,
 });
 

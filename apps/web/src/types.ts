@@ -256,6 +256,7 @@ export interface Thread extends ThreadWorkspaceState {
   pendingSourceProposedPlan?: OrchestrationLatestTurn["sourceProposedPlan"];
   lastVisitedAt?: string | undefined;
   parentThreadId?: ThreadId | null;
+  gatewayOperationId?: string | null;
   creationSource?: ThreadCreationSource | null;
   sourceThreadId?: ThreadId | null;
   subagentAgentId?: string | null;
@@ -302,6 +303,7 @@ export interface ThreadShell extends ThreadWorkspaceState {
   goalPausedAt?: string | null;
   goalAchievements?: ThreadGoalAchievement[];
   parentThreadId?: ThreadId | null;
+  gatewayOperationId?: string | null;
   creationSource?: ThreadCreationSource | null;
   sourceThreadId?: ThreadId | null;
   subagentAgentId?: string | null;
@@ -348,6 +350,7 @@ export interface SidebarThreadSummary {
   latestTurn: OrchestrationLatestTurn | null;
   lastVisitedAt?: string | undefined;
   parentThreadId?: ThreadId | null;
+  gatewayOperationId?: string | null;
   subagentAgentId?: string | null;
   subagentNickname?: string | null;
   subagentRole?: string | null;

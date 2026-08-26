@@ -63,6 +63,15 @@ const EN_MESSAGES = {
   "conversation.editRestartRequired": "Stop the current response before editing",
   "conversation.editRestartRequiredDescription":
     "This change needs to restart the Engine. Stop the current response, then edit and resend.",
+  "conversation.quitResumeFailed": "Task was not resumed",
+  "conversation.quitResumeFailed.workspace-missing":
+    "The original workspace no longer exists. OmniMind did not guess another folder or start the task.",
+  "conversation.quitResumeFailed.workspace-unavailable":
+    "The original workspace is not accessible. Check its permissions or storage, then continue manually.",
+  "conversation.quitResumeFailed.project-unavailable":
+    "The original project is no longer available. OmniMind did not start the task.",
+  "conversation.quitResumeFailed.exact-binding-unavailable":
+    "The exact model and reasoning settings used by this task could not be recovered, so OmniMind did not substitute different settings.",
   "conversation.nothingToCommit": "Nothing to commit or push.",
   "conversation.answerPlanBeforeImages": "Answer the plan questions before adding images.",
   "conversation.answerPlanBeforeFiles": "Answer the plan questions before adding files.",
@@ -239,6 +248,14 @@ const ZH_CN_MESSAGES = {
   "conversation.editRestartRequired": "请先停止当前回复再编辑",
   "conversation.editRestartRequiredDescription":
     "这项修改需要重新启动引擎。请先停止当前回复，再编辑并重新发送。",
+  "conversation.quitResumeFailed": "任务未能自动继续",
+  "conversation.quitResumeFailed.workspace-missing":
+    "原工作区已不存在。OmniMind 没有猜测其他目录，也没有启动任务。",
+  "conversation.quitResumeFailed.workspace-unavailable":
+    "原工作区当前无法访问。请检查权限或存储状态后手动继续。",
+  "conversation.quitResumeFailed.project-unavailable": "原项目已不可用。OmniMind 没有启动任务。",
+  "conversation.quitResumeFailed.exact-binding-unavailable":
+    "无法恢复此任务当时精确的模型和推理设置，因此 OmniMind 没有替换成其他设置。",
   "conversation.nothingToCommit": "没有可提交或推送的更改。",
   "conversation.answerPlanBeforeImages": "请先回答规划问题，再添加图片。",
   "conversation.answerPlanBeforeFiles": "请先回答规划问题，再添加文件。",

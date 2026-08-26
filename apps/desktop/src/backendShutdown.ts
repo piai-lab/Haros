@@ -21,6 +21,7 @@ export interface PendingDesktopBackendShutdownRequest {
 export type StartDesktopBackendShutdownRequest = (input: {
   readonly backendHttpUrl: string;
   readonly shutdownToken: string;
+  readonly body?: unknown;
 }) => PendingDesktopBackendShutdownRequest;
 
 export type WindowsBackendShutdownResult =
@@ -115,12 +116,14 @@ function resolveDesktopBackendShutdownUrl(backendHttpUrl: string): URL {
 export function startDesktopBackendShutdownRequest(input: {
   readonly backendHttpUrl: string;
   readonly shutdownToken: string;
+  readonly body?: unknown;
 }): PendingDesktopBackendShutdownRequest {
   if (!input.shutdownToken) {
     throw new Error("Desktop backend shutdown token is required.");
   }
 
   const url = resolveDesktopBackendShutdownUrl(input.backendHttpUrl);
+  const body = input.body === undefined ? "" : JSON.stringify(input.body);
   let request: Http.ClientRequest | null = null;
   let response: Http.IncomingMessage | null = null;
   let cancelled = false;
@@ -143,7 +146,8 @@ export function startDesktopBackendShutdownRequest(input: {
       agent: false,
       headers: {
         Authorization: `Bearer ${input.shutdownToken}`,
-        "Content-Length": "0",
+        ...(body ? { "Content-Type": "application/json" } : {}),
+        "Content-Length": String(Buffer.byteLength(body)),
       },
     },
     (incoming) => {
@@ -158,7 +162,7 @@ export function startDesktopBackendShutdownRequest(input: {
   request.once("error", () => {
     complete(cancelled ? { type: "cancelled" } : { type: "error" });
   });
-  request.end();
+  request.end(body);
 
   return {
     outcome,
@@ -200,6 +204,7 @@ export function stopPosixBackendAndWait(input: {
   readonly shutdownToken: string;
   readonly forceKillDelayMs: number;
   readonly timeoutMs: number;
+  readonly shutdownBody?: unknown;
   readonly startRequest?: StartDesktopBackendShutdownRequest;
 }): Promise<void> {
   if (!Number.isFinite(input.forceKillDelayMs) || input.forceKillDelayMs < 0) {
@@ -241,6 +246,7 @@ function runRequestFirstBackendShutdown(input: {
   readonly shutdownToken: string;
   readonly forceKillDelayMs: number;
   readonly timeoutMs: number;
+  readonly shutdownBody?: unknown;
   readonly startRequest: StartDesktopBackendShutdownRequest;
   readonly forceTerminate: (child: BackendShutdownProcess) => void;
 }): Promise<WindowsBackendShutdownResult> {
@@ -281,6 +287,7 @@ function runRequestFirstBackendShutdown(input: {
       pendingRequest = input.startRequest({
         backendHttpUrl: input.backendHttpUrl,
         shutdownToken: input.shutdownToken,
+        ...(input.shutdownBody !== undefined ? { body: input.shutdownBody } : {}),
       });
       if (settled) {
         pendingRequest.cancel();
@@ -349,6 +356,7 @@ export function stopWindowsBackendAndWait(input: {
   readonly shutdownToken: string;
   readonly forceKillDelayMs: number;
   readonly timeoutMs: number;
+  readonly shutdownBody?: unknown;
   readonly startRequest?: StartDesktopBackendShutdownRequest;
   readonly forceTerminate?: (child: BackendShutdownProcess) => void;
 }): Promise<WindowsBackendShutdownResult> {

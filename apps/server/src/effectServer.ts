@@ -31,6 +31,10 @@ import {
 import { OrchestrationReactor } from "./orchestration/Services/OrchestrationReactor";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { ThreadDeletionReactor } from "./orchestration/Services/ThreadDeletionReactor";
+import {
+  claimQuitResumeRecordAtStartup,
+  resumeQuitInterruptedTasks,
+} from "./orchestration/quitResume";
 import { reconcileRestartStuckTurns } from "./orchestration/startupTurnReconciliation";
 import { ProviderSessionReaper } from "./provider/Services/ProviderSessionReaper";
 import { ProviderRuntimeReconciler } from "./provider/Services/ProviderRuntimeReconciler";
@@ -247,12 +251,17 @@ export const createEffectServer = Effect.fn(function* (
   // process start cannot replay state-dependent commands against the terminal
   // projection.
   yield* orchestrationReactor.reconcileSettledOpenTurns;
+  // Older user-authored queued messages have priority over a synthetic quit
+  // continuation. Re-run their promotion after stale live turns are settled.
+  yield* orchestrationReactor.reconcileQueuedTurns;
   yield* recoverGitHandoffOperations((command) => orchestrationEngine.dispatch(command)).pipe(
     Effect.mapError(
       (cause) => new ServerLifecycleError({ operation: "recoverGitHandoffOperations", cause }),
     ),
   );
+  const quitResumeRecord = yield* claimQuitResumeRecordAtStartup;
   yield* runtimeStartup.markCommandReady;
+  yield* resumeQuitInterruptedTasks(quitResumeRecord).pipe(Effect.forkIn(subscriptionsScope));
 
   yield* lifecycleEvents.publish({
     type: "welcome",

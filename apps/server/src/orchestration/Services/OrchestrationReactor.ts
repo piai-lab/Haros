@@ -23,6 +23,9 @@ export interface OrchestrationReactorShape {
 
   /** Reconciles durable provider replay state after restart turn recovery. */
   readonly reconcileSettledOpenTurns: Effect.Effect<void>;
+
+  /** Gives older user-authored queued turns first claim after restart recovery. */
+  readonly reconcileQueuedTurns: Effect.Effect<void>;
 }
 
 /**

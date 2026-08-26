@@ -32,6 +32,10 @@ import {
   OrchestrationEngineService,
   type OrchestrationEngineShape,
 } from "./orchestration/Services/OrchestrationEngine";
+import {
+  OrchestrationEventStore,
+  type OrchestrationEventStoreShape,
+} from "./persistence/Services/OrchestrationEventStore";
 import type { ServerReadiness } from "./server/readiness";
 import {
   DESKTOP_SHUTDOWN_ROUTE_PATH,
@@ -124,7 +128,12 @@ const healthyOrchestrationEngine = {
     lagByProjector: {},
     missingProjectors: [],
   }),
+  getReadModel: () => Effect.succeed({ threads: [] } as never),
 } as unknown as OrchestrationEngineShape;
+
+// Shutdown route wiring requires the canonical event-log owner even when this
+// HTTP-focused fixture has no eligible tasks and therefore performs no reads.
+const orchestrationEventStore = {} as OrchestrationEventStoreShape;
 
 type TestedRoute =
   | { readonly kind: "health"; readonly readiness: typeof readiness }
@@ -173,6 +182,7 @@ async function withEffectServer(
               Layer.succeed(ServerAuth, serverAuth),
               Layer.succeed(ProjectFaviconResolver, projectFaviconResolver),
               Layer.succeed(OrchestrationEngineService, healthyOrchestrationEngine),
+              Layer.succeed(OrchestrationEventStore, orchestrationEventStore),
               NodeHttpServer.layerHttpServices,
             ),
           ),
@@ -251,6 +261,50 @@ describe("production Effect HTTP routes", () => {
 
     await Effect.runPromise(controller.stopSignal);
     await expect(Effect.runPromise(controller.requestStop)).resolves.toBe(false);
+  });
+
+  it("parses resume intent only after desktop authorization and rejects malformed bodies", async () => {
+    const shutdownToken = "a".repeat(64);
+    const rejectedController = await Effect.runPromise(makeServerShutdownController());
+    await withEffectServer(
+      makeConfig({ mode: "desktop", desktopShutdownToken: shutdownToken }),
+      { kind: "shutdown", controller: rejectedController },
+      async (origin) => {
+        const response = await fetch(`${origin}${DESKTOP_SHUTDOWN_ROUTE_PATH}`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${shutdownToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ resumeIntent: { threadIds: [], continuationPrompt: "continue" } }),
+        });
+        expect(response.status).toBe(400);
+      },
+    );
+    await expect(Effect.runPromise(rejectedController.requestStop)).resolves.toBe(true);
+
+    const acceptedController = await Effect.runPromise(makeServerShutdownController());
+    await withEffectServer(
+      makeConfig({ mode: "desktop", desktopShutdownToken: shutdownToken }),
+      { kind: "shutdown", controller: acceptedController },
+      async (origin) => {
+        const response = await fetch(`${origin}${DESKTOP_SHUTDOWN_ROUTE_PATH}`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${shutdownToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            resumeIntent: { threadIds: ["thread-1"], continuationPrompt: "continue" },
+          }),
+        });
+        expect(response.status).toBe(202);
+        await expect(response.json()).resolves.toEqual({
+          accepted: true,
+          resumeRecordedThreadIds: [],
+        });
+      },
+    );
   });
 
   it("rejects browser authority, query, cookie, missing, malformed, and wrong tokens", async () => {

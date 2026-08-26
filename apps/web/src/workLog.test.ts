@@ -667,6 +667,25 @@ describe("deriveWorkLogEntries", () => {
     expect(entry?.failureReason).toBe("active-edit-requires-stop");
   });
 
+  it("keeps the bounded quit-resume reason for localized Timeline presentation", () => {
+    const [entry] = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "quit-resume-workspace-missing",
+          kind: "quit-resume.failed",
+          summary: "fallback",
+          tone: "error",
+          payload: { reason: "workspace-missing" },
+        }),
+      ],
+      undefined,
+    );
+    expect(entry).toMatchObject({
+      activityKind: "quit-resume.failed",
+      quitResumeFailureReason: "workspace-missing",
+    });
+  });
+
   it("keeps a sanitized Engine-native web-surface presentation marker", () => {
     const entries = deriveWorkLogEntries(
       [

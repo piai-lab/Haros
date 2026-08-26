@@ -453,8 +453,7 @@ export interface EngineWebSurfacePresentationContext {
   themeSnapshot?: EngineWebSurfaceThemeSnapshot;
 }
 
-export interface BrowserSetEngineWebSurfaceContextInput
-  extends EngineWebSurfacePresentationContext {}
+export interface BrowserSetEngineWebSurfaceContextInput extends EngineWebSurfacePresentationContext {}
 
 export interface BrowserReopenEngineWebSurfaceInput {
   threadId: ThreadId;
@@ -587,9 +586,7 @@ interface BrowserControlMethods {
   newTab: (input: BrowserNewTabInput) => Promise<ThreadBrowserState>;
   closeTab: (input: BrowserTabInput) => Promise<ThreadBrowserState>;
   selectTab: (input: BrowserTabInput) => Promise<ThreadBrowserState>;
-  setEngineWebSurfaceContext: (
-    input: BrowserSetEngineWebSurfaceContextInput,
-  ) => Promise<void>;
+  setEngineWebSurfaceContext: (input: BrowserSetEngineWebSurfaceContextInput) => Promise<void>;
   reopenEngineWebSurface: (
     input: BrowserReopenEngineWebSurfaceInput,
   ) => Promise<ThreadBrowserState>;
@@ -609,6 +606,36 @@ export interface DesktopWindowState {
   isMaximized: boolean;
   isFullscreen: boolean;
 }
+
+/** Main → renderer: request a bounded in-app decision for a normal desktop quit. */
+export interface DesktopQuitConfirmationRequest {
+  readonly requestId: string;
+}
+
+export interface DesktopQuitConfirmationThread {
+  readonly id: string;
+  readonly title: string;
+}
+
+/**
+ * Renderer first reports the current eligible task snapshot, then replies with
+ * the user's decision. The continuation prompt is localized by the renderer but
+ * remains length-bounded and is revalidated by the protected Server route.
+ */
+export type DesktopQuitConfirmationResponse =
+  | {
+      readonly requestId: string;
+      readonly phase: "ready";
+      readonly runningCount: number;
+      readonly threads: ReadonlyArray<DesktopQuitConfirmationThread>;
+    }
+  | {
+      readonly requestId: string;
+      readonly phase: "decision";
+      readonly allow: boolean;
+      readonly resume: boolean;
+      readonly continuationPrompt: string;
+    };
 
 /** Windows/Linux frameless title bar preference vs the live BrowserWindow frame. */
 export interface DesktopCustomTitleBarState {
@@ -671,6 +698,10 @@ export interface DesktopBridge {
     relaunch: () => Promise<void>;
   };
   onMenuAction: (listener: (action: string) => void) => () => void;
+  onQuitConfirmationRequest: (
+    listener: (request: DesktopQuitConfirmationRequest) => void,
+  ) => () => void;
+  replyQuitConfirmation: (response: DesktopQuitConfirmationResponse) => void;
   /** Current `webContents` page zoom (1 = 100%). Used to keep macOS traffic-light gutter aligned. */
   getZoomFactor: () => number;
   onZoomFactorChange: (listener: (zoomFactor: number) => void) => () => void;

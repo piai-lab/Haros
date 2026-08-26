@@ -77,6 +77,7 @@ import { collectActiveTerminalThreadIds } from "../lib/terminalStateCleanup";
 import { useProjectRunStore } from "../projectRunStore";
 import { dockTerminalThreadId } from "../lib/dockTerminalScope";
 import { TaskCompletionNotifications } from "../notifications/taskCompletion";
+import { RunningTasksQuitCoordinator } from "../components/RunningTasksQuitCoordinator";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
 import {
   isThreadDetailRetained,
@@ -293,6 +294,7 @@ function RootRouteView() {
             <GlobalShortcutsDialog />
             <GlobalFeedbackDialog />
             <TaskCompletionNotifications />
+            <RunningTasksQuitCoordinator />
             <AppSnapWelcomeDialog />
             <AppSnapCoordinator />
             <DesktopProjectBootstrap />
@@ -398,8 +400,7 @@ function ProviderStatusRefreshCoordinator() {
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   const [transportOpen, setTransportOpen] = useState(false);
   const [liveVersionCheckCompleted, setLiveVersionCheckCompleted] = useState(false);
-  const providerUpdateChecksEnabled =
-    serverSettingsQuery.data?.enableProviderUpdateChecks === true;
+  const providerUpdateChecksEnabled = serverSettingsQuery.data?.enableProviderUpdateChecks === true;
   const providerUpdateRefreshEnabled = providerUpdateChecksEnabled && transportOpen;
   const markLiveVersionCheckCompleted = useCallback(() => {
     setLiveVersionCheckCompleted(true);
@@ -494,7 +495,11 @@ async function runProviderUpdateAll(params: {
       title: firstProgressTitle,
       timeout: 0,
     });
-  activeToastRef.current = { kind: "update", key: activeNotificationKey, toastId };
+  activeToastRef.current = {
+    kind: "update",
+    key: activeNotificationKey,
+    toastId,
+  };
   const dismissProgressToast = () => {
     progressToastDismissedRef.current = true;
     if (activeToastRef.current?.toastId === toastId) {
@@ -765,7 +770,10 @@ function ProviderUpdateNotifications({
           }
           void navigate({
             to: "/settings",
-            search: { section: "providers", target: SETTINGS_TARGETS.providerUpdates },
+            search: {
+              section: "providers",
+              target: SETTINGS_TARGETS.providerUpdates,
+            },
           });
         },
       },
@@ -779,7 +787,12 @@ function ProviderUpdateNotifications({
         },
       },
     });
-    activeToastRef.current = { kind: "prompt", key: notificationKey, locale, toastId };
+    activeToastRef.current = {
+      kind: "prompt",
+      key: notificationKey,
+      locale,
+      toastId,
+    };
   }, [
     isUpdatingAll,
     locale,
@@ -1122,7 +1135,9 @@ function EventRouter() {
   const serverThreadIds = useStore((store) => store.threadIds ?? EMPTY_THREAD_IDS);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
   const routeThreadId = useParams({
     strict: false,
     select: (params) => (params.threadId ? ThreadId.makeUnsafe(params.threadId) : null),
@@ -1269,7 +1284,12 @@ function EventRouter() {
       const turnId = getThreadFromState(useStore.getState(), threadId)?.latestTurn?.turnId ?? null;
       let entry = threadCatchupBackoffById.get(threadId);
       if (entry === undefined || entry.turnId !== turnId) {
-        entry = { turnId, replayNoopStreak: 0, nextReplayAt: 0, reconcileNoopStreak: 0 };
+        entry = {
+          turnId,
+          replayNoopStreak: 0,
+          nextReplayAt: 0,
+          reconcileNoopStreak: 0,
+        };
         threadCatchupBackoffById.set(threadId, entry);
       }
       return entry;
@@ -1701,7 +1721,9 @@ function EventRouter() {
         if (fileChangeCwds.size > 0) {
           void invalidateProjectFileQueriesForCwds(queryClient, fileChangeCwds);
         } else {
-          void queryClient.invalidateQueries({ queryKey: projectQueryKeys.all });
+          void queryClient.invalidateQueries({
+            queryKey: projectQueryKeys.all,
+          });
         }
       }
       if (pendingStudioOutputInvalidationThreadIds.size > 0) {
@@ -1846,12 +1868,17 @@ function EventRouter() {
       let projectionSatisfiesTerminalFence = false;
       let projectionAttemptFailed = false;
       try {
-        const snapshot = await api.orchestration.getThreadDetailSnapshot({ threadId });
+        const snapshot = await api.orchestration.getThreadDetailSnapshot({
+          threadId,
+        });
         if (
           snapshot === null ||
           disposed ||
           threadSubscriptionGenerationById.get(threadId) !== subscriptionGeneration ||
-          !canApplyThreadSnapshot({ threadId, leasedThreadIds: subscribedThreadIds })
+          !canApplyThreadSnapshot({
+            threadId,
+            leasedThreadIds: subscribedThreadIds,
+          })
         ) {
           return;
         }
@@ -2022,7 +2049,12 @@ function EventRouter() {
         // The lease can drop while its refreshed snapshot is in flight. Applying it
         // then would restore detail slices that no retention entry owns, and since
         // eviction only runs from retention entries nothing would ever free them.
-        if (!canApplyThreadSnapshot({ threadId, leasedThreadIds: subscribedThreadIds })) {
+        if (
+          !canApplyThreadSnapshot({
+            threadId,
+            leasedThreadIds: subscribedThreadIds,
+          })
+        ) {
           threadSnapshotSequenceById.delete(threadId);
           pendingThreadEventsById.delete(threadId);
           clearThreadDetailResumeCursor(threadId);
@@ -2161,7 +2193,9 @@ function EventRouter() {
     // client store so the sidebar indicator survives reconnects and stays consistent
     // across tabs without owning any thread/terminal state.
     const invalidateLocalServers = () => {
-      void queryClient.invalidateQueries({ queryKey: serverQueryKeys.localServers() });
+      void queryClient.invalidateQueries({
+        queryKey: serverQueryKeys.localServers(),
+      });
     };
     const unsubDevServerEvent = api.projects.onDevServerEvent((event) => {
       const store = useProjectRunStore.getState();
@@ -2223,7 +2257,9 @@ function EventRouter() {
     // don't produce duplicate toasts.
     let subscribed = false;
     const unsubServerConfigUpdated = onServerConfigUpdated((payload) => {
-      void queryClient.invalidateQueries({ queryKey: serverQueryKeys.config() });
+      void queryClient.invalidateQueries({
+        queryKey: serverQueryKeys.config(),
+      });
       if (!subscribed) return;
       const issue = payload.issues.find((entry) => entry.kind.startsWith("keybindings."));
       if (!issue) {

@@ -44,6 +44,9 @@ export interface ProviderCommandReactorShape {
    */
   readonly drain: Effect.Effect<void>;
 
+  /** Re-runs durable queued-turn promotion after restart reconciliation clears stale turns. */
+  readonly reconcileQueuedTurns: Effect.Effect<void>;
+
   readonly listBlockingDeliveries: (input: {
     readonly threadId?: string | undefined;
     readonly limit: number;

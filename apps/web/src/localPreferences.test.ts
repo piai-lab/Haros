@@ -44,6 +44,7 @@ describe("local preference owner", () => {
     expect(DEFAULT_FOLLOW_UP_BEHAVIOR).toBe("queue");
     expect(DEFAULT_SIDEBAR_PROJECT_SORT_ORDER).toBe("manual");
     expect(DEFAULT_SIDEBAR_THREAD_SORT_ORDER).toBe("updated_at");
+    expect(DEFAULT_LOCAL_PREFERENCES.resumeChatsAfterQuit).toBe(true);
   });
 
   it("never reads or rewrites the retired mixed key", () => {
@@ -68,6 +69,13 @@ describe("local preference owner", () => {
 
     expect(result.state).toBe("saved");
     expect(readLocalPreferences(storage).localePreference).toBe("zh-CN");
+  });
+
+  it("persists the quit-resume checkbox in the existing preference namespace", () => {
+    const storage = createMemoryStorage();
+    expect(persistLocalPreferences(storage, { resumeChatsAfterQuit: false }).state).toBe("saved");
+    expect(readLocalPreferences(storage).resumeChatsAfterQuit).toBe(false);
+    expect(storage.length).toBe(1);
   });
 
   it("preserves committed state and the legacy bytes when persistence fails", () => {

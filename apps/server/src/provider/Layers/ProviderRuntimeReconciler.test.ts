@@ -99,6 +99,7 @@ describe("ProviderRuntimeReconcilerLive", () => {
     const reactor = {
       start: Effect.void,
       reconcileSettledOpenTurns: Effect.sync(reconcileSettledOpenTurns),
+      reconcileQueuedTurns: Effect.void,
     } satisfies OrchestrationReactorShape;
     const snapshotQuery = {
       listStaleInFlightThreadIds: () => Effect.succeed([THREAD_ID]),

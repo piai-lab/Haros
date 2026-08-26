@@ -63,6 +63,8 @@ import {
   requireThreadNotArchived,
   threadHasInFlightTurn,
   threadHasCheckpointRevertInProgress,
+  threadResumePreconditionDetail,
+  threadResumePreconditionViolation,
 } from "./commandInvariants.ts";
 
 const nowIso = () => new Date().toISOString();
@@ -1848,6 +1850,18 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.threadId,
       });
+      if (command.resumePrecondition !== undefined) {
+        const violation = threadResumePreconditionViolation(
+          targetThread,
+          command.resumePrecondition,
+        );
+        if (violation !== null) {
+          return yield* new OrchestrationCommandInvariantError({
+            commandType: command.type,
+            detail: threadResumePreconditionDetail(command.threadId, violation),
+          });
+        }
+      }
       if (threadHasCheckpointRevertInProgress(targetThread)) {
         return yield* new OrchestrationCommandInvariantError({
           commandType: command.type,

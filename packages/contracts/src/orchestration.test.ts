@@ -69,6 +69,31 @@ const decodeOrchestrationCommand = Schema.decodeUnknownEffect(OrchestrationComma
 const decodeOrchestrationEvent = Schema.decodeUnknownEffect(OrchestrationEvent);
 const decodeThreadPullRequest = Schema.decodeUnknownEffect(OrchestrationThreadPullRequest);
 
+it.effect("strips the server-only quit resume precondition from client commands", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decodeClientOrchestrationCommand({
+      type: "thread.turn.start",
+      commandId: "command-resume-spoof",
+      threadId: "thread-1",
+      message: {
+        messageId: "message-resume-spoof",
+        role: "user",
+        text: "continue",
+        attachments: [],
+      },
+      runtimeMode: "full-access",
+      interactionMode: "default",
+      resumePrecondition: {
+        recordedTurnId: "turn-old",
+        recordedAt: "2026-08-26T00:00:00.000Z",
+      },
+      createdAt: "2026-08-26T00:00:01.000Z",
+    });
+    assert.equal(parsed.type, "thread.turn.start");
+    assert.equal("resumePrecondition" in parsed, false);
+  }),
+);
+
 it.effect("decodes last-known PRs persisted before draft/mergeability/diff fields existed", () =>
   Effect.gen(function* () {
     const legacy = yield* decodeThreadPullRequest({

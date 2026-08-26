@@ -49,6 +49,7 @@ describe("OrchestrationReactor", () => {
               () => Effect.sync(() => stopped.push("provider-command-reactor")),
             ),
             drain: Effect.void,
+            reconcileQueuedTurns: Effect.void,
             listBlockingDeliveries: () => Effect.succeed([]),
             reconcileDelivery: () => Effect.succeed(null),
           }),

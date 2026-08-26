@@ -113,6 +113,11 @@ import {
   settleDeferredDesktopQuitAfterUpdaterFailure,
 } from "./desktopQuitIntent";
 import {
+  makeRunningTasksQuitGuard,
+  shouldPromptForRunningTasksBeforeQuit,
+  type DesktopQuitGuardResult,
+} from "./runningTasksQuitGuard";
+import {
   hasPendingDesktopMigrationRecovery,
   requiresDesktopMigrationRecovery,
   recoverDesktopMigrationIfRequired,
@@ -363,6 +368,7 @@ let isUpdaterInstallPreparing = false;
 let isUpdaterQuitAndInstallInFlight = false;
 const updateInstallPreparation = makeUpdateInstallPreparationCoordinator();
 const deferredDesktopQuitIntent = makeDeferredDesktopQuitIntentCoordinator();
+const runningTasksQuitGuard = makeRunningTasksQuitGuard();
 let desktopShutdownPromise: Promise<void> | null = null;
 let desktopStartupBlockedForMigrationRecovery = false;
 let desktopShutdownComplete = false;
@@ -973,6 +979,7 @@ protocol.registerSchemesAsPrivileged([
       secure: true,
       supportFetchAPI: true,
       corsEnabled: true,
+      codeCache: true,
     },
   },
   {
@@ -3861,7 +3868,10 @@ function stopBackend(): void {
   }
 }
 
-async function stopBackendAndWaitForExit(timeoutMs = BACKEND_SHUTDOWN_TIMEOUT_MS): Promise<void> {
+async function stopBackendAndWaitForExit(
+  timeoutMs = BACKEND_SHUTDOWN_TIMEOUT_MS,
+  shutdownBody?: unknown,
+): Promise<void> {
   const child = takeBackendProcessForShutdown();
   if (!child) return;
   const backendChild = child;
@@ -3876,6 +3886,7 @@ async function stopBackendAndWaitForExit(timeoutMs = BACKEND_SHUTDOWN_TIMEOUT_MS
         shutdownToken: DESKTOP_BACKEND_SHUTDOWN_TOKEN,
         forceKillDelayMs,
         timeoutMs,
+        ...(shutdownBody !== undefined ? { shutdownBody } : {}),
       });
       requireWindowsBackendExit(result);
     } catch (error) {
@@ -3893,6 +3904,7 @@ async function stopBackendAndWaitForExit(timeoutMs = BACKEND_SHUTDOWN_TIMEOUT_MS
       shutdownToken: DESKTOP_BACKEND_SHUTDOWN_TOKEN,
       forceKillDelayMs,
       timeoutMs,
+      ...(shutdownBody !== undefined ? { shutdownBody } : {}),
     });
   } catch (error) {
     backendProcess = retainLiveBackendAfterShutdownFailure(backendProcess, backendChild);
@@ -3914,16 +3926,28 @@ async function disposeBrowserHostPipeServerForShutdown(reason: string): Promise<
   }
 }
 
+function hideDesktopWindowForImmediateQuit(): void {
+  const window = mainWindow;
+  if (!window || window.isDestroyed()) return;
+  try {
+    if (process.platform === "win32") window.setSkipTaskbar(true);
+    window.hide();
+  } catch (error) {
+    writeDesktopLogHeader(`hide window for quit failed message=${formatErrorMessage(error)}`);
+  }
+}
+
 // Keeps Electron alive long enough for backend finalizers to reap provider child processes.
-async function shutdownDesktopRuntime(reason: string): Promise<void> {
+async function shutdownDesktopRuntime(reason: string, shutdownBody?: unknown): Promise<void> {
   if (desktopShutdownPromise) {
     return desktopShutdownPromise;
   }
 
   isQuitting = true;
+  hideDesktopWindowForImmediateQuit();
   writeDesktopLogHeader(`${reason} shutdown start`);
   const shutdown = runAfterDesktopShutdown(
-    stopBackendAndWaitForExit(),
+    stopBackendAndWaitForExit(BACKEND_SHUTDOWN_TIMEOUT_MS, shutdownBody),
     async () => {
       clearUpdateBackgroundBlurTimer();
       clearUpdateCheckTimeoutTimer();
@@ -3951,23 +3975,69 @@ async function shutdownDesktopRuntime(reason: string): Promise<void> {
   }
 }
 
-function requestGracefulAppQuit(reason: string): void {
+function isMainRendererAvailable(): boolean {
+  return Boolean(
+    mainWindow &&
+    !mainWindow.isDestroyed() &&
+    !mainWindow.webContents.isDestroyed() &&
+    !mainWindow.webContents.isCrashed(),
+  );
+}
+
+async function confirmRunningTasksThenQuit(reason: string): Promise<void> {
+  if (
+    !shouldPromptForRunningTasksBeforeQuit(reason) ||
+    runningTasksQuitGuard.hasAllowedQuit() ||
+    isQuitting ||
+    desktopShutdownPromise !== null ||
+    desktopShutdownComplete
+  ) {
+    requestGracefulAppQuit(reason);
+    return;
+  }
+  const window = mainWindow;
+  const result: DesktopQuitGuardResult = await runningTasksQuitGuard.askRenderer({
+    isRendererAvailable: isMainRendererAvailable,
+    send: (request) => {
+      if (!window || !isMainRendererAvailable()) throw new Error("Renderer unavailable.");
+      if (window.isMinimized()) window.restore();
+      window.show();
+      window.focus();
+      window.webContents.send(IPC.quitConfirmationRequest, request);
+    },
+  });
+  if (!result.allow) {
+    writeDesktopLogHeader(`${reason} cancelled by user while tasks were running`);
+    return;
+  }
+  requestGracefulAppQuit(
+    reason,
+    result.resumeIntent ? { resumeIntent: result.resumeIntent } : undefined,
+  );
+}
+
+function requestGracefulAppQuit(reason: string, shutdownBody?: unknown): void {
   if (isUpdaterInstallPreparing) {
     deferDesktopQuitUntilUpdaterSettles(reason);
     return;
   }
 
-  void runAfterDesktopShutdown(shutdownDesktopRuntime(reason), () => app.quit()).catch(
-    (error: unknown) => {
-      const message = formatErrorMessage(error);
-      writeDesktopLogHeader(`${reason} shutdown failed message=${message}`);
-      console.warn(`[desktop] Shutdown failed during ${reason}: ${message}`);
-      app.exit(1);
-    },
-  );
+  void runAfterDesktopShutdown(shutdownDesktopRuntime(reason, shutdownBody), () =>
+    app.quit(),
+  ).catch((error: unknown) => {
+    const message = formatErrorMessage(error);
+    writeDesktopLogHeader(`${reason} shutdown failed message=${message}`);
+    console.warn(`[desktop] Shutdown failed during ${reason}: ${message}`);
+    app.exit(1);
+  });
 }
 
 function registerIpcHandlers(): void {
+  ipcMain.removeAllListeners(IPC.quitConfirmationResponse);
+  ipcMain.on(IPC.quitConfirmationResponse, (_event, payload: unknown) => {
+    runningTasksQuitGuard.receiveResponse(payload);
+  });
+
   ipcMain.removeAllListeners(IPC.wsUrl);
   ipcMain.on(IPC.wsUrl, (event: IpcMainEvent) => {
     // The backend port is reserved at runtime, so preload asks main for the
@@ -4543,7 +4613,17 @@ function createWindow(): BrowserWindow {
       })
     ) {
       event.preventDefault();
-      requestGracefulAppQuit("window-close");
+      void confirmRunningTasksThenQuit("window-close");
+      return;
+    }
+
+    if (
+      process.platform === "linux" &&
+      !desktopShutdownComplete &&
+      !isUpdaterQuitAndInstallInFlight
+    ) {
+      event.preventDefault();
+      void confirmRunningTasksThenQuit("window-close");
     }
   });
 
@@ -4563,6 +4643,7 @@ function createWindow(): BrowserWindow {
   }
 
   window.on("closed", () => {
+    runningTasksQuitGuard.failOpenPending();
     if (mainWindow === window) {
       mainWindow = null;
     }
@@ -4588,6 +4669,7 @@ function attachRendererCrashRecovery(window: BrowserWindow): void {
   };
 
   window.webContents.on("render-process-gone", (_event, details) => {
+    runningTasksQuitGuard.failOpenPending();
     const description = `reason=${details.reason} exitCode=${details.exitCode}`;
     writeDesktopLogHeader(`renderer process gone ${description}`);
     safeConsoleError(`[desktop] renderer process gone (${description})`);
@@ -4619,6 +4701,10 @@ function attachRendererCrashRecovery(window: BrowserWindow): void {
         presentRendererCrashRecovery(window, details.reason, response);
         return;
     }
+  });
+
+  window.webContents.on("did-start-loading", () => {
+    runningTasksQuitGuard.failOpenPending();
   });
 
   // A hung renderer is not a crash — Chromium keeps the process alive — so it never
@@ -4887,7 +4973,7 @@ app.on("before-quit", (event) => {
   }
 
   event.preventDefault();
-  requestGracefulAppQuit("before-quit");
+  void confirmRunningTasksThenQuit("before-quit");
 });
 
 if (hasSingleInstanceLock) {

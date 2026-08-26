@@ -6,6 +6,48 @@ import type { ServerConfigShape } from "./config";
 import { isLoopbackHost } from "./startupAccess";
 
 export const DESKTOP_SHUTDOWN_ROUTE_PATH = "/api/desktop/shutdown";
+export const DESKTOP_SHUTDOWN_BODY_MAX_BYTES = 16 * 1024;
+
+export interface DesktopShutdownResumeIntent {
+  readonly threadIds: ReadonlyArray<string>;
+  readonly continuationPrompt: string;
+}
+
+export interface DesktopShutdownRequestBody {
+  readonly resumeIntent?: DesktopShutdownResumeIntent;
+}
+
+/** Strict, bounded parser used only after desktop+loopback+token authorization. */
+export function parseDesktopShutdownRequestBody(value: unknown): DesktopShutdownRequestBody | null {
+  if (value == null) return {};
+  if (typeof value !== "object" || Array.isArray(value)) return null;
+  if (Object.keys(value).some((key) => key !== "resumeIntent")) return null;
+  const resumeIntent = (value as { readonly resumeIntent?: unknown }).resumeIntent;
+  if (resumeIntent === undefined) return {};
+  if (typeof resumeIntent !== "object" || resumeIntent === null || Array.isArray(resumeIntent)) {
+    return null;
+  }
+  if (
+    Object.keys(resumeIntent).some((key) => key !== "threadIds" && key !== "continuationPrompt")
+  ) {
+    return null;
+  }
+  const threadIds = (resumeIntent as { readonly threadIds?: unknown }).threadIds;
+  const continuationPrompt = (resumeIntent as { readonly continuationPrompt?: unknown })
+    .continuationPrompt;
+  if (
+    !Array.isArray(threadIds) ||
+    threadIds.length === 0 ||
+    threadIds.length > 256 ||
+    threadIds.some((id) => typeof id !== "string" || id.trim().length === 0 || id.length > 512) ||
+    typeof continuationPrompt !== "string" ||
+    continuationPrompt.trim().length === 0 ||
+    continuationPrompt.length > 2_000
+  ) {
+    return null;
+  }
+  return { resumeIntent: { threadIds, continuationPrompt } };
+}
 
 export interface ServerShutdownController {
   /** Completes the stop signal once. `true` identifies the first request. */

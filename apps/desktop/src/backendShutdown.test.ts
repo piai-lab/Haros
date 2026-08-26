@@ -708,6 +708,32 @@ async function closeServer(server: Http.Server): Promise<void> {
 }
 
 describe("startDesktopBackendShutdownRequest", () => {
+  it("sends a bounded resume intent only in the protected request body", async () => {
+    let observedBody = "";
+    let observedContentType = "";
+    const { server, baseUrl } = await listen((request, response) => {
+      observedContentType = request.headers["content-type"] ?? "";
+      request.setEncoding("utf8");
+      request.on("data", (chunk) => (observedBody += chunk));
+      request.on("end", () => response.writeHead(202).end());
+    });
+    try {
+      const body = {
+        resumeIntent: { threadIds: ["thread-a"], continuationPrompt: "continue" },
+      };
+      const pending = startDesktopBackendShutdownRequest({
+        backendHttpUrl: baseUrl,
+        shutdownToken: "desktop-only-token",
+        body,
+      });
+      await expect(pending.outcome).resolves.toEqual({ type: "response", statusCode: 202 });
+      expect(observedContentType).toBe("application/json");
+      expect(JSON.parse(observedBody)).toEqual(body);
+    } finally {
+      await closeServer(server);
+    }
+  });
+
   it("posts only to the loopback shutdown path with the bearer credential", async () => {
     let observedMethod = "";
     let observedUrl = "";

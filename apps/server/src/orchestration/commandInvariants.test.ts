@@ -5,6 +5,7 @@ import {
   DEFAULT_PROVIDER_INTERACTION_MODE,
   ProjectId,
   ThreadId,
+  TurnId,
   type OrchestrationCommand,
   type OrchestrationReadModel,
 } from "@omnimind/contracts";
@@ -19,6 +20,7 @@ import {
   requireThreadAbsent,
   requireThreadArchived,
   requireThreadNotArchived,
+  threadResumePreconditionViolation,
 } from "./commandInvariants.ts";
 
 const now = new Date().toISOString();
@@ -168,6 +170,69 @@ const messageSendCommand: OrchestrationCommand = {
 };
 
 describe("commandInvariants", () => {
+  it("blocks a quit continuation after archive, completion, or newer live work", () => {
+    const precondition = {
+      recordedTurnId: TurnId.makeUnsafe("turn-before-quit"),
+      recordedAt: "2026-08-26T00:00:00.000Z",
+    };
+    const base = {
+      archivedAt: null,
+      session: null,
+      latestTurn: {
+        turnId: TurnId.makeUnsafe("turn-before-quit"),
+        state: "interrupted" as const,
+        completedAt: null,
+      },
+    };
+    expect(threadResumePreconditionViolation(base, precondition)).toBeNull();
+    expect(
+      threadResumePreconditionViolation(
+        { ...base, archivedAt: precondition.recordedAt },
+        precondition,
+      ),
+    ).toBe("thread-archived");
+    expect(
+      threadResumePreconditionViolation(
+        {
+          ...base,
+          latestTurn: {
+            ...base.latestTurn,
+            state: "completed",
+            completedAt: precondition.recordedAt,
+          },
+        },
+        precondition,
+      ),
+    ).toBe("turn-completed");
+    expect(
+      threadResumePreconditionViolation(
+        {
+          ...base,
+          session: { status: "running", activeTurnId: TurnId.makeUnsafe("turn-new") },
+          latestTurn: {
+            ...base.latestTurn,
+            turnId: TurnId.makeUnsafe("turn-new"),
+            state: "running",
+          },
+        },
+        precondition,
+      ),
+    ).toBe("turn-in-flight");
+    expect(
+      threadResumePreconditionViolation(
+        {
+          ...base,
+          latestTurn: {
+            ...base.latestTurn,
+            turnId: TurnId.makeUnsafe("turn-new"),
+            state: "error",
+          },
+        },
+        precondition,
+      ),
+    ).toBe("turn-changed");
+  });
+
   it("finds threads by id and project", () => {
     expect(findThreadById(readModel, ThreadId.makeUnsafe("thread-1"))?.projectId).toBe("project-a");
     expect(findThreadById(readModel, ThreadId.makeUnsafe("missing"))).toBeUndefined();
