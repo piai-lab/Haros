@@ -43,6 +43,15 @@ describe("product Ask User tool", () => {
 
     expect(tool.name).toBe("ask_user");
     expect(tool.executionMode).toBe("barrier");
+    expect(tool.description).toContain("before answering, recommending, planning, or acting");
+    expect(tool.promptSnippet).toContain("before answering or acting");
+    expect(tool.promptGuidelines.join("\n")).toContain(
+      "response, recommendation, plan, acceptance criteria, or next action",
+    );
+    expect(tool.promptGuidelines.join("\n")).toContain(
+      "replace this tool with a prose option list",
+    );
+    expect(tool.promptGuidelines.join("\n")).toContain("instead of sending a prose preamble first");
     expect(JSON.stringify(tool.parameters)).not.toContain("maxItems");
     expect(JSON.stringify(tool.parameters)).not.toContain(ASK_USER_RESERVED_CUSTOM_VALUE);
     const result = await tool.execute("call-1", request);
