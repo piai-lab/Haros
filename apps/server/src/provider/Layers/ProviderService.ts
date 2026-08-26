@@ -50,7 +50,11 @@ import {
 import { nonEmptyTrimmed } from "@omnimind/shared/text";
 import { providerExecutionStructure } from "../providerExecutionStructure.ts";
 
-import { ProviderAdapterProcessError, ProviderValidationError } from "../Errors.ts";
+import {
+  ProviderAdapterProcessError,
+  ProviderSessionDirectoryPersistenceError,
+  ProviderValidationError,
+} from "../Errors.ts";
 import { ProviderAdapterRegistry } from "../Services/ProviderAdapterRegistry.ts";
 import { ProviderService, type ProviderServiceShape } from "../Services/ProviderService.ts";
 import {
@@ -3024,7 +3028,16 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                   : { lifecycleGeneration: bindingGeneration }),
                 createdAt: new Date().toISOString(),
                 payload: { reason: PROVIDER_INTERRUPT_REASON },
-              });
+              }).pipe(
+                Effect.mapError(
+                  (cause) =>
+                    new ProviderSessionDirectoryPersistenceError({
+                      operation: "ProviderService.interruptTurn",
+                      detail: "Failed to persist the authoritative interrupt settlement.",
+                      cause,
+                    }),
+                ),
+              );
             }
             if (targetedInterruptKey !== undefined) {
               rememberTargetedChildInterrupt(targetedInterruptKey, {
