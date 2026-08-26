@@ -74,6 +74,24 @@ describe("Mermaid sandbox output", () => {
     ).toBe("fallback");
   });
 
+  it("rejects invalid geometry and oversized output without a geometry ceiling", () => {
+    const body = btoa('<body style="margin:0"><svg viewBox="0 0 10 10"></svg></body>');
+    const valid = `<iframe style="width:100%;height:10px;border:0;margin:0;" src="data:text/html;charset=UTF-8;base64,${body}" sandbox="allow-top-navigation-by-user-activation allow-popups">fallback</iframe>`;
+    expect(parseOfficialMermaidSandboxOutput(valid.replace("height:10px", "height:0px")).kind).toBe(
+      "fallback",
+    );
+    expect(
+      parseOfficialMermaidSandboxOutput(valid.replace("height:10px", "height:-1px")).kind,
+    ).toBe("fallback");
+    const mismatchedBody = btoa('<body style="margin:0"><svg viewBox="0 0 10 11"></svg></body>');
+    expect(parseOfficialMermaidSandboxOutput(valid.replace(body, mismatchedBody)).kind).toBe(
+      "fallback",
+    );
+    expect(parseOfficialMermaidSandboxOutput(`${valid}${" ".repeat(1024 * 1024)}`).kind).toBe(
+      "fallback",
+    );
+  });
+
   it("cancels a task before loading or rendering Mermaid", async () => {
     const controller = new AbortController();
     controller.abort();
@@ -114,8 +132,8 @@ describe("Mermaid sandbox output", () => {
     expect(light.srcDoc).not.toContain(darkTheme.surface);
   });
 
-  it("keeps tall but bounded diagrams out of the inline transcript projection", async () => {
-    const edges = Array.from({ length: 24 }, (_, index) => `N${index}-->N${index + 1}`);
+  it("keeps geometry independent from presentation eligibility", async () => {
+    const edges = Array.from({ length: 100 }, (_, index) => `N${index}-->N${index + 1}`);
     const result = await renderMermaidPresentation({
       source: ["flowchart TD", ...edges].join("\n"),
       theme: THEME,
@@ -123,9 +141,25 @@ describe("Mermaid sandbox output", () => {
     });
     expect(result.kind).toBe("ready");
     if (result.kind !== "ready") return;
-    expect(result.height).toBeGreaterThan(720);
-    expect(result.height).toBeLessThanOrEqual(4096);
-    expect(result.inline).toBe(false);
+    expect(result.height).toBeGreaterThan(4096);
+  });
+
+  it("rejects the 101st connector before importing or rendering Mermaid", async () => {
+    const importMarksBefore = performance.getEntriesByName("omnimind:mermaid-import").length;
+    const renderMeasuresBefore = performance.getEntriesByName(
+      "omnimind:mermaid-render-duration",
+    ).length;
+    const source = `flowchart TD\n${"A-->B;".repeat(101)}`;
+    const result = await renderMermaidPresentation({
+      source,
+      theme: THEME,
+      signal: new AbortController().signal,
+    });
+    expect(result).toMatchObject({ kind: "fallback", reason: "budget" });
+    expect(performance.getEntriesByName("omnimind:mermaid-import")).toHaveLength(importMarksBefore);
+    expect(performance.getEntriesByName("omnimind:mermaid-render-duration")).toHaveLength(
+      renderMeasuresBefore,
+    );
   });
 
   it("contains hostile returned markup inside a scriptless opaque-origin frame", async () => {

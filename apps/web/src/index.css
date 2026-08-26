@@ -1085,6 +1085,49 @@ label:has(> select#reasoning-effort) select {
   background: var(--app-chat-code-surface);
 }
 
+.chat-markdown .chat-markdown-mermaid-breakout {
+  --mermaid-chat-gutter-x: var(--app-density-chat-gutter-x, 0.75rem);
+  position: relative;
+  left: 50%;
+  width: min(
+    calc(
+      100cqw - var(--mermaid-chat-gutter-x) - var(--mermaid-chat-gutter-x) -
+        var(--app-chat-content-inset-right, 0px)
+    ),
+    max(100%, var(--mermaid-preferred-inline-size, 100%))
+  );
+  max-width: calc(
+    100cqw - var(--mermaid-chat-gutter-x) - var(--mermaid-chat-gutter-x) -
+      var(--app-chat-content-inset-right, 0px)
+  );
+  transform: translateX(-50%);
+}
+
+@media (min-width: 640px) {
+  .chat-markdown .chat-markdown-mermaid-breakout {
+    --mermaid-chat-gutter-x: var(--app-density-chat-gutter-x-lg, 1.25rem);
+  }
+}
+
+.chat-markdown .chat-markdown-codeblock[data-variant="diagram"] {
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--border) 58%, transparent);
+  background: color-mix(in srgb, var(--app-chat-code-surface) 82%, var(--background));
+}
+
+.chat-markdown .chat-markdown-codeblock[data-variant="diagram"] > .chat-markdown-codeblock__header {
+  position: absolute;
+  z-index: 1;
+  top: 0.35rem;
+  right: 0.35rem;
+  justify-content: flex-end;
+  border: 1px solid color-mix(in srgb, var(--border) 48%, transparent);
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--background) 88%, transparent);
+  padding: 0.05rem 0.1rem;
+  backdrop-filter: blur(8px);
+}
+
 .chat-markdown .chat-markdown-codeblock__header {
   display: flex;
   align-items: center;
@@ -1185,16 +1228,28 @@ label:has(> select#reasoning-effort) select {
 .chat-markdown .chat-markdown-mermaid {
   overflow: hidden;
   padding: 0.75rem;
-  background: var(--app-chat-code-surface);
+  background: transparent;
 }
 
 .chat-markdown .chat-markdown-mermaid__frame {
   display: block;
-  width: 100%;
   max-width: 100%;
+  margin-inline: auto;
   border: 0;
   background: transparent;
   pointer-events: none;
+}
+
+.chat-markdown .chat-markdown-mermaid__pending {
+  display: flex;
+  min-height: 8rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  color: var(--muted-foreground);
+  font-size: var(--app-font-size-ui-sm, 11px);
+  line-height: 1.4;
 }
 
 .chat-markdown .chat-markdown-mermaid__fallback {
@@ -1202,8 +1257,8 @@ label:has(> select#reasoning-effort) select {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
-  padding: 0.45rem 0.65rem 0.5rem;
+  min-height: 6rem;
+  padding: 1rem 3.25rem 1rem 1rem;
   color: var(--muted-foreground);
   font-size: var(--app-font-size-ui-sm, 11px);
   line-height: 1.4;

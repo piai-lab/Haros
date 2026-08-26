@@ -38,12 +38,10 @@ export function assistantText(index: number): string {
 }
 
 export function buildMermaidDiagramSource(edgeCount: number, identity = 0): string {
-  const edges = Array.from(
-    { length: Math.max(0, edgeCount) },
-    (_, index) =>
-      `N${index}[节点 ${index} · representative wide CJK label ${identity}]-->N${index + 1}[Node ${index + 1}]`,
+  const edges = Array.from({ length: Math.max(0, edgeCount) }, (_, index) =>
+    index === 0 ? `N0[节点 ${identity}]-->N1` : `N${index}-->N${index + 1}`,
   );
-  return ["flowchart LR", ...(edgeCount > 240 ? [edges.join(";")] : edges)].join("\n");
+  return ["flowchart TD", ...(edgeCount > 100 ? [edges.join(";")] : edges)].join("\n");
 }
 
 export function buildMermaidFence(edgeCount: number, identity = 0): string {

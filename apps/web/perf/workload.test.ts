@@ -2,15 +2,15 @@ import { describe, expect, it } from "vitest";
 import { buildDiagramStreamCorpus, buildMermaidDiagramSource } from "./workload";
 
 describe("Mermaid transcript performance workloads", () => {
-  it("builds the normal 80-edge fixture inside automatic budgets", () => {
-    const source = buildMermaidDiagramSource(80);
-    expect(source.match(/-->/g)).toHaveLength(80);
-    expect(source.split("\n").filter(Boolean).length).toBe(81);
+  it("builds the normal 100-edge fixture inside automatic budgets", () => {
+    const source = buildMermaidDiagramSource(100);
+    expect(source.match(/-->/g)).toHaveLength(100);
+    expect(source.split("\n").filter(Boolean).length).toBe(101);
   });
 
-  it("keeps the 300-edge fixture compressed so connector policy, not line count, rejects it", () => {
-    const source = buildMermaidDiagramSource(300);
-    expect(source.match(/-->/g)).toHaveLength(300);
+  it("keeps the 101-edge fixture compressed so connector policy rejects it before import", () => {
+    const source = buildMermaidDiagramSource(101);
+    expect(source.match(/-->/g)).toHaveLength(101);
     expect(source.split("\n").filter(Boolean).length).toBe(2);
   });
 

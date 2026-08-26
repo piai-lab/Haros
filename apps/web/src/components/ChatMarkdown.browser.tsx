@@ -9,6 +9,7 @@ import { page, userEvent } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { MessageId } from "@omnimind/contracts";
+import type { CSSProperties } from "react";
 
 import { DEFAULT_THEME_STATE, serializeThemeState } from "../theme/theme.logic";
 import ChatMarkdown from "./ChatMarkdown";
@@ -29,6 +30,7 @@ const COMPACT_TABLE_MARKDOWN = ["| A | B |", "| --- | --- |", "| 1 | 2 |"].join(
 
 describe("ChatMarkdown table overflow", () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     document.body.innerHTML = "";
     document.documentElement.classList.remove("dark");
     localStorage.removeItem("omnimind:theme");
@@ -197,12 +199,24 @@ describe("ChatMarkdown table overflow", () => {
 
 describe("ChatMarkdown Mermaid presentation", () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     document.body.innerHTML = "";
     document.documentElement.classList.remove("dark");
     localStorage.removeItem("omnimind:theme");
   });
 
-  const source = "```mermaid\nflowchart LR\nA[开始]-->B[Ready]\n```";
+  const diagramSource = [
+    "flowchart TD",
+    "    A([开始]) --> B[确定目标]",
+    "    B --> C[制定计划]",
+    "    C --> D[执行任务]",
+    "    D --> E{结果符合预期？}",
+    "    E -- 否 --> F[分析问题并调整]",
+    "    F --> D",
+    "    E -- 是 --> G[整理成果]",
+    "    G --> H([完成])",
+  ].join("\n");
+  const source = `\`\`\`mermaid\n${diagramSource}\n\`\`\``;
   const presentation = { messageId: MessageId.makeUnsafe("browser-mermaid") } as const;
   const mermaidResourceCount = () =>
     performance
@@ -211,18 +225,40 @@ describe("ChatMarkdown Mermaid presentation", () => {
 
   it("does not import or render Mermaid while the message is streaming", async () => {
     const before = mermaidResourceCount();
+    const importMarksBefore = performance.getEntriesByName("omnimind:mermaid-import").length;
+    const renderMeasuresBefore = performance.getEntriesByName(
+      "omnimind:mermaid-render-duration",
+    ).length;
+    const digest = vi.spyOn(crypto.subtle, "digest");
     const mounted = await render(
-      <ChatMarkdown text={source} cwd={undefined} isStreaming mermaidPresentation={presentation} />,
+      <ChatMarkdown
+        text={`\`\`\`mermaid\n${diagramSource}`}
+        cwd={undefined}
+        isStreaming
+        mermaidPresentation={presentation}
+      />,
     );
     await new Promise((resolve) => setTimeout(resolve, 650));
     const host = mounted.container;
     expect(host.querySelector("iframe")).toBeNull();
     expect(host.querySelector(".chat-markdown-shiki")).toBeNull();
-    expect(host.textContent).toContain("flowchart LR");
+    expect(host.querySelector('[data-mermaid-state="pending"]')).not.toBeNull();
+    expect(host.textContent).toContain("Generating diagram…");
+    expect(host.textContent).not.toContain("flowchart TD");
+    expect(host.textContent).not.toContain("mermaid");
     expect(mermaidResourceCount()).toBe(before);
+    expect(performance.getEntriesByName("omnimind:mermaid-import")).toHaveLength(importMarksBefore);
+    expect(performance.getEntriesByName("omnimind:mermaid-render-duration")).toHaveLength(
+      renderMeasuresBefore,
+    );
+    expect(digest).not.toHaveBeenCalled();
+    const pending = host.querySelector<HTMLElement>(".chat-markdown-mermaid__pending")!;
+    expect(pending.getBoundingClientRect().height).toBeGreaterThanOrEqual(120);
+    expect(pending.getBoundingClientRect().height).toBeLessThanOrEqual(160);
+    digest.mockRestore();
   });
 
-  it("atomically presents a settled diagram in a locked-down iframe and preserves source controls", async () => {
+  it("atomically presents the 755px example with only expand and source-copy actions", async () => {
     const mounted = await render(
       <ChatMarkdown text={source} cwd={undefined} mermaidPresentation={presentation} />,
     );
@@ -240,12 +276,18 @@ describe("ChatMarkdown Mermaid presentation", () => {
     expect(frame.hasAttribute("allow")).toBe(false);
     expect(frame.style.pointerEvents).toBe("none");
     expect(frame.srcdoc).toContain("default-src 'none'");
-
-    await userEvent.click(page.getByRole("button", { name: "View source" }));
-    expect(host.textContent).toContain("flowchart LR");
-    expect(host.querySelector(".chat-markdown-mermaid__frame")).toBeNull();
-    await userEvent.click(page.getByRole("button", { name: "View diagram" }));
-    expect(host.querySelector(".chat-markdown-mermaid__frame")).not.toBeNull();
+    expect(Number.parseFloat(frame.style.aspectRatio.split("/")[1] ?? "0")).toBeGreaterThan(720);
+    expect(host.textContent).not.toContain("flowchart TD");
+    expect(host.textContent).not.toContain("mermaid");
+    expect(host.querySelectorAll("button")).toHaveLength(2);
+    expect(page.getByRole("button", { name: "Expand diagram" })).toBeDefined();
+    const copy = page.getByRole("button", { name: "Copy diagram source" });
+    expect(copy).toBeDefined();
+    expect(host.querySelector('[aria-label="View source"]')).toBeNull();
+    const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
+    await userEvent.click(copy);
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledWith(`${diagramSource}\n`));
+    writeText.mockRestore();
   });
 
   it("reuses the safe srcDoc in the Base UI dialog and returns focus on Escape", async () => {
@@ -283,6 +325,60 @@ describe("ChatMarkdown Mermaid presentation", () => {
     await userEvent.keyboard("{Escape}");
     await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull());
     expect(document.activeElement).toBe(expand.element());
+  });
+
+  it("fits a 9864px diagram below 2% when necessary and preserves manual zoom on resize", async () => {
+    await page.viewport(480, 240);
+    const tallDiagram = [
+      "flowchart TD",
+      ...Array.from({ length: 100 }, (_, index) => `N${index}-->N${index + 1}`),
+    ].join("\n");
+    const mounted = await render(
+      <ChatMarkdown
+        text={`\`\`\`mermaid\n${tallDiagram}\n\`\`\``}
+        cwd={undefined}
+        mermaidPresentation={{ messageId: MessageId.makeUnsafe("browser-mermaid-tall") }}
+      />,
+    );
+    await vi.waitFor(
+      () =>
+        expect(
+          mounted.container.querySelector<HTMLIFrameElement>(".chat-markdown-mermaid__frame"),
+        ).not.toBeNull(),
+      { timeout: 5000 },
+    );
+    const inlineFrame = mounted.container.querySelector<HTMLIFrameElement>(
+      ".chat-markdown-mermaid__frame",
+    )!;
+    expect(Number.parseFloat(inlineFrame.style.aspectRatio.split("/")[1] ?? "0")).toBe(9864);
+
+    await userEvent.click(page.getByRole("button", { name: "Expand diagram" }));
+    const dialog = page.getByRole("dialog");
+    const dialogViewport = dialog
+      .element()
+      .querySelector<HTMLElement>("[data-mermaid-dialog-viewport]")!;
+    const dialogFrame = dialog.element().querySelector<HTMLIFrameElement>("iframe")!;
+    await vi.waitFor(() => expect(dialogFrame.style.visibility).toBe("visible"));
+    expect(Number.parseFloat(dialogFrame.style.height) / 9864).toBeLessThan(0.02);
+    expect(dialogFrame.getBoundingClientRect().height).toBeLessThanOrEqual(
+      dialogViewport.clientHeight - 30,
+    );
+
+    await userEvent.click(page.getByRole("button", { name: "Zoom in" }));
+    const manualHeight = dialogFrame.style.height;
+    await page.viewport(480, 620);
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    expect(dialogFrame.style.height).toBe(manualHeight);
+
+    await userEvent.click(page.getByRole("button", { name: "Fit diagram" }));
+    await vi.waitFor(() => expect(dialogFrame.style.height).not.toBe(manualHeight));
+    expect(dialogFrame.getBoundingClientRect().height).toBeLessThanOrEqual(
+      dialogViewport.clientHeight - 30,
+    );
+    await userEvent.click(page.getByRole("button", { name: "Reset zoom" }));
+    expect(Number.parseFloat(dialogFrame.style.height)).toBe(9864);
+    await userEvent.keyboard("{Escape}");
+    await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull());
   });
 
   it("keeps the previous diagram visible until a changed theme result is ready", async () => {
@@ -324,7 +420,58 @@ describe("ChatMarkdown Mermaid presentation", () => {
     expect(mounted.container.querySelectorAll(".chat-markdown-mermaid__frame")).toHaveLength(1);
   });
 
-  it("quietly keeps unsafe and unsupported inputs as source without loading Mermaid", async () => {
+  it("breaks wide diagrams out to the real transcript pane without horizontal overflow", async () => {
+    await page.viewport(2032, 900);
+    const wideChain = Array.from(
+      { length: 12 },
+      (_, index) => `N${index}[A deliberately wide step ${index}]`,
+    ).join("-->");
+    const wideSource = `\`\`\`mermaid\nflowchart LR\n${wideChain}\n\`\`\``;
+    const mounted = await render(
+      <div
+        data-testid="diagram-pane"
+        style={
+          {
+            containerType: "inline-size",
+            width: 1800,
+            maxWidth: "100%",
+            overflowX: "hidden",
+            "--app-chat-content-inset-right": "260px",
+          } as CSSProperties & { "--app-chat-content-inset-right": string }
+        }
+      >
+        <div data-testid="reading-column" style={{ width: "min(736px, 100%)", margin: "0 auto" }}>
+          <ChatMarkdown
+            text={wideSource}
+            cwd={undefined}
+            mermaidPresentation={{ messageId: MessageId.makeUnsafe("browser-mermaid-wide") }}
+          />
+        </div>
+      </div>,
+    );
+    const pane = mounted.getByTestId("diagram-pane").element();
+    const readingColumn = mounted.getByTestId("reading-column").element();
+    await vi.waitFor(
+      () =>
+        expect(
+          pane.querySelector<HTMLIFrameElement>(".chat-markdown-mermaid__frame"),
+        ).not.toBeNull(),
+      { timeout: 5000 },
+    );
+    const breakout = pane.querySelector<HTMLElement>(".chat-markdown-mermaid-breakout")!;
+    expect(breakout.getBoundingClientRect().width).toBeGreaterThan(
+      readingColumn.getBoundingClientRect().width,
+    );
+    expect(breakout.getBoundingClientRect().width).toBeLessThanOrEqual(1500);
+    expect(pane.scrollWidth).toBe(pane.clientWidth);
+
+    pane.style.width = "480px";
+    pane.style.removeProperty("--app-chat-content-inset-right");
+    await vi.waitFor(() => expect(breakout.getBoundingClientRect().width).toBeLessThanOrEqual(456));
+    expect(pane.scrollWidth).toBe(pane.clientWidth);
+  });
+
+  it("quietly contains unsafe input in a source-free local failure state", async () => {
     const before = mermaidResourceCount();
     const mounted = await render(
       <ChatMarkdown
@@ -334,9 +481,40 @@ describe("ChatMarkdown Mermaid presentation", () => {
       />,
     );
     await new Promise((resolve) => setTimeout(resolve, 650));
-    expect(mounted.container.textContent).toContain("click A");
+    expect(mounted.container.textContent).toContain("This diagram could not be shown.");
+    expect(mounted.container.textContent).not.toContain("click A");
+    expect(mounted.container.querySelector('[data-mermaid-state="failed"]')).not.toBeNull();
+    expect(page.getByRole("button", { name: "Copy diagram source" })).toBeDefined();
+    expect(mounted.container.querySelector('[aria-label="Retry"]')).toBeNull();
     expect(mounted.container.querySelector("iframe")).toBeNull();
     expect(mermaidResourceCount()).toBe(before);
+  });
+
+  it("offers retry only for render failures and bypasses their cached result", async () => {
+    const invalidSource = "flowchart TD\nA -->";
+    const mounted = await render(
+      <ChatMarkdown
+        text={`\`\`\`mermaid\n${invalidSource}\n\`\`\``}
+        cwd={undefined}
+        mermaidPresentation={{ messageId: MessageId.makeUnsafe("browser-mermaid-invalid") }}
+      />,
+    );
+    await vi.waitFor(
+      () => expect(mounted.container.querySelector('[data-mermaid-state="failed"]')).not.toBeNull(),
+      { timeout: 5000 },
+    );
+    expect(mounted.container.textContent).not.toContain(invalidSource);
+    const retry = page.getByRole("button", { name: "Retry" });
+    const rendersBefore = performance.getEntriesByName("omnimind:mermaid-render-attempt").length;
+    await userEvent.click(retry);
+    await vi.waitFor(
+      () =>
+        expect(
+          performance.getEntriesByName("omnimind:mermaid-render-attempt").length,
+        ).toBeGreaterThan(rendersBefore),
+      { timeout: 5000 },
+    );
+    expect(mounted.container.querySelector('[data-mermaid-state="failed"]')).not.toBeNull();
   });
 });
 

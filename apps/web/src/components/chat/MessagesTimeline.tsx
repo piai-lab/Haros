@@ -640,9 +640,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     if (!contentInsetRightPx && !contentInsetBottomPx) {
       return undefined;
     }
-    const style: CSSProperties = {};
+    const style: CSSProperties & { "--app-chat-content-inset-right"?: string } = {};
     if (contentInsetRightPx) {
       style.paddingRight = contentInsetRightPx;
+      style["--app-chat-content-inset-right"] = `${contentInsetRightPx}px`;
     }
     if (contentInsetBottomPx) {
       style.paddingBottom = contentInsetBottomPx;

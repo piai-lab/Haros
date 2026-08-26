@@ -13,7 +13,7 @@
 //   instrument=1      patch getBoundingClientRect to count layout reads (keep OFF for
 //                     uninstrumented timing runs — instrumented and timing runs are
 //                     separate by design)
-//   diagrams=0|1|5|20, diagramEdges=80|300        settled Mermaid matrix
+//   diagrams=0|1|5|20, diagramEdges=100|101       settled Mermaid matrix
 //   streamFence=default|plain|mermaid              same-byte streaming comparison
 //   animations=off, shimmer=off, scrollFade=off    style cost toggles (see metrics.ts)
 
@@ -145,7 +145,7 @@ const seedMessageCount = Math.max(1, Number(params.get("messages") ?? 200));
 const working = params.get("working") !== "0";
 const instrumentLayout = params.get("instrument") === "1";
 const settledDiagramCount = Math.min(20, Math.max(0, Number(params.get("diagrams") ?? 0)));
-const settledDiagramEdges = Number(params.get("diagramEdges") ?? 80) === 300 ? 300 : 80;
+const settledDiagramEdges = Number(params.get("diagramEdges") ?? 100) === 101 ? 101 : 100;
 const streamFence = params.get("streamFence");
 
 installCostToggleStyles();

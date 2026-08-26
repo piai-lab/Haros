@@ -49,7 +49,7 @@ describe("preflightMermaidSource", () => {
     "radar-beta\naxis a",
     "pie\nA: 1",
     "A-->B",
-  ])("keeps unsupported diagrams as source", (source) => {
+  ])("rejects unsupported diagram types before import", (source) => {
     expect(preflightMermaidSource(source)).toEqual({ ok: false, reason: "unsupported" });
   });
 
@@ -111,7 +111,6 @@ describe("Mermaid presentation cache", () => {
       srcDoc: "123456789",
       width: 10,
       height: 10,
-      inline: true,
       byteLength: 9,
     });
     expect(cache.byteLength).toBeLessThanOrEqual(10);

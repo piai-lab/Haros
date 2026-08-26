@@ -3,15 +3,7 @@
 // Layer: Web chat presentation internals
 
 import type { EngineWebSurfaceThemeSnapshot, MessageId } from "@omnimind/contracts";
-import {
-  CodeIcon,
-  EyeOpenIcon,
-  Maximize2,
-  MinusIcon,
-  PanelExpandIcon,
-  PlusIcon,
-  RotateCcwIcon,
-} from "~/lib/icons";
+import { Maximize2, MinusIcon, PanelExpandIcon, PlusIcon, RotateCcwIcon } from "~/lib/icons";
 import type { CSSProperties, RefObject } from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../../i18n";
@@ -25,10 +17,11 @@ import {
 } from "../../lib/mermaidPresentation";
 import { Dialog, DialogHeader, DialogPopup, DialogTitle, DialogTrigger } from "../ui/dialog";
 import { IconButton } from "../ui/icon-button";
+import { Spinner } from "../ui/spinner";
 import { MarkdownCodeBlock } from "./MarkdownCodeBlock";
 
 type MermaidReadyPresentation = Extract<MermaidPresentationResult, { kind: "ready" }>;
-const MERMAID_DIALOG_MIN_ZOOM = 0.02;
+const MERMAID_DIALOG_DEFAULT_MIN_ZOOM = 0.02;
 const MERMAID_DIALOG_MAX_ZOOM = 4;
 
 function MermaidDiagramFrame({
@@ -58,33 +51,76 @@ function MermaidExpandDialog({ presentation }: { presentation: MermaidReadyPrese
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [fitZoom, setFitZoom] = useState(1);
+  const [zoomMode, setZoomMode] = useState<"fit" | "manual">("fit");
+  const [fitReady, setFitReady] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
 
-  const fit = useCallback(() => {
+  const measureFitZoom = useCallback(() => {
     const viewport = viewportRef.current;
-    if (!viewport) return;
+    if (!viewport) return null;
     const horizontalRoom = Math.max(1, viewport.clientWidth - 32);
     const verticalRoom = Math.max(1, viewport.clientHeight - 32);
-    setZoom(
-      Math.max(
-        MERMAID_DIALOG_MIN_ZOOM,
-        Math.min(
-          MERMAID_DIALOG_MAX_ZOOM,
-          horizontalRoom / presentation.width,
-          verticalRoom / presentation.height,
-        ),
+    return Math.max(
+      Number.EPSILON,
+      Math.min(
+        MERMAID_DIALOG_MAX_ZOOM,
+        horizontalRoom / presentation.width,
+        verticalRoom / presentation.height,
       ),
     );
   }, [presentation.height, presentation.width]);
 
+  const fit = useCallback(() => {
+    const nextFitZoom = measureFitZoom();
+    if (nextFitZoom === null) return;
+    setFitZoom(nextFitZoom);
+    setZoom(nextFitZoom);
+    setZoomMode("fit");
+    setFitReady(true);
+  }, [measureFitZoom]);
+
   useLayoutEffect(() => {
     if (!open) return;
-    const frame = requestAnimationFrame(fit);
-    return () => cancelAnimationFrame(frame);
-  }, [fit, open]);
+    let frame = requestAnimationFrame(() => {
+      const nextFitZoom = measureFitZoom();
+      if (nextFitZoom === null) return;
+      setFitZoom(nextFitZoom);
+      if (zoomMode === "fit") setZoom(nextFitZoom);
+      setFitReady(true);
+    });
+    const viewport = viewportRef.current;
+    const observer =
+      viewport && typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => {
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(() => {
+              const nextFitZoom = measureFitZoom();
+              if (nextFitZoom === null) return;
+              setFitZoom(nextFitZoom);
+              if (zoomMode === "fit") setZoom(nextFitZoom);
+              setFitReady(true);
+            });
+          })
+        : null;
+    if (viewport) observer?.observe(viewport);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
+  }, [measureFitZoom, open, zoomMode]);
+
+  const minimumZoom = Math.min(MERMAID_DIALOG_DEFAULT_MIN_ZOOM, fitZoom);
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (nextOpen) {
+      setZoomMode("fit");
+      setFitReady(false);
+    }
+  }, []);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={
           <IconButton
@@ -98,10 +134,7 @@ function MermaidExpandDialog({ presentation }: { presentation: MermaidReadyPrese
           </IconButton>
         }
       />
-      <DialogPopup
-        className="h-[min(88vh,64rem)] max-w-[min(94vw,80rem)]"
-        bottomStickOnMobile={false}
-      >
+      <DialogPopup className="h-[92vh] w-[94vw] max-w-none" bottomStickOnMobile={false}>
         <DialogHeader className="pe-12">
           <div className="flex min-w-0 items-center justify-between gap-3">
             <DialogTitle className="truncate">{t("markdown.diagram.title")}</DialogTitle>
@@ -111,21 +144,30 @@ function MermaidExpandDialog({ presentation }: { presentation: MermaidReadyPrese
               </IconButton>
               <IconButton
                 label={t("markdown.diagram.zoomOut")}
-                onClick={() => setZoom((value) => Math.max(MERMAID_DIALOG_MIN_ZOOM, value / 1.25))}
+                onClick={() => {
+                  setZoomMode("manual");
+                  setZoom((value) => Math.max(minimumZoom, value / 1.25));
+                }}
                 variant="ghost"
               >
                 <MinusIcon className="size-4" />
               </IconButton>
               <IconButton
                 label={t("markdown.diagram.zoomIn")}
-                onClick={() => setZoom((value) => Math.min(MERMAID_DIALOG_MAX_ZOOM, value * 1.25))}
+                onClick={() => {
+                  setZoomMode("manual");
+                  setZoom((value) => Math.min(MERMAID_DIALOG_MAX_ZOOM, value * 1.25));
+                }}
                 variant="ghost"
               >
                 <PlusIcon className="size-4" />
               </IconButton>
               <IconButton
                 label={t("markdown.diagram.resetZoom")}
-                onClick={() => setZoom(1)}
+                onClick={() => {
+                  setZoomMode("manual");
+                  setZoom(1);
+                }}
                 variant="ghost"
               >
                 <RotateCcwIcon className="size-4" />
@@ -147,6 +189,7 @@ function MermaidExpandDialog({ presentation }: { presentation: MermaidReadyPrese
                 style={{
                   width: `${presentation.width * zoom}px`,
                   height: `${presentation.height * zoom}px`,
+                  visibility: fitReady ? "visible" : "hidden",
                 }}
               />
             </div>
@@ -257,19 +300,51 @@ function waitForMermaidPresentationIdle(signal: AbortSignal): Promise<void> {
   });
 }
 
-export function MermaidCodeBlock({
+interface MermaidCodeBlockProps {
+  readonly code: string;
+  readonly fence: CodeFenceInfo;
+  readonly messageId: MessageId;
+  readonly ordinal: number;
+  readonly theme: Readonly<EngineWebSurfaceThemeSnapshot>;
+  readonly isStreaming?: boolean;
+}
+
+function MermaidPendingCodeBlock({
+  code,
+  fence,
+  presentationId,
+}: Pick<MermaidCodeBlockProps, "code" | "fence"> & { readonly presentationId: string }) {
+  const { t } = useI18n();
+  return (
+    <div className="chat-markdown-mermaid-breakout" data-mermaid-state="pending">
+      <MarkdownCodeBlock
+        code={code}
+        fence={fence}
+        copyEnabled={false}
+        presentationId={presentationId}
+        variant="diagram"
+        wrapControl={false}
+      >
+        <div className="chat-markdown-mermaid__pending" role="status">
+          <Spinner
+            aria-hidden="true"
+            className="size-4 motion-reduce:animate-none"
+            role="presentation"
+          />
+          <span>{t("markdown.diagram.rendering")}</span>
+        </div>
+      </MarkdownCodeBlock>
+    </div>
+  );
+}
+
+function MermaidSettledCodeBlock({
   code,
   fence,
   messageId,
   ordinal,
   theme,
-}: {
-  code: string;
-  fence: CodeFenceInfo;
-  messageId: MessageId;
-  ordinal: number;
-  theme: Readonly<EngineWebSurfaceThemeSnapshot>;
-}) {
+}: MermaidCodeBlockProps) {
   const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const presentationId = `${messageId}:${ordinal}`;
@@ -283,7 +358,6 @@ export function MermaidCodeBlock({
     const latest = getLatestReadyMermaidPresentation(presentationId, code);
     return latest ? { source: code, themeKey: latest.themeKey, result: latest.result } : null;
   });
-  const [modeOverride, setModeOverride] = useState<"source" | "diagram" | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
   const themeKey = useMemo(() => JSON.stringify(theme), [theme]);
   const themeRef = useRef(theme);
@@ -297,10 +371,6 @@ export function MermaidCodeBlock({
       presentation.themeKey === themeKey &&
       presentation.result.kind === "ready"
     );
-
-  useEffect(() => {
-    setModeOverride(null);
-  }, [code]);
 
   useEffect(() => {
     if (!canRender) return;
@@ -324,16 +394,26 @@ export function MermaidCodeBlock({
             start: settledAt,
             end: performance.now(),
           });
-          setPresentation({ source: code, themeKey, result });
+          setPresentation((previous) =>
+            result.kind === "fallback" &&
+            previous?.source === code &&
+            previous.result.kind === "ready"
+              ? previous
+              : { source: code, themeKey, result },
+          );
         }
       })
       .catch((error: unknown) => {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
-          setPresentation({
-            source: code,
-            themeKey,
-            result: { kind: "fallback", reason: "invalid", retryable: true },
-          });
+          setPresentation((previous) =>
+            previous?.source === code && previous.result.kind === "ready"
+              ? previous
+              : {
+                  source: code,
+                  themeKey,
+                  result: { kind: "fallback", reason: "invalid", retryable: true },
+                },
+          );
         }
       });
     return () => controller.abort();
@@ -341,38 +421,37 @@ export function MermaidCodeBlock({
 
   const currentResult = presentation?.source === code ? presentation.result : null;
   const ready = currentResult?.kind === "ready" ? currentResult : null;
-  const showDiagram =
-    ready?.inline === true && (modeOverride === "diagram" || modeOverride === null);
-  const actions = ready ? (
-    <>
-      {ready.inline ? (
-        <IconButton
-          className="chat-markdown-codeblock__action"
-          onClick={() => setModeOverride(showDiagram ? "source" : "diagram")}
-          title={showDiagram ? t("markdown.diagram.showSource") : t("markdown.diagram.showDiagram")}
-          label={showDiagram ? t("markdown.diagram.showSource") : t("markdown.diagram.showDiagram")}
-          size="icon-xs"
-          variant="ghost"
-        >
-          {showDiagram ? <CodeIcon className="size-3" /> : <EyeOpenIcon className="size-3" />}
-        </IconButton>
-      ) : null}
-      <MermaidExpandDialog presentation={ready} />
-    </>
-  ) : null;
-  const failed = currentResult?.kind === "fallback" && currentResult.retryable;
+  const actions = ready ? <MermaidExpandDialog presentation={ready} /> : null;
+  let policyFailure: MermaidPresentationResult | null = null;
+  if (ordinal > MERMAID_MAX_DIAGRAMS_PER_MESSAGE) {
+    policyFailure = { kind: "fallback", reason: "budget", retryable: false };
+  } else if (!preflight.ok) {
+    policyFailure = { kind: "fallback", reason: preflight.reason, retryable: false };
+  }
+  const failed = currentResult?.kind === "fallback" ? currentResult : policyFailure;
+  const state = ready ? "ready" : failed ? "failed" : "pending";
+  const preferredWidth = ready
+    ? ({ "--mermaid-preferred-inline-size": `${ready.width + 24}px` } as CSSProperties)
+    : undefined;
 
   return (
-    <div ref={containerRef}>
+    <div
+      ref={containerRef}
+      className="chat-markdown-mermaid-breakout"
+      data-mermaid-state={state}
+      style={preferredWidth}
+    >
       <MarkdownCodeBlock
         code={code}
         fence={fence}
         beforeCopyActions={actions}
+        copyEnabled={state !== "pending"}
+        copyLabel={t("markdown.diagram.copySource")}
         wrapControl={false}
-        wrapped={!showDiagram}
         presentationId={presentationId}
+        variant="diagram"
       >
-        {showDiagram && ready ? (
+        {ready ? (
           <div className="chat-markdown-mermaid" aria-label={t("markdown.diagram.title")}>
             <MermaidDiagramFrame
               presentation={ready}
@@ -385,22 +464,40 @@ export function MermaidCodeBlock({
               }}
             />
           </div>
-        ) : (
-          <>
-            <pre>
-              <code>{code}</code>
-            </pre>
-            {failed ? (
-              <div className="chat-markdown-mermaid__fallback" role="status">
-                <span>{t("markdown.diagram.renderFailed")}</span>
-                <button type="button" onClick={() => setRetryNonce((value) => value + 1)}>
-                  {t("common.retry")}
-                </button>
-              </div>
+        ) : failed ? (
+          <div className="chat-markdown-mermaid__fallback" role="status">
+            <span>{t("markdown.diagram.renderFailed")}</span>
+            {failed.retryable ? (
+              <button type="button" onClick={() => setRetryNonce((value) => value + 1)}>
+                {t("common.retry")}
+              </button>
             ) : null}
-          </>
+          </div>
+        ) : (
+          <div className="chat-markdown-mermaid__pending" role="status">
+            <Spinner
+              aria-hidden="true"
+              className="size-4 motion-reduce:animate-none"
+              role="presentation"
+            />
+            <span>{t("markdown.diagram.rendering")}</span>
+          </div>
         )}
       </MarkdownCodeBlock>
     </div>
   );
+}
+
+export function MermaidCodeBlock(props: MermaidCodeBlockProps) {
+  const presentationId = `${props.messageId}:${props.ordinal}`;
+  if (props.isStreaming) {
+    return (
+      <MermaidPendingCodeBlock
+        code={props.code}
+        fence={props.fence}
+        presentationId={presentationId}
+      />
+    );
+  }
+  return <MermaidSettledCodeBlock {...props} />;
 }

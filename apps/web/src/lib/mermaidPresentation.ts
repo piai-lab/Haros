@@ -5,15 +5,13 @@
 import type { EngineWebSurfaceThemeSnapshot } from "@omnimind/contracts";
 import type { MermaidConfig } from "mermaid";
 
-export const MERMAID_PRESENTATION_VERSION = "mermaid-presentation-v1";
+export const MERMAID_PRESENTATION_VERSION = "mermaid-presentation-v2";
 export const MERMAID_PACKAGE_VERSION = "11.17.2";
 export const MERMAID_MAX_SOURCE_CHARACTERS = 20_000;
-export const MERMAID_MAX_NONEMPTY_LINES = 240;
-export const MERMAID_MAX_CONNECTORS = 240;
+export const MERMAID_MAX_NONEMPTY_LINES = 120;
+export const MERMAID_MAX_CONNECTORS = 100;
 export const MERMAID_MAX_DIAGRAMS_PER_MESSAGE = 8;
 export const MERMAID_MAX_OUTPUT_BYTES = 1024 * 1024;
-export const MERMAID_MAX_INLINE_HEIGHT = 720;
-export const MERMAID_MAX_OUTPUT_HEIGHT = 4096;
 
 const MERMAID_CACHE_MAX_ENTRIES = 24;
 const MERMAID_CACHE_MAX_BYTES = 6 * 1024 * 1024;
@@ -48,7 +46,6 @@ export type MermaidPresentationResult =
       readonly srcDoc: string;
       readonly width: number;
       readonly height: number;
-      readonly inline: boolean;
       readonly byteLength: number;
     }
   | {
@@ -312,7 +309,7 @@ export function parseOfficialMermaidSandboxOutput(svg: string): MermaidPresentat
 
   const heightMatch = /^(\d+(?:\.\d+)?)px$/.exec(iframe.style.height);
   const height = heightMatch ? Number(heightMatch[1]) : Number.NaN;
-  if (!Number.isFinite(height) || height <= 0 || height > MERMAID_MAX_OUTPUT_HEIGHT) {
+  if (!Number.isFinite(height) || height <= 0) {
     return { kind: "fallback", reason: "output", retryable: false };
   }
 
@@ -367,7 +364,6 @@ export function parseOfficialMermaidSandboxOutput(svg: string): MermaidPresentat
     srcDoc,
     width,
     height,
-    inline: height <= MERMAID_MAX_INLINE_HEIGHT,
     byteLength,
   };
 }
@@ -450,6 +446,7 @@ export async function renderMermaidPresentation(input: {
     mermaid.initialize(buildMermaidConfig(input.theme, cacheKey));
 
     try {
+      performance.mark("omnimind:mermaid-render-attempt");
       const renderStartedAt = performance.now();
       const rendered = await mermaid.render(
         `omnimind-mermaid-${cacheKey.slice(0, 16)}`,

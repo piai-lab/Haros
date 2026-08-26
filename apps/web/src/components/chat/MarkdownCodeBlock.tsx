@@ -41,6 +41,9 @@ export function MarkdownCodeBlock({
   wrapControl: wrapControlProp,
   wrapped: wrappedProp,
   presentationId,
+  variant = "code",
+  copyEnabled = true,
+  copyLabel,
 }: {
   code: string;
   fence: CodeFenceInfo;
@@ -49,12 +52,16 @@ export function MarkdownCodeBlock({
   wrapControl?: boolean;
   wrapped?: boolean;
   presentationId?: string;
+  variant?: "code" | "diagram";
+  copyEnabled?: boolean;
+  copyLabel?: string;
 }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [wrap, setWrap] = useState(false);
   const wrapControl = wrapControlProp ?? true;
   const wrapped = wrappedProp ?? wrap;
+  const showHeader = variant === "code" || Boolean(beforeCopyActions) || wrapControl || copyEnabled;
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleCopy = () => {
     void copyTextToClipboard(code)
@@ -83,38 +90,43 @@ export function MarkdownCodeBlock({
     <div
       className="chat-markdown-codeblock"
       data-wrap={wrapped ? "true" : "false"}
+      data-variant={variant}
       {...(presentationId ? { "data-mermaid-presentation": presentationId } : {})}
     >
-      <div className="chat-markdown-codeblock__header">
-        <CodeBlockHeaderTitle fence={fence} />
-        <div className="chat-markdown-codeblock__actions">
-          {beforeCopyActions}
-          {wrapControl ? (
-            <IconButton
-              className="chat-markdown-codeblock__action"
-              onClick={() => setWrap((previous) => !previous)}
-              title={wrap ? t("common.disableSoftWrap") : t("common.enableSoftWrap")}
-              label={wrap ? t("common.disableSoftWrap") : t("common.enableSoftWrap")}
-              aria-pressed={wrap}
-              data-active={wrap ? "true" : "false"}
-              size="icon-xs"
-              variant="ghost"
-            >
-              <TextWrapIcon className="size-3" />
-            </IconButton>
-          ) : null}
-          <IconButton
-            className="chat-markdown-codeblock__action"
-            onClick={handleCopy}
-            title={copied ? t("common.copied") : t("common.copyCode")}
-            label={copied ? t("common.copied") : t("common.copyCode")}
-            size="icon-xs"
-            variant="ghost"
-          >
-            {copied ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}
-          </IconButton>
+      {showHeader ? (
+        <div className="chat-markdown-codeblock__header">
+          {variant === "code" ? <CodeBlockHeaderTitle fence={fence} /> : null}
+          <div className="chat-markdown-codeblock__actions">
+            {beforeCopyActions}
+            {wrapControl ? (
+              <IconButton
+                className="chat-markdown-codeblock__action"
+                onClick={() => setWrap((previous) => !previous)}
+                title={wrap ? t("common.disableSoftWrap") : t("common.enableSoftWrap")}
+                label={wrap ? t("common.disableSoftWrap") : t("common.enableSoftWrap")}
+                aria-pressed={wrap}
+                data-active={wrap ? "true" : "false"}
+                size="icon-xs"
+                variant="ghost"
+              >
+                <TextWrapIcon className="size-3" />
+              </IconButton>
+            ) : null}
+            {copyEnabled ? (
+              <IconButton
+                className="chat-markdown-codeblock__action"
+                onClick={handleCopy}
+                title={copied ? t("common.copied") : (copyLabel ?? t("common.copyCode"))}
+                label={copied ? t("common.copied") : (copyLabel ?? t("common.copyCode"))}
+                size="icon-xs"
+                variant="ghost"
+              >
+                {copied ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}
+              </IconButton>
+            ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
       <div className="chat-markdown-codeblock__body">{children}</div>
     </div>
   );

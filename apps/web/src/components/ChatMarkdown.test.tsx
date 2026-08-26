@@ -83,11 +83,13 @@ async function renderTimelineMermaid(text: string, isStreaming: boolean) {
 }
 
 describe("ChatMarkdown", () => {
-  it("keeps canonical streaming Mermaid as wrapped plain source without Shiki output", async () => {
+  it("keeps canonical streaming Mermaid in a source-free generation state", async () => {
     const markup = await renderTimelineMermaid("```mermaid\ngraph TD\nA-->B\n```", true);
     expect(markup).toContain('data-mermaid-presentation="assistant-mermaid:1"');
-    expect(markup).toContain('data-wrap="true"');
-    expect(markup).toContain("graph TD");
+    expect(markup).toContain('data-mermaid-state="pending"');
+    expect(markup).toContain("Generating diagram…");
+    expect(markup).not.toContain("graph TD");
+    expect(markup).not.toContain("mermaid</span>");
     expect(markup).not.toContain("chat-markdown-shiki");
   });
 
@@ -103,13 +105,16 @@ describe("ChatMarkdown", () => {
     expect(markup).not.toContain("data-mermaid-presentation");
   });
 
-  it("assigns explicit ordinals and leaves the ninth diagram as source", async () => {
+  it("assigns explicit ordinals and locally fails the ninth diagram without exposing source", async () => {
     const text = Array.from({ length: 9 }, (_, index) =>
       ["```mermaid", `graph TD`, `A${index}-->B${index}`, "```"].join("\n"),
     ).join("\n\n");
     const markup = await renderTimelineMermaid(text, false);
     expect(markup.match(/data-mermaid-presentation=/g) ?? []).toHaveLength(9);
     expect(markup).toContain('data-mermaid-presentation="assistant-mermaid:9"');
+    expect(markup.match(/data-mermaid-state="pending"/g) ?? []).toHaveLength(8);
+    expect(markup.match(/data-mermaid-state="failed"/g) ?? []).toHaveLength(1);
+    expect(markup).not.toContain("graph TD");
   });
 
   it("uses the theme foreground token for markdown text", async () => {

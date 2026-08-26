@@ -1284,22 +1284,28 @@ function ChatMarkdown({
             : null;
 
         // A streaming info string arrives as `m`, `mer`, `mermai`, then `mermaid`.
-        // Highlighting those transient language ids would load Shiki and repeatedly
-        // redo work before the fence has a stable identity. Keep every streaming
-        // fence as plain source; settled ordinary fences still use the normal highlighter.
+        // Do not guess prefixes. Once the explicit Mermaid identity exists, its owner
+        // presents one stable generation state without parsing, hashing, or highlighting
+        // source. Other streaming fences remain plain source.
         if (isStreaming) {
+          if (
+            mermaidPresentationId &&
+            mermaidPresentationMessageId &&
+            codeBlock.mermaidOrdinal !== null
+          ) {
+            return (
+              <MermaidCodeBlock
+                code={code}
+                fence={fence}
+                messageId={mermaidPresentationMessageId}
+                ordinal={codeBlock.mermaidOrdinal}
+                theme={engineWebSurfaceThemeSnapshot}
+                isStreaming
+              />
+            );
+          }
           return (
-            <MarkdownCodeBlock
-              code={code}
-              fence={fence}
-              {...(mermaidPresentationId
-                ? {
-                    wrapControl: false,
-                    wrapped: true,
-                    presentationId: mermaidPresentationId,
-                  }
-                : {})}
-            >
+            <MarkdownCodeBlock code={code} fence={fence}>
               <pre>
                 <code>{code}</code>
               </pre>
