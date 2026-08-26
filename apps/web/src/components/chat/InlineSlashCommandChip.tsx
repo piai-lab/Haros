@@ -9,18 +9,30 @@ import type { ComposerSlashCommand } from "~/composerSlashCommands";
 import { builtInComposerSlashCommandIcon } from "~/composerSlashCommandPresentation";
 import {
   COMPOSER_INLINE_CHIP_INLINE_ICON_CLASS_NAME,
+  COMPOSER_EDITOR_INLINE_CHIP_CLASS_NAME,
   COMPOSER_INLINE_SKILL_CHIP_CLASS_NAME,
   formatComposerSlashCommandChipLabel,
+  type InlineChipSelectionMode,
 } from "../composerInlineChip";
 import { InlineChipContent } from "../InlineChip";
 
-export function InlineSlashCommandChip(props: { command: ComposerSlashCommand }) {
+export function InlineSlashCommandChip(props: {
+  command: ComposerSlashCommand;
+  selectionMode: InlineChipSelectionMode;
+}) {
   const Icon = builtInComposerSlashCommandIcon(props.command);
   return (
-    <span className={COMPOSER_INLINE_SKILL_CHIP_CLASS_NAME}>
+    <span
+      className={
+        props.selectionMode === "document"
+          ? COMPOSER_INLINE_SKILL_CHIP_CLASS_NAME
+          : COMPOSER_EDITOR_INLINE_CHIP_CLASS_NAME
+      }
+    >
       <InlineChipContent
         icon={<Icon aria-hidden="true" className={COMPOSER_INLINE_CHIP_INLINE_ICON_CLASS_NAME} />}
         label={formatComposerSlashCommandChipLabel(props.command)}
+        selectionMode={props.selectionMode}
       />
     </span>
   );

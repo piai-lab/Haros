@@ -1,5 +1,5 @@
 // FILE: assistantSelections.ts
-// Purpose: Normalize, serialize, and strip assistant quote selections from user prompts.
+// Purpose: Validate, serialize, and strip assistant quote selections from user prompts.
 // Layer: Chat composer and transcript helpers
 
 import { CHAT_ASSISTANT_SELECTION_TEXT_MAX_CHARS } from "@omnimind/contracts";
@@ -25,7 +25,7 @@ export interface ParsedAssistantSelectionEntry {
 
 export type AssistantSelectionValidationError = "empty" | "too-long";
 
-export function normalizeAssistantSelectionText(text: string): string {
+function formatAssistantSelectionPreviewText(text: string): string {
   return text
     .replace(/\r\n/g, "\n")
     .replace(/^\n+|\n+$/g, "")
@@ -36,11 +36,10 @@ export function getAssistantSelectionValidationError(
   selection: Pick<ChatAssistantSelectionAttachment, "assistantMessageId" | "text">,
 ): AssistantSelectionValidationError | null {
   const assistantMessageId = selection.assistantMessageId.trim();
-  const text = normalizeAssistantSelectionText(selection.text);
-  if (assistantMessageId.length === 0 || text.length === 0) {
+  if (assistantMessageId.length === 0 || selection.text.trim().length === 0) {
     return "empty";
   }
-  if (text.length > CHAT_ASSISTANT_SELECTION_TEXT_MAX_CHARS) {
+  if (selection.text.length > CHAT_ASSISTANT_SELECTION_TEXT_MAX_CHARS) {
     return "too-long";
   }
   return null;
@@ -54,10 +53,9 @@ export function normalizeAssistantSelectionAttachment(
     return null;
   }
   const assistantMessageId = selection.assistantMessageId.trim();
-  const text = normalizeAssistantSelectionText(selection.text);
   return {
     assistantMessageId,
-    text,
+    text: selection.text,
   };
 }
 
@@ -79,7 +77,7 @@ export function createAssistantSelectionAttachment(input: {
 }
 
 export function formatAssistantSelectionPreview(text: string): string {
-  const normalized = normalizeAssistantSelectionText(text);
+  const normalized = formatAssistantSelectionPreviewText(text);
   if (normalized.length === 0) {
     return "Selection";
   }
@@ -165,8 +163,8 @@ function parseAssistantSelectionEntries(block: string): ParsedAssistantSelection
 
   const commitCurrent = () => {
     if (!current) return;
-    const text = current.lines.join("\n").trimEnd();
-    if (text.length > 0) {
+    const text = current.lines.join("\n");
+    if (text.trim().length > 0) {
       entries.push({
         assistantMessageId: current.assistantMessageId,
         text,

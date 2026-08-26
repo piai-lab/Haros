@@ -383,18 +383,30 @@ export const ChatFileAttachment = Schema.Struct({
 });
 export type ChatFileAttachment = typeof ChatFileAttachment.Type;
 
+const AssistantSelectionText = Schema.String.check(
+  Schema.isMaxLength(CHAT_ASSISTANT_SELECTION_TEXT_MAX_CHARS),
+  Schema.makeFilter(
+    (text: string) =>
+      text.trim().length > 0 ||
+      new SchemaIssue.InvalidValue(Option.some(text), {
+        message: "Assistant selection text must contain non-whitespace content.",
+      }),
+    { identifier: "AssistantSelectionText" },
+  ),
+);
+
 export const ChatAssistantSelectionAttachment = Schema.Struct({
   type: Schema.Literal("assistant-selection"),
   id: ChatAttachmentId,
   assistantMessageId: MessageId,
-  text: TrimmedNonEmptyString.check(Schema.isMaxLength(CHAT_ASSISTANT_SELECTION_TEXT_MAX_CHARS)),
+  text: AssistantSelectionText,
 });
 export type ChatAssistantSelectionAttachment = typeof ChatAssistantSelectionAttachment.Type;
 
 export const UploadChatAssistantSelectionAttachment = Schema.Struct({
   type: Schema.Literal("assistant-selection"),
   assistantMessageId: MessageId,
-  text: TrimmedNonEmptyString.check(Schema.isMaxLength(CHAT_ASSISTANT_SELECTION_TEXT_MAX_CHARS)),
+  text: AssistantSelectionText,
 });
 export type UploadChatAssistantSelectionAttachment =
   typeof UploadChatAssistantSelectionAttachment.Type;

@@ -9,20 +9,31 @@ import { BotIcon } from "~/lib/icons";
 import {
   COMPOSER_INLINE_AGENT_CHIP_CLASS_NAME,
   COMPOSER_INLINE_AGENT_CHIP_ICON_CLASS_NAME,
+  TIMELINE_INLINE_AGENT_CHIP_CLASS_NAME,
+  type InlineChipSelectionMode,
   resolveAgentChipColor,
 } from "../composerInlineChip";
 import { InlineChipContent } from "../InlineChip";
 
-export const InlineAgentChip = function InlineAgentChip(props: { alias: string; color: string }) {
+export const InlineAgentChip = function InlineAgentChip(props: {
+  alias: string;
+  color: string;
+  selectionMode: InlineChipSelectionMode;
+}) {
   const colors = resolveAgentChipColor(props.color);
   return (
     <span
-      className={COMPOSER_INLINE_AGENT_CHIP_CLASS_NAME}
+      className={
+        props.selectionMode === "document"
+          ? TIMELINE_INLINE_AGENT_CHIP_CLASS_NAME
+          : COMPOSER_INLINE_AGENT_CHIP_CLASS_NAME
+      }
       style={{ backgroundColor: colors.bg, color: colors.text }}
     >
       <InlineChipContent
         icon={<BotIcon className={COMPOSER_INLINE_AGENT_CHIP_ICON_CLASS_NAME} />}
         label={`@${props.alias}`}
+        selectionMode={props.selectionMode}
       />
     </span>
   );

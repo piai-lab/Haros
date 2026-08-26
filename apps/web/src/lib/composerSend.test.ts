@@ -32,6 +32,32 @@ describe("composerSend attachment builders", () => {
     vi.unstubAllGlobals();
   });
 
+  it("preserves exact assistant selection text in upload attachments", async () => {
+    const text = "\r\n  selected text  \r\n";
+
+    const staged = await stageUploadComposerAttachments({
+      threadId: "thread-1",
+      images: [],
+      files: [],
+      assistantSelections: [
+        {
+          type: "assistant-selection",
+          id: "selection-1",
+          assistantMessageId: "assistant-1",
+          text,
+        },
+      ],
+    });
+
+    expect(staged.attachments).toEqual([
+      {
+        type: "assistant-selection",
+        assistantMessageId: "assistant-1",
+        text,
+      },
+    ]);
+  });
+
   it("keeps image-specific unsupported-file errors while sharing cap handling", async () => {
     const textFile = new File(["hello"], "notes.txt", { type: "text/plain" });
     const imageFile = new File(["png"], "screen.png", { type: "image/png" });

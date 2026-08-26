@@ -225,7 +225,7 @@ function renderAgentMentionChipDom(container: HTMLElement, alias: string, color:
 }
 
 function ComposerLinkDecorator(props: { url: string }) {
-  return <InlineLinkChip url={props.url} />;
+  return <InlineLinkChip url={props.url} selectionMode="atomic" />;
 }
 
 // ── ComposerMentionNode ───────────────────────────────────────────────

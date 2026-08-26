@@ -7,13 +7,29 @@
 // Exports: InlineChipContent
 
 import type { ReactNode } from "react";
-import { COMPOSER_INLINE_CHIP_LABEL_CLASS_NAME } from "./composerInlineChip";
+import {
+  COMPOSER_INLINE_CHIP_LABEL_CLASS_NAME,
+  TIMELINE_INLINE_CHIP_LABEL_CLASS_NAME,
+  type InlineChipSelectionMode,
+} from "./composerInlineChip";
 
-export function InlineChipContent(props: { icon: ReactNode; label: ReactNode }) {
+export function InlineChipContent(props: {
+  icon: ReactNode;
+  label: ReactNode;
+  selectionMode: InlineChipSelectionMode;
+}) {
   return (
     <>
       {props.icon}
-      <span className={COMPOSER_INLINE_CHIP_LABEL_CLASS_NAME}>{props.label}</span>
+      <span
+        className={
+          props.selectionMode === "document"
+            ? TIMELINE_INLINE_CHIP_LABEL_CLASS_NAME
+            : COMPOSER_INLINE_CHIP_LABEL_CLASS_NAME
+        }
+      >
+        {props.label}
+      </span>
     </>
   );
 }

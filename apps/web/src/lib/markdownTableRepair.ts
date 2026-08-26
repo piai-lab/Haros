@@ -11,6 +11,183 @@ const CODE_FENCE_REGEX = /^ {0,3}(`{3,}|~{3,})(.*)$/;
 
 type FenceState = { readonly marker: string; readonly length: number };
 
+interface MarkdownSourceReplacement {
+  readonly rawStart: number;
+  readonly rawEnd: number;
+  readonly replacement: string;
+}
+
+interface MarkdownSourceProjectionSegment {
+  readonly rawStart: number;
+  readonly rawEnd: number;
+  readonly renderedStart: number;
+  readonly renderedEnd: number;
+}
+
+interface MarkdownSourceProjectionReplacement {
+  readonly rawStart: number;
+  readonly rawEnd: number;
+  readonly renderedStart: number;
+  readonly renderedEnd: number;
+}
+
+export interface MarkdownSourceOffsetProjection {
+  toRawBoundary(renderedOffset: number): number | null;
+  toRenderedBoundary(rawOffset: number): number | null;
+}
+
+export interface PreparedAssistantMarkdown {
+  readonly rawText: string;
+  readonly renderedText: string;
+  readonly projection: MarkdownSourceOffsetProjection;
+}
+
+function isValidBoundary(offset: number, max: number): boolean {
+  return Number.isInteger(offset) && offset >= 0 && offset <= max;
+}
+
+function createMarkdownSourceOffsetProjection(input: {
+  rawLength: number;
+  renderedLength: number;
+  segments: readonly MarkdownSourceProjectionSegment[];
+  replacements: readonly MarkdownSourceProjectionReplacement[];
+}): MarkdownSourceOffsetProjection {
+  const mapBoundary = (
+    offset: number,
+    sourceLength: number,
+    targetLength: number,
+    sourceStartKey: "rawStart" | "renderedStart",
+    sourceEndKey: "rawEnd" | "renderedEnd",
+    targetStartKey: "rawStart" | "renderedStart",
+    targetEndKey: "rawEnd" | "renderedEnd",
+  ): number | null => {
+    if (!isValidBoundary(offset, sourceLength)) {
+      return null;
+    }
+
+    for (const replacement of input.replacements) {
+      const sourceStart = replacement[sourceStartKey];
+      const sourceEnd = replacement[sourceEndKey];
+      if (offset === sourceStart) {
+        return replacement[targetStartKey];
+      }
+      if (offset === sourceEnd) {
+        return replacement[targetEndKey];
+      }
+      if (offset > sourceStart && offset < sourceEnd) {
+        return null;
+      }
+    }
+
+    for (const segment of input.segments) {
+      const sourceStart = segment[sourceStartKey];
+      const sourceEnd = segment[sourceEndKey];
+      if (offset < sourceStart || offset > sourceEnd) {
+        continue;
+      }
+      const targetStart = segment[targetStartKey];
+      const targetEnd = segment[targetEndKey];
+      if (sourceEnd - sourceStart !== targetEnd - targetStart) {
+        return null;
+      }
+      return targetStart + (offset - sourceStart);
+    }
+
+    return offset === sourceLength ? targetLength : null;
+  };
+
+  return {
+    toRawBoundary(renderedOffset) {
+      return mapBoundary(
+        renderedOffset,
+        input.renderedLength,
+        input.rawLength,
+        "renderedStart",
+        "renderedEnd",
+        "rawStart",
+        "rawEnd",
+      );
+    },
+    toRenderedBoundary(rawOffset) {
+      return mapBoundary(
+        rawOffset,
+        input.rawLength,
+        input.renderedLength,
+        "rawStart",
+        "rawEnd",
+        "renderedStart",
+        "renderedEnd",
+      );
+    },
+  };
+}
+
+function prepareMarkdownSourceReplacements(
+  value: string,
+  replacements: readonly MarkdownSourceReplacement[],
+): PreparedAssistantMarkdown {
+  if (replacements.length === 0) {
+    return {
+      rawText: value,
+      renderedText: value,
+      projection: {
+        toRawBoundary: (offset) => (isValidBoundary(offset, value.length) ? offset : null),
+        toRenderedBoundary: (offset) => (isValidBoundary(offset, value.length) ? offset : null),
+      },
+    };
+  }
+
+  const renderedParts: string[] = [];
+  const segments: MarkdownSourceProjectionSegment[] = [];
+  const projectedReplacements: MarkdownSourceProjectionReplacement[] = [];
+  let rawCursor = 0;
+  let renderedCursor = 0;
+
+  for (const replacement of replacements) {
+    const unchanged = value.slice(rawCursor, replacement.rawStart);
+    renderedParts.push(unchanged);
+    segments.push({
+      rawStart: rawCursor,
+      rawEnd: replacement.rawStart,
+      renderedStart: renderedCursor,
+      renderedEnd: renderedCursor + unchanged.length,
+    });
+    renderedCursor += unchanged.length;
+
+    const renderedStart = renderedCursor;
+    renderedParts.push(replacement.replacement);
+    renderedCursor += replacement.replacement.length;
+    projectedReplacements.push({
+      rawStart: replacement.rawStart,
+      rawEnd: replacement.rawEnd,
+      renderedStart,
+      renderedEnd: renderedCursor,
+    });
+    rawCursor = replacement.rawEnd;
+  }
+
+  const tail = value.slice(rawCursor);
+  renderedParts.push(tail);
+  segments.push({
+    rawStart: rawCursor,
+    rawEnd: value.length,
+    renderedStart: renderedCursor,
+    renderedEnd: renderedCursor + tail.length,
+  });
+  renderedCursor += tail.length;
+
+  return {
+    rawText: value,
+    renderedText: renderedParts.join(""),
+    projection: createMarkdownSourceOffsetProjection({
+      rawLength: value.length,
+      renderedLength: renderedCursor,
+      segments,
+      replacements: projectedReplacements,
+    }),
+  };
+}
+
 function matchCodeFence(line: string): (FenceState & { readonly info: string }) | null {
   const match = CODE_FENCE_REGEX.exec(line);
   if (!match) {
@@ -81,13 +258,19 @@ function parseDelimiterCells(line: string): string[] | null {
   return trimmedCells.every((cell) => DELIMITER_CELL_REGEX.test(cell)) ? trimmedCells : null;
 }
 
-export function repairMarkdownTableDelimiters(value: string): string {
+export function prepareMarkdownTableDelimiters(value: string): PreparedAssistantMarkdown {
   if (!value.includes("|") || !value.includes("-")) {
-    return value;
+    return prepareMarkdownSourceReplacements(value, []);
   }
 
   const lines = value.split("\n");
-  let repaired = false;
+  const lineStartOffsets: number[] = [];
+  let sourceOffset = 0;
+  for (let index = 0; index < lines.length; index += 1) {
+    lineStartOffsets.push(sourceOffset);
+    sourceOffset += (lines[index]?.length ?? 0) + (index < lines.length - 1 ? 1 : 0);
+  }
+  const replacements: MarkdownSourceReplacement[] = [];
   let fence: FenceState | null = null;
 
   for (let index = 0; index < lines.length; index += 1) {
@@ -146,9 +329,17 @@ export function repairMarkdownTableDelimiters(value: string): string {
       rebuiltCells.push("---");
     }
     const indent = line.slice(0, line.length - line.trimStart().length);
-    lines[index] = `${indent}| ${rebuiltCells.join(" | ")} |`;
-    repaired = true;
+    const lineStartOffset = lineStartOffsets[index] ?? 0;
+    replacements.push({
+      rawStart: lineStartOffset,
+      rawEnd: lineStartOffset + line.length,
+      replacement: `${indent}| ${rebuiltCells.join(" | ")} |`,
+    });
   }
 
-  return repaired ? lines.join("\n") : value;
+  return prepareMarkdownSourceReplacements(value, replacements);
+}
+
+export function repairMarkdownTableDelimiters(value: string): string {
+  return prepareMarkdownTableDelimiters(value).renderedText;
 }

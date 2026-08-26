@@ -1254,7 +1254,8 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain("@spark");
-    expect(markup).toContain("inline-flex max-w-full select-none items-center gap-0.5");
+    expect(markup).toContain("inline-flex max-w-full items-center gap-0.5");
+    expect(markup).toContain("select-text");
     expect(markup).toContain("mx-0.5");
     expect(markup).toContain("rounded-md px-1.5 py-0.5");
     expect(markup).toContain("(check the UI)");
@@ -1501,7 +1502,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain(">done</p>");
+    expect(markup).toContain(">done</span></p>");
     expect(markup).not.toContain("Work log");
     expect(markup).not.toContain('data-timeline-row-kind="work"');
   });
@@ -1618,7 +1619,7 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain("Worked for");
-    expect(markup).toContain(">done</p>");
+    expect(markup).toContain(">done</span></p>");
     // Completed turns fold all tool work behind the single collapsed disclosure,
     // which stays unmounted until expanded, so no inline tool rows leak out.
     expect(markup).not.toContain("+2 more tool calls");
@@ -1731,7 +1732,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("<h2>Complete File-Icon Rendering Map</h2>");
+    expect(markup).toMatch(/<h2><span[^>]*>Complete File-Icon Rendering Map<\/span><\/h2>/);
     expect(markup).toContain("chat-markdown-codeblock");
     expect(markup).not.toContain("```tsx");
   });
@@ -2205,7 +2206,7 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain("Worked for");
-    expect(markup).toContain(">done</p>");
+    expect(markup).toContain(">done</span></p>");
     // Trailing work folds into the terminal reply's collapsed disclosure rather
     // than leaving a detached work row at the end of the transcript.
     expect(markup).not.toContain("Tool 1");

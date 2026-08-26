@@ -68,7 +68,7 @@ function formatMenuSelectionLabel(reference: ChatFileReference, t: MenuTranslate
 
 // Right-click menu shared by explorer rows, changed-file rows, and the file
 // preview. Unavailable surfaces return without opening a menu.
-export async function showFileReferenceContextMenu(input: {
+export function showFileReferenceContextMenu(input: {
   path: string;
   /** Absolute path to reveal in the platform file manager. Omit when the
    * surface only knows a repository-relative path. */
@@ -79,12 +79,34 @@ export async function showFileReferenceContextMenu(input: {
   selection?: Omit<ChatFileReference, "path"> | null;
   onReferenceInChat: ((reference: ChatFileReference) => void) | undefined;
   onAskWhyInChat?: ((reference: ChatFileReference) => void) | undefined;
+  /** Interactive transcript labels leave browser-only surfaces to the native
+   * context menu so selected text keeps the platform Copy action. */
+  desktopOnly?: boolean;
   t: MenuTranslate;
-}): Promise<void> {
+}): Promise<void> | false {
+  if (input.desktopOnly && (typeof window === "undefined" || !window.desktopBridge)) {
+    return false;
+  }
   const api = readNativeApi();
   if (!api) {
-    return;
+    return false;
   }
+  return showFileReferenceContextMenuWithApi(api, input);
+}
+
+async function showFileReferenceContextMenuWithApi(
+  api: NonNullable<ReturnType<typeof readNativeApi>>,
+  input: {
+    path: string;
+    revealPath?: string;
+    position: { x: number; y: number };
+    selection?: Omit<ChatFileReference, "path"> | null;
+    onReferenceInChat: ((reference: ChatFileReference) => void) | undefined;
+    onAskWhyInChat?: ((reference: ChatFileReference) => void) | undefined;
+    desktopOnly?: boolean;
+    t: MenuTranslate;
+  },
+): Promise<void> {
   const revealPath =
     input.revealPath && typeof window !== "undefined" && window.desktopBridge
       ? input.revealPath

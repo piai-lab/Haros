@@ -971,8 +971,9 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
           ) : null}
           {previewSelectionAction.pendingAction ? (
             <TranscriptSelectionAction
-              left={previewSelectionAction.pendingAction.left}
-              top={previewSelectionAction.pendingAction.top}
+              anchorX={previewSelectionAction.pendingAction.anchorX}
+              selectionTop={previewSelectionAction.pendingAction.selectionTop}
+              selectionBottom={previewSelectionAction.pendingAction.selectionBottom}
               placement={previewSelectionAction.pendingAction.placement}
               onAddToChat={previewSelectionAction.commit}
             />

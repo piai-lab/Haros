@@ -55,9 +55,6 @@ const EN_MESSAGES = {
   "conversation.serverDisconnected": "OmniMind is not connected to the server.",
   "conversation.planModeUpdateFailed": "Could not update plan mode",
   "conversation.messageNotFound": "Could not find the selected message.",
-  "conversation.markerSelectUnique": "Select a unique phrase to mark it.",
-  "conversation.markerSelectUniqueDescription":
-    "Include a few more words so OmniMind can find the exact place.",
   "conversation.stopFailed": "Could not stop the response",
   "conversation.stopFailedDescription": "The current response could not be interrupted.",
   "conversation.editRestartRequired": "Stop the current response before editing",
@@ -243,8 +240,6 @@ const ZH_CN_MESSAGES = {
   "conversation.serverDisconnected": "OmniMind 尚未连接到服务器。",
   "conversation.planModeUpdateFailed": "无法更新规划模式",
   "conversation.messageNotFound": "找不到所选消息。",
-  "conversation.markerSelectUnique": "请选择一段唯一内容作为标记。",
-  "conversation.markerSelectUniqueDescription": "多选择几个字词，以便 OmniMind 准确定位。",
   "conversation.stopFailed": "无法停止回复",
   "conversation.stopFailedDescription": "当前回复未能中断。",
   "conversation.editRestartRequired": "请先停止当前回复再编辑",

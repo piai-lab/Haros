@@ -137,7 +137,7 @@ describe("assistantSelections", () => {
     ).toBe("This is a fairly long first line that shoul…");
   });
 
-  it("creates normalized assistant selection attachments", () => {
+  it("preserves assistant selection text exactly while normalizing the message id", () => {
     expect(
       createAssistantSelectionAttachment({
         assistantMessageId: " msg-1 ",
@@ -146,8 +146,31 @@ describe("assistantSelections", () => {
     ).toMatchObject({
       type: "assistant-selection",
       assistantMessageId: "msg-1",
-      text: "selected line",
+      text: "\nselected line\n",
     });
+  });
+
+  it.each(["\nselected line\n", "  indented\n\n  paragraph  ", "\r\nselected\r\nline\r\n"])(
+    "round-trips exact selected whitespace through the prompt block",
+    (text) => {
+      const prompt = appendAssistantSelectionsToPrompt("Investigate this", [
+        { assistantMessageId: "msg-1", text },
+      ]);
+
+      expect(extractTrailingAssistantSelections(prompt)).toEqual({
+        promptText: "Investigate this",
+        selections: [{ assistantMessageId: "msg-1", text }],
+      });
+    },
+  );
+
+  it("rejects whitespace-only assistant selections", () => {
+    expect(
+      createAssistantSelectionAttachment({
+        assistantMessageId: "msg-1",
+        text: " \n\t ",
+      }),
+    ).toBeNull();
   });
 
   it("rejects assistant selections that exceed the max length", () => {

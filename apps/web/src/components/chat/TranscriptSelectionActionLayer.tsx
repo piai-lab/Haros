@@ -19,11 +19,12 @@ export function TranscriptSelectionActionLayer(props: TranscriptSelectionActionL
 
   return (
     <TranscriptSelectionAction
-      left={props.action.left}
-      top={props.action.top}
+      anchorX={props.action.anchorX}
+      selectionTop={props.action.selectionTop}
+      selectionBottom={props.action.selectionBottom}
       placement={props.action.placement}
-      onHighlight={props.onHighlight}
-      onUnderline={props.onUnderline}
+      onHighlight={props.action.selection.markerRange ? props.onHighlight : undefined}
+      onUnderline={props.action.selection.markerRange ? props.onUnderline : undefined}
       onAddToChat={props.onAddToChat}
     />
   );
