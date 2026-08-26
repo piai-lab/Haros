@@ -654,32 +654,34 @@ describe("runAfterDesktopShutdown", () => {
 });
 
 describe("shouldDeferDesktopWindowClose", () => {
-  it("keeps Windows windows alive until shutdown or updater handoff is proven", () => {
+  it("keeps every desktop window alive until shutdown or updater handoff is proven", () => {
     expect(
       shouldDeferDesktopWindowClose({
-        platform: "win32",
         shutdownComplete: false,
         updaterHandoffActive: false,
       }),
     ).toBe(true);
     expect(
       shouldDeferDesktopWindowClose({
-        platform: "linux",
         shutdownComplete: false,
         updaterHandoffActive: false,
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       shouldDeferDesktopWindowClose({
-        platform: "win32",
         shutdownComplete: false,
         updaterHandoffActive: true,
       }),
     ).toBe(false);
     expect(
       shouldDeferDesktopWindowClose({
-        platform: "darwin",
         shutdownComplete: false,
+        updaterHandoffActive: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldDeferDesktopWindowClose({
+        shutdownComplete: true,
         updaterHandoffActive: false,
       }),
     ).toBe(false);

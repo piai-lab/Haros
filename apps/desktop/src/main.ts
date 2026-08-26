@@ -4607,7 +4607,6 @@ function createWindow(): BrowserWindow {
 
     if (
       shouldDeferDesktopWindowClose({
-        platform: process.platform,
         shutdownComplete: desktopShutdownComplete,
         updaterHandoffActive: isUpdaterQuitAndInstallInFlight,
       })
@@ -4615,15 +4614,6 @@ function createWindow(): BrowserWindow {
       event.preventDefault();
       void confirmRunningTasksThenQuit("window-close");
       return;
-    }
-
-    if (
-      process.platform === "linux" &&
-      !desktopShutdownComplete &&
-      !isUpdaterQuitAndInstallInFlight
-    ) {
-      event.preventDefault();
-      void confirmRunningTasksThenQuit("window-close");
     }
   });
 

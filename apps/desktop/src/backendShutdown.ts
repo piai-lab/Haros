@@ -78,11 +78,10 @@ export async function runAfterDesktopShutdown(
 }
 
 export function shouldDeferDesktopWindowClose(input: {
-  readonly platform: NodeJS.Platform;
   readonly shutdownComplete: boolean;
   readonly updaterHandoffActive: boolean;
 }): boolean {
-  return input.platform === "win32" && !input.shutdownComplete && !input.updaterHandoffActive;
+  return !input.shutdownComplete && !input.updaterHandoffActive;
 }
 
 const shutdownsByProcess = new WeakMap<object, Promise<WindowsBackendShutdownResult>>();
