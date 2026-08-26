@@ -204,6 +204,10 @@ Product command receipt 只证明外层 admission。native acceptance/turn/sessi
 
 restart 优先使用 Provider native resume/session cursor。无法恢复时明确创建 fresh context/new lineage；不能用 Product Timeline 冒充完整 native continuation。
 
+Desktop shutdown token、loopback origin 与本机 Desktop composition共同构成 normal-quit recovery 的 authority；普通 Web、远程 client、Provider 与公共 WebSocket command 均不能制造恢复记录。`/api/desktop/shutdown` 在既有鉴权后可接收一个有界 `resumeIntent`，无 body 时保持原 shutdown 行为。Server 的派生 `quitResumeStatePath` 指向私有 state 目录中的 `quit-resume.json`：同目录临时文件原子替换，目录 `0700`、文件 `0600`，一个 shutdown writer、一个 startup claimant，无查询 API、历史、编辑或迁移生命周期。
+
+恢复启动顺序固定为 projection bootstrap → restart reconciliation（旧运行与旧交互 promise 收口）→ queued-turn reconciliation → 原子 claim → command-ready → 逐条普通 `thread.turn.start`。只允许 Server 注入的 `resumePrecondition` 在最终 serialized dispatch 再检查任务仍存在且可用、没有新 in-flight turn、旧 turn 未自行完成且工作区/Project/exact binding 仍有效；客户端 schema剥离该字段。恢复继续走原 Queue、并发、权限和 Provider Registry；当前精确绑定不可用时走现有失败投影，禁止 silent fallback。
+
 ## Runtime mode：一个任务只有一个自动化边界
 
 Product Thread 的 `runtimeMode` 是 Engine adapter 与 OmniMind Host capability 的共同输入，不是只约束 Provider command 的装饰标签。它由 Product state 持久化、由每次 dispatch 携带，并在子 Thread/child capability 创建时沿现有 privilege rule 继承；Browser、Device、Gateway 和 future Host tool 不能再各自发明一层默认拒绝或 approval ledger。

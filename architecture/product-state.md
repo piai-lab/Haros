@@ -158,6 +158,10 @@ Product Orchestration 恢复 command/event/projection；Provider adapter 恢复 
 - cancel/interrupt request 只证明已请求，native acknowledgement/terminal event 才证明结果。
 - targeted child interrupt 必须引用 exact child identity；只停止目标 child，不能借已有 Root interrupt path 误杀 parent 或 sibling。Root stop-all 与 child stop 是两种不同语义。
 
+正常退出恢复是同一 Product Orchestration 的一次性输入，不是第二 Product State。只有用户通过窗口关闭或普通 App 退出并确认后，Desktop 才可把 Renderer 的候选快照经受保护的 loopback shutdown route 交给 Server；崩溃、强杀、信号、更新安装、内部重启、bundle swap 与 fatal startup 均不得写恢复记录。记录只保存任务、active turn、精确 `ModelSelection`、Thinking/effort、runtime/interaction/review/delivery mode 与本地化续接文案的白名单字段，不保存凭据、Provider 私有目录、endpoint 或任意原始配置。
+
+Server 在 shutdown 前重新核验只有 `starting / connecting / running` 的用户可见顶层任务可进入记录；queued-only、approval、user-input、terminal、archived/deleted 与 child/subagent 均排除。启动时先 claim 并删除整个私有记录，再按 queued-turn 优先顺序和 serialized dispatch precondition 派发普通用户消息；claim 后失败不重建、不重试。原工作区缺失、不可访问、Project 缺失或 exact binding 不可取得时只写受限双语失败 activity，不能猜路径、退回 Home、切换 Provider/model/Thinking 或制造重复续接。
+
 ## 权限真实性
 
 Thread 的 `runtimeMode` 是用户对该任务自动化程度的唯一产品级选择。它不是 OS sandbox 声明，也不抹平各 Engine 的 native permission 模型；adapter 和 Host 只能把它翻译到真实可执行的底层语义：
