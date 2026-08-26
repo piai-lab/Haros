@@ -113,6 +113,7 @@ const BUFFERED_TOOL_OUTPUT_BY_KEY_CACHE_CAPACITY = 2_048;
 const BUFFERED_TOOL_OUTPUT_BY_KEY_TTL = Duration.minutes(60);
 const BUFFERED_REASONING_SUMMARY_BY_KEY_CACHE_CAPACITY = 2_048;
 const BUFFERED_REASONING_SUMMARY_BY_KEY_TTL = Duration.minutes(60);
+const REASONING_ACTIVITY_UPDATE_INTERVAL_MS = 100;
 const PENDING_GENERATED_IMAGES_CACHE_CAPACITY = 512;
 // Hot-path cache only. Turn settlement also reads durable activity records, so
 // TTL expiry or a server restart cannot discard the transcript reference.
@@ -176,6 +177,11 @@ type RuntimeIngestionInput =
   | {
       source: "domain";
       event: RuntimeIngestionDomainEvent;
+    }
+  | {
+      source: "reasoning-flush";
+      key: string;
+      generation: number;
     };
 
 type BufferedToolOutput = {
@@ -185,7 +191,10 @@ type BufferedToolOutput = {
 type BufferedReasoningSummary = {
   readonly parts: ReadonlyMap<number, string>;
   readonly sourceEvent: Extract<ProviderRuntimeEvent, { readonly type: "content.delta" }>;
+  readonly firstRuntimeSequence: number | undefined;
   readonly lastRuntimeSequence: number;
+  readonly lastPublishedAtMs: number | undefined;
+  readonly flushGeneration: number;
   readonly truncated: boolean;
   readonly segmented: boolean;
 };
@@ -355,6 +364,13 @@ function joinedBufferedReasoningSummary(
   );
 }
 
+function bufferedReasoningSegmentItemId(summary: BufferedReasoningSummary): string | undefined {
+  const sourceItemId = summary.sourceEvent.itemId;
+  return sourceItemId === undefined || summary.firstRuntimeSequence === undefined
+    ? undefined
+    : `${sourceItemId}:turn:${summary.sourceEvent.turnId ?? "no-turn"}:segment:${summary.firstRuntimeSequence}`;
+}
+
 function withBufferedReasoningSummary(
   event: ProviderRuntimeEvent,
   summary: BufferedReasoningSummary | undefined,
@@ -363,20 +379,27 @@ function withBufferedReasoningSummary(
   if (
     event.type !== "item.completed" ||
     !supportsReadableReasoningProjection(event.provider) ||
-    event.payload.itemType !== "reasoning" ||
-    (!preferBufferedDetail && readableReasoningDetail(event.payload.detail))
+    event.payload.itemType !== "reasoning"
   ) {
     return event;
   }
   const bufferedDetail = joinedBufferedReasoningSummary(summary);
-  if (!bufferedDetail) {
+  const detail =
+    !preferBufferedDetail && readableReasoningDetail(event.payload.detail)
+      ? event.payload.detail
+      : bufferedDetail;
+  const segmentItemId = summary ? bufferedReasoningSegmentItemId(summary) : undefined;
+  if (!detail && !segmentItemId) {
     return event;
   }
   return {
     ...event,
+    ...(segmentItemId
+      ? { itemId: segmentItemId as NonNullable<ProviderRuntimeEvent["itemId"]> }
+      : {}),
     payload: {
       ...event.payload,
-      detail: bufferedDetail,
+      ...(detail ? { detail } : {}),
       ...(summary?.truncated
         ? {
             data: {
@@ -1121,17 +1144,31 @@ const make = Effect.gen(function* () {
         const summaryIndex = event.payload.summaryIndex ?? 0;
         const delta = event.payload.delta;
         if (summaryIndex < 0 || delta.length === 0) {
-          return Effect.void;
+          return Effect.succeed(undefined);
         }
         const existingSummary = Option.getOrUndefined(existingEntry);
+        const beginsVisibleSegment =
+          existingSummary?.firstRuntimeSequence === undefined &&
+          readableReasoningDetail(event.payload.delta) !== undefined;
+        const sourceEvent = beginsVisibleSegment ? event : (existingSummary?.sourceEvent ?? event);
+        const firstRuntimeSequence = beginsVisibleSegment
+          ? runtimeSequence
+          : existingSummary?.firstRuntimeSequence;
+        const flushGeneration = (existingSummary?.flushGeneration ?? 0) + 1;
         if (summaryIndex >= MAX_BUFFERED_REASONING_SUMMARY_PARTS) {
-          return Cache.set(bufferedReasoningSummaryByKey, key, {
+          const nextSummary: BufferedReasoningSummary = {
             parts: new Map(existingSummary?.parts ?? []),
-            sourceEvent: event,
+            sourceEvent,
+            firstRuntimeSequence,
             lastRuntimeSequence: runtimeSequence,
+            lastPublishedAtMs: existingSummary?.lastPublishedAtMs,
+            flushGeneration,
             truncated: true,
             segmented: existingSummary?.segmented === true,
-          });
+          };
+          return Cache.set(bufferedReasoningSummaryByKey, key, nextSummary).pipe(
+            Effect.as(nextSummary),
+          );
         }
         const parts = new Map(existingSummary?.parts ?? []);
         const existingPart = parts.get(summaryIndex) ?? "";
@@ -1141,23 +1178,35 @@ const make = Effect.gen(function* () {
         );
         const partLimit = Math.max(0, MAX_REASONING_ACTIVITY_DETAIL_CHARS - otherChars);
         if (partLimit === 0) {
-          return Cache.set(bufferedReasoningSummaryByKey, key, {
+          const nextSummary: BufferedReasoningSummary = {
             parts,
-            sourceEvent: event,
+            sourceEvent,
+            firstRuntimeSequence,
             lastRuntimeSequence: runtimeSequence,
+            lastPublishedAtMs: existingSummary?.lastPublishedAtMs,
+            flushGeneration,
             truncated: true,
             segmented: existingSummary?.segmented === true,
-          });
+          };
+          return Cache.set(bufferedReasoningSummaryByKey, key, nextSummary).pipe(
+            Effect.as(nextSummary),
+          );
         }
         const truncated = existingPart.length + delta.length > partLimit;
         parts.set(summaryIndex, appendCappedProviderText(existingPart, delta, partLimit));
-        return Cache.set(bufferedReasoningSummaryByKey, key, {
+        const nextSummary: BufferedReasoningSummary = {
           parts,
-          sourceEvent: event,
+          sourceEvent,
+          firstRuntimeSequence,
           lastRuntimeSequence: runtimeSequence,
+          lastPublishedAtMs: existingSummary?.lastPublishedAtMs,
+          flushGeneration,
           truncated: existingSummary?.truncated === true || truncated,
           segmented: existingSummary?.segmented === true,
-        });
+        };
+        return Cache.set(bufferedReasoningSummaryByKey, key, nextSummary).pipe(
+          Effect.as(nextSummary),
+        );
       }),
     );
 
@@ -1186,8 +1235,10 @@ const make = Effect.gen(function* () {
                 if (!summary || !detail || !summary.sourceEvent.itemId) {
                   return Effect.void;
                 }
-                const sourceItemId = String(summary.sourceEvent.itemId);
-                const segmentItemId = `${sourceItemId}:segment:${summary.lastRuntimeSequence}`;
+                const segmentItemId = bufferedReasoningSegmentItemId(summary);
+                if (!segmentItemId) {
+                  return Effect.void;
+                }
                 const completionEvent: ProviderRuntimeEvent = {
                   ...summary.sourceEvent,
                   eventId: EventId.makeUnsafe(
@@ -1206,13 +1257,16 @@ const make = Effect.gen(function* () {
                 };
                 const activities = projectProviderRuntimeActivities(
                   completionEvent,
-                  summary.lastRuntimeSequence,
+                  summary.firstRuntimeSequence,
                 );
                 return dispatchProjectedActivities(completionEvent, threadId, activities).pipe(
                   Effect.andThen(
                     Cache.set(bufferedReasoningSummaryByKey, key, {
                       ...summary,
                       parts: new Map<number, string>(),
+                      firstRuntimeSequence: undefined,
+                      lastPublishedAtMs: undefined,
+                      flushGeneration: summary.flushGeneration + 1,
                       truncated: false,
                       segmented: true,
                     }),
@@ -1250,11 +1304,16 @@ const make = Effect.gen(function* () {
                 if (!summary || !detail || !summary.sourceEvent.itemId) {
                   return Cache.invalidate(bufferedReasoningSummaryByKey, key);
                 }
+                const segmentItemId = bufferedReasoningSegmentItemId(summary);
+                if (!segmentItemId) {
+                  return Cache.invalidate(bufferedReasoningSummaryByKey, key);
+                }
                 const completionEvent: ProviderRuntimeEvent = {
                   ...summary.sourceEvent,
                   eventId: EventId.makeUnsafe(
-                    `${terminalEvent.eventId}:reasoning:${summary.sourceEvent.itemId}`,
+                    `${terminalEvent.eventId}:reasoning:${segmentItemId}`,
                   ),
+                  itemId: segmentItemId as NonNullable<ProviderRuntimeEvent["itemId"]>,
                   threadId,
                   type: "item.completed",
                   payload: {
@@ -1267,7 +1326,7 @@ const make = Effect.gen(function* () {
                 };
                 const activities = projectProviderRuntimeActivities(
                   completionEvent,
-                  runtimeSequence,
+                  summary.firstRuntimeSequence ?? runtimeSequence,
                 );
                 return dispatchProjectedActivities(completionEvent, threadId, activities).pipe(
                   Effect.andThen(Cache.invalidate(bufferedReasoningSummaryByKey, key)),
@@ -1935,7 +1994,9 @@ const make = Effect.gen(function* () {
             payload: {
               requestId: row.requestId,
               ...(isApproval
-                ? { detail: buildStalePendingRequestFailureDetail(requestKind, row.requestId) }
+                ? {
+                    detail: buildStalePendingRequestFailureDetail(requestKind, row.requestId),
+                  }
                 : { settlement: { status: "stale" } }),
               ...(row.lifecycleGeneration ? { lifecycleGeneration: row.lifecycleGeneration } : {}),
             },
@@ -1997,6 +2058,93 @@ const make = Effect.gen(function* () {
       ),
       Effect.asVoid,
     );
+  let enqueueReasoningFlush:
+    | ((
+        input: Extract<RuntimeIngestionInput, { source: "reasoning-flush" }>,
+      ) => Effect.Effect<boolean>)
+    | undefined;
+
+  const publishBufferedReasoningUpdate = Effect.fnUntraced(function* (
+    key: string,
+    expectedGeneration?: number,
+  ) {
+    const summary = yield* getBufferedReasoningSummary(key);
+    if (
+      !summary ||
+      (expectedGeneration !== undefined && summary.flushGeneration !== expectedGeneration)
+    ) {
+      return;
+    }
+    const detail = joinedBufferedReasoningSummary(summary);
+    const segmentItemId = bufferedReasoningSegmentItemId(summary);
+    if (!detail || !segmentItemId || summary.firstRuntimeSequence === undefined) {
+      return;
+    }
+    const updateEvent: ProviderRuntimeEvent = {
+      ...summary.sourceEvent,
+      eventId: EventId.makeUnsafe(
+        `${summary.sourceEvent.eventId}:reasoning-update:${summary.lastRuntimeSequence}`,
+      ),
+      itemId: segmentItemId as NonNullable<ProviderRuntimeEvent["itemId"]>,
+      type: "item.updated",
+      payload: {
+        itemType: "reasoning",
+        status: "inProgress",
+        title: "Reasoning",
+        detail,
+        ...(summary.truncated ? { data: { reasoningDetailTruncated: true } } : {}),
+      },
+    };
+    yield* dispatchProjectedActivities(
+      updateEvent,
+      updateEvent.threadId,
+      projectProviderRuntimeActivities(updateEvent, summary.firstRuntimeSequence),
+    );
+    yield* Cache.set(bufferedReasoningSummaryByKey, key, {
+      ...summary,
+      lastPublishedAtMs: Date.now(),
+    });
+  });
+
+  const scheduleBufferedReasoningFlush = (key: string, generation: number, delayMs: number) =>
+    Effect.forkDetach(
+      Effect.sleep(Duration.millis(Math.max(0, delayMs))).pipe(
+        Effect.andThen(
+          Effect.suspend(() =>
+            enqueueReasoningFlush
+              ? enqueueReasoningFlush({
+                  source: "reasoning-flush",
+                  key,
+                  generation,
+                })
+              : Effect.succeed(false),
+          ),
+        ),
+      ),
+    ).pipe(Effect.asVoid);
+
+  const publishOrScheduleBufferedReasoning = Effect.fnUntraced(function* (
+    key: string,
+    summary: BufferedReasoningSummary,
+  ) {
+    if (
+      summary.firstRuntimeSequence === undefined ||
+      joinedBufferedReasoningSummary(summary) === undefined
+    ) {
+      return;
+    }
+    const elapsed =
+      summary.lastPublishedAtMs === undefined ? undefined : Date.now() - summary.lastPublishedAtMs;
+    if (elapsed === undefined || elapsed >= REASONING_ACTIVITY_UPDATE_INTERVAL_MS) {
+      yield* publishBufferedReasoningUpdate(key, summary.flushGeneration);
+      return;
+    }
+    yield* scheduleBufferedReasoningFlush(
+      key,
+      summary.flushGeneration,
+      REASONING_ACTIVITY_UPDATE_INTERVAL_MS - elapsed,
+    );
+  });
   const clearAssistantTextSegmentStateForThread = (threadId: ThreadId) => {
     const states = segmentStateByThreadId.get(threadId);
     for (const messageId of states?.keys() ?? []) {
@@ -2489,7 +2637,14 @@ const make = Effect.gen(function* () {
         isReadableReasoningDelta(event.provider, event.payload.streamKind) &&
         event.payload.delta.length > 0
       ) {
-        yield* appendBufferedReasoningSummary(reasoningSummaryKey, event, runtimeSequence);
+        const summary = yield* appendBufferedReasoningSummary(
+          reasoningSummaryKey,
+          event,
+          runtimeSequence,
+        );
+        if (summary) {
+          yield* publishOrScheduleBufferedReasoning(reasoningSummaryKey, summary);
+        }
       }
 
       const assistantDelta =
@@ -2930,6 +3085,27 @@ const make = Effect.gen(function* () {
         }
       }
 
+      // Complete the hot reasoning row before projecting a terminal boundary.
+      // This preserves causal delivery even though both facts share one serial
+      // ingestion pass, and invalidates any detached trailing timer first.
+      if (isTerminalTurnEvent) {
+        yield* settleBufferedReasoningSummaries(
+          thread.id,
+          event,
+          runtimeSequence,
+          toTurnId(event.turnId),
+        );
+      } else if (event.type === "session.exited") {
+        yield* settleBufferedReasoningSummaries(thread.id, event, runtimeSequence);
+      } else if (event.type === "runtime.error") {
+        yield* settleBufferedReasoningSummaries(
+          thread.id,
+          event,
+          runtimeSequence,
+          eventTurnId ?? activeTurnId ?? undefined,
+        );
+      }
+
       const bufferedReasoningSummary =
         event.type === "item.completed" && reasoningSummaryKey
           ? yield* getBufferedReasoningSummary(reasoningSummaryKey)
@@ -2950,30 +3126,18 @@ const make = Effect.gen(function* () {
         joinedBufferedReasoningSummary(bufferedReasoningSummary) === undefined;
       const projectedActivities = suppressReplayedReasoningCompletion
         ? []
-        : projectProviderRuntimeActivities(activityEvent, runtimeSequence);
+        : projectProviderRuntimeActivities(
+            activityEvent,
+            event.type === "item.completed" &&
+              bufferedReasoningSummary?.firstRuntimeSequence !== undefined
+              ? bufferedReasoningSummary.firstRuntimeSequence
+              : runtimeSequence,
+          );
       yield* dispatchProjectedActivities(activityEvent, thread.id, projectedActivities);
       if (event.type === "item.completed" && reasoningSummaryKey) {
         yield* Cache.invalidate(bufferedReasoningSummaryByKey, reasoningSummaryKey);
       } else if (event.type === "item.completed" && toolOutputKey) {
         yield* Cache.invalidate(bufferedToolOutputByKey, toolOutputKey);
-      }
-
-      if (isTerminalTurnEvent) {
-        yield* settleBufferedReasoningSummaries(
-          thread.id,
-          event,
-          runtimeSequence,
-          toTurnId(event.turnId),
-        );
-      } else if (event.type === "session.exited") {
-        yield* settleBufferedReasoningSummaries(thread.id, event, runtimeSequence);
-      } else if (event.type === "runtime.error") {
-        yield* settleBufferedReasoningSummaries(
-          thread.id,
-          event,
-          runtimeSequence,
-          eventTurnId ?? activeTurnId ?? undefined,
-        );
       }
 
       // Exact-turn delivery modes deliberately survive terminal events for a
@@ -3079,7 +3243,9 @@ const make = Effect.gen(function* () {
                 ),
           ),
         )
-      : processDomainEvent(input.event);
+      : input.source === "domain"
+        ? processDomainEvent(input.event)
+        : publishBufferedReasoningUpdate(input.key, input.generation);
 
   // A failed journal row blocks later runtime rows in the same page. Domain
   // inputs still drain, and the durable poll retries from the exact cursor.
@@ -3171,10 +3337,14 @@ const make = Effect.gen(function* () {
             if (input.source === "runtime") {
               runtimeJournalPageBlocked = true;
             }
-            return Effect.logWarning("provider runtime ingestion failed to process event", {
+            return Effect.logWarning("provider runtime ingestion failed to process input", {
               source: input.source,
-              eventId: input.event.eventId,
-              eventType: input.event.type,
+              ...(input.source === "reasoning-flush"
+                ? { reasoningKey: input.key, generation: input.generation }
+                : {
+                    eventId: input.event.eventId,
+                    eventType: input.event.type,
+                  }),
               cause: Cause.pretty(cause),
             });
           }),
@@ -3183,6 +3353,7 @@ const make = Effect.gen(function* () {
   const worker = yield* makeDrainableWorker(processInputSafely, {
     capacity: PROVIDER_RUNTIME_INGESTION_CAPACITY,
   });
+  enqueueReasoningFlush = worker.enqueue;
   const runtimeJournalDrainLock = yield* Semaphore.make(1);
 
   // A deterministically failing row would otherwise pin the single global

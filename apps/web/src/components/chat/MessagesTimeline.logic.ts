@@ -205,8 +205,9 @@ export function findLastLiveWorkGroupId(rows: ReadonlyArray<MessagesTimelineRow>
   return null;
 }
 
-// Public reasoning is live only while it is the causal tail of the active turn.
-// A following assistant segment, tool activity, or proposed plan closes that
+// Public reasoning is live only while its canonical `reasoning.updated` row is
+// the causal tail of the active turn. Its same-ID terminal replacement, a
+// following assistant segment, tool activity, or proposed plan closes that
 // reasoning group immediately even though the turn itself may keep running.
 // Keeping this decision on the canonical Timeline sequence prevents every
 // reasoning row in a long active turn from inheriting one coarse `isWorking`
@@ -216,7 +217,11 @@ export function findLiveReasoningEntryId(
   activeTurnId: TurnId | null,
 ): string | null {
   const tail = timelineEntries.at(-1);
-  if (tail?.kind !== "work" || !isReasoningUpdateWorkEntry(tail.entry)) {
+  if (
+    tail?.kind !== "work" ||
+    tail.entry.activityKind !== "reasoning.updated" ||
+    !isReasoningUpdateWorkEntry(tail.entry)
+  ) {
     return null;
   }
   if (activeTurnId !== null && tail.entry.turnId !== activeTurnId) {
@@ -1088,10 +1093,8 @@ function workLogUserInputInteractionsEqual(
     if (question.answer === other.answer) return true;
     if (!question.answer || !other.answer) return false;
     return (
-      stringArraysEqual(
-        question.answer.selectedOptionLabels,
-        other.answer.selectedOptionLabels,
-      ) && question.answer.customText === other.answer.customText
+      stringArraysEqual(question.answer.selectedOptionLabels, other.answer.selectedOptionLabels) &&
+      question.answer.customText === other.answer.customText
     );
   });
 }

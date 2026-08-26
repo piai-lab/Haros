@@ -651,7 +651,7 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
   const toolStatus = deriveToolLifecycleStatus(activity.kind, payload);
   const engineWebSurface = extractEngineWebSurface(payload);
   const reasoningDetailTruncated =
-    activity.kind === "reasoning.completed" &&
+    (activity.kind === "reasoning.updated" || activity.kind === "reasoning.completed") &&
     asRecord(payload?.data)?.reasoningDetailTruncated === true;
   const userInputResolution = extractUserInputResolution(payload);
   const userInputCorrelationKey =

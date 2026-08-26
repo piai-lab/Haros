@@ -49,7 +49,7 @@ function ReasoningRow(props: {
         createdAt: "2026-08-24T13:30:40.000Z",
         label: "Reasoning",
         toolTitle: "Reasoning",
-        activityKind: "reasoning.completed",
+        activityKind: props.reasoningIsLive ? "reasoning.updated" : "reasoning.completed",
         tone: "thinking",
         reasoningEntries: props.reasoningText
           ? [{ id: "reasoning-live", text: props.reasoningText }]
@@ -107,6 +107,7 @@ function reasoningEntry(
   turnId: TurnId,
   text: string,
   tone: "thinking" | "error" = "thinking",
+  activityKind: "reasoning.updated" | "reasoning.completed" = "reasoning.completed",
 ) {
   return {
     id,
@@ -118,7 +119,7 @@ function reasoningEntry(
       turnId,
       label: "Reasoning",
       tone,
-      activityKind: "reasoning.completed" as const,
+      activityKind,
       reasoningEntries: [{ id: `${id}-part`, text }],
     },
   } satisfies TimelineEntries[number];
@@ -231,12 +232,26 @@ function AnswerStageTimeline(props: { settled: boolean }) {
 function ReasoningBoundaryTimeline(props: { stage: 0 | 1 | 2 | 3 }) {
   const turnId = TurnId.makeUnsafe("turn-reasoning-boundary-browser");
   const timelineEntries: TimelineEntries = [
-    reasoningEntry("reasoning-boundary-1", turnId, "First reasoning group."),
+    reasoningEntry(
+      "reasoning-boundary-1",
+      turnId,
+      "First reasoning group.",
+      "thinking",
+      props.stage === 0 ? "reasoning.updated" : "reasoning.completed",
+    ),
     ...(props.stage >= 1
       ? [toolEntry("tool-reasoning-boundary", turnId, { label: "Read boundary source" })]
       : []),
     ...(props.stage >= 2
-      ? [reasoningEntry("reasoning-boundary-2", turnId, "Second reasoning group.")]
+      ? [
+          reasoningEntry(
+            "reasoning-boundary-2",
+            turnId,
+            "Second reasoning group.",
+            "thinking",
+            props.stage === 2 ? "reasoning.updated" : "reasoning.completed",
+          ),
+        ]
       : []),
     ...(props.stage >= 3
       ? [
@@ -1007,7 +1022,12 @@ describe("Timeline public reasoning disclosure", () => {
       const providerText = document.querySelector<HTMLElement>(
         "[data-reasoning-provider-text='true']",
       )!;
-      const textNode = providerText.querySelector("p [data-transcript-source-start]")?.firstChild;
+      await expect.poll(() => providerText.textContent).toContain("Public reasoning paragraph 14");
+      const walker = document.createTreeWalker(providerText, NodeFilter.SHOW_TEXT);
+      let textNode = walker.nextNode();
+      while (textNode && !textNode.textContent?.trim()) {
+        textNode = walker.nextNode();
+      }
       expect(textNode).toBeInstanceOf(Text);
       const selection = window.getSelection()!;
       const range = document.createRange();
@@ -1029,10 +1049,13 @@ describe("Timeline public reasoning disclosure", () => {
     const screen = await render(liveReasoningRow(LIVE_REASONING), { container: host });
 
     try {
+      await expect.poll(() => document.body.textContent).toContain("Public reasoning paragraph 14");
       await settleLayout();
       const viewport = document.querySelector<HTMLElement>(
         "[data-reasoning-scroll-viewport='true']",
       )!;
+      const disclosure = document.querySelector<HTMLElement>("[data-reasoning-disclosure='true']")!;
+      const trigger = screen.getByRole("button", { name: "Reasoning", exact: true }).element();
       expect(
         viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop,
       ).toBeLessThanOrEqual(2);
@@ -1042,7 +1065,15 @@ describe("Timeline public reasoning disclosure", () => {
       await screen.rerender(
         liveReasoningRow(`${LIVE_REASONING}\n\nAn appended paragraph stays below.`),
       );
+      await expect
+        .poll(() => document.body.textContent)
+        .toContain("An appended paragraph stays below.");
       await settleLayout();
+      expect(document.querySelector("[data-reasoning-disclosure='true']")).toBe(disclosure);
+      expect(screen.getByRole("button", { name: "Reasoning", exact: true }).element()).toBe(
+        trigger,
+      );
+      expect(document.querySelector("[data-reasoning-scroll-viewport='true']")).toBe(viewport);
       expect(viewport.scrollTop).toBe(0);
 
       viewport.scrollTop = viewport.scrollHeight;
@@ -1052,7 +1083,12 @@ describe("Timeline public reasoning disclosure", () => {
           `${LIVE_REASONING}\n\nAn appended paragraph stays below.\n\nThe newest paragraph.`,
         ),
       );
+      await expect.poll(() => document.body.textContent).toContain("The newest paragraph.");
       await settleLayout();
+      expect(document.querySelector("[data-reasoning-disclosure='true']")).toBe(disclosure);
+      expect(screen.getByRole("button", { name: "Reasoning", exact: true }).element()).toBe(
+        trigger,
+      );
       expect(
         viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop,
       ).toBeLessThanOrEqual(2);

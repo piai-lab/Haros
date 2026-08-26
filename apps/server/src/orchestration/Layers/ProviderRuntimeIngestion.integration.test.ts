@@ -2821,7 +2821,138 @@ describe("ProviderRuntimeIngestion", () => {
     expect(thread.messages).toHaveLength(0);
   });
 
-  it("projects only completed Codex reasoning with a readable summary", async () => {
+  it.each([
+    ["codex", "reasoning_summary_text"],
+    ["antigravity", "reasoning_text"],
+    ["omnimind", "reasoning_text"],
+    ["pi", "reasoning_text"],
+  ] as const)(
+    "publishes the first %s reasoning delta immediately and completes the growing row in place",
+    async (provider, streamKind) => {
+      const harness = await createHarness();
+      if (provider !== "codex") {
+        await harness.bindLegacyRuntimeSource(provider);
+      }
+      const createdAt = new Date().toISOString();
+      const threadId = asThreadId("thread-1");
+      const turnId = asTurnId(`turn-${provider}-streaming-reasoning`);
+      const itemId = asItemId(`${provider}-streaming-reasoning`);
+      const baseEvent = { provider, createdAt, threadId, turnId, itemId };
+
+      harness.emit({
+        ...baseEvent,
+        type: "content.delta",
+        eventId: asEventId(`evt-${provider}-streaming-reasoning-1`),
+        payload: { streamKind, summaryIndex: 0, delta: "First visible thought" },
+      });
+
+      const first = await waitForThread(harness.engine, (entry) =>
+        entry.activities.some(
+          (activity) =>
+            activity.kind === "reasoning.updated" &&
+            (activity.payload as { detail?: unknown }).detail === "First visible thought",
+        ),
+      );
+      const firstActivity = first.activities.find(
+        (activity) => activity.kind === "reasoning.updated",
+      );
+      expect(firstActivity?.id).toMatch(
+        new RegExp(
+          `^provider-reasoning:thread-1:${provider}-streaming-reasoning:turn:${turnId}:segment:`,
+        ),
+      );
+
+      harness.emit({
+        ...baseEvent,
+        type: "content.delta",
+        eventId: asEventId(`evt-${provider}-streaming-reasoning-2`),
+        payload: { streamKind, summaryIndex: 0, delta: " grows" },
+      });
+      harness.emit({
+        ...baseEvent,
+        type: "content.delta",
+        eventId: asEventId(`evt-${provider}-streaming-reasoning-3`),
+        payload: { streamKind, summaryIndex: 0, delta: " again" },
+      });
+
+      const grown = await waitForThread(harness.engine, (entry) =>
+        entry.activities.some(
+          (activity) =>
+            activity.id === firstActivity?.id &&
+            activity.kind === "reasoning.updated" &&
+            (activity.payload as { detail?: unknown }).detail ===
+              "First visible thought grows again",
+        ),
+      );
+      expect(grown.activities.filter((activity) => activity.id === firstActivity?.id)).toHaveLength(
+        1,
+      );
+
+      harness.emit({
+        ...baseEvent,
+        type: "item.completed",
+        eventId: asEventId(`evt-${provider}-streaming-reasoning-completed`),
+        payload: { itemType: "reasoning", status: "completed", title: "Reasoning" },
+      });
+
+      const completed = await waitForThread(harness.engine, (entry) =>
+        entry.activities.some(
+          (activity) =>
+            activity.id === firstActivity?.id && activity.kind === "reasoning.completed",
+        ),
+      );
+      expect(completed.activities.filter((activity) => activity.id === firstActivity?.id)).toEqual([
+        expect.objectContaining({
+          kind: "reasoning.completed",
+          payload: expect.objectContaining({
+            status: "completed",
+            detail: "First visible thought grows again",
+          }),
+        }),
+      ]);
+    },
+  );
+
+  it("coalesces a 100-delta burst instead of writing one activity per token", async () => {
+    const observed: OrchestrationCommand[] = [];
+    const harness = await createHarness({
+      dispatchFault: {
+        mode: "before-commit",
+        matches: () => false,
+        observes: (command) =>
+          command.type === "thread.activity.append" &&
+          command.activity.kind === "reasoning.updated",
+        observed,
+        attempts: [],
+        injected: false,
+      },
+    });
+    const createdAt = new Date().toISOString();
+    for (let index = 0; index < 100; index += 1) {
+      harness.emit({
+        type: "content.delta",
+        eventId: asEventId(`evt-reasoning-burst-${index}`),
+        provider: "codex",
+        createdAt,
+        threadId: asThreadId("thread-1"),
+        turnId: asTurnId("turn-reasoning-burst"),
+        itemId: asItemId("reasoning-burst"),
+        payload: { streamKind: "reasoning_summary_text", summaryIndex: 0, delta: "x" },
+      });
+    }
+
+    await waitForThread(harness.engine, (entry) =>
+      entry.activities.some(
+        (activity) =>
+          activity.kind === "reasoning.updated" &&
+          (activity.payload as { detail?: unknown }).detail === "x".repeat(100),
+      ),
+    );
+    expect(observed.length).toBeGreaterThanOrEqual(2);
+    expect(observed.length).toBeLessThanOrEqual(10);
+  });
+
+  it("streams Codex reasoning under one stable segment id and completes it in place", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
     const detail = `**${"Verify the protocol mapping ".repeat(12).trim()}**\n\n<!-- -->\n\n**Update the adapter**\n\n<!-- -->`;
@@ -2870,17 +3001,21 @@ describe("ProviderRuntimeIngestion", () => {
       },
     });
 
-    const stableActivityId = "provider-reasoning:thread-1:reasoning-1";
+    const stableActivityIdPrefix =
+      "provider-reasoning:thread-1:reasoning-1:turn:turn-reasoning:segment:";
     const thread = await waitForThread(harness.engine, (entry) =>
       entry.activities.some((activity: ProviderRuntimeTestActivity) => {
-        if (activity.id !== stableActivityId || typeof activity.payload !== "object") {
+        if (
+          !activity.id.startsWith(stableActivityIdPrefix) ||
+          typeof activity.payload !== "object"
+        ) {
           return false;
         }
         return (activity.payload as { status?: unknown }).status === "completed";
       }),
     );
-    const reasoningActivities = thread.activities.filter(
-      (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+    const reasoningActivities = thread.activities.filter((activity: ProviderRuntimeTestActivity) =>
+      activity.id.startsWith(stableActivityIdPrefix),
     );
 
     expect(reasoningActivities).toHaveLength(1);
@@ -2891,7 +3026,7 @@ describe("ProviderRuntimeIngestion", () => {
       payload: {
         status: "completed",
         detail,
-        data: { toolCallId: "reasoning-1" },
+        data: { toolCallId: expect.stringMatching(/^reasoning-1:turn:turn-reasoning:segment:/u) },
       },
     });
   });
@@ -2940,16 +3075,17 @@ describe("ProviderRuntimeIngestion", () => {
       },
     });
 
-    const stableActivityId = "provider-reasoning:thread-1:antigravity-reasoning-1";
+    const stableActivityIdPrefix =
+      "provider-reasoning:thread-1:antigravity-reasoning-1:turn:turn-antigravity-reasoning:segment:";
     const thread = await waitForThread(harness.engine, (entry) =>
-      entry.activities.some(
-        (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+      entry.activities.some((activity: ProviderRuntimeTestActivity) =>
+        activity.id.startsWith(stableActivityIdPrefix),
       ),
     );
 
     expect(
-      thread.activities.filter(
-        (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+      thread.activities.filter((activity: ProviderRuntimeTestActivity) =>
+        activity.id.startsWith(stableActivityIdPrefix),
       ),
     ).toEqual([
       expect.objectContaining({
@@ -2959,7 +3095,11 @@ describe("ProviderRuntimeIngestion", () => {
         payload: expect.objectContaining({
           status: "completed",
           detail,
-          data: { toolCallId: "antigravity-reasoning-1" },
+          data: {
+            toolCallId: expect.stringMatching(
+              /^antigravity-reasoning-1:turn:turn-antigravity-reasoning:segment:/u,
+            ),
+          },
         }),
       }),
     ]);
@@ -3017,14 +3157,15 @@ describe("ProviderRuntimeIngestion", () => {
       },
     });
 
-    const stableActivityId = "provider-reasoning:thread-1:reasoning-buffered-1";
+    const stableActivityIdPrefix =
+      "provider-reasoning:thread-1:reasoning-buffered-1:turn:turn-buffered-reasoning:segment:";
     const thread = await waitForThread(harness.engine, (entry) =>
-      entry.activities.some(
-        (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+      entry.activities.some((activity: ProviderRuntimeTestActivity) =>
+        activity.id.startsWith(stableActivityIdPrefix),
       ),
     );
-    const reasoningActivities = thread.activities.filter(
-      (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+    const reasoningActivities = thread.activities.filter((activity: ProviderRuntimeTestActivity) =>
+      activity.id.startsWith(stableActivityIdPrefix),
     );
 
     expect(reasoningActivities).toHaveLength(1);
@@ -3035,7 +3176,11 @@ describe("ProviderRuntimeIngestion", () => {
       payload: {
         status: "completed",
         detail: "**Inspect the protocol**\n\n<!-- -->\n\n**Update the adapter**\n\n<!-- -->",
-        data: { toolCallId: "reasoning-buffered-1" },
+        data: {
+          toolCallId: expect.stringMatching(
+            /^reasoning-buffered-1:turn:turn-buffered-reasoning:segment:/u,
+          ),
+        },
       },
     });
   });
@@ -3086,16 +3231,16 @@ describe("ProviderRuntimeIngestion", () => {
         },
       });
 
-      const stableActivityId = `provider-reasoning:thread-1:${itemId}`;
+      const stableActivityIdPrefix = `provider-reasoning:thread-1:${itemId}:turn:turn-${provider}-reasoning:segment:`;
       const thread = await waitForThread(harness.engine, (entry) =>
-        entry.activities.some(
-          (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+        entry.activities.some((activity: ProviderRuntimeTestActivity) =>
+          activity.id.startsWith(stableActivityIdPrefix),
         ),
       );
 
       expect(
-        thread.activities.filter(
-          (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+        thread.activities.filter((activity: ProviderRuntimeTestActivity) =>
+          activity.id.startsWith(stableActivityIdPrefix),
         ),
       ).toEqual([
         expect.objectContaining({
@@ -3105,7 +3250,11 @@ describe("ProviderRuntimeIngestion", () => {
           payload: expect.objectContaining({
             status: "completed",
             detail: "Inspect the runtime mapping",
-            data: { toolCallId: itemId },
+            data: {
+              toolCallId: expect.stringMatching(
+                new RegExp(`^${itemId}:turn:turn-${provider}-reasoning:segment:`),
+              ),
+            },
           }),
         }),
       ]);
@@ -3292,16 +3441,17 @@ describe("ProviderRuntimeIngestion", () => {
       payload: { state: "interrupted", reason: "provider aborted" },
     });
 
-    const stableActivityId = "provider-reasoning:thread-1:reasoning-aborted-1";
+    const stableActivityIdPrefix =
+      "provider-reasoning:thread-1:reasoning-aborted-1:turn:turn-aborted-reasoning:segment:";
     const thread = await waitForThread(harness.engine, (entry) =>
-      entry.activities.some(
-        (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+      entry.activities.some((activity: ProviderRuntimeTestActivity) =>
+        activity.id.startsWith(stableActivityIdPrefix),
       ),
     );
 
     expect(
-      thread.activities.find(
-        (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+      thread.activities.find((activity: ProviderRuntimeTestActivity) =>
+        activity.id.startsWith(stableActivityIdPrefix),
       ),
     ).toMatchObject({
       tone: "error",
@@ -3358,21 +3508,23 @@ describe("ProviderRuntimeIngestion", () => {
       payload: { state: "completed" },
     });
 
-    const stableActivityId = `provider-reasoning:${threadId}:${itemId}`;
+    const stableActivityIdPrefix = `provider-reasoning:${threadId}:${itemId}:turn:${turnId}:segment:`;
     const thread = await waitForThread(harness.engine, (entry) =>
-      entry.activities.some(
-        (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+      entry.activities.some((activity: ProviderRuntimeTestActivity) =>
+        activity.id.startsWith(stableActivityIdPrefix),
       ),
     );
     expect(
-      thread.activities.find(
-        (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+      thread.activities.find((activity: ProviderRuntimeTestActivity) =>
+        activity.id.startsWith(stableActivityIdPrefix),
       ),
     ).toMatchObject({
       payload: {
         detail: "Visible provider reasoning",
         data: {
-          toolCallId: itemId,
+          toolCallId: expect.stringMatching(
+            /^reasoning-too-many-parts:turn:turn-reasoning-too-many-parts:segment:/u,
+          ),
           reasoningDetailTruncated: true,
         },
       },
@@ -3407,16 +3559,17 @@ describe("ProviderRuntimeIngestion", () => {
       payload: { state: "failed", errorMessage: "turn failed" },
     });
 
-    const stableActivityId = "provider-reasoning:thread-1:reasoning-failed-turn-1";
+    const stableActivityIdPrefix =
+      "provider-reasoning:thread-1:reasoning-failed-turn-1:turn:turn-failed-reasoning:segment:";
     const thread = await waitForThread(harness.engine, (entry) =>
-      entry.activities.some(
-        (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+      entry.activities.some((activity: ProviderRuntimeTestActivity) =>
+        activity.id.startsWith(stableActivityIdPrefix),
       ),
     );
 
     expect(
-      thread.activities.find(
-        (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+      thread.activities.find((activity: ProviderRuntimeTestActivity) =>
+        activity.id.startsWith(stableActivityIdPrefix),
       ),
     ).toMatchObject({
       summary: "Reasoning trace",
@@ -3455,16 +3608,17 @@ describe("ProviderRuntimeIngestion", () => {
       payload: { message: "app-server exited" },
     });
 
-    const stableActivityId = "provider-reasoning:thread-1:reasoning-errored-1";
+    const stableActivityIdPrefix =
+      "provider-reasoning:thread-1:reasoning-errored-1:turn:turn-errored-reasoning:segment:";
     const thread = await waitForThread(harness.engine, (entry) =>
-      entry.activities.some(
-        (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+      entry.activities.some((activity: ProviderRuntimeTestActivity) =>
+        activity.id.startsWith(stableActivityIdPrefix),
       ),
     );
 
     expect(
-      thread.activities.find(
-        (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+      thread.activities.find((activity: ProviderRuntimeTestActivity) =>
+        activity.id.startsWith(stableActivityIdPrefix),
       ),
     ).toMatchObject({
       summary: "Reasoning trace",

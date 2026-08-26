@@ -107,6 +107,8 @@ Provider 切换沿用 stop-first replacement：当前 operation 结束或停止�
 
 ProviderService 在任何当前 adapter 可发出 runtime event 之前，必须先持久化带 lifecycle generation 的 `starting` binding；journal row 只能投影到同 Thread、同 Provider、同 generation 的 durable binding。无 binding 的 row 一律只推进消费 cursor 并跳过 Product 投影；generation-less row 只能兼容仍明确标为 `legacy` 的同 Provider binding，不能进入 UUID generation，也不能由 Ingestion 猜测或补写为当前 generation。该兼容只处理既有诊断尾部，不授权 adapter、测试注入或新调用方省略 generation。
 
+Codex、Antigravity、OmniMind 与 Pi 已公开可读的 reasoning 文本继续由各 adapter 以 canonical `content.delta` 发出；adapter 不持有 Timeline、节流或展示 lifecycle。唯一 `ProviderRuntimeIngestion` owner 在收到每个 segment 的首个非空公开 delta 时立即投影 `reasoning.updated { status: inProgress, detail }`，后续按 100ms leading+trailing 窗口有界合并。Activity ID 由 Thread、Turn、source item 与首个 runtime sequence 共同稳定确定；所有快照保留首序列的因果位置，重复快照由同一 fingerprint owner 去重。trailing token 带 generation 重新进入同一串行 ingestion worker；Tool、Assistant、item/turn/session terminal 或 runtime error 立即使当前 generation 失效，因此迟到 timer 只能 no-op。边界以同一 ID 原位投影 `reasoning.completed`；长生命周期 item 的下一段获得新 segment ID。abort/error 保留已公开正文并以 `failed` terminal 完成；空白、隐藏、加密、不支持的 reasoning 不投影。24-part 顺序、8,000 字符上限、结构化截断事实、runtime sequence、journal replay 幂等与迟到 completion 抑制继续由该 owner 统一承担，不新增 Provider 私有协议、第二 Timeline/store 或数据库迁移。
+
 ## OmniMind Agent 与 stock Pi
 
 OmniMind Agent runtime 拥有：
