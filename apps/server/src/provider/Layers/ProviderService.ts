@@ -3002,6 +3002,25 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               TurnId.makeUnsafe(providerTurnId),
               input.providerThreadId,
             );
+            if (input.providerThreadId === undefined) {
+              // User interruption is itself the authoritative terminal fact.
+              // Persist and publish it while the exact turn still owns the
+              // binding; the provider-native terminal may arrive only after
+              // the interrupted runtime has been retired and must then be a
+              // harmless duplicate rather than the sole settlement path.
+              yield* processRuntimeEvent({
+                type: "turn.aborted",
+                eventId: EventId.makeUnsafe(`provider-interrupt:${randomUUID()}`),
+                provider: routed.adapter.provider,
+                threadId: input.threadId,
+                turnId: TurnId.makeUnsafe(providerTurnId),
+                ...(bindingGeneration === undefined
+                  ? {}
+                  : { lifecycleGeneration: bindingGeneration }),
+                createdAt: new Date().toISOString(),
+                payload: { reason: "Turn interrupted by user." },
+              });
+            }
             if (targetedInterruptKey !== undefined) {
               rememberTargetedChildInterrupt(targetedInterruptKey, {
                 lifecycleGeneration: bindingGeneration,

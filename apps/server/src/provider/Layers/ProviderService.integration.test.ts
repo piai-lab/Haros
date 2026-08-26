@@ -584,6 +584,43 @@ const bindingRetryRouting = makeProviderServiceLayer({
 });
 
 staleSettlementRouting.layer("ProviderServiceLive exact stale-terminal settlement", (it) => {
+  it.effect("settles the exact parent turn before retiring an interrupted runtime", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const threadId = asThreadId("thread-interrupt-terminal-before-retirement");
+      staleSettlementPersistedEvents.clear();
+
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      const turn = yield* provider.sendTurn({
+        threadId,
+        input: "stream a partial answer",
+        attachments: [],
+      });
+
+      const defaultStop = staleSettlementRouting.codex.stopSession.getMockImplementation();
+      assert.isDefined(defaultStop);
+      staleSettlementRouting.codex.stopSession.mockImplementationOnce((stoppedThreadId) =>
+        Effect.sync(() => {
+          const terminal = Array.from(staleSettlementPersistedEvents.values()).find(
+            (event) =>
+              event.type === "turn.aborted" &&
+              event.threadId === threadId &&
+              event.turnId === turn.turnId,
+          );
+          assert.isDefined(terminal);
+          assert.deepEqual(terminal.payload, { reason: "Turn interrupted by user." });
+        }).pipe(Effect.andThen(defaultStop!(stoppedThreadId))),
+      );
+
+      yield* provider.interruptTurn({ threadId });
+      assert.equal(staleSettlementRouting.codex.stopSession.mock.calls.at(-1)?.[0], threadId);
+    }),
+  );
+
   it.effect("keeps current stream deltas on the binding-free fast path", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;
@@ -2191,14 +2228,34 @@ routing.layer("ProviderServiceLive routing", (it) => {
       const piSendCount = routing.pi.sendTurn.mock.calls.length;
       const antigravitySendCount = routing.antigravity.sendTurn.mock.calls.length;
 
-      yield* provider.startSession(piThreadId, { provider: "pi", threadId: piThreadId, runtimeMode: "full-access" });
-      yield* provider.startSession(antigravityThreadId, { provider: "antigravity", threadId: antigravityThreadId, runtimeMode: "full-access" });
-      yield* provider.startSession(omniMindThreadId, { provider: "omnimind", threadId: omniMindThreadId, runtimeMode: "full-access" });
+      yield* provider.startSession(piThreadId, {
+        provider: "pi",
+        threadId: piThreadId,
+        runtimeMode: "full-access",
+      });
+      yield* provider.startSession(antigravityThreadId, {
+        provider: "antigravity",
+        threadId: antigravityThreadId,
+        runtimeMode: "full-access",
+      });
+      yield* provider.startSession(omniMindThreadId, {
+        provider: "omnimind",
+        threadId: omniMindThreadId,
+        runtimeMode: "full-access",
+      });
 
-      for (const [threadId, expectedProvider] of [[piThreadId, "pi"], [antigravityThreadId, "antigravity"]] as const) {
-        const result = yield* Effect.result(provider.sendTurn({
-          threadId, input: "plan this", attachments: [], interactionMode: "plan",
-        }));
+      for (const [threadId, expectedProvider] of [
+        [piThreadId, "pi"],
+        [antigravityThreadId, "antigravity"],
+      ] as const) {
+        const result = yield* Effect.result(
+          provider.sendTurn({
+            threadId,
+            input: "plan this",
+            attachments: [],
+            interactionMode: "plan",
+          }),
+        );
         assert.equal(result._tag, "Failure");
         if (result._tag === "Failure" && result.failure._tag === "ProviderValidationError") {
           assert.match(result.failure.issue, new RegExp(`Provider '${expectedProvider}'`));
@@ -2207,8 +2264,18 @@ routing.layer("ProviderServiceLive routing", (it) => {
       assert.equal(routing.pi.sendTurn.mock.calls.length, piSendCount);
       assert.equal(routing.antigravity.sendTurn.mock.calls.length, antigravitySendCount);
 
-      yield* provider.sendTurn({ threadId: piThreadId, input: "debug this", attachments: [], interactionMode: "debug" });
-      yield* provider.sendTurn({ threadId: omniMindThreadId, input: "plan this", attachments: [], interactionMode: "plan" });
+      yield* provider.sendTurn({
+        threadId: piThreadId,
+        input: "debug this",
+        attachments: [],
+        interactionMode: "debug",
+      });
+      yield* provider.sendTurn({
+        threadId: omniMindThreadId,
+        input: "plan this",
+        attachments: [],
+        interactionMode: "plan",
+      });
       assert.equal(routing.pi.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "debug");
       assert.equal(routing.omnimind.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "plan");
       yield* provider.stopSession({ threadId: piThreadId });
