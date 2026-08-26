@@ -46,6 +46,10 @@ import { ProviderService } from "../../provider/Services/ProviderService.ts";
 import { ProviderSessionDirectory } from "../../provider/Services/ProviderSessionDirectory.ts";
 import { activeThreadGoal } from "../../provider/goalMode.ts";
 import {
+  isProviderInterruptTurnSettlement,
+  PROVIDER_INTERRUPT_RUNTIME_FENCED_EVENT,
+} from "../../provider/providerInterruptSettlement.ts";
+import {
   classifyTerminalTurnApplicability,
   isStartedTurnApplicable,
 } from "../../provider/terminalTurnApplicability.ts";
@@ -2180,14 +2184,27 @@ const make = Effect.gen(function* () {
       );
       const bindingRuntimePayload =
         binding === undefined ? undefined : asObject(binding.runtimePayload);
+      // ProviderService durably publishes the user's exact parent-turn abort
+      // before retiring that runtime. The journal consumer can observe it only
+      // after the binding has advanced, so admit this one service-owned
+      // terminal namespace while the replacement binding still proves the
+      // matching interrupt fence. Every provider-native stale row remains
+      // generation-rejected.
+      const acceptsRetiredInterruptSettlement =
+        binding !== undefined &&
+        binding.provider === event.provider &&
+        bindingRuntimePayload?.lastRuntimeEvent === PROVIDER_INTERRUPT_RUNTIME_FENCED_EVENT &&
+        isProviderInterruptTurnSettlement(event);
       if (
         binding === undefined ||
         (binding !== undefined &&
           (bindingRuntimePayload?.lastRuntimeEvent === PROVIDER_REPLACEMENT_RESTORE_FAILED_EVENT ||
             binding.provider !== event.provider ||
-            (event.lifecycleGeneration === undefined && binding.lifecycleGeneration !== "legacy") ||
-            (event.lifecycleGeneration !== undefined &&
-              binding.lifecycleGeneration !== event.lifecycleGeneration)))
+            (!acceptsRetiredInterruptSettlement &&
+              ((event.lifecycleGeneration === undefined &&
+                binding.lifecycleGeneration !== "legacy") ||
+                (event.lifecycleGeneration !== undefined &&
+                  binding.lifecycleGeneration !== event.lifecycleGeneration)))))
       ) {
         yield* Effect.logWarning("provider.runtime.stale_binding_event_projection_skipped", {
           eventId: event.eventId,

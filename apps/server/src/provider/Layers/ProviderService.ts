@@ -72,6 +72,11 @@ import { makeProviderLifecycleCoordinator } from "../providerLifecycleCoordinato
 import { makeKeyedLock } from "../keyedLock.ts";
 import { carryProviderAttachmentPaths } from "../providerAttachmentPaths.ts";
 import {
+  PROVIDER_INTERRUPT_EVENT_ID_PREFIX,
+  PROVIDER_INTERRUPT_REASON,
+  PROVIDER_INTERRUPT_RUNTIME_FENCED_EVENT,
+} from "../providerInterruptSettlement.ts";
+import {
   makeProviderRuntimeEventPumpHealthRegistry,
   runProviderRuntimeEventPump,
 } from "../providerRuntimeEventPump.ts";
@@ -3010,7 +3015,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               // harmless duplicate rather than the sole settlement path.
               yield* processRuntimeEvent({
                 type: "turn.aborted",
-                eventId: EventId.makeUnsafe(`provider-interrupt:${randomUUID()}`),
+                eventId: EventId.makeUnsafe(`${PROVIDER_INTERRUPT_EVENT_ID_PREFIX}${randomUUID()}`),
                 provider: routed.adapter.provider,
                 threadId: input.threadId,
                 turnId: TurnId.makeUnsafe(providerTurnId),
@@ -3018,7 +3023,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                   ? {}
                   : { lifecycleGeneration: bindingGeneration }),
                 createdAt: new Date().toISOString(),
-                payload: { reason: "Turn interrupted by user." },
+                payload: { reason: PROVIDER_INTERRUPT_REASON },
               });
             }
             if (targetedInterruptKey !== undefined) {
@@ -3400,7 +3405,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                   activeTurnId: null,
                   lastRuntimeEvent:
                     options?.requireAgentGatewayCredentialRotation === true
-                      ? "provider.interruptRuntimeFenced"
+                      ? PROVIDER_INTERRUPT_RUNTIME_FENCED_EVENT
                       : "provider.stopRuntimeSession",
                   lastRuntimeEventAt: new Date().toISOString(),
                   lifecycleGeneration: lease.generation,

@@ -40,6 +40,11 @@ import {
 } from "../../provider/Services/ProviderService.ts";
 import { ProviderSessionDirectoryLive } from "../../provider/Layers/ProviderSessionDirectory.ts";
 import { ProviderSessionDirectory } from "../../provider/Services/ProviderSessionDirectory.ts";
+import {
+  PROVIDER_INTERRUPT_EVENT_ID_PREFIX,
+  PROVIDER_INTERRUPT_REASON,
+  PROVIDER_INTERRUPT_RUNTIME_FENCED_EVENT,
+} from "../../provider/providerInterruptSettlement.ts";
 import { OrchestrationEngineLive } from "./OrchestrationEngine.ts";
 import { OrchestrationProjectionPipelineLive } from "./ProjectionPipeline.ts";
 import { OrchestrationProjectionSnapshotQueryLive } from "./ProjectionSnapshotQuery.ts";
@@ -2912,6 +2917,96 @@ describe("ProviderRuntimeIngestion", () => {
       ]);
     },
   );
+
+  it("settles public reasoning after an authoritative interrupt retires its runtime generation", async () => {
+    const harness = await createHarness();
+    const threadId = asThreadId("thread-1");
+    const turnId = asTurnId("turn-interrupted-reasoning");
+    const itemId = asItemId("interrupted-reasoning");
+    const createdAt = new Date().toISOString();
+    const interruptedGeneration = "generation-before-user-interrupt";
+
+    await Effect.runPromise(
+      harness.providerSessionDirectory.replace({
+        threadId,
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: interruptedGeneration,
+        runtimePayload: { activeTurnId: turnId },
+      }),
+    );
+    harness.emit({
+      type: "turn.started",
+      eventId: asEventId("evt-interrupted-reasoning-turn-started"),
+      provider: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      lifecycleGeneration: interruptedGeneration,
+      payload: {},
+    });
+    harness.emit({
+      type: "content.delta",
+      eventId: asEventId("evt-interrupted-reasoning-delta"),
+      provider: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      itemId,
+      lifecycleGeneration: interruptedGeneration,
+      payload: {
+        streamKind: "reasoning_summary_text",
+        summaryIndex: 0,
+        delta: "Public partial reasoning before cancellation",
+      },
+    });
+
+    const live = await waitForThread(harness.engine, (thread) =>
+      thread.activities.some((activity) => activity.kind === "reasoning.updated"),
+    );
+    const liveReasoning = live.activities.find((activity) => activity.kind === "reasoning.updated");
+    expect(liveReasoning).toBeDefined();
+
+    await Effect.runPromise(
+      harness.providerSessionDirectory.upsert({
+        threadId,
+        provider: "codex",
+        status: "stopped",
+        lifecycleGeneration: "generation-after-user-interrupt",
+        runtimePayload: {
+          activeTurnId: null,
+          lastRuntimeEvent: PROVIDER_INTERRUPT_RUNTIME_FENCED_EVENT,
+        },
+      }),
+    );
+    harness.emit({
+      type: "turn.aborted",
+      eventId: asEventId(`${PROVIDER_INTERRUPT_EVENT_ID_PREFIX}fixture`),
+      provider: "codex",
+      createdAt: new Date().toISOString(),
+      threadId,
+      turnId,
+      lifecycleGeneration: interruptedGeneration,
+      payload: { reason: PROVIDER_INTERRUPT_REASON },
+    });
+
+    const settled = await waitForThread(harness.engine, (thread) =>
+      thread.activities.some(
+        (activity) => activity.id === liveReasoning?.id && activity.kind === "reasoning.completed",
+      ),
+    );
+    expect(settled.session?.status).toBe("interrupted");
+    expect(settled.activities.filter((activity) => activity.id === liveReasoning?.id)).toEqual([
+      expect.objectContaining({
+        kind: "reasoning.completed",
+        tone: "error",
+        payload: expect.objectContaining({
+          status: "failed",
+          detail: "Public partial reasoning before cancellation",
+        }),
+      }),
+    ]);
+  });
 
   it("coalesces a 100-delta burst instead of writing one activity per token", async () => {
     const observed: OrchestrationCommand[] = [];

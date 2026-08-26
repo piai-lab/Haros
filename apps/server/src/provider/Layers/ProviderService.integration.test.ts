@@ -72,6 +72,7 @@ import {
   AGENT_GATEWAY_CREDENTIAL_ROTATION_REQUIRED,
   AGENT_GATEWAY_TURN_AUTHORITY_RETIRED,
 } from "../../agentGateway/sessionLease.ts";
+import { PROVIDER_INTERRUPT_REASON } from "../providerInterruptSettlement.ts";
 
 const asRequestId = (value: string): ApprovalRequestId => ApprovalRequestId.makeUnsafe(value);
 const asEventId = (value: string): EventId => EventId.makeUnsafe(value);
@@ -612,7 +613,7 @@ staleSettlementRouting.layer("ProviderServiceLive exact stale-terminal settlemen
               event.turnId === turn.turnId,
           );
           assert.isDefined(terminal);
-          assert.deepEqual(terminal.payload, { reason: "Turn interrupted by user." });
+          assert.deepEqual(terminal.payload, { reason: PROVIDER_INTERRUPT_REASON });
         }).pipe(Effect.andThen(defaultStop!(stoppedThreadId))),
       );
 
