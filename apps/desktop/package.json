@@ -11,6 +11,8 @@
     "start": "bun run scripts/start-electron.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
+    "test:unit": "vitest run --passWithNoTests",
+    "test:related": "vitest related --passWithNoTests",
     "smoke-test": "node scripts/smoke-test.mjs"
   },
   "dependencies": {

@@ -26,6 +26,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.types.json",
     "test": "node --test --test-concurrency=4",
+    "test:unit": "node --test --test-concurrency=4",
+    "test:related": "node --test --test-concurrency=4",
     "typecheck": "tsc && tsc -p tsconfig.types.json",
     "audit:runtime": "npm audit --omit=dev --omit=peer"
   },

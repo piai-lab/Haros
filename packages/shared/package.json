@@ -312,7 +312,9 @@
   "scripts": {
     "prepare": "effect-language-service patch",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:related": "vitest related --passWithNoTests"
   },
   "dependencies": {
     "@omnimind/contracts": "workspace:*",

@@ -1,8 +1,17 @@
 import { spawn } from "node:child_process";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const mode = process.argv[2];
-const paths = process.argv.slice(3);
+const webRoot = fileURLToPath(new URL("..", import.meta.url));
+const repoRoot = fileURLToPath(new URL("../../..", import.meta.url));
+const paths = process.argv
+  .slice(3)
+  .map((input) =>
+    path.isAbsolute(input) || !input.startsWith("apps/web/")
+      ? input
+      : path.resolve(repoRoot, input),
+  );
 const vitestBin = fileURLToPath(
   new URL("../../../node_modules/vitest/vitest.mjs", import.meta.url),
 );
@@ -19,7 +28,7 @@ if ((mode !== "focused" && mode !== "related") || paths.length === 0) {
 const runVitest = (args) =>
   new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [vitestBin, ...args], {
-      cwd: fileURLToPath(new URL("..", import.meta.url)),
+      cwd: webRoot,
       stdio: "inherit",
     });
     child.once("error", reject);

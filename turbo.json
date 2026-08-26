@@ -36,11 +36,58 @@
     "typecheck": {
       "dependsOn": ["^typecheck"],
       "outputs": [],
-      "cache": false
+      "outputLogs": "errors-only",
+      "cache": true
     },
     "test": {
-      "dependsOn": ["^build"],
       "cache": false,
+      "outputLogs": "errors-only",
+      "outputs": []
+    },
+    "test:unit": {
+      "dependsOn": ["^test:unit"],
+      "cache": true,
+      "outputLogs": "errors-only",
+      "outputs": []
+    },
+    "test:integration": {
+      "cache": false,
+      "outputLogs": "errors-only",
+      "outputs": []
+    },
+    "test:browser:stable": {
+      "cache": false,
+      "outputLogs": "errors-only",
+      "outputs": []
+    },
+    "test:browser:geometry": {
+      "cache": false,
+      "outputLogs": "errors-only",
+      "outputs": []
+    },
+    "@omnimind/server#test": {
+      "dependsOn": ["@omnimind/om-ask#build"],
+      "cache": false,
+      "outputLogs": "errors-only",
+      "outputs": []
+    },
+    "@omnimind/server#test:unit": {
+      "dependsOn": ["@omnimind/om-ask#build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/apps/web/public/**",
+        "$TURBO_ROOT$/packages/contracts/src/**",
+        "$TURBO_ROOT$/packages/om-web-access/**",
+        "$TURBO_ROOT$/packages/shared/src/**"
+      ],
+      "cache": true,
+      "outputLogs": "errors-only",
+      "outputs": []
+    },
+    "@omnimind/server#test:integration": {
+      "dependsOn": ["@omnimind/om-ask#build"],
+      "cache": false,
+      "outputLogs": "errors-only",
       "outputs": []
     }
   }
