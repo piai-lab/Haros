@@ -1431,9 +1431,20 @@ export const makeGitManager = Effect.gen(function* () {
   // identical to the ones a client-side parse produced, so no surface changes what it displays.
   const readWorkingTreeDiffStats: GitManagerShape["readWorkingTreeDiffStats"] = Effect.fnUntraced(
     function* (input) {
-      const { patch } = yield* readWorkingTreeDiff(input);
-      const totals = summarizeUnifiedPatchTotals(patch);
-      return totals ?? { additions: 0, deletions: 0, fileCount: 0 };
+      return yield* gitCore.readDiffStats(input.cwd, input.scope ?? "workingTree").pipe(
+        Effect.catch(() =>
+          readWorkingTreeDiff(input).pipe(
+            Effect.map(
+              ({ patch }) =>
+                summarizeUnifiedPatchTotals(patch) ?? {
+                  additions: 0,
+                  deletions: 0,
+                  fileCount: 0,
+                },
+            ),
+          ),
+        ),
+      );
     },
   );
 

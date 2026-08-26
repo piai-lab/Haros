@@ -54,6 +54,7 @@ body:has([data-testid="first-run-readiness-dialog"]) [data-slot="dialog-backdrop
 
 @theme inline {
   --animate-skeleton: skeleton 2s -1s infinite linear;
+  --animate-spin-stepped: spin-stepped 1.3s steps(24, end) infinite;
   --font-sans: var(--font-ui-family);
   --font-display: var(--font-display-family);
   --font-mono: var(--font-mono-family);
@@ -120,6 +121,16 @@ body:has([data-testid="first-run-readiness-dialog"]) [data-slot="dialog-backdrop
       background-position: -200% 0;
     }
   }
+  @keyframes spin-stepped {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
+
+[data-slot="sidebar-container"][aria-hidden="true"] .animate-spin-stepped,
+[data-slot="sidebar"][aria-hidden="true"] .animate-spin-stepped {
+  animation-play-state: paused;
 }
 
 @layer base {
@@ -3258,15 +3269,15 @@ diffs-container {
 
 /* Fixed width — only the composer model/effort/provider pickers opt in. */
 .composer-picker-menu-fixed.composer-picker-menu--normal {
-  width: 13rem;
-  min-width: 13rem;
-  max-width: min(13rem, 92vw);
+  width: 14.5rem;
+  min-width: min(14.5rem, 92vw);
+  max-width: min(14.5rem, 92vw);
 }
 
 .composer-picker-menu-fixed.composer-picker-menu--small {
-  width: 10rem;
-  min-width: 10rem;
-  max-width: min(10rem, 92vw);
+  width: 11.25rem;
+  min-width: min(11.25rem, 92vw);
+  max-width: min(11.25rem, 92vw);
 }
 
 /* Size-aware option rows inside composer picker shells. */

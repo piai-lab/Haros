@@ -4,6 +4,7 @@ import {
   normalizeModelSlug,
 } from "@omnimind/shared/model";
 import {
+  MODEL_OPTIONS_BY_PROVIDER,
   type AntigravityModelOptions,
   type AntigravityModelSelection,
   type ClaudeModelOptions,
@@ -110,6 +111,20 @@ function normalizeDynamicModelSlug(provider: ProviderKind, slug: string): string
   return normalizeModelSlug(slug, provider) ?? slug;
 }
 
+const CLAUDE_CATALOG_RANK_BY_SLUG: ReadonlyMap<string, number> = new Map(
+  MODEL_OPTIONS_BY_PROVIDER.claudeAgent.map((model, index) => [model.slug as string, index]),
+);
+
+function orderClaudeModelOptions<T extends ProviderModelOption>(
+  options: ReadonlyArray<T>,
+): ReadonlyArray<T> {
+  return options.toSorted(
+    (left, right) =>
+      (CLAUDE_CATALOG_RANK_BY_SLUG.get(left.slug) ?? -1) -
+      (CLAUDE_CATALOG_RANK_BY_SLUG.get(right.slug) ?? -1),
+  );
+}
+
 /**
  * Folds runtime-discovered models into the static option list for a provider:
  * discovered models lead (with display names recovered from the static list when
@@ -200,12 +215,14 @@ export function mergeDynamicModelOptions(input: {
       ? []
       : staticBuiltInModels.filter((model) => !dynamicNormalizedSlugs.has(model.slug));
 
-  const orderedDynamicOptions =
-    input.provider === "claudeAgent"
-      ? normalizedDynamicOptions.toReversed()
-      : normalizedDynamicOptions;
+  if (input.provider === "claudeAgent") {
+    return [
+      ...orderClaudeModelOptions([...normalizedDynamicOptions, ...missingStaticBuiltIns]),
+      ...customOnlyModels,
+    ];
+  }
 
-  return [...orderedDynamicOptions, ...missingStaticBuiltIns, ...customOnlyModels];
+  return [...normalizedDynamicOptions, ...missingStaticBuiltIns, ...customOnlyModels];
 }
 
 /** Returns a compact label for provider descriptions that begin with an `Nx` cost multiplier. */
@@ -315,13 +332,22 @@ export function buildNextProviderOptions(
   patch: Record<string, unknown>,
 ): ProviderOptions {
   if (provider === "codex") {
-    return { ...(modelOptions as CodexModelOptions | undefined), ...patch } as CodexModelOptions;
+    return {
+      ...(modelOptions as CodexModelOptions | undefined),
+      ...patch,
+    } as CodexModelOptions;
   }
   if (provider === "claudeAgent") {
-    return { ...(modelOptions as ClaudeModelOptions | undefined), ...patch } as ClaudeModelOptions;
+    return {
+      ...(modelOptions as ClaudeModelOptions | undefined),
+      ...patch,
+    } as ClaudeModelOptions;
   }
   if (provider === "cursor") {
-    return { ...(modelOptions as CursorModelOptions | undefined), ...patch } as CursorModelOptions;
+    return {
+      ...(modelOptions as CursorModelOptions | undefined),
+      ...patch,
+    } as CursorModelOptions;
   }
   if (provider === "antigravity") {
     return {

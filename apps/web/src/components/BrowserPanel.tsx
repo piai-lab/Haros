@@ -57,6 +57,8 @@ import { useComposerDraftStore, type BrowserAnnotationDraft } from "../composerD
 import { anchoredToastManager } from "./ui/toast";
 import { prepareComposerImageFromBrowserScreenshot } from "../lib/browserPromptContext";
 import {
+  BROWSER_CHROME_CONTROL_CLASS_NAME,
+  BROWSER_CHROME_CONTROL_FILLED_CLASS_NAME,
   browserAddressDisplayValue,
   browserWebviewInitialUrl,
   buildBrowserAddressSuggestions,
@@ -69,6 +71,7 @@ import {
   type BrowserAnnotationActionErrorKind,
   type BrowserAddressSuggestion,
 } from "./BrowserPanel.logic";
+import { BrowserTabStrip } from "./BrowserTabStrip";
 import { DiffPanelLoadingState, DiffPanelShell, type DiffPanelMode } from "./DiffPanelShell";
 import {
   useBrowserAnnotations,
@@ -97,12 +100,6 @@ const BROWSER_WEBVIEW_PARTITION = "persist:omnimind-browser";
 const BROWSER_PERF_SAMPLE_INTERVAL_MS = 5_000;
 const OMNIMIND_BROWSER_LABEL = "OmniMind browser";
 const browserPanelHideScheduler = createBrowserPanelHideScheduler();
-// The address field and tab pills share one chrome-control surface so the whole row reads
-// as a single cohesive control: matching height, radius, border width, and type scale.
-const BROWSER_CHROME_CONTROL_CLASS_NAME = "h-8 rounded-lg border text-xs";
-// The address field's filled look, reused by the active tab so the selected tab visually
-// matches the search input (same border tone + faint fill).
-const BROWSER_CHROME_CONTROL_FILLED_CLASS_NAME = "border-border bg-background/70";
 const BROWSER_ACTION_MENU_PANEL_CLASS_NAME = "w-52 min-w-52";
 const BROWSER_ACTION_MENU_ITEM_CLASS_NAME =
   "text-[var(--color-text-foreground)] data-highlighted:text-[var(--color-text-foreground)]";
@@ -218,13 +215,6 @@ const VIEWPORT_TRANSITION_PROPERTIES = new Set([
   "inset-block-start",
   "inset-block-end",
 ]);
-function closeButtonClassName(isActive: boolean) {
-  return cn(
-    "ml-1 size-5 shrink-0 rounded-sm p-0 text-muted-foreground/70 hover:bg-background/80 hover:text-foreground",
-    isActive ? "hover:bg-background" : "hover:bg-card",
-  );
-}
-
 function formatBrowserActionError(error: unknown, fallback: string): string | null {
   if (!(error instanceof Error)) {
     return fallback;
@@ -582,7 +572,6 @@ export function BrowserPanel({
     (store) => store.draftsByThreadId[threadId]?.assistantSelections.length ?? 0,
   );
   const addressInputRef = useRef<HTMLInputElement>(null);
-  const browserTabsBarRef = useRef<HTMLDivElement>(null);
   const browserViewportRef = useRef<HTMLDivElement>(null);
   const browserWebviewRef = useRef<BrowserWebviewElement | null>(null);
   const browserWebviewTabIdRef = useRef<string | null>(null);
@@ -621,6 +610,7 @@ export function BrowserPanel({
   });
   const [addressValue, setAddressValue] = useState("");
   const [isAddressFocused, setIsAddressFocused] = useState(false);
+  const [addressSuggestionsSuppressed, setAddressSuggestionsSuppressed] = useState(false);
   const [workspaceReady, setWorkspaceReady] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [browserRendererGeneration, setBrowserRendererGeneration] = useState(0);
@@ -696,6 +686,7 @@ export function BrowserPanel({
     !activeTabInternalOnly &&
     isLiveRuntime &&
     isAddressFocused &&
+    !addressSuggestionsSuppressed &&
     browserAddressSuggestions.length > 0 &&
     runtimeReady;
   const annotationMethods = api?.browser.annotations;
@@ -1131,7 +1122,12 @@ export function BrowserPanel({
             // pixels measured above while the shell sits at 100% zoom. Convert, or a
             // zoomed shell leaves the browser surface sized 1/zoom off its DOM slot.
             return resolveDesktopDipRectFromCssRect(
-              { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
+              {
+                x: rect.left,
+                y: rect.top,
+                width: rect.width,
+                height: rect.height,
+              },
               readDesktopZoomFactor(),
             );
           })();
@@ -1301,6 +1297,17 @@ export function BrowserPanel({
     upsertThreadState,
   ]);
 
+  const onSelectTab = useCallback(
+    (tabId: string): Promise<ThreadBrowserState | null> => {
+      if (!ensureLiveRuntime() || !api) return Promise.resolve(null);
+      return runBrowserAction(() => api.browser.selectTab({ threadId, tabId })).then((state) => {
+        if (state) upsertThreadState(state);
+        return state;
+      });
+    },
+    [api, ensureLiveRuntime, runBrowserAction, threadId, upsertThreadState],
+  );
+
   const onChooseSuggestion = useCallback(
     (suggestion: BrowserAddressSuggestion) => {
       if (!api) {
@@ -1316,10 +1323,7 @@ export function BrowserPanel({
 
       const tabId = suggestion.tabId;
       if (suggestion.kind === "tab" && typeof tabId === "string") {
-        void runBrowserAction(() => api.browser.selectTab({ threadId, tabId })).then((state) => {
-          if (state) {
-            upsertThreadState(state);
-          }
+        void onSelectTab(tabId).then(() => {
           window.requestAnimationFrame(() => {
             addressInputRef.current?.focus();
             addressInputRef.current?.select();
@@ -1344,7 +1348,7 @@ export function BrowserPanel({
         }
       });
     },
-    [activeTab, api, ensureLiveRuntime, runBrowserAction, threadId, upsertThreadState],
+    [activeTab, api, ensureLiveRuntime, onSelectTab, runBrowserAction, threadId, upsertThreadState],
   );
 
   const onOpenLocalServer = useCallback(
@@ -1379,22 +1383,20 @@ export function BrowserPanel({
   );
 
   const onCreateTab = useCallback(() => {
-    if (!ensureLiveRuntime()) {
-      return;
-    }
     if (!api) {
       return;
     }
+    if (!isLiveRuntime) requestLiveRuntime();
     void runBrowserAction(() => api.browser.newTab({ threadId, activate: true })).then((state) => {
-      if (state) {
-        upsertThreadState(state);
-      }
+      if (!state) return;
+      upsertThreadState(state);
+      setAddressSuggestionsSuppressed(true);
       window.requestAnimationFrame(() => {
         addressInputRef.current?.focus();
         addressInputRef.current?.select();
       });
     });
-  }, [api, ensureLiveRuntime, runBrowserAction, threadId, upsertThreadState]);
+  }, [api, isLiveRuntime, requestLiveRuntime, runBrowserAction, threadId, upsertThreadState]);
 
   const onCaptureScreenshot = useCallback(() => {
     if (!ensureLiveRuntime()) {
@@ -1407,7 +1409,11 @@ export function BrowserPanel({
     const attachmentCount =
       composerDraftImageCount + composerDraftFileCount + composerDraftAssistantSelectionCount;
     if (attachmentCount >= PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
-      setLocalError(t("browser.attachmentLimit", { count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS }));
+      setLocalError(
+        t("browser.attachmentLimit", {
+          count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+        }),
+      );
       return;
     }
 
@@ -1424,7 +1430,9 @@ export function BrowserPanel({
         );
         if (!inserted) {
           throw new Error(
-            t("browser.attachmentLimit", { count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS }),
+            t("browser.attachmentLimit", {
+              count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+            }),
           );
         }
         setLocalError(null);
@@ -1664,46 +1672,56 @@ export function BrowserPanel({
             {t("browser.internalWebSurface")}
           </div>
         ) : (
-        <form
-          className="min-w-0 flex-1 [-webkit-app-region:no-drag]"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onSubmitAddress();
-          }}
-        >
-          <Input
-            ref={addressInputRef}
-            value={addressValue}
-            onChange={(event) => {
-              if (!isLiveRuntime) {
-                requestLiveRuntime();
-              }
-              const nextValue = event.target.value;
-              isAddressEditingRef.current = true;
-              setAddressValue(nextValue);
-              if (activeTab) {
-                addressDraftsByTabIdRef.current.set(activeTab.id, nextValue);
-              }
+          <form
+            className="min-w-0 flex-1 [-webkit-app-region:no-drag]"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSubmitAddress();
             }}
-            onFocus={() => {
-              if (!isLiveRuntime) {
-                requestLiveRuntime();
-              }
-              isAddressEditingRef.current = true;
-              setIsAddressFocused(true);
-            }}
-            onBlur={() => {
-              isAddressEditingRef.current = false;
-              setIsAddressFocused(false);
-            }}
-            placeholder={t("browser.addressPlaceholder")}
-            className={cn(
-              "min-w-0 [-webkit-app-region:no-drag]",
-              BROWSER_CHROME_CONTROL_CLASS_NAME,
-              BROWSER_CHROME_CONTROL_FILLED_CLASS_NAME,
-            )}
-          />
-        </form>
+          >
+            <Input
+              ref={addressInputRef}
+              value={addressValue}
+              onChange={(event) => {
+                if (!isLiveRuntime) {
+                  requestLiveRuntime();
+                }
+                const nextValue = event.target.value;
+                isAddressEditingRef.current = true;
+                setAddressSuggestionsSuppressed(false);
+                setAddressValue(nextValue);
+                if (activeTab) {
+                  addressDraftsByTabIdRef.current.set(activeTab.id, nextValue);
+                }
+              }}
+              onFocus={() => {
+                if (!isLiveRuntime) {
+                  requestLiveRuntime();
+                }
+                isAddressEditingRef.current = true;
+                setIsAddressFocused(true);
+              }}
+              onBlur={() => {
+                isAddressEditingRef.current = false;
+                setIsAddressFocused(false);
+                setAddressSuggestionsSuppressed(false);
+              }}
+              onMouseDown={() => {
+                setAddressSuggestionsSuppressed(false);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                  setAddressSuggestionsSuppressed(false);
+                }
+              }}
+              placeholder={t("browser.addressPlaceholder")}
+              className={cn(
+                "min-w-0 [-webkit-app-region:no-drag]",
+                BROWSER_CHROME_CONTROL_CLASS_NAME,
+                BROWSER_CHROME_CONTROL_FILLED_CLASS_NAME,
+              )}
+            />
+          </form>
         )}
         {showBrowserAddressSuggestions ? (
           <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-lg border border-border bg-popover shadow-lg [-webkit-app-region:no-drag]">
@@ -1852,86 +1870,23 @@ export function BrowserPanel({
   return (
     <DiffPanelShell mode={mode} header={header}>
       <div className="flex min-h-0 flex-1 flex-col">
-        <div
-          ref={browserTabsBarRef}
-          className={cn(
-            "flex items-center gap-2 border-b border-border px-2 py-1.5",
-            // Extend the frameless window drag region across the tab strip's empty space so
-            // the panel is easy to grab; interactive children stay no-drag via global CSS.
-            isElectron && mode !== "sheet" && "drag-region",
-          )}
-        >
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
-            {threadBrowserState?.tabs.map((tab) => {
-              const isActive = tab.id === activeTab?.id;
-              const tabIsBlank = isBlankBrowserTabUrl(tab);
-              return (
-                <div
-                  key={tab.id}
-                  className={cn(
-                    "group flex min-w-0 max-w-[14rem] items-center px-2.5 text-left transition-colors",
-                    BROWSER_CHROME_CONTROL_CLASS_NAME,
-                    isActive
-                      ? cn(BROWSER_CHROME_CONTROL_FILLED_CLASS_NAME, "text-foreground")
-                      : "border-transparent text-muted-foreground hover:border-border/60 hover:bg-background/40 hover:text-foreground",
-                    tab.status === "suspended" && !tabIsBlank ? "opacity-75" : "",
-                  )}
-                >
-                  <span className="mr-2 flex size-4 shrink-0 items-center justify-center rounded-sm">
-                    {tab.faviconUrl ? (
-                      <img alt="" src={tab.faviconUrl} className="size-3 rounded-[2px]" />
-                    ) : (
-                      <GlobeIcon className="size-3 text-muted-foreground" />
-                    )}
-                  </span>
-                  <button
-                    type="button"
-                    className="min-w-0 flex-1 truncate text-left"
-                    onClick={() => {
-                      if (!ensureLiveRuntime()) return;
-                      if (!api) return;
-                      void runBrowserAction(() =>
-                        api.browser.selectTab({ threadId, tabId: tab.id }),
-                      ).then((state) => {
-                        if (state) {
-                          upsertThreadState(state);
-                        }
-                      });
-                    }}
-                  >
-                    {tab.title || t("browser.untitled")}
-                  </button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className={closeButtonClassName(isActive)}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onCloseTab(tab.id);
-                    }}
-                  >
-                    <XIcon className="size-3" />
-                    <span className="sr-only">{t("browser.closeTab")}</span>
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-          {browserChromeStatus ? (
-            <div
-              className={cn(
-                "max-w-[13rem] shrink-0 truncate rounded-full border px-2.5 py-1 text-[11px] leading-none sm:max-w-[16rem]",
-                browserChromeStatus.tone === "error"
-                  ? "border-destructive/25 bg-destructive/8 text-destructive"
-                  : "border-border/60 bg-background/80 text-muted-foreground",
-              )}
-              title={browserChromeStatus.detail ?? browserChromeStatusLabel ?? undefined}
-            >
-              {browserChromeStatusLabel}
-            </div>
-          ) : null}
-        </div>
+        <BrowserTabStrip
+          tabs={threadBrowserState?.tabs ?? []}
+          activeTabId={activeTabId}
+          status={
+            browserChromeStatus && browserChromeStatusLabel
+              ? {
+                  tone: browserChromeStatus.tone,
+                  label: browserChromeStatusLabel,
+                  title: browserChromeStatus.detail ?? browserChromeStatusLabel,
+                }
+              : null
+          }
+          dragRegion={isElectron && mode !== "sheet"}
+          onSelectTab={(tabId) => void onSelectTab(tabId)}
+          onCloseTab={onCloseTab}
+          onCreateTab={onCreateTab}
+        />
         <div className="relative min-h-0 flex-1 bg-transparent">
           {!isLiveRuntime ? (
             <BrowserRuntimePreview

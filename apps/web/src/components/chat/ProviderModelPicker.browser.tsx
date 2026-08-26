@@ -1,3 +1,5 @@
+import "../../index.css";
+
 import { type ModelSlug, type ProviderKind, type ServerProviderStatus } from "@omnimind/contracts";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -377,6 +379,37 @@ describe("ProviderModelPicker", () => {
       expect(element.querySelector("svg")).not.toBeNull();
     } finally {
       await mounted.cleanup();
+    }
+  });
+
+  it("keeps long grouped model copy inside a 480px viewport", async () => {
+    await page.viewport(480, 620);
+    i18nHarness.settings.localePreference = "zh-CN";
+    const mounted = await mountPicker({
+      provider: "opencode",
+      model: MANY_OPENCODE_MODELS[0]!.slug,
+      lockedProvider: "opencode",
+      modelOptionsByProvider: {
+        ...MODEL_OPTIONS_BY_PROVIDER,
+        opencode: MANY_OPENCODE_MODELS.map((model, index) => ({
+          ...model,
+          name: `${LONG_MODEL_NAME} ${index + 1}`,
+        })),
+      },
+      locale: "zh-CN",
+    });
+
+    try {
+      await page.getByRole("button").click();
+      const popup = document.querySelector<HTMLElement>(".composer-picker-menu-fixed");
+      expect(popup).not.toBeNull();
+      const rect = popup!.getBoundingClientRect();
+      expect(rect.left).toBeGreaterThanOrEqual(-1);
+      expect(rect.right).toBeLessThanOrEqual(window.innerWidth + 1);
+      expect(document.body.scrollWidth).toBeLessThanOrEqual(window.innerWidth + 1);
+    } finally {
+      await mounted.cleanup();
+      await page.viewport(1280, 720);
     }
   });
 

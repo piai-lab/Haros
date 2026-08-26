@@ -1,0 +1,60 @@
+import { useEffect, useRef, useState } from "react";
+
+export type ThrottledCommitPlan =
+  | { readonly immediate: true }
+  | { readonly immediate: false; readonly delayMs: number };
+
+export function planThrottledCommit(
+  lastCommitAtMs: number,
+  nowMs: number,
+  intervalMs: number,
+): ThrottledCommitPlan {
+  const elapsed = lastCommitAtMs === 0 ? Number.POSITIVE_INFINITY : nowMs - lastCommitAtMs;
+  return elapsed >= intervalMs
+    ? { immediate: true }
+    : { immediate: false, delayMs: Math.max(0, intervalMs - elapsed) };
+}
+
+/** Immediate leading edge, coalesced trailing edge, exact final settled value. */
+export function useThrottledStreamingValue<T>(value: T, active: boolean, intervalMs: number): T {
+  const [throttled, setThrottled] = useState(value);
+  const lastCommitAtRef = useRef(0);
+  const timerRef = useRef<number | null>(null);
+  const latestRef = useRef(value);
+
+  useEffect(() => {
+    latestRef.current = value;
+    const clearTimer = () => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    };
+    if (!active) {
+      clearTimer();
+      lastCommitAtRef.current = 0;
+      setThrottled(value);
+      return;
+    }
+    const now = performance.now();
+    const plan = planThrottledCommit(lastCommitAtRef.current, now, intervalMs);
+    if (plan.immediate) {
+      clearTimer();
+      lastCommitAtRef.current = now;
+      setThrottled(value);
+      return;
+    }
+    if (timerRef.current !== null) return;
+    timerRef.current = window.setTimeout(() => {
+      timerRef.current = null;
+      lastCommitAtRef.current = performance.now();
+      setThrottled(latestRef.current);
+    }, plan.delayMs);
+  }, [active, intervalMs, value]);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    },
+    [],
+  );
+  return active ? throttled : value;
+}

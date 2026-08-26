@@ -8,6 +8,7 @@ import path from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it } from "@effect/vitest";
+import { summarizeUnifiedPatchTotals } from "@omnimind/shared/unifiedPatchStats";
 import { Effect, Exit, FileSystem, Layer, PlatformError, Schema, Scope, Stream } from "effect";
 import { describe, expect, vi } from "vitest";
 
@@ -2130,6 +2131,7 @@ it.layer(TestLayer)("git integration", (it) => {
         const tmp = yield* makeTmpDir();
         yield* initRepoWithCommit(tmp);
         const core = yield* GitCore;
+        const fileSystem = yield* FileSystem.FileSystem;
 
         yield* core.createBranch({ cwd: tmp, branch: "feature/diff-scopes" });
         yield* core.checkoutBranch({ cwd: tmp, branch: "feature/diff-scopes" });
@@ -2141,6 +2143,7 @@ it.layer(TestLayer)("git integration", (it) => {
         yield* git(tmp, ["add", "staged.txt"]);
         yield* writeTextFile(path.join(tmp, "README.md"), "# test\nunstaged change\n");
         yield* writeTextFile(path.join(tmp, "untracked.txt"), "untracked change\n");
+        yield* fileSystem.writeFile(path.join(tmp, "untracked.bin"), new Uint8Array([0, 1, 2, 3]));
 
         const branchPatch = (yield* core.readBranchPatch(tmp)).patch;
         expect(branchPatch).toContain("diff --git a/branch.txt b/branch.txt");
@@ -2157,6 +2160,41 @@ it.layer(TestLayer)("git integration", (it) => {
         expect(unstagedPatch).toContain("diff --git a/README.md b/README.md");
         expect(unstagedPatch).toContain("diff --git a/untracked.txt b/untracked.txt");
         expect(unstagedPatch).not.toContain("staged.txt");
+
+        const scopePatches = [
+          ["branch", branchPatch],
+          ["staged", stagedPatch],
+          ["unstaged", unstagedPatch],
+          ["workingTree", (yield* core.readWorkingTreePatch(tmp)).patch],
+        ] as const;
+        for (const [scope, patch] of scopePatches) {
+          expect(yield* core.readDiffStats(tmp, scope)).toEqual(
+            summarizeUnifiedPatchTotals(patch) ?? { additions: 0, deletions: 0, fileCount: 0 },
+          );
+        }
+      }),
+    );
+
+    it.effect("matches full-patch stats for first commits, renames, and special paths", () =>
+      Effect.gen(function* () {
+        const core = yield* GitCore;
+        const firstCommit = yield* makeTmpDir();
+        yield* initRepoWithoutCommit(firstCommit);
+        yield* writeTextFile(path.join(firstCommit, "中文 name.txt"), "alpha\nbeta\n");
+        yield* git(firstCommit, ["add", "中文 name.txt"]);
+        const firstPatch = (yield* core.readWorkingTreePatch(firstCommit)).patch;
+        expect(yield* core.readDiffStats(firstCommit, "workingTree")).toEqual(
+          summarizeUnifiedPatchTotals(firstPatch),
+        );
+
+        const renamed = yield* makeTmpDir();
+        yield* initRepoWithCommit(renamed);
+        yield* git(renamed, ["mv", "README.md", "重命名 file.txt"]);
+        yield* writeTextFile(path.join(renamed, "重命名 file.txt"), "# test\nchanged\n");
+        const renamePatch = (yield* core.readWorkingTreePatch(renamed)).patch;
+        expect(yield* core.readDiffStats(renamed, "workingTree")).toEqual(
+          summarizeUnifiedPatchTotals(renamePatch),
+        );
       }),
     );
 

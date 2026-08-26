@@ -987,7 +987,11 @@ function classifyRequestType(toolName: string): CanonicalRequestType {
       : "dynamic_tool_call";
 }
 
-function summarizeToolRequest(toolName: string, input: Record<string, unknown>): string {
+function summarizeToolRequest(
+  toolName: string,
+  input: Record<string, unknown>,
+  serializedInput = JSON.stringify(input),
+): string {
   const commandValue = input.command ?? input.cmd;
   const command = typeof commandValue === "string" ? commandValue : undefined;
   if (command && command.trim().length > 0) {
@@ -996,11 +1000,10 @@ function summarizeToolRequest(toolName: string, input: Record<string, unknown>):
     return `${toolName}: ${command.trim().slice(0, 400).trimEnd()}`;
   }
 
-  const serialized = JSON.stringify(input);
-  if (serialized.length <= 400) {
-    return `${toolName}: ${serialized}`;
+  if (serializedInput.length <= 400) {
+    return `${toolName}: ${serializedInput}`;
   }
-  return `${toolName}: ${serialized.slice(0, 397)}...`;
+  return `${toolName}: ${serializedInput.slice(0, 397)}...`;
 }
 
 // Tools whose result is surfaced through a dedicated runtime channel — AskUserQuestion
@@ -1472,12 +1475,17 @@ function exitPlanCaptureKey(input: {
     : `plan:${input.planMarkdown}`;
 }
 
-function tryParseJsonRecord(value: string): Record<string, unknown> | undefined {
+interface ParsedJsonRecord {
+  readonly value: Record<string, unknown>;
+  readonly serialized: string;
+}
+
+export function tryParseCompleteJsonRecord(value: string): ParsedJsonRecord | undefined {
+  if (!value.trimEnd().endsWith("}")) return undefined;
   try {
     const parsed = JSON.parse(value);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : undefined;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
+    return { value: parsed as Record<string, unknown>, serialized: JSON.stringify(parsed) };
   } catch {
     return undefined;
   }
@@ -3059,11 +3067,14 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
     ): Effect.Effect<void> =>
       Effect.gen(function* () {
         const itemType = classifyToolItemType(input.toolName);
-        const detail = summarizeToolRequest(input.toolName, input.toolInput);
+        const serializedInput = toolInputFingerprint(input.toolInput);
         const inputFingerprint =
-          Object.keys(input.toolInput).length > 0
-            ? toolInputFingerprint(input.toolInput)
-            : undefined;
+          Object.keys(input.toolInput).length > 0 ? serializedInput : undefined;
+        const detail = summarizeToolRequest(
+          input.toolName,
+          input.toolInput,
+          serializedInput ?? undefined,
+        );
 
         const tool: ToolInFlight = {
           itemId: input.itemId,
@@ -3182,20 +3193,20 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             }
 
             const partialInputJson = tool.partialInputJson + event.delta.partial_json;
-            const parsedInput = tryParseJsonRecord(partialInputJson);
+            const parsedInput = tryParseCompleteJsonRecord(partialInputJson);
             const detail = parsedInput
-              ? summarizeToolRequest(tool.toolName, parsedInput)
+              ? summarizeToolRequest(tool.toolName, parsedInput.value, parsedInput.serialized)
               : tool.detail;
             let nextTool: ToolInFlight = {
               ...tool,
               partialInputJson,
-              ...(parsedInput ? { input: parsedInput } : {}),
+              ...(parsedInput ? { input: parsedInput.value } : {}),
               ...(detail ? { detail } : {}),
             };
 
             const nextFingerprint =
-              parsedInput && Object.keys(parsedInput).length > 0
-                ? toolInputFingerprint(parsedInput)
+              parsedInput && Object.keys(parsedInput.value).length > 0
+                ? parsedInput.serialized
                 : undefined;
             context.inFlightTools.set(event.index, nextTool);
 
