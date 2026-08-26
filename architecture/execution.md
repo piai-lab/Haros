@@ -122,7 +122,7 @@ stock Pi 继续由 inherited `pi` adapter 拥有其 Session、Pi version、confi
 
 stock Pi 的“实际会话 runtime version”和“本机可选 `pi` CLI version”是两个事实。若 session 使用 bundled SDK，就不能用 `pi --version` 冒充其执行版本；local CLI 只能作为独立诊断字段显示。
 
-OmniMind Agent Core 是上述 Pi-compatible runtime 与多个独立 Extension owner 的组合宿主，不是所有工具的业务或状态 owner。进入同一 Pi Registry 只表示共用 `ToolDefinition`/registered/active 运行时语义，不会合并 source、maintenance、registration、execution、state、authorization 或 cross-Engine distribution authority。产品随附的自有 Session Extension、AgentGateway Host 投影 Extension、OmniMind 维护的上游 fork 与用户直接安装的上游 Extension 必须保留各自 provenance 与 lifecycle；具体采用方式只由 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 定义，不在运行时另建来源 registry 或控制面。只有 AgentGateway canonical Host tools 可根据目标 Engine 的官方 seam 跨 Engine 投影；其他 Pi-native Extension 不因为被 OmniMind Agent Core 组合就自动成为 Host capability。
+OmniMind Agent Core 是上述 Pi-compatible runtime 与多个独立 Extension owner 的组合宿主，不是所有工具的业务或状态 owner。进入同一 Pi Registry 只表示共用 `ToolDefinition`/registered/active 运行时语义，不会合并 source、maintenance、registration、execution、state、authorization 或 cross-Engine distribution authority。产品随附的自有 Session Extension、AgentGateway Host 投影 Extension、OmniMind 维护的上游 fork 与用户直接安装的上游 Extension 必须保留各自 provenance 与 lifecycle；公共采用 Gate 由 [`SOURCE-INTAKE.md`](../SOURCE-INTAKE.md) 定义，Pi source type 与运行时专项边界由 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 定义，不在运行时另建来源 registry 或控制面。只有 AgentGateway canonical Host tools 可根据目标 Engine 的官方 seam 跨 Engine 投影；其他 Pi-native Extension 不因为被 OmniMind Agent Core 组合就自动成为 Host capability。
 
 ### OmniMind identity、work surface 与 project context
 

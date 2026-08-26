@@ -16,6 +16,7 @@ OmniMind 的产品味道不是“功能多”，而是让复杂系统以最少�
 - **用户表达权不可丢。** 用户输入、文本、选择和结构化结果在 owner 边界内原样保留；presentation 可以有界折叠，但不能反向 trim、猜测、拼接或重写模型收到的事实。
 - **能力必须是真的。** schema、设置或 UI 一旦公开某项能力，normal、failure、cancel、restart、shutdown 与 packaged journey 都要真实闭合；没有证据就准确 unavailable，不能用 fallback 伪装支持。
 - **维护成本按未来修改半径计算。** 可以为收回唯一 owner 大动代码，但不为想象中的未来建立第二平台、兼容双轨、通用 manager、永久 ledger 或同步清单。
+- **高判断密度，低操作摩擦。** Agent 先自行查清可搜索事实、真实链路和最强方案，只把会改变产品结果或风险承担的分叉交给维护者；“全面”是覆盖全部相关责任与反证，不是把所有文档、工具、Provider 和验证层级机械跑一遍。
 - **证据强度等于声明强度。** source test、真实 Provider wire、浏览器交互、packaged App、签名与公开发行是不同层级，任何一层绿色都不能冒充更高层完成。
 - **来源身份诚实，产品身份统一。** 普通旅程只说 OmniMind；Provider、Synara、Pi 与 donor identity 在选择器、诊断、About、Licenses、research 和 provenance 中按事实出现，不泄漏也不洗白。
 
@@ -33,16 +34,17 @@ OmniMind 的产品味道不是“功能多”，而是让复杂系统以最少�
 
 ## 唯一权威
 
-| 事实 | Sole owner |
-| --- | --- |
-| 产品身份、战略不变量与本页 taste | 本 `README.md` |
-| exact adopted source、revision、rights、路径、digest 与更新策略 | [`source-adoptions.json`](source-adoptions.json) |
-| 稳定产品事实、UI、公共出口与执行拓扑 | [`architecture/`](architecture/README.md) 的专题 owner |
-| Synara 持续 intake 方法与人工决策边界 | [`SYNARA-INTAKE.md`](SYNARA-INTAKE.md) |
-| Pi Core、Pi ecosystem、Extension、Package 与 fork intake 方法 | [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md) |
-| 当前唯一目标、真实冲突、阻塞与下一动作 | [`execution-brief.md`](execution-brief.md) |
-| Campaign claim 状态与最短 evidence pointer | [`missions/independent-omnimind-v1.md`](missions/independent-omnimind-v1.md) |
-| 固定来源观察、反证、历史失败与复验触发器 | [`research/`](research/README.md) |
+| 事实                                                                          | Sole owner                                                                   |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 产品身份、战略不变量与本页 taste                                              | 本 `README.md`                                                               |
+| exact adopted source、revision、rights、路径、digest 与更新策略               | [`source-adoptions.json`](source-adoptions.json)                             |
+| 稳定产品事实、UI、公共出口与执行拓扑                                          | [`architecture/`](architecture/README.md) 的专题 owner                       |
+| 所有外部来源的 intent、freshness、Gate、disposition、proof 与 stop conditions | [`SOURCE-INTAKE.md`](SOURCE-INTAKE.md)                                       |
+| Synara 母体默认、domain split、reconciliation 与人工决策边界                  | [`SYNARA-INTAKE.md`](SYNARA-INTAKE.md)                                       |
+| Pi runtime 默认、source type 与按风险读取的专项检查                           | [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)                           |
+| 当前唯一目标、真实冲突、阻塞与下一动作                                        | [`execution-brief.md`](execution-brief.md)                                   |
+| Campaign claim 状态与最短 evidence pointer                                    | [`missions/independent-omnimind-v1.md`](missions/independent-omnimind-v1.md) |
+| 固定来源观察、反证、历史失败与复验触发器                                      | [`research/`](research/README.md)                                            |
 
 权威按事实类型分工，不按更新时间竞争。research、Git 历史、聊天、截图、测试名称和 package README 都不能覆盖 architecture 或当前状态 owner；两个 sole owner 对同一事实冲突时先修 authority，再施工。
 
@@ -108,7 +110,7 @@ omni-harness
 2. 从用户入口沿 route/command、owner、writer、normal/failure/restart/shutdown 追真实链路；
 3. 区分已存在、部分存在、缺失和只是文档声称；
 4. 在唯一 owner 内完成最小完整结果，删除被替代的 truth、fallback、测试与文档残留；
-5. 用最窄但能推翻声明的证据验证；用户可见 Desktop 行为必须从 exact pushed SHA 构建 fresh isolated packaged journey；
+5. 先写 claim，再用最窄但能推翻它的证据验证；只有声明穿过 shipped bytes、Electron/OS、profile、安装或关闭/重开边界时，才对冻结的 exact pushed SHA 做一次 fresh isolated packaged journey；
 6. 一个 commit 一个关注点，只 stage 任务路径，不把历史证据、研究候选或局部绿色写成更高层完成。
 
 没有当前任务时，`execution-brief.md` 应明确写“无活动施工”，而不是保留上一列车的 SHA、DMG、测试计数和下一动作。历史 artifact 与长 journey 留在 Git 或对应 fixed evidence owner，不进入根入口。
@@ -122,7 +124,7 @@ omni-harness
   ↓
 读 execution-brief：确认当前是否有冲突或活动施工
   ↓
-只有做 source intake 才读对应 Intake
+只有做 source intake 才读 SOURCE-INTAKE + 对应 profile
   ↓
 只有需要来源反证时才读 research 中的精确文件
 ```

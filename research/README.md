@@ -19,14 +19,14 @@
 | [`source-review.md`](source-review.md)                             | Synara exact-source、rights、range disposition、母体机制与复验触发器 |
 | [`interface-surface-inventory.md`](interface-surface-inventory.md) | 需要复核 2026-08-10 历史 public/interface surface snapshot           |
 
-未来 Synara review/adoption 的操作方法只见根 [`SYNARA-INTAKE.md`](../SYNARA-INTAKE.md)。
+所有来源的公共 Gate 与证据规则只见根 [`SOURCE-INTAKE.md`](../SOURCE-INTAKE.md)；Synara 母体默认、reconciliation 与人工决策边界只见 [`SYNARA-INTAKE.md`](../SYNARA-INTAKE.md)。
 
 ### Pi、OmniMind Agent 与生态
 
 | 文件                                                                                                             | 只在什么问题下读取                                                                                            |
 | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | [`pi-native-product-integration-review.md`](pi-native-product-integration-review.md)                             | Pi runtime、Project trust、prompt、compaction、package/TUI 边界的 fixed review                                |
-| [`omnimind-scientist-subagent-cognition.md`](omnimind-scientist-subagent-cognition.md)                           | 需要理解可安装科学家、OmniMind-owned child、Thread/Session/Agent 区分、完整 Agent 工具与零 Host 工具边界时     |
+| [`omnimind-scientist-subagent-cognition.md`](omnimind-scientist-subagent-cognition.md)                           | 需要理解可安装科学家、OmniMind-owned child、Thread/Session/Agent 区分、完整 Agent 工具与零 Host 工具边界时    |
 | [`omnimind-agent-core-ecosystem-orchestration-review.md`](omnimind-agent-core-ecosystem-orchestration-review.md) | Agent Core、异构协作、Workflow、Search、Memory/Wiki、Prompt/Cache 经济学与 package 候选的 2026-08-12 固定研究 |
 | [`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)                                 | Pi Extension Registry 与 AgentGateway Host projection 的 owner 证据                                           |
 | [`pi-native-todo-extension-review.md`](pi-native-todo-extension-review.md)                                       | product-bundled Todo Extension 的 bounded source evidence                                                     |
@@ -37,9 +37,9 @@
 | [`omnimind-prompt-management-review.md`](omnimind-prompt-management-review.md)                                   | default prompt + custom rules 的 source precedence 与失败证据                                                 |
 | [`pi-web-access-intake.md`](pi-web-access-intake.md)                                                             | `@omnimind/om-web-access` exact lineage、P1–P6、rights、更新与删除边界                                        |
 | [`omnimind-ask-user-cognition.md`](omnimind-ask-user-cognition.md)                                               | canonical Ask User 产品裁决、fork decision、生命周期反证与证据                                                |
-| [`pi-ask-user-intake.md`](pi-ask-user-intake.md)                                                                 | `@omnimind/om-ask` 的 upstream update/replay 手册                                                             |
+| [`pi-ask-user-intake.md`](pi-ask-user-intake.md)                                                                 | `@omnimind/om-ask` exact baseline、P1–P7 patch inventory、反证与 revalidation trigger                         |
 
-通用 Pi/package/fork intake 方法只见根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md)。
+公共 Gate 与 proof 只见根 [`SOURCE-INTAKE.md`](../SOURCE-INTAKE.md)；Pi runtime 默认、source type 与按风险读取的专项检查只见 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md)。
 
 ### Workbench、视觉与用户表面
 
