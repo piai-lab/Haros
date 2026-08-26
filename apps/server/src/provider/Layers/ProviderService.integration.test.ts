@@ -2228,34 +2228,14 @@ routing.layer("ProviderServiceLive routing", (it) => {
       const piSendCount = routing.pi.sendTurn.mock.calls.length;
       const antigravitySendCount = routing.antigravity.sendTurn.mock.calls.length;
 
-      yield* provider.startSession(piThreadId, {
-        provider: "pi",
-        threadId: piThreadId,
-        runtimeMode: "full-access",
-      });
-      yield* provider.startSession(antigravityThreadId, {
-        provider: "antigravity",
-        threadId: antigravityThreadId,
-        runtimeMode: "full-access",
-      });
-      yield* provider.startSession(omniMindThreadId, {
-        provider: "omnimind",
-        threadId: omniMindThreadId,
-        runtimeMode: "full-access",
-      });
+      yield* provider.startSession(piThreadId, { provider: "pi", threadId: piThreadId, runtimeMode: "full-access" });
+      yield* provider.startSession(antigravityThreadId, { provider: "antigravity", threadId: antigravityThreadId, runtimeMode: "full-access" });
+      yield* provider.startSession(omniMindThreadId, { provider: "omnimind", threadId: omniMindThreadId, runtimeMode: "full-access" });
 
-      for (const [threadId, expectedProvider] of [
-        [piThreadId, "pi"],
-        [antigravityThreadId, "antigravity"],
-      ] as const) {
-        const result = yield* Effect.result(
-          provider.sendTurn({
-            threadId,
-            input: "plan this",
-            attachments: [],
-            interactionMode: "plan",
-          }),
-        );
+      for (const [threadId, expectedProvider] of [[piThreadId, "pi"], [antigravityThreadId, "antigravity"]] as const) {
+        const result = yield* Effect.result(provider.sendTurn({
+          threadId, input: "plan this", attachments: [], interactionMode: "plan",
+        }));
         assert.equal(result._tag, "Failure");
         if (result._tag === "Failure" && result.failure._tag === "ProviderValidationError") {
           assert.match(result.failure.issue, new RegExp(`Provider '${expectedProvider}'`));
@@ -2264,18 +2244,8 @@ routing.layer("ProviderServiceLive routing", (it) => {
       assert.equal(routing.pi.sendTurn.mock.calls.length, piSendCount);
       assert.equal(routing.antigravity.sendTurn.mock.calls.length, antigravitySendCount);
 
-      yield* provider.sendTurn({
-        threadId: piThreadId,
-        input: "debug this",
-        attachments: [],
-        interactionMode: "debug",
-      });
-      yield* provider.sendTurn({
-        threadId: omniMindThreadId,
-        input: "plan this",
-        attachments: [],
-        interactionMode: "plan",
-      });
+      yield* provider.sendTurn({ threadId: piThreadId, input: "debug this", attachments: [], interactionMode: "debug" });
+      yield* provider.sendTurn({ threadId: omniMindThreadId, input: "plan this", attachments: [], interactionMode: "plan" });
       assert.equal(routing.pi.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "debug");
       assert.equal(routing.omnimind.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "plan");
       yield* provider.stopSession({ threadId: piThreadId });
