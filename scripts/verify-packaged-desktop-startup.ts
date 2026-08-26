@@ -4,6 +4,7 @@
 // Layer: Release verification script
 
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import {
   chmodSync,
   copyFileSync,
@@ -12,6 +13,7 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -31,6 +33,148 @@ export interface PackagedDesktopStartupOptions {
   readonly version: string;
   readonly sourceCommit: string;
   readonly timeoutMs: number;
+}
+
+interface PackagedProofLeaseOwner {
+  readonly pid: number;
+  readonly sourceCommit: string;
+  readonly token: string;
+}
+
+export interface PackagedProofLease {
+  readonly release: () => void;
+}
+
+const PACKAGED_PROOF_LEASE_DIRECTORY = "omnimind-packaged-proof.lock";
+const PACKAGED_PROOF_LEASE_OWNER_FILE = "owner.json";
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error instanceof Error && "code" in error && error.code === "EPERM";
+  }
+}
+
+function readPackagedProofLeaseOwner(leaseDirectory: string): PackagedProofLeaseOwner | null {
+  try {
+    const parsed = JSON.parse(
+      readFileSync(join(leaseDirectory, PACKAGED_PROOF_LEASE_OWNER_FILE), "utf8"),
+    ) as Partial<PackagedProofLeaseOwner>;
+    if (
+      !Number.isInteger(parsed.pid) ||
+      typeof parsed.sourceCommit !== "string" ||
+      typeof parsed.token !== "string"
+    ) {
+      return null;
+    }
+    return parsed as PackagedProofLeaseOwner;
+  } catch {
+    return null;
+  }
+}
+
+export function acquirePackagedProofLease(
+  sourceCommit: string,
+  leaseParentDirectory = tmpdir(),
+): PackagedProofLease {
+  const leaseDirectory = join(leaseParentDirectory, PACKAGED_PROOF_LEASE_DIRECTORY);
+  const owner: PackagedProofLeaseOwner = {
+    pid: process.pid,
+    sourceCommit,
+    token: randomUUID(),
+  };
+
+  const acquire = (): boolean => {
+    try {
+      mkdirSync(leaseDirectory);
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "EEXIST") {
+        return false;
+      }
+      throw error;
+    }
+    try {
+      writeFileSync(
+        join(leaseDirectory, PACKAGED_PROOF_LEASE_OWNER_FILE),
+        `${JSON.stringify(owner)}\n`,
+        { flag: "wx" },
+      );
+      return true;
+    } catch (error) {
+      rmSync(leaseDirectory, { recursive: true, force: true });
+      throw error;
+    }
+  };
+
+  if (!acquire()) {
+    const existingOwner = readPackagedProofLeaseOwner(leaseDirectory);
+    if (!existingOwner || isProcessAlive(existingOwner.pid)) {
+      const ownerDescription = existingOwner
+        ? `pid=${existingOwner.pid}, source=${existingOwner.sourceCommit.slice(0, 12)}`
+        : "owner metadata is not yet available";
+      throw new Error(
+        `Another OmniMind packaged proof owns this host (${ownerDescription}). Wait for it to finish; do not terminate unrelated OmniMind processes.`,
+      );
+    }
+
+    const staleDirectory = `${leaseDirectory}.stale-${randomUUID()}`;
+    try {
+      // Renaming first prevents stale-owner cleanup from deleting a lease that
+      // another process acquired concurrently.
+      renameSync(leaseDirectory, staleDirectory);
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
+        throw error;
+      }
+    }
+    rmSync(staleDirectory, { recursive: true, force: true });
+    if (!acquire()) {
+      throw new Error("Another OmniMind packaged proof acquired this host concurrently.");
+    }
+  }
+
+  return {
+    release: () => {
+      const currentOwner = readPackagedProofLeaseOwner(leaseDirectory);
+      if (currentOwner?.token === owner.token) {
+        rmSync(leaseDirectory, { recursive: true, force: true });
+      }
+    },
+  };
+}
+
+function removePackagedProofTemporaryRoot(temporaryRoot: string): void {
+  try {
+    rmSync(temporaryRoot, {
+      recursive: true,
+      force: true,
+      maxRetries: process.platform === "win32" ? 20 : 0,
+      retryDelay: process.platform === "win32" ? 250 : 100,
+    });
+  } catch (error) {
+    if (
+      process.platform !== "win32" ||
+      !(error instanceof Error && "code" in error && error.code === "EPERM")
+    ) {
+      throw error;
+    }
+    console.warn(
+      `Could not remove Windows smoke temp directory; leaving it for runner cleanup: ${temporaryRoot}`,
+    );
+  }
+}
+
+function releasePackagedProofResources(
+  temporaryRoot: string | undefined,
+  proofLease: PackagedProofLease,
+): void {
+  try {
+    if (temporaryRoot) removePackagedProofTemporaryRoot(temporaryRoot);
+  } finally {
+    proofLease.release();
+  }
 }
 
 // A release smoke must not become an ambient credential consumer. Keep only
@@ -436,11 +580,13 @@ export async function verifyPackagedDesktopStartup(
       `Packaged ${options.platform} startup smoke must run on its native host, not ${process.platform}.`,
     );
   }
-  const temporaryRoot = mkdtempSync(join(tmpdir(), `omnimind-packaged-smoke-${options.platform}-`));
-  const extractionRoot = join(temporaryRoot, "payload");
-  mkdirSync(extractionRoot, { recursive: true });
+  const proofLease = acquirePackagedProofLease(options.sourceCommit);
+  let temporaryRoot: string | undefined;
 
   try {
+    temporaryRoot = mkdtempSync(join(tmpdir(), `omnimind-packaged-smoke-${options.platform}-`));
+    const extractionRoot = join(temporaryRoot, "payload");
+    mkdirSync(extractionRoot, { recursive: true });
     const launch = prepareLaunch(options, extractionRoot);
     if (!existsSync(launch.appArchivePath)) {
       throw new Error(`Packaged application archive was not found at ${launch.appArchivePath}.`);
@@ -465,24 +611,7 @@ export async function verifyPackagedDesktopStartup(
       `Packaged ${options.platform}/${options.arch} startup, shutdown, and reopen passed from isolated state at ${options.sourceCommit.slice(0, 12)}.`,
     );
   } finally {
-    try {
-      rmSync(temporaryRoot, {
-        recursive: true,
-        force: true,
-        maxRetries: process.platform === "win32" ? 20 : 0,
-        retryDelay: process.platform === "win32" ? 250 : 100,
-      });
-    } catch (error) {
-      if (
-        process.platform !== "win32" ||
-        !(error instanceof Error && "code" in error && error.code === "EPERM")
-      ) {
-        throw error;
-      }
-      console.warn(
-        `Could not remove Windows smoke temp directory; leaving it for runner cleanup: ${temporaryRoot}`,
-      );
-    }
+    releasePackagedProofResources(temporaryRoot, proofLease);
   }
 }
 

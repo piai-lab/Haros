@@ -1,10 +1,11 @@
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  acquirePackagedProofLease,
   assertPackagedSourceCommit,
   createPackagedDesktopSmokeEnvironment,
   parsePackagedDesktopStartupArgs,
@@ -91,6 +92,36 @@ describe("packaged desktop startup verification", () => {
         sourceCommit,
       ),
     ).toThrow("Packaged source commit mismatch");
+  });
+
+  it("gives one packaged proof exclusive ownership of the host", () => {
+    const root = mkdtempSync(join(tmpdir(), "omnimind-packaged-proof-lease-test-"));
+    temporaryRoots.push(root);
+
+    const firstLease = acquirePackagedProofLease(sourceCommit, root);
+    expect(() => acquirePackagedProofLease(sourceCommit, root)).toThrow(
+      `Another OmniMind packaged proof owns this host (pid=${process.pid}, source=${sourceCommit.slice(0, 12)})`,
+    );
+
+    firstLease.release();
+    const nextLease = acquirePackagedProofLease(sourceCommit, root);
+    nextLease.release();
+    expect(existsSync(join(root, "omnimind-packaged-proof.lock"))).toBe(false);
+  });
+
+  it("reclaims a packaged proof lease whose owner exited", () => {
+    const root = mkdtempSync(join(tmpdir(), "omnimind-packaged-proof-stale-test-"));
+    temporaryRoots.push(root);
+    const leaseDirectory = join(root, "omnimind-packaged-proof.lock");
+    mkdirSync(leaseDirectory);
+    writeFileSync(
+      join(leaseDirectory, "owner.json"),
+      JSON.stringify({ pid: 2_147_483_647, sourceCommit: "stale", token: "stale" }),
+    );
+
+    const lease = acquirePackagedProofLease(sourceCommit, root);
+    lease.release();
+    expect(existsSync(leaseDirectory)).toBe(false);
   });
 
   it("isolates user state and removes inherited runtime authority", () => {
