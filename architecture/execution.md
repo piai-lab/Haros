@@ -170,7 +170,7 @@ Server 通过 OmniMind-Agent-scoped typed surface 把 Pi 的 provider/auth/catal
 - provider、auth method/status、known/available model 与 network-refresh capability 来自 Pi ModelRuntime，不由 OmniMind 维护静态供应商/模型 capability 镜像；
 - Model-service discovery 的主入口只消费 Pi runtime 已暴露的 built-in/extension metadata；built-in 与经用户显式 intent、由 Pi 既有 ResourceLoader/Session owner 安全加载的 Extension provider 都是 V1 必达结果。被动页面不执行第三方 Extension，“通过 API 地址连接”只是低频 presentation 分支，Host 不为任何一条路径建立另一套 discovery、registry 或 catalog authority；
 - generic `models.json` 配置只允许 Pi 官方支持的 `openai-completions`、`openai-responses`、`anthropic-messages` 与 `google-generative-ai` 四种协议；其他 protocol/auth/discovery/stream/tool/usage 只能来自真实 Pi Extension，不能由 Host 按品牌或 URL 猜测；
-- 持久 API key 与 OAuth 走 Pi `login()`/`logout()` credential-store lifecycle；runtime API-key override 只用于明确的一次性/未保存操作，不得显示为已保存；
+- 持久 API key 与 OAuth 走 Pi `login()`/`logout()` credential-store lifecycle；用户主动在详情中显示或复制已保存literal API Key时，由同一Server owner串行读取精确credential并通过owner-only、可取消的typed response短时返回，普通query与catalog projection仍保持credential-blind；OAuth、无literal key的credential、环境与command来源拒绝该读取。runtime API-key override只用于明确的一次性/未保存操作，不得显示为已保存；
 - Pi `AuthInteraction` 的 text/secret/select/manual-code prompt 与 info/auth-url/device-code/progress event 通过短生命周期、可取消的 typed bridge 呈现，secret/token 不进入 Product state、query cache、Timeline 或日志；
 - provider-scoped network refresh、last-good catalog 与 cache 语义由 Pi models store/provider implementation 拥有；普通 model-list refetch 不得冒充网络刷新；
 - Settings operation 使用 task-local ModelRuntime，不能把一个全局可变 runtime 注入所有 Thread。credential/config/catalog mutation 不热切当前 turn；每个隔离 Session 在下一次 send admission 前按同一 agentDir 的 process-local mutation revision 刷新自身 runtime snapshot。该 revision 只做失效通知，不是第二持久化真相；

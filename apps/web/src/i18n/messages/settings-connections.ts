@@ -11,7 +11,6 @@ const EN_MESSAGES = {
   "settings.permissionUnknown": "Unknown",
   "settings.never": "Never",
   "settings.codingAgent": "External app",
-  "settings.copyFailed": "Could not copy",
   "settings.clipboardFailed": "Clipboard access failed.",
   "settings.connectionReady": "Connection ready",
   "settings.connectionReadyDescription":
@@ -120,7 +119,6 @@ const ZH_CN_MESSAGES = {
   "settings.permissionUnknown": "未知",
   "settings.never": "从未",
   "settings.codingAgent": "外部应用",
-  "settings.copyFailed": "复制失败",
   "settings.clipboardFailed": "无法访问剪贴板。",
   "settings.connectionReady": "连接已就绪",
   "settings.connectionReadyDescription": "请在一次性代码过期前把设置提示发给 Agent。",

@@ -111,6 +111,7 @@ function setNativeApi(input: {
   readonly answerLogin?: NativeApi["omnimindModelServices"]["answerLogin"];
   readonly cancelLogin?: NativeApi["omnimindModelServices"]["cancelLogin"];
   readonly logout?: NativeApi["omnimindModelServices"]["logout"];
+  readonly revealApiKey?: NativeApi["omnimindModelServices"]["revealApiKey"];
   readonly refresh?: NativeApi["omnimindModelServices"]["refresh"];
   readonly discoverCustom?: NativeApi["omnimindModelServices"]["discoverCustom"];
   readonly testCustom?: NativeApi["omnimindModelServices"]["testCustom"];
@@ -146,6 +147,10 @@ function setNativeApi(input: {
   const cancelLogin = vi.fn(input.cancelLogin ?? beginLogin);
   const logout = vi.fn(
     input.logout ?? (async () => ({ state: "complete", service: service() }) as const),
+  );
+  const revealApiKey = vi.fn(
+    input.revealApiKey ??
+      (async () => ({ state: "unavailable", reason: "not_stored_api_key" }) as const),
   );
   const refresh = vi.fn(
     input.refresh ?? (async () => ({ state: "success", service: service() }) as const),
@@ -200,6 +205,7 @@ function setNativeApi(input: {
             answerLogin,
             cancelLogin,
             logout,
+            revealApiKey,
             refresh,
             discoverCustom,
             testCustom,
@@ -217,6 +223,7 @@ function setNativeApi(input: {
     answerLogin,
     cancelLogin,
     logout,
+    revealApiKey,
     refresh,
     discoverCustom,
     testCustom,
@@ -247,6 +254,7 @@ async function renderPanel(input: {
   readonly answerLogin?: NativeApi["omnimindModelServices"]["answerLogin"];
   readonly cancelLogin?: NativeApi["omnimindModelServices"]["cancelLogin"];
   readonly logout?: NativeApi["omnimindModelServices"]["logout"];
+  readonly revealApiKey?: NativeApi["omnimindModelServices"]["revealApiKey"];
   readonly refresh?: NativeApi["omnimindModelServices"]["refresh"];
   readonly discoverCustom?: NativeApi["omnimindModelServices"]["discoverCustom"];
   readonly testCustom?: NativeApi["omnimindModelServices"]["testCustom"];
@@ -1426,7 +1434,7 @@ describe("ModelsSettingsPanel model services", () => {
     ).toBeVisible();
 
     await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
-    await confirmCustomApiRisk(mounted.screen);
+    expect(document.body.textContent).not.toContain("settings.customApiRiskTitle");
     await expect
       .poll(() => testCustom)
       .toHaveBeenCalledWith(
@@ -3290,7 +3298,7 @@ describe("ModelsSettingsPanel model services", () => {
     mounted.queryClient.clear();
   });
 
-  it("refreshes only the selected service and confirms stored-key removal", async () => {
+  it("reveals, copies, re-hides, and directly clears only the saved API key", async () => {
     const configuredService = service();
     const refresh = vi.fn(async () => ({
       state: "success" as const,
@@ -3305,6 +3313,10 @@ describe("ModelsSettingsPanel model services", () => {
         availableModelCount: 0,
       }),
     }));
+    const revealApiKey = vi.fn(async () => ({
+      state: "ready" as const,
+      apiKey: "test-only-visible-key",
+    }));
     const mounted = await renderPanel({
       list: async () => ({
         state: "ready",
@@ -3315,6 +3327,7 @@ describe("ModelsSettingsPanel model services", () => {
       get: async () => ({ state: "ready", service: configuredService, errorCode: null }),
       refresh,
       logout,
+      revealApiKey,
     });
 
     await mounted.screen
@@ -3331,16 +3344,109 @@ describe("ModelsSettingsPanel model services", () => {
       .poll(() => document.body.textContent)
       .toContain("settings.modelServiceRefreshComplete");
 
-    await mounted.screen.getByRole("button", { name: "settings.removeApiKey" }).click();
+    expect(document.body.textContent).toContain("settings.modelServiceCredentialSourceStored");
+    const keyInput = mounted.screen.getByLabelText("settings.modelServiceStoredApiKey");
+    expect(keyInput.element()).toHaveAttribute("type", "password");
+    expect((keyInput.element() as HTMLInputElement).value).not.toContain("test-only-visible-key");
+
+    await mounted.screen.getByRole("button", { name: "settings.showSecret" }).click();
     await expect
-      .element(mounted.screen.getByText('settings.removeApiKeyDescription:{"name":"DeepSeek"}'))
-      .toBeVisible();
-    const removeButtons = mounted.screen.getByRole("button", { name: "settings.removeApiKey" });
-    await removeButtons.last().click();
+      .poll(() => revealApiKey)
+      .toHaveBeenCalledWith(
+        { serviceId: "deepseek" },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    await expect
+      .poll(() => (keyInput.element() as HTMLInputElement).value)
+      .toBe("test-only-visible-key");
+    expect(keyInput.element()).toHaveAttribute("type", "text");
+
+    await mounted.screen.getByRole("button", { name: "settings.copySecret" }).click();
+    await expect.poll(() => revealApiKey).toHaveBeenCalledTimes(2);
+    await mounted.screen.getByRole("button", { name: "settings.hideSecret" }).click();
+    expect((keyInput.element() as HTMLInputElement).value).not.toContain("test-only-visible-key");
+
+    await mounted.screen.getByRole("button", { name: "settings.showSecret" }).click();
+    await expect
+      .poll(() => (keyInput.element() as HTMLInputElement).value)
+      .toBe("test-only-visible-key");
+    await mounted.screen.getByRole("button", { name: "common.back" }).click();
+    expect(document.body.textContent).not.toContain("test-only-visible-key");
+    await mounted.screen
+      .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"DeepSeek"}' })
+      .click();
+    expect(
+      (
+        mounted.screen
+          .getByLabelText("settings.modelServiceStoredApiKey")
+          .element() as HTMLInputElement
+      ).value,
+    ).not.toContain("test-only-visible-key");
+
+    await mounted.screen.getByRole("button", { name: "settings.clear" }).click();
     await expect.poll(() => logout).toHaveBeenCalledWith({ serviceId: "deepseek" });
+    expect(document.body.textContent).not.toContain("settings.removeApiKeyDescription");
     await expect
       .poll(() => document.body.textContent)
       .toContain("settings.modelServiceCredentialRemoved");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("aborts an in-flight key reveal on detail close and keeps a failed reveal retryable", async () => {
+    const configuredService = service();
+    let revealAttempt = 0;
+    let observedSignal: AbortSignal | undefined;
+    const revealApiKey = vi.fn(
+      (
+        _input: Parameters<NativeApi["omnimindModelServices"]["revealApiKey"]>[0],
+        options?: Parameters<NativeApi["omnimindModelServices"]["revealApiKey"]>[1],
+      ) => {
+        revealAttempt += 1;
+        if (revealAttempt > 1) {
+          return Promise.resolve({
+            state: "unavailable" as const,
+            reason: "credential_unavailable" as const,
+          });
+        }
+        observedSignal = options?.signal;
+        return new Promise<never>((_resolve, reject) => {
+          const rejectAbort = () => reject(new DOMException("Aborted", "AbortError"));
+          if (options?.signal?.aborted) rejectAbort();
+          else options?.signal?.addEventListener("abort", rejectAbort, { once: true });
+        });
+      },
+    );
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "ready",
+        services: [configuredService],
+        connectableServices: [],
+        errorCode: null,
+      }),
+      get: async () => ({ state: "ready", service: configuredService, errorCode: null }),
+      revealApiKey,
+    });
+
+    await mounted.screen
+      .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"DeepSeek"}' })
+      .click();
+    await mounted.screen.getByRole("button", { name: "settings.showSecret" }).click();
+    await expect.poll(() => revealApiKey).toHaveBeenCalledTimes(1);
+    expect(observedSignal?.aborted).toBe(false);
+    await mounted.screen.getByRole("button", { name: "common.back" }).click();
+    expect(observedSignal?.aborted).toBe(true);
+    expect(document.body.textContent).not.toContain("test-only-visible-key");
+
+    await mounted.screen
+      .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"DeepSeek"}' })
+      .click();
+    await mounted.screen.getByRole("button", { name: "settings.showSecret" }).click();
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("settings.modelServiceApiKeyRevealFailed");
+    expect(mounted.screen.getByRole("button", { name: "settings.showSecret" })).toBeTruthy();
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();
@@ -3353,6 +3459,7 @@ describe("ModelsSettingsPanel model services", () => {
       ],
       authState: "configured",
       authSource: "environment",
+      authEnvironmentVariables: ["DEEPSEEK_API_KEY"],
       storedCredentialType: null,
       supportsNetworkRefresh: false,
     });
@@ -3376,6 +3483,9 @@ describe("ModelsSettingsPanel model services", () => {
     expect(document.body.textContent).not.toContain("settings.replaceApiKey");
     expect(document.body.textContent).not.toContain("settings.removeApiKey");
     expect(document.body.textContent).not.toContain("settings.refreshModelCatalog");
+    expect(document.body.textContent).toContain(
+      'settings.modelServiceCredentialSourceEnvironmentNamed:{"variable":"DEEPSEEK_API_KEY"}',
+    );
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

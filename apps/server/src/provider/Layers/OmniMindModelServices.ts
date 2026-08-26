@@ -86,6 +86,7 @@ const CUSTOM_CONNECTION_TEST_PROMPT = "Reply with OK.";
 const CUSTOM_CONNECTION_TEST_TIMEOUT_MS = 20_000;
 const CUSTOM_MODEL_DISCOVERY_TIMEOUT_MS = 20_000;
 const MODEL_SERVICE_REFRESH_TIMEOUT_MS = 20_000;
+const MAX_REVEALED_API_KEY_LENGTH = 65_536;
 const CUSTOM_MODEL_THINKING_LEVELS = [
   "off",
   "minimal",
@@ -297,7 +298,10 @@ function headerReferencesForMutation(
     reference:
       mutation.type === "clear"
         ? ({ type: "clear" } as const)
-        : ({ type: "environment", variableName: mutation.variableName } as const),
+        : ({
+            type: "environment",
+            variableName: mutation.variableName,
+          } as const),
   }));
   if (!("models" in input)) return providerReferences;
   return [
@@ -309,7 +313,10 @@ function headerReferencesForMutation(
         reference:
           mutation.type === "clear"
             ? ({ type: "clear" } as const)
-            : ({ type: "environment", variableName: mutation.variableName } as const),
+            : ({
+                type: "environment",
+                variableName: mutation.variableName,
+              } as const),
       })),
     ),
   ];
@@ -497,7 +504,9 @@ function projectAuthPrompt(prompt: AuthPrompt): OmniMindModelServiceAuthPrompt {
     type: prompt.type,
     message: safeInteractionText(prompt.message, "Authentication input required"),
     ...(prompt.placeholder
-      ? { placeholder: safeInteractionText(prompt.placeholder, "Authentication input") }
+      ? {
+          placeholder: safeInteractionText(prompt.placeholder, "Authentication input"),
+        }
       : {}),
   };
 }
@@ -516,7 +525,9 @@ function projectAuthEvent(event: AuthEvent): OmniMindModelServiceAuthEvent | nul
           type: "auth_url",
           url,
           ...(event.instructions
-            ? { instructions: safeInteractionText(event.instructions, "Continue authentication") }
+            ? {
+                instructions: safeInteractionText(event.instructions, "Continue authentication"),
+              }
             : {}),
         }
       : null;
@@ -529,10 +540,14 @@ function projectAuthEvent(event: AuthEvent): OmniMindModelServiceAuthEvent | nul
         verificationUri,
         ...(event.intervalSeconds === undefined
           ? {}
-          : { intervalSeconds: Math.max(0, Math.trunc(event.intervalSeconds)) }),
+          : {
+              intervalSeconds: Math.max(0, Math.trunc(event.intervalSeconds)),
+            }),
         ...(event.expiresInSeconds === undefined
           ? {}
-          : { expiresInSeconds: Math.max(0, Math.trunc(event.expiresInSeconds)) }),
+          : {
+              expiresInSeconds: Math.max(0, Math.trunc(event.expiresInSeconds)),
+            }),
       }
     : null;
 }
@@ -770,6 +785,19 @@ function normalizeAuthSource(source: string | undefined): OmniMindModelServiceAu
   }
 }
 
+function environmentVariablesFromAuthStatus(input: {
+  readonly source?: string;
+  readonly label?: string;
+}): ReadonlyArray<string> | undefined {
+  if (input.source !== "environment") return undefined;
+  const names = input.label?.split(", ") ?? [];
+  return names.length > 0 &&
+    names.length <= 8 &&
+    names.every((name) => /^[A-Za-z_][A-Za-z0-9_]*$/u.test(name))
+    ? names
+    : undefined;
+}
+
 type OmniMindModelRuntime = Awaited<
   ReturnType<OmniMindCodingAgentModule["ModelRuntime"]["create"]>
 >;
@@ -891,7 +919,10 @@ async function projectModelServices(input: {
     if (runtime.getError() !== undefined) {
       throw new Error("OmniMind model-services configuration is unavailable");
     }
-    const refresh = await runtime.refresh({ allowNetwork: false, signal: input.signal });
+    const refresh = await runtime.refresh({
+      allowNetwork: false,
+      signal: input.signal,
+    });
     if (refresh.aborted) input.signal.throwIfAborted();
     if (runtime.getError() !== undefined) {
       throw new Error("OmniMind model-services availability is unavailable");
@@ -993,6 +1024,7 @@ async function projectModelServices(input: {
     if (customConfig) customConfigsByServiceId.set(providerId, customConfig);
     const credentialInfo = credentials.info(provider.id);
     const authStatus = runtime.getProviderAuthStatus(provider.id);
+    const authEnvironmentVariables = environmentVariablesFromAuthStatus(authStatus);
     const authState = credentialInfo?.oauthAccessExpired
       ? ("refresh_required" as const)
       : authStatus.configured
@@ -1040,6 +1072,7 @@ async function projectModelServices(input: {
       authMethods,
       authState,
       authSource: normalizeAuthSource(authStatus.source),
+      ...(authEnvironmentVariables ? { authEnvironmentVariables } : {}),
       storedCredentialType: credentialInfo?.type ?? null,
       knownModelCount,
       availableModelCount,
@@ -1256,7 +1289,9 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
           modelsPath: null,
           ...(input.serviceId === null
             ? {}
-            : { modelsConfigReader: createOmniMindModelsConfigReader(agentDir) }),
+            : {
+                modelsConfigReader: createOmniMindModelsConfigReader(agentDir),
+              }),
           allowModelNetwork: false,
           refreshOnCreate: false,
           signal: input.signal,
@@ -1391,7 +1426,9 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                       const onAbort = () =>
                         reject(new DOMException("Authentication cancelled", "AbortError"));
                       request.controller.signal.addEventListener("abort", onAbort, { once: true });
-                      prompt.signal?.addEventListener("abort", onAbort, { once: true });
+                      prompt.signal?.addEventListener("abort", onAbort, {
+                        once: true,
+                      });
                       request.pendingPrompt = {
                         prompt: projected,
                         resolve: (value) => {
@@ -1485,7 +1522,9 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                     connectableServices: projection.connectable,
                     customApiConfiguration: { protocols: CUSTOM_API_PROTOCOLS },
                     ...(projection.extensionProjectionState
-                      ? { extensionProjectionState: projection.extensionProjectionState }
+                      ? {
+                          extensionProjectionState: projection.extensionProjectionState,
+                        }
                       : {}),
                     errorCode: null,
                   } satisfies OmniMindModelServicesListResult)
@@ -1495,7 +1534,9 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                     connectableServices: projection.connectable,
                     customApiConfiguration: { protocols: CUSTOM_API_PROTOCOLS },
                     ...(projection.extensionProjectionState
-                      ? { extensionProjectionState: projection.extensionProjectionState }
+                      ? {
+                          extensionProjectionState: projection.extensionProjectionState,
+                        }
                       : {}),
                     errorCode: null,
                   } satisfies OmniMindModelServicesListResult);
@@ -1520,7 +1561,9 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                         }
                       : {}),
                     ...(projection.extensionProjectionState
-                      ? { extensionProjectionState: projection.extensionProjectionState }
+                      ? {
+                          extensionProjectionState: projection.extensionProjectionState,
+                        }
                       : {}),
                     errorCode: null,
                   } as const)
@@ -1528,7 +1571,9 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                     state: "empty",
                     service: null,
                     ...(projection.extensionProjectionState
-                      ? { extensionProjectionState: projection.extensionProjectionState }
+                      ? {
+                          extensionProjectionState: projection.extensionProjectionState,
+                        }
                       : {}),
                     errorCode: null,
                   } as const);
@@ -1555,7 +1600,9 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 } as const;
               }
               const controller = new AbortController();
-              signal.addEventListener("abort", () => controller.abort(), { once: true });
+              signal.addEventListener("abort", () => controller.abort(), {
+                once: true,
+              });
               const abortOnConnectionClose = () => controller.abort();
               if (connectionSignal.aborted) abortOnConnectionClose();
               else
@@ -1624,7 +1671,9 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 events: [],
               } as const;
             }
-            signal.addEventListener("abort", () => request.controller.abort(), { once: true });
+            signal.addEventListener("abort", () => request.controller.abort(), {
+              once: true,
+            });
             const pending = request.pendingPrompt;
             if (!pending || pending.prompt.promptId !== input.promptId) {
               return {
@@ -1699,6 +1748,48 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 },
               ),
             ),
+          ),
+        revealApiKey: (input) =>
+          Effect.promise((signal) =>
+            serializeMutation(async () => {
+              const agentDir = resolveOmniMindAgentDir(config.baseDir);
+              let credential: Credential | undefined;
+              try {
+                const credentials = await StaticCredentialStore.create({
+                  authPath: path.join(agentDir, "auth.json"),
+                  readTextFile: (filePath, readSignal) =>
+                    options.readTextFile
+                      ? options.readTextFile(filePath, readSignal)
+                      : readOmniMindPrivateTextFile({
+                          agentDir,
+                          filename: path.basename(filePath) as OmniMindPrivateRuntimeFilename,
+                          ...(readSignal ? { signal: readSignal } : {}),
+                        }),
+                  signal,
+                });
+                credential = await credentials.read(input.serviceId, {
+                  signal,
+                });
+              } catch {
+                signal.throwIfAborted();
+                return {
+                  state: "unavailable",
+                  reason: "credential_unavailable",
+                } as const;
+              }
+              if (
+                credential?.type !== "api_key" ||
+                typeof credential.key !== "string" ||
+                credential.key.length === 0 ||
+                credential.key.length > MAX_REVEALED_API_KEY_LENGTH
+              ) {
+                return {
+                  state: "unavailable",
+                  reason: "not_stored_api_key",
+                } as const;
+              }
+              return { state: "ready", apiKey: credential.key } as const;
+            }),
           ),
         refresh: (input) =>
           Effect.promise((requestSignal) => {
@@ -1876,7 +1967,11 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 model,
                 {
                   messages: [
-                    { role: "user", content: CUSTOM_CONNECTION_TEST_PROMPT, timestamp: Date.now() },
+                    {
+                      role: "user",
+                      content: CUSTOM_CONNECTION_TEST_PROMPT,
+                      timestamp: Date.now(),
+                    },
                   ],
                 },
                 { signal, maxTokens: 8 },

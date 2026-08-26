@@ -4,13 +4,13 @@
 
 Synara adopted head `a93c47e2` 的代码、focused/live/packaged evidence、architecture、research disposition 与 `source-adoptions.json` 已闭合；候选代码 exact SHA 为 `dbe793d35accbd81484201e5376c772ba9ed94ea`，没有合并受保护分支、创建 Release 或修改 update feed。
 
-当前唯一活动施工仍在 `codex/synara-073-adoption`，但已经切换到维护者正式授权的两个相邻产品结果：一是 Chat 的 `Send to Agent` 必须经用户明确选择或创建 Project，再建立新的 folder-backed Agent Thread，携带产品可见历史、references、可用附件与 draft，原 Chat 不变且不自动执行；二是用户保存的 LLM API Key 在现有 credential owner 下提供与 Web Search Provider 共用规则的隐藏、主动 reveal/copy、replace、clear 与离开即清理，不能进入普通 Product State、事件、缓存、日志、诊断或恢复记录。
+维护者追加授权的两个相邻产品结果已经完成 source candidate：Chat 的 `Send to Agent` 经现有 Browser/Server 证据确认已要求用户明确选择或创建 Project，再建立新的 folder-backed Agent Thread，携带产品可见历史、references、可用附件与 draft，原 Chat 不变且不自动执行，因此没有复制实现；用户保存的 LLM API Key 已在现有 credential owner 下获得与 Web Search Provider 共用规则的隐藏、主动 reveal/copy、replace、direct clear 与离开即清理，普通 Product State、事件、缓存、日志、诊断和恢复记录仍保持 credential-blind。普通 API endpoint 的确认 fingerprint 也已收窄为实际 endpoint 集合，非 endpoint 编辑不再重复打断。代码、focused/related tests、类型与生产构建已通过，等待从 exact pushed SHA 完成隔离 packaged proof 后闭合。
 
 主线是唯一工作基线。当前安装版、历史 DMG、测试计数、Provider probe 与 packaged journey 只在精确证据需要时从 Git 或对应 research owner 查找，不在本文件维护镜像。
 
 ## 下一动作
 
-沿真实 UI → command → Project/Thread/credential owner 逐段盘点两条现有调用链，先证明“已存在、部分存在、缺失”，再在原 owner 内补齐最窄 typed seam、双语 UI 与 focused tests。Chat/Agent/Project 边界不得模糊；LLM secret 不得进入第二 store 或普通投影。与这两条链直接相邻的重复确认或 exact-binding 失败死路只做最小完整修正，历史用量、local/remote auth policy、`.omnimind`/`.pi` 隔离与发行门不改变。
+提交并推送当前 source candidate，从该 exact SHA 构建 packaged App，以任务专用 `userData`、HOME 与 Provider private home 验证已保存 API Key 的隐藏、主动显示/复制、关闭即清理和直接清除；不得在截图或 artifact 中保留完整 Key。通过后闭合当前状态。保持历史用量、local/remote auth policy、`.omnimind`/`.pi` 隔离与发行门不变。
 
 ## Stop-loss
 

@@ -784,7 +784,10 @@ const makeWsRpcHandlersLayer = () =>
         providerHealth.getPassivePresence.pipe(
           Effect.map((recoverableProviders) => ({
             providers,
-            passivePresence: { state: "settled" as const, recoverableProviders },
+            passivePresence: {
+              state: "settled" as const,
+              recoverableProviders,
+            },
           })),
         );
 
@@ -815,7 +818,10 @@ const makeWsRpcHandlersLayer = () =>
             cause: String(cause),
           }).pipe(
             Effect.andThen(
-              listManagedWorktrees({ worktreesDir: config.worktreesDir, git }).pipe(
+              listManagedWorktrees({
+                worktreesDir: config.worktreesDir,
+                git,
+              }).pipe(
                 Effect.catchCause((listCause) =>
                   Effect.logWarning("managed worktree inventory scan failed", {
                     cause: String(listCause),
@@ -940,7 +946,9 @@ const makeWsRpcHandlersLayer = () =>
       const requireOwnerRole = Effect.gen(function* () {
         if (!canManageExternalMcp(yield* CurrentWsSessionRole)) {
           return yield* Effect.fail(
-            new WsRpcError({ message: "Owner authorization is required for this operation." }),
+            new WsRpcError({
+              message: "Owner authorization is required for this operation.",
+            }),
           );
         }
       });
@@ -1363,12 +1371,18 @@ const makeWsRpcHandlersLayer = () =>
                   const registration = existingProjectId
                     ? { projectId: existingProjectId, created: false }
                     : yield* dispatchOrchestrationCommand(normalizedCommand).pipe(
-                        Effect.map(() => ({ projectId: input.projectId, created: true })),
+                        Effect.map(() => ({
+                          projectId: input.projectId,
+                          created: true,
+                        })),
                         Effect.catch((cause) =>
                           findRegisteredProjectId(normalizedCommand.workspaceRoot).pipe(
                             Effect.flatMap((racedProjectId) =>
                               racedProjectId
-                                ? Effect.succeed({ projectId: racedProjectId, created: false })
+                                ? Effect.succeed({
+                                    projectId: racedProjectId,
+                                    created: false,
+                                  })
                                 : Effect.fail(cause),
                             ),
                           ),
@@ -1460,7 +1474,9 @@ const makeWsRpcHandlersLayer = () =>
                 workspaceRoot: workspaceCwd,
                 checkpoints: context.value.checkpoints,
                 ...(context.value.fileChangeActivityPayloads
-                  ? { fileChangeActivityPayloads: context.value.fileChangeActivityPayloads }
+                  ? {
+                      fileChangeActivityPayloads: context.value.fileChangeActivityPayloads,
+                    }
                   : {}),
               });
             }),
@@ -1562,9 +1578,11 @@ const makeWsRpcHandlersLayer = () =>
                   input.cwd,
                   git.createDetachedWorktree(input, {
                     onPhase: (phase) =>
-                      Queue.offer(queue, { kind: "phase_started", progressId, phase }).pipe(
-                        Effect.asVoid,
-                      ),
+                      Queue.offer(queue, {
+                        kind: "phase_started",
+                        progressId,
+                        phase,
+                      }).pipe(Effect.asVoid),
                   }),
                 ),
               ).pipe(
@@ -1572,10 +1590,11 @@ const makeWsRpcHandlersLayer = () =>
                   onFailure: (cause) =>
                     Queue.fail(queue, toWsRpcError(cause, "Failed to create detached worktree")),
                   onSuccess: (result) =>
-                    Queue.offer(queue, { kind: "completed", progressId, result }).pipe(
-                      Effect.andThen(Queue.end(queue)),
-                      Effect.asVoid,
-                    ),
+                    Queue.offer(queue, {
+                      kind: "completed",
+                      progressId,
+                      result,
+                    }).pipe(Effect.andThen(Queue.end(queue)), Effect.asVoid),
                 }),
               );
             }),
@@ -1923,11 +1942,12 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [WS_METHODS.serverUpsertKeybinding]: (input) =>
           rpcEffect(
-            keybindings
-              .upsertKeybindingRule(input.rule, input.replacing)
-              .pipe(
-                Effect.map((keybindingsConfig) => ({ keybindings: keybindingsConfig, issues: [] })),
-              ),
+            keybindings.upsertKeybindingRule(input.rule, input.replacing).pipe(
+              Effect.map((keybindingsConfig) => ({
+                keybindings: keybindingsConfig,
+                issues: [],
+              })),
+            ),
             "Failed to update keybinding",
           ),
         [WS_METHODS.subscribeServerLifecycle]: (_, { clientId }) =>
@@ -2205,6 +2225,11 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.logout(input))),
             "Failed to remove OmniMind model-service credentials",
+          ),
+        [WS_METHODS.omnimindModelServicesRevealApiKey]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.revealApiKey(input))),
+            "Failed to reveal an OmniMind model-service API key",
           ),
         [WS_METHODS.omnimindModelServicesRefresh]: (input) =>
           rpcEffect(
@@ -2536,7 +2561,10 @@ function makeWsNegotiateHttpRouteLayer() {
           const headers = { "Cache-Control": "no-store", ...corsHeaders };
           const input = parseWsNegotiateSearchParams(url.searchParams);
           if (input instanceof WsCompatibilityError) {
-            return HttpServerResponse.jsonUnsafe(input, { status: 426, headers });
+            return HttpServerResponse.jsonUnsafe(input, {
+              status: 426,
+              headers,
+            });
           }
           return yield* negotiateWsCompatibility(input).pipe(
             Effect.map((result) => HttpServerResponse.jsonUnsafe(result, { status: 200, headers })),

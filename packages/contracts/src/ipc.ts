@@ -277,6 +277,8 @@ import type {
   OmniMindModelServicePollLoginInput,
   OmniMindModelServiceLogoutInput,
   OmniMindModelServiceLogoutResult,
+  OmniMindModelServiceRevealApiKeyInput,
+  OmniMindModelServiceRevealApiKeyResult,
   OmniMindModelServiceRefreshInput,
   OmniMindModelServiceRefreshResult,
   OmniMindModelServicesGetInput,
@@ -983,6 +985,10 @@ export interface NativeApi {
       input: OmniMindModelServiceCancelLoginInput,
     ) => Promise<OmniMindModelServiceAuthResult>;
     logout: (input: OmniMindModelServiceLogoutInput) => Promise<OmniMindModelServiceLogoutResult>;
+    revealApiKey: (
+      input: OmniMindModelServiceRevealApiKeyInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindModelServiceRevealApiKeyResult>;
     refresh: (
       input: OmniMindModelServiceRefreshInput,
       options?: { readonly signal?: AbortSignal },

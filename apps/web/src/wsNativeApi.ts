@@ -334,7 +334,11 @@ function resolveFallbackBrowserTab(state: ThreadBrowserState, tabId?: string) {
  */
 export function onServerWelcome(listener: (payload: WsWelcomePayload) => void): () => void {
   const latestWelcome = instance?.transport.getLatestPush(WS_CHANNELS.serverWelcome)?.data ?? null;
-  return subscribeWithReplay({ registry: welcomeListeners, listener, latest: latestWelcome });
+  return subscribeWithReplay({
+    registry: welcomeListeners,
+    listener,
+    latest: latestWelcome,
+  });
 }
 
 /**
@@ -414,7 +418,9 @@ export function createWsNativeApi(): NativeApi {
 
   const transport = new WsTransport();
   let unsubscribeDomainEventTransport: (() => void) | null = null;
-  transport.onStateChange((state) => emitWsTransportState(state), { replayCurrent: true });
+  transport.onStateChange((state) => emitWsTransportState(state), {
+    replayCurrent: true,
+  });
   transport.onCompatibilityIssue((issue) => emitWsCompatibilityIssue(issue), {
     replayCurrent: true,
   });
@@ -478,7 +484,9 @@ export function createWsNativeApi(): NativeApi {
         if (window.desktopBridge?.saveFile) {
           return window.desktopBridge.saveFile(input);
         }
-        const blob = new Blob([input.contents], { type: "text/markdown;charset=utf-8" });
+        const blob = new Blob([input.contents], {
+          type: "text/markdown;charset=utf-8",
+        });
         const url = URL.createObjectURL(blob);
         try {
           const anchor = document.createElement("a");
@@ -611,7 +619,9 @@ export function createWsNativeApi(): NativeApi {
       detail: (input) => transport.request(WS_METHODS.pullRequestsDetail, input),
       diff: (input) => transport.request(WS_METHODS.pullRequestsDiff, input),
       action: (input) =>
-        transport.request(WS_METHODS.pullRequestsAction, input, { timeoutMs: null }),
+        transport.request(WS_METHODS.pullRequestsAction, input, {
+          timeoutMs: null,
+        }),
       comment: (input) => transport.request(WS_METHODS.pullRequestsComment, input),
       setPinned: (input) => transport.request(WS_METHODS.pullRequestsSetPinned, input),
     },
@@ -647,7 +657,9 @@ export function createWsNativeApi(): NativeApi {
           body: input,
         }),
       issueAuthWebSocketToken: () =>
-        requestAuthJson<AuthWebSocketTokenResult>("/api/auth/ws-token", { method: "POST" }),
+        requestAuthJson<AuthWebSocketTokenResult>("/api/auth/ws-token", {
+          method: "POST",
+        }),
       createAuthPairingToken: (input?: AuthCreatePairingCredentialInput) =>
         requestAuthJson<AuthPairingCredentialResult>("/api/auth/pairing-token", {
           method: "POST",
@@ -689,7 +701,9 @@ export function createWsNativeApi(): NativeApi {
       // Provider updates run up to 2 minutes server-side; callers wrap this in
       // withProviderUpdateTimeout, which owns the client-side watchdog.
       updateProvider: (input) =>
-        transport.request(WS_METHODS.serverUpdateProvider, input, { timeoutMs: null }),
+        transport.request(WS_METHODS.serverUpdateProvider, input, {
+          timeoutMs: null,
+        }),
       listWorktrees: () => transport.request(WS_METHODS.serverListWorktrees),
       listLocalServers: () => transport.request(WS_METHODS.serverListLocalServers),
       stopLocalServer: (input) => transport.request(WS_METHODS.serverStopLocalServer, input),
@@ -714,7 +728,9 @@ export function createWsNativeApi(): NativeApi {
           if (!(error instanceof VoiceUploadRouteUnavailableError)) {
             throw error;
           }
-          return transport.request(WS_METHODS.serverTranscribeVoice, input, { timeoutMs: null });
+          return transport.request(WS_METHODS.serverTranscribeVoice, input, {
+            timeoutMs: null,
+          });
         }
       },
       upsertKeybinding: (input) => transport.request(WS_METHODS.serverUpsertKeybinding, input),
@@ -732,7 +748,9 @@ export function createWsNativeApi(): NativeApi {
       // Compaction is capped server-side per provider (ACP providers allow up
       // to the 10-minute turn-idle ceiling), so the server owns this bound.
       compactThread: (input) =>
-        transport.request(WS_METHODS.providerCompactThread, input, { timeoutMs: null }),
+        transport.request(WS_METHODS.providerCompactThread, input, {
+          timeoutMs: null,
+        }),
       listCommands: (input) => transport.request(WS_METHODS.providerListCommands, input),
       listSkills: (input) => transport.request(WS_METHODS.providerListSkills, input),
       listSkillsCatalog: (input) => transport.request(WS_METHODS.providerListSkillsCatalog, input),
@@ -781,6 +799,12 @@ export function createWsNativeApi(): NativeApi {
         }),
       cancelLogin: (input) => transport.request(WS_METHODS.omnimindModelServicesCancelLogin, input),
       logout: (input) => transport.request(WS_METHODS.omnimindModelServicesLogout, input),
+      revealApiKey: (input, options) =>
+        transport.request(
+          WS_METHODS.omnimindModelServicesRevealApiKey,
+          input,
+          options?.signal ? { signal: options.signal } : undefined,
+        ),
       refresh: (input, options) =>
         transport.request(
           WS_METHODS.omnimindModelServicesRefresh,
@@ -812,27 +836,39 @@ export function createWsNativeApi(): NativeApi {
       list: (input = {}) => transport.request(WS_METHODS.omnimindEcosystemList, input),
       listResources: (input) => transport.request(WS_METHODS.omnimindEcosystemListResources, input),
       install: (input) =>
-        transport.request(WS_METHODS.omnimindEcosystemInstall, input, { timeoutMs: null }),
+        transport.request(WS_METHODS.omnimindEcosystemInstall, input, {
+          timeoutMs: null,
+        }),
       update: (input) =>
-        transport.request(WS_METHODS.omnimindEcosystemUpdate, input, { timeoutMs: null }),
+        transport.request(WS_METHODS.omnimindEcosystemUpdate, input, {
+          timeoutMs: null,
+        }),
       remove: (input) =>
-        transport.request(WS_METHODS.omnimindEcosystemRemove, input, { timeoutMs: null }),
+        transport.request(WS_METHODS.omnimindEcosystemRemove, input, {
+          timeoutMs: null,
+        }),
       setResourceEnabled: (input) =>
         transport.request(WS_METHODS.omnimindEcosystemSetResourceEnabled, input),
       reload: (input) =>
-        transport.request(WS_METHODS.omnimindEcosystemReload, input, { timeoutMs: null }),
+        transport.request(WS_METHODS.omnimindEcosystemReload, input, {
+          timeoutMs: null,
+        }),
     },
     omnimindAgentPrompts: {
       getSnapshot: (input = {}) =>
         transport.request(WS_METHODS.omnimindAgentPromptsGetSnapshot, input),
       mutate: (input) =>
-        transport.request(WS_METHODS.omnimindAgentPromptsMutate, input, { timeoutMs: null }),
+        transport.request(WS_METHODS.omnimindAgentPromptsMutate, input, {
+          timeoutMs: null,
+        }),
     },
     omnimindWebSearch: {
       open: () => transport.request(WS_METHODS.omnimindWebSearchOpen, {}),
       refresh: (input = {}) => transport.request(WS_METHODS.omnimindWebSearchRefresh, input),
       mutate: (input) =>
-        transport.request(WS_METHODS.omnimindWebSearchMutate, input, { timeoutMs: null }),
+        transport.request(WS_METHODS.omnimindWebSearchMutate, input, {
+          timeoutMs: null,
+        }),
       testProvider: (input, options) =>
         transport.request(WS_METHODS.omnimindWebSearchTestProvider, input, {
           timeoutMs: null,
@@ -928,18 +964,26 @@ export function createWsNativeApi(): NativeApi {
       keyEvent: (input) => transport.request(DEVICE_WS_METHODS.keyEvent, input),
       pressButton: (input) => transport.request(DEVICE_WS_METHODS.pressButton, input),
       installApp: (input) =>
-        transport.request(DEVICE_WS_METHODS.installApp, input, { timeoutMs: null }),
+        transport.request(DEVICE_WS_METHODS.installApp, input, {
+          timeoutMs: null,
+        }),
       launchApp: (input) => transport.request(DEVICE_WS_METHODS.launchApp, input),
       openUrl: (input) => transport.request(DEVICE_WS_METHODS.openUrl, input),
       screenshot: (input) => transport.request(DEVICE_WS_METHODS.screenshot, input),
       startRecording: (input) =>
-        transport.request(DEVICE_WS_METHODS.startRecording, input, { timeoutMs: null }),
+        transport.request(DEVICE_WS_METHODS.startRecording, input, {
+          timeoutMs: null,
+        }),
       stopRecording: (input) =>
-        transport.request(DEVICE_WS_METHODS.stopRecording, input, { timeoutMs: null }),
+        transport.request(DEVICE_WS_METHODS.stopRecording, input, {
+          timeoutMs: null,
+        }),
       describeUi: (input) => transport.request(DEVICE_WS_METHODS.describeUi, input),
       // A scroll loop runs several swipe/describe round-trips on the device.
       scrollToElement: (input) =>
-        transport.request(DEVICE_WS_METHODS.scrollToElement, input, { timeoutMs: null }),
+        transport.request(DEVICE_WS_METHODS.scrollToElement, input, {
+          timeoutMs: null,
+        }),
       onEvent: deviceEventListeners.subscribe,
     },
     browser: {

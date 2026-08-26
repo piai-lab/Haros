@@ -11,6 +11,8 @@ import {
   OmniMindModelServiceAuthResult,
   OmniMindModelServiceBeginLoginInput,
   OmniMindModelServicePollLoginInput,
+  OmniMindModelServiceRevealApiKeyInput,
+  OmniMindModelServiceRevealApiKeyResult,
   OmniMindModelServiceDescriptor,
   OmniMindModelServicesGetResult,
   OmniMindModelServicesGetInput,
@@ -647,5 +649,36 @@ describe("OmniMind model-services contracts", () => {
       credential: { key: "must-not-cross-the-contract" },
     } as never);
     expect(JSON.stringify(result)).not.toContain("must-not-cross-the-contract");
+  });
+
+  it("admits only an explicit bounded saved-key reveal result", () => {
+    expect(
+      Schema.decodeUnknownSync(OmniMindModelServiceRevealApiKeyInput)({
+        serviceId: "deepseek",
+      }),
+    ).toEqual({ serviceId: "deepseek" });
+    expect(
+      Schema.decodeUnknownSync(OmniMindModelServiceRevealApiKeyResult)({
+        state: "ready",
+        apiKey: "test-only-key",
+      }),
+    ).toEqual({ state: "ready", apiKey: "test-only-key" });
+    expect(
+      Schema.decodeUnknownSync(OmniMindModelServiceRevealApiKeyResult)({
+        state: "unavailable",
+        reason: "not_stored_api_key",
+      }),
+    ).toEqual({ state: "unavailable", reason: "not_stored_api_key" });
+    expect(() =>
+      Schema.decodeUnknownSync(OmniMindModelServiceRevealApiKeyInput)({
+        serviceId: "/private/.omnimind/agent/auth.json",
+      }),
+    ).toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(OmniMindModelServiceRevealApiKeyResult)({
+        state: "ready",
+        apiKey: "",
+      }),
+    ).toThrow();
   });
 });

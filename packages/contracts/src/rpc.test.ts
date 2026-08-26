@@ -32,6 +32,7 @@ describe("WS RPC contracts", () => {
     expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesAnswerLogin)).toBe(true);
     expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesCancelLogin)).toBe(true);
     expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesLogout)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesRevealApiKey)).toBe(true);
     expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesRefresh)).toBe(true);
     expect(WsFeatureRpcGroup.requests.has(WS_METHODS.projectsSearchContent)).toBe(true);
     expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesDiscoverCustom)).toBe(

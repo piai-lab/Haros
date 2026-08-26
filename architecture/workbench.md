@@ -290,7 +290,9 @@ Settings 的 **概览 → 添加 → 详情** 仍是 Model services 管理 IA；
 
 技术 authority 与用户语言必须分层。`Model services` 的 overview、添加/编辑、认证、模型列表、进度、Toast、错误和恢复属于 OmniMind 正常产品表面，只使用“模型服务、连接、登录、API Key、模型目录、本机凭据、重新加载”等用户概念；不得用 `Pi`、`Pi-derived`、`ModelRuntime`、`ModelConfig`、`models.json`、`runtime projection`、`credential owner`、内部 provider id、package/module 名或中英混杂术语解释 OmniMind 自身。普通详情中的来源只表达“OmniMind 内置 / 通过 API 地址连接 / 由 OmniMind 扩展提供”；精确文件、模块和 lineage 只在用户主动展开的技术详情、诊断、About、Licenses 或源码归属中出现。独立 stock Pi 仍在用户明确选择该 Engine 或查看其技术详情时准确显示为 `Pi`，不能为了品牌清理而改写其真实 identity。
 
-凭据说明只陈述用户可验证且由当前实现保证的事实，例如“仅保存在这台设备上、用于连接该模型服务、保存后不再显示”；不能用“交给 Pi”“不在 OmniMind 设置中”等实现拓扑制造另一个产品心智，也不能无证据承诺 Keychain、加密级别、云端零接触或其他更强保证。API Key、OAuth、目录刷新与配置重载已经具有不同 typed state 时，应分别给出准确的本地化进度与恢复动作，不能用一个含糊的“等待模型服务”掩盖当前阶段。
+凭据说明只陈述用户可验证且由当前实现保证的事实，例如“仅保存在这台设备上、用于连接该模型服务、可在当前服务详情中主动显示或复制”；不能用“交给 Pi”“不在 OmniMind 设置中”等实现拓扑制造另一个产品心智，也不能无证据承诺 Keychain、加密级别、云端零接触或其他更强保证。用户保存的literal API Key默认密码态隐藏，眼睛、复制、更换与清除复用Web Search Provider同一组控件规则；清除是用户已经明确表达的本地可恢复动作，不再叠加确认框。离开详情或Settings、开始更换、清除、重置与卸载都重新隐藏并清空短时值。环境来源只显示变量名；OAuth、command与其他非literal来源保持各自真实语义，不能出现可查看Key的假入口。API Key、OAuth、目录刷新与配置重载已经具有不同typed state时，应分别给出准确的本地化进度与恢复动作，不能用一个含糊的“等待模型服务”掩盖当前阶段。
+
+用户亲手输入普通API endpoint并明确点击发现、测试或保存后，同一编辑会话按实际endpoint集合记忆确认；只改模型ID、协议、名称、header或其他非endpoint字段不得重新弹出相同地址的确认。实际endpoint集合改变后可重新确认；隐藏command-backed credential/header仍按稳定内容fingerprint确认一次，内容变化后再确认。两者不能共用把无关编辑也算成新风险的宽fingerprint。
 
 typed bridge 只证明结构与秘密边界，不会自动把 Provider 原文变成 OmniMind 产品文案。正常认证对话框的标题、说明、状态、动作和可识别错误必须来自同一 en/zh-CN catalog；URL host、设备代码、模型/服务/选项的真实名称可以保持原文。Provider 的 raw prompt、instructions、progress message、error 或 stack 若对完成操作不可或缺，应以明确 provenance 放在次级说明或可展开技术详情，不能替代本地化主状态，也不能让普通中文路径因上游英文再次中英混杂；若缺少足够 typed 语义，准确保留 provider instruction 并标明来源，而不是猜测翻译或丢失操作信息。
 
