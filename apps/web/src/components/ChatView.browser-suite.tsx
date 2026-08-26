@@ -2568,7 +2568,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     document.body.innerHTML = "";
   });
 
-  it("keeps the message trail fixed to the Chat pane while the reading column recenters", async () => {
+  geometryIt("keeps the message trail fixed to the Chat pane while the reading column recenters", async () => {
     const mounted = await mountChatView({
       viewport: { ...DEFAULT_VIEWPORT, width: 1894, height: 1072 },
       snapshot: createSnapshotForTargetUser({
@@ -2681,7 +2681,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("does not translate a wide chat column underneath the message trail", async () => {
+  geometryIt("does not translate a wide chat column underneath the message trail", async () => {
     localStorage.setItem(LOCAL_PREFERENCES_STORAGE_KEY, JSON.stringify({ chatWidth: "wide" }));
     const mounted = await mountChatView({
       viewport: { ...DEFAULT_VIEWPORT, width: 1358, height: 1072 },
@@ -2715,7 +2715,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("keeps Sidebar through the reading range and only suppresses it under compact pressure", async () => {
+  geometryIt("keeps Sidebar through the reading range and only suppresses it under compact pressure", async () => {
     const cookieSet = vi.spyOn(cookieStore, "set");
     const mounted = await mountChatView({
       viewport: { ...DEFAULT_VIEWPORT, width: 1280 },
@@ -2902,7 +2902,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("turns a Sidebar rail retreat into a stable non-modal edge peek without rewriting width", async () => {
+  geometryIt("turns a Sidebar rail retreat into a stable non-modal edge peek without rewriting width", async () => {
     localStorage.removeItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY);
     const cookieSet = vi.spyOn(cookieStore, "set");
     const mounted = await mountChatView({
@@ -3142,7 +3142,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("uses a compact custom Sidebar width without feeding presentation back into the budget", async () => {
+  geometryIt("uses a compact custom Sidebar width without feeding presentation back into the budget", async () => {
     localStorage.setItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY, JSON.stringify(208));
     const mounted = await mountChatView({
       viewport: { ...DEFAULT_VIEWPORT, width: 528 },
@@ -3273,7 +3273,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it.each([
+  geometryIt.each([
     { width: 480, storedLegacyDefaultOpen: false },
     { width: 480, storedLegacyDefaultOpen: true },
     { width: 840, storedLegacyDefaultOpen: false },
@@ -3371,7 +3371,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     },
   );
 
-  it("lets Environment yield before Sidebar and restores its manual intent after pressure", async () => {
+  geometryIt("lets Environment yield before Sidebar and restores its manual intent after pressure", async () => {
     const mounted = await mountChatView({
       viewport: { ...DEFAULT_VIEWPORT, width: 1440 },
       snapshot: createSnapshotForTargetUser({
@@ -3498,7 +3498,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it.each([
+  geometryIt.each([
     { locale: "en", theme: "light" },
     { locale: "en", theme: "dark" },
     { locale: "zh-CN", theme: "light" },
@@ -3646,7 +3646,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     },
   );
 
-  it("keeps RightDock panes mounted and geometrically correct across split and exclusive resize", async () => {
+  geometryIt("keeps RightDock panes mounted and geometrically correct across split and exclusive resize", async () => {
     const explorerPane = createRightDockPane("pane-explorer-responsive", "explorer");
     const browserPane = createRightDockPane("pane-browser-responsive", "browser");
     const nativeApi = readNativeApi();
@@ -3873,7 +3873,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("animates and reverses RightDock geometry when route navigation changes thread-local state", async () => {
+  geometryIt("animates and reverses RightDock geometry when route navigation changes thread-local state", async () => {
     const explorerPane = createRightDockPane("pane-explorer-route-motion", "explorer");
     useRightDockStore.setState({
       dockStateByThreadId: {
@@ -3980,7 +3980,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("keeps the responsive shell continuous through the authored hysteresis widths", async () => {
+  geometryIt("keeps the responsive shell continuous through the authored hysteresis widths", async () => {
     const explorerPane = createRightDockPane("pane-explorer-continuous-resize", "explorer");
     useRightDockStore.setState({
       dockStateByThreadId: {
@@ -4229,7 +4229,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("clamps the Device pane's natural width without shrinking Chat below its floor", async () => {
+  geometryIt("clamps the Device pane's natural width without shrinking Chat below its floor", async () => {
     const devicePane = createRightDockPane("pane-device-responsive", "device");
     useRightDockStore.setState({
       dockStateByThreadId: {
@@ -4290,7 +4290,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("keeps the 340px Plan sidebar stable while Workbench changes presentation", async () => {
+  geometryIt("keeps the 340px Plan sidebar stable while Workbench changes presentation", async () => {
     const diffPane = createRightDockPane("pane-diff-plan-pressure", "diff");
     useRightDockStore.setState({
       dockStateByThreadId: {
@@ -5372,7 +5372,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("centers the scroll-to-bottom arrow with Composer in each usable Chat canvas", async () => {
+  geometryIt("centers the scroll-to-bottom arrow with Composer in each usable Chat canvas", async () => {
     const mounted = await mountChatView({
       viewport: { ...DEFAULT_VIEWPORT, width: 1894, height: 1072 },
       snapshot: createSnapshotWithLongAssistantResponse(),
@@ -6948,7 +6948,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("applies the selected chat width to the transcript column", async () => {
+  geometryIt("applies the selected chat width to the transcript column", async () => {
     localStorage.setItem(LOCAL_PREFERENCES_STORAGE_KEY, JSON.stringify({ chatWidth: "wide" }));
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
@@ -11546,7 +11546,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("keeps the final transcript row clear of a tall composer panel stack", async () => {
+  geometryIt("keeps the final transcript row clear of a tall composer panel stack", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotWithTallComposerStack(),
