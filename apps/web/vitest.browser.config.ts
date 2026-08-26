@@ -34,14 +34,19 @@ interface BrowserTestConfigOptions {
 export async function createBrowserTestConfig(options: BrowserTestConfigOptions) {
   const host = process.env.VITEST_BROWSER_API_HOST ?? "127.0.0.1";
   const port = await resolveBrowserTestPort({ host, suite: options.suite });
+  const cacheScope = process.argv.some((argument) =>
+    /(?:\.test|\.browser)\.[cm]?[jt]sx?$/.test(argument),
+  )
+    ? "focused"
+    : "full";
 
   return mergeConfig(
     viteConfig,
     defineConfig({
-      // Stable, geometry, and all have different Vitest/Vite configs. Sharing
-      // the default optimizer directory makes switching suites invalidate the
-      // previous suite's dependency cache on every inner-loop run.
-      cacheDir: `node_modules/.vite-browser-${options.suite}`,
+      // Suites have different configs, and a focused run optimizes only the
+      // selected file's graph. Keep the six bounded suite/scope caches apart so
+      // neither switching suites nor a narrow inner-loop run poisons a full gate.
+      cacheDir: `node_modules/.vite-browser-${options.suite}-${cacheScope}`,
       resolve: {
         alias: {
           "~": srcPath,
