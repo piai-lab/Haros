@@ -58,16 +58,35 @@ describe("provider interaction mode policy", () => {
     }
   });
 
-  it("makes Converge read-only, treats Goal as context, and prefers Ask User", () => {
+  it("makes Converge read-only, treats Goal as context, and gates substantive output on Ask User", () => {
     expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain("Do not implement");
-    expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain("canonical Ask User");
+    expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain(
+      "before a substantive answer, recommendation, brief, plan, or consequential execution",
+    );
+    expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain("its exact name is `ask_user`");
+    expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain("your next assistant output MUST be a call");
+    expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain(
+      "Emit no prose, analysis, rationale, candidate options, or conversational preamble",
+    );
+    expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain(
+      "output only the structured Ask User tool call now—no preamble and no substantive answer",
+    );
+    expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain(
+      "the structured Ask User call is mandatory before substantive output",
+    );
+    expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain('say "I guess your real goal is..."');
+    expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain(
+      "A prose question, option list, Markdown table, or recommendation is not a substitute",
+    );
     expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain("A / B / C choices");
     expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain(
-      "reply with a letter or provide a custom answer",
+      "reply with a letter or provide a custom answer, then end the response immediately",
+    );
+    expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain(
+      "Do not give the substantive answer before the fallback question",
     );
     expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain("Confirm convergence");
     expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain("Continue converging");
-    expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain("rather than obeying a fixed count");
     expect(PROVIDER_CONVERGE_MODE_ENVELOPE).toContain(
       "Do not repeat confirmation for a decision the user has already expressed clearly",
     );

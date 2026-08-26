@@ -34,10 +34,13 @@ export function buildAskUserTool(input: {
     name: ASK_USER_TOOL_NAME,
     label: "Ask user",
     description:
-      "Ask the user one or more decision or clarification questions and wait for their response before replanning. Use authored options when they help, but never add an Other/Custom catch-all option; OmniMind always provides that choice.",
-    promptSnippet: "Ask the user for blocking decisions or clarification",
+      "Ask the user one or more material decision or clarification questions and wait for their response before answering, recommending, planning, or acting. Use authored options when they help, but never add an Other/Custom catch-all option; OmniMind always provides that choice.",
+    promptSnippet:
+      "Ask the user for material decisions or clarification before answering or acting",
     promptGuidelines: [
-      "Use ask_user only when the answer materially affects the next action. Do not author an Other, Custom, free-form catch-all, or equivalent sentinel option.",
+      "Use ask_user when the user's answer materially affects the response, recommendation, plan, acceptance criteria, or next action. Do not infer a user-owned choice from circumstantial context or replace this tool with a prose option list.",
+      "Call ask_user directly when it is needed. Put concise context and recommendations inside the structured question instead of sending a prose preamble first.",
+      "Do not author an Other, Custom, free-form catch-all, or equivalent sentinel option.",
       "Recommendations and suggestions are advisory only: they are never selected or inserted unless the user explicitly chooses them.",
     ],
     parameters: {
@@ -87,7 +90,10 @@ export function buildAskUserTool(input: {
                   placeholder: { type: "string" },
                   suggestion: {
                     type: "object",
-                    properties: { text: { type: "string", minLength: 1 }, reason: { type: "string" } },
+                    properties: {
+                      text: { type: "string", minLength: 1 },
+                      reason: { type: "string" },
+                    },
                     required: ["text"],
                     additionalProperties: false,
                   },
@@ -107,7 +113,11 @@ export function buildAskUserTool(input: {
       const request = validateAskUserToolInput(params);
       const result = validateAskUserResult(
         request,
-        await input.interaction.present({ toolCallId, request, ...(signal === undefined ? {} : { signal }) }),
+        await input.interaction.present({
+          toolCallId,
+          request,
+          ...(signal === undefined ? {} : { signal }),
+        }),
       );
       return {
         content: [{ type: "text", text: JSON.stringify(result) }],
