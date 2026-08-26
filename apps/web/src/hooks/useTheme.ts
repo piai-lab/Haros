@@ -4,8 +4,6 @@
 // Exports: useTheme for mode, resolved variant, theme-pack import/export, and active theme metadata.
 
 import { useEffect, useMemo, useSyncExternalStore } from "react";
-import { isElectron } from "../env";
-import { isMacPlatform } from "../lib/utils";
 import {
   DEFAULT_THEME_STATE,
   type ChromeTheme,
@@ -16,10 +14,8 @@ import {
   type ThemeVariant,
   areThemePacksEqual,
   buildEngineWebSurfaceThemeSnapshot,
-  buildThemeCssVariables,
   canParseThemeShareString,
   createThemeShareString,
-  parseStoredThemeState,
   resetThemeVariant as resetThemeVariantState,
   resolveThemePack,
   resolveThemeVariant,
@@ -29,19 +25,24 @@ import {
   updateChromeTheme,
   updateThemePackFromShareString,
 } from "../theme/theme.logic";
+import {
+  THEME_STORAGE_KEY,
+  applyThemeState,
+  getSystemDark,
+  hasThemeStorage,
+  readStoredThemeState,
+} from "../theme/theme.bootstrap";
 
 type ThemeSnapshot = {
   state: ThemeState;
   systemDark: boolean;
 };
 
-const STORAGE_KEY = "omnimind:theme";
 const MEDIA_QUERY = "(prefers-color-scheme: dark)";
 
 let listeners: Array<() => void> = [];
 let lastSnapshot: ThemeSnapshot | null = null;
 let lastSnapshotKey = "";
-let lastDesktopTheme: ThemeMode | null = null;
 
 // ─── Store wiring ─────────────────────────────────────────────────────────
 
@@ -51,32 +52,12 @@ function emitChange() {
   }
 }
 
-function hasThemeStorage(): boolean {
-  return typeof window !== "undefined" && typeof localStorage !== "undefined";
-}
-
-function getSystemDark(): boolean {
-  return typeof window !== "undefined" && window.matchMedia(MEDIA_QUERY).matches;
-}
-
-function readStoredThemeState(): ThemeState {
-  if (!hasThemeStorage()) {
-    return DEFAULT_THEME_STATE;
-  }
-
-  try {
-    return parseStoredThemeState(localStorage.getItem(STORAGE_KEY));
-  } catch {
-    return DEFAULT_THEME_STATE;
-  }
-}
-
 function writeStoredThemeState(state: ThemeState) {
   if (!hasThemeStorage()) {
     return;
   }
 
-  localStorage.setItem(STORAGE_KEY, serializeThemeState(state));
+  localStorage.setItem(THEME_STORAGE_KEY, serializeThemeState(state));
 }
 
 function getSnapshot(): ThemeSnapshot {
@@ -116,7 +97,7 @@ function subscribe(listener: () => void): () => void {
     emitChange();
   };
   const handleStorage = (event: StorageEvent) => {
-    if (event.key !== STORAGE_KEY) {
+    if (event.key !== THEME_STORAGE_KEY) {
       return;
     }
     applyThemeState(readStoredThemeState(), true);
@@ -131,79 +112,6 @@ function subscribe(listener: () => void): () => void {
     mediaQuery.removeEventListener("change", handleMediaChange);
     window.removeEventListener("storage", handleStorage);
   };
-}
-
-// ─── DOM projection ───────────────────────────────────────────────────────
-
-function applyThemeState(state: ThemeState, suppressTransitions = false) {
-  if (typeof document === "undefined" || typeof window === "undefined") {
-    return;
-  }
-
-  const root = document.documentElement;
-  // Some server-rendered tests stub only the tiny DOM surface they need.
-  if (
-    typeof root.classList?.toggle !== "function" ||
-    typeof root.style?.setProperty !== "function" ||
-    typeof root.style?.removeProperty !== "function"
-  ) {
-    return;
-  }
-
-  if (suppressTransitions) {
-    root.classList.add("no-transitions");
-  }
-
-  const variant = resolveThemeVariant(state.mode, getSystemDark());
-  const activeTheme = resolveThemePack(state, variant);
-  const cssVariableBuild = buildThemeCssVariables(activeTheme, variant, {
-    electron: isElectron,
-    isMac: isMacPlatform(typeof navigator === "undefined" ? "" : navigator.platform),
-    systemUiFont: state.systemUiFont,
-  });
-
-  root.classList.toggle("dark", variant === "dark");
-  root.setAttribute("data-theme-preset-id", activeTheme.codeThemeId);
-  root.setAttribute("data-theme-mode", state.mode);
-  root.setAttribute("data-theme-variant", variant);
-  root.setAttribute("data-window-material", cssVariableBuild.material);
-
-  for (const [name, value] of Object.entries(cssVariableBuild.variables)) {
-    if (value.trim().length === 0) {
-      root.style.removeProperty(name);
-      continue;
-    }
-    root.style.setProperty(name, value);
-  }
-
-  syncDesktopTheme(state.mode);
-
-  if (suppressTransitions) {
-    // Force a reflow so the no-transitions class takes effect before removal.
-    // oxlint-disable-next-line no-unused-expressions
-    root.offsetHeight;
-    requestAnimationFrame(() => {
-      root.classList.remove("no-transitions");
-    });
-  }
-}
-
-function syncDesktopTheme(theme: ThemeMode) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const bridge = window.desktopBridge;
-  if (!bridge || lastDesktopTheme === theme) {
-    return;
-  }
-
-  lastDesktopTheme = theme;
-  void bridge.setTheme(theme).catch(() => {
-    if (lastDesktopTheme === theme) {
-      lastDesktopTheme = null;
-    }
-  });
 }
 
 // Apply immediately on module load to minimize flash before React mounts.

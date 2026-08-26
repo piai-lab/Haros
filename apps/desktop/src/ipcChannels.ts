@@ -35,6 +35,7 @@ export const DESKTOP_IPC_CHANNELS = {
   zoomFactor: "desktop:zoom-factor",
   zoomFactorChanged: "desktop:zoom-factor-changed",
   wsUrl: "desktop:get-ws-url",
+  startupPresentation: "desktop:startup-presentation",
   transcribeVoice: "desktop:server-transcribe-voice",
   appSnap: {
     getState: "desktop:appsnap-get-state",

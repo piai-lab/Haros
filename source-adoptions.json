@@ -275,6 +275,32 @@
       "changes": "Adds one default-inert executionMode named barrier. Before any sibling argument preparation, hook or execute, the batch runs only the source-order first barrier and emits structured blocked results for every sibling. An answered barrier continues with a fresh model request; terminal or failed barriers stop the loop. No stock Tool selects barrier, and batches without one retain the upstream parallel/sequential path.",
       "updatePolicy": "Bun applies the exact patch or fails on conflict. On every Pi intake, first delete it if upstream provides equivalent preflight barrier semantics. Otherwise re-prove sibling prepare/before/execute are zero on both sides of the barrier, multiple-barrier behavior, answered replan, terminal no-continuation and unchanged stock batches. Stop if maintenance would require an ask_user name special-case, duplicated scheduler or agent-loop rewrite.",
       "licenseFiles": ["LICENSES/pi-coding-agent-MIT.txt"]
+    },
+    {
+      "id": "percho-startup-splash",
+      "url": "https://github.com/Jaxton07/percho.git",
+      "revision": "575216c2690c7e2b30d9ad10b773f424b469c163",
+      "paths": [
+        "apps/web/src/startup/startupSplashDom.ts",
+        "apps/web/src/startup/startupSplash.ts",
+        "apps/web/src/styles/startup-splash.css"
+      ],
+      "sourcePaths": [
+        "packages/desktop/src/renderer/src/splash-dom.ts",
+        "packages/desktop/src/renderer/src/splash.ts",
+        "packages/desktop/src/renderer/src/styles/splash.css"
+      ],
+      "sourceSha256": {
+        "packages/desktop/src/renderer/src/splash-dom.ts": "9b1f39b8bd8a9eb19299794333080c3289af00d255f2e611f36e95fc320e5fc9",
+        "packages/desktop/src/renderer/src/splash.ts": "b7bf65e7bec76f28c3a1c24c30422df91a53f283c7d0f3b6f2e2f64cb063d7cb",
+        "packages/desktop/src/renderer/src/styles/splash.css": "4abdf18669bec3e6f48fd2a2d6e23d562ed61991a2f17d952a344032724a4b2f"
+      },
+      "licenseSha256": "27e29ff5583c46bfba33748632fb4024427f7fa3783aeb728fc628caa002d2bd",
+      "rights": "The fixed Percho source is MIT-licensed by Jaxton07 under the retained exact legal text. Adoption is limited to the synchronous first-frame splash DOM, CSS choreography and presentation controller; no Percho product identity, state owner, window lifecycle or readiness authority is adopted.",
+      "mode": "copied-adapted",
+      "changes": "OmniMind retains the synchronous pre-bundle DOM, 64-dot golden-angle swarm, breathe and sonar motion, radial exit, content-visibility isolation, theme-first background and reduced-motion structure. Product identity, theme tokens, bilingual accessible slow status and full/brief process timing are adapted locally. Percho's Promise.allSettled readiness and unconditional maximum display timeout are explicitly rejected: the splash exits only from OmniMind's existing transport, Settings/Provider snapshot and focused Composer catalog owners, or into deterministic recovery. The copied layer is presentation-only, leaves retries in React Query and creates no second BrowserWindow, store or persisted state.",
+      "updatePolicy": "Pinned exact revision and donor digests. Do not retune or rewrite the particle geometry from memory. Any source, identity, timing, lifecycle, rights or readiness change requires exact upstream comparison plus first-frame, theme, reduced-motion, cleanup, focused Composer recovery and packaged Electron revalidation. The adoption can be removed by deleting the three copied presentation files and their bootstrap/readiness wiring without changing Provider or Product State owners.",
+      "licenseFiles": ["LICENSES/percho-MIT.txt"]
     }
   ]
 }

@@ -651,6 +651,8 @@ export const DesktopAppIcon = Schema.Literals(["default", "icon", "dark"]);
 export type DesktopAppIcon = typeof DesktopAppIcon.Type;
 
 export interface DesktopBridge {
+  /** Full only for the first renderer window in this Desktop process. */
+  readonly startupPresentation?: "full" | "brief";
   getWsUrl: () => string | null;
   /**
    * Absolute filesystem path for a File from drag/drop or file inputs.

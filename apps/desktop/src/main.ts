@@ -243,6 +243,7 @@ import {
   writeDesktopWindowState,
 } from "./windowState";
 import { DESKTOP_IPC_CHANNELS } from "./ipcChannels";
+import { makeStartupPresentationOwner } from "./startupPresentation";
 import { DesktopAppSnapManager } from "./appSnapManager";
 import { hardenBrowserAnnotationWebviewPreferences } from "./browserAnnotations/webviewSecurity";
 import { LOCAL_HTML_PREVIEW_SCHEME } from "./localHtmlPreviewProtocol";
@@ -272,6 +273,7 @@ const startupBundleIdentity = captureStartupBundleIdentity();
 const shellEnvironmentSync = syncShellEnvironment();
 
 const IPC = DESKTOP_IPC_CHANNELS;
+const startupPresentationOwner = makeStartupPresentationOwner();
 const MAX_CLIPBOARD_IMAGE_DATA_URL_LENGTH = 16 * 1024 * 1024;
 const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
 const desktopFlavor = resolveOmniMindDesktopFlavor({
@@ -4044,6 +4046,11 @@ function registerIpcHandlers(): void {
     // live URL instead of trusting build-time or inherited renderer env.
     event.returnValue =
       normalizeDesktopWsUrl(backendWsUrl) ?? resolveDesktopWsUrlFromEnv(process.env);
+  });
+
+  ipcMain.removeAllListeners(IPC.startupPresentation);
+  ipcMain.on(IPC.startupPresentation, (event: IpcMainEvent) => {
+    event.returnValue = startupPresentationOwner.claim();
   });
 
   ipcMain.removeAllListeners(IPC.zoomFactor);

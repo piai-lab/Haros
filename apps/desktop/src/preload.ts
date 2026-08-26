@@ -18,6 +18,14 @@ function getDesktopWsUrl(): string | null {
   }
 }
 
+function getStartupPresentation(): "full" | "brief" {
+  try {
+    return ipcRenderer.sendSync(IPC.startupPresentation) === "full" ? "full" : "brief";
+  } catch {
+    return "brief";
+  }
+}
+
 function parseBrowserOpenPanelRequest(payload: unknown): BrowserUseOpenPanelRequest | null {
   if (!payload || typeof payload !== "object") {
     return null;
@@ -60,6 +68,7 @@ function parseBrowserAnnotationEvent(payload: unknown): BrowserAnnotationEvent |
 }
 
 contextBridge.exposeInMainWorld("desktopBridge", {
+  startupPresentation: getStartupPresentation(),
   getWsUrl: getDesktopWsUrl,
   // Absolute path for OS-dropped File objects (folders with spaces/parens, etc.).
   getPathForFile: (file: File) => {

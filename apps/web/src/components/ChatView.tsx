@@ -106,6 +106,8 @@ import {
   serverSettingsQueryOptions,
 } from "~/lib/serverReactQuery";
 import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
+import { reportFocusedComposerReadiness } from "~/startup/startupSplash";
+import { isTerminalStartupCatalogState } from "~/startup/startupReadiness";
 import { SINGLE_CHAT_PANE_SCOPE_ID } from "~/lib/chatPaneScope";
 import {
   composerMentionPathNeedsQuoting,
@@ -4110,6 +4112,29 @@ export default function ChatView({
     () => findProviderStatus(providerStatuses, selectedProvider),
     [selectedProvider, providerStatuses],
   );
+  useEffect(() => {
+    if (!isFocusedPane) return;
+    const snapshotsSettled = !serverConfigQuery.isPending && !serverSettingsQuery.isPending;
+    const deterministicRecovery =
+      serverConfigQuery.isError ||
+      serverSettingsQuery.isError ||
+      activeProviderStatus?.authStatus === "unauthenticated" ||
+      (activeProviderStatus !== null && activeProviderStatus.available === false);
+    reportFocusedComposerReadiness(
+      snapshotsSettled &&
+        (deterministicRecovery ||
+          isTerminalStartupCatalogState(catalogStateByProvider[selectedProvider])),
+    );
+  }, [
+    activeProviderStatus,
+    catalogStateByProvider,
+    isFocusedPane,
+    selectedProvider,
+    serverConfigQuery.isError,
+    serverConfigQuery.isPending,
+    serverSettingsQuery.isError,
+    serverSettingsQuery.isPending,
+  ]);
   const activeProviderHealthBannerDismissalKey = useMemo(
     () => getProviderHealthBannerDismissalKey(activeProviderStatus),
     [activeProviderStatus],

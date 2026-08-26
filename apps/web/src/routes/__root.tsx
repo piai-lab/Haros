@@ -70,6 +70,7 @@ import {
   addWsCompatibilityIssueListener,
   addWsTransportStateListener,
   readLatestWsCompatibilityIssue,
+  readLatestWsTransportState,
   type WsTransportState,
 } from "../wsTransportEvents";
 import { providerQueryKeys } from "../lib/providerReactQuery";
@@ -132,6 +133,11 @@ import {
 import { providerDiscoveryQueryKeys } from "../lib/providerDiscoveryReactQuery";
 import { useLocalPreferences } from "../localPreferences";
 import { DocumentLocaleSync, I18nProvider, useI18n } from "../i18n";
+import {
+  finishStartupSplashForRecovery,
+  reportStartupShellReadiness,
+} from "../startup/startupSplash";
+import { startupRouteExpectsComposer } from "../startup/startupReadiness";
 import {
   getNotifiableProviderUpdateStatuses,
   isProviderUpdateActive,
@@ -252,6 +258,9 @@ function RootRouteView() {
       }),
     [],
   );
+  useEffect(() => {
+    if (compatibilityIssue) finishStartupSplashForRecovery();
+  }, [compatibilityIssue]);
 
   // Single mount point for the Windows caption buttons. The cluster is pinned to the
   // window's top-right corner (frameless Windows/Linux shell) and renders nothing on macOS
@@ -294,6 +303,7 @@ function RootRouteView() {
         <ToastProvider position="bottom-right">
           <AnchoredToastProvider>
             <DocumentLocaleSync />
+            <StartupSplashShellBridge />
             <EngineWebSurfaceAppearanceProjection
               theme={resolvedTheme}
               themeSnapshot={engineWebSurfaceThemeSnapshot}
@@ -315,6 +325,33 @@ function RootRouteView() {
       {desktopWindowControls}
     </>
   );
+}
+
+function StartupSplashShellBridge() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const configQuery = useQuery(serverConfigQueryOptions());
+  const settingsQuery = useQuery(serverSettingsQueryOptions());
+  const [transportState, setTransportState] = useState<WsTransportState | null>(() =>
+    readLatestWsTransportState(),
+  );
+
+  useEffect(() => addWsTransportStateListener(setTransportState, { replayCurrent: true }), []);
+  useEffect(() => {
+    const snapshotsSettled = !configQuery.isPending && !settingsQuery.isPending;
+    const deterministicRecovery = configQuery.isError || settingsQuery.isError;
+    reportStartupShellReadiness({
+      settled: transportState === "open" && snapshotsSettled,
+      expectsComposer: !deterministicRecovery && startupRouteExpectsComposer(pathname),
+    });
+  }, [
+    configQuery.isError,
+    configQuery.isPending,
+    pathname,
+    settingsQuery.isError,
+    settingsQuery.isPending,
+    transportState,
+  ]);
+  return null;
 }
 
 /**
@@ -903,6 +940,7 @@ function RootRouteErrorContent({ error, reset }: ErrorComponentProps) {
   const { t } = useI18n();
   const message = errorMessage(error, t("error.unexpectedRouter"));
   const details = errorDetails(error);
+  useEffect(() => finishStartupSplashForRecovery(), []);
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10 text-foreground sm:px-6">

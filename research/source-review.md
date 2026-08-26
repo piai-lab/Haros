@@ -1339,3 +1339,27 @@ Floating Browser entry. A subsequent exact-process `SIGKILL` left no recovery re
 isolated profile added no continuation and started no turn. These artifacts are packaged-not-released:
 they do not assert signing, notarization, Release creation, update-feed activation or installation into a
 real user profile.
+
+## 24. Percho startup splash copied-adapted intake
+
+The 2026-08-26 intake fixed Percho at exact commit
+`575216c2690c7e2b30d9ad10b773f424b469c163`, verified the clean local checkout against
+`https://github.com/Jaxton07/percho.git`, and retained the exact MIT notice by Jaxton07. The adopted
+source set is limited to `splash-dom.ts`, `splash.ts` and `styles/splash.css`; their donor SHA-256
+digests and exact product paths are owned only by `source-adoptions.json`.
+
+Disposition is `copied-adapted`. OmniMind keeps Percho's synchronous first-frame construction,
+64-particle golden-angle geometry, breathe/sonar/exit choreography, theme-first surface,
+`content-visibility` isolation and reduced-motion branch. It replaces the donor identity and fixed
+colors with canonical `OmniMind` and the existing Theme owner, compresses normal Desktop presentation
+to a roughly 2–3 second envelope, adds a bilingual accessible slow-start status, and lets the Desktop
+process grant one full presentation followed by brief presentations without persistence or a second
+window.
+
+Two donor completion mechanisms are explicitly rejected. `Promise.allSettled` cannot establish model
+catalog authority because a failed request also settles, and a maximum display timeout cannot become a
+readiness fact. OmniMind therefore completes presentation only after transport open, settled Settings
+and Provider snapshots, and the focused Composer Engine reaching ready, authoritative empty, usable
+stale or deterministic recovery. Typed startup failure remains on the existing React Query retry path;
+the splash neither sleeps over the race nor owns retry state. `/pair`, `/signed-out` and browser builds
+do not inherit the cinematic residency.

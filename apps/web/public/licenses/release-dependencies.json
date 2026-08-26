@@ -3107,7 +3107,7 @@
       "author": null,
       "repository": null,
       "homepage": null,
-      "manifestSha256": "71be1e19a69b68fc527d37762daaf40617f1f590d951514d3d87a8aae3f3606e",
+      "manifestSha256": "ef10dd42d2466dd0c3307d597537cf3dbd0411e5ebd6eed6ef201e20f8b1850d",
       "locations": [
         "bundled:apps/server/dist/index.mjs"
       ],
