@@ -1,15 +1,14 @@
-import { defineConfig, mergeConfig } from "vitest/config";
+import {
+  browserGeometryTestFiles,
+  browserStableTestFiles,
+  createBrowserTestConfig,
+} from "./vitest.browser.config";
 
-import browserConfig from "./vitest.browser.config";
-
-export default mergeConfig(
-  browserConfig,
-  defineConfig({
-    test: {
-      testNamePattern: /^(?!.*\[geometry:linux\])/,
-      browser: {
-        fileParallelism: false,
-      },
-    },
-  }),
-);
+export default await createBrowserTestConfig({
+  suite: "stable",
+  include: browserStableTestFiles,
+  exclude: browserGeometryTestFiles,
+  fileParallelism: true,
+  maxWorkers: 2,
+  timeoutMs: 45_000,
+});

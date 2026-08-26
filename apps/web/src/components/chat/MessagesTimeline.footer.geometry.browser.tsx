@@ -1,3 +1,3 @@
 import { registerMessagesTimelineFooterBrowserTests } from "./MessagesTimeline.footer.browser-suite";
 
-registerMessagesTimelineFooterBrowserTests("stable");
+registerMessagesTimelineFooterBrowserTests("geometry");

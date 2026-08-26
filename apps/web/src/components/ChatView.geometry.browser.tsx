@@ -1,3 +1,3 @@
 import { registerChatViewBrowserTests } from "./ChatView.browser-suite";
 
-registerChatViewBrowserTests("stable");
+registerChatViewBrowserTests("geometry");
