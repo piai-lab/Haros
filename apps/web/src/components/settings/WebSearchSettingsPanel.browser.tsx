@@ -4,10 +4,7 @@
 
 import "../../index.css";
 
-import type {
-  NativeApi,
-  OmniMindWebSearchSettingsSnapshot,
-} from "@omnimind/contracts";
+import type { NativeApi, OmniMindWebSearchSettingsSnapshot } from "@omnimind/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
@@ -31,11 +28,7 @@ const field = (configKey: string, value: string | null, environmentVariable: str
   invalidStoredValue: false,
 });
 
-const provider = (
-  id: string,
-  displayName: string,
-  fields: ReturnType<typeof field>[],
-) => ({
+const provider = (id: string, displayName: string, fields: ReturnType<typeof field>[]) => ({
   id,
   displayName,
   prerequisite: "key" as const,
@@ -53,14 +46,16 @@ const provider = (
   icon: { kind: "neutral" as const, assetId: null, admission: "not-admitted" as const },
 });
 
-function snapshot(input: {
-  readonly revision?: string;
-  readonly provider?: "auto" | "tavily";
-  readonly tavilyKey?: string | null;
-  readonly workflow?: "none" | "auto-summary" | "summary-review";
-  readonly autoShowSearchProcess?: boolean;
-  readonly capabilityStatus?: "possible" | "needs-configuration" | "file-disabled";
-} = {}): OmniMindWebSearchSettingsSnapshot {
+function snapshot(
+  input: {
+    readonly revision?: string;
+    readonly provider?: "auto" | "tavily";
+    readonly tavilyKey?: string | null;
+    readonly workflow?: "none" | "auto-summary" | "summary-review";
+    readonly autoShowSearchProcess?: boolean;
+    readonly capabilityStatus?: "possible" | "needs-configuration" | "file-disabled";
+  } = {},
+): OmniMindWebSearchSettingsSnapshot {
   return {
     state: "ready",
     revision: input.revision ?? "a".repeat(64),
@@ -77,7 +72,9 @@ function snapshot(input: {
     },
     providers: [
       {
-        ...provider("tavily", "Tavily", [field("tavilyApiKey", input.tavilyKey ?? null, "TAVILY_API_KEY")]),
+        ...provider("tavily", "Tavily", [
+          field("tavilyApiKey", input.tavilyKey ?? null, "TAVILY_API_KEY"),
+        ]),
         icon: {
           kind: "local-asset" as const,
           assetId: "tavily",
@@ -123,10 +120,12 @@ import {
   webSearchProviderFieldAccessibleLabel,
 } from "./WebSearchSettingsPanel";
 
-const renderPanel = (input: {
-  readonly activeTarget?: string | null;
-  readonly onTargetInvalidated?: () => void;
-} = {}) =>
+const renderPanel = (
+  input: {
+    readonly activeTarget?: string | null;
+    readonly onTargetInvalidated?: () => void;
+  } = {},
+) =>
   render(
     <WebSearchSettingsPanel
       active
@@ -159,17 +158,24 @@ describe("WebSearchSettingsPanel", () => {
     await expect.element(page.getByText("Available", { exact: true }).first()).toBeVisible();
     await expect.element(page.getByText("Can the Agent search the web?")).toBeVisible();
     await expect.element(page.getByText("Auto · first success", { exact: true })).toBeVisible();
-    await expect.element(page.getByText("Automatic summary · Recommended", { exact: true })).toBeVisible();
-    await expect.element(page.getByText(/Summary review waits for your approval before the Agent continues/)).toBeVisible();
+    await expect
+      .element(page.getByText("Automatic summary · Recommended", { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(page.getByText(/Summary review waits for your approval before the Agent continues/))
+      .toBeVisible();
     expect(document.body.textContent).not.toContain("Enable Web search");
-	const processSwitch = page.getByRole("switch", { name: "Show search progress automatically" });
-	await expect.element(processSwitch).not.toBeChecked();
-	await processSwitch.click();
-	await expect.element(processSwitch).toBeChecked();
+    const processSwitch = page.getByRole("switch", { name: "Show search progress automatically" });
+    await expect.element(processSwitch).not.toBeChecked();
+    await processSwitch.click();
+    await expect.element(processSwitch).toBeChecked();
 
     await page.getByRole("button", { name: "Add service" }).click();
     expect(document.querySelectorAll('[data-provider-icon-kind="local-asset"]')).toHaveLength(1);
-    expect(document.querySelector<HTMLImageElement>('img[src="/web-access/provider-icons/tavily.svg"]')?.className).not.toContain("dark:invert");
+    expect(
+      document.querySelector<HTMLImageElement>('img[src="/web-access/provider-icons/tavily.svg"]')
+        ?.className,
+    ).not.toContain("dark:invert");
     expect(document.querySelectorAll('[data-provider-icon-kind="neutral"]')).toHaveLength(1);
     await expect.element(page.getByText(/API key required · Setup required/)).toBeVisible();
     await page.getByRole("button", { name: "Set up" }).first().click();
@@ -182,24 +188,34 @@ describe("WebSearchSettingsPanel", () => {
     expect(document.body.scrollWidth).toBeLessThanOrEqual(document.body.clientWidth + 1);
 
     expect(testProvider).toHaveBeenCalledTimes(1);
-    expect(testProvider).toHaveBeenCalledWith(expect.objectContaining({
-      providerId: "tavily",
-      draft: expect.objectContaining({
-        workflow: "auto-summary",
-		autoShowSearchProcess: true,
-        fields: expect.arrayContaining([
-          { configKey: "tavilyApiKey", value: "unsaved-tavily-key" },
-        ]),
+    expect(testProvider).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerId: "tavily",
+        draft: expect.objectContaining({
+          workflow: "auto-summary",
+          autoShowSearchProcess: true,
+          fields: expect.arrayContaining([
+            { configKey: "tavilyApiKey", value: "unsaved-tavily-key" },
+          ]),
+        }),
       }),
-    }));
+    );
     expect(mutate).not.toHaveBeenCalled();
   });
 
   it("keeps the selected service visible as current while its setup is incomplete", async () => {
-    installApi({ open: vi.fn().mockResolvedValue(snapshot({ provider: "tavily", capabilityStatus: "needs-configuration" })) });
+    installApi({
+      open: vi
+        .fn()
+        .mockResolvedValue(
+          snapshot({ provider: "tavily", capabilityStatus: "needs-configuration" }),
+        ),
+    });
 
     await renderPanel();
-    await expect.element(page.getByText("Set up the selected service", { exact: true })).toBeVisible();
+    await expect
+      .element(page.getByText("Set up the selected service", { exact: true }))
+      .toBeVisible();
     expect(document.body.textContent).not.toContain("Can the Agent search the web?Available");
     await page.getByRole("button", { name: "Add service" }).click();
 
@@ -242,7 +258,11 @@ describe("WebSearchSettingsPanel", () => {
   it("preserves a dirty draft when focus discovers an external revision", async () => {
     await page.viewport(1_280, 720);
     const initial = snapshot();
-    const external = snapshot({ revision: "b".repeat(64), tavilyKey: "external-key", workflow: "none" });
+    const external = snapshot({
+      revision: "b".repeat(64),
+      tavilyKey: "external-key",
+      workflow: "none",
+    });
     const refresh = vi.fn().mockResolvedValue(external);
     const mutate = vi.fn().mockResolvedValue({ state: "changed", snapshot: external });
     installApi({ open: vi.fn().mockResolvedValue(initial), refresh, mutate });
@@ -254,18 +274,22 @@ describe("WebSearchSettingsPanel", () => {
     await keyInput.fill("my-unsaved-key");
     window.dispatchEvent(new Event("focus"));
 
-    await expect.element(page.getByText("The config file changed outside this draft")).toBeVisible();
+    await expect
+      .element(page.getByText("The config file changed outside this draft"))
+      .toBeVisible();
     await expect.element(keyInput).toHaveValue("my-unsaved-key");
     expect(refresh).toHaveBeenCalledWith({ knownRevision: "a".repeat(64) });
 
     await page.getByRole("button", { name: "Overwrite with draft" }).click();
-    expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
-      expectedRevision: "b".repeat(64),
-      allowOverwriteConflict: true,
-      draft: expect.objectContaining({
-        fields: expect.arrayContaining([{ configKey: "tavilyApiKey", value: "my-unsaved-key" }]),
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedRevision: "b".repeat(64),
+        allowOverwriteConflict: true,
+        draft: expect.objectContaining({
+          fields: expect.arrayContaining([{ configKey: "tavilyApiKey", value: "my-unsaved-key" }]),
+        }),
       }),
-    }));
+    );
   });
 
   it("keeps late and cancelled probe results bound to the exact service and request", async () => {
@@ -358,7 +382,13 @@ describe("WebSearchSettingsPanel", () => {
     await page.getByRole("button", { name: "Set up" }).last().click();
     await page.getByRole("button", { name: "Inspect account" }).click();
 
-    await expect.element(page.getByText("Try again, or check the Chromium profile in the configuration file.").first()).toBeVisible();
+    await expect
+      .element(
+        page
+          .getByText("Try again, or check the Chromium profile in the configuration file.")
+          .first(),
+      )
+      .toBeVisible();
     await expect.element(page.getByRole("button", { name: "Inspect account" })).toBeEnabled();
   });
 
