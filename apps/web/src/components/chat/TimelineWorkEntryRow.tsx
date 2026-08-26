@@ -556,6 +556,8 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   onOpenAutomation?: (automationId: string) => void;
   onOpenEngineWebSurface?: (surfaceId: string) => void;
   reasoningDefaultOpen?: boolean;
+  reasoningOpenOverride?: boolean | undefined;
+  onReasoningOpenChange?: (entryId: string, open: boolean) => void;
   reasoningIsLive?: boolean;
   timestampFormat: TimestampFormat;
 }) {
@@ -576,6 +578,8 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
     onOpenAutomation,
     onOpenEngineWebSurface,
     reasoningDefaultOpen,
+    reasoningOpenOverride,
+    onReasoningOpenChange,
     reasoningIsLive,
     timestampFormat,
   } = props;
@@ -745,6 +749,8 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
         workEntry={workEntry}
         compact={compact}
         defaultOpen={reasoningDefaultOpen ?? false}
+        openOverride={reasoningOpenOverride}
+        onOpenChange={onReasoningOpenChange}
         isLive={reasoningIsLive ?? false}
         textFontSizePx={textFontSizePx}
         markdownCwd={markdownCwd}
@@ -1160,14 +1166,18 @@ function ReasoningDisclosureRow(props: {
   workEntry: TimelineWorkEntry;
   compact: boolean;
   defaultOpen: boolean;
+  openOverride: boolean | undefined;
+  onOpenChange: ((entryId: string, open: boolean) => void) | undefined;
   isLive: boolean;
   textFontSizePx: number;
   markdownCwd: string | undefined;
   onImageExpand: (preview: ExpandedImagePreview) => void;
 }) {
   const { t } = useI18n();
-  const [open, setOpen] = useState(props.defaultOpen);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(props.defaultOpen);
   const interactionDirtyRef = useRef(false);
+  const externallyControlled = props.onOpenChange !== undefined;
+  const open = externallyControlled ? (props.openOverride ?? props.defaultOpen) : uncontrolledOpen;
   const regionId = useId();
   const entries =
     props.workEntry.reasoningEntries ??
@@ -1177,10 +1187,10 @@ function ReasoningDisclosureRow(props: {
     })();
 
   useEffect(() => {
-    if (!interactionDirtyRef.current) {
-      setOpen(props.defaultOpen);
+    if (!externallyControlled && !interactionDirtyRef.current) {
+      setUncontrolledOpen(props.defaultOpen);
     }
-  }, [props.defaultOpen]);
+  }, [externallyControlled, props.defaultOpen]);
 
   if (entries.length === 0) {
     return null;
@@ -1200,8 +1210,12 @@ function ReasoningDisclosureRow(props: {
         aria-expanded={open}
         aria-controls={regionId}
         onClick={() => {
+          if (props.onOpenChange) {
+            props.onOpenChange(props.workEntry.id, !open);
+            return;
+          }
           interactionDirtyRef.current = true;
-          setOpen((current) => !current);
+          setUncontrolledOpen((current) => !current);
         }}
       >
         <span

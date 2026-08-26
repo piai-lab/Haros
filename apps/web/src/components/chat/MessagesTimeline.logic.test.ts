@@ -10,6 +10,7 @@ import {
   computeStableMessagesTimelineRows,
   deriveMessagesTimelineRows,
   deriveTerminalAssistantMessageIds,
+  findLiveReasoningEntryId,
   findLastLiveWorkGroupId,
   normalizeCompactToolLabel,
   planWorkEntryRenderChunks,
@@ -1911,5 +1912,79 @@ describe("findLastLiveWorkGroupId", () => {
 
   it("returns null when the transcript has no work groups", () => {
     expect(findLastLiveWorkGroupId([messageRowOf("u1", "user")])).toBeNull();
+  });
+});
+
+describe("findLiveReasoningEntryId", () => {
+  const turnId = TurnId.makeUnsafe("turn-live-reasoning");
+  const reasoning = (id: string): TimelineEntry => ({
+    id,
+    kind: "work",
+    createdAt: "2026-08-26T12:00:00.000Z",
+    entry: {
+      id,
+      createdAt: "2026-08-26T12:00:00.000Z",
+      turnId,
+      label: "Reasoning",
+      tone: "thinking",
+      activityKind: "reasoning.completed",
+      reasoningEntries: [{ id: `${id}:part`, text: "Public reasoning" }],
+    },
+  });
+  const tool = (id: string): TimelineEntry => ({
+    id,
+    kind: "work",
+    createdAt: "2026-08-26T12:00:01.000Z",
+    entry: {
+      id,
+      createdAt: "2026-08-26T12:00:01.000Z",
+      turnId,
+      label: "Read source",
+      tone: "tool",
+      itemType: "dynamic_tool_call",
+    },
+  });
+
+  it("returns only a trailing reasoning group from the active turn", () => {
+    expect(findLiveReasoningEntryId([tool("tool-1"), reasoning("reasoning-1")], turnId)).toBe(
+      "reasoning-1",
+    );
+    expect(
+      findLiveReasoningEntryId(
+        [reasoning("reasoning-1"), tool("tool-1"), reasoning("reasoning-2")],
+        turnId,
+      ),
+    ).toBe("reasoning-2");
+  });
+
+  it("closes reasoning as soon as a tool or assistant segment follows", () => {
+    expect(findLiveReasoningEntryId([reasoning("reasoning-1"), tool("tool-1")], turnId)).toBeNull();
+    expect(
+      findLiveReasoningEntryId(
+        [
+          reasoning("reasoning-1"),
+          {
+            id: "assistant-answer",
+            kind: "message",
+            createdAt: "2026-08-26T12:00:02.000Z",
+            message: {
+              id: MessageId.makeUnsafe("assistant-answer"),
+              role: "assistant",
+              text: "Answer streaming now",
+              turnId,
+              createdAt: "2026-08-26T12:00:02.000Z",
+              streaming: true,
+            },
+          },
+        ],
+        turnId,
+      ),
+    ).toBeNull();
+  });
+
+  it("does not reopen trailing reasoning from a different turn", () => {
+    expect(
+      findLiveReasoningEntryId([reasoning("reasoning-1")], TurnId.makeUnsafe("turn-other")),
+    ).toBeNull();
   });
 });
