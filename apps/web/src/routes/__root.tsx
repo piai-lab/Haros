@@ -70,6 +70,7 @@ import {
   addWsCompatibilityIssueListener,
   addWsTransportStateListener,
   readLatestWsCompatibilityIssue,
+  type WsTransportState,
 } from "../wsTransportEvents";
 import { providerQueryKeys } from "../lib/providerReactQuery";
 import { invalidateProjectFileQueriesForCwds, projectQueryKeys } from "../lib/projectReactQuery";
@@ -123,7 +124,11 @@ import { resolveSplitViewThreadIds, selectSplitView, useSplitViewStore } from ".
 import { useRightDockStore } from "../rightDockStore";
 import { resolveVisibleDockSidechatThreadIds } from "../rightDockStore.logic";
 import { arraysShallowEqual } from "../storeNormalization";
-import { providerModelDiscoveryInvalidationFingerprint } from "../lib/providerDiscoveryInvalidation";
+import {
+  changedProviderModelDiscoveryProviders,
+  providerModelDiscoveryInvalidationFingerprints,
+  type ProviderModelDiscoveryInvalidationFingerprints,
+} from "../lib/providerDiscoveryInvalidation";
 import { providerDiscoveryQueryKeys } from "../lib/providerDiscoveryReactQuery";
 import { useLocalPreferences } from "../localPreferences";
 import { DocumentLocaleSync, I18nProvider, useI18n } from "../i18n";
@@ -1223,7 +1228,9 @@ function EventRouter() {
     let pendingStudioOutputInvalidationThreadIds = new Set<ThreadId>();
     let pendingDomainEvents: OrchestrationEvent[] = [];
     const immediatelyFlushedAssistantMessageIds = new Set<string>();
-    let providerDiscoveryInvalidationFingerprint: string | null = null;
+    let providerDiscoveryInvalidationFingerprints: ProviderModelDiscoveryInvalidationFingerprints | null =
+      null;
+    let previousWsTransportState: WsTransportState | null = null;
     let shellSnapshotSequence = -1;
     let pendingShellEvents: OrchestrationShellStreamEvent[] = [];
     const subscribedThreadIds = new Set<ThreadId>();
@@ -2300,19 +2307,22 @@ function EventRouter() {
       });
     });
     const unsubProviderStatusesUpdated = onServerProviderStatusesUpdated((payload) => {
-      const nextProviderDiscoveryFingerprint = providerModelDiscoveryInvalidationFingerprint(
+      const nextProviderDiscoveryFingerprints = providerModelDiscoveryInvalidationFingerprints(
         payload.providers,
       );
       const currentConfig = queryClient.getQueryData<ServerConfig>(serverQueryKeys.config());
-      const previousProviderDiscoveryFingerprint =
-        providerDiscoveryInvalidationFingerprint ??
+      const previousProviderDiscoveryFingerprints =
+        providerDiscoveryInvalidationFingerprints ??
         (currentConfig
-          ? providerModelDiscoveryInvalidationFingerprint(currentConfig.providers)
+          ? providerModelDiscoveryInvalidationFingerprints(currentConfig.providers)
           : null);
-      const shouldInvalidateProviderDiscovery =
-        previousProviderDiscoveryFingerprint !== null &&
-        previousProviderDiscoveryFingerprint !== nextProviderDiscoveryFingerprint;
-      providerDiscoveryInvalidationFingerprint = nextProviderDiscoveryFingerprint;
+      const changedProviders = previousProviderDiscoveryFingerprints
+        ? changedProviderModelDiscoveryProviders(
+            previousProviderDiscoveryFingerprints,
+            nextProviderDiscoveryFingerprints,
+          )
+        : [];
+      providerDiscoveryInvalidationFingerprints = nextProviderDiscoveryFingerprints;
 
       void reconcileServerProviderStatuses(
         queryClient,
@@ -2321,24 +2331,17 @@ function EventRouter() {
           ? { passivePresence: payload.passivePresence.recoverableProviders }
           : undefined,
       ).catch(() => undefined);
-      if (shouldInvalidateProviderDiscovery) {
+      if (changedProviders.length > 0) {
         // Model and agent discovery can depend on auth, availability, and installed versions,
         // but not on every provider-status timestamp replay.
-        void queryClient.invalidateQueries({
-          queryKey: ["provider-discovery", "models", "kilo"],
-        });
-        void queryClient.invalidateQueries({
-          queryKey: ["provider-discovery", "models", "opencode"],
-        });
-        void queryClient.invalidateQueries({
-          queryKey: ["provider-discovery", "models", "cursor"],
-        });
-        void queryClient.invalidateQueries({
-          queryKey: providerDiscoveryQueryKeys.agentsForProvider("kilo"),
-        });
-        void queryClient.invalidateQueries({
-          queryKey: providerDiscoveryQueryKeys.agentsForProvider("opencode"),
-        });
+        for (const provider of changedProviders) {
+          void queryClient.invalidateQueries({
+            queryKey: providerDiscoveryQueryKeys.modelsForProvider(provider),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: providerDiscoveryQueryKeys.agentsForProvider(provider),
+          });
+        }
         void queryClient.invalidateQueries({
           queryKey: providerDiscoveryQueryKeys.executionCapabilitiesAll,
         });
@@ -2346,10 +2349,21 @@ function EventRouter() {
     });
     const unsubWsTransportState = addWsTransportStateListener(
       (state) => {
+        const reopened = previousWsTransportState !== null && previousWsTransportState !== "open";
+        previousWsTransportState = state;
         if (state !== "open") return;
         // Reopening the socket is a projection boundary. React Query otherwise
         // keeps the previous infinite-stale config and can strand "Checking".
         void refreshServerConfigAfterTransportOpen(queryClient).catch(() => undefined);
+        if (reopened) {
+          // The active Composer may still hold a terminal model-catalog error from
+          // the dead transport. Mark every cached catalog stale, but refetch only
+          // active observers so reconnect does not fan out across hidden Engines.
+          void queryClient.invalidateQueries({
+            queryKey: ["provider-discovery", "models"],
+            refetchType: "active",
+          });
+        }
       },
       { replayCurrent: true },
     );

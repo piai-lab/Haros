@@ -116,6 +116,7 @@ import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegi
 import { ProviderExecutionCapabilities } from "./provider/Services/ProviderExecutionCapabilities";
 import { ProviderHealth } from "./provider/Services/ProviderHealth";
 import { ProviderService } from "./provider/Services/ProviderService";
+import { toProviderModelDiscoveryRpcError } from "./provider/providerModelDiscoveryRpcError";
 import { userInputPresenterRegistry } from "./provider/userInputPresenterRegistry";
 import { listProviderUsage } from "./providerUsage";
 import { UsageHistory } from "./usageHistory/UsageHistory";
@@ -2096,7 +2097,21 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.providerReadPlugin]: (input) =>
           rpcEffect(providerDiscoveryService.readPlugin(input), "Failed to read plugin"),
         [WS_METHODS.providerListModels]: (input) =>
-          rpcEffect(providerDiscoveryService.listModels(input), "Failed to list models"),
+          providerDiscoveryService.listModels(input).pipe(
+            Effect.catch((cause) =>
+              providerHealth.getStatuses.pipe(
+                Effect.flatMap((statuses) =>
+                  Effect.fail(
+                    toProviderModelDiscoveryRpcError({
+                      cause,
+                      provider: input.provider,
+                      statuses,
+                    }),
+                  ),
+                ),
+              ),
+            ),
+          ),
         [WS_METHODS.providerListAgents]: (input) =>
           rpcEffect(providerDiscoveryService.listAgents(input), "Failed to list agents"),
         [WS_METHODS.omnimindEcosystemList]: (input) =>

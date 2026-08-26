@@ -1,7 +1,10 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 
-import { ProviderListModelsResult } from "./providerDiscovery";
+import {
+  PROVIDER_MODEL_DISCOVERY_ERROR_CODES,
+  ProviderListModelsResult,
+} from "./providerDiscovery";
 
 const decodeProviderListModelsResult = Schema.decodeUnknownSync(ProviderListModelsResult);
 
@@ -29,5 +32,16 @@ describe("ProviderListModelsResult", () => {
     expect(result.models[0]?.upstreamProviderOrigin).toBe("extension");
     expect(result.models[1]?.description).toBeUndefined();
     expect(result.models[1]?.resolvedModel).toBeUndefined();
+  });
+});
+
+describe("PROVIDER_MODEL_DISCOVERY_ERROR_CODES", () => {
+  it("keeps the cross-process recovery codes stable", () => {
+    expect(PROVIDER_MODEL_DISCOVERY_ERROR_CODES).toEqual({
+      starting: "PROVIDER_MODEL_DISCOVERY_STARTING",
+      authRequired: "PROVIDER_MODEL_DISCOVERY_AUTH_REQUIRED",
+      configuration: "PROVIDER_MODEL_DISCOVERY_CONFIGURATION",
+      unavailable: "PROVIDER_MODEL_DISCOVERY_UNAVAILABLE",
+    });
   });
 });

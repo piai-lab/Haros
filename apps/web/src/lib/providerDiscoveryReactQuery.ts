@@ -11,6 +11,7 @@ import type {
   ProviderListSkillsResult,
   ProviderSkillsCatalogResult,
 } from "@omnimind/contracts";
+import { PROVIDER_MODEL_DISCOVERY_ERROR_CODES } from "@omnimind/contracts";
 import { queryOptions } from "@tanstack/react-query";
 import { ensureNativeApi } from "~/nativeApi";
 
@@ -285,25 +286,55 @@ function isExplicitlyRetryableDiscoveryError(error: unknown): error is {
 }
 
 const EXPENSIVE_READ_CAPACITY_CODE = "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED";
+const WS_REQUEST_TIMEOUT_CODE = "WS_REQUEST_TIMEOUT";
 const EXPENSIVE_READ_CAPACITY_RETRY_LIMIT = 12;
 const TRANSIENT_DISCOVERY_RETRY_LIMIT = 3;
 
+function discoveryErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== "object" || !("code" in error)) return null;
+  return typeof error.code === "string" ? error.code : null;
+}
+
+function isRetryableProviderCatalogDiscoveryError(error: unknown): boolean {
+  const code = discoveryErrorCode(error);
+  return (
+    code === WS_REQUEST_TIMEOUT_CODE ||
+    (isExplicitlyRetryableDiscoveryError(error) &&
+      (code === EXPENSIVE_READ_CAPACITY_CODE ||
+        code === PROVIDER_MODEL_DISCOVERY_ERROR_CODES.starting))
+  );
+}
+
 export function shouldRetryProviderCatalogDiscovery(failureCount: number, error: unknown): boolean {
-  if (!isExplicitlyRetryableDiscoveryError(error)) return false;
+  if (!isRetryableProviderCatalogDiscoveryError(error)) return false;
   return (
     failureCount <
-    (error.code === EXPENSIVE_READ_CAPACITY_CODE
+    (discoveryErrorCode(error) === EXPENSIVE_READ_CAPACITY_CODE
       ? EXPENSIVE_READ_CAPACITY_RETRY_LIMIT
       : TRANSIENT_DISCOVERY_RETRY_LIMIT)
   );
 }
 
 export function providerCatalogDiscoveryRetryDelay(attemptIndex: number, error: unknown): number {
-  if (isExplicitlyRetryableDiscoveryError(error)) {
+  const code = discoveryErrorCode(error);
+  if (code === EXPENSIVE_READ_CAPACITY_CODE && isExplicitlyRetryableDiscoveryError(error)) {
     const retryAfterMs = error.retryAfterMs;
     if (typeof retryAfterMs === "number" && Number.isFinite(retryAfterMs) && retryAfterMs >= 0) {
       return retryAfterMs;
     }
+  }
+  if (
+    code === WS_REQUEST_TIMEOUT_CODE ||
+    code === PROVIDER_MODEL_DISCOVERY_ERROR_CODES.starting
+  ) {
+    const baseDelay =
+      isExplicitlyRetryableDiscoveryError(error) &&
+      typeof error.retryAfterMs === "number" &&
+      Number.isFinite(error.retryAfterMs) &&
+      error.retryAfterMs >= 0
+        ? error.retryAfterMs
+        : 250;
+    return Math.min(baseDelay * 2 ** attemptIndex, 1_000);
   }
   return Math.min(1_000 * 2 ** attemptIndex, 30_000);
 }

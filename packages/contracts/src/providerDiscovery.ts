@@ -8,6 +8,15 @@ import { TrimmedNonEmptyString } from "./baseSchemas";
 import { ProviderOptionDescriptor } from "./model";
 import { ProviderKind } from "./providerIdentity";
 
+export const PROVIDER_MODEL_DISCOVERY_ERROR_CODES = {
+  starting: "PROVIDER_MODEL_DISCOVERY_STARTING",
+  authRequired: "PROVIDER_MODEL_DISCOVERY_AUTH_REQUIRED",
+  configuration: "PROVIDER_MODEL_DISCOVERY_CONFIGURATION",
+  unavailable: "PROVIDER_MODEL_DISCOVERY_UNAVAILABLE",
+} as const;
+export type ProviderModelDiscoveryErrorCode =
+  (typeof PROVIDER_MODEL_DISCOVERY_ERROR_CODES)[keyof typeof PROVIDER_MODEL_DISCOVERY_ERROR_CODES];
+
 export const ProviderSkillInterface = Schema.Struct({
   displayName: Schema.optional(TrimmedNonEmptyString),
   shortDescription: Schema.optional(TrimmedNonEmptyString),

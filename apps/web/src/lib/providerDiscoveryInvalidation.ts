@@ -1,9 +1,13 @@
 // FILE: providerDiscoveryInvalidation.ts
 // Purpose: Keeps provider-discovery cache invalidation tied to meaningful provider changes.
 // Layer: Web UI provider discovery
-// Exports: providerModelDiscoveryInvalidationFingerprint
+// Exports: per-provider fingerprints and exact changed-provider detection
 
-import type { ServerProviderStatus } from "@omnimind/contracts";
+import {
+  PROVIDER_KINDS,
+  type ProviderKind,
+  type ServerProviderStatus,
+} from "@omnimind/contracts";
 
 type ProviderModelDiscoveryFingerprintEntry = readonly [
   provider: ServerProviderStatus["provider"],
@@ -15,22 +19,32 @@ type ProviderModelDiscoveryFingerprintEntry = readonly [
   version: string | null,
 ];
 
-export function providerModelDiscoveryInvalidationFingerprint(
-  providers: ReadonlyArray<ServerProviderStatus>,
-): string {
-  const entries = providers
-    .map(
-      (provider): ProviderModelDiscoveryFingerprintEntry => [
-        provider.provider,
-        provider.status,
-        provider.available,
-        provider.authStatus,
-        provider.authType ?? null,
-        provider.authLabel ?? null,
-        provider.version ?? null,
-      ],
-    )
-    .toSorted((left, right) => left[0].localeCompare(right[0]));
+export type ProviderModelDiscoveryInvalidationFingerprints = Partial<
+  Record<ProviderKind, string>
+>;
 
-  return JSON.stringify(entries);
+export function providerModelDiscoveryInvalidationFingerprints(
+  providers: ReadonlyArray<ServerProviderStatus>,
+): ProviderModelDiscoveryInvalidationFingerprints {
+  const result: ProviderModelDiscoveryInvalidationFingerprints = {};
+  for (const provider of providers) {
+    const entry: ProviderModelDiscoveryFingerprintEntry = [
+      provider.provider,
+      provider.status,
+      provider.available,
+      provider.authStatus,
+      provider.authType ?? null,
+      provider.authLabel ?? null,
+      provider.version ?? null,
+    ];
+    result[provider.provider] = JSON.stringify(entry);
+  }
+  return result;
+}
+
+export function changedProviderModelDiscoveryProviders(
+  previous: ProviderModelDiscoveryInvalidationFingerprints,
+  next: ProviderModelDiscoveryInvalidationFingerprints,
+): ProviderKind[] {
+  return PROVIDER_KINDS.filter((provider) => previous[provider] !== next[provider]);
 }

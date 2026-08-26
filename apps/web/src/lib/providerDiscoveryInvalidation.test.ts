@@ -2,10 +2,13 @@
 // Purpose: Verifies provider-discovery invalidation ignores provider-status metadata noise.
 // Layer: Web UI provider discovery tests
 
-import type { ServerProviderStatus } from "@omnimind/contracts";
+import { PROVIDER_KINDS, type ServerProviderStatus } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
-import { providerModelDiscoveryInvalidationFingerprint } from "./providerDiscoveryInvalidation";
+import {
+  changedProviderModelDiscoveryProviders,
+  providerModelDiscoveryInvalidationFingerprints,
+} from "./providerDiscoveryInvalidation";
 
 const BASE_PROVIDER_STATUS = {
   provider: "cursor",
@@ -27,10 +30,10 @@ const BASE_PROVIDER_STATUS = {
   },
 } satisfies ServerProviderStatus;
 
-describe("providerModelDiscoveryInvalidationFingerprint", () => {
+describe("provider model discovery invalidation", () => {
   it("ignores provider checkedAt, message, and advisory metadata churn", () => {
     expect(
-      providerModelDiscoveryInvalidationFingerprint([
+      providerModelDiscoveryInvalidationFingerprints([
         {
           ...BASE_PROVIDER_STATUS,
           checkedAt: "2026-06-04T10:05:00.000Z",
@@ -42,41 +45,67 @@ describe("providerModelDiscoveryInvalidationFingerprint", () => {
           },
         },
       ]),
-    ).toBe(providerModelDiscoveryInvalidationFingerprint([BASE_PROVIDER_STATUS]));
+    ).toEqual(providerModelDiscoveryInvalidationFingerprints([BASE_PROVIDER_STATUS]));
   });
 
   it("changes when model discovery inputs can change", () => {
-    const previous = providerModelDiscoveryInvalidationFingerprint([BASE_PROVIDER_STATUS]);
+    const previous = providerModelDiscoveryInvalidationFingerprints([BASE_PROVIDER_STATUS]);
 
     expect(
-      providerModelDiscoveryInvalidationFingerprint([
+      providerModelDiscoveryInvalidationFingerprints([
         {
           ...BASE_PROVIDER_STATUS,
           authStatus: "authenticated",
           authLabel: "pro@example.com",
         },
       ]),
-    ).not.toBe(previous);
+    ).not.toEqual(previous);
 
     expect(
-      providerModelDiscoveryInvalidationFingerprint([
+      providerModelDiscoveryInvalidationFingerprints([
         {
           ...BASE_PROVIDER_STATUS,
           version: "2026.06.05-a1b2c3d",
         },
       ]),
-    ).not.toBe(previous);
+    ).not.toEqual(previous);
   });
 
-  it("is stable across provider ordering", () => {
+  it("returns only the provider whose model-discovery facts changed", () => {
     const codexStatus = {
       ...BASE_PROVIDER_STATUS,
       provider: "codex",
       version: "1.2.3",
     } satisfies ServerProviderStatus;
 
-    expect(providerModelDiscoveryInvalidationFingerprint([BASE_PROVIDER_STATUS, codexStatus])).toBe(
-      providerModelDiscoveryInvalidationFingerprint([codexStatus, BASE_PROVIDER_STATUS]),
+    const previous = providerModelDiscoveryInvalidationFingerprints([
+      BASE_PROVIDER_STATUS,
+      codexStatus,
+    ]);
+    const next = providerModelDiscoveryInvalidationFingerprints([
+      { ...BASE_PROVIDER_STATUS, authStatus: "authenticated" },
+      codexStatus,
+    ]);
+
+    expect(changedProviderModelDiscoveryProviders(previous, next)).toEqual(["cursor"]);
+  });
+
+  it.each(PROVIDER_KINDS)("isolates invalidation for the %s Engine", (provider) => {
+    const statuses = PROVIDER_KINDS.map(
+      (candidate) =>
+        ({
+          ...BASE_PROVIDER_STATUS,
+          provider: candidate,
+          version: "1.0.0",
+        }) satisfies ServerProviderStatus,
     );
+    const previous = providerModelDiscoveryInvalidationFingerprints(statuses);
+    const next = providerModelDiscoveryInvalidationFingerprints(
+      statuses.map((status) =>
+        status.provider === provider ? { ...status, version: "1.0.1" } : status,
+      ),
+    );
+
+    expect(changedProviderModelDiscoveryProviders(previous, next)).toEqual([provider]);
   });
 });

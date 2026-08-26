@@ -3,7 +3,11 @@
 //          stale-catalog preservation, and initial-vs-background pending (#103).
 // Layer: Web data fetching tests
 
-import type { NativeApi, ProviderListModelsResult } from "@omnimind/contracts";
+import {
+  PROVIDER_MODEL_DISCOVERY_ERROR_CODES,
+  type NativeApi,
+  type ProviderListModelsResult,
+} from "@omnimind/contracts";
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -240,8 +244,12 @@ describe("providerModelsQueryOptions", () => {
     expect(queryClient.getQueryState(options.queryKey)?.status).toBe("error");
   });
 
-  it("retries only typed transient failures and honors the server delay", () => {
-    const transient = { retryable: true, retryAfterMs: 275 };
+  it("retries only typed model-starting, timeout, and capacity failures", () => {
+    const transient = {
+      code: PROVIDER_MODEL_DISCOVERY_ERROR_CODES.starting,
+      retryable: true,
+      retryAfterMs: 250,
+    };
     const startupCapacity = {
       code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
       retryable: true,
@@ -252,10 +260,38 @@ describe("providerModelsQueryOptions", () => {
     expect(shouldRetryProviderCatalogDiscovery(3, transient)).toBe(false);
     expect(shouldRetryProviderCatalogDiscovery(11, startupCapacity)).toBe(true);
     expect(shouldRetryProviderCatalogDiscovery(12, startupCapacity)).toBe(false);
+    expect(shouldRetryProviderCatalogDiscovery(0, { code: "WS_REQUEST_TIMEOUT" })).toBe(true);
+    expect(shouldRetryProviderCatalogDiscovery(0, { code: "WS_REQUEST_ABORTED" })).toBe(false);
     expect(shouldRetryProviderCatalogDiscovery(0, new Error("missing CLI"))).toBe(false);
     expect(shouldRetryProviderCatalogDiscovery(0, { retryable: false })).toBe(false);
-    expect(providerCatalogDiscoveryRetryDelay(0, transient)).toBe(275);
+    expect(providerCatalogDiscoveryRetryDelay(0, transient)).toBe(250);
+    expect(providerCatalogDiscoveryRetryDelay(1, transient)).toBe(500);
+    expect(providerCatalogDiscoveryRetryDelay(2, transient)).toBe(1_000);
     expect(providerCatalogDiscoveryRetryDelay(0, startupCapacity)).toBe(250);
+  });
+
+  it("settles after one typed cold-start failure without user refresh", async () => {
+    const catalog = {
+      models: [{ slug: "gpt-5.4", name: "GPT-5.4" }],
+      source: "codex",
+      cached: false,
+    };
+    const listModels = mockListModels(
+      vi
+        .fn()
+        .mockRejectedValueOnce({
+          code: PROVIDER_MODEL_DISCOVERY_ERROR_CODES.starting,
+          retryable: true,
+          retryAfterMs: 1,
+        })
+        .mockResolvedValue(catalog),
+    );
+    const queryClient = new QueryClient();
+
+    await expect(
+      queryClient.fetchQuery(providerModelsQueryOptions({ provider: "codex", enabled: true })),
+    ).resolves.toEqual(catalog);
+    expect(listModels).toHaveBeenCalledTimes(2);
   });
 
   it("settles a catalog after temporary startup admission pressure", async () => {
