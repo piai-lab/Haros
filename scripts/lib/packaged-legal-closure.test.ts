@@ -14,7 +14,10 @@ function write(path: string, contents: string): void {
   writeFileSync(path, contents);
 }
 
-async function archiveFixture(extraPackage = false): Promise<string> {
+async function archiveFixture(
+  extraPackage = false,
+  includeBundledWebReceipt = true,
+): Promise<string> {
   const root = mkdtempSync(join(tmpdir(), "omnimind-legal-asar-"));
   roots.push(root);
   const source = join(root, "source");
@@ -41,7 +44,15 @@ async function archiveFixture(extraPackage = false): Promise<string> {
     name: "@omnimind/om-ask",
     locations: ["bundled:apps/server/dist/index.mjs"],
   } as (typeof components)[number]);
+  components.push({
+    id: "mermaid@11.17.2",
+    name: "mermaid",
+    locations: ["bundled:apps/server/dist/client/index.html"],
+  } as (typeof components)[number]);
   write(join(source, "apps/server/dist/index.mjs"), "export {};\n");
+  if (includeBundledWebReceipt) {
+    write(join(source, "apps/server/dist/client/index.html"), "<!doctype html>\n");
+  }
   write(
     join(source, "apps/server/dist/client/licenses/release-dependencies.json"),
     JSON.stringify({
@@ -66,13 +77,20 @@ afterEach(() => {
 describe("packaged legal closure", () => {
   it("accepts an ASAR only when every packaged dependency is disclosed", async () => {
     const result = verifyPackagedLegalClosureArchive(await archiveFixture());
-    expect(result.componentCount).toBe(9);
+    expect(result.componentCount).toBe(10);
   });
 
   it("rejects an undisclosed dependency found in the actual ASAR", async () => {
     const archive = await archiveFixture(true);
     expect(() => verifyPackagedLegalClosureArchive(archive)).toThrow(
       "Undisclosed packaged IDs: undisclosed@1.0.0",
+    );
+  });
+
+  it("rejects a disclosed bundled dependency when its runtime receipt is absent", async () => {
+    const archive = await archiveFixture(false, false);
+    expect(() => verifyPackagedLegalClosureArchive(archive)).toThrow(
+      "Bundled dependency mermaid@11.17.2 runtime receipt is absent",
     );
   });
 });

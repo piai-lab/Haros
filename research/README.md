@@ -14,42 +14,43 @@
 
 ### Synara 与产品母体
 
-| 文件 | 只在什么问题下读取 |
-| --- | --- |
-| [`source-review.md`](source-review.md) | Synara exact-source、rights、range disposition、母体机制与复验触发器 |
-| [`interface-surface-inventory.md`](interface-surface-inventory.md) | 需要复核 2026-08-10 历史 public/interface surface snapshot |
+| 文件                                                               | 只在什么问题下读取                                                   |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| [`source-review.md`](source-review.md)                             | Synara exact-source、rights、range disposition、母体机制与复验触发器 |
+| [`interface-surface-inventory.md`](interface-surface-inventory.md) | 需要复核 2026-08-10 历史 public/interface surface snapshot           |
 
 未来 Synara review/adoption 的操作方法只见根 [`SYNARA-INTAKE.md`](../SYNARA-INTAKE.md)。
 
 ### Pi、OmniMind Agent 与生态
 
-| 文件 | 只在什么问题下读取 |
-| --- | --- |
-| [`pi-native-product-integration-review.md`](pi-native-product-integration-review.md) | Pi runtime、Project trust、prompt、compaction、package/TUI 边界的 fixed review |
+| 文件                                                                                                             | 只在什么问题下读取                                                                                            |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| [`pi-native-product-integration-review.md`](pi-native-product-integration-review.md)                             | Pi runtime、Project trust、prompt、compaction、package/TUI 边界的 fixed review                                |
 | [`omnimind-agent-core-ecosystem-orchestration-review.md`](omnimind-agent-core-ecosystem-orchestration-review.md) | Agent Core、异构协作、Workflow、Search、Memory/Wiki、Prompt/Cache 经济学与 package 候选的 2026-08-12 固定研究 |
-| [`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md) | Pi Extension Registry 与 AgentGateway Host projection 的 owner 证据 |
-| [`pi-native-todo-extension-review.md`](pi-native-todo-extension-review.md) | product-bundled Todo Extension 的 bounded source evidence |
-| [`agent-tools-mcp-settings-review.md`](agent-tools-mcp-settings-review.md) | Host tool/MCP Settings 的历史基线与反证 |
-| [`host-tools-product-surface-policy-review.md`](host-tools-product-surface-policy-review.md) | 六组 Host capability 在 Agent/Chat/Studio 的 policy evidence |
-| [`chat-work-surface-contract-review.md`](chat-work-surface-contract-review.md) | ProductSurface 与 Provider execution/trust surface 的历史对照 |
-| [`model-services-composer-product-design.md`](model-services-composer-product-design.md) | Model services/Composer 的完整设计来源与旧 snapshot；不按其中阶段表施工 |
-| [`omnimind-prompt-management-review.md`](omnimind-prompt-management-review.md) | default prompt + custom rules 的 source precedence 与失败证据 |
-| [`pi-web-access-intake.md`](pi-web-access-intake.md) | `@omnimind/om-web-access` exact lineage、P1–P6、rights、更新与删除边界 |
-| [`omnimind-ask-user-cognition.md`](omnimind-ask-user-cognition.md) | canonical Ask User 产品裁决、fork decision、生命周期反证与证据 |
-| [`pi-ask-user-intake.md`](pi-ask-user-intake.md) | `@omnimind/om-ask` 的 upstream update/replay 手册 |
+| [`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)                                 | Pi Extension Registry 与 AgentGateway Host projection 的 owner 证据                                           |
+| [`pi-native-todo-extension-review.md`](pi-native-todo-extension-review.md)                                       | product-bundled Todo Extension 的 bounded source evidence                                                     |
+| [`agent-tools-mcp-settings-review.md`](agent-tools-mcp-settings-review.md)                                       | Host tool/MCP Settings 的历史基线与反证                                                                       |
+| [`host-tools-product-surface-policy-review.md`](host-tools-product-surface-policy-review.md)                     | 六组 Host capability 在 Agent/Chat/Studio 的 policy evidence                                                  |
+| [`chat-work-surface-contract-review.md`](chat-work-surface-contract-review.md)                                   | ProductSurface 与 Provider execution/trust surface 的历史对照                                                 |
+| [`model-services-composer-product-design.md`](model-services-composer-product-design.md)                         | Model services/Composer 的完整设计来源与旧 snapshot；不按其中阶段表施工                                       |
+| [`omnimind-prompt-management-review.md`](omnimind-prompt-management-review.md)                                   | default prompt + custom rules 的 source precedence 与失败证据                                                 |
+| [`pi-web-access-intake.md`](pi-web-access-intake.md)                                                             | `@omnimind/om-web-access` exact lineage、P1–P6、rights、更新与删除边界                                        |
+| [`omnimind-ask-user-cognition.md`](omnimind-ask-user-cognition.md)                                               | canonical Ask User 产品裁决、fork decision、生命周期反证与证据                                                |
+| [`pi-ask-user-intake.md`](pi-ask-user-intake.md)                                                                 | `@omnimind/om-ask` 的 upstream update/replay 手册                                                             |
 
 通用 Pi/package/fork intake 方法只见根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md)。
 
 ### Workbench、视觉与用户表面
 
-| 文件 | 只在什么问题下读取 |
-| --- | --- |
-| [`omnimind-agent-capability-surface.md`](omnimind-agent-capability-surface.md) | Agent capability 如何复用 Composer、Timeline、child Thread、Files/Diff 等真实宿主 |
-| [`omnimind-responsive-workbench-review.md`](omnimind-responsive-workbench-review.md) | 响应式 Workbench、Sidebar/RightDock/Environment 角色与几何反证 |
-| [`omnimind-usage-insights-cognition.md`](omnimind-usage-insights-cognition.md) | context pressure、usage stats、heatmap 与 export 的口径和视觉 taste |
-| [`omnimind-theme-system-review.md`](omnimind-theme-system-review.md) | Theme owner、semantic tokens、跨 Web/Browser/Terminal/native surface 边界 |
-| [`omnimind-i18n-system-review.md`](omnimind-i18n-system-review.md) | catalog 分域、placeholder、normal surface language 与修改半径证据 |
-| [`omnimind-tool-ui-projection-cognition.md`](omnimind-tool-ui-projection-cognition.md) | canonical Activity/Tool identity、icon、density 与 Timeline projection taste |
+| 文件                                                                                     | 只在什么问题下读取                                                                |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| [`omnimind-agent-capability-surface.md`](omnimind-agent-capability-surface.md)           | Agent capability 如何复用 Composer、Timeline、child Thread、Files/Diff 等真实宿主 |
+| [`omnimind-responsive-workbench-review.md`](omnimind-responsive-workbench-review.md)     | 响应式 Workbench、Sidebar/RightDock/Environment 角色与几何反证                    |
+| [`omnimind-usage-insights-cognition.md`](omnimind-usage-insights-cognition.md)           | context pressure、usage stats、heatmap 与 export 的口径和视觉 taste               |
+| [`omnimind-theme-system-review.md`](omnimind-theme-system-review.md)                     | Theme owner、semantic tokens、跨 Web/Browser/Terminal/native surface 边界         |
+| [`omnimind-i18n-system-review.md`](omnimind-i18n-system-review.md)                       | catalog 分域、placeholder、normal surface language 与修改半径证据                 |
+| [`omnimind-mermaid-presentation-evidence.md`](omnimind-mermaid-presentation-evidence.md) | Mermaid 精确依赖、安全反证、donor disposition、性能与 packaged 复验证据           |
+| [`omnimind-tool-ui-projection-cognition.md`](omnimind-tool-ui-projection-cognition.md)   | canonical Activity/Tool identity、icon、density 与 Timeline projection taste      |
 
 原型、HTML、截图和设计候选只证明相应文件声明的视觉或交互问题，不证明生产 owner、runtime correlation、packaged App 或发布状态。
 

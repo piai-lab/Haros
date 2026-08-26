@@ -2,6 +2,77 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "packageIds": ["@napi-rs/canvas-darwin-arm64@0.1.100"],
+      "license": "MIT",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/napi-rs-canvas-MIT.txt",
+      "sha256": "da8423778f50a960eeaf44ef1c4742e9d883f4d7235259603d676a8dc7f51936",
+      "manifestSha256ByPackageId": {
+        "@napi-rs/canvas-darwin-arm64@0.1.100": "612e133d91d7367657657ff68f4bd011e6ce8b167093442e0fe2b5733da74814"
+      },
+      "revision": "db337893b9b53483050ca7b24c6d306e4da06741",
+      "sourcePath": "LICENSE",
+      "sourceUrl": "https://github.com/Brooooooklyn/canvas/blob/db337893b9b53483050ca7b24c6d306e4da06741/LICENSE",
+      "upstreamLegalTextAbsent": false
+    },
+    {
+      "packageIds": ["strictdom@1.0.1"],
+      "license": "MIT",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/strictdom-MIT.txt",
+      "sha256": "b9f4e4eede38500658f31d64e235033103110f94b572aefb4a31661baf849c3c",
+      "manifestSha256ByPackageId": {
+        "strictdom@1.0.1": "41768059f064f33500a89c2777f6231bf69a8d32664d09ba675006ae0ed8f282"
+      },
+      "revision": "a3bbf19013ecc9c9d165dd4ed89e94757161443e",
+      "sourcePath": "README.md#license",
+      "sourceUrl": "https://github.com/wilsonpage/strictdom/blob/a3bbf19013ecc9c9d165dd4ed89e94757161443e/README.md#license",
+      "upstreamLegalTextAbsent": false
+    },
+    {
+      "packageIds": ["khroma@2.1.0"],
+      "license": "MIT",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/khroma-MIT.txt",
+      "sha256": "5135f3f7607134fae453693e070d5afb8704957fa2f4388dd4abdc14b99aebfb",
+      "manifestSha256ByPackageId": {
+        "khroma@2.1.0": "0d2145738d3cab828da4c5724b45e0dd2577c0ce84503c956d76897e93fa7de2"
+      },
+      "revision": "4968165afb0d3d09be66497e7985a34f7bfe6d42",
+      "sourcePath": "license",
+      "sourceUrl": "https://github.com/fabiospampinato/khroma/blob/4968165afb0d3d09be66497e7985a34f7bfe6d42/license",
+      "upstreamLegalTextAbsent": false
+    },
+    {
+      "packageIds": ["fastdom@1.0.12"],
+      "license": "MIT",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/fastdom-MIT.txt",
+      "sha256": "08fe5121162143b34b2d55101ced8a6a594b426c6c912a0c5058aba0b4122cfe",
+      "manifestSha256ByPackageId": {
+        "fastdom@1.0.12": "59d7cb811e170491bac1d4bc3c881a2fa3f23f50691ed60e6bd9bb9a1e197858"
+      },
+      "revision": "01524d7b90785fcac5a75bb9f149e14b9e5246c3",
+      "sourcePath": "README.md#license",
+      "sourceUrl": "https://github.com/wilsonpage/fastdom/blob/01524d7b90785fcac5a75bb9f149e14b9e5246c3/README.md#license",
+      "upstreamLegalTextAbsent": false
+    },
+    {
+      "packageIds": ["rehype-katex@7.0.1", "remark-math@6.0.0"],
+      "license": "MIT",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/remark-math-MIT.txt",
+      "sha256": "0f5c7c674cac69f37119bee44622cdcabd1980d21737dd3e3f5242a18ceac6cf",
+      "manifestSha256ByPackageId": {
+        "rehype-katex@7.0.1": "c8a2a4b5fafa4145ef6c073806608967187be300c523685273fb188bc8d398bc",
+        "remark-math@6.0.0": "936d400d2c2a3f121c4d2b6b84b8a891af02852032b0dcb31f0407d2d6a4364f"
+      },
+      "revision": "88a9497e1ede93b958237c85edbf5651faeca7af",
+      "sourcePath": "license",
+      "sourceUrl": "https://github.com/remarkjs/remark-math/blob/88a9497e1ede93b958237c85edbf5651faeca7af/license",
+      "upstreamLegalTextAbsent": false
+    },
+    {
       "packageIds": ["@lobehub/icons-static-svg@1.94.0"],
       "license": "MIT",
       "kind": "exact-upstream",

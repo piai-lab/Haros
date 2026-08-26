@@ -640,9 +640,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     if (!contentInsetRightPx && !contentInsetBottomPx) {
       return undefined;
     }
-    const style: CSSProperties = {};
+    const style: CSSProperties & { "--app-chat-content-inset-right"?: string } = {};
     if (contentInsetRightPx) {
       style.paddingRight = contentInsetRightPx;
+      style["--app-chat-content-inset-right"] = `${contentInsetRightPx}px`;
     }
     if (contentInsetBottomPx) {
       style.paddingBottom = contentInsetBottomPx;
@@ -2103,6 +2104,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       style={chatTypographyStyle}
                       onImageExpand={onImageExpand}
                       markers={messageMarkers}
+                      mermaidPresentation={{ messageId: row.message.id }}
                     />
                   </div>
                 ) : null}
@@ -2428,11 +2430,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             {nowIso ? (
               t("timeline.workingFor", {
                 duration:
-                  formatClockElapsed(
-                    row.createdAt,
-                    nowIso,
-                    locale === "zh-CN" ? "zh" : "en",
-                  ) ?? (locale === "zh-CN" ? "0秒" : "0s"),
+                  formatClockElapsed(row.createdAt, nowIso, locale === "zh-CN" ? "zh" : "en") ??
+                  (locale === "zh-CN" ? "0秒" : "0s"),
               })
             ) : (
               <WorkingTimer createdAt={row.createdAt} />

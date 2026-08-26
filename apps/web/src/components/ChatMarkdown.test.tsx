@@ -14,7 +14,29 @@ vi.mock("@pierre/diffs", () => ({
 }));
 
 vi.mock("../hooks/useTheme", () => ({
-  useTheme: () => ({ resolvedTheme: "light" }),
+  useTheme: () => ({
+    resolvedTheme: "light",
+    engineWebSurfaceThemeSnapshot: {
+      accent: "#2463eb",
+      border: "#d1d5db",
+      borderStrong: "#9ca3af",
+      danger: "#dc2626",
+      elevatedSurface: "#f3f4f6",
+      hoverSurface: "#e5e7eb",
+      primaryBackground: "#111827",
+      primaryBackgroundHover: "#1f2937",
+      primaryText: "#ffffff",
+      secondaryBackground: "#eef2ff",
+      secondaryBackgroundHover: "#e0e7ff",
+      success: "#16a34a",
+      surface: "#ffffff",
+      surfaceUnder: "#f9fafb",
+      text: "#111827",
+      textDim: "#4b5563",
+      textMuted: "#6b7280",
+      warning: "#d97706",
+    },
+  }),
 }));
 
 async function renderMarkdown(
@@ -48,7 +70,53 @@ async function renderMarkdownPair(text: string) {
   );
 }
 
+async function renderTimelineMermaid(text: string, isStreaming: boolean) {
+  const { default: ChatMarkdown } = await import("./ChatMarkdown");
+  return renderToStaticMarkup(
+    <ChatMarkdown
+      text={text}
+      cwd={undefined}
+      isStreaming={isStreaming}
+      mermaidPresentation={{ messageId: MessageId.makeUnsafe("assistant-mermaid") }}
+    />,
+  );
+}
+
 describe("ChatMarkdown", () => {
+  it("keeps canonical streaming Mermaid in a source-free generation state", async () => {
+    const markup = await renderTimelineMermaid("```mermaid\ngraph TD\nA-->B\n```", true);
+    expect(markup).toContain('data-mermaid-presentation="assistant-mermaid:1"');
+    expect(markup).toContain('data-mermaid-state="pending"');
+    expect(markup).toContain("Generating diagram…");
+    expect(markup).not.toContain("graph TD");
+    expect(markup).not.toContain("mermaid</span>");
+    expect(markup).not.toContain("chat-markdown-shiki");
+  });
+
+  it("keeps an incomplete streaming fence info string away from Shiki", async () => {
+    const markup = await renderTimelineMermaid("```mermai\ngraph TD\nA-->B", true);
+    expect(markup).toContain("graph TD");
+    expect(markup).not.toContain("chat-markdown-shiki");
+    expect(markup).not.toContain("data-mermaid-presentation");
+  });
+
+  it("does not promote Mermaid fences outside the canonical assistant opt-in", async () => {
+    const markup = await renderMarkdown("```mermaid\ngraph TD\nA-->B\n```");
+    expect(markup).not.toContain("data-mermaid-presentation");
+  });
+
+  it("assigns explicit ordinals and locally fails the ninth diagram without exposing source", async () => {
+    const text = Array.from({ length: 9 }, (_, index) =>
+      ["```mermaid", `graph TD`, `A${index}-->B${index}`, "```"].join("\n"),
+    ).join("\n\n");
+    const markup = await renderTimelineMermaid(text, false);
+    expect(markup.match(/data-mermaid-presentation=/g) ?? []).toHaveLength(9);
+    expect(markup).toContain('data-mermaid-presentation="assistant-mermaid:9"');
+    expect(markup.match(/data-mermaid-state="pending"/g) ?? []).toHaveLength(8);
+    expect(markup.match(/data-mermaid-state="failed"/g) ?? []).toHaveLength(1);
+    expect(markup).not.toContain("graph TD");
+  });
+
   it("uses the theme foreground token for markdown text", async () => {
     const markup = await renderMarkdown("Theme-aware text");
 
