@@ -18,7 +18,10 @@
     "prepare": "effect-language-service patch",
     "ask-user-live": "bun run scripts/verify-ask-user-live.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --maxWorkers=1 --no-file-parallelism"
+    "test": "vitest run --maxWorkers=4",
+    "test:unit": "vitest run --project unit --maxWorkers=4",
+    "test:integration": "vitest run --project integration --project git-integration --maxWorkers=4",
+    "test:related": "vitest related --maxWorkers=4"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "1.2.1",

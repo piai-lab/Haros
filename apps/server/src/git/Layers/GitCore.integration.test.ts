@@ -1,4 +1,4 @@
-// FILE: GitCore.test.ts
+// FILE: GitCore.integration.test.ts
 // Purpose: Exercises GitCore repository operations, branch/worktree flows, and status summaries.
 // Layer: Server Git service tests
 // Depends on: Effect test layers plus real temporary Git repositories.
