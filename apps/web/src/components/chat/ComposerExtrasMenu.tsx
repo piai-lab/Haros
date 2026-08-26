@@ -15,6 +15,7 @@ import { Menu, MenuCheckboxItem, MenuItem, MenuSeparator, MenuTrigger } from "..
 
 export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
   interactionMode: ProviderInteractionMode;
+  planModeAvailable: boolean;
   onAddAttachments: (files: File[]) => void;
   onAddFileReference?: () => void;
   onAddFolderReference?: () => void;
@@ -80,6 +81,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
             </MenuItem>
           ) : null}
 
+          {props.planModeAvailable || props.interactionMode === "plan" ? <>
           <MenuSeparator />
           <MenuCheckboxItem
             checked={props.interactionMode === "plan"}
@@ -93,6 +95,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
               {t("composer.planMode")}
             </span>
           </MenuCheckboxItem>
+          </> : null}
         </ComposerPickerMenuPopup>
       </Menu>
     </>

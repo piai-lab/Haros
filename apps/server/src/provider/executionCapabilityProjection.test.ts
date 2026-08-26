@@ -21,6 +21,25 @@ describe("provider execution capability projection", () => {
     expect(Object.keys(PROVIDER_EXECUTION_STRUCTURE)).toEqual([...PROVIDER_KINDS]);
   });
 
+  it.each(PROVIDER_KINDS)("projects the canonical interaction-mode matrix for %s", (provider) => {
+    const result = resolveProviderExecutionCapabilities({
+      modelSelection: { provider, model: `${provider}-test` },
+      adapterCapabilities: providerExecutionStructure(provider),
+      providerStatus: readyStatus(provider),
+    });
+    expect(result.interactionModes.default).toMatchObject({
+      mode: "default", structurallySupported: true, status: "ready",
+    });
+    expect(result.interactionModes.debug).toMatchObject({
+      mode: "debug", structurallySupported: true, status: "ready",
+    });
+    expect(result.interactionModes.plan).toMatchObject(
+      provider === "pi" || provider === "antigravity"
+        ? { mode: "plan", structurallySupported: false, reason: "mode-unsupported" }
+        : { mode: "plan", structurallySupported: true, status: "ready" },
+    );
+  });
+
   it("fails closed when the adapter is not registered", () => {
     const result = resolveProviderExecutionCapabilities({
       modelSelection: { provider: "codex", model: "gpt-test" },
@@ -30,6 +49,11 @@ describe("provider execution capability projection", () => {
 
     expect(result.supportsNativeTurnSteering).toBe(false);
     expect(result.runtimeModes.auto).toMatchObject({
+      structurallySupported: false,
+      status: "unavailable",
+      reason: "adapter-unregistered",
+    });
+    expect(result.interactionModes.plan).toMatchObject({
       structurallySupported: false,
       status: "unavailable",
       reason: "adapter-unregistered",

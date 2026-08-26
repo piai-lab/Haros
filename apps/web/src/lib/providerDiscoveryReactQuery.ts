@@ -1,5 +1,6 @@
 import type {
   ProviderExecutionCapabilities,
+  ProviderInteractionModeCapability,
   ProviderComposerCapabilities,
   ModelSelection,
   ProviderKind,
@@ -147,6 +148,13 @@ export function providerExecutionCapabilitiesMatchSelection(
   return (
     capabilities.provider === modelSelection.provider && capabilities.model === modelSelection.model
   );
+}
+
+export function isProviderInteractionModeExecutable(
+  capability: ProviderInteractionModeCapability | undefined,
+): capability is ProviderInteractionModeCapability & { readonly structurallySupported: true } {
+  return capability?.structurallySupported === true &&
+    (capability.status === "ready" || capability.status === "degraded");
 }
 
 export function providerSkillsQueryOptions(input: {

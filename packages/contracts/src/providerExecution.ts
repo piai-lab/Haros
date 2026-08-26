@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 import { TrimmedNonEmptyString } from "./baseSchemas";
-import { ModelSelection, RuntimeMode } from "./orchestration";
+import { ModelSelection, ProviderInteractionMode, RuntimeMode } from "./orchestration";
 import { ProviderKind } from "./providerIdentity";
 
 export const ProviderExecutionCapabilityStatus = Schema.Literals([
@@ -33,6 +33,14 @@ export const ProviderRuntimeModeCapability = Schema.Struct({
 });
 export type ProviderRuntimeModeCapability = typeof ProviderRuntimeModeCapability.Type;
 
+export const ProviderInteractionModeCapability = Schema.Struct({
+  mode: ProviderInteractionMode,
+  structurallySupported: Schema.Boolean,
+  status: ProviderExecutionCapabilityStatus,
+  reason: Schema.optional(ProviderExecutionCapabilityReason),
+});
+export type ProviderInteractionModeCapability = typeof ProviderInteractionModeCapability.Type;
+
 export const ProviderExecutionCapabilitiesInput = Schema.Struct({
   modelSelection: ModelSelection,
 });
@@ -46,6 +54,11 @@ export const ProviderExecutionCapabilities = Schema.Struct({
     "full-access": ProviderRuntimeModeCapability,
     auto: ProviderRuntimeModeCapability,
     "approval-required": ProviderRuntimeModeCapability,
+  }),
+  interactionModes: Schema.Struct({
+    default: ProviderInteractionModeCapability,
+    plan: ProviderInteractionModeCapability,
+    debug: ProviderInteractionModeCapability,
   }),
 });
 export type ProviderExecutionCapabilities = typeof ProviderExecutionCapabilities.Type;

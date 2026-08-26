@@ -50,6 +50,11 @@ describe("provider execution capability identity", () => {
         status: "ready" as const,
       },
     },
+    interactionModes: {
+      default: { mode: "default" as const, structurallySupported: true, status: "ready" as const },
+      plan: { mode: "plan" as const, structurallySupported: true, status: "ready" as const },
+      debug: { mode: "debug" as const, structurallySupported: true, status: "ready" as const },
+    },
   };
 
   it("rejects a late projection for a different Provider or model", () => {

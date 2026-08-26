@@ -13,6 +13,7 @@ import { cn } from "~/lib/utils";
 import { ComposerAutomationSetupBanner } from "./ComposerAutomationSetupBanner";
 import { ComposerPlanFollowUpBanner } from "./ComposerPlanFollowUpBanner";
 import { COMPOSER_INPUT_SURFACE_BANNER_CLASS_NAME } from "./composerPickerStyles";
+import { Button } from "../ui/button";
 
 interface ComposerInputBannersProps {
   // Drop the rounded top when rows are stacked above the composer so the banner sits
@@ -23,15 +24,24 @@ interface ComposerInputBannersProps {
   // Setup-mode control while gathering an automation's task/schedule (the exchange
   // itself renders as bubbles in the transcript).
   automationSetup: { onCancel: () => void } | null;
+  interactionModeUnavailable: { message: string; exitLabel: string; onExit: () => void } | null;
 }
 
 export function ComposerInputBanners({
   roundedTopReset,
   planFollowUp,
   automationSetup,
+  interactionModeUnavailable,
 }: ComposerInputBannersProps) {
   let content: ReactNode = null;
-  if (planFollowUp) {
+  if (interactionModeUnavailable) {
+    content = <div className="flex items-center justify-between gap-3 px-3 py-2 text-xs text-muted-foreground">
+      <span>{interactionModeUnavailable.message}</span>
+      <Button type="button" size="sm" variant="ghost" onClick={interactionModeUnavailable.onExit}>
+        {interactionModeUnavailable.exitLabel}
+      </Button>
+    </div>;
+  } else if (planFollowUp) {
     content = <ComposerPlanFollowUpBanner key={planFollowUp.id} planTitle={planFollowUp.title} />;
   } else if (automationSetup) {
     content = <ComposerAutomationSetupBanner onCancel={automationSetup.onCancel} />;

@@ -11,7 +11,7 @@ import { render } from "vitest-browser-react";
 
 import { ComposerExtrasMenu } from "./ComposerExtrasMenu";
 
-async function mountMenu(props?: { interactionMode?: "default" | "plan" }) {
+async function mountMenu(props?: { interactionMode?: "default" | "plan"; planModeAvailable?: boolean }) {
   const onAddAttachments = vi.fn();
   const onSetPlanMode = vi.fn();
   const host = document.createElement("div");
@@ -19,6 +19,7 @@ async function mountMenu(props?: { interactionMode?: "default" | "plan" }) {
   const screen = await render(
     <ComposerExtrasMenu
       interactionMode={props?.interactionMode ?? "default"}
+      planModeAvailable={props?.planModeAvailable ?? true}
       onAddAttachments={onAddAttachments}
       onSetPlanMode={onSetPlanMode}
     />,
@@ -88,5 +89,19 @@ describe("ComposerExtrasMenu", () => {
 
     expect(menu.onSetPlanMode).toHaveBeenCalledWith(true);
     expect(document.body.textContent).not.toContain("Fast");
+  });
+
+  it("hides unavailable Plan entry but keeps the exit control for preserved Plan intent", async () => {
+    {
+      await using _ = await mountMenu({ planModeAvailable: false });
+      await page.getByLabelText("Message box options").click();
+      expect(document.body.textContent).not.toContain("Plan mode");
+    }
+    {
+      await using preserved = await mountMenu({ interactionMode: "plan", planModeAvailable: false });
+      await page.getByLabelText("Message box options").click();
+      await page.getByText("Plan mode").click();
+      expect(preserved.onSetPlanMode).toHaveBeenCalledWith(false);
+    }
   });
 });

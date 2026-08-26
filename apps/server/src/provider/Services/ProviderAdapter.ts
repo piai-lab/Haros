@@ -29,6 +29,7 @@ import type {
   ProviderListSkillsInput,
   ProviderStartReviewInput,
   ProviderRuntimeEvent,
+  ProviderInteractionMode,
   RuntimeMode,
   ProviderSendTurnInput,
   ProviderSteerTurnInput,
@@ -105,6 +106,8 @@ export interface ProviderAdapterCapabilities {
   readonly supportsTurnSteering?: boolean;
   /** Structurally executable modes for this exact adapter and Host bridge. */
   readonly supportedRuntimeModes?: ReadonlySet<RuntimeMode>;
+  /** Structurally executable Product interaction modes for this adapter. */
+  readonly supportedInteractionModes?: ReadonlySet<ProviderInteractionMode>;
   /** True when `turn.diff.updated.payload.unifiedDiff` contains a parseable live patch. */
   readonly supportsLiveTurnDiffPatch?: boolean;
 }

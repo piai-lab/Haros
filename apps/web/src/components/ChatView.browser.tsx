@@ -1387,6 +1387,11 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
         auto: capability("auto"),
         "approval-required": capability("approval-required"),
       },
+      interactionModes: {
+        default: { mode: "default", structurallySupported: true, status: "ready" },
+        plan: { mode: "plan", structurallySupported: true, status: "ready" },
+        debug: { mode: "debug", structurallySupported: true, status: "ready" },
+      },
     };
   }
   if (tag === WS_METHODS.providerListCommands) {
@@ -4754,6 +4759,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
               status: "ready",
             },
           },
+          interactionModes: {
+            default: { mode: "default", structurallySupported: true, status: "ready" },
+            plan: { mode: "plan", structurallySupported: true, status: "ready" },
+            debug: { mode: "debug", structurallySupported: true, status: "ready" },
+          },
         };
       },
     });
@@ -6804,6 +6814,58 @@ describe("ChatView timeline estimator parity (full app)", () => {
           .map(readDispatchedCommand)
           .filter((command) => command?.type === "thread.interaction-mode.set"),
       ).toHaveLength(0);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("preserves unsupported Plan intent while blocking send and keeping an exit", async () => {
+    const baseSnapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-plan-unsupported" as MessageId,
+      targetText: "unsupported plan target",
+    });
+    const snapshot: OrchestrationReadModel = {
+      ...baseSnapshot,
+      threads: baseSnapshot.threads.map((thread) => ({ ...thread, interactionMode: "plan" })),
+    };
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot,
+      configureFixture: (nextFixture) => {
+        const ready = (mode: "full-access" | "auto" | "approval-required") => ({
+          mode, structurallySupported: true, status: "ready" as const,
+        });
+        nextFixture.providerExecutionCapabilitiesByProvider.codex = {
+          provider: "codex",
+          model: "gpt-5",
+          supportsNativeTurnSteering: true,
+          runtimeModes: {
+            "full-access": ready("full-access"),
+            auto: ready("auto"),
+            "approval-required": ready("approval-required"),
+          },
+          interactionModes: {
+            default: { mode: "default", structurallySupported: true, status: "ready" },
+            plan: { mode: "plan", structurallySupported: false, status: "unavailable", reason: "mode-unsupported" },
+            debug: { mode: "debug", structurallySupported: true, status: "ready" },
+          },
+        };
+      },
+    });
+
+    try {
+      const editor = await waitForComposerEditor();
+      editor.focus();
+      await userEvent.keyboard("inspect first");
+      await expect.element(page.getByText(EN_MESSAGES["composer.planModeUnsupported"], { exact: true })).toBeVisible();
+      expect((await waitForSendButton()).disabled).toBe(true);
+      expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.interactionMode ?? snapshot.threads[0]?.interactionMode).toBe("plan");
+
+      await page.getByText(EN_MESSAGES["conversation.planModeExitAction"], { exact: true }).click();
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.interactionMode).toBe("default");
+      });
+      expect((await waitForSendButton()).disabled).toBe(false);
     } finally {
       await mounted.cleanup();
     }

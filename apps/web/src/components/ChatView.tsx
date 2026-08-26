@@ -88,7 +88,9 @@ import {
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
 import {
   isProviderDiscoverySessionActive,
+  isProviderInteractionModeExecutable,
   providerComposerCapabilitiesQueryOptions,
+  providerExecutionCapabilitiesQueryOptions,
   providerCommandsQueryOptions,
   providerDiscoveryQueryKeys,
   providerPluginsQueryOptions,
@@ -2572,6 +2574,23 @@ export default function ChatView({
     selectedProvider,
     selectedRuntimeModel,
   ]);
+  const executionCapabilitySelection = selectedModelSelection ?? {
+    provider: selectedProvider,
+    model: "__unselected__",
+  };
+  const executionCapabilitiesQuery = useQuery({
+    ...providerExecutionCapabilitiesQueryOptions(executionCapabilitySelection),
+    enabled: selectedModelSelection !== null,
+  });
+  const planModeCapability = executionCapabilitiesQuery.data?.interactionModes.plan;
+  const planModeAvailable = isProviderInteractionModeExecutable(planModeCapability);
+  const planModeUnavailableMessage = t(
+    executionCapabilitiesQuery.isPending
+      ? "composer.planModeChecking"
+      : planModeCapability?.reason === "mode-unsupported"
+        ? "composer.planModeUnsupported"
+        : "composer.planModeUnavailable",
+  );
   const providerOptionsForDispatch = useMemo(
     () => getProviderStartOptions(serverSettingsSnapshot),
     [serverSettingsSnapshot],
@@ -5284,6 +5303,14 @@ export default function ChatView({
   const handleInteractionModeChange = useCallback(
     (mode: ProviderInteractionMode) => {
       if (mode === interactionMode) return;
+      if (mode === "plan" && !planModeAvailable) {
+        toastManager.add({
+          type: "warning",
+          title: t("composer.planModeUnavailableTitle"),
+          description: planModeUnavailableMessage,
+        });
+        return;
+      }
       setComposerDraftInteractionMode(threadId, mode);
       if (isLocalDraftThread) {
         setDraftThreadContext(threadId, { interactionMode: mode });
@@ -5312,6 +5339,8 @@ export default function ChatView({
     },
     [
       interactionMode,
+      planModeAvailable,
+      planModeUnavailableMessage,
       desiredBindingCanPersistRuntimeMode,
       isLocalDraftThread,
       scheduleComposerFocus,
@@ -7871,6 +7900,14 @@ export default function ChatView({
         setPendingAutomationConversation(null);
         return true;
       }
+    }
+    if (queuedChatTurn === null && interactionModeForSend === "plan" && !planModeAvailable) {
+      toastManager.add({
+        type: "warning",
+        title: t("composer.planModeUnavailableTitle"),
+        description: planModeUnavailableMessage,
+      });
+      return false;
     }
     if (!selectedModelSelectionForSend) {
       toastManager.add({
@@ -11492,6 +11529,7 @@ export default function ChatView({
     <>
       <ComposerExtrasMenu
         interactionMode={interactionMode}
+        planModeAvailable={planModeAvailable}
         onAddAttachments={addComposerAttachments}
         onAddFileReference={() => void handleAddFileReference()}
         onAddFolderReference={() => void handleAddFolderReference()}
@@ -11872,6 +11910,11 @@ export default function ChatView({
               >
                 <ComposerInputBanners
                   roundedTopReset={false}
+                  interactionModeUnavailable={interactionMode === "plan" && !planModeAvailable ? {
+                    message: planModeUnavailableMessage,
+                    exitLabel: t("conversation.planModeExitAction"),
+                    onExit: () => handleInteractionModeChange("default"),
+                  } : null}
                   planFollowUp={
                     !activePendingApproval &&
                     pendingUserInputs.length === 0 &&
@@ -12162,7 +12205,8 @@ export default function ChatView({
                                 isSendBusy ||
                                 isConnecting ||
                                 !serverSettingsReady ||
-                                !selectedModelSelection
+                                !selectedModelSelection ||
+                                !planModeAvailable
                               }
                             >
                               {isConnecting || isSendBusy
@@ -12244,6 +12288,7 @@ export default function ChatView({
                                 isVoiceTranscribing ||
                                 isPreparingComposerImages ||
                                 !selectedModelSelection ||
+                                (interactionMode === "plan" && !planModeAvailable) ||
                                 !composerSendState.hasSendableContent
                               }
                               aria-label={

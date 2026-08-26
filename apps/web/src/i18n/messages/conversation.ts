@@ -112,6 +112,7 @@ const EN_MESSAGES = {
   "conversation.optimizingImage": "Optimizing image…",
   "conversation.optimizingImages": "Optimizing images…",
   "conversation.planModeExit": "Plan mode — click to return to build mode",
+  "conversation.planModeExitAction": "Return to Build",
   "conversation.debugModeExit": "Debug mode — click to return to normal build mode",
   "conversation.stopGeneration": "Stop generation",
   "conversation.stopGenerationDescription":
@@ -280,6 +281,7 @@ const ZH_CN_MESSAGES = {
   "conversation.optimizingImage": "正在优化图片…",
   "conversation.optimizingImages": "正在优化图片…",
   "conversation.planModeExit": "规划模式 — 点击返回构建模式",
+  "conversation.planModeExitAction": "返回构建模式",
   "conversation.debugModeExit": "调试模式 — 点击返回常规构建模式",
   "conversation.stopGeneration": "停止生成",
   "conversation.stopGenerationDescription": "停止当前回复。在 Mac 上可按 Ctrl+C 中断。",

@@ -1,5 +1,6 @@
 import type {
   ModelSelection,
+  ProviderInteractionMode,
   ProviderExecutionCapabilities,
   ProviderExecutionCapabilityReason,
   ProviderExecutionCapabilityStatus,
@@ -11,10 +12,11 @@ import type { ProviderAdapterCapabilities } from "./Services/ProviderAdapter.ts"
 
 type ProviderExecutionStructureCapabilities = Pick<
   ProviderAdapterCapabilities,
-  "supportsTurnSteering" | "supportedRuntimeModes"
+  "supportsTurnSteering" | "supportedRuntimeModes" | "supportedInteractionModes"
 >;
 
 const RUNTIME_MODES = ["full-access", "auto", "approval-required"] as const;
+const INTERACTION_MODES = ["default", "plan", "debug"] as const;
 
 function healthDisposition(status: ServerProviderStatus | undefined): {
   readonly status: ProviderExecutionCapabilityStatus;
@@ -68,6 +70,12 @@ export function resolveProviderExecutionCapabilities(input: {
       status: "unavailable" as const,
       reason: "adapter-unregistered" as const,
     });
+    const interactionUnsupported = (mode: ProviderInteractionMode) => ({
+      mode,
+      structurallySupported: false,
+      status: "unavailable" as const,
+      reason: "adapter-unregistered" as const,
+    });
     return {
       provider,
       model: input.modelSelection.model,
@@ -76,6 +84,11 @@ export function resolveProviderExecutionCapabilities(input: {
         "full-access": unsupported("full-access"),
         auto: unsupported("auto"),
         "approval-required": unsupported("approval-required"),
+      },
+      interactionModes: {
+        default: interactionUnsupported("default"),
+        plan: interactionUnsupported("plan"),
+        debug: interactionUnsupported("debug"),
       },
     };
   }
@@ -136,11 +149,25 @@ export function resolveProviderExecutionCapabilities(input: {
       ];
     }),
   ) as ProviderExecutionCapabilities["runtimeModes"];
+  const interactionModes = Object.fromEntries(
+    INTERACTION_MODES.map((mode) => {
+      if (!input.adapterCapabilities!.supportedInteractionModes?.has(mode)) {
+        return [mode, {
+          mode,
+          structurallySupported: false,
+          status: "unavailable" as const,
+          reason: "mode-unsupported" as const,
+        }];
+      }
+      return [mode, { mode, structurallySupported: true, ...health }];
+    }),
+  ) as ProviderExecutionCapabilities["interactionModes"];
 
   return {
     provider,
     model: input.modelSelection.model,
     supportsNativeTurnSteering: input.adapterCapabilities.supportsTurnSteering === true,
     runtimeModes,
+    interactionModes,
   };
 }

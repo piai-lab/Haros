@@ -124,6 +124,22 @@ function validateRuntimeModeStructure(
       );
 }
 
+function validateInteractionModeStructure(
+  operation: string,
+  provider: ProviderSession["provider"],
+  interactionMode: ProviderSendTurnInput["interactionMode"],
+) {
+  const mode = interactionMode ?? "default";
+  return providerExecutionStructure(provider).supportedInteractionModes.has(mode)
+    ? Effect.void
+    : Effect.fail(
+        new ProviderValidationError({
+          operation,
+          issue: `Interaction mode '${mode}' is not supported by Provider '${provider}'.`,
+        }),
+      );
+}
+
 export function summarizeProviderRuntimeQuarantineCause(cause: string): {
   readonly cause: string;
   readonly causeTruncated?: true;
@@ -2732,6 +2748,11 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 ? {}
                 : { productSurface: dispatchContext.productSurface }),
             });
+            yield* validateInteractionModeStructure(
+              "ProviderService.sendTurn",
+              routed.adapter.provider,
+              input.interactionMode,
+            );
             const turn = yield* routed.adapter.sendTurn(input, dispatchContext);
             const persistenceInput: StartedTurnPersistenceInput = {
               threadId: input.threadId,
@@ -2785,6 +2806,11 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               operation: "ProviderService.steerTurn",
               allowRecovery: true,
             });
+            yield* validateInteractionModeStructure(
+              "ProviderService.steerTurn",
+              routed.adapter.provider,
+              input.interactionMode,
+            );
             if (
               !routed.adapter.steerTurn ||
               routed.adapter.capabilities.supportsTurnSteering !== true
