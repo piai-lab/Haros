@@ -7251,8 +7251,13 @@ describe("ChatView timeline estimator parity (full app)", () => {
           () =>
             Array.from(
               document.querySelectorAll<HTMLElement>('[data-slot="menu-radio-item"]'),
-            ).find((item) => item.textContent?.trim().startsWith("Ask for approval")) ?? null,
-          "Unable to find the Ask for approval option.",
+            ).find(
+              (item) =>
+                item.textContent?.trim().startsWith("Ask for approval") &&
+                !item.hasAttribute("data-disabled") &&
+                item.getAttribute("aria-disabled") !== "true",
+            ) ?? null,
+          "Unable to find an enabled Ask for approval option.",
         );
         supervisedOption.click();
 

@@ -199,6 +199,11 @@ describe("ChatTranscriptPane", () => {
       await vi.waitFor(() => {
         expect(transcriptCommitCount).toBeGreaterThan(0);
       });
+      // LegendList and the transcript's layout effects can commit after the
+      // first paint under a busy two-worker browser run. Establish the perf
+      // baseline only after those mount-owned frames have settled, otherwise
+      // their deferred commit is misattributed to the composer update.
+      await settleLayout();
 
       const baselineCommitCount = transcriptCommitCount;
       await page.getByPlaceholder("Type composer text").fill("reply follow up");
