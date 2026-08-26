@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// FILE: verify-packaged-desktop-startup.ts
-// Purpose: Launches a packaged desktop payload from an isolated temporary tree before upload.
+// FILE: verify-packaged-desktop.ts
+// Purpose: Proves a packaged desktop payload from an isolated temporary tree before upload.
 // Layer: Release verification script
 
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
@@ -26,12 +26,15 @@ import { extractFile } from "@electron/asar";
 
 export type PackagedDesktopPlatform = "linux" | "mac" | "win";
 
-export interface PackagedDesktopStartupOptions {
+export type PackagedDesktopProof = "startup";
+
+export interface PackagedDesktopProofOptions {
   readonly assetsDirectory: string;
   readonly platform: PackagedDesktopPlatform;
   readonly arch: string;
   readonly version: string;
   readonly sourceCommit: string;
+  readonly proof: PackagedDesktopProof;
   readonly timeoutMs: number;
 }
 
@@ -180,7 +183,7 @@ function releasePackagedProofResources(
 // A release smoke must not become an ambient credential consumer. Keep only
 // operating-system/session values required to start a GUI process; product and
 // provider authority is deliberately absent.
-const PACKAGED_SMOKE_INHERITED_ENV_ALLOWLIST = [
+const PACKAGED_PROOF_INHERITED_ENV_ALLOWLIST = [
   "PATH",
   "LANG",
   "LC_ALL",
@@ -201,26 +204,24 @@ const PACKAGED_SMOKE_INHERITED_ENV_ALLOWLIST = [
   "PULSE_SERVER",
 ] as const;
 
-function selectPackagedSmokeInheritedEnvironment(
+function selectPackagedProofInheritedEnvironment(
   inheritedEnvironment: NodeJS.ProcessEnv,
 ): NodeJS.ProcessEnv {
   const selected: NodeJS.ProcessEnv = {};
-  for (const name of PACKAGED_SMOKE_INHERITED_ENV_ALLOWLIST) {
+  for (const name of PACKAGED_PROOF_INHERITED_ENV_ALLOWLIST) {
     const value = inheritedEnvironment[name];
     if (value) selected[name] = value;
   }
   return selected;
 }
 
-export function parsePackagedDesktopStartupArgs(
-  argv: ReadonlyArray<string>,
-): PackagedDesktopStartupOptions {
+export function parsePackagedDesktopArgs(argv: ReadonlyArray<string>): PackagedDesktopProofOptions {
   const values = new Map<string, string>();
   for (let index = 0; index < argv.length; index += 2) {
     const name = argv[index];
     const value = argv[index + 1];
     if (!name?.startsWith("--") || value === undefined || values.has(name)) {
-      throw new Error(`Invalid packaged startup argument near ${name ?? "<end>"}.`);
+      throw new Error(`Invalid packaged proof argument near ${name ?? "<end>"}.`);
     }
     values.set(name, value);
   }
@@ -230,19 +231,24 @@ export function parsePackagedDesktopStartupArgs(
     "--arch",
     "--version",
     "--source-commit",
+    "--proof",
     "--timeout-ms",
   ]);
   for (const name of values.keys()) {
-    if (!known.has(name)) throw new Error(`Unknown packaged startup argument: ${name}.`);
+    if (!known.has(name)) throw new Error(`Unknown packaged proof argument: ${name}.`);
   }
   const required = (name: string): string => {
     const value = values.get(name)?.trim();
-    if (!value) throw new Error(`Missing packaged startup argument: ${name}.`);
+    if (!value) throw new Error(`Missing packaged proof argument: ${name}.`);
     return value;
   };
   const platform = required("--platform");
   if (platform !== "linux" && platform !== "mac" && platform !== "win") {
-    throw new Error(`Unsupported packaged startup platform: ${platform}.`);
+    throw new Error(`Unsupported packaged proof platform: ${platform}.`);
+  }
+  const proof = required("--proof");
+  if (proof !== "startup") {
+    throw new Error(`Unsupported packaged proof: ${proof}.`);
   }
   const timeoutMs = Number(values.get("--timeout-ms") ?? "60000");
   if (!Number.isInteger(timeoutMs) || timeoutMs < 5_000 || timeoutMs > 180_000) {
@@ -258,6 +264,7 @@ export function parsePackagedDesktopStartupArgs(
     arch: required("--arch"),
     version: required("--version"),
     sourceCommit,
+    proof,
     timeoutMs,
   };
 }
@@ -397,7 +404,7 @@ export function assertPackagedSourceCommit(
 }
 
 function prepareLaunch(
-  options: PackagedDesktopStartupOptions,
+  options: PackagedDesktopProofOptions,
   extractionRoot: string,
 ): LaunchCommand {
   if (options.platform === "mac") {
@@ -409,14 +416,14 @@ function prepareLaunch(
   return prepareWindowsLaunch(options.assetsDirectory, extractionRoot);
 }
 
-export function createPackagedDesktopSmokeEnvironment(
+export function createPackagedDesktopEnvironment(
   root: string,
-  options: Pick<PackagedDesktopStartupOptions, "platform" | "version">,
+  options: Pick<PackagedDesktopProofOptions, "platform" | "version">,
   inheritedEnvironment: NodeJS.ProcessEnv = process.env,
 ): NodeJS.ProcessEnv {
   const isolatedTemp = join(root, "tmp");
   const env: NodeJS.ProcessEnv = {
-    ...selectPackagedSmokeInheritedEnvironment(inheritedEnvironment),
+    ...selectPackagedProofInheritedEnvironment(inheritedEnvironment),
     HOME: join(root, "home"),
     USERPROFILE: join(root, "home"),
     APPDATA: join(root, "appdata"),
@@ -479,7 +486,9 @@ async function terminateProcessTree(child: ChildProcess): Promise<void> {
       stdio: "ignore",
       windowsHide: true,
     });
-    await waitForExit(child, 5_000);
+    if (!(await waitForExit(child, 5_000))) {
+      throw new Error(`Packaged process tree ${child.pid} did not exit after taskkill.`);
+    }
     return;
   }
   try {
@@ -493,7 +502,9 @@ async function terminateProcessTree(child: ChildProcess): Promise<void> {
   } catch {
     child.kill("SIGKILL");
   }
-  await waitForExit(child, 2_000);
+  if (!(await waitForExit(child, 2_000))) {
+    throw new Error(`Packaged process tree ${child.pid} did not exit after SIGKILL.`);
+  }
 }
 
 function hasStartupProof(logPath: string, expectedLogDirectory: string): boolean {
@@ -510,23 +521,27 @@ function hasStartupProof(logPath: string, expectedLogDirectory: string): boolean
   }
 }
 
-async function launchPackagedDesktopOnce(input: {
+interface PackagedDesktopSession {
+  readonly child: ChildProcess;
+  readonly waitForExit: (timeoutMs: number) => Promise<boolean>;
+  readonly terminate: () => Promise<void>;
+}
+
+async function launchPackagedDesktopSession(input: {
   readonly launch: LaunchCommand;
   readonly env: NodeJS.ProcessEnv;
   readonly logPath: string;
   readonly timeoutMs: number;
   readonly attempt: number;
-}): Promise<void> {
-  let child: ChildProcess | null = null;
+}): Promise<PackagedDesktopSession> {
+  const child = spawn(input.launch.command, [...input.launch.args], {
+    cwd: input.launch.cwd,
+    env: input.env,
+    detached: process.platform !== "win32",
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
+  });
   try {
-    child = spawn(input.launch.command, [...input.launch.args], {
-      cwd: input.launch.cwd,
-      env: input.env,
-      detached: process.platform !== "win32",
-      stdio: ["ignore", "pipe", "pipe"],
-      windowsHide: true,
-    });
-
     const childOutcome: {
       exited: { code: number | null; signal: NodeJS.Signals | null } | null;
       launchError: Error | null;
@@ -545,7 +560,11 @@ async function launchPackagedDesktopOnce(input: {
     while (Date.now() < deadline) {
       if (hasStartupProof(input.logPath, expectedLogDirectory)) {
         console.log(`Packaged startup attempt ${input.attempt} reached backend and main window.`);
-        return;
+        return {
+          child,
+          waitForExit: (timeoutMs) => waitForExit(child, timeoutMs),
+          terminate: () => terminateProcessTree(child),
+        };
       }
       if (childOutcome.launchError) {
         throw new Error(`Packaged app could not start: ${childOutcome.launchError.message}`);
@@ -558,8 +577,9 @@ async function launchPackagedDesktopOnce(input: {
       await new Promise((resolveDelay) => setTimeout(resolveDelay, 200));
     }
     throw new Error(`Packaged startup proof timed out after ${input.timeoutMs}ms.`);
-  } finally {
-    if (child) await terminateProcessTree(child);
+  } catch (error) {
+    await terminateProcessTree(child);
+    throw error;
   }
 }
 
@@ -571,20 +591,18 @@ export function resolveNativePackagedDesktopPlatform(
   return "linux";
 }
 
-export async function verifyPackagedDesktopStartup(
-  options: PackagedDesktopStartupOptions,
-): Promise<void> {
+export async function verifyPackagedDesktop(options: PackagedDesktopProofOptions): Promise<void> {
   const nativePlatform = resolveNativePackagedDesktopPlatform(process.platform);
   if (nativePlatform !== options.platform) {
     throw new Error(
-      `Packaged ${options.platform} startup smoke must run on its native host, not ${process.platform}.`,
+      `Packaged ${options.platform} proof must run on its native host, not ${process.platform}.`,
     );
   }
   const proofLease = acquirePackagedProofLease(options.sourceCommit);
   let temporaryRoot: string | undefined;
 
   try {
-    temporaryRoot = mkdtempSync(join(tmpdir(), `omnimind-packaged-smoke-${options.platform}-`));
+    temporaryRoot = mkdtempSync(join(tmpdir(), `omnimind-packaged-proof-${options.platform}-`));
     const extractionRoot = join(temporaryRoot, "payload");
     mkdirSync(extractionRoot, { recursive: true });
     const launch = prepareLaunch(options, extractionRoot);
@@ -595,17 +613,18 @@ export async function verifyPackagedDesktopStartup(
       extractFile(launch.appArchivePath, "package.json").toString("utf8"),
       options.sourceCommit,
     );
-    const env = createPackagedDesktopSmokeEnvironment(join(temporaryRoot, "state"), options);
+    const env = createPackagedDesktopEnvironment(join(temporaryRoot, "state"), options);
     const logPath = join(env.OMNIMIND_HOME!, "userdata", "logs", "desktop-main.log");
     for (const attempt of [1, 2]) {
       rmSync(logPath, { force: true });
-      await launchPackagedDesktopOnce({
+      const session = await launchPackagedDesktopSession({
         launch,
         env,
         logPath,
         timeoutMs: options.timeoutMs,
         attempt,
       });
+      await session.terminate();
     }
     console.log(
       `Packaged ${options.platform}/${options.arch} startup, shutdown, and reopen passed from isolated state at ${options.sourceCommit.slice(0, 12)}.`,
@@ -617,5 +636,5 @@ export async function verifyPackagedDesktopStartup(
 
 const invokedPath = process.argv[1] ? resolve(process.argv[1]) : null;
 if (invokedPath === fileURLToPath(import.meta.url)) {
-  await verifyPackagedDesktopStartup(parsePackagedDesktopStartupArgs(process.argv.slice(2)));
+  await verifyPackagedDesktop(parsePackagedDesktopArgs(process.argv.slice(2)));
 }

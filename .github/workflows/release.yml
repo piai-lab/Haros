@@ -165,12 +165,13 @@ jobs:
       - name: Smoke packaged desktop startup
         shell: bash
         run: |
-          node scripts/verify-packaged-desktop-startup.ts \
+          node scripts/verify-packaged-desktop.ts \
             --assets-dir build-assets \
             --platform "${{ matrix.platform }}" \
             --arch "${{ matrix.arch }}" \
             --version "${{ needs.preflight.outputs.version }}" \
-            --source-commit "${{ needs.preflight.outputs.source_commit }}"
+            --source-commit "${{ needs.preflight.outputs.source_commit }}" \
+            --proof startup
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

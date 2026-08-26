@@ -7,10 +7,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   acquirePackagedProofLease,
   assertPackagedSourceCommit,
-  createPackagedDesktopSmokeEnvironment,
-  parsePackagedDesktopStartupArgs,
+  createPackagedDesktopEnvironment,
+  parsePackagedDesktopArgs,
   resolveNativePackagedDesktopPlatform,
-} from "./verify-packaged-desktop-startup.ts";
+} from "./verify-packaged-desktop.ts";
 
 const temporaryRoots: string[] = [];
 
@@ -20,12 +20,12 @@ afterEach(() => {
   }
 });
 
-describe("packaged desktop startup verification", () => {
+describe("packaged desktop verification", () => {
   const sourceCommit = "1234567890abcdef1234567890abcdef12345678";
 
   it("parses a bounded native payload request", () => {
     expect(
-      parsePackagedDesktopStartupArgs([
+      parsePackagedDesktopArgs([
         "--assets-dir",
         "./release-publish",
         "--platform",
@@ -36,6 +36,8 @@ describe("packaged desktop startup verification", () => {
         "1.2.3",
         "--source-commit",
         sourceCommit,
+        "--proof",
+        "startup",
       ]),
     ).toEqual({
       assetsDirectory: expect.stringMatching(/release-publish$/),
@@ -43,11 +45,12 @@ describe("packaged desktop startup verification", () => {
       arch: "x64",
       version: "1.2.3",
       sourceCommit,
+      proof: "startup",
       timeoutMs: 60_000,
     });
 
     expect(() =>
-      parsePackagedDesktopStartupArgs([
+      parsePackagedDesktopArgs([
         "--assets-dir",
         "./release-publish",
         "--platform",
@@ -58,13 +61,15 @@ describe("packaged desktop startup verification", () => {
         "1.2.3",
         "--source-commit",
         sourceCommit,
+        "--proof",
+        "startup",
         "--timeout-ms",
         "4999",
       ]),
     ).toThrow("--timeout-ms must be an integer between 5000 and 180000");
 
     expect(() =>
-      parsePackagedDesktopStartupArgs([
+      parsePackagedDesktopArgs([
         "--assets-dir",
         "./release-publish",
         "--platform",
@@ -75,8 +80,25 @@ describe("packaged desktop startup verification", () => {
         "1.2.3",
         "--source-commit",
         "1234567",
+        "--proof",
+        "startup",
       ]),
     ).toThrow("--source-commit must be a full 40-character Git SHA");
+
+    expect(() =>
+      parsePackagedDesktopArgs([
+        "--assets-dir",
+        "./release-publish",
+        "--platform",
+        "linux",
+        "--arch",
+        "x64",
+        "--version",
+        "1.2.3",
+        "--source-commit",
+        sourceCommit,
+      ]),
+    ).toThrow("Missing packaged proof argument: --proof");
   });
 
   it("rejects an artifact whose embedded commit differs from the requested source", () => {
@@ -125,10 +147,10 @@ describe("packaged desktop startup verification", () => {
   });
 
   it("isolates user state and removes inherited runtime authority", () => {
-    const root = mkdtempSync(join(tmpdir(), "omnimind-packaged-smoke-env-test-"));
+    const root = mkdtempSync(join(tmpdir(), "omnimind-packaged-proof-env-test-"));
     temporaryRoots.push(root);
 
-    const env = createPackagedDesktopSmokeEnvironment(
+    const env = createPackagedDesktopEnvironment(
       root,
       { platform: "linux", version: "1.2.3" },
       {

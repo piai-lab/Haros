@@ -240,13 +240,18 @@ function verifyReleaseWorkflowSafety(): void {
   );
   assertContains(
     workflow,
-    "node scripts/verify-packaged-desktop-startup.ts",
+    "node scripts/verify-packaged-desktop.ts",
     "Expected every native payload to pass isolated packaged startup before upload.",
   );
   assertContains(
     workflow,
     '--source-commit "${{ needs.preflight.outputs.source_commit }}"',
     "Expected packaged startup to verify the exact preflight source commit.",
+  );
+  assertContains(
+    workflow,
+    "--proof startup",
+    "Expected packaged payloads to select an explicit proof level.",
   );
   assertContains(
     workflow,
