@@ -28,8 +28,13 @@ const MERMAID_PROTOCOL_RELATIVE_URI_PATTERN = /(?:^|[\s('"=])\/\/[\w.-]/m;
 const MERMAID_BEHAVIOR_PATTERN = /^\s*(?:click|link|href)\b/im;
 const MERMAID_INIT_DIRECTIVE_PATTERN = /%%\s*\{\s*(?:init|initialize|config)\s*:/i;
 const MERMAID_FRONTMATTER_PATTERN = /^\s*---(?:\r?\n|$)/;
+// Count every relationship spelling accepted by the diagram kinds above before
+// Mermaid is imported. Keep longer spellings first so one edge is counted once.
+// The final `--` / `..` alternatives deliberately over-count unusual label text:
+// the resource guard must fail closed rather than let compressed open/class edges
+// move unbounded parsing work onto the main thread.
 const MERMAID_CONNECTOR_PATTERN =
-  /(?:<-->|<->|-->>|->>|-->|==>|-.->|~~>|--[ox]|<\|--|--\|>|\*--|o--|\.{2}>)/g;
+  /(?:<<-->>|<<->>|<-->|<->|<\|--|--\|>|\.\.\|>|-\.->|-\.-|-->>|->>|-->|==>|---|===|~~~|~~>|--[ox*)]|-[x)]|[ox*]--|\.\.>|\.\.|--|->)/g;
 
 export type MermaidDiagramKind = "flowchart" | "sequence" | "class" | "state" | "er" | "mindmap";
 

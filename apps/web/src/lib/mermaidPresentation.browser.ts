@@ -170,23 +170,28 @@ describe("Mermaid sandbox output", () => {
     expect(result.height).toBeGreaterThan(4096);
   });
 
-  it("rejects the 101st connector before importing or rendering Mermaid", async () => {
-    const importMarksBefore = performance.getEntriesByName("omnimind:mermaid-import").length;
-    const renderMeasuresBefore = performance.getEntriesByName(
-      "omnimind:mermaid-render-duration",
-    ).length;
-    const source = `flowchart TD\n${"A-->B;".repeat(101)}`;
-    const result = await renderMermaidPresentation({
-      source,
-      theme: THEME,
-      signal: new AbortController().signal,
-    });
-    expect(result).toMatchObject({ kind: "fallback", reason: "budget" });
-    expect(performance.getEntriesByName("omnimind:mermaid-import")).toHaveLength(importMarksBefore);
-    expect(performance.getEntriesByName("omnimind:mermaid-render-duration")).toHaveLength(
-      renderMeasuresBefore,
-    );
-  });
+  it.each(["-->", "---", "===", "-.-", "~~~", "->", "..>", "--"])(
+    "rejects the 101st %s connector before importing or rendering Mermaid",
+    async (connector) => {
+      const importMarksBefore = performance.getEntriesByName("omnimind:mermaid-import").length;
+      const renderMeasuresBefore = performance.getEntriesByName(
+        "omnimind:mermaid-render-duration",
+      ).length;
+      const source = `flowchart TD\n${`A${connector}B;`.repeat(101)}`;
+      const result = await renderMermaidPresentation({
+        source,
+        theme: THEME,
+        signal: new AbortController().signal,
+      });
+      expect(result).toMatchObject({ kind: "fallback", reason: "budget" });
+      expect(performance.getEntriesByName("omnimind:mermaid-import")).toHaveLength(
+        importMarksBefore,
+      );
+      expect(performance.getEntriesByName("omnimind:mermaid-render-duration")).toHaveLength(
+        renderMeasuresBefore,
+      );
+    },
+  );
 
   it("contains hostile returned markup inside a scriptless opaque-origin frame", async () => {
     const remote = `https://example.invalid/mermaid-${crypto.randomUUID()}.png`;

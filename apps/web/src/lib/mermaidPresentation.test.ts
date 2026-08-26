@@ -71,14 +71,38 @@ describe("preflightMermaidSource", () => {
     expect(preflightMermaidSource(source).ok).toBe(true);
   });
 
-  it("rejects line and compressed connector budgets", () => {
+  it("rejects line and every compressed connector family before import", () => {
     const long = [
       "graph TD",
       ...Array.from({ length: MERMAID_MAX_NONEMPTY_LINES }, () => "A"),
     ].join("\n");
-    const compressed = `graph TD\n${"A-->B;".repeat(MERMAID_MAX_CONNECTORS + 1)}`;
     expect(preflightMermaidSource(long)).toEqual({ ok: false, reason: "budget" });
-    expect(preflightMermaidSource(compressed)).toEqual({ ok: false, reason: "budget" });
+    for (const connector of [
+      "-->",
+      "---",
+      "==>",
+      "===",
+      "-.->",
+      "-.-",
+      "~~~",
+      "->>",
+      "->",
+      "<|--",
+      "..|>",
+      "..>",
+      "..",
+      "*--",
+      "o--",
+      "--o",
+      "--x",
+      "--",
+    ]) {
+      const compressed = `graph TD\n${`A${connector}B;`.repeat(MERMAID_MAX_CONNECTORS + 1)}`;
+      expect(preflightMermaidSource(compressed), connector).toEqual({
+        ok: false,
+        reason: "budget",
+      });
+    }
   });
 });
 
