@@ -116,6 +116,7 @@ jobs:
             --build-version "${{ needs.preflight.outputs.version }}"
             --source-commit "$SOURCE_COMMIT"
             --lockfile-sha256 "$LOCKFILE_SHA256"
+            --output-dir release
             --verbose
           )
           if [[ -n "$SOURCE_TAG" ]]; then

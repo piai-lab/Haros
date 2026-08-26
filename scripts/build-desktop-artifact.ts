@@ -321,19 +321,21 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
   const envSigned = yield* resolveBooleanEnv("OMNIMIND_DESKTOP_SIGNED", env.signed);
   const envVerbose = yield* resolveBooleanEnv("OMNIMIND_DESKTOP_VERBOSE", env.verbose);
   const envMockUpdates = yield* resolveBooleanEnv("OMNIMIND_DESKTOP_MOCK_UPDATES", env.mockUpdates);
-  const releaseDir = resolveBooleanFlag(input.mockUpdates, envMockUpdates)
+  const mockUpdates = resolveBooleanFlag(input.mockUpdates, envMockUpdates);
+  const defaultOutputDir = mockUpdates
     ? "release-mock"
-    : "release";
+    : sourceCommit
+      ? path.join("release", sourceCommit.toLowerCase(), `${platform}-${arch}`)
+      : "release";
   const outputDir = path.resolve(
     repoRoot,
-    mergeOptions(input.outputDir, env.outputDir, releaseDir),
+    mergeOptions(input.outputDir, env.outputDir, defaultOutputDir),
   );
 
   const skipBuild = resolveBooleanFlag(input.skipBuild, envSkipBuild);
   const keepStage = resolveBooleanFlag(input.keepStage, envKeepStage);
   const signed = resolveBooleanFlag(input.signed, envSigned);
   const verbose = resolveBooleanFlag(input.verbose, envVerbose);
-  const mockUpdates = resolveBooleanFlag(input.mockUpdates, envMockUpdates);
   const mockUpdateServerPort = mergeOptions(
     input.mockUpdateServerPort,
     env.mockUpdateServerPort,
@@ -951,8 +953,13 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   const appVersion = options.version ?? serverPackageJson.version;
   const hasSourceCommit = options.sourceCommit !== undefined;
   const hasLockfileSha256 = options.lockfileSha256 !== undefined;
-  const exactProvenanceRequested =
-    hasSourceCommit || hasLockfileSha256 || options.sourceTag !== undefined;
+  if (!options.mockUpdates && !hasSourceCommit) {
+    return yield* new BuildScriptError({
+      message:
+        "Desktop candidate builds require --source-commit with the exact full Git SHA. Mock-update smoke builds are exempt.",
+    });
+  }
+  const exactProvenanceRequested = hasLockfileSha256 || options.sourceTag !== undefined;
   if (exactProvenanceRequested && (!hasSourceCommit || !hasLockfileSha256 || !options.version)) {
     return yield* new BuildScriptError({
       message:
@@ -988,7 +995,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       message: `Release source tag ${options.sourceTag} does not match artifact version ${appVersion}.`,
     });
   }
-  if (exactProvenanceRequested) {
+  if (hasSourceCommit) {
     const gitStatus = spawnSync("git", ["status", "--porcelain=v1", "--untracked-files=all"], {
       cwd: repoRoot,
       encoding: "utf8",
@@ -1001,6 +1008,14 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     if (gitStatus.stdout.trim().length > 0) {
       return yield* new BuildScriptError({
         message: "Release source worktree is not clean; refusing to stage uncommitted bytes.",
+      });
+    }
+  }
+  if (yield* fs.exists(options.outputDir)) {
+    const existingOutputs = yield* fs.readDirectory(options.outputDir);
+    if (existingOutputs.length > 0) {
+      return yield* new BuildScriptError({
+        message: `Desktop artifact output directory is not empty: ${options.outputDir}. Use a fresh --output-dir; candidate artifacts are immutable.`,
       });
     }
   }
