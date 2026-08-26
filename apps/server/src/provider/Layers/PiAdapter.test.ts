@@ -238,6 +238,92 @@ describe("Pi credential gate", () => {
   });
 });
 
+describe("OmniMind Agent Plan lifecycle", () => {
+  it("wraps slash input and emits one proposed plan before terminal settlement", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-plan-lifecycle-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(path.join(agentDir, "models.json"), JSON.stringify({ providers: { local: {
+      api: "openai-completions",
+      baseUrl: "https://local-model.example.test/v1",
+      models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+    } } }));
+    writeFileSync(path.join(agentDir, "auth.json"), JSON.stringify({ local: { type: "api_key", key: "test-key" } }));
+    writeFileSync(path.join(agentDir, "settings.json"), JSON.stringify({ retry: { enabled: false } }));
+    const requestBodies: any[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      requestBodies.push(request instanceof Request ? await request.clone().json() : JSON.parse(String(init?.body)));
+      return piOpenAiSuccessResponse("<proposed_plan>\n- Inspect\n- Implement\n</proposed_plan>");
+    });
+    const events: ProviderRuntimeEvent[] = [];
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000093");
+
+    try {
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(ServerSettingsService.layerTest()),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+        const adapter = yield* OmniMindAgentAdapter;
+        const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+          Effect.sync(() => events.push(event)),
+        ).pipe(Effect.forkChild);
+        yield* adapter.startSession({
+          provider: "omnimind", threadId, cwd, workSurface: "chat",
+          modelSelection: { provider: "omnimind", model: "local/safe-model" },
+          runtimeMode: "full-access",
+        });
+        const planTurn = yield* adapter.sendTurn({
+          threadId, input: "/reload and inspect the workspace", attachments: [],
+          modelSelection: { provider: "omnimind", model: "local/safe-model" },
+          interactionMode: "plan",
+        });
+        yield* Effect.promise(() => waitForTestCondition(
+          () => events.some((event) => event.type === "turn.completed" && event.turnId === planTurn.turnId),
+          "Plan turn did not settle.",
+        ));
+        expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
+        const defaultTurn = yield* adapter.sendTurn({
+          threadId, input: "ordinary continuation", attachments: [],
+          modelSelection: { provider: "omnimind", model: "local/safe-model" },
+          interactionMode: "default",
+        });
+        yield* Effect.promise(() => waitForTestCondition(
+          () => events.some((event) => event.type === "turn.completed" && event.turnId === defaultTurn.turnId),
+          "Default turn did not settle.",
+        ));
+        yield* adapter.stopSession(threadId);
+        yield* Fiber.interrupt(eventsFiber);
+      }).pipe(Effect.provide(layer))));
+
+      const firstUserContent = requestBodies[0]?.messages?.find((message: any) => message.role === "user")?.content;
+      const firstUserMessage = Array.isArray(firstUserContent)
+        ? firstUserContent.filter((block: any) => block?.type === "text").map((block: any) => block.text).join("\n")
+        : String(firstUserContent ?? "");
+      expect(firstUserMessage).toContain("OmniMind plan mode is active.");
+      expect(firstUserMessage).toContain("/reload and inspect the workspace");
+      expect(firstUserMessage.startsWith("/reload")).toBe(false);
+      expect(firstUserMessage.match(/OmniMind plan mode is active\./g)).toHaveLength(1);
+      const secondUserContent = requestBodies[1]?.messages?.filter((message: any) => message.role === "user").at(-1)?.content;
+      expect(JSON.stringify(secondUserContent)).not.toContain("OmniMind plan mode is active.");
+      const proposed = events.filter((event) => event.type === "turn.proposed.completed");
+      expect(proposed).toHaveLength(1);
+      expect(proposed[0]?.payload).toEqual({ planMarkdown: "- Inspect\n- Implement" });
+      const proposedIndex = events.indexOf(proposed[0]!);
+      const planCompletedIndex = events.findIndex((event) =>
+        event.type === "turn.completed" && event.turnId === proposed[0]?.turnId,
+      );
+      expect(planCompletedIndex).toBeGreaterThan(proposedIndex);
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("Pi native OmniMind gateway tools", () => {
   it("uses canonical MCP schemas and keeps same-cwd thread tokens distinct", async () => {
     const requests: Array<{ readonly token: string | null; readonly body: any }> = [];

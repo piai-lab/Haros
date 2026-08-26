@@ -21,6 +21,7 @@ describe("bundled OmniMind Web Access composition", () => {
     >;
     const configPath = join(agentDir, "web-search.json");
     expect(webAccess.name).toBe("omnimind-web-access");
+    expect(typeof composition.extensions[0] === "function" ? undefined : composition.extensions[0]?.name).toBe("omnimind-agent-plan-guard");
     expect(existsSync(configPath)).toBe(false);
 
     const tools: Array<{ readonly name: string }> = [];

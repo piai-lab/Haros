@@ -1248,3 +1248,39 @@ Automation presentation context or i18n catalog composition must rerun the corre
 regressions. Any causal-order change must additionally prove live, settled and reopen order in visual,
 DOM and accessibility projections; any first-party Tool or B-class Web Surface change must prove typed
 detail/context round trips and fail-closed malformed-input behavior.
+
+## 22. OmniMind Agent Plan / Debug compatibility closure
+
+This Slice keeps the adopted Synara source authority at exact commit
+`57f48ef1a3354ae7967d4a8f9f83a1105691ede6`; `source-adoptions.json` is intentionally unchanged. The
+Product interaction-mode owner, Composer, PlanSidebar, Refine/Implement journey and SQLite projection
+were already present and were not forked. Exact capability implementation
+`f939e34e919b204d827ca93681284093ce1144eb` instead makes the existing Server execution structure own
+`default / plan / debug` support and protects final `sendTurn/steerTurn` admission. stock Pi and
+Antigravity now explicitly reject Plan; bundled OmniMind Agent and the already-compatible native
+adapters expose it only through the same health-aware capability projection.
+
+Exact OmniMind Agent implementation `8b7ea057e9e2894e31f8d28442a091ebd32bd5f4` uses the pinned Pi
+`@earendil-works/pi-coding-agent@0.84.2` Extension seam rather than a Host permission system. Pi's
+ResourceLoader loads user/package Extensions before supplied inline factories, and its `tool_call`
+runner visits handlers in order and returns immediately on the first `{ block: true }`. Earlier user
+handlers may inspect or mutate input, but cannot reverse the later Product guard's rejection. The
+bundled hidden guard therefore fail-closes every tool except Pi read tools, canonical Ask User,
+OmniMind task projection and the four canonical Web Access read tools; the latter names are exported by
+their existing package owner instead of copied into adapter policy.
+
+Plan mode is frozen per turn, wrapped before Pi command dispatch, and retained across active steering
+and interrupt until settlement. The wrapper prevents `/reload`, prompt/skill templates and Extension
+commands from bypassing the Agent loop. `agent_end` only replaces an in-memory final-plan candidate;
+`agent_settled` emits at most one canonical `turn.proposed.completed` before `turn.completed`, then
+clears the candidate and guard. Prompt rejection, reload, disposal and Session replacement clear the
+same controller. Debug remains the existing evidence-first ProviderCommandReactor prompt policy and
+does not alter permissions or add a state machine.
+
+Focused evidence covers the ten-Provider matrix, RPC decode, stale-client Server rejection, the fixed
+allow/deny tool set, composition order, Plan prompt exactly once, slash-command neutralization,
+canonical event ordering, tagged Default non-projection, reload/Plan-to-Default cleanup, Debug initial
+and native-steer exactly-once injection, Composer unavailable/pending fail-closed behavior and the
+bilingual preserved-intent exit journey. This is a bounded compatibility closure, not an overall F-20
+verification: the Campaign remains `candidate`, and release signing, notarization and update-feed
+activation remain outside this Slice.

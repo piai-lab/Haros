@@ -226,6 +226,14 @@ Engine/Host 对某一 mode 没有真实实现时，capability projection 必须�
 
 turn steering参与同一次command admission的确定性决策。Server拥有一份同时驱动loaded adapter capability与admission projection的结构描述；Orchestration在接纳前从该owner读取一次bounded snapshot并作为显式输入交给pure decider。该次operation采用native steer或queue-interrupt-redispatch的结果随canonical command/event事实传递，reactor、runtime ingestion与Web只消费该结果，不在不同时间重新按Provider ID判断。能力在admission后变化只影响后续command；restart随当前Server composition重建，不持久化第二份全局capability state。若某Provider未注册，面向consumer的execution projection仍必须fail closed。
 
+## Interaction mode：Product intent 与 Engine policy 分层
+
+Thread 的 `default / plan / debug` 由 Product State 持久化并由 Composer、PlanSidebar、Refine/Implement 与 SQLite 投影共同消费；它们不是三个独立 Agent，也不建立第二 Session 或 Plan store。Server 的同一 `ProviderExecutionStructure` 同时拥有 `supportedInteractionModes` 与 runtime-mode 结构真相，capability projection 叠加当前 health/auth/version，`sendTurn/steerTurn` 在最终 adapter dispatch 前再次 admission。缺省值是 `default`；不支持或尚未确认时 fail closed，不 silent fallback。Composer 只在 Plan 可执行时提供进入动作；已经保存的 Plan intent 遇到 Engine 切换或健康漂移时保持原值、禁止 Plan send并保留显式退出。
+
+`debug` 是不改变工具、文件或 Host 权限的 cognitive policy。ProviderCommandReactor 对 initial、continuation 与 steer 的最终文字恰好注入一次 evidence-first Debug 指令；切回 `default` 后不再注入。adapter 不为 Debug 创建 Extension、权限状态机或持久事实。
+
+`plan` 是 turn-local 的 read-only execution policy，并必须通过 canonical `turn.proposed.completed` 产出可进入 Product Plan journey 的最终 plan。Product 继续拥有 mode/state/UI；adapter只拥有该 Engine 的 prompt translation、执行 guard 与 event translation；Engine继续拥有 Session、Extension runner 与 Tool Registry。对 bundled `omnimind`，一个 hidden Product Inline Extension 在每个 Plan turn 提交前激活，并在最终 settlement、prompt rejection、reload、dispose 或 restart 后撤销。它只允许 Pi 读取工具、canonical Ask User、task-list projection 与 bundled Web Access canonical read tools；Bash、edit/write、Host/MCP、第三方与未知未来工具一律阻止，不解析命令内容猜测只读。interrupt期间 guard 保持到Agent settlement，active steer沿用已冻结mode；`agent_end`只更新最终候选，`agent_settled`才在`turn.completed`之前发出一次canonical plan。stock `pi`与Antigravity当前不声明Plan；其他已实现native/prompt+event闭环的正式adapter继续声明支持。
+
 ## 扩展与生态
 
 用户显式选择某个 Engine（即当前 Provider runtime）后，其有效能力集合是 **该 Engine 的完整 native ecosystem + 与该 Engine 真实兼容的 OmniMind Library assets + OmniMind Workbench**。Codex、Pi、OpenCode 等 Engine 自己的 Skill、MCP、Tool、configuration、authentication 与 Session 能力不得因进入 OmniMind 而被替换、裁掉或伪装成 OmniMind 能力。

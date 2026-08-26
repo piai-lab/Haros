@@ -95,6 +95,7 @@ import {
 import { attachmentRelativePath } from "../../attachmentStore.ts";
 import { resolveProviderAttachmentPath } from "../../provider/providerAttachmentPaths.ts";
 import { providerExecutionStructure } from "../../provider/providerExecutionStructure.ts";
+import { PROVIDER_DEBUG_MODE_PROMPT_PREFIX } from "../../provider/debugMode.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { checkpointRefForThreadTurn } from "../../checkpointing/Utils.ts";
 import {
@@ -8726,11 +8727,14 @@ describe("ProviderCommandReactor", () => {
           attachments: [],
         },
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: "debug",
         createdAt: now,
       }),
     );
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    const initialInput = (harness.sendTurn.mock.calls[0]?.[0] as { input?: string } | undefined)
+      ?.input;
+    expect(initialInput?.split(PROVIDER_DEBUG_MODE_PROMPT_PREFIX)).toHaveLength(2);
 
     harness.setRuntimeSessionTurnState({
       threadId: "thread-1",
@@ -8772,7 +8776,7 @@ describe("ProviderCommandReactor", () => {
         },
         dispatchMode: "steer",
         runtimeMode: "approval-required",
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: "debug",
         createdAt: now,
       }),
     );
@@ -8782,9 +8786,12 @@ describe("ProviderCommandReactor", () => {
     expect(harness.interruptTurn).not.toHaveBeenCalled();
     expect(harness.steerTurn.mock.calls[0]?.[0]).toMatchObject({
       threadId: ThreadId.makeUnsafe("thread-1"),
-      input: "switch directions",
-      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      interactionMode: "debug",
     });
+    const steerInput = (harness.steerTurn.mock.calls[0]?.[0] as { input?: string } | undefined)
+      ?.input;
+    expect(steerInput).toContain("switch directions");
+    expect(steerInput?.split(PROVIDER_DEBUG_MODE_PROMPT_PREFIX)).toHaveLength(2);
   });
 
   it("falls back to interrupt plus priority queue for steering without native support", async () => {
