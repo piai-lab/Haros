@@ -36,7 +36,7 @@
     "build:desktop": "turbo run build --filter=@omnimind/desktop --filter=@omnimind/server",
     "typecheck": "turbo run typecheck",
     "lint": "oxlint --report-unused-disable-directives",
-    "test": "turbo run test:unit test:integration test:browser:stable",
+    "test": "bun run test:unit && bun run test:integration && bun run test:browser:stable",
     "test:unit": "turbo run test:unit",
     "test:integration": "turbo run test:integration",
     "test:related": "node scripts/run-related-tests.mjs",
