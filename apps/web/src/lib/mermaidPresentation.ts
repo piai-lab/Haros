@@ -5,7 +5,7 @@
 import type { EngineWebSurfaceThemeSnapshot } from "@omnimind/contracts";
 import type { MermaidConfig } from "mermaid";
 
-export const MERMAID_PRESENTATION_VERSION = "mermaid-presentation-v2";
+export const MERMAID_PRESENTATION_VERSION = "mermaid-presentation-v3";
 export const MERMAID_PACKAGE_VERSION = "11.17.2";
 export const MERMAID_MAX_SOURCE_CHARACTERS = 20_000;
 export const MERMAID_MAX_NONEMPTY_LINES = 120;
@@ -276,7 +276,7 @@ function buildHostSrcDoc(bodyContent: string): string {
     "<!doctype html>",
     '<html><head><meta charset="utf-8">',
     "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; font-src 'none'; media-src 'none'\">",
-    "<style>html,body{margin:0;overflow:hidden;background:transparent}svg{display:block;max-width:100%;height:auto;margin:0 auto}</style>",
+    "<style>html,body{margin:0;overflow:hidden;background:transparent}svg{display:block;max-width:100%;height:auto;margin:0 auto;background:transparent!important}</style>",
     "</head><body>",
     bodyContent,
     "</body></html>",

@@ -130,6 +130,21 @@ describe("Mermaid sandbox output", () => {
     expect(light.srcDoc).toContain(THEME.surface);
     expect(dark.srcDoc).toContain(darkTheme.surface);
     expect(light.srcDoc).not.toContain(darkTheme.surface);
+
+    const frame = document.createElement("iframe");
+    frame.srcdoc = dark.srcDoc;
+    document.body.append(frame);
+    await new Promise<void>((resolve) => {
+      frame.addEventListener("load", () => resolve(), { once: true });
+      setTimeout(resolve, 500);
+    });
+    const frameDocument = frame.contentDocument;
+    const svg = frameDocument?.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(frameDocument?.defaultView?.getComputedStyle(svg!).backgroundColor).toBe(
+      "rgba(0, 0, 0, 0)",
+    );
+    frame.remove();
   });
 
   it("keeps geometry independent from presentation eligibility", async () => {
