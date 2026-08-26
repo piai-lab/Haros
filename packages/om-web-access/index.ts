@@ -200,12 +200,17 @@ type ToolNames = {
 	getSearchContent: string;
 };
 
-const DEFAULT_TOOL_NAMES: ToolNames = {
+/** Canonical bundled names used by the OmniMind Product profile. */
+export const OMNIMIND_WEB_ACCESS_TOOL_NAMES: Readonly<ToolNames> = Object.freeze({
 	webSearch: "web_search",
 	sourceCheck: "source_check",
 	fetchContent: "fetch_content",
 	getSearchContent: "get_search_content",
-};
+});
+export const OMNIMIND_WEB_ACCESS_PLAN_TOOL_NAMES = Object.freeze(
+	Object.values(OMNIMIND_WEB_ACCESS_TOOL_NAMES),
+);
+const DEFAULT_TOOL_NAMES: ToolNames = { ...OMNIMIND_WEB_ACCESS_TOOL_NAMES };
 const TOOL_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 const DEFAULT_SHORTCUTS = { curate: "ctrl+shift+s", activity: "ctrl+shift+w" } satisfies Record<string, KeyId>;
 const DEFAULT_CURATOR_TIMEOUT_SECONDS = 20;

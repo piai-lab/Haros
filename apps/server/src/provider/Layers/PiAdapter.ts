@@ -37,6 +37,7 @@ import {
   type ProviderListModelsResult,
   type ProviderListSkillsResult,
   type ProviderKind,
+  type ProviderInteractionMode,
   ProviderItemId,
   type ProviderRuntimeEvent,
   type ProviderSession,
@@ -148,6 +149,8 @@ import { getOmniMindModelRuntimeMutationRevision } from "../omnimindModelRuntime
 import { resolveRealPathWithinRoot } from "../../workspace/realPathContainment.ts";
 import { providerExecutionStructure } from "../providerExecutionStructure.ts";
 import { projectAskUserRequest, resolveAskUserResponse } from "../askUserHostBridge.ts";
+import { extractProposedPlanMarkdown, withProviderPlanModePrompt } from "../planMode.ts";
+import type { OmniMindPlanModeController } from "../omnimindPlanModeExtension.ts";
 import { askUserMetrics } from "../askUserMetrics.ts";
 
 type PiFamilyProvider = Extract<ProviderKind, "pi" | "omnimind">;
@@ -506,6 +509,7 @@ interface PiSessionContext {
   /** Frozen discovery trust for this native ResourceLoader; not a second policy owner. */
   readonly resourceScopeIdentity: string;
   readonly hostProjection?: AgentGatewayHostExtensionHandle;
+  readonly planModeController?: OmniMindPlanModeController;
   gatewaySessionLease?: AgentGatewaySessionLease;
   gatewayConnection?: AgentGatewayMcpConnection;
   readonly lifecycleGeneration?: string;
@@ -515,6 +519,8 @@ interface PiSessionContext {
   session: ProviderSession;
   turns: PiStoredTurn[];
   activeTurnId: TurnId | undefined;
+  activeInteractionMode: ProviderInteractionMode | undefined;
+  proposedPlanCandidate: string | undefined;
   startedTurnId: TurnId | undefined;
   activeAssistantItemId: RuntimeItemId | undefined;
   activeReasoningItemId: RuntimeItemId | undefined;
@@ -999,6 +1005,21 @@ function textFromContent(content: string | (TextContent | ImageContent)[]): stri
     .filter((block): block is TextContent => block.type === "text")
     .map((block) => block.text)
     .join("\n\n");
+}
+
+function latestAssistantText(messages: readonly unknown[]): string | undefined {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = toolRecord(messages[index]);
+    if (message?.role !== "assistant") continue;
+    const content = message.content;
+    if (typeof content === "string") return content;
+    if (!Array.isArray(content)) return undefined;
+    return content.flatMap((block) => {
+      const entry = toolRecord(block);
+      return entry?.type === "text" && typeof entry.text === "string" ? [entry.text] : [];
+    }).join("\n\n");
+  }
+  return undefined;
 }
 
 function toolRecord(value: unknown): Record<string, unknown> | undefined {
@@ -2191,7 +2212,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         offerRuntimeError(context, { message, method: "prompt", cause });
       }
       Effect.runFork(cancelAgentGatewayTurn(context.gatewaySessionLease, turnId));
+      context.planModeController?.deactivate(turnId);
       context.activeTurnId = undefined;
+      context.activeInteractionMode = undefined;
+      context.proposedPlanCandidate = undefined;
       context.startedTurnId = undefined;
       context.activeAssistantItemId = undefined;
       context.activeReasoningItemId = undefined;
@@ -2235,6 +2259,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
 
     const disposeSessionContext = async (context: PiSessionContext) => {
       try {
+        context.planModeController?.deactivate();
+        context.activeInteractionMode = undefined;
+        context.proposedPlanCandidate = undefined;
         await Effect.runPromise(
           cancelAgentGatewayTurn(context.gatewaySessionLease, context.activeTurnId),
         );
@@ -2422,6 +2449,14 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         context.pendingPromptSubmission = undefined;
       }
       const completionBase = makeEventBase(context);
+      if (provider === "omnimind" && input.state === "completed" && context.activeInteractionMode === "plan" && context.proposedPlanCandidate) {
+        offerRuntimeEvent({
+          ...completionBase,
+          type: "turn.proposed.completed",
+          payload: { planMarkdown: context.proposedPlanCandidate },
+          raw: { source: "pi.sdk.event", messageType: event.type, payload: { source: "proposed_plan" } },
+        } satisfies ProviderRuntimeEvent);
+      }
       if (context.gatewaySessionLease && context.gatewayConnection) {
         const outgoingLease = context.gatewaySessionLease;
         const drainage = outgoingLease.retireTurn(turnId);
@@ -2448,7 +2483,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ),
         );
       }
+      context.planModeController?.deactivate(turnId);
       context.activeTurnId = undefined;
+      context.activeInteractionMode = undefined;
+      context.proposedPlanCandidate = undefined;
       context.startedTurnId = undefined;
       context.activeAssistantItemId = undefined;
       context.activeReasoningItemId = undefined;
@@ -2830,6 +2868,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         }
         case "auto_retry_start": {
           if (!context.activeTurnId) return;
+          context.proposedPlanCandidate = undefined;
           offerRuntimeEvent({
             ...makeEventBase(context),
             type: "runtime.warning",
@@ -2883,6 +2922,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             ? context.turns.find((candidate) => candidate.id === turnId)
             : undefined;
           if (turn) turn.leafId = leafId;
+          if (provider === "omnimind" && context.activeInteractionMode === "plan") {
+            context.proposedPlanCandidate = extractProposedPlanMarkdown(latestAssistantText(event.messages));
+          } else {
+            context.proposedPlanCandidate = undefined;
+          }
           completePiAttemptItems(context, event, errorMessage ? "failed" : "completed");
           if (usage) {
             offerRuntimeEvent({
@@ -3094,6 +3138,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       let resolvedGatewayControlAvailable =
         provider !== "omnimind" && (input.gatewayTools?.length ?? 0) > 0;
       let resolvedHostProjection: AgentGatewayHostExtensionHandle | undefined;
+      let resolvedPlanModeController: OmniMindPlanModeController | undefined;
       const hostProjectionDiagnostics: string[] = [];
       const webAccessDiagnostics: string[] = [];
       const createRuntime: CreateAgentSessionRuntimeFactory = async ({
@@ -3102,7 +3147,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         sessionManager,
         sessionStartEvent,
       }) => {
-        const composition: Pick<OmniMindSessionExtensionComposition, "extensions" | "host"> =
+        const composition: Pick<OmniMindSessionExtensionComposition, "extensions"> &
+          Partial<Pick<OmniMindSessionExtensionComposition, "host" | "planModeController">> =
           provider === "omnimind"
             ? buildOmniMindSessionExtensions({
                 agentDir,
@@ -3125,6 +3171,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             : { extensions: [] };
         const inlineExtensions = composition.extensions;
         resolvedHostProjection = composition.host;
+        resolvedPlanModeController = composition.planModeController;
         const resourceLoaderOptions = {
           appendSystemPromptOverride: (base: string[]) => [
             ...base,
@@ -3217,6 +3264,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         hostProjectionDiagnostics,
         webAccessDiagnostics,
         ...(resolvedHostProjection === undefined ? {} : { hostProjection: resolvedHostProjection }),
+        ...(resolvedPlanModeController === undefined ? {} : { planModeController: resolvedPlanModeController }),
       };
     };
 
@@ -3418,6 +3466,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           hostProjectionDiagnostics,
           webAccessDiagnostics,
           hostProjection,
+          planModeController,
         } = yield* releaseAgentGatewaySessionLeaseOnInterrupt(
           agentGatewaySessionLease,
           Effect.tryPromise({
@@ -3533,6 +3582,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 : { kind: "project", authoritativeRoot: cwd },
           ),
           ...(hostProjection === undefined ? {} : { hostProjection }),
+          ...(planModeController === undefined ? {} : { planModeController }),
           ...(agentGatewaySessionLease
             ? {
                 gatewaySessionLease: agentGatewaySessionLease,
@@ -3544,6 +3594,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           session,
           turns: [],
           activeTurnId: undefined,
+          activeInteractionMode: undefined,
+          proposedPlanCandidate: undefined,
           startedTurnId: undefined,
           activeAssistantItemId: undefined,
           activeReasoningItemId: undefined,
@@ -3924,11 +3976,22 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           }
           const payload = yield* buildPromptPayload(input);
           const turnId = TurnId.makeUnsafe(crypto.randomUUID());
+          const interactionMode = input.interactionMode ?? "default";
+          const promptText = provider === "omnimind"
+            ? withProviderPlanModePrompt({ text: payload.text, interactionMode })
+            : payload.text;
           context.activeTurnId = turnId;
+          context.activeInteractionMode = interactionMode;
+          context.proposedPlanCandidate = undefined;
+          if (provider === "omnimind" && interactionMode === "plan") {
+            context.planModeController?.activate(turnId);
+          } else {
+            context.planModeController?.deactivate();
+          }
           context.startedTurnId = undefined;
           context.turns.push({ id: turnId, items: [] });
           context.session = makeSessionSnapshot(context, provider);
-          if (payload.images.length === 0 && isPiReloadCommand(payload.text)) {
+          if (payload.images.length === 0 && isPiReloadCommand(promptText)) {
             offerRuntimeEvent({
               ...makeEventBase(context),
               type: "turn.started",
@@ -3979,7 +4042,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                     cause: error,
                   });
                   yield* cancelAgentGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
+                  context.planModeController?.deactivate(turnId);
                   context.activeTurnId = undefined;
+                  context.activeInteractionMode = undefined;
+                  context.proposedPlanCandidate = undefined;
                   context.startedTurnId = undefined;
                   context.session = makeSessionSnapshot(context, provider);
                   return yield* Effect.fail(error);
@@ -3997,7 +4063,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               },
             } satisfies ProviderRuntimeEvent);
             yield* cancelAgentGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
+            context.planModeController?.deactivate(turnId);
             context.activeTurnId = undefined;
+            context.activeInteractionMode = undefined;
+            context.proposedPlanCandidate = undefined;
             context.startedTurnId = undefined;
             context.session = makeSessionSnapshot(context, provider);
             return {
@@ -4006,7 +4075,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               resumeCursor: getSessionFile(context.runtime.session),
             };
           }
-          void submitPiPrompt(context, turnId, payload.text, payload.images)
+          void submitPiPrompt(context, turnId, promptText, payload.images)
             .then((outcome) => {
               resolvePromptSubmission(context, turnId, outcome);
             })
@@ -4027,15 +4096,28 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         Effect.gen(function* () {
           const context = yield* requireSession(input.threadId);
           const payload = yield* buildPromptPayload(input);
+          const interactionMode = context.activeTurnId
+            ? (context.activeInteractionMode ?? "default")
+            : (input.interactionMode ?? "default");
+          const promptText = provider === "omnimind"
+            ? withProviderPlanModePrompt({ text: payload.text, interactionMode })
+            : payload.text;
           const turnId = context.activeTurnId ?? TurnId.makeUnsafe(crypto.randomUUID());
           if (!context.activeTurnId) {
             context.activeTurnId = turnId;
+            context.activeInteractionMode = interactionMode;
+            context.proposedPlanCandidate = undefined;
+            if (provider === "omnimind" && interactionMode === "plan") {
+              context.planModeController?.activate(turnId);
+            } else {
+              context.planModeController?.deactivate();
+            }
             context.startedTurnId = undefined;
             context.turns.push({ id: turnId, items: [] });
           }
           if (context.runtime.session.isStreaming) {
             yield* Effect.tryPromise({
-              try: () => context.runtime.session.steer(payload.text, payload.images),
+              try: () => context.runtime.session.steer(promptText, payload.images),
               catch: (cause) =>
                 new ProviderAdapterRequestError({
                   provider: provider,
@@ -4045,7 +4127,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 }),
             });
           } else {
-            void submitPiPrompt(context, turnId, payload.text, payload.images)
+            void submitPiPrompt(context, turnId, promptText, payload.images)
               .then((outcome) => {
                 resolvePromptSubmission(context, turnId, outcome);
               })
@@ -4213,6 +4295,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ) {
             return "busy" as const;
           }
+          context.planModeController?.deactivate();
+          context.activeInteractionMode = undefined;
+          context.proposedPlanCandidate = undefined;
           const currentServerSettings =
             provider === "omnimind" && serverSettings
               ? yield* serverSettings.getSettings.pipe(

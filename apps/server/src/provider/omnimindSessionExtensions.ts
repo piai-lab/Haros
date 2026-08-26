@@ -13,6 +13,11 @@ import {
 } from "./agentGatewayHostExtension.ts";
 import { makeOmniMindTaskListExtension } from "./omnimindTaskListExtension.ts";
 import { makeOmniMindAskUserExtension } from "./omnimindAskUserExtension.ts";
+import {
+  createOmniMindPlanModeController,
+  makeOmniMindPlanModeExtension,
+  type OmniMindPlanModeController,
+} from "./omnimindPlanModeExtension.ts";
 
 export interface OmniMindSessionExtensionComposition {
   readonly extensions: InlineExtension[];
@@ -20,6 +25,7 @@ export interface OmniMindSessionExtensionComposition {
   readonly host?: AgentGatewayHostExtensionHandle;
   readonly webAccess: InlineExtension;
   readonly askUserExtension?: InlineExtension;
+  readonly planModeController: OmniMindPlanModeController;
 }
 
 /** Explicit product wiring only; user and third-party Extensions stay in Pi's ResourceLoader. */
@@ -36,6 +42,8 @@ export function buildOmniMindSessionExtensions(input: {
   }) => void;
   readonly askUserInteraction?: AskUserProductInteractionPort;
 }): OmniMindSessionExtensionComposition {
+  const planModeController = createOmniMindPlanModeController();
+  const planModeExtension = makeOmniMindPlanModeExtension(planModeController);
   const webAccess = makeOmniMindWebAccessInlineExtension({
     configService: getWebSearchConfigService(input.agentDir),
     ...(input.curatorPresenter === undefined ? {} : { curatorPresenter: input.curatorPresenter }),
@@ -64,6 +72,7 @@ export function buildOmniMindSessionExtensions(input: {
         });
   return {
     extensions: [
+      planModeExtension,
       webAccess,
       ...(todoExtension === undefined ? [] : [todoExtension]),
       ...(askUserExtension === undefined ? [] : [askUserExtension]),
@@ -73,5 +82,6 @@ export function buildOmniMindSessionExtensions(input: {
     ...(host === undefined ? {} : { host }),
     ...(askUserExtension === undefined ? {} : { askUserExtension }),
     webAccess,
+    planModeController,
   };
 }
