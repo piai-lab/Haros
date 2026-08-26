@@ -12,6 +12,9 @@
 >
 > 权威边界：本文是 `pi-web-access` / `@omnimind/om-web-access` 唯一 package-specific research owner。它保存来源、能力、反证、fork patch inventory、维护方式和实施 falsifier；稳定 UI 与 runtime 合同仍分别由 [`architecture/workbench.md`](../architecture/workbench.md) 和 [`architecture/execution.md`](../architecture/execution.md) 拥有，当前施工只看 [`execution-brief.md`](../execution-brief.md)，source adoption 只有进入根 [`source-adoptions.json`](../source-adoptions.json) 后才成立。
 
+> [!NOTE]
+> 公共 intent、freshness、Gate、disposition 与 claim-driven proof 只见根 [`SOURCE-INTAKE.md`](../SOURCE-INTAKE.md)；Pi runtime 默认、source type 与风险标签只见 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md)。未来更新不按本文 0–14 节顺序全读：source/artifact/rights 看 §2，能力或 Provider 变化看 §3–4，fork seam 看 §5，配置/Settings 看 §6，Curator 看 §7，维护/删除看 §8/13，相关 falsifier 看 §10。本文所有 SHA、测试计数、DMG 与“当前”措辞都是绑定日期的历史证据，不是今天的状态 owner。
+
 > [!IMPORTANT]
 > **Adopted disposition：`Fork narrowly`。** Package 名是 `@omnimind/om-web-access`，产品名是 **OmniMind Web Access**。它只作为 OmniMind Agent 随产品内置的 Pi-native Extension 受支持；不进入AgentGateway，不增加第七组Host Built-in capability，不跨Engine分发，也不承担通用stock Pi package的安装、兼容或支持责任。本文记录的exact-SHA packaged证据只证明其列出的journey；当前source adoption只由根`source-adoptions.json`决定，本文不维护最新安装或发行状态。
 
@@ -55,7 +58,7 @@ OmniMind 不需要自造通用 `web_search` Host 能力；应当深 fork 成熟�
 | 服务品牌 | 具体搜索服务使用各自品牌标记；Parallel 与 Parallel MCP 共享 Parallel 标记，连接方式用文字区分 |
 | 图标来源 | runtime Provider定义与presentation字段同源；26家全部使用本地固定、保持原色的品牌资产并记录source snapshot/hash/已知约束，不能运行时热取favicon |
 | 上游同步 | 精确版本、人工 intake、最小 patch inventory；不自动追 `latest` |
-| 当前实施状态 | 已作为production-adopted source integration进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings；26家原色品牌资产、默认`auto-summary`、MiMo stored-result continuation、observer/review分层、keyed Tavily route及A/B多Thread lifecycle均已有exact-SHA packaged证据。当前安全复核安装候选是`62814532f6fbb0977866d7019637cf665583d656`；取消、route active-set、child environment、配置同FD/体积/目录身份边界及fresh恢复态已完成source/live/packaged复验，但不能冒充Release或整个产品已发行 |
+| 固定观察时的实施状态 | 当时已作为production-adopted source integration进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings；26家原色品牌资产、默认`auto-summary`、MiMo stored-result continuation、observer/review分层、keyed Tavily route及A/B多Thread lifecycle已有各自 exact-SHA 证据。最后记录的安全复核候选是`62814532f6fbb0977866d7019637cf665583d656`；该历史观察不能冒充今天的安装、Release或整个产品状态 |
 
 ### 0.3 唯一 owner 图
 
@@ -741,7 +744,9 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 
 当前 `extractPiCuratorWebSurfaceUrl()` 只接受 tool name `web_search`，这进一步证明 canonical tool name 不应在 product profile 暴露 override。
 
-## 10. Required proof
+## 10. Package-specific falsifiers
+
+以下是 Web Access 各类 claim 的反证库存，不是每轮固定测试清单。先按根 `SOURCE-INTAKE.md` 写本轮 claim，只选择能推翻它的相关小节；source-only、Settings-only、Curator-only 或 Provider-only 变化不得机械追加完整 live + packaged 阶梯。
 
 ### 10.1 Source 与 package
 
@@ -828,7 +833,9 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 - Agent 能使用 passages 做独立判断；
 - 搜索 inactive 时它一同 inactive，恢复后回归。
 
-### 10.8 Real-provider 与 packaged product
+### 10.8 Real-provider 与 packaged 历史证据
+
+只有本轮 claim 涉及真实搜索 route/wire 时才做匹配 Provider live probe；只有涉及 shipped bytes、Electron/profile 或关闭重开时才对冻结 SHA 做一次 isolated packaged proof。下列条目是不同历史 SHA 的证据账目，只能保护其明确列出的未变化路径，不能拼接成一个“最新全绿”候选。
 
 - 历史局部门：exact pushed implementation SHA `286df13768de943a2db4df033180251c2f353aca`的fresh任务profile曾证明13个品牌asset与13个中性fallback可渲染；维护者随后把标准提升为26家全部原色品牌asset，因此该视觉证据已经失效。exact pushed SHA `4df9de2474021c1b9396931307acbdb91ee16094`已完成26个identity→25份原色本地资产的fresh隔离Settings/Provider-asset gate。
 - exact pushed implementation SHA `52c8a25e75f702baef36b93fb1f8cc42f270897e`生成DMG SHA-256 `118b55370cbec44308ec68ecbeb5a0efd3bd0d50b88665284e3274aca09c2931`，安装版`app.asar` SHA-256为`018d004a888344e395fa9885f3be2493a1efd9ec0cc15cbaa0c32d4dc26eaeb4`。当时尚未实现独立展示设置，fresh任务profile证明真实DeepSeek Agent经keyless Exa走默认`auto-summary`时不创建Curator并在同一turn继续；显式`summary-review`创建dedicated ephemeral Tab、批准后terminal cleanup并让同一turn继续；关闭重开仍投影`auto-summary`默认且无假Curator入口。DeepSeek最终措辞未完全满足“一句话总结”，故这里只关闭旧候选的工具/Curator lifecycle与continuation门，不把模型答案质量或新observer合同写成通过。

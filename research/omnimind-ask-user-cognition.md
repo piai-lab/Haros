@@ -12,7 +12,7 @@
 >
 > 未来更新程序：[`pi-ask-user-intake.md`](pi-ask-user-intake.md)
 
-本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同只由 `architecture/` 拥有，未来 source intake只由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与 [`pi-ask-user-intake.md`](pi-ask-user-intake.md) 决定。当前实现或交付状态必须读取真实源码、Git、`execution-brief.md` 与 Campaign，不能从本文的历史 SHA 或阶段叙事推断。
+本文是 Ask User 的 package-specific 产品认知与历史 source decision evidence。稳定产品合同只由 `architecture/` 拥有；未来 source intake 的公共 Gate 见根 [`SOURCE-INTAKE.md`](../SOURCE-INTAKE.md)，Pi runtime/source-type 规则见 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md)，Ask 的 exact lineage、P1–P7 与 revalidation trigger 见 [`pi-ask-user-intake.md`](pi-ask-user-intake.md)。当前实现或交付状态必须读取真实源码、Git、`execution-brief.md` 与 Campaign，不能从本文的历史 SHA 或阶段叙事推断。
 
 ## 0. 先给结论
 

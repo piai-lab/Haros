@@ -83,8 +83,11 @@ test("broken owner route fails without interpreting architecture prose", async (
   assertFinding(await validateDocumentContract({ root }), "route.required", "README.md");
 });
 
-test("source intake routes cannot bypass their root handbooks", async (t) => {
+test("source intake routes cannot bypass the common owner or source profiles", async (t) => {
   const root = await createFixture(t);
+  await replaceText(root, "AGENTS.md", "SOURCE-INTAKE.md", "research/README.md", {
+    all: true,
+  });
   await replaceText(root, "AGENTS.md", "SYNARA-INTAKE.md", "research/source-review.md", {
     all: true,
   });
@@ -103,7 +106,7 @@ test("mandatory read route order is structural", async (t) => {
     agentsPath,
     content
       .replace("1. `README.md`；", "1. `architecture/README.md`；")
-      .replace("4. `architecture/README.md`，", "4. `README.md`，"),
+      .replace("3. `architecture/README.md`，", "3. `README.md`，"),
   );
   assertFinding(await validateDocumentContract({ root }), "route.read-order", "AGENTS.md");
 });

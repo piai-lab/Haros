@@ -4,6 +4,8 @@
 
 > Every section preserves evidence and decisions at its recorded review date. Former next-step language is historical and must not be executed as backlog. Current product contracts, adoption and work state are owned only by architecture, `source-adoptions.json` and `execution-brief.md`.
 
+> Vocabulary normalization: historical `already covered` / `current-stronger` labels below are evidence snapshots, not valid future final dispositions. A new intake must map them through [`SOURCE-INTAKE.md`](../SOURCE-INTAKE.md): use `Adopt via existing owner` when the observable guarantee and upstream/equivalent falsifier are retained; otherwise use defer/decline and expose the material loss. This prevents a mixed commit from losing adoptable behavior merely because another part is a fixed divergence.
+
 ## 1. Fixed input
 
 - Repository: U1（exact source URL 只由根 `source-adoptions.json` 持有）
