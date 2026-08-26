@@ -5,7 +5,7 @@
 import type { EngineWebSurfaceThemeSnapshot } from "@omnimind/contracts";
 import type { MermaidConfig } from "mermaid";
 
-export const MERMAID_PRESENTATION_VERSION = "mermaid-presentation-v3";
+export const MERMAID_PRESENTATION_VERSION = "mermaid-presentation-v4";
 export const MERMAID_PACKAGE_VERSION = "11.17.2";
 export const MERMAID_MAX_SOURCE_CHARACTERS = 20_000;
 export const MERMAID_MAX_NONEMPTY_LINES = 120;
@@ -271,19 +271,22 @@ function contentByteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
 }
 
-function buildHostSrcDoc(bodyContent: string): string {
+function buildHostSrcDoc(bodyContent: string, backgroundColor: string): string {
   return [
     "<!doctype html>",
     '<html><head><meta charset="utf-8">',
     "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'; font-src 'none'; media-src 'none'\">",
-    "<style>html,body{margin:0;overflow:hidden;background:transparent}svg{display:block;max-width:100%;height:auto;margin:0 auto;background:transparent!important}</style>",
+    `<style>html,body{margin:0;overflow:hidden;background:${backgroundColor}}svg{display:block;max-width:100%;height:auto;margin:0 auto;background:${backgroundColor}!important}</style>`,
     "</head><body>",
     bodyContent,
     "</body></html>",
   ].join("");
 }
 
-export function parseOfficialMermaidSandboxOutput(svg: string): MermaidPresentationResult {
+export function parseOfficialMermaidSandboxOutput(
+  svg: string,
+  themeSurface: string,
+): MermaidPresentationResult {
   if (contentByteLength(svg) > MERMAID_MAX_OUTPUT_BYTES || typeof DOMParser === "undefined") {
     return { kind: "fallback", reason: "output", retryable: false };
   }
@@ -354,7 +357,13 @@ export function parseOfficialMermaidSandboxOutput(svg: string): MermaidPresentat
   ) {
     return { kind: "fallback", reason: "output", retryable: false };
   }
-  const srcDoc = buildHostSrcDoc(bodyContent);
+  const colorProbe = bodyDocument.createElement("span");
+  colorProbe.style.backgroundColor = themeSurface;
+  const backgroundColor = colorProbe.style.backgroundColor;
+  if (!backgroundColor) {
+    return { kind: "fallback", reason: "output", retryable: false };
+  }
+  const srcDoc = buildHostSrcDoc(bodyContent, backgroundColor);
   const byteLength = contentByteLength(srcDoc);
   if (byteLength > MERMAID_MAX_OUTPUT_BYTES) {
     return { kind: "fallback", reason: "output", retryable: false };
@@ -457,7 +466,7 @@ export async function renderMermaidPresentation(input: {
         end: performance.now(),
       });
       assertNotAborted(input.signal);
-      const result = parseOfficialMermaidSandboxOutput(rendered.svg);
+      const result = parseOfficialMermaidSandboxOutput(rendered.svg, input.theme.surface);
       presentationCache.set(cacheKey, result);
       if (result.kind === "ready" && input.ownerId) {
         rememberLatestReady(input.ownerId, cacheKey, input.source, input.ownerThemeKey ?? cacheKey);

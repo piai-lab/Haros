@@ -56,7 +56,7 @@ Bun 1.3.12 的 fresh resolution 把 Web direct range `katex@^0.16.45` 与 Mermai
 - 100-edge 纵向 fixture 得到超过 `4096px` 的 viewBox 仍可安全 ready；101-edge compressed fixture 在 import/render 前被 connector policy 拒绝，证明资源 stop-loss 与几何资格可以分离；
 - ChatMarkdown browser journey 观察到完整显式 `mermaid` streaming fence 只显示紧凑生成态，源码、Shiki、SHA、Mermaid import/resource/render 均为 `0`；settled 后自动切换、成功态只有展开与复制源码、Dialog 使用相同 `srcDoc`、Esc 返回 trigger focus；
 - packaged live stream 曾暴露 info string 会经历 `m`、`mermai` 等未完成 token；当前只在完整 `mermaid` identity 成立后进入生成态，不用前缀启发式猜图，也不对完整 Mermaid fence 显示或高亮源码；
-- packaged dark-theme journey 暴露官方 sandbox SVG 自带白色 canvas，会在暗色消息面形成整块白带；Host 重建 document 现强制 SVG canvas 透明，并提升私有 cache/config version 使旧白底结果失效。真实 Chromium 直接断言重建 document 中 SVG 的 computed background 为透明，避免只验证字符串或父 document 背景而漏掉这类主题断层；
+- packaged dark-theme journey 暴露 opaque sandbox 即使 document 与 iframe 声明透明，Chromium 仍会把透明画布合成为白色；只断言 SVG computed background 透明因此是假阳性。Host 重建 document 现用 CSSOM 规范化后的主题 surface 同时填充 document 与 SVG canvas，并提升私有 cache/config version 使旧白底结果失效；真实 Chromium 直接断言两层 computed background 都等于暗色主题 surface；
 - 2032px Chromium 几何 fixture 中，宽图突破约 736px 阅读列并服从 transcript pane 与 right inset；收窄至 480px 后回落到真实 pane 且无页面横向 overflow；
 - Timeline SSR 只在 canonical Assistant body 产生 opt-in，User 与其他 Markdown consumer 保持原路径。
 

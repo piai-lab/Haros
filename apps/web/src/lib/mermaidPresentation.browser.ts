@@ -59,37 +59,46 @@ describe("Mermaid sandbox output", () => {
   it("fails closed for extra nodes, changed permissions and non-data output", () => {
     const body = btoa('<body style="margin:0"><svg viewBox="0 0 10 10"></svg></body>');
     const valid = `<iframe style="width:100%;height:10px;border:0;margin:0;" src="data:text/html;charset=UTF-8;base64,${body}" sandbox="allow-top-navigation-by-user-activation allow-popups">fallback</iframe>`;
-    expect(parseOfficialMermaidSandboxOutput(valid).kind).toBe("ready");
-    expect(parseOfficialMermaidSandboxOutput(`<p>extra</p>${valid}`).kind).toBe("fallback");
-    expect(parseOfficialMermaidSandboxOutput(valid.replace(" allow-popups", "")).kind).toBe(
+    expect(parseOfficialMermaidSandboxOutput(valid, THEME.surface).kind).toBe("ready");
+    expect(parseOfficialMermaidSandboxOutput(`<p>extra</p>${valid}`, THEME.surface).kind).toBe(
       "fallback",
     );
+    expect(
+      parseOfficialMermaidSandboxOutput(valid.replace(" allow-popups", ""), THEME.surface).kind,
+    ).toBe("fallback");
     const extraBody = btoa(
       '<body style="margin:0"><p>extra</p><svg viewBox="0 0 10 10"></svg></body>',
     );
-    expect(parseOfficialMermaidSandboxOutput(valid.replace(body, extraBody)).kind).toBe("fallback");
     expect(
-      parseOfficialMermaidSandboxOutput(valid.replace(/data:text[^\"]+/, "https://example.com"))
-        .kind,
+      parseOfficialMermaidSandboxOutput(valid.replace(body, extraBody), THEME.surface).kind,
     ).toBe("fallback");
+    expect(
+      parseOfficialMermaidSandboxOutput(
+        valid.replace(/data:text[^"]+/, "https://example.com"),
+        THEME.surface,
+      ).kind,
+    ).toBe("fallback");
+    expect(parseOfficialMermaidSandboxOutput(valid, "red}</style><script>").kind).toBe("fallback");
   });
 
   it("rejects invalid geometry and oversized output without a geometry ceiling", () => {
     const body = btoa('<body style="margin:0"><svg viewBox="0 0 10 10"></svg></body>');
     const valid = `<iframe style="width:100%;height:10px;border:0;margin:0;" src="data:text/html;charset=UTF-8;base64,${body}" sandbox="allow-top-navigation-by-user-activation allow-popups">fallback</iframe>`;
-    expect(parseOfficialMermaidSandboxOutput(valid.replace("height:10px", "height:0px")).kind).toBe(
-      "fallback",
-    );
     expect(
-      parseOfficialMermaidSandboxOutput(valid.replace("height:10px", "height:-1px")).kind,
+      parseOfficialMermaidSandboxOutput(valid.replace("height:10px", "height:0px"), THEME.surface)
+        .kind,
+    ).toBe("fallback");
+    expect(
+      parseOfficialMermaidSandboxOutput(valid.replace("height:10px", "height:-1px"), THEME.surface)
+        .kind,
     ).toBe("fallback");
     const mismatchedBody = btoa('<body style="margin:0"><svg viewBox="0 0 10 11"></svg></body>');
-    expect(parseOfficialMermaidSandboxOutput(valid.replace(body, mismatchedBody)).kind).toBe(
-      "fallback",
-    );
-    expect(parseOfficialMermaidSandboxOutput(`${valid}${" ".repeat(1024 * 1024)}`).kind).toBe(
-      "fallback",
-    );
+    expect(
+      parseOfficialMermaidSandboxOutput(valid.replace(body, mismatchedBody), THEME.surface).kind,
+    ).toBe("fallback");
+    expect(
+      parseOfficialMermaidSandboxOutput(`${valid}${" ".repeat(1024 * 1024)}`, THEME.surface).kind,
+    ).toBe("fallback");
   });
 
   it("cancels a task before loading or rendering Mermaid", async () => {
@@ -130,7 +139,6 @@ describe("Mermaid sandbox output", () => {
     expect(light.srcDoc).toContain(THEME.surface);
     expect(dark.srcDoc).toContain(darkTheme.surface);
     expect(light.srcDoc).not.toContain(darkTheme.surface);
-
     const frame = document.createElement("iframe");
     frame.srcdoc = dark.srcDoc;
     document.body.append(frame);
@@ -141,8 +149,11 @@ describe("Mermaid sandbox output", () => {
     const frameDocument = frame.contentDocument;
     const svg = frameDocument?.querySelector("svg");
     expect(svg).not.toBeNull();
+    expect(frameDocument?.defaultView?.getComputedStyle(frameDocument.body).backgroundColor).toBe(
+      "rgb(16, 24, 32)",
+    );
     expect(frameDocument?.defaultView?.getComputedStyle(svg!).backgroundColor).toBe(
-      "rgba(0, 0, 0, 0)",
+      "rgb(16, 24, 32)",
     );
     frame.remove();
   });
@@ -183,7 +194,7 @@ describe("Mermaid sandbox output", () => {
       `<body style="margin:0"><svg viewBox="0 0 10 10"><script>parent.document.body.dataset.mermaidEscaped='true';window.open('https://example.invalid/popup');top.location='https://example.invalid/top'</script><image href="${remote}" width="10" height="10"/></svg></body>`,
     );
     const official = `<iframe style="width:100%;height:10px;border:0;margin:0;" src="data:text/html;charset=UTF-8;base64,${body}" sandbox="allow-top-navigation-by-user-activation allow-popups">fallback</iframe>`;
-    const result = parseOfficialMermaidSandboxOutput(official);
+    const result = parseOfficialMermaidSandboxOutput(official, THEME.surface);
     expect(result.kind).toBe("ready");
     if (result.kind !== "ready") return;
 
