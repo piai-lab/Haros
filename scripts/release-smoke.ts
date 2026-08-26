@@ -241,7 +241,7 @@ function verifyReleaseWorkflowSafety(): void {
   assertContains(
     workflow,
     "node scripts/verify-packaged-desktop.ts",
-    "Expected every native payload to pass isolated packaged startup before upload.",
+    "Expected every native payload to pass isolated packaged proof before upload.",
   );
   assertContains(
     workflow,
@@ -250,8 +250,23 @@ function verifyReleaseWorkflowSafety(): void {
   );
   assertContains(
     workflow,
-    "--proof startup",
-    "Expected packaged payloads to select an explicit proof level.",
+    '--proof "${{ matrix.proof }}"',
+    "Expected packaged payloads to select their matrix-owned proof level.",
+  );
+  assertContains(
+    workflow,
+    "platform: mac\n            target: dmg\n            arch: arm64\n            proof: journey",
+    "Expected macOS arm64 to own the shared packaged interaction journey.",
+  );
+  assertContains(
+    workflow,
+    "platform: linux\n            target: AppImage\n            arch: x64\n            proof: startup",
+    "Expected Linux x64 to retain native packaged startup proof.",
+  );
+  assertContains(
+    workflow,
+    "platform: win\n            target: nsis\n            arch: x64\n            proof: startup",
+    "Expected Windows x64 to retain native packaged startup proof.",
   );
   assertContains(
     workflow,
