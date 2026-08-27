@@ -746,23 +746,32 @@ function hasStartupProof(logPath: string, expectedLogDirectory: string): boolean
   }
 }
 
-export function parseGracefulWindowCloseProof(log: string): {
-  readonly shutdownStarted: boolean;
-  readonly shutdownCompleted: boolean;
+export function parseMacWindowCloseLifecycleProof(log: string): {
+  readonly windowCloseShutdownStarted: boolean;
+  readonly windowCloseShutdownCompleted: boolean;
+  readonly explicitQuitShutdownStarted: boolean;
+  readonly explicitQuitShutdownCompleted: boolean;
 } {
   return {
-    shutdownStarted: log.includes("window-close shutdown start"),
-    shutdownCompleted: log.includes("window-close shutdown complete"),
+    windowCloseShutdownStarted: log.includes("window-close shutdown start"),
+    windowCloseShutdownCompleted: log.includes("window-close shutdown complete"),
+    explicitQuitShutdownStarted: log.includes("SIGTERM shutdown start"),
+    explicitQuitShutdownCompleted: log.includes("SIGTERM shutdown complete"),
   };
 }
 
-function readGracefulWindowCloseProof(
+function readMacWindowCloseLifecycleProof(
   logPath: string,
-): ReturnType<typeof parseGracefulWindowCloseProof> {
+): ReturnType<typeof parseMacWindowCloseLifecycleProof> {
   try {
-    return parseGracefulWindowCloseProof(readFileSync(logPath, "utf8"));
+    return parseMacWindowCloseLifecycleProof(readFileSync(logPath, "utf8"));
   } catch {
-    return { shutdownStarted: false, shutdownCompleted: false };
+    return {
+      windowCloseShutdownStarted: false,
+      windowCloseShutdownCompleted: false,
+      explicitQuitShutdownStarted: false,
+      explicitQuitShutdownCompleted: false,
+    };
   }
 }
 
@@ -1042,24 +1051,33 @@ async function closePackagedJourneySession(input: {
     throw new Error("Packaged Renderer exposed no canonical window close control.");
   }
 
-  // Product Main owns the close lifecycle and may spend most of its bounded
-  // backend timeout reaping children. A signal during that lifecycle does not
-  // add evidence; it can only race the owner. Forced termination belongs to
-  // the caller's failure cleanup and can never turn this proof green.
+  // macOS window close is presentation-only. Give Chromium time to tear down
+  // the renderer, then prove that the Desktop owner and bundled Server remain.
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
+  const closeProof = readMacWindowCloseLifecycleProof(input.logPath);
+  if (
+    !isProcessAlive(input.runtimeState.mainPid) ||
+    !isProcessAlive(input.runtimeState.serverPid)
+  ) {
+    throw new Error(
+      `Packaged macOS window close terminated the app or bundled Server (mainAlive=${isProcessAlive(input.runtimeState.mainPid)}, serverAlive=${isProcessAlive(input.runtimeState.serverPid)}).`,
+    );
+  }
+  if (closeProof.windowCloseShutdownStarted || closeProof.windowCloseShutdownCompleted) {
+    throw new Error("Packaged macOS window close incorrectly entered Desktop shutdown.");
+  }
+
+  // A real quit still owns backend finalization. SIGTERM is the programmatic
+  // equivalent used by the packaged harness; forced cleanup cannot make this green.
+  process.kill(input.runtimeState.mainPid, "SIGTERM");
   if (!(await waitForProcessesExit(input.runtimeState.processIds, 10_000))) {
-    const quitProof = readGracefulWindowCloseProof(input.logPath);
     throw new Error(
-      `Packaged process tree did not finish window-close shutdown within 10 seconds (started=${quitProof.shutdownStarted}, completed=${quitProof.shutdownCompleted}, serverAlive=${isProcessAlive(input.runtimeState.serverPid)}).`,
+      `Packaged process tree did not finish explicit shutdown within 10 seconds (serverAlive=${isProcessAlive(input.runtimeState.serverPid)}).`,
     );
   }
-  if (isProcessAlive(input.runtimeState.serverPid)) {
-    throw new Error("Bundled Server remained alive after packaged graceful shutdown.");
-  }
-  const quitProof = readGracefulWindowCloseProof(input.logPath);
-  if (!quitProof.shutdownStarted || !quitProof.shutdownCompleted) {
-    throw new Error(
-      `Packaged Main log did not prove graceful window-close shutdown (started=${quitProof.shutdownStarted}, completed=${quitProof.shutdownCompleted}).`,
-    );
+  const quitProof = readMacWindowCloseLifecycleProof(input.logPath);
+  if (!quitProof.explicitQuitShutdownStarted || !quitProof.explicitQuitShutdownCompleted) {
+    throw new Error("Packaged Main log did not prove graceful explicit shutdown after close.");
   }
 }
 

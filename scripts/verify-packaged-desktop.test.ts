@@ -8,7 +8,7 @@ import {
   acquirePackagedProofLease,
   assertPackagedSourceCommit,
   createPackagedDesktopEnvironment,
-  parseGracefulWindowCloseProof,
+  parseMacWindowCloseLifecycleProof,
   parsePackagedDesktopArgs,
   resolvePackagedProofUserDataPath,
   resolveNativePackagedDesktopPlatform,
@@ -267,15 +267,22 @@ describe("packaged desktop verification", () => {
     ]);
   });
 
-  it("requires the product-owned window-close lifecycle to complete", () => {
+  it("keeps macOS window close separate from explicit Desktop shutdown", () => {
     expect(
-      parseGracefulWindowCloseProof(
-        "window-close shutdown start\nwindow-close shutdown complete\n",
+      parseMacWindowCloseLifecycleProof(
+        "window-close shutdown start\nwindow-close shutdown complete\nSIGTERM shutdown start\nSIGTERM shutdown complete\n",
       ),
-    ).toEqual({ shutdownStarted: true, shutdownCompleted: true });
-    expect(parseGracefulWindowCloseProof("SIGTERM shutdown complete\n")).toEqual({
-      shutdownStarted: false,
-      shutdownCompleted: false,
+    ).toEqual({
+      windowCloseShutdownStarted: true,
+      windowCloseShutdownCompleted: true,
+      explicitQuitShutdownStarted: true,
+      explicitQuitShutdownCompleted: true,
+    });
+    expect(parseMacWindowCloseLifecycleProof("SIGTERM shutdown complete\n")).toEqual({
+      windowCloseShutdownStarted: false,
+      windowCloseShutdownCompleted: false,
+      explicitQuitShutdownStarted: false,
+      explicitQuitShutdownCompleted: true,
     });
   });
 

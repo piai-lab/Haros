@@ -82,9 +82,7 @@ export function shouldDeferDesktopWindowClose(input: {
   readonly shutdownComplete: boolean;
   readonly updaterHandoffActive: boolean;
 }): boolean {
-  return (
-    input.platform !== "darwin" && !input.shutdownComplete && !input.updaterHandoffActive
-  );
+  return input.platform !== "darwin" && !input.shutdownComplete && !input.updaterHandoffActive;
 }
 
 const shutdownsByProcess = new WeakMap<object, Promise<WindowsBackendShutdownResult>>();
