@@ -23,6 +23,17 @@ function runCookieAccessCheck(home, extraEnv = {}) {
 	});
 }
 
+function runBrowserCookieConfig(home) {
+	const env = { ...process.env, HOME: home, USERPROFILE: home };
+	delete env.PI_CODING_AGENT_DIR;
+	delete env.XDG_CONFIG_HOME;
+	return spawnSync(process.execPath, ["--experimental-strip-types", "--input-type=module"], {
+		input: `const { getBrowserCookieSelectionFromConfig } = await import(${JSON.stringify(moduleUrl)}); console.log(JSON.stringify(getBrowserCookieSelectionFromConfig()));`,
+		encoding: "utf8",
+		env,
+	});
+}
+
 test("Gemini Web never forwards browser cookies across origins", async () => {
 	const { getActiveGoogleEmail, setGeminiFetchOverrideForTests } = await import(geminiWebUrl);
 	const calls = [];
@@ -123,4 +134,45 @@ test("browser cookie access is disabled unless explicitly allowed", async () => 
 	child = runCookieAccessCheck(envHome, { PI_ALLOW_BROWSER_COOKIES: "1" });
 	assert.equal(child.status, 0, child.stderr);
 	assert.equal(child.stdout.trim(), "true");
+});
+
+test("disabled browser cookie access does not validate legacy profile selection", async () => {
+	const home = await mkdtemp(join(tmpdir(), "pi-web-access-cookie-legacy-disabled-"));
+	await mkdir(join(home, ".pi"), { recursive: true });
+	await writeFile(join(home, ".pi", "web-search.json"), JSON.stringify({ chromeProfile: "Profile 1" }) + "\n", "utf8");
+
+	const child = runCookieAccessCheck(home);
+	assert.equal(child.status, 0, child.stderr);
+	assert.equal(child.stdout.trim(), "false");
+});
+
+test("browser cookie config validates presets and rejects arbitrary profile paths", async () => {
+	const home = await mkdtemp(join(tmpdir(), "pi-web-access-browser-cookie-config-"));
+	await mkdir(join(home, ".pi"), { recursive: true });
+	const configPath = join(home, ".pi", "web-search.json");
+	await writeFile(configPath, JSON.stringify({ browserCookies: { browser: "Helium", profile: "Profile 1" } }) + "\n", "utf8");
+
+	let child = runBrowserCookieConfig(home);
+	assert.equal(child.status, 0, child.stderr);
+	assert.deepEqual(JSON.parse(child.stdout), { browser: "helium", profile: "Profile 1" });
+
+	await writeFile(configPath, JSON.stringify({ chromeProfile: "Profile 1", allowBrowserCookies: true }) + "\n", "utf8");
+	child = runBrowserCookieConfig(home);
+	assert.notEqual(child.status, 0);
+	assert.match(child.stderr, /chromeProfile.*no longer supported.*browserCookies\.profile/);
+
+	await writeFile(configPath, JSON.stringify({ browserCookies: { browser: "safari", profile: "Profile 1" } }) + "\n", "utf8");
+	child = runBrowserCookieConfig(home);
+	assert.notEqual(child.status, 0);
+	assert.match(child.stderr, /Unsupported browserCookies\.browser/);
+
+	await writeFile(configPath, JSON.stringify({ browserCookies: { browser: "helium", profile: 1 } }) + "\n", "utf8");
+	child = runBrowserCookieConfig(home);
+	assert.notEqual(child.status, 0);
+	assert.match(child.stderr, /browserCookies\.profile.*must be a profile directory name/);
+
+	await writeFile(configPath, JSON.stringify({ browserCookies: { browser: "helium", profilePath: "/tmp/Profile 1" } }) + "\n", "utf8");
+	child = runBrowserCookieConfig(home);
+	assert.notEqual(child.status, 0);
+	assert.match(child.stderr, /profilePath is not supported/);
 });

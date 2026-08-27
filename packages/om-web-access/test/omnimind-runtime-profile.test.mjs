@@ -236,7 +236,10 @@ test("source_check route evidence removes and restores the owned search tool pai
 
 		process.env.OPENAI_API_KEY = "test-key";
 		globalThis.fetch = async () => new Response(JSON.stringify({
-			output: [{ type: "message", content: [{ type: "output_text", text: "No sources." }] }],
+			output: [
+				{ type: "web_search_call", action: { sources: [] } },
+				{ type: "message", content: [{ type: "output_text", text: "No sources." }] },
+			],
 		}), { status: 200 });
 		await sourceCheck.execute("success", { claim: "route evidence", provider: "openai" });
 		assert.deepEqual(new Set(active), new Set(CANONICAL_TOOLS));

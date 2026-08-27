@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-`codex/web-search-agent-native`正在把既有`@omnimind/om-web-access`收敛为Agent-native搜索链：增加有界`broad`路由和多query并发，统一结果/来源投影，并恢复adopted上游的文档流尾部summary。既有Provider协议、免费路径、Artifact惰性读取、自动摘要、显式review、Session/Run/call隔离与package fork边界保持不变；不新增Store、调度服务、控制面或迁移平台。
+`codex/web-search-agent-native`正在把既有`@omnimind/om-web-access`收敛为Agent-native搜索链：增加有界`broad`路由和多query并发，统一结果/来源投影，并恢复adopted上游的文档流尾部summary。exact上游已重新收口到最新稳定`pi-web-access@0.25.0` / `08e347f4…`，新增的Provider、proxy、current-model search与fetch/extraction修复均翻译进现有P1–P6 seam。既有Provider协议、免费路径、Artifact惰性读取、自动摘要、显式review、Session/Run/call隔离与package fork边界保持不变；不新增Store、调度服务、控制面或迁移平台。
 
 ## 下一动作
 

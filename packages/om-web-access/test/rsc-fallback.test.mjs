@@ -30,6 +30,47 @@ test("weak Readability output falls back to useful RSC content", async (t) => {
 	assert.match(result.content, /https:\/\/example\.com\/openapi\.json/);
 });
 
+test("null Readability output falls back to local Defuddle extraction", async (t) => {
+	t.after(() => { globalThis.fetch = originalFetch; });
+	let fetchCalls = 0;
+	const article = "Useful local Defuddle fallback content with enough detail. ".repeat(20);
+	globalThis.fetch = async () => {
+		fetchCalls += 1;
+		if (fetchCalls > 1) throw new Error("Defuddle attempted a hidden network request");
+		return new Response(
+			`<!doctype html><html><head><title>Defuddle article</title></head><body><aside><main>${article}</main></aside></body></html>`,
+			{
+				status: 200,
+				headers: {
+					"content-type": "text/html",
+					link: '</openapi.json>; rel="service-desc"',
+				},
+			},
+		);
+	};
+
+	const result = await extractContent("https://example.com/defuddle-null", undefined, { lookup });
+	assert.equal(fetchCalls, 1);
+	assert.equal(result.error, null);
+	assert.equal(result.title, "Defuddle article");
+	assert.match(result.content, /Useful local Defuddle fallback content/);
+	assert.match(result.content, /https:\/\/example\.com\/openapi\.json/);
+});
+
+test("short Readability output falls back to useful Defuddle content", async (t) => {
+	t.after(() => { globalThis.fetch = originalFetch; });
+	const article = "Useful Defuddle content after the short Readability article. ".repeat(20);
+	globalThis.fetch = async () => new Response(
+		`<!doctype html><html><head><title>Short article fallback</title></head><body><article>Loading...</article><aside><main>${article}</main></aside></body></html>`,
+		{ status: 200, headers: { "content-type": "text/html" } },
+	);
+
+	const result = await extractContent("https://example.com/defuddle-short", undefined, { lookup });
+	assert.equal(result.error, null);
+	assert.equal(result.title, "Short article fallback");
+	assert.match(result.content, /Useful Defuddle content after the short Readability article/);
+});
+
 test("short non-RSC pages remain incomplete", async (t) => {
 	t.after(() => { globalThis.fetch = originalFetch; });
 	globalThis.fetch = async () => new Response(

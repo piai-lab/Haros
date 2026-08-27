@@ -8,6 +8,7 @@ import { activityMonitor } from "./activity.ts";
 import { extractRSCContent } from "./rsc-extract.ts";
 import { extractPDFToMarkdown, isPDF, loadPDFConfig } from "./pdf-extract.ts";
 import { extractGitHub } from "./github-extract.ts";
+import { extractGitHubIssuePr } from "./github-issue-pr.ts";
 import { isYouTubeURL, isYouTubeEnabled, extractYouTube, extractYouTubeFrame, extractYouTubeFrames, getYouTubeStreamInfo } from "./youtube-extract.ts";
 import { CredentialResolutionError } from "./credential-source.ts";
 import { extractWithUrlContext, extractWithGeminiWeb } from "./gemini-url-context.ts";
@@ -23,7 +24,7 @@ import { extractWithBrightDataUnlocker, isBrightDataUnlockerAvailable } from "./
 import { isVideoFile, extractVideo, extractVideoFrame, getLocalVideoDuration } from "./video-extract.ts";
 import { appendDeclaredWebLinks, discoverDeclaredWebLinks, type DeclaredWebLink } from "./declared-web-links.ts";
 import { fetchRemoteUrl, loadFetchContentDomainPolicy, loadSsrfConfig, validateRemoteUrl, type DomainPolicy, type Lookup, type SsrfConfig } from "./ssrf-protection.ts";
-import { formatSeconds, getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
+import { formatSeconds, getWebSearchConfigPath, readWebSearchConfig, type ProxiedRequestInit } from "./utils.ts";
 import { isImageEnabled } from "./feature-config.ts";
 import { assertAuthFetchUrl, authFetchRedirectGuard, type AuthFetchProfile } from "./auth-fetch.ts";
 import { getBrowserCookiesForHosts, getLastBrowserCookieDiagnostic } from "./chrome-cookies.ts";
@@ -41,6 +42,13 @@ type FetchProvider = typeof FETCH_PROVIDERS[number];
 type FetchRouting = { providers: FetchProvider[]; allowRemoteHostedProviders: boolean };
 const DEFAULT_FETCH_PROVIDER_ORDER: FetchProvider[] = ["http", "firecrawl", "jina", "tinyfish", "search1api", "querit", "kagi", "ollama", "parallel", "brightdata", "gemini"];
 const REMOTE_HOSTED_FETCH_PROVIDERS = new Set<FetchProvider>(["jina", "tinyfish", "search1api", "querit", "kagi", "ollama", "parallel", "parallel-mcp", "brightdata", "gemini"]);
+
+async function extractWithDefuddle(text: string, url: string): Promise<{ title: string; content: string } | null> {
+	const { Defuddle } = await import("defuddle/node");
+	const { document } = parseHTML(text);
+	const result = await Defuddle(document as unknown as Document, url, { markdown: true, useAsync: false });
+	return typeof result.content === "string" ? { title: result.title, content: result.content } : null;
+}
 
 export { loadSsrfConfig } from "./ssrf-protection.ts";
 
@@ -169,6 +177,32 @@ function loadFetchRouting(): FetchRouting {
 	return { providers, allowRemoteHostedProviders: allowRemoteHostedProvidersValue === true };
 }
 
+/** Names of the search/fetch tools the caller has actually registered, so
+ * failure guidance never points at tools that do not exist in the session. */
+export interface RegisteredToolNames {
+	webSearch?: string;
+	fetchContent?: string;
+}
+
+/** Guidance for definitive origin 404/410 responses: no extraction provider
+ * can retrieve a page the origin says is gone, so point at the registered
+ * search/fetch tools (when the caller knows them) instead of provider config. */
+function notFoundGuidance(result: ExtractedContent, toolNames?: RegisteredToolNames): string {
+	const lines = [
+		result.error ?? `HTTP ${result.status}`,
+		"",
+		`The origin server says this page does not exist (HTTP ${result.status}), so extraction providers cannot retrieve it.`,
+	];
+	if (toolNames?.webSearch && toolNames.fetchContent) {
+		lines.push(`The page may have moved or been renamed. Use ${toolNames.webSearch} to find the current URL, then retry ${toolNames.fetchContent} with it.`);
+	} else if (toolNames?.webSearch) {
+		lines.push(`The page may have moved or been renamed. Use ${toolNames.webSearch} to find the current URL.`);
+	} else {
+		lines.push("The page may have moved or been renamed. Find the current URL, then retry the fetch with it.");
+	}
+	return lines.join("\n");
+}
+
 function abortedResult(url: string): ExtractedContent {
 	return { url, title: "", content: "", error: "Aborted" };
 }
@@ -213,6 +247,9 @@ export interface ExtractOptions {
 	mode?: "readable" | "raw" | "answer";
 	answerModel?: string;
 	authFetchProfile?: AuthFetchProfile;
+	toolNames?: RegisteredToolNames;
+	/** Optional http(s) proxy URL; routed through the curl-backed transport. */
+	proxy?: string;
 	/** Custom DNS resolver used for SSRF validation. Primarily a test seam. */
 	lookup?: Lookup;
 }
@@ -572,6 +609,18 @@ export async function extractContent(
 	}
 
 	try {
+		const ghIssuePrResult = await extractGitHubIssuePr(url, signal, options);
+		if (ghIssuePrResult) return ghIssuePrResult;
+		if (signal?.aborted) return abortedResult(url);
+	} catch (err) {
+		const message = errorMessage(err);
+		if (isAbortError(err)) return abortedResult(url);
+		if (isConfigParseError(err)) {
+			return { url, title: "", content: "", error: message };
+		}
+	}
+
+	try {
 		const ghResult = await extractGitHub(url, signal, options?.forceClone);
 		if (ghResult) return ghResult;
 		if (signal?.aborted) return abortedResult(url);
@@ -842,6 +891,14 @@ export async function extractContent(
 	const finalHttpResult = httpResult as ExtractedContent | null;
 	if (finalHttpResult && declaredLinks.length > 0) return { ...finalHttpResult, error: null };
 
+	// A definitive 404/410 from the origin means no extraction provider can
+	// retrieve the page, so the provider-configuration checklist below would
+	// send users down the wrong path. Point at search instead.
+	if (finalHttpResult?.status === 404 || finalHttpResult?.status === 410) {
+		return { ...finalHttpResult, error: notFoundGuidance(finalHttpResult, options?.toolNames) };
+	}
+
+	const searchToolName = options?.toolNames?.webSearch;
 	const guidance = [
 		finalHttpResult?.error ?? "No fetch_content provider returned content",
 		...(firecrawlError ? [`Firecrawl fallback failed: ${firecrawlError}`] : []),
@@ -865,19 +922,17 @@ export async function extractContent(
 		`  • Set brightdataApiKey and brightdataUnlockerZone in ${webSearchConfigPath()} or BRIGHTDATA_API_KEY and BRIGHTDATA_UNLOCKER_ZONE`,
 		`  • Set GEMINI_API_KEY in ${webSearchConfigPath()}`,
 		"  • Sign into gemini.google.com in Chrome",
-		"  • Use web_search to find content about this topic",
+		...(searchToolName ? [`  • Use ${searchToolName} to find content about this topic`] : []),
 	].join("\n");
 	return { ...(finalHttpResult ?? { url, title: "", content: "", error: null }), error: guidance };
 }
 
 function isLikelyJSRendered(html: string): boolean {
-	// Extract body content
 	const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
 	if (!bodyMatch) return false;
 
 	const bodyHtml = bodyMatch[1];
 
-	// Strip tags to get text content
 	const textContent = bodyHtml
 		.replace(/<script[\s\S]*?<\/script>/gi, "")
 		.replace(/<style[\s\S]*?<\/style>/gi, "")
@@ -885,10 +940,8 @@ function isLikelyJSRendered(html: string): boolean {
 		.replace(/\s+/g, " ")
 		.trim();
 
-	// Count scripts
 	const scriptCount = (html.match(/<script/gi) || []).length;
 
-	// Heuristic: little text content but many scripts suggests JS rendering
 	return textContent.length < 500 && scriptCount > 3;
 }
 
@@ -985,8 +1038,10 @@ async function extractViaHttp(
 		const ssrf = loadSsrfConfig();
 		const domainPolicy = loadFetchContentDomainPolicy();
 		const authProfile = options?.authFetchProfile;
-		const requestInit = {
+		const trustEnvProxy = options?.proxy === undefined && ssrf.trustEnvProxy;
+		const requestInit: ProxiedRequestInit = {
 			signal: controller.signal,
+			__proxy: options?.proxy,
 			headers: {
 				"User-Agent": "OpenAI File Downloader, XaiImageApiFetch/1.0",
 				"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
@@ -1000,13 +1055,13 @@ async function extractViaHttp(
 			},
 		};
 		const response = authProfile
-			? await fetchAuthenticatedRemoteUrl(url, requestInit, { ssrf, domainPolicy, ...(options?.lookup ? { lookup: options.lookup } : {}) }, authProfile)
+			? await fetchAuthenticatedRemoteUrl(url, requestInit, { ssrf: { ...ssrf, trustEnvProxy }, domainPolicy, ...(options?.lookup ? { lookup: options.lookup } : {}) }, authProfile)
 			: await fetchRemoteUrl(
 				url,
 				requestInit,
 				{
 					allowRanges: ssrf.allowRanges,
-					trustEnvProxy: ssrf.trustEnvProxy,
+					trustEnvProxy,
 					domainPolicy,
 					...(options?.lookup ? { lookup: options.lookup } : {}),
 				},
@@ -1156,6 +1211,19 @@ async function extractViaHttp(
 					declaredLinks,
 				};
 			}
+			controller.signal.throwIfAborted();
+			const defuddleResult = await extractWithDefuddle(text, response.url || url);
+			controller.signal.throwIfAborted();
+			if (defuddleResult && defuddleResult.content.length >= MIN_USEFUL_CONTENT) {
+				activityMonitor.logComplete(activityId, response.status);
+				return {
+					url,
+					title: documentTitle || defuddleResult.title,
+					content: appendDeclaredWebLinks(defuddleResult.content, declaredLinks),
+					error: null,
+					declaredLinks,
+				};
+			}
 
 			activityMonitor.logComplete(activityId, response.status);
 			const jsRendered = isLikelyJSRendered(text);
@@ -1185,6 +1253,18 @@ async function extractViaHttp(
 					url,
 					title: rscResult.title,
 					content: appendDeclaredWebLinks(rscResult.content, declaredLinks),
+					error: null,
+					declaredLinks,
+				};
+			}
+			controller.signal.throwIfAborted();
+			const defuddleResult = await extractWithDefuddle(text, response.url || url);
+			controller.signal.throwIfAborted();
+			if (defuddleResult && defuddleResult.content.length >= MIN_USEFUL_CONTENT) {
+				return {
+					url,
+					title: article.title || documentTitle || defuddleResult.title,
+					content: appendDeclaredWebLinks(defuddleResult.content, declaredLinks),
 					error: null,
 					declaredLinks,
 				};

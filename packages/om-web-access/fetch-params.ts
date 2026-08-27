@@ -1,3 +1,5 @@
+import { normalizeProxyUrl } from "./utils.ts";
+
 export interface FetchContentParams {
 	url?: unknown;
 	urls?: unknown;
@@ -9,6 +11,7 @@ export interface FetchContentParams {
 	mode?: unknown;
 	answerModel?: unknown;
 	auth?: unknown;
+	proxy?: unknown;
 }
 
 export interface NormalizedFetchContentParams {
@@ -22,6 +25,7 @@ export interface NormalizedFetchContentParams {
 		mode?: "readable" | "raw" | "answer";
 		answerModel?: string;
 		auth?: true | string;
+		proxy?: string;
 	};
 }
 
@@ -39,6 +43,7 @@ export function normalizeFetchContentParams(params: FetchContentParams): Normali
 	const mode = normalizeMode(params.mode);
 	const answerModel = normalizeOptionalString(params.answerModel);
 	const auth = normalizeAuth(params.auth);
+	const proxy = normalizeProxy(params.proxy);
 
 	return {
 		urlList,
@@ -51,6 +56,7 @@ export function normalizeFetchContentParams(params: FetchContentParams): Normali
 			...(mode !== undefined ? { mode } : {}),
 			...(answerModel !== undefined ? { answerModel } : {}),
 			...(auth !== undefined ? { auth } : {}),
+			...(proxy !== undefined ? { proxy } : {}),
 		},
 	};
 }
@@ -86,6 +92,13 @@ function normalizeAuth(value: unknown): true | string | undefined {
 		if (trimmed) return trimmed;
 	}
 	throw new Error("auth must be a profile name, true, or false");
+}
+
+function normalizeProxy(value: unknown): string | undefined {
+	if (value === undefined || value === false) return undefined;
+	if (value === null) throw new Error("proxy must be an http(s) proxy URL string");
+	const normalized = normalizeProxyUrl(value, "proxy");
+	return normalized ?? "";
 }
 
 function normalizeOptionalFrameCount(value: unknown): number | undefined {

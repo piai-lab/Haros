@@ -17,7 +17,14 @@ import { rewriteSearchQuery } from "./query-rewrite.ts";
 import { clearCloneCache } from "./github-extract.ts";
 import { getAutoSearchProviderOrder, getBroadSearchProviderOrder, getConfiguredSearchRouting, getSearchProviderAvailability, getSearchProviderPresentation, normalizeSearchProviderSelection, RESOLVED_SEARCH_PROVIDERS, SEARCH_PROVIDERS, search, SearchRouteExhaustedError, type AttributedSearchResponse, type SearchProviderAvailability, type SearchProviderSelection, type ResolvedSearchProvider } from "./gemini-search.ts";
 import type { SearchResult } from "./perplexity.ts";
-import { formatSeconds, getWebSearchConfigPath, readWebSearchConfig, resolveCuratorNetworkConfig } from "./utils.ts";
+import {
+	formatSeconds,
+	getWebSearchConfigPath,
+	installGlobalProxyFetch,
+	readWebSearchConfig,
+	resolveCuratorNetworkConfig,
+	runWithProxy,
+} from "./utils.ts";
 import {
 	clearResults,
 	deleteResult,
@@ -48,8 +55,9 @@ import { createRequire } from "node:module";
 import { platform } from "node:os";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { getActiveGoogleEmail, getGeminiWebAvailabilityDiagnostic, isGeminiWebAvailable } from "./gemini-web.ts";
+import { getActiveGoogleEmail, getGeminiWebAvailabilityDiagnostic, getGeminiWebAvailabilityDiagnosticDetails, isGeminiWebAvailable } from "./gemini-web.ts";
 import { isBrowserCookieAccessAllowed } from "./gemini-web-config.ts";
+import { isCurrentModelHostedSearchEligible } from "./openai-search.ts";
 import { buildSearchErrorPlan, type SearchErrorDetails, type SearchErrorPlan } from "./render-search-error.ts";
 import { findModelWithProviderRouting, loadEnabledModelPatterns, modelMatchesEnabledPatterns, splitThinkingSuffix } from "./summary-model-scope.ts";
 import {
@@ -88,6 +96,18 @@ async function fetchAllContent(
 ): Promise<ExtractedContent[]> {
 	const extractModule = await (extractModulePromise ??= import("./extract.ts"));
 	return extractModule.fetchAllContent(urls, signal, options);
+}
+
+function withRegisteredFetchOptions(
+	options: ExtractOptions | undefined,
+	toolNames: ExtractOptions["toolNames"],
+	proxy?: string,
+): ExtractOptions {
+	return {
+		...(options ?? {}),
+		toolNames,
+		...(proxy !== undefined ? { proxy } : {}),
+	};
 }
 
 function isAbortError(err: unknown): boolean {
@@ -375,13 +395,24 @@ async function getProviderAvailability(ctx: ExtensionContext): Promise<ProviderA
 	return getSearchProviderAvailability({ extensionContext: ctx });
 }
 
-function shouldPreferOpenAI(options?: Pick<PendingCurate, "numResults" | "recencyFilter">): boolean {
-	if (!options) return true;
-	if (options.recencyFilter) return false;
-	if (typeof options.numResults === "number" && Number.isFinite(options.numResults) && Math.floor(options.numResults) !== 5) {
+async function getOptionalGeminiWebAvailability() {
+	try {
+		return await isGeminiWebAvailable();
+	} catch {
+		return null;
+	}
+}
+
+function shouldUseOpenAICodexDefault(ctx?: Pick<ExtensionContext, "model">): boolean {
+	return ctx?.model?.provider === "openai-codex";
+}
+
+function shouldPreferOpenAI(options: Pick<PendingCurate, "numResults" | "recencyFilter"> | undefined, preferOpenAICodexDefault: boolean): boolean {
+	if (options?.recencyFilter) return false;
+	if (typeof options?.numResults === "number" && Number.isFinite(options.numResults) && Math.floor(options.numResults) !== 5) {
 		return false;
 	}
-	return true;
+	return preferOpenAICodexDefault;
 }
 
 async function loadCuratorBootstrap(
@@ -394,9 +425,18 @@ async function loadCuratorBootstrap(
 	if (Array.isArray(provider)) availableProviders.all = true;
 	return {
 		availableProviders,
-		defaultProvider: resolveProvider(provider, availableProviders, options),
+		defaultProvider: resolveCuratorDefaultProvider(provider, availableProviders, ctx, options),
 		timeoutSeconds: getCuratorTimeoutSeconds(),
 	};
+}
+
+export function resolveCuratorDefaultProvider(
+	provider: SearchProviderSelection,
+	available: ProviderAvailability,
+	ctx?: Pick<ExtensionContext, "model">,
+	options?: Pick<PendingCurate, "numResults" | "recencyFilter">,
+): CuratorProvider {
+	return resolveProvider(provider, available, options, shouldUseOpenAICodexDefault(ctx), ctx);
 }
 
 function firstAvailableProvider(available: ProviderAvailability, preferOpenAI: boolean, fallback: ResolvedSearchProvider): ResolvedSearchProvider {
@@ -410,17 +450,20 @@ function resolveProvider(
 	provider: SearchProviderSelection,
 	available: ProviderAvailability,
 	options?: Pick<PendingCurate, "numResults" | "recencyFilter">,
+	preferOpenAICodexDefault = false,
+	ctx?: Pick<ExtensionContext, "model">,
 ): CuratorProvider {
 	if (Array.isArray(provider)) return "all";
-	const preferOpenAI = shouldPreferOpenAI(options);
+	const preferOpenAI = shouldPreferOpenAI(options, preferOpenAICodexDefault);
 
 	if (provider === "auto") {
 		const routing = getConfiguredSearchRouting();
 		if (routing) {
 			for (const candidate of routing.providers) {
+				if (candidate === "openai" && routing.useCurrentModel === true && !isCurrentModelHostedSearchEligible(ctx)) continue;
 				if (available[candidate]) return candidate;
 			}
-			return routing.providers[0];
+			return routing.providers.find(candidate => candidate !== "openai" || routing.useCurrentModel !== true || isCurrentModelHostedSearchEligible(ctx)) ?? routing.providers[0];
 		}
 		return firstAvailableProvider(available, preferOpenAI, "exa");
 	}
@@ -472,6 +515,7 @@ interface PendingCurate {
 	summaryModels: Array<{ value: string; label: string }>;
 	defaultSummaryModel: string | null;
 	timeoutSeconds: number;
+	proxy?: string;
 	curatorUrl?: string;
 	onUpdate: ((update: { content: Array<{ type: string; text: string }>; details?: Record<string, unknown> }) => void) | undefined;
 	signal: AbortSignal | undefined;
@@ -533,6 +577,40 @@ function normalizeFindQueries(value: string | string[]): string[] {
 	const queries = (Array.isArray(value) ? value : [value]).map(query => query.trim()).filter(Boolean);
 	if (queries.length === 0) throw new Error("findText must contain at least one non-empty string");
 	return queries;
+}
+
+interface GetSearchContentParams {
+	responseId: string;
+	query?: string;
+	queryIndex?: number;
+	url?: string;
+	urlIndex?: number;
+	offset?: number;
+	limit?: number;
+	findText?: string | string[];
+	findMode?: FindMode;
+}
+
+type RawGetSearchContentParams = Omit<GetSearchContentParams, "findMode"> & { findMode?: unknown };
+
+function normalizeFindMode(value: unknown): FindMode | undefined {
+	if (value === undefined) return undefined;
+	if (value === "exact" || value === "case-insensitive" || value === "fuzzy") return value;
+	throw new Error('findMode must be "exact", "case-insensitive", or "fuzzy"');
+}
+
+function normalizeGetSearchContentParams(params: RawGetSearchContentParams): GetSearchContentParams {
+	const normalized: GetSearchContentParams = { ...params, findMode: normalizeFindMode(params.findMode) };
+
+	if (normalized.query?.trim() === "") delete normalized.query;
+	if (normalized.url?.trim() === "") delete normalized.url;
+
+	if (normalized.findText !== undefined) {
+		delete normalized.offset;
+		delete normalized.limit;
+	}
+
+	return normalized;
 }
 
 function formatInputValue(value: unknown): string {
@@ -926,6 +1004,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		)
 		: undefined;
 	const initConfig = loadConfigForExtensionInit();
+	installGlobalProxyFetch();
 	const toolNames = omnimindProfile ? DEFAULT_TOOL_NAMES : resolveToolNames(initConfig);
 	const webSearchEnabled = isToolEnabled(initConfig, "webSearch");
 	const sourceCheckEnabled = isToolEnabled(initConfig, "sourceCheck");
@@ -951,6 +1030,10 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		}
 		return "Every configured web search route is currently unavailable. Review credentials or quota under Development > Web search, then use Recheck.";
 	};
+	const registeredToolNames = {
+		...(webSearchEnabled ? { webSearch: toolNames.webSearch } : {}),
+		...(fetchContentEnabled ? { fetchContent: toolNames.fetchContent } : {}),
+	};
 	const storedContentSources = joinToolNames([
 		...(webSearchEnabled ? [toolNames.webSearch] : []),
 		...(sourceCheckEnabled ? [toolNames.sourceCheck] : []),
@@ -965,12 +1048,12 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 	const curateKey = initConfig.shortcuts?.curate || DEFAULT_SHORTCUTS.curate;
 	const activityKey = initConfig.shortcuts?.activity || DEFAULT_SHORTCUTS.activity;
 
-	function startBackgroundFetch(urls: string[]): string | null {
+	function startBackgroundFetch(urls: string[], proxy?: string): string | null {
 		if (urls.length === 0) return null;
 		const fetchId = generateId();
 		const controller = new AbortController();
 		pendingFetches.set(fetchId, controller);
-		fetchAllContent(urls, controller.signal)
+		runWithProxy(proxy, () => fetchAllContent(urls, controller.signal, withRegisteredFetchOptions(undefined, registeredToolNames, proxy)))
 			.then((fetched) => {
 				if (!sessionActive.value || !pendingFetches.has(fetchId)) return;
 				const data = {
@@ -1035,6 +1118,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		workflow?: SummaryWorkflow;
 		approvedSummary?: string;
 		summaryMeta?: SummaryMeta;
+		proxy?: string;
 	}
 
 	function normalizeSummaryMeta(meta: SummaryMeta | undefined, summaryText: string): SummaryMeta {
@@ -1273,7 +1357,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				output += `---\nFull content for ${opts.inlineContent.length} sources available [${fetchId}].`;
 			}
 		} else if (opts.includeContent) {
-			fetchId = startBackgroundFetch(opts.urls);
+			fetchId = startBackgroundFetch(opts.urls, opts.proxy);
 			if (fetchId && !hasApprovedSummary) {
 				output += `---\nContent fetching in background [${fetchId}]. Will notify when ready.`;
 			}
@@ -1502,25 +1586,27 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				},
 				{
 					async onSummarize(selectedQueryIndices, summarizeSignal, model, feedback) {
-						if (pendingCurates.get(callId) !== pc) throw new Error("Curator session is no longer active.");
-						pc.onUpdate?.({
-							content: [{ type: "text", text: "Generating summary draft..." }],
-							details: { phase: "generating-summary", progress: 0.9, ...presentationDetails(), timeoutSeconds: pc.timeoutSeconds, shortcut: curateKey },
+						return runWithProxy(pc.proxy, async () => {
+							if (pendingCurates.get(callId) !== pc) throw new Error("Curator session is no longer active.");
+							pc.onUpdate?.({
+								content: [{ type: "text", text: "Generating summary draft..." }],
+								details: { phase: "generating-summary", progress: 0.9, ...presentationDetails(), timeoutSeconds: pc.timeoutSeconds, shortcut: curateKey },
+							});
+							const draft = await generateSummaryForSelectedIndices(
+								selectedQueryIndices,
+								pc.searchResults,
+								pc.summaryContext,
+								summarizeSignal,
+								model,
+								feedback,
+							);
+							if (pendingCurates.get(callId) !== pc) throw new Error("Curator session is no longer active.");
+							pc.onUpdate?.({
+								content: [{ type: "text", text: "Summary draft ready — waiting for approval..." }],
+								details: { phase: "waiting-for-approval", progress: 1, ...presentationDetails(), timeoutSeconds: pc.timeoutSeconds, shortcut: curateKey },
+							});
+							return draft;
 						});
-						const draft = await generateSummaryForSelectedIndices(
-							selectedQueryIndices,
-							pc.searchResults,
-							pc.summaryContext,
-							summarizeSignal,
-							model,
-							feedback,
-						);
-						if (pendingCurates.get(callId) !== pc) throw new Error("Curator session is no longer active.");
-						pc.onUpdate?.({
-							content: [{ type: "text", text: "Summary draft ready — waiting for approval..." }],
-							details: { phase: "waiting-for-approval", progress: 1, ...presentationDetails(), timeoutSeconds: pc.timeoutSeconds, shortcut: curateKey },
-						});
-						return draft;
 					},
 					onSubmit(payload) {
 						if (pendingCurates.get(callId) !== pc) return;
@@ -1537,6 +1623,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 							inlineContent: filteredInline.length > 0 ? filteredInline : undefined,
 							curated: true,
 							curatedFrom: pc.searchResults.size,
+							proxy: pc.proxy,
 						};
 						if (!payload.rawResults) {
 							const resolvedSummary = resolveSummaryForSubmit(payload, pc.searchResults);
@@ -1565,6 +1652,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 								workflow: pc.workflow,
 								approvedSummary: resolvedSummary.approvedSummary,
 								summaryMeta: resolvedSummary.summaryMeta,
+								proxy: pc.proxy,
 							}));
 						} else {
 							const conn = activeCurators.get(callId)?.getConnectionState();
@@ -1595,20 +1683,22 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 							: { state: "failed", reason: "write-failed" };
 					},
 					async onAddSearch(query, provider) {
-						if (pendingCurates.get(callId) !== pc) throw new Error("Curator session is no longer active.");
-						const requestedProvider = resolveCuratorSearchProvider(provider, pc.searchProvider);
-						const response = await search(query, {
-							provider: requestedProvider,
-							numResults: pc.numResults,
-							recencyFilter: pc.recencyFilter,
-							domainFilter: pc.domainFilter,
-							includeContent: pc.includeContent,
-							signal: addSearchSignal,
-							extensionContext: ctx,
+						return runWithProxy(pc.proxy, async () => {
+							if (pendingCurates.get(callId) !== pc) throw new Error("Curator session is no longer active.");
+							const requestedProvider = resolveCuratorSearchProvider(provider, pc.searchProvider);
+							const response = await search(query, {
+								provider: requestedProvider,
+								numResults: pc.numResults,
+								recencyFilter: pc.recencyFilter,
+								domainFilter: pc.domainFilter,
+								includeContent: pc.includeContent,
+								signal: addSearchSignal,
+								extensionContext: ctx,
+							});
+							if (pendingCurates.get(callId) !== pc) throw new Error("Curator session is no longer active.");
+							if (response.inlineContent) pc.allInlineContent.push(...response.inlineContent);
+							return toCuratorSearchEntries(response);
 						});
-						if (pendingCurates.get(callId) !== pc) throw new Error("Curator session is no longer active.");
-						if (response.inlineContent) pc.allInlineContent.push(...response.inlineContent);
-						return toCuratorSearchEntries(response);
 					},
 					onAddSearchResults(entries) {
 						if (pendingCurates.get(callId) !== pc) return;
@@ -1617,8 +1707,10 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 						}
 					},
 					async onRewriteQuery(query, rewriteSignal) {
-						if (pendingCurates.get(callId) !== pc) throw new Error("Curator session is no longer active.");
-						return rewriteSearchQuery(query, pc.summaryContext, rewriteSignal);
+						return runWithProxy(pc.proxy, async () => {
+							if (pendingCurates.get(callId) !== pc) throw new Error("Curator session is no longer active.");
+							return rewriteSearchQuery(query, pc.summaryContext, rewriteSignal);
+						});
 					},
 				},
 			);
@@ -1816,9 +1908,13 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 					description: "Search workflow mode: auto-summary = generate a summary without waiting for review (OmniMind default; an independent display preference may show a nonblocking observer), summary-review = pause for interactive source review, none = return raw results",
 				}),
 			),
+			proxy: Type.Optional(Type.String({
+				description: "http(s) proxy URL (e.g. http://host:port) used for every outbound request in this call (search APIs and content fetches). Node fetch ignores HTTP(S)_PROXY env vars, so set this (or `proxy` in web-search.json) when direct access is blocked; empty string forces direct access.",
+			})),
 		}),
 
 		async execute(callId, params, signal, onUpdate, ctx) {
+			return runWithProxy(typeof params.proxy === "string" ? params.proxy : undefined, async () => {
 			const rawQueryList: unknown[] = Array.isArray(params.queries)
 				? params.queries
 				: (params.query !== undefined ? [params.query] : []);
@@ -1841,14 +1937,14 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				};
 			}
 
-			if (shouldCurate && !ctx) {
-				return {
-					content: [{ type: "text", text: "Error: Curation requires an active extension context." }],
-					details: { error: "Missing extension context" },
-				};
-			}
+				if (shouldCurate && !ctx) {
+					return {
+						content: [{ type: "text", text: "Error: Curation requires an active extension context." }],
+						details: { error: "Missing extension context" },
+					};
+				}
 
-			if (shouldCurate) {
+				if (shouldCurate) {
 				closeCurator(callId);
 
 				let resolvePromise: (value: AgentToolResult<Record<string, unknown>>) => void = () => {};
@@ -1903,6 +1999,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 					summaryModels: summaryModelChoices.summaryModels,
 					defaultSummaryModel: summaryModelChoices.defaultSummaryModel,
 					timeoutSeconds: curatorTimeoutSeconds,
+					proxy: typeof params.proxy === "string" ? params.proxy : undefined,
 					onUpdate: onUpdate as PendingCurate["onUpdate"],
 					signal,
 					abortSearches: () => {
@@ -2151,6 +2248,8 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				workflow: workflow === "auto-summary" ? "auto-summary" : undefined,
 				approvedSummary,
 				summaryMeta,
+				proxy: typeof params.proxy === "string" ? params.proxy : undefined,
+			});
 			});
 		},
 
@@ -2422,13 +2521,17 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 			fetchContent: Type.Optional(Type.Boolean({ description: "Fetch up to 5 result pages for exact passage extraction." })),
 			recencyFilter: Type.Optional(StringEnum(["day", "week", "month", "year"], { description: "Filter by recency." })),
 			domainFilter: Type.Optional(Type.Array(Type.String(), { description: "Limit to domains; prefix with - to exclude." })),
-			provider: Type.Optional(searchProviderSchema("Search provider or non-empty list of providers to search simultaneously; all searches every eligible provider except DuckDuckGo, AnySearch, xAI, Bright Data, SerpBase, Serper, and Valyu")),
+			provider: Type.Optional(searchProviderSchema(webSearchAgentDescription().provider)),
+			proxy: Type.Optional(Type.String({
+				description: "http(s) proxy URL (e.g. http://host:port) used for every outbound request in this call (search APIs and result-page fetches). Empty string forces direct access.",
+			})),
 		}),
 		async execute(_callId, params, signal, _onUpdate, ctx) {
-			const claim = typeof params.claim === "string" ? params.claim.trim() : "";
-			if (!claim) {
-				return { content: [{ type: "text", text: "Error: 'claim' is required." }], details: { error: "Missing claim" } };
-			}
+			return runWithProxy(typeof params.proxy === "string" ? params.proxy : undefined, async () => {
+				const claim = typeof params.claim === "string" ? params.claim.trim() : "";
+				if (!claim) {
+					return { content: [{ type: "text", text: "Error: 'claim' is required." }], details: { error: "Missing claim" } };
+				}
 
 			const requestedQueries = Array.isArray(params.queries)
 				? params.queries.filter((query): query is string => typeof query === "string").map((query) => query.trim()).filter(Boolean)
@@ -2506,6 +2609,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				content: [{ type: "text", text: formatSourceCheckResult(artifact, getSearchContentEnabled ? toolNames.getSearchContent : null) }],
 				details: { responseId: artifact.id, artifact, sourceCount: artifact.sources.length, passageCount: artifact.passages.length },
 			};
+			});
 		},
 	});
 
@@ -2544,6 +2648,9 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 			auth: Type.Optional(Type.Union([Type.String(), Type.Boolean()], {
 				description: "Opt into an authFetch profile for local browser-cookie fetching. Use a profile name, or true only when exactly one profile exists.",
 			})),
+			proxy: Type.Optional(Type.String({
+				description: "http(s) proxy URL (e.g. http://host:port) used for this fetch. Needed when the target is unreachable directly; localhost and NO_PROXY hosts always bypass the proxy. Empty string forces direct access.",
+			})),
 		}),
 
 		async execute(_toolCallId, params, signal, onUpdate, ctx): Promise<AgentToolResult<Record<string, unknown>>> {
@@ -2555,164 +2662,164 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				return { content: [{ type: "text", text: `Error: ${error}` }], details: { error } };
 			}
 			const { urlList, options } = normalized;
-			const mode = options.mode ?? "readable";
-			if (mode === "answer" && !options.prompt) {
-				return { content: [{ type: "text", text: "Error: mode answer requires prompt." }], details: { error: "mode answer requires prompt" } };
-			}
-			if (mode === "raw" && (options.forceClone === true || options.timestamp || options.frames || options.prompt || options.model || options.answerModel)) {
-				return { content: [{ type: "text", text: "Error: mode raw cannot be combined with forceClone, prompt, timestamp, frames, model, or answerModel." }], details: { error: "Incompatible raw mode options" } };
-			}
-			if (mode !== "answer" && options.answerModel) {
-				return { content: [{ type: "text", text: "Error: answerModel requires mode answer." }], details: { error: "answerModel requires mode answer" } };
-			}
-			if (mode === "answer" && options.model) {
-				return { content: [{ type: "text", text: "Error: use answerModel, not model, with mode answer." }], details: { error: "model is incompatible with mode answer" } };
-			}
-			if (mode === "answer" && options.auth !== undefined) {
-				return { content: [{ type: "text", text: "Error: auth cannot be combined with mode answer." }], details: { error: "auth cannot be combined with mode answer" } };
-			}
-			let authFetchProfile: AuthFetchProfile | undefined;
-			if (options.auth !== undefined) {
-				try {
-					authFetchProfile = resolveAuthFetchProfile(options.auth);
-				} catch (err) {
-					const error = err instanceof Error ? err.message : String(err);
-					return { content: [{ type: "text", text: `Error: ${error}` }], details: { error } };
+			return runWithProxy(options.proxy, async () => {
+				const mode = options.mode ?? "readable";
+				if (mode === "answer" && !options.prompt) {
+					return { content: [{ type: "text", text: "Error: mode answer requires prompt." }], details: { error: "mode answer requires prompt" } };
 				}
-			}
-			if (urlList.length === 0) {
-				return {
-					content: [{ type: "text", text: "Error: No URL provided." }],
-					details: { error: "No URL provided" },
-				};
-			}
-
-			onUpdate?.({
-				content: [{ type: "text", text: `Fetching ${urlList.length} URL(s)...` }],
-				details: { phase: "fetch", progress: 0 },
-			});
-
-			const { answerModel: _answerModel, auth: _auth, ...extractionOptions } = options;
-			const fetchOptions = mode === "answer"
-				? (() => {
-					const { prompt: _prompt, ...rest } = extractionOptions;
-					return { ...rest, ...(authFetchProfile ? { authFetchProfile } : {}) };
-				})()
-				: { ...extractionOptions, ...(authFetchProfile ? { authFetchProfile } : {}) };
-			const fetchResults = await fetchAllContent(urlList, signal, fetchOptions);
-			const presentedResults = mode === "answer"
-				? await Promise.all(fetchResults.map(async result => {
-					if (result.error) return result;
-					if (result.thumbnail || result.mimeType?.startsWith("image/")) {
-						return { ...result, error: "Page answer requires textual fetched content" };
-					}
+				if (mode === "raw" && (options.forceClone === true || options.timestamp || options.frames || options.prompt || options.model || options.answerModel)) {
+					return { content: [{ type: "text", text: "Error: mode raw cannot be combined with forceClone, prompt, timestamp, frames, model, or answerModel." }], details: { error: "Incompatible raw mode options" } };
+				}
+				if (mode !== "answer" && options.answerModel) {
+					return { content: [{ type: "text", text: "Error: answerModel requires mode answer." }], details: { error: "answerModel requires mode answer" } };
+				}
+				if (mode === "answer" && options.model) {
+					return { content: [{ type: "text", text: "Error: use answerModel, not model, with mode answer." }], details: { error: "model is incompatible with mode answer" } };
+				}
+				if (mode === "answer" && options.auth !== undefined) {
+					return { content: [{ type: "text", text: "Error: auth cannot be combined with mode answer." }], details: { error: "auth cannot be combined with mode answer" } };
+				}
+				let authFetchProfile: AuthFetchProfile | undefined;
+				if (options.auth !== undefined) {
 					try {
-						const answer = await answerFromPage({
-							question: options.prompt!,
-							pageText: result.content,
-							sourceUrl: result.url,
-							...(options.answerModel ? { model: options.answerModel } : {}),
-						}, ctx, signal);
-						return { ...result, content: answer.text };
+						authFetchProfile = resolveAuthFetchProfile(options.auth);
 					} catch (err) {
-						return { ...result, error: `Page answer failed: ${err instanceof Error ? err.message : String(err)}` };
+						const error = err instanceof Error ? err.message : String(err);
+						return { content: [{ type: "text", text: `Error: ${error}` }], details: { error } };
 					}
-				}))
-				: fetchResults;
-			const successful = presentedResults.filter((r) => !r.error).length;
-			const totalChars = presentedResults.reduce((sum, r) => sum + r.content.length, 0);
-
-			const responseId = generateId();
-			const data = {
-				id: responseId,
-				type: "fetch",
-				timestamp: Date.now(),
-				urls: stripThumbnails(fetchResults),
-			} satisfies StoredSearchData & { type: "fetch"; urls: ExtractedContent[] };
-			const storedContent = storeFetchResult(pi, responseId, data, authFetchProfile);
-
-			// Single URL: return content directly (possibly truncated) with responseId
-			if (urlList.length === 1) {
-				const result = presentedResults[0];
-				if (result.error) {
+				}
+				if (urlList.length === 0) {
 					return {
-						content: [{ type: "text", text: `Error: ${result.error}` }],
-						details: { urls: urlList, urlCount: 1, successful: 0, error: result.error, ...(storedContent ? { responseId } : {}), prompt: params.prompt, timestamp: params.timestamp, frames: params.frames },
+						content: [{ type: "text", text: "Error: No URL provided." }],
+						details: { error: "No URL provided" },
 					};
 				}
 
-				const fullLength = result.content.length;
-				const slice = initialContentSlice(result.content, getMaxInlineContentChars());
-				const truncated = slice.endOffset < fullLength;
-				let output = slice.text;
+				onUpdate?.({
+					content: [{ type: "text", text: `Fetching ${urlList.length} URL(s)...` }],
+					details: { phase: "fetch", progress: 0 },
+				});
 
-				if (truncated) {
-					output += `\n\n---\nShowing ${slice.endOffset} of ${fullLength} chars, ${slice.shownBytes} of ${slice.totalBytes} bytes, and ${slice.shownLines} of ${slice.totalLines} lines. `;
-					output += storedContent
-						? getSearchContentEnabled
-							? `Use ${toolNames.getSearchContent}({ responseId: "${responseId}", urlIndex: 0, offset: ${slice.endOffset} }) for the next slice.`
-							: "Content retrieval is not registered."
-						: "Authenticated fetch cache is off; repeat the fetch to read more.";
-				}
+				const { answerModel: _answerModel, auth: _auth, ...extractionOptions } = options;
+				const fetchOptions = mode === "answer"
+					? (() => {
+						const { prompt: _prompt, ...rest } = extractionOptions;
+						return { ...rest, ...(authFetchProfile ? { authFetchProfile } : {}) };
+					})()
+					: { ...extractionOptions, ...(authFetchProfile ? { authFetchProfile } : {}) };
+				const fetchResults = await fetchAllContent(urlList, signal, withRegisteredFetchOptions(fetchOptions, registeredToolNames, options.proxy));
+				const presentedResults = mode === "answer"
+					? await Promise.all(fetchResults.map(async result => {
+						if (result.error) return result;
+						if (result.thumbnail || result.mimeType?.startsWith("image/")) {
+							return { ...result, error: "Page answer requires textual fetched content" };
+						}
+						try {
+							const answer = await answerFromPage({
+								question: options.prompt!,
+								pageText: result.content,
+								sourceUrl: result.url,
+								...(options.answerModel ? { model: options.answerModel } : {}),
+							}, ctx, signal);
+							return { ...result, content: answer.text };
+						} catch (err) {
+							return { ...result, error: `Page answer failed: ${err instanceof Error ? err.message : String(err)}` };
+						}
+					}))
+					: fetchResults;
+				const successful = presentedResults.filter((r) => !r.error).length;
+				const totalChars = presentedResults.reduce((sum, r) => sum + r.content.length, 0);
 
-				const content: Array<TextContent | ImageContent> = [];
-				if (result.frames?.length) {
-					for (const frame of result.frames) {
-						content.push({ type: "image", data: frame.data, mimeType: frame.mimeType });
-						content.push({ type: "text", text: `Frame at ${frame.timestamp}` });
+				const responseId = generateId();
+				const data = {
+					id: responseId,
+					type: "fetch",
+					timestamp: Date.now(),
+					urls: stripThumbnails(fetchResults),
+				} satisfies StoredSearchData & { type: "fetch"; urls: ExtractedContent[] };
+				const storedContent = storeFetchResult(pi, responseId, data, authFetchProfile);
+
+				if (urlList.length === 1) {
+					const result = presentedResults[0];
+					if (result.error) {
+						return {
+							content: [{ type: "text", text: `Error: ${result.error}` }],
+							details: { urls: urlList, urlCount: 1, successful: 0, error: result.error, ...(storedContent ? { responseId } : {}), prompt: params.prompt, timestamp: params.timestamp, frames: params.frames },
+						};
 					}
-				} else if (result.thumbnail) {
-					content.push({ type: "image", data: result.thumbnail.data, mimeType: result.thumbnail.mimeType });
-				}
-				content.push({ type: "text", text: output });
 
-				const imageCount = (result.frames?.length ?? 0) + (result.thumbnail ? 1 : 0);
+					const fullLength = result.content.length;
+					const slice = initialContentSlice(result.content, getMaxInlineContentChars());
+					const truncated = slice.endOffset < fullLength;
+					let output = slice.text;
+
+					if (truncated) {
+						output += `\n\n---\nShowing ${slice.endOffset} of ${fullLength} chars, ${slice.shownBytes} of ${slice.totalBytes} bytes, and ${slice.shownLines} of ${slice.totalLines} lines. `;
+						output += storedContent
+							? getSearchContentEnabled
+								? `Use ${toolNames.getSearchContent}({ responseId: "${responseId}", urlIndex: 0, offset: ${slice.endOffset} }) for the next slice.`
+								: "Content retrieval is not registered."
+							: "Authenticated fetch cache is off; repeat the fetch to read more.";
+					}
+
+					const content: Array<TextContent | ImageContent> = [];
+					if (result.frames?.length) {
+						for (const frame of result.frames) {
+							content.push({ type: "image", data: frame.data, mimeType: frame.mimeType });
+							content.push({ type: "text", text: `Frame at ${frame.timestamp}` });
+						}
+					} else if (result.thumbnail) {
+						content.push({ type: "image", data: result.thumbnail.data, mimeType: result.thumbnail.mimeType });
+					}
+					content.push({ type: "text", text: output });
+
+					const imageCount = (result.frames?.length ?? 0) + (result.thumbnail ? 1 : 0);
+					return {
+						content,
+						details: {
+							urls: urlList,
+							urlCount: 1,
+							successful: 1,
+							totalChars: fullLength,
+							title: result.title,
+							...(storedContent ? { responseId } : {}),
+							truncated,
+							hasImage: imageCount > 0,
+							imageCount,
+							prompt: params.prompt,
+							timestamp: params.timestamp,
+							frames: params.frames,
+							duration: result.duration,
+							mode,
+							mimeType: result.mimeType,
+							status: result.status,
+							totalBytes: slice.totalBytes,
+							totalLines: slice.totalLines,
+							shownBytes: slice.shownBytes,
+							shownLines: slice.shownLines,
+						},
+					};
+				}
+
+				let output = "## Fetched URLs\n\n";
+				for (const { url, title, content, error } of presentedResults) {
+					if (error) {
+						output += `- ${url}: Error - ${error}\n`;
+					} else {
+						output += `- ${title || url} (${content.length} chars)\n`;
+					}
+				}
+				output += storedContent
+					? getSearchContentEnabled
+						? `\n---\nUse ${toolNames.getSearchContent}({ responseId: "${responseId}", urlIndex: 0 }) to retrieve bounded content slices.`
+						: "\n---\nContent retrieval is not registered."
+					: "\n---\nAuthenticated fetch cache is off; repeat the fetch to read content.";
+
 				return {
-					content,
-					details: {
-						urls: urlList,
-						urlCount: 1,
-						successful: 1,
-						totalChars: fullLength,
-						title: result.title,
-						...(storedContent ? { responseId } : {}),
-						truncated,
-						hasImage: imageCount > 0,
-						imageCount,
-						prompt: params.prompt,
-						timestamp: params.timestamp,
-						frames: params.frames,
-						duration: result.duration,
-						mode,
-						mimeType: result.mimeType,
-						status: result.status,
-						totalBytes: slice.totalBytes,
-						totalLines: slice.totalLines,
-						shownBytes: slice.shownBytes,
-						shownLines: slice.shownLines,
-					},
+					content: [{ type: "text", text: output }],
+					details: { urls: urlList, urlCount: urlList.length, successful, totalChars, ...(storedContent ? { responseId } : {}) },
 				};
-			}
-
-			// Multi-URL: existing behavior (summary + responseId)
-			let output = "## Fetched URLs\n\n";
-			for (const { url, title, content, error } of presentedResults) {
-				if (error) {
-					output += `- ${url}: Error - ${error}\n`;
-				} else {
-					output += `- ${title || url} (${content.length} chars)\n`;
-				}
-			}
-			output += storedContent
-				? getSearchContentEnabled
-					? `\n---\nUse ${toolNames.getSearchContent}({ responseId: "${responseId}", urlIndex: 0 }) to retrieve bounded content slices.`
-					: "\n---\nContent retrieval is not registered."
-				: "\n---\nAuthenticated fetch cache is off; repeat the fetch to read content.";
-
-			return {
-				content: [{ type: "text", text: output }],
-				details: { urls: urlList, urlCount: urlList.length, successful, totalChars, ...(storedContent ? { responseId } : {}) },
-			};
+			});
 		},
 
 		renderCall(args, theme) {
@@ -2862,24 +2969,17 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 			queryIndex: Type.Optional(Type.Integer({ minimum: 0, description: "Get content for query at index" })),
 			url: Type.Optional(Type.String({ description: "Get content for this URL" })),
 			urlIndex: Type.Optional(Type.Integer({ minimum: 0, description: "Get content for URL at index" })),
-			offset: Type.Optional(Type.Integer({ minimum: 0, description: "Character offset for fetched URL content slices (default 0). Cannot be combined with findText." })),
-			limit: Type.Optional(Type.Integer({ minimum: 1, maximum: maxInlineContentChars, description: "Maximum characters to return for fetched URL content slices (default and max are set by maxInlineContentChars). Cannot be combined with findText." })),
+			offset: Type.Optional(Type.Integer({ minimum: 0, description: "Character offset for fetched URL content slices (default 0). Ignored when findText is supplied." })),
+			limit: Type.Optional(Type.Integer({ minimum: 1, maximum: maxInlineContentChars, description: "Maximum characters to return for fetched URL content slices (default and max are set by maxInlineContentChars). Ignored when findText is supplied." })),
 			findText: Type.Optional(Type.Union([
 				Type.String({ minLength: 1, maxLength: 500 }),
 				Type.Array(Type.String({ minLength: 1, maxLength: 500 }), { minItems: 1, maxItems: 10 }),
-			], { description: "Text or texts to find in the selected stored content. Cannot be combined with offset or limit." })),
+			], { description: "Text or texts to find in the selected stored content. When supplied, offset and limit are ignored." })),
 			findMode: Type.Optional(StringEnum(["exact", "case-insensitive", "fuzzy"], { description: "Matching mode for findText (default: case-insensitive). Requires findText." })),
 		}),
 
-		async execute(_toolCallId, params): Promise<AgentToolResult<Record<string, unknown>>> {
-			if (params.findText !== undefined && (params.offset !== undefined || params.limit !== undefined)) {
-				const offset = formatInputValue(params.offset);
-				const limit = formatInputValue(params.limit);
-				return {
-					content: [{ type: "text", text: `findText cannot be combined with offset or limit. Received offset=${offset}, limit=${limit}; omit offset and limit when using findText.` }],
-					details: { error: "Incompatible find options" },
-				};
-			}
+		async execute(_toolCallId, rawParams): Promise<AgentToolResult<Record<string, unknown>>> {
+			const params = normalizeGetSearchContentParams(rawParams);
 			if (params.findMode !== undefined && params.findText === undefined) {
 				return {
 					content: [{ type: "text", text: `findMode ${formatInputValue(params.findMode)} requires findText; provide findText or omit findMode.` }],
@@ -2903,6 +3003,22 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 					};
 				}
 				const serialized = JSON.stringify(artifact, null, 2);
+				if (params.findText !== undefined) {
+					try {
+						const found = findContent(serialized, normalizeFindQueries(params.findText), params.findMode ?? "case-insensitive");
+						const { text, ...findDetails } = found;
+						return {
+							content: [{ type: "text", text }],
+							details: { responseId: artifact.id, type: "research", contentLength: serialized.length, findMode: params.findMode ?? "case-insensitive", ...findDetails },
+						};
+					} catch (err) {
+						const error = err instanceof Error ? err.message : String(err);
+						return {
+							content: [{ type: "text", text: `Unable to find ${formatInputValue(params.findText)} in research artifact for responseId ${formatInputValue(params.responseId)}: ${error}. Check findText and use a supported findMode.` }],
+							details: { error, responseId: params.responseId, type: "research" },
+						};
+					}
+				}
 				const offset = params.offset ?? 0;
 				const limit = params.limit ?? maxInlineContentChars;
 				if (!Number.isInteger(offset) || offset < 0) {
@@ -2971,7 +3087,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				const fullResults = formatStoredQueryResult(queryData);
 				if (params.findText !== undefined) {
 					try {
-						const found = findContent(fullResults, normalizeFindQueries(params.findText), (params.findMode ?? "case-insensitive") as FindMode);
+						const found = findContent(fullResults, normalizeFindQueries(params.findText), params.findMode ?? "case-insensitive");
 						const { text, ...findDetails } = found;
 						return {
 							content: [{ type: "text", text }],
@@ -3033,7 +3149,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 
 				if (params.findText !== undefined) {
 					try {
-						const found = findContent(urlData.content, normalizeFindQueries(params.findText), (params.findMode ?? "case-insensitive") as FindMode);
+						const found = findContent(urlData.content, normalizeFindQueries(params.findText), params.findMode ?? "case-insensitive");
 						const { text, ...findDetails } = found;
 						return {
 							content: [{ type: "text", text: `# ${urlData.title || urlData.url}\n\n${text}` }],
@@ -3481,6 +3597,10 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		},
 	});
 
+	function formatCookieAttempts(attempts: { browser: string; profile: string; status: string }[]): string {
+		return attempts.map(({ browser, profile, status }) => `${browser}/${profile} (${status})`).join(", ");
+	}
+
 	if (!omnimindProfile && isCommandEnabled(initConfig, "google-account")) pi.registerCommand("google-account", {
 		description: "Show the active Google account for Gemini Web",
 		handler: async () => {
@@ -3497,14 +3617,16 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 			const cookies = await isGeminiWebAvailable();
 			if (!cookies) {
 				const diagnostic = getGeminiWebAvailabilityDiagnostic();
+				const diagnosticDetails = getGeminiWebAvailabilityDiagnosticDetails();
+				const attempted = formatCookieAttempts(diagnosticDetails?.attempts ?? []);
 				const text = diagnostic
-					? `Gemini Web is unavailable: ${diagnostic}`
+					? `Gemini Web is unavailable: ${diagnostic}${attempted ? ` Attempted browser profiles: ${attempted}.` : ""}`
 					: "Gemini Web is unavailable. Sign into gemini.google.com in a supported Chromium-based browser.";
 				pi.sendMessage({
 					customType: "google-account",
 					content: [{ type: "text", text }],
 					display: true,
-					details: { available: false, cookieAccessAllowed: true, diagnostic },
+					details: { available: false, cookieAccessAllowed: true, diagnostic, cookieDiagnostic: diagnosticDetails },
 				}, { triggerTurn: true, deliverAs: "followUp" });
 				return;
 			}

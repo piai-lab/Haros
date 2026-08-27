@@ -2,12 +2,10 @@ import { execFileSync } from "node:child_process";
 import { activityMonitor } from "./activity.ts";
 import { canAttachImages } from "./feature-config.ts";
 import { isGeminiWebAvailable, queryWithCookies } from "./gemini-web.ts";
-import { isGeminiApiAvailable, queryGeminiApiWithVideo } from "./gemini-api.ts";
+import { isGeminiApiAvailableWithVideo, queryGeminiApiWithVideo } from "./gemini-api.ts";
 import { isPerplexityAvailable, searchWithPerplexity } from "./perplexity.ts";
 import { extractHeadingTitle, type ExtractedContent, type FrameResult, type VideoFrame } from "./extract.ts";
-import { formatSeconds, readExecError, isTimeoutError, trimErrorText, mapFfmpegError, getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
-
-const configPath = () => getWebSearchConfigPath();
+import { formatSeconds, readExecError, isTimeoutError, trimErrorText, mapFfmpegError, readWebSearchConfig } from "./utils.ts";
 
 const YOUTUBE_PROMPT = `Extract the complete content of this YouTube video. Include:
 1. Video title, channel name, and duration
@@ -248,7 +246,7 @@ async function tryGeminiApi(
 	attemptErrors: string[],
 ): Promise<ExtractedContent | null> {
 	try {
-		if (!isGeminiApiAvailable()) return null;
+		if (!isGeminiApiAvailableWithVideo()) return null;
 
 		if (signal?.aborted) return null;
 

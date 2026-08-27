@@ -34,7 +34,10 @@ function runTool(agentDir, provider) {
 			const urlText = String(url);
 			calls.push(urlText);
 			if (urlText === "https://api.openai.com/v1/responses") {
-				return new Response(JSON.stringify({ output: [{ type: "message", content: [{ type: "output_text", text: "openai answer" }] }] }), { status: 200 });
+				return new Response(JSON.stringify({ output: [
+					{ type: "web_search_call", action: { sources: [] } },
+					{ type: "message", content: [{ type: "output_text", text: "openai answer" }] },
+				] }), { status: 200 });
 			}
 			if (urlText === "https://api.perplexity.ai/chat/completions") {
 				return new Response(JSON.stringify({ choices: [{ message: { content: "perplexity answer" } }], citations: ["https://perplexity.example/source"] }), { status: 200 });
@@ -141,6 +144,16 @@ test("configured explicit-only SerpBase fails instead of falling back", async ()
 	const result = JSON.parse(child.stdout.trim());
 	assert.match(result.content[0].text, /SerpBase API key not found/);
 	assert.doesNotMatch(result.content[0].text, /Unexpected fallback fetch/);
+});
+
+test("legacy Gemini Web profile config does not block unrelated configured providers", async () => {
+	const calls = runTool(await createConfig({
+		provider: "tavily",
+		tavilyApiKey: "tavily-test-key",
+		allowBrowserCookies: true,
+		chromeProfile: "Profile 1",
+	}));
+	assert.deepEqual(calls, ["https://api.tavily.com/search"]);
 });
 
 test("malformed config root fails with an explicit object-shape error", async () => {

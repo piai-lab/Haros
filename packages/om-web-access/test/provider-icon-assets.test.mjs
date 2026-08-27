@@ -42,13 +42,14 @@ const EXPECTED_DESCRIPTOR_ASSETS = {
 	firecrawl: "firecrawl.svg", jina: "jina.svg", serpdive: "serpdive.png", kagi: "kagi.svg",
 	bocha: "bocha.svg", ollama: "ollama.svg", searxng: "searxng.svg",
 	duckduckgo: "duckduckgo.svg", perplexity: "perplexity.svg", gemini: "gemini.svg",
+	kimi: null,
 	anysearch: "anysearch.ico", xai: "xai.svg", brightdata: "bright-data.png",
 	serpbase: "serpbase.svg", serper: "serper.png", valyu: "valyu.ico",
 };
 
-test("all provider identities project exact pinned local brand assets", async () => {
+test("provider identities project pinned assets or the deterministic neutral fallback", async () => {
 	const { SEARCH_PROVIDER_RUNTIME_DEFINITIONS } = await import(searchModuleUrl);
-	assert.equal(SEARCH_PROVIDER_RUNTIME_DEFINITIONS.length, 26);
+	assert.equal(SEARCH_PROVIDER_RUNTIME_DEFINITIONS.length, 27);
 	assert.deepEqual(
 		Object.fromEntries(SEARCH_PROVIDER_RUNTIME_DEFINITIONS.map(({ id, icon }) => [
 			id,

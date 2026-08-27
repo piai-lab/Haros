@@ -20,7 +20,7 @@ const EXPECTED_CURATOR_ORDER = [
 	"openai", "exa", "brave", "parallel", "parallel-mcp", "tinyfish",
 	"search1api", "searchinfinity", "querit", "tavily", "firecrawl",
 	"jina", "serpdive", "kagi", "bocha", "ollama", "searxng",
-	"duckduckgo", "perplexity", "gemini", "anysearch", "xai",
+	"duckduckgo", "perplexity", "gemini", "kimi", "anysearch", "xai",
 	"brightdata", "serpbase", "serper", "valyu",
 ];
 
@@ -45,6 +45,7 @@ const PROVIDER_SOURCE_FILES = {
 	duckduckgo: ["duckduckgo.ts"],
 	perplexity: ["perplexity.ts"],
 	gemini: ["gemini-api.ts", "gemini-web-config.ts", "gemini-web.ts"],
+	kimi: ["kimi-search.ts"],
 	anysearch: ["anysearch.ts"],
 	xai: ["xai-search.ts"],
 	brightdata: ["brightdata.ts"],

@@ -22,7 +22,7 @@ export type OmniMindWebSearchWorkflow = typeof OmniMindWebSearchWorkflow.Type;
 
 export const OmniMindWebSearchProviderSelection = Schema.Union([
   ProviderId,
-  Schema.Array(ProviderId).check(Schema.isMinLength(1), Schema.isMaxLength(26)),
+  Schema.Array(ProviderId).check(Schema.isMinLength(1), Schema.isMaxLength(64)),
 ]);
 export type OmniMindWebSearchProviderSelection =
   typeof OmniMindWebSearchProviderSelection.Type;

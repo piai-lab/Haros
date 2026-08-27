@@ -10,13 +10,18 @@ const MAX_INLINE_FILE_CHARS = 100_000;
 const ghAvailable = scopedValue<boolean | null>("github-cli-available", () => null);
 const ghHintShown = scopedValue("github-cli-hint-shown", () => false);
 
-export async function checkGhAvailable(): Promise<boolean> {
+export async function checkGhAvailable(signal?: AbortSignal): Promise<boolean> {
 	if (ghAvailable.value !== null) return ghAvailable.value;
 
 	return new Promise((resolve) => {
-		execFile("gh", ["--version"], { timeout: 5000, env: githubChildEnvironment() }, (err) => {
-			ghAvailable.value = !err;
-			resolve(ghAvailable.value);
+		execFile("gh", ["--version"], {
+			timeout: 5000,
+			env: githubChildEnvironment(),
+			...(signal ? { signal } : {}),
+		}, (err) => {
+			const available = !err;
+			if (!signal?.aborted) ghAvailable.value = available;
+			resolve(available);
 		});
 	});
 }

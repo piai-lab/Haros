@@ -1,12 +1,12 @@
 # `pi-web-access` → OmniMind Web Access：exact-source intake、产品裁决与长期维护合同
 
-> 观察与收口日期：2026-08-24
+> 观察与收口日期：2026-08-27
 >
 > OmniMind 首轮观察基线：`codex/host-tools-product-surface-policy@5451e22ce80b34e0d1d9f6fe4143b7760564d659`；2026-08-22 double check 基线：`main@d5bd737d96008733d6ba854c6bbce2ad880f1bc1`。实现已在任务分支形成有序提交，并从exact pushed SHA完成Desktop重建、替换安装、fresh-profile Settings/Provider-asset gate，以及真实DeepSeek + keyless Exa的默认`auto-summary`、显式Curator和non-review observer packaged局部门；真实MiMo stored search responseId衔接已由exact pushed implementation SHA `3f4d673bce30465cba387df2667d2488a744c05f`完成复验。独立observer/review presentation与V7适配最终由exact pushed implementation SHA `ff67a21a97f9071bd9162dfb61e9f4b632a903a8`完成隔离packaged复验；同一安装候选已补齐keyed Tavily draft/named route与A/B多Thread background attention/exact reopen journey。route-aware Settings、keyboard/inert Curator及summary inspector焦点生命周期由`6a0990cc7c3d22eb531a4d428972fbbd65a3444f`闭合；合并终审实现`d7017961b13c9604799c833e340bfc27fc9245c7`进一步闭合fail-closed presenter/error projection、loopback-only profile、probe identity、runner隔离与完整默认bytes，并从远端clean clone完成fresh任务profile安装复验。2026-08-24深度安全复核由exact pushed main SHA `62814532f6fbb0977866d7019637cf665583d656`闭合取消无副作用、`source_check` route availability、GitHub child environment allowlist、配置同FD读取/1 MiB上限/目录身份固定，并完成keyless Exa live与隔离安装版恢复 journey。Host Tools事实仍不能外推为Web Access证据。
 >
-> 上游 exact source：[`nicobailon/pi-web-access@fbbd0cb3b3eb918c8833906aa0b41e257fffe979`](https://github.com/nicobailon/pi-web-access/tree/fbbd0cb3b3eb918c8833906aa0b41e257fffe979)
+> 上游 exact source：[`nicobailon/pi-web-access@08e347f4fe6bea807882c2363527118cce6eb539`](https://github.com/nicobailon/pi-web-access/tree/08e347f4fe6bea807882c2363527118cce6eb539)
 >
-> 上游 exact artifact：[`pi-web-access@0.24.1`](https://www.npmjs.com/package/pi-web-access/v/0.24.1)
+> 上游 exact artifact：[`pi-web-access@0.25.0`](https://www.npmjs.com/package/pi-web-access/v/0.25.0)
 >
 > 文档性质：fixed-source fact + dated OmniMind source observation + maintainer-confirmed product decision + bounded implementation reference。
 >
@@ -22,7 +22,10 @@
 > 2026-08-22维护者重新裁决默认体验：canonical默认workflow是`auto-summary`，普通联网后台摘要并同turn继续；Curator不再是日常默认，只在Settings显式选择、per-call override或用户明确要求审查/挑选来源时以`summary-review`进入。该决定supersede本文此前“Curator默认开启”的旧结论，但不删除P4或显式review能力。
 
 > [!IMPORTANT]
-> 2026-08-27维护者补齐搜索覆盖语义：`auto`仍是首个成功即停止，新增`broad`由runtime从用户真实可用服务中选择最多三家，`all`仍是全部eligible服务。多query并发按Provider fan-out自适应；summary模型只做语义压缩，完整来源由程序追加，网页正文继续留在现有Artifact。Curator恢复adopted `0.24.1`的开放文档流尾部summary：自动摘要只读展示且不阻塞Agent，显式review保留完整人工审查动作。该变化归入既有P3/P4，不新增第七patch seam、Store或控制面。
+> 2026-08-27维护者补齐搜索覆盖语义：`auto`仍是首个成功即停止，新增`broad`由runtime从用户真实可用服务中选择最多三家，`all`仍是全部eligible服务。多query并发按Provider fan-out自适应；summary模型只做语义压缩，完整来源由程序追加，网页正文继续留在现有Artifact。Curator恢复adopted `0.25.0`的开放文档流尾部summary：自动摘要只读展示且不阻塞Agent，显式review保留完整人工审查动作。该变化归入既有P3/P4，不新增第七patch seam、Store或控制面。
+
+> [!IMPORTANT]
+> 2026-08-27上游freshness重开Gate A后，维护者将长期跟随单位固定为“最新稳定release”，不自动追未发布main。本轮exact基线因此为`pi-web-access@0.25.0` / `08e347f4…`；0.25.0的Provider、routing/fetch/extraction、proxy、协议修复、错误语义、作者测试与配置能力原则上保留，只通过既有P1–P6 seam翻译进OmniMind。未发布main的XCrawl不属于本轮稳定基线。
 
 ## 0. 固定裁决摘要
 
@@ -61,9 +64,9 @@ OmniMind 不需要自造通用 `web_search` Host 能力；应当深 fork 成熟�
 | 不可用处理 | 真正没有可用搜索路径时，只从该 Pi Session 的 active set 移除 `web_search` 与 `source_check`；保留两个 content 工具 |
 | `source_check` | 保留结构化 ResearchArtifact 与精确 passages；把 claim 判断明确降级为 heuristic，并补 Unicode/中文匹配 |
 | 能力图标 | OmniMind Web Access 的通用图标固定为现有 `globe`；不为同一功能发明第二个图标 |
-| 服务品牌 | 具体搜索服务使用各自品牌标记；Parallel 与 Parallel MCP 共享 Parallel 标记，连接方式用文字区分 |
-| 图标来源 | runtime Provider定义与presentation字段同源；26家全部使用本地固定、保持原色的品牌资产并记录source snapshot/hash/已知约束，不能运行时热取favicon |
-| 上游同步 | 精确版本、人工 intake、最小 patch inventory；不自动追 `latest` |
+| 服务品牌 | 具体搜索服务使用各自品牌标记；Parallel 与 Parallel MCP 共享 Parallel 标记，连接方式用文字区分；Kimi在品牌资产未单独准入前使用中性provider fallback |
+| 图标来源 | runtime Provider定义与presentation字段同源；原有26个identity继续使用25份本地固定、保持原色的品牌资产并记录source snapshot/hash/已知约束；Kimi使用中性图标，不运行时热取favicon |
+| 上游同步 | 当前最新稳定release的精确版本与commit、人工 intake、最小 patch inventory；不自动追未发布main |
 | 固定观察时的实施状态 | 当时已作为production-adopted source integration进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings；26家原色品牌资产、默认`auto-summary`、MiMo stored-result continuation、observer/review分层、keyed Tavily route及A/B多Thread lifecycle已有各自 exact-SHA 证据。最后记录的安全复核候选是`62814532f6fbb0977866d7019637cf665583d656`；该历史观察不能冒充今天的安装、Release或整个产品状态 |
 
 ### 0.3 唯一 owner 图
@@ -134,7 +137,7 @@ Browser 成为 Host capability有意义，因为许多 Engine 没有同等、可
 
 ### 1.4 为什么不能重写
 
-上游已经拥有 26 个搜索 Provider、内容提取 fallback、GitHub、PDF、视频、Curator、SSE、请求取消、缓存、SSRF、credential source 和 64 个作者测试文件。把它降格为“几段 search API 调用”后重建，等于主动接管作者已经承担的水下生命周期，长期成本远高于维护六个窄 patch seam。
+上游0.25.0已经拥有 27 个搜索 Provider、内容提取 fallback、GitHub、PDF、视频、Curator、SSE、请求取消、缓存、SSRF、credential source 和 69 个作者测试文件。把它降格为“几段 search API 调用”后重建，等于主动接管作者已经承担的水下生命周期，长期成本远高于维护六个窄 patch seam。
 
 ## 2. Exact source、artifact 与权利
 
@@ -142,26 +145,26 @@ Browser 成为 Host capability有意义，因为许多 Engine 没有同等、可
 
 | 字段 | Exact value |
 | --- | --- |
-| upstream package | `pi-web-access@0.24.1` |
-| npm latest（观察时） | `0.24.1` |
+| upstream package | `pi-web-access@0.25.0` |
+| npm latest（观察时） | `0.25.0` |
 | repository | `https://github.com/nicobailon/pi-web-access.git` |
-| gitHead | `fbbd0cb3b3eb918c8833906aa0b41e257fffe979` |
+| gitHead | `08e347f4fe6bea807882c2363527118cce6eb539` |
 | author | Nico Bailon |
 | license | MIT |
-| npm integrity | `sha512-kNYVqPT2wbWbDKD2mfMsrCie1DyVsE/KYNVgpp7yqq072sG2PciKAB28PG4h0+klSO3MtCFRoPWAyA+l0CS7/A==` |
-| npm shasum | `78449966e7f682f707bb9964c3e62d5f04318d8c` |
-| downloaded tgz SHA-256 | `d82adba93034bdbd3d4f3ffb092fb57789069441723a3f9d582faa4aab68b054` |
+| npm integrity | `sha512-DYOEIMEPwpC6pHElexBy3XuaYPnfMxH0ZBaGrILFsLNQzhhHJ3kJLrCQU4fnKXYXV6OEwxsLt2pBP76koK4hHg==` |
+| npm shasum | `8b6cab44e86f6d134a25f8a3e31d241d4b92c1ec` |
+| downloaded tgz SHA-256 | `06b3cb2b9d3118f66cd2fe84e5453dc0a8b8feaf099ae05e543ff9ebe80ae103` |
 | source/artifact relation | npm `gitHead` 指向 exact commit；发布物中的 runtime TypeScript 与 exact source 对应文件逐字节一致 |
-| evidence maturity | `production-adopted-with-packaged-web-access-evidence`；exact implementation SHA `62814532f6…`通过package 565/565、focused 36/36、Settings 6/6、双语22/22、root typecheck 7/7与lint 0 error；production Desktop构建核验241个组件身份。keyless Exa live `source_check`返回1来源/0错误/1 entry；DMG `d61b7da5…`安装版在fresh任务profile证明Main/Renderer/Helper/bundled Server隔离、默认Settings、1 MiB+1恢复态原字节不变、恢复与关闭重开。严格codesign未通过，故明确保持未签名、未公证、未Release；`6a0990c…`与`ff67a21a…`的既有真实Provider/Curator/多Thread证据继续保护未改动生命周期 |
+| evidence maturity | `0.25.0-agent-native-candidate-pending-final-gates`；0.24.1的exact-SHA packaged证据仍只是未改动生命周期的历史基线，不代替本轮修改字节的focused、full、live与隔离packaged proof |
 
 ### 2.2 发布物结构
 
 | 指标 | 观察 |
 | --- | --- |
-| npm tgz | 6,552,132 bytes |
-| unpacked | 约 7.46 MiB |
-| runtime `.ts` | 62 files，26,029 lines，935,248 bytes |
-| 作者测试 | source tree 中 64 files；npm 发布物不包含 tests |
+| npm tgz | 6,576,926 bytes |
+| unpacked | 7,592,590 bytes（npm metadata） |
+| runtime `.ts` | 65 files，28,132 lines，1,027,217 bytes |
+| 作者测试 | source tree 中 69 files；npm 发布物不包含 tests |
 | `banner.png` | 1,276,766 bytes |
 | `pi-web-fetch-demo.mp4` | 5,126,335 bytes |
 | 非 runtime 媒体 | 合计约 6.4 MB，占发布包绝大多数 |
@@ -173,6 +176,7 @@ Fork source 应保留作者 tests、README、CHANGELOG、SECURITY 和 demo 资�
 Direct runtime dependencies：
 
 - `@mozilla/readability@^0.6.0`
+- `defuddle@0.19.3`
 - `linkedom@^0.16.0`
 - `p-limit@^6.1.0`
 - `promise.try@^2.0.1`
@@ -211,7 +215,7 @@ Peer dependencies 当前都是 wildcard：
 
 工具名必须固定。上游 `toolNames` override 在 OmniMind product profile 中不支持，因为当前 Timeline 分类、Curator Web-surface provenance、availability active-set 管理和模型提示都以 canonical identity 为稳定接口。未来若同名 foreign Extension 按 Pi precedence 胜出，应准确将本 Extension 对应能力标为 collision/unavailable，不能强行覆盖。
 
-### 3.2 搜索 Provider：26 个 resolved identities
+### 3.2 搜索 Provider：27 个 resolved identities
 
 | Provider | 上游可用条件 | `auto` | `all` | 备注 |
 | --- | --- | ---: | ---: | --- |
@@ -235,6 +239,7 @@ Peer dependencies 当前都是 wildcard：
 | DuckDuckGo | keyless HTML | 否 | 否 | explicit-only；recency 无稳定保证 |
 | Perplexity | API key | 是 | 是 | 上游 client-side 10 req/min |
 | Gemini | Gemini API/gateway，或显式启用浏览器 cookies | 是 | 只有 API/gateway | browser-cookie alone 不进入 `all` |
+| Kimi | Pi Kimi Code Plan Session | 否 | 否 | explicit-only；消耗用户共享Code Plan额度 |
 | AnySearch | anonymous 或可选 API key | 否 | 否 | explicit-only；参数能力较窄 |
 | xAI | SuperGrok/X auth 或 xAI key | 否 | 否 | explicit-only |
 | Bright Data | API key + SERP zone | 否 | 否 | paid explicit-only；fetch unlocker zone 是另一产品 |
@@ -242,13 +247,13 @@ Peer dependencies 当前都是 wildcard：
 | Serper | API key | 否 | 否 | explicit-only |
 | Valyu | API key | 否 | 否 | explicit-only research search |
 
-上游实际不止一条 keyless 路径：Exa MCP、Parallel MCP、DuckDuckGo 和 AnySearch 都可能无需 key；但默认 `auto` 只把 Exa 放进零配置 fallback，其他三项都是 explicit-only。OmniMind 的“搜索是否可用”应以**当前 configured/default contract**为准，而不是为证明每个 dormant explicit-only endpoint 都失败而偷偷发探测请求。用户把 explicit-only Provider 设为默认或加入 routing 后，它才进入该 Session 的正式 candidate set。
+上游实际不止一条零配置或Session路径：Exa MCP、Parallel MCP、DuckDuckGo、AnySearch和Kimi Code Plan都可能无需单独API key；但默认 `auto` 只把 Exa 放进零配置 fallback，其他四项都是 explicit-only。OmniMind 的“搜索是否可用”应以**当前 configured/default contract**为准，而不是为证明每个 dormant explicit-only endpoint 都失败而偷偷发探测请求。用户把 explicit-only Provider 设为默认或加入 routing 后，它才进入该 Session 的正式 candidate set。
 
 ### 3.3 四种 routing 不是一回事
 
 #### `auto`：顺序 fallback，通常只成功调用一个 Provider
 
-默认顺序是：configured SearXNG → 适配且可用的 OpenAI → Exa → Brave → Parallel → TinyFish → Search1API → Searchinfinity → Querit → Tavily → Firecrawl → Jina → SERPdive → Kagi → Bocha → Ollama → Perplexity → Gemini。
+默认顺序是：configured SearXNG →（当前模型是Codex时）适配且可用的 OpenAI → Exa →（非Codex时）OpenAI → Brave → Parallel → TinyFish → Search1API → Searchinfinity → Querit → Tavily → Firecrawl → Jina → SERPdive → Kagi → Bocha → Ollama → Perplexity → Gemini。`searchRouting.useCurrentModel`还可让automatic OpenAI步骤在当前模型为官方OpenAI Responses/Codex GPT时使用当前模型的Hosted Search；不适配的模型或第三方endpoint继续下一个route。
 
 它不是把所有已配置 Provider 一起搜索。前一个成功后停止，所以默认经济性最好。
 
@@ -262,7 +267,7 @@ Peer dependencies 当前都是 wildcard：
 
 #### `all`：显式并发调用所有 eligible Provider
 
-`all` 会并发运行 eligible Provider，但永远排除 Parallel MCP、DuckDuckGo、AnySearch、Valyu、xAI、Bright Data、SerpBase 和 Serper；这样不会因为 `all` 无意消耗 paid Google SERP 或显式-only 服务。Gemini 只有 API/gateway 能进入 `all`。
+`all` 会并发运行 eligible Provider，但永远排除 Parallel MCP、DuckDuckGo、Kimi、AnySearch、Valyu、xAI、Bright Data、SerpBase 和 Serper；这样不会因为 `all` 无意消耗 paid Google SERP、Kimi共享Code Plan额度或其他explicit-only服务。Gemini 只有 API/gateway 能进入 `all`。
 
 #### `searchRouting`：有类型条件的顺序 fallback
 
@@ -607,7 +612,7 @@ Settings UI ─┐
    - `curatorRemote`、slash commands、shortcuts、tool names 永远不显示，因为 OmniMind profile 不支持；
    - Gemini Web启用cookie路径时，在Provider detail/技术诊断显示当前Chromium profile/account，作为不注册`/google-account`后的产品替代；不恢复slash command。
 
-Settings不建设任意JSON Schema/form DSL。package presentation只使用满足当前26个Provider常用路径的closed field vocabulary（`secret/text/url/select/boolean/integer`及key/endpoint/model/zone/profile等稳定field identity）；无法诚实表达的复杂结构保持file-only。未来真实第二种表单消费者出现前，不抽象通用配置平台。
+Settings不建设任意JSON Schema/form DSL。package presentation只使用满足当前27个Provider常用路径的closed field vocabulary（`secret/text/url/select/boolean/integer`及key/endpoint/model/zone/profile等稳定field identity）；无法诚实表达的复杂结构保持file-only。未来真实第二种表单消费者出现前，不抽象通用配置平台。
 
 ### 6.5 Provider descriptor 是同源 presentation 投影，不是第二 Registry
 
@@ -620,7 +625,7 @@ Fork 应让presentation字段附着在runtime Provider定义的同一exact descr
 - cost/remote-fetch hints；
 - optional local icon identity与asset-admission状态。
 
-Server只把这份projection投影给Web。Web不再手写第二个26-Provider清单；Curator合法ID校验与Agent tool description/schema也必须由descriptor的窄projection派生，不得另外维护会独立增删Provider的静态manifest或白名单。presentation字段也不决定runtime availability、路由或credentials，不是Provider Registry。测试必须保证所有`RESOLVED_SEARCH_PROVIDERS`恰好被descriptor覆盖一次，并锁定作者auto/all/array/named顺序；新增/删除Provider若缺少presentation信息只能使用明确fallback，不能从UI消失或阻塞runtime。
+Server只把这份projection投影给Web。Web不再手写第二个Provider清单；Curator合法ID校验与Agent tool description/schema也必须由descriptor的窄projection派生，不得另外维护会独立增删Provider的静态manifest或白名单。presentation字段也不决定runtime availability、路由或credentials，不是Provider Registry。测试必须保证所有`RESOLVED_SEARCH_PROVIDERS`恰好被descriptor覆盖一次，并锁定作者auto/all/array/named顺序；新增/删除Provider若缺少presentation信息只能使用明确fallback，不能从UI消失或阻塞runtime。
 
 ### 6.6 本轮图标调研结论与生产准入
 
@@ -640,7 +645,7 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 - status使用文字/tone，不能通过把logo变灰来暗示唯一状态；
 - Settings、Curator、Timeline/technical detail只消费同一asset identity；Curator不得复制自己的logo表；
 - shipped asset全部本地、固定hash、无CDN/favicon热链；品牌更新只在新一轮source intake中发生，不在用户机器自动漂移；
-- 当前26家不得出现中性fallback；未来新增Provider在身份或资产尚未确定时才使用中性字母标记或统一provider glyph，且视觉缺口不能升级成runtime unavailable。
+- 原有26家不得回退为中性fallback；0.25.0新增Kimi在资产未单独准入前使用中性provider glyph，且视觉缺口不能升级成runtime unavailable。
 
 ### 6.7 明确不提供的 UI
 
@@ -686,7 +691,7 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 
 必须完整保留作者已经做好的交互能力：Provider buttons、query 输入/改写、streaming result cards、单项选择、替代 Provider、timer 调整、raw-send、summary model选择、生成、编辑、feedback regenerate、preview、approve、keyboard 与 reduced motion。
 
-信息结构严格follow adopted `pi-web-access@0.24.1`：结果卡片→Add Search→文档流尾部Summary Panel→Footer。`summary-review`保留上述全部人工动作；`auto-summary`只把已经回传Agent的同一终态摘要安全渲染为只读内容，不新增编辑、重新生成、预览或批准；`none`没有summary区域。摘要不是固定侧栏、modal或第二页面，进入review也不把结果与footer从视觉、焦点或accessibility tree中inert化。
+信息结构严格follow adopted `pi-web-access@0.25.0`：结果卡片→Add Search→文档流尾部Summary Panel→Footer。`summary-review`保留上述全部人工动作；`auto-summary`只把已经回传Agent的同一终态摘要安全渲染为只读内容，不新增编辑、重新生成、预览或批准；`none`没有summary区域。摘要不是固定侧栏、modal或第二页面，进入review也不把结果与footer从视觉、焦点或accessibility tree中inert化。
 
 Provider切换同时触发当前结果重搜与canonical默认写入，但二者必须分别建模：只有expected-revision mutation提交成功才宣称默认已保存；冲突/损坏/权限失败不丢本次重搜结果，不静默重试或更新revision，并引导用户进入同一Settings config owner恢复；multi-query只有部分重搜成功时保留成功与失败卡片并明确partial，无query时只报告默认写入结果，不能虚构“已重搜”。Browser Tab标题来自创建时locale snapshot；Curator普通错误使用stable typed code与页面双语catalog，不能把Server原始英文直接拼入中文表面。
 
@@ -706,7 +711,7 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 
 - 在OmniMind monorepo中建立私有workspace package，集中导入exact upstream source、原目录、作者测试与license；不建立独立GitHub fork、不发布npm package、不生成第二tgz或同步控制面；
 - untouched upstream baseline独立commit保留exact `fbbd0cb…`字节；之后的monorepo commits形成可审计P1–P6 diff，不能把“来源可追溯”写成不存在的GitHub fork ancestry；
-- package改为`@omnimind/om-web-access`，首个候选版本建议`0.24.1-omnimind.1`并保持private；
+- package改为`@omnimind/om-web-access`，当前候选版本为`0.25.0-omnimind.0`并保持private；
 - 官方支持合同只覆盖bundled OmniMind Agent；
 - stock Pi 用户问题指向 upstream，不为其保留 `.pi`、Glimpse、commands、shortcuts 第二 profile。
 
@@ -719,7 +724,7 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 5. 在独立untouched baseline上重放或重做最小P1–P6差异，生成可重复upstream diff/patch inventory；不以目录重排或“干净架构”扩大修改半径；
 6. 运行 OmniMind conformance、isolated runtime、real-provider、packaged journey；
 7. 只有 exact pushed SHA 全链通过后才更新产品 pin、`source-adoptions.json`、license/SBOM 和 evidence；
-8. 不自动追 latest，不因 README 新功能直接扩大 Settings 或 runtime activation。
+8. 每次维护者触发更新时跟随最新稳定release，不追未发布main，也不因README新功能扩大OmniMind既有owner或runtime activation。
 
 候选交付使用两段事实链：实现、authority、research与execution status先在本地共同冻结为`candidate/pending-packaged`后才推送任务分支；Desktop必须从该次已pushed的exact implementation SHA构建。packaged journey通过后再以evidence/status commit记录被测implementation SHA、产物与结果，并明确evidence-recording SHA不属于Desktop shipped bytes；不在commit内容中嵌入自身SHA，也不制造尾随提交循环。
 
@@ -830,7 +835,7 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 - typed presentation claim失败fail closed，不触发Glimpse/系统浏览器fallback；
 - 简中/英文、keyboard、screen reader、390px/Right Dock窄宽、dark/light、reduced motion；
 - 无 Google Fonts/jsDelivr/运行时 CDN；
-- 26个exact Provider descriptor全部有且只有一个presentation identity；Parallel/Parallel MCP共享品牌asset但保留两个runtime ID；
+- 27个exact Provider descriptor全部有且只有一个presentation identity；Parallel/Parallel MCP共享品牌asset但保留两个runtime ID；
 - 能力级入口固定`globe`，当前26个服务identity全部使用descriptor同源的本地品牌资产；未来新增但身份未定的服务才使用中性fallback；
 - shipped品牌资产具备source snapshot/hash与已知license/trademark约束记录；Bright Data等书面许可约束不被伪写成已获许可；
 - Settings、Curator、Timeline/technical detail消费同一presentation projection，没有第二logo表或remote hotlink；
@@ -879,7 +884,7 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 - slash-command palette；
 - 第二事实核验模型/consensus engine；
 - fork 全面重写、按 OmniMind 目录重排 26k 行源码；
-- 自动跟随 latest。
+- 自动跟随未发布main或main-only功能；维护者触发的正式同步仍以最新稳定release为单位。
 
 ## 12. 反方压力测试
 
@@ -911,7 +916,7 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 
 第五个风险是把搜索页面当成“打开一个URL”而忽略其两种生命周期：review Curator是pending tool call的短时交互面，observer是非阻塞typed页面。untouched baseline的三个反例是PiAdapter用`browser_open reuse:true`导航用户当前Tab、Timeline callback只展开Browser pane而不能定位对应review call、Browser recent-history把token URL写入localStorage；source candidate必须同时用typed dedicated ephemeral Tab、review exact pending reopen、observer terminal无reopen、call-scoped settlement/cleanup与non-history metadata闭合。只有pushed-SHA packaged journey通过后，才能把source事实提升为安装产品证据。
 
-第六个风险是为了26个Provider表单发明通用配置DSL，或为了Curator Tab把内部presentation需求塞进Agent可见Browser tool schema。两者都会把一个fork接入升级成新的平台owner。正确边界是package-owned closed field vocabulary与Browser owner内部typed presentation seam；复杂Provider配置保持file-only，Agent-facing Browser schema保持不变。
+第六个风险是为了Provider表单发明通用配置DSL，或为了Curator Tab把内部presentation需求塞进Agent可见Browser tool schema。两者都会把一个fork接入升级成新的平台owner。正确边界是package-owned closed field vocabulary与Browser owner内部typed presentation seam；复杂Provider配置保持file-only，Agent-facing Browser schema保持不变。
 
 第七个风险是把配置兼容升级做成Host级迁移平台。`web-search.json`属于package，schema、known migration与forward-compatibility也必须属于package；Host只调用typed service。高版本或损坏文件若被默认值静默覆盖，会直接丢掉高手的手工配置和literal keys，因此必须保留原文件并fail closed，不能为了“自动修好”另建quarantine数据库、通用migration registry或双读兼容层。
 
@@ -937,8 +942,8 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 ```om-web-access-intake
 {
   "upstream": {
-    "package": "pi-web-access@0.24.1",
-    "commit": "fbbd0cb3b3eb918c8833906aa0b41e257fffe979",
+    "package": "pi-web-access@0.25.0",
+    "commit": "08e347f4fe6bea807882c2363527118cce6eb539",
     "license": "MIT",
     "author": "Nico Bailon"
   },
@@ -1007,7 +1012,7 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
     "providerListInWeb": false,
     "runtimeRemoteAssets": false,
     "parallelBrandAssetSharedWithMcp": true,
-    "providerBrandCoverage": "26-runtime-identities-to-25-local-original-color-assets",
+    "providerBrandCoverage": "27-runtime-identities-26-preexisting-to-25-local-assets-kimi-neutral",
     "knownTrademarkConstraintsBlockVisualDelivery": false,
     "missingAssetFallback": "future-unresolved-provider-only-neutral-provider-mark-not-globe"
   },
@@ -1019,9 +1024,10 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
     "provider-availability-to-pi-active-set",
     "source-check-honest-unicode-contract"
   ],
-  "evidenceMaturity": "production-adopted-with-packaged-web-access-evidence",
+  "evidenceMaturity": "0.25.0-agent-native-candidate-pending-final-gates",
   "implemented": true,
-  "currentSourceImplementationSha": "62814532f6fbb0977866d7019637cf665583d656",
+  "candidateImplementationSha": "pending-first-push",
+  "previousPackagedImplementationSha": "62814532f6fbb0977866d7019637cf665583d656",
   "supersededObserverImplementationSha": "2bf044049d7eeb419975d7426e5d6414d2136814",
   "testedImplementationSha": "62814532f6fbb0977866d7019637cf665583d656",
   "previousTestedImplementationSha": "6a0990cc7c3d22eb531a4d428972fbbd65a3444f",
@@ -1031,8 +1037,9 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
   "testedMainMergeSha": "62814532f6fbb0977866d7019637cf665583d656",
   "postMergeDmgSha256": "d61b7da52eee918332e83cb8be31c01df73f8de0ca7b248a0d6b20437facb1c4",
   "postMergeAppAsarSha256": "0519ca390c3454255afcb7f094608cc0dc0a3c9f213fdf3b9c41c830ff55b0e7",
-  "sourceAuthorTests": "560/560",
-  "currentPackageTests": "565/565",
+  "retainedAuthorAndOmniMindTests": "657/657",
+  "currentPackageTests": "657/657",
+  "liveBroadProviderGate": "broad-returned-exa-success-with-tavily-local-failure",
   "liveKeylessExaSourceCheckGate": true,
   "packagedOversizedConfigRecoveryGate": true,
   "packagedSettingsProviderAssetGate": true,

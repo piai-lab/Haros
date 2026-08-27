@@ -2,11 +2,17 @@ import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { activityMonitor } from "./activity.ts";
 import { CredentialResolutionError } from "./credential-source.ts";
 import { getApiKey, getVersionedApiBase, fetchGeminiApi, isGatewayConfigured, isGeminiApiAvailable, redactGeminiApiResponse } from "./gemini-api.ts";
+import { isGeminiAdcAvailable } from "./gemini-adc.ts";
 import { getGeminiWebAvailabilityDiagnostic, isGeminiWebAvailable, queryWithCookies } from "./gemini-web.ts";
 import { isPerplexityAvailable, searchWithPerplexity, type SearchResult, type SearchResponse, type SearchOptions } from "./perplexity.ts";
 import { isExaAvailable, searchWithExa } from "./exa.ts";
 import { isBraveAvailable, searchWithBrave } from "./brave.ts";
-import { isOpenAISearchAvailable, searchWithOpenAI } from "./openai-search.ts";
+import {
+	isCurrentModelHostedSearchEligible,
+	isOpenAISearchAvailable,
+	searchWithCurrentModelOpenAI,
+	searchWithOpenAI,
+} from "./openai-search.ts";
 import { isParallelAvailable, searchWithParallel } from "./parallel.ts";
 import { isParallelMcpAvailable, searchWithParallelMcp } from "./parallel-mcp.ts";
 import { isTinyFishAvailable, searchWithTinyFish } from "./tinyfish.ts";
@@ -28,6 +34,7 @@ import { isBrightDataAvailable, searchWithBrightData } from "./brightdata.ts";
 import { isSerpBaseAvailable, searchWithSerpBase } from "./serpbase.ts";
 import { isSerperAvailable, searchWithSerper } from "./serper.ts";
 import { isValyuAvailable, searchWithValyu } from "./valyu.ts";
+import { isKimiSearchAvailable, searchWithKimi } from "./kimi-search.ts";
 import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 type ProviderConfigFieldKind = "secret" | "url" | "text";
@@ -112,6 +119,12 @@ const admittedProviderIcon = (assetId: string, extension = "svg"): SearchProvide
 	admission: "admitted",
 });
 
+const neutralProviderIcon = (): SearchProviderIcon => ({
+	kind: "neutral",
+	assetId: null,
+	admission: "not-admitted",
+});
+
 const keyField = (
 	configKey: string,
 	environmentVariable: string,
@@ -157,12 +170,14 @@ export type SearchProviderErrorKind =
 	| "auth"
 	| "invalid-request"
 	| "invalid-response"
+	| "unsupported"
 	| "aborted"
 	| "unknown";
 
 export interface SearchRoutingConfig {
 	providers: ResolvedSearchProvider[];
-	fallbackOn: Array<Extract<SearchProviderErrorKind, "transient" | "quota" | "network" | "invalid-response">>;
+	useCurrentModel?: boolean;
+	fallbackOn: Array<Extract<SearchProviderErrorKind, "transient" | "quota" | "network" | "invalid-response" | "unsupported">>;
 }
 
 export class SearchProviderError extends Error {
@@ -230,7 +245,7 @@ export interface AttributedSearchResponse extends SearchResponse {
 
 const configPath = () => getWebSearchConfigPath();
 const DEFAULT_SEARCH_MODEL = "gemini-3.6-flash";
-const VALID_ROUTING_KINDS = ["transient", "quota", "network", "invalid-response"] as const;
+const VALID_ROUTING_KINDS = ["transient", "quota", "network", "invalid-response", "unsupported"] as const;
 
 type SearchConfig = {
 	searchProvider: SearchProviderSelection;
@@ -264,19 +279,27 @@ function normalizeSearchRouting(value: unknown): SearchRoutingConfig {
 	}
 	const raw = value as Record<string, unknown>;
 	const providers = normalizeResolvedProviderList(raw.providers, `searchRouting.providers in ${configPath()}`);
+	const useCurrentModel = raw.useCurrentModel;
+	if (useCurrentModel !== undefined && typeof useCurrentModel !== "boolean") {
+		throw new Error(`searchRouting.useCurrentModel in ${configPath()} must be a boolean`);
+	}
 	if (!Array.isArray(raw.fallbackOn) || raw.fallbackOn.length === 0) {
 		throw new Error(`searchRouting.fallbackOn in ${configPath()} must be a non-empty array`);
 	}
 	const fallbackOn: SearchRoutingConfig["fallbackOn"] = [];
 	for (const kind of raw.fallbackOn) {
 		if (typeof kind !== "string" || !VALID_ROUTING_KINDS.includes(kind as typeof VALID_ROUTING_KINDS[number])) {
-			throw new Error(`searchRouting.fallbackOn in ${configPath()} may only contain transient, quota, network, or invalid-response`);
+			throw new Error(`searchRouting.fallbackOn in ${configPath()} may only contain transient, quota, network, invalid-response, or unsupported`);
 		}
 		if (!fallbackOn.includes(kind as SearchRoutingConfig["fallbackOn"][number])) {
 			fallbackOn.push(kind as SearchRoutingConfig["fallbackOn"][number]);
 		}
 	}
-	return { providers, fallbackOn };
+	return {
+		providers,
+		...(useCurrentModel !== undefined ? { useCurrentModel: useCurrentModel as boolean } : {}),
+		fallbackOn,
+	};
 }
 
 export function getConfiguredSearchRouting(): SearchRoutingConfig | undefined {
@@ -477,8 +500,17 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 		curatorOrder: 19,
 		autoOrder: 17, allOrder: 16, all: "api-only", icon: admittedProviderIcon("gemini"),
 		fields: [optionalKeyField("geminiApiKey", "GEMINI_API_KEY", "Gemini"), textField("geminiBaseUrl", "endpoint", { environmentVariable: "GOOGLE_GEMINI_BASE_URL", qualifier: "Gemini" }), optionalKeyField("cloudflareApiKey", "CLOUDFLARE_API_KEY", "Cloudflare")],
-		advancedFileOnly: ["allowBrowserCookies", "chromeProfile", "geminiWebModel"],
+		advancedFileOnly: ["allowBrowserCookies", "browserCookies", "geminiWebModel", "geminiAuth", "geminiProject", "geminiLocation"],
 		evaluateConfiguration: (config, hasField) => {
+			const adcSelected = typeof config.geminiAuth === "string" && config.geminiAuth.trim().toLowerCase() === "adc";
+			const adcProject = (typeof config.geminiProject === "string" && config.geminiProject.trim().length > 0)
+				|| !!process.env.GOOGLE_CLOUD_PROJECT?.trim()
+				|| !!process.env.GCLOUD_PROJECT?.trim();
+			const adcLocation = (typeof config.geminiLocation === "string" && config.geminiLocation.trim().length > 0)
+				|| !!process.env.GOOGLE_CLOUD_LOCATION?.trim();
+			if (adcSelected && adcProject && adcLocation) {
+				return { state: "complete", missingRequiredConfigKeys: [], configured: true, structurallyPossible: true };
+			}
 			if (config.allowBrowserCookies === true || hasField("geminiApiKey")) {
 				return { state: "complete", missingRequiredConfigKeys: [], configured: true, structurallyPossible: true };
 			}
@@ -490,10 +522,12 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 			if (gateway && cloudflareKey) {
 				return { state: "complete", missingRequiredConfigKeys: [], configured: true, structurallyPossible: true };
 			}
-			const anyApiField = base.length > 0 || cloudflareKey;
+			const anyApiField = base.length > 0 || cloudflareKey || adcSelected;
 			return {
 				state: anyApiField ? "partial" : "missing",
-				missingRequiredConfigKeys: gateway
+				missingRequiredConfigKeys: adcSelected
+					? [...(!adcProject ? ["geminiProject"] : []), ...(!adcLocation ? ["geminiLocation"] : [])]
+					: gateway
 					? ["cloudflareApiKey"]
 					: cloudflareKey
 						? ["geminiBaseUrl"]
@@ -532,15 +566,24 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 		searchForAll: async (query, options) => requireProviderResult("Gemini API", await searchWithGeminiApi(query, options)),
 	},
 	{
-		id: "anysearch", displayName: "AnySearch", prerequisite: "optional-key", costHint: "keyless-shared-quota",
+		id: "kimi", displayName: "Kimi", prerequisite: "key-or-session", costHint: "provider-dependent",
 		curatorOrder: 20,
+		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon(), settingsGroup: "advanced",
+		fields: [], advancedFileOnly: [],
+		evaluateConfiguration: () => ({ state: "session-dependent", missingRequiredConfigKeys: [], configured: false, structurallyPossible: true }),
+		isAvailable: (options) => isKimiSearchAvailable(options.extensionContext),
+		search: (query, options) => searchWithKimi(query, options, options.extensionContext),
+	},
+	{
+		id: "anysearch", displayName: "AnySearch", prerequisite: "optional-key", costHint: "keyless-shared-quota",
+		curatorOrder: 21,
 		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("anysearch", "ico"),
 		fields: [optionalKeyField("anysearchApiKey", "ANYSEARCH_API_KEY")], advancedFileOnly: [],
 		isAvailable: () => isAnySearchAvailable(), search: searchWithAnySearch,
 	},
 	{
 		id: "xai", displayName: "xAI", prerequisite: "key-or-session", costHint: "provider-dependent",
-		curatorOrder: 21,
+		curatorOrder: 22,
 		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("xai"),
 		fields: [optionalKeyField("xaiApiKey", "XAI_API_KEY"), textField("xaiSearchModel", "model")], advancedFileOnly: [],
 		evaluateConfiguration: (_config, hasField) => hasField("xaiApiKey")
@@ -551,28 +594,28 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 	},
 	{
 		id: "brightdata", displayName: "Bright Data", prerequisite: "key", costHint: "may-charge",
-		curatorOrder: 22,
+		curatorOrder: 23,
 		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("bright-data", "png"),
 		fields: [keyField("brightdataApiKey", "BRIGHTDATA_API_KEY"), textField("brightdataSerpZone", "zone", { required: true, environmentVariable: "BRIGHTDATA_SERP_ZONE", qualifier: "SERP" })],
 		advancedFileOnly: ["brightdataUnlockerZone"], isAvailable: () => isBrightDataAvailable(), search: searchWithBrightData,
 	},
 	{
 		id: "serpbase", displayName: "SerpBase", prerequisite: "key", costHint: "may-charge",
-		curatorOrder: 23,
+		curatorOrder: 24,
 		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("serpbase"),
 		fields: [keyField("serpbaseApiKey", "SERPBASE_API_KEY")], advancedFileOnly: [],
 		isAvailable: () => isSerpBaseAvailable(), search: searchWithSerpBase,
 	},
 	{
 		id: "serper", displayName: "Serper", prerequisite: "key", costHint: "may-charge",
-		curatorOrder: 24,
+		curatorOrder: 25,
 		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("serper", "png"),
 		fields: [keyField("serperApiKey", "SERPER_API_KEY")], advancedFileOnly: [],
 		isAvailable: () => isSerperAvailable(), search: searchWithSerper,
 	},
 	{
 		id: "valyu", displayName: "Valyu", prerequisite: "key", costHint: "may-charge",
-		curatorOrder: 25,
+		curatorOrder: 26,
 		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("valyu", "ico"),
 		fields: [keyField("valyuApiKey", "VALYU_API_KEY")], advancedFileOnly: [],
 		isAvailable: () => isValyuAvailable(), search: searchWithValyu,
@@ -771,9 +814,7 @@ export async function getSearchProviderAvailability(
 }
 
 export function getAutoSearchProviderOrder(options: { readonly preferOpenAI?: boolean } = {}): readonly ResolvedSearchProvider[] {
-	return AUTO_SEARCH_PROVIDER_RUNTIME_DEFINITIONS
-		.filter((descriptor) => descriptor.id !== "openai" || options.preferOpenAI !== false)
-		.map((descriptor) => descriptor.id);
+	return autoSearchProviderRuntimeDefinitions(options.preferOpenAI !== false).map((descriptor) => descriptor.id);
 }
 
 function appendBroadCandidate(
@@ -848,6 +889,18 @@ const AUTO_SEARCH_PROVIDER_RUNTIME_DEFINITIONS: readonly SearchProviderRuntimeDe
 	.filter((descriptor) => descriptor.autoOrder !== null)
 	.sort((left, right) => (left.autoOrder ?? 0) - (right.autoOrder ?? 0));
 
+function autoSearchProviderRuntimeDefinitions(preferOpenAI: boolean): readonly SearchProviderRuntimeDescriptor<ResolvedSearchProvider>[] {
+	if (preferOpenAI) return AUTO_SEARCH_PROVIDER_RUNTIME_DEFINITIONS;
+	const definitions = [...AUTO_SEARCH_PROVIDER_RUNTIME_DEFINITIONS];
+	const openAIIndex = definitions.findIndex(({ id }) => id === "openai");
+	const exaIndex = definitions.findIndex(({ id }) => id === "exa");
+	if (openAIIndex >= 0 && exaIndex >= 0 && openAIIndex < exaIndex) {
+		const [openAI] = definitions.splice(openAIIndex, 1);
+		definitions.splice(exaIndex, 0, openAI);
+	}
+	return definitions;
+}
+
 // Explicit-only providers are absent by descriptor contract. Gemini's all-mode
 // executor is API-only and never falls through to browser cookies.
 const ALL_SEARCH_PROVIDER_RUNTIME_DEFINITIONS: readonly SearchProviderRuntimeDescriptor<ResolvedSearchProvider>[] = SEARCH_PROVIDER_RUNTIME_DEFINITIONS
@@ -872,6 +925,10 @@ function shouldTryOpenAIInAuto(options: SearchOptions): boolean {
 		return false;
 	}
 	return true;
+}
+
+function isOpenAICodexSelected(ctx?: ExtensionContext): boolean {
+	return ctx?.model?.provider === "openai-codex";
 }
 
 async function searchWithGemini(
@@ -918,6 +975,7 @@ function classifyProviderError(provider: ResolvedSearchProvider, err: unknown): 
 	const lower = message.toLowerCase();
 	const status = providerErrorStatus(message);
 	let kind: SearchProviderErrorKind = "unknown";
+	const mentionsUnsupportedWebSearch = /(?:web[_ -]?search|web[_ -]?search_preview|(?:the )?tool)\b.*\b(?:unsupported|not supported|does not support|doesn't support|unknown|unrecognized|unavailable|not found)|\b(?:unsupported|not supported|does not support|doesn't support|unknown|unrecognized|unavailable|not found)\b.*\b(?:web[_ -]?search|web[_ -]?search_preview|(?:the )?tool)/i.test(lower);
 	if (err instanceof CredentialResolutionError || /(?:api )?key (?:not found|missing)|credential resolution/.test(lower)) {
 		kind = "credential";
 	} else if (isAbortError(err)) {
@@ -926,6 +984,8 @@ function classifyProviderError(provider: ResolvedSearchProvider, err: unknown): 
 		kind = "quota";
 	} else if (status === 401 || status === 403) {
 		kind = "auth";
+	} else if (provider === "openai" && (status === 400 || status === 422) && mentionsUnsupportedWebSearch) {
+		kind = "unsupported";
 	} else if (status === 400 || status === 422) {
 		kind = "invalid-request";
 	} else if (status === 402 || status === 429) {
@@ -938,7 +998,7 @@ function classifyProviderError(provider: ResolvedSearchProvider, err: unknown): 
 		kind = "auth";
 	} else if (/bad request|invalid request/.test(lower)) {
 		kind = "invalid-request";
-	} else if (/invalid json|no parseable response|no parseable results|invalid response|returned empty response/.test(lower)) {
+	} else if (/invalid json|no parseable response|no parseable results|invalid response|returned empty response|no web_search_call/.test(lower)) {
 		kind = "invalid-response";
 	} else if (/temporar|service unavailable|server error/.test(lower)) {
 		kind = "transient";
@@ -962,13 +1022,31 @@ async function searchWithResolvedProvider(
 	provider: ResolvedSearchProvider,
 	query: string,
 	options: FullSearchOptions,
+	useCurrentModel = false,
 ): Promise<AttributedSearchResponse> {
-	const result = await runtimeDescriptor(provider).search(query, options);
+	const result = provider === "openai" && useCurrentModel
+		? await searchWithCurrentModelOpenAI(query, options, options.extensionContext)
+		: await runtimeDescriptor(provider).search(query, options);
 	return { ...result, provider };
 }
 
-async function isResolvedProviderAvailable(provider: ResolvedSearchProvider, options: FullSearchOptions): Promise<boolean> {
+async function isResolvedProviderAvailable(
+	provider: ResolvedSearchProvider,
+	options: FullSearchOptions,
+	useCurrentModel = false,
+): Promise<boolean> {
+	if (provider === "openai" && useCurrentModel) {
+		return isCurrentModelHostedSearchEligible(options.extensionContext);
+	}
 	return runtimeDescriptor(provider).isAvailable(options);
+}
+
+async function isGeminiWebOptionallyAvailable(): Promise<boolean> {
+	try {
+		return !!(await isGeminiWebAvailable());
+	} catch {
+		return false;
+	}
 }
 
 function providerLabel(provider: ResolvedSearchProvider): string {
@@ -1078,13 +1156,14 @@ async function searchWithConfiguredRouting(
 	const failures: SearchRouteFailure[] = [];
 	let structuralCandidateCount = 0;
 	for (const provider of routing.providers) {
-		if (!(await isResolvedProviderAvailable(provider, options))) {
+		const useCurrentModel = provider === "openai" && routing.useCurrentModel === true;
+		if (!(await isResolvedProviderAvailable(provider, options, useCurrentModel))) {
 			diagnostics.push(`${provider}: unavailable`);
 			continue;
 		}
 		structuralCandidateCount++;
 		try {
-			return await searchWithResolvedProvider(provider, query, options);
+			return await searchWithResolvedProvider(provider, query, options, useCurrentModel);
 		} catch (err) {
 			const classified = classifyProviderError(provider, err);
 			diagnostics.push(`${provider} [${classified.kind}]: ${errorMessage(err)}`);
@@ -1138,7 +1217,8 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 		});
 	};
 
-	for (const descriptor of AUTO_SEARCH_PROVIDER_RUNTIME_DEFINITIONS) {
+	const preferOpenAI = !options.extensionContext || isOpenAICodexSelected(options.extensionContext);
+	for (const descriptor of autoSearchProviderRuntimeDefinitions(preferOpenAI)) {
 		if (descriptor.autoEligible && !descriptor.autoEligible(options)) continue;
 		const available = await (descriptor.isAvailableForAuto ?? descriptor.isAvailable)(options);
 		if (!available) continue;
@@ -1182,8 +1262,8 @@ async function searchWithGeminiApi(query: string, options: SearchOptions = {}): 
 		AbortSignal.timeout(120000),
 		...(options.signal ? [options.signal] : []),
 	]);
-	const apiKey = await getApiKey(requestSignal);
-	if (!apiKey && !isGatewayConfigured()) return null;
+	const apiKey = isGeminiAdcAvailable() ? null : await getApiKey(requestSignal);
+	if (!apiKey && !isGatewayConfigured() && !isGeminiAdcAvailable()) return null;
 
 	const activityId = activityMonitor.logStart({ type: "api", query });
 

@@ -12,6 +12,7 @@ const perplexityModuleUrl = new URL("../perplexity.ts", import.meta.url).href;
 const tavilyModuleUrl = new URL("../tavily.ts", import.meta.url).href;
 const searxngModuleUrl = new URL("../searxng.ts", import.meta.url).href;
 const searchModuleUrl = new URL("../gemini-search.ts", import.meta.url).href;
+const indexModuleUrl = new URL("../index.ts", import.meta.url).href;
 
 function runChild(script, env) {
 	const childEnv = { ...process.env };
@@ -890,7 +891,10 @@ test("OpenAI search uses configured Responses endpoint", async () => {
 			capturedUrl = String(url);
 			capturedAuthorization = init.headers.Authorization;
 			return new Response(JSON.stringify({
-				output: [{ type: "message", content: [{ type: "output_text", text: "gateway answer" }] }],
+				output: [
+					{ type: "web_search_call", action: { sources: [] } },
+					{ type: "message", content: [{ type: "output_text", text: "gateway answer" }] },
+				],
 			}), { status: 200, headers: { "content-type": "application/json" } });
 		};
 
@@ -910,6 +914,123 @@ test("OpenAI search uses configured Responses endpoint", async () => {
 	assert.equal(output.answer, "gateway answer");
 });
 
+test("curator auto default follows the active model provider", async () => {
+	const { resolveCuratorDefaultProvider } = await import(indexModuleUrl);
+	const available = {
+		all: true,
+		openai: true,
+		brave: false,
+		parallel: false,
+		"parallel-mcp": false,
+		tinyfish: false,
+		search1api: false,
+		searchinfinity: false,
+		querit: false,
+		tavily: false,
+		firecrawl: false,
+		jina: false,
+		serpdive: false,
+		searxng: false,
+		duckduckgo: false,
+		perplexity: false,
+		exa: true,
+		gemini: false,
+		kagi: false,
+		bocha: false,
+		ollama: false,
+		anysearch: false,
+		xai: false,
+		brightdata: false,
+		serpbase: false,
+		serper: false,
+		valyu: false,
+	};
+
+	assert.equal(resolveCuratorDefaultProvider("auto", available, { model: { provider: "openai-codex" } }), "openai");
+	assert.equal(resolveCuratorDefaultProvider("auto", available, { model: { provider: "openai" } }), "exa");
+	assert.equal(resolveCuratorDefaultProvider("auto", { ...available, exa: false }, { model: { provider: "openai" } }), "openai");
+});
+
+test("auto search prefers Codex-backed OpenAI search when the selected model is openai-codex", async () => {
+	const home = await mkdtemp(join(tmpdir(), "pi-web-access-auto-codex-selected-"));
+	const child = runChild(`
+		let capturedUrl = "";
+		globalThis.fetch = async (url) => {
+			capturedUrl = String(url);
+			if (capturedUrl !== "https://chatgpt.com/backend-api/codex/responses") {
+				throw new Error("Expected Codex search first, got " + capturedUrl);
+			}
+			return new Response(JSON.stringify({
+				output: [
+					{ type: "web_search_call", action: { sources: [] } },
+					{ type: "message", content: [{ type: "output_text", text: "codex search answer" }] },
+				],
+			}), { status: 200, headers: { "content-type": "application/json" } });
+		};
+
+		const ctx = {
+			model: { provider: "openai-codex", id: "gpt-5.6-terra" },
+			modelRegistry: {
+				getAll: () => [{ provider: "openai-codex", id: "gpt-5.6-terra" }],
+				getApiKeyAndHeaders: async () => ({ ok: true, apiKey: "codex-token", headers: {} }),
+			},
+		};
+		const { search } = await import(${JSON.stringify(searchModuleUrl)});
+		const result = await search("current model search", { provider: "auto", extensionContext: ctx });
+		console.log(JSON.stringify({ provider: result.provider, answer: result.answer, capturedUrl }));
+	`, {
+		HOME: home,
+		USERPROFILE: home,
+		PI_CODING_AGENT_DIR: home,
+	});
+
+	assert.equal(child.status, 0, child.stderr);
+	const output = JSON.parse(child.stdout.trim());
+	assert.equal(output.provider, "openai");
+	assert.equal(output.answer, "codex search answer");
+	assert.equal(output.capturedUrl, "https://chatgpt.com/backend-api/codex/responses");
+});
+
+test("auto search uses Exa before OpenAI when the selected model is not openai-codex", async () => {
+	const home = await mkdtemp(join(tmpdir(), "pi-web-access-auto-non-codex-selected-"));
+	const child = runChild(`
+		let capturedUrl = "";
+		globalThis.fetch = async (url) => {
+			capturedUrl = String(url);
+			if (capturedUrl.startsWith("https://api.openai.com/") || capturedUrl.startsWith("https://chatgpt.com/")) {
+				throw new Error("OpenAI must not run before Exa for a non-Codex selected model");
+			}
+			if (!capturedUrl.startsWith("https://mcp.exa.ai/mcp")) throw new Error("Unexpected fetch " + capturedUrl);
+			const event = { result: { content: [{ type: "text", text: "Title: Exa Source\\nURL: https://exa.example/source\\nText: Exa selected first" }] } };
+			return new Response("data: " + JSON.stringify(event) + "\\n\\n", {
+				status: 200,
+				headers: { "content-type": "text/event-stream" },
+			});
+		};
+
+		const ctx = {
+			model: { provider: "openai", id: "gpt-5.6-terra" },
+			modelRegistry: {
+				getAll: () => [{ provider: "openai-codex", id: "gpt-5.6-terra" }],
+				getApiKeyAndHeaders: async () => ({ ok: true, apiKey: "codex-token", headers: {} }),
+			},
+		};
+		const { search } = await import(${JSON.stringify(searchModuleUrl)});
+		const result = await search("current model search", { provider: "auto", extensionContext: ctx });
+		console.log(JSON.stringify({ provider: result.provider, answer: result.answer, capturedUrl }));
+	`, {
+		HOME: home,
+		USERPROFILE: home,
+		PI_CODING_AGENT_DIR: home,
+	});
+
+	assert.equal(child.status, 0, child.stderr);
+	const output = JSON.parse(child.stdout.trim());
+	assert.equal(output.provider, "exa");
+	assert.match(output.answer, /Exa selected first/);
+	assert.match(output.capturedUrl, /^https:\/\/mcp\.exa\.ai\/mcp/);
+});
+
 test("OpenAI search falls back to API key when model registry cannot enumerate", async () => {
 	const home = await mkdtemp(join(tmpdir(), "pi-web-access-openai-partial-registry-"));
 	const child = runChild(`
@@ -917,7 +1038,10 @@ test("OpenAI search falls back to API key when model registry cannot enumerate",
 		globalThis.fetch = async (url, init) => {
 			capturedBody = JSON.parse(init.body);
 			return new Response(JSON.stringify({
-				output: [{ type: "message", content: [{ type: "output_text", text: "fallback answer" }] }],
+				output: [
+					{ type: "web_search_call", action: { sources: [] } },
+					{ type: "message", content: [{ type: "output_text", text: "fallback answer" }] },
+				],
 			}), { status: 200, headers: { "content-type": "application/json" } });
 		};
 
@@ -947,7 +1071,10 @@ test("OpenAI search uses configured model with selected registry auth", async ()
 		globalThis.fetch = async (url, init) => {
 			capturedBody = JSON.parse(init.body);
 			return new Response(JSON.stringify({
-				output: [{ type: "message", content: [{ type: "output_text", text: "registry answer" }] }],
+				output: [
+					{ type: "web_search_call", action: { sources: [] } },
+					{ type: "message", content: [{ type: "output_text", text: "registry answer" }] },
+				],
 			}), { status: 200, headers: { "content-type": "application/json" } });
 		};
 
@@ -992,7 +1119,10 @@ test("OpenAI search honors configured provider priority", async () => {
 		globalThis.fetch = async (url, init) => {
 			capturedAuthorization = init.headers.Authorization;
 			return new Response(JSON.stringify({
-				output: [{ type: "message", content: [{ type: "output_text", text: "second account answer" }] }],
+				output: [
+					{ type: "web_search_call", action: { sources: [] } },
+					{ type: "message", content: [{ type: "output_text", text: "second account answer" }] },
+				],
 			}), { status: 200, headers: { "content-type": "application/json" } });
 		};
 

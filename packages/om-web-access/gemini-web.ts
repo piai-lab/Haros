@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { basename } from "node:path";
-import { getLastGoogleCookieDiagnostic, type CookieMap, getGoogleCookies } from "./chrome-cookies.ts";
-import { getChromeProfileFromConfig, isBrowserCookieAccessAllowed, normalizeChromeProfile } from "./gemini-web-config.ts";
+import { getLastGoogleCookieDiagnostic, getLastGoogleCookieDiagnosticDetails, type BrowserCookieDiagnosticDetails, type CookieMap, getGoogleCookies } from "./chrome-cookies.ts";
+import { getBrowserCookieSelectionFromConfig, isBrowserCookieAccessAllowed, normalizeChromeProfile } from "./gemini-web-config.ts";
 
 const GEMINI_APP_URL = "https://gemini.google.com/app";
 const GEMINI_STREAM_GENERATE_URL =
@@ -100,8 +100,10 @@ export interface GeminiWebOptions {
 export async function isGeminiWebAvailable(chromeProfile?: string): Promise<CookieMap | null> {
 	if (!isBrowserCookieAccessAllowed()) return null;
 
+	const configured = getBrowserCookieSelectionFromConfig();
 	const result = await getGoogleCookies({
-		profile: normalizeChromeProfile(chromeProfile) ?? getChromeProfileFromConfig(),
+		browser: configured.browser,
+		profile: normalizeChromeProfile(chromeProfile) ?? configured.profile,
 		requiredCookies: REQUIRED_COOKIES,
 	});
 	if (!result) return null;
@@ -110,6 +112,10 @@ export async function isGeminiWebAvailable(chromeProfile?: string): Promise<Cook
 
 export function getGeminiWebAvailabilityDiagnostic(): string | null {
 	return isBrowserCookieAccessAllowed() ? getLastGoogleCookieDiagnostic() : null;
+}
+
+export function getGeminiWebAvailabilityDiagnosticDetails(): BrowserCookieDiagnosticDetails | null {
+	return isBrowserCookieAccessAllowed() ? getLastGoogleCookieDiagnosticDetails() : null;
 }
 
 export async function getActiveGoogleEmail(cookies: CookieMap): Promise<string | null> {
@@ -151,8 +157,9 @@ export async function getGeminiWebAccountDiagnostic(): Promise<{
 	if (!isBrowserCookieAccessAllowed()) {
 		return { state: "unavailable", browser: null, profile: null, account: null };
 	}
+	const browserCookies = getBrowserCookieSelectionFromConfig();
 	const result = await getGoogleCookies({
-		profile: getChromeProfileFromConfig(),
+		...browserCookies,
 		requiredCookies: REQUIRED_COOKIES,
 	});
 	if (!result) return { state: "unavailable", browser: null, profile: null, account: null };

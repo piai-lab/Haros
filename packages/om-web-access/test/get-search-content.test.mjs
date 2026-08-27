@@ -34,6 +34,24 @@ function storeFetchedContent(content) {
 	});
 }
 
+function storeSearchContent() {
+	storeResult("search-result", {
+		id: "search-result",
+		type: "search",
+		timestamp: Date.now(),
+		queries: [{
+			query: "CotEditor scripts",
+			answer: "",
+			results: [
+				{ title: "ScriptManager.swift", url: "https://example.com/script-manager", snippet: "UNIX script support" },
+				{ title: "UNIX script", url: "https://example.com/unix-script", snippet: "Script support" },
+				{ title: "ScriptMenu", url: "https://example.com/script-menu", snippet: "Menu integration" },
+			],
+			error: null,
+		}],
+	});
+}
+
 test("get_search_content schemas constrain numeric parameters", () => {
 	const properties = getContentTool().parameters.properties;
 
@@ -141,15 +159,15 @@ test("get_search_content rejects unsafe fetched content ranges", async () => {
 	assert.match(outOfRange.content[0].text, /Received offset 99/);
 	assert.match(outOfRange.content[0].text, /valid range is 0-13/);
 
-	const incompatible = await tool.execute("call", { responseId: "large-fetch", urlIndex: 0, findText: "content", offset: 1 });
-	assert.equal(incompatible.details.error, "Incompatible find options");
-	assert.match(incompatible.content[0].text, /Received offset=1, limit=undefined/);
-
 	const missingFindText = await tool.execute("call", { responseId: "large-fetch", urlIndex: 0, findMode: "fuzzy" });
 	assert.equal(missingFindText.details.error, "findMode requires findText");
 	assert.match(missingFindText.content[0].text, /findMode "fuzzy" requires findText/);
 
-	const artifact = buildResearchArtifact({ query: "stored claim", results: [] });
+	const artifact = buildResearchArtifact({
+		query: "stored claim",
+		results: [{ url: "https://example.com/research", title: "Research source", snippet: "The bridge defaults match this research passage.", rank: 1 }],
+		summary: "Unique bridge research summary marker.",
+	});
 	artifact.id = "stored-research";
 	storeResearchArtifact(artifact);
 	const researchInvalidLimit = await tool.execute("call", { responseId: "stored-research", limit: 30_001 });
@@ -161,6 +179,40 @@ test("get_search_content rejects unsafe fetched content ranges", async () => {
 	assert.equal(researchOutOfRange.details.error, "Offset out of range");
 	assert.match(researchOutOfRange.content[0].text, /responseId "stored-research"/);
 	assert.match(researchOutOfRange.content[0].text, /valid range is 0-/);
+
+	const researchFind = await tool.execute("call", {
+		responseId: "stored-research",
+		offset: 0,
+		limit: 10_000,
+		findText: "Unique bridge research summary marker",
+	});
+	assert.equal(researchFind.details.type, "research");
+	assert.equal(researchFind.details.findMode, "case-insensitive");
+	assert.equal(researchFind.details.matchCount, 1);
+	assert.match(researchFind.content[0].text, /^Text matches \(case-insensitive\)/);
+	assert.match(researchFind.content[0].text, /Unique bridge research summary marker/);
+});
+
+test("get_search_content normalizes bridge defaults for search matches", async () => {
+	const tool = getContentTool();
+	storeSearchContent();
+
+	const result = await tool.execute("call", {
+		responseId: "search-result",
+		query: "",
+		queryIndex: 0,
+		url: "",
+		urlIndex: 0,
+		offset: 0,
+		limit: 10_000,
+		findText: ["ScriptManager.swift", "UNIX script", "ScriptMenu"],
+		findMode: "case-insensitive",
+	});
+
+	assert.equal(result.details.findMode, "case-insensitive");
+	assert.equal(result.details.matchCount, 4);
+	assert.match(result.content[0].text, /ScriptManager\.swift/);
+	assert.match(result.content[0].text, /ScriptMenu/);
 });
 
 test("get_search_content returns small fetched content without continuation noise", async () => {
@@ -182,7 +234,12 @@ test("get_search_content finds bounded passages in stored fetched content", asyn
 
 	const result = await tool.execute("call", {
 		responseId: "large-fetch",
+		query: "",
+		queryIndex: 0,
+		url: "",
 		urlIndex: 0,
+		offset: 0,
+		limit: 10_000,
 		findText: "installation",
 	});
 

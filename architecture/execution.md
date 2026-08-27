@@ -291,6 +291,8 @@ Web Access的runtime Provider定义是服务stable ID、参与`auto/broad/all/ex
 
 同一次`web_search`的多query调度只复用package内有界并发：`auto`、named和单Provider数组最多三个query并发，`broad`与二至三Provider数组最多两个，四家以上数组与`all`串行query；Provider内部继续保持自身并发。完成顺序可以实时投影，但存储、Agent返回与Artifact索引固定按输入query顺序；单query失败不取消其他query，Run abort停止后续调度并向当前Provider请求传播。该边界同时限制query fan-out与Provider fan-out，不建立调度服务、队列或第二Run状态。
 
+Web Access继承当前稳定上游的两个runtime选项，不另造OmniMind控制面：`searchRouting.useCurrentModel`只在当前模型为官方OpenAI Responses/Codex GPT且进入automatic OpenAI route时使用当前模型Hosted Search，不适配时按原route继续；config-level `proxy`与`web_search/source_check/fetch_content`的per-call `proxy`都属于package执行合同，空字符串可覆盖为direct。Proxy继续复用作者的redaction、SSRF、`NO_PROXY`和cancellation语义，Settings不增加第二proxy状态、确认或隐藏Agent schema。
+
 搜索结果只保留一份`QueryResultData`事实。fork package内一个窄结果投影owner统一负责稳定来源排序/去重、summary输入、raw Agent输出、deterministic fallback后的完整来源目录和`get_search_content`格式；summary模型只判断搜索answer与来源标题/URL，不接收网页全文，也不负责生成Sources目录。自动摘要或fallback正文之后由程序追加全部去重来源与Artifact读取提示；网页正文仍只保存在现有Artifact/fetch owner并按需读取，不创建第二result store或summary状态机。
 
 Web Access canonical配置只由fork package导出的config read/mutation service拥有；Settings在没有Pi Session/Extension instance时调用同一服务，Session内Provider也消费它，不能各自解析、缓存或写入第二份配置。`web-search.json`只在首次进入Web Search Settings或首次启动OmniMind Agent Session时由先发生的一方原子创建；App启动、普通页面和被动readiness不ambient write，Settings也不得为读取配置实例化Session或执行Extension。package同时唯一拥有`schemaVersion`、known-schema解析与有界迁移：读取不因版本旧而ambient rewrite，已知旧版本只在显式mutation的原子提交内升级并保留unknown fields；损坏JSON或高于当前实现的schema必须fail closed并保留原文件，不能自动覆盖、降级或另建Host migration平台。

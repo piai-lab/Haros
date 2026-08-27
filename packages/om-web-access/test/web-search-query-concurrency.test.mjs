@@ -124,3 +124,51 @@ test("all-provider route serializes queries while preserving provider-internal f
   assert.equal(child.status, 0, child.stderr || child.error?.message);
   assert.equal(JSON.parse(child.stdout.trim()).peak, 1);
 });
+
+test("explicit provider arrays adapt query concurrency to bound total fanout", async () => {
+  const fetchImplementation = `
+		globalThis.fetch = async (url, init) => {
+			active += 1; peak = Math.max(peak, active);
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			active -= 1;
+			const target = String(url);
+			if (target.includes("api.openai.com")) {
+				return new Response(JSON.stringify({ output: [
+					{ type: "web_search_call", action: { sources: [] } },
+					{ type: "message", content: [{ type: "output_text", text: "OpenAI answer" }] },
+				] }), { status: 200 });
+			}
+			if (target.startsWith("https://mcp.exa.ai/mcp")) {
+				return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { content: [{ type: "text", text: "Title: Exa\\nURL: https://example.com/exa\\nText: answer\\n---" }] } }), { status: 200 });
+			}
+			if (target.includes("api.search.brave.com")) {
+				return new Response(JSON.stringify({ web: { results: [{ title: "Brave", url: "https://example.com/brave", description: "answer" }] } }), { status: 200 });
+			}
+			if (target.includes("api.tavily.com")) {
+				return new Response(JSON.stringify({ answer: "Tavily answer", results: [{ title: "Tavily", url: "https://example.com/tavily", content: "answer" }] }), { status: 200 });
+			}
+			throw new Error("Unexpected fetch " + target);
+		};
+	`;
+  const environment = {
+    OPENAI_API_KEY: "synthetic",
+    BRAVE_API_KEY: "synthetic",
+    TAVILY_API_KEY: "synthetic",
+  };
+
+  const twoHome = await mkdtemp(join(tmpdir(), "web-search-query-array-two-"));
+  const two = runChild(
+    extensionScript(["openai", "exa"], fetchImplementation),
+    { ...environment, HOME: twoHome, USERPROFILE: twoHome, PI_CODING_AGENT_DIR: twoHome },
+  );
+  assert.equal(two.status, 0, two.stderr || two.error?.message);
+  assert.equal(JSON.parse(two.stdout.trim()).peak, 4);
+
+  const fourHome = await mkdtemp(join(tmpdir(), "web-search-query-array-four-"));
+  const four = runChild(
+    extensionScript(["openai", "exa", "brave", "tavily"], fetchImplementation),
+    { ...environment, HOME: fourHome, USERPROFILE: fourHome, PI_CODING_AGENT_DIR: fourHome },
+  );
+  assert.equal(four.status, 0, four.stderr || four.error?.message);
+  assert.equal(JSON.parse(four.stdout.trim()).peak, 4);
+});
