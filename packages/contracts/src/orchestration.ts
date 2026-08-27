@@ -839,6 +839,15 @@ export const OrchestrationPendingInteraction = Schema.Struct({
 });
 export type OrchestrationPendingInteraction = typeof OrchestrationPendingInteraction.Type;
 
+/** Exact model binding admitted for one surviving response turn. */
+export const OrchestrationTurnProvenance = Schema.Struct({
+  pendingMessageId: MessageId,
+  turnId: Schema.NullOr(TurnId),
+  modelSelection: ModelSelection,
+  requestedAt: IsoDateTime,
+});
+export type OrchestrationTurnProvenance = typeof OrchestrationTurnProvenance.Type;
+
 export const OrchestrationThread = Schema.Struct({
   id: ThreadId,
   projectId: ProjectId,
@@ -925,6 +934,9 @@ export const OrchestrationThread = Schema.Struct({
   ...ThreadGoalTimingFields,
   goalAchievements: Schema.optional(ThreadGoalAchievements),
   messages: Schema.Array(OrchestrationMessage),
+  turnProvenance: Schema.optional(Schema.Array(OrchestrationTurnProvenance)).pipe(
+    Schema.withDecodingDefault(() => []),
+  ),
   proposedPlans: Schema.Array(OrchestrationProposedPlan).pipe(Schema.withDecodingDefault(() => [])),
   activities: Schema.Array(OrchestrationThreadActivity),
   pendingInteractions: Schema.optional(Schema.Array(OrchestrationPendingInteraction)),

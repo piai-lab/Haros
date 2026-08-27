@@ -18,6 +18,7 @@ const EMPTY_MESSAGES: ChatMessage[] = [];
 const EMPTY_ACTIVITIES: Thread["activities"] = [];
 const EMPTY_PROPOSED_PLANS: ProposedPlan[] = [];
 const EMPTY_TURN_DIFF_SUMMARIES: TurnDiffSummary[] = [];
+const EMPTY_TURN_PROVENANCE: NonNullable<Thread["turnProvenance"]> = [];
 const EMPTY_MESSAGE_MAP: Record<MessageId, ChatMessage> = {};
 const EMPTY_ACTIVITY_MAP: Record<string, Thread["activities"][number]> = {};
 const EMPTY_PROPOSED_PLAN_MAP: Record<string, ProposedPlan> = {};
@@ -137,6 +138,7 @@ export function getThreadFromState(state: AppState, threadId: ThreadId): Thread 
     ...shell,
     session,
     latestTurn: turnState?.latestTurn ?? null,
+    turnProvenance: turnState?.turnProvenance ?? EMPTY_TURN_PROVENANCE,
     pendingSourceProposedPlan: turnState?.pendingSourceProposedPlan,
     messages,
     activities,

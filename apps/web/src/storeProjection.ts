@@ -138,6 +138,7 @@ function toThreadShell(thread: Thread | ThreadShell): ThreadShell {
 function toThreadTurnState(thread: Thread): ThreadTurnState {
   return {
     latestTurn: thread.latestTurn,
+    turnProvenance: thread.turnProvenance ?? [],
     ...(thread.pendingSourceProposedPlan
       ? { pendingSourceProposedPlan: thread.pendingSourceProposedPlan }
       : {}),
@@ -321,7 +322,10 @@ export function removeSpace(
       sidebarGroupsChanged = true;
       return [
         threadId,
-        { ...thread, groupIds: (thread.groupIds ?? []).filter((groupId) => groupId !== spaceId) },
+        {
+          ...thread,
+          groupIds: (thread.groupIds ?? []).filter((groupId) => groupId !== spaceId),
+        },
       ];
     }),
   ) as AppState["sidebarThreadSummaryById"];
@@ -353,7 +357,11 @@ export function applySpaceOrder(
       const sortOrder = orderById.get(space.id);
       return sortOrder === undefined || sortOrder === space.sortOrder
         ? space
-        : { ...space, sortOrder, ...(updatedAt !== undefined ? { updatedAt } : {}) };
+        : {
+            ...space,
+            sortOrder,
+            ...(updatedAt !== undefined ? { updatedAt } : {}),
+          };
     })
     .toSorted((left, right) => left.sortOrder - right.sortOrder || left.id.localeCompare(right.id));
   return arraysShallowEqual(spaces, state.spaces) ? state : { ...state, spaces };
@@ -1454,7 +1462,9 @@ export function syncServerThreadDetailHotPath(state: AppState, thread: ReadModel
   ) {
     return removeThreadState(state, thread.id);
   }
-  return syncServerThreadDetailWithOptions(state, thread, { updateSidebarSummary: false });
+  return syncServerThreadDetailWithOptions(state, thread, {
+    updateSidebarSummary: false,
+  });
 }
 
 export function applyShellEvent(state: AppState, event: OrchestrationShellStreamEvent): AppState {

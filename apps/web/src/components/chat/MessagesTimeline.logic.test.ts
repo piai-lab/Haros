@@ -24,8 +24,20 @@ import type { TurnDiffSummary, WorktreeSetupSnapshot } from "../../types";
 
 describe("canSubmitUserMessageEdit", () => {
   it("allows an empty edit only when hidden annotations remain attached", () => {
-    expect(canSubmitUserMessageEdit({ draft: "", allowEmpty: true, disabled: false })).toBe(true);
-    expect(canSubmitUserMessageEdit({ draft: "", allowEmpty: false, disabled: false })).toBe(false);
+    expect(
+      canSubmitUserMessageEdit({
+        draft: "",
+        allowEmpty: true,
+        disabled: false,
+      }),
+    ).toBe(true);
+    expect(
+      canSubmitUserMessageEdit({
+        draft: "",
+        allowEmpty: false,
+        disabled: false,
+      }),
+    ).toBe(false);
     expect(canSubmitUserMessageEdit({ draft: "", allowEmpty: true, disabled: true })).toBe(false);
   });
 });
@@ -304,7 +316,11 @@ describe("computeStableMessagesTimelineRows", () => {
         {
           ...firstRow.groupedEntries[0]!,
           reasoningEntries: [
-            { id: "reasoning-truncated", text: "Inspect the owner.", truncated: true },
+            {
+              id: "reasoning-truncated",
+              text: "Inspect the owner.",
+              truncated: true,
+            },
           ],
         },
       ],
@@ -692,9 +708,24 @@ describe("deriveTerminalAssistantMessageIds", () => {
     expect(
       deriveTerminalAssistantMessageIds([
         { id: "u1", role: "user", createdAt: "2026-01-01T00:00:00Z" },
-        { id: "a1", role: "assistant", createdAt: "2026-01-01T00:00:01Z", turnId: "t1" },
-        { id: "a2", role: "assistant", createdAt: "2026-01-01T00:00:02Z", turnId: "t1" },
-        { id: "a3", role: "assistant", createdAt: "2026-01-01T00:00:03Z", turnId: "t2" },
+        {
+          id: "a1",
+          role: "assistant",
+          createdAt: "2026-01-01T00:00:01Z",
+          turnId: "t1",
+        },
+        {
+          id: "a2",
+          role: "assistant",
+          createdAt: "2026-01-01T00:00:02Z",
+          turnId: "t1",
+        },
+        {
+          id: "a3",
+          role: "assistant",
+          createdAt: "2026-01-01T00:00:03Z",
+          turnId: "t2",
+        },
       ]),
     ).toEqual(new Set(["a3"]));
   });
@@ -832,7 +863,11 @@ describe("buildTurnDiffSummaryByAssistantMessageId", () => {
     const result = buildTurnDiffSummaryByAssistantMessageId({
       turnDiffSummaries: [
         makeSummary({ turnId: "turn-files", checkpointTurnCount: 1 }),
-        makeSummary({ turnId: "turn-no-files", checkpointTurnCount: 2, files: [] }),
+        makeSummary({
+          turnId: "turn-no-files",
+          checkpointTurnCount: 2,
+          files: [],
+        }),
         makeSummary({
           turnId: "turn-placeholder",
           checkpointTurnCount: 3,
@@ -954,7 +989,11 @@ describe("buildTurnDiffSummaryByAssistantMessageId", () => {
     const result = buildTurnDiffSummaryByAssistantMessageId({
       turnDiffSummaries: [],
       messages: [
-        { id: MessageId.makeUnsafe("a-1"), role: "assistant", turnId: TurnId.makeUnsafe("turn-1") },
+        {
+          id: MessageId.makeUnsafe("a-1"),
+          role: "assistant",
+          turnId: TurnId.makeUnsafe("turn-1"),
+        },
       ],
     });
 
@@ -964,7 +1003,13 @@ describe("buildTurnDiffSummaryByAssistantMessageId", () => {
   it("ignores assistant messages without a turnId", () => {
     const result = buildTurnDiffSummaryByAssistantMessageId({
       turnDiffSummaries: [makeSummary({ turnId: "turn-1" })],
-      messages: [{ id: MessageId.makeUnsafe("a-nullturn"), role: "assistant", turnId: null }],
+      messages: [
+        {
+          id: MessageId.makeUnsafe("a-nullturn"),
+          role: "assistant",
+          turnId: null,
+        },
+      ],
     });
 
     expect(result.size).toBe(0);
@@ -1049,7 +1094,11 @@ describe("resolveAssistantMessageDisplayText", () => {
       resolveAssistantMessageDisplayText({
         message: { text: "", streaming: false },
         turnWorkEntries: [
-          { ...imageEntry, activityKind: "tool.completed", tone: "error" as const },
+          {
+            ...imageEntry,
+            activityKind: "tool.completed",
+            tone: "error" as const,
+          },
         ],
       }),
     ).toBe("(empty response)");
@@ -1167,6 +1216,54 @@ describe("deriveMessagesTimelineRows", () => {
 
   const processSignature = (rows: MessagesTimelineRow[], boundaryId?: string): string[] =>
     (processRow(rows, boundaryId)?.items ?? []).map((item) => `${item.kind}:${String(item.id)}`);
+
+  it("assigns one exact identity header across every assistant-owned row in a response", () => {
+    const pendingMessageId = MessageId.makeUnsafe("u-model");
+    const provenance = {
+      pendingMessageId,
+      turnId: TurnId.makeUnsafe("t-model"),
+      modelSelection: {
+        provider: "omnimind" as const,
+        model: "deepseek/deepseek-v4-pro",
+      },
+      requestedAt: "2026-08-27T02:21:00.000Z",
+    };
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      turnProvenance: [provenance],
+      timelineEntries: [
+        userEntry("u-model", "2026-08-27T02:21:00.000Z"),
+        workEntry("w-model", "2026-08-27T02:21:01.000Z", "Reading files"),
+        assistantEntry("a-model", "2026-08-27T02:21:02.000Z", {
+          turnId: "t-model",
+          text: "Done",
+          completedAt: "2026-08-27T02:21:03.000Z",
+        }),
+        userEntry("u-unknown", "2026-08-27T02:22:00.000Z"),
+        assistantEntry("a-unknown", "2026-08-27T02:22:01.000Z", {
+          turnId: "t-unknown",
+          text: "Legacy reply",
+          completedAt: "2026-08-27T02:22:02.000Z",
+        }),
+      ],
+    });
+
+    const knownRows = rows.filter((row) => row.assistantTurnLayout?.responseId === "u-model");
+    expect(knownRows.length).toBeGreaterThanOrEqual(2);
+    expect(knownRows.filter((row) => row.assistantTurnLayout?.showIdentity)).toHaveLength(1);
+    expect(knownRows.every((row) => row.assistantTurnLayout?.provenance === provenance)).toBe(true);
+    expect(knownRows.map((row) => row.kind)).toContain("turn-process");
+    expect(knownRows.map((row) => row.kind)).toContain("message");
+
+    const unknownRows = rows.filter((row) => row.assistantTurnLayout?.responseId === "u-unknown");
+    expect(unknownRows).toHaveLength(1);
+    expect(unknownRows[0]?.assistantTurnLayout).toMatchObject({
+      showIdentity: true,
+      provenance: null,
+      timestamp: "2026-08-27T02:22:01.000Z",
+    });
+    expect(messageRow(rows, "u-model")?.assistantTurnLayout).toBeUndefined();
+  });
 
   it("moves interleaved narration and work into one settled process row", () => {
     const rows = deriveMessagesTimelineRows({
@@ -1681,7 +1778,11 @@ describe("deriveMessagesTimelineRows", () => {
       };
     }
     if (automation.kind === "work") {
-      automation.entry.automation = { id: "automation-1", name: "Watch CI", cadenceLabel: "5m" };
+      automation.entry.automation = {
+        id: "automation-1",
+        name: "Watch CI",
+        cadenceLabel: "5m",
+      };
     }
     const rows = deriveMessagesTimelineRows({
       ...baseInput,
@@ -1745,7 +1846,11 @@ describe("deriveMessagesTimelineRows", () => {
     steps: [
       { id: "create-branch", label: "Creating branch", status: "done" },
       { id: "create-worktree", label: "Creating worktree", status: "done" },
-      { id: "prepare-thread", label: "Linking thread workspace", status: "active" },
+      {
+        id: "prepare-thread",
+        label: "Linking thread workspace",
+        status: "active",
+      },
       { id: "start-session", label: "Starting session", status: "pending" },
     ],
   });
@@ -1780,7 +1885,9 @@ describe("deriveMessagesTimelineRows", () => {
     });
 
     expect(rows.map((row) => row.kind)).toEqual(["message", "turn-process", "worktree-setup"]);
-    expect(rows.find((row) => row.kind === "worktree-setup")).toMatchObject({ open: false });
+    expect(rows.find((row) => row.kind === "worktree-setup")).toMatchObject({
+      open: false,
+    });
   });
 
   it("omits the worktree-setup row entirely once the snapshot is gone", () => {
@@ -1920,7 +2027,9 @@ describe("planWorkEntryRenderChunks", () => {
 
   it("collapses the trailing run once the tail is no longer live", () => {
     expect(
-      planSignature([toolItem("w1").entry, toolItem("w2").entry], { tailIsLive: false }),
+      planSignature([toolItem("w1").entry, toolItem("w2").entry], {
+        tailIsLive: false,
+      }),
     ).toEqual(["collapsed:w1+w2"]);
   });
 

@@ -195,6 +195,7 @@ describe("orchestration projector", () => {
         deletedAt: null,
         handoff: null,
         messages: [],
+        turnProvenance: [],
         proposedPlans: [],
         activities: [],
         checkpoints: [],
@@ -267,6 +268,17 @@ describe("orchestration projector", () => {
     });
     expect(next.threads[0]?.runtimeMode).toBe("approval-required");
     expect(next.threads[0]?.interactionMode).toBe("default");
+    expect(next.threads[0]?.turnProvenance).toEqual([
+      {
+        pendingMessageId: "message-1",
+        turnId: null,
+        modelSelection: {
+          provider: "pi",
+          model: "openai/gpt-5.5",
+        },
+        requestedAt: turnRequestedAt,
+      },
+    ]);
     expect(next.threads[0]?.updatedAt).toBe(turnRequestedAt);
     expect(next.threads[0]?.session).toEqual({
       threadId: "thread-1",

@@ -76,6 +76,109 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
     }),
   );
 
+  it.effect("joins admitted model provenance only to the surviving exact turn request", () =>
+    Effect.gen(function* () {
+      const snapshotQuery = yield* ProjectionSnapshotQuery;
+      const sql = yield* SqlClient.SqlClient;
+
+      yield* sql`
+        INSERT INTO projection_projects (
+          project_id, title, workspace_root, default_model_selection_json,
+          scripts_json, created_at, updated_at, deleted_at
+        ) VALUES (
+          'project-turn-provenance', 'Turn provenance', '/tmp/turn-provenance',
+          '{"provider":"codex","model":"gpt-5.6"}', '[]',
+          '2026-08-27T02:20:00.000Z', '2026-08-27T02:20:00.000Z', NULL
+        )
+      `;
+      yield* sql`
+        INSERT INTO projection_threads (
+          thread_id, project_id, title, model_selection_json, branch, worktree_path,
+          latest_turn_id, created_at, updated_at, deleted_at
+        ) VALUES (
+          'thread-turn-provenance', 'project-turn-provenance', 'Turn provenance',
+          '{"provider":"codex","model":"gpt-5.6"}', NULL, NULL,
+          'turn-deepseek', '2026-08-27T02:20:00.000Z',
+          '2026-08-27T02:21:03.000Z', NULL
+        )
+      `;
+      yield* sql`
+        INSERT INTO projection_turns (
+          thread_id, turn_id, pending_message_id, assistant_message_id, state,
+          requested_at, started_at, completed_at, checkpoint_turn_count,
+          checkpoint_ref, checkpoint_status, checkpoint_files_json
+        ) VALUES (
+          'thread-turn-provenance', 'turn-deepseek', 'message-user-deepseek',
+          'message-assistant-deepseek', 'completed',
+          '2026-08-27T02:21:00.000Z', '2026-08-27T02:21:01.000Z',
+          '2026-08-27T02:21:03.000Z', NULL, NULL, NULL, '[]'
+        )
+      `;
+      yield* sql`
+        INSERT INTO orchestration_events (
+          event_id, aggregate_kind, stream_id, stream_version, event_type,
+          occurred_at, command_id, causation_event_id, correlation_id,
+          actor_kind, payload_json, metadata_json
+        ) VALUES
+          (
+            'event-turn-provenance-exact', 'thread', 'thread-turn-provenance', 0,
+            'thread.turn-start-requested', '2026-08-27T02:21:00.000Z',
+            'command-turn-provenance-exact', NULL, NULL, 'client',
+            '{"threadId":"thread-turn-provenance","messageId":"message-user-deepseek","modelSelection":{"provider":"omnimind","model":"deepseek/deepseek-v4-pro"},"createdAt":"2026-08-27T02:21:00.000Z"}',
+            '{}'
+          ),
+          (
+            'event-turn-provenance-decoy', 'thread', 'thread-turn-provenance', 1,
+            'thread.turn-start-requested', '2026-08-27T02:22:00.000Z',
+            'command-turn-provenance-decoy', NULL, NULL, 'client',
+            '{"threadId":"thread-turn-provenance","messageId":"message-user-deepseek","modelSelection":{"provider":"codex","model":"gpt-5.6"},"createdAt":"2026-08-27T02:22:00.000Z"}',
+            '{}'
+          )
+      `;
+
+      const detail = yield* snapshotQuery.getThreadDetailById(asThreadId("thread-turn-provenance"));
+      assert.isTrue(Option.isSome(detail));
+      if (Option.isSome(detail)) {
+        assert.deepEqual(detail.value.turnProvenance, [
+          {
+            pendingMessageId: asMessageId("message-user-deepseek"),
+            turnId: asTurnId("turn-deepseek"),
+            modelSelection: {
+              provider: "omnimind",
+              model: "deepseek/deepseek-v4-pro",
+            },
+            requestedAt: "2026-08-27T02:21:00.000Z",
+          },
+        ]);
+      }
+
+      yield* sql`
+        DELETE FROM projection_turns
+        WHERE thread_id = 'thread-turn-provenance'
+      `;
+      const afterRollback = yield* snapshotQuery.getThreadDetailById(
+        asThreadId("thread-turn-provenance"),
+      );
+      assert.isTrue(Option.isSome(afterRollback));
+      if (Option.isSome(afterRollback)) {
+        assert.deepEqual(afterRollback.value.turnProvenance, []);
+      }
+
+      yield* sql`
+        DELETE FROM orchestration_events
+        WHERE stream_id = 'thread-turn-provenance'
+      `;
+      yield* sql`
+        DELETE FROM projection_threads
+        WHERE thread_id = 'thread-turn-provenance'
+      `;
+      yield* sql`
+        DELETE FROM projection_projects
+        WHERE project_id = 'project-turn-provenance'
+      `;
+    }),
+  );
+
   it.effect("hydrates Space identity and project assignments in full and shell snapshots", () =>
     Effect.gen(function* () {
       const snapshotQuery = yield* ProjectionSnapshotQuery;
@@ -511,6 +614,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
               updatedAt: "2026-02-24T00:00:05.000Z",
             },
           ],
+          turnProvenance: [],
           proposedPlans: [
             {
               id: "plan-1",
@@ -568,7 +672,14 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
               checkpointTurnCount: 1,
               checkpointRef: asCheckpointRef("checkpoint-1"),
               status: "ready",
-              files: [{ path: "README.md", kind: "modified", additions: 2, deletions: 1 }],
+              files: [
+                {
+                  path: "README.md",
+                  kind: "modified",
+                  additions: 2,
+                  deletions: 1,
+                },
+              ],
               assistantMessageId: asMessageId("message-1"),
               completedAt: "2026-02-24T00:00:08.000Z",
             },
@@ -1338,7 +1449,10 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
 
       const snapshot = yield* snapshotQuery.getSnapshot();
       assert.deepEqual(
-        snapshot.projects.map((project) => ({ id: project.id, kind: project.kind })),
+        snapshot.projects.map((project) => ({
+          id: project.id,
+          kind: project.kind,
+        })),
         [
           { id: asProjectId("project-folder"), kind: "project" },
           { id: asProjectId("project-chat"), kind: "chat" },
@@ -1347,7 +1461,10 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
 
       const shellSnapshot = yield* snapshotQuery.getShellSnapshot();
       assert.deepEqual(
-        shellSnapshot.projects.map((project) => ({ id: project.id, kind: project.kind })),
+        shellSnapshot.projects.map((project) => ({
+          id: project.id,
+          kind: project.kind,
+        })),
         [
           { id: asProjectId("project-folder"), kind: "project" },
           { id: asProjectId("project-chat"), kind: "chat" },
@@ -2107,7 +2224,10 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           payload: {
             itemType: "image_generation",
             status: "completed",
-            data: { kind: "codex.generated_image", path: "/codex/generated.png" },
+            data: {
+              kind: "codex.generated_image",
+              path: "/codex/generated.png",
+            },
           },
         },
       ]);

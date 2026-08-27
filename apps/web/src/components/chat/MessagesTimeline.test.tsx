@@ -139,6 +139,76 @@ beforeAll(() => {
 });
 
 describe("MessagesTimeline", () => {
+  it("renders one model-first identity header and keeps later assistant rows in its content column", async () => {
+    const { MessagesTimeline } = await import("./MessagesTimeline");
+    const pendingMessageId = MessageId.makeUnsafe("user-deepseek");
+    const turnId = TurnId.makeUnsafe("turn-deepseek");
+    const markup = renderToStaticMarkup(
+      <MessagesTimeline
+        {...makeTimelineBaseProps()}
+        turnProvenance={[
+          {
+            pendingMessageId,
+            turnId,
+            modelSelection: {
+              provider: "omnimind",
+              model: "deepseek/deepseek-v4-pro",
+            },
+            requestedAt: "2026-08-27T02:21:00.000Z",
+          },
+        ]}
+        timelineEntries={[
+          {
+            id: "entry-user-deepseek",
+            kind: "message",
+            createdAt: "2026-08-27T02:21:00.000Z",
+            message: {
+              id: pendingMessageId,
+              role: "user",
+              text: "Please inspect this.",
+              createdAt: "2026-08-27T02:21:00.000Z",
+              streaming: false,
+            },
+          },
+          {
+            id: "entry-work-deepseek",
+            kind: "work",
+            createdAt: "2026-08-27T02:21:01.000Z",
+            entry: {
+              id: "work-deepseek",
+              createdAt: "2026-08-27T02:21:01.000Z",
+              turnId,
+              label: "Read source",
+              tone: "tool",
+            },
+          },
+          {
+            id: "entry-assistant-deepseek",
+            kind: "message",
+            createdAt: "2026-08-27T02:21:02.000Z",
+            message: {
+              id: MessageId.makeUnsafe("assistant-deepseek"),
+              role: "assistant",
+              text: "Finished.",
+              turnId,
+              createdAt: "2026-08-27T02:21:02.000Z",
+              completedAt: "2026-08-27T02:21:03.000Z",
+              streaming: false,
+            },
+          },
+        ]}
+      />,
+    );
+
+    expect(markup.match(/data-assistant-turn-identity="visible"/g)).toHaveLength(1);
+    expect(markup).toContain('data-assistant-turn-avatar="deepseek"');
+    expect(markup).toContain('data-assistant-turn-identity="continuation"');
+    expect(markup).toContain("DeepSeek V4 Pro");
+    expect(markup).toContain("OmniMind ·");
+    expect(markup.indexOf("DeepSeek V4 Pro")).toBeLessThan(markup.indexOf("Read source"));
+    expect(markup.indexOf("Read source")).toBeLessThan(markup.indexOf("Finished."));
+  });
+
   it("renders a focused, token-free reopen affordance for a waiting Engine web surface", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const markup = renderToStaticMarkup(
@@ -545,7 +615,10 @@ describe("MessagesTimeline", () => {
 
   it("keeps user-bubble file and folder mention icons from being overridden by plugin names", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
-    const baseProps = { ...makeTimelineBaseProps(), resolvedTheme: "light" as const };
+    const baseProps = {
+      ...makeTimelineBaseProps(),
+      resolvedTheme: "light" as const,
+    };
 
     const folderMarkup = renderToStaticMarkup(
       <MessagesTimeline
@@ -1345,7 +1418,7 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("h-px flex-1 bg-border");
   });
 
-  it("does not reserve a timestamp footer between live status updates and the wait row", async () => {
+  it("moves the live response timestamp into the identity header without reserving a footer", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const activeTurnId = TurnId.makeUnsafe("turn-live-status");
     const assistantCreatedAt = "2026-03-17T19:12:29.000Z";
@@ -1389,7 +1462,8 @@ describe("MessagesTimeline", () => {
     expect(markup).toContain("Tasks updated");
     expect(markup).toContain('data-testid="thinking-status"');
     expect(markup).not.toContain(">Thinking<");
-    expect(markup).not.toContain(formatShortTimestamp(assistantCreatedAt, "locale"));
+    expect(markup).toContain('data-assistant-turn-engine-time="true"');
+    expect(markup.split(formatShortTimestamp(assistantCreatedAt, "locale"))).toHaveLength(2);
     expect(markup).toMatch(/class="[^"]*\bpb-1\b[^"]*" data-timeline-row-kind="message"/);
   });
 
@@ -3328,9 +3402,15 @@ describe("MessagesTimeline", () => {
                     additions: 2,
                     deletions: 0,
                   },
-                  { path: "apps/web/src/components/chat/TimelineWorkEntryRow.tsx" },
-                  { path: "apps/web/src/components/chat/ToolCallGroupSummaryRow.tsx" },
-                  { path: "apps/web/src/components/chat/agentActivity.logic.ts" },
+                  {
+                    path: "apps/web/src/components/chat/TimelineWorkEntryRow.tsx",
+                  },
+                  {
+                    path: "apps/web/src/components/chat/ToolCallGroupSummaryRow.tsx",
+                  },
+                  {
+                    path: "apps/web/src/components/chat/agentActivity.logic.ts",
+                  },
                   { path: "apps/web/src/i18n.tsx" },
                 ],
               },
@@ -3488,7 +3568,11 @@ describe("MessagesTimeline", () => {
                 completedAt: "2026-03-17T19:12:30.000Z",
                 assistantMessageId,
                 files: [
-                  { path: "apps/web/src/components/Sidebar.tsx", additions: 6, deletions: 5 },
+                  {
+                    path: "apps/web/src/components/Sidebar.tsx",
+                    additions: 6,
+                    deletions: 5,
+                  },
                 ],
               },
             ],

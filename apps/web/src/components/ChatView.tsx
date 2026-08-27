@@ -4331,7 +4331,10 @@ export default function ChatView({
             to: "/$threadId",
             params: { threadId },
             replace: true,
-            search: (previous) => ({ ...stripDiffSearchParams(previous), panel: "browser" }),
+            search: (previous) => ({
+              ...stripDiffSearchParams(previous),
+              panel: "browser",
+            }),
           });
         })
         .catch((error) => {
@@ -12764,6 +12767,7 @@ export default function ChatView({
                     forkSource={forkSource}
                     isTemporaryThread={isThreadTemporary}
                     timelineEntries={timelineEntries}
+                    turnProvenance={activeThread.turnProvenance ?? []}
                     turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}
                     onOpenTurnDiff={onOpenTurnDiff}
                     onOpenThread={onNavigateToThread}

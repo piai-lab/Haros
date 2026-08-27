@@ -31,6 +31,7 @@ export function makeThread(overrides: Partial<Thread> = {}): Thread {
     interactionMode: DEFAULT_INTERACTION_MODE,
     session: null,
     messages: [],
+    turnProvenance: [],
     turnDiffSummaries: [],
     activities: [],
     proposedPlans: [],
@@ -108,6 +109,7 @@ export function makeState(thread: Thread): AppState {
   const {
     session,
     latestTurn,
+    turnProvenance,
     pendingSourceProposedPlan,
     messages,
     activities,
@@ -123,20 +125,34 @@ export function makeState(thread: Thread): AppState {
     threadIds: [thread.id],
     threadShellById: { [thread.id]: shell },
     threadSessionById: { [thread.id]: session },
-    threadTurnStateById: { [thread.id]: { latestTurn, pendingSourceProposedPlan } },
-    messageIdsByThreadId: { [thread.id]: messages.map((message) => message.id) },
+    threadTurnStateById: {
+      [thread.id]: {
+        latestTurn,
+        turnProvenance: turnProvenance ?? [],
+        pendingSourceProposedPlan,
+      },
+    },
+    messageIdsByThreadId: {
+      [thread.id]: messages.map((message) => message.id),
+    },
     messageByThreadId: {
       [thread.id]: Object.fromEntries(messages.map((message) => [message.id, message])),
     },
-    activityIdsByThreadId: { [thread.id]: activities.map((activity) => activity.id) },
+    activityIdsByThreadId: {
+      [thread.id]: activities.map((activity) => activity.id),
+    },
     activityByThreadId: {
       [thread.id]: Object.fromEntries(activities.map((activity) => [activity.id, activity])),
     },
-    proposedPlanIdsByThreadId: { [thread.id]: proposedPlans.map((plan) => plan.id) },
+    proposedPlanIdsByThreadId: {
+      [thread.id]: proposedPlans.map((plan) => plan.id),
+    },
     proposedPlanByThreadId: {
       [thread.id]: Object.fromEntries(proposedPlans.map((plan) => [plan.id, plan])),
     },
-    turnDiffIdsByThreadId: { [thread.id]: turnDiffSummaries.map((summary) => summary.turnId) },
+    turnDiffIdsByThreadId: {
+      [thread.id]: turnDiffSummaries.map((summary) => summary.turnId),
+    },
     turnDiffSummaryByThreadId: {
       [thread.id]: Object.fromEntries(
         turnDiffSummaries.map((summary) => [summary.turnId, summary]),
@@ -189,6 +205,7 @@ export function makeReadModelThread(overrides: Partial<OrchestrationReadModel["t
     deletedAt: null,
     handoff: null,
     messages: [],
+    turnProvenance: [],
     activities: [],
     proposedPlans: [],
     checkpoints: [],

@@ -515,6 +515,35 @@ function rollbackThreadMessagesFromMessage(
   };
 }
 
+function retainTurnProvenanceForMessages(
+  provenance: Thread["turnProvenance"],
+  messages: ReadonlyArray<ChatMessage>,
+): NonNullable<Thread["turnProvenance"]> {
+  if (!provenance?.length) return [];
+  const retainedMessageIds = new Set(messages.map((message) => message.id));
+  return provenance.filter((entry) => retainedMessageIds.has(entry.pendingMessageId));
+}
+
+function upsertTurnProvenance(
+  provenance: Thread["turnProvenance"],
+  next: NonNullable<Thread["turnProvenance"]>[number],
+): NonNullable<Thread["turnProvenance"]> {
+  const current = provenance ?? [];
+  const previous = current.find(
+    (entry) =>
+      entry.pendingMessageId === next.pendingMessageId && entry.requestedAt === next.requestedAt,
+  );
+  if (previous && deepEqualJson(previous, next)) return current;
+  return [
+    ...current.filter((entry) => entry.pendingMessageId !== next.pendingMessageId),
+    next,
+  ].toSorted(
+    (left, right) =>
+      left.requestedAt.localeCompare(right.requestedAt) ||
+      left.pendingMessageId.localeCompare(right.pendingMessageId),
+  );
+}
+
 function applyTurnDiffSummaryToThread(
   thread: Thread,
   summary: Thread["turnDiffSummaries"][number],
@@ -1333,10 +1362,20 @@ function applyOrchestrationEvent(
           const interactionMode = adoptTurnModes
             ? event.payload.interactionMode
             : thread.interactionMode;
+          const turnProvenance =
+            event.payload.modelSelection === undefined
+              ? (thread.turnProvenance ?? [])
+              : upsertTurnProvenance(thread.turnProvenance, {
+                  pendingMessageId: event.payload.messageId,
+                  turnId: null,
+                  modelSelection,
+                  requestedAt: event.payload.createdAt,
+                });
           if (
             modelSelection === thread.modelSelection &&
             thread.runtimeMode === runtimeMode &&
             thread.interactionMode === interactionMode &&
+            turnProvenance === thread.turnProvenance &&
             thread.pendingSourceProposedPlan === event.payload.sourceProposedPlan &&
             (thread.updatedAt ?? thread.createdAt) >= event.payload.createdAt
           ) {
@@ -1345,6 +1384,7 @@ function applyOrchestrationEvent(
           return {
             ...thread,
             modelSelection,
+            turnProvenance,
             runtimeMode,
             interactionMode,
             pendingSourceProposedPlan: event.payload.sourceProposedPlan,
@@ -1536,11 +1576,13 @@ function applyOrchestrationEvent(
           );
           const activities = retainThreadActivitiesAfterRevert(thread.activities, retainedTurnIds);
           const latestCheckpoint = turnDiffSummaries.at(-1) ?? null;
+          const turnProvenance = retainTurnProvenanceForMessages(thread.turnProvenance, messages);
 
           return {
             ...thread,
             turnDiffSummaries,
             messages,
+            turnProvenance,
             proposedPlans,
             activities,
             pendingSourceProposedPlan: undefined,
@@ -1601,11 +1643,14 @@ function applyOrchestrationEvent(
             (activity) => activity.turnId === null || !removedTurnIds.has(activity.turnId),
           );
           const latestCheckpoint = turnDiffSummaries.at(-1) ?? null;
+          const messages = rollback.messages.slice(-MAX_THREAD_MESSAGES);
+          const turnProvenance = retainTurnProvenanceForMessages(thread.turnProvenance, messages);
 
           return {
             ...thread,
             turnDiffSummaries,
-            messages: rollback.messages.slice(-MAX_THREAD_MESSAGES),
+            messages,
+            turnProvenance,
             proposedPlans,
             activities,
             pendingSourceProposedPlan: undefined,

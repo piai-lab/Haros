@@ -383,7 +383,11 @@ export function projectEvent(
           ...nextBase,
           spaces: nextBase.spaces.map((space) =>
             space.id === payload.spaceId
-              ? { ...space, deletedAt: payload.deletedAt, updatedAt: payload.deletedAt }
+              ? {
+                  ...space,
+                  deletedAt: payload.deletedAt,
+                  updatedAt: payload.deletedAt,
+                }
               : space,
           ),
           projects: nextBase.projects.map((project) =>
@@ -534,6 +538,7 @@ export function projectEvent(
             deletedAt: null,
             handoff: payload.handoff,
             messages: [],
+            turnProvenance: [],
             activities: [],
             checkpoints: [],
             session: null,
@@ -925,6 +930,20 @@ export function projectEvent(
           });
           const adoptTurnSettings =
             payload.dispatchOrigin !== "automation" && !deferBindingProjection;
+          const turnProvenance =
+            payload.modelSelection === undefined
+              ? (thread.turnProvenance ?? [])
+              : [
+                  ...(thread.turnProvenance ?? []).filter(
+                    (entry) => entry.pendingMessageId !== payload.messageId,
+                  ),
+                  {
+                    pendingMessageId: payload.messageId,
+                    turnId: null,
+                    modelSelection: payload.modelSelection,
+                    requestedAt: payload.createdAt,
+                  },
+                ].toSorted((left, right) => left.requestedAt.localeCompare(right.requestedAt));
           return {
             ...nextBase,
             threads: updateThread(nextBase.threads, payload.threadId, {
@@ -936,6 +955,7 @@ export function projectEvent(
                     interactionMode: payload.interactionMode,
                   }
                 : {}),
+              turnProvenance,
               updatedAt: payload.createdAt,
             }),
           };
@@ -1254,6 +1274,10 @@ export function projectEvent(
             retainedTurnIds,
           ).slice(-200);
           const activities = retainThreadActivitiesAfterRevert(thread.activities, retainedTurnIds);
+          const retainedMessageIds = new Set(messages.map((message) => message.id));
+          const turnProvenance = (thread.turnProvenance ?? []).filter((entry) =>
+            retainedMessageIds.has(entry.pendingMessageId),
+          );
 
           const latestCheckpoint = checkpoints.at(-1) ?? null;
           const latestTurn =
@@ -1275,6 +1299,7 @@ export function projectEvent(
               messages,
               proposedPlans,
               activities,
+              turnProvenance,
               latestTurn,
               updatedAt: event.occurredAt,
             }),
@@ -1314,12 +1339,18 @@ export function projectEvent(
             (activity) => activity.turnId === null || !rollback.removedTurnIds.has(activity.turnId),
           );
           const latestCheckpoint = checkpoints.at(-1) ?? null;
+          const messages = rollback.messages.slice(-MAX_THREAD_MESSAGES);
+          const retainedMessageIds = new Set(messages.map((message) => message.id));
+          const turnProvenance = (thread.turnProvenance ?? []).filter((entry) =>
+            retainedMessageIds.has(entry.pendingMessageId),
+          );
 
           return {
             ...nextBase,
             threads: updateThread(nextBase.threads, payload.threadId, {
               checkpoints,
-              messages: rollback.messages.slice(-MAX_THREAD_MESSAGES),
+              messages,
+              turnProvenance,
               proposedPlans,
               activities,
               latestTurn:

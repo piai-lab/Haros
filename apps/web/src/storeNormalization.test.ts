@@ -44,7 +44,10 @@ describe("normalizeChatMessage text segments", () => {
     };
     const first = normalizeChatMessage(incoming, undefined);
     const equalReplay = normalizeChatMessage(
-      { ...incoming, textSegments: incoming.textSegments.map((segment) => ({ ...segment })) },
+      {
+        ...incoming,
+        textSegments: incoming.textSegments.map((segment) => ({ ...segment })),
+      },
       first,
     );
     expect(equalReplay).toBe(first);
@@ -128,6 +131,90 @@ describe("normalizeChatMessage text segments", () => {
   });
 });
 
+describe("assistant turn provenance hot-path merge", () => {
+  const pendingMessageId = MessageId.makeUnsafe("user-provenance");
+  const requestedAt = "2026-08-27T02:21:00.000Z";
+  const provenance = {
+    pendingMessageId,
+    turnId: null,
+    modelSelection: {
+      provider: "omnimind" as const,
+      model: "deepseek/deepseek-v4-pro",
+    },
+    requestedAt,
+  };
+
+  function previousWithLiveProvenance(): Thread {
+    return makeThread({
+      messages: [
+        {
+          id: pendingMessageId,
+          role: "user",
+          text: "Research this",
+          turnId: null,
+          createdAt: requestedAt,
+          streaming: false,
+          source: "native",
+        },
+      ],
+      turnProvenance: [provenance],
+      updatedAt: requestedAt,
+    });
+  }
+
+  it("preserves an admitted model while an equally fresh snapshot still lacks the joined turn", () => {
+    const merged = mergeReadModelThreadDetailWithLiveHotPath(
+      makeReadModelThread({
+        updatedAt: requestedAt,
+        messages: [],
+        turnProvenance: [],
+      }),
+      previousWithLiveProvenance(),
+    );
+
+    expect(merged.turnProvenance).toEqual([provenance]);
+  });
+
+  it("prefers a newer edit-resend request and lets a later rollback snapshot remove it", () => {
+    const previous = previousWithLiveProvenance();
+    const olderEntry = {
+      ...provenance,
+      modelSelection: { provider: "codex" as const, model: "gpt-5.6" },
+      requestedAt: "2026-08-27T02:20:00.000Z",
+    };
+    const merged = mergeReadModelThreadDetailWithLiveHotPath(
+      makeReadModelThread({
+        updatedAt: requestedAt,
+        messages: [
+          {
+            id: pendingMessageId,
+            role: "user",
+            text: "Research this",
+            turnId: null,
+            streaming: false,
+            source: "native",
+            createdAt: requestedAt,
+            updatedAt: requestedAt,
+          },
+        ],
+        turnProvenance: [olderEntry],
+      }),
+      previous,
+    );
+    expect(merged.turnProvenance).toEqual([provenance]);
+
+    const rolledBack = mergeReadModelThreadDetailWithLiveHotPath(
+      makeReadModelThread({
+        updatedAt: "2026-08-27T02:22:00.000Z",
+        messages: [],
+        turnProvenance: [],
+      }),
+      previous,
+    );
+    expect(rolledBack.turnProvenance).toEqual([]);
+  });
+});
+
 interface FoldStep {
   readonly changed: boolean;
 }
@@ -155,7 +242,9 @@ function foldWithAccumulator(
   batch: readonly ThreadActivity[],
 ): { readonly result: Thread["activities"]; readonly steps: FoldStep[] } {
   const accumulator: ThreadActivityAccumulator = createThreadActivityAccumulator(previous);
-  const steps = batch.map((activity) => ({ changed: accumulator.append(activity) }));
+  const steps = batch.map((activity) => ({
+    changed: accumulator.append(activity),
+  }));
   return { result: accumulator.result(), steps };
 }
 

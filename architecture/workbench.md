@@ -95,6 +95,8 @@ Composer 复用现有输入、attachments、`+`、`@`、Provider、Model、trait
 
 选择变化只影响下一次发送。当前 operation 不热换；Provider 切换沿用 stop-first replacement，失败恢复上一 exact binding。Timeline 可保留混合 Provider turns，但每个 turn 显示自己的 provenance。
 
+每个用户可见 Assistant response 在 Timeline 中只显示一次模型身份头，且身份只消费该轮 canonical `thread.turn-start-requested` 已准入的 exact `ModelSelection` 与当前仍存活 turn 的只读关联；Composer 当前选择、Thread 当前 binding、品牌图标或模型名都不得反向猜测历史。身份头按 `模型头像 | 模型名称 / Engine · 时间` 呈现，随后同一 response 的 `Working / Worked`、过程、正文、结果卡与操作栏继续沿同一右列排列；常规列为 `30px + 12px gap`，`≤560px` 为 `28px + 10px gap`。模型名称是主层级，Engine 与本地化真实时间是次层级；OmniMind Engine 优先使用模型服务/模型视觉身份，其他 Engine 使用其现有 Provider identity。无精确历史 provenance 时不得投影当前模型，只显示通用模型头像、`OmniMind` 与真实消息时间。用户消息、Composer、正文 typography、虚拟行、因果 DOM 顺序、锚点、滚动与操作行为保持原 owner。
+
 Provider-specific 控制只在 capability data 支持时显示。这里的 capability gate 是逐 Provider 的可见性条件，不是实施团队可跳过真实能力的许可：当前选定 runtime 已暴露、且属于 V1 产品面的能力必须保持可发现、可操作和可恢复；不存在的能力才隐藏或准确显示 unavailable。不能伪造 steer、review、compaction、fork、approval、Skill 或 Plugin 能力，也不能 silent fallback。
 
 Composer 的 16px 上下文圆环只有一个稳定语义：当前上下文压力。尺寸、位置、线宽和动效不为缓存信息改变，也不增加双环、双色或常驻百分比。已有 Popover 可在最近一次已结算请求拥有真实互斥输入拆分且总输入大于零时追加 `缓存命中 R% · C / I 输入`；无可比拆分时整行消失，不显示 `0%`。trigger 的 accessible name 同时描述上下文占用与可用的最近一轮缓存命中。既有 Session cost 行继续属于原 Composer，不扩张到使用洞察或导出摘要。

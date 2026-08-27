@@ -17,6 +17,7 @@ import type {
   ThreadGoalAchievement,
   OrchestrationSessionStatus,
   OrchestrationThreadActivity,
+  OrchestrationTurnProvenance,
   ThreadHandoff,
   ThreadForkScope,
   ProjectScript as ContractProjectScript,
@@ -238,6 +239,7 @@ export interface Thread extends ThreadWorkspaceState {
   interactionMode: ProviderInteractionMode;
   session: ThreadSession | null;
   messages: ChatMessage[];
+  turnProvenance?: OrchestrationTurnProvenance[];
   proposedPlans: ProposedPlan[];
   error: string | null;
   createdAt: string;
@@ -325,6 +327,7 @@ export interface ThreadShell extends ThreadWorkspaceState {
 export interface ThreadTurnState {
   latestTurn: OrchestrationLatestTurn | null;
   pendingSourceProposedPlan?: OrchestrationLatestTurn["sourceProposedPlan"];
+  turnProvenance?: OrchestrationTurnProvenance[];
 }
 
 export interface SidebarThreadSummary {

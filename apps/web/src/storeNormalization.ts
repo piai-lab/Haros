@@ -200,7 +200,9 @@ export function threadTurnStatesEqual(
   return (
     left !== undefined &&
     latestTurnsEqual(left.latestTurn, right.latestTurn) &&
-    sourceProposedPlansEqual(left.pendingSourceProposedPlan, right.pendingSourceProposedPlan)
+    sourceProposedPlansEqual(left.pendingSourceProposedPlan, right.pendingSourceProposedPlan) &&
+    (left.turnProvenance === right.turnProvenance ||
+      deepEqualJson(left.turnProvenance ?? [], right.turnProvenance ?? []))
   );
 }
 
@@ -944,6 +946,49 @@ function clearSettledTurnStreamingFlags(
   return changed ? nextMessages : messages;
 }
 
+function mergeReadModelTurnProvenanceWithLiveHotPath(
+  incomingThread: ReadModelThread,
+  previousThread: Thread,
+): NonNullable<ReadModelThread["turnProvenance"]> {
+  const incoming = incomingThread.turnProvenance ?? [];
+  const previous = previousThread.turnProvenance ?? [];
+  if (previous.length === 0) {
+    return incoming;
+  }
+
+  // The event hot path can know the admitted model before projection_turns is
+  // visible to the scoped snapshot query. Keep only provenance whose pending
+  // user message still exists locally, and prefer the newer request for
+  // edit/resend re-use of the same message id. A rollback event removes both
+  // the message and this optimistic projection before its snapshot arrives.
+  const incomingMessageIds = new Set(incomingThread.messages.map((message) => message.id));
+  const liveMessageIds = new Set(previousThread.messages.map((message) => message.id));
+  const nextByMessageId = new Map(
+    incoming.map((entry) => [entry.pendingMessageId, entry] as const),
+  );
+  let changed = false;
+  for (const entry of previous) {
+    const snapshotCanStillPrecedeTheHotRequest = incomingThread.updatedAt <= entry.requestedAt;
+    if (
+      !liveMessageIds.has(entry.pendingMessageId) ||
+      (!incomingMessageIds.has(entry.pendingMessageId) && !snapshotCanStillPrecedeTheHotRequest)
+    ) {
+      continue;
+    }
+    const current = nextByMessageId.get(entry.pendingMessageId);
+    if (!current || current.requestedAt < entry.requestedAt) {
+      nextByMessageId.set(entry.pendingMessageId, entry);
+      changed = true;
+    }
+  }
+  if (!changed) {
+    return incoming;
+  }
+  return [...nextByMessageId.values()].toSorted((left, right) =>
+    left.requestedAt.localeCompare(right.requestedAt),
+  );
+}
+
 export function mergeReadModelThreadDetailWithLiveHotPath(
   incoming: ReadModelThread,
   previousThread: Thread | undefined,
@@ -983,10 +1028,12 @@ export function mergeReadModelThreadDetailWithLiveHotPath(
   const latestTurn = mergeReadModelLatestTurnWithLiveHotPath(incoming.latestTurn, previousThread, {
     preserveRunningTurn,
   });
+  const turnProvenance = mergeReadModelTurnProvenanceWithLiveHotPath(incoming, previousThread);
   if (
     messages === incoming.messages &&
     session === incoming.session &&
-    latestTurn === incoming.latestTurn
+    latestTurn === incoming.latestTurn &&
+    turnProvenance === incoming.turnProvenance
   ) {
     return incoming;
   }
@@ -995,6 +1042,7 @@ export function mergeReadModelThreadDetailWithLiveHotPath(
     messages,
     session,
     latestTurn,
+    turnProvenance,
   };
 }
 
@@ -1484,6 +1532,11 @@ export function normalizeThreadFromReadModel(
       : [...incomingGroupIds];
   const session = normalizeThreadSession(incoming.session, previous?.session);
   const messages = normalizeChatMessages(incoming.messages, previous?.messages);
+  const incomingTurnProvenance = incoming.turnProvenance ?? [];
+  const turnProvenance =
+    previous?.turnProvenance && deepEqualJson(previous.turnProvenance, incomingTurnProvenance)
+      ? previous.turnProvenance
+      : [...incomingTurnProvenance];
   const proposedPlans = normalizeProposedPlans(incoming.proposedPlans, previous?.proposedPlans);
   const latestTurn = normalizeLatestTurn(incoming.latestTurn, previous?.latestTurn);
   const handoff =
@@ -1586,6 +1639,7 @@ export function normalizeThreadFromReadModel(
     previous.interactionMode === incoming.interactionMode &&
     previous.session === session &&
     previous.messages === messages &&
+    previous.turnProvenance === turnProvenance &&
     previous.proposedPlans === proposedPlans &&
     previous.error === error &&
     previous.createdAt === incoming.createdAt &&
@@ -1644,6 +1698,7 @@ export function normalizeThreadFromReadModel(
     interactionMode: incoming.interactionMode,
     session,
     messages,
+    turnProvenance,
     proposedPlans,
     error,
     createdAt: incoming.createdAt,
@@ -1829,6 +1884,7 @@ export function normalizeThreadShellSnapshot(
     session,
     turnState: {
       latestTurn,
+      turnProvenance: previous?.turnProvenance ?? [],
       ...(latestTurn?.sourceProposedPlan
         ? { pendingSourceProposedPlan: latestTurn.sourceProposedPlan }
         : {}),

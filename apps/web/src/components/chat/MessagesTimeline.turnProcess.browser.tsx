@@ -6,6 +6,7 @@ import "../../index.css";
 
 import { MessageId, TurnId } from "@omnimind/contracts";
 import { afterEach, describe, expect, it } from "vitest";
+import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
 import type { TimelineEntry, WorkLogEntry } from "../../session-logic";
@@ -172,7 +173,11 @@ describe("MessagesTimeline turn process approval cases", () => {
       activeTurnInProgress: true,
       activeTurnId: TURN_ID,
       activeTurnStartedAt: STARTED_AT,
-      turnProcessPhase: { kind: "running", turnId: TURN_ID, startedAt: STARTED_AT } as const,
+      turnProcessPhase: {
+        kind: "running",
+        turnId: TURN_ID,
+        startedAt: STARTED_AT,
+      } as const,
     };
     const screen = await render(
       <MessagesTimeline
@@ -313,6 +318,87 @@ describe("MessagesTimeline turn process approval cases", () => {
       expect(processRow()).toBeNull();
       expect(document.body.textContent ?? "").toContain("Direct.");
     } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
+  it("8. keeps the approved avatar grid and shared content origin across product widths", async () => {
+    const host = createHost();
+    host.style.width = "calc(100vw - 32px)";
+    const pendingMessageId = MessageId.makeUnsafe("user-process-browser");
+    const turnProvenance = [
+      {
+        pendingMessageId,
+        turnId: TURN_ID,
+        modelSelection: {
+          provider: "omnimind" as const,
+          model: "deepseek/deepseek-v4-pro",
+        },
+        requestedAt: STARTED_AT,
+      },
+    ];
+    const entries = [userEntry(), workEntry("identity-read", "Read source"), assistantEntry()];
+    const screen = await render(
+      <MessagesTimeline {...baseProps} turnProvenance={turnProvenance} timelineEntries={entries} />,
+      { container: host },
+    );
+
+    try {
+      for (const [width, expectedAvatar, expectedGap] of [
+        [1_440, 30, 12],
+        [832, 30, 12],
+        [480, 28, 10],
+      ] as const) {
+        await page.viewport(width, 720);
+        document.documentElement.classList.toggle("dark", width === 832);
+        await screen.rerender(
+          <MessagesTimeline
+            {...baseProps}
+            resolvedTheme={width === 832 ? "dark" : "light"}
+            turnProvenance={turnProvenance}
+            timelineEntries={entries}
+          />,
+        );
+
+        const identity = document.querySelector<HTMLElement>(
+          "[data-assistant-turn-identity='visible']",
+        );
+        const continuation = document.querySelector<HTMLElement>(
+          "[data-assistant-turn-identity='continuation']",
+        );
+        const avatar = identity?.querySelector<HTMLElement>("[data-assistant-turn-avatar]");
+        const identityContent = identity?.querySelector<HTMLElement>(
+          "[data-assistant-turn-content='true']",
+        );
+        const continuationContent = continuation?.querySelector<HTMLElement>(
+          "[data-assistant-turn-content='true']",
+        );
+        expect(identity).not.toBeNull();
+        expect(continuation).not.toBeNull();
+        expect(avatar).not.toBeNull();
+        expect(identityContent).not.toBeNull();
+        expect(continuationContent).not.toBeNull();
+        if (!identity || !avatar || !identityContent || !continuationContent) continue;
+
+        const gridStyle = getComputedStyle(identity);
+        const avatarStyle = getComputedStyle(avatar);
+        expect(avatar.getBoundingClientRect().width).toBeCloseTo(expectedAvatar, 1);
+        expect(Number.parseFloat(gridStyle.columnGap)).toBeCloseTo(expectedGap, 1);
+        expect(identityContent.getBoundingClientRect().left).toBeCloseTo(
+          continuationContent.getBoundingClientRect().left,
+          1,
+        );
+        expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth);
+        expect(avatarStyle.backgroundColor).toBe("rgb(77, 107, 254)");
+      }
+
+      expect(document.querySelectorAll("[data-assistant-turn-identity='visible']")).toHaveLength(1);
+      expect(document.body.textContent).toContain("DeepSeek V4 Pro");
+      expect(document.body.textContent).toContain("OmniMind ·");
+    } finally {
+      document.documentElement.classList.remove("dark");
+      await page.viewport(1_280, 720);
       await screen.unmount();
       host.remove();
     }

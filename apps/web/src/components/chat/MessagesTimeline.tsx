@@ -5,12 +5,15 @@
 
 import {
   type MessageId,
+  type ModelSelection,
+  type OrchestrationTurnProvenance,
   type ProviderMentionReference,
   ThreadId,
   type ThreadGoalAchievement,
   type ThreadMarker,
   type TurnId,
 } from "@omnimind/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { LegendList, type AnchoredEndSpaceConfig, type LegendListRef } from "@legendapp/list/react";
 import {
   memo,
@@ -45,6 +48,7 @@ import ChatMarkdown from "../ChatMarkdown";
 import { InlineLinkChip } from "../InlineLinkChip";
 import {
   BotIcon,
+  BrainIcon,
   ChangesIcon,
   CircleAlertIcon,
   CircleCheckIcon,
@@ -59,6 +63,9 @@ import {
   Undo2Icon,
   WorktreeIcon,
 } from "~/lib/icons";
+import { ModelServiceIcon } from "../ModelServiceIcon";
+import { ProviderIcon } from "../ProviderIcon";
+import { formatProviderModelOptionName } from "../../providerModelOptions";
 import { pinActionLabel } from "~/lib/pin";
 import { Button } from "../ui/button";
 import { composerOverlayScrollMaskImage } from "./composerOverlay";
@@ -96,6 +103,7 @@ import {
   MAX_VISIBLE_WORK_LOG_ENTRIES,
   planWorkEntryRenderChunks,
   type MessagesTimelineRow,
+  type AssistantTurnLayout,
   resolveAssistantMessageCopyState,
   resolveAssistantMessageDisplayText,
   type StableMessagesTimelineRowsState,
@@ -212,6 +220,7 @@ const TRAIL_VIEWABILITY_CONFIG = { itemVisiblePercentThreshold: 0 } as const;
 // never re-parses a message's markdown tree (the className is purely a CSS box-shadow).
 const ACTIVE_MARKER_CLASS_NAME = "thread-marker-active";
 const EMPTY_MESSAGE_MARKERS: readonly ThreadMarker[] = [];
+const EMPTY_TURN_PROVENANCE: readonly OrchestrationTurnProvenance[] = [];
 const EMPTY_THREAD_MARKERS_BY_MESSAGE_ID = new Map<MessageId, readonly ThreadMarker[]>();
 const EMPTY_GOAL_ACHIEVEMENTS: readonly ThreadGoalAchievement[] = [];
 const EMPTY_GOAL_ACHIEVEMENTS_BY_TURN_ID = new Map<TurnId, ThreadGoalAchievement>();
@@ -429,6 +438,99 @@ function WorktreeSetupCard({
   );
 }
 
+function resolveOmniMindModelService(selection: ModelSelection): {
+  readonly serviceId: string;
+  readonly modelId: string;
+} | null {
+  if (selection.provider !== "omnimind") return null;
+  const separatorIndex = selection.model.indexOf("/");
+  if (separatorIndex <= 0 || separatorIndex === selection.model.length - 1) return null;
+  return {
+    serviceId: selection.model.slice(0, separatorIndex),
+    modelId: selection.model.slice(separatorIndex + 1),
+  };
+}
+
+function AssistantTurnAvatar({ selection }: { readonly selection: ModelSelection | null }) {
+  const modelService = selection ? resolveOmniMindModelService(selection) : null;
+  const isDeepSeek = modelService?.serviceId.toLocaleLowerCase("en-US") === "deepseek";
+  return (
+    <div
+      aria-hidden="true"
+      data-assistant-turn-avatar={isDeepSeek ? "deepseek" : (selection?.provider ?? "generic")}
+      className={cn(
+        "flex size-[30px] shrink-0 items-center justify-center rounded-lg border border-[color:var(--color-border-light)] shadow-[0_1px_2px_rgba(15,23,42,0.08)] max-[560px]:size-7 max-[560px]:rounded-[7.5px]",
+        isDeepSeek
+          ? "border-transparent bg-[#4D6BFE] [&_[data-model-service-icon-render=image]]:brightness-0 [&_[data-model-service-icon-render=image]]:invert"
+          : "bg-[var(--color-background-elevated-secondary)] text-foreground/80",
+      )}
+    >
+      {modelService ? (
+        <ModelServiceIcon
+          serviceId={modelService.serviceId}
+          modelId={modelService.modelId}
+          className="size-5 max-[560px]:size-[18px]"
+        />
+      ) : selection && selection.provider !== "omnimind" ? (
+        <ProviderIcon provider={selection.provider} className="size-5 max-[560px]:size-[18px]" />
+      ) : (
+        <BrainIcon className="size-[18px] max-[560px]:size-4" />
+      )}
+    </div>
+  );
+}
+
+function AssistantTurnRowFrame({
+  layout,
+  timestamp,
+  children,
+}: {
+  readonly layout: AssistantTurnLayout | undefined;
+  readonly timestamp: string | null;
+  readonly children: ReactNode;
+}) {
+  if (!layout) return <>{children}</>;
+  const selection = layout.provenance?.modelSelection ?? null;
+  const modelName = selection
+    ? formatProviderModelOptionName({
+        provider: selection.provider,
+        slug: selection.model,
+      })
+    : "OmniMind";
+  const engineName = selection ? PROVIDER_DISPLAY_NAMES[selection.provider] : null;
+  return (
+    <div
+      className="grid min-w-0 grid-cols-[30px_minmax(0,1fr)] gap-x-3 max-[560px]:grid-cols-[28px_minmax(0,1fr)] max-[560px]:gap-x-2.5"
+      data-assistant-turn-response={layout.responseId}
+      data-assistant-turn-identity={layout.showIdentity ? "visible" : "continuation"}
+    >
+      {layout.showIdentity ? <AssistantTurnAvatar selection={selection} /> : null}
+      <div className="col-start-2 min-w-0" data-assistant-turn-content="true">
+        {layout.showIdentity ? (
+          <div className="mb-3 min-h-[30px] font-system-ui max-[560px]:min-h-7">
+            <div
+              data-assistant-turn-model="true"
+              className="truncate font-semibold leading-[1.15] tracking-[-0.012em] text-foreground/92"
+              style={{ fontSize: "12.75px" }}
+              title={modelName}
+            >
+              {modelName}
+            </div>
+            <div
+              data-assistant-turn-engine-time="true"
+              className="mt-0.5 truncate font-normal leading-[1.2] text-muted-foreground/55 tabular-nums"
+              style={{ fontSize: "10.25px" }}
+            >
+              {engineName && timestamp ? `${engineName} · ${timestamp}` : (timestamp ?? engineName)}
+            </div>
+          </div>
+        ) : null}
+        {children}
+      </div>
+    </div>
+  );
+}
+
 interface MessagesTimelineProps {
   hasMessages: boolean;
   isWorking: boolean;
@@ -482,6 +584,7 @@ interface MessagesTimelineProps {
   /** Marks the transcript as a temporary chat so user bubbles render the dashed primary outline. */
   isTemporaryThread?: boolean;
   timelineEntries: ReturnType<typeof deriveTimelineEntries>;
+  turnProvenance?: readonly OrchestrationTurnProvenance[];
   turnDiffSummaryByAssistantMessageId: Map<MessageId, TurnDiffSummary>;
   nowIso?: string;
   expandedWorkGroups?: Record<string, boolean>;
@@ -568,6 +671,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   forkSource: forkSourceProp,
   isTemporaryThread: isTemporaryThreadProp,
   timelineEntries,
+  turnProvenance: turnProvenanceProp,
   turnDiffSummaryByAssistantMessageId,
   nowIso,
   expandedWorkGroups,
@@ -616,6 +720,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   const worktreeSetupPendingAction = worktreeSetupPendingActionProp ?? null;
   const followLiveOutput = followLiveOutputProp ?? false;
   const threadMarkers = threadMarkersProp ?? EMPTY_MESSAGE_MARKERS;
+  const turnProvenance = turnProvenanceProp ?? EMPTY_TURN_PROVENANCE;
   const enteringUserMessageIds = enteringUserMessageIdsProp ?? EMPTY_MESSAGE_ID_SET;
   const tailAnchorMessageId = tailAnchorMessageIdProp ?? null;
   const forkSource = forkSourceProp ?? null;
@@ -829,6 +934,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         turnProcessPhase,
         turnDiffSummaryByAssistantMessageId,
         revertTurnCountByUserMessageId,
+        turnProvenance,
       }),
     [
       timelineEntries,
@@ -840,6 +946,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       turnProcessPhase,
       turnDiffSummaryByAssistantMessageId,
       revertTurnCountByUserMessageId,
+      turnProvenance,
     ],
   );
   const rows = useStableRows(rawRows);
@@ -1099,7 +1206,11 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         const visibleElement = findVisibleThreadMarkerElement(elements);
         if (visibleElement) {
           applyActiveMarkerDecoration(elements);
-          visibleElement.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+          visibleElement.scrollIntoView({
+            block: "center",
+            inline: "nearest",
+            behavior: "smooth",
+          });
           return;
         }
         attempts += 1;
@@ -1406,871 +1517,884 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       data-message-role={row.kind === "message" ? row.message.role : undefined}
     >
       {forkDividerBeforeRowId === row.id ? forkSourceDivider : null}
-      {row.kind === "turn-process" &&
-        (() => {
-          const savedState = turnProcessOpenState[row.id];
-          const isOpen =
-            savedState?.phase === row.phase ? savedState.open : row.phase === "running";
-          const processPanelId = `turn-process-panel-${row.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
-          const fileDiffStatByPath = turnDiffFileStats(row.turnDiffSummary);
-          const renderProcessItem = (item: TurnProcessItem, keyPrefix: string) =>
-            item.kind === "work" ? (
+      <AssistantTurnRowFrame
+        layout={row.assistantTurnLayout}
+        timestamp={
+          row.assistantTurnLayout
+            ? formatDayAwareTimestamp(
+                row.assistantTurnLayout.timestamp,
+                timestampFormat,
+                timestampNow,
+              )
+            : null
+        }
+      >
+        {row.kind === "turn-process" &&
+          (() => {
+            const savedState = turnProcessOpenState[row.id];
+            const isOpen =
+              savedState?.phase === row.phase ? savedState.open : row.phase === "running";
+            const processPanelId = `turn-process-panel-${row.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+            const fileDiffStatByPath = turnDiffFileStats(row.turnDiffSummary);
+            const renderProcessItem = (item: TurnProcessItem, keyPrefix: string) =>
+              item.kind === "work" ? (
+                <TimelineWorkEntryRow
+                  key={`${keyPrefix}:work:${row.id}:${item.id}`}
+                  workEntry={item.entry}
+                  chatMetaFontSizePx={appTypographyScale.chatMetaPx}
+                  textFontSizePx={appTypographyScale.activityPx}
+                  density={prefersCompactWorkEntryRow(item.entry) ? "compact" : "default"}
+                  reasoningDefaultOpen={reasoningDisclosureDefaultOpen(
+                    item.entry,
+                    row.phase === "running" && item.entry.id === liveReasoningEntryId,
+                  )}
+                  reasoningOpenOverride={reasoningDisclosureOverrides[item.entry.id]}
+                  onReasoningOpenChange={setReasoningDisclosureOpen}
+                  reasoningIsLive={
+                    row.phase === "running" && item.entry.id === liveReasoningEntryId
+                  }
+                  fileDiffStatByPath={fileDiffStatByPath}
+                  markdownCwd={markdownCwd}
+                  onImageExpand={onImageExpand}
+                  onOpenTurnDiff={onOpenTurnDiff}
+                  timestampFormat={timestampFormat}
+                  {...(onOpenAgentActivity ? { onOpenAgentActivity } : {})}
+                  {...(onOpenAutomation ? { onOpenAutomation } : {})}
+                  {...(onOpenEngineWebSurface ? { onOpenEngineWebSurface } : {})}
+                  {...((item.entry.turnId ?? row.turnId)
+                    ? { turnId: (item.entry.turnId ?? row.turnId)! }
+                    : {})}
+                />
+              ) : (
+                <div
+                  key={`${keyPrefix}:narration:${row.id}:${item.id}`}
+                  className={MUTED_LABEL_TEXT_CLASS_NAME}
+                >
+                  <ChatMarkdown
+                    text={item.message.text}
+                    cwd={markdownCwd}
+                    isStreaming={false}
+                    style={chatTypographyStyle}
+                    onImageExpand={onImageExpand}
+                  />
+                </div>
+              );
+            const renderProcessChunk = (chunk: TurnProcessChunk) => {
+              if (chunk.kind === "item") {
+                return renderProcessItem(chunk.item, "turn-process");
+              }
+              const summary = summarizeToolCallGroup(chunk.entries);
+              if (!summary) {
+                return chunk.entries.map((entry) =>
+                  renderProcessItem({ kind: "work", id: entry.id, entry }, "turn-process"),
+                );
+              }
+              const summaryOverrideKey = `${row.id}:tool-group:${chunk.id}`;
+              return (
+                <ToolCallGroupSummaryRow
+                  key={summaryOverrideKey}
+                  summary={summary}
+                  open={toolGroupSummaryOverrides[summaryOverrideKey] ?? false}
+                  onToggle={(open) => setToolGroupSummaryOpen(summaryOverrideKey, open)}
+                  fontSizePx={appTypographyScale.activityPx}
+                  renderChildren={() => (
+                    <div className="space-y-0.5 pt-0.5">
+                      {chunk.entries.map((entry) =>
+                        renderProcessItem({ kind: "work", id: entry.id, entry }, "turn-process"),
+                      )}
+                    </div>
+                  )}
+                />
+              );
+            };
+
+            return (
+              <div className="mb-1" data-turn-process-phase={row.phase}>
+                <Collapsible
+                  className="group/turn-process"
+                  open={isOpen}
+                  onOpenChange={(open) => setTurnProcessOpen(row.id, row.phase, open)}
+                >
+                  <CollapsibleTrigger
+                    aria-controls={processPanelId}
+                    className={cn(
+                      "inline-flex items-center gap-1 pb-2 text-left transition-colors duration-200 hover:text-foreground",
+                      MUTED_LABEL_TEXT_CLASS_NAME,
+                    )}
+                    style={{ fontSize: `${appTypographyScale.activityPx}px` }}
+                  >
+                    {row.phase === "running" ? (
+                      nowIso ? (
+                        <span>
+                          {t("timeline.workingFor", {
+                            duration:
+                              formatClockElapsed(
+                                row.createdAt,
+                                nowIso,
+                                locale === "zh-CN" ? "zh" : "en",
+                              ) ?? (locale === "zh-CN" ? "0秒" : "0s"),
+                          })}
+                        </span>
+                      ) : (
+                        <WorkingTimer createdAt={row.createdAt} />
+                      )
+                    ) : (
+                      <span>
+                        {row.elapsedMs !== null
+                          ? t("timeline.workedFor", {
+                              duration: formatClockDuration(
+                                row.elapsedMs,
+                                locale === "zh-CN" ? "zh" : "en",
+                              ),
+                            })
+                          : t("timeline.details")}
+                      </span>
+                    )}
+                    <DisclosureChevron open={isOpen} className="text-muted-foreground/70" />
+                  </CollapsibleTrigger>
+                  <CollapsiblePanel
+                    id={processPanelId}
+                    keepMounted
+                    aria-hidden={!isOpen}
+                    inert={!isOpen ? true : undefined}
+                  >
+                    <div className={disclosureContentClassName(isOpen, "mb-2.5 space-y-1.5")}>
+                      {chunkTurnProcessItems(row.items).map(renderProcessChunk)}
+                      {row.phase === "running" ? (
+                        <ThinkingStatus
+                          accessibleLabel={t("timeline.workingStatus")}
+                          fontSizePx={appTypographyScale.activityPx}
+                          hints={thinkingHints}
+                          theme={resolvedTheme}
+                        />
+                      ) : null}
+                    </div>
+                  </CollapsiblePanel>
+                </Collapsible>
+                <div className="h-px w-full bg-border" />
+              </div>
+            );
+          })()}
+        {row.kind === "work" &&
+          (() => {
+            const groupId = row.id;
+            // Creation milestones are reserved for the end-of-turn recap card.
+            // The provider's actual OmniMind MCP tool rows remain visible here.
+            const groupedEntries = row.groupedEntries.filter(
+              (workEntry) => !workEntry.omnimindThreadCreation,
+            );
+            if (groupedEntries.length === 0) {
+              return null;
+            }
+            const renderEntryRow = (workEntry: WorkLogEntry) => (
               <TimelineWorkEntryRow
-                key={`${keyPrefix}:work:${row.id}:${item.id}`}
-                workEntry={item.entry}
+                key={`work-row:${workEntry.id}`}
+                workEntry={workEntry}
                 chatMetaFontSizePx={appTypographyScale.chatMetaPx}
                 textFontSizePx={appTypographyScale.activityPx}
-                density={prefersCompactWorkEntryRow(item.entry) ? "compact" : "default"}
-                reasoningDefaultOpen={reasoningDisclosureDefaultOpen(
-                  item.entry,
-                  row.phase === "running" && item.entry.id === liveReasoningEntryId,
-                )}
-                reasoningOpenOverride={reasoningDisclosureOverrides[item.entry.id]}
+                density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
+                reasoningDefaultOpen={reasoningDisclosureDefaultOpen(workEntry, false)}
+                reasoningOpenOverride={reasoningDisclosureOverrides[workEntry.id]}
                 onReasoningOpenChange={setReasoningDisclosureOpen}
-                reasoningIsLive={row.phase === "running" && item.entry.id === liveReasoningEntryId}
-                fileDiffStatByPath={fileDiffStatByPath}
+                reasoningIsLive={false}
                 markdownCwd={markdownCwd}
                 onImageExpand={onImageExpand}
-                onOpenTurnDiff={onOpenTurnDiff}
                 timestampFormat={timestampFormat}
                 {...(onOpenAgentActivity ? { onOpenAgentActivity } : {})}
                 {...(onOpenAutomation ? { onOpenAutomation } : {})}
                 {...(onOpenEngineWebSurface ? { onOpenEngineWebSurface } : {})}
-                {...((item.entry.turnId ?? row.turnId)
-                  ? { turnId: (item.entry.turnId ?? row.turnId)! }
-                  : {})}
               />
-            ) : (
-              <div
-                key={`${keyPrefix}:narration:${row.id}:${item.id}`}
-                className={MUTED_LABEL_TEXT_CLASS_NAME}
-              >
-                <ChatMarkdown
-                  text={item.message.text}
-                  cwd={markdownCwd}
-                  isStreaming={false}
-                  style={chatTypographyStyle}
-                  onImageExpand={onImageExpand}
-                />
-              </div>
             );
-          const renderProcessChunk = (chunk: TurnProcessChunk) => {
-            if (chunk.kind === "item") {
-              return renderProcessItem(chunk.item, "turn-process");
-            }
-            const summary = summarizeToolCallGroup(chunk.entries);
-            if (!summary) {
-              return chunk.entries.map((entry) =>
-                renderProcessItem({ kind: "work", id: entry.id, entry }, "turn-process"),
-              );
-            }
-            const summaryOverrideKey = `${row.id}:tool-group:${chunk.id}`;
+            const isExpanded = expandedWorkGroupsState[groupId] ?? false;
+            const plannedRenderChunks = planWorkEntryRenderChunks(groupedEntries, {
+              tailIsLive: false,
+            });
+            const cappedRenderPlan = capOpenWorkEntryRenderChunks(plannedRenderChunks, {
+              expanded: isExpanded,
+              maxVisibleEntries: MAX_VISIBLE_WORK_LOG_ENTRIES,
+              keep: "last",
+              shouldCapEntry: (workEntry) => workEntry.tone === "tool",
+            });
+            const renderChunks = cappedRenderPlan.chunks;
+
             return (
-              <ToolCallGroupSummaryRow
-                key={summaryOverrideKey}
-                summary={summary}
-                open={toolGroupSummaryOverrides[summaryOverrideKey] ?? false}
-                onToggle={(open) => setToolGroupSummaryOpen(summaryOverrideKey, open)}
-                fontSizePx={appTypographyScale.activityPx}
-                renderChildren={() => (
-                  <div className="space-y-0.5 pt-0.5">
-                    {chunk.entries.map((entry) =>
-                      renderProcessItem({ kind: "work", id: entry.id, entry }, "turn-process"),
-                    )}
+              <div>
+                <div className="space-y-0.5">
+                  {renderChunks.map((chunk) => {
+                    if (!chunk.summary) return chunk.entries.map(renderEntryRow);
+                    const summary = chunk.summary;
+                    const summaryKey = `${groupId}:${chunk.id}`;
+                    return (
+                      <ToolCallGroupSummaryRow
+                        key={`tool-summary:${summaryKey}`}
+                        summary={summary}
+                        open={toolGroupSummaryOverrides[summaryKey] ?? false}
+                        onToggle={(open) => setToolGroupSummaryOpen(summaryKey, open)}
+                        fontSizePx={appTypographyScale.activityPx}
+                        renderChildren={() => (
+                          <div className="space-y-0.5 pt-0.5">
+                            {chunk.entries.map(renderEntryRow)}
+                          </div>
+                        )}
+                      />
+                    );
+                  })}
+                </div>
+                {cappedRenderPlan.hasOverflow && (
+                  <div className="mt-1.5 flex items-center justify-start gap-2 px-0.5">
+                    <button
+                      type="button"
+                      className="font-system-ui text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:text-foreground"
+                      style={{ fontSize: `${appTypographyScale.uiSmPx}px` }}
+                      onClick={() => handleToggleWorkGroup(groupId)}
+                    >
+                      {isExpanded
+                        ? t("common.showLess")
+                        : t(
+                            cappedRenderPlan.hiddenEntryCount === 1
+                              ? "timeline.showMoreToolCall"
+                              : "timeline.showMoreToolCalls",
+                            { count: cappedRenderPlan.hiddenEntryCount },
+                          )}
+                    </button>
                   </div>
                 )}
-              />
+              </div>
             );
-          };
+          })()}
 
-          return (
-            <div className="mb-1" data-turn-process-phase={row.phase}>
-              <Collapsible
-                className="group/turn-process"
-                open={isOpen}
-                onOpenChange={(open) => setTurnProcessOpen(row.id, row.phase, open)}
-              >
-                <CollapsibleTrigger
-                  aria-controls={processPanelId}
-                  className={cn(
-                    "inline-flex items-center gap-1 pb-2 text-left transition-colors duration-200 hover:text-foreground",
-                    MUTED_LABEL_TEXT_CLASS_NAME,
-                  )}
-                  style={{ fontSize: `${appTypographyScale.activityPx}px` }}
-                >
-                  {row.phase === "running" ? (
-                    nowIso ? (
-                      <span>
-                        {t("timeline.workingFor", {
-                          duration:
-                            formatClockElapsed(
-                              row.createdAt,
-                              nowIso,
-                              locale === "zh-CN" ? "zh" : "en",
-                            ) ?? (locale === "zh-CN" ? "0秒" : "0s"),
-                        })}
-                      </span>
-                    ) : (
-                      <WorkingTimer createdAt={row.createdAt} />
-                    )
-                  ) : (
-                    <span>
-                      {row.elapsedMs !== null
-                        ? t("timeline.workedFor", {
-                            duration: formatClockDuration(
-                              row.elapsedMs,
-                              locale === "zh-CN" ? "zh" : "en",
-                            ),
-                          })
-                        : t("timeline.details")}
-                    </span>
-                  )}
-                  <DisclosureChevron open={isOpen} className="text-muted-foreground/70" />
-                </CollapsibleTrigger>
-                <CollapsiblePanel
-                  id={processPanelId}
-                  keepMounted
-                  aria-hidden={!isOpen}
-                  inert={!isOpen ? true : undefined}
-                >
-                  <div className={disclosureContentClassName(isOpen, "mb-2.5 space-y-1.5")}>
-                    {chunkTurnProcessItems(row.items).map(renderProcessChunk)}
-                    {row.phase === "running" ? (
-                      <ThinkingStatus
-                        accessibleLabel={t("timeline.workingStatus")}
-                        fontSizePx={appTypographyScale.activityPx}
-                        hints={thinkingHints}
-                        theme={resolvedTheme}
-                      />
-                    ) : null}
-                  </div>
-                </CollapsiblePanel>
-              </Collapsible>
-              <div className="h-px w-full bg-border" />
-            </div>
-          );
-        })()}
-      {row.kind === "work" &&
-        (() => {
-          const groupId = row.id;
-          // Creation milestones are reserved for the end-of-turn recap card.
-          // The provider's actual OmniMind MCP tool rows remain visible here.
-          const groupedEntries = row.groupedEntries.filter(
-            (workEntry) => !workEntry.omnimindThreadCreation,
-          );
-          if (groupedEntries.length === 0) {
-            return null;
-          }
-          const renderEntryRow = (workEntry: WorkLogEntry) => (
-            <TimelineWorkEntryRow
-              key={`work-row:${workEntry.id}`}
-              workEntry={workEntry}
-              chatMetaFontSizePx={appTypographyScale.chatMetaPx}
-              textFontSizePx={appTypographyScale.activityPx}
-              density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
-              reasoningDefaultOpen={reasoningDisclosureDefaultOpen(workEntry, false)}
-              reasoningOpenOverride={reasoningDisclosureOverrides[workEntry.id]}
-              onReasoningOpenChange={setReasoningDisclosureOpen}
-              reasoningIsLive={false}
-              markdownCwd={markdownCwd}
-              onImageExpand={onImageExpand}
-              timestampFormat={timestampFormat}
-              {...(onOpenAgentActivity ? { onOpenAgentActivity } : {})}
-              {...(onOpenAutomation ? { onOpenAutomation } : {})}
-              {...(onOpenEngineWebSurface ? { onOpenEngineWebSurface } : {})}
-            />
-          );
-          const isExpanded = expandedWorkGroupsState[groupId] ?? false;
-          const plannedRenderChunks = planWorkEntryRenderChunks(groupedEntries, {
-            tailIsLive: false,
-          });
-          const cappedRenderPlan = capOpenWorkEntryRenderChunks(plannedRenderChunks, {
-            expanded: isExpanded,
-            maxVisibleEntries: MAX_VISIBLE_WORK_LOG_ENTRIES,
-            keep: "last",
-            shouldCapEntry: (workEntry) => workEntry.tone === "tool",
-          });
-          const renderChunks = cappedRenderPlan.chunks;
-
-          return (
-            <div>
-              <div className="space-y-0.5">
-                {renderChunks.map((chunk) => {
-                  if (!chunk.summary) return chunk.entries.map(renderEntryRow);
-                  const summary = chunk.summary;
-                  const summaryKey = `${groupId}:${chunk.id}`;
-                  return (
-                    <ToolCallGroupSummaryRow
-                      key={`tool-summary:${summaryKey}`}
-                      summary={summary}
-                      open={toolGroupSummaryOverrides[summaryKey] ?? false}
-                      onToggle={(open) => setToolGroupSummaryOpen(summaryKey, open)}
-                      fontSizePx={appTypographyScale.activityPx}
-                      renderChildren={() => (
-                        <div className="space-y-0.5 pt-0.5">
-                          {chunk.entries.map(renderEntryRow)}
-                        </div>
-                      )}
-                    />
-                  );
-                })}
-              </div>
-              {cappedRenderPlan.hasOverflow && (
-                <div className="mt-1.5 flex items-center justify-start gap-2 px-0.5">
-                  <button
-                    type="button"
-                    className="font-system-ui text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:text-foreground"
-                    style={{ fontSize: `${appTypographyScale.uiSmPx}px` }}
-                    onClick={() => handleToggleWorkGroup(groupId)}
-                  >
-                    {isExpanded
-                      ? t("common.showLess")
-                      : t(
-                          cappedRenderPlan.hiddenEntryCount === 1
-                            ? "timeline.showMoreToolCall"
-                            : "timeline.showMoreToolCalls",
-                          { count: cappedRenderPlan.hiddenEntryCount },
-                        )}
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-
-      {row.kind === "message" &&
-        row.message.role === "user" &&
-        (() => {
-          const userImages = (row.message.attachments ?? []).filter(
-            (
-              attachment,
-            ): attachment is Extract<
-              NonNullable<TimelineMessage["attachments"]>[number],
-              { type: "image" }
-            > => attachment.type === "image",
-          );
-          const assistantSelections = (row.message.attachments ?? []).filter(
-            (
-              attachment,
-            ): attachment is Extract<
-              NonNullable<TimelineMessage["attachments"]>[number],
-              { type: "assistant-selection" }
-            > => attachment.type === "assistant-selection",
-          );
-          const userFiles = (row.message.attachments ?? []).filter(
-            (
-              attachment,
-            ): attachment is Extract<
-              NonNullable<TimelineMessage["attachments"]>[number],
-              { type: "file" }
-            > => attachment.type === "file",
-          );
-          const displayedUserMessage = deriveDisplayedUserMessageState(row.message.text, {
-            hideImageOnlyBootstrapPrompt:
-              userImages.length > 0 || userFiles.length > 0 || assistantSelections.length > 0,
-            messageId: row.message.id,
-          });
-          const renderedAssistantSelections =
-            assistantSelections.length > 0
-              ? assistantSelections
-              : displayedUserMessage.assistantSelections.map((selection, index) => ({
-                  type: "assistant-selection" as const,
-                  id: `fallback-selection-${row.message.id}-${index}`,
-                  assistantMessageId: selection.assistantMessageId,
-                  text: selection.text,
-                }));
-          const terminalContexts = displayedUserMessage.contexts;
-          const renderedFileComments = displayedUserMessage.fileComments;
-          const renderedPastedTexts = displayedUserMessage.pastedTexts;
-          const renderedBrowserAnnotations = displayedUserMessage.browserAnnotations;
-          const userMessageText = displayedUserMessage.visibleText;
-          const userMessageExpanded = expandedUserMessagesById[row.message.id] ?? false;
-          const showUserText = userMessageText.trim().length > 0 || terminalContexts.length > 0;
-          const bubbleIsChipOnly =
-            showUserText &&
-            terminalContexts.length === 0 &&
-            hasOnlyInlineSkillChips(userMessageText, row.message.mentions ?? []);
-          const canRevertAgentWork = typeof row.revertTurnCount === "number";
-          const isEditingThisMessage = editingUserMessageId === row.message.id;
-          const isSubmittingThisEdit = submittingEditedUserMessageId === row.message.id;
-          const showEditUserMessage =
-            Boolean(onEditUserMessage) &&
-            row.message.id === latestEditableUserMessageId &&
-            (displayedUserMessage.copyText.trim().length > 0 ||
-              renderedBrowserAnnotations.length > 0);
-          const hasLeadingMedia = hasLeadingUserMedia({
-            imageCount: userImages.length,
-            fileCount: userFiles.length,
-            assistantSelectionCount: renderedAssistantSelections.length,
-            browserAnnotationCount: renderedBrowserAnnotations.length,
-            fileCommentCount: renderedFileComments.length,
-            pastedTextCount: renderedPastedTexts.length,
-          });
-          const isTailContentRow = row.id === tailContentRowId;
-          const showCrossTaskOrigin =
-            crossTaskOrigin !== null && row.message.id === firstUserMessageId;
-          return (
-            <div className="flex w-full flex-col gap-3">
-              {showCrossTaskOrigin ? (
-                <CrossTaskOriginLabel
-                  origin={crossTaskOrigin}
-                  {...(onOpenThread ? { onOpenSourceThread: onOpenThread } : {})}
-                />
-              ) : null}
-              <div className="flex w-full justify-end">
-                <div
-                  className={cn(
-                    "group flex flex-col items-end gap-px",
-                    isEditingThisMessage ? "w-full max-w-full" : "max-w-[80%]",
-                  )}
-                >
-                  {/* Keep user-message chrome outside the bubble so the message reads as one simple block. */}
-                  {/* The cross-task origin label already attributes this turn to another OmniMind thread,
-                      so suppress the dispatch chip here to avoid a duplicate "Sent by …" marker. */}
-                  {showCrossTaskOrigin ? null : (
-                    <UserDispatchModeChip
-                      dispatchMode={row.message.dispatchMode}
-                      dispatchOrigin={row.message.dispatchOrigin}
-                      hasLeadingMedia={hasLeadingMedia}
-                    />
-                  )}
-                  {renderedAssistantSelections.length > 0 && (
-                    <div className="mb-1 flex max-w-[240px] flex-wrap justify-end gap-1.5 self-end">
-                      <AssistantSelectionsSummaryChip selections={renderedAssistantSelections} />
-                    </div>
-                  )}
-                  {renderedBrowserAnnotations.length > 0 && (
-                    <div className="mb-1 flex w-full max-w-[28rem] justify-end self-end">
-                      <BrowserAnnotationStrip
-                        annotations={renderedBrowserAnnotations}
-                        className="justify-end"
-                      />
-                    </div>
-                  )}
-                  {renderedFileComments.length > 0 && (
-                    <div className="mb-1 flex max-w-[240px] flex-wrap justify-end gap-1.5 self-end">
-                      <FileCommentsSummaryChip comments={renderedFileComments} />
-                    </div>
-                  )}
-                  {renderedPastedTexts.length > 0 && (
-                    <div className="mb-1 flex max-w-full flex-col items-end gap-1.5 self-end">
-                      {renderedPastedTexts.map((pasted) => (
-                        <UserMessagePastedTextCard
-                          key={pasted.index}
-                          text={pasted.text}
-                          metrics={{ lineCount: pasted.lineCount, charCount: pasted.charCount }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {userFiles.length > 0 && (
-                    <div className="mb-1 flex max-w-[280px] flex-wrap justify-end gap-1.5 self-end">
-                      {userFiles.map((file) => (
-                        <FileAttachmentChip key={file.id} file={file} />
-                      ))}
-                    </div>
-                  )}
-                  {userImages.length > 0 && (
-                    <div
-                      className={cn(
-                        "flex max-w-[240px] flex-wrap justify-end gap-2 self-end",
-                        showUserText && "mb-1",
-                      )}
-                    >
-                      {userImages.map((image) => (
-                        <UserImageAttachmentThumbnail
-                          key={image.id}
-                          image={image}
-                          userImages={userImages}
-                          onImageExpand={onImageExpand}
-                          onTimelineImageLoad={
-                            isTailContentRow ? scrollTailExpansionToEnd : ignoreTimelineImageLoad
-                          }
-                          resolvedTheme={resolvedTheme}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {isEditingThisMessage ? (
-                    <UserMessageEditForm
-                      key={row.message.id}
-                      initialValue={displayedUserMessage.copyText}
-                      disabled={isSubmittingThisEdit || isRevertingCheckpoint}
-                      allowEmpty={renderedBrowserAnnotations.length > 0}
-                      chatTypographyStyle={userMessageTypographyStyle}
-                      borderClassName={userMessageBubbleBorderClass}
-                      onCancel={cancelUserMessageEdit}
-                      onSubmit={(text) =>
-                        void submitUserMessageEdit(
-                          row.message.id,
-                          text,
-                          renderedBrowserAnnotations.length > 0,
-                        )
-                      }
-                    />
-                  ) : showUserText ? (
-                    <div
-                      className={cn(
-                        "w-max max-w-full min-w-0 self-end bg-[var(--app-user-message-background)]",
-                        USER_MESSAGE_BUBBLE_RADIUS_CLASS_NAME,
-                        userMessageBubbleBorderClass,
-                        bubbleIsChipOnly
-                          ? "py-0.5 px-3"
-                          : USER_MESSAGE_BUBBLE_SHELL_CHROME_CLASS_NAME,
-                      )}
-                    >
-                      <UserMessageCollapsibleText
-                        text={userMessageText}
-                        expanded={userMessageExpanded}
-                        chatFontSizePx={normalizedChatFontSizePx}
-                        onToggle={() => {
-                          setExpandedUserMessagesById((previous) => ({
-                            ...previous,
-                            [row.message.id]: !(previous[row.message.id] ?? false),
-                          }));
-                        }}
-                      >
-                        <UserMessageBody
-                          text={userMessageText}
-                          mentionReferences={row.message.mentions ?? []}
-                          terminalContexts={terminalContexts}
-                          chatTypographyStyle={userMessageTypographyStyle}
-                          resolvedTheme={resolvedTheme}
-                          markdownCwd={markdownCwd}
-                        />
-                      </UserMessageCollapsibleText>
-                    </div>
-                  ) : null}
-                  {!isEditingThisMessage && (
-                    <div
-                      className="flex select-none items-center justify-end gap-2 pr-0.5 font-system-ui font-normal text-muted-foreground/45"
-                      style={chatMessageFooterStyle}
-                    >
-                      <p className={cn("tabular-nums", MESSAGE_HOVER_REVEAL_CLASS_NAME)}>
-                        {formatDayAwareTimestamp(
-                          row.message.createdAt,
-                          timestampFormat,
-                          timestampNow,
-                        )}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        {displayedUserMessage.copyText && (
-                          <MessageCopyButton
-                            text={displayedUserMessage.copyText}
-                            className={MESSAGE_HOVER_REVEAL_CLASS_NAME}
-                          />
-                        )}
-                        {showEditUserMessage && (
-                          <MessageActionButton
-                            label="Edit message"
-                            tooltip="Edit and resend"
-                            disabled={isRevertingCheckpoint}
-                            className={cn(
-                              MESSAGE_HOVER_REVEAL_CLASS_NAME,
-                              "disabled:text-muted-foreground/35",
-                            )}
-                            onClick={() => startUserMessageEdit(row.message.id)}
-                          >
-                            <NewThreadIcon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
-                          </MessageActionButton>
-                        )}
-                        {canRevertAgentWork ? (
-                          <MessageActionButton
-                            label="Revert to this message"
-                            tooltip="Revert to this message"
-                            disabled={isRevertingCheckpoint || isWorking}
-                            className={cn(
-                              MESSAGE_HOVER_REVEAL_CLASS_NAME,
-                              "disabled:text-muted-foreground/35",
-                            )}
-                            onClick={() => onRevertUserMessage(row.message.id)}
-                          >
-                            <Undo2Icon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
-                          </MessageActionButton>
-                        ) : null}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
-      {row.kind === "message" &&
-        row.message.role === "assistant" &&
-        (() => {
-          const messageText = resolveAssistantMessageDisplayText(row);
-          const messageMarkers =
-            threadMarkersByMessageId.get(row.message.id) ?? EMPTY_MESSAGE_MARKERS;
-          const assistantCopyState = resolveAssistantMessageCopyState({
-            text: row.assistantCopyText ?? row.message.text ?? null,
-            showCopyButton: row.showAssistantCopyButton,
-            streaming: row.assistantCopyStreaming,
-          });
-          const messagePinned = pinnedMessageIds?.has(row.message.id) ?? false;
-          const messageCanPin = canPinMessage?.(row.message.id) ?? true;
-          // Offer the pin toggle wherever copy is offered (a complete, terminal answer);
-          // keep it visible for an already-pinned message so it can always be unpinned.
-          const showPinToggle =
-            messageCanPin &&
-            Boolean(onTogglePinMessage) &&
-            (assistantCopyState.visible || messagePinned);
-          const showForkAction =
-            assistantCopyState.visible &&
-            Boolean(onForkMessage) &&
-            (canForkMessage?.(row.message.id) ?? false);
-          const turnSummary = row.assistantTurnDiffSummary;
-          // Only the turn's final answer carries a timestamp. Intermediate
-          // working preambles (and their inline tool calls) stay timestamp-free
-          // so a live turn reads as one block, not a stack of timestamped
-          // fragments. `showAssistantCopyButton` is exactly the terminal-message
-          // signal (see deriveTerminalAssistantMessageIds).
-          const isTerminalAssistantMessage =
-            row.showAssistantCopyButton && !row.assistantTurnInProgress;
-          const goalAchievement =
-            isTerminalAssistantMessage && row.message.turnId
-              ? (goalAchievementByTurnId.get(row.message.turnId) ?? null)
-              : null;
-          const assistantMeta = [
-            isTerminalAssistantMessage
-              ? formatDayAwareTimestamp(row.message.createdAt, timestampFormat, timestampNow)
-              : null,
-          ]
-            .filter((value): value is string => Boolean(value))
-            .join(" • ");
-          const allTurnWorkEntries = row.turnWorkEntries ?? [];
-          const omnimindThreadCreationRecaps = [
-            ...new Map(
-              allTurnWorkEntries.flatMap((entry) =>
-                entry.omnimindThreadCreation
-                  ? [
-                      [
-                        entry.omnimindThreadCreation.operationId,
-                        entry.omnimindThreadCreation,
-                      ] as const,
-                    ]
-                  : [],
-              ),
-            ).values(),
-          ];
-          const isTailContentRow = row.id === tailContentRowId;
-          return (
-            <>
-              <div className="group min-w-0 py-0.5">
-                {messageText !== null ? (
-                  <div data-assistant-message-id={row.message.id}>
-                    <ChatMarkdown
-                      text={messageText}
-                      cwd={markdownCwd}
-                      isStreaming={Boolean(row.message.streaming)}
-                      style={chatTypographyStyle}
-                      onImageExpand={onImageExpand}
-                      markers={messageMarkers}
-                      mermaidPresentation={{ messageId: row.message.id }}
-                    />
-                  </div>
+        {row.kind === "message" &&
+          row.message.role === "user" &&
+          (() => {
+            const userImages = (row.message.attachments ?? []).filter(
+              (
+                attachment,
+              ): attachment is Extract<
+                NonNullable<TimelineMessage["attachments"]>[number],
+                { type: "image" }
+              > => attachment.type === "image",
+            );
+            const assistantSelections = (row.message.attachments ?? []).filter(
+              (
+                attachment,
+              ): attachment is Extract<
+                NonNullable<TimelineMessage["attachments"]>[number],
+                { type: "assistant-selection" }
+              > => attachment.type === "assistant-selection",
+            );
+            const userFiles = (row.message.attachments ?? []).filter(
+              (
+                attachment,
+              ): attachment is Extract<
+                NonNullable<TimelineMessage["attachments"]>[number],
+                { type: "file" }
+              > => attachment.type === "file",
+            );
+            const displayedUserMessage = deriveDisplayedUserMessageState(row.message.text, {
+              hideImageOnlyBootstrapPrompt:
+                userImages.length > 0 || userFiles.length > 0 || assistantSelections.length > 0,
+              messageId: row.message.id,
+            });
+            const renderedAssistantSelections =
+              assistantSelections.length > 0
+                ? assistantSelections
+                : displayedUserMessage.assistantSelections.map((selection, index) => ({
+                    type: "assistant-selection" as const,
+                    id: `fallback-selection-${row.message.id}-${index}`,
+                    assistantMessageId: selection.assistantMessageId,
+                    text: selection.text,
+                  }));
+            const terminalContexts = displayedUserMessage.contexts;
+            const renderedFileComments = displayedUserMessage.fileComments;
+            const renderedPastedTexts = displayedUserMessage.pastedTexts;
+            const renderedBrowserAnnotations = displayedUserMessage.browserAnnotations;
+            const userMessageText = displayedUserMessage.visibleText;
+            const userMessageExpanded = expandedUserMessagesById[row.message.id] ?? false;
+            const showUserText = userMessageText.trim().length > 0 || terminalContexts.length > 0;
+            const bubbleIsChipOnly =
+              showUserText &&
+              terminalContexts.length === 0 &&
+              hasOnlyInlineSkillChips(userMessageText, row.message.mentions ?? []);
+            const canRevertAgentWork = typeof row.revertTurnCount === "number";
+            const isEditingThisMessage = editingUserMessageId === row.message.id;
+            const isSubmittingThisEdit = submittingEditedUserMessageId === row.message.id;
+            const showEditUserMessage =
+              Boolean(onEditUserMessage) &&
+              row.message.id === latestEditableUserMessageId &&
+              (displayedUserMessage.copyText.trim().length > 0 ||
+                renderedBrowserAnnotations.length > 0);
+            const hasLeadingMedia = hasLeadingUserMedia({
+              imageCount: userImages.length,
+              fileCount: userFiles.length,
+              assistantSelectionCount: renderedAssistantSelections.length,
+              browserAnnotationCount: renderedBrowserAnnotations.length,
+              fileCommentCount: renderedFileComments.length,
+              pastedTextCount: renderedPastedTexts.length,
+            });
+            const isTailContentRow = row.id === tailContentRowId;
+            const showCrossTaskOrigin =
+              crossTaskOrigin !== null && row.message.id === firstUserMessageId;
+            return (
+              <div className="flex w-full flex-col gap-3">
+                {showCrossTaskOrigin ? (
+                  <CrossTaskOriginLabel
+                    origin={crossTaskOrigin}
+                    {...(onOpenThread ? { onOpenSourceThread: onOpenThread } : {})}
+                  />
                 ) : null}
-                {!row.assistantTurnInProgress && row.showAssistantCopyButton
-                  ? omnimindThreadCreationRecaps.map((creation) => (
-                      <div key={creation.operationId} className="mt-2 mb-1">
-                        <OmniMindThreadCreationCard
-                          creation={creation}
-                          {...(onOpenThread
-                            ? {
-                                onOpenThread: (createdThreadId) =>
-                                  onOpenThread(ThreadId.makeUnsafe(createdThreadId)),
-                              }
-                            : {})}
+                <div className="flex w-full justify-end">
+                  <div
+                    className={cn(
+                      "group flex flex-col items-end gap-px",
+                      isEditingThisMessage ? "w-full max-w-full" : "max-w-[80%]",
+                    )}
+                  >
+                    {/* Keep user-message chrome outside the bubble so the message reads as one simple block. */}
+                    {/* The cross-task origin label already attributes this turn to another OmniMind thread,
+                      so suppress the dispatch chip here to avoid a duplicate "Sent by …" marker. */}
+                    {showCrossTaskOrigin ? null : (
+                      <UserDispatchModeChip
+                        dispatchMode={row.message.dispatchMode}
+                        dispatchOrigin={row.message.dispatchOrigin}
+                        hasLeadingMedia={hasLeadingMedia}
+                      />
+                    )}
+                    {renderedAssistantSelections.length > 0 && (
+                      <div className="mb-1 flex max-w-[240px] flex-wrap justify-end gap-1.5 self-end">
+                        <AssistantSelectionsSummaryChip selections={renderedAssistantSelections} />
+                      </div>
+                    )}
+                    {renderedBrowserAnnotations.length > 0 && (
+                      <div className="mb-1 flex w-full max-w-[28rem] justify-end self-end">
+                        <BrowserAnnotationStrip
+                          annotations={renderedBrowserAnnotations}
+                          className="justify-end"
                         />
                       </div>
-                    ))
-                  : null}
-                {(() => {
-                  // Hold the end-of-turn changes card (Undo / Review) until the
-                  // turn settles. While the turn is live the composer's own
-                  // live-changes strip owns this surface; showing the card too
-                  // would duplicate it and pre-empt the strip mid-turn.
-                  if (!turnSummary || row.assistantTurnInProgress) return null;
-                  const checkpointFiles = turnSummary.files;
-                  if (checkpointFiles.length === 0) return null;
-                  const fileChangesExpanded =
-                    expandedFileChangesByTurnId[turnSummary.turnId] ?? true;
-                  const fileListExpanded = expandedFileListByTurnId[turnSummary.turnId] ?? false;
-                  const checkpointTurnCount = turnSummary.checkpointTurnCount;
-                  const checkpointTurnCounts =
-                    turnSummary.checkpointTurnCounts ??
-                    (checkpointTurnCount === undefined ? [] : [checkpointTurnCount]);
-                  const canUndo =
-                    turnSummary.status !== "missing" &&
-                    turnSummary.status !== "error" &&
-                    turnSummary.checkpointRef !== undefined &&
-                    !turnSummary.checkpointRef.startsWith("provider-diff:") &&
-                    checkpointTurnCounts.length > 0 &&
-                    onUndoTurnFiles !== undefined;
-                  const totalAdditions = checkpointFiles.reduce(
-                    (sum, file) => sum + (file.additions ?? 0),
-                    0,
-                  );
-                  const totalDeletions = checkpointFiles.reduce(
-                    (sum, file) => sum + (file.deletions ?? 0),
-                    0,
-                  );
-                  const editedFilesLabel = t(
-                    checkpointFiles.length === 1 ? "toolGroup.editSingle" : "toolGroup.edit",
-                    { count: checkpointFiles.length },
-                  );
-                  const firstCheckpointFiles = checkpointFiles.slice(0, MAX_VISIBLE_CHANGED_FILES);
-                  const overflowCheckpointFiles = checkpointFiles.slice(MAX_VISIBLE_CHANGED_FILES);
-                  const renderCheckpointFileRow = (
-                    file: (typeof checkpointFiles)[number],
-                    withFirstReset: boolean,
-                  ) => {
-                    // Hoisted out of JSX: a `??` inside an `&&` test makes React Compiler
-                    // bail out ("Unexpected terminal kind `logical` for logical test block").
-                    const additions = file.additions ?? 0;
-                    const deletions = file.deletions ?? 0;
-                    const hasDiffStat = additions + deletions > 0;
-                    return (
-                      <button
-                        key={file.path}
-                        type="button"
-                        className={cn(
-                          "group/file-row flex w-full items-center gap-2 border-t border-[color:var(--color-border-light)] bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-[var(--color-background-button-secondary-hover)]",
-                          withFirstReset && "first:border-t-0",
-                        )}
-                        onClick={() => onOpenTurnDiff(turnSummary.turnId, file.path)}
-                      >
-                        <FileEntryIcon
-                          pathValue={file.path}
-                          kind="file"
-                          theme={resolvedTheme}
-                          colorMode="inherit"
-                          className="size-4 shrink-0 text-[var(--color-icon-secondary)]"
-                        />
-                        <span
-                          className="font-system-ui truncate font-normal text-[var(--color-text-foreground)] underline-offset-2 group-hover/file-row:underline group-focus-visible/file-row:underline"
-                          style={{ fontSize: chatTypographyStyle.fontSize }}
-                        >
-                          {file.path}
-                        </span>
-                        {hasDiffStat && (
-                          <span
-                            className="font-system-ui ml-auto shrink-0 tabular-nums"
-                            style={{ fontSize: chatTypographyStyle.fontSize }}
-                          >
-                            <DiffStatLabel additions={additions} deletions={deletions} />
-                          </span>
-                        )}
-                      </button>
-                    );
-                  };
-                  return (
-                    <div className="mt-2 mb-1 overflow-hidden rounded-[0.65rem] border border-[color:var(--color-border-light)]">
+                    )}
+                    {renderedFileComments.length > 0 && (
+                      <div className="mb-1 flex max-w-[240px] flex-wrap justify-end gap-1.5 self-end">
+                        <FileCommentsSummaryChip comments={renderedFileComments} />
+                      </div>
+                    )}
+                    {renderedPastedTexts.length > 0 && (
+                      <div className="mb-1 flex max-w-full flex-col items-end gap-1.5 self-end">
+                        {renderedPastedTexts.map((pasted) => (
+                          <UserMessagePastedTextCard
+                            key={pasted.index}
+                            text={pasted.text}
+                            metrics={{
+                              lineCount: pasted.lineCount,
+                              charCount: pasted.charCount,
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {userFiles.length > 0 && (
+                      <div className="mb-1 flex max-w-[280px] flex-wrap justify-end gap-1.5 self-end">
+                        {userFiles.map((file) => (
+                          <FileAttachmentChip key={file.id} file={file} />
+                        ))}
+                      </div>
+                    )}
+                    {userImages.length > 0 && (
                       <div
                         className={cn(
-                          "flex items-center justify-between gap-3 bg-[color:color-mix(in_srgb,var(--app-user-message-background)_40%,transparent)] px-3 py-1.5",
-                          fileChangesExpanded &&
-                            "border-b border-[color:var(--color-border-light)]",
+                          "flex max-w-[240px] flex-wrap justify-end gap-2 self-end",
+                          showUserText && "mb-1",
                         )}
                       >
-                        <div className="flex min-w-0 items-center gap-2.5">
-                          <ChangesIcon className="size-3.5 shrink-0 text-muted-foreground/70" />
-                          <div className="min-w-0">
-                            <div
-                              className="truncate font-normal text-foreground/92"
-                              style={{ fontSize: chatTypographyStyle.fontSize }}
-                            >
-                              {editedFilesLabel}
-                            </div>
-                            {totalAdditions + totalDeletions > 0 ? (
-                              <div
-                                className="font-system-ui tabular-nums"
-                                style={{ fontSize: chatTypographyStyle.fontSize }}
-                              >
-                                <DiffStatLabel
-                                  additions={totalAdditions}
-                                  deletions={totalDeletions}
-                                />
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-2">
-                          {canUndo && (
-                            <button
-                              type="button"
-                              className="flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
-                              style={{ fontSize: chatTypographyStyle.fontSize }}
-                              onClick={() => onUndoTurnFiles(checkpointTurnCounts)}
-                            >
-                              Undo
-                              <Undo2Icon className="size-3" />
-                            </button>
-                          )}
-                          <ReviewChangesButton
-                            style={{ fontSize: chatTypographyStyle.fontSize }}
-                            onClick={() => onOpenTurnDiff(turnSummary.turnId)}
-                          />
-                          <button
-                            type="button"
-                            className="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/70 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground/80"
-                            aria-expanded={fileChangesExpanded}
-                            aria-label={
-                              fileChangesExpanded
-                                ? "Collapse changed files list"
-                                : "Expand changed files list"
+                        {userImages.map((image) => (
+                          <UserImageAttachmentThumbnail
+                            key={image.id}
+                            image={image}
+                            userImages={userImages}
+                            onImageExpand={onImageExpand}
+                            onTimelineImageLoad={
+                              isTailContentRow ? scrollTailExpansionToEnd : ignoreTimelineImageLoad
                             }
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              if (!fileChangesExpanded && isTailContentRow) {
-                                scrollTailExpansionToEnd();
-                              }
-                              toggleFileChangesExpanded(turnSummary.turnId);
-                            }}
-                            data-scroll-anchor-ignore={isTailContentRow ? true : undefined}
-                          >
-                            <DisclosureChevron
-                              open={fileChangesExpanded}
-                              className="text-[var(--color-text-foreground-tertiary)]"
+                            resolvedTheme={resolvedTheme}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {isEditingThisMessage ? (
+                      <UserMessageEditForm
+                        key={row.message.id}
+                        initialValue={displayedUserMessage.copyText}
+                        disabled={isSubmittingThisEdit || isRevertingCheckpoint}
+                        allowEmpty={renderedBrowserAnnotations.length > 0}
+                        chatTypographyStyle={userMessageTypographyStyle}
+                        borderClassName={userMessageBubbleBorderClass}
+                        onCancel={cancelUserMessageEdit}
+                        onSubmit={(text) =>
+                          void submitUserMessageEdit(
+                            row.message.id,
+                            text,
+                            renderedBrowserAnnotations.length > 0,
+                          )
+                        }
+                      />
+                    ) : showUserText ? (
+                      <div
+                        className={cn(
+                          "w-max max-w-full min-w-0 self-end bg-[var(--app-user-message-background)]",
+                          USER_MESSAGE_BUBBLE_RADIUS_CLASS_NAME,
+                          userMessageBubbleBorderClass,
+                          bubbleIsChipOnly
+                            ? "py-0.5 px-3"
+                            : USER_MESSAGE_BUBBLE_SHELL_CHROME_CLASS_NAME,
+                        )}
+                      >
+                        <UserMessageCollapsibleText
+                          text={userMessageText}
+                          expanded={userMessageExpanded}
+                          chatFontSizePx={normalizedChatFontSizePx}
+                          onToggle={() => {
+                            setExpandedUserMessagesById((previous) => ({
+                              ...previous,
+                              [row.message.id]: !(previous[row.message.id] ?? false),
+                            }));
+                          }}
+                        >
+                          <UserMessageBody
+                            text={userMessageText}
+                            mentionReferences={row.message.mentions ?? []}
+                            terminalContexts={terminalContexts}
+                            chatTypographyStyle={userMessageTypographyStyle}
+                            resolvedTheme={resolvedTheme}
+                            markdownCwd={markdownCwd}
+                          />
+                        </UserMessageCollapsibleText>
+                      </div>
+                    ) : null}
+                    {!isEditingThisMessage && (
+                      <div
+                        className="flex select-none items-center justify-end gap-2 pr-0.5 font-system-ui font-normal text-muted-foreground/45"
+                        style={chatMessageFooterStyle}
+                      >
+                        <p className={cn("tabular-nums", MESSAGE_HOVER_REVEAL_CLASS_NAME)}>
+                          {formatDayAwareTimestamp(
+                            row.message.createdAt,
+                            timestampFormat,
+                            timestampNow,
+                          )}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          {displayedUserMessage.copyText && (
+                            <MessageCopyButton
+                              text={displayedUserMessage.copyText}
+                              className={MESSAGE_HOVER_REVEAL_CLASS_NAME}
                             />
-                          </button>
+                          )}
+                          {showEditUserMessage && (
+                            <MessageActionButton
+                              label="Edit message"
+                              tooltip="Edit and resend"
+                              disabled={isRevertingCheckpoint}
+                              className={cn(
+                                MESSAGE_HOVER_REVEAL_CLASS_NAME,
+                                "disabled:text-muted-foreground/35",
+                              )}
+                              onClick={() => startUserMessageEdit(row.message.id)}
+                            >
+                              <NewThreadIcon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
+                            </MessageActionButton>
+                          )}
+                          {canRevertAgentWork ? (
+                            <MessageActionButton
+                              label="Revert to this message"
+                              tooltip="Revert to this message"
+                              disabled={isRevertingCheckpoint || isWorking}
+                              className={cn(
+                                MESSAGE_HOVER_REVEAL_CLASS_NAME,
+                                "disabled:text-muted-foreground/35",
+                              )}
+                              onClick={() => onRevertUserMessage(row.message.id)}
+                            >
+                              <Undo2Icon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
+                            </MessageActionButton>
+                          ) : null}
                         </div>
                       </div>
-                      <DisclosureRegion open={fileChangesExpanded}>
-                        {firstCheckpointFiles.map((file) => renderCheckpointFileRow(file, true))}
-                        {overflowCheckpointFiles.length > 0 ? (
-                          <DisclosureRegion open={fileListExpanded}>
-                            {overflowCheckpointFiles.map((file) =>
-                              renderCheckpointFileRow(file, false),
-                            )}
-                          </DisclosureRegion>
-                        ) : null}
-                        {overflowCheckpointFiles.length > 0 ? (
-                          <button
-                            type="button"
-                            className="flex w-full items-center justify-start gap-1.5 border-t border-[color:var(--color-border-light)] bg-transparent px-3 py-2 font-system-ui font-normal text-muted-foreground transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground"
-                            style={{ fontSize: chatTypographyStyle.fontSize }}
-                            aria-expanded={fileListExpanded}
-                            onClick={() => toggleFileListExpanded(turnSummary.turnId)}
-                          >
-                            <DisclosureChevron open={fileListExpanded} />
-                            <span>
-                              {fileListExpanded
-                                ? t("common.showLess")
-                                : t(
-                                    overflowCheckpointFiles.length === 1
-                                      ? "timeline.showMoreFile"
-                                      : "timeline.showMoreFiles",
-                                    { count: overflowCheckpointFiles.length },
-                                  )}
-                            </span>
-                          </button>
-                        ) : null}
-                      </DisclosureRegion>
-                    </div>
-                  );
-                })()}
-                {(showPinToggle ||
-                  showForkAction ||
-                  assistantCopyState.visible ||
-                  assistantMeta.length > 0 ||
-                  goalAchievement !== null) && (
-                  <div
-                    className="mt-0.5 flex select-none items-center gap-2 font-system-ui font-normal text-muted-foreground/45 [&>button:first-child]:-ml-[0.4375em]"
-                    style={chatMessageFooterStyle}
-                  >
-                    {showPinToggle ? (
-                      // Pin sits at the left edge of the footer, before the copy action. It stays
-                      // visible when pinned so it reads as a persistent "this is pinned" marker; an
-                      // unpinned message only reveals it on hover, like the other footer actions.
-                      // Same Central pin glyph in both states — persistence signals the pinned state.
-                      <MessageActionButton
-                        label={pinActionLabel("message", messagePinned)}
-                        tooltip={messagePinned ? "Unpin from panel" : "Pin to panel"}
-                        aria-pressed={messagePinned}
-                        className={
-                          messagePinned
-                            ? "text-muted-foreground/80"
-                            : MESSAGE_HOVER_REVEAL_CLASS_NAME
-                        }
-                        onClick={() => onTogglePinMessage?.(row.message.id)}
-                      >
-                        <PinIcon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
-                      </MessageActionButton>
-                    ) : null}
-                    {showForkAction ? (
-                      <MessageActionButton
-                        label={t("timeline.forkMessage")}
-                        tooltip={t("timeline.forkMessage")}
-                        className={MESSAGE_HOVER_REVEAL_CLASS_NAME}
-                        onClick={() => onForkMessage?.(row.message.id)}
-                      >
-                        <GitBranchIcon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
-                      </MessageActionButton>
-                    ) : null}
-                    {assistantCopyState.visible ? (
-                      <MessageCopyButton
-                        text={assistantCopyState.text ?? ""}
-                        className={MESSAGE_HOVER_REVEAL_CLASS_NAME}
-                      />
-                    ) : null}
-                    {assistantMeta.length > 0 ? (
-                      <p className={cn("tabular-nums", MESSAGE_HOVER_REVEAL_CLASS_NAME)}>
-                        {assistantMeta}
-                      </p>
-                    ) : null}
-                    {goalAchievement !== null ? (
-                      <>
-                        <div aria-hidden className="h-3 w-px shrink-0 bg-border" />
-                        <p
-                          className="flex min-w-0 items-center gap-1.5 tabular-nums"
-                          title={goalAchievement.goal}
-                        >
-                          <GoalIcon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
-                          <span className="truncate">
-                            {goalAchievement.elapsedMs !== null
-                              ? t("conversation.goalAchievedIn", {
-                                  duration: formatClockDuration(
-                                    goalAchievement.elapsedMs,
-                                    locale === "zh-CN" ? "zh" : "en",
-                                  ),
-                                })
-                              : t("conversation.goalAchieved")}
-                          </span>
-                        </p>
-                      </>
-                    ) : null}
+                    )}
                   </div>
-                )}
+                </div>
               </div>
-            </>
-          );
-        })()}
+            );
+          })()}
 
-      {row.kind === "proposed-plan" && (
-        <div className="min-w-0 py-0.5">
-          <ProposedPlanCard
-            planMarkdown={row.proposedPlan.planMarkdown}
-            cwd={markdownCwd}
-            workspaceRoot={workspaceRoot}
-            chatTypographyStyle={chatTypographyStyle}
-          />
-        </div>
-      )}
+        {row.kind === "message" &&
+          row.message.role === "assistant" &&
+          (() => {
+            const messageText = resolveAssistantMessageDisplayText(row);
+            const messageMarkers =
+              threadMarkersByMessageId.get(row.message.id) ?? EMPTY_MESSAGE_MARKERS;
+            const assistantCopyState = resolveAssistantMessageCopyState({
+              text: row.assistantCopyText ?? row.message.text ?? null,
+              showCopyButton: row.showAssistantCopyButton,
+              streaming: row.assistantCopyStreaming,
+            });
+            const messagePinned = pinnedMessageIds?.has(row.message.id) ?? false;
+            const messageCanPin = canPinMessage?.(row.message.id) ?? true;
+            // Offer the pin toggle wherever copy is offered (a complete, terminal answer);
+            // keep it visible for an already-pinned message so it can always be unpinned.
+            const showPinToggle =
+              messageCanPin &&
+              Boolean(onTogglePinMessage) &&
+              (assistantCopyState.visible || messagePinned);
+            const showForkAction =
+              assistantCopyState.visible &&
+              Boolean(onForkMessage) &&
+              (canForkMessage?.(row.message.id) ?? false);
+            const turnSummary = row.assistantTurnDiffSummary;
+            // `showAssistantCopyButton` is exactly the terminal-message signal
+            // (see deriveTerminalAssistantMessageIds). Time now belongs to the
+            // response-level identity header rather than this action footer.
+            const isTerminalAssistantMessage =
+              row.showAssistantCopyButton && !row.assistantTurnInProgress;
+            const goalAchievement =
+              isTerminalAssistantMessage && row.message.turnId
+                ? (goalAchievementByTurnId.get(row.message.turnId) ?? null)
+                : null;
+            const allTurnWorkEntries = row.turnWorkEntries ?? [];
+            const omnimindThreadCreationRecaps = [
+              ...new Map(
+                allTurnWorkEntries.flatMap((entry) =>
+                  entry.omnimindThreadCreation
+                    ? [
+                        [
+                          entry.omnimindThreadCreation.operationId,
+                          entry.omnimindThreadCreation,
+                        ] as const,
+                      ]
+                    : [],
+                ),
+              ).values(),
+            ];
+            const isTailContentRow = row.id === tailContentRowId;
+            return (
+              <>
+                <div className="group min-w-0 py-0.5">
+                  {messageText !== null ? (
+                    <div data-assistant-message-id={row.message.id}>
+                      <ChatMarkdown
+                        text={messageText}
+                        cwd={markdownCwd}
+                        isStreaming={Boolean(row.message.streaming)}
+                        style={chatTypographyStyle}
+                        onImageExpand={onImageExpand}
+                        markers={messageMarkers}
+                        mermaidPresentation={{ messageId: row.message.id }}
+                      />
+                    </div>
+                  ) : null}
+                  {!row.assistantTurnInProgress && row.showAssistantCopyButton
+                    ? omnimindThreadCreationRecaps.map((creation) => (
+                        <div key={creation.operationId} className="mt-2 mb-1">
+                          <OmniMindThreadCreationCard
+                            creation={creation}
+                            {...(onOpenThread
+                              ? {
+                                  onOpenThread: (createdThreadId) =>
+                                    onOpenThread(ThreadId.makeUnsafe(createdThreadId)),
+                                }
+                              : {})}
+                          />
+                        </div>
+                      ))
+                    : null}
+                  {(() => {
+                    // Hold the end-of-turn changes card (Undo / Review) until the
+                    // turn settles. While the turn is live the composer's own
+                    // live-changes strip owns this surface; showing the card too
+                    // would duplicate it and pre-empt the strip mid-turn.
+                    if (!turnSummary || row.assistantTurnInProgress) return null;
+                    const checkpointFiles = turnSummary.files;
+                    if (checkpointFiles.length === 0) return null;
+                    const fileChangesExpanded =
+                      expandedFileChangesByTurnId[turnSummary.turnId] ?? true;
+                    const fileListExpanded = expandedFileListByTurnId[turnSummary.turnId] ?? false;
+                    const checkpointTurnCount = turnSummary.checkpointTurnCount;
+                    const checkpointTurnCounts =
+                      turnSummary.checkpointTurnCounts ??
+                      (checkpointTurnCount === undefined ? [] : [checkpointTurnCount]);
+                    const canUndo =
+                      turnSummary.status !== "missing" &&
+                      turnSummary.status !== "error" &&
+                      turnSummary.checkpointRef !== undefined &&
+                      !turnSummary.checkpointRef.startsWith("provider-diff:") &&
+                      checkpointTurnCounts.length > 0 &&
+                      onUndoTurnFiles !== undefined;
+                    const totalAdditions = checkpointFiles.reduce(
+                      (sum, file) => sum + (file.additions ?? 0),
+                      0,
+                    );
+                    const totalDeletions = checkpointFiles.reduce(
+                      (sum, file) => sum + (file.deletions ?? 0),
+                      0,
+                    );
+                    const editedFilesLabel = t(
+                      checkpointFiles.length === 1 ? "toolGroup.editSingle" : "toolGroup.edit",
+                      { count: checkpointFiles.length },
+                    );
+                    const firstCheckpointFiles = checkpointFiles.slice(
+                      0,
+                      MAX_VISIBLE_CHANGED_FILES,
+                    );
+                    const overflowCheckpointFiles =
+                      checkpointFiles.slice(MAX_VISIBLE_CHANGED_FILES);
+                    const renderCheckpointFileRow = (
+                      file: (typeof checkpointFiles)[number],
+                      withFirstReset: boolean,
+                    ) => {
+                      // Hoisted out of JSX: a `??` inside an `&&` test makes React Compiler
+                      // bail out ("Unexpected terminal kind `logical` for logical test block").
+                      const additions = file.additions ?? 0;
+                      const deletions = file.deletions ?? 0;
+                      const hasDiffStat = additions + deletions > 0;
+                      return (
+                        <button
+                          key={file.path}
+                          type="button"
+                          className={cn(
+                            "group/file-row flex w-full items-center gap-2 border-t border-[color:var(--color-border-light)] bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-[var(--color-background-button-secondary-hover)]",
+                            withFirstReset && "first:border-t-0",
+                          )}
+                          onClick={() => onOpenTurnDiff(turnSummary.turnId, file.path)}
+                        >
+                          <FileEntryIcon
+                            pathValue={file.path}
+                            kind="file"
+                            theme={resolvedTheme}
+                            colorMode="inherit"
+                            className="size-4 shrink-0 text-[var(--color-icon-secondary)]"
+                          />
+                          <span
+                            className="font-system-ui truncate font-normal text-[var(--color-text-foreground)] underline-offset-2 group-hover/file-row:underline group-focus-visible/file-row:underline"
+                            style={{ fontSize: chatTypographyStyle.fontSize }}
+                          >
+                            {file.path}
+                          </span>
+                          {hasDiffStat && (
+                            <span
+                              className="font-system-ui ml-auto shrink-0 tabular-nums"
+                              style={{ fontSize: chatTypographyStyle.fontSize }}
+                            >
+                              <DiffStatLabel additions={additions} deletions={deletions} />
+                            </span>
+                          )}
+                        </button>
+                      );
+                    };
+                    return (
+                      <div className="mt-2 mb-1 overflow-hidden rounded-[0.65rem] border border-[color:var(--color-border-light)]">
+                        <div
+                          className={cn(
+                            "flex items-center justify-between gap-3 bg-[color:color-mix(in_srgb,var(--app-user-message-background)_40%,transparent)] px-3 py-1.5",
+                            fileChangesExpanded &&
+                              "border-b border-[color:var(--color-border-light)]",
+                          )}
+                        >
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <ChangesIcon className="size-3.5 shrink-0 text-muted-foreground/70" />
+                            <div className="min-w-0">
+                              <div
+                                className="truncate font-normal text-foreground/92"
+                                style={{
+                                  fontSize: chatTypographyStyle.fontSize,
+                                }}
+                              >
+                                {editedFilesLabel}
+                              </div>
+                              {totalAdditions + totalDeletions > 0 ? (
+                                <div
+                                  className="font-system-ui tabular-nums"
+                                  style={{
+                                    fontSize: chatTypographyStyle.fontSize,
+                                  }}
+                                >
+                                  <DiffStatLabel
+                                    additions={totalAdditions}
+                                    deletions={totalDeletions}
+                                  />
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            {canUndo && (
+                              <button
+                                type="button"
+                                className="flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
+                                style={{
+                                  fontSize: chatTypographyStyle.fontSize,
+                                }}
+                                onClick={() => onUndoTurnFiles(checkpointTurnCounts)}
+                              >
+                                Undo
+                                <Undo2Icon className="size-3" />
+                              </button>
+                            )}
+                            <ReviewChangesButton
+                              style={{ fontSize: chatTypographyStyle.fontSize }}
+                              onClick={() => onOpenTurnDiff(turnSummary.turnId)}
+                            />
+                            <button
+                              type="button"
+                              className="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground/70 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground/80"
+                              aria-expanded={fileChangesExpanded}
+                              aria-label={
+                                fileChangesExpanded
+                                  ? "Collapse changed files list"
+                                  : "Expand changed files list"
+                              }
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                if (!fileChangesExpanded && isTailContentRow) {
+                                  scrollTailExpansionToEnd();
+                                }
+                                toggleFileChangesExpanded(turnSummary.turnId);
+                              }}
+                              data-scroll-anchor-ignore={isTailContentRow ? true : undefined}
+                            >
+                              <DisclosureChevron
+                                open={fileChangesExpanded}
+                                className="text-[var(--color-text-foreground-tertiary)]"
+                              />
+                            </button>
+                          </div>
+                        </div>
+                        <DisclosureRegion open={fileChangesExpanded}>
+                          {firstCheckpointFiles.map((file) => renderCheckpointFileRow(file, true))}
+                          {overflowCheckpointFiles.length > 0 ? (
+                            <DisclosureRegion open={fileListExpanded}>
+                              {overflowCheckpointFiles.map((file) =>
+                                renderCheckpointFileRow(file, false),
+                              )}
+                            </DisclosureRegion>
+                          ) : null}
+                          {overflowCheckpointFiles.length > 0 ? (
+                            <button
+                              type="button"
+                              className="flex w-full items-center justify-start gap-1.5 border-t border-[color:var(--color-border-light)] bg-transparent px-3 py-2 font-system-ui font-normal text-muted-foreground transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground"
+                              style={{ fontSize: chatTypographyStyle.fontSize }}
+                              aria-expanded={fileListExpanded}
+                              onClick={() => toggleFileListExpanded(turnSummary.turnId)}
+                            >
+                              <DisclosureChevron open={fileListExpanded} />
+                              <span>
+                                {fileListExpanded
+                                  ? t("common.showLess")
+                                  : t(
+                                      overflowCheckpointFiles.length === 1
+                                        ? "timeline.showMoreFile"
+                                        : "timeline.showMoreFiles",
+                                      { count: overflowCheckpointFiles.length },
+                                    )}
+                              </span>
+                            </button>
+                          ) : null}
+                        </DisclosureRegion>
+                      </div>
+                    );
+                  })()}
+                  {(showPinToggle ||
+                    showForkAction ||
+                    assistantCopyState.visible ||
+                    goalAchievement !== null) && (
+                    <div
+                      className="mt-0.5 flex select-none items-center gap-2 font-system-ui font-normal text-muted-foreground/45 [&>button:first-child]:-ml-[0.4375em]"
+                      style={chatMessageFooterStyle}
+                    >
+                      {showPinToggle ? (
+                        // Pin sits at the left edge of the footer, before the copy action. It stays
+                        // visible when pinned so it reads as a persistent "this is pinned" marker; an
+                        // unpinned message only reveals it on hover, like the other footer actions.
+                        // Same Central pin glyph in both states — persistence signals the pinned state.
+                        <MessageActionButton
+                          label={pinActionLabel("message", messagePinned)}
+                          tooltip={messagePinned ? "Unpin from panel" : "Pin to panel"}
+                          aria-pressed={messagePinned}
+                          className={
+                            messagePinned
+                              ? "text-muted-foreground/80"
+                              : MESSAGE_HOVER_REVEAL_CLASS_NAME
+                          }
+                          onClick={() => onTogglePinMessage?.(row.message.id)}
+                        >
+                          <PinIcon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
+                        </MessageActionButton>
+                      ) : null}
+                      {showForkAction ? (
+                        <MessageActionButton
+                          label={t("timeline.forkMessage")}
+                          tooltip={t("timeline.forkMessage")}
+                          className={MESSAGE_HOVER_REVEAL_CLASS_NAME}
+                          onClick={() => onForkMessage?.(row.message.id)}
+                        >
+                          <GitBranchIcon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
+                        </MessageActionButton>
+                      ) : null}
+                      {assistantCopyState.visible ? (
+                        <MessageCopyButton
+                          text={assistantCopyState.text ?? ""}
+                          className={MESSAGE_HOVER_REVEAL_CLASS_NAME}
+                        />
+                      ) : null}
+                      {goalAchievement !== null ? (
+                        <>
+                          <div aria-hidden className="h-3 w-px shrink-0 bg-border" />
+                          <p
+                            className="flex min-w-0 items-center gap-1.5 tabular-nums"
+                            title={goalAchievement.goal}
+                          >
+                            <GoalIcon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
+                            <span className="truncate">
+                              {goalAchievement.elapsedMs !== null
+                                ? t("conversation.goalAchievedIn", {
+                                    duration: formatClockDuration(
+                                      goalAchievement.elapsedMs,
+                                      locale === "zh-CN" ? "zh" : "en",
+                                    ),
+                                  })
+                                : t("conversation.goalAchieved")}
+                            </span>
+                          </p>
+                        </>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
 
-      {row.kind === "worktree-setup" && (
-        <DisclosureRegion open={row.open}>
-          <div className="pt-0.5 pb-1">
-            <WorktreeSetupCard
-              steps={row.steps}
-              pendingAction={worktreeSetupPendingAction}
-              onResolve={onResolveWorktreeSetup}
+        {row.kind === "proposed-plan" && (
+          <div className="min-w-0 py-0.5">
+            <ProposedPlanCard
+              planMarkdown={row.proposedPlan.planMarkdown}
+              cwd={markdownCwd}
+              workspaceRoot={workspaceRoot}
+              chatTypographyStyle={chatTypographyStyle}
             />
           </div>
-        </DisclosureRegion>
-      )}
+        )}
+
+        {row.kind === "worktree-setup" && (
+          <DisclosureRegion open={row.open}>
+            <div className="pt-0.5 pb-1">
+              <WorktreeSetupCard
+                steps={row.steps}
+                pendingAction={worktreeSetupPendingAction}
+                onResolve={onResolveWorktreeSetup}
+              />
+            </div>
+          </DisclosureRegion>
+        )}
+      </AssistantTurnRowFrame>
     </div>
   );
 

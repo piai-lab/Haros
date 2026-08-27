@@ -105,6 +105,7 @@ interface ChatTranscriptPaneProps {
   scrollButtonVisible: boolean;
   terminalWorkspaceTerminalTabActive: boolean;
   timelineEntries: ComponentProps<typeof MessagesTimeline>["timelineEntries"];
+  turnProvenance?: ComponentProps<typeof MessagesTimeline>["turnProvenance"];
   timestampFormat: TimestampFormat;
   turnDiffSummaryByAssistantMessageId: Map<MessageId, TurnDiffSummary>;
   workspaceRoot: string | undefined;
@@ -179,6 +180,7 @@ export function ChatTranscriptPane({
   scrollButtonVisible,
   terminalWorkspaceTerminalTabActive,
   timelineEntries,
+  turnProvenance,
   timestampFormat,
   turnDiffSummaryByAssistantMessageId,
   workspaceRoot,
@@ -194,7 +196,9 @@ export function ChatTranscriptPane({
       ? {
           ...(contentInsetRightPx ? { paddingRight: contentInsetRightPx } : {}),
           ...(contentInsetBottomPx
-            ? { bottom: composerOverlayAffordanceBottomPx(contentInsetBottomPx) }
+            ? {
+                bottom: composerOverlayAffordanceBottomPx(contentInsetBottomPx),
+              }
             : {}),
         }
       : undefined;
@@ -262,6 +266,7 @@ export function ChatTranscriptPane({
             {...(forkSource ? { forkSource } : {})}
             isTemporaryThread={isTemporaryThread ?? false}
             timelineEntries={timelineEntries}
+            {...(turnProvenance ? { turnProvenance } : {})}
             turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}
             onOpenTurnDiff={onOpenTurnDiff}
             onOpenThread={onOpenThread}

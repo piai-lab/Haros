@@ -198,6 +198,7 @@ it.effect("preserves thread activity payloads through the RPC JSON codec", () =>
     const decoded = yield* Schema.decodeUnknownEffect(codec)(encoded);
     const activity = decoded.threads[0]?.activities[0];
 
+    assert.deepStrictEqual(decoded.threads[0]?.turnProvenance, []);
     assert.deepStrictEqual(activity?.payload, {
       itemType: "command_execution",
       data: {
@@ -564,7 +565,12 @@ it.effect("bounds initial turn text while preserving attachment-only turns", () 
       type: "thread.turn.start",
       commandId: "cmd-turn-input-limit",
       threadId: "thread-1",
-      message: { messageId: "msg-input-limit", role: "user", text, attachments },
+      message: {
+        messageId: "msg-input-limit",
+        role: "user",
+        text,
+        attachments,
+      },
       createdAt: "2026-01-01T00:00:00.000Z",
     });
 
@@ -1260,8 +1266,14 @@ it.effect("rejects retired and unknown canonical answer fields without stripping
     assert.equal(legacyShortcut._tag, "Failure");
 
     const raw = " line one\nline two  ";
-    const accepted = yield* decode({ selectedOptionLabels: ["A"], customText: raw });
-    assert.deepStrictEqual(accepted, { selectedOptionLabels: ["A"], customText: raw });
+    const accepted = yield* decode({
+      selectedOptionLabels: ["A"],
+      customText: raw,
+    });
+    assert.deepStrictEqual(accepted, {
+      selectedOptionLabels: ["A"],
+      customText: raw,
+    });
   }),
 );
 
@@ -1269,7 +1281,9 @@ it.effect("keeps canonical response and settlement terminal members strict", () 
   Effect.gen(function* () {
     const decodeResponse = Schema.decodeUnknownEffect(CanonicalUserInputResponse);
     const decodeSettlement = Schema.decodeUnknownEffect(CanonicalUserInputSettlement);
-    const answers = { q1: { selectedOptionLabels: ["A"], customText: " 解释\n  " } };
+    const answers = {
+      q1: { selectedOptionLabels: ["A"], customText: " 解释\n  " },
+    };
 
     const legal = yield* decodeResponse({ status: "answered", answers });
     assert.deepStrictEqual(legal, { status: "answered", answers });

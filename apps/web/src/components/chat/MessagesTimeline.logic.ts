@@ -3,7 +3,7 @@
 // Layer: Web chat presentation helpers
 // Exports: row derivation, structural sharing, copy/timer helpers
 
-import { type MessageId, type TurnId } from "@omnimind/contracts";
+import { type MessageId, type OrchestrationTurnProvenance, type TurnId } from "@omnimind/contracts";
 import { type TimelineEntry, type WorkLogEntry, elapsedMilliseconds } from "../../session-logic";
 import { normalizeCompactToolLabel as normalizeCompactToolLabelValue } from "../../lib/toolCallLabel";
 import {
@@ -129,7 +129,11 @@ export function planWorkEntryRenderChunks(
     const summary = summarizeToolCallGroup(chunk.entries);
     const isLiveTail = options.tailIsLive && index === chunks.length - 1;
     const collapsed = summary !== null && !summary.hasRunningEntry && !isLiveTail;
-    return { id: chunk.id, entries: chunk.entries, summary: collapsed ? summary : null };
+    return {
+      id: chunk.id,
+      entries: chunk.entries,
+      summary: collapsed ? summary : null,
+    };
   });
 }
 
@@ -225,7 +229,14 @@ interface TimelineDiffMessage {
   turnId: TurnId | null;
 }
 
-export type MessagesTimelineRow =
+export interface AssistantTurnLayout {
+  readonly responseId: string;
+  readonly showIdentity: boolean;
+  readonly provenance: OrchestrationTurnProvenance | null;
+  readonly timestamp: string;
+}
+
+type MessagesTimelineRowContent =
   | {
       kind: "work";
       id: string;
@@ -277,6 +288,10 @@ export type MessagesTimelineRow =
       steps: ReadonlyArray<WorktreeSetupStep>;
       open: boolean;
     };
+
+export type MessagesTimelineRow = MessagesTimelineRowContent & {
+  assistantTurnLayout?: AssistantTurnLayout;
+};
 
 export interface StableMessagesTimelineRowsState {
   byId: Map<string, MessagesTimelineRow>;
@@ -535,6 +550,7 @@ export function deriveMessagesTimelineRows(input: {
   turnProcessPhase?: TurnProcessPhase | undefined;
   turnDiffSummaryByAssistantMessageId: ReadonlyMap<MessageId, TurnDiffSummary>;
   revertTurnCountByUserMessageId: ReadonlyMap<MessageId, number>;
+  turnProvenance?: ReadonlyArray<OrchestrationTurnProvenance>;
 }): MessagesTimelineRow[] {
   const timelineMessages = input.timelineEntries.flatMap((entry) =>
     entry.kind === "message" ? [entry.message] : [],
@@ -552,6 +568,14 @@ export function deriveMessagesTimelineRows(input: {
           startedAt: input.activeTurnStartedAt,
         } satisfies TurnProcessPhase)
       : ({ kind: "settled" } satisfies TurnProcessPhase));
+  const provenanceByPendingMessageId = new Map(
+    (input.turnProvenance ?? []).map((entry) => [entry.pendingMessageId, entry] as const),
+  );
+  const provenanceByTurnId = new Map(
+    (input.turnProvenance ?? []).flatMap((entry) =>
+      entry.turnId === null ? [] : ([[entry.turnId, entry]] as const),
+    ),
+  );
 
   type ResponseSegment = {
     boundaryId: string;
@@ -559,7 +583,10 @@ export function deriveMessagesTimelineRows(input: {
     entries: TimelineEntry[];
   };
   type TimelinePart =
-    | { kind: "boundary-message"; entry: Extract<TimelineEntry, { kind: "message" }> }
+    | {
+        kind: "boundary-message";
+        entry: Extract<TimelineEntry, { kind: "message" }>;
+      }
     | { kind: "segment"; segment: ResponseSegment };
 
   const parts: TimelinePart[] = [];
@@ -667,6 +694,7 @@ export function deriveMessagesTimelineRows(input: {
     const segmentPhase = segmentIsActive ? configuredPhase.kind : "settled";
     const processItems: TurnProcessItem[] = [];
     const resultRows: MessagesTimelineRow[] = [];
+    const segmentRows: MessagesTimelineRow[] = [];
     const allWorkEntries: WorkLogEntry[] = [];
     let mergedTurnDiffSummary: TurnDiffSummary | undefined;
     let terminalMessageRow: Extract<MessagesTimelineRow, { kind: "message" }> | null = null;
@@ -696,7 +724,11 @@ export function deriveMessagesTimelineRows(input: {
         } else if (isOutsideTurnProcessWork(entry.entry)) {
           appendResultWork(entry.entry);
         } else {
-          processItems.push({ kind: "work", id: entry.entry.id, entry: entry.entry });
+          processItems.push({
+            kind: "work",
+            id: entry.entry.id,
+            entry: entry.entry,
+          });
         }
         continue;
       }
@@ -765,7 +797,7 @@ export function deriveMessagesTimelineRows(input: {
         .toReversed()
         .map((item) => (item.kind === "work" ? item.entry.turnId : item.message.turnId))
         .find((turnId): turnId is TurnId => turnId != null);
-      nextRows.push({
+      segmentRows.push({
         kind: "turn-process",
         id: `turn-process:${segment.boundaryId}`,
         createdAt: startedAt,
@@ -778,7 +810,51 @@ export function deriveMessagesTimelineRows(input: {
         ...(mergedTurnDiffSummary ? { turnDiffSummary: mergedTurnDiffSummary } : {}),
       });
     }
-    nextRows.push(...resultRows);
+    segmentRows.push(...resultRows);
+
+    const assistantRows = segmentRows.filter(
+      (row) =>
+        row.kind === "turn-process" ||
+        row.kind === "work" ||
+        row.kind === "proposed-plan" ||
+        (row.kind === "message" && row.message.role === "assistant"),
+    );
+    const assistantTurnId =
+      terminalMessageRow?.message.turnId ??
+      assistantRows
+        .toReversed()
+        .map((row) => {
+          if (row.kind === "turn-process") return row.turnId;
+          if (row.kind === "message") return row.message.turnId;
+          if (row.kind === "proposed-plan") return row.proposedPlan.turnId;
+          if (row.kind === "work") {
+            return row.groupedEntries.findLast((entry) => entry.turnId !== null)?.turnId ?? null;
+          }
+          return null;
+        })
+        .find((turnId): turnId is TurnId => turnId !== null && turnId !== undefined) ??
+      null;
+    const provenance =
+      provenanceByPendingMessageId.get(segment.boundaryId as MessageId) ??
+      (assistantTurnId === null ? null : (provenanceByTurnId.get(assistantTurnId) ?? null));
+    const firstAssistantRow = assistantRows[0];
+    const firstAssistantRowCreatedAt =
+      firstAssistantRow && firstAssistantRow.kind !== "worktree-setup"
+        ? firstAssistantRow.createdAt
+        : undefined;
+    const identityTimestamp = terminalMessageRow?.message.createdAt ?? firstAssistantRowCreatedAt;
+    if (assistantRows.length > 0 && identityTimestamp) {
+      const firstAssistantRow = assistantRows[0]!;
+      for (const row of assistantRows) {
+        row.assistantTurnLayout = {
+          responseId: segment.boundaryId,
+          showIdentity: row === firstAssistantRow,
+          provenance,
+          timestamp: identityTimestamp,
+        };
+      }
+    }
+    nextRows.push(...segmentRows);
   }
 
   if (input.worktreeSetup) {
@@ -1082,6 +1158,7 @@ function turnProcessItemsEqual(
 
 function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean {
   if (a.kind !== b.kind || a.id !== b.id) return false;
+  if (!assistantTurnLayoutsEqual(a.assistantTurnLayout, b.assistantTurnLayout)) return false;
 
   switch (a.kind) {
     case "turn-process": {
@@ -1132,4 +1209,18 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
       );
     }
   }
+}
+
+function assistantTurnLayoutsEqual(
+  left: AssistantTurnLayout | undefined,
+  right: AssistantTurnLayout | undefined,
+): boolean {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return (
+    left.responseId === right.responseId &&
+    left.showIdentity === right.showIdentity &&
+    left.provenance === right.provenance &&
+    left.timestamp === right.timestamp
+  );
 }

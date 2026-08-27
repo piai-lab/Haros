@@ -521,6 +521,72 @@ describe("store event reducer", () => {
     expect(threadsOf(next)[0]?.runtimeMode).toBe("full-access");
   });
 
+  it("projects the admitted model immediately and replaces it on edit-resend", () => {
+    const messageId = MessageId.makeUnsafe("user-model-provenance");
+    const initialState = makeState(
+      makeThread({
+        modelSelection: { provider: "codex", model: "gpt-5.6" },
+        messages: [
+          {
+            id: messageId,
+            role: "user",
+            text: "Use the selected model",
+            turnId: null,
+            createdAt: "2026-08-27T02:20:00.000Z",
+            streaming: false,
+            source: "native",
+          },
+        ],
+      }),
+    );
+
+    const deepSeek = applyOrchestrationEvents(initialState, [
+      makeDomainEvent("thread.turn-start-requested", {
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        messageId,
+        modelSelection: {
+          provider: "omnimind",
+          model: "deepseek/deepseek-v4-pro",
+        },
+        runtimeMode: DEFAULT_RUNTIME_MODE,
+        interactionMode: DEFAULT_INTERACTION_MODE,
+        dispatchMode: "queue",
+        createdAt: "2026-08-27T02:21:00.000Z",
+      }),
+    ]);
+
+    expect(threadsOf(deepSeek)[0]?.turnProvenance).toEqual([
+      {
+        pendingMessageId: messageId,
+        turnId: null,
+        modelSelection: {
+          provider: "omnimind",
+          model: "deepseek/deepseek-v4-pro",
+        },
+        requestedAt: "2026-08-27T02:21:00.000Z",
+      },
+    ]);
+    const resent = applyOrchestrationEvents(deepSeek, [
+      makeDomainEvent("thread.turn-start-requested", {
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        messageId,
+        modelSelection: { provider: "codex", model: "gpt-5.6" },
+        runtimeMode: DEFAULT_RUNTIME_MODE,
+        interactionMode: DEFAULT_INTERACTION_MODE,
+        dispatchMode: "queue",
+        createdAt: "2026-08-27T02:22:00.000Z",
+      }),
+    ]);
+    expect(threadsOf(resent)[0]?.turnProvenance).toEqual([
+      {
+        pendingMessageId: messageId,
+        turnId: null,
+        modelSelection: { provider: "codex", model: "gpt-5.6" },
+        requestedAt: "2026-08-27T02:22:00.000Z",
+      },
+    ]);
+  });
+
   it("does not truncate streamed assistant text when completion only carries the trailing chunk", () => {
     const assistantId = MessageId.makeUnsafe("assistant-message");
     const turnId = TurnId.makeUnsafe("turn-1");
@@ -1006,7 +1072,14 @@ describe("store event reducer", () => {
         turnId: TurnId.makeUnsafe("turn-2"),
         completedAt: "2026-02-27T00:02:00.000Z",
         status: "ready",
-        files: [{ path: "src/other.ts", kind: "modified", additions: 1, deletions: 0 }],
+        files: [
+          {
+            path: "src/other.ts",
+            kind: "modified",
+            additions: 1,
+            deletions: 0,
+          },
+        ],
         checkpointRef: CheckpointRef.makeUnsafe("checkpoint-2"),
         assistantMessageId: null,
         checkpointTurnCount: 2,
@@ -1091,6 +1164,23 @@ describe("store event reducer", () => {
             streaming: false,
           },
         ],
+        turnProvenance: [
+          {
+            pendingMessageId: MessageId.makeUnsafe("user-1"),
+            turnId: TurnId.makeUnsafe("turn-1"),
+            modelSelection: { provider: "codex", model: "gpt-5.6" },
+            requestedAt: "2026-02-27T00:00:00.000Z",
+          },
+          {
+            pendingMessageId: MessageId.makeUnsafe("user-2"),
+            turnId: TurnId.makeUnsafe("turn-2"),
+            modelSelection: {
+              provider: "omnimind",
+              model: "deepseek/deepseek-v4-pro",
+            },
+            requestedAt: "2026-02-27T00:01:00.000Z",
+          },
+        ],
         proposedPlans: [
           {
             id: OrchestrationProposedPlanId.makeUnsafe("plan-1"),
@@ -1145,6 +1235,14 @@ describe("store event reducer", () => {
     expect(threadsOf(next)[0]?.messages.map((message) => message.id)).toEqual([
       MessageId.makeUnsafe("user-1"),
       MessageId.makeUnsafe("assistant-1"),
+    ]);
+    expect(threadsOf(next)[0]?.turnProvenance).toEqual([
+      {
+        pendingMessageId: MessageId.makeUnsafe("user-1"),
+        turnId: TurnId.makeUnsafe("turn-1"),
+        modelSelection: { provider: "codex", model: "gpt-5.6" },
+        requestedAt: "2026-02-27T00:00:00.000Z",
+      },
     ]);
     expect(threadsOf(next)[0]?.proposedPlans.map((plan) => plan.id)).toEqual([
       OrchestrationProposedPlanId.makeUnsafe("plan-1"),
@@ -1204,6 +1302,23 @@ describe("store event reducer", () => {
             streaming: false,
           },
         ],
+        turnProvenance: [
+          {
+            pendingMessageId: MessageId.makeUnsafe("user-1"),
+            turnId: TurnId.makeUnsafe("turn-1"),
+            modelSelection: { provider: "codex", model: "gpt-5.6" },
+            requestedAt: "2026-02-27T00:00:00.000Z",
+          },
+          {
+            pendingMessageId: MessageId.makeUnsafe("user-2"),
+            turnId: TurnId.makeUnsafe("turn-2"),
+            modelSelection: {
+              provider: "omnimind",
+              model: "deepseek/deepseek-v4-pro",
+            },
+            requestedAt: "2026-02-27T00:01:00.000Z",
+          },
+        ],
         proposedPlans: [
           {
             id: OrchestrationProposedPlanId.makeUnsafe("plan-2"),
@@ -1247,6 +1362,14 @@ describe("store event reducer", () => {
     expect(threadsOf(next)[0]?.messages.map((message) => message.id)).toEqual([
       MessageId.makeUnsafe("user-1"),
       MessageId.makeUnsafe("assistant-1"),
+    ]);
+    expect(threadsOf(next)[0]?.turnProvenance).toEqual([
+      {
+        pendingMessageId: MessageId.makeUnsafe("user-1"),
+        turnId: TurnId.makeUnsafe("turn-1"),
+        modelSelection: { provider: "codex", model: "gpt-5.6" },
+        requestedAt: "2026-02-27T00:00:00.000Z",
+      },
     ]);
     expect(threadsOf(next)[0]?.turnDiffSummaries.map((summary) => summary.turnId)).toEqual([
       TurnId.makeUnsafe("turn-1"),
@@ -1634,7 +1757,10 @@ describe("store event reducer", () => {
         "thread.activity-appended",
         {
           threadId,
-          activity: makeActivity({ id: "activity-before-restart", sequence: 99 }),
+          activity: makeActivity({
+            id: "activity-before-restart",
+            sequence: 99,
+          }),
         },
         { sequence: 40 },
       ),
