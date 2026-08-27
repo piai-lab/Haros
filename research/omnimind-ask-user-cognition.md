@@ -11,6 +11,8 @@
 > 首要 UX/test donor：[`geoqiao/pi-tools@26496c809870e349429bc2cae72d61b46d0e2bc3/packages/pi-ask`](https://github.com/geoqiao/pi-tools/tree/26496c809870e349429bc2cae72d61b46d0e2bc3/packages/pi-ask)
 >
 > 未来更新程序：[`pi-ask-user-intake.md`](pi-ask-user-intake.md)
+>
+> **2026-08-27 runtime supersession：** 当前 pinned barrier runtime 已复验到 `@earendil-works/pi-agent-core@0.84.3`；下文明确写作 `0.84.2` 的段落保留 2026-08-25 fixed observation，不再代表当前 exact adoption。当前 package、patch digest 与 revision 只见根 [`source-adoptions.json`](../source-adoptions.json) 和 [`pi-ask-user-intake.md`](pi-ask-user-intake.md)。
 
 本文是 Ask User 的 package-specific 产品认知与历史 source decision evidence。稳定产品合同只由 `architecture/` 拥有；未来 source intake 的公共 Gate 见根 [`SOURCE-INTAKE.md`](../SOURCE-INTAKE.md)，Pi runtime/source-type 规则见 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md)，Ask 的 exact lineage、P1–P7 与 revalidation trigger 见 [`pi-ask-user-intake.md`](pi-ask-user-intake.md)。当前实现或交付状态必须读取真实源码、Git、`execution-brief.md` 与 Campaign，不能从本文的历史 SHA 或阶段叙事推断。
 

@@ -181,7 +181,7 @@ Peer dependencies 当前都是 wildcard：
 - `@earendil-works/pi-coding-agent@*`
 - `@earendil-works/pi-tui@*`
 
-上游 README 声称 Pi `v0.37.3+`，但 OmniMind 不能把 wildcard 或 README 范围当成自己的支持合同。Fork 只验证 bundled Pi baseline `0.84.2` 及后续每个明确 adopted runtime。
+上游 README 声称 Pi `v0.37.3+`，但 OmniMind 不能把 wildcard 或 README 范围当成自己的支持合同。Fork 只验证 bundled Pi baseline `0.84.3` 及后续每个明确 adopted runtime。
 
 ### 2.4 权利与署名
 
@@ -754,7 +754,7 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 - upstream 64 test files 全量运行；
 - package dry-run证明 demo media 不进入 shipped tgz；
 - fork README/NOTICE/License 与 package identity准确；
-- Pi 0.84.2 exact typecheck/runtime compatibility。
+- Pi 0.84.3 exact typecheck/runtime compatibility。
 
 ### 10.2 Session 隔离
 
@@ -909,7 +909,7 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 出现以下任一变化，重新执行 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md)：
 
 - upstream 新版本或 exact source/artifact/dependency/license/provenance 改变；
-- bundled Pi runtime 从 0.84.2 升级；
+- bundled Pi runtime 从 0.84.3 升级；
 - upstream 提供 instance config、per-session state、Host-presentable web surface 或统一 config cache seam，可删除 fork patch；
 - Provider routing、Exa MCP、Curator protocol、ResearchArtifact schema 或 cache format 改变；
 - OmniMind temporary Web surface、Settings IA、private home 或 composition owner 改变；

@@ -35,10 +35,10 @@ async function archiveFixture(
   for (const name of extraPackage ? [...packages, "undisclosed"] : packages) {
     write(
       join(source, "node_modules", ...name.split("/"), "package.json"),
-      JSON.stringify({ name, version: name === "undisclosed" ? "1.0.0" : "0.84.2" }),
+      JSON.stringify({ name, version: name === "undisclosed" ? "1.0.0" : "0.84.3" }),
     );
   }
-  const components = packages.map((name) => ({ id: `${name}@0.84.2` }));
+  const components = packages.map((name) => ({ id: `${name}@0.84.3` }));
   components.push({
     id: "@omnimind/om-ask@5.0.0-omnimind.1",
     name: "@omnimind/om-ask",

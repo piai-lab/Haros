@@ -1384,3 +1384,47 @@ and Provider snapshots, and the focused Composer Engine reaching ready, authorit
 stale or deterministic recovery. Typed startup failure remains on the existing React Query retry path;
 the splash neither sleeps over the race nor owns retry state. `/pair`, `/signed-out` and browser builds
 do not inherit the cinematic residency.
+
+## 25. Pi stable `v0.84.3` adopted-head advancement
+
+The 2026-08-27 intake advances the exact Pi source from stable `v0.84.2` to stable tag `v0.84.3`,
+revision `4e58f324fae8ebfa98a3d45181fb248072a2afac`. The reviewed range contains 105 commits and 235
+changed files. The seven `0.84.3` npm artifacts report git head
+`bfb004d4418ff05c6f909eaaab856cbe75c1fde0`, two commits after the release tag; those two commits
+change package changelogs and CI only, not executable source or package manifests. The source tag and
+npm artifact git head are therefore recorded separately in `source-adoptions.json`. Later `main`
+commits remain excluded.
+
+Disposition follows the existing runtime owners rather than adding Pi product surfaces. Provider-
+neutral `toolChoice`, OpenAI-compatible reasoning replay and thinking budgets, returned-model pricing,
+raw Bedrock response headers, Kimi cache accounting, Google custom thinking maps, catalog corrections,
+compaction routing/events, failed Extension-factory rollback, single-object edit normalization, nested
+Skill discovery, UTF-8 BOM handling, file-permission preservation and package glob/runtime startup
+fixes are adopted through the existing Pi, ModelRuntime, ResourceLoader and Session contracts. The
+optional PowerShell tool remains source-present but unregistered by OmniMind's product surface.
+Installer-managed self-update, TUI model/thinking controls, Radius session sharing, standalone Pi CLI
+identity and Pi release assets remain inactive or excluded; OmniMind keeps its existing updater,
+Workbench, sharing, package identity and release authorities.
+
+Upstream still exposes no equivalent public seam for OmniMind's credential-blind model-config
+projection/mutation, product prompt contract, bounded context root, request-scoped package policy,
+typed prompt outcome, OAuth completion-page renderer or same-turn interactive barrier. The three Bun
+patches and one product-source patch were therefore rebased rather than deleted. The new upstream Node
+bundle validator exposed one build-only incompatibility in `jsonc-parser`: using its ESM subpath made
+the bundle pass but broke unbundled Node execution. The final patch keeps the supported package-root
+import and resolves only that exact import to the ESM build inside upstream esbuild. Both bundle and
+unbundled paths then pass. Two new compaction author tests were updated to assert OmniMind's already-
+established `{ kind: "agent-run" }` result instead of the upstream `undefined`; their continuation,
+event and call-count assertions remain unchanged.
+
+Evidence is claim-scoped. The deterministic generator rebuilt the product archive from the clean tag,
+ran 298 focused patch tests and produced SHA-256
+`08012a2637d0e2a1eb83c0131b90491ad6e037c0a1aaef3c051cb1a9e7ce3d5c`. Clean upstream
+coding-agent passed 1,976 tests; the patched product source passed 1,991; agent-core passed 417; the AI
+offline suite passed 949. Two optional Ollama E2E cases were not counted as green because no local
+Ollama model service answered; all remaining AI files passed. OmniMind Web Access passed 565 tests and
+both typechecks, the eight-package repository typecheck passed, and Server passed 4,536 tests. The
+release legal inventory was regenerated from exact `0.84.3` manifest hashes and closed 537 production
+components. Minimal credential-in-memory MiMo and DeepSeek journeys each received two 2xx Provider
+responses and proved the real `ask_user` schema, canonical settlement, lossless structured result and
+same-turn model replan. No benchmark, protected-branch merge, Release or update-feed change is implied.

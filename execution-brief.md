@@ -2,17 +2,13 @@
 
 ## 当前状态
 
-Synara adopted head `a93c47e2` 的代码、focused/live/packaged evidence、architecture、research disposition 与 `source-adoptions.json` 已闭合；adoption 候选代码 exact SHA 为 `dbe793d35accbd81484201e5376c772ba9ed94ea`。维护者追加授权的相邻产品结果也已闭合，packaged product candidate exact SHA 为 `9eedf9cd77d680a4590967497b088d564189350e`。没有合并受保护分支、创建 Release 或修改 update feed。
+Pi stable adopted head 正从 `v0.84.2` 推进到 `v0.84.3`（tag `4e58f324`）；源码 tag 与 npm artifact git head 已分开记录，post-tag `main` 未进入。产品 runtime、stock dependency、OAuth renderer 与 interactive barrier 四个既有 patch 已重基；上游仍无等价 seam，未新增第二 owner。PowerShell、Pi installer updater、TUI model controls、Radius sharing、CLI/release identity 保持未激活或排除。
 
-Chat 的 `Send to Agent` 经现有 Browser/Server 证据确认已要求用户明确选择或创建 Project，再建立新的 folder-backed Agent Thread，携带产品可见历史、references、可用附件与 draft，原 Chat 不变且不自动执行，因此没有复制实现。用户保存的 LLM API Key 已在现有 credential owner 下获得与 Web Search Provider 共用规则的隐藏、主动 reveal/copy、replace、direct clear 与离开即清理；已显示的 Key 复制直接复用短生命周期 Renderer 内存值，不产生第二次 reveal RPC；LLM 的立即删除与 Web Search 的草稿清除使用明确不同的文案和持久化语义。普通 Product State、事件、缓存、日志、诊断和恢复记录仍保持 credential-blind。普通 API endpoint 的确认 fingerprint 也已收窄为实际 endpoint 集合，非 endpoint 编辑不再重复打断。
-
-相关 Browser、Contracts、Server、i18n、typecheck、lint 与生产构建均通过；lint 只有既有 warning、没有 error。由 exact SHA `9eedf9cd77d680a4590967497b088d564189350e` 构建的 arm64 DMG SHA-256 为 `0bbd8a2e237d4813e0120cf8a7ac65a5a25e92cb89507dc1560c01f025b283c8`，其中 `app.asar` SHA-256 为 `299a941ec35351c991b6b41b2e29bcb46bb102d3a9af322dd09f35adf11ac9dd`。packaged proof 在任务专用 `userData`、HOME、OmniMind state 与 Provider private home 下验证了 LLM Key 默认隐藏、主动显示、已显示后直接复制、关闭详情即清理、重新进入仍隐藏、立即移除，以及 Web Search Clear 只修改未保存草稿；隔离 profile 已删除，证据未保留完整测试 Key。
-
-主线是唯一工作基线。当前安装版、历史 DMG、测试计数、Provider probe 与 packaged journey 只在精确证据需要时从 Git 或对应 research owner 查找，不在本文件维护镜像。
+源码、archive、lock、法定清单、architecture、research disposition 已形成同一 branch candidate。上游 clean/product patched/OmniMind full tests、8-package typecheck、MiMo 与 DeepSeek 最小真实 Ask wire 均已通过其声明范围；Ollama E2E 因本机无目标服务不计为绿色。当前尚未从 exact pushed SHA 重建隔离 packaged App，因此只主张 source/runtime candidate，不主张安装 App 已获得新 bytes。主线、受保护分支、Release 与 update feed 均未改变。
 
 ## 下一动作
 
-当前无活动施工。Provider live benchmark、正式签名/公证、Release、受保护分支合并和 update feed 变更不在本轮范围内；本地 packaged candidate 不代表正式发行。历史用量、local/remote auth policy、`.omnimind`/`.pi` 隔离与发行门保持不变。
+提交并推送当前 task branch 后，从 exact pushed SHA 进行一次任务专用 fresh-profile packaged proof，验证 bundled runtime identity、隔离启动、最小真实 Agent journey、关闭与重开。Provider benchmark、正式签名/公证、Release、受保护分支合并和 update feed 变更不在本轮范围内。
 
 ## Stop-loss
 

@@ -50,7 +50,7 @@
 
 | 来源                               | 当前 owner                                                                                                               | 默认 Agent Session                         | Settings 的六组开关是否控制 | 当前固定数量               |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ | --------------------------- | -------------------------- |
-| Pi/OmniMind Agent native built-ins | bundled `@omnimind/pi-coding-agent@0.84.2` Session/Tool Registry；`bash` 由 OmniMind process supervisor 提供同名受管实现 | 7 个注册，4 个 active                      | 否                          | active 4；registered 7     |
+| Pi/OmniMind Agent native built-ins | bundled `@omnimind/pi-coding-agent@0.84.3` Session/Tool Registry；`bash` 由 OmniMind process supervisor 提供同名受管实现 | 7 个注册，4 个 active                      | 否                          | active 4；registered 7     |
 | Product Todo Session Extension     | `omnimind-agent-task-list` hidden inline Extension                                                                       | Agent surface 注册并 active                | 否                          | 1                          |
 | AgentGateway Host Projection       | AgentGateway canonical catalog + hidden Pi Host Projection Extension                                                     | 当前允许且可用的 definitions 注册并 active | 是                          | fresh 常见 46；理论上限 58 |
 
@@ -271,7 +271,7 @@ Host tool 已 active 也不构成长期通行证。每次真实 `tools/call` 至
 
 主要 current-source 入口：
 
-- Pi base registry/default active：`vendor/omnimind-pi-coding-agent-0.84.2.tgz` 内 `package/dist/core/agent-session.js` 与 `package/dist/core/tools/index.js`
+- Pi base registry/default active：`vendor/omnimind-pi-coding-agent-0.84.3.tgz` 内 `package/dist/core/agent-session.js` 与 `package/dist/core/tools/index.js`
 - OmniMind Session composition：[`apps/server/src/provider/omnimindSessionExtensions.ts`](../apps/server/src/provider/omnimindSessionExtensions.ts)
 - Todo definition/provenance：[`apps/server/src/provider/omnimindTaskListExtension.ts`](../apps/server/src/provider/omnimindTaskListExtension.ts)
 - 六组 contract：[`packages/contracts/src/agentTools.ts`](../packages/contracts/src/agentTools.ts)

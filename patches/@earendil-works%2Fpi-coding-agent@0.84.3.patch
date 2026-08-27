@@ -1,5 +1,5 @@
 diff --git a/dist/core/agent-session.d.ts b/dist/core/agent-session.d.ts
-index e5d84dd53528c14618bfb9956f3b4a0c10c59bfd..408b9779f393924358ea03509d314c10b5b07fce 100644
+index 528a246..df6ff9b 100644
 --- a/dist/core/agent-session.d.ts
 +++ b/dist/core/agent-session.d.ts
 @@ -31,6 +31,15 @@ export interface ParsedSkillBlock {
@@ -18,7 +18,7 @@ index e5d84dd53528c14618bfb9956f3b4a0c10c59bfd..408b9779f393924358ea03509d314c10
  /**
   * Parse a skill block from message text.
   * Returns null if the text doesn't contain a skill block.
-@@ -232,6 +241,7 @@ export declare class AgentSession {
+@@ -237,6 +246,7 @@ export declare class AgentSession {
      private _extensionShutdownHandler?;
      private _extensionErrorListener?;
      private _extensionErrorUnsubscriber?;
@@ -26,7 +26,7 @@ index e5d84dd53528c14618bfb9956f3b4a0c10c59bfd..408b9779f393924358ea03509d314c10
      private _modelRuntime;
      private _toolRegistry;
      private _toolDefinitions;
-@@ -352,7 +362,7 @@ export declare class AgentSession {
+@@ -358,7 +368,7 @@ export declare class AgentSession {
       * @throws Error if streaming and no streamingBehavior specified
       * @throws Error if no model selected or no API key available (when not streaming)
       */
@@ -36,10 +36,10 @@ index e5d84dd53528c14618bfb9956f3b4a0c10c59bfd..408b9779f393924358ea03509d314c10
      /**
       * Expand skill commands (/skill:name args) to their full content.
 diff --git a/dist/core/agent-session.js b/dist/core/agent-session.js
-index 4bcf0d4b823d1cc847d1fa26a86a850761758194..6dbd786ed6696768fc5271a5415cfb661a9dc722 100644
+index f4fd9f3..2bf8893 100644
 --- a/dist/core/agent-session.js
 +++ b/dist/core/agent-session.js
-@@ -125,6 +125,7 @@ export class AgentSession {
+@@ -123,6 +123,7 @@ export class AgentSession {
      _extensionShutdownHandler;
      _extensionErrorListener;
      _extensionErrorUnsubscriber;
@@ -47,7 +47,7 @@ index 4bcf0d4b823d1cc847d1fa26a86a850761758194..6dbd786ed6696768fc5271a5415cfb66
      _modelRuntime;
      // Tool registry for extension getTools/setTools
      _toolRegistry = new Map();
-@@ -797,11 +798,11 @@ export class AgentSession {
+@@ -800,11 +801,11 @@ export class AgentSession {
              // Handle extension commands first (execute immediately, even during streaming)
              // Extension commands manage their own LLM interaction via pi.sendMessage()
              if (expandPromptTemplates && text.startsWith("/")) {
@@ -63,7 +63,7 @@ index 4bcf0d4b823d1cc847d1fa26a86a850761758194..6dbd786ed6696768fc5271a5415cfb66
                  }
              }
              if (this._compactionAbortController !== undefined) {
-@@ -811,10 +812,24 @@ export class AgentSession {
+@@ -814,10 +815,24 @@ export class AgentSession {
              let currentText = text;
              let currentImages = options?.images;
              if (this._extensionRunner.hasHandlers("input")) {
@@ -91,7 +91,7 @@ index 4bcf0d4b823d1cc847d1fa26a86a850761758194..6dbd786ed6696768fc5271a5415cfb66
                  }
                  if (inputResult.action === "transform") {
                      currentText = inputResult.text;
-@@ -839,7 +854,7 @@ export class AgentSession {
+@@ -842,7 +857,7 @@ export class AgentSession {
                      await this._queueSteer(expandedText, currentImages);
                  }
                  preflightResult?.(true);
@@ -100,7 +100,7 @@ index 4bcf0d4b823d1cc847d1fa26a86a850761758194..6dbd786ed6696768fc5271a5415cfb66
              }
              // Flush any pending bash messages before the new prompt
              this._flushPendingBashMessages();
-@@ -913,13 +928,16 @@ export class AgentSession {
+@@ -916,13 +931,16 @@ export class AgentSession {
              throw error;
          }
          if (!messages) {
@@ -119,7 +119,7 @@ index 4bcf0d4b823d1cc847d1fa26a86a850761758194..6dbd786ed6696768fc5271a5415cfb66
       */
      async _tryExecuteExtensionCommand(text) {
          // Parse command name and args
-@@ -928,22 +946,34 @@ export class AgentSession {
+@@ -931,22 +949,34 @@ export class AgentSession {
          const args = spaceIndex === -1 ? "" : text.slice(spaceIndex + 1);
          const command = this._extensionRunner.getCommand(commandName);
          if (!command)
@@ -157,7 +157,7 @@ index 4bcf0d4b823d1cc847d1fa26a86a850761758194..6dbd786ed6696768fc5271a5415cfb66
      }
      /**
       * Expand skill commands (/skill:name args) to their full content.
-@@ -1844,7 +1874,11 @@ export class AgentSession {
+@@ -1934,7 +1964,11 @@ export class AgentSession {
          };
          runner.bindCore({
              sendMessage: (message, options) => {
@@ -170,7 +170,7 @@ index 4bcf0d4b823d1cc847d1fa26a86a850761758194..6dbd786ed6696768fc5271a5415cfb66
                      runner.emitError({
                          extensionPath: "<runtime>",
                          event: "send_message",
-@@ -1853,7 +1887,10 @@ export class AgentSession {
+@@ -1943,7 +1977,10 @@ export class AgentSession {
                  });
              },
              sendUserMessage: (content, options) => {
@@ -183,7 +183,7 @@ index 4bcf0d4b823d1cc847d1fa26a86a850761758194..6dbd786ed6696768fc5271a5415cfb66
                          extensionPath: "<runtime>",
                          event: "send_user_message",
 diff --git a/dist/index.d.ts b/dist/index.d.ts
-index f43bc9620f36d198d75abeeb5c84e171de0d5ffe..8850295cfa0512f1c041bb3afa96355629e1d6c7 100644
+index cd12d9e..9353a53 100644
 --- a/dist/index.d.ts
 +++ b/dist/index.d.ts
 @@ -1,6 +1,6 @@
@@ -197,7 +197,7 @@ index f43bc9620f36d198d75abeeb5c84e171de0d5ffe..8850295cfa0512f1c041bb3afa963556
 @@ -32,4 +32,4 @@ export { parseFrontmatter, stripFrontmatter } from "./utils/frontmatter.ts";
  export { convertToPng } from "./utils/image-convert.ts";
  export { formatDimensionNote, type ResizedImage, resizeImage } from "./utils/image-resize.ts";
- export { getShellConfig } from "./utils/shell.ts";
+ export { getPowerShellConfig, getShellConfig } from "./utils/shell.ts";
 -//# sourceMappingURL=index.d.ts.map
 \ No newline at end of file
 +//# sourceMappingURL=index.d.ts.map

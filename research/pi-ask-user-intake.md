@@ -16,7 +16,7 @@
 | source activation checkpoint | `36e3bec7e789122c731028c1a8b791a68a6c1fea`                                                                               | 证明 composition/activation 形状的固定观察                      |
 | primary UX/test donor        | `@geoqiao/pi-ask@1.3.0`；`eko24ive/pi-ask` ancestry；commit `26496c809870e349429bc2cae72d61b46d0e2bc3`                   | 只提供 UX 与 regression insight，不承担 runtime lineage         |
 | bounded donors               | `@pi9/ask@0.4.2`、`pi-ask-user@0.14.0`、`@qmahyar/pi-ask@1.4.0`、`pi-tian-ask-user@1.0.0`                                | lifecycle、compatibility、correctness tests 与 sentinel 反证    |
-| Pi barrier                   | `@earendil-works/pi-agent-core@0.84.2` patch；SHA-256 `c63f6877299935fd9ee85c05b81d9e3f571f640704ff85a7f8e03209620e8e78` | same-turn preflight barrier；upstream 等价能力出现后删除        |
+| Pi barrier                   | `@earendil-works/pi-agent-core@0.84.3` patch；SHA-256 `cb59da2b312af0052c93de0873959d8f0a051561211751b4010ea60958ee5334` | same-turn preflight barrier；upstream 等价能力出现后删除        |
 
 固定 artifact 事实：source/package 声明 MIT；supi npm integrity 为 `sha512-uBlvlXTvSrdvTvvdbpapwVwA4I3DMcIaHSGe18mtd4KdWAhd36yY1UwGvAbFXcS2NvJ18VIkaJpi112CSoabJQ==`，shasum 为 `cabb06df40ab95be1a67b4f3b32c83bc257ea38a`，tgz SHA-256 为 `d687d4d448cc115a67ceb473b8e9ceeb56dddb047901b1f2daa05d6ae0cb300e`。当时 artifact 缺失 LICENSE/NOTICE，因此 fork distribution 必须自行闭合法定文本；未来 source/artifact 变化要重新核验，不能继承这些 hash。
 
@@ -182,8 +182,8 @@ current_fork_snapshot:
   runtime_dependencies_at_observation: 0
   retained_lineage_distribution: source_and_author_tests_only_not_root_api_or_dist
 pi_barrier:
-  package: "@earendil-works/pi-agent-core@0.84.2"
-  patch_sha256: c63f6877299935fd9ee85c05b81d9e3f571f640704ff85a7f8e03209620e8e78
+  package: "@earendil-works/pi-agent-core@0.84.3"
+  patch_sha256: cb59da2b312af0052c93de0873959d8f0a051561211751b4010ea60958ee5334
   delete_when: upstream_provides_equivalent_preflight_barrier
 patch_inventory:
   [P1_identity, P2_contract, P3_host_seam, P4_workbench, P5_lifecycle, P6_result, P7_provenance]

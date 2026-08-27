@@ -18,7 +18,7 @@ export const RELEASE_WORKSPACE_MANIFEST_PATHS = [
 
 export const RELEASE_LOCKFILE_PATH = "bun.lock";
 export const RELEASE_PATCHES_PATH = "patches";
-export const OMNIMIND_PI_RUNTIME_PACKAGE_PATH = "vendor/omnimind-pi-coding-agent-0.84.2.tgz";
+export const OMNIMIND_PI_RUNTIME_PACKAGE_PATH = "vendor/omnimind-pi-coding-agent-0.84.3.tgz";
 
 export const SERVER_BUNDLED_WORKSPACE_COMPONENTS = [
   {

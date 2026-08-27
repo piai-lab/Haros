@@ -2032,10 +2032,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "ready");
         assert.strictEqual(status.available, true);
         assert.strictEqual(status.authStatus, "unknown");
-        assert.strictEqual(status.version, "0.84.2");
+        assert.strictEqual(status.version, "0.84.3");
         assert.strictEqual(
           status.message,
-          "Pi 0.84.2 is bundled. Native Pi discovery and state access begin only after you select Pi.",
+          "Pi 0.84.3 is bundled. Native Pi discovery and state access begin only after you select Pi.",
         );
       }),
     );

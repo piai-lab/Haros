@@ -124,7 +124,7 @@ const KILO_PROVIDER = "kilo" as const;
 const OPENCODE_PROVIDER = "opencode" as const;
 const PI_PROVIDER = "pi" as const;
 const OMNIMIND_AGENT_PROVIDER = "omnimind" as const;
-const BUNDLED_PI_VERSION = "0.84.2";
+const BUNDLED_PI_VERSION = "0.84.3";
 type ProviderStatuses = ReadonlyArray<ServerProviderStatus>;
 const DISABLED_PROVIDER_STATUS_MESSAGE = "Provider is disabled in OmniMind settings.";
 const MINIMUM_ANTIGRAVITY_CLI_VERSION = "1.0.12";
@@ -1582,7 +1582,7 @@ export const checkPiProviderStatus = (): Effect.Effect<ServerProviderStatus> =>
         version: BUNDLED_PI_VERSION,
         checkedAt: new Date().toISOString(),
         message:
-          "Pi 0.84.2 is bundled. Native Pi discovery and state access begin only after you select Pi.",
+          "Pi 0.84.3 is bundled. Native Pi discovery and state access begin only after you select Pi.",
       }) satisfies ServerProviderStatus,
   );
 

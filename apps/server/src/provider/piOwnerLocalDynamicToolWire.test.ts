@@ -1,5 +1,5 @@
 // FILE: piOwnerLocalDynamicToolWire.test.ts
-// Purpose: Captures exact Pi 0.84.2 provider payloads for additive tool loading.
+// Purpose: Captures exact Pi 0.84.3 provider payloads for additive tool loading.
 // Layer: Provider wire conformance tests
 
 import { Type, type Api, type Context, type Model, type Usage } from "@earendil-works/pi-ai";
@@ -95,7 +95,7 @@ async function capturePayload(
   return read() as Record<string, any>;
 }
 
-describe("Pi 0.84.2 owner-local dynamic tool provider wire", () => {
+describe("Pi 0.84.3 owner-local dynamic tool provider wire", () => {
   it.each([
     ["tool-search", { supportsToolSearch: true }, "tool_search_output"],
     ["additional-tools", { supportsAdditionalTools: true }, "additional_tools"],

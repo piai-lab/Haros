@@ -1449,7 +1449,7 @@ function makeAgentDir(
   return trimToUndefined(agentDir) ?? piSdk.getAgentDir();
 }
 
-// Mirrors Pi 0.84.2's own session path encoding while honoring the explicit
+// Mirrors Pi 0.84.3's own session path encoding while honoring the explicit
 // agentDir already passed through the SDK services. Pi's public SessionManager
 // accepts this path but does not expose its default-path helper.
 function piSessionDir(agentDir: string, cwd: string): string {

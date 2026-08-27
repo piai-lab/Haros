@@ -29,7 +29,7 @@
       },
       {
         "name": "omnimind:inventory-sha256",
-        "value": "99ee6d9ca7486a1f3ee4ee07616b0c6edcd7be177c6673fe9112c03e26c0343a"
+        "value": "06e177ed097220627ac8947409f12c38a52805efc4b69684fe82b6ddfd951321"
       }
     ]
   },
@@ -1448,9 +1448,9 @@
     {
       "type": "library",
       "name": "@earendil-works/pi-agent-core",
-      "version": "0.84.2",
-      "bom-ref": "pkg:npm/%40earendil-works/pi-agent-core@0.84.2",
-      "purl": "pkg:npm/%40earendil-works/pi-agent-core@0.84.2",
+      "version": "0.84.3",
+      "bom-ref": "pkg:npm/%40earendil-works/pi-agent-core@0.84.3",
+      "purl": "pkg:npm/%40earendil-works/pi-agent-core@0.84.3",
       "licenses": [
         {
           "license": {
@@ -1461,7 +1461,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "8c251c0a7e2fce4e2fe41da6d6609ba7ddb680cdcea50ae0839a6f4ee0c8eac2"
+          "content": "bef86235129a8ae77e028f3a8979de86b7dfcb48a4441c8b462051174c7588bc"
         }
       ],
       "author": "Mario Zechner",
@@ -1474,16 +1474,16 @@
       "properties": [
         {
           "name": "omnimind:artifact-location",
-          "value": "node_modules/.bun/@earendil-works+pi-agent-core@0.84.2+bfb712a8fa2951a7/node_modules/@earendil-works/pi-agent-core"
+          "value": "node_modules/.bun/@earendil-works+pi-agent-core@0.84.3+bfb712a8fa2951a7/node_modules/@earendil-works/pi-agent-core"
         }
       ]
     },
     {
       "type": "library",
       "name": "@earendil-works/pi-ai",
-      "version": "0.84.2",
-      "bom-ref": "pkg:npm/%40earendil-works/pi-ai@0.84.2",
-      "purl": "pkg:npm/%40earendil-works/pi-ai@0.84.2",
+      "version": "0.84.3",
+      "bom-ref": "pkg:npm/%40earendil-works/pi-ai@0.84.3",
+      "purl": "pkg:npm/%40earendil-works/pi-ai@0.84.3",
       "licenses": [
         {
           "license": {
@@ -1494,7 +1494,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "acf2f2e9236aa5e9c539a93c9d100b988c313b2ad270b78b32917b2f3b8704a5"
+          "content": "389240385238bbf02691e1b9a27372f163ba4b9694b1c6118517ab35afdd4ea4"
         }
       ],
       "author": "Mario Zechner",
@@ -1507,16 +1507,16 @@
       "properties": [
         {
           "name": "omnimind:artifact-location",
-          "value": "node_modules/.bun/@earendil-works+pi-ai@0.84.2+bfb712a8fa2951a7/node_modules/@earendil-works/pi-ai"
+          "value": "node_modules/.bun/@earendil-works+pi-ai@0.84.3+bfb712a8fa2951a7/node_modules/@earendil-works/pi-ai"
         }
       ]
     },
     {
       "type": "library",
       "name": "@earendil-works/pi-client",
-      "version": "0.84.2",
-      "bom-ref": "pkg:npm/%40earendil-works/pi-client@0.84.2",
-      "purl": "pkg:npm/%40earendil-works/pi-client@0.84.2",
+      "version": "0.84.3",
+      "bom-ref": "pkg:npm/%40earendil-works/pi-client@0.84.3",
+      "purl": "pkg:npm/%40earendil-works/pi-client@0.84.3",
       "licenses": [
         {
           "license": {
@@ -1527,7 +1527,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "7c580ef12e574fe2a4edf37649ef1026674b4a05fda7a39275405019060d78f3"
+          "content": "73d18c06ed64111a19001d9137cfa358d37d141b5cd00a90a105d36db5a7825a"
         }
       ],
       "author": "Earendil Works",
@@ -1540,16 +1540,16 @@
       "properties": [
         {
           "name": "omnimind:artifact-location",
-          "value": "node_modules/.bun/@earendil-works+pi-client@0.84.2/node_modules/@earendil-works/pi-client"
+          "value": "node_modules/.bun/@earendil-works+pi-client@0.84.3/node_modules/@earendil-works/pi-client"
         }
       ]
     },
     {
       "type": "library",
       "name": "@earendil-works/pi-coding-agent",
-      "version": "0.84.2",
-      "bom-ref": "pkg:npm/%40earendil-works/pi-coding-agent@0.84.2",
-      "purl": "pkg:npm/%40earendil-works/pi-coding-agent@0.84.2",
+      "version": "0.84.3",
+      "bom-ref": "pkg:npm/%40earendil-works/pi-coding-agent@0.84.3",
+      "purl": "pkg:npm/%40earendil-works/pi-coding-agent@0.84.3",
       "licenses": [
         {
           "license": {
@@ -1560,7 +1560,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "31c6700cfd23b4b5db155746070e59d788ed7a64053fb4b651ff8b373dbb4048"
+          "content": "f429170e0e8d79b58f14720565fe16b0cbdc9fc1659ee9a1b044061ef8e9e1c8"
         }
       ],
       "author": "Mario Zechner",
@@ -1573,16 +1573,16 @@
       "properties": [
         {
           "name": "omnimind:artifact-location",
-          "value": "node_modules/.bun/@earendil-works+pi-coding-agent@0.84.2+bfb712a8fa2951a7/node_modules/@earendil-works/pi-coding-agent"
+          "value": "node_modules/.bun/@earendil-works+pi-coding-agent@0.84.3+bfb712a8fa2951a7/node_modules/@earendil-works/pi-coding-agent"
         }
       ]
     },
     {
       "type": "library",
       "name": "@earendil-works/pi-protocol",
-      "version": "0.84.2",
-      "bom-ref": "pkg:npm/%40earendil-works/pi-protocol@0.84.2",
-      "purl": "pkg:npm/%40earendil-works/pi-protocol@0.84.2",
+      "version": "0.84.3",
+      "bom-ref": "pkg:npm/%40earendil-works/pi-protocol@0.84.3",
+      "purl": "pkg:npm/%40earendil-works/pi-protocol@0.84.3",
       "licenses": [
         {
           "license": {
@@ -1593,7 +1593,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "dad47a88174549f0448a2c9fc320a302c8285ebb02b57d7da7c80eb337e25961"
+          "content": "5a238d5379714bc91a54d41cab8a4fd92515563d7772ef85686ebaabcd7b0873"
         }
       ],
       "author": "Earendil Works",
@@ -1606,16 +1606,16 @@
       "properties": [
         {
           "name": "omnimind:artifact-location",
-          "value": "node_modules/.bun/@earendil-works+pi-protocol@0.84.2/node_modules/@earendil-works/pi-protocol"
+          "value": "node_modules/.bun/@earendil-works+pi-protocol@0.84.3/node_modules/@earendil-works/pi-protocol"
         }
       ]
     },
     {
       "type": "library",
       "name": "@earendil-works/pi-telemetry",
-      "version": "0.84.2",
-      "bom-ref": "pkg:npm/%40earendil-works/pi-telemetry@0.84.2",
-      "purl": "pkg:npm/%40earendil-works/pi-telemetry@0.84.2",
+      "version": "0.84.3",
+      "bom-ref": "pkg:npm/%40earendil-works/pi-telemetry@0.84.3",
+      "purl": "pkg:npm/%40earendil-works/pi-telemetry@0.84.3",
       "licenses": [
         {
           "license": {
@@ -1626,7 +1626,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "6fbea24402e2034af8b4ccf05bdc332553af33ca26c870ad6ba2a762ce95f6fa"
+          "content": "051af3f1e410f10f290888dbf2b328053cd8a5b640a183cdeb8418e96a5e69c7"
         }
       ],
       "author": "Mario Zechner",
@@ -1639,16 +1639,16 @@
       "properties": [
         {
           "name": "omnimind:artifact-location",
-          "value": "node_modules/.bun/@earendil-works+pi-telemetry@0.84.2/node_modules/@earendil-works/pi-telemetry"
+          "value": "node_modules/.bun/@earendil-works+pi-telemetry@0.84.3/node_modules/@earendil-works/pi-telemetry"
         }
       ]
     },
     {
       "type": "library",
       "name": "@earendil-works/pi-tui",
-      "version": "0.84.2",
-      "bom-ref": "pkg:npm/%40earendil-works/pi-tui@0.84.2",
-      "purl": "pkg:npm/%40earendil-works/pi-tui@0.84.2",
+      "version": "0.84.3",
+      "bom-ref": "pkg:npm/%40earendil-works/pi-tui@0.84.3",
+      "purl": "pkg:npm/%40earendil-works/pi-tui@0.84.3",
       "licenses": [
         {
           "license": {
@@ -1659,7 +1659,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "663db8f3560f1b11fc2788f89174260df45d7442ab0698e04732edb4b1301fb6"
+          "content": "c5e123a4096e9ed5346685785dc8721d9d586e0e100afdb4a8c34470ad254491"
         }
       ],
       "author": "Mario Zechner",
@@ -1672,7 +1672,7 @@
       "properties": [
         {
           "name": "omnimind:artifact-location",
-          "value": "node_modules/.bun/@earendil-works+pi-tui@0.84.2/node_modules/@earendil-works/pi-tui"
+          "value": "node_modules/.bun/@earendil-works+pi-tui@0.84.3/node_modules/@earendil-works/pi-tui"
         }
       ]
     },
@@ -3126,9 +3126,9 @@
     {
       "type": "library",
       "name": "@omnimind/pi-coding-agent",
-      "version": "0.84.2",
-      "bom-ref": "pkg:npm/%40omnimind/pi-coding-agent@0.84.2",
-      "purl": "pkg:npm/%40omnimind/pi-coding-agent@0.84.2",
+      "version": "0.84.3",
+      "bom-ref": "pkg:npm/%40omnimind/pi-coding-agent@0.84.3",
+      "purl": "pkg:npm/%40omnimind/pi-coding-agent@0.84.3",
       "licenses": [
         {
           "license": {
@@ -3139,7 +3139,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "3a0db45d4ecc5d0cd58bf5e990632af2854c9bae342e3da7f59cfcc084aa9711"
+          "content": "01211b92f0004f677cdb63d83ad84bcdc20d3bb8e481f1ccce3c81814089c033"
         }
       ],
       "author": "Mario Zechner",
@@ -3152,7 +3152,7 @@
       "properties": [
         {
           "name": "omnimind:artifact-location",
-          "value": "node_modules/.bun/@omnimind+pi-coding-agent@..+..+vendor+omnimind-pi-coding-agent-0.84.2.tgz+bfb712a8fa2951a7/node_modules/@omnimind/pi-coding-agent"
+          "value": "node_modules/.bun/@omnimind+pi-coding-agent@..+..+vendor+omnimind-pi-coding-agent-0.84.3.tgz+bfb712a8fa2951a7/node_modules/@omnimind/pi-coding-agent"
         }
       ]
     },
@@ -3179,39 +3179,6 @@
         {
           "name": "omnimind:artifact-location",
           "value": "node_modules/.bun/@opencode-ai+sdk@1.15.13/node_modules/@opencode-ai/sdk"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "@opentelemetry/api",
-      "version": "1.9.0",
-      "bom-ref": "pkg:npm/%40opentelemetry/api@1.9.0",
-      "purl": "pkg:npm/%40opentelemetry/api@1.9.0",
-      "licenses": [
-        {
-          "license": {
-            "id": "Apache-2.0"
-          }
-        }
-      ],
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "e25a32b52a1a38c5792fcb8b3cd6e5ee332ce03434738471c767801921726de4"
-        }
-      ],
-      "author": "OpenTelemetry Authors",
-      "externalReferences": [
-        {
-          "type": "vcs",
-          "url": "open-telemetry/opentelemetry-js"
-        }
-      ],
-      "properties": [
-        {
-          "name": "omnimind:artifact-location",
-          "value": "node_modules/.bun/@opentelemetry+api@1.9.0/node_modules/@opentelemetry/api"
         }
       ]
     },
@@ -10070,39 +10037,6 @@
     },
     {
       "type": "library",
-      "name": "glob",
-      "version": "13.0.6",
-      "bom-ref": "pkg:npm/glob@13.0.6",
-      "purl": "pkg:npm/glob@13.0.6",
-      "licenses": [
-        {
-          "license": {
-            "name": "BlueOak-1.0.0"
-          }
-        }
-      ],
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "82e98895be2d6ca8371c04095c32c2ef4fce007efa74bf9087d6d69ae17442b9"
-        }
-      ],
-      "author": "Isaac Z. Schlueter <i@izs.me> (https://blog.izs.me/)",
-      "externalReferences": [
-        {
-          "type": "vcs",
-          "url": "git@github.com:isaacs/node-glob.git"
-        }
-      ],
-      "properties": [
-        {
-          "name": "omnimind:artifact-location",
-          "value": "node_modules/.bun/glob@13.0.6/node_modules/glob"
-        }
-      ]
-    },
-    {
-      "type": "library",
       "name": "google-auth-library",
       "version": "10.6.2",
       "bom-ref": "pkg:npm/google-auth-library@10.6.2",
@@ -13954,39 +13888,6 @@
     },
     {
       "type": "library",
-      "name": "minipass",
-      "version": "7.1.3",
-      "bom-ref": "pkg:npm/minipass@7.1.3",
-      "purl": "pkg:npm/minipass@7.1.3",
-      "licenses": [
-        {
-          "license": {
-            "name": "BlueOak-1.0.0"
-          }
-        }
-      ],
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "7f247ec0977614faa9e59cf1441530566507e410032d69013f19bb115672d45f"
-        }
-      ],
-      "author": "Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)",
-      "externalReferences": [
-        {
-          "type": "vcs",
-          "url": "https://github.com/isaacs/minipass"
-        }
-      ],
-      "properties": [
-        {
-          "name": "omnimind:artifact-location",
-          "value": "node_modules/.bun/minipass@7.1.3/node_modules/minipass"
-        }
-      ]
-    },
-    {
-      "type": "library",
       "name": "ms",
       "version": "2.1.3",
       "bom-ref": "pkg:npm/ms@2.1.3",
@@ -14673,39 +14574,6 @@
         {
           "name": "omnimind:artifact-location",
           "value": "node_modules/.bun/path-key@3.1.1/node_modules/path-key"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "path-scurry",
-      "version": "2.0.2",
-      "bom-ref": "pkg:npm/path-scurry@2.0.2",
-      "purl": "pkg:npm/path-scurry@2.0.2",
-      "licenses": [
-        {
-          "license": {
-            "name": "BlueOak-1.0.0"
-          }
-        }
-      ],
-      "hashes": [
-        {
-          "alg": "SHA-256",
-          "content": "f8c0d8a51a8776f0e926fc6e84effc2f55dafe1fe049613ff44d7954ba9a4394"
-        }
-      ],
-      "author": "Isaac Z. Schlueter <i@izs.me> (https://blog.izs.me)",
-      "externalReferences": [
-        {
-          "type": "vcs",
-          "url": "https://github.com/isaacs/path-scurry"
-        }
-      ],
-      "properties": [
-        {
-          "name": "omnimind:artifact-location",
-          "value": "node_modules/.bun/path-scurry@2.0.2/node_modules/path-scurry"
         }
       ]
     },
@@ -17749,9 +17617,9 @@
         "pkg:npm/%40dnd-kit/modifiers@9.0.0",
         "pkg:npm/%40dnd-kit/sortable@10.0.0",
         "pkg:npm/%40dnd-kit/utilities@3.2.2",
-        "pkg:npm/%40earendil-works/pi-agent-core@0.84.2",
-        "pkg:npm/%40earendil-works/pi-ai@0.84.2",
-        "pkg:npm/%40earendil-works/pi-coding-agent@0.84.2",
+        "pkg:npm/%40earendil-works/pi-agent-core@0.84.3",
+        "pkg:npm/%40earendil-works/pi-ai@0.84.3",
+        "pkg:npm/%40earendil-works/pi-coding-agent@0.84.3",
         "pkg:npm/%40effect/platform-node@4.0.0-beta.25",
         "pkg:npm/%40effect/sql-sqlite-bun@4.0.0-beta.25",
         "pkg:npm/%40fontsource-variable/jetbrains-mono@5.2.8",
@@ -17760,7 +17628,7 @@
         "pkg:npm/%40lexical/react@0.41.0",
         "pkg:npm/%40lobehub/icons-static-svg@1.94.0",
         "pkg:npm/%40omnimind/om-ask@5.0.0-omnimind.1",
-        "pkg:npm/%40omnimind/pi-coding-agent@0.84.2",
+        "pkg:npm/%40omnimind/pi-coding-agent@0.84.3",
         "pkg:npm/%40opencode-ai/sdk@1.15.13",
         "pkg:npm/%40pierre/diffs@1.2.12",
         "pkg:npm/%40tabler/icons-react@3.44.0",
@@ -18184,10 +18052,10 @@
       ]
     },
     {
-      "ref": "pkg:npm/%40earendil-works/pi-agent-core@0.84.2",
+      "ref": "pkg:npm/%40earendil-works/pi-agent-core@0.84.3",
       "dependsOn": [
-        "pkg:npm/%40earendil-works/pi-ai@0.84.2",
-        "pkg:npm/%40earendil-works/pi-telemetry@0.84.2",
+        "pkg:npm/%40earendil-works/pi-ai@0.84.3",
+        "pkg:npm/%40earendil-works/pi-telemetry@0.84.3",
         "pkg:npm/diff@8.0.4",
         "pkg:npm/ignore@7.0.5",
         "pkg:npm/typebox@1.3.7",
@@ -18195,13 +18063,12 @@
       ]
     },
     {
-      "ref": "pkg:npm/%40earendil-works/pi-ai@0.84.2",
+      "ref": "pkg:npm/%40earendil-works/pi-ai@0.84.3",
       "dependsOn": [
         "pkg:npm/%40anthropic-ai/sdk@0.91.1",
         "pkg:npm/%40aws-sdk/client-bedrock-runtime@3.1048.0",
-        "pkg:npm/%40earendil-works/pi-telemetry@0.84.2",
+        "pkg:npm/%40earendil-works/pi-telemetry@0.84.3",
         "pkg:npm/%40google/genai@1.52.0",
-        "pkg:npm/%40opentelemetry/api@1.9.0",
         "pkg:npm/%40smithy/node-http-handler@4.7.3",
         "pkg:npm/http-proxy-agent@7.0.2",
         "pkg:npm/https-proxy-agent@7.0.6",
@@ -18211,25 +18078,24 @@
       ]
     },
     {
-      "ref": "pkg:npm/%40earendil-works/pi-client@0.84.2",
+      "ref": "pkg:npm/%40earendil-works/pi-client@0.84.3",
       "dependsOn": [
-        "pkg:npm/%40earendil-works/pi-protocol@0.84.2"
+        "pkg:npm/%40earendil-works/pi-protocol@0.84.3"
       ]
     },
     {
-      "ref": "pkg:npm/%40earendil-works/pi-coding-agent@0.84.2",
+      "ref": "pkg:npm/%40earendil-works/pi-coding-agent@0.84.3",
       "dependsOn": [
-        "pkg:npm/%40earendil-works/pi-agent-core@0.84.2",
-        "pkg:npm/%40earendil-works/pi-ai@0.84.2",
-        "pkg:npm/%40earendil-works/pi-client@0.84.2",
-        "pkg:npm/%40earendil-works/pi-protocol@0.84.2",
-        "pkg:npm/%40earendil-works/pi-tui@0.84.2",
+        "pkg:npm/%40earendil-works/pi-agent-core@0.84.3",
+        "pkg:npm/%40earendil-works/pi-ai@0.84.3",
+        "pkg:npm/%40earendil-works/pi-client@0.84.3",
+        "pkg:npm/%40earendil-works/pi-protocol@0.84.3",
+        "pkg:npm/%40earendil-works/pi-tui@0.84.3",
         "pkg:npm/%40mariozechner/clipboard@0.3.9",
         "pkg:npm/%40silvia-odwyer/photon-node@0.3.4",
         "pkg:npm/chalk@5.6.2",
         "pkg:npm/cross-spawn@7.0.6",
         "pkg:npm/diff@8.0.4",
-        "pkg:npm/glob@13.0.6",
         "pkg:npm/grok-mermaid@0.2.2",
         "pkg:npm/highlight.js@10.7.3",
         "pkg:npm/hosted-git-info@9.0.3",
@@ -18244,17 +18110,17 @@
       ]
     },
     {
-      "ref": "pkg:npm/%40earendil-works/pi-protocol@0.84.2",
+      "ref": "pkg:npm/%40earendil-works/pi-protocol@0.84.3",
       "dependsOn": [
         "pkg:npm/typebox@1.3.7"
       ]
     },
     {
-      "ref": "pkg:npm/%40earendil-works/pi-telemetry@0.84.2",
+      "ref": "pkg:npm/%40earendil-works/pi-telemetry@0.84.3",
       "dependsOn": []
     },
     {
-      "ref": "pkg:npm/%40earendil-works/pi-tui@0.84.2",
+      "ref": "pkg:npm/%40earendil-works/pi-tui@0.84.3",
       "dependsOn": [
         "pkg:npm/get-east-asian-width@1.6.0",
         "pkg:npm/marked@18.0.5"
@@ -18585,19 +18451,18 @@
       "dependsOn": []
     },
     {
-      "ref": "pkg:npm/%40omnimind/pi-coding-agent@0.84.2",
+      "ref": "pkg:npm/%40omnimind/pi-coding-agent@0.84.3",
       "dependsOn": [
-        "pkg:npm/%40earendil-works/pi-agent-core@0.84.2",
-        "pkg:npm/%40earendil-works/pi-ai@0.84.2",
-        "pkg:npm/%40earendil-works/pi-client@0.84.2",
-        "pkg:npm/%40earendil-works/pi-protocol@0.84.2",
-        "pkg:npm/%40earendil-works/pi-tui@0.84.2",
+        "pkg:npm/%40earendil-works/pi-agent-core@0.84.3",
+        "pkg:npm/%40earendil-works/pi-ai@0.84.3",
+        "pkg:npm/%40earendil-works/pi-client@0.84.3",
+        "pkg:npm/%40earendil-works/pi-protocol@0.84.3",
+        "pkg:npm/%40earendil-works/pi-tui@0.84.3",
         "pkg:npm/%40mariozechner/clipboard@0.3.9",
         "pkg:npm/%40silvia-odwyer/photon-node@0.3.4",
         "pkg:npm/chalk@5.6.2",
         "pkg:npm/cross-spawn@7.0.6",
         "pkg:npm/diff@8.0.4",
-        "pkg:npm/glob@13.0.6",
         "pkg:npm/grok-mermaid@0.2.2",
         "pkg:npm/highlight.js@10.7.3",
         "pkg:npm/hosted-git-info@9.0.3",
@@ -18617,10 +18482,6 @@
       "dependsOn": [
         "pkg:npm/cross-spawn@7.0.6"
       ]
-    },
-    {
-      "ref": "pkg:npm/%40opentelemetry/api@1.9.0",
-      "dependsOn": []
     },
     {
       "ref": "pkg:npm/%40pierre/diffs@1.2.12",
@@ -19834,14 +19695,6 @@
       "dependsOn": []
     },
     {
-      "ref": "pkg:npm/glob@13.0.6",
-      "dependsOn": [
-        "pkg:npm/minimatch@10.2.5",
-        "pkg:npm/minipass@7.1.3",
-        "pkg:npm/path-scurry@2.0.2"
-      ]
-    },
-    {
       "ref": "pkg:npm/google-auth-library@10.6.2",
       "dependsOn": [
         "pkg:npm/base64-js@1.5.1",
@@ -20709,10 +20562,6 @@
       ]
     },
     {
-      "ref": "pkg:npm/minipass@7.1.3",
-      "dependsOn": []
-    },
-    {
       "ref": "pkg:npm/ms@2.1.3",
       "dependsOn": []
     },
@@ -20832,13 +20681,6 @@
     {
       "ref": "pkg:npm/path-key@3.1.1",
       "dependsOn": []
-    },
-    {
-      "ref": "pkg:npm/path-scurry@2.0.2",
-      "dependsOn": [
-        "pkg:npm/lru-cache@11.2.7",
-        "pkg:npm/minipass@7.1.3"
-      ]
     },
     {
       "ref": "pkg:npm/pdfjs-dist@5.7.284",
