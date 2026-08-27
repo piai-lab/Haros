@@ -2178,7 +2178,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                   assistantMeta.length > 0 ||
                   goalAchievement !== null) && (
                   <div
-                    className="mt-0.5 flex select-none items-center gap-2 font-system-ui font-normal text-muted-foreground/45 [&>button:first-child]:-ml-[0.3125em]"
+                    className="mt-0.5 flex select-none items-center gap-2 font-system-ui font-normal text-muted-foreground/45 [&>button:first-child]:-ml-[0.4375em]"
                     style={chatMessageFooterStyle}
                   >
                     {showPinToggle ? (

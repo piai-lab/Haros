@@ -107,7 +107,7 @@ export function registerMessagesTimelineFooterBrowserTests(kind: BrowserTestKind
           const buttonFontSize = Number.parseFloat(getComputedStyle(forkButton).fontSize);
 
           expect(Math.abs(glyphRect.left - messageRect.left)).toBeLessThanOrEqual(0.5);
-          expect(Math.abs(buttonRect.width - buttonFontSize * 1.75)).toBeLessThanOrEqual(0.5);
+          expect(Math.abs(buttonRect.width - buttonFontSize * 2)).toBeLessThanOrEqual(0.5);
           expect(buttonRect.width).toBeGreaterThan(glyphRect.width);
           expect(row.getBoundingClientRect().right).toBeLessThanOrEqual(
             host.getBoundingClientRect().right + 0.5,
