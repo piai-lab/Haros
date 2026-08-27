@@ -2,11 +2,11 @@
 
 ## 当前状态
 
-`codex/web-search-agent-native`已完成既有`@omnimind/om-web-access`的Agent-native搜索闭合：有界`broad`路由、多query并发、唯一结果/来源投影、完整来源、Artifact惰性读取、自动摘要尾部展示与显式review均已进入现有owner。exact上游已收口到最新稳定`pi-web-access@0.25.0` / `08e347f4…`，Provider、proxy、current-model search与fetch/extraction修复均翻译进现有P1–P6 seam；未新增Store、调度服务、控制面或迁移平台。实现候选`8a663b2c27d0…`已推送，并完成focused/full/live与fresh隔离packaged proof。
+当前无活动施工。
 
 ## 下一动作
 
-当前施工已闭合；下一动作仅是维护者对任务分支做代码审查并决定是否合并。Provider benchmark、正式签名/公证、Release 和 update feed 变更不在本轮范围内。
+无。正式签名、公证、Release 和 update feed 仍由独立发行流程拥有，不能从已完成的功能合并自动推出。
 
 ## Stop-loss
 
