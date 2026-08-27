@@ -7,7 +7,7 @@ import { generateCuratorPage } from "./curator-page.ts";
 import type { SummaryMeta } from "./summary-review.ts";
 import { resolveCuratorNetworkConfig } from "./utils.ts";
 import type { CuratorPresentationSnapshot } from "./curator-presentation.ts";
-import { getSearchProviderPresentation } from "./gemini-search.ts";
+import { getSearchProviderPresentation, type SearchProviderAvailability } from "./gemini-search.ts";
 
 const STALE_THRESHOLD_MS = 30000;
 const WATCHDOG_INTERVAL_MS = 1000;
@@ -56,7 +56,7 @@ export interface CuratorServerOptions {
 	queries: string[];
 	sessionToken: string;
 	timeout: number;
-	availableProviders: { all: boolean; openai: boolean; brave: boolean; parallel: boolean; "parallel-mcp": boolean; tinyfish: boolean; search1api: boolean; searchinfinity: boolean; querit: boolean; tavily: boolean; firecrawl: boolean; jina: boolean; serpdive: boolean; kagi: boolean; bocha: boolean; ollama: boolean; searxng: boolean; duckduckgo: boolean; perplexity: boolean; exa: boolean; gemini: boolean; anysearch: boolean; xai: boolean; brightdata: boolean; serpbase: boolean; serper: boolean; valyu: boolean };
+	availableProviders: SearchProviderAvailability;
 	defaultProvider: string;
 	searchProvider: string;
 	summaryModels: Array<{ value: string; label: string }>;
@@ -105,7 +105,7 @@ export interface CuratorServerHandle {
 	pushResult: (queryIndex: number, data: CuratorSearchEntry & { query?: string; slotIndex?: number }) => void;
 	pushError: (queryIndex: number, error: string, provider?: string, meta?: { query?: string; slotIndex?: number }) => void;
 	searchesDone: () => void;
-	completeObserver: (outcome: "summary-sent" | "results-sent") => void;
+	completeObserver: (outcome: "summary-sent" | "results-sent", summary?: string) => void;
 	/** Reports browser connection state so a cancelled search can surface WHY it
 	 * went stale (e.g. the browser never connected). */
 	getConnectionState: () => { browserConnected: boolean; lastHeartbeatAgeMs: number };
@@ -838,9 +838,14 @@ export function startCuratorServer(
 					state = "RESULT_SELECTION";
 					stateChangedAt = Date.now();
 				},
-				completeObserver: (outcome) => {
+				completeObserver: (outcome, summary) => {
 					if (!observerMode || completed) return;
-					sendSSE("terminal", { outcome });
+					sendSSE("terminal", {
+						outcome,
+						...(outcome === "summary-sent" && typeof summary === "string" && summary.trim().length > 0
+							? { summary: summary.trim() }
+							: {}),
+					});
 					markCompleted();
 					try { server.close(); } catch {}
 				},

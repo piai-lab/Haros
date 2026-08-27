@@ -32,7 +32,10 @@ const EN_MESSAGES = {
   "settings.webSearch.autoShowSearchProcessDescription":
     "Show live results in the Right Dock while search runs. This does not pause the Agent or require approval.",
   "settings.webSearch.routeAuto": "Auto · first success",
+  "settings.webSearch.routeBroad": "Multi-source · up to three services",
   "settings.webSearch.routeAll": "All eligible services",
+  "settings.webSearch.broadCostWarning":
+    "Multi-source coverage may request up to three available services for each query and may use multiple service quotas.",
   "settings.webSearch.parallelCostWarning":
     "This mode contacts several services. Each service may use its own quota or charge separately.",
   "settings.webSearch.selectedParallel": "Selected services · file configured",
@@ -190,7 +193,10 @@ const ZH_CN_MESSAGES = {
   "settings.webSearch.autoShowSearchProcessDescription":
     "搜索时在 Right Dock 展示实时结果。不会暂停 Agent 或要求批准。",
   "settings.webSearch.routeAuto": "自动 · 首个成功即停止",
+  "settings.webSearch.routeBroad": "多源覆盖 · 最多三家服务",
   "settings.webSearch.routeAll": "全部符合条件的服务",
+  "settings.webSearch.broadCostWarning":
+    "多源覆盖会为每个查询请求最多三家可用服务，可能消耗多份服务额度。",
   "settings.webSearch.parallelCostWarning":
     "该模式会请求多个服务；每个服务都可能分别消耗额度或产生费用。",
   "settings.webSearch.selectedParallel": "已选服务并发 · 由文件配置",

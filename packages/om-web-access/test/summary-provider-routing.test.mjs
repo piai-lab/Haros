@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, test } from "node:test";
 
-import { generateSummaryDraft } from "../summary-review.ts";
+import { buildDeterministicSummary, buildSummaryPrompt, generateSummaryDraft } from "../summary-review.ts";
 
 const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
 const testAgentDir = await mkdtemp(join(tmpdir(), "pi-web-access-provider-summary-"));
@@ -56,4 +56,26 @@ test("summary generation preserves registered provider behavior", async () => {
 	);
 
 	assert.equal(result.summary, "Summary from the registered gateway provider.");
+});
+
+test("summary model owns semantics while deterministic rendering leaves sources to the canonical projector", () => {
+	const results = [{
+		query: "source ownership",
+		answer: "A concise answer.",
+		results: Array.from({ length: 20 }, (_, index) => ({
+			title: `Source ${index + 1}`,
+			url: `https://example.test/${index + 1}`,
+			snippet: `Snippet ${index + 1}`,
+		})),
+		error: null,
+		provider: "exa",
+	}];
+	const prompt = buildSummaryPrompt(results);
+	assert.match(prompt, /Do not write a Sources section/);
+	assert.doesNotMatch(prompt, /End with a short "Sources" section/);
+	assert.doesNotMatch(prompt, /Snippet 1/);
+
+	const deterministic = buildDeterministicSummary(results).summary;
+	assert.doesNotMatch(deterministic, /\nSources\n/);
+	assert.doesNotMatch(deterministic, /\.\.\. and \d+ more/);
 });

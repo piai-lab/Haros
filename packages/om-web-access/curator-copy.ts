@@ -27,6 +27,8 @@ export const CURATOR_COPY = {
 	addSearch: { en: "Add a search…", "zh-CN": "添加搜索…" },
 	rewriteQuery: { en: "Rewrite query with AI", "zh-CN": "用 AI 改写查询" },
 	summaryReview: { en: "Summary review", "zh-CN": "摘要审查" },
+	summary: { en: "Summary", "zh-CN": "摘要" },
+	observerSummaryReadOnly: { en: "Generated automatically and sent to the agent.", "zh-CN": "已自动生成并发送给 Agent。" },
 	reviewSummaryDraft: { en: "Review summary draft", "zh-CN": "审查摘要草稿" },
 	editSummary: { en: "Edit the summary before approving.", "zh-CN": "批准前可继续编辑摘要。" },
 	summaryProvider: { en: "Summary provider", "zh-CN": "摘要服务" },

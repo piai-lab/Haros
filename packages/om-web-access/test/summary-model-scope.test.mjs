@@ -378,14 +378,14 @@ test("summary generation no longer uses catalog fallback or first available mode
 });
 
 test("summary and query rewrite defaults use the refreshed model order", () => {
-	for (const src of [summarySrc, indexSrc]) {
-		assert(src.indexOf('id: "claude-haiku-4-5"') < src.indexOf('id: "gpt-5.6-luna"'));
-		assert(src.indexOf('id: "gpt-5.6-luna"') < src.indexOf('id: "gpt-5.6-terra"'));
-		assert(src.indexOf('id: "gpt-5.6-terra"') < src.indexOf('id: "gemini-3.6-flash"'));
-		assert(src.indexOf('id: "gemini-3.6-flash"') < src.indexOf('id: "gpt-5-mini"'));
-		assert(src.indexOf('id: "gpt-5-mini"') < src.indexOf('id: "deepseek-v4-flash"'));
-		assert.doesNotMatch(src, /gpt-5\.3-codex-spark/);
-	}
+	assert(summarySrc.indexOf('id: "claude-haiku-4-5"') < summarySrc.indexOf('id: "gpt-5.6-luna"'));
+	assert(summarySrc.indexOf('id: "gpt-5.6-luna"') < summarySrc.indexOf('id: "gpt-5.6-terra"'));
+	assert(summarySrc.indexOf('id: "gpt-5.6-terra"') < summarySrc.indexOf('id: "gemini-3.6-flash"'));
+	assert(summarySrc.indexOf('id: "gemini-3.6-flash"') < summarySrc.indexOf('id: "gpt-5-mini"'));
+	assert(summarySrc.indexOf('id: "gpt-5-mini"') < summarySrc.indexOf('id: "deepseek-v4-flash"'));
+	assert.doesNotMatch(summarySrc, /gpt-5\.3-codex-spark/);
+	assert.match(indexSrc, /resolvePreferredSummaryModelValue/);
+	assert.doesNotMatch(indexSrc, /const PREFERRED_SUMMARY_MODELS/);
 	assert.match(queryRewriteSrc, /id: "gpt-5-mini"/);
 	assert.doesNotMatch(queryRewriteSrc, /gpt-4\.1-mini/);
 });

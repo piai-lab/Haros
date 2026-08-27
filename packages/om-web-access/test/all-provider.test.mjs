@@ -31,6 +31,7 @@ function runChild(script, env = {}) {
 		"PERPLEXITY_API_KEY",
 		"GEMINI_API_KEY",
 		"CLOUDFLARE_API_KEY",
+		"PI_ALLOW_BROWSER_COOKIES",
 	]) {
 		delete childEnv[key];
 	}
@@ -130,6 +131,158 @@ test('provider "all" starts every eligible provider together, excludes AnySearch
 	assert.match(output.result.answer, /## TinyFish/);
 	assert.match(output.result.answer, /## Search1API/);
 	assert.doesNotMatch(output.result.answer, /AnySearch/);
+});
+
+test('provider "broad" prioritizes configured services, fills free routes, and caps the route at three', async () => {
+	const home = await mkdtemp(join(tmpdir(), "pi-web-access-broad-"));
+	await writeFile(join(home, "web-search.json"), JSON.stringify({
+		provider: "broad",
+		searchRouting: { providers: ["brave"], fallbackOn: ["network"] },
+		braveApiKey: "brave-test-key",
+		tinyfishApiKey: "tinyfish-test-key",
+	}) + "\n");
+	const child = runChild(`
+		const started = [];
+		let releaseGate;
+		const gate = new Promise((resolve) => { releaseGate = resolve; });
+		async function waitForPeers(provider) {
+			started.push(provider);
+			if (started.length === 3) releaseGate();
+			await gate;
+		}
+		globalThis.fetch = async (url) => {
+			const target = String(url);
+			if (target.startsWith("https://api.search.brave.com/")) {
+				await waitForPeers("brave");
+				return new Response(JSON.stringify({ web: { results: [{ title: "Brave", url: "https://example.com/brave", description: "Brave" }] } }), { status: 200 });
+			}
+			if (target.startsWith("https://api.search.tinyfish.ai")) {
+				await waitForPeers("tinyfish");
+				return new Response(JSON.stringify({ query: "broad", results: [{ title: "TinyFish", url: "https://example.com/tinyfish", snippet: "TinyFish" }], total_results: 1, page: 0 }), { status: 200 });
+			}
+			if (target.startsWith("https://mcp.exa.ai/mcp")) {
+				await waitForPeers("exa");
+				return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { content: [{ type: "text", text: "Title: Exa\\nURL: https://example.com/exa\\nText: Exa\\n---" }] } }), { status: 200 });
+			}
+			throw new Error("Unexpected fourth broad provider: " + target);
+		};
+		const { search } = await import(${JSON.stringify(searchModuleUrl)});
+		const result = await search("broad coverage", { provider: "broad" });
+		console.log(JSON.stringify({ started, result }));
+	`, { HOME: home, USERPROFILE: home, PI_CODING_AGENT_DIR: home });
+
+	assert.equal(child.status, 0, child.stderr || child.error?.message);
+	const output = JSON.parse(child.stdout.trim());
+	assert.deepEqual([...output.started].sort(), ["brave", "exa", "tinyfish"]);
+	assert.equal(output.result.provider, "broad");
+	assert.deepEqual(output.result.providerResponses.map(({ provider }) => provider), ["brave", "tinyfish", "exa"]);
+});
+
+test('provider "broad" keeps successful providers and reports partial failures', async () => {
+	const home = await mkdtemp(join(tmpdir(), "pi-web-access-broad-partial-"));
+	await writeFile(join(home, "web-search.json"), JSON.stringify({
+		provider: "broad",
+		braveApiKey: "brave-test-key",
+	}) + "\n");
+	const child = runChild(`
+		globalThis.fetch = async (url) => {
+			const target = String(url);
+			if (target.startsWith("https://api.search.brave.com/")) return new Response("temporary", { status: 503 });
+			if (target.startsWith("https://mcp.exa.ai/mcp")) return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { content: [{ type: "text", text: "Title: Exa\\nURL: https://example.com/exa\\nText: Exa\\n---" }] } }), { status: 200 });
+			throw new Error("Unexpected fetch " + target);
+		};
+		const { search } = await import(${JSON.stringify(searchModuleUrl)});
+		const result = await search("partial broad", { provider: "broad" });
+		console.log(JSON.stringify(result));
+	`, { HOME: home, USERPROFILE: home, PI_CODING_AGENT_DIR: home });
+
+	assert.equal(child.status, 0, child.stderr || child.error?.message);
+	const output = JSON.parse(child.stdout.trim());
+	assert.equal(output.provider, "broad");
+	assert.deepEqual(output.providerResponses.map(({ provider }) => provider), ["exa"]);
+	assert.ok(output.providerErrors.some(({ provider }) => provider === "brave"));
+});
+
+test('zero-config broad uses only actually executable providers and does not invent a Gemini failure', async () => {
+	const home = await mkdtemp(join(tmpdir(), "pi-web-access-broad-zero-config-"));
+	const child = runChild(`
+		globalThis.fetch = async (url) => {
+			const target = String(url);
+			if (target.startsWith("https://mcp.exa.ai/mcp")) return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { content: [{ type: "text", text: "Title: Exa\\nURL: https://example.com/exa\\nText: Exa\\n---" }] } }), { status: 200 });
+			throw new Error("Unexpected zero-config broad fetch " + target);
+		};
+		const { search } = await import(${JSON.stringify(searchModuleUrl)});
+		const result = await search("zero-config broad", { provider: "broad" });
+		console.log(JSON.stringify(result));
+	`, { HOME: home, USERPROFILE: home, PI_CODING_AGENT_DIR: home });
+
+	assert.equal(child.status, 0, child.stderr || child.error?.message);
+	const output = JSON.parse(child.stdout.trim());
+	assert.deepEqual(output.providerResponses.map(({ provider }) => provider), ["exa"]);
+	assert.deepEqual(output.providerErrors ?? [], []);
+});
+
+test('provider "broad" reports typed route exhaustion only when every selected service fails', async () => {
+	const home = await mkdtemp(join(tmpdir(), "pi-web-access-broad-failed-"));
+	await writeFile(join(home, "web-search.json"), JSON.stringify({
+		provider: "broad",
+		searchRouting: { providers: ["brave", "tinyfish", "search1api"], fallbackOn: ["network"] },
+		braveApiKey: "brave-test-key",
+		tinyfishApiKey: "tinyfish-test-key",
+		search1apiKey: "search1api-test-key",
+	}) + "\n");
+	const child = runChild(`
+		globalThis.fetch = async () => new Response("temporary", { status: 503 });
+		const { search, SearchRouteExhaustedError } = await import(${JSON.stringify(searchModuleUrl)});
+		try {
+			await search("failed broad", { provider: "broad" });
+		} catch (error) {
+			console.log(JSON.stringify({
+				isTyped: error instanceof SearchRouteExhaustedError,
+				route: error.route,
+				providers: error.failures.map(({ provider }) => provider),
+			}));
+		}
+	`, { HOME: home, USERPROFILE: home, PI_CODING_AGENT_DIR: home });
+
+	assert.equal(child.status, 0, child.stderr || child.error?.message);
+	const output = JSON.parse(child.stdout.trim());
+	assert.equal(output.isTyped, true);
+	assert.equal(output.route, "broad");
+	assert.deepEqual(output.providers.slice(0, 2), ["brave", "tinyfish"]);
+	assert.equal(output.providers.length, 3);
+});
+
+test('broad priority admits explicit-only providers only through an explicit advanced route', async () => {
+	const home = await mkdtemp(join(tmpdir(), "pi-web-access-broad-explicit-"));
+	await writeFile(join(home, "web-search.json"), JSON.stringify({
+		provider: "broad",
+		searchRouting: { providers: ["parallel-mcp"], fallbackOn: ["network"] },
+	}) + "\n");
+	const child = runChild(`
+		const { getBroadSearchProviderOrder } = await import(${JSON.stringify(searchModuleUrl)});
+		console.log(JSON.stringify(getBroadSearchProviderOrder()));
+	`, { HOME: home, USERPROFILE: home, PI_CODING_AGENT_DIR: home });
+
+	assert.equal(child.status, 0, child.stderr || child.error?.message);
+	const order = JSON.parse(child.stdout.trim());
+	assert.equal(order[0], "parallel-mcp");
+	assert.equal(order.includes("anysearch"), false);
+	assert.equal(order.includes("valyu"), false);
+});
+
+test('a named explicit-only default does not silently join a per-call broad override', async () => {
+	const home = await mkdtemp(join(tmpdir(), "pi-web-access-broad-named-explicit-"));
+	await writeFile(join(home, "web-search.json"), JSON.stringify({ provider: "anysearch" }) + "\n");
+	const child = runChild(`
+		const { getBroadSearchProviderOrder } = await import(${JSON.stringify(searchModuleUrl)});
+		console.log(JSON.stringify(getBroadSearchProviderOrder()));
+	`, { HOME: home, USERPROFILE: home, PI_CODING_AGENT_DIR: home });
+
+	assert.equal(child.status, 0, child.stderr || child.error?.message);
+	const order = JSON.parse(child.stdout.trim());
+	assert.equal(order.includes("anysearch"), false);
+	assert.equal(order.includes("exa"), true);
 });
 
 test('provider array searches only the selected providers concurrently and preserves their order', async () => {

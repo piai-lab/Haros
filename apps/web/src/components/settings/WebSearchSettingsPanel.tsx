@@ -880,7 +880,7 @@ export function WebSearchSettingsPanel({
 
   const overviewSelectedIds = new Set(
     (Array.isArray(draft.provider) ? draft.provider : [draft.provider]).filter(
-      (id) => id !== "auto" && id !== "all",
+      (id) => id !== "auto" && id !== "broad" && id !== "all",
     ),
   );
   const configuredProviders = base.providers.filter(
@@ -953,6 +953,8 @@ export function WebSearchSettingsPanel({
                     ? t("settings.webSearch.selectedParallel")
                     : draft.provider === "auto"
                       ? t("settings.webSearch.routeAuto")
+                      : draft.provider === "broad"
+                        ? t("settings.webSearch.routeBroad")
                       : draft.provider === "all"
                         ? t("settings.webSearch.routeAll")
                         : (base.providers.find((provider) => provider.id === draft.provider)
@@ -966,6 +968,7 @@ export function WebSearchSettingsPanel({
                   </SelectItem>
                 ) : null}
                 <SelectItem value="auto">{t("settings.webSearch.routeAuto")}</SelectItem>
+                <SelectItem value="broad">{t("settings.webSearch.routeBroad")}</SelectItem>
                 <SelectItem value="all">{t("settings.webSearch.routeAll")}</SelectItem>
                 {base.providers.map((provider) => (
                   <SelectItem key={provider.id} value={provider.id}>
@@ -1030,7 +1033,11 @@ export function WebSearchSettingsPanel({
             />
           }
         />
-        {providerSelectionValue(draft.provider) === "all" || Array.isArray(draft.provider) ? (
+        {providerSelectionValue(draft.provider) === "broad" ? (
+          <p className="px-3 pb-2 text-xs text-warning">
+            {t("settings.webSearch.broadCostWarning")}
+          </p>
+        ) : providerSelectionValue(draft.provider) === "all" || Array.isArray(draft.provider) ? (
           <p className="px-3 pb-2 text-xs text-warning">
             {t("settings.webSearch.parallelCostWarning")}
           </p>

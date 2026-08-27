@@ -189,6 +189,7 @@ test("Settings capability status follows the selected route's structural prerequ
 		assert.equal((await project({ provider: "tavily", tavilyApiKey: "synthetic" })).capabilityStatus, "possible");
 		assert.equal((await project({ provider: "openai" })).capabilityStatus, "possible");
 		assert.equal((await project({ provider: "auto" })).capabilityStatus, "possible");
+		assert.equal((await project({ provider: "broad" })).capabilityStatus, "possible");
 		assert.equal((await project({ provider: ["tavily", "exa"] })).capabilityStatus, "possible");
 		assert.equal((await project({ provider: ["tavily"] })).capabilityStatus, "needs-configuration");
 		assert.equal((await project({ provider: "all" })).capabilityStatus, "possible");
@@ -196,7 +197,7 @@ test("Settings capability status follows the selected route's structural prerequ
 
 		assert.deepEqual(
 			getSearchProviderRouteConfigurationProjection("gemini", { allowBrowserCookies: true }),
-			{ named: true, auto: true, all: false },
+			{ named: true, auto: true, broad: true, all: false },
 		);
 	});
 });

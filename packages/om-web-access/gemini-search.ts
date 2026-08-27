@@ -196,13 +196,13 @@ export interface SearchRouteFailure {
 /** Auto or configured routing exhausted every structurally eligible candidate. */
 export class SearchRouteExhaustedError extends Error {
 	readonly failures: readonly SearchRouteFailure[];
-	readonly route: "auto" | "configured";
+	readonly route: "auto" | "broad" | "configured";
 	readonly structuralCandidateCount: number;
 
 	constructor(
 		message: string,
 		failures: readonly SearchRouteFailure[],
-		route: "auto" | "configured" = "auto",
+		route: "auto" | "broad" | "configured" = "auto",
 		structuralCandidateCount = failures.length,
 	) {
 		super(message);
@@ -223,7 +223,7 @@ export interface ProviderSearchFailure {
 }
 
 export interface AttributedSearchResponse extends SearchResponse {
-	provider: ResolvedSearchProvider | "all";
+	provider: ResolvedSearchProvider | "broad" | "all";
 	providerResponses?: ProviderSearchResponse[];
 	providerErrors?: ProviderSearchFailure[];
 }
@@ -581,10 +581,10 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 
 export type ResolvedSearchProvider = typeof SEARCH_PROVIDER_RUNTIME_DEFINITIONS[number]["id"];
 export const RESOLVED_SEARCH_PROVIDERS = SEARCH_PROVIDER_RUNTIME_DEFINITIONS.map(({ id }) => id) as readonly ResolvedSearchProvider[];
-export const SEARCH_PROVIDERS = ["auto", "all", ...RESOLVED_SEARCH_PROVIDERS] as const;
+export const SEARCH_PROVIDERS = ["auto", "broad", "all", ...RESOLVED_SEARCH_PROVIDERS] as const;
 export type SearchProvider = typeof SEARCH_PROVIDERS[number];
 export type SearchProviderSelection = SearchProvider | ResolvedSearchProvider[];
-export type SearchProviderAvailability = Record<ResolvedSearchProvider | "all", boolean>;
+export type SearchProviderAvailability = Record<ResolvedSearchProvider | "broad" | "all", boolean>;
 
 export interface SearchProviderPresentation {
 	readonly id: ResolvedSearchProvider;
@@ -697,6 +697,7 @@ export function getSearchProviderConfigurationProjection(
 export interface SearchProviderRouteConfigurationProjection {
 	readonly named: boolean;
 	readonly auto: boolean;
+	readonly broad: boolean;
 	readonly all: boolean;
 }
 
@@ -710,6 +711,10 @@ export function getSearchProviderRouteConfigurationProjection(
 	return {
 		named: configuration.structurallyPossible,
 		auto: descriptor.autoOrder !== null && (
+			descriptor.isStructurallyPossibleForAuto?.(config, configuration)
+			?? configuration.structurallyPossible
+		),
+		broad: descriptor.autoOrder !== null && (
 			descriptor.isStructurallyPossibleForAuto?.(config, configuration)
 			?? configuration.structurallyPossible
 		),
@@ -761,13 +766,76 @@ export async function getSearchProviderAvailability(
 		),
 	);
 	const all = allAvailability.some(Boolean);
-	return { all, ...available };
+	const broad = (await resolveBroadSearchProviders(options)).length > 0;
+	return { broad, all, ...available };
 }
 
 export function getAutoSearchProviderOrder(options: { readonly preferOpenAI?: boolean } = {}): readonly ResolvedSearchProvider[] {
 	return AUTO_SEARCH_PROVIDER_RUNTIME_DEFINITIONS
 		.filter((descriptor) => descriptor.id !== "openai" || options.preferOpenAI !== false)
 		.map((descriptor) => descriptor.id);
+}
+
+function appendBroadCandidate(
+	candidates: ResolvedSearchProvider[],
+	seen: Set<ResolvedSearchProvider>,
+	provider: ResolvedSearchProvider,
+): void {
+	if (seen.has(provider)) return;
+	seen.add(provider);
+	candidates.push(provider);
+}
+
+function broadSearchCandidates(options: FullSearchOptions = {}): ResolvedSearchProvider[] {
+	const raw = readWebSearchConfig();
+	const configured = getSearchConfig();
+	const candidates: ResolvedSearchProvider[] = [];
+	const seen = new Set<ResolvedSearchProvider>();
+
+	for (const provider of configured.searchRouting?.providers ?? []) {
+		appendBroadCandidate(candidates, seen, provider);
+	}
+	if (Array.isArray(configured.searchProvider)) {
+		for (const provider of configured.searchProvider) {
+			appendBroadCandidate(candidates, seen, provider);
+		}
+	} else if (
+		configured.searchProvider !== "auto" &&
+		configured.searchProvider !== "broad" &&
+		configured.searchProvider !== "all"
+	) {
+		const descriptor = runtimeDescriptor(configured.searchProvider);
+		if (descriptor.autoOrder !== null) appendBroadCandidate(candidates, seen, configured.searchProvider);
+	}
+
+	for (const descriptor of AUTO_SEARCH_PROVIDER_RUNTIME_DEFINITIONS) {
+		if (descriptor.autoEligible && !descriptor.autoEligible(options)) continue;
+		const configuration = getSearchProviderConfigurationProjection(descriptor.id, raw);
+		if (configuration.configured) {
+			appendBroadCandidate(candidates, seen, descriptor.id);
+		}
+	}
+	for (const descriptor of AUTO_SEARCH_PROVIDER_RUNTIME_DEFINITIONS) {
+		if (descriptor.autoEligible && !descriptor.autoEligible(options)) continue;
+		const route = getSearchProviderRouteConfigurationProjection(descriptor.id, raw);
+		if (route.broad) appendBroadCandidate(candidates, seen, descriptor.id);
+	}
+	return candidates;
+}
+
+/** Stable, credential-blind priority for Curator presentation and focused tests. */
+export function getBroadSearchProviderOrder(options: FullSearchOptions = {}): readonly ResolvedSearchProvider[] {
+	return broadSearchCandidates(options);
+}
+
+async function resolveBroadSearchProviders(options: FullSearchOptions): Promise<ResolvedSearchProvider[]> {
+	const candidates = broadSearchCandidates(options);
+	const availability = await Promise.all(candidates.map(async (provider) => {
+		const descriptor = runtimeDescriptor(provider);
+		const available = await descriptor.isAvailable(options);
+		return { provider, available };
+	}));
+	return availability.filter(({ available }) => available).slice(0, 3).map(({ provider }) => provider);
 }
 
 function runtimeDescriptor(provider: ResolvedSearchProvider): SearchProviderRuntimeDescriptor<ResolvedSearchProvider> {
@@ -921,13 +989,14 @@ async function searchWithProviders(
 	query: string,
 	options: FullSearchOptions,
 	selectedProviders?: ResolvedSearchProvider[],
+	aggregateProvider: "broad" | "all" = "all",
 ): Promise<AttributedSearchResponse> {
 	const providers = selectedProviders ?? (await Promise.all(ALL_SEARCH_PROVIDER_RUNTIME_DEFINITIONS.map(async (descriptor) => ({
 		provider: descriptor.id,
 		available: await (descriptor.isAvailableForAll ?? descriptor.isAvailable)(options),
 	})))).filter((entry) => entry.available).map((entry) => entry.provider);
 	if (providers.length === 0) {
-		throw new Error("No eligible configured search provider is available for provider \"all\".");
+		throw new Error(`No eligible configured search provider is available for provider "${aggregateProvider}".`);
 	}
 
 	const settled = await Promise.allSettled(
@@ -938,16 +1007,28 @@ async function searchWithProviders(
 	if (options.signal?.aborted) throw new Error("Aborted");
 
 	const successes: AttributedSearchResponse[] = [];
-	const failures: Array<{ provider: ResolvedSearchProvider; error: string }> = [];
+	const failures: Array<{ provider: ResolvedSearchProvider; error: string; cause: unknown }> = [];
 	for (let index = 0; index < settled.length; index++) {
 		const outcome = settled[index];
 		if (outcome.status === "fulfilled") {
 			successes.push(outcome.value);
 		} else {
-			failures.push({ provider: providers[index], error: errorMessage(outcome.reason) });
+			failures.push({ provider: providers[index], error: errorMessage(outcome.reason), cause: outcome.reason });
 		}
 	}
 	if (successes.length === 0) {
+		if (aggregateProvider === "broad") {
+			const routeFailures = failures.map(({ provider, error, cause }) => {
+				const classified = classifyProviderError(provider, cause);
+				return { provider, kind: classified.kind, error };
+			});
+			throw new SearchRouteExhaustedError(
+				`Broad provider search failed:\n  - ${failures.map(({ provider, error }) => `${providerLabel(provider)}: ${error}`).join("\n  - ")}`,
+				routeFailures,
+				"broad",
+				providers.length,
+			);
+		}
 		const label = selectedProviders ? "Selected-provider" : "All-provider";
 		throw new Error(`${label} search failed:\n  - ${failures.map(({ provider, error }) => `${providerLabel(provider)}: ${error}`).join("\n  - ")}`);
 	}
@@ -979,11 +1060,11 @@ async function searchWithProviders(
 	}
 
 	return {
-		provider: "all",
+		provider: aggregateProvider,
 		answer: answerSections.join("\n\n"),
 		results,
 		providerResponses: successes as ProviderSearchResponse[],
-		...(failures.length > 0 ? { providerErrors: failures } : {}),
+		...(failures.length > 0 ? { providerErrors: failures.map(({ provider, error }) => ({ provider, error })) } : {}),
 		...(inlineContent.length > 0 ? { inlineContent } : {}),
 	};
 }
@@ -1028,6 +1109,18 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 		: options.provider;
 	if (Array.isArray(provider)) {
 		return searchWithProviders(query, options, normalizeResolvedProviderList(provider, "provider"));
+	}
+	if (provider === "broad") {
+		const providers = await resolveBroadSearchProviders(options);
+		if (providers.length === 0) {
+			throw new SearchRouteExhaustedError(
+				"No eligible configured search provider is available for provider \"broad\".",
+				[],
+				"broad",
+				0,
+			);
+		}
+		return searchWithProviders(query, options, providers, "broad");
 	}
 	if (provider === "all") return searchWithProviders(query, options);
 	if (provider !== "auto") return searchWithResolvedProvider(provider, query, options);

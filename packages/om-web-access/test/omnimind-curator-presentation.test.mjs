@@ -5,7 +5,7 @@ import { generateCuratorPage } from "../curator-page.ts";
 import { startCuratorServer } from "../curator-server.ts";
 
 const providerIds = [
-  "all", "openai", "brave", "parallel", "parallel-mcp", "tinyfish", "search1api",
+  "broad", "all", "openai", "brave", "parallel", "parallel-mcp", "tinyfish", "search1api",
   "searchinfinity", "querit", "tavily", "firecrawl", "jina", "serpdive", "kagi",
   "bocha", "ollama", "searxng", "duckduckgo", "perplexity", "exa", "gemini",
   "anysearch", "xai", "brightdata", "serpbase", "serper", "valyu",
@@ -75,8 +75,11 @@ test("Curator freezes OmniMind locale/theme and ships executable self-contained 
   assert.match(chinese, /展开搜索结果/);
   assert.match(chinese, /t\("expandResult"\)/);
   assert.match(chinese, /aria-expanded="false"/);
-  assert.match(chinese, /actionBar\.inert = summaryOwnsSettlement/);
-  assert.match(chinese, /actionBar\.setAttribute\("aria-hidden", "true"\)/);
+  assert.match(chinese, /actionBar\.inert = false/);
+  assert.doesNotMatch(chinese, /position: fixed;\s*z-index: 24;\s*top: 14px/);
+  assert.ok(chinese.indexOf('id="result-cards"') < chinese.indexOf('id="add-search"'));
+  assert.ok(chinese.indexOf('id="add-search"') < chinese.indexOf('id="summary-panel"'));
+  assert.ok(chinese.indexOf('id="summary-panel"') < chinese.indexOf('<footer class="action-bar">'));
   assert.match(chinese, /successfulSearches > 0/);
   assert.match(chinese, /btnSummaryBack/);
   assert.doesNotMatch(chinese, /btnSummary返回|btnSummary预览|maybe自动GenerateSummary/);
@@ -129,6 +132,10 @@ test("observer uses the same bilingual page but removes review settlement contro
   assert.match(observer, /interactiveReview = surfaceMode === "review"/);
   assert.doesNotMatch(observer, /workflow = observerMode/);
   assert.match(observer, /html\[data-surface-mode="observer"\] \.action-bar/);
+  assert.doesNotMatch(observer, /html\[data-surface-mode="observer"\][^}]*\.summary-panel,/);
+  assert.match(observer, /id="summary-readonly" class="summary-readonly hidden"/);
+  assert.match(observer, /typeof data\.summary === "string"/);
+  assert.match(observer, /summaryReadonly\.innerHTML = sanitizeMarkdownHtml/);
   assert.match(observer, /html\[data-surface-mode="observer"\] \.expired-overlay/);
   assert.match(observer, /id="expired-overlay" class="expired-overlay hidden" aria-live="polite" aria-hidden="true"/);
   assert.match(observer, /es\.addEventListener\("terminal"/);
@@ -224,7 +231,13 @@ test("observer server is read-only, never times out, and terminalizes without re
   handle.searchesDone();
   await new Promise(resolve => setTimeout(resolve, 1_200));
   assert.deepEqual(cancellations, []);
-  handle.completeObserver("summary-sent");
+  const eventStream = fetch(new URL(`/events?session=${encodeURIComponent(token)}`, pageUrl)).then(response => response.text());
+  await new Promise(resolve => setTimeout(resolve, 20));
+  handle.completeObserver("summary-sent", "## Final summary\n\nVisible in the tail.");
+  const events = await eventStream;
+  assert.match(events, /event: terminal/);
+  assert.match(events, /Final summary/);
+  assert.match(events, /Visible in the tail/);
   assert.deepEqual(cancellations, []);
 });
 

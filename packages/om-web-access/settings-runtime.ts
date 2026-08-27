@@ -86,7 +86,7 @@ export interface WebSearchSettingsProjection {
 
 export interface WebSearchProviderProbeResult {
 	readonly state: "ready" | "degraded" | "unavailable" | "failed";
-	readonly provider: ResolvedSearchProvider | "all" | null;
+	readonly provider: ResolvedSearchProvider | "broad" | "all" | null;
 	readonly reason:
 		| "request-succeeded"
 		| "temporary-failure"
@@ -127,6 +127,8 @@ export function projectWebSearchSettings(
 		? provider.some((id) => routeProjection.get(id)?.named === true)
 		: provider === "auto"
 			? [...routeProjection.values()].some(({ auto }) => auto)
+			: provider === "broad"
+				? [...routeProjection.values()].some(({ broad }) => broad)
 			: provider === "all"
 				? [...routeProjection.values()].some(({ all }) => all)
 				: routeProjection.get(provider)?.named === true;

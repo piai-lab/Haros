@@ -57,6 +57,33 @@ test("get_search_content schemas constrain numeric parameters", () => {
 	}
 });
 
+test("get_search_content returns stored answer, snippets, and every source", async () => {
+	const tool = getContentTool();
+	storeResult("stored-search", {
+		id: "stored-search",
+		type: "search",
+		timestamp: Date.now(),
+		queries: [{
+			query: "complete stored query",
+			answer: "Stored provider answer.",
+			results: [
+				{ title: "First", url: "https://example.com/first", snippet: "First stored snippet." },
+				{ title: "Second", url: "https://example.com/second", snippet: "Second stored snippet." },
+			],
+			error: null,
+			provider: "broad",
+		}],
+	});
+
+	const result = await tool.execute("call", { responseId: "stored-search", queryIndex: 0 });
+	const text = result.content[0].text;
+	assert.match(text, /Stored provider answer/);
+	assert.match(text, /First stored snippet/);
+	assert.match(text, /Second stored snippet/);
+	assert.match(text, /https:\/\/example\.com\/first/);
+	assert.match(text, /https:\/\/example\.com\/second/);
+});
+
 test("get_search_content returns a bounded first slice for large fetched content", async () => {
 	const tool = getContentTool();
 	storeFetchedContent("A".repeat(30_000) + "TAIL");

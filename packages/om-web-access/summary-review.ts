@@ -2,13 +2,14 @@ import { clampThinkingLevel, type ModelThinkingLevel, type ThinkingLevel } from 
 import { complete, completeSimple, type Api, type Message, type Model } from "@earendil-works/pi-ai/compat";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { findModelWithProviderRouting, loadEnabledModelPatterns, modelMatchesEnabledPatterns, splitThinkingSuffix, type SummaryThinkingLevel } from "./summary-model-scope.ts";
+import { formatSummaryInputResult } from "./search-result.ts";
 import type { QueryResultData } from "./storage.ts";
 
 type ProviderHeaders = Record<string, string | null>;
 type CompleteFunction = typeof complete;
 type SummaryModelRegistry = SummaryGenerationContext["modelRegistry"] & { complete?: CompleteFunction };
 
-const PREFERRED_SUMMARY_MODELS = [
+export const PREFERRED_SUMMARY_MODELS = [
 	{ provider: "anthropic", id: "claude-haiku-4-5" },
 	{ provider: "openai-codex", id: "gpt-5.6-luna" },
 	{ provider: "openai-codex", id: "gpt-5.6-terra" },
@@ -31,35 +32,22 @@ export interface SummaryMeta {
 
 export type SummaryGenerationContext = Pick<ExtensionContext, "model" | "modelRegistry" | "cwd" | "isProjectTrusted">;
 
+export function resolvePreferredSummaryModelValue(
+	registry: SummaryGenerationContext["modelRegistry"],
+	availableValues: ReadonlySet<string>,
+): string | null {
+	for (const preferred of PREFERRED_SUMMARY_MODELS) {
+		const model = findModelWithProviderRouting(registry, preferred.provider, preferred.id);
+		const value = model ? `${model.provider}/${model.id}` : null;
+		if (value && availableValues.has(value)) return value;
+	}
+	return null;
+}
+
 function estimateTokens(text: string): number {
 	const trimmed = text.trim();
 	if (trimmed.length === 0) return 0;
 	return Math.max(1, Math.ceil(trimmed.length / 4));
-}
-
-function summarizeQueryResult(result: QueryResultData): string {
-	if (result.error) {
-		return `Query: ${result.query}\nStatus: Error\nError: ${result.error}`;
-	}
-
-	const lines = [
-		`Query: ${result.query}`,
-		`Provider: ${result.provider ?? "unknown"}`,
-		`Answer: ${result.answer || "(no answer text returned)"}`,
-	];
-
-	if (result.results.length === 0) {
-		lines.push("Sources: none");
-		return lines.join("\n");
-	}
-
-	lines.push("Sources:");
-	for (let i = 0; i < result.results.length; i++) {
-		const source = result.results[i];
-		lines.push(`${i + 1}. ${source.title} — ${source.url}`);
-	}
-
-	return lines.join("\n");
 }
 
 export function buildSummaryPrompt(results: QueryResultData[], feedback?: string): string {
@@ -71,7 +59,7 @@ export function buildSummaryPrompt(results: QueryResultData[], feedback?: string
 		"- Include key findings and caveats.",
 		"- Do not invent sources or claims.",
 		"- If evidence is weak or conflicting, say so explicitly.",
-		"- End with a short \"Sources\" section listing the most relevant URLs.",
+		"- Do not write a Sources section; the complete source directory is appended mechanically after your summary.",
 	];
 
 	if (feedback) {
@@ -83,7 +71,7 @@ export function buildSummaryPrompt(results: QueryResultData[], feedback?: string
 
 	for (let i = 0; i < results.length; i++) {
 		sections.push(`\n[Result ${i + 1}]`);
-		sections.push(summarizeQueryResult(results[i]));
+		sections.push(formatSummaryInputResult(results[i]));
 	}
 
 	sections.push("\n</search_results>");
@@ -113,9 +101,6 @@ function buildDeterministicSummaryLines(results: QueryResultData[]): string[] {
 	if (results.length === 0) {
 		return [
 			"No completed search results were available when the curator session finished.",
-			"",
-			"Sources",
-			"- None",
 		];
 	}
 
@@ -124,7 +109,6 @@ function buildDeterministicSummaryLines(results: QueryResultData[]): string[] {
 		"",
 	];
 
-	const sourceUrls: string[] = [];
 	let successful = 0;
 	let failed = 0;
 
@@ -143,31 +127,12 @@ function buildDeterministicSummaryLines(results: QueryResultData[]): string[] {
 			lines.push(`- ${result.query}: returned ${result.results.length} source${result.results.length === 1 ? "" : "s"} without answer text.`);
 		}
 
-		for (const source of result.results) {
-			if (!sourceUrls.includes(source.url)) {
-				sourceUrls.push(source.url);
-			}
-		}
 	}
 
 	lines.push("");
 	lines.push(`Completed queries: ${results.length}`);
 	lines.push(`Successful: ${successful}`);
 	lines.push(`Failed: ${failed}`);
-	lines.push("");
-	lines.push("Sources");
-
-	if (sourceUrls.length === 0) {
-		lines.push("- None");
-	} else {
-		for (const url of sourceUrls.slice(0, 12)) {
-			lines.push(`- ${url}`);
-		}
-		if (sourceUrls.length > 12) {
-			lines.push(`- ... and ${sourceUrls.length - 12} more`);
-		}
-	}
-
 	return lines;
 }
 
@@ -175,7 +140,7 @@ export function buildDeterministicSummary(results: QueryResultData[]): { summary
 	const summary = buildDeterministicSummaryLines(results).join("\n").trim();
 	const nonEmptySummary = summary.length > 0
 		? summary
-		: "No completed search results were available when the curator session finished.\n\nSources\n- None";
+		: "No completed search results were available when the curator session finished.";
 
 	return {
 		summary: nonEmptySummary,

@@ -176,6 +176,7 @@ ${CSS}
 <span class="summary-generating-bar b3"></span>
 </div>
 </div>
+<div id="summary-readonly" class="summary-readonly hidden"></div>
 <textarea id="summary-input" class="summary-input" placeholder="${escapeMarkup(copy.summaryDraftPlaceholder)}"></textarea>
 <div class="summary-feedback-row">
 <input type="text" id="summary-feedback" class="summary-feedback" placeholder="${escapeMarkup(copy.optionalFeedback)}" />
@@ -1278,18 +1279,12 @@ main {
 }
 .action-buttons { display: flex; gap: 8px; }
 
-body.summary-open .action-bar {
-  opacity: 0;
-  pointer-events: none;
-}
-
 html[data-surface-mode="observer"] .timer-badge,
 html[data-surface-mode="observer"] .timer-adjust,
 html[data-surface-mode="observer"] .provider-buttons,
 html[data-surface-mode="observer"] .provider-switch-consequence,
 html[data-surface-mode="observer"] .send-raw-row,
 html[data-surface-mode="observer"] .add-search,
-html[data-surface-mode="observer"] .summary-panel,
 html[data-surface-mode="observer"] .action-bar,
 html[data-surface-mode="observer"] .result-card-header input[type="checkbox"],
 html[data-surface-mode="observer"] .card-alt-chip {
@@ -1299,6 +1294,25 @@ html[data-surface-mode="observer"] .card-alt-chip {
 html[data-surface-mode="observer"] main {
   padding-bottom: 40px;
 }
+
+html[data-surface-mode="observer"] .summary-model-controls,
+html[data-surface-mode="observer"] .summary-generating,
+html[data-surface-mode="observer"] .summary-input,
+html[data-surface-mode="observer"] .summary-feedback-row,
+html[data-surface-mode="observer"] .summary-actions {
+  display: none !important;
+}
+
+.summary-readonly {
+  color: var(--fg);
+  font-size: 13.5px;
+  line-height: 1.72;
+  overflow-wrap: anywhere;
+}
+.summary-readonly.hidden { display: none; }
+.summary-readonly > :first-child { margin-top: 0; }
+.summary-readonly > :last-child { margin-bottom: 0; }
+.summary-readonly a { color: var(--accent); text-underline-offset: 2px; }
 
 html[data-surface-mode="observer"] .success-overlay,
 html[data-surface-mode="observer"] .expired-overlay {
@@ -1691,19 +1705,13 @@ main {
 .btn { min-height: 34px; border-radius: 8px; font-size: 11px; }
 
 .summary-panel {
-  position: fixed;
-  z-index: 24;
-  top: 14px;
-  right: 14px;
-  bottom: 78px;
-  width: min(438px, calc(100vw - 28px));
-  margin: 0;
-  padding: 15px;
+  position: relative;
+  margin: 21px 0 0;
+  padding: 18px;
   border-radius: 14px;
-  background: color-mix(in srgb, var(--bg-card) 96%, transparent);
-  box-shadow: 0 26px 78px rgba(0,0,0,.36);
-  backdrop-filter: blur(20px) saturate(130%);
-  overflow: auto;
+  background: var(--bg-card);
+  box-shadow: none;
+  overflow: visible;
   animation: slide-up .32s cubic-bezier(.16,1,.3,1);
 }
 .summary-input { min-height: 230px; }
@@ -1712,7 +1720,7 @@ main {
   main { padding: 28px 16px 42px; }
   .result-card-header { padding-inline: 3px; }
   .result-card-answer { padding-inline: 29px 27px; }
-  .summary-panel { top: 8px; right: 8px; bottom: 74px; width: calc(100vw - 16px); }
+  .summary-panel { margin-top: 18px; padding: 15px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1862,6 +1870,7 @@ const SCRIPT = `(function() {
   var summarySubtitle = document.getElementById("summary-subtitle");
   var summaryGeneratingEl = document.getElementById("summary-generating");
   var summaryGeneratingCopy = document.getElementById("summary-generating-copy");
+  var summaryReadonly = document.getElementById("summary-readonly");
   var summaryInput = document.getElementById("summary-input");
   var summaryFeedback = document.getElementById("summary-feedback");
   var btnSummaryBack = document.getElementById("btn-summary-back");
@@ -2368,13 +2377,11 @@ __PROVIDER_LABEL_RESOLVER__
 
   function updateStageUI() {
     var showSummary = stage === "summary-review" || stage === "generating-summary" || isRegenerating;
-    document.body.classList.toggle("summary-open", showSummary && !observerMode);
-    var summaryOwnsSettlement = showSummary && !observerMode;
+    document.body.classList.remove("summary-open");
     if (actionBar) {
-      actionBar.hidden = summaryOwnsSettlement;
-      actionBar.inert = summaryOwnsSettlement;
-      if (summaryOwnsSettlement) actionBar.setAttribute("aria-hidden", "true");
-      else actionBar.removeAttribute("aria-hidden");
+      actionBar.hidden = false;
+      actionBar.inert = false;
+      actionBar.removeAttribute("aria-hidden");
     }
     if (summaryPanel) {
       summaryPanel.classList.toggle("hidden", !showSummary);
@@ -3349,6 +3356,18 @@ __PROVIDER_LABEL_RESOLVER__
       : t("observerResultsSent");
     heroDesc.textContent = terminalCopy;
     if (heroStatus) heroStatus.textContent = "";
+    if (data && data.outcome === "summary-sent" && typeof data.summary === "string" && data.summary.trim()) {
+      if (summaryHeading) summaryHeading.textContent = t("summary");
+      if (summarySubtitle) summarySubtitle.textContent = t("observerSummaryReadOnly");
+      if (summaryReadonly) {
+        var renderedSummary = typeof marked !== "undefined" && marked.parse
+          ? marked.parse(data.summary, { breaks: true })
+          : escHtml(data.summary).replace(/\\n/g, "<br>");
+        summaryReadonly.innerHTML = sanitizeMarkdownHtml(renderedSummary);
+        summaryReadonly.classList.remove("hidden");
+      }
+      if (summaryPanel) summaryPanel.classList.remove("hidden");
+    }
     document.body.classList.add("observer-terminal");
     if (es) es.close();
   });

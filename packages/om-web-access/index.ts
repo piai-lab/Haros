@@ -15,7 +15,7 @@ import { findContent, type FindMode } from "./content-find.ts";
 import { answerFromPage } from "./page-query.ts";
 import { rewriteSearchQuery } from "./query-rewrite.ts";
 import { clearCloneCache } from "./github-extract.ts";
-import { getAutoSearchProviderOrder, getConfiguredSearchRouting, getSearchProviderAgentProjection, getSearchProviderAvailability, getSearchProviderPresentation, normalizeSearchProviderSelection, RESOLVED_SEARCH_PROVIDERS, SEARCH_PROVIDERS, search, SearchRouteExhaustedError, type AttributedSearchResponse, type SearchProvider, type SearchProviderAvailability, type SearchProviderSelection, type ResolvedSearchProvider } from "./gemini-search.ts";
+import { getAutoSearchProviderOrder, getBroadSearchProviderOrder, getConfiguredSearchRouting, getSearchProviderAvailability, getSearchProviderPresentation, normalizeSearchProviderSelection, RESOLVED_SEARCH_PROVIDERS, SEARCH_PROVIDERS, search, SearchRouteExhaustedError, type AttributedSearchResponse, type SearchProviderAvailability, type SearchProviderSelection, type ResolvedSearchProvider } from "./gemini-search.ts";
 import type { SearchResult } from "./perplexity.ts";
 import { formatSeconds, getWebSearchConfigPath, readWebSearchConfig, resolveCuratorNetworkConfig } from "./utils.ts";
 import {
@@ -36,10 +36,12 @@ import { resolveCuratorCopy } from "./curator-copy.ts";
 import {
 	buildDeterministicSummary,
 	generateSummaryDraft,
+	resolvePreferredSummaryModelValue,
 	SUMMARY_GENERATION_DEADLINE_MS,
 	type SummaryGenerationContext,
 	type SummaryMeta,
 } from "./summary-review.ts";
+import { appendSourceDirectory, formatArtifactHint, formatRawQueryResult, formatStoredQueryResult } from "./search-result.ts";
 import { randomUUID } from "node:crypto";
 import { execFileSync, spawn } from "node:child_process";
 import { createRequire } from "node:module";
@@ -152,7 +154,7 @@ type ProviderAvailability = SearchProviderAvailability;
 
 type WebSearchWorkflow = "none" | "summary-review" | "auto-summary";
 type CuratorWorkflow = "summary-review";
-type CuratorProvider = Exclude<SearchProvider, "auto">;
+type CuratorProvider = ResolvedSearchProvider | "all";
 type SummaryWorkflow = "summary-review" | "auto-summary";
 
 interface CuratorBootstrap {
@@ -175,7 +177,7 @@ function saveConfig(updates: Partial<WebSearchConfig>): void {
 }
 
 function persistProviderAtRevision(
-	provider: Exclude<SearchProvider, "auto">,
+	provider: CuratorProvider,
 	expectedRevision: string,
 ): { readonly result: "saved" | "unchanged" | "conflict" | "failed"; readonly revision: string } {
 	const service = currentWebSearchConfigService();
@@ -225,26 +227,10 @@ function searchProviderSchema(description: string) {
 	], { description });
 }
 
-function formatProviderNames(ids: readonly ResolvedSearchProvider[]): string {
-	const names = new Map(getSearchProviderPresentation().map(({ id, displayName }) => [id, displayName]));
-	const values = ids.map((id) => names.get(id) ?? id);
-	if (values.length <= 1) return values[0] ?? "";
-	if (values.length === 2) return `${values[0]} or ${values[1]}`;
-	return `${values.slice(0, -1).join(", ")}, or ${values.at(-1)}`;
-}
-
 function webSearchAgentDescription(): { readonly tool: string; readonly provider: string } {
-	const facts = getSearchProviderAgentProjection();
-	const providers = formatProviderNames(facts.canonicalIds);
-	const allExcluded = formatProviderNames(facts.allExcluded);
-	const explicitOnly = formatProviderNames(facts.explicitOnly);
-	const autoOrder = formatProviderNames(facts.autoOrder);
-	const sessionCapable = formatProviderNames(
-		getSearchProviderPresentation().filter(({ prerequisite }) => prerequisite === "key-or-session").map(({ id }) => id),
-	);
 	return {
-		tool: `Search the web using ${providers}. Pass a provider array to search only those providers simultaneously, or use provider "all" to search every eligible provider except ${allExcluded}. Returns an AI-synthesized answer with source citations. ${explicitOnly} are explicit-only services. ${sessionCapable} may use an authenticated Agent session when that runtime path is available. For comprehensive research, prefer queries (plural) with 2-4 varied angles over a single query — each query gets its own synthesized answer, so varying phrasing and scope gives much broader coverage. When includeContent is true, full page content is fetched in the background. Searches generate a background summary by default and continue without waiting for source review; the independent display preference may show a nonblocking Right Dock observer. Use workflow "summary-review" only when the user explicitly asks to review or select sources, or workflow "none" to return raw results. The configured provider is used when provider is omitted or set to auto; omit provider unless explicitly overriding it. Auto routing follows this canonical order and stops at the first success: ${autoOrder}. SearXNG is first only when its endpoint is configured; otherwise it is skipped without a request.`,
-		provider: `Search provider or non-empty list of providers to search simultaneously; use all to search every eligible provider except ${allExcluded}, omit this field to use the configured provider, or use auto when none is configured`,
+		tool: "Search the web and return an automatic summary with complete source links. Omit provider for the configured everyday route; use broad for bounded multi-source coverage when the task is important, open-ended, disputed, or benefits from several perspectives; use all only when maximum coverage justifies substantially higher cost and latency. Multiple varied queries run with bounded concurrency. Full page content stays in the artifact and can be read later. Use summary-review only when the user explicitly asks to review or select sources, or none for raw results.",
+		provider: "Search coverage or explicit service selection: auto/configured = one successful route, broad = up to three available services, all = every eligible service, a named service = strict single route, or a non-empty named-service array = explicit parallel routes",
 	};
 }
 
@@ -314,7 +300,8 @@ function resolveRequestedProvider(requested: unknown): SearchProviderSelection {
 
 function toCuratorProvider(provider: SearchProviderSelection): CuratorProvider | undefined {
 	if (Array.isArray(provider)) return "all";
-	return provider === "auto" ? undefined : provider;
+	if (provider === "auto") return undefined;
+	return provider === "broad" ? "all" : provider;
 }
 
 function resolveCuratorSearchProvider(requested: unknown, current: SearchProviderSelection): SearchProviderSelection {
@@ -437,6 +424,12 @@ function resolveProvider(
 		}
 		return firstAvailableProvider(available, preferOpenAI, "exa");
 	}
+	if (provider === "broad") {
+		for (const candidate of getBroadSearchProviderOrder(options)) {
+			if (available[candidate]) return candidate;
+		}
+		return firstAvailableProvider(available, preferOpenAI, "exa");
+	}
 	if (provider === "all" && !available.all) {
 		return firstAvailableProvider(available, preferOpenAI, "exa");
 	}
@@ -553,15 +546,6 @@ function formatInputValue(value: unknown): string {
 	}
 }
 
-function formatSearchSummary(results: SearchResult[], answer: string): string {
-	if (results.length === 0) {
-		return answer ? `${answer}\n\n---\n\n**Sources:**\nNo sources returned.` : "No results found.";
-	}
-	let output = answer ? `${answer}\n\n---\n\n**Sources:**\n` : "";
-	output += results.map((r, i) => `${i + 1}. ${r.title}\n   ${r.url}`).join("\n\n");
-	return output;
-}
-
 function formatSourceCheckResult(artifact: ResearchArtifact, getSearchContentTool: string | null = DEFAULT_TOOL_NAMES.getSearchContent): string {
 	const assessment = artifact.claims?.[0];
 	const lines = [`# Source check: ${artifact.query}`, ""];
@@ -609,15 +593,44 @@ function hasFullInlineCoverage(urls: string[], inlineContent: ExtractedContent[]
 	return urls.every(url => coveredUrls.has(url));
 }
 
-function formatFullResults(queryData: QueryResultData): string {
-	let output = `## Results for: "${queryData.query}"\n\n`;
-	if (queryData.answer) {
-		output += `${queryData.answer}\n\n---\n\n`;
+function queryConcurrency(provider: SearchProviderSelection): number {
+	if (Array.isArray(provider)) {
+		if (provider.length === 1) return 3;
+		return provider.length <= 3 ? 2 : 1;
 	}
-	for (const r of queryData.results) {
-		output += `### ${r.title}\n${r.url}\n\n`;
+	if (provider === "all") return 1;
+	if (provider === "broad") return 2;
+	return 3;
+}
+
+async function runQueryWorkers(
+	queryCount: number,
+	concurrency: number,
+	signal: AbortSignal | undefined,
+	worker: (queryIndex: number) => Promise<void>,
+): Promise<void> {
+	if (signal?.aborted) throw new Error("Aborted");
+	let nextQueryIndex = 0;
+	const run = async () => {
+		while (true) {
+			if (signal?.aborted) return;
+			const queryIndex = nextQueryIndex++;
+			if (queryIndex >= queryCount) return;
+			await worker(queryIndex);
+		}
+	};
+	await Promise.all(Array.from({ length: Math.min(queryCount, concurrency) }, () => run()));
+	if (signal?.aborted) throw new Error("Aborted");
+}
+
+function orderedQueryResults(results: ReadonlyMap<number, QueryResultData>): QueryResultData[] {
+	const ordered: QueryResultData[] = [];
+	const highestIndex = Math.max(-1, ...results.keys());
+	for (let index = 0; index <= highestIndex; index++) {
+		const result = results.get(index);
+		if (result) ordered.push(result);
 	}
-	return output;
+	return ordered;
 }
 
 function abortPendingFetches(): void {
@@ -635,11 +648,11 @@ function settleCuratorPresentation(callId: string, pc: PendingCurate | undefined
 	void presenter.settle({ toolCallId: callId, surfaceId }).catch(() => undefined);
 }
 
-function closeSearchObserver(callId: string, options?: { outcome?: "summary-sent" | "results-sent"; preserveTab?: boolean }): void {
+function closeSearchObserver(callId: string, options?: { outcome?: "summary-sent" | "results-sent"; summary?: string; preserveTab?: boolean }): void {
 	const observer = activeObservers.get(callId);
 	if (!observer) return;
 	activeObservers.delete(callId);
-	if (options?.outcome) observer.handle.completeObserver(options.outcome);
+	if (options?.outcome) observer.handle.completeObserver(options.outcome, options.summary);
 	else {
 		try { observer.handle.close(); } catch {}
 	}
@@ -792,7 +805,7 @@ function extractDomain(url: string): string {
 }
 
 function toCuratorSearchEntries(response: AttributedSearchResponse): CuratorSearchEntry[] {
-	const providerResponses = response.provider === "all" && response.providerResponses?.length
+	const providerResponses = response.providerResponses?.length
 		? response.providerResponses
 		: [response];
 	const entries: CuratorSearchEntry[] = providerResponses.map(result => ({
@@ -1167,14 +1180,6 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 
 		const config = loadConfig();
 		const configuredSummaryModel = typeof config.summaryModel === "string" ? config.summaryModel.trim() : "";
-		const preferredDefaults = [
-			{ provider: "anthropic", id: "claude-haiku-4-5" },
-			{ provider: "openai-codex", id: "gpt-5.6-luna" },
-			{ provider: "openai-codex", id: "gpt-5.6-terra" },
-			{ provider: "google", id: "gemini-3.6-flash" },
-			{ provider: "openai", id: "gpt-5-mini" },
-			{ provider: "deepseek", id: "deepseek-v4-flash" },
-		];
 
 		const resolveAvailableModelValue = (selector: string): string | null => {
 			const parsed = splitThinkingSuffix(selector);
@@ -1202,14 +1207,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				: resolveAvailableModelValue(configuredSummaryModel);
 		}
 		if (scopeLoaded && !defaultSummaryModel) {
-			for (const preferred of preferredDefaults) {
-				const model = findModelWithProviderRouting(summaryContext.modelRegistry, preferred.provider, preferred.id);
-				const value = model ? `${model.provider}/${model.id}` : null;
-				if (value && availableValues.has(value)) {
-					defaultSummaryModel = value;
-					break;
-				}
-			}
+			defaultSummaryModel = resolvePreferredSummaryModelValue(summaryContext.modelRegistry, availableValues);
 		}
 		return { summaryModels, defaultSummaryModel };
 	}
@@ -1227,7 +1225,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		}
 
 		const selected = filterByQueryIndices(payload.selectedQueryIndices, resultsByIndex).results;
-		const fallbackResults = selected.length > 0 ? selected : [...resultsByIndex.values()];
+		const fallbackResults = selected.length > 0 ? selected : orderedQueryResults(resultsByIndex);
 		const deterministic = buildDeterministicSummary(fallbackResults);
 		return {
 			approvedSummary: deterministic.summary,
@@ -1248,16 +1246,17 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				output += "[These results were manually curated by the user in the browser. Use them as-is — do not re-search or discard.]\n\n";
 			}
 			const duplicateQueries = opts.curated ? duplicateQuerySet(opts.results) : new Set<string>();
-			for (const { query, answer, results, error, provider } of opts.results) {
+			for (const result of opts.results) {
+				const { query, provider } = result;
 				if (opts.queryList.length > 1) {
 					output += opts.curated
 						? formatQueryHeader(query, provider, duplicateQueries)
 						: `## Query: "${query}"\n\n`;
 				}
-				if (error) output += `Error: ${error}\n\n`;
-				else output += formatSearchSummary(results, answer) + "\n\n";
+				output += `${formatRawQueryResult(result)}\n\n`;
 			}
 		}
+		output = appendSourceDirectory(output, opts.results);
 
 		const hasInlineReady = hasFullInlineCoverage(opts.urls, opts.inlineContent);
 		let fetchId: string | null = null;
@@ -1279,10 +1278,9 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				output += `---\nContent fetching in background [${fetchId}]. Will notify when ready.`;
 			}
 		}
-
 		const searchId = storeAndPublishSearch(opts.results);
 		if (getSearchContentEnabled) {
-			output = `${output.trim()}\n\n---\nArtifact responseId: ${searchId}. Use ${toolNames.getSearchContent}({ responseId: "${searchId}", queryIndex: 0 }) to retrieve the first stored query.`;
+			output = `${output.trim()}\n\n---\n${formatArtifactHint(searchId, opts.results.length, toolNames.getSearchContent)}`;
 		}
 		const isBackgroundFetch = fetchId !== null && !hasInlineReady;
 
@@ -1344,7 +1342,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 	}
 
 	function collectAllResultsAndUrls(resultsByIndex: Map<number, QueryResultData>) {
-		const results = [...resultsByIndex.values()];
+		const results = orderedQueryResults(resultsByIndex);
 		const urls: string[] = [];
 		for (const result of results) {
 			for (const source of result.results) {
@@ -1571,7 +1569,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 						} else {
 							const conn = activeCurators.get(callId)?.getConnectionState();
 							pc.finish(buildCurationCancelledReturn(reason, {
-								queries: Array.from(pc.searchResults.values()),
+								queries: orderedQueryResults(pc.searchResults),
 								queryCount: pc.queryList.length,
 								browserConnected: conn?.browserConnected,
 								lastHeartbeatAgeMs: conn?.lastHeartbeatAgeMs,
@@ -1584,7 +1582,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 					async onProviderChange(provider) {
 						if (pendingCurates.get(callId) !== pc) return { state: "failed", reason: "write-failed" };
 						const normalized = normalizeProviderInput(provider);
-						if (!normalized || normalized === "auto" || Array.isArray(normalized)) return { state: "failed", reason: "invalid-config" };
+						if (!normalized || normalized === "auto" || normalized === "broad" || Array.isArray(normalized)) return { state: "failed", reason: "invalid-config" };
 						pc.defaultProvider = normalized;
 						pc.searchProvider = normalized;
 						const persisted = persistProviderAtRevision(normalized, providerConfigRevision);
@@ -1805,7 +1803,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 			"Use for web research questions. Prefer {queries:[...]} with 2-4 varied angles over a single query for broader coverage. Omit provider unless explicitly overriding the configured default. Use summary-review only when the user explicitly asks to review or select sources.",
 		parameters: Type.Object({
 			query: Type.Optional(Type.String({ description: "Single search query. For research tasks, prefer 'queries' with multiple varied angles instead." })),
-			queries: Type.Optional(Type.Array(Type.String(), { description: "Multiple queries searched in sequence, each returning its own synthesized answer. Prefer this for research — vary phrasing, scope, and angle across 2-4 queries to maximize coverage. Good: ['React vs Vue performance benchmarks 2026', 'React vs Vue developer experience comparison', 'React ecosystem size vs Vue ecosystem']. Bad: ['React vs Vue', 'React vs Vue comparison', 'React vs Vue review'] (too similar, redundant results)." })),
+			queries: Type.Optional(Type.Array(Type.String(), { description: "Multiple queries searched with bounded concurrency, each returning its own synthesized answer in input order. Prefer this for research — vary phrasing, scope, and angle across 2-4 queries to maximize coverage. Good: ['React vs Vue performance benchmarks 2026', 'React vs Vue developer experience comparison', 'React ecosystem size vs Vue ecosystem']. Bad: ['React vs Vue', 'React vs Vue comparison', 'React vs Vue review'] (too similar, redundant results)." })),
 			numResults: Type.Optional(Type.Integer({ minimum: 1, maximum: 20, description: "Results per query (default: 5, max: 20)" })),
 			includeContent: Type.Optional(Type.Boolean({ description: "Fetch full page content (async)" })),
 			recencyFilter: Type.Optional(
@@ -1928,7 +1926,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 					if (cancelled) return;
 					const conn = activeCurators.get(callId)?.getConnectionState();
 					finish(buildCurationCancelledReturn(reason, {
-						queries: Array.from(searchResults.values()),
+						queries: orderedQueryResults(searchResults),
 						queryCount: queryList.length,
 						browserConnected: conn?.browserConnected,
 						lastHeartbeatAgeMs: conn?.lastHeartbeatAgeMs,
@@ -1945,15 +1943,17 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				signal?.addEventListener("abort", onAbort, { once: true });
 				pc.browserPromise = openCuratorBrowser(callId, pc, ctx, false);
 
-				for (let qi = 0; qi < queryList.length; qi++) {
-					if (signal?.aborted || cancelled || searchAbort.signal.aborted) break;
+				let completedQueries = 0;
+				await runQueryWorkers(queryList.length, queryConcurrency(searchProvider), searchSignal, async (qi) => {
+					if (cancelled || searchAbort.signal.aborted) return;
+					const query = queryList[qi];
 					onUpdate?.({
-						content: [{ type: "text", text: `Searching ${qi + 1}/${queryList.length}: "${queryList[qi]}"...` }],
-						details: { phase: "searching", progress: qi / queryList.length, currentQuery: queryList[qi] },
+						content: [{ type: "text", text: `Searching ${completedQueries + 1}/${queryList.length}: "${query}"...` }],
+						details: { phase: "searching", progress: completedQueries / queryList.length, currentQuery: query },
 					});
 					const requestedProvider = pc.searchProvider;
 					try {
-						const response = await search(queryList[qi], {
+						const response = await search(query, {
 							provider: requestedProvider,
 							numResults: params.numResults,
 							recencyFilter,
@@ -1963,41 +1963,31 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 							extensionContext: ctx,
 						});
 						availability?.noteSearchSuccess();
-						if (signal?.aborted || cancelled || searchAbort.signal.aborted) break;
+						if (cancelled || searchAbort.signal.aborted) return;
 						if (response.inlineContent) allInlineContent.push(...response.inlineContent);
 						const entries = toCuratorSearchEntries(response);
 						const curator = activeCurators.get(callId);
 						for (let entryIndex = 0; entryIndex < entries.length; entryIndex++) {
 							const entry = entries[entryIndex];
 							const resultIndex = entryIndex === 0 ? qi : nextResultIndex++;
-							const indexedEntry: IndexedCuratorSearchEntry = {
-								...entry,
-								queryIndex: resultIndex,
-								query: queryList[qi],
-							};
+							const indexedEntry: IndexedCuratorSearchEntry = { ...entry, queryIndex: resultIndex, query };
 							searchResults.set(resultIndex, indexedCuratorEntryToQueryResult(indexedEntry));
 							resultSlots.set(resultIndex, qi);
-							if (curator) {
-								if (entry.error) {
-									curator.pushError(resultIndex, entry.error, entry.provider, { query: queryList[qi], slotIndex: qi });
-								} else {
-									curator.pushResult(resultIndex, { ...entry, query: queryList[qi], slotIndex: qi });
-								}
-							}
+							if (entry.error) curator?.pushError(resultIndex, entry.error, entry.provider, { query, slotIndex: qi });
+							else curator?.pushResult(resultIndex, { ...entry, query, slotIndex: qi });
 						}
 					} catch (err) {
-						if (signal?.aborted || cancelled || searchAbort.signal.aborted) break;
+						if (searchSignal.aborted || cancelled || isAbortError(err)) return;
 						availability?.noteSearchFailure(err);
 						const message = searchErrorMessage(err);
 						const failedProvider = toCuratorProvider(requestedProvider);
-						searchResults.set(qi, { query: queryList[qi], answer: "", results: [], error: message, provider: failedProvider });
+						searchResults.set(qi, { query, answer: "", results: [], error: message, provider: failedProvider });
 						resultSlots.set(qi, qi);
-						const curator = activeCurators.get(callId);
-						if (curator) {
-							curator.pushError(qi, message, failedProvider, { query: queryList[qi], slotIndex: qi });
-						}
+						activeCurators.get(callId)?.pushError(qi, message, failedProvider, { query, slotIndex: qi });
+					} finally {
+						completedQueries += 1;
 					}
-				}
+				});
 
 				if (signal?.aborted || cancelled || searchAbort.signal.aborted) {
 					cancel();
@@ -2043,11 +2033,10 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				return promise;
 			}
 
-			const searchResults: QueryResultData[] = [];
-			const allUrls: string[] = [];
-			const allInlineContent: ExtractedContent[] = [];
+			const searchResultSlots = Array.from<QueryResultData | undefined>({ length: queryList.length });
+			const inlineContentSlots = Array.from<ExtractedContent[] | undefined>({ length: queryList.length });
 			const resolvedProvider = resolveRequestedProvider(params.provider);
-			let observerResultIndex = 0;
+			let nextObserverResultIndex = queryList.length;
 			let observer = shouldObserve && ctx
 				? await openSearchObserver(callId, queryList, resolvedProvider, ctx, onUpdate as PendingCurate["onUpdate"], {
 					numResults: params.numResults,
@@ -2057,14 +2046,13 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 			const onObserverAbort = bindToCurrentWebAccessContext(() => closeSearchObserver(callId));
 			if (observer) signal?.addEventListener("abort", onObserverAbort, { once: true });
 
-			for (let i = 0; i < queryList.length; i++) {
+			let completedQueries = 0;
+			await runQueryWorkers(queryList.length, queryConcurrency(resolvedProvider), signal, async (i) => {
 				const query = queryList[i];
-
 				onUpdate?.({
-					content: [{ type: "text", text: `Searching ${i + 1}/${queryList.length}: "${query}"...` }],
-					details: { phase: "search", progress: i / queryList.length, currentQuery: query },
+					content: [{ type: "text", text: `Searching ${completedQueries + 1}/${queryList.length}: "${query}"...` }],
+					details: { phase: "search", progress: completedQueries / queryList.length, currentQuery: query },
 				});
-
 				try {
 					const response = await search(query, {
 						provider: resolvedProvider,
@@ -2078,27 +2066,30 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 					const { answer, results, inlineContent, provider } = response;
 					availability?.noteSearchSuccess();
 					if (observer) {
-						for (const entry of toCuratorSearchEntries(response)) {
-							observer.handle.pushResult(observerResultIndex++, { ...entry, query, slotIndex: i });
+						const entries = toCuratorSearchEntries(response);
+						for (let entryIndex = 0; entryIndex < entries.length; entryIndex++) {
+							const resultIndex = entryIndex === 0 ? i : nextObserverResultIndex++;
+							const entry = entries[entryIndex];
+							if (entry.error) observer.handle.pushError(resultIndex, entry.error, entry.provider, { query, slotIndex: i });
+							else observer.handle.pushResult(resultIndex, { ...entry, query, slotIndex: i });
 						}
 					}
-
-					searchResults.push({ query, answer, results, error: null, provider });
-					for (const r of results) {
-						if (!allUrls.includes(r.url)) {
-							allUrls.push(r.url);
-						}
-					}
-					if (inlineContent) allInlineContent.push(...inlineContent);
+					searchResultSlots[i] = { query, answer, results, error: null, provider };
+					if (inlineContent) inlineContentSlots[i] = inlineContent;
 				} catch (err) {
 					if (signal?.aborted || isAbortError(err)) throw err;
 					availability?.noteSearchFailure(err);
 					const message = searchErrorMessage(err);
 					const requestedProvider = toCuratorProvider(resolvedProvider);
-					searchResults.push({ query, answer: "", results: [], error: message, provider: requestedProvider });
-					observer?.handle.pushError(observerResultIndex++, message, requestedProvider, { query, slotIndex: i });
+					searchResultSlots[i] = { query, answer: "", results: [], error: message, provider: requestedProvider };
+					observer?.handle.pushError(i, message, requestedProvider, { query, slotIndex: i });
+				} finally {
+					completedQueries += 1;
 				}
-			}
+			});
+			const searchResults = searchResultSlots.filter((result): result is QueryResultData => result !== undefined);
+			const allUrls = [...new Set(searchResults.flatMap((result) => result.results.map(({ url }) => url)))];
+			const allInlineContent = inlineContentSlots.flatMap((content) => content ?? []);
 			observer?.handle.searchesDone();
 
 			let approvedSummary: string | undefined;
@@ -2145,6 +2136,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				signal?.removeEventListener("abort", onObserverAbort);
 				closeSearchObserver(callId, {
 					outcome: workflow === "auto-summary" ? "summary-sent" : "results-sent",
+					...(workflow === "auto-summary" && approvedSummary ? { summary: approvedSummary } : {}),
 					preserveTab: true,
 				});
 				observer = undefined;
@@ -2976,7 +2968,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 					};
 				}
 
-				const fullResults = formatFullResults(queryData);
+				const fullResults = formatStoredQueryResult(queryData);
 				if (params.findText !== undefined) {
 					try {
 						const found = findContent(fullResults, normalizeFindQueries(params.findText), (params.findMode ?? "case-insensitive") as FindMode);
@@ -3315,7 +3307,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 						async onProviderChange(provider) {
 							if (commandHandle && !isCommandActive()) return { state: "failed", reason: "write-failed" };
 							const normalized = normalizeProviderInput(provider);
-							if (!normalized || normalized === "auto" || Array.isArray(normalized)) return { state: "failed", reason: "invalid-config" };
+							if (!normalized || normalized === "auto" || normalized === "broad" || Array.isArray(normalized)) return { state: "failed", reason: "invalid-config" };
 							currentProvider = normalized;
 							currentSearchProvider = normalized;
 							const persisted = persistProviderAtRevision(normalized, providerConfigRevision);

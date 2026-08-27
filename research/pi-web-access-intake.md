@@ -21,6 +21,9 @@
 > [!IMPORTANT]
 > 2026-08-22维护者重新裁决默认体验：canonical默认workflow是`auto-summary`，普通联网后台摘要并同turn继续；Curator不再是日常默认，只在Settings显式选择、per-call override或用户明确要求审查/挑选来源时以`summary-review`进入。该决定supersede本文此前“Curator默认开启”的旧结论，但不删除P4或显式review能力。
 
+> [!IMPORTANT]
+> 2026-08-27维护者补齐搜索覆盖语义：`auto`仍是首个成功即停止，新增`broad`由runtime从用户真实可用服务中选择最多三家，`all`仍是全部eligible服务。多query并发按Provider fan-out自适应；summary模型只做语义压缩，完整来源由程序追加，网页正文继续留在现有Artifact。Curator恢复adopted `0.24.1`的开放文档流尾部summary：自动摘要只读展示且不阻塞Agent，显式review保留完整人工审查动作。该变化归入既有P3/P4，不新增第七patch seam、Store或控制面。
+
 ## 0. 固定裁决摘要
 
 ### 0.1 一句话结论
@@ -40,8 +43,11 @@ OmniMind 不需要自造通用 `web_search` Host 能力；应当深 fork 成熟�
 | Runtime owner | Pi `AgentSession`、`ResourceLoader`、Tool Registry / active set 和 Extension lifecycle |
 | 明确非 owner | AgentGateway、Host Built-in policy、跨 Engine Tool Registry、Product Orchestration、Thread、Timeline、Workbench |
 | 工具名 | 保留 `web_search`、`source_check`、`fetch_content`、`get_search_content`，不允许产品 profile 改名 |
+| 搜索覆盖 | `auto`首成功停止；`broad`最多三家真实可用服务且允许局部成功；`all`全部eligible服务并发。Agent选择覆盖级别，不读取Key或猜Provider配置 |
+| 多query调度 | auto/named/单Provider数组最多3个query并发，broad/2–3家数组最多2个，all/4家以上数组按query串行；结果与Artifact索引保持输入顺序 |
 | 结果处理 | workflow与展示独立：默认`auto-summary`且展示关闭；`auto-summary/none`在展示开启时可进入非阻塞observer，`summary-review`进入pending审查；不自动打开系统浏览器 |
-| Web Search / Curator Tab | observer与review都使用独立、短时、非历史Browser Tab；只有pending review按exact tool call进入Timeline聚焦/重开，observer terminal后无reopen；控制台internal-only |
+| 结果投影 | 一份`QueryResultData`事实与现有Artifact；summary输入只有全部Provider answer和来源标题/URL，程序机械追加全部去重来源，`get_search_content`按query读取answer/snippets/标题/URL |
+| Web Search / Curator Tab | observer与review都使用独立、短时、非历史Browser Tab；结果→补充搜索→尾部summary→footer；自动摘要尾部只读，显式review保留编辑/重生成/预览/批准；只有pending review按exact tool call进入Timeline聚焦/重开 |
 | 关闭语义 | 关闭 Curator Tab、Right Dock 或隐藏 Browser 只关闭展示；call terminal 只清理该 call，Run abort 只中止该 Run，Session shutdown 才清理整个 Extension instance |
 | Curator 语言/主题 | 创建时消费当前 OmniMind locale、resolved light/dark 对比变体与 appearance owner 生成的 credential-blind resolved theme token 快照；不跟随 OS/browser 猜测，也不建立第二设置或 palette owner |
 | Slash commands | OmniMind profile 不注册 `/websearch`、`/curator`、`/search`、`/google-account` |
@@ -333,7 +339,8 @@ OmniMind 不把这些能力误命名为“只有搜索”。Settings 导航可�
 
 - 搜索、fetch 与 research result 通过 response ID 放在 Session-owned custom entries 中，可随 branch 恢复；
 - fetched full content 进入 config dir 下的 `web-search-cache`，TTL 1小时，最多 128 entries / 128 MiB，超限 oldest-first；
-- `get_search_content` 只按 bounded slice/findText 取回，不把整页默认塞回模型上下文；
+- 首次`web_search`返回summary或raw answer、完整去重来源目录、response ID和可读query范围；不把网页正文默认塞回模型上下文；
+- `get_search_content`对search Artifact按query index返回完整Provider answer、已有snippet及全部标题/URL；对fetched content继续只按bounded slice/findText读取；
 - GitHub clone cache 当前是 module-global map，Session 切换时清理；fork 后必须 instance-scoped；
 - `session_shutdown` 清 Session results；这不是跨 Thread 搜索历史数据库；
 - OmniMind 不新增 `/search` archive、Artifact store、搜索数据库或长期索引。
@@ -429,6 +436,10 @@ OmniMind profile继续尊重上游`webSearch.enabled`与`tools.webSearch/sourceC
 
 这不是把成熟 package 削成四个 API；search/fetch/provider/Curator/storage/tests 全部保留。它只移除不适配 OmniMind 宿主的入口和第二呈现面。
 
+同一seam还拥有任务级搜索语义：`auto`顺序尝试并在首个成功停止；`broad`先采用高级`searchRouting`和显式配置，再用auto-eligible配置服务与免费/Session/零配置路径补足，按真实可用性去重且最多三家；`all`继续运行全部eligible服务。explicit-only服务仅在高级route或显式数组中加入broad。多query只复用package内worker：auto/named/单Provider数组并发3，broad/2–3家数组并发2，all/4家以上数组并发1；Abort在发起前或进行中都停止新query并传播给当前请求。它不新增队列、调度服务或持久健康状态。
+
+P3内的窄`search-result`投影只消费现有`QueryResultData[]`，统一稳定来源顺序/去重、summary输入、raw结果、deterministic fallback后的完整来源目录和search Artifact读取格式。summary模型看到全部query answer和来源标题/URL，但不接收网页全文，也不生成Sources；来源和Artifact提示由程序追加。该投影不是第二Store，TTL、Session所有权、branch恢复和cleanup仍由原Artifact/storage owner负责。
+
 ### P4. Host-presentable、双语、自包含 Curator
 
 - `ctx.hasUI === false` 不能再强制 `summary-review → none`；应区分 Pi TUI 与 OmniMind Host-presentable Web surface；
@@ -447,6 +458,7 @@ OmniMind profile继续尊重上游`webSearch.enabled`与`tools.webSearch/sourceC
 - 只有owning Thread正处于前台时才自动呈现。后台review只投影既有waiting-for-user activity/attention，用户进入该Thread后可按exact activity打开，若一直忽略则继续服从上游idle timeout与deterministic settlement；后台observer不投影waiting/reopen。两者都不能切换route或抢占当前Right Dock，也不建立后台Curator调度器；
 - `curatorRemote` 在 OmniMind profile 恒不可用；作者的`autoOpenBrowser` intent在OmniMind profile只被解释为默认关闭的typed Right Dock搜索过程展示，不恢复系统浏览器或raw-token fallback；
 - 页面改为 OmniMind 品牌和现有 Workbench tokens，完整简中/英文；
+- 页面保留adopted上游开放文档流：结果卡片、Add Search、尾部summary、footer。`auto-summary` observer只读显示已回传Agent的同一summary且不出现settlement控件；`summary-review`在尾部保留生成、编辑、feedback重新生成、预览与批准；`none`不生成summary区。不得再做fixed/modal inspector或把结果/footer inert化；
 - 移除 Google Fonts 和 jsDelivr `marked` CDN，改用本地/系统字体与 pinned local markdown renderer；
 - 把 presentation/copy/token adapter 从 3,577 行页面生成器中分离，避免每次 upstream sync 手改整页；
 - 多个同时页面各自属于tool call；只有pending review可通过Timeline对应activity精确重开，observer terminal后无reopen。
@@ -558,7 +570,7 @@ Settings UI ─┐
 1. **Overview / 概览**
 	- 首屏依次回答：能否搜索、默认服务选择、结果处理、是否自动显示过程；
 	- file-level四工具状态只在高级区准确投影，不能把`fetch_content/get_search_content`从workflow或search route猜出来；
-   - 当前 routing：Auto / 单 Provider / ordered fallback / selected parallel / All；
+   - 当前 routing：Auto（首成功停止）/ Broad（最多三家）/ 单 Provider / ordered fallback / selected parallel / All；
    - 搜索结果处理：自动摘要（推荐默认）/ 摘要审查 / 直接返回；
    - 独立展示选择：自动显示搜索过程（默认关闭；不暂停Agent、不要求批准）；
    - 已配置 Provider rows；
@@ -579,9 +591,10 @@ Settings UI ─┐
 	- pending/success/error/cancel绑定request identity与Provider ID，切换详情后迟到结果不跨Provider显示；credential/quota/network/missing-field错误只给对应下一步，不生成永久connected truth。
 4. **Routing / 搜索方式**
    - `Auto` 为推荐默认；
+   - `Broad / 多源覆盖`由runtime按真实可用性选择最多三家，普通用户不维护Provider多选；
    - 单 Provider严格模式；
    - ordered fallback + typed `fallbackOn`；
-   - selected parallel 和 `All` 明确写“会同时请求多个服务，可能消耗多份额度”；
+   - Broad、selected parallel 和 `All`明确写可能消耗多份服务额度，其中`All`是费用和延迟最高的重模式；
    - 配置多个 key 本身不自动并发。
 5. **Search result handling / 搜索结果处理**
    - `Generate summary automatically / 自动生成摘要`（`auto-summary`，推荐且默认；不打断当前turn）；
@@ -648,10 +661,10 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
   → Agent 调 web_search
   → results 流式产生
   → 当前 Thread Right Dock 为该 tool call 创建独立 OmniMind Web Access Tab
-  → 用户选来源 / 加搜索 / 生成或编辑 summary
-  → Approve 或发送原始结果
-  → tool call settlement 回到同一 Pi turn
-  → pending期间Timeline可精确聚焦/重开；terminal后只保留普通tool result/activity
+  → auto-summary：后台summary直接回传Agent，同一摘要在结果尾部只读显示
+  → summary-review：用户选来源 / 加搜索 / 生成或编辑summary / preview / approve
+  → none：raw results直接回传Agent，不显示summary
+  → 只有review pending期间Timeline可精确聚焦/重开；terminal后只保留普通tool result/activity
 ```
 
 ### 7.2 展示与生命周期
@@ -672,6 +685,8 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 ### 7.3 UI 产品化
 
 必须完整保留作者已经做好的交互能力：Provider buttons、query 输入/改写、streaming result cards、单项选择、替代 Provider、timer 调整、raw-send、summary model选择、生成、编辑、feedback regenerate、preview、approve、keyboard 与 reduced motion。
+
+信息结构严格follow adopted `pi-web-access@0.24.1`：结果卡片→Add Search→文档流尾部Summary Panel→Footer。`summary-review`保留上述全部人工动作；`auto-summary`只把已经回传Agent的同一终态摘要安全渲染为只读内容，不新增编辑、重新生成、预览或批准；`none`没有summary区域。摘要不是固定侧栏、modal或第二页面，进入review也不把结果与footer从视觉、焦点或accessibility tree中inert化。
 
 Provider切换同时触发当前结果重搜与canonical默认写入，但二者必须分别建模：只有expected-revision mutation提交成功才宣称默认已保存；冲突/损坏/权限失败不丢本次重搜结果，不静默重试或更新revision，并引导用户进入同一Settings config owner恢复；multi-query只有部分重搜成功时保留成功与失败卡片并明确partial，无query时只报告默认写入结果，不能虚构“已重搜”。Browser Tab标题来自创建时locale snapshot；Curator普通错误使用stable typed code与页面双语catalog，不能把Server原始英文直接拼入中文表面。
 
