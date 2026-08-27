@@ -275,14 +275,10 @@ describe("packaged desktop verification", () => {
     ).toEqual({
       windowCloseShutdownStarted: true,
       windowCloseShutdownCompleted: true,
-      explicitQuitShutdownStarted: true,
-      explicitQuitShutdownCompleted: true,
     });
     expect(parseMacWindowCloseLifecycleProof("SIGTERM shutdown complete\n")).toEqual({
       windowCloseShutdownStarted: false,
       windowCloseShutdownCompleted: false,
-      explicitQuitShutdownStarted: false,
-      explicitQuitShutdownCompleted: true,
     });
   });
 
