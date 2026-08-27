@@ -3092,7 +3092,7 @@ index 41d8320..9ddb83f 100644
  	});
  
 diff --git a/scripts/build-coding-agent-bundle.mjs b/scripts/build-coding-agent-bundle.mjs
-index 1b6d233..d68f0ff 100644
+index 1b6d233..cb8e621 100644
 --- a/scripts/build-coding-agent-bundle.mjs
 +++ b/scripts/build-coding-agent-bundle.mjs
 @@ -49,6 +49,15 @@ export function createJiti(...args) {
@@ -3120,18 +3120,3 @@ index 1b6d233..d68f0ff 100644
  		sourcemap: false,
  		target: "node22.19",
  		// Do not apply the monorepo's source-oriented path aliases while bundling
-@@ -80,12 +89,13 @@ function commonBuildOptions() {
- function validateExternalImports(metafiles) {
- 	const unexpected = new Set();
- 	for (const metafile of metafiles) {
--		for (const input of Object.values(metafile.inputs)) {
-+		for (const [inputPath, input] of Object.entries(metafile.inputs)) {
- 			for (const imported of input.imports) {
- 				if (!imported.external || isBuiltin(imported.path) || allowedExternalPackages.has(imported.path)) {
- 					continue;
- 				}
- 				unexpected.add(imported.path);
-+				console.error("unexpected external", inputPath, imported);
- 			}
- 		}
- 	}

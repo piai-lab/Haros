@@ -72,7 +72,7 @@
         "sharedRuntimeBytes": "patched",
         "factoryDefaultSeam": "The product runtime exports its stable identity-neutral default instruction segment and accepts one caller-supplied replacement as an input to the same native builder. Dynamic tools, guidelines, context, Skills, cwd, manual SYSTEM replacement and Extension mutation remain native; no second composer or Prompt registry is introduced.",
         "patchPath": "patches/pi-coding-agent/0.84.3-model-config-reader.patch",
-        "patchSha256": "26e8d3eaba98a0ade7125ac51dca9d2c788efab615a566926035702ee766673c",
+        "patchSha256": "23cd289d663b21fa8a3f6fce4e1c90543662793adad217f4268ad40c1684b53a",
         "bundleDependencyResolution": "The product source keeps jsonc-parser's package-root import so unbundled Node execution uses the package's supported CommonJS entry. Only the upstream esbuild bundle resolves that exact import to the package's ESM build, preventing an external runtime stub without changing parser behavior or globally changing package resolution.",
         "stockPatchPath": "patches/@earendil-works%2Fpi-coding-agent@0.84.3.patch",
         "stockPatchSha256": "b5c6c034862394e59eca73ef4d143a4618362a610312bd82238f9dd6b510e063",
