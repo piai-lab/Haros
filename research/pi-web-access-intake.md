@@ -155,7 +155,7 @@ Browser 成为 Host capability有意义，因为许多 Engine 没有同等、可
 | npm shasum | `8b6cab44e86f6d134a25f8a3e31d241d4b92c1ec` |
 | downloaded tgz SHA-256 | `06b3cb2b9d3118f66cd2fe84e5453dc0a8b8feaf099ae05e543ff9ebe80ae103` |
 | source/artifact relation | npm `gitHead` 指向 exact commit；发布物中的 runtime TypeScript 与 exact source 对应文件逐字节一致 |
-| evidence maturity | `0.25.0-agent-native-candidate-pending-final-gates`；0.24.1的exact-SHA packaged证据仍只是未改动生命周期的历史基线，不代替本轮修改字节的focused、full、live与隔离packaged proof |
+| evidence maturity | `0.25.0-agent-native-candidate-verified`；当前证据精确绑定implementation SHA `8a663b2c27d0a2aeacd308a74ea7a1e631ba494e`，不代表Release或受保护分支合并 |
 
 ### 2.2 发布物结构
 
@@ -853,10 +853,11 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 - Agent 能使用 passages 做独立判断；
 - 搜索 inactive 时它一同 inactive，恢复后回归。
 
-### 10.8 Real-provider 与 packaged 历史证据
+### 10.8 Real-provider 与 packaged 证据
 
-只有本轮 claim 涉及真实搜索 route/wire 时才做匹配 Provider live probe；只有涉及 shipped bytes、Electron/profile 或关闭重开时才对冻结 SHA 做一次 isolated packaged proof。下列条目是不同历史 SHA 的证据账目，只能保护其明确列出的未变化路径，不能拼接成一个“最新全绿”候选。
+只有本轮 claim 涉及真实搜索 route/wire 时才做匹配 Provider live probe；只有涉及 shipped bytes、Electron/profile 或关闭重开时才对冻结 SHA 做一次 isolated packaged proof。不同 SHA 的条目只能保护其明确列出的路径，不能拼接成一个“最新全绿”候选。
 
+- 当前候选：exact pushed implementation SHA `8a663b2c27d0a2aeacd308a74ea7a1e631ba494e`生成arm64 DMG SHA-256 `cc66c8220f177d6e81993955d6b4e0f7510799d9a241f2e86be2ed47b1e95b3f`，DMG内`app.asar` SHA-256为`a3e33f2466c32e58f5796b29c3ce2f21e185b9ee38294c0d5bdfc7aab880725a`。fresh隔离profile复证Main、Renderer与bundled Server只使用任务HOME/OMNIMIND_HOME/userData；真实Settings用户路径选择并保存`broad`，同一App Browser中的observer把自动摘要只读显示在`结果 → Add Search → Summary → Footer`文档流尾部且无review动作，显式review保留编辑、Markdown预览与批准并提交编辑后正文；macOS关闭窗口不杀bundled Server，隔离重开后`broad`仍持久化。通用packaged journey另行通过Composer持久化、窗口关闭隔离与重开恢复。完整package作者/OmniMind套件657/657、cross-package focused 113/113、root typecheck 8/8、production build 6/6通过；一次有界live `broad`得到Exa成功并保留Tavily局部失败，没有零配置Gemini幽灵错误。该证据证明0.25.0 Agent-native候选与列明的安装路径，不代表签名、公证、Release、受保护分支合并或update feed。
 - 历史局部门：exact pushed implementation SHA `286df13768de943a2db4df033180251c2f353aca`的fresh任务profile曾证明13个品牌asset与13个中性fallback可渲染；维护者随后把标准提升为26家全部原色品牌asset，因此该视觉证据已经失效。exact pushed SHA `4df9de2474021c1b9396931307acbdb91ee16094`已完成26个identity→25份原色本地资产的fresh隔离Settings/Provider-asset gate。
 - exact pushed implementation SHA `52c8a25e75f702baef36b93fb1f8cc42f270897e`生成DMG SHA-256 `118b55370cbec44308ec68ecbeb5a0efd3bd0d50b88665284e3274aca09c2931`，安装版`app.asar` SHA-256为`018d004a888344e395fa9885f3be2493a1efd9ec0cc15cbaa0c32d4dc26eaeb4`。当时尚未实现独立展示设置，fresh任务profile证明真实DeepSeek Agent经keyless Exa走默认`auto-summary`时不创建Curator并在同一turn继续；显式`summary-review`创建dedicated ephemeral Tab、批准后terminal cleanup并让同一turn继续；关闭重开仍投影`auto-summary`默认且无假Curator入口。DeepSeek最终措辞未完全满足“一句话总结”，故这里只关闭旧候选的工具/Curator lifecycle与continuation门，不把模型答案质量或新observer合同写成通过。
 - exact pushed implementation SHA `3f4d673bce30465cba387df2667d2488a744c05f`生成arm64 DMG SHA-256 `4160ec9594e0cbc185b970a645be0e05695344682c255aa9f5bcaed02f831e18`，DMG内与安装后`app.asar` SHA-256均为`3d909eba51ea301e66f8ca71f522fbc1eccf7c98905ca4c46c906e06f767be4`。任务隔离profile复证Main、Renderer与bundled Server均未使用真实用户profile，canonical文件保持`0600`及显式`provider: auto` / `workflow: auto-summary`。真实MiMo-V2.5-Pro从非错误`web_search` tool result读取agent-visible Artifact responseId，随后以该ID成功调用`get_search_content`取回stored result；当时默认展示关闭且尚无observer实现，因此未创建Curator。同一安装候选下的DeepSeek V4 Flash显式`summary-review`又一次完成dedicated ephemeral Tab、批准、terminal cleanup与same-turn continuation；这条证据不证明后续observer合同。
@@ -1024,15 +1025,15 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
     "provider-availability-to-pi-active-set",
     "source-check-honest-unicode-contract"
   ],
-  "evidenceMaturity": "0.25.0-agent-native-candidate-pending-final-gates",
+  "evidenceMaturity": "0.25.0-agent-native-candidate-verified",
   "implemented": true,
-  "candidateImplementationSha": "pending-first-push",
+  "candidateImplementationSha": "8a663b2c27d0a2aeacd308a74ea7a1e631ba494e",
   "previousPackagedImplementationSha": "62814532f6fbb0977866d7019637cf665583d656",
   "supersededObserverImplementationSha": "2bf044049d7eeb419975d7426e5d6414d2136814",
-  "testedImplementationSha": "62814532f6fbb0977866d7019637cf665583d656",
+  "testedImplementationSha": "8a663b2c27d0a2aeacd308a74ea7a1e631ba494e",
   "previousTestedImplementationSha": "6a0990cc7c3d22eb531a4d428972fbbd65a3444f",
-  "testedDmgSha256": "d61b7da52eee918332e83cb8be31c01df73f8de0ca7b248a0d6b20437facb1c4",
-  "testedAppAsarSha256": "0519ca390c3454255afcb7f094608cc0dc0a3c9f213fdf3b9c41c830ff55b0e7",
+  "testedDmgSha256": "cc66c8220f177d6e81993955d6b4e0f7510799d9a241f2e86be2ed47b1e95b3f",
+  "testedAppAsarSha256": "a3e33f2466c32e58f5796b29c3ce2f21e185b9ee38294c0d5bdfc7aab880725a",
   "mergedTaskTipSha": "62814532f6fbb0977866d7019637cf665583d656",
   "testedMainMergeSha": "62814532f6fbb0977866d7019637cf665583d656",
   "postMergeDmgSha256": "d61b7da52eee918332e83cb8be31c01df73f8de0ca7b248a0d6b20437facb1c4",
@@ -1040,6 +1041,10 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
   "retainedAuthorAndOmniMindTests": "657/657",
   "currentPackageTests": "657/657",
   "liveBroadProviderGate": "broad-returned-exa-success-with-tavily-local-failure",
+  "candidateBranchPushed": true,
+  "crossPackageFocusedTests": "113/113",
+  "rootTypecheckPackages": "8/8",
+  "productionBuildPackages": "6/6",
   "liveKeylessExaSourceCheckGate": true,
   "packagedOversizedConfigRecoveryGate": true,
   "packagedSettingsProviderAssetGate": true,
@@ -1055,6 +1060,9 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
   "packagedRouteAwareSettingsGate": true,
   "packagedCuratorAccessibilityDomGate": true,
   "packagedCuratorFocusLifecycleGate": true,
+  "packagedBroadSettingsPersistenceGate": true,
+  "packagedInlineTailAutoSummaryGate": true,
+  "packagedExplicitReviewEditPreviewApproveGate": true,
   "packagedJourney": true,
   "releaseStatus": "not-released",
   "unresolvedMaintainerChoice": "none"

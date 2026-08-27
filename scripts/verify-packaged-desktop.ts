@@ -978,6 +978,7 @@ async function writeAndVerifyJourneyDraft(
   cdp: PackagedProofCdpSession,
   fixture: PackagedJourneyFixture,
 ): Promise<void> {
+  await cdp.bringToFront();
   await waitForRendererCondition({
     cdp,
     expression: `(() => {
@@ -989,8 +990,9 @@ async function writeAndVerifyJourneyDraft(
   const focused = await cdp.evaluate<boolean>(`(() => {
     const editor = document.querySelector('[data-testid="composer-editor"]');
     if (!(editor instanceof HTMLElement)) return false;
-    editor.focus();
-    return document.activeElement === editor;
+    editor.click();
+    editor.focus({ preventScroll: true });
+    return document.activeElement === editor || editor.contains(document.activeElement);
   })()`);
   if (!focused) throw new Error("Packaged journey could not focus the Composer.");
   await cdp.insertText(fixture.draft);

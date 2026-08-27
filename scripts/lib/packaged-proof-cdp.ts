@@ -174,6 +174,10 @@ export class PackagedProofCdpSession {
     await this.#command("Input.insertText", { text });
   }
 
+  async bringToFront(): Promise<void> {
+    await this.#command("Page.bringToFront", {});
+  }
+
   close(): void {
     if (this.#closed) return;
     this.#closed = true;

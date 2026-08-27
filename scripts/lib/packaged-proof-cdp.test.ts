@@ -72,6 +72,26 @@ describe("packaged proof CDP", () => {
     await expect(pending).rejects.toThrow("disconnected");
   });
 
+  it("brings the packaged renderer target forward before focus-sensitive input", async () => {
+    const socket = new FakeCdpSocket();
+    const connection = PackagedProofCdpSession.connect(
+      "ws://localhost:47123/devtools/page/example",
+      () => socket as unknown as WebSocket,
+    );
+    socket.open();
+    const session = await connection;
+    const pending = session.bringToFront();
+    const request = JSON.parse(socket.sent[0]!) as {
+      readonly id: number;
+      readonly method: string;
+      readonly params: Record<string, unknown>;
+    };
+    expect(request).toMatchObject({ method: "Page.bringToFront", params: {} });
+    socket.message({ id: request.id, result: {} });
+    await expect(pending).resolves.toBeUndefined();
+    session.close();
+  });
+
   it("bounds each CDP command independently", async () => {
     vi.useFakeTimers();
     const socket = new FakeCdpSocket();
