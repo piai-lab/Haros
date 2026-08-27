@@ -24,20 +24,17 @@ describe("Desktop startup splash", () => {
     await page.viewport(1280, 720);
   });
 
-  it("retains the exact 64-dot golden-angle presentation with accessible bilingual status", () => {
-    const splash = createStartupSplashDom({ locale: "zh-CN", presentation: "full" });
+  it("retains the exact quiet 64-dot golden-angle presentation", () => {
+    const splash = createStartupSplashDom({ presentation: "full" });
 
     expect(splash.querySelectorAll(".startup-splash__dot")).toHaveLength(64);
     expect(splash.querySelector(".startup-splash__visual")?.getAttribute("aria-hidden")).toBe(
       "true",
     );
-    expect(splash.querySelector(".startup-splash__status")?.getAttribute("role")).toBe("status");
+    expect(splash.querySelector(".startup-splash__status")).toBeNull();
     expect(splash.querySelector(".startup-splash__rings")).toBeNull();
     expect(splash.querySelector(".startup-splash__line")).toBeNull();
     expect(splash.querySelector(".startup-splash__wave")).toBeNull();
-    expect((splash.querySelector(".startup-splash__status") as HTMLElement).dataset.message).toBe(
-      "正在准备模型…",
-    );
     splash.remove();
   });
 
@@ -52,7 +49,7 @@ describe("Desktop startup splash", () => {
     "keeps the 64-dot composition proportionate and dense at $width×$height",
     async ({ height, maximum, minimum, width }) => {
       await page.viewport(width, height);
-      const splash = createStartupSplashDom({ locale: "en", presentation: "full" });
+      const splash = createStartupSplashDom({ presentation: "full" });
       document.body.append(splash);
 
       const visual = splash.querySelector<HTMLElement>(".startup-splash__visual");
@@ -81,7 +78,6 @@ describe("Desktop startup splash", () => {
 
     expect(isStartupSplashActive()).toBe(false);
     expect(document.getElementById("startup-splash")).toBeNull();
-    expect(document.documentElement.dataset.startupSlow).toBeUndefined();
   });
 
   it("cancels a pending exit when the focused Engine changes back to checking", async () => {

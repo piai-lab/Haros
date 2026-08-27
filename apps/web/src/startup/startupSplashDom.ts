@@ -2,10 +2,8 @@
  * Copied-adapted from Percho splash-dom.ts at
  * 575216c2690c7e2b30d9ad10b773f424b469c163 (MIT).
  * Keeps the donor's synchronous golden-angle particle construction while
- * adapting product identity, accessibility, and host lifecycle ownership.
+ * adapting product identity and host lifecycle ownership.
  */
-
-import type { StartupSurfaceLocale } from "../startupSurface";
 
 const DOT_COUNT = 64;
 const GOLDEN_ANGLE_RAD = 137.508 * (Math.PI / 180);
@@ -30,7 +28,6 @@ function buildDots(): string {
 }
 
 export function createStartupSplashDom(input: {
-  readonly locale: StartupSurfaceLocale;
   readonly presentation: "full" | "brief";
 }): HTMLElement {
   document.getElementById("startup-splash")?.remove();
@@ -45,10 +42,7 @@ export function createStartupSplashDom(input: {
         </div>
       </div>
       <div class="startup-splash__word">OmniMind</div>
-    </div>
-    <p class="startup-splash__status" role="status" aria-live="polite" aria-atomic="true"></p>`;
-  splash.querySelector<HTMLElement>(".startup-splash__status")!.dataset.message =
-    input.locale === "zh-CN" ? "正在准备模型…" : "Preparing models…";
+    </div>`;
   document.body.append(splash);
   return splash;
 }

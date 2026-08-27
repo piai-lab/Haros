@@ -1353,9 +1353,9 @@ Disposition is `copied-adapted`. OmniMind keeps Percho's synchronous first-frame
 surface, `content-visibility` isolation and reduced-motion branch. It replaces the donor identity and
 fixed colors with canonical `OmniMind` and the existing Theme owner, compresses normal Desktop
 presentation to a roughly 2–3 second envelope, omits the decorative horizontal sweep, persistent sonar
-rings and radial exit waves because they carry no authoritative progress and compete with the particle
-composition, adds a bilingual accessible slow-start status, and lets the Desktop process grant one full
-presentation followed by brief presentations without persistence or a second window.
+rings, radial exit waves and slow-start status copy because they carry no authoritative progress and
+compete with the particle composition, and lets the Desktop process grant one full presentation
+followed by brief presentations without persistence or a second window.
 
 Two donor completion mechanisms are explicitly rejected. `Promise.allSettled` cannot establish model
 catalog authority because a failed request also settles, and a maximum display timeout cannot become a

@@ -5,7 +5,6 @@
  * readiness reports from the existing transport, settings, Provider, and Composer owners.
  */
 
-import { resolveStartupSurfaceLocale } from "../startupSurface";
 import { createStartupSplashDom } from "./startupSplashDom";
 
 export type StartupPresentation = "full" | "brief";
@@ -16,7 +15,6 @@ const FULL_EXIT_MS = 1_100;
 const BRIEF_EXIT_MS = 380;
 const REDUCED_MIN_DISPLAY_MS = 300;
 const REDUCED_EXIT_MS = 220;
-const SLOW_STATUS_MS = 2_500;
 
 let active = false;
 let shellSettled = false;
@@ -25,7 +23,6 @@ let focusedComposerTerminal = false;
 let finishing = false;
 let startedAt = 0;
 let presentation: StartupPresentation = "brief";
-let slowStatusTimer: number | null = null;
 let finishTimer: number | null = null;
 let removeTimer: number | null = null;
 
@@ -38,17 +35,14 @@ function isReducedMotion(): boolean {
 }
 
 function removeSplash(): void {
-  clearTimer(slowStatusTimer);
   clearTimer(finishTimer);
   clearTimer(removeTimer);
-  slowStatusTimer = null;
   finishTimer = null;
   removeTimer = null;
   document.getElementById("startup-splash")?.remove();
   delete document.documentElement.dataset.startupSplash;
   delete document.documentElement.dataset.startupPresentation;
   delete document.documentElement.dataset.startupReady;
-  delete document.documentElement.dataset.startupSlow;
   active = false;
 }
 
@@ -100,17 +94,7 @@ export function initializeStartupSplash(nextPresentation: StartupPresentation): 
 
   document.documentElement.dataset.startupSplash = "active";
   document.documentElement.dataset.startupPresentation = presentation;
-  createStartupSplashDom({
-    locale: resolveStartupSurfaceLocale(navigator.languages ?? [navigator.language]),
-    presentation,
-  });
-
-  slowStatusTimer = window.setTimeout(() => {
-    const status = document.querySelector<HTMLElement>(".startup-splash__status");
-    if (!status || finishing) return;
-    status.textContent = status.dataset.message ?? "";
-    document.documentElement.dataset.startupSlow = "true";
-  }, SLOW_STATUS_MS);
+  createStartupSplashDom({ presentation });
 }
 
 export function reportStartupShellReadiness(input: {
