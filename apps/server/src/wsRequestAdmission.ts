@@ -3,11 +3,12 @@ import * as Crypto from "node:crypto";
 import { ORCHESTRATION_WS_METHODS, WS_METHODS, WsRpcError } from "@omnimind/contracts";
 import { Effect, Ref } from "effect";
 
-export type WsRequestClass = "control" | "standard" | "expensive-read";
+export type WsRequestClass = "control" | "standard" | "provider-discovery" | "expensive-read";
 
 export const WS_REQUEST_CLASS_LIMITS: Readonly<Record<WsRequestClass, number>> = {
   control: 16,
   standard: 12,
+  "provider-discovery": 2,
   "expensive-read": 2,
 };
 
@@ -22,6 +23,14 @@ const CONTROL_METHODS = new Set<string>([
   WS_METHODS.automationCancelRun,
   WS_METHODS.automationMarkRunRead,
   WS_METHODS.automationArchiveRun,
+]);
+
+// Composer model truth must not queue behind cold shell restoration. Keep the
+// provider catalog bounded, but give it an independent lane so two long-running
+// snapshot/diff reads cannot strand every Engine until a window-focus refetch.
+const PROVIDER_DISCOVERY_METHODS = new Set<string>([
+  WS_METHODS.providerListModels,
+  WS_METHODS.providerListAgents,
 ]);
 
 const EXPENSIVE_READ_METHODS = new Set<string>([
@@ -58,8 +67,6 @@ const EXPENSIVE_READ_METHODS = new Set<string>([
   WS_METHODS.providerListSkillsCatalog,
   WS_METHODS.providerListPlugins,
   WS_METHODS.providerReadPlugin,
-  WS_METHODS.providerListModels,
-  WS_METHODS.providerListAgents,
   WS_METHODS.omnimindModelServicesList,
   WS_METHODS.omnimindModelServicesGet,
   WS_METHODS.omnimindModelServicesDiscoverCustom,
@@ -71,6 +78,7 @@ const EXPENSIVE_READ_METHODS = new Set<string>([
 
 export function classifyWsRequest(method: string): WsRequestClass {
   if (CONTROL_METHODS.has(method)) return "control";
+  if (PROVIDER_DISCOVERY_METHODS.has(method)) return "provider-discovery";
   if (EXPENSIVE_READ_METHODS.has(method)) return "expensive-read";
   return "standard";
 }
@@ -119,7 +127,7 @@ export const makeWsRequestAdmission = Effect.gen(function* () {
         );
         if (activeForClass >= WS_REQUEST_CLASS_LIMITS[requestClass]) {
           const code =
-            requestClass === "expensive-read"
+            requestClass === "expensive-read" || requestClass === "provider-discovery"
               ? "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED"
               : "RPC_REQUEST_CAPACITY_EXCEEDED";
           return [

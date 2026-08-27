@@ -15,6 +15,8 @@ describe("WsRequestAdmission", () => {
     expect(classifyWsRequest(WS_METHODS.serverPrewarmVoice)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.serverGetUsageHistory)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.projectsSearchContent)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.providerListModels)).toBe("provider-discovery");
+    expect(classifyWsRequest(WS_METHODS.providerListAgents)).toBe("provider-discovery");
     expect(classifyWsRequest(WS_METHODS.omnimindModelServicesList)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.omnimindModelServicesGet)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.omnimindModelServicesDiscoverCustom)).toBe(
@@ -79,6 +81,32 @@ describe("WsRequestAdmission", () => {
           admittedTotal: 3,
           releasedTotal: 3,
           rejectedTotal: 1,
+        });
+      }),
+    );
+  });
+
+  it("reserves provider discovery capacity during cold shell restoration", async () => {
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const admission = yield* makeWsRequestAdmission;
+        const shellSnapshot = yield* admission.acquire(1, ORCHESTRATION_WS_METHODS.getSnapshot);
+        const threadSnapshot = yield* admission.acquire(
+          1,
+          ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot,
+        );
+
+        const modelCatalog = yield* admission.acquire(1, WS_METHODS.providerListModels);
+        expect(modelCatalog.requestClass).toBe("provider-discovery");
+
+        yield* admission.release(shellSnapshot);
+        yield* admission.release(threadSnapshot);
+        yield* admission.release(modelCatalog);
+        expect(yield* admission.snapshot).toMatchObject({
+          active: 0,
+          admittedTotal: 3,
+          releasedTotal: 3,
+          rejectedTotal: 0,
         });
       }),
     );
