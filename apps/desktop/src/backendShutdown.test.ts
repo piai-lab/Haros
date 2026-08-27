@@ -8,9 +8,9 @@ import {
   DESKTOP_BACKEND_SHUTDOWN_PATH,
   PosixBackendShutdownTimeoutError,
   retainLiveBackendAfterShutdownFailure,
+  resolveDesktopWindowCloseAction,
   requireWindowsBackendExit,
   runAfterDesktopShutdown,
-  shouldDeferDesktopWindowClose,
   startDesktopBackendShutdownRequest,
   stopPosixBackendAndWait,
   stopWindowsBackendAndWait,
@@ -653,50 +653,28 @@ describe("runAfterDesktopShutdown", () => {
   });
 });
 
-describe("shouldDeferDesktopWindowClose", () => {
-  it("keeps Windows and Linux windows alive until shutdown or updater handoff is proven", () => {
-    expect(
-      shouldDeferDesktopWindowClose({
-        platform: "win32",
-        shutdownComplete: false,
-        updaterHandoffActive: false,
-      }),
-    ).toBe(true);
-    expect(
-      shouldDeferDesktopWindowClose({
-        platform: "linux",
-        shutdownComplete: false,
-        updaterHandoffActive: false,
-      }),
-    ).toBe(true);
-    expect(
-      shouldDeferDesktopWindowClose({
-        platform: "win32",
-        shutdownComplete: false,
-        updaterHandoffActive: true,
-      }),
-    ).toBe(false);
-  });
-
-  it("lets macOS close only the window while the app and backend keep running", () => {
-    expect(
-      shouldDeferDesktopWindowClose({
-        platform: "darwin",
-        shutdownComplete: false,
-        updaterHandoffActive: false,
-      }),
-    ).toBe(false);
-  });
-
-  it("lets the window close after desktop shutdown has completed", () => {
-    expect(
-      shouldDeferDesktopWindowClose({
-        platform: "win32",
-        shutdownComplete: true,
-        updaterHandoffActive: false,
-      }),
-    ).toBe(false);
-  });
+describe("resolveDesktopWindowCloseAction", () => {
+  it.each([
+    ["darwin", false, false, false, "hide"],
+    ["darwin", true, false, false, "close"],
+    ["darwin", false, true, false, "close"],
+    ["darwin", false, false, true, "close"],
+    ["win32", false, false, false, "confirm-quit"],
+    ["linux", false, false, false, "confirm-quit"],
+    ["win32", false, true, false, "close"],
+  ] as const)(
+    "maps %s close state to %s",
+    (platform, quitting, shutdownComplete, updaterHandoffActive, expected) => {
+      expect(
+        resolveDesktopWindowCloseAction({
+          platform,
+          quitting,
+          shutdownComplete,
+          updaterHandoffActive,
+        }),
+      ).toBe(expected);
+    },
+  );
 });
 
 async function listen(

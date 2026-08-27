@@ -482,7 +482,7 @@ catalog 覆盖正常用户可达的 shell、Agent/Chat、Projects/Groups、Compo
 
 V1 复用现有 Electron build/package/updater：
 
-- macOS 红色关闭按钮只关闭当前窗口，App、后台任务与 bundled Server 继续运行；从 Dock、状态栏或再次打开 App 时复用现有窗口 owner 直接恢复工作区，不重复启动动画。只有全新 Desktop 进程的第一个产品窗口播放一次完整启动动画；只有 `Quit OmniMind`、`⌘Q`、系统退出或更新安装等明确退出意图才进入运行任务确认与 Desktop shutdown；
+- macOS 红色关闭按钮只隐藏并保留当前 `BrowserWindow` 与 Renderer，App、后台任务和 bundled Server 继续运行；从 Dock、状态栏或再次打开 App 时直接显示同一窗口，React 树、Composer 与页面状态原样保留，不重建首帧或重复启动动画。只有全新 Desktop 进程的第一个产品窗口播放一次完整启动动画；只有 `Quit OmniMind`、`⌘Q`、系统退出或更新安装等明确退出意图才进入运行任务确认与 Desktop shutdown；
 - macOS、Windows、Linux 产物可安装、启动、更新和重新安装恢复；
 - macOS/Windows signing、notarization 或平台证书按实际发行条件完成；
 - update 检查、下载、重启、错误、retry 与 release provenance 准确；

@@ -66,9 +66,9 @@ import { isBackendReadinessAborted, waitForHttpReady } from "./backendReadiness"
 import { resolveBackendNodeArgs } from "./backendNodeOptions";
 import {
   retainLiveBackendAfterShutdownFailure,
+  resolveDesktopWindowCloseAction,
   requireWindowsBackendExit,
   runAfterDesktopShutdown,
-  shouldDeferDesktopWindowClose,
   stopPosixBackendAndWait,
   stopWindowsBackendAndWait,
 } from "./backendShutdown";
@@ -4612,13 +4612,20 @@ function createWindow(): BrowserWindow {
       console.warn(`[desktop] Failed to persist window state: ${formatErrorMessage(error)}`);
     }
 
-    if (
-      shouldDeferDesktopWindowClose({
-        platform: process.platform,
-        shutdownComplete: desktopShutdownComplete,
-        updaterHandoffActive: isUpdaterQuitAndInstallInFlight,
-      })
-    ) {
+    const closeAction = resolveDesktopWindowCloseAction({
+      platform: process.platform,
+      quitting: isQuitting,
+      shutdownComplete: desktopShutdownComplete,
+      updaterHandoffActive: isUpdaterQuitAndInstallInFlight,
+    });
+    if (closeAction === "hide") {
+      event.preventDefault();
+      runningTasksQuitGuard.cancelPending();
+      window.hide();
+      return;
+    }
+
+    if (closeAction === "confirm-quit") {
       event.preventDefault();
       void confirmRunningTasksThenQuit("window-close");
       return;

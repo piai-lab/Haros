@@ -64,6 +64,7 @@ export function parseQuitConfirmationResponse(
 
 export interface RunningTasksQuitGuard {
   readonly hasAllowedQuit: () => boolean;
+  readonly cancelPending: () => void;
   readonly failOpenPending: () => void;
   readonly receiveResponse: (payload: unknown) => void;
   readonly askRenderer: (input: {
@@ -97,6 +98,7 @@ export function makeRunningTasksQuitGuard(
 
   return {
     hasAllowedQuit: () => allowed,
+    cancelPending: () => finish({ allow: false }),
     failOpenPending: () => finish({ allow: true }),
     receiveResponse(payload): void {
       const response = parseQuitConfirmationResponse(payload);

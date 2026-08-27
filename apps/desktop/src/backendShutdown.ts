@@ -77,12 +77,17 @@ export async function runAfterDesktopShutdown(
   }
 }
 
-export function shouldDeferDesktopWindowClose(input: {
+export type DesktopWindowCloseAction = "hide" | "confirm-quit" | "close";
+
+export function resolveDesktopWindowCloseAction(input: {
   readonly platform: NodeJS.Platform;
+  readonly quitting: boolean;
   readonly shutdownComplete: boolean;
   readonly updaterHandoffActive: boolean;
-}): boolean {
-  return input.platform !== "darwin" && !input.shutdownComplete && !input.updaterHandoffActive;
+}): DesktopWindowCloseAction {
+  if (input.shutdownComplete || input.updaterHandoffActive) return "close";
+  if (input.platform === "darwin") return input.quitting ? "close" : "hide";
+  return "confirm-quit";
 }
 
 const shutdownsByProcess = new WeakMap<object, Promise<WindowsBackendShutdownResult>>();

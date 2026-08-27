@@ -115,6 +115,22 @@ describe("running tasks quit guard", () => {
     await expect(result).resolves.toEqual({ allow: true });
   });
 
+  it("cancels a pending quit when macOS hides the window", async () => {
+    const guard = makeRunningTasksQuitGuard(() => "request-hide");
+    const result = guard.askRenderer({ send: vi.fn(), isRendererAvailable: () => true });
+    guard.receiveResponse({
+      requestId: "request-hide",
+      phase: "ready",
+      runningCount: 1,
+      threads: [{ id: "thread-a", title: "A" }],
+    });
+
+    guard.cancelPending();
+
+    await expect(result).resolves.toEqual({ allow: false });
+    expect(guard.hasAllowedQuit()).toBe(false);
+  });
+
   it("ignores ordinary renderer loads when no quit is pending", () => {
     const guard = makeRunningTasksQuitGuard(() => "request-idle-load");
     guard.failOpenPending();
