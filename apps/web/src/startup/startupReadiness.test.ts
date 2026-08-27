@@ -17,9 +17,10 @@ describe("startup readiness projection", () => {
     (pathname) => expect(startupRouteExpectsComposer(pathname)).toBe(true),
   );
 
-  it("holds only while the catalog is genuinely checking", () => {
+  it("holds until the focused catalog has an authoritative terminal state", () => {
+    expect(isTerminalStartupCatalogState("idle")).toBe(false);
     expect(isTerminalStartupCatalogState("checking")).toBe(false);
-    for (const state of ["idle", "ready", "empty", "stale", "error"] as const) {
+    for (const state of ["ready", "empty", "stale", "error"] as const) {
       expect(isTerminalStartupCatalogState(state)).toBe(true);
     }
   });

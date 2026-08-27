@@ -1,8 +1,9 @@
 /*
  * Copied-adapted from Percho splash.css at
  * 575216c2690c7e2b30d9ad10b773f424b469c163 (MIT).
- * Structure, golden-angle swarm, sonar, exit wave, content-visibility isolation,
- * and reduced-motion behavior are retained; identity, tokens, and timing are OmniMind-owned.
+ * The synchronous golden-angle swarm, content-visibility isolation, and reduced-motion
+ * structure are retained; identity, tokens, timing, and the quieter particle-only exit are
+ * OmniMind-owned.
  */
 
 html,
@@ -68,9 +69,7 @@ html[data-startup-ready="true"] #root {
   grid-area: 1 / 1;
 }
 
-.startup-splash__swarm,
-.startup-splash__rings,
-.startup-splash__wave {
+.startup-splash__swarm {
   position: relative;
   width: 220px;
   height: 220px;
@@ -110,51 +109,6 @@ html[data-startup-ready="true"] #root {
   transform: translate(var(--x), var(--y));
   animation: startup-dot-drift var(--t) ease-in-out var(--dl) infinite;
   will-change: transform, opacity;
-}
-
-.startup-splash__rings::before,
-.startup-splash__rings::after {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(
-    closest-side,
-    transparent 97%,
-    color-mix(in srgb, var(--background) 72%, transparent) 98.6%,
-    transparent 100%
-  );
-  content: "";
-  opacity: 0;
-  animation: startup-sonar 3.2s cubic-bezier(0.16, 1, 0.3, 1) 1.4s infinite;
-  will-change: transform, opacity;
-}
-
-.startup-splash__rings::after {
-  animation-delay: 3s;
-}
-
-.startup-splash__wave,
-.startup-splash__wave::after {
-  border-radius: 50%;
-  background: radial-gradient(
-    closest-side,
-    transparent 96.5%,
-    color-mix(in srgb, var(--foreground) 48%, transparent) 98.4%,
-    transparent 100%
-  );
-  opacity: 0;
-  will-change: transform, opacity;
-}
-
-.startup-splash__wave {
-  --wave-opacity: 0.68;
-}
-
-.startup-splash__wave::after {
-  position: absolute;
-  inset: 0;
-  --wave-opacity: 0.42;
-  content: "";
 }
 
 .startup-splash__word {
@@ -208,32 +162,6 @@ html[data-startup-ready="true"] #root {
   }
 }
 
-.startup-splash__line {
-  width: 140px;
-  height: 2px;
-  overflow: hidden;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--foreground) 12%, transparent);
-  opacity: 0;
-  transform: translateY(158px);
-  animation: startup-fade-in 500ms ease-out 2.4s forwards;
-}
-
-.startup-splash__line::after {
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--foreground) 58%, transparent),
-    transparent
-  );
-  content: "";
-  transform: translateX(-100%);
-  animation: startup-sweep 1.4s ease-in-out 2.4s infinite;
-}
-
 .startup-splash__status {
   position: absolute;
   bottom: max(38px, env(safe-area-inset-bottom));
@@ -259,15 +187,8 @@ html[data-startup-ready="true"] .startup-splash__word {
   animation: startup-word-out 360ms ease-in forwards;
 }
 
-html[data-startup-ready="true"] .startup-splash__rings::before,
-html[data-startup-ready="true"] .startup-splash__rings::after,
-html[data-startup-ready="true"] .startup-splash__line,
 html[data-startup-ready="true"] .startup-splash__status {
   animation: startup-quick-out 180ms ease-in forwards;
-}
-
-html[data-startup-ready="true"] .startup-splash__line::after {
-  animation: none;
 }
 
 html[data-startup-ready="true"] .startup-splash__dot {
@@ -278,19 +199,6 @@ html[data-startup-ready="true"] .startup-splash__swarm-in {
   opacity: 1;
   transform: scale(1);
   animation: startup-quick-out 220ms ease-in 930ms forwards;
-}
-
-html[data-startup-ready="true"] .startup-splash__wave {
-  animation: startup-wave-out 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) 50ms forwards;
-}
-
-html[data-startup-ready="true"] .startup-splash__wave::after {
-  animation: startup-wave-out 950ms cubic-bezier(0.25, 0.46, 0.45, 0.94) 180ms forwards;
-}
-
-html[data-startup-presentation="brief"] .startup-splash__rings,
-html[data-startup-presentation="brief"] .startup-splash__line {
-  display: none;
 }
 
 html[data-startup-presentation="brief"] .startup-splash__swarm-in,
@@ -306,10 +214,6 @@ html[data-startup-presentation="brief"][data-startup-ready="true"] #root {
 
 html[data-startup-presentation="brief"][data-startup-ready="true"] .startup-splash__dot {
   animation-duration: 320ms;
-}
-
-html[data-startup-presentation="brief"][data-startup-ready="true"] .startup-splash__wave {
-  animation-duration: 350ms;
 }
 
 @keyframes startup-fade-in {
@@ -353,50 +257,10 @@ html[data-startup-presentation="brief"][data-startup-ready="true"] .startup-spla
   }
 }
 
-@keyframes startup-sonar {
-  0% {
-    transform: scale(0.72);
-    opacity: 0;
-  }
-  15% {
-    opacity: 0.65;
-  }
-  60% {
-    opacity: 0.25;
-  }
-  100% {
-    transform: scale(2.3);
-    opacity: 0;
-  }
-}
-
-@keyframes startup-wave-out {
-  0% {
-    transform: scale(0.5);
-    opacity: 0;
-  }
-  8% {
-    opacity: var(--wave-opacity);
-  }
-  55% {
-    opacity: calc(var(--wave-opacity) * 0.7);
-  }
-  100% {
-    transform: scale(12);
-    opacity: 0;
-  }
-}
-
 @keyframes startup-word-in {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes startup-sweep {
-  to {
-    transform: translateX(100%);
   }
 }
 
@@ -447,12 +311,6 @@ html[data-startup-presentation="brief"][data-startup-ready="true"] .startup-spla
   .startup-splash__swarm,
   .startup-splash__dot {
     animation: none;
-  }
-
-  .startup-splash__rings,
-  .startup-splash__wave,
-  .startup-splash__line {
-    display: none;
   }
 
   .startup-splash__swarm-in,

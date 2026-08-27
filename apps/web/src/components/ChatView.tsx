@@ -1719,7 +1719,6 @@ export default function ChatView({
   const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
   const [isTraitsPickerOpen, setIsTraitsPickerOpen] = useState(false);
   const [isEnginePickerOpen, setIsEnginePickerOpen] = useState(false);
-  const [omniMindModelDiscoveryRequested, setOmniMindModelDiscoveryRequested] = useState(false);
   const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
   const legendListRef = useRef<LegendListRef | null>(null);
   const timelineControllerRef = useRef<MessagesTimelineController | null>(null);
@@ -2412,11 +2411,6 @@ export default function ChatView({
     serverThread?.modelSelection.provider ?? activeProject?.defaultModelSelection?.provider ?? null;
   const selectedProvider: ProviderKind =
     selectedProviderByThreadId ?? threadProvider ?? serverSettingsSnapshot.defaultProvider;
-  // A draft/thread/project OmniMind binding is durable user intent, unlike the
-  // untouched application default. Reopen may therefore begin its global-only
-  // catalog before the user pays a second click on the Model picker.
-  const hasExplicitOmniMindEngineBinding =
-    selectedProviderByThreadId === "omnimind" || threadProvider === "omnimind";
   const hasActiveProviderDiscoverySession = isProviderDiscoverySessionActive({
     provider: selectedProvider,
     session: activeThread?.session,
@@ -2494,11 +2488,6 @@ export default function ChatView({
   } = useProviderModelCatalog({
     selectedProvider,
     discoveryEnabled: false,
-    selectedProviderDiscoveryEnabled:
-      selectedProvider !== "omnimind" ||
-      omniMindModelDiscoveryRequested ||
-      composerModelHintByProvider.omnimind !== null ||
-      hasExplicitOmniMindEngineBinding,
     piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider: composerModelHintByProvider,
@@ -4118,6 +4107,7 @@ export default function ChatView({
     const deterministicRecovery =
       serverConfigQuery.isError ||
       serverSettingsQuery.isError ||
+      serverSettingsSnapshot.providers[selectedProvider]?.enabled === false ||
       activeProviderStatus?.authStatus === "unauthenticated" ||
       (activeProviderStatus !== null && activeProviderStatus.available === false);
     reportFocusedComposerReadiness(
@@ -4134,6 +4124,7 @@ export default function ChatView({
     serverConfigQuery.isPending,
     serverSettingsQuery.isError,
     serverSettingsQuery.isPending,
+    serverSettingsSnapshot.providers,
   ]);
   const activeProviderHealthBannerDismissalKey = useMemo(
     () => getProviderHealthBannerDismissalKey(activeProviderStatus),
@@ -4488,12 +4479,6 @@ export default function ChatView({
         requestFirstRunReadinessResume();
         return;
       }
-      if (open && selectedProvider === "omnimind" && !omniMindModelDiscoveryRequested) {
-        setOmniMindModelDiscoveryRequested(true);
-        void queryClient.invalidateQueries({
-          queryKey: providerDiscoveryQueryKeys.modelsForProvider("omnimind"),
-        });
-      }
       setIsModelPickerOpen(open);
       if (!open) {
         setPiDiscoveryRequested(false);
@@ -4503,17 +4488,12 @@ export default function ChatView({
         setIsEnginePickerOpen(false);
       }
     },
-    [omniMindModelDiscoveryRequested, queryClient, selectedModel, selectedProvider],
+    [selectedModel],
   );
   const handleProviderBrowse = useCallback(
     (provider: ProviderKind) => {
       if (provider === "pi") {
         setPiDiscoveryRequested(true);
-      }
-      if (provider === "omnimind") {
-        // Selecting OmniMind is explicit Engine intent. Start its global-only
-        // catalog immediately instead of waiting for a second click on Model.
-        setOmniMindModelDiscoveryRequested(true);
       }
       // Selection is exact Engine intent. Start the target in the same event turn;
       // the enabled catalog hook on the next render shares this canonical query.

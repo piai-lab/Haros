@@ -44,10 +44,7 @@ export function createStartupSplashDom(input: {
           <div class="startup-splash__swarm-breathe">${buildDots()}</div>
         </div>
       </div>
-      <div class="startup-splash__rings"></div>
-      <div class="startup-splash__wave"></div>
       <div class="startup-splash__word">OmniMind</div>
-      <div class="startup-splash__line"></div>
     </div>
     <p class="startup-splash__status" role="status" aria-live="polite" aria-atomic="true"></p>`;
   splash.querySelector<HTMLElement>(".startup-splash__status")!.dataset.message =

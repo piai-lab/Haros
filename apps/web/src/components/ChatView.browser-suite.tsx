@@ -9678,10 +9678,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(
         wsRequests.filter(
           (request) =>
+            request._tag === WS_METHODS.providerListModels && request.provider === "omnimind",
+        ),
+      ).toHaveLength(1);
+      expect(
+        wsRequests.filter(
+          (request) =>
             request._tag === WS_METHODS.providerListModels &&
-            (request.provider === "omnimind" ||
-              request.provider === "pi" ||
-              request.provider === "droid"),
+            (request.provider === "pi" || request.provider === "droid"),
         ),
       ).toHaveLength(0);
       const setupDialogNode = document.querySelector<HTMLElement>(
@@ -9925,7 +9929,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
             (button) =>
               button.getClientRects().length > 0 &&
-              button.textContent?.includes(EN_MESSAGES["composer.selectModel"]),
+              button.textContent?.includes(EN_MESSAGES["composer.noAvailableModel"]),
           ) ?? null,
         "Unable to find the deferred Composer model trigger.",
       );

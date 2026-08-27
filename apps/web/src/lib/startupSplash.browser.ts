@@ -32,6 +32,9 @@ describe("Desktop startup splash", () => {
       "true",
     );
     expect(splash.querySelector(".startup-splash__status")?.getAttribute("role")).toBe("status");
+    expect(splash.querySelector(".startup-splash__rings")).toBeNull();
+    expect(splash.querySelector(".startup-splash__line")).toBeNull();
+    expect(splash.querySelector(".startup-splash__wave")).toBeNull();
     expect((splash.querySelector(".startup-splash__status") as HTMLElement).dataset.message).toBe(
       "正在准备模型…",
     );

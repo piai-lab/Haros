@@ -1349,12 +1349,13 @@ source set is limited to `splash-dom.ts`, `splash.ts` and `styles/splash.css`; t
 digests and exact product paths are owned only by `source-adoptions.json`.
 
 Disposition is `copied-adapted`. OmniMind keeps Percho's synchronous first-frame construction,
-64-particle golden-angle geometry, breathe/sonar/exit choreography, theme-first surface,
-`content-visibility` isolation and reduced-motion branch. It replaces the donor identity and fixed
-colors with canonical `OmniMind` and the existing Theme owner, compresses normal Desktop presentation
-to a roughly 2–3 second envelope, adds a bilingual accessible slow-start status, and lets the Desktop
-process grant one full presentation followed by brief presentations without persistence or a second
-window.
+64-particle golden-angle geometry, breathe/light-rotation and particle-scatter exit, theme-first
+surface, `content-visibility` isolation and reduced-motion branch. It replaces the donor identity and
+fixed colors with canonical `OmniMind` and the existing Theme owner, compresses normal Desktop
+presentation to a roughly 2–3 second envelope, omits the decorative horizontal sweep, persistent sonar
+rings and radial exit waves because they carry no authoritative progress and compete with the particle
+composition, adds a bilingual accessible slow-start status, and lets the Desktop process grant one full
+presentation followed by brief presentations without persistence or a second window.
 
 Two donor completion mechanisms are explicitly rejected. `Promise.allSettled` cannot establish model
 catalog authority because a failed request also settles, and a maximum display timeout cannot become a

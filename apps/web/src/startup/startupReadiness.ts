@@ -26,5 +26,5 @@ export function shouldInitializeDesktopStartupSplash(
 }
 
 export function isTerminalStartupCatalogState(state: ProviderModelCatalogState): boolean {
-  return state !== "checking";
+  return state === "ready" || state === "empty" || state === "stale" || state === "error";
 }
