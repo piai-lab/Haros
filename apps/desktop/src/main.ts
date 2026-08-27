@@ -4614,6 +4614,7 @@ function createWindow(): BrowserWindow {
 
     if (
       shouldDeferDesktopWindowClose({
+        platform: process.platform,
         shutdownComplete: desktopShutdownComplete,
         updaterHandoffActive: isUpdaterQuitAndInstallInFlight,
       })
