@@ -42,6 +42,7 @@ interface ChatTranscriptPaneProps {
   activeTurnId?: TurnId | null;
   activeTurnInProgress: boolean;
   activeTurnStartedAt: string | null;
+  turnProcessPhase?: ComponentProps<typeof MessagesTimeline>["turnProcessPhase"];
   agentActivityDetail?: AgentActivityDetail | null;
   contentInsetRightPx?: ComponentProps<typeof MessagesTimeline>["contentInsetRightPx"];
   contentInsetBottomPx?: ComponentProps<typeof MessagesTimeline>["contentInsetBottomPx"];
@@ -119,6 +120,7 @@ export function ChatTranscriptPane({
   activeTurnId,
   activeTurnInProgress,
   activeTurnStartedAt,
+  turnProcessPhase,
   agentActivityDetail,
   contentInsetRightPx,
   contentInsetBottomPx,
@@ -242,6 +244,7 @@ export function ChatTranscriptPane({
             activeTurnId={activeTurnId ?? null}
             activeTurnInProgress={activeTurnInProgress}
             activeTurnStartedAt={activeTurnStartedAt}
+            {...(turnProcessPhase ? { turnProcessPhase } : {})}
             listRef={listRef}
             {...(timelineControllerRef ? { controllerRef: timelineControllerRef } : {})}
             {...(pinnedMessageIds ? { pinnedMessageIds } : {})}

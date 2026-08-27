@@ -5,7 +5,7 @@
 import "../../index.css";
 
 import { MessageId, TurnId } from "@omnimind/contracts";
-import { useState, type ComponentProps } from "react";
+import { type ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
@@ -317,8 +317,9 @@ function AlignedActivityRowsTimeline(props: { theme: "light" | "dark" }) {
   return (
     <MessagesTimeline
       {...baseTimelineProps}
-      isWorking={false}
-      activeTurnInProgress={false}
+      isWorking
+      activeTurnInProgress
+      activeTurnId={turnId}
       timelineEntries={timelineEntries}
       expandedWorkGroups={{}}
       onToggleWorkGroup={() => {}}
@@ -583,8 +584,9 @@ function FailedReasoningTimeline() {
   return (
     <MessagesTimeline
       {...baseTimelineProps}
-      isWorking={false}
-      activeTurnInProgress={false}
+      isWorking
+      activeTurnInProgress
+      activeTurnId={turnId}
       timelineEntries={[
         assistantEntry("assistant-failure-before", turnId, "I will try this.", {
           completed: true,
@@ -667,7 +669,6 @@ function SettledSummaryTimeline() {
 
 function ToolCapTimeline() {
   const turnId = TurnId.makeUnsafe("turn-tool-cap-browser");
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const toolsBefore = Array.from({ length: 5 }, (_, index) =>
     toolEntry(`cap-tool-${index + 1}`, turnId, {
       label: `Cap tool ${index + 1}`,
@@ -683,17 +684,16 @@ function ToolCapTimeline() {
   return (
     <MessagesTimeline
       {...baseTimelineProps}
-      isWorking={false}
-      activeTurnInProgress={false}
+      isWorking
+      activeTurnInProgress
+      activeTurnId={turnId}
       timelineEntries={[
         ...toolsBefore,
         reasoningEntry("reasoning-cap", turnId, "Reasoning remains at its causal position."),
         ...toolsAfter,
       ]}
-      expandedWorkGroups={expanded}
-      onToggleWorkGroup={(groupId) =>
-        setExpanded((current) => ({ ...current, [groupId]: !current[groupId] }))
-      }
+      expandedWorkGroups={{}}
+      onToggleWorkGroup={() => {}}
     />
   );
 }
@@ -1176,7 +1176,7 @@ describe("Timeline public reasoning disclosure", () => {
     }
   });
 
-  it("keeps reducer-produced live assistant segments interleaved and settles disclosures in place", async () => {
+  it("keeps reducer-produced narration in process and settles the same disclosure in place", async () => {
     const host = createNarrowHost();
     const screen = await render(<ReducedLiveCausalTimeline settled={false} />, {
       container: host,
@@ -1185,8 +1185,11 @@ describe("Timeline public reasoning disclosure", () => {
     try {
       const narrationId = "assistant-reduced-live-browser#segment:0";
       const answerId = "assistant-reduced-live-browser";
-      expect(document.querySelector(`[data-assistant-message-id="${narrationId}"]`)).not.toBeNull();
+      expect(document.querySelector(`[data-assistant-message-id="${narrationId}"]`)).toBeNull();
       expect(document.querySelector(`[data-assistant-message-id="${answerId}"]`)).not.toBeNull();
+      const processRow = document.querySelector<HTMLElement>(
+        "[data-timeline-row-kind='turn-process']",
+      );
 
       const text = document.body.textContent ?? "";
       const orderedText = [
@@ -1210,6 +1213,9 @@ describe("Timeline public reasoning disclosure", () => {
       ]);
 
       await screen.rerender(<ReducedLiveCausalTimeline settled />);
+      expect(document.querySelector<HTMLElement>("[data-timeline-row-kind='turn-process']")).toBe(
+        processRow,
+      );
       await expect
         .poll(() => triggers.map((trigger) => trigger.getAttribute("aria-expanded")))
         .toEqual(["false", "false"]);
@@ -1277,10 +1283,7 @@ describe("Timeline public reasoning disclosure", () => {
       expect(timelineAssistantRowIds()).toEqual(["assistant-inserted-live-browser"]);
       await screen.rerender(<InsertedLiveCausalTimeline split />);
       await settleLayout();
-      expect(timelineAssistantRowIds()).toEqual([
-        "assistant-inserted-live-browser#segment:0",
-        "assistant-inserted-live-browser",
-      ]);
+      expect(timelineAssistantRowIds()).toEqual(["assistant-inserted-live-browser"]);
 
       const text = document.body.textContent ?? "";
       const orderedText = [
@@ -1305,6 +1308,7 @@ describe("Timeline public reasoning disclosure", () => {
     });
 
     try {
+      await userEvent.click(screen.getByRole("button", { name: /Worked for/ }));
       const text = document.body.textContent ?? "";
       const orderedText = [
         "Before grouped work.",
@@ -1324,7 +1328,7 @@ describe("Timeline public reasoning disclosure", () => {
     }
   });
 
-  it("caps only tool rows, preserves reasoning position, and uses singular overflow copy", async () => {
+  it("preserves reasoning between independently summarized tool runs", async () => {
     const host = createNarrowHost();
     const screen = await render(<ToolCapTimeline />, { container: host });
 
@@ -1333,23 +1337,22 @@ describe("Timeline public reasoning disclosure", () => {
       expect(text).not.toContain("Cap tool 1");
       expect(text).toContain("Reasoning remains at its causal position.");
       const positions = [
-        text.indexOf("Cap tool 2"),
+        text.indexOf("Used 5 tools"),
         text.indexOf("Reasoning remains at its causal position."),
-        text.indexOf("Cap tool 6"),
+        text.indexOf("Used 2 tools"),
       ];
       expect(positions.every((position) => position >= 0)).toBe(true);
       expect(positions).toEqual([...positions].toSorted((left, right) => left - right));
 
-      await userEvent.click(screen.getByRole("button", { name: "Show 1 more tool call" }));
+      await userEvent.click(screen.getByRole("button", { name: "Used 5 tools" }));
       expect(document.body.textContent ?? "").toContain("Cap tool 1");
-      expect(screen.getByRole("button", { name: "Show less" }).element()).toBeTruthy();
     } finally {
       await screen.unmount();
       host.remove();
     }
   });
 
-  it("localizes the tool overflow disclosure in Simplified Chinese", async () => {
+  it("localizes nested tool summaries in Simplified Chinese", async () => {
     harness.settings.localePreference = "zh-CN";
     const host = createNarrowHost();
     const screen = await render(
@@ -1360,8 +1363,7 @@ describe("Timeline public reasoning disclosure", () => {
     );
 
     try {
-      await userEvent.click(screen.getByRole("button", { name: "再显示 1 个工具调用" }));
-      expect(screen.getByRole("button", { name: "收起" }).element()).toBeTruthy();
+      expect(screen.getByRole("button", { name: "使用了 5 个工具" }).element()).toBeTruthy();
     } finally {
       await screen.unmount();
       host.remove();

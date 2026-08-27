@@ -82,7 +82,9 @@ function TimelineHarness(props: {
       isWorking={props.active}
       activeTurnInProgress={props.active}
       activeTurnStartedAt={props.active ? STARTED_AT : null}
-      activeTurnId={props.activeTurnId === undefined ? (props.active ? TURN_ID : null) : props.activeTurnId}
+      activeTurnId={
+        props.activeTurnId === undefined ? (props.active ? TURN_ID : null) : props.activeTurnId
+      }
       timelineEntries={props.entries}
       turnDiffSummaryByAssistantMessageId={new Map()}
       expandedWorkGroups={{}}
@@ -116,7 +118,7 @@ describe("MessagesTimeline settled turn transitions", () => {
     document.body.innerHTML = "";
   });
 
-  it("animates a turn that visibly changes from live work to a settled disclosure", async () => {
+  it("settles the same process row in place without a visual clone", async () => {
     const host = createHost();
     const screen = await render(
       <TimelineHarness
@@ -128,6 +130,10 @@ describe("MessagesTimeline settled turn transitions", () => {
 
     try {
       expect(document.body.textContent ?? "").not.toContain("Worked for");
+      const liveProcessRow = document.querySelector<HTMLElement>(
+        "[data-timeline-row-kind='turn-process']",
+      );
+      expect(liveProcessRow?.querySelector("button")?.getAttribute("aria-expanded")).toBe("true");
 
       await screen.rerender(
         <TimelineHarness
@@ -139,11 +145,23 @@ describe("MessagesTimeline settled turn transitions", () => {
         />,
       );
 
-      await expect.poll(() => transitionClone() !== null).toBe(true);
-      expect(transitionClone()?.hasAttribute("inert")).toBe(true);
-      expect(transitionClone()?.textContent).toContain("Ran 6 commands");
       await expect.poll(() => (document.body.textContent ?? "").includes("Worked for")).toBe(true);
-      await expect.poll(() => transitionClone() === null, { timeout: 1_000 }).toBe(true);
+      const settledProcessRow = document.querySelector<HTMLElement>(
+        "[data-timeline-row-kind='turn-process']",
+      );
+      expect(settledProcessRow).toBe(liveProcessRow);
+      expect(
+        settledProcessRow
+          ?.querySelector("[data-turn-process-phase]")
+          ?.getAttribute("data-turn-process-phase"),
+      ).toBe("settled");
+      expect(settledProcessRow?.querySelector("button")?.getAttribute("aria-expanded")).toBe(
+        "false",
+      );
+      expect(
+        settledProcessRow?.querySelector("[data-slot='collapsible-panel']")?.hasAttribute("inert"),
+      ).toBe(true);
+      expect(transitionClone()).toBeNull();
     } finally {
       await screen.unmount();
       host.remove();
@@ -155,10 +173,7 @@ describe("MessagesTimeline settled turn transitions", () => {
     const screen = await render(
       <TimelineHarness
         active={false}
-        entries={[
-          ...commands,
-          assistantEntry("answer", "Finished the work.", { completed: true }),
-        ]}
+        entries={[...commands, assistantEntry("answer", "Finished the work.", { completed: true })]}
       />,
       { container: host },
     );
@@ -178,10 +193,9 @@ describe("MessagesTimeline settled turn transitions", () => {
   it("does not animate when historical work hydrates onto an existing settled answer", async () => {
     const host = createHost();
     const settledAnswer = assistantEntry("answer", "Finished the work.", { completed: true });
-    const screen = await render(
-      <TimelineHarness active={false} entries={[settledAnswer]} />,
-      { container: host },
-    );
+    const screen = await render(<TimelineHarness active={false} entries={[settledAnswer]} />, {
+      container: host,
+    });
 
     try {
       await screen.rerender(

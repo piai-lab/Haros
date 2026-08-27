@@ -4,21 +4,20 @@ import {
   buildTurnDiffSummaryByAssistantMessageId,
   canSubmitUserMessageEdit,
   capOpenWorkEntryRenderChunks,
-  chunkCollapsedTurnItems,
+  chunkTurnProcessItems,
   chunkWorkEntries,
   computeMessageDurationStart,
   computeStableMessagesTimelineRows,
   deriveMessagesTimelineRows,
   deriveTerminalAssistantMessageIds,
   findLiveReasoningEntryId,
-  findLastLiveWorkGroupId,
   normalizeCompactToolLabel,
   planWorkEntryRenderChunks,
   resolveAssistantMessageCopyState,
   resolveAssistantMessageDisplayText,
-  type CollapsedTurnItem,
   type MessagesTimelineRow,
   type StableMessagesTimelineRowsState,
+  type TurnProcessItem,
 } from "./MessagesTimeline.logic";
 import type { TimelineEntry, WorkLogEntry } from "../../session-logic";
 import type { TurnDiffSummary, WorktreeSetupSnapshot } from "../../types";
@@ -193,6 +192,7 @@ describe("normalizeCompactToolLabel", () => {
 describe("computeStableMessagesTimelineRows", () => {
   type MessageTimelineRow = Extract<MessagesTimelineRow, { kind: "message" }>;
   type WorkTimelineRow = Extract<MessagesTimelineRow, { kind: "work" }>;
+  type TurnProcessTimelineRow = Extract<MessagesTimelineRow, { kind: "turn-process" }>;
 
   const emptyStableRows = (): StableMessagesTimelineRowsState => ({
     byId: new Map(),
@@ -566,7 +566,7 @@ describe("computeStableMessagesTimelineRows", () => {
     expect(second.result[0]).toBe(enrichedRows[0]);
   });
 
-  it("replaces assistant rows when inline tool metadata becomes richer", () => {
+  it("replaces assistant rows when response work metadata becomes richer", () => {
     const assistantMessage = {
       id: MessageId.makeUnsafe("assistant-1"),
       role: "assistant" as const,
@@ -580,7 +580,7 @@ describe("computeStableMessagesTimelineRows", () => {
         id: "assistant-1",
         createdAt: "2026-05-09T10:00:01.000Z",
         message: assistantMessage,
-        inlineWorkEntries: [
+        turnWorkEntries: [
           {
             id: "activity-command",
             createdAt: "2026-05-09T10:00:00.000Z",
@@ -590,7 +590,6 @@ describe("computeStableMessagesTimelineRows", () => {
             toolTitle: "Ran",
           },
         ],
-        inlineWorkGroupId: "activity-command",
         durationStart: "2026-05-09T10:00:01.000Z",
         showAssistantCopyButton: false,
         assistantCopyStreaming: true,
@@ -601,7 +600,7 @@ describe("computeStableMessagesTimelineRows", () => {
     const enrichedRows: MessageTimelineRow[] = [
       {
         ...firstRows[0]!,
-        inlineWorkEntries: [
+        turnWorkEntries: [
           {
             id: "activity-command",
             createdAt: "2026-05-09T10:00:00.000Z",
@@ -621,6 +620,70 @@ describe("computeStableMessagesTimelineRows", () => {
 
     expect(second).not.toBe(first);
     expect(second.result[0]).toBe(enrichedRows[0]);
+  });
+
+  it("invalidates only the live turn-process row when a stream item is appended", () => {
+    const userMessage = {
+      id: MessageId.makeUnsafe("stable-user"),
+      role: "user" as const,
+      text: "Inspect it",
+      createdAt: "2026-05-09T10:00:00.000Z",
+      streaming: false,
+    };
+    const historicalRow: MessageTimelineRow = {
+      kind: "message",
+      id: "stable-user",
+      createdAt: userMessage.createdAt,
+      message: userMessage,
+      durationStart: userMessage.createdAt,
+      showAssistantCopyButton: false,
+      assistantCopyStreaming: false,
+    };
+    const firstEntry: WorkLogEntry = {
+      id: "stable-read",
+      createdAt: "2026-05-09T10:00:01.000Z",
+      label: "Read",
+      tone: "tool",
+    };
+    const firstProcessRow: TurnProcessTimelineRow = {
+      kind: "turn-process",
+      id: "turn-process:stable-user",
+      createdAt: userMessage.createdAt,
+      turnId: TurnId.makeUnsafe("stable-turn"),
+      phase: "running",
+      items: [{ kind: "work", id: firstEntry.id, entry: firstEntry }],
+      elapsedMs: 1_000,
+    };
+    const first = computeStableMessagesTimelineRows(
+      [historicalRow, firstProcessRow],
+      emptyStableRows(),
+    );
+    const nextEntry: WorkLogEntry = {
+      id: "stable-search",
+      createdAt: "2026-05-09T10:00:02.000Z",
+      label: "Search",
+      tone: "tool",
+    };
+    const second = computeStableMessagesTimelineRows(
+      [
+        { ...historicalRow },
+        {
+          ...firstProcessRow,
+          items: [
+            { kind: "work", id: firstEntry.id, entry: firstEntry },
+            { kind: "work", id: nextEntry.id, entry: nextEntry },
+          ],
+          elapsedMs: 2_000,
+        },
+      ],
+      first,
+    );
+
+    expect(second.result[0]).toBe(first.result[0]);
+    expect(second.result[1]).not.toBe(first.result[1]);
+    const retainedItem = (second.result[1] as TurnProcessTimelineRow).items[0];
+    expect(retainedItem?.kind).toBe("work");
+    expect(retainedItem?.kind === "work" ? retainedItem.entry : null).toBe(firstEntry);
   });
 });
 
@@ -945,18 +1008,14 @@ describe("resolveAssistantMessageDisplayText", () => {
     expect(
       resolveAssistantMessageDisplayText({
         message: { text: "", streaming: false },
-        collapsedTurnItems: [
+        turnWorkEntries: [
           {
-            kind: "work",
             id: "generated-image",
-            entry: {
-              id: "generated-image",
-              createdAt: "2026-07-08T10:00:00.000Z",
-              label: "Generated image",
-              tone: "tool",
-              itemType: "image_generation",
-              activityKind: "tool.completed",
-            },
+            createdAt: "2026-07-08T10:00:00.000Z",
+            label: "Generated image",
+            tone: "tool",
+            itemType: "image_generation",
+            activityKind: "tool.completed",
           },
         ],
       }),
@@ -983,13 +1042,13 @@ describe("resolveAssistantMessageDisplayText", () => {
     expect(
       resolveAssistantMessageDisplayText({
         message: { text: "", streaming: false },
-        leadingWorkEntries: [imageEntry],
+        turnWorkEntries: [imageEntry],
       }),
     ).toBe("(empty response)");
     expect(
       resolveAssistantMessageDisplayText({
         message: { text: "", streaming: false },
-        leadingWorkEntries: [
+        turnWorkEntries: [
           { ...imageEntry, activityKind: "tool.completed", tone: "error" as const },
         ],
       }),
@@ -1000,7 +1059,7 @@ describe("resolveAssistantMessageDisplayText", () => {
     expect(
       resolveAssistantMessageDisplayText({
         message: { text: "Here is your image.", streaming: false },
-        inlineWorkEntries: [
+        turnWorkEntries: [
           {
             id: "generated-image",
             createdAt: "2026-07-08T10:00:00.000Z",
@@ -1099,10 +1158,17 @@ describe("deriveMessagesTimelineRows", () => {
         row.kind === "message" && row.message.id === MessageId.makeUnsafe(id),
     );
 
-  const collapsedSignature = (row: MessageTimelineRow): string[] =>
-    (row.collapsedTurnItems ?? []).map((item) => `${item.kind}:${String(item.id)}`);
+  const processRow = (rows: MessagesTimelineRow[], boundaryId?: string) =>
+    rows.find(
+      (row): row is Extract<MessagesTimelineRow, { kind: "turn-process" }> =>
+        row.kind === "turn-process" &&
+        (boundaryId === undefined || row.id === `turn-process:${boundaryId}`),
+    );
 
-  it("keeps interleaved narration and work visible after the turn settles", () => {
+  const processSignature = (rows: MessagesTimelineRow[], boundaryId?: string): string[] =>
+    (processRow(rows, boundaryId)?.items ?? []).map((item) => `${item.kind}:${String(item.id)}`);
+
+  it("moves interleaved narration and work into one settled process row", () => {
     const rows = deriveMessagesTimelineRows({
       ...baseInput,
       timelineEntries: [
@@ -1130,13 +1196,12 @@ describe("deriveMessagesTimelineRows", () => {
     const visibleMessageIds = rows
       .filter((row): row is MessageTimelineRow => row.kind === "message")
       .map((row) => String(row.message.id));
-    expect(visibleMessageIds).toEqual(["u1", "a1", "a2", "a3"]);
+    expect(visibleMessageIds).toEqual(["u1", "a3"]);
 
     const terminal = messageRow(rows, "a3");
     expect(terminal).toBeDefined();
-    expect(collapsedSignature(terminal!)).toEqual([]);
-    expect(messageRow(rows, "a2")?.leadingWorkEntries?.map((entry) => entry.id)).toEqual(["w1"]);
-    expect(messageRow(rows, "a3")?.leadingWorkEntries?.map((entry) => entry.id)).toEqual(["w2"]);
+    expect(processSignature(rows)).toEqual(["narration:a1", "work:w1", "narration:a2", "work:w2"]);
+    expect(processRow(rows)?.phase).toBe("settled");
     expect(rows.some((row) => row.kind === "work")).toBe(false);
   });
 
@@ -1198,13 +1263,11 @@ describe("deriveMessagesTimelineRows", () => {
 
     const visibleSignature = (rows: MessagesTimelineRow[]) =>
       rows.flatMap((row) => {
-        if (row.kind === "working-header" || row.kind === "working") return [];
+        if (row.kind === "turn-process") {
+          return row.items.map((item) => `${item.kind === "work" ? "work" : "message"}:${item.id}`);
+        }
         if (row.kind === "message") {
-          return [
-            ...(row.leadingWorkEntries ?? []).map((entry) => `work:${entry.id}`),
-            `message:${String(row.message.id)}`,
-            ...(row.inlineWorkEntries ?? []).map((entry) => `work:${entry.id}`),
-          ];
+          return [`message:${String(row.message.id)}`];
         }
         return row.kind === "work" ? row.groupedEntries.map((entry) => `work:${entry.id}`) : [];
       });
@@ -1220,7 +1283,8 @@ describe("deriveMessagesTimelineRows", () => {
     ];
     expect(visibleSignature(settledRows)).toEqual(expected);
     expect(visibleSignature(liveRows)).toEqual(expected);
-    expect(messageRow(settledRows, "a-causal-final")?.collapsedTurnItems).toBeUndefined();
+    expect(processRow(settledRows)?.phase).toBe("settled");
+    expect(processRow(liveRows)?.phase).toBe("running");
   });
 
   it("keeps interleaved assistant segments in their causal positions after settlement", () => {
@@ -1246,12 +1310,11 @@ describe("deriveMessagesTimelineRows", () => {
     const terminal = messageRow(rows, "a-segmented");
     expect(terminal?.message.text).toBe("Then explain.");
     expect(terminal?.assistantCopyText).toBe("Plan first.Then explain.");
-    expect(collapsedSignature(terminal!)).toEqual([]);
-    expect(messageRow(rows, "a-segmented#segment:0")?.message.text).toBe("Plan first.");
-    expect(terminal?.leadingWorkEntries?.map((entry) => entry.id)).toEqual(["w-segmented"]);
+    expect(processSignature(rows)).toEqual(["narration:a-segmented#segment:0", "work:w-segmented"]);
+    expect(messageRow(rows, "a-segmented#segment:0")).toBeUndefined();
   });
 
-  it("keeps settled reasoning inline instead of folding it into Worked for", () => {
+  it("keeps settled reasoning inspectable inside Worked for", () => {
     const reasoning = workEntry("reasoning-1", "2026-01-01T00:00:02Z", "Reasoning trace");
     if (reasoning.kind === "work") {
       reasoning.entry = {
@@ -1274,12 +1337,10 @@ describe("deriveMessagesTimelineRows", () => {
       ],
     });
 
-    const terminal = messageRow(rows, "a1");
-    expect(collapsedSignature(terminal!)).toEqual([]);
-    expect(terminal?.leadingWorkEntries?.map((entry) => entry.id)).toEqual(["reasoning-1"]);
+    expect(processSignature(rows)).toEqual(["work:reasoning-1"]);
   });
 
-  it("keeps a provider failure and retry transcript visible instead of guessing the final answer", () => {
+  it("keeps provider failure and retry facts in canonical process order", () => {
     const rows = deriveMessagesTimelineRows({
       ...baseInput,
       timelineEntries: [
@@ -1301,9 +1362,8 @@ describe("deriveMessagesTimelineRows", () => {
 
     const terminal = messageRow(rows, "a2");
     expect(terminal).toBeDefined();
-    expect(collapsedSignature(terminal!)).toEqual([]);
-    expect(messageRow(rows, "a1")?.leadingWorkEntries?.map((entry) => entry.id)).toEqual(["w1"]);
-    expect(terminal?.leadingWorkEntries?.map((entry) => entry.id)).toEqual(["w2"]);
+    expect(processSignature(rows)).toEqual(["work:w1", "narration:a1", "work:w2"]);
+    expect(messageRow(rows, "a1")).toBeUndefined();
   });
 
   it("keeps the live turn expanded instead of collapsing while it streams", () => {
@@ -1328,10 +1388,11 @@ describe("deriveMessagesTimelineRows", () => {
       ],
     });
 
-    expect(messageRow(rows, "a1")).toBeDefined();
+    expect(messageRow(rows, "a1")).toBeUndefined();
     const terminal = messageRow(rows, "a3");
     expect(terminal).toBeDefined();
-    expect(terminal!.collapsedTurnItems).toBeUndefined();
+    expect(processSignature(rows)).toEqual(["narration:a1", "work:w1"]);
+    expect(processRow(rows)?.phase).toBe("running");
   });
 
   it("keeps pre-existing tool work above the new live narration text", () => {
@@ -1357,12 +1418,8 @@ describe("deriveMessagesTimelineRows", () => {
       ],
     });
 
-    const streamingNarration = messageRow(rows, "a2");
-
-    expect(streamingNarration?.leadingWorkEntries?.map((entry) => entry.id)).toEqual(["w1"]);
-    expect(streamingNarration?.leadingWorkGroupId).toBe("entry-w1");
-    expect(streamingNarration?.inlineWorkEntries?.map((entry) => entry.id)).toEqual(["w2"]);
-    expect(streamingNarration?.inlineWorkGroupId).toBe("entry-w2");
+    expect(messageRow(rows, "a2")).toBeUndefined();
+    expect(processSignature(rows)).toEqual(["narration:a1", "work:w1", "narration:a2", "work:w2"]);
   });
 
   it("keeps a just-settled tail assistant expanded when the active turn id is briefly unavailable", () => {
@@ -1383,9 +1440,8 @@ describe("deriveMessagesTimelineRows", () => {
 
     const terminal = messageRow(rows, "a1");
     expect(terminal).toBeDefined();
-    expect(terminal!.leadingWorkEntries?.map((entry) => entry.id)).toEqual(["w1"]);
-    expect(terminal!.inlineWorkEntries).toBeUndefined();
-    expect(terminal!.collapsedTurnItems).toBeUndefined();
+    expect(processSignature(rows)).toEqual(["work:w1"]);
+    expect(processRow(rows)?.phase).toBe("running");
     expect(rows.some((row) => row.kind === "work")).toBe(false);
   });
 
@@ -1409,8 +1465,8 @@ describe("deriveMessagesTimelineRows", () => {
 
     const previousAssistant = messageRow(rows, "a1");
     expect(previousAssistant).toBeDefined();
-    expect(collapsedSignature(previousAssistant!)).toEqual(["work:w1"]);
-    expect(previousAssistant!.inlineWorkEntries).toBeUndefined();
+    expect(processSignature(rows, "u1")).toEqual(["work:w1"]);
+    expect(processRow(rows, "u1")?.phase).toBe("settled");
     expect(messageRow(rows, "u2")).toBeDefined();
     expect(rows.some((row) => row.kind === "work")).toBe(false);
   });
@@ -1448,10 +1504,14 @@ describe("deriveMessagesTimelineRows", () => {
     const visibleMessageIds = rows
       .filter((row): row is MessageTimelineRow => row.kind === "message")
       .map((row) => String(row.message.id));
-    expect(visibleMessageIds).toEqual(["u1", "a1", "a2", "a3", "a4"]);
-    expect(collapsedSignature(messageRow(rows, "a4")!)).toEqual([]);
-    expect(messageRow(rows, "a2")?.leadingWorkEntries?.map((entry) => entry.id)).toEqual(["w1"]);
-    expect(messageRow(rows, "a4")?.leadingWorkEntries?.map((entry) => entry.id)).toEqual(["w2"]);
+    expect(visibleMessageIds).toEqual(["u1", "a4"]);
+    expect(processSignature(rows)).toEqual([
+      "narration:a1",
+      "work:w1",
+      "narration:a2",
+      "narration:a3",
+      "work:w2",
+    ]);
   });
 
   it("keeps causal work visible across an intervening proposed plan card", () => {
@@ -1475,11 +1535,9 @@ describe("deriveMessagesTimelineRows", () => {
     });
 
     expect(rows.some((row) => row.kind === "proposed-plan")).toBe(true);
-    expect(messageRow(rows, "a1")).toBeDefined();
-    expect(collapsedSignature(messageRow(rows, "a2")!)).toEqual([]);
-    expect(rows.some((row) => row.kind === "work" && row.groupedEntries[0]?.id === "w1")).toBe(
-      true,
-    );
+    expect(messageRow(rows, "a1")).toBeUndefined();
+    expect(messageRow(rows, "a2")).toBeDefined();
+    expect(processSignature(rows)).toEqual(["narration:a1", "work:w1"]);
   });
 
   it("preserves OmniMind tool calls when a separate creation recap is present", () => {
@@ -1536,10 +1594,151 @@ describe("deriveMessagesTimelineRows", () => {
       ],
     });
 
-    expect(collapsedSignature(messageRow(rows, "a1")!)).toEqual([
-      "work:omnimind-create-tool",
-      "work:omnimind-create-recap",
+    expect(processSignature(rows)).toEqual(["work:omnimind-create-tool"]);
+    expect(messageRow(rows, "a1")?.turnWorkEntries?.map((entry) => entry.id)).toEqual([
+      "omnimind-create-tool",
+      "omnimind-create-recap",
     ]);
+  });
+
+  it("does not render an empty Worked for row for a direct answer", () => {
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      timelineEntries: [
+        userEntry("u-direct", "2026-01-01T00:00:00Z"),
+        assistantEntry("a-direct", "2026-01-01T00:00:01Z", {
+          turnId: "t-direct",
+          text: "Direct answer",
+          completedAt: "2026-01-01T00:00:01Z",
+        }),
+      ],
+    });
+
+    expect(rows.map((row) => row.kind)).toEqual(["message", "message"]);
+  });
+
+  it("freezes a waiting process at the earliest pending interaction boundary", () => {
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      activeTurnId: TurnId.makeUnsafe("t-waiting"),
+      turnProcessPhase: {
+        kind: "waiting-for-user",
+        turnId: TurnId.makeUnsafe("t-waiting"),
+        startedAt: "2026-01-01T00:00:00Z",
+        waitingAt: "2026-01-01T00:00:03Z",
+      },
+      timelineEntries: [
+        userEntry("u-waiting", "2026-01-01T00:00:00Z"),
+        workEntry("w-waiting", "2026-01-01T00:00:01Z", "Inspecting"),
+      ],
+    });
+
+    expect(processRow(rows)).toMatchObject({
+      phase: "waiting-for-user",
+      turnId: TurnId.makeUnsafe("t-waiting"),
+      elapsedMs: 3000,
+    });
+  });
+
+  it("does not apply an unmatched old-turn phase to the latest response", () => {
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      turnProcessPhase: {
+        kind: "waiting-for-user",
+        turnId: TurnId.makeUnsafe("t-old-missing"),
+        startedAt: "2026-01-01T00:00:00Z",
+        waitingAt: "2026-01-01T00:00:06Z",
+      },
+      timelineEntries: [
+        userEntry("u1", "2026-01-01T00:00:00Z"),
+        workEntry("w1", "2026-01-01T00:00:01Z", "First turn work"),
+        assistantEntry("a1", "2026-01-01T00:00:02Z", {
+          turnId: "t1",
+          completedAt: "2026-01-01T00:00:02Z",
+        }),
+        userEntry("u2", "2026-01-01T00:00:03Z"),
+        workEntry("w2", "2026-01-01T00:00:04Z", "Latest turn work"),
+        assistantEntry("a2", "2026-01-01T00:00:05Z", {
+          turnId: "t2",
+          completedAt: "2026-01-01T00:00:05Z",
+        }),
+      ],
+    });
+
+    expect(processRow(rows, "u1")?.phase).toBe("settled");
+    expect(processRow(rows, "u2")?.phase).toBe("settled");
+  });
+
+  it("keeps explicit action and automation result cards outside process", () => {
+    const webReview = workEntry("web-review", "2026-01-01T00:00:02Z", "Review selection");
+    const automation = workEntry("automation", "2026-01-01T00:00:03Z", "Created automation");
+    if (webReview.kind === "work") {
+      webReview.entry.engineWebSurface = {
+        status: "waiting-for-user",
+        provenance: "engine-native",
+        presentation: "omnimind-browser",
+        surfaceId: "surface-1",
+      };
+    }
+    if (automation.kind === "work") {
+      automation.entry.automation = { id: "automation-1", name: "Watch CI", cadenceLabel: "5m" };
+    }
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      timelineEntries: [
+        userEntry("u-result", "2026-01-01T00:00:00Z"),
+        workEntry("process", "2026-01-01T00:00:01Z", "Searching"),
+        webReview,
+        automation,
+      ],
+    });
+
+    expect(processSignature(rows)).toEqual(["work:process"]);
+    expect(
+      rows.flatMap((row) =>
+        row.kind === "work" ? row.groupedEntries.map((entry) => entry.id) : [],
+      ),
+    ).toEqual(["web-review", "automation"]);
+  });
+
+  it("keeps a completed generated image as a final result outside process", () => {
+    const generatedImage = workEntry("generated-image", "2026-01-01T00:00:02Z", "Generated image");
+    if (generatedImage.kind === "work") {
+      generatedImage.entry.itemType = "image_generation";
+      generatedImage.entry.activityKind = "tool.completed";
+    }
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      timelineEntries: [
+        userEntry("u-image", "2026-01-01T00:00:00Z"),
+        assistantEntry("a-image", "2026-01-01T00:00:01Z", {
+          turnId: "t-image",
+          text: "",
+          completedAt: "2026-01-01T00:00:03Z",
+        }),
+        generatedImage,
+      ],
+    });
+
+    expect(messageRow(rows, "a-image")).toBeDefined();
+    expect(messageRow(rows, "a-image")?.turnWorkEntries?.map((entry) => entry.id)).toEqual([
+      "generated-image",
+    ]);
+    expect(processRow(rows)).toBeUndefined();
+    expect(rows.find((row) => row.kind === "work")?.groupedEntries[0]?.id).toBe("generated-image");
+  });
+
+  it("places a plan-only final result after its process disclosure", () => {
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      timelineEntries: [
+        userEntry("u-plan", "2026-01-01T00:00:00Z"),
+        workEntry("plan-work", "2026-01-01T00:00:01Z", "Building plan"),
+        proposedPlanEntry("plan-only", "2026-01-01T00:00:02Z", "t-plan"),
+      ],
+    });
+
+    expect(rows.map((row) => row.kind)).toEqual(["message", "turn-process", "proposed-plan"]);
   });
 
   const worktreeSetupSnapshot = (): WorktreeSetupSnapshot => ({
@@ -1568,10 +1767,10 @@ describe("deriveMessagesTimelineRows", () => {
       open: true,
       steps: setup.steps,
     });
-    expect(rows.some((row) => row.kind === "working")).toBe(false);
+    expect(rows.some((row) => row.kind === "turn-process")).toBe(false);
   });
 
-  it("restores the working shimmer while the worktree-setup row animates closed", () => {
+  it("restores the live process row while the worktree-setup row animates closed", () => {
     const rows = deriveMessagesTimelineRows({
       ...baseInput,
       isWorking: true,
@@ -1580,7 +1779,7 @@ describe("deriveMessagesTimelineRows", () => {
       timelineEntries: [userEntry("u1", "2026-01-01T00:00:00Z")],
     });
 
-    expect(rows.map((row) => row.kind)).toEqual(["message", "worktree-setup", "working"]);
+    expect(rows.map((row) => row.kind)).toEqual(["message", "turn-process", "worktree-setup"]);
     expect(rows.find((row) => row.kind === "worktree-setup")).toMatchObject({ open: false });
   });
 
@@ -1591,14 +1790,14 @@ describe("deriveMessagesTimelineRows", () => {
       timelineEntries: [userEntry("u1", "2026-01-01T00:00:00Z")],
     });
 
-    expect(rows.map((row) => row.kind)).toEqual(["message", "working"]);
+    expect(rows.map((row) => row.kind)).toEqual(["message", "turn-process"]);
   });
 });
 
 const toolItem = (
   id: string,
   overrides: Partial<WorkLogEntry> = {},
-): Extract<CollapsedTurnItem, { kind: "work" }> => ({
+): Extract<TurnProcessItem, { kind: "work" }> => ({
   kind: "work",
   id,
   entry: {
@@ -1611,7 +1810,7 @@ const toolItem = (
   },
 });
 
-const narrationItem = (id: string): CollapsedTurnItem => ({
+const narrationItem = (id: string): TurnProcessItem => ({
   kind: "narration",
   id,
   message: {
@@ -1623,14 +1822,14 @@ const narrationItem = (id: string): CollapsedTurnItem => ({
   },
 });
 
-const chunkSignature = (items: ReadonlyArray<CollapsedTurnItem>): string[] =>
-  chunkCollapsedTurnItems(items).map((chunk) =>
+const chunkSignature = (items: ReadonlyArray<TurnProcessItem>): string[] =>
+  chunkTurnProcessItems(items).map((chunk) =>
     chunk.kind === "tool-group"
       ? `group:${chunk.id}:${chunk.entries.map((entry) => entry.id).join("+")}`
       : `item:${chunk.item.kind}:${String(chunk.item.id)}`,
   );
 
-describe("chunkCollapsedTurnItems", () => {
+describe("chunkTurnProcessItems", () => {
   it("folds consecutive tool runs and lets narration split them", () => {
     expect(
       chunkSignature([
@@ -1833,85 +2032,6 @@ describe("capOpenWorkEntryRenderChunks", () => {
     ]);
     expect(result.hasOverflow).toBe(true);
     expect(result.hiddenEntryCount).toBe(0);
-  });
-});
-
-const workRow = (id: string): MessagesTimelineRow => ({
-  kind: "work",
-  id,
-  createdAt: "2026-01-01T00:00:00Z",
-  groupedEntries: [{ id, createdAt: "2026-01-01T00:00:00Z", label: "tool", tone: "tool" }],
-});
-
-const messageRowOf = (
-  id: string,
-  role: "user" | "assistant",
-  groups: { leadingWorkGroupId?: string; inlineWorkGroupId?: string } = {},
-): MessagesTimelineRow => ({
-  kind: "message",
-  id: `row-${id}`,
-  createdAt: "2026-01-01T00:00:00Z",
-  message: {
-    id: MessageId.makeUnsafe(id),
-    role,
-    text: "text",
-    createdAt: "2026-01-01T00:00:00Z",
-    streaming: false,
-  },
-  durationStart: "2026-01-01T00:00:00Z",
-  showAssistantCopyButton: false,
-  assistantCopyStreaming: false,
-  ...groups,
-});
-
-const workingRow: MessagesTimelineRow = {
-  kind: "working",
-  id: "working-indicator-row",
-  createdAt: null,
-};
-
-describe("findLastLiveWorkGroupId", () => {
-  it("returns the trailing standalone work row", () => {
-    expect(
-      findLastLiveWorkGroupId([
-        messageRowOf("u1", "user"),
-        messageRowOf("a1", "assistant", { inlineWorkGroupId: "g1" }),
-        workRow("g2"),
-        workingRow,
-      ]),
-    ).toBe("g2");
-  });
-
-  it("prefers a message's inline group over its leading group", () => {
-    expect(
-      findLastLiveWorkGroupId([
-        messageRowOf("u1", "user"),
-        messageRowOf("a1", "assistant", { leadingWorkGroupId: "g1", inlineWorkGroupId: "g2" }),
-      ]),
-    ).toBe("g2");
-  });
-
-  it("falls back to the leading group when no inline group exists", () => {
-    expect(
-      findLastLiveWorkGroupId([
-        messageRowOf("u1", "user"),
-        messageRowOf("a1", "assistant", { leadingWorkGroupId: "g1" }),
-      ]),
-    ).toBe("g1");
-  });
-
-  it("stops at a trailing user message: the next turn has no live group yet", () => {
-    expect(
-      findLastLiveWorkGroupId([
-        messageRowOf("a1", "assistant", { inlineWorkGroupId: "g1" }),
-        messageRowOf("u2", "user"),
-        workingRow,
-      ]),
-    ).toBeNull();
-  });
-
-  it("returns null when the transcript has no work groups", () => {
-    expect(findLastLiveWorkGroupId([messageRowOf("u1", "user")])).toBeNull();
   });
 });
 

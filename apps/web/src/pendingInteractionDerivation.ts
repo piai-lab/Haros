@@ -19,6 +19,7 @@ export interface PendingApproval {
   lifecycleGeneration?: string;
   requestKind: "command" | "file-read" | "file-change" | "permissions";
   createdAt: string;
+  turnId?: TurnId;
   detail?: string;
   permissionProfile?: Record<string, unknown>;
   sessionApprovalAvailable?: boolean;
@@ -28,6 +29,7 @@ export interface PendingUserInput {
   requestId: ApprovalRequestId;
   lifecycleGeneration?: string;
   createdAt: string;
+  turnId?: TurnId;
   questions: ReadonlyArray<UserInputQuestion>;
   settlementStatus?: OrchestrationPendingInteraction["status"];
   responseClaimable?: boolean;
@@ -406,6 +408,7 @@ export function derivePendingApprovals(
           ...(lifecycleGeneration !== undefined ? { lifecycleGeneration } : {}),
           requestKind,
           createdAt: activity.createdAt,
+          ...(activity.turnId ? { turnId: activity.turnId } : {}),
           ...(detail ? { detail } : {}),
           ...(permissionProfile ? { permissionProfile } : {}),
           ...(sessionApprovalAvailable !== undefined ? { sessionApprovalAvailable } : {}),
@@ -438,6 +441,7 @@ export function derivePendingUserInputs(
           requestId,
           ...(lifecycleGeneration !== undefined ? { lifecycleGeneration } : {}),
           createdAt: activity.createdAt,
+          ...(activity.turnId ? { turnId: activity.turnId } : {}),
           questions,
         };
       },

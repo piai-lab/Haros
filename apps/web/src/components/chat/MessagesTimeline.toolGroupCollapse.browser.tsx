@@ -71,7 +71,7 @@ function ToolGroupCollapseTimeline(props: { timelineEntries: TimelineEntry[] }) 
   return (
     <MessagesTimeline
       hasMessages
-      isWorking={false}
+      isWorking
       activeTurnInProgress
       activeTurnStartedAt="2026-03-17T19:12:20.000Z"
       timelineEntries={props.timelineEntries}
@@ -121,7 +121,7 @@ describe("MessagesTimeline tool group collapse", () => {
     document.body.innerHTML = "";
   });
 
-  it("collapses the settled run behind a summary and keeps the live run expanded", async () => {
+  it("keeps both command runs behind nested summaries inside the live process", async () => {
     const host = createTimelineHost();
     const screen = await render(
       <ToolGroupCollapseTimeline
@@ -149,16 +149,12 @@ describe("MessagesTimeline tool group collapse", () => {
         expect(document.body.textContent ?? "").not.toContain(command);
       }
 
-      // The live (newest) run renders individual rows with no summary trigger.
-      expect(findSummaryTrigger("Ran 2 commands")).toBeNull();
+      const liveTrigger = findSummaryTrigger("Ran 2 commands");
+      expect(liveTrigger).not.toBeNull();
+      expect(liveTrigger?.getAttribute("aria-expanded")).toBe("false");
       for (const command of LIVE_COMMANDS) {
-        expect(isVisibleOutsideClosedDisclosure(command)).toBe(true);
+        expect(document.body.textContent ?? "").not.toContain(command);
       }
-      const liveCommandLabel = [
-        ...document.querySelectorAll<HTMLElement>("[data-work-entry-display-text]"),
-      ].find((element) => (element.textContent ?? "").includes(LIVE_COMMANDS[0]!));
-      expect(liveCommandLabel).toBeDefined();
-      expect(getComputedStyle(liveCommandLabel!).fontSize).toBe("13px");
 
       trigger.click();
 
@@ -180,7 +176,7 @@ describe("MessagesTimeline tool group collapse", () => {
     }
   });
 
-  it("collapses mid-turn as soon as a thinking block splits the live group", async () => {
+  it("keeps a thinking boundary between independently collapsed command runs", async () => {
     const host = createTimelineHost();
     // One live inline group: settled commands, then a thinking boundary, then
     // the live tail. The run before the boundary must collapse while the turn
@@ -204,12 +200,11 @@ describe("MessagesTimeline tool group collapse", () => {
         expect(document.body.textContent ?? "").not.toContain(command);
       }
 
-      // The run after the thinking boundary is the live tail: expanded rows,
-      // no summary trigger.
-      expect(findSummaryTrigger("Ran 2 commands")).toBeNull();
+      expect(findSummaryTrigger("Ran 2 commands")).not.toBeNull();
       for (const command of LIVE_COMMANDS) {
-        expect(isVisibleOutsideClosedDisclosure(command)).toBe(true);
+        expect(document.body.textContent ?? "").not.toContain(command);
       }
+      expect(document.body.textContent ?? "").toContain("Weighing the next verification step");
     } finally {
       await screen.unmount();
       host.remove();

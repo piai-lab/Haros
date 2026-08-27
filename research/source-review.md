@@ -1251,6 +1251,26 @@ regressions. Any causal-order change must additionally prove live, settled and r
 DOM and accessibility projections; any first-party Tool or B-class Web Surface change must prove typed
 detail/context round trips and fail-closed malformed-input behavior.
 
+### 21.3 Turn-level process disclosure correction
+
+The maintainer's 2026-08-27 comparison of Proma, the adopted Synara mother and OmniMind identified a
+downstream presentation regression after the causal-order repair. Exact adopted Synara
+`a93c47e275870f34ec7aa8cd72f2a0ff6246db7c` folds non-terminal Assistant narration together with Tool
+work into the settled `Worked for` disclosure. OmniMind's later `hasPriorAssistantNarration` and
+`hasReasoningActivity` guards incorrectly treated causal preservation as a requirement to leave all
+process content permanently expanded. The guards and the tests that encoded them are not a fixed
+OmniMind divergence.
+
+The corrected disposition is **Adopt via existing owner** for settled turns: `MessagesTimeline`
+continues to consume the already-adopted canonical Assistant-segment/Activity sequence, preserves that
+order inside one reversible disclosure, and keeps only the terminal/current Assistant result outside.
+The maintainer-approved running behavior is one narrow OmniMind presentation extension: the same
+turn-level owner shows a collapsible, initially open `Working for` view while work is live, then becomes
+an initially closed `Worked for` view when waiting for user action or settled. Actionable
+Ask/Approval/permission and equivalent immediate-action surfaces remain outside; a direct response with
+no visible process has no empty disclosure. Proma is visual reference only and contributes no source
+bytes. This correction does not advance or otherwise change `source-adoptions.json`.
+
 ## 22. OmniMind Agent Plan / Debug compatibility closure
 
 This Slice keeps the adopted Synara source authority at exact commit

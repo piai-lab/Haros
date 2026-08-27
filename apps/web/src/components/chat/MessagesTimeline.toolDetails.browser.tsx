@@ -118,6 +118,11 @@ describe("MessagesTimeline tool details", () => {
     const pendingFrames: Array<FrameRequestCallback | null> = [];
 
     try {
+      const processTrigger = document.querySelector<HTMLButtonElement>(
+        '[data-timeline-row-kind="turn-process"] [data-slot="collapsible-trigger"]',
+      );
+      processTrigger?.click();
+      await expect.poll(() => processTrigger?.getAttribute("aria-expanded")).toBe("true");
       const trigger = document.querySelector<HTMLButtonElement>(
         '[data-tool-detail-trigger="true"]',
       );

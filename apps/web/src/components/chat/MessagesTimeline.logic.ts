@@ -4,12 +4,7 @@
 // Exports: row derivation, structural sharing, copy/timer helpers
 
 import { type MessageId, type TurnId } from "@omnimind/contracts";
-import {
-  type TimelineEntry,
-  type WorkLogEntry,
-  elapsedMilliseconds,
-  formatElapsed,
-} from "../../session-logic";
+import { type TimelineEntry, type WorkLogEntry, elapsedMilliseconds } from "../../session-logic";
 import { normalizeCompactToolLabel as normalizeCompactToolLabelValue } from "../../lib/toolCallLabel";
 import {
   isSummarizableToolCallEntry,
@@ -36,29 +31,37 @@ export function canSubmitUserMessageEdit(input: {
   return (input.allowEmpty || input.draft.trim().length > 0) && !input.disabled;
 }
 
-// Ordered item folded into a settled turn's single "Worked for Xs" disclosure.
-// A turn can interleave tool work and intermediate assistant narration
-// (preambles), so the collapsed panel keeps both in chronological order.
-export type CollapsedTurnItem =
+// Ordered process item owned by one response-level Working/Worked disclosure.
+// The sequence is projected directly from canonical Timeline entries: terminal
+// assistant/result rows are excluded, everything else keeps source order.
+export type TurnProcessItem =
   | { kind: "work"; id: string; entry: WorkLogEntry }
   | { kind: "narration"; id: string; message: ChatMessage };
 
-// A settled turn's collapsed items re-chunked for rendering: consecutive
+// A turn's process items re-chunked for rendering: consecutive
 // summarizable tool rows fold into one "Ran N commands..." disclosure while
 // narration and rich rows pass through individually.
-export type CollapsedTurnChunk =
-  | { kind: "item"; item: CollapsedTurnItem }
+export type TurnProcessChunk =
+  | { kind: "item"; item: TurnProcessItem }
   | { kind: "tool-group"; id: string; entries: WorkLogEntry[] };
+
+export type TurnProcessPhase =
+  | { kind: "running"; turnId: TurnId | null; startedAt: string | null }
+  | {
+      kind: "waiting-for-user";
+      turnId: TurnId | null;
+      startedAt: string | null;
+      waitingAt: string;
+    }
+  | { kind: "settled" };
 
 export type WorkEntryChunk =
   | { kind: "item"; id: string; entry: WorkLogEntry }
   | { kind: "tool-group"; id: string; entries: WorkLogEntry[] };
 
-export function chunkCollapsedTurnItems(
-  items: ReadonlyArray<CollapsedTurnItem>,
-): CollapsedTurnChunk[] {
-  const chunks: CollapsedTurnChunk[] = [];
-  let pendingRun: Extract<CollapsedTurnItem, { kind: "work" }>[] = [];
+export function chunkTurnProcessItems(items: ReadonlyArray<TurnProcessItem>): TurnProcessChunk[] {
+  const chunks: TurnProcessChunk[] = [];
+  let pendingRun: Extract<TurnProcessItem, { kind: "work" }>[] = [];
 
   const flushPendingRun = () => {
     if (pendingRun.length === 0) return;
@@ -89,7 +92,7 @@ export function chunkCollapsedTurnItems(
 }
 
 export function chunkWorkEntries(entries: ReadonlyArray<WorkLogEntry>): WorkEntryChunk[] {
-  return chunkCollapsedTurnItems(
+  return chunkTurnProcessItems(
     entries.map((entry) => ({ kind: "work" as const, id: entry.id, entry })),
   ).map((chunk) => {
     if (chunk.kind === "tool-group") return chunk;
@@ -183,28 +186,6 @@ export function capOpenWorkEntryRenderChunks(
   };
 }
 
-// The newest work group in the transcript — the one still allowed to render its
-// rows inline while the turn is live. Everything older collapses to a summary.
-export function findLastLiveWorkGroupId(rows: ReadonlyArray<MessagesTimelineRow>): string | null {
-  for (let index = rows.length - 1; index >= 0; index -= 1) {
-    const row = rows[index]!;
-    if (row.kind === "work") {
-      return row.id;
-    }
-    if (row.kind === "message") {
-      const groupId = row.inlineWorkGroupId ?? row.leadingWorkGroupId;
-      if (groupId) {
-        return groupId;
-      }
-      // A user message closes the previous turn: nothing before it is live.
-      if (row.message.role === "user") {
-        return null;
-      }
-    }
-  }
-  return null;
-}
-
 // Public reasoning is live only while its canonical `reasoning.updated` row is
 // the causal tail of the active turn. Its same-ID terminal replacement, a
 // following assistant segment, tool activity, or proposed plan closes that
@@ -256,13 +237,10 @@ export type MessagesTimelineRow =
       id: string;
       createdAt: string;
       message: ChatMessage;
-      leadingWorkEntries?: WorkLogEntry[];
-      leadingWorkGroupId?: string;
-      inlineWorkEntries?: WorkLogEntry[];
-      inlineWorkGroupId?: string;
-      collapsedTurnItems?: CollapsedTurnItem[];
-      collapsedWorkElapsed?: string | null;
-      collapsedWorkElapsedMs?: number | null;
+      // Read-only response metadata used by final-result projections (image-only
+      // responses and OmniMind creation recaps). These entries render only in
+      // the sibling turn-process row unless they are explicit result receipts.
+      turnWorkEntries?: WorkLogEntry[];
       durationStart: string;
       showAssistantCopyButton: boolean;
       assistantCopyStreaming: boolean;
@@ -280,14 +258,15 @@ export type MessagesTimelineRow =
       createdAt: string;
       proposedPlan: ProposedPlan;
     }
-  | { kind: "working"; id: string; createdAt: string | null }
   | {
-      // Live-turn header that mirrors the settled "Worked for Xs" disclosure
-      // (label + full-width divider), but is non-collapsible and counts up while
-      // the turn is still running. Sits at the top of the active turn.
-      kind: "working-header";
+      kind: "turn-process";
       id: string;
       createdAt: string;
+      turnId: TurnId | null;
+      phase: "running" | "waiting-for-user" | "settled";
+      items: TurnProcessItem[];
+      elapsedMs: number | null;
+      turnDiffSummary?: TurnDiffSummary | undefined;
     }
   | {
       // Transient "Preparing worktree..." step card shown during the New
@@ -345,9 +324,7 @@ export function resolveAssistantMessageCopyState({
 
 type AssistantMessageDisplayInput = {
   readonly message: Pick<ChatMessage, "text" | "streaming">;
-  readonly leadingWorkEntries?: ReadonlyArray<WorkLogEntry>;
-  readonly inlineWorkEntries?: ReadonlyArray<WorkLogEntry>;
-  readonly collapsedTurnItems?: ReadonlyArray<CollapsedTurnItem>;
+  readonly turnWorkEntries?: ReadonlyArray<WorkLogEntry>;
 };
 
 function isVisibleGeneratedImageEntry(entry: WorkLogEntry): boolean {
@@ -374,13 +351,9 @@ export function resolveAssistantMessageDisplayText(
     return "";
   }
 
-  const hasVisibleGeneratedImage = [
-    ...(input.leadingWorkEntries ?? []),
-    ...(input.inlineWorkEntries ?? []),
-    ...(input.collapsedTurnItems ?? []).flatMap((item) =>
-      item.kind === "work" ? [item.entry] : [],
-    ),
-  ].some(isVisibleGeneratedImageEntry);
+  const hasVisibleGeneratedImage = [...(input.turnWorkEntries ?? [])].some(
+    isVisibleGeneratedImageEntry,
+  );
 
   return hasVisibleGeneratedImage ? null : "(empty response)";
 }
@@ -508,9 +481,49 @@ export function deriveTerminalAssistantMessageIds(
   return terminalAssistantMessageIds;
 }
 
-// Derives transcript rows from timeline entries while keeping live narration and
-// tool rows in visual chronology. Work already waiting when assistant text
-// arrives renders above that text; trailing work renders below it.
+function isOutsideTurnProcessWork(entry: WorkLogEntry): boolean {
+  return Boolean(
+    entry.automation ||
+    entry.omnimindThreadCreation ||
+    isVisibleGeneratedImageEntry(entry) ||
+    entry.attachmentTransferFailures ||
+    entry.engineWebSurface?.status === "waiting-for-user",
+  );
+}
+
+// A tool/process event after an assistant segment invalidates that provisional
+// tail immediately. A later assistant segment becomes the new terminal result.
+// Explicit result receipts do not invalidate an already-final answer.
+function deriveTerminalAssistantMessageIdsFromTimeline(
+  entries: ReadonlyArray<TimelineEntry>,
+): Set<string> {
+  const result = new Set<string>();
+  let candidate: string | null = null;
+  const commit = () => {
+    if (candidate) result.add(candidate);
+    candidate = null;
+  };
+
+  for (const entry of entries) {
+    if (entry.kind === "message") {
+      if (entry.message.role === "assistant") {
+        candidate = entry.message.id;
+      } else {
+        commit();
+      }
+      continue;
+    }
+    if (entry.kind === "work" && !isOutsideTurnProcessWork(entry.entry)) {
+      candidate = null;
+    }
+  }
+  commit();
+  return result;
+}
+
+// Derives one stable process row per user-response boundary. Process items keep
+// canonical Timeline order inside that row; terminal assistant/result rows stay
+// outside and follow it. No text/tool-name heuristics participate in grouping.
 export function deriveMessagesTimelineRows(input: {
   timelineEntries: ReadonlyArray<TimelineEntry>;
   isWorking: boolean;
@@ -519,142 +532,254 @@ export function deriveMessagesTimelineRows(input: {
   activeTurnInProgress?: boolean;
   activeTurnId?: TurnId | null | undefined;
   activeTurnStartedAt: string | null;
+  turnProcessPhase?: TurnProcessPhase | undefined;
   turnDiffSummaryByAssistantMessageId: ReadonlyMap<MessageId, TurnDiffSummary>;
   revertTurnCountByUserMessageId: ReadonlyMap<MessageId, number>;
 }): MessagesTimelineRow[] {
-  const nextRows: MessagesTimelineRow[] = [];
   const timelineMessages = input.timelineEntries.flatMap((entry) =>
     entry.kind === "message" ? [entry.message] : [],
   );
   const durationStartByMessageId = computeMessageDurationStart(timelineMessages);
-  const terminalAssistantMessageIds = deriveTerminalAssistantMessageIds(timelineMessages);
-  let pendingWorkGroup: Extract<MessagesTimelineRow, { kind: "work" }> | null = null;
+  const terminalAssistantMessageIds = deriveTerminalAssistantMessageIdsFromTimeline(
+    input.timelineEntries,
+  );
+  const configuredPhase =
+    input.turnProcessPhase ??
+    (input.isWorking
+      ? ({
+          kind: "running",
+          turnId: input.activeTurnId ?? null,
+          startedAt: input.activeTurnStartedAt,
+        } satisfies TurnProcessPhase)
+      : ({ kind: "settled" } satisfies TurnProcessPhase));
 
-  const groupedEntriesEqual = (
-    left: ReadonlyArray<WorkLogEntry>,
-    right: ReadonlyArray<WorkLogEntry>,
-  ) => left.length === right.length && left.every((entry, index) => entry === right[index]);
+  type ResponseSegment = {
+    boundaryId: string;
+    boundaryCreatedAt: string | null;
+    entries: TimelineEntry[];
+  };
+  type TimelinePart =
+    | { kind: "boundary-message"; entry: Extract<TimelineEntry, { kind: "message" }> }
+    | { kind: "segment"; segment: ResponseSegment };
 
-  const appendWorkEntriesToPreviousAssistant = (
-    groupedEntries: WorkLogEntry[],
-    groupId: string,
-  ): boolean => {
-    const previousRow = nextRows.at(-1);
-    if (
-      !previousRow ||
-      previousRow.kind !== "message" ||
-      previousRow.message.role !== "assistant"
-    ) {
-      return false;
-    }
-
-    const nextInlineWorkEntries = previousRow.inlineWorkEntries
-      ? [...previousRow.inlineWorkEntries, ...groupedEntries]
-      : groupedEntries;
-
-    if (groupedEntriesEqual(previousRow.inlineWorkEntries ?? [], nextInlineWorkEntries)) {
-      return true;
-    }
-
-    previousRow.inlineWorkEntries = nextInlineWorkEntries;
-    previousRow.inlineWorkGroupId ??= groupId;
-    return true;
+  const parts: TimelinePart[] = [];
+  let currentSegment: ResponseSegment | null = null;
+  const flushSegment = () => {
+    if (!currentSegment) return;
+    parts.push({ kind: "segment", segment: currentSegment });
+    currentSegment = null;
   };
 
-  const flushPendingWorkGroup = (options?: { attachToPreviousAssistant?: boolean }) => {
-    if (!pendingWorkGroup) return;
-    const shouldAttachToPreviousAssistant = options?.attachToPreviousAssistant ?? true;
-    if (
-      !shouldAttachToPreviousAssistant ||
-      !appendWorkEntriesToPreviousAssistant(pendingWorkGroup.groupedEntries, pendingWorkGroup.id)
-    ) {
-      nextRows.push(pendingWorkGroup);
-    }
-    pendingWorkGroup = null;
-  };
-
-  for (let index = 0; index < input.timelineEntries.length; index += 1) {
-    const timelineEntry = input.timelineEntries[index];
-    if (!timelineEntry) {
-      continue;
-    }
-
-    if (timelineEntry.kind === "work") {
-      const groupedEntries = [timelineEntry.entry];
-      let cursor = index + 1;
-      while (cursor < input.timelineEntries.length) {
-        const nextEntry = input.timelineEntries[cursor];
-        if (!nextEntry || nextEntry.kind !== "work") break;
-        groupedEntries.push(nextEntry.entry);
-        cursor += 1;
-      }
-      flushPendingWorkGroup();
-      pendingWorkGroup = {
-        kind: "work",
-        id: timelineEntry.id,
-        createdAt: timelineEntry.createdAt,
-        groupedEntries,
+  for (const entry of input.timelineEntries) {
+    if (entry.kind === "message" && entry.message.role === "user") {
+      flushSegment();
+      parts.push({ kind: "boundary-message", entry });
+      currentSegment = {
+        boundaryId: entry.message.id,
+        boundaryCreatedAt: entry.message.createdAt,
+        entries: [],
       };
-      index = cursor - 1;
       continue;
     }
+    currentSegment ??= {
+      boundaryId: "root",
+      boundaryCreatedAt: configuredPhase.kind === "settled" ? null : configuredPhase.startedAt,
+      entries: [],
+    };
+    currentSegment.entries.push(entry);
+  }
+  flushSegment();
 
-    if (timelineEntry.kind === "proposed-plan") {
-      // A plan card is a visible mid-turn artifact. Keep adjacent work as its
-      // own row so final turn collapse can preserve the true chronology.
-      flushPendingWorkGroup({ attachToPreviousAssistant: false });
-      nextRows.push({
-        kind: "proposed-plan",
-        id: timelineEntry.id,
-        createdAt: timelineEntry.createdAt,
-        proposedPlan: timelineEntry.proposedPlan,
-      });
-      continue;
-    }
-
-    const message = timelineEntry.message;
-    const leadingWorkEntries =
-      message.role === "assistant" ? pendingWorkGroup?.groupedEntries : undefined;
-    const leadingWorkGroupId = message.role === "assistant" ? pendingWorkGroup?.id : undefined;
-    if (message.role === "assistant") {
-      pendingWorkGroup = null;
-    } else {
-      flushPendingWorkGroup();
-    }
-
-    const assistantTurnStillInProgress =
-      message.role === "assistant" &&
-      input.activeTurnInProgress === true &&
-      input.activeTurnId != null &&
-      message.turnId === input.activeTurnId;
-
-    nextRows.push({
-      kind: "message",
-      id: timelineEntry.id,
-      createdAt: timelineEntry.createdAt,
-      message,
-      ...(leadingWorkEntries ? { leadingWorkEntries } : {}),
-      ...(leadingWorkGroupId ? { leadingWorkGroupId } : {}),
-      durationStart: durationStartByMessageId.get(message.id) ?? message.createdAt,
-      showAssistantCopyButton:
-        message.role === "assistant" && terminalAssistantMessageIds.has(message.id),
-      assistantCopyStreaming: message.streaming || assistantTurnStillInProgress,
-      ...(timelineEntry.assistantCopyText !== undefined
-        ? { assistantCopyText: timelineEntry.assistantCopyText }
-        : {}),
-      assistantTurnInProgress: assistantTurnStillInProgress,
-      assistantTurnDiffSummary:
-        message.role === "assistant"
-          ? input.turnDiffSummaryByAssistantMessageId.get(message.id)
-          : undefined,
-      revertTurnCount:
-        message.role === "user" ? input.revertTurnCountByUserMessageId.get(message.id) : undefined,
+  // A fresh active response has no Timeline entries yet. Retain its user
+  // boundary so the single live status can appear inside Working for.
+  if (configuredPhase.kind !== "settled" && !parts.some((part) => part.kind === "segment")) {
+    parts.push({
+      kind: "segment",
+      segment: {
+        boundaryId: "root",
+        boundaryCreatedAt: configuredPhase.startedAt,
+        entries: [],
+      },
     });
   }
 
-  // Keep any trailing work summary visually attached to the last answer so a
-  // completed chat does not end with a detached tool-log footer.
-  flushPendingWorkGroup();
+  const segments = parts.flatMap((part) => (part.kind === "segment" ? [part.segment] : []));
+  const phaseTurnId = configuredPhase.kind === "settled" ? null : configuredPhase.turnId;
+  let activeSegment = configuredPhase.kind === "settled" ? null : (segments.at(-1) ?? null);
+  if (phaseTurnId) {
+    const matchingSegment = segments.findLast((segment) =>
+      segment.entries.some((entry) => {
+        if (entry.kind === "work") return entry.entry.turnId === phaseTurnId;
+        if (entry.kind === "message") return entry.message.turnId === phaseTurnId;
+        return false;
+      }),
+    );
+    const tailHasNoTurnIdentity =
+      activeSegment?.entries.every((entry) => {
+        if (entry.kind === "work") return entry.entry.turnId == null;
+        if (entry.kind === "message") return entry.message.turnId == null;
+        return true;
+      }) ?? false;
+    activeSegment = matchingSegment ?? (tailHasNoTurnIdentity ? activeSegment : null);
+  }
+
+  const makeMessageRow = (
+    entry: Extract<TimelineEntry, { kind: "message" }>,
+    options?: {
+      inProgress?: boolean;
+      turnWorkEntries?: WorkLogEntry[];
+      turnDiffSummary?: TurnDiffSummary;
+    },
+  ): Extract<MessagesTimelineRow, { kind: "message" }> => {
+    const message = entry.message;
+    return {
+      kind: "message",
+      id: entry.id,
+      createdAt: entry.createdAt,
+      message,
+      ...(options?.turnWorkEntries?.length ? { turnWorkEntries: options.turnWorkEntries } : {}),
+      durationStart: durationStartByMessageId.get(message.id) ?? message.createdAt,
+      showAssistantCopyButton:
+        message.role === "assistant" && terminalAssistantMessageIds.has(message.id),
+      assistantCopyStreaming: message.streaming || options?.inProgress === true,
+      ...(entry.assistantCopyText !== undefined
+        ? { assistantCopyText: entry.assistantCopyText }
+        : {}),
+      assistantTurnInProgress: options?.inProgress === true,
+      assistantTurnDiffSummary:
+        message.role === "assistant"
+          ? (options?.turnDiffSummary ?? input.turnDiffSummaryByAssistantMessageId.get(message.id))
+          : undefined,
+      revertTurnCount:
+        message.role === "user" ? input.revertTurnCountByUserMessageId.get(message.id) : undefined,
+    };
+  };
+
+  const nextRows: MessagesTimelineRow[] = [];
+  for (const part of parts) {
+    if (part.kind === "boundary-message") {
+      nextRows.push(makeMessageRow(part.entry));
+      continue;
+    }
+
+    const segment = part.segment;
+    const segmentIsActive = segment === activeSegment && configuredPhase.kind !== "settled";
+    const segmentPhase = segmentIsActive ? configuredPhase.kind : "settled";
+    const processItems: TurnProcessItem[] = [];
+    const resultRows: MessagesTimelineRow[] = [];
+    const allWorkEntries: WorkLogEntry[] = [];
+    let mergedTurnDiffSummary: TurnDiffSummary | undefined;
+    let terminalMessageRow: Extract<MessagesTimelineRow, { kind: "message" }> | null = null;
+    let latestTimestamp = segment.boundaryCreatedAt;
+
+    const appendResultWork = (entry: WorkLogEntry) => {
+      const previous = resultRows.at(-1);
+      if (previous?.kind === "work") {
+        previous.groupedEntries.push(entry);
+      } else {
+        resultRows.push({
+          kind: "work",
+          id: `result:${entry.id}`,
+          createdAt: entry.createdAt,
+          groupedEntries: [entry],
+        });
+      }
+    };
+
+    for (const entry of segment.entries) {
+      latestTimestamp = entry.createdAt;
+      if (entry.kind === "work") {
+        allWorkEntries.push(entry.entry);
+        if (entry.entry.omnimindThreadCreation) {
+          // The structured creation recap is a final result rendered beside
+          // the terminal answer; its milestone is metadata, not a second row.
+        } else if (isOutsideTurnProcessWork(entry.entry)) {
+          appendResultWork(entry.entry);
+        } else {
+          processItems.push({ kind: "work", id: entry.entry.id, entry: entry.entry });
+        }
+        continue;
+      }
+      if (entry.kind === "proposed-plan") {
+        resultRows.push({
+          kind: "proposed-plan",
+          id: entry.id,
+          createdAt: entry.createdAt,
+          proposedPlan: entry.proposedPlan,
+        });
+        continue;
+      }
+
+      const message = entry.message;
+      if (message.role === "assistant" && !terminalAssistantMessageIds.has(message.id)) {
+        processItems.push({ kind: "narration", id: message.id, message });
+        const summary = input.turnDiffSummaryByAssistantMessageId.get(message.id);
+        if (summary) {
+          mergedTurnDiffSummary = mergedTurnDiffSummary
+            ? mergeTurnDiffSummaries(mergedTurnDiffSummary, summary)
+            : summary;
+        }
+        continue;
+      }
+
+      const row = makeMessageRow(entry, {
+        inProgress: segmentIsActive,
+        turnWorkEntries: allWorkEntries,
+      });
+      if (message.role === "assistant") {
+        const summary = input.turnDiffSummaryByAssistantMessageId.get(message.id);
+        if (summary) {
+          mergedTurnDiffSummary = mergedTurnDiffSummary
+            ? mergeTurnDiffSummaries(mergedTurnDiffSummary, summary)
+            : summary;
+        }
+        terminalMessageRow = row;
+      }
+      resultRows.push(row);
+    }
+
+    if (terminalMessageRow) {
+      terminalMessageRow.turnWorkEntries = allWorkEntries;
+      terminalMessageRow.assistantTurnDiffSummary = mergedTurnDiffSummary;
+    }
+
+    const firstProcessItem = processItems.at(0);
+    const firstProcessAt =
+      firstProcessItem?.kind === "work"
+        ? firstProcessItem.entry.createdAt
+        : firstProcessItem?.message.createdAt;
+    const startedAt =
+      segmentIsActive && configuredPhase.startedAt
+        ? configuredPhase.startedAt
+        : (segment.boundaryCreatedAt ?? firstProcessAt ?? latestTimestamp);
+    const endedAt =
+      segmentIsActive && configuredPhase.kind === "waiting-for-user"
+        ? configuredPhase.waitingAt
+        : (terminalMessageRow?.message.completedAt ?? latestTimestamp);
+    const shouldRenderProcess =
+      processItems.length > 0 ||
+      (segmentIsActive && configuredPhase.kind === "running" && !input.worktreeSetupOpen);
+
+    if (shouldRenderProcess && startedAt) {
+      const lastProcessTurnId = processItems
+        .toReversed()
+        .map((item) => (item.kind === "work" ? item.entry.turnId : item.message.turnId))
+        .find((turnId): turnId is TurnId => turnId != null);
+      nextRows.push({
+        kind: "turn-process",
+        id: `turn-process:${segment.boundaryId}`,
+        createdAt: startedAt,
+        turnId: segmentIsActive
+          ? configuredPhase.turnId
+          : (terminalMessageRow?.message.turnId ?? lastProcessTurnId ?? null),
+        phase: segmentPhase,
+        items: processItems,
+        elapsedMs: endedAt ? elapsedMilliseconds(startedAt, endedAt) : null,
+        ...(mergedTurnDiffSummary ? { turnDiffSummary: mergedTurnDiffSummary } : {}),
+      });
+    }
+    nextRows.push(...resultRows);
+  }
 
   if (input.worktreeSetup) {
     nextRows.push({
@@ -665,214 +790,7 @@ export function deriveMessagesTimelineRows(input: {
     });
   }
 
-  // The generic live-status row remains the single transient wait surface.
-  // Provider work rows are transcript history and must never replace it.
-  if (input.isWorking && !(input.worktreeSetup && input.worktreeSetupOpen)) {
-    nextRows.push({
-      kind: "working",
-      id: "working-indicator-row",
-      createdAt: input.activeTurnStartedAt,
-    });
-  }
-
-  collapseSettledTurns(nextRows, {
-    terminalAssistantMessageIds,
-    activeTurnInProgress: input.activeTurnInProgress ?? false,
-    activeTurnId: input.activeTurnId ?? null,
-  });
-
-  // The live turn wears a "Working for Xs" header + divider — the counting-up
-  // twin of a settled turn's "Worked for Xs" disclosure. It anchors to the top
-  // of the active turn (right after the user message that opened it) and needs a
-  // real start time to count from; the trailing status row covers the gap before
-  // one exists. Inserted after collapse so folding is untouched.
-  if (
-    input.isWorking &&
-    input.activeTurnStartedAt &&
-    !(input.worktreeSetup && input.worktreeSetupOpen)
-  ) {
-    nextRows.splice(findLiveTurnHeaderInsertIndex(nextRows), 0, {
-      kind: "working-header",
-      id: "working-header-row",
-      createdAt: input.activeTurnStartedAt,
-    });
-  }
-
   return nextRows;
-}
-
-// The live turn starts at the most recent user message, so its header slots in
-// right after it. Absent any user message (degenerate transcripts) the header
-// leads the transcript so the "Working for" copy is never lost.
-function findLiveTurnHeaderInsertIndex(rows: ReadonlyArray<MessagesTimelineRow>): number {
-  for (let index = rows.length - 1; index >= 0; index -= 1) {
-    const row = rows[index]!;
-    if (row.kind === "message" && row.message.role === "user") {
-      return index + 1;
-    }
-  }
-  return 0;
-}
-
-// Returns the terminal assistant only when it is still the transcript tail.
-// A newer user message means the next turn has begun but has not produced text yet.
-function findTailTerminalAssistantMessageId(
-  rows: ReadonlyArray<MessagesTimelineRow>,
-  terminalAssistantMessageIds: ReadonlySet<string>,
-): string | null {
-  for (let index = rows.length - 1; index >= 0; index -= 1) {
-    const row = rows[index]!;
-    if (row.kind !== "message") {
-      continue;
-    }
-    return row.message.role === "assistant" && terminalAssistantMessageIds.has(row.message.id)
-      ? row.message.id
-      : null;
-  }
-  return null;
-}
-
-// Post-pass: collapse each *settled* turn into a single "Worked for Xs"
-// disclosure on the turn's terminal assistant message. This only folds turns
-// with one assistant message: once a provider interleaves visible narration and
-// tools, the UI cannot safely infer which text is a preamble versus the answer,
-// so the causal transcript stays inline. The live turn also stays expanded.
-function collapseSettledTurns(
-  rows: MessagesTimelineRow[],
-  options: {
-    terminalAssistantMessageIds: ReadonlySet<string>;
-    activeTurnInProgress: boolean;
-    activeTurnId: TurnId | null;
-  },
-): void {
-  const { terminalAssistantMessageIds, activeTurnInProgress, activeTurnId } = options;
-  const lastTerminalAssistantMessageId = activeTurnInProgress
-    ? findTailTerminalAssistantMessageId(rows, terminalAssistantMessageIds)
-    : null;
-
-  const collectWorkItems = (entries: ReadonlyArray<WorkLogEntry>, into: CollapsedTurnItem[]) => {
-    for (const entry of entries) {
-      into.push({ kind: "work", id: entry.id, entry });
-    }
-  };
-
-  const earliestTimestamp = (a: string, b: string): string => {
-    const aMs = Date.parse(a);
-    const bMs = Date.parse(b);
-    if (Number.isNaN(aMs)) return b;
-    if (Number.isNaN(bMs)) return a;
-    return bMs < aMs ? b : a;
-  };
-
-  for (let pass = rows.length - 1; pass >= 0; pass -= 1) {
-    const row = rows[pass]!;
-    if (row.kind !== "message" || row.message.role !== "assistant") continue;
-    const message = row.message;
-    // Only the terminal message of a turn owns the collapsed group.
-    if (!terminalAssistantMessageIds.has(message.id)) continue;
-    // Never collapse the live turn: streaming text or the in-progress turn stays
-    // inline so the user sees output as it arrives.
-    if (message.streaming) continue;
-    const turnId = message.turnId ?? null;
-    const turnIsActive =
-      activeTurnInProgress &&
-      (activeTurnId != null
-        ? (turnId != null && turnId === activeTurnId) ||
-          message.id === lastTerminalAssistantMessageId
-        : message.id === lastTerminalAssistantMessageId);
-    if (turnIsActive) continue;
-
-    // Scan back to the response boundary collecting rows to fold. Provider
-    // mini-turns can have distinct turnIds inside one assistant answer, so the
-    // user message boundary is the stable UI grouping point.
-    const foldIndices: number[] = [];
-    let hasPriorAssistantNarration = false;
-    for (let scan = pass - 1; scan >= 0; scan -= 1) {
-      const prev = rows[scan]!;
-      if (prev.kind === "work") {
-        foldIndices.push(scan);
-        continue;
-      }
-      if (prev.kind === "message" && prev.message.role === "assistant") {
-        hasPriorAssistantNarration = true;
-        foldIndices.push(scan);
-        continue;
-      }
-      if (prev.kind === "proposed-plan") {
-        // The plan card stays visible, but it should not strand earlier
-        // narration/work outside the final "Worked for..." disclosure.
-        continue;
-      }
-      break;
-    }
-    // Interleaved assistant text is user-visible content, not a reliable
-    // "preamble" signal. Keep the whole causal transcript inline instead of
-    // guessing which segment is the answer and moving the rest behind Worked
-    // for. Single-answer turns still collapse their tool-only work normally.
-    if (hasPriorAssistantNarration) continue;
-    foldIndices.reverse();
-
-    // Public reasoning is itself visible transcript content. Keeping the whole
-    // turn inline preserves reasoning/tool/answer causality and leaves the
-    // reasoning disclosure as the only owner of its collapsed state.
-    const hasReasoningActivity = [
-      ...foldIndices.flatMap((index) => {
-        const folded = rows[index]!;
-        return folded.kind === "work" ? folded.groupedEntries : [];
-      }),
-      ...(row.leadingWorkEntries ?? []),
-      ...(row.inlineWorkEntries ?? []),
-    ].some(isReasoningUpdateWorkEntry);
-    if (hasReasoningActivity) continue;
-
-    const collapsedItems: CollapsedTurnItem[] = [];
-    // The disclosure folds everything back to the user boundary, so "Worked
-    // for" must start where the folded segment starts. The terminal row's own
-    // durationStart advances past intermediate *completed* assistant messages
-    // (e.g. a failed attempt before a retry), which would report only the tail
-    // of the turn instead of the full run.
-    let collapsedStart = row.durationStart;
-    for (const index of foldIndices) {
-      const folded = rows[index]!;
-      if (folded.kind === "work") {
-        collapsedStart = earliestTimestamp(collapsedStart, folded.createdAt);
-        collectWorkItems(folded.groupedEntries, collapsedItems);
-      } else if (folded.kind === "message" && folded.message.role === "assistant") {
-        collapsedStart = earliestTimestamp(collapsedStart, folded.durationStart);
-        if (folded.assistantTurnDiffSummary) {
-          row.assistantTurnDiffSummary = mergeTurnDiffSummaries(
-            folded.assistantTurnDiffSummary,
-            row.assistantTurnDiffSummary ?? folded.assistantTurnDiffSummary,
-          );
-        }
-        if (folded.leadingWorkEntries) collectWorkItems(folded.leadingWorkEntries, collapsedItems);
-        if (folded.collapsedTurnItems) collapsedItems.push(...folded.collapsedTurnItems);
-        collapsedItems.push({ kind: "narration", id: folded.message.id, message: folded.message });
-        if (folded.inlineWorkEntries) collectWorkItems(folded.inlineWorkEntries, collapsedItems);
-      }
-    }
-    // The terminal's own work rows are details around the final answer; fold
-    // them into the disclosure so completed chats do not end with tool-log rows.
-    if (row.leadingWorkEntries) collectWorkItems(row.leadingWorkEntries, collapsedItems);
-    if (row.inlineWorkEntries) collectWorkItems(row.inlineWorkEntries, collapsedItems);
-
-    if (collapsedItems.length > 0) {
-      const elapsed = formatElapsed(collapsedStart, message.completedAt);
-      const elapsedMs = elapsedMilliseconds(collapsedStart, message.completedAt);
-      row.collapsedTurnItems = collapsedItems;
-      row.collapsedWorkElapsed = elapsed ?? null;
-      row.collapsedWorkElapsedMs = elapsedMs;
-      delete row.leadingWorkEntries;
-      delete row.leadingWorkGroupId;
-      delete row.inlineWorkEntries;
-      delete row.inlineWorkGroupId;
-
-      for (const index of foldIndices.toSorted((a, b) => b - a)) {
-        rows.splice(index, 1);
-      }
-      pass -= foldIndices.length;
-    }
-  }
 }
 
 // Reuses stable row references so streaming updates only invalidate rows whose
@@ -1142,9 +1060,9 @@ function workLogEntryArraysEqual(
   return left.every((entry, index) => workLogEntryContentEqual(entry, right[index]!));
 }
 
-function collapsedTurnItemsEqual(
-  left: ReadonlyArray<CollapsedTurnItem> | undefined,
-  right: ReadonlyArray<CollapsedTurnItem> | undefined,
+function turnProcessItemsEqual(
+  left: ReadonlyArray<TurnProcessItem> | undefined,
+  right: ReadonlyArray<TurnProcessItem> | undefined,
 ): boolean {
   if (left === right) return true;
   if (!left || !right) return false;
@@ -1166,11 +1084,17 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
   if (a.kind !== b.kind || a.id !== b.id) return false;
 
   switch (a.kind) {
-    case "working":
-      return a.createdAt === (b as typeof a).createdAt;
-
-    case "working-header":
-      return a.createdAt === (b as typeof a).createdAt;
+    case "turn-process": {
+      const bp = b as typeof a;
+      return (
+        a.createdAt === bp.createdAt &&
+        a.turnId === bp.turnId &&
+        a.phase === bp.phase &&
+        a.elapsedMs === bp.elapsedMs &&
+        a.turnDiffSummary === bp.turnDiffSummary &&
+        turnProcessItemsEqual(a.items, bp.items)
+      );
+    }
 
     case "worktree-setup": {
       const bw = b as typeof a;
@@ -1197,13 +1121,7 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
       const bm = b as typeof a;
       return (
         a.message === bm.message &&
-        workLogEntryArraysEqual(a.leadingWorkEntries, bm.leadingWorkEntries) &&
-        a.leadingWorkGroupId === bm.leadingWorkGroupId &&
-        workLogEntryArraysEqual(a.inlineWorkEntries, bm.inlineWorkEntries) &&
-        a.inlineWorkGroupId === bm.inlineWorkGroupId &&
-        collapsedTurnItemsEqual(a.collapsedTurnItems, bm.collapsedTurnItems) &&
-        a.collapsedWorkElapsed === bm.collapsedWorkElapsed &&
-        a.collapsedWorkElapsedMs === bm.collapsedWorkElapsedMs &&
+        workLogEntryArraysEqual(a.turnWorkEntries, bm.turnWorkEntries) &&
         a.durationStart === bm.durationStart &&
         a.showAssistantCopyButton === bm.showAssistantCopyButton &&
         a.assistantCopyStreaming === bm.assistantCopyStreaming &&

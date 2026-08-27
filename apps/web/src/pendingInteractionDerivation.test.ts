@@ -136,8 +136,11 @@ describe("derivePendingApprovals", () => {
       derivePendingApprovals(freshActivities, undefined, {
         ...options,
         authoritativeHasPending: undefined,
-      }).map((pending) => pending.requestId),
-    ).toEqual(["req-current", "req-current-concurrent"]);
+      }).map((pending) => [pending.requestId, pending.turnId]),
+    ).toEqual([
+      ["req-current", "turn-current"],
+      ["req-current-concurrent", "turn-current"],
+    ]);
   });
 
   it("tracks open approvals and removes resolved ones", () => {
@@ -524,8 +527,8 @@ describe("derivePendingUserInputs", () => {
       derivePendingUserInputs(freshActivities, undefined, {
         ...options,
         authoritativeHasPending: true,
-      }).map((pending) => pending.requestId),
-    ).toEqual(["req-user-input-current"]);
+      }).map((pending) => [pending.requestId, pending.turnId]),
+    ).toEqual([["req-user-input-current", "turn-current"]]);
     expect(
       derivePendingUserInputs(freshActivities, undefined, {
         ...options,

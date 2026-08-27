@@ -1444,7 +1444,7 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain(formatShortTimestamp("2026-03-17T19:12:29.000Z", "locale"));
-    expect(markup).toContain("Worked for 1s");
+    expect(markup).toContain("Worked for 2s");
     expect(markup).not.toContain("data-scroll-anchor-ignore");
     expect(markup).not.toContain(
       `${formatShortTimestamp("2026-03-17T19:12:29.000Z", "locale")} • 1.0s`,
@@ -2051,7 +2051,7 @@ describe("MessagesTimeline", () => {
         />,
       );
 
-      expect(markup).toContain('data-timeline-row-kind="work"');
+      expect(markup).toContain('data-timeline-row-kind="turn-process"');
       expect(markup).toContain('data-work-entry-display-text="true"');
       expect(markup).toContain('data-live-activity-meta="true"');
       expect(markup).toContain('data-testid="thinking-status"');
@@ -2214,7 +2214,7 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain('data-timeline-row-kind="work"');
   });
 
-  it("expands live inline tool calls past the cap when the group is toggled open", async () => {
+  it("keeps long live tool runs behind the process row's nested summary", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const markup = renderToStaticMarkup(
       <MessagesTimeline
@@ -2314,8 +2314,8 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Tool 5");
-    expect(markup).toContain("Show less");
+    expect(markup).toContain("Used 5 tools");
+    expect(markup).not.toContain("Tool 5");
   });
 
   it("renders inline file-change tool calls as edited rows with diff stats", async () => {
@@ -2511,7 +2511,7 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("&gt;/bin/zsh -lc");
   });
 
-  it("uses the GitHub logo for git and GitHub CLI command rows", async () => {
+  it("summarizes adjacent git and GitHub CLI command rows inside process", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     // Rendered as a live turn: once settled, consecutive command rows fold into
     // a closed "Ran N commands" summary and individual rows are not in markup.
@@ -2567,8 +2567,8 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup.match(/data-tool-icon="github"/g)).toHaveLength(2);
-    expect(markup).not.toContain("/central-icons-reversed/git.svg");
+    expect(markup).toContain("Ran 2 commands");
+    expect(markup).toContain('data-timeline-row-kind="turn-process"');
   });
 
   it("marks command rows with captured details as clickable", async () => {
@@ -3448,7 +3448,7 @@ describe("MessagesTimeline", () => {
     expect(markup).toContain("-4");
     expect(markup).toContain("+41");
     expect(markup).toContain("-5");
-    expect(markup).not.toContain(">File Change<");
+    expect(markup).toContain('aria-hidden="true" inert=""');
   });
 
   it("renders a collapsible changed files header with ui-font filenames", async () => {

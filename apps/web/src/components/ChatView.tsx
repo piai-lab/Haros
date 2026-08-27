@@ -67,6 +67,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ComponentProps,
   type MouseEvent,
   type ReactNode,
   type WheelEvent,
@@ -3211,6 +3212,56 @@ export default function ChatView({
   const activeTurnLayoutKey =
     activeThreadId === null ? null : `${activeThreadId}:${activeLatestTurn?.turnId ?? "idle"}`;
   const activeTurnInProgress = activeTurnLayoutLive || keepSettledActiveTurnLayout;
+  const turnProcessPhase = useMemo<
+    ComponentProps<typeof ChatTranscriptPane>["turnProcessPhase"]
+  >(() => {
+    const pendingRequests = [...pendingApprovals, ...pendingUserInputs];
+    const matchingRequests = activeTurnIdForTranscript
+      ? pendingRequests.filter((request) => request.turnId === activeTurnIdForTranscript)
+      : [];
+    const uniquelyAttributableRequest =
+      matchingRequests.length === 0 &&
+      activeTurnIdForTranscript != null &&
+      !latestTurnSettled &&
+      pendingRequests.length === 1 &&
+      pendingRequests[0]?.turnId === undefined
+        ? pendingRequests[0]
+        : null;
+    const waitingRequests =
+      matchingRequests.length > 0
+        ? matchingRequests
+        : uniquelyAttributableRequest
+          ? [uniquelyAttributableRequest]
+          : [];
+    const waitingAt = waitingRequests
+      .map((request) => request.createdAt)
+      .toSorted()
+      .at(0);
+    if (waitingAt) {
+      return {
+        kind: "waiting-for-user",
+        turnId: activeTurnIdForTranscript ?? null,
+        startedAt: activeWorkStartedAt,
+        waitingAt,
+      };
+    }
+    if (isWorking || latestTurnLive) {
+      return {
+        kind: "running",
+        turnId: activeTurnIdForTranscript ?? null,
+        startedAt: activeWorkStartedAt,
+      };
+    }
+    return { kind: "settled" };
+  }, [
+    activeTurnIdForTranscript,
+    activeWorkStartedAt,
+    isWorking,
+    latestTurnLive,
+    latestTurnSettled,
+    pendingApprovals,
+    pendingUserInputs,
+  ]);
   const isComposerApprovalState = activePendingApproval !== null;
   const isComposerEditorDisabled =
     isConnecting || isComposerApprovalState || activePendingProgress !== null;
@@ -12691,6 +12742,7 @@ export default function ChatView({
                     onResolveWorktreeSetup={onResolveWorktreeSetup}
                     activeTurnInProgress={activeTurnInProgress}
                     activeTurnStartedAt={activeWorkStartedAt}
+                    turnProcessPhase={turnProcessPhase}
                     listRef={legendListRef}
                     timelineControllerRef={timelineControllerRef}
                     pinnedMessageIds={pinnedMessageIds}

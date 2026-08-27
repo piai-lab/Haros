@@ -33,7 +33,6 @@ import {
   deriveTimelineEntries,
   formatClockDuration,
   formatClockElapsed,
-  isFileChangeWorkLogEntry,
   type WorkLogEntry,
 } from "../../session-logic";
 import {
@@ -81,11 +80,7 @@ import { FileAttachmentChip } from "./FileAttachmentChip";
 import { FileCommentsSummaryChip } from "./FileCommentsSummaryChip";
 import { BrowserAnnotationStrip } from "./BrowserAnnotationStrip";
 import { UserMessagePastedTextCard } from "./PastedTextChip";
-import {
-  EditedFileRowContent,
-  prefersCompactWorkEntryRow,
-  TimelineWorkEntryRow,
-} from "./TimelineWorkEntryRow";
+import { prefersCompactWorkEntryRow, TimelineWorkEntryRow } from "./TimelineWorkEntryRow";
 import {
   hasLeadingUserMedia,
   resolveUserTurnMarker,
@@ -94,19 +89,19 @@ import {
 import {
   canSubmitUserMessageEdit,
   capOpenWorkEntryRenderChunks,
-  chunkCollapsedTurnItems,
+  chunkTurnProcessItems,
   computeStableMessagesTimelineRows,
   deriveMessagesTimelineRows,
   findLiveReasoningEntryId,
-  findLastLiveWorkGroupId,
   MAX_VISIBLE_WORK_LOG_ENTRIES,
   planWorkEntryRenderChunks,
-  type CollapsedTurnChunk,
-  type CollapsedTurnItem,
   type MessagesTimelineRow,
   resolveAssistantMessageCopyState,
   resolveAssistantMessageDisplayText,
   type StableMessagesTimelineRowsState,
+  type TurnProcessChunk,
+  type TurnProcessItem,
+  type TurnProcessPhase,
 } from "./MessagesTimeline.logic";
 import { summarizeToolCallGroup } from "./toolCallGroup.logic";
 import { ToolCallGroupSummaryRow } from "./ToolCallGroupSummaryRow";
@@ -165,7 +160,6 @@ import {
   type MessageTrailAnchor,
 } from "./messageTrail.logic";
 
-const MAX_VISIBLE_INLINE_TOOL_ENTRIES = 4;
 // Changed-files list in the per-turn card is capped so large turns stay compact;
 // the rest are revealed via an inline "Show more" row.
 const MAX_VISIBLE_CHANGED_FILES = 5;
@@ -179,6 +173,27 @@ const JUMP_HIGHLIGHT_DURATION_MS = 1200;
 const MARKER_FINE_SCROLL_RETRY_TIMEOUT_MS = 900;
 const MARKER_FINE_SCROLL_MAX_RETRY_FRAMES = 90;
 const MESSAGE_SEND_ENTER_ANIMATION_MS = 180;
+const EMPTY_TURN_DIFF_FILE_STATS = new Map<string, { additions: number; deletions: number }>();
+const turnDiffFileStatsCache = new WeakMap<
+  TurnDiffSummary,
+  ReadonlyMap<string, { additions: number; deletions: number }>
+>();
+
+function turnDiffFileStats(
+  summary: TurnDiffSummary | undefined,
+): ReadonlyMap<string, { additions: number; deletions: number }> {
+  if (!summary) return EMPTY_TURN_DIFF_FILE_STATS;
+  const cached = turnDiffFileStatsCache.get(summary);
+  if (cached) return cached;
+  const stats = new Map(
+    summary.files.map((file) => [
+      file.path,
+      { additions: file.additions ?? 0, deletions: file.deletions ?? 0 },
+    ]),
+  );
+  turnDiffFileStatsCache.set(summary, stats);
+  return stats;
+}
 
 function reasoningDisclosureDefaultOpen(entry: WorkLogEntry, turnIsLive: boolean): boolean {
   return (
@@ -419,6 +434,7 @@ interface MessagesTimelineProps {
   isWorking: boolean;
   activeTurnInProgress: boolean;
   activeTurnStartedAt: string | null;
+  turnProcessPhase?: TurnProcessPhase;
   /** Transient "New worktree" setup progress; rendered as an ephemeral step card at the tail. */
   worktreeSetup?: WorktreeSetupSnapshot | null;
   /** Action already chosen from the worktree setup card; disables its buttons while it applies. */
@@ -530,6 +546,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   isWorking,
   activeTurnInProgress,
   activeTurnStartedAt,
+  turnProcessPhase,
   worktreeSetup: worktreeSetupProp,
   worktreeSetupPendingAction: worktreeSetupPendingActionProp,
   onResolveWorktreeSetup,
@@ -692,13 +709,18 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     },
     [onToggleWorkGroup],
   );
-  const [expandedCollapsedWork, setExpandedCollapsedWork] = useState<Record<string, boolean>>({});
-  const setCollapsedWorkExpanded = useCallback((messageId: string, open: boolean) => {
-    setExpandedCollapsedWork((current) => ({
-      ...current,
-      [messageId]: open,
-    }));
-  }, []);
+  const [turnProcessOpenState, setTurnProcessOpenState] = useState<
+    Record<string, { phase: TurnProcessPhase["kind"]; open: boolean }>
+  >({});
+  const setTurnProcessOpen = useCallback(
+    (rowId: string, phase: TurnProcessPhase["kind"], open: boolean) => {
+      setTurnProcessOpenState((current) => ({
+        ...current,
+        [rowId]: { phase, open },
+      }));
+    },
+    [],
+  );
   // Manual open/closed overrides for the collapsed tool-group summary rows,
   // keyed per group. Deliberately separate from expandedWorkGroupsState, whose
   // meaning is "show rows past the live +N cap".
@@ -804,6 +826,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         activeTurnInProgress,
         activeTurnId,
         activeTurnStartedAt,
+        turnProcessPhase,
         turnDiffSummaryByAssistantMessageId,
         revertTurnCountByUserMessageId,
       }),
@@ -814,6 +837,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       activeTurnInProgress,
       activeTurnId,
       activeTurnStartedAt,
+      turnProcessPhase,
       turnDiffSummaryByAssistantMessageId,
       revertTurnCountByUserMessageId,
     ],
@@ -947,9 +971,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       }
     });
   }, [resolvedListRef]);
-  // The newest work group renders its rows inline while the turn is live; every
-  // older run of tool calls folds into a "Ran N commands..." summary row.
-  const lastLiveWorkGroupId = useMemo(() => findLastLiveWorkGroupId(rows), [rows]);
   const firstUserMessageId = useMemo(() => {
     for (const row of rows) {
       if (row.kind === "message" && row.message.role === "user") {
@@ -958,24 +979,21 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     }
     return null;
   }, [rows]);
-  const settledTurnCollapseTransitions = useSettledTurnCollapseTransitions(rows);
   const enteringMessageRowIds = useMessageSendEnterAnimations(rows, enteringUserMessageIds);
   const timelineExtraData = useMemo(
     () => ({
       crossTaskOrigin,
       editingUserMessageId,
       enteringMessageRowIds,
-      expandedCollapsedWork,
+      turnProcessOpenState,
       expandedFileChangesByTurnId,
       expandedFileListByTurnId,
       expandedUserMessagesById,
       expandedWorkGroupsState,
       firstUserMessageId,
       highlightedMessageId,
-      lastLiveWorkGroupId,
       pinnedMessageIds,
       reasoningDisclosureOverrides,
-      settledTurnCollapseTransitions,
       submittingEditedUserMessageId,
       threadMarkersByMessageId,
       toolGroupSummaryOverrides,
@@ -984,17 +1002,15 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       crossTaskOrigin,
       editingUserMessageId,
       enteringMessageRowIds,
-      expandedCollapsedWork,
+      turnProcessOpenState,
       expandedFileChangesByTurnId,
       expandedFileListByTurnId,
       expandedUserMessagesById,
       expandedWorkGroupsState,
       firstUserMessageId,
       highlightedMessageId,
-      lastLiveWorkGroupId,
       pinnedMessageIds,
       reasoningDisclosureOverrides,
-      settledTurnCollapseTransitions,
       submittingEditedUserMessageId,
       threadMarkersByMessageId,
       toolGroupSummaryOverrides,
@@ -1123,7 +1139,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   const tailContentRowId = useMemo(() => {
     for (let index = rows.length - 1; index >= 0; index -= 1) {
       const row = rows[index]!;
-      if (row.kind !== "working" && row.kind !== "worktree-setup") return row.id;
+      if (row.kind !== "worktree-setup") return row.id;
     }
     return null;
   }, [rows]);
@@ -1369,13 +1385,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       className={cn(
         CHAT_COLUMN_FRAME_CLASS_NAME,
         "px-1 transition-colors duration-500",
-        row.kind === "working" ||
+        (row.kind === "turn-process" && row.phase === "running") ||
           (row.kind === "message" &&
             row.message.role === "assistant" &&
             row.assistantTurnInProgress)
           ? "pb-1"
           : row.kind === "work" ||
-              row.kind === "working-header" ||
+              row.kind === "turn-process" ||
               (row.kind === "message" && row.message.role === "assistant")
             ? "pb-2"
             : "pb-4",
@@ -1390,6 +1406,150 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       data-message-role={row.kind === "message" ? row.message.role : undefined}
     >
       {forkDividerBeforeRowId === row.id ? forkSourceDivider : null}
+      {row.kind === "turn-process" &&
+        (() => {
+          const savedState = turnProcessOpenState[row.id];
+          const isOpen =
+            savedState?.phase === row.phase ? savedState.open : row.phase === "running";
+          const processPanelId = `turn-process-panel-${row.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+          const fileDiffStatByPath = turnDiffFileStats(row.turnDiffSummary);
+          const renderProcessItem = (item: TurnProcessItem, keyPrefix: string) =>
+            item.kind === "work" ? (
+              <TimelineWorkEntryRow
+                key={`${keyPrefix}:work:${row.id}:${item.id}`}
+                workEntry={item.entry}
+                chatMetaFontSizePx={appTypographyScale.chatMetaPx}
+                textFontSizePx={appTypographyScale.activityPx}
+                density={prefersCompactWorkEntryRow(item.entry) ? "compact" : "default"}
+                reasoningDefaultOpen={reasoningDisclosureDefaultOpen(
+                  item.entry,
+                  row.phase === "running" && item.entry.id === liveReasoningEntryId,
+                )}
+                reasoningOpenOverride={reasoningDisclosureOverrides[item.entry.id]}
+                onReasoningOpenChange={setReasoningDisclosureOpen}
+                reasoningIsLive={row.phase === "running" && item.entry.id === liveReasoningEntryId}
+                fileDiffStatByPath={fileDiffStatByPath}
+                markdownCwd={markdownCwd}
+                onImageExpand={onImageExpand}
+                onOpenTurnDiff={onOpenTurnDiff}
+                timestampFormat={timestampFormat}
+                {...(onOpenAgentActivity ? { onOpenAgentActivity } : {})}
+                {...(onOpenAutomation ? { onOpenAutomation } : {})}
+                {...(onOpenEngineWebSurface ? { onOpenEngineWebSurface } : {})}
+                {...((item.entry.turnId ?? row.turnId)
+                  ? { turnId: (item.entry.turnId ?? row.turnId)! }
+                  : {})}
+              />
+            ) : (
+              <div
+                key={`${keyPrefix}:narration:${row.id}:${item.id}`}
+                className={MUTED_LABEL_TEXT_CLASS_NAME}
+              >
+                <ChatMarkdown
+                  text={item.message.text}
+                  cwd={markdownCwd}
+                  isStreaming={false}
+                  style={chatTypographyStyle}
+                  onImageExpand={onImageExpand}
+                />
+              </div>
+            );
+          const renderProcessChunk = (chunk: TurnProcessChunk) => {
+            if (chunk.kind === "item") {
+              return renderProcessItem(chunk.item, "turn-process");
+            }
+            const summary = summarizeToolCallGroup(chunk.entries);
+            if (!summary) {
+              return chunk.entries.map((entry) =>
+                renderProcessItem({ kind: "work", id: entry.id, entry }, "turn-process"),
+              );
+            }
+            const summaryOverrideKey = `${row.id}:tool-group:${chunk.id}`;
+            return (
+              <ToolCallGroupSummaryRow
+                key={summaryOverrideKey}
+                summary={summary}
+                open={toolGroupSummaryOverrides[summaryOverrideKey] ?? false}
+                onToggle={(open) => setToolGroupSummaryOpen(summaryOverrideKey, open)}
+                fontSizePx={appTypographyScale.activityPx}
+                renderChildren={() => (
+                  <div className="space-y-0.5 pt-0.5">
+                    {chunk.entries.map((entry) =>
+                      renderProcessItem({ kind: "work", id: entry.id, entry }, "turn-process"),
+                    )}
+                  </div>
+                )}
+              />
+            );
+          };
+
+          return (
+            <div className="mb-1" data-turn-process-phase={row.phase}>
+              <Collapsible
+                className="group/turn-process"
+                open={isOpen}
+                onOpenChange={(open) => setTurnProcessOpen(row.id, row.phase, open)}
+              >
+                <CollapsibleTrigger
+                  aria-controls={processPanelId}
+                  className={cn(
+                    "inline-flex items-center gap-1 pb-2 text-left transition-colors duration-200 hover:text-foreground",
+                    MUTED_LABEL_TEXT_CLASS_NAME,
+                  )}
+                  style={{ fontSize: `${appTypographyScale.activityPx}px` }}
+                >
+                  {row.phase === "running" ? (
+                    nowIso ? (
+                      <span>
+                        {t("timeline.workingFor", {
+                          duration:
+                            formatClockElapsed(
+                              row.createdAt,
+                              nowIso,
+                              locale === "zh-CN" ? "zh" : "en",
+                            ) ?? (locale === "zh-CN" ? "0秒" : "0s"),
+                        })}
+                      </span>
+                    ) : (
+                      <WorkingTimer createdAt={row.createdAt} />
+                    )
+                  ) : (
+                    <span>
+                      {row.elapsedMs !== null
+                        ? t("timeline.workedFor", {
+                            duration: formatClockDuration(
+                              row.elapsedMs,
+                              locale === "zh-CN" ? "zh" : "en",
+                            ),
+                          })
+                        : t("timeline.details")}
+                    </span>
+                  )}
+                  <DisclosureChevron open={isOpen} className="text-muted-foreground/70" />
+                </CollapsibleTrigger>
+                <CollapsiblePanel
+                  id={processPanelId}
+                  keepMounted
+                  aria-hidden={!isOpen}
+                  inert={!isOpen ? true : undefined}
+                >
+                  <div className={disclosureContentClassName(isOpen, "mb-2.5 space-y-1.5")}>
+                    {chunkTurnProcessItems(row.items).map(renderProcessChunk)}
+                    {row.phase === "running" ? (
+                      <ThinkingStatus
+                        accessibleLabel={t("timeline.workingStatus")}
+                        fontSizePx={appTypographyScale.activityPx}
+                        hints={thinkingHints}
+                        theme={resolvedTheme}
+                      />
+                    ) : null}
+                  </div>
+                </CollapsiblePanel>
+              </Collapsible>
+              <div className="h-px w-full bg-border" />
+            </div>
+          );
+        })()}
       {row.kind === "work" &&
         (() => {
           const groupId = row.id;
@@ -1401,11 +1561,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           if (groupedEntries.length === 0) {
             return null;
           }
-          const reasoningTurnIsLive =
-            (activeTurnInProgress || isWorking) &&
-            (activeTurnId
-              ? groupedEntries.some((workEntry) => workEntry.turnId === activeTurnId)
-              : groupId === lastLiveWorkGroupId);
           const renderEntryRow = (workEntry: WorkLogEntry) => (
             <TimelineWorkEntryRow
               key={`work-row:${workEntry.id}`}
@@ -1413,13 +1568,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               chatMetaFontSizePx={appTypographyScale.chatMetaPx}
               textFontSizePx={appTypographyScale.activityPx}
               density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
-              reasoningDefaultOpen={reasoningDisclosureDefaultOpen(
-                workEntry,
-                reasoningTurnIsLive && workEntry.id === liveReasoningEntryId,
-              )}
+              reasoningDefaultOpen={reasoningDisclosureDefaultOpen(workEntry, false)}
               reasoningOpenOverride={reasoningDisclosureOverrides[workEntry.id]}
               onReasoningOpenChange={setReasoningDisclosureOpen}
-              reasoningIsLive={reasoningTurnIsLive && workEntry.id === liveReasoningEntryId}
+              reasoningIsLive={false}
               markdownCwd={markdownCwd}
               onImageExpand={onImageExpand}
               timestampFormat={timestampFormat}
@@ -1428,11 +1580,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               {...(onOpenEngineWebSurface ? { onOpenEngineWebSurface } : {})}
             />
           );
-          const isLiveGroup =
-            groupId === lastLiveWorkGroupId && (activeTurnInProgress || isWorking);
           const isExpanded = expandedWorkGroupsState[groupId] ?? false;
           const plannedRenderChunks = planWorkEntryRenderChunks(groupedEntries, {
-            tailIsLive: isLiveGroup,
+            tailIsLive: false,
           });
           const cappedRenderPlan = capOpenWorkEntryRenderChunks(plannedRenderChunks, {
             expanded: isExpanded,
@@ -1753,41 +1903,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           const messageText = resolveAssistantMessageDisplayText(row);
           const messageMarkers =
             threadMarkersByMessageId.get(row.message.id) ?? EMPTY_MESSAGE_MARKERS;
-          const buildWorkDisplay = (workEntries: WorkLogEntry[], workGroupId: string | null) => {
-            const displayEntries = workEntries.filter((entry) => !entry.omnimindThreadCreation);
-            const toolEntries = displayEntries.filter((entry) => entry.tone === "tool");
-            const toolGroupId = toolEntries.length > 0 ? workGroupId : null;
-            const toolExpanded =
-              toolGroupId !== null ? (expandedWorkGroupsState[toolGroupId] ?? false) : false;
-            const hasGenericFileChangeEntry = toolEntries.some(
-              (workEntry) =>
-                isFileChangeWorkLogEntry(workEntry) && (workEntry.changedFiles?.length ?? 0) === 0,
-            );
-            const isRenderableToolEntry = (workEntry: WorkLogEntry) =>
-              !(
-                hasGenericFileChangeEntry &&
-                isFileChangeWorkLogEntry(workEntry) &&
-                (workEntry.changedFiles?.length ?? 0) === 0
-              );
-            return {
-              workGroupId,
-              toolGroupId,
-              toolExpanded,
-              // Tool limits and summaries may hide only tool entries; this
-              // ordered stream remains the sole visual sequence for public
-              // reasoning, tool activity, and other status rows.
-              orderedRenderableEntries: displayEntries.filter(isRenderableToolEntry),
-              hasGenericFileChangeEntry,
-            };
-          };
-          const leadingWorkDisplay = buildWorkDisplay(
-            row.leadingWorkEntries ?? [],
-            row.leadingWorkGroupId ?? null,
-          );
-          const inlineWorkDisplay = buildWorkDisplay(
-            row.inlineWorkEntries ?? [],
-            row.inlineWorkGroupId ?? null,
-          );
           const assistantCopyState = resolveAssistantMessageCopyState({
             text: row.assistantCopyText ?? row.message.text ?? null,
             showCopyButton: row.showAssistantCopyButton,
@@ -1806,21 +1921,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             Boolean(onForkMessage) &&
             (canForkMessage?.(row.message.id) ?? false);
           const turnSummary = row.assistantTurnDiffSummary;
-          const fileDiffStatByPath = new Map(
-            (turnSummary?.files ?? []).map((file) => [
-              file.path,
-              {
-                additions: file.additions ?? 0,
-                deletions: file.deletions ?? 0,
-              },
-            ]),
-          );
-          const inlineEditedFilesFromTurnSummary =
-            (leadingWorkDisplay.hasGenericFileChangeEntry ||
-              inlineWorkDisplay.hasGenericFileChangeEntry) &&
-            (turnSummary?.files.length ?? 0) > 0
-              ? turnSummary!.files
-              : [];
           // Only the turn's final answer carries a timestamp. Intermediate
           // working preambles (and their inline tool calls) stay timestamp-free
           // so a live turn reads as one block, not a stack of timestamped
@@ -1839,13 +1939,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           ]
             .filter((value): value is string => Boolean(value))
             .join(" • ");
-          const allTurnWorkEntries = [
-            ...(row.leadingWorkEntries ?? []),
-            ...(row.inlineWorkEntries ?? []),
-            ...(row.collapsedTurnItems ?? []).flatMap((item) =>
-              item.kind === "work" ? [item.entry] : [],
-            ),
-          ];
+          const allTurnWorkEntries = row.turnWorkEntries ?? [];
           const omnimindThreadCreationRecaps = [
             ...new Map(
               allTurnWorkEntries.flatMap((entry) =>
@@ -1860,272 +1954,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               ),
             ).values(),
           ];
-          const collapsedTurnItems = row.collapsedTurnItems?.filter(
-            (item) => item.kind !== "work" || !item.entry.omnimindThreadCreation,
-          );
-          const hasCollapsedWork = Boolean(collapsedTurnItems && collapsedTurnItems.length > 0);
-          const isCollapsedWorkExpanded = hasCollapsedWork
-            ? (expandedCollapsedWork[row.message.id] ?? false)
-            : false;
-          const settledCollapseTransition = isCollapsedWorkExpanded
-            ? undefined
-            : settledTurnCollapseTransitions[row.message.id];
           const isTailContentRow = row.id === tailContentRowId;
-          const renderWorkDisplay = (
-            display: typeof leadingWorkDisplay,
-            placement: "leading" | "inline",
-          ) => {
-            // A leading work group can still belong to the active turn while the
-            // assistant answer streams after it. Keep that turn lifecycle
-            // separate from the causal-tail decision: the turn remains live,
-            // while reasoning closes as soon as a later visible segment exists.
-            const reasoningTurnIsLive = row.assistantTurnInProgress === true;
-            const renderInlineWorkRow = (workEntry: WorkLogEntry) => (
-              <TimelineWorkEntryRow
-                key={`${placement}-work-row:${row.message.id}:${workEntry.id}`}
-                workEntry={workEntry}
-                chatMetaFontSizePx={appTypographyScale.chatMetaPx}
-                textFontSizePx={appTypographyScale.activityPx}
-                density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
-                reasoningDefaultOpen={reasoningDisclosureDefaultOpen(
-                  workEntry,
-                  reasoningTurnIsLive && workEntry.id === liveReasoningEntryId,
-                )}
-                reasoningOpenOverride={reasoningDisclosureOverrides[workEntry.id]}
-                onReasoningOpenChange={setReasoningDisclosureOpen}
-                reasoningIsLive={reasoningTurnIsLive && workEntry.id === liveReasoningEntryId}
-                fileDiffStatByPath={fileDiffStatByPath}
-                markdownCwd={markdownCwd}
-                onImageExpand={onImageExpand}
-                onOpenTurnDiff={onOpenTurnDiff}
-                timestampFormat={timestampFormat}
-                {...(onOpenAgentActivity ? { onOpenAgentActivity } : {})}
-                {...(onOpenAutomation ? { onOpenAutomation } : {})}
-                {...(onOpenEngineWebSurface ? { onOpenEngineWebSurface } : {})}
-                {...(turnSummary?.turnId ? { turnId: turnSummary.turnId } : {})}
-              />
-            );
-            const isLiveGroup =
-              placement === "inline" &&
-              display.workGroupId !== null &&
-              display.workGroupId === lastLiveWorkGroupId &&
-              (activeTurnInProgress || isWorking);
-            // Leading groups are never a live tail: the message's own text
-            // already follows them, so their last tool run collapses too.
-            const plannedRenderChunks = planWorkEntryRenderChunks(
-              display.orderedRenderableEntries,
-              {
-                tailIsLive: placement === "inline" && isLiveGroup,
-              },
-            );
-            const cappedRenderPlan = capOpenWorkEntryRenderChunks(plannedRenderChunks, {
-              expanded: display.toolExpanded,
-              maxVisibleEntries: MAX_VISIBLE_INLINE_TOOL_ENTRIES,
-              keep: activeTurnInProgress ? "last" : "first",
-              shouldCapEntry: (workEntry) => workEntry.tone === "tool",
-            });
-            const renderChunks = cappedRenderPlan.chunks;
-            const hasVisibleEntries = renderChunks.some(
-              (chunk) => chunk.summary !== null || chunk.entries.length > 0,
-            );
-            if (hasCollapsedWork || !hasVisibleEntries) {
-              return null;
-            }
-            return (
-              <div
-                className={cn(
-                  "space-y-0.5",
-                  placement === "leading"
-                    ? row.assistantTurnInProgress
-                      ? "mb-0.5"
-                      : "mb-2"
-                    : "mt-2",
-                )}
-              >
-                {renderChunks.map((chunk) => {
-                  if (!chunk.summary) {
-                    return chunk.entries.map(renderInlineWorkRow);
-                  }
-                  const summary = chunk.summary;
-                  // Message ids stay stable while a live group's first-entry id can drift.
-                  const summaryOverrideKey = `${placement}:${row.message.id}:${chunk.id}`;
-                  return (
-                    <ToolCallGroupSummaryRow
-                      key={`inline-tool-summary:${summaryOverrideKey}`}
-                      summary={summary}
-                      open={toolGroupSummaryOverrides[summaryOverrideKey] ?? false}
-                      onToggle={(open) => setToolGroupSummaryOpen(summaryOverrideKey, open)}
-                      fontSizePx={appTypographyScale.activityPx}
-                      renderChildren={() => (
-                        <div className="space-y-px pt-0.5">
-                          {chunk.entries.map(renderInlineWorkRow)}
-                        </div>
-                      )}
-                    />
-                  );
-                })}
-                {display.toolGroupId && cappedRenderPlan.hasOverflow && (
-                  <div className="py-0.5">
-                    <button
-                      type="button"
-                      className="text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:text-foreground"
-                      style={{ fontSize: `${appTypographyScale.activityPx}px` }}
-                      onClick={() => handleToggleWorkGroup(display.toolGroupId!)}
-                    >
-                      {display.toolExpanded
-                        ? t("common.showLess")
-                        : t(
-                            cappedRenderPlan.hiddenEntryCount === 1
-                              ? "timeline.showMoreToolCall"
-                              : "timeline.showMoreToolCalls",
-                            { count: cappedRenderPlan.hiddenEntryCount },
-                          )}
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          };
-          const renderCollapsedTurnItem = (item: CollapsedTurnItem, keyPrefix: string) =>
-            item.kind === "work" ? (
-              <TimelineWorkEntryRow
-                key={`${keyPrefix}:work:${row.message.id}:${item.id}`}
-                workEntry={item.entry}
-                chatMetaFontSizePx={appTypographyScale.chatMetaPx}
-                textFontSizePx={appTypographyScale.activityPx}
-                density={prefersCompactWorkEntryRow(item.entry) ? "compact" : "default"}
-                reasoningDefaultOpen={reasoningDisclosureDefaultOpen(item.entry, false)}
-                reasoningOpenOverride={reasoningDisclosureOverrides[item.entry.id]}
-                onReasoningOpenChange={setReasoningDisclosureOpen}
-                reasoningIsLive={false}
-                markdownCwd={markdownCwd}
-                onImageExpand={onImageExpand}
-                timestampFormat={timestampFormat}
-                {...(onOpenAgentActivity ? { onOpenAgentActivity } : {})}
-                {...(onOpenAutomation ? { onOpenAutomation } : {})}
-                {...(onOpenEngineWebSurface ? { onOpenEngineWebSurface } : {})}
-              />
-            ) : (
-              <div
-                key={`${keyPrefix}:narration:${row.message.id}:${item.id}`}
-                className={MUTED_LABEL_TEXT_CLASS_NAME}
-              >
-                <ChatMarkdown
-                  text={item.message.text}
-                  cwd={markdownCwd}
-                  isStreaming={false}
-                  style={chatTypographyStyle}
-                  onImageExpand={onImageExpand}
-                />
-              </div>
-            );
-          const renderCollapsedTurnChunk = (chunk: CollapsedTurnChunk, keyPrefix: string) => {
-            if (chunk.kind === "item") {
-              return renderCollapsedTurnItem(chunk.item, keyPrefix);
-            }
-            const summary = summarizeToolCallGroup(chunk.entries);
-            if (!summary) {
-              return chunk.entries.map((entry) =>
-                renderCollapsedTurnItem({ kind: "work", id: entry.id, entry }, keyPrefix),
-              );
-            }
-            const summaryOverrideKey = `turn:${row.message.id}:${chunk.id}`;
-            return (
-              <ToolCallGroupSummaryRow
-                key={`${keyPrefix}:tool-group:${row.message.id}:${chunk.id}`}
-                summary={summary}
-                open={toolGroupSummaryOverrides[summaryOverrideKey] ?? false}
-                onToggle={(open) => setToolGroupSummaryOpen(summaryOverrideKey, open)}
-                fontSizePx={appTypographyScale.activityPx}
-                renderChildren={() => (
-                  <div className="space-y-0.5 pt-0.5">
-                    {chunk.entries.map((entry) =>
-                      renderCollapsedTurnItem({ kind: "work", id: entry.id, entry }, keyPrefix),
-                    )}
-                  </div>
-                )}
-              />
-            );
-          };
           return (
             <>
-              {settledCollapseTransition && (
-                <div
-                  aria-hidden="true"
-                  inert
-                  // The clone is visual-only for the entire close transition; keep it inert
-                  // even while the inner DisclosureRegion starts open for its first frame.
-                  className="pointer-events-none mb-3 select-none"
-                  data-settled-turn-collapse-transition="true"
-                >
-                  <DisclosureRegion
-                    open={settledCollapseTransition.open}
-                    contentClassName="space-y-1.5 pb-2.5"
-                  >
-                    {chunkCollapsedTurnItems(settledCollapseTransition.items).map((chunk) =>
-                      renderCollapsedTurnChunk(chunk, "settling-turn-close"),
-                    )}
-                  </DisclosureRegion>
-                </div>
-              )}
-              {hasCollapsedWork && (
-                <div className="mb-3">
-                  <Collapsible
-                    className="group/collapsed-work"
-                    open={isCollapsedWorkExpanded}
-                    onOpenChange={(open) => {
-                      setCollapsedWorkExpanded(row.message.id, open);
-                    }}
-                  >
-                    <CollapsibleTrigger
-                      // ChatView's click anchor preserves this trigger's screen position
-                      // while the disclosure height animates, so opening it should not tail-scroll.
-                      // Keep the trigger inside the row's shared leading inset. Pulling
-                      // the W left by its side-bearing clips its antialiasing at common
-                      // desktop scales and breaks parity with the live-status orb.
-                      className={cn(
-                        "inline-flex items-center gap-1 pb-2 text-left transition-colors duration-200 hover:text-foreground",
-                        MUTED_LABEL_TEXT_CLASS_NAME,
-                      )}
-                      style={{ fontSize: `${appTypographyScale.activityPx}px` }}
-                    >
-                      <span>
-                        {row.collapsedWorkElapsed
-                          ? t("timeline.workedFor", {
-                              duration:
-                                row.collapsedWorkElapsedMs !== undefined &&
-                                row.collapsedWorkElapsedMs !== null
-                                  ? formatClockDuration(
-                                      row.collapsedWorkElapsedMs,
-                                      locale === "zh-CN" ? "zh" : "en",
-                                    )
-                                  : row.collapsedWorkElapsed,
-                            })
-                          : t("timeline.details")}
-                      </span>
-                      <DisclosureChevron
-                        open={isCollapsedWorkExpanded}
-                        className="text-muted-foreground/70"
-                      />
-                    </CollapsibleTrigger>
-                    <CollapsiblePanel>
-                      <div
-                        className={disclosureContentClassName(
-                          isCollapsedWorkExpanded,
-                          "mb-2.5 space-y-1.5",
-                        )}
-                      >
-                        {chunkCollapsedTurnItems(collapsedTurnItems!).map((chunk) =>
-                          renderCollapsedTurnChunk(chunk, "collapsed-panel"),
-                        )}
-                      </div>
-                    </CollapsiblePanel>
-                  </Collapsible>
-                  <div className="h-px w-full bg-border" />
-                </div>
-              )}
               <div className="group min-w-0 py-0.5">
-                {renderWorkDisplay(leadingWorkDisplay, "leading")}
                 {messageText !== null ? (
                   <div data-assistant-message-id={row.message.id}>
                     <ChatMarkdown
@@ -2139,28 +1971,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     />
                   </div>
                 ) : null}
-                {renderWorkDisplay(inlineWorkDisplay, "inline")}
-                {inlineEditedFilesFromTurnSummary.length > 0 && (
-                  <div className="mt-2 space-y-0.5">
-                    {inlineEditedFilesFromTurnSummary.map((file) => (
-                      <button
-                        key={`inline-summary-edit:${row.message.id}:${file.path}`}
-                        type="button"
-                        className="group/file-row flex w-full max-w-full items-center gap-2 px-0 py-1.5 text-left transition-colors duration-150 focus-visible:outline-none"
-                        title={file.path}
-                        onClick={() => onOpenTurnDiff(turnSummary!.turnId, file.path)}
-                      >
-                        <EditedFileRowContent
-                          filePath={file.path}
-                          additions={file.additions}
-                          deletions={file.deletions}
-                          fontSizePx={appTypographyScale.activityPx}
-                          compact={false}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                )}
                 {!row.assistantTurnInProgress && row.showAssistantCopyButton
                   ? omnimindThreadCreationRecaps.map((creation) => (
                       <div key={creation.operationId} className="mt-2 mb-1">
@@ -2450,37 +2260,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         </div>
       )}
 
-      {row.kind === "working-header" && (
-        <div>
-          {/* Non-collapsible twin of the settled "Worked for" header: same label
-              tone, size, full-width divider, and safe leading inset, but counting up live. */}
-          <div
-            className={cn("pb-2", MUTED_LABEL_TEXT_CLASS_NAME)}
-            style={{ fontSize: `${appTypographyScale.activityPx}px` }}
-          >
-            {nowIso ? (
-              t("timeline.workingFor", {
-                duration:
-                  formatClockElapsed(row.createdAt, nowIso, locale === "zh-CN" ? "zh" : "en") ??
-                  (locale === "zh-CN" ? "0秒" : "0s"),
-              })
-            ) : (
-              <WorkingTimer createdAt={row.createdAt} />
-            )}
-          </div>
-          <div className="h-px w-full bg-border" />
-        </div>
-      )}
-
-      {row.kind === "working" && (
-        <ThinkingStatus
-          accessibleLabel={t("timeline.workingStatus")}
-          fontSizePx={appTypographyScale.activityPx}
-          hints={thinkingHints}
-          theme={resolvedTheme}
-        />
-      )}
-
       {row.kind === "worktree-setup" && (
         <DisclosureRegion open={row.open}>
           <div className="pt-0.5 pb-1">
@@ -2576,14 +2355,6 @@ export const MessagesTimeline = memo(function MessagesTimeline({
 });
 
 type TimelineMessage = Extract<MessagesTimelineRow, { kind: "message" }>["message"];
-type SettledTurnCollapseTransition = {
-  open: boolean;
-  items: readonly CollapsedTurnItem[];
-};
-type SettledTurnCollapseTimer = {
-  closeFrame: number | null;
-  cleanupTimeout: number | null;
-};
 
 // Reuse stable row references so streaming updates only force React work for
 // rows whose visible content actually changed.
@@ -2777,203 +2548,6 @@ function reconcileWorktreeSetupPresentation(params: {
       setPresented(null);
     }, DISCLOSURE_TRANSITION_MS + DISCLOSURE_CLEANUP_BUFFER_MS);
   });
-}
-
-// Keeps newly folded turn details mounted for one shared-disclosure close
-// animation, so settled turns do not disappear in one height recalculation.
-function useSettledTurnCollapseTransitions(
-  rows: readonly MessagesTimelineRow[],
-): Readonly<Record<string, SettledTurnCollapseTransition>> {
-  const [transitions, setTransitions] = useState<Record<string, SettledTurnCollapseTransition>>({});
-  const previousAssistantMessageIdsRef = useRef<ReadonlySet<string>>(new Set());
-  const previousCollapsedSignaturesRef = useRef<ReadonlyMap<string, string>>(new Map());
-  const watchedLiveMessageIdsRef = useRef(new Set<string>());
-  const timersRef = useRef(new Map<string, SettledTurnCollapseTimer>());
-
-  const clearTransitionTimer = useCallback((messageId: string) => {
-    const timer = timersRef.current.get(messageId);
-    if (!timer) {
-      return;
-    }
-    if (timer.closeFrame !== null) {
-      window.cancelAnimationFrame(timer.closeFrame);
-    }
-    if (timer.cleanupTimeout !== null) {
-      window.clearTimeout(timer.cleanupTimeout);
-    }
-    timersRef.current.delete(messageId);
-  }, []);
-
-  const scheduleTransitionClose = useCallback(
-    (messageId: string) => {
-      clearTransitionTimer(messageId);
-      const closeFrame = window.requestAnimationFrame(() => {
-        const timer = timersRef.current.get(messageId);
-        if (!timer) {
-          return;
-        }
-        timersRef.current.set(messageId, { ...timer, closeFrame: null });
-        setTransitions((current) => {
-          const transition = current[messageId];
-          if (!transition || !transition.open) {
-            return current;
-          }
-          return {
-            ...current,
-            [messageId]: { ...transition, open: false },
-          };
-        });
-
-        const cleanupTimeout = window.setTimeout(() => {
-          timersRef.current.delete(messageId);
-          setTransitions((current) => {
-            if (!current[messageId]) {
-              return current;
-            }
-            const next = { ...current };
-            delete next[messageId];
-            return next;
-          });
-        }, DISCLOSURE_TRANSITION_MS + DISCLOSURE_CLEANUP_BUFFER_MS);
-        timersRef.current.set(messageId, { closeFrame: null, cleanupTimeout });
-      });
-      timersRef.current.set(messageId, { closeFrame, cleanupTimeout: null });
-    },
-    [clearTransitionTimer],
-  );
-
-  useLayoutEffect(() => {
-    applySettledTurnCollapseTransitions({
-      rows,
-      previousAssistantMessageIdsRef,
-      previousCollapsedSignaturesRef,
-      watchedLiveMessageIdsRef,
-      clearTransitionTimer,
-      scheduleTransitionClose,
-      setTransitions,
-    });
-  }, [clearTransitionTimer, rows, scheduleTransitionClose]);
-
-  useEffect(
-    () => () => {
-      for (const messageId of Array.from(timersRef.current.keys())) {
-        clearTransitionTimer(messageId);
-      }
-    },
-    [clearTransitionTimer],
-  );
-
-  return transitions;
-}
-
-// Detects turns that just folded and drives their close animation. Kept in a module
-// helper (not compiled) so the synchronous open setState stays out of the hook while
-// its ordering against scheduleTransitionClose — which needs the open state committed
-// before it schedules the closing rAF — is preserved exactly.
-function applySettledTurnCollapseTransitions(params: {
-  rows: readonly MessagesTimelineRow[];
-  previousAssistantMessageIdsRef: RefObject<ReadonlySet<string>>;
-  previousCollapsedSignaturesRef: RefObject<ReadonlyMap<string, string>>;
-  watchedLiveMessageIdsRef: RefObject<Set<string>>;
-  clearTransitionTimer: (messageId: string) => void;
-  scheduleTransitionClose: (messageId: string) => void;
-  setTransitions: Dispatch<SetStateAction<Record<string, SettledTurnCollapseTransition>>>;
-}): void {
-  const {
-    rows,
-    previousAssistantMessageIdsRef,
-    previousCollapsedSignaturesRef,
-    watchedLiveMessageIdsRef,
-    clearTransitionTimer,
-    scheduleTransitionClose,
-    setTransitions,
-  } = params;
-  const currentAssistantMessageIds = new Set<string>();
-  const currentCollapsed = new Map<
-    string,
-    { signature: string; items: readonly CollapsedTurnItem[] }
-  >();
-  const watchedLiveMessageIds = watchedLiveMessageIdsRef.current;
-
-  for (const row of rows) {
-    if (row.kind !== "message" || row.message.role !== "assistant") {
-      continue;
-    }
-    const messageId = row.message.id;
-    currentAssistantMessageIds.add(messageId);
-    // Only the assistant row belonging to the live turn has an expanded layout
-    // on screen worth animating away. Thread-wide working state also covers
-    // reconnects, approvals, and newer turns, so it must not qualify history.
-    if (row.assistantTurnInProgress || row.message.streaming) {
-      watchedLiveMessageIds.add(messageId);
-    }
-    if (row.collapsedTurnItems && row.collapsedTurnItems.length > 0) {
-      currentCollapsed.set(messageId, {
-        signature: collapsedTurnItemsSignature(row.collapsedTurnItems),
-        items: row.collapsedTurnItems,
-      });
-    }
-  }
-
-  for (const messageId of watchedLiveMessageIds) {
-    if (!currentAssistantMessageIds.has(messageId)) {
-      watchedLiveMessageIds.delete(messageId);
-    }
-  }
-
-  const previousAssistantMessageIds = previousAssistantMessageIdsRef.current;
-  const previousCollapsedSignatures = previousCollapsedSignaturesRef.current;
-  const startedTransitions: Array<{
-    messageId: string;
-    items: readonly CollapsedTurnItem[];
-  }> = [];
-
-  for (const [messageId, collapsed] of currentCollapsed) {
-    if (
-      watchedLiveMessageIds.has(messageId) &&
-      previousAssistantMessageIds.has(messageId) &&
-      !previousCollapsedSignatures.has(messageId)
-    ) {
-      startedTransitions.push({ messageId, items: collapsed.items });
-    }
-  }
-
-  previousAssistantMessageIdsRef.current = currentAssistantMessageIds;
-  previousCollapsedSignaturesRef.current = new Map(
-    Array.from(currentCollapsed, ([messageId, collapsed]) => [messageId, collapsed.signature]),
-  );
-
-  setTransitions((current) => {
-    let next: Record<string, SettledTurnCollapseTransition> | null = null;
-    const ensureNext = () => {
-      next ??= { ...current };
-      return next;
-    };
-
-    for (const messageId of Object.keys(current)) {
-      if (!currentCollapsed.has(messageId)) {
-        clearTransitionTimer(messageId);
-        delete ensureNext()[messageId];
-      }
-    }
-
-    for (const transition of startedTransitions) {
-      ensureNext()[transition.messageId] = {
-        open: true,
-        items: transition.items,
-      };
-    }
-
-    return next ?? current;
-  });
-
-  for (const transition of startedTransitions) {
-    scheduleTransitionClose(transition.messageId);
-  }
-}
-
-function collapsedTurnItemsSignature(items: readonly CollapsedTurnItem[]): string {
-  return items.map((item) => `${item.kind}:${item.id}`).join("|");
 }
 
 // Keep the live clock scoped to tiny leaf components so active Claude turns do

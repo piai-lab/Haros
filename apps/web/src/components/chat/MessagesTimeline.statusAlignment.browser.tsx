@@ -128,7 +128,7 @@ describe("MessagesTimeline turn-status alignment", () => {
   });
 
   it.each(LIVE_STATUS_CASES)(
-    "keeps the live header and orb on the same safe leading edge at %ipx in %s mode for %s",
+    "keeps the live trigger and nested orb on the same safe leading edge at %ipx in %s mode for %s",
     async (widthPx, theme, locale) => {
       harness.settings.localePreference = locale;
       const host = createTimelineHost(widthPx);
@@ -136,44 +136,37 @@ describe("MessagesTimeline turn-status alignment", () => {
       try {
         await settleLayout();
 
-        const headerRow = host.querySelector<HTMLElement>(
-          '[data-timeline-row-kind="working-header"]',
+        const processRow = host.querySelector<HTMLElement>(
+          '[data-timeline-row-kind="turn-process"]',
         );
-        const workingRow = host.querySelector<HTMLElement>('[data-timeline-row-kind="working"]');
-        const headerLabel = headerRow?.firstElementChild?.firstElementChild as HTMLElement | null;
-        const orb = workingRow?.querySelector<HTMLCanvasElement>(
+        const trigger = processRow?.querySelector<HTMLButtonElement>(
+          '[data-slot="collapsible-trigger"]',
+        );
+        const orb = processRow?.querySelector<HTMLCanvasElement>(
           'canvas[data-composing-orb="official-20px"]',
         );
 
-        expect(headerRow).not.toBeNull();
-        expect(workingRow).not.toBeNull();
-        expect(headerLabel?.textContent).toContain(
+        expect(processRow).not.toBeNull();
+        expect(trigger?.textContent).toContain(
           locale === "zh-CN" ? "正在工作，已用时 2.0秒" : "Working for 2s",
         );
         expect(orb).not.toBeNull();
-        if (!headerRow || !workingRow || !headerLabel || !orb) return;
+        if (!processRow || !trigger || !orb) return;
 
-        const headerLeft = headerLabel.getBoundingClientRect().left;
+        const headerLeft = trigger.getBoundingClientRect().left;
         const orbLeft = orb.getBoundingClientRect().left;
         const hostRect = host.getBoundingClientRect();
         const hostCenter = hostRect.x + hostRect.width / 2;
         expect(Math.abs(headerLeft - orbLeft)).toBeLessThanOrEqual(0.5);
         expect(
           Math.abs(
-            headerRow.getBoundingClientRect().x +
-              headerRow.getBoundingClientRect().width / 2 -
+            processRow.getBoundingClientRect().x +
+              processRow.getBoundingClientRect().width / 2 -
               hostCenter,
           ),
         ).toBeLessThanOrEqual(0.5);
-        expect(
-          Math.abs(
-            workingRow.getBoundingClientRect().x +
-              workingRow.getBoundingClientRect().width / 2 -
-              hostCenter,
-          ),
-        ).toBeLessThanOrEqual(0.5);
-        expect(headerLeft).toBeGreaterThanOrEqual(headerRow.getBoundingClientRect().left + 3.5);
-        expect(orbLeft).toBeGreaterThanOrEqual(workingRow.getBoundingClientRect().left + 3.5);
+        expect(headerLeft).toBeGreaterThanOrEqual(processRow.getBoundingClientRect().left + 3.5);
+        expect(orbLeft).toBeGreaterThanOrEqual(processRow.getBoundingClientRect().left + 3.5);
       } finally {
         screen.unmount();
         host.remove();
@@ -190,7 +183,7 @@ describe("MessagesTimeline turn-status alignment", () => {
 
       try {
         await settleLayout();
-        const row = host.querySelector<HTMLElement>('[data-message-id="message-assistant-inline"]');
+        const row = host.querySelector<HTMLElement>('[data-timeline-row-kind="turn-process"]');
         const expectedLabel = locale === "zh-CN" ? "工作了" : "Worked for";
         const trigger = [...(row?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find(
           (button) => button.textContent?.includes(expectedLabel),
@@ -218,9 +211,7 @@ describe("MessagesTimeline turn-status alignment", () => {
 
     try {
       await settleLayout();
-      const headerRow = host.querySelector<HTMLElement>(
-        '[data-timeline-row-kind="working-header"]',
-      );
+      const headerRow = host.querySelector<HTMLElement>('[data-timeline-row-kind="turn-process"]');
       expect(headerRow?.textContent).toContain("正在工作，已用时");
       expect(headerRow?.textContent).not.toContain("Working for");
     } finally {
