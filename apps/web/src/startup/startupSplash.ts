@@ -7,12 +7,8 @@
 
 import { createStartupSplashDom } from "./startupSplashDom";
 
-export type StartupPresentation = "full" | "brief";
-
 const FULL_MIN_DISPLAY_MS = 1_400;
-const BRIEF_MIN_DISPLAY_MS = 500;
 const FULL_EXIT_MS = 1_100;
-const BRIEF_EXIT_MS = 380;
 const REDUCED_MIN_DISPLAY_MS = 300;
 const REDUCED_EXIT_MS = 220;
 
@@ -22,7 +18,6 @@ let expectsComposer = true;
 let focusedComposerTerminal = false;
 let finishing = false;
 let startedAt = 0;
-let presentation: StartupPresentation = "brief";
 let finishTimer: number | null = null;
 let removeTimer: number | null = null;
 
@@ -41,7 +36,6 @@ function removeSplash(): void {
   removeTimer = null;
   document.getElementById("startup-splash")?.remove();
   delete document.documentElement.dataset.startupSplash;
-  delete document.documentElement.dataset.startupPresentation;
   delete document.documentElement.dataset.startupReady;
   active = false;
 }
@@ -50,19 +44,11 @@ function finishStartupSplash(): void {
   if (!active || finishing) return;
   finishing = true;
   const reduced = isReducedMotion();
-  const minimum = reduced
-    ? REDUCED_MIN_DISPLAY_MS
-    : presentation === "full"
-      ? FULL_MIN_DISPLAY_MS
-      : BRIEF_MIN_DISPLAY_MS;
+  const minimum = reduced ? REDUCED_MIN_DISPLAY_MS : FULL_MIN_DISPLAY_MS;
   const wait = Math.max(0, minimum - (performance.now() - startedAt));
   finishTimer = window.setTimeout(() => {
     document.documentElement.dataset.startupReady = "true";
-    const exitMs = reduced
-      ? REDUCED_EXIT_MS
-      : presentation === "full"
-        ? FULL_EXIT_MS
-        : BRIEF_EXIT_MS;
+    const exitMs = reduced ? REDUCED_EXIT_MS : FULL_EXIT_MS;
     removeTimer = window.setTimeout(removeSplash, exitMs);
   }, wait);
 }
@@ -82,9 +68,8 @@ function cancelPendingFinishIfReadinessRegressed(): void {
   finishing = false;
 }
 
-export function initializeStartupSplash(nextPresentation: StartupPresentation): void {
+export function initializeStartupSplash(): void {
   if (active) return;
-  presentation = nextPresentation;
   active = true;
   shellSettled = false;
   expectsComposer = true;
@@ -93,8 +78,7 @@ export function initializeStartupSplash(nextPresentation: StartupPresentation): 
   startedAt = performance.now();
 
   document.documentElement.dataset.startupSplash = "active";
-  document.documentElement.dataset.startupPresentation = presentation;
-  createStartupSplashDom({ presentation });
+  createStartupSplashDom();
 }
 
 export function reportStartupShellReadiness(input: {

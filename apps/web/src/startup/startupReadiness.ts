@@ -20,9 +20,9 @@ export function startupRouteExpectsComposer(pathname: string): boolean {
 
 export function shouldInitializeDesktopStartupSplash(
   pathname: string,
-  hasDesktopBridge: boolean,
+  presentation: "full" | "none" | undefined,
 ): boolean {
-  return hasDesktopBridge && pathname !== "/pair" && pathname !== "/signed-out";
+  return presentation === "full" && pathname !== "/pair" && pathname !== "/signed-out";
 }
 
 export function isTerminalStartupCatalogState(state: ProviderModelCatalogState): boolean {

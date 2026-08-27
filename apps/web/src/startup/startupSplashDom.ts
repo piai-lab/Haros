@@ -27,13 +27,10 @@ function buildDots(): string {
   return html;
 }
 
-export function createStartupSplashDom(input: {
-  readonly presentation: "full" | "brief";
-}): HTMLElement {
+export function createStartupSplashDom(): HTMLElement {
   document.getElementById("startup-splash")?.remove();
   const splash = document.createElement("div");
   splash.id = "startup-splash";
-  splash.dataset.presentation = input.presentation;
   splash.innerHTML = `
     <div class="startup-splash__visual" aria-hidden="true">
       <div class="startup-splash__swarm">

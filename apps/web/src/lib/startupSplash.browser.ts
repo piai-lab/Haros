@@ -25,7 +25,7 @@ describe("Desktop startup splash", () => {
   });
 
   it("retains the exact quiet 64-dot golden-angle presentation", () => {
-    const splash = createStartupSplashDom({ presentation: "full" });
+    const splash = createStartupSplashDom();
 
     expect(splash.querySelectorAll(".startup-splash__dot")).toHaveLength(64);
     expect(splash.querySelector(".startup-splash__visual")?.getAttribute("aria-hidden")).toBe(
@@ -49,7 +49,7 @@ describe("Desktop startup splash", () => {
     "keeps the 64-dot composition proportionate and dense at $width×$height",
     async ({ height, maximum, minimum, width }) => {
       await page.viewport(width, height);
-      const splash = createStartupSplashDom({ presentation: "full" });
+      const splash = createStartupSplashDom();
       document.body.append(splash);
 
       const visual = splash.querySelector<HTMLElement>(".startup-splash__visual");
@@ -64,30 +64,30 @@ describe("Desktop startup splash", () => {
   );
 
   it("does not finish until shell and focused Composer catalog are both terminal", async () => {
-    initializeStartupSplash("brief");
+    initializeStartupSplash();
     reportStartupShellReadiness({ settled: true, expectsComposer: true });
 
-    await wait(550);
+    await wait(1_450);
     expect(document.documentElement.dataset.startupReady).toBeUndefined();
     expect(isStartupSplashActive()).toBe(true);
 
     reportFocusedComposerReadiness(true);
     await wait(10);
     expect(document.documentElement.dataset.startupReady).toBe("true");
-    await wait(400);
+    await wait(1_150);
 
     expect(isStartupSplashActive()).toBe(false);
     expect(document.getElementById("startup-splash")).toBeNull();
   });
 
   it("cancels a pending exit when the focused Engine changes back to checking", async () => {
-    initializeStartupSplash("brief");
+    initializeStartupSplash();
     reportStartupShellReadiness({ settled: true, expectsComposer: true });
     reportFocusedComposerReadiness(true);
 
     await wait(150);
     reportFocusedComposerReadiness(false);
-    await wait(400);
+    await wait(1_300);
     expect(document.documentElement.dataset.startupReady).toBeUndefined();
 
     reportFocusedComposerReadiness(true);

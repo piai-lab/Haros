@@ -25,10 +25,11 @@ describe("startup readiness projection", () => {
     }
   });
 
-  it("keeps cinematic residency out of browser, pairing, and signed-out surfaces", () => {
-    expect(shouldInitializeDesktopStartupSplash("/", false)).toBe(false);
-    expect(shouldInitializeDesktopStartupSplash("/pair", true)).toBe(false);
-    expect(shouldInitializeDesktopStartupSplash("/signed-out", true)).toBe(false);
-    expect(shouldInitializeDesktopStartupSplash("/", true)).toBe(true);
+  it("plays only for the first product window in a Desktop process", () => {
+    expect(shouldInitializeDesktopStartupSplash("/", undefined)).toBe(false);
+    expect(shouldInitializeDesktopStartupSplash("/", "none")).toBe(false);
+    expect(shouldInitializeDesktopStartupSplash("/pair", "full")).toBe(false);
+    expect(shouldInitializeDesktopStartupSplash("/signed-out", "full")).toBe(false);
+    expect(shouldInitializeDesktopStartupSplash("/", "full")).toBe(true);
   });
 });

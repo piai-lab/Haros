@@ -178,21 +178,6 @@ html[data-startup-ready="true"] .startup-splash__swarm-in {
   animation: startup-quick-out 220ms ease-in 930ms forwards;
 }
 
-html[data-startup-presentation="brief"] .startup-splash__swarm-in,
-html[data-startup-presentation="brief"] .startup-splash__word {
-  animation-delay: 0ms;
-  animation-duration: 300ms;
-}
-
-html[data-startup-presentation="brief"][data-startup-ready="true"] #root {
-  animation-delay: 100ms;
-  animation-duration: 220ms;
-}
-
-html[data-startup-presentation="brief"][data-startup-ready="true"] .startup-splash__dot {
-  animation-duration: 320ms;
-}
-
 @keyframes startup-fade-in {
   to {
     opacity: 1;

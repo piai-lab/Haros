@@ -1,14 +1,14 @@
 // FILE: startupPresentation.ts
-// Purpose: Selects one full startup presentation per Desktop process, then brief reopen motion.
+// Purpose: Grants the startup presentation once per Desktop process.
 // Layer: Desktop process lifecycle
 
-export type StartupPresentation = "full" | "brief";
+export type StartupPresentation = "full" | "none";
 
 export function makeStartupPresentationOwner(): { claim(): StartupPresentation } {
   let fullPresentationClaimed = false;
   return {
     claim() {
-      if (fullPresentationClaimed) return "brief";
+      if (fullPresentationClaimed) return "none";
       fullPresentationClaimed = true;
       return "full";
     },

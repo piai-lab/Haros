@@ -10,8 +10,10 @@ import { applyStoredThemeState } from "./theme/theme.bootstrap";
 applyStoredThemeState();
 
 const desktopBridge = window.desktopBridge;
-if (shouldInitializeDesktopStartupSplash(window.location.pathname, Boolean(desktopBridge))) {
-  initializeStartupSplash(desktopBridge?.startupPresentation ?? "brief");
+if (
+  shouldInitializeDesktopStartupSplash(window.location.pathname, desktopBridge?.startupPresentation)
+) {
+  initializeStartupSplash();
 }
 
 if (!bootstrapSignedOutScreen()) {

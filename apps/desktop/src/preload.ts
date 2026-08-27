@@ -18,11 +18,11 @@ function getDesktopWsUrl(): string | null {
   }
 }
 
-function getStartupPresentation(): "full" | "brief" {
+function getStartupPresentation(): "full" | "none" {
   try {
-    return ipcRenderer.sendSync(IPC.startupPresentation) === "full" ? "full" : "brief";
+    return ipcRenderer.sendSync(IPC.startupPresentation) === "full" ? "full" : "none";
   } catch {
-    return "brief";
+    return "none";
   }
 }
 

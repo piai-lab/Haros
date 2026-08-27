@@ -1374,8 +1374,9 @@ surface, `content-visibility` isolation and reduced-motion branch. It replaces t
 fixed colors with canonical `OmniMind` and the existing Theme owner, compresses normal Desktop
 presentation to a roughly 2–3 second envelope, omits the decorative horizontal sweep, persistent sonar
 rings, radial exit waves and slow-start status copy because they carry no authoritative progress and
-compete with the particle composition, and lets the Desktop process grant one full presentation
-followed by brief presentations without persistence or a second window.
+compete with the particle composition, and lets a new Desktop process grant exactly one full
+presentation. Windows restored after macOS closes the visible window skip the splash entirely; the
+process-local grant is neither persisted nor represented by a second window.
 
 Two donor completion mechanisms are explicitly rejected. `Promise.allSettled` cannot establish model
 catalog authority because a failed request also settles, and a maximum display timeout cannot become a
