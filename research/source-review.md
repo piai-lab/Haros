@@ -1428,3 +1428,24 @@ release legal inventory was regenerated from exact `0.84.3` manifest hashes and 
 components. Minimal credential-in-memory MiMo and DeepSeek journeys each received two 2xx Provider
 responses and proved the real `ask_user` schema, canonical settlement, lossless structured result and
 same-turn model replan. No benchmark, protected-branch merge, Release or update-feed change is implied.
+
+The final merge review removed one build-validator-only `console.error` diagnostic and restored the
+upstream validator iteration unchanged. The corrected product patch SHA-256 is
+`23cd289d663b21fa8a3f6fce4e1c90543662793adad217f4268ad40c1684b53a`; reapplying it to the clean tag
+passed source `git diff --check`, the bundle build and all 298 focused tests. Deterministic regeneration
+produced the same archive bytes and SHA-256, proving that the review correction did not change shipped
+runtime output. A stale catalog-test comment was also advanced from `0.84.2` to `0.84.3`; its five tests
+and 206 assertions passed.
+
+Exact pushed shipped-byte candidate `ad02dccb9d4cc55b2a513309857c006a3f69035a` produced arm64 DMG
+SHA-256 `5e4e41a97554daeefb025520f4e2257684706a9482e67df6c85129853f5add37`; its `app.asar` SHA-256 is
+`53d42bcf7681d9e3e8db2878317108df98a53c6d7c368daf78b347697bad790e`. Read-only archive inspection
+confirmed stock `pi-agent-core`, `pi-ai`, `pi-coding-agent` and product `pi-coding-agent` at `0.84.3`,
+the interactive barrier patch, the supported `jsonc-parser` package-root import, the exact source
+commit and 537 disclosed production identities. After the maintainer authorized closing the installed
+OmniMind instance, the packaged journey ran with isolated HOME, userData, OmniMind state and Provider
+private homes. Two launches reached the bundled backend and main window; attempt one proved fixture
+persistence plus macOS window-close isolation, and attempt two proved same-profile restoration after
+isolated relaunch. Candidate processes and temporary proof state were removed, and the installed app
+was not automatically restarted. This is packaged candidate evidence, not a Release, signing,
+notarization or update-feed action.
