@@ -1,7 +1,7 @@
 facebook/idb
 Canonical source: https://github.com/facebook/idb
 Reviewed revision: dd0cb550510331f2d11e9130cb003d2425688e28
-Use in OmniMind: portions of the iOS Simulator HID bridge and private SimulatorKit declarations.
+Use in HarnessOS: portions of the iOS Simulator HID bridge and private SimulatorKit declarations.
 
 MIT License
 
