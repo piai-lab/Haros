@@ -64,7 +64,7 @@ function threadShell(overrides: Partial<OrchestrationThreadShell> = {}): Orchest
     session: {
       threadId: THREAD_ID,
       status: "running",
-      providerName: "codex",
+      engine: "codex",
       runtimeMode: "full-access",
       activeTurnId: OLD_TURN_ID,
       lastError: null,
@@ -134,7 +134,7 @@ describe("planProviderRuntimeReconciliation", () => {
             engineSelection: { engine: "claude", model: "claude-opus-4-8" },
             session: {
               ...threadShell().session!,
-              providerName: "claude",
+              engine: "claude",
             },
           }),
         ],
@@ -521,10 +521,8 @@ describe("planProviderRuntimeReconciliation", () => {
             : plan.action === "settle-terminal-projection"
               ? plan.terminalSession.status
               : "interrupted",
-      providerName:
-        plan.action === "settle-terminal-projection"
-          ? plan.terminalSession.providerName
-          : plan.engine,
+      engine:
+        plan.action === "settle-terminal-projection" ? plan.terminalSession.engine : plan.engine,
       runtimeMode:
         plan.action === "settle-terminal-projection"
           ? plan.terminalSession.runtimeMode
@@ -628,7 +626,7 @@ describe("planProviderRuntimeReconciliation", () => {
         session: {
           ...threadShell().session!,
           status: "error",
-          providerName: "",
+          engine: "",
           lastError: "  ",
         },
       });

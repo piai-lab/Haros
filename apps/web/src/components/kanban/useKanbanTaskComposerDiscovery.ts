@@ -53,7 +53,7 @@ const KANBAN_SUPPORTED_APP_SLASH_COMMANDS = new Set(["clear", "default", "plan"]
 
 interface UseKanbanTaskComposerDiscoveryInput {
   readonly composerTrigger: ComposerTrigger | null;
-  readonly selectedProvider: EngineKind;
+  readonly selectedEngine: EngineKind;
   readonly modelOptionsByEngine: Record<
     EngineKind,
     ReadonlyArray<EngineModelOption & { isCustom?: boolean }>
@@ -78,7 +78,7 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
 } {
   const {
     composerTrigger,
-    selectedProvider,
+    selectedEngine,
     modelOptionsByEngine,
     selectedRuntimeAgents,
     selectedProjectCwd,
@@ -115,30 +115,30 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
   });
 
   const providerComposerCapabilitiesQuery = useQuery(
-    providerComposerCapabilitiesQueryOptions(selectedProvider),
+    providerComposerCapabilitiesQueryOptions(selectedEngine),
   );
   const providerCommandsQuery = useQuery(
     providerCommandsQueryOptions({
-      engine: selectedProvider,
+      engine: selectedEngine,
       cwd: composerSkillCwd,
       threadId: scratchThreadId,
       binaryPath:
-        (selectedProvider === "opencode"
+        (selectedEngine === "opencode"
           ? engineOptionsForDispatch?.opencode?.binaryPath
-          : selectedProvider === "kilo"
+          : selectedEngine === "kilo"
             ? engineOptionsForDispatch?.kilo?.binaryPath
             : null) ?? null,
       serverUrl:
-        (selectedProvider === "opencode"
+        (selectedEngine === "opencode"
           ? engineOptionsForDispatch?.opencode?.serverUrl
-          : selectedProvider === "kilo"
+          : selectedEngine === "kilo"
             ? engineOptionsForDispatch?.kilo?.serverUrl
             : null) ?? null,
       experimentalWebSockets:
-        selectedProvider === "opencode"
+        selectedEngine === "opencode"
           ? engineOptionsForDispatch?.opencode?.experimentalWebSockets
           : undefined,
-      agentDir: selectedProvider === "pi" ? piAgentDir : null,
+      agentDir: selectedEngine === "pi" ? piAgentDir : null,
       enabled:
         (composerTriggerKind === "slash-command" || composerTriggerKind === "slash-model") &&
         supportsNativeSlashCommandDiscovery(providerComposerCapabilitiesQuery.data) &&
@@ -146,22 +146,22 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
     }),
   );
   const canDiscoverProviderSkills =
-    selectedProvider === "pi" || supportsSkillDiscovery(providerComposerCapabilitiesQuery.data);
+    selectedEngine === "pi" || supportsSkillDiscovery(providerComposerCapabilitiesQuery.data);
   const providerSkillsQuery = useQuery(
     providerSkillsQueryOptions({
-      engine: selectedProvider,
+      engine: selectedEngine,
       cwd: composerSkillCwd,
       threadId: scratchThreadId,
-      agentDir: selectedProvider === "pi" ? piAgentDir : null,
+      agentDir: selectedEngine === "pi" ? piAgentDir : null,
       enabled:
-        (isSkillTrigger || composerTriggerKind === "slash-command" || selectedProvider === "pi") &&
+        (isSkillTrigger || composerTriggerKind === "slash-command" || selectedEngine === "pi") &&
         canDiscoverProviderSkills &&
         composerSkillCwd !== null,
     }),
   );
   const providerPluginsQuery = useQuery(
     providerPluginsQueryOptions({
-      engine: selectedProvider,
+      engine: selectedEngine,
       cwd: composerSkillCwd,
       threadId: scratchThreadId,
       enabled:
@@ -197,7 +197,7 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
     modelOptionsByEngine,
     engineOrder,
     hiddenEngines,
-    protectedProviders: [selectedProvider],
+    protectedProviders: [selectedEngine],
   });
   const dynamicAgents = selectedRuntimeAgents.map((agent) =>
     agent.description
@@ -206,7 +206,7 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
   );
   const rawComposerMenuItems = useComposerCommandMenuItems({
     composerTrigger,
-    engine: selectedProvider,
+    engine: selectedEngine,
     providerPlugins,
     providerNativeCommands,
     providerSkills,

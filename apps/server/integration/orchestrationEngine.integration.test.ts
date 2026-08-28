@@ -325,7 +325,7 @@ it.live.skipIf(!process.env.CODEX_BINARY_PATH)(
           THREAD_ID,
           (entry) =>
             entry.session?.status === "ready" &&
-            entry.session.providerName === "codex" &&
+            entry.session.engine === "codex" &&
             entry.messages.some(
               (message) => message.role === "assistant" && message.streaming === false,
             ),
@@ -352,7 +352,7 @@ it.live.skipIf(!process.env.CODEX_BINARY_PATH)(
           THREAD_ID,
           (entry) =>
             entry.session?.status === "ready" &&
-            entry.session.providerName === "codex" &&
+            entry.session.engine === "codex" &&
             entry.session.runtimeMode === "approval-required" &&
             entry.messages.some(
               (message) => message.role === "assistant" && message.text.includes("BETA"),
@@ -969,13 +969,13 @@ it.live("starts a claudeAgent session on first turn when engine is requested", (
         const thread = yield* harness.waitForThread(
           THREAD_ID,
           (entry) =>
-            entry.session?.providerName === "claude" &&
+            entry.session?.engine === "claude" &&
             entry.session.status === "ready" &&
             entry.messages.some(
               (message) => message.role === "assistant" && message.text === "Claude first turn.\n",
             ),
         );
-        assert.equal(thread.session?.providerName, "claude");
+        assert.equal(thread.session?.engine, "claude");
       }),
     "claude",
   ),
@@ -1085,13 +1085,13 @@ itLiveUnlessCi(
           const recoveredThread = yield* harness.waitForThread(
             THREAD_ID,
             (entry) =>
-              entry.session?.providerName === "claude" &&
+              entry.session?.engine === "claude" &&
               entry.messages.some(
                 (message) => message.role === "user" && message.text === "After restart",
               ) &&
               !entry.activities.some((activity) => activity.kind === "engine.turn.start.failed"),
           );
-          assert.equal(recoveredThread.session?.providerName, "claude");
+          assert.equal(recoveredThread.session?.engine, "claude");
           assert.equal(recoveredThread.session?.threadId, "thread-1");
         }),
       "claude",
@@ -1358,7 +1358,7 @@ itLiveUnlessCi("reverts claudeAgent turns and rolls back engine conversation sta
           (entry) =>
             entry.latestTurn?.turnId === "turn-2" &&
             entry.checkpoints.length === 2 &&
-            entry.session?.providerName === "claude",
+            entry.session?.engine === "claude",
         );
 
         yield* harness.engine.dispatch({

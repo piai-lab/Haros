@@ -415,7 +415,7 @@ function createSnapshotForTargetUser(options: {
         session: {
           threadId: THREAD_ID,
           status: options.sessionStatus ?? "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId:
             options.sessionStatus === "running"
@@ -554,7 +554,7 @@ function withTurnStartFailureRestoredToCodex(
               ? {
                   ...thread.session,
                   status: "ready" as const,
-                  providerName: "codex" as const,
+                  engine: "codex" as const,
                   runtimeMode: "full-access" as const,
                   activeTurnId: null,
                   lastError: null,
@@ -609,7 +609,7 @@ function withTurnStartFailureUnrecovered(
               ? {
                   ...thread.session,
                   status: "error" as const,
-                  providerName: "claude" as const,
+                  engine: "claude" as const,
                   activeTurnId: null,
                   lastError: "Target engine failed to start.",
                   updatedAt: failedAt,
@@ -807,7 +807,7 @@ function addThreadToSnapshot(
         session: {
           threadId,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError: null,
@@ -7155,7 +7155,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       wsRequests.length = 0;
       await page.getByRole("menuitemradio", { name: /Claude/ }).click();
       await vi.waitFor(() => {
-        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeEngine).toBe(
           "claude",
         );
       });
@@ -7281,7 +7281,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
         await page.getByRole("menuitemradio", { name: /Pi/ }).click();
         await vi.waitFor(() => {
-          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeEngine).toBe(
             "pi",
           );
         });
@@ -7382,7 +7382,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await page.getByRole("button", { name: /^Change engine\. Current:/ }).click();
       await page.getByRole("menuitemradio", { name: /Claude/ }).click();
       await vi.waitFor(() => {
-        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeEngine).toBe(
           "claude",
         );
         expect(
@@ -7442,7 +7442,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           failedAttachments = message?.attachments ?? [];
           expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toMatchObject({
             prompt: "",
-            activeProvider: "claude",
+            activeEngine: "claude",
             pendingDirectTurnRecovery: {
               messageId: failedMessageId,
               contentSuperseded: false,
@@ -7550,7 +7550,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         () => {
           const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
           expect(draft?.prompt).toBe(failedPrompt);
-          expect(draft?.activeProvider).toBe("codex");
+          expect(draft?.activeEngine).toBe("codex");
           expect(draft?.engineSelectionByEngine.codex).toMatchObject({
             engine: "codex",
             model: "gpt-5",
@@ -7579,7 +7579,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
       await page.getByRole("menuitemradio", { name: /Claude/ }).click();
       await vi.waitFor(() => {
-        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeEngine).toBe(
           "claude",
         );
         expect(
@@ -7628,7 +7628,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       useComposerDraftStore.getState().setRuntimeMode(THREAD_ID, "approval-required");
       await vi.waitFor(() => {
         const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
-        expect(draft?.activeProvider).toBe("codex");
+        expect(draft?.activeEngine).toBe("codex");
         expect(draft?.engineSelectionByEngine.codex).toMatchObject({ model: "gpt-5.4" });
         expect(draft?.runtimeMode).toBe("approval-required");
       });
@@ -7645,7 +7645,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         () => {
           const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
           expect(draft?.prompt).toBe(secondFailedPrompt);
-          expect(draft?.activeProvider).toBe("codex");
+          expect(draft?.activeEngine).toBe("codex");
           expect(draft?.engineSelectionByEngine.codex).toMatchObject({
             engine: "codex",
             model: "gpt-5.4",
@@ -7699,7 +7699,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(() => {
         const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
         expect(draft?.prompt).toBe(terminalPrompt);
-        expect(draft?.activeProvider).toBe("claude");
+        expect(draft?.activeEngine).toBe("claude");
         expect(draft?.pendingDirectTurnRecovery ?? null).toBeNull();
         expect(
           wsRequests
@@ -8305,7 +8305,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         pastedTexts: [],
         skills: [],
         mentions: [],
-        selectedProvider: "codex",
+        selectedEngine: "codex",
         selectedModel: "gpt-5",
         selectedPromptEffort: null,
         engineSelection: {
@@ -8331,7 +8331,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         pastedTexts: [],
         skills: [],
         mentions: [],
-        selectedProvider: "codex",
+        selectedEngine: "codex",
         selectedModel: "gpt-5",
         selectedPromptEffort: null,
         engineSelection: {
@@ -8418,7 +8418,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await page.getByRole("menuitemradio", { name: /Pi/ }).click();
       await vi.waitFor(
         () => {
-          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeEngine).toBe(
             "pi",
           );
         },
@@ -8466,7 +8466,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         pastedTexts: [],
         skills: [],
         mentions: [],
-        selectedProvider: "codex",
+        selectedEngine: "codex",
         selectedModel: "gpt-5",
         selectedPromptEffort: null,
         engineSelection: {
@@ -8562,7 +8562,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         pastedTexts: [],
         skills: [],
         mentions: [],
-        selectedProvider: "codex",
+        selectedEngine: "codex",
         selectedModel: "gpt-5",
         selectedPromptEffort: null,
         engineSelection: {
@@ -8728,7 +8728,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           useComposerDraftStore.getState().draftsByThreadId[targetDraftThreadId],
         ).toMatchObject({
-          activeProvider: "claude",
+          activeEngine: "claude",
           prompt: "stored draft prompt",
           images: [{ id: preservedImage.id, name: preservedImage.name }],
         });
@@ -9792,7 +9792,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(() => {
         expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toMatchObject({
           prompt: "Keep this draft while I connect a model.",
-          activeProvider: "oa",
+          activeEngine: "oa",
           engineSelectionByEngine: {
             oa: { engine: "oa", model: "deepseek/deepseek-v4-flash" },
           },
@@ -10022,7 +10022,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         .click();
       await expect.element(setupDialog).not.toBeInTheDocument();
       expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toMatchObject({
-        activeProvider: "claude",
+        activeEngine: "claude",
         engineSelectionByEngine: {
           claude: { engine: "claude", model: "claude-sonnet-4" },
         },
@@ -10975,7 +10975,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             },
           },
         },
-        activeProvider: "claude",
+        activeEngine: "claude",
       });
     } finally {
       await mounted.cleanup();
@@ -11028,7 +11028,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             },
           },
         },
-        activeProvider: "codex",
+        activeEngine: "codex",
       });
 
       useComposerDraftStore.getState().setEngineSelection(threadId, {
@@ -11052,7 +11052,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
                 },
               },
             },
-            activeProvider: "codex",
+            activeEngine: "codex",
           });
         },
         { timeout: 8_000, interval: 16 },
@@ -11266,7 +11266,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           useComposerDraftStore.getState().draftThreadsByThreadId[draftThreadId],
         ).toBeDefined();
         expect(
-          useComposerDraftStore.getState().draftsByThreadId[draftThreadId]?.activeProvider,
+          useComposerDraftStore.getState().draftsByThreadId[draftThreadId]?.activeEngine,
         ).toBe("pi");
         expect(useComposerDraftStore.getState().draftThreadsByThreadId[draftThreadId]?.title).toBe(
           "Local Pi terminal",
@@ -11307,7 +11307,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
               },
             },
           },
-          activeProvider: "claude",
+          activeEngine: "claude",
           runtimeMode: null,
           interactionMode: null,
         },

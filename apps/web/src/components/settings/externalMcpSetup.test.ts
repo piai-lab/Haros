@@ -40,17 +40,17 @@ describe("external MCP guided setup", () => {
   it("builds standard JSON configuration for desktop and other clients", () => {
     const desktop = buildExternalMcpClientConfiguration("claudeDesktop", stdio);
     const parsed = JSON.parse(desktop.value) as {
-      mcpServers: { oa: { command: string; args: ReadonlyArray<string> } };
+      mcpServers: { harnessos: { command: string; args: ReadonlyArray<string> } };
     };
 
     expect(desktop.format).toBe("json");
-    expect(parsed.mcpServers.oa).toEqual(stdio);
+    expect(parsed.mcpServers.harnessos).toEqual(stdio);
   });
 
   it("builds terminal commands for PowerShell on Windows", () => {
     const codex = buildExternalMcpClientConfiguration("codex", stdio, "Win32");
     expect(codex.value).toBe(
-      "& 'codex' 'mcp' 'add' 'oa' '--env' 'ELECTRON_RUN_AS_NODE=1' '--' '/Applications/HarnessOS.app/Contents/MacOS/HarnessOS' 'server.js' 'mcp' 'serve' '--integration' 'mcp_int_example' '--home-dir' '/tmp/HarnessOS home'",
+      "& 'codex' 'mcp' 'add' 'harnessos' '--env' 'ELECTRON_RUN_AS_NODE=1' '--' '/Applications/HarnessOS.app/Contents/MacOS/HarnessOS' 'server.js' 'mcp' 'serve' '--integration' 'mcp_int_example' '--home-dir' '/tmp/HarnessOS home'",
     );
     expect(codex.instruction).toContain("PowerShell");
   });

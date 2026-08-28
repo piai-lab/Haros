@@ -1023,7 +1023,7 @@ const make = Effect.gen(function* () {
       session: {
         threadId: input.threadId,
         status: "error",
-        providerName: thread.session?.providerName ?? thread.engineSelection.engine,
+        engine: thread.session?.engine ?? thread.engineSelection.engine,
         runtimeMode: input.runtimeMode ?? thread.session?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
         activeTurnId: null,
         lastError: input.detail,
@@ -1056,7 +1056,7 @@ const make = Effect.gen(function* () {
             : input.session.status === "closed"
               ? "stopped"
               : input.session.status,
-        providerName: input.session.engine,
+        engine: input.session.engine,
         runtimeMode: input.runtimeMode ?? input.session.runtimeMode,
         // Engine turn ids are not orchestration turn ids. A caller may only
         // preserve an orchestration turn id it already read from the committed
@@ -1211,7 +1211,7 @@ const make = Effect.gen(function* () {
 
   const resolveSessionReplacementRequirement = Effect.fnUntraced(function* (input: {
     readonly threadId: ThreadId;
-    readonly activeProvider: EngineKind | undefined;
+    readonly activeEngine: EngineKind | undefined;
     readonly activeModel: string | undefined;
     readonly currentEngineSelection: EngineSelection;
     readonly requestedEngineSelection: EngineSelection | undefined;
@@ -1220,14 +1220,13 @@ const make = Effect.gen(function* () {
   }) {
     const targetEngine =
       input.requestedEngineSelection?.engine ?? input.currentEngineSelection.engine;
-    const providerChanged =
-      input.activeProvider !== undefined && targetEngine !== input.activeProvider;
+    const providerChanged = input.activeEngine !== undefined && targetEngine !== input.activeEngine;
     const runtimeModeChanged = input.desiredRuntimeMode !== input.currentRuntimeMode;
-    const activeProviderCapabilities =
-      input.activeProvider === undefined || providerChanged
+    const activeEngineCapabilities =
+      input.activeEngine === undefined || providerChanged
         ? undefined
-        : yield* engineService.getCapabilities(input.activeProvider);
-    const sessionModelSwitch = activeProviderCapabilities?.sessionModelSwitch ?? "in-session";
+        : yield* engineService.getCapabilities(input.activeEngine);
+    const sessionModelSwitch = activeEngineCapabilities?.sessionModelSwitch ?? "in-session";
     const modelChanged =
       input.requestedEngineSelection !== undefined &&
       input.requestedEngineSelection.model !== input.activeModel;
@@ -1235,12 +1234,12 @@ const make = Effect.gen(function* () {
     const previousEngineSelection = threadSessionEngineSelections.get(input.threadId);
     const shouldRestartForEngineSelectionChange =
       input.requestedEngineSelection !== undefined &&
-      (input.activeProvider === "claude"
+      (input.activeEngine === "claude"
         ? claudeSelectionRequiresRestart(
             previousEngineSelection ?? input.currentEngineSelection,
             input.requestedEngineSelection,
           )
-        : (input.activeProvider === "droid" || input.activeProvider === "grok") &&
+        : (input.activeEngine === "droid" || input.activeEngine === "grok") &&
           !Equal.equals(previousEngineSelection, input.requestedEngineSelection));
 
     return {
@@ -1249,7 +1248,7 @@ const make = Effect.gen(function* () {
       runtimeModeChanged,
       shouldRestartForModelChange,
       shouldRestartForEngineSelectionChange,
-      conversationRollback: activeProviderCapabilities?.conversationRollback,
+      conversationRollback: activeEngineCapabilities?.conversationRollback,
       shouldReplaceSession:
         runtimeModeChanged ||
         providerChanged ||
@@ -1321,8 +1320,8 @@ const make = Effect.gen(function* () {
   }) {
     const projectedThread = yield* resolveThread(input.threadId);
     const engine = projectedThread
-      ? Schema.is(EngineKind)(projectedThread.session?.providerName)
-        ? projectedThread.session?.providerName
+      ? Schema.is(EngineKind)(projectedThread.session?.engine)
+        ? projectedThread.session?.engine
         : projectedThread.engineSelection.engine
       : undefined;
     const rebuildsContext =
@@ -1494,9 +1493,9 @@ const make = Effect.gen(function* () {
     const desiredRuntimeMode = options?.runtimeMode ?? thread.runtimeMode;
     const desiredInteractionMode = options?.interactionMode ?? thread.interactionMode;
     const projectedSessionEngine: EngineKind | undefined = Schema.is(EngineKind)(
-      thread.session?.providerName,
+      thread.session?.engine,
     )
-      ? thread.session.providerName
+      ? thread.session.engine
       : undefined;
     const requestedEngineSelection = options?.engineSelection;
     const desiredEngineSelection = requestedEngineSelection ?? thread.engineSelection;
@@ -1589,7 +1588,7 @@ const make = Effect.gen(function* () {
 
     // Only reuse projected session state when the runtime still has a live session to attach to.
     const activeSessionBeforeEnsure = yield* resolveActiveSession(threadId);
-    const activeProvider = activeSessionBeforeEnsure?.engine ?? projectedSessionEngine;
+    const activeEngine = activeSessionBeforeEnsure?.engine ?? projectedSessionEngine;
     const reusableSession =
       thread.session && thread.session.status !== "stopped" ? activeSessionBeforeEnsure : undefined;
     if (reusableSession) {
@@ -1607,7 +1606,7 @@ const make = Effect.gen(function* () {
         shouldReplaceSession,
       } = yield* resolveSessionReplacementRequirement({
         threadId,
-        activeProvider,
+        activeEngine,
         activeModel: activeSessionBeforeEnsure?.model,
         currentEngineSelection: thread.engineSelection,
         requestedEngineSelection,
@@ -1627,7 +1626,7 @@ const make = Effect.gen(function* () {
               : reusableSession.status;
         const requiresSessionProjection =
           reusableSession.status !== "running" &&
-          (thread.session?.providerName !== reusableSession.engine ||
+          (thread.session?.engine !== reusableSession.engine ||
             thread.session?.runtimeMode !== desiredRuntimeMode ||
             thread.session?.status !== projectedStatus);
         if (requiresSessionProjection) {
@@ -1651,7 +1650,7 @@ const make = Effect.gen(function* () {
       yield* Effect.logInfo("engine command reactor restarting engine session", {
         threadId,
         existingSessionThreadId,
-        currentProvider: activeProvider,
+        currentEngine: activeEngine,
         desiredProvider: desiredEngineSelection.engine,
         currentRuntimeMode: thread.session?.runtimeMode,
         desiredRuntimeMode,
@@ -1668,7 +1667,7 @@ const make = Effect.gen(function* () {
       }
       if (
         shouldRegisterContextBootstrap &&
-        activeProvider === "droid" &&
+        activeEngine === "droid" &&
         !providerChanged &&
         resumeCursor === undefined
       ) {
@@ -1748,8 +1747,8 @@ const make = Effect.gen(function* () {
     const startedSession = yield* startEngineSession();
     if (
       shouldRegisterContextBootstrap &&
-      activeProvider !== undefined &&
-      targetEngine !== activeProvider &&
+      activeEngine !== undefined &&
+      targetEngine !== activeEngine &&
       !thread.sidechatSourceThreadId
     ) {
       freshSessionContextBootstrapThreadIds.add(threadId);
@@ -1832,13 +1831,13 @@ const make = Effect.gen(function* () {
       // instructions, normalize skill/agent mentions, and forward the
       // structured context so the adapter can project attachments into the
       // text-only subagent steering channel.
-      const steerProvider = (providerThread.session?.providerName ??
+      const steerEngine = (providerThread.session?.engine ??
         providerThread.engineSelection.engine) as EngineKind;
       const steerSkillResult =
         input.skills !== undefined && input.skills.length > 0
           ? yield* Effect.tryPromise(() =>
               buildInlineSkillInstructions({
-                engine: steerProvider,
+                engine: steerEngine,
                 skills: input.skills ?? [],
                 maxChars: Math.max(
                   0,
@@ -1877,7 +1876,7 @@ const make = Effect.gen(function* () {
         interactionMode: input.interactionMode,
         goal: activeThreadGoal(thread),
         text: normalizeSkillMentionTextForProvider({
-          engine: steerProvider,
+          engine: steerEngine,
           messageText: steerMessageWithSkills,
           ...(input.skills !== undefined ? { skills: input.skills } : {}),
         }),
@@ -1887,7 +1886,7 @@ const make = Effect.gen(function* () {
         composedSteerInput.length > ENGINE_SEND_TURN_MAX_INPUT_CHARS
       ) {
         return yield* new EngineAdapterValidationError({
-          engine: steerProvider,
+          engine: steerEngine,
           operation: "thread.turn.start",
           issue: providerPromptOverflowIssue({
             goalPromptOverheadChars,
@@ -1902,7 +1901,7 @@ const make = Effect.gen(function* () {
         repository: managedAttachments,
         threadId: input.threadId,
         messageId: input.messageId,
-        engine: steerProvider,
+        engine: steerEngine,
         operation: "thread.turn.start",
       });
       yield* engineService.steerSubagent({
@@ -1931,10 +1930,10 @@ const make = Effect.gen(function* () {
     // then fail locally without any turn being sent or a rollback owner left.
     const targetEngine = input.engineSelection?.engine ?? thread.engineSelection.engine;
     const preEnsureLiveSession = input.preEnsureLiveSession;
-    const projectedProvider = Schema.is(EngineKind)(thread.session?.providerName)
-      ? thread.session.providerName
+    const projectedEngine = Schema.is(EngineKind)(thread.session?.engine)
+      ? thread.session.engine
       : thread.engineSelection.engine;
-    const previousProvider = preEnsureLiveSession?.engine ?? projectedProvider;
+    const previousProvider = preEnsureLiveSession?.engine ?? projectedEngine;
     const requiresCrossProviderTranscriptBootstrap =
       targetEngine !== previousProvider &&
       !suppressContextBootstrapOnNextStartThreadIds.has(input.threadId) &&
@@ -2003,16 +2002,16 @@ const make = Effect.gen(function* () {
     // instead so it never reads as part of the user's own words. The budget
     // text below still counts the suffix, keeping the total under the engine
     // input limit regardless of where the suffix sits.
-    const selectedProvider =
+    const selectedEngine =
       input.engineSelection?.engine ??
       threadSessionEngineSelections.get(input.threadId)?.engine ??
-      thread.session?.providerName ??
+      thread.session?.engine ??
       thread.engineSelection.engine;
     // Skill aliases belong to the newly submitted user segment only. Imported
     // context is durable source material and must remain byte-exact, including
     // literal slash commands from an earlier turn.
     const normalizedLatestUserMessageText = normalizeSkillMentionTextForProvider({
-      engine: selectedProvider as EngineKind,
+      engine: selectedEngine as EngineKind,
       messageText: input.messageText,
       ...(input.skills !== undefined ? { skills: input.skills } : {}),
     });
@@ -2087,7 +2086,7 @@ const make = Effect.gen(function* () {
       historyOnlyForkBootstrapText === null
     ) {
       return yield* new EngineAdapterValidationError({
-        engine: selectedProvider as EngineKind,
+        engine: selectedEngine as EngineKind,
         operation: "thread.turn.start",
         issue:
           "The latest message is too long to include the history-only fork context required by this engine session. Shorten the message and retry.",
@@ -2102,7 +2101,7 @@ const make = Effect.gen(function* () {
       }).length > ENGINE_SEND_TURN_MAX_INPUT_CHARS
     ) {
       return yield* new EngineAdapterValidationError({
-        engine: selectedProvider as EngineKind,
+        engine: selectedEngine as EngineKind,
         operation: "thread.turn.start",
         issue: providerPromptOverflowIssue({
           goalPromptOverheadChars,
@@ -2139,14 +2138,14 @@ const make = Effect.gen(function* () {
       sidechatBootstrapAvailableChars === 0
     ) {
       return yield* new EngineAdapterValidationError({
-        engine: selectedProvider as EngineKind,
+        engine: selectedEngine as EngineKind,
         operation: "thread.turn.start",
         issue:
           "The latest message is too long to include the sidechat context required by this engine session. Shorten the message and retry.",
       });
     }
     const shouldBootstrapPriorTranscriptContext =
-      (((selectedProvider === "kilo" || selectedProvider === "opencode") &&
+      (((selectedEngine === "kilo" || selectedEngine === "opencode") &&
         activeSessionBeforeEnsure === undefined) ||
         hasPendingPriorTranscriptBootstrap) &&
       !shouldBootstrapHandoff &&
@@ -2170,7 +2169,7 @@ const make = Effect.gen(function* () {
       hasPriorTranscriptBootstrapContent
     ) {
       return yield* new EngineAdapterValidationError({
-        engine: selectedProvider as EngineKind,
+        engine: selectedEngine as EngineKind,
         operation: "thread.turn.start",
         issue:
           "The latest message is too long to include the transcript context required by the restarted engine session. Shorten the message and retry.",
@@ -2236,7 +2235,7 @@ const make = Effect.gen(function* () {
       input.skills !== undefined && input.skills.length > 0
         ? yield* Effect.tryPromise(() =>
             buildInlineSkillInstructions({
-              engine: selectedProvider as EngineKind,
+              engine: selectedEngine as EngineKind,
               skills: input.skills ?? [],
               maxChars: Math.max(
                 0,
@@ -2287,7 +2286,7 @@ const make = Effect.gen(function* () {
       repository: managedAttachments,
       threadId: input.threadId,
       messageId: input.messageId,
-      engine: selectedProvider as EngineKind,
+      engine: selectedEngine as EngineKind,
       operation: "thread.turn.start",
     });
     const sessionModelSwitch = (yield* engineService.getCapabilities(activeSession.engine))
@@ -2495,7 +2494,7 @@ const make = Effect.gen(function* () {
       const sentTurn = yield* sendQueuedProviderTurn(normalizedInput).pipe(
         Effect.catch((error) =>
           Effect.gen(function* () {
-            if (selectedProvider !== "claude" || !isStaleClaudeResumeError(error)) {
+            if (selectedEngine !== "claude" || !isStaleClaudeResumeError(error)) {
               return yield* Effect.fail(error);
             }
 
@@ -2984,9 +2983,9 @@ const make = Effect.gen(function* () {
       // live engine turn. Steer-capable engines ride the live turn natively;
       // everything else re-queues and is promoted when the live turn settles.
       const liveSession = yield* resolveLiveEngineSession(event.payload.threadId);
-      const activeProvider =
+      const activeEngine =
         liveSession?.engine ??
-        thread.session?.providerName ??
+        thread.session?.engine ??
         threadSessionEngineSelections.get(event.payload.threadId)?.engine ??
         thread.engineSelection.engine;
       const targetEngine = admittedEngineSelection.engine;
@@ -3010,7 +3009,7 @@ const make = Effect.gen(function* () {
       // would skip the turn-start checkpoint.
       const isNativeSteer =
         event.payload.dispatchMode === "steer" &&
-        targetEngine === activeProvider &&
+        targetEngine === activeEngine &&
         activeTurnAdmission !== null &&
         activeTurnAdmission.sequence < event.sequence &&
         activeTurnEngineSelection !== undefined &&
@@ -3054,7 +3053,7 @@ const make = Effect.gen(function* () {
       const turnStartSession = deriveTurnStartSession({
         threadId: event.payload.threadId,
         currentSession: thread.session,
-        providerName: activeProvider,
+        engine: activeEngine,
         requestedRuntimeMode: event.payload.runtimeMode ?? DEFAULT_RUNTIME_MODE,
         requestedAt: event.payload.createdAt,
       });
@@ -3178,7 +3177,7 @@ const make = Effect.gen(function* () {
                   const currentSession = currentThread?.session;
                   if (
                     !(
-                      currentSession?.providerName === authoritativeSession.engine &&
+                      currentSession?.engine === authoritativeSession.engine &&
                       currentSession.status === "running" &&
                       currentSession.activeTurnId !== null
                     )
@@ -3187,7 +3186,7 @@ const make = Effect.gen(function* () {
                       threadId: event.payload.threadId,
                       session: authoritativeSession,
                       activeTurnId:
-                        currentSession?.providerName === authoritativeSession.engine
+                        currentSession?.engine === authoritativeSession.engine
                           ? currentSession.activeTurnId
                           : null,
                       createdAt: event.payload.createdAt,
@@ -3636,11 +3635,11 @@ const make = Effect.gen(function* () {
         blockedGoalContinuations.delete(thread.id);
 
         const createdAt = event.payload.createdAt;
-        const providerName = thread.session?.providerName ?? thread.engineSelection.engine;
+        const engine = thread.session?.engine ?? thread.engineSelection.engine;
         const turnStartSession = deriveTurnStartSession({
           threadId: thread.id,
           currentSession: thread.session,
-          providerName,
+          engine,
           requestedRuntimeMode: thread.runtimeMode,
           requestedAt: createdAt,
         });
@@ -4309,7 +4308,7 @@ const make = Effect.gen(function* () {
         session: {
           threadId: payload.threadId,
           status: "starting",
-          providerName: thread.session?.providerName ?? thread.engineSelection.engine,
+          engine: thread.session?.engine ?? thread.engineSelection.engine,
           runtimeMode: payload.runtimeMode,
           activeTurnId: null,
           lastError: null,
@@ -4354,8 +4353,8 @@ const make = Effect.gen(function* () {
   }) {
     const thread = yield* resolveThread(input.threadId);
     const engine = thread
-      ? Schema.is(EngineKind)(thread.session?.providerName)
-        ? thread.session?.providerName
+      ? Schema.is(EngineKind)(thread.session?.engine)
+        ? thread.session?.engine
         : thread.engineSelection.engine
       : undefined;
     const rebuildsContext =
@@ -4387,16 +4386,16 @@ const make = Effect.gen(function* () {
         : providerThread?.session?.status === "running"
           ? (providerThread.session.activeTurnId ?? null)
           : null;
-    const activeProvider =
+    const activeEngine =
       liveSession?.engine ??
-      (Schema.is(EngineKind)(providerThread?.session?.providerName)
-        ? providerThread.session.providerName
+      (Schema.is(EngineKind)(providerThread?.session?.engine)
+        ? providerThread.session.engine
         : thread?.engineSelection.engine);
     const replacementRequirement =
       thread !== undefined
         ? yield* resolveSessionReplacementRequirement({
             threadId: event.payload.threadId,
-            activeProvider,
+            activeEngine,
             activeModel: liveSession?.model,
             currentEngineSelection: thread.engineSelection,
             requestedEngineSelection: event.payload.engineSelection,
@@ -4439,7 +4438,7 @@ const make = Effect.gen(function* () {
         session: {
           threadId: event.payload.threadId,
           status: "starting",
-          providerName: thread.session?.providerName ?? thread.engineSelection.engine,
+          engine: thread.session?.engine ?? thread.engineSelection.engine,
           runtimeMode: event.payload.runtimeMode,
           activeTurnId: engineServiceOwnsReplacement ? activeTurnId : null,
           lastError: null,
@@ -4580,7 +4579,7 @@ const make = Effect.gen(function* () {
         session: {
           threadId: thread.id,
           status: "interrupted",
-          providerName: thread.session.providerName ?? null,
+          engine: thread.session.engine ?? null,
           runtimeMode: thread.session.runtimeMode ?? DEFAULT_RUNTIME_MODE,
           // Preserve the active turn until the engine emits the terminal child event.
           activeTurnId: thread.session.activeTurnId,
@@ -4619,7 +4618,7 @@ const make = Effect.gen(function* () {
       session: {
         threadId: thread.id,
         status: "stopped",
-        providerName: thread.session?.providerName ?? null,
+        engine: thread.session?.engine ?? null,
         runtimeMode: thread.session?.runtimeMode ?? DEFAULT_RUNTIME_MODE,
         activeTurnId: null,
         lastError: thread.session?.lastError ?? null,

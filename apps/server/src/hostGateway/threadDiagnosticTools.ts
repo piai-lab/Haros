@@ -312,7 +312,7 @@ export function makeThreadDiagnosticTools(input: {
             }))
             .reverse(),
           coverage: {
-            source: "provider_runtime_events",
+            source: "engine_runtime_events",
             highWaterSequence,
             oldestRetainedSequence: runtimeCoverage.oldestSequence,
             retainedForThread: runtimeCoverage.retainedCount,
@@ -400,14 +400,14 @@ export function makeThreadDiagnosticTools(input: {
             ? [
                 {
                   severity: "error",
-                  code: "provider_session_error",
+                  code: "engine_session_error",
                   detail: detail.session.lastError,
                 },
               ]
             : []),
           ...blockers.map((blocker) => ({
             severity: "error",
-            code: "provider_delivery_blocked",
+            code: "engine_delivery_blocked",
             detail: `Event ${blocker.eventSequence} is ${blocker.state} after ${blocker.attemptCount} attempt(s).`,
           })),
           ...incidents
@@ -478,7 +478,7 @@ export function makeThreadDiagnosticTools(input: {
             },
             engineRuntimeRawEvents: {
               included: true,
-              source: "provider_runtime_events",
+              source: "engine_runtime_events",
               returnedNewest: runtimeEvents.length,
               highWaterSequence: runtimeCoverage.highWaterSequence,
               oldestRetainedSequence: runtimeCoverage.oldestSequence,

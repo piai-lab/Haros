@@ -245,9 +245,9 @@ function SettingsRouteView() {
     [currentGitTextGenerationModel, currentGitTextGenerationEngine],
   );
   const { modelOptionsByEngine: gitWritingCatalogOptionsByEngine } = useEngineModelCatalog({
-    selectedProvider: currentGitTextGenerationEngine,
+    selectedEngine: currentGitTextGenerationEngine,
     discoveryEnabled: activeSection === "general",
-    selectedProviderDiscoveryEnabled: activeSection === "general",
+    selectedEngineDiscoveryEnabled: activeSection === "general",
     cwd: serverConfigQuery.data?.cwd ?? null,
     modelHintByEngine: gitWritingModelHintByEngine,
     prefetchProviders: GIT_WRITING_DISCOVERY_PROVIDERS,

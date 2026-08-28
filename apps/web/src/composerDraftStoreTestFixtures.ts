@@ -111,7 +111,7 @@ export function makeQueuedTurn(id: string): QueuedComposerTurn {
     previewText: `queued ${id}`,
     text: `queued ${id}`,
     interactionMode: "plan",
-    selectedProvider: "codex",
+    selectedEngine: "codex",
     selectedModel: "gpt-5",
     selectedPromptEffort: null,
     engineSelection: {
@@ -141,7 +141,7 @@ export function makeQueuedChatTurn(
     pastedTexts: [],
     skills: [{ name: "check-code", path: "/skills/check-code" }],
     mentions: [{ name: "repo", path: "/mentions/repo" }],
-    selectedProvider: "codex",
+    selectedEngine: "codex",
     selectedModel: "gpt-5",
     selectedPromptEffort: null,
     engineSelection: {

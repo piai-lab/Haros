@@ -1610,11 +1610,11 @@ it.effect("EngineServiceLive keeps persisted resumable sessions on startup", () 
       yield* EngineService;
     }).pipe(Effect.provide(engineLayer));
 
-    const persistedProvider = yield* Effect.gen(function* () {
+    const persistedEngine = yield* Effect.gen(function* () {
       const directory = yield* EngineSessionDirectory;
-      return yield* directory.getProvider(asThreadId("thread-stale"));
+      return yield* directory.getEngine(asThreadId("thread-stale"));
     }).pipe(Effect.provide(directoryLayer));
-    assert.equal(persistedProvider, "codex");
+    assert.equal(persistedEngine, "codex");
 
     const runtime = yield* Effect.gen(function* () {
       const repository = yield* EngineSessionRuntimeRepository;
@@ -1623,16 +1623,6 @@ it.effect("EngineServiceLive keeps persisted resumable sessions on startup", () 
       });
     }).pipe(Effect.provide(runtimeRepositoryLayer));
     assert.equal(Option.isSome(runtime), true);
-
-    const legacyTableRows = yield* Effect.gen(function* () {
-      const sql = yield* SqlClient.SqlClient;
-      return yield* sql<{ readonly name: string }>`
-        SELECT name
-        FROM sqlite_master
-        WHERE type = 'table' AND name = 'provider_sessions'
-      `;
-    }).pipe(Effect.provide(persistenceLayer));
-    assert.equal(legacyTableRows.length, 0);
 
     fs.rmSync(tempDir, { recursive: true, force: true });
   }).pipe(Effect.provide(NodeServices.layer)),
@@ -4518,7 +4508,7 @@ routing.layer("EngineServiceLive routing", (it) => {
     }),
   );
 
-  it.effect("persists runtime status transitions in provider_session_runtime", () =>
+  it.effect("persists runtime status transitions in engine_session_runtime", () =>
     Effect.gen(function* () {
       const engine = yield* EngineService;
       const runtimeRepository = yield* EngineSessionRuntimeRepository;

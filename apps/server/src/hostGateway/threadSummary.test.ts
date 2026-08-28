@@ -20,7 +20,7 @@ function makeMessage(index: number, text = `message ${index}`): OrchestrationMes
 const session = (status: "running" | "ready" | "error" | "starting" | "stopped") => ({
   threadId: ThreadId.makeUnsafe("t-1"),
   status,
-  providerName: null,
+  engine: null,
   runtimeMode: "approval-required" as const,
   activeTurnId: null,
   lastError: null,

@@ -158,7 +158,7 @@ export function useHandleNewThread() {
       const project = useStore.getState().projects.find((candidate) => candidate.id === projectId);
       const engine = resolveNewThreadModelPrefetchProvider({
         providerOverride: options?.engine ?? null,
-        draftActiveProvider: targetComposer?.activeProvider ?? null,
+        draftActiveProvider: targetComposer?.activeEngine ?? null,
         stickyActiveProvider: draftStore.stickyActiveProvider,
         projectDefaultProvider: project?.defaultEngineSelection?.engine ?? null,
         defaultEngine: authoritativeSettings.defaultEngine,

@@ -88,7 +88,7 @@ const make = (options?: EngineRuntimeReconcilerLiveOptions) =>
     ): boolean =>
       current !== null &&
       current.status === next.status &&
-      current.providerName === next.providerName &&
+      current.engine === next.engine &&
       current.runtimeMode === next.runtimeMode &&
       current.activeTurnId === next.activeTurnId &&
       current.lastError === next.lastError;
@@ -111,10 +111,8 @@ const make = (options?: EngineRuntimeReconcilerLiveOptions) =>
               : plan.action === "settle-terminal-projection"
                 ? plan.terminalSession.status
                 : "interrupted",
-        providerName:
-          plan.action === "settle-terminal-projection"
-            ? plan.terminalSession.providerName
-            : plan.engine,
+        engine:
+          plan.action === "settle-terminal-projection" ? plan.terminalSession.engine : plan.engine,
         runtimeMode:
           plan.action === "settle-terminal-projection"
             ? plan.terminalSession.runtimeMode

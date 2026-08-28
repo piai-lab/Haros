@@ -8,8 +8,6 @@ import {
 } from "../Services/OrchestrationEventDeliveries.ts";
 import { OrchestrationEventDeliveryRepositoryLive } from "./OrchestrationEventDeliveries.ts";
 import { SqlitePersistenceMemory } from "./Sqlite.ts";
-import DurableProviderCommandDeliveryMigration from "../Migrations/064_DurableEngineCommandDelivery.ts";
-import EngineDeliveryReconciliationMigration from "../Migrations/067_EngineDeliveryReconciliation.ts";
 
 const layer = it.layer(
   OrchestrationEventDeliveryRepositoryLive.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
@@ -20,7 +18,6 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
     Effect.gen(function* () {
       const repository = yield* OrchestrationEventDeliveryRepository;
       const sql = yield* SqlClient.SqlClient;
-      yield* DurableProviderCommandDeliveryMigration;
       const now = new Date().toISOString();
       const payload = JSON.stringify({ threadId: "thread-delivery", text: "payload-owned-by-log" });
 
@@ -162,7 +159,6 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
     Effect.gen(function* () {
       const repository = yield* OrchestrationEventDeliveryRepository;
       const sql = yield* SqlClient.SqlClient;
-      yield* DurableProviderCommandDeliveryMigration;
       const now = new Date().toISOString();
       const inserted = yield* sql<{ readonly sequence: number }>`
         INSERT INTO orchestration_events (
@@ -249,8 +245,6 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
     Effect.gen(function* () {
       const repository = yield* OrchestrationEventDeliveryRepository;
       const sql = yield* SqlClient.SqlClient;
-      yield* DurableProviderCommandDeliveryMigration;
-      yield* EngineDeliveryReconciliationMigration;
       const now = new Date().toISOString();
       const inserted = yield* sql<{ readonly sequence: number }>`
         INSERT INTO orchestration_events (
@@ -367,7 +361,7 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       );
       const auditRows = yield* sql<{ readonly count: number }>`
         SELECT COUNT(*) AS count
-        FROM provider_delivery_reconciliations
+        FROM engine_delivery_reconciliations
         WHERE event_sequence = ${eventSequence}
       `;
       assert.strictEqual(auditRows[0]?.count, 2);

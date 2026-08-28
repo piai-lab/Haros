@@ -38,7 +38,7 @@ export interface UseComposerVoiceControllerOptions {
   activeProject: Project | undefined;
   activeThreadId: ThreadId | null;
   threadId: ThreadId;
-  selectedProvider: EngineKind;
+  selectedEngine: EngineKind;
   activeEngineStatus: ServerEngineStatus | null;
   pendingUserInputCount: number;
   onTranscriptReady: (transcript: string) => void;
@@ -76,7 +76,7 @@ export function useComposerVoiceController(
     activeProject,
     activeThreadId,
     threadId,
-    selectedProvider,
+    selectedEngine,
     activeEngineStatus,
     pendingUserInputCount,
     onTranscriptReady,
@@ -97,7 +97,7 @@ export function useComposerVoiceController(
   const [isVoiceTranscribing, setIsVoiceTranscribing] = useState(false);
   const voiceTranscriptionRequestIdRef = useRef(0);
   const voiceThreadIdRef = useRef(threadId);
-  const voiceProviderRef = useRef<EngineKind>(selectedProvider);
+  const voiceProviderRef = useRef<EngineKind>(selectedEngine);
   const voiceRecordingStartedAtRef = useRef<number | null>(null);
   const failureCopy = {
     ...DEFAULT_FAILURE_COPY,
@@ -107,8 +107,8 @@ export function useComposerVoiceController(
   // its identity before passive effects and browser events can observe it.
   useLayoutEffect(() => {
     voiceThreadIdRef.current = threadId;
-    voiceProviderRef.current = selectedProvider;
-  }, [threadId, selectedProvider]);
+    voiceProviderRef.current = selectedEngine;
+  }, [threadId, selectedEngine]);
 
   const voiceRecordingDurationLabel = formatVoiceRecordingDuration(voiceRecordingDurationMs);
   const { canStartVoiceNotes, showVoiceNotesControl } = deriveComposerVoiceState({
@@ -129,7 +129,7 @@ export function useComposerVoiceController(
         setIsVoiceTranscribing(false);
       }
     });
-  }, [cancelVoiceRecording, selectedProvider, threadId]);
+  }, [cancelVoiceRecording, selectedEngine, threadId]);
 
   useEffect(
     () => () => {
@@ -250,7 +250,7 @@ export function useComposerVoiceController(
     const requestId = voiceTranscriptionRequestIdRef.current + 1;
     voiceTranscriptionRequestIdRef.current = requestId;
     const requestThreadId = threadId;
-    const requestProvider = selectedProvider;
+    const requestProvider = selectedEngine;
     const isCurrentVoiceRequest = () =>
       voiceTranscriptionRequestIdRef.current === requestId &&
       voiceThreadIdRef.current === requestThreadId &&

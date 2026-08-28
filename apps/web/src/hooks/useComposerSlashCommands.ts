@@ -143,8 +143,8 @@ export function useComposerSlashCommands(input: {
   fastModeEnabled: boolean;
   providerNativeCommands: readonly EngineNativeCommandDescriptor[];
   providerCommandDiscoveryCwd: string | null;
-  selectedProvider: EngineKind;
-  currentProviderModelOptions: EngineModelOptions[EngineKind] | undefined;
+  selectedEngine: EngineKind;
+  currentEngineModelOptions: EngineModelOptions[EngineKind] | undefined;
   selectedEngineSelection: EngineSelection | null;
   environmentMode: string | null;
   runtimeMode: RuntimeMode;
@@ -197,8 +197,8 @@ export function useComposerSlashCommands(input: {
     fastModeEnabled,
     providerNativeCommands,
     providerCommandDiscoveryCwd,
-    selectedProvider,
-    currentProviderModelOptions,
+    selectedEngine,
+    currentEngineModelOptions,
     selectedEngineSelection,
     environmentMode,
     runtimeMode,
@@ -215,7 +215,7 @@ export function useComposerSlashCommands(input: {
   } = input;
   const providerNativeCommandNames = providerNativeCommands.map((command) => command.name);
   const availableBuiltInSlashCommands = getAvailableComposerSlashCommands({
-    engine: selectedProvider,
+    engine: selectedEngine,
     supportsFastSlashCommand,
     canOfferCompactCommand,
     canOfferReviewCommand: true,
@@ -273,8 +273,8 @@ export function useComposerSlashCommands(input: {
     (enabled: boolean) => {
       setComposerDraftProviderModelOptions(
         threadId,
-        selectedProvider,
-        buildNextProviderOptions(selectedProvider, currentProviderModelOptions, {
+        selectedEngine,
+        buildNextProviderOptions(selectedEngine, currentEngineModelOptions, {
           fastMode: enabled,
         }),
         {
@@ -284,9 +284,9 @@ export function useComposerSlashCommands(input: {
       );
     },
     [
-      currentProviderModelOptions,
+      currentEngineModelOptions,
       selectedEngineSelection,
-      selectedProvider,
+      selectedEngine,
       setComposerDraftProviderModelOptions,
       threadId,
     ],
@@ -842,7 +842,7 @@ export function useComposerSlashCommands(input: {
 
   const handleReviewTargetSelection = useCallback(
     async (target: "changes" | "base-branch") => {
-      if (selectedProvider === "codex") {
+      if (selectedEngine === "codex") {
         await runCodexReviewStart(target);
       } else {
         const replacement = buildSlashReviewComposerPrompt(target === "base-branch" ? "base" : "");
@@ -850,7 +850,7 @@ export function useComposerSlashCommands(input: {
       }
       editorActions.scheduleComposerFocus();
     },
-    [editorActions, selectedProvider, runCodexReviewStart],
+    [editorActions, selectedEngine, runCodexReviewStart],
   );
 
   const handleForkTargetSelection = useCallback(
@@ -946,7 +946,7 @@ export function useComposerSlashCommands(input: {
 
   const openFeedbackDialog = useCallback(() => {
     openGlobalFeedbackDialog({
-      engine: selectedProvider,
+      engine: selectedEngine,
       model: selectedEngineSelection?.model ?? null,
       projectKind: activeProject?.kind ?? null,
       environmentMode,
@@ -968,13 +968,13 @@ export function useComposerSlashCommands(input: {
     openGlobalFeedbackDialog,
     runtimeMode,
     selectedEngineSelection?.model,
-    selectedProvider,
+    selectedEngine,
   ]);
 
   const handleStandaloneSlashCommand = useCallback(
     async (trimmed: string): Promise<boolean> => {
       const fastSlashAction = parseFastSlashCommandAction(trimmed);
-      if (selectedProvider === "claude" && fastSlashAction !== null) {
+      if (selectedEngine === "claude" && fastSlashAction !== null) {
         if (await checkClaudeFastSlashCommandAvailability()) {
           return false;
         }
@@ -1034,7 +1034,7 @@ export function useComposerSlashCommands(input: {
         return true;
       }
       if (slashInvocation.command === "review") {
-        if (selectedProvider === "codex") {
+        if (selectedEngine === "codex") {
           const normalizedArgs = slashInvocation.args.trim().toLowerCase();
           if (normalizedArgs.length === 0) {
             editorActions.clearComposerSlashDraft();
@@ -1115,7 +1115,7 @@ export function useComposerSlashCommands(input: {
         const { targetEngine, prompt, unavailableProvider } = parseSideSlashCommandArgs(
           slashInvocation.args,
           {
-            currentProvider: selectedProvider,
+            currentEngine: selectedEngine,
             availableTargetProviders: sidechatTargetProviders,
           },
         );
@@ -1164,7 +1164,7 @@ export function useComposerSlashCommands(input: {
       openForkTargetPicker,
       openFeedbackDialog,
       openReviewTargetPicker,
-      selectedProvider,
+      selectedEngine,
       sidechatTargetProviders,
       supportsTextNativeReviewCommand,
       t,
@@ -1319,7 +1319,7 @@ export function useComposerSlashCommands(input: {
       }
 
       if (item.command === "review") {
-        if (selectedProvider === "codex") {
+        if (selectedEngine === "codex") {
           const applied = clearSlashCommandFromComposer();
           if (!wasPromptReplacementApplied(applied)) {
             return;
@@ -1395,7 +1395,7 @@ export function useComposerSlashCommands(input: {
       openForkTargetPicker,
       openFeedbackDialog,
       openReviewTargetPicker,
-      selectedProvider,
+      selectedEngine,
       supportsTextNativeReviewCommand,
       runExportSlashCommand,
       runFastSlashCommand,

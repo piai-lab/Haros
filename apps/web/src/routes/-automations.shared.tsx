@@ -1023,7 +1023,7 @@ export function AutomationModelPicker({
     runtimeModelsByEngine,
     selectedRuntimeModel,
   } = useEngineModelCatalog({
-    selectedProvider: value.engine,
+    selectedEngine: value.engine,
     discoveryEnabled: open,
     piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,

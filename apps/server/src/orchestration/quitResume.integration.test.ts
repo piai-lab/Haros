@@ -80,7 +80,7 @@ function runningThread(overrides: Partial<OrchestrationThread> = {}): Orchestrat
     session: {
       threadId: ThreadId.makeUnsafe("thread-1"),
       status: "running",
-      providerName: "claude",
+      engine: "claude",
       runtimeMode: "approval-required",
       activeTurnId: TurnId.makeUnsafe("turn-1"),
       lastError: null,

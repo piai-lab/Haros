@@ -419,7 +419,7 @@ retentionLayer("EngineRuntimeEventRepository retention", (it) => {
       const repository = yield* EngineRuntimeEventRepository;
       const sql = yield* SqlClient.SqlClient;
       const journalSize = Effect.map(
-        sql<{ readonly count: number }>`SELECT COUNT(*) AS count FROM provider_runtime_events`,
+        sql<{ readonly count: number }>`SELECT COUNT(*) AS count FROM engine_runtime_events`,
         (rows) => rows[0]?.count ?? 0,
       );
       const replayable = Effect.map(

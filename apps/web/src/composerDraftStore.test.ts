@@ -37,7 +37,7 @@ describe("composerDraftStore queued model binding", () => {
     const store = useComposerDraftStore.getState();
     store.enqueueQueuedTurn(threadId, {
       ...makeQueuedChatTurn("queued-claude"),
-      selectedProvider: "claude",
+      selectedEngine: "claude",
       selectedModel: "claude-sonnet-4-6",
       engineSelection: {
         engine: "claude",
@@ -55,7 +55,7 @@ describe("composerDraftStore queued model binding", () => {
     expect(
       useComposerDraftStore.getState().draftsByThreadId[threadId]?.queuedTurns[0],
     ).toMatchObject({
-      selectedProvider: "claude",
+      selectedEngine: "claude",
       selectedModel: "claude-sonnet-4-6",
       engineSelection: {
         engine: "claude",

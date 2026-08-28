@@ -1103,7 +1103,7 @@ const makeOrchestrationEngine = Effect.gen(function* () {
               const thread = deciderReadModel.threads.find(
                 (candidate) => candidate.id === turnCommand.threadId,
               );
-              const sessionEngine = thread?.session?.providerName;
+              const sessionEngine = thread?.session?.engine;
               const engine =
                 sessionEngine !== undefined && Schema.is(EngineKind)(sessionEngine)
                   ? sessionEngine

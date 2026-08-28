@@ -1998,7 +1998,7 @@ export default function ChatView({
   const localDraftThread = useMemo(() => {
     if (!draftThread) return undefined;
     const desiredProvider =
-      composerDraft.activeProvider ??
+      composerDraft.activeEngine ??
       fallbackDraftProject?.defaultEngineSelection?.engine ??
       serverSettingsSnapshot.defaultEngine;
     const desiredEngineSelection =
@@ -2016,7 +2016,7 @@ export default function ChatView({
       localDraftError,
     );
   }, [
-    composerDraft.activeProvider,
+    composerDraft.activeEngine,
     composerDraft.engineSelectionByEngine,
     draftThread,
     fallbackDraftProject?.defaultEngineSelection,
@@ -2407,13 +2407,13 @@ export default function ChatView({
     markThreadVisited,
   ]);
 
-  const selectedProviderByThreadId = composerDraft.activeProvider ?? null;
+  const selectedEngineByThreadId = composerDraft.activeEngine ?? null;
   const threadProvider =
     serverThread?.engineSelection.engine ?? activeProject?.defaultEngineSelection?.engine ?? null;
-  const selectedProvider: EngineKind =
-    selectedProviderByThreadId ?? threadProvider ?? serverSettingsSnapshot.defaultEngine;
+  const selectedEngine: EngineKind =
+    selectedEngineByThreadId ?? threadProvider ?? serverSettingsSnapshot.defaultEngine;
   const hasActiveProviderDiscoverySession = isProviderDiscoverySessionActive({
-    engine: selectedProvider,
+    engine: selectedEngine,
     session: activeThread?.session,
   });
   const previousSelectedProviderRef = useRef<{
@@ -2483,7 +2483,7 @@ export default function ChatView({
     runtimeModelsByEngine,
     selectedRuntimeAgents: dynamicAgents,
   } = useEngineModelCatalog({
-    selectedProvider,
+    selectedEngine,
     discoveryEnabled: false,
     piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
@@ -2491,7 +2491,7 @@ export default function ChatView({
   });
   const { modelOptions: composerModelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId,
-    selectedProvider,
+    selectedEngine,
     threadEngineSelection: serverThread?.engineSelection,
     projectEngineSelection: activeProject?.defaultEngineSelection,
     // The Composer may inherit an exact draft/thread/project/sticky selection,
@@ -2502,9 +2502,9 @@ export default function ChatView({
     availableModelOptionsByEngine: selectableModelOptionsByEngine,
   });
   const draftEngineSelectionForSelectedProvider =
-    composerDraft.engineSelectionByEngine[selectedProvider] ?? null;
+    composerDraft.engineSelectionByEngine[selectedEngine] ?? null;
   const persistedClaudeSupportsAutoMode =
-    selectedProvider === "claude"
+    selectedEngine === "claude"
       ? draftEngineSelectionForSelectedProvider?.engine === "claude" &&
         draftEngineSelectionForSelectedProvider.model === selectedModel
         ? draftEngineSelectionForSelectedProvider.supportsAutoMode
@@ -2515,15 +2515,15 @@ export default function ChatView({
       : undefined;
   const selectedRuntimeModel = useMemo(() => {
     const discovered = resolveRuntimeModelDescriptor({
-      engine: selectedProvider,
+      engine: selectedEngine,
       model: selectedModel,
-      runtimeModels: runtimeModelsByEngine[selectedProvider],
+      runtimeModels: runtimeModelsByEngine[selectedEngine],
     });
     if (discovered) {
       return discovered;
     }
     return selectedModel !== null &&
-      selectedProvider === "claude" &&
+      selectedEngine === "claude" &&
       typeof persistedClaudeSupportsAutoMode === "boolean"
       ? {
           slug: selectedModel,
@@ -2531,17 +2531,17 @@ export default function ChatView({
           supportsAutoMode: persistedClaudeSupportsAutoMode,
         }
       : undefined;
-  }, [persistedClaudeSupportsAutoMode, runtimeModelsByEngine, selectedModel, selectedProvider]);
+  }, [persistedClaudeSupportsAutoMode, runtimeModelsByEngine, selectedModel, selectedEngine]);
   const composerEngineState = useMemo(
     () =>
       getComposerProviderState({
-        engine: selectedProvider,
+        engine: selectedEngine,
         model: selectedModel,
         runtimeModel: selectedRuntimeModel,
         prompt,
         modelOptions: composerModelOptions,
       }),
-    [composerModelOptions, prompt, selectedModel, selectedProvider, selectedRuntimeModel],
+    [composerModelOptions, prompt, selectedModel, selectedEngine, selectedRuntimeModel],
   );
   const selectedPromptEffort = composerEngineState.promptEffort;
   const selectedModelOptionsForDispatch = composerEngineState.modelOptionsForDispatch;
@@ -2550,20 +2550,20 @@ export default function ChatView({
       return null;
     }
     return buildEngineSelection(
-      selectedProvider,
+      selectedEngine,
       selectedModel,
       selectedModelOptionsForDispatch,
-      selectedProvider === "claude" ? selectedRuntimeModel?.supportsAutoMode : undefined,
+      selectedEngine === "claude" ? selectedRuntimeModel?.supportsAutoMode : undefined,
     );
   }, [
     draftEngineSelectionForSelectedProvider,
     selectedModel,
     selectedModelOptionsForDispatch,
-    selectedProvider,
+    selectedEngine,
     selectedRuntimeModel,
   ]);
   const executionCapabilitySelection = selectedEngineSelection ?? {
-    engine: selectedProvider,
+    engine: selectedEngine,
     model: "__unselected__",
   };
   const executionCapabilitiesQuery = useQuery({
@@ -2584,18 +2584,18 @@ export default function ChatView({
     [serverSettingsSnapshot],
   );
   const selectedModelForPicker =
-    selectedEngineSelection?.engine === selectedProvider
+    selectedEngineSelection?.engine === selectedEngine
       ? selectedEngineSelection.model
       : selectedModel;
   const selectedModelForPickerWithCustomFallback = useMemo(() => {
-    const currentOptions = modelOptionsByEngine[selectedProvider];
+    const currentOptions = modelOptionsByEngine[selectedEngine];
     if (selectedModelForPicker === null) {
       return null;
     }
     return currentOptions.some((option) => option.slug === selectedModelForPicker)
       ? selectedModelForPicker
-      : (normalizeModelSlug(selectedModelForPicker, selectedProvider) ?? selectedModelForPicker);
-  }, [modelOptionsByEngine, selectedModelForPicker, selectedProvider]);
+      : (normalizeModelSlug(selectedModelForPicker, selectedEngine) ?? selectedModelForPicker);
+  }, [modelOptionsByEngine, selectedModelForPicker, selectedEngine]);
   const searchableModelOptions = useMemo(
     () =>
       buildSearchableModelOptions({
@@ -2603,15 +2603,10 @@ export default function ChatView({
         modelOptionsByEngine: selectableModelOptionsByEngine,
         engineOrder: settings.engineOrder,
         hiddenEngines: settings.hiddenEngines,
-        protectedProviders: [selectedProvider],
+        protectedProviders: [selectedEngine],
         lockedProvider: null,
       }),
-    [
-      selectableModelOptionsByEngine,
-      selectedProvider,
-      settings.hiddenEngines,
-      settings.engineOrder,
-    ],
+    [selectableModelOptionsByEngine, selectedEngine, settings.hiddenEngines, settings.engineOrder],
   );
   const phase = derivePhase(activeThread?.session ?? null);
   const isConnecting = isLocalConnecting || phase === "connecting";
@@ -3776,36 +3771,35 @@ export default function ChatView({
   const effectiveMentionQuery = mentionTriggerQuery.length > 0 ? debouncedPathQuery : "";
   const composerSkillCwd = providerModelDiscoveryCwd;
   const providerComposerCapabilitiesQuery = useQuery(
-    providerComposerCapabilitiesQueryOptions(selectedProvider),
+    providerComposerCapabilitiesQueryOptions(selectedEngine),
   );
   const canCompactActiveSession =
-    activeThread?.session?.engine === selectedProvider &&
+    activeThread?.session?.engine === selectedEngine &&
     activeThread.session.status !== "closed" &&
     supportsThreadCompaction(providerComposerCapabilitiesQuery.data);
   const providerCommandsQuery = useQuery(
     providerCommandsQueryOptions({
-      engine: selectedProvider,
+      engine: selectedEngine,
       cwd: composerSkillCwd,
       threadId,
       activeSession: hasActiveProviderDiscoverySession,
       binaryPath:
-        (selectedProvider === "opencode"
+        (selectedEngine === "opencode"
           ? engineOptionsForDispatch?.opencode?.binaryPath
-          : selectedProvider === "kilo"
+          : selectedEngine === "kilo"
             ? engineOptionsForDispatch?.kilo?.binaryPath
             : null) ?? null,
       serverUrl:
-        (selectedProvider === "opencode"
+        (selectedEngine === "opencode"
           ? engineOptionsForDispatch?.opencode?.serverUrl
-          : selectedProvider === "kilo"
+          : selectedEngine === "kilo"
             ? engineOptionsForDispatch?.kilo?.serverUrl
             : null) ?? null,
       experimentalWebSockets:
-        selectedProvider === "opencode"
+        selectedEngine === "opencode"
           ? engineOptionsForDispatch?.opencode?.experimentalWebSockets
           : undefined,
-      agentDir:
-        selectedProvider === "pi" ? serverSettingsSnapshot.engines.pi.agentDir || null : null,
+      agentDir: selectedEngine === "pi" ? serverSettingsSnapshot.engines.pi.agentDir || null : null,
       enabled:
         (composerTriggerKind === "slash-command" || composerTriggerKind === "slash-model") &&
         supportsNativeSlashCommandDiscovery(providerComposerCapabilitiesQuery.data) &&
@@ -3813,24 +3807,23 @@ export default function ChatView({
     }),
   );
   const canDiscoverProviderSkills =
-    selectedProvider === "pi" || supportsSkillDiscovery(providerComposerCapabilitiesQuery.data);
+    selectedEngine === "pi" || supportsSkillDiscovery(providerComposerCapabilitiesQuery.data);
   const providerSkillsQuery = useQuery(
     providerSkillsQueryOptions({
-      engine: selectedProvider,
+      engine: selectedEngine,
       cwd: composerSkillCwd,
       threadId,
       activeSession: hasActiveProviderDiscoverySession,
-      agentDir:
-        selectedProvider === "pi" ? serverSettingsSnapshot.engines.pi.agentDir || null : null,
+      agentDir: selectedEngine === "pi" ? serverSettingsSnapshot.engines.pi.agentDir || null : null,
       enabled:
-        (isSkillTrigger || composerTriggerKind === "slash-command" || selectedProvider === "pi") &&
+        (isSkillTrigger || composerTriggerKind === "slash-command" || selectedEngine === "pi") &&
         canDiscoverProviderSkills &&
         composerSkillCwd !== null,
     }),
   );
   const providerPluginsQuery = useQuery(
     providerPluginsQueryOptions({
-      engine: selectedProvider,
+      engine: selectedEngine,
       cwd: composerSkillCwd,
       threadId,
       enabled:
@@ -3886,7 +3879,7 @@ export default function ChatView({
   const effectiveComposerTrigger = useMemo(() => {
     if (
       composerTrigger?.kind === "slash-model" &&
-      hasProviderNativeSlashCommand(selectedProvider, providerNativeCommandNames, "model")
+      hasProviderNativeSlashCommand(selectedEngine, providerNativeCommandNames, "model")
     ) {
       return {
         ...composerTrigger,
@@ -3895,27 +3888,27 @@ export default function ChatView({
       };
     }
     return composerTrigger;
-  }, [composerTrigger, providerNativeCommandNames, selectedProvider]);
+  }, [composerTrigger, providerNativeCommandNames, selectedEngine]);
   const effectiveComposerTriggerKind = effectiveComposerTrigger?.kind ?? null;
   const supportsTextNativeReviewCommand = useMemo(
-    () => providerSupportsTextNativeReviewCommand(selectedProvider, providerNativeCommands),
-    [providerNativeCommands, selectedProvider],
+    () => providerSupportsTextNativeReviewCommand(selectedEngine, providerNativeCommands),
+    [providerNativeCommands, selectedEngine],
   );
   const providerSkills = providerSkillsQuery.data?.skills ?? EMPTY_PROVIDER_SKILLS;
   const selectedModelCaps = useMemo(
     () =>
       getRuntimeAwareModelCapabilities({
-        engine: selectedProvider,
+        engine: selectedEngine,
         model: selectedModel,
         runtimeModel: selectedRuntimeModel,
       }),
-    [selectedModel, selectedProvider, selectedRuntimeModel],
+    [selectedModel, selectedEngine, selectedRuntimeModel],
   );
   const supportsFastSlashCommand = selectedModelCaps.supportsFastMode;
-  const currentProviderModelOptions = composerModelOptions?.[selectedProvider];
+  const currentEngineModelOptions = composerModelOptions?.[selectedEngine];
   const fastModeEnabled =
     supportsFastSlashCommand &&
-    (currentProviderModelOptions as { fastMode?: boolean } | undefined)?.fastMode === true;
+    (currentEngineModelOptions as { fastMode?: boolean } | undefined)?.fastMode === true;
   const composerPromptWithoutActiveSlashTrigger =
     composerTrigger?.kind === "slash-command"
       ? stripComposerTriggerText(prompt, composerTrigger)
@@ -3961,7 +3954,7 @@ export default function ChatView({
     threadExportBlockedReason(activeThread) === null;
   const normalComposerMenuItems = useComposerCommandMenuItems({
     composerTrigger: effectiveComposerTrigger,
-    engine: selectedProvider,
+    engine: selectedEngine,
     providerPlugins,
     providerNativeCommands,
     providerSkills,
@@ -4145,8 +4138,8 @@ export default function ChatView({
     ? t("composer.handoffThread")
     : t("composer.createHandoffThread");
   const activeEngineStatus = useMemo(
-    () => findEngineStatus(engineStatuses, selectedProvider),
-    [selectedProvider, engineStatuses],
+    () => findEngineStatus(engineStatuses, selectedEngine),
+    [selectedEngine, engineStatuses],
   );
   useEffect(() => {
     if (!isFocusedPane) return;
@@ -4154,19 +4147,19 @@ export default function ChatView({
     const deterministicRecovery =
       serverConfigQuery.isError ||
       serverSettingsQuery.isError ||
-      serverSettingsSnapshot.engines[selectedProvider]?.enabled === false ||
+      serverSettingsSnapshot.engines[selectedEngine]?.enabled === false ||
       activeEngineStatus?.authStatus === "unauthenticated" ||
       (activeEngineStatus !== null && activeEngineStatus.available === false);
     reportFocusedComposerReadiness(
       snapshotsSettled &&
         (deterministicRecovery ||
-          isTerminalStartupCatalogState(catalogStateByEngine[selectedProvider])),
+          isTerminalStartupCatalogState(catalogStateByEngine[selectedEngine])),
     );
   }, [
     activeEngineStatus,
     catalogStateByEngine,
     isFocusedPane,
-    selectedProvider,
+    selectedEngine,
     serverConfigQuery.isError,
     serverConfigQuery.isPending,
     serverSettingsQuery.isError,
@@ -4620,7 +4613,7 @@ export default function ChatView({
     activeProject,
     activeThreadId: activeThread?.id ?? null,
     threadId,
-    selectedProvider,
+    selectedEngine,
     activeEngineStatus: voiceEngineStatus,
     pendingUserInputCount: pendingUserInputs.length,
     onTranscriptReady: appendVoiceTranscriptToComposer,
@@ -6011,10 +6004,10 @@ export default function ChatView({
 
   useEffect(() => {
     updateSelectedComposerSkills((existing) => {
-      const nextSkills = filterPromptSkillReferences(prompt, existing, selectedProvider);
+      const nextSkills = filterPromptSkillReferences(prompt, existing, selectedEngine);
       return providerSkillReferencesEqual(existing, nextSkills) ? existing : nextSkills;
     });
-  }, [prompt, selectedProvider, updateSelectedComposerSkills]);
+  }, [prompt, selectedEngine, updateSelectedComposerSkills]);
 
   useEffect(() => {
     updateSelectedComposerMentions((existing) => {
@@ -6028,14 +6021,14 @@ export default function ChatView({
     const previous = previousSelectedProviderRef.current;
     previousSelectedProviderRef.current = {
       threadId,
-      engine: selectedProvider,
+      engine: selectedEngine,
     };
-    if (!previous || previous.threadId !== threadId || previous.engine === selectedProvider) {
+    if (!previous || previous.threadId !== threadId || previous.engine === selectedEngine) {
       return;
     }
     updateSelectedComposerSkills([]);
     updateSelectedComposerMentions([]);
-  }, [selectedProvider, threadId, updateSelectedComposerMentions, updateSelectedComposerSkills]);
+  }, [selectedEngine, threadId, updateSelectedComposerMentions, updateSelectedComposerSkills]);
 
   useLayoutEffect(() => {
     // ChatView stays mounted across thread switches, so clear thread-local overlays before paint.
@@ -6627,16 +6620,11 @@ export default function ChatView({
   const onComposerEngineSelect = useCallback(
     (engine: EngineKind) => {
       if (!activeThread) return;
-      if (engine === selectedProvider) return;
+      if (engine === selectedEngine) return;
       setComposerDraftActiveProviderAndSticky(activeThread.id, engine);
       scheduleComposerFocus();
     },
-    [
-      activeThread,
-      scheduleComposerFocus,
-      selectedProvider,
-      setComposerDraftActiveProviderAndSticky,
-    ],
+    [activeThread, scheduleComposerFocus, selectedEngine, setComposerDraftActiveProviderAndSticky],
   );
 
   const copyThreadIdToClipboard = useCopyThreadIdToClipboard();
@@ -6727,15 +6715,15 @@ export default function ChatView({
         event.preventDefault();
         event.stopPropagation();
         const direction = command === "model.next" ? "next" : "previous";
-        const engineOptions = selectableModelOptionsByEngine[selectedProvider] ?? [];
+        const engineOptions = selectableModelOptionsByEngine[selectedEngine] ?? [];
         const nextSlug = resolveCycledModelSlug({
           currentModel: selectedModel,
           options: engineOptions,
-          favoriteSlugs: readFavoriteModelSlugs(selectedProvider),
+          favoriteSlugs: readFavoriteModelSlugs(selectedEngine),
           direction,
         });
         if (!nextSlug) return;
-        onEngineModelSelect(selectedProvider, nextSlug as ModelSlug);
+        onEngineModelSelect(selectedEngine, nextSlug as ModelSlug);
         return;
       }
 
@@ -6957,7 +6945,7 @@ export default function ChatView({
     toggleComposerFocus,
     toggleTerminalVisibility,
     activeThread,
-    selectedProvider,
+    selectedEngine,
     selectedModel,
     modelOptionsByEngine,
     onEngineModelSelect,
@@ -7855,7 +7843,7 @@ export default function ChatView({
       queuedChatTurn?.skills ?? selectedComposerSkillsRef.current;
     const selectedComposerMentionsForSend =
       queuedChatTurn?.mentions ?? selectedComposerMentionsRef.current;
-    const selectedProviderForSend = queuedChatTurn?.selectedProvider ?? selectedProvider;
+    const selectedEngineForSend = queuedChatTurn?.selectedEngine ?? selectedEngine;
     const selectedModelForSend = queuedChatTurn?.selectedModel ?? selectedModel;
     const selectedPromptEffortForSend =
       queuedChatTurn?.selectedPromptEffort ?? selectedPromptEffort;
@@ -7941,7 +7929,7 @@ export default function ChatView({
             previewText: followUp.text.trim(),
             text: followUp.text,
             interactionMode: followUp.interactionMode,
-            selectedProvider,
+            selectedEngine,
             selectedModel,
             selectedPromptEffort,
             engineSelection: selectedEngineSelectionForSend,
@@ -8295,7 +8283,7 @@ export default function ChatView({
         pastedTexts: sendableComposerPastedTexts,
         skills: selectedComposerSkillsForSend,
         mentions: selectedComposerMentionsForSend,
-        selectedProvider: selectedProviderForSend,
+        selectedEngine: selectedEngineForSend,
         selectedModel: selectedModelForSend,
         selectedPromptEffort: selectedPromptEffortForSend,
         engineSelection: selectedEngineSelectionForSend,
@@ -8648,7 +8636,7 @@ export default function ChatView({
           pastedTexts: composerPastedTextsSnapshot,
           skills: composerSkillsSnapshot,
           mentions: composerMentionsSnapshot,
-          selectedProvider: selectedProviderForSend,
+          selectedEngine: selectedEngineForSend,
           selectedModel: selectedModelForSend,
           selectedPromptEffort: selectedPromptEffortForSend,
           engineSelection: selectedEngineSelectionForSend,
@@ -8668,7 +8656,7 @@ export default function ChatView({
     const outgoingTextSeed =
       messageTextForSend || (composerImagesSnapshot.length > 0 ? IMAGE_ONLY_BOOTSTRAP_PROMPT : "");
     const outgoingMessageText = formatOutgoingComposerPrompt({
-      engine: selectedProviderForSend,
+      engine: selectedEngineForSend,
       model: selectedModelForSend,
       effort: selectedPromptEffortForSend,
       text: outgoingTextSeed,
@@ -8676,7 +8664,7 @@ export default function ChatView({
     const mentionedSkillsForSend = filterPromptSkillReferences(
       outgoingMessageText,
       selectedComposerSkillsForSend,
-      selectedProviderForSend,
+      selectedEngineForSend,
     );
     const mentionedPluginMentionsForSend = filterPromptProviderMentionReferences(
       outgoingMessageText,
@@ -9382,7 +9370,7 @@ export default function ChatView({
     const messageIdForSend = newMessageId();
     const messageCreatedAt = new Date().toISOString();
     const outgoingMessageText = formatOutgoingComposerPrompt({
-      engine: queuedTurn?.selectedProvider ?? selectedProvider,
+      engine: queuedTurn?.selectedEngine ?? selectedEngine,
       model: queuedTurn?.selectedModel ?? selectedModel,
       effort: queuedTurn?.selectedPromptEffort ?? selectedPromptEffort,
       text: trimmed,
@@ -9534,7 +9522,7 @@ export default function ChatView({
         messageId,
       });
       const outgoingMessageText = formatOutgoingComposerPrompt({
-        engine: selectedProvider,
+        engine: selectedEngine,
         model: selectedModel,
         effort: selectedPromptEffort,
         text: editedTextWithOriginalContext,
@@ -9583,7 +9571,7 @@ export default function ChatView({
       selectedModel,
       selectedEngineSelection,
       selectedPromptEffort,
-      selectedProvider,
+      selectedEngine,
       serverSettingsReady,
       setThreadError,
       assistantDeliveryMode,
@@ -9642,7 +9630,7 @@ export default function ChatView({
       pastedTexts: [],
       skills: [],
       mentions: [],
-      selectedProvider,
+      selectedEngine,
       selectedModel,
       selectedPromptEffort,
       engineSelection: selectedEngineSelection,
@@ -9664,7 +9652,7 @@ export default function ChatView({
     selectedModel,
     selectedEngineSelection,
     selectedPromptEffort,
-    selectedProvider,
+    selectedEngine,
     t,
     workflowRunState,
   ]);
@@ -9810,7 +9798,7 @@ export default function ChatView({
     const planMarkdown = activeProposedPlan.planMarkdown;
     const implementationPrompt = buildPlanImplementationPrompt(planMarkdown);
     const outgoingImplementationPrompt = formatOutgoingComposerPrompt({
-      engine: selectedProvider,
+      engine: selectedEngine,
       model: selectedModel,
       effort: selectedPromptEffort,
       text: implementationPrompt,
@@ -9935,7 +9923,7 @@ export default function ChatView({
     selectedEngineSelection,
     engineOptionsForDispatch,
     rememberCustomBinaryPathForDispatch,
-    selectedProvider,
+    selectedEngine,
     assistantDeliveryMode,
     syncServerShellSnapshot,
     t,
@@ -9960,29 +9948,29 @@ export default function ChatView({
     },
     [scheduleComposerFocus, setPrompt],
   );
-  const selectedProviderModelOptions = composerModelOptions?.[selectedProvider];
+  const selectedEngineModelOptions = composerModelOptions?.[selectedEngine];
   const composerTraitSelection = getComposerTraitSelection(
-    selectedProvider,
+    selectedEngine,
     selectedModel,
     prompt,
-    selectedProviderModelOptions,
+    selectedEngineModelOptions,
     selectedRuntimeModel,
   );
   const runtimeUsageContextWindow = useMemo(
     () =>
       activeContextWindow ??
-      (selectedProvider === "claude"
+      (selectedEngine === "claude"
         ? deriveSelectedContextWindowSnapshot(composerTraitSelection.contextWindow)
         : null),
-    [activeContextWindow, composerTraitSelection.contextWindow, selectedProvider],
+    [activeContextWindow, composerTraitSelection.contextWindow, selectedEngine],
   );
   const contextWindowSelectionStatus = useMemo(
     () =>
       deriveContextWindowSelectionStatus({
         activeSnapshot: runtimeUsageContextWindow,
-        selectedValue: selectedProvider === "claude" ? composerTraitSelection.contextWindow : null,
+        selectedValue: selectedEngine === "claude" ? composerTraitSelection.contextWindow : null,
       }),
-    [runtimeUsageContextWindow, composerTraitSelection.contextWindow, selectedProvider],
+    [runtimeUsageContextWindow, composerTraitSelection.contextWindow, selectedEngine],
   );
   const composerFooterControlsPlan = useMemo(
     () => composerFooterPlanForTier(composerFooterTier, Boolean(runtimeUsageContextWindow)),
@@ -9993,17 +9981,17 @@ export default function ChatView({
   // let the measured-overflow loop demote again before paint if needed.
   const composerFooterModelLabel = selectedModelForPickerWithCustomFallback
     ? resolveProviderModelLabel({
-        engine: selectedProvider,
-        lockedProvider: selectedProvider,
+        engine: selectedEngine,
+        lockedProvider: selectedEngine,
         model: selectedModelForPickerWithCustomFallback,
         modelOptionsByEngine: selectableModelOptionsByEngine,
       })
-    : t(resolveComposerModelFallbackMessageKey(catalogStateByEngine[selectedProvider]));
+    : t(resolveComposerModelFallbackMessageKey(catalogStateByEngine[selectedEngine]));
   const composerFooterTraitsSummary = resolveTraitsTriggerSummary({
-    engine: selectedProvider,
+    engine: selectedEngine,
     model: selectedModelForPickerWithCustomFallback,
     prompt,
-    modelOptions: selectedProviderModelOptions,
+    modelOptions: selectedEngineModelOptions,
     ...(selectedRuntimeModel ? { runtimeModel: selectedRuntimeModel } : {}),
     runtimeAgents: dynamicAgents,
     labels: {
@@ -10044,21 +10032,21 @@ export default function ChatView({
   );
   const refreshSelectedProviderModels = useCallback(() => {
     void queryClient.invalidateQueries({
-      queryKey: engineDiscoveryQueryKeys.modelsForProvider(selectedProvider),
+      queryKey: engineDiscoveryQueryKeys.modelsForProvider(selectedEngine),
     });
-  }, [queryClient, selectedProvider]);
+  }, [queryClient, selectedEngine]);
   const openSelectedEngineSettings = useCallback(() => {
     void navigate({
       to: "/settings",
       search: {
-        section: selectedProvider === "oa" ? "models" : "engines",
+        section: selectedEngine === "oa" ? "models" : "engines",
       },
     });
-  }, [navigate, selectedProvider]);
+  }, [navigate, selectedEngine]);
   const composerPickerControls = (
     <>
       <ComposerEnginePicker
-        engine={selectedProvider}
+        engine={selectedEngine}
         engines={engineStatuses}
         hiddenEngines={settings.hiddenEngines}
         engineOrder={settings.engineOrder}
@@ -10072,16 +10060,16 @@ export default function ChatView({
         compact={isComposerFooterCompact}
         hideModelLabel={!composerFooterControlsPlan.showModelLabel}
         hideStatusLabel={!composerFooterControlsPlan.showTraitsLabel}
-        engine={selectedProvider}
+        engine={selectedEngine}
         model={selectedModelForPickerWithCustomFallback}
-        catalogState={catalogStateByEngine[selectedProvider]}
+        catalogState={catalogStateByEngine[selectedEngine]}
         modelOptionsByEngine={selectableModelOptionsByEngine}
         loadingModelProviders={loadingModelProviders}
         threadId={threadId}
         runtimeModel={selectedRuntimeModel}
-        runtimeModels={runtimeModelsByEngine[selectedProvider]}
+        runtimeModels={runtimeModelsByEngine[selectedEngine]}
         runtimeAgents={dynamicAgents}
-        modelOptions={selectedProviderModelOptions}
+        modelOptions={selectedEngineModelOptions}
         prompt={prompt}
         onPromptChange={setPromptFromTraits}
         onEngineModelChange={onEngineModelSelect}
@@ -10835,8 +10823,8 @@ export default function ChatView({
     fastModeEnabled,
     providerNativeCommands,
     providerCommandDiscoveryCwd: composerSkillCwd,
-    selectedProvider,
-    currentProviderModelOptions,
+    selectedEngine,
+    currentEngineModelOptions,
     selectedEngineSelection,
     environmentMode: envMode ?? null,
     runtimeMode,
@@ -10966,7 +10954,7 @@ export default function ChatView({
         return;
       }
       if (item.type === "engine-native-command") {
-        if (selectedProvider === "codex" && item.command.toLowerCase() === "review") {
+        if (selectedEngine === "codex" && item.command.toLowerCase() === "review") {
           setComposerCommandPicker("review-target");
           setComposerHighlightedItemId("review-target:changes");
           scheduleComposerFocus();
@@ -10983,7 +10971,7 @@ export default function ChatView({
         applyComposerTriggerReplacement({
           snapshot,
           trigger,
-          base: `${skillMentionPrefix(selectedProvider)}${item.skill.name} `,
+          base: `${skillMentionPrefix(selectedEngine)}${item.skill.name} `,
           onApplied: () => {
             updateSelectedComposerSkills((existing) => {
               const nextSkill = {
@@ -11042,7 +11030,7 @@ export default function ChatView({
       onEngineModelSelect,
       setComposerCommandPicker,
       localFolderBrowseRootPath,
-      selectedProvider,
+      selectedEngine,
       updateSelectedComposerMentions,
       updateSelectedComposerSkills,
       resolveActiveComposerTrigger,
@@ -11806,7 +11794,7 @@ export default function ChatView({
     keybindings,
     availableEditors,
     activeThreadId: activeThread.id,
-    activeProvider: activeThread.session?.engine ?? activeThread.engineSelection.engine,
+    activeEngine: activeThread.session?.engine ?? activeThread.engineSelection.engine,
     isStudioChat: isStudioContainer,
     studioFolderPath: isStudioContainer ? resolvedThreadWorkingDirectory : null,
     showGitActions,
@@ -12503,7 +12491,7 @@ export default function ChatView({
           activeThreadTitle={activeThreadDisplayTitle}
           activeThreadEntryPoint={terminalState.entryPoint}
           showThreadIdentity={showActiveThreadHeaderIdentity}
-          activeProvider={activeThread.session?.engine ?? activeThread.engineSelection.engine}
+          activeEngine={activeThread.session?.engine ?? activeThread.engineSelection.engine}
           activeProjectName={isEditorRail ? undefined : activeProjectDisplayName}
           threadBreadcrumbs={threadBreadcrumbs}
           {...(isEditorRail

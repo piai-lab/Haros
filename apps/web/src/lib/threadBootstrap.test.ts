@@ -64,7 +64,7 @@ function makeComposerDraftState(
     engineSelectionByEngine: {
       claude: engineSelection("claude", "claude-opus-4-6", { effort: "max" }),
     },
-    activeProvider: "claude",
+    activeEngine: "claude",
     runtimeMode: null,
     interactionMode: null,
     ...partial,
@@ -323,7 +323,7 @@ describe("threadBootstrap", () => {
         },
         draftComposerState: {
           ...makeComposerDraftState(),
-          activeProvider: "pi",
+          activeEngine: "pi",
           engineSelectionByEngine: {},
         },
         draftThread: makeDraftThread(),

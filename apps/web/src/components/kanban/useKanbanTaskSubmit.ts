@@ -31,7 +31,7 @@ import { truncateKanbanTaskPreview } from "./KanbanNewTaskDialog.logic";
 interface UseKanbanTaskSubmitInput {
   readonly selectedProjectId: ProjectId | null;
   readonly hasSendableContent: boolean;
-  readonly selectedProvider: EngineKind;
+  readonly selectedEngine: EngineKind;
   readonly selectedModel: ModelSlug | null;
   readonly selectedModelSupportsAutoMode: boolean | undefined;
   readonly taskPreview: string;
@@ -53,7 +53,7 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
   const {
     selectedProjectId,
     hasSendableContent,
-    selectedProvider,
+    selectedEngine,
     selectedModel,
     selectedModelSupportsAutoMode,
     taskPreview,
@@ -100,16 +100,16 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
     // The scratch draft carries the full selection (model + reasoning effort +
     // speed) set through the picker; fall back to a bare selection otherwise.
     const scratchState = useComposerDraftStore.getState().draftsByThreadId[scratchThreadId];
-    const storedEngineSelection = scratchState?.engineSelectionByEngine[selectedProvider];
+    const storedEngineSelection = scratchState?.engineSelectionByEngine[selectedEngine];
     const storedModelSupportsAutoMode =
       storedEngineSelection?.engine === "claude"
         ? storedEngineSelection.supportsAutoMode
         : undefined;
     const engineSelection = buildEngineSelection(
-      selectedProvider,
+      selectedEngine,
       selectedModel,
       storedEngineSelection?.options,
-      selectedProvider === "claude"
+      selectedEngine === "claude"
         ? (selectedModelSupportsAutoMode ?? storedModelSupportsAutoMode)
         : undefined,
     );

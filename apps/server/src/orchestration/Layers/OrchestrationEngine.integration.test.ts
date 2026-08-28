@@ -468,7 +468,7 @@ describe("OrchestrationEngine", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-managed-attachment-active"),
           lastError: null,
@@ -619,7 +619,7 @@ describe("OrchestrationEngine", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "cursor",
+          engine: "cursor",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-fallback-steer-active"),
           lastError: null,
@@ -1551,7 +1551,7 @@ describe("OrchestrationEngine", () => {
       session: {
         threadId: ThreadId.makeUnsafe("thread-atomic"),
         status: "ready" as const,
-        providerName: "claude" as const,
+        engine: "claude" as const,
         runtimeMode: "full-access" as const,
         activeTurnId: null,
         lastError: null,
@@ -1609,7 +1609,7 @@ describe("OrchestrationEngine", () => {
       engineSelection: { engine: "claude", model: "claude-opus-4-6" },
       runtimeMode: "full-access",
       interactionMode: "plan",
-      session: { providerName: "claude", runtimeMode: "full-access" },
+      session: { engine: "claude", runtimeMode: "full-access" },
     });
 
     await runtime.dispose();

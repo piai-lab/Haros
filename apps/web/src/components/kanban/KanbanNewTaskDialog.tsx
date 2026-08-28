@@ -145,10 +145,10 @@ export function KanbanNewTaskDialog({
     isPreparingImages,
     pendingImageCount,
     waitForPendingImages,
-    selectedProvider,
+    selectedEngine,
     selectedModel,
     selectedModelSupportsAutoMode,
-    selectedProviderModelOptions,
+    selectedEngineModelOptions,
     setPrompt,
     handleProviderModelChange: setScratchProviderModel,
     addComposerImages,
@@ -190,8 +190,8 @@ export function KanbanNewTaskDialog({
     [engineStatuses],
   );
   const modelHintByEngine = useMemo<Partial<Record<EngineKind, string | null>>>(
-    () => ({ [selectedProvider]: selectedModel }),
-    [selectedProvider, selectedModel],
+    () => ({ [selectedEngine]: selectedModel }),
+    [selectedEngine, selectedModel],
   );
   const {
     modelOptionsByEngine,
@@ -201,7 +201,7 @@ export function KanbanNewTaskDialog({
     selectedRuntimeModel,
     selectedRuntimeAgents,
   } = useEngineModelCatalog({
-    selectedProvider,
+    selectedEngine,
     // Keep discovery warm whenever either picker can open so cursor/codex effort
     // and fast-mode controls are populated, not just the model list.
     discoveryEnabled: isModelPickerOpen || isTraitsPickerOpen,
@@ -216,14 +216,14 @@ export function KanbanNewTaskDialog({
   const selectedRuntimeModelForCapabilities = useMemo(
     () =>
       selectedRuntimeModel ??
-      (selectedProvider === "claude" && typeof selectedModelSupportsAutoMode === "boolean"
+      (selectedEngine === "claude" && typeof selectedModelSupportsAutoMode === "boolean"
         ? {
             slug: selectedModel ?? "default",
             name: selectedModel ?? "default",
             supportsAutoMode: selectedModelSupportsAutoMode,
           }
         : undefined),
-    [selectedModel, selectedModelSupportsAutoMode, selectedProvider, selectedRuntimeModel],
+    [selectedModel, selectedModelSupportsAutoMode, selectedEngine, selectedRuntimeModel],
   );
   const handleProviderModelChange = useCallback(
     (engine: EngineKind, model: Parameters<typeof setScratchProviderModel>[1]) => {
@@ -254,7 +254,7 @@ export function KanbanNewTaskDialog({
   const { canCreate, isCreating, handleCreate } = useKanbanTaskSubmit({
     selectedProjectId,
     hasSendableContent,
-    selectedProvider,
+    selectedEngine,
     selectedModel,
     selectedModelSupportsAutoMode: selectedRuntimeModelForCapabilities?.supportsAutoMode,
     taskPreview,
@@ -301,7 +301,7 @@ export function KanbanNewTaskDialog({
     composerSkills,
     composerMentions,
     scratchThreadId,
-    selectedProvider,
+    selectedEngine,
     modelOptionsByEngine,
     selectedRuntimeAgents,
     selectedProjectCwd: selectedProject?.cwd ?? null,
@@ -322,29 +322,23 @@ export function KanbanNewTaskDialog({
     if (selectedModel !== null) {
       return;
     }
-    const firstOption = modelOptionsByEngine[selectedProvider][0];
+    const firstOption = modelOptionsByEngine[selectedEngine][0];
     if (firstOption) {
       useComposerDraftStore.getState().setEngineSelection(
         scratchThreadId,
         buildEngineSelection(
-          selectedProvider,
+          selectedEngine,
           firstOption.slug,
           undefined,
           resolveRuntimeModelDescriptor({
-            engine: selectedProvider,
+            engine: selectedEngine,
             model: firstOption.slug,
-            runtimeModels: runtimeModelsByEngine[selectedProvider],
+            runtimeModels: runtimeModelsByEngine[selectedEngine],
           })?.supportsAutoMode,
         ),
       );
     }
-  }, [
-    modelOptionsByEngine,
-    runtimeModelsByEngine,
-    scratchThreadId,
-    selectedModel,
-    selectedProvider,
-  ]);
+  }, [modelOptionsByEngine, runtimeModelsByEngine, scratchThreadId, selectedModel, selectedEngine]);
 
   const handleTranscriptReady = useCallback(
     (transcript: string) => {
@@ -357,7 +351,7 @@ export function KanbanNewTaskDialog({
     activeProject: selectedProject ?? undefined,
     activeThreadId: null,
     threadId: scratchThreadId,
-    selectedProvider,
+    selectedEngine,
     activeEngineStatus: voiceEngineStatus,
     pendingUserInputCount: 0,
     onTranscriptReady: handleTranscriptReady,
@@ -570,10 +564,10 @@ export function KanbanNewTaskDialog({
                     engineSelection={
                       selectedModel
                         ? buildEngineSelection(
-                            selectedProvider,
+                            selectedEngine,
                             selectedModel,
                             undefined,
-                            selectedProvider === "claude"
+                            selectedEngine === "claude"
                               ? selectedRuntimeModelForCapabilities?.supportsAutoMode
                               : undefined,
                           )
@@ -588,7 +582,7 @@ export function KanbanNewTaskDialog({
                       the separate effort/thinking/speed picker. */}
                   <EngineModelPicker
                     compact
-                    engine={selectedProvider}
+                    engine={selectedEngine}
                     model={selectedModel}
                     lockedProvider={null}
                     engines={engineStatuses}
@@ -614,13 +608,13 @@ export function KanbanNewTaskDialog({
                     }}
                   />
                   <TraitsPicker
-                    engine={selectedProvider}
+                    engine={selectedEngine}
                     threadId={scratchThreadId}
                     model={selectedModel}
                     runtimeModel={selectedRuntimeModel}
-                    runtimeModels={runtimeModelsByEngine[selectedProvider]}
+                    runtimeModels={runtimeModelsByEngine[selectedEngine]}
                     runtimeAgents={selectedRuntimeAgents}
-                    modelOptions={selectedProviderModelOptions}
+                    modelOptions={selectedEngineModelOptions}
                     prompt={prompt}
                     onPromptChange={setPrompt}
                     open={isTraitsPickerOpen}

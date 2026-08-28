@@ -74,7 +74,9 @@ const EXCLUDED_PROCESS_COMMANDS = new Set([
   "electron",
   "electron helper",
   "electron helper (renderer)",
-  "oa",
+  "harnessos",
+  "harnessos (dev)",
+  "harnessos canary",
 ]);
 
 // Chromium/Electron spawns child processes (renderers, GPU, utility, plugin hosts) that can hold

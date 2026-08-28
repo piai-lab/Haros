@@ -63,7 +63,7 @@ function mergeProviderModelOptionsFromSelections(
 
 function deriveEffectiveComposerModelOptions(input: {
   draft:
-    | Pick<ComposerThreadDraftState, "engineSelectionByEngine" | "activeProvider">
+    | Pick<ComposerThreadDraftState, "engineSelectionByEngine" | "activeEngine">
     | null
     | undefined;
   threadEngineSelection: EngineSelection | null | undefined;
@@ -252,7 +252,7 @@ export function normalizeProviderModelOptions(
     candidate?.pi && typeof candidate.pi === "object"
       ? (candidate.pi as Record<string, unknown>)
       : null;
-  const omniMindCandidate =
+  const oaCandidate =
     candidate?.oa && typeof candidate.oa === "object"
       ? (candidate.oa as Record<string, unknown>)
       : null;
@@ -392,20 +392,19 @@ export function normalizeProviderModelOptions(
       ? piCandidate.thinkingLevel
       : undefined;
   const pi = piThinkingLevel !== undefined ? { thinkingLevel: piThinkingLevel } : undefined;
-  const omniMindThinkingLevel: PiThinkingLevel | undefined =
-    omniMindCandidate?.thinkingLevel === "off" ||
-    omniMindCandidate?.thinkingLevel === "minimal" ||
-    omniMindCandidate?.thinkingLevel === "low" ||
-    omniMindCandidate?.thinkingLevel === "medium" ||
-    omniMindCandidate?.thinkingLevel === "high" ||
-    omniMindCandidate?.thinkingLevel === "xhigh" ||
-    omniMindCandidate?.thinkingLevel === "max"
-      ? omniMindCandidate.thinkingLevel
+  const oaThinkingLevel: PiThinkingLevel | undefined =
+    oaCandidate?.thinkingLevel === "off" ||
+    oaCandidate?.thinkingLevel === "minimal" ||
+    oaCandidate?.thinkingLevel === "low" ||
+    oaCandidate?.thinkingLevel === "medium" ||
+    oaCandidate?.thinkingLevel === "high" ||
+    oaCandidate?.thinkingLevel === "xhigh" ||
+    oaCandidate?.thinkingLevel === "max"
+      ? oaCandidate.thinkingLevel
       : undefined;
-  const harnessos =
-    omniMindThinkingLevel !== undefined ? { thinkingLevel: omniMindThinkingLevel } : undefined;
+  const oa = oaThinkingLevel !== undefined ? { thinkingLevel: oaThinkingLevel } : undefined;
   if (
-    !harnessos &&
+    !oa &&
     !codex &&
     !claude &&
     !cursor &&
@@ -419,7 +418,7 @@ export function normalizeProviderModelOptions(
     return null;
   }
   return {
-    ...(harnessos ? { harnessos } : {}),
+    ...(oa ? { oa } : {}),
     ...(codex ? { codex } : {}),
     ...(claude ? { claude: claude } : {}),
     ...(cursor ? { cursor } : {}),
@@ -689,10 +688,10 @@ export function legacyToEngineSelectionByEngine(
 
 export function deriveEffectiveComposerModelState(input: {
   draft:
-    | Pick<ComposerThreadDraftState, "engineSelectionByEngine" | "activeProvider">
+    | Pick<ComposerThreadDraftState, "engineSelectionByEngine" | "activeEngine">
     | null
     | undefined;
-  selectedProvider: EngineKind;
+  selectedEngine: EngineKind;
   threadEngineSelection: EngineSelection | null | undefined;
   projectEngineSelection: EngineSelection | null | undefined;
   stickyEngineSelection?: EngineSelection | null | undefined;
@@ -703,22 +702,22 @@ export function deriveEffectiveComposerModelState(input: {
   >;
 }): EffectiveComposerModelState {
   const resolveAvailableModel = (candidate: string | null | undefined): ModelSlug | null => {
-    const availableOptions = input.availableModelOptionsByEngine?.[input.selectedProvider];
+    const availableOptions = input.availableModelOptionsByEngine?.[input.selectedEngine];
     if (!availableOptions || availableOptions.length === 0) {
       return null;
     }
-    return resolveSelectableModel(input.selectedProvider, candidate, availableOptions);
+    return resolveSelectableModel(input.selectedEngine, candidate, availableOptions);
   };
-  const activeSelection = input.draft?.engineSelectionByEngine?.[input.selectedProvider];
+  const activeSelection = input.draft?.engineSelectionByEngine?.[input.selectedEngine];
   const selectionCandidates = [
     activeSelection,
-    input.threadEngineSelection?.engine === input.selectedProvider
+    input.threadEngineSelection?.engine === input.selectedEngine
       ? input.threadEngineSelection
       : null,
-    input.projectEngineSelection?.engine === input.selectedProvider
+    input.projectEngineSelection?.engine === input.selectedEngine
       ? input.projectEngineSelection
       : null,
-    input.stickyEngineSelection?.engine === input.selectedProvider
+    input.stickyEngineSelection?.engine === input.selectedEngine
       ? input.stickyEngineSelection
       : null,
   ] as const;
@@ -735,20 +734,20 @@ export function deriveEffectiveComposerModelState(input: {
     (candidate) => candidate !== null && candidate !== undefined,
   );
   const requiresExactRuntimeCatalogSelection =
-    input.selectedProvider === "oa" || input.selectedProvider === "pi";
+    input.selectedEngine === "oa" || input.selectedEngine === "pi";
   if (!(requiresExactRuntimeCatalogSelection && hasRememberedExactSelection)) {
     selectedModel ??=
       input.runtimeCatalogFallbackModel !== undefined
         ? resolveAvailableModel(input.runtimeCatalogFallbackModel)
-        : (resolveAvailableModel(getDefaultModel(input.selectedProvider)) ??
-          input.availableModelOptionsByEngine?.[input.selectedProvider]?.[0]?.slug ??
+        : (resolveAvailableModel(getDefaultModel(input.selectedEngine)) ??
+          input.availableModelOptionsByEngine?.[input.selectedEngine]?.[0]?.slug ??
           null);
   }
 
   const inheritedModelOptions = deriveEffectiveComposerModelOptions(input);
   const modelOptions = legacyReplaceProviderModelOptions(
     inheritedModelOptions,
-    input.selectedProvider,
+    input.selectedEngine,
     selectedSource?.options,
   );
 
@@ -760,7 +759,7 @@ export function deriveEffectiveComposerModelState(input: {
 
 export function resolvePreferredComposerEngineSelection(input: {
   draft:
-    | Pick<ComposerThreadDraftState, "engineSelectionByEngine" | "activeProvider">
+    | Pick<ComposerThreadDraftState, "engineSelectionByEngine" | "activeEngine">
     | null
     | undefined;
   threadEngineSelection: EngineSelection | null | undefined;
@@ -771,7 +770,7 @@ export function resolvePreferredComposerEngineSelection(input: {
     ENGINE_KINDS.find((engine) => input.draft?.engineSelectionByEngine?.[engine] !== undefined) ??
     null;
   const preferredProvider =
-    input.draft?.activeProvider ??
+    input.draft?.activeEngine ??
     draftProviderWithSelection ??
     input.threadEngineSelection?.engine ??
     input.projectEngineSelection?.engine ??

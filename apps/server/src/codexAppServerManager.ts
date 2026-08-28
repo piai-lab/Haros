@@ -3778,7 +3778,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     const parentTurnId = this.readChildParentTurnId(context, params);
     const nativeThreadId = normalizeProviderThreadId(this.readProviderConversationId(params));
     const mappedProviderParentThreadId = this.readChildParentProviderThreadId(context, params);
-    const activeProviderThreadId = normalizeProviderThreadId(
+    const activeEngineThreadId = normalizeProviderThreadId(
       readResumeThreadId({
         threadId: context.session.threadId,
         runtimeMode: context.session.runtimeMode,
@@ -3794,11 +3794,11 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       context.session.status === "running" &&
       context.session.activeTurnId !== undefined &&
       nativeThreadId !== undefined &&
-      activeProviderThreadId !== undefined &&
-      nativeThreadId !== activeProviderThreadId;
+      activeEngineThreadId !== undefined &&
+      nativeThreadId !== activeEngineThreadId;
     const nativeParentThreadId =
       mappedProviderParentThreadId ??
-      (isUnmappedChildConversation ? activeProviderThreadId : undefined);
+      (isUnmappedChildConversation ? activeEngineThreadId : undefined);
 
     return {
       ...(parentTurnId ? { parentTurnId } : {}),

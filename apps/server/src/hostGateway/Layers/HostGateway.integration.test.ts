@@ -842,7 +842,7 @@ function makeHarnessLayer(
     },
   } as unknown as (typeof EngineDiscoveryService)["Service"]);
 
-  const providerKinds: ReadonlyArray<EngineKind> = [
+  const engineKinds: ReadonlyArray<EngineKind> = [
     "codex",
     "claude",
     "cursor",
@@ -855,7 +855,7 @@ function makeHarnessLayer(
   ];
   let engineStatuses =
     options.engineStatuses ??
-    providerKinds.map(
+    engineKinds.map(
       (engine): ServerEngineStatus => ({
         engine,
         status: "ready",
@@ -1435,7 +1435,7 @@ describe("HostGateway", () => {
             session: {
               threadId: thread.id,
               status: "running" as const,
-              providerName: "claude",
+              engine: "claude",
               runtimeMode: thread.runtimeMode,
               activeTurnId: thread.latestTurn?.turnId ?? null,
               lastError: null,
@@ -2123,7 +2123,7 @@ describe("HostGateway", () => {
       assert.lengthOf(payload.operationalIncidents as Array<unknown>, 1);
       assert.includeMembers(
         (payload.findings as Array<{ code: string }>).map((finding) => finding.code),
-        ["provider_delivery_blocked", "THREAD_STREAM_CAPACITY_EXCEEDED"],
+        ["engine_delivery_blocked", "THREAD_STREAM_CAPACITY_EXCEEDED"],
       );
     }).pipe(Effect.provide(gatewayLayer));
   });
@@ -4141,7 +4141,7 @@ describe("HostGateway", () => {
       session: {
         threadId: ThreadId.makeUnsafe("thread-wait-failed"),
         status: "error",
-        providerName: "claude",
+        engine: "claude",
         runtimeMode: "approval-required",
         activeTurnId: null,
         lastError: "Child failed",
@@ -4250,7 +4250,7 @@ describe("HostGateway", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-child"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: TurnId.makeUnsafe("turn-live"),
           lastError: null,

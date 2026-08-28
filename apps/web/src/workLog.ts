@@ -454,17 +454,17 @@ function extractWorkLogHarnessOSThreadCreation(
     const model = asTrimmedString(thread?.model);
     const environment = asTrimmedString(thread?.environment);
     const status = asTrimmedString(thread?.status) ?? "created";
-    const providerKind = engine !== null && Schema.is(EngineKind)(engine) ? engine : null;
+    const engineKind = engine !== null && Schema.is(EngineKind)(engine) ? engine : null;
     if (
       !threadId ||
       !title ||
-      !providerKind ||
+      !engineKind ||
       !model ||
       (environment !== "local" && environment !== "worktree")
     ) {
       return [];
     }
-    return [{ threadId, title, engine: providerKind, model, environment, status }];
+    return [{ threadId, title, engine: engineKind, model, environment, status }];
   });
   if (threads.length === 0) {
     return null;

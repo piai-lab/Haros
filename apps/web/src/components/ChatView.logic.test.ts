@@ -124,7 +124,7 @@ describe("resolvePendingDirectTurnRecoveryMutation", () => {
 
     const targetBinding = {
       ...baseline,
-      activeProvider: "codex" as const,
+      activeEngine: "codex" as const,
       engineSelectionByEngine: {
         codex: { engine: "codex" as const, model: "gpt-5.4" },
       },

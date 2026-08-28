@@ -416,7 +416,7 @@ function matchSideProviderToken(token: string): EngineKind | null {
 export function parseSideSlashCommandArgs(
   args: string,
   input: {
-    currentProvider: EngineKind;
+    currentEngine: EngineKind;
     availableTargetProviders: ReadonlyArray<EngineKind>;
   },
 ): SideSlashCommandArgs {
@@ -427,7 +427,7 @@ export function parseSideSlashCommandArgs(
     return { targetEngine: null, prompt: trimmedArgs, unavailableProvider: null };
   }
   const prompt = trimmedArgs.slice(firstToken.length).trim();
-  if (matchedProvider === input.currentProvider) {
+  if (matchedProvider === input.currentEngine) {
     return { targetEngine: null, prompt, unavailableProvider: null };
   }
   if (!input.availableTargetProviders.includes(matchedProvider)) {

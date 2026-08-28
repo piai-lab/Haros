@@ -246,7 +246,7 @@ export function planRestartTurnReconciliation(input: {
         session: {
           threadId: thread.id,
           status: thread.session?.status ?? "interrupted",
-          providerName: thread.session?.providerName ?? null,
+          engine: thread.session?.engine ?? null,
           runtimeMode: thread.session?.runtimeMode ?? thread.runtimeMode,
           activeTurnId: null,
           lastError: thread.session?.lastError ?? null,
@@ -263,7 +263,7 @@ export function planRestartTurnReconciliation(input: {
       session: {
         threadId: thread.id,
         status: "interrupted",
-        providerName: thread.session?.providerName ?? null,
+        engine: thread.session?.engine ?? null,
         // Prefer the session's own mode; fall back to the thread default when the
         // thread never had a materialized session row.
         runtimeMode: thread.session?.runtimeMode ?? thread.runtimeMode,

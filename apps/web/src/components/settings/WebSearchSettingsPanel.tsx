@@ -64,10 +64,10 @@ const WEB_SEARCH_OVERVIEW_TARGETS = new Set<string>(
 );
 
 export function webSearchProviderFieldAccessibleLabel(
-  providerName: string,
+  engine: string,
   localizedFieldLabel: string,
 ): string {
-  return `${providerName} · ${localizedFieldLabel}`;
+  return `${engine} · ${localizedFieldLabel}`;
 }
 const workflowOptions: readonly OAWebSearchWorkflow[] = ["auto-summary", "summary-review", "none"];
 
@@ -473,7 +473,7 @@ export function WebSearchSettingsPanel({
   }
   if (!base || !draft) return null;
 
-  const selectedProvider =
+  const selectedEngine =
     renderedView.kind === "detail"
       ? (base.providers.find((provider) => provider.id === renderedView.providerId) ?? null)
       : null;
@@ -669,10 +669,10 @@ export function WebSearchSettingsPanel({
     );
   }
 
-  if (renderedView.kind === "detail" && selectedProvider) {
-    const testingThis = probeRun?.target === selectedProvider.id && probeRun.status === "pending";
+  if (renderedView.kind === "detail" && selectedEngine) {
+    const testingThis = probeRun?.target === selectedEngine.id && probeRun.status === "pending";
     const providerProbe =
-      probeRun?.target === selectedProvider.id && probeRun.status === "settled"
+      probeRun?.target === selectedEngine.id && probeRun.status === "settled"
         ? probeRun.result
         : null;
     return (
@@ -702,18 +702,18 @@ export function WebSearchSettingsPanel({
         </div>
         {conflictNotice}
         {failureNotice}
-        <SettingsSectionShell title={selectedProvider.displayName}>
+        <SettingsSectionShell title={selectedEngine.displayName}>
           <SettingsCard>
             <SettingsListRow
               title={
                 <span className="flex items-center gap-2">
-                  <ProviderMark icon={selectedProvider.icon} label={selectedProvider.displayName} />
-                  {selectedProvider.displayName}
+                  <ProviderMark icon={selectedEngine.icon} label={selectedEngine.displayName} />
+                  {selectedEngine.displayName}
                 </span>
               }
               description={t("settings.webSearch.providerRequestsMayCost")}
             />
-            {selectedProvider.fields.map((field) => {
+            {selectedEngine.fields.map((field) => {
               const value = draft.fields[field.configKey] ?? "";
               const secret = field.kind === "secret";
               const visible = visibleSecrets.has(field.configKey);
@@ -738,7 +738,7 @@ export function WebSearchSettingsPanel({
                 >
                   <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <Input
-                      aria-label={fieldAccessibleLabel(selectedProvider, field)}
+                      aria-label={fieldAccessibleLabel(selectedEngine, field)}
                       type={secret && !visible ? "password" : "text"}
                       value={value}
                       spellCheck={false}
@@ -818,10 +818,10 @@ export function WebSearchSettingsPanel({
                 </SettingsRow>
               );
             })}
-            {selectedProvider.advancedFileOnly.length > 0 ? (
+            {selectedEngine.advancedFileOnly.length > 0 ? (
               <SettingsRow
                 title={t("settings.webSearch.advancedFileOnly")}
-                description={selectedProvider.advancedFileOnly.join(", ")}
+                description={selectedEngine.advancedFileOnly.join(", ")}
                 control={
                   <Button size="xs" variant="outline" onClick={() => void openConfig()}>
                     {t("settings.webSearch.openConfig")}
@@ -841,13 +841,13 @@ export function WebSearchSettingsPanel({
                 size="xs"
                 variant="outline"
                 disabled={probeRun?.status === "pending"}
-                onClick={() => void runProviderTest(selectedProvider.id)}
+                onClick={() => void runProviderTest(selectedEngine.id)}
               >
                 {testingThis ? t("settings.webSearch.testing") : t("settings.webSearch.test")}
               </Button>
             }
           />
-          {selectedProvider.id === "gemini" ? (
+          {selectedEngine.id === "gemini" ? (
             <SettingsRow
               title={t("settings.webSearch.geminiAccount")}
               description={t("settings.webSearch.geminiAccountDescription")}

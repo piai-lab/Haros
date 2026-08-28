@@ -321,14 +321,14 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
 
       const sessionRows = yield* sql<{
         readonly status: string;
-        readonly providerName: string | null;
+        readonly engine: string | null;
         readonly runtimeMode: string;
         readonly activeTurnId: string | null;
         readonly updatedAt: string;
       }>`
         SELECT
           status,
-          provider_name AS "providerName",
+          engine AS "engine",
           runtime_mode AS "runtimeMode",
           active_turn_id AS "activeTurnId",
           updated_at AS "updatedAt"
@@ -338,7 +338,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
       assert.deepEqual(sessionRows, [
         {
           status: "starting",
-          providerName: "pi",
+          engine: "pi",
           runtimeMode: "approval-required",
           activeTurnId: null,
           updatedAt: turnRequestedAt,
@@ -361,7 +361,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           session: {
             threadId: ThreadId.makeUnsafe("thread-turn-settings"),
             status: "ready",
-            providerName: "pi",
+            engine: "pi",
             runtimeMode: "approval-required",
             activeTurnId: null,
             lastError: null,
@@ -422,13 +422,13 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
 
       const providerRows = yield* sql<{
         readonly engineSelectionJson: string;
-        readonly providerName: string | null;
+        readonly engine: string | null;
         readonly runtimeMode: string;
         readonly interactionMode: string;
       }>`
         SELECT
           threads.model_selection_json AS "engineSelectionJson",
-          sessions.provider_name AS "providerName",
+          sessions.engine AS "engine",
           threads.runtime_mode AS "runtimeMode",
           threads.interaction_mode AS "interactionMode"
         FROM projection_threads AS threads
@@ -440,7 +440,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
         engine: "pi",
         model: "openai/gpt-5.5",
       });
-      assert.equal(providerRows[0]!.providerName, "pi");
+      assert.equal(providerRows[0]!.engine, "pi");
       assert.equal(providerRows[0]!.runtimeMode, "approval-required");
       assert.equal(providerRows[0]!.interactionMode, "default");
 
@@ -647,7 +647,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           session: {
             threadId,
             status: "running",
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "full-access",
             activeTurnId: turnId,
             lastError: null,
@@ -670,7 +670,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           session: {
             threadId,
             status: "error",
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "full-access",
             activeTurnId: turnId,
             lastError: "engine failed",
@@ -1666,7 +1666,7 @@ it.effect("drains 2,501 file-backed events to a captured high-water fence", () =
             'title', 'Project ' || n,
             'updatedAt', ${occurredAt}
           ),
-          '{}'
+          '{"persistedEventSchemaVersion":1}'
         FROM numbered
       `;
     }).pipe(Effect.provide(eventStoreLayer));
@@ -4572,7 +4572,7 @@ it.effect("restores pending turn-start metadata across projection pipeline resta
           session: {
             threadId,
             status: "running",
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "approval-required",
             activeTurnId: turnId,
             lastError: null,
@@ -5063,7 +5063,7 @@ it.layer(
           session: {
             threadId,
             status: "running",
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "full-access",
             activeTurnId: turnId,
             lastError: null,
@@ -5132,7 +5132,7 @@ it.layer(
           session: {
             threadId,
             status: "ready",
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "full-access",
             activeTurnId: null,
             lastError: null,
@@ -5234,7 +5234,7 @@ it.layer(
             session: {
               threadId,
               status: "running",
-              providerName: "codex",
+              engine: "codex",
               runtimeMode: "full-access",
               activeTurnId: turnId,
               lastError: null,
@@ -5260,7 +5260,7 @@ it.layer(
             session: {
               threadId,
               status: scenario.status,
-              providerName: "codex",
+              engine: "codex",
               runtimeMode: "full-access",
               activeTurnId: scenario.retainsActiveTurn ? turnId : null,
               lastError: scenario.status === "error" ? "engine crashed" : null,

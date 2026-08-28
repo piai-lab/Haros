@@ -53,7 +53,7 @@ export function createBrowserMcpHarness(input: {
   const shell = {
     id: threadId,
     engineSelection: { engine: PROVIDER, model: "e2e-fixture" },
-    session: { providerName: PROVIDER },
+    session: { engine: PROVIDER },
     latestTurn: { turnId: "turn-visible-browser-e2e", state: "running" },
   } as unknown as OrchestrationThreadShell;
   const snapshotQuery = {

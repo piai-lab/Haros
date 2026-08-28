@@ -622,7 +622,7 @@ export type OrchestrationSessionStatus = typeof OrchestrationSessionStatus.Type;
 export const OrchestrationSession = Schema.Struct({
   threadId: ThreadId,
   status: OrchestrationSessionStatus,
-  providerName: Schema.NullOr(TrimmedNonEmptyString),
+  engine: Schema.NullOr(TrimmedNonEmptyString),
   runtimeMode: RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
   activeTurnId: Schema.NullOr(TurnId),
   lastError: Schema.NullOr(TrimmedNonEmptyString),

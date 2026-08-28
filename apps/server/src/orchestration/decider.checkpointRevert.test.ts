@@ -78,7 +78,7 @@ function makeSession(
 ): OrchestrationSession {
   return {
     threadId: THREAD_ID,
-    providerName: "codex",
+    engine: "codex",
     runtimeMode: "full-access",
     activeTurnId: null,
     lastError: null,

@@ -61,7 +61,7 @@ function makeSessionSetEvent(input: {
       session: {
         threadId: "thread-1",
         status: input.status,
-        providerName: "codex",
+        engine: "codex",
         engineSessionId: "session-1",
         nativeThreadId: "engine-thread-1",
         runtimeMode: "full-access",
@@ -283,7 +283,7 @@ describe("orchestration projector", () => {
     expect(next.threads[0]?.session).toEqual({
       threadId: "thread-1",
       status: "starting",
-      providerName: "pi",
+      engine: "pi",
       runtimeMode: "approval-required",
       activeTurnId: null,
       lastError: null,
@@ -355,7 +355,7 @@ describe("orchestration projector", () => {
     });
     expect(next.threads[0]?.session).toMatchObject({
       status: "starting",
-      providerName: "opencode",
+      engine: "opencode",
     });
   });
 
@@ -470,7 +470,7 @@ describe("orchestration projector", () => {
             session: {
               threadId: "thread-1",
               status: "running",
-              providerName: "codex",
+              engine: "codex",
               engineSessionId: "session-1",
               nativeThreadId: "engine-thread-1",
               runtimeMode: "approval-required",
@@ -537,7 +537,7 @@ describe("orchestration projector", () => {
             session: {
               threadId: "thread-1",
               status: "running",
-              providerName: "codex",
+              engine: "codex",
               engineSessionId: "session-1",
               nativeThreadId: "engine-thread-1",
               runtimeMode: "approval-required",
@@ -1015,7 +1015,7 @@ describe("orchestration projector", () => {
             session: {
               threadId: "thread-1",
               status: "running",
-              providerName: "codex",
+              engine: "codex",
               engineSessionId: "session-1",
               nativeThreadId: "engine-thread-1",
               runtimeMode: "full-access",

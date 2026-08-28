@@ -800,7 +800,7 @@ describe("composerDraftStore copyTransferableComposerState", () => {
           },
         },
       },
-      activeProvider: "claude",
+      activeEngine: "claude",
     });
   });
 

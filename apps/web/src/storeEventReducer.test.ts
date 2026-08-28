@@ -114,7 +114,7 @@ describe("store event reducer", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "error",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError: "engine crashed",
@@ -151,7 +151,7 @@ describe("store event reducer", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "interrupted",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: TurnId.makeUnsafe("turn-running"),
           lastError: null,
@@ -193,7 +193,7 @@ describe("store event reducer", () => {
           session: {
             threadId: ThreadId.makeUnsafe("thread-1"),
             status,
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "full-access",
             activeTurnId: null,
             lastError: null,
@@ -230,7 +230,7 @@ describe("store event reducer", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError: null,
@@ -2359,7 +2359,7 @@ describe("store event reducer", () => {
           session: {
             threadId,
             status: "running",
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "full-access",
             activeTurnId: turnId,
             lastError: null,

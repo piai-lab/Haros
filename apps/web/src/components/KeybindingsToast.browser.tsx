@@ -108,7 +108,7 @@ function createMinimalSnapshot(): OrchestrationReadModel {
         session: {
           threadId: THREAD_ID,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError: null,

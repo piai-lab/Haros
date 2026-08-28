@@ -409,9 +409,9 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
         INSERT INTO projection_thread_sessions (
           thread_id,
           status,
-          provider_name,
-          provider_session_id,
-          provider_thread_id,
+          engine,
+          engine_session_id,
+          engine_thread_id,
           runtime_mode,
           active_turn_id,
           last_error,
@@ -694,7 +694,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           session: {
             threadId: ThreadId.makeUnsafe("thread-1"),
             status: "running",
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "approval-required",
             activeTurnId: asTurnId("turn-1"),
             lastError: null,
@@ -1270,144 +1270,6 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
     }),
   );
 
-  it.effect("normalizes imported HarnessOS model-selection shapes from projection reads", () =>
-    Effect.gen(function* () {
-      const snapshotQuery = yield* ProjectionSnapshotQuery;
-      const sql = yield* SqlClient.SqlClient;
-
-      yield* sql`DELETE FROM projection_projects`;
-      yield* sql`DELETE FROM projection_threads`;
-      yield* sql`DELETE FROM projection_state`;
-      yield* sql`DELETE FROM projection_thread_messages`;
-      yield* sql`DELETE FROM projection_thread_activities`;
-      yield* sql`DELETE FROM projection_thread_proposed_plans`;
-      yield* sql`DELETE FROM projection_turns`;
-      yield* sql`DELETE FROM projection_thread_sessions`;
-
-      yield* sql`
-        INSERT INTO projection_projects (
-          project_id,
-          title,
-          workspace_root,
-          default_model_selection_json,
-          scripts_json,
-          created_at,
-          updated_at,
-          deleted_at
-        )
-        VALUES (
-          'project-imported-shape',
-          'Imported Shape Project',
-          '/tmp/imported-shape',
-          '{"instanceId":"codex","model":"imported-project-model","options":[{"id":"reasoningEffort","value":"medium"}]}',
-          '[]',
-          '2026-05-05T14:39:18.000Z',
-          '2026-05-05T14:39:19.000Z',
-          NULL
-        )
-      `;
-
-      yield* sql`
-        INSERT INTO projection_threads (
-          thread_id,
-          project_id,
-          title,
-          model_selection_json,
-          branch,
-          worktree_path,
-          runtime_mode,
-          interaction_mode,
-          latest_turn_id,
-          created_at,
-          updated_at,
-          deleted_at
-        )
-        VALUES (
-          'thread-imported-shape',
-          'project-imported-shape',
-          'Imported Shape Thread',
-          '{"engine":"codex","model":"gpt-5.5","options":[{"id":"reasoningEffort","value":"medium"}]}',
-          NULL,
-          NULL,
-          'full-access',
-          'default',
-          NULL,
-          '2026-05-05T14:39:20.000Z',
-          '2026-05-05T14:39:21.000Z',
-          NULL
-        )
-      `;
-
-      const expectedProjectSelection = {
-        engine: "codex",
-        model: "imported-project-model",
-        options: { reasoningEffort: "medium" },
-      } as const;
-      const expectedThreadSelection = {
-        engine: "codex",
-        model: "gpt-5.5",
-        options: { reasoningEffort: "medium" },
-      } as const;
-
-      const snapshot = yield* snapshotQuery.getSnapshot();
-      const shellSnapshot = yield* snapshotQuery.getShellSnapshot();
-      const activeProject =
-        yield* snapshotQuery.getActiveProjectByWorkspaceRoot("/tmp/imported-shape");
-      const projectShell = yield* snapshotQuery.getProjectShellById(
-        asProjectId("project-imported-shape"),
-      );
-      const threadShell = yield* snapshotQuery.getThreadShellById(
-        asThreadId("thread-imported-shape"),
-      );
-      const threadDetail = yield* snapshotQuery.getThreadDetailById(
-        asThreadId("thread-imported-shape"),
-      );
-      const threadDetailSnapshot = yield* snapshotQuery.getThreadDetailSnapshotById(
-        asThreadId("thread-imported-shape"),
-      );
-
-      assert.deepStrictEqual(
-        snapshot.projects.find((project) => project.id === "project-imported-shape")
-          ?.defaultEngineSelection,
-        expectedProjectSelection,
-      );
-      assert.deepStrictEqual(
-        snapshot.threads.find((thread) => thread.id === "thread-imported-shape")?.engineSelection,
-        expectedThreadSelection,
-      );
-      assert.deepStrictEqual(
-        shellSnapshot.projects.find((project) => project.id === "project-imported-shape")
-          ?.defaultEngineSelection,
-        expectedProjectSelection,
-      );
-      assert.deepStrictEqual(
-        shellSnapshot.threads.find((thread) => thread.id === "thread-imported-shape")
-          ?.engineSelection,
-        expectedThreadSelection,
-      );
-      assert.deepStrictEqual(
-        Option.getOrNull(activeProject)?.defaultEngineSelection,
-        expectedProjectSelection,
-      );
-      assert.deepStrictEqual(
-        Option.getOrNull(projectShell)?.defaultEngineSelection,
-        expectedProjectSelection,
-      );
-      assert.deepStrictEqual(
-        Option.getOrNull(threadShell)?.engineSelection,
-        expectedThreadSelection,
-      );
-      assert.deepStrictEqual(
-        Option.getOrNull(threadDetail)?.engineSelection,
-        expectedThreadSelection,
-      );
-      assert.deepStrictEqual(
-        Option.getOrNull(threadDetailSnapshot)?.thread.engineSelection,
-        expectedThreadSelection,
-      );
-    }),
-  );
-
   it.effect("preserves project kind in read and shell snapshots", () =>
     Effect.gen(function* () {
       const snapshotQuery = yield* ProjectionSnapshotQuery;
@@ -1785,9 +1647,9 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
         INSERT INTO projection_thread_sessions (
           thread_id,
           status,
-          provider_name,
-          provider_session_id,
-          provider_thread_id,
+          engine,
+          engine_session_id,
+          engine_thread_id,
           runtime_mode,
           active_turn_id,
           last_error,
@@ -1916,7 +1778,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           session: {
             threadId: ThreadId.makeUnsafe("thread-shell"),
             status: "ready",
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "full-access",
             activeTurnId: null,
             lastError: null,
@@ -2395,7 +2257,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
       `;
       yield* sql`
         INSERT INTO projection_thread_sessions (
-          thread_id, status, provider_name, provider_session_id, provider_thread_id,
+          thread_id, status, engine, engine_session_id, engine_thread_id,
           runtime_mode, active_turn_id, last_error, updated_at
         ) VALUES
           (
@@ -2424,8 +2286,8 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           )
       `;
       yield* sql`
-        INSERT INTO provider_session_runtime (
-          thread_id, provider_name, adapter_key, runtime_mode, status,
+        INSERT INTO engine_session_runtime (
+          thread_id, engine, adapter_key, runtime_mode, status,
           lifecycle_generation, last_seen_at, runtime_payload_json
         ) VALUES
           (
@@ -2441,7 +2303,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             'generation-queued', '2026-07-21T00:00:00.000Z', '{}'
           )
         ON CONFLICT (thread_id) DO UPDATE SET
-          provider_name = excluded.provider_name,
+          engine = excluded.engine,
           adapter_key = excluded.adapter_key,
           runtime_mode = excluded.runtime_mode,
           status = excluded.status,

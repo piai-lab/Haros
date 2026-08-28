@@ -50,7 +50,6 @@ import {
   toPersistenceSqlError,
   type ProjectionRepositoryError,
 } from "../../persistence/Errors.ts";
-import { normalizePersistedEngineSelection } from "../../persistence/engineSelectionCompatibility.ts";
 import { deriveThreadSummaryMetadata } from "@harnessos/shared/threadSummary";
 import { ProjectionCheckpoint } from "../../persistence/Services/ProjectionCheckpoints.ts";
 import { ProjectionProject } from "../../persistence/Services/ProjectionProjects.ts";
@@ -289,7 +288,7 @@ function decodeProjectionProjectRow(
   if (row.defaultEngineSelection === null) {
     return Effect.succeed({ ...row, defaultEngineSelection: null });
   }
-  return decodeEngineSelection(normalizePersistedEngineSelection(row.defaultEngineSelection)).pipe(
+  return decodeEngineSelection(row.defaultEngineSelection).pipe(
     Effect.map((defaultEngineSelection) => ({ ...row, defaultEngineSelection })),
   );
 }
@@ -297,7 +296,7 @@ function decodeProjectionProjectRow(
 function decodeProjectionThreadRow(
   row: ProjectionThreadDbRowRaw,
 ): Effect.Effect<ProjectionThreadDbRow, Schema.SchemaError> {
-  return decodeEngineSelection(normalizePersistedEngineSelection(row.engineSelection)).pipe(
+  return decodeEngineSelection(row.engineSelection).pipe(
     Effect.map((engineSelection) => ({ ...row, engineSelection })),
   );
 }
@@ -305,7 +304,7 @@ function decodeProjectionThreadRow(
 function decodeProjectionThreadShellRow(
   row: ProjectionThreadShellDbRowRaw,
 ): Effect.Effect<ProjectionThreadShellDbRow, Schema.SchemaError> {
-  return decodeEngineSelection(normalizePersistedEngineSelection(row.engineSelection)).pipe(
+  return decodeEngineSelection(row.engineSelection).pipe(
     Effect.map((engineSelection) => ({ ...row, engineSelection })),
   );
 }
@@ -342,7 +341,7 @@ function decodeProjectionTurnProvenanceRows(
   operation: string,
 ): Effect.Effect<ReadonlyArray<ProjectionTurnProvenanceDbRow>, ProjectionRepositoryError> {
   return Effect.forEach(rows, (row) =>
-    decodeEngineSelection(normalizePersistedEngineSelection(row.engineSelection)).pipe(
+    decodeEngineSelection(row.engineSelection).pipe(
       Effect.map((engineSelection) => ({ ...row, engineSelection })),
     ),
   ).pipe(Effect.mapError(toPersistenceDecodeError(operation)));
@@ -468,7 +467,7 @@ function toProjectedSession(row: ProjectionThreadSessionDbRow): OrchestrationSes
   return {
     threadId: row.threadId,
     status: row.status,
-    providerName: row.providerName,
+    engine: row.engine,
     runtimeMode: row.runtimeMode,
     activeTurnId: row.activeTurnId,
     lastError: row.lastError,
@@ -1052,7 +1051,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         -- removed is exactly the thread most likely to be stuck running with
         -- nothing left to settle it. Archived threads are included for the same
         -- reason - archiving does not stop a turn.
-        LEFT JOIN provider_session_runtime AS runtime
+        LEFT JOIN engine_session_runtime AS runtime
           ON runtime.thread_id = threads.thread_id
         LEFT JOIN projection_thread_sessions AS sessions
           ON sessions.thread_id = threads.thread_id
@@ -1347,9 +1346,9 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         SELECT
           thread_id AS "threadId",
           status,
-          provider_name AS "providerName",
-          provider_session_id AS "engineSessionId",
-          provider_thread_id AS "nativeThreadId",
+          engine AS "engine",
+          engine_session_id AS "engineSessionId",
+          engine_thread_id AS "nativeThreadId",
           runtime_mode AS "runtimeMode",
           active_turn_id AS "activeTurnId",
           last_error AS "lastError",
@@ -1943,9 +1942,9 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         SELECT
           thread_id AS "threadId",
           status,
-          provider_name AS "providerName",
-          provider_session_id AS "engineSessionId",
-          provider_thread_id AS "nativeThreadId",
+          engine AS "engine",
+          engine_session_id AS "engineSessionId",
+          engine_thread_id AS "nativeThreadId",
           runtime_mode AS "runtimeMode",
           active_turn_id AS "activeTurnId",
           last_error AS "lastError",

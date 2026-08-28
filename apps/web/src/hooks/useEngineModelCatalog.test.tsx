@@ -128,7 +128,7 @@ beforeEach(() => {
 describe("useEngineModelCatalog", () => {
   it("keeps aggregate identities stable when inputs and query data are unchanged", () => {
     const [first, second] = readCatalogRenders({
-      selectedProvider: "cursor",
+      selectedEngine: "cursor",
       discoveryEnabled: true,
       modelHintByEngine: MODEL_HINTS,
     });
@@ -144,7 +144,7 @@ describe("useEngineModelCatalog", () => {
   });
 
   it("discovers agents only for the selected Engine", () => {
-    readCatalogRenders({ selectedProvider: "cursor", discoveryEnabled: false });
+    readCatalogRenders({ selectedEngine: "cursor", discoveryEnabled: false });
     expect(readAgentQueryEnabled("claude")).toBe(false);
     expect(readAgentQueryEnabled("codex")).toBe(false);
   });
@@ -156,7 +156,7 @@ describe("useEngineModelCatalog", () => {
       isPending: true,
       isPlaceholderData: true,
     });
-    readCatalogRenders({ selectedProvider: "codex", discoveryEnabled: false });
+    readCatalogRenders({ selectedEngine: "codex", discoveryEnabled: false });
     expect(readAgentQueryEnabled("codex")).toBe(false);
 
     modelQueries.set("codex", {
@@ -167,7 +167,7 @@ describe("useEngineModelCatalog", () => {
       isPlaceholderData: false,
     });
     mocks.useQuery.mockClear();
-    readCatalogRenders({ selectedProvider: "codex", discoveryEnabled: false });
+    readCatalogRenders({ selectedEngine: "codex", discoveryEnabled: false });
     expect(readAgentQueryEnabled("codex")).toBe(true);
   });
 
@@ -176,7 +176,7 @@ describe("useEngineModelCatalog", () => {
       preferences: { ...LOCAL_PREFERENCES, hiddenEngines: ["cursor"] },
     });
 
-    readCatalogRenders({ selectedProvider: "codex", discoveryEnabled: true });
+    readCatalogRenders({ selectedEngine: "codex", discoveryEnabled: true });
 
     expect(readModelQueryEnabled("codex")).toBe(true);
     expect(readModelQueryEnabled("cursor")).toBe(false);
@@ -184,19 +184,19 @@ describe("useEngineModelCatalog", () => {
   });
 
   it("discovers stock Pi only after explicit browse intent or selection", () => {
-    readCatalogRenders({ selectedProvider: "codex", discoveryEnabled: true });
+    readCatalogRenders({ selectedEngine: "codex", discoveryEnabled: true });
     expect(readModelQueryEnabled("pi")).toBe(false);
 
     mocks.useQuery.mockClear();
     readCatalogRenders({
-      selectedProvider: "codex",
+      selectedEngine: "codex",
       discoveryEnabled: true,
       piDiscoveryRequested: true,
     });
     expect(readModelQueryEnabled("pi")).toBe(true);
 
     mocks.useQuery.mockClear();
-    readCatalogRenders({ selectedProvider: "pi", discoveryEnabled: false });
+    readCatalogRenders({ selectedEngine: "pi", discoveryEnabled: false });
     expect(readModelQueryEnabled("pi")).toBe(true);
   });
 
@@ -215,7 +215,7 @@ describe("useEngineModelCatalog", () => {
     });
 
     readCatalogRenders({
-      selectedProvider: "codex",
+      selectedEngine: "codex",
       discoveryEnabled: true,
       piDiscoveryRequested: true,
     });
@@ -228,16 +228,16 @@ describe("useEngineModelCatalog", () => {
       preferences: { ...LOCAL_PREFERENCES, hiddenEngines: ["cursor"] },
     });
 
-    readCatalogRenders({ selectedProvider: "cursor", discoveryEnabled: false });
+    readCatalogRenders({ selectedEngine: "cursor", discoveryEnabled: false });
 
     expect(readModelQueryEnabled("cursor")).toBe(true);
   });
 
   it("lets a permanently mounted inactive surface stop its selected-engine query", () => {
     readCatalogRenders({
-      selectedProvider: "codex",
+      selectedEngine: "codex",
       discoveryEnabled: false,
-      selectedProviderDiscoveryEnabled: false,
+      selectedEngineDiscoveryEnabled: false,
     });
 
     expect(readModelQueryEnabled("codex")).toBe(false);
@@ -258,7 +258,7 @@ describe("useEngineModelCatalog", () => {
       },
     });
 
-    readCatalogRenders({ selectedProvider: "cursor", discoveryEnabled: true });
+    readCatalogRenders({ selectedEngine: "cursor", discoveryEnabled: true });
 
     expect(readModelQueryEnabled("cursor")).toBe(false);
   });
@@ -269,7 +269,7 @@ describe("useEngineModelCatalog", () => {
     // closed here would blank every engine's model list, selected one included.
     mocks.useServerSettings.mockReturnValue({ settings: undefined });
 
-    readCatalogRenders({ selectedProvider: "claude", discoveryEnabled: true });
+    readCatalogRenders({ selectedEngine: "claude", discoveryEnabled: true });
 
     expect(readModelQueryEnabled("claude")).toBe(true);
     expect(readModelQueryEnabled("codex")).toBe(true);
@@ -283,14 +283,14 @@ describe("useEngineModelCatalog", () => {
       settings: { ...SERVER_SETTINGS, engines: providersWithoutCursor },
     });
 
-    readCatalogRenders({ selectedProvider: "cursor", discoveryEnabled: false });
+    readCatalogRenders({ selectedEngine: "cursor", discoveryEnabled: false });
 
     expect(readModelQueryEnabled("cursor")).toBe(true);
   });
 
   it("restricts non-picker prefetch to the requested engines", () => {
     readCatalogRenders({
-      selectedProvider: "codex",
+      selectedEngine: "codex",
       discoveryEnabled: true,
       prefetchProviders: ["codex", "kilo", "opencode"],
     });
@@ -304,7 +304,7 @@ describe("useEngineModelCatalog", () => {
 
   it("keeps an intent-scoped picker on the selected Engine until another submenu is opened", () => {
     readCatalogRenders({
-      selectedProvider: "codex",
+      selectedEngine: "codex",
       discoveryEnabled: true,
       prefetchProviders: [],
     });
@@ -316,7 +316,7 @@ describe("useEngineModelCatalog", () => {
 
     mocks.useQuery.mockClear();
     readCatalogRenders({
-      selectedProvider: "codex",
+      selectedEngine: "codex",
       discoveryEnabled: true,
       prefetchProviders: ["opencode"],
     });
@@ -340,7 +340,7 @@ describe("useEngineModelCatalog", () => {
     });
 
     const catalog = readCatalogRenders({
-      selectedProvider: "cursor",
+      selectedEngine: "cursor",
       discoveryEnabled: true,
       modelHintByEngine: MODEL_HINTS,
     }).at(-1);
@@ -349,7 +349,7 @@ describe("useEngineModelCatalog", () => {
     expect(displaySlugs).toContain("composer-2");
     expect(displaySlugs).toContain("cursor-custom");
     expect(catalog?.loadingModelProviders.cursor).toBe(true);
-    expect(catalog?.selectedProviderModelsLoading).toBe(true);
+    expect(catalog?.selectedEngineModelsLoading).toBe(true);
     expect(catalog?.runtimeModelsByEngine.cursor).toEqual([]);
     expect(catalog?.selectableModelOptionsByEngine.cursor).toEqual([]);
     expect(catalog?.selectedRuntimeModel).toBeUndefined();
@@ -366,7 +366,7 @@ describe("useEngineModelCatalog", () => {
     });
 
     const catalog = readCatalogRenders({
-      selectedProvider: "cursor",
+      selectedEngine: "cursor",
       discoveryEnabled: true,
       modelHintByEngine: MODEL_HINTS,
     }).at(-1);
@@ -406,7 +406,7 @@ describe("useEngineModelCatalog", () => {
     });
 
     const catalog = readCatalogRenders({
-      selectedProvider: "antigravity",
+      selectedEngine: "antigravity",
       discoveryEnabled: true,
     }).at(-1);
 
@@ -430,7 +430,7 @@ describe("useEngineModelCatalog", () => {
     });
 
     const catalog = readCatalogRenders({
-      selectedProvider: "oa",
+      selectedEngine: "oa",
       discoveryEnabled: true,
       modelHintByEngine: { oa: "legacy/engine-model" },
     }).at(-1);
@@ -452,7 +452,7 @@ describe("useEngineModelCatalog", () => {
     });
 
     let catalog = readCatalogRenders({
-      selectedProvider: "cursor",
+      selectedEngine: "cursor",
       discoveryEnabled: true,
     }).at(-1);
     expect(catalog?.catalogStateByEngine.cursor).toBe("checking");
@@ -470,7 +470,7 @@ describe("useEngineModelCatalog", () => {
       isPlaceholderData: false,
     });
 
-    catalog = readCatalogRenders({ selectedProvider: "cursor", discoveryEnabled: true }).at(-1);
+    catalog = readCatalogRenders({ selectedEngine: "cursor", discoveryEnabled: true }).at(-1);
     expect(catalog?.catalogStateByEngine.cursor).toBe("stale");
     expect(catalog?.selectableModelOptionsByEngine.cursor.map((model) => model.slug)).toEqual([
       "composer-2",
@@ -489,7 +489,7 @@ describe("useEngineModelCatalog", () => {
     });
 
     const catalog = readCatalogRenders({
-      selectedProvider: "cursor",
+      selectedEngine: "cursor",
       discoveryEnabled: true,
     }).at(-1);
 
@@ -513,7 +513,7 @@ describe("useEngineModelCatalog", () => {
     });
 
     const catalog = readCatalogRenders({
-      selectedProvider: "opencode",
+      selectedEngine: "opencode",
       discoveryEnabled: true,
       cwd: "/next-project",
     }).at(-1);

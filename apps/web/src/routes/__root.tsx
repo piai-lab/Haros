@@ -779,18 +779,18 @@ function EngineUpdateNotifications({
 
     const firstProvider = outdatedProviders[0]!;
     const additionalCount = outdatedProviders.length - 1;
-    const providerName = ENGINE_DISPLAY_NAMES[firstProvider.engine];
+    const engine = ENGINE_DISPLAY_NAMES[firstProvider.engine];
     const title =
       outdatedProviders.length === 1
-        ? t("updater.providerAvailable", { engine: providerName })
+        ? t("updater.providerAvailable", { engine: engine })
         : t("updater.providersAvailable", { count: outdatedProviders.length });
     const description =
       outdatedProviders.length === 1
-        ? t("updater.providerDescription", { engine: providerName })
+        ? t("updater.providerDescription", { engine: engine })
         : additionalCount === 1
-          ? t("updater.providerPairDescription", { engine: providerName })
+          ? t("updater.providerPairDescription", { engine: engine })
           : t("updater.providersDescription", {
-              engine: providerName,
+              engine: engine,
               count: additionalCount,
             });
 

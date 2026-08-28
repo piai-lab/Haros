@@ -666,7 +666,7 @@ describe("automation shared route helpers", () => {
     const savedProviderOptions: EngineStartOptions = {
       opencode: { binaryPath: "/old/opencode", serverUrl: "http://old.example" },
     };
-    const currentProviderOptions: EngineStartOptions = {
+    const currentEngineOptions: EngineStartOptions = {
       opencode: { binaryPath: "/new/opencode", serverUrl: "http://new.example" },
     };
     const definition = definitionWith({
@@ -675,7 +675,7 @@ describe("automation shared route helpers", () => {
     });
     const form = formFromDefinition(definition, "project-1");
 
-    expect(engineOptionsForAutomationEdit(definition, form, currentProviderOptions)).toEqual(
+    expect(engineOptionsForAutomationEdit(definition, form, currentEngineOptions)).toEqual(
       savedProviderOptions,
     );
   });
@@ -684,7 +684,7 @@ describe("automation shared route helpers", () => {
     const savedProviderOptions: EngineStartOptions = {
       opencode: { binaryPath: "/old/opencode", serverUrl: "http://old.example" },
     };
-    const currentProviderOptions: EngineStartOptions = {
+    const currentEngineOptions: EngineStartOptions = {
       cursor: { binaryPath: "/current/cursor", apiEndpoint: "http://cursor.example" },
     };
     const definition = definitionWith({
@@ -697,16 +697,16 @@ describe("automation shared route helpers", () => {
       engineOptionsForAutomationEngineSelection(
         definition,
         nextEngineSelection,
-        currentProviderOptions,
+        currentEngineOptions,
       ),
-    ).toEqual(currentProviderOptions);
+    ).toEqual(currentEngineOptions);
   });
 
   it("preserves saved engine options when only model capability options change", () => {
     const savedProviderOptions: EngineStartOptions = {
       codex: { binaryPath: "/old/codex", homePath: "/old/home" },
     };
-    const currentProviderOptions: EngineStartOptions = {
+    const currentEngineOptions: EngineStartOptions = {
       codex: { binaryPath: "/new/codex", homePath: "/new/home" },
     };
     const definition = definitionWith({
@@ -726,7 +726,7 @@ describe("automation shared route helpers", () => {
           model: "gpt-5-codex",
           options: { reasoningEffort: "high" },
         },
-        currentProviderOptions,
+        currentEngineOptions,
       ),
     ).toEqual(savedProviderOptions);
   });

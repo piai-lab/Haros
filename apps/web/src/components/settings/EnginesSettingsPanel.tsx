@@ -1153,11 +1153,11 @@ function EngineToolRow(props: {
   const updateAdvisory = props.engineStatus?.versionAdvisory;
   const engineUpdateSuppressed =
     updateAdvisory?.status === "behind_latest" && !showEngineUpdateStatus;
-  const currentProviderVersion = formatProviderVersion(props.engineStatus?.version);
+  const currentEngineVersion = formatProviderVersion(props.engineStatus?.version);
   const engineUpdateLabel = props.engineStatus
     ? !props.settings.enableEngineUpdateChecks
-      ? currentProviderVersion
-        ? t("settings.currentVersion", { version: currentProviderVersion })
+      ? currentEngineVersion
+        ? t("settings.currentVersion", { version: currentEngineVersion })
         : null
       : engineUpdateSuppressed
         ? null
@@ -1432,10 +1432,10 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
       const dismissProgressToast = () => {
         progressToastDismissed = true;
       };
-      const providerName = ENGINE_DISPLAY_NAMES[engine];
+      const engineLabel = ENGINE_DISPLAY_NAMES[engine];
       const toastId = toastManager.add({
         type: "loading",
-        title: t("updater.updatingProvider", { engine: providerName }),
+        title: t("updater.updatingProvider", { engine: engineLabel }),
         data: createEngineUpdateToastData({
           stage: "progress",
           closeLabel: t("updater.hideProgress"),
@@ -1460,7 +1460,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
             toastManager.update(toastId, {
               type: "error",
               title: t("settings.couldNotUpdateProvider", {
-                engine: providerName,
+                engine: engine,
               }),
               description: manualCommand
                 ? t("settings.manualUpdateInstruction", { failure: failureMessage })
@@ -1477,7 +1477,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
           if (progressToastDismissed) return;
           toastManager.update(toastId, {
             type: "success",
-            title: t("updater.engineUpdated", { engine: providerName }),
+            title: t("updater.engineUpdated", { engine: engine }),
             description: t("updater.refreshedDescription"),
             data: createEngineUpdateToastData({
               stage: "success",
@@ -1491,7 +1491,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
           toastManager.update(toastId, {
             type: "error",
             title: t("settings.couldNotUpdateProvider", {
-              engine: providerName,
+              engine: engine,
             }),
             description:
               error instanceof EngineUpdateTimeoutError

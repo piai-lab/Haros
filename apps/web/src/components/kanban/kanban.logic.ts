@@ -41,7 +41,7 @@ type KanbanComposerDraftSource = Pick<
   | "terminalContexts"
   | "assistantSelections"
   | "fileComments"
-  | "activeProvider"
+  | "activeEngine"
 > &
   Partial<Pick<ComposerThreadDraftState, "browserAnnotations">>;
 
@@ -62,7 +62,7 @@ export function buildKanbanComposerDraftSnapshot(
       draft.assistantSelections.length > 0 ||
       (draft.browserAnnotations?.length ?? 0) > 0 ||
       draft.fileComments.length > 0,
-    engine: draft.activeProvider,
+    engine: draft.activeEngine,
   };
 }
 

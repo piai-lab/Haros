@@ -152,7 +152,7 @@ describe("decider Auto model compatibility", () => {
           session: {
             threadId: THREAD_ID,
             status: "ready",
-            providerName: "claude",
+            engine: "claude",
             runtimeMode: "auto",
             activeTurnId: null,
             lastError: null,
@@ -174,7 +174,7 @@ describe("decider Auto model compatibility", () => {
     );
 
     expect(Array.isArray(result) ? result : [result]).toMatchObject([
-      { type: "thread.session-set", payload: { session: { providerName: "claude" } } },
+      { type: "thread.session-set", payload: { session: { engine: "claude" } } },
       {
         type: "thread.meta-updated",
         payload: { engineSelection: { engine: "claude", model: "claude-fable-5" } },

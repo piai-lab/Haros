@@ -198,8 +198,7 @@ class FakeCodexManager extends CodexAppServerManager {
 const engineSessionDirectoryTestLayer = Layer.succeed(EngineSessionDirectory, {
   upsert: () => Effect.void,
   replace: () => Effect.void,
-  getProvider: () =>
-    Effect.die(new Error("EngineSessionDirectory.getProvider is not used in test")),
+  getEngine: () => Effect.die(new Error("EngineSessionDirectory.getEngine is not used in test")),
   getBinding: () => Effect.succeed(Option.none()),
   remove: () => Effect.void,
   listThreadIds: () => Effect.succeed([]),

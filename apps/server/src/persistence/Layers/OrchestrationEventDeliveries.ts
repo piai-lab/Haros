@@ -284,10 +284,10 @@ const makeRepository = Effect.gen(function* () {
           r.note AS "lastReconciliationNote"
         FROM orchestration_event_deliveries d
         INNER JOIN orchestration_events e ON e.sequence = d.event_sequence
-        LEFT JOIN provider_delivery_reconciliations r
+        LEFT JOIN engine_delivery_reconciliations r
           ON r.reconciliation_id = (
             SELECT r2.reconciliation_id
-            FROM provider_delivery_reconciliations r2
+            FROM engine_delivery_reconciliations r2
             WHERE r2.consumer_name = d.consumer_name
               AND r2.event_sequence = d.event_sequence
             ORDER BY r2.reconciled_at DESC, r2.reconciliation_id DESC
@@ -318,7 +318,7 @@ const makeRepository = Effect.gen(function* () {
           AND state IN ('retry', 'inflight')
           AND EXISTS (
             SELECT 1
-            FROM provider_delivery_reconciliations r
+            FROM engine_delivery_reconciliations r
             WHERE r.consumer_name = orchestration_event_deliveries.consumer_name
               AND r.event_sequence = orchestration_event_deliveries.event_sequence
               AND r.outcome = 'safe_retry'
@@ -347,7 +347,7 @@ const makeRepository = Effect.gen(function* () {
           if (candidates.length !== 1) return Option.none<OrchestrationEventDelivery>();
 
           yield* sql`
-          INSERT INTO provider_delivery_reconciliations (
+          INSERT INTO engine_delivery_reconciliations (
             reconciliation_id, consumer_name, event_sequence, thread_id,
             previous_state, outcome, reconciled_by, note, reconciled_at
           ) VALUES (

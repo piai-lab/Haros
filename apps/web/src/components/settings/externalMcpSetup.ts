@@ -5,6 +5,8 @@ import type {
   ExternalMcpStdioConfiguration,
 } from "@harnessos/contracts";
 
+const EXTERNAL_MCP_SERVER_NAME = "harnessos";
+
 export interface ExternalMcpClientConfiguration {
   readonly format: "command" | "json";
   readonly value: string;
@@ -41,7 +43,7 @@ function jsonConfiguration(stdio: ExternalMcpStdioConfiguration): string {
   return JSON.stringify(
     {
       mcpServers: {
-        oa: {
+        [EXTERNAL_MCP_SERVER_NAME]: {
           command: stdio.command,
           args: stdio.args,
           ...(stdio.env ? { env: stdio.env } : {}),
@@ -66,7 +68,16 @@ export function buildExternalMcpClientConfiguration(
     return {
       format: "command",
       value: shellCommand(
-        ["codex", "mcp", "add", "oa", ...environment, "--", stdio.command, ...stdio.args],
+        [
+          "codex",
+          "mcp",
+          "add",
+          EXTERNAL_MCP_SERVER_NAME,
+          ...environment,
+          "--",
+          stdio.command,
+          ...stdio.args,
+        ],
         platform,
       ),
       copyLabel: "Copy Codex command",
@@ -90,7 +101,7 @@ export function buildExternalMcpClientConfiguration(
           "add",
           "--scope",
           "user",
-          "oa",
+          EXTERNAL_MCP_SERVER_NAME,
           ...environment,
           "--",
           stdio.command,
@@ -156,7 +167,7 @@ export function buildExternalMcpSetupPrompt(input: {
   }
   sections.push(
     [
-      'Step 2 — Register HarnessOS as a stdio MCP server named "oa" in your own configuration, using whichever mechanism your app supports:',
+      `Step 2 — Register HarnessOS as a stdio MCP server named "${EXTERNAL_MCP_SERVER_NAME}" in your own configuration, using whichever mechanism your app supports:`,
       "",
       `If you are Codex, run: ${codex.value}`,
       `If you are Claude Code, run: ${claude.value}`,

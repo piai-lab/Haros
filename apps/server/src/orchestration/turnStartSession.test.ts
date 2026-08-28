@@ -14,7 +14,7 @@ function makeSession(status: OrchestrationSession["status"]): OrchestrationSessi
   return {
     threadId: THREAD_ID,
     status,
-    providerName: "codex",
+    engine: "codex",
     runtimeMode: "approval-required",
     activeTurnId: null,
     lastError: status === "error" ? "runtime exploded" : null,
@@ -26,7 +26,7 @@ function derive(currentSession: OrchestrationSession | null) {
   return deriveTurnStartSession({
     threadId: THREAD_ID,
     currentSession,
-    providerName: "pi",
+    engine: "pi",
     requestedRuntimeMode: "full-access",
     requestedAt: REQUESTED_AT,
   });
@@ -131,7 +131,7 @@ describe("deriveTurnStartSession", () => {
     expect(derive(null)).toEqual({
       threadId: THREAD_ID,
       status: "starting",
-      providerName: "pi",
+      engine: "pi",
       runtimeMode: "full-access",
       activeTurnId: null,
       lastError: null,
@@ -142,7 +142,7 @@ describe("deriveTurnStartSession", () => {
   it("preserves established engine settings when restarting an idle session", () => {
     expect(derive(makeSession("ready"))).toMatchObject({
       status: "starting",
-      providerName: "codex",
+      engine: "codex",
       runtimeMode: "approval-required",
       activeTurnId: null,
       lastError: null,

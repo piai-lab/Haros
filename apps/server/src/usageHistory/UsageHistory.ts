@@ -247,7 +247,7 @@ const makeUsageHistory = Effect.gen(function* () {
   `;
   for (const engine of PROVIDERS) {
     yield* sql`
-      INSERT INTO usage_history_provider_state (engine, status)
+      INSERT INTO usage_history_engine_state (engine, status)
       VALUES (${engine}, 'pending')
       ON CONFLICT (engine) DO NOTHING
     `;
@@ -291,7 +291,7 @@ const makeUsageHistory = Effect.gen(function* () {
         restart_attempts AS "restartAttempts",
         detail_code AS "detailCode",
         last_completed_at AS "lastCompletedAt"
-      FROM usage_history_provider_state ORDER BY engine
+      FROM usage_history_engine_state ORDER BY engine
     `;
 
   const roots = Effect.gen(function* () {
@@ -326,7 +326,7 @@ const makeUsageHistory = Effect.gen(function* () {
             )
               return;
             yield* sql`
-              UPDATE usage_history_provider_state SET status = 'pending', discovery_cursor = NULL,
+              UPDATE usage_history_engine_state SET status = 'pending', discovery_cursor = NULL,
                 discovery_generation = discovery_generation + 1, discovery_complete = 0,
                 files_discovered = 0, bytes_discovered = 0, bytes_read = 0,
                 restart_attempts = 0, detail_code = NULL
@@ -408,7 +408,7 @@ const makeUsageHistory = Effect.gen(function* () {
         `;
         for (const engine of new Set(versionMismatches.map((file) => file.engine))) {
           yield* sql`
-            UPDATE usage_history_provider_state SET status = 'pending', discovery_cursor = NULL,
+            UPDATE usage_history_engine_state SET status = 'pending', discovery_cursor = NULL,
               discovery_generation = discovery_generation + 1, discovery_complete = 0,
               restart_attempts = 0, detail_code = 'parser-updated'
             WHERE engine = ${engine}
@@ -449,13 +449,13 @@ const makeUsageHistory = Effect.gen(function* () {
       const result: UsageHistoryDiscoverResponse = response;
       const currentGeneration = yield* sql<{ readonly discoveryGeneration: number }>`
         SELECT discovery_generation AS "discoveryGeneration"
-        FROM usage_history_provider_state WHERE engine = ${engine}
+        FROM usage_history_engine_state WHERE engine = ${engine}
       `;
       if (Number(currentGeneration[0]?.discoveryGeneration) !== state.discoveryGeneration) return;
       const discoveryIssue = result.issueCodes[0] ?? null;
       if (!result.rootAvailable) {
         yield* sql`
-          UPDATE usage_history_provider_state
+          UPDATE usage_history_engine_state
           SET status = ${discoveryIssue ? "partial" : "unsupported"}, discovery_complete = 1,
               discovery_cursor = NULL, detail_code = ${discoveryIssue ?? "archive-unavailable"}
           WHERE engine = ${engine} AND discovery_generation = ${state.discoveryGeneration}
@@ -517,7 +517,7 @@ const makeUsageHistory = Effect.gen(function* () {
         `;
       }
       yield* sql`
-        UPDATE usage_history_provider_state SET
+        UPDATE usage_history_engine_state SET
           discovery_cursor = ${result.nextCursor},
           discovery_complete = ${result.complete ? 1 : 0},
           files_discovered = files_discovered + ${result.files.length},
@@ -608,7 +608,7 @@ const makeUsageHistory = Effect.gen(function* () {
         Effect.gen(function* () {
           const currentGeneration = yield* sql<{ readonly discoveryGeneration: number }>`
             SELECT discovery_generation AS "discoveryGeneration"
-            FROM usage_history_provider_state WHERE engine = ${engine}
+            FROM usage_history_engine_state WHERE engine = ${engine}
           `;
           if (Number(currentGeneration[0]?.discoveryGeneration) !== expectedGeneration)
             return false;
@@ -707,7 +707,7 @@ const makeUsageHistory = Effect.gen(function* () {
             `;
           }
           yield* sql`
-            UPDATE usage_history_provider_state SET
+            UPDATE usage_history_engine_state SET
               bytes_read = bytes_read + ${result.bytesRead},
               files_indexed = (SELECT COUNT(*) FROM usage_history_files
                 WHERE engine = ${engine} AND state = 'indexed'),
@@ -732,18 +732,18 @@ const makeUsageHistory = Effect.gen(function* () {
         UPDATE usage_history_control SET status = 'indexing', updated_at = ${new Date().toISOString()}
         WHERE singleton_id = 1 AND consent_state = 'authorized'
       `;
-      const activeProviders = new Set<UsageHistoryEngine>(PROVIDERS);
-      while (activeProviders.size > 0) {
+      const activeEngines = new Set<UsageHistoryEngine>(PROVIDERS);
+      while (activeEngines.size > 0) {
         if (stopped || pauseRequested) break;
         for (const engine of PROVIDERS) {
-          if (!activeProviders.has(engine) || stopped || pauseRequested) continue;
+          if (!activeEngines.has(engine) || stopped || pauseRequested) continue;
           const current = (yield* readProviders()).find((row) => row.engine === engine)!;
           if (current.status === "paused" || current.status === "unsupported") {
-            activeProviders.delete(engine);
+            activeEngines.delete(engine);
             continue;
           }
           yield* sql`
-            UPDATE usage_history_provider_state SET status = 'indexing'
+            UPDATE usage_history_engine_state SET status = 'indexing'
             WHERE engine = ${engine} AND discovery_generation = ${current.discoveryGeneration}
           `;
           const stepExit = yield* Effect.exit(
@@ -763,7 +763,7 @@ const makeUsageHistory = Effect.gen(function* () {
           );
           if (Exit.isSuccess(stepExit)) {
             yield* sql`
-              UPDATE usage_history_provider_state SET restart_attempts = 0
+              UPDATE usage_history_engine_state SET restart_attempts = 0
               WHERE engine = ${engine} AND discovery_generation = ${current.discoveryGeneration}
             `;
             if (!stepExit.value) {
@@ -771,24 +771,24 @@ const makeUsageHistory = Effect.gen(function* () {
               if (settled.status !== "paused" && settled.status !== "unsupported") {
                 const partial = Number(settled.skippedFiles) > 0 || settled.detailCode !== null;
                 yield* sql`
-                  UPDATE usage_history_provider_state SET status = ${partial ? "partial" : "ready"},
+                  UPDATE usage_history_engine_state SET status = ${partial ? "partial" : "ready"},
                     last_completed_at = ${new Date().toISOString()}
                   WHERE engine = ${engine}
                     AND discovery_generation = ${settled.discoveryGeneration}
                 `;
               }
-              activeProviders.delete(engine);
+              activeEngines.delete(engine);
             }
           } else {
             if (pauseRequested) return;
             const attempts = Number(current.restartAttempts) + 1;
             yield* sql`
-              UPDATE usage_history_provider_state SET restart_attempts = ${attempts},
+              UPDATE usage_history_engine_state SET restart_attempts = ${attempts},
                 status = ${attempts >= MAX_PROVIDER_RESTARTS ? "paused" : "partial"},
                 detail_code = 'indexer-interrupted'
               WHERE engine = ${engine} AND discovery_generation = ${current.discoveryGeneration}
             `;
-            if (attempts >= MAX_PROVIDER_RESTARTS) activeProviders.delete(engine);
+            if (attempts >= MAX_PROVIDER_RESTARTS) activeEngines.delete(engine);
           }
           yield* Effect.yieldNow;
         }
@@ -983,7 +983,7 @@ const makeUsageHistory = Effect.gen(function* () {
         yield* sql`DELETE FROM usage_history_events`;
         yield* sql`DELETE FROM usage_history_files`;
         yield* sql`
-          UPDATE usage_history_provider_state SET status = 'pending', discovery_cursor = NULL,
+          UPDATE usage_history_engine_state SET status = 'pending', discovery_cursor = NULL,
             discovery_generation = discovery_generation + 1, discovery_complete = 0,
             files_discovered = 0, files_indexed = 0, bytes_discovered = 0, bytes_read = 0,
             skipped_files = 0, restart_attempts = 0, detail_code = NULL, last_completed_at = NULL
@@ -1012,7 +1012,7 @@ const makeUsageHistory = Effect.gen(function* () {
         activeChild?.kill("SIGKILL");
         yield* sql`UPDATE usage_history_control SET status = 'paused', updated_at = ${now} WHERE singleton_id = 1`;
         yield* sql`
-          UPDATE usage_history_provider_state
+          UPDATE usage_history_engine_state
           SET status = CASE WHEN status = 'unsupported' THEN status ELSE 'paused' END,
             discovery_generation = discovery_generation + 1
         `;
@@ -1029,7 +1029,7 @@ const makeUsageHistory = Effect.gen(function* () {
             yield* resetProjection("indexing");
           } else {
             yield* sql`
-              UPDATE usage_history_provider_state SET status = 'pending', discovery_cursor = NULL,
+              UPDATE usage_history_engine_state SET status = 'pending', discovery_cursor = NULL,
                 discovery_generation = discovery_generation + 1, discovery_complete = 0,
                 files_discovered = 0, bytes_discovered = 0, bytes_read = 0,
                 restart_attempts = 0, detail_code = NULL

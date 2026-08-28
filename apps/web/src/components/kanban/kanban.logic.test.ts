@@ -791,7 +791,7 @@ describe("buildKanbanComposerDraftSnapshot", () => {
       ],
       assistantSelections: [],
       fileComments: [],
-      activeProvider: null,
+      activeEngine: null,
     });
 
     expect(snapshot).toEqual({
@@ -819,7 +819,7 @@ describe("buildKanbanComposerDraftSnapshot", () => {
       terminalContexts: [],
       assistantSelections: [],
       fileComments: [],
-      activeProvider: null,
+      activeEngine: null,
     });
 
     expect(snapshot?.hasAttachments).toBe(true);

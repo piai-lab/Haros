@@ -103,7 +103,7 @@ describe("RateLimitsPanel helpers", () => {
 
     expect(rows).toEqual([
       {
-        id: "claudeAgent-Weekly",
+        id: "claude-Weekly",
         label: "Weekly",
         remainingPercent: 80,
         resetsAt: "2099-04-14T20:00:00.000Z",
@@ -220,7 +220,7 @@ describe("RateLimitsPanel helpers", () => {
 
     expect(rows).toEqual([
       {
-        id: "claudeAgent-5h",
+        id: "claude-5h",
         label: "5h",
         remainingPercent: 10,
         resetsAt: "2099-04-04T08:03:00.000Z",
@@ -248,7 +248,7 @@ describe("RateLimitsPanel helpers", () => {
 
     expect(deriveVisibleRateLimitRows(rateLimits)).toEqual([
       {
-        id: "claudeAgent-Weekly (overage)",
+        id: "claude-Weekly (overage)",
         label: "Weekly (overage)",
         remainingPercent: 75,
         resetsAt: "2099-04-14T20:00:00.000Z",
@@ -262,7 +262,7 @@ describe("RateLimitsPanel helpers", () => {
         engine: "codex",
         updatedAt: "2099-04-08T18:00:00.000Z",
         limits: [
-          { window: "new_provider_window", usedPercent: 10 },
+          { window: "new-runtime-window", usedPercent: 10 },
           { window: "Weekly", usedPercent: 5 },
           { window: "another-engine-window", usedPercent: 20 },
           { window: "weekly_overage", usedPercent: 15, windowDurationMins: 10_080 },
@@ -292,7 +292,11 @@ describe("RateLimitsPanel helpers", () => {
         label: "New Engine Window",
         remainingPercent: 70,
       },
+      {
+        id: "codex-New Runtime Window",
+        label: "New Runtime Window",
+        remainingPercent: 90,
+      },
     ]);
-    expect(JSON.stringify(rows)).not.toContain("new_provider_window");
   });
 });

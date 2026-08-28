@@ -39,14 +39,14 @@ export interface EngineModelCatalog {
   loadingModelProviders: Record<EngineKind, boolean>;
   /** Runtime descriptors from the settled current query identity only. */
   runtimeModelsByEngine: Record<EngineKind, ReadonlyArray<EngineModelDescriptor>>;
-  /** The runtime descriptor matching `selectedProvider` + its selected-model hint. */
+  /** The runtime descriptor matching `selectedEngine` + its selected-model hint. */
   selectedRuntimeModel: EngineModelDescriptor | undefined;
   /** Runtime-discovered agents/modes for the selected engine (kilo/opencode/claude/codex). */
   selectedRuntimeAgents: ReadonlyArray<EngineAgentDescriptor>;
   /** Loading state used by the selected engine's bootstrap skeleton. */
-  selectedProviderModelsLoading: boolean;
+  selectedEngineModelsLoading: boolean;
   /** Whether the selected engine requires and is still waiting on runtime models. */
-  selectedProviderRuntimeModelDiscoveryPending: boolean;
+  selectedEngineRuntimeModelDiscoveryPending: boolean;
 }
 
 export type EngineModelCatalogState = "idle" | "checking" | "ready" | "empty" | "stale" | "error";
@@ -93,7 +93,7 @@ function deriveCatalogState(input: {
 }
 
 export function useEngineModelCatalog(input: {
-  selectedProvider: EngineKind;
+  selectedEngine: EngineKind;
   /**
    * Enables discovery for the on-demand engines (cursor/grok/droid/kilo/opencode)
    * even when they are not selected — pass the picker's open state so their lists
@@ -106,7 +106,7 @@ export function useEngineModelCatalog(input: {
    * query while inactive. Chat/Composer callers omit this and keep the current
    * Engine authoritative.
    */
-  selectedProviderDiscoveryEnabled?: boolean;
+  selectedEngineDiscoveryEnabled?: boolean;
   /** User explicitly opened the stock Pi engine submenu in the current picker session. */
   piDiscoveryRequested?: boolean;
   /** Effective cwd for engines whose model catalog can be extended by project resources. */
@@ -119,7 +119,7 @@ export function useEngineModelCatalog(input: {
    */
   prefetchProviders?: ReadonlyArray<EngineKind>;
 }): EngineModelCatalog {
-  const { selectedProvider, discoveryEnabled, modelHintByEngine } = input;
+  const { selectedEngine, discoveryEnabled, modelHintByEngine } = input;
   const discoveryCwd = input.cwd ?? null;
   const { preferences } = useLocalPreferences();
   const { settings: serverSettings } = useServerSettings();
@@ -149,8 +149,8 @@ export function useEngineModelCatalog(input: {
     if (serverSettings?.engines[engine]?.enabled === false) {
       return false;
     }
-    if (engine === selectedProvider) {
-      return input.selectedProviderDiscoveryEnabled ?? true;
+    if (engine === selectedEngine) {
+      return input.selectedEngineDiscoveryEnabled ?? true;
     }
     if (!prefetchRequested) {
       return false;
@@ -170,7 +170,7 @@ export function useEngineModelCatalog(input: {
   // Opening the whole picker is not consent to inspect `.pi`. Browsing the Pi submenu
   // is explicit engine intent, and selecting Pi keeps its native discovery active.
   const piModelDiscoveryEnabled =
-    selectedProvider === "pi"
+    selectedEngine === "pi"
       ? shouldDiscoverProvider("pi", false)
       : input.piDiscoveryRequested === true && shouldDiscoverProvider("pi", true);
 
@@ -610,27 +610,27 @@ export function useEngineModelCatalog(input: {
   const selectedRuntimeModel = useMemo(
     () =>
       resolveRuntimeModelDescriptor({
-        engine: selectedProvider,
-        model: modelHintByEngine?.[selectedProvider] ?? null,
-        runtimeModels: runtimeModelsByEngine[selectedProvider],
+        engine: selectedEngine,
+        model: modelHintByEngine?.[selectedEngine] ?? null,
+        runtimeModels: runtimeModelsByEngine[selectedEngine],
       }),
-    [modelHintByEngine, runtimeModelsByEngine, selectedProvider],
+    [modelHintByEngine, runtimeModelsByEngine, selectedEngine],
   );
 
   const selectedAgentCatalog =
-    selectedProvider === "claude"
+    selectedEngine === "claude"
       ? {
           enabled: claudeAgentDiscoveryEnabled,
           query: claudeDynamicAgentsQuery,
         }
-      : selectedProvider === "codex"
+      : selectedEngine === "codex"
         ? {
             enabled: codexAgentDiscoveryEnabled,
             query: codexDynamicAgentsQuery,
           }
-        : selectedProvider === "kilo"
+        : selectedEngine === "kilo"
           ? { enabled: kiloAgentDiscoveryEnabled, query: kiloDynamicAgentsQuery }
-          : selectedProvider === "opencode"
+          : selectedEngine === "opencode"
             ? { enabled: openCodeAgentDiscoveryEnabled, query: openCodeDynamicAgentsQuery }
             : null;
   const selectedDynamicAgents =
@@ -656,8 +656,8 @@ export function useEngineModelCatalog(input: {
     }
     return result;
   }, [catalogStateByEngine]);
-  const selectedProviderRuntimeModelDiscoveryPending = loadingModelProviders[selectedProvider];
-  const selectedProviderModelsLoading = selectedProviderRuntimeModelDiscoveryPending;
+  const selectedEngineRuntimeModelDiscoveryPending = loadingModelProviders[selectedEngine];
+  const selectedEngineModelsLoading = selectedEngineRuntimeModelDiscoveryPending;
 
   return useMemo(
     () => ({
@@ -669,8 +669,8 @@ export function useEngineModelCatalog(input: {
       runtimeModelsByEngine,
       selectedRuntimeModel,
       selectedRuntimeAgents,
-      selectedProviderModelsLoading,
-      selectedProviderRuntimeModelDiscoveryPending,
+      selectedEngineModelsLoading,
+      selectedEngineRuntimeModelDiscoveryPending,
     }),
     [
       customModelsByEngine,
@@ -678,8 +678,8 @@ export function useEngineModelCatalog(input: {
       loadingModelProviders,
       modelOptionsByEngine,
       runtimeModelsByEngine,
-      selectedProviderModelsLoading,
-      selectedProviderRuntimeModelDiscoveryPending,
+      selectedEngineModelsLoading,
+      selectedEngineRuntimeModelDiscoveryPending,
       selectedRuntimeAgents,
       selectedRuntimeModel,
       selectableModelOptionsByEngine,

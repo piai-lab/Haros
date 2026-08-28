@@ -461,7 +461,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
       session: {
         threadId: thread.id,
         status: mapEngineSessionStatusToOrchestrationStatus(session.status),
-        providerName: session.engine,
+        engine: session.engine,
         runtimeMode: thread.runtimeMode,
         activeTurnId: null,
         lastError: session.lastError ?? null,

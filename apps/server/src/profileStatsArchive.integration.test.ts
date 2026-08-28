@@ -1298,7 +1298,7 @@ describe("ProfileStatsArchive", () => {
         yield* sql`
           INSERT INTO automation_definitions (
             automation_id, project_id, source_thread_id, name, prompt, schedule_json,
-            enabled, next_run_at, model_selection_json, provider_options_json, runtime_mode,
+            enabled, next_run_at, model_selection_json, engine_options_json, runtime_mode,
             interaction_mode, worktree_mode, mode, target_thread_id, max_iterations,
             stop_on_error, completion_policy_json, completion_policy_version,
             completion_policy_updated_at, minimum_interval_seconds, max_runtime_seconds,

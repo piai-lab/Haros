@@ -200,8 +200,8 @@ export function makeHostGatewayMcpTransport(input: {
           "Bearer token refers to a thread that no longer exists.",
         );
       }
-      const liveProvider = callerThread.value.session?.providerName;
-      if ((liveProvider ?? callerThread.value.engineSelection.engine) !== callerSession.engine) {
+      const liveEngine = callerThread.value.session?.engine;
+      if ((liveEngine ?? callerThread.value.engineSelection.engine) !== callerSession.engine) {
         return invalidRequestResponse(
           401,
           "caller_session_inactive: Engine session no longer owns this thread.",

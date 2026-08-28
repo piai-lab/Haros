@@ -684,7 +684,7 @@ describe("composerDraftStore terminal contexts", () => {
               codex: codexSelection,
               cursor: cursorSelection,
             },
-            activeProvider: "cursor",
+            activeEngine: "cursor",
           },
         },
         draftThreadsByThreadId: {},
@@ -696,7 +696,7 @@ describe("composerDraftStore terminal contexts", () => {
     const draft = mergedState.draftsByThreadId[threadId];
     expect(draft?.engineSelectionByEngine.codex).toEqual(codexSelection);
     expect(draft?.engineSelectionByEngine.cursor).toEqual(cursorSelection);
-    expect(draft?.activeProvider).toBe("cursor");
+    expect(draft?.activeEngine).toBe("cursor");
   });
 });
 

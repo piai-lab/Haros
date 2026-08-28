@@ -1954,8 +1954,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         ...(sourceProposedPlan !== undefined ? { sourceProposedPlan } : {}),
         createdAt: command.createdAt,
       } as const;
-      const activeProvider =
-        targetThread.session?.providerName ?? targetThread.engineSelection.engine;
+      const activeEngine = targetThread.session?.engine ?? targetThread.engineSelection.engine;
       const isThreadRunning =
         targetThread.session?.status === "running" && targetThread.session.activeTurnId !== null;
       const admittedBindingMatchesCurrent = turnStartBindingMatchesCommitted({
@@ -1967,7 +1966,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         requestedInteractionMode: command.interactionMode,
       });
       const supportsNativeTurnSteering =
-        turnAdmissionCapabilities?.engine === activeProvider &&
+        turnAdmissionCapabilities?.engine === activeEngine &&
         turnAdmissionCapabilities.supportsNativeTurnSteering;
       const steeringDisposition =
         dispatchMode === "steer" && isThreadRunning
@@ -2410,7 +2409,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           session: {
             threadId: command.threadId,
             status: "starting",
-            providerName: thread.session?.providerName ?? thread.engineSelection.engine,
+            engine: thread.session?.engine ?? thread.engineSelection.engine,
             runtimeMode: command.runtimeMode,
             activeTurnId: null,
             lastError: null,
@@ -2463,7 +2462,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         });
       }
       if (command.binding !== undefined) {
-        if (command.binding.engineSelection.engine !== command.session.providerName) {
+        if (command.binding.engineSelection.engine !== command.session.engine) {
           return yield* new OrchestrationCommandInvariantError({
             commandType: command.type,
             detail: "Committed model selection must match the engine Session.",

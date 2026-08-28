@@ -129,7 +129,7 @@ export interface QueuedComposerChatTurn {
   pastedTexts: PastedTextDraft[];
   skills: EngineSkillReference[];
   mentions: EngineMentionReference[];
-  selectedProvider: EngineKind;
+  selectedEngine: EngineKind;
   selectedModel: string | null;
   selectedPromptEffort: string | null;
   engineSelection: EngineSelection;
@@ -154,7 +154,7 @@ export interface QueuedComposerPlanFollowUp {
   previewText: string;
   text: string;
   interactionMode: "default" | "plan";
-  selectedProvider: EngineKind;
+  selectedEngine: EngineKind;
   selectedModel: string | null;
   selectedPromptEffort: string | null;
   engineSelection: EngineSelection;
@@ -219,7 +219,7 @@ export interface ComposerThreadDraftState {
   pendingDirectTurnRecovery?: PendingDirectTurnRecovery | null;
   restoredSourceProposedPlan?: RestoredComposerSourceProposedPlan | null;
   engineSelectionByEngine: Partial<Record<EngineKind, EngineSelection>>;
-  activeProvider: EngineKind | null;
+  activeEngine: EngineKind | null;
   runtimeMode: RuntimeMode | null;
   interactionMode: EngineInteractionMode | null;
 }
@@ -594,7 +594,7 @@ export function createEmptyThreadDraft(): ComposerThreadDraftState {
     pendingDirectTurnRecovery: null,
     restoredSourceProposedPlan: null,
     engineSelectionByEngine: {},
-    activeProvider: null,
+    activeEngine: null,
     runtimeMode: null,
     interactionMode: null,
   };
@@ -894,7 +894,7 @@ export function shouldRemoveDraft(draft: ComposerThreadDraftState): boolean {
     draft.pendingDirectTurnRecovery == null &&
     draft.restoredSourceProposedPlan == null &&
     Object.keys(draft.engineSelectionByEngine).length === 0 &&
-    draft.activeProvider === null &&
+    draft.activeEngine === null &&
     draft.runtimeMode === null &&
     draft.interactionMode === null
   );
@@ -929,7 +929,7 @@ export function resolvePendingDirectTurnRecoveryMutation(
   }
   if (
     !Equal.equals(previous.engineSelectionByEngine, current.engineSelectionByEngine) ||
-    previous.activeProvider !== current.activeProvider ||
+    previous.activeEngine !== current.activeEngine ||
     previous.runtimeMode !== current.runtimeMode ||
     previous.interactionMode !== current.interactionMode
   ) {
@@ -986,7 +986,7 @@ const EMPTY_THREAD_DRAFT = Object.freeze<ComposerThreadDraftState>({
   pendingDirectTurnRecovery: null,
   restoredSourceProposedPlan: null,
   engineSelectionByEngine: EMPTY_MODEL_SELECTION_BY_PROVIDER,
-  activeProvider: null,
+  activeEngine: null,
   runtimeMode: null,
   interactionMode: null,
 });

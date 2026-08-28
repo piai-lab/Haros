@@ -2576,7 +2576,7 @@ const make = Effect.gen(function* () {
             session: {
               threadId: thread.id,
               status,
-              providerName: event.engine,
+              engine: event.engine,
               runtimeMode: thread.session?.runtimeMode ?? "full-access",
               activeTurnId: nextActiveTurnId,
               lastError,
@@ -2997,7 +2997,7 @@ const make = Effect.gen(function* () {
             session: {
               threadId: thread.id,
               status: "error",
-              providerName: event.engine,
+              engine: event.engine,
               runtimeMode: thread.session?.runtimeMode ?? "full-access",
               activeTurnId: eventTurnId ?? null,
               lastError: runtimeErrorMessage,
@@ -3179,10 +3179,10 @@ const make = Effect.gen(function* () {
       // A native steer rides the live turn, so no later turn.started will
       // arrive to match a pending delivery-mode request — bind to the live
       // turn immediately instead.
-      const steerProvider = thread?.session?.providerName ?? thread?.engineSelection.engine;
+      const steerEngine = thread?.session?.engine ?? thread?.engineSelection.engine;
       const isNativeSteer =
         event.payload.dispatchMode === "steer" &&
-        steerProvider !== undefined &&
+        steerEngine !== undefined &&
         event.payload.steeringDisposition === "native";
       let deliveryTurnId: TurnId | undefined;
       if (isNativeSteer) {
@@ -3215,7 +3215,7 @@ const make = Effect.gen(function* () {
       const flushEvent: EngineRuntimeEvent = {
         type: "turn.started",
         eventId: event.eventId,
-        engine: (steerProvider ?? "codex") as EngineKind,
+        engine: (steerEngine ?? "codex") as EngineKind,
         createdAt: event.payload.createdAt,
         threadId: event.payload.threadId,
         turnId: deliveryTurnId,

@@ -36,9 +36,9 @@ const makeEngineSessionRuntimeRepository = Effect.gen(function* () {
     Request: EngineSessionRuntimeDbRowSchema,
     execute: (runtime) =>
       sql`
-        INSERT INTO provider_session_runtime (
+        INSERT INTO engine_session_runtime (
           thread_id,
-          provider_name,
+          engine,
           adapter_key,
           runtime_mode,
           status,
@@ -49,7 +49,7 @@ const makeEngineSessionRuntimeRepository = Effect.gen(function* () {
         )
         VALUES (
           ${runtime.threadId},
-          ${runtime.providerName},
+          ${runtime.engine},
           ${runtime.adapterKey},
           ${runtime.runtimeMode},
           ${runtime.status},
@@ -60,7 +60,7 @@ const makeEngineSessionRuntimeRepository = Effect.gen(function* () {
         )
         ON CONFLICT (thread_id)
         DO UPDATE SET
-          provider_name = excluded.provider_name,
+          engine = excluded.engine,
           adapter_key = excluded.adapter_key,
           runtime_mode = excluded.runtime_mode,
           status = excluded.status,
@@ -78,7 +78,7 @@ const makeEngineSessionRuntimeRepository = Effect.gen(function* () {
       sql`
         SELECT
           thread_id AS "threadId",
-          provider_name AS "providerName",
+          engine AS "engine",
           adapter_key AS "adapterKey",
           runtime_mode AS "runtimeMode",
           status,
@@ -86,7 +86,7 @@ const makeEngineSessionRuntimeRepository = Effect.gen(function* () {
           last_seen_at AS "lastSeenAt",
           resume_cursor_json AS "resumeCursor",
           runtime_payload_json AS "runtimePayload"
-        FROM provider_session_runtime
+        FROM engine_session_runtime
         WHERE thread_id = ${threadId}
       `,
   });
@@ -98,7 +98,7 @@ const makeEngineSessionRuntimeRepository = Effect.gen(function* () {
       sql`
         SELECT
           thread_id AS "threadId",
-          provider_name AS "providerName",
+          engine AS "engine",
           adapter_key AS "adapterKey",
           runtime_mode AS "runtimeMode",
           status,
@@ -106,7 +106,7 @@ const makeEngineSessionRuntimeRepository = Effect.gen(function* () {
           last_seen_at AS "lastSeenAt",
           resume_cursor_json AS "resumeCursor",
           runtime_payload_json AS "runtimePayload"
-        FROM provider_session_runtime
+        FROM engine_session_runtime
         ORDER BY last_seen_at ASC, thread_id ASC
       `,
   });
@@ -115,7 +115,7 @@ const makeEngineSessionRuntimeRepository = Effect.gen(function* () {
     Request: DeleteRuntimeRequestSchema,
     execute: ({ threadId }) =>
       sql`
-        DELETE FROM provider_session_runtime
+        DELETE FROM engine_session_runtime
         WHERE thread_id = ${threadId}
       `,
   });

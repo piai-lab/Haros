@@ -284,157 +284,6 @@ layer("OrchestrationEventStore", (it) => {
     }),
   );
 
-  it.effect("normalizes imported HarnessOS model-selection shapes during replay", () =>
-    Effect.gen(function* () {
-      const eventStore = yield* OrchestrationEventStore;
-      const sql = yield* SqlClient.SqlClient;
-      const now = "2026-05-05T14:39:18.000Z";
-
-      yield* sql`
-        INSERT INTO orchestration_events (
-          event_id,
-          aggregate_kind,
-          stream_id,
-          stream_version,
-          event_type,
-          occurred_at,
-          command_id,
-          causation_event_id,
-          correlation_id,
-          actor_kind,
-          payload_json,
-          metadata_json
-        )
-        VALUES
-        (
-          ${EventId.makeUnsafe("evt-import-project-created")},
-          ${"project"},
-          ${ProjectId.makeUnsafe("project-imported")},
-          ${0},
-          ${"project.created"},
-          ${now},
-          ${CommandId.makeUnsafe("cmd-import-project-created")},
-          ${null},
-          ${null},
-          ${"server"},
-          ${JSON.stringify({
-            projectId: "project-imported",
-            title: "Imported Project",
-            workspaceRoot: "/tmp/imported",
-            defaultEngineSelection: {
-              instanceId: "codex",
-              model: "imported-project-model",
-            },
-            scripts: [],
-            createdAt: now,
-            updatedAt: now,
-          })},
-          ${"{}"}
-        ),
-        (
-          ${EventId.makeUnsafe("evt-import-thread-created")},
-          ${"thread"},
-          ${ThreadId.makeUnsafe("thread-imported")},
-          ${0},
-          ${"thread.created"},
-          ${now},
-          ${CommandId.makeUnsafe("cmd-import-thread-created")},
-          ${null},
-          ${null},
-          ${"server"},
-          ${JSON.stringify({
-            threadId: "thread-imported",
-            projectId: "project-imported",
-            title: "Imported Thread",
-            engineSelection: {
-              engine: "codex",
-              model: "gpt-5.5",
-              options: [{ id: "reasoningEffort", value: "medium" }],
-            },
-            runtimeMode: "full-access",
-            interactionMode: "default",
-            branch: null,
-            worktreePath: null,
-            createdAt: now,
-            updatedAt: now,
-          })},
-          ${"{}"}
-        ),
-        (
-          ${EventId.makeUnsafe("evt-import-turn-start")},
-          ${"thread"},
-          ${ThreadId.makeUnsafe("thread-imported")},
-          ${1},
-          ${"thread.turn-start-requested"},
-          ${now},
-          ${CommandId.makeUnsafe("cmd-import-turn-start")},
-          ${null},
-          ${null},
-          ${"server"},
-          ${JSON.stringify({
-            threadId: "thread-imported",
-            messageId: "message-imported",
-            engineSelection: {
-              engine: "codex",
-              model: "gpt-5.5",
-              options: [{ id: "reasoningEffort", value: "medium" }],
-            },
-            dispatchMode: "queue",
-            runtimeMode: "full-access",
-            interactionMode: "default",
-            createdAt: now,
-          })},
-          ${"{}"}
-        )
-      `;
-
-      const replayed = yield* Stream.runCollect(eventStore.readFromSequence(0, 10)).pipe(
-        Effect.map((chunk) => Array.from(chunk)),
-      );
-      const projectCreated = replayed.find(
-        (event) => event.eventId === EventId.makeUnsafe("evt-import-project-created"),
-      );
-      const threadCreated = replayed.find(
-        (event) => event.eventId === EventId.makeUnsafe("evt-import-thread-created"),
-      );
-      const turnStartRequested = replayed.find(
-        (event) => event.eventId === EventId.makeUnsafe("evt-import-turn-start"),
-      );
-
-      assert.deepStrictEqual(
-        projectCreated?.type === "project.created"
-          ? projectCreated.payload.defaultEngineSelection
-          : null,
-        {
-          engine: "codex",
-          model: "imported-project-model",
-        },
-      );
-      assert.deepStrictEqual(
-        threadCreated?.type === "thread.created" ? threadCreated.payload.engineSelection : null,
-        {
-          engine: "codex",
-          model: "gpt-5.5",
-          options: {
-            reasoningEffort: "medium",
-          },
-        },
-      );
-      assert.deepStrictEqual(
-        turnStartRequested?.type === "thread.turn-start-requested"
-          ? turnStartRequested.payload.engineSelection
-          : null,
-        {
-          engine: "codex",
-          model: "gpt-5.5",
-          options: {
-            reasoningEffort: "medium",
-          },
-        },
-      );
-    }),
-  );
-
   it.effect("fails with PersistenceDecodeError when stored json is invalid", () =>
     Effect.gen(function* () {
       const eventStore = yield* OrchestrationEventStore;
@@ -483,6 +332,35 @@ layer("OrchestrationEventStore", (it) => {
           replayResult.failure.operation,
           /OrchestrationEventStore\.readFromSequence:rowToEvent\(sequence=\d+, type=project\.created\)/,
         );
+      }
+    }),
+  );
+
+  it.effect("rejects unversioned persisted events instead of upcasting them", () =>
+    Effect.gen(function* () {
+      const eventStore = yield* OrchestrationEventStore;
+      const sql = yield* SqlClient.SqlClient;
+      const now = new Date().toISOString();
+      const startSequence = yield* eventStore.getHighWaterSequence();
+
+      yield* sql`
+        INSERT INTO orchestration_events (
+          event_id, aggregate_kind, stream_id, stream_version, event_type,
+          occurred_at, command_id, causation_event_id, correlation_id,
+          actor_kind, payload_json, metadata_json
+        ) VALUES (
+          'evt-store-unversioned', 'project', 'project-unversioned', 0, 'project.created',
+          ${now}, 'cmd-store-unversioned', NULL, NULL, 'server', '{}', '{}'
+        )
+      `;
+
+      const replayResult = yield* Effect.result(
+        Stream.runCollect(eventStore.readFromSequence(startSequence, 10)),
+      );
+      assert.equal(replayResult._tag, "Failure");
+      if (replayResult._tag === "Failure") {
+        assert.ok(Schema.is(PersistenceDecodeError)(replayResult.failure));
+        assert.include(replayResult.failure.issue, "schema version undefined; expected 1");
       }
     }),
   );

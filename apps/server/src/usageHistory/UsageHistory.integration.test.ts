@@ -236,7 +236,7 @@ describe("UsageHistory", () => {
 
         yield* Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 25)));
         yield* sql`
-          UPDATE usage_history_provider_state SET status = 'pending',
+          UPDATE usage_history_engine_state SET status = 'pending',
             discovery_cursor = 'session.jsonl', discovery_complete = 0,
             restart_attempts = 0, detail_code = NULL
           WHERE engine = 'codex'

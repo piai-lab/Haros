@@ -23,7 +23,7 @@ function makeProject(id: string, workspaceRoot = WORKSPACE_ROOT) {
   return {
     id: id as ProjectId,
     kind: "project" as const,
-    title: "oa",
+    title: "harnessos",
     workspaceRoot,
     defaultEngineSelection: {
       engine: "codex" as const,
@@ -77,7 +77,7 @@ describe("createOrRecoverProjectFromPath", () => {
       expect.objectContaining({
         type: "project.create",
         kind: "project",
-        title: "oa",
+        title: "harnessos",
         workspaceRoot: WORKSPACE_ROOT,
         createWorkspaceRootIfMissing: false,
         defaultEngineSelection: DEFAULT_PROJECT_MODEL,

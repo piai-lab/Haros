@@ -371,7 +371,7 @@ export default function BranchToolbar({
   const activeWorkingDirectory = hasServerThread
     ? (serverThread.workingDirectory ?? null)
     : (draftThread?.workingDirectory ?? null);
-  const activeProvider =
+  const activeEngine =
     serverThread?.session?.engine ?? serverThread?.engineSelection.engine ?? null;
   const usesFixedLocalWorkspace = fixedLocalWorkspaceCwd !== undefined;
   const branchCwd = usesFixedLocalWorkspace
@@ -534,7 +534,7 @@ export default function BranchToolbar({
   const showEnvPicker = effectiveEnvMode === "local" || canSwitchToLocal;
 
   const usageSummary = useAccountCapacity({
-    engine: activeProvider,
+    engine: activeEngine,
   });
   const [rateLimitsOpen, setRateLimitsOpen] = useState(true);
   const [envPickerOpen, setEnvPickerOpen] = useState(false);
@@ -654,7 +654,7 @@ export default function BranchToolbar({
                 </MenuItem>
                 <CollapsiblePanel>
                   <EngineUsagePanelContent
-                    engine={activeProvider}
+                    engine={activeEngine}
                     rateLimits={usageSummary.rateLimits}
                     usageLines={usageSummary.usageLines}
                     notice={usageSummary.usageNotice}

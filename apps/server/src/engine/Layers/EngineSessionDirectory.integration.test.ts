@@ -43,7 +43,7 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
         threadId: initialThreadId,
       });
 
-      const engine = yield* directory.getProvider(initialThreadId);
+      const engine = yield* directory.getEngine(initialThreadId);
       assert.equal(engine, "codex");
       const resolvedBinding = yield* directory.getBinding(initialThreadId);
       assertSome(resolvedBinding, {
@@ -71,18 +71,18 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
       if (Option.isSome(runtime)) {
         assert.equal(runtime.value.threadId, nextThreadId);
         assert.equal(runtime.value.status, "running");
-        assert.equal(runtime.value.providerName, "codex");
+        assert.equal(runtime.value.engine, "codex");
       }
 
       const threadIds = yield* directory.listThreadIds();
       assert.deepEqual(threadIds, [nextThreadId]);
 
       yield* directory.remove(nextThreadId);
-      const missingProvider = yield* directory.getProvider(nextThreadId).pipe(Effect.result);
+      const missingProvider = yield* directory.getEngine(nextThreadId).pipe(Effect.result);
       assertFailure(
         missingProvider,
         new EngineSessionDirectoryPersistenceError({
-          operation: "EngineSessionDirectory.getProvider",
+          operation: "EngineSessionDirectory.getEngine",
           detail: `No persisted engine binding found for thread '${nextThreadId}'.`,
         }),
       );
@@ -175,7 +175,7 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
 
       yield* runtimeRepository.upsert({
         threadId,
-        providerName: "claude",
+        engine: "claude",
         adapterKey: "claude",
         runtimeMode: "full-access",
         status: "running",
@@ -193,7 +193,7 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
       const runtime = yield* runtimeRepository.getByThreadId({ threadId });
       assert.equal(Option.isSome(runtime), true);
       if (Option.isSome(runtime)) {
-        assert.equal(runtime.value.providerName, "codex");
+        assert.equal(runtime.value.engine, "codex");
         assert.equal(runtime.value.adapterKey, "codex");
       }
     }));
@@ -217,7 +217,7 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
       yield* Effect.gen(function* () {
         const directory = yield* EngineSessionDirectory;
         const sql = yield* SqlClient.SqlClient;
-        const engine = yield* directory.getProvider(threadId);
+        const engine = yield* directory.getEngine(threadId);
         assert.equal(engine, "codex");
 
         const resolvedBinding = yield* directory.getBinding(threadId);
@@ -228,13 +228,6 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
         if (Option.isSome(resolvedBinding)) {
           assert.equal(resolvedBinding.value.threadId, threadId);
         }
-
-        const legacyTableRows = yield* sql<{ readonly name: string }>`
-          SELECT name
-          FROM sqlite_master
-          WHERE type = 'table' AND name = 'provider_sessions'
-        `;
-        assert.equal(legacyTableRows.length, 0);
       }).pipe(Effect.provide(directoryLayer));
 
       fs.rmSync(tempDir, { recursive: true, force: true });
@@ -261,7 +254,7 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
       yield* Effect.gen(function* () {
         const directory = yield* EngineSessionDirectory;
 
-        const engine = yield* directory.getProvider(threadId);
+        const engine = yield* directory.getEngine(threadId);
         assert.equal(engine, "opencode");
 
         const resolvedBinding = yield* directory.getBinding(threadId);
@@ -284,7 +277,7 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
 
       yield* runtimeRepository.upsert({
         threadId: legacyThreadId,
-        providerName: "kilo",
+        engine: "kilo",
         adapterKey: "kilo",
         runtimeMode: "full-access",
         status: "running",

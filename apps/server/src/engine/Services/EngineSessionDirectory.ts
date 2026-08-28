@@ -37,7 +37,7 @@ export interface EngineSessionDirectoryShape {
     binding: EngineRuntimeBinding,
   ) => Effect.Effect<void, EngineSessionDirectoryWriteError>;
 
-  readonly getProvider: (
+  readonly getEngine: (
     threadId: ThreadId,
   ) => Effect.Effect<EngineKind, EngineSessionDirectoryReadError>;
 

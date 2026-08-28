@@ -18,11 +18,7 @@ export {
 
 import { ensurePrivateDirectorySync, repairPrivateFile } from "../privatePathPermissions.ts";
 import { withDatabaseLifecycleLock } from "./DatabaseLifecycleLock.ts";
-import {
-  findFirstMigrationLineageDivergence,
-  LAST_SHARED_LINEAGE_MIGRATION_ID,
-  migrationEntries,
-} from "./Migrations.ts";
+import { migrationEntries } from "./Migrations.ts";
 
 /** Keep at most this many finished pre-migration SQLite backups (issue #618). */
 export const MIGRATION_BACKUP_RETENTION = 5;
@@ -197,7 +193,7 @@ export const inspectMigrationBackupPlan = Effect.gen(function* () {
 
   const hasTracker = tables.some((table) => table.name === "effect_sql_migrations");
   if (!hasTracker) {
-    return { sourceVersion: "untracked", targetVersion: latestMigrationId };
+    return null;
   }
 
   const recordedResult = yield* sql<{
@@ -210,45 +206,19 @@ export const inspectMigrationBackupPlan = Effect.gen(function* () {
     Effect.catch(() => Effect.succeed({ status: "malformed" as const })),
   );
   if (recordedResult.status === "malformed") {
-    return { sourceVersion: "malformed-tracker", targetVersion: latestMigrationId };
+    return null;
   }
   const recorded = recordedResult.rows;
-  const userTables = tables.filter((table) => table.name !== "effect_sql_migrations");
   if (recorded.length === 0) {
-    return userTables.length === 0
-      ? null
-      : { sourceVersion: "untracked", targetVersion: latestMigrationId };
+    return null;
   }
 
-  const recordedNames = new Map(recorded.map((row) => [row.migration_id, row.name] as const));
   const highWaterMark = recorded[recorded.length - 1]!.migration_id;
-  const canonicalPrefixThrough31 = migrationEntries
-    .filter(([id]) => id < 32)
+  const recordedNames = new Map(recorded.map((row) => [row.migration_id, row.name] as const));
+  const canonicalPrefix = migrationEntries
+    .filter(([id]) => id <= highWaterMark)
     .every(([id, name]) => recordedNames.get(id) === name);
-  if (
-    canonicalPrefixThrough31 &&
-    recordedNames.has(32) &&
-    recordedNames.get(32) !== "ReconcileImportedSchemaLineage"
-  ) {
-    return { sourceVersion: `v${highWaterMark}-legacy32`, targetVersion: latestMigrationId };
-  }
-
-  // Same predicate the reconciler classifies trackers with. Sharing it is what
-  // keeps "this database needs a backup" and "this database will be replayed"
-  // from ever disagreeing.
-  const firstDivergedId = findFirstMigrationLineageDivergence(recordedNames, highWaterMark)?.[0];
-  if (firstDivergedId !== undefined) {
-    // Shared-lineage divergence is rejected before the migrator mutates data.
-    if (firstDivergedId <= LAST_SHARED_LINEAGE_MIGRATION_ID) {
-      return null;
-    }
-    return {
-      sourceVersion: `imported-v${highWaterMark}-from${firstDivergedId}`,
-      targetVersion: latestMigrationId,
-    };
-  }
-
-  if (highWaterMark < latestMigrationId) {
+  if (canonicalPrefix && recorded.length === highWaterMark && highWaterMark < latestMigrationId) {
     return { sourceVersion: `v${highWaterMark}`, targetVersion: latestMigrationId };
   }
   return null;

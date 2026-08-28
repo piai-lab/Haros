@@ -198,7 +198,7 @@ describe("useComposerVoiceController", () => {
       activeProject: PROJECT,
       activeThreadId: THREAD_A,
       threadId: THREAD_A,
-      selectedProvider: "codex",
+      selectedEngine: "codex",
       activeEngineStatus: null,
       pendingUserInputCount: 0,
       onTranscriptReady: vi.fn(),
@@ -250,7 +250,7 @@ describe("useComposerVoiceController", () => {
       if (staleCause === "thread") {
         render({ activeThreadId: THREAD_B, threadId: THREAD_B });
       } else if (staleCause === "engine") {
-        render({ selectedProvider: "claude" as EngineKind });
+        render({ selectedEngine: "claude" as EngineKind });
       } else {
         result.cancelComposerVoiceRecording();
       }

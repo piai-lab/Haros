@@ -855,7 +855,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
               activeTurnId: null,
             },
           })
-        : directory.getProvider(threadId).pipe(
+        : directory.getEngine(threadId).pipe(
             Effect.flatMap((engine) =>
               directory.upsert({
                 threadId,
@@ -1725,7 +1725,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
 
             const persistedCwd = readPersistedCwd(binding.runtimePayload);
             const persistedEngineSelection = readPersistedEngineSelection(binding.runtimePayload);
-            const persistedProviderOptions = readPersistedProviderOptions(binding.runtimePayload);
+            const persistedEngineOptions = readPersistedProviderOptions(binding.runtimePayload);
             const persistedWorkSurface =
               binding.engine === "oa" || binding.engine === "pi"
                 ? readPersistedWorkSurface(binding.runtimePayload)
@@ -1746,7 +1746,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
               lifecycleGeneration: lease.generation,
               ...(persistedCwd ? { cwd: persistedCwd } : {}),
               ...(persistedEngineSelection ? { engineSelection: persistedEngineSelection } : {}),
-              ...(persistedProviderOptions ? { engineOptions: persistedProviderOptions } : {}),
+              ...(persistedEngineOptions ? { engineOptions: persistedEngineOptions } : {}),
               ...(persistedWorkSurface ? { workSurface: persistedWorkSurface } : {}),
               ...(persistedProjectContextRoot
                 ? { projectContextRoot: persistedProjectContextRoot }

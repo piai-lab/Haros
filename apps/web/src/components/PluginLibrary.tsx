@@ -596,7 +596,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
 
   const preferredProvider = contextThread?.engineSelection.engine ?? "oa";
 
-  const [selectedProvider, setSelectedProvider] = useState<EngineKind>(preferredProvider);
+  const [selectedEngine, setSelectedProvider] = useState<EngineKind>(preferredProvider);
   const [selectedTab, setSelectedTab] = useState<DiscoveryTab>("skills");
   const [pluginSearch, setPluginSearch] = useState("");
   const [skillSearch, setSkillSearch] = useState("");
@@ -704,9 +704,9 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
 
   // Library discovery stays bound to the Engine the user selected. Unsupported
   // tabs render an accurate unavailable state instead of reading another Engine.
-  const effectiveProvider = selectedProvider;
+  const effectiveEngine = selectedEngine;
   const hasActiveProviderDiscoverySession = isProviderDiscoverySessionActive({
-    engine: effectiveProvider,
+    engine: effectiveEngine,
     session: contextThread?.session,
   });
 
@@ -716,13 +716,13 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
     serverCwd: serverConfigQuery.data?.cwd ?? null,
   });
 
-  const providerLabel = ENGINE_DISPLAY_NAMES[effectiveProvider];
-  const canListPlugins = providerCapabilities[effectiveProvider].plugins;
-  const canListSkills = providerCapabilities[effectiveProvider].skills;
+  const providerLabel = ENGINE_DISPLAY_NAMES[effectiveEngine];
+  const canListPlugins = providerCapabilities[effectiveEngine].plugins;
+  const canListSkills = providerCapabilities[effectiveEngine].skills;
 
   const pluginsQuery = useQuery(
     providerPluginsQueryOptions({
-      engine: effectiveProvider,
+      engine: effectiveEngine,
       cwd: discoveryCwd,
       threadId: nativeThreadId,
       enabled: selectedTab === "plugins" && canListPlugins,
@@ -731,7 +731,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
 
   const skillsQuery = useQuery(
     providerSkillsQueryOptions({
-      engine: effectiveProvider,
+      engine: effectiveEngine,
       cwd: discoveryCwd,
       threadId: nativeThreadId,
       activeSession: hasActiveProviderDiscoverySession,
@@ -833,7 +833,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
                   key={engine}
                   label={label}
                   engine={engine}
-                  active={effectiveProvider === engine}
+                  active={effectiveEngine === engine}
                   disabled={!capabilities.plugins && !capabilities.skills}
                   onClick={() => {
                     setSelectedProvider(engine);

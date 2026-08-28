@@ -60,7 +60,7 @@ export function turnStartBindingMatchesCommitted(input: {
 export function deriveTurnStartSession(input: {
   readonly threadId: ThreadId;
   readonly currentSession: OrchestrationSession | null;
-  readonly providerName: OrchestrationSession["providerName"];
+  readonly engine: OrchestrationSession["engine"];
   readonly requestedRuntimeMode: RuntimeMode;
   readonly requestedAt: string;
 }): OrchestrationSession | null {
@@ -71,7 +71,7 @@ export function deriveTurnStartSession(input: {
   return {
     threadId: input.threadId,
     status: "starting",
-    providerName: input.currentSession?.providerName ?? input.providerName,
+    engine: input.currentSession?.engine ?? input.engine,
     runtimeMode: input.currentSession?.runtimeMode ?? input.requestedRuntimeMode,
     activeTurnId: null,
     lastError: null,

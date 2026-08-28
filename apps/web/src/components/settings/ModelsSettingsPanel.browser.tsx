@@ -2077,7 +2077,7 @@ describe("ModelsSettingsPanel model services", () => {
     }));
     useComposerDraftStore.getState().enqueueQueuedTurn(ThreadId.makeUnsafe("queued-reference"), {
       ...makeQueuedChatTurn("queued-custom-service"),
-      selectedProvider: "oa",
+      selectedEngine: "oa",
       selectedModel: referencedSelection.model,
       engineSelection: referencedSelection,
     });

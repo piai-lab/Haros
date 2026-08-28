@@ -9,6 +9,8 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { makeSqlitePersistenceLive } from "./Sqlite.ts";
+import { runMigrations } from "../Migrations.ts";
+import * as NodeSqliteClient from "../NodeSqliteClient.ts";
 
 const tempDirectories: Array<string> = [];
 
@@ -20,6 +22,9 @@ async function makeDbPath(): Promise<string> {
 
 async function createNormalWalSnapshot(dbPath: string): Promise<Buffer> {
   const seedPath = `${dbPath}.seed`;
+  await Effect.runPromise(
+    runMigrations().pipe(Effect.provide(NodeSqliteClient.layer({ filename: seedPath }))),
+  );
   const seed = new DatabaseSync(seedPath);
   try {
     seed.exec(`

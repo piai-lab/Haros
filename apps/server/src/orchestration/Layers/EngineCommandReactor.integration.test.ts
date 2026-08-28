@@ -783,7 +783,10 @@ describe("EngineCommandReactor", () => {
               ${versions[0]!.version}, ${event.type},
               ${event.occurredAt}, ${event.commandId}, ${event.causationEventId},
               ${event.correlationId}, 'user', ${JSON.stringify(event.payload)},
-              ${JSON.stringify(event.metadata)}
+              ${JSON.stringify({
+                ...event.metadata,
+                persistedEventSchemaVersion: 1,
+              })}
             )
             RETURNING sequence
           `);
@@ -820,7 +823,7 @@ describe("EngineCommandReactor", () => {
       }) =>
         runtime.runPromise(sql`
           INSERT INTO projection_thread_sessions (
-            thread_id, status, provider_name, runtime_mode,
+            thread_id, status, engine, runtime_mode,
             active_turn_id, last_error, updated_at
           ) VALUES (
             ${input.threadId}, 'running', 'codex', 'approval-required',
@@ -828,7 +831,7 @@ describe("EngineCommandReactor", () => {
           )
           ON CONFLICT (thread_id) DO UPDATE SET
             status = excluded.status,
-            provider_name = excluded.provider_name,
+            engine = excluded.engine,
             runtime_mode = excluded.runtime_mode,
             active_turn_id = excluded.active_turn_id,
             last_error = excluded.last_error,
@@ -1157,7 +1160,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "starting",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -1601,7 +1604,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-durable-expired"),
           lastError: null,
@@ -1710,7 +1713,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-durable-uncertain"),
           lastError: null,
@@ -1727,7 +1730,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-2"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-durable-unrelated"),
           lastError: null,
@@ -1895,7 +1898,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: turnId,
           lastError: null,
@@ -1936,7 +1939,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -2041,7 +2044,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: turnId,
           lastError: null,
@@ -2125,7 +2128,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: turnId,
           lastError: null,
@@ -3616,7 +3619,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "interrupted",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError: null,
@@ -4342,7 +4345,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-active-edit"),
           lastError: null,
@@ -4423,7 +4426,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-active-edit-resend"),
           lastError: null,
@@ -4509,7 +4512,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-cross-engine-edit-active"),
           lastError: null,
@@ -4561,7 +4564,7 @@ describe("EngineCommandReactor", () => {
       model: "gpt-5-codex",
     });
     expect((await readHarnessThread(harness))?.session).toMatchObject({
-      providerName: "codex",
+      engine: "codex",
       status: "running",
       activeTurnId: asTurnId("turn-cross-engine-edit-active"),
     });
@@ -4603,7 +4606,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId,
           lastError: null,
@@ -4654,7 +4657,7 @@ describe("EngineCommandReactor", () => {
     expect(thread?.messages.map((message) => message.text)).toEqual(["old prompt"]);
     expect(thread?.engineSelection).toEqual({ engine: "codex", model: "gpt-5-codex" });
     expect(thread?.session).toMatchObject({
-      providerName: "codex",
+      engine: "codex",
       status: "running",
       activeTurnId,
     });
@@ -4741,7 +4744,7 @@ describe("EngineCommandReactor", () => {
     const thread = await readHarnessThread(harness);
     expect(thread?.engineSelection).toEqual({ engine: "codex", model: "gpt-5-codex" });
     expect(thread?.session).toMatchObject({
-      providerName: "codex",
+      engine: "codex",
       status: "ready",
       activeTurnId: null,
     });
@@ -4865,7 +4868,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "droid",
+          engine: "droid",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-droid-active-edit"),
           lastError: null,
@@ -4909,7 +4912,7 @@ describe("EngineCommandReactor", () => {
       "old prompt",
     ]);
     expect(thread?.session).toMatchObject({
-      providerName: "droid",
+      engine: "droid",
       status: "running",
       activeTurnId: asTurnId("turn-droid-active-edit"),
     });
@@ -4932,7 +4935,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-running-edit-queued"),
           lastError: null,
@@ -6804,12 +6807,12 @@ describe("EngineCommandReactor", () => {
     });
     expect(harness.renameBranch.mock.calls[0]?.[0]).toMatchObject({
       oldBranch: "harnessos/cb661f0d",
-      newBranch: "harnessos/provider-startup-timeouts",
+      newBranch: "harnessos/engine-startup-timeouts",
     });
 
     await waitFor(
       async () =>
-        (await readHarnessThread(harness))?.branch === "harnessos/provider-startup-timeouts",
+        (await readHarnessThread(harness))?.branch === "harnessos/engine-startup-timeouts",
     );
   });
 
@@ -6979,7 +6982,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-running"),
           lastError: null,
@@ -7059,7 +7062,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: input.liveTurnId,
           lastError: null,
@@ -7367,7 +7370,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-running-before-promotion"),
           lastError: null,
@@ -7500,7 +7503,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-running-before-idless-abort"),
           lastError: null,
@@ -7671,7 +7674,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-parent-before-stop"),
           lastError: null,
@@ -7846,7 +7849,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-before-direct-failure"),
           lastError: null,
@@ -7886,7 +7889,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -7948,7 +7951,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-already-settled"),
           lastError: null,
@@ -8104,7 +8107,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId,
           lastError: null,
@@ -8206,7 +8209,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId,
           lastError: null,
@@ -8321,7 +8324,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId,
           lastError: null,
@@ -8425,7 +8428,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId,
           lastError: null,
@@ -8542,7 +8545,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: liveTurnId,
           lastError: null,
@@ -8655,7 +8658,7 @@ describe("EngineCommandReactor", () => {
           session: {
             threadId,
             status: "running",
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "approval-required",
             activeTurnId,
             lastError: null,
@@ -8730,7 +8733,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-settled"),
           lastError: null,
@@ -8815,7 +8818,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "approval-required",
           activeTurnId,
           lastError: null,
@@ -8882,7 +8885,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "cursor",
+          engine: "cursor",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-running"),
           lastError: null,
@@ -9201,7 +9204,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "ready",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -9270,7 +9273,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "approval-required",
           activeTurnId: turnId,
           lastError: null,
@@ -9304,7 +9307,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "ready",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -9356,7 +9359,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "droid",
+          engine: "droid",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -9543,7 +9546,7 @@ describe("EngineCommandReactor", () => {
       engine: "claude",
       model: "claude-opus-4-6",
     });
-    expect(thread?.session?.providerName).toBe("claude");
+    expect(thread?.session?.engine).toBe("claude");
     expect(
       thread?.activities.find((activity) => activity.kind === "engine.turn.start.failed"),
     ).toBeUndefined();
@@ -9814,7 +9817,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError: null,
@@ -9931,7 +9934,7 @@ describe("EngineCommandReactor", () => {
 
     const thread = await readHarnessThread(harness);
     expect(thread?.session?.threadId).toBe("thread-1");
-    expect(thread?.session?.providerName).toBe("claude");
+    expect(thread?.session?.engine).toBe("claude");
     expect(thread?.session?.runtimeMode).toBe("approval-required");
     expect(thread?.engineSelection).toEqual({
       engine: "claude",
@@ -9965,7 +9968,7 @@ describe("EngineCommandReactor", () => {
 
     let targetSessionProjectionAttempts = 0;
     harness.interceptEngineDispatch((command) => {
-      if (command.type !== "thread.session.set" || command.session.providerName !== "claude") {
+      if (command.type !== "thread.session.set" || command.session.engine !== "claude") {
         return undefined;
       }
       targetSessionProjectionAttempts += 1;
@@ -10012,7 +10015,7 @@ describe("EngineCommandReactor", () => {
     });
     const thread = await readHarnessThread(harness);
     expect(thread?.session).toMatchObject({
-      providerName: "claude",
+      engine: "claude",
       status: "ready",
       runtimeMode: "approval-required",
     });
@@ -10118,7 +10121,7 @@ describe("EngineCommandReactor", () => {
     expect(bindingCommitCommands).toEqual([
       expect.objectContaining({
         session: expect.objectContaining({
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "full-access",
         }),
         binding: {
@@ -10129,7 +10132,7 @@ describe("EngineCommandReactor", () => {
       }),
       expect.objectContaining({
         session: expect.objectContaining({
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "full-access",
         }),
         binding: {
@@ -10181,7 +10184,7 @@ describe("EngineCommandReactor", () => {
       "thread.interaction-mode-set",
     ]);
     expect(committedBindingEvents).toMatchObject([
-      { payload: { session: { providerName: "claude", runtimeMode: "full-access" } } },
+      { payload: { session: { engine: "claude", runtimeMode: "full-access" } } },
       { payload: { engineSelection: targetSelection } },
       { payload: { runtimeMode: "full-access" } },
       { payload: { interactionMode: "plan" } },
@@ -10255,7 +10258,7 @@ describe("EngineCommandReactor", () => {
       engineSelection: targetSelection,
       runtimeMode: "approval-required",
       interactionMode: "plan",
-      session: { providerName: "codex", runtimeMode: "approval-required" },
+      session: { engine: "codex", runtimeMode: "approval-required" },
     });
 
     const events = await Effect.runPromise(
@@ -10340,7 +10343,7 @@ describe("EngineCommandReactor", () => {
       model: "gpt-5-codex",
     });
     expect((await readHarnessThread(harness))?.session).toMatchObject({
-      providerName: "codex",
+      engine: "codex",
       status: "ready",
     });
   });
@@ -10375,7 +10378,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "stopped",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -10509,7 +10512,7 @@ describe("EngineCommandReactor", () => {
     expect(thread?.runtimeMode).toBe("full-access");
     expect(thread?.interactionMode).toBe(DEFAULT_ENGINE_INTERACTION_MODE);
     expect(thread?.session).toMatchObject({
-      providerName: "codex",
+      engine: "codex",
       status: "ready",
       runtimeMode: "full-access",
       activeTurnId: null,
@@ -10591,7 +10594,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -10646,7 +10649,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-1"),
           lastError: null,
@@ -10732,7 +10735,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-projected-stale"),
           lastError: null,
@@ -10778,7 +10781,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-parent"),
           lastError: null,
@@ -10816,7 +10819,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("subagent:thread-1:child-engine-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-child"),
           lastError: null,
@@ -10855,7 +10858,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -10913,7 +10916,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-parent"),
           lastError: null,
@@ -10950,7 +10953,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("subagent:thread-1:child-engine-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-child"),
           lastError: null,
@@ -10996,7 +10999,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-synthetic-steer-parent"),
           lastError: null,
@@ -11062,7 +11065,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -11157,7 +11160,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -11305,7 +11308,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "stopped",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -11382,7 +11385,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "stopped",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -11465,7 +11468,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -11547,7 +11550,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -11670,7 +11673,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "opencode",
+          engine: "opencode",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -11766,7 +11769,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -11922,7 +11925,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -12001,7 +12004,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "stopped",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -12020,7 +12023,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -12070,7 +12073,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -12153,7 +12156,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -12200,7 +12203,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -12348,7 +12351,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -12386,7 +12389,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("subagent:thread-1:child-engine-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-child-stop"),
           lastError: null,
@@ -12446,7 +12449,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-mode-active"),
           lastError: null,
@@ -12484,7 +12487,7 @@ describe("EngineCommandReactor", () => {
         session: {
           threadId,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError: null,

@@ -76,7 +76,7 @@ function createEngineServiceHarness(
   cwd: string,
   hasSession = true,
   sessionCwd = cwd,
-  providerName: EngineSession["engine"] = "codex",
+  engine: EngineSession["engine"] = "codex",
   engineStatus: EngineSession["status"] = "ready",
   activeTurnId?: TurnId,
 ) {
@@ -95,7 +95,7 @@ function createEngineServiceHarness(
     hasSession
       ? Effect.succeed([
           {
-            engine: providerName,
+            engine: engine,
             status: engineStatus,
             runtimeMode: "full-access",
             threadId: ThreadId.makeUnsafe("thread-1"),
@@ -310,7 +310,7 @@ describe("CheckpointReactor", () => {
     readonly projectWorkspaceRoot?: string;
     readonly threadWorktreePath?: string | null;
     readonly engineSessionCwd?: string;
-    readonly providerName?: EngineKind;
+    readonly engine?: EngineKind;
     readonly engineStatus?: EngineSession["status"];
     readonly providerActiveTurnId?: TurnId;
     readonly hasInitialCommit?: boolean;
@@ -321,7 +321,7 @@ describe("CheckpointReactor", () => {
       cwd,
       options?.hasSession ?? true,
       options?.engineSessionCwd ?? cwd,
-      options?.providerName ?? "codex",
+      options?.engine ?? "codex",
       options?.engineStatus ?? "ready",
       options?.providerActiveTurnId,
     );
@@ -466,7 +466,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -709,7 +709,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: turnId,
           lastError: null,
@@ -969,7 +969,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-main"),
           lastError: null,
@@ -1034,7 +1034,7 @@ describe("CheckpointReactor", () => {
   it("captures pre-turn and completion checkpoints for claude runtime events", async () => {
     const harness = await createHarness({
       seedFilesystemCheckpoints: false,
-      providerName: "claude",
+      engine: "claude",
     });
     const createdAt = new Date().toISOString();
 
@@ -1046,7 +1046,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -1095,7 +1095,7 @@ describe("CheckpointReactor", () => {
   it("derives a live turn-diff placeholder from git for claude file edits mid-turn", async () => {
     const harness = await createHarness({
       seedFilesystemCheckpoints: false,
-      providerName: "claude",
+      engine: "claude",
     });
     const threadId = ThreadId.makeUnsafe("thread-1");
     const turnId = asTurnId("turn-claude-live");
@@ -1109,7 +1109,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "approval-required",
           activeTurnId: turnId,
           lastError: null,
@@ -1197,7 +1197,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -1285,7 +1285,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: asTurnId("turn-missing-cwd"),
           lastError: null,
@@ -1332,7 +1332,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -1383,7 +1383,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -1435,7 +1435,7 @@ describe("CheckpointReactor", () => {
   it("undoes turn files without trimming chat or rolling back the Claude conversation", async () => {
     const harness = await createHarness({
       seedFilesystemCheckpoints: false,
-      providerName: "claude",
+      engine: "claude",
     });
     const createdAt = new Date().toISOString();
     const threadId = ThreadId.makeUnsafe("thread-1");
@@ -1505,7 +1505,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId,
           status: "ready",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -1813,7 +1813,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -1927,7 +1927,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -2062,7 +2062,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -2142,7 +2142,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -2338,7 +2338,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -2396,7 +2396,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -2444,7 +2444,7 @@ describe("CheckpointReactor", () => {
   });
 
   it("executes engine revert and emits thread.reverted for claude sessions", async () => {
-    const harness = await createHarness({ providerName: "claude" });
+    const harness = await createHarness({ engine: "claude" });
     const createdAt = new Date().toISOString();
 
     await Effect.runPromise(
@@ -2455,7 +2455,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -2525,7 +2525,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,

@@ -64,7 +64,7 @@ export interface FirstRunReadinessController {
 }
 
 export function useFirstRunReadinessController(
-  selectedProvider: EngineKind,
+  selectedEngine: EngineKind,
 ): FirstRunReadinessController {
   const queryClient = useQueryClient();
   const { settings, defaults } = useServerSettings();
@@ -91,22 +91,22 @@ export function useFirstRunReadinessController(
     readServerModelServicesTransport,
   );
   const selectedModelHint =
-    stickyEngineSelectionByEngine[selectedProvider]?.model ??
-    (focusedContext.activeThread?.engineSelection.engine === selectedProvider
+    stickyEngineSelectionByEngine[selectedEngine]?.model ??
+    (focusedContext.activeThread?.engineSelection.engine === selectedEngine
       ? focusedContext.activeThread.engineSelection.model
-      : focusedContext.activeProject?.defaultEngineSelection?.engine === selectedProvider
+      : focusedContext.activeProject?.defaultEngineSelection?.engine === selectedEngine
         ? focusedContext.activeProject.defaultEngineSelection.model
         : null);
   const catalog = useEngineModelCatalog({
-    selectedProvider,
+    selectedEngine,
     discoveryEnabled: false,
     // First-run classification is passive. HarnessOS's engine catalog loads
     // Pi Extensions, so readiness must rely on the credential-blind Model
     // services projection until the user explicitly opens model discovery.
-    selectedProviderDiscoveryEnabled: selectedProvider !== "oa",
-    piDiscoveryRequested: selectedProvider === "pi",
+    selectedEngineDiscoveryEnabled: selectedEngine !== "oa",
+    piDiscoveryRequested: selectedEngine === "pi",
     cwd: focusedContext.activeProject?.cwd ?? serverConfigQuery.data?.cwd ?? null,
-    modelHintByEngine: { [selectedProvider]: selectedModelHint },
+    modelHintByEngine: { [selectedEngine]: selectedModelHint },
   });
 
   const rememberedSelections = useMemo(() => {
@@ -128,7 +128,7 @@ export function useFirstRunReadinessController(
       ? draftsByThreadId[focusedContext.focusedThreadId]
       : null;
     const focusedProvider =
-      focusedDraft?.activeProvider ??
+      focusedDraft?.activeEngine ??
       focusedContext.activeThread?.engineSelection.engine ??
       focusedContext.activeProject?.defaultEngineSelection?.engine ??
       stickyActiveProvider ??

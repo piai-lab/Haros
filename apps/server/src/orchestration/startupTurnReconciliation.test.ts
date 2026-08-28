@@ -25,7 +25,7 @@ const makeSession = (
 ): NonNullable<ReconcilableThread["session"]> => ({
   threadId: ThreadId.makeUnsafe(threadId),
   status: "running",
-  providerName: "grok",
+  engine: "grok",
   runtimeMode: "approval-required",
   activeTurnId: TurnId.makeUnsafe(`${threadId}-turn`),
   lastError: null,
@@ -118,7 +118,7 @@ describe("planRestartTurnReconciliation", () => {
         session: {
           threadId: "errored",
           status: "error",
-          providerName: "grok",
+          engine: "grok",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: "runtime exploded",
@@ -214,7 +214,7 @@ describe("planRestartTurnReconciliation", () => {
       session: {
         threadId: "errored-with-requests",
         status: "error",
-        providerName: "grok",
+        engine: "grok",
         runtimeMode: "approval-required",
         activeTurnId: null,
         lastError: "runtime exploded",
@@ -245,7 +245,7 @@ describe("planRestartTurnReconciliation", () => {
       session: {
         threadId: "stuck",
         status: "interrupted",
-        providerName: "grok",
+        engine: "grok",
         runtimeMode: "approval-required",
         activeTurnId: null,
         lastError: null,
@@ -504,7 +504,7 @@ describe("planRestartTurnReconciliation", () => {
     expect(commands).toHaveLength(1);
     const sessionCommands = expectSessionCommands(commands);
     expect(sessionCommands[0]?.session).toMatchObject({
-      providerName: null,
+      engine: null,
       runtimeMode: "approval-required",
       status: "interrupted",
       activeTurnId: null,

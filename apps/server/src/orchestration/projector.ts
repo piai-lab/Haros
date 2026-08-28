@@ -924,7 +924,7 @@ export function projectEvent(
           const turnStartSession = deriveTurnStartSession({
             threadId: thread.id,
             currentSession: thread.session,
-            providerName: projectedEngineSelection.engine,
+            engine: projectedEngineSelection.engine,
             requestedRuntimeMode: payload.runtimeMode,
             requestedAt: payload.createdAt,
           });

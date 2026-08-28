@@ -44,7 +44,7 @@ function createDatabase(): { readonly database: Database; readonly dispose: () =
   database.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA synchronous = NORMAL;
-    CREATE TABLE provider_runtime_events (
+    CREATE TABLE engine_runtime_events (
       sequence INTEGER PRIMARY KEY AUTOINCREMENT,
       event_id TEXT NOT NULL UNIQUE,
       thread_id TEXT NOT NULL,
@@ -80,17 +80,17 @@ function eventParams(sourceEventIndex: number): Record<string, string> {
 function createAppendRuntimeEvent(database: Database, strategy: Strategy): AppendRuntimeEvent {
   const lookup = database.query(
     `SELECT sequence, event_json AS eventJson
-     FROM provider_runtime_events
+     FROM engine_runtime_events
      WHERE event_id = $eventId`,
   );
   const insert = database.query(
-    `INSERT INTO provider_runtime_events (
+    `INSERT INTO engine_runtime_events (
        event_id, thread_id, event_type, event_json, persisted_at
      ) VALUES ($eventId, $threadId, $eventType, $eventJson, $persistedAt)
      RETURNING sequence, event_json AS eventJson`,
   );
   const insertOnConflict = database.query(
-    `INSERT INTO provider_runtime_events (
+    `INSERT INTO engine_runtime_events (
        event_id, thread_id, event_type, event_json, persisted_at
      ) VALUES ($eventId, $threadId, $eventType, $eventJson, $persistedAt)
      ON CONFLICT (event_id) DO NOTHING

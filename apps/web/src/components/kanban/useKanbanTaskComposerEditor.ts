@@ -57,7 +57,7 @@ interface UseKanbanTaskComposerEditorInput {
   readonly composerSkills: readonly EngineSkillReference[];
   readonly composerMentions: readonly EngineMentionReference[];
   readonly scratchThreadId: ThreadId;
-  readonly selectedProvider: EngineKind;
+  readonly selectedEngine: EngineKind;
   readonly handleProviderModelChange: (engine: EngineKind, model: ModelSlug) => void;
   readonly setInteractionMode: Dispatch<SetStateAction<EngineInteractionMode>>;
   readonly onCreate: () => void;
@@ -82,7 +82,7 @@ export function useKanbanTaskComposerEditor(input: UseKanbanTaskComposerEditorIn
     composerSkills,
     composerMentions,
     scratchThreadId,
-    selectedProvider,
+    selectedEngine,
     handleProviderModelChange,
     setInteractionMode,
     onCreate,
@@ -244,7 +244,7 @@ export function useKanbanTaskComposerEditor(input: UseKanbanTaskComposerEditorIn
       applyComposerTriggerReplacement({
         snapshot,
         trigger,
-        base: `${skillMentionPrefix(selectedProvider)}${item.skill.name} `,
+        base: `${skillMentionPrefix(selectedEngine)}${item.skill.name} `,
         onApplied: () => {
           const nextSkill = {
             name: item.skill.name,

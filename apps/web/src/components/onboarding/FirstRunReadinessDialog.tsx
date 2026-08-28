@@ -63,7 +63,7 @@ function readSelectionIntentFingerprint(threadId: ThreadId): string {
     .map(([engine, selection]) => [engine, selection?.model ?? null] as const)
     .toSorted(([left], [right]) => left.localeCompare(right));
   return JSON.stringify({
-    activeProvider: draft?.activeProvider ?? null,
+    activeEngine: draft?.activeEngine ?? null,
     draftModels,
     stickyActiveProvider: composerState.stickyActiveProvider,
     stickyModels,
@@ -95,8 +95,8 @@ export function FirstRunReadinessDialog() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const pathname = useLocation({ select: (location) => location.pathname });
-  const [selectedProvider, setSelectedProvider] = useState<EngineKind>("oa");
-  const controller = useFirstRunReadinessController(selectedProvider);
+  const [selectedEngine, setSelectedProvider] = useState<EngineKind>("oa");
+  const controller = useFirstRunReadinessController(selectedEngine);
   const [step, setStep] = useState<WizardStep>("engine");
   const [open, setOpen] = useState(false);
   const [flowStarted, setFlowStarted] = useState(false);
@@ -109,18 +109,18 @@ export function FirstRunReadinessDialog() {
   const completionCommittedRef = useRef(false);
 
   const selectedEngineStatus = controller.engineStatuses.find(
-    (status) => status.engine === selectedProvider,
+    (status) => status.engine === selectedEngine,
   );
   const selectedEngineAvailability = deriveProviderPickerAvailability(selectedEngineStatus);
-  const selectedProviderPrepared =
+  const selectedEnginePrepared =
     selectedEngineAvailability.state === "ready" || selectedEngineAvailability.state === "limited";
-  const selectedProviderModels = controller.modelOptionsByEngine[selectedProvider];
-  const selectedProviderCatalogState = controller.catalogStateByEngine[selectedProvider];
-  const selectedProviderModelsReady =
-    selectedProviderModels.length > 0 &&
-    (selectedProviderCatalogState === "ready" || selectedProviderCatalogState === "stale");
+  const selectedEngineModels = controller.modelOptionsByEngine[selectedEngine];
+  const selectedEngineCatalogState = controller.catalogStateByEngine[selectedEngine];
+  const selectedEngineModelsReady =
+    selectedEngineModels.length > 0 &&
+    (selectedEngineCatalogState === "ready" || selectedEngineCatalogState === "stale");
   const modelChoices = useMemo(() => {
-    if (selectedProvider === "oa" && preparedService) {
+    if (selectedEngine === "oa" && preparedService) {
       return preparedService.models.map((model) => ({
         slug: `${preparedService.service.serviceId}/${model.modelId}`,
         name: model.displayName,
@@ -129,12 +129,12 @@ export function FirstRunReadinessDialog() {
           : t("onboarding.firstRun.modelGeneral"),
       }));
     }
-    return selectedProviderModels.map((model) => ({
+    return selectedEngineModels.map((model) => ({
       slug: model.slug,
       name: model.name,
       description: model.description ?? model.slug,
     }));
-  }, [preparedService, selectedProvider, selectedProviderModels, t]);
+  }, [preparedService, selectedEngine, selectedEngineModels, t]);
 
   const startFlow = useCallback(() => {
     const targetThreadId = controller.focusedThreadId;
@@ -211,11 +211,11 @@ export function FirstRunReadinessDialog() {
   }, [navigate]);
 
   const advanceFromPrepare = useCallback(() => {
-    if (selectedProvider === "oa") return;
-    if (!selectedProviderModelsReady || !selectedProviderPrepared) return;
+    if (selectedEngine === "oa") return;
+    if (!selectedEngineModelsReady || !selectedEnginePrepared) return;
     setSelectedModel(null);
     setStep("model");
-  }, [selectedProvider, selectedProviderModelsReady, selectedProviderPrepared]);
+  }, [selectedEngine, selectedEngineModelsReady, selectedEnginePrepared]);
 
   const handleServicePrepared = useCallback((prepared: PreparedModelService) => {
     setPreparedService(prepared);
@@ -238,7 +238,7 @@ export function FirstRunReadinessDialog() {
       readSelectionIntentFingerprint(targetThreadId) === capturedIntent &&
       selectedModel
     ) {
-      const selection: EngineSelection = { engine: selectedProvider, model: selectedModel };
+      const selection: EngineSelection = { engine: selectedEngine, model: selectedModel };
       useComposerDraftStore.getState().setEngineSelectionAndSticky(targetThreadId, selection);
     }
     clearFirstRunReadinessPreference();
@@ -246,10 +246,10 @@ export function FirstRunReadinessDialog() {
     setOpen(false);
     setFlowStarted(true);
     focusPreviousSurface(focusReturnRef.current);
-  }, [selectedModel, selectedProvider]);
+  }, [selectedModel, selectedEngine]);
 
   const currentStepNumber = step === "engine" ? 1 : step === "prepare" ? 2 : 3;
-  const selectedProviderLabel = ENGINE_LABEL_BY_KIND[selectedProvider];
+  const selectedEngineLabel = ENGINE_LABEL_BY_KIND[selectedEngine];
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -307,10 +307,10 @@ export function FirstRunReadinessDialog() {
               </DialogDescription>
               <button
                 type="button"
-                aria-pressed={selectedProvider === "oa"}
+                aria-pressed={selectedEngine === "oa"}
                 className={cn(
                   "mt-6 flex w-full items-center gap-4 rounded-[17px] border p-[17px] text-left outline-none transition-colors motion-reduce:transition-none",
-                  selectedProvider === "oa"
+                  selectedEngine === "oa"
                     ? "border-primary/45 bg-primary/[0.06] ring-4 ring-primary/[0.06]"
                     : "border-border hover:bg-muted/40",
                 )}
@@ -328,7 +328,7 @@ export function FirstRunReadinessDialog() {
                 <span className="rounded-full bg-primary/10 px-2 py-1 text-[length:var(--app-font-size-ui-2xs,11px)] font-semibold text-primary">
                   {t("onboarding.firstRun.recommended")}
                 </span>
-                {selectedProvider === "oa" ? (
+                {selectedEngine === "oa" ? (
                   <span className="grid size-[21px] place-items-center rounded-full bg-primary text-primary-foreground">
                     <CheckIcon className="size-3" />
                   </span>
@@ -344,7 +344,7 @@ export function FirstRunReadinessDialog() {
                     (candidate) => candidate.engine === engine,
                   );
                   const availability = deriveProviderPickerAvailability(status);
-                  const selected = selectedProvider === engine;
+                  const selected = selectedEngine === engine;
                   return (
                     <button
                       key={engine}
@@ -377,13 +377,13 @@ export function FirstRunReadinessDialog() {
 
           {step === "prepare" ? (
             <section className="first-run-step min-h-0 flex-1" data-first-run-step="prepare">
-              {selectedProvider === "oa" ? (
+              {selectedEngine === "oa" ? (
                 <div data-first-run-model-services>
                   <p className="mb-1.5 text-xs font-semibold text-primary">
                     {t("onboarding.firstRun.stepWithEngine", {
                       current: 2,
                       total: 3,
-                      engine: selectedProviderLabel,
+                      engine: selectedEngineLabel,
                     })}
                   </p>
                   <DialogTitle className="text-[length:calc(var(--app-font-size-ui-lg,15px)*1.6667)] tracking-[-0.035em]">
@@ -406,12 +406,12 @@ export function FirstRunReadinessDialog() {
                     {t("onboarding.firstRun.stepWithEngine", {
                       current: 2,
                       total: 3,
-                      engine: selectedProviderLabel,
+                      engine: selectedEngineLabel,
                     })}
                   </p>
                   <DialogTitle className="text-[length:calc(var(--app-font-size-ui-lg,15px)*1.6667)] tracking-[-0.035em]">
                     {t("onboarding.firstRun.prepareEngineTitle", {
-                      engine: selectedProviderLabel,
+                      engine: selectedEngineLabel,
                     })}
                   </DialogTitle>
                   <DialogDescription className="mt-1.5 max-w-[610px] text-[length:var(--app-font-size-ui,14px)] leading-relaxed">
@@ -419,23 +419,23 @@ export function FirstRunReadinessDialog() {
                   </DialogDescription>
                   <div className="mt-7 flex items-center gap-4 rounded-2xl border border-border p-5">
                     <span className="grid size-14 place-items-center rounded-2xl border border-border bg-muted/30">
-                      <EngineIcon engine={selectedProvider} className="size-8" />
+                      <EngineIcon engine={selectedEngine} className="size-8" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <strong className="text-[length:var(--app-font-size-ui-lg,15px)]">
-                        {selectedProviderLabel}
+                        {selectedEngineLabel}
                       </strong>
                       <p className="mt-1 text-[length:var(--app-font-size-ui,14px)] text-muted-foreground">
-                        {selectedProviderModelsReady && selectedProviderPrepared
+                        {selectedEngineModelsReady && selectedEnginePrepared
                           ? t("onboarding.firstRun.enginePrepared")
                           : t("onboarding.firstRun.engineNeedsSetup")}
                       </p>
                     </div>
-                    {selectedProviderModelsReady && selectedProviderPrepared ? (
+                    {selectedEngineModelsReady && selectedEnginePrepared ? (
                       <CheckIcon className="size-5 text-emerald-600" />
                     ) : null}
                   </div>
-                  {!selectedProviderModelsReady || !selectedProviderPrepared ? (
+                  {!selectedEngineModelsReady || !selectedEnginePrepared ? (
                     <Button className="mt-5" onClick={openEngineSettings}>
                       {t("composer.openEngineSettings")}
                       <ChevronRightIcon />
@@ -452,7 +452,7 @@ export function FirstRunReadinessDialog() {
                 {t("onboarding.firstRun.stepWithEngine", {
                   current: 3,
                   total: 3,
-                  engine: selectedProviderLabel,
+                  engine: selectedEngineLabel,
                 })}
               </p>
               <DialogTitle className="text-[length:calc(var(--app-font-size-ui-lg,15px)*1.6667)] tracking-[-0.035em]">
@@ -507,7 +507,7 @@ export function FirstRunReadinessDialog() {
             >
               <div>
                 <span className="mx-auto mb-5 grid size-[66px] place-items-center rounded-[21px] bg-emerald-500/10 text-emerald-600">
-                  <EngineIcon engine={selectedProvider} className="size-[42px]" />
+                  <EngineIcon engine={selectedEngine} className="size-[42px]" />
                 </span>
                 <DialogTitle className="text-[length:calc(var(--app-font-size-ui-lg,15px)*1.7333)] tracking-[-0.035em]">
                   {t("onboarding.firstRun.readyTitle")}
@@ -518,7 +518,7 @@ export function FirstRunReadinessDialog() {
                 <div className="mx-auto mt-6 flex justify-center gap-8 rounded-xl bg-muted/55 px-5 py-3 text-left text-[length:var(--app-font-size-ui-xs,12px)]">
                   <span>
                     <span className="block text-muted-foreground">{t("term.engine")}</span>
-                    <strong>{selectedProviderLabel}</strong>
+                    <strong>{selectedEngineLabel}</strong>
                   </span>
                   <span>
                     <span className="block text-muted-foreground">{t("term.model")}</span>
@@ -563,13 +563,13 @@ export function FirstRunReadinessDialog() {
             >
               {t("common.forward")}
             </Button>
-          ) : step === "prepare" && selectedProvider !== "oa" ? (
+          ) : step === "prepare" && selectedEngine !== "oa" ? (
             <Button
               className="ms-auto bg-foreground text-background hover:bg-foreground/90"
-              disabled={!selectedProviderModelsReady || !selectedProviderPrepared}
+              disabled={!selectedEngineModelsReady || !selectedEnginePrepared}
               onClick={advanceFromPrepare}
             >
-              {controller.loadingModelProviders[selectedProvider]
+              {controller.loadingModelProviders[selectedEngine]
                 ? t("composer.checkingModels")
                 : t("common.forward")}
             </Button>

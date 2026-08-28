@@ -140,7 +140,7 @@ const make = Effect.gen(function* () {
         .withTransaction(
           Effect.gen(function* () {
             const inserted = yield* sql<Record<string, unknown>>`
-            INSERT INTO provider_runtime_events (
+            INSERT INTO engine_runtime_events (
               event_id, thread_id, turn_id, lifecycle_generation, event_type,
               event_json, persisted_at
             ) VALUES (
@@ -156,7 +156,7 @@ const make = Effect.gen(function* () {
             }
             const existing = yield* sql<Record<string, unknown>>`
               SELECT sequence, event_json AS "eventJson"
-              FROM provider_runtime_events
+              FROM engine_runtime_events
               WHERE event_id = ${event.eventId}
             `;
             return { inserted: false as const, row: existing[0] };
@@ -185,7 +185,7 @@ const make = Effect.gen(function* () {
 
   const getHighWaterSequence = sql<{ readonly highWaterSequence: number }>`
     SELECT COALESCE(MAX(sequence), 0) AS "highWaterSequence"
-    FROM provider_runtime_events
+    FROM engine_runtime_events
   `.pipe(
     Effect.map((rows) => rows[0]?.highWaterSequence ?? 0),
     Effect.mapError(toPersistenceSqlError("EngineRuntimeEvent.getHighWaterSequence")),
@@ -196,7 +196,7 @@ const make = Effect.gen(function* () {
     return Effect.gen(function* () {
       const rows = yield* sql<Record<string, unknown>>`
         SELECT sequence, event_json AS "eventJson"
-        FROM provider_runtime_events
+        FROM engine_runtime_events
         WHERE sequence > ${input.sequenceExclusive}
           AND sequence <= ${input.throughSequenceInclusive}
         ORDER BY sequence ASC
@@ -231,7 +231,7 @@ const make = Effect.gen(function* () {
         COUNT(*) AS "retainedCount",
         MIN(sequence) AS "oldestSequence",
         COALESCE(MAX(sequence), 0) AS "highWaterSequence"
-      FROM provider_runtime_events
+      FROM engine_runtime_events
       WHERE thread_id = ${threadId}
     `.pipe(
       Effect.map(
@@ -250,7 +250,7 @@ const make = Effect.gen(function* () {
     return Effect.gen(function* () {
       const rows = yield* sql<Record<string, unknown>>`
         SELECT sequence, event_json AS "eventJson"
-        FROM provider_runtime_events
+        FROM engine_runtime_events
         WHERE thread_id = ${input.threadId}
           AND sequence <= ${input.throughSequenceInclusive}
           AND sequence < ${beforeSequence}
@@ -286,12 +286,12 @@ const make = Effect.gen(function* () {
       return Effect.gen(function* () {
         const rows = yield* sql<Record<string, unknown>>`
           SELECT event.sequence, event.event_json AS "eventJson"
-          FROM provider_runtime_events AS event
-          INNER JOIN provider_runtime_open_turns AS open_turn
+          FROM engine_runtime_events AS event
+          INNER JOIN engine_runtime_open_turns AS open_turn
             ON open_turn.thread_id = event.thread_id
            AND open_turn.turn_id = event.turn_id
            AND event.sequence >= open_turn.first_sequence
-          INNER JOIN provider_runtime_event_consumers AS consumer
+          INNER JOIN engine_runtime_event_consumers AS consumer
             ON consumer.consumer_name = ${input.consumerName}
            AND event.sequence <= consumer.last_acked_sequence
           WHERE event.sequence > ${input.sequenceExclusive}
@@ -324,12 +324,12 @@ const make = Effect.gen(function* () {
     };
 
   const pruneSettledOpenTurns: EngineRuntimeEventRepositoryShape["pruneSettledOpenTurns"] = sql`
-      DELETE FROM provider_runtime_open_turns
+      DELETE FROM engine_runtime_open_turns
       WHERE EXISTS (
         SELECT 1
         FROM projection_turns AS turn
-        WHERE turn.thread_id = provider_runtime_open_turns.thread_id
-          AND turn.turn_id = provider_runtime_open_turns.turn_id
+        WHERE turn.thread_id = engine_runtime_open_turns.thread_id
+          AND turn.turn_id = engine_runtime_open_turns.turn_id
           AND turn.state IN ('interrupted', 'completed', 'error')
       )
     `.pipe(
@@ -342,7 +342,7 @@ const make = Effect.gen(function* () {
   ) =>
     sql<{ readonly lastAckedSequence: number }>`
         SELECT last_acked_sequence AS "lastAckedSequence"
-        FROM provider_runtime_event_consumers
+        FROM engine_runtime_event_consumers
         WHERE consumer_name = ${consumerName}
       `.pipe(
       Effect.flatMap((rows) =>
@@ -369,7 +369,7 @@ const make = Effect.gen(function* () {
         const cursor = yield* getConsumerCursor(input.consumerName);
         const rows = yield* sql<{ readonly present: number }>`
           SELECT 1 AS present
-          FROM provider_runtime_events
+          FROM engine_runtime_events
           WHERE sequence > ${cursor}
             AND thread_id IN ${sql.in(input.threadIds)}
           LIMIT 1
@@ -395,7 +395,7 @@ const make = Effect.gen(function* () {
         Effect.gen(function* () {
           const consumerRows = yield* sql<{ readonly lastAckedSequence: number }>`
             SELECT last_acked_sequence AS "lastAckedSequence"
-            FROM provider_runtime_event_consumers
+            FROM engine_runtime_event_consumers
             WHERE consumer_name = ${input.consumerName}
           `;
           const cursor = consumerRows[0]?.lastAckedSequence;
@@ -407,7 +407,7 @@ const make = Effect.gen(function* () {
           // stored row, not arithmetic sequence + 1.
           const nextRows = yield* sql<{ readonly sequence: number | null }>`
             SELECT MIN(sequence) AS sequence
-            FROM provider_runtime_events
+            FROM engine_runtime_events
             WHERE sequence > ${cursor}
           `;
           if (nextRows[0]?.sequence !== input.eventSequence) return false;
@@ -418,14 +418,14 @@ const make = Effect.gen(function* () {
             readonly turnId: string | null;
           }>`
             SELECT event_type AS "eventType", thread_id AS "threadId", turn_id AS "turnId"
-            FROM provider_runtime_events
+            FROM engine_runtime_events
             WHERE sequence = ${input.eventSequence}
           `;
           const event = eventRows[0];
           if (!event) return false;
 
           const advanced = yield* sql<{ readonly sequence: number }>`
-            UPDATE provider_runtime_event_consumers
+            UPDATE engine_runtime_event_consumers
             SET last_acked_sequence = ${input.eventSequence}, updated_at = ${input.updatedAt}
             WHERE consumer_name = ${input.consumerName}
               AND last_acked_sequence = ${cursor}
@@ -439,34 +439,34 @@ const make = Effect.gen(function* () {
             event.eventType === "session.exited" || event.eventType === "runtime.error";
           if (event.turnId !== null && !isTerminalTurnEvent && !isThreadTerminalEvent) {
             yield* sql`
-              INSERT INTO provider_runtime_open_turns (
+              INSERT INTO engine_runtime_open_turns (
                 thread_id, turn_id, first_sequence, updated_at
               ) VALUES (
                 ${event.threadId}, ${event.turnId}, ${input.eventSequence}, ${input.updatedAt}
               )
               ON CONFLICT (thread_id, turn_id) DO UPDATE SET
                 first_sequence = MIN(
-                  provider_runtime_open_turns.first_sequence,
+                  engine_runtime_open_turns.first_sequence,
                   excluded.first_sequence
                 ),
                 updated_at = excluded.updated_at
             `;
           } else if (event.turnId !== null) {
             yield* sql`
-              DELETE FROM provider_runtime_open_turns
+              DELETE FROM engine_runtime_open_turns
               WHERE thread_id = ${event.threadId} AND turn_id = ${event.turnId}
             `;
           } else if (isThreadTerminalEvent) {
             yield* sql`
-              DELETE FROM provider_runtime_open_turns
+              DELETE FROM engine_runtime_open_turns
               WHERE thread_id = ${event.threadId}
             `;
           } else if (isTerminalTurnEvent) {
             yield* sql`
-              DELETE FROM provider_runtime_open_turns
+              DELETE FROM engine_runtime_open_turns
               WHERE thread_id = ${event.threadId}
                 AND 1 = (
-                  SELECT COUNT(*) FROM provider_runtime_open_turns
+                  SELECT COUNT(*) FROM engine_runtime_open_turns
                   WHERE thread_id = ${event.threadId}
                 )
             `;
@@ -490,18 +490,18 @@ const make = Effect.gen(function* () {
           // remain replayable until its terminal output is accepted; all other
           // accepted history is bounded to a diagnostic tail.
           yield* sql`
-            DELETE FROM provider_runtime_events AS event
+            DELETE FROM engine_runtime_events AS event
             WHERE event.sequence <= ${input.eventSequence}
               AND NOT EXISTS (
                 SELECT 1
-                FROM provider_runtime_open_turns AS open_turn
+                FROM engine_runtime_open_turns AS open_turn
                 WHERE open_turn.thread_id = event.thread_id
                   AND open_turn.turn_id = event.turn_id
                   AND event.sequence >= open_turn.first_sequence
               )
               AND event.sequence NOT IN (
                 SELECT sequence
-                FROM provider_runtime_events
+                FROM engine_runtime_events
                 WHERE sequence <= ${input.eventSequence}
                 ORDER BY sequence DESC
                 LIMIT ${ENGINE_RUNTIME_EVENT_RETAIN_ACCEPTED}

@@ -125,7 +125,7 @@ interface ChatHeaderProps {
   activeThreadTitle: string;
   activeThreadEntryPoint: ThreadPrimarySurface;
   showThreadIdentity: boolean;
-  activeProvider: EngineKind;
+  activeEngine: EngineKind;
   activeProjectName: string | undefined;
   threadBreadcrumbs: ReadonlyArray<{
     threadId: ThreadId;
@@ -286,7 +286,7 @@ function EditorRailTabs(props: {
   projectId: ProjectId;
   activeThreadId: ThreadId;
   activeThreadTitle: string;
-  activeProvider: EngineKind;
+  activeEngine: EngineKind;
   activeSurface: "chat" | "terminal";
   terminalAvailable: boolean;
   terminalHasRunningActivity: boolean;
@@ -307,7 +307,7 @@ function EditorRailTabs(props: {
           {
             id: props.activeThreadId,
             title: props.activeThreadTitle,
-            engine: props.activeProvider,
+            engine: props.activeEngine,
           },
         ];
   });
@@ -317,7 +317,7 @@ function EditorRailTabs(props: {
   const currentChatTab: EditorRailChatTab = {
     id: props.activeThreadId,
     title: props.activeThreadTitle,
-    engine: props.activeProvider,
+    engine: props.activeEngine,
   };
   const setAndStoreOpenChatTabs = (
     updater: (current: ReadonlyArray<EditorRailChatTab>) => ReadonlyArray<EditorRailChatTab>,
@@ -337,13 +337,13 @@ function EditorRailTabs(props: {
               {
                 id: props.activeThreadId,
                 title: props.activeThreadTitle,
-                engine: props.activeProvider,
+                engine: props.activeEngine,
               },
             ],
       );
     }, 0);
     return () => window.clearTimeout(timeoutId);
-  }, [props.activeProvider, props.activeThreadId, props.activeThreadTitle, props.projectId]);
+  }, [props.activeEngine, props.activeThreadId, props.activeThreadTitle, props.projectId]);
   useEffect(() => {
     if (!props.terminalAvailable) {
       return;
@@ -361,7 +361,7 @@ function EditorRailTabs(props: {
       const activeChatTab: EditorRailChatTab = {
         id: props.activeThreadId,
         title: props.activeThreadTitle,
-        engine: props.activeProvider,
+        engine: props.activeEngine,
       };
       updateStoredEditorRailChatTabs(setOpenChatTabs, props.projectId, (current) => {
         const existingIndex = current.findIndex((thread) => thread.id === activeChatTab.id);
@@ -377,7 +377,7 @@ function EditorRailTabs(props: {
     }, 0);
     return () => window.clearTimeout(timeoutId);
   }, [
-    props.activeProvider,
+    props.activeEngine,
     props.activeSurface,
     props.activeThreadId,
     props.activeThreadTitle,
@@ -541,7 +541,7 @@ export function ChatHeader({
   activeThreadTitle,
   activeThreadEntryPoint,
   showThreadIdentity,
-  activeProvider,
+  activeEngine,
   activeProjectName,
   threadBreadcrumbs,
   className,
@@ -810,7 +810,7 @@ export function ChatHeader({
                   projectId={editorChatControls.projectId}
                   activeThreadId={activeThreadId}
                   activeThreadTitle={activeThreadTitle}
-                  activeProvider={activeProvider}
+                  activeEngine={activeEngine}
                   activeSurface={editorChatControls.activeSurface}
                   terminalAvailable={editorChatControls.terminalAvailable}
                   terminalHasRunningActivity={editorChatControls.terminalHasRunningActivity}
@@ -850,7 +850,7 @@ export function ChatHeader({
       <div className="flex shrink-0 items-center gap-2 [-webkit-app-region:no-drag]">
         {sendToAgentControl}
         {!minimalChrome && !hideHandoffControls && !environment ? (
-          <EngineUsageMenuControl engine={activeProvider} />
+          <EngineUsageMenuControl engine={activeEngine} />
         ) : null}
         {!minimalChrome && !hideHandoffControls ? (
           <Menu modal={false}>

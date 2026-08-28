@@ -536,14 +536,14 @@ export const createComposerDraftStoreState =
         }
         if (
           Equal.equals(base.engineSelectionByEngine, nextMap) &&
-          base.activeProvider === stickyActiveProvider
+          base.activeEngine === stickyActiveProvider
         ) {
           return state;
         }
         const nextDraft: ComposerThreadDraftState = {
           ...base,
           engineSelectionByEngine: nextMap,
-          activeProvider: stickyActiveProvider,
+          activeEngine: stickyActiveProvider,
         };
         const nextDraftsByThreadId = { ...state.draftsByThreadId };
         if (shouldRemoveDraft(nextDraft)) {
@@ -794,17 +794,17 @@ export const createComposerDraftStoreState =
           const current = nextMap[normalized.engine];
           nextMap[normalized.engine] = reconcileProviderScopedEngineSelection(normalized, current);
         }
-        const nextActiveProvider = normalized?.engine ?? base.activeProvider;
+        const nextActiveProvider = normalized?.engine ?? base.activeEngine;
         if (
           Equal.equals(base.engineSelectionByEngine, nextMap) &&
-          base.activeProvider === nextActiveProvider
+          base.activeEngine === nextActiveProvider
         ) {
           return state;
         }
         const nextDraft: ComposerThreadDraftState = {
           ...base,
           engineSelectionByEngine: nextMap,
-          activeProvider: nextActiveProvider,
+          activeEngine: nextActiveProvider,
         };
         const nextDraftsByThreadId = { ...state.draftsByThreadId };
         if (shouldRemoveDraft(nextDraft)) {
@@ -827,14 +827,14 @@ export const createComposerDraftStoreState =
         const existing = state.draftsByThreadId[threadId];
         const base = existing ?? createEmptyThreadDraft();
         if (
-          base.activeProvider === normalizedProvider &&
+          base.activeEngine === normalizedProvider &&
           state.stickyActiveProvider === normalizedProvider
         ) {
           return state;
         }
         const nextDraft: ComposerThreadDraftState = {
           ...base,
-          activeProvider: normalizedProvider,
+          activeEngine: normalizedProvider,
         };
         return {
           draftsByThreadId: {
@@ -990,7 +990,7 @@ export const createComposerDraftStoreState =
               stickyBase.engine === "claude" ? stickyBase.supportsAutoMode : undefined,
             );
           }
-          nextStickyActiveProvider = base.activeProvider ?? normalizedProvider;
+          nextStickyActiveProvider = base.activeEngine ?? normalizedProvider;
         }
 
         if (

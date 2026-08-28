@@ -173,7 +173,7 @@ const PersistedQueuedComposerChatTurn = Schema.Struct({
   pastedTexts: Schema.optionalKey(Schema.Array(PersistedPastedTextDraft)),
   skills: Schema.Array(EngineSkillReference),
   mentions: Schema.Array(EngineMentionReference),
-  selectedProvider: EngineKind,
+  selectedEngine: EngineKind,
   selectedModel: Schema.NullOr(Schema.String),
   selectedPromptEffort: Schema.NullOr(Schema.String),
   engineSelection: EngineSelection,
@@ -194,7 +194,7 @@ const PersistedQueuedComposerPlanFollowUp = Schema.Struct({
   previewText: Schema.String,
   text: Schema.String,
   interactionMode: Schema.Literals(["default", "plan"]),
-  selectedProvider: EngineKind,
+  selectedEngine: EngineKind,
   selectedModel: Schema.NullOr(Schema.String),
   selectedPromptEffort: Schema.NullOr(Schema.String),
   engineSelection: EngineSelection,
@@ -286,7 +286,7 @@ const PersistedComposerThreadDraftState = Schema.Struct({
   engineSelectionByEngine: Schema.optionalKey(
     Schema.Record(EngineKind, Schema.optionalKey(EngineSelection)),
   ),
-  activeProvider: Schema.optionalKey(Schema.NullOr(EngineKind)),
+  activeEngine: Schema.optionalKey(Schema.NullOr(EngineKind)),
   runtimeMode: Schema.optionalKey(RuntimeMode),
   interactionMode: Schema.optionalKey(EngineInteractionMode),
 });
@@ -574,7 +574,7 @@ function normalizePersistedQueuedTurns(
     const kind = candidate.kind;
     const createdAt = typeof candidate.createdAt === "string" ? candidate.createdAt : "";
     const previewText = typeof candidate.previewText === "string" ? candidate.previewText : "";
-    const selectedProvider = normalizeProviderKind(candidate.selectedProvider);
+    const selectedEngine = normalizeProviderKind(candidate.selectedEngine);
     const selectedModel =
       candidate.selectedModel === null
         ? null
@@ -605,7 +605,7 @@ function normalizePersistedQueuedTurns(
       id.length === 0 ||
       createdAt.length === 0 ||
       previewText.length === 0 ||
-      selectedProvider === null ||
+      selectedEngine === null ||
       engineSelection === null ||
       runtimeMode === null ||
       seenIds.has(id)
@@ -677,7 +677,7 @@ function normalizePersistedQueuedTurns(
         ...(pastedTexts.length > 0 ? { pastedTexts } : {}),
         skills: [...skills],
         mentions: [...mentions],
-        selectedProvider,
+        selectedEngine,
         selectedModel,
         selectedPromptEffort,
         engineSelection,
@@ -706,7 +706,7 @@ function normalizePersistedQueuedTurns(
         previewText,
         text,
         interactionMode,
-        selectedProvider,
+        selectedEngine,
         selectedModel,
         selectedPromptEffort,
         engineSelection,
@@ -1000,7 +1000,7 @@ function normalizePersistedDraftsByThreadId(
     // If the draft already has the v3 shape, use it directly
     const legacyDraftCandidate = draftValue as LegacyPersistedComposerThreadDraftState;
     let engineSelectionByEngine: Partial<Record<EngineKind, EngineSelection>> = {};
-    let activeProvider: EngineKind | null = null;
+    let activeEngine: EngineKind | null = null;
 
     if (
       draftCandidate.engineSelectionByEngine &&
@@ -1010,7 +1010,7 @@ function normalizePersistedDraftsByThreadId(
       engineSelectionByEngine = draftCandidate.engineSelectionByEngine as Partial<
         Record<EngineKind, EngineSelection>
       >;
-      activeProvider = normalizeProviderKind(draftCandidate.activeProvider);
+      activeEngine = normalizeProviderKind(draftCandidate.activeEngine);
     } else {
       // v2 or legacy format: migrate
       const normalizedModelOptions =
@@ -1040,7 +1040,7 @@ function normalizePersistedDraftsByThreadId(
         engineSelection,
         mergedModelOptions,
       );
-      activeProvider = engineSelection?.engine ?? null;
+      activeEngine = engineSelection?.engine ?? null;
     }
 
     const normalizedQueuedTurns = queuedTurns ?? [];
@@ -1049,7 +1049,7 @@ function normalizePersistedDraftsByThreadId(
     )
       ? draftCandidate.restoredSourceProposedPlan
       : null;
-    const hasModelData = Object.keys(engineSelectionByEngine).length > 0 || activeProvider !== null;
+    const hasModelData = Object.keys(engineSelectionByEngine).length > 0 || activeEngine !== null;
     const hasQueuedTurns = normalizedQueuedTurns.length > 0;
     const hasPendingDirectTurnRecovery = pendingDirectTurnRecovery !== undefined;
     const hasReferenceData = skills.length > 0 || mentions.length > 0;
@@ -1086,7 +1086,7 @@ function normalizePersistedDraftsByThreadId(
       ...(hasQueuedTurns ? { queuedTurns: normalizedQueuedTurns } : {}),
       ...(pendingDirectTurnRecovery ? { pendingDirectTurnRecovery } : {}),
       ...(restoredSourceProposedPlan ? { restoredSourceProposedPlan } : {}),
-      ...(hasModelData ? { engineSelectionByEngine, activeProvider } : {}),
+      ...(hasModelData ? { engineSelectionByEngine, activeEngine } : {}),
       ...(runtimeMode ? { runtimeMode } : {}),
       ...(interactionMode ? { interactionMode } : {}),
     };
@@ -1156,7 +1156,7 @@ function persistPendingDirectTurnRecovery(
       : {}),
     skills: [...queuedTurn.skills],
     mentions: [...queuedTurn.mentions],
-    selectedProvider: queuedTurn.selectedProvider,
+    selectedEngine: queuedTurn.selectedEngine,
     selectedModel: queuedTurn.selectedModel,
     selectedPromptEffort: queuedTurn.selectedPromptEffort,
     engineSelection: queuedTurn.engineSelection,
@@ -1267,7 +1267,7 @@ export function partializeComposerDraftStoreState(
             : {}),
           skills: [...queuedTurn.skills],
           mentions: [...queuedTurn.mentions],
-          selectedProvider: queuedTurn.selectedProvider,
+          selectedEngine: queuedTurn.selectedEngine,
           selectedModel: queuedTurn.selectedModel,
           selectedPromptEffort: queuedTurn.selectedPromptEffort,
           engineSelection: queuedTurn.engineSelection,
@@ -1290,7 +1290,7 @@ export function partializeComposerDraftStoreState(
         previewText: queuedTurn.previewText,
         text: queuedTurn.text,
         interactionMode: queuedTurn.interactionMode,
-        selectedProvider: queuedTurn.selectedProvider,
+        selectedEngine: queuedTurn.selectedEngine,
         selectedModel: queuedTurn.selectedModel,
         selectedPromptEffort: queuedTurn.selectedPromptEffort,
         engineSelection: queuedTurn.engineSelection,
@@ -1301,7 +1301,7 @@ export function partializeComposerDraftStoreState(
       });
     }
     const hasModelData =
-      Object.keys(draft.engineSelectionByEngine).length > 0 || draft.activeProvider !== null;
+      Object.keys(draft.engineSelectionByEngine).length > 0 || draft.activeEngine !== null;
     const hasQueuedTurns = persistedQueuedTurns.length > 0;
     const pendingDirectTurnRecovery = draft.pendingDirectTurnRecovery
       ? persistPendingDirectTurnRecovery(draft.pendingDirectTurnRecovery)
@@ -1455,7 +1455,7 @@ export function partializeComposerDraftStoreState(
       ...(hasModelData
         ? {
             engineSelectionByEngine: draft.engineSelectionByEngine,
-            activeProvider: draft.activeProvider,
+            activeEngine: draft.activeEngine,
           }
         : {}),
       ...(draft.runtimeMode ? { runtimeMode: draft.runtimeMode } : {}),
@@ -1640,7 +1640,7 @@ export function toHydratedThreadDraft(
   // The persisted draft is already in v3 shape (migration handles older formats)
   const engineSelectionByEngine: Partial<Record<EngineKind, EngineSelection>> =
     persistedDraft.engineSelectionByEngine ?? {};
-  const activeProvider = normalizeProviderKind(persistedDraft.activeProvider) ?? null;
+  const activeEngine = normalizeProviderKind(persistedDraft.activeEngine) ?? null;
 
   return {
     prompt: persistedDraft.prompt,
@@ -1667,7 +1667,7 @@ export function toHydratedThreadDraft(
     ),
     restoredSourceProposedPlan: persistedDraft.restoredSourceProposedPlan ?? null,
     engineSelectionByEngine,
-    activeProvider,
+    activeEngine,
     runtimeMode: persistedDraft.runtimeMode ?? null,
     interactionMode: persistedDraft.interactionMode ?? null,
   };

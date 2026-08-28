@@ -538,7 +538,7 @@ describe("decider project scripts", () => {
           session: {
             threadId: ThreadId.makeUnsafe("thread-1"),
             status: "running",
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "approval-required",
             activeTurnId: TurnId.makeUnsafe("turn-running"),
             lastError: null,

@@ -1443,9 +1443,9 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
           const turnStartSession = deriveTurnStartSession({
             threadId: event.payload.threadId,
             currentSession: Option.getOrNull(currentSession),
-            providerName:
+            engine:
               Option.getOrNull(thread)?.engineSelection.engine ??
-              Option.getOrNull(currentSession)?.providerName ??
+              Option.getOrNull(currentSession)?.engine ??
               event.payload.engineSelection?.engine ??
               null,
             requestedRuntimeMode: event.payload.runtimeMode,
@@ -1461,7 +1461,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
           yield* projectionThreadSessionRepository.upsert({
             threadId: event.payload.threadId,
             status: event.payload.session.status,
-            providerName: event.payload.session.providerName,
+            engine: event.payload.session.engine,
             runtimeMode: event.payload.session.runtimeMode,
             activeTurnId: event.payload.session.activeTurnId,
             lastError: event.payload.session.lastError,

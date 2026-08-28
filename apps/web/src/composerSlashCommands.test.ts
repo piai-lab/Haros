@@ -156,7 +156,7 @@ describe("composerSlashCommands", () => {
 
   it("parses an optional leading engine token in /side args", () => {
     const context = {
-      currentProvider: "claude",
+      currentEngine: "claude",
       availableTargetProviders: ["codex", "cursor"],
     } as const;
     expect(parseSideSlashCommandArgs("codex is this safe?", context)).toEqual({

@@ -18,7 +18,7 @@ import type { EngineSessionRuntimeRepositoryError } from "../Errors.ts";
 
 export const EngineSessionRuntime = Schema.Struct({
   threadId: ThreadId,
-  providerName: Schema.String,
+  engine: Schema.String,
   adapterKey: Schema.String,
   runtimeMode: RuntimeMode,
   status: EngineSessionRuntimeStatus,

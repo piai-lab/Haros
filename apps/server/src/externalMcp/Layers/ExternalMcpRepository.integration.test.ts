@@ -499,7 +499,7 @@ layer("ExternalMcpRepository", (it) => {
 
       yield* sql`
         INSERT INTO projection_thread_sessions (
-          thread_id, status, provider_name, active_turn_id, last_error, updated_at
+          thread_id, status, engine, active_turn_id, last_error, updated_at
         ) VALUES (
           'external-projection-lag-thread', 'error', 'codex', NULL,
           'Engine startup failed.', '2026-07-20T00:01:05.000Z'

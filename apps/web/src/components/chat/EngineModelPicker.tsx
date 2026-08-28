@@ -159,7 +159,7 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
     FavoriteModelSlugs,
   );
   const deferredModelSearchQuery = useDeferredValue(modelSearchQuery);
-  const activeProvider = props.lockedProvider ?? props.engine;
+  const activeEngine = props.lockedProvider ?? props.engine;
   const hiddenEngines = props.hiddenEngines;
   const engineOrder = props.engineOrder;
   const hiddenProviderSet = new Set<EngineKind>(hiddenEngines ?? []);
@@ -244,7 +244,7 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
     const content =
       groupedOptions.length > 0 ? (
         <MenuRadioGroup
-          value={activeProvider === engine ? (props.model ?? "") : ""}
+          value={activeEngine === engine ? (props.model ?? "") : ""}
           onValueChange={(value) => handleModelChange(engine, value)}
         >
           <EngineModelOptionGroupList
@@ -310,8 +310,8 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
     <>
       {visibleProviderOptions.map((option) => {
         const OptionIcon = ENGINE_ICON_COMPONENT_BY_PROVIDER[option.value];
-        const liveProvider = props.engines?.find((entry) => entry.engine === option.value);
-        const availability = deriveProviderPickerAvailability(liveProvider);
+        const liveEngine = props.engines?.find((entry) => entry.engine === option.value);
+        const availability = deriveProviderPickerAvailability(liveEngine);
         const availabilityLabel = (
           {
             checking: t("composer.engineChecking"),
@@ -381,11 +381,11 @@ export function resolveProviderModelLabel(input: {
   model: ModelSlug;
   modelOptionsByEngine: Record<EngineKind, ReadonlyArray<EngineModelOption>>;
 }): string {
-  const activeProvider = input.lockedProvider ?? input.engine;
+  const activeEngine = input.lockedProvider ?? input.engine;
   return resolveSelectedModelLabel({
-    engine: activeProvider,
+    engine: activeEngine,
     model: input.model,
-    options: input.modelOptionsByEngine[activeProvider],
+    options: input.modelOptionsByEngine[activeEngine],
   });
 }
 
@@ -406,7 +406,7 @@ type EngineModelPickerProps = {
   catalogStateByEngine?: Partial<Record<EngineKind, EngineModelCatalogState>>;
   hiddenEngines?: ReadonlyArray<EngineKind>;
   engineOrder?: ReadonlyArray<EngineKind>;
-  activeProviderIconClassName?: string;
+  activeEngineIconClassName?: string;
   compact?: boolean;
   // Icon-only trigger for narrow composers; the model name moves to title/sr-only.
   hideLabel?: boolean;
@@ -425,10 +425,10 @@ export const EngineModelPicker = function EngineModelPicker(props: EngineModelPi
   const [uncontrolledMenuOpen, setUncontrolledMenuOpen] = useState(false);
   const selectionCommitTimerRef = useRef<number | null>(null);
   const isMenuOpen = open ?? uncontrolledMenuOpen;
-  const activeProvider = props.lockedProvider ?? props.engine;
+  const activeEngine = props.lockedProvider ?? props.engine;
   const activeCatalogState =
-    props.catalogStateByEngine?.[activeProvider] ??
-    (props.loadingModelProviders?.[activeProvider] ? "checking" : null);
+    props.catalogStateByEngine?.[activeEngine] ??
+    (props.loadingModelProviders?.[activeEngine] ? "checking" : null);
   const selectedModelLabel = props.model
     ? resolveProviderModelLabel({
         engine: props.engine,
@@ -440,10 +440,10 @@ export const EngineModelPicker = function EngineModelPicker(props: EngineModelPi
       ? t(resolveComposerModelFallbackMessageKey(activeCatalogState))
       : t("composer.noAvailableModel");
   const selectedDescriptor = props.model
-    ? (props.modelOptionsByEngine[activeProvider]?.find((option) => option.slug === props.model) ??
+    ? (props.modelOptionsByEngine[activeEngine]?.find((option) => option.slug === props.model) ??
       null)
     : null;
-  const selectedModel = props.model ? buildEngineSelection(activeProvider, props.model) : null;
+  const selectedModel = props.model ? buildEngineSelection(activeEngine, props.model) : null;
 
   const setMenuOpen = (nextOpen: boolean) => {
     if (open === undefined) {
@@ -486,7 +486,7 @@ export const EngineModelPicker = function EngineModelPicker(props: EngineModelPi
           <ModelIdentityIcon
             selection={selectedModel}
             descriptor={selectedDescriptor}
-            className={cn("size-3.5 opacity-100", props.activeProviderIconClassName)}
+            className={cn("size-3.5 opacity-100", props.activeEngineIconClassName)}
           />
         ) : (
           <BrainIcon className="size-3.5 shrink-0 text-muted-foreground/70" />

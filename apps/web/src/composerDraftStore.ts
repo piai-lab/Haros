@@ -150,7 +150,7 @@ export function useComposerThreadDraft(threadId: ThreadId): ComposerThreadDraftS
 
 export function useEffectiveComposerModelState(input: {
   threadId: ThreadId;
-  selectedProvider: EngineKind;
+  selectedEngine: EngineKind;
   threadEngineSelection: EngineSelection | null | undefined;
   projectEngineSelection: EngineSelection | null | undefined;
   runtimeCatalogFallbackModel?: ModelSlug | null | undefined;
@@ -161,11 +161,11 @@ export function useEffectiveComposerModelState(input: {
 }): EffectiveComposerModelState {
   const draft = useComposerThreadDraft(input.threadId);
   const stickyEngineSelection = useComposerDraftStore(
-    (state) => state.stickyEngineSelectionByEngine[input.selectedProvider] ?? null,
+    (state) => state.stickyEngineSelectionByEngine[input.selectedEngine] ?? null,
   );
   return deriveEffectiveComposerModelState({
     draft,
-    selectedProvider: input.selectedProvider,
+    selectedEngine: input.selectedEngine,
     threadEngineSelection: input.threadEngineSelection,
     projectEngineSelection: input.projectEngineSelection,
     stickyEngineSelection,

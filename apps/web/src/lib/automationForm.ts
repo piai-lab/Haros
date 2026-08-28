@@ -584,22 +584,22 @@ function modelIdentityMatches(left: EngineSelection, right: EngineSelection): bo
 export function engineOptionsForAutomationEngineSelection(
   definition: Pick<AutomationDefinition, "engineSelection" | "engineOptions">,
   nextEngineSelection: EngineSelection,
-  currentProviderOptions?: EngineStartOptions,
+  currentEngineOptions?: EngineStartOptions,
 ): EngineStartOptions | undefined {
   return modelIdentityMatches(definition.engineSelection, nextEngineSelection)
     ? definition.engineOptions
-    : (currentProviderOptions ?? {});
+    : (currentEngineOptions ?? {});
 }
 
 export function engineOptionsForAutomationEdit(
   definition: Pick<AutomationDefinition, "engineSelection" | "engineOptions">,
   form: Pick<AutomationFormState, "engineSelection">,
-  currentProviderOptions?: EngineStartOptions,
+  currentEngineOptions?: EngineStartOptions,
 ): EngineStartOptions | undefined {
   return engineOptionsForAutomationEngineSelection(
     definition,
     form.engineSelection,
-    currentProviderOptions,
+    currentEngineOptions,
   );
 }
 

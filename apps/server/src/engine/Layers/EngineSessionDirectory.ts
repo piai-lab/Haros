@@ -19,16 +19,16 @@ function toPersistenceError(operation: string) {
 }
 
 function decodeEngineKind(
-  providerName: string,
+  engine: string,
   operation: string,
 ): Effect.Effect<EngineKind, EngineSessionDirectoryPersistenceError> {
-  if (Schema.is(EngineKind)(providerName)) {
-    return Effect.succeed(providerName);
+  if (Schema.is(EngineKind)(engine)) {
+    return Effect.succeed(engine);
   }
   return Effect.fail(
     new EngineSessionDirectoryPersistenceError({
       operation,
-      detail: `Unknown persisted engine '${providerName}'.`,
+      detail: `Unknown persisted engine '${engine}'.`,
     }),
   );
 }
@@ -60,7 +60,7 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
         Option.match(runtime, {
           onNone: () => Effect.succeed(Option.none<EngineRuntimeBinding>()),
           onSome: (value) =>
-            decodeEngineKind(value.providerName, "EngineSessionDirectory.getBinding").pipe(
+            decodeEngineKind(value.engine, "EngineSessionDirectory.getBinding").pipe(
               Effect.map((engine) =>
                 Option.some({
                   threadId: value.threadId,
@@ -94,16 +94,16 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
     }
 
     const now = new Date().toISOString();
-    const providerChanged =
-      existingRuntime !== undefined && existingRuntime.providerName !== binding.engine;
-    const compatibleRuntime = providerChanged ? undefined : existingRuntime;
+    const engineChanged =
+      existingRuntime !== undefined && existingRuntime.engine !== binding.engine;
+    const compatibleRuntime = engineChanged ? undefined : existingRuntime;
     yield* repository
       .upsert({
         threadId: resolvedThreadId,
-        providerName: binding.engine,
+        engine: binding.engine,
         adapterKey:
           binding.adapterKey ??
-          (providerChanged ? binding.engine : (existingRuntime?.adapterKey ?? binding.engine)),
+          (engineChanged ? binding.engine : (existingRuntime?.adapterKey ?? binding.engine)),
         runtimeMode: binding.runtimeMode ?? existingRuntime?.runtimeMode ?? "full-access",
         status: binding.status ?? compatibleRuntime?.status ?? "running",
         lifecycleGeneration:
@@ -125,7 +125,7 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
     repository
       .upsert({
         threadId: binding.threadId,
-        providerName: binding.engine,
+        engine: binding.engine,
         adapterKey: binding.adapterKey ?? binding.engine,
         runtimeMode: binding.runtimeMode ?? "full-access",
         status: binding.status ?? "running",
@@ -136,7 +136,7 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
       })
       .pipe(Effect.mapError(toPersistenceError("EngineSessionDirectory.replace:upsert")));
 
-  const getProvider: EngineSessionDirectoryShape["getProvider"] = (threadId) =>
+  const getEngine: EngineSessionDirectoryShape["getEngine"] = (threadId) =>
     getBinding(threadId).pipe(
       Effect.flatMap((binding) =>
         Option.match(binding, {
@@ -144,7 +144,7 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
           onNone: () =>
             Effect.fail(
               new EngineSessionDirectoryPersistenceError({
-                operation: "EngineSessionDirectory.getProvider",
+                operation: "EngineSessionDirectory.getEngine",
                 detail: `No persisted engine binding found for thread '${threadId}'.`,
               }),
             ),
@@ -168,7 +168,7 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
       Effect.mapError(toPersistenceError("EngineSessionDirectory.listBindings:list")),
       Effect.flatMap(
         Effect.forEach((row) =>
-          decodeEngineKind(row.providerName, "EngineSessionDirectory.listBindings").pipe(
+          decodeEngineKind(row.engine, "EngineSessionDirectory.listBindings").pipe(
             Effect.map((engine) =>
               Option.some({
                 threadId: row.threadId,
@@ -185,7 +185,7 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
             Effect.catchTag("EngineSessionDirectoryPersistenceError", (error) =>
               Effect.logDebug("engine session directory skipped unknown persisted engine", {
                 threadId: row.threadId,
-                providerName: row.providerName,
+                engine: row.engine,
                 detail: error.detail,
               }).pipe(Effect.as(Option.none<EngineRuntimeBinding>())),
             ),
@@ -198,7 +198,7 @@ const makeEngineSessionDirectory = Effect.gen(function* () {
   return {
     upsert,
     replace,
-    getProvider,
+    getEngine,
     getBinding,
     remove,
     listThreadIds,

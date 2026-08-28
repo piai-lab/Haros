@@ -45,7 +45,7 @@ function ClaudeTraitsPickerHarness(props: {
   const setPrompt = useComposerDraftStore((store) => store.setPrompt);
   const { modelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId: CLAUDE_THREAD_ID,
-    selectedProvider: "claude",
+    selectedEngine: "claude",
     threadEngineSelection: props.fallbackEngineSelection,
     projectEngineSelection: null,
     customModelsByEngine: {
@@ -122,7 +122,7 @@ async function mountClaudePicker(props?: {
                 : {}),
             },
           },
-      activeProvider: "claude",
+      activeEngine: "claude",
       runtimeMode: null,
       interactionMode: null,
     },
@@ -367,7 +367,7 @@ async function mountCodexPicker(props: { model?: string; options?: CodexModelOpt
           ...(props.options ? { options: props.options } : {}),
         },
       },
-      activeProvider: "codex",
+      activeEngine: "codex",
       runtimeMode: null,
       interactionMode: null,
     },
@@ -701,7 +701,7 @@ function OpenCodeTraitsPickerHarness(props: {
   const setPrompt = useComposerDraftStore((store) => store.setPrompt);
   const { modelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId: OPENCODE_THREAD_ID,
-    selectedProvider: "opencode",
+    selectedEngine: "opencode",
     threadEngineSelection: props.fallbackEngineSelection,
     projectEngineSelection: null,
     customModelsByEngine: {
@@ -771,7 +771,7 @@ async function mountOpenCodePicker(props?: {
           ...(props?.options ? { options: props.options } : {}),
         },
       },
-      activeProvider: "opencode",
+      activeEngine: "opencode",
       runtimeMode: null,
       interactionMode: null,
     },

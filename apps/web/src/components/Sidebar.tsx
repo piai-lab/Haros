@@ -2705,7 +2705,7 @@ export default function Sidebar() {
       const authoritativeSettings = await fetchSettings();
       const trimmedExternalId = externalId.trim();
       const suffix = trimmedExternalId.slice(-8);
-      const providerName =
+      const engineLabel =
         engine === "claude"
           ? "Claude"
           : engine === "cursor"
@@ -2716,7 +2716,7 @@ export default function Sidebar() {
                 ? "OpenCode"
                 : "Codex";
       const title = t("import.taskTitle", {
-        engine: providerName,
+        engine: engineLabel,
         suffix: suffix ? ` ${suffix}` : "",
       });
       let createdThread = false;

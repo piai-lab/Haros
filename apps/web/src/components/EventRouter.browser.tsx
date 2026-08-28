@@ -167,7 +167,7 @@ function createSnapshot(overrides?: Partial<OrchestrationReadModel["threads"][nu
         session: {
           threadId: THREAD_ID,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError: null,
@@ -194,7 +194,7 @@ function createRunningSnapshot(turnId: TurnId): OrchestrationReadModel {
     session: {
       threadId: THREAD_ID,
       status: "running",
-      providerName: "codex",
+      engine: "codex",
       runtimeMode: "full-access",
       activeTurnId: turnId,
       lastError: null,
@@ -849,7 +849,7 @@ describe("EventRouter scoped orchestration sync", () => {
           session: {
             threadId: THREAD_ID,
             status: "ready",
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "full-access",
             activeTurnId: null,
             lastError: null,
@@ -948,7 +948,7 @@ describe("EventRouter scoped orchestration sync", () => {
         session: {
           threadId: THREAD_ID,
           status: "running",
-          providerName: "opencode",
+          engine: "opencode",
           runtimeMode: "full-access",
           activeTurnId: runningTurnId,
           lastError: null,
@@ -997,7 +997,7 @@ describe("EventRouter scoped orchestration sync", () => {
         session: {
           threadId: THREAD_ID,
           status: "ready",
-          providerName: "opencode",
+          engine: "opencode",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError: null,
@@ -1050,7 +1050,7 @@ describe("EventRouter scoped orchestration sync", () => {
         session: {
           threadId: THREAD_ID,
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: turnId,
           lastError: null,
@@ -1097,7 +1097,7 @@ describe("EventRouter scoped orchestration sync", () => {
               session: {
                 threadId: THREAD_ID,
                 status: "ready",
-                providerName: "codex",
+                engine: "codex",
                 runtimeMode: "full-access",
                 activeTurnId: null,
                 lastError: null,
@@ -1125,7 +1125,7 @@ describe("EventRouter scoped orchestration sync", () => {
           session: {
             threadId: THREAD_ID,
             status: "ready",
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "full-access",
             activeTurnId: null,
             lastError: null,
@@ -1177,7 +1177,7 @@ describe("EventRouter scoped orchestration sync", () => {
         session: {
           threadId: THREAD_ID,
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: turnId,
           lastError: null,
@@ -1213,7 +1213,7 @@ describe("EventRouter scoped orchestration sync", () => {
               session: {
                 threadId: THREAD_ID,
                 status: "ready",
-                providerName: "codex",
+                engine: "codex",
                 runtimeMode: "full-access",
                 activeTurnId: null,
                 lastError: null,
@@ -1243,7 +1243,7 @@ describe("EventRouter scoped orchestration sync", () => {
           session: {
             threadId: THREAD_ID,
             status: "ready",
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "full-access",
             activeTurnId: null,
             lastError: null,
@@ -1336,7 +1336,7 @@ describe("EventRouter scoped orchestration sync", () => {
         session: {
           threadId: THREAD_ID,
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: turnId,
           lastError: null,
@@ -1425,7 +1425,7 @@ describe("EventRouter scoped orchestration sync", () => {
               session: {
                 threadId: THREAD_ID,
                 status: "ready",
-                providerName: "codex",
+                engine: "codex",
                 runtimeMode: "full-access",
                 activeTurnId: null,
                 lastError: null,
@@ -1457,7 +1457,7 @@ describe("EventRouter scoped orchestration sync", () => {
           session: {
             threadId: THREAD_ID,
             status: "ready",
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "full-access",
             activeTurnId: null,
             lastError: null,
@@ -1520,7 +1520,7 @@ describe("EventRouter scoped orchestration sync", () => {
         session: {
           threadId: THREAD_ID,
           status: "running",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: turnId,
           lastError: null,
@@ -1559,7 +1559,7 @@ describe("EventRouter scoped orchestration sync", () => {
           session: {
             threadId: THREAD_ID,
             status: "ready",
-            providerName: "codex",
+            engine: "codex",
             runtimeMode: "full-access",
             activeTurnId: null,
             lastError: null,

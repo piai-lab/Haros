@@ -498,7 +498,7 @@ it.effect("keeps atomic Session binding commits internal", () =>
       session: {
         threadId: "thread-1",
         status: "ready",
-        providerName: "claude",
+        engine: "claude",
         runtimeMode: "approval-required",
         activeTurnId: null,
         lastError: null,
@@ -1174,7 +1174,7 @@ it.effect("decodes orchestration session runtime mode defaults", () =>
     const parsed = yield* decodeOrchestrationSession({
       threadId: "thread-1",
       status: "idle",
-      providerName: null,
+      engine: null,
       engineSessionId: null,
       nativeThreadId: null,
       activeTurnId: null,

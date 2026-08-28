@@ -431,13 +431,13 @@ describe("EngineRuntimeIngestion", () => {
     }
     const drain = () => Effect.runPromise(ingestion.drain);
     const bindLegacyRuntimeSource = (
-      providerKind: EngineKind,
+      engineKind: EngineKind,
       threadId: ThreadId = ThreadId.makeUnsafe("thread-1"),
     ) =>
       Effect.runPromise(
         engineSessionDirectory.replace({
           threadId,
-          engine: providerKind,
+          engine: engineKind,
           status: "running",
           lifecycleGeneration: "legacy",
         }),
@@ -484,7 +484,7 @@ describe("EngineRuntimeIngestion", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           updatedAt: createdAt,
@@ -684,7 +684,7 @@ describe("EngineRuntimeIngestion", () => {
     const readModel = await Effect.runPromise(harness.engine.getReadModel());
     const thread = readModel.threads.find((entry) => entry.id === threadId);
     expect(thread?.session).toMatchObject({
-      providerName: "codex",
+      engine: "codex",
       status: "ready",
     });
     expect(thread?.activities.some((activity) => activity.id === currentRow.event.eventId)).toBe(
@@ -761,7 +761,7 @@ describe("EngineRuntimeIngestion", () => {
         session: {
           threadId,
           status: "error",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: "Engine replacement restore is uncertain.",
@@ -802,7 +802,7 @@ describe("EngineRuntimeIngestion", () => {
     const readModel = await Effect.runPromise(harness.engine.getReadModel());
     const thread = readModel.threads.find((entry) => entry.id === threadId);
     expect(thread?.session).toMatchObject({
-      providerName: "codex",
+      engine: "codex",
       status: "error",
       lastError: "Engine replacement restore is uncertain.",
     });
@@ -830,7 +830,7 @@ describe("EngineRuntimeIngestion", () => {
         session: {
           threadId,
           status: "error",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: "The engine failed to start.",
@@ -867,7 +867,7 @@ describe("EngineRuntimeIngestion", () => {
     const readModel = await Effect.runPromise(harness.engine.getReadModel());
     const thread = readModel.threads.find((entry) => entry.id === threadId);
     expect(thread?.session).toMatchObject({
-      providerName: "codex",
+      engine: "codex",
       status: "error",
       lastError: "The engine failed to start.",
     });
@@ -2570,7 +2570,7 @@ describe("EngineRuntimeIngestion", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           updatedAt: seededAt,
@@ -4098,7 +4098,7 @@ describe("EngineRuntimeIngestion", () => {
         session: {
           threadId: sourceThreadId,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           updatedAt: createdAt,
@@ -4133,7 +4133,7 @@ describe("EngineRuntimeIngestion", () => {
         session: {
           threadId: targetThreadId,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           updatedAt: createdAt,
@@ -4287,7 +4287,7 @@ describe("EngineRuntimeIngestion", () => {
         session: {
           threadId: sourceThreadId,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           updatedAt: createdAt,
@@ -4441,7 +4441,7 @@ describe("EngineRuntimeIngestion", () => {
         session: {
           threadId: sourceThreadId,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           updatedAt: createdAt,
@@ -4476,7 +4476,7 @@ describe("EngineRuntimeIngestion", () => {
         session: {
           threadId: targetThreadId,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           updatedAt: createdAt,
@@ -5142,7 +5142,7 @@ describe("EngineRuntimeIngestion", () => {
         session: {
           threadId: secondThreadId,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "approval-required",
           activeTurnId: null,
           updatedAt: now,

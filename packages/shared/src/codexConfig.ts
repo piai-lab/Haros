@@ -42,18 +42,18 @@ export function parseCodexConfigProviderEnvKey(
   content: string,
   provider: string,
 ): string | undefined {
-  let currentProviderSection: string | undefined;
+  let currentEngineSection: string | undefined;
 
   for (const line of content.split("\n")) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
 
     if (trimmed.startsWith("[")) {
-      currentProviderSection = readModelProviderSectionName(trimmed);
+      currentEngineSection = readModelProviderSectionName(trimmed);
       continue;
     }
 
-    if (currentProviderSection !== provider) continue;
+    if (currentEngineSection !== provider) continue;
 
     const envKey = readQuotedAssignmentValue(trimmed, "env_key");
     if (envKey) return envKey;

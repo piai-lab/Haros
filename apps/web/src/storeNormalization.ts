@@ -812,7 +812,7 @@ function readModelSessionFromThreadSession(
   return {
     threadId: previousThread?.id ?? incomingSession?.threadId ?? ThreadId.makeUnsafe("unknown"),
     status: previousSession.orchestrationStatus,
-    providerName: previousSession.engine,
+    engine: previousSession.engine,
     runtimeMode: previousThread?.runtimeMode ?? incomingSession?.runtimeMode ?? "full-access",
     activeTurnId: previousSession.activeTurnId ?? null,
     lastError: previousSession.lastError ?? null,
@@ -845,7 +845,7 @@ function mergeReadModelSessionWithLiveHotPath(
     );
     return {
       ...nextSession,
-      providerName: incomingSession.providerName,
+      engine: incomingSession.engine,
       runtimeMode: incomingSession.runtimeMode,
       activeTurnId: previousSession.activeTurnId ?? incomingSession.activeTurnId,
       lastError: previousSession.lastError ?? incomingSession.lastError,
@@ -1458,7 +1458,7 @@ export function normalizeThreadSession(
       ? incoming.lastError
       : undefined;
   const nextSession = {
-    engine: toLegacyProvider(incoming.providerName),
+    engine: toLegacyProvider(incoming.engine),
     status: toLegacySessionStatus(incoming.status),
     orchestrationStatus: incoming.status,
     activeTurnId: incoming.activeTurnId ?? undefined,
@@ -1960,9 +1960,9 @@ function toLegacySessionStatus(
   }
 }
 
-function toLegacyProvider(providerName: string | null): EngineKind {
-  if (Schema.is(EngineKind)(providerName)) {
-    return providerName;
+function toLegacyProvider(engine: string | null): EngineKind {
+  if (Schema.is(EngineKind)(engine)) {
+    return engine;
   }
   return "codex";
 }

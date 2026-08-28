@@ -722,7 +722,7 @@ describe("store projection", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "error",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError:
@@ -765,7 +765,7 @@ describe("store projection", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -790,7 +790,7 @@ describe("store projection", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "error",
-          providerName: "oa",
+          engine: "oa",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError: "HarnessOS Agent credentials are not configured.",
@@ -816,7 +816,7 @@ describe("store projection", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "opencode",
+          engine: "opencode",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -842,7 +842,7 @@ describe("store projection", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "pi",
+          engine: "pi",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -988,7 +988,7 @@ describe("store projection", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "claude",
+          engine: "claude",
           runtimeMode: "full-access",
           activeTurnId: turnId,
           lastError: null,
@@ -1152,7 +1152,7 @@ describe("store projection", () => {
         session: {
           threadId,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError: null,
@@ -1231,7 +1231,7 @@ describe("store projection", () => {
         session: {
           threadId,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError: null,
@@ -1313,7 +1313,7 @@ describe("store projection", () => {
         session: {
           threadId,
           status: "ready",
-          providerName: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError: null,

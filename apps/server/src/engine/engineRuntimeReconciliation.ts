@@ -98,11 +98,11 @@ function terminalProjectedSession(
     case "error":
       // Copied verbatim into `thread.session.set`, so it has to satisfy
       // `OrchestrationSession` on the way out even when the persisted row does
-      // not: `providerName`/`lastError` are trimmed-non-empty-or-null.
+      // not: `engine`/`lastError` are trimmed-non-empty-or-null.
       return {
         ...session,
         status: session.status,
-        providerName: nonEmptyTrimmed(session.providerName ?? undefined) ?? null,
+        engine: nonEmptyTrimmed(session.engine ?? undefined) ?? null,
         lastError: nonEmptyTrimmed(session.lastError ?? undefined) ?? null,
         activeTurnId: turnIdOrNull(session.activeTurnId),
       };

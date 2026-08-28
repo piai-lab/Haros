@@ -21,7 +21,7 @@ describe("resolvePreferredComposerEngineSelection", () => {
               effort: "max",
             }),
           },
-          activeProvider: "claude",
+          activeEngine: "claude",
         },
         threadEngineSelection: engineSelection("codex", "gpt-5"),
         projectEngineSelection: engineSelection("codex", "gpt-5.4"),
@@ -40,7 +40,7 @@ describe("resolvePreferredComposerEngineSelection", () => {
           engineSelectionByEngine: {
             grok: engineSelection("grok", "grok-build"),
           },
-          activeProvider: "grok",
+          activeEngine: "grok",
         },
         threadEngineSelection: engineSelection("codex", "gpt-5"),
         projectEngineSelection: engineSelection("codex", "gpt-5.4"),
@@ -59,7 +59,7 @@ describe("resolvePreferredComposerEngineSelection", () => {
             codex: engineSelection("codex", "gpt-5.6-sol", { reasoningEffort: "ultra" }),
             cursor: cursorSelection,
           },
-          activeProvider: "cursor",
+          activeEngine: "cursor",
         },
         threadEngineSelection: null,
         projectEngineSelection: null,
@@ -72,7 +72,7 @@ describe("resolvePreferredComposerEngineSelection", () => {
       resolvePreferredComposerEngineSelection({
         draft: {
           engineSelectionByEngine: {},
-          activeProvider: "pi",
+          activeEngine: "pi",
         },
         threadEngineSelection: engineSelection("codex", "gpt-5.5"),
         projectEngineSelection: null,
@@ -86,7 +86,7 @@ describe("resolvePreferredComposerEngineSelection", () => {
       resolvePreferredComposerEngineSelection({
         draft: {
           engineSelectionByEngine: {},
-          activeProvider: "oa",
+          activeEngine: "oa",
         },
         threadEngineSelection: null,
         projectEngineSelection: null,
@@ -172,7 +172,7 @@ describe("composerDraftStore engineSelection", () => {
     expect(state.draftsByThreadId[threadId]?.engineSelectionByEngine.grok).toEqual(
       engineSelection("grok", "grok-build"),
     );
-    expect(state.draftsByThreadId[threadId]?.activeProvider).toBe("grok");
+    expect(state.draftsByThreadId[threadId]?.activeEngine).toBe("grok");
     expect(state.stickyEngineSelectionByEngine.grok).toEqual(engineSelection("grok", "grok-build"));
     expect(state.stickyActiveProvider).toBe("grok");
   });
@@ -190,7 +190,7 @@ describe("composerDraftStore engineSelection", () => {
     expect(state.draftsByThreadId[threadId]?.engineSelectionByEngine.antigravity).toEqual(
       selection,
     );
-    expect(state.draftsByThreadId[threadId]?.activeProvider).toBe("antigravity");
+    expect(state.draftsByThreadId[threadId]?.activeEngine).toBe("antigravity");
     expect(state.stickyEngineSelectionByEngine.antigravity).toEqual(selection);
     expect(state.stickyActiveProvider).toBe("antigravity");
   });
@@ -343,7 +343,7 @@ describe("composerDraftStore engineSelection", () => {
       engineSelection("claude", "claude-opus-4-6", { effort: "max" }),
     );
     expect(draft?.engineSelectionByEngine.codex?.options).toEqual({ fastMode: true });
-    expect(draft?.activeProvider).toBe("claude");
+    expect(draft?.activeEngine).toBe("claude");
   });
 
   it("creates the first sticky snapshot from engine option changes", () => {
@@ -373,9 +373,9 @@ describe("composerDraftStore engineSelection", () => {
         engineSelectionByEngine: {
           opencode: engineSelection("opencode", "openai/gpt-5"),
         },
-        activeProvider: "opencode",
+        activeEngine: "opencode",
       },
-      selectedProvider: "opencode",
+      selectedEngine: "opencode",
       threadEngineSelection: engineSelection("opencode", "opencode/gpt-5-nano"),
       projectEngineSelection: null,
       customModelsByEngine: {
@@ -401,9 +401,9 @@ describe("composerDraftStore engineSelection", () => {
     const state = deriveEffectiveComposerModelState({
       draft: {
         engineSelectionByEngine: {},
-        activeProvider: "opencode",
+        activeEngine: "opencode",
       },
-      selectedProvider: "opencode",
+      selectedEngine: "opencode",
       threadEngineSelection: engineSelection("opencode", "openai/gpt-5.4"),
       projectEngineSelection: null,
       customModelsByEngine: {
@@ -434,9 +434,9 @@ describe("composerDraftStore engineSelection", () => {
         engineSelectionByEngine: {
           opencode: engineSelection("opencode", "openai/gpt-5"),
         },
-        activeProvider: "opencode",
+        activeEngine: "opencode",
       },
-      selectedProvider: "opencode",
+      selectedEngine: "opencode",
       threadEngineSelection: null,
       projectEngineSelection: null,
       customModelsByEngine: {
@@ -467,9 +467,9 @@ describe("composerDraftStore engineSelection", () => {
         engineSelectionByEngine: {
           pi: engineSelection("pi", "openai/gpt-5.5"),
         },
-        activeProvider: "pi",
+        activeEngine: "pi",
       },
-      selectedProvider: "pi",
+      selectedEngine: "pi",
       threadEngineSelection: null,
       projectEngineSelection: null,
       customModelsByEngine: {
@@ -500,9 +500,9 @@ describe("composerDraftStore engineSelection", () => {
         engineSelectionByEngine: {
           oa: engineSelection("oa", "service-a/model-a"),
         },
-        activeProvider: "oa",
+        activeEngine: "oa",
       },
-      selectedProvider: "oa",
+      selectedEngine: "oa",
       threadEngineSelection: null,
       projectEngineSelection: null,
       customModelsByEngine: {},
@@ -516,8 +516,8 @@ describe("composerDraftStore engineSelection", () => {
 
   it("selects the first HarnessOS catalog model only when no exact selection was remembered", () => {
     const state = deriveEffectiveComposerModelState({
-      draft: { engineSelectionByEngine: {}, activeProvider: "oa" },
-      selectedProvider: "oa",
+      draft: { engineSelectionByEngine: {}, activeEngine: "oa" },
+      selectedEngine: "oa",
       threadEngineSelection: null,
       projectEngineSelection: null,
       customModelsByEngine: {},
@@ -531,8 +531,8 @@ describe("composerDraftStore engineSelection", () => {
 
   it("uses an authority-selected HarnessOS catalog fallback instead of the first catalog row", () => {
     const state = deriveEffectiveComposerModelState({
-      draft: { engineSelectionByEngine: {}, activeProvider: "oa" },
-      selectedProvider: "oa",
+      draft: { engineSelectionByEngine: {}, activeEngine: "oa" },
+      selectedEngine: "oa",
       threadEngineSelection: null,
       projectEngineSelection: null,
       runtimeCatalogFallbackModel: "service-b/model-b",
@@ -555,9 +555,9 @@ describe("composerDraftStore engineSelection", () => {
           oa: engineSelection("oa", "deepseek/deepseek-chat"),
           codex: engineSelection("codex", "gpt-5.5"),
         },
-        activeProvider: "oa",
+        activeEngine: "oa",
       },
-      selectedProvider: "oa",
+      selectedEngine: "oa",
       threadEngineSelection: engineSelection("codex", "gpt-5.4"),
       projectEngineSelection: engineSelection("codex", "gpt-5.5"),
       customModelsByEngine: {},
@@ -569,8 +569,8 @@ describe("composerDraftStore engineSelection", () => {
 
   it("restores a valid target-Engine sticky model before the declared default", () => {
     const state = deriveEffectiveComposerModelState({
-      draft: { engineSelectionByEngine: {}, activeProvider: "claude" },
-      selectedProvider: "claude",
+      draft: { engineSelectionByEngine: {}, activeEngine: "claude" },
+      selectedEngine: "claude",
       threadEngineSelection: engineSelection("codex", "gpt-5.4"),
       projectEngineSelection: engineSelection("codex", "gpt-5.5"),
       stickyEngineSelection: engineSelection("claude", "claude-opus-4-8", {
@@ -591,8 +591,8 @@ describe("composerDraftStore engineSelection", () => {
 
   it("does not restore a target-Engine sticky model missing from the catalog", () => {
     const state = deriveEffectiveComposerModelState({
-      draft: { engineSelectionByEngine: {}, activeProvider: "claude" },
-      selectedProvider: "claude",
+      draft: { engineSelectionByEngine: {}, activeEngine: "claude" },
+      selectedEngine: "claude",
       threadEngineSelection: null,
       projectEngineSelection: null,
       stickyEngineSelection: engineSelection("claude", "claude-opus-4-8", {
@@ -623,7 +623,7 @@ describe("composerDraftStore setEngineSelection", () => {
     store.setActiveProviderAndSticky(threadId, "oa");
 
     const state = useComposerDraftStore.getState();
-    expect(state.draftsByThreadId[threadId]?.activeProvider).toBe("oa");
+    expect(state.draftsByThreadId[threadId]?.activeEngine).toBe("oa");
     expect(state.stickyActiveProvider).toBe("oa");
     expect(state.draftsByThreadId[threadId]?.engineSelectionByEngine.oa).toBeUndefined();
     expect(state.draftsByThreadId[threadId]?.engineSelectionByEngine.codex).toEqual(
@@ -918,7 +918,7 @@ describe("composerDraftStore sticky composer settings", () => {
     expect(migratedState.stickyActiveProvider).toBe("claude");
   });
 
-  it("applies sticky activeProvider to new drafts", () => {
+  it("applies sticky activeEngine to new drafts", () => {
     const store = useComposerDraftStore.getState();
     const threadId = ThreadId.makeUnsafe("thread-sticky-active-engine");
 
@@ -929,7 +929,7 @@ describe("composerDraftStore sticky composer settings", () => {
       engineSelectionByEngine: {
         claude: engineSelection("claude", "claude-opus-4-6"),
       },
-      activeProvider: "claude",
+      activeEngine: "claude",
     });
   });
 
@@ -1088,7 +1088,7 @@ describe("composerDraftStore engine-scoped option updates", () => {
       engineSelection("codex", "gpt-5.3-codex", { reasoningEffort: "medium" }),
     );
     expect(draft?.engineSelectionByEngine.claude?.options).toEqual({ effort: "max" });
-    expect(draft?.activeProvider).toBe("codex");
+    expect(draft?.activeEngine).toBe("codex");
   });
 
   it("retains Claude xhigh effort in engine-scoped options", () => {
