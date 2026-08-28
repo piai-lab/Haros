@@ -2,7 +2,7 @@
 
 > 当前复验基线：bundled OmniMind Agent runtime `@omnimind/pi-coding-agent@0.84.3`，upstream exact source `4e58f324fae8ebfa98a3d45181fb248072a2afac`。exact artifact、patch 与 rights 只见根 [`source-adoptions.json`](../source-adoptions.json)。
 >
-> 本文只保存 prompt discovery/composition 的 source evidence、被拒绝路线、维护者裁决和复验触发器。稳定合同只见 [`architecture/product-state.md`](../architecture/product-state.md)、[`architecture/execution.md`](../architecture/execution.md) 与 [`architecture/workbench.md`](../architecture/workbench.md)。当前施工或交付状态不由本文拥有。
+> 本文只保存 prompt discovery/composition 的 source evidence、被拒绝路线、维护者裁决和复验触发器。稳定合同只见 [`architecture/product.md`](../architecture/product.md)、[`architecture/execution.md`](../architecture/execution.md) 与 [`architecture/workbench.md`](../architecture/workbench.md)。当前施工或交付状态不由本文拥有。
 
 ## 最终裁决
 

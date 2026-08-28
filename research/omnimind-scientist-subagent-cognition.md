@@ -8,7 +8,7 @@
 >
 > 当前代码环境：OmniMind workspace base HEAD `f939e34e919b204d827ca93681284093ce1144eb`；本文没有把当时工作树中与 Provider/Plan Mode 有关的未提交用户修改当作证据。代码与架构观察绑定本文列出的路径和上述 fixed revisions，不声称未来 upstream 或当前安装 App 仍保持同一行为
 >
-> 文档角色：保存维护者已经表达的产品判断、taste、术语澄清、当前来源反证、候选设计与复验触发器。它不拥有当前稳定架构、实施顺序、Campaign 状态或交付声明；接受后的稳定合同应分别进入 [`architecture/execution.md`](../architecture/execution.md)、[`architecture/product-state.md`](../architecture/product-state.md) 与必要的 Workbench owner
+> 文档角色：保存维护者已经表达的产品判断、taste、术语澄清、当前来源反证、候选设计与复验触发器。它不拥有当前稳定架构、实施顺序、Campaign 状态或交付声明；接受后的稳定合同应分别进入 [`architecture/execution.md`](../architecture/execution.md)、[`architecture/product.md`](../architecture/product.md) 与必要的 Workbench owner
 
 ## 0. 一句话结论
 
@@ -249,7 +249,7 @@ Synara 的完整历史还表明两条能力是分别形成的：
 
 ## 5. 当前稳定架构已经允许什么
 
-当前 [`architecture/product-state.md`](../architecture/product-state.md) 已接受以下事实：
+当前 [`architecture/product.md`](../architecture/product.md) 已接受以下事实：
 
 - 产品顶层 Agent 不是 durable entity；
 - OmniMind Agent 可以在当前 Root turn 内创建 bounded child Session；
@@ -739,7 +739,7 @@ Proof
 若方向被接受，稳定合同应进入：
 
 - Agent/Session/Tool/Extension/Host ownership：[`architecture/execution.md`](../architecture/execution.md)；
-- child identity、Thread projection、恢复与结果真实性：[`architecture/product-state.md`](../architecture/product-state.md)；
+- child identity、Thread projection、恢复与结果真实性：[`architecture/product.md`](../architecture/product.md)；
 - Scientist child 的列表、控制、继续和失败呈现：[`architecture/workbench.md`](../architecture/workbench.md)；
 - exact Pi/Synara source adoption：根 [`source-adoptions.json`](../source-adoptions.json) 与对应 intake。
 

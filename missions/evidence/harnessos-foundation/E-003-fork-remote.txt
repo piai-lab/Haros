@@ -1,0 +1,16 @@
+Campaign-ID: harnessos-foundation
+Evidence-ID: E-003
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/HarnessOS
+Repository-Identity: github.com/piai-lab/HarnessOS
+Candidate-Version: 698d305e63a600ff00bb1873e87b2cb825a6496d
+Command: git ls-remote origin refs/heads/main refs/heads/codex/harnessos-foundation refs/tags/harnessos-fork-base refs/tags/harnessos-fork-base^{}
+Exit-Code: 0
+Result: PASS
+Claims: C-001
+
+Observed output:
+698d305e63a600ff00bb1873e87b2cb825a6496d refs/heads/codex/harnessos-foundation
+698d305e63a600ff00bb1873e87b2cb825a6496d refs/heads/main
+68ecb6a8982dea872ab4ee567be098ec4babf8e9 refs/tags/harnessos-fork-base
+698d305e63a600ff00bb1873e87b2cb825a6496d refs/tags/harnessos-fork-base^{}

@@ -1,0 +1,17 @@
+Campaign-ID: harnessos-foundation
+Evidence-ID: E-002
+Role: bootstrap
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/HarnessOS
+Repository-Identity: github.com/piai-lab/HarnessOS
+Candidate-Version: 698d305e63a600ff00bb1873e87b2cb825a6496d
+Command: git rev-parse --show-toplevel && git remote get-url origin && git rev-parse HEAD && git rev-list --count harnessos-fork-base^{} && git status --porcelain=v1
+Exit-Code: 0
+Result: PASS
+Claims: none
+
+Observed output:
+/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS
+git@github.com:piai-lab/HarnessOS.git
+698d305e63a600ff00bb1873e87b2cb825a6496d
+1191
+[no status output; worktree clean]

@@ -1365,7 +1365,7 @@ Fork 后代码只保留一个明确 owner。若为了“未来兼容”同时保
 
 ### 前置：只把已接受结论写入 sole owner
 
-本文不拥有 architecture contract。每次施工前重新检查 exact SHA 与 diff；稳定结论只进入现有 owner：Pi/native Engine lifecycle 归 `architecture/execution.md`，用户可见表面归 `architecture/workbench.md`，Product Thread/Turn facts 归 `architecture/product-state.md`。第一阶段没有新的 Workflow aggregate、backend abstraction 或 graph state，因此也没有理由提前给这些 owner 增加对应 contract。
+本文不拥有 architecture contract。每次施工前重新检查 exact SHA 与 diff；稳定结论只进入现有 owner：Pi/native Engine lifecycle 归 `architecture/execution.md`，用户可见表面归 `architecture/workbench.md`，Product Thread/Turn facts 归 `architecture/product.md`。第一阶段没有新的 Workflow aggregate、backend abstraction 或 graph state，因此也没有理由提前给这些 owner 增加对应 contract。
 
 ### Slice A：先保持 Pi，再闭合 target truth
 
@@ -1601,7 +1601,7 @@ Fork 后代码只保留一个明确 owner。若为了“未来兼容”同时保
 1. 读根 `README.md`；
 2. 读 `architecture/README.md`；
 3. 完整读 `architecture/execution.md`，确认 Provider/Runtime/Orchestration owner；
-4. 按任务读 `architecture/product-state.md` 与 `architecture/workbench.md`；
+4. 按任务读 `architecture/product.md` 与 `architecture/workbench.md`；
 5. 读 `execution-brief.md` 与 active Campaign；
 6. 完整读 `research/model-services-composer-product-design.md`，因为任何 Subagent/Workflow target 都依赖其 Engine/Model services truth；
 7. 读本文件中与本轮来源或反证直接相关的章节；
@@ -1633,7 +1633,7 @@ Fork 后代码只保留一个明确 owner。若为了“未来兼容”同时保
 - bundled `pi-coding-agent` AgentSession/ResourceLoader/cache-stats：Session、tools、steer/follow-up、Skills/Prompts/Extensions reload、compaction/branch summary 与 cache miss diagnostics。
 - `apps/server/src/usageHistory/` 与 `apps/server/src/provider/claudeTokenUsage.ts`：OmniMind 已有 cache read/write normalization、历史聚合、cost 与大额 uncached context 诊断；新增平台前先复用/校正这些 owner。
 - `architecture/execution.md`：Provider、Pi/OmniMind Agent runtime、package lifecycle 与 Orchestration owner。
-- `architecture/product-state.md`：Thread/Turn/Run/Queue/receipt/recovery 产品事实。
+- `architecture/product.md`：Thread/Turn/Run/Queue/receipt/recovery 产品事实。
 - `architecture/workbench.md`：Subagents/Todo/Question/Browser 等 Workbench surface owner。
 - `missions/independent-omnimind-v1.md`：F-11/F-12 等 package compatibility evidence pointers。
 - `research/model-services-composer-product-design.md`：Model services/Composer/Provider options 的相邻产品设计说明。

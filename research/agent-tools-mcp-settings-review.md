@@ -262,7 +262,7 @@ Host tool 已 active 也不构成长期通行证。每次真实 `tools/call` 至
 | 已删除的 Host search/dynamic loader                              | 当前没有 `search_tools` / `omnimind_search_tools` 应计入 Host；future dynamic 只能由具体 Extension owner 自己拥有            |
 | Browser/Device 人类 UI actions                                   | 人类界面可用性不由 Agent Built-in policy 开关控制                                                                            |
 
-## 当前状态、证据边界与复验触发器
+## 固定证据边界与复验触发器
 
 - `e36b189e0c` 已提交并推送到 `main/origin/main`，六组 contract、Gateway assembly、v3 settings migration、Settings UI/i18n、harness guidance 与相关 tests 同关注点闭合。
 - 本文只证明该 source snapshot 的 current product baseline；不凭 Git SHA 推断任意用户机器当前打开的旧 Session、实际 settings、Extension 安装、Browser/Device service 或安装包一定一致。
@@ -636,7 +636,7 @@ Pi built-ins、supervised Bash、团队/第三方Extensions、Skills与Packages�
 
 任何后续shipped-code修正都必须产生新commit、新push SHA并重建artifact；不能在旧artifact上补文档宣称完成。docs-only evidence SHA不得冒充新shipped bytes。
 
-## 14. 验收矩阵
+## 14. 历史证明矩阵
 
 | 场景                         | 期望                                                                 |
 | ---------------------------- | -------------------------------------------------------------------- |

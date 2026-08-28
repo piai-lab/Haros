@@ -17,7 +17,7 @@ MCP 集成或未来 Developer API 时快速判断：一项能力属于哪个信�
 - 用户可见 UI、Agent/Chat、Workbench、Settings、扩展、双语与可访问性：
   [`../architecture/workbench.md`](../architecture/workbench.md)；
 - Project、Thread、Space、Conversation、Queue、receipt、恢复与私有状态：
-  [`../architecture/product-state.md`](../architecture/product-state.md)；
+  [`../architecture/product.md`](../architecture/product.md)；
 - Product Orchestration、Provider Registry、Session、进程、MCP 与执行拓扑：
   [`../architecture/execution.md`](../architecture/execution.md)；
 - 当前发行和验收状态：[`../missions/independent-omnimind-v1.md`](../missions/independent-omnimind-v1.md)。
@@ -496,7 +496,7 @@ Exposure: N0 → L0 presentation。
 - `architecture/README.md`；
 - `architecture/workbench.md`；
 - `architecture/public-surface.md`；
-- `architecture/product-state.md`；
+- `architecture/product.md`；
 - `architecture/execution.md`；
 - `execution-brief.md`；
 - `missions/independent-omnimind-v1.md`；

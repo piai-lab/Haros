@@ -21,7 +21,7 @@
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
 | [`workbench.md`](workbench.md)           | 所有用户可见行为、UI source-domain preserve/adapt/delete gate、失败/恢复呈现、性能与可访问性          | 持久事实目录、Engine 私有语义或进程 topology       |
 | [`public-surface.md`](public-surface.md) | canonical public origin、Public Surface Registry、激活门、不可用行为、反馈数据边界与发行/更新权威分离 | 网站视觉/内容实现、Runtime topology 或产品状态对象 |
-| [`product-state.md`](product-state.md)   | 继承的 Project/Thread/Space 产品事实、Conversation/native Session 边界、Queue admission 与恢复真实性  | 详细进程布局、完整 UI 行为或 Provider 私有生态     |
+| [`product.md`](product.md)   | 继承的 Project/Thread/Space 产品事实、Conversation/native Session 边界、Queue admission 与恢复真实性  | 详细进程布局、完整 UI 行为或 Provider 私有生态     |
 | [`execution.md`](execution.md)           | 单一 Product Orchestration、Provider Registry/adapters、进程 topology、OS capability 与故障边界       | Campaign 状态、来源结论或第二套产品对象目录        |
 
 一个任务涉及多个 topic 时必须逐个完整读取；本索引不是它们的缩写，也不提供第二套物理文件树或对象清单。

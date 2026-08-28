@@ -17,7 +17,7 @@
 本文不是第二份产品宪法、当前施工计划或完成状态：
 
 - 稳定 UI 与交互最终仍只由 [`architecture/workbench.md`](../architecture/workbench.md) 拥有；
-- Project、Thread、Conversation、Queue 与恢复事实仍只由 [`architecture/product-state.md`](../architecture/product-state.md) 拥有；
+- Project、Thread、Conversation、Queue 与恢复事实仍只由 [`architecture/product.md`](../architecture/product.md) 拥有；
 - Provider、Prompt、Pi、Host 与进程边界仍只由 [`architecture/execution.md`](../architecture/execution.md) 拥有；
 - 当前工作只看 [`execution-brief.md`](../execution-brief.md)；
 - 验收状态只看 active Campaign。
@@ -551,7 +551,7 @@ Proma 源码中存在受管 `workspace-files/`、session/workspace attached file
 本轮实施与后续复验的最小完整顺序：
 
 1. 先把 `README.md` 与 `architecture/workbench.md` 的一级工作面从两面同步为三面，并明确 Synara Menu/Radio；
-2. 在 `architecture/product-state.md` 固定 `Project kind → product surface → provider workSurface`、Chat reference 与 `Send to Agent` contextual fork；
+2. 在 `architecture/product.md` 固定 `Project kind → product surface → provider workSurface`、Chat reference 与 `Send to Agent` contextual fork；
 3. 在 `architecture/execution.md` 固定 shared Pi-global default、Chat Todo、三工作面Host矩阵、Session-scoped guidance、Skill global/project admission 与其他 Engine honest-degrade；
 4. 更新被本轮 supersede 的 Todo/Host research 路由，但保留历史证据；
 5. 沿真实调用链做最小实现，不新建 owner；

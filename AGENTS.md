@@ -28,7 +28,7 @@
 
 - UI、信息架构、视觉、交互、stream/scroll、性能或可访问性：`architecture/workbench.md`。
 - canonical public origin、公共出口、激活门、反馈数据边界或发行/更新 authority separation：`architecture/public-surface.md`。
-- Workspace、Conversation、Entry、Run、Queue、权限、receipt、恢复或产品事实：`architecture/product-state.md`。
+- Workspace、Conversation、Entry、Run、Queue、权限、receipt、恢复或产品事实：`architecture/product.md`。
 - 进程、Provider Registry/adapters、runtime/Session、系统能力或 execution topology：`architecture/execution.md`。
 - 当前工作目标、冲突协调、阻塞和下一动作：`execution-brief.md`。它不能推翻维护者对完整 source decision surface 的明确决定，也不能以历史阶段或 stale Slice 形成第二准入门。
 - exact adopted source、revision、rights、paths、digest 与更新策略：`source-adoptions.json`。README、research、package README 与测试不得复制一份可独立修改的 adoption 清单。

@@ -6,7 +6,7 @@
 
 它只拥有可推翻的 source fact、反例、推断、被否决路线和复验条件：
 
-- 不取代 `architecture/workbench.md`、`architecture/product-state.md` 或 `architecture/execution.md`；
+- 不取代 `architecture/workbench.md`、`architecture/product.md` 或 `architecture/execution.md`；
 - 不保存 Campaign 状态，不把 research 判断冒充已实现；
 - 主会话采用本文裁决时，必须先更新冲突的 sole owner，再修改产品；
 - 原 Model services 关注点已经通过的证据，除非当前 SHA 出现新的直接反例，不应因本文重新演整轮 E0–E8；

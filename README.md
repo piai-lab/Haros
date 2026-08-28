@@ -50,7 +50,7 @@ OmniMind 的产品味道不是“功能多”，而是让复杂系统以最少�
 
 ## 架构入口
 
-- [`architecture/product-state.md`](architecture/product-state.md)：Project、Thread、Space、Conversation、Queue、receipt、canonical User Input、恢复与权限事实。
+- [`architecture/product.md`](architecture/product.md)：Project、Thread、Space、Conversation、Queue、receipt、canonical User Input、恢复与权限事实。
 - [`architecture/execution.md`](architecture/execution.md)：Product Orchestration、Provider Registry/adapters、OmniMind Agent、进程、Session、系统能力、failure/restart/shutdown。
 - [`architecture/workbench.md`](architecture/workbench.md)：信息架构、Composer、Timeline、Settings、Workbench、双语、响应式、性能与可访问性。
 - [`architecture/public-surface.md`](architecture/public-surface.md)：公共 origin、反馈、发布出口、激活门、数据边界与 authority separation。

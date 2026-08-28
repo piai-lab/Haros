@@ -31,7 +31,7 @@ Status: local source observation + maintainer-confirmed product direction + impl
 本文不拥有稳定产品事实。发生冲突时，按以下 sole owner 裁决：
 
 - Composer、Chat、Workbench、可访问性、响应式和双语：[`../architecture/workbench.md`](../architecture/workbench.md)；
-- Conversation、Thread、Entry、Run、Queue、draft、receipt、恢复和 Provider 切换事实：[`../architecture/product-state.md`](../architecture/product-state.md)；
+- Conversation、Thread、Entry、Run、Queue、draft、receipt、恢复和 Provider 切换事实：[`../architecture/product.md`](../architecture/product.md)；
 - Product Orchestration、Provider Registry、adapter、Session 和执行拓扑：[`../architecture/execution.md`](../architecture/execution.md)；
 - 当前目标、真实并发、依赖与阻塞：[`../execution-brief.md`](../execution-brief.md)；它不决定维护者授权或另设准入；
 - 当前 claim 状态：[`../missions/independent-omnimind-v1.md`](../missions/independent-omnimind-v1.md)。
