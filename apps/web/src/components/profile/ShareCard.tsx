@@ -54,7 +54,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
           <p className="mt-3 text-xl text-muted-foreground">{t("settings.profileDescription")}</p>
         </div>
         <div className="flex items-center gap-3 text-foreground">
-          <HarnessOSLogo size={30} variant="flat" responsive={false} />
+          <HarnessOSLogo size={30} />
           <span className="text-2xl tracking-tight">HarnessOS</span>
         </div>
       </header>

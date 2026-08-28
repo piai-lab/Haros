@@ -6,11 +6,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { EngineIcon, ENGINE_ICON_COMPONENT_BY_PROVIDER } from "./EngineIcon";
+import { EngineIcon, ENGINE_ICON_COMPONENT_BY_ENGINE } from "./EngineIcon";
 
 describe("EngineIcon", () => {
   it("uses Antigravity branding", () => {
-    expect(ENGINE_ICON_COMPONENT_BY_PROVIDER).not.toHaveProperty("gemini");
+    expect(ENGINE_ICON_COMPONENT_BY_ENGINE).not.toHaveProperty("gemini");
 
     const markup = renderToStaticMarkup(<EngineIcon engine="antigravity" />);
     expect(markup).toContain('viewBox="0 0 16 15"');

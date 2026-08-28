@@ -21,7 +21,7 @@ function escapeHtml(value: string): string {
 export function loadHarnessOSOAuthLogoDataUrl(staticDir: string | undefined): string | null {
   if (!staticDir) return null;
   try {
-    const logoPath = path.join(staticDir, "brand", "harnessos-logo-flat.svg");
+    const logoPath = path.join(staticDir, "brand", "harnessos-mark.svg");
     const metadata = statSync(logoPath);
     if (!metadata.isFile() || metadata.size <= 0 || metadata.size > MAX_LOGO_BYTES) return null;
     return `data:image/svg+xml;base64,${readFileSync(logoPath).toString("base64")}`;

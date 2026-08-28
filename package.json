@@ -33,6 +33,8 @@
     "start": "turbo run start --filter=@harnessos/server",
     "start:desktop": "turbo run start --filter=@harnessos/desktop",
     "build": "turbo run build",
+    "brand:generate": "node apps/web/scripts/generate-brand-assets.mjs",
+    "brand:check": "node apps/web/scripts/generate-brand-assets.mjs --check",
     "build:desktop": "turbo run build --filter=@harnessos/desktop --filter=@harnessos/server",
     "typecheck": "turbo run typecheck",
     "lint": "oxlint --report-unused-disable-directives",

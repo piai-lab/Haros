@@ -12685,7 +12685,6 @@ export default function ChatView({
                   >
                     <HarnessOSLogoButton
                       size={64}
-                      variant="satin"
                       aria-label={t("shortcuts.focusComposer")}
                       className="-my-3"
                       onClick={focusComposer}

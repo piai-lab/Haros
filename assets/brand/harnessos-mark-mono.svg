@@ -7,7 +7,7 @@
     <path d="M82 219A178 178 0 0 1 219 82"/>
     <circle cx="256" cy="256" r="111" stroke-width="40"/>
   </g>
-  <g fill="#E2A11A">
+  <g fill="#242528">
     <rect x="232" y="48" width="48" height="84" rx="24"/>
     <rect x="380" y="232" width="84" height="48" rx="24"/>
     <rect x="232" y="380" width="48" height="84" rx="24"/>

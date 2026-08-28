@@ -21,7 +21,7 @@ export function SidebarProductMark() {
       className="me-[3px] flex h-7 w-5 shrink-0 items-center justify-center"
       data-slot="sidebar-product-mark"
     >
-      <HarnessOSLogo size={16} variant="flat" />
+      <HarnessOSLogo size={16} />
     </span>
   );
 }

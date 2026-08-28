@@ -8,7 +8,7 @@ import { type EngineKind } from "@harnessos/contracts";
 import type { ReactNode, SVGProps } from "react";
 
 import { CentralIcon } from "~/lib/central-icons";
-import { HarnessOSLogo } from "./HarnessOSLogo";
+import { OABadge } from "./HarnessOSLogo";
 import { cn } from "~/lib/utils";
 import {
   AntigravityIcon,
@@ -64,8 +64,8 @@ const OpenCodeEngineIcon = ({
   );
 };
 
-export const ENGINE_ICON_COMPONENT_BY_PROVIDER: Record<EngineKind, Icon> = {
-  oa: HarnessOSLogo,
+export const ENGINE_ICON_COMPONENT_BY_ENGINE: Record<EngineKind, Icon> = {
+  oa: OABadge,
   codex: OpenAI,
   claude: ClaudeAI,
   cursor: CursorIcon,
@@ -111,7 +111,7 @@ export function EngineIcon({
     return fallback;
   }
 
-  const Icon = ENGINE_ICON_COMPONENT_BY_PROVIDER[engine];
+  const Icon = ENGINE_ICON_COMPONENT_BY_ENGINE[engine];
   return (
     <Icon
       aria-hidden={ariaHidden}

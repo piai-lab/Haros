@@ -134,6 +134,9 @@ jobs:
       - name: Browser test (stable)
         run: bun run test:browser:stable
 
+      - name: Verify brand exports
+        run: bun run brand:check
+
   browser-geometry:
     name: Linux browser geometry signal
     runs-on: ubuntu-24.04

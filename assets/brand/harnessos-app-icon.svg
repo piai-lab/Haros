@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">HarnessOS app icon</title>
+  <rect x="20" y="20" width="472" height="472" rx="112" fill="#F7F3EB" stroke="#DED7CA" stroke-width="4"/>
+  <g transform="translate(256 256) scale(.82) translate(-256 -256)">
+    <g fill="none" stroke="#242528" stroke-width="48">
+      <path d="M293 82A178 178 0 0 1 430 219"/>
+      <path d="M430 293A178 178 0 0 1 293 430"/>
+      <path d="M219 430A178 178 0 0 1 82 293"/>
+      <path d="M82 219A178 178 0 0 1 219 82"/>
+      <circle cx="256" cy="256" r="111" stroke-width="40"/>
+    </g>
+    <g fill="#E2A11A">
+      <rect x="232" y="48" width="48" height="84" rx="24"/>
+      <rect x="380" y="232" width="84" height="48" rx="24"/>
+      <rect x="232" y="380" width="48" height="84" rx="24"/>
+      <rect x="48" y="232" width="84" height="48" rx="24"/>
+    </g>
+  </g>
+</svg>

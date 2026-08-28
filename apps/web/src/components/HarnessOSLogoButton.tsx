@@ -9,14 +9,13 @@ import {
   type SoftOrbitController,
   type SoftOrbitSnapshot,
 } from "~/motion/softOrbit";
-import { HarnessOSLogo, type HarnessOSLogoVariant } from "./HarnessOSLogo";
+import { HarnessOSLogo } from "./HarnessOSLogo";
 
 export interface HarnessOSLogoButtonProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
   "children"
 > {
   readonly size?: number;
-  readonly variant?: HarnessOSLogoVariant;
   readonly duration?: number;
   readonly reducedMotion?: boolean | "auto";
   readonly onMotionStateChange?: (snapshot: SoftOrbitSnapshot) => void;
@@ -24,7 +23,6 @@ export interface HarnessOSLogoButtonProps extends Omit<
 
 export function HarnessOSLogoButton({
   size = 32,
-  variant = "flat",
   duration = 650,
   reducedMotion = "auto",
   onMotionStateChange,
@@ -84,7 +82,7 @@ export function HarnessOSLogoButton({
       }}
     >
       <span ref={markRef} className="harnessos-logo-motion-target" aria-hidden="true">
-        <HarnessOSLogo size={size} variant={variant} />
+        <HarnessOSLogo size={size} />
       </span>
     </button>
   );

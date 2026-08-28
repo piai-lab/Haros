@@ -113,17 +113,11 @@ describe("HarnessOSLogoButton", () => {
   });
 
   it("keeps both official theme variants and a visible keyboard focus ring", async () => {
-    const screen = await render(
-      <HarnessOSLogoButton aria-label="Focus composer" size={64} variant="satin" />,
-    );
+    const screen = await render(<HarnessOSLogoButton aria-label="Focus composer" size={64} />);
     const button = screen.getByRole("button", { name: "Focus composer" });
-    const images = button.element().querySelectorAll("img");
-    expect(images[0]?.getAttribute("src")).toBe("/brand/harnessos-logo-satin.svg");
-    expect(images[1]?.getAttribute("src")).toBe("/brand/harnessos-logo-satin-dark.svg");
-    await vi.waitFor(() => {
-      expect(images[0]?.naturalWidth).toBeGreaterThan(0);
-      expect(images[1]?.naturalWidth).toBeGreaterThan(0);
-    });
+    const images = button.element().querySelectorAll("image");
+    expect(images[0]?.getAttribute("href")).toBe("/brand/harnessos-mark.svg");
+    expect(images[1]?.getAttribute("href")).toBe("/brand/harnessos-mark-dark.svg");
 
     await userEvent.keyboard("{Tab}");
     expect(document.activeElement).toBe(button.element());

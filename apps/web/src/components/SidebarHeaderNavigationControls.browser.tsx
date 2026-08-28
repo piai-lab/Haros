@@ -50,13 +50,11 @@ describe("SidebarProductMark", () => {
     await render(<SidebarProductMark />);
     const slot = document.querySelector<HTMLElement>('[data-slot="sidebar-product-mark"]');
     const logo = slot?.querySelector<SVGSVGElement>("svg");
-    const images = slot?.querySelectorAll("img");
+    const images = slot?.querySelectorAll("image");
     if (!slot || !logo || !images) throw new Error("Sidebar product mark is missing");
 
     expect(logo.getAttribute("aria-hidden")).toBe("true");
-    expect(images[0]?.getAttribute("src")).toBe("/brand/harnessos-logo-flat.svg");
-    expect(images[1]?.getAttribute("src")).toBe("/brand/harnessos-logo-flat-dark.svg");
-    await expect.poll(() => images[0]?.naturalWidth ?? 0).toBeGreaterThan(0);
-    await expect.poll(() => images[1]?.naturalWidth ?? 0).toBeGreaterThan(0);
+    expect(images[0]?.getAttribute("href")).toBe("/brand/harnessos-mark.svg");
+    expect(images[1]?.getAttribute("href")).toBe("/brand/harnessos-mark-dark.svg");
   });
 });

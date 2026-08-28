@@ -17,7 +17,7 @@ import {
 import { Menu, MenuItem, MenuRadioGroup, MenuSub, MenuSubTrigger, MenuTrigger } from "../ui/menu";
 import { BrainIcon } from "~/lib/icons";
 import { ModelIdentityIcon } from "../ModelIdentityIcon";
-import { ENGINE_ICON_COMPONENT_BY_PROVIDER } from "../EngineIcon";
+import { ENGINE_ICON_COMPONENT_BY_ENGINE } from "../EngineIcon";
 import { cn } from "~/lib/utils";
 import { PickerPanelShell } from "./PickerPanelShell";
 import { PickerTriggerButton } from "./PickerTriggerButton";
@@ -309,7 +309,7 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
   return (
     <>
       {visibleEngineOptions.map((option) => {
-        const OptionIcon = ENGINE_ICON_COMPONENT_BY_PROVIDER[option.value];
+        const OptionIcon = ENGINE_ICON_COMPONENT_BY_ENGINE[option.value];
         const liveEngine = props.engines?.find((entry) => entry.engine === option.value);
         const availability = deriveEnginePickerAvailability(liveEngine);
         const availabilityLabel = (
