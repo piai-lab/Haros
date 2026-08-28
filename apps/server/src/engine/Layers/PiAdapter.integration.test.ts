@@ -32,6 +32,16 @@ import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "../goalMode.ts";
 import { OAAgentAdapter } from "../Services/OAAgentAdapter.ts";
 import { PiAdapter } from "../Services/PiAdapter.ts";
 import { publishOAModelRuntimeMutation } from "../oaModelRuntimeMutation.ts";
+import {
+  makePiGatewayLoadWarning,
+  makePiRuntimeEventBase,
+  piToolTimelineDetail,
+} from "../piFamilyNativeEventProjection.ts";
+import {
+  makeOAEngineSystemPrompt,
+  makePiHostSystemPrompt,
+  promptRequiredHostGatewayToolNames,
+} from "../piFamilyPrompt.ts";
 import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
 import {
   createPiModelRuntime,
@@ -41,19 +51,13 @@ import {
   getPiSupportedThinkingOptions,
   buildPiHostGatewayCustomTools,
   makePiBashProcessSupervisor,
-  makePiGatewayLoadWarning,
-  makePiHostSystemPrompt,
-  makeOAEngineSystemPrompt,
-  makePiRuntimeEventBase,
   normalizePiTokenUsage,
   makePiUserInputOptions,
   makePiAdapterLive,
   piModelHasConfiguredCredentials,
-  piToolTimelineDetail,
   PLAIN_PI_EXTENSION_THEME,
   toPiProviderModelDescriptor,
   makeOAAgentAdapterLive,
-  promptRequiredHostGatewayToolNames,
 } from "./PiAdapter";
 
 describe("normalizePiTokenUsage", () => {
@@ -114,9 +118,9 @@ describe("Pi native resource projection", () => {
   });
 
   it("keeps usable native tools visible when HarnessOS MCP discovery fails", () => {
-    expect(makePiGatewayLoadWarning("HarnessOS Agent")).toEqual({
+    expect(makePiGatewayLoadWarning("OA")).toEqual({
       message:
-        "HarnessOS MCP tools could not be loaded for this HarnessOS Agent session. Engine-native tools remain available; HarnessOS MCP actions are unavailable.",
+        "HarnessOS MCP tools could not be loaded for this OA session. Engine-native tools remain available; HarnessOS MCP actions are unavailable.",
       detail: { source: "harnessos-mcp", availability: "failed" },
     });
   });

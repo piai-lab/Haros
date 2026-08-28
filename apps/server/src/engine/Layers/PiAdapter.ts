@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import path from "node:path";
 import {
   spawn as spawnChildProcess,
@@ -17,7 +16,7 @@ import type {
   ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
-import type { Api, ImageContent, Model, TextContent } from "@earendil-works/pi-ai";
+import type { Api, ImageContent, Model } from "@earendil-works/pi-ai";
 import type { PromptOutcome as OAPromptOutcome } from "@harnessos/oa-runtime";
 import { ASK_USER_TOOL_NAME, type AskUserProductInteractionPort } from "@harnessos/oa-ask";
 import {
@@ -25,7 +24,6 @@ import {
   type BuiltInToolGroupId,
   type ChatAttachment,
   type CanonicalUserInputResponse,
-  EventId,
   type EngineListCommandsResult,
   type EngineListModelsResult,
   type EngineListSkillsResult,
@@ -147,6 +145,20 @@ import {
   makePiHostSystemPrompt,
   promptRequiredHostGatewayToolNames,
 } from "../piFamilyPrompt.ts";
+import {
+  classifyPiRuntimeError,
+  isPiBarrierSiblingBlocked,
+  latestPiAssistantText,
+  makePiGatewayLoadWarning,
+  makePiRuntimeEventBase,
+  mapPiMessageHistory,
+  piRuntimeErrorDetail,
+  piToolItemType,
+  piToolLifecycleData,
+  piToolTimelineDetail,
+  piToolTitle,
+  type PiTrackedToolCall,
+} from "../piFamilyNativeEventProjection.ts";
 
 type PiFamilyEngine = Extract<EngineKind, "pi" | "oa">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
@@ -483,48 +495,10 @@ interface PiSessionContext {
   unsubscribe: (() => void) | undefined;
 }
 
-export function makePiRuntimeEventBase(
-  context: {
-    readonly engine?: PiFamilyEngine;
-    readonly lifecycleGeneration?: string;
-    readonly session: Pick<EngineSession, "threadId">;
-    readonly activeTurnId: TurnId | undefined;
-  },
-  options?: { readonly includeTurnId?: boolean },
-) {
-  return {
-    eventId: EventId.makeUnsafe(crypto.randomUUID()),
-    engine: context.engine ?? "pi",
-    threadId: context.session.threadId,
-    createdAt: new Date().toISOString(),
-    ...(context.lifecycleGeneration !== undefined
-      ? { lifecycleGeneration: context.lifecycleGeneration }
-      : {}),
-    ...(options?.includeTurnId !== false && context.activeTurnId
-      ? { turnId: context.activeTurnId }
-      : {}),
-  };
-}
-
 interface PiStoredTurn {
   readonly id: TurnId;
   readonly items: unknown[];
   leafId?: string | null;
-}
-
-interface PiTrackedToolCall {
-  readonly toolCallId: string;
-  readonly toolName: string;
-  readonly args: unknown;
-  readonly itemId: RuntimeItemId;
-  readonly itemType: "command_execution" | "file_change" | "dynamic_tool_call" | "web_search";
-  canonicalUserInputLifecycle?: "candidate" | "projected";
-  engineWebSurface?: {
-    readonly url?: string;
-    readonly surfaceId?: string;
-    readonly unregister?: () => void;
-    readonly status?: "pending" | "observing";
-  };
 }
 
 export interface PiAdapterLiveOptions {
@@ -839,453 +813,6 @@ function isPiReloadCommand(text: string): boolean {
   return /^\/reload(?:\s|$)/iu.test(text.trim());
 }
 
-function classifyPiRuntimeError(
-  message: string,
-): "engine_error" | "transport_error" | "permission_error" | "validation_error" | "unknown" {
-  const normalized = message.toLowerCase();
-  if (
-    normalized.includes("network") ||
-    normalized.includes("connection") ||
-    normalized.includes("timeout") ||
-    normalized.includes("econn") ||
-    normalized.includes("fetch failed")
-  ) {
-    return "transport_error";
-  }
-  if (
-    normalized.includes("api key") ||
-    normalized.includes("auth") ||
-    normalized.includes("unauthorized") ||
-    normalized.includes("forbidden") ||
-    normalized.includes("permission")
-  ) {
-    return "permission_error";
-  }
-  if (
-    normalized.includes("invalid") ||
-    normalized.includes("validation") ||
-    normalized.includes("not available")
-  ) {
-    return "validation_error";
-  }
-  if (
-    normalized.includes("rate limit") ||
-    normalized.includes("quota") ||
-    normalized.includes("usage limit") ||
-    normalized.includes("overloaded") ||
-    normalized.includes("engine")
-  ) {
-    return "engine_error";
-  }
-  return "unknown";
-}
-
-function runtimeErrorDetail(cause: unknown): unknown {
-  if (cause instanceof Error) {
-    return {
-      name: cause.name,
-      message: cause.message,
-      ...(cause.stack ? { stack: cause.stack } : {}),
-    };
-  }
-  return cause;
-}
-
-function textFromContent(content: string | (TextContent | ImageContent)[]): string {
-  if (typeof content === "string") {
-    return content;
-  }
-  return content
-    .filter((block): block is TextContent => block.type === "text")
-    .map((block) => block.text)
-    .join("\n\n");
-}
-
-function latestAssistantText(messages: readonly unknown[]): string | undefined {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = toolRecord(messages[index]);
-    if (message?.role !== "assistant") continue;
-    const content = message.content;
-    if (typeof content === "string") return content;
-    if (!Array.isArray(content)) return undefined;
-    return content
-      .flatMap((block) => {
-        const entry = toolRecord(block);
-        return entry?.type === "text" && typeof entry.text === "string" ? [entry.text] : [];
-      })
-      .join("\n\n");
-  }
-  return undefined;
-}
-
-function toolRecord(value: unknown): Record<string, unknown> | undefined {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
-}
-
-function firstStringValue(
-  record: Record<string, unknown> | undefined,
-  keys: readonly string[],
-): string | undefined {
-  if (!record) return undefined;
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value;
-    }
-  }
-  return undefined;
-}
-
-function textFromToolResult(result: unknown): string | undefined {
-  if (typeof result === "string") {
-    return result;
-  }
-  const record = toolRecord(result);
-  if (!record) {
-    return undefined;
-  }
-  const directText = firstStringValue(record, [
-    "output",
-    "stdout",
-    "stderr",
-    "text",
-    "summary",
-    "message",
-    "error",
-  ]);
-  if (directText) {
-    return directText;
-  }
-  const content = Array.isArray(record.content) ? record.content : [];
-  const parts = content.flatMap((block) => {
-    const blockRecord = toolRecord(block);
-    return blockRecord?.type === "text" && typeof blockRecord.text === "string"
-      ? [blockRecord.text]
-      : [];
-  });
-  return parts.length > 0 ? parts.join("\n") : undefined;
-}
-
-export function piToolTimelineDetail(result: unknown): string | undefined {
-  return trimToUndefined(textFromToolResult(result));
-}
-
-export function makePiGatewayLoadWarning(displayName: string) {
-  return {
-    message: `HarnessOS MCP tools could not be loaded for this ${displayName} session. Engine-native tools remain available; HarnessOS MCP actions are unavailable.`,
-    detail: { source: "harnessos-mcp", availability: "failed" } as const,
-  };
-}
-
-export {
-  makeOAEngineSystemPrompt,
-  makePiHostSystemPrompt,
-  promptRequiredHostGatewayToolNames,
-} from "../piFamilyPrompt.ts";
-
-function toolExitCode(result: unknown): number | null | undefined {
-  const record = toolRecord(result);
-  if (!record) return undefined;
-  const exitCode = record.exitCode;
-  if (typeof exitCode === "number" && Number.isFinite(exitCode)) return exitCode;
-  const code = record.code;
-  if (typeof code === "number" && Number.isFinite(code)) return code;
-  return null;
-}
-
-function toolRawOutput(result: unknown): Record<string, unknown> | undefined {
-  if (result === undefined) return undefined;
-  const text = textFromToolResult(result);
-  const exitCode = toolExitCode(result);
-  if (typeof result === "string") {
-    return { stdout: result, content: result };
-  }
-  if (result === null) {
-    return {};
-  }
-  const record = toolRecord(result);
-  if (!record) {
-    return text ? { stdout: text, content: text } : undefined;
-  }
-  return {
-    ...record,
-    ...(text ? { stdout: text, content: text } : {}),
-    ...(exitCode !== undefined ? { exitCode } : {}),
-  };
-}
-
-function toolPath(args: unknown): string | undefined {
-  return firstStringValue(toolRecord(args), ["path", "filePath", "file", "relativePath"]);
-}
-
-function toolCommand(args: unknown): string | undefined {
-  return firstStringValue(toolRecord(args), ["command", "cmd"]);
-}
-
-function toolSearchQuery(toolName: string, args: unknown): string | undefined {
-  const record = toolRecord(args);
-  if (!record) return undefined;
-  if (toolName === "grep" || toolName === "find") {
-    return firstStringValue(record, ["pattern", "query"]);
-  }
-  return firstStringValue(record, ["query", "pattern"]);
-}
-
-function toolEditEntries(args: unknown): ReadonlyArray<Record<string, unknown>> | undefined {
-  const record = toolRecord(args);
-  if (!record) return undefined;
-  if (Array.isArray(record.edits)) {
-    return record.edits.flatMap((edit) => {
-      const editRecord = toolRecord(edit);
-      return editRecord ? [editRecord] : [];
-    });
-  }
-  const oldText = firstStringValue(record, ["oldText", "old_string", "oldString"]);
-  const newText = firstStringValue(record, ["newText", "new_string", "newString"]);
-  if (oldText !== undefined || newText !== undefined) {
-    return [
-      {
-        ...(oldText !== undefined ? { oldText } : {}),
-        ...(newText !== undefined ? { newText } : {}),
-      },
-    ];
-  }
-  return undefined;
-}
-
-function toolItemType(toolName: string): PiTrackedToolCall["itemType"] {
-  switch (toolName) {
-    case "bash":
-      return "command_execution";
-    case "edit":
-    case "write":
-      return "file_change";
-    case "grep":
-    case "find":
-    case "web_search":
-      return "web_search";
-    default:
-      return "dynamic_tool_call";
-  }
-}
-
-function toolTitle(toolName: string, args: unknown): string {
-  const command = toolName === "bash" ? toolCommand(args) : undefined;
-  if (command) return command;
-  const filePath = toolPath(args);
-  if (
-    filePath &&
-    (toolName === "read" || toolName === "edit" || toolName === "write" || toolName === "ls")
-  ) {
-    return `${toolName} ${filePath}`;
-  }
-  const query = toolSearchQuery(toolName, args);
-  if (query && (toolName === "find" || toolName === "grep")) {
-    return `${toolName} ${query}`;
-  }
-  return toolName;
-}
-
-function toolLifecycleData(input: {
-  toolCallId: string;
-  toolName: string;
-  args: unknown;
-  result?: unknown;
-  partialResult?: unknown;
-  isError?: boolean;
-  engineWebSurfaceStatus?: "waiting-for-user" | "unavailable" | "completed";
-  engineWebSurfaceId?: string;
-}): Record<string, unknown> {
-  const { toolCallId, toolName, args } = input;
-  const rawOutput = toolRawOutput(input.result ?? input.partialResult);
-  const path = toolPath(args);
-  const query = toolSearchQuery(toolName, args);
-  const command = toolCommand(args);
-  const edits = toolEditEntries(args);
-  const content = toolRecord(args)?.content;
-  const outputDetails = toolRecord(rawOutput?.details);
-  const unifiedDiff = firstStringValue(outputDetails, ["diff"]);
-  const base: Record<string, unknown> = {
-    toolCallId,
-    callId: toolCallId,
-    toolName,
-    name: toolName,
-    tool: toolName,
-    kind: toolName,
-    args,
-    input: args,
-    rawInput: args,
-    ...(rawOutput ? { rawOutput } : {}),
-    ...(input.partialResult !== undefined ? { partialResult: input.partialResult } : {}),
-    ...(input.result !== undefined ? { result: input.result } : {}),
-    ...(input.isError !== undefined ? { isError: input.isError } : {}),
-    ...(input.engineWebSurfaceStatus
-      ? {
-          engineWebSurface: engineWebSurfacePresentationMetadata(
-            input.engineWebSurfaceStatus,
-            input.engineWebSurfaceId,
-          ),
-        }
-      : {}),
-  };
-
-  switch (toolName) {
-    case "bash":
-      return {
-        ...base,
-        kind: "execute",
-        ...(command ? { command } : {}),
-        ...(rawOutput?.exitCode !== undefined ? { exitCode: rawOutput.exitCode } : {}),
-      };
-    case "read":
-      return {
-        ...base,
-        kind: "read",
-        ...(path
-          ? {
-              path,
-              filePath: path,
-              files: [{ path }],
-              commandActions: [{ type: "read", name: "read", path }],
-            }
-          : {}),
-      };
-    case "edit":
-      return {
-        ...base,
-        kind: "edit",
-        ...(path ? { path, filePath: path, files: [{ path }], changes: [{ path }] } : {}),
-        ...(edits
-          ? {
-              edits: edits.map((edit) => ({
-                ...edit,
-                ...(path ? { path } : {}),
-              })),
-            }
-          : {}),
-        ...(unifiedDiff ? { unifiedDiff } : {}),
-      };
-    case "write":
-      return {
-        ...base,
-        kind: "write",
-        ...(path ? { path, filePath: path, files: [{ path }], changes: [{ path }] } : {}),
-        ...(typeof content === "string" ? { content } : {}),
-      };
-    case "find":
-      return {
-        ...base,
-        kind: "search",
-        searchKind: "find",
-        ...(query ? { query } : {}),
-        ...(path ? { path } : {}),
-        ...(query || path
-          ? { commandActions: [{ type: "search", name: "find", query, path }] }
-          : {}),
-      };
-    case "grep":
-      return {
-        ...base,
-        kind: "search",
-        searchKind: "grep",
-        ...(query ? { query } : {}),
-        ...(path ? { path } : {}),
-        ...(query || path
-          ? { commandActions: [{ type: "search", name: "grep", query, path }] }
-          : {}),
-      };
-    case "ls":
-      return {
-        ...base,
-        kind: "listFiles",
-        ...(path
-          ? {
-              path,
-              query: path,
-              commandActions: [{ type: "listFiles", name: "ls", path }],
-            }
-          : {}),
-      };
-    default:
-      return base;
-  }
-}
-
-function mapMessageHistory(session: PiAgentSession): unknown[] {
-  const items: unknown[] = [];
-  const pendingTools = new Map<string, { toolName: string; args: unknown }>();
-  for (const message of session.messages) {
-    if (message.role === "user") {
-      const text = textFromContent(message.content);
-      if (text) items.push({ type: "user_message", text });
-      continue;
-    }
-    if (message.role === "assistant") {
-      for (const content of message.content) {
-        if (content.type === "text" && content.text) {
-          items.push({ type: "assistant_message", text: content.text });
-          continue;
-        }
-        if (content.type === "thinking" && content.thinking) {
-          items.push({ type: "reasoning", text: content.thinking });
-          continue;
-        }
-        if (content.type === "toolCall") {
-          pendingTools.set(content.id, {
-            toolName: content.name,
-            args: content.arguments,
-          });
-          items.push({
-            type: "tool_call",
-            status: "started",
-            callId: content.id,
-            toolName: content.name,
-            itemType: toolItemType(content.name),
-            title: toolTitle(content.name, content.arguments),
-            args: content.arguments,
-            data: toolLifecycleData({
-              toolCallId: content.id,
-              toolName: content.name,
-              args: content.arguments,
-            }),
-          });
-        }
-      }
-      continue;
-    }
-    if (message.role === "toolResult") {
-      const pending = pendingTools.get(message.toolCallId);
-      pendingTools.delete(message.toolCallId);
-      const toolName = pending?.toolName ?? message.toolName;
-      const args = pending?.args;
-      const result = { content: message.content };
-      const surfaceUrl = extractPiCuratorWebSurfaceUrl(toolName, result);
-      const safeResult = sanitizeEngineWebSurfacePayload(result, surfaceUrl);
-      items.push({
-        type: "tool_call",
-        status: message.isError ? "failed" : "completed",
-        callId: message.toolCallId,
-        toolName,
-        itemType: toolItemType(toolName),
-        title: toolTitle(toolName, args),
-        output: piToolTimelineDetail(safeResult),
-        isError: message.isError,
-        data: toolLifecycleData({
-          toolCallId: message.toolCallId,
-          toolName,
-          args,
-          result: safeResult,
-          isError: message.isError,
-          ...(surfaceUrl ? { engineWebSurfaceStatus: "completed" } : {}),
-        }),
-      });
-    }
-  }
-  return items;
-}
-
 function makeAgentDir(
   agentDir: string | undefined,
   piSdk: Pick<PiCodingAgentModule, "getAgentDir">,
@@ -1462,7 +989,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         payload: {
           message: input.message,
           class: classifyPiRuntimeError(input.message),
-          ...(input.cause !== undefined ? { detail: runtimeErrorDetail(input.cause) } : {}),
+          ...(input.cause !== undefined ? { detail: piRuntimeErrorDetail(input.cause) } : {}),
         },
         raw: {
           source: "pi.sdk.event",
@@ -1489,9 +1016,9 @@ const makePiAdapter = <P extends PiFamilyEngine>(
         payload: {
           itemType: tracked.itemType,
           status: "inProgress",
-          title: toolTitle(tracked.toolName, tracked.args),
+          title: piToolTitle(tracked.toolName, tracked.args),
           detail: message,
-          data: toolLifecycleData({
+          data: piToolLifecycleData({
             toolCallId: tracked.toolCallId,
             toolName: tracked.toolName,
             args: tracked.args,
@@ -2012,11 +1539,11 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             toolName: event.toolName,
             args: event.args,
             itemId,
-            itemType: toolItemType(event.toolName),
+            itemType: piToolItemType(event.toolName),
             ...(isBundledProductAsk ? { canonicalUserInputLifecycle: "candidate" as const } : {}),
           };
           context.activeToolItems.set(event.toolCallId, tracked);
-          const title = toolTitle(event.toolName, event.args);
+          const title = piToolTitle(event.toolName, event.args);
           recordItem(context, {
             type: "tool_call",
             status: "started",
@@ -2035,7 +1562,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
                 itemType: tracked.itemType,
                 status: "inProgress",
                 title,
-                data: toolLifecycleData({
+                data: piToolLifecycleData({
                   toolCallId: event.toolCallId,
                   toolName: event.toolName,
                   args: event.args,
@@ -2095,9 +1622,9 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             payload: {
               itemType: tracked.itemType,
               status: "inProgress",
-              title: toolTitle(event.toolName, tracked.args),
+              title: piToolTitle(event.toolName, tracked.args),
               ...(detail ? { detail } : {}),
-              data: toolLifecycleData({
+              data: piToolLifecycleData({
                 toolCallId: event.toolCallId,
                 toolName: event.toolName,
                 args: tracked.args,
@@ -2125,15 +1652,14 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             toolName: event.toolName,
             args: undefined,
             itemId: RuntimeItemId.makeUnsafe(`pi-tool-${event.toolCallId}`),
-            itemType: toolItemType(event.toolName),
+            itemType: piToolItemType(event.toolName),
           };
           const surfaceUrl =
             tracked.engineWebSurface?.url ??
             extractPiCuratorWebSurfaceUrl(event.toolName, event.result);
           const safeResult = sanitizeEngineWebSurfacePayload(event.result, surfaceUrl);
           const safeEvent = sanitizeEngineWebSurfacePayload(event, surfaceUrl);
-          const barrierDetails = toolRecord(toolRecord(event.result)?.details)?.barrier;
-          if (toolRecord(barrierDetails)?.status === "blocked") {
+          if (isPiBarrierSiblingBlocked(event.result)) {
             askUserMetrics.increment("barrier_sibling_blocked");
           }
           context.activeToolItems.delete(event.toolCallId);
@@ -2157,9 +1683,9 @@ const makePiAdapter = <P extends PiFamilyEngine>(
             payload: {
               itemType: tracked.itemType,
               status: event.isError ? "failed" : "completed",
-              title: toolTitle(event.toolName, tracked.args),
+              title: piToolTitle(event.toolName, tracked.args),
               ...(detail ? { detail } : {}),
-              data: toolLifecycleData({
+              data: piToolLifecycleData({
                 toolCallId: event.toolCallId,
                 toolName: event.toolName,
                 args: tracked.args,
@@ -2280,7 +1806,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
           if (turn) turn.leafId = leafId;
           if (engine === "oa" && context.activeInteractionMode === "plan") {
             context.proposedPlanCandidate = extractProposedPlanMarkdown(
-              latestAssistantText(event.messages),
+              latestPiAssistantText(event.messages),
             );
           } else {
             context.proposedPlanCandidate = undefined;
@@ -3715,7 +3241,7 @@ const makePiAdapter = <P extends PiFamilyEngine>(
       Effect.sync(() => sessions.has(threadId));
 
     const snapshotThread = (context: PiSessionContext): EngineThreadSnapshot => {
-      const historyItems = mapMessageHistory(context.runtime.session);
+      const historyItems = mapPiMessageHistory(context.runtime.session);
       const activeTurn = context.activeTurnId
         ? context.turns.find((turn) => turn.id === context.activeTurnId)
         : undefined;
