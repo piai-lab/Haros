@@ -121,17 +121,6 @@ jobs:
       - name: Verify isolated packaged behavior
         shell: bash
         run: |
-          node scripts/write-release-artifact-provenance.ts \
-            --assets-dir proof-assets \
-            --platform "${{ matrix.platform }}" \
-            --arch "${{ matrix.arch }}" \
-            --target "${{ matrix.target }}" \
-            --version "${{ needs.source.outputs.version }}" \
-            --source-commit "${{ needs.source.outputs.source_commit }}" \
-            --lockfile-sha256 "${{ needs.source.outputs.lockfile_sha256 }}" \
-            --publication false \
-            --signed false \
-            --allow-unsigned-windows-publication false
           node scripts/verify-packaged-desktop.ts \
             --assets-dir proof-assets \
             --platform "${{ matrix.platform }}" \

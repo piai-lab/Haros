@@ -71,8 +71,11 @@ function verifyWorkflow(): void {
   assertNotContains(workflow, "action-gh-release", "Proof must not create GitHub Releases.");
   assertNotContains(workflow, "latest.yml", "Proof must not collect updater feeds.");
   assertContains(workflow, 'HARNESSOS_PUBLISH_RELEASE: "false"', "Publishing must be denied.");
-  assertContains(workflow, "--publication false", "Provenance must record non-publication.");
-  assertContains(workflow, "--signed false", "Provenance must record unsigned artifacts.");
+  assertNotContains(
+    workflow,
+    "write-release-artifact-provenance",
+    "Proof must not carry a release-publication control plane.",
+  );
   assertContains(
     workflow,
     '--source-commit "${{ needs.source.outputs.source_commit }}"',
@@ -80,7 +83,7 @@ function verifyWorkflow(): void {
   );
   assertContains(
     workflow,
-    '--lockfile-sha256 "${{ needs.source.outputs.lockfile_sha256 }}"',
+    '--lockfile-sha256 "$LOCKFILE_SHA256"',
     "Packaging must bind the frozen lockfile digest.",
   );
   assertContains(workflow, "platform: mac\n            target: dmg", "Expected macOS proof.");
