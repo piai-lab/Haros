@@ -1,0 +1,17 @@
+Campaign-ID: harnessos-foundation
+Evidence-ID: E-017
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/HarnessOS
+Repository-Identity: github.com/piai-lab/HarnessOS
+Candidate-Version: 816bafc542107b1bae0139f6b5907a73a4ef71ad
+Command: (cd apps/server && bun run typecheck && bunx vitest run --project integration src/engine/oaRuntime.integration.test.ts src/engine/Layers/PiRuntimeIsolation.integration.test.ts src/engine/Layers/PiAdapter.integration.test.ts --maxWorkers=1) && ! rg -n -i "omni" apps packages scripts .github assets docs README.md package.json --glob '!docs/provenance.md' && git diff --check
+Exit-Code: 0
+Result: PASS
+Claims: C-004 (fresh-HOME runtime writer isolation; failure/cancel/shutdown audit remains open)
+
+Observed output:
+- Server typecheck passed and all 72 focused runtime/adapter tests passed.
+- The full OA Agent/Chat lifecycle ran under an isolated HOME and HarnessOS-private state root through reload, rollback, resume, and stop.
+- The OA state tree was captured byte-for-byte before the independent Engine lifecycle; it remained exactly unchanged afterward.
+- The independent Engine wrote its Session only beneath its own native state root under the isolated HOME.
+- Shipped source, packages, scripts, assets, and normal docs outside the sole provenance file contain no retired product token.
