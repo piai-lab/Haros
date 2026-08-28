@@ -14,7 +14,7 @@ import { FastModeIcon, GitBranchIcon, WorktreeIcon } from "~/lib/icons";
 import type { ThreadModelSummary } from "~/lib/threadModelSummary";
 import { FolderClosed } from "./FolderClosed";
 import { ProjectSidebarIcon } from "./ProjectSidebarIcon";
-import { ProviderIcon } from "./ProviderIcon";
+import { ModelIdentityIcon } from "./ModelIdentityIcon";
 import type { ThreadStatusPill } from "./Sidebar.logic";
 import { SidebarStatusTrailingGlyph } from "./SidebarStatusTrailingGlyph";
 import {
@@ -59,7 +59,7 @@ function MetaRow({ icon, children }: { icon: ReactNode; children: string }) {
 function ModelRow({ model }: { model: ThreadModelSummary }) {
   return (
     <span className={META_ROW_CLASS_NAME}>
-      <ProviderIcon provider={model.provider} className={META_ICON_CLASS_NAME} />
+      <ModelIdentityIcon selection={model.modelSelection} className={META_ICON_CLASS_NAME} />
       <span className="min-w-0 truncate">{model.modelLabel}</span>
       {model.fastMode ? (
         <FastModeIcon aria-hidden className="size-3.5 shrink-0 text-muted-foreground/75" />

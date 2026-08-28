@@ -6,12 +6,13 @@ import { useRef, useState, type KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { ProfileHeatmapCell, ProfileStats, ProfileTokenStats } from "@omnimind/contracts";
 
-import { ProviderIcon } from "~/components/ProviderIcon";
+import { ModelIdentityIcon } from "~/components/ModelIdentityIcon";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { useI18n } from "~/i18n";
 import { CentralIcon } from "~/lib/central-icons";
+import { buildModelSelection } from "~/providerModelOptions";
 import {
   serverProfileStatsQueryOptions,
   serverProfileTokenStatsQueryOptions,
@@ -317,8 +318,11 @@ function ModelUsageSection({ stats }: { readonly stats: ProfileStats }) {
                 >
                   <div className="flex items-center justify-between gap-4 text-sm">
                     <span className="flex min-w-0 items-center gap-2">
-                      {entry.provider !== "unknown" ? (
-                        <ProviderIcon provider={entry.provider} className="size-3.5 shrink-0" />
+                      {entry.provider !== "unknown" && entry.kind === "model" ? (
+                        <ModelIdentityIcon
+                          selection={buildModelSelection(entry.provider, entry.model)}
+                          className="size-3.5 shrink-0"
+                        />
                       ) : (
                         <CentralIcon
                           name="chart-2"

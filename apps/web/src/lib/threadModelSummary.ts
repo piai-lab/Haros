@@ -17,6 +17,7 @@ import { formatProviderModelOptionName, type ProviderOptions } from "~/providerM
 
 export interface ThreadModelSummary {
   provider: ProviderKind;
+  modelSelection: ModelSelection;
   /** Display name of the selected model, e.g. "Sonnet 4.5". */
   modelLabel: string;
   /** Reasoning effort / thinking label, e.g. "High"; null when the model has none. */
@@ -48,6 +49,7 @@ export function resolveThreadModelSummary(
   );
   return {
     provider,
+    modelSelection,
     modelLabel,
     statusLabel: resolveComposerTraitStatusLabel(traits),
     fastMode: showsComposerFastModeBadge(traits),

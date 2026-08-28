@@ -5,6 +5,7 @@
 import {
   CommandId,
   MessageId,
+  ModelPresentationIdentity,
   ModelSelection,
   OrchestrationProposedPlanId,
   OrchestrationThreadPullRequest,
@@ -176,6 +177,7 @@ const PersistedQueuedComposerChatTurn = Schema.Struct({
   selectedModel: Schema.NullOr(Schema.String),
   selectedPromptEffort: Schema.NullOr(Schema.String),
   modelSelection: ModelSelection,
+  modelPresentationIdentity: Schema.optionalKey(ModelPresentationIdentity),
   providerOptionsForDispatch: Schema.optionalKey(ProviderStartOptions),
   sourceProposedPlan: Schema.optionalKey(PersistedSourceProposedPlanReference),
   runtimeMode: RuntimeMode,
@@ -196,6 +198,7 @@ const PersistedQueuedComposerPlanFollowUp = Schema.Struct({
   selectedModel: Schema.NullOr(Schema.String),
   selectedPromptEffort: Schema.NullOr(Schema.String),
   modelSelection: ModelSelection,
+  modelPresentationIdentity: Schema.optionalKey(ModelPresentationIdentity),
   providerOptionsForDispatch: Schema.optionalKey(ProviderStartOptions),
   runtimeMode: RuntimeMode,
 });

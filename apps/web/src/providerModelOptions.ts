@@ -18,6 +18,8 @@ import {
   type GrokModelOptions,
   type GrokModelSelection,
   type KiloModelSelection,
+  type ModelPresentationIdentity,
+  type ModelPresentationIdentitySource,
   type ModelSelection,
   type OpenCodeModelOptions,
   type OpenCodeModelSelection,
@@ -38,6 +40,59 @@ export interface ProviderModelOption {
   upstreamProviderId?: string;
   upstreamProviderName?: string;
   upstreamProviderOrigin?: "builtin" | "models_json" | "extension" | "unknown";
+  presentationSource?: ModelPresentationIdentitySource;
+  isCustom?: boolean;
+}
+
+function presentationSourceFromOrigin(
+  origin: ProviderModelOption["upstreamProviderOrigin"],
+): ModelPresentationIdentitySource {
+  if (origin === "models_json") return "user-configured";
+  if (origin === "extension") return "extension";
+  if (origin === "unknown") return "unknown";
+  return origin === "builtin" ? "builtin-catalog" : "runtime-catalog";
+}
+
+function presentationSourceFromDiscovery(
+  origin: ProviderModelOption["upstreamProviderOrigin"],
+): ModelPresentationIdentitySource {
+  if (origin === "models_json") return "user-configured";
+  if (origin === "extension") return "extension";
+  if (origin === "unknown") return "unknown";
+  return "runtime-catalog";
+}
+
+export function resolveModelPresentationIdentity(input: {
+  selection: ModelSelection;
+  options?: ReadonlyArray<ProviderModelOption>;
+}): ModelPresentationIdentity {
+  const option = input.options?.find((entry) => entry.slug === input.selection.model);
+  const qualifiedServiceId = input.selection.model.includes("/")
+    ? input.selection.model.slice(0, input.selection.model.indexOf("/")).trim()
+    : undefined;
+  const serviceId = option?.upstreamProviderId?.trim() || qualifiedServiceId;
+  const serviceName = option?.upstreamProviderName?.trim();
+  const source =
+    option?.presentationSource ??
+    (option?.isCustom
+      ? "user-configured"
+      : option
+        ? presentationSourceFromOrigin(option.upstreamProviderOrigin ?? "builtin")
+        : qualifiedServiceId
+          ? "runtime-catalog"
+          : "unknown");
+  return {
+    model: input.selection.model,
+    displayName:
+      option?.name.trim() ||
+      formatProviderModelOptionName({
+        provider: input.selection.provider,
+        slug: input.selection.model,
+      }),
+    ...(serviceId ? { serviceId } : {}),
+    ...(serviceName ? { serviceName } : {}),
+    source,
+  };
 }
 
 export interface ProviderModelOptionGroup {
@@ -177,6 +232,7 @@ export function mergeDynamicModelOptions(input: {
         rawName.toLowerCase() !== normalizedSlug.toLowerCase()
           ? rawName
           : displayNameFallback),
+      presentationSource: presentationSourceFromDiscovery(dynamicModel.upstreamProviderOrigin),
       ...(dynamicModel.description?.trim() ? { description: dynamicModel.description.trim() } : {}),
       ...(dynamicModel.upstreamProviderId?.trim()
         ? { upstreamProviderId: dynamicModel.upstreamProviderId.trim() }

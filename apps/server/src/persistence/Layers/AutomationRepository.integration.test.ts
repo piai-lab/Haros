@@ -29,6 +29,12 @@ const createInput = {
     provider: "codex",
     model: "gpt-5-codex",
   },
+  modelPresentationIdentity: {
+    model: "gpt-5-codex",
+    displayName: "GPT-5 Codex",
+    serviceId: "openai",
+    source: "builtin-catalog",
+  },
 } satisfies AutomationCreateInput;
 
 const createInputForProject = (projectId: string) => ({
@@ -42,6 +48,7 @@ const permissionSnapshot = {
     provider: "codex",
     model: "gpt-5-codex",
   },
+  modelPresentationIdentity: createInput.modelPresentationIdentity,
   runtimeMode: "approval-required",
   interactionMode: "default",
   worktreeMode: "worktree",
@@ -66,6 +73,10 @@ layer("AutomationRepository", (it) => {
       assert.strictEqual(created.worktreeMode, "auto");
       assert.strictEqual(listed.definitions.length, 1);
       assert.strictEqual(listed.definitions[0]?.id, created.id);
+      assert.deepStrictEqual(
+        listed.definitions[0]?.modelPresentationIdentity,
+        createInput.modelPresentationIdentity,
+      );
     }),
   );
 

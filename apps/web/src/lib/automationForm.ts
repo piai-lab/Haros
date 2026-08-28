@@ -16,6 +16,7 @@ import type {
   AutomationUpdateInput,
   AutomationWorktreeMode,
   ModelSelection,
+  ModelPresentationIdentity,
   ProjectId,
   ProviderStartOptions,
   RuntimeMode,
@@ -42,6 +43,7 @@ import {
   type AutomationDraftWarning,
   type AutomationDraftWarningId,
 } from "./automationDraft";
+import { resolveModelPresentationIdentity } from "../providerModelOptions";
 
 export const defaultModelSelection: ModelSelection = {
   provider: "codex",
@@ -94,6 +96,7 @@ export type AutomationFormState = {
   readonly runtimeMode: RuntimeMode;
   readonly worktreeMode: AutomationWorktreeMode;
   readonly modelSelection: ModelSelection;
+  readonly modelPresentationIdentity?: ModelPresentationIdentity;
   readonly mode: AutomationMode;
   readonly notificationPolicy: AutomationNotificationPolicy;
   readonly targetThreadId: string;
@@ -458,13 +461,14 @@ export function formFromDefinition(
     runtimeMode: definition?.runtimeMode ?? "approval-required",
     worktreeMode: definition?.worktreeMode ?? "auto",
     modelSelection: definition?.modelSelection ?? fallbackModelSelection,
+    ...(definition?.modelPresentationIdentity
+      ? { modelPresentationIdentity: definition.modelPresentationIdentity }
+      : {}),
     mode: definition?.mode ?? "standalone",
     notificationPolicy: definition?.notificationPolicy ?? "all",
     targetThreadId: definition?.targetThreadId ?? "",
     maxIterations: definition?.maxIterations != null ? String(definition.maxIterations) : "",
-    stopAfterFailures: automationFailurePolicyValue(
-      definition?.stopAfterConsecutiveFailures,
-    ),
+    stopAfterFailures: automationFailurePolicyValue(definition?.stopAfterConsecutiveFailures),
     stopWhen: definition
       ? stopWhenFromCompletionPolicy(definition.completionPolicy ?? { type: "none" })
       : "",
@@ -628,6 +632,9 @@ export function createInputFromForm(
     schedule: scheduleFromForm(form),
     enabled: form.enabled,
     modelSelection: form.modelSelection,
+    modelPresentationIdentity:
+      form.modelPresentationIdentity ??
+      resolveModelPresentationIdentity({ selection: form.modelSelection }),
     runtimeMode: form.runtimeMode,
     interactionMode: "default",
     worktreeMode: form.worktreeMode,

@@ -74,6 +74,16 @@ const STUDIO_PROJECT_KIND_SET = new Set<ProjectKind>(["studio"]);
 // use placeholder roots (e.g. the home dir) that legitimately coexist with real projects.
 const WORKSPACE_OWNING_PROJECT_KIND_SET = new Set<ProjectKind>(["project", "studio"]);
 
+function admitModelPresentationIdentity(
+  identity: Extract<
+    OrchestrationCommand,
+    { type: "thread.turn.start" }
+  >["modelPresentationIdentity"],
+  modelSelection: OrchestrationThread["modelSelection"],
+) {
+  return identity?.model === modelSelection.model ? identity : undefined;
+}
+
 function validateStructuralRuntimeMode(
   command: OrchestrationCommand,
   modelSelection: OrchestrationThread["modelSelection"],
@@ -1925,10 +1935,17 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           updatedAt: command.createdAt,
         },
       };
+      const admittedModelPresentationIdentity = admitModelPresentationIdentity(
+        command.modelPresentationIdentity,
+        admittedModelSelection,
+      );
       const turnRequestPayloadBase = {
         threadId: command.threadId,
         messageId: command.message.messageId,
         modelSelection: admittedModelSelection,
+        ...(admittedModelPresentationIdentity !== undefined
+          ? { modelPresentationIdentity: admittedModelPresentationIdentity }
+          : {}),
         ...(command.providerOptions !== undefined
           ? { providerOptions: command.providerOptions }
           : {}),
@@ -2029,6 +2046,10 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         });
       }
       yield* validateStructuralRuntimeMode(command, command.modelSelection, command.runtimeMode);
+      const admittedModelPresentationIdentity = admitModelPresentationIdentity(
+        command.modelPresentationIdentity,
+        command.modelSelection,
+      );
       return {
         ...withEventBase({
           aggregateKind: "thread",
@@ -2041,6 +2062,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           threadId: command.threadId,
           messageId: command.messageId,
           modelSelection: command.modelSelection,
+          ...(admittedModelPresentationIdentity !== undefined
+            ? { modelPresentationIdentity: admittedModelPresentationIdentity }
+            : {}),
           ...(command.providerOptions !== undefined
             ? { providerOptions: command.providerOptions }
             : {}),

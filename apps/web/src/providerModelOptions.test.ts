@@ -94,6 +94,7 @@ describe("mergeDynamicModelOptions", () => {
       expect.objectContaining({
         slug: "local/glm-5.2",
         upstreamProviderOrigin: "models_json",
+        presentationSource: "user-configured",
       }),
     ]);
   });
@@ -126,8 +127,12 @@ describe("mergeDynamicModelOptions", () => {
         ],
       }),
     ).toEqual([
-      { slug: "Gemini 4 Pro", name: "Gemini 4 Pro" },
-      { slug: "Claude Sonnet 5", name: "Claude Sonnet 5" },
+      { slug: "Gemini 4 Pro", name: "Gemini 4 Pro", presentationSource: "runtime-catalog" },
+      {
+        slug: "Claude Sonnet 5",
+        name: "Claude Sonnet 5",
+        presentationSource: "runtime-catalog",
+      },
       { slug: "custom/private-model", name: "custom/private-model", isCustom: true },
     ]);
   });
@@ -151,8 +156,9 @@ describe("mergeDynamicModelOptions", () => {
         slug: "gpt-5.6-luna",
         name: "GPT-5.6 Luna",
         description: "0.4x Factory token rate",
+        presentationSource: "runtime-catalog",
       },
-      { slug: "custom:model", name: "Custom model" },
+      { slug: "custom:model", name: "Custom model", presentationSource: "runtime-catalog" },
     ]);
   });
 
@@ -166,7 +172,9 @@ describe("mergeDynamicModelOptions", () => {
         ],
         dynamicModels: [{ slug: "gpt-5.6-sol", name: "GPT-5.6 Sol" }],
       }),
-    ).toEqual([{ slug: "gpt-5.6-sol", name: "GPT-5.6 Sol" }]);
+    ).toEqual([
+      { slug: "gpt-5.6-sol", name: "GPT-5.6 Sol", presentationSource: "runtime-catalog" },
+    ]);
   });
 
   it("deduplicates Cursor transport variants by their base model", () => {
@@ -196,6 +204,7 @@ describe("mergeDynamicModelOptions", () => {
         name: "Cursor Grok 4.5",
         upstreamProviderId: "xai",
         upstreamProviderName: "xAI",
+        presentationSource: "runtime-catalog",
       },
     ]);
   });
@@ -257,7 +266,7 @@ describe("mergeDynamicModelOptions", () => {
         dynamicModels: [{ slug: "grok-4.6", name: "Grok 4.6" }],
       }),
     ).toEqual([
-      { slug: "grok-4.6", name: "Grok 4.6" },
+      { slug: "grok-4.6", name: "Grok 4.6", presentationSource: "runtime-catalog" },
       { slug: "custom/grok-fast", name: "custom/grok-fast", isCustom: true },
     ]);
   });

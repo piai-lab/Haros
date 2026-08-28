@@ -13,6 +13,7 @@ import { buildPromptThreadTitleFallback } from "@omnimind/shared/chatThreads";
 import { newCommandId, newMessageId, newThreadId } from "./utils";
 import { buildThreadHandoffImportedMessages } from "./threadHandoff";
 import type { Project, Thread } from "../types";
+import { resolveModelPresentationIdentity } from "../providerModelOptions";
 
 const SIDECHAT_MISSING_GRACE_MS = 15_000;
 type SidechatPaneRetention = { kind: "syncing" } | { kind: "grace"; untilMs: number };
@@ -202,6 +203,9 @@ export async function sendSidechatPrompt(input: {
       attachments: [],
     },
     modelSelection: input.selectedModelSelection,
+    modelPresentationIdentity: resolveModelPresentationIdentity({
+      selection: input.selectedModelSelection,
+    }),
     runtimeMode: "approval-required",
     interactionMode: "default",
     createdAt: new Date().toISOString(),

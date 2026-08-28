@@ -9,6 +9,7 @@ import {
   AutomationSchedule,
   DEFAULT_AUTOMATION_RUNTIME_MODE,
   ModelSelection,
+  ModelPresentationIdentity,
   ProviderStartOptions,
   ProjectId,
   TurnId,
@@ -77,6 +78,7 @@ const AutomationDefinitionDbRow = Schema.Struct({
   enabled: Schema.Number,
   nextRunAt: AutomationDefinition.fields.nextRunAt,
   modelSelection: Schema.fromJsonString(ModelSelection),
+  modelPresentationIdentity: Schema.NullOr(Schema.fromJsonString(ModelPresentationIdentity)),
   providerOptions: Schema.NullOr(Schema.fromJsonString(ProviderStartOptions)),
   runtimeMode: AutomationDefinition.fields.runtimeMode,
   interactionMode: AutomationDefinition.fields.interactionMode,
@@ -186,6 +188,7 @@ function toDefinition(row: AutomationDefinitionDbRow) {
     // The explicit threshold is authoritative. Keep the boolean only as a compatibility mirror.
     stopOnError: row.stopAfterConsecutiveFailures !== null,
     providerOptions: row.providerOptions ?? undefined,
+    modelPresentationIdentity: row.modelPresentationIdentity ?? undefined,
   }).pipe(Effect.mapError(toPersistenceDecodeError("AutomationRepository.definitionRowToDomain")));
 }
 
@@ -214,6 +217,7 @@ const makeAutomationRepository = Effect.gen(function* () {
           enabled,
           next_run_at,
           model_selection_json,
+          model_presentation_identity_json,
           provider_options_json,
           runtime_mode,
           interaction_mode,
@@ -253,6 +257,7 @@ const makeAutomationRepository = Effect.gen(function* () {
           ${definition.enabled},
           ${definition.nextRunAt},
           ${definition.modelSelection},
+          ${definition.modelPresentationIdentity},
           ${definition.providerOptions},
           ${definition.runtimeMode},
           ${definition.interactionMode},
@@ -300,6 +305,7 @@ const makeAutomationRepository = Effect.gen(function* () {
           enabled,
           next_run_at AS "nextRunAt",
           model_selection_json AS "modelSelection",
+          model_presentation_identity_json AS "modelPresentationIdentity",
           provider_options_json AS "providerOptions",
           runtime_mode AS "runtimeMode",
           interaction_mode AS "interactionMode",
@@ -359,6 +365,7 @@ const makeAutomationRepository = Effect.gen(function* () {
               ELSE NULL
             END,
             model_selection_json = ${definition.modelSelection},
+            model_presentation_identity_json = ${definition.modelPresentationIdentity},
             provider_options_json = ${definition.providerOptions},
             runtime_mode = ${definition.runtimeMode},
             interaction_mode = ${definition.interactionMode},
@@ -445,6 +452,7 @@ const makeAutomationRepository = Effect.gen(function* () {
           enabled,
           next_run_at AS "nextRunAt",
           model_selection_json AS "modelSelection",
+          model_presentation_identity_json AS "modelPresentationIdentity",
           provider_options_json AS "providerOptions",
           runtime_mode AS "runtimeMode",
           interaction_mode AS "interactionMode",
@@ -500,6 +508,7 @@ const makeAutomationRepository = Effect.gen(function* () {
           definitions.enabled,
           definitions.next_run_at AS "nextRunAt",
           definitions.model_selection_json AS "modelSelection",
+          definitions.model_presentation_identity_json AS "modelPresentationIdentity",
           definitions.provider_options_json AS "providerOptions",
           definitions.runtime_mode AS "runtimeMode",
           definitions.interaction_mode AS "interactionMode",
@@ -1938,6 +1947,9 @@ const makeAutomationRepository = Effect.gen(function* () {
       enabled: input.enabled ?? true,
       nextRunAt: initialNextRunAt,
       modelSelection: input.modelSelection,
+      ...(input.modelPresentationIdentity?.model === input.modelSelection.model
+        ? { modelPresentationIdentity: input.modelPresentationIdentity }
+        : {}),
       ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
       runtimeMode: input.runtimeMode ?? DEFAULT_AUTOMATION_RUNTIME_MODE,
       interactionMode: input.interactionMode ?? "default",
@@ -1974,6 +1986,7 @@ const makeAutomationRepository = Effect.gen(function* () {
       enabled: definition.enabled ? 1 : 0,
       stopOnError: definition.stopOnError ? 1 : 0,
       providerOptions: definition.providerOptions ?? null,
+      modelPresentationIdentity: definition.modelPresentationIdentity ?? null,
       completionPolicy: definition.completionPolicy ?? { type: "none" },
       completionPolicyVersion: definition.completionPolicyVersion ?? 1,
       completionPolicyUpdatedAt: definition.completionPolicyUpdatedAt ?? definition.createdAt,
@@ -2076,6 +2089,7 @@ const makeAutomationRepository = Effect.gen(function* () {
           enabled: input.definition.enabled ? 1 : 0,
           stopOnError: input.definition.stopAfterConsecutiveFailures !== null ? 1 : 0,
           providerOptions: input.definition.providerOptions ?? null,
+          modelPresentationIdentity: input.definition.modelPresentationIdentity ?? null,
           completionPolicy: input.definition.completionPolicy ?? { type: "none" },
           completionPolicyVersion: input.definition.completionPolicyVersion ?? 1,
           completionPolicyUpdatedAt:

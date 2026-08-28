@@ -12,6 +12,7 @@ import {
   type AutomationUpdateInput,
   type AutomationWorktreeMode,
   type ModelSelection,
+  type ModelPresentationIdentity,
   type ProviderKind,
   type RuntimeMode,
   type ThreadId,
@@ -105,7 +106,7 @@ import type { AppLocale } from "~/locale";
 import { useI18n, type MessageKey } from "~/i18n";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { ensureNativeApi } from "~/nativeApi";
-import { buildModelSelection } from "~/providerModelOptions";
+import { buildModelSelection, resolveModelPresentationIdentity } from "~/providerModelOptions";
 import { useProviderModelCatalog } from "~/hooks/useProviderModelCatalog";
 import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
 import { useStore } from "~/store";
@@ -998,7 +999,7 @@ export function AutomationModelPicker({
 }: {
   readonly value: ModelSelection;
   readonly projectCwd: string | null;
-  readonly onChange: (value: ModelSelection) => void;
+  readonly onChange: (value: ModelSelection, identity: ModelPresentationIdentity) => void;
   readonly onAutoModeSupportChange?: (supported: boolean) => void;
 }) {
   const { preferences: settings } = useLocalPreferences();
@@ -1079,7 +1080,19 @@ export function AutomationModelPicker({
           model,
           runtimeModels: runtimeModelsByProvider[provider],
         });
-        onChange(buildModelSelection(provider, model, undefined, runtimeModel?.supportsAutoMode));
+        const selection = buildModelSelection(
+          provider,
+          model,
+          undefined,
+          runtimeModel?.supportsAutoMode,
+        );
+        onChange(
+          selection,
+          resolveModelPresentationIdentity({
+            selection,
+            options: modelOptionsByProvider[provider],
+          }),
+        );
       }}
     />
   );
@@ -1377,10 +1390,11 @@ export function AutomationDialog({
             <AutomationModelPicker
               value={form.modelSelection}
               projectCwd={selectedProject?.cwd ?? null}
-              onChange={(value) => {
+              onChange={(value, modelPresentationIdentity) => {
                 onFormChange({
                   ...form,
                   modelSelection: value,
+                  modelPresentationIdentity,
                 });
               }}
               onAutoModeSupportChange={handleAutoModeSupportChange}

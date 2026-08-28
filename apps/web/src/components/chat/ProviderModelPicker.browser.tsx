@@ -600,6 +600,17 @@ describe("ProviderModelPicker", () => {
     });
 
     try {
+      const activeModelIcon = document.querySelector<HTMLElement>(
+        'button [data-model-service-icon-level="model"]',
+      );
+      expect(
+        (
+          activeModelIcon?.getAttribute("src") ??
+          activeModelIcon?.style.maskImage ??
+          ""
+        ).toLowerCase(),
+      ).toContain("deepseek");
+
       await page.getByRole("button").click();
 
       await expect
@@ -627,6 +638,19 @@ describe("ProviderModelPicker", () => {
           (element) => element.textContent,
         ),
       ).toEqual(["DeepSeek V4 FlashDeepSeek", "DeepSeek V4 FlashOpenCode Go"]);
+      const modelIcons = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '[role="menuitemradio"] [data-model-service-icon-level="model"]',
+        ),
+      );
+      expect(modelIcons).toHaveLength(2);
+      expect(
+        modelIcons.every((element) =>
+          (element.getAttribute("src") ?? element.style.maskImage)
+            .toLowerCase()
+            .includes("deepseek"),
+        ),
+      ).toBe(true);
     } finally {
       await mounted.cleanup();
     }

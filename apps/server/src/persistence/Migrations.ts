@@ -117,6 +117,7 @@ import Migration0098 from "./Migrations/098_ProjectionThreadsGoalAchievements.ts
 import Migration0099 from "./Migrations/099_BackfillAutomationRunThreadSource.ts";
 import Migration0100 from "./Migrations/100_BackfillMaxIterationsDisabledReason.ts";
 import Migration0101 from "./Migrations/101_ProfileUsageInsightsArchive.ts";
+import Migration0102 from "./Migrations/102_AutomationModelPresentationIdentity.ts";
 
 /**
  * Migration loader with all migrations defined inline.
@@ -233,6 +234,7 @@ export const migrationEntries = [
   [99, "BackfillAutomationRunThreadSource", Migration0099],
   [100, "BackfillMaxIterationsDisabledReason", Migration0100],
   [101, "ProfileUsageInsightsArchive", Migration0101],
+  [102, "AutomationModelPresentationIdentity", Migration0102],
 ] as const;
 
 export const makeMigrationLoader = (throughId?: number) =>

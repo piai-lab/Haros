@@ -201,7 +201,9 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup.match(/data-assistant-turn-identity="visible"/g)).toHaveLength(1);
-    expect(markup).toContain('data-assistant-turn-avatar="deepseek"');
+    expect(markup).toContain('data-assistant-turn-avatar="model"');
+    expect(markup.toLowerCase()).toContain("%3ctitle%3edeepseek%3c/title%3e");
+    expect(markup).not.toContain("omnimind.svg");
     expect(markup).toContain('data-assistant-turn-identity="continuation"');
     expect(markup).toContain("DeepSeek V4 Pro");
     expect(markup).toContain("OmniMind ·");

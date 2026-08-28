@@ -945,7 +945,16 @@ layer("AutomationService", (it) => {
     Effect.gen(function* () {
       resetHarness();
       const service = yield* AutomationService;
-      const created = yield* service.create(createInput("local"));
+      const modelPresentationIdentity = {
+        model: "gpt-5-codex",
+        displayName: "GPT-5 Codex",
+        serviceId: "openai",
+        source: "builtin-catalog" as const,
+      };
+      const created = yield* service.create({
+        ...createInput("local"),
+        modelPresentationIdentity,
+      });
 
       const result = yield* service.runNow({ automationId: created.id });
       const threadCreate = dispatchedCommands[0];
@@ -964,6 +973,12 @@ layer("AutomationService", (it) => {
       assert.include(turnStart.message.text, "Memory (persistent across runs");
       assert.isTrue(turnStart.message.text.endsWith("---\n\nCheck stale dependencies."));
       assert.strictEqual(turnStart.dispatchMode, "queue");
+      assert.deepStrictEqual(created.modelPresentationIdentity, modelPresentationIdentity);
+      assert.deepStrictEqual(
+        result.run.permissionSnapshot.modelPresentationIdentity,
+        modelPresentationIdentity,
+      );
+      assert.deepStrictEqual(turnStart.modelPresentationIdentity, modelPresentationIdentity);
       assert.strictEqual(result.run.threadId, threadCreate.threadId);
       assert.strictEqual(result.run.messageId, turnStart.message.messageId);
       assert.strictEqual(result.run.threadCreateCommandId, threadCreate.commandId);
@@ -2201,11 +2216,18 @@ layer("AutomationService", (it) => {
       const service = yield* AutomationService;
       const targetThreadId = ThreadId.makeUnsafe("heartbeat-target-thread");
       threadShell = Option.some(makeThreadShell({ id: targetThreadId }));
+      const modelPresentationIdentity = {
+        model: "gpt-5-codex",
+        displayName: "GPT-5 Codex",
+        serviceId: "openai",
+        source: "builtin-catalog" as const,
+      };
 
       const created = yield* service.create({
         ...createInput("local"),
         mode: "heartbeat",
         targetThreadId,
+        modelPresentationIdentity,
       });
 
       const { run } = yield* service.runNow({ automationId: created.id });
@@ -2218,6 +2240,11 @@ layer("AutomationService", (it) => {
         assert.fail("Expected a thread.turn.start command.");
       }
       assert.strictEqual(command.threadId, targetThreadId);
+      assert.deepStrictEqual(
+        run.permissionSnapshot.modelPresentationIdentity,
+        modelPresentationIdentity,
+      );
+      assert.deepStrictEqual(command.modelPresentationIdentity, modelPresentationIdentity);
       assert.isUndefined(dispatchedCommands.find((entry) => entry.type === "thread.create"));
       assert.strictEqual(run.threadId, targetThreadId);
       assert.strictEqual(run.status, "running");

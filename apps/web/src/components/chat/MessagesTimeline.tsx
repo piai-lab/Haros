@@ -63,8 +63,7 @@ import {
   Undo2Icon,
   WorktreeIcon,
 } from "~/lib/icons";
-import { ModelServiceIcon } from "../ModelServiceIcon";
-import { ProviderIcon } from "../ProviderIcon";
+import { ModelIdentityIcon } from "../ModelIdentityIcon";
 import { formatProviderModelOptionName } from "../../providerModelOptions";
 import { pinActionLabel } from "~/lib/pin";
 import { Button } from "../ui/button";
@@ -438,41 +437,27 @@ function WorktreeSetupCard({
   );
 }
 
-function resolveOmniMindModelService(selection: ModelSelection): {
-  readonly serviceId: string;
-  readonly modelId: string;
-} | null {
-  if (selection.provider !== "omnimind") return null;
-  const separatorIndex = selection.model.indexOf("/");
-  if (separatorIndex <= 0 || separatorIndex === selection.model.length - 1) return null;
-  return {
-    serviceId: selection.model.slice(0, separatorIndex),
-    modelId: selection.model.slice(separatorIndex + 1),
-  };
-}
-
-function AssistantTurnAvatar({ selection }: { readonly selection: ModelSelection | null }) {
-  const modelService = selection ? resolveOmniMindModelService(selection) : null;
-  const isDeepSeek = modelService?.serviceId.toLocaleLowerCase("en-US") === "deepseek";
+function AssistantTurnAvatar({
+  provenance,
+}: {
+  readonly provenance: OrchestrationTurnProvenance | null;
+}) {
+  const selection = provenance?.modelSelection ?? null;
   return (
     <div
       aria-hidden="true"
-      data-assistant-turn-avatar={isDeepSeek ? "deepseek" : (selection?.provider ?? "generic")}
-      className={cn(
-        "flex size-[30px] shrink-0 items-center justify-center rounded-lg border border-[color:var(--color-border-light)] shadow-[0_1px_2px_rgba(15,23,42,0.08)] max-[560px]:size-7 max-[560px]:rounded-[7.5px]",
-        isDeepSeek
-          ? "border-transparent bg-[#4D6BFE] [&_[data-model-service-icon-render=image]]:brightness-0 [&_[data-model-service-icon-render=image]]:invert"
-          : "bg-[var(--color-background-elevated-secondary)] text-foreground/80",
-      )}
+      data-assistant-turn-avatar={selection ? "model" : "generic"}
+      className="flex size-[30px] shrink-0 items-center justify-center rounded-lg border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-secondary)] text-foreground/80 shadow-[0_1px_2px_rgba(15,23,42,0.08)] max-[560px]:size-7 max-[560px]:rounded-[7.5px]"
     >
-      {modelService ? (
-        <ModelServiceIcon
-          serviceId={modelService.serviceId}
-          modelId={modelService.modelId}
+      {selection ? (
+        <ModelIdentityIcon
+          selection={selection}
+          historical
+          {...(provenance?.modelPresentationIdentity
+            ? { identity: provenance.modelPresentationIdentity }
+            : {})}
           className="size-5 max-[560px]:size-[18px]"
         />
-      ) : selection && selection.provider !== "omnimind" ? (
-        <ProviderIcon provider={selection.provider} className="size-5 max-[560px]:size-[18px]" />
       ) : (
         <BrainIcon className="size-[18px] max-[560px]:size-4" />
       )}
@@ -491,12 +476,14 @@ function AssistantTurnRowFrame({
 }) {
   if (!layout) return <>{children}</>;
   const selection = layout.provenance?.modelSelection ?? null;
-  const modelName = selection
-    ? formatProviderModelOptionName({
-        provider: selection.provider,
-        slug: selection.model,
-      })
-    : "OmniMind";
+  const modelName =
+    layout.provenance?.modelPresentationIdentity?.displayName ??
+    (selection
+      ? formatProviderModelOptionName({
+          provider: selection.provider,
+          slug: selection.model,
+        })
+      : "OmniMind");
   const engineName = selection ? PROVIDER_DISPLAY_NAMES[selection.provider] : null;
   return (
     <div
@@ -504,7 +491,7 @@ function AssistantTurnRowFrame({
       data-assistant-turn-response={layout.responseId}
       data-assistant-turn-identity={layout.showIdentity ? "visible" : "continuation"}
     >
-      {layout.showIdentity ? <AssistantTurnAvatar selection={selection} /> : null}
+      {layout.showIdentity ? <AssistantTurnAvatar provenance={layout.provenance ?? null} /> : null}
       <div className="col-start-2 min-w-0" data-assistant-turn-content="true">
         {layout.showIdentity ? (
           <div className="mb-3 min-h-[30px] font-system-ui max-[560px]:min-h-7">

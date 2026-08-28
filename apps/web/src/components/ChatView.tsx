@@ -611,7 +611,7 @@ import {
   resolveDiffEnvironmentState,
   resolveThreadEnvironmentMode,
 } from "../lib/threadEnvironment";
-import { buildModelSelection } from "../providerModelOptions";
+import { buildModelSelection, resolveModelPresentationIdentity } from "../providerModelOptions";
 import {
   isDuplicateProjectCreateError,
   waitForRecoverableProjectForDuplicateCreate,
@@ -7868,6 +7868,13 @@ export default function ChatView({
     const selectedPromptEffortForSend =
       queuedChatTurn?.selectedPromptEffort ?? selectedPromptEffort;
     const selectedModelSelectionForSend = queuedChatTurn?.modelSelection ?? selectedModelSelection;
+    const modelPresentationIdentityForSend = selectedModelSelectionForSend
+      ? (queuedChatTurn?.modelPresentationIdentity ??
+        resolveModelPresentationIdentity({
+          selection: selectedModelSelectionForSend,
+          options: modelOptionsByProvider[selectedModelSelectionForSend.provider],
+        }))
+      : undefined;
     const providerOptionsForDispatchForSend =
       queuedChatTurn?.providerOptionsForDispatch ?? providerOptionsForDispatch;
     const runtimeModeForSend = queuedChatTurn?.runtimeMode ?? runtimeMode;
@@ -7945,6 +7952,9 @@ export default function ChatView({
             selectedModel,
             selectedPromptEffort,
             modelSelection: selectedModelSelectionForSend,
+            ...(modelPresentationIdentityForSend
+              ? { modelPresentationIdentity: modelPresentationIdentityForSend }
+              : {}),
             ...(providerOptionsForDispatch ? { providerOptionsForDispatch } : {}),
             runtimeMode,
           });
@@ -8296,6 +8306,9 @@ export default function ChatView({
         selectedModel: selectedModelForSend,
         selectedPromptEffort: selectedPromptEffortForSend,
         modelSelection: selectedModelSelectionForSend,
+        ...(modelPresentationIdentityForSend
+          ? { modelPresentationIdentity: modelPresentationIdentityForSend }
+          : {}),
         ...(providerOptionsForDispatchForSend
           ? { providerOptionsForDispatch: providerOptionsForDispatchForSend }
           : {}),
@@ -8646,6 +8659,9 @@ export default function ChatView({
           selectedModel: selectedModelForSend,
           selectedPromptEffort: selectedPromptEffortForSend,
           modelSelection: selectedModelSelectionForSend,
+          ...(modelPresentationIdentityForSend
+            ? { modelPresentationIdentity: modelPresentationIdentityForSend }
+            : {}),
           ...(providerOptionsForDispatchForSend
             ? { providerOptionsForDispatch: providerOptionsForDispatchForSend }
             : {}),
@@ -9035,6 +9051,9 @@ export default function ChatView({
             : {}),
         },
         modelSelection: selectedModelSelectionForSend,
+        ...(modelPresentationIdentityForSend
+          ? { modelPresentationIdentity: modelPresentationIdentityForSend }
+          : {}),
         ...(providerOptionsForDispatchForSend
           ? { providerOptions: providerOptionsForDispatchForSend }
           : {}),
@@ -9359,6 +9378,12 @@ export default function ChatView({
       });
       return false;
     }
+    const modelPresentationIdentityForPlanDispatch =
+      queuedTurn?.modelPresentationIdentity ??
+      resolveModelPresentationIdentity({
+        selection: modelSelectionForPlanDispatch,
+        options: modelOptionsByProvider[modelSelectionForPlanDispatch.provider],
+      });
 
     const threadIdForSend = activeThread.id;
     const messageIdForSend = newMessageId();
@@ -9421,6 +9446,7 @@ export default function ChatView({
           attachments: [],
         },
         modelSelection: modelSelectionForPlanDispatch,
+        modelPresentationIdentity: modelPresentationIdentityForPlanDispatch,
         ...(providerOptionsForPlanDispatch
           ? {
               providerOptions: providerOptionsForPlanDispatch,
@@ -9793,6 +9819,10 @@ export default function ChatView({
     });
     const nextThreadTitle = truncateTitle(buildPlanImplementationThreadTitle(planMarkdown));
     const nextThreadModelSelection: ModelSelection = selectedModelSelection;
+    const nextThreadModelPresentationIdentity = resolveModelPresentationIdentity({
+      selection: nextThreadModelSelection,
+      options: modelOptionsByProvider[nextThreadModelSelection.provider],
+    });
     const sourceProposedPlan = buildSourceProposedPlanReference({
       threadId: activeThread.id,
       proposedPlan: activeProposedPlan,
@@ -9842,6 +9872,7 @@ export default function ChatView({
             attachments: [],
           },
           modelSelection: nextThreadModelSelection,
+          modelPresentationIdentity: nextThreadModelPresentationIdentity,
           ...(providerOptionsForDispatch ? { providerOptions: providerOptionsForDispatch } : {}),
           assistantDeliveryMode,
           dispatchMode: "queue",
@@ -9911,6 +9942,7 @@ export default function ChatView({
     syncServerShellSnapshot,
     t,
     selectedModel,
+    modelOptionsByProvider,
     serverSettingsReady,
   ]);
 

@@ -36,6 +36,7 @@ import {
   ThreadHandoff,
   ThreadForkScope,
   ModelSelection,
+  ModelPresentationIdentity,
 } from "@omnimind/contracts";
 import { Effect, Layer, Option, Schema, Struct } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
@@ -175,6 +176,7 @@ const ProjectionTurnProvenanceDbRowSchema = Schema.Struct({
   pendingMessageId: MessageId,
   turnId: Schema.NullOr(TurnId),
   modelSelection: ModelSelectionJsonUnknown,
+  modelPresentationIdentity: Schema.NullOr(Schema.fromJsonString(ModelPresentationIdentity)),
   requestedAt: IsoDateTime,
 });
 const ProjectionLatestTurnDbRowSchema = Schema.Struct({
@@ -669,6 +671,9 @@ function collectTurnProvenance(rows: ReadonlyArray<ProjectionTurnProvenanceDbRow
       pendingMessageId: row.pendingMessageId,
       turnId: row.turnId,
       modelSelection: row.modelSelection,
+      ...(row.modelPresentationIdentity
+        ? { modelPresentationIdentity: row.modelPresentationIdentity }
+        : {}),
       requestedAt: row.requestedAt,
     });
   }
@@ -1127,6 +1132,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           turns.pending_message_id AS "pendingMessageId",
           turns.turn_id AS "turnId",
           json_extract(events.payload_json, '$.modelSelection') AS "modelSelection",
+          json_extract(events.payload_json, '$.modelPresentationIdentity') AS "modelPresentationIdentity",
           turns.requested_at AS "requestedAt"
         FROM projection_turns AS turns
         JOIN orchestration_events AS events
@@ -1722,6 +1728,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           turns.pending_message_id AS "pendingMessageId",
           turns.turn_id AS "turnId",
           json_extract(events.payload_json, '$.modelSelection') AS "modelSelection",
+          json_extract(events.payload_json, '$.modelPresentationIdentity') AS "modelPresentationIdentity",
           turns.requested_at AS "requestedAt"
         FROM projection_turns AS turns
         JOIN orchestration_events AS events
@@ -3117,6 +3124,9 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           pendingMessageId: row.pendingMessageId,
           turnId: row.turnId,
           modelSelection: row.modelSelection,
+          ...(row.modelPresentationIdentity
+            ? { modelPresentationIdentity: row.modelPresentationIdentity }
+            : {}),
           requestedAt: row.requestedAt,
         })),
         proposedPlans: proposedPlanRows.map((row) => toProjectedProposedPlan(row)),

@@ -41,7 +41,10 @@ import {
 } from "../lib/threadHandoff";
 import { toastManager } from "../components/ui/toast";
 import type { ComposerCommandItem } from "../components/chat/ComposerCommandMenu";
-import { buildNextProviderOptions } from "../providerModelOptions";
+import {
+  buildNextProviderOptions,
+  resolveModelPresentationIdentity,
+} from "../providerModelOptions";
 import { resolveForkThreadEnvironment } from "../lib/threadEnvironment";
 import { type SplitViewId } from "../splitViewStore";
 import { useRightDockStore } from "../rightDockStore";
@@ -802,6 +805,9 @@ export function useComposerSlashCommands(input: {
             attachments: [],
           },
           modelSelection: selectedModelSelection,
+          modelPresentationIdentity: resolveModelPresentationIdentity({
+            selection: selectedModelSelection,
+          }),
           reviewTarget,
           dispatchMode: "queue",
           runtimeMode,

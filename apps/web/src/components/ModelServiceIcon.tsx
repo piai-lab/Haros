@@ -68,6 +68,7 @@ const EXACT_BRAND_ICONS: Readonly<Record<string, string>> = {
   groq: groqIconUrl,
   huggingface: huggingFaceIconUrl,
   "kimi-coding": kimiIconUrl,
+  "kimi-for-coding": kimiIconUrl,
   minimax: minimaxIconUrl,
   "minimax-cn": minimaxIconUrl,
   mistral: mistralIconUrl,
@@ -200,7 +201,13 @@ export function resolveModelSpecificIcon(input: {
   readonly modelId: string;
   readonly origin?: OmniMindModelServiceOrigin;
 }): string | null {
-  if (input.origin !== "builtin") return null;
+  if (
+    input.origin === "models_json" ||
+    input.origin === "extension" ||
+    input.origin === "unknown"
+  ) {
+    return null;
+  }
   const serviceId = input.serviceId.trim();
   const modelId = (
     input.modelId.trim().startsWith(`${serviceId}/`)
@@ -234,16 +241,19 @@ export function ModelServiceIcon({
   serviceId,
   modelId,
   origin,
+  allowModelFamily = true,
   className,
 }: {
   readonly serviceId: string;
   readonly modelId?: string;
   readonly origin?: OmniMindModelServiceOrigin;
+  readonly allowModelFamily?: boolean;
   readonly className?: string;
 }) {
-  const modelIcon = modelId
-    ? resolveModelSpecificIcon({ serviceId, modelId, ...(origin ? { origin } : {}) })
-    : null;
+  const modelIcon =
+    modelId && allowModelFamily
+      ? resolveModelSpecificIcon({ serviceId, modelId, ...(origin ? { origin } : {}) })
+      : null;
   const resolution = modelIcon
     ? {
         kind: "brand" as const,
@@ -273,6 +283,22 @@ export function ModelServiceIcon({
             WebkitMaskImage: `url("${resolution.src}")`,
           }}
         />
+      );
+    }
+    if (resolution.src === kimiIconUrl) {
+      return (
+        <span
+          aria-hidden="true"
+          data-model-service-icon="brand"
+          data-model-service-icon-level={modelIcon ? "model" : "service"}
+          data-model-service-icon-render="contained-image"
+          className={cn(
+            sharedClassName,
+            "inline-flex items-center justify-center rounded-[22%] bg-[#111827] p-[14%]",
+          )}
+        >
+          <img src={resolution.src} alt="" className="size-full object-contain" />
+        </span>
       );
     }
     return (

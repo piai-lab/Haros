@@ -8,6 +8,25 @@ import { TrimmedNonEmptyString } from "./baseSchemas";
 import { ProviderOptionDescriptor } from "./model";
 import { ProviderKind } from "./providerIdentity";
 
+export const ModelPresentationIdentitySource = Schema.Literals([
+  "builtin-catalog",
+  "runtime-catalog",
+  "user-configured",
+  "extension",
+  "unknown",
+]);
+export type ModelPresentationIdentitySource = typeof ModelPresentationIdentitySource.Type;
+
+/** Asset-free identity frozen at model admission for historical presentation. */
+export const ModelPresentationIdentity = Schema.Struct({
+  model: TrimmedNonEmptyString,
+  displayName: TrimmedNonEmptyString,
+  serviceId: Schema.optional(TrimmedNonEmptyString),
+  serviceName: Schema.optional(TrimmedNonEmptyString),
+  source: ModelPresentationIdentitySource,
+});
+export type ModelPresentationIdentity = typeof ModelPresentationIdentity.Type;
+
 export const PROVIDER_MODEL_DISCOVERY_ERROR_CODES = {
   starting: "PROVIDER_MODEL_DISCOVERY_STARTING",
   authRequired: "PROVIDER_MODEL_DISCOVERY_AUTH_REQUIRED",

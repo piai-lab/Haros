@@ -53,6 +53,7 @@ import {
 } from "./terminalContext";
 import { resolveTerminalThreadCreationState } from "./threadBootstrap";
 import { promoteThreadCreate } from "./threadCreatePromotion";
+import { resolveModelPresentationIdentity } from "../providerModelOptions";
 import { newCommandId, newMessageId } from "./utils";
 
 export type KanbanDraftDispatchResult =
@@ -318,6 +319,7 @@ async function dispatchKanbanDraftThreadOnce(
           ...(mentionedMentions.length > 0 ? { mentions: mentionedMentions } : {}),
         },
         modelSelection,
+        modelPresentationIdentity: resolveModelPresentationIdentity({ selection: modelSelection }),
         ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
         assistantDeliveryMode: input.assistantDeliveryMode,
         dispatchMode: "queue",

@@ -1120,6 +1120,34 @@ it.effect("decodes thread.turn-start-requested source proposed plan metadata whe
   }),
 );
 
+it.effect("preserves an asset-free model presentation identity on turn admission", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decodeThreadTurnStartRequestedPayload({
+      threadId: "thread-model-identity",
+      messageId: "message-model-identity",
+      modelSelection: {
+        provider: "opencode",
+        model: "deepseek/deepseek-v4-flash",
+      },
+      modelPresentationIdentity: {
+        model: "deepseek/deepseek-v4-flash",
+        displayName: "DeepSeek V4 Flash",
+        serviceId: "deepseek",
+        serviceName: "DeepSeek",
+        source: "runtime-catalog",
+      },
+      createdAt: "2026-08-28T00:00:00.000Z",
+    });
+    assert.deepStrictEqual(parsed.modelPresentationIdentity, {
+      model: "deepseek/deepseek-v4-flash",
+      displayName: "DeepSeek V4 Flash",
+      serviceId: "deepseek",
+      serviceName: "DeepSeek",
+      source: "runtime-catalog",
+    });
+  }),
+);
+
 it.effect("decodes latest turn source proposed plan metadata when present", () =>
   Effect.gen(function* () {
     const parsed = yield* decodeOrchestrationLatestTurn({

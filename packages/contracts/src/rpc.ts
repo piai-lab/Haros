@@ -1505,7 +1505,7 @@ export const WsSubscribeAutomationEventsRpc = Rpc.make(WS_METHODS.subscribeAutom
 
 export const WsBootstrapRpcGroup = RpcGroup.make(WsBootstrapNegotiateRpc);
 
-export const WsFeatureRpcGroup = RpcGroup.make(
+const WsOrchestrationAndProjectRpcGroup = RpcGroup.make(
   WsOrchestrationDispatchCommandRpc,
   WsOrchestrationImportThreadRpc,
   WsOrchestrationGetSnapshotRpc,
@@ -1541,6 +1541,9 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsStudioListThreadOutputsRpc,
   WsFilesystemBrowseRpc,
   WsShellOpenInEditorRpc,
+);
+
+const WsGitAndTerminalRpcGroup = RpcGroup.make(
   WsGitGithubRepositoryRpc,
   WsGitStatusRpc,
   WsGitReadWorkingTreeDiffRpc,
@@ -1580,6 +1583,9 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsTerminalRestartRpc,
   WsTerminalCloseRpc,
   WsSubscribeTerminalEventsRpc,
+);
+
+const WsServerAndProviderRpcGroup = RpcGroup.make(
   WsServerGetConfigRpc,
   WsServerGetEnvironmentRpc,
   WsServerGetBuiltInToolGroupsRpc,
@@ -1621,6 +1627,9 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsProviderReadPluginRpc,
   WsProviderListModelsRpc,
   WsProviderListAgentsRpc,
+);
+
+const WsOmniMindAndAutomationRpcGroup = RpcGroup.make(
   WsOmniMindModelServicesListRpc,
   WsOmniMindModelServicesGetRpc,
   WsOmniMindModelServicesBeginLoginRpc,
@@ -1662,6 +1671,19 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsAutomationResolveProposalRpc,
   WsSubscribeAutomationEventsRpc,
 );
+
+type WsFeatureRpc =
+  | RpcGroup.Rpcs<typeof WsOrchestrationAndProjectRpcGroup>
+  | RpcGroup.Rpcs<typeof WsGitAndTerminalRpcGroup>
+  | RpcGroup.Rpcs<typeof WsServerAndProviderRpcGroup>
+  | RpcGroup.Rpcs<typeof WsOmniMindAndAutomationRpcGroup>;
+
+export const WsFeatureRpcGroup: RpcGroup.RpcGroup<WsFeatureRpc> =
+  WsOrchestrationAndProjectRpcGroup.merge(
+    WsGitAndTerminalRpcGroup,
+    WsServerAndProviderRpcGroup,
+    WsOmniMindAndAutomationRpcGroup,
+  );
 
 /** @deprecated Use WsFeatureRpcGroup. Bootstrap is intentionally a separate endpoint/group. */
 export const WsRpcGroup = WsFeatureRpcGroup;

@@ -9,7 +9,11 @@ import {
   OpenCodeModelOptions,
   PiModelOptions,
 } from "./model";
-import { ProviderMentionReference, ProviderSkillReference } from "./providerDiscovery";
+import {
+  ModelPresentationIdentity,
+  ProviderMentionReference,
+  ProviderSkillReference,
+} from "./providerDiscovery";
 import { DEFAULT_PROVIDER_KIND, PROVIDER_KINDS, ProviderKind } from "./providerIdentity";
 export { DEFAULT_PROVIDER_KIND, PROVIDER_KINDS, ProviderKind } from "./providerIdentity";
 import { ProjectKind } from "./project";
@@ -844,6 +848,7 @@ export const OrchestrationTurnProvenance = Schema.Struct({
   pendingMessageId: MessageId,
   turnId: Schema.NullOr(TurnId),
   modelSelection: ModelSelection,
+  modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
   requestedAt: IsoDateTime,
 });
 export type OrchestrationTurnProvenance = typeof OrchestrationTurnProvenance.Type;
@@ -1433,6 +1438,7 @@ export const ThreadTurnStartCommand = Schema.Struct({
     mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
   }).check(TurnMessageContentCheck),
   modelSelection: Schema.optional(ModelSelection),
+  modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
   providerOptions: Schema.optional(ProviderStartOptions),
   reviewTarget: Schema.optional(ProviderReviewTarget),
   assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),
@@ -1471,6 +1477,7 @@ const ClientThreadTurnStartCommand = Schema.Struct({
     mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
   }).check(TurnMessageContentCheck),
   modelSelection: Schema.optional(ModelSelection),
+  modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
   providerOptions: Schema.optional(ProviderStartOptions),
   reviewTarget: Schema.optional(ProviderReviewTarget),
   assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),
@@ -1513,6 +1520,7 @@ const ThreadDispatchQueuedTurnCommand = Schema.Struct({
   threadId: ThreadId,
   messageId: MessageId,
   modelSelection: Schema.optional(ModelSelection),
+  modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
   providerOptions: Schema.optional(ProviderStartOptions),
   reviewTarget: Schema.optional(ProviderReviewTarget),
   assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),
@@ -2116,6 +2124,7 @@ export const ThreadTurnStartRequestedPayload = Schema.Struct({
   threadId: ThreadId,
   messageId: MessageId,
   modelSelection: Schema.optional(ModelSelection),
+  modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
   providerOptions: Schema.optional(ProviderStartOptions),
   reviewTarget: Schema.optional(ProviderReviewTarget),
   assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),

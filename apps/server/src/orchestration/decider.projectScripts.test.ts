@@ -401,6 +401,12 @@ describe("decider project scripts", () => {
             text: "hello",
             attachments: [],
           },
+          modelPresentationIdentity: {
+            model: "gpt-5.3-codex",
+            displayName: "GPT-5.3 Codex",
+            serviceId: "openai",
+            source: "builtin-catalog",
+          },
           modelSelection: {
             provider: "codex",
             model: "gpt-5.3-codex",
@@ -439,8 +445,49 @@ describe("decider project scripts", () => {
           fastMode: true,
         },
       },
+      modelPresentationIdentity: {
+        model: "gpt-5.3-codex",
+        displayName: "GPT-5.3 Codex",
+        serviceId: "openai",
+        source: "builtin-catalog",
+      },
       runtimeMode: "approval-required",
     });
+
+    const mismatchedIdentityResult = await Effect.runPromise(
+      decideOrchestrationCommand({
+        command: {
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe("cmd-turn-start-mismatched-identity"),
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          message: {
+            messageId: asMessageId("message-user-mismatched-identity"),
+            role: "user",
+            text: "discard stale presentation",
+            attachments: [],
+          },
+          modelSelection: { provider: "codex", model: "gpt-5.3-codex" },
+          modelPresentationIdentity: {
+            model: "claude-sonnet-4-5",
+            displayName: "Wrong model",
+            serviceId: "anthropic",
+            source: "runtime-catalog",
+          },
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          runtimeMode: "approval-required",
+          createdAt: now,
+        },
+        readModel,
+      }),
+    );
+    const mismatchedIdentityEvents = Array.isArray(mismatchedIdentityResult)
+      ? mismatchedIdentityResult
+      : [mismatchedIdentityResult];
+    expect(mismatchedIdentityEvents[1]).toMatchObject({
+      type: "thread.turn-start-requested",
+      payload: { modelSelection: { provider: "codex", model: "gpt-5.3-codex" } },
+    });
+    expect("modelPresentationIdentity" in (mismatchedIdentityEvents[1]?.payload ?? {})).toBe(false);
 
     const omittedSelectionResult = await Effect.runPromise(
       decideOrchestrationCommand({
@@ -512,6 +559,12 @@ describe("decider project scripts", () => {
             text: "queue with a frozen selection",
             attachments: [],
           },
+          modelPresentationIdentity: {
+            model: "gpt-5-codex",
+            displayName: "GPT-5 Codex",
+            serviceId: "openai",
+            source: "builtin-catalog",
+          },
           interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
           runtimeMode: "approval-required",
           createdAt: now,
@@ -526,6 +579,12 @@ describe("decider project scripts", () => {
         modelSelection: {
           provider: "codex",
           model: "gpt-5-codex",
+        },
+        modelPresentationIdentity: {
+          model: "gpt-5-codex",
+          displayName: "GPT-5 Codex",
+          serviceId: "openai",
+          source: "builtin-catalog",
         },
       },
     });
@@ -605,6 +664,12 @@ describe("decider project scripts", () => {
             provider: "claudeAgent",
             model: "claude-sonnet-4-5",
           },
+          modelPresentationIdentity: {
+            model: "claude-sonnet-4-5",
+            displayName: "Claude Sonnet 4.5",
+            serviceId: "anthropic",
+            source: "builtin-catalog",
+          },
           interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
           runtimeMode: "approval-required",
           createdAt: now,
@@ -618,6 +683,12 @@ describe("decider project scripts", () => {
         modelSelection: {
           provider: "claudeAgent",
           model: "claude-sonnet-4-5",
+        },
+        modelPresentationIdentity: {
+          model: "claude-sonnet-4-5",
+          displayName: "Claude Sonnet 4.5",
+          serviceId: "anthropic",
+          source: "builtin-catalog",
         },
       },
     });

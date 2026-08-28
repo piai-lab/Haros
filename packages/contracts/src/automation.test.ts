@@ -160,6 +160,12 @@ it.effect("accepts automation runs with immutable permission snapshots", () =>
           provider: "codex",
           model: "gpt-5-codex",
         },
+        modelPresentationIdentity: {
+          model: "gpt-5-codex",
+          displayName: "GPT-5 Codex",
+          serviceId: "openai",
+          source: "builtin-catalog",
+        },
         completionPolicyVersion: 7,
         iterationNumber: 3,
         runtimeMode: "approval-required",
@@ -175,6 +181,7 @@ it.effect("accepts automation runs with immutable permission snapshots", () =>
     assert.strictEqual(parsed.permissionSnapshot.runtimeMode, "approval-required");
     assert.strictEqual(parsed.permissionSnapshot.completionPolicyVersion, 7);
     assert.strictEqual(parsed.permissionSnapshot.iterationNumber, 3);
+    assert.strictEqual(parsed.permissionSnapshot.modelPresentationIdentity?.serviceId, "openai");
     assert.strictEqual(parsed.status, "running");
     assert.isNull(parsed.deferredUntil);
   }),

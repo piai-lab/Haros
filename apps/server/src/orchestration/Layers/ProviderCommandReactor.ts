@@ -3340,6 +3340,9 @@ const make = Effect.gen(function* () {
             threadId,
             messageId: nextQueuedTurn.messageId,
             modelSelection: nextQueuedTurn.modelSelection,
+            ...(nextQueuedTurn.modelPresentationIdentity !== undefined
+              ? { modelPresentationIdentity: nextQueuedTurn.modelPresentationIdentity }
+              : {}),
             ...(nextQueuedTurn.providerOptions !== undefined
               ? { providerOptions: nextQueuedTurn.providerOptions }
               : {}),

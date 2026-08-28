@@ -124,7 +124,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             'event-turn-provenance-exact', 'thread', 'thread-turn-provenance', 0,
             'thread.turn-start-requested', '2026-08-27T02:21:00.000Z',
             'command-turn-provenance-exact', NULL, NULL, 'client',
-            '{"threadId":"thread-turn-provenance","messageId":"message-user-deepseek","modelSelection":{"provider":"omnimind","model":"deepseek/deepseek-v4-pro"},"createdAt":"2026-08-27T02:21:00.000Z"}',
+            '{"threadId":"thread-turn-provenance","messageId":"message-user-deepseek","modelSelection":{"provider":"opencode","model":"deepseek/deepseek-v4-pro"},"modelPresentationIdentity":{"model":"deepseek/deepseek-v4-pro","displayName":"DeepSeek V4 Pro","serviceId":"deepseek","serviceName":"DeepSeek","source":"runtime-catalog"},"createdAt":"2026-08-27T02:21:00.000Z"}',
             '{}'
           ),
           (
@@ -144,8 +144,15 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             pendingMessageId: asMessageId("message-user-deepseek"),
             turnId: asTurnId("turn-deepseek"),
             modelSelection: {
-              provider: "omnimind",
+              provider: "opencode",
               model: "deepseek/deepseek-v4-pro",
+            },
+            modelPresentationIdentity: {
+              model: "deepseek/deepseek-v4-pro",
+              displayName: "DeepSeek V4 Pro",
+              serviceId: "deepseek",
+              serviceName: "DeepSeek",
+              source: "runtime-catalog",
             },
             requestedAt: "2026-08-27T02:21:00.000Z",
           },

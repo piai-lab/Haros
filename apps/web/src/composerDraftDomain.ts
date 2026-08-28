@@ -6,6 +6,7 @@ import {
   type CommandId,
   type MessageId,
   type ModelSelection,
+  type ModelPresentationIdentity,
   type OrchestrationLatestTurn,
   type OrchestrationThreadPullRequest,
   type ProjectId,
@@ -132,6 +133,7 @@ export interface QueuedComposerChatTurn {
   selectedModel: string | null;
   selectedPromptEffort: string | null;
   modelSelection: ModelSelection;
+  modelPresentationIdentity?: ModelPresentationIdentity;
   providerOptionsForDispatch?: ProviderStartOptions | undefined;
   sourceProposedPlan?: NonNullable<OrchestrationLatestTurn["sourceProposedPlan"]> | undefined;
   runtimeMode: RuntimeMode;
@@ -156,6 +158,7 @@ export interface QueuedComposerPlanFollowUp {
   selectedModel: string | null;
   selectedPromptEffort: string | null;
   modelSelection: ModelSelection;
+  modelPresentationIdentity?: ModelPresentationIdentity;
   providerOptionsForDispatch?: ProviderStartOptions | undefined;
   runtimeMode: RuntimeMode;
 }

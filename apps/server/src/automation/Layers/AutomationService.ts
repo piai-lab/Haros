@@ -402,6 +402,9 @@ function makePermissionSnapshot(
     provider: definition.modelSelection.provider,
     ...(settingsRevision !== undefined ? { settingsRevision } : {}),
     modelSelection: definition.modelSelection,
+    ...(definition.modelPresentationIdentity
+      ? { modelPresentationIdentity: definition.modelPresentationIdentity }
+      : {}),
     ...(providerOptions ? { providerOptions } : {}),
     completionPolicyVersion: completionPolicyVersionForDefinition(definition),
     iterationNumber: definition.iterationCount + 1,
@@ -620,6 +623,13 @@ function mergeDefinitionUpdate(
     enabled: finalEnabled,
     nextRunAt,
     modelSelection: input.modelSelection ?? current.modelSelection,
+    modelPresentationIdentity:
+      input.modelPresentationIdentity?.model ===
+      (input.modelSelection ?? current.modelSelection).model
+        ? input.modelPresentationIdentity
+        : input.modelSelection !== undefined
+          ? undefined
+          : current.modelPresentationIdentity,
     runtimeMode: input.runtimeMode ?? current.runtimeMode,
     interactionMode: input.interactionMode ?? current.interactionMode,
     worktreeMode: input.worktreeMode ?? current.worktreeMode,
@@ -1241,6 +1251,9 @@ export const AutomationServiceLive = Layer.effect(
                 attachments: [],
               },
               modelSelection: definition.modelSelection,
+              ...(definition.modelPresentationIdentity
+                ? { modelPresentationIdentity: definition.modelPresentationIdentity }
+                : {}),
               ...(definition.providerOptions
                 ? { providerOptions: definition.providerOptions }
                 : {}),
@@ -1388,6 +1401,9 @@ export const AutomationServiceLive = Layer.effect(
               attachments: [],
             },
             modelSelection: definition.modelSelection,
+            ...(definition.modelPresentationIdentity
+              ? { modelPresentationIdentity: definition.modelPresentationIdentity }
+              : {}),
             ...(definition.providerOptions ? { providerOptions: definition.providerOptions } : {}),
             dispatchMode: "queue",
             dispatchOrigin: "automation",

@@ -9,6 +9,7 @@ import { useI18n } from "~/i18n";
 import { StarFilledIcon, StarIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import {
+  buildModelSelection,
   resolveModelGroupDefaultOpen,
   shouldUseCollapsibleModelGroups,
   providerModelCostMultiplierLabel,
@@ -19,6 +20,7 @@ import {
 import type { ProviderKind } from "@omnimind/contracts";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
+import { ModelIdentityIcon } from "../ModelIdentityIcon";
 import { ModelServiceIcon } from "../ModelServiceIcon";
 import { MenuGroup, MenuGroupLabel, MenuRadioItem } from "../ui/menu";
 import {
@@ -130,16 +132,11 @@ function ProviderModelRadioItem(
           supportsFavorites && COMPOSER_PICKER_MODEL_ROW_LABEL_INDENT_CLASS_NAME,
         )}
       >
-        {modelOption.upstreamProviderId ? (
-          <ModelServiceIcon
-            serviceId={modelOption.upstreamProviderId}
-            modelId={modelOption.slug}
-            {...(modelOption.upstreamProviderOrigin
-              ? { origin: modelOption.upstreamProviderOrigin }
-              : {})}
-            className="size-3.5"
-          />
-        ) : null}
+        <ModelIdentityIcon
+          selection={buildModelSelection(provider, modelOption.slug)}
+          descriptor={modelOption}
+          className="size-3.5"
+        />
         <span className="flex min-w-0 flex-col">
           <span className="block min-w-0 truncate">{modelOption.name}</span>
           {provenanceLabel ? (

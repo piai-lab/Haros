@@ -14,6 +14,7 @@ import {
   TurnId,
 } from "./baseSchemas";
 import { ModelSelection, ProviderKind, ProviderStartOptions, RuntimeMode } from "./orchestration";
+import { ModelPresentationIdentity } from "./providerDiscovery";
 
 export const DEFAULT_AUTOMATION_RUNTIME_MODE: RuntimeMode = "approval-required";
 export const AutomationInteractionMode = Schema.Literals(["default", "plan"]);
@@ -160,6 +161,7 @@ export const AutomationPermissionSnapshot = Schema.Struct({
   provider: ProviderKind,
   settingsRevision: Schema.optional(NonNegativeInt),
   modelSelection: ModelSelection,
+  modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
   providerOptions: Schema.optional(ProviderStartOptions),
   completionPolicyVersion: Schema.optional(NonNegativeInt),
   /** Stable one-based iteration ordinal claimed for this run. */
@@ -221,6 +223,7 @@ export const AutomationDefinition = Schema.Struct({
   enabled: Schema.Boolean,
   nextRunAt: Schema.NullOr(AutomationIsoDateTime),
   modelSelection: ModelSelection,
+  modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
   providerOptions: Schema.optional(ProviderStartOptions),
   runtimeMode: RuntimeMode,
   interactionMode: AutomationInteractionMode,
@@ -296,6 +299,7 @@ const AutomationDefinitionConfig = Schema.Struct({
   schedule: AutomationSchedule,
   enabled: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => true)),
   modelSelection: ModelSelection,
+  modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
   providerOptions: Schema.optional(ProviderStartOptions),
   runtimeMode: Schema.optional(RuntimeMode).pipe(
     Schema.withDecodingDefault(() => DEFAULT_AUTOMATION_RUNTIME_MODE),
@@ -360,6 +364,7 @@ export const AutomationUpdateInput = Schema.Struct({
   schedule: Schema.optional(AutomationSchedule),
   enabled: Schema.optional(Schema.Boolean),
   modelSelection: Schema.optional(ModelSelection),
+  modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
   providerOptions: Schema.optional(ProviderStartOptions),
   runtimeMode: Schema.optional(RuntimeMode),
   interactionMode: Schema.optional(AutomationInteractionMode),

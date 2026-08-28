@@ -8,13 +8,15 @@ import { resolveSelectableModel } from "@omnimind/shared/model";
 import * as Schema from "effect/Schema";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { type ProviderPickerKind, PROVIDER_OPTIONS } from "../../session-logic";
-import { formatProviderModelOptionName } from "../../providerModelOptions";
+import { buildModelSelection, formatProviderModelOptionName } from "../../providerModelOptions";
 import { compareProvidersByOrder, filterProviderOptionsByVisibility } from "../../providerOrdering";
 import {
   deriveProviderPickerAvailability,
   type ProviderPickerAvailabilityState,
 } from "../../lib/providerAvailability";
 import { Menu, MenuItem, MenuRadioGroup, MenuSub, MenuSubTrigger, MenuTrigger } from "../ui/menu";
+import { BrainIcon } from "~/lib/icons";
+import { ModelIdentityIcon } from "../ModelIdentityIcon";
 import { PROVIDER_ICON_COMPONENT_BY_PROVIDER } from "../ProviderIcon";
 import { cn } from "~/lib/utils";
 import { PickerPanelShell } from "./PickerPanelShell";
@@ -444,7 +446,12 @@ export const ProviderModelPicker = function ProviderModelPicker(props: ProviderM
     : activeCatalogState
       ? t(resolveComposerModelFallbackMessageKey(activeCatalogState))
       : t("composer.noAvailableModel");
-  const ProviderIcon = PROVIDER_ICON_COMPONENT_BY_PROVIDER[activeProvider];
+  const selectedDescriptor = props.model
+    ? (props.modelOptionsByProvider[activeProvider]?.find(
+        (option) => option.slug === props.model,
+      ) ?? null)
+    : null;
+  const selectedModel = props.model ? buildModelSelection(activeProvider, props.model) : null;
 
   const setMenuOpen = (nextOpen: boolean) => {
     if (open === undefined) {
@@ -483,15 +490,15 @@ export const ProviderModelPicker = function ProviderModelPicker(props: ProviderM
       hideLabel={props.hideLabel ?? false}
       className="text-[var(--color-text-foreground)]"
       icon={
-        <ProviderIcon
-          aria-hidden="true"
-          className={cn(
-            // opacity-100 opts out of the Button base's [&_svg]:opacity-80 dimming.
-            "size-3.5 shrink-0 opacity-100",
-            providerIconClassName(activeProvider, "text-muted-foreground/70"),
-            props.activeProviderIconClassName,
-          )}
-        />
+        selectedModel ? (
+          <ModelIdentityIcon
+            selection={selectedModel}
+            descriptor={selectedDescriptor}
+            className={cn("size-3.5 opacity-100", props.activeProviderIconClassName)}
+          />
+        ) : (
+          <BrainIcon className="size-3.5 shrink-0 text-muted-foreground/70" />
+        )
       }
       label={selectedModelLabel}
     />

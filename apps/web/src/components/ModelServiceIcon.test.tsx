@@ -234,7 +234,7 @@ describe("ModelServiceIcon", () => {
         serviceId: "openrouter",
         modelId: "anthropic/claude-sonnet-4-6",
       }),
-    ).toBeNull();
+    ).not.toBeNull();
     expect(
       resolveModelSpecificIcon({
         serviceId: "anthropic",
@@ -290,5 +290,14 @@ describe("ModelServiceIcon", () => {
     );
     expect(markup).toContain('data-model-service-icon="custom"');
     expect(markup).not.toContain("private-service");
+  });
+
+  it("owns Kimi contrast treatment for every consumer", () => {
+    const markup = renderToStaticMarkup(
+      <ModelServiceIcon serviceId="kimi-for-coding" modelId="k3" />,
+    );
+    expect(markup).toContain('data-model-service-icon-render="contained-image"');
+    expect(markup).toContain("bg-[#111827]");
+    expect(markup.toLowerCase()).toContain("%3ctitle%3ekimi%3c/title%3e");
   });
 });
