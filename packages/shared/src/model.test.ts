@@ -505,7 +505,7 @@ describe("engine option descriptor helpers", () => {
     });
     expect(descriptors.some((descriptor) => descriptor.id === "reasoningEffort")).toBe(false);
 
-    const omniMindDescriptors = getEngineOptionDescriptors({
+    const oaDescriptors = getEngineOptionDescriptors({
       engine: "oa",
       caps: {
         reasoningEffortLevels: [{ value: "high", label: "High", isDefault: true }],
@@ -516,7 +516,7 @@ describe("engine option descriptor helpers", () => {
       },
       selections: { thinkingLevel: "high" },
     });
-    expect(omniMindDescriptors[0]).toMatchObject({
+    expect(oaDescriptors[0]).toMatchObject({
       id: "thinkingLevel",
       currentValue: "high",
     });

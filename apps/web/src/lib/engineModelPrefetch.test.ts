@@ -202,12 +202,12 @@ describe("engineModelsPrefetchQueryOptions", () => {
       engineDiscoveryQueryKeys.models("cursor", "/bin/agent", "https://api.example", null, null),
     );
 
-    const omniMindOptions = engineModelsPrefetchQueryOptions({
+    const oaOptions = engineModelsPrefetchQueryOptions({
       engine: "oa",
       settings,
       cwd: "/tmp/project",
     });
-    expect(omniMindOptions.queryKey).toEqual(
+    expect(oaOptions.queryKey).toEqual(
       engineDiscoveryQueryKeys.models("oa", null, null, null, null),
     );
 

@@ -19,8 +19,8 @@ import {
   readNativeApiTransportState,
 } from "~/nativeApi";
 import {
-  omniMindModelServicesListQueryOptions,
-  omniMindModelServicesQueryKeys,
+  oaModelServicesListQueryOptions,
+  oaModelServicesQueryKeys,
 } from "~/lib/oaModelServicesReactQuery";
 import { hasReceivedEngineStatusSnapshot, serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { useStore } from "~/store";
@@ -174,14 +174,14 @@ export function useFirstRunReadinessController(
     exactEngineSelections: exactSelections,
   });
   const passiveQueryState = queryClient.getQueryState<OAModelServicesListResult>(
-    omniMindModelServicesQueryKeys.list(),
+    oaModelServicesQueryKeys.list(),
   );
   const cachedPassiveServices =
     passiveQueryState && isSettledPassiveModelServicesQueryState(passiveQueryState)
       ? passiveQueryState.data
       : undefined;
   const modelServicesQuery = useQuery(
-    omniMindModelServicesListQueryOptions({
+    oaModelServicesListQueryOptions({
       enabled:
         serverConfigQuery.isSuccess &&
         !hasUsableIndependentBinding &&

@@ -157,7 +157,7 @@ export function useEngineModelCatalog(input: {
     return prefetchEngineSet?.has(engine) ?? !hiddenEngineSet.has(engine);
   };
 
-  const omniMindModelDiscoveryEnabled = shouldDiscoverEngine("oa");
+  const oaModelDiscoveryEnabled = shouldDiscoverEngine("oa");
   const claudeModelDiscoveryEnabled = shouldDiscoverEngine("claude");
   const codexModelDiscoveryEnabled = shouldDiscoverEngine("codex");
   const cursorModelDiscoveryEnabled = shouldDiscoverEngine("cursor");
@@ -173,11 +173,11 @@ export function useEngineModelCatalog(input: {
       ? shouldDiscoverEngine("pi", false)
       : input.piDiscoveryRequested === true && shouldDiscoverEngine("pi", true);
 
-  const omniMindDynamicModelsQuery = useQuery(
+  const oaDynamicModelsQuery = useQuery(
     engineModelsQueryOptions({
       engine: "oa",
       cwd: discoveryCwd,
-      enabled: omniMindModelDiscoveryEnabled,
+      enabled: oaModelDiscoveryEnabled,
     }),
   );
 
@@ -324,7 +324,7 @@ export function useEngineModelCatalog(input: {
       ...staticOptions,
     };
     const dynamicSources: Record<EngineKind, typeof claudeDynamicModelsQuery.data> = {
-      oa: omniMindDynamicModelsQuery.data,
+      oa: oaDynamicModelsQuery.data,
       claude: claudeDynamicModelsQuery.data,
       codex: codexDynamicModelsQuery.data,
       cursor:
@@ -372,7 +372,7 @@ export function useEngineModelCatalog(input: {
     kiloDynamicModelsQuery.data,
     modelHintByEngine,
     openCodeDynamicModelsQuery.data,
-    omniMindDynamicModelsQuery.data,
+    oaDynamicModelsQuery.data,
     piDynamicModelsQuery.data,
   ]);
 
@@ -380,7 +380,7 @@ export function useEngineModelCatalog(input: {
     Record<EngineKind, ReadonlyArray<EngineModelDescriptor>>
   >(
     () => ({
-      oa: omniMindDynamicModelsQuery.data?.models ?? [],
+      oa: oaDynamicModelsQuery.data?.models ?? [],
       claude: claudeDynamicModelsQuery.data?.models ?? [],
       codex: codexDynamicModelsQuery.data?.models ?? [],
       cursor: cursorRuntimeModels,
@@ -400,7 +400,7 @@ export function useEngineModelCatalog(input: {
       grokDynamicModelsQuery.data?.models,
       kiloDynamicModelsQuery.data?.models,
       openCodeDynamicModelsQuery.data?.models,
-      omniMindDynamicModelsQuery.data?.models,
+      oaDynamicModelsQuery.data?.models,
       piDynamicModelsQuery.data?.models,
     ],
   );
@@ -408,13 +408,12 @@ export function useEngineModelCatalog(input: {
   const catalogStateByEngine = useMemo<Record<EngineKind, EngineModelCatalogState>>(
     () => ({
       oa: deriveCatalogState({
-        enabled: omniMindModelDiscoveryEnabled,
+        enabled: oaModelDiscoveryEnabled,
         hasSettledData:
-          omniMindDynamicModelsQuery.data !== undefined &&
-          !omniMindDynamicModelsQuery.isPlaceholderData,
-        isPending: omniMindDynamicModelsQuery.isPending,
-        isPlaceholderData: omniMindDynamicModelsQuery.isPlaceholderData,
-        isError: omniMindDynamicModelsQuery.isError,
+          oaDynamicModelsQuery.data !== undefined && !oaDynamicModelsQuery.isPlaceholderData,
+        isPending: oaDynamicModelsQuery.isPending,
+        isPlaceholderData: oaDynamicModelsQuery.isPlaceholderData,
+        isError: oaDynamicModelsQuery.isError,
         modelCount: discoveredRuntimeModelsByEngine.oa.length,
       }),
       codex: deriveCatalogState({
@@ -531,10 +530,10 @@ export function useEngineModelCatalog(input: {
       kiloDynamicModelsQuery.isPending,
       kiloDynamicModelsQuery.isPlaceholderData,
       kiloModelDiscoveryEnabled,
-      omniMindDynamicModelsQuery.isError,
-      omniMindDynamicModelsQuery.isPending,
-      omniMindDynamicModelsQuery.isPlaceholderData,
-      omniMindModelDiscoveryEnabled,
+      oaDynamicModelsQuery.isError,
+      oaDynamicModelsQuery.isPending,
+      oaDynamicModelsQuery.isPlaceholderData,
+      oaModelDiscoveryEnabled,
       openCodeDynamicModelsQuery.isError,
       openCodeDynamicModelsQuery.isPending,
       openCodeDynamicModelsQuery.isPlaceholderData,

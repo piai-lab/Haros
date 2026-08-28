@@ -398,7 +398,7 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("consumes desktop shutdown authority before generic child launches", () =>
     Effect.gen(function* () {
       const canonicalKey = "HARNESSOS_DESKTOP_SHUTDOWN_TOKEN";
-      const mixedCaseKey = "oMnImInD_dEsKtOp_ShUtDoWn_ToKeN";
+      const mixedCaseKey = "hArNeSsOs_dEsKtOp_ShUtDoWn_ToKeN";
       const liveToken = "live-process-shutdown-token";
       const injectedToken = "injected-shutdown-token";
       const posixCaseSensitiveSentinel = "posix-case-sensitive-sentinel";

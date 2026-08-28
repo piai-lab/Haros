@@ -2197,7 +2197,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       const engine = yield* EngineService;
       const piThreadId = asThreadId("thread-pi-plan-admission");
       const antigravityThreadId = asThreadId("thread-antigravity-plan-admission");
-      const omniMindThreadId = asThreadId("thread-harnessos-plan-admission");
+      const oaThreadId = asThreadId("thread-harnessos-plan-admission");
       const piSendCount = routing.pi.sendTurn.mock.calls.length;
       const antigravitySendCount = routing.antigravity.sendTurn.mock.calls.length;
 
@@ -2211,9 +2211,9 @@ routing.layer("EngineServiceLive routing", (it) => {
         threadId: antigravityThreadId,
         runtimeMode: "full-access",
       });
-      yield* engine.startSession(omniMindThreadId, {
+      yield* engine.startSession(oaThreadId, {
         engine: "oa",
-        threadId: omniMindThreadId,
+        threadId: oaThreadId,
         runtimeMode: "full-access",
       });
 
@@ -2244,7 +2244,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         interactionMode: "debug",
       });
       yield* engine.sendTurn({
-        threadId: omniMindThreadId,
+        threadId: oaThreadId,
         input: "plan this",
         attachments: [],
         interactionMode: "plan",
@@ -2253,7 +2253,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       assert.equal(routing.oa.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "plan");
       yield* engine.stopSession({ threadId: piThreadId });
       yield* engine.stopSession({ threadId: antigravityThreadId });
-      yield* engine.stopSession({ threadId: omniMindThreadId });
+      yield* engine.stopSession({ threadId: oaThreadId });
     }),
   );
 

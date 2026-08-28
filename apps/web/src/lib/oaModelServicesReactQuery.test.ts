@@ -7,28 +7,28 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   cancelOAModelServicesAddIntentQueries,
-  omniMindModelServiceDetailQueryOptions,
-  omniMindModelServicesListQueryOptions,
-  omniMindModelServicesQueryKeys,
+  oaModelServiceDetailQueryOptions,
+  oaModelServicesListQueryOptions,
+  oaModelServicesQueryKeys,
 } from "./oaModelServicesReactQuery";
 
 describe("HarnessOS model services React Query options", () => {
   it("uses a path-free stable namespace and honors the inactive list gate", () => {
-    const options = omniMindModelServicesListQueryOptions({ enabled: false });
+    const options = oaModelServicesListQueryOptions({ enabled: false });
 
     expect(options.queryKey).toEqual(["harnessos-model-services", "list", null]);
     expect(options.enabled).toBe(false);
-    expect(omniMindModelServicesQueryKeys.all).toEqual(["harnessos-model-services"]);
+    expect(oaModelServicesQueryKeys.all).toEqual(["harnessos-model-services"]);
   });
 
   it("does not admit a detail read until both the route and service id are present", () => {
-    expect(omniMindModelServiceDetailQueryOptions({ enabled: true, serviceId: null }).enabled).toBe(
+    expect(oaModelServiceDetailQueryOptions({ enabled: true, serviceId: null }).enabled).toBe(
       false,
     );
     expect(
-      omniMindModelServiceDetailQueryOptions({ enabled: false, serviceId: "deepseek" }).enabled,
+      oaModelServiceDetailQueryOptions({ enabled: false, serviceId: "deepseek" }).enabled,
     ).toBe(false);
-    const enabled = omniMindModelServiceDetailQueryOptions({
+    const enabled = oaModelServiceDetailQueryOptions({
       enabled: true,
       serviceId: "deepseek",
     });
@@ -37,11 +37,11 @@ describe("HarnessOS model services React Query options", () => {
   });
 
   it("keeps passive and explicit add-service projection queries separate", () => {
-    const list = omniMindModelServicesListQueryOptions({
+    const list = oaModelServicesListQueryOptions({
       enabled: true,
       intent: "add_service",
     });
-    const detail = omniMindModelServiceDetailQueryOptions({
+    const detail = oaModelServiceDetailQueryOptions({
       enabled: true,
       serviceId: "extension-service",
       intent: "add_service",
@@ -57,7 +57,7 @@ describe("HarnessOS model services React Query options", () => {
   });
 
   it("retries only bounded server read-capacity rejections", () => {
-    const options = omniMindModelServicesListQueryOptions({ enabled: true });
+    const options = oaModelServicesListQueryOptions({ enabled: true });
     const retry = options.retry;
     const retryDelay = options.retryDelay;
     expect(retry).toBeTypeOf("function");
@@ -81,11 +81,11 @@ describe("HarnessOS model services React Query options", () => {
   });
 
   it("retries only capacity admission for intent-scoped Extension projection", () => {
-    const addList = omniMindModelServicesListQueryOptions({
+    const addList = oaModelServicesListQueryOptions({
       enabled: true,
       intent: "add_service",
     });
-    const addDetail = omniMindModelServiceDetailQueryOptions({
+    const addDetail = oaModelServiceDetailQueryOptions({
       enabled: true,
       serviceId: "extension-service",
       intent: "add_service",
@@ -111,7 +111,7 @@ describe("HarnessOS model services React Query options", () => {
       let calls = 0;
       let aborts = 0;
       const observer = new QueryObserver(queryClient, {
-        queryKey: omniMindModelServicesQueryKeys.detail("extension-service", "add_service"),
+        queryKey: oaModelServicesQueryKeys.detail("extension-service", "add_service"),
         queryFn: ({ signal }) => {
           calls += 1;
           signal.addEventListener("abort", () => {

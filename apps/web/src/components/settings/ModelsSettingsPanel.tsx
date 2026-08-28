@@ -44,9 +44,9 @@ import {
 } from "~/nativeApi";
 import {
   cancelOAModelServicesAddIntentQueries,
-  omniMindModelServicesQueryKeys,
-  omniMindModelServiceDetailQueryOptions,
-  omniMindModelServicesListQueryOptions,
+  oaModelServicesQueryKeys,
+  oaModelServiceDetailQueryOptions,
+  oaModelServicesListQueryOptions,
 } from "~/lib/oaModelServicesReactQuery";
 import { engineDiscoveryQueryKeys } from "~/lib/engineDiscoveryReactQuery";
 import { cn } from "~/lib/utils";
@@ -930,18 +930,18 @@ function ActiveModelsSettingsPanel({
     withResolver: true,
   });
   const modelServicesQuery = useQuery(
-    omniMindModelServicesListQueryOptions({
+    oaModelServicesListQueryOptions({
       enabled: active && modelServicesCapability === true,
     }),
   );
   const addModelServicesQuery = useQuery(
-    omniMindModelServicesListQueryOptions({
+    oaModelServicesListQueryOptions({
       enabled: active && modelServicesCapability === true && modelServiceBrowserOpen,
       intent: "add_service",
     }),
   );
   const modelServiceDetailQuery = useQuery(
-    omniMindModelServiceDetailQueryOptions({
+    oaModelServiceDetailQueryOptions({
       enabled: active && modelServicesCapability === true,
       serviceId: selectedModelServiceId,
       ...(modelServiceDetailReturnView === "browser" ? { intent: "add_service" as const } : {}),
@@ -962,7 +962,7 @@ function ActiveModelsSettingsPanel({
 
   useEffect(() => {
     if (modelServiceDetailReturnView !== "browser" || selectedModelServiceId === null) return;
-    const queryKey = omniMindModelServicesQueryKeys.detail(selectedModelServiceId, "add_service");
+    const queryKey = oaModelServicesQueryKeys.detail(selectedModelServiceId, "add_service");
     return () => {
       void queryClient.cancelQueries({ queryKey, exact: true });
     };
@@ -988,7 +988,7 @@ function ActiveModelsSettingsPanel({
       setupCompletionArmedRef.current = false;
       try {
         const detail = await queryClient.fetchQuery(
-          omniMindModelServiceDetailQueryOptions({
+          oaModelServiceDetailQueryOptions({
             enabled: true,
             serviceId: service.serviceId,
             intent: "add_service",
@@ -1251,7 +1251,7 @@ function ActiveModelsSettingsPanel({
   const invalidateModelServiceConsumers = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({
-        queryKey: omniMindModelServicesQueryKeys.all,
+        queryKey: oaModelServicesQueryKeys.all,
       }),
       queryClient.invalidateQueries({
         queryKey: engineDiscoveryQueryKeys.modelsForEngine("oa"),

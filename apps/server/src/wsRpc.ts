@@ -382,10 +382,10 @@ const makeWsRpcHandlersLayer = () =>
       const engineAdapterRegistry = yield* EngineAdapterRegistry;
       const engineExecutionCapabilities = yield* EngineExecutionCapabilities;
       const engineDiscoveryService = yield* EngineDiscoveryService;
-      const omniMindEcosystem = yield* OAEcosystem;
-      const omniMindAgentPromptFiles = yield* OAAgentPromptFiles;
-      const omniMindWebSearchSettings = yield* OAWebSearchSettings;
-      const omniMindModelServices = yield* OAModelServices;
+      const oaEcosystem = yield* OAEcosystem;
+      const oaAgentPromptFiles = yield* OAAgentPromptFiles;
+      const oaWebSearchSettings = yield* OAWebSearchSettings;
+      const oaModelServices = yield* OAModelServices;
       const engineHealth = yield* EngineHealth;
       const engineService = yield* EngineService;
       const lifecycleEvents = yield* ServerLifecycleEvents;
@@ -2117,159 +2117,151 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(engineDiscoveryService.listAgents(input), "Failed to list agents"),
         [WS_METHODS.oaEcosystemList]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.list(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaEcosystem.list(input))),
             "Failed to list HarnessOS Agent packages",
           ),
         [WS_METHODS.oaEcosystemListResources]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.listResources(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaEcosystem.listResources(input))),
             "Failed to list HarnessOS Agent package resources",
           ),
         [WS_METHODS.oaEcosystemInstall]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.install(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaEcosystem.install(input))),
             "Failed to install an HarnessOS Agent package",
           ),
         [WS_METHODS.oaEcosystemUpdate]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.update(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaEcosystem.update(input))),
             "Failed to update an HarnessOS Agent package",
           ),
         [WS_METHODS.oaEcosystemRemove]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.remove(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaEcosystem.remove(input))),
             "Failed to remove an HarnessOS Agent package",
           ),
         [WS_METHODS.oaEcosystemSetResourceEnabled]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.setResourceEnabled(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaEcosystem.setResourceEnabled(input))),
             "Failed to change an HarnessOS Agent package resource",
           ),
         [WS_METHODS.oaEcosystemReload]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.reload(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaEcosystem.reload(input))),
             "Failed to reload HarnessOS Agent resources",
           ),
         [WS_METHODS.oaAgentPromptsGetSnapshot]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindAgentPromptFiles.getSnapshot(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaAgentPromptFiles.getSnapshot(input))),
             "Failed to read HarnessOS Agent prompt files",
           ),
         [WS_METHODS.oaAgentPromptsMutate]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindAgentPromptFiles.mutate(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaAgentPromptFiles.mutate(input))),
             "Failed to change an HarnessOS Agent prompt file",
           ),
         [WS_METHODS.oaWebSearchOpen]: () =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindWebSearchSettings.open())),
+            requireOwnerRole.pipe(Effect.andThen(oaWebSearchSettings.open())),
             "Failed to open Web search settings",
           ),
         [WS_METHODS.oaWebSearchRefresh]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindWebSearchSettings.refresh(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaWebSearchSettings.refresh(input))),
             "Failed to refresh Web search settings",
           ),
         [WS_METHODS.oaWebSearchMutate]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindWebSearchSettings.mutate(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaWebSearchSettings.mutate(input))),
             "Failed to change Web search settings",
           ),
         [WS_METHODS.oaWebSearchTestProvider]: (input, { clientId }) =>
           rpcEffect(
             requireOwnerRole.pipe(
-              Effect.andThen(omniMindWebSearchSettings.testProvider(input, String(clientId))),
+              Effect.andThen(oaWebSearchSettings.testProvider(input, String(clientId))),
             ),
             "Failed to test Web search Engine",
           ),
         [WS_METHODS.oaWebSearchRecheck]: (input, { clientId }) =>
           rpcEffect(
             requireOwnerRole.pipe(
-              Effect.andThen(omniMindWebSearchSettings.recheck(input, String(clientId))),
+              Effect.andThen(oaWebSearchSettings.recheck(input, String(clientId))),
             ),
             "Failed to recheck Web search",
           ),
         [WS_METHODS.oaWebSearchOpenConfig]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(
-              Effect.andThen(omniMindWebSearchSettings.openConfig(input.editor)),
-            ),
+            requireOwnerRole.pipe(Effect.andThen(oaWebSearchSettings.openConfig(input.editor))),
             "Failed to open Web search configuration",
           ),
         [WS_METHODS.oaWebSearchGeminiDiagnostic]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindWebSearchSettings.diagnoseGemini(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaWebSearchSettings.diagnoseGemini(input))),
             "Failed to inspect Gemini Web account",
           ),
         [WS_METHODS.oaModelServicesList]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.list(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaModelServices.list(input))),
             "Failed to list HarnessOS model services",
           ),
         [WS_METHODS.oaModelServicesGet]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.get(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaModelServices.get(input))),
             "Failed to read an HarnessOS model service",
           ),
         [WS_METHODS.oaModelServicesBeginLogin]: (input, { clientId }) =>
           rpcEffect(
-            requireOwnerRole.pipe(
-              Effect.andThen(omniMindModelServices.beginLogin(clientId, input)),
-            ),
+            requireOwnerRole.pipe(Effect.andThen(oaModelServices.beginLogin(clientId, input))),
             "Failed to begin HarnessOS model-service login",
           ),
         [WS_METHODS.oaModelServicesPollLogin]: (input, { clientId }) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.pollLogin(clientId, input))),
+            requireOwnerRole.pipe(Effect.andThen(oaModelServices.pollLogin(clientId, input))),
             "Failed to poll HarnessOS model-service login",
           ),
         [WS_METHODS.oaModelServicesAnswerLogin]: (input, { clientId }) =>
           rpcEffect(
-            requireOwnerRole.pipe(
-              Effect.andThen(omniMindModelServices.answerLogin(clientId, input)),
-            ),
+            requireOwnerRole.pipe(Effect.andThen(oaModelServices.answerLogin(clientId, input))),
             "Failed to continue HarnessOS model-service login",
           ),
         [WS_METHODS.oaModelServicesCancelLogin]: (input, { clientId }) =>
           rpcEffect(
-            requireOwnerRole.pipe(
-              Effect.andThen(omniMindModelServices.cancelLogin(clientId, input)),
-            ),
+            requireOwnerRole.pipe(Effect.andThen(oaModelServices.cancelLogin(clientId, input))),
             "Failed to cancel HarnessOS model-service login",
           ),
         [WS_METHODS.oaModelServicesLogout]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.logout(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaModelServices.logout(input))),
             "Failed to remove HarnessOS model-service credentials",
           ),
         [WS_METHODS.oaModelServicesRevealApiKey]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.revealApiKey(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaModelServices.revealApiKey(input))),
             "Failed to reveal an HarnessOS model-service API key",
           ),
         [WS_METHODS.oaModelServicesRefresh]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.refresh(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaModelServices.refresh(input))),
             "Failed to refresh an HarnessOS model service",
           ),
         [WS_METHODS.oaModelServicesDiscoverCustom]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.discoverCustom(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaModelServices.discoverCustom(input))),
             "Failed to discover models for an HarnessOS custom model service",
           ),
         [WS_METHODS.oaModelServicesTestCustom]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.testCustom(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaModelServices.testCustom(input))),
             "Failed to test an HarnessOS custom model service",
           ),
         [WS_METHODS.oaModelServicesSaveCustom]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.saveCustom(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaModelServices.saveCustom(input))),
             "Failed to save an HarnessOS custom model service",
           ),
         [WS_METHODS.oaModelServicesRemoveCustom]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.removeCustom(input))),
+            requireOwnerRole.pipe(Effect.andThen(oaModelServices.removeCustom(input))),
             "Failed to remove an HarnessOS custom model service",
           ),
         [WS_METHODS.automationList]: (input) =>

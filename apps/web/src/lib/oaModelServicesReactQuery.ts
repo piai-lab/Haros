@@ -34,7 +34,7 @@ const MODEL_SERVICES_READ_RETRY_OPTIONS = {
   retryDelay: modelServicesReadRetryDelay,
 } as const;
 
-export const omniMindModelServicesQueryKeys = {
+export const oaModelServicesQueryKeys = {
   all: ["harnessos-model-services"] as const,
   list: (intent: "add_service" | null = null) =>
     ["harnessos-model-services", "list", intent] as const,
@@ -44,7 +44,7 @@ export const omniMindModelServicesQueryKeys = {
 
 function isAddServiceIntentQueryKey(queryKey: readonly unknown[]): boolean {
   return (
-    queryKey[0] === omniMindModelServicesQueryKeys.all[0] &&
+    queryKey[0] === oaModelServicesQueryKeys.all[0] &&
     ((queryKey[1] === "list" && queryKey[2] === "add_service") ||
       (queryKey[1] === "detail" && queryKey[3] === "add_service"))
   );
@@ -54,17 +54,17 @@ export async function cancelOAModelServicesAddIntentQueries(
   queryClient: QueryClient,
 ): Promise<void> {
   await queryClient.cancelQueries({
-    queryKey: omniMindModelServicesQueryKeys.all,
+    queryKey: oaModelServicesQueryKeys.all,
     predicate: (query) => isAddServiceIntentQueryKey(query.queryKey),
   });
 }
 
-export function omniMindModelServicesListQueryOptions(input: {
+export function oaModelServicesListQueryOptions(input: {
   enabled: boolean;
   intent?: "add_service";
 }) {
   return queryOptions({
-    queryKey: omniMindModelServicesQueryKeys.list(input.intent ?? null),
+    queryKey: oaModelServicesQueryKeys.list(input.intent ?? null),
     enabled: input.enabled,
     queryFn: async ({ signal }) =>
       ensureNativeApi().oaModelServices.list(input.intent ? { intent: input.intent } : {}, {
@@ -77,13 +77,13 @@ export function omniMindModelServicesListQueryOptions(input: {
   });
 }
 
-export function omniMindModelServiceDetailQueryOptions(input: {
+export function oaModelServiceDetailQueryOptions(input: {
   enabled: boolean;
   serviceId: string | null;
   intent?: "add_service";
 }) {
   return queryOptions({
-    queryKey: omniMindModelServicesQueryKeys.detail(input.serviceId, input.intent ?? null),
+    queryKey: oaModelServicesQueryKeys.detail(input.serviceId, input.intent ?? null),
     enabled: input.enabled && input.serviceId !== null,
     queryFn: async ({ signal }) => {
       if (input.serviceId === null) {

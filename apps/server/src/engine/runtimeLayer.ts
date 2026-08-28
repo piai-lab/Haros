@@ -89,7 +89,7 @@ export function makeServerEngineLayer(
     const piAdapterLayer = makePiAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
     ).pipe(Layer.provide(hostGatewayCredentialsLayer), Layer.provide(BrowserAutomationHostLive));
-    const omniMindAgentAdapterLayer = makeOAAgentAdapterLive(
+    const oaAgentAdapterLayer = makeOAAgentAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
     ).pipe(
       Layer.provide(hostGatewayCredentialsLayer),
@@ -105,7 +105,7 @@ export function makeServerEngineLayer(
       Layer.provide(droidAdapterLayer),
       Layer.provide(kiloAdapterLayer),
       Layer.provide(openCodeAdapterLayer),
-      Layer.provide(omniMindAgentAdapterLayer),
+      Layer.provide(oaAgentAdapterLayer),
       Layer.provide(piAdapterLayer),
       Layer.provideMerge(engineSessionDirectoryLayer),
     );
@@ -123,18 +123,16 @@ export function makeServerEngineLayer(
       // layer is memoized so this reuses the instance built at the top level.
       Layer.provide(ServerSettingsLive),
     );
-    const omniMindModelServicesLayer = OAModelServicesLive.pipe(Layer.provide(engineServiceLayer));
-    const omniMindEcosystemLayer = OAEcosystemLive.pipe(Layer.provide(engineServiceLayer));
-    const omniMindAgentPromptFilesLayer = OAAgentPromptFilesLive.pipe(
-      Layer.provide(ServerSettingsLive),
-    );
+    const oaModelServicesLayer = OAModelServicesLive.pipe(Layer.provide(engineServiceLayer));
+    const oaEcosystemLayer = OAEcosystemLive.pipe(Layer.provide(engineServiceLayer));
+    const oaAgentPromptFilesLayer = OAAgentPromptFilesLive.pipe(Layer.provide(ServerSettingsLive));
     return Layer.mergeAll(
       engineServiceLayer,
       engineDiscoveryLayer,
-      omniMindEcosystemLayer,
-      omniMindAgentPromptFilesLayer,
+      oaEcosystemLayer,
+      oaAgentPromptFilesLayer,
       OAWebSearchSettingsLive,
-      omniMindModelServicesLayer,
+      oaModelServicesLayer,
       adapterRegistryLayer,
       engineSessionDirectoryLayer,
     );
