@@ -1,5 +1,5 @@
 // FILE: FeedbackDialog.browser.tsx
-// Purpose: Proves feedback delivery failure preserves the user's visible draft.
+// Purpose: Proves the public feedback flow opens a reviewable GitHub issue draft.
 // Layer: Browser UI test
 
 import "../index.css";
@@ -7,22 +7,14 @@ import "../index.css";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
+import { FeedbackDialog } from "./FeedbackDialog";
+import { I18nProvider } from "../i18n";
 
-const delivery = vi.hoisted(() => ({ submit: vi.fn() }));
 const i18n = vi.hoisted(() => ({ settings: { localePreference: "zh-CN" } }));
 
 vi.mock("../localPreferences", () => ({
   useLocalPreferences: () => ({ preferences: i18n.settings }),
 }));
-
-vi.mock("../feedback", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../feedback")>();
-  return { ...actual, submitFeedback: delivery.submit };
-});
-
-import { FeedbackDialog } from "./FeedbackDialog";
-import { FeedbackDeliveryCancelledError } from "../feedback";
-import { I18nProvider } from "../i18n";
 
 const EMPTY_CONTEXT = {
   engine: null,
@@ -41,100 +33,53 @@ const EMPTY_CONTEXT = {
 };
 
 describe("FeedbackDialog", () => {
-  afterEach(async () => {
-    await cleanup();
-    delivery.submit.mockReset();
-  });
+  afterEach(cleanup);
 
-  it("shows unavailable before submission and sends no request", async () => {
-    const onOpenChange = vi.fn();
-    await render(<FeedbackDialog open context={EMPTY_CONTEXT} onOpenChange={onOpenChange} />);
+  it("keeps the GitHub action disabled until the user writes feedback", async () => {
+    await render(
+      <FeedbackDialog open context={EMPTY_CONTEXT} onOpenChange={vi.fn()} onOpenIssue={vi.fn()} />,
+    );
 
-    await expect.element(page.getByRole("status")).toHaveTextContent("unavailable in this build");
     await expect
-      .element(page.getByText(/If feedback delivery is activated in a future production build/))
-      .toBeInTheDocument();
-    const details = page.getByLabelText("Feedback details");
-    await details.fill("Keep this local draft.");
-    await expect.element(page.getByRole("button", { name: "Submit" })).toBeDisabled();
-    expect(delivery.submit).not.toHaveBeenCalled();
+      .element(page.getByRole("button", { name: "Open GitHub issue draft" }))
+      .toBeDisabled();
+    await expect
+      .element(page.getByText(/Nothing is submitted until you confirm on GitHub/))
+      .toBeVisible();
   });
 
-  it("renders categories and privacy boundaries in simplified Chinese", async () => {
+  it("renders the same public boundary in simplified Chinese", async () => {
     await render(
       <I18nProvider>
-        <FeedbackDialog open context={EMPTY_CONTEXT} onOpenChange={vi.fn()} />
+        <FeedbackDialog open context={EMPTY_CONTEXT} onOpenChange={vi.fn()} onOpenIssue={vi.fn()} />
       </I18nProvider>,
     );
 
     await expect.element(page.getByRole("heading", { name: "提交反馈" })).toBeVisible();
     await expect.element(page.getByRole("button", { name: /任务/ })).toBeVisible();
+    await expect.element(page.getByText(/确认前不会提交任何内容/)).toBeVisible();
     await expect.element(page.getByText(/绝不会发送提示、消息、代码或文件内容/)).toBeVisible();
-    await expect.element(page.getByRole("button", { name: "提交" })).toBeDisabled();
   });
 
-  it("keeps the draft and dialog open when an activated delivery fails", async () => {
+  it("opens a reviewable issue draft and closes the dialog", async () => {
+    const onOpenIssue = vi.fn();
     const onOpenChange = vi.fn();
-    delivery.submit.mockRejectedValue(
-      new Error("Feedback delivery is not available in this build. Your draft has been kept."),
-    );
     await render(
       <FeedbackDialog
         open
         context={EMPTY_CONTEXT}
         onOpenChange={onOpenChange}
-        deliveryOptions={{
-          configuredEndpoint: "https://harnessos.wisdomeyes.cn/api/v1/feedback",
-          isProduction: true,
-        }}
+        onOpenIssue={onOpenIssue}
       />,
     );
 
-    const details = page.getByLabelText("Feedback details");
-    await details.fill("Please keep this exact draft.");
-    await page.getByRole("button", { name: "Submit" }).click();
+    await page.getByLabelText("Feedback details").fill("Please keep this exact draft.");
+    await page.getByRole("button", { name: "Open GitHub issue draft" }).click();
 
-    await expect
-      .element(page.getByRole("alert"))
-      .toHaveTextContent("Feedback delivery is not available in this build");
-    await expect.element(details).toHaveValue("Please keep this exact draft.");
-    expect(onOpenChange).not.toHaveBeenCalledWith(false);
-    expect(delivery.submit).toHaveBeenCalledTimes(1);
-  });
-
-  it("offers an explicit cancel while sending and keeps the draft", async () => {
-    const onOpenChange = vi.fn();
-    let rejectDelivery: ((error: Error) => void) | undefined;
-    delivery.submit.mockImplementation(async () => {
-      await new Promise<void>((_resolve, reject) => {
-        rejectDelivery = reject;
-      });
-    });
-    await render(
-      <FeedbackDialog
-        open
-        context={EMPTY_CONTEXT}
-        onOpenChange={onOpenChange}
-        deliveryOptions={{
-          configuredEndpoint: "https://harnessos.wisdomeyes.cn/api/v1/feedback",
-          isProduction: true,
-        }}
-      />,
-    );
-
-    const details = page.getByLabelText("Feedback details");
-    await details.fill("Keep this draft after cancel.");
-    await page.getByRole("button", { name: "Submit" }).click();
-    await page.getByRole("button", { name: "Cancel sending" }).click();
-
-    expect(delivery.submit.mock.calls[0]?.[1].signal.aborted).toBe(true);
-    rejectDelivery?.(new FeedbackDeliveryCancelledError());
-    await vi.waitFor(
-      () => expect(document.body.textContent).toContain("Feedback sending was cancelled"),
-      { timeout: 3_000 },
-    );
-    await expect.element(page.getByRole("alert")).toHaveTextContent("cancelled");
-    await expect.element(details).toHaveValue("Keep this draft after cancel.");
-    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(onOpenIssue).toHaveBeenCalledTimes(1);
+    const url = new URL(onOpenIssue.mock.calls[0]?.[0] as string);
+    expect(url.origin + url.pathname).toBe("https://github.com/piai-lab/HarnessOS/issues/new");
+    expect(url.searchParams.get("body")).toContain("Please keep this exact draft.");
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

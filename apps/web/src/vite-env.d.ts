@@ -4,8 +4,6 @@ import type { NativeApi, DesktopBridge } from "@harnessos/contracts";
 
 interface ImportMetaEnv {
   readonly APP_VERSION: string;
-  readonly VITE_PUBLIC_SITE_ORIGIN?: string;
-  readonly VITE_FEEDBACK_ENDPOINT?: string;
 }
 
 interface ImportMeta {

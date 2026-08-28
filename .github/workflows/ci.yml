@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [static, unit, integration, release]
+        suite: [static, unit, integration, build]
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -76,19 +76,19 @@ jobs:
         run: bun run test:integration
 
       - name: Verify Linux terminal PTY native dependency
-        if: matrix.suite == 'release'
+        if: matrix.suite == 'build'
         run: node scripts/node-pty-smoke.mjs
 
-      - name: Release workflow smoke
-        if: matrix.suite == 'release'
-        run: node scripts/release-smoke.ts
+      - name: Unsigned packaged proof smoke
+        if: matrix.suite == 'build'
+        run: node scripts/packaged-proof-smoke.ts
 
       - name: Build desktop pipeline
-        if: matrix.suite == 'release'
+        if: matrix.suite == 'build'
         run: bun run build:desktop
 
       - name: Verify preload bundle output
-        if: matrix.suite == 'release'
+        if: matrix.suite == 'build'
         run: |
           test -f apps/desktop/dist-electron/preload.js
           grep -nE "desktopBridge|getWsUrl|PICK_FOLDER_CHANNEL|wsUrl" apps/desktop/dist-electron/preload.js

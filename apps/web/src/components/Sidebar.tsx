@@ -880,18 +880,14 @@ function PublicSiteMenuItem({
   label: string;
   surface: PublicSiteSurface;
 }) {
-  const { t } = useI18n();
   const link = resolvePublicSiteLink(surface);
-  const unavailable = link.href === null;
   return (
     <MenuItem
-      aria-label={unavailable ? t("public.unavailableLabel", { label }) : label}
+      aria-label={label}
       className={SIDEBAR_CONTEXT_MENU_ITEM_CLASS_NAME}
       data-public-surface={surface}
-      disabled={unavailable}
-      title={unavailable ? t("public.unavailable") : undefined}
       onClick={() => {
-        if (link.href) openExternalLink(link.href);
+        openExternalLink(link.href);
       }}
     >
       <SidebarContextMenuIcon icon={icon} />
@@ -921,7 +917,7 @@ function SidebarHelpMenu({
       <ComposerPickerMenuPopup align="end" side="top" className="w-64 min-w-64">
         <MenuGroup>
           <PublicSiteMenuItem icon={BookIcon} label={t("nav.docs")} surface="docs" />
-          <PublicSiteMenuItem icon={ClockIcon} label={t("nav.whatsNew")} surface="changelog" />
+          <PublicSiteMenuItem icon={ClockIcon} label={t("nav.whatsNew")} surface="discussions" />
           <MenuItem className={SIDEBAR_CONTEXT_MENU_ITEM_CLASS_NAME} onClick={onOpenShortcuts}>
             <SidebarContextMenuIcon icon={KeyboardIcon} />
             <span>{t("shortcuts.title")}</span>

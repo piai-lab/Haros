@@ -1,19 +1,10 @@
 // FILE: feedback.ts
-// Purpose: Owns feedback categories, privacy-safe diagnostics, and delivery.
+// Purpose: Builds a privacy-bounded GitHub issue draft from visible user input and typed diagnostics.
 // Layer: Web feature logic
-// Depends on: The separately configured Public Surface feedback boundary.
 
 import { APP_VERSION } from "./branding";
-import {
-  FEEDBACK_RECIPIENT_LABEL,
-  resolveFeedbackEndpoint,
-  type FeedbackSurfaceActivation,
-} from "./publicSurface";
+import { buildGitHubIssueDraftUrl, FEEDBACK_RECIPIENT_LABEL } from "./publicSurface";
 
-/**
- * `lead` opens the reported summary in the reporter's voice, so the category is
- * readable as a sentence rather than as an enum value.
- */
 export const FEEDBACK_CATEGORIES = [
   { value: "bug", label: "Bug", lead: "I ran into a bug" },
   { value: "session", label: "Session", lead: "I hit a session problem" },
@@ -24,8 +15,6 @@ export const FEEDBACK_CATEGORIES = [
 ] as const;
 
 export type FeedbackCategory = (typeof FEEDBACK_CATEGORIES)[number]["value"];
-
-const UNCATEGORIZED_LEAD = "I have some feedback";
 
 export interface FeedbackThreadContext {
   engine: string | null;
@@ -55,31 +44,15 @@ export type FeedbackDiagnostics = FeedbackThreadContext & {
 export interface FeedbackSubmission {
   category: FeedbackCategory | null;
   details: string;
-  contactEmail?: string | null;
-  /** Reader-facing rendering of `diagnostics`; the reporter never sees or edits it. */
   summary: string;
   diagnostics: FeedbackDiagnostics;
 }
 
-const FEEDBACK_REQUEST_TIMEOUT_MS = 20_000;
 export const MAX_FEEDBACK_DETAILS_LENGTH = 5_000;
-export const MAX_FEEDBACK_EMAIL_LENGTH = 254;
-export const MAX_FEEDBACK_BODY_BYTES = 64 * 1_024;
 export { FEEDBACK_RECIPIENT_LABEL };
 
 const MAX_DIAGNOSTIC_COUNT = 1_000_000;
-
-function hasUnsupportedControlCharacter(value: string, multiline: boolean): boolean {
-  for (const character of value) {
-    const code = character.codePointAt(0)!;
-    if (code >= 0x7f && code <= 0x9f) return true;
-    if (code > 0x1f) continue;
-    if (multiline && (code === 0x09 || code === 0x0a || code === 0x0d)) continue;
-    return true;
-  }
-  return false;
-}
-
+const UNCATEGORIZED_LEAD = "I have some feedback";
 const DIAGNOSTIC_ENUMS = {
   projectKind: ["project", "chat", "studio"],
   environmentMode: ["local", "worktree"],
@@ -89,20 +62,6 @@ const DIAGNOSTIC_ENUMS = {
   latestTurnState: ["running", "interrupted", "completed", "error"],
 } as const satisfies Record<string, readonly string[]>;
 
-export class FeedbackDeliveryUnavailableError extends Error {
-  constructor() {
-    super("Feedback delivery is not available in this build. Your draft has been kept.");
-    this.name = "FeedbackDeliveryUnavailableError";
-  }
-}
-
-export class FeedbackDeliveryCancelledError extends Error {
-  constructor() {
-    super("Feedback sending was cancelled. Your draft has been kept.");
-    this.name = "FeedbackDeliveryCancelledError";
-  }
-}
-
 function formatStateFlags(diagnostics: FeedbackThreadContext): string {
   const flags: string[] = [];
   if (diagnostics.hasThreadError) flags.push("the thread was in an error state");
@@ -111,10 +70,6 @@ function formatStateFlags(diagnostics: FeedbackThreadContext): string {
   return flags.length > 0 ? `${flags.join(", ")}.` : "nothing pending.";
 }
 
-/**
- * Renders diagnostics as the report a maintainer reads first, since incoming
- * feedback arrives without any context about what the reporter was doing.
- */
 export function formatFeedbackSummary(input: {
   category: FeedbackCategory | null;
   diagnostics: FeedbackDiagnostics;
@@ -127,7 +82,6 @@ export function formatFeedbackSummary(input: {
       ? `, using ${diagnostics.engine} with ${diagnostics.model}`
       : `, using ${diagnostics.engine}`
     : " outside an active chat";
-
   const rows: Array<[string, string | null]> = [
     ["Report type", category?.label ?? "Unspecified"],
     ["App version", diagnostics.appVersion],
@@ -150,21 +104,18 @@ export function formatFeedbackSummary(input: {
     ["Submitted at", diagnostics.submittedAt],
   ];
 
-  const detailLines = rows
-    .filter((row): row is [string, string] => row[1] !== null && row[1] !== "")
-    .map(([label, value]) => `${label}: ${value}`);
-
   return [
     `${lead} in HarnessOS ${diagnostics.appVersion}${usageContext}.`,
     "",
-    ...detailLines,
+    ...rows
+      .filter((row): row is [string, string] => row[1] !== null && row[1] !== "")
+      .map(([label, value]) => `${label}: ${value}`),
   ].join("\n");
 }
 
 export function buildFeedbackSubmission(input: {
   category: FeedbackCategory | null;
   details: string;
-  contactEmail?: string;
   context: FeedbackThreadContext;
   now?: Date;
   userAgent?: string;
@@ -179,14 +130,6 @@ export function buildFeedbackSubmission(input: {
     );
   }
   const viewport = input.viewport ?? { width: window.innerWidth, height: window.innerHeight };
-  const contactEmail = input.contactEmail?.trim().toLowerCase() || null;
-  if (
-    contactEmail &&
-    (contactEmail.length > MAX_FEEDBACK_EMAIL_LENGTH ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(contactEmail))
-  ) {
-    throw new TypeError("Contact email is invalid.");
-  }
   const diagnostics: FeedbackDiagnostics = {
     engine: input.context.engine,
     model: input.context.model,
@@ -212,30 +155,9 @@ export function buildFeedbackSubmission(input: {
   return {
     category: input.category,
     details,
-    contactEmail,
-    summary: formatFeedbackSummary({
-      category: input.category,
-      diagnostics,
-    }),
+    summary: formatFeedbackSummary({ category: input.category, diagnostics }),
     diagnostics,
   };
-}
-
-export interface FeedbackDeliveryOptions extends FeedbackSurfaceActivation {
-  readonly fetchImplementation?: typeof fetch;
-  /** Lets the visible dialog cancel the one in-flight request without discarding its draft. */
-  readonly signal?: AbortSignal;
-}
-
-export function isFeedbackDeliveryAvailable(options: FeedbackDeliveryOptions = {}): boolean {
-  return resolveFeedbackEndpoint(options) !== null;
-}
-
-function requireRecord(value: unknown, label: string): Record<string, unknown> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new TypeError(`${label} must be an object.`);
-  }
-  return value as Record<string, unknown>;
 }
 
 function requireBoundedString(
@@ -244,77 +166,78 @@ function requireBoundedString(
   maximumLength: number,
   options: { nullable?: boolean; multiline?: boolean } = {},
 ): string | null {
-  if (options.nullable && (value === null || value === undefined)) return null;
+  if (options.nullable && value === null) return null;
   if (typeof value !== "string") throw new TypeError(`${label} must be a string.`);
   const normalized = value.trim();
   if (normalized.length > maximumLength) {
     throw new RangeError(`${label} must be ${maximumLength} characters or fewer.`);
   }
-  if (hasUnsupportedControlCharacter(normalized, options.multiline === true)) {
+  for (const character of normalized) {
+    const code = character.codePointAt(0)!;
+    if (code >= 0x7f && code <= 0x9f) {
+      throw new TypeError(`${label} contains unsupported control characters.`);
+    }
+    if (code > 0x1f) continue;
+    if (options.multiline && (code === 0x09 || code === 0x0a || code === 0x0d)) continue;
     throw new TypeError(`${label} contains unsupported control characters.`);
   }
   return normalized;
 }
 
-function requireNullableEnum<K extends keyof typeof DIAGNOSTIC_ENUMS>(
-  value: unknown,
-  label: K,
-): string | null {
-  if (value === null) return null;
-  if (
-    typeof value !== "string" ||
-    !(DIAGNOSTIC_ENUMS[label] as readonly string[]).includes(value)
-  ) {
-    throw new TypeError(`Feedback diagnostic ${label} is invalid.`);
+function validateDiagnostics(value: unknown): FeedbackDiagnostics {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("Feedback diagnostics must be an object.");
   }
-  return value;
-}
-
-function requireCount(value: unknown, label: string): number {
-  if (
-    typeof value !== "number" ||
-    !Number.isFinite(value) ||
-    !Number.isInteger(value) ||
-    value < 0 ||
-    value > MAX_DIAGNOSTIC_COUNT
-  ) {
-    throw new TypeError(`Feedback diagnostic ${label} must be a bounded non-negative integer.`);
-  }
-  return value;
-}
-
-function requireBoolean(value: unknown, label: string): boolean {
-  if (typeof value !== "boolean") {
-    throw new TypeError(`Feedback diagnostic ${label} must be a boolean.`);
-  }
-  return value;
-}
-
-function normalizeFeedbackDiagnostics(value: unknown): FeedbackDiagnostics {
-  const candidate = requireRecord(value, "Feedback diagnostics");
-  const submittedAt = requireBoundedString(candidate.submittedAt, "Submitted at", 40);
-  if (!submittedAt || Number.isNaN(Date.parse(submittedAt))) {
+  const candidate = value as Record<string, unknown>;
+  const nullableEnum = (key: keyof typeof DIAGNOSTIC_ENUMS): string | null => {
+    const current = candidate[key];
+    if (current === null) return null;
+    if (typeof current !== "string" || !DIAGNOSTIC_ENUMS[key].includes(current as never)) {
+      throw new TypeError(`Feedback diagnostic ${key} is invalid.`);
+    }
+    return current;
+  };
+  const count = (key: "messageCount" | "activityCount"): number => {
+    const current = candidate[key];
+    if (
+      typeof current !== "number" ||
+      !Number.isInteger(current) ||
+      current < 0 ||
+      current > MAX_DIAGNOSTIC_COUNT
+    ) {
+      throw new TypeError(`Feedback diagnostic ${key} must be a bounded non-negative integer.`);
+    }
+    return current;
+  };
+  const flag = (key: "hasPendingApproval" | "hasPendingUserInput" | "hasThreadError"): boolean => {
+    if (typeof candidate[key] !== "boolean") {
+      throw new TypeError(`Feedback diagnostic ${key} must be a boolean.`);
+    }
+    return candidate[key];
+  };
+  const submittedAt = requireBoundedString(candidate.submittedAt, "Submitted at", 40)!;
+  if (Number.isNaN(Date.parse(submittedAt))) {
     throw new TypeError("Feedback diagnostic submittedAt is invalid.");
   }
-  const viewport = requireBoundedString(candidate.viewport, "Viewport", 24);
-  if (!viewport || !/^\d{1,5}x\d{1,5}$/u.test(viewport)) {
+  const viewport = requireBoundedString(candidate.viewport, "Viewport", 24)!;
+  if (!/^\d{1,5}x\d{1,5}$/u.test(viewport)) {
     throw new TypeError("Feedback diagnostic viewport is invalid.");
   }
 
   return {
     engine: requireBoundedString(candidate.engine, "Engine", 128, { nullable: true }),
     model: requireBoundedString(candidate.model, "Model", 256, { nullable: true }),
-    projectKind: requireNullableEnum(candidate.projectKind, "projectKind"),
-    environmentMode: requireNullableEnum(candidate.environmentMode, "environmentMode"),
-    runtimeMode: requireNullableEnum(candidate.runtimeMode, "runtimeMode"),
-    interactionMode: requireNullableEnum(candidate.interactionMode, "interactionMode"),
-    sessionStatus: requireNullableEnum(candidate.sessionStatus, "sessionStatus"),
-    latestTurnState: requireNullableEnum(candidate.latestTurnState, "latestTurnState"),
-    messageCount: requireCount(candidate.messageCount, "messageCount"),
-    activityCount: requireCount(candidate.activityCount, "activityCount"),
-    hasPendingApproval: requireBoolean(candidate.hasPendingApproval, "hasPendingApproval"),
-    hasPendingUserInput: requireBoolean(candidate.hasPendingUserInput, "hasPendingUserInput"),
-    hasThreadError: requireBoolean(candidate.hasThreadError, "hasThreadError"),
+    projectKind: nullableEnum("projectKind"),
+    environmentMode: nullableEnum("environmentMode"),
+    runtimeMode: nullableEnum("runtimeMode"),
+    interactionMode: nullableEnum("interactionMode"),
+    sessionStatus: nullableEnum("sessionStatus"),
+    latestTurnState: nullableEnum("latestTurnState"),
+    messageCount: count("messageCount"),
+    activityCount: count("activityCount"),
+    hasPendingApproval: flag("hasPendingApproval"),
+    hasPendingUserInput: flag("hasPendingUserInput"),
+    hasThreadError: flag("hasThreadError"),
     appVersion: requireBoundedString(candidate.appVersion, "App version", 64)!,
     submittedAt,
     userAgent: requireBoundedString(candidate.userAgent, "User agent", 1_024)!,
@@ -324,101 +247,39 @@ function normalizeFeedbackDiagnostics(value: unknown): FeedbackDiagnostics {
   };
 }
 
-function serializeFeedbackSubmission(submission: FeedbackSubmission): string {
-  const validCategory = FEEDBACK_CATEGORIES.some(
-    (candidate) => candidate.value === submission.category,
-  );
-  if (submission.category !== null && !validCategory) {
+export function buildFeedbackIssueUrl(submission: FeedbackSubmission): string {
+  const category = FEEDBACK_CATEGORIES.find((item) => item.value === submission.category);
+  if (submission.category !== null && !category) {
     throw new TypeError("Feedback category is invalid.");
   }
-  const category = submission.category;
   const details = requireBoundedString(
     (submission as unknown as Record<string, unknown>).details,
     "Feedback details",
     MAX_FEEDBACK_DETAILS_LENGTH,
     { multiline: true },
   )!;
-  const contactEmail = requireBoundedString(
-    (submission as unknown as Record<string, unknown>).contactEmail,
-    "Contact email",
-    MAX_FEEDBACK_EMAIL_LENGTH,
-    { nullable: true },
-  );
-  if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(contactEmail)) {
-    throw new TypeError("Contact email is invalid.");
-  }
-  if (details.length > MAX_FEEDBACK_DETAILS_LENGTH) {
-    throw new RangeError(
-      `Feedback details must be ${MAX_FEEDBACK_DETAILS_LENGTH} characters or fewer.`,
-    );
-  }
-
-  const diagnostics = normalizeFeedbackDiagnostics(
+  const diagnostics = validateDiagnostics(
     (submission as unknown as Record<string, unknown>).diagnostics,
   );
-  const body = JSON.stringify({
-    source: "desktop",
-    category,
+  const label = category?.label ?? "Feedback";
+  const firstLine = details.split(/\r?\n/u, 1)[0]?.trim() || "HarnessOS feedback";
+  const title = `[${label}] ${firstLine}`.slice(0, 120);
+  const body = [
+    "## Feedback",
+    "",
     details,
-    contactEmail: contactEmail?.toLowerCase() ?? null,
-    summary: formatFeedbackSummary({ category, diagnostics }),
-    diagnostics,
-  });
-  if (new TextEncoder().encode(body).byteLength > MAX_FEEDBACK_BODY_BYTES) {
-    throw new RangeError(`Feedback request must be ${MAX_FEEDBACK_BODY_BYTES} bytes or fewer.`);
-  }
-  return body;
-}
-
-export async function submitFeedback(
-  submission: FeedbackSubmission,
-  options: FeedbackDeliveryOptions = {},
-): Promise<void> {
-  const endpoint = resolveFeedbackEndpoint(options);
-  if (!endpoint) throw new FeedbackDeliveryUnavailableError();
-  const body = serializeFeedbackSubmission(submission);
-
-  const fetchImplementation = options.fetchImplementation ?? fetch;
-  const controller = new AbortController();
-  let timedOut = false;
-  const cancelFromCaller = () => controller.abort();
-  if (options.signal?.aborted) throw new FeedbackDeliveryCancelledError();
-  options.signal?.addEventListener("abort", cancelFromCaller, { once: true });
-  const timeout = globalThis.setTimeout(() => {
-    timedOut = true;
-    controller.abort();
-  }, FEEDBACK_REQUEST_TIMEOUT_MS);
-  try {
-    const response = await fetchImplementation(endpoint, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-harnessos-feedback": "1",
-      },
-      body,
-      signal: controller.signal,
-      credentials: "omit",
-      referrerPolicy: "no-referrer",
-      redirect: "error",
-    });
-    if (response.redirected) {
-      throw new Error("Feedback delivery refused a redirected response.");
-    }
-    if (response.ok) return;
-
-    const payload = (await response.json().catch(() => null)) as { error?: unknown } | null;
-    const message = typeof payload?.error === "string" ? payload.error.trim() : "";
-    throw new Error(message || `Feedback could not be sent (${response.status}).`);
-  } catch (error) {
-    if (controller.signal.aborted && options.signal?.aborted && !timedOut) {
-      throw new FeedbackDeliveryCancelledError();
-    }
-    if (controller.signal.aborted && timedOut) {
-      throw new Error("Feedback delivery timed out. Please try again.", { cause: error });
-    }
-    throw error;
-  } finally {
-    globalThis.clearTimeout(timeout);
-    options.signal?.removeEventListener("abort", cancelFromCaller);
-  }
+    "",
+    "<details>",
+    "<summary>HarnessOS diagnostics</summary>",
+    "",
+    formatFeedbackSummary({ category: submission.category, diagnostics }),
+    "",
+    "</details>",
+    "",
+    "> This draft was created locally by HarnessOS. Review it before submitting to GitHub.",
+  ].join("\n");
+  const labels =
+    submission.category === "idea" ? ["enhancement", "needs-triage"] : ["needs-triage"];
+  if (submission.category === "bug" || submission.category === "session") labels.unshift("bug");
+  return buildGitHubIssueDraftUrl({ title, body, labels });
 }

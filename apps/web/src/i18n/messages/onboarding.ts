@@ -2,8 +2,8 @@ import { defineMessageSlice } from "../messageCatalog";
 
 const EN_MESSAGES = {
   "feedback.title": "Share feedback",
-  "feedback.sent": "Feedback sent",
-  "feedback.thanks": "Thanks for helping make HarnessOS better.",
+  "feedback.draftOpened": "GitHub issue draft opened",
+  "feedback.reviewOnGitHub": "Review the draft in your browser before submitting it.",
   "feedback.category": "Feedback category",
   "feedback.categoryBug": "Bug",
   "feedback.categoryTask": "Task",
@@ -13,22 +13,11 @@ const EN_MESSAGES = {
   "feedback.categoryOther": "Other",
   "feedback.detailsPlaceholder": "Share details (required)",
   "feedback.details": "Feedback details",
-  "feedback.contactEmail": "Contact email · Optional",
-  "feedback.contactEmailPlaceholder": "Only if you want a reply",
-  "feedback.contactEmailPrivacy": "Encrypted at rest and removed 90 days after the report closes.",
-  "feedback.deliveryFailed": "Feedback could not be delivered. Your draft has been kept.",
-  "feedback.unavailable":
-    "Feedback delivery is unavailable in this build. You can draft here, but Submit stays disabled and no request will be sent.",
-  "feedback.recipientPrivacy":
-    "Recipient: {recipient}. An explicit submission sends your feedback plus app version, OS, language, viewport, engine/model, modes, and task state.",
-  "feedback.futurePrivacy":
-    "If feedback delivery is activated in a future production build, an explicit submission will send your feedback plus app version, OS, language, viewport, engine/model, modes, and task state.",
+  "feedback.githubDraft":
+    "Opens a local draft at {recipient} with your feedback plus app version, OS, language, viewport, engine/model, modes, and task state. Nothing is submitted until you confirm on GitHub.",
   "feedback.neverSends":
     "It never sends prompts, messages, code or file content, file paths, terminal output, environment variables, credentials, logs, screenshots, or attachments.",
-  "feedback.cancelSending": "Cancel sending",
-  "feedback.submit": "Submit",
-  "public.unavailableLabel": "{label} — unavailable",
-  "public.unavailable": "This destination is not available in this build.",
+  "feedback.openGitHubIssue": "Open GitHub issue draft",
   "import.projectRequired": "Add a project before importing a task.",
   "import.projectUnresolved": "The target project could not be found.",
   "import.piModelRequired": "Select a Pi model before importing a Pi task.",
@@ -161,8 +150,8 @@ const EN_MESSAGES = {
 
 const ZH_CN_MESSAGES = {
   "feedback.title": "提交反馈",
-  "feedback.sent": "反馈已发送",
-  "feedback.thanks": "感谢你帮助 HarnessOS 变得更好。",
+  "feedback.draftOpened": "已打开 GitHub Issue 草稿",
+  "feedback.reviewOnGitHub": "请在浏览器中检查草稿，确认后再提交。",
   "feedback.category": "反馈分类",
   "feedback.categoryBug": "问题",
   "feedback.categoryTask": "任务",
@@ -172,22 +161,11 @@ const ZH_CN_MESSAGES = {
   "feedback.categoryOther": "其他",
   "feedback.detailsPlaceholder": "请填写详细信息（必填）",
   "feedback.details": "反馈详情",
-  "feedback.contactEmail": "联系邮箱 · 选填",
-  "feedback.contactEmailPlaceholder": "仅在你希望收到回复时填写",
-  "feedback.contactEmailPrivacy": "静态存储时加密，并在反馈关闭 90 天后删除。",
-  "feedback.deliveryFailed": "反馈未能送达，草稿已保留。",
-  "feedback.unavailable":
-    "此版本暂未启用反馈发送。你可以先填写草稿，但提交按钮会保持禁用，也不会发送请求。",
-  "feedback.recipientPrivacy":
-    "接收方：{recipient}。只有你明确提交时，才会发送反馈以及应用版本、操作系统、语言、窗口大小、引擎/模型、模式和任务状态。",
-  "feedback.futurePrivacy":
-    "若未来的正式版本启用反馈发送，只有你明确提交时，才会发送反馈以及应用版本、操作系统、语言、窗口大小、引擎/模型、模式和任务状态。",
+  "feedback.githubDraft":
+    "将在 {recipient} 打开本地草稿，内容仅包含你的反馈以及应用版本、操作系统、语言、窗口大小、引擎/模型、模式和任务状态。你在 GitHub 确认前不会提交任何内容。",
   "feedback.neverSends":
     "绝不会发送提示、消息、代码或文件内容、文件路径、终端输出、环境变量、凭据、日志、截图或附件。",
-  "feedback.cancelSending": "取消发送",
-  "feedback.submit": "提交",
-  "public.unavailableLabel": "{label} — 暂不可用",
-  "public.unavailable": "此版本暂不提供该入口。",
+  "feedback.openGitHubIssue": "打开 GitHub Issue 草稿",
   "import.projectRequired": "请先添加项目，再导入任务。",
   "import.projectUnresolved": "找不到目标项目。",
   "import.piModelRequired": "请先选择 Pi 模型，再导入 Pi 任务。",
