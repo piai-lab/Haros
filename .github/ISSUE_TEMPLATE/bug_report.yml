@@ -31,7 +31,7 @@ body:
         - apps/server
         - apps/desktop
         - packages/contracts or packages/shared
-        - Build, CI, or release tooling
+        - Build, CI, or packaged-proof tooling
         - Docs
         - Not sure
     validations:
@@ -90,8 +90,8 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: OS, browser or desktop app version, Node/Bun version, provider/model if relevant.
-      placeholder: macOS 15.3, Chrome 135, Bun 1.3.9, Codex app-server ...
+      description: OS, browser or desktop app version, Node/Bun version, and Engine/model if relevant.
+      placeholder: macOS 15.3, Chrome 135, Bun 1.3.12, OA ...
 
   - type: textarea
     id: logs
@@ -114,4 +114,4 @@ body:
     attributes:
       label: Workaround
       description: If you found a temporary workaround, include it.
-      placeholder: Restarting the provider session clears the stuck state.
+      placeholder: Restarting the Engine session clears the stuck state.

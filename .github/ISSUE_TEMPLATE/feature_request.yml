@@ -31,7 +31,7 @@ body:
         - apps/server
         - apps/desktop
         - packages/contracts or packages/shared
-        - Build, CI, or release tooling
+        - Build, CI, or packaged-proof tooling
         - Docs
         - Not sure
     validations:
@@ -42,7 +42,7 @@ body:
     attributes:
       label: Problem or use case
       description: What are you trying to do? What is hard, slow, or impossible today?
-      placeholder: I want to reconnect to an existing provider session after a browser refresh without losing the current thread state.
+      placeholder: I want to reconnect to an existing Engine session after a browser refresh without losing the current thread state.
     validations:
       required: true
 
@@ -51,7 +51,7 @@ body:
     attributes:
       label: Proposed solution
       description: Describe the behavior, API, or UX you want.
-      placeholder: Persist enough session metadata so the client can discover and reattach to the active provider session on load.
+      placeholder: Restore the active Engine session without introducing a second product thread.
     validations:
       required: true
 
@@ -78,14 +78,14 @@ body:
     attributes:
       label: Alternatives considered
       description: Workarounds, prior art, or other approaches you considered.
-      placeholder: I currently work around this by manually restarting the provider session, but that loses in-flight context.
+      placeholder: I currently restart the Engine session manually, but that loses in-flight context.
 
   - type: textarea
     id: tradeoffs
     attributes:
       label: Risks or tradeoffs
       description: What costs, complexity, or edge cases should be considered?
-      placeholder: This may require careful handling when the underlying provider session has already exited.
+      placeholder: This may require careful handling when the underlying Engine session has already exited.
 
   - type: textarea
     id: references
