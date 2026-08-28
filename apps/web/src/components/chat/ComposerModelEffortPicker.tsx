@@ -35,7 +35,7 @@ type ComposerModelEffortPickerProps = {
   engine: EngineKind;
   model: ModelSlug | null;
   catalogState: EngineModelCatalogState;
-  modelOptionsByEngine: Record<EngineKind, ReadonlyArray<EngineModelOption>>;
+  modelOptionsByEngine: Partial<Record<EngineKind, ReadonlyArray<EngineModelOption>>>;
   loadingEngineModels?: Partial<Record<EngineKind, boolean>>;
   compact?: boolean;
   hideModelLabel?: boolean;
@@ -95,7 +95,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
   const catalogIsIdle = props.catalogState === "idle";
   const catalogIsStale = props.catalogState === "stale";
   const catalogIsError = props.catalogState === "error";
-  const hasSelectableModels = props.modelOptionsByEngine[props.engine].length > 0;
+  const hasSelectableModels = (props.modelOptionsByEngine[props.engine]?.length ?? 0) > 0;
   const closeAndRefocus = () => {
     setMenuOpen(false);
     props.onSelectionCommitted?.();

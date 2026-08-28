@@ -54,11 +54,14 @@ export function useThreadHandoff() {
       statuses: engineStatuses,
       refreshStatuses: () => refreshEngineStatuses({ silent: true }),
     });
+    const configuredEngines = serverSettingsQuery.data?.engines as
+      | Partial<Record<EngineKind, { readonly enabled?: boolean }>>
+      | undefined;
     if (
       !isEligibleHandoffTargetEngine({
         sourceEngine: thread.engineSelection.engine,
         targetEngine,
-        targetEngineEnabled: serverSettingsQuery.data?.engines[targetEngine].enabled,
+        targetEngineEnabled: configuredEngines?.[targetEngine]?.enabled,
         targetEngineStatus: targetAvailability.status,
       })
     ) {

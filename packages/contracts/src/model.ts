@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 import { TrimmedNonEmptyString } from "./baseSchemas";
-import type { EngineKind } from "./orchestration";
+import type { EngineKind } from "./engineIdentity";
 
 export const CODEX_REASONING_EFFORT_OPTIONS = ["low", "medium", "high", "xhigh"] as const;
 // Codex app-server can add model-specific efforts through runtime discovery.
@@ -162,7 +162,9 @@ export const EngineModelOptions = Schema.Struct({
   opencode: Schema.optional(OpenCodeModelOptions),
   pi: Schema.optional(PiModelOptions),
 });
-export type EngineModelOptions = typeof EngineModelOptions.Type;
+type SpecializedEngineModelOptions = typeof EngineModelOptions.Type;
+export type EngineModelOptions = SpecializedEngineModelOptions &
+  Partial<Record<Exclude<EngineKind, keyof SpecializedEngineModelOptions>, never>>;
 
 export type ReasoningControlSource = "api-effort" | "provider-setting" | "prompt-prefix";
 
@@ -1066,7 +1068,8 @@ export const MODEL_OPTIONS_BY_ENGINE = {
 } as const satisfies Partial<Record<EngineKind, readonly ModelDefinition[]>>;
 export type ModelOptionsByEngine = typeof MODEL_OPTIONS_BY_ENGINE;
 
-type BuiltInModelSlug = (typeof MODEL_OPTIONS_BY_ENGINE)[keyof ModelOptionsByEngine][number]["slug"];
+type BuiltInModelSlug =
+  (typeof MODEL_OPTIONS_BY_ENGINE)[keyof ModelOptionsByEngine][number]["slug"];
 export type ModelSlug = BuiltInModelSlug | (string & {});
 
 export const DEFAULT_MODEL_BY_ENGINE = {

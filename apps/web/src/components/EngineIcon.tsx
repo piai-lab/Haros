@@ -64,7 +64,7 @@ const OpenCodeEngineIcon = ({
   );
 };
 
-export const ENGINE_ICON_COMPONENT_BY_ENGINE: Record<EngineKind, Icon> = {
+export const ENGINE_ICON_COMPONENT_BY_ENGINE: Partial<Record<EngineKind, Icon>> = {
   oa: OABadge,
   codex: OpenAI,
   claude: ClaudeAI,
@@ -112,6 +112,9 @@ export function EngineIcon({
   }
 
   const Icon = ENGINE_ICON_COMPONENT_BY_ENGINE[engine];
+  if (!Icon) {
+    return fallback;
+  }
   return (
     <Icon
       aria-hidden={ariaHidden}

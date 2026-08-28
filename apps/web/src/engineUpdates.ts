@@ -131,7 +131,10 @@ function isEngineEnabled(
   if (!serverSettings) {
     return false;
   }
-  return serverSettings.engines[engine]?.enabled !== false;
+  const engines = serverSettings.engines as Partial<
+    Record<EngineKind, { readonly enabled?: boolean }>
+  >;
+  return engines[engine]?.enabled !== false;
 }
 
 // Central visibility gate used by both global toasts and Settings update rows.

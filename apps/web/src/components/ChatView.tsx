@@ -38,6 +38,7 @@ import {
   RuntimeMode,
 } from "@harnessos/contracts";
 import { automationRequiresTargetThread } from "@harnessos/shared/automationMode";
+import { mapEngineDescriptors } from "@harnessos/shared/engineMetadata";
 import { getDefaultModel, normalizeModelSlug } from "@harnessos/shared/model";
 import {
   resolveLatestTailUserMessageEditTarget,
@@ -2446,18 +2447,7 @@ export default function ChatView({
       (threadEngineSelection?.engine === engine ? threadEngineSelection.model : null) ??
       (projectEngineSelection?.engine === engine ? projectEngineSelection.model : null);
 
-    return {
-      oa: resolveHint("oa"),
-      codex: resolveHint("codex"),
-      claude: resolveHint("claude"),
-      cursor: resolveHint("cursor"),
-      antigravity: resolveHint("antigravity"),
-      grok: resolveHint("grok"),
-      droid: resolveHint("droid"),
-      kilo: resolveHint("kilo"),
-      opencode: resolveHint("opencode"),
-      pi: resolveHint("pi"),
-    };
+    return mapEngineDescriptors(({ kind }) => resolveHint(kind));
   }, [
     activeProject?.defaultEngineSelection,
     composerDraft.engineSelectionByEngine,
@@ -4139,7 +4129,11 @@ export default function ChatView({
     const deterministicRecovery =
       serverConfigQuery.isError ||
       serverSettingsQuery.isError ||
-      serverSettingsSnapshot.engines[selectedEngine]?.enabled === false ||
+      (
+        serverSettingsSnapshot.engines as Partial<
+          Record<EngineKind, { readonly enabled?: boolean }>
+        >
+      )[selectedEngine]?.enabled === false ||
       activeEngineStatus?.authStatus === "unauthenticated" ||
       (activeEngineStatus !== null && activeEngineStatus.available === false);
     reportFocusedComposerReadiness(
@@ -4534,13 +4528,14 @@ export default function ChatView({
       // the enabled catalog hook on the next render shares this canonical query.
       // A cached health/auth failure must not block catalog truth until the delayed
       // live status refresh; engine health remains the separate send-admission owner.
-      void queryClient.prefetchQuery(
-        engineModelsPrefetchQueryOptions({
-          engine,
-          settings: serverSettingsSnapshot,
-          cwd: engineModelDiscoveryCwd,
-        }),
-      );
+      const modelOptions = engineModelsPrefetchQueryOptions({
+        engine,
+        settings: serverSettingsSnapshot,
+        cwd: engineModelDiscoveryCwd,
+      });
+      if (modelOptions) {
+        void queryClient.prefetchQuery(modelOptions);
+      }
     },
     [engineModelDiscoveryCwd, queryClient, serverSettingsSnapshot],
   );

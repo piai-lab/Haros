@@ -82,7 +82,9 @@ const MODEL_OPTIONS_BY_ENGINE = {
       name: "Gemini 3.5 Flash",
     },
   ],
-} as const satisfies Record<EngineKind, ReadonlyArray<EngineModelOption & { slug: ModelSlug }>>;
+} as const satisfies Partial<
+  Record<EngineKind, ReadonlyArray<EngineModelOption & { slug: ModelSlug }>>
+>;
 
 const MANY_OPENCODE_MODELS = Array.from({ length: 16 }, (_, index) => ({
   slug: `${index % 2 === 0 ? "openai" : "anthropic"}/model-${index + 1}` as ModelSlug,
@@ -170,7 +172,9 @@ async function mountPicker(props: {
   catalogStateByEngine?: Partial<Record<EngineKind, EngineModelCatalogState>>;
   onSelectionCommitted?: () => void;
   onEngineBrowse?: (engine: EngineKind) => void;
-  modelOptionsByEngine?: Record<EngineKind, ReadonlyArray<EngineModelOption & { slug: ModelSlug }>>;
+  modelOptionsByEngine?: Partial<
+    Record<EngineKind, ReadonlyArray<EngineModelOption & { slug: ModelSlug }>>
+  >;
   locale?: "en" | "zh-CN";
 }) {
   i18nHarness.settings.localePreference = props.locale ?? "en";

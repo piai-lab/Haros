@@ -198,7 +198,7 @@ describe("engineModelsPrefetchQueryOptions", () => {
       engine: "cursor",
       settings,
     });
-    expect(cursorOptions.queryKey).toEqual(
+    expect(cursorOptions?.queryKey).toEqual(
       engineDiscoveryQueryKeys.models("cursor", "/bin/agent", "https://api.example", null, null),
     );
 
@@ -207,7 +207,7 @@ describe("engineModelsPrefetchQueryOptions", () => {
       settings,
       cwd: "/tmp/project",
     });
-    expect(oaOptions.queryKey).toEqual(
+    expect(oaOptions?.queryKey).toEqual(
       engineDiscoveryQueryKeys.models("oa", null, null, null, null),
     );
 
@@ -215,7 +215,7 @@ describe("engineModelsPrefetchQueryOptions", () => {
       engine: "claude",
       settings,
     });
-    expect(claudeOptions.queryKey).toEqual(
+    expect(claudeOptions?.queryKey).toEqual(
       engineDiscoveryQueryKeys.models("claude", "/bin/claude", null, null, null),
     );
 
@@ -224,7 +224,7 @@ describe("engineModelsPrefetchQueryOptions", () => {
       settings,
       cwd: "/tmp/project",
     });
-    expect(openCodeOptions.queryKey).toEqual(
+    expect(openCodeOptions?.queryKey).toEqual(
       engineDiscoveryQueryKeys.models("opencode", "/bin/opencode", null, null, "/tmp/project"),
     );
 
@@ -233,7 +233,7 @@ describe("engineModelsPrefetchQueryOptions", () => {
       settings,
       cwd: "/tmp/project",
     });
-    expect(piOptions.queryKey).toEqual(
+    expect(piOptions?.queryKey).toEqual(
       engineDiscoveryQueryKeys.models("pi", "/bin/pi", null, "/tmp/pi-agent", "/tmp/project"),
     );
 
@@ -242,7 +242,7 @@ describe("engineModelsPrefetchQueryOptions", () => {
       settings,
       cwd: "/tmp/project",
     });
-    expect(antigravityOptions.queryKey).toEqual(
+    expect(antigravityOptions?.queryKey).toEqual(
       engineDiscoveryQueryKeys.models(
         "antigravity",
         "/bin/antigravity",
@@ -256,7 +256,7 @@ describe("engineModelsPrefetchQueryOptions", () => {
       engine: "codex",
       settings,
     });
-    expect(codexOptions.queryKey).toEqual(
+    expect(codexOptions?.queryKey).toEqual(
       engineDiscoveryQueryKeys.models("codex", null, null, null, null),
     );
   });

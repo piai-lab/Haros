@@ -17,7 +17,7 @@ import {
 import { Menu, MenuItem, MenuRadioGroup, MenuSub, MenuSubTrigger, MenuTrigger } from "../ui/menu";
 import { BrainIcon } from "~/lib/icons";
 import { ModelIdentityIcon } from "../ModelIdentityIcon";
-import { ENGINE_ICON_COMPONENT_BY_ENGINE } from "../EngineIcon";
+import { EngineIcon } from "../EngineIcon";
 import { cn } from "~/lib/utils";
 import { PickerPanelShell } from "./PickerPanelShell";
 import { PickerTriggerButton } from "./PickerTriggerButton";
@@ -116,7 +116,7 @@ type EngineModelMenuItemsProps = {
   model: ModelSlug | null;
   lockedEngine: EngineKind | null;
   engines?: ReadonlyArray<ServerEngineStatus>;
-  modelOptionsByEngine: Record<EngineKind, ReadonlyArray<EngineModelOption>>;
+  modelOptionsByEngine: Partial<Record<EngineKind, ReadonlyArray<EngineModelOption>>>;
   loadingEngineModels?: Partial<Record<EngineKind, boolean>>;
   hiddenEngines?: ReadonlyArray<EngineKind>;
   engineOrder?: ReadonlyArray<EngineKind>;
@@ -187,7 +187,11 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
   const handleModelChange = (engine: EngineKind, value: string) => {
     if (props.disabled) return;
     if (!value) return;
-    const resolvedModel = resolveSelectableModel(engine, value, props.modelOptionsByEngine[engine]);
+    const resolvedModel = resolveSelectableModel(
+      engine,
+      value,
+      props.modelOptionsByEngine[engine] ?? [],
+    );
     if (!resolvedModel) return;
     props.onEngineModelChange(engine, resolvedModel);
     onAfterSelection?.();
@@ -218,7 +222,7 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
       );
     }
 
-    const engineOptions = props.modelOptionsByEngine[engine];
+    const engineOptions = props.modelOptionsByEngine[engine] ?? [];
     const shouldShowSearch =
       (engine === "kilo" || engine === "opencode" || engine === "cursor" || engine === "pi") &&
       engineOptions.length >= SEARCHABLE_MODEL_PICKER_THRESHOLD;
@@ -309,7 +313,6 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
   return (
     <>
       {visibleEngineOptions.map((option) => {
-        const OptionIcon = ENGINE_ICON_COMPONENT_BY_ENGINE[option.value];
         const liveEngine = props.engines?.find((entry) => entry.engine === option.value);
         const availability = deriveEnginePickerAvailability(liveEngine);
         const availabilityLabel = (
@@ -325,7 +328,8 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
         if (availability.disabled) {
           return (
             <MenuItem key={option.value} disabled>
-              <OptionIcon
+              <EngineIcon
+                engine={option.value}
                 aria-hidden="true"
                 className={cn(
                   "size-3 shrink-0 opacity-80",
@@ -347,7 +351,8 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
             }}
           >
             <MenuSubTrigger>
-              <OptionIcon
+              <EngineIcon
+                engine={option.value}
                 aria-hidden="true"
                 className={cn(
                   "size-3 shrink-0",
@@ -379,13 +384,13 @@ export function resolveEngineModelLabel(input: {
   engine: EngineKind;
   lockedEngine: EngineKind | null;
   model: ModelSlug;
-  modelOptionsByEngine: Record<EngineKind, ReadonlyArray<EngineModelOption>>;
+  modelOptionsByEngine: Partial<Record<EngineKind, ReadonlyArray<EngineModelOption>>>;
 }): string {
   const activeEngine = input.lockedEngine ?? input.engine;
   return resolveSelectedModelLabel({
     engine: activeEngine,
     model: input.model,
-    options: input.modelOptionsByEngine[activeEngine],
+    options: input.modelOptionsByEngine[activeEngine] ?? [],
   });
 }
 
@@ -401,7 +406,7 @@ type EngineModelPickerProps = {
   model: ModelSlug | null;
   lockedEngine: EngineKind | null;
   engines?: ReadonlyArray<ServerEngineStatus>;
-  modelOptionsByEngine: Record<EngineKind, ReadonlyArray<EngineModelOption>>;
+  modelOptionsByEngine: Partial<Record<EngineKind, ReadonlyArray<EngineModelOption>>>;
   loadingEngineModels?: Partial<Record<EngineKind, boolean>>;
   catalogStateByEngine?: Partial<Record<EngineKind, EngineModelCatalogState>>;
   hiddenEngines?: ReadonlyArray<EngineKind>;

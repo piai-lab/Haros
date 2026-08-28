@@ -145,19 +145,54 @@ export const PiEngineSelection = Schema.Struct({
 });
 export type PiEngineSelection = typeof PiEngineSelection.Type;
 
-export const EngineSelection = Schema.Union([
-  OAEngineSelection,
-  CodexEngineSelection,
-  ClaudeEngineSelection,
-  CursorEngineSelection,
-  AntigravityEngineSelection,
-  GrokEngineSelection,
-  DroidEngineSelection,
-  KiloEngineSelection,
-  OpenCodeEngineSelection,
-  PiEngineSelection,
-]);
-export type EngineSelection = typeof EngineSelection.Type;
+type SpecializedEngineSelection =
+  | OAEngineSelection
+  | CodexEngineSelection
+  | ClaudeEngineSelection
+  | CursorEngineSelection
+  | AntigravityEngineSelection
+  | GrokEngineSelection
+  | DroidEngineSelection
+  | KiloEngineSelection
+  | OpenCodeEngineSelection
+  | PiEngineSelection;
+
+type BasicEngineSelection = {
+  readonly [Kind in Exclude<EngineKind, SpecializedEngineSelection["engine"]>]: {
+    readonly engine: Kind;
+    readonly model: string;
+    readonly options?: never;
+    readonly supportsAutoMode?: never;
+  };
+}[Exclude<EngineKind, SpecializedEngineSelection["engine"]>];
+
+export type EngineSelection = SpecializedEngineSelection | BasicEngineSelection;
+
+const SPECIALIZED_ENGINE_SELECTION_SCHEMA_BY_KIND: Partial<Record<EngineKind, Schema.Top>> = {
+  oa: OAEngineSelection,
+  codex: CodexEngineSelection,
+  claude: ClaudeEngineSelection,
+  cursor: CursorEngineSelection,
+  antigravity: AntigravityEngineSelection,
+  grok: GrokEngineSelection,
+  droid: DroidEngineSelection,
+  kilo: KiloEngineSelection,
+  opencode: OpenCodeEngineSelection,
+  pi: PiEngineSelection,
+};
+
+const engineSelectionMembers = ENGINE_KINDS.map(
+  (engine) =>
+    SPECIALIZED_ENGINE_SELECTION_SCHEMA_BY_KIND[engine] ??
+    Schema.Struct({
+      engine: Schema.Literal(engine),
+      model: TrimmedNonEmptyString,
+    }),
+);
+
+export const EngineSelection = Schema.Union(
+  engineSelectionMembers as unknown as readonly [Schema.Top, Schema.Top, ...Schema.Top[]],
+) as unknown as Schema.Codec<EngineSelection>;
 
 export const CodexEngineStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),

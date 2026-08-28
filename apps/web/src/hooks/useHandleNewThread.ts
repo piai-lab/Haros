@@ -1,4 +1,4 @@
-import { type ProjectId, ThreadId } from "@harnessos/contracts";
+import { type EngineKind, type ProjectId, ThreadId } from "@harnessos/contracts";
 import { getDefaultModel } from "@harnessos/shared/model";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
@@ -177,7 +177,12 @@ export function useHandleNewThread() {
         engine,
         settings: authoritativeSettings,
         cwd,
-        enabled: authoritativeSettings.engines[engine]?.enabled !== false,
+        enabled:
+          (
+            authoritativeSettings.engines as Partial<
+              Record<EngineKind, { readonly enabled?: boolean }>
+            >
+          )[engine]?.enabled !== false,
       });
     }
     // Read from the store at call time so post-sync sidebar flows can use the latest project defaults.

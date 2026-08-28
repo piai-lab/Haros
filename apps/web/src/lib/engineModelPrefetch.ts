@@ -127,6 +127,8 @@ export function engineModelsPrefetchQueryOptions(input: {
         agentDir: settings.engines.pi.agentDir || null,
         cwd,
       });
+    default:
+      return null;
   }
 }
 
@@ -173,13 +175,15 @@ export function prefetchEngineModelsForNewThread(
     return;
   }
   const cwd = input.cwd ?? null;
-  const modelPrefetch = queryClient.prefetchQuery(
-    engineModelsPrefetchQueryOptions({
-      engine: input.engine,
-      settings: input.settings,
-      cwd,
-    }),
-  );
+  const modelOptions = engineModelsPrefetchQueryOptions({
+    engine: input.engine,
+    settings: input.settings,
+    cwd,
+  });
+  if (!modelOptions) {
+    return;
+  }
+  const modelPrefetch = queryClient.prefetchQuery(modelOptions);
 
   // Agent/mode lists ride along for engines that surface them next to models.
   const agentsOptions = engineAgentsPrefetchQueryOptions({

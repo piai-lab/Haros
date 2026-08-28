@@ -61,11 +61,15 @@ export function resolveAvailableHandoffTargetEngines(input: {
   readonly engineSettings: ServerSettingsView["engines"] | null | undefined;
   readonly engineStatuses: readonly ServerEngineStatus[];
 }): ReadonlyArray<EngineKind> {
+  const engineSettings = input.engineSettings as
+    | Partial<Record<EngineKind, { readonly enabled?: boolean }>>
+    | null
+    | undefined;
   return DEFAULT_PROVIDER_ORDER.filter((targetEngine) =>
     isEligibleHandoffTargetEngine({
       sourceEngine: input.sourceEngine,
       targetEngine,
-      targetEngineEnabled: input.engineSettings?.[targetEngine].enabled,
+      targetEngineEnabled: engineSettings?.[targetEngine]?.enabled,
       targetEngineStatus: findEngineStatus(input.engineStatuses, targetEngine),
     }),
   );

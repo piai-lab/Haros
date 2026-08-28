@@ -81,9 +81,7 @@ function deriveEffectiveComposerModelOptions(input: {
     return baseOptions;
   }
 
-  const result: Partial<Record<EngineKind, EngineOptions>> = baseOptions
-    ? { ...baseOptions }
-    : {};
+  const result: Partial<Record<EngineKind, EngineOptions>> = baseOptions ? { ...baseOptions } : {};
   for (const [engine, selection] of Object.entries(draftSelections) as Array<
     [EngineKind, EngineSelection | undefined]
   >) {
@@ -208,6 +206,8 @@ export function makeEngineSelection(
           ? { options: options as Extract<EngineSelection, { engine: "pi" }>["options"] }
           : {}),
       };
+    default:
+      return { engine, model };
   }
 }
 

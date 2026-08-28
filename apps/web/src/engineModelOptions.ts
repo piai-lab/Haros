@@ -66,9 +66,10 @@ export function resolveModelPresentationIdentity(input: {
   selection: EngineSelection;
   options?: ReadonlyArray<EngineModelOption>;
 }): ModelPresentationIdentity {
-  const staticOptions = MODEL_OPTIONS_BY_ENGINE[
-    input.selection.engine
-  ] as ReadonlyArray<EngineModelOption>;
+  const staticOptions =
+    (MODEL_OPTIONS_BY_ENGINE as Partial<Record<EngineKind, ReadonlyArray<EngineModelOption>>>)[
+      input.selection.engine
+    ] ?? [];
   const option =
     input.options?.find((entry) => entry.slug === input.selection.model) ??
     staticOptions.find((entry) => entry.slug === input.selection.model);
@@ -577,5 +578,7 @@ export function buildEngineSelection(
             options: options as PiModelOptions,
           }
         : { engine, model };
+    default:
+      return { engine, model };
   }
 }

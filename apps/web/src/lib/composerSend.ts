@@ -229,6 +229,8 @@ export function resolvePromptEffortFromEngineSelection(
     case "kilo":
     case "opencode":
       return null;
+    default:
+      return null;
   }
 }
 
