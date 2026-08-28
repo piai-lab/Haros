@@ -66,7 +66,12 @@ export function resolveModelPresentationIdentity(input: {
   selection: ModelSelection;
   options?: ReadonlyArray<ProviderModelOption>;
 }): ModelPresentationIdentity {
-  const option = input.options?.find((entry) => entry.slug === input.selection.model);
+  const staticOptions = MODEL_OPTIONS_BY_PROVIDER[
+    input.selection.provider
+  ] as ReadonlyArray<ProviderModelOption>;
+  const option =
+    input.options?.find((entry) => entry.slug === input.selection.model) ??
+    staticOptions.find((entry) => entry.slug === input.selection.model);
   const qualifiedServiceId = input.selection.model.includes("/")
     ? input.selection.model.slice(0, input.selection.model.indexOf("/")).trim()
     : undefined;

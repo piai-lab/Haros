@@ -9554,6 +9554,10 @@ export default function ChatView({
           messageId,
           text: outgoingMessageText,
           modelSelection: selectedModelSelection,
+          modelPresentationIdentity: resolveModelPresentationIdentity({
+            selection: selectedModelSelection,
+            options: modelOptionsByProvider[selectedModelSelection.provider],
+          }),
           ...(providerOptionsForDispatch ? { providerOptions: providerOptionsForDispatch } : {}),
           assistantDeliveryMode,
           runtimeMode,
@@ -9580,6 +9584,7 @@ export default function ChatView({
       isSendBusy,
       isServerThread,
       interactionMode,
+      modelOptionsByProvider,
       providerOptionsForDispatch,
       runtimeMode,
       selectedModel,

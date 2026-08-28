@@ -15,6 +15,7 @@ import {
   mergeDynamicModelOptions,
   providerModelCostMultiplierLabel,
   providerModelOptionProvenanceLabel,
+  resolveModelPresentationIdentity,
   resolveModelGroupDefaultOpen,
   shouldUseCollapsibleModelGroups,
   type ProviderModelOption,
@@ -71,6 +72,20 @@ describe("formatProviderModelOptionName", () => {
         slug: "custom/internal-model",
       }),
     ).toBe("custom/internal-model");
+  });
+});
+
+describe("resolveModelPresentationIdentity", () => {
+  it("freezes built-in catalog identity even when the caller has no live descriptor", () => {
+    expect(
+      resolveModelPresentationIdentity({
+        selection: { provider: "codex", model: "gpt-5.5" },
+      }),
+    ).toEqual({
+      model: "gpt-5.5",
+      displayName: "GPT-5.5",
+      source: "builtin-catalog",
+    });
   });
 });
 

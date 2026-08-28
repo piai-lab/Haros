@@ -1,5 +1,6 @@
 import type {
   ChatAttachment,
+  ModelPresentationIdentity,
   OrchestrationCommand,
   OrchestrationEvent,
   OrchestrationReadModel,
@@ -75,10 +76,7 @@ const STUDIO_PROJECT_KIND_SET = new Set<ProjectKind>(["studio"]);
 const WORKSPACE_OWNING_PROJECT_KIND_SET = new Set<ProjectKind>(["project", "studio"]);
 
 function admitModelPresentationIdentity(
-  identity: Extract<
-    OrchestrationCommand,
-    { type: "thread.turn.start" }
-  >["modelPresentationIdentity"],
+  identity: ModelPresentationIdentity | undefined,
   modelSelection: OrchestrationThread["modelSelection"],
 ) {
   return identity?.model === modelSelection.model ? identity : undefined;
@@ -2356,6 +2354,10 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         });
       }
       const admittedModelSelection = command.modelSelection ?? thread.modelSelection;
+      const admittedModelPresentationIdentity = admitModelPresentationIdentity(
+        command.modelPresentationIdentity,
+        admittedModelSelection,
+      );
       yield* validateStructuralRuntimeMode(command, admittedModelSelection, command.runtimeMode);
       const editTarget = resolveTailUserMessageEditTarget({
         messages: thread.messages,
@@ -2384,6 +2386,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           rollbackTurnCount: editTarget.rollbackTurnCount,
           removedTurnIds: editTarget.removedTurnIds.map((turnId) => TurnId.makeUnsafe(turnId)),
           modelSelection: admittedModelSelection,
+          ...(admittedModelPresentationIdentity !== undefined
+            ? { modelPresentationIdentity: admittedModelPresentationIdentity }
+            : {}),
           ...(command.providerOptions !== undefined
             ? { providerOptions: command.providerOptions }
             : {}),

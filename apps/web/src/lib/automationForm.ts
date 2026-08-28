@@ -624,6 +624,10 @@ export function createInputFromForm(
 ): AutomationCreateInput {
   const maxIterations = maxIterationsFromForm(form);
   const stopWhen = form.stopWhen.trim();
+  const modelPresentationIdentity =
+    form.modelPresentationIdentity?.model === form.modelSelection.model
+      ? form.modelPresentationIdentity
+      : resolveModelPresentationIdentity({ selection: form.modelSelection });
   return {
     name: form.name.trim(),
     projectId: form.projectId as ProjectId,
@@ -632,9 +636,7 @@ export function createInputFromForm(
     schedule: scheduleFromForm(form),
     enabled: form.enabled,
     modelSelection: form.modelSelection,
-    modelPresentationIdentity:
-      form.modelPresentationIdentity ??
-      resolveModelPresentationIdentity({ selection: form.modelSelection }),
+    modelPresentationIdentity,
     runtimeMode: form.runtimeMode,
     interactionMode: "default",
     worktreeMode: form.worktreeMode,

@@ -614,6 +614,26 @@ describe("automation shared route helpers", () => {
     });
   });
 
+  it("rebuilds a stale model identity after an automation model change", () => {
+    const form = {
+      ...formFromDefinition(null, "project-1"),
+      name: "Check status",
+      prompt: "Check status.",
+      modelSelection: { provider: "codex" as const, model: "gpt-5.5" },
+      modelPresentationIdentity: {
+        model: "claude-sonnet-5",
+        displayName: "Claude Sonnet 5",
+        source: "builtin-catalog" as const,
+      },
+    };
+
+    expect(createInputFromForm(form).modelPresentationIdentity).toEqual({
+      model: "gpt-5.5",
+      displayName: "GPT-5.5",
+      source: "builtin-catalog",
+    });
+  });
+
   it("round-trips the notification policy through form payloads", () => {
     const form = {
       ...formFromDefinition(

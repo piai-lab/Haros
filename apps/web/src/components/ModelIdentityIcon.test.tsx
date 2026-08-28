@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { resolveModelPresentationIdentity } from "~/providerModelOptions";
 import { ModelIdentityIcon, resolveModelIdentityPresentation } from "./ModelIdentityIcon";
 
 describe("ModelIdentityIcon", () => {
@@ -55,8 +56,11 @@ describe("ModelIdentityIcon", () => {
   });
 
   it("recognizes a trusted frozen model family without borrowing the fixed Engine icon", () => {
-    const selection = { provider: "codex" as const, model: "gpt-5.6" };
-    const markup = renderToStaticMarkup(<ModelIdentityIcon selection={selection} />);
+    const selection = { provider: "codex" as const, model: "gpt-5.5" };
+    const identity = resolveModelPresentationIdentity({ selection });
+    const markup = renderToStaticMarkup(
+      <ModelIdentityIcon selection={selection} identity={identity} historical />,
+    );
     expect(markup).toContain('data-model-service-icon="brand"');
     expect(markup).toContain('data-model-service-icon-level="model"');
     expect(markup).not.toContain("codex");

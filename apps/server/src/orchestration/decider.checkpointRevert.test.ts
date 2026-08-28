@@ -392,6 +392,11 @@ describe("checkpoint revert decider", () => {
           threadId: THREAD_ID,
           messageId: MessageId.makeUnsafe("message-to-edit"),
           text: "edited",
+          modelPresentationIdentity: {
+            model: "gpt-5-codex",
+            displayName: "GPT-5 Codex",
+            source: "builtin-catalog",
+          },
           interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
           runtimeMode: "full-access",
           createdAt: NOW,
@@ -410,6 +415,11 @@ describe("checkpoint revert decider", () => {
         modelSelection: {
           provider: "codex",
           model: "gpt-5-codex",
+        },
+        modelPresentationIdentity: {
+          model: "gpt-5-codex",
+          displayName: "GPT-5 Codex",
+          source: "builtin-catalog",
         },
       },
     });

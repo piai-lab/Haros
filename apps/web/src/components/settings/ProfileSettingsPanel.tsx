@@ -321,6 +321,7 @@ function ModelUsageSection({ stats }: { readonly stats: ProfileStats }) {
                       {entry.provider !== "unknown" && entry.kind === "model" ? (
                         <ModelIdentityIcon
                           selection={buildModelSelection(entry.provider, entry.model)}
+                          historical
                           className="size-3.5 shrink-0"
                         />
                       ) : (

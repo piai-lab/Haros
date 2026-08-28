@@ -4336,6 +4336,9 @@ const make = Effect.gen(function* () {
         ...(originalMessage.mentions !== undefined ? { mentions: originalMessage.mentions } : {}),
       },
       ...(payload.modelSelection !== undefined ? { modelSelection: payload.modelSelection } : {}),
+      ...(payload.modelPresentationIdentity !== undefined
+        ? { modelPresentationIdentity: payload.modelPresentationIdentity }
+        : {}),
       ...(payload.providerOptions !== undefined
         ? { providerOptions: payload.providerOptions }
         : {}),
