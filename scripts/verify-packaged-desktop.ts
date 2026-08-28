@@ -515,7 +515,7 @@ export function createPackagedDesktopEnvironment(
     if (path) mkdirSync(path, { recursive: true });
   }
   if (options.platform === "mac") {
-    const userDataPath = join(env.HOME!, "Library", "Application Support", "oa");
+    const userDataPath = resolvePackagedProofUserDataPath(env);
     mkdirSync(userDataPath, { recursive: true });
     // Prevent the packaged app's update-only icon repair from registering this
     // temporary bundle in the runner's normal Launch Services database.
@@ -528,7 +528,7 @@ export function createPackagedDesktopEnvironment(
 export function resolvePackagedProofUserDataPath(env: NodeJS.ProcessEnv): string {
   const productHome = env.HARNESSOS_HOME;
   if (!productHome) throw new Error("Packaged proof environment has no isolated product home.");
-  return join(productHome, "electron", "oa");
+  return join(productHome, "electron", "harnessos");
 }
 
 export function withPackagedJourneyDebugging(launch: LaunchCommand): LaunchCommand {

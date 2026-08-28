@@ -8,7 +8,7 @@ describe("desktopUserDataProfile", () => {
     expect(
       resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "harnessos-dev" }),
     ).toBe("/Users/tester/Library/Application Support/harnessos-dev");
-    expect(resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "oa" })).toBe(
+    expect(resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "harnessos" })).toBe(
       "/Users/tester/Library/Application Support/harnessos",
     );
     expect(

@@ -19,16 +19,16 @@ describe("desktop migration recovery", () => {
   it("targets the same production database and bundled restore authority as the server", () => {
     expect(
       resolveDesktopMigrationRecoveryPaths({
-        baseDir: Path.join(Path.sep, "home", "oa"),
+        baseDir: Path.join(Path.sep, "home", "harnessos"),
         appRoot: Path.join(Path.sep, "app"),
         isDevelopment: false,
       }),
     ).toEqual({
-      dbPath: Path.join(Path.sep, "home", "oa", "userdata", "state.sqlite"),
+      dbPath: Path.join(Path.sep, "home", "harnessos", "userdata", "state.sqlite"),
       markerPath: Path.join(
         Path.sep,
         "home",
-        "oa",
+        "harnessos",
         "userdata",
         "state.sqlite.migration-recovery.json",
       ),
@@ -45,12 +45,12 @@ describe("desktop migration recovery", () => {
 
   it("uses the isolated development database when the desktop backend receives a dev URL", () => {
     const paths = resolveDesktopMigrationRecoveryPaths({
-      baseDir: Path.join(Path.sep, "home", "oa"),
+      baseDir: Path.join(Path.sep, "home", "harnessos"),
       appRoot: Path.join(Path.sep, "repo"),
       isDevelopment: true,
     });
 
-    expect(paths.dbPath).toBe(Path.join(Path.sep, "home", "oa", "dev", "state.sqlite"));
+    expect(paths.dbPath).toBe(Path.join(Path.sep, "home", "harnessos", "dev", "state.sqlite"));
   });
 
   it("continues only when the server-owned command clears the durable marker", async () => {
