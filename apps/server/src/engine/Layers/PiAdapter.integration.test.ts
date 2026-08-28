@@ -6,7 +6,15 @@
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -59,6 +67,24 @@ import {
   toPiProviderModelDescriptor,
   makeOAAgentAdapterLive,
 } from "./PiAdapter";
+
+function snapshotDirectoryTree(root: string): Readonly<Record<string, string>> {
+  const snapshot: Record<string, string> = {};
+  const visit = (directory: string) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const absolutePath = path.join(directory, entry.name);
+      const relativePath = path.relative(root, absolutePath);
+      if (entry.isDirectory()) {
+        snapshot[`${relativePath}/`] = "directory";
+        visit(absolutePath);
+      } else {
+        snapshot[relativePath] = readFileSync(absolutePath).toString("base64");
+      }
+    }
+  };
+  visit(root);
+  return snapshot;
+}
 
 describe("normalizePiTokenUsage", () => {
   const stats = (
@@ -2222,6 +2248,8 @@ describe("getPiDiscoverableModels", () => {
   it("keeps the final request identity immutable and excludes Agent task behavior from Chat and stock Pi", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-final-prompt-contract-"));
     const agentDir = path.join(serverRoot, "agent");
+    const isolatedHome = path.join(serverRoot, "home");
+    const stockAgentDir = path.join(isolatedHome, ".pi");
     const cwd = path.join(serverRoot, "workspace");
     const agentThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000061");
     const chatThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000062");
@@ -2235,6 +2263,9 @@ describe("getPiDiscoverableModels", () => {
     });
     mkdirSync(path.join(cwd, ".harnessos", "extensions"), { recursive: true });
     mkdirSync(agentDir, { recursive: true });
+    mkdirSync(stockAgentDir, { recursive: true });
+    vi.stubEnv("HOME", isolatedHome);
+    vi.stubEnv("USERPROFILE", isolatedHome);
     writeFileSync(
       path.join(cwd, ".harnessos", "extensions", "replace-system-prompt.ts"),
       [
@@ -2265,6 +2296,9 @@ describe("getPiDiscoverableModels", () => {
       path.join(agentDir, "settings.json"),
       JSON.stringify({ retry: { enabled: false } }),
     );
+    for (const filename of ["models.json", "auth.json", "settings.json"] as const) {
+      writeFileSync(path.join(stockAgentDir, filename), readFileSync(path.join(agentDir, filename)));
+    }
     const requestBodies: any[] = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
       if (request instanceof Request) {
@@ -2369,6 +2403,9 @@ describe("getPiDiscoverableModels", () => {
         ),
       );
 
+      const oaStateAfterOwnLifecycle = snapshotDirectoryTree(agentDir);
+      const stockStateBeforeOwnLifecycle = snapshotDirectoryTree(stockAgentDir);
+
       const stockLayer = makePiAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
@@ -2385,7 +2422,7 @@ describe("getPiDiscoverableModels", () => {
               engine: "pi",
               threadId: stockThreadId,
               cwd,
-              engineOptions: { pi: { agentDir } },
+              engineOptions: { pi: { agentDir: stockAgentDir } },
               engineSelection: { engine: "pi", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -2401,6 +2438,10 @@ describe("getPiDiscoverableModels", () => {
           }).pipe(Effect.provide(stockLayer)),
         ),
       );
+
+      expect(snapshotDirectoryTree(agentDir)).toEqual(oaStateAfterOwnLifecycle);
+      expect(snapshotDirectoryTree(stockAgentDir)).not.toEqual(stockStateBeforeOwnLifecycle);
+      expect(Object.keys(snapshotDirectoryTree(stockAgentDir))).toContain("sessions/");
 
       expect(requestBodies).toHaveLength(6);
       const systemPrompt = (body: any) =>
@@ -2435,6 +2476,7 @@ describe("getPiDiscoverableModels", () => {
       expect(toolNames(requestBodies[5])).not.toContain("harnessos_update_tasks");
     } finally {
       vi.restoreAllMocks();
+      vi.unstubAllEnvs();
       rmSync(serverRoot, { recursive: true, force: true });
     }
   });
