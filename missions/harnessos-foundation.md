@@ -6,9 +6,9 @@
 - Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`, Git worktree for HarnessOS.
 - Repository identity: `github.com/piai-lab/HarnessOS`
 - Campaign origin revision: `f310080bfa1df72eade006d3d74143892c05f9b4`.
-- Last reconciled revision: `328409445d7f82abe403c8b116674d9e4d4465dd`.
+- Last reconciled revision: `6b36a5debba3b0987f5fc4ddad85c6ab85a18865`.
 - Worktree state: dirty only under `missions/` while this canonical Campaign reconciliation is being recorded; no product path is dirty.
-- Last reconciled at: `2026-08-28T15:06:30+08:00`.
+- Last reconciled at: `2026-08-28T15:11:55+08:00`.
 - Active branch/worktree: `codex/harnessos-foundation` at `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`.
 - Applicable instructions: user-locked HarnessOS implementation plan; root `AGENTS.md`; public architecture in `docs/architecture.md`.
 - Superseded state sources: no competing state files remain; this Campaign directory is temporary and must be deleted before public push.
@@ -66,6 +66,7 @@
 | E-009 | task | focused | K-001, C-001 final alpha ancestry | `file:missions/evidence/harnessos-foundation/E-009-f310-ancestry.txt#L1-L20` | revision `199c0b740fba88707082b374dc98286adec5e41a`; receipt sha256 `8b5dd9c3a5e4f84f8817a7a423233463d2214db4ff72ff6cbd0b177a4e5b6c9b` | `git merge-base --is-ancestor f310080bfa1df72eade006d3d74143892c05f9b4 HEAD && git rev-list --count harnessos-fork-base^{} && git show -s --format='%H %P %s' 86eebb8cf7f5bc27769abc442e2414318dc6ee1b && git show -s --format='%H' harnessos-fork-base^{}` | current until ancestry or local tag changes |
 | E-010 | task | focused | K-006, C-006 selected brand and deterministic assets | `file:missions/evidence/harnessos-foundation/E-010-brand-assets.txt#L1-L18` | revision `8e8ea265ac1c7ecf8271154644ad458849fff354`; receipt sha256 `caf5c0ea711745c9ca70430497d27ce27fdc6be550669b5ad60dd57d21678392` | `bun run brand:check && (cd apps/web && bun run typecheck && bun run test:unit -- src/components/EngineIcon.test.tsx && bun run test:browser -- src/components/HarnessOSLogoButton.browser.tsx src/components/SidebarHeaderNavigationControls.browser.tsx && bun run build) && (cd apps/server && bun run typecheck && bun run test -- src/engine/harnessosOAuthCallbackPage.test.ts) && git diff --check` | current until brand sources, generator or consuming surfaces change |
 | E-011 | task | focused | C-005 Sidebar project mutation ownership | `file:missions/evidence/harnessos-foundation/E-011-sidebar-project-pinning.txt#L1-L16` | revision `328409445d7f82abe403c8b116674d9e4d4465dd`; receipt sha256 `0b634775e79ef49cd0a318b76c5c18098d9293921ed330d822cfd83909a4eb00` | `(cd apps/web && bun run typecheck && bun run test:unit -- src/hooks/useSidebarProjectPinning.test.ts src/components/Sidebar.logic.test.ts src/components/Sidebar.import.test.ts src/hooks/useSidebarThreadActions.test.ts && bun run test:browser -- src/components/SidebarHeaderNavigationControls.browser.tsx src/components/SidebarActivityView.browser.tsx src/components/SidebarSectionLabel.browser.tsx src/components/SidebarSurfacePicker.browser.tsx src/components/SidebarThreadRowContent.browser.tsx) && bunx oxlint --quiet --report-unused-disable-directives apps/web/src/components/Sidebar.tsx apps/web/src/hooks/useSidebarProjectPinning.ts apps/web/src/hooks/useSidebarProjectPinning.test.ts && git diff --check` | current until Sidebar project pinning, ordering, or persistence changes |
+| E-012 | task | focused | C-005 Conversation Workbench Environment ownership | `file:missions/evidence/harnessos-foundation/E-012-workbench-environment-owner.txt#L1-L16` | revision `6b36a5debba3b0987f5fc4ddad85c6ab85a18865`; receipt sha256 `7074bfaa009ef93d96d32d4555706a630f07407208b668ba27271e94530822ac` | `(cd apps/web && bun run typecheck && bun run test:unit -- src/components/ChatView.logic.test.ts src/lib/responsiveWorkbench.test.ts && bun run test:browser -- src/components/ChatView.browser.tsx -t Environment && bun run test:browser -- src/components/ChatView.geometry.browser.tsx -t 'Environment|Plan sidebar') && git diff --check` | current until Workbench Environment/Plan presentation or focus lifecycle changes |
 
 ## 验收矩阵
 
@@ -75,7 +76,7 @@
 | C-002 | [required] package, app, URL, env, storage and MCP identities are HarnessOS-only with one provenance exception | absence + focused build | open | pending | pending |
 | C-003 | [required] canonical `Engine*` contract and sole `ENGINE_DESCRIPTORS` owner drive registration, settings and UI with OA default | contract/radius proof | open | pending | pending |
 | C-004 | [required] OA and stock Pi independently satisfy lifecycle and state-isolation journeys without fallback | integration + isolated-state proof | open | pending | pending |
-| C-005 | [required] HostGateway, Pi-family adapter, Conversation Workbench and Sidebar owner cuts reduce the promised modification radius | characterization + radius proof | open | E-011 partial; remaining Workbench/Sidebar cuts and fixture radius drill pending | `328409445d7f82abe403c8b116674d9e4d4465dd` partial |
+| C-005 | [required] HostGateway, Pi-family adapter, Conversation Workbench and Sidebar owner cuts reduce the promised modification radius | characterization + radius proof | open | E-011, E-012 partial; remaining lifecycle cuts and fixture radius drill pending | `6b36a5debba3b0987f5fc4ddad85c6ab85a18865` partial |
 | C-006 | [required] selected HarnessOS/OA identity, all user surfaces and Chinese/English rendering pass real-shell visual and accessibility review | deterministic assets + browser/Electron rubric | open | E-007, E-010 partial; Electron and complete bilingual surface audit pending | `8e8ea265ac1c7ecf8271154644ad458849fff354` partial |
 | C-007 | [required] Apache-2.0 root, retained third-party rights, 12 source records, docs and clean repository surface are closed | legal/source/structure proof | open | pending | pending |
 | C-008 | [required] format, lint, typecheck, unit, integration, stable browser, Desktop build and legal checks pass | deterministic final gate | open | pending | pending |
@@ -84,11 +85,11 @@
 
 ## 当前状态
 
-- Current checkpoint: source ancestry, HarnessOS/OA identity, Engine contract, HostGateway, clean persistence schema, Pi-family deep projections, public docs and selected constrained-loop brand are implemented locally. Sidebar project pinning now has one controller owner. Public push, lifecycle/state isolation, remaining Workbench/Sidebar owner cuts and final packaged gates remain open.
+- Current checkpoint: source ancestry, HarnessOS/OA identity, Engine contract, HostGateway, clean persistence schema, Pi-family deep projections, public docs and selected constrained-loop brand are implemented locally. Sidebar project pinning and Workbench Environment/Plan presentation now have single controller owners. Public push, lifecycle/state isolation, remaining owner cuts and final packaged gates remain open.
 - Active Claim: C-005.
 - Next safe action: characterize and extract the remaining Conversation Workbench and Sidebar responsibilities into their existing domain hooks/controllers without creating a global store, manager or registry.
 - Blockers: none.
-- Last material change: commit `328409445d7f82abe403c8b116674d9e4d4465dd` moved the complete Sidebar project-pin mutation lifecycle into a controller hook while preserving logic ownership and real-browser behavior; E-011 binds the focused proof.
+- Last material change: commit `6b36a5debba3b0987f5fc4ddad85c6ab85a18865` moved Workbench Environment/Plan responsive presentation and focus restoration into its domain controller while preserving 13 real-browser journeys; E-012 binds the focused proof.
 
 ## 已知问题与方向
 
