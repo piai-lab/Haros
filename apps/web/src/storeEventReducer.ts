@@ -37,7 +37,7 @@ import {
   normalizeThreadErrorMessage,
   normalizeThreadSession,
   normalizeTurnDiffFiles,
-  providerReferenceArraysEqual,
+  engineReferenceArraysEqual,
   resolveCreateBranchFlowCompletedMerge,
   textSegmentArraysEqual,
   withOrchestrationEventSequence,
@@ -286,7 +286,7 @@ function checkpointStatusToLatestTurnState(
   return "completed";
 }
 
-function isProviderDiffPlaceholderRef(checkpointRef: string | null | undefined): boolean {
+function isEngineDiffPlaceholderRef(checkpointRef: string | null | undefined): boolean {
   return checkpointRef?.startsWith("engine-diff:") === true;
 }
 
@@ -566,7 +566,7 @@ function applyTurnDiffSummaryToThread(
   // lifecycle — neither close a running turn nor flip an already-settled one
   // to "interrupted" when it loses the race against session settlement.
   const isSameTurnPlaceholder =
-    isProviderDiffPlaceholderRef(nextSummary.checkpointRef) &&
+    isEngineDiffPlaceholderRef(nextSummary.checkpointRef) &&
     nextSummary.status === "missing" &&
     thread.latestTurn?.turnId === nextSummary.turnId;
   const latestTurn =
@@ -667,8 +667,8 @@ function mergeStreamingMessage(
     existingMessage.text === nextText &&
     existingMessage.streaming === incomingMessage.streaming &&
     existingMessage.attachments === nextAttachments &&
-    providerReferenceArraysEqual(existingMessage.skills, nextSkills) &&
-    providerReferenceArraysEqual(existingMessage.mentions, nextMentions) &&
+    engineReferenceArraysEqual(existingMessage.skills, nextSkills) &&
+    engineReferenceArraysEqual(existingMessage.mentions, nextMentions) &&
     existingMessage.completedAt === nextCompletedAt &&
     existingMessage.turnId === nextTurnId &&
     existingMessage.dispatchMode === nextDispatchMode &&

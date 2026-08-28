@@ -7,10 +7,10 @@ import { describe, expect, it } from "vitest";
 import {
   createComposerMentionTokenRegex,
   extractComposerMentionPath,
-  filterPromptProviderMentionReferences,
+  filterPromptEngineMentionReferences,
   filterPromptSkillReferences,
   formatComposerMentionToken,
-  isThreadProviderMentionReference,
+  isThreadEngineMentionReference,
   resolveMentionChipKind,
 } from "./composerMentions";
 
@@ -27,7 +27,7 @@ function parseMentionToken(token: string): string {
 
 describe("composer mention reference filtering", () => {
   it("does not invent plugin references for plain file or folder mentions", () => {
-    expect(filterPromptProviderMentionReferences("Open @Things please", [])).toEqual([]);
+    expect(filterPromptEngineMentionReferences("Open @Things please", [])).toEqual([]);
   });
 
   it("preserves selected plugin references only while their token remains in the prompt", () => {
@@ -35,22 +35,22 @@ describe("composer mention reference filtering", () => {
     const githubPlugin = { name: "github", path: "plugin://github@openai-curated" };
 
     expect(
-      filterPromptProviderMentionReferences("Open @Things please", [thingsPlugin, githubPlugin]),
+      filterPromptEngineMentionReferences("Open @Things please", [thingsPlugin, githubPlugin]),
     ).toEqual([thingsPlugin]);
   });
 
   it("drops selected plugin references after the matching token is removed", () => {
     const thingsPlugin = { name: "things", path: "plugin://things@openai-curated" };
 
-    expect(
-      filterPromptProviderMentionReferences("Open @src/things please", [thingsPlugin]),
-    ).toEqual([]);
+    expect(filterPromptEngineMentionReferences("Open @src/things please", [thingsPlugin])).toEqual(
+      [],
+    );
   });
 
   it("matches quoted plugin mention tokens when the plugin name contains whitespace", () => {
     const plugin = { name: "Google Drive", path: "plugin://google-drive@openai-curated" };
 
-    expect(filterPromptProviderMentionReferences('Use @"Google Drive" please', [plugin])).toEqual([
+    expect(filterPromptEngineMentionReferences('Use @"Google Drive" please', [plugin])).toEqual([
       plugin,
     ]);
   });
@@ -58,7 +58,7 @@ describe("composer mention reference filtering", () => {
   it("matches plugin mention tokens from plugin:// paths when display names differ", () => {
     const plugin = { name: "Linear Plugin", path: "plugin://linear@openai-curated" };
 
-    expect(filterPromptProviderMentionReferences("Use @linear please", [plugin])).toEqual([plugin]);
+    expect(filterPromptEngineMentionReferences("Use @linear please", [plugin])).toEqual([plugin]);
   });
 
   it("resolves plugin chip kind from stored mention references", () => {
@@ -74,11 +74,11 @@ describe("composer mention reference filtering", () => {
     const token = formatComposerMentionToken(mention.name);
 
     expect(token).toBe('@"Release planning"');
-    expect(isThreadProviderMentionReference(mention)).toBe(true);
-    expect(filterPromptProviderMentionReferences(`Compare ${token} please`, [mention])).toEqual([
+    expect(isThreadEngineMentionReference(mention)).toBe(true);
+    expect(filterPromptEngineMentionReferences(`Compare ${token} please`, [mention])).toEqual([
       mention,
     ]);
-    expect(filterPromptProviderMentionReferences("Compare the plan please", [mention])).toEqual([]);
+    expect(filterPromptEngineMentionReferences("Compare the plan please", [mention])).toEqual([]);
     expect(resolveMentionChipKind(mention.name, { mentionReferences: [mention] })).toBe("thread");
   });
 

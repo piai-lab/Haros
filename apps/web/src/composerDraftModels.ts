@@ -27,7 +27,7 @@ import {
 import type { ComposerThreadDraftState } from "./composerDraftDomain";
 import { classifyProviderReasoningEffortSupport } from "./lib/codexReasoningEffort";
 
-const isProviderKind = Schema.is(EngineKind);
+const isEngineKind = Schema.is(EngineKind);
 
 const GROK_REASONING_EFFORT_SET = new Set<string>(GROK_REASONING_EFFORT_OPTIONS);
 
@@ -46,7 +46,7 @@ export interface EffectiveComposerModelState {
   modelOptions: EngineModelOptions | null;
 }
 
-function mergeProviderModelOptionsFromSelections(
+function mergeEngineModelOptionsFromSelections(
   ...selections: ReadonlyArray<EngineSelection | null | undefined>
 ): EngineModelOptions | null {
   const result: Partial<Record<EngineKind, EngineModelOptions[EngineKind]>> = {};
@@ -70,7 +70,7 @@ function deriveEffectiveComposerModelOptions(input: {
   projectEngineSelection: EngineSelection | null | undefined;
   stickyEngineSelection?: EngineSelection | null | undefined;
 }): EngineModelOptions | null {
-  const baseOptions = mergeProviderModelOptionsFromSelections(
+  const baseOptions = mergeEngineModelOptionsFromSelections(
     input.stickyEngineSelection,
     input.projectEngineSelection,
     input.threadEngineSelection,
@@ -96,11 +96,11 @@ function deriveEffectiveComposerModelOptions(input: {
   return Object.keys(result).length > 0 ? (result as EngineModelOptions) : null;
 }
 
-export function normalizeProviderKind(value: unknown): EngineKind | null {
+export function normalizeEngineKind(value: unknown): EngineKind | null {
   if (value === "gemini") {
     return "antigravity";
   }
-  return isProviderKind(value) ? value : null;
+  return isEngineKind(value) ? value : null;
 }
 
 function trimStringOrUndefined(value: unknown): string | undefined {
@@ -210,7 +210,7 @@ export function makeEngineSelection(
   }
 }
 
-export function normalizeProviderModelOptions(
+export function normalizeEngineModelOptions(
   value: unknown,
   engine?: EngineKind | null,
   legacy?: LegacyCodexFields,
@@ -443,7 +443,7 @@ export function normalizeEngineSelection(
   const candidate = value && typeof value === "object" ? (value as Record<string, unknown>) : null;
   const rawProvider = candidate?.engine ?? legacy?.engine;
   const migratedGeminiSelection = rawProvider === "gemini";
-  const engine = normalizeProviderKind(rawProvider);
+  const engine = normalizeEngineKind(rawProvider);
   if (engine === null) {
     return null;
   }
@@ -471,7 +471,7 @@ export function normalizeEngineSelection(
   }
   const modelOptions = migratedGeminiSelection
     ? null
-    : normalizeProviderModelOptions(
+    : normalizeEngineModelOptions(
         candidate?.options ? { [engine]: candidate.options } : legacy?.modelOptions,
         engine,
         engine === "codex" ? legacy?.legacyCodex : undefined,
@@ -520,7 +520,7 @@ export function normalizeEngineSelection(
   );
 }
 
-export function reconcileProviderScopedEngineSelection(
+export function reconcileEngineScopedSelection(
   requested: EngineSelection,
   current: EngineSelection | null | undefined,
 ): EngineSelection {
@@ -630,10 +630,10 @@ export function legacyMergeEngineSelectionIntoProviderModelOptions(
   currentModelOptions: EngineModelOptions | null | undefined,
 ): EngineModelOptions | null {
   if (engineSelection?.options === undefined) {
-    return normalizeProviderModelOptions(currentModelOptions);
+    return normalizeEngineModelOptions(currentModelOptions);
   }
   return legacyReplaceProviderModelOptions(
-    normalizeProviderModelOptions(currentModelOptions),
+    normalizeEngineModelOptions(currentModelOptions),
     engineSelection.engine,
     engineSelection.options,
   );
@@ -642,16 +642,16 @@ export function legacyMergeEngineSelectionIntoProviderModelOptions(
 function legacyReplaceProviderModelOptions(
   currentModelOptions: EngineModelOptions | null | undefined,
   engine: EngineKind,
-  nextProviderOptions: EngineModelOptions[EngineKind] | null | undefined,
+  nextEngineOptions: EngineModelOptions[EngineKind] | null | undefined,
 ): EngineModelOptions | null {
   const { [engine]: _discardedProviderModelOptions, ...otherProviderModelOptions } =
     currentModelOptions ?? {};
-  const normalizedNextProviderOptions = normalizeProviderModelOptions(
-    { [engine]: nextProviderOptions },
+  const normalizedNextProviderOptions = normalizeEngineModelOptions(
+    { [engine]: nextEngineOptions },
     engine,
   );
 
-  return normalizeProviderModelOptions({
+  return normalizeEngineModelOptions({
     ...otherProviderModelOptions,
     ...(normalizedNextProviderOptions ? normalizedNextProviderOptions : {}),
   });
@@ -769,7 +769,7 @@ export function resolvePreferredComposerEngineSelection(input: {
   const draftProviderWithSelection =
     ENGINE_KINDS.find((engine) => input.draft?.engineSelectionByEngine?.[engine] !== undefined) ??
     null;
-  const preferredProvider =
+  const preferredEngine =
     input.draft?.activeEngine ??
     draftProviderWithSelection ??
     input.threadEngineSelection?.engine ??
@@ -778,16 +778,16 @@ export function resolvePreferredComposerEngineSelection(input: {
     "codex";
 
   return (
-    input.draft?.engineSelectionByEngine?.[preferredProvider] ??
-    (input.threadEngineSelection?.engine === preferredProvider
+    input.draft?.engineSelectionByEngine?.[preferredEngine] ??
+    (input.threadEngineSelection?.engine === preferredEngine
       ? input.threadEngineSelection
       : null) ??
-    (input.projectEngineSelection?.engine === preferredProvider
+    (input.projectEngineSelection?.engine === preferredEngine
       ? input.projectEngineSelection
       : null) ??
     (() => {
-      const model = getDefaultModel(preferredProvider);
-      return model ? { engine: preferredProvider, model } : null;
+      const model = getDefaultModel(preferredEngine);
+      return model ? { engine: preferredEngine, model } : null;
     })()
   );
 }

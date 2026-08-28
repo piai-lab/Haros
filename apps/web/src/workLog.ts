@@ -9,7 +9,7 @@ import {
   type ToolLifecycleItemType,
   type TurnId,
 } from "@harnessos/contracts";
-import { isPotentiallyVisibleProviderRuntimeActivity } from "@harnessos/shared/providerActivityVisibility";
+import { isPotentiallyVisibleEngineRuntimeActivity } from "@harnessos/shared/engineActivityVisibility";
 import { Schema } from "effect";
 import {
   decodeSubagentAgentStates,
@@ -240,7 +240,7 @@ export function isFileChangeWorkLogEntry(
 }
 
 // Composer live chrome should count actual edit work, not bare file-change approvals.
-export function isProviderFileEditWorkLogEntry(
+export function isEngineFileEditWorkLogEntry(
   workEntry: Pick<WorkLogEntry, "changedFiles" | "itemType" | "requestKind">,
 ): boolean {
   if (workEntry.itemType === "file_change") {
@@ -337,7 +337,7 @@ export function deriveWorkLogEntries(
   const ordered = orderedActivities(activities);
   const entries = ordered
     .filter((activity) => shouldKeepActivityForWorkLog(activity, latestTurnId, visibleTurnIds))
-    .filter(isPotentiallyVisibleProviderRuntimeActivity)
+    .filter(isPotentiallyVisibleEngineRuntimeActivity)
     .map(toDerivedWorkLogEntry);
   // Strip the derivation-only helpers that exist solely on DerivedWorkLogEntry.
   // `toolName` and `activityKind` are intentionally kept: they are public
@@ -916,7 +916,7 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     entry.preview = invocationPreview;
   }
   const collapseKey =
-    deriveProviderRuntimeReconciliationCollapseKey(activity, payload) ??
+    deriveEngineRuntimeReconciliationCollapseKey(activity, payload) ??
     deriveToolLifecycleCollapseKey(entry);
   if (collapseKey) {
     entry.collapseKey = collapseKey;
@@ -950,7 +950,7 @@ function extractEngineWebSurface(
   };
 }
 
-function deriveProviderRuntimeReconciliationCollapseKey(
+function deriveEngineRuntimeReconciliationCollapseKey(
   activity: OrchestrationThreadActivity,
   payload: Record<string, unknown> | null,
 ): string | undefined {

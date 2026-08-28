@@ -20,10 +20,10 @@ import { resolveRuntimeModelDescriptor } from "../components/chat/runtimeModelCa
 import { collapseCursorModelVariants } from "../cursorModelVariants";
 import {
   isInitialModelDiscoveryPending,
-  providerAgentsQueryOptions,
-  providerModelsQueryOptions,
+  engineAgentsQueryOptions,
+  engineModelsQueryOptions,
 } from "../lib/engineDiscoveryReactQuery";
-import { mergeDynamicModelOptions, type EngineModelOption } from "../providerModelOptions";
+import { mergeDynamicModelOptions, type EngineModelOption } from "../engineModelOptions";
 
 export interface EngineModelCatalog {
   customModelsByEngine: ReturnType<typeof getCustomModelsByEngine>;
@@ -36,7 +36,7 @@ export interface EngineModelCatalog {
   /** Distinguishes cold checks, truthful empty catalogs, last-good data, and hard failures. */
   catalogStateByEngine: Record<EngineKind, EngineModelCatalogState>;
   /** Engines whose runtime model discovery is still pending (no usable list yet). */
-  loadingModelProviders: Record<EngineKind, boolean>;
+  loadingEngineModels: Record<EngineKind, boolean>;
   /** Runtime descriptors from the settled current query identity only. */
   runtimeModelsByEngine: Record<EngineKind, ReadonlyArray<EngineModelDescriptor>>;
   /** The runtime descriptor matching `selectedEngine` + its selected-model hint. */
@@ -117,7 +117,7 @@ export function useEngineModelCatalog(input: {
    * Restrict background discovery to the engines used by a non-picker surface.
    * Picker surfaces can omit this to use the visible-engine list from settings.
    */
-  prefetchProviders?: ReadonlyArray<EngineKind>;
+  prefetchEngines?: ReadonlyArray<EngineKind>;
 }): EngineModelCatalog {
   const { selectedEngine, discoveryEnabled, modelHintByEngine } = input;
   const discoveryCwd = input.cwd ?? null;
@@ -127,16 +127,15 @@ export function useEngineModelCatalog(input: {
     () => (serverSettings ? getCustomModelsByEngine(serverSettings) : EMPTY_CUSTOM_MODELS),
     [serverSettings],
   );
-  const hiddenProviderSet = useMemo(
+  const hiddenEngineSet = useMemo(
     () => new Set<EngineKind>(preferences.hiddenEngines),
     [preferences.hiddenEngines],
   );
-  const prefetchProviderSet = useMemo(
-    () =>
-      input.prefetchProviders === undefined ? null : new Set<EngineKind>(input.prefetchProviders),
-    [input.prefetchProviders],
+  const prefetchEngineSet = useMemo(
+    () => (input.prefetchEngines === undefined ? null : new Set<EngineKind>(input.prefetchEngines)),
+    [input.prefetchEngines],
   );
-  const shouldDiscoverProvider = (
+  const shouldDiscoverEngine = (
     engine: EngineKind,
     prefetchRequested = discoveryEnabled,
   ): boolean => {
@@ -155,27 +154,27 @@ export function useEngineModelCatalog(input: {
     if (!prefetchRequested) {
       return false;
     }
-    return prefetchProviderSet?.has(engine) ?? !hiddenProviderSet.has(engine);
+    return prefetchEngineSet?.has(engine) ?? !hiddenEngineSet.has(engine);
   };
 
-  const omniMindModelDiscoveryEnabled = shouldDiscoverProvider("oa");
-  const claudeModelDiscoveryEnabled = shouldDiscoverProvider("claude");
-  const codexModelDiscoveryEnabled = shouldDiscoverProvider("codex");
-  const cursorModelDiscoveryEnabled = shouldDiscoverProvider("cursor");
-  const antigravityModelDiscoveryEnabled = shouldDiscoverProvider("antigravity");
-  const grokModelDiscoveryEnabled = shouldDiscoverProvider("grok");
-  const droidModelDiscoveryEnabled = shouldDiscoverProvider("droid", false);
-  const kiloModelDiscoveryEnabled = shouldDiscoverProvider("kilo");
-  const openCodeModelDiscoveryEnabled = shouldDiscoverProvider("opencode");
+  const omniMindModelDiscoveryEnabled = shouldDiscoverEngine("oa");
+  const claudeModelDiscoveryEnabled = shouldDiscoverEngine("claude");
+  const codexModelDiscoveryEnabled = shouldDiscoverEngine("codex");
+  const cursorModelDiscoveryEnabled = shouldDiscoverEngine("cursor");
+  const antigravityModelDiscoveryEnabled = shouldDiscoverEngine("antigravity");
+  const grokModelDiscoveryEnabled = shouldDiscoverEngine("grok");
+  const droidModelDiscoveryEnabled = shouldDiscoverEngine("droid", false);
+  const kiloModelDiscoveryEnabled = shouldDiscoverEngine("kilo");
+  const openCodeModelDiscoveryEnabled = shouldDiscoverEngine("opencode");
   // Opening the whole picker is not consent to inspect `.pi`. Browsing the Pi submenu
   // is explicit engine intent, and selecting Pi keeps its native discovery active.
   const piModelDiscoveryEnabled =
     selectedEngine === "pi"
-      ? shouldDiscoverProvider("pi", false)
-      : input.piDiscoveryRequested === true && shouldDiscoverProvider("pi", true);
+      ? shouldDiscoverEngine("pi", false)
+      : input.piDiscoveryRequested === true && shouldDiscoverEngine("pi", true);
 
   const omniMindDynamicModelsQuery = useQuery(
-    providerModelsQueryOptions({
+    engineModelsQueryOptions({
       engine: "oa",
       cwd: discoveryCwd,
       enabled: omniMindModelDiscoveryEnabled,
@@ -183,20 +182,20 @@ export function useEngineModelCatalog(input: {
   );
 
   const claudeDynamicModelsQuery = useQuery(
-    providerModelsQueryOptions({
+    engineModelsQueryOptions({
       engine: "claude",
       binaryPath: serverSettings?.engines.claude?.binaryPath || null,
       enabled: claudeModelDiscoveryEnabled,
     }),
   );
   const codexDynamicModelsQuery = useQuery(
-    providerModelsQueryOptions({
+    engineModelsQueryOptions({
       engine: "codex",
       enabled: codexModelDiscoveryEnabled,
     }),
   );
   const cursorDynamicModelsQuery = useQuery(
-    providerModelsQueryOptions({
+    engineModelsQueryOptions({
       engine: "cursor",
       binaryPath: serverSettings?.engines.cursor?.binaryPath || null,
       apiEndpoint: serverSettings?.engines.cursor?.apiEndpoint || null,
@@ -204,7 +203,7 @@ export function useEngineModelCatalog(input: {
     }),
   );
   const antigravityModelsQuery = useQuery(
-    providerModelsQueryOptions({
+    engineModelsQueryOptions({
       engine: "antigravity",
       binaryPath: serverSettings?.engines.antigravity?.binaryPath || null,
       cwd: discoveryCwd,
@@ -212,14 +211,14 @@ export function useEngineModelCatalog(input: {
     }),
   );
   const grokDynamicModelsQuery = useQuery(
-    providerModelsQueryOptions({
+    engineModelsQueryOptions({
       engine: "grok",
       binaryPath: serverSettings?.engines.grok?.binaryPath || null,
       enabled: grokModelDiscoveryEnabled,
     }),
   );
   const droidDynamicModelsQuery = useQuery(
-    providerModelsQueryOptions({
+    engineModelsQueryOptions({
       engine: "droid",
       binaryPath: serverSettings?.engines.droid?.binaryPath || null,
       cwd: discoveryCwd,
@@ -229,7 +228,7 @@ export function useEngineModelCatalog(input: {
     }),
   );
   const openCodeDynamicModelsQuery = useQuery(
-    providerModelsQueryOptions({
+    engineModelsQueryOptions({
       engine: "opencode",
       binaryPath: serverSettings?.engines.opencode?.binaryPath || null,
       cwd: discoveryCwd,
@@ -237,7 +236,7 @@ export function useEngineModelCatalog(input: {
     }),
   );
   const kiloDynamicModelsQuery = useQuery(
-    providerModelsQueryOptions({
+    engineModelsQueryOptions({
       engine: "kilo",
       binaryPath: serverSettings?.engines.kilo?.binaryPath || null,
       cwd: discoveryCwd,
@@ -245,7 +244,7 @@ export function useEngineModelCatalog(input: {
     }),
   );
   const piDynamicModelsQuery = useQuery(
-    providerModelsQueryOptions({
+    engineModelsQueryOptions({
       engine: "pi",
       binaryPath: serverSettings?.engines.pi?.binaryPath || null,
       agentDir: serverSettings?.engines.pi?.agentDir || null,
@@ -267,19 +266,19 @@ export function useEngineModelCatalog(input: {
   const kiloAgentDiscoveryEnabled =
     kiloModelDiscoveryEnabled && !isInitialModelDiscoveryPending(kiloDynamicModelsQuery);
   const claudeDynamicAgentsQuery = useQuery(
-    providerAgentsQueryOptions({
+    engineAgentsQueryOptions({
       engine: "claude",
       enabled: claudeAgentDiscoveryEnabled,
     }),
   );
   const codexDynamicAgentsQuery = useQuery(
-    providerAgentsQueryOptions({
+    engineAgentsQueryOptions({
       engine: "codex",
       enabled: codexAgentDiscoveryEnabled,
     }),
   );
   const openCodeDynamicAgentsQuery = useQuery(
-    providerAgentsQueryOptions({
+    engineAgentsQueryOptions({
       engine: "opencode",
       binaryPath: serverSettings?.engines.opencode?.binaryPath || null,
       cwd: discoveryCwd,
@@ -287,7 +286,7 @@ export function useEngineModelCatalog(input: {
     }),
   );
   const kiloDynamicAgentsQuery = useQuery(
-    providerAgentsQueryOptions({
+    engineAgentsQueryOptions({
       engine: "kilo",
       binaryPath: serverSettings?.engines.kilo?.binaryPath || null,
       cwd: discoveryCwd,
@@ -649,14 +648,14 @@ export function useEngineModelCatalog(input: {
     [selectedDynamicAgents],
   );
 
-  const loadingModelProviders = useMemo<Record<EngineKind, boolean>>(() => {
+  const loadingEngineModels = useMemo<Record<EngineKind, boolean>>(() => {
     const result = {} as Record<EngineKind, boolean>;
     for (const engine of ENGINE_KINDS) {
       result[engine] = catalogStateByEngine[engine] === "checking";
     }
     return result;
   }, [catalogStateByEngine]);
-  const selectedEngineRuntimeModelDiscoveryPending = loadingModelProviders[selectedEngine];
+  const selectedEngineRuntimeModelDiscoveryPending = loadingEngineModels[selectedEngine];
   const selectedEngineModelsLoading = selectedEngineRuntimeModelDiscoveryPending;
 
   return useMemo(
@@ -665,7 +664,7 @@ export function useEngineModelCatalog(input: {
       modelOptionsByEngine,
       selectableModelOptionsByEngine,
       catalogStateByEngine,
-      loadingModelProviders,
+      loadingEngineModels,
       runtimeModelsByEngine,
       selectedRuntimeModel,
       selectedRuntimeAgents,
@@ -675,7 +674,7 @@ export function useEngineModelCatalog(input: {
     [
       customModelsByEngine,
       catalogStateByEngine,
-      loadingModelProviders,
+      loadingEngineModels,
       modelOptionsByEngine,
       runtimeModelsByEngine,
       selectedEngineModelsLoading,

@@ -127,7 +127,7 @@ import {
 import { derivePendingApprovals, derivePendingUserInputs } from "../session-logic";
 import { useThreadPullRequests, type ThreadPullRequest } from "../hooks/useThreadPullRequests";
 import {
-  providerComposerCapabilitiesQueryOptions,
+  engineComposerCapabilitiesQueryOptions,
   supportsThreadImport,
 } from "../lib/engineDiscoveryReactQuery";
 import {
@@ -207,7 +207,7 @@ import { RenameDialog } from "./RenameDialog";
 import { RenameThreadDialog } from "./RenameThreadDialog";
 import {
   SidebarSearchPalette,
-  type ImportProviderKind,
+  type ImportEngineKind,
   type SidebarSearchPaletteMode,
 } from "./SidebarSearchPalette";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
@@ -333,10 +333,7 @@ import {
 } from "~/lib/disclosureMotion";
 import { createClientPointMenuAnchor } from "~/lib/clientPointMenuAnchor";
 import { resolveThreadModelSummary } from "~/lib/threadModelSummary";
-import {
-  canCreateThreadHandoff,
-  resolveAvailableHandoffTargetProviders,
-} from "../lib/threadHandoff";
+import { canCreateThreadHandoff, resolveAvailableHandoffTargetEngines } from "../lib/threadHandoff";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import { normalizeSettingsSection } from "../settingsNavigation";
@@ -2670,7 +2667,7 @@ export default function Sidebar() {
   }, [handleNewThread, handleStartAddProject, primaryNewThreadTarget, threadsHydrated]);
 
   const handleImportThread = useCallback(
-    async (engine: ImportProviderKind, externalId: string) => {
+    async (engine: ImportEngineKind, externalId: string) => {
       const api = readNativeApi();
       if (!api) {
         throw new Error(t("project.appServerUnavailable"));
@@ -2687,14 +2684,14 @@ export default function Sidebar() {
         throw new Error(t("import.projectUnresolved"));
       }
 
-      const providerDefaultModel = getDefaultModel(engine);
+      const engineDefaultModel = getDefaultModel(engine);
       const engineSelection =
         activeProject.defaultEngineSelection?.engine === engine
           ? activeProject.defaultEngineSelection
-          : providerDefaultModel
+          : engineDefaultModel
             ? {
                 engine,
-                model: providerDefaultModel,
+                model: engineDefaultModel,
               }
             : null;
       if (!engineSelection) {
@@ -2922,7 +2919,7 @@ export default function Sidebar() {
       });
       const threadStatus = threadSummary ? resolveThreadStatusForSidebar(threadSummary) : null;
       const handoffTargets = canHandoff
-        ? resolveAvailableHandoffTargetProviders({
+        ? resolveAvailableHandoffTargetEngines({
             sourceEngine: thread.engineSelection.engine,
             engineSettings: serverSettingsQuery.data?.engines,
             engineStatuses,
@@ -6626,15 +6623,15 @@ function SidebarSearchPaletteController(props: {
   onOpenFeedback: () => void;
   onOpenUsageSettings: () => void;
   onOpenProject: (projectId: string) => void;
-  onImportThread: (engine: ImportProviderKind, externalId: string) => Promise<void>;
+  onImportThread: (engine: ImportEngineKind, externalId: string) => Promise<void>;
   onOpenThread: (threadId: string) => void;
 }) {
   const { t } = useI18n();
   const selectAllThreads = useMemo(() => createAllThreadsSelector(), []);
   const selectSidebarDisplayThreads = useMemo(() => createSidebarDisplayThreadsSelector(), []);
-  const importProviderCapabilityQueries = useQueries({
+  const importEngineCapabilityQueries = useQueries({
     queries: (["codex", "claude", "cursor", "kilo", "opencode"] as const).map((engine) =>
-      providerComposerCapabilitiesQueryOptions(engine),
+      engineComposerCapabilitiesQueryOptions(engine),
     ),
   });
   const threads = useStore(selectAllThreads);
@@ -6642,9 +6639,9 @@ function SidebarSearchPaletteController(props: {
   const searchTerminalStateByThreadId = useTerminalStateStore(
     (state) => state.terminalStateByThreadId,
   );
-  const importProviders: ReadonlyArray<ImportProviderKind> = (
+  const importEngines: ReadonlyArray<ImportEngineKind> = (
     ["codex", "claude", "cursor", "kilo", "opencode"] as const
-  ).filter((engine, index) => supportsThreadImport(importProviderCapabilityQueries[index]?.data));
+  ).filter((engine, index) => supportsThreadImport(importEngineCapabilityQueries[index]?.data));
   const searchPaletteThreads = useMemo<SidebarSearchThread[]>(() => {
     const threadById = new Map(threads.map((thread) => [thread.id, thread] as const));
     const searchProjectById = new Map(
@@ -6707,7 +6704,7 @@ function SidebarSearchPaletteController(props: {
       onOpenFeedback={props.onOpenFeedback}
       onOpenUsageSettings={props.onOpenUsageSettings}
       onOpenProject={props.onOpenProject}
-      importProviders={importProviders}
+      importEngines={importEngines}
       onImportThread={props.onImportThread}
       onOpenThread={props.onOpenThread}
     />

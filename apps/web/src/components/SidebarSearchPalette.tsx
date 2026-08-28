@@ -22,7 +22,7 @@ import { LuArrowDownToLine, LuArrowLeft, LuCornerLeftUp, LuFolderPlus } from "re
 import { type ComponentType, useEffect, useState, type KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FolderClosed } from "./FolderClosed";
-import { EngineIcon as SharedProviderIcon } from "./EngineIcon";
+import { EngineIcon as SharedEngineIcon } from "./EngineIcon";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { readNativeApi } from "~/nativeApi";
 import { isMacPlatform } from "~/lib/utils";
@@ -92,11 +92,11 @@ interface SidebarSearchPaletteProps {
   onOpenUsageSettings: () => void;
   onOpenProject: (projectId: string) => void;
   onOpenThread: (threadId: string) => void;
-  importProviders: readonly ImportProviderKind[];
-  onImportThread: (engine: ImportProviderKind, externalId: string) => Promise<void>;
+  importEngines: readonly ImportEngineKind[];
+  onImportThread: (engine: ImportEngineKind, externalId: string) => Promise<void>;
 }
 
-export type ImportProviderKind = Extract<
+export type ImportEngineKind = Extract<
   EngineKind,
   "codex" | "claude" | "cursor" | "kilo" | "opencode"
 >;
@@ -288,7 +288,7 @@ const THEME_MODE_ICONS: Record<"system" | "light" | "dark", IconComponent> = {
 function EngineIcon(props: { engine: EngineKind }) {
   return (
     <div className="flex size-5 shrink-0 items-center justify-center">
-      <SharedProviderIcon engine={props.engine} className="size-[15px]" />
+      <SharedEngineIcon engine={props.engine} className="size-[15px]" />
     </div>
   );
 }
@@ -365,17 +365,17 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
   const { activeTheme, resolvedTheme, setTheme, setThemePresetId, theme } = useTheme();
   const [query, setQuery] = useState("");
   const [highlightedItemValue, setHighlightedItemValue] = useState<string | null>(null);
-  const [importProviderState, setImportProvider] = useState<ImportProviderKind>(
-    props.importProviders[0] ?? "codex",
+  const [importEngineState, setImportEngine] = useState<ImportEngineKind>(
+    props.importEngines[0] ?? "codex",
   );
   const [importId, setImportId] = useState("");
   const [importError, setImportError] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   // Derived fallback (no syncing effect): an unavailable engine renders as
   // the first available one, and the user's pick resurfaces if it comes back.
-  const importProvider = props.importProviders.includes(importProviderState)
-    ? importProviderState
-    : (props.importProviders[0] ?? "codex");
+  const importEngine = props.importEngines.includes(importEngineState)
+    ? importEngineState
+    : (props.importEngines[0] ?? "codex");
   // Error keyed to the query it was produced for: editing the query derives
   // straight back to null with no state-clearing effect.
   const [addProjectErrorState, setAddProjectErrorState] = useState<{
@@ -399,7 +399,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
     const timeoutId = window.setTimeout(() => {
       setQuery("");
       setHighlightedItemValue(null);
-      setImportProvider(props.importProviders[0] ?? "codex");
+      setImportEngine(props.importEngines[0] ?? "codex");
       setImportId("");
       setImportError(null);
       setIsImporting(false);
@@ -407,7 +407,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
       setIsAddingProject(false);
     }, 0);
     return () => window.clearTimeout(timeoutId);
-  }, [props.importProviders, props.open]);
+  }, [props.importEngines, props.open]);
 
   const platform = typeof navigator === "undefined" ? "" : navigator.platform;
   const trimmedQuery = query.trim();
@@ -486,16 +486,15 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
     matchedCurrentThemes.length > 0 ||
     matchedProjects.length > 0 ||
     matchedThreads.length > 0;
-  const importFieldLabel =
-    importProvider === "codex" ? t("search.threadId") : t("search.sessionId");
+  const importFieldLabel = importEngine === "codex" ? t("search.threadId") : t("search.sessionId");
   const importPlaceholder =
-    importProvider === "claude"
+    importEngine === "claude"
       ? t("search.pasteSessionId", { engine: "Claude" })
-      : importProvider === "cursor"
+      : importEngine === "cursor"
         ? t("search.pasteSessionId", { engine: "Cursor" })
-        : importProvider === "kilo"
+        : importEngine === "kilo"
           ? t("search.pasteSessionId", { engine: "Kilo" })
-          : importProvider === "opencode"
+          : importEngine === "opencode"
             ? t("search.pasteSessionId", { engine: "OpenCode" })
             : t("search.pasteThreadId", { engine: "Codex" });
 
@@ -595,7 +594,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
     }
     setImportError(null);
     setIsImporting(true);
-    void Promise.resolve(props.onImportThread(importProvider, normalizedImportId))
+    void Promise.resolve(props.onImportThread(importEngine, normalizedImportId))
       .then(() => {
         props.onOpenChange(false);
       })
@@ -627,10 +626,10 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                 </Button>
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {t("search.importFromProvider")}
+                    {t("search.importFromEngine")}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {t("search.importFromProviderDescription")}
+                    {t("search.importFromEngineDescription")}
                   </p>
                 </div>
               </div>
@@ -639,16 +638,16 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">{t("search.engine")}</p>
                 <div className="flex gap-2">
-                  {props.importProviders.map((engine) => (
+                  {props.importEngines.map((engine) => (
                     <Button
                       key={engine}
                       className={
-                        importProvider === engine
+                        importEngine === engine
                           ? "flex-1 justify-start border-border bg-muted text-foreground hover:bg-muted/80"
                           : "flex-1 justify-start"
                       }
                       variant="outline"
-                      onClick={() => setImportProvider(engine)}
+                      onClick={() => setImportEngine(engine)}
                     >
                       <EngineIcon engine={engine} />
                       {engine === "claude"
@@ -663,8 +662,8 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                     </Button>
                   ))}
                 </div>
-                {props.importProviders.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">{t("search.noImportProviders")}</p>
+                {props.importEngines.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">{t("search.noImportEngines")}</p>
                 ) : null}
               </div>
               <div className="space-y-2">
@@ -674,7 +673,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                   nativeInput
                   placeholder={importPlaceholder}
                   value={importId}
-                  disabled={props.importProviders.length === 0}
+                  disabled={props.importEngines.length === 0}
                   onChange={(event) => setImportId(event.currentTarget.value)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
@@ -684,15 +683,15 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                   }}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {importProvider === "claude"
+                  {importEngine === "claude"
                     ? t("search.engineSessionResume", { engine: "Claude" })
-                    : importProvider === "cursor"
+                    : importEngine === "cursor"
                       ? t("search.engineSessionResume", { engine: "Cursor" })
-                      : importProvider === "kilo"
+                      : importEngine === "kilo"
                         ? t("search.engineSessionResume", { engine: "Kilo" })
-                        : importProvider === "opencode"
+                        : importEngine === "opencode"
                           ? t("search.engineSessionResume", { engine: "OpenCode" })
-                          : t("search.providerThreadResume", { engine: "Codex" })}
+                          : t("search.engineThreadResume", { engine: "Codex" })}
                 </p>
               </div>
               {importError ? (
@@ -712,9 +711,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                 </Button>
                 <Button
                   disabled={
-                    props.importProviders.length === 0 ||
-                    importId.trim().length === 0 ||
-                    isImporting
+                    props.importEngines.length === 0 || importId.trim().length === 0 || isImporting
                   }
                   onClick={submitImport}
                 >
@@ -842,7 +839,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                               if (action.id === "import-thread") {
                                 setImportError(null);
                                 setImportId("");
-                                setImportProvider(props.importProviders[0] ?? "codex");
+                                setImportEngine(props.importEngines[0] ?? "codex");
                                 props.onModeChange("import");
                                 return;
                               }

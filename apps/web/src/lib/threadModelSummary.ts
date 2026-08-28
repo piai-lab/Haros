@@ -13,7 +13,7 @@ import {
   resolveComposerTraitStatusLabel,
   showsComposerFastModeBadge,
 } from "~/components/chat/composerTraits";
-import { formatProviderModelOptionName, type EngineOptions } from "~/providerModelOptions";
+import { formatEngineModelOptionName, type EngineOptions } from "~/engineModelOptions";
 
 export interface ThreadModelSummary {
   engine: EngineKind;
@@ -31,11 +31,11 @@ export function resolveThreadModelSummary(
   if (!engineSelection) {
     return null;
   }
-  // Deliberately the selection's engine, not `resolveThreadDisplayProvider`:
+  // Deliberately the selection's engine, not `resolveThreadDisplayEngine`:
   // the glyph and the model name must describe the same selection, and a live
   // session can briefly report a different engine than the stored selection.
   const engine = engineSelection.engine;
-  const modelLabel = formatProviderModelOptionName({ engine, slug: engineSelection.model });
+  const modelLabel = formatEngineModelOptionName({ engine, slug: engineSelection.model });
   if (modelLabel.length === 0) {
     return null;
   }

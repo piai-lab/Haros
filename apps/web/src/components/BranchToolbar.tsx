@@ -10,7 +10,7 @@ import type {
 import { CheckIcon, ChevronDownIcon, HandoffIcon, WorktreeIcon } from "~/lib/icons";
 import { HiOutlineHandRaised } from "react-icons/hi2";
 import { CentralIcon } from "~/lib/central-icons";
-import { isProviderRuntimeModeExecutable } from "@harnessos/shared/runtimeMode";
+import { isEngineRuntimeModeExecutable } from "@harnessos/shared/runtimeMode";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "~/i18n";
@@ -135,7 +135,7 @@ function RuntimeModeMenuItem({
   return (
     <MenuRadioItem
       value={mode}
-      disabled={!isProviderRuntimeModeExecutable(capability)}
+      disabled={!isEngineRuntimeModeExecutable(capability)}
       className={cn(
         "runtime-mode-menu-item",
         mode === "auto" && "runtime-mode-menu-item--auto",
@@ -299,7 +299,7 @@ export function RuntimeUsageControls({
                 }
                 const nextMode = value as RuntimeMode;
                 const capability = executionCapabilities?.runtimeModes[nextMode];
-                if (!isProviderRuntimeModeExecutable(capability)) {
+                if (!isEngineRuntimeModeExecutable(capability)) {
                   return;
                 }
                 onRuntimeModeChange(nextMode);

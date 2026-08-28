@@ -28,7 +28,7 @@ import { createThreadShellsSelector } from "~/storeSelectors";
 import { WS_HARNESSOS_MODEL_SERVICES_CAPABILITY } from "@harnessos/contracts";
 
 import {
-  areUsableProviderCatalogsSettled,
+  areUsableEngineCatalogsSettled,
   hasUsableExactModelBinding,
   hasUsableOAModelServiceBinding,
   isSettledPassiveModelServicesQueryState,
@@ -60,7 +60,7 @@ export interface FirstRunReadinessController {
     typeof useEngineModelCatalog
   >["selectableModelOptionsByEngine"];
   readonly catalogStateByEngine: ReturnType<typeof useEngineModelCatalog>["catalogStateByEngine"];
-  readonly loadingModelProviders: ReturnType<typeof useEngineModelCatalog>["loadingModelProviders"];
+  readonly loadingEngineModels: ReturnType<typeof useEngineModelCatalog>["loadingEngineModels"];
 }
 
 export function useFirstRunReadinessController(
@@ -77,7 +77,7 @@ export function useFirstRunReadinessController(
   const stickyEngineSelectionByEngine = useComposerDraftStore(
     (state) => state.stickyEngineSelectionByEngine,
   );
-  const stickyActiveProvider = useComposerDraftStore((state) => state.stickyActiveProvider);
+  const stickyActiveEngine = useComposerDraftStore((state) => state.stickyActiveEngine);
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const engineStatuses = useEngineStatusesForLocalConfig();
   const modelServicesCapability = useSyncExternalStore(
@@ -127,23 +127,23 @@ export function useFirstRunReadinessController(
     const focusedDraft = focusedContext.focusedThreadId
       ? draftsByThreadId[focusedContext.focusedThreadId]
       : null;
-    const focusedProvider =
+    const focusedEngine =
       focusedDraft?.activeEngine ??
       focusedContext.activeThread?.engineSelection.engine ??
       focusedContext.activeProject?.defaultEngineSelection?.engine ??
-      stickyActiveProvider ??
+      stickyActiveEngine ??
       settingsSnapshot.defaultEngine;
     const focusedSelection =
-      focusedDraft?.engineSelectionByEngine[focusedProvider] ??
-      (focusedContext.activeThread?.engineSelection.engine === focusedProvider
+      focusedDraft?.engineSelectionByEngine[focusedEngine] ??
+      (focusedContext.activeThread?.engineSelection.engine === focusedEngine
         ? focusedContext.activeThread.engineSelection
         : null) ??
-      (focusedContext.activeProject?.defaultEngineSelection?.engine === focusedProvider
+      (focusedContext.activeProject?.defaultEngineSelection?.engine === focusedEngine
         ? focusedContext.activeProject.defaultEngineSelection
         : null) ??
-      stickyEngineSelectionByEngine[focusedProvider] ??
+      stickyEngineSelectionByEngine[focusedEngine] ??
       null;
-    if (focusedSelection) result[focusedProvider] = focusedSelection;
+    if (focusedSelection) result[focusedEngine] = focusedSelection;
     for (const engine of ENGINE_KINDS) {
       const status = engineStatuses.find((candidate) => candidate.engine === engine);
       if (
@@ -166,7 +166,7 @@ export function useFirstRunReadinessController(
     engineStatuses,
     rememberedSelections,
     settingsSnapshot.defaultEngine,
-    stickyActiveProvider,
+    stickyActiveEngine,
     stickyEngineSelectionByEngine,
   ]);
   const hasUsableIndependentBinding = hasUsableExactModelBinding({
@@ -219,7 +219,7 @@ export function useFirstRunReadinessController(
     engines: ["oa"],
     explicitExactEngineSelections: rememberedSelections,
   });
-  const catalogsSettled = areUsableProviderCatalogsSettled({
+  const catalogsSettled = areUsableEngineCatalogsSettled({
     engineStatuses,
     catalogStateByEngine: catalog.catalogStateByEngine,
     explicitExactEngineSelections: rememberedSelections,
@@ -251,6 +251,6 @@ export function useFirstRunReadinessController(
     engineStatuses,
     modelOptionsByEngine: catalog.selectableModelOptionsByEngine,
     catalogStateByEngine: catalog.catalogStateByEngine,
-    loadingModelProviders: catalog.loadingModelProviders,
+    loadingEngineModels: catalog.loadingEngineModels,
   };
 }

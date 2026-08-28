@@ -59,15 +59,13 @@ function toUsedPercent(line: OpenUsageProgressLine): number | undefined {
   return Math.min(100, Math.max(0, (used / limit) * 100));
 }
 
-function toProviderKind(providerId: string | undefined): EngineKind | null {
+function toEngineKind(providerId: string | undefined): EngineKind | null {
   if (providerId === "codex") return "codex";
   if (providerId === "claude") return "claude";
   return null;
 }
 
-export function openUsageProviderIdForProvider(
-  engine: EngineKind | null | undefined,
-): string | null {
+export function openUsageProviderIdForEngine(engine: EngineKind | null | undefined): string | null {
   if (engine === "codex") return "codex";
   if (engine === "claude") return "claude";
   return null;
@@ -108,14 +106,14 @@ function normalizeTextLine(line: OpenUsageTextLine): OpenUsageUsageLine | null {
 
 export function normalizeOpenUsageSnapshot(
   snapshot: unknown,
-  preferredProvider?: EngineKind | null,
+  preferredEngine?: EngineKind | null,
 ): EngineRateLimit | null {
   const parsed = asRecord(snapshot) as OpenUsageSnapshot | null;
   if (!parsed) return null;
 
   const engine =
-    toProviderKind(asString(parsed.providerId)) ??
-    (preferredProvider !== undefined ? preferredProvider : null);
+    toEngineKind(asString(parsed.providerId)) ??
+    (preferredEngine !== undefined ? preferredEngine : null);
   if (!engine) return null;
 
   const lines = Array.isArray(parsed.lines) ? parsed.lines : [];

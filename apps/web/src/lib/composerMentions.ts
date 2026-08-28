@@ -98,7 +98,7 @@ export function filterPromptSkillReferences(
   return skills.filter((skill) => promptIncludesSkillMention(prompt, skill.name, engine));
 }
 
-export function providerSkillReferencesEqual(
+export function engineSkillReferencesEqual(
   left: ReadonlyArray<EngineSkillReference>,
   right: ReadonlyArray<EngineSkillReference>,
 ): boolean {
@@ -114,7 +114,7 @@ function normalizeMentionNameKey(name: string): string {
   return name.trim().toLowerCase();
 }
 
-function collectProviderMentionTokenKeys(mention: EngineMentionReference): Set<string> {
+function collectEngineMentionTokenKeys(mention: EngineMentionReference): Set<string> {
   const keys = new Set<string>();
   const normalizedName = normalizeMentionNameKey(mention.name);
   if (normalizedName.length > 0) {
@@ -140,39 +140,32 @@ function collectProviderMentionTokenKeys(mention: EngineMentionReference): Set<s
   return keys;
 }
 
-export function providerMentionMatchesToken(
-  mention: EngineMentionReference,
-  token: string,
-): boolean {
+export function engineMentionMatchesToken(mention: EngineMentionReference, token: string): boolean {
   const normalizedToken = normalizeMentionNameKey(token);
-  return (
-    normalizedToken.length > 0 && collectProviderMentionTokenKeys(mention).has(normalizedToken)
-  );
+  return normalizedToken.length > 0 && collectEngineMentionTokenKeys(mention).has(normalizedToken);
 }
 
 export type MentionChipKind = "path" | "plugin" | "thread";
 
-export function isPluginProviderMentionReference(mention: EngineMentionReference): boolean {
+export function isPluginEngineMentionReference(mention: EngineMentionReference): boolean {
   return mention.path.startsWith("plugin://");
 }
 
-export function isThreadProviderMentionReference(mention: EngineMentionReference): boolean {
+export function isThreadEngineMentionReference(mention: EngineMentionReference): boolean {
   return isThreadMentionPath(mention.path);
 }
 
-export function threadIdFromProviderMentionReference(
-  mention: EngineMentionReference,
-): string | null {
+export function threadIdFromEngineMentionReference(mention: EngineMentionReference): string | null {
   return threadIdFromThreadMentionPath(mention.path);
 }
 
-export function findThreadProviderMentionReferenceForToken(
+export function findThreadEngineMentionReferenceForToken(
   token: string,
   mentions: ReadonlyArray<EngineMentionReference> | undefined,
 ): EngineMentionReference | undefined {
   return mentions?.find(
     (mention) =>
-      isThreadProviderMentionReference(mention) && providerMentionMatchesToken(mention, token),
+      isThreadEngineMentionReference(mention) && engineMentionMatchesToken(mention, token),
   );
 }
 
@@ -189,13 +182,13 @@ export function resolveMentionChipKind(
   if (options?.kind === "plugin" || path.startsWith("plugin://")) {
     return "plugin";
   }
-  if (findThreadProviderMentionReferenceForToken(path, options?.mentionReferences)) {
+  if (findThreadEngineMentionReferenceForToken(path, options?.mentionReferences)) {
     return "thread";
   }
   if (
     options?.mentionReferences?.some(
       (mention) =>
-        isPluginProviderMentionReference(mention) && providerMentionMatchesToken(mention, path),
+        isPluginEngineMentionReference(mention) && engineMentionMatchesToken(mention, path),
     )
   ) {
     return "plugin";
@@ -218,7 +211,7 @@ function collectPromptMentionNameKeys(prompt: string): Set<string> {
   return names;
 }
 
-export function filterPromptProviderMentionReferences(
+export function filterPromptEngineMentionReferences(
   prompt: string,
   mentions: ReadonlyArray<EngineMentionReference>,
 ): EngineMentionReference[] {
@@ -230,7 +223,7 @@ export function filterPromptProviderMentionReferences(
   const seenPaths = new Set<string>();
   const matchedMentions: EngineMentionReference[] = [];
   for (const mention of mentions) {
-    const mentionKeys = collectProviderMentionTokenKeys(mention);
+    const mentionKeys = collectEngineMentionTokenKeys(mention);
     if (!Array.from(mentionKeys).some((key) => promptMentionNames.has(key))) {
       continue;
     }
@@ -243,7 +236,7 @@ export function filterPromptProviderMentionReferences(
   return matchedMentions;
 }
 
-export function providerMentionReferencesEqual(
+export function engineMentionReferencesEqual(
   left: ReadonlyArray<EngineMentionReference>,
   right: ReadonlyArray<EngineMentionReference>,
 ): boolean {

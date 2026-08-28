@@ -148,9 +148,9 @@ interface ChatHeaderProps {
   handoffBadgeLabel: string | null;
   handoffActionLabel: string;
   handoffDisabled: boolean;
-  handoffActionTargetProviders: ReadonlyArray<EngineKind>;
-  handoffBadgeSourceProvider: EngineKind | null;
-  handoffBadgeTargetProvider: EngineKind | null;
+  handoffActionTargetEngines: ReadonlyArray<EngineKind>;
+  handoffBadgeSourceEngine: EngineKind | null;
+  handoffBadgeTargetEngine: EngineKind | null;
   gitCwd: string | null;
   diffTotals: RepoDiffTotals;
   showGitActions?: boolean;
@@ -558,9 +558,9 @@ export function ChatHeader({
   handoffBadgeLabel,
   handoffActionLabel,
   handoffDisabled,
-  handoffActionTargetProviders,
-  handoffBadgeSourceProvider,
-  handoffBadgeTargetProvider,
+  handoffActionTargetEngines,
+  handoffBadgeSourceEngine,
+  handoffBadgeTargetEngine,
   gitCwd,
   diffTotals,
   showGitActions: showGitActionsProp,
@@ -649,7 +649,7 @@ export function ChatHeader({
     };
   }, [isSplitPane]);
 
-  const renderProviderIcon = (engine: EngineKind | null, className: string) => {
+  const renderEngineIcon = (engine: EngineKind | null, className: string) => {
     return (
       <EngineIcon
         engine={engine}
@@ -831,11 +831,11 @@ export function ChatHeader({
                         className="hidden !h-6 shrink-0 items-center justify-center gap-1 rounded-md px-1.5 text-[10px] sm:inline-flex"
                       >
                         <span className="inline-flex size-4 shrink-0 items-center justify-center">
-                          {renderProviderIcon(handoffBadgeSourceProvider, "size-3")}
+                          {renderEngineIcon(handoffBadgeSourceEngine, "size-3")}
                         </span>
                         <ArrowRightIcon className="size-2.5 shrink-0 opacity-45" />
                         <span className="inline-flex size-4 shrink-0 items-center justify-center">
-                          {renderProviderIcon(handoffBadgeTargetProvider, "size-3")}
+                          {renderEngineIcon(handoffBadgeTargetEngine, "size-3")}
                         </span>
                       </Badge>
                     }
@@ -864,7 +864,7 @@ export function ChatHeader({
                         tone="outline"
                         className={compact ? "gap-1" : "gap-1.5"}
                         aria-label={handoffActionLabel}
-                        disabled={handoffDisabled || handoffActionTargetProviders.length === 0}
+                        disabled={handoffDisabled || handoffActionTargetEngines.length === 0}
                       />
                     }
                   >
@@ -878,10 +878,10 @@ export function ChatHeader({
               <TooltipPopup side="bottom">{handoffActionLabel}</TooltipPopup>
             </Tooltip>
             <ComposerPickerMenuPopup align="end" side="bottom" className="w-48 min-w-48">
-              {handoffActionTargetProviders.map((engine) => (
+              {handoffActionTargetEngines.map((engine) => (
                 <MenuItem key={engine} onClick={() => onCreateHandoff(engine)}>
                   {/* opacity-100 opts brand icons out of the option row's 80% icon dim. */}
-                  {renderProviderIcon(engine, "size-3.5 shrink-0 opacity-100")}
+                  {renderEngineIcon(engine, "size-3.5 shrink-0 opacity-100")}
                   <span>
                     {t("composer.handoffTo", {
                       engine: ENGINE_DISPLAY_NAMES[engine],

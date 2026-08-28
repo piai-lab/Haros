@@ -10,7 +10,7 @@ import {
 } from "@harnessos/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import { isPotentiallyVisibleProviderRuntimeActivity } from "@harnessos/shared/providerActivityVisibility";
+import { isPotentiallyVisibleEngineRuntimeActivity } from "@harnessos/shared/engineActivityVisibility";
 
 import {
   MAX_REASONING_ACTIVITY_DETAIL_CHARS,
@@ -99,7 +99,7 @@ describe("projected activities satisfy the orchestration command schema", () => 
     ];
     for (const event of visibleEvents) {
       expect(
-        projectProviderRuntimeActivities(event).some(isPotentiallyVisibleProviderRuntimeActivity),
+        projectProviderRuntimeActivities(event).some(isPotentiallyVisibleEngineRuntimeActivity),
         event.eventId,
       ).toBe(true);
     }
@@ -148,7 +148,7 @@ describe("projected activities satisfy the orchestration command schema", () => 
     ];
     for (const event of hiddenEvents) {
       expect(
-        projectProviderRuntimeActivities(event).some(isPotentiallyVisibleProviderRuntimeActivity),
+        projectProviderRuntimeActivities(event).some(isPotentiallyVisibleEngineRuntimeActivity),
         event.eventId,
       ).toBe(false);
     }

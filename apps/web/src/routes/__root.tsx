@@ -73,7 +73,7 @@ import {
   readLatestWsTransportState,
   type WsTransportState,
 } from "../wsTransportEvents";
-import { providerQueryKeys } from "../lib/providerReactQuery";
+import { engineQueryKeys } from "../lib/engineReactQuery";
 import { invalidateProjectFileQueriesForCwds, projectQueryKeys } from "../lib/projectReactQuery";
 import { collectActiveTerminalThreadIds } from "../lib/terminalStateCleanup";
 import { useProjectRunStore } from "../projectRunStore";
@@ -126,8 +126,8 @@ import { useRightDockStore } from "../rightDockStore";
 import { resolveVisibleDockSidechatThreadIds } from "../rightDockStore.logic";
 import { arraysShallowEqual } from "../storeNormalization";
 import {
-  changedProviderModelDiscoveryProviders,
-  providerModelDiscoveryInvalidationFingerprints,
+  changedEngineModelDiscoveryEngines,
+  engineModelDiscoveryInvalidationFingerprints,
   type EngineModelDiscoveryInvalidationFingerprints,
 } from "../lib/engineDiscoveryInvalidation";
 import { engineDiscoveryQueryKeys } from "../lib/engineDiscoveryReactQuery";
@@ -154,7 +154,7 @@ import {
   getStudioOutputInvalidationThreadIdForEvent,
   resolveGitInvalidationCwdForThreadId,
   shouldInvalidateGitQueriesForEvent,
-  shouldInvalidateProviderQueriesForEvent,
+  shouldInvalidateEngineQueriesForEvent,
 } from "./-rootEventInvalidation";
 import { createDesktopProjectRecoveryAttemptGate } from "./-desktopProjectRecoveryAttempt";
 import {
@@ -198,7 +198,7 @@ function engineUpdateProgressTitle(params: {
 }): string {
   const engine = ENGINE_DISPLAY_NAMES[params.engine.engine];
   return params.total === 1
-    ? params.t("updater.updatingProvider", { engine })
+    ? params.t("updater.updatingEngine", { engine })
     : params.t("updater.updatingProviderProgress", {
         current: params.current,
         engine,
@@ -692,7 +692,7 @@ async function runEngineUpdateAll(params: {
         ? t("updater.engineUpdated", {
             engine: ENGINE_DISPLAY_NAMES[engines[0]!.engine],
           })
-        : t("updater.providersUpdated", { count: engines.length }),
+        : t("updater.enginesUpdated", { count: engines.length }),
     description: t("updater.refreshedDescription"),
     data: createEngineUpdateToastData({
       stage: "success",
@@ -782,14 +782,14 @@ function EngineUpdateNotifications({
     const engine = ENGINE_DISPLAY_NAMES[firstProvider.engine];
     const title =
       outdatedProviders.length === 1
-        ? t("updater.providerAvailable", { engine: engine })
-        : t("updater.providersAvailable", { count: outdatedProviders.length });
+        ? t("updater.engineAvailable", { engine: engine })
+        : t("updater.enginesAvailable", { count: outdatedProviders.length });
     const description =
       outdatedProviders.length === 1
-        ? t("updater.providerDescription", { engine: engine })
+        ? t("updater.engineDescription", { engine: engine })
         : additionalCount === 1
-          ? t("updater.providerPairDescription", { engine: engine })
-          : t("updater.providersDescription", {
+          ? t("updater.enginePairDescription", { engine: engine })
+          : t("updater.enginesDescription", {
               engine: engine,
               count: additionalCount,
             });
@@ -1746,7 +1746,7 @@ function EventRouter() {
       if (needsProviderInvalidation) {
         needsProviderInvalidation = false;
         pendingProjectFileInvalidationThreadIds = new Set();
-        void queryClient.invalidateQueries({ queryKey: providerQueryKeys.all });
+        void queryClient.invalidateQueries({ queryKey: engineQueryKeys.all });
         // Invalidate workspace entry queries so the @-mention file picker
         // reflects files created, deleted, or restored during this turn.
         void queryClient.invalidateQueries({ queryKey: projectQueryKeys.all });
@@ -1806,7 +1806,7 @@ function EventRouter() {
 
     const queueDomainEvent = (event: OrchestrationEvent) => {
       pendingDomainEvents.push(event);
-      if (shouldInvalidateProviderQueriesForEvent(event)) {
+      if (shouldInvalidateEngineQueriesForEvent(event)) {
         needsProviderInvalidation = true;
       }
       const projectFileThreadId = getProjectFileInvalidationThreadIdForEvent(event);
@@ -2343,17 +2343,17 @@ function EventRouter() {
       });
     });
     const unsubEngineStatusesUpdated = onServerEngineStatusesUpdated((payload) => {
-      const nextProviderDiscoveryFingerprints = providerModelDiscoveryInvalidationFingerprints(
+      const nextProviderDiscoveryFingerprints = engineModelDiscoveryInvalidationFingerprints(
         payload.engines,
       );
       const currentConfig = queryClient.getQueryData<ServerConfig>(serverQueryKeys.config());
       const previousProviderDiscoveryFingerprints =
         engineDiscoveryInvalidationFingerprints ??
         (currentConfig
-          ? providerModelDiscoveryInvalidationFingerprints(currentConfig.engines)
+          ? engineModelDiscoveryInvalidationFingerprints(currentConfig.engines)
           : null);
       const changedProviders = previousProviderDiscoveryFingerprints
-        ? changedProviderModelDiscoveryProviders(
+        ? changedEngineModelDiscoveryEngines(
             previousProviderDiscoveryFingerprints,
             nextProviderDiscoveryFingerprints,
           )
@@ -2372,10 +2372,10 @@ function EventRouter() {
         // but not on every engine-status timestamp replay.
         for (const engine of changedProviders) {
           void queryClient.invalidateQueries({
-            queryKey: engineDiscoveryQueryKeys.modelsForProvider(engine),
+            queryKey: engineDiscoveryQueryKeys.modelsForEngine(engine),
           });
           void queryClient.invalidateQueries({
-            queryKey: engineDiscoveryQueryKeys.agentsForProvider(engine),
+            queryKey: engineDiscoveryQueryKeys.agentsForEngine(engine),
           });
         }
         void queryClient.invalidateQueries({

@@ -114,7 +114,7 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
           draftThreadsByThreadId: normalizedPersisted.draftThreadsByThreadId,
           projectDraftThreadIdByProjectId: normalizedPersisted.projectDraftThreadIdByProjectId,
           stickyEngineSelectionByEngine: normalizedPersisted.stickyEngineSelectionByEngine ?? {},
-          stickyActiveProvider: normalizedPersisted.stickyActiveProvider ?? null,
+          stickyActiveEngine: normalizedPersisted.stickyActiveEngine ?? null,
         };
       },
     },

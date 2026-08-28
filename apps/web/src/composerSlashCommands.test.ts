@@ -8,7 +8,7 @@ import {
   canOfferReviewSlashCommand,
   canOfferSideSlashCommand,
   getAvailableComposerSlashCommands,
-  hasProviderNativeSlashCommand,
+  hasEngineNativeSlashCommand,
   isBuiltInComposerSlashCommand,
   parseComposerSlashInvocation,
   parseComposerSlashInvocationForCommands,
@@ -16,8 +16,8 @@ import {
   parseForkSlashCommandArgs,
   parseGoalSlashCommandArgs,
   parseSideSlashCommandArgs,
-  providerSupportsTextNativeReviewCommand,
-  shouldHideProviderNativeCommandFromComposerMenu,
+  engineSupportsTextNativeReviewCommand,
+  shouldHideEngineNativeCommandFromComposerMenu,
 } from "./composerSlashCommands";
 
 describe("composerSlashCommands", () => {
@@ -157,37 +157,37 @@ describe("composerSlashCommands", () => {
   it("parses an optional leading engine token in /side args", () => {
     const context = {
       currentEngine: "claude",
-      availableTargetProviders: ["codex", "cursor"],
+      availableTargetEngines: ["codex", "cursor"],
     } as const;
     expect(parseSideSlashCommandArgs("codex is this safe?", context)).toEqual({
       targetEngine: "codex",
       prompt: "is this safe?",
-      unavailableProvider: null,
+      unavailableEngine: null,
     });
     expect(parseSideSlashCommandArgs("Codex", context)).toEqual({
       targetEngine: "codex",
       prompt: "",
-      unavailableProvider: null,
+      unavailableEngine: null,
     });
     expect(parseSideSlashCommandArgs("claude compare this", context)).toEqual({
       targetEngine: null,
       prompt: "compare this",
-      unavailableProvider: null,
+      unavailableEngine: null,
     });
     expect(parseSideSlashCommandArgs("is this safe?", context)).toEqual({
       targetEngine: null,
       prompt: "is this safe?",
-      unavailableProvider: null,
+      unavailableEngine: null,
     });
     expect(parseSideSlashCommandArgs("", context)).toEqual({
       targetEngine: null,
       prompt: "",
-      unavailableProvider: null,
+      unavailableEngine: null,
     });
     expect(parseSideSlashCommandArgs("grok compare this", context)).toEqual({
       targetEngine: null,
       prompt: "compare this",
-      unavailableProvider: "grok",
+      unavailableEngine: "grok",
     });
   });
 
@@ -255,14 +255,14 @@ describe("composerSlashCommands", () => {
       canOfferForkCommand: true,
       canOfferSideCommand: true,
       canOfferExportCommand: true,
-      providerNativeCommandNames: ["fast", "/model", "status"],
+      engineNativeCommandNames: ["fast", "/model", "status"],
     });
 
     expect(availableCommands).not.toContain("fast");
     expect(availableCommands).not.toContain("model");
     expect(availableCommands).not.toContain("status");
-    expect(hasProviderNativeSlashCommand("codex", ["/fast", "model"], "fast")).toBe(true);
-    expect(hasProviderNativeSlashCommand("codex", ["/fast", "model"], "/model")).toBe(true);
+    expect(hasEngineNativeSlashCommand("codex", ["/fast", "model"], "fast")).toBe(true);
+    expect(hasEngineNativeSlashCommand("codex", ["/fast", "model"], "/model")).toBe(true);
   });
 
   it("keeps app-level /review available for codex even when native review exists", () => {
@@ -274,17 +274,17 @@ describe("composerSlashCommands", () => {
       canOfferForkCommand: true,
       canOfferSideCommand: true,
       canOfferExportCommand: true,
-      providerNativeCommandNames: ["review"],
+      engineNativeCommandNames: ["review"],
     });
 
     expect(availableCommands).toContain("review");
-    expect(shouldHideProviderNativeCommandFromComposerMenu("codex", "review")).toBe(true);
-    expect(shouldHideProviderNativeCommandFromComposerMenu("codex", "status")).toBe(false);
+    expect(shouldHideEngineNativeCommandFromComposerMenu("codex", "review")).toBe(true);
+    expect(shouldHideEngineNativeCommandFromComposerMenu("codex", "status")).toBe(false);
   });
 
   it("does not surface engine-native remote entry points in V1", () => {
-    expect(shouldHideProviderNativeCommandFromComposerMenu("claude", "remote-control")).toBe(true);
-    expect(shouldHideProviderNativeCommandFromComposerMenu("claude", "mobile")).toBe(true);
+    expect(shouldHideEngineNativeCommandFromComposerMenu("claude", "remote-control")).toBe(true);
+    expect(shouldHideEngineNativeCommandFromComposerMenu("claude", "mobile")).toBe(true);
   });
 
   // #218: OpenCode lists native /review but does not honor bare `/review` text turns.
@@ -297,15 +297,15 @@ describe("composerSlashCommands", () => {
       canOfferForkCommand: true,
       canOfferSideCommand: true,
       canOfferExportCommand: true,
-      providerNativeCommandNames: ["review", "status"],
+      engineNativeCommandNames: ["review", "status"],
     });
 
     expect(availableCommands).toContain("review");
-    expect(shouldHideProviderNativeCommandFromComposerMenu("opencode", "review")).toBe(true);
-    expect(providerSupportsTextNativeReviewCommand("opencode", ["review", "status"])).toBe(false);
-    expect(providerSupportsTextNativeReviewCommand("opencode", [{ name: "review" }])).toBe(false);
+    expect(shouldHideEngineNativeCommandFromComposerMenu("opencode", "review")).toBe(true);
+    expect(engineSupportsTextNativeReviewCommand("opencode", ["review", "status"])).toBe(false);
+    expect(engineSupportsTextNativeReviewCommand("opencode", [{ name: "review" }])).toBe(false);
     // Other engines with a native review still use text pass-through.
-    expect(providerSupportsTextNativeReviewCommand("claude", ["review"])).toBe(true);
+    expect(engineSupportsTextNativeReviewCommand("claude", ["review"])).toBe(true);
   });
 
   it("keeps app-level /automation available even if a engine exposes a native collision", () => {
@@ -317,11 +317,11 @@ describe("composerSlashCommands", () => {
       canOfferForkCommand: true,
       canOfferSideCommand: true,
       canOfferExportCommand: true,
-      providerNativeCommandNames: ["automation"],
+      engineNativeCommandNames: ["automation"],
     });
 
     expect(availableCommands).toContain("automation");
-    expect(shouldHideProviderNativeCommandFromComposerMenu("antigravity", "automation")).toBe(true);
+    expect(shouldHideEngineNativeCommandFromComposerMenu("antigravity", "automation")).toBe(true);
   });
 
   it("keeps Feedback HarnessOS ahead of engine-native /feedback", () => {
@@ -333,11 +333,11 @@ describe("composerSlashCommands", () => {
       canOfferForkCommand: true,
       canOfferSideCommand: true,
       canOfferExportCommand: true,
-      providerNativeCommandNames: ["feedback"],
+      engineNativeCommandNames: ["feedback"],
     });
 
     expect(availableCommands).toContain("feedback");
-    expect(shouldHideProviderNativeCommandFromComposerMenu("claude", "feedback")).toBe(true);
+    expect(shouldHideEngineNativeCommandFromComposerMenu("claude", "feedback")).toBe(true);
   });
 
   it("only exposes HarnessOS-owned app commands for claude", () => {
@@ -416,11 +416,11 @@ describe("composerSlashCommands", () => {
       canOfferForkCommand: true,
       canOfferSideCommand: true,
       canOfferExportCommand: true,
-      providerNativeCommandNames: ["export"],
+      engineNativeCommandNames: ["export"],
     });
 
     expect(availableCommands).toContain("export");
-    expect(shouldHideProviderNativeCommandFromComposerMenu("claude", "export")).toBe(true);
+    expect(shouldHideEngineNativeCommandFromComposerMenu("claude", "export")).toBe(true);
   });
 
   it("keeps native /export visible on surfaces without app-level /export", () => {
@@ -428,12 +428,12 @@ describe("composerSlashCommands", () => {
     const mainComposerAppCommands = new Set(["clear", "export", "model"]);
 
     expect(
-      shouldHideProviderNativeCommandFromComposerMenu("claude", "export", {
+      shouldHideEngineNativeCommandFromComposerMenu("claude", "export", {
         availableAppCommands: kanbanAppCommands,
       }),
     ).toBe(false);
     expect(
-      shouldHideProviderNativeCommandFromComposerMenu("claude", "export", {
+      shouldHideEngineNativeCommandFromComposerMenu("claude", "export", {
         availableAppCommands: mainComposerAppCommands,
       }),
     ).toBe(true);
@@ -497,7 +497,7 @@ describe("composerSlashCommands", () => {
   });
 
   it("treats real claude aliases like /reset as engine-native collisions", () => {
-    expect(hasProviderNativeSlashCommand("claude", ["clear"], "reset")).toBe(true);
+    expect(hasEngineNativeSlashCommand("claude", ["clear"], "reset")).toBe(true);
   });
 
   it.each(["claude", "codex", "opencode"] as const)(
@@ -511,22 +511,22 @@ describe("composerSlashCommands", () => {
         canOfferForkCommand: true,
         canOfferSideCommand: true,
         canOfferExportCommand: true,
-        providerNativeCommandNames: ["fork", "branch"],
+        engineNativeCommandNames: ["fork", "branch"],
       });
       const visibleAppCommands = new Set(availableCommands);
 
       expect(availableCommands.filter((command) => command === "fork")).toEqual(["fork"]);
       expect(
-        shouldHideProviderNativeCommandFromComposerMenu(engine, "fork", {
+        shouldHideEngineNativeCommandFromComposerMenu(engine, "fork", {
           availableAppCommands: visibleAppCommands,
         }),
       ).toBe(true);
       expect(
-        shouldHideProviderNativeCommandFromComposerMenu(engine, "branch", {
+        shouldHideEngineNativeCommandFromComposerMenu(engine, "branch", {
           availableAppCommands: visibleAppCommands,
         }),
       ).toBe(false);
-      expect(hasProviderNativeSlashCommand(engine, ["branch"], "fork")).toBe(false);
+      expect(hasEngineNativeSlashCommand(engine, ["branch"], "fork")).toBe(false);
     },
   );
 
@@ -541,12 +541,12 @@ describe("composerSlashCommands", () => {
         canOfferForkCommand: false,
         canOfferSideCommand: true,
         canOfferExportCommand: true,
-        providerNativeCommandNames: ["fork"],
+        engineNativeCommandNames: ["fork"],
       });
 
       expect(availableCommands).not.toContain("fork");
       expect(
-        shouldHideProviderNativeCommandFromComposerMenu(engine, "fork", {
+        shouldHideEngineNativeCommandFromComposerMenu(engine, "fork", {
           availableAppCommands: new Set(availableCommands),
         }),
       ).toBe(false);

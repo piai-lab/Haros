@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyServerSettingsPatch,
   normalizeBuiltInGroupOverrides,
-  providerStartOptionsFromServerSettings,
+  engineStartOptionsFromServerSettings,
   validateServerSettingsPatch,
 } from "./serverSettings";
 
@@ -94,7 +94,7 @@ describe("applyServerSettingsPatch", () => {
   });
 });
 
-describe("providerStartOptionsFromServerSettings", () => {
+describe("engineStartOptionsFromServerSettings", () => {
   it("omits blank launch settings from engine session input", () => {
     const settings = {
       ...DEFAULT_SERVER_SETTINGS,
@@ -146,7 +146,7 @@ describe("providerStartOptionsFromServerSettings", () => {
       },
     };
 
-    const engineOptions = providerStartOptionsFromServerSettings(settings);
+    const engineOptions = engineStartOptionsFromServerSettings(settings);
 
     expect(() =>
       decodeEngineSessionStartInput({
@@ -186,7 +186,7 @@ describe("providerStartOptionsFromServerSettings", () => {
       },
     };
 
-    const engineOptions = providerStartOptionsFromServerSettings(settings);
+    const engineOptions = engineStartOptionsFromServerSettings(settings);
 
     expect(engineOptions.codex).toEqual({
       binaryPath: "/custom/bin/codex",

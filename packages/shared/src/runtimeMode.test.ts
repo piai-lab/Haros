@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  isProviderRuntimeModeExecutable,
-  isProviderRuntimeModePermanentlyUnsupported,
+  isEngineRuntimeModeExecutable,
+  isEngineRuntimeModePermanentlyUnsupported,
   runtimeModeEscalatesPrivilege,
 } from "./runtimeMode";
 
@@ -15,7 +15,7 @@ describe("runtime mode compatibility", () => {
 
   it("treats only structurally supported ready or degraded modes as executable", () => {
     expect(
-      isProviderRuntimeModeExecutable({
+      isEngineRuntimeModeExecutable({
         mode: "auto",
         structurallySupported: true,
         status: "degraded",
@@ -23,19 +23,19 @@ describe("runtime mode compatibility", () => {
       }),
     ).toBe(true);
     expect(
-      isProviderRuntimeModeExecutable({
+      isEngineRuntimeModeExecutable({
         mode: "auto",
         structurallySupported: false,
         status: "unavailable",
         reason: "mode-unsupported",
       }),
     ).toBe(false);
-    expect(isProviderRuntimeModeExecutable(undefined)).toBe(false);
+    expect(isEngineRuntimeModeExecutable(undefined)).toBe(false);
   });
 
   it("reserves permanent unsupported for exact Engine/model facts", () => {
     expect(
-      isProviderRuntimeModePermanentlyUnsupported({
+      isEngineRuntimeModePermanentlyUnsupported({
         mode: "auto",
         structurallySupported: false,
         status: "unavailable",
@@ -43,7 +43,7 @@ describe("runtime mode compatibility", () => {
       }),
     ).toBe(true);
     expect(
-      isProviderRuntimeModePermanentlyUnsupported({
+      isEngineRuntimeModePermanentlyUnsupported({
         mode: "auto",
         structurallySupported: false,
         status: "unknown",
@@ -51,7 +51,7 @@ describe("runtime mode compatibility", () => {
       }),
     ).toBe(false);
     expect(
-      isProviderRuntimeModePermanentlyUnsupported({
+      isEngineRuntimeModePermanentlyUnsupported({
         mode: "auto",
         structurallySupported: false,
         status: "unavailable",

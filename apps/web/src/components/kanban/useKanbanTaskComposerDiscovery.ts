@@ -24,12 +24,12 @@ import {
   useComposerCommandMenuItems,
 } from "~/hooks/useComposerCommandMenuItems";
 import { getLocalFolderBrowseRootPath, isLocalFolderMentionQuery } from "~/lib/localFolderMentions";
-import { resolveProviderDiscoveryCwd } from "~/lib/engineDiscovery";
+import { resolveEngineDiscoveryCwd } from "~/lib/engineDiscovery";
 import {
-  providerCommandsQueryOptions,
-  providerComposerCapabilitiesQueryOptions,
-  providerPluginsQueryOptions,
-  providerSkillsQueryOptions,
+  engineCommandsQueryOptions,
+  engineComposerCapabilitiesQueryOptions,
+  enginePluginsQueryOptions,
+  engineSkillsQueryOptions,
   supportsNativeSlashCommandDiscovery,
   supportsPluginDiscovery,
   supportsSkillDiscovery,
@@ -37,7 +37,7 @@ import {
 import { projectSearchEntriesQueryOptions } from "~/lib/projectReactQuery";
 import { isMacPlatform } from "~/lib/utils";
 import { ENGINE_MODEL_OPTIONS } from "../chat/EngineModelPicker";
-import type { EngineModelOption } from "../../providerModelOptions";
+import type { EngineModelOption } from "../../engineModelOptions";
 
 type ComposerPluginSuggestion = {
   plugin: EnginePluginDescriptor;
@@ -108,17 +108,17 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
     (debouncerState) => ({ isPending: debouncerState.isPending }),
   );
   const effectiveMentionQuery = mentionTriggerQuery.length > 0 ? debouncedPathQuery : "";
-  const composerSkillCwd = resolveProviderDiscoveryCwd({
+  const composerSkillCwd = resolveEngineDiscoveryCwd({
     activeThreadWorktreePath: null,
     activeProjectCwd: selectedProjectCwd,
     serverCwd,
   });
 
-  const providerComposerCapabilitiesQuery = useQuery(
-    providerComposerCapabilitiesQueryOptions(selectedEngine),
+  const engineComposerCapabilitiesQuery = useQuery(
+    engineComposerCapabilitiesQueryOptions(selectedEngine),
   );
-  const providerCommandsQuery = useQuery(
-    providerCommandsQueryOptions({
+  const engineCommandsQuery = useQuery(
+    engineCommandsQueryOptions({
       engine: selectedEngine,
       cwd: composerSkillCwd,
       threadId: scratchThreadId,
@@ -141,32 +141,31 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
       agentDir: selectedEngine === "pi" ? piAgentDir : null,
       enabled:
         (composerTriggerKind === "slash-command" || composerTriggerKind === "slash-model") &&
-        supportsNativeSlashCommandDiscovery(providerComposerCapabilitiesQuery.data) &&
+        supportsNativeSlashCommandDiscovery(engineComposerCapabilitiesQuery.data) &&
         composerSkillCwd !== null,
     }),
   );
-  const canDiscoverProviderSkills =
-    selectedEngine === "pi" || supportsSkillDiscovery(providerComposerCapabilitiesQuery.data);
-  const providerSkillsQuery = useQuery(
-    providerSkillsQueryOptions({
+  const canDiscoverEngineSkills =
+    selectedEngine === "pi" || supportsSkillDiscovery(engineComposerCapabilitiesQuery.data);
+  const engineSkillsQuery = useQuery(
+    engineSkillsQueryOptions({
       engine: selectedEngine,
       cwd: composerSkillCwd,
       threadId: scratchThreadId,
       agentDir: selectedEngine === "pi" ? piAgentDir : null,
       enabled:
         (isSkillTrigger || composerTriggerKind === "slash-command" || selectedEngine === "pi") &&
-        canDiscoverProviderSkills &&
+        canDiscoverEngineSkills &&
         composerSkillCwd !== null,
     }),
   );
-  const providerPluginsQuery = useQuery(
-    providerPluginsQueryOptions({
+  const enginePluginsQuery = useQuery(
+    enginePluginsQueryOptions({
       engine: selectedEngine,
       cwd: composerSkillCwd,
       threadId: scratchThreadId,
       enabled:
-        supportsPluginDiscovery(providerComposerCapabilitiesQuery.data) &&
-        composerSkillCwd !== null,
+        supportsPluginDiscovery(engineComposerCapabilitiesQuery.data) && composerSkillCwd !== null,
     }),
   );
   const workspaceEntriesQuery = useQuery(
@@ -179,8 +178,8 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
   );
 
   const workspaceEntries = workspaceEntriesQuery.data?.entries ?? EMPTY_PROJECT_ENTRIES;
-  const providerPlugins =
-    providerPluginsQuery.data?.marketplaces.flatMap((marketplace) =>
+  const enginePlugins =
+    enginePluginsQuery.data?.marketplaces.flatMap((marketplace) =>
       marketplace.plugins.map((plugin) => ({
         plugin,
         mention: {
@@ -189,15 +188,14 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
         } satisfies EngineMentionReference,
       })),
     ) ?? EMPTY_COMPOSER_PLUGIN_SUGGESTIONS;
-  const providerNativeCommands =
-    providerCommandsQuery.data?.commands ?? EMPTY_PROVIDER_NATIVE_COMMANDS;
-  const providerSkills = providerSkillsQuery.data?.skills ?? EMPTY_PROVIDER_SKILLS;
+  const engineNativeCommands = engineCommandsQuery.data?.commands ?? EMPTY_PROVIDER_NATIVE_COMMANDS;
+  const engineSkills = engineSkillsQuery.data?.skills ?? EMPTY_PROVIDER_SKILLS;
   const searchableModelOptions = buildSearchableModelOptions({
     engineOptions: ENGINE_MODEL_OPTIONS,
     modelOptionsByEngine,
     engineOrder,
     hiddenEngines,
-    protectedProviders: [selectedEngine],
+    protectedEngines: [selectedEngine],
   });
   const dynamicAgents = selectedRuntimeAgents.map((agent) =>
     agent.description
@@ -207,9 +205,9 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
   const rawComposerMenuItems = useComposerCommandMenuItems({
     composerTrigger,
     engine: selectedEngine,
-    providerPlugins,
-    providerNativeCommands,
-    providerSkills,
+    enginePlugins,
+    engineNativeCommands,
+    engineSkills,
     workspaceEntries,
     searchableModelOptions,
     supportsFastSlashCommand: false,
@@ -230,18 +228,18 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
       ((mentionTriggerQuery.length > 0 && composerPathQueryDebouncer.state.isPending) ||
         workspaceEntriesQuery.isLoading ||
         workspaceEntriesQuery.isFetching ||
-        providerPluginsQuery.isLoading ||
-        providerPluginsQuery.isFetching)) ||
+        enginePluginsQuery.isLoading ||
+        enginePluginsQuery.isFetching)) ||
     (composerTriggerKind === "slash-command" &&
-      (providerCommandsQuery.isLoading ||
-        providerCommandsQuery.isFetching ||
-        providerSkillsQuery.isLoading ||
-        providerSkillsQuery.isFetching)) ||
+      (engineCommandsQuery.isLoading ||
+        engineCommandsQuery.isFetching ||
+        engineSkillsQuery.isLoading ||
+        engineSkillsQuery.isFetching)) ||
     (composerTriggerKind === "skill" &&
-      (providerComposerCapabilitiesQuery.isLoading ||
-        providerComposerCapabilitiesQuery.isFetching ||
-        providerSkillsQuery.isLoading ||
-        providerSkillsQuery.isFetching));
+      (engineComposerCapabilitiesQuery.isLoading ||
+        engineComposerCapabilitiesQuery.isFetching ||
+        engineSkillsQuery.isLoading ||
+        engineSkillsQuery.isFetching));
 
   return {
     mentionTriggerQuery,

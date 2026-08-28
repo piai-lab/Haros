@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { resolveModelPresentationIdentity } from "~/providerModelOptions";
+import { resolveModelPresentationIdentity } from "~/engineModelOptions";
 import { ModelIdentityIcon, resolveModelIdentityPresentation } from "./ModelIdentityIcon";
 
 describe("ModelIdentityIcon", () => {

@@ -5,7 +5,7 @@
 import type { ProjectId, ThreadEnvironmentMode, ThreadId } from "@harnessos/contracts";
 
 import type { AppState } from "./storeState";
-import { resolveThreadDisplayProvider } from "./lib/threadDisplayProvider";
+import { resolveThreadDisplayEngine } from "./lib/threadDisplayEngine";
 import { collectByIds, getThreadFromState, getThreadsFromState } from "./threadDerivation";
 import type {
   ComposerThreadMentionSource,
@@ -256,7 +256,7 @@ export function createComposerThreadMentionSourcesSelector(): (
               id: thread.id,
               projectId: thread.projectId,
               title: thread.title,
-              engine: resolveThreadDisplayProvider(thread),
+              engine: resolveThreadDisplayEngine(thread),
               createdAt: thread.createdAt,
               latestUserMessageAt: thread.latestUserMessageAt,
               ...(thread.archivedAt !== undefined ? { archivedAt: thread.archivedAt } : {}),

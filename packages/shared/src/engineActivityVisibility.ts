@@ -22,7 +22,7 @@ function isPlanBoundaryToolActivity(activity: OrchestrationThreadActivity): bool
  * Instance-specific collapsing still belongs to WorkLog; this only owns the
  * activity classes that every presentation path hides.
  */
-export function isPotentiallyVisibleProviderRuntimeActivity(
+export function isPotentiallyVisibleEngineRuntimeActivity(
   activity: OrchestrationThreadActivity,
 ): boolean {
   if (

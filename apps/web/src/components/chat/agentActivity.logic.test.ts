@@ -10,7 +10,7 @@ import {
   isAgentActivityWorkEntry,
   isCodexActivityStatusWorkEntry,
   isReasoningUpdateWorkEntry,
-  isUnmappedProviderEventWorkEntry,
+  isUnmappedEngineEventWorkEntry,
 } from "./agentActivity.logic";
 
 function workEntry(overrides: Partial<WorkLogEntry> & Pick<WorkLogEntry, "id">): WorkLogEntry {
@@ -460,7 +460,7 @@ describe("unmapped engine events", () => {
       tone: "info",
     });
 
-    expect(isUnmappedProviderEventWorkEntry(entry)).toBe(true);
+    expect(isUnmappedEngineEventWorkEntry(entry)).toBe(true);
     // Raw native type/label is the title instead of the generic "Activity".
     expect(formatAgentActivityEntryTitle(entry)).toBe("Item/agentMessage/completed");
     expect(formatAgentActivityEntryPreview(entry)).toBe("Finished the refactor");

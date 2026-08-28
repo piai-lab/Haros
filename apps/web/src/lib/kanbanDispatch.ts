@@ -43,7 +43,7 @@ import {
 } from "./composerSend";
 import { appendFileCommentsToPrompt, formatFileCommentTitleSeed } from "./fileComments";
 import {
-  filterPromptProviderMentionReferences,
+  filterPromptEngineMentionReferences,
   filterPromptSkillReferences,
 } from "./composerMentions";
 import {
@@ -53,7 +53,7 @@ import {
 } from "./terminalContext";
 import { resolveTerminalThreadCreationState } from "./threadBootstrap";
 import { promoteThreadCreate } from "./threadCreatePromotion";
-import { resolveModelPresentationIdentity } from "../providerModelOptions";
+import { resolveModelPresentationIdentity } from "../engineModelOptions";
 import { newCommandId, newMessageId } from "./utils";
 
 export type KanbanDraftDispatchResult =
@@ -228,7 +228,7 @@ async function dispatchKanbanDraftThreadOnce(
     skills,
     engineSelection.engine,
   );
-  const mentionedMentions = filterPromptProviderMentionReferences(outgoingMessageText, mentions);
+  const mentionedMentions = filterPromptEngineMentionReferences(outgoingMessageText, mentions);
   const turnAttachmentsPromise = stageUploadComposerAttachments({
     threadId,
     images: composerImages,

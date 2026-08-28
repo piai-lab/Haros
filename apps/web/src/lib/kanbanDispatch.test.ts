@@ -28,7 +28,7 @@ describe("dispatchKanbanDraftThread", () => {
     const projectId = ProjectId.makeUnsafe("kanban-pi-project");
     const store = useComposerDraftStore.getState();
     store.setProjectDraftThreadId(projectId, threadId);
-    store.setActiveProviderAndSticky(threadId, "pi");
+    store.setActiveEngineAndSticky(threadId, "pi");
     store.setPrompt(threadId, "Keep this draft on Pi");
 
     await expect(

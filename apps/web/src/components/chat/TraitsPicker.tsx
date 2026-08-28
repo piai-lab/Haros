@@ -26,10 +26,10 @@ import {
 } from "../ui/menu";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import {
-  buildNextProviderOptions,
-  buildProviderOptionPatch,
+  buildNextEngineOptions,
+  buildEngineOptionPatch,
   type EngineOptions,
-} from "../../providerModelOptions";
+} from "../../engineModelOptions";
 import { COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME } from "./composerPickerStyles";
 import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 import {
@@ -260,7 +260,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
 }: TraitsMenuContentProps) {
   const { t } = useI18n();
   const includeFastMode = includeFastModeProp ?? true;
-  const setProviderModelOptions = useComposerDraftStore((store) => store.setProviderModelOptions);
+  const setEngineModelOptions = useComposerDraftStore((store) => store.setEngineModelOptions);
   const {
     caps,
     defaultEffort,
@@ -306,17 +306,15 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
   // The fast-mode header toggle passes `keepMenuOpen` so its state flip stays visible.
   const commitTrait = useCallback(
     (patch: Record<string, unknown>, options?: { keepMenuOpen?: boolean }) => {
-      setProviderModelOptions(
-        threadId,
-        engine,
-        buildNextProviderOptions(engine, modelOptions, patch),
-        { ...(model !== undefined ? { model } : {}), persistSticky: true },
-      );
+      setEngineModelOptions(threadId, engine, buildNextEngineOptions(engine, modelOptions, patch), {
+        ...(model !== undefined ? { model } : {}),
+        persistSticky: true,
+      });
       if (!options?.keepMenuOpen) {
         onSelectionComplete?.();
       }
     },
-    [threadId, engine, modelOptions, model, setProviderModelOptions, onSelectionComplete],
+    [threadId, engine, modelOptions, model, setEngineModelOptions, onSelectionComplete],
   );
 
   // Deliberately not wrapped in `useCallback`: its inputs all come out of one
@@ -346,7 +344,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
           : engine === "claude"
             ? "effort"
             : "reasoningEffort");
-    commitTrait(buildProviderOptionPatch(engine, optionId, nextOption.value));
+    commitTrait(buildEngineOptionPatch(engine, optionId, nextOption.value));
   };
 
   if (!hasVisibleControls && !hasAgentControls) {

@@ -9,7 +9,7 @@ import {
   buildSkillSearchFields,
   formatSkillDiscoveryWarning,
   formatSkillScope,
-  rankProviderDiscoveryItems,
+  rankEngineDiscoveryItems,
 } from "./engineDiscovery";
 
 describe("formatSkillScope", () => {
@@ -31,7 +31,7 @@ function makeSkill(partial: Partial<EngineSkillDescriptor>): EngineSkillDescript
   };
 }
 
-describe("rankProviderDiscoveryItems", () => {
+describe("rankEngineDiscoveryItems", () => {
   it("prioritizes skill name and display-name matches over weaker field matches", () => {
     const skills = [
       makeSkill({
@@ -72,7 +72,7 @@ describe("rankProviderDiscoveryItems", () => {
       }),
     ];
 
-    const ranked = rankProviderDiscoveryItems(skills, "check", buildSkillSearchFields);
+    const ranked = rankEngineDiscoveryItems(skills, "check", buildSkillSearchFields);
 
     expect(ranked[0]?.name).toBe("check-code");
     expect(ranked.map((skill) => skill.name)).toEqual([
@@ -84,7 +84,7 @@ describe("rankProviderDiscoveryItems", () => {
   });
 
   it("matches compact queries across normalized separators", () => {
-    const ranked = rankProviderDiscoveryItems(
+    const ranked = rankEngineDiscoveryItems(
       [
         makeSkill({
           name: "release-prep",
@@ -103,7 +103,7 @@ describe("rankProviderDiscoveryItems", () => {
   });
 
   it("finds namespaced Claude plugin skills by their unqualified skill name", () => {
-    const ranked = rankProviderDiscoveryItems(
+    const ranked = rankEngineDiscoveryItems(
       [
         makeSkill({
           name: "workflow-kit:feature-delivery",

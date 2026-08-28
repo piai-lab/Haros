@@ -19,7 +19,7 @@ import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { sanitizeImportedUserMessageText } from "@harnessos/shared/importedTranscript";
 import { type Thread } from "../types";
 import { DEFAULT_PROVIDER_ORDER } from "../engineOrdering";
-import { findEngineStatus, isProviderUsable } from "./engineAvailability";
+import { findEngineStatus, isEngineUsable } from "./engineAvailability";
 import { randomUUID } from "./utils";
 
 const IMPORTABLE_THREAD_ACTIVITY_KINDS = new Set([
@@ -42,7 +42,7 @@ function isImportableThreadActivity(
   return IMPORTABLE_THREAD_ACTIVITY_KINDS.has(activity.kind);
 }
 
-export function isEligibleHandoffTargetProvider(input: {
+export function isEligibleHandoffTargetEngine(input: {
   readonly sourceEngine: EngineKind;
   readonly targetEngine: EngineKind;
   readonly targetEngineEnabled: boolean | null | undefined;
@@ -52,17 +52,17 @@ export function isEligibleHandoffTargetProvider(input: {
     input.targetEngine !== input.sourceEngine &&
     input.targetEngineEnabled === true &&
     input.targetEngineStatus?.engine === input.targetEngine &&
-    isProviderUsable(input.targetEngineStatus)
+    isEngineUsable(input.targetEngineStatus)
   );
 }
 
-export function resolveAvailableHandoffTargetProviders(input: {
+export function resolveAvailableHandoffTargetEngines(input: {
   readonly sourceEngine: EngineKind;
   readonly engineSettings: ServerSettingsView["engines"] | null | undefined;
   readonly engineStatuses: readonly ServerEngineStatus[];
 }): ReadonlyArray<EngineKind> {
   return DEFAULT_PROVIDER_ORDER.filter((targetEngine) =>
-    isEligibleHandoffTargetProvider({
+    isEligibleHandoffTargetEngine({
       sourceEngine: input.sourceEngine,
       targetEngine,
       targetEngineEnabled: input.engineSettings?.[targetEngine].enabled,

@@ -2,7 +2,7 @@ import type {
   EngineExecutionCapabilityReason,
   EngineRuntimeModeCapability,
 } from "@harnessos/contracts";
-import { isProviderRuntimeModeExecutable } from "@harnessos/shared/runtimeMode";
+import { isEngineRuntimeModeExecutable } from "@harnessos/shared/runtimeMode";
 
 import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";
@@ -81,7 +81,7 @@ export function RuntimeModeAvailabilityHint({
       <span className={cn("text-xs font-normal text-muted-foreground", className)}>{message}</span>
     );
   }
-  if (isProviderRuntimeModeExecutable(capability) && capability.status !== "degraded") {
+  if (isEngineRuntimeModeExecutable(capability) && capability.status !== "degraded") {
     return null;
   }
 

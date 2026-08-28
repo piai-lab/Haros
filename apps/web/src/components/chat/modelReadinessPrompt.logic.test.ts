@@ -2,7 +2,7 @@ import type { EngineSelection, ServerEngineStatus } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
-  areUsableProviderCatalogsSettled,
+  areUsableEngineCatalogsSettled,
   hasUsableExactModelBinding,
   hasUsableOAModelServiceBinding,
   isSettledPassiveModelServicesQueryState,
@@ -221,28 +221,28 @@ describe("model readiness facts", () => {
     const codexSelection = { codex: { engine: "codex", model: "gpt-5.5" } } as const;
 
     expect(
-      areUsableProviderCatalogsSettled({
+      areUsableEngineCatalogsSettled({
         engineStatuses: statuses,
         catalogStateByEngine: { codex: "checking", oa: "empty" },
         explicitExactEngineSelections: codexSelection,
       }),
     ).toBe(false);
     expect(
-      areUsableProviderCatalogsSettled({
+      areUsableEngineCatalogsSettled({
         engineStatuses: statuses,
         catalogStateByEngine: { codex: "ready", oa: "empty" },
         explicitExactEngineSelections: codexSelection,
       }),
     ).toBe(true);
     expect(
-      areUsableProviderCatalogsSettled({
+      areUsableEngineCatalogsSettled({
         engineStatuses: [engineStatus("codex", { available: false })],
         catalogStateByEngine: { codex: "checking" },
         explicitExactEngineSelections: codexSelection,
       }),
     ).toBe(true);
     expect(
-      areUsableProviderCatalogsSettled({
+      areUsableEngineCatalogsSettled({
         engineStatuses: statuses,
         catalogStateByEngine: { codex: "checking", oa: "checking" },
         explicitExactEngineSelections: {},

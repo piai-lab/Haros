@@ -51,7 +51,7 @@ describe("useAccountCapacity", () => {
     function Probe() {
       captured.current = useAccountCapacity({
         engine: "codex",
-        providerSnapshot: snapshot("error"),
+        engineSnapshot: snapshot("error"),
       });
       return null;
     }

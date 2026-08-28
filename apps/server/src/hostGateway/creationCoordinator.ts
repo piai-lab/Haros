@@ -20,8 +20,8 @@ import { buildPromptThreadTitleFallback } from "@harnessos/shared/chatThreads";
 import { WORKTREE_BRANCH_PREFIX } from "@harnessos/shared/git";
 import { parseGitHubRepositoryNameWithOwnerFromPullRequestUrl } from "@harnessos/shared/githubRepository";
 import {
-  isProviderRuntimeModeExecutable,
-  isProviderRuntimeModePermanentlyUnsupported,
+  isEngineRuntimeModeExecutable,
+  isEngineRuntimeModePermanentlyUnsupported,
   runtimeModeEscalatesPrivilege,
 } from "@harnessos/shared/runtimeMode";
 import { Cause, Effect, Option, Semaphore } from "effect";
@@ -548,10 +548,10 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
             ),
           );
           const runtimeModeCapability = executionCapabilities.runtimeModes[runtimeMode];
-          if (!isProviderRuntimeModeExecutable(runtimeModeCapability)) {
+          if (!isEngineRuntimeModeExecutable(runtimeModeCapability)) {
             return yield* Effect.fail(
               new ToolInputError(
-                isProviderRuntimeModePermanentlyUnsupported(runtimeModeCapability)
+                isEngineRuntimeModePermanentlyUnsupported(runtimeModeCapability)
                   ? `Runtime mode "${runtimeMode}" is not supported by this Engine and model.`
                   : `Runtime mode "${runtimeMode}" is temporarily unavailable. Check the Engine, sign-in, or version and try again.`,
               ),

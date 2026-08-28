@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ServerEngineStatus } from "@harnessos/contracts";
 import {
-  deriveProviderPickerAvailability,
-  isProviderUsable,
+  deriveEnginePickerAvailability,
+  isEngineUsable,
   normalizeEngineStatusForLocalConfig,
-  providerUnavailableReason,
-  resolveProviderSendAvailabilityWithRefresh,
+  engineUnavailableReason,
+  resolveEngineSendAvailabilityWithRefresh,
 } from "./engineAvailability";
 
 const BASE_STATUS: ServerEngineStatus = {
@@ -267,41 +267,41 @@ describe("normalizeEngineStatusForLocalConfig", () => {
   });
 });
 
-describe("deriveProviderPickerAvailability", () => {
+describe("deriveEnginePickerAvailability", () => {
   it("distinguishes observed missing installation from other unavailable states", () => {
     expect(
-      deriveProviderPickerAvailability({
+      deriveEnginePickerAvailability({
         ...BASE_STATUS,
         unavailableReason: "not_installed",
       }),
     ).toEqual({ disabled: false, state: "not_installed" });
-    expect(deriveProviderPickerAvailability(BASE_STATUS)).toEqual({
+    expect(deriveEnginePickerAvailability(BASE_STATUS)).toEqual({
       disabled: false,
       state: "unavailable",
     });
   });
 });
 
-describe("isProviderUsable", () => {
+describe("isEngineUsable", () => {
   it("blocks unavailable or unauthenticated engines", () => {
-    expect(isProviderUsable(null)).toBe(false);
-    expect(isProviderUsable(undefined)).toBe(false);
-    expect(isProviderUsable(BASE_STATUS)).toBe(false);
-    expect(
-      isProviderUsable({ ...BASE_STATUS, available: true, authStatus: "unauthenticated" }),
-    ).toBe(false);
-    expect(isProviderUsable({ ...BASE_STATUS, available: true, authStatus: "authenticated" })).toBe(
+    expect(isEngineUsable(null)).toBe(false);
+    expect(isEngineUsable(undefined)).toBe(false);
+    expect(isEngineUsable(BASE_STATUS)).toBe(false);
+    expect(isEngineUsable({ ...BASE_STATUS, available: true, authStatus: "unauthenticated" })).toBe(
+      false,
+    );
+    expect(isEngineUsable({ ...BASE_STATUS, available: true, authStatus: "authenticated" })).toBe(
       true,
     );
   });
 });
 
-describe("resolveProviderSendAvailabilityWithRefresh", () => {
+describe("resolveEngineSendAvailabilityWithRefresh", () => {
   it("returns usable engines without refreshing", async () => {
     const refreshStatuses = vi.fn(async () => null);
 
     await expect(
-      resolveProviderSendAvailabilityWithRefresh({
+      resolveEngineSendAvailabilityWithRefresh({
         engine: "antigravity",
         statuses: [READY_STATUS],
         refreshStatuses,
@@ -314,7 +314,7 @@ describe("resolveProviderSendAvailabilityWithRefresh", () => {
     const refreshStatuses = vi.fn(async () => [READY_STATUS]);
 
     await expect(
-      resolveProviderSendAvailabilityWithRefresh({
+      resolveEngineSendAvailabilityWithRefresh({
         engine: "antigravity",
         statuses: [],
         refreshStatuses,
@@ -327,7 +327,7 @@ describe("resolveProviderSendAvailabilityWithRefresh", () => {
     const refreshStatuses = vi.fn(async () => [READY_STATUS]);
 
     await expect(
-      resolveProviderSendAvailabilityWithRefresh({
+      resolveEngineSendAvailabilityWithRefresh({
         engine: "antigravity",
         statuses: [
           { ...BASE_STATUS, available: true, status: "error", authStatus: "unauthenticated" },
@@ -340,7 +340,7 @@ describe("resolveProviderSendAvailabilityWithRefresh", () => {
 
   it("keeps the original blocked reason when refresh fails", async () => {
     await expect(
-      resolveProviderSendAvailabilityWithRefresh({
+      resolveEngineSendAvailabilityWithRefresh({
         engine: "antigravity",
         statuses: [{ ...BASE_STATUS, authStatus: "unauthenticated" }],
         refreshStatuses: vi.fn(async () => {
@@ -354,11 +354,11 @@ describe("resolveProviderSendAvailabilityWithRefresh", () => {
   });
 });
 
-describe("providerUnavailableReason", () => {
+describe("engineUnavailableReason", () => {
   it("returns engine-specific guidance", () => {
-    expect(providerUnavailableReason({ ...BASE_STATUS, authStatus: "unauthenticated" })).toBe(
+    expect(engineUnavailableReason({ ...BASE_STATUS, authStatus: "unauthenticated" })).toBe(
       "Antigravity is not authenticated yet.",
     );
-    expect(providerUnavailableReason(BASE_STATUS)).toBe(BASE_STATUS.message);
+    expect(engineUnavailableReason(BASE_STATUS)).toBe(BASE_STATUS.message);
   });
 });

@@ -32,15 +32,15 @@ import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } fr
 import {
   CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
   MAX_CUSTOM_MODEL_LENGTH,
-  getCustomModelsForProvider,
-  getCustomBinaryPathForProvider,
-  getDefaultCustomModelsForProvider,
+  getCustomModelsForEngine,
+  getCustomBinaryPathForEngine,
+  getDefaultCustomModelsForEngine,
   patchCustomModels,
 } from "~/engineSettings";
 import { useLocalPreferences } from "~/localPreferences";
 import { useServerSettings } from "~/serverSettings";
 import {
-  deriveProviderPickerAvailability,
+  deriveEnginePickerAvailability,
   normalizeEngineStatusForLocalConfig,
   type EnginePickerAvailabilityState,
 } from "~/lib/engineAvailability";
@@ -57,7 +57,7 @@ import { ensureNativeApi } from "~/nativeApi";
 import { sameEngineOrder } from "~/engineOrdering";
 import {
   getVisibleEngineUpdateStatuses,
-  isProviderLatestVersionKnowable,
+  isEngineLatestVersionKnowable,
   isEngineUpdateActive,
   shouldOfferEngineUpdateAction,
   shouldPromptEngineUpdate,
@@ -154,7 +154,7 @@ type CustomModelValidationResult =
   | { readonly model: string; readonly error?: never }
   | { readonly model?: never; readonly error: string };
 
-export function validateProviderCustomModelInput(input: {
+export function validateEngineCustomModelInput(input: {
   readonly engine: EngineKind;
   readonly value: string;
   readonly savedModels: readonly string[];
@@ -424,7 +424,7 @@ const ENGINE_INSTALL_SETTINGS: readonly EngineInstallSettings[] = [
   },
 ];
 
-function readProviderInstallField(
+function readEngineInstallField(
   settings: ServerSettingsView,
   field: EngineInstallField,
 ): string | boolean {
@@ -466,7 +466,7 @@ function readProviderInstallField(
   }
 }
 
-function providerInstallFieldPatch(
+function engineInstallFieldPatch(
   field: Exclude<EngineInstallField, EngineInstallPasswordField>,
   value: string | boolean,
 ): ServerSettingsPatch {
@@ -504,30 +504,30 @@ function providerInstallFieldPatch(
   }
 }
 
-function createProviderInstallDraft(
+function createEngineInstallDraft(
   config: EngineInstallSettings,
   settings: ServerSettingsView,
 ): EngineInstallDraft {
   return Object.fromEntries(
     config.fields.map((field) => [
       field.settingsKey,
-      field.kind === "password" ? "" : readProviderInstallField(settings, field),
+      field.kind === "password" ? "" : readEngineInstallField(settings, field),
     ]),
   );
 }
 
-function providerInstallDraftValue(
+function engineInstallDraftValue(
   draft: EngineInstallDraft,
   settings: ServerSettingsView,
   field: EngineInstallField,
 ): string | boolean {
   return (
     draft[field.settingsKey] ??
-    (field.kind === "password" ? "" : readProviderInstallField(settings, field))
+    (field.kind === "password" ? "" : readEngineInstallField(settings, field))
   );
 }
 
-function createProviderInstallDraftServerPatch(input: {
+function createEngineInstallDraftServerPatch(input: {
   config: EngineInstallSettings;
   settings: ServerSettingsView;
   draft: EngineInstallDraft;
@@ -536,41 +536,41 @@ function createProviderInstallDraftServerPatch(input: {
   let patch: ServerSettingsPatch | null = null;
   for (const field of input.config.fields) {
     if (field.kind === "password" || !input.dirtyKeys.has(field.settingsKey)) continue;
-    const fieldPatch = providerInstallFieldPatch(
+    const fieldPatch = engineInstallFieldPatch(
       field,
-      providerInstallDraftValue(input.draft, input.settings, field),
+      engineInstallDraftValue(input.draft, input.settings, field),
     );
     patch = patch === null ? fieldPatch : deepMerge(patch, fieldPatch);
   }
   return patch;
 }
 
-function isProviderInstallFieldDirty(
+function isEngineInstallFieldDirty(
   field: EngineInstallField,
   settings: ServerSettingsView,
   defaults: ServerSettingsView,
 ): boolean {
-  return readProviderInstallField(settings, field) !== readProviderInstallField(defaults, field);
+  return readEngineInstallField(settings, field) !== readEngineInstallField(defaults, field);
 }
 
-function isProviderInstallConfigDirty(
+function isEngineInstallConfigDirty(
   config: EngineInstallSettings,
   settings: ServerSettingsView,
   defaults: ServerSettingsView,
 ): boolean {
-  return config.fields.some((field) => isProviderInstallFieldDirty(field, settings, defaults));
+  return config.fields.some((field) => isEngineInstallFieldDirty(field, settings, defaults));
 }
 
-export function isProviderInstallSettingsDirty(
+export function isEngineInstallSettingsDirty(
   settings: ServerSettingsView,
   defaults: ServerSettingsView,
 ): boolean {
   return ENGINE_INSTALL_SETTINGS.some((config) =>
-    isProviderInstallConfigDirty(config, settings, defaults),
+    isEngineInstallConfigDirty(config, settings, defaults),
   );
 }
 
-function createProviderInstallDisclosureState(
+function createEngineInstallDisclosureState(
   settings: ServerSettingsView,
   defaults: ServerSettingsView,
 ): Record<EngineKind, boolean> {
@@ -583,23 +583,23 @@ function createProviderInstallDisclosureState(
         config.engine,
         config.fields.some(
           (field) =>
-            readProviderInstallField(settings, field) !== readProviderInstallField(defaults, field),
+            readEngineInstallField(settings, field) !== readEngineInstallField(defaults, field),
         ) ||
           (customModelsConfig !== undefined &&
-            getCustomModelsForProvider(settings, customModelsConfig.engine).length >
-              getCustomModelsForProvider(defaults, customModelsConfig.engine).length),
+            getCustomModelsForEngine(settings, customModelsConfig.engine).length >
+              getCustomModelsForEngine(defaults, customModelsConfig.engine).length),
       ];
     }),
   ) as Record<EngineKind, boolean>;
 }
 
-function createClosedProviderInstallDisclosureState(): Record<EngineKind, boolean> {
+function createClosedEngineInstallDisclosureState(): Record<EngineKind, boolean> {
   return Object.fromEntries(
     ENGINE_INSTALL_SETTINGS.map((config) => [config.engine, false]),
   ) as Record<EngineKind, boolean>;
 }
 
-export function createProviderInstallResetPatch(defaults: ServerSettingsView): ServerSettingsPatch {
+export function createEngineInstallResetPatch(defaults: ServerSettingsView): ServerSettingsPatch {
   return {
     engines: {
       codex: {
@@ -631,7 +631,7 @@ export function createProviderInstallResetPatch(defaults: ServerSettingsView): S
   };
 }
 
-function setProviderHidden(
+function setEngineHidden(
   current: ReadonlyArray<EngineKind>,
   engine: EngineKind,
   hidden: boolean,
@@ -640,7 +640,7 @@ function setProviderHidden(
   return hidden ? [...withoutTarget, engine] : withoutTarget;
 }
 
-function providerVisibilityStatusLabel(
+function engineVisibilityStatusLabel(
   state: EnginePickerAvailabilityState,
   t: SettingsTranslator,
 ): string {
@@ -660,7 +660,7 @@ function providerVisibilityStatusLabel(
   }
 }
 
-function SortableProviderVisibilityRow(props: {
+function SortableEngineVisibilityRow(props: {
   option: { engine: EngineKind; title: string };
   engineStatus: ServerEngineStatus | undefined;
   statusPending: boolean;
@@ -680,7 +680,7 @@ function SortableProviderVisibilityRow(props: {
   const availability = props.statusPending
     ? ({ disabled: false, state: "checking" } as const)
     : props.engineStatus
-      ? deriveProviderPickerAvailability(props.engineStatus)
+      ? deriveEnginePickerAvailability(props.engineStatus)
       : ({ disabled: false, state: "unavailable" } as const);
 
   return (
@@ -702,7 +702,7 @@ function SortableProviderVisibilityRow(props: {
             ELEVATED_HOVER_SURFACE_RAISED_TEXT_CLASS_NAME,
             SETTINGS_INSET_RADIUS_CLASS_NAME,
           )}
-          aria-label={t("settings.reorderProvider", { engine: props.option.title })}
+          aria-label={t("settings.reorderEngine", { engine: props.option.title })}
           {...attributes}
           {...listeners}
         >
@@ -712,14 +712,14 @@ function SortableProviderVisibilityRow(props: {
         <span className="min-w-0">
           <span className="block truncate text-sm text-foreground">{props.option.title}</span>
           <span className="block text-[11px] text-muted-foreground">
-            {providerVisibilityStatusLabel(availability.state, t)}
+            {engineVisibilityStatusLabel(availability.state, t)}
           </span>
         </span>
       </div>
       <Switch
         checked={!props.isHidden}
         onCheckedChange={(checked) => props.onHiddenChange(!checked)}
-        aria-label={t("settings.showProvider", { engine: props.option.title })}
+        aria-label={t("settings.showEngine", { engine: props.option.title })}
       />
     </div>
   );
@@ -749,7 +749,7 @@ function EngineDocsLinks({ docs }: { docs: EngineInstallSettings["docs"] }) {
   );
 }
 
-function formatProviderVersion(value: string | null | undefined): string | null {
+function formatEngineVersion(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
   if (!trimmed) return null;
   return trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
@@ -758,19 +758,19 @@ function formatProviderVersion(value: string | null | undefined): string | null 
 function engineUpdateStatusLabel(engine: ServerEngineStatus, t: SettingsTranslator): string | null {
   const state = engine.updateState?.status;
   if (state === "queued") return t("settings.updateQueued");
-  if (state === "running") return t("settings.updatingProvider");
-  if (state === "succeeded") return t("settings.updatedProvider");
+  if (state === "running") return t("settings.updatingEngine");
+  if (state === "succeeded") return t("settings.updatedEngine");
   if (state === "failed") return t("settings.updateFailed");
   if (state === "unchanged") return t("settings.stillOutdated");
   const advisory = engine.versionAdvisory;
   if (advisory?.status === "behind_latest" && advisory.latestVersion) {
-    const currentVersion = formatProviderVersion(advisory.currentVersion);
-    const latestVersion = formatProviderVersion(advisory.latestVersion);
+    const currentVersion = formatEngineVersion(advisory.currentVersion);
+    const latestVersion = formatEngineVersion(advisory.latestVersion);
     return currentVersion
       ? `${currentVersion} → ${latestVersion}`
       : t("settings.latestVersion", { version: latestVersion ?? "" });
   }
-  const currentVersion = formatProviderVersion(engine.version);
+  const currentVersion = formatEngineVersion(engine.version);
   return currentVersion ? t("settings.currentVersion", { version: currentVersion }) : null;
 }
 
@@ -817,7 +817,7 @@ function EngineUpdateAction(props: {
       ) : (
         <DownloadIcon className="size-3.5" />
       )}
-      {props.active ? t("settings.updatingProvider") : t("settings.update")}
+      {props.active ? t("settings.updatingEngine") : t("settings.update")}
     </Button>
   );
 }
@@ -861,7 +861,7 @@ function EngineInstallFieldControl(props: {
 
   const configured =
     props.field.kind === "password"
-      ? Boolean(readProviderInstallField(props.settings, props.field))
+      ? Boolean(readEngineInstallField(props.settings, props.field))
       : false;
   const isPassword = props.field.kind === "password";
   return (
@@ -908,11 +908,11 @@ function EngineCustomModelsEditor(props: {
   if (!config) return null;
 
   const engine = config.engine;
-  const savedModels = getCustomModelsForProvider(props.settings, engine);
-  const defaultModels = getDefaultCustomModelsForProvider(engine);
+  const savedModels = getCustomModelsForEngine(props.settings, engine);
+  const defaultModels = getDefaultCustomModelsForEngine(engine);
   const isDirty = JSON.stringify(savedModels) !== JSON.stringify(defaultModels);
   const addModel = () => {
-    const result = validateProviderCustomModelInput({
+    const result = validateEngineCustomModelInput({
       engine,
       value: input,
       savedModels,
@@ -1012,10 +1012,10 @@ function EngineToolRow(props: {
   open: boolean;
   settings: ServerSettingsView;
   defaults: ServerSettingsView;
-  hiddenProviderSet: ReadonlySet<EngineKind>;
+  hiddenEngineSet: ReadonlySet<EngineKind>;
   serverSettings: Pick<ServerSettingsView, "engines" | "enableEngineUpdateChecks"> | null;
   engineStatus: ServerEngineStatus | undefined;
-  updatingProviders: ReadonlySet<EngineKind>;
+  updatingEngines: ReadonlySet<EngineKind>;
   onOpenChange: (open: boolean) => void;
   onUpdate: (engine: EngineKind) => void;
   updateServerSettings: (
@@ -1029,7 +1029,7 @@ function EngineToolRow(props: {
   const { t } = useI18n();
   const title = ENGINE_DISPLAY_NAMES[props.config.engine];
   const [draft, setDraft] = useState<EngineInstallDraft>(() =>
-    createProviderInstallDraft(props.config, props.settings),
+    createEngineInstallDraft(props.config, props.settings),
   );
   const [dirtyKeys, setDirtyKeys] = useState<ReadonlySet<EngineInstallFieldKey>>(() => new Set());
   const [saving, setSaving] = useState(false);
@@ -1042,8 +1042,8 @@ function EngineToolRow(props: {
         if (
           field.kind !== "password" &&
           next.has(field.settingsKey) &&
-          providerInstallDraftValue(draft, props.settings, field) ===
-            readProviderInstallField(props.settings, field)
+          engineInstallDraftValue(draft, props.settings, field) ===
+            readEngineInstallField(props.settings, field)
         ) {
           next.delete(field.settingsKey);
         }
@@ -1061,7 +1061,7 @@ function EngineToolRow(props: {
       for (const field of props.config.fields) {
         if (dirtyKeys.has(field.settingsKey)) continue;
         const authoritative =
-          field.kind === "password" ? "" : readProviderInstallField(props.settings, field);
+          field.kind === "password" ? "" : readEngineInstallField(props.settings, field);
         if (next[field.settingsKey] !== authoritative) {
           next[field.settingsKey] = authoritative;
           changed = true;
@@ -1081,14 +1081,14 @@ function EngineToolRow(props: {
   const discardDraft = () => {
     saveRequestIdRef.current += 1;
     setSaving(false);
-    setDraft(createProviderInstallDraft(props.config, props.settings));
+    setDraft(createEngineInstallDraft(props.config, props.settings));
     setDirtyKeys(new Set());
   };
 
   const saveDraft = async () => {
     const requestId = ++saveRequestIdRef.current;
     setSaving(true);
-    const serverPatch = createProviderInstallDraftServerPatch({
+    const serverPatch = createEngineInstallDraftServerPatch({
       config: props.config,
       settings: props.settings,
       draft,
@@ -1111,7 +1111,7 @@ function EngineToolRow(props: {
       const engine = passwordField.settingsKey === "kiloServerPassword" ? "kilo" : "opencode";
       const result = await props.updateCredential(
         engine,
-        String(providerInstallDraftValue(draft, props.settings, passwordField)),
+        String(engineInstallDraftValue(draft, props.settings, passwordField)),
       );
       if (requestId !== saveRequestIdRef.current) return;
       if (result.state === "failed") {
@@ -1119,13 +1119,13 @@ function EngineToolRow(props: {
           type: serverPatch === null ? "error" : "warning",
           title: t(
             serverPatch === null
-              ? "settings.providerConfigSaveFailed"
-              : "settings.providerConfigSavedCredentialFailed",
+              ? "settings.engineConfigSaveFailed"
+              : "settings.engineConfigSavedCredentialFailed",
           ),
           description: t(
             serverPatch === null
-              ? "settings.providerConfigSaveRecovery"
-              : "settings.providerConfigSavedCredentialFailedDescription",
+              ? "settings.engineConfigSaveRecovery"
+              : "settings.engineConfigSavedCredentialFailedDescription",
           ),
         });
         setSaving(false);
@@ -1141,19 +1141,18 @@ function EngineToolRow(props: {
     if (requestId === saveRequestIdRef.current) setSaving(false);
   };
   const isDirty =
-    dirtyKeys.size > 0 ||
-    isProviderInstallConfigDirty(props.config, props.settings, props.defaults);
+    dirtyKeys.size > 0 || isEngineInstallConfigDirty(props.config, props.settings, props.defaults);
   const showEngineUpdateStatus = props.engineStatus
     ? shouldShowEngineUpdateStatus({
         engine: props.engineStatus,
-        hiddenProviderSet: props.hiddenProviderSet,
+        hiddenEngineSet: props.hiddenEngineSet,
         serverSettings: props.serverSettings,
       })
     : false;
   const updateAdvisory = props.engineStatus?.versionAdvisory;
   const engineUpdateSuppressed =
     updateAdvisory?.status === "behind_latest" && !showEngineUpdateStatus;
-  const currentEngineVersion = formatProviderVersion(props.engineStatus?.version);
+  const currentEngineVersion = formatEngineVersion(props.engineStatus?.version);
   const engineUpdateLabel = props.engineStatus
     ? !props.settings.enableEngineUpdateChecks
       ? currentEngineVersion
@@ -1165,7 +1164,7 @@ function EngineToolRow(props: {
     : null;
   const updateActive = Boolean(
     (props.engineStatus && isEngineUpdateActive(props.engineStatus)) ||
-    props.updatingProviders.has(props.config.engine),
+    props.updatingEngines.has(props.config.engine),
   );
   const showUpdateButton = props.engineStatus
     ? shouldPromptEngineUpdate(props.engineStatus) &&
@@ -1175,7 +1174,7 @@ function EngineToolRow(props: {
   // inside the panel rather than as a header badge that can never be satisfied.
   const showSelfManagedUpdate = props.engineStatus
     ? shouldOfferEngineUpdateAction(props.engineStatus) &&
-      !isProviderLatestVersionKnowable(props.engineStatus)
+      !isEngineLatestVersionKnowable(props.engineStatus)
     : false;
 
   return (
@@ -1253,7 +1252,7 @@ function EngineToolRow(props: {
                   key={field.settingsKey}
                   field={field}
                   settings={props.settings}
-                  value={providerInstallDraftValue(draft, props.settings, field)}
+                  value={engineInstallDraftValue(draft, props.settings, field)}
                   disabled={saving}
                   onChange={(value) => updateDraft(field, value)}
                 />
@@ -1305,17 +1304,17 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
       if (result.state === "failed") {
         toastManager.add({
           type: "error",
-          title: t("settings.providerConfigSaveFailed"),
-          description: t("settings.providerConfigSaveRecovery"),
+          title: t("settings.engineConfigSaveFailed"),
+          description: t("settings.engineConfigSaveRecovery"),
         });
       }
       return result;
     },
     [mutateServerSettings, t],
   );
-  const resetProviderTools = useCallback(async () => {
+  const resetEngineTools = useCallback(async () => {
     const results = await Promise.all([
-      mutateServerSettings(createProviderInstallResetPatch(defaults)),
+      mutateServerSettings(createEngineInstallResetPatch(defaults)),
       mutateEngineCredential("kilo", ""),
       mutateEngineCredential("opencode", ""),
     ]);
@@ -1327,33 +1326,31 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
       });
       return;
     }
-    setOpenInstallProviders(createClosedProviderInstallDisclosureState());
+    setOpenInstallEngines(createClosedEngineInstallDisclosureState());
   }, [defaults, mutateEngineCredential, mutateServerSettings, t]);
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const [openInstallProviders, setOpenInstallProviders] = useState<Record<EngineKind, boolean>>(
-    () => createProviderInstallDisclosureState(settings ?? defaults, defaults),
+  const [openInstallEngines, setOpenInstallEngines] = useState<Record<EngineKind, boolean>>(() =>
+    createEngineInstallDisclosureState(settings ?? defaults, defaults),
   );
-  const [updatingProviders, setUpdatingProviders] = useState<ReadonlySet<EngineKind>>(
-    () => new Set(),
-  );
-  const hiddenProviderSet = useMemo(
+  const [updatingEngines, setUpdatingEngines] = useState<ReadonlySet<EngineKind>>(() => new Set());
+  const hiddenEngineSet = useMemo(
     () => new Set<EngineKind>(preferences.hiddenEngines),
     [preferences.hiddenEngines],
   );
-  const hiddenProviderCount = hiddenProviderSet.size;
-  const providerVisibilityOptionsByEngine = useMemo(
+  const hiddenEngineCount = hiddenEngineSet.size;
+  const engineVisibilityOptionsByEngine = useMemo(
     () => new Map(ENGINE_VISIBILITY_OPTIONS.map((option) => [option.engine, option])),
     [],
   );
-  const orderedProviderVisibilityOptions = useMemo(
+  const orderedEngineVisibilityOptions = useMemo(
     () =>
       preferences.engineOrder.flatMap((engine) => {
-        const option = providerVisibilityOptionsByEngine.get(engine);
+        const option = engineVisibilityOptionsByEngine.get(engine);
         return option ? [option] : [];
       }),
-    [providerVisibilityOptionsByEngine, preferences.engineOrder],
+    [engineVisibilityOptionsByEngine, preferences.engineOrder],
   );
-  const providerVisibilitySensors = useSensors(
+  const engineVisibilitySensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
   const isEngineOrderDirty = !sameEngineOrder(
@@ -1364,24 +1361,22 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
     () => new Map((serverConfigQuery.data?.engines ?? []).map((status) => [status.engine, status])),
     [serverConfigQuery.data?.engines],
   );
-  const providerPickerStatusByEngine = useMemo(
+  const enginePickerStatusByEngine = useMemo(
     () =>
       new Map(
         (serverConfigQuery.data?.engines ?? []).flatMap((status) => {
           const normalized = normalizeEngineStatusForLocalConfig({
             engine: status.engine,
             status,
-            customBinaryPath: settings
-              ? getCustomBinaryPathForProvider(settings, status.engine)
-              : "",
+            customBinaryPath: settings ? getCustomBinaryPathForEngine(settings, status.engine) : "",
           });
           return normalized ? ([[normalized.engine, normalized]] as const) : [];
         }),
       ),
     [serverConfigQuery.data?.engines, settings],
   );
-  const availableProviderCount = orderedProviderVisibilityOptions.filter(
-    (option) => providerPickerStatusByEngine.get(option.engine)?.available === true,
+  const availableEngineCount = orderedEngineVisibilityOptions.filter(
+    (option) => enginePickerStatusByEngine.get(option.engine)?.available === true,
   ).length;
   const engineUpdateServerSettings = useMemo(
     () =>
@@ -1402,13 +1397,11 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
       }),
     [engineUpdateServerSettings, serverConfigQuery.data?.engines, preferences.hiddenEngines],
   );
-  const outdatedProviderCount = outdatedEngineStatuses.length;
-  const installSettingsDirty = settings
-    ? isProviderInstallSettingsDirty(settings, defaults)
-    : false;
+  const outdatedEngineCount = outdatedEngineStatuses.length;
+  const installSettingsDirty = settings ? isEngineInstallSettingsDirty(settings, defaults) : false;
 
   useSettingsRestoreSignal(resetEpoch, () => {
-    setOpenInstallProviders(createClosedProviderInstallDisclosureState());
+    setOpenInstallEngines(createClosedEngineInstallDisclosureState());
   });
 
   const handleEngineOrderDragEnd = useCallback(
@@ -1427,7 +1420,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
 
   const runEngineUpdate = useCallback(
     async (engine: EngineKind) => {
-      if (updatingProviders.has(engine)) return;
+      if (updatingEngines.has(engine)) return;
       let progressToastDismissed = false;
       const dismissProgressToast = () => {
         progressToastDismissed = true;
@@ -1435,7 +1428,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
       const engineLabel = ENGINE_DISPLAY_NAMES[engine];
       const toastId = toastManager.add({
         type: "loading",
-        title: t("updater.updatingProvider", { engine: engineLabel }),
+        title: t("updater.updatingEngine", { engine: engineLabel }),
         data: createEngineUpdateToastData({
           stage: "progress",
           closeLabel: t("updater.hideProgress"),
@@ -1443,23 +1436,23 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
         }),
         timeout: 0,
       });
-      setUpdatingProviders((current) => new Set(current).add(engine));
+      setUpdatingEngines((current) => new Set(current).add(engine));
       await withEngineUpdateTimeout({
         engine,
         request: ensureNativeApi().server.updateEngine({ engine }),
       })
         .then((result) => {
           void reconcileServerEngineStatuses(queryClient, result.engines).catch(() => undefined);
-          const refreshedProvider = result.engines.find((status) => status.engine === engine);
-          const failureMessage = refreshedProvider
-            ? engineUpdateFailureMessage(refreshedProvider, t("settings.engineUpdateIncomplete"))
+          const refreshedEngine = result.engines.find((status) => status.engine === engine);
+          const failureMessage = refreshedEngine
+            ? engineUpdateFailureMessage(refreshedEngine, t("settings.engineUpdateIncomplete"))
             : t("settings.engineUpdateIncomplete");
           if (failureMessage) {
-            const manualCommand = refreshedProvider?.versionAdvisory?.updateCommand?.trim();
+            const manualCommand = refreshedEngine?.versionAdvisory?.updateCommand?.trim();
             if (progressToastDismissed) return;
             toastManager.update(toastId, {
               type: "error",
-              title: t("settings.couldNotUpdateProvider", {
+              title: t("settings.couldNotUpdateEngine", {
                 engine: engine,
               }),
               description: manualCommand
@@ -1490,7 +1483,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
           if (progressToastDismissed) return;
           toastManager.update(toastId, {
             type: "error",
-            title: t("settings.couldNotUpdateProvider", {
+            title: t("settings.couldNotUpdateEngine", {
               engine: engine,
             }),
             description:
@@ -1512,22 +1505,22 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
           void queryClient
             .invalidateQueries({ queryKey: serverQueryKeys.config() })
             .catch(() => undefined);
-          setUpdatingProviders((current) => {
+          setUpdatingEngines((current) => {
             const next = new Set(current);
             next.delete(engine);
             return next;
           });
         });
     },
-    [queryClient, t, updatingProviders],
+    [queryClient, t, updatingEngines],
   );
 
   if (!active) return null;
   if (!settings) {
     return (
-      <SettingsSection title={t("settings.providerTools")}>
+      <SettingsSection title={t("settings.engineTools")}>
         <SettingsRow
-          title={t("settings.providerTools")}
+          title={t("settings.engineTools")}
           description={t("settings.serverSettingsUnavailable")}
           status={serverSettingsQuery.isPending ? t("common.loading") : t("settings.unavailable")}
           control={
@@ -1583,8 +1576,8 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
             status={
               !settings.enableEngineUpdateChecks
                 ? t("settings.automaticChecksOff")
-                : outdatedProviderCount > 0
-                  ? t("settings.updatesAvailable", { count: outdatedProviderCount })
+                : outdatedEngineCount > 0
+                  ? t("settings.updatesAvailable", { count: outdatedEngineCount })
                   : t("settings.noEngineUpdates")
             }
           >
@@ -1598,8 +1591,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
               >
                 {outdatedEngineStatuses.map((engineStatus) => {
                   const updateActive =
-                    isEngineUpdateActive(engineStatus) ||
-                    updatingProviders.has(engineStatus.engine);
+                    isEngineUpdateActive(engineStatus) || updatingEngines.has(engineStatus.engine);
                   const updateLabel = engineUpdateStatusLabel(engineStatus, t);
                   return (
                     <SettingsListRow
@@ -1629,29 +1621,29 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
         </SettingsSection>
       </div>
 
-      <SettingsSection title={t("settings.providerPicker")}>
+      <SettingsSection title={t("settings.enginePicker")}>
         <SettingsRow
-          anchorId={PROVIDERS_SETTINGS_SEARCH.visibleProviders.target}
-          title={t("settings.visibleProviders")}
-          description={t("settings.visibleProvidersDescription")}
+          anchorId={PROVIDERS_SETTINGS_SEARCH.visibleEngines.target}
+          title={t("settings.visibleEngines")}
+          description={t("settings.visibleEnginesDescription")}
           status={
             serverConfigQuery.isPending
               ? t("settings.engineStatusChecking")
-              : hiddenProviderCount > 0
+              : hiddenEngineCount > 0
                 ? t("settings.enginesAvailableWithHidden", {
-                    available: availableProviderCount,
-                    hidden: hiddenProviderCount,
+                    available: availableEngineCount,
+                    hidden: hiddenEngineCount,
                   })
                 : isEngineOrderDirty
                   ? t("settings.enginesAvailableCustomOrder", {
-                      count: availableProviderCount,
+                      count: availableEngineCount,
                     })
-                  : t("settings.enginesAvailable", { count: availableProviderCount })
+                  : t("settings.enginesAvailable", { count: availableEngineCount })
           }
           resetAction={
-            hiddenProviderCount > 0 || isEngineOrderDirty ? (
+            hiddenEngineCount > 0 || isEngineOrderDirty ? (
               <SettingResetButton
-                label={t("settings.providerPicker")}
+                label={t("settings.enginePicker")}
                 onClick={() =>
                   updatePreferences({
                     hiddenEngines: preferenceDefaults.hiddenEngines,
@@ -1663,26 +1655,26 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
           }
         >
           <DndContext
-            sensors={providerVisibilitySensors}
+            sensors={engineVisibilitySensors}
             collisionDetection={closestCenter}
             modifiers={[restrictToVerticalAxis]}
             onDragEnd={handleEngineOrderDragEnd}
           >
             <SortableContext
-              items={orderedProviderVisibilityOptions.map((option) => option.engine)}
+              items={orderedEngineVisibilityOptions.map((option) => option.engine)}
               strategy={verticalListSortingStrategy}
             >
               <div className="mt-4 space-y-2">
-                {orderedProviderVisibilityOptions.map((option) => (
-                  <SortableProviderVisibilityRow
+                {orderedEngineVisibilityOptions.map((option) => (
+                  <SortableEngineVisibilityRow
                     key={option.engine}
                     option={option}
-                    engineStatus={providerPickerStatusByEngine.get(option.engine)}
+                    engineStatus={enginePickerStatusByEngine.get(option.engine)}
                     statusPending={serverConfigQuery.isPending}
-                    isHidden={hiddenProviderSet.has(option.engine)}
+                    isHidden={hiddenEngineSet.has(option.engine)}
                     onHiddenChange={(hidden) =>
                       updatePreferences({
-                        hiddenEngines: setProviderHidden(
+                        hiddenEngines: setEngineHidden(
                           preferences.hiddenEngines,
                           option.engine,
                           hidden,
@@ -1698,7 +1690,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
       </SettingsSection>
 
       <div>
-        <SettingsSection title={t("settings.providerTools")}>
+        <SettingsSection title={t("settings.engineTools")}>
           <SettingsRow
             anchorId={PROVIDERS_SETTINGS_SEARCH.installedClis.target}
             title={t("settings.installedClis")}
@@ -1706,16 +1698,16 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
             status={
               !settings.enableEngineUpdateChecks
                 ? t("settings.automaticChecksOff")
-                : outdatedProviderCount > 0
-                  ? t("settings.updatesAvailable", { count: outdatedProviderCount })
+                : outdatedEngineCount > 0
+                  ? t("settings.updatesAvailable", { count: outdatedEngineCount })
                   : t("settings.noEngineUpdates")
             }
             resetAction={
               installSettingsDirty ? (
                 <SettingResetButton
-                  label={t("settings.providerTools")}
+                  label={t("settings.engineTools")}
                   onClick={() => {
-                    void resetProviderTools();
+                    void resetEngineTools();
                   }}
                 />
               ) : null
@@ -1727,15 +1719,15 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
                   <EngineToolRow
                     key={config.engine}
                     config={config}
-                    open={openInstallProviders[config.engine]}
+                    open={openInstallEngines[config.engine]}
                     settings={settings}
                     defaults={defaults}
-                    hiddenProviderSet={hiddenProviderSet}
+                    hiddenEngineSet={hiddenEngineSet}
                     serverSettings={engineUpdateServerSettings}
                     engineStatus={engineStatusByEngine.get(config.engine)}
-                    updatingProviders={updatingProviders}
+                    updatingEngines={updatingEngines}
                     onOpenChange={(open) =>
-                      setOpenInstallProviders((existing) => ({
+                      setOpenInstallEngines((existing) => ({
                         ...existing,
                         [config.engine]: open,
                       }))

@@ -283,7 +283,7 @@ function extractFallbackLimits(payload: Record<string, unknown>): RateLimitWindo
 export function deriveAccountRateLimits(
   threads: ReadonlyArray<Pick<OrchestrationThread, "activities">>,
 ): EngineRateLimit[] {
-  const byProvider = new Map<string, EngineRateLimit>();
+  const byEngine = new Map<string, EngineRateLimit>();
   const nowMs = Date.now();
 
   for (const thread of threads) {
@@ -299,7 +299,7 @@ export function deriveAccountRateLimits(
       if (!payload) continue;
 
       const engine = typeof payload.engine === "string" ? payload.engine : "unknown";
-      const existing = byProvider.get(engine);
+      const existing = byEngine.get(engine);
       if (existing && existing.updatedAt > activity.createdAt) continue;
 
       const claudePayload = extractLimitsFromClaudePayload(payload);
@@ -315,7 +315,7 @@ export function deriveAccountRateLimits(
 
       if (!limits || limits.length === 0) continue;
 
-      byProvider.set(engine, {
+      byEngine.set(engine, {
         engine,
         updatedAt: activity.createdAt,
         limits,
@@ -324,7 +324,7 @@ export function deriveAccountRateLimits(
     }
   }
 
-  return Array.from(byProvider.values());
+  return Array.from(byEngine.values());
 }
 
 export function deriveVisibleRateLimitRows(
@@ -467,7 +467,7 @@ function mergeRateLimitWindowSets(
   return Array.from(merged.values()).toSorted((a, b) => compareWindowLabels(a.window, b.window));
 }
 
-function mergeProviderRateLimit(
+function mergeEngineRateLimit(
   preferred: EngineRateLimit,
   fallback: EngineRateLimit | undefined,
 ): EngineRateLimit {
@@ -491,7 +491,7 @@ function mergeProviderRateLimit(
   };
 }
 
-export function mergeProviderRateLimits(
+export function mergeEngineRateLimits(
   preferred: ReadonlyArray<EngineRateLimit>,
   fallback: ReadonlyArray<EngineRateLimit>,
 ): EngineRateLimit[] {
@@ -502,7 +502,7 @@ export function mergeProviderRateLimits(
   }
 
   for (const rateLimit of preferred) {
-    merged.set(rateLimit.engine, mergeProviderRateLimit(rateLimit, merged.get(rateLimit.engine)));
+    merged.set(rateLimit.engine, mergeEngineRateLimit(rateLimit, merged.get(rateLimit.engine)));
   }
 
   return Array.from(merged.values());

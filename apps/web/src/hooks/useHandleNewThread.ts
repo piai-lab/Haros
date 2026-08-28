@@ -20,9 +20,9 @@ import {
 } from "../lib/threadBootstrap";
 import { promoteThreadCreate } from "../lib/threadCreatePromotion";
 import {
-  prefetchProviderModelsForNewThread,
+  prefetchEngineModelsForNewThread,
   resolveNewThreadModelPrefetchCwd,
-  resolveNewThreadModelPrefetchProvider,
+  resolveNewThreadModelPrefetchEngine,
 } from "../lib/engineModelPrefetch";
 import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 import {
@@ -73,13 +73,13 @@ export function useHandleNewThread() {
     };
     const entryPoint = options?.entryPoint ?? "chat";
     const wantsTemporaryThread = options?.temporary === true;
-    const applyProviderOverride = (threadId: ThreadId) => {
+    const applyEngineOverride = (threadId: ThreadId) => {
       if (!options?.engine) {
         return;
       }
       const defaultModel = getDefaultModel(options.engine);
       if (!defaultModel) {
-        useComposerDraftStore.getState().setActiveProviderAndSticky(threadId, options.engine);
+        useComposerDraftStore.getState().setActiveEngineAndSticky(threadId, options.engine);
         return;
       }
       setEngineSelection(threadId, {
@@ -156,11 +156,11 @@ export function useHandleNewThread() {
           ? null
           : (draftStore.draftsByThreadId[bootstrapPlan.threadId] ?? null);
       const project = useStore.getState().projects.find((candidate) => candidate.id === projectId);
-      const engine = resolveNewThreadModelPrefetchProvider({
-        providerOverride: options?.engine ?? null,
-        draftActiveProvider: targetComposer?.activeEngine ?? null,
-        stickyActiveProvider: draftStore.stickyActiveProvider,
-        projectDefaultProvider: project?.defaultEngineSelection?.engine ?? null,
+      const engine = resolveNewThreadModelPrefetchEngine({
+        engineOverride: options?.engine ?? null,
+        draftActiveEngine: targetComposer?.activeEngine ?? null,
+        stickyActiveEngine: draftStore.stickyActiveEngine,
+        projectDefaultEngine: project?.defaultEngineSelection?.engine ?? null,
         defaultEngine: authoritativeSettings.defaultEngine,
       });
       const cwd = resolveNewThreadModelPrefetchCwd({
@@ -173,7 +173,7 @@ export function useHandleNewThread() {
         projectCwd: project?.cwd ?? null,
         serverCwd: serverConfigQuery.data?.cwd ?? null,
       });
-      prefetchProviderModelsForNewThread(queryClient, {
+      prefetchEngineModelsForNewThread(queryClient, {
         engine,
         settings: authoritativeSettings,
         cwd,
@@ -255,7 +255,7 @@ export function useHandleNewThread() {
         }
         setProjectDraftThreadId(projectId, bootstrapPlan.threadId, { entryPoint });
         restoreComposerDraft(bootstrapPlan.threadId, preservedComposerDraft);
-        applyProviderOverride(bootstrapPlan.threadId);
+        applyEngineOverride(bootstrapPlan.threadId);
         activateThreadEntryPoint(bootstrapPlan.threadId);
         if (focusedThreadId === bootstrapPlan.threadId) {
           if (entryPoint === "terminal") {
@@ -276,7 +276,7 @@ export function useHandleNewThread() {
           ...(navigation?.search ? { search: navigation.search } : {}),
         });
         restoreComposerDraft(bootstrapPlan.threadId, preservedComposerDraft);
-        applyProviderOverride(bootstrapPlan.threadId);
+        applyEngineOverride(bootstrapPlan.threadId);
         if (entryPoint === "terminal") {
           await createTerminalThread(
             bootstrapPlan.threadId,
@@ -306,7 +306,7 @@ export function useHandleNewThread() {
         }
         setProjectDraftThreadId(projectId, bootstrapPlan.threadId, { entryPoint });
         restoreComposerDraft(bootstrapPlan.threadId, preservedComposerDraft);
-        applyProviderOverride(bootstrapPlan.threadId);
+        applyEngineOverride(bootstrapPlan.threadId);
         activateThreadEntryPoint(bootstrapPlan.threadId);
         if (entryPoint === "terminal") {
           await createTerminalThread(
@@ -332,7 +332,7 @@ export function useHandleNewThread() {
           registerDraftThread(threadId, { projectId, ...draftSeed });
           activateThreadEntryPoint(threadId);
           applyStickyState(threadId);
-          applyProviderOverride(threadId);
+          applyEngineOverride(threadId);
         },
         // Mark the draft-landing navigation as a transition so the new route
         // subtree renders interruptibly and the browser can paint the chat

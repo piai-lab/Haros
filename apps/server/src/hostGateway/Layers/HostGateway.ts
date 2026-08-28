@@ -29,8 +29,8 @@ import {
   type TurnDispatchMode,
 } from "@harnessos/contracts";
 import {
-  isProviderRuntimeModeExecutable,
-  isProviderRuntimeModePermanentlyUnsupported,
+  isEngineRuntimeModeExecutable,
+  isEngineRuntimeModePermanentlyUnsupported,
   runtimeModeEscalatesPrivilege,
 } from "@harnessos/shared/runtimeMode";
 import { Effect, Layer, Option } from "effect";
@@ -472,10 +472,10 @@ export const makeHostGateway = Effect.gen(function* () {
           target.engineSelection,
         );
         const runtimeModeCapability = executionCapabilities.runtimeModes[target.runtimeMode];
-        if (!isProviderRuntimeModeExecutable(runtimeModeCapability)) {
+        if (!isEngineRuntimeModeExecutable(runtimeModeCapability)) {
           return yield* Effect.fail(
             new ToolInputError(
-              isProviderRuntimeModePermanentlyUnsupported(runtimeModeCapability)
+              isEngineRuntimeModePermanentlyUnsupported(runtimeModeCapability)
                 ? `Thread runtime mode "${target.runtimeMode}" is not supported by its current Engine and model.`
                 : `Thread runtime mode "${target.runtimeMode}" is temporarily unavailable. Check the Engine, sign-in, or version and try again.`,
             ),

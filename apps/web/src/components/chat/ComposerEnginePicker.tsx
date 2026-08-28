@@ -10,11 +10,11 @@ import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 import { ENGINE_OPTIONS } from "../../session-logic";
 import {
-  deriveProviderPickerAvailability,
+  deriveEnginePickerAvailability,
   findEngineStatus,
   type EnginePickerAvailabilityState,
 } from "../../lib/engineAvailability";
-import { compareProvidersByOrder, filterProviderOptionsByVisibility } from "../../engineOrdering";
+import { compareEnginesByOrder, filterEngineOptionsByVisibility } from "../../engineOrdering";
 import { Button } from "../ui/button";
 import { Menu, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "../ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
@@ -66,13 +66,13 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
   };
 
   const hiddenEngines = new Set(props.hiddenEngines ?? []);
-  const protectedProviders = new Set<EngineKind>([props.engine]);
-  const options = filterProviderOptionsByVisibility(
+  const protectedEngines = new Set<EngineKind>([props.engine]);
+  const options = filterEngineOptionsByVisibility(
     ENGINE_OPTIONS.toSorted((left, right) =>
-      compareProvidersByOrder(props.engineOrder ?? [], left.value, right.value),
+      compareEnginesByOrder(props.engineOrder ?? [], left.value, right.value),
     ),
     hiddenEngines,
-    protectedProviders,
+    protectedEngines,
   );
   const currentEngineLabel =
     ENGINE_OPTIONS.find((option) => option.value === props.engine)?.label ?? props.engine;
@@ -127,7 +127,7 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
         >
           {options.map((option) => {
             const liveStatus = findEngineStatus(props.engines, option.value);
-            const availability = deriveProviderPickerAvailability(liveStatus);
+            const availability = deriveEnginePickerAvailability(liveStatus);
             const trailing =
               availability.state === "ready" ? null : (
                 <span className="text-[11px] text-muted-foreground/80">

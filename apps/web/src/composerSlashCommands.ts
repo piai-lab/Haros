@@ -45,7 +45,7 @@ const CLAUDE_NATIVE_COMMAND_ALIASES: Record<string, readonly string[]> = {
   resume: ["continue"],
 };
 
-function getProviderNativeSlashCommandAliases(
+function getEngineNativeSlashCommandAliases(
   engine: EngineKind,
   command: string,
 ): readonly string[] {
@@ -56,7 +56,7 @@ function getProviderNativeSlashCommandAliases(
   return CLAUDE_NATIVE_COMMAND_ALIASES[normalizedCommand] ?? [];
 }
 
-function expandProviderNativeSlashCommandNames(
+function expandEngineNativeSlashCommandNames(
   engine: EngineKind,
   commandNames: ReadonlyArray<string>,
 ): string[] {
@@ -67,7 +67,7 @@ function expandProviderNativeSlashCommandNames(
       continue;
     }
     expandedNames.add(normalizedCommandName);
-    for (const alias of getProviderNativeSlashCommandAliases(engine, normalizedCommandName)) {
+    for (const alias of getEngineNativeSlashCommandAliases(engine, normalizedCommandName)) {
       expandedNames.add(alias);
     }
   }
@@ -79,7 +79,7 @@ function expandProviderNativeSlashCommandNames(
  * win over listing a native "review" command. OpenCode exposes /review in its
  * command list but does not honor bare `/review` text turns (#218).
  */
-export function providerUsesAppOwnedReviewSlashCommand(engine: EngineKind): boolean {
+export function engineUsesAppOwnedReviewSlashCommand(engine: EngineKind): boolean {
   return engine === "codex" || engine === "opencode";
 }
 
@@ -99,11 +99,11 @@ function shouldKeepBuiltInSlashCommandDespiteNativeCollision(
     // command with the same spelling must not replace that product action.
     command === "fork" ||
     command === "goal" ||
-    (providerUsesAppOwnedReviewSlashCommand(engine) && command === "review")
+    (engineUsesAppOwnedReviewSlashCommand(engine) && command === "review")
   );
 }
 
-export function shouldHideProviderNativeCommandFromComposerMenu(
+export function shouldHideEngineNativeCommandFromComposerMenu(
   engine: EngineKind,
   command: string,
   options: { readonly availableAppCommands?: ReadonlySet<string> } = {},
@@ -122,7 +122,7 @@ export function shouldHideProviderNativeCommandFromComposerMenu(
     (normalizedCommand === "feedback" && appCommandIsAvailable) ||
     (normalizedCommand === "fork" && appCommandIsAvailable) ||
     (normalizedCommand === "goal" && appCommandIsAvailable) ||
-    (providerUsesAppOwnedReviewSlashCommand(engine) && normalizedCommand === "review")
+    (engineUsesAppOwnedReviewSlashCommand(engine) && normalizedCommand === "review")
   );
 }
 
@@ -130,11 +130,11 @@ export function shouldHideProviderNativeCommandFromComposerMenu(
  * True when a discovered native "review" command should be sent as plain
  * `/review` text. Codex/OpenCode use the app review UX instead (#218).
  */
-export function providerSupportsTextNativeReviewCommand(
+export function engineSupportsTextNativeReviewCommand(
   engine: EngineKind,
   nativeCommandNames: ReadonlyArray<{ readonly name: string } | string>,
 ): boolean {
-  if (providerUsesAppOwnedReviewSlashCommand(engine)) {
+  if (engineUsesAppOwnedReviewSlashCommand(engine)) {
     return false;
   }
   return nativeCommandNames.some((command) => {
@@ -143,12 +143,12 @@ export function providerSupportsTextNativeReviewCommand(
   });
 }
 
-export function getProviderNativeSlashCommandSearchTerms(
+export function getEngineNativeSlashCommandSearchTerms(
   engine: EngineKind,
   command: string,
 ): readonly string[] {
   const normalizedCommand = normalizeComposerSlashCommandName(command);
-  return [normalizedCommand, ...getProviderNativeSlashCommandAliases(engine, normalizedCommand)];
+  return [normalizedCommand, ...getEngineNativeSlashCommandAliases(engine, normalizedCommand)];
 }
 
 export function isBuiltInComposerSlashCommand(value: string): value is ComposerSlashCommand {
@@ -311,13 +311,10 @@ export function getAvailableComposerSlashCommands(input: {
   canOfferForkCommand: boolean;
   canOfferSideCommand: boolean;
   canOfferExportCommand: boolean;
-  providerNativeCommandNames?: ReadonlyArray<string>;
+  engineNativeCommandNames?: ReadonlyArray<string>;
 }): ComposerSlashCommand[] {
   const collidingNativeCommandNames = new Set<ComposerSlashCommand>(
-    expandProviderNativeSlashCommandNames(
-      input.engine,
-      input.providerNativeCommandNames ?? [],
-    ).filter(
+    expandEngineNativeSlashCommandNames(input.engine, input.engineNativeCommandNames ?? []).filter(
       (name): name is ComposerSlashCommand =>
         isBuiltInComposerSlashCommand(name) &&
         !shouldKeepBuiltInSlashCommandDespiteNativeCollision(input.engine, name),
@@ -367,13 +364,13 @@ export function getAvailableComposerSlashCommands(input: {
   return availableCommands.filter((command) => !collidingNativeCommandNames.has(command));
 }
 
-export function hasProviderNativeSlashCommand(
+export function hasEngineNativeSlashCommand(
   engine: EngineKind,
   commandNames: ReadonlyArray<string>,
   command: string,
 ): boolean {
   const normalizedCommand = normalizeComposerSlashCommandName(command);
-  return expandProviderNativeSlashCommandNames(engine, commandNames).includes(normalizedCommand);
+  return expandEngineNativeSlashCommandNames(engine, commandNames).includes(normalizedCommand);
 }
 
 export function buildSlashReviewComposerPrompt(args: string): string {
@@ -397,10 +394,10 @@ export function buildSlashReviewComposerPrompt(args: string): string {
 export interface SideSlashCommandArgs {
   targetEngine: EngineKind | null;
   prompt: string;
-  unavailableProvider: EngineKind | null;
+  unavailableEngine: EngineKind | null;
 }
 
-function matchSideProviderToken(token: string): EngineKind | null {
+function matchSideEngineToken(token: string): EngineKind | null {
   const normalized = token.toLowerCase();
   return (
     DEFAULT_PROVIDER_ORDER.find(
@@ -417,23 +414,23 @@ export function parseSideSlashCommandArgs(
   args: string,
   input: {
     currentEngine: EngineKind;
-    availableTargetProviders: ReadonlyArray<EngineKind>;
+    availableTargetEngines: ReadonlyArray<EngineKind>;
   },
 ): SideSlashCommandArgs {
   const trimmedArgs = args.trim();
   const firstToken = trimmedArgs.split(/\s+/, 1)[0] ?? "";
-  const matchedProvider = firstToken.length > 0 ? matchSideProviderToken(firstToken) : null;
-  if (!matchedProvider) {
-    return { targetEngine: null, prompt: trimmedArgs, unavailableProvider: null };
+  const matchedEngine = firstToken.length > 0 ? matchSideEngineToken(firstToken) : null;
+  if (!matchedEngine) {
+    return { targetEngine: null, prompt: trimmedArgs, unavailableEngine: null };
   }
   const prompt = trimmedArgs.slice(firstToken.length).trim();
-  if (matchedProvider === input.currentEngine) {
-    return { targetEngine: null, prompt, unavailableProvider: null };
+  if (matchedEngine === input.currentEngine) {
+    return { targetEngine: null, prompt, unavailableEngine: null };
   }
-  if (!input.availableTargetProviders.includes(matchedProvider)) {
-    return { targetEngine: null, prompt, unavailableProvider: matchedProvider };
+  if (!input.availableTargetEngines.includes(matchedEngine)) {
+    return { targetEngine: null, prompt, unavailableEngine: matchedEngine };
   }
-  return { targetEngine: matchedProvider, prompt, unavailableProvider: null };
+  return { targetEngine: matchedEngine, prompt, unavailableEngine: null };
 }
 
 // `/fork` optionally accepts only an explicit target shorthand like `/fork local`.

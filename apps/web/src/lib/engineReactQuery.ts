@@ -1,4 +1,4 @@
-// FILE: providerReactQuery.ts
+// FILE: engineReactQuery.ts
 // Purpose: Builds React Query options for engine-backed orchestration RPC calls.
 // Layer: Web data fetching helpers
 // Depends on: native API bridge, orchestration contracts, and React Query.
@@ -21,7 +21,7 @@ interface CheckpointDiffQueryInput {
   enabled?: boolean;
 }
 
-export const providerQueryKeys = {
+export const engineQueryKeys = {
   all: ["engines"] as const,
   checkpointDiff: (input: CheckpointDiffQueryInput) =>
     [
@@ -128,7 +128,7 @@ export function checkpointDiffQueryOptions(input: CheckpointDiffQueryInput) {
   const decodedRequest = decodeCheckpointDiffRequest(input);
 
   return queryOptions({
-    queryKey: providerQueryKeys.checkpointDiff(input),
+    queryKey: engineQueryKeys.checkpointDiff(input),
     queryFn: async () => {
       const api = ensureNativeApi();
       if (!input.threadId || decodedRequest._tag === "None") {

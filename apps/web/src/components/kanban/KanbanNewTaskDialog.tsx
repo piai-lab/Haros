@@ -62,7 +62,7 @@ import { useI18n } from "~/i18n";
 import { ChevronRightIcon, LoaderCircleIcon, PaperclipIcon } from "~/lib/icons";
 import { formatComposerMentionToken } from "~/lib/composerMentions";
 import { findEngineStatus } from "~/lib/engineAvailability";
-import { resolveProviderDiscoveryCwd } from "~/lib/engineDiscovery";
+import { resolveEngineDiscoveryCwd } from "~/lib/engineDiscovery";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
 import {
@@ -70,7 +70,7 @@ import {
   type DraftThreadEnvMode,
   useComposerDraftStore,
 } from "../../composerDraftStore";
-import { buildEngineSelection } from "../../providerModelOptions";
+import { buildEngineSelection } from "../../engineModelOptions";
 import { type ExpandedImagePreview } from "../chat/ExpandedImagePreview";
 import { ExpandedImageOverlay } from "../chat/ExpandedImageOverlay";
 import { useStore } from "../../store";
@@ -170,14 +170,14 @@ export function KanbanNewTaskDialog({
   const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
   const [isTraitsPickerOpen, setIsTraitsPickerOpen] = useState(false);
   const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
-  const [prefetchProviders, setPrefetchProviders] = useState<ReadonlyArray<EngineKind>>([]);
+  const [prefetchEngines, setPrefetchEngines] = useState<ReadonlyArray<EngineKind>>([]);
   const [isDragOverComposer, setIsDragOverComposer] = useState(false);
   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === selectedProjectId) ?? null,
     [projects, selectedProjectId],
   );
-  const providerModelDiscoveryCwd = resolveProviderDiscoveryCwd({
+  const engineModelDiscoveryCwd = resolveEngineDiscoveryCwd({
     activeThreadWorktreePath: null,
     activeProjectCwd: selectedProject?.cwd ?? null,
     serverCwd: serverConfigQuery.data?.cwd ?? null,
@@ -196,7 +196,7 @@ export function KanbanNewTaskDialog({
   const {
     modelOptionsByEngine,
     catalogStateByEngine,
-    loadingModelProviders,
+    loadingEngineModels,
     runtimeModelsByEngine,
     selectedRuntimeModel,
     selectedRuntimeAgents,
@@ -206,12 +206,12 @@ export function KanbanNewTaskDialog({
     // and fast-mode controls are populated, not just the model list.
     discoveryEnabled: isModelPickerOpen || isTraitsPickerOpen,
     piDiscoveryRequested,
-    cwd: providerModelDiscoveryCwd,
+    cwd: engineModelDiscoveryCwd,
     modelHintByEngine,
     // The current Engine stays authoritative. A different Engine enters the
     // discovery set only when the user opens that submenu, so this picker does
     // not cold-start every CLI/engine at once.
-    prefetchProviders,
+    prefetchEngines,
   });
   const selectedRuntimeModelForCapabilities = useMemo(
     () =>
@@ -584,11 +584,11 @@ export function KanbanNewTaskDialog({
                     compact
                     engine={selectedEngine}
                     model={selectedModel}
-                    lockedProvider={null}
+                    lockedEngine={null}
                     engines={engineStatuses}
                     modelOptionsByEngine={modelOptionsByEngine}
                     catalogStateByEngine={catalogStateByEngine}
-                    loadingModelProviders={loadingModelProviders}
+                    loadingEngineModels={loadingEngineModels}
                     hiddenEngines={preferences.hiddenEngines}
                     engineOrder={preferences.engineOrder}
                     onEngineModelChange={handleProviderModelChange}
@@ -597,11 +597,11 @@ export function KanbanNewTaskDialog({
                       setIsModelPickerOpen(open);
                       if (!open) {
                         setPiDiscoveryRequested(false);
-                        setPrefetchProviders([]);
+                        setPrefetchEngines([]);
                       }
                     }}
                     onEngineBrowse={(engine) => {
-                      setPrefetchProviders((current) =>
+                      setPrefetchEngines((current) =>
                         current.includes(engine) ? current : [...current, engine],
                       );
                       if (engine === "pi") setPiDiscoveryRequested(true);

@@ -13,7 +13,7 @@ import { buildPromptThreadTitleFallback } from "@harnessos/shared/chatThreads";
 import { newCommandId, newMessageId, newThreadId } from "./utils";
 import { buildThreadHandoffImportedMessages } from "./threadHandoff";
 import type { Project, Thread } from "../types";
-import { resolveModelPresentationIdentity } from "../providerModelOptions";
+import { resolveModelPresentationIdentity } from "../engineModelOptions";
 
 const SIDECHAT_MISSING_GRACE_MS = 15_000;
 type SidechatPaneRetention = { kind: "syncing" } | { kind: "grace"; untilMs: number };

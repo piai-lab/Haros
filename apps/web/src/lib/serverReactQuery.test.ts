@@ -10,7 +10,7 @@ import {
   hasReceivedEngineStatusSnapshot,
   LOCAL_SERVERS_VISIBLE_REFETCH_INTERVAL_MS,
   reconcileServerEngineStatuses,
-  readPassiveProviderPresence,
+  readPassiveEnginePresence,
   refreshServerConfigAfterTransportOpen,
   serverAllEngineUsageQueryOptions,
   serverLocalServersQueryOptions,
@@ -52,7 +52,7 @@ describe("server engine status reconciliation", () => {
     expect(hasReceivedEngineStatusSnapshot(queryClient)).toBe(false);
     await reconcileServerEngineStatuses(queryClient, [], { passivePresence: [] });
     expect(hasReceivedEngineStatusSnapshot(queryClient)).toBe(true);
-    expect(readPassiveProviderPresence(queryClient)).toEqual([]);
+    expect(readPassiveEnginePresence(queryClient)).toEqual([]);
   });
 
   it("applies a missed live snapshot after the config projection hydrates", async () => {

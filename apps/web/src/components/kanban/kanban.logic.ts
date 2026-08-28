@@ -284,7 +284,7 @@ function buildThreadCard(
   const column = deriveKanbanColumn(thread);
   const composerDraft = resolveComposerDraft(composerDraftByThreadId, thread.id);
   const timestamp = resolveThreadCardTimestamp(thread, column);
-  const threadProvider = isTerminal
+  const threadEngine = isTerminal
     ? null
     : (thread.session?.engine ?? thread.engineSelection.engine);
   const activeWorkStartedAt =
@@ -301,7 +301,7 @@ function buildThreadCard(
       isTerminal,
       genericTerminalTitle: copy.newTerminal,
     }),
-    engine: column === "draft" && composerDraft.engine ? composerDraft.engine : threadProvider,
+    engine: column === "draft" && composerDraft.engine ? composerDraft.engine : threadEngine,
     isTerminal,
     branch: thread.branch,
     envMode: thread.envMode ?? null,
@@ -333,7 +333,7 @@ function buildUnsentPromptCard(
   }
   const titleSeed =
     composerDraft.prompt.length > 0 ? composerDraft.prompt : copy.attachedReferences;
-  const threadProvider = isTerminal
+  const threadEngine = isTerminal
     ? null
     : (thread.session?.engine ?? thread.engineSelection.engine);
   return {
@@ -342,7 +342,7 @@ function buildUnsentPromptCard(
     projectId: thread.projectId,
     column: "draft",
     title: buildPromptThreadTitleFallback(titleSeed),
-    engine: composerDraft.engine ?? threadProvider,
+    engine: composerDraft.engine ?? threadEngine,
     isTerminal,
     branch: thread.branch,
     envMode: thread.envMode ?? null,

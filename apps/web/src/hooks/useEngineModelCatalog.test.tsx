@@ -138,7 +138,7 @@ describe("useEngineModelCatalog", () => {
     expect(second?.modelOptionsByEngine).toBe(first?.modelOptionsByEngine);
     expect(second?.selectableModelOptionsByEngine).toBe(first?.selectableModelOptionsByEngine);
     expect(second?.catalogStateByEngine).toBe(first?.catalogStateByEngine);
-    expect(second?.loadingModelProviders).toBe(first?.loadingModelProviders);
+    expect(second?.loadingEngineModels).toBe(first?.loadingEngineModels);
     expect(second?.runtimeModelsByEngine).toBe(first?.runtimeModelsByEngine);
     expect(second?.selectedRuntimeAgents).toBe(first?.selectedRuntimeAgents);
   });
@@ -292,7 +292,7 @@ describe("useEngineModelCatalog", () => {
     readCatalogRenders({
       selectedEngine: "codex",
       discoveryEnabled: true,
-      prefetchProviders: ["codex", "kilo", "opencode"],
+      prefetchEngines: ["codex", "kilo", "opencode"],
     });
 
     expect(readModelQueryEnabled("codex")).toBe(true);
@@ -306,7 +306,7 @@ describe("useEngineModelCatalog", () => {
     readCatalogRenders({
       selectedEngine: "codex",
       discoveryEnabled: true,
-      prefetchProviders: [],
+      prefetchEngines: [],
     });
 
     expect(readModelQueryEnabled("codex")).toBe(true);
@@ -318,7 +318,7 @@ describe("useEngineModelCatalog", () => {
     readCatalogRenders({
       selectedEngine: "codex",
       discoveryEnabled: true,
-      prefetchProviders: ["opencode"],
+      prefetchEngines: ["opencode"],
     });
 
     expect(readModelQueryEnabled("codex")).toBe(true);
@@ -348,7 +348,7 @@ describe("useEngineModelCatalog", () => {
     const displaySlugs = catalog?.modelOptionsByEngine.cursor.map((model) => model.slug);
     expect(displaySlugs).toContain("composer-2");
     expect(displaySlugs).toContain("cursor-custom");
-    expect(catalog?.loadingModelProviders.cursor).toBe(true);
+    expect(catalog?.loadingEngineModels.cursor).toBe(true);
     expect(catalog?.selectedEngineModelsLoading).toBe(true);
     expect(catalog?.runtimeModelsByEngine.cursor).toEqual([]);
     expect(catalog?.selectableModelOptionsByEngine.cursor).toEqual([]);

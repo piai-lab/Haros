@@ -5,7 +5,7 @@ import {
   deriveTimelineEntries,
   deriveWorkLogEntries,
   isFileChangeWorkLogEntry,
-  isProviderFileEditWorkLogEntry,
+  isEngineFileEditWorkLogEntry,
   omitRoutedSubagentWorkEntries,
 } from "./workLog";
 import { makeActivity } from "./storeTestFixtures";
@@ -2790,14 +2790,14 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("identifies engine file edits without counting bare file-change approvals", () => {
-    expect(isProviderFileEditWorkLogEntry({ itemType: "file_change" })).toBe(true);
+    expect(isEngineFileEditWorkLogEntry({ itemType: "file_change" })).toBe(true);
     expect(
-      isProviderFileEditWorkLogEntry({
+      isEngineFileEditWorkLogEntry({
         requestKind: "file-change",
         changedFiles: ["apps/web/src/session-logic.ts"],
       }),
     ).toBe(true);
-    expect(isProviderFileEditWorkLogEntry({ requestKind: "file-change" })).toBe(false);
+    expect(isEngineFileEditWorkLogEntry({ requestKind: "file-change" })).toBe(false);
   });
 
   it("extracts Cursor read targets from rawInput and ACP locations", () => {

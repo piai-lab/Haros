@@ -63,7 +63,7 @@ export function hasReceivedEngineStatusSnapshot(queryClient: QueryClient): boole
   );
 }
 
-export function readPassiveProviderPresence(
+export function readPassiveEnginePresence(
   queryClient: QueryClient,
 ): ReadonlyArray<EngineKind> | null {
   return latestEngineStatusSnapshotByQueryClient.get(queryClient)?.passivePresence ?? null;
@@ -115,11 +115,11 @@ export async function reconcileServerEngineStatuses(
         staleTime: 0,
       }));
   const hydratedConfig = await loadConfig();
-  const latestProviders =
+  const latestEngines =
     latestEngineStatusSnapshotByQueryClient.get(queryClient)?.engines ?? engines;
   queryClient.setQueryData<ServerConfig>(serverQueryKeys.config(), (current) => ({
     ...(current ?? hydratedConfig),
-    engines: latestProviders,
+    engines: latestEngines,
   }));
 }
 
@@ -133,7 +133,7 @@ export async function refreshServerConfigAfterTransportOpen(
     readonly loadConfig?: () => Promise<ServerConfig>;
   },
 ): Promise<void> {
-  const providerRevisionAtStart =
+  const engineRevisionAtStart =
     latestEngineStatusSnapshotByQueryClient.get(queryClient)?.revision ?? 0;
   const loadConfig =
     options?.loadConfig ??
@@ -143,12 +143,12 @@ export async function refreshServerConfigAfterTransportOpen(
         staleTime: 0,
       }));
   const config = await loadConfig();
-  const latestProviderSnapshot = latestEngineStatusSnapshotByQueryClient.get(queryClient);
+  const latestEngineSnapshot = latestEngineStatusSnapshotByQueryClient.get(queryClient);
   queryClient.setQueryData<ServerConfig>(serverQueryKeys.config(), {
     ...config,
     engines:
-      latestProviderSnapshot && latestProviderSnapshot.revision > providerRevisionAtStart
-        ? latestProviderSnapshot.engines
+      latestEngineSnapshot && latestEngineSnapshot.revision > engineRevisionAtStart
+        ? latestEngineSnapshot.engines
         : config.engines,
   });
 }

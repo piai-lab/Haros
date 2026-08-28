@@ -20,7 +20,7 @@ import {
 } from "~/components/ui/dialog";
 import { useI18n, type MessageKey } from "~/i18n";
 import { CheckIcon, ChevronRightIcon } from "~/lib/icons";
-import { deriveProviderPickerAvailability } from "~/lib/engineAvailability";
+import { deriveEnginePickerAvailability } from "~/lib/engineAvailability";
 import { cn } from "~/lib/utils";
 import { ENGINE_OPTIONS } from "~/session-logic";
 import { SETTINGS_TARGETS } from "~/settingsNavigation";
@@ -40,7 +40,7 @@ const ENGINE_LABEL_BY_KIND = Object.fromEntries(
 ) as Record<EngineKind, string>;
 
 type OnboardingEngineAvailabilityState =
-  | ReturnType<typeof deriveProviderPickerAvailability>["state"]
+  | ReturnType<typeof deriveEnginePickerAvailability>["state"]
   | "coming_soon";
 
 const ENGINE_STATUS_KEY_BY_STATE = {
@@ -65,7 +65,7 @@ function readSelectionIntentFingerprint(threadId: ThreadId): string {
   return JSON.stringify({
     activeEngine: draft?.activeEngine ?? null,
     draftModels,
-    stickyActiveProvider: composerState.stickyActiveProvider,
+    stickyActiveEngine: composerState.stickyActiveEngine,
     stickyModels,
   });
 }
@@ -95,7 +95,7 @@ export function FirstRunReadinessDialog() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const pathname = useLocation({ select: (location) => location.pathname });
-  const [selectedEngine, setSelectedProvider] = useState<EngineKind>("oa");
+  const [selectedEngine, setSelectedEngine] = useState<EngineKind>("oa");
   const controller = useFirstRunReadinessController(selectedEngine);
   const [step, setStep] = useState<WizardStep>("engine");
   const [open, setOpen] = useState(false);
@@ -111,7 +111,7 @@ export function FirstRunReadinessDialog() {
   const selectedEngineStatus = controller.engineStatuses.find(
     (status) => status.engine === selectedEngine,
   );
-  const selectedEngineAvailability = deriveProviderPickerAvailability(selectedEngineStatus);
+  const selectedEngineAvailability = deriveEnginePickerAvailability(selectedEngineStatus);
   const selectedEnginePrepared =
     selectedEngineAvailability.state === "ready" || selectedEngineAvailability.state === "limited";
   const selectedEngineModels = controller.modelOptionsByEngine[selectedEngine];
@@ -144,7 +144,7 @@ export function FirstRunReadinessDialog() {
     focusReturnRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     completionCommittedRef.current = false;
-    setSelectedProvider("oa");
+    setSelectedEngine("oa");
     setPreparedService(null);
     setSelectedModel(null);
     setStep("engine");
@@ -314,7 +314,7 @@ export function FirstRunReadinessDialog() {
                     ? "border-primary/45 bg-primary/[0.06] ring-4 ring-primary/[0.06]"
                     : "border-border hover:bg-muted/40",
                 )}
-                onClick={() => setSelectedProvider("oa")}
+                onClick={() => setSelectedEngine("oa")}
               >
                 <EngineIcon engine="oa" className="size-12" />
                 <span className="min-w-0 flex-1">
@@ -343,7 +343,7 @@ export function FirstRunReadinessDialog() {
                   const status = controller.engineStatuses.find(
                     (candidate) => candidate.engine === engine,
                   );
-                  const availability = deriveProviderPickerAvailability(status);
+                  const availability = deriveEnginePickerAvailability(status);
                   const selected = selectedEngine === engine;
                   return (
                     <button
@@ -355,7 +355,7 @@ export function FirstRunReadinessDialog() {
                         "flex min-w-0 items-center gap-2 rounded-[13px] border px-2.5 py-3 text-left outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:cursor-default disabled:opacity-55 motion-reduce:transition-none",
                         selected && "border-primary/45 bg-primary/[0.05]",
                       )}
-                      onClick={() => setSelectedProvider(engine)}
+                      onClick={() => setSelectedEngine(engine)}
                     >
                       <span className="grid size-[34px] shrink-0 place-items-center rounded-[9px] border border-border/70 bg-muted/30">
                         <EngineIcon engine={engine} className="size-[21px]" />
@@ -569,7 +569,7 @@ export function FirstRunReadinessDialog() {
               disabled={!selectedEngineModelsReady || !selectedEnginePrepared}
               onClick={advanceFromPrepare}
             >
-              {controller.loadingModelProviders[selectedEngine]
+              {controller.loadingEngineModels[selectedEngine]
                 ? t("composer.checkingModels")
                 : t("common.forward")}
             </Button>

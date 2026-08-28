@@ -14,13 +14,13 @@ import { serverAllEngineUsageQueryOptions } from "~/lib/serverReactQuery";
 
 export function useAccountCapacity(input: {
   engine: EngineKind | null | undefined;
-  providerSnapshot?: ServerEngineUsageSnapshot | undefined;
+  engineSnapshot?: ServerEngineUsageSnapshot | undefined;
 }) {
   const engine = input.engine ?? null;
-  const shouldFetch = engine !== null && input.providerSnapshot === undefined;
+  const shouldFetch = engine !== null && input.engineSnapshot === undefined;
   const query = useQuery(serverAllEngineUsageQueryOptions({ enabled: shouldFetch }));
   const fetched = (query.data ?? []).find((snapshot) => snapshot.engine === engine);
-  const snapshot = fetched ?? input.providerSnapshot ?? null;
+  const snapshot = fetched ?? input.engineSnapshot ?? null;
   const unavailable = isEngineUsageSnapshotNonOk(snapshot);
   const liveRateLimit = unavailable ? null : normalizeServerEngineUsageRateLimit(snapshot);
   const rateLimits = liveRateLimit ? [liveRateLimit] : [];

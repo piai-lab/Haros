@@ -137,7 +137,7 @@ export function applyServerSettingsPatch(
 }
 
 /** Server-owned launch options derived from the persisted non-secret settings snapshot. */
-export function providerStartOptionsFromServerSettings(
+export function engineStartOptionsFromServerSettings(
   settings: Pick<ServerSettingsView, "engines">,
 ): EngineStartOptions {
   const { engines } = settings;

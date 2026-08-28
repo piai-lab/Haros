@@ -19,7 +19,7 @@ const FILE_CHANGE_EVENT_TYPES = new Set<OrchestrationEvent["type"]>([
   "thread.conversation-rolled-back",
 ]);
 
-export function shouldInvalidateProviderQueriesForEvent(event: OrchestrationEvent): boolean {
+export function shouldInvalidateEngineQueriesForEvent(event: OrchestrationEvent): boolean {
   return FILE_CHANGE_EVENT_TYPES.has(event.type);
 }
 

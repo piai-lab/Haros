@@ -56,7 +56,7 @@ import {
   THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
 } from "~/appearanceMigrations";
 import { useRefreshEngineStatusesNow } from "~/hooks/useEngineStatusRefresh";
-import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
+import { resolveEngineSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
 import { toastManager } from "~/components/ui/toast";
 import {
   Sidebar,
@@ -498,7 +498,7 @@ function ChatRouteGlobalShortcuts() {
         event.preventDefault();
         event.stopPropagation();
         void (async () => {
-          const engineAvailability = await resolveProviderSendAvailabilityWithRefresh({
+          const engineAvailability = await resolveEngineSendAvailabilityWithRefresh({
             engine,
             statuses: engineStatuses,
             refreshStatuses: () => refreshEngineStatuses({ silent: true }),

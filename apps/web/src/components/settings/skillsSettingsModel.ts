@@ -37,15 +37,15 @@ export interface SettingsSkillSection {
 const SHARED_SKILLS_SECTION = "shared";
 const PERSONAL_ORIGIN = "personal";
 const ENGINE_KIND_SET = new Set<string>(ENGINE_KINDS);
-const skillOriginForProvider = (engine: EngineKind): string =>
+const skillOriginForEngine = (engine: EngineKind): string =>
   engine === "claude" ? "claude" : engine;
 export const ORIGIN_SECTION_ORDER = [
-  ...ENGINE_KINDS.map(skillOriginForProvider),
+  ...ENGINE_KINDS.map(skillOriginForEngine),
   "agents",
   "project",
 ] as const;
 
-function providerForSkillOrigin(origin: string): EngineKind | null {
+function engineForSkillOrigin(origin: string): EngineKind | null {
   const candidate = origin === "claude" ? "claude" : origin;
   return ENGINE_KIND_SET.has(candidate) ? (candidate as EngineKind) : null;
 }
@@ -59,7 +59,7 @@ export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
     case "project":
       return { label: "Project", engine: null };
     default: {
-      const engine = scope === undefined ? null : providerForSkillOrigin(scope);
+      const engine = scope === undefined ? null : engineForSkillOrigin(scope);
       return engine
         ? { label: ENGINE_DISPLAY_NAMES[engine], engine }
         : { label: scope ?? "Personal", engine: null };
@@ -67,7 +67,7 @@ export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
   }
 }
 
-export function providersForSkillOrigin(origin: string): EngineKind[] {
+export function enginesForSkillOrigin(origin: string): EngineKind[] {
   const engine = skillOriginInfo(origin).engine;
   return engine ? [engine] : [];
 }
@@ -84,11 +84,11 @@ export function isHarnessOSSkillSource(skill: EngineSkillDescriptor): boolean {
   return skill.scope === "oa" || skill.path.split(/[\\/]+/).includes(".harnessos");
 }
 
-export function providerDisplayName(engine: EngineKind): string {
+export function engineDisplayName(engine: EngineKind): string {
   return ENGINE_DISPLAY_NAMES[engine];
 }
 
-export function sortProviderStack(engines: ReadonlyArray<EngineKind>): EngineKind[] {
+export function sortEngineStack(engines: ReadonlyArray<EngineKind>): EngineKind[] {
   return engines.toSorted(
     (left, right) => DEFAULT_PROVIDER_ORDER.indexOf(left) - DEFAULT_PROVIDER_ORDER.indexOf(right),
   );
@@ -143,9 +143,9 @@ export function buildSettingsSkillGroups(
       if (!primarySkill) {
         return null;
       }
-      const engines = sortProviderStack(
+      const engines = sortEngineStack(
         sources
-          .flatMap((source) => providersForSkillOrigin(source.origin))
+          .flatMap((source) => enginesForSkillOrigin(source.origin))
           .filter((engine, index, all) => all.indexOf(engine) === index),
       );
       const section =

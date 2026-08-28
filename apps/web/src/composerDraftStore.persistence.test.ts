@@ -117,7 +117,7 @@ describe("composerDraftStore persisted-state hydration", () => {
       draftThreadsByThreadId: {},
       projectDraftThreadIdByProjectId: {},
       stickyEngineSelectionByEngine: {},
-      stickyActiveProvider: null,
+      stickyActiveEngine: null,
     };
 
     expect(normalizeCurrentPersistedComposerDraftStoreState(null)).toEqual(emptyState);
@@ -437,7 +437,7 @@ describe("composerDraftStore terminal contexts", () => {
       draftThreadsByThreadId: {},
       projectDraftThreadIdByProjectId: {},
       stickyEngineSelectionByEngine: {},
-      stickyActiveProvider: null,
+      stickyActiveEngine: null,
     });
   });
 

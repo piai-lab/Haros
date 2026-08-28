@@ -13,11 +13,11 @@ import {
   buildThreadHandoffImportedActivities,
   buildThreadHandoffImportedMessages,
   canCreateThreadHandoff,
-  isEligibleHandoffTargetProvider,
+  isEligibleHandoffTargetEngine,
   resolveThreadHandoffEngineSelection,
   resolveThreadHandoffTitle,
 } from "../lib/threadHandoff";
-import { resolveProviderSendAvailabilityWithRefresh } from "../lib/engineAvailability";
+import { resolveEngineSendAvailabilityWithRefresh } from "../lib/engineAvailability";
 import { serverSettingsQueryOptions } from "../lib/serverReactQuery";
 import { newCommandId, newThreadId } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
@@ -49,13 +49,13 @@ export function useThreadHandoff() {
     if (!canCreateThreadHandoff({ thread })) {
       throw new Error("This thread cannot be handed off yet.");
     }
-    const targetAvailability = await resolveProviderSendAvailabilityWithRefresh({
+    const targetAvailability = await resolveEngineSendAvailabilityWithRefresh({
       engine: targetEngine,
       statuses: engineStatuses,
       refreshStatuses: () => refreshEngineStatuses({ silent: true }),
     });
     if (
-      !isEligibleHandoffTargetProvider({
+      !isEligibleHandoffTargetEngine({
         sourceEngine: thread.engineSelection.engine,
         targetEngine,
         targetEngineEnabled: serverSettingsQuery.data?.engines[targetEngine].enabled,

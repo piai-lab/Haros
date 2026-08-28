@@ -245,7 +245,7 @@ describe("deriveComposerSubagentStripItems", () => {
           }),
         ],
         liveTurnId: TurnId.makeUnsafe("turn-1"),
-        backgroundedProviderThreadIds: new Set(["sub-bg-patch"]),
+        backgroundedEngineThreadIds: new Set(["sub-bg-patch"]),
       }),
     );
 
@@ -275,7 +275,7 @@ describe("deriveComposerSubagentStripItems", () => {
           }),
         ],
         liveTurnId: TurnId.makeUnsafe("turn-1"),
-        backgroundedProviderThreadIds: new Set(["toolu_1"]),
+        backgroundedEngineThreadIds: new Set(["toolu_1"]),
       }),
     );
 
@@ -739,7 +739,7 @@ describe("collectForegroundRunningSubagentStripItems", () => {
         }),
       ],
       liveTurnId: TurnId.makeUnsafe("turn-1"),
-      backgroundedProviderThreadIds: new Set(["toolu_patch"]),
+      backgroundedEngineThreadIds: new Set(["toolu_patch"]),
       parentRow: { threadId: ThreadId.makeUnsafe("thread-1"), label: "Main thread" },
     });
 

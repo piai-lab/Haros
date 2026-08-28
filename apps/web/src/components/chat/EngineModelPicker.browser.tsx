@@ -7,7 +7,7 @@ import { render } from "vitest-browser-react";
 
 import { EngineModelPicker } from "./EngineModelPicker";
 import type { EngineModelCatalogState } from "../../hooks/useEngineModelCatalog";
-import type { EngineModelOption } from "../../providerModelOptions";
+import type { EngineModelOption } from "../../engineModelOptions";
 import { FAVORITE_MODEL_STORAGE_KEYS } from "../../lib/modelFavorites";
 import { I18nProvider } from "../../i18n";
 
@@ -164,9 +164,9 @@ const PI_FAVORITE_SORT_MODELS = [
 async function mountPicker(props: {
   engine: EngineKind;
   model: ModelSlug;
-  lockedProvider: EngineKind | null;
+  lockedEngine: EngineKind | null;
   engines?: ReadonlyArray<ServerEngineStatus>;
-  loadingModelProviders?: Partial<Record<EngineKind, boolean>>;
+  loadingEngineModels?: Partial<Record<EngineKind, boolean>>;
   catalogStateByEngine?: Partial<Record<EngineKind, EngineModelCatalogState>>;
   onSelectionCommitted?: () => void;
   onEngineBrowse?: (engine: EngineKind) => void;
@@ -182,11 +182,9 @@ async function mountPicker(props: {
       <EngineModelPicker
         engine={props.engine}
         model={props.model}
-        lockedProvider={props.lockedProvider}
+        lockedEngine={props.lockedEngine}
         modelOptionsByEngine={props.modelOptionsByEngine ?? MODEL_OPTIONS_BY_PROVIDER}
-        {...(props.loadingModelProviders
-          ? { loadingModelProviders: props.loadingModelProviders }
-          : {})}
+        {...(props.loadingEngineModels ? { loadingEngineModels: props.loadingEngineModels } : {})}
         {...(props.catalogStateByEngine
           ? { catalogStateByEngine: props.catalogStateByEngine }
           : {})}
@@ -227,7 +225,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "oa",
       model: "" as ModelSlug,
-      lockedProvider: "oa",
+      lockedEngine: "oa",
       catalogStateByEngine: { oa: "checking" },
     });
 
@@ -250,7 +248,7 @@ describe("EngineModelPicker", () => {
       const mounted = await mountPicker({
         engine: "oa",
         model: "" as ModelSlug,
-        lockedProvider: "oa",
+        lockedEngine: "oa",
         catalogStateByEngine: { oa: state },
       });
 
@@ -266,7 +264,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "claude",
       model: "claude-opus-4-6",
-      lockedProvider: null,
+      lockedEngine: null,
     });
 
     try {
@@ -288,7 +286,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "claude",
       model: "claude-opus-4-6",
-      lockedProvider: null,
+      lockedEngine: null,
       onEngineBrowse,
       engines: [
         {
@@ -318,7 +316,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "claude",
       model: "claude-opus-4-6",
-      lockedProvider: "claude",
+      lockedEngine: "claude",
     });
 
     try {
@@ -339,7 +337,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "claude",
       model: "claude-opus-4-6",
-      lockedProvider: "claude",
+      lockedEngine: "claude",
     });
 
     try {
@@ -356,7 +354,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "antigravity",
       model: "private-long-model",
-      lockedProvider: "antigravity",
+      lockedEngine: "antigravity",
       modelOptionsByEngine: {
         ...MODEL_OPTIONS_BY_PROVIDER,
         antigravity: [{ slug: "private-long-model", name: LONG_MODEL_NAME }],
@@ -382,7 +380,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "opencode",
       model: MANY_OPENCODE_MODELS[0]!.slug,
-      lockedProvider: "opencode",
+      lockedEngine: "opencode",
       modelOptionsByEngine: {
         ...MODEL_OPTIONS_BY_PROVIDER,
         opencode: MANY_OPENCODE_MODELS.map((model, index) => ({
@@ -411,7 +409,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "droid",
       model: "gpt-5.6-luna",
-      lockedProvider: "droid",
+      lockedEngine: "droid",
     });
 
     try {
@@ -441,7 +439,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "grok",
       model: "grok-build",
-      lockedProvider: "grok",
+      lockedEngine: "grok",
       onSelectionCommitted,
     });
 
@@ -461,7 +459,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "opencode",
       model: "openai/gpt-5",
-      lockedProvider: "opencode",
+      lockedEngine: "opencode",
     });
 
     try {
@@ -492,7 +490,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "opencode",
       model: MANY_OPENCODE_MODELS[0]!.slug,
-      lockedProvider: "opencode",
+      lockedEngine: "opencode",
       modelOptionsByEngine: {
         ...MODEL_OPTIONS_BY_PROVIDER,
         opencode: MANY_OPENCODE_MODELS,
@@ -512,7 +510,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "opencode",
       model: MANY_OPENCODE_MODELS[0]!.slug,
-      lockedProvider: "opencode",
+      lockedEngine: "opencode",
       modelOptionsByEngine: {
         ...MODEL_OPTIONS_BY_PROVIDER,
         opencode: MANY_OPENCODE_MODELS,
@@ -542,7 +540,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "opencode",
       model: "anthropic/claude-favorite-sort",
-      lockedProvider: "opencode",
+      lockedEngine: "opencode",
       modelOptionsByEngine: {
         ...MODEL_OPTIONS_BY_PROVIDER,
         opencode: OPENCODE_FAVORITE_SORT_MODELS,
@@ -586,7 +584,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "opencode",
       model: OPENCODE_DUPLICATE_NAME_MODELS[0]!.slug,
-      lockedProvider: "opencode",
+      lockedEngine: "opencode",
       modelOptionsByEngine: {
         ...MODEL_OPTIONS_BY_PROVIDER,
         opencode: OPENCODE_DUPLICATE_NAME_MODELS,
@@ -654,7 +652,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "cursor",
       model: MANY_CURSOR_MODELS[0]!.slug,
-      lockedProvider: "cursor",
+      lockedEngine: "cursor",
       modelOptionsByEngine: {
         ...MODEL_OPTIONS_BY_PROVIDER,
         cursor: MANY_CURSOR_MODELS,
@@ -684,7 +682,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "cursor",
       model: "cursor-claude-favorite-sort",
-      lockedProvider: "cursor",
+      lockedEngine: "cursor",
       modelOptionsByEngine: {
         ...MODEL_OPTIONS_BY_PROVIDER,
         cursor: CURSOR_FAVORITE_SORT_MODELS,
@@ -728,7 +726,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "pi",
       model: "anthropic/claude-pi-favorite-sort",
-      lockedProvider: "pi",
+      lockedEngine: "pi",
       modelOptionsByEngine: {
         ...MODEL_OPTIONS_BY_PROVIDER,
         pi: PI_FAVORITE_SORT_MODELS,
@@ -772,7 +770,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "opencode",
       model: OPENCODE_FAVORITE_SORT_MODELS[0]!.slug,
-      lockedProvider: "opencode",
+      lockedEngine: "opencode",
       locale: "zh-CN",
       modelOptionsByEngine: {
         ...MODEL_OPTIONS_BY_PROVIDER,
@@ -798,8 +796,8 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "cursor",
       model: "auto",
-      lockedProvider: "cursor",
-      loadingModelProviders: { cursor: true },
+      lockedEngine: "cursor",
+      loadingEngineModels: { cursor: true },
     });
 
     try {
@@ -821,7 +819,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "codex",
       model: "gpt-5-codex",
-      lockedProvider: null,
+      lockedEngine: null,
       engines: [
         {
           engine: "codex",
@@ -858,7 +856,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "codex",
       model: "gpt-5-codex",
-      lockedProvider: null,
+      lockedEngine: null,
       engines: [
         {
           engine: "codex",
@@ -887,7 +885,7 @@ describe("EngineModelPicker", () => {
     const mounted = await mountPicker({
       engine: "codex",
       model: "gpt-5-codex",
-      lockedProvider: null,
+      lockedEngine: null,
       engines: [
         {
           engine: "codex",

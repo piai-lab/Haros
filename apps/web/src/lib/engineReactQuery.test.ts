@@ -1,4 +1,4 @@
-// FILE: providerReactQuery.test.ts
+// FILE: engineReactQuery.test.ts
 // Purpose: Verifies engine query keys, RPC dispatch, and checkpoint retry behavior.
 // Layer: Web data fetching tests
 // Depends on: Vitest, React Query, and the native API bridge mock.
@@ -11,9 +11,9 @@ import {
   CHECKPOINT_DIFF_PENDING_REFETCH_MAX_ATTEMPTS,
   checkpointDiffQueryOptions,
   isCheckpointTemporarilyUnavailable,
-  providerQueryKeys,
+  engineQueryKeys,
   resolveCheckpointDiffQueryDisplayState,
-} from "./providerReactQuery";
+} from "./engineReactQuery";
 import * as nativeApi from "../nativeApi";
 
 const threadId = ThreadId.makeUnsafe("thread-id");
@@ -34,7 +34,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("providerQueryKeys.checkpointDiff", () => {
+describe("engineQueryKeys.checkpointDiff", () => {
   it("includes cacheScope so reused turn counts do not collide", () => {
     const baseInput = {
       threadId,
@@ -44,12 +44,12 @@ describe("providerQueryKeys.checkpointDiff", () => {
     } as const;
 
     expect(
-      providerQueryKeys.checkpointDiff({
+      engineQueryKeys.checkpointDiff({
         ...baseInput,
         cacheScope: "turn:old-turn",
       }),
     ).not.toEqual(
-      providerQueryKeys.checkpointDiff({
+      engineQueryKeys.checkpointDiff({
         ...baseInput,
         cacheScope: "turn:new-turn",
       }),
@@ -65,12 +65,12 @@ describe("providerQueryKeys.checkpointDiff", () => {
     } as const;
 
     expect(
-      providerQueryKeys.checkpointDiff({
+      engineQueryKeys.checkpointDiff({
         ...baseInput,
         ignoreWhitespace: true,
       }),
     ).not.toEqual(
-      providerQueryKeys.checkpointDiff({
+      engineQueryKeys.checkpointDiff({
         ...baseInput,
         ignoreWhitespace: false,
       }),

@@ -47,7 +47,7 @@ import {
   LOCAL_DISPATCH_TURN_TAKEOVER_TIMEOUT_MS,
   resolveActiveThreadTitle,
   resolveActiveTurnLiveDiffState,
-  resolveCommittedProviderModel,
+  resolveCommittedEngineModel,
   resolveComposerStripWorkLogEntries,
   resolveCycledModelSlug,
   resolveEnvironmentPanelVisible,
@@ -1438,10 +1438,10 @@ describe("resolveActiveTurnLiveDiffState", () => {
   });
 });
 
-describe("resolveCommittedProviderModel", () => {
+describe("resolveCommittedEngineModel", () => {
   it("preserves the exact runtime-discovered slug when the picker selected it", () => {
     expect(
-      resolveCommittedProviderModel({
+      resolveCommittedEngineModel({
         selectedModel: "grok-code-fast-1-0825" as ModelSlug,
         availableOptions: [
           {
@@ -1455,7 +1455,7 @@ describe("resolveCommittedProviderModel", () => {
 
   it("rejects a selected slug that is not in the authoritative options", () => {
     expect(
-      resolveCommittedProviderModel({
+      resolveCommittedEngineModel({
         selectedModel: "code-fast" as ModelSlug,
         availableOptions: [],
       }),

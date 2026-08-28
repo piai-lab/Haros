@@ -21,7 +21,7 @@ export interface EnginePickerAvailability {
   readonly state: EnginePickerAvailabilityState;
 }
 
-export function deriveProviderPickerAvailability(
+export function deriveEnginePickerAvailability(
   status: ServerEngineStatus | null | undefined,
 ): EnginePickerAvailability {
   if (!status) {
@@ -127,7 +127,7 @@ export function normalizeEngineStatusForLocalConfig(input: {
   };
 }
 
-export function isProviderUsable(status: ServerEngineStatus | null | undefined): boolean {
+export function isEngineUsable(status: ServerEngineStatus | null | undefined): boolean {
   if (!status) {
     // Missing status means the health check has not confirmed an installed engine yet.
     return false;
@@ -135,18 +135,18 @@ export function isProviderUsable(status: ServerEngineStatus | null | undefined):
   return status.available && status.authStatus !== "unauthenticated";
 }
 
-export function providerUnavailableReason(status: ServerEngineStatus | null | undefined): string {
+export function engineUnavailableReason(status: ServerEngineStatus | null | undefined): string {
   if (!status) {
     return "Engine status is still loading.";
   }
-  const providerLabel = ENGINE_DISPLAY_NAMES[status.engine] ?? status.engine;
+  const engineLabel = ENGINE_DISPLAY_NAMES[status.engine] ?? status.engine;
   if (status.authStatus === "unauthenticated") {
-    return `${providerLabel} is not authenticated yet.`;
+    return `${engineLabel} is not authenticated yet.`;
   }
   if (!status.available) {
-    return status.message ?? `${providerLabel} is unavailable right now.`;
+    return status.message ?? `${engineLabel} is unavailable right now.`;
   }
-  return status.message ?? `${providerLabel} has limited availability right now.`;
+  return status.message ?? `${engineLabel} has limited availability right now.`;
 }
 
 export function findEngineStatus(
@@ -157,7 +157,7 @@ export function findEngineStatus(
 }
 
 // Shared send gate used by chat, Kanban, shortcuts, and handoff flows.
-export function resolveProviderSendAvailability(input: {
+export function resolveEngineSendAvailability(input: {
   readonly engine: EngineKind;
   readonly statuses: readonly ServerEngineStatus[];
 }): EngineSendAvailability {
@@ -165,8 +165,8 @@ export function resolveProviderSendAvailability(input: {
   return {
     engine: input.engine,
     status,
-    usable: isProviderUsable(status),
-    unavailableReason: providerUnavailableReason(status),
+    usable: isEngineUsable(status),
+    unavailableReason: engineUnavailableReason(status),
   };
 }
 
@@ -175,12 +175,12 @@ function shouldRefreshBeforeBlocking(status: ServerEngineStatus | null): boolean
 }
 
 // Re-check a blocked engine once before surfacing stale install/auth state to the user.
-export async function resolveProviderSendAvailabilityWithRefresh(input: {
+export async function resolveEngineSendAvailabilityWithRefresh(input: {
   readonly engine: EngineKind;
   readonly statuses: readonly ServerEngineStatus[];
   readonly refreshStatuses: EngineStatusRefresh;
 }): Promise<EngineSendAvailability> {
-  const initial = resolveProviderSendAvailability(input);
+  const initial = resolveEngineSendAvailability(input);
   if (initial.usable || !shouldRefreshBeforeBlocking(initial.status)) {
     return initial;
   }
@@ -195,7 +195,7 @@ export async function resolveProviderSendAvailabilityWithRefresh(input: {
     return initial;
   }
 
-  return resolveProviderSendAvailability({
+  return resolveEngineSendAvailability({
     engine: input.engine,
     statuses: refreshedStatuses,
   });

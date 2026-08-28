@@ -31,7 +31,7 @@ import {
   type ComposerTrigger,
 } from "~/composer-logic";
 import type { TerminalContextDraft } from "~/lib/terminalContext";
-import type { EngineModelOption } from "../../providerModelOptions";
+import type { EngineModelOption } from "../../engineModelOptions";
 import { useKanbanTaskComposerDiscovery } from "./useKanbanTaskComposerDiscovery";
 import { useKanbanTaskComposerEditor } from "./useKanbanTaskComposerEditor";
 

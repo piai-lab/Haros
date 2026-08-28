@@ -7,9 +7,9 @@ export const PROVIDERS_SETTINGS_SEARCH = {
     keywords:
       "Check Codex Claude and other engine CLIs for newer versions in the background. updates upgrade disable nags",
   }),
-  visibleProviders: defineSettingsSearchRow({
+  visibleEngines: defineSettingsSearchRow({
     id: "engines:visible-engines",
-    titleKey: "settings.visibleProviders",
+    titleKey: "settings.visibleEngines",
     keywords:
       "Drag engines into your preferred picker order and hide the ones you don't use. visibility order",
   }),

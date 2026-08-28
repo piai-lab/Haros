@@ -8,10 +8,10 @@ import { resolveSelectableModel } from "@harnessos/shared/model";
 import * as Schema from "effect/Schema";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { type EnginePickerKind, ENGINE_OPTIONS } from "../../session-logic";
-import { buildEngineSelection, formatProviderModelOptionName } from "../../providerModelOptions";
-import { compareProvidersByOrder, filterProviderOptionsByVisibility } from "../../engineOrdering";
+import { buildEngineSelection, formatEngineModelOptionName } from "../../engineModelOptions";
+import { compareEnginesByOrder, filterEngineOptionsByVisibility } from "../../engineOrdering";
 import {
-  deriveProviderPickerAvailability,
+  deriveEnginePickerAvailability,
   type EnginePickerAvailabilityState,
 } from "../../lib/engineAvailability";
 import { Menu, MenuItem, MenuRadioGroup, MenuSub, MenuSubTrigger, MenuTrigger } from "../ui/menu";
@@ -31,16 +31,16 @@ import {
 import { ShortcutKbd } from "../ui/shortcut-kbd";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import {
-  groupProviderModelOptions,
-  groupProviderModelOptionsWithFavorites,
+  groupEngineModelOptions,
+  groupEngineModelOptionsWithFavorites,
   shouldUseCollapsibleModelGroups,
   type EngineModelOption,
-} from "../../providerModelOptions";
+} from "../../engineModelOptions";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import {
   FAVORITE_MODEL_STORAGE_KEYS,
   supportsModelFavorites,
-  type FavoriteModelProvider,
+  type FavoriteModelEngine,
 } from "../../lib/modelFavorites";
 import { Skeleton } from "../ui/skeleton";
 import { useI18n } from "~/i18n";
@@ -92,7 +92,7 @@ function resolveSelectedModelLabel(input: {
       return baseMatch.name;
     }
   }
-  return formatProviderModelOptionName({
+  return formatEngineModelOptionName({
     engine: input.engine,
     slug: input.model,
   });
@@ -114,10 +114,10 @@ function buildModelSearchText(option: EngineModelOption): string {
 type EngineModelMenuItemsProps = {
   engine: EngineKind;
   model: ModelSlug | null;
-  lockedProvider: EngineKind | null;
+  lockedEngine: EngineKind | null;
   engines?: ReadonlyArray<ServerEngineStatus>;
   modelOptionsByEngine: Record<EngineKind, ReadonlyArray<EngineModelOption>>;
-  loadingModelProviders?: Partial<Record<EngineKind, boolean>>;
+  loadingEngineModels?: Partial<Record<EngineKind, boolean>>;
   hiddenEngines?: ReadonlyArray<EngineKind>;
   engineOrder?: ReadonlyArray<EngineKind>;
   disabled?: boolean;
@@ -159,20 +159,20 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
     FavoriteModelSlugs,
   );
   const deferredModelSearchQuery = useDeferredValue(modelSearchQuery);
-  const activeEngine = props.lockedProvider ?? props.engine;
+  const activeEngine = props.lockedEngine ?? props.engine;
   const hiddenEngines = props.hiddenEngines;
   const engineOrder = props.engineOrder;
-  const hiddenProviderSet = new Set<EngineKind>(hiddenEngines ?? []);
-  const protectedProviderSet = new Set<EngineKind>([props.engine]);
-  if (props.lockedProvider !== null) {
-    protectedProviderSet.add(props.lockedProvider);
+  const hiddenEngineSet = new Set<EngineKind>(hiddenEngines ?? []);
+  const protectedEngineSet = new Set<EngineKind>([props.engine]);
+  if (props.lockedEngine !== null) {
+    protectedEngineSet.add(props.lockedEngine);
   }
-  const visibleProviderOptions = filterProviderOptionsByVisibility(
+  const visibleProviderOptions = filterEngineOptionsByVisibility(
     ENGINE_MODEL_OPTIONS.toSorted((left, right) =>
-      compareProvidersByOrder(engineOrder ?? [], left.value, right.value),
+      compareEnginesByOrder(engineOrder ?? [], left.value, right.value),
     ),
-    hiddenProviderSet,
-    protectedProviderSet,
+    hiddenEngineSet,
+    protectedEngineSet,
   );
   const kiloFavoriteModelSlugSet = new Set(kiloFavoriteModelSlugs);
   const openCodeFavoriteModelSlugSet = new Set(openCodeFavoriteModelSlugs);
@@ -192,7 +192,7 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
     props.onEngineModelChange(engine, resolvedModel);
     onAfterSelection?.();
   };
-  const toggleFavoriteModel = (engine: FavoriteModelProvider, slug: string) => {
+  const toggleFavoriteModel = (engine: FavoriteModelEngine, slug: string) => {
     const setFavoriteModelSlugs =
       engine === "cursor"
         ? setCursorFavoriteModelSlugs
@@ -205,7 +205,7 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
   };
 
   const renderModelRadioGroup = (engine: EngineKind) => {
-    if (props.loadingModelProviders?.[engine]) {
+    if (props.loadingEngineModels?.[engine]) {
       return (
         <div className="space-y-2 px-2 py-2" aria-label={t("composer.loadingModels")}>
           {Array.from({ length: 6 }, (_, index) => (
@@ -229,17 +229,17 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
             buildModelSearchText(option).includes(normalizedModelSearchQuery),
           )
         : engineOptions;
-    const favoriteProvider = supportsModelFavorites(engine) ? engine : null;
+    const favoriteEngine = supportsModelFavorites(engine) ? engine : null;
     const favoriteModelSlugSet =
-      favoriteProvider !== null ? favoriteModelSlugSets[favoriteProvider] : undefined;
+      favoriteEngine !== null ? favoriteModelSlugSets[favoriteEngine] : undefined;
     const groupedOptions =
       favoriteModelSlugSet !== undefined
-        ? groupProviderModelOptionsWithFavorites({
+        ? groupEngineModelOptionsWithFavorites({
             options: filteredOptions,
             favoriteSlugs: favoriteModelSlugSet,
             favoriteLabel: t("composer.favorites"),
           })
-        : groupProviderModelOptions(filteredOptions);
+        : groupEngineModelOptions(filteredOptions);
 
     const content =
       groupedOptions.length > 0 ? (
@@ -252,7 +252,7 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
             engine={engine}
             activeModel={props.model ?? ""}
             isSearching={normalizedModelSearchQuery.length > 0}
-            favoriteProvider={favoriteProvider}
+            favoriteEngine={favoriteEngine}
             favoriteModelSlugSet={favoriteModelSlugSet}
             onToggleFavorite={toggleFavoriteModel}
             {...(onAfterSelection ? { onAfterSelection } : {})}
@@ -302,8 +302,8 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
     );
   };
 
-  if (props.lockedProvider !== null) {
-    return <>{renderModelRadioGroup(props.lockedProvider)}</>;
+  if (props.lockedEngine !== null) {
+    return <>{renderModelRadioGroup(props.lockedEngine)}</>;
   }
 
   return (
@@ -311,7 +311,7 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
       {visibleProviderOptions.map((option) => {
         const OptionIcon = ENGINE_ICON_COMPONENT_BY_PROVIDER[option.value];
         const liveEngine = props.engines?.find((entry) => entry.engine === option.value);
-        const availability = deriveProviderPickerAvailability(liveEngine);
+        const availability = deriveEnginePickerAvailability(liveEngine);
         const availabilityLabel = (
           {
             checking: t("composer.engineChecking"),
@@ -375,13 +375,13 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
 };
 
 // Resolves the human-readable label for the currently selected model.
-export function resolveProviderModelLabel(input: {
+export function resolveEngineModelLabel(input: {
   engine: EngineKind;
-  lockedProvider: EngineKind | null;
+  lockedEngine: EngineKind | null;
   model: ModelSlug;
   modelOptionsByEngine: Record<EngineKind, ReadonlyArray<EngineModelOption>>;
 }): string {
-  const activeEngine = input.lockedProvider ?? input.engine;
+  const activeEngine = input.lockedEngine ?? input.engine;
   return resolveSelectedModelLabel({
     engine: activeEngine,
     model: input.model,
@@ -399,10 +399,10 @@ export function getProviderIconClassName(
 type EngineModelPickerProps = {
   engine: EngineKind;
   model: ModelSlug | null;
-  lockedProvider: EngineKind | null;
+  lockedEngine: EngineKind | null;
   engines?: ReadonlyArray<ServerEngineStatus>;
   modelOptionsByEngine: Record<EngineKind, ReadonlyArray<EngineModelOption>>;
-  loadingModelProviders?: Partial<Record<EngineKind, boolean>>;
+  loadingEngineModels?: Partial<Record<EngineKind, boolean>>;
   catalogStateByEngine?: Partial<Record<EngineKind, EngineModelCatalogState>>;
   hiddenEngines?: ReadonlyArray<EngineKind>;
   engineOrder?: ReadonlyArray<EngineKind>;
@@ -425,14 +425,14 @@ export const EngineModelPicker = function EngineModelPicker(props: EngineModelPi
   const [uncontrolledMenuOpen, setUncontrolledMenuOpen] = useState(false);
   const selectionCommitTimerRef = useRef<number | null>(null);
   const isMenuOpen = open ?? uncontrolledMenuOpen;
-  const activeEngine = props.lockedProvider ?? props.engine;
+  const activeEngine = props.lockedEngine ?? props.engine;
   const activeCatalogState =
     props.catalogStateByEngine?.[activeEngine] ??
-    (props.loadingModelProviders?.[activeEngine] ? "checking" : null);
+    (props.loadingEngineModels?.[activeEngine] ? "checking" : null);
   const selectedModelLabel = props.model
-    ? resolveProviderModelLabel({
+    ? resolveEngineModelLabel({
         engine: props.engine,
-        lockedProvider: props.lockedProvider,
+        lockedEngine: props.lockedEngine,
         model: props.model,
         modelOptionsByEngine: props.modelOptionsByEngine,
       })
@@ -533,12 +533,10 @@ export const EngineModelPicker = function EngineModelPicker(props: EngineModelPi
         <EngineModelMenuItems
           engine={props.engine}
           model={props.model}
-          lockedProvider={props.lockedProvider}
+          lockedEngine={props.lockedEngine}
           {...(props.engines ? { engines: props.engines } : {})}
           modelOptionsByEngine={props.modelOptionsByEngine}
-          {...(props.loadingModelProviders
-            ? { loadingModelProviders: props.loadingModelProviders }
-            : {})}
+          {...(props.loadingEngineModels ? { loadingEngineModels: props.loadingEngineModels } : {})}
           {...(props.hiddenEngines ? { hiddenEngines: props.hiddenEngines } : {})}
           {...(props.engineOrder ? { engineOrder: props.engineOrder } : {})}
           {...(props.disabled !== undefined ? { disabled: props.disabled } : {})}

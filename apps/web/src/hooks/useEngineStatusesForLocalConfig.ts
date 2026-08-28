@@ -6,7 +6,7 @@
 import type { ServerEngineStatus } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
 
-import { getCustomBinaryPathForProvider } from "../engineSettings";
+import { getCustomBinaryPathForEngine } from "../engineSettings";
 import { useServerSettings } from "../serverSettings";
 import { normalizeEngineStatusForLocalConfig } from "../lib/engineAvailability";
 import { serverConfigQueryOptions } from "../lib/serverReactQuery";
@@ -22,7 +22,7 @@ export function useEngineStatusesForLocalConfig(): readonly ServerEngineStatus[]
       normalizeEngineStatusForLocalConfig({
         engine: status.engine,
         status,
-        customBinaryPath: settings ? getCustomBinaryPathForProvider(settings, status.engine) : "",
+        customBinaryPath: settings ? getCustomBinaryPathForEngine(settings, status.engine) : "",
       }),
     )
     .flatMap((status) => (status ? [status] : []));

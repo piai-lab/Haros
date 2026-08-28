@@ -29,7 +29,7 @@ import { TraitsMenuContent, TraitsPicker } from "./TraitsPicker";
 import { getComposerTraitSelection, hasVisibleComposerTraitControls } from "./composerTraits";
 import { getRuntimeAwareModelCapabilities } from "./runtimeModelCapabilities";
 
-export type ComposerProviderStateInput = {
+export type ComposerEngineStateInput = {
   engine: EngineKind;
   model: ModelSlug | null;
   runtimeModel?: EngineModelDescriptor | undefined;
@@ -37,7 +37,7 @@ export type ComposerProviderStateInput = {
   modelOptions: EngineModelOptions | null | undefined;
 };
 
-export type ComposerProviderState = {
+export type ComposerEngineState = {
   engine: EngineKind;
   promptEffort: string | null;
   modelOptionsForDispatch: EngineModelOptions[EngineKind] | undefined;
@@ -66,12 +66,12 @@ type EngineTraitPickerRenderInput = EngineTraitRenderInput & {
 };
 
 type EngineRegistryEntry = {
-  getState: (input: ComposerProviderStateInput) => ComposerProviderState;
+  getState: (input: ComposerEngineStateInput) => ComposerEngineState;
   renderTraitsMenuContent: (input: EngineTraitRenderInput) => ReactNode;
   renderTraitsPicker: (input: EngineTraitPickerRenderInput) => ReactNode;
 };
 
-function renderTraitsMenuContentForProvider(
+function renderTraitsMenuContentForEngine(
   engine: EngineKind,
   input: EngineTraitRenderInput,
 ): ReactNode {
@@ -92,7 +92,7 @@ function renderTraitsMenuContentForProvider(
   );
 }
 
-function renderTraitsPickerForProvider(
+function renderTraitsPickerForEngine(
   engine: EngineKind,
   input: EngineTraitPickerRenderInput,
 ): ReactNode {
@@ -115,9 +115,7 @@ function renderTraitsPickerForProvider(
   );
 }
 
-function getProviderStateFromCapabilities(
-  input: ComposerProviderStateInput,
-): ComposerProviderState {
+function getEngineStateFromCapabilities(input: ComposerEngineStateInput): ComposerEngineState {
   const { engine, model, runtimeModel, prompt, modelOptions } = input;
   const caps = getRuntimeAwareModelCapabilities({ engine, model, runtimeModel });
 
@@ -253,62 +251,62 @@ function getProviderStateFromCapabilities(
 
 const composerEngineRegistry: Record<EngineKind, EngineRegistryEntry> = {
   oa: {
-    getState: (input) => getProviderStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("oa", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForProvider("oa", input),
+    getState: (input) => getEngineStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("oa", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForEngine("oa", input),
   },
   codex: {
-    getState: (input) => getProviderStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("codex", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForProvider("codex", input),
+    getState: (input) => getEngineStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("codex", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForEngine("codex", input),
   },
   claude: {
-    getState: (input) => getProviderStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("claude", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForProvider("claude", input),
+    getState: (input) => getEngineStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("claude", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForEngine("claude", input),
   },
   cursor: {
-    getState: (input) => getProviderStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("cursor", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForProvider("cursor", input),
+    getState: (input) => getEngineStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("cursor", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForEngine("cursor", input),
   },
   antigravity: {
-    getState: (input) => getProviderStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("antigravity", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForProvider("antigravity", input),
+    getState: (input) => getEngineStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("antigravity", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForEngine("antigravity", input),
   },
   grok: {
-    getState: (input) => getProviderStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("grok", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForProvider("grok", input),
+    getState: (input) => getEngineStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("grok", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForEngine("grok", input),
   },
   droid: {
-    getState: (input) => getProviderStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("droid", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForProvider("droid", input),
+    getState: (input) => getEngineStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("droid", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForEngine("droid", input),
   },
   kilo: {
-    getState: (input) => getProviderStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("kilo", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForProvider("kilo", input),
+    getState: (input) => getEngineStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("kilo", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForEngine("kilo", input),
   },
   opencode: {
-    getState: (input) => getProviderStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("opencode", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForProvider("opencode", input),
+    getState: (input) => getEngineStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("opencode", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForEngine("opencode", input),
   },
   pi: {
-    getState: (input) => getProviderStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("pi", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForProvider("pi", input),
+    getState: (input) => getEngineStateFromCapabilities(input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("pi", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForEngine("pi", input),
   },
 };
 
-export function getComposerProviderState(input: ComposerProviderStateInput): ComposerProviderState {
+export function getComposerEngineState(input: ComposerEngineStateInput): ComposerEngineState {
   return composerEngineRegistry[input.engine].getState(input);
 }
 
-export function renderProviderTraitsMenuContent(input: {
+export function renderEngineTraitsMenuContent(input: {
   engine: EngineKind;
   threadId: ThreadId;
   model: ModelSlug;
@@ -341,7 +339,7 @@ export function renderProviderTraitsMenuContent(input: {
   return composerEngineRegistry[input.engine].renderTraitsMenuContent(input);
 }
 
-export function renderProviderTraitsPicker(input: {
+export function renderEngineTraitsPicker(input: {
   engine: EngineKind;
   threadId: ThreadId;
   model: ModelSlug;

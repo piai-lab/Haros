@@ -1254,7 +1254,7 @@ function ActiveModelsSettingsPanel({
         queryKey: omniMindModelServicesQueryKeys.all,
       }),
       queryClient.invalidateQueries({
-        queryKey: engineDiscoveryQueryKeys.modelsForProvider("oa"),
+        queryKey: engineDiscoveryQueryKeys.modelsForEngine("oa"),
       }),
     ]);
   }, [queryClient]);

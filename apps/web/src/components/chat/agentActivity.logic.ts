@@ -57,9 +57,7 @@ export function isAgentActivityWorkEntry(entry: WorkLogEntry): boolean {
 }
 
 // Unmapped engine events keep their native type as the title and a safe detail as preview.
-export function isUnmappedProviderEventWorkEntry(
-  entry: Pick<WorkLogEntry, "activityKind">,
-): boolean {
+export function isUnmappedEngineEventWorkEntry(entry: Pick<WorkLogEntry, "activityKind">): boolean {
   return entry.activityKind === "engine.event.unmapped";
 }
 
@@ -71,7 +69,7 @@ export function formatAgentActivityEntryTitle(entry: WorkLogEntry): string {
   if (heading) {
     return capitalizePhrase(heading);
   }
-  if (isUnmappedProviderEventWorkEntry(entry) && entry.nativeEventType) {
+  if (isUnmappedEngineEventWorkEntry(entry) && entry.nativeEventType) {
     // The raw native type/label is the only title the event carries; use it
     // verbatim instead of degrading to the generic "Activity" label.
     return capitalizePhrase(entry.nativeEventType);

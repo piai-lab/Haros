@@ -17,7 +17,7 @@ import {
 import {
   checkpointDiffQueryOptions,
   resolveCheckpointDiffQueryDisplayState,
-} from "~/lib/providerReactQuery";
+} from "~/lib/engineReactQuery";
 import { stripDiffSearchParams } from "../diffRouteSearch";
 import { useTheme } from "../hooks/useTheme";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";

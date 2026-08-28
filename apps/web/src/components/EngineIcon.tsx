@@ -29,7 +29,7 @@ export type EngineIconTone = "default" | "header";
 // React's SVGProps has no `title`, so accept it via an explicit prop type and forward it
 // only to CentralIcon (an HTML span, which supports `title`); the light-mode SVG conveys
 // its accessible name through aria-label instead.
-const OpenCodeProviderIcon = ({
+const OpenCodeEngineIcon = ({
   className,
   style,
   title,
@@ -73,11 +73,11 @@ export const ENGINE_ICON_COMPONENT_BY_PROVIDER: Record<EngineKind, Icon> = {
   grok: GrokIcon,
   droid: DroidIcon,
   kilo: KiloIcon,
-  opencode: OpenCodeProviderIcon,
+  opencode: OpenCodeEngineIcon,
   pi: PiIcon,
 };
 
-export function providerIconToneClassName(
+export function engineIconToneClassName(
   engine: EngineKind | null | undefined,
   tone: EngineIconTone = "default",
 ): string {
@@ -116,7 +116,7 @@ export function EngineIcon({
     <Icon
       aria-hidden={ariaHidden}
       {...svgProps}
-      className={cn(providerIconToneClassName(engine, tone), className)}
+      className={cn(engineIconToneClassName(engine, tone), className)}
     />
   );
 }

@@ -13,10 +13,10 @@ import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  prefetchProviderModelsForNewThread,
-  providerModelsPrefetchQueryOptions,
+  prefetchEngineModelsForNewThread,
+  engineModelsPrefetchQueryOptions,
   resolveNewThreadModelPrefetchCwd,
-  resolveNewThreadModelPrefetchProvider,
+  resolveNewThreadModelPrefetchEngine,
   type EngineModelPrefetchSettings,
 } from "./engineModelPrefetch";
 import { engineDiscoveryQueryKeys } from "./engineDiscoveryReactQuery";
@@ -76,47 +76,47 @@ function makeSettings(
   };
 }
 
-describe("resolveNewThreadModelPrefetchProvider", () => {
+describe("resolveNewThreadModelPrefetchEngine", () => {
   it("prefers the explicit override, then draft, sticky, project, and app defaults", () => {
     expect(
-      resolveNewThreadModelPrefetchProvider({
-        providerOverride: "droid",
-        draftActiveProvider: "cursor",
-        stickyActiveProvider: "pi",
-        projectDefaultProvider: "opencode",
+      resolveNewThreadModelPrefetchEngine({
+        engineOverride: "droid",
+        draftActiveEngine: "cursor",
+        stickyActiveEngine: "pi",
+        projectDefaultEngine: "opencode",
         defaultEngine: "codex",
       }),
     ).toBe("droid");
 
     expect(
-      resolveNewThreadModelPrefetchProvider({
-        draftActiveProvider: "cursor",
-        stickyActiveProvider: "pi",
-        projectDefaultProvider: "opencode",
+      resolveNewThreadModelPrefetchEngine({
+        draftActiveEngine: "cursor",
+        stickyActiveEngine: "pi",
+        projectDefaultEngine: "opencode",
         defaultEngine: "codex",
       }),
     ).toBe("cursor");
 
     expect(
-      resolveNewThreadModelPrefetchProvider({
-        draftActiveProvider: null,
-        stickyActiveProvider: "pi",
-        projectDefaultProvider: "opencode",
+      resolveNewThreadModelPrefetchEngine({
+        draftActiveEngine: null,
+        stickyActiveEngine: "pi",
+        projectDefaultEngine: "opencode",
         defaultEngine: "codex",
       }),
     ).toBe("pi");
 
     expect(
-      resolveNewThreadModelPrefetchProvider({
-        stickyActiveProvider: null,
-        projectDefaultProvider: "opencode",
+      resolveNewThreadModelPrefetchEngine({
+        stickyActiveEngine: null,
+        projectDefaultEngine: "opencode",
         defaultEngine: "codex",
       }),
     ).toBe("opencode");
 
     expect(
-      resolveNewThreadModelPrefetchProvider({
-        projectDefaultProvider: null,
+      resolveNewThreadModelPrefetchEngine({
+        projectDefaultEngine: null,
         defaultEngine: "claude",
       }),
     ).toBe("claude");
@@ -182,7 +182,7 @@ describe("resolveNewThreadModelPrefetchCwd", () => {
   });
 });
 
-describe("providerModelsPrefetchQueryOptions", () => {
+describe("engineModelsPrefetchQueryOptions", () => {
   it("matches ChatView cache keys for cwd-scoped and binary-scoped engines", () => {
     const settings = makeSettings({
       engines: {
@@ -194,7 +194,7 @@ describe("providerModelsPrefetchQueryOptions", () => {
       },
     });
 
-    const cursorOptions = providerModelsPrefetchQueryOptions({
+    const cursorOptions = engineModelsPrefetchQueryOptions({
       engine: "cursor",
       settings,
     });
@@ -202,7 +202,7 @@ describe("providerModelsPrefetchQueryOptions", () => {
       engineDiscoveryQueryKeys.models("cursor", "/bin/agent", "https://api.example", null, null),
     );
 
-    const omniMindOptions = providerModelsPrefetchQueryOptions({
+    const omniMindOptions = engineModelsPrefetchQueryOptions({
       engine: "oa",
       settings,
       cwd: "/tmp/project",
@@ -211,7 +211,7 @@ describe("providerModelsPrefetchQueryOptions", () => {
       engineDiscoveryQueryKeys.models("oa", null, null, null, null),
     );
 
-    const claudeOptions = providerModelsPrefetchQueryOptions({
+    const claudeOptions = engineModelsPrefetchQueryOptions({
       engine: "claude",
       settings,
     });
@@ -219,7 +219,7 @@ describe("providerModelsPrefetchQueryOptions", () => {
       engineDiscoveryQueryKeys.models("claude", "/bin/claude", null, null, null),
     );
 
-    const openCodeOptions = providerModelsPrefetchQueryOptions({
+    const openCodeOptions = engineModelsPrefetchQueryOptions({
       engine: "opencode",
       settings,
       cwd: "/tmp/project",
@@ -228,7 +228,7 @@ describe("providerModelsPrefetchQueryOptions", () => {
       engineDiscoveryQueryKeys.models("opencode", "/bin/opencode", null, null, "/tmp/project"),
     );
 
-    const piOptions = providerModelsPrefetchQueryOptions({
+    const piOptions = engineModelsPrefetchQueryOptions({
       engine: "pi",
       settings,
       cwd: "/tmp/project",
@@ -237,7 +237,7 @@ describe("providerModelsPrefetchQueryOptions", () => {
       engineDiscoveryQueryKeys.models("pi", "/bin/pi", null, "/tmp/pi-agent", "/tmp/project"),
     );
 
-    const antigravityOptions = providerModelsPrefetchQueryOptions({
+    const antigravityOptions = engineModelsPrefetchQueryOptions({
       engine: "antigravity",
       settings,
       cwd: "/tmp/project",
@@ -252,7 +252,7 @@ describe("providerModelsPrefetchQueryOptions", () => {
       ),
     );
 
-    const codexOptions = providerModelsPrefetchQueryOptions({
+    const codexOptions = engineModelsPrefetchQueryOptions({
       engine: "codex",
       settings,
     });
@@ -262,12 +262,12 @@ describe("providerModelsPrefetchQueryOptions", () => {
   });
 });
 
-describe("prefetchProviderModelsForNewThread", () => {
+describe("prefetchEngineModelsForNewThread", () => {
   it("prefetches models and agents for the resolved engine", async () => {
     const queryClient = new QueryClient();
     const prefetchQuery = vi.spyOn(queryClient, "prefetchQuery").mockResolvedValue(undefined);
 
-    prefetchProviderModelsForNewThread(queryClient, {
+    prefetchEngineModelsForNewThread(queryClient, {
       engine: "kilo" satisfies EngineKind,
       settings: makeSettings({
         engines: { kilo: { binaryPath: "/bin/kilo" } },
@@ -292,7 +292,7 @@ describe("prefetchProviderModelsForNewThread", () => {
     const queryClient = new QueryClient();
     const prefetchQuery = vi.spyOn(queryClient, "prefetchQuery").mockResolvedValue(undefined);
 
-    prefetchProviderModelsForNewThread(queryClient, {
+    prefetchEngineModelsForNewThread(queryClient, {
       engine: "cursor",
       settings: makeSettings({ engines: { cursor: { binaryPath: "/bin/agent" } } }),
     });
@@ -310,7 +310,7 @@ describe("prefetchProviderModelsForNewThread", () => {
     const queryClient = new QueryClient();
     const prefetchQuery = vi.spyOn(queryClient, "prefetchQuery").mockResolvedValue(undefined);
 
-    prefetchProviderModelsForNewThread(queryClient, {
+    prefetchEngineModelsForNewThread(queryClient, {
       engine: "oa",
       settings: makeSettings({ defaultEngine: "oa" }),
       cwd: "/tmp/project",
@@ -336,12 +336,12 @@ describe("prefetchProviderModelsForNewThread", () => {
     const queryClient = new QueryClient();
     const settings = makeSettings({ defaultEngine: "oa" });
 
-    prefetchProviderModelsForNewThread(queryClient, {
+    prefetchEngineModelsForNewThread(queryClient, {
       engine: "oa",
       settings,
       cwd: "/tmp/project-a",
     });
-    prefetchProviderModelsForNewThread(queryClient, {
+    prefetchEngineModelsForNewThread(queryClient, {
       engine: "oa",
       settings,
       cwd: "/tmp/project-b",
@@ -374,8 +374,8 @@ describe("prefetchProviderModelsForNewThread", () => {
       cwd: "/tmp/project",
     };
 
-    prefetchProviderModelsForNewThread(queryClient, input);
-    prefetchProviderModelsForNewThread(queryClient, input);
+    prefetchEngineModelsForNewThread(queryClient, input);
+    prefetchEngineModelsForNewThread(queryClient, input);
 
     await vi.waitFor(() => {
       expect(listModels).toHaveBeenCalledTimes(1);

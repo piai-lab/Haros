@@ -12,7 +12,7 @@ import {
   getStudioOutputInvalidationThreadIdForEvent,
   resolveGitInvalidationCwdForThreadId,
   shouldInvalidateGitQueriesForEvent,
-  shouldInvalidateProviderQueriesForEvent,
+  shouldInvalidateEngineQueriesForEvent,
 } from "./-rootEventInvalidation";
 import type { AppState } from "../store";
 import type { Thread } from "../types";
@@ -29,7 +29,7 @@ describe("root event invalidation", () => {
     const turnDiffEvent = event("thread.turn-diff-completed");
 
     expect(shouldInvalidateGitQueriesForEvent(turnDiffEvent)).toBe(true);
-    expect(shouldInvalidateProviderQueriesForEvent(turnDiffEvent)).toBe(true);
+    expect(shouldInvalidateEngineQueriesForEvent(turnDiffEvent)).toBe(true);
   });
 
   it("invalidates git queries when checkpoint changes can rewrite files", () => {
@@ -45,7 +45,7 @@ describe("root event invalidation", () => {
 
   it("leaves unrelated events alone", () => {
     expect(shouldInvalidateGitQueriesForEvent(event("thread.message-sent"))).toBe(false);
-    expect(shouldInvalidateProviderQueriesForEvent(event("thread.message-sent"))).toBe(false);
+    expect(shouldInvalidateEngineQueriesForEvent(event("thread.message-sent"))).toBe(false);
   });
 
   it("extracts thread ids from mid-turn file-change activities", () => {

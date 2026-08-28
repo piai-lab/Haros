@@ -9,28 +9,28 @@
 import type { EngineKind, ServerSettingsView } from "@harnessos/contracts";
 import type { QueryClient } from "@tanstack/react-query";
 
-import { resolveProviderDiscoveryCwd } from "./engineDiscovery";
+import { resolveEngineDiscoveryCwd } from "./engineDiscovery";
 import { resolveNewThreadDiscoveryWorktreePath } from "./threadBootstrap";
 import {
-  providerAgentsQueryOptions,
-  providerComposerCapabilitiesQueryOptions,
-  providerModelsQueryOptions,
+  engineAgentsQueryOptions,
+  engineComposerCapabilitiesQueryOptions,
+  engineModelsQueryOptions,
 } from "./engineDiscoveryReactQuery";
 
 export type EngineModelPrefetchSettings = Pick<ServerSettingsView, "defaultEngine" | "engines">;
 
-export function resolveNewThreadModelPrefetchProvider(input: {
-  providerOverride?: EngineKind | null | undefined;
-  draftActiveProvider?: EngineKind | null | undefined;
-  stickyActiveProvider?: EngineKind | null | undefined;
-  projectDefaultProvider?: EngineKind | null | undefined;
+export function resolveNewThreadModelPrefetchEngine(input: {
+  engineOverride?: EngineKind | null | undefined;
+  draftActiveEngine?: EngineKind | null | undefined;
+  stickyActiveEngine?: EngineKind | null | undefined;
+  projectDefaultEngine?: EngineKind | null | undefined;
   defaultEngine: EngineKind;
 }): EngineKind {
   return (
-    input.providerOverride ??
-    input.draftActiveProvider ??
-    input.stickyActiveProvider ??
-    input.projectDefaultProvider ??
+    input.engineOverride ??
+    input.draftActiveEngine ??
+    input.stickyActiveEngine ??
+    input.projectDefaultEngine ??
     input.defaultEngine
   );
 }
@@ -56,7 +56,7 @@ export function resolveNewThreadModelPrefetchCwd(input: {
     },
     draftWorktreePath: input.draftWorktreePath,
   });
-  return resolveProviderDiscoveryCwd({
+  return resolveEngineDiscoveryCwd({
     activeThreadWorktreePath: worktreePath,
     activeProjectCwd: input.projectCwd ?? null,
     serverCwd: input.serverCwd ?? null,
@@ -67,7 +67,7 @@ export function resolveNewThreadModelPrefetchCwd(input: {
  * Build the same listModels query options ChatView uses for a engine, so a
  * prefetch lands on the exact cache key the composer will read on mount.
  */
-export function providerModelsPrefetchQueryOptions(input: {
+export function engineModelsPrefetchQueryOptions(input: {
   engine: EngineKind;
   settings: EngineModelPrefetchSettings;
   cwd?: string | null;
@@ -77,51 +77,51 @@ export function providerModelsPrefetchQueryOptions(input: {
 
   switch (engine) {
     case "oa":
-      return providerModelsQueryOptions({ engine: "oa", cwd });
+      return engineModelsQueryOptions({ engine: "oa", cwd });
     case "claude":
-      return providerModelsQueryOptions({
+      return engineModelsQueryOptions({
         engine: "claude",
         binaryPath: settings.engines.claude.binaryPath || null,
       });
     case "codex":
-      return providerModelsQueryOptions({ engine: "codex" });
+      return engineModelsQueryOptions({ engine: "codex" });
     case "cursor":
-      return providerModelsQueryOptions({
+      return engineModelsQueryOptions({
         engine: "cursor",
         binaryPath: settings.engines.cursor.binaryPath || null,
         apiEndpoint: settings.engines.cursor.apiEndpoint || null,
       });
     case "antigravity":
-      return providerModelsQueryOptions({
+      return engineModelsQueryOptions({
         engine: "antigravity",
         binaryPath: settings.engines.antigravity.binaryPath || null,
         cwd,
       });
     case "grok":
-      return providerModelsQueryOptions({
+      return engineModelsQueryOptions({
         engine: "grok",
         binaryPath: settings.engines.grok.binaryPath || null,
       });
     case "droid":
-      return providerModelsQueryOptions({
+      return engineModelsQueryOptions({
         engine: "droid",
         binaryPath: settings.engines.droid.binaryPath || null,
         cwd,
       });
     case "kilo":
-      return providerModelsQueryOptions({
+      return engineModelsQueryOptions({
         engine: "kilo",
         binaryPath: settings.engines.kilo.binaryPath || null,
         cwd,
       });
     case "opencode":
-      return providerModelsQueryOptions({
+      return engineModelsQueryOptions({
         engine: "opencode",
         binaryPath: settings.engines.opencode.binaryPath || null,
         cwd,
       });
     case "pi":
-      return providerModelsQueryOptions({
+      return engineModelsQueryOptions({
         engine: "pi",
         binaryPath: settings.engines.pi.binaryPath || null,
         agentDir: settings.engines.pi.agentDir || null,
@@ -130,7 +130,7 @@ export function providerModelsPrefetchQueryOptions(input: {
   }
 }
 
-function providerAgentsPrefetchQueryOptions(input: {
+function engineAgentsPrefetchQueryOptions(input: {
   engine: EngineKind;
   settings: EngineModelPrefetchSettings;
   cwd?: string | null;
@@ -140,17 +140,17 @@ function providerAgentsPrefetchQueryOptions(input: {
 
   switch (engine) {
     case "claude":
-      return providerAgentsQueryOptions({ engine: "claude" });
+      return engineAgentsQueryOptions({ engine: "claude" });
     case "codex":
-      return providerAgentsQueryOptions({ engine: "codex" });
+      return engineAgentsQueryOptions({ engine: "codex" });
     case "kilo":
-      return providerAgentsQueryOptions({
+      return engineAgentsQueryOptions({
         engine: "kilo",
         binaryPath: settings.engines.kilo.binaryPath || null,
         cwd,
       });
     case "opencode":
-      return providerAgentsQueryOptions({
+      return engineAgentsQueryOptions({
         engine: "opencode",
         binaryPath: settings.engines.opencode.binaryPath || null,
         cwd,
@@ -160,7 +160,7 @@ function providerAgentsPrefetchQueryOptions(input: {
   }
 }
 
-export function prefetchProviderModelsForNewThread(
+export function prefetchEngineModelsForNewThread(
   queryClient: QueryClient,
   input: {
     engine: EngineKind;
@@ -174,7 +174,7 @@ export function prefetchProviderModelsForNewThread(
   }
   const cwd = input.cwd ?? null;
   const modelPrefetch = queryClient.prefetchQuery(
-    providerModelsPrefetchQueryOptions({
+    engineModelsPrefetchQueryOptions({
       engine: input.engine,
       settings: input.settings,
       cwd,
@@ -182,7 +182,7 @@ export function prefetchProviderModelsForNewThread(
   );
 
   // Agent/mode lists ride along for engines that surface them next to models.
-  const agentsOptions = providerAgentsPrefetchQueryOptions({
+  const agentsOptions = engineAgentsPrefetchQueryOptions({
     engine: input.engine,
     settings: input.settings,
     cwd,
@@ -196,5 +196,5 @@ export function prefetchProviderModelsForNewThread(
 
   // Composer capabilities gate composer affordances on ChatView mount; the query
   // has staleTime Infinity, so this costs one IPC per engine per session.
-  void queryClient.prefetchQuery(providerComposerCapabilitiesQueryOptions(input.engine));
+  void queryClient.prefetchQuery(engineComposerCapabilitiesQueryOptions(input.engine));
 }

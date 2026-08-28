@@ -7,9 +7,9 @@
 
 import { getFileIconName, inferEntryKindFromPath } from "~/file-icons";
 import {
-  findThreadProviderMentionReferenceForToken,
+  findThreadEngineMentionReferenceForToken,
   resolveMentionChipKind,
-  threadIdFromProviderMentionReference,
+  threadIdFromEngineMentionReference,
   type MentionChipKind,
 } from "~/lib/composerMentions";
 import { CentralIcon, createCentralIconElement } from "~/lib/central-icons";
@@ -19,7 +19,7 @@ import { FolderClosed } from "../FolderClosed";
 import type { EngineMentionReference } from "@harnessos/contracts";
 import { threadIdFromThreadMentionPath } from "@harnessos/shared/threadMentions";
 import { useStore } from "~/store";
-import { resolveThreadDisplayProvider } from "~/lib/threadDisplayProvider";
+import { resolveThreadDisplayEngine } from "~/lib/threadDisplayEngine";
 import { EngineIcon } from "../EngineIcon";
 
 export type { MentionChipKind };
@@ -50,22 +50,22 @@ export const MentionChipIcon = function MentionChipIcon(props: {
     ...(props.kind ? { kind: props.kind } : {}),
     ...(props.mentionReferences ? { mentionReferences: props.mentionReferences } : {}),
   });
-  const threadMention = findThreadProviderMentionReferenceForToken(
+  const threadMention = findThreadEngineMentionReferenceForToken(
     props.path,
     props.mentionReferences,
   );
   const threadId = threadMention
-    ? threadIdFromProviderMentionReference(threadMention)
+    ? threadIdFromEngineMentionReference(threadMention)
     : threadIdFromThreadMentionPath(props.path);
-  const threadProvider = useStore((state) => {
+  const threadEngine = useStore((state) => {
     if (!threadId) return null;
     const thread = state.sidebarThreadSummaryById[threadId];
-    return thread ? resolveThreadDisplayProvider(thread) : null;
+    return thread ? resolveThreadDisplayEngine(thread) : null;
   });
   if (resolvedKind === "thread") {
     return (
       <EngineIcon
-        engine={threadProvider}
+        engine={threadEngine}
         className={className}
         fallback={<MessageCircleIcon className={className} />}
       />

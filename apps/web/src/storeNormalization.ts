@@ -238,7 +238,7 @@ export function textSegmentArraysEqual(
   });
 }
 
-export function providerReferenceArraysEqual(
+export function engineReferenceArraysEqual(
   left:
     | ReadonlyArray<Pick<NonNullable<ChatMessage["mentions"]>[number], "name" | "path">>
     | undefined,
@@ -521,8 +521,8 @@ export function normalizeChatMessage(
     previous.completedAt === completedAt &&
     previous.attachments === attachments &&
     textSegmentArraysEqual(previous.textSegments, incoming.textSegments) &&
-    providerReferenceArraysEqual(previousSkills, skills) &&
-    providerReferenceArraysEqual(previousMentions, mentions)
+    engineReferenceArraysEqual(previousSkills, skills) &&
+    engineReferenceArraysEqual(previousMentions, mentions)
   ) {
     return previous;
   }
@@ -1458,7 +1458,7 @@ export function normalizeThreadSession(
       ? incoming.lastError
       : undefined;
   const nextSession = {
-    engine: toLegacyProvider(incoming.engine),
+    engine: toLegacyEngine(incoming.engine),
     status: toLegacySessionStatus(incoming.status),
     orchestrationStatus: incoming.status,
     activeTurnId: incoming.activeTurnId ?? undefined,
@@ -1960,7 +1960,7 @@ function toLegacySessionStatus(
   }
 }
 
-function toLegacyProvider(engine: string | null): EngineKind {
+function toLegacyEngine(engine: string | null): EngineKind {
   if (Schema.is(EngineKind)(engine)) {
     return engine;
   }

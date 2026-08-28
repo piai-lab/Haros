@@ -43,7 +43,7 @@ import {
 } from "./composerPickerStyles";
 import { useI18n } from "~/i18n";
 
-function humanizeProviderCommandName(command: string): string {
+function humanizeEngineCommandName(command: string): string {
   return command
     .split(/[-_]/g)
     .filter((part) => part.length > 0)
@@ -58,7 +58,7 @@ function commandMenuTitle(
   if (item.type === "slash-command") {
     return resolveBuiltInComposerSlashCommandPresentation(item.command, t).title;
   }
-  return humanizeProviderCommandName(item.command);
+  return humanizeEngineCommandName(item.command);
 }
 
 function commandMenuTrailingMeta(
@@ -283,7 +283,7 @@ export function groupCommandItems(
   }
 
   const builtInItems = items.filter((item) => item.type === "slash-command");
-  const providerItems = items.filter((item) => item.type === "engine-native-command");
+  const engineItems = items.filter((item) => item.type === "engine-native-command");
   const skillItems = items.filter((item) => item.type === "skill");
   const otherItems = items.filter(
     (item) =>
@@ -296,8 +296,8 @@ export function groupCommandItems(
   if (builtInItems.length > 0) {
     groups.push({ id: "built-in", label: labels.builtIn, items: builtInItems });
   }
-  if (providerItems.length > 0) {
-    groups.push({ id: "engine", label: labels.engine, items: providerItems });
+  if (engineItems.length > 0) {
+    groups.push({ id: "engine", label: labels.engine, items: engineItems });
   }
   if (skillItems.length > 0) {
     groups.push({ id: "skills", label: labels.skills, items: skillItems });

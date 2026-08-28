@@ -12,16 +12,16 @@ import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  isProviderDiscoverySessionActive,
+  isEngineDiscoverySessionActive,
   isInitialModelDiscoveryPending,
-  providerCatalogDiscoveryRetryDelay,
-  providerAgentsQueryOptions,
-  providerCommandsQueryOptions,
+  engineCatalogDiscoveryRetryDelay,
+  engineAgentsQueryOptions,
+  engineCommandsQueryOptions,
   engineDiscoveryQueryKeys,
   engineExecutionCapabilitiesMatchSelection,
-  providerModelsQueryOptions,
-  providerSkillsQueryOptions,
-  shouldRetryProviderCatalogDiscovery,
+  engineModelsQueryOptions,
+  engineSkillsQueryOptions,
+  shouldRetryEngineCatalogDiscovery,
 } from "./engineDiscoveryReactQuery";
 import * as nativeApi from "../nativeApi";
 
@@ -123,7 +123,7 @@ describe("isInitialModelDiscoveryPending", () => {
   });
 });
 
-describe("providerModelsQueryOptions", () => {
+describe("engineModelsQueryOptions", () => {
   it("shares passive HarnessOS discovery across Projects without sending a cwd", async () => {
     const catalog = {
       models: [{ slug: "deepseek/deepseek-chat", name: "DeepSeek Chat" }],
@@ -131,11 +131,11 @@ describe("providerModelsQueryOptions", () => {
       cached: false,
     };
     const listModels = mockListModels(vi.fn().mockResolvedValue(catalog));
-    const firstProject = providerModelsQueryOptions({
+    const firstProject = engineModelsQueryOptions({
       engine: "oa",
       cwd: "/tmp/project-a",
     });
-    const secondProject = providerModelsQueryOptions({
+    const secondProject = engineModelsQueryOptions({
       engine: "oa",
       cwd: "/tmp/project-b",
     });
@@ -157,12 +157,12 @@ describe("providerModelsQueryOptions", () => {
       cached: false,
     };
     const listModels = mockListModels(vi.fn().mockResolvedValue(catalog));
-    const firstProject = providerModelsQueryOptions({
+    const firstProject = engineModelsQueryOptions({
       engine: "opencode",
       binaryPath: "/bin/opencode",
       cwd: "/tmp/project-a",
     });
-    const secondProject = providerModelsQueryOptions({
+    const secondProject = engineModelsQueryOptions({
       engine: "opencode",
       binaryPath: "/bin/opencode",
       cwd: "/tmp/project-b",
@@ -198,11 +198,11 @@ describe("providerModelsQueryOptions", () => {
     const listModels = mockListModels(
       vi.fn().mockResolvedValue({ models: [], source: "pi.sdk", cached: false }),
     );
-    const firstProject = providerModelsQueryOptions({
+    const firstProject = engineModelsQueryOptions({
       engine: "oa",
       cwd: "/tmp/project-a",
     });
-    const secondProject = providerModelsQueryOptions({
+    const secondProject = engineModelsQueryOptions({
       engine: "oa",
       cwd: "/tmp/project-b",
     });
@@ -210,7 +210,7 @@ describe("providerModelsQueryOptions", () => {
 
     await queryClient.fetchQuery(firstProject);
     await queryClient.invalidateQueries({
-      queryKey: engineDiscoveryQueryKeys.modelsForProvider("oa"),
+      queryKey: engineDiscoveryQueryKeys.modelsForEngine("oa"),
     });
     await queryClient.fetchQuery(secondProject);
 
@@ -231,7 +231,7 @@ describe("providerModelsQueryOptions", () => {
     const listModels = mockListModels(
       vi.fn().mockRejectedValue(new Error("Cursor CLI is not installed or not on PATH")),
     );
-    const options = providerModelsQueryOptions({ engine: "cursor", enabled: true });
+    const options = engineModelsQueryOptions({ engine: "cursor", enabled: true });
 
     const queryClient = new QueryClient();
     await expect(queryClient.fetchQuery(options)).rejects.toThrow(
@@ -252,19 +252,19 @@ describe("providerModelsQueryOptions", () => {
       retryable: true,
       retryAfterMs: 250,
     };
-    expect(shouldRetryProviderCatalogDiscovery(0, transient)).toBe(true);
-    expect(shouldRetryProviderCatalogDiscovery(2, transient)).toBe(true);
-    expect(shouldRetryProviderCatalogDiscovery(3, transient)).toBe(false);
-    expect(shouldRetryProviderCatalogDiscovery(11, startupCapacity)).toBe(true);
-    expect(shouldRetryProviderCatalogDiscovery(12, startupCapacity)).toBe(false);
-    expect(shouldRetryProviderCatalogDiscovery(0, { code: "WS_REQUEST_TIMEOUT" })).toBe(true);
-    expect(shouldRetryProviderCatalogDiscovery(0, { code: "WS_REQUEST_ABORTED" })).toBe(false);
-    expect(shouldRetryProviderCatalogDiscovery(0, new Error("missing CLI"))).toBe(false);
-    expect(shouldRetryProviderCatalogDiscovery(0, { retryable: false })).toBe(false);
-    expect(providerCatalogDiscoveryRetryDelay(0, transient)).toBe(250);
-    expect(providerCatalogDiscoveryRetryDelay(1, transient)).toBe(500);
-    expect(providerCatalogDiscoveryRetryDelay(2, transient)).toBe(1_000);
-    expect(providerCatalogDiscoveryRetryDelay(0, startupCapacity)).toBe(250);
+    expect(shouldRetryEngineCatalogDiscovery(0, transient)).toBe(true);
+    expect(shouldRetryEngineCatalogDiscovery(2, transient)).toBe(true);
+    expect(shouldRetryEngineCatalogDiscovery(3, transient)).toBe(false);
+    expect(shouldRetryEngineCatalogDiscovery(11, startupCapacity)).toBe(true);
+    expect(shouldRetryEngineCatalogDiscovery(12, startupCapacity)).toBe(false);
+    expect(shouldRetryEngineCatalogDiscovery(0, { code: "WS_REQUEST_TIMEOUT" })).toBe(true);
+    expect(shouldRetryEngineCatalogDiscovery(0, { code: "WS_REQUEST_ABORTED" })).toBe(false);
+    expect(shouldRetryEngineCatalogDiscovery(0, new Error("missing CLI"))).toBe(false);
+    expect(shouldRetryEngineCatalogDiscovery(0, { retryable: false })).toBe(false);
+    expect(engineCatalogDiscoveryRetryDelay(0, transient)).toBe(250);
+    expect(engineCatalogDiscoveryRetryDelay(1, transient)).toBe(500);
+    expect(engineCatalogDiscoveryRetryDelay(2, transient)).toBe(1_000);
+    expect(engineCatalogDiscoveryRetryDelay(0, startupCapacity)).toBe(250);
   });
 
   it("settles after one typed cold-start failure without user refresh", async () => {
@@ -286,7 +286,7 @@ describe("providerModelsQueryOptions", () => {
     const queryClient = new QueryClient();
 
     await expect(
-      queryClient.fetchQuery(providerModelsQueryOptions({ engine: "codex", enabled: true })),
+      queryClient.fetchQuery(engineModelsQueryOptions({ engine: "codex", enabled: true })),
     ).resolves.toEqual(catalog);
     expect(listModels).toHaveBeenCalledTimes(2);
   });
@@ -312,14 +312,14 @@ describe("providerModelsQueryOptions", () => {
     const queryClient = new QueryClient();
 
     await expect(
-      queryClient.fetchQuery(providerModelsQueryOptions({ engine: "codex", enabled: true })),
+      queryClient.fetchQuery(engineModelsQueryOptions({ engine: "codex", enabled: true })),
     ).resolves.toEqual(catalog);
     expect(listModels).toHaveBeenCalledTimes(3);
   });
 
   it("fails fast for unclassified engine errors instead of adding a seven-second loop", async () => {
     const listModels = mockListModels(vi.fn().mockRejectedValue(new Error("model/list failed")));
-    const options = providerModelsQueryOptions({ engine: "codex", enabled: true });
+    const options = engineModelsQueryOptions({ engine: "codex", enabled: true });
     const queryClient = new QueryClient();
 
     await expect(queryClient.fetchQuery(options)).rejects.toThrow("model/list failed");
@@ -327,9 +327,9 @@ describe("providerModelsQueryOptions", () => {
   });
 
   it("unsubscribes disabled catalogs so an orphaned Engine request can be aborted", () => {
-    expect(providerModelsQueryOptions({ engine: "codex", enabled: true }).subscribed).toBe(true);
-    expect(providerModelsQueryOptions({ engine: "codex", enabled: false }).subscribed).toBe(false);
-    expect(providerAgentsQueryOptions({ engine: "codex", enabled: false }).subscribed).toBe(false);
+    expect(engineModelsQueryOptions({ engine: "codex", enabled: true }).subscribed).toBe(true);
+    expect(engineModelsQueryOptions({ engine: "codex", enabled: false }).subscribed).toBe(false);
+    expect(engineAgentsQueryOptions({ engine: "codex", enabled: false }).subscribed).toBe(false);
   });
 
   it("keeps a shared Engine request alive until its last consumer leaves", async () => {
@@ -351,7 +351,7 @@ describe("providerModelsQueryOptions", () => {
       ),
     );
     const queryClient = new QueryClient();
-    const options = providerModelsQueryOptions({ engine: "codex", enabled: true });
+    const options = engineModelsQueryOptions({ engine: "codex", enabled: true });
     const firstObserver = new QueryObserver(queryClient, options);
     const secondObserver = new QueryObserver(queryClient, options);
     const unsubscribeFirst = firstObserver.subscribe(() => undefined);
@@ -373,7 +373,7 @@ describe("providerModelsQueryOptions", () => {
 
   it("surfaces real errors instead of masking them as empty catalogs", async () => {
     mockListModels(vi.fn().mockRejectedValue(new Error("discovery exploded")));
-    const options = providerModelsQueryOptions({ engine: "cursor", enabled: true });
+    const options = engineModelsQueryOptions({ engine: "cursor", enabled: true });
 
     const queryClient = new QueryClient();
     await expect(queryClient.fetchQuery(options)).rejects.toThrow("discovery exploded");
@@ -389,7 +389,7 @@ describe("providerModelsQueryOptions", () => {
     const listModels = mockListModels(
       vi.fn().mockResolvedValueOnce(catalog).mockRejectedValue(new Error("cursor went away")),
     );
-    const options = providerModelsQueryOptions({ engine: "cursor", enabled: true });
+    const options = engineModelsQueryOptions({ engine: "cursor", enabled: true });
 
     const queryClient = new QueryClient();
     await expect(queryClient.fetchQuery(options)).resolves.toEqual(catalog);
@@ -406,7 +406,7 @@ describe("providerModelsQueryOptions", () => {
       cached: false,
     };
     mockListModels(vi.fn().mockResolvedValue(catalog));
-    const options = providerModelsQueryOptions({ engine: "codex", enabled: true });
+    const options = engineModelsQueryOptions({ engine: "codex", enabled: true });
 
     const queryClient = new QueryClient();
     await expect(queryClient.fetchQuery(options)).resolves.toEqual(catalog);
@@ -415,11 +415,11 @@ describe("providerModelsQueryOptions", () => {
 
 describe("Session-aware resource discovery keys", () => {
   it("keeps a recoverable error on the active key and changes key only after close", () => {
-    const errorActive = isProviderDiscoverySessionActive({
+    const errorActive = isEngineDiscoverySessionActive({
       engine: "oa",
       session: { engine: "oa", status: "error" },
     });
-    const closedActive = isProviderDiscoverySessionActive({
+    const closedActive = isEngineDiscoverySessionActive({
       engine: "oa",
       session: { engine: "oa", status: "closed" },
     });
@@ -427,14 +427,14 @@ describe("Session-aware resource discovery keys", () => {
     expect(errorActive).toBe(true);
     expect(closedActive).toBe(false);
     expect(
-      providerSkillsQueryOptions({
+      engineSkillsQueryOptions({
         engine: "oa",
         cwd: "/tmp/project",
         threadId: "thread-a",
         activeSession: errorActive,
       }).queryKey,
     ).not.toEqual(
-      providerSkillsQueryOptions({
+      engineSkillsQueryOptions({
         engine: "oa",
         cwd: "/tmp/project",
         threadId: "thread-a",
@@ -444,31 +444,31 @@ describe("Session-aware resource discovery keys", () => {
   });
 
   it("separates threads and the pre-session versus active-session resource loaders", () => {
-    const skillsBeforeSession = providerSkillsQueryOptions({
+    const skillsBeforeSession = engineSkillsQueryOptions({
       engine: "oa",
       cwd: "/tmp/project",
       threadId: "thread-a",
       activeSession: false,
     }).queryKey;
-    const skillsAfterSession = providerSkillsQueryOptions({
+    const skillsAfterSession = engineSkillsQueryOptions({
       engine: "oa",
       cwd: "/tmp/project",
       threadId: "thread-a",
       activeSession: true,
     }).queryKey;
-    const skillsForOtherThread = providerSkillsQueryOptions({
+    const skillsForOtherThread = engineSkillsQueryOptions({
       engine: "oa",
       cwd: "/tmp/project",
       threadId: "thread-b",
       activeSession: true,
     }).queryKey;
-    const commandsBeforeSession = providerCommandsQueryOptions({
+    const commandsBeforeSession = engineCommandsQueryOptions({
       engine: "oa",
       cwd: "/tmp/project",
       threadId: "thread-a",
       activeSession: false,
     }).queryKey;
-    const commandsAfterSession = providerCommandsQueryOptions({
+    const commandsAfterSession = engineCommandsQueryOptions({
       engine: "oa",
       cwd: "/tmp/project",
       threadId: "thread-a",
@@ -503,7 +503,7 @@ describe("Session-aware resource discovery keys", () => {
     });
     const observer = new QueryObserver(
       queryClient,
-      providerSkillsQueryOptions({
+      engineSkillsQueryOptions({
         engine: "oa",
         cwd: "/tmp/project",
         threadId: "thread-agent",
@@ -516,7 +516,7 @@ describe("Session-aware resource discovery keys", () => {
       expect(observer.getCurrentResult().data?.skills[0]?.name).toBe("project-only-skill");
     });
     observer.setOptions(
-      providerSkillsQueryOptions({
+      engineSkillsQueryOptions({
         engine: "oa",
         cwd: "/tmp/managed-chat",
         threadId: "thread-chat",
@@ -557,7 +557,7 @@ describe("Session-aware resource discovery keys", () => {
     });
     const observer = new QueryObserver(
       queryClient,
-      providerCommandsQueryOptions({
+      engineCommandsQueryOptions({
         engine: "oa",
         cwd: "/tmp/project",
         threadId: "thread-agent",
@@ -570,7 +570,7 @@ describe("Session-aware resource discovery keys", () => {
       expect(observer.getCurrentResult().data?.commands[0]?.name).toBe("project-review");
     });
     observer.setOptions(
-      providerCommandsQueryOptions({
+      engineCommandsQueryOptions({
         engine: "oa",
         cwd: "/tmp/project",
         threadId: "thread-agent",

@@ -12,11 +12,11 @@ import {
   buildEngineSelection,
   resolveModelGroupDefaultOpen,
   shouldUseCollapsibleModelGroups,
-  providerModelCostMultiplierLabel,
-  providerModelOptionProvenanceLabel,
+  engineModelCostMultiplierLabel,
+  engineModelOptionProvenanceLabel,
   type EngineModelOption,
   type EngineModelOptionGroup,
-} from "../../providerModelOptions";
+} from "../../engineModelOptions";
 import type { EngineKind } from "@harnessos/contracts";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
@@ -29,16 +29,16 @@ import {
   COMPOSER_PICKER_RADIUS_CLASS_NAME,
 } from "./composerPickerStyles";
 
-type FavoriteModelProvider = "cursor" | "kilo" | "opencode" | "pi";
+type FavoriteModelEngine = "cursor" | "kilo" | "opencode" | "pi";
 
 type EngineModelOptionGroupListProps = {
   groupedOptions: ReadonlyArray<EngineModelOptionGroup>;
   engine: EngineKind;
   activeModel: string;
   isSearching: boolean;
-  favoriteProvider: FavoriteModelProvider | null;
+  favoriteEngine: FavoriteModelEngine | null;
   favoriteModelSlugSet: ReadonlySet<string> | undefined;
-  onToggleFavorite: (engine: FavoriteModelProvider, slug: string) => void;
+  onToggleFavorite: (engine: FavoriteModelEngine, slug: string) => void;
   onAfterSelection?: () => void;
 };
 
@@ -46,10 +46,10 @@ function EngineModelRadioItem(
   props: Readonly<{
     engine: EngineKind;
     modelOption: EngineModelOption;
-    favoriteProvider: FavoriteModelProvider | null;
+    favoriteEngine: FavoriteModelEngine | null;
     isFavorite: boolean;
     showProvenance: boolean;
-    onToggleFavorite: (engine: FavoriteModelProvider, slug: string) => void;
+    onToggleFavorite: (engine: FavoriteModelEngine, slug: string) => void;
     onAfterSelection?: () => void;
   }>,
 ) {
@@ -57,17 +57,17 @@ function EngineModelRadioItem(
   const {
     engine,
     modelOption,
-    favoriteProvider,
+    favoriteEngine,
     isFavorite,
     showProvenance,
     onToggleFavorite,
     onAfterSelection,
   } = props;
-  const supportsFavorites = favoriteProvider !== null;
+  const supportsFavorites = favoriteEngine !== null;
   const costMultiplierLabel =
-    engine === "droid" ? providerModelCostMultiplierLabel(modelOption.description) : null;
+    engine === "droid" ? engineModelCostMultiplierLabel(modelOption.description) : null;
   const provenanceLabel = showProvenance
-    ? providerModelOptionProvenanceLabel({ engine, option: modelOption })
+    ? engineModelOptionProvenanceLabel({ engine, option: modelOption })
     : null;
   const accessibleModelName = provenanceLabel
     ? `${modelOption.name} — ${provenanceLabel}`
@@ -100,7 +100,7 @@ function EngineModelRadioItem(
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              onToggleFavorite(favoriteProvider, modelOption.slug);
+              onToggleFavorite(favoriteEngine, modelOption.slug);
             }}
             onPointerDown={(event) => {
               event.stopPropagation();
@@ -208,7 +208,7 @@ export function EngineModelOptionGroupList(props: EngineModelOptionGroupListProp
             key={`${props.engine}:${modelOption.slug}`}
             engine={props.engine}
             modelOption={modelOption}
-            favoriteProvider={props.favoriteProvider}
+            favoriteEngine={props.favoriteEngine}
             isFavorite={props.favoriteModelSlugSet?.has(modelOption.slug) ?? false}
             showProvenance={group.key === "__favorites__"}
             onToggleFavorite={props.onToggleFavorite}

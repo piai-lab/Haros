@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { normalizeOpenUsageSnapshot, normalizeOpenUsageUsageLines } from "./openUsageRateLimits";
-import { mergeProviderRateLimits } from "./rateLimits";
+import { mergeEngineRateLimits } from "./rateLimits";
 
 describe("openUsageRateLimits", () => {
   it("normalizes OpenUsage progress lines into shared engine rate limits", () => {
@@ -50,7 +50,7 @@ describe("openUsageRateLimits", () => {
 
   it("merges runtime and OpenUsage windows for the same engine", () => {
     expect(
-      mergeProviderRateLimits(
+      mergeEngineRateLimits(
         [
           {
             engine: "codex",
@@ -104,7 +104,7 @@ describe("openUsageRateLimits", () => {
 
   it("keeps the freshest window when two sources report the same engine limit", () => {
     expect(
-      mergeProviderRateLimits(
+      mergeEngineRateLimits(
         [
           {
             engine: "codex",
@@ -152,7 +152,7 @@ describe("openUsageRateLimits", () => {
 
   it("fills missing timing metadata from an older source when the freshest row only has usage", () => {
     expect(
-      mergeProviderRateLimits(
+      mergeEngineRateLimits(
         [
           {
             engine: "codex",

@@ -23,8 +23,8 @@ import { useComposerDraftStore } from "~/composerDraftStore";
 import { useRefreshEngineStatusesNow } from "~/hooks/useEngineStatusRefresh";
 import { useI18n } from "~/i18n";
 import { createAndSendKanbanTask, createKanbanDraftTask } from "~/lib/kanbanTaskCreate";
-import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
-import { buildEngineSelection } from "~/providerModelOptions";
+import { resolveEngineSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
+import { buildEngineSelection } from "~/engineModelOptions";
 import { getEngineStartOptions, resolveAssistantDeliveryMode } from "~/engineSettings";
 import { truncateKanbanTaskPreview } from "./KanbanNewTaskDialog.logic";
 
@@ -135,7 +135,7 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
     }
 
     // Send now: create + promote + dispatch straight to In Progress.
-    const sendAvailability = await resolveProviderSendAvailabilityWithRefresh({
+    const sendAvailability = await resolveEngineSendAvailabilityWithRefresh({
       engine: engineSelection.engine,
       statuses: engineStatuses,
       refreshStatuses: () => refreshEngineStatuses({ silent: true }),

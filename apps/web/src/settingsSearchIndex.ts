@@ -3,7 +3,7 @@
 // Layer: Route/UI support
 
 import type { MessageKey } from "./i18n";
-import { rankProviderDiscoveryItems } from "./lib/engineDiscovery";
+import { rankEngineDiscoveryItems } from "./lib/engineDiscovery";
 import {
   SETTINGS_NAV_ITEMS,
   SETTINGS_SECTION_BY_ID,
@@ -51,7 +51,7 @@ export function rankSettingsSearchEntries(
     target: record.target,
     title: localizeSettingsSearchEntryTitle(record, translate),
   }));
-  const ranked = rankProviderDiscoveryItems(entries, trimmed, (entry) => {
+  const ranked = rankEngineDiscoveryItems(entries, trimmed, (entry) => {
     const section = SETTINGS_SECTION_BY_ID.get(entry.section);
     return [
       { value: entry.title },

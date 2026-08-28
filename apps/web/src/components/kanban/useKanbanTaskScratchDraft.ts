@@ -8,10 +8,10 @@ import { getDefaultModel } from "@harnessos/shared/model";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
-  filterPromptProviderMentionReferences,
+  filterPromptEngineMentionReferences,
   filterPromptSkillReferences,
-  providerMentionReferencesEqual,
-  providerSkillReferencesEqual,
+  engineMentionReferencesEqual,
+  engineSkillReferencesEqual,
 } from "~/lib/composerMentions";
 import { effectiveComposerAttachmentCount } from "~/lib/composerSend";
 import { useComposerImageIntake } from "~/hooks/useComposerImageIntake";
@@ -21,7 +21,7 @@ import {
   useComposerDraftStore,
   useComposerThreadDraft,
 } from "../../composerDraftStore";
-import { buildEngineSelection } from "../../providerModelOptions";
+import { buildEngineSelection } from "../../engineModelOptions";
 import { toastManager } from "../ui/toast";
 
 export function useKanbanTaskScratchDraft(input: { readonly defaultEngine: EngineKind }) {
@@ -49,12 +49,12 @@ export function useKanbanTaskScratchDraft(input: { readonly defaultEngine: Engin
     useComposerDraftStore.getState().setPrompt(scratchThreadId, nextPrompt);
   };
 
-  const stickyActiveProvider = useComposerDraftStore((state) => state.stickyActiveProvider);
+  const stickyActiveEngine = useComposerDraftStore((state) => state.stickyActiveEngine);
   const stickyEngineSelectionByEngine = useComposerDraftStore(
     (state) => state.stickyEngineSelectionByEngine,
   );
   const selectedEngine: EngineKind =
-    scratchDraft.activeEngine ?? stickyActiveProvider ?? input.defaultEngine;
+    scratchDraft.activeEngine ?? stickyActiveEngine ?? input.defaultEngine;
   const draftEngineSelection =
     scratchDraft.engineSelectionByEngine[selectedEngine] ??
     stickyEngineSelectionByEngine[selectedEngine];
@@ -64,28 +64,28 @@ export function useKanbanTaskScratchDraft(input: { readonly defaultEngine: Engin
   const selectedModelSupportsAutoMode =
     draftEngineSelection?.engine === "claude" ? draftEngineSelection.supportsAutoMode : undefined;
 
-  const previousSelectedProviderRef = useRef<{
+  const previousSelectedEngineRef = useRef<{
     threadId: string;
     engine: EngineKind;
   } | null>(null);
 
   useEffect(() => {
     const nextSkills = filterPromptSkillReferences(prompt, composerSkills, selectedEngine);
-    if (!providerSkillReferencesEqual(composerSkills, nextSkills)) {
+    if (!engineSkillReferencesEqual(composerSkills, nextSkills)) {
       useComposerDraftStore.getState().setSkills(scratchThreadId, nextSkills);
     }
   }, [composerSkills, prompt, scratchThreadId, selectedEngine]);
 
   useEffect(() => {
-    const nextMentions = filterPromptProviderMentionReferences(prompt, composerMentions);
-    if (!providerMentionReferencesEqual(composerMentions, nextMentions)) {
+    const nextMentions = filterPromptEngineMentionReferences(prompt, composerMentions);
+    if (!engineMentionReferencesEqual(composerMentions, nextMentions)) {
       useComposerDraftStore.getState().setMentions(scratchThreadId, nextMentions);
     }
   }, [composerMentions, prompt, scratchThreadId]);
 
   useEffect(() => {
-    const previous = previousSelectedProviderRef.current;
-    previousSelectedProviderRef.current = {
+    const previous = previousSelectedEngineRef.current;
+    previousSelectedEngineRef.current = {
       threadId: scratchThreadId,
       engine: selectedEngine,
     };

@@ -18,7 +18,7 @@ import {
   type ThreadId,
 } from "@harnessos/contracts";
 import { automationRequiresTargetThread } from "@harnessos/shared/automationMode";
-import { isProviderRuntimeModeExecutable } from "@harnessos/shared/runtimeMode";
+import { isEngineRuntimeModeExecutable } from "@harnessos/shared/runtimeMode";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
@@ -99,14 +99,14 @@ import {
 import { SkillCubeIcon, WorktreeIcon } from "~/lib/icons";
 import { CentralIcon } from "~/lib/central-icons";
 import { resolveRuntimeModelDescriptor } from "~/components/chat/runtimeModelCapabilities";
-import { resolveProviderDiscoveryCwd } from "~/lib/engineDiscovery";
+import { resolveEngineDiscoveryCwd } from "~/lib/engineDiscovery";
 import { engineExecutionCapabilitiesQueryOptions } from "~/lib/engineDiscoveryReactQuery";
 import { cn } from "~/lib/utils";
 import type { AppLocale } from "~/locale";
 import { useI18n, type MessageKey } from "~/i18n";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { ensureNativeApi } from "~/nativeApi";
-import { buildEngineSelection, resolveModelPresentationIdentity } from "~/providerModelOptions";
+import { buildEngineSelection, resolveModelPresentationIdentity } from "~/engineModelOptions";
 import { useEngineModelCatalog } from "~/hooks/useEngineModelCatalog";
 import { useEngineStatusesForLocalConfig } from "~/hooks/useEngineStatusesForLocalConfig";
 import { useStore } from "~/store";
@@ -1007,11 +1007,11 @@ export function AutomationModelPicker({
   const engineStatuses = useEngineStatusesForLocalConfig();
   const [open, setOpen] = useState(false);
   const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
-  const [prefetchProviders, setPrefetchProviders] = useState<ReadonlyArray<EngineKind>>([]);
+  const [prefetchEngines, setPrefetchEngines] = useState<ReadonlyArray<EngineKind>>([]);
   const modelHintByEngine: Partial<Record<EngineKind, string | null>> = {
     [value.engine]: value.model,
   };
-  const providerModelDiscoveryCwd = resolveProviderDiscoveryCwd({
+  const engineModelDiscoveryCwd = resolveEngineDiscoveryCwd({
     activeThreadWorktreePath: null,
     activeProjectCwd: projectCwd,
     serverCwd: serverConfigQuery.data?.cwd ?? null,
@@ -1019,19 +1019,19 @@ export function AutomationModelPicker({
   const {
     modelOptionsByEngine,
     catalogStateByEngine,
-    loadingModelProviders,
+    loadingEngineModels,
     runtimeModelsByEngine,
     selectedRuntimeModel,
   } = useEngineModelCatalog({
     selectedEngine: value.engine,
     discoveryEnabled: open,
     piDiscoveryRequested,
-    cwd: providerModelDiscoveryCwd,
+    cwd: engineModelDiscoveryCwd,
     modelHintByEngine,
     // The selected Engine is always discovered. Other Engine catalogs start
     // only after their submenu is explicitly opened, avoiding a ten-engine
     // cold-start burst against the Server's bounded expensive-read admission.
-    prefetchProviders,
+    prefetchEngines,
   });
   const persistedRuntimeModel =
     value.engine === "claude" && typeof value.supportsAutoMode === "boolean"
@@ -1053,11 +1053,11 @@ export function AutomationModelPicker({
       compact
       engine={value.engine}
       model={value.model}
-      lockedProvider={null}
+      lockedEngine={null}
       engines={engineStatuses}
       modelOptionsByEngine={modelOptionsByEngine}
       catalogStateByEngine={catalogStateByEngine}
-      loadingModelProviders={loadingModelProviders}
+      loadingEngineModels={loadingEngineModels}
       hiddenEngines={settings.hiddenEngines}
       engineOrder={settings.engineOrder}
       open={open}
@@ -1065,11 +1065,11 @@ export function AutomationModelPicker({
         setOpen(nextOpen);
         if (!nextOpen) {
           setPiDiscoveryRequested(false);
-          setPrefetchProviders([]);
+          setPrefetchEngines([]);
         }
       }}
       onEngineBrowse={(engine) => {
-        setPrefetchProviders((current) =>
+        setPrefetchEngines((current) =>
           current.includes(engine) ? current : [...current, engine],
         );
         if (engine === "pi") setPiDiscoveryRequested(true);
@@ -1169,7 +1169,7 @@ export function AutomationDialog({
   const submittable =
     isFormSubmittable(form) &&
     !hasBlockingWarning &&
-    isProviderRuntimeModeExecutable(selectedModeCapability);
+    isEngineRuntimeModeExecutable(selectedModeCapability);
   const intervalValue = intervalOptionValue({
     amount: form.intervalAmount,
     unit: form.intervalUnit,
@@ -1694,7 +1694,7 @@ export function AutomationDialog({
                   <MenuRadioItem
                     value="approval-required"
                     disabled={
-                      !isProviderRuntimeModeExecutable(
+                      !isEngineRuntimeModeExecutable(
                         executionCapabilities?.runtimeModes["approval-required"],
                       )
                     }
@@ -1710,7 +1710,7 @@ export function AutomationDialog({
                   <MenuRadioItem
                     value="auto"
                     disabled={
-                      !isProviderRuntimeModeExecutable(executionCapabilities?.runtimeModes.auto)
+                      !isEngineRuntimeModeExecutable(executionCapabilities?.runtimeModes.auto)
                     }
                   >
                     <CentralIcon
@@ -1728,7 +1728,7 @@ export function AutomationDialog({
                   <MenuRadioItem
                     value="full-access"
                     disabled={
-                      !isProviderRuntimeModeExecutable(
+                      !isEngineRuntimeModeExecutable(
                         executionCapabilities?.runtimeModes["full-access"],
                       )
                     }

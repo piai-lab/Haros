@@ -25,7 +25,7 @@ import { runtimeModeAvailabilityMessageKeyFromError } from "~/components/chat/Ru
 import { useEngineStatusesForLocalConfig } from "~/hooks/useEngineStatusesForLocalConfig";
 import { useRefreshEngineStatusesNow } from "~/hooks/useEngineStatusRefresh";
 import { useI18n } from "~/i18n";
-import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
+import { resolveEngineSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
 import { dispatchKanbanDraftCard } from "../../lib/kanbanDispatch";
 import { KanbanCardView, type KanbanCardPrLookup } from "./KanbanCardView";
 import { KanbanColumn, parseKanbanColumnDropId } from "./KanbanColumn";
@@ -104,7 +104,7 @@ export function KanbanProjectBoardView({
       return;
     }
     const targetEngine = card.engine ?? settingsSnapshot.defaultEngine;
-    const sendAvailability = await resolveProviderSendAvailabilityWithRefresh({
+    const sendAvailability = await resolveEngineSendAvailabilityWithRefresh({
       engine: targetEngine,
       statuses: engineStatuses,
       refreshStatuses: () => refreshEngineStatuses({ silent: true }),

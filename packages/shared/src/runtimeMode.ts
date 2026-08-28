@@ -17,7 +17,7 @@ export function runtimeModeEscalatesPrivilege(
   return RUNTIME_MODE_PRIVILEGE[targetRuntimeMode] > RUNTIME_MODE_PRIVILEGE[callerRuntimeMode];
 }
 
-export function isProviderRuntimeModeExecutable(
+export function isEngineRuntimeModeExecutable(
   capability: EngineRuntimeModeCapability | undefined,
 ): capability is EngineRuntimeModeCapability & { readonly structurallySupported: true } {
   return (
@@ -26,7 +26,7 @@ export function isProviderRuntimeModeExecutable(
   );
 }
 
-export function isProviderRuntimeModePermanentlyUnsupported(
+export function isEngineRuntimeModePermanentlyUnsupported(
   capability: EngineRuntimeModeCapability | undefined,
 ): boolean {
   return isPermanentRuntimeModeCapabilityReason(capability?.reason);

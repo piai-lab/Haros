@@ -164,7 +164,7 @@ export function resetComposerDraftStore() {
     draftThreadsByThreadId: {},
     projectDraftThreadIdByProjectId: {},
     stickyEngineSelectionByEngine: {},
-    stickyActiveProvider: null,
+    stickyActiveEngine: null,
   });
 }
 
@@ -180,6 +180,6 @@ export function engineSelection(
   } as EngineSelection;
 }
 
-export function providerModelOptions(options: EngineModelOptions): EngineModelOptions {
+export function engineModelOptions(options: EngineModelOptions): EngineModelOptions {
   return options;
 }

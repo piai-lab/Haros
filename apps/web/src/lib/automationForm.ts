@@ -43,7 +43,7 @@ import {
   type AutomationDraftWarning,
   type AutomationDraftWarningId,
 } from "./automationDraft";
-import { resolveModelPresentationIdentity } from "../providerModelOptions";
+import { resolveModelPresentationIdentity } from "../engineModelOptions";
 
 export const defaultEngineSelection: EngineSelection = {
   engine: "codex",

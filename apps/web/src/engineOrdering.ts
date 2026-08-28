@@ -12,7 +12,7 @@ export const DEFAULT_PROVIDER_ORDER: readonly EngineKind[] = ENGINE_DESCRIPTORS.
 
 const ENGINE_KIND_SET: ReadonlySet<EngineKind> = new Set(DEFAULT_PROVIDER_ORDER);
 
-export function isProviderKind(value: string): value is EngineKind {
+export function isEngineKind(value: string): value is EngineKind {
   return ENGINE_KIND_SET.has(value as EngineKind);
 }
 
@@ -20,7 +20,7 @@ export function normalizeHiddenEngines(hiddenEngines: ReadonlyArray<string>): En
   const seen = new Set<EngineKind>();
   const result: EngineKind[] = [];
   for (const candidate of hiddenEngines) {
-    if (isProviderKind(candidate) && !seen.has(candidate)) {
+    if (isEngineKind(candidate) && !seen.has(candidate)) {
       seen.add(candidate);
       result.push(candidate);
     }
@@ -32,7 +32,7 @@ export function normalizeEngineOrder(engineOrder: ReadonlyArray<string>): Engine
   const seen = new Set<EngineKind>();
   const result: EngineKind[] = [];
   for (const candidate of engineOrder) {
-    if (isProviderKind(candidate) && !seen.has(candidate)) {
+    if (isEngineKind(candidate) && !seen.has(candidate)) {
       seen.add(candidate);
       result.push(candidate);
     }
@@ -52,7 +52,7 @@ export function sameEngineOrder(
   return left.length === right.length && left.every((engine, index) => engine === right[index]);
 }
 
-export function compareProvidersByOrder(
+export function compareEnginesByOrder(
   engineOrder: ReadonlyArray<EngineKind>,
   left: EngineKind,
   right: EngineKind,
@@ -66,15 +66,15 @@ export function compareProvidersByOrder(
   return normalizedLeftIndex - normalizedRightIndex;
 }
 
-export function filterProviderOptionsByVisibility<T extends { value: EngineKind }>(
+export function filterEngineOptionsByVisibility<T extends { value: EngineKind }>(
   options: ReadonlyArray<T>,
   hiddenEngines: ReadonlySet<EngineKind>,
-  protectedProviders: ReadonlySet<EngineKind>,
+  protectedEngines: ReadonlySet<EngineKind>,
 ): ReadonlyArray<T> {
   if (hiddenEngines.size === 0) {
     return options;
   }
   return options.filter(
-    (option) => protectedProviders.has(option.value) || !hiddenEngines.has(option.value),
+    (option) => protectedEngines.has(option.value) || !hiddenEngines.has(option.value),
   );
 }

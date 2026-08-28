@@ -37,9 +37,9 @@ function EngineAvatarWithTerminal({
 }) {
   const { t } = useI18n();
   const engine = thread.session?.engine ?? thread.engineSelection.engine;
-  const handoffSourceProvider = thread.handoff?.sourceEngine ?? null;
-  const handoffTooltip = handoffSourceProvider
-    ? t("thread.handoffFrom", { engine: ENGINE_DISPLAY_NAMES[handoffSourceProvider] })
+  const handoffSourceEngine = thread.handoff?.sourceEngine ?? null;
+  const handoffTooltip = handoffSourceEngine
+    ? t("thread.handoffFrom", { engine: ENGINE_DISPLAY_NAMES[handoffSourceEngine] })
     : null;
   const showBadge = terminalCount > 1 || terminalStatus !== null;
   const badgeTooltip =
@@ -48,7 +48,7 @@ function EngineAvatarWithTerminal({
       : (terminalStatus?.label ?? t("terminal.open"));
   const badgeColorClass = terminalStatus?.colorClass ?? "text-muted-foreground/55";
 
-  const hasHandoff = Boolean(handoffSourceProvider);
+  const hasHandoff = Boolean(handoffSourceEngine);
   const containerClass = hasHandoff
     ? "relative inline-flex h-3 w-4.5 shrink-0 items-center"
     : "relative inline-flex size-3 shrink-0 items-center justify-center";
@@ -56,7 +56,7 @@ function EngineAvatarWithTerminal({
   const avatarNode = hasHandoff ? (
     <span className={containerClass}>
       <span className="sidebar-icon-chip absolute left-0 top-1/2 inline-flex size-3 -translate-y-1/2 items-center justify-center rounded-full">
-        <EngineIcon engine={handoffSourceProvider!} className="size-2" />
+        <EngineIcon engine={handoffSourceEngine!} className="size-2" />
       </span>
       <span className="sidebar-icon-chip absolute right-0 top-1/2 z-10 inline-flex size-3 -translate-y-1/2 items-center justify-center rounded-full">
         <EngineIcon engine={engine} className="size-2" />
@@ -206,7 +206,7 @@ export function SidebarThreadRowContent({
           },
         })
       : null;
-  const showThreadProviderAvatar = !isGenericChatThreadTitle(thread.title);
+  const showThreadEngineAvatar = !isGenericChatThreadTitle(thread.title);
   const displayTitle = resolveThreadDisplayTitle({
     title: thread.title,
     isTerminal: terminalEntryPoint,
@@ -230,7 +230,7 @@ export function SidebarThreadRowContent({
         </span>
       ) : terminalEntryPoint ? (
         <SidebarGlyph icon={TerminalIcon} variant="chrome" />
-      ) : showThreadProviderAvatar ? (
+      ) : showThreadEngineAvatar ? (
         <EngineAvatarWithTerminal
           thread={thread}
           terminalStatus={terminalStatus}

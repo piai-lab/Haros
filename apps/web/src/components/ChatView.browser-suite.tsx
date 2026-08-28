@@ -64,7 +64,7 @@ import { isMacPlatform } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
 import { resetHomeChatProjectPrewarmStateForTests } from "../lib/chatProjects";
 import { resetStudioProjectPrewarmStateForTests } from "../lib/studioProjects";
-import { providerModelsQueryOptions } from "../lib/engineDiscoveryReactQuery";
+import { engineModelsQueryOptions } from "../lib/engineDiscoveryReactQuery";
 import { getRouter } from "../router";
 import { useSplitViewStore } from "../splitViewStore";
 import { useStore } from "../store";
@@ -2406,7 +2406,7 @@ async function mountChatView(options: {
     // without authorizing any mount-time discovery. Mark it stale so a real
     // engine intent still refreshes through the production query owner.
     router.options.context.queryClient.setQueryData(
-      providerModelsQueryOptions({ engine }).queryKey,
+      engineModelsQueryOptions({ engine }).queryKey,
       knownCatalog,
       { updatedAt: 0 },
     );
@@ -2524,7 +2524,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       draftThreadsByThreadId: {},
       projectDraftThreadIdByProjectId: {},
       stickyEngineSelectionByEngine: {},
-      stickyActiveProvider: null,
+      stickyActiveEngine: null,
     });
     useStore.setState({
       shellSnapshotSequence: 0,
@@ -5699,7 +5699,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       engine: "claude",
       model: "claude-sonnet-4-5",
     });
-    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "claude");
+    useComposerDraftStore.getState().setActiveEngineAndSticky(THREAD_ID, "claude");
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({
@@ -5772,7 +5772,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       engine: "claude",
       model: "claude-sonnet-4-5",
     });
-    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "claude");
+    useComposerDraftStore.getState().setActiveEngineAndSticky(THREAD_ID, "claude");
     useComposerDraftStore.getState().setInteractionMode(THREAD_ID, "plan");
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
@@ -7099,7 +7099,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       engine: "claude",
       model: "claude-sonnet-4-5",
     });
-    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "codex");
+    useComposerDraftStore.getState().setActiveEngineAndSticky(THREAD_ID, "codex");
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({
@@ -7490,7 +7490,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         draftThreadsByThreadId: hydratedState.draftThreadsByThreadId,
         projectDraftThreadIdByProjectId: hydratedState.projectDraftThreadIdByProjectId,
         stickyEngineSelectionByEngine: hydratedState.stickyEngineSelectionByEngine,
-        stickyActiveProvider: hydratedState.stickyActiveProvider,
+        stickyActiveEngine: hydratedState.stickyActiveEngine,
       });
       expect(
         useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.pendingDirectTurnRecovery,
@@ -8697,7 +8697,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       name: "claude-override-stored.png",
     });
     seedLocalDraftThread({ threadId: targetDraftThreadId, projectId: PROJECT_ID });
-    useComposerDraftStore.getState().setActiveProviderAndSticky(targetDraftThreadId, "cursor");
+    useComposerDraftStore.getState().setActiveEngineAndSticky(targetDraftThreadId, "cursor");
     useComposerDraftStore.getState().setPrompt(targetDraftThreadId, "stored draft prompt");
     useComposerDraftStore.getState().addImage(targetDraftThreadId, preservedImage);
 
@@ -10039,7 +10039,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
   it("requires an explicit model choice instead of sending with a configured catalog fallback", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
-    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "oa");
+    useComposerDraftStore.getState().setActiveEngineAndSticky(THREAD_ID, "oa");
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
     const configuredService = {
@@ -10289,7 +10289,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       engine: "oa",
       model: "deleted-service/deleted-model",
     });
-    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "oa");
+    useComposerDraftStore.getState().setActiveEngineAndSticky(THREAD_ID, "oa");
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
     const listModelServices = vi.fn(async () => ({
@@ -10374,7 +10374,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       engine: "pi",
       model: "pi/engine-model",
     });
-    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "pi");
+    useComposerDraftStore.getState().setActiveEngineAndSticky(THREAD_ID, "pi");
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
     const listModelServices = vi.fn(async () => ({
@@ -10940,7 +10940,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           },
         },
       },
-      stickyActiveProvider: "claude",
+      stickyActiveEngine: "claude",
     });
 
     const mounted = await mountChatView({
@@ -10994,7 +10994,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           },
         },
       },
-      stickyActiveProvider: "codex",
+      stickyActiveEngine: "codex",
     });
 
     const mounted = await mountChatView({
@@ -11217,7 +11217,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         projectId: PROJECT_ID,
         entryPoint: "terminal",
       });
-      useComposerDraftStore.getState().setActiveProviderAndSticky(draftThreadId, "pi");
+      useComposerDraftStore.getState().setActiveEngineAndSticky(draftThreadId, "pi");
 
       const mounted = await mountChatView({
         viewport: DEFAULT_VIEWPORT,
@@ -11329,7 +11329,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         [`${PROJECT_ID}::terminal`]: draftThreadId,
       },
       stickyEngineSelectionByEngine: {},
-      stickyActiveProvider: null,
+      stickyActiveEngine: null,
     });
 
     const mounted = await mountChatView({

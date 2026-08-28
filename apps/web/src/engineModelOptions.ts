@@ -90,7 +90,7 @@ export function resolveModelPresentationIdentity(input: {
     model: input.selection.model,
     displayName:
       option?.name.trim() ||
-      formatProviderModelOptionName({
+      formatEngineModelOptionName({
         engine: input.selection.engine,
         slug: input.selection.model,
       }),
@@ -110,7 +110,7 @@ export interface EngineModelOptionGroup {
  * Returns the engine provenance shown when a model is detached from its
  * normal upstream-engine group (for example, inside Favourites).
  */
-export function providerModelOptionProvenanceLabel(input: {
+export function engineModelOptionProvenanceLabel(input: {
   engine: EngineKind;
   option: EngineModelOption;
 }): string {
@@ -132,7 +132,7 @@ export function providerModelOptionProvenanceLabel(input: {
   return ENGINE_DISPLAY_NAMES[input.engine];
 }
 
-export function formatProviderModelOptionName(input: { engine: EngineKind; slug: string }): string {
+export function formatEngineModelOptionName(input: { engine: EngineKind; slug: string }): string {
   const trimmedSlug =
     input.engine === "cursor" ? input.slug.trim().replace(/\[[^\]]*\]$/u, "") : input.slug.trim();
   if (trimmedSlug.length === 0) {
@@ -217,7 +217,7 @@ export function mergeDynamicModelOptions(input: {
 
     const normalizedSlug = normalizeDynamicModelSlug(input.engine, dynamicModel.slug);
     const rawSlug = dynamicModel.slug.trim().toLowerCase();
-    const displayNameFallback = formatProviderModelOptionName({
+    const displayNameFallback = formatEngineModelOptionName({
       engine: input.engine,
       slug: normalizedSlug,
     });
@@ -284,12 +284,12 @@ export function mergeDynamicModelOptions(input: {
 }
 
 /** Returns a compact label for engine descriptions that begin with an `Nx` cost multiplier. */
-export function providerModelCostMultiplierLabel(description?: string): string | null {
+export function engineModelCostMultiplierLabel(description?: string): string | null {
   const multiplier = description?.trim().match(/^(\d+(?:\.\d+)?)x(?:\s|$)/i)?.[1];
   return multiplier ? `${multiplier}×` : null;
 }
 
-export function groupProviderModelOptions(
+export function groupEngineModelOptions(
   options: ReadonlyArray<EngineModelOption>,
 ): EngineModelOptionGroup[] {
   const groupedOptions: EngineModelOptionGroup[] = [];
@@ -335,20 +335,20 @@ export function groupProviderModelOptions(
   );
 }
 
-export function groupProviderModelOptionsWithFavorites(input: {
+export function groupEngineModelOptionsWithFavorites(input: {
   options: ReadonlyArray<EngineModelOption>;
   favoriteSlugs: ReadonlySet<string>;
   favoriteLabel?: string;
 }): EngineModelOptionGroup[] {
   if (input.favoriteSlugs.size === 0) {
-    return groupProviderModelOptions(input.options);
+    return groupEngineModelOptions(input.options);
   }
 
   const favoriteOptions = input.options.filter((option) => input.favoriteSlugs.has(option.slug));
   if (favoriteOptions.length === 0) {
-    return groupProviderModelOptions(input.options);
+    return groupEngineModelOptions(input.options);
   }
-  const groupedOptions = groupProviderModelOptions(
+  const groupedOptions = groupEngineModelOptions(
     input.options.filter((option) => !input.favoriteSlugs.has(option.slug)),
   );
 
@@ -384,7 +384,7 @@ export function resolveModelGroupDefaultOpen(input: {
   return input.options.some((option) => option.slug === input.activeModel);
 }
 
-export function buildNextProviderOptions(
+export function buildNextEngineOptions(
   engine: EngineKind,
   modelOptions: EngineOptions | null | undefined,
   patch: Record<string, unknown>,
@@ -437,7 +437,7 @@ export function buildNextProviderOptions(
   } as PiModelOptions;
 }
 
-export function buildProviderOptionPatch(
+export function buildEngineOptionPatch(
   engine: EngineKind,
   optionId: string,
   value: string | boolean,

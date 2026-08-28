@@ -7,8 +7,8 @@ import {
 } from "@harnessos/contracts";
 
 import type { EngineModelCatalogState } from "~/hooks/useEngineModelCatalog";
-import { findEngineStatus, isProviderUsable } from "~/lib/engineAvailability";
-import type { EngineModelOption } from "~/providerModelOptions";
+import { findEngineStatus, isEngineUsable } from "~/lib/engineAvailability";
+import type { EngineModelOption } from "~/engineModelOptions";
 export type { PassiveModelServicesState } from "../onboarding/firstRunReadiness.logic";
 
 export function isSettledPassiveModelServicesQueryState(input: {
@@ -35,7 +35,7 @@ export function hasUsableExactModelBinding(input: {
       return false;
     }
     return (
-      selection?.engine === engine && selection.model.trim().length > 0 && isProviderUsable(status)
+      selection?.engine === engine && selection.model.trim().length > 0 && isEngineUsable(status)
     );
   });
 }
@@ -76,7 +76,7 @@ export function hasUsableOAModelServiceBinding(input: {
   );
 }
 
-export function areUsableProviderCatalogsSettled(input: {
+export function areUsableEngineCatalogsSettled(input: {
   readonly engineStatuses: readonly ServerEngineStatus[];
   readonly catalogStateByEngine: Partial<Record<EngineKind, EngineModelCatalogState>>;
   readonly explicitExactEngineSelections: Partial<Record<EngineKind, EngineSelection>>;
@@ -84,7 +84,7 @@ export function areUsableProviderCatalogsSettled(input: {
   return ENGINE_KINDS.every(
     (engine) =>
       input.explicitExactEngineSelections[engine] === undefined ||
-      !isProviderUsable(findEngineStatus(input.engineStatuses, engine)) ||
+      !isEngineUsable(findEngineStatus(input.engineStatuses, engine)) ||
       input.catalogStateByEngine[engine] !== "checking",
   );
 }

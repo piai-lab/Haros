@@ -29,7 +29,7 @@ export {
   deriveTimelineEntries,
   deriveWorkLogEntries,
   isFileChangeWorkLogEntry,
-  isProviderFileEditWorkLogEntry,
+  isEngineFileEditWorkLogEntry,
   isRoutedSubagentWorkEntry,
   omitRoutedSubagentWorkEntries,
   orderedActivities,

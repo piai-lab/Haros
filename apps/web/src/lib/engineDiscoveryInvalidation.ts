@@ -17,7 +17,7 @@ type EngineModelDiscoveryFingerprintEntry = readonly [
 
 export type EngineModelDiscoveryInvalidationFingerprints = Partial<Record<EngineKind, string>>;
 
-export function providerModelDiscoveryInvalidationFingerprints(
+export function engineModelDiscoveryInvalidationFingerprints(
   engines: ReadonlyArray<ServerEngineStatus>,
 ): EngineModelDiscoveryInvalidationFingerprints {
   const result: EngineModelDiscoveryInvalidationFingerprints = {};
@@ -36,7 +36,7 @@ export function providerModelDiscoveryInvalidationFingerprints(
   return result;
 }
 
-export function changedProviderModelDiscoveryProviders(
+export function changedEngineModelDiscoveryEngines(
   previous: EngineModelDiscoveryInvalidationFingerprints,
   next: EngineModelDiscoveryInvalidationFingerprints,
 ): EngineKind[] {

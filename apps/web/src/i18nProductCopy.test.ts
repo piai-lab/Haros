@@ -280,7 +280,7 @@ const RAW_FACT_ALLOWLIST = [
   "useComposerCommandMenuItems.ts:property:`@${LOCAL_FOLDER_MENTION_NAME}`",
   "useComposerCommandMenuItems.ts:property:`/${command}`",
   "useComposerCommandMenuItems.ts:property:`/${command.name}`",
-  "useComposerCommandMenuItems.ts:property:`${providerLabel} · ${slug}`",
+  "useComposerCommandMenuItems.ts:property:`${engineLabel} · ${slug}`",
   // Persisted internal placeholder; ChatView maps it through the catalog at presentation time.
   "TerminalSearch.tsx:text:Aa",
 ] as const satisfies readonly string[];

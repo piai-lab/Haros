@@ -16,7 +16,7 @@ import { useI18n } from "~/i18n";
 import { ChevronDownIcon, FastModeIcon, RefreshCwIcon, SettingsIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import type { EngineModelCatalogState } from "../../hooks/useEngineModelCatalog";
-import type { EngineModelOption } from "../../providerModelOptions";
+import type { EngineModelOption } from "../../engineModelOptions";
 import { Button } from "../ui/button";
 import { Menu, MenuItem, MenuSeparator, MenuSub, MenuSubTrigger, MenuTrigger } from "../ui/menu";
 import { ShortcutKbd } from "../ui/shortcut-kbd";
@@ -28,8 +28,8 @@ import {
 } from "./composerPickerStyles";
 import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
 import { resolveComposerModelFallbackMessageKey } from "./modelCatalogPresentation";
-import { renderProviderTraitsMenuContent } from "./composerEngineRegistry";
-import { EngineModelMenuItems, resolveProviderModelLabel } from "./EngineModelPicker";
+import { renderEngineTraitsMenuContent } from "./composerEngineRegistry";
+import { EngineModelMenuItems, resolveEngineModelLabel } from "./EngineModelPicker";
 import { resolveTraitsTriggerSummary } from "./TraitsPicker";
 
 type ComposerModelEffortPickerProps = {
@@ -37,7 +37,7 @@ type ComposerModelEffortPickerProps = {
   model: ModelSlug | null;
   catalogState: EngineModelCatalogState;
   modelOptionsByEngine: Record<EngineKind, ReadonlyArray<EngineModelOption>>;
-  loadingModelProviders?: Partial<Record<EngineKind, boolean>>;
+  loadingEngineModels?: Partial<Record<EngineKind, boolean>>;
   compact?: boolean;
   hideModelLabel?: boolean;
   hideStatusLabel?: boolean;
@@ -68,9 +68,9 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
   };
 
   const modelLabel = props.model
-    ? resolveProviderModelLabel({
+    ? resolveEngineModelLabel({
         engine: props.engine,
-        lockedProvider: props.engine,
+        lockedEngine: props.engine,
         model: props.model,
         modelOptionsByEngine: props.modelOptionsByEngine,
       })
@@ -102,7 +102,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
     props.onSelectionCommitted?.();
   };
   const traitsContent = props.model
-    ? renderProviderTraitsMenuContent({
+    ? renderEngineTraitsMenuContent({
         engine: props.engine,
         threadId: props.threadId,
         model: props.model,
@@ -276,10 +276,10 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                     <EngineModelMenuItems
                       engine={props.engine}
                       model={props.model}
-                      lockedProvider={props.engine}
+                      lockedEngine={props.engine}
                       modelOptionsByEngine={props.modelOptionsByEngine}
-                      {...(props.loadingModelProviders
-                        ? { loadingModelProviders: props.loadingModelProviders }
+                      {...(props.loadingEngineModels
+                        ? { loadingEngineModels: props.loadingEngineModels }
                         : {})}
                       onEngineModelChange={props.onEngineModelChange}
                       onAfterSelection={closeAndRefocus}
@@ -291,10 +291,10 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
               <EngineModelMenuItems
                 engine={props.engine}
                 model={props.model}
-                lockedProvider={props.engine}
+                lockedEngine={props.engine}
                 modelOptionsByEngine={props.modelOptionsByEngine}
-                {...(props.loadingModelProviders
-                  ? { loadingModelProviders: props.loadingModelProviders }
+                {...(props.loadingEngineModels
+                  ? { loadingEngineModels: props.loadingEngineModels }
                   : {})}
                 onEngineModelChange={props.onEngineModelChange}
                 onAfterSelection={closeAndRefocus}
@@ -305,10 +305,10 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
           <EngineModelMenuItems
             engine={props.engine}
             model={null}
-            lockedProvider={props.engine}
+            lockedEngine={props.engine}
             modelOptionsByEngine={props.modelOptionsByEngine}
-            {...(props.loadingModelProviders
-              ? { loadingModelProviders: props.loadingModelProviders }
+            {...(props.loadingEngineModels
+              ? { loadingEngineModels: props.loadingEngineModels }
               : {})}
             onEngineModelChange={props.onEngineModelChange}
             onAfterSelection={closeAndRefocus}

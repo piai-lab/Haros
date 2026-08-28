@@ -1,29 +1,29 @@
-// FILE: providerModelOptions.test.ts
+// FILE: engineModelOptions.test.ts
 // Purpose: Verifies engine-aware model-name formatting for picker and composer labels.
 // Layer: Web unit tests
-// Depends on: providerModelOptions shared formatting helpers.
+// Depends on: engineModelOptions shared formatting helpers.
 
 import { describe, expect, it } from "vitest";
 
 import {
   buildEngineSelection,
-  buildNextProviderOptions,
-  buildProviderOptionPatch,
-  formatProviderModelOptionName,
-  groupProviderModelOptions,
-  groupProviderModelOptionsWithFavorites,
+  buildNextEngineOptions,
+  buildEngineOptionPatch,
+  formatEngineModelOptionName,
+  groupEngineModelOptions,
+  groupEngineModelOptionsWithFavorites,
   mergeDynamicModelOptions,
-  providerModelCostMultiplierLabel,
-  providerModelOptionProvenanceLabel,
+  engineModelCostMultiplierLabel,
+  engineModelOptionProvenanceLabel,
   resolveModelPresentationIdentity,
   resolveModelGroupDefaultOpen,
   shouldUseCollapsibleModelGroups,
   type EngineModelOption,
-} from "./providerModelOptions";
+} from "./engineModelOptions";
 
 describe("Antigravity model options", () => {
   it("keeps the base model and effort as separate selection fields", () => {
-    const options = buildNextProviderOptions("antigravity", undefined, {
+    const options = buildNextEngineOptions("antigravity", undefined, {
       reasoningEffort: "high",
     });
 
@@ -46,10 +46,10 @@ describe("Claude model selections", () => {
   });
 });
 
-describe("formatProviderModelOptionName", () => {
+describe("formatEngineModelOptionName", () => {
   it("humanizes unknown OpenCode runtime model slugs using the model identifier", () => {
     expect(
-      formatProviderModelOptionName({
+      formatEngineModelOptionName({
         engine: "opencode",
         slug: "opencode-go/kimi-k2.6",
       }),
@@ -58,7 +58,7 @@ describe("formatProviderModelOptionName", () => {
 
   it("keeps known OpenCode-backed models on their shared display names", () => {
     expect(
-      formatProviderModelOptionName({
+      formatEngineModelOptionName({
         engine: "opencode",
         slug: "openai/gpt-5",
       }),
@@ -67,7 +67,7 @@ describe("formatProviderModelOptionName", () => {
 
   it("leaves non-OpenCode unknown slugs unchanged", () => {
     expect(
-      formatProviderModelOptionName({
+      formatEngineModelOptionName({
         engine: "codex",
         slug: "custom/internal-model",
       }),
@@ -287,22 +287,22 @@ describe("mergeDynamicModelOptions", () => {
   });
 });
 
-describe("providerModelCostMultiplierLabel", () => {
+describe("engineModelCostMultiplierLabel", () => {
   it("formats live engine multipliers without hardcoding their values", () => {
-    expect(providerModelCostMultiplierLabel("0.38x Factory token rate")).toBe("0.38×");
-    expect(providerModelCostMultiplierLabel("12x Factory token rate")).toBe("12×");
+    expect(engineModelCostMultiplierLabel("0.38x Factory token rate")).toBe("0.38×");
+    expect(engineModelCostMultiplierLabel("12x Factory token rate")).toBe("12×");
   });
 
   it("ignores descriptions that do not begin with a multiplier", () => {
-    expect(providerModelCostMultiplierLabel("Launch Pricing")).toBeNull();
-    expect(providerModelCostMultiplierLabel()).toBeNull();
+    expect(engineModelCostMultiplierLabel("Launch Pricing")).toBeNull();
+    expect(engineModelCostMultiplierLabel()).toBeNull();
   });
 });
 
-describe("providerModelOptionProvenanceLabel", () => {
+describe("engineModelOptionProvenanceLabel", () => {
   it("prefers the discovered upstream engine name", () => {
     expect(
-      providerModelOptionProvenanceLabel({
+      engineModelOptionProvenanceLabel({
         engine: "opencode",
         option: {
           slug: "opencode-go/deepseek-v4-flash",
@@ -316,7 +316,7 @@ describe("providerModelOptionProvenanceLabel", () => {
 
   it("falls back to a humanized slug engine, then the HarnessOS engine", () => {
     expect(
-      providerModelOptionProvenanceLabel({
+      engineModelOptionProvenanceLabel({
         engine: "opencode",
         option: {
           slug: "local-runtime/deepseek-v4-flash",
@@ -325,7 +325,7 @@ describe("providerModelOptionProvenanceLabel", () => {
       }),
     ).toBe("Local Runtime");
     expect(
-      providerModelOptionProvenanceLabel({
+      engineModelOptionProvenanceLabel({
         engine: "cursor",
         option: { slug: "auto", name: "Auto" },
       }),
@@ -333,22 +333,22 @@ describe("providerModelOptionProvenanceLabel", () => {
   });
 });
 
-describe("buildProviderOptionPatch", () => {
+describe("buildEngineOptionPatch", () => {
   it("passes through option ids unchanged", () => {
-    expect(buildProviderOptionPatch("codex", "reasoningEffort", "xhigh")).toEqual({
+    expect(buildEngineOptionPatch("codex", "reasoningEffort", "xhigh")).toEqual({
       reasoningEffort: "xhigh",
     });
-    expect(buildProviderOptionPatch("droid", "reasoningEffort", "high")).toEqual({
+    expect(buildEngineOptionPatch("droid", "reasoningEffort", "high")).toEqual({
       reasoningEffort: "high",
     });
-    expect(buildProviderOptionPatch("grok", "reasoningEffort", "high")).toEqual({
+    expect(buildEngineOptionPatch("grok", "reasoningEffort", "high")).toEqual({
       reasoningEffort: "high",
     });
-    expect(buildProviderOptionPatch("cursor", "fastMode", true)).toEqual({ fastMode: true });
+    expect(buildEngineOptionPatch("cursor", "fastMode", true)).toEqual({ fastMode: true });
   });
 });
 
-describe("groupProviderModelOptions", () => {
+describe("groupEngineModelOptions", () => {
   it("groups engine models by upstream engine", () => {
     const options = [
       {
@@ -365,13 +365,13 @@ describe("groupProviderModelOptions", () => {
       },
     ] satisfies EngineModelOption[];
 
-    const groupedOptions = groupProviderModelOptions(options);
+    const groupedOptions = groupEngineModelOptions(options);
 
     expect(groupedOptions.map((group) => group.label)).toEqual(["Anthropic", "OpenAI"]);
   });
 
   it("disambiguates two model-service instances with the same display name", () => {
-    const groupedOptions = groupProviderModelOptions([
+    const groupedOptions = groupEngineModelOptions([
       {
         slug: "gateway-primary/shared-model",
         name: "Shared Model",
@@ -397,7 +397,7 @@ describe("groupProviderModelOptions", () => {
   });
 
   it("keeps case-distinct opaque model-service ids in separate groups", () => {
-    const groupedOptions = groupProviderModelOptions([
+    const groupedOptions = groupEngineModelOptions([
       {
         slug: "Gateway/shared-model",
         name: "Shared Model",
@@ -420,7 +420,7 @@ describe("groupProviderModelOptions", () => {
   });
 });
 
-describe("groupProviderModelOptionsWithFavorites", () => {
+describe("groupEngineModelOptionsWithFavorites", () => {
   it("adds a favourites group ahead of the normal engine groups", () => {
     const options = [
       {
@@ -437,7 +437,7 @@ describe("groupProviderModelOptionsWithFavorites", () => {
       },
     ] satisfies EngineModelOption[];
 
-    const groupedOptions = groupProviderModelOptionsWithFavorites({
+    const groupedOptions = groupEngineModelOptionsWithFavorites({
       options,
       favoriteSlugs: new Set(["openai/gpt-5"]),
     });

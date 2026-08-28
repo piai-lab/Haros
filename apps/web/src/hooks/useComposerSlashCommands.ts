@@ -26,7 +26,7 @@ import {
   buildSlashReviewComposerPrompt,
   buildSubagentsPrompt,
   getAvailableComposerSlashCommands,
-  hasProviderNativeSlashCommand,
+  hasEngineNativeSlashCommand,
   parseComposerSlashInvocationForCommands,
   parseFastSlashCommandAction,
   parseForkSlashCommandArgs,
@@ -41,10 +41,7 @@ import {
 } from "../lib/threadHandoff";
 import { toastManager } from "../components/ui/toast";
 import type { ComposerCommandItem } from "../components/chat/ComposerCommandMenu";
-import {
-  buildNextProviderOptions,
-  resolveModelPresentationIdentity,
-} from "../providerModelOptions";
+import { buildNextEngineOptions, resolveModelPresentationIdentity } from "../engineModelOptions";
 import { resolveForkThreadEnvironment } from "../lib/threadEnvironment";
 import { type SplitViewId } from "../splitViewStore";
 import { useRightDockStore } from "../rightDockStore";
@@ -137,12 +134,12 @@ export function useComposerSlashCommands(input: {
   canOfferCompactCommand: boolean;
   canOfferForkCommand: boolean;
   canOfferSideCommand: boolean;
-  sidechatTargetProviders: ReadonlyArray<EngineKind>;
+  sidechatTargetEngines: ReadonlyArray<EngineKind>;
   canOfferExportCommand: boolean;
   supportsTextNativeReviewCommand: boolean;
   fastModeEnabled: boolean;
-  providerNativeCommands: readonly EngineNativeCommandDescriptor[];
-  providerCommandDiscoveryCwd: string | null;
+  engineNativeCommands: readonly EngineNativeCommandDescriptor[];
+  engineCommandDiscoveryCwd: string | null;
   selectedEngine: EngineKind;
   currentEngineModelOptions: EngineModelOptions[EngineKind] | undefined;
   selectedEngineSelection: EngineSelection | null;
@@ -156,10 +153,10 @@ export function useComposerSlashCommands(input: {
   handleInteractionModeChange: (mode: EngineInteractionMode) => Promise<void> | void;
   openForkTargetPicker: () => void;
   openReviewTargetPicker: () => void;
-  setComposerDraftProviderModelOptions: (
+  setComposerDraftEngineModelOptions: (
     threadId: ThreadId,
     engine: EngineKind,
-    nextProviderOptions: EngineModelOptions[EngineKind],
+    nextEngineOptions: EngineModelOptions[EngineKind],
     options?: { model?: string | null; persistSticky?: boolean },
   ) => void;
   editorActions: {
@@ -191,12 +188,12 @@ export function useComposerSlashCommands(input: {
     canOfferCompactCommand,
     canOfferForkCommand,
     canOfferSideCommand,
-    sidechatTargetProviders,
+    sidechatTargetEngines,
     canOfferExportCommand,
     supportsTextNativeReviewCommand,
     fastModeEnabled,
-    providerNativeCommands,
-    providerCommandDiscoveryCwd,
+    engineNativeCommands,
+    engineCommandDiscoveryCwd,
     selectedEngine,
     currentEngineModelOptions,
     selectedEngineSelection,
@@ -210,10 +207,10 @@ export function useComposerSlashCommands(input: {
     handleInteractionModeChange,
     openForkTargetPicker,
     openReviewTargetPicker,
-    setComposerDraftProviderModelOptions,
+    setComposerDraftEngineModelOptions,
     editorActions,
   } = input;
-  const providerNativeCommandNames = providerNativeCommands.map((command) => command.name);
+  const engineNativeCommandNames = engineNativeCommands.map((command) => command.name);
   const availableBuiltInSlashCommands = getAvailableComposerSlashCommands({
     engine: selectedEngine,
     supportsFastSlashCommand,
@@ -222,10 +219,10 @@ export function useComposerSlashCommands(input: {
     canOfferForkCommand,
     canOfferSideCommand: true,
     canOfferExportCommand,
-    providerNativeCommandNames,
+    engineNativeCommandNames,
   });
 
-  const compactProviderThread = useCallback(async (): Promise<boolean> => {
+  const compactEngineThread = useCallback(async (): Promise<boolean> => {
     const api = readNativeApi();
     if (
       !api ||
@@ -271,10 +268,10 @@ export function useComposerSlashCommands(input: {
 
   const setFastModeFromSlashCommand = useCallback(
     (enabled: boolean) => {
-      setComposerDraftProviderModelOptions(
+      setComposerDraftEngineModelOptions(
         threadId,
         selectedEngine,
-        buildNextProviderOptions(selectedEngine, currentEngineModelOptions, {
+        buildNextEngineOptions(selectedEngine, currentEngineModelOptions, {
           fastMode: enabled,
         }),
         {
@@ -287,7 +284,7 @@ export function useComposerSlashCommands(input: {
       currentEngineModelOptions,
       selectedEngineSelection,
       selectedEngine,
-      setComposerDraftProviderModelOptions,
+      setComposerDraftEngineModelOptions,
       threadId,
     ],
   );
@@ -873,7 +870,7 @@ export function useComposerSlashCommands(input: {
 
   const checkClaudeFastSlashCommandAvailability = useCallback(async (): Promise<boolean> => {
     const api = readNativeApi();
-    if (!api || !providerCommandDiscoveryCwd) {
+    if (!api || !engineCommandDiscoveryCwd) {
       editorActions.clearComposerSlashDraft();
       toastManager.add({
         type: "warning",
@@ -886,12 +883,12 @@ export function useComposerSlashCommands(input: {
     try {
       const result = await api.engine.listCommands({
         engine: "claude",
-        cwd: providerCommandDiscoveryCwd,
+        cwd: engineCommandDiscoveryCwd,
         threadId,
         forceReload: true,
       });
       if (
-        hasProviderNativeSlashCommand(
+        hasEngineNativeSlashCommand(
           "claude",
           result.commands.map((command) => command.name),
           "fast",
@@ -916,7 +913,7 @@ export function useComposerSlashCommands(input: {
       description: t("composer.fastClaudeUnavailableHint"),
     });
     return false;
-  }, [editorActions, providerCommandDiscoveryCwd, t, threadId]);
+  }, [editorActions, engineCommandDiscoveryCwd, t, threadId]);
 
   const runExportSlashCommand = useCallback(() => {
     // Re-validate at call time (mirrors /compact): menu selections and stale
@@ -995,7 +992,7 @@ export function useComposerSlashCommands(input: {
       }
       if (slashInvocation.command === "compact") {
         editorActions.clearComposerSlashDraft();
-        await compactProviderThread();
+        await compactEngineThread();
         return true;
       }
       if (
@@ -1112,20 +1109,20 @@ export function useComposerSlashCommands(input: {
           });
           return true;
         }
-        const { targetEngine, prompt, unavailableProvider } = parseSideSlashCommandArgs(
+        const { targetEngine, prompt, unavailableEngine } = parseSideSlashCommandArgs(
           slashInvocation.args,
           {
             currentEngine: selectedEngine,
-            availableTargetProviders: sidechatTargetProviders,
+            availableTargetEngines: sidechatTargetEngines,
           },
         );
-        if (unavailableProvider) {
+        if (unavailableEngine) {
           toastManager.add({
             type: "warning",
-            title: t("composer.sideProviderUnavailableTitle", {
-              engine: ENGINE_DISPLAY_NAMES[unavailableProvider],
+            title: t("composer.sideEngineUnavailableTitle", {
+              engine: ENGINE_DISPLAY_NAMES[unavailableEngine],
             }),
-            description: t("composer.sideProviderUnavailableDescription"),
+            description: t("composer.sideEngineUnavailableDescription"),
           });
           return true;
         }
@@ -1155,7 +1152,7 @@ export function useComposerSlashCommands(input: {
       availableBuiltInSlashCommands,
       canOfferSideCommand,
       checkClaudeFastSlashCommandAvailability,
-      compactProviderThread,
+      compactEngineThread,
       createForkThreadFromSlashCommand,
       createSidechatFromSlashCommand,
       editorActions,
@@ -1165,7 +1162,7 @@ export function useComposerSlashCommands(input: {
       openFeedbackDialog,
       openReviewTargetPicker,
       selectedEngine,
-      sidechatTargetProviders,
+      sidechatTargetEngines,
       supportsTextNativeReviewCommand,
       t,
       runCodexReviewStart,
@@ -1242,7 +1239,7 @@ export function useComposerSlashCommands(input: {
           return;
         }
         editorActions.setComposerHighlightedItemId(null);
-        void compactProviderThread();
+        void compactEngineThread();
         editorActions.scheduleComposerFocus();
         return;
       }
@@ -1387,7 +1384,7 @@ export function useComposerSlashCommands(input: {
       }
     },
     [
-      compactProviderThread,
+      compactEngineThread,
       createSidechatFromSlashCommand,
       editorActions,
       handleClearConversation,

@@ -127,7 +127,7 @@ import { QueuedTurnPromotionRepository } from "../../persistence/Services/Queued
 import { ManagedAttachmentRepository } from "../../persistence/Services/ManagedAttachments.ts";
 import { ServerConfig } from "../../config.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
-import { providerStartOptionsFromServerSettings } from "@harnessos/shared/serverSettings";
+import { engineStartOptionsFromServerSettings } from "@harnessos/shared/serverSettings";
 import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import {
   buildPriorTranscriptBootstrapText,
@@ -850,7 +850,7 @@ const make = Effect.gen(function* () {
     const settings = yield* serverSettings.getSettings;
     return resolveTextGenerationInputForSelection(
       settings.textGenerationEngineSelection,
-      providerStartOptionsFromServerSettings(settings),
+      engineStartOptionsFromServerSettings(settings),
     );
   });
 
@@ -1509,7 +1509,7 @@ const make = Effect.gen(function* () {
       });
     }
     const resolvedProviderOptions =
-      options?.engineOptions ?? providerStartOptionsFromServerSettings(settingsSnapshot.settings);
+      options?.engineOptions ?? engineStartOptionsFromServerSettings(settingsSnapshot.settings);
     const project = yield* resolveThreadWorkspaceProject(thread);
     if (!project) {
       return yield* Effect.die(

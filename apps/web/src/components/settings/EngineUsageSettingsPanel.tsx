@@ -79,7 +79,7 @@ function EngineUsageCard({ snapshot }: { snapshot: ServerEngineUsageSnapshot }) 
   const status = snapshot.status ?? "ok";
   const usageSummary = useAccountCapacity({
     engine,
-    providerSnapshot: snapshot,
+    engineSnapshot: snapshot,
   });
   const meterRows = deriveEngineUsageDisplayRows(usageSummary.rateLimits);
   const usageLines = usageSummary.usageLines;

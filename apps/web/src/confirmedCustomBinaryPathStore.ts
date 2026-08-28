@@ -12,7 +12,7 @@ const STORAGE_KEY = "harnessos:confirmed-custom-binary-paths:v1";
 
 const ENGINE_KIND_SET: ReadonlySet<EngineKind> = new Set(ENGINE_KINDS);
 
-function isProviderKind(value: string): value is EngineKind {
+function isEngineKind(value: string): value is EngineKind {
   return ENGINE_KIND_SET.has(value as EngineKind);
 }
 
@@ -42,7 +42,7 @@ export function loadConfirmedCustomBinaryPaths(): Partial<Record<EngineKind, str
   // pollution (e.g. "__proto__") from untrusted persisted input.
   const result: Partial<Record<EngineKind, string>> = {};
   for (const [key, value] of Object.entries(parsed)) {
-    if (!isProviderKind(key) || typeof value !== "string") {
+    if (!isEngineKind(key) || typeof value !== "string") {
       continue;
     }
     const trimmed = value.trim();

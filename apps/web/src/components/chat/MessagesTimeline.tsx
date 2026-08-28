@@ -64,7 +64,7 @@ import {
   WorktreeIcon,
 } from "~/lib/icons";
 import { ModelIdentityIcon } from "../ModelIdentityIcon";
-import { formatProviderModelOptionName } from "../../providerModelOptions";
+import { formatEngineModelOptionName } from "../../engineModelOptions";
 import { pinActionLabel } from "~/lib/pin";
 import { Button } from "../ui/button";
 import { composerOverlayScrollMaskImage } from "./composerOverlay";
@@ -479,7 +479,7 @@ function AssistantTurnRowFrame({
   const modelName =
     layout.provenance?.modelPresentationIdentity?.displayName ??
     (selection
-      ? formatProviderModelOptionName({
+      ? formatEngineModelOptionName({
           engine: selection.engine,
           slug: selection.model,
         })

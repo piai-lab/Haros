@@ -150,7 +150,7 @@ describe("message catalogs", () => {
   });
 
   it("keeps engine update feedback concise and truthful in both supported languages", () => {
-    expect(translate("en", "updater.updatingProvider", { engine: "Claude" })).toBe(
+    expect(translate("en", "updater.updatingEngine", { engine: "Claude" })).toBe(
       "Updating Claude…",
     );
     expect(
@@ -166,7 +166,7 @@ describe("message catalogs", () => {
       "Codex update timed out. Try again.",
     );
 
-    expect(translate("zh-CN", "updater.updatingProvider", { engine: "Claude" })).toBe(
+    expect(translate("zh-CN", "updater.updatingEngine", { engine: "Claude" })).toBe(
       "正在更新 Claude…",
     );
     expect(

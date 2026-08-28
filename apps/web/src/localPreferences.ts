@@ -73,7 +73,7 @@ const AppSnapShortcut = Schema.Union([
   }),
 ]);
 
-const PersistedProviderKind = EngineKind;
+const PersistedEngineKind = EngineKind;
 
 const withDefaults =
   <
@@ -132,8 +132,8 @@ export const LocalPreferencesSchema = Schema.Struct({
   ),
   timestampFormat: TimestampFormat.pipe(withDefaults(() => DEFAULT_TIMESTAMP_FORMAT)),
   uiFontFamily: Schema.String.check(Schema.isMaxLength(256)).pipe(withDefaults(() => "")),
-  hiddenEngines: Schema.Array(PersistedProviderKind).pipe(withDefaults(() => [])),
-  engineOrder: Schema.Array(PersistedProviderKind).pipe(
+  hiddenEngines: Schema.Array(PersistedEngineKind).pipe(withDefaults(() => [])),
+  engineOrder: Schema.Array(PersistedEngineKind).pipe(
     withDefaults(() => [...DEFAULT_PROVIDER_ORDER]),
   ),
 });

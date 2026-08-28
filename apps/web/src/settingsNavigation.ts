@@ -160,7 +160,7 @@ export const SETTINGS_NAV_ITEMS = [
     id: "engines",
     group: "coding",
     labelKey: "settings.engines",
-    descriptionKey: "settings.providersDescription",
+    descriptionKey: "settings.enginesDescription",
     icon: "puzzle",
     searchRecords: Object.values(PROVIDERS_SETTINGS_SEARCH),
   },

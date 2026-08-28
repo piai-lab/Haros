@@ -3,25 +3,25 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_SERVER_SETTINGS_VIEW, type ServerEngineStatus } from "@harnessos/contracts";
 
 import {
-  createProviderInstallResetPatch,
-  isProviderInstallSettingsDirty,
+  createEngineInstallResetPatch,
+  isEngineInstallSettingsDirty,
   engineUpdateFailureMessage,
-  validateProviderCustomModelInput,
+  validateEngineCustomModelInput,
 } from "./EnginesSettingsPanel";
 
 const defaults = DEFAULT_SERVER_SETTINGS_VIEW;
 
-describe("validateProviderCustomModelInput", () => {
+describe("validateEngineCustomModelInput", () => {
   it("normalizes a new Engine-owned custom slug and rejects duplicates", () => {
     expect(
-      validateProviderCustomModelInput({
+      validateEngineCustomModelInput({
         engine: "codex",
         value: "  custom/codex-next  ",
         savedModels: [],
       }),
     ).toEqual({ model: "custom/codex-next" });
     expect(
-      validateProviderCustomModelInput({
+      validateEngineCustomModelInput({
         engine: "codex",
         value: "custom/codex-next",
         savedModels: ["custom/codex-next"],
@@ -30,7 +30,7 @@ describe("validateProviderCustomModelInput", () => {
   });
 });
 
-describe("isProviderInstallSettingsDirty", () => {
+describe("isEngineInstallSettingsDirty", () => {
   it("covers every engine install text and boolean field", () => {
     const dirtySettings = [
       { engine: "codex", field: "binaryPath", value: "/opt/codex" },
@@ -50,7 +50,7 @@ describe("isProviderInstallSettingsDirty", () => {
       { engine: "pi", field: "agentDir", value: "/tmp/pi-agent" },
     ] as const;
 
-    expect(isProviderInstallSettingsDirty(defaults, defaults)).toBe(false);
+    expect(isEngineInstallSettingsDirty(defaults, defaults)).toBe(false);
     for (const dirty of dirtySettings) {
       const settings = {
         ...defaults,
@@ -62,14 +62,14 @@ describe("isProviderInstallSettingsDirty", () => {
           },
         },
       };
-      expect(isProviderInstallSettingsDirty(settings, defaults)).toBe(true);
+      expect(isEngineInstallSettingsDirty(settings, defaults)).toBe(true);
     }
   });
 
   it("uses configured flags instead of unreadable password values", () => {
-    expect(isProviderInstallSettingsDirty(defaults, defaults)).toBe(false);
+    expect(isEngineInstallSettingsDirty(defaults, defaults)).toBe(false);
     expect(
-      isProviderInstallSettingsDirty(
+      isEngineInstallSettingsDirty(
         {
           ...defaults,
           engines: {
@@ -81,7 +81,7 @@ describe("isProviderInstallSettingsDirty", () => {
       ),
     ).toBe(true);
     expect(
-      isProviderInstallSettingsDirty(
+      isEngineInstallSettingsDirty(
         {
           ...defaults,
           engines: {
@@ -95,9 +95,9 @@ describe("isProviderInstallSettingsDirty", () => {
   });
 });
 
-describe("createProviderInstallResetPatch", () => {
+describe("createEngineInstallResetPatch", () => {
   it("resets public engine fields without routing secrets through ServerSettings", () => {
-    const patch = createProviderInstallResetPatch(defaults);
+    const patch = createEngineInstallResetPatch(defaults);
 
     expect(patch.engines?.codex).toEqual({
       binaryPath: defaults.engines.codex.binaryPath,

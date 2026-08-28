@@ -15,7 +15,7 @@ import {
   trimOrNull,
 } from "@harnessos/shared/model";
 
-import type { EngineOptions } from "../../providerModelOptions";
+import type { EngineOptions } from "../../engineModelOptions";
 import { getRuntimeAwareModelCapabilities } from "./runtimeModelCapabilities";
 
 function getCursorBooleanModelParameter(

@@ -8,8 +8,8 @@ import type {
   OAModelServiceOrigin,
 } from "@harnessos/contracts";
 
-import type { EngineModelOption } from "~/providerModelOptions";
-import { resolveModelPresentationIdentity } from "~/providerModelOptions";
+import type { EngineModelOption } from "~/engineModelOptions";
+import { resolveModelPresentationIdentity } from "~/engineModelOptions";
 import { ModelServiceIcon } from "./ModelServiceIcon";
 
 function originFromSource(

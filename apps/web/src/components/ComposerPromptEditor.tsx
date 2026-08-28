@@ -64,7 +64,7 @@ import { shouldCollapsePastedText } from "~/lib/composerPastedText";
 import type { EngineMentionReference } from "@harnessos/contracts";
 import { useStore } from "~/store";
 import { createComposerThreadMentionSourcesSelector } from "~/storeSelectors";
-import { resolveThreadDisplayProvider } from "~/lib/threadDisplayProvider";
+import { resolveThreadDisplayEngine } from "~/lib/threadDisplayEngine";
 import { cn } from "~/lib/utils";
 import {
   COMPOSER_EDITOR_CONTENT_RESET_CLASS_NAME,
@@ -454,7 +454,7 @@ function $setComposerEditorPrompt(
       const thread = segment.threadId
         ? useStore.getState().sidebarThreadSummaryById[segment.threadId]
         : undefined;
-      const engine = thread ? resolveThreadDisplayProvider(thread) : undefined;
+      const engine = thread ? resolveThreadDisplayEngine(thread) : undefined;
       paragraph.append(
         $createComposerMentionNode(segment.path, segment.kind, engine, segment.threadId),
       );

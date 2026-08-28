@@ -27,7 +27,7 @@ import {
 } from "./lib/icons";
 import {
   ENGINE_DISCOVERY_SECONDARY_FIELD_WEIGHT,
-  rankProviderDiscoveryItems,
+  rankEngineDiscoveryItems,
 } from "./lib/engineDiscovery";
 
 interface BuiltInComposerSlashCommandPresentationDescriptor {
@@ -156,7 +156,7 @@ export function filterBuiltInComposerSlashCommands(
   commands: readonly BuiltInComposerSlashCommand[],
   t: Translate,
 ): BuiltInComposerSlashCommand[] {
-  return rankProviderDiscoveryItems(commands, query, (command) => {
+  return rankEngineDiscoveryItems(commands, query, (command) => {
     const presentation = resolveBuiltInComposerSlashCommandPresentation(command, t);
     return [
       { value: command },

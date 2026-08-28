@@ -35,10 +35,10 @@ import { buildTemporaryWorktreeBranchName } from "@harnessos/shared/git";
 import { configuredHostGroupEnabled } from "@harnessos/shared/hostToolSurfacePolicy";
 import { projectKindToProductSurface } from "@harnessos/shared/productSurface";
 import {
-  isProviderRuntimeModeExecutable,
-  isProviderRuntimeModePermanentlyUnsupported,
+  isEngineRuntimeModeExecutable,
+  isEngineRuntimeModePermanentlyUnsupported,
 } from "@harnessos/shared/runtimeMode";
-import { providerStartOptionsFromServerSettings } from "@harnessos/shared/serverSettings";
+import { engineStartOptionsFromServerSettings } from "@harnessos/shared/serverSettings";
 import { Cause, Effect, Layer, Option, PubSub, Queue, Stream } from "effect";
 
 import { GitCore } from "../../git/Services/GitCore.ts";
@@ -949,10 +949,10 @@ export const AutomationServiceLive = Layer.effect(
     }) {
       const capability = (yield* engineExecutionCapabilities.get(input.engineSelection))
         .runtimeModes[input.runtimeMode];
-      if (isProviderRuntimeModeExecutable(capability)) {
+      if (isEngineRuntimeModeExecutable(capability)) {
         return;
       }
-      const permanentlyUnsupported = isProviderRuntimeModePermanentlyUnsupported(capability);
+      const permanentlyUnsupported = isEngineRuntimeModePermanentlyUnsupported(capability);
       return yield* new AutomationServiceError({
         code: capability.reason ?? "runtime-health-unknown",
         message: permanentlyUnsupported
@@ -1538,7 +1538,7 @@ export const AutomationServiceLive = Layer.effect(
               ...(threadIdOverride !== undefined ? { threadIdOverride } : {}),
             },
             settings.revision,
-            providerStartOptionsFromServerSettings(settings.settings),
+            engineStartOptionsFromServerSettings(settings.settings),
           ),
           {
             expectedDefinitionRevision: definition.definitionRevision,
@@ -1577,7 +1577,7 @@ export const AutomationServiceLive = Layer.effect(
             now,
             { threadIdOverride: null },
             settings.revision,
-            providerStartOptionsFromServerSettings(settings.settings),
+            engineStartOptionsFromServerSettings(settings.settings),
           ),
           {
             expectedDefinitionRevision: definition.definitionRevision,

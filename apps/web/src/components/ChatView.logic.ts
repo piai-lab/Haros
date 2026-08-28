@@ -46,11 +46,11 @@ import {
 } from "../lib/subagentPresentation";
 import {
   hasLiveTurnTailWork,
-  isProviderFileEditWorkLogEntry,
+  isEngineFileEditWorkLogEntry,
   type WorkLogEntry,
 } from "../session-logic";
 import { localSubagentThreadId } from "./ChatView.selectors";
-import type { EngineModelOption } from "../providerModelOptions";
+import type { EngineModelOption } from "../engineModelOptions";
 
 export const LAST_INVOKED_SCRIPT_BY_PROJECT_KEY = "harnessos:last-invoked-script-by-project";
 export const DISMISSED_PROVIDER_HEALTH_BANNERS_KEY = "harnessos:dismissed-engine-health-banners";
@@ -737,7 +737,7 @@ export function resolveActiveTurnLiveDiffState(input: {
   let hasFileEditWork = false;
   if (input.latestTurnId) {
     for (const entry of input.workLogEntries ?? []) {
-      if (entry.turnId !== input.latestTurnId || !isProviderFileEditWorkLogEntry(entry)) {
+      if (entry.turnId !== input.latestTurnId || !isEngineFileEditWorkLogEntry(entry)) {
         continue;
       }
       hasFileEditWork = true;
@@ -973,7 +973,7 @@ export function deriveComposerVoiceState(input: {
   };
 }
 
-export function resolveCommittedProviderModel(input: {
+export function resolveCommittedEngineModel(input: {
   selectedModel: ModelSlug | null;
   availableOptions: ReadonlyArray<EngineModelOption>;
 }): ModelSlug | null {

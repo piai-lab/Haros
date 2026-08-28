@@ -6,8 +6,8 @@ import { ENGINE_KINDS, type ServerEngineStatus } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
-  changedProviderModelDiscoveryProviders,
-  providerModelDiscoveryInvalidationFingerprints,
+  changedEngineModelDiscoveryEngines,
+  engineModelDiscoveryInvalidationFingerprints,
 } from "./engineDiscoveryInvalidation";
 
 const BASE_PROVIDER_STATUS = {
@@ -33,7 +33,7 @@ const BASE_PROVIDER_STATUS = {
 describe("engine model discovery invalidation", () => {
   it("ignores engine checkedAt, message, and advisory metadata churn", () => {
     expect(
-      providerModelDiscoveryInvalidationFingerprints([
+      engineModelDiscoveryInvalidationFingerprints([
         {
           ...BASE_PROVIDER_STATUS,
           checkedAt: "2026-06-04T10:05:00.000Z",
@@ -45,14 +45,14 @@ describe("engine model discovery invalidation", () => {
           },
         },
       ]),
-    ).toEqual(providerModelDiscoveryInvalidationFingerprints([BASE_PROVIDER_STATUS]));
+    ).toEqual(engineModelDiscoveryInvalidationFingerprints([BASE_PROVIDER_STATUS]));
   });
 
   it("changes when model discovery inputs can change", () => {
-    const previous = providerModelDiscoveryInvalidationFingerprints([BASE_PROVIDER_STATUS]);
+    const previous = engineModelDiscoveryInvalidationFingerprints([BASE_PROVIDER_STATUS]);
 
     expect(
-      providerModelDiscoveryInvalidationFingerprints([
+      engineModelDiscoveryInvalidationFingerprints([
         {
           ...BASE_PROVIDER_STATUS,
           authStatus: "authenticated",
@@ -62,7 +62,7 @@ describe("engine model discovery invalidation", () => {
     ).not.toEqual(previous);
 
     expect(
-      providerModelDiscoveryInvalidationFingerprints([
+      engineModelDiscoveryInvalidationFingerprints([
         {
           ...BASE_PROVIDER_STATUS,
           version: "2026.06.05-a1b2c3d",
@@ -78,16 +78,16 @@ describe("engine model discovery invalidation", () => {
       version: "1.2.3",
     } satisfies ServerEngineStatus;
 
-    const previous = providerModelDiscoveryInvalidationFingerprints([
+    const previous = engineModelDiscoveryInvalidationFingerprints([
       BASE_PROVIDER_STATUS,
       codexStatus,
     ]);
-    const next = providerModelDiscoveryInvalidationFingerprints([
+    const next = engineModelDiscoveryInvalidationFingerprints([
       { ...BASE_PROVIDER_STATUS, authStatus: "authenticated" },
       codexStatus,
     ]);
 
-    expect(changedProviderModelDiscoveryProviders(previous, next)).toEqual(["cursor"]);
+    expect(changedEngineModelDiscoveryEngines(previous, next)).toEqual(["cursor"]);
   });
 
   it.each(ENGINE_KINDS)("isolates invalidation for the %s Engine", (engine) => {
@@ -99,13 +99,13 @@ describe("engine model discovery invalidation", () => {
           version: "1.0.0",
         }) satisfies ServerEngineStatus,
     );
-    const previous = providerModelDiscoveryInvalidationFingerprints(statuses);
-    const next = providerModelDiscoveryInvalidationFingerprints(
+    const previous = engineModelDiscoveryInvalidationFingerprints(statuses);
+    const next = engineModelDiscoveryInvalidationFingerprints(
       statuses.map((status) =>
         status.engine === engine ? { ...status, version: "1.0.1" } : status,
       ),
     );
 
-    expect(changedProviderModelDiscoveryProviders(previous, next)).toEqual([engine]);
+    expect(changedEngineModelDiscoveryEngines(previous, next)).toEqual([engine]);
   });
 });

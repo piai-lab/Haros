@@ -201,7 +201,7 @@ describe("PluginLibrary HarnessOS Agent packages", () => {
     await expect.poll(() => fixture.reload.mock.calls.length).toBe(1);
     expect(fixture.reload).toHaveBeenCalledWith({ threadId });
     expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: engineDiscoveryQueryKeys.modelsForProvider("oa"),
+      queryKey: engineDiscoveryQueryKeys.modelsForEngine("oa"),
     });
     await expect
       .poll(() => document.body.textContent)

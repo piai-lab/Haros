@@ -6,9 +6,9 @@ import {
 import {
   createComposerMentionTokenRegex,
   extractComposerMentionPath,
-  findThreadProviderMentionReferenceForToken,
-  isPluginProviderMentionReference,
-  providerMentionMatchesToken,
+  findThreadEngineMentionReferenceForToken,
+  isPluginEngineMentionReference,
+  engineMentionMatchesToken,
 } from "./lib/composerMentions";
 import {
   LINK_TOKEN_SOURCE,
@@ -324,15 +324,15 @@ function splitTextIntoPromptSegments(
         color: match.color,
       });
     } else if (match.kind === "mention") {
-      const threadMention = findThreadProviderMentionReferenceForToken(
+      const threadMention = findThreadEngineMentionReferenceForToken(
         match.value,
         options.mentionReferences,
       );
       const isPluginMention =
         options.mentionReferences?.some(
           (mention) =>
-            isPluginProviderMentionReference(mention) &&
-            providerMentionMatchesToken(mention, match.value),
+            isPluginEngineMentionReference(mention) &&
+            engineMentionMatchesToken(mention, match.value),
         ) ?? false;
       const tokenLength = match.end - match.start;
       const threadId = threadMention ? threadIdFromThreadMentionPath(threadMention.path) : null;

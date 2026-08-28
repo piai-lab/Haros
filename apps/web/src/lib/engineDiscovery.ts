@@ -13,7 +13,7 @@ import type {
 import type { AppLocale } from "~/locale";
 
 // Prefer the most specific workspace context so discovery reflects the active thread first.
-export function resolveProviderDiscoveryCwd(options: {
+export function resolveEngineDiscoveryCwd(options: {
   activeThreadWorktreePath: string | null;
   activeProjectCwd: string | null;
   serverCwd: string | null;
@@ -26,7 +26,7 @@ export function resolveProviderDiscoveryCwd(options: {
   );
 }
 
-export function normalizeProviderDiscoveryText(value: string | undefined): string {
+export function normalizeEngineDiscoveryText(value: string | undefined): string {
   if (!value) return "";
   return value
     .toLowerCase()
@@ -40,7 +40,7 @@ export interface EngineDiscoverySearchField {
   weight?: number;
 }
 
-interface RankedProviderDiscoveryItem<T> {
+interface RankedEngineDiscoveryItem<T> {
   item: T;
   score: number;
   index: number;
@@ -148,7 +148,7 @@ function scoreNormalizedDiscoveryText(
   return null;
 }
 
-function scoreProviderDiscoverySearchFieldsForNormalizedQuery(
+function scoreEngineDiscoverySearchFieldsForNormalizedQuery(
   normalizedQuery: string,
   fields: readonly EngineDiscoverySearchField[],
 ): number | null {
@@ -159,7 +159,7 @@ function scoreProviderDiscoverySearchFieldsForNormalizedQuery(
   let bestScore: number | null = null;
   for (const field of fields) {
     const fieldWeight = field.weight ?? 0;
-    const normalizedValue = normalizeProviderDiscoveryText(field.value ?? undefined);
+    const normalizedValue = normalizeEngineDiscoveryText(field.value ?? undefined);
     const fieldScore = scoreNormalizedDiscoveryText(normalizedValue, normalizedQuery, {
       allowFuzzy: fieldWeight === 0,
     });
@@ -174,25 +174,25 @@ function scoreProviderDiscoverySearchFieldsForNormalizedQuery(
   return bestScore;
 }
 
-export function rankProviderDiscoveryItems<T>(
+export function rankEngineDiscoveryItems<T>(
   items: readonly T[],
   query: string,
   fieldsForItem: (item: T) => readonly EngineDiscoverySearchField[],
 ): T[] {
-  const normalizedQuery = normalizeProviderDiscoveryText(query);
+  const normalizedQuery = normalizeEngineDiscoveryText(query);
   if (!normalizedQuery) {
     return [...items];
   }
 
   return items
-    .map((item, index): RankedProviderDiscoveryItem<T> | null => {
-      const score = scoreProviderDiscoverySearchFieldsForNormalizedQuery(
+    .map((item, index): RankedEngineDiscoveryItem<T> | null => {
+      const score = scoreEngineDiscoverySearchFieldsForNormalizedQuery(
         normalizedQuery,
         fieldsForItem(item),
       );
       return score === null ? null : { item, score, index };
     })
-    .filter((entry): entry is RankedProviderDiscoveryItem<T> => entry !== null)
+    .filter((entry): entry is RankedEngineDiscoveryItem<T> => entry !== null)
     .toSorted((left, right) => left.score - right.score || left.index - right.index)
     .map((entry) => entry.item);
 }
@@ -213,7 +213,7 @@ export function buildSkillSearchFields(
   ];
 }
 
-export function isInstalledProviderPlugin(
+export function isInstalledEnginePlugin(
   plugin: Pick<EnginePluginDescriptor, "installed" | "enabled" | "installPolicy">,
 ): boolean {
   return plugin.installed || plugin.enabled || plugin.installPolicy === "INSTALLED_BY_DEFAULT";
@@ -266,10 +266,10 @@ export function formatSkillScope(scope: string | undefined, locale: AppLocale = 
 
 export function formatSkillDiscoveryWarning(
   warning: EngineSkillDiscoveryWarning,
-  providerLabel: string,
+  engineLabel: string,
 ): string {
   if (warning.source === "engine-native") {
-    return `${providerLabel} native skill discovery failed. Any available HarnessOS Library skills are shown below.`;
+    return `${engineLabel} native skill discovery failed. Any available HarnessOS Library skills are shown below.`;
   }
-  return `HarnessOS Library discovery failed. Any available ${providerLabel} native skills are shown below.`;
+  return `HarnessOS Library discovery failed. Any available ${engineLabel} native skills are shown below.`;
 }

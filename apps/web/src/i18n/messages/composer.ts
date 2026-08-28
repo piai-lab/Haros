@@ -43,8 +43,8 @@ const EN_MESSAGES = {
   "composer.command.sideDescription": "Open a guarded Side from this task",
   "composer.sideUnavailableAttachments":
     "Remove message attachments or context before using /side.",
-  "composer.sideProviderUnavailableTitle": "{engine} is unavailable for Side",
-  "composer.sideProviderUnavailableDescription":
+  "composer.sideEngineUnavailableTitle": "{engine} is unavailable for Side",
+  "composer.sideEngineUnavailableDescription":
     "Enable and sign in to that engine, then run /side again.",
   "composer.sideStartedWithoutPromptTitle": "Side chat started without the prompt",
   "composer.sidePromptRetryDescription":
@@ -331,8 +331,8 @@ const ZH_CN_MESSAGES = {
   "composer.command.forkDescription": "将当前任务分叉到主仓库或新的独立工作树",
   "composer.command.sideDescription": "从当前任务打开受保护的旁路对话",
   "composer.sideUnavailableAttachments": "请先移除输入框中的附件或上下文，再使用 /side。",
-  "composer.sideProviderUnavailableTitle": "{engine} 暂不可用于 Side",
-  "composer.sideProviderUnavailableDescription": "请启用并登录该引擎，然后重新运行 /side。",
+  "composer.sideEngineUnavailableTitle": "{engine} 暂不可用于 Side",
+  "composer.sideEngineUnavailableDescription": "请启用并登录该引擎，然后重新运行 /side。",
   "composer.sideStartedWithoutPromptTitle": "侧边对话已创建，但提示词尚未发送",
   "composer.sidePromptRetryDescription": "侧边对话已打开；加载完成后请重新发送提示词。",
   "composer.sideSyncingTitle": "侧边对话仍在同步",

@@ -59,8 +59,8 @@ import { ServerConfig, type ServerConfigShape } from "./config";
 import { realpathNearestExisting } from "./realpathNearestExisting";
 import { workspaceRootsEqual } from "@harnessos/shared/threadWorkspace";
 import {
-  isProviderRuntimeModeExecutable,
-  isProviderRuntimeModePermanentlyUnsupported,
+  isEngineRuntimeModeExecutable,
+  isEngineRuntimeModePermanentlyUnsupported,
 } from "@harnessos/shared/runtimeMode";
 import {
   isThreadDetailEventFor,
@@ -404,10 +404,10 @@ const makeWsRpcHandlersLayer = () =>
         engineExecutionCapabilities.get(engineSelection).pipe(
           Effect.flatMap((capabilities) => {
             const capability = capabilities.runtimeModes[runtimeMode];
-            if (isProviderRuntimeModeExecutable(capability)) {
+            if (isEngineRuntimeModeExecutable(capability)) {
               return Effect.void;
             }
-            const permanentlyUnsupported = isProviderRuntimeModePermanentlyUnsupported(capability);
+            const permanentlyUnsupported = isEngineRuntimeModePermanentlyUnsupported(capability);
             return Effect.fail(
               new WsRpcError({
                 message: permanentlyUnsupported

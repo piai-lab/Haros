@@ -23,7 +23,7 @@ import {
   makeDrainableWorker,
   startDrainableWorkerProducers,
 } from "@harnessos/shared/DrainableWorker";
-import { isPotentiallyVisibleProviderRuntimeActivity } from "@harnessos/shared/providerActivityVisibility";
+import { isPotentiallyVisibleEngineRuntimeActivity } from "@harnessos/shared/engineActivityVisibility";
 import { buildStalePendingRequestFailureDetail } from "@harnessos/shared/threadSummary";
 import {
   buildSubagentIdentityDirectory,
@@ -2051,7 +2051,7 @@ const make = Effect.gen(function* () {
         Effect.forEach(activities, (activity) => dispatchActivityUpdate(event, threadId, activity)),
       ),
       Effect.tap(() =>
-        activities.some(isPotentiallyVisibleProviderRuntimeActivity)
+        activities.some(isPotentiallyVisibleEngineRuntimeActivity)
           ? Effect.sync(() => markAssistantTextBoundaryForThread(threadId))
           : Effect.void,
       ),

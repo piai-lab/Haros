@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getAppModelOptions,
-  getCustomBinaryPathForProvider,
+  getCustomBinaryPathForEngine,
   getGitTextGenerationModelOptions,
   getEngineStartOptions,
   isGitTextGenerationSettingsDirty,
@@ -92,7 +92,7 @@ describe("engine settings projection", () => {
         apiEndpoint: "http://localhost:3000",
       },
     });
-    expect(getCustomBinaryPathForProvider(settings, "cursor")).toBe("/usr/local/bin/agent");
+    expect(getCustomBinaryPathForEngine(settings, "cursor")).toBe("/usr/local/bin/agent");
   });
 
   it("resolves canonical and custom model selections without a universal settings object", () => {

@@ -49,7 +49,7 @@ export class EngineUpdateTimeoutError extends Error {
   readonly timeoutMs: number;
 
   constructor(engine: EngineKind, timeoutMs: number) {
-    super("provider_update_timeout");
+    super("engine_update_timeout");
     this.name = "EngineUpdateTimeoutError";
     this.engine = engine;
     this.timeoutMs = timeoutMs;
@@ -91,7 +91,7 @@ type EngineUpdateFilterInput = {
 type EngineUpdateVisibilityInput = {
   readonly engine: ServerEngineStatus;
   readonly hiddenEngines?: ReadonlyArray<EngineKind>;
-  readonly hiddenProviderSet?: ReadonlySet<EngineKind>;
+  readonly hiddenEngineSet?: ReadonlySet<EngineKind>;
   readonly serverSettings?:
     | Pick<ServerSettingsView, "engines" | "enableEngineUpdateChecks">
     | null
@@ -106,7 +106,7 @@ export function isEngineUpdateActive(engine: ServerEngineStatus): boolean {
 // A engine whose latest version HarnessOS cannot look up (self-updating CLIs such as
 // `cursor-agent`) is permanently "unknown". Treating that as an update prompt made its
 // row nag forever, so those engines get the update offered as a manual action instead.
-export function isProviderLatestVersionKnowable(engine: ServerEngineStatus): boolean {
+export function isEngineLatestVersionKnowable(engine: ServerEngineStatus): boolean {
   return engine.versionAdvisory?.latestVersionKnowable !== false;
 }
 
@@ -121,10 +121,10 @@ export function shouldOfferEngineUpdateAction(engine: ServerEngineStatus): boole
 
 // Header affordance: reserved for engines HarnessOS can actually assert are outdated.
 export function shouldPromptEngineUpdate(engine: ServerEngineStatus): boolean {
-  return shouldOfferEngineUpdateAction(engine) && isProviderLatestVersionKnowable(engine);
+  return shouldOfferEngineUpdateAction(engine) && isEngineLatestVersionKnowable(engine);
 }
 
-function isProviderEnabled(
+function isEngineEnabled(
   engine: EngineKind,
   serverSettings: Pick<ServerSettingsView, "engines"> | null | undefined,
 ): boolean {
@@ -137,14 +137,14 @@ function isProviderEnabled(
 // Central visibility gate used by both global toasts and Settings update rows.
 export function shouldShowEngineUpdateStatus(input: EngineUpdateVisibilityInput): boolean {
   const advisory = input.engine.versionAdvisory;
-  const hiddenProviderSet = input.hiddenProviderSet ?? new Set(input.hiddenEngines ?? []);
+  const hiddenEngineSet = input.hiddenEngineSet ?? new Set(input.hiddenEngines ?? []);
   if (
     !advisory ||
     input.serverSettings?.enableEngineUpdateChecks === false ||
     advisory.status !== "behind_latest" ||
     advisory.latestVersion === null ||
-    hiddenProviderSet.has(input.engine.engine) ||
-    !isProviderEnabled(input.engine.engine, input.serverSettings)
+    hiddenEngineSet.has(input.engine.engine) ||
+    !isEngineEnabled(input.engine.engine, input.serverSettings)
   ) {
     return false;
   }
@@ -157,14 +157,14 @@ export function shouldShowEngineUpdateStatus(input: EngineUpdateVisibilityInput)
 export function getVisibleEngineUpdateStatuses(
   input: EngineUpdateFilterInput,
 ): ServerEngineStatus[] {
-  const hiddenProviderSet = new Set(input.hiddenEngines ?? []);
+  const hiddenEngineSet = new Set(input.hiddenEngines ?? []);
   const oneClickOnly = input.oneClickOnly ?? false;
 
   return input.engines.filter((engine) =>
     shouldShowEngineUpdateStatus({
       engine,
       serverSettings: input.serverSettings,
-      hiddenProviderSet,
+      hiddenEngineSet,
       oneClickOnly,
     }),
   );

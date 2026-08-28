@@ -54,10 +54,10 @@ import type { AppLocale } from "~/locale";
 import { cn } from "~/lib/utils";
 import {
   buildEngineSelection,
-  buildNextProviderOptions,
-  buildProviderOptionPatch,
+  buildNextEngineOptions,
+  buildEngineOptionPatch,
   type EngineOptions,
-} from "~/providerModelOptions";
+} from "~/engineModelOptions";
 import { ensureNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
 import { createAllThreadsSelector } from "~/storeSelectors";
@@ -1053,8 +1053,8 @@ function ModelOptionRows({
   }
 
   const setOption = (descriptor: EngineOptionDescriptor, value: string | boolean) => {
-    const optionPatch = buildProviderOptionPatch(engine, descriptor.id, value);
-    const nextOptions = buildNextProviderOptions(
+    const optionPatch = buildEngineOptionPatch(engine, descriptor.id, value);
+    const nextOptions = buildNextEngineOptions(
       engine,
       engineSelection.options as EngineOptions | undefined,
       optionPatch,

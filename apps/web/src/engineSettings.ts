@@ -9,7 +9,7 @@ import type {
   ServerSettingsView,
 } from "@harnessos/contracts";
 import { DEFAULT_SERVER_SETTINGS_VIEW } from "@harnessos/contracts";
-import { providerStartOptionsFromServerSettings } from "@harnessos/shared/serverSettings";
+import { engineStartOptionsFromServerSettings } from "@harnessos/shared/serverSettings";
 import {
   getDefaultModel,
   getModelOptions,
@@ -17,15 +17,15 @@ import {
   resolveSelectableModel,
 } from "@harnessos/shared/model";
 import { normalizeCursorModelVariantBaseId } from "./cursorModelVariants";
-import { formatProviderModelOptionName, type EngineModelOption } from "./providerModelOptions";
+import { formatEngineModelOptionName, type EngineModelOption } from "./engineModelOptions";
 
 const MAX_CUSTOM_MODEL_COUNT = 32;
 export const MAX_CUSTOM_MODEL_LENGTH = 256;
 
-type CustomModelProvider = Exclude<EngineKind, "oa">;
+type CustomModelEngine = Exclude<EngineKind, "oa">;
 
 export type EngineCustomModelConfig = {
-  readonly engine: CustomModelProvider;
+  readonly engine: CustomModelEngine;
   readonly title: string;
   readonly description: string;
   readonly placeholder: string;
@@ -153,19 +153,19 @@ export function normalizeCustomModelSlugs(
   return normalizedModels;
 }
 
-export function getCustomModelsForProvider(
+export function getCustomModelsForEngine(
   settings: ServerSettingsView,
-  engine: CustomModelProvider,
+  engine: CustomModelEngine,
 ): readonly string[] {
   return settings.engines[engine].customModels;
 }
 
-export function getDefaultCustomModelsForProvider(engine: CustomModelProvider): readonly string[] {
+export function getDefaultCustomModelsForEngine(engine: CustomModelEngine): readonly string[] {
   return DEFAULT_SERVER_SETTINGS_VIEW.engines[engine].customModels;
 }
 
 export function patchCustomModels(
-  engine: CustomModelProvider,
+  engine: CustomModelEngine,
   models: readonly string[],
 ): ServerSettingsPatch {
   return { engines: { [engine]: { customModels: [...models] } } };
@@ -207,7 +207,7 @@ export function getAppModelOptions(
     options.push({
       engine,
       slug,
-      name: formatProviderModelOptionName({ engine, slug }),
+      name: formatEngineModelOptionName({ engine, slug }),
       isCustom: true,
     });
   }
@@ -222,17 +222,17 @@ export function getAppModelOptions(
     options.push({
       engine,
       slug: normalizedSelectedModel,
-      name: formatProviderModelOptionName({ engine, slug: normalizedSelectedModel }),
+      name: formatEngineModelOptionName({ engine, slug: normalizedSelectedModel }),
       isCustom: true,
     });
   }
   return options;
 }
 
-type GitTextGenerationDiscoveredProvider = "codex" | "kilo" | "opencode";
+type GitTextGenerationDiscoveredEngine = "codex" | "kilo" | "opencode";
 
 export function mapCatalogModelOptionsToAppModelOptions(
-  engine: GitTextGenerationDiscoveredProvider,
+  engine: GitTextGenerationDiscoveredEngine,
   options: ReadonlyArray<EngineModelOption & { isCustom?: boolean }>,
 ): AppModelOption[] {
   return options.map((option) => ({ ...option, engine, isCustom: option.isCustom ?? false }));
@@ -242,7 +242,7 @@ export function getGitTextGenerationModelOptions(
   settings: ServerSettingsView,
   discoveredOptionsByEngine?: Partial<
     Record<
-      GitTextGenerationDiscoveredProvider,
+      GitTextGenerationDiscoveredEngine,
       ReadonlyArray<EngineModelOption & { isCustom?: boolean }>
     >
   >,
@@ -271,7 +271,7 @@ export function getGitTextGenerationModelOptions(
     deduped.push({
       engine: selection.engine,
       slug: selection.model,
-      name: formatProviderModelOptionName({ engine: selection.engine, slug: selection.model }),
+      name: formatEngineModelOptionName({ engine: selection.engine, slug: selection.model }),
       isCustom: true,
     });
   }
@@ -306,10 +306,10 @@ export function getCustomModelOptionsByEngine(
 }
 
 export function getEngineStartOptions(settings: ServerSettingsView): EngineStartOptions {
-  return providerStartOptionsFromServerSettings(settings);
+  return engineStartOptionsFromServerSettings(settings);
 }
 
-export function getCustomBinaryPathForProvider(
+export function getCustomBinaryPathForEngine(
   settings: ServerSettingsView,
   engine: EngineKind,
 ): string {

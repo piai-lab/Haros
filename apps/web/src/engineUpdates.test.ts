@@ -10,7 +10,7 @@ import {
   createEngineUpdateToastData,
   getNotifiableEngineUpdateStatuses,
   getVisibleEngineUpdateStatuses,
-  isProviderLatestVersionKnowable,
+  isEngineLatestVersionKnowable,
   isEngineUpdateActive,
   ENGINE_UPDATE_REQUEST_TIMEOUT_MS,
   ENGINE_UPDATE_SUCCESS_VISIBLE_MS,
@@ -266,7 +266,7 @@ describe("shouldShowEngineUpdateStatus", () => {
     expect(
       shouldShowEngineUpdateStatus({
         engine: codex,
-        hiddenProviderSet: new Set(),
+        hiddenEngineSet: new Set(),
         serverSettings: settings,
       }),
     ).toBe(false);
@@ -383,7 +383,7 @@ describe("shouldPromptEngineUpdate", () => {
   });
 
   it("does not prompt when the latest version is unknowable", () => {
-    expect(isProviderLatestVersionKnowable(selfManaged)).toBe(false);
+    expect(isEngineLatestVersionKnowable(selfManaged)).toBe(false);
     expect(shouldPromptEngineUpdate(selfManaged)).toBe(false);
     // The update itself stays reachable as a manual action.
     expect(shouldOfferEngineUpdateAction(selfManaged)).toBe(true);
@@ -419,7 +419,7 @@ describe("shouldPromptEngineUpdate", () => {
       },
     });
 
-    expect(isProviderLatestVersionKnowable(legacy)).toBe(true);
+    expect(isEngineLatestVersionKnowable(legacy)).toBe(true);
     expect(shouldPromptEngineUpdate(legacy)).toBe(true);
   });
 

@@ -13,7 +13,7 @@ import {
   buildThreadHandoffImportedMessages,
   buildHistoryOnlyForkPayload,
   deriveHistoryOnlyForkableAssistantMessageIds,
-  resolveAvailableHandoffTargetProviders,
+  resolveAvailableHandoffTargetEngines,
   resolveThreadHandoffTitle,
   resolveThreadHandoffEngineSelection,
 } from "./threadHandoff";
@@ -256,7 +256,7 @@ describe("threadHandoff", () => {
     };
 
     expect(
-      resolveAvailableHandoffTargetProviders({
+      resolveAvailableHandoffTargetEngines({
         sourceEngine: "codex",
         engineSettings,
         engineStatuses: [
@@ -273,7 +273,7 @@ describe("threadHandoff", () => {
 
   it("does not expose targets before enabled-engine settings are available", () => {
     expect(
-      resolveAvailableHandoffTargetProviders({
+      resolveAvailableHandoffTargetEngines({
         sourceEngine: "codex",
         engineSettings: undefined,
         engineStatuses: [

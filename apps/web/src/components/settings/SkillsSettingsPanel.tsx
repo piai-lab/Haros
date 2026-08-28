@@ -22,18 +22,18 @@ import {
   buildSettingsSkillGroups,
   buildSettingsSkillSections,
   isHarnessOSSkillSource,
-  providerDisplayName,
+  engineDisplayName,
   settingsSkillNameKey,
 } from "./skillsSettingsModel";
 
-function SkillProviderStack({ engines }: { engines: ReadonlyArray<EngineKind> }) {
+function SkillEngineStack({ engines }: { engines: ReadonlyArray<EngineKind> }) {
   const { t } = useI18n();
   if (engines.length === 0) {
     return null;
   }
 
-  const label = engines.map(providerDisplayName).join(", ");
-  const stackLabel = t(engines.length === 1 ? "settings.providerCopy" : "settings.providerCopies", {
+  const label = engines.map(engineDisplayName).join(", ");
+  const stackLabel = t(engines.length === 1 ? "settings.engineCopy" : "settings.engineCopies", {
     engines: label,
   });
   return (
@@ -175,7 +175,7 @@ export function SkillsSettingsPanel() {
                   status={
                     <span className="flex min-w-0 flex-col gap-1">
                       <span className="flex min-w-0 items-center gap-1.5">
-                        <SkillProviderStack engines={group.engines} />
+                        <SkillEngineStack engines={group.engines} />
                         <span className="truncate text-[11px] text-muted-foreground">
                           {group.sources.map((source) => source.originInfo.label).join(" · ")}
                         </span>

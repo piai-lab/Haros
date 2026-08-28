@@ -833,7 +833,7 @@ describe("composerDraftStore syncPersistedAttachments", () => {
       draftThreadsByThreadId: {},
       projectDraftThreadIdByProjectId: {},
       stickyEngineSelectionByEngine: {},
-      stickyActiveProvider: null,
+      stickyActiveEngine: null,
     });
   });
 

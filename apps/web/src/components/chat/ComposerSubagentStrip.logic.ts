@@ -179,7 +179,7 @@ export function deriveComposerSubagentStripItems(input: {
   workEntries: ReadonlyArray<WorkLogEntry>;
   liveTurnId: TurnId | null;
   // Task tool_use_ids the engine confirmed as backgrounded (task_updated patches).
-  backgroundedProviderThreadIds?: ReadonlySet<string>;
+  backgroundedEngineThreadIds?: ReadonlySet<string>;
   // The open thread when it is one of the subagents (marks its row as viewed).
   viewedThreadId?: ThreadId | null;
   // Present while a subagent thread is open: prepends a row back to the parent.
@@ -192,7 +192,7 @@ export function deriveComposerSubagentStripItems(input: {
     return [];
   }
 
-  const backgroundedThreadIds = input.backgroundedProviderThreadIds ?? NO_BACKGROUNDED_THREAD_IDS;
+  const backgroundedThreadIds = input.backgroundedEngineThreadIds ?? NO_BACKGROUNDED_THREAD_IDS;
   const viewedThreadId = input.viewedThreadId ?? null;
   const liveTurnEntries = input.liveTurnId
     ? entriesWithSubagents.filter((entry) => entry.turnId === input.liveTurnId)

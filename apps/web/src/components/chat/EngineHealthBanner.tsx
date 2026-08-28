@@ -26,12 +26,12 @@ export const EngineHealthBanner = function EngineHealthBanner({
     return null;
   }
 
-  const providerLabel = ENGINE_DISPLAY_NAMES[status.engine] ?? status.engine;
+  const engineLabel = ENGINE_DISPLAY_NAMES[status.engine] ?? status.engine;
   const defaultMessage =
     status.status === "error"
-      ? `${providerLabel} engine is unavailable.`
-      : `${providerLabel} engine has limited availability.`;
-  const title = `${providerLabel} engine status`;
+      ? `${engineLabel} engine is unavailable.`
+      : `${engineLabel} engine has limited availability.`;
+  const title = `${engineLabel} engine status`;
   const Icon = status.status === "error" ? CircleAlertIcon : TriangleAlertIcon;
 
   return (

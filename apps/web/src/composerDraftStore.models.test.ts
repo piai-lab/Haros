@@ -7,7 +7,7 @@ import {
 } from "./composerDraftStore";
 import {
   engineSelection,
-  providerModelOptions,
+  engineModelOptions,
   resetComposerDraftStore,
 } from "./composerDraftStoreTestFixtures";
 
@@ -141,7 +141,7 @@ describe("composerDraftStore engineSelection", () => {
   it("drops malformed Codex reasoning efforts while preserving other options", () => {
     const store = useComposerDraftStore.getState();
 
-    store.setProviderModelOptions(
+    store.setEngineModelOptions(
       threadId,
       "codex",
       { reasoningEffort: "   ", fastMode: true },
@@ -174,7 +174,7 @@ describe("composerDraftStore engineSelection", () => {
     );
     expect(state.draftsByThreadId[threadId]?.activeEngine).toBe("grok");
     expect(state.stickyEngineSelectionByEngine.grok).toEqual(engineSelection("grok", "grok-build"));
-    expect(state.stickyActiveProvider).toBe("grok");
+    expect(state.stickyActiveEngine).toBe("grok");
   });
 
   it("stores Antigravity base models and effort options separately", () => {
@@ -192,7 +192,7 @@ describe("composerDraftStore engineSelection", () => {
     );
     expect(state.draftsByThreadId[threadId]?.activeEngine).toBe("antigravity");
     expect(state.stickyEngineSelectionByEngine.antigravity).toEqual(selection);
-    expect(state.stickyActiveProvider).toBe("antigravity");
+    expect(state.stickyActiveEngine).toBe("antigravity");
   });
 
   it("replaces only the targeted engine options on the current model selection", () => {
@@ -212,7 +212,7 @@ describe("composerDraftStore engineSelection", () => {
       }),
     );
 
-    store.setProviderModelOptions(
+    store.setEngineModelOptions(
       threadId,
       "claude",
       {
@@ -245,7 +245,7 @@ describe("composerDraftStore engineSelection", () => {
       }),
     );
 
-    store.setProviderModelOptions(threadId, "claude", {
+    store.setEngineModelOptions(threadId, "claude", {
       thinking: true,
     });
 
@@ -264,7 +264,7 @@ describe("composerDraftStore engineSelection", () => {
 
     store.setEngineSelection(threadId, engineSelection("codex", "gpt-5.4", { fastMode: true }));
 
-    store.setProviderModelOptions(threadId, "codex", {
+    store.setEngineModelOptions(threadId, "codex", {
       reasoningEffort: "high",
       fastMode: false,
     });
@@ -291,7 +291,7 @@ describe("composerDraftStore engineSelection", () => {
       engineSelection("claude", "claude-opus-4-6", { effort: "max" }),
     );
 
-    store.setProviderModelOptions(threadId, "claude", { thinking: false }, options);
+    store.setEngineModelOptions(threadId, "claude", { thinking: false }, options);
 
     expect(
       useComposerDraftStore.getState().draftsByThreadId[threadId]?.engineSelectionByEngine.claude,
@@ -311,14 +311,14 @@ describe("composerDraftStore engineSelection", () => {
     // Set options for both engines
     store.setModelOptions(
       threadId,
-      providerModelOptions({
+      engineModelOptions({
         codex: { fastMode: true },
         claude: { effort: "max" },
       }),
     );
 
     // Now set options for only codex — claudeAgent should be untouched
-    store.setModelOptions(threadId, providerModelOptions({ codex: { reasoningEffort: "xhigh" } }));
+    store.setModelOptions(threadId, engineModelOptions({ codex: { reasoningEffort: "xhigh" } }));
 
     const draft = useComposerDraftStore.getState().draftsByThreadId[threadId];
     expect(draft?.engineSelectionByEngine.codex?.options).toEqual({ reasoningEffort: "xhigh" });
@@ -330,7 +330,7 @@ describe("composerDraftStore engineSelection", () => {
 
     store.setModelOptions(
       threadId,
-      providerModelOptions({
+      engineModelOptions({
         codex: { fastMode: true },
         claude: { effort: "max" },
       }),
@@ -351,7 +351,7 @@ describe("composerDraftStore engineSelection", () => {
 
     store.setEngineSelection(threadId, engineSelection("codex", "gpt-5.4"));
 
-    store.setProviderModelOptions(
+    store.setEngineModelOptions(
       threadId,
       "codex",
       {
@@ -620,11 +620,11 @@ describe("composerDraftStore setEngineSelection", () => {
     const store = useComposerDraftStore.getState();
 
     store.setEngineSelectionAndSticky(threadId, engineSelection("codex", "gpt-5.4"));
-    store.setActiveProviderAndSticky(threadId, "oa");
+    store.setActiveEngineAndSticky(threadId, "oa");
 
     const state = useComposerDraftStore.getState();
     expect(state.draftsByThreadId[threadId]?.activeEngine).toBe("oa");
-    expect(state.stickyActiveProvider).toBe("oa");
+    expect(state.stickyActiveEngine).toBe("oa");
     expect(state.draftsByThreadId[threadId]?.engineSelectionByEngine.oa).toBeUndefined();
     expect(state.draftsByThreadId[threadId]?.engineSelectionByEngine.codex).toEqual(
       engineSelection("codex", "gpt-5.4"),
@@ -645,7 +645,7 @@ describe("composerDraftStore setEngineSelection", () => {
     const store = useComposerDraftStore.getState();
     store.setEngineSelection(threadId, engineSelection("droid", "future-droid-model"));
 
-    store.setProviderModelOptions(threadId, "droid", { reasoningEffort: "ultra" });
+    store.setEngineModelOptions(threadId, "droid", { reasoningEffort: "ultra" });
 
     expect(
       useComposerDraftStore.getState().draftsByThreadId[threadId]?.engineSelectionByEngine.droid,
@@ -791,7 +791,7 @@ describe("composerDraftStore sticky composer settings", () => {
         fastMode: true,
       }),
     );
-    expect(useComposerDraftStore.getState().stickyActiveProvider).toBe("codex");
+    expect(useComposerDraftStore.getState().stickyActiveEngine).toBe("codex");
   });
 
   it("preserves Claude Auto support through sticky updates, options, and hydration", () => {
@@ -804,7 +804,7 @@ describe("composerDraftStore sticky composer settings", () => {
     };
 
     store.setEngineSelectionAndSticky(threadId, selection);
-    store.setProviderModelOptions(threadId, "claude", { effort: "high" }, { persistSticky: true });
+    store.setEngineModelOptions(threadId, "claude", { effort: "high" }, { persistSticky: true });
 
     const state = useComposerDraftStore.getState();
     expect(state.draftsByThreadId[threadId]?.engineSelectionByEngine.claude).toEqual({
@@ -831,7 +831,7 @@ describe("composerDraftStore sticky composer settings", () => {
         stickyEngineSelectionByEngine: {
           claude: state.stickyEngineSelectionByEngine.claude,
         },
-        stickyActiveProvider: "claude",
+        stickyActiveEngine: "claude",
       },
       useComposerDraftStore.getState(),
     ) as {
@@ -881,7 +881,7 @@ describe("composerDraftStore sticky composer settings", () => {
     expect(useComposerDraftStore.getState().stickyEngineSelectionByEngine.codex).toEqual(
       engineSelection("codex", "gpt-5.4"),
     );
-    expect(useComposerDraftStore.getState().stickyActiveProvider).toBe("codex");
+    expect(useComposerDraftStore.getState().stickyActiveEngine).toBe("codex");
   });
 
   it("preserves current sticky model fields during storage-version migration", () => {
@@ -900,14 +900,14 @@ describe("composerDraftStore sticky composer settings", () => {
             effort: "max",
           }),
         },
-        stickyActiveProvider: "claude",
+        stickyActiveEngine: "claude",
         stickyProvider: "codex",
         stickyModel: "gpt-5",
       },
       4,
     ) as {
       stickyEngineSelectionByEngine: Partial<Record<EngineSelection["engine"], EngineSelection>>;
-      stickyActiveProvider: EngineSelection["engine"] | null;
+      stickyActiveEngine: EngineSelection["engine"] | null;
     };
 
     expect(migratedState.stickyEngineSelectionByEngine.claude).toEqual(
@@ -915,7 +915,7 @@ describe("composerDraftStore sticky composer settings", () => {
         effort: "max",
       }),
     );
-    expect(migratedState.stickyActiveProvider).toBe("claude");
+    expect(migratedState.stickyActiveEngine).toBe("claude");
   });
 
   it("applies sticky activeEngine to new drafts", () => {
@@ -998,7 +998,7 @@ describe("composerDraftStore sticky composer settings", () => {
     const store = useComposerDraftStore.getState();
     const threadId = ThreadId.makeUnsafe("thread-sticky-auto-compact-window");
 
-    store.setProviderModelOptions(
+    store.setEngineModelOptions(
       threadId,
       "claude",
       { effort: "xhigh", autoCompactWindow: "1m" },
@@ -1018,7 +1018,7 @@ describe("composerDraftStore sticky composer settings", () => {
     const store = useComposerDraftStore.getState();
     const threadId = ThreadId.makeUnsafe("thread-sticky-context-window");
 
-    store.setProviderModelOptions(
+    store.setEngineModelOptions(
       threadId,
       "claude",
       { effort: "xhigh", contextWindow: "1m" },
@@ -1054,7 +1054,7 @@ describe("composerDraftStore sticky composer settings", () => {
             contextWindow: "1m",
           }),
         },
-        stickyActiveProvider: "claude",
+        stickyActiveEngine: "claude",
       },
       useComposerDraftStore.getState(),
     ) as {
@@ -1082,7 +1082,7 @@ describe("composerDraftStore engine-scoped option updates", () => {
         reasoningEffort: "medium",
       }),
     );
-    store.setProviderModelOptions(threadId, "claude", { effort: "max" });
+    store.setEngineModelOptions(threadId, "claude", { effort: "max" });
     const draft = useComposerDraftStore.getState().draftsByThreadId[threadId];
     expect(draft?.engineSelectionByEngine.codex).toEqual(
       engineSelection("codex", "gpt-5.3-codex", { reasoningEffort: "medium" }),
@@ -1094,7 +1094,7 @@ describe("composerDraftStore engine-scoped option updates", () => {
   it("retains Claude xhigh effort in engine-scoped options", () => {
     const store = useComposerDraftStore.getState();
 
-    store.setProviderModelOptions(
+    store.setEngineModelOptions(
       threadId,
       "claude",
       { effort: "xhigh" },
@@ -1112,7 +1112,7 @@ describe("composerDraftStore engine-scoped option updates", () => {
   it("retains Grok reasoning effort in engine-scoped options", () => {
     const store = useComposerDraftStore.getState();
 
-    store.setProviderModelOptions(
+    store.setEngineModelOptions(
       threadId,
       "grok",
       { reasoningEffort: "high" },
@@ -1130,7 +1130,7 @@ describe("composerDraftStore engine-scoped option updates", () => {
   it("retains HarnessOS max thinking level in engine-scoped options", () => {
     const store = useComposerDraftStore.getState();
 
-    store.setProviderModelOptions(
+    store.setEngineModelOptions(
       threadId,
       "oa",
       { thinkingLevel: "max" },
@@ -1153,7 +1153,7 @@ describe("composerDraftStore engine-scoped option updates", () => {
       engineSelection("pi", "legacy/missing-model", { thinkingLevel: "low" }),
     );
 
-    store.setProviderModelOptions(
+    store.setEngineModelOptions(
       threadId,
       "pi",
       { thinkingLevel: "high" },
@@ -1181,7 +1181,7 @@ describe("composerDraftStore engine-scoped option updates", () => {
       engineSelection("pi", "legacy/missing-model", { thinkingLevel: "low" }),
     );
 
-    store.setProviderModelOptions(threadId, "pi", undefined, {
+    store.setEngineModelOptions(threadId, "pi", undefined, {
       model: "openai/live-model",
       persistSticky: true,
     });

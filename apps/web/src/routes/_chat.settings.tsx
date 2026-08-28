@@ -49,7 +49,7 @@ import { ModelsSettingsPanel } from "~/components/settings/ModelsSettingsPanel";
 import { WebSearchSettingsPanel } from "~/components/settings/WebSearchSettingsPanel";
 import { PromptsSettingsPanel } from "~/components/settings/PromptsSettingsPanel";
 import {
-  isProviderInstallSettingsDirty,
+  isEngineInstallSettingsDirty,
   EnginesSettingsPanel,
 } from "~/components/settings/EnginesSettingsPanel";
 import { EngineOptionLabel } from "../components/EngineIcon";
@@ -135,7 +135,7 @@ const GIT_WRITING_DISCOVERY_PROVIDERS = ["codex", "kilo", "opencode"] as const;
 
 // Shared settings controls live in ~/components/settings/SettingControls.
 
-function isProviderSelectOption(value: string): value is EngineKind {
+function isEngineSelectOption(value: string): value is EngineKind {
   return ENGINE_SELECT_OPTIONS.includes(value as EngineKind);
 }
 
@@ -209,8 +209,8 @@ function SettingsRouteView() {
     if (result.state === "failed") {
       toastManager.add({
         type: "error",
-        title: t("settings.providerConfigSaveFailed"),
-        description: t("settings.providerConfigSaveRecovery"),
+        title: t("settings.engineConfigSaveFailed"),
+        description: t("settings.engineConfigSaveRecovery"),
       });
     }
     return result;
@@ -220,8 +220,8 @@ function SettingsRouteView() {
     if (result.state === "failed") {
       toastManager.add({
         type: "error",
-        title: t("settings.providerConfigSaveFailed"),
-        description: t("settings.providerConfigSaveRecovery"),
+        title: t("settings.engineConfigSaveFailed"),
+        description: t("settings.engineConfigSaveRecovery"),
       });
     }
     return result;
@@ -250,7 +250,7 @@ function SettingsRouteView() {
     selectedEngineDiscoveryEnabled: activeSection === "general",
     cwd: serverConfigQuery.data?.cwd ?? null,
     modelHintByEngine: gitWritingModelHintByEngine,
-    prefetchProviders: GIT_WRITING_DISCOVERY_PROVIDERS,
+    prefetchEngines: GIT_WRITING_DISCOVERY_PROVIDERS,
   });
   const gitTextGenerationModelOptions = useMemo(
     () =>
@@ -388,11 +388,11 @@ function SettingsRouteView() {
     serverSettings ?? serverDefaults,
     serverDefaults,
   );
-  const isInstallSettingsDirty = isProviderInstallSettingsDirty(
+  const isInstallSettingsDirty = isEngineInstallSettingsDirty(
     serverSettings ?? serverDefaults,
     serverDefaults,
   );
-  const hiddenProviderCount = new Set(settings.hiddenEngines).size;
+  const hiddenEngineCount = new Set(settings.hiddenEngines).size;
   const isEngineOrderDirty = !sameEngineOrder(settings.engineOrder, defaults.engineOrder);
 
   // Deep links and sidebar search targets all resolve to stable DOM ids in the active panel.
@@ -484,9 +484,9 @@ function SettingsRouteView() {
     )
       ? [t("settings.customModels")]
       : []),
-    ...(isInstallSettingsDirty ? [t("settings.providerTools")] : []),
-    ...(hiddenProviderCount > 0 ? [t("settings.visibleProviders")] : []),
-    ...(isEngineOrderDirty ? [t("settings.providerPicker")] : []),
+    ...(isInstallSettingsDirty ? [t("settings.engineTools")] : []),
+    ...(hiddenEngineCount > 0 ? [t("settings.visibleEngines")] : []),
+    ...(isEngineOrderDirty ? [t("settings.enginePicker")] : []),
   ];
 
   async function restoreDefaults() {
@@ -699,7 +699,7 @@ function SettingsRouteView() {
               disabled={!serverSettings}
               value={activeServerSettings.defaultEngine}
               onValueChange={(value) => {
-                if (!isProviderSelectOption(value)) return;
+                if (!isEngineSelectOption(value)) return;
                 void updateServerSettings({ defaultEngine: value });
               }}
               ariaLabel={t("settings.defaultEngine")}

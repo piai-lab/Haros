@@ -1,9 +1,9 @@
 import { type EngineModelDescriptor, ThreadId } from "@harnessos/contracts";
 import { describe, expect, it, vi } from "vitest";
 import {
-  getComposerProviderState,
-  renderProviderTraitsMenuContent,
-  renderProviderTraitsPicker,
+  getComposerEngineState,
+  renderEngineTraitsMenuContent,
+  renderEngineTraitsPicker,
 } from "./composerEngineRegistry";
 import { getComposerTraitSelection } from "./composerTraits";
 
@@ -101,9 +101,9 @@ const GROK_RUNTIME_4_5_WITH_REASONING: EngineModelDescriptor = {
   defaultReasoningEffort: "high",
 };
 
-describe("getComposerProviderState", () => {
+describe("getComposerEngineState", () => {
   it("dispatches Antigravity effort separately from its base model", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "antigravity",
       model: "Gemini 3.5 Flash",
       runtimeModel: ANTIGRAVITY_RUNTIME_GEMINI_WITH_REASONING,
@@ -126,7 +126,7 @@ describe("getComposerProviderState", () => {
       ).effortLevels.map((effort) => effort.value),
     ).toEqual(["low", "medium", "high"]);
     expect(
-      renderProviderTraitsPicker({
+      renderEngineTraitsPicker({
         engine: "antigravity",
         threadId: ThreadId.makeUnsafe("thread-antigravity-effort"),
         model: "Gemini 3.5 Flash",
@@ -149,7 +149,7 @@ describe("getComposerProviderState", () => {
 
     expect(selection.effortLevels).toEqual([]);
     expect(
-      renderProviderTraitsPicker({
+      renderEngineTraitsPicker({
         engine: "antigravity",
         threadId: ThreadId.makeUnsafe("thread-antigravity-single-effort"),
         model: "Claude Sonnet 4.6",
@@ -162,7 +162,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("returns codex defaults when no codex draft options exist", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "codex",
       model: "gpt-5.4",
       prompt: "",
@@ -177,7 +177,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("normalizes codex dispatch options while preserving the selected effort", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "codex",
       model: "gpt-5.4",
       prompt: "",
@@ -200,7 +200,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("reads only Codex options when other engine effort state is present", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "codex",
       model: "gpt-5.4",
       prompt: "",
@@ -215,7 +215,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("reads only Cursor options when Codex runtime effort state is present", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "cursor",
       model: "claude-opus-4-7",
       runtimeModel: CURSOR_RUNTIME_MODEL_300K,
@@ -231,7 +231,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("preserves a stored runtime Codex effort for dispatch before discovery resolves", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "codex",
       model: "gpt-5.6-sol",
       prompt: "",
@@ -252,7 +252,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("rejects an unsupported effort for a known static Codex model before discovery", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "codex",
       model: "gpt-5.4",
       prompt: "",
@@ -284,7 +284,7 @@ describe("getComposerProviderState", () => {
       },
     },
   ])("falls back to static Codex efforts when runtime metadata $shape", ({ runtimeModel }) => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "codex",
       model: "gpt-5.4",
       runtimeModel,
@@ -306,7 +306,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("drops a stored runtime Codex effort after discovery proves it unsupported", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "codex",
       model: "gpt-5.6-terra",
       runtimeModel: {
@@ -337,7 +337,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("preserves codex fast mode when it is the only active option", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "codex",
       model: "gpt-5.4",
       prompt: "",
@@ -358,7 +358,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("preserves codex fast mode for runtime-discovered models that advertise support", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "codex",
       model: "gpt-5.6-preview",
       runtimeModel: {
@@ -386,7 +386,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("drops codex fast mode when runtime discovery does not advertise support", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "codex",
       model: "gpt-5.4-mini",
       runtimeModel: {
@@ -411,7 +411,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("drops explicit codex default/off overrides from dispatch while keeping the selected effort label", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "codex",
       model: "gpt-5.4",
       prompt: "",
@@ -431,7 +431,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("returns Claude defaults for effort-capable models", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "claude",
       model: "claude-sonnet-4-6",
       prompt: "",
@@ -446,7 +446,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("tracks Claude ultrathink from the prompt without changing dispatch effort", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "claude",
       model: "claude-sonnet-4-6",
       prompt: "Ultrathink:\nInvestigate this failure",
@@ -498,7 +498,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("drops unsupported Claude effort options for models without effort controls", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "claude",
       model: "claude-haiku-4-5",
       prompt: "",
@@ -520,7 +520,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("preserves Claude fast mode when it is the only active option", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "claude",
       model: "claude-opus-4-6",
       prompt: "",
@@ -541,7 +541,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("drops explicit Claude default/off overrides from dispatch while keeping the selected effort label", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "claude",
       model: "claude-opus-4-6",
       prompt: "",
@@ -561,7 +561,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("normalizes Grok reasoning effort options for dispatch", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "grok",
       model: "grok-build",
       prompt: "",
@@ -582,7 +582,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("drops explicit Grok default reasoning effort from dispatch", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "grok",
       model: "grok-build",
       prompt: "",
@@ -608,7 +608,7 @@ describe("getComposerProviderState", () => {
       { reasoningEffort: "medium" },
       GROK_RUNTIME_4_5_WITH_REASONING,
     );
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "grok",
       model: "grok-4.5",
       runtimeModel: GROK_RUNTIME_4_5_WITH_REASONING,
@@ -654,14 +654,14 @@ describe("getComposerProviderState", () => {
       { reasoningEffort: "xhigh" },
       DROID_RUNTIME_GPT_5_6_WITH_REASONING,
     );
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "droid",
       model: "gpt-5.6-sol",
       runtimeModel: DROID_RUNTIME_GPT_5_6_WITH_REASONING,
       prompt: "",
       modelOptions: { droid: { reasoningEffort: "xhigh" } },
     });
-    const picker = renderProviderTraitsPicker({
+    const picker = renderEngineTraitsPicker({
       engine: "droid",
       threadId,
       model: "gpt-5.6-sol",
@@ -691,7 +691,7 @@ describe("getComposerProviderState", () => {
 
   it("dispatches an explicitly selected Droid effort even when ACP reports it as current", () => {
     expect(
-      getComposerProviderState({
+      getComposerEngineState({
         engine: "droid",
         model: "gpt-5.6-sol",
         runtimeModel: DROID_RUNTIME_GPT_5_6_WITH_REASONING,
@@ -705,7 +705,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("dispatches Cursor fast mode off when the lightning bolt is inactive", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "cursor",
       model: "grok-4.5",
       prompt: "",
@@ -727,7 +727,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("dispatches Cursor fast mode off for runtime Grok models that advertise the toggle", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "cursor",
       model: "grok-4.6",
       runtimeModel: {
@@ -764,7 +764,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("dispatches the Cursor Grok default HIGH effort together with fast mode", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "cursor",
       model: "grok-4.6",
       runtimeModel: {
@@ -801,7 +801,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("dispatches the Cursor Grok default HIGH effort even when it matches the picker default", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "cursor",
       model: "grok-4.6",
       prompt: "",
@@ -823,7 +823,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("drops stale Cursor context options once runtime metadata is authoritative", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "cursor",
       model: "claude-opus-4-7",
       runtimeModel: CURSOR_RUNTIME_MODEL_300K,
@@ -854,7 +854,7 @@ describe("getComposerProviderState", () => {
       { thinkingLevel: "xhigh" },
       PI_RUNTIME_MODEL_WITH_REASONING,
     );
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "pi",
       model: "openai/gpt-5.5",
       runtimeModel: PI_RUNTIME_MODEL_WITH_REASONING,
@@ -885,7 +885,7 @@ describe("getComposerProviderState", () => {
       { thinkingLevel: "xhigh" },
       { ...PI_RUNTIME_MODEL_WITH_REASONING, slug: "deepseek/deepseek-v4-pro" },
     );
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "oa",
       model: "deepseek/deepseek-v4-pro",
       runtimeModel: { ...PI_RUNTIME_MODEL_WITH_REASONING, slug: "deepseek/deepseek-v4-pro" },
@@ -922,7 +922,7 @@ describe("getComposerProviderState", () => {
       { thinkingLevel: "max" },
       runtimeModel,
     );
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "pi",
       model: "moonshotai/kimi-k3",
       runtimeModel,
@@ -951,7 +951,7 @@ describe("getComposerProviderState", () => {
   it("does not render a traits picker for OpenCode models without exposed controls", () => {
     const threadId = ThreadId.makeUnsafe("thread-opencode-traits-hidden");
 
-    const picker = renderProviderTraitsPicker({
+    const picker = renderEngineTraitsPicker({
       engine: "opencode",
       threadId,
       model: "openrouter/gpt-oss-120b:free",
@@ -961,7 +961,7 @@ describe("getComposerProviderState", () => {
       onPromptChange: vi.fn(),
     });
 
-    const menuContent = renderProviderTraitsMenuContent({
+    const menuContent = renderEngineTraitsMenuContent({
       engine: "opencode",
       threadId,
       model: "openrouter/gpt-oss-120b:free",
@@ -975,7 +975,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("keeps OpenCode runtime thinking selections on the variant field", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "opencode",
       model: "openai/gpt-5.4",
       runtimeModel: OPENCODE_RUNTIME_MODEL_WITH_REASONING,
@@ -997,7 +997,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("uses the runtime default thinking level for OpenCode trigger state", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "opencode",
       model: "openai/gpt-5.4",
       runtimeModel: OPENCODE_RUNTIME_MODEL_WITH_REASONING,
@@ -1013,7 +1013,7 @@ describe("getComposerProviderState", () => {
   });
 
   it("falls back to the first OpenCode runtime variant when metadata omits a default", () => {
-    const state = getComposerProviderState({
+    const state = getComposerEngineState({
       engine: "opencode",
       model: "opencode/gpt-5-nano",
       runtimeModel: OPENCODE_RUNTIME_MODEL_WITHOUT_DEFAULT,
@@ -1031,7 +1031,7 @@ describe("getComposerProviderState", () => {
   it("renders OpenCode thinking controls when runtime metadata exposes levels without a default", () => {
     const threadId = ThreadId.makeUnsafe("thread-opencode-runtime-thinking");
 
-    const picker = renderProviderTraitsPicker({
+    const picker = renderEngineTraitsPicker({
       engine: "opencode",
       threadId,
       model: "opencode/gpt-5-nano",
@@ -1042,7 +1042,7 @@ describe("getComposerProviderState", () => {
       onPromptChange: vi.fn(),
     });
 
-    const menuContent = renderProviderTraitsMenuContent({
+    const menuContent = renderEngineTraitsMenuContent({
       engine: "opencode",
       threadId,
       model: "opencode/gpt-5-nano",

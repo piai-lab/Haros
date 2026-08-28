@@ -4,7 +4,7 @@
 // Layer: Web UI state persistence
 
 import type { ProjectId, EngineKind, ThreadId } from "@harnessos/contracts";
-import { isProviderKind } from "./engineOrdering";
+import { isEngineKind } from "./engineOrdering";
 
 const EDITOR_VIEW_STATE_STORAGE_KEY = "harnessos:editor:view-state-by-thread:v1";
 const EDITOR_RAIL_CHAT_TABS_STORAGE_KEY = "harnessos:editor:rail-chat-tabs-by-project:v1";
@@ -128,7 +128,7 @@ function readEditorRailChatTabsMap(): PersistedEditorRailChatTabsMap {
             typeof candidate.id !== "string" ||
             typeof candidate.title !== "string" ||
             typeof candidate.engine !== "string" ||
-            !isProviderKind(candidate.engine)
+            !isEngineKind(candidate.engine)
           ) {
             return [];
           }

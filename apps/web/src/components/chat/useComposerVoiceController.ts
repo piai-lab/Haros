@@ -97,7 +97,7 @@ export function useComposerVoiceController(
   const [isVoiceTranscribing, setIsVoiceTranscribing] = useState(false);
   const voiceTranscriptionRequestIdRef = useRef(0);
   const voiceThreadIdRef = useRef(threadId);
-  const voiceProviderRef = useRef<EngineKind>(selectedEngine);
+  const voiceEngineRef = useRef<EngineKind>(selectedEngine);
   const voiceRecordingStartedAtRef = useRef<number | null>(null);
   const failureCopy = {
     ...DEFAULT_FAILURE_COPY,
@@ -107,7 +107,7 @@ export function useComposerVoiceController(
   // its identity before passive effects and browser events can observe it.
   useLayoutEffect(() => {
     voiceThreadIdRef.current = threadId;
-    voiceProviderRef.current = selectedEngine;
+    voiceEngineRef.current = selectedEngine;
   }, [threadId, selectedEngine]);
 
   const voiceRecordingDurationLabel = formatVoiceRecordingDuration(voiceRecordingDurationMs);
@@ -250,11 +250,11 @@ export function useComposerVoiceController(
     const requestId = voiceTranscriptionRequestIdRef.current + 1;
     voiceTranscriptionRequestIdRef.current = requestId;
     const requestThreadId = threadId;
-    const requestProvider = selectedEngine;
+    const requestEngine = selectedEngine;
     const isCurrentVoiceRequest = () =>
       voiceTranscriptionRequestIdRef.current === requestId &&
       voiceThreadIdRef.current === requestThreadId &&
-      voiceProviderRef.current === requestProvider;
+      voiceEngineRef.current === requestEngine;
 
     // Promise chain instead of async/try-catch-finally: React Compiler does
     // not yet support try/finally, and it would skip optimizing this hook.

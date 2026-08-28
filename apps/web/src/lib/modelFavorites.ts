@@ -12,11 +12,11 @@ export const FAVORITE_MODEL_STORAGE_KEYS = {
   pi: "harnessos:pi-favourite-models:v1",
 } as const;
 
-export type FavoriteModelProvider = keyof typeof FAVORITE_MODEL_STORAGE_KEYS;
+export type FavoriteModelEngine = keyof typeof FAVORITE_MODEL_STORAGE_KEYS;
 
 const FavoriteModelSlugsSchema = Schema.Array(Schema.String);
 
-export function supportsModelFavorites(engine: EngineKind): engine is FavoriteModelProvider {
+export function supportsModelFavorites(engine: EngineKind): engine is FavoriteModelEngine {
   return engine === "cursor" || engine === "kilo" || engine === "opencode" || engine === "pi";
 }
 

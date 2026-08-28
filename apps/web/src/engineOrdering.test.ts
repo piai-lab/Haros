@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_PROVIDER_ORDER,
-  isProviderKind,
+  isEngineKind,
   normalizeHiddenEngines,
   normalizeEngineOrder,
 } from "./engineOrdering";
@@ -30,7 +30,7 @@ describe("engineOrdering", () => {
   });
 
   it("keeps Pi as a valid engine for persisted order and visibility settings", () => {
-    expect(isProviderKind("pi")).toBe(true);
+    expect(isEngineKind("pi")).toBe(true);
     expect(normalizeEngineOrder(["pi", "codex"])[0]).toBe("pi");
     expect(normalizeHiddenEngines(["bogus", "pi", "pi"])).toEqual(["pi"]);
   });

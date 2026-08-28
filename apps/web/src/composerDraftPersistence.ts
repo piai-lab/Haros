@@ -50,8 +50,8 @@ import {
   legacySyncEngineSelectionOptions,
   legacyToEngineSelectionByEngine,
   normalizeEngineSelection,
-  normalizeProviderKind,
-  normalizeProviderModelOptions,
+  normalizeEngineKind,
+  normalizeEngineModelOptions,
   sanitizeStickyEngineSelectionMap,
 } from "./composerDraftModels";
 import { normalizeAssistantSelectionAttachment } from "./lib/assistantSelections";
@@ -354,7 +354,7 @@ const PersistedComposerDraftStoreState = Schema.Struct({
   stickyEngineSelectionByEngine: Schema.optionalKey(
     Schema.Record(EngineKind, Schema.optionalKey(EngineSelection)),
   ),
-  stickyActiveProvider: Schema.optionalKey(Schema.NullOr(EngineKind)),
+  stickyActiveEngine: Schema.optionalKey(Schema.NullOr(EngineKind)),
 });
 
 export type PersistedComposerDraftStoreState = typeof PersistedComposerDraftStoreState.Type;
@@ -364,7 +364,7 @@ const EMPTY_PERSISTED_DRAFT_STORE_STATE = Object.freeze<PersistedComposerDraftSt
   draftThreadsByThreadId: {},
   projectDraftThreadIdByProjectId: {},
   stickyEngineSelectionByEngine: {},
-  stickyActiveProvider: null,
+  stickyActiveEngine: null,
 });
 
 function normalizePersistedPromptHistorySavedDraft(
@@ -574,7 +574,7 @@ function normalizePersistedQueuedTurns(
     const kind = candidate.kind;
     const createdAt = typeof candidate.createdAt === "string" ? candidate.createdAt : "";
     const previewText = typeof candidate.previewText === "string" ? candidate.previewText : "";
-    const selectedEngine = normalizeProviderKind(candidate.selectedEngine);
+    const selectedEngine = normalizeEngineKind(candidate.selectedEngine);
     const selectedModel =
       candidate.selectedModel === null
         ? null
@@ -1010,11 +1010,11 @@ function normalizePersistedDraftsByThreadId(
       engineSelectionByEngine = draftCandidate.engineSelectionByEngine as Partial<
         Record<EngineKind, EngineSelection>
       >;
-      activeEngine = normalizeProviderKind(draftCandidate.activeEngine);
+      activeEngine = normalizeEngineKind(draftCandidate.activeEngine);
     } else {
       // v2 or legacy format: migrate
       const normalizedModelOptions =
-        normalizeProviderModelOptions(
+        normalizeEngineModelOptions(
           legacyDraftCandidate.modelOptions,
           undefined,
           legacyDraftCandidate,
@@ -1468,7 +1468,7 @@ export function partializeComposerDraftStoreState(
     draftThreadsByThreadId: state.draftThreadsByThreadId,
     projectDraftThreadIdByProjectId: state.projectDraftThreadIdByProjectId,
     stickyEngineSelectionByEngine: state.stickyEngineSelectionByEngine,
-    stickyActiveProvider: state.stickyActiveProvider,
+    stickyActiveEngine: state.stickyActiveEngine,
   };
 }
 
@@ -1487,7 +1487,7 @@ export function normalizeCurrentPersistedComposerDraftStoreState(
 
   // Handle both v3 (engineSelectionByEngine) and v2/legacy formats
   let stickyEngineSelectionByEngine: Partial<Record<EngineKind, EngineSelection>> = {};
-  let stickyActiveProvider: EngineKind | null = null;
+  let stickyActiveEngine: EngineKind | null = null;
   if (
     normalizedPersistedState.stickyEngineSelectionByEngine &&
     typeof normalizedPersistedState.stickyEngineSelectionByEngine === "object"
@@ -1496,11 +1496,11 @@ export function normalizeCurrentPersistedComposerDraftStoreState(
       normalizedPersistedState.stickyEngineSelectionByEngine as Partial<
         Record<EngineKind, EngineSelection>
       >;
-    stickyActiveProvider = normalizeProviderKind(normalizedPersistedState.stickyActiveProvider);
+    stickyActiveEngine = normalizeEngineKind(normalizedPersistedState.stickyActiveEngine);
   } else {
     // Legacy migration path
     const stickyModelOptions =
-      normalizeProviderModelOptions(normalizedPersistedState.stickyModelOptions) ?? {};
+      normalizeEngineModelOptions(normalizedPersistedState.stickyModelOptions) ?? {};
     const normalizedStickyEngineSelection = normalizeEngineSelection(
       normalizedPersistedState.stickyEngineSelection,
       {
@@ -1521,7 +1521,7 @@ export function normalizeCurrentPersistedComposerDraftStoreState(
       stickyEngineSelection,
       nextStickyModelOptions,
     );
-    stickyActiveProvider = normalizeProviderKind(normalizedPersistedState.stickyProvider);
+    stickyActiveEngine = normalizeEngineKind(normalizedPersistedState.stickyProvider);
   }
 
   return {
@@ -1529,7 +1529,7 @@ export function normalizeCurrentPersistedComposerDraftStoreState(
     draftThreadsByThreadId,
     projectDraftThreadIdByProjectId,
     stickyEngineSelectionByEngine: sanitizeStickyEngineSelectionMap(stickyEngineSelectionByEngine),
-    stickyActiveProvider,
+    stickyActiveEngine,
   };
 }
 
@@ -1640,7 +1640,7 @@ export function toHydratedThreadDraft(
   // The persisted draft is already in v3 shape (migration handles older formats)
   const engineSelectionByEngine: Partial<Record<EngineKind, EngineSelection>> =
     persistedDraft.engineSelectionByEngine ?? {};
-  const activeEngine = normalizeProviderKind(persistedDraft.activeEngine) ?? null;
+  const activeEngine = normalizeEngineKind(persistedDraft.activeEngine) ?? null;
 
   return {
     prompt: persistedDraft.prompt,

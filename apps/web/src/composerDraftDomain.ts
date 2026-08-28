@@ -273,7 +273,7 @@ export interface ComposerDraftStoreState {
   draftThreadsByThreadId: Record<ThreadId, DraftThreadState>;
   projectDraftThreadIdByProjectId: Record<string, ThreadId>;
   stickyEngineSelectionByEngine: Partial<Record<EngineKind, EngineSelection>>;
-  stickyActiveProvider: EngineKind | null;
+  stickyActiveEngine: EngineKind | null;
   getDraftThreadByProjectId: (
     projectId: ProjectId,
     entryPoint?: ThreadPrimarySurface,
@@ -344,17 +344,17 @@ export interface ComposerDraftStoreState {
     threadId: ThreadId,
     engineSelection: EngineSelection | null | undefined,
   ) => void;
-  setActiveProviderAndSticky: (threadId: ThreadId, engine: EngineKind) => void;
+  setActiveEngineAndSticky: (threadId: ThreadId, engine: EngineKind) => void;
   setEngineSelectionAndSticky: (threadId: ThreadId, engineSelection: EngineSelection) => void;
   setModelOptions: (
     threadId: ThreadId,
     modelOptions: EngineModelOptions | null | undefined,
   ) => void;
   applyStickyState: (threadId: ThreadId) => void;
-  setProviderModelOptions: (
+  setEngineModelOptions: (
     threadId: ThreadId,
     engine: EngineKind,
-    nextProviderOptions: EngineModelOptions[EngineKind] | null | undefined,
+    nextEngineOptions: EngineModelOptions[EngineKind] | null | undefined,
     options?: {
       model?: string | null;
       persistSticky?: boolean;

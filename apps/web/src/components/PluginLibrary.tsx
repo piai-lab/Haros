@@ -44,10 +44,10 @@ import {
   buildPluginSearchFields,
   buildSkillSearchFields,
   formatSkillScope,
-  isInstalledProviderPlugin,
-  normalizeProviderDiscoveryText,
-  rankProviderDiscoveryItems,
-  resolveProviderDiscoveryCwd,
+  isInstalledEnginePlugin,
+  normalizeEngineDiscoveryText,
+  rankEngineDiscoveryItems,
+  resolveEngineDiscoveryCwd,
 } from "~/lib/engineDiscovery";
 import {
   createFirstProjectSelector,
@@ -55,11 +55,11 @@ import {
   createThreadSelector,
 } from "~/storeSelectors";
 import {
-  isProviderDiscoverySessionActive,
-  providerComposerCapabilitiesQueryOptions,
+  isEngineDiscoverySessionActive,
+  engineComposerCapabilitiesQueryOptions,
   engineDiscoveryQueryKeys,
-  providerPluginsQueryOptions,
-  providerSkillsQueryOptions,
+  enginePluginsQueryOptions,
+  engineSkillsQueryOptions,
   supportsPluginDiscovery,
   supportsSkillDiscovery,
 } from "~/lib/engineDiscoveryReactQuery";
@@ -376,7 +376,7 @@ function PluginGridItem({ entry }: { entry: PluginEntry }) {
         </p>
         <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{description}</p>
       </div>
-      <InstalledStatus installed={isInstalledProviderPlugin(entry.plugin)} />
+      <InstalledStatus installed={isInstalledEnginePlugin(entry.plugin)} />
     </div>
   );
 }
@@ -396,7 +396,7 @@ function localizedSkillScope(
 
 function skillSourceLabel(
   skill: EngineSkillDescriptor,
-  providerLabel: string,
+  engineLabel: string,
   t: ReturnType<typeof useI18n>["t"],
 ): string {
   const segments = new Set(skill.path.split(/[\\/]+/));
@@ -407,17 +407,17 @@ function skillSourceLabel(
     return t("library.compatibleSharedAsset");
   }
   return t("library.nativeSource", {
-    engine: providerLabel,
+    engine: engineLabel,
     scope: localizedSkillScope(skill.scope, t),
   });
 }
 
 function SkillGridItem({
   skill,
-  providerLabel,
+  engineLabel,
 }: {
   skill: EngineSkillDescriptor;
-  providerLabel: string;
+  engineLabel: string;
 }) {
   const { t } = useI18n();
   const description =
@@ -432,7 +432,7 @@ function SkillGridItem({
         </p>
         <p className="mt-0.5 truncate text-[12px] text-muted-foreground">{description}</p>
         <p className="mt-0.5 truncate text-[11px] text-muted-foreground/70">
-          {skillSourceLabel(skill, providerLabel, t)}
+          {skillSourceLabel(skill, engineLabel, t)}
         </p>
       </div>
       <InstalledStatus installed={skill.enabled} />
@@ -594,9 +594,9 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   const contextThread = activeThread ?? sourceThread ?? null;
   const activeProject = focusedProject ?? sourceProject ?? firstProject ?? null;
 
-  const preferredProvider = contextThread?.engineSelection.engine ?? "oa";
+  const preferredEngine = contextThread?.engineSelection.engine ?? "oa";
 
-  const [selectedEngine, setSelectedProvider] = useState<EngineKind>(preferredProvider);
+  const [selectedEngine, setSelectedEngine] = useState<EngineKind>(preferredEngine);
   const [selectedTab, setSelectedTab] = useState<DiscoveryTab>("skills");
   const [pluginSearch, setPluginSearch] = useState("");
   const [skillSearch, setSkillSearch] = useState("");
@@ -668,7 +668,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
         // engines registered into passive HarnessOS model discovery. Keep the
         // existing engine-prefix invalidation as the single refresh boundary.
         queryClient.invalidateQueries({
-          queryKey: engineDiscoveryQueryKeys.modelsForProvider("oa"),
+          queryKey: engineDiscoveryQueryKeys.modelsForEngine("oa"),
         }),
       ]);
     },
@@ -687,9 +687,9 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
 
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const capabilityQueries = useQueries({
-    queries: ENGINE_KINDS.map((engine) => providerComposerCapabilitiesQueryOptions(engine)),
+    queries: ENGINE_KINDS.map((engine) => engineComposerCapabilitiesQueryOptions(engine)),
   });
-  const providerCapabilities = Object.fromEntries(
+  const engineCapabilities = Object.fromEntries(
     ENGINE_KINDS.map((engine, index) => {
       const capability = capabilityQueries[index]?.data;
       return [
@@ -705,23 +705,23 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   // Library discovery stays bound to the Engine the user selected. Unsupported
   // tabs render an accurate unavailable state instead of reading another Engine.
   const effectiveEngine = selectedEngine;
-  const hasActiveProviderDiscoverySession = isProviderDiscoverySessionActive({
+  const hasActiveEngineDiscoverySession = isEngineDiscoverySessionActive({
     engine: effectiveEngine,
     session: contextThread?.session,
   });
 
-  const discoveryCwd = resolveProviderDiscoveryCwd({
+  const discoveryCwd = resolveEngineDiscoveryCwd({
     activeThreadWorktreePath: contextThread?.worktreePath ?? null,
     activeProjectCwd: activeProject?.cwd ?? null,
     serverCwd: serverConfigQuery.data?.cwd ?? null,
   });
 
-  const providerLabel = ENGINE_DISPLAY_NAMES[effectiveEngine];
-  const canListPlugins = providerCapabilities[effectiveEngine].plugins;
-  const canListSkills = providerCapabilities[effectiveEngine].skills;
+  const engineLabel = ENGINE_DISPLAY_NAMES[effectiveEngine];
+  const canListPlugins = engineCapabilities[effectiveEngine].plugins;
+  const canListSkills = engineCapabilities[effectiveEngine].skills;
 
   const pluginsQuery = useQuery(
-    providerPluginsQueryOptions({
+    enginePluginsQueryOptions({
       engine: effectiveEngine,
       cwd: discoveryCwd,
       threadId: nativeThreadId,
@@ -730,11 +730,11 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   );
 
   const skillsQuery = useQuery(
-    providerSkillsQueryOptions({
+    engineSkillsQueryOptions({
       engine: effectiveEngine,
       cwd: discoveryCwd,
       threadId: nativeThreadId,
-      activeSession: hasActiveProviderDiscoverySession,
+      activeSession: hasActiveEngineDiscoverySession,
       enabled: selectedTab === "skills" && canListSkills && discoveryCwd !== null,
     }),
   );
@@ -752,12 +752,12 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   );
 
   const installedPluginEntries = pluginEntries.filter((entry) =>
-    isInstalledProviderPlugin(entry.plugin),
+    isInstalledEnginePlugin(entry.plugin),
   );
 
-  const pluginSearchQuery = normalizeProviderDiscoveryText(deferredPluginSearch);
+  const pluginSearchQuery = normalizeEngineDiscoveryText(deferredPluginSearch);
   const filteredPluginEntries = pluginSearchQuery
-    ? rankProviderDiscoveryItems(installedPluginEntries, pluginSearchQuery, (entry) =>
+    ? rankEngineDiscoveryItems(installedPluginEntries, pluginSearchQuery, (entry) =>
         buildPluginSearchFields(entry.plugin),
       )
     : installedPluginEntries;
@@ -780,9 +780,9 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
     entries: v.entries,
   }));
 
-  const skillSearchQuery = normalizeProviderDiscoveryText(deferredSkillSearch);
+  const skillSearchQuery = normalizeEngineDiscoveryText(deferredSkillSearch);
   const filteredSkills = skillSearchQuery
-    ? rankProviderDiscoveryItems(discoveredSkills, skillSearchQuery, buildSkillSearchFields)
+    ? rankEngineDiscoveryItems(discoveredSkills, skillSearchQuery, buildSkillSearchFields)
     : discoveredSkills;
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -826,7 +826,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
             )}
           >
             {DEFAULT_PROVIDER_ORDER.map((engine) => {
-              const capabilities = providerCapabilities[engine];
+              const capabilities = engineCapabilities[engine];
               const label = ENGINE_DISPLAY_NAMES[engine];
               return (
                 <EngineToggleButton
@@ -836,7 +836,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
                   active={effectiveEngine === engine}
                   disabled={!capabilities.plugins && !capabilities.skills}
                   onClick={() => {
-                    setSelectedProvider(engine);
+                    setSelectedEngine(engine);
                     if (selectedTab === "plugins" && !capabilities.plugins && capabilities.skills) {
                       setSelectedTab("skills");
                     }
@@ -857,7 +857,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
             <h1 className="text-[28px] font-semibold text-foreground">
               {selectedTab === "packages"
                 ? t("library.packageTitle")
-                : t("library.title", { engine: providerLabel })}
+                : t("library.title", { engine: engineLabel })}
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
               {selectedTab === "packages" ? t("library.packageSubtitle") : t("library.subtitle")}
@@ -947,8 +947,8 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
                 ? (skillsQuery.data?.warnings ?? []).map((warning) => (
                     <InlineWarning key={`${warning.source}:${warning.reason}`}>
                       {warning.source === "engine-native"
-                        ? t("library.nativeDiscoveryFailed", { engine: providerLabel })
-                        : t("library.catalogDiscoveryFailed", { engine: providerLabel })}
+                        ? t("library.nativeDiscoveryFailed", { engine: engineLabel })
+                        : t("library.catalogDiscoveryFailed", { engine: engineLabel })}
                     </InlineWarning>
                   ))
                 : null}
@@ -1016,7 +1016,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
                 {!canListPlugins ? (
                   <div className="mx-auto max-w-2xl">
                     <EmptyPanel
-                      title={t("library.pluginsUnavailable", { engine: providerLabel })}
+                      title={t("library.pluginsUnavailable", { engine: engineLabel })}
                       description={t("library.pluginDiscoveryUnsupported")}
                     />
                   </div>
@@ -1029,7 +1029,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
                 ) : filteredPluginEntries.length === 0 ? (
                   <EmptyPanel
                     title={t("library.noPlugins")}
-                    description={t("library.onlyInstalledPlugins", { engine: providerLabel })}
+                    description={t("library.onlyInstalledPlugins", { engine: engineLabel })}
                   />
                 ) : (
                   <div className="space-y-6">
@@ -1051,7 +1051,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
                 {!canListSkills ? (
                   <div className="mx-auto max-w-2xl">
                     <EmptyPanel
-                      title={t("library.skillsUnavailable", { engine: providerLabel })}
+                      title={t("library.skillsUnavailable", { engine: engineLabel })}
                       description={t("library.skillDiscoveryUnsupported")}
                     />
                   </div>
@@ -1071,11 +1071,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
                     <SectionHeader title={t("library.skills")} />
                     <div className="grid grid-cols-1 sm:grid-cols-2">
                       {filteredSkills.map((skill) => (
-                        <SkillGridItem
-                          key={skill.path}
-                          skill={skill}
-                          providerLabel={providerLabel}
-                        />
+                        <SkillGridItem key={skill.path} skill={skill} engineLabel={engineLabel} />
                       ))}
                     </div>
                   </div>

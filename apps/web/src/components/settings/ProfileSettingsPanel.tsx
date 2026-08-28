@@ -12,7 +12,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { useI18n } from "~/i18n";
 import { CentralIcon } from "~/lib/central-icons";
-import { buildEngineSelection } from "~/providerModelOptions";
+import { buildEngineSelection } from "~/engineModelOptions";
 import {
   serverProfileStatsQueryOptions,
   serverProfileTokenStatsQueryOptions,

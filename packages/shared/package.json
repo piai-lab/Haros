@@ -136,9 +136,9 @@
       "types": "./src/threadSummary.ts",
       "import": "./src/threadSummary.ts"
     },
-    "./providerActivityVisibility": {
-      "types": "./src/providerActivityVisibility.ts",
-      "import": "./src/providerActivityVisibility.ts"
+    "./engineActivityVisibility": {
+      "types": "./src/engineActivityVisibility.ts",
+      "import": "./src/engineActivityVisibility.ts"
     },
     "./pendingInteractions": {
       "types": "./src/pendingInteractions.ts",

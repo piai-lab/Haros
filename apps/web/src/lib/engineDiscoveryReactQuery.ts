@@ -48,7 +48,7 @@ const EMPTY_PLUGINS_RESULT: EngineListPluginsResult = {
   cached: false,
 };
 
-export function isProviderDiscoverySessionActive(input: {
+export function isEngineDiscoverySessionActive(input: {
   readonly engine: EngineKind;
   readonly session: { readonly engine: EngineKind; readonly status: string } | null | undefined;
 }): boolean {
@@ -106,13 +106,13 @@ export const engineDiscoveryQueryKeys = {
     agentDir: string | null,
     cwd: string | null,
   ) => ["engine-discovery", "models", engine, binaryPath, apiEndpoint, agentDir, cwd] as const,
-  modelsForProvider: (engine: EngineKind) => ["engine-discovery", "models", engine] as const,
-  agentsForProvider: (engine: EngineKind) => ["engine-discovery", "agents", engine] as const,
+  modelsForEngine: (engine: EngineKind) => ["engine-discovery", "models", engine] as const,
+  agentsForEngine: (engine: EngineKind) => ["engine-discovery", "agents", engine] as const,
   agents: (engine: EngineKind, binaryPath: string | null, cwd: string | null) =>
-    [...engineDiscoveryQueryKeys.agentsForProvider(engine), binaryPath, cwd] as const,
+    [...engineDiscoveryQueryKeys.agentsForEngine(engine), binaryPath, cwd] as const,
 };
 
-export function providerComposerCapabilitiesQueryOptions(engine: EngineKind) {
+export function engineComposerCapabilitiesQueryOptions(engine: EngineKind) {
   return queryOptions({
     queryKey: engineDiscoveryQueryKeys.composerCapabilities(engine),
     queryFn: async () => {
@@ -146,7 +146,7 @@ export function engineExecutionCapabilitiesMatchSelection(
   );
 }
 
-export function isProviderInteractionModeExecutable(
+export function isEngineInteractionModeExecutable(
   capability: EngineInteractionModeCapability | undefined,
 ): capability is EngineInteractionModeCapability & { readonly structurallySupported: true } {
   return (
@@ -155,7 +155,7 @@ export function isProviderInteractionModeExecutable(
   );
 }
 
-export function providerSkillsQueryOptions(input: {
+export function engineSkillsQueryOptions(input: {
   engine: EngineKind;
   cwd: string | null;
   threadId?: string | null;
@@ -208,7 +208,7 @@ export function skillsCatalogQueryOptions(input?: { cwd?: string | null; enabled
   });
 }
 
-export function providerCommandsQueryOptions(input: {
+export function engineCommandsQueryOptions(input: {
   engine: EngineKind;
   cwd: string | null;
   threadId?: string | null;
@@ -292,7 +292,7 @@ function discoveryErrorCode(error: unknown): string | null {
   return typeof error.code === "string" ? error.code : null;
 }
 
-function isRetryableProviderCatalogDiscoveryError(error: unknown): boolean {
+function isRetryableEngineCatalogDiscoveryError(error: unknown): boolean {
   const code = discoveryErrorCode(error);
   return (
     code === WS_REQUEST_TIMEOUT_CODE ||
@@ -302,8 +302,8 @@ function isRetryableProviderCatalogDiscoveryError(error: unknown): boolean {
   );
 }
 
-export function shouldRetryProviderCatalogDiscovery(failureCount: number, error: unknown): boolean {
-  if (!isRetryableProviderCatalogDiscoveryError(error)) return false;
+export function shouldRetryEngineCatalogDiscovery(failureCount: number, error: unknown): boolean {
+  if (!isRetryableEngineCatalogDiscoveryError(error)) return false;
   return (
     failureCount <
     (discoveryErrorCode(error) === EXPENSIVE_READ_CAPACITY_CODE
@@ -312,7 +312,7 @@ export function shouldRetryProviderCatalogDiscovery(failureCount: number, error:
   );
 }
 
-export function providerCatalogDiscoveryRetryDelay(attemptIndex: number, error: unknown): number {
+export function engineCatalogDiscoveryRetryDelay(attemptIndex: number, error: unknown): number {
   const code = discoveryErrorCode(error);
   if (code === EXPENSIVE_READ_CAPACITY_CODE && isExplicitlyRetryableDiscoveryError(error)) {
     const retryAfterMs = error.retryAfterMs;
@@ -333,7 +333,7 @@ export function providerCatalogDiscoveryRetryDelay(attemptIndex: number, error: 
   return Math.min(1_000 * 2 ** attemptIndex, 30_000);
 }
 
-export function providerModelsQueryOptions(input: {
+export function engineModelsQueryOptions(input: {
   engine: EngineKind;
   binaryPath?: string | null;
   apiEndpoint?: string | null;
@@ -377,15 +377,15 @@ export function providerModelsQueryOptions(input: {
     // not add a second 1s + 2s + 4s retry loop for deterministic CLI, auth,
     // config, or unknown engine failures. Only a typed RPC error that
     // explicitly declares itself transient may retry.
-    retry: shouldRetryProviderCatalogDiscovery,
-    retryDelay: providerCatalogDiscoveryRetryDelay,
+    retry: shouldRetryEngineCatalogDiscovery,
+    retryDelay: engineCatalogDiscoveryRetryDelay,
     staleTime: input.engine === "droid" ? 5 * 60_000 : 60_000,
     ...(input.engine === "droid" ? { refetchOnWindowFocus: false } : {}),
     placeholderData: (previous) => previous ?? EMPTY_MODELS_RESULT,
   });
 }
 
-export function providerAgentsQueryOptions(input: {
+export function engineAgentsQueryOptions(input: {
   engine: EngineKind;
   binaryPath?: string | null;
   cwd?: string | null;
@@ -410,14 +410,14 @@ export function providerAgentsQueryOptions(input: {
     },
     enabled: input.enabled ?? true,
     subscribed: input.enabled ?? true,
-    retry: shouldRetryProviderCatalogDiscovery,
-    retryDelay: providerCatalogDiscoveryRetryDelay,
+    retry: shouldRetryEngineCatalogDiscovery,
+    retryDelay: engineCatalogDiscoveryRetryDelay,
     staleTime: 60_000,
     placeholderData: (previous) => previous ?? EMPTY_AGENTS_RESULT,
   });
 }
 
-export function providerPluginsQueryOptions(input: {
+export function enginePluginsQueryOptions(input: {
   engine: EngineKind;
   cwd: string | null;
   threadId?: string | null;
