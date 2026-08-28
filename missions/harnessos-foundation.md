@@ -6,9 +6,9 @@
 - Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`, Git worktree for HarnessOS.
 - Repository identity: `github.com/piai-lab/HarnessOS`
 - Campaign origin revision: `698d305e63a600ff00bb1873e87b2cb825a6496d`.
-- Last reconciled revision: `393d66372b0b5db6bc0e9316b08c5de06836b6d4`.
-- Worktree state: clean.
-- Last reconciled at: `2026-08-28T11:39:21+08:00`.
+- Last reconciled revision: `0ad5017020ef265901e9a61130726616b729c681`.
+- Worktree state: dirty only in `missions/harnessos-foundation.md` and `missions/evidence/harnessos-foundation/E-008-application-identity.txt` for this Campaign reconciliation.
+- Last reconciled at: `2026-08-28T11:54:30+08:00`.
 - Active branch/worktree: `codex/harnessos-foundation` at `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`.
 - Applicable instructions: user-locked HarnessOS implementation plan; root `AGENTS.md`; repository authority routes in `README.md` and `architecture/README.md`.
 - Superseded state sources: no competing state files were found after the recursive scan; historical tombstones remain at `execution-brief.md` and `missions/independent-omnimind-v1.md`.
@@ -62,6 +62,7 @@
 | E-005 | core | source | K-004, C-007 | `file:source-adoptions.json#L1-L311` | revision `698d305e63a600ff00bb1873e87b2cb825a6496d` | `node -e "JSON.parse(require('fs').readFileSync('source-adoptions.json','utf8')); console.log('valid')"` | current until adoption rewrite or source revision change |
 | E-006 | task | focused | C-002 partial package-scope cut | `file:missions/evidence/harnessos-foundation/E-006-package-scope.txt#L1-L18` | revision `5cd76f66ca5439b5d48eade3473453ae193d7767`; receipt sha256 `b32c9196fa51c132af524b134f696305d08ceb25ec6bb05df294caaff6d12db4` | `git rev-parse HEAD && test "$(rg -l -F '@omnimind/' --glob '!node_modules/**' --glob '!.git/**')" = 'bun.lock' && bun install --frozen-lockfile && bun run build:contracts && bun run typecheck && bun test test/workspace-package-identity.test.mjs scripts/lib/release-workspace-manifests.test.ts scripts/lib/release-legal-metadata.test.ts scripts/lib/packaged-legal-closure.test.ts` | current until workspace manifests, imports or vendored OA runtime identity change |
 | E-007 | task | focused | C-006 supporting post-base UI update requested by maintainer | `file:missions/evidence/harnessos-foundation/E-007-alpha-ui-update.txt#L1-L17` | revision `712c829b3e768b9e6e5178997f8ec30e319fe83d`; receipt sha256 `af23a6d2f387e6045ab276f9f2278aa94668d39839c95092acf42390568fa41e` | `cd apps/web && bun run test:unit -- src/components/ModelServiceIcon.test.tsx src/components/chat/MessagesTimeline.test.tsx && bun run test:browser -- src/components/ModelIdentityIcon.browser.tsx src/components/settings/ModelsSettingsPanel.browser.tsx src/components/chat/MessagesTimeline.turnProcess.browser.tsx` | current until the three affected UI owners change |
+| E-008 | task | focused | C-002 partial application-namespace cut | `file:missions/evidence/harnessos-foundation/E-008-application-identity.txt#L1-L18` | revision `0ad5017020ef265901e9a61130726616b729c681`; receipt sha256 `43b325961eecabfe8fc1659ee091e6f357aff23db92bca3ebc873a2f97c98a10` | `git rev-parse HEAD && ! rg --hidden -n 'OMNIMIND_[A-Z0-9_]+' apps packages/contracts packages/shared scripts package.json turbo.json .github --glob '!apps/server/src/provider/omnimindPlanModeExtension.ts' && ! rg --hidden -n 'omnimind(-canary)?://' apps packages/contracts packages/shared scripts package.json turbo.json .github && ! rg --hidden -n 'app\.omnimind' apps packages/contracts packages/shared scripts package.json turbo.json .github && ! rg --hidden -n 'app\.harnessos\.desktop' apps packages/contracts packages/shared scripts package.json turbo.json .github && ! rg --hidden -n '\bomnimind_[a-z0-9_]+' apps packages/contracts packages/shared scripts package.json turbo.json .github && bun install --frozen-lockfile && bun run lint >/dev/null && bun run typecheck && (cd packages/shared && bun run test:unit -- src/desktopIdentity.test.ts src/loginShellEnvironment.test.ts) && (cd apps/desktop && bun run test:unit -- src/desktopUserDataProfile.test.ts src/desktopWsBridge.test.ts src/mediaPermissions.test.ts src/browserUsePipeServer.test.ts src/windowsTaskbarIcon.test.ts) && (cd apps/server && bun run test -- src/agentGateway/mcpInjection.test.ts src/auth/utils.test.ts src/codexProcessEnv.integration.test.ts src/codexHomePaths.integration.test.ts src/restoreMigrationBackup.integration.test.ts) && (cd apps/web && bun run test:unit -- src/browserStateStore.test.ts src/components/BrowserPanel.logic.test.ts src/components/EditorWorkspaceView.test.tsx src/hooks/useBrowserPanelDesktopBridge.test.ts src/lib/appSnapIconStore.test.ts src/lib/composerImageBlobStore.test.ts src/localPreferences.test.ts) && bunx vitest run scripts/dev-runner.test.ts scripts/canary.test.ts scripts/verify-packaged-desktop.test.ts scripts/build-desktop-artifact-mac-config.test.ts` | current until application identity owners or deferred OA extension contracts change |
 
 ## 验收矩阵
 
@@ -80,11 +81,11 @@
 
 ## 当前状态
 
-- Current checkpoint: workspace manifests, imports, task filters and tests use `@harnessos/*`; the clean-clone typecheck graph now builds the declaration package it consumes. The two maintainer-requested post-base UI fixes are independently replayed and browser-verified. C-002 remains open because app/env/storage/MCP identities and the vendored runtime artifact have not yet been cut.
+- Current checkpoint: package scope and HarnessOS application namespace are cut. Desktop/bundle/URI, CLI, environment, state roots, storage keys and Host MCP surfaces use HarnessOS identities, while the intentionally deferred bundled Engine and OA extension contracts still retain OmniMind symbols. C-002 remains open until those contracts and the vendored runtime are cut to OA.
 - Active Claim: C-002.
-- Next safe action: cut canonical app, bundle, URI, environment and storage identities without adding migration or compatibility reads; regenerate the vendored runtime only in the later OA artifact cut.
+- Next safe action: establish the canonical `Engine*` contract and sole `ENGINE_DESCRIPTORS` owner with the exact fixed Engine IDs and OA default, then switch all consumers before deleting the Provider-level truth.
 - Blockers: none.
-- Last material change: source commits `54a87840e6` and `f310080bfa` were replayed as HarnessOS commits `40ff9387` and `712c829b`; E-007 binds the source mapping to 65 unit and 56 browser passing tests without changing the locked fork base.
+- Last material change: commit `0ad5017020ef265901e9a61130726616b729c681` established the HarnessOS app/runtime namespace without touching the deferred OA package contract; E-008 binds the scoped absence, frozen install, lint, typecheck and 215 focused tests.
 
 ## 已知问题与方向
 
