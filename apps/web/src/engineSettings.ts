@@ -10,6 +10,7 @@ import type {
 } from "@harnessos/contracts";
 import { DEFAULT_SERVER_SETTINGS_VIEW } from "@harnessos/contracts";
 import { engineStartOptionsFromServerSettings } from "@harnessos/shared/serverSettings";
+import { mapEngineDescriptors } from "@harnessos/shared/engineMetadata";
 import {
   getDefaultModel,
   getModelOptions,
@@ -22,7 +23,7 @@ import { formatEngineModelOptionName, type EngineModelOption } from "./engineMod
 const MAX_CUSTOM_MODEL_COUNT = 32;
 export const MAX_CUSTOM_MODEL_LENGTH = 256;
 
-type CustomModelEngine = Exclude<EngineKind, "oa">;
+type CustomModelEngine = Exclude<keyof ServerSettingsView["engines"], "oa">;
 
 export type EngineCustomModelConfig = {
   readonly engine: CustomModelEngine;
@@ -32,18 +33,9 @@ export type EngineCustomModelConfig = {
   readonly example: string;
 };
 
-const BUILT_IN_MODEL_SLUGS_BY_PROVIDER: Record<EngineKind, ReadonlySet<string>> = {
-  oa: new Set(getModelOptions("oa").map((option) => option.slug)),
-  codex: new Set(getModelOptions("codex").map((option) => option.slug)),
-  claude: new Set(getModelOptions("claude").map((option) => option.slug)),
-  cursor: new Set(getModelOptions("cursor").map((option) => option.slug)),
-  antigravity: new Set(getModelOptions("antigravity").map((option) => option.slug)),
-  grok: new Set(getModelOptions("grok").map((option) => option.slug)),
-  droid: new Set(getModelOptions("droid").map((option) => option.slug)),
-  kilo: new Set(getModelOptions("kilo").map((option) => option.slug)),
-  opencode: new Set(getModelOptions("opencode").map((option) => option.slug)),
-  pi: new Set(getModelOptions("pi").map((option) => option.slug)),
-};
+const BUILT_IN_MODEL_SLUGS_BY_ENGINE = mapEngineDescriptors(
+  ({ kind }) => new Set<string>(getModelOptions(kind).map((option) => option.slug)),
+);
 
 export const MODEL_PROVIDER_SETTINGS: readonly EngineCustomModelConfig[] = [
   {
@@ -142,7 +134,7 @@ export function normalizeCustomModelSlugs(
     if (
       !normalized ||
       normalized.length > MAX_CUSTOM_MODEL_LENGTH ||
-      BUILT_IN_MODEL_SLUGS_BY_PROVIDER[engine].has(normalized) ||
+      BUILT_IN_MODEL_SLUGS_BY_ENGINE[engine].has(normalized) ||
       seen.has(normalized)
     )
       continue;
@@ -174,18 +166,10 @@ export function patchCustomModels(
 export function getCustomModelsByEngine(
   settings: ServerSettingsView,
 ): Record<EngineKind, readonly string[]> {
-  return {
-    oa: [],
-    codex: settings.engines.codex?.customModels ?? [],
-    claude: settings.engines.claude?.customModels ?? [],
-    cursor: settings.engines.cursor?.customModels ?? [],
-    antigravity: settings.engines.antigravity?.customModels ?? [],
-    grok: settings.engines.grok?.customModels ?? [],
-    droid: settings.engines.droid?.customModels ?? [],
-    kilo: settings.engines.kilo?.customModels ?? [],
-    opencode: settings.engines.opencode?.customModels ?? [],
-    pi: settings.engines.pi?.customModels ?? [],
-  };
+  const engineSettings = settings.engines as Partial<
+    Record<EngineKind, { readonly customModels?: readonly string[] }>
+  >;
+  return mapEngineDescriptors(({ kind }) => engineSettings[kind]?.customModels ?? []);
 }
 
 export function getAppModelOptions(
@@ -291,18 +275,7 @@ export function getCustomModelOptionsByEngine(
   settings: ServerSettingsView,
 ): Record<EngineKind, ReadonlyArray<EngineModelOption>> {
   const custom = getCustomModelsByEngine(settings);
-  return {
-    oa: getAppModelOptions("oa", []),
-    codex: getAppModelOptions("codex", custom.codex),
-    claude: getAppModelOptions("claude", custom.claude),
-    cursor: getAppModelOptions("cursor", custom.cursor),
-    antigravity: getAppModelOptions("antigravity", custom.antigravity),
-    grok: getAppModelOptions("grok", custom.grok),
-    droid: getAppModelOptions("droid", custom.droid),
-    kilo: getAppModelOptions("kilo", custom.kilo),
-    opencode: getAppModelOptions("opencode", custom.opencode),
-    pi: getAppModelOptions("pi", custom.pi),
-  };
+  return mapEngineDescriptors(({ kind }) => getAppModelOptions(kind, custom[kind]));
 }
 
 export function getEngineStartOptions(settings: ServerSettingsView): EngineStartOptions {
@@ -313,9 +286,14 @@ export function getCustomBinaryPathForEngine(
   settings: ServerSettingsView,
   engine: EngineKind,
 ): string {
-  if (engine === "oa") return "";
-  const configured = settings.engines[engine].binaryPath.trim();
-  const bundledDefault = DEFAULT_SERVER_SETTINGS_VIEW.engines[engine].binaryPath.trim();
+  const engineSettings = settings.engines as Partial<
+    Record<EngineKind, { readonly binaryPath?: string }>
+  >;
+  const defaultEngineSettings = DEFAULT_SERVER_SETTINGS_VIEW.engines as Partial<
+    Record<EngineKind, { readonly binaryPath?: string }>
+  >;
+  const configured = engineSettings[engine]?.binaryPath?.trim() ?? "";
+  const bundledDefault = defaultEngineSettings[engine]?.binaryPath?.trim() ?? "";
   return configured === bundledDefault ? "" : configured;
 }
 

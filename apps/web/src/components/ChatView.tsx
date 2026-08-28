@@ -1093,6 +1093,8 @@ function getEngineStartOptionsCustomBinaryPath(
       return normalizeCustomBinaryPath(engineOptions?.cursor?.binaryPath);
     case "pi":
       return normalizeCustomBinaryPath(engineOptions?.pi?.binaryPath);
+    default:
+      return null;
   }
 }
 

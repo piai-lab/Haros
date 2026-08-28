@@ -10,6 +10,7 @@ import type {
   EngineModelDescriptor,
 } from "@harnessos/contracts";
 import { ENGINE_KINDS } from "@harnessos/contracts";
+import { mapEngineDescriptors } from "@harnessos/shared/engineMetadata";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
@@ -52,18 +53,9 @@ export interface EngineModelCatalog {
 export type EngineModelCatalogState = "idle" | "checking" | "ready" | "empty" | "stale" | "error";
 
 const EMPTY_PROVIDER_AGENTS: ReadonlyArray<EngineAgentDescriptor> = [];
-const EMPTY_CUSTOM_MODELS: ReturnType<typeof getCustomModelsByEngine> = {
-  oa: [],
-  codex: [],
-  claude: [],
-  cursor: [],
-  antigravity: [],
-  grok: [],
-  droid: [],
-  kilo: [],
-  opencode: [],
-  pi: [],
-};
+const EMPTY_CUSTOM_MODELS: ReturnType<typeof getCustomModelsByEngine> = mapEngineDescriptors(
+  () => [],
+);
 
 function ownsIndependentCustomModelSlugs(engine: EngineKind): boolean {
   return (
@@ -145,7 +137,10 @@ export function useEngineModelCatalog(input: {
     // that as "disabled" would silence discovery for every engine, including the
     // selected one, which is precisely the "my model disappeared" symptom. Mirrors
     // the server-side fallback in EngineDiscoveryService.listModels.
-    if (serverSettings?.engines[engine]?.enabled === false) {
+    const configuredEngines = serverSettings?.engines as
+      | Partial<Record<EngineKind, { readonly enabled?: boolean }>>
+      | undefined;
+    if (configuredEngines?.[engine]?.enabled === false) {
       return false;
     }
     if (engine === selectedEngine) {
@@ -300,30 +295,17 @@ export function useEngineModelCatalog(input: {
   );
 
   const modelOptionsByEngine = useMemo(() => {
-    const staticOptions: Record<EngineKind, ReturnType<typeof getAppModelOptions>> = {
-      oa: getAppModelOptions("oa", []),
-      codex: getAppModelOptions("codex", customModelsByEngine.codex, modelHintByEngine?.codex),
-      claude: getAppModelOptions("claude", customModelsByEngine.claude, modelHintByEngine?.claude),
-      cursor: getAppModelOptions("cursor", customModelsByEngine.cursor, modelHintByEngine?.cursor),
-      antigravity: getAppModelOptions(
-        "antigravity",
-        customModelsByEngine.antigravity,
-        modelHintByEngine?.antigravity,
+    const staticOptions = mapEngineDescriptors(({ kind }) =>
+      getAppModelOptions(
+        kind,
+        customModelsByEngine[kind],
+        kind === "oa" ? undefined : modelHintByEngine?.[kind],
       ),
-      grok: getAppModelOptions("grok", customModelsByEngine.grok, modelHintByEngine?.grok),
-      droid: getAppModelOptions("droid", customModelsByEngine.droid, modelHintByEngine?.droid),
-      kilo: getAppModelOptions("kilo", customModelsByEngine.kilo, modelHintByEngine?.kilo),
-      opencode: getAppModelOptions(
-        "opencode",
-        customModelsByEngine.opencode,
-        modelHintByEngine?.opencode,
-      ),
-      pi: getAppModelOptions("pi", customModelsByEngine.pi, modelHintByEngine?.pi),
-    };
+    );
     const result: Record<EngineKind, ReadonlyArray<EngineModelOption & { isCustom?: boolean }>> = {
       ...staticOptions,
     };
-    const dynamicSources: Record<EngineKind, typeof claudeDynamicModelsQuery.data> = {
+    const dynamicSources: Partial<Record<EngineKind, typeof claudeDynamicModelsQuery.data>> = {
       oa: oaDynamicModelsQuery.data,
       claude: claudeDynamicModelsQuery.data,
       codex: codexDynamicModelsQuery.data,
@@ -338,18 +320,7 @@ export function useEngineModelCatalog(input: {
       opencode: openCodeDynamicModelsQuery.data,
       pi: piDynamicModelsQuery.data,
     };
-    for (const engine of [
-      "oa",
-      "claude",
-      "codex",
-      "cursor",
-      "antigravity",
-      "grok",
-      "droid",
-      "kilo",
-      "opencode",
-      "pi",
-    ] as const) {
+    for (const engine of ENGINE_KINDS) {
       const dynamicModels = dynamicSources[engine]?.models;
       if (dynamicModels && dynamicModels.length > 0) {
         result[engine] = mergeDynamicModelOptions({
@@ -380,6 +351,7 @@ export function useEngineModelCatalog(input: {
     Record<EngineKind, ReadonlyArray<EngineModelDescriptor>>
   >(
     () => ({
+      ...mapEngineDescriptors(() => [] as ReadonlyArray<EngineModelDescriptor>),
       oa: oaDynamicModelsQuery.data?.models ?? [],
       claude: claudeDynamicModelsQuery.data?.models ?? [],
       codex: codexDynamicModelsQuery.data?.models ?? [],
@@ -407,6 +379,7 @@ export function useEngineModelCatalog(input: {
 
   const catalogStateByEngine = useMemo<Record<EngineKind, EngineModelCatalogState>>(
     () => ({
+      ...mapEngineDescriptors(() => "idle" as EngineModelCatalogState),
       oa: deriveCatalogState({
         enabled: oaModelDiscoveryEnabled,
         hasSettledData:

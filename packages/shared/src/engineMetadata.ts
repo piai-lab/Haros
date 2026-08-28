@@ -106,3 +106,11 @@ export const ENGINE_DESCRIPTOR_BY_KIND = Object.fromEntries(
 export const ENGINE_DISPLAY_NAMES: Readonly<Record<EngineKind, string>> = Object.fromEntries(
   ENGINE_DESCRIPTORS.map((descriptor) => [descriptor.kind, descriptor.displayName]),
 ) as Record<EngineKind, string>;
+
+export function mapEngineDescriptors<Value>(
+  project: (descriptor: (typeof ENGINE_DESCRIPTORS)[number]) => Value,
+): Record<EngineKind, Value> {
+  return Object.fromEntries(
+    ENGINE_DESCRIPTORS.map((descriptor) => [descriptor.kind, project(descriptor)]),
+  ) as Record<EngineKind, Value>;
+}
