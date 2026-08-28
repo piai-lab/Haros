@@ -82,7 +82,7 @@ function localInactiveResponse(message) {
         result: {
           protocolVersion: message.params?.protocolVersion || "2025-06-18",
           capabilities: { tools: {} },
-          serverInfo: { name: "omnimind", version: "1.0.0" },
+          serverInfo: { name: "oa", version: "1.0.0" },
         },
       },
     ];

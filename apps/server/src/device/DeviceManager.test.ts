@@ -389,7 +389,7 @@ describe("DeviceManager boot ownership", () => {
     const listed = await manager.list();
 
     expect(booted).toMatchObject({ kind: "booted" });
-    expect(listed.devices.find((device) => device.udid === DEVICE_A)?.bootSource).toBe("omnimind");
+    expect(listed.devices.find((device) => device.udid === DEVICE_A)?.bootSource).toBe("oa");
     expect(listed.devices.find((device) => device.udid === DEVICE_B)?.bootSource).toBe("user");
   });
 

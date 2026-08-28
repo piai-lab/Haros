@@ -61,17 +61,17 @@ describe("normalizeProviderStatusForLocalConfig", () => {
   it("applies the same custom-path fallback to Claude", () => {
     expect(
       normalizeProviderStatusForLocalConfig({
-        provider: "claudeAgent",
+        provider: "claude",
         status: {
           ...BASE_STATUS,
-          provider: "claudeAgent",
+          provider: "claude",
           message: "Claude Code CLI (`claude`) is not installed or not on PATH.",
         },
         customBinaryPath: "/opt/homebrew/bin/claude",
       }),
     ).toEqual({
       ...BASE_STATUS,
-      provider: "claudeAgent",
+      provider: "claude",
       available: true,
       status: "warning",
       message:
@@ -142,7 +142,7 @@ describe("normalizeProviderStatusForLocalConfig", () => {
 
   it("does not reuse Auto capability from a different Claude binary", () => {
     const status: ServerProviderStatus = {
-      provider: "claudeAgent",
+      provider: "claude",
       status: "ready",
       available: true,
       authStatus: "authenticated",
@@ -153,12 +153,12 @@ describe("normalizeProviderStatusForLocalConfig", () => {
 
     expect(
       normalizeProviderStatusForLocalConfig({
-        provider: "claudeAgent",
+        provider: "claude",
         status,
         customBinaryPath: "/custom/bin/claude",
       }),
     ).toEqual({
-      provider: "claudeAgent",
+      provider: "claude",
       status: "ready",
       available: true,
       authStatus: "authenticated",
@@ -187,7 +187,7 @@ describe("normalizeProviderStatusForLocalConfig", () => {
     ).toEqual(status);
   });
 
-  it.each(["codex", "claudeAgent"] as const)(
+  it.each(["codex", "claude"] as const)(
     "keeps an older Server's exact %s probe conservatively unavailable",
     (provider) => {
       const customBinaryPath = `/custom/bin/${provider}`;

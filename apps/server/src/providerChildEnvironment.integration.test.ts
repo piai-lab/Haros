@@ -142,7 +142,7 @@ describe("buildProviderChildEnvironment", () => {
       },
     });
     const descendantScript =
-      "process.stdout.write(JSON.stringify({ xai: process.env.XAI_API_KEY, anthropic: process.env.ANTHROPIC_API_KEY, omnimind: process.env.HARNESSOS_AUTH_TOKEN }))";
+      "process.stdout.write(JSON.stringify({ xai: process.env.XAI_API_KEY, anthropic: process.env.ANTHROPIC_API_KEY, oa: process.env.HARNESSOS_AUTH_TOKEN }))";
     const parentScript = `const { spawnSync } = require("node:child_process"); const result = spawnSync(process.execPath, ["-e", ${JSON.stringify(descendantScript)}], { env: process.env, encoding: "utf8" }); process.stdout.write(result.stdout); process.stderr.write(result.stderr); process.exit(result.status ?? 1);`;
     const result = spawnSync(process.execPath, ["-e", parentScript], {
       env,

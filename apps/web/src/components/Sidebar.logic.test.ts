@@ -94,7 +94,7 @@ describe("resolveNewProjectDefaultModelSelection", () => {
   });
 
   it("keeps an OmniMind project unbound until the runtime catalog supplies an exact model", () => {
-    expect(resolveNewProjectDefaultModelSelection("omnimind")).toBeNull();
+    expect(resolveNewProjectDefaultModelSelection("oa")).toBeNull();
   });
 
   it("preserves the existing default for other Engines", () => {
@@ -466,14 +466,14 @@ describe("resolveThreadHoverCardMetadata", () => {
       }),
       project: {
         kind: "project",
-        name: "omnimind",
-        folderName: "omnimind",
+        name: "oa",
+        folderName: "oa",
         cwd: "/Users/me/Developer/omnimind",
       },
     });
 
     expect(metadata).toEqual({
-      projectName: "omnimind",
+      projectName: "oa",
       projectCwd: "/Users/me/Developer/omnimind",
       sourceProjectName: null,
       branch: "main",
@@ -495,8 +495,8 @@ describe("resolveThreadHoverCardMetadata", () => {
         thread,
         project: {
           kind: "project",
-          name: "omnimind",
-          folderName: "omnimind",
+          name: "oa",
+          folderName: "oa",
           cwd: "/repo",
         },
       }).branch,

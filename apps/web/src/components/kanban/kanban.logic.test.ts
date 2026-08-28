@@ -287,7 +287,7 @@ describe("buildKanbanBoard", () => {
           [localId]: {
             prompt: "  Fix the flaky reconnect test  ",
             hasAttachments: false,
-            provider: "claudeAgent",
+            provider: "claude",
           },
         },
       }),
@@ -302,7 +302,7 @@ describe("buildKanbanBoard", () => {
     expect(localCard.thread).toBeNull();
     expect(localCard.draftPrompt).toBe("Fix the flaky reconnect test");
     expect(localCard.title).toContain("Fix the flaky");
-    expect(localCard.provider).toBe("claudeAgent");
+    expect(localCard.provider).toBe("claude");
   });
 
   it("surfaces an unsent prompt on a settled thread as an extra draft card", () => {

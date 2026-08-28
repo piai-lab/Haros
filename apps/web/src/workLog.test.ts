@@ -1226,7 +1226,7 @@ describe("deriveWorkLogEntries", () => {
             {
               threadId: "thread-claude",
               title: "Explain the repository with Claude",
-              provider: "claudeAgent",
+              provider: "claude",
               model: "claude-sonnet-5",
               environment: "worktree",
               status: "task_dispatched",
@@ -1253,7 +1253,7 @@ describe("deriveWorkLogEntries", () => {
         {
           threadId: "thread-claude",
           title: "Explain the repository with Claude",
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-sonnet-5",
           environment: "worktree",
           status: "task_dispatched",

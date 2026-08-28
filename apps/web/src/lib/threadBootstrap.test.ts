@@ -17,7 +17,7 @@ const PROJECT_ID = ProjectId.makeUnsafe("project-bootstrap");
 const THREAD_ID = ThreadId.makeUnsafe("thread-bootstrap");
 
 function modelSelection(
-  provider: "codex" | "claudeAgent",
+  provider: "codex" | "claude",
   model: string,
   options?: ModelSelection["options"],
 ): ModelSelection {
@@ -62,9 +62,9 @@ function makeComposerDraftState(
     queuedTurns: [],
     pendingDirectTurnRecovery: null,
     modelSelectionByProvider: {
-      claudeAgent: modelSelection("claudeAgent", "claude-opus-4-6", { effort: "max" }),
+      claude: modelSelection("claude", "claude-opus-4-6", { effort: "max" }),
     },
-    activeProvider: "claudeAgent",
+    activeProvider: "claude",
     runtimeMode: null,
     interactionMode: null,
     ...partial,
@@ -298,7 +298,7 @@ describe("threadBootstrap", () => {
       }),
     ).toEqual({
       title: "New terminal",
-      modelSelection: modelSelection("claudeAgent", "claude-opus-4-6", {
+      modelSelection: modelSelection("claude", "claude-opus-4-6", {
         effort: "max",
       }),
       runtimeMode: "approval-required",

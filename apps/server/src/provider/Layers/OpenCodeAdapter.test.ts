@@ -189,9 +189,7 @@ function createMockOpenCodeRuntime(options?: {
     mcp: {
       add: async (input: Record<string, unknown>) => {
         mcpAddCalls.push(input);
-        return options?.mcpAdd
-          ? options.mcpAdd(input)
-          : { data: { omnimind: { status: "connected" } } };
+        return options?.mcpAdd ? options.mcpAdd(input) : { data: { oa: { status: "connected" } } };
       },
     },
   };
@@ -1307,12 +1305,12 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       mcpAdd: async (input) => {
         const config = input.config as { enabled?: boolean } | undefined;
         if (config?.enabled === false) {
-          return { data: { omnimind: { status: "disabled" } } };
+          return { data: { oa: { status: "disabled" } } };
         }
         activeSetupAttempts += 1;
         return activeSetupAttempts === 1
-          ? { data: { omnimind: { status: "failed", error: "gateway unavailable" } } }
-          : { data: { omnimind: { status: "connected" } } };
+          ? { data: { oa: { status: "failed", error: "gateway unavailable" } } }
+          : { data: { oa: { status: "connected" } } };
       },
     });
     const gateway = makeGatewayCredentials();
@@ -1372,7 +1370,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
 
   it("keeps managed sessions identity-only and revokes credentials when MCP setup is not connected", async () => {
     const runtime = createMockOpenCodeRuntime({
-      mcpAdd: async () => ({ data: { omnimind: { status: "failed", error: "offline" } } }),
+      mcpAdd: async () => ({ data: { oa: { status: "failed", error: "offline" } } }),
     });
     const gateway = makeGatewayCredentials();
 

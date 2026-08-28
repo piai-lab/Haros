@@ -88,7 +88,7 @@ export interface ServerSettingsSnapshot {
 }
 
 const SERVER_SETTINGS_MIGRATION_VERSION = 4;
-const LEGACY_HARNESSOS_BUILT_IN_GROUP = "omnimind";
+const LEGACY_HARNESSOS_BUILT_IN_GROUP = "oa";
 const HARNESSOS_FINE_GRAINED_BUILT_IN_GROUPS = [
   "tasks",
   "diagnostics",
@@ -97,12 +97,12 @@ const HARNESSOS_FINE_GRAINED_BUILT_IN_GROUPS = [
 ] as const;
 
 export function toServerSettingsView(settings: ServerSettings): ServerSettingsView {
-  const { defaultPrompt: _defaultPrompt, ...omnimind } = settings.providers.omnimind;
+  const { defaultPrompt: _defaultPrompt, ...oa } = settings.providers.oa;
   return {
     ...settings,
     providers: {
       ...settings.providers,
-      omnimind,
+      oa,
     },
   };
 }
@@ -168,9 +168,9 @@ export class ServerSettingsService extends ServiceMap.Service<
               ...DEFAULT_SERVER_SETTINGS,
               providers: {
                 ...DEFAULT_SERVER_SETTINGS.providers,
-                omnimind: {
-                  ...DEFAULT_SERVER_SETTINGS.providers.omnimind,
-                  defaultPrompt: current.providers.omnimind.defaultPrompt,
+                oa: {
+                  ...DEFAULT_SERVER_SETTINGS.providers.oa,
+                  defaultPrompt: current.providers.oa.defaultPrompt,
                 },
                 kilo: {
                   ...DEFAULT_SERVER_SETTINGS.providers.kilo,
@@ -192,7 +192,7 @@ export class ServerSettingsService extends ServiceMap.Service<
           writeSemaphore.withPermits(1)(
             Effect.gen(function* () {
               const currentSettings = yield* Ref.get(currentSettingsRef);
-              const current = currentSettings.providers.omnimind.defaultPrompt;
+              const current = currentSettings.providers.oa.defaultPrompt;
               if (current !== expected) return { state: "conflict" as const, current };
               if (current === next) return { state: "unchanged" as const, current };
               const nextSettings = yield* replaceOmniMindDefaultPrompt(
@@ -244,12 +244,7 @@ export class ServerSettingsService extends ServiceMap.Service<
     );
 }
 
-const PROVIDER_ORDER: readonly ProviderWithDefaultModel[] = [
-  "codex",
-  "claudeAgent",
-  "kilo",
-  "opencode",
-];
+const PROVIDER_ORDER: readonly ProviderWithDefaultModel[] = ["codex", "claude", "kilo", "opencode"];
 
 function resolveTextGenerationProvider(settings: ServerSettings): ServerSettings {
   const selection = settings.textGenerationModelSelection;
@@ -306,8 +301,8 @@ function replaceOmniMindDefaultPrompt(
     ...current,
     providers: {
       ...current.providers,
-      omnimind: {
-        ...current.providers.omnimind,
+      oa: {
+        ...current.providers.oa,
         defaultPrompt,
       },
     },
@@ -675,7 +670,7 @@ const makeServerSettings = Effect.gen(function* () {
     writeSemaphore.withPermits(1)(
       Effect.gen(function* () {
         const disk = yield* loadSettingsFromDisk;
-        const current = disk.settings.providers.omnimind.defaultPrompt;
+        const current = disk.settings.providers.oa.defaultPrompt;
         if (current !== expected) return { state: "conflict" as const, current };
         if (current === nextValue) return { state: "unchanged" as const, current };
         const next = yield* replaceOmniMindDefaultPrompt(settingsPath, disk.settings, nextValue);
@@ -738,9 +733,9 @@ const makeServerSettings = Effect.gen(function* () {
         ...credentialState,
         providers: {
           ...credentialState.providers,
-          omnimind: {
-            ...credentialState.providers.omnimind,
-            defaultPrompt: disk.settings.providers.omnimind.defaultPrompt,
+          oa: {
+            ...credentialState.providers.oa,
+            defaultPrompt: disk.settings.providers.oa.defaultPrompt,
           },
         },
       } satisfies ServerSettings;

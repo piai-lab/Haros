@@ -206,7 +206,7 @@ describe("syncWindowsShortcutIcons", () => {
       appId: HARNESSOS_PRODUCTION_BUNDLE_ID,
       executablePath: Path.join(
         "Users",
-        "omnimind",
+        "oa",
         "AppData",
         "Local",
         "Programs",
@@ -218,7 +218,7 @@ describe("syncWindowsShortcutIcons", () => {
         target: Path.join(
           "C:",
           "Users",
-          "omnimind",
+          "oa",
           "AppData",
           "Local",
           "Programs",

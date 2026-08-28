@@ -11,7 +11,7 @@ import {
   type OrchestrationThreadPullRequest,
   type ProjectId,
   type ProviderInteractionMode,
-  type ProviderKind,
+  type EngineKind,
   type ProviderMentionReference,
   type ProviderModelOptions,
   type ProviderSkillReference,
@@ -129,7 +129,7 @@ export interface QueuedComposerChatTurn {
   pastedTexts: PastedTextDraft[];
   skills: ProviderSkillReference[];
   mentions: ProviderMentionReference[];
-  selectedProvider: ProviderKind;
+  selectedProvider: EngineKind;
   selectedModel: string | null;
   selectedPromptEffort: string | null;
   modelSelection: ModelSelection;
@@ -154,7 +154,7 @@ export interface QueuedComposerPlanFollowUp {
   previewText: string;
   text: string;
   interactionMode: "default" | "plan";
-  selectedProvider: ProviderKind;
+  selectedProvider: EngineKind;
   selectedModel: string | null;
   selectedPromptEffort: string | null;
   modelSelection: ModelSelection;
@@ -218,8 +218,8 @@ export interface ComposerThreadDraftState {
   queuedTurns: QueuedComposerTurn[];
   pendingDirectTurnRecovery?: PendingDirectTurnRecovery | null;
   restoredSourceProposedPlan?: RestoredComposerSourceProposedPlan | null;
-  modelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>>;
-  activeProvider: ProviderKind | null;
+  modelSelectionByProvider: Partial<Record<EngineKind, ModelSelection>>;
+  activeProvider: EngineKind | null;
   runtimeMode: RuntimeMode | null;
   interactionMode: ProviderInteractionMode | null;
 }
@@ -272,8 +272,8 @@ export interface ComposerDraftStoreState {
   draftsByThreadId: Record<ThreadId, ComposerThreadDraftState>;
   draftThreadsByThreadId: Record<ThreadId, DraftThreadState>;
   projectDraftThreadIdByProjectId: Record<string, ThreadId>;
-  stickyModelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>>;
-  stickyActiveProvider: ProviderKind | null;
+  stickyModelSelectionByProvider: Partial<Record<EngineKind, ModelSelection>>;
+  stickyActiveProvider: EngineKind | null;
   getDraftThreadByProjectId: (
     projectId: ProjectId,
     entryPoint?: ThreadPrimarySurface,
@@ -344,7 +344,7 @@ export interface ComposerDraftStoreState {
     threadId: ThreadId,
     modelSelection: ModelSelection | null | undefined,
   ) => void;
-  setActiveProviderAndSticky: (threadId: ThreadId, provider: ProviderKind) => void;
+  setActiveProviderAndSticky: (threadId: ThreadId, provider: EngineKind) => void;
   setModelSelectionAndSticky: (threadId: ThreadId, modelSelection: ModelSelection) => void;
   setModelOptions: (
     threadId: ThreadId,
@@ -353,8 +353,8 @@ export interface ComposerDraftStoreState {
   applyStickyState: (threadId: ThreadId) => void;
   setProviderModelOptions: (
     threadId: ThreadId,
-    provider: ProviderKind,
-    nextProviderOptions: ProviderModelOptions[ProviderKind] | null | undefined,
+    provider: EngineKind,
+    nextProviderOptions: ProviderModelOptions[EngineKind] | null | undefined,
     options?: {
       model?: string | null;
       persistSticky?: boolean;
@@ -965,7 +965,7 @@ Object.freeze(EMPTY_PASTED_TEXTS);
 Object.freeze(EMPTY_SKILLS);
 Object.freeze(EMPTY_MENTIONS);
 Object.freeze(EMPTY_QUEUED_TURNS);
-const EMPTY_MODEL_SELECTION_BY_PROVIDER: Partial<Record<ProviderKind, ModelSelection>> =
+const EMPTY_MODEL_SELECTION_BY_PROVIDER: Partial<Record<EngineKind, ModelSelection>> =
   Object.freeze({});
 
 const EMPTY_THREAD_DRAFT = Object.freeze<ComposerThreadDraftState>({

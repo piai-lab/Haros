@@ -4,8 +4,8 @@
 
 import {
   GROK_REASONING_EFFORT_OPTIONS,
-  PROVIDER_KINDS,
-  ProviderKind,
+  ENGINE_KINDS,
+  EngineKind,
   type ClaudeCodeEffort,
   type CodexReasoningEffort,
   type CursorModelOptions,
@@ -27,7 +27,7 @@ import {
 import type { ComposerThreadDraftState } from "./composerDraftDomain";
 import { classifyProviderReasoningEffortSupport } from "./lib/codexReasoningEffort";
 
-const isProviderKind = Schema.is(ProviderKind);
+const isProviderKind = Schema.is(EngineKind);
 
 const GROK_REASONING_EFFORT_SET = new Set<string>(GROK_REASONING_EFFORT_OPTIONS);
 
@@ -49,7 +49,7 @@ export interface EffectiveComposerModelState {
 function mergeProviderModelOptionsFromSelections(
   ...selections: ReadonlyArray<ModelSelection | null | undefined>
 ): ProviderModelOptions | null {
-  const result: Partial<Record<ProviderKind, ProviderModelOptions[ProviderKind]>> = {};
+  const result: Partial<Record<EngineKind, ProviderModelOptions[EngineKind]>> = {};
   for (const selection of selections) {
     if (!selection) continue;
     if (selection.options) {
@@ -80,11 +80,11 @@ function deriveEffectiveComposerModelOptions(input: {
     return baseOptions;
   }
 
-  const result: Partial<Record<ProviderKind, ProviderModelOptions[ProviderKind]>> = baseOptions
+  const result: Partial<Record<EngineKind, ProviderModelOptions[EngineKind]>> = baseOptions
     ? { ...baseOptions }
     : {};
   for (const [provider, selection] of Object.entries(draftSelections) as Array<
-    [ProviderKind, ModelSelection | undefined]
+    [EngineKind, ModelSelection | undefined]
   >) {
     if (!selection) continue;
     if (selection.options) {
@@ -96,7 +96,7 @@ function deriveEffectiveComposerModelOptions(input: {
   return Object.keys(result).length > 0 ? (result as ProviderModelOptions) : null;
 }
 
-export function normalizeProviderKind(value: unknown): ProviderKind | null {
+export function normalizeProviderKind(value: unknown): EngineKind | null {
   if (value === "gemini") {
     return "antigravity";
   }
@@ -116,18 +116,18 @@ function isGrokReasoningEffort(value: unknown): value is GrokReasoningEffort {
 }
 
 export function makeModelSelection(
-  provider: ProviderKind,
+  provider: EngineKind,
   model: string,
-  options?: ProviderModelOptions[ProviderKind],
+  options?: ProviderModelOptions[EngineKind],
   supportsAutoMode?: boolean,
 ): ModelSelection {
   switch (provider) {
-    case "omnimind":
+    case "oa":
       return {
         provider,
         model,
         ...(options
-          ? { options: options as Extract<ModelSelection, { provider: "omnimind" }>["options"] }
+          ? { options: options as Extract<ModelSelection, { provider: "oa" }>["options"] }
           : {}),
       };
     case "antigravity":
@@ -148,13 +148,13 @@ export function makeModelSelection(
           ? { options: options as Extract<ModelSelection, { provider: "codex" }>["options"] }
           : {}),
       };
-    case "claudeAgent":
+    case "claude":
       return {
         provider,
         model,
         ...(options
           ? {
-              options: options as Extract<ModelSelection, { provider: "claudeAgent" }>["options"],
+              options: options as Extract<ModelSelection, { provider: "claude" }>["options"],
             }
           : {}),
         ...(typeof supportsAutoMode === "boolean" ? { supportsAutoMode } : {}),
@@ -212,7 +212,7 @@ export function makeModelSelection(
 
 export function normalizeProviderModelOptions(
   value: unknown,
-  provider?: ProviderKind | null,
+  provider?: EngineKind | null,
   legacy?: LegacyCodexFields,
 ): ProviderModelOptions | null {
   const candidate = value && typeof value === "object" ? (value as Record<string, unknown>) : null;
@@ -221,8 +221,8 @@ export function normalizeProviderModelOptions(
       ? (candidate.codex as Record<string, unknown>)
       : null;
   const claudeCandidate =
-    candidate?.claudeAgent && typeof candidate.claudeAgent === "object"
-      ? (candidate.claudeAgent as Record<string, unknown>)
+    candidate?.claude && typeof candidate.claude === "object"
+      ? (candidate.claude as Record<string, unknown>)
       : null;
   const cursorCandidate =
     candidate?.cursor && typeof candidate.cursor === "object"
@@ -253,8 +253,8 @@ export function normalizeProviderModelOptions(
       ? (candidate.pi as Record<string, unknown>)
       : null;
   const omniMindCandidate =
-    candidate?.omnimind && typeof candidate.omnimind === "object"
-      ? (candidate.omnimind as Record<string, unknown>)
+    candidate?.oa && typeof candidate.oa === "object"
+      ? (candidate.oa as Record<string, unknown>)
       : null;
 
   const codexReasoningEffort: CodexReasoningEffort | undefined =
@@ -421,7 +421,7 @@ export function normalizeProviderModelOptions(
   return {
     ...(omnimind ? { omnimind } : {}),
     ...(codex ? { codex } : {}),
-    ...(claude ? { claudeAgent: claude } : {}),
+    ...(claude ? { claude: claude } : {}),
     ...(cursor ? { cursor } : {}),
     ...(antigravity ? { antigravity } : {}),
     ...(grok ? { grok } : {}),
@@ -465,7 +465,7 @@ export function normalizeModelSelection(
       ? antigravityLegacyMatch[1]!.trim()
       : rawModel;
   const inferredClaudeAutoCompactWindow =
-    provider === "claudeAgent" && /\[1m\]$/iu.test(rawModel) ? "1m" : undefined;
+    provider === "claude" && /\[1m\]$/iu.test(rawModel) ? "1m" : undefined;
   const model = normalizeModelSlug(normalizedRawModel, provider);
   if (!model) {
     return null;
@@ -480,14 +480,14 @@ export function normalizeModelSelection(
   const options =
     provider === "codex"
       ? modelOptions?.codex
-      : provider === "claudeAgent"
+      : provider === "claude"
         ? inferredClaudeAutoCompactWindow !== undefined
           ? {
-              ...modelOptions?.claudeAgent,
+              ...modelOptions?.claude,
               autoCompactWindow:
-                modelOptions?.claudeAgent?.autoCompactWindow ?? inferredClaudeAutoCompactWindow,
+                modelOptions?.claude?.autoCompactWindow ?? inferredClaudeAutoCompactWindow,
             }
-          : modelOptions?.claudeAgent
+          : modelOptions?.claude
         : provider === "antigravity"
           ? modelOptions?.antigravity
           : provider === "grok"
@@ -500,8 +500,8 @@ export function normalizeModelSelection(
                   ? modelOptions?.cursor
                   : provider === "opencode"
                     ? modelOptions?.opencode
-                    : provider === "omnimind"
-                      ? modelOptions?.omnimind
+                    : provider === "oa"
+                      ? modelOptions?.oa
                       : provider === "pi"
                         ? modelOptions?.pi
                         : undefined;
@@ -515,7 +515,7 @@ export function normalizeModelSelection(
     provider,
     model,
     normalizedOptions,
-    provider === "claudeAgent" && typeof candidate?.supportsAutoMode === "boolean"
+    provider === "claude" && typeof candidate?.supportsAutoMode === "boolean"
       ? candidate.supportsAutoMode
       : undefined,
   );
@@ -530,12 +530,12 @@ export function reconcileProviderScopedModelSelection(
   }
   if (current.model === requested.model) {
     const currentSupportsAutoMode =
-      current.provider === "claudeAgent" ? current.supportsAutoMode : undefined;
+      current.provider === "claude" ? current.supportsAutoMode : undefined;
     return makeModelSelection(
       requested.provider,
       requested.model,
       current.options,
-      requested.provider === "claudeAgent"
+      requested.provider === "claude"
         ? (requested.supportsAutoMode ?? currentSupportsAutoMode)
         : undefined,
     );
@@ -543,13 +543,13 @@ export function reconcileProviderScopedModelSelection(
   if (
     current.provider !== "codex" &&
     current.provider !== "cursor" &&
-    current.provider !== "claudeAgent"
+    current.provider !== "claude"
   ) {
     return requested;
   }
   let preservedOptions = current.options;
   const effort =
-    current.provider === "claudeAgent"
+    current.provider === "claude"
       ? current.options?.effort
       : current.provider === "codex" || current.provider === "cursor"
         ? current.options?.reasoningEffort
@@ -562,7 +562,7 @@ export function reconcileProviderScopedModelSelection(
       effort,
     }) !== "supported"
   ) {
-    if (current.provider === "claudeAgent") {
+    if (current.provider === "claude") {
       const { effort: _effort, ...remainingOptions } = current.options ?? {};
       preservedOptions = Object.keys(remainingOptions).length > 0 ? remainingOptions : undefined;
     } else if (current.provider === "codex" || current.provider === "cursor") {
@@ -574,13 +574,13 @@ export function reconcileProviderScopedModelSelection(
     requested.provider,
     requested.model,
     preservedOptions,
-    requested.provider === "claudeAgent" ? requested.supportsAutoMode : undefined,
+    requested.provider === "claude" ? requested.supportsAutoMode : undefined,
   );
 }
 
 export function stripNonStickyModelOptions(selection: ModelSelection): ModelSelection {
   if (
-    selection.provider !== "claudeAgent" ||
+    selection.provider !== "claude" ||
     (!selection.options?.contextWindow && !selection.options?.autoCompactWindow)
   ) {
     return selection;
@@ -599,16 +599,16 @@ export function stripNonStickyModelOptions(selection: ModelSelection): ModelSele
 }
 
 export function sanitizeStickyModelSelectionMap(
-  map: Partial<Record<ProviderKind, ModelSelection>>,
-): Partial<Record<ProviderKind, ModelSelection>> {
-  const claude = map.claudeAgent;
+  map: Partial<Record<EngineKind, ModelSelection>>,
+): Partial<Record<EngineKind, ModelSelection>> {
+  const claude = map.claude;
   if (
-    claude?.provider !== "claudeAgent" ||
+    claude?.provider !== "claude" ||
     (!claude.options?.contextWindow && !claude.options?.autoCompactWindow)
   ) {
     return map;
   }
-  return { ...map, claudeAgent: stripNonStickyModelOptions(claude) };
+  return { ...map, claude: stripNonStickyModelOptions(claude) };
 }
 
 export function legacySyncModelSelectionOptions(
@@ -626,7 +626,7 @@ export function legacySyncModelSelectionOptions(
     modelSelection.provider,
     modelSelection.model,
     normalizedOptions,
-    modelSelection.provider === "claudeAgent" ? modelSelection.supportsAutoMode : undefined,
+    modelSelection.provider === "claude" ? modelSelection.supportsAutoMode : undefined,
   );
 }
 
@@ -646,8 +646,8 @@ export function legacyMergeModelSelectionIntoProviderModelOptions(
 
 function legacyReplaceProviderModelOptions(
   currentModelOptions: ProviderModelOptions | null | undefined,
-  provider: ProviderKind,
-  nextProviderOptions: ProviderModelOptions[ProviderKind] | null | undefined,
+  provider: EngineKind,
+  nextProviderOptions: ProviderModelOptions[EngineKind] | null | undefined,
 ): ProviderModelOptions | null {
   const { [provider]: _discardedProviderModelOptions, ...otherProviderModelOptions } =
     currentModelOptions ?? {};
@@ -665,11 +665,11 @@ function legacyReplaceProviderModelOptions(
 export function legacyToModelSelectionByProvider(
   modelSelection: ModelSelection | null,
   modelOptions: ProviderModelOptions | null | undefined,
-): Partial<Record<ProviderKind, ModelSelection>> {
-  const result: Partial<Record<ProviderKind, ModelSelection>> = {};
+): Partial<Record<EngineKind, ModelSelection>> {
+  const result: Partial<Record<EngineKind, ModelSelection>> = {};
   // Add entries from the options bag (for non-active providers)
   if (modelOptions) {
-    for (const provider of PROVIDER_KINDS) {
+    for (const provider of ENGINE_KINDS) {
       const options = modelOptions[provider];
       if (options && Object.keys(options).length > 0) {
         const model =
@@ -696,14 +696,14 @@ export function deriveEffectiveComposerModelState(input: {
     | Pick<ComposerThreadDraftState, "modelSelectionByProvider" | "activeProvider">
     | null
     | undefined;
-  selectedProvider: ProviderKind;
+  selectedProvider: EngineKind;
   threadModelSelection: ModelSelection | null | undefined;
   projectModelSelection: ModelSelection | null | undefined;
   stickyModelSelection?: ModelSelection | null | undefined;
   runtimeCatalogFallbackModel?: ModelSlug | null | undefined;
-  customModelsByProvider: Partial<Record<ProviderKind, readonly string[]>>;
+  customModelsByProvider: Partial<Record<EngineKind, readonly string[]>>;
   availableModelOptionsByProvider?: Partial<
-    Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>>
+    Record<EngineKind, ReadonlyArray<{ slug: string; name: string }>>
   >;
 }): EffectiveComposerModelState {
   const resolveAvailableModel = (candidate: string | null | undefined): ModelSlug | null => {
@@ -739,7 +739,7 @@ export function deriveEffectiveComposerModelState(input: {
     (candidate) => candidate !== null && candidate !== undefined,
   );
   const requiresExactRuntimeCatalogSelection =
-    input.selectedProvider === "omnimind" || input.selectedProvider === "pi";
+    input.selectedProvider === "oa" || input.selectedProvider === "pi";
   if (!(requiresExactRuntimeCatalogSelection && hasRememberedExactSelection)) {
     selectedModel ??=
       input.runtimeCatalogFallbackModel !== undefined
@@ -769,10 +769,10 @@ export function resolvePreferredComposerModelSelection(input: {
     | undefined;
   threadModelSelection: ModelSelection | null | undefined;
   projectModelSelection: ModelSelection | null | undefined;
-  defaultProvider?: ProviderKind | null | undefined;
+  defaultProvider?: EngineKind | null | undefined;
 }): ModelSelection | null {
   const draftProviderWithSelection =
-    PROVIDER_KINDS.find(
+    ENGINE_KINDS.find(
       (provider) => input.draft?.modelSelectionByProvider?.[provider] !== undefined,
     ) ?? null;
   const preferredProvider =

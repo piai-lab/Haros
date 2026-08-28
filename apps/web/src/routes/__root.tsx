@@ -9,7 +9,7 @@ import {
   type ServerProviderStatus,
   type WsCompatibilityError,
 } from "@harnessos/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { defaultTerminalTitleForCliKind } from "@harnessos/shared/terminalThreads";
 import { isThreadDetailEventFor } from "@harnessos/shared/threadDetailEvents";
 import {
@@ -196,7 +196,7 @@ function providerUpdateProgressTitle(params: {
   readonly t: ReturnType<typeof useI18n>["t"];
   readonly total: number;
 }): string {
-  const provider = PROVIDER_DISPLAY_NAMES[params.provider.provider];
+  const provider = ENGINE_DISPLAY_NAMES[params.provider.provider];
   return params.total === 1
     ? params.t("updater.updatingProvider", { provider })
     : params.t("updater.updatingProviderProgress", {
@@ -617,7 +617,7 @@ async function runProviderUpdateAll(params: {
           reason:
             error instanceof ProviderUpdateTimeoutError
               ? t("updater.requestTimedOut", {
-                  provider: PROVIDER_DISPLAY_NAMES[error.provider],
+                  provider: ENGINE_DISPLAY_NAMES[error.provider],
                 })
               : error instanceof Error
                 ? error.message
@@ -663,7 +663,7 @@ async function runProviderUpdateAll(params: {
       ),
     );
     const failureLines = failures
-      .map(({ provider, reason }) => `${PROVIDER_DISPLAY_NAMES[provider.provider]}: ${reason}`)
+      .map(({ provider, reason }) => `${ENGINE_DISPLAY_NAMES[provider.provider]}: ${reason}`)
       .join("\n");
     toastManager.update(toastId, {
       type: "error",
@@ -690,7 +690,7 @@ async function runProviderUpdateAll(params: {
     title:
       providers.length === 1
         ? t("updater.providerUpdated", {
-            provider: PROVIDER_DISPLAY_NAMES[providers[0]!.provider],
+            provider: ENGINE_DISPLAY_NAMES[providers[0]!.provider],
           })
         : t("updater.providersUpdated", { count: providers.length }),
     description: t("updater.refreshedDescription"),
@@ -781,7 +781,7 @@ function ProviderUpdateNotifications({
 
     const firstProvider = outdatedProviders[0]!;
     const additionalCount = outdatedProviders.length - 1;
-    const providerName = PROVIDER_DISPLAY_NAMES[firstProvider.provider];
+    const providerName = ENGINE_DISPLAY_NAMES[firstProvider.provider];
     const title =
       outdatedProviders.length === 1
         ? t("updater.providerAvailable", { provider: providerName })

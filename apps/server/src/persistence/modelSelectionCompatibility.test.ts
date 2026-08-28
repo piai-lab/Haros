@@ -10,12 +10,12 @@ import { normalizePersistedModelSelection } from "./modelSelectionCompatibility.
 it("preserves canonical OmniMind Agent model selections", () => {
   assert.deepEqual(
     normalizePersistedModelSelection({
-      provider: "omnimind",
+      provider: "oa",
       model: "deepseek/deepseek-chat",
       options: { thinkingLevel: "medium" },
     }),
     {
-      provider: "omnimind",
+      provider: "oa",
       model: "deepseek/deepseek-chat",
       options: { thinkingLevel: "medium" },
     },
@@ -119,7 +119,7 @@ it("infers Droid only for Factory-exclusive provider-less model slugs", () => {
 
 it("does not steal ambiguous provider-less Claude slugs from Claude Agent", () => {
   assert.deepEqual(normalizePersistedModelSelection({ model: "claude-opus-4-8" }), {
-    provider: "claudeAgent",
+    provider: "claude",
     model: "claude-opus-4-8",
   });
 });

@@ -54,7 +54,7 @@ const DROID_DEFINITION = {
 } as const satisfies PackageManagedProviderMaintenanceDefinition;
 
 const CLAUDE_DEFINITION = {
-  provider: "claudeAgent",
+  provider: "claude",
   binaryName: "claude",
   npmPackageName: "@anthropic-ai/claude-code",
   homebrew: {

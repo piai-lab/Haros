@@ -101,7 +101,7 @@ function agentContextWindowTokens(agent: WorkflowAgentRow): number | undefined {
   if (!agent.model) {
     return undefined;
   }
-  const contextWindowTokens = getModelCapabilities("claudeAgent", agent.model).contextWindowTokens;
+  const contextWindowTokens = getModelCapabilities("claude", agent.model).contextWindowTokens;
   return typeof contextWindowTokens === "number" && contextWindowTokens > 0
     ? contextWindowTokens
     : undefined;

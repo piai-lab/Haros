@@ -8,6 +8,7 @@
  * @module ProviderAdapterRegistryLive
  */
 import { Effect, Layer } from "effect";
+import { ENGINE_DESCRIPTORS } from "@harnessos/shared/engineMetadata";
 
 import { ProviderUnsupportedError, type ProviderAdapterError } from "../Errors.ts";
 import { assertProviderAdapterConformance } from "../providerAdapterConformance.ts";
@@ -54,6 +55,22 @@ const makeProviderAdapterRegistry = (options?: ProviderAdapterRegistryLiveOption
     }
 
     const byProvider = new Map(adapters.map((adapter) => [adapter.provider, adapter]));
+    if (byProvider.size !== adapters.length) {
+      return yield* Effect.die(new Error("Duplicate Engine adapter registration"));
+    }
+
+    const registeredProviders = ENGINE_DESCRIPTORS.map((descriptor) => descriptor.kind).filter(
+      (engine) => byProvider.has(engine),
+    );
+    if (
+      options?.adapters === undefined &&
+      registeredProviders.length !== ENGINE_DESCRIPTORS.length
+    ) {
+      const missing = ENGINE_DESCRIPTORS.filter(
+        (descriptor) => !byProvider.has(descriptor.kind),
+      ).map((descriptor) => descriptor.kind);
+      return yield* Effect.die(new Error(`Missing Engine adapters: ${missing.join(", ")}`));
+    }
 
     const getByProvider: ProviderAdapterRegistryShape["getByProvider"] = (provider) => {
       const adapter = byProvider.get(provider);
@@ -64,7 +81,7 @@ const makeProviderAdapterRegistry = (options?: ProviderAdapterRegistryLiveOption
     };
 
     const listProviders: ProviderAdapterRegistryShape["listProviders"] = () =>
-      Effect.sync(() => Array.from(byProvider.keys()));
+      Effect.succeed(registeredProviders);
 
     return {
       getByProvider,

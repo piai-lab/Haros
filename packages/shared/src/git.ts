@@ -2,7 +2,7 @@
  * Sanitize an arbitrary string into a valid, lowercase git branch fragment.
  * Strips quotes, collapses separators, limits to 64 chars.
  */
-export const WORKTREE_BRANCH_PREFIX = "omnimind";
+export const WORKTREE_BRANCH_PREFIX = "oa";
 const TEMP_WORKTREE_BRANCH_PATTERN = /^([a-z0-9][a-z0-9-]*)\/[0-9a-f]{8}$/;
 // Exact 64-bit namespace fingerprints preserve pre-cutover worktrees without
 // retaining retired first-party names in source or matching arbitrary namespaces.

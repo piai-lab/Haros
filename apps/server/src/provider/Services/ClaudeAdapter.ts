@@ -6,7 +6,7 @@
  * event fan-out, or checkpoint orchestration.
  *
  * Uses Effect `ServiceMap.Service` for dependency injection and returns the
- * shared provider-adapter error channel with `provider: "claudeAgent"` context.
+ * shared provider-adapter error channel with `provider: "claude"` context.
  *
  * @module ClaudeAdapter
  */
@@ -19,7 +19,7 @@ import type { ProviderAdapterShape } from "./ProviderAdapter.ts";
  * ClaudeAdapterShape - Service API for the Claude Agent provider adapter.
  */
 export interface ClaudeAdapterShape extends ProviderAdapterShape<ProviderAdapterError> {
-  readonly provider: "claudeAgent";
+  readonly provider: "claude";
   readonly steerTurn: NonNullable<ProviderAdapterShape<ProviderAdapterError>["steerTurn"]>;
   readonly stopTask: NonNullable<ProviderAdapterShape<ProviderAdapterError>["stopTask"]>;
   readonly backgroundTask: NonNullable<

@@ -403,7 +403,7 @@ export function makeOmniMindAgentPromptFilesLive(
           ...current,
           homeDir: config.homeDir,
           factoryContent: current.sdk.DEFAULT_BASE_INSTRUCTIONS,
-          customizedContent: settings.providers.omnimind.defaultPrompt,
+          customizedContent: settings.providers.oa.defaultPrompt,
           hooks: options.safeReadHooks,
         });
       };

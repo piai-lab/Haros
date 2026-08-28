@@ -225,12 +225,12 @@ async function run() {
 
           failureStage = "session-start";
           yield* adapter.startSession({
-            provider: "omnimind",
+            provider: "oa",
             threadId,
             cwd,
             workSurface: "chat",
             modelSelection: {
-              provider: "omnimind",
+              provider: "oa",
               model: `${target.providerId}/${target.modelId}`,
             },
             runtimeMode: "full-access",
@@ -250,7 +250,7 @@ async function run() {
                   ].join(" "),
             attachments: [],
             modelSelection: {
-              provider: "omnimind",
+              provider: "oa",
               model: `${target.providerId}/${target.modelId}`,
             },
           });

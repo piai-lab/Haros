@@ -73,7 +73,7 @@ describe("resolveAllowedLocalPreviewFile", () => {
     // way only the overlay candidate can satisfy the allowlist.
     const fakeRoot = path.join(process.cwd(), `.test-codex-overlay-${process.pid}-${Date.now()}`);
     const sourceHome = path.join(fakeRoot, "source", ".codex");
-    const harnessosHome = path.join(fakeRoot, "omnimind", "runtime");
+    const harnessosHome = path.join(fakeRoot, "oa", "runtime");
     const overlayImageDir = path.join(
       harnessosHome,
       "codex-home-overlay",

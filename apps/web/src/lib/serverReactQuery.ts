@@ -1,5 +1,5 @@
 import type {
-  ProviderKind,
+  EngineKind,
   ServerConfig,
   ServerGetUsageHistoryInput,
   ServerListProviderUsageInput,
@@ -52,7 +52,7 @@ export function serverConfigQueryOptions() {
 interface ProviderStatusSnapshot {
   readonly revision: number;
   readonly providers: readonly ServerProviderStatus[];
-  readonly passivePresence: ReadonlyArray<ProviderKind> | null;
+  readonly passivePresence: ReadonlyArray<EngineKind> | null;
 }
 
 const latestProviderStatusSnapshotByQueryClient = new WeakMap<
@@ -68,14 +68,14 @@ export function hasReceivedProviderStatusSnapshot(queryClient: QueryClient): boo
 
 export function readPassiveProviderPresence(
   queryClient: QueryClient,
-): ReadonlyArray<ProviderKind> | null {
+): ReadonlyArray<EngineKind> | null {
   return latestProviderStatusSnapshotByQueryClient.get(queryClient)?.passivePresence ?? null;
 }
 
 function recordProviderStatusSnapshot(
   queryClient: QueryClient,
   providers: readonly ServerProviderStatus[],
-  passivePresence?: ReadonlyArray<ProviderKind>,
+  passivePresence?: ReadonlyArray<EngineKind>,
 ): ProviderStatusSnapshot {
   const previous = latestProviderStatusSnapshotByQueryClient.get(queryClient);
   const snapshot = {
@@ -97,7 +97,7 @@ export async function reconcileServerProviderStatuses(
   providers: readonly ServerProviderStatus[],
   options?: {
     readonly loadConfig?: () => Promise<ServerConfig>;
-    readonly passivePresence?: ReadonlyArray<ProviderKind>;
+    readonly passivePresence?: ReadonlyArray<EngineKind>;
   },
 ): Promise<void> {
   recordProviderStatusSnapshot(queryClient, providers, options?.passivePresence);

@@ -12,7 +12,7 @@ import {
   TrimmedNonEmptyString,
   TurnId,
 } from "./baseSchemas";
-import { CanonicalUserInputSettlement, ProviderKind } from "./orchestration";
+import { CanonicalUserInputSettlement, EngineKind } from "./orchestration";
 import {
   CANONICAL_USER_INPUT_MAX_NODES,
   CANONICAL_USER_INPUT_MAX_UTF8_BYTES,
@@ -267,7 +267,7 @@ const EventUnmappedType = Schema.Literal("event.unmapped");
 
 const ProviderRuntimeEventBase = Schema.Struct({
   eventId: EventId,
-  provider: ProviderKind,
+  provider: EngineKind,
   threadId: ThreadId,
   createdAt: IsoDateTime,
   turnId: Schema.optional(TurnId),

@@ -1,7 +1,7 @@
 // FILE: useAccountCapacity.ts
 // Purpose: Provider-native account capacity only; never reads local history or thread signals.
 
-import type { ProviderKind, ServerProviderUsageSnapshot } from "@harnessos/contracts";
+import type { EngineKind, ServerProviderUsageSnapshot } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -13,7 +13,7 @@ import { deriveProviderUsageLearnMoreHref, deriveRateLimitLearnMoreHref } from "
 import { serverAllProviderUsageQueryOptions } from "~/lib/serverReactQuery";
 
 export function useAccountCapacity(input: {
-  provider: ProviderKind | null | undefined;
+  provider: EngineKind | null | undefined;
   providerSnapshot?: ServerProviderUsageSnapshot | undefined;
 }) {
   const provider = input.provider ?? null;

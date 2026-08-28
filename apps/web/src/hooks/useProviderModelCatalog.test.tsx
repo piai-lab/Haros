@@ -4,7 +4,7 @@
 
 import {
   DEFAULT_SERVER_SETTINGS_VIEW,
-  type ProviderKind,
+  type EngineKind,
   type ProviderModelDescriptor,
 } from "@harnessos/contracts";
 import { useState } from "react";
@@ -56,11 +56,11 @@ const EMPTY_QUERY: QueryResultLike = {
   isLoading: false,
   isPlaceholderData: false,
 };
-const modelQueries = new Map<ProviderKind, QueryResultLike>();
-const agentQueries = new Map<ProviderKind, QueryResultLike>();
+const modelQueries = new Map<EngineKind, QueryResultLike>();
+const agentQueries = new Map<EngineKind, QueryResultLike>();
 const MODEL_HINTS = { cursor: "composer-2" } as const;
 const LOCAL_PREFERENCES = {
-  hiddenProviders: [] as ProviderKind[],
+  hiddenProviders: [] as EngineKind[],
 };
 const SERVER_SETTINGS = {
   ...DEFAULT_SERVER_SETTINGS_VIEW,
@@ -92,7 +92,7 @@ function readCatalogRenders(
   return results;
 }
 
-function readAgentQueryEnabled(provider: ProviderKind): boolean | undefined {
+function readAgentQueryEnabled(provider: EngineKind): boolean | undefined {
   const call = mocks.useQuery.mock.calls.find(([value]) => {
     const queryKey = (value as QueryOptionsLike).queryKey;
     return queryKey[1] === "agents" && queryKey[2] === provider;
@@ -100,7 +100,7 @@ function readAgentQueryEnabled(provider: ProviderKind): boolean | undefined {
   return call ? (call[0] as QueryOptionsLike).enabled : undefined;
 }
 
-function readModelQueryEnabled(provider: ProviderKind): boolean | undefined {
+function readModelQueryEnabled(provider: EngineKind): boolean | undefined {
   const call = mocks.useQuery.mock.calls.find(([value]) => {
     const queryKey = (value as QueryOptionsLike).queryKey;
     return queryKey[1] === "models" && queryKey[2] === provider;
@@ -116,10 +116,10 @@ beforeEach(() => {
   mocks.useQuery.mockReset().mockImplementation((value: QueryOptionsLike) => {
     const [, resource, provider] = value.queryKey;
     if (resource === "models") {
-      return modelQueries.get(provider as ProviderKind) ?? EMPTY_QUERY;
+      return modelQueries.get(provider as EngineKind) ?? EMPTY_QUERY;
     }
     if (resource === "agents") {
-      return agentQueries.get(provider as ProviderKind) ?? EMPTY_QUERY;
+      return agentQueries.get(provider as EngineKind) ?? EMPTY_QUERY;
     }
     throw new Error(`Unexpected provider catalog query: ${String(resource)}`);
   });
@@ -145,7 +145,7 @@ describe("useProviderModelCatalog", () => {
 
   it("discovers agents only for the selected Engine", () => {
     readCatalogRenders({ selectedProvider: "cursor", discoveryEnabled: false });
-    expect(readAgentQueryEnabled("claudeAgent")).toBe(false);
+    expect(readAgentQueryEnabled("claude")).toBe(false);
     expect(readAgentQueryEnabled("codex")).toBe(false);
   });
 
@@ -269,9 +269,9 @@ describe("useProviderModelCatalog", () => {
     // closed here would blank every provider's model list, selected one included.
     mocks.useServerSettings.mockReturnValue({ settings: undefined });
 
-    readCatalogRenders({ selectedProvider: "claudeAgent", discoveryEnabled: true });
+    readCatalogRenders({ selectedProvider: "claude", discoveryEnabled: true });
 
-    expect(readModelQueryEnabled("claudeAgent")).toBe(true);
+    expect(readModelQueryEnabled("claude")).toBe(true);
     expect(readModelQueryEnabled("codex")).toBe(true);
   });
 
@@ -310,7 +310,7 @@ describe("useProviderModelCatalog", () => {
     });
 
     expect(readModelQueryEnabled("codex")).toBe(true);
-    expect(readModelQueryEnabled("claudeAgent")).toBe(false);
+    expect(readModelQueryEnabled("claude")).toBe(false);
     expect(readModelQueryEnabled("cursor")).toBe(false);
     expect(readModelQueryEnabled("opencode")).toBe(false);
 
@@ -323,7 +323,7 @@ describe("useProviderModelCatalog", () => {
 
     expect(readModelQueryEnabled("codex")).toBe(true);
     expect(readModelQueryEnabled("opencode")).toBe(true);
-    expect(readModelQueryEnabled("claudeAgent")).toBe(false);
+    expect(readModelQueryEnabled("claude")).toBe(false);
     expect(readModelQueryEnabled("cursor")).toBe(false);
   });
 
@@ -416,7 +416,7 @@ describe("useProviderModelCatalog", () => {
   });
 
   it("does not surface an unavailable exact OmniMind binding as a static model option", () => {
-    modelQueries.set("omnimind", {
+    modelQueries.set("oa", {
       data: {
         models: [{ slug: "deepseek/deepseek-chat", name: "DeepSeek Chat" }],
         source: "pi.sdk",
@@ -429,15 +429,15 @@ describe("useProviderModelCatalog", () => {
     });
 
     const catalog = readCatalogRenders({
-      selectedProvider: "omnimind",
+      selectedProvider: "oa",
       discoveryEnabled: true,
-      modelHintByProvider: { omnimind: "legacy/provider-model" },
+      modelHintByProvider: { oa: "legacy/provider-model" },
     }).at(-1);
 
-    expect(catalog?.modelOptionsByProvider.omnimind.map((model) => model.slug)).not.toContain(
+    expect(catalog?.modelOptionsByProvider.oa.map((model) => model.slug)).not.toContain(
       "legacy/provider-model",
     );
-    expect(catalog?.selectableModelOptionsByProvider.omnimind.map((model) => model.slug)).toEqual([
+    expect(catalog?.selectableModelOptionsByProvider.oa.map((model) => model.slug)).toEqual([
       "deepseek/deepseek-chat",
     ]);
   });

@@ -4,7 +4,7 @@
  * Centralizes provider-to-icon mapping so new providers do not need repeated
  * branching across every UI surface.
  */
-import { type ProviderKind } from "@harnessos/contracts";
+import { type EngineKind } from "@harnessos/contracts";
 import type { ReactNode, SVGProps } from "react";
 
 import { CentralIcon } from "~/lib/central-icons";
@@ -64,10 +64,10 @@ const OpenCodeProviderIcon = ({
   );
 };
 
-export const PROVIDER_ICON_COMPONENT_BY_PROVIDER: Record<ProviderKind, Icon> = {
-  omnimind: OmniMindLogo,
+export const PROVIDER_ICON_COMPONENT_BY_PROVIDER: Record<EngineKind, Icon> = {
+  oa: OmniMindLogo,
   codex: OpenAI,
-  claudeAgent: ClaudeAI,
+  claude: ClaudeAI,
   cursor: CursorIcon,
   antigravity: AntigravityIcon,
   grok: GrokIcon,
@@ -78,7 +78,7 @@ export const PROVIDER_ICON_COMPONENT_BY_PROVIDER: Record<ProviderKind, Icon> = {
 };
 
 export function providerIconToneClassName(
-  provider: ProviderKind | null | undefined,
+  provider: EngineKind | null | undefined,
   tone: ProviderIconTone = "default",
 ): string {
   if (provider === "kilo" || provider === "opencode") {
@@ -91,7 +91,7 @@ export function providerIconToneClassName(
 }
 
 export type ProviderIconProps = Omit<SVGProps<SVGSVGElement>, "ref"> & {
-  readonly provider: ProviderKind | null | undefined;
+  readonly provider: EngineKind | null | undefined;
   readonly fallback?: ReactNode;
   readonly tone?: ProviderIconTone;
 };
@@ -127,7 +127,7 @@ export function ProviderOptionLabel({
   className,
   iconClassName,
 }: {
-  provider: ProviderKind;
+  provider: EngineKind;
   label: ReactNode;
   className?: string;
   iconClassName?: string;

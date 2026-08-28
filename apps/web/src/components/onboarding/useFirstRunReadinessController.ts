@@ -1,8 +1,8 @@
 import {
-  PROVIDER_KINDS,
+  ENGINE_KINDS,
   type ModelSelection,
   type OmniMindModelServicesListResult,
-  type ProviderKind,
+  type EngineKind,
 } from "@harnessos/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useSyncExternalStore } from "react";
@@ -71,7 +71,7 @@ export interface FirstRunReadinessController {
 }
 
 export function useFirstRunReadinessController(
-  selectedProvider: ProviderKind,
+  selectedProvider: EngineKind,
 ): FirstRunReadinessController {
   const queryClient = useQueryClient();
   const { settings, defaults } = useServerSettings();
@@ -110,15 +110,15 @@ export function useFirstRunReadinessController(
     // First-run classification is passive. OmniMind's provider catalog loads
     // Pi Extensions, so readiness must rely on the credential-blind Model
     // services projection until the user explicitly opens model discovery.
-    selectedProviderDiscoveryEnabled: selectedProvider !== "omnimind",
+    selectedProviderDiscoveryEnabled: selectedProvider !== "oa",
     piDiscoveryRequested: selectedProvider === "pi",
     cwd: focusedContext.activeProject?.cwd ?? serverConfigQuery.data?.cwd ?? null,
     modelHintByProvider: { [selectedProvider]: selectedModelHint },
   });
 
   const rememberedSelections = useMemo(() => {
-    const result: Partial<Record<ProviderKind, ModelSelection>> = {};
-    for (const provider of PROVIDER_KINDS) {
+    const result: Partial<Record<EngineKind, ModelSelection>> = {};
+    for (const provider of ENGINE_KINDS) {
       const selection =
         stickyModelSelectionByProvider[provider] ??
         threadShells.find((thread) => thread.modelSelection.provider === provider)
@@ -152,7 +152,7 @@ export function useFirstRunReadinessController(
       stickyModelSelectionByProvider[focusedProvider] ??
       null;
     if (focusedSelection) result[focusedProvider] = focusedSelection;
-    for (const provider of PROVIDER_KINDS) {
+    for (const provider of ENGINE_KINDS) {
       const status = providerStatuses.find((candidate) => candidate.provider === provider);
       if (
         result[provider] &&
@@ -208,23 +208,23 @@ export function useFirstRunReadinessController(
             ? "configured"
             : "error"
         : "unknown";
-  const explicitOmniMindSelection = rememberedSelections.omnimind;
+  const explicitOmniMindSelection = rememberedSelections.oa;
   const hasUsableOmniMindBinding =
     cachedPassiveServices?.state === "ready" &&
     explicitOmniMindSelection !== undefined &&
     hasUsableOmniMindModelServiceBinding({
       selection: explicitOmniMindSelection,
       selectionIsExplicit: true,
-      catalogState: catalog.catalogStateByProvider.omnimind,
-      modelOptions: catalog.selectableModelOptionsByProvider.omnimind,
+      catalogState: catalog.catalogStateByProvider.oa,
+      modelOptions: catalog.selectableModelOptionsByProvider.oa,
       services: cachedPassiveServices.services,
     });
   const hasRememberedIndependentEngineBinding = hasRememberedExactModelBinding({
-    providers: PROVIDER_KINDS.filter((provider) => provider !== "omnimind"),
+    providers: ENGINE_KINDS.filter((provider) => provider !== "oa"),
     explicitExactModelSelections: rememberedSelections,
   });
   const hasRememberedOmniMindBinding = hasRememberedExactModelBinding({
-    providers: ["omnimind"],
+    providers: ["oa"],
     explicitExactModelSelections: rememberedSelections,
   });
   const catalogsSettled = areUsableProviderCatalogsSettled({

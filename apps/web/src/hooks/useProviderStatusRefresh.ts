@@ -6,7 +6,7 @@
 
 import { useEffect } from "react";
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
-import type { ProviderKind, ServerProviderStatus } from "@harnessos/contracts";
+import type { EngineKind, ServerProviderStatus } from "@harnessos/contracts";
 import { toastManager } from "../components/ui/toast";
 import { readNativeApi } from "../nativeApi";
 import { reconcileServerProviderStatuses } from "../lib/serverReactQuery";
@@ -22,7 +22,7 @@ export type RefreshProviderStatusesNow = (
 function writeProviderStatusesToConfigCache(
   queryClient: QueryClient,
   providers: readonly ServerProviderStatus[],
-  passivePresence?: ReadonlyArray<ProviderKind>,
+  passivePresence?: ReadonlyArray<EngineKind>,
 ) {
   return passivePresence
     ? reconcileServerProviderStatuses(queryClient, providers, { passivePresence })

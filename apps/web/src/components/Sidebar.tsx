@@ -82,14 +82,14 @@ import {
   type OrchestrationShellSnapshot,
   ProjectId,
   SpaceId,
-  type ProviderKind,
+  type EngineKind,
   ThreadId,
   type ResolvedKeybindingsConfig,
   WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
 } from "@harnessos/contracts";
 import { isGenericChatThreadTitle } from "@harnessos/shared/chatThreads";
 import { getDefaultModel } from "@harnessos/shared/model";
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { resolveThreadWorkspaceCwd } from "@harnessos/shared/threadEnvironment";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useParams, useSearch } from "@tanstack/react-router";
@@ -685,7 +685,7 @@ function resolveThreadRowMetaChips(input: {
   }
 
   const handoffBadgeLabel = input.thread.handoff
-    ? input.handoffFromLabel(PROVIDER_DISPLAY_NAMES[input.thread.handoff.sourceProvider])
+    ? input.handoffFromLabel(ENGINE_DISPLAY_NAMES[input.thread.handoff.sourceProvider])
     : null;
   if (input.includeHandoffBadge && !input.handoffShownInAvatar && handoffBadgeLabel) {
     chips.push({
@@ -2710,7 +2710,7 @@ export default function Sidebar() {
       const trimmedExternalId = externalId.trim();
       const suffix = trimmedExternalId.slice(-8);
       const providerName =
-        provider === "claudeAgent"
+        provider === "claude"
           ? "Claude"
           : provider === "cursor"
             ? "Cursor"
@@ -2869,7 +2869,7 @@ export default function Sidebar() {
   const copyThreadIdToClipboard = useCopyThreadIdToClipboard();
   const copyPathToClipboard = useCopyPathToClipboard();
   const handoffThread = useCallback(
-    async (thread: Thread, targetProvider: ProviderKind) => {
+    async (thread: Thread, targetProvider: EngineKind) => {
       try {
         await createThreadHandoff(thread, targetProvider);
       } catch (error) {
@@ -2934,7 +2934,7 @@ export default function Sidebar() {
         : [];
       const handoffItems = handoffTargets.map((provider, index) => ({
         id: `handoff:${provider}`,
-        label: t("thread.handoffTo", { provider: PROVIDER_DISPLAY_NAMES[provider] }),
+        label: t("thread.handoffTo", { provider: ENGINE_DISPLAY_NAMES[provider] }),
         separatorBefore: index === 0,
       }));
       const threadWorkspacePath = resolveThreadWorkspaceCwd({
@@ -3003,8 +3003,8 @@ export default function Sidebar() {
       }
       if (typeof clicked === "string" && clicked.startsWith("handoff:")) {
         const targetProvider = clicked.slice("handoff:".length);
-        if (handoffTargets.includes(targetProvider as ProviderKind)) {
-          await handoffThread(thread, targetProvider as ProviderKind);
+        if (handoffTargets.includes(targetProvider as EngineKind)) {
+          await handoffThread(thread, targetProvider as EngineKind);
         }
         return;
       }
@@ -5463,7 +5463,7 @@ export default function Sidebar() {
       id: "feedback",
       label: t("search.feedback"),
       description: t("search.feedbackDescription"),
-      keywords: ["feedback", "bug", "issue", "problem", "report", "support", "omnimind"],
+      keywords: ["feedback", "bug", "issue", "problem", "report", "support", "oa"],
     },
     {
       id: "settings",
@@ -6637,7 +6637,7 @@ function SidebarSearchPaletteController(props: {
   const selectAllThreads = useMemo(() => createAllThreadsSelector(), []);
   const selectSidebarDisplayThreads = useMemo(() => createSidebarDisplayThreadsSelector(), []);
   const importProviderCapabilityQueries = useQueries({
-    queries: (["codex", "claudeAgent", "cursor", "kilo", "opencode"] as const).map((provider) =>
+    queries: (["codex", "claude", "cursor", "kilo", "opencode"] as const).map((provider) =>
       providerComposerCapabilitiesQueryOptions(provider),
     ),
   });
@@ -6647,7 +6647,7 @@ function SidebarSearchPaletteController(props: {
     (state) => state.terminalStateByThreadId,
   );
   const importProviders: ReadonlyArray<ImportProviderKind> = (
-    ["codex", "claudeAgent", "cursor", "kilo", "opencode"] as const
+    ["codex", "claude", "cursor", "kilo", "opencode"] as const
   ).filter((provider, index) => supportsThreadImport(importProviderCapabilityQueries[index]?.data));
   const searchPaletteThreads = useMemo<SidebarSearchThread[]>(() => {
     const threadById = new Map(threads.map((thread) => [thread.id, thread] as const));

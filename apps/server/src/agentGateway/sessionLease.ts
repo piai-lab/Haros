@@ -1,4 +1,4 @@
-import type { ProviderKind, ThreadId } from "@harnessos/contracts";
+import type { EngineKind, ThreadId } from "@harnessos/contracts";
 import { Effect, Exit } from "effect";
 
 import type {
@@ -145,7 +145,7 @@ export function withAgentGatewayTurnCancellation<A, E, R>(
 export function acquireAgentGatewaySessionLease(
   credentials: AgentGatewaySessionLeaseCredentials | undefined,
   threadId: ThreadId,
-  provider: ProviderKind,
+  provider: EngineKind,
 ): AgentGatewaySessionLease | undefined {
   if (credentials === undefined) return undefined;
 

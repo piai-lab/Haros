@@ -4,12 +4,7 @@
 // Layer: UI logic (no React, no stores) so the board math stays unit-testable.
 // Exports: deriveKanbanColumn, buildKanbanBoard, ordering + drop-action helpers.
 
-import type {
-  ProjectId,
-  ProviderKind,
-  ThreadEnvironmentMode,
-  ThreadId,
-} from "@harnessos/contracts";
+import type { ProjectId, EngineKind, ThreadEnvironmentMode, ThreadId } from "@harnessos/contracts";
 import { buildPromptThreadTitleFallback } from "@harnessos/shared/chatThreads";
 import { isPendingThreadWorktree } from "@harnessos/shared/threadEnvironment";
 import type { ComposerThreadDraftState } from "../../composerDraftStore";
@@ -34,7 +29,7 @@ export interface KanbanComposerDraftSnapshot {
   prompt: string;
   /** Files, images, terminal contexts, or references attached to the composer draft. */
   hasAttachments: boolean;
-  provider: ProviderKind | null;
+  provider: EngineKind | null;
 }
 
 type KanbanComposerDraftSource = Pick<
@@ -80,7 +75,7 @@ export interface KanbanOptimisticDispatchSnapshot {
   projectId: ProjectId;
   /** Display title for the window where neither thread nor composer prompt exists. */
   title: string;
-  provider: ProviderKind | null;
+  provider: EngineKind | null;
   /** latestTurn.turnId at dispatch time; any different (or first) turn settles the entry. */
   baselineTurnId: string | null;
   /** Epoch ms of the drop — recency sort key and expiry baseline. */
@@ -137,7 +132,7 @@ export interface KanbanCard {
   projectId: ProjectId;
   column: KanbanColumnKey;
   title: string;
-  provider: ProviderKind | null;
+  provider: EngineKind | null;
   /** Terminal-first thread — renders the terminal glyph instead of a provider icon. */
   isTerminal: boolean;
   branch: string | null;
@@ -271,7 +266,7 @@ function resolveThreadCardTimestamp(
 function resolveComposerDraft(
   composerDraftByThreadId: BuildKanbanBoardInput["composerDraftByThreadId"],
   threadId: ThreadId,
-): { prompt: string; hasAttachments: boolean; provider: ProviderKind | null } {
+): { prompt: string; hasAttachments: boolean; provider: EngineKind | null } {
   const snapshot = composerDraftByThreadId[threadId];
   return {
     prompt: snapshot?.prompt.trim() ?? "",

@@ -1,5 +1,5 @@
 import type {
-  ProviderKind,
+  EngineKind,
   ProviderSessionRuntimeStatus,
   RuntimeMode,
   ThreadId,
@@ -14,7 +14,7 @@ import type {
 
 export interface ProviderRuntimeBinding {
   readonly threadId: ThreadId;
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly adapterKey?: string;
   readonly status?: ProviderSessionRuntimeStatus;
   readonly lifecycleGeneration?: string;
@@ -42,7 +42,7 @@ export interface ProviderSessionDirectoryShape {
 
   readonly getProvider: (
     threadId: ThreadId,
-  ) => Effect.Effect<ProviderKind, ProviderSessionDirectoryReadError>;
+  ) => Effect.Effect<EngineKind, ProviderSessionDirectoryReadError>;
 
   readonly getBinding: (
     threadId: ThreadId,

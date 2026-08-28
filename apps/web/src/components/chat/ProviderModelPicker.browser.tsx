@@ -1,6 +1,6 @@
 import "../../index.css";
 
-import { type ModelSlug, type ProviderKind, type ServerProviderStatus } from "@harnessos/contracts";
+import { type ModelSlug, type EngineKind, type ServerProviderStatus } from "@harnessos/contracts";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -20,8 +20,8 @@ vi.mock("../../localPreferences", () => ({
 }));
 
 const MODEL_OPTIONS_BY_PROVIDER = {
-  omnimind: [],
-  claudeAgent: [
+  oa: [],
+  claude: [
     { slug: "claude-opus-4-6", name: "Claude Opus 4.6" },
     { slug: "claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
     { slug: "claude-haiku-4-5", name: "Claude Haiku 4.5" },
@@ -82,7 +82,7 @@ const MODEL_OPTIONS_BY_PROVIDER = {
       name: "Gemini 3.5 Flash",
     },
   ],
-} as const satisfies Record<ProviderKind, ReadonlyArray<ProviderModelOption & { slug: ModelSlug }>>;
+} as const satisfies Record<EngineKind, ReadonlyArray<ProviderModelOption & { slug: ModelSlug }>>;
 
 const MANY_OPENCODE_MODELS = Array.from({ length: 16 }, (_, index) => ({
   slug: `${index % 2 === 0 ? "openai" : "anthropic"}/model-${index + 1}` as ModelSlug,
@@ -162,16 +162,16 @@ const PI_FAVORITE_SORT_MODELS = [
 ] satisfies ReadonlyArray<ProviderModelOption & { slug: ModelSlug }>;
 
 async function mountPicker(props: {
-  provider: ProviderKind;
+  provider: EngineKind;
   model: ModelSlug;
-  lockedProvider: ProviderKind | null;
+  lockedProvider: EngineKind | null;
   providers?: ReadonlyArray<ServerProviderStatus>;
-  loadingModelProviders?: Partial<Record<ProviderKind, boolean>>;
-  catalogStateByProvider?: Partial<Record<ProviderKind, ProviderModelCatalogState>>;
+  loadingModelProviders?: Partial<Record<EngineKind, boolean>>;
+  catalogStateByProvider?: Partial<Record<EngineKind, ProviderModelCatalogState>>;
   onSelectionCommitted?: () => void;
-  onProviderBrowse?: (provider: ProviderKind) => void;
+  onProviderBrowse?: (provider: EngineKind) => void;
   modelOptionsByProvider?: Record<
-    ProviderKind,
+    EngineKind,
     ReadonlyArray<ProviderModelOption & { slug: ModelSlug }>
   >;
   locale?: "en" | "zh-CN";
@@ -228,10 +228,10 @@ describe("ProviderModelPicker", () => {
 
   it("does not present a loading catalog as an empty catalog", async () => {
     const mounted = await mountPicker({
-      provider: "omnimind",
+      provider: "oa",
       model: "" as ModelSlug,
-      lockedProvider: "omnimind",
-      catalogStateByProvider: { omnimind: "checking" },
+      lockedProvider: "oa",
+      catalogStateByProvider: { oa: "checking" },
     });
 
     try {
@@ -251,10 +251,10 @@ describe("ProviderModelPicker", () => {
     "labels a settled %s catalog accurately without a selection",
     async (state, label) => {
       const mounted = await mountPicker({
-        provider: "omnimind",
+        provider: "oa",
         model: "" as ModelSlug,
-        lockedProvider: "omnimind",
-        catalogStateByProvider: { omnimind: state },
+        lockedProvider: "oa",
+        catalogStateByProvider: { oa: state },
       });
 
       try {
@@ -267,7 +267,7 @@ describe("ProviderModelPicker", () => {
 
   it("shows provider submenus when provider switching is allowed", async () => {
     const mounted = await mountPicker({
-      provider: "claudeAgent",
+      provider: "claude",
       model: "claude-opus-4-6",
       lockedProvider: null,
     });
@@ -289,7 +289,7 @@ describe("ProviderModelPicker", () => {
   it("reports explicit provider browse without treating the root picker as Pi intent", async () => {
     const onProviderBrowse = vi.fn();
     const mounted = await mountPicker({
-      provider: "claudeAgent",
+      provider: "claude",
       model: "claude-opus-4-6",
       lockedProvider: null,
       onProviderBrowse,
@@ -319,9 +319,9 @@ describe("ProviderModelPicker", () => {
 
   it("shows models directly when the provider is locked mid-thread", async () => {
     const mounted = await mountPicker({
-      provider: "claudeAgent",
+      provider: "claude",
       model: "claude-opus-4-6",
-      lockedProvider: "claudeAgent",
+      lockedProvider: "claude",
     });
 
     try {
@@ -340,19 +340,16 @@ describe("ProviderModelPicker", () => {
 
   it("dispatches the canonical slug when a model is selected", async () => {
     const mounted = await mountPicker({
-      provider: "claudeAgent",
+      provider: "claude",
       model: "claude-opus-4-6",
-      lockedProvider: "claudeAgent",
+      lockedProvider: "claude",
     });
 
     try {
       await page.getByRole("button").click();
       await page.getByRole("menuitemradio", { name: "Claude Sonnet 4.6" }).click();
 
-      expect(mounted.onProviderModelChange).toHaveBeenCalledWith(
-        "claudeAgent",
-        "claude-sonnet-4-6",
-      );
+      expect(mounted.onProviderModelChange).toHaveBeenCalledWith("claude", "claude-sonnet-4-6");
     } finally {
       await mounted.cleanup();
     }
@@ -837,7 +834,7 @@ describe("ProviderModelPicker", () => {
           checkedAt: "2026-04-10T10:00:00.000Z",
         },
         {
-          provider: "claudeAgent",
+          provider: "claude",
           status: "error",
           available: false,
           authStatus: "unauthenticated",
@@ -903,7 +900,7 @@ describe("ProviderModelPicker", () => {
           checkedAt: "2026-04-10T10:00:00.000Z",
         },
         {
-          provider: "claudeAgent",
+          provider: "claude",
           status: "warning",
           available: true,
           authStatus: "unknown",

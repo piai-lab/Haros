@@ -154,7 +154,7 @@ export function buildMcpInitializeResult(input: {
       tools: { listChanged: false },
     },
     serverInfo: {
-      name: "omnimind",
+      name: "oa",
       title: "OmniMind App Control",
       version: input.serverVersion,
     },

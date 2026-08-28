@@ -477,10 +477,10 @@ function parseClaudeLine(input: {
   readonly unknownWorkspace: string;
 }): UsageHistoryParsedEvent | null {
   const rawSession = nonEmptyString(input.record.sessionId ?? input.record.session_id);
-  if (rawSession) input.state.sessionKey = sessionKey("claudeAgent", input.salt, rawSession);
+  if (rawSession) input.state.sessionKey = sessionKey("claude", input.salt, rawSession);
   const cwd = nonEmptyString(input.record.cwd);
   if (cwd) {
-    const workspace = workspaceFromPath("claudeAgent", input.salt, cwd, input.unknownWorkspace);
+    const workspace = workspaceFromPath("claude", input.salt, cwd, input.unknownWorkspace);
     input.state.workspaceKey = workspace.key;
     input.state.workspaceLabel = workspace.label;
   }
@@ -497,12 +497,12 @@ function parseClaudeLine(input: {
       nonEmptyString(input.record.requestId ?? message?.id ?? input.record.uuid) ??
       `${timestamp}:${semanticHash(usage)}`;
     return normalizedEvent({
-      provider: "claudeAgent",
+      provider: "claude",
       salt: input.salt,
       stableIdentity: { session: input.state.sessionKey, kind: "assistant", id: stableId },
       timestamp,
       state: input.state,
-      tokens: readTokenFields(usage, "claudeAgent"),
+      tokens: readTokenFields(usage, "claude"),
       unknownModel: input.unknownModel,
       unknownWorkspace: input.unknownWorkspace,
     });
@@ -515,12 +515,12 @@ function parseClaudeLine(input: {
     nonEmptyString(input.record.uuid ?? toolUseResult.agentId ?? input.record.requestId) ??
     `${timestamp}:${semanticHash(usage)}`;
   return normalizedEvent({
-    provider: "claudeAgent",
+    provider: "claude",
     salt: input.salt,
     stableIdentity: { session: input.state.sessionKey, kind: "tool-result", id: stableId },
     timestamp,
     state: input.state,
-    tokens: readTokenFields(usage, "claudeAgent"),
+    tokens: readTokenFields(usage, "claude"),
     unknownModel: input.unknownModel,
     unknownWorkspace: input.unknownWorkspace,
   });

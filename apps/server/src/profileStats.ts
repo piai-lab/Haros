@@ -9,11 +9,11 @@
 import type {
   ProfileStats,
   ProfileTokenStats,
-  ProviderKind,
+  EngineKind,
   StatsGetProfileStatsInput,
   StatsGetProfileTokenStatsInput,
 } from "@harnessos/contracts";
-import { PROVIDER_KINDS } from "@harnessos/contracts";
+import { ENGINE_KINDS } from "@harnessos/contracts";
 import { isBuiltInComposerSlashCommandName } from "@harnessos/shared/composerSlashCommands";
 import { Effect, Layer, ServiceMap } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
@@ -21,7 +21,7 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 const HEATMAP_WINDOW_DAYS = 274; // ~9 months, GitHub-style contribution grid.
 const RECENT_USAGE_WINDOW_DAYS = 30;
 const SKILL_RESULT_LIMIT = 12;
-const PROVIDER_KIND_SET = new Set<ProviderKind>(PROVIDER_KINDS);
+const PROVIDER_KIND_SET = new Set<EngineKind>(ENGINE_KINDS);
 
 type HeatmapCell = ProfileStats["activity"]["heatmap"][number];
 type SkillUsage = ProfileStats["skills"][number];
@@ -423,10 +423,10 @@ function compareNullableText(
   return (left ?? "").localeCompare(right ?? "");
 }
 
-function normalizeProviderKind(value: unknown): ProviderKind | "unknown" {
+function normalizeProviderKind(value: unknown): EngineKind | "unknown" {
   const provider = nonEmptyString(value);
-  return provider && PROVIDER_KIND_SET.has(provider as ProviderKind)
-    ? (provider as ProviderKind)
+  return provider && PROVIDER_KIND_SET.has(provider as EngineKind)
+    ? (provider as EngineKind)
     : "unknown";
 }
 
@@ -1232,7 +1232,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
       const recentModelCounts = new Map<
         string,
         {
-          provider: ProviderKind | "unknown";
+          provider: EngineKind | "unknown";
           model: string;
           count: number;
           kind: "model" | "unknown";
@@ -1436,7 +1436,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         string,
         { cachedInputTokens: number; uncachedInputTokens: number; outputTokens: number }
       >();
-      const breakdownProviders = new Set<ProviderKind>();
+      const breakdownProviders = new Set<EngineKind>();
       for (const row of recentBreakdownRows) {
         const day = nonEmptyString(row.day);
         if (!day) continue;
@@ -1452,7 +1452,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         const provider = normalizeProviderKind(row.provider);
         if (provider !== "unknown") breakdownProviders.add(provider);
       }
-      const recentTurnProviders = new Set<ProviderKind>();
+      const recentTurnProviders = new Set<EngineKind>();
       for (const row of recentTurnRows) {
         const provider = normalizeProviderKind(row.provider);
         if (provider !== "unknown") recentTurnProviders.add(provider);

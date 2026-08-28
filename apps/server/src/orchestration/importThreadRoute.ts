@@ -6,7 +6,7 @@
 import {
   CommandId,
   type OrchestrationImportThreadInput,
-  type ProviderKind,
+  type EngineKind,
   type ThreadHandoffImportedMessage,
   type ThreadId,
 } from "@harnessos/contracts";
@@ -41,9 +41,9 @@ function importMessagesError(message: string): ImportThreadError {
   return new ImportThreadError({ message });
 }
 
-function providerResumeCursorForImport(provider: ProviderKind, externalId: string): unknown {
+function providerResumeCursorForImport(provider: EngineKind, externalId: string): unknown {
   switch (provider) {
-    case "claudeAgent":
+    case "claude":
       return { resume: externalId };
     case "droid":
       return { schemaVersion: 1, sessionId: externalId };
@@ -393,7 +393,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
       });
     }
 
-    if (thread.modelSelection.provider === "claudeAgent") {
+    if (thread.modelSelection.provider === "claude") {
       yield* ensureClaudeThreadImportable({
         cwd,
         externalId,
@@ -423,7 +423,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
           threadId: thread.id,
           importedAt: session.updatedAt,
         });
-      } else if (thread.modelSelection.provider === "claudeAgent") {
+      } else if (thread.modelSelection.provider === "claude") {
         yield* importClaudeThreadHistory({
           threadId: thread.id,
           externalId,

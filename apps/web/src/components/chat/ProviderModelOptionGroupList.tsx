@@ -17,7 +17,7 @@ import {
   type ProviderModelOption,
   type ProviderModelOptionGroup,
 } from "../../providerModelOptions";
-import type { ProviderKind } from "@harnessos/contracts";
+import type { EngineKind } from "@harnessos/contracts";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
 import { ModelIdentityIcon } from "../ModelIdentityIcon";
@@ -33,7 +33,7 @@ type FavoriteModelProvider = "cursor" | "kilo" | "opencode" | "pi";
 
 type ProviderModelOptionGroupListProps = {
   groupedOptions: ReadonlyArray<ProviderModelOptionGroup>;
-  provider: ProviderKind;
+  provider: EngineKind;
   activeModel: string;
   isSearching: boolean;
   favoriteProvider: FavoriteModelProvider | null;
@@ -44,7 +44,7 @@ type ProviderModelOptionGroupListProps = {
 
 function ProviderModelRadioItem(
   props: Readonly<{
-    provider: ProviderKind;
+    provider: EngineKind;
     modelOption: ProviderModelOption;
     favoriteProvider: FavoriteModelProvider | null;
     isFavorite: boolean;

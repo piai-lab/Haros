@@ -6,7 +6,7 @@
 import {
   type ProviderApprovalDecision,
   type ProviderInteractionMode,
-  type ProviderKind,
+  type EngineKind,
   type RuntimeMode,
   type ThreadId,
   type ToolLifecycleItemType,
@@ -56,7 +56,7 @@ function acpRequestErrorDetail(error: AcpErrors.AcpRequestError): string {
 }
 
 export function mapAcpToAdapterError(
-  provider: ProviderKind,
+  provider: EngineKind,
   _threadId: ThreadId,
   method: string,
   error: AcpErrors.AcpError,

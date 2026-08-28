@@ -114,7 +114,7 @@ describe("ProvidersSettingsPanel provider update feedback", () => {
       providers: [
         outdatedCodex(),
         {
-          provider: "claudeAgent" as const,
+          provider: "claude" as const,
           status: "ready" as const,
           available: true,
           authStatus: "unauthenticated" as const,

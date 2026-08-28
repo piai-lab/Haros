@@ -65,7 +65,7 @@ export type DeviceRuntimeState = typeof DeviceRuntimeState.Type;
  * Who owns the boot. OmniMind only auto-shuts down devices it booted itself;
  * anything the user started (pane picker, Simulator.app) outlives the session.
  */
-export const DeviceBootSource = Schema.Literals(["omnimind", "user"]);
+export const DeviceBootSource = Schema.Literals(["oa", "user"]);
 export type DeviceBootSource = typeof DeviceBootSource.Type;
 
 /**

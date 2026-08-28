@@ -68,7 +68,7 @@ describe("server-only OmniMind default prompt settings", () => {
     const retiredKey = ["custom", "Models"].join("");
     const settings = Schema.decodeUnknownSync(ServerSettings)({
       providers: {
-        omnimind: {
+        oa: {
           enabled: false,
           [retiredKey]: ["legacy/provider-model"],
           defaultPrompt: null,
@@ -76,18 +76,18 @@ describe("server-only OmniMind default prompt settings", () => {
       },
     });
     const patch = decodePatch({
-      providers: { omnimind: { [retiredKey]: ["legacy/provider-model"] } },
+      providers: { oa: { [retiredKey]: ["legacy/provider-model"] } },
     });
 
-    expect(settings.providers.omnimind).toEqual({ enabled: false, defaultPrompt: null });
-    expect(patch.providers?.omnimind).toEqual({});
+    expect(settings.providers.oa).toEqual({ enabled: false, defaultPrompt: null });
+    expect(patch.providers?.oa).toEqual({});
   });
 
   it("is not accepted by the public settings patch", () => {
     const patch = decodePatch({
-      providers: { omnimind: { defaultPrompt: "must stay private" } },
+      providers: { oa: { defaultPrompt: "must stay private" } },
     });
-    expect(patch.providers?.omnimind).not.toHaveProperty("defaultPrompt");
+    expect(patch.providers?.oa).not.toHaveProperty("defaultPrompt");
   });
 
   it("uses the same UTF-8 byte boundary as the prompt contract", () => {
@@ -95,10 +95,10 @@ describe("server-only OmniMind default prompt settings", () => {
     const withinLimit = emoji.repeat(HARNESSOS_AGENT_PROMPT_MAX_BYTES / 4);
     const decodeSettings = (defaultPrompt: string) =>
       Schema.decodeUnknownSync(ServerSettings)({
-        providers: { omnimind: { defaultPrompt } },
+        providers: { oa: { defaultPrompt } },
       });
 
-    expect(decodeSettings(withinLimit).providers.omnimind.defaultPrompt).toBe(withinLimit);
+    expect(decodeSettings(withinLimit).providers.oa.defaultPrompt).toBe(withinLimit);
     expect(() => decodeSettings(`${withinLimit}${emoji}`)).toThrow();
   });
 });

@@ -342,12 +342,12 @@ function makeToolContext(): ToolContext {
       kind: "provider-session",
       sessionKey: "device-e2e",
       threadId: THREAD_ID,
-      provider: "claudeAgent",
+      provider: "claude",
       turnId: "device-e2e-turn",
     },
     callerThreadId: THREAD_ID,
     callerSessionKey: "device-e2e",
-    callerProvider: "claudeAgent",
+    callerProvider: "claude",
     callerCapabilities: new Set(["device:control"]),
     callerTurnId: "device-e2e-turn",
     assertCallerTurnActive: () => Effect.void,
@@ -407,7 +407,7 @@ describeE2e("device pane end-to-end", () => {
     const listed = await rpc.call<DeviceListResult>(DEVICE_WS_METHODS.list, {});
     const booted = listed.devices.find((device) => device.udid === target?.udid);
     expect(booted?.state).toBe("booted");
-    expect(booted?.bootSource).toBe("omnimind");
+    expect(booted?.bootSource).toBe("oa");
   }, 180_000);
 
   it("attaches the thread and streams H.264 frames driven by taps", async () => {

@@ -2,7 +2,7 @@ import type {
   ProjectEntry,
   ProviderAgentDescriptor,
   ProviderNativeCommandDescriptor,
-  ProviderKind,
+  EngineKind,
   ProviderMentionReference,
   ProviderPluginDescriptor,
   ProviderSkillDescriptor,
@@ -45,7 +45,7 @@ type ComposerPluginSuggestion = {
 };
 
 export type SearchableModelOption = {
-  provider: ProviderKind;
+  provider: EngineKind;
   providerLabel: string;
   slug: string;
   name: string;
@@ -225,12 +225,12 @@ export function buildThreadMentionComposerItems(input: {
 }
 
 export function buildSearchableModelOptions(input: {
-  providerOptions: ReadonlyArray<{ value: ProviderKind; label: string }>;
-  modelOptionsByProvider: Record<ProviderKind, ReadonlyArray<ProviderModelOption>>;
-  providerOrder: readonly ProviderKind[];
-  hiddenProviders: readonly ProviderKind[];
-  protectedProviders: readonly ProviderKind[];
-  lockedProvider?: ProviderKind | null;
+  providerOptions: ReadonlyArray<{ value: EngineKind; label: string }>;
+  modelOptionsByProvider: Record<EngineKind, ReadonlyArray<ProviderModelOption>>;
+  providerOrder: readonly EngineKind[];
+  hiddenProviders: readonly EngineKind[];
+  protectedProviders: readonly EngineKind[];
+  lockedProvider?: EngineKind | null;
 }): SearchableModelOption[] {
   const hiddenProviderSet = new Set(input.hiddenProviders);
   const protectedProviderSet = new Set(input.protectedProviders);
@@ -261,7 +261,7 @@ export function buildSearchableModelOptions(input: {
 
 export function useComposerCommandMenuItems(input: {
   composerTrigger: ComposerTrigger | null;
-  provider: ProviderKind;
+  provider: EngineKind;
   providerPlugins: readonly ComposerPluginSuggestion[];
   providerNativeCommands: readonly ProviderNativeCommandDescriptor[];
   providerSkills: readonly ProviderSkillDescriptor[];

@@ -10,7 +10,7 @@ import {
   APP_SNAP_SHORTCUT_MODIFIERS,
   DEFAULT_APP_SNAP_SHORTCUT,
 } from "@harnessos/shared/appSnapShortcut";
-import { ProviderKind } from "@harnessos/contracts";
+import { EngineKind } from "@harnessos/contracts";
 import { DEFAULT_LOCALE_PREFERENCE, LocalePreference } from "./locale";
 import {
   DEFAULT_PROVIDER_ORDER,
@@ -73,7 +73,7 @@ const AppSnapShortcut = Schema.Union([
   }),
 ]);
 
-const PersistedProviderKind = ProviderKind;
+const PersistedProviderKind = EngineKind;
 
 const withDefaults =
   <

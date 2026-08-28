@@ -208,7 +208,7 @@ export function RuntimeUsageControls({
   const { t } = useI18n();
   const executionCapabilitiesQuery = useQuery({
     ...providerExecutionCapabilitiesQueryOptions(
-      modelSelection ?? { provider: "omnimind", model: "default" },
+      modelSelection ?? { provider: "oa", model: "default" },
     ),
     enabled: modelSelection !== undefined,
   });

@@ -294,7 +294,7 @@ export function parseClaudeUsage(input: { json: unknown; nowMs: number; planName
   }
 
   return buildSnapshot({
-    provider: "claudeAgent",
+    provider: "claude",
     nowMs: input.nowMs,
     status: "ok",
     source: SOURCE,
@@ -310,7 +310,7 @@ export function parseClaudeUsage(input: { json: unknown; nowMs: number; planName
 // and keeps serving it — with a staleness note — while backing off. Keyed by a credential fingerprint
 // so a removed or switched Claude login can't be served another account's cached numbers.
 const claudeRateLimit = createRateLimitResilience({
-  provider: "claudeAgent",
+  provider: "claude",
   source: SOURCE,
   detail: (retryMins) =>
     `Anthropic is rate-limiting usage checks — showing your last values, retrying in ~${retryMins}m. Manual refreshes only extend the limit.`,
@@ -322,14 +322,14 @@ export function __resetClaudeUsageRateLimitState(): void {
 }
 
 export const claudeUsageFetcher: ProviderUsageFetcher = {
-  provider: "claudeAgent",
+  provider: "claude",
   async cacheKey(ctx) {
     return claudeCredentialsCacheKey(ctx, await resolveClaudeCredCandidates(ctx));
   },
   async fetch(ctx) {
     const candidates = await resolveClaudeCredCandidates(ctx);
     if (candidates.length === 0) {
-      return needsAuthSnapshot("claudeAgent", ctx.nowMs, SOURCE);
+      return needsAuthSnapshot("claude", ctx.nowMs, SOURCE);
     }
 
     // At most one CLI nudge per fetch, shared by the proactive (near-expiry) and reactive (401)
@@ -352,7 +352,7 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
       if (!hasProfileScope(original)) {
         const planName = claudePlanName(original);
         inferenceOnlySnapshot = buildSnapshot({
-          provider: "claudeAgent",
+          provider: "claude",
           nowMs: ctx.nowMs,
           status: "ok",
           source: SOURCE,
@@ -412,7 +412,7 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
         if (!result.ok) {
           log.warn("claude usage request failed", { status: result.status });
           lastErrorSnapshot = errorSnapshot(
-            "claudeAgent",
+            "claude",
             ctx.nowMs,
             SOURCE,
             `Claude usage request failed (${result.status}).`,
@@ -436,7 +436,7 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
           message: cause instanceof Error ? cause.message : String(cause),
         });
         lastErrorSnapshot = errorSnapshot(
-          "claudeAgent",
+          "claude",
           ctx.nowMs,
           SOURCE,
           "Could not reach the Claude usage endpoint.",
@@ -446,9 +446,7 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
     }
 
     return (
-      inferenceOnlySnapshot ??
-      lastErrorSnapshot ??
-      needsAuthSnapshot("claudeAgent", ctx.nowMs, SOURCE)
+      inferenceOnlySnapshot ?? lastErrorSnapshot ?? needsAuthSnapshot("claude", ctx.nowMs, SOURCE)
     );
   },
 };

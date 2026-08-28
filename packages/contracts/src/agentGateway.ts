@@ -8,7 +8,7 @@
 import { Schema } from "effect";
 
 import { ProjectId, ThreadId, TurnId } from "./baseSchemas";
-import { ModelSelection, ProviderKind } from "./orchestration";
+import { ModelSelection, EngineKind } from "./orchestration";
 import { ProviderModelDescriptor } from "./providerDiscovery";
 import { ServerProviderAuthStatus } from "./server";
 
@@ -53,7 +53,7 @@ export const OmniMindContextResult = Schema.Struct({
   caller: Schema.Struct({
     threadId: ThreadId,
     turnId: Schema.NullOr(TurnId),
-    provider: ProviderKind,
+    provider: EngineKind,
     projectId: ProjectId,
   }),
   capabilities: Schema.Struct({
@@ -93,7 +93,7 @@ export const OmniMindCreateThreadsInput = Schema.Struct({
 export type OmniMindCreateThreadsInput = typeof OmniMindCreateThreadsInput.Type;
 
 export const OmniMindProviderCatalog = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
   defaultModel: Schema.NullOr(Schema.String),
   models: Schema.Array(ProviderModelDescriptor),
   enabled: Schema.Boolean,
@@ -147,7 +147,7 @@ export const OmniMindCreatedThreadResult = Schema.Struct({
   projectId: ProjectId,
   title: Schema.String,
   target: ModelSelection,
-  provider: ProviderKind,
+  provider: EngineKind,
   model: Schema.String,
   runtimeMode: Schema.Literals(["approval-required", "full-access"]),
   environment: Schema.Literals(["local", "worktree"]),

@@ -5,7 +5,7 @@
 
 import {
   type ProviderOptionDescriptor,
-  type ProviderKind,
+  type EngineKind,
   type ProviderModelDescriptor,
 } from "@harnessos/contracts";
 import {
@@ -96,7 +96,7 @@ function promptInjectedValuesForDescriptor(
 
 // Resolve the currently selected composer traits from capabilities plus draft overrides.
 export function getComposerTraitSelection(
-  provider: ProviderKind,
+  provider: EngineKind,
   model: string | null | undefined,
   prompt: string,
   modelOptions: ProviderOptions | null | undefined,

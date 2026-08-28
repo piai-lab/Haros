@@ -156,7 +156,7 @@ describe("composerSlashCommands", () => {
 
   it("parses an optional leading provider token in /side args", () => {
     const context = {
-      currentProvider: "claudeAgent",
+      currentProvider: "claude",
       availableTargetProviders: ["codex", "cursor"],
     } as const;
     expect(parseSideSlashCommandArgs("codex is this safe?", context)).toEqual({
@@ -283,10 +283,8 @@ describe("composerSlashCommands", () => {
   });
 
   it("does not surface provider-native remote entry points in V1", () => {
-    expect(shouldHideProviderNativeCommandFromComposerMenu("claudeAgent", "remote-control")).toBe(
-      true,
-    );
-    expect(shouldHideProviderNativeCommandFromComposerMenu("claudeAgent", "mobile")).toBe(true);
+    expect(shouldHideProviderNativeCommandFromComposerMenu("claude", "remote-control")).toBe(true);
+    expect(shouldHideProviderNativeCommandFromComposerMenu("claude", "mobile")).toBe(true);
   });
 
   // #218: OpenCode lists native /review but does not honor bare `/review` text turns.
@@ -307,7 +305,7 @@ describe("composerSlashCommands", () => {
     expect(providerSupportsTextNativeReviewCommand("opencode", ["review", "status"])).toBe(false);
     expect(providerSupportsTextNativeReviewCommand("opencode", [{ name: "review" }])).toBe(false);
     // Other providers with a native review still use text pass-through.
-    expect(providerSupportsTextNativeReviewCommand("claudeAgent", ["review"])).toBe(true);
+    expect(providerSupportsTextNativeReviewCommand("claude", ["review"])).toBe(true);
   });
 
   it("keeps app-level /automation available even if a provider exposes a native collision", () => {
@@ -328,7 +326,7 @@ describe("composerSlashCommands", () => {
 
   it("keeps Feedback OmniMind ahead of provider-native /feedback", () => {
     const availableCommands = getAvailableComposerSlashCommands({
-      provider: "claudeAgent",
+      provider: "claude",
       supportsFastSlashCommand: true,
       canOfferCompactCommand: true,
       canOfferReviewCommand: true,
@@ -339,13 +337,13 @@ describe("composerSlashCommands", () => {
     });
 
     expect(availableCommands).toContain("feedback");
-    expect(shouldHideProviderNativeCommandFromComposerMenu("claudeAgent", "feedback")).toBe(true);
+    expect(shouldHideProviderNativeCommandFromComposerMenu("claude", "feedback")).toBe(true);
   });
 
   it("only exposes OmniMind-owned app commands for claude", () => {
     expect(
       getAvailableComposerSlashCommands({
-        provider: "claudeAgent",
+        provider: "claude",
         supportsFastSlashCommand: true,
         canOfferCompactCommand: true,
         canOfferReviewCommand: true,
@@ -370,7 +368,7 @@ describe("composerSlashCommands", () => {
   it("omits app-level /fork for claude when the composer cannot offer it", () => {
     expect(
       getAvailableComposerSlashCommands({
-        provider: "claudeAgent",
+        provider: "claude",
         supportsFastSlashCommand: true,
         canOfferCompactCommand: true,
         canOfferReviewCommand: true,
@@ -411,7 +409,7 @@ describe("composerSlashCommands", () => {
 
   it("keeps app-level /export available even if a provider exposes a native collision", () => {
     const availableCommands = getAvailableComposerSlashCommands({
-      provider: "claudeAgent",
+      provider: "claude",
       supportsFastSlashCommand: true,
       canOfferCompactCommand: true,
       canOfferReviewCommand: true,
@@ -422,7 +420,7 @@ describe("composerSlashCommands", () => {
     });
 
     expect(availableCommands).toContain("export");
-    expect(shouldHideProviderNativeCommandFromComposerMenu("claudeAgent", "export")).toBe(true);
+    expect(shouldHideProviderNativeCommandFromComposerMenu("claude", "export")).toBe(true);
   });
 
   it("keeps native /export visible on surfaces without app-level /export", () => {
@@ -430,12 +428,12 @@ describe("composerSlashCommands", () => {
     const mainComposerAppCommands = new Set(["clear", "export", "model"]);
 
     expect(
-      shouldHideProviderNativeCommandFromComposerMenu("claudeAgent", "export", {
+      shouldHideProviderNativeCommandFromComposerMenu("claude", "export", {
         availableAppCommands: kanbanAppCommands,
       }),
     ).toBe(false);
     expect(
-      shouldHideProviderNativeCommandFromComposerMenu("claudeAgent", "export", {
+      shouldHideProviderNativeCommandFromComposerMenu("claude", "export", {
         availableAppCommands: mainComposerAppCommands,
       }),
     ).toBe(true);
@@ -499,10 +497,10 @@ describe("composerSlashCommands", () => {
   });
 
   it("treats real claude aliases like /reset as provider-native collisions", () => {
-    expect(hasProviderNativeSlashCommand("claudeAgent", ["clear"], "reset")).toBe(true);
+    expect(hasProviderNativeSlashCommand("claude", ["clear"], "reset")).toBe(true);
   });
 
-  it.each(["claudeAgent", "codex", "opencode"] as const)(
+  it.each(["claude", "codex", "opencode"] as const)(
     "keeps app /fork unique for %s despite provider-native fork and branch commands",
     (provider) => {
       const availableCommands = getAvailableComposerSlashCommands({
@@ -532,7 +530,7 @@ describe("composerSlashCommands", () => {
     },
   );
 
-  it.each(["claudeAgent", "codex", "opencode"] as const)(
+  it.each(["claude", "codex", "opencode"] as const)(
     "keeps provider-native /fork visible for %s when app /fork is unavailable",
     (provider) => {
       const availableCommands = getAvailableComposerSlashCommands({

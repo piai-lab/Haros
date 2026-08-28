@@ -661,7 +661,7 @@ describe("decider project scripts", () => {
           threadId: ThreadId.makeUnsafe("thread-1"),
           messageId: asMessageId("message-user-queued-implicit-selection"),
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-sonnet-4-5",
           },
           modelPresentationIdentity: {
@@ -681,7 +681,7 @@ describe("decider project scripts", () => {
       type: "thread.turn-start-requested",
       payload: {
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-sonnet-4-5",
         },
         modelPresentationIdentity: {
@@ -935,7 +935,7 @@ describe("decider project scripts", () => {
           worktreePath: null,
           handoff: {
             sourceThreadId: ThreadId.makeUnsafe("thread-original"),
-            sourceProvider: "claudeAgent",
+            sourceProvider: "claude",
             importedAt: now,
             bootstrapStatus: "pending",
           },
@@ -981,7 +981,7 @@ describe("decider project scripts", () => {
             projectId: asProjectId("project-handoff"),
             title: "Handoff Copy",
             modelSelection: {
-              provider: "claudeAgent",
+              provider: "claude",
               model: "sonnet",
             },
             interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
@@ -1057,7 +1057,7 @@ describe("decider project scripts", () => {
           worktreePath: null,
           handoff: {
             sourceThreadId: ThreadId.makeUnsafe("thread-original"),
-            sourceProvider: "claudeAgent",
+            sourceProvider: "claude",
             importedAt: now,
             bootstrapStatus: "completed",
           },
@@ -1127,7 +1127,7 @@ describe("decider project scripts", () => {
           projectId: asProjectId("project-native-handoff"),
           title: "Handoff Copy",
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "sonnet",
           },
           interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,

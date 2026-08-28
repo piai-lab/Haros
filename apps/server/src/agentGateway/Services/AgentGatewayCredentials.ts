@@ -8,7 +8,7 @@
  *
  * @module agentGateway/Services/AgentGatewayCredentials
  */
-import type { ProviderKind, ThreadId } from "@harnessos/contracts";
+import type { EngineKind, ThreadId } from "@harnessos/contracts";
 import { ServiceMap } from "effect";
 import type {
   AgentGatewaySessionIdentity,
@@ -40,7 +40,7 @@ export interface AgentGatewayCredentialsShape {
   /** Update the endpoint after the HTTP server resolves a dynamic listen port. */
   readonly setListeningPort: (port: number) => void;
   /** Mint a new opaque bearer token for one provider session. */
-  readonly issueSessionToken: (threadId: ThreadId, provider: ProviderKind) => string;
+  readonly issueSessionToken: (threadId: ThreadId, provider: EngineKind) => string;
   /** Resolve a live bearer token back to its thread id, or null when invalid. */
   readonly verifySessionToken: (token: string) => string | null;
   /** Resolve the complete non-secret invocation scope. */
@@ -77,7 +77,7 @@ export interface AgentGatewayCredentialsShape {
   /** Convenience bundle used when injecting MCP config into provider sessions. */
   readonly connectionForThread: (
     threadId: ThreadId,
-    provider: ProviderKind,
+    provider: EngineKind,
   ) => AgentGatewayMcpConnection;
   /** Spawn spec for the stdio->HTTP proxy used by stdio-only MCP clients. */
   readonly stdioProxy: AgentGatewayStdioProxySpawn;

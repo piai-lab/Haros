@@ -1,4 +1,4 @@
-import { PROVIDER_KINDS } from "@harnessos/contracts";
+import { ENGINE_KINDS } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { resolveProviderExecutionCapabilities } from "./executionCapabilityProjection.ts";
@@ -7,7 +7,7 @@ import {
   providerExecutionStructure,
 } from "./providerExecutionStructure.ts";
 
-const readyStatus = (provider: (typeof PROVIDER_KINDS)[number]) => ({
+const readyStatus = (provider: (typeof ENGINE_KINDS)[number]) => ({
   provider,
   status: "ready" as const,
   available: true,
@@ -18,10 +18,10 @@ const readyStatus = (provider: (typeof PROVIDER_KINDS)[number]) => ({
 
 describe("provider execution capability projection", () => {
   it("keeps the structural descriptor exhaustive over canonical identity", () => {
-    expect(Object.keys(PROVIDER_EXECUTION_STRUCTURE)).toEqual([...PROVIDER_KINDS]);
+    expect(Object.keys(PROVIDER_EXECUTION_STRUCTURE)).toEqual([...ENGINE_KINDS]);
   });
 
-  it.each(PROVIDER_KINDS)("projects the canonical interaction-mode matrix for %s", (provider) => {
+  it.each(ENGINE_KINDS)("projects the canonical interaction-mode matrix for %s", (provider) => {
     const result = resolveProviderExecutionCapabilities({
       modelSelection: { provider, model: `${provider}-test` },
       adapterCapabilities: providerExecutionStructure(provider),
@@ -64,7 +64,7 @@ describe("provider execution capability projection", () => {
     });
   });
 
-  it.each(["omnimind", "pi"] as const)(
+  it.each(["oa", "pi"] as const)(
     "does not advertise approval-required for Pi-family provider %s without a request bridge",
     (provider) => {
       const result = resolveProviderExecutionCapabilities({
@@ -82,15 +82,15 @@ describe("provider execution capability projection", () => {
   );
 
   it("separates model support from current CLI health for Auto", () => {
-    const structure = providerExecutionStructure("claudeAgent");
+    const structure = providerExecutionStructure("claude");
     const unsupportedModel = resolveProviderExecutionCapabilities({
       modelSelection: {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-test",
         supportsAutoMode: false,
       },
       adapterCapabilities: structure,
-      providerStatus: readyStatus("claudeAgent"),
+      providerStatus: readyStatus("claude"),
     });
     expect(unsupportedModel.runtimeModes.auto).toMatchObject({
       structurallySupported: false,

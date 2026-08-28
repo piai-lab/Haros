@@ -188,8 +188,7 @@ export function resolveClaudeApiModelIdContextWindowMaxTokens(
     return undefined;
   }
   return positiveFiniteNumber(
-    getModelCapabilities("claudeAgent", stripClaudeContextWindowSuffix(apiModelId))
-      .contextWindowTokens,
+    getModelCapabilities("claude", stripClaudeContextWindowSuffix(apiModelId)).contextWindowTokens,
   );
 }
 
@@ -197,7 +196,7 @@ export function resolveSelectedClaudeAutoCompactWindow(
   model: string | null | undefined,
   selectedAutoCompactWindow: string | null | undefined,
 ): number | undefined {
-  const caps = getModelCapabilities("claudeAgent", model);
+  const caps = getModelCapabilities("claude", model);
   const resolvedAutoCompactWindow =
     trimOrNull(selectedAutoCompactWindow) ?? getDefaultAutoCompactWindow(caps) ?? null;
   if (

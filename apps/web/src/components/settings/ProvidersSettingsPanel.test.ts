@@ -35,7 +35,7 @@ describe("isProviderInstallSettingsDirty", () => {
     const dirtySettings = [
       { provider: "codex", field: "binaryPath", value: "/opt/codex" },
       { provider: "codex", field: "homePath", value: "/tmp/codex-home" },
-      { provider: "claudeAgent", field: "binaryPath", value: "/opt/claude" },
+      { provider: "claude", field: "binaryPath", value: "/opt/claude" },
       { provider: "cursor", field: "binaryPath", value: "/opt/cursor" },
       { provider: "cursor", field: "apiEndpoint", value: "https://cursor.example" },
       { provider: "antigravity", field: "binaryPath", value: "/opt/agy" },

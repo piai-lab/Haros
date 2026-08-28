@@ -385,7 +385,7 @@ layer("035_NormalizeLegacyModelSelectionOptions", (it) => {
         options: { reasoningEffort: "medium" },
       });
       assert.deepStrictEqual(decodeModelSelection(threadSelections.get("claude-opus-4-6")), {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-opus-4-6",
         options: { effort: "high", fastMode: true },
       });

@@ -287,7 +287,7 @@ describe("external MCP gateway stdio flow", () => {
     } as never);
     const providerStatuses: ReadonlyArray<ServerProviderStatus> = [
       "codex",
-      "claudeAgent",
+      "claude",
       "cursor",
       "antigravity",
       "grok",

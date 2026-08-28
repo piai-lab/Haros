@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Effect } from "effect";
 
-import type { ProviderKind } from "@harnessos/contracts";
+import type { EngineKind } from "@harnessos/contracts";
 
 import { DeviceBackendError } from "../device/DeviceBackend.ts";
 import { DeviceManager } from "../device/DeviceManager.ts";
@@ -13,7 +13,7 @@ import type { ToolContext, ToolEntry } from "./toolRuntime.ts";
 const THREAD = "thread-a";
 const DEVICE = "FAKE-0001";
 
-function makeContext(provider: ProviderKind = "claudeAgent"): ToolContext {
+function makeContext(provider: EngineKind = "claude"): ToolContext {
   return {
     principal: {
       kind: "provider-session",
@@ -44,7 +44,7 @@ async function setup() {
   const call = async (
     name: string,
     args: Record<string, unknown>,
-    provider?: ProviderKind,
+    provider?: EngineKind,
   ): Promise<McpToolCallResult> => {
     const tool = byName.get(name);
     if (!tool) throw new Error(`no such tool: ${name}`);
@@ -53,7 +53,7 @@ async function setup() {
   const structured = async (
     name: string,
     args: Record<string, unknown>,
-    provider?: ProviderKind,
+    provider?: EngineKind,
   ): Promise<unknown> => {
     const result = await call(name, args, provider);
     const text = result.content.find((entry) => entry.type === "text");
@@ -122,7 +122,7 @@ describe("agent gateway device tool handlers", () => {
     };
 
     expect(result.availability).toEqual({ kind: "available" });
-    expect(result.devices.find((device) => device.udid === DEVICE)?.bootSource).toBe("omnimind");
+    expect(result.devices.find((device) => device.udid === DEVICE)?.bootSource).toBe("oa");
   });
 
   it("taps through to the backend with the requested device points", async () => {

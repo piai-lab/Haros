@@ -11,7 +11,7 @@ import type {
   OrchestrationThread,
   OrchestrationThreadShell,
   ProviderExecutionCapabilities as ProviderExecutionCapabilitiesSnapshot,
-  ProviderKind,
+  EngineKind,
   ServerProviderStatus,
   ThreadId as ThreadIdType,
 } from "@harnessos/contracts";
@@ -344,8 +344,7 @@ function makeHarnessLayer(
         ? {
             sessionKey: `session-for-${threadId}`,
             threadId: ThreadId.makeUnsafe(threadId),
-            provider:
-              token === "token-parent-claude" ? ("claudeAgent" as const) : ("codex" as const),
+            provider: token === "token-parent-claude" ? ("claude" as const) : ("codex" as const),
             issuedAt: 0,
             capabilities:
               token === "token-parent-readonly"
@@ -367,8 +366,7 @@ function makeHarnessLayer(
         ? {
             sessionKey: `session-for-${threadId}`,
             threadId: ThreadId.makeUnsafe(threadId),
-            provider:
-              token === "token-parent-claude" ? ("claudeAgent" as const) : ("codex" as const),
+            provider: token === "token-parent-claude" ? ("claude" as const) : ("codex" as const),
             turnId,
           }
         : null;
@@ -817,7 +815,7 @@ function makeHarnessLayer(
             ],
           },
         ],
-        claudeAgent: [
+        claude: [
           {
             slug: "claude-sonnet-5",
             name: "Claude Sonnet 5",
@@ -844,9 +842,9 @@ function makeHarnessLayer(
     },
   } as unknown as (typeof ProviderDiscoveryService)["Service"]);
 
-  const providerKinds: ReadonlyArray<ProviderKind> = [
+  const providerKinds: ReadonlyArray<EngineKind> = [
     "codex",
-    "claudeAgent",
+    "claude",
     "cursor",
     "antigravity",
     "grok",
@@ -1439,7 +1437,7 @@ describe("AgentGateway", () => {
               session: {
                 threadId: thread.id,
                 status: "running" as const,
-                providerName: "claudeAgent",
+                providerName: "claude",
                 runtimeMode: thread.runtimeMode,
                 activeTurnId: thread.latestTurn?.turnId ?? null,
                 lastError: null,
@@ -1784,10 +1782,9 @@ describe("AgentGateway", () => {
           ?.allowedValues,
         ["low", "high"],
       );
-      assert.equal(targetConstruction.claudeAgent?.primaryOptionKey, "effort");
+      assert.equal(targetConstruction.claude?.primaryOptionKey, "effort");
       assert.deepEqual(
-        (targetConstruction.claudeAgent?.exampleTarget as { options?: unknown } | undefined)
-          ?.options,
+        (targetConstruction.claude?.exampleTarget as { options?: unknown } | undefined)?.options,
         { effort: "low" },
       );
       const antigravity = targetConstruction.antigravity as {
@@ -1902,7 +1899,7 @@ describe("AgentGateway", () => {
         }),
         makeThreadShell("thread-other", {
           title: "Unrelated task",
-          modelSelection: { provider: "claudeAgent", model: "opus-4.8" },
+          modelSelection: { provider: "claude", model: "opus-4.8" },
           updatedAt: "2026-02-01T10:00:00.000Z",
         }),
       ];
@@ -2264,7 +2261,7 @@ describe("AgentGateway", () => {
         args: {
           requestId: "create-worktree",
           prompt: "refactor module X",
-          provider: "claudeAgent",
+          provider: "claude",
           environment: "worktree",
         },
       });
@@ -3033,7 +3030,7 @@ describe("AgentGateway", () => {
           { prompt: "worker one", target: { provider: "codex", model: "gpt-5.5" } },
           {
             prompt: "worker two",
-            target: { provider: "claudeAgent", model: "claude-sonnet-5" },
+            target: { provider: "claude", model: "claude-sonnet-5" },
           },
         ],
       };
@@ -3052,7 +3049,7 @@ describe("AgentGateway", () => {
           message: "temporarily unavailable after dispatch",
         },
         {
-          provider: "claudeAgent",
+          provider: "claude",
           status: "error",
           available: false,
           authStatus: "unauthenticated",
@@ -3248,7 +3245,7 @@ describe("AgentGateway", () => {
     const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads, [], {
       providerStatuses: [
         {
-          provider: "claudeAgent",
+          provider: "claude",
           status: "error",
           available: false,
           authStatus: "unauthenticated",
@@ -3267,7 +3264,7 @@ describe("AgentGateway", () => {
           threads: [
             {
               prompt: "must not dispatch",
-              target: { provider: "claudeAgent", model: "claude-sonnet-5" },
+              target: { provider: "claude", model: "claude-sonnet-5" },
             },
           ],
         },
@@ -3328,7 +3325,7 @@ describe("AgentGateway", () => {
             { prompt: "valid", target: { provider: "codex", model: "gpt-5.5" } },
             {
               prompt: "invalid",
-              target: { provider: "claudeAgent", model: "made-up-claude" },
+              target: { provider: "claude", model: "made-up-claude" },
             },
           ],
         },
@@ -3697,7 +3694,7 @@ describe("AgentGateway", () => {
             },
             {
               prompt: "second",
-              target: { provider: "claudeAgent", model: "claude-sonnet-5" },
+              target: { provider: "claude", model: "claude-sonnet-5" },
               environment: "worktree",
             },
           ],
@@ -4022,7 +4019,7 @@ describe("AgentGateway", () => {
           },
           {
             prompt: "What is this repository about?",
-            target: { provider: "claudeAgent", model: "claude-sonnet-5" },
+            target: { provider: "claude", model: "claude-sonnet-5" },
           },
         ],
       };
@@ -4053,7 +4050,7 @@ describe("AgentGateway", () => {
                   model: "gpt-5.6-terra",
                   options: { reasoningEffort: "low" },
                 }
-              : { provider: "claudeAgent", model: "claude-sonnet-5" },
+              : { provider: "claude", model: "claude-sonnet-5" },
           latestTurn: {
             turnId: runId,
             state: "completed",
@@ -4133,7 +4130,7 @@ describe("AgentGateway", () => {
             model: "gpt-5.6-terra",
             options: { reasoningEffort: "low" },
           },
-          { provider: "claudeAgent", model: "claude-sonnet-5" },
+          { provider: "claude", model: "claude-sonnet-5" },
         ],
       );
     }).pipe(Effect.provide(gatewayLayer));
@@ -4153,7 +4150,7 @@ describe("AgentGateway", () => {
       session: {
         threadId: ThreadId.makeUnsafe("thread-wait-failed"),
         status: "error",
-        providerName: "claudeAgent",
+        providerName: "claude",
         runtimeMode: "approval-required",
         activeTurnId: null,
         lastError: "Child failed",

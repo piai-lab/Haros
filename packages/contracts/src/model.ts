@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 import { TrimmedNonEmptyString } from "./baseSchemas";
-import type { ProviderKind } from "./orchestration";
+import type { EngineKind } from "./orchestration";
 
 export const CODEX_REASONING_EFFORT_OPTIONS = ["low", "medium", "high", "xhigh"] as const;
 // Codex app-server can add model-specific efforts through runtime discovery.
@@ -151,9 +151,9 @@ export const DroidModelOptions = Schema.Struct({
 export type DroidModelOptions = typeof DroidModelOptions.Type;
 
 export const ProviderModelOptions = Schema.Struct({
-  omnimind: Schema.optional(PiModelOptions),
+  oa: Schema.optional(PiModelOptions),
   codex: Schema.optional(CodexModelOptions),
-  claudeAgent: Schema.optional(ClaudeModelOptions),
+  claude: Schema.optional(ClaudeModelOptions),
   cursor: Schema.optional(CursorModelOptions),
   antigravity: Schema.optional(AntigravityModelOptions),
   grok: Schema.optional(GrokModelOptions),
@@ -540,7 +540,7 @@ type ModelDefinition = {
  * should return its own model list over the WS API.
  */
 export const MODEL_OPTIONS_BY_PROVIDER = {
-  omnimind: [],
+  oa: [],
   codex: [
     {
       slug: "gpt-5.5",
@@ -578,7 +578,7 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
       capabilities: CODEX_GPT_5_CAPABILITIES,
     },
   ],
-  claudeAgent: [
+  claude: [
     {
       slug: "claude-fable-5",
       name: "Claude Fable 5",
@@ -1063,17 +1063,17 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
       capabilities: cursorCapabilities({ efforts: ["high", "max"] }),
     },
   ],
-} as const satisfies Record<ProviderKind, readonly ModelDefinition[]>;
+} as const satisfies Record<EngineKind, readonly ModelDefinition[]>;
 export type ModelOptionsByProvider = typeof MODEL_OPTIONS_BY_PROVIDER;
 
-type BuiltInModelSlug = (typeof MODEL_OPTIONS_BY_PROVIDER)[ProviderKind][number]["slug"];
+type BuiltInModelSlug = (typeof MODEL_OPTIONS_BY_PROVIDER)[EngineKind][number]["slug"];
 export type ModelSlug = BuiltInModelSlug | (string & {});
 
-export type ProviderWithDefaultModel = Exclude<ProviderKind, "omnimind" | "pi">;
+export type ProviderWithDefaultModel = Exclude<EngineKind, "oa" | "pi">;
 
 export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderWithDefaultModel, ModelSlug> = {
   codex: "gpt-5.5",
-  claudeAgent: "claude-sonnet-5",
+  claude: "claude-sonnet-5",
   cursor: "auto",
   antigravity: "Gemini 3.5 Flash",
   grok: "grok-4.6",
@@ -1088,8 +1088,8 @@ export const DEFAULT_MODEL = DEFAULT_MODEL_BY_PROVIDER.codex;
 export const DEFAULT_GIT_TEXT_GENERATION_MODEL = "gpt-5.6-luna" as const;
 export const DEFAULT_GIT_TEXT_GENERATION_REASONING_EFFORT = "high" as const;
 
-export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string, ModelSlug>> = {
-  omnimind: {},
+export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<EngineKind, Record<string, ModelSlug>> = {
+  oa: {},
   codex: {
     "5.5": "gpt-5.5",
     "5.4": "gpt-5.4",
@@ -1098,7 +1098,7 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<ProviderKind, Record<string,
     "5.3-spark": "gpt-5.3-codex-spark",
     "gpt-5.3-spark": "gpt-5.3-codex-spark",
   },
-  claudeAgent: {
+  claude: {
     fable: "claude-fable-5",
     "fable-5": "claude-fable-5",
     opus: "claude-opus-5",
@@ -1244,7 +1244,7 @@ export const MODEL_CAPABILITIES_INDEX = Object.fromEntries(
     provider,
     Object.fromEntries(models.map((m) => [m.slug, m.capabilities])),
   ]),
-) as unknown as Record<ProviderKind, Record<string, ModelCapabilities>>;
+) as unknown as Record<EngineKind, Record<string, ModelCapabilities>>;
 
 Object.assign(MODEL_CAPABILITIES_INDEX.grok, {
   "grok-build-0.1": GROK_BUILD_CAPABILITIES,

@@ -3,17 +3,13 @@
 // Layer: Settings UI logic
 // Exports: origin metadata, canonical skill grouping, and section ordering helpers.
 
-import {
-  PROVIDER_KINDS,
-  type ProviderKind,
-  type ProviderSkillDescriptor,
-} from "@harnessos/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_KINDS, type EngineKind, type ProviderSkillDescriptor } from "@harnessos/contracts";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { DEFAULT_PROVIDER_ORDER } from "~/providerOrdering";
 
 export interface SkillOriginInfo {
   readonly label: string;
-  readonly provider: ProviderKind | null;
+  readonly provider: EngineKind | null;
 }
 
 export interface SettingsSkillSource {
@@ -27,7 +23,7 @@ export interface SettingsSkillGroup {
   readonly displayName: string;
   readonly description: string;
   readonly primarySkill: ProviderSkillDescriptor;
-  readonly providers: ReadonlyArray<ProviderKind>;
+  readonly providers: ReadonlyArray<EngineKind>;
   readonly sources: ReadonlyArray<SettingsSkillSource>;
   readonly section: string;
 }
@@ -40,23 +36,23 @@ export interface SettingsSkillSection {
 
 const SHARED_SKILLS_SECTION = "shared";
 const PERSONAL_ORIGIN = "personal";
-const PROVIDER_KIND_SET = new Set<string>(PROVIDER_KINDS);
-const skillOriginForProvider = (provider: ProviderKind): string =>
-  provider === "claudeAgent" ? "claude" : provider;
+const PROVIDER_KIND_SET = new Set<string>(ENGINE_KINDS);
+const skillOriginForProvider = (provider: EngineKind): string =>
+  provider === "claude" ? "claude" : provider;
 export const ORIGIN_SECTION_ORDER = [
-  ...PROVIDER_KINDS.map(skillOriginForProvider),
+  ...ENGINE_KINDS.map(skillOriginForProvider),
   "agents",
   "project",
 ] as const;
 
-function providerForSkillOrigin(origin: string): ProviderKind | null {
-  const candidate = origin === "claude" ? "claudeAgent" : origin;
-  return PROVIDER_KIND_SET.has(candidate) ? (candidate as ProviderKind) : null;
+function providerForSkillOrigin(origin: string): EngineKind | null {
+  const candidate = origin === "claude" ? "claude" : origin;
+  return PROVIDER_KIND_SET.has(candidate) ? (candidate as EngineKind) : null;
 }
 
 export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
   switch (scope) {
-    case "omnimind":
+    case "oa":
       return { label: "OmniMind", provider: null };
     case "agents":
       return { label: "Shared (.agents)", provider: null };
@@ -65,13 +61,13 @@ export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
     default: {
       const provider = scope === undefined ? null : providerForSkillOrigin(scope);
       return provider
-        ? { label: PROVIDER_DISPLAY_NAMES[provider], provider }
+        ? { label: ENGINE_DISPLAY_NAMES[provider], provider }
         : { label: scope ?? "Personal", provider: null };
     }
   }
 }
 
-export function providersForSkillOrigin(origin: string): ProviderKind[] {
+export function providersForSkillOrigin(origin: string): EngineKind[] {
   const provider = skillOriginInfo(origin).provider;
   return provider ? [provider] : [];
 }
@@ -85,14 +81,14 @@ export function skillDisplayName(skill: ProviderSkillDescriptor): string {
 }
 
 export function isOmniMindSkillSource(skill: ProviderSkillDescriptor): boolean {
-  return skill.scope === "omnimind" || skill.path.split(/[\\/]+/).includes(".harnessos");
+  return skill.scope === "oa" || skill.path.split(/[\\/]+/).includes(".harnessos");
 }
 
-export function providerDisplayName(provider: ProviderKind): string {
-  return PROVIDER_DISPLAY_NAMES[provider];
+export function providerDisplayName(provider: EngineKind): string {
+  return ENGINE_DISPLAY_NAMES[provider];
 }
 
-export function sortProviderStack(providers: ReadonlyArray<ProviderKind>): ProviderKind[] {
+export function sortProviderStack(providers: ReadonlyArray<EngineKind>): EngineKind[] {
   return providers.toSorted(
     (left, right) => DEFAULT_PROVIDER_ORDER.indexOf(left) - DEFAULT_PROVIDER_ORDER.indexOf(right),
   );

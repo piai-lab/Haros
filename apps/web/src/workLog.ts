@@ -5,7 +5,7 @@ import {
   type OrchestrationThreadActivity,
   ProviderTurnStartFailureReason,
   type ProviderTurnStartFailureReason as ProviderTurnStartFailureReasonValue,
-  ProviderKind,
+  EngineKind,
   type ToolLifecycleItemType,
   type TurnId,
 } from "@harnessos/contracts";
@@ -181,7 +181,7 @@ export interface WorkLogAutomation {
 export interface WorkLogOmniMindCreatedThread {
   threadId: string;
   title: string;
-  provider: ProviderKind;
+  provider: EngineKind;
   model: string;
   environment: "local" | "worktree";
   status: string;
@@ -454,7 +454,7 @@ function extractWorkLogOmniMindThreadCreation(
     const model = asTrimmedString(thread?.model);
     const environment = asTrimmedString(thread?.environment);
     const status = asTrimmedString(thread?.status) ?? "created";
-    const providerKind = provider !== null && Schema.is(ProviderKind)(provider) ? provider : null;
+    const providerKind = provider !== null && Schema.is(EngineKind)(provider) ? provider : null;
     if (
       !threadId ||
       !title ||

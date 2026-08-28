@@ -1,7 +1,7 @@
 import {
   PROVIDER_INTERACTION_MODES,
   type ProviderInteractionMode,
-  type ProviderKind,
+  type EngineKind,
   type RuntimeMode,
 } from "@harnessos/contracts";
 
@@ -31,13 +31,13 @@ const PRODUCT_INTERACTION_MODES = PROVIDER_INTERACTION_MODES;
  * assets and presentation remain with their existing owners.
  */
 export const PROVIDER_EXECUTION_STRUCTURE = {
-  omnimind: defineStructure(true, ["full-access"], PRODUCT_INTERACTION_MODES),
+  oa: defineStructure(true, ["full-access"], PRODUCT_INTERACTION_MODES),
   codex: defineStructure(
     true,
     ["full-access", "auto", "approval-required"],
     PRODUCT_INTERACTION_MODES,
   ),
-  claudeAgent: defineStructure(
+  claude: defineStructure(
     true,
     ["full-access", "auto", "approval-required"],
     PRODUCT_INTERACTION_MODES,
@@ -49,8 +49,8 @@ export const PROVIDER_EXECUTION_STRUCTURE = {
   kilo: defineStructure(false, ["full-access", "approval-required"], PRODUCT_INTERACTION_MODES),
   opencode: defineStructure(false, ["full-access", "approval-required"], PRODUCT_INTERACTION_MODES),
   pi: defineStructure(true, ["full-access"], HOST_INTERACTION_MODES),
-} as const satisfies Record<ProviderKind, ProviderExecutionStructure>;
+} as const satisfies Record<EngineKind, ProviderExecutionStructure>;
 
-export function providerExecutionStructure(provider: ProviderKind): ProviderExecutionStructure {
+export function providerExecutionStructure(provider: EngineKind): ProviderExecutionStructure {
   return PROVIDER_EXECUTION_STRUCTURE[provider];
 }

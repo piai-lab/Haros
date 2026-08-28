@@ -7,7 +7,7 @@
  *
  * @module providerRuntimeEventPump
  */
-import type { ProviderKind, ProviderRuntimeEvent } from "@harnessos/contracts";
+import type { EngineKind, ProviderRuntimeEvent } from "@harnessos/contracts";
 import { Cause, Effect, Stream } from "effect";
 
 import type {
@@ -26,7 +26,7 @@ const DEFAULT_RETRY_MAX_DELAY_MS = 2_000;
 const DEFAULT_DEGRADED_HEAL_AFTER_SUCCESSES = 100;
 
 export interface ProviderRuntimeEventPumpOptions<R> {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly stream: Stream.Stream<ProviderRuntimeEvent>;
   readonly processEvent: (event: ProviderRuntimeEvent) => Effect.Effect<void, unknown, R>;
   readonly updateHealth: (health: ProviderRuntimeEventPumpHealth) => void;
@@ -40,13 +40,11 @@ export interface ProviderRuntimeEventPumpOptions<R> {
   readonly degradedHealAfterSuccesses?: number;
 }
 
-export function makeProviderRuntimeEventPumpHealthRegistry(
-  providers: ReadonlyArray<ProviderKind>,
-): {
+export function makeProviderRuntimeEventPumpHealthRegistry(providers: ReadonlyArray<EngineKind>): {
   readonly update: (health: ProviderRuntimeEventPumpHealth) => void;
   readonly snapshot: () => ReadonlyArray<ProviderRuntimeEventPumpHealth>;
 } {
-  const healthByProvider = new Map<ProviderKind, ProviderRuntimeEventPumpHealth>(
+  const healthByProvider = new Map<EngineKind, ProviderRuntimeEventPumpHealth>(
     providers.map((provider) => [
       provider,
       {
@@ -83,7 +81,7 @@ function shouldLogRetry(attempt: number): boolean {
 }
 
 function health(input: {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly status: ProviderRuntimeEventPumpStatus;
   readonly consecutiveFailures: number;
   readonly lastEventAt?: string;

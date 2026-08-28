@@ -8,7 +8,7 @@
 import * as fs from "node:fs/promises";
 import * as nodePath from "node:path";
 
-import type { ProviderKind, ProviderSkillReference } from "@harnessos/contracts";
+import type { EngineKind, ProviderSkillReference } from "@harnessos/contracts";
 
 // Per-skill cap keeps a single oversized SKILL.md from eating the turn budget.
 const MAX_INLINE_SKILL_CONTENT_CHARS = 24_000;
@@ -45,7 +45,7 @@ function pathSegments(path: string): Set<string> {
   return new Set(nodePath.normalize(path).split(/[\\/]+/));
 }
 
-export function shouldInlineSkillForProvider(provider: ProviderKind, skillPath: string): boolean {
+export function shouldInlineSkillForProvider(provider: EngineKind, skillPath: string): boolean {
   const segments = pathSegments(skillPath);
   switch (provider) {
     case "antigravity":
@@ -60,14 +60,14 @@ export function shouldInlineSkillForProvider(provider: ProviderKind, skillPath: 
       // cursor-agent natively scans .cursor/.agents/.claude/.codex skill roots;
       // only OmniMind-owned paths need inlining.
       return segments.has(".harnessos");
-    case "claudeAgent":
+    case "claude":
       // Claude Code only loads skills from .claude/skills folders.
       return !segments.has(".claude");
     case "pi":
       // Pi loads its own skill set; anything resolved from a cross-provider
       // folder is portable and must be inlined.
       return CROSS_PROVIDER_SKILL_DIR_NAMES.some((dir) => segments.has(dir));
-    case "omnimind":
+    case "oa":
       // OmniMind's explicit multi-skill Composer selection is a Host-owned
       // inline path. Pi remains the owner of native discovery and model-invoked
       // skills; this branch makes the Host boundary explicit instead of relying
@@ -80,7 +80,7 @@ export function shouldInlineSkillForProvider(provider: ProviderKind, skillPath: 
 }
 
 export async function buildInlineSkillInstructions(input: {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly skills: ReadonlyArray<ProviderSkillReference>;
   readonly maxChars: number;
 }): Promise<InlineSkillInstructionsResult> {

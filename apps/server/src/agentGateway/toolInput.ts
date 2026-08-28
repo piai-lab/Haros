@@ -2,21 +2,21 @@ import {
   DEFAULT_MODEL_BY_PROVIDER,
   OmniMindCreateThreadsInput,
   OmniMindWaitForThreadsInput,
-  PROVIDER_KINDS,
+  ENGINE_KINDS,
   type ModelSelection,
-  type ProviderKind,
+  type EngineKind,
 } from "@harnessos/contracts";
 import { Schema } from "effect";
 
 import { AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION } from "./targetResolver.ts";
 
-export { PROVIDER_KINDS };
+export { ENGINE_KINDS };
 
 export const MODEL_SELECTION_INPUT_SCHEMA = {
   type: "object",
   description: AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION,
   properties: {
-    provider: { type: "string", enum: [...PROVIDER_KINDS] },
+    provider: { type: "string", enum: [...ENGINE_KINDS] },
     model: {
       type: "string",
       description: "Exact model slug from harnessos_capabilities providers[].models[].slug.",
@@ -109,24 +109,22 @@ export function readStringArrayArg(
   return value.map((entry) => (entry as string).trim());
 }
 
-export function parseProviderKind(raw: string): ProviderKind {
-  if ((PROVIDER_KINDS as ReadonlyArray<string>).includes(raw)) {
-    return raw as ProviderKind;
+export function parseProviderKind(raw: string): EngineKind {
+  if ((ENGINE_KINDS as ReadonlyArray<string>).includes(raw)) {
+    return raw as EngineKind;
   }
   throw new ToolInputError(
-    `Unknown provider "${raw}". Supported providers: ${PROVIDER_KINDS.join(", ")}.`,
+    `Unknown provider "${raw}". Supported providers: ${ENGINE_KINDS.join(", ")}.`,
   );
 }
 
 export function buildModelSelection(
-  provider: ProviderKind,
+  provider: EngineKind,
   model: string | undefined,
 ): ModelSelection {
   const effectiveModel =
     model ??
-    (provider === "pi" || provider === "omnimind"
-      ? undefined
-      : DEFAULT_MODEL_BY_PROVIDER[provider]);
+    (provider === "pi" || provider === "oa" ? undefined : DEFAULT_MODEL_BY_PROVIDER[provider]);
   if (!effectiveModel) {
     throw new ToolInputError(
       `Provider "${provider}" has no default model; pass an explicit "model" argument.`,

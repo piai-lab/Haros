@@ -23,7 +23,7 @@ import {
   MessageId,
   THREAD_GOAL_MAX_CHARS,
   ThreadId,
-  type ProviderKind,
+  type EngineKind,
   type RuntimeMode,
   type ServerProviderStatus,
   type TurnDispatchMode,
@@ -61,7 +61,7 @@ import { mcpToolResultError, mcpToolResultJson } from "../protocol.ts";
 import { gatewayIsoNow as isoNow } from "../creationUtils.ts";
 import {
   MODEL_SELECTION_INPUT_SCHEMA,
-  PROVIDER_KINDS,
+  ENGINE_KINDS,
   ToolInputError,
   buildModelSelection,
   decodeCreateThreadsInput,
@@ -160,11 +160,11 @@ export const makeAgentGateway = Effect.gen(function* () {
       serverSettings.getSettings,
       providerHealth.getStatuses,
     ]);
-    const statusByProvider = new Map<ProviderKind, ServerProviderStatus>(
+    const statusByProvider = new Map<EngineKind, ServerProviderStatus>(
       statuses.map((status) => [status.provider, status]),
     );
-    return new Map<ProviderKind, AgentGatewayProviderAvailability>(
-      PROVIDER_KINDS.map((provider) => {
+    return new Map<EngineKind, AgentGatewayProviderAvailability>(
+      ENGINE_KINDS.map((provider) => {
         const status = statusByProvider.get(provider);
         return [
           provider,
@@ -345,7 +345,7 @@ export const makeAgentGateway = Effect.gen(function* () {
           target: {
             ...MODEL_SELECTION_INPUT_SCHEMA,
           },
-          provider: { type: "string", enum: [...PROVIDER_KINDS] },
+          provider: { type: "string", enum: [...ENGINE_KINDS] },
           model: { type: "string" },
           options: {
             type: "object",

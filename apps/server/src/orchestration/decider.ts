@@ -91,7 +91,7 @@ function validateStructuralRuntimeMode(
   const issue = !structure.supportedRuntimeModes.has(runtimeMode)
     ? `The selected runtime mode is not supported by this Provider.`
     : runtimeMode === "auto" &&
-        modelSelection.provider === "claudeAgent" &&
+        modelSelection.provider === "claude" &&
         modelSelection.supportsAutoMode !== true
       ? modelSelection.supportsAutoMode === false
         ? `The selected model does not support Auto mode.`

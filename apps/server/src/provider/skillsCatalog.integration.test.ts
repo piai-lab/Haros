@@ -126,7 +126,7 @@ describe("discoverSkillsCatalog", () => {
     const skills = await discoverSkillsCatalog({ homeDir, harnessosBaseDir });
     const byName = new Map(skills.map((skill) => [skill.name, skill]));
 
-    expect(byName.get("portable")?.scope).toBe("omnimind");
+    expect(byName.get("portable")?.scope).toBe("oa");
     expect(byName.get("codex-only")?.scope).toBe("codex");
     expect(byName.get("claude-only")?.scope).toBe("claude");
     expect(byName.get("cursor-only")?.scope).toBe("cursor");
@@ -394,10 +394,10 @@ describe("discoverSkillsCatalog", () => {
     const claudeView = await discoverSkillsCatalog({
       homeDir,
       harnessosBaseDir,
-      provider: "claudeAgent",
+      provider: "claude",
     });
     const claudeShared = claudeView.find((skill) => skill.name === "shared");
-    expect(claudeShared?.scope).toBe("omnimind");
+    expect(claudeShared?.scope).toBe("oa");
   });
 
   it("uses documented provider alias roots before OmniMind fallbacks", async () => {
@@ -517,7 +517,7 @@ description: Direct Pi markdown skill
     const names = skills.map((skill) => skill.name);
     expect(names.filter((name) => name === "from-codex")).toHaveLength(1);
     expect(skills.find((skill) => skill.name === "from-codex")?.scope).toBe("codex");
-    expect(skills.find((skill) => skill.name === "portable")?.scope).toBe("omnimind");
+    expect(skills.find((skill) => skill.name === "portable")?.scope).toBe("oa");
   });
 
   it("dedupes same-named skills within a root deterministically", async () => {
@@ -542,12 +542,12 @@ describe("mergeSkillsIntoCatalog", () => {
   it("preserves same-named identities from different paths", () => {
     const merged = mergeSkillsIntoCatalog({
       native: [descriptor("shared", "codex-native")],
-      catalog: [descriptor("Shared", "omnimind"), descriptor("extra", "omnimind")],
+      catalog: [descriptor("Shared", "oa"), descriptor("extra", "oa")],
     });
     expect(merged).toHaveLength(3);
     expect(
       merged.filter((skill) => skill.name.toLowerCase() === "shared").map((skill) => skill.scope),
-    ).toEqual(["codex-native", "omnimind"]);
+    ).toEqual(["codex-native", "oa"]);
     expect(merged.some((skill) => skill.name === "extra")).toBe(true);
   });
 
@@ -589,7 +589,7 @@ describe("filterDisabledSkills", () => {
         name: "Reviewer",
         path: "/Users/test/.harnessos/skills/reviewer/SKILL.md",
         enabled: true,
-        scope: "omnimind",
+        scope: "oa",
       },
       {
         name: "Reviewer",
@@ -601,7 +601,7 @@ describe("filterDisabledSkills", () => {
         name: "writer",
         path: "/Users/test/.harnessos/skills/writer/SKILL.md",
         enabled: true,
-        scope: "omnimind",
+        scope: "oa",
       },
     ];
     expect(filterDisabledSkills(skills, ["reviewer"]).map((skill) => skill.path)).toEqual([

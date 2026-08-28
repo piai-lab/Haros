@@ -6,7 +6,7 @@
 // pile on more 429s. Any fetcher can opt in via createRateLimitResilience; keeping the state
 // here avoids duplicating the bookkeeping per provider.
 
-import type { ProviderKind, ServerProviderUsageSnapshot } from "@harnessos/contracts";
+import type { EngineKind, ServerProviderUsageSnapshot } from "@harnessos/contracts";
 
 import { errorSnapshot } from "./parse";
 
@@ -43,7 +43,7 @@ export interface RateLimitResilience {
 }
 
 export function createRateLimitResilience(options: {
-  provider: ProviderKind;
+  provider: EngineKind;
   source: string;
   /** Builds the throttle note shown on the served snapshot, given the rounded minutes until retry. */
   detail: (retryMins: number) => string;

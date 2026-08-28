@@ -1,7 +1,7 @@
 // FILE: EnvironmentUsageSection.tsx
 // Purpose: "Usage" section of the Environment panel — same menu as the header chip.
 
-import type { ProviderKind } from "@harnessos/contracts";
+import type { EngineKind } from "@harnessos/contracts";
 
 import {
   ProviderUsageMenuPopup,
@@ -19,7 +19,7 @@ import {
   EnvironmentRowChevron,
 } from "./EnvironmentRow";
 
-export function EnvironmentUsageSection({ provider }: { provider: ProviderKind }) {
+export function EnvironmentUsageSection({ provider }: { provider: EngineKind }) {
   const { t } = useI18n();
   const model = useProviderUsageMenuModel(provider);
 

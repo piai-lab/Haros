@@ -6,7 +6,7 @@
 import { Schema } from "effect";
 import { TrimmedNonEmptyString } from "./baseSchemas";
 import { ProviderOptionDescriptor } from "./model";
-import { ProviderKind } from "./providerIdentity";
+import { EngineKind } from "./engineIdentity";
 
 export const ModelPresentationIdentitySource = Schema.Literals([
   "builtin-catalog",
@@ -67,7 +67,7 @@ export const ProviderMentionReference = Schema.Struct({
 export type ProviderMentionReference = typeof ProviderMentionReference.Type;
 
 export const ProviderComposerCapabilities = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
   supportsSkillMentions: Schema.Boolean,
   supportsSkillDiscovery: Schema.Boolean,
   supportsNativeSlashCommandDiscovery: Schema.Boolean,
@@ -80,12 +80,12 @@ export const ProviderComposerCapabilities = Schema.Struct({
 export type ProviderComposerCapabilities = typeof ProviderComposerCapabilities.Type;
 
 export const ProviderGetComposerCapabilitiesInput = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
 });
 export type ProviderGetComposerCapabilitiesInput = typeof ProviderGetComposerCapabilitiesInput.Type;
 
 export const ProviderListSkillsInput = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
   cwd: TrimmedNonEmptyString,
   threadId: Schema.optional(TrimmedNonEmptyString),
   agentDir: Schema.optional(TrimmedNonEmptyString),
@@ -108,7 +108,7 @@ export const ProviderListSkillsResult = Schema.Struct({
 export type ProviderListSkillsResult = typeof ProviderListSkillsResult.Type;
 
 // Unified cross-provider skills catalog (OmniMind portable skills). Descriptors use
-// `scope` to carry the origin label ("omnimind", "codex", "claude", "cursor", ...).
+// `scope` to carry the origin label ("oa", "codex", "claude", "cursor", ...).
 export const ProviderSkillsCatalogInput = Schema.Struct({
   cwd: Schema.optional(TrimmedNonEmptyString),
 });
@@ -127,7 +127,7 @@ export const ProviderNativeCommandDescriptor = Schema.Struct({
 export type ProviderNativeCommandDescriptor = typeof ProviderNativeCommandDescriptor.Type;
 
 export const ProviderListCommandsInput = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
   cwd: TrimmedNonEmptyString,
   threadId: Schema.optional(TrimmedNonEmptyString),
   binaryPath: Schema.optional(TrimmedNonEmptyString),
@@ -221,7 +221,7 @@ export const ProviderPluginAppSummary = Schema.Struct({
 export type ProviderPluginAppSummary = typeof ProviderPluginAppSummary.Type;
 
 export const ProviderListPluginsInput = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
   cwd: Schema.optional(TrimmedNonEmptyString),
   threadId: Schema.optional(TrimmedNonEmptyString),
   forceRemoteSync: Schema.optional(Schema.Boolean),
@@ -240,7 +240,7 @@ export const ProviderListPluginsResult = Schema.Struct({
 export type ProviderListPluginsResult = typeof ProviderListPluginsResult.Type;
 
 export const ProviderReadPluginInput = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
   marketplacePath: TrimmedNonEmptyString,
   pluginName: TrimmedNonEmptyString,
   cwd: Schema.optional(TrimmedNonEmptyString),
@@ -267,7 +267,7 @@ export const ProviderReadPluginResult = Schema.Struct({
 export type ProviderReadPluginResult = typeof ProviderReadPluginResult.Type;
 
 export const ProviderListModelsInput = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   apiEndpoint: Schema.optional(TrimmedNonEmptyString),
   agentDir: Schema.optional(TrimmedNonEmptyString),
@@ -320,7 +320,7 @@ export const ProviderListModelsResult = Schema.Struct({
 export type ProviderListModelsResult = typeof ProviderListModelsResult.Type;
 
 export const ProviderListAgentsInput = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   cwd: Schema.optional(TrimmedNonEmptyString),
 });

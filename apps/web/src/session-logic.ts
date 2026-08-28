@@ -2,11 +2,11 @@ import {
   type OrchestrationLatestTurn,
   type OrchestrationProposedPlanId,
   type OrchestrationThreadActivity,
-  type ProviderKind,
+  type EngineKind,
   type ThreadId,
   type TurnId,
 } from "@harnessos/contracts";
-import { PROVIDER_DESCRIPTORS } from "@harnessos/shared/providerMetadata";
+import { ENGINE_DESCRIPTORS } from "@harnessos/shared/engineMetadata";
 
 import { orderedActivities, parseTaskListTasks } from "./workLog";
 
@@ -44,12 +44,12 @@ export {
   type WorkLogOmniMindThreadCreation,
 } from "./workLog";
 
-export type ProviderPickerKind = ProviderKind;
+export type ProviderPickerKind = EngineKind;
 
 export const PROVIDER_OPTIONS: Array<{
   value: ProviderPickerKind;
   label: string;
-}> = PROVIDER_DESCRIPTORS.map((descriptor) => ({
+}> = ENGINE_DESCRIPTORS.map((descriptor) => ({
   value: descriptor.kind,
   label: descriptor.displayName,
 }));

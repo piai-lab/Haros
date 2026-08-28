@@ -186,7 +186,7 @@ describe("sanitizeRecentHistoryByThreadId", () => {
         { url: "https://a.com", title: "A", tabId: "t1" },
         { url: "https://b.com", title: "B" },
         null,
-        { url: 5, title: "C", tabId: "omnimind" },
+        { url: 5, title: "C", tabId: "oa" },
       ],
       "thread-2": "not-an-array",
     });
@@ -198,7 +198,7 @@ describe("sanitizeRecentHistoryByThreadId", () => {
 
   it("drops threads whose history fully fails validation", () => {
     const result = sanitizeRecentHistoryByThreadId({
-      "thread-1": [null, { url: 5, title: "C", tabId: "omnimind" }],
+      "thread-1": [null, { url: 5, title: "C", tabId: "oa" }],
       "thread-2": [],
     });
 

@@ -2,7 +2,7 @@
 // Purpose: Verifies provider-discovery invalidation ignores provider-status metadata noise.
 // Layer: Web UI provider discovery tests
 
-import { PROVIDER_KINDS, type ServerProviderStatus } from "@harnessos/contracts";
+import { ENGINE_KINDS, type ServerProviderStatus } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -90,8 +90,8 @@ describe("provider model discovery invalidation", () => {
     expect(changedProviderModelDiscoveryProviders(previous, next)).toEqual(["cursor"]);
   });
 
-  it.each(PROVIDER_KINDS)("isolates invalidation for the %s Engine", (provider) => {
-    const statuses = PROVIDER_KINDS.map(
+  it.each(ENGINE_KINDS)("isolates invalidation for the %s Engine", (provider) => {
+    const statuses = ENGINE_KINDS.map(
       (candidate) =>
         ({
           ...BASE_PROVIDER_STATUS,

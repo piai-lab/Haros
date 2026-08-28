@@ -11,7 +11,7 @@ import {
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   PROVIDER_SEND_TURN_MAX_FILE_BYTES,
   type ClaudeCodeEffort,
-  type ProviderKind,
+  type EngineKind,
   type UploadChatAttachment,
 } from "@harnessos/contracts";
 import {
@@ -195,7 +195,7 @@ export function readFileAsDataUrl(file: File): Promise<string> {
 // Provider-specific prompt massaging. Claude prompt-injected efforts must be
 // applied before filtering skill/mention references and before dispatch.
 export function formatOutgoingComposerPrompt(params: {
-  provider: ProviderKind;
+  provider: EngineKind;
   model: string | null;
   effort: string | null;
   text: string;
@@ -211,13 +211,13 @@ export function resolvePromptEffortFromModelSelection(
   modelSelection: ModelSelection,
 ): string | null {
   switch (modelSelection.provider) {
-    case "omnimind":
+    case "oa":
       return modelSelection.options?.thinkingLevel ?? null;
     case "antigravity":
       return null;
     case "codex":
       return modelSelection.options?.reasoningEffort ?? null;
-    case "claudeAgent":
+    case "claude":
       return modelSelection.options?.effort ?? null;
     case "cursor":
       return modelSelection.options?.reasoningEffort ?? null;

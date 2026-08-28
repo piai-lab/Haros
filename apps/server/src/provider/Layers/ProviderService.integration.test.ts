@@ -20,7 +20,7 @@ import type {
 import {
   ApprovalRequestId,
   EventId,
-  type ProviderKind,
+  type EngineKind,
   ProviderSessionStartInput,
   ThreadId,
   TurnId,
@@ -82,7 +82,7 @@ const asTurnId = (value: string): TurnId => TurnId.makeUnsafe(value);
 type LegacyProviderRuntimeEvent = {
   readonly type: string;
   readonly eventId: EventId;
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly createdAt: string;
   readonly threadId: ThreadId;
   readonly turnId?: string | undefined;
@@ -125,7 +125,7 @@ function asRuntimePayloadRecord(value: unknown): Record<string, unknown> {
 }
 
 function makeFakeCodexAdapter(
-  provider: ProviderKind = "codex",
+  provider: EngineKind = "codex",
   options?: {
     readonly conversationRollback?: "native" | "restart-session";
     readonly runtimeEventCapacity?: number;
@@ -425,18 +425,18 @@ function makeProviderServiceLayer(
       ? undefined
       : { runtimeEventCapacity: providers.runtimeEventCapacity },
   );
-  const claude = makeFakeCodexAdapter("claudeAgent");
+  const claude = makeFakeCodexAdapter("claude");
   const antigravity = makeFakeCodexAdapter("antigravity");
   const droid = makeFakeCodexAdapter("droid", {
     conversationRollback: "restart-session",
   });
   const pi = makeFakeCodexAdapter("pi");
-  const omnimind = makeFakeCodexAdapter("omnimind");
+  const oa = makeFakeCodexAdapter("oa");
   const registry: typeof ProviderAdapterRegistry.Service = {
     getByProvider: (provider) =>
       provider === "codex"
         ? Effect.succeed(codex.adapter)
-        : provider === "claudeAgent"
+        : provider === "claude"
           ? Effect.succeed(claude.adapter)
           : provider === "antigravity"
             ? Effect.succeed(antigravity.adapter)
@@ -444,17 +444,17 @@ function makeProviderServiceLayer(
               ? Effect.succeed(droid.adapter)
               : provider === "pi" && providers?.includePi === true
                 ? Effect.succeed(pi.adapter)
-                : provider === "omnimind" && providers?.includeOmniMind === true
-                  ? Effect.succeed(omnimind.adapter)
+                : provider === "oa" && providers?.includeOmniMind === true
+                  ? Effect.succeed(oa.adapter)
                   : Effect.fail(new ProviderUnsupportedError({ provider })),
     listProviders: () =>
       Effect.succeed([
         "codex",
-        "claudeAgent",
+        "claude",
         "antigravity",
         ...(providers?.includeRestartRollbackDroid === true ? (["droid"] as const) : []),
         ...(providers?.includePi === true ? (["pi"] as const) : []),
-        ...(providers?.includeOmniMind === true ? (["omnimind"] as const) : []),
+        ...(providers?.includeOmniMind === true ? (["oa"] as const) : []),
       ] as const),
   };
 
@@ -481,7 +481,7 @@ function makeProviderServiceLayer(
     antigravity,
     droid,
     pi,
-    omnimind,
+    oa,
     layer,
     rawLayer,
   };
@@ -999,7 +999,7 @@ staleSettlementRouting.layer("ProviderServiceLive exact stale-terminal settlemen
         {
           type: "turn.aborted",
           eventId: asEventId("stale-terminal-wrong-provider"),
-          provider: "claudeAgent",
+          provider: "claude",
           threadId,
           turnId: activeTurnId,
           lifecycleGeneration: String(generation),
@@ -1530,16 +1530,16 @@ ecosystemReloadRouting.layer("ProviderServiceLive active resource reload", (it) 
       const provider = yield* ProviderService;
       const threadId = asThreadId("thread-ecosystem-reload");
       yield* provider.startSession(threadId, {
-        provider: "omnimind",
+        provider: "oa",
         threadId,
-        modelSelection: { provider: "omnimind", model: "gateway/model-one" },
+        modelSelection: { provider: "oa", model: "gateway/model-one" },
         runtimeMode: "full-access",
       });
 
       assert.deepEqual(yield* provider.reloadSessionResources({ threadId }), {
         state: "reloaded",
       });
-      assert.equal(ecosystemReloadRouting.omnimind.reloadSessionResources.mock.calls.length, 1);
+      assert.equal(ecosystemReloadRouting.oa.reloadSessionResources.mock.calls.length, 1);
     }),
   );
 
@@ -1547,17 +1547,14 @@ ecosystemReloadRouting.layer("ProviderServiceLive active resource reload", (it) 
     Effect.gen(function* () {
       const provider = yield* ProviderService;
       const threadId = asThreadId("thread-ecosystem-no-session");
-      const startCount = ecosystemReloadRouting.omnimind.startSession.mock.calls.length;
-      const reloadCount = ecosystemReloadRouting.omnimind.reloadSessionResources.mock.calls.length;
+      const startCount = ecosystemReloadRouting.oa.startSession.mock.calls.length;
+      const reloadCount = ecosystemReloadRouting.oa.reloadSessionResources.mock.calls.length;
 
       assert.deepEqual(yield* provider.reloadSessionResources({ threadId }), {
         state: "no_active_session",
       });
-      assert.equal(ecosystemReloadRouting.omnimind.startSession.mock.calls.length, startCount);
-      assert.equal(
-        ecosystemReloadRouting.omnimind.reloadSessionResources.mock.calls.length,
-        reloadCount,
-      );
+      assert.equal(ecosystemReloadRouting.oa.startSession.mock.calls.length, startCount);
+      assert.equal(ecosystemReloadRouting.oa.reloadSessionResources.mock.calls.length, reloadCount);
     }),
   );
 
@@ -1844,24 +1841,24 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
     Effect.gen(function* () {
       const provider = yield* ProviderService;
       const threadId = asThreadId("thread-model-service-start-first");
-      const defaultStart = modelServiceAdmission.omnimind.startSession.getMockImplementation();
+      const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
       if (!defaultStart) assert.fail("Expected the fake OmniMind start implementation");
       const releaseStart = yield* Deferred.make<void>();
-      modelServiceAdmission.omnimind.startSession.mockImplementationOnce((input) =>
+      modelServiceAdmission.oa.startSession.mockImplementationOnce((input) =>
         Deferred.await(releaseStart).pipe(Effect.andThen(defaultStart(input))),
       );
 
-      const startCallCount = modelServiceAdmission.omnimind.startSession.mock.calls.length;
+      const startCallCount = modelServiceAdmission.oa.startSession.mock.calls.length;
       const startFiber = yield* provider
         .startSession(threadId, {
-          provider: "omnimind",
+          provider: "oa",
           threadId,
-          modelSelection: { provider: "omnimind", model: "gateway/model-one" },
+          modelSelection: { provider: "oa", model: "gateway/model-one" },
           runtimeMode: "full-access",
         })
         .pipe(Effect.forkChild);
       yield* waitUntil(
-        () => modelServiceAdmission.omnimind.startSession.mock.calls.length > startCallCount,
+        () => modelServiceAdmission.oa.startSession.mock.calls.length > startCallCount,
         500,
         10,
         "OmniMind custom-service start",
@@ -1898,25 +1895,22 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
         .pipe(Effect.forkChild);
       yield* Deferred.await(mutationEntered);
 
-      const startCallCount = modelServiceAdmission.omnimind.startSession.mock.calls.length;
+      const startCallCount = modelServiceAdmission.oa.startSession.mock.calls.length;
       const startFiber = yield* provider
         .startSession(threadId, {
-          provider: "omnimind",
+          provider: "oa",
           threadId,
-          modelSelection: { provider: "omnimind", model: "gateway/model-one" },
+          modelSelection: { provider: "oa", model: "gateway/model-one" },
           runtimeMode: "full-access",
         })
         .pipe(Effect.forkChild);
       yield* sleep(25);
-      assert.equal(modelServiceAdmission.omnimind.startSession.mock.calls.length, startCallCount);
+      assert.equal(modelServiceAdmission.oa.startSession.mock.calls.length, startCallCount);
 
       yield* Deferred.succeed(releaseMutation, undefined);
       yield* Fiber.join(mutationFiber);
       yield* Fiber.join(startFiber);
-      assert.equal(
-        modelServiceAdmission.omnimind.startSession.mock.calls.length,
-        startCallCount + 1,
-      );
+      assert.equal(modelServiceAdmission.oa.startSession.mock.calls.length, startCallCount + 1);
       yield* provider.stopSession({ threadId });
     }),
   );
@@ -1926,25 +1920,25 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
       const provider = yield* ProviderService;
       const threadId = asThreadId("thread-model-service-recovery-first");
       yield* provider.startSession(threadId, {
-        provider: "omnimind",
+        provider: "oa",
         threadId,
-        modelSelection: { provider: "omnimind", model: "gateway/model-one" },
+        modelSelection: { provider: "oa", model: "gateway/model-one" },
         runtimeMode: "full-access",
       });
       yield* provider.stopRuntimeSession!({ threadId });
 
-      const defaultStart = modelServiceAdmission.omnimind.startSession.getMockImplementation();
+      const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
       if (!defaultStart) assert.fail("Expected the fake OmniMind start implementation");
       const releaseRecovery = yield* Deferred.make<void>();
-      modelServiceAdmission.omnimind.startSession.mockImplementationOnce((input) =>
+      modelServiceAdmission.oa.startSession.mockImplementationOnce((input) =>
         Deferred.await(releaseRecovery).pipe(Effect.andThen(defaultStart(input))),
       );
-      const startCallCount = modelServiceAdmission.omnimind.startSession.mock.calls.length;
+      const startCallCount = modelServiceAdmission.oa.startSession.mock.calls.length;
       const recoveryFiber = yield* provider
         .sendTurn({ threadId, input: "recover", attachments: [] })
         .pipe(Effect.forkChild);
       yield* waitUntil(
-        () => modelServiceAdmission.omnimind.startSession.mock.calls.length > startCallCount,
+        () => modelServiceAdmission.oa.startSession.mock.calls.length > startCallCount,
         500,
         10,
         "OmniMind custom-service recovery",
@@ -1972,21 +1966,21 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
         const provider = yield* ProviderService;
         const threadId = asThreadId("thread-model-service-replacement-restore");
         yield* provider.startSession(threadId, {
-          provider: "omnimind",
+          provider: "oa",
           threadId,
-          modelSelection: { provider: "omnimind", model: "gateway-a/model-one" },
+          modelSelection: { provider: "oa", model: "gateway-a/model-one" },
           runtimeMode: "full-access",
         });
 
-        const defaultStart = modelServiceAdmission.omnimind.startSession.getMockImplementation();
+        const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
         if (!defaultStart) assert.fail("Expected the fake OmniMind start implementation");
         const replacementFailure = new ProviderAdapterSessionNotFoundError({
-          provider: "omnimind",
+          provider: "oa",
           threadId,
         });
         const restoreEntered = yield* Deferred.make<void>();
         const releaseRestore = yield* Deferred.make<void>();
-        modelServiceAdmission.omnimind.startSession
+        modelServiceAdmission.oa.startSession
           .mockImplementationOnce(() => Effect.fail(replacementFailure))
           .mockImplementationOnce((input) =>
             Deferred.succeed(restoreEntered, undefined).pipe(
@@ -1997,9 +1991,9 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
 
         const replacementFiber = yield* provider
           .startSession(threadId, {
-            provider: "omnimind",
+            provider: "oa",
             threadId,
-            modelSelection: { provider: "omnimind", model: "gateway-b/model-two" },
+            modelSelection: { provider: "oa", model: "gateway-b/model-two" },
             runtimeMode: "full-access",
           })
           .pipe(Effect.result, Effect.forkChild);
@@ -2026,17 +2020,17 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
       const directory = yield* ProviderSessionDirectory;
       const threadId = asThreadId("thread-model-service-turn-persistence-fence");
       yield* provider.startSession(threadId, {
-        provider: "omnimind",
+        provider: "oa",
         threadId,
-        modelSelection: { provider: "omnimind", model: "gateway-a/model-one" },
+        modelSelection: { provider: "oa", model: "gateway-a/model-one" },
         runtimeMode: "full-access",
       });
 
-      const defaultHasSession = modelServiceAdmission.omnimind.hasSession.getMockImplementation();
+      const defaultHasSession = modelServiceAdmission.oa.hasSession.getMockImplementation();
       if (!defaultHasSession) assert.fail("Expected the fake OmniMind session probe");
       const lifecycleEntered = yield* Deferred.make<void>();
       const releaseLifecycle = yield* Deferred.make<void>();
-      modelServiceAdmission.omnimind.hasSession.mockImplementationOnce((probedThreadId) =>
+      modelServiceAdmission.oa.hasSession.mockImplementationOnce((probedThreadId) =>
         Deferred.succeed(lifecycleEntered, undefined).pipe(
           Effect.andThen(Deferred.await(releaseLifecycle)),
           Effect.andThen(defaultHasSession(probedThreadId)),
@@ -2050,20 +2044,20 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
         .pipe(Effect.forkChild);
       yield* Deferred.await(lifecycleEntered);
 
-      const defaultStart = modelServiceAdmission.omnimind.startSession.getMockImplementation();
+      const defaultStart = modelServiceAdmission.oa.startSession.getMockImplementation();
       if (!defaultStart) assert.fail("Expected the fake OmniMind start implementation");
       const replacementFailure = new ProviderAdapterSessionNotFoundError({
-        provider: "omnimind",
+        provider: "oa",
         threadId,
       });
-      modelServiceAdmission.omnimind.startSession
+      modelServiceAdmission.oa.startSession
         .mockImplementationOnce(() => Effect.fail(replacementFailure))
         .mockImplementationOnce(defaultStart);
       const replacementFiber = yield* provider
         .startSession(threadId, {
-          provider: "omnimind",
+          provider: "oa",
           threadId,
-          modelSelection: { provider: "omnimind", model: "gateway-b/model-two" },
+          modelSelection: { provider: "oa", model: "gateway-b/model-two" },
           runtimeMode: "full-access",
         })
         .pipe(Effect.result, Effect.forkChild);
@@ -2082,7 +2076,7 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
           threadId,
           input: "persist model C",
           attachments: [],
-          modelSelection: { provider: "omnimind", model: "gateway-c/model-three" },
+          modelSelection: { provider: "oa", model: "gateway-c/model-three" },
         })
         .pipe(Effect.forkChild);
       yield* sleep(25);
@@ -2101,7 +2095,7 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
       assertFailure(yield* Fiber.join(replacementFiber), replacementFailure);
       yield* Fiber.join(sendFiber);
 
-      const restoreCall = modelServiceAdmission.omnimind.startSession.mock.calls.at(-1)?.[0];
+      const restoreCall = modelServiceAdmission.oa.startSession.mock.calls.at(-1)?.[0];
       assert.equal(restoreCall?.modelSelection?.model, "gateway-a/model-one");
       yield* provider.stopSession({ threadId });
     }),
@@ -2113,9 +2107,9 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
       const directory = yield* ProviderSessionDirectory;
       const threadId = asThreadId("thread-model-service-recovery-current-binding");
       yield* provider.startSession(threadId, {
-        provider: "omnimind",
+        provider: "oa",
         threadId,
-        modelSelection: { provider: "omnimind", model: "gateway-a/model-one" },
+        modelSelection: { provider: "oa", model: "gateway-a/model-one" },
         runtimeMode: "full-access",
       });
       yield* provider.stopRuntimeSession!({ threadId });
@@ -2130,7 +2124,7 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
         .pipe(Effect.forkChild);
       yield* Deferred.await(aEntered);
 
-      const startCallCount = modelServiceAdmission.omnimind.startSession.mock.calls.length;
+      const startCallCount = modelServiceAdmission.oa.startSession.mock.calls.length;
       const recoveryFiber = yield* provider
         .sendTurn({ threadId, input: "recover current binding", attachments: [] })
         .pipe(Effect.forkChild);
@@ -2142,7 +2136,7 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
         ...binding,
         runtimePayload: {
           ...asRuntimePayloadRecord(binding.runtimePayload),
-          modelSelection: { provider: "omnimind", model: "gateway-b/model-two" },
+          modelSelection: { provider: "oa", model: "gateway-b/model-two" },
         },
       });
 
@@ -2159,17 +2153,14 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
       yield* Deferred.succeed(releaseA, undefined);
       yield* Fiber.join(aFenceFiber);
       yield* sleep(25);
-      assert.equal(modelServiceAdmission.omnimind.startSession.mock.calls.length, startCallCount);
+      assert.equal(modelServiceAdmission.oa.startSession.mock.calls.length, startCallCount);
 
       yield* Deferred.succeed(releaseB, undefined);
       yield* Fiber.join(bFenceFiber);
       yield* Fiber.join(recoveryFiber);
+      assert.equal(modelServiceAdmission.oa.startSession.mock.calls.length, startCallCount + 1);
       assert.equal(
-        modelServiceAdmission.omnimind.startSession.mock.calls.length,
-        startCallCount + 1,
-      );
-      assert.equal(
-        modelServiceAdmission.omnimind.startSession.mock.calls.at(-1)?.[0].modelSelection?.model,
+        modelServiceAdmission.oa.startSession.mock.calls.at(-1)?.[0].modelSelection?.model,
         "gateway-b/model-two",
       );
       yield* provider.stopSession({ threadId });
@@ -2182,30 +2173,30 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
       const aThreadId = asThreadId("thread-model-service-a-to-b");
       const bThreadId = asThreadId("thread-model-service-b-to-a");
       yield* provider.startSession(aThreadId, {
-        provider: "omnimind",
+        provider: "oa",
         threadId: aThreadId,
-        modelSelection: { provider: "omnimind", model: "gateway-a/model-one" },
+        modelSelection: { provider: "oa", model: "gateway-a/model-one" },
         runtimeMode: "full-access",
       });
       yield* provider.startSession(bThreadId, {
-        provider: "omnimind",
+        provider: "oa",
         threadId: bThreadId,
-        modelSelection: { provider: "omnimind", model: "gateway-b/model-two" },
+        modelSelection: { provider: "oa", model: "gateway-b/model-two" },
         runtimeMode: "full-access",
       });
 
       const replacements = yield* Effect.all(
         [
           provider.startSession(aThreadId, {
-            provider: "omnimind",
+            provider: "oa",
             threadId: aThreadId,
-            modelSelection: { provider: "omnimind", model: "gateway-b/model-two" },
+            modelSelection: { provider: "oa", model: "gateway-b/model-two" },
             runtimeMode: "full-access",
           }),
           provider.startSession(bThreadId, {
-            provider: "omnimind",
+            provider: "oa",
             threadId: bThreadId,
-            modelSelection: { provider: "omnimind", model: "gateway-a/model-one" },
+            modelSelection: { provider: "oa", model: "gateway-a/model-one" },
             runtimeMode: "full-access",
           }),
         ],
@@ -2240,7 +2231,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
         runtimeMode: "full-access",
       });
       yield* provider.startSession(omniMindThreadId, {
-        provider: "omnimind",
+        provider: "oa",
         threadId: omniMindThreadId,
         runtimeMode: "full-access",
       });
@@ -2278,7 +2269,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
         interactionMode: "plan",
       });
       assert.equal(routing.pi.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "debug");
-      assert.equal(routing.omnimind.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "plan");
+      assert.equal(routing.oa.sendTurn.mock.calls.at(-1)?.[0].interactionMode, "plan");
       yield* provider.stopSession({ threadId: piThreadId });
       yield* provider.stopSession({ threadId: antigravityThreadId });
       yield* provider.stopSession({ threadId: omniMindThreadId });
@@ -2395,7 +2386,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       const threadId = asThreadId("thread-omnimind-work-surface-recovery");
 
       yield* provider.startSession(threadId, {
-        provider: "omnimind",
+        provider: "oa",
         threadId,
         cwd: "/tmp/project/packages/app",
         workSurface: "agent",
@@ -2410,10 +2401,10 @@ routing.layer("ProviderServiceLive routing", (it) => {
       );
 
       yield* provider.stopRuntimeSession!({ threadId });
-      routing.omnimind.startSession.mockClear();
+      routing.oa.startSession.mockClear();
       yield* provider.sendTurn({ threadId, input: "resume", attachments: [] });
 
-      const recoveredInput = routing.omnimind.startSession.mock.calls[0]?.[0];
+      const recoveredInput = routing.oa.startSession.mock.calls[0]?.[0];
       assert.equal(recoveredInput?.cwd, "/tmp/project/packages/app");
       assert.equal(recoveredInput?.workSurface, "agent");
       assert.equal(recoveredInput?.projectContextRoot, "/tmp/project");
@@ -2660,7 +2651,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       );
       const crossProviderFiber = yield* provider
         .startSession(threadId, {
-          provider: "claudeAgent",
+          provider: "claude",
           threadId,
           cwd: "/tmp/provider-starts",
           runtimeMode: "full-access",
@@ -2678,7 +2669,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
         routing.codex.listSessions(),
         routing.claude.listSessions(),
       ]);
-      assert.equal(binding?.provider, "claudeAgent");
+      assert.equal(binding?.provider, "claude");
       assert.equal(
         codexSessions.some((session) => session.threadId === threadId),
         false,
@@ -2717,7 +2708,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
         resumeCursor: null,
       }));
       const replacementFailure = new ProviderAdapterSessionNotFoundError({
-        provider: "claudeAgent",
+        provider: "claude",
         threadId,
       });
       let failedTargetGeneration: string | undefined;
@@ -2728,7 +2719,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
 
       const replacement = yield* Effect.result(
         provider.startSession(threadId, {
-          provider: "claudeAgent",
+          provider: "claude",
           threadId,
           cwd: "/tmp/failed-provider-replacement",
           runtimeMode: "full-access",
@@ -2780,7 +2771,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       const defaultCodexStart = routing.codex.startSession.getMockImplementation();
       if (!defaultCodexStart) assert.fail("Expected the fake Codex start implementation");
       const replacementFailure = new ProviderAdapterSessionNotFoundError({
-        provider: "claudeAgent",
+        provider: "claude",
         threadId,
       });
       routing.claude.startSession.mockImplementationOnce(() => Effect.fail(replacementFailure));
@@ -2795,10 +2786,10 @@ routing.layer("ProviderServiceLive routing", (it) => {
 
       const replacementFiber = yield* provider
         .startSession(threadId, {
-          provider: "claudeAgent",
+          provider: "claude",
           threadId,
           runtimeMode: "approval-required",
-          modelSelection: { provider: "claudeAgent", model: "claude-opus-4-6" },
+          modelSelection: { provider: "claude", model: "claude-opus-4-6" },
         })
         .pipe(Effect.result, Effect.forkChild);
       const restoreInput = yield* Deferred.await(restoreEntered);
@@ -2938,11 +2929,11 @@ routing.layer("ProviderServiceLive routing", (it) => {
       const defaultClaudeStart = routing.claude.startSession.getMockImplementation();
       if (!defaultClaudeStart) assert.fail("Expected the fake Claude start implementation");
       const targetStartFailure = new ProviderAdapterSessionNotFoundError({
-        provider: "claudeAgent",
+        provider: "claude",
         threadId,
       });
       const targetStopFailure = new ProviderAdapterSessionNotFoundError({
-        provider: "claudeAgent",
+        provider: "claude",
         threadId,
       });
       const codexStartCount = routing.codex.startSession.mock.calls.length;
@@ -2956,11 +2947,11 @@ routing.layer("ProviderServiceLive routing", (it) => {
 
       const replacement = yield* Effect.exit(
         provider.startSession(threadId, {
-          provider: "claudeAgent",
+          provider: "claude",
           threadId,
           cwd: "/tmp/replacement-target-retire-failure",
           runtimeMode: "approval-required",
-          modelSelection: { provider: "claudeAgent", model: "claude-opus-4-6" },
+          modelSelection: { provider: "claude", model: "claude-opus-4-6" },
         }),
       );
 
@@ -2978,7 +2969,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       );
       assert.equal(
         asRuntimePayloadRecord(uncertainBinding?.runtimePayload).replacementTargetProvider,
-        "claudeAgent",
+        "claude",
       );
 
       const send = yield* Effect.exit(
@@ -3078,11 +3069,11 @@ routing.layer("ProviderServiceLive routing", (it) => {
         const directory = yield* ProviderSessionDirectory;
         const threadId = asThreadId("thread-same-provider-start-persistence-failure");
         const previousModelSelection = {
-          provider: "omnimind" as const,
+          provider: "oa" as const,
           model: "local/stable-model",
         };
         yield* provider.startSession(threadId, {
-          provider: "omnimind",
+          provider: "oa",
           threadId,
           cwd: "/tmp/same-provider-persistence-failure",
           workSurface: "agent",
@@ -3101,17 +3092,17 @@ routing.layer("ProviderServiceLive routing", (it) => {
           .spyOn(directory, "upsert")
           .mockImplementationOnce((binding) => originalUpsert(binding))
           .mockImplementationOnce(() => Effect.fail(persistenceFailure));
-        const stopCount = routing.omnimind.stopSession.mock.calls.length;
+        const stopCount = routing.oa.stopSession.mock.calls.length;
 
         const result = yield* Effect.result(
           provider.startSession(threadId, {
-            provider: "omnimind",
+            provider: "oa",
             threadId,
             cwd: "/tmp/same-provider-persistence-failure-new",
             workSurface: "chat",
             runtimeMode: "full-access",
             modelSelection: {
-              provider: "omnimind",
+              provider: "oa",
               model: "local/new-model",
             },
           }),
@@ -3122,8 +3113,8 @@ routing.layer("ProviderServiceLive routing", (it) => {
         // Stop-first retires the old incarnation, cleanup retires the failed
         // target, then the exact old binding is restored as a fresh physical
         // incarnation under a third generation.
-        assert.equal(routing.omnimind.stopSession.mock.calls.length, stopCount + 2);
-        assert.equal(yield* routing.omnimind.hasSession(threadId), true);
+        assert.equal(routing.oa.stopSession.mock.calls.length, stopCount + 2);
+        assert.equal(yield* routing.oa.hasSession(threadId), true);
         const restoredBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
         assert.equal(restoredBinding?.provider, previousBinding.provider);
         assert.notEqual(restoredBinding?.lifecycleGeneration, previousBinding.lifecycleGeneration);
@@ -3137,7 +3128,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
           asRuntimePayloadRecord(restoredBinding?.runtimePayload).projectContextRoot,
           "/tmp/same-provider-persistence-failure",
         );
-        const restoredStartInput = routing.omnimind.startSession.mock.calls.at(-1)?.[0];
+        const restoredStartInput = routing.oa.startSession.mock.calls.at(-1)?.[0];
         assert.equal(restoredStartInput?.workSurface, "agent");
         assert.equal(
           restoredStartInput?.projectContextRoot,
@@ -3160,7 +3151,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
           runtimeMode: "full-access",
         }),
         routing.claude.startSession({
-          provider: "claudeAgent",
+          provider: "claude",
           threadId,
           runtimeMode: "full-access",
         }),
@@ -3173,7 +3164,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
         lifecycleGeneration: "restore-failed-generation",
         runtimePayload: {
           lastRuntimeEvent: "provider.replacement.restore.failed",
-          replacementTargetProvider: "claudeAgent",
+          replacementTargetProvider: "claude",
         },
       });
       yield* routing.codex.waitForRuntimeSubscribers();
@@ -3194,7 +3185,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
         "provider.replacement.restore.failed",
       );
       const stopFailure = new ProviderAdapterSessionNotFoundError({
-        provider: "claudeAgent",
+        provider: "claude",
         threadId,
       });
       routing.claude.stopSession.mockImplementationOnce(() => Effect.fail(stopFailure));
@@ -3273,7 +3264,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       );
       const competingStartFiber = yield* provider
         .startSession(threadId, {
-          provider: "claudeAgent",
+          provider: "claude",
           threadId,
           cwd: "/tmp/recovery-start-race",
           runtimeMode: "full-access",
@@ -3294,7 +3285,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       const recoveryCall = routing.codex.startSession.mock.calls.findLast(
         ([input]) => input.threadId === threadId,
       )?.[0];
-      assert.equal(binding?.provider, "claudeAgent");
+      assert.equal(binding?.provider, "claude");
       assert.equal(
         codexSessions.some((session) => session.threadId === threadId),
         false,
@@ -3313,7 +3304,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       const threadId = asThreadId("thread-claude-interaction-generation");
 
       yield* provider.startSession(threadId, {
-        provider: "claudeAgent",
+        provider: "claude",
         threadId,
         cwd: "/tmp/project",
         runtimeMode: "approval-required",
@@ -3442,7 +3433,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       const orphanThreadId = asThreadId("thread-ambiguous-session-list");
 
       yield* provider.startSession(boundThreadId, {
-        provider: "claudeAgent",
+        provider: "claude",
         threadId: boundThreadId,
         runtimeMode: "full-access",
       });
@@ -3458,7 +3449,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
           runtimeMode: "full-access",
         }),
         routing.claude.startSession({
-          provider: "claudeAgent",
+          provider: "claude",
           threadId: orphanThreadId,
           runtimeMode: "full-access",
         }),
@@ -3469,7 +3460,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
         sessions
           .filter((session) => session.threadId === boundThreadId)
           .map((session) => session.provider),
-        ["claudeAgent"],
+        ["claude"],
       );
       assert.equal(
         sessions.some((session) => session.threadId === orphanThreadId),
@@ -3497,7 +3488,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
           runtimeMode: "full-access",
         }),
         routing.claude.startSession({
-          provider: "claudeAgent",
+          provider: "claude",
           threadId,
           runtimeMode: "full-access",
         }),
@@ -3549,7 +3540,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       const provider = yield* ProviderService;
       const threadId = asThreadId("thread-single-unbound-owner");
       yield* routing.claude.startSession({
-        provider: "claudeAgent",
+        provider: "claude",
         threadId,
         runtimeMode: "full-access",
       });
@@ -4400,13 +4391,13 @@ routing.layer("ProviderServiceLive routing", (it) => {
       routing.claude.startSession.mockClear();
 
       const session = yield* provider.startSession(asThreadId("thread-claude"), {
-        provider: "claudeAgent",
+        provider: "claude",
         threadId: asThreadId("thread-claude"),
         cwd: "/tmp/project-claude",
         runtimeMode: "full-access",
       });
 
-      assert.equal(session.provider, "claudeAgent");
+      assert.equal(session.provider, "claude");
       assert.equal(routing.claude.startSession.mock.calls.length, 1);
       const startInput = routing.claude.startSession.mock.calls[0]?.[0];
       assert.equal(typeof startInput === "object" && startInput !== null, true);
@@ -4415,7 +4406,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
           provider?: string;
           cwd?: string;
         };
-        assert.equal(startPayload.provider, "claudeAgent");
+        assert.equal(startPayload.provider, "claude");
         assert.equal(startPayload.cwd, "/tmp/project-claude");
       }
     }),
@@ -4466,11 +4457,11 @@ routing.layer("ProviderServiceLive routing", (it) => {
       const provider = yield* ProviderService;
 
       const initial = yield* provider.startSession(asThreadId("thread-claude-send-turn"), {
-        provider: "claudeAgent",
+        provider: "claude",
         threadId: asThreadId("thread-claude-send-turn"),
         cwd: "/tmp/project-claude-send-turn",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
           options: {
             effort: "max",
@@ -4500,10 +4491,10 @@ routing.layer("ProviderServiceLive routing", (it) => {
           resumeCursor?: unknown;
           threadId?: string;
         };
-        assert.equal(startPayload.provider, "claudeAgent");
+        assert.equal(startPayload.provider, "claude");
         assert.equal(startPayload.cwd, "/tmp/project-claude-send-turn");
         assert.deepEqual(startPayload.modelSelection, {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
           options: {
             effort: "max",
@@ -5103,7 +5094,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       const runtimeRepository = yield* ProviderSessionRuntimeRepository;
 
       const session = yield* provider.startSession(asThreadId("thread-runtime-resume-refresh"), {
-        provider: "claudeAgent",
+        provider: "claude",
         threadId: asThreadId("thread-runtime-resume-refresh"),
         runtimeMode: "full-access",
       });
@@ -5123,7 +5114,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       routing.claude.emit({
         type: "model.rerouted",
         eventId: asEventId("runtime-model-rerouted-refresh"),
-        provider: "claudeAgent",
+        provider: "claude",
         createdAt: "2026-02-27T00:04:00.000Z",
         threadId: session.threadId,
         payload: {
@@ -5150,7 +5141,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       const runtimeRepository = yield* ProviderSessionRuntimeRepository;
 
       const session = yield* provider.startSession(asThreadId("thread-task-resume-refresh"), {
-        provider: "claudeAgent",
+        provider: "claude",
         threadId: asThreadId("thread-task-resume-refresh"),
         runtimeMode: "full-access",
       });
@@ -5180,7 +5171,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       routing.claude.emit({
         type: "turn.tasks.updated",
         eventId: asEventId("runtime-task-resume-refresh"),
-        provider: "claudeAgent",
+        provider: "claude",
         createdAt: "2026-02-27T00:04:30.000Z",
         threadId: session.threadId,
         turnId: turn.turnId,
@@ -5358,13 +5349,13 @@ routing.layer("ProviderServiceLive routing", (it) => {
         Layer.provide(persistenceLayer),
       );
 
-      const firstClaude = makeFakeCodexAdapter("claudeAgent");
+      const firstClaude = makeFakeCodexAdapter("claude");
       const firstRegistry: typeof ProviderAdapterRegistry.Service = {
         getByProvider: (provider) =>
-          provider === "claudeAgent"
+          provider === "claude"
             ? Effect.succeed(firstClaude.adapter)
             : Effect.fail(new ProviderUnsupportedError({ provider })),
-        listProviders: () => Effect.succeed(["claudeAgent"]),
+        listProviders: () => Effect.succeed(["claude"]),
       };
       const firstDirectoryLayer = ProviderSessionDirectoryLive.pipe(
         Layer.provide(runtimeRepositoryLayer),
@@ -5377,7 +5368,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       const initial = yield* Effect.gen(function* () {
         const provider = yield* ProviderService;
         return yield* provider.startSession(asThreadId("thread-claude-start"), {
-          provider: "claudeAgent",
+          provider: "claude",
           threadId: asThreadId("thread-claude-start"),
           cwd: "/tmp/project-claude-start",
           runtimeMode: "full-access",
@@ -5389,13 +5380,13 @@ routing.layer("ProviderServiceLive routing", (it) => {
         yield* provider.listSessions();
       }).pipe(Effect.provide(firstProviderLayer));
 
-      const secondClaude = makeFakeCodexAdapter("claudeAgent");
+      const secondClaude = makeFakeCodexAdapter("claude");
       const secondRegistry: typeof ProviderAdapterRegistry.Service = {
         getByProvider: (provider) =>
-          provider === "claudeAgent"
+          provider === "claude"
             ? Effect.succeed(secondClaude.adapter)
             : Effect.fail(new ProviderUnsupportedError({ provider })),
-        listProviders: () => Effect.succeed(["claudeAgent"]),
+        listProviders: () => Effect.succeed(["claude"]),
       };
       const secondDirectoryLayer = ProviderSessionDirectoryLive.pipe(
         Layer.provide(runtimeRepositoryLayer),
@@ -5410,7 +5401,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       yield* Effect.gen(function* () {
         const provider = yield* ProviderService;
         yield* provider.startSession(initial.threadId, {
-          provider: "claudeAgent",
+          provider: "claude",
           threadId: initial.threadId,
           cwd: "/tmp/project-claude-start",
           runtimeMode: "full-access",
@@ -5427,7 +5418,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
           resumeCursor?: unknown;
           threadId?: string;
         };
-        assert.equal(startPayload.provider, "claudeAgent");
+        assert.equal(startPayload.provider, "claude");
         assert.equal(startPayload.cwd, "/tmp/project-claude-start");
         assert.deepEqual(startPayload.resumeCursor, initial.resumeCursor);
         assert.equal(startPayload.threadId, initial.threadId);
@@ -5539,19 +5530,19 @@ routing.layer("ProviderServiceLive routing", (it) => {
         Layer.provide(persistenceLayer),
       );
       const providerOptions = {
-        claudeAgent: {
+        claude: {
           binaryPath: "/usr/local/bin/claude",
           permissionMode: "acceptEdits",
         },
       };
 
-      const firstClaude = makeFakeCodexAdapter("claudeAgent");
+      const firstClaude = makeFakeCodexAdapter("claude");
       const firstRegistry: typeof ProviderAdapterRegistry.Service = {
         getByProvider: (provider) =>
-          provider === "claudeAgent"
+          provider === "claude"
             ? Effect.succeed(firstClaude.adapter)
             : Effect.fail(new ProviderUnsupportedError({ provider })),
-        listProviders: () => Effect.succeed(["claudeAgent"]),
+        listProviders: () => Effect.succeed(["claude"]),
       };
       const firstDirectoryLayer = ProviderSessionDirectoryLive.pipe(
         Layer.provide(runtimeRepositoryLayer),
@@ -5564,7 +5555,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       const initial = yield* Effect.gen(function* () {
         const provider = yield* ProviderService;
         const session = yield* provider.startSession(asThreadId("thread-stop-runtime"), {
-          provider: "claudeAgent",
+          provider: "claude",
           threadId: asThreadId("thread-stop-runtime"),
           cwd: "/tmp/project-stop-runtime",
           providerOptions,
@@ -5579,13 +5570,13 @@ routing.layer("ProviderServiceLive routing", (it) => {
 
       assert.equal(firstClaude.stopSession.mock.calls.length, 1);
 
-      const secondClaude = makeFakeCodexAdapter("claudeAgent");
+      const secondClaude = makeFakeCodexAdapter("claude");
       const secondRegistry: typeof ProviderAdapterRegistry.Service = {
         getByProvider: (provider) =>
-          provider === "claudeAgent"
+          provider === "claude"
             ? Effect.succeed(secondClaude.adapter)
             : Effect.fail(new ProviderUnsupportedError({ provider })),
-        listProviders: () => Effect.succeed(["claudeAgent"]),
+        listProviders: () => Effect.succeed(["claude"]),
       };
       const secondDirectoryLayer = ProviderSessionDirectoryLive.pipe(
         Layer.provide(runtimeRepositoryLayer),
@@ -5598,7 +5589,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
       yield* Effect.gen(function* () {
         const provider = yield* ProviderService;
         yield* provider.startSession(initial.threadId, {
-          provider: "claudeAgent",
+          provider: "claude",
           threadId: initial.threadId,
           cwd: "/tmp/project-stop-runtime",
           runtimeMode: "full-access",
@@ -6248,7 +6239,7 @@ idleCleanup.layer("ProviderServiceLive idle cleanup", (it) => {
 
       idleCleanup.claude.stopSession.mockClear();
       const session = yield* provider.startSession(threadId, {
-        provider: "claudeAgent",
+        provider: "claude",
         threadId,
         runtimeMode: "full-access",
       });
@@ -6256,7 +6247,7 @@ idleCleanup.layer("ProviderServiceLive idle cleanup", (it) => {
       idleCleanup.claude.emit({
         type: "task.started",
         eventId: asEventId("runtime-background-task-started"),
-        provider: "claudeAgent",
+        provider: "claude",
         createdAt: "2026-07-16T20:00:00.000Z",
         threadId,
         payload: { taskId: "background-task-1" },
@@ -6264,7 +6255,7 @@ idleCleanup.layer("ProviderServiceLive idle cleanup", (it) => {
       idleCleanup.claude.emit({
         type: "turn.completed",
         eventId: asEventId("runtime-background-parent-completed"),
-        provider: "claudeAgent",
+        provider: "claude",
         createdAt: "2026-07-16T20:00:01.000Z",
         threadId,
         payload: { state: "completed" },
@@ -6276,7 +6267,7 @@ idleCleanup.layer("ProviderServiceLive idle cleanup", (it) => {
       idleCleanup.claude.emit({
         type: "task.updated",
         eventId: asEventId("runtime-background-task-completed"),
-        provider: "claudeAgent",
+        provider: "claude",
         createdAt: "2026-07-16T20:00:02.000Z",
         threadId,
         payload: { taskId: "background-task-1", status: "completed" },
@@ -6404,7 +6395,7 @@ idleCleanup.layer("ProviderServiceLive idle cleanup", (it) => {
 
       idleCleanup.claude.stopSession.mockClear();
       const session = yield* provider.startSession(threadId, {
-        provider: "claudeAgent",
+        provider: "claude",
         threadId,
         runtimeMode: "full-access",
       });
@@ -6412,7 +6403,7 @@ idleCleanup.layer("ProviderServiceLive idle cleanup", (it) => {
       idleCleanup.claude.emit({
         type: "task.started",
         eventId: asEventId("runtime-clear-resume-live-task-started"),
-        provider: "claudeAgent",
+        provider: "claude",
         createdAt: "2026-07-17T12:00:00.000Z",
         threadId,
         payload: { taskId: "background-task-clear-resume" },

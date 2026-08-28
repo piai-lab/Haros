@@ -6,7 +6,7 @@
 import type {
   ProjectEntry,
   ProviderAgentDescriptor,
-  ProviderKind,
+  EngineKind,
   ProviderMentionReference,
   ProviderNativeCommandDescriptor,
   ProviderPluginDescriptor,
@@ -53,9 +53,9 @@ const KANBAN_SUPPORTED_APP_SLASH_COMMANDS = new Set(["clear", "default", "plan"]
 
 interface UseKanbanTaskComposerDiscoveryInput {
   readonly composerTrigger: ComposerTrigger | null;
-  readonly selectedProvider: ProviderKind;
+  readonly selectedProvider: EngineKind;
   readonly modelOptionsByProvider: Record<
-    ProviderKind,
+    EngineKind,
     ReadonlyArray<ProviderModelOption & { isCustom?: boolean }>
   >;
   readonly selectedRuntimeAgents: readonly ProviderAgentDescriptor[];
@@ -64,8 +64,8 @@ interface UseKanbanTaskComposerDiscoveryInput {
   readonly serverHomeDir: string | null;
   readonly scratchThreadId: ThreadId;
   readonly providerOptionsForDispatch: ProviderStartOptions | undefined;
-  readonly hiddenProviders: readonly ProviderKind[];
-  readonly providerOrder: readonly ProviderKind[];
+  readonly hiddenProviders: readonly EngineKind[];
+  readonly providerOrder: readonly EngineKind[];
   readonly piAgentDir: string | null;
 }
 

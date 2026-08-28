@@ -5,7 +5,7 @@
 import {
   type ModelSelection,
   type ModelSlug,
-  type ProviderKind,
+  type EngineKind,
   type ThreadId,
 } from "@harnessos/contracts";
 import { create } from "zustand";
@@ -150,13 +150,13 @@ export function useComposerThreadDraft(threadId: ThreadId): ComposerThreadDraftS
 
 export function useEffectiveComposerModelState(input: {
   threadId: ThreadId;
-  selectedProvider: ProviderKind;
+  selectedProvider: EngineKind;
   threadModelSelection: ModelSelection | null | undefined;
   projectModelSelection: ModelSelection | null | undefined;
   runtimeCatalogFallbackModel?: ModelSlug | null | undefined;
-  customModelsByProvider: Partial<Record<ProviderKind, readonly string[]>>;
+  customModelsByProvider: Partial<Record<EngineKind, readonly string[]>>;
   availableModelOptionsByProvider?: Partial<
-    Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>>
+    Record<EngineKind, ReadonlyArray<{ slug: string; name: string }>>
   >;
 }): EffectiveComposerModelState {
   const draft = useComposerThreadDraft(input.threadId);

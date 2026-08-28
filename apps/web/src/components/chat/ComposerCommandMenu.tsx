@@ -3,7 +3,7 @@ import {
   type ModelSlug,
   type ProviderNativeCommandDescriptor,
   type ProviderMentionReference,
-  type ProviderKind,
+  type EngineKind,
   type ProviderPluginDescriptor,
   type ProviderSkillDescriptor,
 } from "@harnessos/contracts";
@@ -149,7 +149,7 @@ export type ComposerCommandItem =
   | {
       id: string;
       type: "provider-native-command";
-      provider: ProviderKind;
+      provider: EngineKind;
       command: ProviderNativeCommandDescriptor["name"];
       label: string;
       description: string;
@@ -171,7 +171,7 @@ export type ComposerCommandItem =
   | {
       id: string;
       type: "model";
-      provider: ProviderKind;
+      provider: EngineKind;
       model: ModelSlug;
       label: string;
       description: string;
@@ -188,7 +188,7 @@ export type ComposerCommandItem =
       id: string;
       type: "thread";
       threadId: string;
-      provider: ProviderKind;
+      provider: EngineKind;
       mention: ProviderMentionReference;
       label: string;
       description: string;
@@ -203,7 +203,7 @@ export type ComposerCommandItem =
   | {
       id: string;
       type: "agent";
-      provider: ProviderKind;
+      provider: EngineKind;
       alias: string;
       color: string;
       label: string;

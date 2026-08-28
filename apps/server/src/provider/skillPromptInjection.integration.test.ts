@@ -38,9 +38,9 @@ describe("shouldInlineSkillForProvider", () => {
   });
 
   it("inlines everything except .claude paths for claudeAgent", () => {
-    expect(shouldInlineSkillForProvider("claudeAgent", claudeSkillPath)).toBe(false);
-    expect(shouldInlineSkillForProvider("claudeAgent", omnimindSkillPath)).toBe(true);
-    expect(shouldInlineSkillForProvider("claudeAgent", codexSkillPath)).toBe(true);
+    expect(shouldInlineSkillForProvider("claude", claudeSkillPath)).toBe(false);
+    expect(shouldInlineSkillForProvider("claude", omnimindSkillPath)).toBe(true);
+    expect(shouldInlineSkillForProvider("claude", codexSkillPath)).toBe(true);
   });
 
   it("inlines cross-provider paths for pi but not pi-native skills", () => {
@@ -137,7 +137,7 @@ describe("buildInlineSkillInstructions", () => {
       await writeFile(secondPath, "Keep this instruction.");
 
       const result = await buildInlineSkillInstructions({
-        provider: "omnimind",
+        provider: "oa",
         skills: [
           { name: "large", path: firstPath },
           { name: "small", path: secondPath },

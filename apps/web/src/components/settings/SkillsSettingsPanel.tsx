@@ -4,7 +4,7 @@
 // a skill comes from, and lets the user enable/disable each one. Disabled skills are
 // hidden from the composer skill picker on every provider.
 
-import type { ProviderKind, ServerSettings } from "@harnessos/contracts";
+import type { EngineKind, ServerSettings } from "@harnessos/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { ProviderIcon } from "~/components/ProviderIcon";
@@ -26,7 +26,7 @@ import {
   settingsSkillNameKey,
 } from "./skillsSettingsModel";
 
-function SkillProviderStack({ providers }: { providers: ReadonlyArray<ProviderKind> }) {
+function SkillProviderStack({ providers }: { providers: ReadonlyArray<EngineKind> }) {
   const { t } = useI18n();
   if (providers.length === 0) {
     return null;

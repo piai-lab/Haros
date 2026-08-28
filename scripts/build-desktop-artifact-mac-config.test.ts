@@ -96,12 +96,12 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.deepStrictEqual(linux.asarUnpack, ["node_modules/node-pty/**"]);
     assert.deepStrictEqual(linux.linux, {
       target: ["AppImage"],
-      executableName: "omnimind",
+      executableName: "oa",
       icon: "icon.png",
       category: "Development",
       desktop: {
         entry: {
-          StartupWMClass: "omnimind",
+          StartupWMClass: "oa",
         },
       },
     });

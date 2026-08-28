@@ -1,8 +1,8 @@
-import { type ProviderKind, type ServerProviderStatus } from "@harnessos/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { type EngineKind, type ServerProviderStatus } from "@harnessos/contracts";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 
 export interface ProviderSendAvailability {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly status: ServerProviderStatus | null;
   readonly usable: boolean;
   readonly unavailableReason: string;
@@ -55,7 +55,7 @@ export function normalizeCustomBinaryPath(value: string | null | undefined): str
 }
 
 export function normalizeProviderStatusForLocalConfig(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   status: ServerProviderStatus | null | undefined;
   customBinaryPath?: string | null | undefined;
   confirmedCustomBinaryPath?: string | null | undefined;
@@ -74,7 +74,7 @@ export function normalizeProviderStatusForLocalConfig(input: {
   const legacyAutoBinaryPath = normalizeCustomBinaryPath(status.autoRuntimeModeBinaryPath);
   const hasExactLegacyProbeIdentity =
     checkedBinaryPath === null &&
-    (input.provider === "codex" || input.provider === "claudeAgent") &&
+    (input.provider === "codex" || input.provider === "claude") &&
     legacyAutoBinaryPath === customBinaryPath;
   if (checkedBinaryPath === customBinaryPath || hasExactLegacyProbeIdentity) {
     if (
@@ -125,7 +125,7 @@ export function normalizeProviderStatusForLocalConfig(input: {
     ...statusWithoutStaleProbeFacts,
     available: true,
     status: "warning",
-    message: `${PROVIDER_DISPLAY_NAMES[input.provider]} uses a custom local binary path in this app. Availability will be confirmed when you start a session.`,
+    message: `${ENGINE_DISPLAY_NAMES[input.provider]} uses a custom local binary path in this app. Availability will be confirmed when you start a session.`,
   };
 }
 
@@ -141,7 +141,7 @@ export function providerUnavailableReason(status: ServerProviderStatus | null | 
   if (!status) {
     return "Provider status is still loading.";
   }
-  const providerLabel = PROVIDER_DISPLAY_NAMES[status.provider] ?? status.provider;
+  const providerLabel = ENGINE_DISPLAY_NAMES[status.provider] ?? status.provider;
   if (status.authStatus === "unauthenticated") {
     return `${providerLabel} is not authenticated yet.`;
   }
@@ -153,14 +153,14 @@ export function providerUnavailableReason(status: ServerProviderStatus | null | 
 
 export function findProviderStatus(
   statuses: readonly ServerProviderStatus[],
-  provider: ProviderKind,
+  provider: EngineKind,
 ): ServerProviderStatus | null {
   return statuses.find((status) => status.provider === provider) ?? null;
 }
 
 // Shared send gate used by chat, Kanban, shortcuts, and handoff flows.
 export function resolveProviderSendAvailability(input: {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly statuses: readonly ServerProviderStatus[];
 }): ProviderSendAvailability {
   const status = findProviderStatus(input.statuses, input.provider);
@@ -178,7 +178,7 @@ function shouldRefreshBeforeBlocking(status: ServerProviderStatus | null): boole
 
 // Re-check a blocked provider once before surfacing stale install/auth state to the user.
 export async function resolveProviderSendAvailabilityWithRefresh(input: {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly statuses: readonly ServerProviderStatus[];
   readonly refreshStatuses: ProviderStatusRefresh;
 }): Promise<ProviderSendAvailability> {

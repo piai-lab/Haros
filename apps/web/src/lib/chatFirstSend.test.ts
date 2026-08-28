@@ -8,7 +8,7 @@ import type { Project } from "../types";
 import { resolveFirstSendTarget } from "./chatFirstSend";
 
 const defaultModelSelection = {
-  provider: "omnimind" as const,
+  provider: "oa" as const,
   model: "deepseek/deepseek-chat",
 };
 

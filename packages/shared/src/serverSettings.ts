@@ -142,13 +142,13 @@ export function providerStartOptionsFromServerSettings(
 ): ProviderStartOptions {
   const { providers } = settings;
   return {
-    omnimind: {},
+    oa: {},
     codex: {
       ...(providers.codex.binaryPath ? { binaryPath: providers.codex.binaryPath } : {}),
       ...(providers.codex.homePath ? { homePath: providers.codex.homePath } : {}),
     },
-    claudeAgent: {
-      ...(providers.claudeAgent.binaryPath ? { binaryPath: providers.claudeAgent.binaryPath } : {}),
+    claude: {
+      ...(providers.claude.binaryPath ? { binaryPath: providers.claude.binaryPath } : {}),
     },
     cursor: {
       ...(providers.cursor.binaryPath ? { binaryPath: providers.cursor.binaryPath } : {}),

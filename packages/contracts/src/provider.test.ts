@@ -43,7 +43,7 @@ describe("ProviderSessionStartInput", () => {
   it("accepts the product-derived work surface and project context root", () => {
     const parsed = decodeProviderSessionStartInput({
       threadId: "thread-agent",
-      provider: "omnimind",
+      provider: "oa",
       cwd: "/tmp/workspace/packages/app",
       workSurface: "agent",
       projectContextRoot: "/tmp/workspace",
@@ -66,10 +66,10 @@ describe("ProviderSessionStartInput", () => {
   it("accepts claude runtime knobs", () => {
     const parsed = decodeProviderSessionStartInput({
       threadId: "thread-1",
-      provider: "claudeAgent",
+      provider: "claude",
       cwd: "/tmp/workspace",
       modelSelection: {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-sonnet-4-6",
         options: {
           thinking: true,
@@ -78,7 +78,7 @@ describe("ProviderSessionStartInput", () => {
         },
       },
       providerOptions: {
-        claudeAgent: {
+        claude: {
           binaryPath: "/usr/local/bin/claude",
           permissionMode: "plan",
           maxThinkingTokens: 12_000,
@@ -86,18 +86,18 @@ describe("ProviderSessionStartInput", () => {
       },
       runtimeMode: "full-access",
     });
-    expect(parsed.provider).toBe("claudeAgent");
-    expect(parsed.modelSelection?.provider).toBe("claudeAgent");
+    expect(parsed.provider).toBe("claude");
+    expect(parsed.modelSelection?.provider).toBe("claude");
     expect(parsed.modelSelection?.model).toBe("claude-sonnet-4-6");
-    if (parsed.modelSelection?.provider !== "claudeAgent") {
+    if (parsed.modelSelection?.provider !== "claude") {
       throw new Error("Expected claude modelSelection");
     }
     expect(parsed.modelSelection.options?.thinking).toBe(true);
     expect(parsed.modelSelection.options?.effort).toBe("max");
     expect(parsed.modelSelection.options?.fastMode).toBe(true);
-    expect(parsed.providerOptions?.claudeAgent?.binaryPath).toBe("/usr/local/bin/claude");
-    expect(parsed.providerOptions?.claudeAgent?.permissionMode).toBe("plan");
-    expect(parsed.providerOptions?.claudeAgent?.maxThinkingTokens).toBe(12_000);
+    expect(parsed.providerOptions?.claude?.binaryPath).toBe("/usr/local/bin/claude");
+    expect(parsed.providerOptions?.claude?.permissionMode).toBe("plan");
+    expect(parsed.providerOptions?.claude?.maxThinkingTokens).toBe(12_000);
     expect(parsed.runtimeMode).toBe("full-access");
   });
 });
@@ -129,7 +129,7 @@ describe("ProviderSendTurnInput", () => {
     const parsed = decodeProviderSendTurnInput({
       threadId: "thread-1",
       modelSelection: {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-sonnet-4-6",
         options: {
           effort: "ultrathink",
@@ -138,8 +138,8 @@ describe("ProviderSendTurnInput", () => {
       },
     });
 
-    expect(parsed.modelSelection?.provider).toBe("claudeAgent");
-    if (parsed.modelSelection?.provider !== "claudeAgent") {
+    expect(parsed.modelSelection?.provider).toBe("claude");
+    if (parsed.modelSelection?.provider !== "claude") {
       throw new Error("Expected claude modelSelection");
     }
     expect(parsed.modelSelection.options?.effort).toBe("ultrathink");
@@ -150,7 +150,7 @@ describe("ProviderSendTurnInput", () => {
     const parsed = decodeProviderSendTurnInput({
       threadId: "thread-1",
       modelSelection: {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-opus-4-7",
         options: {
           effort: "xhigh",
@@ -158,8 +158,8 @@ describe("ProviderSendTurnInput", () => {
       },
     });
 
-    expect(parsed.modelSelection?.provider).toBe("claudeAgent");
-    if (parsed.modelSelection?.provider !== "claudeAgent") {
+    expect(parsed.modelSelection?.provider).toBe("claude");
+    if (parsed.modelSelection?.provider !== "claude") {
       throw new Error("Expected claude modelSelection");
     }
     expect(parsed.modelSelection.options?.effort).toBe("xhigh");

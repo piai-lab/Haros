@@ -153,7 +153,7 @@ const CODEX_BINDING: ModelSelection = {
 };
 
 const CLAUDE_BINDING: ModelSelection = {
-  provider: "claudeAgent",
+  provider: "claude",
   model: "claude-sonnet-4-5",
 };
 
@@ -180,7 +180,7 @@ describe("turn-start recovery disposition", () => {
         threadModelSelection: CLAUDE_BINDING,
         threadRuntimeMode: "approval-required",
         threadInteractionMode: "default",
-        session: { provider: "claudeAgent", orchestrationStatus: "running" },
+        session: { provider: "claude", orchestrationStatus: "running" },
         activities: matchingFailure,
       }),
     ).toBe("target-committed");
@@ -261,7 +261,7 @@ describe("turn-start recovery disposition", () => {
         threadModelSelection: CLAUDE_BINDING,
         threadRuntimeMode: "approval-required",
         threadInteractionMode: "default",
-        session: { provider: "claudeAgent", orchestrationStatus: "running" },
+        session: { provider: "claude", orchestrationStatus: "running" },
         activities: [],
       }),
     ).toBe("pending");
@@ -2377,7 +2377,7 @@ describe("hasServerAcknowledgedLocalDispatch", () => {
         latestTurn: null,
         messages: [],
         session: {
-          provider: "claudeAgent",
+          provider: "claude",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-04-13T00:00:00.000Z",
@@ -2406,7 +2406,7 @@ describe("hasServerAcknowledgedLocalDispatch", () => {
           },
         ],
         session: {
-          provider: "claudeAgent",
+          provider: "claude",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-04-13T00:00:00.000Z",

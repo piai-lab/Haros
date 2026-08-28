@@ -911,8 +911,8 @@ describe("hasLiveTurnTailWork", () => {
 
 describe("PROVIDER_OPTIONS", () => {
   it("lists every discoverable provider without claiming runtime availability", () => {
-    const omnimind = PROVIDER_OPTIONS.find((option) => option.value === "omnimind");
-    const claude = PROVIDER_OPTIONS.find((option) => option.value === "claudeAgent");
+    const omnimind = PROVIDER_OPTIONS.find((option) => option.value === "oa");
+    const claude = PROVIDER_OPTIONS.find((option) => option.value === "claude");
     const cursor = PROVIDER_OPTIONS.find((option) => option.value === "cursor");
     const grok = PROVIDER_OPTIONS.find((option) => option.value === "grok");
     const droid = PROVIDER_OPTIONS.find((option) => option.value === "droid");
@@ -920,9 +920,9 @@ describe("PROVIDER_OPTIONS", () => {
     const opencode = PROVIDER_OPTIONS.find((option) => option.value === "opencode");
     const pi = PROVIDER_OPTIONS.find((option) => option.value === "pi");
     expect(PROVIDER_OPTIONS).toEqual([
-      { value: "omnimind", label: "OmniMind" },
+      { value: "oa", label: "OmniMind" },
       { value: "codex", label: "Codex" },
-      { value: "claudeAgent", label: "Claude" },
+      { value: "claude", label: "Claude" },
       { value: "cursor", label: "Cursor" },
       { value: "antigravity", label: "Antigravity" },
       { value: "grok", label: "Grok" },
@@ -932,11 +932,11 @@ describe("PROVIDER_OPTIONS", () => {
       { value: "pi", label: "Pi" },
     ]);
     expect(omnimind).toEqual({
-      value: "omnimind",
+      value: "oa",
       label: "OmniMind",
     });
     expect(claude).toEqual({
-      value: "claudeAgent",
+      value: "claude",
       label: "Claude",
     });
     expect(cursor).toEqual({

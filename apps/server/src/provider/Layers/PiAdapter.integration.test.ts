@@ -294,18 +294,18 @@ describe("OmniMind Agent Plan lifecycle", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "chat",
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const planTurn = yield* adapter.sendTurn({
               threadId,
               input: "/reload and inspect the workspace",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               interactionMode: "plan",
             });
             yield* Effect.promise(() =>
@@ -322,7 +322,7 @@ describe("OmniMind Agent Plan lifecycle", () => {
               threadId,
               input: "ordinary continuation",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               interactionMode: "default",
             });
             yield* Effect.promise(() =>
@@ -560,19 +560,19 @@ describe("Pi native OmniMind gateway tools", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             const agentSession = yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId: agentThreadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const agentTurn = yield* adapter.sendTurn({
               threadId: agentThreadId,
               input: "Open a browser page",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -588,7 +588,7 @@ describe("Pi native OmniMind gateway tools", () => {
               threadId: agentThreadId,
               input: "Continue on the native branch",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -605,7 +605,7 @@ describe("Pi native OmniMind gateway tools", () => {
               threadId: agentThreadId,
               input: "Continue after reloading Session resources",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -620,7 +620,7 @@ describe("Pi native OmniMind gateway tools", () => {
             yield* adapter.stopSession(agentThreadId);
 
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId: agentThreadId,
               cwd,
               workSurface: "agent",
@@ -628,14 +628,14 @@ describe("Pi native OmniMind gateway tools", () => {
               ...(agentSession.resumeCursor === undefined
                 ? {}
                 : { resumeCursor: agentSession.resumeCursor }),
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const resumedTurn = yield* adapter.sendTurn({
               threadId: agentThreadId,
               input: "Continue after native resume",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -650,18 +650,18 @@ describe("Pi native OmniMind gateway tools", () => {
             yield* adapter.stopSession(agentThreadId);
 
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId: chatThreadId,
               cwd,
               workSurface: "chat",
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const chatTurn = yield* adapter.sendTurn({
               threadId: chatThreadId,
               input: "Explain the browser capability",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -766,18 +766,18 @@ describe("Pi native OmniMind gateway tools", () => {
             ).pipe(Effect.forkChild);
 
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId: noUiThreadId,
               cwd,
               workSurface: "chat",
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const noUiTurn = yield* adapter.sendTurn({
               threadId: noUiThreadId,
               input: "Complete without a presenter.",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -793,7 +793,7 @@ describe("Pi native OmniMind gateway tools", () => {
               threadId: askThreadId,
               input: "Ask before deciding.",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -854,7 +854,7 @@ describe("Pi native OmniMind gateway tools", () => {
               threadId: askThreadId,
               input: "Ask again, then lose the presenter.",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -891,7 +891,7 @@ describe("Pi native OmniMind gateway tools", () => {
               threadId: askThreadId,
               input: "Ask again, then stop the owning turn.",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -931,7 +931,7 @@ describe("Pi native OmniMind gateway tools", () => {
               threadId: askThreadId,
               input: "Continue after a same-name Extension appears.",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -1147,12 +1147,12 @@ describe("Pi native OmniMind gateway tools", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const send = (
@@ -1164,7 +1164,7 @@ describe("Pi native OmniMind gateway tools", () => {
                   threadId,
                   input,
                   attachments: [],
-                  modelSelection: { provider: "omnimind", model: "local/safe-model" },
+                  modelSelection: { provider: "oa", model: "local/safe-model" },
                 },
                 dispatchContext,
               );
@@ -1279,12 +1279,12 @@ describe("Pi native OmniMind gateway tools", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             enabled = false;
@@ -1294,7 +1294,7 @@ describe("Pi native OmniMind gateway tools", () => {
                   threadId,
                   input: "Continue the goal",
                   attachments: [],
-                  modelSelection: { provider: "omnimind", model: "local/safe-model" },
+                  modelSelection: { provider: "oa", model: "local/safe-model" },
                 },
                 { turnKind: "goal-continuation", dispatchOrigin: "agent" },
               ),
@@ -1303,7 +1303,7 @@ describe("Pi native OmniMind gateway tools", () => {
               threadId,
               input: "Continue with the ordinary Agent task",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -1878,14 +1878,14 @@ describe("getPiDiscoverableModels", () => {
         Effect.scoped(
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
-            const catalog = yield* adapter.listModels!({ provider: "omnimind", cwd });
+            const catalog = yield* adapter.listModels!({ provider: "oa", cwd });
             const session = yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const reloaded = yield* adapter.reloadSessionResources!(threadId);
@@ -1900,7 +1900,7 @@ describe("getPiDiscoverableModels", () => {
         expect.objectContaining({ slug: "local/safe-model", upstreamProviderId: "local" }),
       );
       expect(result.session).toMatchObject({
-        provider: "omnimind",
+        provider: "oa",
         model: "local/safe-model",
         status: "ready",
       });
@@ -1940,9 +1940,9 @@ describe("getPiDiscoverableModels", () => {
         Effect.scoped(
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
-            const models = yield* adapter.listModels!({ provider: "omnimind", cwd });
-            const skills = yield* adapter.listSkills!({ provider: "omnimind", cwd });
-            const commands = yield* adapter.listCommands!({ provider: "omnimind", cwd });
+            const models = yield* adapter.listModels!({ provider: "oa", cwd });
+            const skills = yield* adapter.listSkills!({ provider: "oa", cwd });
+            const commands = yield* adapter.listCommands!({ provider: "oa", cwd });
             return { commands, models, skills };
           }).pipe(Effect.provide(layer)),
         ),
@@ -2026,20 +2026,20 @@ describe("getPiDiscoverableModels", () => {
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId: agentThreadId,
               cwd: projectA,
               workSurface: "agent",
               productSurface: "agent",
               projectContextRoot: projectA,
               modelSelection: {
-                provider: "omnimind",
+                provider: "oa",
                 model: "local/safe-model",
               },
               runtimeMode: "full-access",
             });
             const agentA = yield* adapter.listSkills!({
-              provider: "omnimind",
+              provider: "oa",
               threadId: agentThreadId,
               cwd: projectA,
               resourceScope: {
@@ -2048,19 +2048,19 @@ describe("getPiDiscoverableModels", () => {
               },
             });
             const failClosedSkills = yield* adapter.listSkills!({
-              provider: "omnimind",
+              provider: "oa",
               threadId: agentThreadId,
               cwd: projectA,
               resourceScope: { kind: "global-only" },
             });
             const failClosedCommands = yield* adapter.listCommands!({
-              provider: "omnimind",
+              provider: "oa",
               threadId: agentThreadId,
               cwd: projectA,
               resourceScope: { kind: "global-only" },
             });
             const projectBCommands = yield* adapter.listCommands!({
-              provider: "omnimind",
+              provider: "oa",
               threadId: agentThreadId,
               cwd: projectB,
               resourceScope: {
@@ -2071,19 +2071,19 @@ describe("getPiDiscoverableModels", () => {
             yield* adapter.stopSession(agentThreadId);
 
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId: chatThreadId,
               cwd: projectA,
               workSurface: "chat",
               productSurface: "chat",
               modelSelection: {
-                provider: "omnimind",
+                provider: "oa",
                 model: "local/safe-model",
               },
               runtimeMode: "full-access",
             });
             const chatSkills = yield* adapter.listSkills!({
-              provider: "omnimind",
+              provider: "oa",
               threadId: chatThreadId,
               cwd: projectA,
               resourceScope: { kind: "global-only" },
@@ -2091,19 +2091,19 @@ describe("getPiDiscoverableModels", () => {
             yield* adapter.stopSession(chatThreadId);
 
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId: studioThreadId,
               cwd: projectB,
               workSurface: "chat",
               productSurface: "studio",
               modelSelection: {
-                provider: "omnimind",
+                provider: "oa",
                 model: "local/safe-model",
               },
               runtimeMode: "full-access",
             });
             const studioCommands = yield* adapter.listCommands!({
-              provider: "omnimind",
+              provider: "oa",
               threadId: studioThreadId,
               cwd: projectB,
               resourceScope: { kind: "global-only" },
@@ -2292,19 +2292,19 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             const agentSession = yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId: agentThreadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const firstAgentTurn = yield* adapter.sendTurn({
               threadId: agentThreadId,
               input: "first Agent turn",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() => waitForTurn(events, firstAgentTurn.turnId));
             yield* adapter.reloadSessionResources!(agentThreadId);
@@ -2312,7 +2312,7 @@ describe("getPiDiscoverableModels", () => {
               threadId: agentThreadId,
               input: "second Agent turn after reload",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() => waitForTurn(events, secondAgentTurn.turnId));
             yield* adapter.rollbackThread(agentThreadId, 1);
@@ -2320,13 +2320,13 @@ describe("getPiDiscoverableModels", () => {
               threadId: agentThreadId,
               input: "third Agent turn after branch rollback",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() => waitForTurn(events, thirdAgentTurn.turnId));
             yield* adapter.stopSession(agentThreadId);
 
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId: agentThreadId,
               cwd,
               workSurface: "agent",
@@ -2334,31 +2334,31 @@ describe("getPiDiscoverableModels", () => {
               ...(agentSession.resumeCursor === undefined
                 ? {}
                 : { resumeCursor: agentSession.resumeCursor }),
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const resumedAgentTurn = yield* adapter.sendTurn({
               threadId: agentThreadId,
               input: "fourth Agent turn after resume",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() => waitForTurn(events, resumedAgentTurn.turnId));
             yield* adapter.stopSession(agentThreadId);
 
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId: chatThreadId,
               cwd,
               workSurface: "chat",
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const chatTurn = yield* adapter.sendTurn({
               threadId: chatThreadId,
               input: "Chat turn",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() => waitForTurn(events, chatTurn.turnId));
             yield* adapter.stopSession(chatThreadId);
@@ -2496,11 +2496,11 @@ describe("getPiDiscoverableModels", () => {
             ).toMatchObject({ state: "changed" });
             const start = () =>
               adapter.startSession({
-                provider: "omnimind",
+                provider: "oa",
                 threadId,
                 cwd,
                 workSurface: "chat",
-                modelSelection: { provider: "omnimind", model: "local/safe-model" },
+                modelSelection: { provider: "oa", model: "local/safe-model" },
                 runtimeMode: "full-access",
               });
             yield* start();
@@ -2510,7 +2510,7 @@ describe("getPiDiscoverableModels", () => {
                   threadId,
                   input,
                   attachments: [],
-                  modelSelection: { provider: "omnimind", model: "local/safe-model" },
+                  modelSelection: { provider: "oa", model: "local/safe-model" },
                 });
                 yield* Effect.promise(() =>
                   waitForTestCondition(
@@ -2620,12 +2620,12 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const send = (input: string) =>
@@ -2634,7 +2634,7 @@ describe("getPiDiscoverableModels", () => {
                   threadId,
                   input,
                   attachments: [],
-                  modelSelection: { provider: "omnimind", model: "local/safe-model" },
+                  modelSelection: { provider: "oa", model: "local/safe-model" },
                 });
                 yield* Effect.promise(() => waitForTurn(events, turn.turnId));
               });
@@ -2735,7 +2735,7 @@ describe("getPiDiscoverableModels", () => {
             const adapter = yield* OmniMindAgentAdapter;
             const missingSurface = yield* Effect.exit(
               adapter.startSession({
-                provider: "omnimind",
+                provider: "oa",
                 threadId: ThreadId.makeUnsafe("omnimind-missing-surface"),
                 cwd,
                 runtimeMode: "full-access",
@@ -2743,7 +2743,7 @@ describe("getPiDiscoverableModels", () => {
             );
             const missingRoot = yield* Effect.exit(
               adapter.startSession({
-                provider: "omnimind",
+                provider: "oa",
                 threadId: ThreadId.makeUnsafe("omnimind-missing-root"),
                 cwd,
                 workSurface: "agent",
@@ -2752,7 +2752,7 @@ describe("getPiDiscoverableModels", () => {
             );
             const chatWithRoot = yield* Effect.exit(
               adapter.startSession({
-                provider: "omnimind",
+                provider: "oa",
                 threadId: ThreadId.makeUnsafe("omnimind-chat-with-root"),
                 cwd,
                 workSurface: "chat",
@@ -2762,7 +2762,7 @@ describe("getPiDiscoverableModels", () => {
             );
             const cwdOutsideRoot = yield* Effect.exit(
               adapter.startSession({
-                provider: "omnimind",
+                provider: "oa",
                 threadId: ThreadId.makeUnsafe("omnimind-cwd-outside-root"),
                 cwd,
                 workSurface: "agent",
@@ -2863,18 +2863,18 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "chat",
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const sent = yield* adapter.sendTurn({
               threadId,
               input: "Use the available extension tool.",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -2990,19 +2990,19 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const turn = yield* adapter.sendTurn({
               threadId,
               input: "Use the selected project tool.",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3092,12 +3092,12 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             yield* Effect.sync(() => {
@@ -3124,7 +3124,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "Use the tool selected after reload.",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3206,19 +3206,19 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const sent = yield* adapter.sendTurn({
               threadId,
               input: "Do the multi-step request and keep every part visible.",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3304,12 +3304,12 @@ describe("getPiDiscoverableModels", () => {
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const before = yield* Effect.exit(
@@ -3317,7 +3317,7 @@ describe("getPiDiscoverableModels", () => {
                 threadId,
                 input: "before credential mutation",
                 attachments: [],
-                modelSelection: { provider: "omnimind", model: "local/safe-model" },
+                modelSelection: { provider: "oa", model: "local/safe-model" },
               }),
             );
             yield* Effect.sync(() => {
@@ -3331,7 +3331,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "after credential mutation",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.sleep("50 millis");
             yield* adapter.stopSession(threadId);
@@ -3410,19 +3410,19 @@ describe("getPiDiscoverableModels", () => {
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const first = yield* adapter.sendTurn({
               threadId,
               input: "active turn",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.sleep("20 millis");
             const reloadWhileActive = yield* adapter.reloadSessionResources!(threadId);
@@ -3438,7 +3438,7 @@ describe("getPiDiscoverableModels", () => {
                 threadId,
                 input: "must not hot-switch",
                 attachments: [],
-                modelSelection: { provider: "omnimind", model: "local/safe-model" },
+                modelSelection: { provider: "oa", model: "local/safe-model" },
               }),
             );
             yield* Effect.sync(releaseFirstRequest);
@@ -3447,7 +3447,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "next turn",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.sleep("50 millis");
             yield* adapter.stopSession(threadId);
@@ -3521,19 +3521,19 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const turn = yield* adapter.sendTurn({
               threadId,
               input: "retry once",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3556,7 +3556,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "next turn",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3669,19 +3669,19 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const turn = yield* adapter.sendTurn({
               threadId,
               input: "exhaust retry",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3768,19 +3768,19 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const turn = yield* adapter.sendTurn({
               threadId,
               input: "cancel retry",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3893,19 +3893,19 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const seed = yield* adapter.sendTurn({
               threadId,
               input: "seed enough history for overflow recovery",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3920,7 +3920,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "recover this turn after context compaction",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -4085,12 +4085,12 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "omnimind",
+              provider: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const requestsAfterStart = requestCount;
@@ -4098,7 +4098,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "/noop",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -4116,7 +4116,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "/fail",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -4132,7 +4132,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "handled input",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -4148,7 +4148,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "/agent",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -4177,7 +4177,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "/mixed",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -4193,7 +4193,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "ordinary next turn",
               attachments: [],
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              modelSelection: { provider: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(

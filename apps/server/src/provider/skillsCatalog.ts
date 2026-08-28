@@ -10,7 +10,7 @@ import { existsSync, realpathSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as nodePath from "node:path";
 
-import type { ProviderKind, ProviderSkillDescriptor } from "@harnessos/contracts";
+import type { EngineKind, ProviderSkillDescriptor } from "@harnessos/contracts";
 import { discoverClaudePluginSkillRoots } from "./claudePluginSkills.ts";
 
 type FrontmatterValue = string | boolean;
@@ -352,7 +352,7 @@ export interface SkillsCatalogDiscoveryInput {
   /** OmniMind base dir (usually `~/.harnessos`); skills live in `{base}/skills`. */
   readonly harnessosBaseDir: string;
   /** Provider whose native copies should win when the same skill exists in several roots. */
-  readonly provider?: ProviderKind | null;
+  readonly provider?: EngineKind | null;
   /** Settings needs every origin; composer/provider pickers keep one winner by name. */
   readonly includeDuplicateOrigins?: boolean;
   /** Bypass the short-lived discovery cache. */
@@ -365,7 +365,7 @@ export interface SkillsCatalogRootInput extends SkillsCatalogDiscoveryInput {
 }
 
 const HOME_ORIGIN_ORDER = [
-  "omnimind",
+  "oa",
   "codex",
   "claude",
   "cursor",
@@ -425,7 +425,7 @@ interface SkillOriginRootSpec {
 }
 
 const SKILL_ORIGIN_ROOTS = {
-  omnimind: {
+  oa: {
     homeRoots: (input) => [harnessosSkillsDir(input.harnessosBaseDir)],
     projectRootNames: [".harnessos"],
   },
@@ -473,9 +473,9 @@ const SKILL_ORIGIN_ROOTS = {
 } as const satisfies Record<SkillsHomeOrigin, SkillOriginRootSpec>;
 
 const PROVIDER_SKILL_ORIGIN_PREFERENCES = {
-  omnimind: ["omnimind", "agents"],
+  oa: ["oa", "agents"],
   codex: ["codex", "agents"],
-  claudeAgent: ["claude"],
+  claude: ["claude"],
   cursor: ["cursor", "agents", "claude", "codex"],
   antigravity: ["agents"],
   grok: ["grok", "claude", "agents"],
@@ -483,7 +483,7 @@ const PROVIDER_SKILL_ORIGIN_PREFERENCES = {
   kilo: ["kilo", "agents", "claude"],
   opencode: ["opencode", "claude", "agents"],
   pi: ["pi", "agents"],
-} as const satisfies Partial<Record<ProviderKind, readonly SkillsHomeOrigin[]>>;
+} as const satisfies Partial<Record<EngineKind, readonly SkillsHomeOrigin[]>>;
 
 function homeRootsForOrigin(
   origin: SkillsHomeOrigin,
@@ -499,23 +499,23 @@ function projectRootNamesForOrigin(origin: SkillsHomeOrigin): readonly string[] 
 // Keep each selected Engine's documented compatible native roots together. The
 // OmniMind Library root is added separately; unrelated Engine homes stay out.
 function preferredOriginsForProvider(
-  provider: ProviderKind | null | undefined,
+  provider: EngineKind | null | undefined,
 ): ReadonlyArray<SkillsHomeOrigin> {
   return provider ? (PROVIDER_SKILL_ORIGIN_PREFERENCES[provider] ?? []) : [];
 }
 
 function orderedOriginsForProvider(
-  provider: ProviderKind | null | undefined,
+  provider: EngineKind | null | undefined,
   includeOmniMindRoot = true,
   includeRemainingOrigins = true,
 ): SkillsHomeOrigin[] {
   const preferred = preferredOriginsForProvider(provider);
   const ordered = [...preferred];
-  if (includeOmniMindRoot && !ordered.includes("omnimind")) {
-    ordered.push("omnimind");
+  if (includeOmniMindRoot && !ordered.includes("oa")) {
+    ordered.push("oa");
   }
   if (!includeRemainingOrigins) {
-    return ordered.filter((origin) => includeOmniMindRoot || origin !== "omnimind");
+    return ordered.filter((origin) => includeOmniMindRoot || origin !== "oa");
   }
   for (const origin of HOME_ORIGIN_ORDER) {
     // Stock Pi owns `.pi`. Do not enumerate its roots until the user has
@@ -523,7 +523,7 @@ function orderedOriginsForProvider(
     if (origin === "pi" && provider !== "pi") {
       continue;
     }
-    if (!includeOmniMindRoot && origin === "omnimind") {
+    if (!includeOmniMindRoot && origin === "oa") {
       continue;
     }
     if (!ordered.includes(origin)) {
@@ -679,7 +679,7 @@ export function mergeSkillsIntoCatalog(input: {
 }
 
 export function isOmniMindLibrarySkill(skill: ProviderSkillDescriptor): boolean {
-  if (skill.scope === "omnimind") {
+  if (skill.scope === "oa") {
     return true;
   }
   return skill.path.split(/[\\/]+/).includes(".harnessos");

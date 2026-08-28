@@ -2,8 +2,8 @@
 // Purpose: Locks down Settings -> Skills grouping for duplicate provider skill copies.
 // Layer: Web settings logic tests
 
-import { PROVIDER_KINDS, type ProviderSkillDescriptor } from "@harnessos/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_KINDS, type ProviderSkillDescriptor } from "@harnessos/contracts";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -47,7 +47,7 @@ describe("buildSettingsSkillGroups", () => {
 
     const shared = groups.find((group) => group.key === "check-code");
     expect(shared?.section).toBe("shared");
-    expect(shared?.providers).toEqual(["codex", "claudeAgent"]);
+    expect(shared?.providers).toEqual(["codex", "claude"]);
     expect(shared?.sources.map((source) => source.origin)).toEqual(["codex", "claude"]);
     expect(shared?.sources.map((source) => source.skill.path)).toEqual([
       "/Users/test/.codex/skills/check-code/SKILL.md",
@@ -116,18 +116,18 @@ describe("buildSettingsSkillSections", () => {
 
 describe("Settings skill Provider projection", () => {
   it("derives Provider-backed origins from canonical identity instead of a second member list", () => {
-    const providerOrigins = ORIGIN_SECTION_ORDER.slice(0, PROVIDER_KINDS.length);
+    const providerOrigins = ORIGIN_SECTION_ORDER.slice(0, ENGINE_KINDS.length);
     expect(providerOrigins).toEqual(
-      PROVIDER_KINDS.map((provider) => (provider === "claudeAgent" ? "claude" : provider)),
+      ENGINE_KINDS.map((provider) => (provider === "claude" ? "claude" : provider)),
     );
 
-    for (const provider of PROVIDER_KINDS) {
-      const origin = provider === "claudeAgent" ? "claude" : provider;
+    for (const provider of ENGINE_KINDS) {
+      const origin = provider === "claude" ? "claude" : provider;
       const info = skillOriginInfo(origin);
-      if (provider === "omnimind") {
+      if (provider === "oa") {
         expect(info).toEqual({ label: "OmniMind", provider: null });
       } else {
-        expect(info).toEqual({ label: PROVIDER_DISPLAY_NAMES[provider], provider });
+        expect(info).toEqual({ label: ENGINE_DISPLAY_NAMES[provider], provider });
       }
     }
   });

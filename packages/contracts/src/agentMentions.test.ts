@@ -69,10 +69,10 @@ describe("agentMentions", () => {
   });
 
   it("shows provider-specific Claude subagents in autocomplete", () => {
-    expect(getAgentMentionAutocompleteAliases("claudeAgent")).toEqual([
+    expect(getAgentMentionAutocompleteAliases("claude")).toEqual([
       {
         alias: "explore",
-        provider: "claudeAgent",
+        provider: "claude",
         kind: "claude-subagent",
         agentName: "explore",
         displayName: "Explore",
@@ -86,7 +86,7 @@ describe("agentMentions", () => {
       },
       {
         alias: "review",
-        provider: "claudeAgent",
+        provider: "claude",
         kind: "claude-subagent",
         agentName: "review",
         displayName: "Code Review",
@@ -100,7 +100,7 @@ describe("agentMentions", () => {
       },
       {
         alias: "build",
-        provider: "claudeAgent",
+        provider: "claude",
         kind: "claude-subagent",
         agentName: "build",
         displayName: "Implementer",
@@ -114,7 +114,7 @@ describe("agentMentions", () => {
       },
       {
         alias: "plan",
-        provider: "claudeAgent",
+        provider: "claude",
         kind: "claude-subagent",
         agentName: "plan",
         displayName: "Planner",
@@ -131,13 +131,13 @@ describe("agentMentions", () => {
 
   it("keeps compatibility aliases resolvable even when hidden from autocomplete", () => {
     const codexCompatAlias = resolveAgentAlias("codex", "codex");
-    const claudeCompatAlias = resolveAgentAlias("reviewer", "claudeAgent");
+    const claudeCompatAlias = resolveAgentAlias("reviewer", "claude");
 
     expect(getAgentMentionAliases("codex").map(({ alias }) => alias)).toContain("codex");
     expect(getAgentMentionAliases("codex").map(({ alias }) => alias)).toContain("5.3-spark");
     expect(getAgentMentionAliases("codex").map(({ alias }) => alias)).toContain("5.4-mini");
-    expect(getAgentMentionAliases("claudeAgent").map(({ alias }) => alias)).toContain("reviewer");
-    expect(getAgentMentionAliases("claudeAgent").map(({ alias }) => alias)).toContain("planner");
+    expect(getAgentMentionAliases("claude").map(({ alias }) => alias)).toContain("reviewer");
+    expect(getAgentMentionAliases("claude").map(({ alias }) => alias)).toContain("planner");
 
     expect(codexCompatAlias?.kind).toBe("model");
     expect(codexCompatAlias?.provider).toBe("codex");
@@ -145,7 +145,7 @@ describe("agentMentions", () => {
       "gpt-5.3-codex",
     );
     expect(claudeCompatAlias?.kind).toBe("claude-subagent");
-    expect(claudeCompatAlias?.provider).toBe("claudeAgent");
+    expect(claudeCompatAlias?.provider).toBe("claude");
     expect(claudeCompatAlias?.kind === "claude-subagent" ? claudeCompatAlias.agentName : null).toBe(
       "review",
     );

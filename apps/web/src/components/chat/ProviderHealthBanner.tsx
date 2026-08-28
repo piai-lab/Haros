@@ -4,7 +4,7 @@
 // Exports: ProviderHealthBanner
 
 import type { ServerProviderStatus } from "@harnessos/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "../ui/alert";
 import { IconButton } from "../ui/icon-button";
 import {
@@ -26,7 +26,7 @@ export const ProviderHealthBanner = function ProviderHealthBanner({
     return null;
   }
 
-  const providerLabel = PROVIDER_DISPLAY_NAMES[status.provider] ?? status.provider;
+  const providerLabel = ENGINE_DISPLAY_NAMES[status.provider] ?? status.provider;
   const defaultMessage =
     status.status === "error"
       ? `${providerLabel} provider is unavailable.`

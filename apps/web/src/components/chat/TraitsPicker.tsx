@@ -6,7 +6,7 @@
 import {
   type OpenCodeModelOptions,
   type ProviderAgentDescriptor,
-  type ProviderKind,
+  type EngineKind,
   type ProviderModelDescriptor,
   type ThreadId,
 } from "@harnessos/contracts";
@@ -45,14 +45,14 @@ import { useI18n } from "~/i18n";
 
 const ULTRATHINK_PROMPT_PREFIX = "Ultrathink:\n";
 
-function defaultAgentForProvider(provider: ProviderKind): string | null {
+function defaultAgentForProvider(provider: EngineKind): string | null {
   if (provider === "kilo") return "code";
   if (provider === "opencode") return "build";
   return null;
 }
 
 function getAgentOptions(
-  provider: ProviderKind,
+  provider: EngineKind,
   runtimeAgents: ReadonlyArray<ProviderAgentDescriptor> | null | undefined,
 ): ReadonlyArray<ProviderAgentDescriptor> {
   if (provider !== "kilo" && provider !== "opencode") return [];
@@ -60,7 +60,7 @@ function getAgentOptions(
 }
 
 function getSelectedAgentValue(
-  provider: ProviderKind,
+  provider: EngineKind,
   modelOptions: ProviderOptions | null | undefined,
 ): string | null {
   const defaultAgent = defaultAgentForProvider(provider);
@@ -81,7 +81,7 @@ function findAgentLabel(
 // Mirrors the trigger label assembly so callers (e.g. the composer footer
 // width planner) can measure the summary without rendering the picker.
 export function resolveTraitsTriggerSummary(options: {
-  provider: ProviderKind;
+  provider: EngineKind;
   model: string | null | undefined;
   prompt: string;
   modelOptions: ProviderOptions | null | undefined;
@@ -233,7 +233,7 @@ function TraitRadioSection({
 }
 
 export interface TraitsMenuContentProps {
-  provider: ProviderKind;
+  provider: EngineKind;
   threadId: ThreadId;
   model: string | null | undefined;
   runtimeModel?: ProviderModelDescriptor | undefined;
@@ -341,9 +341,9 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
       primarySelectDescriptorId ??
       (provider === "kilo" || provider === "opencode"
         ? "variant"
-        : provider === "pi" || provider === "omnimind"
+        : provider === "pi" || provider === "oa"
           ? "thinkingLevel"
-          : provider === "claudeAgent"
+          : provider === "claude"
             ? "effort"
             : "reasoningEffort");
     commitTrait(buildProviderOptionPatch(provider, optionId, nextOption.value));
@@ -390,7 +390,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
             label={
               provider === "kilo" || provider === "opencode"
                 ? t("composer.variant")
-                : provider === "pi" || provider === "omnimind"
+                : provider === "pi" || provider === "oa"
                   ? t("composer.thinkingLevel")
                   : t("composer.effort")
             }

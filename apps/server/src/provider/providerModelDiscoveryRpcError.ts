@@ -5,7 +5,7 @@
 import {
   PROVIDER_MODEL_DISCOVERY_ERROR_CODES,
   WsRpcError,
-  type ProviderKind,
+  type EngineKind,
   type ServerProviderStatus,
 } from "@harnessos/contracts";
 import { Schema } from "effect";
@@ -22,14 +22,14 @@ const STARTUP_RETRY_AFTER_MS = 250;
 
 function statusForProvider(
   statuses: ReadonlyArray<ServerProviderStatus>,
-  provider: ProviderKind,
+  provider: EngineKind,
 ): ServerProviderStatus | undefined {
   return statuses.find((status) => status.provider === provider);
 }
 
 export function toProviderModelDiscoveryRpcError(input: {
   readonly cause: unknown;
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly statuses: ReadonlyArray<ServerProviderStatus>;
 }): WsRpcError {
   if (

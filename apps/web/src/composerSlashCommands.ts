@@ -2,9 +2,9 @@ import {
   THREAD_GOAL_MAX_CHARS,
   type GitBranch,
   type ProviderInteractionMode,
-  type ProviderKind,
+  type EngineKind,
 } from "@harnessos/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { DEFAULT_PROVIDER_ORDER } from "./providerOrdering";
 import {
   BUILT_IN_COMPOSER_SLASH_COMMANDS,
@@ -46,18 +46,18 @@ const CLAUDE_NATIVE_COMMAND_ALIASES: Record<string, readonly string[]> = {
 };
 
 function getProviderNativeSlashCommandAliases(
-  provider: ProviderKind,
+  provider: EngineKind,
   command: string,
 ): readonly string[] {
   const normalizedCommand = normalizeComposerSlashCommandName(command);
-  if (provider !== "claudeAgent") {
+  if (provider !== "claude") {
     return [];
   }
   return CLAUDE_NATIVE_COMMAND_ALIASES[normalizedCommand] ?? [];
 }
 
 function expandProviderNativeSlashCommandNames(
-  provider: ProviderKind,
+  provider: EngineKind,
   commandNames: ReadonlyArray<string>,
 ): string[] {
   const expandedNames = new Set<string>();
@@ -79,12 +79,12 @@ function expandProviderNativeSlashCommandNames(
  * win over listing a native "review" command. OpenCode exposes /review in its
  * command list but does not honor bare `/review` text turns (#218).
  */
-export function providerUsesAppOwnedReviewSlashCommand(provider: ProviderKind): boolean {
+export function providerUsesAppOwnedReviewSlashCommand(provider: EngineKind): boolean {
   return provider === "codex" || provider === "opencode";
 }
 
 function shouldKeepBuiltInSlashCommandDespiteNativeCollision(
-  provider: ProviderKind,
+  provider: EngineKind,
   command: ComposerSlashCommand,
 ): boolean {
   return (
@@ -104,7 +104,7 @@ function shouldKeepBuiltInSlashCommandDespiteNativeCollision(
 }
 
 export function shouldHideProviderNativeCommandFromComposerMenu(
-  provider: ProviderKind,
+  provider: EngineKind,
   command: string,
   options: { readonly availableAppCommands?: ReadonlySet<string> } = {},
 ): boolean {
@@ -131,7 +131,7 @@ export function shouldHideProviderNativeCommandFromComposerMenu(
  * `/review` text. Codex/OpenCode use the app review UX instead (#218).
  */
 export function providerSupportsTextNativeReviewCommand(
-  provider: ProviderKind,
+  provider: EngineKind,
   nativeCommandNames: ReadonlyArray<{ readonly name: string } | string>,
 ): boolean {
   if (providerUsesAppOwnedReviewSlashCommand(provider)) {
@@ -144,7 +144,7 @@ export function providerSupportsTextNativeReviewCommand(
 }
 
 export function getProviderNativeSlashCommandSearchTerms(
-  provider: ProviderKind,
+  provider: EngineKind,
   command: string,
 ): readonly string[] {
   const normalizedCommand = normalizeComposerSlashCommandName(command);
@@ -304,7 +304,7 @@ export function resolveComposerSlashRootBranch(input: {
 }
 
 export function getAvailableComposerSlashCommands(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   supportsFastSlashCommand: boolean;
   canOfferCompactCommand: boolean;
   canOfferReviewCommand: boolean;
@@ -325,7 +325,7 @@ export function getAvailableComposerSlashCommands(input: {
   );
 
   const availableCommands: ComposerSlashCommand[] =
-    input.provider !== "claudeAgent"
+    input.provider !== "claude"
       ? [
           "clear",
           ...(input.canOfferCompactCommand ? (["compact"] as const) : []),
@@ -368,7 +368,7 @@ export function getAvailableComposerSlashCommands(input: {
 }
 
 export function hasProviderNativeSlashCommand(
-  provider: ProviderKind,
+  provider: EngineKind,
   commandNames: ReadonlyArray<string>,
   command: string,
 ): boolean {
@@ -395,18 +395,18 @@ export function buildSlashReviewComposerPrompt(args: string): string {
 }
 
 export interface SideSlashCommandArgs {
-  targetProvider: ProviderKind | null;
+  targetProvider: EngineKind | null;
   prompt: string;
-  unavailableProvider: ProviderKind | null;
+  unavailableProvider: EngineKind | null;
 }
 
-function matchSideProviderToken(token: string): ProviderKind | null {
+function matchSideProviderToken(token: string): EngineKind | null {
   const normalized = token.toLowerCase();
   return (
     DEFAULT_PROVIDER_ORDER.find(
       (provider) =>
         provider.toLowerCase() === normalized ||
-        PROVIDER_DISPLAY_NAMES[provider].toLowerCase() === normalized,
+        ENGINE_DISPLAY_NAMES[provider].toLowerCase() === normalized,
     ) ?? null
   );
 }
@@ -416,8 +416,8 @@ function matchSideProviderToken(token: string): ProviderKind | null {
 export function parseSideSlashCommandArgs(
   args: string,
   input: {
-    currentProvider: ProviderKind;
-    availableTargetProviders: ReadonlyArray<ProviderKind>;
+    currentProvider: EngineKind;
+    availableTargetProviders: ReadonlyArray<EngineKind>;
   },
 ): SideSlashCommandArgs {
   const trimmedArgs = args.trim();

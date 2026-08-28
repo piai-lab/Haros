@@ -11,7 +11,7 @@
 import type {
   ProjectId,
   ProviderInteractionMode,
-  ProviderKind,
+  EngineKind,
   RuntimeMode,
 } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
@@ -170,7 +170,7 @@ export function KanbanNewTaskDialog({
   const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
   const [isTraitsPickerOpen, setIsTraitsPickerOpen] = useState(false);
   const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
-  const [prefetchProviders, setPrefetchProviders] = useState<ReadonlyArray<ProviderKind>>([]);
+  const [prefetchProviders, setPrefetchProviders] = useState<ReadonlyArray<EngineKind>>([]);
   const [isDragOverComposer, setIsDragOverComposer] = useState(false);
   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
   const selectedProject = useMemo(
@@ -189,7 +189,7 @@ export function KanbanNewTaskDialog({
     () => findProviderStatus(providerStatuses, "codex"),
     [providerStatuses],
   );
-  const modelHintByProvider = useMemo<Partial<Record<ProviderKind, string | null>>>(
+  const modelHintByProvider = useMemo<Partial<Record<EngineKind, string | null>>>(
     () => ({ [selectedProvider]: selectedModel }),
     [selectedProvider, selectedModel],
   );
@@ -216,7 +216,7 @@ export function KanbanNewTaskDialog({
   const selectedRuntimeModelForCapabilities = useMemo(
     () =>
       selectedRuntimeModel ??
-      (selectedProvider === "claudeAgent" && typeof selectedModelSupportsAutoMode === "boolean"
+      (selectedProvider === "claude" && typeof selectedModelSupportsAutoMode === "boolean"
         ? {
             slug: selectedModel ?? "default",
             name: selectedModel ?? "default",
@@ -226,7 +226,7 @@ export function KanbanNewTaskDialog({
     [selectedModel, selectedModelSupportsAutoMode, selectedProvider, selectedRuntimeModel],
   );
   const handleProviderModelChange = useCallback(
-    (provider: ProviderKind, model: Parameters<typeof setScratchProviderModel>[1]) => {
+    (provider: EngineKind, model: Parameters<typeof setScratchProviderModel>[1]) => {
       const runtimeModel = resolveRuntimeModelDescriptor({
         provider,
         model,
@@ -573,7 +573,7 @@ export function KanbanNewTaskDialog({
                             selectedProvider,
                             selectedModel,
                             undefined,
-                            selectedProvider === "claudeAgent"
+                            selectedProvider === "claude"
                               ? selectedRuntimeModelForCapabilities?.supportsAutoMode
                               : undefined,
                           )

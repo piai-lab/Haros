@@ -1,5 +1,5 @@
 import type {
-  ProviderKind,
+  EngineKind,
   ServerProviderStatus,
   ServerProviderVersionAdvisory,
 } from "@harnessos/contracts";
@@ -38,7 +38,7 @@ export interface ProviderHomebrewPackageDefinition {
 }
 
 export interface ProviderMaintenanceCapabilities {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly packageName: string | null;
   readonly latestVersionSource: ProviderLatestVersionSource | null;
   readonly update: ProviderMaintenanceCommandAction | null;
@@ -63,7 +63,7 @@ export interface ProviderMaintenanceCapabilityResolutionOptions {
 }
 
 export interface PackageManagedProviderMaintenanceDefinition {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly binaryName: string;
   readonly npmPackageName: string | null;
   readonly homebrew:
@@ -232,7 +232,7 @@ export function deriveNpmGlobalPrefix(commandPath: string): string | null {
 }
 
 export function makeProviderMaintenanceCapabilities(input: {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly packageName: string | null;
   readonly latestVersionSource?: ProviderLatestVersionSource | null;
   readonly updateExecutable: string | null;
@@ -270,7 +270,7 @@ export function makeProviderMaintenanceCapabilities(input: {
 }
 
 function makeManualOnlyProviderMaintenanceCapabilities(input: {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly packageName: string | null;
 }): ProviderMaintenanceCapabilities {
   return makeProviderMaintenanceCapabilities({
@@ -684,7 +684,7 @@ function deriveVersionAdvisory(input: {
 }
 
 export function createProviderVersionAdvisory(input: {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly currentVersion: string | null;
   readonly latestVersion?: string | null;
   readonly checkedAt?: string | null;

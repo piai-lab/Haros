@@ -6,7 +6,7 @@ import {
   CommandId,
   DEFAULT_AUTOMATION_STOP_CONFIDENCE_THRESHOLD,
   MessageId,
-  PROVIDER_KINDS,
+  ENGINE_KINDS,
   ProjectId,
   ThreadId,
   TurnId,
@@ -556,7 +556,7 @@ const gitCore = {
     }),
 } as unknown as GitCoreShape;
 
-const readyProviderStatuses: ServerProviderStatus[] = PROVIDER_KINDS.map((provider) => ({
+const readyProviderStatuses: ServerProviderStatus[] = ENGINE_KINDS.map((provider) => ({
   provider,
   status: "ready" as const,
   available: true,
@@ -612,7 +612,7 @@ layer("AutomationService", (it) => {
       resetHarness();
       const service = yield* AutomationService;
       const unsupportedModelSelection = {
-        provider: "claudeAgent" as const,
+        provider: "claude" as const,
         model: "claude-haiku-4-5",
         supportsAutoMode: false,
       };
@@ -3299,7 +3299,7 @@ layer("AutomationService", (it) => {
         mode: "heartbeat",
         targetThreadId,
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-8",
         },
         completionPolicy: aiCompletionPolicy("the PR is ready"),

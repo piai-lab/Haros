@@ -66,7 +66,7 @@ describe("reconcileAutomationFormAutoModeSupport", () => {
     const form = {
       ...formFromDefinition(null, "project-1"),
       modelSelection: {
-        provider: "claudeAgent" as const,
+        provider: "claude" as const,
         model: "sonnet",
         supportsAutoMode: false,
       },
@@ -75,7 +75,7 @@ describe("reconcileAutomationFormAutoModeSupport", () => {
 
     expect(reconcileAutomationFormAutoModeSupport(form, true)).toMatchObject({
       modelSelection: {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "sonnet",
         supportsAutoMode: true,
       },
@@ -87,7 +87,7 @@ describe("reconcileAutomationFormAutoModeSupport", () => {
     const form = {
       ...formFromDefinition(null, "project-1"),
       modelSelection: {
-        provider: "claudeAgent" as const,
+        provider: "claude" as const,
         model: "sonnet",
         supportsAutoMode: true,
       },
@@ -96,7 +96,7 @@ describe("reconcileAutomationFormAutoModeSupport", () => {
 
     expect(reconcileAutomationFormAutoModeSupport(form, false)).toMatchObject({
       modelSelection: {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "sonnet",
         supportsAutoMode: false,
       },
@@ -499,7 +499,7 @@ describe("automation shared route helpers", () => {
       },
       {
         id: projectId("project-new"),
-        defaultModelSelection: { provider: "claudeAgent", model: "sonnet" },
+        defaultModelSelection: { provider: "claude", model: "sonnet" },
       },
     ] as Parameters<typeof modelSelectionForProjectChange>[0];
 
@@ -508,7 +508,7 @@ describe("automation shared route helpers", () => {
         provider: "codex",
         model: "gpt-5-codex",
       }),
-    ).toEqual({ provider: "claudeAgent", model: "sonnet" });
+    ).toEqual({ provider: "claude", model: "sonnet" });
   });
 
   it("preserves an explicitly chosen model when switching projects", () => {
@@ -519,7 +519,7 @@ describe("automation shared route helpers", () => {
       },
       {
         id: projectId("project-new"),
-        defaultModelSelection: { provider: "claudeAgent", model: "sonnet" },
+        defaultModelSelection: { provider: "claude", model: "sonnet" },
       },
     ] as Parameters<typeof modelSelectionForProjectChange>[0];
 

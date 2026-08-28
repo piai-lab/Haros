@@ -5,7 +5,7 @@ import {
   GROK_REASONING_EFFORT_OPTIONS,
   PI_THINKING_LEVEL_OPTIONS,
   type ModelSelection,
-  type ProviderKind,
+  type EngineKind,
   type ProviderListModelsResult,
   type ProviderModelDescriptor,
   type ServerProviderAuthStatus,
@@ -33,7 +33,7 @@ export class AgentGatewayTargetError extends Error {
 }
 
 export interface AgentGatewayProviderCatalog {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly defaultModel: string | null;
   readonly models: ReadonlyArray<ProviderModelDescriptor>;
   readonly enabled: boolean;
@@ -71,18 +71,18 @@ export interface AgentGatewayTargetOptionGuidance {
   readonly providerOptions: ReadonlyArray<AgentGatewayTargetOptionRule>;
   readonly optionsByModel: Readonly<Record<string, ReadonlyArray<AgentGatewayTargetOptionRule>>>;
   readonly exampleTarget: {
-    readonly provider: ProviderKind;
+    readonly provider: EngineKind;
     readonly model: string;
     readonly options: Readonly<Record<string, AgentGatewayTargetOptionValue>>;
   } | null;
 }
 
-type ModelSelectionForProvider<P extends ProviderKind> = Extract<
+type ModelSelectionForProvider<P extends EngineKind> = Extract<
   ModelSelection,
   { readonly provider: P }
 >;
 
-type ProviderTargetOptionKey<P extends ProviderKind> = keyof NonNullable<
+type ProviderTargetOptionKey<P extends EngineKind> = keyof NonNullable<
   ModelSelectionForProvider<P>["options"]
 > &
   string;
@@ -105,11 +105,11 @@ interface ResolvedProviderTargetOptionRuleSpec extends ProviderTargetOptionRuleS
   readonly key: string;
 }
 
-type ProviderTargetOptionRuleRegistry<P extends ProviderKind> = {
+type ProviderTargetOptionRuleRegistry<P extends EngineKind> = {
   readonly [Key in ProviderTargetOptionKey<P>]: ProviderTargetOptionRuleSpec;
 };
 
-interface ProviderTargetOptionConfigInput<P extends ProviderKind> {
+interface ProviderTargetOptionConfigInput<P extends EngineKind> {
   readonly primaryOptionKey: ProviderTargetOptionKey<P>;
   readonly options: ProviderTargetOptionRuleRegistry<P>;
 }
@@ -119,7 +119,7 @@ interface ProviderTargetOptionConfig {
   readonly options: Readonly<Record<string, ProviderTargetOptionRuleSpec>>;
 }
 
-function defineProviderOptionConfig<P extends ProviderKind>(
+function defineProviderOptionConfig<P extends EngineKind>(
   config: ProviderTargetOptionConfigInput<P>,
 ): ProviderTargetOptionConfig {
   return config;
@@ -186,7 +186,7 @@ const PROVIDER_TARGET_OPTION_RULES = {
       reasoningEffort: providerOptionRule("string", DROID_REASONING_EFFORT_OPTIONS),
     },
   }),
-  claudeAgent: defineProviderOptionConfig<"claudeAgent">({
+  claude: defineProviderOptionConfig<"claude">({
     primaryOptionKey: "effort",
     options: {
       effort: providerOptionRule("string", CLAUDE_CODE_EFFORT_OPTIONS),
@@ -212,7 +212,7 @@ const PROVIDER_TARGET_OPTION_RULES = {
     primaryOptionKey: "thinkingLevel",
     options: { thinkingLevel: providerOptionRule("string", PI_THINKING_LEVEL_OPTIONS) },
   }),
-  omnimind: defineProviderOptionConfig<"omnimind">({
+  oa: defineProviderOptionConfig<"oa">({
     primaryOptionKey: "thinkingLevel",
     options: { thinkingLevel: providerOptionRule("string", PI_THINKING_LEVEL_OPTIONS) },
   }),
@@ -240,14 +240,14 @@ const PROVIDER_TARGET_OPTION_RULES = {
       }),
     },
   }),
-} as const satisfies Record<ProviderKind, ProviderTargetOptionConfig>;
+} as const satisfies Record<EngineKind, ProviderTargetOptionConfig>;
 
-function providerDefaultModel(provider: ProviderKind): string | null {
+function providerDefaultModel(provider: EngineKind): string | null {
   return getDefaultModel(provider);
 }
 
 export function loadAgentGatewayProviderCatalog(input: {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly discovery: ProviderDiscoveryServiceShape;
   readonly availability?: AgentGatewayProviderAvailability;
   readonly cwd?: string;
@@ -300,7 +300,7 @@ export function loadAgentGatewayProviderCatalog(input: {
 }
 
 function providerTargetOptionRules(
-  provider: ProviderKind,
+  provider: EngineKind,
 ): ReadonlyArray<AgentGatewayTargetOptionRule> {
   return Object.entries(PROVIDER_TARGET_OPTION_RULES[provider].options)
     .filter(([, option]) => option.advertised)
@@ -313,7 +313,7 @@ function providerTargetOptionRules(
     }));
 }
 
-function providerPrimaryOptionKey(provider: ProviderKind): string {
+function providerPrimaryOptionKey(provider: EngineKind): string {
   return PROVIDER_TARGET_OPTION_RULES[provider].primaryOptionKey;
 }
 
@@ -332,7 +332,7 @@ function convertDiscoveredOptionValue(
 }
 
 function modelTargetOptionRules(
-  provider: ProviderKind,
+  provider: EngineKind,
   model: ProviderModelDescriptor,
 ): ReadonlyArray<AgentGatewayTargetOptionRule> {
   const rules = providerTargetOptionRules(provider).map(
@@ -465,7 +465,7 @@ const DISCOVERED_EFFORT_OPTION_IDS = new Set([
 ]);
 
 function providerOptionRuleSpec(
-  provider: ProviderKind,
+  provider: EngineKind,
   optionId: string,
 ): ResolvedProviderTargetOptionRuleSpec | undefined {
   const rule = PROVIDER_TARGET_OPTION_RULES[provider].options[optionId];

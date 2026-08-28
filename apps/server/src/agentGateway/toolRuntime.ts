@@ -1,4 +1,4 @@
-import type { BuiltInToolGroupId, ProviderKind } from "@harnessos/contracts";
+import type { BuiltInToolGroupId, EngineKind } from "@harnessos/contracts";
 import type { Effect } from "effect";
 
 import type { AgentGatewayTargetError } from "./targetResolver.ts";
@@ -28,7 +28,7 @@ export interface ProviderSessionPrincipal {
   readonly kind: "provider-session";
   readonly sessionKey: string;
   readonly threadId: string;
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly turnId: string | null;
 }
 
@@ -44,7 +44,7 @@ export interface ToolContext {
   readonly principal: ProviderSessionPrincipal;
   readonly callerThreadId: string;
   readonly callerSessionKey: string;
-  readonly callerProvider: ProviderKind;
+  readonly callerProvider: EngineKind;
   readonly callerCapabilities: ReadonlySet<AgentGatewayCapability>;
   readonly callerTurnId: string | null;
   readonly assertCallerTurnActive: () => Effect.Effect<void, GatewayToolError>;

@@ -3,7 +3,7 @@
 // Layer: Chat composer presentation
 // Depends on: canonical provider metadata, asset registry, live health, and shared menu primitives.
 
-import type { ProviderKind, ServerProviderStatus } from "@harnessos/contracts";
+import type { EngineKind, ServerProviderStatus } from "@harnessos/contracts";
 import { useState } from "react";
 
 import { useI18n } from "~/i18n";
@@ -22,15 +22,15 @@ import { ProviderIcon } from "../ProviderIcon";
 import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 
 type ComposerEnginePickerProps = {
-  provider: ProviderKind;
+  provider: EngineKind;
   providers: ReadonlyArray<ServerProviderStatus>;
-  hiddenProviders?: ReadonlyArray<ProviderKind>;
-  providerOrder?: ReadonlyArray<ProviderKind>;
+  hiddenProviders?: ReadonlyArray<EngineKind>;
+  providerOrder?: ReadonlyArray<EngineKind>;
   disabled?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  onProviderChange: (provider: ProviderKind) => void;
-  onProviderIntent?: (provider: ProviderKind) => void;
+  onProviderChange: (provider: EngineKind) => void;
+  onProviderIntent?: (provider: EngineKind) => void;
   onSelectionCommitted?: () => void;
 };
 
@@ -66,7 +66,7 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
   };
 
   const hiddenProviders = new Set(props.hiddenProviders ?? []);
-  const protectedProviders = new Set<ProviderKind>([props.provider]);
+  const protectedProviders = new Set<EngineKind>([props.provider]);
   const options = filterProviderOptionsByVisibility(
     PROVIDER_OPTIONS.toSorted((left, right) =>
       compareProvidersByOrder(props.providerOrder ?? [], left.value, right.value),

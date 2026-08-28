@@ -13,7 +13,7 @@ import {
   TrimmedNonEmptyString,
   TurnId,
 } from "./baseSchemas";
-import { ModelSelection, ProviderKind, ProviderStartOptions, RuntimeMode } from "./orchestration";
+import { ModelSelection, EngineKind, ProviderStartOptions, RuntimeMode } from "./orchestration";
 import { ModelPresentationIdentity } from "./providerDiscovery";
 
 export const DEFAULT_AUTOMATION_RUNTIME_MODE: RuntimeMode = "approval-required";
@@ -158,7 +158,7 @@ export const AutomationAllowedCapability = Schema.Literals([
 export type AutomationAllowedCapability = typeof AutomationAllowedCapability.Type;
 
 export const AutomationPermissionSnapshot = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
   settingsRevision: Schema.optional(NonNegativeInt),
   modelSelection: ModelSelection,
   modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),

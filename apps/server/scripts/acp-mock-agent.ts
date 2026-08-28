@@ -616,7 +616,7 @@ app.onRequest(OfficialAcp.methods.agent.session.prompt, ({ client: context, para
             status: "completed",
             rawOutput: {
               exitCode: 0,
-              stdout: '{ "name": "omnimind" }',
+              stdout: '{ "name": "oa" }',
               stderr: "",
             },
           },

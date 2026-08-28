@@ -4,7 +4,7 @@ import {
   MessageId,
   type ModelSelection,
   type OrchestrationThreadActivity,
-  type ProviderKind,
+  type EngineKind,
   type ServerProviderStatus,
 } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
@@ -237,7 +237,7 @@ describe("threadHandoff", () => {
 
   it("excludes disabled, missing, unavailable, and unauthenticated handoff targets", () => {
     const readyStatus = (
-      provider: ProviderKind,
+      provider: EngineKind,
       overrides: Partial<ServerProviderStatus> = {},
     ): ServerProviderStatus => ({
       provider,
@@ -261,14 +261,14 @@ describe("threadHandoff", () => {
         providerSettings,
         providerStatuses: [
           readyStatus("codex"),
-          readyStatus("claudeAgent"),
+          readyStatus("claude"),
           readyStatus("cursor", { available: false, status: "error" }),
           readyStatus("antigravity"),
           readyStatus("grok", { authStatus: "unauthenticated" }),
           readyStatus("kilo", { authStatus: "unknown" }),
         ],
       }),
-    ).toEqual(["claudeAgent", "kilo"]);
+    ).toEqual(["claude", "kilo"]);
   });
 
   it("does not expose targets before enabled-provider settings are available", () => {
@@ -278,7 +278,7 @@ describe("threadHandoff", () => {
         providerSettings: undefined,
         providerStatuses: [
           {
-            provider: "claudeAgent",
+            provider: "claude",
             status: "ready",
             available: true,
             authStatus: "authenticated",
@@ -306,7 +306,7 @@ describe("threadHandoff", () => {
       resolveThreadHandoffModelSelection({
         sourceThread: {
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-sonnet-4-6",
           },
         },

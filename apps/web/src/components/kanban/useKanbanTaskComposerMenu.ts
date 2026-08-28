@@ -7,7 +7,7 @@ import type {
   ModelSlug,
   ProviderAgentDescriptor,
   ProviderInteractionMode,
-  ProviderKind,
+  EngineKind,
   ProviderMentionReference,
   ProviderSkillReference,
   ProviderStartOptions,
@@ -45,9 +45,9 @@ interface UseKanbanTaskComposerMenuInput {
   readonly composerSkills: readonly ProviderSkillReference[];
   readonly composerMentions: readonly ProviderMentionReference[];
   readonly scratchThreadId: ThreadId;
-  readonly selectedProvider: ProviderKind;
+  readonly selectedProvider: EngineKind;
   readonly modelOptionsByProvider: Record<
-    ProviderKind,
+    EngineKind,
     ReadonlyArray<ProviderModelOption & { isCustom?: boolean }>
   >;
   readonly selectedRuntimeAgents: readonly ProviderAgentDescriptor[];
@@ -55,10 +55,10 @@ interface UseKanbanTaskComposerMenuInput {
   readonly serverCwd: string | null;
   readonly serverHomeDir: string | null;
   readonly providerOptionsForDispatch: ProviderStartOptions | undefined;
-  readonly hiddenProviders: readonly ProviderKind[];
-  readonly providerOrder: readonly ProviderKind[];
+  readonly hiddenProviders: readonly EngineKind[];
+  readonly providerOrder: readonly EngineKind[];
   readonly piAgentDir: string | null;
-  readonly handleProviderModelChange: (provider: ProviderKind, model: ModelSlug) => void;
+  readonly handleProviderModelChange: (provider: EngineKind, model: ModelSlug) => void;
   readonly setInteractionMode: Dispatch<SetStateAction<ProviderInteractionMode>>;
   readonly onCreate: () => void;
 }

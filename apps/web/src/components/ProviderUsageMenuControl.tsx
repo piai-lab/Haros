@@ -1,8 +1,8 @@
 // FILE: ProviderUsageMenuControl.tsx
 // Purpose: Shared provider-usage chip/menu used in the chat header and Environment panel.
 
-import type { ProviderKind } from "@harnessos/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import type { EngineKind } from "@harnessos/contracts";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { type ReactNode } from "react";
 
 import { useAccountCapacity } from "~/hooks/useAccountCapacity";
@@ -30,7 +30,7 @@ export interface ProviderUsageMenuModel {
   isLoading: boolean;
 }
 
-export function useProviderUsageMenuModel(provider: ProviderKind): ProviderUsageMenuModel | null {
+export function useProviderUsageMenuModel(provider: EngineKind): ProviderUsageMenuModel | null {
   const usageSummary = useAccountCapacity({
     provider,
   });
@@ -42,7 +42,7 @@ export function useProviderUsageMenuModel(provider: ProviderKind): ProviderUsage
   }
 
   return {
-    menuTitle: `${PROVIDER_DISPLAY_NAMES[provider]} usage`,
+    menuTitle: `${ENGINE_DISPLAY_NAMES[provider]} usage`,
     primaryRow,
     rateLimits: usageSummary.rateLimits,
     usageLines: usageSummary.usageLines,
@@ -57,7 +57,7 @@ export function ProviderUsageMenuPopup({
   align: alignProp,
   children,
 }: {
-  provider: ProviderKind;
+  provider: EngineKind;
   model: ProviderUsageMenuModel;
   align?: "start" | "end";
   children: ReactNode;
@@ -82,7 +82,7 @@ export function ProviderUsageMenuPopup({
   );
 }
 
-export function ProviderUsageMenuControl({ provider }: { provider: ProviderKind }) {
+export function ProviderUsageMenuControl({ provider }: { provider: EngineKind }) {
   const model = useProviderUsageMenuModel(provider);
 
   if (!model) {

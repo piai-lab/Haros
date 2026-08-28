@@ -14,7 +14,7 @@ describe("providerUsageDisplay", () => {
   it("selects the most constrained display row for compact header chips", () => {
     const rows = deriveProviderUsageDisplayRows([
       {
-        provider: "claudeAgent",
+        provider: "claude",
         updatedAt: "2099-04-08T18:00:00.000Z",
         limits: [
           {

@@ -2,7 +2,7 @@
 // Purpose: Render a provider usage summary panel that can show both classic
 // rate-limit rows and archive-derived local usage lines in the same popover.
 
-import type { ProviderKind } from "@harnessos/contracts";
+import type { EngineKind } from "@harnessos/contracts";
 import { providerUsageLabel } from "@harnessos/shared/providerUsage";
 
 import { ExternalLinkIcon, TriangleAlertIcon } from "~/lib/icons";
@@ -21,7 +21,7 @@ import { ProviderUsageLineList } from "./ProviderUsageLineList";
 export { providerUsageLabel };
 
 export function ProviderUsagePanelContent(props: {
-  provider: ProviderKind | null | undefined;
+  provider: EngineKind | null | undefined;
   rateLimits: ReadonlyArray<ProviderRateLimit>;
   usageLines?: ReadonlyArray<OpenUsageUsageLine> | undefined;
   notice?: string | null | undefined;

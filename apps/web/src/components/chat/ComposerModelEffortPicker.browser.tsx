@@ -31,8 +31,8 @@ describe("ComposerModelEffortPicker", () => {
         model={firstModel}
         catalogState="ready"
         modelOptionsByProvider={{
-          omnimind: [],
-          claudeAgent: [],
+          oa: [],
+          claude: [],
           codex: [],
           cursor: [
             { slug: firstModel, name: "Cursor Fast" },
@@ -84,8 +84,8 @@ describe("ComposerModelEffortPicker", () => {
         model={GROK_4_6}
         catalogState="ready"
         modelOptionsByProvider={{
-          omnimind: [],
-          claudeAgent: [],
+          oa: [],
+          claude: [],
           codex: [],
           cursor: [],
           antigravity: [],
@@ -131,8 +131,8 @@ describe("ComposerModelEffortPicker", () => {
         model={model}
         catalogState="ready"
         modelOptionsByProvider={{
-          omnimind: [],
-          claudeAgent: [],
+          oa: [],
+          claude: [],
           codex: [{ slug: model, name: "GPT-5.4" }],
           cursor: [],
           antigravity: [],
@@ -180,8 +180,8 @@ describe("ComposerModelEffortPicker", () => {
       onPromptChange: vi.fn(),
     };
     const modelOptionsByProvider = {
-      omnimind: [],
-      claudeAgent: [],
+      oa: [],
+      claude: [],
       codex: [],
       cursor: [],
       antigravity: [],
@@ -193,7 +193,7 @@ describe("ComposerModelEffortPicker", () => {
     };
     const emptyScreen = await render(
       <ComposerModelEffortPicker
-        provider="omnimind"
+        provider="oa"
         model={null}
         catalogState="empty"
         modelOptionsByProvider={modelOptionsByProvider}
@@ -214,7 +214,7 @@ describe("ComposerModelEffortPicker", () => {
 
     const errorScreen = await render(
       <ComposerModelEffortPicker
-        provider="omnimind"
+        provider="oa"
         model={null}
         catalogState="error"
         modelOptionsByProvider={modelOptionsByProvider}
@@ -244,12 +244,12 @@ describe("ComposerModelEffortPicker", () => {
   it("does not present an idle catalog as an empty catalog", async () => {
     const screen = await render(
       <ComposerModelEffortPicker
-        provider="omnimind"
+        provider="oa"
         model={null}
         catalogState="idle"
         modelOptionsByProvider={{
-          omnimind: [],
-          claudeAgent: [],
+          oa: [],
+          claude: [],
           codex: [],
           cursor: [],
           antigravity: [],
@@ -285,8 +285,8 @@ describe("ComposerModelEffortPicker", () => {
       onPromptChange: vi.fn(),
     };
     const emptyOptions = {
-      omnimind: [],
-      claudeAgent: [],
+      oa: [],
+      claude: [],
       codex: [],
       cursor: [],
       antigravity: [],
@@ -298,7 +298,7 @@ describe("ComposerModelEffortPicker", () => {
     };
     const checkingScreen = await render(
       <ComposerModelEffortPicker
-        provider="omnimind"
+        provider="oa"
         model={null}
         catalogState="checking"
         modelOptionsByProvider={emptyOptions}
@@ -357,8 +357,8 @@ describe("ComposerModelEffortPicker", () => {
         model={null}
         catalogState="idle"
         modelOptionsByProvider={{
-          omnimind: [],
-          claudeAgent: [],
+          oa: [],
+          claude: [],
           codex: [],
           cursor: [],
           antigravity: [],
@@ -408,8 +408,8 @@ describe("ComposerModelEffortPicker", () => {
         model={customModel}
         catalogState="error"
         modelOptionsByProvider={{
-          omnimind: [],
-          claudeAgent: [],
+          oa: [],
+          claude: [],
           codex: [],
           cursor: [],
           antigravity: [{ slug: customModel, name: "Private model" }],
@@ -453,8 +453,8 @@ describe("ComposerModelEffortPicker", () => {
         model={model}
         catalogState="ready"
         modelOptionsByProvider={{
-          omnimind: [],
-          claudeAgent: [],
+          oa: [],
+          claude: [],
           codex: [],
           cursor: [],
           antigravity: [],
@@ -500,12 +500,12 @@ describe("ComposerModelEffortPicker", () => {
     const model = "claude-opus-4-6" as ModelSlug;
     const screen = await render(
       <ComposerModelEffortPicker
-        provider="claudeAgent"
+        provider="claude"
         model={model}
         catalogState="ready"
         modelOptionsByProvider={{
-          omnimind: [],
-          claudeAgent: [{ slug: model, name: "Claude Opus 4.6" }],
+          oa: [],
+          claude: [{ slug: model, name: "Claude Opus 4.6" }],
           codex: [],
           cursor: [],
           antigravity: [],
@@ -539,12 +539,12 @@ describe("ComposerModelEffortPicker", () => {
     const screen = await render(
       <I18nProvider>
         <ComposerModelEffortPicker
-          provider="omnimind"
+          provider="oa"
           model={null}
           catalogState="empty"
           modelOptionsByProvider={{
-            omnimind: [],
-            claudeAgent: [],
+            oa: [],
+            claude: [],
             codex: [],
             cursor: [],
             antigravity: [],
@@ -583,12 +583,12 @@ describe("ComposerModelEffortPicker", () => {
     const screen = await render(
       <I18nProvider>
         <ComposerModelEffortPicker
-          provider="omnimind"
+          provider="oa"
           model={null}
           catalogState="checking"
           modelOptionsByProvider={{
-            omnimind: [],
-            claudeAgent: [],
+            oa: [],
+            claude: [],
             codex: [],
             cursor: [],
             antigravity: [],

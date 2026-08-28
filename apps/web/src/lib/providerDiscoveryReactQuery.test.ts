@@ -82,7 +82,7 @@ describe("provider execution capability identity", () => {
     ).toBe(false);
     expect(
       providerExecutionCapabilitiesMatchSelection(capabilities, {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "gpt-test",
       }),
     ).toBe(false);
@@ -132,11 +132,11 @@ describe("providerModelsQueryOptions", () => {
     };
     const listModels = mockListModels(vi.fn().mockResolvedValue(catalog));
     const firstProject = providerModelsQueryOptions({
-      provider: "omnimind",
+      provider: "oa",
       cwd: "/tmp/project-a",
     });
     const secondProject = providerModelsQueryOptions({
-      provider: "omnimind",
+      provider: "oa",
       cwd: "/tmp/project-b",
     });
 
@@ -147,7 +147,7 @@ describe("providerModelsQueryOptions", () => {
     await expect(queryClient.fetchQuery(secondProject)).resolves.toEqual(catalog);
     expect(listModels).toHaveBeenCalledTimes(1);
     expect(listModels).toHaveBeenCalledWith(
-      { provider: "omnimind" },
+      { provider: "oa" },
       { signal: expect.any(AbortSignal) },
     );
     expect(queryClient.getQueryState(secondProject.queryKey)).toMatchObject({ status: "success" });
@@ -202,30 +202,30 @@ describe("providerModelsQueryOptions", () => {
       vi.fn().mockResolvedValue({ models: [], source: "pi.sdk", cached: false }),
     );
     const firstProject = providerModelsQueryOptions({
-      provider: "omnimind",
+      provider: "oa",
       cwd: "/tmp/project-a",
     });
     const secondProject = providerModelsQueryOptions({
-      provider: "omnimind",
+      provider: "oa",
       cwd: "/tmp/project-b",
     });
     const queryClient = new QueryClient();
 
     await queryClient.fetchQuery(firstProject);
     await queryClient.invalidateQueries({
-      queryKey: providerDiscoveryQueryKeys.modelsForProvider("omnimind"),
+      queryKey: providerDiscoveryQueryKeys.modelsForProvider("oa"),
     });
     await queryClient.fetchQuery(secondProject);
 
     expect(listModels).toHaveBeenCalledTimes(2);
     expect(listModels).toHaveBeenNthCalledWith(
       1,
-      { provider: "omnimind" },
+      { provider: "oa" },
       { signal: expect.any(AbortSignal) },
     );
     expect(listModels).toHaveBeenNthCalledWith(
       2,
-      { provider: "omnimind" },
+      { provider: "oa" },
       { signal: expect.any(AbortSignal) },
     );
   });
@@ -423,26 +423,26 @@ describe("providerModelsQueryOptions", () => {
 describe("Session-aware resource discovery keys", () => {
   it("keeps a recoverable error on the active key and changes key only after close", () => {
     const errorActive = isProviderDiscoverySessionActive({
-      provider: "omnimind",
-      session: { provider: "omnimind", status: "error" },
+      provider: "oa",
+      session: { provider: "oa", status: "error" },
     });
     const closedActive = isProviderDiscoverySessionActive({
-      provider: "omnimind",
-      session: { provider: "omnimind", status: "closed" },
+      provider: "oa",
+      session: { provider: "oa", status: "closed" },
     });
 
     expect(errorActive).toBe(true);
     expect(closedActive).toBe(false);
     expect(
       providerSkillsQueryOptions({
-        provider: "omnimind",
+        provider: "oa",
         cwd: "/tmp/project",
         threadId: "thread-a",
         activeSession: errorActive,
       }).queryKey,
     ).not.toEqual(
       providerSkillsQueryOptions({
-        provider: "omnimind",
+        provider: "oa",
         cwd: "/tmp/project",
         threadId: "thread-a",
         activeSession: closedActive,
@@ -452,31 +452,31 @@ describe("Session-aware resource discovery keys", () => {
 
   it("separates threads and the pre-session versus active-session resource loaders", () => {
     const skillsBeforeSession = providerSkillsQueryOptions({
-      provider: "omnimind",
+      provider: "oa",
       cwd: "/tmp/project",
       threadId: "thread-a",
       activeSession: false,
     }).queryKey;
     const skillsAfterSession = providerSkillsQueryOptions({
-      provider: "omnimind",
+      provider: "oa",
       cwd: "/tmp/project",
       threadId: "thread-a",
       activeSession: true,
     }).queryKey;
     const skillsForOtherThread = providerSkillsQueryOptions({
-      provider: "omnimind",
+      provider: "oa",
       cwd: "/tmp/project",
       threadId: "thread-b",
       activeSession: true,
     }).queryKey;
     const commandsBeforeSession = providerCommandsQueryOptions({
-      provider: "omnimind",
+      provider: "oa",
       cwd: "/tmp/project",
       threadId: "thread-a",
       activeSession: false,
     }).queryKey;
     const commandsAfterSession = providerCommandsQueryOptions({
-      provider: "omnimind",
+      provider: "oa",
       cwd: "/tmp/project",
       threadId: "thread-a",
       activeSession: true,
@@ -511,7 +511,7 @@ describe("Session-aware resource discovery keys", () => {
     const observer = new QueryObserver(
       queryClient,
       providerSkillsQueryOptions({
-        provider: "omnimind",
+        provider: "oa",
         cwd: "/tmp/project",
         threadId: "thread-agent",
         activeSession: true,
@@ -524,7 +524,7 @@ describe("Session-aware resource discovery keys", () => {
     });
     observer.setOptions(
       providerSkillsQueryOptions({
-        provider: "omnimind",
+        provider: "oa",
         cwd: "/tmp/managed-chat",
         threadId: "thread-chat",
         activeSession: false,
@@ -565,7 +565,7 @@ describe("Session-aware resource discovery keys", () => {
     const observer = new QueryObserver(
       queryClient,
       providerCommandsQueryOptions({
-        provider: "omnimind",
+        provider: "oa",
         cwd: "/tmp/project",
         threadId: "thread-agent",
         activeSession: true,
@@ -578,7 +578,7 @@ describe("Session-aware resource discovery keys", () => {
     });
     observer.setOptions(
       providerCommandsQueryOptions({
-        provider: "omnimind",
+        provider: "oa",
         cwd: "/tmp/project",
         threadId: "thread-agent",
         activeSession: false,

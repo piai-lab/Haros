@@ -7,7 +7,7 @@
  *
  * @module ProviderAdapterRegistry
  */
-import type { ProviderKind } from "@harnessos/contracts";
+import type { EngineKind } from "@harnessos/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
 
@@ -22,13 +22,13 @@ export interface ProviderAdapterRegistryShape {
    * Resolve the adapter for a provider kind.
    */
   readonly getByProvider: (
-    provider: ProviderKind,
+    provider: EngineKind,
   ) => Effect.Effect<ProviderAdapterShape<ProviderAdapterError>, ProviderUnsupportedError>;
 
   /**
    * List provider kinds currently registered.
    */
-  readonly listProviders: () => Effect.Effect<ReadonlyArray<ProviderKind>>;
+  readonly listProviders: () => Effect.Effect<ReadonlyArray<EngineKind>>;
 }
 
 /**

@@ -1,8 +1,8 @@
 // FILE: providerUsage/registry.ts
-// Purpose: Map each supported ProviderKind to its live usage fetcher. Adding a provider is a
+// Purpose: Map each supported EngineKind to its live usage fetcher. Adding a provider is a
 // one-file change: implement a ProviderUsageFetcher and register it here.
 
-import type { ProviderKind } from "@harnessos/contracts";
+import type { EngineKind } from "@harnessos/contracts";
 
 import { antigravityUsageFetcher } from "./providers/antigravity";
 import { claudeUsageFetcher } from "./providers/claude";
@@ -13,9 +13,9 @@ import { droidUsageFetcher, kiloUsageFetcher } from "./providers/localCredential
 import { opencodeUsageFetcher } from "./providers/opencode";
 import type { ProviderUsageFetcher } from "./types";
 
-export const PROVIDER_USAGE_FETCHERS: Partial<Record<ProviderKind, ProviderUsageFetcher>> = {
+export const PROVIDER_USAGE_FETCHERS: Partial<Record<EngineKind, ProviderUsageFetcher>> = {
   codex: codexUsageFetcher,
-  claudeAgent: claudeUsageFetcher,
+  claude: claudeUsageFetcher,
   cursor: cursorUsageFetcher,
   antigravity: antigravityUsageFetcher,
   grok: grokUsageFetcher,

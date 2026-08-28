@@ -3,7 +3,7 @@
 // Layer: Web UI provider discovery
 // Exports: per-provider fingerprints and exact changed-provider detection
 
-import { PROVIDER_KINDS, type ProviderKind, type ServerProviderStatus } from "@harnessos/contracts";
+import { ENGINE_KINDS, type EngineKind, type ServerProviderStatus } from "@harnessos/contracts";
 
 type ProviderModelDiscoveryFingerprintEntry = readonly [
   provider: ServerProviderStatus["provider"],
@@ -15,7 +15,7 @@ type ProviderModelDiscoveryFingerprintEntry = readonly [
   version: string | null,
 ];
 
-export type ProviderModelDiscoveryInvalidationFingerprints = Partial<Record<ProviderKind, string>>;
+export type ProviderModelDiscoveryInvalidationFingerprints = Partial<Record<EngineKind, string>>;
 
 export function providerModelDiscoveryInvalidationFingerprints(
   providers: ReadonlyArray<ServerProviderStatus>,
@@ -39,6 +39,6 @@ export function providerModelDiscoveryInvalidationFingerprints(
 export function changedProviderModelDiscoveryProviders(
   previous: ProviderModelDiscoveryInvalidationFingerprints,
   next: ProviderModelDiscoveryInvalidationFingerprints,
-): ProviderKind[] {
-  return PROVIDER_KINDS.filter((provider) => previous[provider] !== next[provider]);
+): EngineKind[] {
+  return ENGINE_KINDS.filter((provider) => previous[provider] !== next[provider]);
 }

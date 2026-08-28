@@ -527,7 +527,7 @@ describe("ModelsSettingsPanel model services", () => {
     });
     await expect.poll(() => onSetupReady).toHaveBeenCalledTimes(1);
     expect(onSetupReady).toHaveBeenCalledWith({
-      provider: "omnimind",
+      provider: "oa",
       model: "deepseek/deepseek-v4-flash",
     });
     expect(mounted.calls.list).toHaveBeenCalledWith(
@@ -627,7 +627,7 @@ describe("ModelsSettingsPanel model services", () => {
 
     await expect.poll(() => onSetupReady).toHaveBeenCalledTimes(1);
     expect(onSetupReady).toHaveBeenCalledWith({
-      provider: "omnimind",
+      provider: "oa",
       model: "saved-custom/custom-model",
     });
     expect(intentDetailCalls).toBe(2);
@@ -2066,18 +2066,18 @@ describe("ModelsSettingsPanel model services", () => {
       .poll(() => document.body.textContent)
       .toContain("settings.modelServiceDetailsNamed");
     const referencedSelection = {
-      provider: "omnimind" as const,
+      provider: "oa" as const,
       model: "saved-custom/saved-model",
     };
     useComposerDraftStore.setState((state) => ({
       stickyModelSelectionByProvider: {
         ...state.stickyModelSelectionByProvider,
-        omnimind: referencedSelection,
+        oa: referencedSelection,
       },
     }));
     useComposerDraftStore.getState().enqueueQueuedTurn(ThreadId.makeUnsafe("queued-reference"), {
       ...makeQueuedChatTurn("queued-custom-service"),
-      selectedProvider: "omnimind",
+      selectedProvider: "oa",
       selectedModel: referencedSelection.model,
       modelSelection: referencedSelection,
     });
@@ -2099,7 +2099,7 @@ describe("ModelsSettingsPanel model services", () => {
       .click();
     await expect.poll(() => removeCustom).toHaveBeenCalledTimes(2);
     expect(removeCustom).toHaveBeenLastCalledWith({ serviceId: "saved-custom" });
-    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.omnimind).toEqual(
+    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.oa).toEqual(
       referencedSelection,
     );
 
@@ -2494,7 +2494,7 @@ describe("ModelsSettingsPanel model services", () => {
         await expect
           .poll(() => onSetupReady)
           .toHaveBeenCalledWith({
-            provider: "omnimind",
+            provider: "oa",
             model: "deepseek/deepseek-v4-flash",
           });
       } else {

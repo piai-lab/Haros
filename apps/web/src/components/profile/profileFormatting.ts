@@ -55,7 +55,7 @@ export function normalizeHandle(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, "")
     .slice(0, 30);
-  return `@${slug || "omnimind"}`;
+  return `@${slug || "oa"}`;
 }
 
 // Pretty short date for "peak day" tooltips ("Apr 3").

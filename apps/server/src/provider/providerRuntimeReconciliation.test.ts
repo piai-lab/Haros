@@ -131,18 +131,18 @@ describe("planProviderRuntimeReconciliation", () => {
       planProviderRuntimeReconciliation({
         threads: [
           threadShell({
-            modelSelection: { provider: "claudeAgent", model: "claude-opus-4-8" },
+            modelSelection: { provider: "claude", model: "claude-opus-4-8" },
             session: {
               ...threadShell().session!,
-              providerName: "claudeAgent",
+              providerName: "claude",
             },
           }),
         ],
-        bindings: [binding(null, "claudeAgent")],
-        liveSessions: [liveSession({ provider: "claudeAgent", status: "ready" })],
+        bindings: [binding(null, "claude")],
+        liveSessions: [liveSession({ provider: "claude", status: "ready" })],
         pumpHealth: [
           {
-            provider: "claudeAgent",
+            provider: "claude",
             status: "healthy",
             consecutiveFailures: 0,
             updatedAt: "2026-07-23T20:00:29.000Z",
@@ -154,7 +154,7 @@ describe("planProviderRuntimeReconciliation", () => {
     ).toEqual([
       expect.objectContaining({
         action: "settle-interrupted",
-        provider: "claudeAgent",
+        provider: "claude",
         projectedTurnId: OLD_TURN_ID,
         runtimeTurnId: null,
       }),

@@ -29,7 +29,7 @@ import type {
   MessageId,
   ProviderMentionReference,
   ProviderSkillReference,
-  ProviderKind,
+  EngineKind,
   CheckpointRef,
   ProviderInteractionMode,
   ProjectKind,
@@ -373,7 +373,7 @@ export interface ComposerThreadMentionSource {
   id: ThreadId;
   projectId: ProjectId;
   title: string;
-  provider: ProviderKind;
+  provider: EngineKind;
   createdAt: string;
   archivedAt?: string | null;
   lastVisitedAt?: string | undefined;
@@ -381,7 +381,7 @@ export interface ComposerThreadMentionSource {
 }
 
 export interface ThreadSession {
-  provider: ProviderKind;
+  provider: EngineKind;
   status: SessionPhase | "error" | "closed";
   activeTurnId?: TurnId | undefined;
   createdAt: string;

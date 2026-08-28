@@ -347,16 +347,16 @@ describe("wsNativeApi", () => {
 
     const payload = {
       settings: {
-        defaultProvider: "omnimind",
+        defaultProvider: "oa",
         enableAssistantStreaming: true,
         enableProviderUpdateChecks: true,
         defaultThreadEnvMode: "local",
         addProjectBaseDirectory: "",
         textGenerationModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
         providers: {
-          omnimind: { enabled: true },
+          oa: { enabled: true },
           codex: { enabled: true, binaryPath: "codex", homePath: "", customModels: [] },
-          claudeAgent: { enabled: true, binaryPath: "claude", launchArgs: "", customModels: [] },
+          claude: { enabled: true, binaryPath: "claude", launchArgs: "", customModels: [] },
           cursor: { enabled: false, binaryPath: "agent", apiEndpoint: "", customModels: [] },
           antigravity: { enabled: true, binaryPath: "agy", customModels: [] },
           grok: { enabled: true, binaryPath: "grok", customModels: [] },

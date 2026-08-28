@@ -29,7 +29,7 @@ function makeThread(input: {
     projectId: ProjectId.makeUnsafe("project-archive"),
     title: `Thread ${input.id}`,
     modelSelection: {
-      provider: "claudeAgent",
+      provider: "claude",
       model: "claude-opus-4-6",
       supportsAutoMode: true,
     },

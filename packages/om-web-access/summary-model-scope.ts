@@ -8,18 +8,18 @@ const THINKING_LEVELS = new Set(["off", "minimal", "low", "medium", "high", "xhi
 export type SummaryThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 
 interface SummaryModelScopeContext {
-	cwd: string;
-	isProjectTrusted(): boolean;
+  cwd: string;
+  isProjectTrusted(): boolean;
 }
 
 export interface ModelLike {
-	provider: string;
-	id: string;
+  provider: string;
+  id: string;
 }
 
 export interface ModelRegistryLike<T extends ModelLike = ModelLike> {
-	find(provider: string, id: string): T | undefined;
-	getAvailable(): readonly T[];
+  find(provider: string, id: string): T | undefined;
+  getAvailable(): readonly T[];
 }
 
 /**
@@ -30,100 +30,103 @@ export interface ModelRegistryLike<T extends ModelLike = ModelLike> {
  * continue to apply their existing enabled-model and authentication checks.
  */
 export function findModelWithProviderRouting<T extends ModelLike>(
-	registry: ModelRegistryLike<T>,
-	provider: string,
-	id: string,
+  registry: ModelRegistryLike<T>,
+  provider: string,
+  id: string,
 ): T | undefined {
-	const available = registry.getAvailable();
-	const direct = available.find(model => model.provider === provider && model.id === id);
-	if (direct) return direct;
+  const available = registry.getAvailable();
+  const direct = available.find((model) => model.provider === provider && model.id === id);
+  if (direct) return direct;
 
-	const routedId = `${provider}/${id}`;
-	// If multiple routers expose the same model ID, Pi's available-model ordering
-	// determines which route is selected. An explicit provider/model selector can
-	// select a specific route when that distinction matters.
-	const routed = available.find(model => model.id === routedId);
-	return routed ?? registry.find(provider, id);
+  const routedId = `${provider}/${id}`;
+  // If multiple routers expose the same model ID, Pi's available-model ordering
+  // determines which route is selected. An explicit provider/model selector can
+  // select a specific route when that distinction matters.
+  const routed = available.find((model) => model.id === routedId);
+  return routed ?? registry.find(provider, id);
 }
 
 function getAgentDir(): string {
-	return process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
+  return process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
 }
 
 function readSettings(path: string): Record<string, unknown> {
-	if (!existsSync(path)) return {};
-	const raw = readFileSync(path, "utf8");
-	try {
-		return JSON.parse(raw) as Record<string, unknown>;
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${path}: ${message}`);
-	}
+  if (!existsSync(path)) return {};
+  const raw = readFileSync(path, "utf8");
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`Failed to parse ${path}: ${message}`);
+  }
 }
 
 export function loadEnabledModelPatterns(ctx: SummaryModelScopeContext): string[] | null {
-	// OmniMind's injected ModelRuntime/SettingsManager already owns its model scope.
-	// Never consult stock Pi global or project state from the bundled profile.
-	if (currentWebAccessContext()?.profile === "omnimind") return null;
-	const globalSettings = readSettings(join(getAgentDir(), "settings.json"));
-	const projectSettings = ctx.isProjectTrusted()
-		? readSettings(join(ctx.cwd, ".pi", "settings.json"))
-		: {};
-	const value = Object.hasOwn(projectSettings, "enabledModels")
-		? projectSettings.enabledModels
-		: globalSettings.enabledModels;
-	if (value === undefined) return null;
-	if (!Array.isArray(value)) throw new Error("enabledModels must be an array");
-	return value
-		.filter((item): item is string => typeof item === "string")
-		.map(item => item.trim())
-		.filter(Boolean);
+  // OmniMind's injected ModelRuntime/SettingsManager already owns its model scope.
+  // Never consult stock Pi global or project state from the bundled profile.
+  if (currentWebAccessContext()?.profile === "oa") return null;
+  const globalSettings = readSettings(join(getAgentDir(), "settings.json"));
+  const projectSettings = ctx.isProjectTrusted()
+    ? readSettings(join(ctx.cwd, ".pi", "settings.json"))
+    : {};
+  const value = Object.hasOwn(projectSettings, "enabledModels")
+    ? projectSettings.enabledModels
+    : globalSettings.enabledModels;
+  if (value === undefined) return null;
+  if (!Array.isArray(value)) throw new Error("enabledModels must be an array");
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 export function summaryModelValue(model: ModelLike): string {
-	return `${model.provider}/${model.id}`;
+  return `${model.provider}/${model.id}`;
 }
 
-export function splitThinkingSuffix(value: string): { value: string; thinkingLevel?: SummaryThinkingLevel } {
-	const index = value.lastIndexOf(":");
-	if (index < 0) return { value };
-	const suffix = value.slice(index + 1);
-	return THINKING_LEVELS.has(suffix)
-		? { value: value.slice(0, index), thinkingLevel: suffix as SummaryThinkingLevel }
-		: { value };
+export function splitThinkingSuffix(value: string): {
+  value: string;
+  thinkingLevel?: SummaryThinkingLevel;
+} {
+  const index = value.lastIndexOf(":");
+  if (index < 0) return { value };
+  const suffix = value.slice(index + 1);
+  return THINKING_LEVELS.has(suffix)
+    ? { value: value.slice(0, index), thinkingLevel: suffix as SummaryThinkingLevel }
+    : { value };
 }
 
 function stripThinkingSuffix(pattern: string): string {
- return splitThinkingSuffix(pattern).value;
+  return splitThinkingSuffix(pattern).value;
 }
 
 function globToRegExp(pattern: string): RegExp {
-	let source = "^";
-	for (const char of pattern) {
-		if (char === "*") {
-			source += ".*";
-		} else if (char === "?") {
-			source += ".";
-		} else {
-			source += char.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
-		}
-	}
-	return new RegExp(`${source}$`, "i");
+  let source = "^";
+  for (const char of pattern) {
+    if (char === "*") {
+      source += ".*";
+    } else if (char === "?") {
+      source += ".";
+    } else {
+      source += char.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
+    }
+  }
+  return new RegExp(`${source}$`, "i");
 }
 
 export function modelMatchesEnabledPatterns(model: ModelLike, patterns: string[] | null): boolean {
-	if (patterns === null) return true;
-	const value = summaryModelValue(model).toLowerCase();
-	const id = model.id.toLowerCase();
-	for (const rawPattern of patterns) {
-		const pattern = stripThinkingSuffix(rawPattern.trim()).toLowerCase();
-		if (!pattern) continue;
-		if (pattern.includes("*") || pattern.includes("?")) {
-			const regex = globToRegExp(pattern);
-			if (regex.test(value) || regex.test(id)) return true;
-			continue;
-		}
-		if (pattern === value || pattern === id) return true;
-	}
-	return false;
+  if (patterns === null) return true;
+  const value = summaryModelValue(model).toLowerCase();
+  const id = model.id.toLowerCase();
+  for (const rawPattern of patterns) {
+    const pattern = stripThinkingSuffix(rawPattern.trim()).toLowerCase();
+    if (!pattern) continue;
+    if (pattern.includes("*") || pattern.includes("?")) {
+      const regex = globToRegExp(pattern);
+      if (regex.test(value) || regex.test(id)) return true;
+      continue;
+    }
+    if (pattern === value || pattern === id) return true;
+  }
+  return false;
 }

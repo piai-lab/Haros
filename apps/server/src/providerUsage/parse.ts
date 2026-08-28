@@ -4,7 +4,7 @@
 // without touching the network, filesystem, or keychain.
 
 import type {
-  ProviderKind,
+  EngineKind,
   ProviderUsageStatus,
   ServerProviderUsageLimit,
   ServerProviderUsageLine,
@@ -96,7 +96,7 @@ export function formatUsd(amount: number): string {
 }
 
 export interface SnapshotInput {
-  provider: ProviderKind;
+  provider: EngineKind;
   nowMs: number;
   status: ProviderUsageStatus;
   source: string;
@@ -120,7 +120,7 @@ export function buildSnapshot(input: SnapshotInput): ServerProviderUsageSnapshot
 }
 
 export function needsAuthSnapshot(
-  provider: ProviderKind,
+  provider: EngineKind,
   nowMs: number,
   source: string,
 ): ServerProviderUsageSnapshot {
@@ -134,7 +134,7 @@ export function needsAuthSnapshot(
 }
 
 export function unsupportedSnapshot(
-  provider: ProviderKind,
+  provider: EngineKind,
   nowMs: number,
   source: string,
   detail: string,
@@ -143,7 +143,7 @@ export function unsupportedSnapshot(
 }
 
 export function errorSnapshot(
-  provider: ProviderKind,
+  provider: EngineKind,
   nowMs: number,
   source: string,
   detail: string,

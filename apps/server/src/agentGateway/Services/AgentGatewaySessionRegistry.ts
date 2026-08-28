@@ -1,4 +1,4 @@
-import type { ProviderKind, ThreadId } from "@harnessos/contracts";
+import type { EngineKind, ThreadId } from "@harnessos/contracts";
 import { ServiceMap } from "effect";
 
 export type AgentGatewayCapability =
@@ -12,7 +12,7 @@ export type AgentGatewayCapability =
 export interface AgentGatewaySessionIdentity {
   readonly sessionKey: string;
   readonly threadId: ThreadId;
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly issuedAt: number;
   readonly capabilities: ReadonlySet<AgentGatewayCapability>;
 }
@@ -32,12 +32,12 @@ export interface AgentGatewayIssuedSession extends AgentGatewaySessionIdentity {
 export interface AgentGatewayTurnAuthority {
   readonly sessionKey: string;
   readonly threadId: ThreadId;
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly turnId: string;
 }
 
 export interface AgentGatewaySessionRegistryShape {
-  readonly issue: (threadId: ThreadId, provider: ProviderKind) => AgentGatewayIssuedSession;
+  readonly issue: (threadId: ThreadId, provider: EngineKind) => AgentGatewayIssuedSession;
   readonly verify: (token: string) => AgentGatewaySessionIdentity | null;
   readonly bindTurnAuthority: (token: string, turnId: string) => AgentGatewayTurnAuthority | null;
   readonly verifyTurnAuthority: (authority: AgentGatewayTurnAuthority) => boolean;

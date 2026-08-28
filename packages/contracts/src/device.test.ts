@@ -28,7 +28,7 @@ const BASE_DEVICE = {
   name: "iPhone 17 Pro",
   runtime: "iOS 26.0",
   state: "booted",
-  bootSource: "omnimind",
+  bootSource: "oa",
 } as const;
 
 /** iPhone 17 Pro: the geometry that exposed the pixel-vs-point tap bug. */

@@ -743,7 +743,7 @@ describe("store projection", () => {
     const readModel = makeReadModel(
       makeReadModelThread({
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
         },
       }),
@@ -759,13 +759,13 @@ describe("store projection", () => {
     const readModel = makeReadModel(
       makeReadModelThread({
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "sonnet",
         },
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "claudeAgent",
+          providerName: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -784,13 +784,13 @@ describe("store projection", () => {
     const readModel = makeReadModel(
       makeReadModelThread({
         modelSelection: {
-          provider: "omnimind",
+          provider: "oa",
           model: "deepseek/deepseek-chat",
         },
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "error",
-          providerName: "omnimind",
+          providerName: "oa",
           runtimeMode: "full-access",
           activeTurnId: null,
           lastError: "OmniMind Agent credentials are not configured.",
@@ -801,8 +801,8 @@ describe("store projection", () => {
 
     const next = syncServerReadModel(initialState, readModel);
 
-    expect(threadsOf(next)[0]?.modelSelection.provider).toBe("omnimind");
-    expect(threadsOf(next)[0]?.session?.provider).toBe("omnimind");
+    expect(threadsOf(next)[0]?.modelSelection.provider).toBe("oa");
+    expect(threadsOf(next)[0]?.session?.provider).toBe("oa");
   });
 
   it("preserves OpenCode as the active session provider", () => {
@@ -914,11 +914,11 @@ describe("store projection", () => {
       makeThread({
         id: threadId,
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-7",
         },
         session: {
-          provider: "claudeAgent",
+          provider: "claude",
           status: "running",
           orchestrationStatus: "running",
           activeTurnId: turnId,
@@ -960,7 +960,7 @@ describe("store projection", () => {
       makeReadModelThread({
         id: threadId,
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-7",
         },
         latestTurn: {
@@ -988,7 +988,7 @@ describe("store projection", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "claudeAgent",
+          providerName: "claude",
           runtimeMode: "full-access",
           activeTurnId: turnId,
           lastError: null,

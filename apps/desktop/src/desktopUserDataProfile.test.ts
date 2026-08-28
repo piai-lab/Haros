@@ -8,7 +8,7 @@ describe("desktopUserDataProfile", () => {
     expect(resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "omnimind-dev" })).toBe(
       "/Users/tester/Library/Application Support/omnimind-dev",
     );
-    expect(resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "omnimind" })).toBe(
+    expect(resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "oa" })).toBe(
       "/Users/tester/Library/Application Support/omnimind",
     );
     expect(

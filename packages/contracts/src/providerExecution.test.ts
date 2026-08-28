@@ -13,7 +13,7 @@ describe("ProviderExecutionCapabilities", () => {
       status: "ready",
     });
     const result = decodeCapabilities({
-      provider: "omnimind",
+      provider: "oa",
       model: "model-test",
       supportsNativeTurnSteering: true,
       runtimeModes: {

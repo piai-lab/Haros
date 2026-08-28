@@ -1,8 +1,8 @@
 import {
   type ModelSelection,
   type OmniMindModelServiceDescriptor,
-  PROVIDER_KINDS,
-  type ProviderKind,
+  ENGINE_KINDS,
+  type EngineKind,
   type ServerProviderStatus,
 } from "@harnessos/contracts";
 
@@ -21,9 +21,9 @@ export function isSettledPassiveModelServicesQueryState(input: {
 
 export function hasUsableExactModelBinding(input: {
   readonly providerStatuses: readonly ServerProviderStatus[];
-  readonly exactModelSelections: Partial<Record<ProviderKind, ModelSelection>>;
+  readonly exactModelSelections: Partial<Record<EngineKind, ModelSelection>>;
 }): boolean {
-  return PROVIDER_KINDS.some((provider) => {
+  return ENGINE_KINDS.some((provider) => {
     const selection = input.exactModelSelections[provider];
     const status = findProviderStatus(input.providerStatuses, provider);
     // Bundled OmniMind/stock Pi runtimes can enumerate models before any
@@ -31,7 +31,7 @@ export function hasUsableExactModelBinding(input: {
     // unknown. Their exact catalog rows are therefore not send authority.
     // OmniMind is upgraded separately by the passive Model-services projection;
     // stock Pi stays recoverable until its own health can prove authentication.
-    if ((provider === "omnimind" || provider === "pi") && status?.authStatus !== "authenticated") {
+    if ((provider === "oa" || provider === "pi") && status?.authStatus !== "authenticated") {
       return false;
     }
     return (
@@ -49,7 +49,7 @@ export function hasUsableOmniMindModelServiceBinding(input: {
   readonly modelOptions: ReadonlyArray<ProviderModelOption>;
   readonly services: ReadonlyArray<OmniMindModelServiceDescriptor>;
 }): boolean {
-  if (input.selection?.provider !== "omnimind") return false;
+  if (input.selection?.provider !== "oa") return false;
   const model = input.modelOptions.find((option) => option.slug === input.selection?.model);
   if (!model?.upstreamProviderId || !model.upstreamProviderOrigin) return false;
   const exactService = input.services.find(
@@ -80,10 +80,10 @@ export function hasUsableOmniMindModelServiceBinding(input: {
 
 export function areUsableProviderCatalogsSettled(input: {
   readonly providerStatuses: readonly ServerProviderStatus[];
-  readonly catalogStateByProvider: Partial<Record<ProviderKind, ProviderModelCatalogState>>;
-  readonly explicitExactModelSelections: Partial<Record<ProviderKind, ModelSelection>>;
+  readonly catalogStateByProvider: Partial<Record<EngineKind, ProviderModelCatalogState>>;
+  readonly explicitExactModelSelections: Partial<Record<EngineKind, ModelSelection>>;
 }): boolean {
-  return PROVIDER_KINDS.every(
+  return ENGINE_KINDS.every(
     (provider) =>
       input.explicitExactModelSelections[provider] === undefined ||
       !isProviderUsable(findProviderStatus(input.providerStatuses, provider)) ||

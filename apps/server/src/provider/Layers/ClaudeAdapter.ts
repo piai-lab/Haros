@@ -172,7 +172,7 @@ import {
   type ProcessExitHandle,
 } from "../supervisedProcessTeardown.ts";
 
-const PROVIDER = "claudeAgent" as const;
+const PROVIDER = "claude" as const;
 const CLAUDE_DISCOVERY_THREAD_ID = ThreadId.makeUnsafe("claude:discovery");
 type ClaudeTextStreamKind = Extract<RuntimeContentStreamKind, "assistant_text" | "reasoning_text">;
 type ClaudeToolResultStreamKind = Extract<
@@ -592,7 +592,7 @@ function mapSupportedCommands(commands: SlashCommand[]): ProviderListCommandsRes
       name: cmd.name,
       description: cmd.description || undefined,
     })),
-    source: "claudeAgent",
+    source: "claude",
     cached: false,
   };
 }
@@ -831,7 +831,7 @@ function resolveSelectedClaudeThinkingToggle(
   if (typeof selectedThinking !== "boolean") {
     return undefined;
   }
-  return getModelCapabilities("claudeAgent", model).supportsThinkingToggle
+  return getModelCapabilities("claude", model).supportsThinkingToggle
     ? selectedThinking
     : undefined;
 }
@@ -1123,7 +1123,7 @@ function claudeSubagentSteerContext(message: string): string {
 function buildClaudeSdkSubagents(): Record<string, AgentDefinition> {
   const agents: Record<string, AgentDefinition> = {};
 
-  for (const alias of getAgentMentionAliases("claudeAgent")) {
+  for (const alias of getAgentMentionAliases("claude")) {
     if (alias.kind !== "claude-subagent" || agents[alias.agentName]) {
       continue;
     }
@@ -1158,11 +1158,11 @@ function buildClaudeSdkSubagents(): Record<string, AgentDefinition> {
 function buildPromptText(input: ProviderSendTurnInput): string {
   const basePrompt = buildClaudeSubagentPrompt(input.input?.trim() ?? "").prompt;
   const rawEffort =
-    input.modelSelection?.provider === "claudeAgent" ? input.modelSelection.options?.effort : null;
+    input.modelSelection?.provider === "claude" ? input.modelSelection.options?.effort : null;
   const requestedEffort = trimOrNull(rawEffort);
   const claudeModel =
-    input.modelSelection?.provider === "claudeAgent" ? input.modelSelection.model : undefined;
-  const caps = getModelCapabilities("claudeAgent", claudeModel);
+    input.modelSelection?.provider === "claude" ? input.modelSelection.model : undefined;
+  const caps = getModelCapabilities("claude", claudeModel);
   const promptEffort =
     requestedEffort === "ultrathink" && caps.promptInjectedEffortLevels.includes("ultrathink")
       ? "ultrathink"
@@ -5135,17 +5135,17 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             }),
           );
 
-        const providerOptions = input.providerOptions?.claudeAgent;
+        const providerOptions = input.providerOptions?.claude;
         const modelSelection =
-          input.modelSelection?.provider === "claudeAgent" ? input.modelSelection : undefined;
+          input.modelSelection?.provider === "claude" ? input.modelSelection : undefined;
         const requestedEffort = trimOrNull(modelSelection?.options?.effort ?? null);
         const requestedAutoCompactWindow = trimOrNull(
           modelSelection?.options?.autoCompactWindow ??
             modelSelection?.options?.contextWindow ??
             null,
         );
-        const effectiveClaudeModel = modelSelection?.model ?? getDefaultModel("claudeAgent");
-        const caps = getModelCapabilities("claudeAgent", effectiveClaudeModel);
+        const effectiveClaudeModel = modelSelection?.model ?? getDefaultModel("claude");
+        const caps = getModelCapabilities("claude", effectiveClaudeModel);
         const requestedAutoCompactWindowTokens = resolveSelectedClaudeAutoCompactWindow(
           effectiveClaudeModel,
           requestedAutoCompactWindow,
@@ -5595,7 +5595,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       Effect.gen(function* () {
         const context = yield* requireSession(input.threadId);
         const modelSelection =
-          input.modelSelection?.provider === "claudeAgent" ? input.modelSelection : undefined;
+          input.modelSelection?.provider === "claude" ? input.modelSelection : undefined;
         const requestedAutoCompactWindow = resolveSelectedClaudeAutoCompactWindow(
           modelSelection?.model,
           modelSelection?.options?.autoCompactWindow ?? modelSelection?.options?.contextWindow,
@@ -5688,7 +5688,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         // `max` effort has no Settings equivalent; transitions involving it
         // restart upstream (claudeSelectionRequiresRestart) before this runs.
         if (modelSelection) {
-          const turnCaps = getModelCapabilities("claudeAgent", modelSelection.model);
+          const turnCaps = getModelCapabilities("claude", modelSelection.model);
           const requestedEffortOption = trimOrNull(modelSelection.options?.effort ?? null);
           const validEffort =
             requestedEffortOption && hasEffortLevel(turnCaps, requestedEffortOption)

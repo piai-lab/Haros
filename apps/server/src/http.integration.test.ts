@@ -397,11 +397,11 @@ describe("production Effect HTTP routes", () => {
     const staticDir = makeTempDir("omnimind-effect-static-");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
     writeFileSync(path.join(staticDir, "index.html"), "<main>OmniMind shell</main>");
-    writeFileSync(path.join(staticDir, "assets", "app.js"), "globalThis.omnimind = true;");
+    writeFileSync(path.join(staticDir, "assets", "app.js"), "globalThis.oa = true;");
     await withEffectServer(makeConfig({ staticDir }), { kind: "static" }, async (origin) => {
       const asset = await fetch(`${origin}/assets/app.js`);
       expect(asset.status).toBe(200);
-      await expect(asset.text()).resolves.toContain("globalThis.omnimind");
+      await expect(asset.text()).resolves.toContain("globalThis.oa");
 
       const fallback = await fetch(`${origin}/chat/thread-id`);
       expect(fallback.status).toBe(200);
@@ -413,7 +413,7 @@ describe("production Effect HTTP routes", () => {
   it("serves precompressed sidecars by Accept-Encoding with identity fallback", async () => {
     const staticDir = makeTempDir("omnimind-effect-static-");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
-    const source = "globalThis.omnimind = true;".repeat(64);
+    const source = "globalThis.oa = true;".repeat(64);
     writeFileSync(path.join(staticDir, "assets", "app-abc123.js"), source);
     writeFileSync(path.join(staticDir, "assets", "app-abc123.js.gz"), zlib.gzipSync(source));
     writeFileSync(
@@ -502,7 +502,7 @@ describe("production Effect HTTP routes", () => {
   it("returns 406 when no acceptable encoding exists and identity is excluded", async () => {
     const staticDir = makeTempDir("omnimind-effect-static-");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
-    const source = "globalThis.omnimind = true;".repeat(64);
+    const source = "globalThis.oa = true;".repeat(64);
     writeFileSync(path.join(staticDir, "index.html"), "<main>OmniMind shell</main>");
     writeFileSync(path.join(staticDir, "assets", "plain-def456.js"), source);
 
@@ -527,7 +527,7 @@ describe("production Effect HTTP routes", () => {
   it("revalidates with ETags and answers matching conditionals with 304", async () => {
     const staticDir = makeTempDir("omnimind-effect-static-");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
-    const source = "globalThis.omnimind = true;".repeat(64);
+    const source = "globalThis.oa = true;".repeat(64);
     writeFileSync(path.join(staticDir, "index.html"), "<main>OmniMind shell</main>");
     writeFileSync(path.join(staticDir, "assets", "app-abc123.js"), source);
     writeFileSync(path.join(staticDir, "assets", "app-abc123.js.gz"), zlib.gzipSync(source));
@@ -566,7 +566,7 @@ describe("production Effect HTTP routes", () => {
     const staticDir = makeTempDir("omnimind-effect-static-");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
     writeFileSync(path.join(staticDir, "index.html"), "<main>OmniMind shell</main>");
-    writeFileSync(path.join(staticDir, "assets", "app-abc123.js"), "globalThis.omnimind = true;");
+    writeFileSync(path.join(staticDir, "assets", "app-abc123.js"), "globalThis.oa = true;");
 
     await withEffectServer(makeConfig({ staticDir }), { kind: "static" }, async (origin) => {
       const asset = await fetch(`${origin}/assets/app-abc123.js`);

@@ -543,7 +543,7 @@ export function projectProviderRuntimeActivities(
   if (
     (event.provider === "codex" ||
       event.provider === "antigravity" ||
-      event.provider === "omnimind" ||
+      event.provider === "oa" ||
       event.provider === "pi") &&
     (event.type === "item.updated" || event.type === "item.completed") &&
     event.payload.itemType === "reasoning" &&

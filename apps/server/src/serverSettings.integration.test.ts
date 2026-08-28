@@ -154,7 +154,7 @@ describe("ServerSettingsService", () => {
               enableProviderUpdateChecks: false,
               addProjectBaseDirectory: "/tmp/omnimind-projects",
               providers: {
-                omnimind: {
+                oa: {
                   enabled: false,
                   [retiredKey]: ["legacy/provider-model"],
                   defaultPrompt: "private prompt",
@@ -176,7 +176,7 @@ describe("ServerSettingsService", () => {
           migrationVersion: number;
           settings: Record<string, unknown> & {
             providers: Record<string, unknown> & {
-              omnimind: Record<string, unknown>;
+              oa: Record<string, unknown>;
               codex: { customModels: string[] };
             };
           };
@@ -186,8 +186,8 @@ describe("ServerSettingsService", () => {
     );
 
     expect(result.rawAfterRead).toContain(`"${retiredKey}":["legacy/provider-model"]`);
-    expect(result.view.providers.omnimind).toEqual({ enabled: false });
-    expect(result.internal.providers.omnimind).toEqual({
+    expect(result.view.providers.oa).toEqual({ enabled: false });
+    expect(result.internal.providers.oa).toEqual({
       enabled: false,
       defaultPrompt: "private prompt",
     });
@@ -199,13 +199,13 @@ describe("ServerSettingsService", () => {
         enableProviderUpdateChecks: false,
         addProjectBaseDirectory: "/tmp/omnimind-projects",
         providers: {
-          omnimind: { enabled: false, defaultPrompt: "private prompt" },
+          oa: { enabled: false, defaultPrompt: "private prompt" },
           codex: { customModels: ["custom/codex-model"] },
         },
         agentTools: { builtInGroupOverrides: {} },
       },
     });
-    expect(result.persisted.settings.providers.omnimind).not.toHaveProperty(retiredKey);
+    expect(result.persisted.settings.providers.oa).not.toHaveProperty(retiredKey);
   });
 
   it.each([
@@ -230,7 +230,7 @@ describe("ServerSettingsService", () => {
     },
     {
       name: "the disabled legacy OmniMind aggregate",
-      disabledBuiltInGroups: ["omnimind", "future-group"],
+      disabledBuiltInGroups: ["oa", "future-group"],
       expected: {
         agent: {
           automations: false,
@@ -472,7 +472,7 @@ describe("ServerSettingsService", () => {
         yield* service.start;
         const updateExit = yield* Effect.exit(
           service.updateSettings({
-            textGenerationModelSelection: { provider: "omnimind" },
+            textGenerationModelSelection: { provider: "oa" },
           }),
         );
         return {
@@ -517,7 +517,7 @@ describe("ServerSettingsService", () => {
 
   it("persists an explicit runtime-catalog model selection exactly", async () => {
     const selection = {
-      provider: "omnimind" as const,
+      provider: "oa" as const,
       model: "deepseek/deepseek-v4-pro",
       options: { thinkingLevel: "high" as const },
     };
@@ -720,7 +720,7 @@ describe("ServerSettingsService", () => {
       }),
     );
 
-    expect(result.reset.defaultProvider).toBe("omnimind");
+    expect(result.reset.defaultProvider).toBe("oa");
     expect(result.reset.addProjectBaseDirectory).toBe("");
     expect(result.reset.providers.kilo.serverPasswordConfigured).toBe(true);
     expect(result.cleared.providers.kilo.serverPasswordConfigured).toBe(false);
@@ -740,15 +740,15 @@ describe("ServerSettingsService", () => {
       }).pipe(
         Effect.provide(
           ServerSettingsService.layerTest({
-            providers: { omnimind: { defaultPrompt: "private one" } },
+            providers: { oa: { defaultPrompt: "private one" } },
           }),
         ),
       ),
     );
 
     expect(result.mutation.state).toBe("changed");
-    expect(result.initialView.providers.omnimind).not.toHaveProperty("defaultPrompt");
-    expect(result.streamedView.providers.omnimind).not.toHaveProperty("defaultPrompt");
+    expect(result.initialView.providers.oa).not.toHaveProperty("defaultPrompt");
+    expect(result.streamedView.providers.oa).not.toHaveProperty("defaultPrompt");
     expect(JSON.stringify(result.initialView)).not.toContain("private one");
     expect(JSON.stringify(result.streamedView)).not.toContain("private two");
   });
@@ -772,9 +772,7 @@ describe("ServerSettingsService", () => {
     );
 
     expect(result.mutations.map(({ state }) => state).toSorted()).toEqual(["changed", "conflict"]);
-    expect(["first", "second"]).toContain(
-      result.snapshot.settings.providers.omnimind.defaultPrompt,
-    );
+    expect(["first", "second"]).toContain(result.snapshot.settings.providers.oa.defaultPrompt);
     expect(result.snapshot.revision).toBe(1);
   });
 

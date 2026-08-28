@@ -332,7 +332,7 @@ describe("MessagesTimeline turn process approval cases", () => {
         pendingMessageId,
         turnId: TURN_ID,
         modelSelection: {
-          provider: "omnimind" as const,
+          provider: "oa" as const,
           model: "deepseek/deepseek-v4-pro",
         },
         requestedAt: STARTED_AT,

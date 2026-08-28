@@ -48,7 +48,7 @@ const baseStats = {
         kind: "model",
       },
       {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-sonnet-4-6",
         turnCount: 1,
         percent: 33.3,

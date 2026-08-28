@@ -7,7 +7,7 @@ import type {
   OrchestrationCommand,
   OrchestrationEvent,
   OrchestrationReadModel,
-  ProviderKind,
+  EngineKind,
   ProviderRuntimeEvent,
   ProviderSession,
 } from "@harnessos/contracts";
@@ -73,7 +73,7 @@ const asTurnId = (value: string): TurnId => TurnId.makeUnsafe(value);
 type LegacyProviderRuntimeEvent = {
   readonly type: string;
   readonly eventId: EventId;
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly createdAt: string;
   readonly threadId: ThreadId;
   readonly turnId?: string | undefined;
@@ -436,7 +436,7 @@ describe("ProviderRuntimeIngestion", () => {
     }
     const drain = () => Effect.runPromise(ingestion.drain);
     const bindLegacyRuntimeSource = (
-      providerKind: ProviderKind,
+      providerKind: EngineKind,
       threadId: ThreadId = ThreadId.makeUnsafe("thread-1"),
     ) =>
       Effect.runPromise(
@@ -632,7 +632,7 @@ describe("ProviderRuntimeIngestion", () => {
       harness.runtimeEventRepository.append({
         type: "session.started",
         eventId: asEventId("evt-delayed-target-session-started"),
-        provider: "claudeAgent",
+        provider: "claude",
         threadId,
         createdAt: "2026-08-12T08:00:00.000Z",
         lifecycleGeneration: "generation-failed-target",
@@ -654,7 +654,7 @@ describe("ProviderRuntimeIngestion", () => {
       harness.runtimeEventRepository.append({
         type: "runtime.warning",
         eventId: asEventId("evt-delayed-target-runtime-warning"),
-        provider: "claudeAgent",
+        provider: "claude",
         threadId,
         createdAt: "2026-08-12T08:00:01.500Z",
         lifecycleGeneration: "generation-failed-target",
@@ -2565,7 +2565,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("accepts claude turn lifecycle when seeded thread id is a synthetic placeholder", async () => {
     const harness = await createHarness();
     const seededAt = new Date().toISOString();
-    await harness.bindLegacyRuntimeSource("claudeAgent");
+    await harness.bindLegacyRuntimeSource("claude");
 
     await Effect.runPromise(
       harness.engine.dispatch({
@@ -2575,7 +2575,7 @@ describe("ProviderRuntimeIngestion", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "claudeAgent",
+          providerName: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           updatedAt: seededAt,
@@ -2588,7 +2588,7 @@ describe("ProviderRuntimeIngestion", () => {
     harness.emit({
       type: "turn.started",
       eventId: asEventId("evt-turn-started-claude-placeholder"),
-      provider: "claudeAgent",
+      provider: "claude",
       createdAt: new Date().toISOString(),
       threadId: asThreadId("thread-1"),
       turnId: asTurnId("turn-claude-placeholder"),
@@ -2604,7 +2604,7 @@ describe("ProviderRuntimeIngestion", () => {
     harness.emit({
       type: "turn.completed",
       eventId: asEventId("evt-turn-completed-claude-placeholder"),
-      provider: "claudeAgent",
+      provider: "claude",
       createdAt: new Date().toISOString(),
       threadId: asThreadId("thread-1"),
       turnId: asTurnId("turn-claude-placeholder"),
@@ -2829,7 +2829,7 @@ describe("ProviderRuntimeIngestion", () => {
   it.each([
     ["codex", "reasoning_summary_text"],
     ["antigravity", "reasoning_text"],
-    ["omnimind", "reasoning_text"],
+    ["oa", "reasoning_text"],
     ["pi", "reasoning_text"],
   ] as const)(
     "publishes the first %s reasoning delta immediately and completes the growing row in place",
@@ -3282,7 +3282,7 @@ describe("ProviderRuntimeIngestion", () => {
     });
   });
 
-  it.each(["omnimind", "pi"] as const)(
+  it.each(["oa", "pi"] as const)(
     "buffers %s native reasoning text into one completed activity",
     async (provider) => {
       const harness = await createHarness();
@@ -3879,11 +3879,11 @@ describe("ProviderRuntimeIngestion", () => {
 
   it("persists a compact per-model token breakdown on turn.completed activities", async () => {
     const harness = await createHarness();
-    await harness.bindLegacyRuntimeSource("claudeAgent");
+    await harness.bindLegacyRuntimeSource("claude");
 
     harness.setProviderSession({
       threadId: asThreadId("thread-1"),
-      provider: "claudeAgent",
+      provider: "claude",
       status: "running",
       runtimeMode: "approval-required",
       createdAt: "2026-03-01T10:00:00.000Z",
@@ -3894,7 +3894,7 @@ describe("ProviderRuntimeIngestion", () => {
     harness.emit({
       type: "turn.completed",
       eventId: asEventId("evt-turn-completed-model-usage"),
-      provider: "claudeAgent",
+      provider: "claude",
       createdAt: "2026-03-01T10:00:01.000Z",
       threadId: asThreadId("thread-1"),
       turnId: asTurnId("turn-1"),
@@ -7251,12 +7251,12 @@ describe("ProviderRuntimeIngestion", () => {
   it("labels Claude background moves as a background notice, not a runtime warning", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
-    await harness.bindLegacyRuntimeSource("claudeAgent");
+    await harness.bindLegacyRuntimeSource("claude");
 
     harness.emit({
       type: "runtime.warning",
       eventId: asEventId("evt-background-move-notice"),
-      provider: "claudeAgent",
+      provider: "claude",
       createdAt: now,
       threadId: asThreadId("thread-1"),
       turnId: asTurnId("turn-background"),
@@ -7582,12 +7582,12 @@ describe("ProviderRuntimeIngestion", () => {
   it("does not parse live diff files for providers without patch capability", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
-    await harness.bindLegacyRuntimeSource("claudeAgent");
+    await harness.bindLegacyRuntimeSource("claude");
 
     harness.emit({
       type: "turn.diff.updated",
       eventId: asEventId("evt-claude-diff-placeholder"),
-      provider: "claudeAgent",
+      provider: "claude",
       createdAt: now,
       threadId: asThreadId("thread-1"),
       turnId: asTurnId("turn-claude"),
@@ -7686,11 +7686,11 @@ describe("ProviderRuntimeIngestion", () => {
   it("suppresses identical consecutive context window updates", async () => {
     const harness = await createHarness();
     const now = "2026-07-09T00:00:00.000Z";
-    await harness.bindLegacyRuntimeSource("claudeAgent");
+    await harness.bindLegacyRuntimeSource("claude");
     const makeUsageEvent = (eventId: string, usedTokens: number) => ({
       type: "thread.token-usage.updated" as const,
       eventId: asEventId(eventId),
-      provider: "claudeAgent" as const,
+      provider: "claude" as const,
       createdAt: now,
       threadId: asThreadId("thread-1"),
       payload: {
@@ -7794,12 +7794,12 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects configured Claude context windows into normalized thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
-    await harness.bindLegacyRuntimeSource("claudeAgent");
+    await harness.bindLegacyRuntimeSource("claude");
 
     harness.emit({
       type: "session.configured",
       eventId: asEventId("evt-session-configured-context-window"),
-      provider: "claudeAgent",
+      provider: "claude",
       createdAt: now,
       threadId: asThreadId("thread-1"),
       payload: {
@@ -7887,12 +7887,12 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects Claude usage snapshots with context window into normalized thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
-    await harness.bindLegacyRuntimeSource("claudeAgent");
+    await harness.bindLegacyRuntimeSource("claude");
 
     harness.emit({
       type: "thread.token-usage.updated",
       eventId: asEventId("evt-thread-token-usage-updated-claude-window"),
-      provider: "claudeAgent",
+      provider: "claude",
       createdAt: now,
       threadId: asThreadId("thread-1"),
       payload: {

@@ -489,7 +489,7 @@ function ChatRouteGlobalShortcuts() {
       ) {
         const provider =
           command === "chat.newClaude"
-            ? "claudeAgent"
+            ? "claude"
             : command === "chat.newCodex"
               ? "codex"
               : "cursor";

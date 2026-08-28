@@ -10,14 +10,14 @@
  */
 import * as OS from "node:os";
 import type {
-  ProviderKind,
+  EngineKind,
   ServerSettings,
   ServerProviderAuthStatus,
   ServerProviderStatus,
   ServerProviderStatusState,
   ServerProviderUpdateState,
 } from "@harnessos/contracts";
-import { PROVIDER_KINDS, ServerProviderUpdateError } from "@harnessos/contracts";
+import { ENGINE_KINDS, ServerProviderUpdateError } from "@harnessos/contracts";
 import { parseCodexConfigModelProvider } from "@harnessos/shared/codexConfig";
 import { decodeJsonResult } from "@harnessos/shared/schemaJson";
 import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
@@ -115,7 +115,7 @@ const CLAUDE_HEALTH_TIMEOUT_MS = 20_000;
 const OPENCODE_HEALTH_TIMEOUT_MS = 20_000;
 const CODEX_AUTH_STATUS_ARGS = ["-c", "mcp_servers={}", "login", "status"] as const;
 const CODEX_PROVIDER = "codex" as const;
-const CLAUDE_AGENT_PROVIDER = "claudeAgent" as const;
+const CLAUDE_AGENT_PROVIDER = "claude" as const;
 const CURSOR_PROVIDER = "cursor" as const;
 const ANTIGRAVITY_PROVIDER = "antigravity" as const;
 const GROK_PROVIDER = "grok" as const;
@@ -123,22 +123,22 @@ const DROID_PROVIDER = "droid" as const;
 const KILO_PROVIDER = "kilo" as const;
 const OPENCODE_PROVIDER = "opencode" as const;
 const PI_PROVIDER = "pi" as const;
-const HARNESSOS_AGENT_PROVIDER = "omnimind" as const;
+const HARNESSOS_AGENT_PROVIDER = "oa" as const;
 const BUNDLED_PI_VERSION = "0.84.3";
 type ProviderStatuses = ReadonlyArray<ServerProviderStatus>;
 const DISABLED_PROVIDER_STATUS_MESSAGE = "Provider is disabled in OmniMind settings.";
 const MINIMUM_ANTIGRAVITY_CLI_VERSION = "1.0.12";
 
-const PROVIDERS = PROVIDER_KINDS;
+const PROVIDERS = ENGINE_KINDS;
 
-const providerChildKind = (provider: ProviderKind): ProviderChildKind =>
+const providerChildKind = (provider: EngineKind): ProviderChildKind =>
   provider === CLAUDE_AGENT_PROVIDER
     ? "claude"
     : provider === HARNESSOS_AGENT_PROVIDER
       ? "pi"
       : provider;
 
-const providerCommandEnv = (provider: ProviderKind): NodeJS.ProcessEnv =>
+const providerCommandEnv = (provider: EngineKind): NodeJS.ProcessEnv =>
   buildProviderChildEnvironment({ provider: providerChildKind(provider) });
 
 const UPDATE_OUTPUT_MAX_BYTES = 10_000;
@@ -187,7 +187,7 @@ function isKiloNativeCommandPath(commandPath: string): boolean {
 }
 
 export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
-  Record<ProviderKind, PackageManagedProviderMaintenanceDefinition>
+  Record<EngineKind, PackageManagedProviderMaintenanceDefinition>
 > = {
   codex: {
     provider: CODEX_PROVIDER,
@@ -196,7 +196,7 @@ export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
     homebrew: { name: "codex", kind: "cask" },
     nativeUpdate: null,
   },
-  claudeAgent: {
+  claude: {
     provider: CLAUDE_AGENT_PROVIDER,
     binaryName: "claude",
     npmPackageName: "@anthropic-ai/claude-code",
@@ -2002,7 +2002,7 @@ export function stabilizeProviderStatusesAgainstTransientTimeouts(
 }
 
 export function isProviderEnabledForSettings(
-  provider: ProviderKind,
+  provider: EngineKind,
   settings: ServerSettings,
 ): boolean {
   return (
@@ -2013,8 +2013,8 @@ export function isProviderEnabledForSettings(
 export function resolvePassiveProviderPresence(
   settings: ServerSettings,
   resolveCommand: (command: string) => string | null = resolveExecutable,
-): ReadonlyArray<ProviderKind> {
-  const recoverable: ProviderKind[] = [];
+): ReadonlyArray<EngineKind> {
+  const recoverable: EngineKind[] = [];
   for (const provider of PROVIDERS) {
     if (!isProviderEnabledForSettings(provider, settings)) continue;
     if (provider === HARNESSOS_AGENT_PROVIDER || provider === PI_PROVIDER) {
@@ -2030,8 +2030,8 @@ export function resolvePassiveProviderPresence(
           );
         case CLAUDE_AGENT_PROVIDER:
           return (
-            settings.providers.claudeAgent.customModels.length > 0 ||
-            resolveCommand(settings.providers.claudeAgent.binaryPath) !== null
+            settings.providers.claude.customModels.length > 0 ||
+            resolveCommand(settings.providers.claude.binaryPath) !== null
           );
         case CURSOR_PROVIDER:
           return (
@@ -2074,7 +2074,7 @@ export function resolvePassiveProviderPresence(
 }
 
 export function makeDisabledProviderStatus(
-  provider: ProviderKind,
+  provider: EngineKind,
   checkedAt = new Date().toISOString(),
 ): ServerProviderStatus {
   return {
@@ -2214,14 +2214,14 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
       );
 
       const statusesRef = yield* Ref.make<ProviderStatuses>(cachedStatuses);
-      const updateStatesRef = yield* Ref.make<ReadonlyMap<ProviderKind, ServerProviderUpdateState>>(
+      const updateStatesRef = yield* Ref.make<ReadonlyMap<EngineKind, ServerProviderUpdateState>>(
         new Map(),
       );
       const refreshFiberRef = yield* Ref.make<Fiber.Fiber<ProviderStatuses, never> | null>(null);
       const commandCoordinator = yield* makeProviderMaintenanceCommandCoordinator({
         makeAlreadyRunningError: (provider) =>
           new ServerProviderUpdateError({
-            provider: provider as ProviderKind,
+            provider: provider as EngineKind,
             reason: "An update is already running for this provider.",
           }),
       });
@@ -2239,14 +2239,14 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
         Effect.map((probe) => probe?.subscriptionType),
       );
 
-      const getProviderBinaryPath = (provider: ProviderKind, settings: ServerSettings) => {
+      const getProviderBinaryPath = (provider: EngineKind, settings: ServerSettings) => {
         switch (provider) {
-          case "omnimind":
+          case "oa":
             return null;
           case "codex":
             return settings.providers.codex.binaryPath;
-          case "claudeAgent":
-            return settings.providers.claudeAgent.binaryPath;
+          case "claude":
+            return settings.providers.claude.binaryPath;
           case "cursor":
             return settings.providers.cursor.binaryPath;
           case "antigravity":
@@ -2265,7 +2265,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
       };
 
       const resolveProviderMaintenanceBinaryPath = (
-        provider: ProviderKind,
+        provider: EngineKind,
         settings: ServerSettings,
       ) => {
         const configuredPath = getProviderBinaryPath(provider, settings);
@@ -2277,7 +2277,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
       };
 
       const getProviderMaintenanceCapabilities = Effect.fn("getProviderMaintenanceCapabilities")(
-        function* (provider: ProviderKind) {
+        function* (provider: EngineKind) {
           const settings = yield* serverSettings.getSettings;
           if (!isProviderEnabledForSettings(provider, settings)) {
             return makeProviderMaintenanceCapabilities({
@@ -2356,7 +2356,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
       });
 
       const setProviderUpdateState = Effect.fn("setProviderUpdateState")(function* (
-        provider: ProviderKind,
+        provider: EngineKind,
         state: ServerProviderUpdateState | null,
       ) {
         yield* Ref.update(updateStatesRef, (previous) => {
@@ -2418,7 +2418,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
 
       const checkProviderWhenEnabled = <R>(
         settings: ServerSettings,
-        provider: ProviderKind,
+        provider: EngineKind,
         check: Effect.Effect<ServerProviderStatus, never, R>,
       ): Effect.Effect<Option.Option<ServerProviderStatus>, never, R> =>
         isProviderEnabledForSettings(provider, settings)
@@ -2449,7 +2449,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
                   CLAUDE_AGENT_PROVIDER,
                   makeCheckClaudeProviderStatus(
                     resolveClaudeSubscription,
-                    settings.providers.claudeAgent.binaryPath,
+                    settings.providers.claude.binaryPath,
                     serverConfig.homeDir,
                   ),
                 ),
@@ -2620,7 +2620,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
       };
 
       const runUpdateCommand = Effect.fn("runProviderUpdateCommand")(function* (input: {
-        readonly provider: ProviderKind;
+        readonly provider: EngineKind;
         readonly command: string;
         readonly args: ReadonlyArray<string>;
         readonly pathPrepend?: string;

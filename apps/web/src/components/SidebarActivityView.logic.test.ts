@@ -791,7 +791,7 @@ describe("collectUnreadActivityThreads", () => {
 describe("resolveThreadProjectLabel", () => {
   it("uses the project name for real projects and OmniMind otherwise", () => {
     expect(
-      resolveThreadProjectLabel({ kind: "project", name: "OmniMind App", folderName: "omnimind" }),
+      resolveThreadProjectLabel({ kind: "project", name: "OmniMind App", folderName: "oa" }),
     ).toBe("OmniMind App");
     expect(resolveThreadProjectLabel({ kind: "chat", name: "Chats", folderName: "chats" })).toBe(
       "OmniMind",

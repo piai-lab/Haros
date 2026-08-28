@@ -3,10 +3,10 @@
 // Layer: Persistence compatibility helper
 // Exports: normalizeLegacyModelSelection, normalizePersistedModelSelection
 
-import { MODEL_OPTIONS_BY_PROVIDER, ProviderKind } from "@harnessos/contracts";
+import { MODEL_OPTIONS_BY_PROVIDER, EngineKind } from "@harnessos/contracts";
 import { Schema } from "effect";
 
-type ModelProviderKind = ProviderKind;
+type ModelProviderKind = EngineKind;
 
 const NON_DROID_MODEL_SLUGS = new Set(
   Object.entries(MODEL_OPTIONS_BY_PROVIDER).flatMap(([provider, models]) =>
@@ -40,8 +40,8 @@ function readTrimmedString(record: Record<string, unknown>, key: string): string
 // Imported instance ids may be runtime names rather than OmniMind provider literals.
 function inferProviderFromLabel(label: string): ModelProviderKind | undefined {
   const lowerLabel = label.toLowerCase();
-  if (lowerLabel.includes("omnimind")) {
-    return "omnimind";
+  if (lowerLabel.includes("oa")) {
+    return "oa";
   }
   if (/(^|[^a-z0-9])pi([^a-z0-9]|$)/u.test(lowerLabel)) {
     return "pi";
@@ -59,7 +59,7 @@ function inferProviderFromLabel(label: string): ModelProviderKind | undefined {
     return "antigravity";
   }
   if (lowerLabel.includes("claude") || lowerLabel.includes("anthropic")) {
-    return "claudeAgent";
+    return "claude";
   }
   if (lowerLabel.includes("gemini") || lowerLabel.includes("google")) {
     return "antigravity";
@@ -77,7 +77,7 @@ function inferProviderFromLabel(label: string): ModelProviderKind | undefined {
 }
 
 function inferLegacyModelProvider(provider: unknown, model: string): ModelProviderKind {
-  if (Schema.is(ProviderKind)(provider)) {
+  if (Schema.is(EngineKind)(provider)) {
     return provider;
   }
   if (provider === "gemini") {
@@ -96,7 +96,7 @@ function inferLegacyModelProvider(provider: unknown, model: string): ModelProvid
     return "droid";
   }
   if (lowerModel.includes("claude")) {
-    return "claudeAgent";
+    return "claude";
   }
   if (lowerModel.includes("gemini")) {
     return "antigravity";

@@ -5,7 +5,7 @@
 // plain async API (for tests) and an Effect that reads ServerConfig (for the WS RPC handler).
 
 import type {
-  ProviderKind,
+  EngineKind,
   ServerListProviderUsageInput,
   ServerListProviderUsageResult,
   ServerProviderUsageSnapshot,
@@ -22,8 +22,8 @@ import { errorSnapshot } from "./parse";
 import { PROVIDER_USAGE_FETCHERS } from "./registry";
 import type { ProviderUsageContext } from "./types";
 
-const providerChildKind = (provider: ProviderKind): ProviderChildKind =>
-  provider === "claudeAgent" ? "claude" : provider === "omnimind" ? "pi" : provider;
+const providerChildKind = (provider: EngineKind): ProviderChildKind =>
+  provider === "claude" ? "claude" : provider === "oa" ? "pi" : provider;
 
 function buildContext(): ProviderUsageContext {
   return {
@@ -35,7 +35,7 @@ function buildContext(): ProviderUsageContext {
 }
 
 async function fetchProviderUsage(
-  provider: ProviderKind,
+  provider: EngineKind,
   providerContext: ProviderUsageContext,
 ): Promise<ServerProviderUsageSnapshot | null> {
   const fetcher = PROVIDER_USAGE_FETCHERS[provider];
@@ -56,7 +56,7 @@ async function fetchProviderUsage(
 }
 
 function buildProviderContext(
-  provider: ProviderKind,
+  provider: EngineKind,
   ctx: ProviderUsageContext,
 ): ProviderUsageContext {
   return {
@@ -74,7 +74,7 @@ function buildProviderContext(
 // concurrent requests for the same provider coalesce into a single fetch, and `forceRefresh`
 // (the settings panel's explicit refresh button) bypasses the TTL but still joins an in-flight
 // fetch. Degraded snapshots (errors, re-served last-good data) expire faster so recovery is
-// picked up quickly. Keyed by ProviderKind, so the cache is inherently bounded.
+// picked up quickly. Keyed by EngineKind, so the cache is inherently bounded.
 const SNAPSHOT_CACHE_TTL_MS = 5 * 60 * 1000;
 const SNAPSHOT_CACHE_DEGRADED_TTL_MS = 60 * 1000;
 
@@ -89,8 +89,8 @@ interface InFlightSnapshot {
   promise: Promise<ServerProviderUsageSnapshot | null>;
 }
 
-const snapshotCache = new Map<ProviderKind, CachedSnapshot>();
-const inFlightFetches = new Map<ProviderKind, InFlightSnapshot>();
+const snapshotCache = new Map<EngineKind, CachedSnapshot>();
+const inFlightFetches = new Map<EngineKind, InFlightSnapshot>();
 
 const snapshotCacheTtlMs = (snapshot: ServerProviderUsageSnapshot): number =>
   snapshot.stale === true
@@ -100,7 +100,7 @@ const snapshotCacheTtlMs = (snapshot: ServerProviderUsageSnapshot): number =>
       : SNAPSHOT_CACHE_TTL_MS;
 
 async function resolveCredentialKey(
-  provider: ProviderKind,
+  provider: EngineKind,
   ctx: ProviderUsageContext,
 ): Promise<string | null> {
   const fetcher = PROVIDER_USAGE_FETCHERS[provider];
@@ -121,7 +121,7 @@ export function __resetProviderUsageCacheForTests(): void {
 }
 
 async function getProviderUsageSnapshot(
-  provider: ProviderKind,
+  provider: EngineKind,
   ctx: ProviderUsageContext,
   forceRefresh: boolean,
 ): Promise<ServerProviderUsageSnapshot | null> {
@@ -179,10 +179,10 @@ async function getProviderUsageSnapshot(
 /** Plain async batch fetch for supported providers. Never throws. */
 export async function collectProviderUsageSnapshots(
   ctx: ProviderUsageContext,
-  options: { forceRefresh?: boolean; provider?: ProviderKind } = {},
+  options: { forceRefresh?: boolean; provider?: EngineKind } = {},
 ): Promise<ServerProviderUsageSnapshot[]> {
   const providers = options.provider
-    ? ([options.provider] as ProviderKind[])
+    ? ([options.provider] as EngineKind[])
     : PROVIDER_USAGE_PROVIDERS.filter(
         (provider) => PROVIDER_USAGE_FETCHERS[provider] !== undefined,
       );
@@ -209,7 +209,7 @@ export const listProviderUsage = Effect.fn(function* (input: ServerListProviderU
         {
           ...buildContext(),
           homeDir: serverConfig.homeDir,
-          claudeBinaryPath: settings.providers.claudeAgent.binaryPath,
+          claudeBinaryPath: settings.providers.claude.binaryPath,
           ...(codexAdapter.readAccountRateLimits
             ? {
                 codexRateLimits: () => Effect.runPromise(codexAdapter.readAccountRateLimits!()),

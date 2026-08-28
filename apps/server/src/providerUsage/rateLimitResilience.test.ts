@@ -11,7 +11,7 @@ const NOW_MS = 1_780_000_000_000;
 
 function makeResilience() {
   return createRateLimitResilience({
-    provider: "claudeAgent",
+    provider: "claude",
     source: "test",
     detail: (retryMins) => `throttled, retrying in ~${retryMins}m`,
   });
@@ -19,7 +19,7 @@ function makeResilience() {
 
 function goodSnapshot(): ServerProviderUsageSnapshot {
   return {
-    provider: "claudeAgent",
+    provider: "claude",
     updatedAt: "2026-06-09T12:00:00.000Z",
     limits: [{ window: "5h", usedPercent: 42, windowDurationMins: 300 }],
     usageLines: [],

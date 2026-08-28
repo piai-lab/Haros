@@ -38,12 +38,12 @@ describe("resolveThreadModelSummary", () => {
 
   it("summarizes a claude selection", () => {
     const summary = resolveThreadModelSummary({
-      provider: "claudeAgent",
+      provider: "claude",
       model: "claude-sonnet-5",
       options: { effort: "high" },
     });
 
-    expect(summary?.provider).toBe("claudeAgent");
+    expect(summary?.provider).toBe("claude");
     expect(summary?.modelLabel.length).toBeGreaterThan(0);
     expect(summary?.fastMode).toBe(false);
   });

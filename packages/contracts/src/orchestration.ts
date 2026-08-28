@@ -14,8 +14,8 @@ import {
   ProviderMentionReference,
   ProviderSkillReference,
 } from "./providerDiscovery";
-import { DEFAULT_PROVIDER_KIND, PROVIDER_KINDS, ProviderKind } from "./providerIdentity";
-export { DEFAULT_PROVIDER_KIND, PROVIDER_KINDS, ProviderKind } from "./providerIdentity";
+import { DEFAULT_ENGINE_KIND, ENGINE_KINDS, EngineKind } from "./engineIdentity";
+export { DEFAULT_ENGINE_KIND, ENGINE_KINDS, EngineKind } from "./engineIdentity";
 import { ProjectKind } from "./project";
 import {
   ApprovalRequestId,
@@ -75,7 +75,7 @@ export const ProviderSandboxMode = Schema.Literals([
 export type ProviderSandboxMode = typeof ProviderSandboxMode.Type;
 
 export const OmniMindModelSelection = Schema.Struct({
-  provider: Schema.Literal("omnimind"),
+  provider: Schema.Literal("oa"),
   model: TrimmedNonEmptyString,
   options: Schema.optional(PiModelOptions),
 });
@@ -89,7 +89,7 @@ export const CodexModelSelection = Schema.Struct({
 export type CodexModelSelection = typeof CodexModelSelection.Type;
 
 export const ClaudeModelSelection = Schema.Struct({
-  provider: Schema.Literal("claudeAgent"),
+  provider: Schema.Literal("claude"),
   model: TrimmedNonEmptyString,
   options: Schema.optional(ClaudeModelOptions),
   supportsAutoMode: Schema.optional(Schema.Boolean),
@@ -204,9 +204,9 @@ export const PiProviderStartOptions = Schema.Struct({
 });
 
 export const ProviderStartOptions = Schema.Struct({
-  omnimind: Schema.optional(Schema.Struct({})),
+  oa: Schema.optional(Schema.Struct({})),
   codex: Schema.optional(CodexProviderStartOptions),
-  claudeAgent: Schema.optional(ClaudeProviderStartOptions),
+  claude: Schema.optional(ClaudeProviderStartOptions),
   cursor: Schema.optional(CursorProviderStartOptions),
   antigravity: Schema.optional(AntigravityProviderStartOptions),
   grok: Schema.optional(GrokProviderStartOptions),
@@ -575,7 +575,7 @@ export type OrchestrationMessage = typeof OrchestrationMessage.Type;
 
 export const ThreadHandoff = Schema.Struct({
   sourceThreadId: ThreadId,
-  sourceProvider: ProviderKind,
+  sourceProvider: EngineKind,
   importedAt: IsoDateTime,
   bootstrapStatus: ThreadHandoffBootstrapStatus,
 });

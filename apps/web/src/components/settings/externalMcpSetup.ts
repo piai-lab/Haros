@@ -41,7 +41,7 @@ function jsonConfiguration(stdio: ExternalMcpStdioConfiguration): string {
   return JSON.stringify(
     {
       mcpServers: {
-        omnimind: {
+        oa: {
           command: stdio.command,
           args: stdio.args,
           ...(stdio.env ? { env: stdio.env } : {}),
@@ -66,7 +66,7 @@ export function buildExternalMcpClientConfiguration(
     return {
       format: "command",
       value: shellCommand(
-        ["codex", "mcp", "add", "omnimind", ...environment, "--", stdio.command, ...stdio.args],
+        ["codex", "mcp", "add", "oa", ...environment, "--", stdio.command, ...stdio.args],
         platform,
       ),
       copyLabel: "Copy Codex command",
@@ -90,7 +90,7 @@ export function buildExternalMcpClientConfiguration(
           "add",
           "--scope",
           "user",
-          "omnimind",
+          "oa",
           ...environment,
           "--",
           stdio.command,
@@ -156,7 +156,7 @@ export function buildExternalMcpSetupPrompt(input: {
   }
   sections.push(
     [
-      'Step 2 — Register OmniMind as a stdio MCP server named "omnimind" in your own configuration, using whichever mechanism your app supports:',
+      'Step 2 — Register OmniMind as a stdio MCP server named "oa" in your own configuration, using whichever mechanism your app supports:',
       "",
       `If you are Codex, run: ${codex.value}`,
       `If you are Claude Code, run: ${claude.value}`,

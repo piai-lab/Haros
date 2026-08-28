@@ -10,7 +10,7 @@ import type { ProviderAdapterError } from "../Errors.ts";
 import type { ProviderAdapterShape } from "./ProviderAdapter.ts";
 
 export interface OmniMindAgentAdapterShape extends ProviderAdapterShape<ProviderAdapterError> {
-  readonly provider: "omnimind";
+  readonly provider: "oa";
 }
 
 export class OmniMindAgentAdapter extends ServiceMap.Service<

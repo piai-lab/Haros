@@ -1,6 +1,6 @@
 import "../../index.css";
 
-import type { ProviderKind, ServerProviderStatus } from "@harnessos/contracts";
+import type { EngineKind, ServerProviderStatus } from "@harnessos/contracts";
 import { page, userEvent } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -18,7 +18,7 @@ vi.mock("../../localPreferences", () => ({
 const READY_AT = "2026-08-12T00:00:00.000Z";
 
 function providerStatus(
-  provider: ProviderKind,
+  provider: EngineKind,
   overrides: Partial<ServerProviderStatus> = {},
 ): ServerProviderStatus {
   return {
@@ -32,9 +32,9 @@ function providerStatus(
 }
 
 const READY_PROVIDERS: ReadonlyArray<ServerProviderStatus> = [
-  "omnimind",
+  "oa",
   "codex",
-  "claudeAgent",
+  "claude",
   "cursor",
   "antigravity",
   "grok",
@@ -42,23 +42,23 @@ const READY_PROVIDERS: ReadonlyArray<ServerProviderStatus> = [
   "kilo",
   "opencode",
   "pi",
-].map((provider) => providerStatus(provider as ProviderKind));
+].map((provider) => providerStatus(provider as EngineKind));
 
 async function mountPicker(input: {
-  provider?: ProviderKind;
+  provider?: EngineKind;
   providers?: ReadonlyArray<ServerProviderStatus>;
-  hiddenProviders?: ReadonlyArray<ProviderKind>;
-  providerOrder?: ReadonlyArray<ProviderKind>;
+  hiddenProviders?: ReadonlyArray<EngineKind>;
+  providerOrder?: ReadonlyArray<EngineKind>;
   locale?: "en" | "zh-CN";
 }) {
   harness.settings.localePreference = input.locale ?? "en";
-  const onProviderChange = vi.fn<(provider: ProviderKind) => void>();
-  const onProviderIntent = vi.fn<(provider: ProviderKind) => void>();
+  const onProviderChange = vi.fn<(provider: EngineKind) => void>();
+  const onProviderIntent = vi.fn<(provider: EngineKind) => void>();
   const host = document.createElement("div");
   document.body.append(host);
 
   function Harness() {
-    const [provider, setProvider] = useState<ProviderKind>(input.provider ?? "codex");
+    const [provider, setProvider] = useState<EngineKind>(input.provider ?? "codex");
     return (
       <I18nProvider>
         <ComposerEnginePicker
@@ -145,7 +145,7 @@ describe("ComposerEnginePicker", () => {
   it("applies custom order while retaining the hidden active Engine", async () => {
     const mounted = await mountPicker({
       hiddenProviders: ["codex", "cursor"],
-      providerOrder: ["pi", "codex", "claudeAgent"],
+      providerOrder: ["pi", "codex", "claude"],
     });
     try {
       await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
@@ -163,7 +163,7 @@ describe("ComposerEnginePicker", () => {
     const mounted = await mountPicker({
       providers: [
         providerStatus("codex"),
-        providerStatus("claudeAgent", { authStatus: "unauthenticated" }),
+        providerStatus("claude", { authStatus: "unauthenticated" }),
         providerStatus("cursor", {
           available: false,
           status: "error",
@@ -242,7 +242,7 @@ describe("ComposerEnginePicker", () => {
   });
 
   it("names OmniMind explicitly in the trigger and tooltip", async () => {
-    const mounted = await mountPicker({ provider: "omnimind" });
+    const mounted = await mountPicker({ provider: "oa" });
     try {
       const trigger = page.getByRole("button", { name: "Change engine. Current: OmniMind" });
       await expect.element(trigger).toBeVisible();

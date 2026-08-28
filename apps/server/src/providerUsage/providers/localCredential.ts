@@ -5,7 +5,7 @@
 
 import nodePath from "node:path";
 
-import type { ProviderKind } from "@harnessos/contracts";
+import type { EngineKind } from "@harnessos/contracts";
 
 import { getDroidApiKeyEnv } from "../../provider/acp/DroidAcpSupport";
 import { resolveOpenCodeCompatibleAuthPaths } from "../../provider/openCodeAuthPaths";
@@ -47,7 +47,7 @@ async function resolveOpenCodeCompatibleSignedIn(
 }
 
 function localCredentialFetcher(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   source: string;
   detail: string;
   resolveSignedIn: (ctx: ProviderUsageContext) => Promise<string | null>;

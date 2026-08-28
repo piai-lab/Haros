@@ -40,17 +40,17 @@ describe("external MCP guided setup", () => {
   it("builds standard JSON configuration for desktop and other clients", () => {
     const desktop = buildExternalMcpClientConfiguration("claudeDesktop", stdio);
     const parsed = JSON.parse(desktop.value) as {
-      mcpServers: { omnimind: { command: string; args: ReadonlyArray<string> } };
+      mcpServers: { oa: { command: string; args: ReadonlyArray<string> } };
     };
 
     expect(desktop.format).toBe("json");
-    expect(parsed.mcpServers.omnimind).toEqual(stdio);
+    expect(parsed.mcpServers.oa).toEqual(stdio);
   });
 
   it("builds terminal commands for PowerShell on Windows", () => {
     const codex = buildExternalMcpClientConfiguration("codex", stdio, "Win32");
     expect(codex.value).toBe(
-      "& 'codex' 'mcp' 'add' 'omnimind' '--env' 'ELECTRON_RUN_AS_NODE=1' '--' '/Applications/OmniMind.app/Contents/MacOS/OmniMind' 'server.js' 'mcp' 'serve' '--integration' 'mcp_int_example' '--home-dir' '/tmp/OmniMind home'",
+      "& 'codex' 'mcp' 'add' 'oa' '--env' 'ELECTRON_RUN_AS_NODE=1' '--' '/Applications/OmniMind.app/Contents/MacOS/OmniMind' 'server.js' 'mcp' 'serve' '--integration' 'mcp_int_example' '--home-dir' '/tmp/OmniMind home'",
     );
     expect(codex.instruction).toContain("PowerShell");
   });

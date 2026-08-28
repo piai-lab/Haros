@@ -4,7 +4,7 @@
 
 import { useMemo, type ReactNode } from "react";
 
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { isGenericChatThreadTitle } from "@harnessos/shared/chatThreads";
 
 import { useI18n } from "../i18n";
@@ -39,7 +39,7 @@ function ProviderAvatarWithTerminal({
   const provider = thread.session?.provider ?? thread.modelSelection.provider;
   const handoffSourceProvider = thread.handoff?.sourceProvider ?? null;
   const handoffTooltip = handoffSourceProvider
-    ? t("thread.handoffFrom", { provider: PROVIDER_DISPLAY_NAMES[handoffSourceProvider] })
+    ? t("thread.handoffFrom", { provider: ENGINE_DISPLAY_NAMES[handoffSourceProvider] })
     : null;
   const showBadge = terminalCount > 1 || terminalStatus !== null;
   const badgeTooltip =

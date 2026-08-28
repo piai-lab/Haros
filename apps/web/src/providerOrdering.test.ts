@@ -3,8 +3,8 @@
 // Layer: Web settings tests
 // Depends on: provider display metadata from contracts and providerOrdering helpers.
 
-import { PROVIDER_KINDS, type ProviderKind } from "@harnessos/contracts";
-import { PROVIDER_DESCRIPTORS, PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_KINDS, type EngineKind } from "@harnessos/contracts";
+import { ENGINE_DESCRIPTORS, ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -14,20 +14,18 @@ import {
   normalizeProviderOrder,
 } from "./providerOrdering";
 
-const ALL_PROVIDER_KINDS: readonly ProviderKind[] = PROVIDER_KINDS;
+const ALL_ENGINE_KINDS: readonly EngineKind[] = ENGINE_KINDS;
 
 describe("providerOrdering", () => {
   it("includes every displayable provider in the default order", () => {
-    expect(DEFAULT_PROVIDER_ORDER).toHaveLength(ALL_PROVIDER_KINDS.length);
-    expect(new Set(DEFAULT_PROVIDER_ORDER)).toEqual(new Set(ALL_PROVIDER_KINDS));
+    expect(DEFAULT_PROVIDER_ORDER).toHaveLength(ALL_ENGINE_KINDS.length);
+    expect(new Set(DEFAULT_PROVIDER_ORDER)).toEqual(new Set(ALL_ENGINE_KINDS));
   });
 
   it("keeps the shared presentation descriptor exhaustive and internally aligned", () => {
-    expect(PROVIDER_DESCRIPTORS.map((descriptor) => descriptor.kind)).toEqual(
-      DEFAULT_PROVIDER_ORDER,
-    );
-    for (const descriptor of PROVIDER_DESCRIPTORS) {
-      expect(descriptor.displayName).toBe(PROVIDER_DISPLAY_NAMES[descriptor.kind]);
+    expect(ENGINE_DESCRIPTORS.map((descriptor) => descriptor.kind)).toEqual(DEFAULT_PROVIDER_ORDER);
+    for (const descriptor of ENGINE_DESCRIPTORS) {
+      expect(descriptor.displayName).toBe(ENGINE_DISPLAY_NAMES[descriptor.kind]);
     }
   });
 

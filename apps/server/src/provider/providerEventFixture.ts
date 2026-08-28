@@ -83,7 +83,7 @@ const SAFE_UNTRUSTED_STRING_VALUES = new Set([
   "antigravity",
   "cancelled",
   "canceled",
-  "claudeAgent",
+  "claude",
   "client",
   "codex",
   "complete",

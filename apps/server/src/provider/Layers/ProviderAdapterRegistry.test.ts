@@ -1,4 +1,4 @@
-import { PROVIDER_KINDS, type ProviderKind } from "@harnessos/contracts";
+import { ENGINE_KINDS, type EngineKind } from "@harnessos/contracts";
 import { it, assert, vi } from "@effect/vitest";
 import { assertFailure } from "@effect/vitest/utils";
 
@@ -40,7 +40,7 @@ const fakeCodexAdapter: CodexAdapterShape = {
 };
 
 const fakeClaudeAdapter: ClaudeAdapterShape = {
-  provider: "claudeAgent",
+  provider: "claude",
   capabilities: { sessionModelSwitch: "in-session" },
   startSession: vi.fn(),
   sendTurn: vi.fn(),
@@ -164,7 +164,7 @@ const fakePiAdapter: PiAdapterShape = {
 
 const fakeOmniMindAgentAdapter: OmniMindAgentAdapterShape = {
   ...fakePiAdapter,
-  provider: "omnimind",
+  provider: "oa",
 };
 
 const fakeAntigravityAdapter: AntigravityAdapterShape = {
@@ -210,14 +210,14 @@ layer("ProviderAdapterRegistryLive", (it) => {
     Effect.gen(function* () {
       const registry = yield* ProviderAdapterRegistry;
       const codex = yield* registry.getByProvider("codex");
-      const claude = yield* registry.getByProvider("claudeAgent");
+      const claude = yield* registry.getByProvider("claude");
       const cursor = yield* registry.getByProvider("cursor");
       const antigravity = yield* registry.getByProvider("antigravity");
       const grok = yield* registry.getByProvider("grok");
       const droid = yield* registry.getByProvider("droid");
       const kilo = yield* registry.getByProvider("kilo");
       const opencode = yield* registry.getByProvider("opencode");
-      const omnimind = yield* registry.getByProvider("omnimind");
+      const omnimind = yield* registry.getByProvider("oa");
       const pi = yield* registry.getByProvider("pi");
       assert.equal(codex, fakeCodexAdapter);
       assert.equal(claude, fakeClaudeAdapter);
@@ -231,14 +231,14 @@ layer("ProviderAdapterRegistryLive", (it) => {
       assert.equal(pi, fakePiAdapter);
 
       const providers = yield* registry.listProviders();
-      assert.deepEqual(new Set(providers), new Set(PROVIDER_KINDS));
+      assert.deepEqual(providers, ENGINE_KINDS);
     }),
   );
 
   it.effect("fails with ProviderUnsupportedError for unknown providers", () =>
     Effect.gen(function* () {
       const registry = yield* ProviderAdapterRegistry;
-      const adapter = yield* registry.getByProvider("unknown" as ProviderKind).pipe(Effect.result);
+      const adapter = yield* registry.getByProvider("unknown" as EngineKind).pipe(Effect.result);
       assertFailure(adapter, new ProviderUnsupportedError({ provider: "unknown" }));
     }),
   );

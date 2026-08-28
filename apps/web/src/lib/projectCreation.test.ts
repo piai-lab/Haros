@@ -15,7 +15,7 @@ import { createOrRecoverProjectFromPath } from "./projectCreation";
 const NOW_ISO = "2026-06-26T20:00:00.000Z";
 const WORKSPACE_ROOT = "/Users/tester/Developer/omnimind";
 const DEFAULT_PROJECT_MODEL = {
-  provider: "omnimind" as const,
+  provider: "oa" as const,
   model: "deepseek/deepseek-chat",
 };
 
@@ -23,7 +23,7 @@ function makeProject(id: string, workspaceRoot = WORKSPACE_ROOT) {
   return {
     id: id as ProjectId,
     kind: "project" as const,
-    title: "omnimind",
+    title: "oa",
     workspaceRoot,
     defaultModelSelection: {
       provider: "codex" as const,
@@ -77,7 +77,7 @@ describe("createOrRecoverProjectFromPath", () => {
       expect.objectContaining({
         type: "project.create",
         kind: "project",
-        title: "omnimind",
+        title: "oa",
         workspaceRoot: WORKSPACE_ROOT,
         createWorkspaceRootIfMissing: false,
         defaultModelSelection: DEFAULT_PROJECT_MODEL,

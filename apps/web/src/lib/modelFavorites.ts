@@ -2,7 +2,7 @@
 // Purpose: Shared storage keys + readers for per-provider favorite model slugs.
 // Layer: Web local-storage helpers used by the model picker and model cycle shortcuts.
 
-import type { ProviderKind } from "@harnessos/contracts";
+import type { EngineKind } from "@harnessos/contracts";
 import { Schema } from "effect";
 
 export const FAVORITE_MODEL_STORAGE_KEYS = {
@@ -16,14 +16,14 @@ export type FavoriteModelProvider = keyof typeof FAVORITE_MODEL_STORAGE_KEYS;
 
 const FavoriteModelSlugsSchema = Schema.Array(Schema.String);
 
-export function supportsModelFavorites(provider: ProviderKind): provider is FavoriteModelProvider {
+export function supportsModelFavorites(provider: EngineKind): provider is FavoriteModelProvider {
   return (
     provider === "cursor" || provider === "kilo" || provider === "opencode" || provider === "pi"
   );
 }
 
 // Read favorite slugs for cycle order. Failures (SSR, parse errors) return [].
-export function readFavoriteModelSlugs(provider: ProviderKind): string[] {
+export function readFavoriteModelSlugs(provider: EngineKind): string[] {
   if (!supportsModelFavorites(provider) || typeof globalThis.localStorage === "undefined") {
     return [];
   }

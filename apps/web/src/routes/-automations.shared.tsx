@@ -13,7 +13,7 @@ import {
   type AutomationWorktreeMode,
   type ModelSelection,
   type ModelPresentationIdentity,
-  type ProviderKind,
+  type EngineKind,
   type RuntimeMode,
   type ThreadId,
 } from "@harnessos/contracts";
@@ -1007,8 +1007,8 @@ export function AutomationModelPicker({
   const providerStatuses = useProviderStatusesForLocalConfig();
   const [open, setOpen] = useState(false);
   const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
-  const [prefetchProviders, setPrefetchProviders] = useState<ReadonlyArray<ProviderKind>>([]);
-  const modelHintByProvider: Partial<Record<ProviderKind, string | null>> = {
+  const [prefetchProviders, setPrefetchProviders] = useState<ReadonlyArray<EngineKind>>([]);
+  const modelHintByProvider: Partial<Record<EngineKind, string | null>> = {
     [value.provider]: value.model,
   };
   const providerModelDiscoveryCwd = resolveProviderDiscoveryCwd({
@@ -1034,7 +1034,7 @@ export function AutomationModelPicker({
     prefetchProviders,
   });
   const persistedRuntimeModel =
-    value.provider === "claudeAgent" && typeof value.supportsAutoMode === "boolean"
+    value.provider === "claude" && typeof value.supportsAutoMode === "boolean"
       ? {
           slug: value.model,
           name: value.model,
@@ -1042,7 +1042,7 @@ export function AutomationModelPicker({
         }
       : undefined;
   const autoModeSupported =
-    value.provider !== "claudeAgent" ||
+    value.provider !== "claude" ||
     (selectedRuntimeModel ?? persistedRuntimeModel)?.supportsAutoMode === true;
   useEffect(() => {
     onAutoModeSupportChange?.(autoModeSupported);
@@ -1103,8 +1103,7 @@ export function reconcileAutomationFormAutoModeSupport(
   supported: boolean,
 ): AutomationFormState {
   const modelSelection =
-    form.modelSelection.provider === "claudeAgent" &&
-    form.modelSelection.supportsAutoMode !== supported
+    form.modelSelection.provider === "claude" && form.modelSelection.supportsAutoMode !== supported
       ? { ...form.modelSelection, supportsAutoMode: supported }
       : form.modelSelection;
   return modelSelection !== form.modelSelection ? { ...form, modelSelection } : form;

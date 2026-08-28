@@ -1064,7 +1064,7 @@ function ModelOptionRows({
         provider,
         model,
         nextOptions,
-        modelSelection.provider === "claudeAgent" ? modelSelection.supportsAutoMode : undefined,
+        modelSelection.provider === "claude" ? modelSelection.supportsAutoMode : undefined,
       ),
     );
   };

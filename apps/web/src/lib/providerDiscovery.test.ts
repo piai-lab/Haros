@@ -15,7 +15,7 @@ import {
 describe("formatSkillScope", () => {
   it("localizes known product scopes and preserves engine-specific identities", () => {
     expect(formatSkillScope("project", "zh-CN")).toBe("项目");
-    expect(formatSkillScope("omnimind", "zh-CN")).toBe("OmniMind 能力库");
+    expect(formatSkillScope("oa", "zh-CN")).toBe("OmniMind 能力库");
     expect(formatSkillScope("factory-plugin:reviewer", "zh-CN")).toBe("Factory-plugin:reviewer");
   });
 });

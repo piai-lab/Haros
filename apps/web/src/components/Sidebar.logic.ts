@@ -7,7 +7,7 @@ import {
   type KeybindingCommand,
   type ModelSelection,
   type ProjectId,
-  type ProviderKind,
+  type EngineKind,
   type PullRequestReviewRequestCountResult,
   type ThreadId,
 } from "@harnessos/contracts";
@@ -57,7 +57,7 @@ export type SidebarActionBadge = {
 };
 
 export function resolveNewProjectDefaultModelSelection(
-  provider: ProviderKind,
+  provider: EngineKind,
 ): ModelSelection | null {
   const model = getDefaultModel(provider);
   return model ? { provider, model } : null;

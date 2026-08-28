@@ -6,10 +6,10 @@
 
 import type {
   ProviderAgentDescriptor,
-  ProviderKind,
+  EngineKind,
   ProviderModelDescriptor,
 } from "@harnessos/contracts";
-import { PROVIDER_KINDS } from "@harnessos/contracts";
+import { ENGINE_KINDS } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
@@ -28,17 +28,17 @@ import { mergeDynamicModelOptions, type ProviderModelOption } from "../providerM
 export interface ProviderModelCatalog {
   customModelsByProvider: ReturnType<typeof getCustomModelsByProvider>;
   modelOptionsByProvider: Record<
-    ProviderKind,
+    EngineKind,
     ReadonlyArray<ProviderModelOption & { isCustom?: boolean }>
   >;
   /** Catalog-authoritative candidates; provider health still owns send admission. */
-  selectableModelOptionsByProvider: Record<ProviderKind, ReadonlyArray<ProviderModelOption>>;
+  selectableModelOptionsByProvider: Record<EngineKind, ReadonlyArray<ProviderModelOption>>;
   /** Distinguishes cold checks, truthful empty catalogs, last-good data, and hard failures. */
-  catalogStateByProvider: Record<ProviderKind, ProviderModelCatalogState>;
+  catalogStateByProvider: Record<EngineKind, ProviderModelCatalogState>;
   /** Providers whose runtime model discovery is still pending (no usable list yet). */
-  loadingModelProviders: Record<ProviderKind, boolean>;
+  loadingModelProviders: Record<EngineKind, boolean>;
   /** Runtime descriptors from the settled current query identity only. */
-  runtimeModelsByProvider: Record<ProviderKind, ReadonlyArray<ProviderModelDescriptor>>;
+  runtimeModelsByProvider: Record<EngineKind, ReadonlyArray<ProviderModelDescriptor>>;
   /** The runtime descriptor matching `selectedProvider` + its selected-model hint. */
   selectedRuntimeModel: ProviderModelDescriptor | undefined;
   /** Runtime-discovered agents/modes for the selected provider (kilo/opencode/claude/codex). */
@@ -53,9 +53,9 @@ export type ProviderModelCatalogState = "idle" | "checking" | "ready" | "empty" 
 
 const EMPTY_PROVIDER_AGENTS: ReadonlyArray<ProviderAgentDescriptor> = [];
 const EMPTY_CUSTOM_MODELS: ReturnType<typeof getCustomModelsByProvider> = {
-  omnimind: [],
+  oa: [],
   codex: [],
-  claudeAgent: [],
+  claude: [],
   cursor: [],
   antigravity: [],
   grok: [],
@@ -65,10 +65,10 @@ const EMPTY_CUSTOM_MODELS: ReturnType<typeof getCustomModelsByProvider> = {
   pi: [],
 };
 
-function ownsIndependentCustomModelSlugs(provider: ProviderKind): boolean {
+function ownsIndependentCustomModelSlugs(provider: EngineKind): boolean {
   return (
     provider === "codex" ||
-    provider === "claudeAgent" ||
+    provider === "claude" ||
     provider === "cursor" ||
     provider === "antigravity" ||
     provider === "grok" ||
@@ -93,7 +93,7 @@ function deriveCatalogState(input: {
 }
 
 export function useProviderModelCatalog(input: {
-  selectedProvider: ProviderKind;
+  selectedProvider: EngineKind;
   /**
    * Enables discovery for the on-demand providers (cursor/grok/droid/kilo/opencode)
    * even when they are not selected — pass the picker's open state so their lists
@@ -112,12 +112,12 @@ export function useProviderModelCatalog(input: {
   /** Effective cwd for providers whose model catalog can be extended by project resources. */
   cwd?: string | null;
   /** Per-provider selected-model hints so an unknown selection still lists itself. */
-  modelHintByProvider?: Partial<Record<ProviderKind, string | null>>;
+  modelHintByProvider?: Partial<Record<EngineKind, string | null>>;
   /**
    * Restrict background discovery to the providers used by a non-picker surface.
    * Picker surfaces can omit this to use the visible-provider list from settings.
    */
-  prefetchProviders?: ReadonlyArray<ProviderKind>;
+  prefetchProviders?: ReadonlyArray<EngineKind>;
 }): ProviderModelCatalog {
   const { selectedProvider, discoveryEnabled, modelHintByProvider } = input;
   const discoveryCwd = input.cwd ?? null;
@@ -128,16 +128,16 @@ export function useProviderModelCatalog(input: {
     [serverSettings],
   );
   const hiddenProviderSet = useMemo(
-    () => new Set<ProviderKind>(preferences.hiddenProviders),
+    () => new Set<EngineKind>(preferences.hiddenProviders),
     [preferences.hiddenProviders],
   );
   const prefetchProviderSet = useMemo(
     () =>
-      input.prefetchProviders === undefined ? null : new Set<ProviderKind>(input.prefetchProviders),
+      input.prefetchProviders === undefined ? null : new Set<EngineKind>(input.prefetchProviders),
     [input.prefetchProviders],
   );
   const shouldDiscoverProvider = (
-    provider: ProviderKind,
+    provider: EngineKind,
     prefetchRequested = discoveryEnabled,
   ): boolean => {
     // The enabled flag is a short-circuit, not a precondition. `serverSettings` is
@@ -158,8 +158,8 @@ export function useProviderModelCatalog(input: {
     return prefetchProviderSet?.has(provider) ?? !hiddenProviderSet.has(provider);
   };
 
-  const omniMindModelDiscoveryEnabled = shouldDiscoverProvider("omnimind");
-  const claudeModelDiscoveryEnabled = shouldDiscoverProvider("claudeAgent");
+  const omniMindModelDiscoveryEnabled = shouldDiscoverProvider("oa");
+  const claudeModelDiscoveryEnabled = shouldDiscoverProvider("claude");
   const codexModelDiscoveryEnabled = shouldDiscoverProvider("codex");
   const cursorModelDiscoveryEnabled = shouldDiscoverProvider("cursor");
   const antigravityModelDiscoveryEnabled = shouldDiscoverProvider("antigravity");
@@ -176,7 +176,7 @@ export function useProviderModelCatalog(input: {
 
   const omniMindDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
-      provider: "omnimind",
+      provider: "oa",
       cwd: discoveryCwd,
       enabled: omniMindModelDiscoveryEnabled,
     }),
@@ -184,8 +184,8 @@ export function useProviderModelCatalog(input: {
 
   const claudeDynamicModelsQuery = useQuery(
     providerModelsQueryOptions({
-      provider: "claudeAgent",
-      binaryPath: serverSettings?.providers.claudeAgent?.binaryPath || null,
+      provider: "claude",
+      binaryPath: serverSettings?.providers.claude?.binaryPath || null,
       enabled: claudeModelDiscoveryEnabled,
     }),
   );
@@ -268,7 +268,7 @@ export function useProviderModelCatalog(input: {
     kiloModelDiscoveryEnabled && !isInitialModelDiscoveryPending(kiloDynamicModelsQuery);
   const claudeDynamicAgentsQuery = useQuery(
     providerAgentsQueryOptions({
-      provider: "claudeAgent",
+      provider: "claude",
       enabled: claudeAgentDiscoveryEnabled,
     }),
   );
@@ -301,13 +301,13 @@ export function useProviderModelCatalog(input: {
   );
 
   const modelOptionsByProvider = useMemo(() => {
-    const staticOptions: Record<ProviderKind, ReturnType<typeof getAppModelOptions>> = {
-      omnimind: getAppModelOptions("omnimind", []),
+    const staticOptions: Record<EngineKind, ReturnType<typeof getAppModelOptions>> = {
+      oa: getAppModelOptions("oa", []),
       codex: getAppModelOptions("codex", customModelsByProvider.codex, modelHintByProvider?.codex),
-      claudeAgent: getAppModelOptions(
-        "claudeAgent",
-        customModelsByProvider.claudeAgent,
-        modelHintByProvider?.claudeAgent,
+      claude: getAppModelOptions(
+        "claude",
+        customModelsByProvider.claude,
+        modelHintByProvider?.claude,
       ),
       cursor: getAppModelOptions(
         "cursor",
@@ -330,12 +330,12 @@ export function useProviderModelCatalog(input: {
       pi: getAppModelOptions("pi", customModelsByProvider.pi, modelHintByProvider?.pi),
     };
     const result: Record<
-      ProviderKind,
+      EngineKind,
       ReadonlyArray<ProviderModelOption & { isCustom?: boolean }>
     > = { ...staticOptions };
-    const dynamicSources: Record<ProviderKind, typeof claudeDynamicModelsQuery.data> = {
-      omnimind: omniMindDynamicModelsQuery.data,
-      claudeAgent: claudeDynamicModelsQuery.data,
+    const dynamicSources: Record<EngineKind, typeof claudeDynamicModelsQuery.data> = {
+      oa: omniMindDynamicModelsQuery.data,
+      claude: claudeDynamicModelsQuery.data,
       codex: codexDynamicModelsQuery.data,
       cursor:
         cursorDynamicModelsQuery.data === undefined
@@ -349,8 +349,8 @@ export function useProviderModelCatalog(input: {
       pi: piDynamicModelsQuery.data,
     };
     for (const provider of [
-      "omnimind",
-      "claudeAgent",
+      "oa",
+      "claude",
       "codex",
       "cursor",
       "antigravity",
@@ -387,11 +387,11 @@ export function useProviderModelCatalog(input: {
   ]);
 
   const discoveredRuntimeModelsByProvider = useMemo<
-    Record<ProviderKind, ReadonlyArray<ProviderModelDescriptor>>
+    Record<EngineKind, ReadonlyArray<ProviderModelDescriptor>>
   >(
     () => ({
-      omnimind: omniMindDynamicModelsQuery.data?.models ?? [],
-      claudeAgent: claudeDynamicModelsQuery.data?.models ?? [],
+      oa: omniMindDynamicModelsQuery.data?.models ?? [],
+      claude: claudeDynamicModelsQuery.data?.models ?? [],
       codex: codexDynamicModelsQuery.data?.models ?? [],
       cursor: cursorRuntimeModels,
       antigravity: antigravityModelsQuery.data?.models ?? [],
@@ -415,9 +415,9 @@ export function useProviderModelCatalog(input: {
     ],
   );
 
-  const catalogStateByProvider = useMemo<Record<ProviderKind, ProviderModelCatalogState>>(
+  const catalogStateByProvider = useMemo<Record<EngineKind, ProviderModelCatalogState>>(
     () => ({
-      omnimind: deriveCatalogState({
+      oa: deriveCatalogState({
         enabled: omniMindModelDiscoveryEnabled,
         hasSettledData:
           omniMindDynamicModelsQuery.data !== undefined &&
@@ -425,7 +425,7 @@ export function useProviderModelCatalog(input: {
         isPending: omniMindDynamicModelsQuery.isPending,
         isPlaceholderData: omniMindDynamicModelsQuery.isPlaceholderData,
         isError: omniMindDynamicModelsQuery.isError,
-        modelCount: discoveredRuntimeModelsByProvider.omnimind.length,
+        modelCount: discoveredRuntimeModelsByProvider.oa.length,
       }),
       codex: deriveCatalogState({
         enabled: codexModelDiscoveryEnabled,
@@ -436,7 +436,7 @@ export function useProviderModelCatalog(input: {
         isError: codexDynamicModelsQuery.isError,
         modelCount: discoveredRuntimeModelsByProvider.codex.length,
       }),
-      claudeAgent: deriveCatalogState({
+      claude: deriveCatalogState({
         enabled: claudeModelDiscoveryEnabled,
         hasSettledData:
           claudeDynamicModelsQuery.data !== undefined &&
@@ -444,7 +444,7 @@ export function useProviderModelCatalog(input: {
         isPending: claudeDynamicModelsQuery.isPending,
         isPlaceholderData: claudeDynamicModelsQuery.isPlaceholderData,
         isError: claudeDynamicModelsQuery.isError,
-        modelCount: discoveredRuntimeModelsByProvider.claudeAgent.length,
+        modelCount: discoveredRuntimeModelsByProvider.claude.length,
       }),
       cursor: deriveCatalogState({
         enabled: cursorModelDiscoveryEnabled,
@@ -558,10 +558,10 @@ export function useProviderModelCatalog(input: {
   );
 
   const runtimeModelsByProvider = useMemo<
-    Record<ProviderKind, ReadonlyArray<ProviderModelDescriptor>>
+    Record<EngineKind, ReadonlyArray<ProviderModelDescriptor>>
   >(() => {
-    const result = {} as Record<ProviderKind, ReadonlyArray<ProviderModelDescriptor>>;
-    for (const provider of PROVIDER_KINDS) {
+    const result = {} as Record<EngineKind, ReadonlyArray<ProviderModelDescriptor>>;
+    for (const provider of ENGINE_KINDS) {
       const state = catalogStateByProvider[provider];
       result[provider] =
         state === "ready" || state === "stale" ? discoveredRuntimeModelsByProvider[provider] : [];
@@ -570,8 +570,8 @@ export function useProviderModelCatalog(input: {
   }, [catalogStateByProvider, discoveredRuntimeModelsByProvider]);
 
   const configuredCustomModelSlugsByProvider = useMemo(() => {
-    const result = {} as Record<ProviderKind, ReadonlySet<string>>;
-    for (const provider of PROVIDER_KINDS) {
+    const result = {} as Record<EngineKind, ReadonlySet<string>>;
+    for (const provider of ENGINE_KINDS) {
       result[provider] = new Set(
         getAppModelOptions(provider, customModelsByProvider[provider])
           .filter((option) => option.isCustom)
@@ -582,10 +582,10 @@ export function useProviderModelCatalog(input: {
   }, [customModelsByProvider]);
 
   const selectableModelOptionsByProvider = useMemo<
-    Record<ProviderKind, ReadonlyArray<ProviderModelOption>>
+    Record<EngineKind, ReadonlyArray<ProviderModelOption>>
   >(() => {
-    const result = {} as Record<ProviderKind, ReadonlyArray<ProviderModelOption>>;
-    for (const provider of PROVIDER_KINDS) {
+    const result = {} as Record<EngineKind, ReadonlyArray<ProviderModelOption>>;
+    for (const provider of ENGINE_KINDS) {
       const runtimeModels = runtimeModelsByProvider[provider];
       const catalogState = catalogStateByProvider[provider];
       if (catalogState === "idle" || catalogState === "checking") {
@@ -627,7 +627,7 @@ export function useProviderModelCatalog(input: {
   );
 
   const selectedAgentCatalog =
-    selectedProvider === "claudeAgent"
+    selectedProvider === "claude"
       ? {
           enabled: claudeAgentDiscoveryEnabled,
           query: claudeDynamicAgentsQuery,
@@ -658,9 +658,9 @@ export function useProviderModelCatalog(input: {
     [selectedDynamicAgents],
   );
 
-  const loadingModelProviders = useMemo<Record<ProviderKind, boolean>>(() => {
-    const result = {} as Record<ProviderKind, boolean>;
-    for (const provider of PROVIDER_KINDS) {
+  const loadingModelProviders = useMemo<Record<EngineKind, boolean>>(() => {
+    const result = {} as Record<EngineKind, boolean>;
+    for (const provider of ENGINE_KINDS) {
       result[provider] = catalogStateByProvider[provider] === "checking";
     }
     return result;

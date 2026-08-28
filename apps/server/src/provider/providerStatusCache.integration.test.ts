@@ -85,7 +85,7 @@ describe("providerStatusCache", () => {
           checkedAt: "2026-04-15T10:02:00.000Z",
         },
         {
-          provider: "claudeAgent",
+          provider: "claude",
           status: "warning",
           available: true,
           authStatus: "unknown",
@@ -110,7 +110,7 @@ describe("providerStatusCache", () => {
     ).toEqual([
       readyCodexStatus,
       {
-        provider: "claudeAgent",
+        provider: "claude",
         status: "warning",
         available: true,
         authStatus: "unknown",

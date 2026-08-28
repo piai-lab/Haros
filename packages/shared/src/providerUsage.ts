@@ -3,13 +3,13 @@
 // the server (live usage fetchers) and the web app (Settings → Usage, toolbar popover):
 // which providers expose a usage source, their display labels, learn-more URLs, and the
 // read-only "sign in via CLI" hint used when a credential is missing or expired.
-// Layer: cross-cutting (no runtime deps beyond the ProviderKind type).
+// Layer: cross-cutting (no runtime deps beyond the EngineKind type).
 
-import type { ProviderKind, ServerProviderUsageSnapshot } from "@harnessos/contracts";
-import { PROVIDER_DESCRIPTORS, PROVIDER_DESCRIPTOR_BY_KIND } from "./providerMetadata";
+import type { EngineKind, ServerProviderUsageSnapshot } from "@harnessos/contracts";
+import { ENGINE_DESCRIPTORS, ENGINE_DESCRIPTOR_BY_KIND } from "./engineMetadata";
 
 /** Providers, in display order, that expose a live usage source. */
-export const PROVIDER_USAGE_PROVIDERS: ReadonlyArray<ProviderKind> = PROVIDER_DESCRIPTORS.flatMap(
+export const PROVIDER_USAGE_PROVIDERS: ReadonlyArray<EngineKind> = ENGINE_DESCRIPTORS.flatMap(
   (descriptor) => (descriptor.usage ? [descriptor.kind] : []),
 );
 
@@ -19,7 +19,7 @@ function lookupMeta(provider: string | null | undefined) {
   if (!provider) {
     return undefined;
   }
-  const descriptor = PROVIDER_DESCRIPTOR_BY_KIND[provider as ProviderKind];
+  const descriptor = ENGINE_DESCRIPTOR_BY_KIND[provider as EngineKind];
   return descriptor?.usage ? descriptor : undefined;
 }
 

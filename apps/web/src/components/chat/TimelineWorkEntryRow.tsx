@@ -614,7 +614,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
       : isOmniMindBrowserToolRow
         ? "browser"
         : isOmniMindToolRow
-          ? "omnimind"
+          ? "oa"
           : isMcpToolRow
             ? "mcp"
             : undefined;

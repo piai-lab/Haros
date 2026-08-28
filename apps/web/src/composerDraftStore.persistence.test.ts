@@ -67,7 +67,7 @@ function makePendingDirectTurnRecovery(
       interactionMode: "default",
     },
     targetBinding: {
-      modelSelection: modelSelection("omnimind", "gateway/model"),
+      modelSelection: modelSelection("oa", "gateway/model"),
       runtimeMode: "auto",
       interactionMode: "plan",
     },

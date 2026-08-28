@@ -5,7 +5,7 @@
 
 import { statSync } from "node:fs";
 
-import type { ChatAttachment, ProviderKind, ThreadId } from "@harnessos/contracts";
+import type { ChatAttachment, EngineKind, ThreadId } from "@harnessos/contracts";
 import { Effect, Option } from "effect";
 
 import { resolveAttachmentRelativePath } from "../attachmentPaths.ts";
@@ -48,7 +48,7 @@ function withStoragePath(attachment: ChatAttachment, storagePath: string): ChatA
 }
 
 function resolutionError(input: {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly operation: string;
   readonly attachmentId: string;
 }): ProviderAdapterValidationError {
@@ -107,7 +107,7 @@ export function resolveProviderDispatchAttachments(input: {
   readonly repository: Pick<ManagedAttachmentRepositoryShape, "findClaimedById">;
   readonly threadId: ThreadId;
   readonly messageId: string;
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly operation: string;
 }) {
   return Effect.forEach(

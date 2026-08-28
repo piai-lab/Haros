@@ -98,7 +98,7 @@ function runtimeLayer(logPath: string, env: Record<string, string> = {}) {
     clientCapabilities: {
       _meta: {
         primitive: "client-meta",
-        nested: { source: "omnimind" },
+        nested: { source: "oa" },
       },
     },
     clientInfo: { name: "omnimind-conformance-test", version: "0.0.0" },
@@ -154,7 +154,7 @@ describe("official ACP SDK conformance at the current OmniMind boundary", () => 
           terminal: false,
           _meta: {
             primitive: "client-meta",
-            nested: { source: "omnimind" },
+            nested: { source: "oa" },
           },
         },
       });
@@ -322,7 +322,7 @@ describe("official ACP SDK conformance at the current OmniMind boundary", () => 
       );
       yield* runtime.start();
       const request = yield* runtime
-        .request("conformance/wait-for-generic-cancel", { source: "omnimind" })
+        .request("conformance/wait-for-generic-cancel", { source: "oa" })
         .pipe(Effect.forkChild);
 
       yield* Deferred.await(ready);

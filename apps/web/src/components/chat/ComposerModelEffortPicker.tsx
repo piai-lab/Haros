@@ -5,7 +5,7 @@
 import {
   type ModelSlug,
   type ProviderAgentDescriptor,
-  type ProviderKind,
+  type EngineKind,
   type ProviderModelDescriptor,
   type ProviderModelOptions,
   type ThreadId,
@@ -33,16 +33,16 @@ import { ProviderModelMenuItems, resolveProviderModelLabel } from "./ProviderMod
 import { resolveTraitsTriggerSummary } from "./TraitsPicker";
 
 type ComposerModelEffortPickerProps = {
-  provider: ProviderKind;
+  provider: EngineKind;
   model: ModelSlug | null;
   catalogState: ProviderModelCatalogState;
-  modelOptionsByProvider: Record<ProviderKind, ReadonlyArray<ProviderModelOption>>;
-  loadingModelProviders?: Partial<Record<ProviderKind, boolean>>;
+  modelOptionsByProvider: Record<EngineKind, ReadonlyArray<ProviderModelOption>>;
+  loadingModelProviders?: Partial<Record<EngineKind, boolean>>;
   compact?: boolean;
   hideModelLabel?: boolean;
   hideStatusLabel?: boolean;
   disabled?: boolean;
-  onProviderModelChange: (provider: ProviderKind, model: ModelSlug) => void;
+  onProviderModelChange: (provider: EngineKind, model: ModelSlug) => void;
   onRefreshModels: () => void;
   onOpenSettings: () => void;
   onSelectionCommitted?: () => void;
@@ -50,7 +50,7 @@ type ComposerModelEffortPickerProps = {
   runtimeModel?: ProviderModelDescriptor | undefined;
   runtimeModels?: ReadonlyArray<ProviderModelDescriptor> | null | undefined;
   runtimeAgents?: ReadonlyArray<ProviderAgentDescriptor> | null | undefined;
-  modelOptions: ProviderModelOptions[ProviderKind] | undefined;
+  modelOptions: ProviderModelOptions[EngineKind] | undefined;
   prompt: string;
   onPromptChange: (prompt: string) => void;
   open?: boolean;
@@ -253,7 +253,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                     }}
                   >
                     <SettingsIcon aria-hidden="true" className="size-3.5" />
-                    {props.provider === "omnimind"
+                    {props.provider === "oa"
                       ? t("composer.openModelServices")
                       : t("composer.openEngineSettings")}
                   </MenuItem>
@@ -358,7 +358,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                   }}
                 >
                   <SettingsIcon aria-hidden="true" className="size-3.5" />
-                  {props.provider === "omnimind"
+                  {props.provider === "oa"
                     ? t("composer.openModelServices")
                     : t("composer.openEngineSettings")}
                 </MenuItem>

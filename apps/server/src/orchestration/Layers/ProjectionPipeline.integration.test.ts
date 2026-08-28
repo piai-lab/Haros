@@ -1297,7 +1297,7 @@ it.effect("fast-forwards lagging hot projector cursors before restart replay", (
           projectId,
           title: "Bootstrap fast-forward thread",
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-sonnet-4-5-20250929",
           },
           runtimeMode: "full-access",
@@ -1432,7 +1432,7 @@ it.effect("rebuilds a deleted hot cursor and advances a stalled projector on boo
           threadId,
           projectId,
           title: "Hot cursor repair thread",
-          modelSelection: { provider: "claudeAgent", model: "claude-sonnet-4-5-20250929" },
+          modelSelection: { provider: "claude", model: "claude-sonnet-4-5-20250929" },
           runtimeMode: "full-access",
           branch: null,
           worktreePath: null,
@@ -2427,7 +2427,7 @@ it.layer(
           projectId,
           title: "Stale Reconcile Thread",
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-sonnet-5",
           },
           runtimeMode: "full-access",

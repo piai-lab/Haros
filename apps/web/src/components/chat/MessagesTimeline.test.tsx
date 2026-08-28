@@ -151,7 +151,7 @@ describe("MessagesTimeline", () => {
             pendingMessageId,
             turnId,
             modelSelection: {
-              provider: "omnimind",
+              provider: "oa",
               model: "deepseek/deepseek-v4-pro",
             },
             requestedAt: "2026-08-27T02:21:00.000Z",
@@ -3007,7 +3007,7 @@ describe("MessagesTimeline", () => {
         ]}
       />,
     );
-    expect(claudeMarkup).toContain('data-tool-icon="omnimind"');
+    expect(claudeMarkup).toContain('data-tool-icon="oa"');
     expect(claudeMarkup).not.toContain('data-tool-icon="mcp"');
     expect(claudeMarkup).toContain("OmniMind is creating a thread");
     expect(claudeMarkup).not.toContain("OmniMind__harnessos_create_thread");
@@ -3035,7 +3035,7 @@ describe("MessagesTimeline", () => {
         ]}
       />,
     );
-    expect(codexMarkup).toContain('data-tool-icon="omnimind"');
+    expect(codexMarkup).toContain('data-tool-icon="oa"');
     expect(codexMarkup).toContain("OmniMind listed threads");
     expect(codexMarkup).not.toContain("mcp__OmniMind__harnessos_list_threads");
 
@@ -3254,7 +3254,7 @@ describe("MessagesTimeline", () => {
               {
                 threadId: "thread-claude",
                 title: "Explain the repository with Claude",
-                provider: "claudeAgent",
+                provider: "claude",
                 model: "claude-sonnet-5",
                 environment: "worktree",
                 status: "task_dispatched",

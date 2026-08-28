@@ -4,13 +4,13 @@
  * Provides provider-aware alias metadata used by the composer UI and provider runtimes.
  */
 
-import type { ProviderKind } from "./orchestration";
+import type { EngineKind } from "./orchestration";
 import type { ModelSlug } from "./model";
 
 type AgentAliasColor = "violet" | "fuchsia" | "teal" | "cyan" | "amber" | "orange";
 
 interface BaseAgentAliasDefinition {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly displayName: string;
   readonly color: AgentAliasColor;
 }
@@ -22,7 +22,7 @@ export interface CodexAgentAliasDefinition extends BaseAgentAliasDefinition {
 }
 
 export interface ClaudeSubagentAliasDefinition extends BaseAgentAliasDefinition {
-  readonly provider: "claudeAgent";
+  readonly provider: "claude";
   readonly kind: "claude-subagent";
   readonly agentName: string;
   readonly description: string;
@@ -115,7 +115,7 @@ const CODEX_AGENT_MENTION_ALIASES: Record<string, CodexAgentAliasDefinition> = {
 
 const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition> = {
   explore: {
-    provider: "claudeAgent",
+    provider: "claude",
     kind: "claude-subagent",
     agentName: "explore",
     displayName: "Explore",
@@ -128,7 +128,7 @@ const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition
     model: "haiku",
   },
   review: {
-    provider: "claudeAgent",
+    provider: "claude",
     kind: "claude-subagent",
     agentName: "review",
     displayName: "Code Review",
@@ -141,7 +141,7 @@ const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition
     model: "sonnet",
   },
   reviewer: {
-    provider: "claudeAgent",
+    provider: "claude",
     kind: "claude-subagent",
     agentName: "review",
     displayName: "Code Review",
@@ -154,7 +154,7 @@ const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition
     model: "sonnet",
   },
   build: {
-    provider: "claudeAgent",
+    provider: "claude",
     kind: "claude-subagent",
     agentName: "build",
     displayName: "Implementer",
@@ -167,7 +167,7 @@ const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition
     model: "sonnet",
   },
   implement: {
-    provider: "claudeAgent",
+    provider: "claude",
     kind: "claude-subagent",
     agentName: "build",
     displayName: "Implementer",
@@ -180,7 +180,7 @@ const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition
     model: "sonnet",
   },
   plan: {
-    provider: "claudeAgent",
+    provider: "claude",
     kind: "claude-subagent",
     agentName: "plan",
     displayName: "Planner",
@@ -193,7 +193,7 @@ const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition
     model: "sonnet",
   },
   planner: {
-    provider: "claudeAgent",
+    provider: "claude",
     kind: "claude-subagent",
     agentName: "plan",
     displayName: "Planner",
@@ -208,12 +208,12 @@ const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition
 };
 
 export const AGENT_MENTION_ALIASES_BY_PROVIDER: Record<
-  ProviderKind,
+  EngineKind,
   Record<string, AgentAliasDefinition>
 > = {
-  omnimind: {},
+  oa: {},
   codex: CODEX_AGENT_MENTION_ALIASES,
-  claudeAgent: CLAUDE_AGENT_MENTION_ALIASES,
+  claude: CLAUDE_AGENT_MENTION_ALIASES,
   cursor: {},
   antigravity: {},
   grok: {},
@@ -221,7 +221,7 @@ export const AGENT_MENTION_ALIASES_BY_PROVIDER: Record<
   kilo: OPENCODE_AGENT_MENTION_ALIASES,
   opencode: OPENCODE_AGENT_MENTION_ALIASES,
   pi: {},
-} as const satisfies Record<ProviderKind, Record<string, AgentAliasDefinition>>;
+} as const satisfies Record<EngineKind, Record<string, AgentAliasDefinition>>;
 
 // Backward compatibility for legacy call sites that still expect a flat alias table.
 export const AGENT_MENTION_ALIASES: Record<string, AgentAliasDefinition> = Object.assign(
@@ -229,10 +229,10 @@ export const AGENT_MENTION_ALIASES: Record<string, AgentAliasDefinition> = Objec
   ...Object.values(AGENT_MENTION_ALIASES_BY_PROVIDER),
 );
 
-const AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_PROVIDER: Record<ProviderKind, readonly string[]> = {
-  omnimind: [],
+const AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_PROVIDER: Record<EngineKind, readonly string[]> = {
+  oa: [],
   codex: ["5.5", "5.4", "mini", "5.3-codex", "spark", "5.2", "5.2-codex"],
-  claudeAgent: ["explore", "review", "build", "plan"],
+  claude: ["explore", "review", "build", "plan"],
   cursor: [],
   antigravity: [],
   grok: [],
@@ -252,7 +252,7 @@ function mapAgentEntries(input: Record<string, AgentAliasDefinition>): ResolvedA
  * Get all available agent aliases for a provider. When no provider is passed,
  * returns the global union for parsing and validation helpers.
  */
-export function getAgentMentionAliases(provider?: ProviderKind): ResolvedAgentAlias[] {
+export function getAgentMentionAliases(provider?: EngineKind): ResolvedAgentAlias[] {
   if (provider) {
     return mapAgentEntries(AGENT_MENTION_ALIASES_BY_PROVIDER[provider]);
   }
@@ -265,7 +265,7 @@ export function getAgentMentionAliases(provider?: ProviderKind): ResolvedAgentAl
 /**
  * Get the preferred aliases shown in autocomplete for a provider.
  */
-export function getAgentMentionAutocompleteAliases(provider: ProviderKind): ResolvedAgentAlias[] {
+export function getAgentMentionAutocompleteAliases(provider: EngineKind): ResolvedAgentAlias[] {
   return AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_PROVIDER[provider].map((alias) => {
     const definition = AGENT_MENTION_ALIASES_BY_PROVIDER[provider][alias];
     if (!definition) {
@@ -281,7 +281,7 @@ export function getAgentMentionAutocompleteAliases(provider: ProviderKind): Reso
  */
 export function resolveAgentAlias(
   alias: string,
-  provider?: ProviderKind,
+  provider?: EngineKind,
 ): AgentAliasDefinition | null {
   const normalized = alias.toLowerCase();
   if (provider) {
@@ -297,11 +297,11 @@ export function resolveAgentAlias(
   return null;
 }
 
-export function isValidAgentAlias(alias: string, provider?: ProviderKind): boolean {
+export function isValidAgentAlias(alias: string, provider?: EngineKind): boolean {
   return resolveAgentAlias(alias, provider) !== null;
 }
 
-export function getAgentAliasNames(provider?: ProviderKind): string[] {
+export function getAgentAliasNames(provider?: EngineKind): string[] {
   if (provider) {
     return Object.keys(AGENT_MENTION_ALIASES_BY_PROVIDER[provider]);
   }

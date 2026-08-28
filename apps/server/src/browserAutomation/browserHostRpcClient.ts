@@ -2,7 +2,7 @@ import * as FS from "node:fs";
 import * as Net from "node:net";
 import * as OS from "node:os";
 
-import type { BrowserToolName, ProviderKind, ThreadId } from "@harnessos/contracts";
+import type { BrowserToolName, EngineKind, ThreadId } from "@harnessos/contracts";
 
 const FRAME_HEADER_BYTES = 4;
 // A bounded 8 MiB PNG expands to roughly 10.7 MiB as base64 inside the
@@ -257,7 +257,7 @@ export interface BrowserHostToolCall {
   readonly pipePath: string;
   readonly capability: string;
   readonly sessionKey: string;
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly threadId: ThreadId;
   readonly name: BrowserToolName;
   readonly arguments: Record<string, unknown>;

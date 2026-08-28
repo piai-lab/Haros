@@ -3,7 +3,7 @@ import {
   ThreadId,
   TurnId,
   type OrchestrationThreadShell,
-  type ProviderKind,
+  type EngineKind,
 } from "@harnessos/contracts";
 import { Effect, Option } from "effect";
 
@@ -32,7 +32,7 @@ import {
 import {
   decodeWaitForThreadsInput,
   errorText,
-  PROVIDER_KINDS,
+  ENGINE_KINDS,
   readBooleanArg,
   readIsoTimestampArg,
   readNumberArg,
@@ -54,7 +54,7 @@ export interface ThreadReadToolsInput {
   readonly projectionTurns: ProjectionTurnRepositoryShape;
   readonly providerDiscovery: ProviderDiscoveryServiceShape;
   readonly loadProviderAvailabilities: Effect.Effect<
-    ReadonlyMap<ProviderKind, AgentGatewayProviderAvailability>,
+    ReadonlyMap<EngineKind, AgentGatewayProviderAvailability>,
     unknown,
     never
   >;
@@ -140,7 +140,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
           ),
         );
         const availabilities = yield* loadProviderAvailabilities;
-        const providers = yield* Effect.forEach(PROVIDER_KINDS, (provider) =>
+        const providers = yield* Effect.forEach(ENGINE_KINDS, (provider) =>
           loadAgentGatewayProviderCatalog({
             provider,
             discovery: providerDiscovery,
@@ -219,7 +219,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
             type: "string",
             description: "Only child threads of this thread (e.g. your own thread id).",
           },
-          provider: { type: "string", enum: [...PROVIDER_KINDS] },
+          provider: { type: "string", enum: [...ENGINE_KINDS] },
           model: { type: "string", description: "Exact model slug." },
           status: {
             type: "string",

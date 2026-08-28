@@ -8,7 +8,7 @@ import {
   ProjectId,
   ThreadId,
   type ExternalMcpCapability,
-  type ProviderKind,
+  type EngineKind,
   type ServerProviderStatus,
 } from "@harnessos/contracts";
 import { Effect, Layer, Option, Schema } from "effect";
@@ -56,7 +56,7 @@ import {
 import {
   decodeCreateThreadsInput,
   errorText,
-  PROVIDER_KINDS,
+  ENGINE_KINDS,
   ToolInputError,
 } from "../../agentGateway/toolInput.ts";
 import {
@@ -183,11 +183,11 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
       settings.getSettings,
       providerHealth.getStatuses,
     ]);
-    const statusByProvider = new Map<ProviderKind, ServerProviderStatus>(
+    const statusByProvider = new Map<EngineKind, ServerProviderStatus>(
       statuses.map((status) => [status.provider, status]),
     );
-    return new Map<ProviderKind, AgentGatewayProviderAvailability>(
-      PROVIDER_KINDS.map((provider) => {
+    return new Map<EngineKind, AgentGatewayProviderAvailability>(
+      ENGINE_KINDS.map((provider) => {
         const status = statusByProvider.get(provider);
         return [
           provider,
@@ -261,7 +261,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
             ),
           );
         const availabilities = yield* loadProviderAvailabilities;
-        const providers = yield* Effect.forEach(PROVIDER_KINDS, (provider) =>
+        const providers = yield* Effect.forEach(ENGINE_KINDS, (provider) =>
           loadAgentGatewayProviderCatalog({
             provider,
             discovery: providerDiscovery,
@@ -380,7 +380,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
         properties: {
           requestId: { type: "string", maxLength: 256 },
           projectId: { type: "string" },
-          provider: { type: "string", enum: [...PROVIDER_KINDS] },
+          provider: { type: "string", enum: [...ENGINE_KINDS] },
           model: { type: "string" },
           options: { type: "object", description: AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION },
           prompt: { type: "string", maxLength: EXTERNAL_MCP_MAX_PROMPT_CHARS },

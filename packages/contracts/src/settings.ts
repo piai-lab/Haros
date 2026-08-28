@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import { TrimmedString } from "./baseSchemas";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
-import { ModelSelection, ProviderKind, ThreadEnvironmentMode } from "./orchestration";
+import { ModelSelection, EngineKind, ThreadEnvironmentMode } from "./orchestration";
 import { isOmniMindAgentPromptContent, HARNESSOS_AGENT_PROMPT_MAX_BYTES } from "./editableText";
 import { BuiltInToolGroupOverrides } from "./agentTools";
 
@@ -110,7 +110,7 @@ export const AgentToolsServerSettings = Schema.Struct({
 export type AgentToolsServerSettings = typeof AgentToolsServerSettings.Type;
 
 export const ServerSettings = Schema.Struct({
-  defaultProvider: ProviderKind.pipe(Schema.withDecodingDefault(() => "omnimind")),
+  defaultProvider: EngineKind.pipe(Schema.withDecodingDefault(() => "oa")),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   enableProviderUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultThreadEnvMode: ThreadEnvironmentMode.pipe(Schema.withDecodingDefault(() => "local")),
@@ -122,9 +122,9 @@ export const ServerSettings = Schema.Struct({
     })),
   ),
   providers: Schema.Struct({
-    omnimind: OmniMindServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    oa: OmniMindServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     codex: CodexServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    claudeAgent: ClaudeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    claude: ClaudeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     cursor: CursorServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     antigravity: AntigravityServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     grok: GrokServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -147,7 +147,7 @@ const OmniMindServerProviderSettingsView = Schema.Struct({
 // Public settings deliberately omit the customized default prompt. Its only
 // projection and mutation authority is the dedicated OmniMind prompt contract.
 export const ServerSettingsView = Schema.Struct({
-  defaultProvider: ProviderKind.pipe(Schema.withDecodingDefault(() => "omnimind")),
+  defaultProvider: EngineKind.pipe(Schema.withDecodingDefault(() => "oa")),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   enableProviderUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultThreadEnvMode: ThreadEnvironmentMode.pipe(Schema.withDecodingDefault(() => "local")),
@@ -159,9 +159,9 @@ export const ServerSettingsView = Schema.Struct({
     })),
   ),
   providers: Schema.Struct({
-    omnimind: OmniMindServerProviderSettingsView.pipe(Schema.withDecodingDefault(() => ({}))),
+    oa: OmniMindServerProviderSettingsView.pipe(Schema.withDecodingDefault(() => ({}))),
     codex: CodexServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    claudeAgent: ClaudeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    claude: ClaudeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     cursor: CursorServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     antigravity: AntigravityServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     grok: GrokServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -180,7 +180,7 @@ export const DEFAULT_SERVER_SETTINGS_VIEW: ServerSettingsView = Schema.decodeSyn
 )({});
 
 const ModelSelectionPatch = Schema.Struct({
-  provider: Schema.optionalKey(ProviderKind),
+  provider: Schema.optionalKey(EngineKind),
   model: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(256))),
   options: Schema.optionalKey(Schema.Unknown),
 });
@@ -192,7 +192,7 @@ const ProviderSettingsBasePatch = {
 };
 
 export const ServerSettingsPatch = Schema.Struct({
-  defaultProvider: Schema.optionalKey(ProviderKind),
+  defaultProvider: Schema.optionalKey(EngineKind),
   enableAssistantStreaming: Schema.optionalKey(Schema.Boolean),
   enableProviderUpdateChecks: Schema.optionalKey(Schema.Boolean),
   defaultThreadEnvMode: Schema.optionalKey(ThreadEnvironmentMode),
@@ -200,7 +200,7 @@ export const ServerSettingsPatch = Schema.Struct({
   textGenerationModelSelection: Schema.optionalKey(ModelSelectionPatch),
   providers: Schema.optionalKey(
     Schema.Struct({
-      omnimind: Schema.optionalKey(
+      oa: Schema.optionalKey(
         Schema.Struct({
           enabled: Schema.optionalKey(Schema.Boolean),
         }),
@@ -211,7 +211,7 @@ export const ServerSettingsPatch = Schema.Struct({
           homePath: Schema.optionalKey(StringSetting),
         }),
       ),
-      claudeAgent: Schema.optionalKey(
+      claude: Schema.optionalKey(
         Schema.Struct({
           ...ProviderSettingsBasePatch,
           launchArgs: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(4096))),

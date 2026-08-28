@@ -64,7 +64,7 @@ describe("UsageHistorySection", () => {
         progress: emptyProgress,
         providers: [
           { provider: "codex", status: "pending", progress: emptyProgress },
-          { provider: "claudeAgent", status: "pending", progress: emptyProgress },
+          { provider: "claude", status: "pending", progress: emptyProgress },
         ],
         rows: [],
       },

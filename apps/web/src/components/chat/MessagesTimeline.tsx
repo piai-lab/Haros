@@ -13,7 +13,7 @@ import {
   type ThreadMarker,
   type TurnId,
 } from "@harnessos/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { LegendList, type AnchoredEndSpaceConfig, type LegendListRef } from "@legendapp/list/react";
 import {
   memo,
@@ -484,7 +484,7 @@ function AssistantTurnRowFrame({
           slug: selection.model,
         })
       : "OmniMind");
-  const engineName = selection ? PROVIDER_DISPLAY_NAMES[selection.provider] : null;
+  const engineName = selection ? ENGINE_DISPLAY_NAMES[selection.provider] : null;
   return (
     <div
       className="grid min-w-0 grid-cols-[30px_minmax(0,1fr)] gap-x-3 max-[560px]:grid-cols-[28px_minmax(0,1fr)] max-[560px]:gap-x-2.5"

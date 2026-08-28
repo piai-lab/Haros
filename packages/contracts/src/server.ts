@@ -9,7 +9,7 @@ import {
 } from "./baseSchemas";
 import { KeybindingRule, ResolvedKeybindingsConfig } from "./keybindings";
 import { EditorId } from "./editor";
-import { ModelSelection, ProviderKind, ProviderStartOptions } from "./orchestration";
+import { ModelSelection, EngineKind, ProviderStartOptions } from "./orchestration";
 import { ServerSettingsPatch, ServerSettingsView } from "./settings";
 import { ExecutionEnvironmentDescriptor } from "./environment";
 import { AutomationCompletionPolicy, AutomationMode, AutomationSchedule } from "./automation";
@@ -54,7 +54,7 @@ export const ServerProviderUnavailableReason = Schema.Literal("not_installed");
 export type ServerProviderUnavailableReason = typeof ServerProviderUnavailableReason.Type;
 
 export const ServerProviderStatus = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
   status: ServerProviderStatusState,
   available: Schema.Boolean,
   authStatus: ServerProviderAuthStatus,
@@ -155,7 +155,7 @@ export const ProviderUsageStatus = Schema.Literals(["ok", "needs-auth", "unsuppo
 export type ProviderUsageStatus = typeof ProviderUsageStatus.Type;
 
 export const ServerProviderUsageSnapshot = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
   updatedAt: IsoDateTime,
   limits: Schema.Array(ServerProviderUsageLimit),
   usageLines: Schema.Array(ServerProviderUsageLine),
@@ -174,14 +174,14 @@ export type ServerProviderUsageSnapshot = typeof ServerProviderUsageSnapshot.Typ
 // (including needs-auth/error) so the UI can render a row each.
 export const ServerListProviderUsageInput = Schema.Struct({
   forceRefresh: Schema.optional(Schema.Boolean),
-  provider: Schema.optional(ProviderKind),
+  provider: Schema.optional(EngineKind),
 });
 export type ServerListProviderUsageInput = typeof ServerListProviderUsageInput.Type;
 
 export const ServerListProviderUsageResult = Schema.Array(ServerProviderUsageSnapshot);
 export type ServerListProviderUsageResult = typeof ServerListProviderUsageResult.Type;
 
-export const UsageHistoryProvider = Schema.Literals(["codex", "claudeAgent"]);
+export const UsageHistoryProvider = Schema.Literals(["codex", "claude"]);
 export type UsageHistoryProvider = typeof UsageHistoryProvider.Type;
 
 export const UsageHistoryRange = Schema.Literals(["24h", "7d", "30d", "all"]);
@@ -368,7 +368,7 @@ export const ServerDiagnosticsResult = Schema.Struct({
 export type ServerDiagnosticsResult = typeof ServerDiagnosticsResult.Type;
 
 export const ServerVoicePrewarmInput = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
   cwd: TrimmedNonEmptyString,
   threadId: Schema.optional(ThreadId),
 });
@@ -380,7 +380,7 @@ export const ServerVoicePrewarmResult = Schema.Struct({
 export type ServerVoicePrewarmResult = typeof ServerVoicePrewarmResult.Type;
 
 export const ServerVoiceTranscriptionInput = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
   cwd: TrimmedNonEmptyString,
   threadId: Schema.optional(ThreadId),
   mimeType: TrimmedNonEmptyString.check(Schema.isMaxLength(100)),
@@ -483,7 +483,7 @@ export const ServerProviderStatusesUpdatedPayload = Schema.Struct({
   passivePresence: Schema.optionalKey(
     Schema.Struct({
       state: Schema.Literal("settled"),
-      recoverableProviders: Schema.Array(ProviderKind),
+      recoverableProviders: Schema.Array(EngineKind),
     }),
   ),
 });
@@ -555,14 +555,14 @@ export const ServerRefreshProvidersResult = ServerProviderStatusesUpdatedPayload
 export type ServerRefreshProvidersResult = typeof ServerRefreshProvidersResult.Type;
 
 export const ServerProviderUpdateInput = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
 });
 export type ServerProviderUpdateInput = typeof ServerProviderUpdateInput.Type;
 
 export class ServerProviderUpdateError extends Schema.TaggedErrorClass<ServerProviderUpdateError>()(
   "ServerProviderUpdateError",
   {
-    provider: ProviderKind,
+    provider: EngineKind,
     reason: TrimmedNonEmptyString,
   },
 ) {

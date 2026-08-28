@@ -3,7 +3,7 @@
 // Layer: Chat composer hook
 // Depends on: useVoiceRecorder, ChatView voice helper logic, and the native API voice endpoint.
 
-import { type ProviderKind, type ServerProviderStatus, type ThreadId } from "@harnessos/contracts";
+import { type EngineKind, type ServerProviderStatus, type ThreadId } from "@harnessos/contracts";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { Project } from "../../types";
@@ -38,7 +38,7 @@ export interface UseComposerVoiceControllerOptions {
   activeProject: Project | undefined;
   activeThreadId: ThreadId | null;
   threadId: ThreadId;
-  selectedProvider: ProviderKind;
+  selectedProvider: EngineKind;
   activeProviderStatus: ServerProviderStatus | null;
   pendingUserInputCount: number;
   onTranscriptReady: (transcript: string) => void;
@@ -97,7 +97,7 @@ export function useComposerVoiceController(
   const [isVoiceTranscribing, setIsVoiceTranscribing] = useState(false);
   const voiceTranscriptionRequestIdRef = useRef(0);
   const voiceThreadIdRef = useRef(threadId);
-  const voiceProviderRef = useRef<ProviderKind>(selectedProvider);
+  const voiceProviderRef = useRef<EngineKind>(selectedProvider);
   const voiceRecordingStartedAtRef = useRef<number | null>(null);
   const failureCopy = {
     ...DEFAULT_FAILURE_COPY,

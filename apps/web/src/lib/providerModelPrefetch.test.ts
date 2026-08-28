@@ -6,7 +6,7 @@
 import {
   DEFAULT_SERVER_SETTINGS_VIEW,
   type NativeApi,
-  type ProviderKind,
+  type EngineKind,
   type ServerSettingsView,
 } from "@harnessos/contracts";
 import { QueryClient } from "@tanstack/react-query";
@@ -34,7 +34,7 @@ type ProviderOverrides = {
 
 function makeSettings(
   overrides: {
-    defaultProvider?: ProviderKind;
+    defaultProvider?: EngineKind;
     providers?: ProviderOverrides;
   } = {},
 ): ProviderModelPrefetchSettings {
@@ -42,9 +42,9 @@ function makeSettings(
     defaultProvider: overrides.defaultProvider ?? "codex",
     providers: {
       ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
-      claudeAgent: {
-        ...DEFAULT_SERVER_SETTINGS_VIEW.providers.claudeAgent,
-        ...overrides.providers?.claudeAgent,
+      claude: {
+        ...DEFAULT_SERVER_SETTINGS_VIEW.providers.claude,
+        ...overrides.providers?.claude,
       },
       cursor: {
         ...DEFAULT_SERVER_SETTINGS_VIEW.providers.cursor,
@@ -119,9 +119,9 @@ describe("resolveNewThreadModelPrefetchProvider", () => {
     expect(
       resolveNewThreadModelPrefetchProvider({
         projectDefaultProvider: null,
-        defaultProvider: "claudeAgent",
+        defaultProvider: "claude",
       }),
-    ).toBe("claudeAgent");
+    ).toBe("claude");
   });
 });
 
@@ -188,7 +188,7 @@ describe("providerModelsPrefetchQueryOptions", () => {
   it("matches ChatView cache keys for cwd-scoped and binary-scoped providers", () => {
     const settings = makeSettings({
       providers: {
-        claudeAgent: { binaryPath: "/bin/claude" },
+        claude: { binaryPath: "/bin/claude" },
         cursor: { binaryPath: "/bin/agent", apiEndpoint: "https://api.example" },
         antigravity: { binaryPath: "/bin/antigravity" },
         opencode: { binaryPath: "/bin/opencode" },
@@ -205,20 +205,20 @@ describe("providerModelsPrefetchQueryOptions", () => {
     );
 
     const omniMindOptions = providerModelsPrefetchQueryOptions({
-      provider: "omnimind",
+      provider: "oa",
       settings,
       cwd: "/tmp/project",
     });
     expect(omniMindOptions.queryKey).toEqual(
-      providerDiscoveryQueryKeys.models("omnimind", null, null, null, null),
+      providerDiscoveryQueryKeys.models("oa", null, null, null, null),
     );
 
     const claudeOptions = providerModelsPrefetchQueryOptions({
-      provider: "claudeAgent",
+      provider: "claude",
       settings,
     });
     expect(claudeOptions.queryKey).toEqual(
-      providerDiscoveryQueryKeys.models("claudeAgent", "/bin/claude", null, null, null),
+      providerDiscoveryQueryKeys.models("claude", "/bin/claude", null, null, null),
     );
 
     const openCodeOptions = providerModelsPrefetchQueryOptions({
@@ -270,7 +270,7 @@ describe("prefetchProviderModelsForNewThread", () => {
     const prefetchQuery = vi.spyOn(queryClient, "prefetchQuery").mockResolvedValue(undefined);
 
     prefetchProviderModelsForNewThread(queryClient, {
-      provider: "kilo" satisfies ProviderKind,
+      provider: "kilo" satisfies EngineKind,
       settings: makeSettings({
         providers: { kilo: { binaryPath: "/bin/kilo" } },
       }),
@@ -313,8 +313,8 @@ describe("prefetchProviderModelsForNewThread", () => {
     const prefetchQuery = vi.spyOn(queryClient, "prefetchQuery").mockResolvedValue(undefined);
 
     prefetchProviderModelsForNewThread(queryClient, {
-      provider: "omnimind",
-      settings: makeSettings({ defaultProvider: "omnimind" }),
+      provider: "oa",
+      settings: makeSettings({ defaultProvider: "oa" }),
       cwd: "/tmp/project",
       enabled: false,
     });
@@ -336,15 +336,15 @@ describe("prefetchProviderModelsForNewThread", () => {
       provider: { listModels, getComposerCapabilities },
     } as unknown as NativeApi);
     const queryClient = new QueryClient();
-    const settings = makeSettings({ defaultProvider: "omnimind" });
+    const settings = makeSettings({ defaultProvider: "oa" });
 
     prefetchProviderModelsForNewThread(queryClient, {
-      provider: "omnimind",
+      provider: "oa",
       settings,
       cwd: "/tmp/project-a",
     });
     prefetchProviderModelsForNewThread(queryClient, {
-      provider: "omnimind",
+      provider: "oa",
       settings,
       cwd: "/tmp/project-b",
     });
@@ -354,7 +354,7 @@ describe("prefetchProviderModelsForNewThread", () => {
       expect(getComposerCapabilities).toHaveBeenCalledTimes(1);
     });
     expect(listModels).toHaveBeenCalledWith(
-      { provider: "omnimind" },
+      { provider: "oa" },
       { signal: expect.any(AbortSignal) },
     );
   });

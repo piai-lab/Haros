@@ -9,7 +9,7 @@ import {
   EventId,
   MessageId,
   ProjectId,
-  ProviderKind,
+  EngineKind,
   ThreadId,
   ModelSelection,
 } from "@harnessos/contracts";
@@ -41,7 +41,7 @@ const THREAD_ID = ThreadId.makeUnsafe("thread-1");
 const FIXTURE_TURN_ID = "fixture-turn";
 const APPROVAL_REQUEST_ID = asApprovalRequestId("req-approval-1");
 const itLiveUnlessCi = (process.env.CI ? it.skip : it.live) as typeof it.live;
-type IntegrationProvider = ProviderKind;
+type IntegrationProvider = EngineKind;
 
 function nowIso() {
   return new Date().toISOString();
@@ -122,7 +122,7 @@ const seedProjectAndThread = (harness: OrchestrationIntegrationHarness) =>
   Effect.gen(function* () {
     const createdAt = nowIso();
     const provider = harness.adapterHarness?.provider ?? "codex";
-    if (provider === "pi" || provider === "omnimind") {
+    if (provider === "pi" || provider === "oa") {
       throw new Error("Pi-family integration tests require an explicit model selection.");
     }
     const defaultModel = DEFAULT_MODEL_BY_PROVIDER[provider];
@@ -934,20 +934,20 @@ it.live("starts a claudeAgent session on first turn when provider is requested",
           events: [
             {
               type: "turn.started",
-              ...runtimeBase("evt-claude-start-1", "2026-02-24T10:10:00.000Z", "claudeAgent"),
+              ...runtimeBase("evt-claude-start-1", "2026-02-24T10:10:00.000Z", "claude"),
               threadId: THREAD_ID,
               turnId: FIXTURE_TURN_ID,
             },
             {
               type: "message.delta",
-              ...runtimeBase("evt-claude-start-2", "2026-02-24T10:10:00.050Z", "claudeAgent"),
+              ...runtimeBase("evt-claude-start-2", "2026-02-24T10:10:00.050Z", "claude"),
               threadId: THREAD_ID,
               turnId: FIXTURE_TURN_ID,
               delta: "Claude first turn.\n",
             },
             {
               type: "turn.completed",
-              ...runtimeBase("evt-claude-start-3", "2026-02-24T10:10:00.100Z", "claudeAgent"),
+              ...runtimeBase("evt-claude-start-3", "2026-02-24T10:10:00.100Z", "claude"),
               threadId: THREAD_ID,
               turnId: FIXTURE_TURN_ID,
               status: "completed",
@@ -961,7 +961,7 @@ it.live("starts a claudeAgent session on first turn when provider is requested",
           messageId: "msg-user-claude-initial",
           text: "Use Claude",
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-sonnet-4-6",
           },
         });
@@ -969,15 +969,15 @@ it.live("starts a claudeAgent session on first turn when provider is requested",
         const thread = yield* harness.waitForThread(
           THREAD_ID,
           (entry) =>
-            entry.session?.providerName === "claudeAgent" &&
+            entry.session?.providerName === "claude" &&
             entry.session.status === "ready" &&
             entry.messages.some(
               (message) => message.role === "assistant" && message.text === "Claude first turn.\n",
             ),
         );
-        assert.equal(thread.session?.providerName, "claudeAgent");
+        assert.equal(thread.session?.providerName, "claude");
       }),
-    "claudeAgent",
+    "claude",
   ),
 );
 
@@ -993,20 +993,20 @@ itLiveUnlessCi(
             events: [
               {
                 type: "turn.started",
-                ...runtimeBase("evt-claude-recover-1", "2026-02-24T10:11:00.000Z", "claudeAgent"),
+                ...runtimeBase("evt-claude-recover-1", "2026-02-24T10:11:00.000Z", "claude"),
                 threadId: THREAD_ID,
                 turnId: FIXTURE_TURN_ID,
               },
               {
                 type: "message.delta",
-                ...runtimeBase("evt-claude-recover-2", "2026-02-24T10:11:00.050Z", "claudeAgent"),
+                ...runtimeBase("evt-claude-recover-2", "2026-02-24T10:11:00.050Z", "claude"),
                 threadId: THREAD_ID,
                 turnId: FIXTURE_TURN_ID,
                 delta: "Turn before restart.\n",
               },
               {
                 type: "turn.completed",
-                ...runtimeBase("evt-claude-recover-3", "2026-02-24T10:11:00.100Z", "claudeAgent"),
+                ...runtimeBase("evt-claude-recover-3", "2026-02-24T10:11:00.100Z", "claude"),
                 threadId: THREAD_ID,
                 turnId: FIXTURE_TURN_ID,
                 status: "completed",
@@ -1020,7 +1020,7 @@ itLiveUnlessCi(
             messageId: "msg-user-claude-recover-1",
             text: "Before restart",
             modelSelection: {
-              provider: "claudeAgent",
+              provider: "claude",
               model: "claude-sonnet-4-6",
             },
           });
@@ -1048,20 +1048,20 @@ itLiveUnlessCi(
             events: [
               {
                 type: "turn.started",
-                ...runtimeBase("evt-claude-recover-4", "2026-02-24T10:11:01.000Z", "claudeAgent"),
+                ...runtimeBase("evt-claude-recover-4", "2026-02-24T10:11:01.000Z", "claude"),
                 threadId: THREAD_ID,
                 turnId: FIXTURE_TURN_ID,
               },
               {
                 type: "message.delta",
-                ...runtimeBase("evt-claude-recover-5", "2026-02-24T10:11:01.050Z", "claudeAgent"),
+                ...runtimeBase("evt-claude-recover-5", "2026-02-24T10:11:01.050Z", "claude"),
                 threadId: THREAD_ID,
                 turnId: FIXTURE_TURN_ID,
                 delta: "Turn after restart.\n",
               },
               {
                 type: "turn.completed",
-                ...runtimeBase("evt-claude-recover-6", "2026-02-24T10:11:01.100Z", "claudeAgent"),
+                ...runtimeBase("evt-claude-recover-6", "2026-02-24T10:11:01.100Z", "claude"),
                 threadId: THREAD_ID,
                 turnId: FIXTURE_TURN_ID,
                 status: "completed",
@@ -1085,16 +1085,16 @@ itLiveUnlessCi(
           const recoveredThread = yield* harness.waitForThread(
             THREAD_ID,
             (entry) =>
-              entry.session?.providerName === "claudeAgent" &&
+              entry.session?.providerName === "claude" &&
               entry.messages.some(
                 (message) => message.role === "user" && message.text === "After restart",
               ) &&
               !entry.activities.some((activity) => activity.kind === "provider.turn.start.failed"),
           );
-          assert.equal(recoveredThread.session?.providerName, "claudeAgent");
+          assert.equal(recoveredThread.session?.providerName, "claude");
           assert.equal(recoveredThread.session?.threadId, "thread-1");
         }),
-      "claudeAgent",
+      "claude",
     ),
 );
 
@@ -1109,13 +1109,13 @@ it.live("forwards claudeAgent approval responses to the provider session", () =>
           events: [
             {
               type: "turn.started",
-              ...runtimeBase("evt-claude-approval-1", "2026-02-24T10:12:00.000Z", "claudeAgent"),
+              ...runtimeBase("evt-claude-approval-1", "2026-02-24T10:12:00.000Z", "claude"),
               threadId: THREAD_ID,
               turnId: FIXTURE_TURN_ID,
             },
             {
               type: "approval.requested",
-              ...runtimeBase("evt-claude-approval-2", "2026-02-24T10:12:00.050Z", "claudeAgent"),
+              ...runtimeBase("evt-claude-approval-2", "2026-02-24T10:12:00.050Z", "claude"),
               threadId: THREAD_ID,
               turnId: FIXTURE_TURN_ID,
               requestId: APPROVAL_REQUEST_ID,
@@ -1124,7 +1124,7 @@ it.live("forwards claudeAgent approval responses to the provider session", () =>
             },
             {
               type: "turn.completed",
-              ...runtimeBase("evt-claude-approval-3", "2026-02-24T10:12:00.100Z", "claudeAgent"),
+              ...runtimeBase("evt-claude-approval-3", "2026-02-24T10:12:00.100Z", "claude"),
               threadId: THREAD_ID,
               turnId: FIXTURE_TURN_ID,
               status: "completed",
@@ -1138,7 +1138,7 @@ it.live("forwards claudeAgent approval responses to the provider session", () =>
           messageId: "msg-user-claude-approval",
           text: "Need approval",
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-sonnet-4-6",
           },
         });
@@ -1177,7 +1177,7 @@ it.live("forwards claudeAgent approval responses to the provider session", () =>
         );
         assert.equal(approvalResponses[0]?.decision, "accept");
       }),
-    "claudeAgent",
+    "claude",
   ),
 );
 
@@ -1192,20 +1192,20 @@ it.live("forwards thread.turn.interrupt to claudeAgent provider sessions", () =>
           events: [
             {
               type: "turn.started",
-              ...runtimeBase("evt-claude-interrupt-1", "2026-02-24T10:13:00.000Z", "claudeAgent"),
+              ...runtimeBase("evt-claude-interrupt-1", "2026-02-24T10:13:00.000Z", "claude"),
               threadId: THREAD_ID,
               turnId: FIXTURE_TURN_ID,
             },
             {
               type: "message.delta",
-              ...runtimeBase("evt-claude-interrupt-2", "2026-02-24T10:13:00.050Z", "claudeAgent"),
+              ...runtimeBase("evt-claude-interrupt-2", "2026-02-24T10:13:00.050Z", "claude"),
               threadId: THREAD_ID,
               turnId: FIXTURE_TURN_ID,
               delta: "Long running output.\n",
             },
             {
               type: "turn.completed",
-              ...runtimeBase("evt-claude-interrupt-3", "2026-02-24T10:13:00.100Z", "claudeAgent"),
+              ...runtimeBase("evt-claude-interrupt-3", "2026-02-24T10:13:00.100Z", "claude"),
               threadId: THREAD_ID,
               turnId: FIXTURE_TURN_ID,
               status: "completed",
@@ -1219,7 +1219,7 @@ it.live("forwards thread.turn.interrupt to claudeAgent provider sessions", () =>
           messageId: "msg-user-claude-interrupt",
           text: "Start long turn",
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-sonnet-4-6",
           },
         });
@@ -1247,7 +1247,7 @@ it.live("forwards thread.turn.interrupt to claudeAgent provider sessions", () =>
         );
         assert.equal(interruptCalls.length, 1);
       }),
-    "claudeAgent",
+    "claude",
   ),
 );
 
@@ -1261,20 +1261,20 @@ itLiveUnlessCi("reverts claudeAgent turns and rolls back provider conversation s
           events: [
             {
               type: "turn.started",
-              ...runtimeBase("evt-claude-revert-1", "2026-02-24T10:14:00.000Z", "claudeAgent"),
+              ...runtimeBase("evt-claude-revert-1", "2026-02-24T10:14:00.000Z", "claude"),
               threadId: THREAD_ID,
               turnId: FIXTURE_TURN_ID,
             },
             {
               type: "message.delta",
-              ...runtimeBase("evt-claude-revert-2", "2026-02-24T10:14:00.050Z", "claudeAgent"),
+              ...runtimeBase("evt-claude-revert-2", "2026-02-24T10:14:00.050Z", "claude"),
               threadId: THREAD_ID,
               turnId: FIXTURE_TURN_ID,
               delta: "README -> v2\n",
             },
             {
               type: "turn.completed",
-              ...runtimeBase("evt-claude-revert-3", "2026-02-24T10:14:00.100Z", "claudeAgent"),
+              ...runtimeBase("evt-claude-revert-3", "2026-02-24T10:14:00.100Z", "claude"),
               threadId: THREAD_ID,
               turnId: FIXTURE_TURN_ID,
               status: "completed",
@@ -1292,7 +1292,7 @@ itLiveUnlessCi("reverts claudeAgent turns and rolls back provider conversation s
           messageId: "msg-user-claude-revert-1",
           text: "First Claude edit",
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-sonnet-4-6",
           },
         });
@@ -1314,20 +1314,20 @@ itLiveUnlessCi("reverts claudeAgent turns and rolls back provider conversation s
           events: [
             {
               type: "turn.started",
-              ...runtimeBase("evt-claude-revert-4", "2026-02-24T10:14:01.000Z", "claudeAgent"),
+              ...runtimeBase("evt-claude-revert-4", "2026-02-24T10:14:01.000Z", "claude"),
               threadId: THREAD_ID,
               turnId: FIXTURE_TURN_ID,
             },
             {
               type: "message.delta",
-              ...runtimeBase("evt-claude-revert-5", "2026-02-24T10:14:01.050Z", "claudeAgent"),
+              ...runtimeBase("evt-claude-revert-5", "2026-02-24T10:14:01.050Z", "claude"),
               threadId: THREAD_ID,
               turnId: FIXTURE_TURN_ID,
               delta: "README -> v3\n",
             },
             {
               type: "turn.completed",
-              ...runtimeBase("evt-claude-revert-6", "2026-02-24T10:14:01.100Z", "claudeAgent"),
+              ...runtimeBase("evt-claude-revert-6", "2026-02-24T10:14:01.100Z", "claude"),
               threadId: THREAD_ID,
               turnId: FIXTURE_TURN_ID,
               status: "completed",
@@ -1358,7 +1358,7 @@ itLiveUnlessCi("reverts claudeAgent turns and rolls back provider conversation s
           (entry) =>
             entry.latestTurn?.turnId === "turn-2" &&
             entry.checkpoints.length === 2 &&
-            entry.session?.providerName === "claudeAgent",
+            entry.session?.providerName === "claude",
         );
 
         yield* harness.engine.dispatch({
@@ -1383,6 +1383,6 @@ itLiveUnlessCi("reverts claudeAgent turns and rolls back provider conversation s
         );
         assert.deepEqual(harness.adapterHarness!.getRollbackCalls(THREAD_ID), [1]);
       }),
-    "claudeAgent",
+    "claude",
   ),
 );

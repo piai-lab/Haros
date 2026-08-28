@@ -25,13 +25,13 @@ import {
   type OpenCodeModelSelection,
   type PiModelOptions,
   type PiModelSelection,
-  type ProviderKind,
+  type EngineKind,
   type ProviderModelOptions,
 } from "@harnessos/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { normalizeCursorModelVariantBaseId } from "./cursorModelVariants";
 
-export type ProviderOptions = ProviderModelOptions[ProviderKind];
+export type ProviderOptions = ProviderModelOptions[EngineKind];
 
 export interface ProviderModelOption {
   slug: string;
@@ -111,7 +111,7 @@ export interface ProviderModelOptionGroup {
  * normal upstream-provider group (for example, inside Favourites).
  */
 export function providerModelOptionProvenanceLabel(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   option: ProviderModelOption;
 }): string {
   const upstreamProviderName = input.option.upstreamProviderName?.trim();
@@ -129,11 +129,11 @@ export function providerModelOptionProvenanceLabel(input: {
     return humanizeModelSlug(slugProvider);
   }
 
-  return PROVIDER_DISPLAY_NAMES[input.provider];
+  return ENGINE_DISPLAY_NAMES[input.provider];
 }
 
 export function formatProviderModelOptionName(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   slug: string;
 }): string {
   const trimmedSlug =
@@ -146,7 +146,7 @@ export function formatProviderModelOptionName(input: {
     input.provider === "kilo" ||
     input.provider === "opencode" ||
     input.provider === "pi" ||
-    input.provider === "omnimind"
+    input.provider === "oa"
   ) {
     const modelIdentifier = trimmedSlug.includes("/")
       ? trimmedSlug.slice(trimmedSlug.lastIndexOf("/") + 1)
@@ -157,8 +157,8 @@ export function formatProviderModelOptionName(input: {
   return formatModelDisplayName(trimmedSlug) ?? trimmedSlug;
 }
 
-function normalizeDynamicModelSlug(provider: ProviderKind, slug: string): string {
-  if (provider === "claudeAgent") {
+function normalizeDynamicModelSlug(provider: EngineKind, slug: string): string {
+  if (provider === "claude") {
     const withoutContextSuffix = slug.replace(/\[[^\]]+\]$/u, "");
     return normalizeModelSlug(withoutContextSuffix, provider) ?? withoutContextSuffix;
   }
@@ -172,7 +172,7 @@ function normalizeDynamicModelSlug(provider: ProviderKind, slug: string): string
 }
 
 const CLAUDE_CATALOG_RANK_BY_SLUG: ReadonlyMap<string, number> = new Map(
-  MODEL_OPTIONS_BY_PROVIDER.claudeAgent.map((model, index) => [model.slug as string, index]),
+  MODEL_OPTIONS_BY_PROVIDER.claude.map((model, index) => [model.slug as string, index]),
 );
 
 function orderClaudeModelOptions<T extends ProviderModelOption>(
@@ -192,7 +192,7 @@ function orderClaudeModelOptions<T extends ProviderModelOption>(
  * (antigravity/kilo/opencode/cursor/grok), and user-defined custom models always survive.
  */
 export function mergeDynamicModelOptions(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   staticOptions: ReadonlyArray<ProviderModelOption & { isCustom?: boolean }>;
   dynamicModels: ReadonlyArray<{
     slug: string;
@@ -210,7 +210,7 @@ export function mergeDynamicModelOptions(input: {
   for (const dynamicModel of input.dynamicModels) {
     const rawName = dynamicModel.name?.trim() ?? "";
     const isClaudeDefaultAlias =
-      input.provider === "claudeAgent" &&
+      input.provider === "claude" &&
       (rawName.toLowerCase() === "default (recommended)" ||
         rawName.toLowerCase() === "default recommended" ||
         dynamicModel.slug.trim().toLowerCase() === "default");
@@ -276,7 +276,7 @@ export function mergeDynamicModelOptions(input: {
       ? []
       : staticBuiltInModels.filter((model) => !dynamicNormalizedSlugs.has(model.slug));
 
-  if (input.provider === "claudeAgent") {
+  if (input.provider === "claude") {
     return [
       ...orderClaudeModelOptions([...normalizedDynamicOptions, ...missingStaticBuiltIns]),
       ...customOnlyModels,
@@ -388,7 +388,7 @@ export function resolveModelGroupDefaultOpen(input: {
 }
 
 export function buildNextProviderOptions(
-  provider: ProviderKind,
+  provider: EngineKind,
   modelOptions: ProviderOptions | null | undefined,
   patch: Record<string, unknown>,
 ): ProviderOptions {
@@ -398,7 +398,7 @@ export function buildNextProviderOptions(
       ...patch,
     } as CodexModelOptions;
   }
-  if (provider === "claudeAgent") {
+  if (provider === "claude") {
     return {
       ...(modelOptions as ClaudeModelOptions | undefined),
       ...patch,
@@ -441,7 +441,7 @@ export function buildNextProviderOptions(
 }
 
 export function buildProviderOptionPatch(
-  provider: ProviderKind,
+  provider: EngineKind,
   optionId: string,
   value: string | boolean,
 ): Record<string, unknown> {
@@ -454,7 +454,7 @@ export function buildModelSelection(
   options?: CodexModelOptions | null | undefined,
 ): CodexModelSelection;
 export function buildModelSelection(
-  provider: "claudeAgent",
+  provider: "claude",
   model: string,
   options?: ClaudeModelOptions | null | undefined,
   supportsAutoMode?: boolean | undefined,
@@ -495,19 +495,19 @@ export function buildModelSelection(
   options?: PiModelOptions | null | undefined,
 ): PiModelSelection;
 export function buildModelSelection(
-  provider: ProviderKind,
+  provider: EngineKind,
   model: string,
   options?: ProviderOptions | null | undefined,
   supportsAutoMode?: boolean | undefined,
 ): ModelSelection;
 export function buildModelSelection(
-  provider: ProviderKind,
+  provider: EngineKind,
   model: string,
   options?: ProviderOptions | null | undefined,
   supportsAutoMode?: boolean | undefined,
 ): ModelSelection {
   switch (provider) {
-    case "omnimind":
+    case "oa":
       return options
         ? { provider, model, options: options as PiModelOptions }
         : { provider, model };
@@ -527,7 +527,7 @@ export function buildModelSelection(
             options: options as CodexModelOptions,
           }
         : { provider, model };
-    case "claudeAgent":
+    case "claude":
       return {
         provider,
         model,

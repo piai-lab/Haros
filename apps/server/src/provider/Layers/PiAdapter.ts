@@ -36,7 +36,7 @@ import {
   type ProviderListCommandsResult,
   type ProviderListModelsResult,
   type ProviderListSkillsResult,
-  type ProviderKind,
+  type EngineKind,
   type ProviderInteractionMode,
   ProviderItemId,
   type ProviderRuntimeEvent,
@@ -153,7 +153,7 @@ import { extractProposedPlanMarkdown, withProviderPlanModePrompt } from "../plan
 import type { OmniMindPlanModeController } from "../omnimindPlanModeExtension.ts";
 import { askUserMetrics } from "../askUserMetrics.ts";
 
-type PiFamilyProvider = Extract<ProviderKind, "pi" | "omnimind">;
+type PiFamilyProvider = Extract<EngineKind, "pi" | "oa">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
 const HARNESSOS_IDENTITY_AND_COGNITIVE_CONTRACT = [
   "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).",
@@ -492,14 +492,14 @@ const STOCK_PI_FAMILY = {
 } satisfies PiFamilyAdapterConfig<"pi">;
 
 const HARNESSOS_AGENT_FAMILY = {
-  provider: "omnimind",
+  provider: "oa",
   displayName: "OmniMind",
   loadModule: loadOmniMindAdapterModule,
   // Product state is App-owned and cannot be redirected into stock Pi state.
   resolveAgentDir: (_requestedAgentDir, serverBaseDir) => resolveOmniMindAgentDir(serverBaseDir),
   createModelRuntime: async (agentDir: string) =>
     (await createOmniMindModelRuntime(agentDir)) as unknown as ModelRuntime,
-} satisfies PiFamilyAdapterConfig<"omnimind">;
+} satisfies PiFamilyAdapterConfig<"oa">;
 
 interface PiSessionContext {
   readonly agentDir: string;
@@ -2452,7 +2452,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       }
       const completionBase = makeEventBase(context);
       if (
-        provider === "omnimind" &&
+        provider === "oa" &&
         input.state === "completed" &&
         context.activeInteractionMode === "plan" &&
         context.proposedPlanCandidate
@@ -2933,7 +2933,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             ? context.turns.find((candidate) => candidate.id === turnId)
             : undefined;
           if (turn) turn.leafId = leafId;
-          if (provider === "omnimind" && context.activeInteractionMode === "plan") {
+          if (provider === "oa" && context.activeInteractionMode === "plan") {
             context.proposedPlanCandidate = extractProposedPlanMarkdown(
               latestAssistantText(event.messages),
             );
@@ -2991,7 +2991,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     };
 
     const warnIfTaskListExtensionUnavailable = (context: PiSessionContext) => {
-      if (provider !== "omnimind" || context.workSurface === undefined) return;
+      if (provider !== "oa" || context.workSurface === undefined) return;
       const inspection = inspectOmniMindTaskListExtensionRegistration({
         extensions: context.runtime.session.resourceLoader.getExtensions(),
         tools: context.runtime.session.getAllTools(),
@@ -3023,7 +3023,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     };
 
     const reconcileAskUserTool = (context: PiSessionContext) => {
-      if (provider !== "omnimind") return undefined;
+      if (provider !== "oa") return undefined;
       const inspection = inspectOmniMindAskUserRegistration({
         extensions: context.runtime.session.resourceLoader.getExtensions(),
         tools: context.runtime.session.getAllTools(),
@@ -3047,7 +3047,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     };
 
     const warnIfAskUserUnavailable = (context: PiSessionContext) => {
-      if (provider !== "omnimind" || !userInputPresenterRegistry.available) return;
+      if (provider !== "oa" || !userInputPresenterRegistry.available) return;
       const inspection = reconcileAskUserTool(context);
       if (inspection?.available) return;
       offerRuntimeEvent({
@@ -3099,7 +3099,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     }) => {
       const modelRuntime = await family.createModelRuntime(input.agentDir);
       const curatorPresenter: CuratorPresenter | undefined =
-        provider === "omnimind" &&
+        provider === "oa" &&
         browserAutomationHost?.available &&
         browserAutomationHost.getEngineWebSurfaceContext &&
         browserAutomationHost.presentEngineWebSurface &&
@@ -3149,7 +3149,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             }
           : undefined;
       let resolvedGatewayControlAvailable =
-        provider !== "omnimind" && (input.gatewayTools?.length ?? 0) > 0;
+        provider !== "oa" && (input.gatewayTools?.length ?? 0) > 0;
       let resolvedHostProjection: AgentGatewayHostExtensionHandle | undefined;
       let resolvedPlanModeController: OmniMindPlanModeController | undefined;
       const hostProjectionDiagnostics: string[] = [];
@@ -3162,7 +3162,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       }) => {
         const composition: Pick<OmniMindSessionExtensionComposition, "extensions"> &
           Partial<Pick<OmniMindSessionExtensionComposition, "host" | "planModeController">> =
-          provider === "omnimind"
+          provider === "oa"
             ? buildOmniMindSessionExtensions({
                 agentDir,
                 defineTool: (tool) => input.sdk.defineTool(tool),
@@ -3188,9 +3188,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         const resourceLoaderOptions = {
           appendSystemPromptOverride: (base: string[]) => [
             ...base,
-            ...(provider === "omnimind"
-              ? []
-              : [input.hostSystemPrompt(resolvedGatewayControlAvailable)]),
+            ...(provider === "oa" ? [] : [input.hostSystemPrompt(resolvedGatewayControlAvailable)]),
           ],
           ...(inlineExtensions.length === 0 ? {} : { extensionFactories: inlineExtensions }),
           ...(input.workSurface !== undefined
@@ -3253,7 +3251,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           resolvedGatewayControlAvailable = inspection.available;
           hostProjectionDiagnostics.push(...inspection.diagnostics);
         }
-        if (provider === "omnimind") {
+        if (provider === "oa") {
           const inspection = inspectOmniMindWebAccessRegistration(
             createdSession.session.getAllTools(),
           );
@@ -3289,7 +3287,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         const workSurface = input.workSurface;
         const productSurface = input.productSurface ?? (workSurface === "agent" ? "agent" : "chat");
         const projectContextRoot = trimToUndefined(input.projectContextRoot);
-        if (provider === "omnimind" && workSurface === undefined) {
+        if (provider === "oa" && workSurface === undefined) {
           return yield* new ProviderAdapterValidationError({
             provider,
             operation: "session/start",
@@ -3331,7 +3329,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         }
         const piSdk = yield* loadPiSdk("session/start");
         const currentServerSettings =
-          provider === "omnimind" && serverSettings
+          provider === "oa" && serverSettings
             ? yield* serverSettings.getSettings.pipe(
                 Effect.mapError(
                   (cause) =>
@@ -3345,12 +3343,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               )
             : undefined;
         const configuredDefaultPrompt =
-          provider === "omnimind" ? currentServerSettings?.providers.omnimind.defaultPrompt : null;
+          provider === "oa" ? currentServerSettings?.providers.oa.defaultPrompt : null;
         const defaultPrompt =
-          provider === "omnimind"
+          provider === "oa"
             ? (configuredDefaultPrompt ?? piSdk.DEFAULT_BASE_INSTRUCTIONS)
             : undefined;
-        if (provider === "omnimind" && defaultPrompt === undefined) {
+        if (provider === "oa" && defaultPrompt === undefined) {
           return yield* new ProviderAdapterValidationError({
             provider,
             operation: "session/start",
@@ -3404,7 +3402,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         let gatewayToolLoadFailed = false;
         let enabledBuiltInGroups: ReadonlyArray<BuiltInToolGroupId> = [];
         const gatewayDescriptors =
-          agentGatewayConnection && provider !== "omnimind"
+          agentGatewayConnection && provider !== "oa"
             ? yield* releaseAgentGatewaySessionLeaseOnInterrupt(
                 agentGatewaySessionLease,
                 Effect.tryPromise({
@@ -3439,7 +3437,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             : [];
         enabledBuiltInGroups = agentGatewayGroupsFromToolDescriptors(gatewayDescriptors);
         const gatewayTools =
-          provider === "omnimind" || !agentGatewayConnection
+          provider === "oa" || !agentGatewayConnection
             ? []
             : buildPiAgentGatewayCustomToolsFromDescriptors({
                 connection: agentGatewayConnection,
@@ -3449,13 +3447,13 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   ? {}
                   : { fetch: options.agentGatewayFetch }),
               });
-        if (provider !== "omnimind" && gatewayDescriptors.length === 0) {
+        if (provider !== "oa" && gatewayDescriptors.length === 0) {
           agentGatewaySessionLease?.release();
         }
         let taskProjectionContext: PiSessionContext | undefined;
         let askProjectionContext: PiSessionContext | undefined;
         const askUserInteraction: AskUserProductInteractionPort | undefined =
-          provider === "omnimind"
+          provider === "oa"
             ? {
                 present: ({ toolCallId, request, signal }) => {
                   const current = askProjectionContext;
@@ -3496,7 +3494,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 ...(thinkingLevel ? { thinkingLevel } : {}),
                 processSupervisor,
                 ...(gatewayTools.length > 0 ? { gatewayTools } : {}),
-                ...(provider === "omnimind" && agentGatewayConnection !== undefined
+                ...(provider === "oa" && agentGatewayConnection !== undefined
                   ? {
                       gatewayConnection: agentGatewayConnection!,
                       ...(options?.agentGatewayFetch === undefined
@@ -3505,9 +3503,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                     }
                   : {}),
                 ...(workSurface === undefined ? {} : { workSurface }),
-                ...(provider === "omnimind" ? { productSurface } : {}),
+                ...(provider === "oa" ? { productSurface } : {}),
                 ...(projectContextRoot === undefined ? {} : { projectContextRoot }),
-                ...(provider === "omnimind" && workSurface !== undefined
+                ...(provider === "oa" && workSurface !== undefined
                   ? {
                       onTaskListUpdate: ({ toolCallId, payload }) => {
                         const current = taskProjectionContext;
@@ -3536,11 +3534,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 hostSystemPrompt: (available) =>
                   makePiHostSystemPrompt({
                     gatewayControlAvailable:
-                      provider === "omnimind" ? agentGatewayConnection !== undefined : available,
+                      provider === "oa" ? agentGatewayConnection !== undefined : available,
                     enabledBuiltInGroups,
                   }),
                 ...(defaultPrompt === undefined ? {} : { defaultPrompt }),
-                ...(provider === "omnimind" && workSurface !== undefined
+                ...(provider === "oa" && workSurface !== undefined
                   ? {
                       immutableSystemPrompt: makeOmniMindEngineSystemPrompt({
                         productSurface,
@@ -3586,9 +3584,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           runtime,
           agentDir,
           appliedModelRuntimeMutationRevision:
-            provider === "omnimind" ? getOmniMindModelRuntimeMutationRevision(agentDir) : 0,
+            provider === "oa" ? getOmniMindModelRuntimeMutationRevision(agentDir) : 0,
           ...(workSurface === undefined ? {} : { workSurface }),
-          ...(provider === "omnimind" ? { productSurface } : {}),
+          ...(provider === "oa" ? { productSurface } : {}),
           resourceScopeIdentity: resourceScopeIdentity(
             workSurface === "chat"
               ? { kind: "global-only" }
@@ -3852,7 +3850,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               issue: `A ${displayName} turn is already active for this thread.`,
             });
           }
-          if (provider === "omnimind") {
+          if (provider === "oa") {
             const currentRevision = getOmniMindModelRuntimeMutationRevision(context.agentDir);
             if (currentRevision > context.appliedModelRuntimeMutationRevision) {
               yield* Effect.tryPromise({
@@ -3955,7 +3953,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             });
           }
           const promptRequiredNames = promptRequiredAgentGatewayToolNames(dispatchContext);
-          if (provider === "omnimind" && promptRequiredNames.length > 0) {
+          if (provider === "oa" && promptRequiredNames.length > 0) {
             if (context.gatewayConnection === undefined || context.hostProjection === undefined) {
               return yield* new ProviderAdapterValidationError({
                 provider,
@@ -3993,13 +3991,13 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           const turnId = TurnId.makeUnsafe(crypto.randomUUID());
           const interactionMode = input.interactionMode ?? "default";
           const promptText =
-            provider === "omnimind"
+            provider === "oa"
               ? withProviderPlanModePrompt({ text: payload.text, interactionMode })
               : payload.text;
           context.activeTurnId = turnId;
           context.activeInteractionMode = interactionMode;
           context.proposedPlanCandidate = undefined;
-          if (provider === "omnimind" && interactionMode === "plan") {
+          if (provider === "oa" && interactionMode === "plan") {
             context.planModeController?.activate(turnId);
           } else {
             context.planModeController?.deactivate();
@@ -4116,7 +4114,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             ? (context.activeInteractionMode ?? "default")
             : (input.interactionMode ?? "default");
           const promptText =
-            provider === "omnimind"
+            provider === "oa"
               ? withProviderPlanModePrompt({ text: payload.text, interactionMode })
               : payload.text;
           const turnId = context.activeTurnId ?? TurnId.makeUnsafe(crypto.randomUUID());
@@ -4124,7 +4122,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             context.activeTurnId = turnId;
             context.activeInteractionMode = interactionMode;
             context.proposedPlanCandidate = undefined;
-            if (provider === "omnimind" && interactionMode === "plan") {
+            if (provider === "oa" && interactionMode === "plan") {
               context.planModeController?.activate(turnId);
             } else {
               context.planModeController?.deactivate();
@@ -4316,7 +4314,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           context.activeInteractionMode = undefined;
           context.proposedPlanCandidate = undefined;
           const currentServerSettings =
-            provider === "omnimind" && serverSettings
+            provider === "oa" && serverSettings
               ? yield* serverSettings.getSettings.pipe(
                   Effect.mapError(
                     (cause) =>
@@ -4329,16 +4327,14 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   ),
                 )
               : undefined;
-          const reloadSdk = provider === "omnimind" ? yield* loadPiSdk("session/reload") : null;
+          const reloadSdk = provider === "oa" ? yield* loadPiSdk("session/reload") : null;
           const configuredDefaultPrompt =
-            provider === "omnimind"
-              ? currentServerSettings?.providers.omnimind.defaultPrompt
-              : null;
+            provider === "oa" ? currentServerSettings?.providers.oa.defaultPrompt : null;
           const defaultPrompt =
-            provider === "omnimind"
+            provider === "oa"
               ? (configuredDefaultPrompt ?? reloadSdk?.DEFAULT_BASE_INSTRUCTIONS)
               : undefined;
-          if (provider === "omnimind" && defaultPrompt === undefined) {
+          if (provider === "oa" && defaultPrompt === undefined) {
             return yield* new ProviderAdapterValidationError({
               provider,
               operation: "session/reload",
@@ -4474,8 +4470,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   ? "extension"
                   : configuredProviderIds.has(providerId)
                     ? "models_json"
-                    : family.provider === "omnimind" &&
-                        services.modelRuntime.getProvider(providerId)
+                    : family.provider === "oa" && services.modelRuntime.getProvider(providerId)
                       ? "builtin"
                       : "unknown",
             );

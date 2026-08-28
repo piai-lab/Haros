@@ -515,7 +515,7 @@ export function createPackagedDesktopEnvironment(
     if (path) mkdirSync(path, { recursive: true });
   }
   if (options.platform === "mac") {
-    const userDataPath = join(env.HOME!, "Library", "Application Support", "omnimind");
+    const userDataPath = join(env.HOME!, "Library", "Application Support", "oa");
     mkdirSync(userDataPath, { recursive: true });
     // Prevent the packaged app's update-only icon repair from registering this
     // temporary bundle in the runner's normal Launch Services database.
@@ -528,7 +528,7 @@ export function createPackagedDesktopEnvironment(
 export function resolvePackagedProofUserDataPath(env: NodeJS.ProcessEnv): string {
   const productHome = env.HARNESSOS_HOME;
   if (!productHome) throw new Error("Packaged proof environment has no isolated product home.");
-  return join(productHome, "electron", "omnimind");
+  return join(productHome, "electron", "oa");
 }
 
 export function withPackagedJourneyDebugging(launch: LaunchCommand): LaunchCommand {
@@ -914,7 +914,7 @@ async function createPackagedJourneyFixture(input: {
     threadId,
     projectId,
     title: threadTitle,
-    modelSelection: { provider: "omnimind", model: "packaged-proof-offline" },
+    modelSelection: { provider: "oa", model: "packaged-proof-offline" },
     runtimeMode: "full-access",
     interactionMode: "default",
     envMode: "local",

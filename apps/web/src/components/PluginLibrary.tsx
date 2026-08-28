@@ -4,16 +4,16 @@
 // Exports: PluginLibrary
 
 import {
-  PROVIDER_KINDS,
+  ENGINE_KINDS,
   type ThreadId,
   WS_HARNESSOS_ECOSYSTEM_CAPABILITY,
   type OmniMindPackageDescriptor,
   type OmniMindPackageResourceDescriptor,
-  type ProviderKind,
+  type EngineKind,
   type ProviderPluginDescriptor,
   type ProviderSkillDescriptor,
 } from "@harnessos/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, {
   useMemo,
@@ -308,7 +308,7 @@ function ProviderToggleButton({
   active: boolean;
   disabled: boolean;
   onClick: () => void;
-  provider: ProviderKind;
+  provider: EngineKind;
 }) {
   return (
     <button
@@ -400,7 +400,7 @@ function skillSourceLabel(
   t: ReturnType<typeof useI18n>["t"],
 ): string {
   const segments = new Set(skill.path.split(/[\\/]+/));
-  if (skill.scope === "omnimind" || segments.has(".harnessos")) {
+  if (skill.scope === "oa" || segments.has(".harnessos")) {
     return t("library.omnimindLibrary");
   }
   if (skill.scope === "agents") {
@@ -594,9 +594,9 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   const contextThread = activeThread ?? sourceThread ?? null;
   const activeProject = focusedProject ?? sourceProject ?? firstProject ?? null;
 
-  const preferredProvider = contextThread?.modelSelection.provider ?? "omnimind";
+  const preferredProvider = contextThread?.modelSelection.provider ?? "oa";
 
-  const [selectedProvider, setSelectedProvider] = useState<ProviderKind>(preferredProvider);
+  const [selectedProvider, setSelectedProvider] = useState<EngineKind>(preferredProvider);
   const [selectedTab, setSelectedTab] = useState<DiscoveryTab>("skills");
   const [pluginSearch, setPluginSearch] = useState("");
   const [skillSearch, setSkillSearch] = useState("");
@@ -610,7 +610,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   const deferredSkillSearch = useDeferredValue(skillSearch);
   const providerThreadId = focusedThreadId ?? sourceThreadId;
   const reloadThreadId =
-    sourceThread?.session?.provider === "omnimind" &&
+    sourceThread?.session?.provider === "oa" &&
     sourceThread.session.status !== "closed" &&
     sourceThread.session.status !== "error"
       ? sourceThread.id
@@ -669,7 +669,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
         // providers registered into passive OmniMind model discovery. Keep the
         // existing provider-prefix invalidation as the single refresh boundary.
         queryClient.invalidateQueries({
-          queryKey: providerDiscoveryQueryKeys.modelsForProvider("omnimind"),
+          queryKey: providerDiscoveryQueryKeys.modelsForProvider("oa"),
         }),
       ]);
     },
@@ -688,10 +688,10 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
 
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const capabilityQueries = useQueries({
-    queries: PROVIDER_KINDS.map((provider) => providerComposerCapabilitiesQueryOptions(provider)),
+    queries: ENGINE_KINDS.map((provider) => providerComposerCapabilitiesQueryOptions(provider)),
   });
   const providerCapabilities = Object.fromEntries(
-    PROVIDER_KINDS.map((provider, index) => {
+    ENGINE_KINDS.map((provider, index) => {
       const capability = capabilityQueries[index]?.data;
       return [
         provider,
@@ -701,7 +701,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
         },
       ];
     }),
-  ) as Record<ProviderKind, ProviderCapabilities>;
+  ) as Record<EngineKind, ProviderCapabilities>;
 
   // Library discovery stays bound to the Engine the user selected. Unsupported
   // tabs render an accurate unavailable state instead of reading another Engine.
@@ -717,7 +717,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
     serverCwd: serverConfigQuery.data?.cwd ?? null,
   });
 
-  const providerLabel = PROVIDER_DISPLAY_NAMES[effectiveProvider];
+  const providerLabel = ENGINE_DISPLAY_NAMES[effectiveProvider];
   const canListPlugins = providerCapabilities[effectiveProvider].plugins;
   const canListSkills = providerCapabilities[effectiveProvider].skills;
 
@@ -828,7 +828,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
           >
             {DEFAULT_PROVIDER_ORDER.map((provider) => {
               const capabilities = providerCapabilities[provider];
-              const label = PROVIDER_DISPLAY_NAMES[provider];
+              const label = ENGINE_DISPLAY_NAMES[provider];
               return (
                 <ProviderToggleButton
                   key={provider}

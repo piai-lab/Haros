@@ -1,4 +1,4 @@
-import type { ProviderKind, ThreadId } from "@harnessos/contracts";
+import type { EngineKind, ThreadId } from "@harnessos/contracts";
 import { Cause, Effect } from "effect";
 
 import type { EventNdjsonLogger } from "../Layers/EventNdjsonLogger.ts";
@@ -75,7 +75,7 @@ export function redactAcpLogSecrets(value: unknown): unknown {
 
 function writeNativeAcpLog(input: {
   readonly nativeEventLogger: EventNdjsonLogger | undefined;
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly threadId: ThreadId;
   readonly kind: "request" | "protocol";
   readonly payload: unknown;
@@ -130,7 +130,7 @@ export function summarizeAcpLogPayload(payload: unknown, limit: number): string 
 export function makeAcpDebugLoggers(input: {
   readonly base: Pick<AcpSessionRuntimeOptions, "requestLogger" | "protocolLogging">;
   readonly enabled: boolean;
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly marker: string;
   readonly payloadLimit: number;
   readonly shouldMirrorIncomingRaw: (payload: string) => boolean;
@@ -191,7 +191,7 @@ export function makeAcpDebugLoggers(input: {
 
 export function makeAcpNativeLoggers(input: {
   readonly nativeEventLogger: EventNdjsonLogger | undefined;
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly threadId: ThreadId;
 }): Pick<AcpSessionRuntimeOptions, "requestLogger" | "protocolLogging"> {
   return {

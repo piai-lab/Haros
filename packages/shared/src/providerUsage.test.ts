@@ -26,7 +26,7 @@ describe("provider usage metadata", () => {
   it("exposes every provider with a safe live usage source", () => {
     expect([...PROVIDER_USAGE_PROVIDERS]).toEqual([
       "codex",
-      "claudeAgent",
+      "claude",
       "cursor",
       "antigravity",
       "grok",
@@ -52,7 +52,7 @@ describe("provider usage metadata", () => {
   it("hides unsigned providers once any connected snapshot exists", () => {
     const snapshots = [
       snapshot("codex", "ok"),
-      snapshot("claudeAgent", "needs-auth"),
+      snapshot("claude", "needs-auth"),
       snapshot("grok", "ok"),
       snapshot("antigravity", "needs-auth"),
     ];
@@ -65,7 +65,7 @@ describe("provider usage metadata", () => {
   it("treats a live fetch error as connected so unsigned cards still hide", () => {
     const snapshots = [
       snapshot("codex", "error"),
-      snapshot("claudeAgent", "needs-auth"),
+      snapshot("claude", "needs-auth"),
       snapshot("opencode", "needs-auth"),
     ];
     expect(selectVisibleProviderUsageSnapshots(snapshots).map((item) => item.provider)).toEqual([

@@ -392,14 +392,14 @@ function modelSelectionUsesCustomService(
   selection: ModelSelection | null | undefined,
   serviceId: string,
 ): boolean {
-  return selection?.provider === "omnimind" && selection.model.startsWith(`${serviceId}/`);
+  return selection?.provider === "oa" && selection.model.startsWith(`${serviceId}/`);
 }
 
 function countCustomServiceReferences(serviceId: string): number {
   const composerState = useComposerDraftStore.getState();
   const appState = useStore.getState();
   const draftReferences = Object.values(composerState.draftsByThreadId).filter((draft) =>
-    modelSelectionUsesCustomService(draft.modelSelectionByProvider.omnimind, serviceId),
+    modelSelectionUsesCustomService(draft.modelSelectionByProvider.oa, serviceId),
   ).length;
   const queuedTurnReferences = Object.values(composerState.draftsByThreadId).reduce(
     (count, draft) =>
@@ -410,7 +410,7 @@ function countCustomServiceReferences(serviceId: string): number {
     0,
   );
   const stickyReference = modelSelectionUsesCustomService(
-    composerState.stickyModelSelectionByProvider.omnimind,
+    composerState.stickyModelSelectionByProvider.oa,
     serviceId,
   )
     ? 1
@@ -1008,7 +1008,7 @@ function ActiveModelsSettingsPanel({
           models: availableModels,
         });
         onSetupReady?.({
-          provider: "omnimind",
+          provider: "oa",
           model: `${service.serviceId}/${model.modelId}`,
         });
         return true;
@@ -1253,7 +1253,7 @@ function ActiveModelsSettingsPanel({
         queryKey: omniMindModelServicesQueryKeys.all,
       }),
       queryClient.invalidateQueries({
-        queryKey: providerDiscoveryQueryKeys.modelsForProvider("omnimind"),
+        queryKey: providerDiscoveryQueryKeys.modelsForProvider("oa"),
       }),
     ]);
   }, [queryClient]);

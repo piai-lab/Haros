@@ -8,7 +8,7 @@
 
 import { Schema } from "effect";
 import { IsoDateTime, NonNegativeInt, TrimmedNonEmptyString } from "./baseSchemas";
-import { ProviderKind } from "./orchestration";
+import { EngineKind } from "./orchestration";
 
 // ── Input ────────────────────────────────────────────────────────────
 
@@ -86,7 +86,7 @@ export const ProfileRecentModelUsage = Schema.Struct({
   coverage: ProfileCoverage,
   models: Schema.Array(
     Schema.Struct({
-      provider: Schema.Union([ProviderKind, Schema.Literal("unknown")]),
+      provider: Schema.Union([EngineKind, Schema.Literal("unknown")]),
       model: TrimmedNonEmptyString,
       turnCount: NonNegativeInt,
       percent: Schema.Number,
@@ -145,7 +145,7 @@ export const ProfileTokenStats = Schema.Struct({
     outputTokens: NonNegativeInt,
     cacheHitPercent: Schema.NullOr(Schema.Number),
     coverage: ProfileCoverage,
-    unavailableProviders: Schema.Array(ProviderKind),
+    unavailableProviders: Schema.Array(EngineKind),
     days: Schema.Array(
       Schema.Struct({
         day: TrimmedNonEmptyString,

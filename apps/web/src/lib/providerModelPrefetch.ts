@@ -6,7 +6,7 @@
 // Layer: Web lib
 // Exports: resolve + prefetch helpers that mirror ChatView's listModels query keys.
 
-import type { ProviderKind, ServerSettingsView } from "@harnessos/contracts";
+import type { EngineKind, ServerSettingsView } from "@harnessos/contracts";
 import type { QueryClient } from "@tanstack/react-query";
 
 import { resolveProviderDiscoveryCwd } from "./providerDiscovery";
@@ -23,12 +23,12 @@ export type ProviderModelPrefetchSettings = Pick<
 >;
 
 export function resolveNewThreadModelPrefetchProvider(input: {
-  providerOverride?: ProviderKind | null | undefined;
-  draftActiveProvider?: ProviderKind | null | undefined;
-  stickyActiveProvider?: ProviderKind | null | undefined;
-  projectDefaultProvider?: ProviderKind | null | undefined;
-  defaultProvider: ProviderKind;
-}): ProviderKind {
+  providerOverride?: EngineKind | null | undefined;
+  draftActiveProvider?: EngineKind | null | undefined;
+  stickyActiveProvider?: EngineKind | null | undefined;
+  projectDefaultProvider?: EngineKind | null | undefined;
+  defaultProvider: EngineKind;
+}): EngineKind {
   return (
     input.providerOverride ??
     input.draftActiveProvider ??
@@ -71,7 +71,7 @@ export function resolveNewThreadModelPrefetchCwd(input: {
  * prefetch lands on the exact cache key the composer will read on mount.
  */
 export function providerModelsPrefetchQueryOptions(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   settings: ProviderModelPrefetchSettings;
   cwd?: string | null;
 }) {
@@ -79,12 +79,12 @@ export function providerModelsPrefetchQueryOptions(input: {
   const cwd = input.cwd ?? null;
 
   switch (provider) {
-    case "omnimind":
-      return providerModelsQueryOptions({ provider: "omnimind", cwd });
-    case "claudeAgent":
+    case "oa":
+      return providerModelsQueryOptions({ provider: "oa", cwd });
+    case "claude":
       return providerModelsQueryOptions({
-        provider: "claudeAgent",
-        binaryPath: settings.providers.claudeAgent.binaryPath || null,
+        provider: "claude",
+        binaryPath: settings.providers.claude.binaryPath || null,
       });
     case "codex":
       return providerModelsQueryOptions({ provider: "codex" });
@@ -134,7 +134,7 @@ export function providerModelsPrefetchQueryOptions(input: {
 }
 
 function providerAgentsPrefetchQueryOptions(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   settings: ProviderModelPrefetchSettings;
   cwd?: string | null;
 }) {
@@ -142,8 +142,8 @@ function providerAgentsPrefetchQueryOptions(input: {
   const cwd = input.cwd ?? null;
 
   switch (provider) {
-    case "claudeAgent":
-      return providerAgentsQueryOptions({ provider: "claudeAgent" });
+    case "claude":
+      return providerAgentsQueryOptions({ provider: "claude" });
     case "codex":
       return providerAgentsQueryOptions({ provider: "codex" });
     case "kilo":
@@ -166,7 +166,7 @@ function providerAgentsPrefetchQueryOptions(input: {
 export function prefetchProviderModelsForNewThread(
   queryClient: QueryClient,
   input: {
-    provider: ProviderKind;
+    provider: EngineKind;
     settings: ProviderModelPrefetchSettings;
     cwd?: string | null;
     enabled?: boolean;

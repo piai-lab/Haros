@@ -383,7 +383,7 @@ describe("Antigravity CLI integration helpers", () => {
         JSON.parse(await fs.readFile(path.join(pluginDir, "mcp_config.json"), "utf8")),
       ).toEqual({
         mcpServers: {
-          omnimind: {
+          oa: {
             command: stdioProxy.command,
             args: stdioProxy.args,
             env: {

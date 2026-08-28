@@ -312,7 +312,7 @@ describe("AgentGatewaySessionLease", () => {
         revokeSessionToken,
       },
       ThreadId.makeUnsafe("thread-1"),
-      "claudeAgent",
+      "claude",
     );
 
     expect(() => lease?.release()).toThrow("revoke failed");

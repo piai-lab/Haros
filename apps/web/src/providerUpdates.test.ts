@@ -3,7 +3,7 @@
 // Layer: Web utility tests
 // Exports: Vitest suites for providerUpdates.ts
 
-import type { ProviderKind, ServerProviderStatus, ServerSettingsView } from "@harnessos/contracts";
+import type { EngineKind, ServerProviderStatus, ServerSettingsView } from "@harnessos/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -58,7 +58,7 @@ afterEach(() => {
 });
 
 function providerStatus(
-  provider: ProviderKind,
+  provider: EngineKind,
   overrides: Partial<ServerProviderStatus> = {},
 ): ServerProviderStatus {
   return {
@@ -91,16 +91,16 @@ function serverSettings(
   };
 
   return {
-    defaultProvider: "omnimind",
+    defaultProvider: "oa",
     enableAssistantStreaming: false,
     enableProviderUpdateChecks: true,
     defaultThreadEnvMode: "local",
     addProjectBaseDirectory: "",
     textGenerationModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
     providers: {
-      omnimind: { enabled: true },
+      oa: { enabled: true },
       codex: { ...provider, binaryPath: "codex", homePath: "" },
-      claudeAgent: { ...provider, binaryPath: "claude", launchArgs: "" },
+      claude: { ...provider, binaryPath: "claude", launchArgs: "" },
       cursor: { ...provider, binaryPath: "cursor-agent", apiEndpoint: "" },
       antigravity: { ...provider, binaryPath: "agy" },
       grok: { ...provider, binaryPath: "grok" },
@@ -192,7 +192,7 @@ describe("getVisibleProviderUpdateStatuses", () => {
 
 describe("getNotifiableProviderUpdateStatuses", () => {
   it("suppresses cached update advisories until a live version check completes", () => {
-    const providers = [providerStatus("claudeAgent")];
+    const providers = [providerStatus("claude")];
     const settings = serverSettings();
 
     expect(
@@ -208,13 +208,13 @@ describe("getNotifiableProviderUpdateStatuses", () => {
         serverSettings: settings,
         liveVersionCheckCompleted: true,
       }).map((provider) => provider.provider),
-    ).toEqual(["claudeAgent"]);
+    ).toEqual(["claude"]);
   });
 
   it("keeps notifications limited to one-click updates after verification", () => {
-    const manualOnly = providerStatus("claudeAgent", {
+    const manualOnly = providerStatus("claude", {
       versionAdvisory: {
-        ...providerStatus("claudeAgent").versionAdvisory!,
+        ...providerStatus("claude").versionAdvisory!,
         updateCommand: null,
         canUpdate: false,
       },

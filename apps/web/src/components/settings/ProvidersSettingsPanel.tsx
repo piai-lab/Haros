@@ -3,12 +3,12 @@
 // Layer: Settings panel
 
 import {
-  type ProviderKind,
+  type EngineKind,
   type ServerProviderStatus,
   type ServerSettingsPatch,
   type ServerSettingsView,
 } from "@harnessos/contracts";
-import { PROVIDER_DESCRIPTORS, PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_DESCRIPTORS, ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { deepMerge } from "@harnessos/shared/Struct";
 import {
   closestCenter,
@@ -145,7 +145,7 @@ type ProviderInstallField =
   | ProviderInstallPasswordField
   | ProviderInstallBooleanField;
 type ProviderInstallSettings = {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly docs: ReadonlyArray<{ readonly labelKey: MessageKey; readonly href: string }>;
   readonly fields: readonly ProviderInstallField[];
 };
@@ -155,7 +155,7 @@ type CustomModelValidationResult =
   | { readonly model?: never; readonly error: string };
 
 export function validateProviderCustomModelInput(input: {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly value: string;
   readonly savedModels: readonly string[];
 }): CustomModelValidationResult {
@@ -173,8 +173,8 @@ export function validateProviderCustomModelInput(input: {
   return { model: normalized };
 }
 
-const PROVIDER_VISIBILITY_OPTIONS: ReadonlyArray<{ provider: ProviderKind; title: string }> =
-  PROVIDER_DESCRIPTORS.map((descriptor) => ({
+const PROVIDER_VISIBILITY_OPTIONS: ReadonlyArray<{ provider: EngineKind; title: string }> =
+  ENGINE_DESCRIPTORS.map((descriptor) => ({
     provider: descriptor.kind,
     title: descriptor.displayName,
   }));
@@ -210,7 +210,7 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
     ],
   },
   {
-    provider: "claudeAgent",
+    provider: "claude",
     docs: [
       { labelKey: "settings.install", href: "https://code.claude.com/docs/en/installation" },
       {
@@ -430,7 +430,7 @@ function readProviderInstallField(
 ): string | boolean {
   switch (field.settingsKey) {
     case "claudeBinaryPath":
-      return settings.providers.claudeAgent.binaryPath;
+      return settings.providers.claude.binaryPath;
     case "codexBinaryPath":
       return settings.providers.codex.binaryPath;
     case "codexHomePath":
@@ -472,7 +472,7 @@ function providerInstallFieldPatch(
 ): ServerSettingsPatch {
   switch (field.settingsKey) {
     case "claudeBinaryPath":
-      return { providers: { claudeAgent: { binaryPath: String(value) } } };
+      return { providers: { claude: { binaryPath: String(value) } } };
     case "codexBinaryPath":
       return { providers: { codex: { binaryPath: String(value) } } };
     case "codexHomePath":
@@ -573,7 +573,7 @@ export function isProviderInstallSettingsDirty(
 function createProviderInstallDisclosureState(
   settings: ServerSettingsView,
   defaults: ServerSettingsView,
-): Record<ProviderKind, boolean> {
+): Record<EngineKind, boolean> {
   return Object.fromEntries(
     PROVIDER_INSTALL_SETTINGS.map((config) => {
       const customModelsConfig = CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.find(
@@ -590,13 +590,13 @@ function createProviderInstallDisclosureState(
               getCustomModelsForProvider(defaults, customModelsConfig.provider).length),
       ];
     }),
-  ) as Record<ProviderKind, boolean>;
+  ) as Record<EngineKind, boolean>;
 }
 
-function createClosedProviderInstallDisclosureState(): Record<ProviderKind, boolean> {
+function createClosedProviderInstallDisclosureState(): Record<EngineKind, boolean> {
   return Object.fromEntries(
     PROVIDER_INSTALL_SETTINGS.map((config) => [config.provider, false]),
-  ) as Record<ProviderKind, boolean>;
+  ) as Record<EngineKind, boolean>;
 }
 
 export function createProviderInstallResetPatch(defaults: ServerSettingsView): ServerSettingsPatch {
@@ -606,7 +606,7 @@ export function createProviderInstallResetPatch(defaults: ServerSettingsView): S
         binaryPath: defaults.providers.codex.binaryPath,
         homePath: defaults.providers.codex.homePath,
       },
-      claudeAgent: { binaryPath: defaults.providers.claudeAgent.binaryPath },
+      claude: { binaryPath: defaults.providers.claude.binaryPath },
       cursor: {
         binaryPath: defaults.providers.cursor.binaryPath,
         apiEndpoint: defaults.providers.cursor.apiEndpoint,
@@ -632,10 +632,10 @@ export function createProviderInstallResetPatch(defaults: ServerSettingsView): S
 }
 
 function setProviderHidden(
-  current: ReadonlyArray<ProviderKind>,
-  provider: ProviderKind,
+  current: ReadonlyArray<EngineKind>,
+  provider: EngineKind,
   hidden: boolean,
-): ProviderKind[] {
+): EngineKind[] {
   const withoutTarget = current.filter((entry) => entry !== provider);
   return hidden ? [...withoutTarget, provider] : withoutTarget;
 }
@@ -661,7 +661,7 @@ function providerVisibilityStatusLabel(
 }
 
 function SortableProviderVisibilityRow(props: {
-  option: { provider: ProviderKind; title: string };
+  option: { provider: EngineKind; title: string };
   providerStatus: ServerProviderStatus | undefined;
   statusPending: boolean;
   isHidden: boolean;
@@ -795,7 +795,7 @@ function ProviderUpdateAction(props: {
   providerStatus: ServerProviderStatus;
   active: boolean;
   disabled: boolean;
-  onUpdate: (provider: ProviderKind) => void;
+  onUpdate: (provider: EngineKind) => void;
 }) {
   const { t } = useI18n();
   const advisory = props.providerStatus.versionAdvisory;
@@ -895,7 +895,7 @@ function ProviderInstallFieldControl(props: {
 }
 
 function ProviderCustomModelsEditor(props: {
-  provider: ProviderKind;
+  provider: EngineKind;
   settings: ServerSettingsView;
   defaults: ServerSettingsView;
   updateServerSettings: (
@@ -1015,12 +1015,12 @@ function ProviderToolRow(props: {
   open: boolean;
   settings: ServerSettingsView;
   defaults: ServerSettingsView;
-  hiddenProviderSet: ReadonlySet<ProviderKind>;
+  hiddenProviderSet: ReadonlySet<EngineKind>;
   serverSettings: Pick<ServerSettingsView, "providers" | "enableProviderUpdateChecks"> | null;
   providerStatus: ServerProviderStatus | undefined;
-  updatingProviders: ReadonlySet<ProviderKind>;
+  updatingProviders: ReadonlySet<EngineKind>;
   onOpenChange: (open: boolean) => void;
-  onUpdate: (provider: ProviderKind) => void;
+  onUpdate: (provider: EngineKind) => void;
   updateServerSettings: (
     patch: ServerSettingsPatch,
   ) => Promise<{ readonly state: "saved" | "failed" }>;
@@ -1030,7 +1030,7 @@ function ProviderToolRow(props: {
   ) => Promise<{ readonly state: "saved" | "failed" }>;
 }) {
   const { t } = useI18n();
-  const title = PROVIDER_DISPLAY_NAMES[props.config.provider];
+  const title = ENGINE_DISPLAY_NAMES[props.config.provider];
   const [draft, setDraft] = useState<ProviderInstallDraft>(() =>
     createProviderInstallDraft(props.config, props.settings),
   );
@@ -1333,14 +1333,14 @@ export function ProvidersSettingsPanel({ active, resetEpoch }: ProvidersSettings
     setOpenInstallProviders(createClosedProviderInstallDisclosureState());
   }, [defaults, mutateProviderCredential, mutateServerSettings, t]);
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const [openInstallProviders, setOpenInstallProviders] = useState<Record<ProviderKind, boolean>>(
+  const [openInstallProviders, setOpenInstallProviders] = useState<Record<EngineKind, boolean>>(
     () => createProviderInstallDisclosureState(settings ?? defaults, defaults),
   );
-  const [updatingProviders, setUpdatingProviders] = useState<ReadonlySet<ProviderKind>>(
+  const [updatingProviders, setUpdatingProviders] = useState<ReadonlySet<EngineKind>>(
     () => new Set(),
   );
   const hiddenProviderSet = useMemo(
-    () => new Set<ProviderKind>(preferences.hiddenProviders),
+    () => new Set<EngineKind>(preferences.hiddenProviders),
     [preferences.hiddenProviders],
   );
   const hiddenProviderCount = hiddenProviderSet.size;
@@ -1419,8 +1419,8 @@ export function ProvidersSettingsPanel({ active, resetEpoch }: ProvidersSettings
     (event: DragEndEvent) => {
       const { active, over } = event;
       if (!over || active.id === over.id) return;
-      const fromIndex = preferences.providerOrder.indexOf(active.id as ProviderKind);
-      const toIndex = preferences.providerOrder.indexOf(over.id as ProviderKind);
+      const fromIndex = preferences.providerOrder.indexOf(active.id as EngineKind);
+      const toIndex = preferences.providerOrder.indexOf(over.id as EngineKind);
       if (fromIndex < 0 || toIndex < 0) return;
       updatePreferences({
         providerOrder: arrayMove([...preferences.providerOrder], fromIndex, toIndex),
@@ -1430,13 +1430,13 @@ export function ProvidersSettingsPanel({ active, resetEpoch }: ProvidersSettings
   );
 
   const runProviderUpdate = useCallback(
-    async (provider: ProviderKind) => {
+    async (provider: EngineKind) => {
       if (updatingProviders.has(provider)) return;
       let progressToastDismissed = false;
       const dismissProgressToast = () => {
         progressToastDismissed = true;
       };
-      const providerName = PROVIDER_DISPLAY_NAMES[provider];
+      const providerName = ENGINE_DISPLAY_NAMES[provider];
       const toastId = toastManager.add({
         type: "loading",
         title: t("updater.updatingProvider", { provider: providerName }),
@@ -1505,7 +1505,7 @@ export function ProvidersSettingsPanel({ active, resetEpoch }: ProvidersSettings
             description:
               error instanceof ProviderUpdateTimeoutError
                 ? t("updater.requestTimedOut", {
-                    provider: PROVIDER_DISPLAY_NAMES[error.provider],
+                    provider: ENGINE_DISPLAY_NAMES[error.provider],
                   })
                 : error instanceof Error
                   ? error.message
@@ -1613,7 +1613,7 @@ export function ProvidersSettingsPanel({ active, resetEpoch }: ProvidersSettings
                   return (
                     <SettingsListRow
                       key={providerStatus.provider}
-                      title={PROVIDER_DISPLAY_NAMES[providerStatus.provider]}
+                      title={ENGINE_DISPLAY_NAMES[providerStatus.provider]}
                       description={updateLabel || undefined}
                       actions={
                         providerStatus.versionAdvisory?.canUpdate ? (

@@ -39,7 +39,7 @@ import {
   type UsageHistoryWorkerResponse,
 } from "./protocol";
 
-const PROVIDERS = ["codex", "claudeAgent"] as const satisfies readonly UsageHistoryProvider[];
+const PROVIDERS = ["codex", "claude"] as const satisfies readonly UsageHistoryProvider[];
 const WORKER_TIMEOUT_MS = 20_000;
 const WORKER_STDOUT_LIMIT = 16 * 1024 * 1024;
 const MAX_PROVIDER_RESTARTS = 2;
@@ -304,7 +304,7 @@ const makeUsageHistory = Effect.gen(function* () {
       process.env.CLAUDE_CONFIG_DIR?.trim() || path.join(config.homeDir, ".claude");
     return {
       codex: path.join(codexHome, "sessions"),
-      claudeAgent: path.join(claudeHome, "projects"),
+      claude: path.join(claudeHome, "projects"),
     } satisfies Record<UsageHistoryProvider, string>;
   });
 

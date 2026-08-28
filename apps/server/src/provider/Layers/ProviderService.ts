@@ -289,7 +289,7 @@ function readPersistedModelSelection(
 }
 
 function modelServiceIdFromSelection(selection: ModelSelection | undefined): string | undefined {
-  if (selection?.provider !== "omnimind") return undefined;
+  if (selection?.provider !== "oa") return undefined;
   const separatorIndex = selection.model.indexOf("/");
   return separatorIndex > 0 ? selection.model.slice(0, separatorIndex) : undefined;
 }
@@ -1732,7 +1732,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             const persistedModelSelection = readPersistedModelSelection(binding.runtimePayload);
             const persistedProviderOptions = readPersistedProviderOptions(binding.runtimePayload);
             const persistedWorkSurface =
-              binding.provider === "omnimind" || binding.provider === "pi"
+              binding.provider === "oa" || binding.provider === "pi"
                 ? readPersistedWorkSurface(binding.runtimePayload)
                 : undefined;
             const persistedProjectContextRoot =
@@ -1847,7 +1847,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           // unambiguous here; Chat/Studio recover on the next authoritative
           // turn dispatch, which supplies ProductSurface from Project.kind.
           if (
-            (binding.provider === "omnimind" || binding.provider === "pi") &&
+            (binding.provider === "oa" || binding.provider === "pi") &&
             readPersistedWorkSurface(binding.runtimePayload) !== "agent"
           ) {
             return;
@@ -2092,7 +2092,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 ? readPersistedProviderOptions(persistedBinding.runtimePayload)
                 : undefined);
             const effectiveWorkSurface =
-              input.provider === "omnimind" || input.provider === "pi"
+              input.provider === "oa" || input.provider === "pi"
                 ? (input.workSurface ??
                   (persistedBinding?.provider === input.provider
                     ? readPersistedWorkSurface(persistedBinding.runtimePayload)
@@ -2344,7 +2344,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               persistedBinding.runtimePayload,
             );
             const previousWorkSurface =
-              persistedBinding.provider === "omnimind" || persistedBinding.provider === "pi"
+              persistedBinding.provider === "oa" || persistedBinding.provider === "pi"
                 ? readPersistedWorkSurface(persistedBinding.runtimePayload)
                 : undefined;
             const previousProjectContextRoot =
@@ -3458,7 +3458,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               ? yield* findLiveSessionAdapter(input.threadId, operation)
               : yield* registry.getByProvider(binding.provider);
           if (adapter === null) return { state: "no_active_session" as const };
-          if (adapter.provider !== "omnimind") {
+          if (adapter.provider !== "oa") {
             return { state: "different_engine" as const };
           }
           if (!(yield* adapter.hasSession(input.threadId))) {

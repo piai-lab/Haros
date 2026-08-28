@@ -432,14 +432,14 @@ describe("getComposerProviderState", () => {
 
   it("returns Claude defaults for effort-capable models", () => {
     const state = getComposerProviderState({
-      provider: "claudeAgent",
+      provider: "claude",
       model: "claude-sonnet-4-6",
       prompt: "",
       modelOptions: undefined,
     });
 
     expect(state).toEqual({
-      provider: "claudeAgent",
+      provider: "claude",
       promptEffort: "high",
       modelOptionsForDispatch: undefined,
     });
@@ -447,18 +447,18 @@ describe("getComposerProviderState", () => {
 
   it("tracks Claude ultrathink from the prompt without changing dispatch effort", () => {
     const state = getComposerProviderState({
-      provider: "claudeAgent",
+      provider: "claude",
       model: "claude-sonnet-4-6",
       prompt: "Ultrathink:\nInvestigate this failure",
       modelOptions: {
-        claudeAgent: {
+        claude: {
           effort: "medium",
         },
       },
     });
 
     expect(state).toEqual({
-      provider: "claudeAgent",
+      provider: "claude",
       promptEffort: "medium",
       modelOptionsForDispatch: {
         effort: "medium",
@@ -470,7 +470,7 @@ describe("getComposerProviderState", () => {
 
   it("treats descriptor prompt-injected choices like legacy prompt-controlled efforts", () => {
     const selection = getComposerTraitSelection(
-      "claudeAgent",
+      "claude",
       "claude-sonnet-4-6",
       "Ultrathink:\nInvestigate this",
       { effort: "ultrathink" },
@@ -499,11 +499,11 @@ describe("getComposerProviderState", () => {
 
   it("drops unsupported Claude effort options for models without effort controls", () => {
     const state = getComposerProviderState({
-      provider: "claudeAgent",
+      provider: "claude",
       model: "claude-haiku-4-5",
       prompt: "",
       modelOptions: {
-        claudeAgent: {
+        claude: {
           effort: "max",
           thinking: false,
         },
@@ -511,7 +511,7 @@ describe("getComposerProviderState", () => {
     });
 
     expect(state).toEqual({
-      provider: "claudeAgent",
+      provider: "claude",
       promptEffort: null,
       modelOptionsForDispatch: {
         thinking: false,
@@ -521,18 +521,18 @@ describe("getComposerProviderState", () => {
 
   it("preserves Claude fast mode when it is the only active option", () => {
     const state = getComposerProviderState({
-      provider: "claudeAgent",
+      provider: "claude",
       model: "claude-opus-4-6",
       prompt: "",
       modelOptions: {
-        claudeAgent: {
+        claude: {
           fastMode: true,
         },
       },
     });
 
     expect(state).toEqual({
-      provider: "claudeAgent",
+      provider: "claude",
       promptEffort: "high",
       modelOptionsForDispatch: {
         fastMode: true,
@@ -542,11 +542,11 @@ describe("getComposerProviderState", () => {
 
   it("drops explicit Claude default/off overrides from dispatch while keeping the selected effort label", () => {
     const state = getComposerProviderState({
-      provider: "claudeAgent",
+      provider: "claude",
       model: "claude-opus-4-6",
       prompt: "",
       modelOptions: {
-        claudeAgent: {
+        claude: {
           effort: "high",
           fastMode: false,
         },
@@ -554,7 +554,7 @@ describe("getComposerProviderState", () => {
     });
 
     expect(state).toEqual({
-      provider: "claudeAgent",
+      provider: "claude",
       promptEffort: "high",
       modelOptionsForDispatch: undefined,
     });
@@ -879,24 +879,24 @@ describe("getComposerProviderState", () => {
 
   it("keeps OmniMind Agent runtime thinking selections on the thinkingLevel field", () => {
     const selection = getComposerTraitSelection(
-      "omnimind",
+      "oa",
       "deepseek/deepseek-v4-pro",
       "",
       { thinkingLevel: "xhigh" },
       { ...PI_RUNTIME_MODEL_WITH_REASONING, slug: "deepseek/deepseek-v4-pro" },
     );
     const state = getComposerProviderState({
-      provider: "omnimind",
+      provider: "oa",
       model: "deepseek/deepseek-v4-pro",
       runtimeModel: { ...PI_RUNTIME_MODEL_WITH_REASONING, slug: "deepseek/deepseek-v4-pro" },
       prompt: "",
-      modelOptions: { omnimind: { thinkingLevel: "xhigh" } },
+      modelOptions: { oa: { thinkingLevel: "xhigh" } },
     });
 
     expect(selection.primarySelectDescriptor?.id).toBe("thinkingLevel");
     expect(selection.effort).toBe("xhigh");
     expect(state).toEqual({
-      provider: "omnimind",
+      provider: "oa",
       promptEffort: "xhigh",
       modelOptionsForDispatch: { thinkingLevel: "xhigh" },
     });

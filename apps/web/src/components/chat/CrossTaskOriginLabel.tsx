@@ -2,7 +2,7 @@
 // Purpose: Identify the source thread for conversations created by another OmniMind agent.
 // Layer: Chat transcript UI
 
-import { type ProviderKind, type ThreadId } from "@harnessos/contracts";
+import { type EngineKind, type ThreadId } from "@harnessos/contracts";
 import { memo, type ReactNode } from "react";
 
 import { OmniMindLogo } from "../OmniMindLogo";
@@ -10,7 +10,7 @@ import { cn } from "~/lib/utils";
 
 export interface CrossTaskOrigin {
   readonly sourceThreadId: ThreadId;
-  readonly sourceProvider: ProviderKind | null;
+  readonly sourceProvider: EngineKind | null;
 }
 
 // A single, app-level attribution: the message reached this thread from another

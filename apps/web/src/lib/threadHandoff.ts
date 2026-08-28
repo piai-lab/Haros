@@ -8,14 +8,14 @@ import {
   MessageId,
   type OrchestrationThreadActivity,
   type ModelSelection,
-  type ProviderKind,
+  type EngineKind,
   type ServerProviderStatus,
   type ServerSettingsView,
   type ThreadHandoffImportedMessage,
   type ThreadForkScope,
 } from "@harnessos/contracts";
 import { getDefaultModel } from "@harnessos/shared/model";
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { sanitizeImportedUserMessageText } from "@harnessos/shared/importedTranscript";
 import { type Thread } from "../types";
 import { DEFAULT_PROVIDER_ORDER } from "../providerOrdering";
@@ -43,8 +43,8 @@ function isImportableThreadActivity(
 }
 
 export function isEligibleHandoffTargetProvider(input: {
-  readonly sourceProvider: ProviderKind;
-  readonly targetProvider: ProviderKind;
+  readonly sourceProvider: EngineKind;
+  readonly targetProvider: EngineKind;
   readonly targetProviderEnabled: boolean | null | undefined;
   readonly targetProviderStatus: ServerProviderStatus | null | undefined;
 }): boolean {
@@ -57,10 +57,10 @@ export function isEligibleHandoffTargetProvider(input: {
 }
 
 export function resolveAvailableHandoffTargetProviders(input: {
-  readonly sourceProvider: ProviderKind;
+  readonly sourceProvider: EngineKind;
   readonly providerSettings: ServerSettingsView["providers"] | null | undefined;
   readonly providerStatuses: readonly ServerProviderStatus[];
-}): ReadonlyArray<ProviderKind> {
+}): ReadonlyArray<EngineKind> {
   return DEFAULT_PROVIDER_ORDER.filter((targetProvider) =>
     isEligibleHandoffTargetProvider({
       sourceProvider: input.sourceProvider,
@@ -75,7 +75,7 @@ export function resolveThreadHandoffBadgeLabel(thread: Pick<Thread, "handoff">):
   if (!thread.handoff) {
     return null;
   }
-  return `Handoff from ${PROVIDER_DISPLAY_NAMES[thread.handoff.sourceProvider]}`;
+  return `Handoff from ${ENGINE_DISPLAY_NAMES[thread.handoff.sourceProvider]}`;
 }
 
 // Preserve the visible source thread name when creating the destination thread.
@@ -233,9 +233,9 @@ export function canCreateThreadHandoff(input: {
 
 export function resolveThreadHandoffModelSelection(input: {
   readonly sourceThread: Pick<Thread, "modelSelection">;
-  readonly targetProvider: ProviderKind;
+  readonly targetProvider: EngineKind;
   readonly projectDefaultModelSelection: ModelSelection | null | undefined;
-  readonly stickyModelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>>;
+  readonly stickyModelSelectionByProvider: Partial<Record<EngineKind, ModelSelection>>;
 }): ModelSelection {
   const isCompatibleSelection = (
     selection: ModelSelection | null | undefined,

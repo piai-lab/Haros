@@ -9,7 +9,7 @@ import { isProviderUsageSnapshotNonOk } from "./providerUsageSnapshot";
 
 function snapshot(input: Partial<ServerProviderUsageSnapshot> = {}): ServerProviderUsageSnapshot {
   return {
-    provider: "claudeAgent",
+    provider: "claude",
     updatedAt: "2026-06-09T12:00:00.000Z",
     limits: [],
     usageLines: [],

@@ -28,7 +28,7 @@ export default Effect.gen(function* () {
 
   yield* sql`
     CREATE TABLE IF NOT EXISTS usage_history_provider_state (
-      provider TEXT PRIMARY KEY CHECK (provider IN ('codex', 'claudeAgent')),
+      provider TEXT PRIMARY KEY CHECK (provider IN ('codex', 'claude')),
       status TEXT NOT NULL CHECK (
         status IN ('pending', 'indexing', 'ready', 'partial', 'paused', 'unsupported')
       ),
@@ -49,7 +49,7 @@ export default Effect.gen(function* () {
   yield* sql`
     CREATE TABLE IF NOT EXISTS usage_history_files (
       file_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      provider TEXT NOT NULL CHECK (provider IN ('codex', 'claudeAgent')),
+      provider TEXT NOT NULL CHECK (provider IN ('codex', 'claude')),
       root_key TEXT NOT NULL,
       relative_path TEXT NOT NULL,
       device_id TEXT NOT NULL,
@@ -76,7 +76,7 @@ export default Effect.gen(function* () {
 
   yield* sql`
     CREATE TABLE IF NOT EXISTS usage_history_events (
-      provider TEXT NOT NULL CHECK (provider IN ('codex', 'claudeAgent')),
+      provider TEXT NOT NULL CHECK (provider IN ('codex', 'claude')),
       event_key TEXT NOT NULL,
       occurred_at TEXT NOT NULL,
       occurred_on TEXT NOT NULL,

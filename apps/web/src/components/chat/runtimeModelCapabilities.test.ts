@@ -19,7 +19,7 @@ describe("resolveRuntimeModelDescriptor", () => {
 
     expect(
       resolveRuntimeModelDescriptor({
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-sonnet-5",
         runtimeModels,
       }),
@@ -28,7 +28,7 @@ describe("resolveRuntimeModelDescriptor", () => {
 
   it("keeps OmniMind Agent runtime reasoning options", () => {
     const capabilities = getRuntimeAwareModelCapabilities({
-      provider: "omnimind",
+      provider: "oa",
       model: "deepseek/deepseek-v4-pro",
       runtimeModel: {
         slug: "deepseek/deepseek-v4-pro",

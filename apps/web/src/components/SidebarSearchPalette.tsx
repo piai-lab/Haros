@@ -14,7 +14,7 @@ import {
   SettingsIcon,
   SunIcon,
 } from "~/lib/icons";
-import { type FilesystemBrowseResult, type ProviderKind } from "@harnessos/contracts";
+import { type FilesystemBrowseResult, type EngineKind } from "@harnessos/contracts";
 import { isGenericChatThreadTitle } from "@harnessos/shared/chatThreads";
 import { BsChat } from "react-icons/bs";
 import { HiOutlineFolderOpen } from "react-icons/hi2";
@@ -97,8 +97,8 @@ interface SidebarSearchPaletteProps {
 }
 
 export type ImportProviderKind = Extract<
-  ProviderKind,
-  "codex" | "claudeAgent" | "cursor" | "kilo" | "opencode"
+  EngineKind,
+  "codex" | "claude" | "cursor" | "kilo" | "opencode"
 >;
 
 function actionHandler(
@@ -285,7 +285,7 @@ const THEME_MODE_ICONS: Record<"system" | "light" | "dark", IconComponent> = {
   dark: MoonIcon,
 };
 
-function ProviderIcon(props: { provider: ProviderKind }) {
+function ProviderIcon(props: { provider: EngineKind }) {
   return (
     <div className="flex size-5 shrink-0 items-center justify-center">
       <SharedProviderIcon provider={props.provider} className="size-[15px]" />
@@ -489,7 +489,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
   const importFieldLabel =
     importProvider === "codex" ? t("search.threadId") : t("search.sessionId");
   const importPlaceholder =
-    importProvider === "claudeAgent"
+    importProvider === "claude"
       ? t("search.pasteSessionId", { provider: "Claude" })
       : importProvider === "cursor"
         ? t("search.pasteSessionId", { provider: "Cursor" })
@@ -651,7 +651,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                       onClick={() => setImportProvider(provider)}
                     >
                       <ProviderIcon provider={provider} />
-                      {provider === "claudeAgent"
+                      {provider === "claude"
                         ? "Claude"
                         : provider === "cursor"
                           ? "Cursor"
@@ -684,7 +684,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                   }}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {importProvider === "claudeAgent"
+                  {importProvider === "claude"
                     ? t("search.providerSessionResume", { provider: "Claude" })
                     : importProvider === "cursor"
                       ? t("search.providerSessionResume", { provider: "Cursor" })

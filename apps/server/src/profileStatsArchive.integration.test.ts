@@ -104,7 +104,7 @@ const seedTwoThreadsWithActivity = Effect.gen(function* () {
         'thread-keep',
         'project-archive',
         'Kept Thread',
-        '{"provider":"claudeAgent","model":"claude-sonnet-4-6","options":{"effort":"max"}}',
+        '{"provider":"claude","model":"claude-sonnet-4-6","options":{"effort":"max"}}',
         'full-access', 'default', 'local',
         '2026-06-13T08:00:00.000Z', '2026-06-13T08:00:00.000Z', NULL
       ),
@@ -158,7 +158,7 @@ const seedTwoThreadsWithActivity = Effect.gen(function* () {
       (
         'event-keep-1', 'thread', 'thread-keep', 1, 'thread.turn-start-requested',
         '2026-06-13T08:05:00.000Z', 'cmd-keep-turn', 'client',
-        '{"threadId":"thread-keep","modelSelection":{"provider":"claudeAgent","model":"claude-sonnet-4-6","options":{"effort":"max"}}}',
+        '{"threadId":"thread-keep","modelSelection":{"provider":"claude","model":"claude-sonnet-4-6","options":{"effort":"max"}}}',
         '{}'
       ),
       (
@@ -303,14 +303,14 @@ describe("ProfileStatsArchive", () => {
       {
         totalProcessedTokens: null,
         usedTokens: 700,
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-haiku-4-5",
         createdAt: "2026-06-13T12:11:00.000Z",
       },
       {
         totalProcessedTokens: null,
         usedTokens: 1700,
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-haiku-4-5",
         createdAt: "2026-06-13T12:12:00.000Z",
       },
@@ -337,7 +337,7 @@ describe("ProfileStatsArchive", () => {
       },
       {
         createdAt: "2026-06-13T12:11:00.000Z",
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-haiku-4-5",
         tokens: 700,
         cachedInputTokens: null,
@@ -346,7 +346,7 @@ describe("ProfileStatsArchive", () => {
       },
       {
         createdAt: "2026-06-13T12:12:00.000Z",
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-haiku-4-5",
         tokens: 1000,
         cachedInputTokens: null,
@@ -464,7 +464,7 @@ describe("ProfileStatsArchive", () => {
         {
           totalProcessedTokens: 1_500,
           usedTokens: null,
-          provider: "claudeAgent",
+          provider: "claude",
           model: null,
           createdAt: "2026-06-13T12:00:00.000Z",
         },
@@ -475,7 +475,7 @@ describe("ProfileStatsArchive", () => {
     expect(rows).toEqual([
       {
         createdAt: "2026-06-13T12:00:00.000Z",
-        provider: "claudeAgent",
+        provider: "claude",
         model: null,
         tokens: 1_500,
         cachedInputTokens: null,

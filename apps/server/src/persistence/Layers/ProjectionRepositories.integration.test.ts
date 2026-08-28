@@ -140,7 +140,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
         projectId: ProjectId.makeUnsafe("project-null-options"),
         title: "Null options thread",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
         },
         runtimeMode: "full-access",
@@ -183,7 +183,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
       assert.strictEqual(
         row.modelSelection,
         JSON.stringify({
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
         }),
       );
@@ -192,7 +192,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
         threadId: ThreadId.makeUnsafe("thread-null-options"),
       });
       assert.deepStrictEqual(Option.getOrNull(persisted)?.modelSelection, {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-opus-4-6",
       });
     }),

@@ -441,13 +441,13 @@ it.effect("decodes project.meta-updated payloads with explicit default provider"
     const parsed = yield* decodeProjectMetaUpdatedPayload({
       projectId: "project-1",
       defaultModelSelection: {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-opus-4-6",
       },
       isPinned: true,
       updatedAt: "2026-01-01T00:00:00.000Z",
     });
-    assert.strictEqual(parsed.defaultModelSelection?.provider, "claudeAgent");
+    assert.strictEqual(parsed.defaultModelSelection?.provider, "claude");
     assert.strictEqual(parsed.isPinned, true);
   }),
 );
@@ -498,14 +498,14 @@ it.effect("keeps atomic Session binding commits internal", () =>
       session: {
         threadId: "thread-1",
         status: "ready",
-        providerName: "claudeAgent",
+        providerName: "claude",
         runtimeMode: "approval-required",
         activeTurnId: null,
         lastError: null,
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
       binding: {
-        modelSelection: { provider: "claudeAgent", model: "claude-opus-4-6" },
+        modelSelection: { provider: "claude", model: "claude-opus-4-6" },
         runtimeMode: "approval-required",
         interactionMode: "plan",
       },
@@ -514,7 +514,7 @@ it.effect("keeps atomic Session binding commits internal", () =>
     const command = yield* decodeOrchestrationCommand(input);
     assert.strictEqual(command.type, "thread.session.set");
     if (command.type !== "thread.session.set") return;
-    assert.strictEqual(command.binding?.modelSelection.provider, "claudeAgent");
+    assert.strictEqual(command.binding?.modelSelection.provider, "claude");
     assert.strictEqual(command.binding?.runtimeMode, "approval-required");
     assert.strictEqual(command.binding?.interactionMode, "plan");
     assert.strictEqual(
@@ -764,15 +764,15 @@ it.effect("decodes thread.meta-updated payloads with explicit provider", () =>
     const parsed = yield* decodeThreadMetaUpdatedPayload({
       threadId: "thread-1",
       modelSelection: {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-opus-4-6",
         supportsAutoMode: false,
       },
       updatedAt: "2026-01-01T00:00:00.000Z",
     });
-    assert.strictEqual(parsed.modelSelection?.provider, "claudeAgent");
+    assert.strictEqual(parsed.modelSelection?.provider, "claude");
     assert.strictEqual(
-      parsed.modelSelection?.provider === "claudeAgent"
+      parsed.modelSelection?.provider === "claude"
         ? parsed.modelSelection.supportsAutoMode
         : undefined,
       false,

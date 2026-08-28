@@ -207,7 +207,7 @@ describe("ThreadGitMetadataReactor", () => {
   ): ProviderRuntimeEvent => ({
     type: "vcs.state.changed",
     eventId: EventId.makeUnsafe(options?.eventId ?? `vcs-${threadId}`),
-    provider: "claudeAgent",
+    provider: "claude",
     threadId,
     createdAt: "2026-08-07T10:00:30.000Z",
     payload: { kind: "commit", ...(options?.cwd !== undefined ? { cwd: options.cwd } : {}) },

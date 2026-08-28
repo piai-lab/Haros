@@ -3,7 +3,7 @@
 // Layer: Chat composer presentation
 // Depends on: provider availability metadata, shared menu primitives, and picker trigger styling.
 
-import { type ModelSlug, type ProviderKind, type ServerProviderStatus } from "@harnessos/contracts";
+import { type ModelSlug, type EngineKind, type ServerProviderStatus } from "@harnessos/contracts";
 import { resolveSelectableModel } from "@harnessos/shared/model";
 import * as Schema from "effect/Schema";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
@@ -50,10 +50,10 @@ import { resolveComposerModelFallbackMessageKey } from "./modelCatalogPresentati
 export const PROVIDER_MODEL_OPTIONS = PROVIDER_OPTIONS;
 
 function providerIconClassName(
-  provider: ProviderKind | ProviderPickerKind,
+  provider: EngineKind | ProviderPickerKind,
   fallbackClassName: string,
 ): string {
-  return provider === "claudeAgent" || provider === "antigravity" || provider === "pi"
+  return provider === "claude" || provider === "antigravity" || provider === "pi"
     ? "text-foreground"
     : fallbackClassName;
 }
@@ -75,7 +75,7 @@ function stripParameterizedModelSuffix(model: string): string {
 }
 
 function resolveSelectedModelLabel(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   model: string;
   options: ReadonlyArray<ProviderModelOption>;
 }): string {
@@ -112,18 +112,18 @@ function buildModelSearchText(option: ProviderModelOption): string {
 }
 
 type ProviderModelMenuItemsProps = {
-  provider: ProviderKind;
+  provider: EngineKind;
   model: ModelSlug | null;
-  lockedProvider: ProviderKind | null;
+  lockedProvider: EngineKind | null;
   providers?: ReadonlyArray<ServerProviderStatus>;
-  modelOptionsByProvider: Record<ProviderKind, ReadonlyArray<ProviderModelOption>>;
-  loadingModelProviders?: Partial<Record<ProviderKind, boolean>>;
-  hiddenProviders?: ReadonlyArray<ProviderKind>;
-  providerOrder?: ReadonlyArray<ProviderKind>;
+  modelOptionsByProvider: Record<EngineKind, ReadonlyArray<ProviderModelOption>>;
+  loadingModelProviders?: Partial<Record<EngineKind, boolean>>;
+  hiddenProviders?: ReadonlyArray<EngineKind>;
+  providerOrder?: ReadonlyArray<EngineKind>;
   disabled?: boolean;
-  onProviderModelChange: (provider: ProviderKind, model: ModelSlug) => void;
+  onProviderModelChange: (provider: EngineKind, model: ModelSlug) => void;
   /** Reports an explicitly opened provider submenu before model selection. */
-  onProviderBrowse?: (provider: ProviderKind) => void;
+  onProviderBrowse?: (provider: EngineKind) => void;
   // Invoked after a model selection commits so callers can close ancestor
   // menus and refocus the composer.
   onAfterSelection?: () => void;
@@ -162,8 +162,8 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
   const activeProvider = props.lockedProvider ?? props.provider;
   const hiddenProviders = props.hiddenProviders;
   const providerOrder = props.providerOrder;
-  const hiddenProviderSet = new Set<ProviderKind>(hiddenProviders ?? []);
-  const protectedProviderSet = new Set<ProviderKind>([props.provider]);
+  const hiddenProviderSet = new Set<EngineKind>(hiddenProviders ?? []);
+  const protectedProviderSet = new Set<EngineKind>([props.provider]);
   if (props.lockedProvider !== null) {
     protectedProviderSet.add(props.lockedProvider);
   }
@@ -184,7 +184,7 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
     opencode: openCodeFavoriteModelSlugSet,
     pi: piFavoriteModelSlugSet,
   };
-  const handleModelChange = (provider: ProviderKind, value: string) => {
+  const handleModelChange = (provider: EngineKind, value: string) => {
     if (props.disabled) return;
     if (!value) return;
     const resolvedModel = resolveSelectableModel(
@@ -208,7 +208,7 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
     setFavoriteModelSlugs((current) => toggleFavoriteModelSlug(current, slug));
   };
 
-  const renderModelRadioGroup = (provider: ProviderKind) => {
+  const renderModelRadioGroup = (provider: EngineKind) => {
     if (props.loadingModelProviders?.[provider]) {
       return (
         <div className="space-y-2 px-2 py-2" aria-label={t("composer.loadingModels")}>
@@ -383,10 +383,10 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
 
 // Resolves the human-readable label for the currently selected model.
 export function resolveProviderModelLabel(input: {
-  provider: ProviderKind;
-  lockedProvider: ProviderKind | null;
+  provider: EngineKind;
+  lockedProvider: EngineKind | null;
   model: ModelSlug;
-  modelOptionsByProvider: Record<ProviderKind, ReadonlyArray<ProviderModelOption>>;
+  modelOptionsByProvider: Record<EngineKind, ReadonlyArray<ProviderModelOption>>;
 }): string {
   const activeProvider = input.lockedProvider ?? input.provider;
   return resolveSelectedModelLabel({
@@ -397,22 +397,22 @@ export function resolveProviderModelLabel(input: {
 }
 
 export function getProviderIconClassName(
-  provider: ProviderKind | ProviderPickerKind,
+  provider: EngineKind | ProviderPickerKind,
   fallbackClassName: string = "text-muted-foreground/70",
 ): string {
   return providerIconClassName(provider, fallbackClassName);
 }
 
 type ProviderModelPickerProps = {
-  provider: ProviderKind;
+  provider: EngineKind;
   model: ModelSlug | null;
-  lockedProvider: ProviderKind | null;
+  lockedProvider: EngineKind | null;
   providers?: ReadonlyArray<ServerProviderStatus>;
-  modelOptionsByProvider: Record<ProviderKind, ReadonlyArray<ProviderModelOption>>;
-  loadingModelProviders?: Partial<Record<ProviderKind, boolean>>;
-  catalogStateByProvider?: Partial<Record<ProviderKind, ProviderModelCatalogState>>;
-  hiddenProviders?: ReadonlyArray<ProviderKind>;
-  providerOrder?: ReadonlyArray<ProviderKind>;
+  modelOptionsByProvider: Record<EngineKind, ReadonlyArray<ProviderModelOption>>;
+  loadingModelProviders?: Partial<Record<EngineKind, boolean>>;
+  catalogStateByProvider?: Partial<Record<EngineKind, ProviderModelCatalogState>>;
+  hiddenProviders?: ReadonlyArray<EngineKind>;
+  providerOrder?: ReadonlyArray<EngineKind>;
   activeProviderIconClassName?: string;
   compact?: boolean;
   // Icon-only trigger for narrow composers; the model name moves to title/sr-only.
@@ -422,8 +422,8 @@ type ProviderModelPickerProps = {
   onOpenChange?: (open: boolean) => void;
   onSelectionCommitted?: () => void;
   shortcutLabel?: string | null;
-  onProviderModelChange: (provider: ProviderKind, model: ModelSlug) => void;
-  onProviderBrowse?: (provider: ProviderKind) => void;
+  onProviderModelChange: (provider: EngineKind, model: ModelSlug) => void;
+  onProviderBrowse?: (provider: EngineKind) => void;
 };
 
 export const ProviderModelPicker = function ProviderModelPicker(props: ProviderModelPickerProps) {

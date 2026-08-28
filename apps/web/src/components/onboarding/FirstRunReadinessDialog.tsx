@@ -1,4 +1,4 @@
-import type { ModelSelection, ProviderKind, ThreadId } from "@harnessos/contracts";
+import type { ModelSelection, EngineKind, ThreadId } from "@harnessos/contracts";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -34,10 +34,10 @@ import { useFirstRunReadinessController } from "./useFirstRunReadinessController
 
 type WizardStep = "engine" | "prepare" | "model" | "ready";
 
-const INDEPENDENT_ENGINE_OPTIONS = PROVIDER_OPTIONS.filter((option) => option.value !== "omnimind");
+const INDEPENDENT_ENGINE_OPTIONS = PROVIDER_OPTIONS.filter((option) => option.value !== "oa");
 const PROVIDER_LABEL_BY_KIND = Object.fromEntries(
   PROVIDER_OPTIONS.map((option) => [option.value, option.label]),
-) as Record<ProviderKind, string>;
+) as Record<EngineKind, string>;
 
 type OnboardingEngineAvailabilityState =
   | ReturnType<typeof deriveProviderPickerAvailability>["state"]
@@ -95,7 +95,7 @@ export function FirstRunReadinessDialog() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const pathname = useLocation({ select: (location) => location.pathname });
-  const [selectedProvider, setSelectedProvider] = useState<ProviderKind>("omnimind");
+  const [selectedProvider, setSelectedProvider] = useState<EngineKind>("oa");
   const controller = useFirstRunReadinessController(selectedProvider);
   const [step, setStep] = useState<WizardStep>("engine");
   const [open, setOpen] = useState(false);
@@ -121,7 +121,7 @@ export function FirstRunReadinessDialog() {
     selectedProviderModels.length > 0 &&
     (selectedProviderCatalogState === "ready" || selectedProviderCatalogState === "stale");
   const modelChoices = useMemo(() => {
-    if (selectedProvider === "omnimind" && preparedService) {
+    if (selectedProvider === "oa" && preparedService) {
       return preparedService.models.map((model) => ({
         slug: `${preparedService.service.serviceId}/${model.modelId}`,
         name: model.displayName,
@@ -145,7 +145,7 @@ export function FirstRunReadinessDialog() {
     focusReturnRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     completionCommittedRef.current = false;
-    setSelectedProvider("omnimind");
+    setSelectedProvider("oa");
     setPreparedService(null);
     setSelectedModel(null);
     setStep("engine");
@@ -212,7 +212,7 @@ export function FirstRunReadinessDialog() {
   }, [navigate]);
 
   const advanceFromPrepare = useCallback(() => {
-    if (selectedProvider === "omnimind") return;
+    if (selectedProvider === "oa") return;
     if (!selectedProviderModelsReady || !selectedProviderPrepared) return;
     setSelectedModel(null);
     setStep("model");
@@ -261,7 +261,7 @@ export function FirstRunReadinessDialog() {
         data-testid="first-run-readiness-dialog"
       >
         <DialogHeader className="h-[70px] shrink-0 flex-row items-center border-b border-border/60 px-7 py-0 font-system-ui">
-          <ProviderIcon provider="omnimind" className="size-[34px]" />
+          <ProviderIcon provider="oa" className="size-[34px]" />
           <span className="text-[length:var(--app-font-size-ui-lg,15px)] font-semibold">
             {t("onboarding.firstRun.header")}
           </span>
@@ -308,19 +308,19 @@ export function FirstRunReadinessDialog() {
               </DialogDescription>
               <button
                 type="button"
-                aria-pressed={selectedProvider === "omnimind"}
+                aria-pressed={selectedProvider === "oa"}
                 className={cn(
                   "mt-6 flex w-full items-center gap-4 rounded-[17px] border p-[17px] text-left outline-none transition-colors motion-reduce:transition-none",
-                  selectedProvider === "omnimind"
+                  selectedProvider === "oa"
                     ? "border-primary/45 bg-primary/[0.06] ring-4 ring-primary/[0.06]"
                     : "border-border hover:bg-muted/40",
                 )}
-                onClick={() => setSelectedProvider("omnimind")}
+                onClick={() => setSelectedProvider("oa")}
               >
-                <ProviderIcon provider="omnimind" className="size-12" />
+                <ProviderIcon provider="oa" className="size-12" />
                 <span className="min-w-0 flex-1">
                   <strong className="block text-[length:var(--app-font-size-ui-lg,15px)]">
-                    {PROVIDER_LABEL_BY_KIND.omnimind}
+                    {PROVIDER_LABEL_BY_KIND.oa}
                   </strong>
                   <span className="mt-1 block text-[length:var(--app-font-size-ui-xs,12px)] text-muted-foreground">
                     {t("onboarding.firstRun.omnimindDescription")}
@@ -329,7 +329,7 @@ export function FirstRunReadinessDialog() {
                 <span className="rounded-full bg-primary/10 px-2 py-1 text-[length:var(--app-font-size-ui-2xs,11px)] font-semibold text-primary">
                   {t("onboarding.firstRun.recommended")}
                 </span>
-                {selectedProvider === "omnimind" ? (
+                {selectedProvider === "oa" ? (
                   <span className="grid size-[21px] place-items-center rounded-full bg-primary text-primary-foreground">
                     <CheckIcon className="size-3" />
                   </span>
@@ -378,7 +378,7 @@ export function FirstRunReadinessDialog() {
 
           {step === "prepare" ? (
             <section className="first-run-step min-h-0 flex-1" data-first-run-step="prepare">
-              {selectedProvider === "omnimind" ? (
+              {selectedProvider === "oa" ? (
                 <div data-first-run-model-services>
                   <p className="mb-1.5 text-xs font-semibold text-primary">
                     {t("onboarding.firstRun.stepWithEngine", {
@@ -564,7 +564,7 @@ export function FirstRunReadinessDialog() {
             >
               {t("common.forward")}
             </Button>
-          ) : step === "prepare" && selectedProvider !== "omnimind" ? (
+          ) : step === "prepare" && selectedProvider !== "oa" ? (
             <Button
               className="ms-auto bg-foreground text-background hover:bg-foreground/90"
               disabled={!selectedProviderModelsReady || !selectedProviderPrepared}

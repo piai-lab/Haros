@@ -9,7 +9,7 @@ import {
   type OrchestrationThreadPullRequest,
   type ProjectId,
   type ProviderInteractionMode,
-  type ProviderKind,
+  type EngineKind,
   type RuntimeMode,
   type ThreadEnvironmentMode,
   type ThreadId,
@@ -30,7 +30,7 @@ export interface NewThreadOptions {
   envMode?: DraftThreadEnvMode;
   entryPoint?: ThreadPrimarySurface;
   temporary?: boolean;
-  provider?: ProviderKind;
+  provider?: EngineKind;
   fresh?: boolean;
 }
 
@@ -123,7 +123,7 @@ export type ThreadBootstrapPlan = DraftReusePlanStored | DraftReusePlanRoute | D
 interface ResolveTerminalThreadCreationStateInput {
   activeDraftThread: DraftThreadState | null;
   activeThread: ActiveThreadSnapshot | null;
-  defaultProvider?: ProviderKind | null | undefined;
+  defaultProvider?: EngineKind | null | undefined;
   draftComposerState: ComposerThreadDraftState | null;
   draftThread: DraftThreadState | null;
   options: NewThreadOptions | undefined;

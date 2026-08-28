@@ -3,7 +3,7 @@
 // Layer: Chat transcript UI
 
 import { formatModelDisplayName } from "@harnessos/shared/model";
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { memo } from "react";
 
 import type { WorkLogOmniMindThreadCreation } from "../../session-logic";
@@ -27,7 +27,7 @@ export const OmniMindThreadCreationCard = memo(function OmniMindThreadCreationCa
         ? "threadCreation.environmentWorktree"
         : "threadCreation.environmentLocal",
     );
-    return `${PROVIDER_DISPLAY_NAMES[thread.provider]} · ${model} · ${environment}`;
+    return `${ENGINE_DISPLAY_NAMES[thread.provider]} · ${model} · ${environment}`;
   };
   const singleThread = creation.threads.length === 1 ? creation.threads[0] : undefined;
   const title = singleThread

@@ -1,4 +1,4 @@
-import type { ModelSelection, ProviderKind, ProviderStartOptions } from "@harnessos/contracts";
+import type { ModelSelection, EngineKind, ProviderStartOptions } from "@harnessos/contracts";
 
 export interface TextGenerationProviderInput {
   readonly modelSelection: ModelSelection;
@@ -6,7 +6,7 @@ export interface TextGenerationProviderInput {
   readonly codexHomePath?: string;
 }
 
-export function hasDedicatedTextGenerationProvider(provider: ProviderKind | undefined): boolean {
+export function hasDedicatedTextGenerationProvider(provider: EngineKind | undefined): boolean {
   return (
     provider === "codex" || provider === "cursor" || provider === "kilo" || provider === "opencode"
   );

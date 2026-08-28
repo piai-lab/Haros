@@ -31,7 +31,7 @@ function makeReadModel(
         projectId: PROJECT_ID,
         title: "Claude Auto",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
           supportsAutoMode,
         },
@@ -93,7 +93,7 @@ describe("decider Auto model compatibility", () => {
           commandId: CommandId.makeUnsafe("cmd-unsupported-claude-model"),
           threadId: THREAD_ID,
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-haiku-4-5",
             supportsAutoMode: false,
           },
@@ -130,7 +130,7 @@ describe("decider Auto model compatibility", () => {
           commandId: CommandId.makeUnsafe("cmd-supported-claude-model"),
           threadId: THREAD_ID,
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-fable-5",
             supportsAutoMode: true,
           },
@@ -152,7 +152,7 @@ describe("decider Auto model compatibility", () => {
           session: {
             threadId: THREAD_ID,
             status: "ready",
-            providerName: "claudeAgent",
+            providerName: "claude",
             runtimeMode: "auto",
             activeTurnId: null,
             lastError: null,
@@ -160,7 +160,7 @@ describe("decider Auto model compatibility", () => {
           },
           binding: {
             modelSelection: {
-              provider: "claudeAgent",
+              provider: "claude",
               model: "claude-fable-5",
               supportsAutoMode: true,
             },
@@ -174,10 +174,10 @@ describe("decider Auto model compatibility", () => {
     );
 
     expect(Array.isArray(result) ? result : [result]).toMatchObject([
-      { type: "thread.session-set", payload: { session: { providerName: "claudeAgent" } } },
+      { type: "thread.session-set", payload: { session: { providerName: "claude" } } },
       {
         type: "thread.meta-updated",
-        payload: { modelSelection: { provider: "claudeAgent", model: "claude-fable-5" } },
+        payload: { modelSelection: { provider: "claude", model: "claude-fable-5" } },
       },
       { type: "thread.runtime-mode-set", payload: { runtimeMode: "auto" } },
       { type: "thread.interaction-mode-set", payload: { interactionMode: "plan" } },
@@ -197,7 +197,7 @@ describe("decider Auto model compatibility", () => {
             projectId: PROJECT_ID,
             title: "User Auto thread",
             modelSelection: {
-              provider: "claudeAgent",
+              provider: "claude",
               model: "claude-fable-5",
             },
             interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
@@ -229,7 +229,7 @@ describe("decider Auto model compatibility", () => {
           projectId: PROJECT_ID,
           title: "Subagent",
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-fable-5",
           },
           interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
@@ -259,7 +259,7 @@ describe("decider Auto model compatibility", () => {
           commandId: CommandId.makeUnsafe("cmd-subagent-model-update"),
           threadId: THREAD_ID,
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-fable-5",
           },
         },

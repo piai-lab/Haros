@@ -11,7 +11,7 @@ import {
   type ModelSelection,
   type OrchestrationThreadShell,
   type ProviderInteractionMode,
-  type ProviderKind,
+  type EngineKind,
   type ProviderExecutionCapabilities,
   type OmniMindCreateThreadsInput,
   type OmniMindCreateThreadsResult,
@@ -102,7 +102,7 @@ interface CreationCoordinatorDependencies {
   readonly externalMcpRepository?: ExternalMcpRepositoryShape;
   readonly serverConfig: ServerConfigShape;
   readonly loadProviderAvailabilities: Effect.Effect<
-    ReadonlyMap<ProviderKind, AgentGatewayProviderAvailability>,
+    ReadonlyMap<EngineKind, AgentGatewayProviderAvailability>,
     unknown
   >;
   readonly getProviderExecutionCapabilities: (

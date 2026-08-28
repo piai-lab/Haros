@@ -4,8 +4,8 @@
 
 import {
   type ModelSelection,
-  type ProviderKind,
-  PROVIDER_KINDS,
+  type EngineKind,
+  ENGINE_KINDS,
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   ProviderInteractionMode,
   RuntimeMode,
@@ -499,7 +499,7 @@ export const createComposerDraftStoreState =
         if (!normalized) {
           return state;
         }
-        const nextMap: Partial<Record<ProviderKind, ModelSelection>> = {
+        const nextMap: Partial<Record<EngineKind, ModelSelection>> = {
           ...state.stickyModelSelectionByProvider,
           [normalized.provider]: normalized,
         };
@@ -529,8 +529,8 @@ export const createComposerDraftStoreState =
         const nextMap = { ...base.modelSelectionByProvider };
         for (const [provider, selection] of Object.entries(stickyMap)) {
           if (selection) {
-            const current = nextMap[provider as ProviderKind];
-            nextMap[provider as ProviderKind] =
+            const current = nextMap[provider as EngineKind];
+            nextMap[provider as EngineKind] =
               current && current.model !== selection.model ? current : selection;
           }
         }
@@ -863,7 +863,7 @@ export const createComposerDraftStoreState =
         }
         const base = existing ?? createEmptyThreadDraft();
         const nextMap = { ...base.modelSelectionByProvider };
-        for (const provider of PROVIDER_KINDS) {
+        for (const provider of ENGINE_KINDS) {
           // Only touch providers explicitly present in the input
           if (!normalizedOpts || !(provider in normalizedOpts)) continue;
           const opts = normalizedOpts[provider];
@@ -875,7 +875,7 @@ export const createComposerDraftStoreState =
               provider,
               model,
               opts,
-              current?.provider === "claudeAgent" ? current.supportsAutoMode : undefined,
+              current?.provider === "claude" ? current.supportsAutoMode : undefined,
             );
           } else if (current?.options) {
             // Remove options but keep the selection
@@ -883,7 +883,7 @@ export const createComposerDraftStoreState =
               provider,
               current.model,
               undefined,
-              current.provider === "claudeAgent" ? current.supportsAutoMode : undefined,
+              current.provider === "claude" ? current.supportsAutoMode : undefined,
             );
           }
         }
@@ -929,7 +929,7 @@ export const createComposerDraftStoreState =
         const currentForProvider = nextMap[normalizedProvider];
         const nextModel = explicitModel ?? currentForProvider?.model ?? fallbackModel;
         const currentSupportsAutoMode =
-          currentForProvider?.provider === "claudeAgent" && currentForProvider.model === nextModel
+          currentForProvider?.provider === "claude" && currentForProvider.model === nextModel
             ? currentForProvider.supportsAutoMode
             : undefined;
         if (providerOpts) {
@@ -964,8 +964,7 @@ export const createComposerDraftStoreState =
                 normalizedProvider,
                 explicitModel,
                 undefined,
-                stickyCandidate?.provider === "claudeAgent" &&
-                  stickyCandidate.model === explicitModel
+                stickyCandidate?.provider === "claude" && stickyCandidate.model === explicitModel
                   ? stickyCandidate.supportsAutoMode
                   : undefined,
               )
@@ -980,7 +979,7 @@ export const createComposerDraftStoreState =
                 normalizedProvider,
                 stickyBase.model,
                 providerOpts,
-                stickyBase.provider === "claudeAgent" ? stickyBase.supportsAutoMode : undefined,
+                stickyBase.provider === "claude" ? stickyBase.supportsAutoMode : undefined,
               ),
             );
           } else if (explicitModel !== null || stickyBase.options) {
@@ -988,7 +987,7 @@ export const createComposerDraftStoreState =
               normalizedProvider,
               stickyBase.model,
               undefined,
-              stickyBase.provider === "claudeAgent" ? stickyBase.supportsAutoMode : undefined,
+              stickyBase.provider === "claude" ? stickyBase.supportsAutoMode : undefined,
             );
           }
           nextStickyActiveProvider = base.activeProvider ?? normalizedProvider;

@@ -50,7 +50,7 @@ const QuitResumeBinding = Schema.Struct({
   modelSelection: ModelSelection,
   providerOptions: Schema.optional(
     Schema.Struct({
-      claudeAgent: Schema.optional(
+      claude: Schema.optional(
         Schema.Struct({
           permissionMode: Schema.optional(TrimmedNonEmptyString),
           maxThinkingTokens: Schema.optional(
@@ -97,7 +97,7 @@ export type QuitResumeRecordRead =
 export function sanitizeQuitResumeProviderOptions(
   options: ProviderStartOptions | undefined,
 ): QuitResumeRecord["threads"][number]["binding"]["providerOptions"] | undefined {
-  const claudeAgent = options?.claudeAgent;
+  const claudeAgent = options?.claude;
   if (!claudeAgent) return undefined;
   const safeClaudeAgent = {
     ...(claudeAgent.permissionMode !== undefined
@@ -107,7 +107,7 @@ export function sanitizeQuitResumeProviderOptions(
       ? { maxThinkingTokens: claudeAgent.maxThinkingTokens }
       : {}),
   };
-  return Object.keys(safeClaudeAgent).length > 0 ? { claudeAgent: safeClaudeAgent } : undefined;
+  return Object.keys(safeClaudeAgent).length > 0 ? { claude: safeClaudeAgent } : undefined;
 }
 
 export function isQuitResumeEligibleThread(thread: OrchestrationThread): boolean {

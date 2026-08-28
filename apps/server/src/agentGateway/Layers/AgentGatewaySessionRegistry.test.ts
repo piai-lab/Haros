@@ -8,12 +8,12 @@ describe("AgentGatewaySessionRegistry", () => {
     let nextId = 0;
     const registry = makeAgentGatewaySessionRegistry({ randomId: () => String(++nextId) });
     const first = registry.issue(ThreadId.makeUnsafe("thread-1"), "codex");
-    const second = registry.issue(ThreadId.makeUnsafe("thread-1"), "claudeAgent");
+    const second = registry.issue(ThreadId.makeUnsafe("thread-1"), "claude");
     assert.notEqual(first.token, second.token);
     assert.equal(registry.verify(first.token)?.threadId, "thread-1");
     assert.equal(registry.verify(second.token)?.threadId, "thread-1");
     assert.equal(registry.verify(first.token)?.provider, "codex");
-    assert.equal(registry.verify(second.token)?.provider, "claudeAgent");
+    assert.equal(registry.verify(second.token)?.provider, "claude");
   });
 
   it("keeps replacement runtime credentials independent from outgoing-session revocation", () => {

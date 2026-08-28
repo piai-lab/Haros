@@ -67,7 +67,7 @@ describe("applyServerSettingsPatch", () => {
 
   it("refuses a provider-only switch to a runtime-catalog-only provider", () => {
     const patch = {
-      textGenerationModelSelection: { provider: "omnimind" as const },
+      textGenerationModelSelection: { provider: "oa" as const },
     };
 
     expect(validateServerSettingsPatch(DEFAULT_SERVER_SETTINGS, patch)).toContain(
@@ -81,7 +81,7 @@ describe("applyServerSettingsPatch", () => {
   it("preserves an explicit runtime-catalog model selection exactly", () => {
     const patch = {
       textGenerationModelSelection: {
-        provider: "omnimind" as const,
+        provider: "oa" as const,
         model: "deepseek/deepseek-v4-pro",
         options: { thinkingLevel: "high" },
       },
@@ -99,16 +99,16 @@ describe("providerStartOptionsFromServerSettings", () => {
     const settings = {
       ...DEFAULT_SERVER_SETTINGS,
       providers: {
-        omnimind: {
-          ...DEFAULT_SERVER_SETTINGS.providers.omnimind,
+        oa: {
+          ...DEFAULT_SERVER_SETTINGS.providers.oa,
         },
         codex: {
           ...DEFAULT_SERVER_SETTINGS.providers.codex,
           binaryPath: "",
           homePath: "",
         },
-        claudeAgent: {
-          ...DEFAULT_SERVER_SETTINGS.providers.claudeAgent,
+        claude: {
+          ...DEFAULT_SERVER_SETTINGS.providers.claude,
           binaryPath: "",
         },
         cursor: {
@@ -157,7 +157,7 @@ describe("providerStartOptionsFromServerSettings", () => {
       }),
     ).not.toThrow();
     expect(providerOptions.codex).toEqual({});
-    expect(providerOptions.claudeAgent).toEqual({});
+    expect(providerOptions.claude).toEqual({});
     expect(providerOptions.cursor).toEqual({});
     expect(providerOptions.antigravity).toEqual({});
     expect(providerOptions.grok).toEqual({});

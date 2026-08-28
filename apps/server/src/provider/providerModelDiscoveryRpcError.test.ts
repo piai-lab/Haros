@@ -1,6 +1,6 @@
 import {
   PROVIDER_MODEL_DISCOVERY_ERROR_CODES,
-  type ProviderKind,
+  type EngineKind,
   type ServerProviderStatus,
 } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
@@ -12,7 +12,7 @@ import {
 } from "./Errors";
 import { toProviderModelDiscoveryRpcError } from "./providerModelDiscoveryRpcError";
 
-const provider = "codex" satisfies ProviderKind;
+const provider = "codex" satisfies EngineKind;
 const readyStatus = {
   provider,
   status: "ready",

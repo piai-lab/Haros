@@ -1,9 +1,4 @@
-import {
-  type ProjectId,
-  type ProviderKind,
-  type ThreadId,
-  type TurnId,
-} from "@harnessos/contracts";
+import { type ProjectId, type EngineKind, type ThreadId, type TurnId } from "@harnessos/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import {
   type CSSProperties,
@@ -281,7 +276,7 @@ function SplitPaneEmptyState(props: {
     id: ThreadId;
     title: string | null;
     projectId: ProjectId;
-    modelSelection: { provider: ProviderKind };
+    modelSelection: { provider: EngineKind };
   }[];
   projects: readonly { id: ProjectId; name: string }[];
   excludedThreadIds: ReadonlySet<ThreadId>;
@@ -569,7 +564,7 @@ function SplitPaneSurface(props: {
     id: ThreadId;
     title: string | null;
     projectId: ProjectId;
-    modelSelection: { provider: ProviderKind };
+    modelSelection: { provider: EngineKind };
   }[];
   projects: readonly { id: ProjectId; name: string }[];
   onFocus: () => void;

@@ -205,7 +205,7 @@ describe("browser host RPC client", () => {
           pipePath,
           capability: TEST_CAPABILITY,
           sessionKey: "gateway-session:one",
-          provider: "claudeAgent",
+          provider: "claude",
           threadId: "thread-one" as never,
           name: "browser_tabs",
           arguments: {},
@@ -218,7 +218,7 @@ describe("browser host RPC client", () => {
     expect(requests.map((request) => request.method)).toEqual(["getInfo", "executeTool"]);
     expect(requests[1]?.params).toMatchObject({
       session_id: "gateway-session:one",
-      provider: "claudeAgent",
+      provider: "claude",
       thread_id: "thread-one",
       name: "browser_tabs",
       workspace_root: "/workspace/project-one",

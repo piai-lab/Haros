@@ -15,7 +15,7 @@ import {
   type ProviderMentionReference,
   type ProviderInteractionMode,
   type ProviderRuntimeEvent,
-  ProviderKind,
+  EngineKind,
   type ProviderTurnStartFailureReason,
   type ProviderReviewTarget,
   type ProviderStartOptions,
@@ -280,7 +280,7 @@ function toNonEmptyProviderInput(value: string | undefined): string | undefined 
 
 // Codex app-server still expects `$skill` text next to the structured skill item.
 export function normalizeSkillMentionTextForProvider(input: {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly messageText: string;
   readonly skills?: ReadonlyArray<ProviderSkillReference>;
 }): string {
@@ -458,7 +458,7 @@ function isUnknownPendingUserInputRequestError(cause: Cause.Cause<ProviderServic
 function isClaudeContextWindowUserInputRejection(error: ProviderServiceError): boolean {
   if (
     error._tag !== "ProviderAdapterRequestError" ||
-    error.provider !== "claudeAgent" ||
+    error.provider !== "claude" ||
     error.method !== "item/tool/respondToUserInput"
   ) {
     return false;
@@ -512,7 +512,7 @@ function isStaleCodexResumeError(error: unknown): boolean {
 function isStaleClaudeResumeError(error: unknown): boolean {
   if (Schema.is(ProviderAdapterRequestError)(error)) {
     return (
-      error.provider === "claudeAgent" &&
+      error.provider === "claude" &&
       error.detail.toLowerCase().includes("no conversation found with session id")
     );
   }
@@ -1213,7 +1213,7 @@ const make = Effect.gen(function* () {
 
   const resolveSessionReplacementRequirement = Effect.fnUntraced(function* (input: {
     readonly threadId: ThreadId;
-    readonly activeProvider: ProviderKind | undefined;
+    readonly activeProvider: EngineKind | undefined;
     readonly activeModel: string | undefined;
     readonly currentModelSelection: ModelSelection;
     readonly requestedModelSelection: ModelSelection | undefined;
@@ -1237,7 +1237,7 @@ const make = Effect.gen(function* () {
     const previousModelSelection = threadSessionModelSelections.get(input.threadId);
     const shouldRestartForModelSelectionChange =
       input.requestedModelSelection !== undefined &&
-      (input.activeProvider === "claudeAgent"
+      (input.activeProvider === "claude"
         ? claudeSelectionRequiresRestart(
             previousModelSelection ?? input.currentModelSelection,
             input.requestedModelSelection,
@@ -1323,7 +1323,7 @@ const make = Effect.gen(function* () {
   }) {
     const projectedThread = yield* resolveThread(input.threadId);
     const provider = projectedThread
-      ? Schema.is(ProviderKind)(projectedThread.session?.providerName)
+      ? Schema.is(EngineKind)(projectedThread.session?.providerName)
         ? projectedThread.session?.providerName
         : projectedThread.modelSelection.provider
       : undefined;
@@ -1495,7 +1495,7 @@ const make = Effect.gen(function* () {
 
     const desiredRuntimeMode = options?.runtimeMode ?? thread.runtimeMode;
     const desiredInteractionMode = options?.interactionMode ?? thread.interactionMode;
-    const projectedSessionProvider: ProviderKind | undefined = Schema.is(ProviderKind)(
+    const projectedSessionProvider: EngineKind | undefined = Schema.is(EngineKind)(
       thread.session?.providerName,
     )
       ? thread.session.providerName
@@ -1538,7 +1538,7 @@ const make = Effect.gen(function* () {
     const providerSessionOptions = {
       threadId,
       ...(effectiveCwd ? { cwd: effectiveCwd } : {}),
-      ...(targetProvider === "omnimind"
+      ...(targetProvider === "oa"
         ? {
             workSurface: productSurfaceToProviderWorkSurface(productSurface),
             ...(project.kind === "project"
@@ -1835,7 +1835,7 @@ const make = Effect.gen(function* () {
       // structured context so the adapter can project attachments into the
       // text-only subagent steering channel.
       const steerProvider = (providerThread.session?.providerName ??
-        providerThread.modelSelection.provider) as ProviderKind;
+        providerThread.modelSelection.provider) as EngineKind;
       const steerSkillResult =
         input.skills !== undefined && input.skills.length > 0
           ? yield* Effect.tryPromise(() =>
@@ -1933,7 +1933,7 @@ const make = Effect.gen(function* () {
     // then fail locally without any turn being sent or a rollback owner left.
     const targetProvider = input.modelSelection?.provider ?? thread.modelSelection.provider;
     const preEnsureLiveSession = input.preEnsureLiveSession;
-    const projectedProvider = Schema.is(ProviderKind)(thread.session?.providerName)
+    const projectedProvider = Schema.is(EngineKind)(thread.session?.providerName)
       ? thread.session.providerName
       : thread.modelSelection.provider;
     const previousProvider = preEnsureLiveSession?.provider ?? projectedProvider;
@@ -2014,7 +2014,7 @@ const make = Effect.gen(function* () {
     // context is durable source material and must remain byte-exact, including
     // literal slash commands from an earlier turn.
     const normalizedLatestUserMessageText = normalizeSkillMentionTextForProvider({
-      provider: selectedProvider as ProviderKind,
+      provider: selectedProvider as EngineKind,
       messageText: input.messageText,
       ...(input.skills !== undefined ? { skills: input.skills } : {}),
     });
@@ -2089,7 +2089,7 @@ const make = Effect.gen(function* () {
       historyOnlyForkBootstrapText === null
     ) {
       return yield* new ProviderAdapterValidationError({
-        provider: selectedProvider as ProviderKind,
+        provider: selectedProvider as EngineKind,
         operation: "thread.turn.start",
         issue:
           "The latest message is too long to include the history-only fork context required by this provider session. Shorten the message and retry.",
@@ -2104,7 +2104,7 @@ const make = Effect.gen(function* () {
       }).length > PROVIDER_SEND_TURN_MAX_INPUT_CHARS
     ) {
       return yield* new ProviderAdapterValidationError({
-        provider: selectedProvider as ProviderKind,
+        provider: selectedProvider as EngineKind,
         operation: "thread.turn.start",
         issue: providerPromptOverflowIssue({
           goalPromptOverheadChars,
@@ -2141,7 +2141,7 @@ const make = Effect.gen(function* () {
       sidechatBootstrapAvailableChars === 0
     ) {
       return yield* new ProviderAdapterValidationError({
-        provider: selectedProvider as ProviderKind,
+        provider: selectedProvider as EngineKind,
         operation: "thread.turn.start",
         issue:
           "The latest message is too long to include the sidechat context required by this provider session. Shorten the message and retry.",
@@ -2172,7 +2172,7 @@ const make = Effect.gen(function* () {
       hasPriorTranscriptBootstrapContent
     ) {
       return yield* new ProviderAdapterValidationError({
-        provider: selectedProvider as ProviderKind,
+        provider: selectedProvider as EngineKind,
         operation: "thread.turn.start",
         issue:
           "The latest message is too long to include the transcript context required by the restarted provider session. Shorten the message and retry.",
@@ -2238,7 +2238,7 @@ const make = Effect.gen(function* () {
       input.skills !== undefined && input.skills.length > 0
         ? yield* Effect.tryPromise(() =>
             buildInlineSkillInstructions({
-              provider: selectedProvider as ProviderKind,
+              provider: selectedProvider as EngineKind,
               skills: input.skills ?? [],
               maxChars: Math.max(
                 0,
@@ -2289,7 +2289,7 @@ const make = Effect.gen(function* () {
       repository: managedAttachments,
       threadId: input.threadId,
       messageId: input.messageId,
-      provider: selectedProvider as ProviderKind,
+      provider: selectedProvider as EngineKind,
       operation: "thread.turn.start",
     });
     const sessionModelSwitch = (yield* providerService.getCapabilities(activeSession.provider))
@@ -2497,7 +2497,7 @@ const make = Effect.gen(function* () {
       const sentTurn = yield* sendQueuedProviderTurn(normalizedInput).pipe(
         Effect.catch((error) =>
           Effect.gen(function* () {
-            if (selectedProvider !== "claudeAgent" || !isStaleClaudeResumeError(error)) {
+            if (selectedProvider !== "claude" || !isStaleClaudeResumeError(error)) {
               return yield* Effect.fail(error);
             }
 
@@ -4357,7 +4357,7 @@ const make = Effect.gen(function* () {
   }) {
     const thread = yield* resolveThread(input.threadId);
     const provider = thread
-      ? Schema.is(ProviderKind)(thread.session?.providerName)
+      ? Schema.is(EngineKind)(thread.session?.providerName)
         ? thread.session?.providerName
         : thread.modelSelection.provider
       : undefined;
@@ -4392,7 +4392,7 @@ const make = Effect.gen(function* () {
           : null;
     const activeProvider =
       liveSession?.provider ??
-      (Schema.is(ProviderKind)(providerThread?.session?.providerName)
+      (Schema.is(EngineKind)(providerThread?.session?.providerName)
         ? providerThread.session.providerName
         : thread?.modelSelection.provider);
     const replacementRequirement =

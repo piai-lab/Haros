@@ -37,10 +37,10 @@ describe("composerDraftStore queued model binding", () => {
     const store = useComposerDraftStore.getState();
     store.enqueueQueuedTurn(threadId, {
       ...makeQueuedChatTurn("queued-claude"),
-      selectedProvider: "claudeAgent",
+      selectedProvider: "claude",
       selectedModel: "claude-sonnet-4-6",
       modelSelection: {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-sonnet-4-6",
         options: { effort: "high" },
       },
@@ -55,10 +55,10 @@ describe("composerDraftStore queued model binding", () => {
     expect(
       useComposerDraftStore.getState().draftsByThreadId[threadId]?.queuedTurns[0],
     ).toMatchObject({
-      selectedProvider: "claudeAgent",
+      selectedProvider: "claude",
       selectedModel: "claude-sonnet-4-6",
       modelSelection: {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-sonnet-4-6",
         options: { effort: "high" },
       },

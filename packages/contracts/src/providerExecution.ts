@@ -2,7 +2,7 @@ import { Schema } from "effect";
 
 import { TrimmedNonEmptyString } from "./baseSchemas";
 import { ModelSelection, ProviderInteractionMode, RuntimeMode } from "./orchestration";
-import { ProviderKind } from "./providerIdentity";
+import { EngineKind } from "./engineIdentity";
 
 export const ProviderExecutionCapabilityStatus = Schema.Literals([
   "ready",
@@ -47,7 +47,7 @@ export const ProviderExecutionCapabilitiesInput = Schema.Struct({
 export type ProviderExecutionCapabilitiesInput = typeof ProviderExecutionCapabilitiesInput.Type;
 
 export const ProviderExecutionCapabilities = Schema.Struct({
-  provider: ProviderKind,
+  provider: EngineKind,
   model: TrimmedNonEmptyString,
   supportsNativeTurnSteering: Schema.Boolean,
   runtimeModes: Schema.Struct({

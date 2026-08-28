@@ -88,7 +88,7 @@ describe("RateLimitsPanel helpers", () => {
         ],
       },
       {
-        provider: "claudeAgent",
+        provider: "claude",
         updatedAt: "2099-04-08T18:05:00.000Z",
         limits: [
           {
@@ -204,7 +204,7 @@ describe("RateLimitsPanel helpers", () => {
       {
         activities: [
           makeActivity("activity-1", "account.rate-limits.updated", {
-            provider: "claudeAgent",
+            provider: "claude",
             rate_limit_info: {
               status: "allowed_warning",
               rateLimitType: "five_hour",
@@ -234,7 +234,7 @@ describe("RateLimitsPanel helpers", () => {
       {
         activities: [
           makeActivity("activity-overage", "account.rate-limits.updated", {
-            provider: "claudeAgent",
+            provider: "claude",
             rate_limit_info: {
               status: "allowed",
               rateLimitType: "seven_day_overage_included",

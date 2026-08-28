@@ -18,7 +18,7 @@ import type {
   ProviderForkThreadInput,
   ProviderForkThreadResult,
   ProviderInterruptTurnInput,
-  ProviderKind,
+  EngineKind,
   ProviderRespondToRequestInput,
   ProviderRespondToUserInputInput,
   ProviderRuntimeEvent,
@@ -47,7 +47,7 @@ import type {
 export type ProviderRuntimeEventPumpStatus = "starting" | "healthy" | "recovering" | "degraded";
 
 export interface ProviderRuntimeEventPumpHealth {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly status: ProviderRuntimeEventPumpStatus;
   readonly consecutiveFailures: number;
   readonly updatedAt: string;
@@ -225,7 +225,7 @@ export interface ProviderServiceShape {
    * Read static capabilities for a provider adapter.
    */
   readonly getCapabilities: (
-    provider: ProviderKind,
+    provider: EngineKind,
   ) => Effect.Effect<ProviderAdapterCapabilities, ProviderServiceError>;
 
   /**

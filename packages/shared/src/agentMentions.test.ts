@@ -26,7 +26,7 @@ describe("parseAgentMentionInvocations", () => {
   it("parses balanced nested parentheses for Claude subagents", () => {
     const parsed = parseAgentMentionInvocations(
       "Please @review(check fn(a, b) and the SQL migration)",
-      "claudeAgent",
+      "claude",
     );
 
     expect(parsed).toHaveLength(1);

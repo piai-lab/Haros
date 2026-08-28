@@ -5,18 +5,18 @@
 // Layer: Web UI state utilities
 // Exports: load/save helpers for the confirmed-path record.
 
-import { PROVIDER_KINDS, type ProviderKind } from "@harnessos/contracts";
+import { ENGINE_KINDS, type EngineKind } from "@harnessos/contracts";
 import { isPlainObject } from "./persistedRecord";
 
 const STORAGE_KEY = "harnessos:confirmed-custom-binary-paths:v1";
 
-const PROVIDER_KIND_SET: ReadonlySet<ProviderKind> = new Set(PROVIDER_KINDS);
+const PROVIDER_KIND_SET: ReadonlySet<EngineKind> = new Set(ENGINE_KINDS);
 
-function isProviderKind(value: string): value is ProviderKind {
-  return PROVIDER_KIND_SET.has(value as ProviderKind);
+function isProviderKind(value: string): value is EngineKind {
+  return PROVIDER_KIND_SET.has(value as EngineKind);
 }
 
-export function loadConfirmedCustomBinaryPaths(): Partial<Record<ProviderKind, string>> {
+export function loadConfirmedCustomBinaryPaths(): Partial<Record<EngineKind, string>> {
   if (typeof window === "undefined") {
     return {};
   }
@@ -40,7 +40,7 @@ export function loadConfirmedCustomBinaryPaths(): Partial<Record<ProviderKind, s
   }
   // Validating keys against the known provider set also blocks prototype
   // pollution (e.g. "__proto__") from untrusted persisted input.
-  const result: Partial<Record<ProviderKind, string>> = {};
+  const result: Partial<Record<EngineKind, string>> = {};
   for (const [key, value] of Object.entries(parsed)) {
     if (!isProviderKind(key) || typeof value !== "string") {
       continue;
@@ -53,7 +53,7 @@ export function loadConfirmedCustomBinaryPaths(): Partial<Record<ProviderKind, s
   return result;
 }
 
-export function saveConfirmedCustomBinaryPaths(paths: Partial<Record<ProviderKind, string>>): void {
+export function saveConfirmedCustomBinaryPaths(paths: Partial<Record<EngineKind, string>>): void {
   if (typeof window === "undefined") {
     return;
   }

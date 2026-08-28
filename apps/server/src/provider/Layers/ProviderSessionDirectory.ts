@@ -1,4 +1,4 @@
-import { ProviderKind, type ThreadId } from "@harnessos/contracts";
+import { EngineKind, type ThreadId } from "@harnessos/contracts";
 import { Effect, Layer, Option, Schema } from "effect";
 
 import { ProviderSessionRuntimeRepository } from "../../persistence/Services/ProviderSessionRuntime.ts";
@@ -21,8 +21,8 @@ function toPersistenceError(operation: string) {
 function decodeProviderKind(
   providerName: string,
   operation: string,
-): Effect.Effect<ProviderKind, ProviderSessionDirectoryPersistenceError> {
-  if (Schema.is(ProviderKind)(providerName)) {
+): Effect.Effect<EngineKind, ProviderSessionDirectoryPersistenceError> {
+  if (Schema.is(EngineKind)(providerName)) {
     return Effect.succeed(providerName);
   }
   return Effect.fail(

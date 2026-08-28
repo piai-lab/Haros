@@ -74,7 +74,7 @@ const EXCLUDED_PROCESS_COMMANDS = new Set([
   "electron",
   "electron helper",
   "electron helper (renderer)",
-  "omnimind",
+  "oa",
 ]);
 
 // Chromium/Electron spawns child processes (renderers, GPU, utility, plugin hosts) that can hold

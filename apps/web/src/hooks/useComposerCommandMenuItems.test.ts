@@ -22,7 +22,7 @@ function thread(input: {
   id: string;
   projectId: string;
   title: string;
-  provider?: "codex" | "claudeAgent";
+  provider?: "codex" | "claude";
   updatedAt?: string;
   archivedAt?: string | null;
 }): ComposerThreadMentionSource {
@@ -58,7 +58,7 @@ describe("buildThreadMentionComposerItems", () => {
           id: "studio-thread",
           projectId: "studio",
           title: "Release artwork",
-          provider: "claudeAgent",
+          provider: "claude",
         }),
         thread({ id: "unrelated", projectId: "project", title: "Bug triage" }),
       ],
@@ -75,7 +75,7 @@ describe("buildThreadMentionComposerItems", () => {
       "thread:studio-thread": "Chat",
     });
     expect(items.find((item) => item.id === "thread:studio-thread")).toMatchObject({
-      provider: "claudeAgent",
+      provider: "claude",
       mention: { name: "Release artwork", path: "thread://studio-thread" },
     });
   });

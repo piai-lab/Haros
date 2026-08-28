@@ -554,7 +554,7 @@ const makeOfficialSdkClient = Effect.fnUntraced(function* (
   });
 
   const clientApp = acpSdk
-    .client({ name: "omnimind" })
+    .client({ name: "oa" })
     .onRequest(acpSdk.methods.client.session.requestPermission, ({ params }) =>
       requireHandler("session/request_permission", requestPermission, params),
     )

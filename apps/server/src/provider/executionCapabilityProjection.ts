@@ -48,7 +48,7 @@ function structuralModeReason(input: {
   if (!input.adapterCapabilities.supportedRuntimeModes?.has(input.mode)) {
     return "mode-unsupported";
   }
-  if (input.mode !== "auto" || input.modelSelection.provider !== "claudeAgent") {
+  if (input.mode !== "auto" || input.modelSelection.provider !== "claude") {
     return null;
   }
   if (input.modelSelection.supportsAutoMode === false) {

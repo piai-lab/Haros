@@ -3,7 +3,7 @@
 // Layer: Credential-blind Web presentation helpers
 
 import type {
-  ProviderKind,
+  EngineKind,
   ProviderStartOptions,
   ServerSettingsPatch,
   ServerSettingsView,
@@ -22,7 +22,7 @@ import { formatProviderModelOptionName, type ProviderModelOption } from "./provi
 const MAX_CUSTOM_MODEL_COUNT = 32;
 export const MAX_CUSTOM_MODEL_LENGTH = 256;
 
-type CustomModelProvider = Exclude<ProviderKind, "omnimind">;
+type CustomModelProvider = Exclude<EngineKind, "oa">;
 
 export type ProviderCustomModelConfig = {
   readonly provider: CustomModelProvider;
@@ -32,10 +32,10 @@ export type ProviderCustomModelConfig = {
   readonly example: string;
 };
 
-const BUILT_IN_MODEL_SLUGS_BY_PROVIDER: Record<ProviderKind, ReadonlySet<string>> = {
-  omnimind: new Set(getModelOptions("omnimind").map((option) => option.slug)),
+const BUILT_IN_MODEL_SLUGS_BY_PROVIDER: Record<EngineKind, ReadonlySet<string>> = {
+  oa: new Set(getModelOptions("oa").map((option) => option.slug)),
   codex: new Set(getModelOptions("codex").map((option) => option.slug)),
-  claudeAgent: new Set(getModelOptions("claudeAgent").map((option) => option.slug)),
+  claude: new Set(getModelOptions("claude").map((option) => option.slug)),
   cursor: new Set(getModelOptions("cursor").map((option) => option.slug)),
   antigravity: new Set(getModelOptions("antigravity").map((option) => option.slug)),
   grok: new Set(getModelOptions("grok").map((option) => option.slug)),
@@ -54,7 +54,7 @@ export const MODEL_PROVIDER_SETTINGS: readonly ProviderCustomModelConfig[] = [
     example: "gpt-6.7-codex-ultra-preview",
   },
   {
-    provider: "claudeAgent",
+    provider: "claude",
     title: "Claude",
     description: "Save additional Claude model slugs for the picker and `/model` command.",
     placeholder: "your-claude-model-slug",
@@ -116,7 +116,7 @@ export const CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS = MODEL_PROVIDER_SETTINGS.fil
 );
 
 export interface AppModelOption extends ProviderModelOption {
-  provider: ProviderKind;
+  provider: EngineKind;
   isCustom: boolean;
 }
 
@@ -133,7 +133,7 @@ export function isGitTextGenerationSettingsDirty(
 
 export function normalizeCustomModelSlugs(
   models: Iterable<string | null | undefined>,
-  provider: ProviderKind = "codex",
+  provider: EngineKind = "codex",
 ): string[] {
   const normalizedModels: string[] = [];
   const seen = new Set<string>();
@@ -175,11 +175,11 @@ export function patchCustomModels(
 
 export function getCustomModelsByProvider(
   settings: ServerSettingsView,
-): Record<ProviderKind, readonly string[]> {
+): Record<EngineKind, readonly string[]> {
   return {
-    omnimind: [],
+    oa: [],
     codex: settings.providers.codex?.customModels ?? [],
-    claudeAgent: settings.providers.claudeAgent?.customModels ?? [],
+    claude: settings.providers.claude?.customModels ?? [],
     cursor: settings.providers.cursor?.customModels ?? [],
     antigravity: settings.providers.antigravity?.customModels ?? [],
     grok: settings.providers.grok?.customModels ?? [],
@@ -191,7 +191,7 @@ export function getCustomModelsByProvider(
 }
 
 export function getAppModelOptions(
-  provider: ProviderKind,
+  provider: EngineKind,
   customModels: readonly string[],
   selectedModel?: string | null,
 ): AppModelOption[] {
@@ -281,8 +281,8 @@ export function getGitTextGenerationModelOptions(
 }
 
 export function resolveAppModelSelection(
-  provider: ProviderKind,
-  customModels: Partial<Record<ProviderKind, readonly string[]>>,
+  provider: EngineKind,
+  customModels: Partial<Record<EngineKind, readonly string[]>>,
   selectedModel: string | null | undefined,
 ): string | null {
   const options = getAppModelOptions(provider, customModels[provider] ?? [], selectedModel);
@@ -291,12 +291,12 @@ export function resolveAppModelSelection(
 
 export function getCustomModelOptionsByProvider(
   settings: ServerSettingsView,
-): Record<ProviderKind, ReadonlyArray<ProviderModelOption>> {
+): Record<EngineKind, ReadonlyArray<ProviderModelOption>> {
   const custom = getCustomModelsByProvider(settings);
   return {
-    omnimind: getAppModelOptions("omnimind", []),
+    oa: getAppModelOptions("oa", []),
     codex: getAppModelOptions("codex", custom.codex),
-    claudeAgent: getAppModelOptions("claudeAgent", custom.claudeAgent),
+    claude: getAppModelOptions("claude", custom.claude),
     cursor: getAppModelOptions("cursor", custom.cursor),
     antigravity: getAppModelOptions("antigravity", custom.antigravity),
     grok: getAppModelOptions("grok", custom.grok),
@@ -313,9 +313,9 @@ export function getProviderStartOptions(settings: ServerSettingsView): ProviderS
 
 export function getCustomBinaryPathForProvider(
   settings: ServerSettingsView,
-  provider: ProviderKind,
+  provider: EngineKind,
 ): string {
-  if (provider === "omnimind") return "";
+  if (provider === "oa") return "";
   const configured = settings.providers[provider].binaryPath.trim();
   const bundledDefault = DEFAULT_SERVER_SETTINGS_VIEW.providers[provider].binaryPath.trim();
   return configured === bundledDefault ? "" : configured;

@@ -3,7 +3,7 @@
 // Layer: Web settings/notification utility
 // Exports: update candidate helpers, notification keys, and auto-refresh timing.
 
-import type { ProviderKind, ServerProviderStatus, ServerSettingsView } from "@harnessos/contracts";
+import type { EngineKind, ServerProviderStatus, ServerSettingsView } from "@harnessos/contracts";
 
 export const PROVIDER_UPDATE_INITIAL_REFRESH_DELAY_MS = 10_000;
 export const PROVIDER_UPDATE_REFRESH_INTERVAL_MS = 60 * 60 * 1_000;
@@ -45,10 +45,10 @@ export function createProviderUpdateToastData(input: ProviderUpdateToastDataInpu
 }
 
 export class ProviderUpdateTimeoutError extends Error {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly timeoutMs: number;
 
-  constructor(provider: ProviderKind, timeoutMs: number) {
+  constructor(provider: EngineKind, timeoutMs: number) {
     super("provider_update_timeout");
     this.name = "ProviderUpdateTimeoutError";
     this.provider = provider;
@@ -57,7 +57,7 @@ export class ProviderUpdateTimeoutError extends Error {
 }
 
 export async function withProviderUpdateTimeout<T>(input: {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly request: Promise<T>;
   readonly timeoutMs?: number;
 }): Promise<T> {
@@ -80,7 +80,7 @@ export async function withProviderUpdateTimeout<T>(input: {
 
 type ProviderUpdateFilterInput = {
   readonly providers: ReadonlyArray<ServerProviderStatus>;
-  readonly hiddenProviders?: ReadonlyArray<ProviderKind>;
+  readonly hiddenProviders?: ReadonlyArray<EngineKind>;
   readonly serverSettings?:
     | Pick<ServerSettingsView, "providers" | "enableProviderUpdateChecks">
     | null
@@ -90,8 +90,8 @@ type ProviderUpdateFilterInput = {
 
 type ProviderUpdateVisibilityInput = {
   readonly provider: ServerProviderStatus;
-  readonly hiddenProviders?: ReadonlyArray<ProviderKind>;
-  readonly hiddenProviderSet?: ReadonlySet<ProviderKind>;
+  readonly hiddenProviders?: ReadonlyArray<EngineKind>;
+  readonly hiddenProviderSet?: ReadonlySet<EngineKind>;
   readonly serverSettings?:
     | Pick<ServerSettingsView, "providers" | "enableProviderUpdateChecks">
     | null
@@ -125,7 +125,7 @@ export function shouldPromptProviderUpdate(provider: ServerProviderStatus): bool
 }
 
 function isProviderEnabled(
-  provider: ProviderKind,
+  provider: EngineKind,
   serverSettings: Pick<ServerSettingsView, "providers"> | null | undefined,
 ): boolean {
   if (!serverSettings) {

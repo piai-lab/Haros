@@ -449,9 +449,9 @@ describe("ClaudeAdapterLive", () => {
       assert.deepEqual(
         result.failure,
         new ProviderAdapterValidationError({
-          provider: "claudeAgent",
+          provider: "claude",
           operation: "startSession",
-          issue: "Expected provider 'claudeAgent' but received 'codex'.",
+          issue: "Expected provider 'claude' but received 'codex'.",
         }),
       );
     }).pipe(
@@ -466,7 +466,7 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -487,10 +487,10 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-8",
         },
       });
@@ -498,7 +498,7 @@ describe("ClaudeAdapterLive", () => {
       const options = harness.createInputs[0]?.options;
       assert.equal(options?.model, "claude-opus-4-8");
       assert.deepEqual(options?.mcpServers, {
-        omnimind: {
+        oa: {
           type: "http",
           url: "http://127.0.0.1:48123/mcp",
           headers: { Authorization: "Bearer gateway-token-1" },
@@ -528,7 +528,7 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "auto",
       });
 
@@ -563,10 +563,10 @@ describe("ClaudeAdapterLive", () => {
       const result = yield* Effect.exit(
         adapter.startSession({
           threadId: THREAD_ID,
-          provider: "claudeAgent",
+          provider: "claude",
           runtimeMode: "auto",
           providerOptions: {
-            claudeAgent: {
+            claude: {
               binaryPath: "/custom/bin/claude",
             },
           },
@@ -588,7 +588,7 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "approval-required",
       });
 
@@ -625,10 +625,10 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
         providerOptions: {
-          claudeAgent: {
+          claude: {
             permissionMode: "plan",
           },
         },
@@ -649,9 +649,9 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
           options: {
             effort: "max",
@@ -674,9 +674,9 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
           options: {
             autoCompactWindow: "1m",
@@ -701,9 +701,9 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-7",
           options: {
             effort: "xhigh",
@@ -727,9 +727,9 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-sonnet-5",
           options: {
             effort: "xhigh",
@@ -758,9 +758,9 @@ describe("ClaudeAdapterLive", () => {
           const adapter = yield* ClaudeAdapter;
           yield* adapter.startSession({
             threadId: THREAD_ID,
-            provider: "claudeAgent",
+            provider: "claude",
             modelSelection: {
-              provider: "claudeAgent",
+              provider: "claude",
               model: "claude-sonnet-5",
               options: { effort },
             },
@@ -789,9 +789,9 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-sonnet-5",
           options: {
             effort: "ultracode",
@@ -821,9 +821,9 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-sonnet-4-6",
           options: {
             effort: "max",
@@ -846,9 +846,9 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-haiku-4-5",
           options: {
             effort: "high",
@@ -871,9 +871,9 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-haiku-4-5",
           options: {
             thinking: false,
@@ -899,9 +899,9 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-sonnet-4-6",
           options: {
             thinking: false,
@@ -927,9 +927,9 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
           options: {
             fastMode: true,
@@ -956,9 +956,9 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-sonnet-4-6",
           options: {
             fastMode: true,
@@ -984,9 +984,9 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-sonnet-4-6",
           options: {
             effort: "ultrathink",
@@ -1000,7 +1000,7 @@ describe("ClaudeAdapterLive", () => {
         input: "Investigate the edge cases",
         attachments: [],
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-sonnet-4-6",
           options: {
             effort: "ultrathink",
@@ -1024,7 +1024,7 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -1050,7 +1050,7 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -1092,7 +1092,7 @@ describe("ClaudeAdapterLive", () => {
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -1155,7 +1155,7 @@ describe("ClaudeAdapterLive", () => {
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -1183,7 +1183,7 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -1232,7 +1232,7 @@ describe("ClaudeAdapterLive", () => {
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
         threadId: RESUME_THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         resumeCursor: {
           threadId: "resume-thread-1",
           resume: "550e8400-e29b-41d4-a716-446655440000",
@@ -1288,7 +1288,7 @@ describe("ClaudeAdapterLive", () => {
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -1353,7 +1353,7 @@ describe("ClaudeAdapterLive", () => {
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -1399,9 +1399,9 @@ describe("ClaudeAdapterLive", () => {
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-sonnet-4-5",
         },
         runtimeMode: "full-access",
@@ -1578,7 +1578,7 @@ describe("ClaudeAdapterLive", () => {
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -1759,7 +1759,7 @@ describe("ClaudeAdapterLive", () => {
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -1904,7 +1904,7 @@ describe("ClaudeAdapterLive", () => {
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -1983,7 +1983,7 @@ describe("ClaudeAdapterLive", () => {
       );
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -2163,7 +2163,7 @@ describe("ClaudeAdapterLive", () => {
       );
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -2272,7 +2272,7 @@ describe("ClaudeAdapterLive", () => {
       );
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -2441,7 +2441,7 @@ describe("ClaudeAdapterLive", () => {
       );
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -2513,7 +2513,7 @@ describe("ClaudeAdapterLive", () => {
       );
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -2564,7 +2564,7 @@ describe("ClaudeAdapterLive", () => {
       );
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -2618,7 +2618,7 @@ describe("ClaudeAdapterLive", () => {
       );
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -2682,7 +2682,7 @@ describe("ClaudeAdapterLive", () => {
       );
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "auto",
       });
 
@@ -2730,7 +2730,7 @@ describe("ClaudeAdapterLive", () => {
       );
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* adapter.sendTurn({
@@ -2942,7 +2942,7 @@ describe("ClaudeAdapterLive", () => {
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       assert.equal(harness.getLastCreateQueryInput()?.options.forwardSubagentText, true);
@@ -3009,7 +3009,7 @@ describe("ClaudeAdapterLive", () => {
         const adapter = yield* ClaudeAdapter;
         const session = yield* adapter.startSession({
           threadId: THREAD_ID,
-          provider: "claudeAgent",
+          provider: "claude",
           runtimeMode: "full-access",
         });
         const turn = yield* adapter.sendTurn({
@@ -3074,7 +3074,7 @@ describe("ClaudeAdapterLive", () => {
       );
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       const turn = yield* adapter.sendTurn({
@@ -3127,7 +3127,7 @@ describe("ClaudeAdapterLive", () => {
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -3227,7 +3227,7 @@ describe("ClaudeAdapterLive", () => {
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -3293,7 +3293,7 @@ describe("ClaudeAdapterLive", () => {
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -3318,7 +3318,7 @@ describe("ClaudeAdapterLive", () => {
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -3345,7 +3345,7 @@ describe("ClaudeAdapterLive", () => {
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -3399,7 +3399,7 @@ describe("ClaudeAdapterLive", () => {
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -3467,7 +3467,7 @@ describe("ClaudeAdapterLive", () => {
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -3673,7 +3673,7 @@ describe("ClaudeAdapterLive", () => {
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       harness.query.emit({
@@ -3773,7 +3773,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -3980,7 +3980,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -4146,7 +4146,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -4276,7 +4276,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -4324,7 +4324,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       harness.query.emit({
@@ -4377,7 +4377,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -4437,7 +4437,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       const resumeCursor = session.resumeCursor;
@@ -4501,7 +4501,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const resumedSession = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
         resumeCursor,
       });
@@ -4567,7 +4567,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -4644,7 +4644,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         lifecycleGeneration: "generation-claude-a",
         runtimeMode: "full-access",
       });
@@ -4714,7 +4714,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -4773,7 +4773,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         resumeCursor: {
           threadId: THREAD_ID,
           resume: "44c0b890-8775-4f30-b47f-0709d29cc9e1",
@@ -4856,7 +4856,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -4912,7 +4912,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -4977,7 +4977,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
       const input = {
         threadId: THREAD_ID,
-        provider: "claudeAgent" as const,
+        provider: "claude" as const,
         runtimeMode: "full-access" as const,
       };
 
@@ -5051,7 +5051,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         assert.fail("Expected Claude adapter to support command discovery.");
       }
       const input = {
-        provider: "claudeAgent" as const,
+        provider: "claude" as const,
         cwd: "/tmp/project",
         forceReload: true,
       };
@@ -5118,7 +5118,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
           assert.fail("Expected Claude adapter to support command discovery.");
         }
         const input = {
-          provider: "claudeAgent" as const,
+          provider: "claude" as const,
           cwd: "/tmp/project",
           forceReload: true,
         };
@@ -5184,7 +5184,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       }
 
       const discovered = yield* listModels({
-        provider: "claudeAgent",
+        provider: "claude",
         cwd: "/tmp/project",
       });
       assert.deepEqual(discovered, {
@@ -5203,7 +5203,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       assert.equal(createQueryCalls, 1);
 
       const cached = yield* listModels({
-        provider: "claudeAgent",
+        provider: "claude",
         cwd: "/tmp/project",
       });
       assert.equal(cached.cached, true);
@@ -5253,7 +5253,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -5290,7 +5290,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -5340,7 +5340,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
         yield* adapter.startSession({
           threadId: THREAD_ID,
-          provider: "claudeAgent",
+          provider: "claude",
           runtimeMode: "full-access",
         });
 
@@ -5431,7 +5431,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -5502,7 +5502,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -5572,7 +5572,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -5699,7 +5699,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -5836,7 +5836,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
         resumeCursor: {
           threadId: THREAD_ID,
@@ -5911,7 +5911,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
         resumeCursor: {
           threadId: THREAD_ID,
@@ -5993,7 +5993,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -6048,7 +6048,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -6123,7 +6123,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -6188,7 +6188,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
         yield* adapter.startSession({
           threadId: THREAD_ID,
-          provider: "claudeAgent",
+          provider: "claude",
           runtimeMode: "full-access",
         });
 
@@ -6267,7 +6267,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -6345,7 +6345,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -6425,7 +6425,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
         const session = yield* adapter.startSession({
           threadId: THREAD_ID,
-          provider: "claudeAgent",
+          provider: "claude",
           runtimeMode: "full-access",
         });
 
@@ -6516,7 +6516,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -6682,7 +6682,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -6751,7 +6751,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -6973,7 +6973,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       assert.equal(session.threadId, THREAD_ID);
@@ -7046,7 +7046,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "auto",
       });
 
@@ -7201,7 +7201,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -7246,7 +7246,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
         yield* adapter.startSession({
           threadId: THREAD_ID,
-          provider: "claudeAgent",
+          provider: "claude",
           runtimeMode: "full-access",
         });
 
@@ -7278,7 +7278,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "approval-required",
       });
 
@@ -7357,7 +7357,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: RESUME_THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         resumeCursor: {
           threadId: "resume-thread-1",
           resume: "550e8400-e29b-41d4-a716-446655440000",
@@ -7399,7 +7399,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: RESUME_THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         resumeCursor: {
           threadId: RESUME_THREAD_ID,
           resume: durableSessionId,
@@ -7483,7 +7483,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -7515,7 +7515,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -7593,14 +7593,14 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* adapter.sendTurn({
         threadId: session.threadId,
         input: "hello",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
         },
         attachments: [],
@@ -7647,10 +7647,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "auto",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
         },
       });
@@ -7660,7 +7660,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
           threadId: session.threadId,
           input: "switch to Haiku",
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-haiku-4-5",
           },
           attachments: [],
@@ -7674,7 +7674,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         threadId: session.threadId,
         input: "switch to Fable",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-fable-5",
         },
         attachments: [],
@@ -7693,14 +7693,14 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* adapter.sendTurn({
         threadId: session.threadId,
         input: "hello",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
           options: {
             autoCompactWindow: "1m",
@@ -7728,10 +7728,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
           options: { autoCompactWindow: "1m" },
         },
@@ -7740,7 +7740,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         threadId: session.threadId,
         input: "use the default auto-compact budget",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
         },
         attachments: [],
@@ -7749,7 +7749,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         threadId: session.threadId,
         input: "switch to a discovered model",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude/custom-opus",
         },
         attachments: [],
@@ -7779,10 +7779,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-haiku-4-5",
           options: { thinking: false },
         },
@@ -7795,7 +7795,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         threadId: session.threadId,
         input: "hello",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-haiku-4-5",
           options: { thinking: true },
         },
@@ -7808,7 +7808,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         threadId: session.threadId,
         input: "continue",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-haiku-4-5",
           options: { thinking: true },
         },
@@ -7828,10 +7828,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-8",
           options: { effort: "high" },
         },
@@ -7842,7 +7842,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         threadId: session.threadId,
         input: "hello",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-8",
           options: { effort: "ultracode", fastMode: true },
         },
@@ -7857,7 +7857,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         threadId: session.threadId,
         input: "continue",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-8",
           options: { effort: "ultracode", fastMode: true },
         },
@@ -7872,7 +7872,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         threadId: session.threadId,
         input: "wrap up",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-8",
         },
         attachments: [],
@@ -7903,7 +7903,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* adapter.sendTurn({
@@ -7962,10 +7962,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-8",
         },
       });
@@ -7973,7 +7973,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         threadId: session.threadId,
         input: "hello",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-8",
         },
         attachments: [],
@@ -7997,7 +7997,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -8028,10 +8028,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-8",
           options: { autoCompactWindow: "1m" },
         },
@@ -8060,10 +8060,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-fable-5",
         },
       });
@@ -8072,7 +8072,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         threadId: session.threadId,
         input: "hello",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-fable-5",
         },
         attachments: [],
@@ -8119,7 +8119,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         threadId: session.threadId,
         input: "continue",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-fable-5",
         },
         attachments: [],
@@ -8142,10 +8142,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const firstSession = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-fable-5",
           options: { autoCompactWindow: "1m" },
         },
@@ -8171,10 +8171,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const resumedSession = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-fable-5",
           options: { autoCompactWindow: "1m" },
         },
@@ -8192,7 +8192,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         threadId: resumedSession.threadId,
         input: "continue after resume",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-fable-5",
           options: { autoCompactWindow: "1m" },
         },
@@ -8211,9 +8211,9 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
-        modelSelection: { provider: "claudeAgent", model: "claude-opus-4-8" },
+        modelSelection: { provider: "claude", model: "claude-opus-4-8" },
       });
       const firstQuery = harness.queries[0];
       assert.ok(firstQuery);
@@ -8221,10 +8221,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const replacement = yield* Effect.exit(
         adapter.startSession({
           threadId: THREAD_ID,
-          provider: "claudeAgent",
+          provider: "claude",
           runtimeMode: "full-access",
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-opus-4-8",
             options: { effort: "max" },
           },
@@ -8251,17 +8251,17 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
       const replacement = yield* Effect.exit(
         adapter.startSession({
           threadId: THREAD_ID,
-          provider: "claudeAgent",
+          provider: "claude",
           runtimeMode: "full-access",
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-opus-4-8",
             options: { effort: "max" },
           },
@@ -8284,7 +8284,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* adapter.sendTurn({
@@ -8321,7 +8321,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const result = yield* Effect.exit(
         adapter.startSession({
           threadId: THREAD_ID,
-          provider: "claudeAgent",
+          provider: "claude",
           runtimeMode: "full-access",
         }),
       );
@@ -8364,10 +8364,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const result = yield* Effect.exit(
         adapter.startSession({
           threadId: THREAD_ID,
-          provider: "claudeAgent",
+          provider: "claude",
           runtimeMode: "auto",
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-haiku-4-5",
           },
         }),
@@ -8413,10 +8413,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const result = yield* Effect.exit(
         adapter.startSession({
           threadId: THREAD_ID,
-          provider: "claudeAgent",
+          provider: "claude",
           runtimeMode: "auto",
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-sonnet-5",
           },
         }),
@@ -8453,10 +8453,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const result = yield* Effect.exit(
         adapter.startSession({
           threadId: THREAD_ID,
-          provider: "claudeAgent",
+          provider: "claude",
           runtimeMode: "auto",
           modelSelection: {
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-sonnet-5",
           },
         }),
@@ -8486,7 +8486,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const result = yield* Effect.exit(
         adapter.startSession({
           threadId: THREAD_ID,
-          provider: "claudeAgent",
+          provider: "claude",
           runtimeMode: "auto",
         }),
       );
@@ -8512,7 +8512,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* adapter.sendTurn({
@@ -8579,10 +8579,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
           options: { autoCompactWindow: "1m" },
         },
@@ -8636,14 +8636,14 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* adapter.sendTurn({
         threadId: session.threadId,
         input: "hello",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
           options: {
             autoCompactWindow: "1m",
@@ -8694,14 +8694,14 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* adapter.sendTurn({
         threadId: session.threadId,
         input: "hello",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-6",
           options: {
             autoCompactWindow: "1m",
@@ -8797,9 +8797,9 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
-        modelSelection: { provider: "claudeAgent", model: "claude-sonnet-5" },
+        modelSelection: { provider: "claude", model: "claude-sonnet-5" },
       });
       harness.query.emit({
         type: "result",
@@ -8839,7 +8839,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* adapter.sendTurn({
@@ -8872,7 +8872,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* adapter.sendTurn({
@@ -8902,7 +8902,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -8954,7 +8954,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* adapter.sendTurn({
@@ -8979,7 +8979,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "approval-required",
       });
       yield* adapter.sendTurn({
@@ -9002,7 +9002,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "approval-required",
       });
       yield* adapter.sendTurn({
@@ -9048,7 +9048,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* adapter.sendTurn({
@@ -9094,7 +9094,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -9161,7 +9161,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -9232,7 +9232,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -9297,7 +9297,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       // Start session in approval-required mode so canUseTool fires.
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "approval-required",
       });
 
@@ -9430,7 +9430,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "approval-required",
       });
 
@@ -9529,7 +9529,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* Stream.take(adapter.streamEvents, 3).pipe(Stream.runDrain);
@@ -9587,7 +9587,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       // AskUserQuestion should still go through the user-input flow.
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -9659,7 +9659,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "approval-required",
       });
 
@@ -9728,7 +9728,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* Stream.take(adapter.streamEvents, 3).pipe(Stream.runDrain);
@@ -9843,7 +9843,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
         const session = yield* adapter.startSession({
           threadId: THREAD_ID,
-          provider: "claudeAgent",
+          provider: "claude",
           runtimeMode: "full-access",
         });
         yield* Stream.take(adapter.streamEvents, 3).pipe(Stream.runDrain);
@@ -9952,7 +9952,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* Stream.take(adapter.streamEvents, 3).pipe(Stream.runDrain);
@@ -10030,7 +10030,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const adapter = yield* ClaudeAdapter;
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "approval-required",
       });
       yield* Stream.take(adapter.streamEvents, 3).pipe(Stream.runDrain);
@@ -10108,7 +10108,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const session = yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       const turn = yield* adapter.sendTurn({
@@ -10151,7 +10151,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       assert.equal(nativeEvents.length > 0, true);
       assert.equal(
-        nativeEvents.some((record) => record.event?.provider === "claudeAgent"),
+        nativeEvents.some((record) => record.event?.provider === "claude"),
         true,
       );
       assert.equal(
@@ -10262,7 +10262,7 @@ describe("ClaudeAdapterLive forkThread", () => {
       const adapter = yield* ClaudeAdapter;
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
       yield* adapter.sendTurn({
@@ -10312,7 +10312,7 @@ describe("ClaudeAdapterLive forkThread", () => {
       // cumulative count must win.
       yield* adapter.startSession({
         threadId: THREAD_ID,
-        provider: "claudeAgent",
+        provider: "claude",
         runtimeMode: "full-access",
       });
 
@@ -10361,7 +10361,7 @@ describe("ClaudeAdapterLive forkThread", () => {
       assert.deepEqual(
         result.failure,
         new ProviderAdapterValidationError({
-          provider: "claudeAgent",
+          provider: "claude",
           operation: "forkThread",
           issue: "The source Claude session has no resumable native cursor.",
         }),

@@ -1,5 +1,5 @@
 import { assert, describe, it } from "@effect/vitest";
-import type { ModelSelection, ProviderKind, ProviderModelDescriptor } from "@harnessos/contracts";
+import type { ModelSelection, EngineKind, ProviderModelDescriptor } from "@harnessos/contracts";
 import { Effect } from "effect";
 
 import type { ProviderDiscoveryServiceShape } from "../provider/Services/ProviderDiscoveryService.ts";
@@ -258,7 +258,7 @@ describe("agent gateway target resolver", () => {
   it.effect("validates every advertised provider option from the same guidance rules", () =>
     Effect.gen(function* () {
       const cases: ReadonlyArray<{
-        readonly provider: ProviderKind;
+        readonly provider: EngineKind;
         readonly descriptor: ProviderModelDescriptor;
         readonly optionKey: string;
         readonly acceptedValue: string;
@@ -293,7 +293,7 @@ describe("agent gateway target resolver", () => {
           rejectedValue: "invented",
         },
         {
-          provider: "claudeAgent",
+          provider: "claude",
           descriptor: makeEffortDescriptor("claude-model", "low"),
           optionKey: "effort",
           acceptedValue: "low",

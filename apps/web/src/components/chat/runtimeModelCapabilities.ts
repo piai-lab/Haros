@@ -6,7 +6,7 @@
 import type {
   EffortOption,
   ModelCapabilities,
-  ProviderKind,
+  EngineKind,
   ProviderModelDescriptor,
 } from "@harnessos/contracts";
 import {
@@ -44,7 +44,7 @@ function runtimeEffortLabel(value: string): string {
 
 // Matches the selected model to its runtime descriptor after provider-specific normalization.
 export function resolveRuntimeModelDescriptor(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   model: string | null | undefined;
   runtimeModels: ReadonlyArray<ProviderModelDescriptor> | null | undefined;
 }): ProviderModelDescriptor | undefined {
@@ -75,7 +75,7 @@ export function resolveRuntimeModelDescriptor(input: {
 
 // Reuses static capability flags but lets runtime-discovered models override exposed effort menus.
 export function getRuntimeAwareModelCapabilities(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   model: string | null | undefined;
   runtimeModel?: ProviderModelDescriptor | undefined;
 }): ModelCapabilities {
@@ -105,7 +105,7 @@ export function getRuntimeAwareModelCapabilities(input: {
       input.provider !== "droid" &&
       input.provider !== "kilo" &&
       input.provider !== "opencode" &&
-      input.provider !== "omnimind" &&
+      input.provider !== "oa" &&
       input.provider !== "pi") ||
     !runtimeEfforts ||
     runtimeEfforts.length === 0

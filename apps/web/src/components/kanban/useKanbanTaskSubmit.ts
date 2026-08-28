@@ -7,7 +7,7 @@ import type {
   ModelSlug,
   ProjectId,
   ProviderInteractionMode,
-  ProviderKind,
+  EngineKind,
   RuntimeMode,
   ServerProviderStatus,
   ServerSettingsView,
@@ -31,7 +31,7 @@ import { truncateKanbanTaskPreview } from "./KanbanNewTaskDialog.logic";
 interface UseKanbanTaskSubmitInput {
   readonly selectedProjectId: ProjectId | null;
   readonly hasSendableContent: boolean;
-  readonly selectedProvider: ProviderKind;
+  readonly selectedProvider: EngineKind;
   readonly selectedModel: ModelSlug | null;
   readonly selectedModelSupportsAutoMode: boolean | undefined;
   readonly taskPreview: string;
@@ -102,14 +102,14 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
     const scratchState = useComposerDraftStore.getState().draftsByThreadId[scratchThreadId];
     const storedModelSelection = scratchState?.modelSelectionByProvider[selectedProvider];
     const storedModelSupportsAutoMode =
-      storedModelSelection?.provider === "claudeAgent"
+      storedModelSelection?.provider === "claude"
         ? storedModelSelection.supportsAutoMode
         : undefined;
     const modelSelection = buildModelSelection(
       selectedProvider,
       selectedModel,
       storedModelSelection?.options,
-      selectedProvider === "claudeAgent"
+      selectedProvider === "claude"
         ? (selectedModelSupportsAutoMode ?? storedModelSupportsAutoMode)
         : undefined,
     );

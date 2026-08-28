@@ -9,7 +9,7 @@ import {
   type OrchestrationSessionStatus,
   type OrchestrationShellSnapshot,
   type OrchestrationThreadActivity,
-  ProviderKind,
+  EngineKind,
   ThreadId,
   type TurnId,
 } from "@harnessos/contracts";
@@ -316,7 +316,7 @@ export function deepEqualJson(left: unknown, right: unknown): boolean {
   return true;
 }
 
-export function normalizeModelSelection<T extends { provider: ProviderKind; model: string }>(
+export function normalizeModelSelection<T extends { provider: EngineKind; model: string }>(
   value: T,
   previous: T | null | undefined,
 ): T {
@@ -1954,8 +1954,8 @@ function toLegacySessionStatus(
   }
 }
 
-function toLegacyProvider(providerName: string | null): ProviderKind {
-  if (Schema.is(ProviderKind)(providerName)) {
+function toLegacyProvider(providerName: string | null): EngineKind {
+  if (Schema.is(EngineKind)(providerName)) {
     return providerName;
   }
   return "codex";

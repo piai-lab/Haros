@@ -120,12 +120,12 @@ export function createDesktopPlatformBuildConfig(
       ...nativePackaging,
       linux: {
         target: [input.target],
-        executableName: "omnimind",
+        executableName: "oa",
         icon: "icon.png",
         category: "Development",
         desktop: {
           entry: {
-            StartupWMClass: "omnimind",
+            StartupWMClass: "oa",
           },
         },
       },

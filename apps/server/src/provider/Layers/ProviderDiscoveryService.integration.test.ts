@@ -13,7 +13,7 @@ import type {
   OrchestrationProjectShell,
   OrchestrationThreadShell,
   ProviderComposerCapabilities,
-  ProviderKind,
+  EngineKind,
   ProviderListModelsResult,
   ProviderListSkillsResult,
 } from "@harnessos/contracts";
@@ -92,7 +92,7 @@ const makeRegistryLayer = (adapter: Partial<ProviderAdapterShape<ProviderAdapter
 const runListSkills = (input: {
   adapter: Partial<ProviderAdapterShape<ProviderAdapterError>>;
   disabled?: string[];
-  provider: ProviderKind;
+  provider: EngineKind;
 }) => {
   const baseLayer = Layer.mergeAll(
     makeConfigLayer(),
@@ -199,12 +199,12 @@ describe("ProviderDiscoveryService.listSkills", () => {
         Effect.gen(function* () {
           const discovery = yield* ProviderDiscoveryService;
           const skills = yield* discovery.listSkills({
-            provider: "omnimind",
+            provider: "oa",
             cwd: forgedRendererCwd,
             threadId,
           });
           const commands = yield* discovery.listCommands({
-            provider: "omnimind",
+            provider: "oa",
             cwd: forgedRendererCwd,
             threadId,
           });
@@ -241,7 +241,7 @@ describe("ProviderDiscoveryService.listSkills", () => {
           return Effect.succeed({ skills: [], source: "test", cached: false });
         },
       },
-      provider: "omnimind",
+      provider: "oa",
     });
     expect(observed[0]).toMatchObject({
       cwd: homeDir,

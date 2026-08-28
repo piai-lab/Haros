@@ -6,7 +6,7 @@
 // Why: Reuses the composer's trait resolution so a thread's model reads exactly
 //      the same wherever it is displayed.
 
-import type { ModelSelection, ProviderKind } from "@harnessos/contracts";
+import type { ModelSelection, EngineKind } from "@harnessos/contracts";
 
 import {
   getComposerTraitSelection,
@@ -16,7 +16,7 @@ import {
 import { formatProviderModelOptionName, type ProviderOptions } from "~/providerModelOptions";
 
 export interface ThreadModelSummary {
-  provider: ProviderKind;
+  provider: EngineKind;
   modelSelection: ModelSelection;
   /** Display name of the selected model, e.g. "Sonnet 4.5". */
   modelLabel: string;

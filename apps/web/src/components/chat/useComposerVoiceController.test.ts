@@ -2,7 +2,7 @@
 // Purpose: Covers voice transcription request identity and recorder action guards.
 // Layer: Chat composer hook tests
 
-import { ProjectId, ThreadId, type ProviderKind } from "@harnessos/contracts";
+import { ProjectId, ThreadId, type EngineKind } from "@harnessos/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const reactHarness = vi.hoisted(() => {
@@ -250,7 +250,7 @@ describe("useComposerVoiceController", () => {
       if (staleCause === "thread") {
         render({ activeThreadId: THREAD_B, threadId: THREAD_B });
       } else if (staleCause === "provider") {
-        render({ selectedProvider: "claudeAgent" as ProviderKind });
+        render({ selectedProvider: "claude" as EngineKind });
       } else {
         result.cancelComposerVoiceRecording();
       }

@@ -11,7 +11,7 @@ import {
   OrchestrationThreadPullRequest,
   ProjectId,
   ProviderInteractionMode,
-  ProviderKind,
+  EngineKind,
   ProviderMentionReference,
   ProviderModelOptions,
   ProviderSkillReference,
@@ -173,7 +173,7 @@ const PersistedQueuedComposerChatTurn = Schema.Struct({
   pastedTexts: Schema.optionalKey(Schema.Array(PersistedPastedTextDraft)),
   skills: Schema.Array(ProviderSkillReference),
   mentions: Schema.Array(ProviderMentionReference),
-  selectedProvider: ProviderKind,
+  selectedProvider: EngineKind,
   selectedModel: Schema.NullOr(Schema.String),
   selectedPromptEffort: Schema.NullOr(Schema.String),
   modelSelection: ModelSelection,
@@ -194,7 +194,7 @@ const PersistedQueuedComposerPlanFollowUp = Schema.Struct({
   previewText: Schema.String,
   text: Schema.String,
   interactionMode: Schema.Literals(["default", "plan"]),
-  selectedProvider: ProviderKind,
+  selectedProvider: EngineKind,
   selectedModel: Schema.NullOr(Schema.String),
   selectedPromptEffort: Schema.NullOr(Schema.String),
   modelSelection: ModelSelection,
@@ -284,9 +284,9 @@ const PersistedComposerThreadDraftState = Schema.Struct({
   pendingDirectTurnRecovery: Schema.optionalKey(PersistedPendingDirectTurnRecovery),
   restoredSourceProposedPlan: Schema.optionalKey(PersistedRestoredSourceProposedPlan),
   modelSelectionByProvider: Schema.optionalKey(
-    Schema.Record(ProviderKind, Schema.optionalKey(ModelSelection)),
+    Schema.Record(EngineKind, Schema.optionalKey(ModelSelection)),
   ),
-  activeProvider: Schema.optionalKey(Schema.NullOr(ProviderKind)),
+  activeProvider: Schema.optionalKey(Schema.NullOr(EngineKind)),
   runtimeMode: Schema.optionalKey(RuntimeMode),
   interactionMode: Schema.optionalKey(ProviderInteractionMode),
 });
@@ -294,7 +294,7 @@ const PersistedComposerThreadDraftState = Schema.Struct({
 type PersistedComposerThreadDraftState = typeof PersistedComposerThreadDraftState.Type;
 
 const LegacyThreadModelFields = Schema.Struct({
-  provider: Schema.optionalKey(ProviderKind),
+  provider: Schema.optionalKey(EngineKind),
   model: Schema.optionalKey(Schema.String),
   modelOptions: Schema.optionalKey(Schema.NullOr(ProviderModelOptions)),
 });
@@ -312,7 +312,7 @@ type LegacyPersistedComposerThreadDraftState = PersistedComposerThreadDraftState
   LegacyV2ThreadDraftFields;
 
 const LegacyStickyModelFields = Schema.Struct({
-  stickyProvider: Schema.optionalKey(ProviderKind),
+  stickyProvider: Schema.optionalKey(EngineKind),
   stickyModel: Schema.optionalKey(Schema.String),
   stickyModelOptions: Schema.optionalKey(Schema.NullOr(ProviderModelOptions)),
 });
@@ -352,9 +352,9 @@ const PersistedComposerDraftStoreState = Schema.Struct({
   draftThreadsByThreadId: Schema.Record(ThreadId, PersistedDraftThreadState),
   projectDraftThreadIdByProjectId: Schema.Record(ProjectId, ThreadId),
   stickyModelSelectionByProvider: Schema.optionalKey(
-    Schema.Record(ProviderKind, Schema.optionalKey(ModelSelection)),
+    Schema.Record(EngineKind, Schema.optionalKey(ModelSelection)),
   ),
-  stickyActiveProvider: Schema.optionalKey(Schema.NullOr(ProviderKind)),
+  stickyActiveProvider: Schema.optionalKey(Schema.NullOr(EngineKind)),
 });
 
 export type PersistedComposerDraftStoreState = typeof PersistedComposerDraftStoreState.Type;
@@ -999,8 +999,8 @@ function normalizePersistedDraftsByThreadId(
     );
     // If the draft already has the v3 shape, use it directly
     const legacyDraftCandidate = draftValue as LegacyPersistedComposerThreadDraftState;
-    let modelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>> = {};
-    let activeProvider: ProviderKind | null = null;
+    let modelSelectionByProvider: Partial<Record<EngineKind, ModelSelection>> = {};
+    let activeProvider: EngineKind | null = null;
 
     if (
       draftCandidate.modelSelectionByProvider &&
@@ -1008,7 +1008,7 @@ function normalizePersistedDraftsByThreadId(
     ) {
       // v3 format
       modelSelectionByProvider = draftCandidate.modelSelectionByProvider as Partial<
-        Record<ProviderKind, ModelSelection>
+        Record<EngineKind, ModelSelection>
       >;
       activeProvider = normalizeProviderKind(draftCandidate.activeProvider);
     } else {
@@ -1487,15 +1487,15 @@ export function normalizeCurrentPersistedComposerDraftStoreState(
     );
 
   // Handle both v3 (modelSelectionByProvider) and v2/legacy formats
-  let stickyModelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>> = {};
-  let stickyActiveProvider: ProviderKind | null = null;
+  let stickyModelSelectionByProvider: Partial<Record<EngineKind, ModelSelection>> = {};
+  let stickyActiveProvider: EngineKind | null = null;
   if (
     normalizedPersistedState.stickyModelSelectionByProvider &&
     typeof normalizedPersistedState.stickyModelSelectionByProvider === "object"
   ) {
     stickyModelSelectionByProvider =
       normalizedPersistedState.stickyModelSelectionByProvider as Partial<
-        Record<ProviderKind, ModelSelection>
+        Record<EngineKind, ModelSelection>
       >;
     stickyActiveProvider = normalizeProviderKind(normalizedPersistedState.stickyActiveProvider);
   } else {
@@ -1639,7 +1639,7 @@ export function toHydratedThreadDraft(
   persistedDraft: PersistedComposerThreadDraftState,
 ): ComposerThreadDraftState {
   // The persisted draft is already in v3 shape (migration handles older formats)
-  const modelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>> =
+  const modelSelectionByProvider: Partial<Record<EngineKind, ModelSelection>> =
     persistedDraft.modelSelectionByProvider ?? {};
   const activeProvider = normalizeProviderKind(persistedDraft.activeProvider) ?? null;
 

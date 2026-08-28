@@ -1228,7 +1228,7 @@ describe("deriveMessagesTimelineRows", () => {
       pendingMessageId,
       turnId: TurnId.makeUnsafe("t-model"),
       modelSelection: {
-        provider: "omnimind" as const,
+        provider: "oa" as const,
         model: "deepseek/deepseek-v4-pro",
       },
       requestedAt: "2026-08-27T02:21:00.000Z",
@@ -1673,7 +1673,7 @@ describe("deriveMessagesTimelineRows", () => {
             {
               threadId: "thread-2",
               title: "Second",
-              provider: "claudeAgent",
+              provider: "claude",
               model: "claude-sonnet-5",
               environment: "local",
               status: "task_dispatched",

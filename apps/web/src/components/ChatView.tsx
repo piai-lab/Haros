@@ -9,7 +9,7 @@ import {
   type OrchestrationShellSnapshot,
   type ProjectScript,
   type ModelSlug,
-  type ProviderKind,
+  type EngineKind,
   type ProjectEntry,
   type ProjectId,
   type ProviderApprovalDecision,
@@ -1058,13 +1058,13 @@ const MAX_DISMISSED_PROVIDER_HEALTH_BANNERS = 50;
 const EMPTY_LAST_INVOKED_SCRIPT_BY_PROJECT: Record<string, string> = {};
 const EMPTY_DISMISSED_PROVIDER_HEALTH_BANNERS: ReadonlyArray<string> = [];
 
-function getThreadProviderCustomBinaryPathKey(threadId: Thread["id"], provider: ProviderKind) {
+function getThreadProviderCustomBinaryPathKey(threadId: Thread["id"], provider: EngineKind) {
   return `${threadId}:${provider}`;
 }
 
 function getConfirmedCustomBinarySessionKey(
   thread: Thread | null | undefined,
-  provider: ProviderKind,
+  provider: EngineKind,
 ): string | null {
   const session = thread?.session;
   if (!thread || session?.provider !== provider) {
@@ -1078,15 +1078,15 @@ function getConfirmedCustomBinarySessionKey(
 
 function getProviderStartOptionsCustomBinaryPath(
   providerOptions: ProviderStartOptions | undefined,
-  provider: ProviderKind,
+  provider: EngineKind,
 ): string | null {
   switch (provider) {
-    case "omnimind":
+    case "oa":
       return null;
     case "codex":
       return normalizeCustomBinaryPath(providerOptions?.codex?.binaryPath);
-    case "claudeAgent":
-      return normalizeCustomBinaryPath(providerOptions?.claudeAgent?.binaryPath);
+    case "claude":
+      return normalizeCustomBinaryPath(providerOptions?.claude?.binaryPath);
     case "antigravity":
       return normalizeCustomBinaryPath(providerOptions?.antigravity?.binaryPath);
     case "grok":
@@ -1635,7 +1635,7 @@ export default function ChatView({
   const composerFooterDemotionWidthsRef = useRef<ReadonlyArray<number | undefined>>([]);
   const composerFooterLayoutSyncRef = useRef<(() => void) | null>(null);
   const [confirmedCustomBinaryPathsByProvider, setConfirmedCustomBinaryPathsByProvider] = useState<
-    Partial<Record<ProviderKind, string>>
+    Partial<Record<EngineKind, string>>
   >(loadConfirmedCustomBinaryPaths);
   const confirmedCustomBinarySessionKeysRef = useRef<Set<string>>(new Set());
   const pendingCustomBinaryPathsByThreadProviderRef = useRef<Map<string, string>>(new Map());
@@ -2410,7 +2410,7 @@ export default function ChatView({
   const selectedProviderByThreadId = composerDraft.activeProvider ?? null;
   const threadProvider =
     serverThread?.modelSelection.provider ?? activeProject?.defaultModelSelection?.provider ?? null;
-  const selectedProvider: ProviderKind =
+  const selectedProvider: EngineKind =
     selectedProviderByThreadId ?? threadProvider ?? serverSettingsSnapshot.defaultProvider;
   const hasActiveProviderDiscoverySession = isProviderDiscoverySessionActive({
     provider: selectedProvider,
@@ -2418,7 +2418,7 @@ export default function ChatView({
   });
   const previousSelectedProviderRef = useRef<{
     threadId: ThreadId;
-    provider: ProviderKind;
+    provider: EngineKind;
   } | null>(null);
   const featureFlags = useFeatureFlags();
   const showDebugTaskBanner = import.meta.env.DEV && featureFlags["show-debug-task-banner"];
@@ -2446,20 +2446,20 @@ export default function ChatView({
       serverSettingsSnapshot,
     ],
   );
-  const composerModelHintByProvider = useMemo<Record<ProviderKind, string | null>>(() => {
+  const composerModelHintByProvider = useMemo<Record<EngineKind, string | null>>(() => {
     const threadModelSelection = serverThread?.modelSelection ?? null;
     const projectModelSelection = activeProject?.defaultModelSelection ?? null;
     const draftSelections = composerDraft.modelSelectionByProvider;
 
-    const resolveHint = (provider: ProviderKind): string | null =>
+    const resolveHint = (provider: EngineKind): string | null =>
       draftSelections[provider]?.model ??
       (threadModelSelection?.provider === provider ? threadModelSelection.model : null) ??
       (projectModelSelection?.provider === provider ? projectModelSelection.model : null);
 
     return {
-      omnimind: resolveHint("omnimind"),
+      oa: resolveHint("oa"),
       codex: resolveHint("codex"),
-      claudeAgent: resolveHint("claudeAgent"),
+      claude: resolveHint("claude"),
       cursor: resolveHint("cursor"),
       antigravity: resolveHint("antigravity"),
       grok: resolveHint("grok"),
@@ -2508,11 +2508,11 @@ export default function ChatView({
   const draftModelSelectionForSelectedProvider =
     composerDraft.modelSelectionByProvider[selectedProvider] ?? null;
   const persistedClaudeSupportsAutoMode =
-    selectedProvider === "claudeAgent"
-      ? draftModelSelectionForSelectedProvider?.provider === "claudeAgent" &&
+    selectedProvider === "claude"
+      ? draftModelSelectionForSelectedProvider?.provider === "claude" &&
         draftModelSelectionForSelectedProvider.model === selectedModel
         ? draftModelSelectionForSelectedProvider.supportsAutoMode
-        : serverThread?.modelSelection.provider === "claudeAgent" &&
+        : serverThread?.modelSelection.provider === "claude" &&
             serverThread.modelSelection.model === selectedModel
           ? serverThread.modelSelection.supportsAutoMode
           : undefined
@@ -2527,7 +2527,7 @@ export default function ChatView({
       return discovered;
     }
     return selectedModel !== null &&
-      selectedProvider === "claudeAgent" &&
+      selectedProvider === "claude" &&
       typeof persistedClaudeSupportsAutoMode === "boolean"
       ? {
           slug: selectedModel,
@@ -2557,7 +2557,7 @@ export default function ChatView({
       selectedProvider,
       selectedModel,
       selectedModelOptionsForDispatch,
-      selectedProvider === "claudeAgent" ? selectedRuntimeModel?.supportsAutoMode : undefined,
+      selectedProvider === "claude" ? selectedRuntimeModel?.supportsAutoMode : undefined,
     );
   }, [
     draftModelSelectionForSelectedProvider,
@@ -4060,7 +4060,7 @@ export default function ChatView({
   const rememberCustomBinaryPathForDispatch = useCallback(
     (input: {
       threadId: Thread["id"];
-      provider: ProviderKind;
+      provider: EngineKind;
       providerOptions: ProviderStartOptions | undefined;
     }) => {
       const pendingKey = getThreadProviderCustomBinaryPathKey(input.threadId, input.provider);
@@ -4545,7 +4545,7 @@ export default function ChatView({
     [selectedModel],
   );
   const handleProviderBrowse = useCallback(
-    (provider: ProviderKind) => {
+    (provider: EngineKind) => {
       if (provider === "pi") {
         setPiDiscoveryRequested(true);
       }
@@ -6589,7 +6589,7 @@ export default function ChatView({
   }, [activeThreadId, markWorkflowRunDismissed, workflowRunState]);
 
   const onProviderModelSelect = useCallback(
-    async (provider: ProviderKind, model: ModelSlug) => {
+    async (provider: EngineKind, model: ModelSlug) => {
       if (!activeThread) return;
       const resolvedModel = resolveCommittedProviderModel({
         selectedModel: model,
@@ -6608,7 +6608,7 @@ export default function ChatView({
         provider,
         resolvedModel,
         undefined,
-        provider === "claudeAgent" ? runtimeModel?.supportsAutoMode : undefined,
+        provider === "claude" ? runtimeModel?.supportsAutoMode : undefined,
       );
       setComposerDraftModelSelectionAndSticky(activeThread.id, nextModelSelection);
       if (provider === "cursor") {
@@ -6629,7 +6629,7 @@ export default function ChatView({
     ],
   );
   const onComposerEngineSelect = useCallback(
-    (provider: ProviderKind) => {
+    (provider: EngineKind) => {
       if (!activeThread) return;
       if (provider === selectedProvider) return;
       setComposerDraftActiveProviderAndSticky(activeThread.id, provider);
@@ -7181,7 +7181,7 @@ export default function ChatView({
   );
 
   const onCreateHandoffThread = useCallback(
-    async (targetProvider: ProviderKind) => {
+    async (targetProvider: EngineKind) => {
       if (!activeThread || handoffDisabled) {
         return;
       }
@@ -9978,7 +9978,7 @@ export default function ChatView({
   const runtimeUsageContextWindow = useMemo(
     () =>
       activeContextWindow ??
-      (selectedProvider === "claudeAgent"
+      (selectedProvider === "claude"
         ? deriveSelectedContextWindowSnapshot(composerTraitSelection.contextWindow)
         : null),
     [activeContextWindow, composerTraitSelection.contextWindow, selectedProvider],
@@ -9987,8 +9987,7 @@ export default function ChatView({
     () =>
       deriveContextWindowSelectionStatus({
         activeSnapshot: runtimeUsageContextWindow,
-        selectedValue:
-          selectedProvider === "claudeAgent" ? composerTraitSelection.contextWindow : null,
+        selectedValue: selectedProvider === "claude" ? composerTraitSelection.contextWindow : null,
       }),
     [runtimeUsageContextWindow, composerTraitSelection.contextWindow, selectedProvider],
   );
@@ -10059,7 +10058,7 @@ export default function ChatView({
     void navigate({
       to: "/settings",
       search: {
-        section: selectedProvider === "omnimind" ? "models" : "providers",
+        section: selectedProvider === "oa" ? "models" : "providers",
       },
     });
   }, [navigate, selectedProvider]);

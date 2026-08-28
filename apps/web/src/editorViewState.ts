@@ -3,7 +3,7 @@
 //          directories, center mode) so re-entering the editor view restores it.
 // Layer: Web UI state persistence
 
-import type { ProjectId, ProviderKind, ThreadId } from "@harnessos/contracts";
+import type { ProjectId, EngineKind, ThreadId } from "@harnessos/contracts";
 import { isProviderKind } from "./providerOrdering";
 
 const EDITOR_VIEW_STATE_STORAGE_KEY = "harnessos:editor:view-state-by-thread:v1";
@@ -25,7 +25,7 @@ type PersistedEditorViewStateMap = Record<string, PersistedEditorViewState>;
 export interface EditorRailChatTabSnapshot {
   id: ThreadId;
   title: string;
-  provider: ProviderKind;
+  provider: EngineKind;
 }
 
 type PersistedEditorRailChatTabsMap = Record<string, ReadonlyArray<EditorRailChatTabSnapshot>>;

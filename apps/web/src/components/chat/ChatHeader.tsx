@@ -7,11 +7,11 @@ import {
   type EditorId,
   type ProjectId,
   type ProjectScript,
-  type ProviderKind,
+  type EngineKind,
   type ResolvedKeybindingsConfig,
   type ThreadId,
 } from "@harnessos/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { useQuery } from "@tanstack/react-query";
 import React, { type Dispatch, type SetStateAction, useEffect, useRef, useState } from "react";
 import { FiGitBranch } from "react-icons/fi";
@@ -125,7 +125,7 @@ interface ChatHeaderProps {
   activeThreadTitle: string;
   activeThreadEntryPoint: ThreadPrimarySurface;
   showThreadIdentity: boolean;
-  activeProvider: ProviderKind;
+  activeProvider: EngineKind;
   activeProjectName: string | undefined;
   threadBreadcrumbs: ReadonlyArray<{
     threadId: ThreadId;
@@ -148,9 +148,9 @@ interface ChatHeaderProps {
   handoffBadgeLabel: string | null;
   handoffActionLabel: string;
   handoffDisabled: boolean;
-  handoffActionTargetProviders: ReadonlyArray<ProviderKind>;
-  handoffBadgeSourceProvider: ProviderKind | null;
-  handoffBadgeTargetProvider: ProviderKind | null;
+  handoffActionTargetProviders: ReadonlyArray<EngineKind>;
+  handoffBadgeSourceProvider: EngineKind | null;
+  handoffBadgeTargetProvider: EngineKind | null;
   gitCwd: string | null;
   diffTotals: RepoDiffTotals;
   showGitActions?: boolean;
@@ -195,7 +195,7 @@ interface ChatHeaderProps {
   onDeleteProjectScript: (scriptId: string) => Promise<void>;
   onToggleDiff: () => void;
   onRegisterCommitAndPushTrigger?: (trigger: (() => void) | null) => void;
-  onCreateHandoff: (targetProvider: ProviderKind) => void;
+  onCreateHandoff: (targetProvider: EngineKind) => void;
   onNavigateToThread: (threadId: ThreadId) => void;
   onRenameThread: () => void;
   onCloseThreadPane?: () => void;
@@ -286,7 +286,7 @@ function EditorRailTabs(props: {
   projectId: ProjectId;
   activeThreadId: ThreadId;
   activeThreadTitle: string;
-  activeProvider: ProviderKind;
+  activeProvider: EngineKind;
   activeSurface: "chat" | "terminal";
   terminalAvailable: boolean;
   terminalHasRunningActivity: boolean;
@@ -658,7 +658,7 @@ export function ChatHeader({
     };
   }, [isSplitPane]);
 
-  const renderProviderIcon = (provider: ProviderKind | null, className: string) => {
+  const renderProviderIcon = (provider: EngineKind | null, className: string) => {
     return (
       <ProviderIcon
         provider={provider}
@@ -893,7 +893,7 @@ export function ChatHeader({
                   {renderProviderIcon(provider, "size-3.5 shrink-0 opacity-100")}
                   <span>
                     {t("composer.handoffTo", {
-                      provider: PROVIDER_DISPLAY_NAMES[provider],
+                      provider: ENGINE_DISPLAY_NAMES[provider],
                     })}
                   </span>
                 </MenuItem>

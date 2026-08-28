@@ -233,7 +233,7 @@ validationLayer("CodexAdapterLive validation", (it) => {
       const adapter = yield* CodexAdapter;
       const result = yield* adapter
         .startSession({
-          provider: "claudeAgent",
+          provider: "claude",
           threadId: asThreadId("thread-1"),
           runtimeMode: "full-access",
         })
@@ -245,7 +245,7 @@ validationLayer("CodexAdapterLive validation", (it) => {
         new ProviderAdapterValidationError({
           provider: "codex",
           operation: "startSession",
-          issue: "Expected provider 'codex' but received 'claudeAgent'.",
+          issue: "Expected provider 'codex' but received 'claude'.",
         }),
       );
       assert.equal(validationManager.startSessionImpl.mock.calls.length, 0);
@@ -530,7 +530,7 @@ lifecycleLayer("CodexAdapterLive lifecycle", (it) => {
         payload: {
           summary: "  Invalid MCP configuration  ",
           details: "url is not supported for stdio\n",
-          path: "  mcp_servers.omnimind  ",
+          path: "  mcp_servers.oa  ",
         },
       } satisfies ProviderEvent);
 
@@ -545,7 +545,7 @@ lifecycleLayer("CodexAdapterLive lifecycle", (it) => {
       }
       assert.equal(firstEvent.value.payload.summary, "Invalid MCP configuration");
       assert.equal(firstEvent.value.payload.details, "url is not supported for stdio");
-      assert.equal(firstEvent.value.payload.path, "mcp_servers.omnimind");
+      assert.equal(firstEvent.value.payload.path, "mcp_servers.oa");
     }),
   );
 

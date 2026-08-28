@@ -2849,7 +2849,7 @@ describe("OmniMindModelServicesLive", () => {
     const observationOrder: string[] = [];
     const providerSessions = [
       {
-        provider: "omnimind",
+        provider: "oa",
         status: "ready",
         runtimeMode: "full-access",
         model: "active-gateway/model-one",
@@ -2858,7 +2858,7 @@ describe("OmniMindModelServicesLive", () => {
         updatedAt: "2026-08-14T00:00:01.000Z",
       } as ProviderSession,
       {
-        provider: "omnimind",
+        provider: "oa",
         status: "ready",
         runtimeMode: "full-access",
         model: "other-gateway/model-one",

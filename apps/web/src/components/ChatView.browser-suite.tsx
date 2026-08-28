@@ -17,7 +17,7 @@ import {
   type OrchestrationReadModel,
   type ProjectId,
   type ProviderExecutionCapabilities,
-  type ProviderKind,
+  type EngineKind,
   type ProviderListCommandsResult,
   type ProviderListModelsResult,
   type ServerConfig,
@@ -142,15 +142,15 @@ interface TestFixture {
   snapshot: OrchestrationReadModel;
   serverConfig: ServerConfig;
   serverSettings: ServerSettingsView;
-  providerPassivePresence?: ReadonlyArray<ProviderKind>;
+  providerPassivePresence?: ReadonlyArray<EngineKind>;
   welcome: WsWelcomePayload;
   gitBranchByCwd: Record<string, string>;
   gitHasWorkingTreeChanges?: boolean;
-  providerCommandsByProvider: Partial<Record<ProviderKind, ProviderListCommandsResult>>;
+  providerCommandsByProvider: Partial<Record<EngineKind, ProviderListCommandsResult>>;
   providerExecutionCapabilitiesByProvider: Partial<
-    Record<ProviderKind, ProviderExecutionCapabilities>
+    Record<EngineKind, ProviderExecutionCapabilities>
   >;
-  providerModelsByProvider: Partial<Record<ProviderKind, ProviderListModelsResult>>;
+  providerModelsByProvider: Partial<Record<EngineKind, ProviderListModelsResult>>;
 }
 
 let fixture: TestFixture;
@@ -609,7 +609,7 @@ function withTurnStartFailureUnrecovered(
               ? {
                   ...thread.session,
                   status: "error" as const,
-                  providerName: "claudeAgent" as const,
+                  providerName: "claude" as const,
                   activeTurnId: null,
                   lastError: "Target provider failed to start.",
                   updatedAt: failedAt,
@@ -730,7 +730,7 @@ function buildFixture(snapshot: OrchestrationReadModel): TestFixture {
 }
 
 function configureClaudeNewThreadShortcut(nextFixture: TestFixture): void {
-  nextFixture.providerModelsByProvider.claudeAgent = {
+  nextFixture.providerModelsByProvider.claude = {
     source: "browser.fixture",
     models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
   };
@@ -739,7 +739,7 @@ function configureClaudeNewThreadShortcut(nextFixture: TestFixture): void {
     providers: [
       ...nextFixture.serverConfig.providers,
       {
-        provider: "claudeAgent",
+        provider: "claude",
         status: "ready",
         available: true,
         authStatus: "authenticated",
@@ -1349,7 +1349,7 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
     return fixture.serverSettings;
   }
   if (tag === WS_METHODS.providerListModels) {
-    const provider = typeof body.provider === "string" ? (body.provider as ProviderKind) : null;
+    const provider = typeof body.provider === "string" ? (body.provider as EngineKind) : null;
     return provider
       ? (fixture.providerModelsByProvider[provider] ?? {
           source: "browser.fixture",
@@ -1358,7 +1358,7 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
       : { source: "browser.fixture", models: [] };
   }
   if (tag === WS_METHODS.providerGetComposerCapabilities) {
-    const provider = typeof body.provider === "string" ? (body.provider as ProviderKind) : "codex";
+    const provider = typeof body.provider === "string" ? (body.provider as EngineKind) : "codex";
     return {
       provider,
       supportsSkillMentions: false,
@@ -1374,7 +1374,7 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
   }
   if (tag === WS_METHODS.providerGetExecutionCapabilities) {
     const modelSelection = body.modelSelection as {
-      provider: ProviderKind;
+      provider: EngineKind;
       model: string;
       supportsAutoMode?: boolean;
     };
@@ -1404,7 +1404,7 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
     };
   }
   if (tag === WS_METHODS.providerListCommands) {
-    const provider = typeof body.provider === "string" ? (body.provider as ProviderKind) : null;
+    const provider = typeof body.provider === "string" ? (body.provider as EngineKind) : null;
     return provider
       ? (fixture.providerCommandsByProvider[provider] ?? {
           source: "browser.fixture",
@@ -2399,7 +2399,7 @@ async function mountChatView(options: {
       initialEntries: [initialEntry],
     }),
   );
-  for (const provider of ["codex", "claudeAgent"] as const) {
+  for (const provider of ["codex", "claude"] as const) {
     const knownCatalog = fixture.providerModelsByProvider[provider];
     if (!knownCatalog) continue;
     // Existing-thread journeys begin with a previously known exact catalog,
@@ -5696,10 +5696,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
   it("keyboard-selects the unique app /fork when Claude also advertises native fork", async () => {
     useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
-      provider: "claudeAgent",
+      provider: "claude",
       model: "claude-sonnet-4-5",
     });
-    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "claudeAgent");
+    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "claude");
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({
@@ -5707,7 +5707,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         targetText: "app fork collision target",
       }),
       configureFixture: (nextFixture) => {
-        nextFixture.providerModelsByProvider.claudeAgent = {
+        nextFixture.providerModelsByProvider.claude = {
           source: "browser.fixture",
           models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
         };
@@ -5716,7 +5716,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           providers: [
             ...nextFixture.serverConfig.providers,
             {
-              provider: "claudeAgent",
+              provider: "claude",
               status: "ready",
               available: true,
               authStatus: "authenticated",
@@ -5725,7 +5725,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             },
           ],
         };
-        nextFixture.providerCommandsByProvider.claudeAgent = {
+        nextFixture.providerCommandsByProvider.claude = {
           source: "browser.fixture",
           commands: [
             { name: "fork", description: "Provider-native fork" },
@@ -5745,7 +5745,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           wsRequests.some(
             (request) =>
               request._tag === WS_METHODS.providerListCommands &&
-              request.provider === "claudeAgent",
+              request.provider === "claude",
           ),
         ).toBe(true);
         const visibleForkItems = Array.from(
@@ -5769,10 +5769,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
   it("submits provider-native /fork when the app fork action is unavailable", async () => {
     useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
-      provider: "claudeAgent",
+      provider: "claude",
       model: "claude-sonnet-4-5",
     });
-    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "claudeAgent");
+    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "claude");
     useComposerDraftStore.getState().setInteractionMode(THREAD_ID, "plan");
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
@@ -5781,7 +5781,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         targetText: "native fork fallback target",
       }),
       configureFixture: (nextFixture) => {
-        nextFixture.providerModelsByProvider.claudeAgent = {
+        nextFixture.providerModelsByProvider.claude = {
           source: "browser.fixture",
           models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
         };
@@ -5790,7 +5790,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           providers: [
             ...nextFixture.serverConfig.providers,
             {
-              provider: "claudeAgent",
+              provider: "claude",
               status: "ready",
               available: true,
               authStatus: "authenticated",
@@ -5799,7 +5799,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             },
           ],
         };
-        nextFixture.providerCommandsByProvider.claudeAgent = {
+        nextFixture.providerCommandsByProvider.claude = {
           source: "browser.fixture",
           commands: [{ name: "fork", description: "Provider-native fork" }],
         };
@@ -7096,7 +7096,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
   it("wires Engine selection into the active Composer catalog", async () => {
     useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
-      provider: "claudeAgent",
+      provider: "claude",
       model: "claude-sonnet-4-5",
     });
     useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "codex");
@@ -7111,7 +7111,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           source: "browser.fixture",
           models: [{ slug: "gpt-5", name: "GPT-5" }],
         };
-        nextFixture.providerModelsByProvider.claudeAgent = {
+        nextFixture.providerModelsByProvider.claude = {
           source: "browser.fixture",
           models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
         };
@@ -7120,14 +7120,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
           providers: [
             ...nextFixture.serverConfig.providers,
             {
-              provider: "omnimind",
+              provider: "oa",
               status: "ready",
               available: true,
               authStatus: "authenticated",
               checkedAt: NOW_ISO,
             },
             {
-              provider: "claudeAgent",
+              provider: "claude",
               status: "ready",
               available: true,
               authStatus: "authenticated",
@@ -7156,10 +7156,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await page.getByRole("menuitemradio", { name: /Claude/ }).click();
       await vi.waitFor(() => {
         expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
-          "claudeAgent",
+          "claude",
         );
       });
-      expect(requestedModelProviders().every((provider) => provider === "claudeAgent")).toBe(true);
+      expect(requestedModelProviders().every((provider) => provider === "claude")).toBe(true);
 
       await page.getByRole("button", { name: "Model and options" }).click();
       await expect
@@ -7348,7 +7348,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       sizeBytes: 11,
     });
     const configureClaudeFixture = (nextFixture: TestFixture) => {
-      nextFixture.providerModelsByProvider.claudeAgent = {
+      nextFixture.providerModelsByProvider.claude = {
         source: "browser.fixture",
         models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
       };
@@ -7357,7 +7357,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         providers: [
           ...nextFixture.serverConfig.providers,
           {
-            provider: "claudeAgent",
+            provider: "claude",
             status: "ready",
             available: true,
             authStatus: "authenticated",
@@ -7375,7 +7375,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     try {
       useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-sonnet-4-5",
       });
       await waitForServerConfigToApply();
@@ -7383,12 +7383,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await page.getByRole("menuitemradio", { name: /Claude/ }).click();
       await vi.waitFor(() => {
         expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
-          "claudeAgent",
+          "claude",
         );
         expect(
           wsRequests.some(
             (request) =>
-              request._tag === WS_METHODS.providerListModels && request.provider === "claudeAgent",
+              request._tag === WS_METHODS.providerListModels && request.provider === "claude",
           ),
         ).toBe(true);
         expect(
@@ -7431,7 +7431,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             );
           expect(turnStart).toBeDefined();
           expect(turnStart?.modelSelection).toMatchObject({
-            provider: "claudeAgent",
+            provider: "claude",
             model: "claude-sonnet-4-5",
           });
           const message = turnStart?.message as
@@ -7442,7 +7442,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           failedAttachments = message?.attachments ?? [];
           expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toMatchObject({
             prompt: "",
-            activeProvider: "claudeAgent",
+            activeProvider: "claude",
             pendingDirectTurnRecovery: {
               messageId: failedMessageId,
               contentSuperseded: false,
@@ -7580,7 +7580,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await page.getByRole("menuitemradio", { name: /Claude/ }).click();
       await vi.waitFor(() => {
         expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
-          "claudeAgent",
+          "claude",
         );
         expect(
           page.getByRole("button", { name: "Model and options" }).element().textContent,
@@ -7699,7 +7699,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(() => {
         const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
         expect(draft?.prompt).toBe(terminalPrompt);
-        expect(draft?.activeProvider).toBe("claudeAgent");
+        expect(draft?.activeProvider).toBe("claude");
         expect(draft?.pendingDirectTurnRecovery ?? null).toBeNull();
         expect(
           wsRequests
@@ -8724,11 +8724,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(() => {
         expect(
           wsRequests.filter((request) => request._tag === WS_METHODS.providerListModels),
-        ).toEqual([expect.objectContaining({ provider: "claudeAgent" })]);
+        ).toEqual([expect.objectContaining({ provider: "claude" })]);
         expect(
           useComposerDraftStore.getState().draftsByThreadId[targetDraftThreadId],
         ).toMatchObject({
-          activeProvider: "claudeAgent",
+          activeProvider: "claude",
           prompt: "stored draft prompt",
           images: [{ id: preservedImage.id, name: preservedImage.name }],
         });
@@ -9493,7 +9493,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     const nativeApi = window.nativeApi!;
     let catalogProjected = false;
     const readyOmniMindStatus = {
-      provider: "omnimind" as const,
+      provider: "oa" as const,
       status: "ready" as const,
       available: true,
       authStatus: "unknown" as const,
@@ -9595,7 +9595,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }));
     const answerLogin = vi.fn(async () => {
       catalogProjected = true;
-      fixture.providerModelsByProvider.omnimind = {
+      fixture.providerModelsByProvider.oa = {
         source: "browser.fixture",
         models: [
           {
@@ -9651,12 +9651,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
           ...nextFixture.serverConfig,
           providers: [readyOmniMindStatus, readyPiStatus, readyUnselectedOpenCodeStatus],
         };
-        nextFixture.providerPassivePresence = ["omnimind", "pi", "opencode"];
+        nextFixture.providerPassivePresence = ["oa", "pi", "opencode"];
         nextFixture.providerModelsByProvider = {
           ...nextFixture.providerModelsByProvider,
           // Bundled Pi can enumerate builtin models without any configured
           // credential. That exact catalog row must not suppress first-run setup.
-          omnimind: {
+          oa: {
             source: "browser.fixture",
             models: [
               {
@@ -9678,7 +9678,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(
         wsRequests.filter(
           (request) =>
-            request._tag === WS_METHODS.providerListModels && request.provider === "omnimind",
+            request._tag === WS_METHODS.providerListModels && request.provider === "oa",
         ),
       ).toHaveLength(1);
       expect(
@@ -9704,7 +9704,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         '[data-first-run-step="engine"]',
       )!;
       const independentEngineOptions = PROVIDER_OPTIONS.filter(
-        (option) => option.value !== "omnimind",
+        (option) => option.value !== "oa",
       );
       expect(engineGrid.querySelectorAll("button")).toHaveLength(independentEngineOptions.length);
       for (const option of independentEngineOptions) {
@@ -9792,17 +9792,17 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(() => {
         expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toMatchObject({
           prompt: "Keep this draft while I connect a model.",
-          activeProvider: "omnimind",
+          activeProvider: "oa",
           modelSelectionByProvider: {
-            omnimind: { provider: "omnimind", model: "deepseek/deepseek-v4-flash" },
+            oa: { provider: "oa", model: "deepseek/deepseek-v4-flash" },
           },
         });
       });
       expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.images).toEqual([
         setupImage,
       ]);
-      expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.omnimind).toEqual({
-        provider: "omnimind",
+      expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.oa).toEqual({
+        provider: "oa",
         model: "deepseek/deepseek-v4-flash",
       });
       const sendButton = await waitForSendButton();
@@ -9816,7 +9816,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           expect(turnStarts).toHaveLength(1);
           expect(turnStarts[0]).toMatchObject({
             modelSelection: {
-              provider: "omnimind",
+              provider: "oa",
               model: "deepseek/deepseek-v4-flash",
             },
             message: {
@@ -9872,7 +9872,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       nextFixture.serverConfig = { ...nextFixture.serverConfig, providers: [] };
       nextFixture.providerPassivePresence = [];
       nextFixture.providerModelsByProvider = {
-        omnimind: { source: "browser.fixture", models: [] },
+        oa: { source: "browser.fixture", models: [] },
         pi: { source: "browser.fixture", models: [] },
       };
     };
@@ -10014,7 +10014,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         .getByRole("button", { name: EN_MESSAGES["onboarding.firstRun.complete"] })
         .click();
       useComposerDraftStore.getState().setModelSelectionAndSticky(THREAD_ID, {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-sonnet-4",
       });
       await setupDialog
@@ -10022,9 +10022,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
         .click();
       await expect.element(setupDialog).not.toBeInTheDocument();
       expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toMatchObject({
-        activeProvider: "claudeAgent",
+        activeProvider: "claude",
         modelSelectionByProvider: {
-          claudeAgent: { provider: "claudeAgent", model: "claude-sonnet-4" },
+          claude: { provider: "claude", model: "claude-sonnet-4" },
         },
       });
       expect(
@@ -10039,7 +10039,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
   it("requires an explicit model choice instead of sending with a configured catalog fallback", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
-    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "omnimind");
+    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "oa");
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
     const configuredService = {
@@ -10082,7 +10082,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           ...nextFixture.serverConfig,
           providers: [
             {
-              provider: "omnimind",
+              provider: "oa",
               status: "ready",
               available: true,
               authStatus: "unknown",
@@ -10091,10 +10091,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
             },
           ],
         };
-        nextFixture.providerPassivePresence = ["omnimind"];
+        nextFixture.providerPassivePresence = ["oa"];
         nextFixture.providerModelsByProvider = {
           ...nextFixture.providerModelsByProvider,
-          omnimind: {
+          oa: {
             source: "browser.fixture",
             models: [
               {
@@ -10136,7 +10136,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           wsRequests.filter(
             (request) =>
-              request._tag === WS_METHODS.providerListModels && request.provider === "omnimind",
+              request._tag === WS_METHODS.providerListModels && request.provider === "oa",
           ).length,
         ).toBeGreaterThan(0);
       });
@@ -10152,7 +10152,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(turnStarts).toHaveLength(1);
         expect(turnStarts[0]).toMatchObject({
           modelSelection: {
-            provider: "omnimind",
+            provider: "oa",
             model: "deepseek/deepseek-v4-flash",
           },
         });
@@ -10212,7 +10212,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
               checkedAt: NOW_ISO,
             },
             {
-              provider: "claudeAgent",
+              provider: "claude",
               status: "error",
               available: true,
               authStatus: "unauthenticated",
@@ -10220,7 +10220,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
               checkedAt: NOW_ISO,
             },
             {
-              provider: "omnimind",
+              provider: "oa",
               status: "ready",
               available: true,
               authStatus: "unknown",
@@ -10247,15 +10247,15 @@ describe("ChatView timeline estimator parity (full app)", () => {
         };
         nextFixture.providerPassivePresence = [
           "codex",
-          "claudeAgent",
-          "omnimind",
+          "claude",
+          "oa",
           "opencode",
           "pi",
         ];
         nextFixture.providerModelsByProvider = {
           ...nextFixture.providerModelsByProvider,
           codex: { source: "browser.fixture", models: [] },
-          omnimind: { source: "browser.fixture", models: [] },
+          oa: { source: "browser.fixture", models: [] },
           opencode: { source: "browser.fixture", models: [] },
           pi: { source: "browser.fixture", models: [] },
         };
@@ -10286,10 +10286,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
   it("routes a stale OmniMind service selection back to Model services", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     useComposerDraftStore.getState().setStickyModelSelection({
-      provider: "omnimind",
+      provider: "oa",
       model: "deleted-service/deleted-model",
     });
-    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "omnimind");
+    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "oa");
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
     const listModelServices = vi.fn(async () => ({
@@ -10317,7 +10317,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           ...nextFixture.serverConfig,
           providers: [
             {
-              provider: "omnimind",
+              provider: "oa",
               status: "ready",
               available: true,
               authStatus: "unknown",
@@ -10326,10 +10326,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
             },
           ],
         };
-        nextFixture.providerPassivePresence = ["omnimind"];
+        nextFixture.providerPassivePresence = ["oa"];
         nextFixture.providerModelsByProvider = {
           ...nextFixture.providerModelsByProvider,
-          omnimind: { source: "browser.fixture", models: [] },
+          oa: { source: "browser.fixture", models: [] },
           pi: { source: "browser.fixture", models: [] },
         };
       },
@@ -10414,7 +10414,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.providerPassivePresence = ["pi"];
         nextFixture.providerModelsByProvider = {
           ...nextFixture.providerModelsByProvider,
-          omnimind: { source: "browser.fixture", models: [] },
+          oa: { source: "browser.fixture", models: [] },
           pi: { source: "browser.fixture", models: [] },
         };
       },
@@ -10931,8 +10931,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
   it("hydrates the provider alongside a sticky claude model", async () => {
     useComposerDraftStore.setState({
       stickyModelSelectionByProvider: {
-        claudeAgent: {
-          provider: "claudeAgent",
+        claude: {
+          provider: "claude",
           model: "claude-opus-4-6",
           options: {
             effort: "max",
@@ -10940,7 +10940,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           },
         },
       },
-      stickyActiveProvider: "claudeAgent",
+      stickyActiveProvider: "claude",
     });
 
     const mounted = await mountChatView({
@@ -10966,8 +10966,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
       expect(useComposerDraftStore.getState().draftsByThreadId[newThreadId]).toMatchObject({
         modelSelectionByProvider: {
-          claudeAgent: {
-            provider: "claudeAgent",
+          claude: {
+            provider: "claude",
             model: "claude-opus-4-6",
             options: {
               effort: "max",
@@ -10975,7 +10975,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             },
           },
         },
-        activeProvider: "claudeAgent",
+        activeProvider: "claude",
       });
     } finally {
       await mounted.cleanup();
@@ -11208,7 +11208,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it.each(["omnimind", "pi"] as const)(
+  it.each(["oa", "pi"] as const)(
     "keeps a no-model Pi terminal rename local when the app default is %s",
     async (defaultProvider) => {
       const draftThreadId = ThreadId.makeUnsafe(`thread-terminal-pi-rename-${defaultProvider}`);
@@ -11299,15 +11299,15 @@ describe("ChatView timeline estimator parity (full app)", () => {
           mentions: [],
           queuedTurns: [],
           modelSelectionByProvider: {
-            claudeAgent: {
-              provider: "claudeAgent",
+            claude: {
+              provider: "claude",
               model: "claude-opus-4-6",
               options: {
                 effort: "max",
               },
             },
           },
-          activeProvider: "claudeAgent",
+          activeProvider: "claude",
           runtimeMode: null,
           interactionMode: null,
         },
@@ -11395,7 +11395,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             worktreePath: "/repo/project/.worktrees/terminal-title",
             runtimeMode: "approval-required",
             modelSelection: {
-              provider: "claudeAgent",
+              provider: "claude",
               model: "claude-opus-4-6",
               options: {
                 effort: "max",

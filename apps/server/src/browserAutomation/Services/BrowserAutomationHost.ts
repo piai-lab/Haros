@@ -1,7 +1,7 @@
 import type {
   BrowserToolName,
   EngineWebSurfacePresentationContext,
-  ProviderKind,
+  EngineKind,
   ThreadId,
 } from "@harnessos/contracts";
 import { ServiceMap, type Effect } from "effect";
@@ -10,7 +10,7 @@ import type { BrowserHostRpcError } from "../browserHostRpcClient.ts";
 
 export interface BrowserAutomationHostCall {
   readonly sessionKey: string;
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly threadId: ThreadId;
   readonly name: BrowserToolName;
   readonly arguments: Record<string, unknown>;

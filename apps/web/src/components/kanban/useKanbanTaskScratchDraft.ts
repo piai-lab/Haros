@@ -3,7 +3,7 @@
 // Layer: Kanban UI hook
 // Exports: useKanbanTaskScratchDraft
 
-import type { ModelSlug, ProviderKind } from "@harnessos/contracts";
+import type { ModelSlug, EngineKind } from "@harnessos/contracts";
 import { getDefaultModel } from "@harnessos/shared/model";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -24,7 +24,7 @@ import {
 import { buildModelSelection } from "../../providerModelOptions";
 import { toastManager } from "../ui/toast";
 
-export function useKanbanTaskScratchDraft(input: { readonly defaultProvider: ProviderKind }) {
+export function useKanbanTaskScratchDraft(input: { readonly defaultProvider: EngineKind }) {
   // Scratch composer draft backing the dialog: model/effort/speed state lives in
   // the composer draft store under this throwaway thread id, exactly like chat.
   const [scratchThreadId] = useState(() => newThreadId());
@@ -53,7 +53,7 @@ export function useKanbanTaskScratchDraft(input: { readonly defaultProvider: Pro
   const stickyModelSelectionByProvider = useComposerDraftStore(
     (state) => state.stickyModelSelectionByProvider,
   );
-  const selectedProvider: ProviderKind =
+  const selectedProvider: EngineKind =
     scratchDraft.activeProvider ?? stickyActiveProvider ?? input.defaultProvider;
   const draftModelSelection =
     scratchDraft.modelSelectionByProvider[selectedProvider] ??
@@ -62,13 +62,11 @@ export function useKanbanTaskScratchDraft(input: { readonly defaultProvider: Pro
     draftModelSelection?.model ?? getDefaultModel(selectedProvider);
   const selectedProviderModelOptions = draftModelSelection?.options;
   const selectedModelSupportsAutoMode =
-    draftModelSelection?.provider === "claudeAgent"
-      ? draftModelSelection.supportsAutoMode
-      : undefined;
+    draftModelSelection?.provider === "claude" ? draftModelSelection.supportsAutoMode : undefined;
 
   const previousSelectedProviderRef = useRef<{
     threadId: string;
-    provider: ProviderKind;
+    provider: EngineKind;
   } | null>(null);
 
   useEffect(() => {
@@ -103,7 +101,7 @@ export function useKanbanTaskScratchDraft(input: { readonly defaultProvider: Pro
   }, [scratchThreadId, selectedProvider]);
 
   const handleProviderModelChange = (
-    provider: ProviderKind,
+    provider: EngineKind,
     model: ModelSlug,
     supportsAutoMode?: boolean,
   ) => {

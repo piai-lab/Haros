@@ -6,7 +6,7 @@
 import {
   type ModelSlug,
   type ProviderAgentDescriptor,
-  type ProviderKind,
+  type EngineKind,
   type ProviderModelDescriptor,
   type ProviderModelOptions,
   type ThreadId,
@@ -30,7 +30,7 @@ import { getComposerTraitSelection, hasVisibleComposerTraitControls } from "./co
 import { getRuntimeAwareModelCapabilities } from "./runtimeModelCapabilities";
 
 export type ComposerProviderStateInput = {
-  provider: ProviderKind;
+  provider: EngineKind;
   model: ModelSlug | null;
   runtimeModel?: ProviderModelDescriptor | undefined;
   prompt: string;
@@ -38,9 +38,9 @@ export type ComposerProviderStateInput = {
 };
 
 export type ComposerProviderState = {
-  provider: ProviderKind;
+  provider: EngineKind;
   promptEffort: string | null;
-  modelOptionsForDispatch: ProviderModelOptions[ProviderKind] | undefined;
+  modelOptionsForDispatch: ProviderModelOptions[EngineKind] | undefined;
   composerFrameClassName?: string;
   composerSurfaceClassName?: string;
   modelPickerIconClassName?: string;
@@ -52,7 +52,7 @@ type ProviderTraitRenderInput = {
   runtimeModel?: ProviderModelDescriptor | undefined;
   runtimeModels?: ReadonlyArray<ProviderModelDescriptor> | null | undefined;
   runtimeAgents?: ReadonlyArray<ProviderAgentDescriptor> | null | undefined;
-  modelOptions: ProviderModelOptions[ProviderKind] | undefined;
+  modelOptions: ProviderModelOptions[EngineKind] | undefined;
   prompt: string;
   includeFastMode?: boolean;
   onPromptChange: (prompt: string) => void;
@@ -72,7 +72,7 @@ type ProviderRegistryEntry = {
 };
 
 function renderTraitsMenuContentForProvider(
-  provider: ProviderKind,
+  provider: EngineKind,
   input: ProviderTraitRenderInput,
 ): ReactNode {
   return (
@@ -93,7 +93,7 @@ function renderTraitsMenuContentForProvider(
 }
 
 function renderTraitsPickerForProvider(
-  provider: ProviderKind,
+  provider: EngineKind,
   input: ProviderTraitPickerRenderInput,
 ): ReactNode {
   return (
@@ -122,7 +122,7 @@ function getProviderStateFromCapabilities(
   const caps = getRuntimeAwareModelCapabilities({ provider, model, runtimeModel });
 
   let rawEffort: string | null = null;
-  let normalizedOptions: ProviderModelOptions[ProviderKind] | undefined;
+  let normalizedOptions: ProviderModelOptions[EngineKind] | undefined;
 
   switch (provider) {
     case "codex": {
@@ -148,8 +148,8 @@ function getProviderStateFromCapabilities(
       normalizedOptions = Object.keys(nextOptions).length > 0 ? nextOptions : undefined;
       break;
     }
-    case "claudeAgent": {
-      const providerOptions = modelOptions?.claudeAgent;
+    case "claude": {
+      const providerOptions = modelOptions?.claude;
       rawEffort = trimOrNull(providerOptions?.effort);
       normalizedOptions = normalizeClaudeModelOptions(model, providerOptions);
       break;
@@ -208,9 +208,9 @@ function getProviderStateFromCapabilities(
       normalizedOptions = normalizeOpenCodeModelOptions(providerOptions);
       break;
     }
-    case "omnimind":
+    case "oa":
     case "pi": {
-      const providerOptions = provider === "omnimind" ? modelOptions?.omnimind : modelOptions?.pi;
+      const providerOptions = provider === "oa" ? modelOptions?.oa : modelOptions?.pi;
       rawEffort = trimOrNull(providerOptions?.thinkingLevel);
       normalizedOptions = normalizePiModelOptions(providerOptions);
       break;
@@ -251,21 +251,21 @@ function getProviderStateFromCapabilities(
   };
 }
 
-const composerProviderRegistry: Record<ProviderKind, ProviderRegistryEntry> = {
-  omnimind: {
+const composerProviderRegistry: Record<EngineKind, ProviderRegistryEntry> = {
+  oa: {
     getState: (input) => getProviderStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("omnimind", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForProvider("omnimind", input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("oa", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForProvider("oa", input),
   },
   codex: {
     getState: (input) => getProviderStateFromCapabilities(input),
     renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("codex", input),
     renderTraitsPicker: (input) => renderTraitsPickerForProvider("codex", input),
   },
-  claudeAgent: {
+  claude: {
     getState: (input) => getProviderStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("claudeAgent", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForProvider("claudeAgent", input),
+    renderTraitsMenuContent: (input) => renderTraitsMenuContentForProvider("claude", input),
+    renderTraitsPicker: (input) => renderTraitsPickerForProvider("claude", input),
   },
   cursor: {
     getState: (input) => getProviderStateFromCapabilities(input),
@@ -309,13 +309,13 @@ export function getComposerProviderState(input: ComposerProviderStateInput): Com
 }
 
 export function renderProviderTraitsMenuContent(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   threadId: ThreadId;
   model: ModelSlug;
   runtimeModel?: ProviderModelDescriptor | undefined;
   runtimeModels?: ReadonlyArray<ProviderModelDescriptor> | null | undefined;
   runtimeAgents?: ReadonlyArray<ProviderAgentDescriptor> | null | undefined;
-  modelOptions: ProviderModelOptions[ProviderKind] | undefined;
+  modelOptions: ProviderModelOptions[EngineKind] | undefined;
   prompt: string;
   includeFastMode?: boolean;
   onPromptChange: (prompt: string) => void;
@@ -342,13 +342,13 @@ export function renderProviderTraitsMenuContent(input: {
 }
 
 export function renderProviderTraitsPicker(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   threadId: ThreadId;
   model: ModelSlug;
   runtimeModel?: ProviderModelDescriptor | undefined;
   runtimeModels?: ReadonlyArray<ProviderModelDescriptor> | null | undefined;
   runtimeAgents?: ReadonlyArray<ProviderAgentDescriptor> | null | undefined;
-  modelOptions: ProviderModelOptions[ProviderKind] | undefined;
+  modelOptions: ProviderModelOptions[EngineKind] | undefined;
   prompt: string;
   includeFastMode?: boolean;
   open?: boolean;

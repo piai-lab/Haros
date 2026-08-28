@@ -76,7 +76,7 @@ describe("agent gateway MCP protocol", () => {
     assert.deepEqual(result.capabilities, { tools: { listChanged: false } });
     assert.equal(result.instructions, "use the tools");
     assert.deepEqual(result.serverInfo, {
-      name: "omnimind",
+      name: "oa",
       title: "OmniMind App Control",
       version: "1.2.3",
     });

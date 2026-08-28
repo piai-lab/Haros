@@ -416,7 +416,7 @@ describe("provider runtime activity projection", () => {
     ];
     expect(absent.map(projectProviderRuntimeActivities)).toEqual([[], [], []]);
 
-    for (const provider of ["codex", "antigravity", "omnimind", "pi"] as const) {
+    for (const provider of ["codex", "antigravity", "oa", "pi"] as const) {
       for (const lifecycle of ["item.updated", "item.completed"] as const) {
         const [activity] = projectProviderRuntimeActivities(
           runtimeEvent({
@@ -790,7 +790,7 @@ describe("provider runtime activity projection", () => {
       runtimeEvent({
         type: "thread.token-usage.updated",
         eventId: "context-usage",
-        provider: "claudeAgent",
+        provider: "claude",
         payload: { usage: { usedTokens: 1_200, maxTokens: 200_000, usedPercent: 0.6 } },
       }),
     );
@@ -800,7 +800,7 @@ describe("provider runtime activity projection", () => {
         usedTokens: 1_200,
         maxTokens: 200_000,
         usedPercent: 0.6,
-        provider: "claudeAgent",
+        provider: "claude",
       },
     });
 
@@ -808,7 +808,7 @@ describe("provider runtime activity projection", () => {
       runtimeEvent({
         type: "session.configured",
         eventId: "context-configured",
-        provider: "claudeAgent",
+        provider: "claude",
         payload: { config: { autoCompactWindow: "1m" } },
       }),
     );
@@ -821,7 +821,7 @@ describe("provider runtime activity projection", () => {
       runtimeEvent({
         type: "session.configured",
         eventId: "legacy-context-configured",
-        provider: "claudeAgent",
+        provider: "claude",
         payload: { config: { contextWindow: "200k" } },
       }),
     );
@@ -834,7 +834,7 @@ describe("provider runtime activity projection", () => {
       runtimeEvent({
         type: "session.configured",
         eventId: "cleared-context-configured",
-        provider: "claudeAgent",
+        provider: "claude",
         payload: { config: { autoCompactWindow: null } },
       }),
     );
@@ -847,7 +847,7 @@ describe("provider runtime activity projection", () => {
       runtimeEvent({
         type: "turn.completed",
         eventId: "turn-usage",
-        provider: "claudeAgent",
+        provider: "claude",
         turnId: TURN_ID,
         payload: {
           state: "completed",

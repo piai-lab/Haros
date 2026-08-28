@@ -6,7 +6,7 @@ import {
   type CanonicalUserInputSettlement,
   EventId,
   type ProviderInteractionMode,
-  type ProviderKind,
+  type EngineKind,
   type ProviderListCommandsResult,
   type ProviderRuntimeEvent,
   type ProviderSession,
@@ -100,7 +100,7 @@ import { providerExecutionStructure } from "../providerExecutionStructure.ts";
 
 export { flattenOpenCodeCliModels, flattenOpenCodeModels, resolvePreferredOpenCodeModelProviders };
 
-type OpenCodeCompatibleProvider = Extract<ProviderKind, "opencode" | "kilo">;
+type OpenCodeCompatibleProvider = Extract<EngineKind, "opencode" | "kilo">;
 
 interface OpenCodeCompatibleAdapterConfig {
   readonly provider: OpenCodeCompatibleProvider;

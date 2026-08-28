@@ -68,8 +68,8 @@ describe("provider settings projection", () => {
       ...DEFAULT_SERVER_SETTINGS_VIEW,
       providers: {
         ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
-        claudeAgent: {
-          ...DEFAULT_SERVER_SETTINGS_VIEW.providers.claudeAgent,
+        claude: {
+          ...DEFAULT_SERVER_SETTINGS_VIEW.providers.claude,
           binaryPath: "/usr/local/bin/claude",
         },
         codex: {
@@ -85,7 +85,7 @@ describe("provider settings projection", () => {
     };
 
     expect(getProviderStartOptions(settings)).toMatchObject({
-      claudeAgent: { binaryPath: "/usr/local/bin/claude" },
+      claude: { binaryPath: "/usr/local/bin/claude" },
       codex: { homePath: "/Users/you/.codex" },
       cursor: {
         binaryPath: "/usr/local/bin/agent",

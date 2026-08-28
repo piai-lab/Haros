@@ -5,7 +5,7 @@ import {
   type NativeApi,
   type OrchestrationShellSnapshot,
   type ProviderInteractionMode,
-  type ProviderKind,
+  type EngineKind,
   type ProviderNativeCommandDescriptor,
   type ProviderModelOptions,
   type RuntimeMode,
@@ -13,7 +13,7 @@ import {
   type ThreadId,
   WsRpcError,
 } from "@harnessos/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { deriveAssociatedWorktreeMetadata } from "@harnessos/shared/threadWorkspace";
 import { Schema } from "effect";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -137,14 +137,14 @@ export function useComposerSlashCommands(input: {
   canOfferCompactCommand: boolean;
   canOfferForkCommand: boolean;
   canOfferSideCommand: boolean;
-  sidechatTargetProviders: ReadonlyArray<ProviderKind>;
+  sidechatTargetProviders: ReadonlyArray<EngineKind>;
   canOfferExportCommand: boolean;
   supportsTextNativeReviewCommand: boolean;
   fastModeEnabled: boolean;
   providerNativeCommands: readonly ProviderNativeCommandDescriptor[];
   providerCommandDiscoveryCwd: string | null;
-  selectedProvider: ProviderKind;
-  currentProviderModelOptions: ProviderModelOptions[ProviderKind] | undefined;
+  selectedProvider: EngineKind;
+  currentProviderModelOptions: ProviderModelOptions[EngineKind] | undefined;
   selectedModelSelection: ModelSelection | null;
   environmentMode: string | null;
   runtimeMode: RuntimeMode;
@@ -158,8 +158,8 @@ export function useComposerSlashCommands(input: {
   openReviewTargetPicker: () => void;
   setComposerDraftProviderModelOptions: (
     threadId: ThreadId,
-    provider: ProviderKind,
-    nextProviderOptions: ProviderModelOptions[ProviderKind],
+    provider: EngineKind,
+    nextProviderOptions: ProviderModelOptions[EngineKind],
     options?: { model?: string | null; persistSticky?: boolean },
   ) => void;
   editorActions: {
@@ -621,7 +621,7 @@ export function useComposerSlashCommands(input: {
 
   const sidechatCreationByKeyRef = useRef(new Map<string, SidechatCreationFlight>());
   const createSidechatFromSlashCommand = useCallback(
-    (inputOptions?: { initialPrompt?: string; targetProvider?: ProviderKind }): Promise<true> => {
+    (inputOptions?: { initialPrompt?: string; targetProvider?: EngineKind }): Promise<true> => {
       if (!selectedModelSelection) {
         toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
         return Promise.resolve(true);
@@ -885,14 +885,14 @@ export function useComposerSlashCommands(input: {
 
     try {
       const result = await api.provider.listCommands({
-        provider: "claudeAgent",
+        provider: "claude",
         cwd: providerCommandDiscoveryCwd,
         threadId,
         forceReload: true,
       });
       if (
         hasProviderNativeSlashCommand(
-          "claudeAgent",
+          "claude",
           result.commands.map((command) => command.name),
           "fast",
         )
@@ -974,7 +974,7 @@ export function useComposerSlashCommands(input: {
   const handleStandaloneSlashCommand = useCallback(
     async (trimmed: string): Promise<boolean> => {
       const fastSlashAction = parseFastSlashCommandAction(trimmed);
-      if (selectedProvider === "claudeAgent" && fastSlashAction !== null) {
+      if (selectedProvider === "claude" && fastSlashAction !== null) {
         if (await checkClaudeFastSlashCommandAvailability()) {
           return false;
         }
@@ -1123,7 +1123,7 @@ export function useComposerSlashCommands(input: {
           toastManager.add({
             type: "warning",
             title: t("composer.sideProviderUnavailableTitle", {
-              provider: PROVIDER_DISPLAY_NAMES[unavailableProvider],
+              provider: ENGINE_DISPLAY_NAMES[unavailableProvider],
             }),
             description: t("composer.sideProviderUnavailableDescription"),
           });

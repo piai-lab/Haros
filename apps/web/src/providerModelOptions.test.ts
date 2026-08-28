@@ -38,8 +38,8 @@ describe("Antigravity model options", () => {
 
 describe("Claude model selections", () => {
   it("preserves the discovered Auto capability with the selected model", () => {
-    expect(buildModelSelection("claudeAgent", "claude-haiku-4-5", undefined, false)).toEqual({
-      provider: "claudeAgent",
+    expect(buildModelSelection("claude", "claude-haiku-4-5", undefined, false)).toEqual({
+      provider: "claude",
       model: "claude-haiku-4-5",
       supportsAutoMode: false,
     });
@@ -227,7 +227,7 @@ describe("mergeDynamicModelOptions", () => {
   it("orders discovered Claude models by the canonical catalog", () => {
     expect(
       mergeDynamicModelOptions({
-        provider: "claudeAgent",
+        provider: "claude",
         staticOptions: [
           { slug: "claude-fable-5", name: "Claude Fable 5" },
           { slug: "claude-opus-5", name: "Claude Opus 5" },
@@ -255,7 +255,7 @@ describe("mergeDynamicModelOptions", () => {
   it("keeps newly discovered unknown Claude models at the top", () => {
     expect(
       mergeDynamicModelOptions({
-        provider: "claudeAgent",
+        provider: "claude",
         staticOptions: [
           { slug: "claude-fable-5", name: "Claude Fable 5" },
           { slug: "claude-opus-5", name: "Claude Opus 5" },

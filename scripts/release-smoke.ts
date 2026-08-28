@@ -94,7 +94,7 @@ function verifyCanonicalIdentity(): void {
     );
   }
   const expectedBinaries = {
-    omnimind: "dist/index.mjs",
+    oa: "dist/index.mjs",
     "harnessos-restore-migration-backup": "dist/restoreMigrationBackup.mjs",
   };
   if (JSON.stringify(serverPackage.bin ?? {}) !== JSON.stringify(expectedBinaries)) {

@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process";
 
 import type {
   OrchestrationEvent,
-  ProviderKind,
+  EngineKind,
   ProviderRuntimeEvent,
   ProviderSession,
 } from "@harnessos/contracts";
@@ -65,7 +65,7 @@ const asTurnId = (value: string): TurnId => TurnId.makeUnsafe(value);
 type LegacyProviderRuntimeEvent = {
   readonly type: string;
   readonly eventId: EventId;
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly createdAt: string;
   readonly threadId: ThreadId;
   readonly turnId?: string | undefined;
@@ -313,7 +313,7 @@ describe("CheckpointReactor", () => {
     readonly projectWorkspaceRoot?: string;
     readonly threadWorktreePath?: string | null;
     readonly providerSessionCwd?: string;
-    readonly providerName?: ProviderKind;
+    readonly providerName?: EngineKind;
     readonly providerStatus?: ProviderSession["status"];
     readonly providerActiveTurnId?: TurnId;
     readonly hasInitialCommit?: boolean;
@@ -1037,7 +1037,7 @@ describe("CheckpointReactor", () => {
   it("captures pre-turn and completion checkpoints for claude runtime events", async () => {
     const harness = await createHarness({
       seedFilesystemCheckpoints: false,
-      providerName: "claudeAgent",
+      providerName: "claude",
     });
     const createdAt = new Date().toISOString();
 
@@ -1049,7 +1049,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "claudeAgent",
+          providerName: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -1062,7 +1062,7 @@ describe("CheckpointReactor", () => {
     harness.provider.emit({
       type: "turn.started",
       eventId: EventId.makeUnsafe("evt-turn-started-claude-1"),
-      provider: "claudeAgent",
+      provider: "claude",
       createdAt: new Date().toISOString(),
       threadId: ThreadId.makeUnsafe("thread-1"),
       turnId: asTurnId("turn-claude-1"),
@@ -1076,7 +1076,7 @@ describe("CheckpointReactor", () => {
     harness.provider.emit({
       type: "turn.completed",
       eventId: EventId.makeUnsafe("evt-turn-completed-claude-1"),
-      provider: "claudeAgent",
+      provider: "claude",
       createdAt: new Date().toISOString(),
       threadId: ThreadId.makeUnsafe("thread-1"),
       turnId: asTurnId("turn-claude-1"),
@@ -1098,7 +1098,7 @@ describe("CheckpointReactor", () => {
   it("derives a live turn-diff placeholder from git for claude file edits mid-turn", async () => {
     const harness = await createHarness({
       seedFilesystemCheckpoints: false,
-      providerName: "claudeAgent",
+      providerName: "claude",
     });
     const threadId = ThreadId.makeUnsafe("thread-1");
     const turnId = asTurnId("turn-claude-live");
@@ -1112,7 +1112,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId,
           status: "running",
-          providerName: "claudeAgent",
+          providerName: "claude",
           runtimeMode: "approval-required",
           activeTurnId: turnId,
           lastError: null,
@@ -1125,7 +1125,7 @@ describe("CheckpointReactor", () => {
     harness.provider.emit({
       type: "turn.started",
       eventId: EventId.makeUnsafe("evt-turn-started-claude-live"),
-      provider: "claudeAgent",
+      provider: "claude",
       createdAt: new Date().toISOString(),
       threadId,
       turnId,
@@ -1137,7 +1137,7 @@ describe("CheckpointReactor", () => {
     harness.provider.emit({
       type: "item.completed",
       eventId: EventId.makeUnsafe("evt-item-file-change-live"),
-      provider: "claudeAgent",
+      provider: "claude",
       createdAt: new Date().toISOString(),
       threadId,
       turnId,
@@ -1169,7 +1169,7 @@ describe("CheckpointReactor", () => {
     harness.provider.emit({
       type: "turn.completed",
       eventId: EventId.makeUnsafe("evt-turn-completed-claude-live"),
-      provider: "claudeAgent",
+      provider: "claude",
       createdAt: new Date().toISOString(),
       threadId,
       turnId,
@@ -1438,7 +1438,7 @@ describe("CheckpointReactor", () => {
   it("undoes turn files without trimming chat or rolling back the Claude conversation", async () => {
     const harness = await createHarness({
       seedFilesystemCheckpoints: false,
-      providerName: "claudeAgent",
+      providerName: "claude",
     });
     const createdAt = new Date().toISOString();
     const threadId = ThreadId.makeUnsafe("thread-1");
@@ -1508,7 +1508,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId,
           status: "ready",
-          providerName: "claudeAgent",
+          providerName: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,
@@ -2447,7 +2447,7 @@ describe("CheckpointReactor", () => {
   });
 
   it("executes provider revert and emits thread.reverted for claude sessions", async () => {
-    const harness = await createHarness({ providerName: "claudeAgent" });
+    const harness = await createHarness({ providerName: "claude" });
     const createdAt = new Date().toISOString();
 
     await Effect.runPromise(
@@ -2458,7 +2458,7 @@ describe("CheckpointReactor", () => {
         session: {
           threadId: ThreadId.makeUnsafe("thread-1"),
           status: "ready",
-          providerName: "claudeAgent",
+          providerName: "claude",
           runtimeMode: "approval-required",
           activeTurnId: null,
           lastError: null,

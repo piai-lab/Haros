@@ -391,12 +391,12 @@ const makeServerProgram = (input: CliInput) =>
     yield* Effect.forkChild(
       Effect.gen(function* () {
         const settings = yield* serverSettings.getSettings;
-        if (settings.providers.claudeAgent.enabled === false) {
+        if (settings.providers.claude.enabled === false) {
           return;
         }
         yield* Effect.sync(() =>
           startClaudeCredentialKeepalive({
-            binaryPath: settings.providers.claudeAgent.binaryPath,
+            binaryPath: settings.providers.claude.binaryPath,
             homeDir: config.homeDir,
             log: (message) => Effect.runFork(Effect.logInfo(message)),
           }),
@@ -515,7 +515,7 @@ const mcpIntegrationFlag = Flag.string("integration").pipe(
 // context. This avoids a duplicate `--home-dir` flag between the root command
 // and its MCP subcommands, which the Effect CLI assigns to the parent and
 // leaves the subcommand flag unset.
-const baseServerCommand = Command.make("omnimind", {
+const baseServerCommand = Command.make("oa", {
   mode: modeFlag,
   port: portFlag,
   host: hostFlag,

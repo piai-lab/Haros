@@ -139,17 +139,17 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("ProviderSessionDirectoryL
       const threadId = ThreadId.makeUnsafe("thread-runtime-replace");
 
       yield* directory.upsert({
-        provider: "omnimind",
+        provider: "oa",
         threadId,
         status: "starting",
         lifecycleGeneration: "failed-target-generation",
         runtimePayload: {
           agentGatewayCredentialRotationRequired: true,
-          replacementTargetProvider: "omnimind",
+          replacementTargetProvider: "oa",
         },
       });
       yield* directory.replace({
-        provider: "omnimind",
+        provider: "oa",
         threadId,
         status: "starting",
         lifecycleGeneration: "restore-generation",
@@ -175,8 +175,8 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("ProviderSessionDirectoryL
 
       yield* runtimeRepository.upsert({
         threadId,
-        providerName: "claudeAgent",
-        adapterKey: "claudeAgent",
+        providerName: "claude",
+        adapterKey: "claude",
         runtimeMode: "full-access",
         status: "running",
         lifecycleGeneration: "legacy-test-claude",

@@ -1,10 +1,10 @@
-// FILE: providerMetadata.ts
-// Purpose: Exhaustive credential-blind provider presentation metadata.
+// FILE: engineMetadata.ts
+// Purpose: The exhaustive, credential-blind identity owner for top-level Agent Engines.
 
-import type { ProviderKind } from "@harnessos/contracts";
+import type { EngineKind } from "@harnessos/contracts";
 
-export interface ProviderDescriptor {
-  readonly kind: ProviderKind;
+export interface EngineDescriptor {
+  readonly kind: EngineKind;
   readonly displayName: string;
   readonly usage: {
     readonly signInCommand: string;
@@ -12,19 +12,19 @@ export interface ProviderDescriptor {
   } | null;
 }
 
-type ExhaustiveProviderDescriptors<Descriptors extends readonly ProviderDescriptor[]> =
-  Exclude<ProviderKind, Descriptors[number]["kind"]> extends never ? Descriptors : never;
+type ExhaustiveEngineDescriptors<Descriptors extends readonly EngineDescriptor[]> =
+  Exclude<EngineKind, Descriptors[number]["kind"]> extends never ? Descriptors : never;
 
-function defineProviderDescriptors<const Descriptors extends readonly ProviderDescriptor[]>(
-  descriptors: ExhaustiveProviderDescriptors<Descriptors>,
+function defineEngineDescriptors<const Descriptors extends readonly EngineDescriptor[]>(
+  descriptors: ExhaustiveEngineDescriptors<Descriptors>,
 ): Descriptors {
   return descriptors;
 }
 
-export const PROVIDER_DESCRIPTORS = defineProviderDescriptors([
+export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   {
-    kind: "omnimind",
-    displayName: "OmniMind",
+    kind: "oa",
+    displayName: "OA",
     usage: null,
   },
   {
@@ -36,7 +36,7 @@ export const PROVIDER_DESCRIPTORS = defineProviderDescriptors([
     },
   },
   {
-    kind: "claudeAgent",
+    kind: "claude",
     displayName: "Claude",
     usage: {
       signInCommand: "claude",
@@ -94,16 +94,16 @@ export const PROVIDER_DESCRIPTORS = defineProviderDescriptors([
   {
     kind: "pi",
     displayName: "Pi",
-    // Stock Pi private state is intentionally isolated. OmniMind must not discover or read
+    // Stock Pi private state is intentionally isolated. HarnessOS must not discover or read
     // ~/.pi merely to populate a background settings panel.
     usage: null,
   },
-] as const satisfies readonly ProviderDescriptor[]);
+] as const satisfies readonly EngineDescriptor[]);
 
-export const PROVIDER_DESCRIPTOR_BY_KIND = Object.fromEntries(
-  PROVIDER_DESCRIPTORS.map((descriptor) => [descriptor.kind, descriptor]),
-) as Record<ProviderKind, (typeof PROVIDER_DESCRIPTORS)[number]>;
+export const ENGINE_DESCRIPTOR_BY_KIND = Object.fromEntries(
+  ENGINE_DESCRIPTORS.map((descriptor) => [descriptor.kind, descriptor]),
+) as Record<EngineKind, (typeof ENGINE_DESCRIPTORS)[number]>;
 
-export const PROVIDER_DISPLAY_NAMES: Readonly<Record<ProviderKind, string>> = Object.fromEntries(
-  PROVIDER_DESCRIPTORS.map((descriptor) => [descriptor.kind, descriptor.displayName]),
-) as Record<ProviderKind, string>;
+export const ENGINE_DISPLAY_NAMES: Readonly<Record<EngineKind, string>> = Object.fromEntries(
+  ENGINE_DESCRIPTORS.map((descriptor) => [descriptor.kind, descriptor.displayName]),
+) as Record<EngineKind, string>;

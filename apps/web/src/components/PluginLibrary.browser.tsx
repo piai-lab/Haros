@@ -186,8 +186,8 @@ describe("PluginLibrary OmniMind Agent packages", () => {
       id: threadId,
       projectId: "project-1",
       worktreePath: "/workspace",
-      modelSelection: { provider: "omnimind", model: "deepseek/model" },
-      session: { provider: "omnimind", status: "ready" },
+      modelSelection: { provider: "oa", model: "deepseek/model" },
+      session: { provider: "oa", status: "ready" },
     };
     fixture.sourceProject = { id: "project-1", cwd: "/workspace" };
     fixture.reload.mockResolvedValue({ state: "reloaded" });
@@ -201,7 +201,7 @@ describe("PluginLibrary OmniMind Agent packages", () => {
     await expect.poll(() => fixture.reload.mock.calls.length).toBe(1);
     expect(fixture.reload).toHaveBeenCalledWith({ threadId });
     expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: providerDiscoveryQueryKeys.modelsForProvider("omnimind"),
+      queryKey: providerDiscoveryQueryKeys.modelsForProvider("oa"),
     });
     await expect
       .poll(() => document.body.textContent)

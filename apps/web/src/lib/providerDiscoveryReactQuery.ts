@@ -3,7 +3,7 @@ import type {
   ProviderInteractionModeCapability,
   ProviderComposerCapabilities,
   ModelSelection,
-  ProviderKind,
+  EngineKind,
   ProviderListAgentsResult,
   ProviderListCommandsResult,
   ProviderListModelsResult,
@@ -49,21 +49,21 @@ const EMPTY_PLUGINS_RESULT: ProviderListPluginsResult = {
 };
 
 export function isProviderDiscoverySessionActive(input: {
-  readonly provider: ProviderKind;
-  readonly session: { readonly provider: ProviderKind; readonly status: string } | null | undefined;
+  readonly provider: EngineKind;
+  readonly session: { readonly provider: EngineKind; readonly status: string } | null | undefined;
 }): boolean {
   return input.session?.provider === input.provider && input.session.status !== "closed";
 }
 
 export const providerDiscoveryQueryKeys = {
   all: ["provider-discovery"] as const,
-  composerCapabilities: (provider: ProviderKind) =>
+  composerCapabilities: (provider: EngineKind) =>
     ["provider-discovery", "composer-capabilities", provider] as const,
   executionCapabilitiesAll: ["provider-discovery", "execution-capabilities"] as const,
   executionCapabilities: (modelSelection: ModelSelection) =>
     [...providerDiscoveryQueryKeys.executionCapabilitiesAll, modelSelection] as const,
   commands: (
-    provider: ProviderKind,
+    provider: EngineKind,
     cwd: string | null,
     agentDir: string | null,
     connectionKey: string | null,
@@ -83,17 +83,17 @@ export const providerDiscoveryQueryKeys = {
   // The skill list is query-independent (filtering is client-side), so the key
   // deliberately excludes the typed filter to avoid a refetch per keystroke.
   skills: (
-    provider: ProviderKind,
+    provider: EngineKind,
     cwd: string | null,
     agentDir: string | null,
     threadId: string | null = null,
     activeSession = false,
   ) => ["provider-discovery", "skills", provider, cwd, agentDir, threadId, activeSession] as const,
   skillsCatalog: (cwd: string | null) => ["provider-discovery", "skills-catalog", cwd] as const,
-  plugins: (provider: ProviderKind, cwd: string | null, threadId: string | null) =>
+  plugins: (provider: EngineKind, cwd: string | null, threadId: string | null) =>
     ["provider-discovery", "plugins", provider, cwd, threadId] as const,
   plugin: (
-    provider: ProviderKind,
+    provider: EngineKind,
     marketplacePath: string,
     pluginName: string,
     cwd: string | null,
@@ -101,21 +101,19 @@ export const providerDiscoveryQueryKeys = {
   ) =>
     ["provider-discovery", "plugin", provider, marketplacePath, pluginName, cwd, threadId] as const,
   models: (
-    provider: ProviderKind,
+    provider: EngineKind,
     binaryPath: string | null,
     apiEndpoint: string | null,
     agentDir: string | null,
     cwd: string | null,
   ) => ["provider-discovery", "models", provider, binaryPath, apiEndpoint, agentDir, cwd] as const,
-  modelsForProvider: (provider: ProviderKind) =>
-    ["provider-discovery", "models", provider] as const,
-  agentsForProvider: (provider: ProviderKind) =>
-    ["provider-discovery", "agents", provider] as const,
-  agents: (provider: ProviderKind, binaryPath: string | null, cwd: string | null) =>
+  modelsForProvider: (provider: EngineKind) => ["provider-discovery", "models", provider] as const,
+  agentsForProvider: (provider: EngineKind) => ["provider-discovery", "agents", provider] as const,
+  agents: (provider: EngineKind, binaryPath: string | null, cwd: string | null) =>
     [...providerDiscoveryQueryKeys.agentsForProvider(provider), binaryPath, cwd] as const,
 };
 
-export function providerComposerCapabilitiesQueryOptions(provider: ProviderKind) {
+export function providerComposerCapabilitiesQueryOptions(provider: EngineKind) {
   return queryOptions({
     queryKey: providerDiscoveryQueryKeys.composerCapabilities(provider),
     queryFn: async () => {
@@ -161,7 +159,7 @@ export function isProviderInteractionModeExecutable(
 }
 
 export function providerSkillsQueryOptions(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   cwd: string | null;
   threadId?: string | null;
   activeSession?: boolean;
@@ -214,7 +212,7 @@ export function skillsCatalogQueryOptions(input?: { cwd?: string | null; enabled
 }
 
 export function providerCommandsQueryOptions(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   cwd: string | null;
   threadId?: string | null;
   activeSession?: boolean;
@@ -339,7 +337,7 @@ export function providerCatalogDiscoveryRetryDelay(attemptIndex: number, error: 
 }
 
 export function providerModelsQueryOptions(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   binaryPath?: string | null;
   apiEndpoint?: string | null;
   agentDir?: string | null;
@@ -351,7 +349,7 @@ export function providerModelsQueryOptions(input: {
   // Keeping a Project cwd in the query identity would therefore repeat the same
   // expensive runtime catalog load for every Project and briefly replace an
   // authoritative catalog with a cold placeholder during navigation.
-  const discoveryCwd = input.provider === "omnimind" ? null : (input.cwd ?? null);
+  const discoveryCwd = input.provider === "oa" ? null : (input.cwd ?? null);
   return queryOptions({
     queryKey: providerDiscoveryQueryKeys.models(
       input.provider,
@@ -391,7 +389,7 @@ export function providerModelsQueryOptions(input: {
 }
 
 export function providerAgentsQueryOptions(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   binaryPath?: string | null;
   cwd?: string | null;
   enabled?: boolean;
@@ -423,7 +421,7 @@ export function providerAgentsQueryOptions(input: {
 }
 
 export function providerPluginsQueryOptions(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   cwd: string | null;
   threadId?: string | null;
   enabled?: boolean;

@@ -350,7 +350,7 @@ export class DeviceManager {
     // A device booted for a new purpose is no longer idle-condemned.
     this.clearIdleTimer(udid);
     await this.publishAllThreads();
-    return { kind: "booted", device: { ...device, bootSource: "omnimind" } };
+    return { kind: "booted", device: { ...device, bootSource: "oa" } };
   }
 
   async shutdown(udid: string): Promise<void> {
@@ -820,7 +820,7 @@ export class DeviceManager {
    * here, so the pane always sees geometry once the device has been attached.
    */
   private describe(device: DeviceDescriptor): DeviceDescriptor {
-    const bootSource = this.omnimindBooted.has(device.udid) ? "omnimind" : device.bootSource;
+    const bootSource = this.omnimindBooted.has(device.udid) ? "oa" : device.bootSource;
     const geometry = this.backend.geometry(device.udid) ?? device.geometry;
     if (bootSource === device.bootSource && geometry === device.geometry) return device;
     return { ...device, bootSource, ...(geometry ? { geometry } : {}) };

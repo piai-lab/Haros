@@ -319,11 +319,11 @@ describe("store facade", () => {
   it("renames a project locally without changing its remote or folder names", () => {
     const state = makeState(makeThread());
 
-    const next = renameProjectLocally(state, ProjectId.makeUnsafe("project-1"), "omnimind");
+    const next = renameProjectLocally(state, ProjectId.makeUnsafe("project-1"), "oa");
 
     expect(next.projects[0]).toMatchObject({
-      name: "omnimind",
-      localName: "omnimind",
+      name: "oa",
+      localName: "oa",
       remoteName: "Project",
       folderName: "project",
     });
@@ -450,7 +450,7 @@ describe("store facade", () => {
     const aliasedState = renameProjectLocally(
       makeState(makeThread()),
       ProjectId.makeUnsafe("project-1"),
-      "omnimind",
+      "oa",
     );
 
     const next = syncServerReadModel(
@@ -463,8 +463,8 @@ describe("store facade", () => {
     );
 
     expect(next.projects[0]).toMatchObject({
-      name: "omnimind",
-      localName: "omnimind",
+      name: "oa",
+      localName: "oa",
       remoteName: "Project",
       folderName: "project",
     });
@@ -491,7 +491,7 @@ describe("store facade", () => {
       "harnessos:renderer-state:v8",
       JSON.stringify({
         projectNamesByCwd: {
-          "/tmp/project": "omnimind",
+          "/tmp/project": "oa",
         },
       }),
     );
@@ -506,8 +506,8 @@ describe("store facade", () => {
         projects: [
           makeProject({
             id: projectId,
-            name: "omnimind",
-            localName: "omnimind",
+            name: "oa",
+            localName: "oa",
           }),
         ],
         sidebarThreadSummaryById: {},
@@ -571,12 +571,12 @@ describe("store facade", () => {
         threadsHydrated: true,
       }));
 
-      freshStore.useStore.getState().renameProjectLocally(projectId, "omnimind");
+      freshStore.useStore.getState().renameProjectLocally(projectId, "oa");
 
       expect(setItem).toHaveBeenCalled();
       expect(JSON.parse(storage.get("harnessos:renderer-state:v8") ?? "{}")).toMatchObject({
         projectNamesByCwd: {
-          "/tmp/project": "omnimind",
+          "/tmp/project": "oa",
         },
       });
     } finally {

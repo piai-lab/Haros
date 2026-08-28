@@ -6,10 +6,10 @@
 import {
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   type DesktopAppIcon,
-  type ProviderKind,
+  type EngineKind,
   type ServerSettingsPatch,
 } from "@harnessos/contracts";
-import { PROVIDER_DESCRIPTORS, PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { ENGINE_DESCRIPTORS, ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { sameAppSnapShortcut } from "@harnessos/shared/appSnapShortcut";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
@@ -128,15 +128,15 @@ import { SETTINGS_PAGE_BACKGROUND_CLASS_NAME } from "../settingsPanelStyles";
 
 // ── Settings taxonomy ──────────────────────────────────────────────────────
 
-const PROVIDER_SELECT_OPTIONS = PROVIDER_DESCRIPTORS.map((descriptor) => descriptor.kind);
+const PROVIDER_SELECT_OPTIONS = ENGINE_DESCRIPTORS.map((descriptor) => descriptor.kind);
 const GIT_WRITING_DISCOVERY_PROVIDERS = ["codex", "kilo", "opencode"] as const;
 
 // ── Settings UI primitives ────────────────────────────────────────────────
 
 // Shared settings controls live in ~/components/settings/SettingControls.
 
-function isProviderSelectOption(value: string): value is ProviderKind {
-  return PROVIDER_SELECT_OPTIONS.includes(value as ProviderKind);
+function isProviderSelectOption(value: string): value is EngineKind {
+  return PROVIDER_SELECT_OPTIONS.includes(value as EngineKind);
 }
 
 // Keys of LocalPreferences whose value is a plain boolean — the only ones that can be
@@ -241,7 +241,7 @@ function SettingsRouteView() {
     ...serverConfigQueryOptions(),
     enabled: activeSection === "general",
   });
-  const gitWritingModelHintByProvider = useMemo<Partial<Record<ProviderKind, string | null>>>(
+  const gitWritingModelHintByProvider = useMemo<Partial<Record<EngineKind, string | null>>>(
     () => ({
       [currentGitTextGenerationProvider]: currentGitTextGenerationModel,
     }),
@@ -709,16 +709,13 @@ function SettingsRouteView() {
               valueContent={
                 <ProviderOptionLabel
                   provider={activeServerSettings.defaultProvider}
-                  label={PROVIDER_DISPLAY_NAMES[activeServerSettings.defaultProvider]}
+                  label={ENGINE_DISPLAY_NAMES[activeServerSettings.defaultProvider]}
                 />
               }
             >
               {PROVIDER_SELECT_OPTIONS.map((provider) => (
                 <SelectItem hideIndicator key={provider} value={provider}>
-                  <ProviderOptionLabel
-                    provider={provider}
-                    label={PROVIDER_DISPLAY_NAMES[provider]}
-                  />
+                  <ProviderOptionLabel provider={provider} label={ENGINE_DISPLAY_NAMES[provider]} />
                 </SelectItem>
               ))}
             </SettingsSelectControl>
@@ -919,7 +916,7 @@ function SettingsRouteView() {
                   onValueChange={(value) => {
                     const separatorIndex = value.indexOf(":");
                     if (separatorIndex <= 0 || separatorIndex === value.length - 1) return;
-                    const provider = value.slice(0, separatorIndex) as ProviderKind;
+                    const provider = value.slice(0, separatorIndex) as EngineKind;
                     const model = value.slice(separatorIndex + 1);
                     if (!PROVIDER_SELECT_OPTIONS.includes(provider)) return;
                     void updateServerSettings({
@@ -936,7 +933,7 @@ function SettingsRouteView() {
                       key={`${option.provider}:${option.slug}`}
                       value={`${option.provider}:${option.slug}`}
                     >
-                      {PROVIDER_DISPLAY_NAMES[option.provider]} / {option.name}
+                      {ENGINE_DISPLAY_NAMES[option.provider]} / {option.name}
                     </SelectItem>
                   ))}
                 </SettingsSelectControl>

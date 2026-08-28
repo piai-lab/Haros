@@ -5,7 +5,7 @@
 
 import type {
   EngineWebSurfacePresentationContext,
-  ProviderKind,
+  EngineKind,
   ThreadId,
 } from "@harnessos/contracts";
 import { parseEngineWebSurfaceThemeSnapshot } from "@harnessos/contracts";
@@ -20,7 +20,7 @@ const REDACTED_ENGINE_WEB_SURFACE = "[OmniMind Browser temporary page]";
 export type EngineWebSurfaceStatus = "waiting-for-user" | "unavailable" | "completed";
 
 export interface EngineWebSurfaceIntentIdentity {
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly threadId: ThreadId;
   readonly toolCallId: string;
 }

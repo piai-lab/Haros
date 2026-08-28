@@ -186,7 +186,7 @@ describe("ProfileStatsQuery", () => {
               'thread-claude',
               'project-profile',
               'Claude Thread',
-              '{"provider":"claudeAgent","model":"claude-sonnet-4-6","options":{"effort":"max"}}',
+              '{"provider":"claude","model":"claude-sonnet-4-6","options":{"effort":"max"}}',
               'full-access',
               'default',
               'local',
@@ -287,7 +287,7 @@ describe("ProfileStatsQuery", () => {
               'thread.turn-start-requested',
               '2026-06-14T10:05:00.000Z',
               'client',
-              '{"threadId":"thread-claude","modelSelection":{"provider":"claudeAgent","model":"claude-sonnet-4-6","options":{"effort":"max"}}}',
+              '{"threadId":"thread-claude","modelSelection":{"provider":"claude","model":"claude-sonnet-4-6","options":{"effort":"max"}}}',
               '{}'
             )
         `;
@@ -324,7 +324,7 @@ describe("ProfileStatsQuery", () => {
             ),
             (
               'thread-reused-agent', 'project-profile', 'Agent Thread',
-              '{"provider":"claudeAgent","model":"claude-sonnet-4-6"}', 'full-access',
+              '{"provider":"claude","model":"claude-sonnet-4-6"}', 'full-access',
               'default', 'local', '2026-06-13T10:00:00.000Z',
               '2026-06-13T10:00:00.000Z', NULL
             )
@@ -357,7 +357,7 @@ describe("ProfileStatsQuery", () => {
             (
               'event-reused-agent', 'thread', 'thread-reused-agent', 1,
               'thread.turn-start-requested', ${recentNow}, 'system',
-              '{"threadId":"thread-reused-agent","messageId":"shared-message-id","modelSelection":{"provider":"claudeAgent","model":"claude-sonnet-4-6"}}', '{}'
+              '{"threadId":"thread-reused-agent","messageId":"shared-message-id","modelSelection":{"provider":"claude","model":"claude-sonnet-4-6"}}', '{}'
             )
         `;
 
@@ -413,7 +413,7 @@ describe("ProfileStatsQuery", () => {
               'thread-claude',
               'project-profile',
               'Claude Thread',
-              '{"provider":"claudeAgent","model":"claude-sonnet-4-6"}',
+              '{"provider":"claude","model":"claude-sonnet-4-6"}',
               'full-access',
               'default',
               'local',
@@ -466,7 +466,7 @@ describe("ProfileStatsQuery", () => {
               'thread.turn-start-requested',
               '2026-06-13T10:05:00.000Z',
               'client',
-              '{"threadId":"thread-claude","modelSelection":{"provider":"claudeAgent","model":"claude-sonnet-4-6"}}',
+              '{"threadId":"thread-claude","modelSelection":{"provider":"claude","model":"claude-sonnet-4-6"}}',
               '{}'
             )
         `;
@@ -548,7 +548,7 @@ describe("ProfileStatsQuery", () => {
               'thread-switch',
               'project-profile',
               'Switch Thread',
-              '{"provider":"claudeAgent","model":"claude-opus-4-8"}',
+              '{"provider":"claude","model":"claude-opus-4-8"}',
               'full-access',
               'default',
               'local',
@@ -591,7 +591,7 @@ describe("ProfileStatsQuery", () => {
               'thread.turn-start-requested',
               '2026-06-13T09:01:00.000Z',
               'client',
-              '{"threadId":"thread-switch","messageId":"message-switch-1","modelSelection":{"provider":"claudeAgent","model":"claude-fable-5"}}',
+              '{"threadId":"thread-switch","messageId":"message-switch-1","modelSelection":{"provider":"claude","model":"claude-fable-5"}}',
               '{}'
             ),
             (
@@ -602,7 +602,7 @@ describe("ProfileStatsQuery", () => {
               'thread.turn-start-requested',
               '2026-06-13T09:20:00.000Z',
               'client',
-              '{"threadId":"thread-switch","messageId":"message-switch-2","modelSelection":{"provider":"claudeAgent","model":"claude-opus-4-8"}}',
+              '{"threadId":"thread-switch","messageId":"message-switch-2","modelSelection":{"provider":"claude","model":"claude-opus-4-8"}}',
               '{}'
             )
         `;
@@ -793,7 +793,7 @@ describe("ProfileStatsQuery", () => {
               'thread.turn-start-requested',
               '2026-06-13T12:10:00.000Z',
               'client',
-              '{"threadId":"thread-hybrid","messageId":"message-hybrid-claude","modelSelection":{"provider":"claudeAgent","model":"claude-haiku-4-5"}}',
+              '{"threadId":"thread-hybrid","messageId":"message-hybrid-claude","modelSelection":{"provider":"claude","model":"claude-haiku-4-5"}}',
               '{}'
             )
         `;
@@ -1487,7 +1487,7 @@ describe("ProfileStatsQuery", () => {
               'info',
               'context-window.updated',
               'tokens updated',
-              '{"totalProcessedTokens":1000,"provider":"claudeAgent"}',
+              '{"totalProcessedTokens":1000,"provider":"claude"}',
               1,
               '2026-06-14T09:05:00.000Z'
             ),
@@ -1498,7 +1498,7 @@ describe("ProfileStatsQuery", () => {
               'info',
               'context-window.updated',
               'tokens updated',
-              '{"totalProcessedTokens":1500,"provider":"claudeAgent"}',
+              '{"totalProcessedTokens":1500,"provider":"claude"}',
               2,
               '2026-06-14T09:10:00.000Z'
             )

@@ -138,7 +138,7 @@ describe("assistant turn provenance hot-path merge", () => {
     pendingMessageId,
     turnId: null,
     modelSelection: {
-      provider: "omnimind" as const,
+      provider: "oa" as const,
       model: "deepseek/deepseek-v4-pro",
     },
     requestedAt,

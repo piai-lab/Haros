@@ -19,14 +19,14 @@ import {
   type ProviderOptionSelection,
   type PiModelOptions,
   type PiThinkingLevel,
-  type ProviderKind,
+  type EngineKind,
   type ProviderWithDefaultModel,
   CodexReasoningEffort,
 } from "@harnessos/contracts";
 
-const MODEL_SLUG_SET_BY_PROVIDER: Record<ProviderKind, ReadonlySet<ModelSlug>> = {
-  omnimind: new Set<ModelSlug>(),
-  claudeAgent: new Set(MODEL_OPTIONS_BY_PROVIDER.claudeAgent.map((option) => option.slug)),
+const MODEL_SLUG_SET_BY_PROVIDER: Record<EngineKind, ReadonlySet<ModelSlug>> = {
+  oa: new Set<ModelSlug>(),
+  claude: new Set(MODEL_OPTIONS_BY_PROVIDER.claude.map((option) => option.slug)),
   codex: new Set(MODEL_OPTIONS_BY_PROVIDER.codex.map((option) => option.slug)),
   cursor: new Set(MODEL_OPTIONS_BY_PROVIDER.cursor.map((option) => option.slug)),
   // Antigravity's built-in list is intentionally empty; its CLI supplies the live catalog.
@@ -59,18 +59,18 @@ export const EMPTY_MODEL_CAPABILITIES: ModelCapabilities = {
   promptInjectedEffortLevels: [],
   contextWindowOptions: [],
 };
-export function getModelOptions(provider: ProviderKind = "codex") {
+export function getModelOptions(provider: EngineKind = "codex") {
   return MODEL_OPTIONS_BY_PROVIDER[provider];
 }
 
-function hasDefaultModel(provider: ProviderKind): provider is ProviderWithDefaultModel {
-  return provider !== "omnimind" && provider !== "pi";
+function hasDefaultModel(provider: EngineKind): provider is ProviderWithDefaultModel {
+  return provider !== "oa" && provider !== "pi";
 }
 
-export function getDefaultModel(provider: "omnimind" | "pi"): null;
+export function getDefaultModel(provider: "oa" | "pi"): null;
 export function getDefaultModel(provider?: ProviderWithDefaultModel): ModelSlug;
-export function getDefaultModel(provider: ProviderKind): ModelSlug | null;
-export function getDefaultModel(provider: ProviderKind = "codex"): ModelSlug | null {
+export function getDefaultModel(provider: EngineKind): ModelSlug | null;
+export function getDefaultModel(provider: EngineKind = "codex"): ModelSlug | null {
   return hasDefaultModel(provider) ? DEFAULT_MODEL_BY_PROVIDER[provider] : null;
 }
 
@@ -280,21 +280,21 @@ function withProviderOptionCurrentValue(
   return { ...descriptor, currentValue };
 }
 
-function reasoningDescriptorId(provider: ProviderKind): string {
-  if (provider === "claudeAgent") {
+function reasoningDescriptorId(provider: EngineKind): string {
+  if (provider === "claude") {
     return "effort";
   }
   if (provider === "kilo" || provider === "opencode") {
     return "variant";
   }
-  if (provider === "pi" || provider === "omnimind") {
+  if (provider === "pi" || provider === "oa") {
     return "thinkingLevel";
   }
   return "reasoningEffort";
 }
 
 function legacyCapabilityDescriptors(
-  provider: ProviderKind,
+  provider: EngineKind,
   caps: ModelCapabilities,
 ): ProviderOptionDescriptor[] {
   const primaryOptions =
@@ -358,7 +358,7 @@ function legacyCapabilityDescriptors(
 }
 
 export function getProviderOptionDescriptors(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   caps: ModelCapabilities;
   selections?: ProviderOptionSelectionsInput;
 }): ReadonlyArray<ProviderOptionDescriptor> {
@@ -418,7 +418,7 @@ export function buildProviderOptionSelectionsFromDescriptors(
 // ── Data-driven capability resolver ───────────────────────────────────
 
 export function getModelCapabilities(
-  provider: ProviderKind,
+  provider: EngineKind,
   model: string | null | undefined,
 ): ModelCapabilities {
   const slug = normalizeModelSlug(model, provider);
@@ -482,7 +482,7 @@ export function isClaudeUltrathinkPrompt(text: string | null | undefined): boole
 
 export function normalizeModelSlug(
   model: string | null | undefined,
-  provider: ProviderKind = "codex",
+  provider: EngineKind = "codex",
 ): ModelSlug | null {
   if (typeof model !== "string") {
     return null;
@@ -493,8 +493,7 @@ export function normalizeModelSlug(
     return null;
   }
 
-  const providerScopedModel =
-    provider === "claudeAgent" ? trimmed.replace(/\[[^\]]+\]$/u, "") : trimmed;
+  const providerScopedModel = provider === "claude" ? trimmed.replace(/\[[^\]]+\]$/u, "") : trimmed;
   const aliases = MODEL_SLUG_ALIASES_BY_PROVIDER[provider] as Record<string, ModelSlug>;
   const aliased = Object.prototype.hasOwnProperty.call(aliases, providerScopedModel)
     ? aliases[providerScopedModel]
@@ -503,7 +502,7 @@ export function normalizeModelSlug(
 }
 
 export function resolveSelectableModel(
-  provider: ProviderKind,
+  provider: EngineKind,
   value: string | null | undefined,
   options: ReadonlyArray<SelectableModelOption>,
 ): ModelSlug | null {
@@ -537,7 +536,7 @@ export function resolveSelectableModel(
 
 export function resolveModelSlug(
   model: string | null | undefined,
-  provider: ProviderKind = "codex",
+  provider: EngineKind = "codex",
 ): ModelSlug | null {
   const normalized = normalizeModelSlug(model, provider);
   if (!hasDefaultModel(provider)) {
@@ -553,7 +552,7 @@ export function resolveModelSlug(
 }
 
 export function resolveModelSlugForProvider(
-  provider: ProviderKind,
+  provider: EngineKind,
   model: string | null | undefined,
 ): ModelSlug | null {
   return resolveModelSlug(model, provider);
@@ -585,7 +584,7 @@ export function normalizeClaudeModelOptions(
   model: string | null | undefined,
   modelOptions: ClaudeModelOptions | null | undefined,
 ): ClaudeModelOptions | undefined {
-  const caps = getModelCapabilities("claudeAgent", model);
+  const caps = getModelCapabilities("claude", model);
   const defaultReasoningEffort = getDefaultEffort(caps);
   const defaultAutoCompactWindow = getDefaultAutoCompactWindow(caps);
   const resolvedEffort = trimOrNull(modelOptions?.effort);
@@ -644,8 +643,8 @@ interface ClaudeSpawnProfile {
 // the flag-settings `effortLevel` key caps at xhigh). Every other effort level
 // plus fastMode/ultracode are Settings keys applied live via the SDK's
 // flag-settings control, and model/context window switch via `setModel`.
-function claudeSpawnProfile(selection: Extract<ModelSelection, { provider: "claudeAgent" }>) {
-  const caps = getModelCapabilities("claudeAgent", selection.model);
+function claudeSpawnProfile(selection: Extract<ModelSelection, { provider: "claude" }>) {
+  const caps = getModelCapabilities("claude", selection.model);
   const requestedEffort = trimOrNull(selection.options?.effort ?? null);
   const effort = requestedEffort && hasEffortLevel(caps, requestedEffort) ? requestedEffort : null;
   return {
@@ -666,7 +665,7 @@ export function claudeSelectionRequiresRestart(
   previous: ModelSelection | undefined,
   next: ModelSelection,
 ): boolean {
-  if (next.provider !== "claudeAgent") {
+  if (next.provider !== "claude") {
     return false;
   }
   if (previous === undefined) {
@@ -674,7 +673,7 @@ export function claudeSelectionRequiresRestart(
     // same selection source, so treat it as unchanged rather than replaying.
     return false;
   }
-  if (previous.provider !== "claudeAgent") {
+  if (previous.provider !== "claude") {
     return true;
   }
   // Normalize against each model before deciding a model-only switch is live:

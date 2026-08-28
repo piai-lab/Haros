@@ -7,7 +7,7 @@
 import type {
   AssistantDeliveryMode,
   ProjectId,
-  ProviderKind,
+  EngineKind,
   ProviderStartOptions,
   ThreadEnvironmentMode,
   ThreadId,
@@ -66,7 +66,7 @@ export type KanbanDraftDispatchResult =
 
 export async function dispatchKanbanDraftCard(input: {
   card: KanbanCard;
-  defaultProvider: ProviderKind;
+  defaultProvider: EngineKind;
   assistantDeliveryMode: AssistantDeliveryMode;
   providerOptions?: ProviderStartOptions | undefined;
 }): Promise<KanbanDraftDispatchResult> {
@@ -92,7 +92,7 @@ interface KanbanDraftDispatchInput {
   projectId: ProjectId;
   /** Backing summary; null for local-only draft threads not yet promoted. */
   thread: SidebarThreadSummary | null;
-  defaultProvider: ProviderKind;
+  defaultProvider: EngineKind;
   assistantDeliveryMode: AssistantDeliveryMode;
   providerOptions?: ProviderStartOptions | undefined;
 }

@@ -1,7 +1,7 @@
 import {
   resolveAgentAlias,
   type ClaudeSubagentAliasDefinition,
-  type ProviderKind,
+  type EngineKind,
   type ResolvedAgentAlias,
 } from "@harnessos/contracts";
 
@@ -50,7 +50,7 @@ function readBalancedTask(
 
 export function parseAgentMentionInvocations(
   text: string,
-  provider: ProviderKind,
+  provider: EngineKind,
 ): ReadonlyArray<ParsedAgentMentionInvocation> {
   const invocations: ParsedAgentMentionInvocation[] = [];
 
@@ -108,7 +108,7 @@ export function buildClaudeSubagentPrompt(text: string): {
     }
   >;
 } {
-  const invocations = parseAgentMentionInvocations(text, "claudeAgent").filter(
+  const invocations = parseAgentMentionInvocations(text, "claude").filter(
     (
       invocation,
     ): invocation is ParsedAgentMentionInvocation & {

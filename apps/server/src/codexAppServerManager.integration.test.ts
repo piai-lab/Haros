@@ -1326,7 +1326,7 @@ describe("handleStdoutLine", () => {
       }
     ).handleStdoutLine.bind(manager);
 
-    for (const line of ["{", "[", '{"scripts": {', "{}", "[]", '{"name":"omnimind"}']) {
+    for (const line of ["{", "[", '{"scripts": {', "{}", "[]", '{"name":"oa"}']) {
       handleStdoutLine(context, line);
     }
 

@@ -80,7 +80,7 @@ function runningThread(overrides: Partial<OrchestrationThread> = {}): Orchestrat
     session: {
       threadId: ThreadId.makeUnsafe("thread-1"),
       status: "running",
-      providerName: "claudeAgent",
+      providerName: "claude",
       runtimeMode: "approval-required",
       activeTurnId: TurnId.makeUnsafe("turn-1"),
       lastError: null,
@@ -154,7 +154,7 @@ describe("quit resume one-shot record", () => {
   it("reads the exact turn admission and strips private provider locations", async () => {
     const rawProviderOptions = {
       codex: { binaryPath: "/private/codex", homePath: "/private/provider-home" },
-      claudeAgent: {
+      claude: {
         binaryPath: "/private/claude",
         permissionMode: "default",
         maxThinkingTokens: 24_000,
@@ -169,7 +169,7 @@ describe("quit resume one-shot record", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         messageId: "message-1",
         modelSelection: {
-          provider: "claudeAgent",
+          provider: "claude",
           model: "claude-opus-4-1",
           options: { thinking: true, effort: "max" },
         },
@@ -188,12 +188,12 @@ describe("quit resume one-shot record", () => {
 
     await expect(readExactQuitResumeBinding(eventStore, runningThread())).resolves.toEqual({
       modelSelection: {
-        provider: "claudeAgent",
+        provider: "claude",
         model: "claude-opus-4-1",
         options: { thinking: true, effort: "max" },
       },
       providerOptions: {
-        claudeAgent: { permissionMode: "default", maxThinkingTokens: 24_000 },
+        claude: { permissionMode: "default", maxThinkingTokens: 24_000 },
       },
       reviewTarget: { type: "baseBranch", branch: "main" },
       assistantDeliveryMode: "streaming",

@@ -46,7 +46,7 @@ const thread: SidebarThreadSummary = {
   projectId: project.id,
   groupIds: [firstGroupId],
   title: "Polish conversation groups",
-  modelSelection: { provider: "omnimind", model: "mimo-v2-pro" },
+  modelSelection: { provider: "oa", model: "mimo-v2-pro" },
   interactionMode: "default",
   branch: null,
   worktreePath: null,

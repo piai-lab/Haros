@@ -12,7 +12,7 @@ import {
   MessageId,
   OrchestrationCommand,
   ORCHESTRATION_WS_METHODS,
-  ProviderKind,
+  EngineKind,
   type ThreadHandoffImportedMessage,
 } from "@harnessos/contracts";
 import { createHash, randomUUID } from "node:crypto";
@@ -1105,11 +1105,11 @@ const makeOrchestrationEngine = Effect.gen(function* () {
               );
               const sessionProvider = thread?.session?.providerName;
               const provider =
-                sessionProvider !== undefined && Schema.is(ProviderKind)(sessionProvider)
+                sessionProvider !== undefined && Schema.is(EngineKind)(sessionProvider)
                   ? sessionProvider
                   : (thread?.modelSelection.provider ??
                     turnCommand.modelSelection?.provider ??
-                    "omnimind");
+                    "oa");
               return {
                 provider,
                 supportsNativeTurnSteering:

@@ -9,7 +9,7 @@ import type {
   ModelSelection,
   ProjectId,
   ProviderInteractionMode,
-  ProviderKind,
+  EngineKind,
   ProviderStartOptions,
   RuntimeMode,
   ThreadId,
@@ -63,7 +63,7 @@ export function createKanbanDraftTask(input: KanbanDraftTaskInput): ThreadId {
  */
 export async function createAndSendKanbanTask(
   input: KanbanDraftTaskInput & {
-    defaultProvider: ProviderKind;
+    defaultProvider: EngineKind;
     assistantDeliveryMode: AssistantDeliveryMode;
     providerOptions?: ProviderStartOptions | undefined;
   },

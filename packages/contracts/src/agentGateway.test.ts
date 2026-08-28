@@ -62,7 +62,7 @@ describe("agent gateway contracts", () => {
           {
             prompt: "invalid",
             target: {
-              provider: "claudeAgent",
+              provider: "claude",
               model: "claude-sonnet-5",
               options: { reasoningEffort: "low" },
             },

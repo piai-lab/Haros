@@ -6,7 +6,7 @@
  *
  * @module providerStatusCache
  */
-import { PROVIDER_KINDS, ServerProviderStatus } from "@harnessos/contracts";
+import { ENGINE_KINDS, ServerProviderStatus } from "@harnessos/contracts";
 import { Cause, Effect, FileSystem, Schema } from "effect";
 import { writeFileStringAtomically } from "../atomicWrite";
 
@@ -15,7 +15,7 @@ const decodeProviderStatusCache = Schema.decodeUnknownEffect(
 );
 
 const providerOrderRank = (provider: ServerProviderStatus["provider"]): number => {
-  const rank = PROVIDER_KINDS.indexOf(provider);
+  const rank = ENGINE_KINDS.indexOf(provider);
   return rank === -1 ? Number.MAX_SAFE_INTEGER : rank;
 };
 

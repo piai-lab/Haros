@@ -152,9 +152,9 @@ function hangingSpawnerLayer(input: {
 
 const allProvidersDisabledSettings = {
   providers: {
-    omnimind: { enabled: false },
+    oa: { enabled: false },
     codex: { enabled: false },
-    claudeAgent: { enabled: false },
+    claude: { enabled: false },
     cursor: { enabled: false },
     antigravity: { enabled: false },
     grok: { enabled: false },
@@ -168,9 +168,9 @@ const allProvidersDisabledSettings = {
 const allProvidersDisabledServerSettings = {
   ...DEFAULT_SERVER_SETTINGS,
   providers: {
-    omnimind: { ...DEFAULT_SERVER_SETTINGS.providers.omnimind, enabled: false },
+    oa: { ...DEFAULT_SERVER_SETTINGS.providers.oa, enabled: false },
     codex: { ...DEFAULT_SERVER_SETTINGS.providers.codex, enabled: false },
-    claudeAgent: { ...DEFAULT_SERVER_SETTINGS.providers.claudeAgent, enabled: false },
+    claude: { ...DEFAULT_SERVER_SETTINGS.providers.claude, enabled: false },
     cursor: { ...DEFAULT_SERVER_SETTINGS.providers.cursor, enabled: false },
     antigravity: { ...DEFAULT_SERVER_SETTINGS.providers.antigravity, enabled: false },
     grok: { ...DEFAULT_SERVER_SETTINGS.providers.grok, enabled: false },
@@ -261,7 +261,7 @@ describe("passive provider presence", () => {
       return command === "codex" ? "/test/bin/codex" : null;
     });
 
-    assert.deepStrictEqual(presence, ["omnimind", "codex", "pi"]);
+    assert.deepStrictEqual(presence, ["oa", "codex", "pi"]);
     assert.deepStrictEqual(observedCommands, [
       "codex",
       "claude",
@@ -287,7 +287,7 @@ describe("passive provider presence", () => {
 it.layer(NodeServices.layer)("ProviderHealth", (it) => {
   describe("provider update commands", () => {
     it("delegates native Claude release-channel truth to Claude", () => {
-      const definition = PACKAGE_MANAGED_PROVIDER_UPDATES.claudeAgent;
+      const definition = PACKAGE_MANAGED_PROVIDER_UPDATES.claude;
       assert.ok(definition);
 
       const capabilities = resolvePackageManagedProviderMaintenance(definition, {
@@ -305,7 +305,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
     });
 
     it("keeps Claude's latest Homebrew cask source and command aligned", () => {
-      const definition = PACKAGE_MANAGED_PROVIDER_UPDATES.claudeAgent;
+      const definition = PACKAGE_MANAGED_PROVIDER_UPDATES.claude;
       assert.ok(definition);
 
       const capabilities = resolvePackageManagedProviderMaintenance(definition, {
@@ -780,7 +780,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
 
     it("keeps an already usable provider ready after a transient auth timeout warning", () => {
       const previousReadyClaude = {
-        provider: "claudeAgent",
+        provider: "claude",
         status: "ready",
         available: true,
         authStatus: "authenticated",
@@ -792,7 +792,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         [previousReadyClaude],
         [
           {
-            provider: "claudeAgent",
+            provider: "claude",
             status: "warning",
             available: true,
             authStatus: "unknown",
@@ -814,7 +814,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
 
     it("does not keep a stale Claude auth error after a transient auth timeout", () => {
       const previousUnauthenticatedClaude = {
-        provider: "claudeAgent",
+        provider: "claude",
         status: "error",
         available: true,
         authStatus: "unauthenticated",
@@ -823,7 +823,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         message: "Claude is not authenticated. Run `claude auth login` and try again.",
       } satisfies ServerProviderStatus;
       const authTimeoutWarning = {
-        provider: "claudeAgent",
+        provider: "claude",
         status: "warning",
         available: true,
         authStatus: "unknown",
@@ -1432,7 +1432,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
     it.effect("returns ready when claude is installed and authenticated", () =>
       Effect.gen(function* () {
         const status = yield* checkClaudeProviderStatus;
-        assert.strictEqual(status.provider, "claudeAgent");
+        assert.strictEqual(status.provider, "claude");
         assert.strictEqual(status.status, "ready");
         assert.strictEqual(status.available, true);
         assert.strictEqual(status.authStatus, "authenticated");
@@ -1578,7 +1578,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
             ),
           );
 
-          assert.strictEqual(status.provider, "claudeAgent");
+          assert.strictEqual(status.provider, "claude");
           assert.strictEqual(status.status, "ready");
           assert.strictEqual(status.authStatus, "authenticated");
         }),
@@ -1632,7 +1632,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         );
 
         assert.strictEqual(sdkProbeCalls, 1);
-        assert.strictEqual(status.provider, "claudeAgent");
+        assert.strictEqual(status.provider, "claude");
         assert.strictEqual(status.status, "ready");
         assert.strictEqual(status.authStatus, "authenticated");
         assert.strictEqual(status.authType, "max");
@@ -1680,7 +1680,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           ),
         );
 
-        assert.strictEqual(status.provider, "claudeAgent");
+        assert.strictEqual(status.provider, "claude");
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.authStatus, "unauthenticated");
         assert.strictEqual(status.authType, undefined);
@@ -1729,7 +1729,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
             ),
           );
 
-          assert.strictEqual(status.provider, "claudeAgent");
+          assert.strictEqual(status.provider, "claude");
           assert.strictEqual(status.status, "error");
           assert.strictEqual(status.authStatus, "unauthenticated");
           assert.strictEqual(status.authType, undefined);
@@ -1780,7 +1780,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           );
 
           assert.strictEqual(authStatusCalls, 2);
-          assert.strictEqual(status.provider, "claudeAgent");
+          assert.strictEqual(status.provider, "claude");
           assert.strictEqual(status.status, "ready");
           assert.strictEqual(status.authStatus, "authenticated");
           assert.strictEqual(status.authType, "max");
@@ -1820,7 +1820,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           );
 
           assert.strictEqual(authStatusCalls, 2);
-          assert.strictEqual(status.provider, "claudeAgent");
+          assert.strictEqual(status.provider, "claude");
           assert.strictEqual(status.status, "error");
           assert.strictEqual(status.authStatus, "unauthenticated");
           assert.match(status.message ?? "", /not authenticated/i);
@@ -1830,7 +1830,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
     it.effect("returns unavailable when claude is missing", () =>
       Effect.gen(function* () {
         const status = yield* checkClaudeProviderStatus;
-        assert.strictEqual(status.provider, "claudeAgent");
+        assert.strictEqual(status.provider, "claude");
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.authStatus, "unknown");
@@ -1845,7 +1845,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
     it.effect("returns error when version check fails with non-zero exit code", () =>
       Effect.gen(function* () {
         const status = yield* checkClaudeProviderStatus;
-        assert.strictEqual(status.provider, "claudeAgent");
+        assert.strictEqual(status.provider, "claude");
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.unavailableReason, undefined);
@@ -1864,7 +1864,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
     it.effect("returns unauthenticated when auth status reports not logged in", () =>
       Effect.gen(function* () {
         const status = yield* checkClaudeProviderStatus;
-        assert.strictEqual(status.provider, "claudeAgent");
+        assert.strictEqual(status.provider, "claude");
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, true);
         assert.strictEqual(status.authStatus, "unauthenticated");
@@ -1892,7 +1892,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
     it.effect("returns unauthenticated when output includes 'not logged in'", () =>
       Effect.gen(function* () {
         const status = yield* checkClaudeProviderStatus;
-        assert.strictEqual(status.provider, "claudeAgent");
+        assert.strictEqual(status.provider, "claude");
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, true);
         assert.strictEqual(status.authStatus, "unauthenticated");
@@ -1911,7 +1911,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
     it.effect("returns warning when auth status command is unsupported", () =>
       Effect.gen(function* () {
         const status = yield* checkClaudeProviderStatus;
-        assert.strictEqual(status.provider, "claudeAgent");
+        assert.strictEqual(status.provider, "claude");
         assert.strictEqual(status.status, "warning");
         assert.strictEqual(status.available, true);
         assert.strictEqual(status.authStatus, "unknown");

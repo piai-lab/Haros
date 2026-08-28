@@ -2,7 +2,7 @@ import {
   ThreadId,
   type BrowserToolName,
   type OrchestrationThreadShell,
-  type ProviderKind,
+  type EngineKind,
 } from "@harnessos/contracts";
 import { Effect, Option } from "effect";
 
@@ -12,7 +12,7 @@ import { makeAgentGatewayMcpTransport } from "../../src/agentGateway/mcpTranspor
 import { makeAgentGatewaySessionRegistry } from "../../src/agentGateway/Layers/AgentGatewaySessionRegistry";
 import { makeBrowserAutomationHost } from "../../src/browserAutomation/Layers/BrowserAutomationHost";
 
-const PROVIDER: ProviderKind = "codex";
+const PROVIDER: EngineKind = "codex";
 
 export interface McpCallResult {
   readonly content: ReadonlyArray<Record<string, unknown>>;

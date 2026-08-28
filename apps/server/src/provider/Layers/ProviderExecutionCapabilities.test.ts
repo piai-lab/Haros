@@ -1,4 +1,4 @@
-import type { ProviderKind, ServerProviderStatus } from "@harnessos/contracts";
+import type { EngineKind, ServerProviderStatus } from "@harnessos/contracts";
 import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 
@@ -22,7 +22,7 @@ const codexStatus: ServerProviderStatus = {
   checkedAt: "2026-08-25T00:00:00.000Z",
 };
 
-function makeLayer(registered: ReadonlySet<ProviderKind>) {
+function makeLayer(registered: ReadonlySet<EngineKind>) {
   const registry: ProviderAdapterRegistryShape = {
     getByProvider: (provider) =>
       registered.has(provider)

@@ -2180,7 +2180,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 const modelPrefix = `${input.serviceId}/`;
                 const ownsLiveSession = sessions.some(
                   (session) =>
-                    session.provider === "omnimind" &&
+                    session.provider === "oa" &&
                     session.model?.startsWith(modelPrefix) === true &&
                     (session.status === "connecting" ||
                       session.status === "ready" ||

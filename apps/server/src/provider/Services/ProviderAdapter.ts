@@ -14,7 +14,7 @@ import type {
   ProviderApprovalDecision,
   ProviderForkThreadInput,
   ProviderForkThreadResult,
-  ProviderKind,
+  EngineKind,
   ProviderListAgentsInput,
   ProviderListAgentsResult,
   ProviderListCommandsInput,
@@ -127,7 +127,7 @@ export interface ProviderAdapterShape<TError> {
   /**
    * Provider kind implemented by this adapter.
    */
-  readonly provider: ProviderKind;
+  readonly provider: EngineKind;
   readonly capabilities: ProviderAdapterCapabilities;
 
   /**

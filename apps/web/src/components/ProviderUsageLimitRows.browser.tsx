@@ -21,7 +21,7 @@ import { ProviderUsageLimitRows } from "./ProviderUsageLimitRows";
 
 const rows = deriveProviderUsageDisplayRows([
   {
-    provider: "claudeAgent",
+    provider: "claude",
     updatedAt: "2099-04-08T18:00:00.000Z",
     limits: [
       { window: "Weekly", usedPercent: 10 },

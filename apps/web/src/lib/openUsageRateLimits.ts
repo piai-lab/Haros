@@ -2,7 +2,7 @@
 // Purpose: Normalizes OpenUsage local HTTP snapshots into the shared rate-limit
 // model consumed by the local toolbar popover.
 
-import type { ProviderKind } from "@harnessos/contracts";
+import type { EngineKind } from "@harnessos/contracts";
 
 import type { ProviderRateLimit, RateLimitWindow } from "~/lib/rateLimits";
 import { normalizeRateLimitLabel } from "~/lib/rateLimits";
@@ -59,17 +59,17 @@ function toUsedPercent(line: OpenUsageProgressLine): number | undefined {
   return Math.min(100, Math.max(0, (used / limit) * 100));
 }
 
-function toProviderKind(providerId: string | undefined): ProviderKind | null {
+function toProviderKind(providerId: string | undefined): EngineKind | null {
   if (providerId === "codex") return "codex";
-  if (providerId === "claude") return "claudeAgent";
+  if (providerId === "claude") return "claude";
   return null;
 }
 
 export function openUsageProviderIdForProvider(
-  provider: ProviderKind | null | undefined,
+  provider: EngineKind | null | undefined,
 ): string | null {
   if (provider === "codex") return "codex";
-  if (provider === "claudeAgent") return "claude";
+  if (provider === "claude") return "claude";
   return null;
 }
 
@@ -108,7 +108,7 @@ function normalizeTextLine(line: OpenUsageTextLine): OpenUsageUsageLine | null {
 
 export function normalizeOpenUsageSnapshot(
   snapshot: unknown,
-  preferredProvider?: ProviderKind | null,
+  preferredProvider?: EngineKind | null,
 ): ProviderRateLimit | null {
   const parsed = asRecord(snapshot) as OpenUsageSnapshot | null;
   if (!parsed) return null;

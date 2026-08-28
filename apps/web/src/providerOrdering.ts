@@ -3,22 +3,22 @@
 // Layer: Web settings utility
 // Exports: default order, normalization, and order comparison helpers.
 
-import type { ProviderKind } from "@harnessos/contracts";
-import { PROVIDER_DESCRIPTORS } from "@harnessos/shared/providerMetadata";
+import type { EngineKind } from "@harnessos/contracts";
+import { ENGINE_DESCRIPTORS } from "@harnessos/shared/engineMetadata";
 
-export const DEFAULT_PROVIDER_ORDER: readonly ProviderKind[] = PROVIDER_DESCRIPTORS.map(
+export const DEFAULT_PROVIDER_ORDER: readonly EngineKind[] = ENGINE_DESCRIPTORS.map(
   (descriptor) => descriptor.kind,
 );
 
-const PROVIDER_KIND_SET: ReadonlySet<ProviderKind> = new Set(DEFAULT_PROVIDER_ORDER);
+const PROVIDER_KIND_SET: ReadonlySet<EngineKind> = new Set(DEFAULT_PROVIDER_ORDER);
 
-export function isProviderKind(value: string): value is ProviderKind {
-  return PROVIDER_KIND_SET.has(value as ProviderKind);
+export function isProviderKind(value: string): value is EngineKind {
+  return PROVIDER_KIND_SET.has(value as EngineKind);
 }
 
-export function normalizeHiddenProviders(hiddenProviders: ReadonlyArray<string>): ProviderKind[] {
-  const seen = new Set<ProviderKind>();
-  const result: ProviderKind[] = [];
+export function normalizeHiddenProviders(hiddenProviders: ReadonlyArray<string>): EngineKind[] {
+  const seen = new Set<EngineKind>();
+  const result: EngineKind[] = [];
   for (const candidate of hiddenProviders) {
     if (isProviderKind(candidate) && !seen.has(candidate)) {
       seen.add(candidate);
@@ -28,9 +28,9 @@ export function normalizeHiddenProviders(hiddenProviders: ReadonlyArray<string>)
   return result;
 }
 
-export function normalizeProviderOrder(providerOrder: ReadonlyArray<string>): ProviderKind[] {
-  const seen = new Set<ProviderKind>();
-  const result: ProviderKind[] = [];
+export function normalizeProviderOrder(providerOrder: ReadonlyArray<string>): EngineKind[] {
+  const seen = new Set<EngineKind>();
+  const result: EngineKind[] = [];
   for (const candidate of providerOrder) {
     if (isProviderKind(candidate) && !seen.has(candidate)) {
       seen.add(candidate);
@@ -46,16 +46,16 @@ export function normalizeProviderOrder(providerOrder: ReadonlyArray<string>): Pr
 }
 
 export function sameProviderOrder(
-  left: ReadonlyArray<ProviderKind>,
-  right: ReadonlyArray<ProviderKind>,
+  left: ReadonlyArray<EngineKind>,
+  right: ReadonlyArray<EngineKind>,
 ): boolean {
   return left.length === right.length && left.every((provider, index) => provider === right[index]);
 }
 
 export function compareProvidersByOrder(
-  providerOrder: ReadonlyArray<ProviderKind>,
-  left: ProviderKind,
-  right: ProviderKind,
+  providerOrder: ReadonlyArray<EngineKind>,
+  left: EngineKind,
+  right: EngineKind,
 ): number {
   const leftIndex = providerOrder.indexOf(left);
   const rightIndex = providerOrder.indexOf(right);
@@ -66,10 +66,10 @@ export function compareProvidersByOrder(
   return normalizedLeftIndex - normalizedRightIndex;
 }
 
-export function filterProviderOptionsByVisibility<T extends { value: ProviderKind }>(
+export function filterProviderOptionsByVisibility<T extends { value: EngineKind }>(
   options: ReadonlyArray<T>,
-  hiddenProviders: ReadonlySet<ProviderKind>,
-  protectedProviders: ReadonlySet<ProviderKind>,
+  hiddenProviders: ReadonlySet<EngineKind>,
+  protectedProviders: ReadonlySet<EngineKind>,
 ): ReadonlyArray<T> {
   if (hiddenProviders.size === 0) {
     return options;

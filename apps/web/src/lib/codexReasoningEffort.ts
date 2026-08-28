@@ -1,4 +1,4 @@
-import type { ProviderKind, ProviderModelDescriptor } from "@harnessos/contracts";
+import type { EngineKind, ProviderModelDescriptor } from "@harnessos/contracts";
 import { getModelCapabilities, hasEffortLevel, trimOrNull } from "@harnessos/shared/model";
 
 export type CodexReasoningEffortSupport = "supported" | "unsupported" | "unknown";
@@ -7,7 +7,7 @@ export type CodexReasoningEffortSupport = "supported" | "unsupported" | "unknown
 // models can still validate built-in efforts; genuinely unknown models remain open
 // to forward-compatible runtime-only values.
 export function classifyProviderReasoningEffortSupport(input: {
-  provider: ProviderKind;
+  provider: EngineKind;
   model: string | null | undefined;
   effort: string | null | undefined;
   runtimeModel?: ProviderModelDescriptor | undefined;

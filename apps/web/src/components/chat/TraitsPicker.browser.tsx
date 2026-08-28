@@ -45,13 +45,13 @@ function ClaudeTraitsPickerHarness(props: {
   const setPrompt = useComposerDraftStore((store) => store.setPrompt);
   const { modelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId: CLAUDE_THREAD_ID,
-    selectedProvider: "claudeAgent",
+    selectedProvider: "claude",
     threadModelSelection: props.fallbackModelSelection,
     projectModelSelection: null,
     customModelsByProvider: {
-      omnimind: [],
+      oa: [],
       codex: [],
-      claudeAgent: [],
+      claude: [],
       cursor: [],
       antigravity: [],
       grok: [],
@@ -61,7 +61,7 @@ function ClaudeTraitsPickerHarness(props: {
       pi: [],
     },
     availableModelOptionsByProvider: {
-      claudeAgent: [{ slug: props.model, name: props.model }],
+      claude: [{ slug: props.model, name: props.model }],
     },
   });
   const handlePromptChange = (nextPrompt: string) => {
@@ -70,11 +70,11 @@ function ClaudeTraitsPickerHarness(props: {
 
   return (
     <TraitsPicker
-      provider="claudeAgent"
+      provider="claude"
       threadId={CLAUDE_THREAD_ID}
       model={selectedModel ?? props.model}
       prompt={prompt}
-      modelOptions={modelOptions?.claudeAgent}
+      modelOptions={modelOptions?.claude}
       onPromptChange={handlePromptChange}
     />
   );
@@ -114,15 +114,15 @@ async function mountClaudePicker(props?: {
       modelSelectionByProvider: props?.skipDraftModelOptions
         ? {}
         : {
-            claudeAgent: {
-              provider: "claudeAgent",
+            claude: {
+              provider: "claude",
               model,
               ...(claudeOptions && Object.keys(claudeOptions).length > 0
                 ? { options: claudeOptions }
                 : {}),
             },
           },
-      activeProvider: "claudeAgent",
+      activeProvider: "claude",
       runtimeMode: null,
       interactionMode: null,
     },
@@ -137,7 +137,7 @@ async function mountClaudePicker(props?: {
   const fallbackModelSelection =
     props?.fallbackModelOptions !== undefined
       ? ({
-          provider: "claudeAgent",
+          provider: "claude",
           model,
           options: props.fallbackModelOptions ?? undefined,
         } satisfies ModelSelection)
@@ -302,10 +302,8 @@ describe("TraitsPicker (Claude)", () => {
     await page.getByRole("button").click();
     await page.getByRole("menuitemradio", { name: "Max" }).click();
 
-    expect(
-      useComposerDraftStore.getState().stickyModelSelectionByProvider.claudeAgent,
-    ).toMatchObject({
-      provider: "claudeAgent",
+    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.claude).toMatchObject({
+      provider: "claude",
       options: {
         effort: "max",
       },
@@ -334,8 +332,8 @@ describe("TraitsPicker (Claude)", () => {
 
     // A 1M thread can grow far beyond the normal compaction point: keep the explicit
     // thread choice, but never leak it into sticky defaults for future threads.
-    const sticky = useComposerDraftStore.getState().stickyModelSelectionByProvider.claudeAgent;
-    expect(sticky?.provider === "claudeAgent" ? sticky.options?.autoCompactWindow : undefined).toBe(
+    const sticky = useComposerDraftStore.getState().stickyModelSelectionByProvider.claude;
+    expect(sticky?.provider === "claude" ? sticky.options?.autoCompactWindow : undefined).toBe(
       undefined,
     );
   });
@@ -707,9 +705,9 @@ function OpenCodeTraitsPickerHarness(props: {
     threadModelSelection: props.fallbackModelSelection,
     projectModelSelection: null,
     customModelsByProvider: {
-      omnimind: [],
+      oa: [],
       codex: [],
-      claudeAgent: [],
+      claude: [],
       cursor: [],
       antigravity: [],
       grok: [],
@@ -955,9 +953,9 @@ describe("TraitsPicker (OpenCode)", () => {
 describe("TraitsPicker (Pi-backed thinking)", () => {
   it.each([
     { provider: "pi", locale: "en", trigger: "Options", label: "Thinking level" },
-    { provider: "omnimind", locale: "en", trigger: "Options", label: "Thinking level" },
+    { provider: "oa", locale: "en", trigger: "Options", label: "Thinking level" },
     { provider: "pi", locale: "zh-CN", trigger: "选项", label: "思考强度" },
-    { provider: "omnimind", locale: "zh-CN", trigger: "选项", label: "思考强度" },
+    { provider: "oa", locale: "zh-CN", trigger: "选项", label: "思考强度" },
   ] as const)("labels $provider native options truthfully in $locale", async (testCase) => {
     i18nHarness.settings.localePreference = testCase.locale;
     const host = document.createElement("div");

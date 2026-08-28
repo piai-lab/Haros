@@ -246,9 +246,7 @@ describe("packaged desktop verification", () => {
       expect(env[name]?.startsWith(root)).toBe(true);
       expect(existsSync(env[name]!)).toBe(true);
     }
-    expect(resolvePackagedProofUserDataPath(env)).toBe(
-      join(env.HARNESSOS_HOME!, "electron", "omnimind"),
-    );
+    expect(resolvePackagedProofUserDataPath(env)).toBe(join(env.HARNESSOS_HOME!, "electron", "oa"));
   });
 
   it("adds ephemeral loopback CDP arguments only to the journey launch", () => {

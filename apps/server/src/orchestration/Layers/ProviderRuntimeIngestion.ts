@@ -14,7 +14,7 @@ import {
   type OrchestrationThreadActivity,
   type OrchestrationThread,
   type OrchestrationThreadShell,
-  type ProviderKind,
+  type EngineKind,
   type ProviderRuntimeEvent,
 } from "@harnessos/contracts";
 import { Cache, Cause, Deferred, Duration, Effect, Layer, Option, Ref, Stream } from "effect";
@@ -340,16 +340,13 @@ function reasoningSummaryBufferKey(
   return null;
 }
 
-function supportsReadableReasoningProjection(provider: ProviderKind): boolean {
+function supportsReadableReasoningProjection(provider: EngineKind): boolean {
   return (
-    provider === "codex" ||
-    provider === "antigravity" ||
-    provider === "omnimind" ||
-    provider === "pi"
+    provider === "codex" || provider === "antigravity" || provider === "oa" || provider === "pi"
   );
 }
 
-function isReadableReasoningDelta(provider: ProviderKind, streamKind: string): boolean {
+function isReadableReasoningDelta(provider: EngineKind, streamKind: string): boolean {
   return provider === "codex"
     ? streamKind === "reasoning_summary_text"
     : supportsReadableReasoningProjection(provider) && streamKind === "reasoning_text";
@@ -3225,7 +3222,7 @@ const make = Effect.gen(function* () {
       const flushEvent: ProviderRuntimeEvent = {
         type: "turn.started",
         eventId: event.eventId,
-        provider: (steerProvider ?? "codex") as ProviderKind,
+        provider: (steerProvider ?? "codex") as EngineKind,
         createdAt: event.payload.createdAt,
         threadId: event.payload.threadId,
         turnId: deliveryTurnId,
