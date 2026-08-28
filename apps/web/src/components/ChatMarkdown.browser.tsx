@@ -17,8 +17,8 @@ import ChatMarkdown from "./ChatMarkdown";
 const TABLE_MARKDOWN = [
   "| Engine | Model | Input tokens | Output tokens | Cost |",
   "| --- | --- | ---: | ---: | ---: |",
-  "| Xiaomi MiMo | mimo-v2-omni-preview | 12,847,392 | 8,201,004 | $31.4297 |",
-  "| DeepSeek | deepseek-reasoner | 9,442,781 | 5,740,218 | $18.0721 |",
+  "| Engine A | model-v2-preview | 12,847,392 | 8,201,004 | $31.4297 |",
+  "| Engine B | model-reasoner | 9,442,781 | 5,740,218 | $18.0721 |",
 ].join("\n");
 const EMBEDDED_TABLE_MARKDOWN = ["Before", "", TABLE_MARKDOWN, "", "After"].join("\n");
 const COMPARISON_MARKDOWN = [
@@ -142,7 +142,7 @@ describe("ChatMarkdown table overflow", () => {
   it("keeps header and row surfaces distinct in both supported themes", async () => {
     await render(<ChatMarkdown text={TABLE_MARKDOWN} cwd={undefined} />);
     const header = page.getByRole("columnheader", { name: "Engine" }).element();
-    const bodyCell = page.getByText("Xiaomi MiMo").element();
+    const bodyCell = page.getByText("Engine A").element();
     const lightHeader = getComputedStyle(header).backgroundColor;
     const lightBody = getComputedStyle(bodyCell).backgroundColor;
     expect(lightHeader).not.toBe(lightBody);
@@ -158,7 +158,7 @@ describe("ChatMarkdown table overflow", () => {
     );
     await vi.waitFor(() => expect(document.documentElement.classList.contains("dark")).toBe(true));
     const darkHeader = page.getByRole("columnheader", { name: "Engine" }).element();
-    const darkBodyCell = page.getByText("Xiaomi MiMo").element();
+    const darkBodyCell = page.getByText("Engine A").element();
     await vi.waitFor(() =>
       expect(getComputedStyle(darkHeader).backgroundColor).not.toBe(lightHeader),
     );

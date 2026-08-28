@@ -164,7 +164,7 @@ body:has([data-testid="first-run-readiness-dialog"]) [data-slot="dialog-backdrop
   }
 
   /* The titlebar controls own most of the 13rem resize floor. Hide the product
-     wordmark there instead of degrading it into a clipped "Omni…" fragment; the
+     wordmark there instead of degrading it into a clipped fragment; the
      full mark returns once the resizable sidebar has enough real inline space. */
   .sidebar-product-wordmark {
     display: none;

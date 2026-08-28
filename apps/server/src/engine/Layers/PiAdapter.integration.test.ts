@@ -2281,7 +2281,7 @@ describe("getPiDiscoverableModels", () => {
         `Turn '${turnId}' did not settle.`,
       );
     try {
-      const omniLayer = makeOAAgentAdapterLive().pipe(
+      const oaLayer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
@@ -2365,7 +2365,7 @@ describe("getPiDiscoverableModels", () => {
             yield* Effect.promise(() => waitForTurn(events, chatTurn.turnId));
             yield* adapter.stopSession(chatThreadId);
             yield* Fiber.interrupt(eventsFiber);
-          }).pipe(Effect.provide(omniLayer)),
+          }).pipe(Effect.provide(oaLayer)),
         ),
       );
 
