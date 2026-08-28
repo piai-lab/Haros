@@ -6,9 +6,9 @@
 - Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`, Git worktree for HarnessOS.
 - Repository identity: `github.com/piai-lab/HarnessOS`
 - Campaign origin revision: `698d305e63a600ff00bb1873e87b2cb825a6496d`.
-- Last reconciled revision: `0ad5017020ef265901e9a61130726616b729c681`.
-- Worktree state: dirty only in `missions/harnessos-foundation.md` and `missions/evidence/harnessos-foundation/E-008-application-identity.txt` for this Campaign reconciliation.
-- Last reconciled at: `2026-08-28T11:54:30+08:00`.
+- Last reconciled revision: `5c9d2d24a631715ac26f06a3601d70116b5589c3`.
+- Worktree state: clean.
+- Last reconciled at: `2026-08-28T11:55:35+08:00`.
 - Active branch/worktree: `codex/harnessos-foundation` at `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`.
 - Applicable instructions: user-locked HarnessOS implementation plan; root `AGENTS.md`; repository authority routes in `README.md` and `architecture/README.md`.
 - Superseded state sources: no competing state files were found after the recursive scan; historical tombstones remain at `execution-brief.md` and `missions/independent-omnimind-v1.md`.
