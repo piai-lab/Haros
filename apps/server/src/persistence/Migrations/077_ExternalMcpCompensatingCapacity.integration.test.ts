@@ -19,7 +19,7 @@ freshLayer("077_ExternalMcpCompensatingCapacity fresh install", (it) => {
           concurrency_limit
         ) VALUES (
           'integration-migration-77-fresh', 'Migration 77 fresh', 'other',
-          'omnimind.external-mcp', NULL, '[]', '2026-07-21T00:00:00.000Z',
+          'harnessos.external-mcp', NULL, '[]', '2026-07-21T00:00:00.000Z',
           '2027-07-21T00:00:00.000Z', 60, 1
         )
       `;
@@ -57,7 +57,7 @@ upgradeLayer("077_ExternalMcpCompensatingCapacity upgrade", (it) => {
           capabilities_json, created_at, expires_at, rate_limit_per_minute,
           concurrency_limit
         ) VALUES (
-          'integration-migration-77', 'Migration 77', 'other', 'omnimind.external-mcp',
+          'integration-migration-77', 'Migration 77', 'other', 'harnessos.external-mcp',
           NULL, '[]', '2026-07-21T00:00:00.000Z', '2027-07-21T00:00:00.000Z', 60, 1
         )
       `;

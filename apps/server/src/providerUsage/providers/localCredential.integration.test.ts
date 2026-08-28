@@ -14,7 +14,7 @@ const NOW_MS = 1_780_000_000_000;
 const tempDirs: string[] = [];
 
 function makeHome(): string {
-  const homeDir = mkdtempSync(nodePath.join(os.tmpdir(), "omnimind-local-usage-"));
+  const homeDir = mkdtempSync(nodePath.join(os.tmpdir(), "harnessos-local-usage-"));
   tempDirs.push(homeDir);
   return homeDir;
 }

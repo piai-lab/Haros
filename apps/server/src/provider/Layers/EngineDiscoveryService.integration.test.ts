@@ -1,6 +1,6 @@
 // FILE: EngineDiscoveryService.test.ts
 // Purpose: Verifies the discovery service merges engine-native skills with the
-//          unified OmniMind catalog, filters user-disabled skills, and reports
+//          unified HarnessOS catalog, filters user-disabled skills, and reports
 //          skill discovery as supported for every engine.
 // Layer: Server engine tests
 
@@ -255,7 +255,7 @@ describe("EngineDiscoveryService.listSkills", () => {
     const result = await runListSkills({ adapter: {}, engine: "antigravity" });
 
     expect(result.skills.map((skill) => skill.name)).toEqual(["portable"]);
-    expect(result.source).toBe("omnimind.catalog");
+    expect(result.source).toBe("harnessos.catalog");
     expect(result.warnings).toEqual([]);
   });
 
@@ -314,12 +314,12 @@ describe("EngineDiscoveryService.listSkills", () => {
     });
 
     expect(result.skills.map((skill) => skill.name)).toEqual(["portable"]);
-    expect(result.source).toBe("omnimind.catalog");
+    expect(result.source).toBe("harnessos.catalog");
     expect(result.warnings).toEqual([{ source: "engine-native", reason: "discovery-failed" }]);
     expect(JSON.stringify(result)).not.toContain("codex binary missing");
   });
 
-  it("keeps native skills and reports a sanitized OmniMind Library discovery failure", async () => {
+  it("keeps native skills and reports a sanitized HarnessOS Library discovery failure", async () => {
     const nativeSkill = {
       name: "native-only",
       path: path.join(homeDir, ".codex", "skills", "native-only", "SKILL.md"),
@@ -334,7 +334,7 @@ describe("EngineDiscoveryService.listSkills", () => {
 
     expect(result.skills).toEqual([nativeSkill]);
     expect(result.source).toBe("codex-app-server");
-    expect(result.warnings).toEqual([{ source: "omnimind-library", reason: "discovery-failed" }]);
+    expect(result.warnings).toEqual([{ source: "harnessos-library", reason: "discovery-failed" }]);
   });
 
   it("distinguishes both failed sources from unsupported native discovery", () => {
@@ -346,7 +346,7 @@ describe("EngineDiscoveryService.listSkills", () => {
       cached: false,
       warnings: [
         { source: "engine-native", reason: "discovery-failed" },
-        { source: "omnimind-library", reason: "discovery-failed" },
+        { source: "harnessos-library", reason: "discovery-failed" },
       ],
     });
     expect(

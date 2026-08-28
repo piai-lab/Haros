@@ -20,7 +20,7 @@ const createIntegration = (
     integrationId: `integration-${suffix}`,
     name: `Integration ${suffix}`,
     clientKind,
-    audience: "omnimind.external-mcp",
+    audience: "harnessos.external-mcp",
     capabilities: ["projects:read", "tasks:create", "tasks:read", "tasks:wait"],
     projectScope: "selected",
     projectIds: [`project-${suffix}`],

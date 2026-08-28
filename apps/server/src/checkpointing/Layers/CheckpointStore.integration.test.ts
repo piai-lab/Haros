@@ -73,7 +73,7 @@ describe("CheckpointStoreLive", () => {
         const store = yield* CheckpointStore;
         const input = {
           cwd: "/repo",
-          checkpointRef: CheckpointRef.makeUnsafe("refs/omnimind-checkpoints/thread/message"),
+          checkpointRef: CheckpointRef.makeUnsafe("refs/harnessos-checkpoints/thread/message"),
         };
 
         const first = yield* store.captureCheckpoint(input).pipe(Effect.forkChild);
@@ -95,7 +95,7 @@ describe("CheckpointStoreLive", () => {
   });
 
   it("seeds a capture from the working index so Git can reuse its stat cache", async () => {
-    const tempDir = mkdtempSync(join(tmpdir(), "omnimind-checkpoint-index-test-"));
+    const tempDir = mkdtempSync(join(tmpdir(), "harnessos-checkpoint-index-test-"));
     const workingIndexPath = join(tempDir, "index");
     writeFileSync(workingIndexPath, "working-index-stat-cache");
     const workingIndexTime = new Date("2020-01-02T03:04:05.000Z");
@@ -143,7 +143,7 @@ describe("CheckpointStoreLive", () => {
           const store = yield* CheckpointStore;
           yield* store.captureCheckpoint({
             cwd: tempDir,
-            checkpointRef: CheckpointRef.makeUnsafe("refs/omnimind-checkpoints/thread/stat-cache"),
+            checkpointRef: CheckpointRef.makeUnsafe("refs/harnessos-checkpoints/thread/stat-cache"),
           });
         }),
       );
@@ -202,7 +202,7 @@ describe("CheckpointStoreLive", () => {
         const store = yield* CheckpointStore;
         const input = {
           cwd: "/repo",
-          checkpointRef: CheckpointRef.makeUnsafe("refs/omnimind-checkpoints/thread/message"),
+          checkpointRef: CheckpointRef.makeUnsafe("refs/harnessos-checkpoints/thread/message"),
         };
 
         const first = yield* store.captureCheckpoint(input).pipe(Effect.forkChild);
@@ -230,8 +230,8 @@ describe("CheckpointStoreLive", () => {
   });
 
   it("skips the capture when skipIfExists is set and the ref already exists", async () => {
-    const existingRef = "refs/omnimind-checkpoints/thread/existing";
-    const missingRef = "refs/omnimind-checkpoints/thread/missing";
+    const existingRef = "refs/harnessos-checkpoints/thread/existing";
+    const missingRef = "refs/harnessos-checkpoints/thread/missing";
     const execute = vi.fn<GitCoreShape["execute"]>((input) => {
       const args = input.args.join(" ");
       if (args === `rev-parse --verify --quiet ${existingRef}^{commit}`) {
@@ -291,8 +291,8 @@ describe("CheckpointStoreLive", () => {
   });
 
   it("restores the worktree patch when resetting the index fails during file undo", async () => {
-    const fromRef = CheckpointRef.makeUnsafe("refs/omnimind-checkpoints/thread/turn/start");
-    const toRef = CheckpointRef.makeUnsafe("refs/omnimind-checkpoints/thread/turn/end");
+    const fromRef = CheckpointRef.makeUnsafe("refs/harnessos-checkpoints/thread/turn/start");
+    const toRef = CheckpointRef.makeUnsafe("refs/harnessos-checkpoints/thread/turn/end");
     const commands: string[] = [];
     const execute = vi.fn<GitCoreShape["execute"]>((input) => {
       const args = input.args.join(" ");

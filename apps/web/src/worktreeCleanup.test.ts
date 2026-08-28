@@ -82,23 +82,23 @@ describe("getOrphanedWorktreePathForThread", () => {
 describe("formatWorktreePathForDisplay", () => {
   it("shows only the last path segment for unix-like paths", () => {
     const result = formatWorktreePathForDisplay(
-      "/Users/julius/.harnessos/worktrees/omnimind-mvp/omnimind-4e609bb8",
+      "/Users/julius/.harnessos/worktrees/harnessos-mvp/harnessos-4e609bb8",
     );
-    expect(result).toBe("omnimind-4e609bb8");
+    expect(result).toBe("harnessos-4e609bb8");
   });
 
   it("keeps legacy .harnessos worktree paths readable after migration", () => {
     const result = formatWorktreePathForDisplay(
-      "/Users/julius/.harnessos/worktrees/omnimind-mvp/omnimind-legacy123",
+      "/Users/julius/.harnessos/worktrees/harnessos-mvp/harnessos-legacy123",
     );
-    expect(result).toBe("omnimind-legacy123");
+    expect(result).toBe("harnessos-legacy123");
   });
 
   it("normalizes windows separators before selecting the final segment", () => {
     const result = formatWorktreePathForDisplay(
-      "C:\\Users\\julius\\.harnessos\\worktrees\\omnimind-mvp\\omnimind-4e609bb8",
+      "C:\\Users\\julius\\.harnessos\\worktrees\\harnessos-mvp\\harnessos-4e609bb8",
     );
-    expect(result).toBe("omnimind-4e609bb8");
+    expect(result).toBe("harnessos-4e609bb8");
   });
 
   it("uses the final segment even when outside ~/.harnessos/worktrees", () => {

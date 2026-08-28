@@ -2,7 +2,7 @@ import { Schema } from "effect";
 import { TrimmedString } from "./baseSchemas";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
 import { EngineSelection, EngineKind, ThreadEnvironmentMode } from "./orchestration";
-import { isOmniMindAgentPromptContent, HARNESSOS_AGENT_PROMPT_MAX_BYTES } from "./editableText";
+import { isOAAgentPromptContent, HARNESSOS_AGENT_PROMPT_MAX_BYTES } from "./editableText";
 import { BuiltInToolGroupOverrides } from "./agentTools";
 
 const StringSetting = TrimmedString.check(Schema.isMaxLength(4096));
@@ -16,16 +16,16 @@ const EngineSettingsBase = {
   customModels: CustomModels,
 };
 
-export const OmniMindServerEngineSettings = Schema.Struct({
+export const HarnessOSServerEngineSettings = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultPrompt: Schema.NullOr(
     Schema.String.check(
       Schema.isMaxLength(HARNESSOS_AGENT_PROMPT_MAX_BYTES),
-      Schema.makeFilter(isOmniMindAgentPromptContent),
+      Schema.makeFilter(isOAAgentPromptContent),
     ),
   ).pipe(Schema.withDecodingDefault(() => null)),
 });
-export type OmniMindServerEngineSettings = typeof OmniMindServerEngineSettings.Type;
+export type HarnessOSServerEngineSettings = typeof HarnessOSServerEngineSettings.Type;
 
 export const CodexServerEngineSettings = Schema.Struct({
   ...EngineSettingsBase,
@@ -122,7 +122,7 @@ export const ServerSettings = Schema.Struct({
     })),
   ),
   engines: Schema.Struct({
-    oa: OmniMindServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    oa: HarnessOSServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     codex: CodexServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     claude: ClaudeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     cursor: CursorServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -140,12 +140,12 @@ export type ServerSettings = typeof ServerSettings.Type;
 
 export const DEFAULT_SERVER_SETTINGS: ServerSettings = Schema.decodeSync(ServerSettings)({});
 
-const OmniMindServerEngineSettingsView = Schema.Struct({
+const HarnessOSServerEngineSettingsView = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
 });
 
 // Public settings deliberately omit the customized default prompt. Its only
-// projection and mutation authority is the dedicated OmniMind prompt contract.
+// projection and mutation authority is the dedicated HarnessOS prompt contract.
 export const ServerSettingsView = Schema.Struct({
   defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "oa")),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
@@ -159,7 +159,7 @@ export const ServerSettingsView = Schema.Struct({
     })),
   ),
   engines: Schema.Struct({
-    oa: OmniMindServerEngineSettingsView.pipe(Schema.withDecodingDefault(() => ({}))),
+    oa: HarnessOSServerEngineSettingsView.pipe(Schema.withDecodingDefault(() => ({}))),
     codex: CodexServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     claude: ClaudeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
     cursor: CursorServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),

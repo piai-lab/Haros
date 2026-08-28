@@ -1,5 +1,5 @@
 // FILE: providerUsage/providers/codex.ts
-// Purpose: Read Codex account limits through Codex's own app-server protocol. OmniMind does not
+// Purpose: Read Codex account limits through Codex's own app-server protocol. HarnessOS does not
 // parse, refresh, copy, or write Codex credentials; authentication remains native to Codex.
 
 import type { ServerProviderUsageLimit, ServerProviderUsageLine } from "@harnessos/contracts";

@@ -200,7 +200,7 @@ it.layer(NodeServices.layer)("resolveEditorLaunch", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-vscode-folder-" });
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "harnessos-vscode-folder-" });
       const folderPath = path.join(dir, "Project Folder");
       yield* fs.makeDirectory(folderPath);
 
@@ -227,7 +227,7 @@ it.layer(NodeServices.layer)("resolveEditorLaunch", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-open-terminal-" });
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "harnessos-open-terminal-" });
       const filePath = path.join(dir, "src", "open.ts");
       yield* fs.makeDirectory(path.dirname(filePath), { recursive: true });
       yield* fs.writeFileString(filePath, "export const value = 1;\n");
@@ -294,7 +294,7 @@ it.layer(NodeServices.layer)("resolveEditorLaunch", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const home = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-open-apps-" });
+      const home = yield* fs.makeTempDirectoryScoped({ prefix: "harnessos-open-apps-" });
       yield* fs.makeDirectory(path.join(home, "Applications", "Ghostty.app"), {
         recursive: true,
       });
@@ -369,7 +369,7 @@ it.layer(NodeServices.layer)("resolveEditorLaunch", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const home = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-open-ghostty-" });
+      const home = yield* fs.makeTempDirectoryScoped({ prefix: "harnessos-open-ghostty-" });
       const binDir = path.join(home, "bin");
       yield* fs.makeDirectory(binDir, { recursive: true });
       yield* fs.writeFileString(path.join(binDir, "ghostty"), "#!/bin/sh\n");
@@ -437,7 +437,7 @@ it.layer(NodeServices.layer)("launchDetached", (it) => {
   it.effect("rejects when command does not exist", () =>
     Effect.gen(function* () {
       const result = yield* launchDetached({
-        command: `omnimind-no-such-command-${Date.now()}`,
+        command: `harnessos-no-such-command-${Date.now()}`,
         args: [],
       }).pipe(Effect.result);
       assert.equal(result._tag, "Failure");
@@ -450,7 +450,7 @@ it.layer(NodeServices.layer)("isCommandAvailable", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-open-test-" });
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "harnessos-open-test-" });
       yield* fs.writeFileString(path.join(dir, "code.CMD"), "@echo off\r\n");
       const env = {
         PATH: dir,
@@ -472,7 +472,7 @@ it.layer(NodeServices.layer)("isCommandAvailable", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-open-test-" });
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "harnessos-open-test-" });
       yield* fs.writeFileString(path.join(dir, "npm"), "echo nope\r\n");
       const env = {
         PATH: dir,
@@ -486,7 +486,7 @@ it.layer(NodeServices.layer)("isCommandAvailable", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-open-test-" });
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "harnessos-open-test-" });
       yield* fs.writeFileString(path.join(dir, "my.tool.CMD"), "@echo off\r\n");
       const env = {
         PATH: dir,
@@ -500,8 +500,8 @@ it.layer(NodeServices.layer)("isCommandAvailable", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const firstDir = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-open-test-" });
-      const secondDir = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-open-test-" });
+      const firstDir = yield* fs.makeTempDirectoryScoped({ prefix: "harnessos-open-test-" });
+      const secondDir = yield* fs.makeTempDirectoryScoped({ prefix: "harnessos-open-test-" });
       yield* fs.writeFileString(path.join(firstDir, "code.CMD"), "@echo off\r\n");
       yield* fs.writeFileString(path.join(secondDir, "code.CMD"), "MZ");
       const env = {
@@ -518,7 +518,7 @@ it.layer(NodeServices.layer)("resolveAvailableEditors", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-editors-" });
+      const dir = yield* fs.makeTempDirectoryScoped({ prefix: "harnessos-editors-" });
 
       yield* fs.writeFileString(path.join(dir, "cursor.CMD"), "@echo off\r\n");
       yield* fs.writeFileString(path.join(dir, "code-insiders.CMD"), "@echo off\r\n");
@@ -558,7 +558,7 @@ it.layer(NodeServices.layer)("resolveAvailableEditors", (it) => {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const localAppData = yield* fs.makeTempDirectoryScoped({
-        prefix: "omnimind-vscode-store-alias-",
+        prefix: "harnessos-vscode-store-alias-",
       });
       yield* fs.makeDirectory(
         path.join(
@@ -644,7 +644,9 @@ it.layer(NodeServices.layer)("resolveAvailableEditors", (it) => {
       const path = yield* Path.Path;
       const editor = EDITORS.find((candidate) => candidate.id === "vscode");
       assert.ok(editor);
-      const programFiles = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-vscode-staged-" });
+      const programFiles = yield* fs.makeTempDirectoryScoped({
+        prefix: "harnessos-vscode-staged-",
+      });
       yield* fs.makeDirectory(
         path.join(
           programFiles,

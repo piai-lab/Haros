@@ -85,7 +85,7 @@ describe("localServerMonitor", () => {
     );
   });
 
-  it("keeps dev servers and ignores Electron/OmniMind-style application listeners", () => {
+  it("keeps dev servers and ignores Electron/HarnessOS-style application listeners", () => {
     expect(
       isLikelyDevServerProcess({
         command: "node",
@@ -96,14 +96,14 @@ describe("localServerMonitor", () => {
     expect(
       isIgnoredLocalServerProcess({
         command: "Electron",
-        args: "/Applications/OmniMind.app/Contents/MacOS/OmniMind",
+        args: "/Applications/HarnessOS.app/Contents/MacOS/HarnessOS",
         ports: [61449],
       }),
     ).toBe(true);
     expect(
       isIgnoredLocalServerProcess({
-        command: "OmniMind",
-        args: "/Applications/OmniMind.app/Contents/MacOS/OmniMind",
+        command: "HarnessOS",
+        args: "/Applications/HarnessOS.app/Contents/MacOS/HarnessOS",
         ports: [61449],
       }),
     ).toBe(true);
@@ -232,7 +232,7 @@ describe("localServerMonitor", () => {
         {
           ppid: 12064,
           commandLine:
-            "node /Users/emanueledipietro/Developer/omnimind-website/node_modules/.bin/next dev",
+            "node /Users/emanueledipietro/Developer/harnessos-website/node_modules/.bin/next dev",
         },
       ],
       [

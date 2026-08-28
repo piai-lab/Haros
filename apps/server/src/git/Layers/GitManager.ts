@@ -1317,7 +1317,7 @@ export const makeGitManager = Effect.gen(function* () {
         prBody ??= generated.body;
       }
 
-      const bodyFile = path.join(tempDir, `omnimind-pr-body-${process.pid}-${randomUUID()}.md`);
+      const bodyFile = path.join(tempDir, `harnessos-pr-body-${process.pid}-${randomUUID()}.md`);
       yield* fileSystem
         .writeFileString(bodyFile, prBody)
         .pipe(
@@ -2120,11 +2120,11 @@ The local stash entry was kept for recovery.`,
 
       const preservedLocalStash = yield* stashWorkingTree(
         input.cwd,
-        `omnimind preserve local handoff ${randomUUID()}`,
+        `harnessos preserve local handoff ${randomUUID()}`,
       );
       const sourceStash = yield* stashWorkingTree(
         input.worktreePath,
-        `omnimind handoff to local ${randomUUID()}`,
+        `harnessos handoff to local ${randomUUID()}`,
       );
 
       yield* gitCore
@@ -2287,7 +2287,7 @@ The local stash entry was kept for recovery.`,
 
     const sourceStash = yield* stashWorkingTree(
       input.cwd,
-      `omnimind handoff to worktree ${randomUUID()}`,
+      `harnessos handoff to worktree ${randomUUID()}`,
     );
     const sourceBranch = currentLocalStatus.branch ?? input.currentBranch ?? null;
     const sourceHeadRef = yield* readHeadRef(input.cwd);

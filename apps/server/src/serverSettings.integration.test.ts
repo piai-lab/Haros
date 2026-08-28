@@ -8,7 +8,7 @@ import { ServerConfig } from "./config";
 import { ServerSettingsLive, ServerSettingsService } from "./serverSettings";
 
 const serverConfigLayer = ServerConfig.layerTest(process.cwd(), {
-  prefix: "omnimind-settings-test-",
+  prefix: "harnessos-settings-test-",
 }).pipe(Layer.provide(NodeServices.layer));
 const makeTestLayer = Layer.merge(NodeServices.layer, serverConfigLayer);
 const testLayer = Layer.merge(makeTestLayer, ServerSettingsLive.pipe(Layer.provide(makeTestLayer)));
@@ -136,7 +136,7 @@ describe("ServerSettingsService", () => {
     });
   });
 
-  it("retires only the old OmniMind model hint field on the next normal settings save", async () => {
+  it("retires only the old HarnessOS model hint field on the next normal settings save", async () => {
     const retiredKey = ["custom", "Models"].join("");
     const result = await runWithSettings(
       Effect.gen(function* () {
@@ -152,7 +152,7 @@ describe("ServerSettingsService", () => {
             settings: {
               enableAssistantStreaming: true,
               enableEngineUpdateChecks: false,
-              addProjectBaseDirectory: "/tmp/omnimind-projects",
+              addProjectBaseDirectory: "/tmp/harnessos-projects",
               engines: {
                 oa: {
                   enabled: false,
@@ -197,7 +197,7 @@ describe("ServerSettingsService", () => {
       settings: {
         enableAssistantStreaming: false,
         enableEngineUpdateChecks: false,
-        addProjectBaseDirectory: "/tmp/omnimind-projects",
+        addProjectBaseDirectory: "/tmp/harnessos-projects",
         engines: {
           oa: { enabled: false, defaultPrompt: "private prompt" },
           codex: { customModels: ["custom/codex-model"] },
@@ -229,7 +229,7 @@ describe("ServerSettingsService", () => {
       },
     },
     {
-      name: "the disabled legacy OmniMind aggregate",
+      name: "the disabled legacy HarnessOS aggregate",
       disabledBuiltInGroups: ["oa", "future-group"],
       expected: {
         agent: {
@@ -734,7 +734,7 @@ describe("ServerSettingsService", () => {
         const streamedViewFiber = yield* Stream.runHead(service.streamViews).pipe(
           Effect.forkChild({ startImmediately: true }),
         );
-        const mutation = yield* service.mutateOmniMindDefaultPrompt("private one", "private two");
+        const mutation = yield* service.mutateHarnessOSDefaultPrompt("private one", "private two");
         const streamedView = Option.getOrThrow(yield* Fiber.join(streamedViewFiber));
         return { initialView, mutation, streamedView };
       }).pipe(
@@ -759,8 +759,8 @@ describe("ServerSettingsService", () => {
         const service = yield* ServerSettingsService;
         const mutations = yield* Effect.all(
           [
-            service.mutateOmniMindDefaultPrompt(null, "first"),
-            service.mutateOmniMindDefaultPrompt(null, "second"),
+            service.mutateHarnessOSDefaultPrompt(null, "first"),
+            service.mutateHarnessOSDefaultPrompt(null, "second"),
           ],
           { concurrency: "unbounded" },
         );

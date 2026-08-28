@@ -239,7 +239,7 @@ describe("TerminalManager", () => {
       prepareLogs?: (logsDir: string) => void;
     } = {},
   ) {
-    const logsDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-terminal-"));
+    const logsDir = fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-terminal-"));
     tempDirs.push(logsDir);
     options.prepareLogs?.(logsDir);
     const ptyAdapter = options.ptyAdapter ?? new FakePtyAdapter();

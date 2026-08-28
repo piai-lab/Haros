@@ -13,7 +13,7 @@ const settledEmpty: ClassifierInput = {
   factsSettled: true,
   hasUsableExactBinding: false,
   hasRememberedIndependentEngineBinding: false,
-  hasRememberedOmniMindBinding: false,
+  hasRememberedHarnessOSBinding: false,
   modelServicesCapability: true,
   modelServicesTransport: "open" as const,
   passiveModelServicesState: "empty" as const,
@@ -48,8 +48,8 @@ describe("first-run readiness classifier", () => {
       expected: "recover-engine",
     },
     {
-      name: "remembered OmniMind binding",
-      overrides: { hasRememberedOmniMindBinding: true },
+      name: "remembered HarnessOS binding",
+      overrides: { hasRememberedHarnessOSBinding: true },
       expected: "recover-model-service",
     },
     {

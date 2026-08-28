@@ -14,8 +14,8 @@ import {
 describe("managed checkpoint refs", () => {
   const threadId = ThreadId.makeUnsafe("thread-1");
 
-  it("creates canonical OmniMind refs", () => {
-    expect(checkpointRefForThreadTurn(threadId, 4)).toMatch(/^refs\/omnimind\/checkpoints\//);
+  it("creates canonical HarnessOS refs", () => {
+    expect(checkpointRefForThreadTurn(threadId, 4)).toMatch(/^refs\/harnessos\/checkpoints\//);
   });
 
   it("recognizes a structurally valid persisted ref for the same thread", () => {

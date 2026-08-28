@@ -1,5 +1,5 @@
 // FILE: codexProcessEnv.ts
-// Purpose: Builds the exact environment used when OmniMind launches Codex subprocesses.
+// Purpose: Builds the exact environment used when HarnessOS launches Codex subprocesses.
 // Layer: Server runtime utility
 // Exports: Codex process env builder and browser-plugin overlay helpers.
 // Depends on: Codex home path helpers, shared Codex config parsing, login-shell env reader.
@@ -14,7 +14,10 @@ import {
   type ShellEnvironmentReader,
 } from "@harnessos/shared/shell";
 
-import { resolveBaseCodexHomePath, resolveOmniMindCodexHomeOverlayPath } from "./codexHomePaths.ts";
+import {
+  resolveBaseCodexHomePath,
+  resolveHarnessOSCodexHomeOverlayPath,
+} from "./codexHomePaths.ts";
 import {
   buildProviderChildEnvironment,
   registerEngineCredentialKey,
@@ -22,7 +25,7 @@ import {
 
 const CODEX_PROCESS_SHELL_ENV_NAMES = ["PATH", "SSH_AUTH_SOCK"] as const;
 const CODEX_OVERLAY_SHARED_STATE_FILES = new Set(["auth.json"]);
-const HARNESSOS_CONFIG_SUPPRESSIONS_FILE = "omnimind-config-suppressions-v1.json";
+const HARNESSOS_CONFIG_SUPPRESSIONS_FILE = "harnessos-config-suppressions-v1.json";
 const HARNESSOS_MANAGED_MCP_TABLE_HEADER = "[mcp_servers.harnessos]";
 export const HARNESSOS_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS = [
   '[plugins."browser@openai-bundled"]',
@@ -50,7 +53,7 @@ function isSafePluginSectionHeader(value: unknown): value is string {
   );
 }
 
-export async function readOmniMindConfigSuppressions(
+export async function readHarnessOSConfigSuppressions(
   markerPath: string,
 ): Promise<readonly string[]> {
   try {
@@ -136,7 +139,7 @@ export function disableCodexConfigSections(
   return output.join("\n");
 }
 
-async function writeOmniMindConfigSuppressions(
+async function writeHarnessOSConfigSuppressions(
   markerPath: string,
   sectionHeaders: readonly string[],
 ): Promise<void> {
@@ -237,8 +240,8 @@ export function appendCodexConfigSection(config: string, section: string): strin
   return base.length > 0 ? `${base}\n\n${trimmedSection}\n` : `${trimmedSection}\n`;
 }
 
-export const HARNESSOS_MANAGED_CODEX_CONFIG_BEGIN = "# >>> omnimind managed config >>>";
-export const HARNESSOS_MANAGED_CODEX_CONFIG_END = "# <<< omnimind managed config <<<";
+export const HARNESSOS_MANAGED_CODEX_CONFIG_BEGIN = "# >>> harnessos managed config >>>";
+export const HARNESSOS_MANAGED_CODEX_CONFIG_END = "# <<< harnessos managed config <<<";
 
 export function extractManagedCodexConfigSection(config: string): string | undefined {
   const begin = config.indexOf(HARNESSOS_MANAGED_CODEX_CONFIG_BEGIN);
@@ -566,7 +569,7 @@ function appendManagedCodexConfigSection(config: string, section: string): strin
       continue;
     }
     if (normalizeTomlTableHeaderName(header) === managedMcpTableName) {
-      // The session-scoped gateway entry is authoritative inside OmniMind's
+      // The session-scoped gateway entry is authoritative inside HarnessOS's
       // overlay. The user's source config remains untouched.
       overlayConfig = removeTomlTableNamespace(overlayConfig, HARNESSOS_MANAGED_MCP_TABLE_HEADER);
       tables.push(table);
@@ -606,13 +609,13 @@ async function serializeCodexOverlayPreparation<A>(
   }
 }
 
-async function prepareOmniMindCodexHomeOverlayUnlocked(input: {
+async function prepareHarnessOSCodexHomeOverlayUnlocked(input: {
   readonly env: NodeJS.ProcessEnv;
   readonly homePath?: string;
   readonly appendConfigToml?: string;
 }): Promise<string | undefined> {
   const sourceHomePath = resolveBaseCodexHomePath(input.env, input.homePath);
-  const overlayHomePath = resolveOmniMindCodexHomeOverlayPath(input.env, sourceHomePath);
+  const overlayHomePath = resolveHarnessOSCodexHomeOverlayPath(input.env, sourceHomePath);
   if (path.resolve(sourceHomePath) === path.resolve(overlayHomePath)) {
     return undefined;
   }
@@ -653,7 +656,7 @@ async function prepareOmniMindCodexHomeOverlayUnlocked(input: {
     ...new Set([
       ...HARNESSOS_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS,
       ...findConflictingLocalBrowserPluginSections(sourceConfig),
-      ...(await readOmniMindConfigSuppressions(suppressionMarkerPath)),
+      ...(await readHarnessOSConfigSuppressions(suppressionMarkerPath)),
     ]),
   ].slice(0, MAX_CONFIG_SUPPRESSION_SECTIONS);
   const overlayConfigPath = path.join(overlayHomePath, "config.toml");
@@ -677,23 +680,23 @@ async function prepareOmniMindCodexHomeOverlayUnlocked(input: {
     }
   }
   await fs.writeFile(overlayConfigPath, overlayConfig, "utf8");
-  await writeOmniMindConfigSuppressions(suppressionMarkerPath, suppressedSections);
+  await writeHarnessOSConfigSuppressions(suppressionMarkerPath, suppressedSections);
 
   return overlayHomePath;
 }
 
-async function prepareOmniMindCodexHomeOverlay(input: {
+async function prepareHarnessOSCodexHomeOverlay(input: {
   readonly env: NodeJS.ProcessEnv;
   readonly homePath?: string;
   readonly appendConfigToml?: string;
 }): Promise<string | undefined> {
   const sourceHomePath = resolveBaseCodexHomePath(input.env, input.homePath);
-  const overlayHomePath = resolveOmniMindCodexHomeOverlayPath(input.env, sourceHomePath);
+  const overlayHomePath = resolveHarnessOSCodexHomeOverlayPath(input.env, sourceHomePath);
   if (path.resolve(sourceHomePath) === path.resolve(overlayHomePath)) {
     return undefined;
   }
   return serializeCodexOverlayPreparation(overlayHomePath, () =>
-    prepareOmniMindCodexHomeOverlayUnlocked(input),
+    prepareHarnessOSCodexHomeOverlayUnlocked(input),
   );
 }
 
@@ -707,7 +710,7 @@ export async function buildCodexProcessEnv(
   } = {},
 ): Promise<NodeJS.ProcessEnv> {
   const baseEnv = { ...(input.env ?? process.env) };
-  const overlayHomePath = await prepareOmniMindCodexHomeOverlay({
+  const overlayHomePath = await prepareHarnessOSCodexHomeOverlay({
     env: baseEnv,
     ...(input.homePath ? { homePath: input.homePath } : {}),
     ...(input.appendConfigToml ? { appendConfigToml: input.appendConfigToml } : {}),

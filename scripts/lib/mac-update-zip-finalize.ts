@@ -174,7 +174,7 @@ export async function finalizeMacUpdateZip(
   const zippedAppBundleName = assertMacZipFrameworkSymlinks(zipPath);
   verifyMacAppSignature(appBundlePath, options.signed);
 
-  const extractedZipRoot = mkdtempSync(join(tmpdir(), "omnimind-mac-update-zip-"));
+  const extractedZipRoot = mkdtempSync(join(tmpdir(), "harnessos-mac-update-zip-"));
   try {
     runTextCommand("ditto", ["-x", "-k", zipPath, extractedZipRoot], { verbose });
     verifyMacAppSignature(join(extractedZipRoot, zippedAppBundleName), options.signed);

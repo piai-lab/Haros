@@ -113,44 +113,44 @@ it.effect("accepts bounded workspace content search requests", () =>
   }),
 );
 
-it.effect("accepts credential-blind OmniMind model-services requests", () =>
+it.effect("accepts credential-blind HarnessOS model-services requests", () =>
   Effect.gen(function* () {
     const list = yield* decode(WebSocketRequest, {
       id: "req-model-services-list",
-      body: { _tag: WS_METHODS.omnimindModelServicesList },
+      body: { _tag: WS_METHODS.oaModelServicesList },
     });
     const get = yield* decode(WebSocketRequest, {
       id: "req-model-services-get",
       body: {
-        _tag: WS_METHODS.omnimindModelServicesGet,
+        _tag: WS_METHODS.oaModelServicesGet,
         serviceId: "deepseek",
       },
     });
     const reveal = yield* decode(WebSocketRequest, {
       id: "req-model-services-reveal-key",
       body: {
-        _tag: WS_METHODS.omnimindModelServicesRevealApiKey,
+        _tag: WS_METHODS.oaModelServicesRevealApiKey,
         serviceId: "deepseek",
       },
     });
 
-    assert.strictEqual(list.body._tag, WS_METHODS.omnimindModelServicesList);
-    assert.strictEqual(get.body._tag, WS_METHODS.omnimindModelServicesGet);
-    assert.strictEqual(reveal.body._tag, WS_METHODS.omnimindModelServicesRevealApiKey);
-    if (get.body._tag === WS_METHODS.omnimindModelServicesGet) {
+    assert.strictEqual(list.body._tag, WS_METHODS.oaModelServicesList);
+    assert.strictEqual(get.body._tag, WS_METHODS.oaModelServicesGet);
+    assert.strictEqual(reveal.body._tag, WS_METHODS.oaModelServicesRevealApiKey);
+    if (get.body._tag === WS_METHODS.oaModelServicesGet) {
       assert.deepStrictEqual(Object.keys(get.body).sort(), ["_tag", "serviceId"]);
     }
   }),
 );
 
-it.effect("accepts typed OmniMind model-service credential operations", () =>
+it.effect("accepts typed HarnessOS model-service credential operations", () =>
   Effect.gen(function* () {
     const requestId = "00000000-0000-4000-8000-000000000031";
     const promptId = "00000000-0000-4000-8000-000000000032";
     const begin = yield* decode(WebSocketRequest, {
       id: "req-model-services-login",
       body: {
-        _tag: WS_METHODS.omnimindModelServicesBeginLogin,
+        _tag: WS_METHODS.oaModelServicesBeginLogin,
         serviceId: "deepseek",
         authType: "api_key",
       },
@@ -158,7 +158,7 @@ it.effect("accepts typed OmniMind model-service credential operations", () =>
     const answer = yield* decode(WebSocketRequest, {
       id: "req-model-services-answer",
       body: {
-        _tag: WS_METHODS.omnimindModelServicesAnswerLogin,
+        _tag: WS_METHODS.oaModelServicesAnswerLogin,
         requestId,
         promptId,
         value: "test-secret",
@@ -166,12 +166,12 @@ it.effect("accepts typed OmniMind model-service credential operations", () =>
     });
     const refresh = yield* decode(WebSocketRequest, {
       id: "req-model-services-refresh",
-      body: { _tag: WS_METHODS.omnimindModelServicesRefresh, serviceId: "deepseek" },
+      body: { _tag: WS_METHODS.oaModelServicesRefresh, serviceId: "deepseek" },
     });
 
-    assert.strictEqual(begin.body._tag, WS_METHODS.omnimindModelServicesBeginLogin);
-    assert.strictEqual(answer.body._tag, WS_METHODS.omnimindModelServicesAnswerLogin);
-    assert.strictEqual(refresh.body._tag, WS_METHODS.omnimindModelServicesRefresh);
+    assert.strictEqual(begin.body._tag, WS_METHODS.oaModelServicesBeginLogin);
+    assert.strictEqual(answer.body._tag, WS_METHODS.oaModelServicesAnswerLogin);
+    assert.strictEqual(refresh.body._tag, WS_METHODS.oaModelServicesRefresh);
   }),
 );
 

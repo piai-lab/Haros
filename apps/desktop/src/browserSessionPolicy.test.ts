@@ -197,7 +197,7 @@ describe("BrowserSessionPolicy", () => {
 
     const runtimeUrl = policy.resolveRuntimeUrl(sourceUrl);
 
-    expect(runtimeUrl).toMatch(/^omnimind-local-preview:\/\/[a-f0-9]+\/index\.html$/u);
+    expect(runtimeUrl).toMatch(/^harnessos-local-preview:\/\/[a-f0-9]+\/index\.html$/u);
     expect(policy.resolveDisplayUrl(runtimeUrl)).toBe(sourceUrl);
   });
 });

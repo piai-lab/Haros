@@ -29,7 +29,7 @@ const viewNames = (sql: SqlClient.SqlClient) =>
   `.pipe(Effect.map((rows) => rows.map((row) => row.name)));
 
 layer("automation migration", (it) => {
-  it.effect("registers automation backlog migration in the OmniMind lineage", () =>
+  it.effect("registers automation backlog migration in the HarnessOS lineage", () =>
     Effect.sync(() => {
       // Look the entry up by id: asserting on the lineage tail would break
       // every time an unrelated migration lands after it.

@@ -1264,7 +1264,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     expect(gateway.revoked).toEqual([]);
     expect(runtime.promptCalls).toHaveLength(2);
     for (const prompt of runtime.promptCalls) {
-      expect(JSON.stringify(prompt)).toContain("OmniMind MCP control is unavailable");
+      expect(JSON.stringify(prompt)).toContain("HarnessOS MCP control is unavailable");
     }
   });
 
@@ -1364,7 +1364,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
 
     expect(activeSetupAttempts).toBe(0);
     expect(runtime.mcpAddCalls).toEqual([]);
-    expect(JSON.stringify(runtime.promptCalls[0])).toContain("OmniMind MCP control is unavailable");
+    expect(JSON.stringify(runtime.promptCalls[0])).toContain(
+      "HarnessOS MCP control is unavailable",
+    );
     expect(gateway.revoked).toEqual([]);
   });
 
@@ -1404,7 +1406,9 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
 
     expect(gateway.revoked).toEqual(["gateway-token-1"]);
     expect(gateway.ownerByToken.size).toBe(0);
-    expect(JSON.stringify(runtime.promptCalls[0])).toContain("OmniMind MCP control is unavailable");
+    expect(JSON.stringify(runtime.promptCalls[0])).toContain(
+      "HarnessOS MCP control is unavailable",
+    );
   });
 
   it("applies the same isolated gateway lifecycle to managed Kilo sessions", async () => {
@@ -1567,7 +1571,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     expect(gateway.ownerByToken.size).toBe(0);
     expect(gateway.revoked).toEqual([]);
     for (const prompt of runtime.promptCalls) {
-      expect(JSON.stringify(prompt)).toContain("OmniMind MCP control is unavailable");
+      expect(JSON.stringify(prompt)).toContain("HarnessOS MCP control is unavailable");
     }
   });
 
@@ -2045,7 +2049,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         variant: "fast",
       },
       agent: "build",
-      title: "OmniMind thread-model-pin",
+      title: "HarnessOS thread-model-pin",
     });
   });
 
@@ -2104,7 +2108,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       runtime.promptCalls[0]?.parts as ReadonlyArray<{ readonly text?: string }> | undefined
     )?.[0]?.text;
     expect(firstPromptText).toContain(HARNESSOS_HARNESS_POLICY_MARKER);
-    expect(firstPromptText).toContain("OmniMind MCP control is unavailable");
+    expect(firstPromptText).toContain("HarnessOS MCP control is unavailable");
     expect(runtime.promptCalls[0]).toMatchObject({
       model: {
         providerID: "openai",
@@ -2677,7 +2681,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     expect(runtime.promptCalls[0]?.parts).toEqual([
       {
         type: "text",
-        text: expect.stringContaining("OmniMind plan mode is active."),
+        text: expect.stringContaining("HarnessOS plan mode is active."),
       },
     ]);
     expect(result.map((event) => event.type)).toEqual([
@@ -2831,7 +2835,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     });
   });
 
-  it("ignores a stale plan agent option when OmniMind interaction mode is default", async () => {
+  it("ignores a stale plan agent option when HarnessOS interaction mode is default", async () => {
     const runtime = createMockOpenCodeRuntime();
 
     await Effect.runPromise(
@@ -2972,7 +2976,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
               id: "part-default-plan",
               messageID: "assistant-message-default-plan",
               type: "text",
-              text: "<proposed_plan>\n# Not a OmniMind plan\n</proposed_plan>",
+              text: "<proposed_plan>\n# Not a HarnessOS plan\n</proposed_plan>",
               time: {
                 start: 1,
                 end: 2,
@@ -3007,7 +3011,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       type: "item.completed",
       payload: {
         itemType: "assistant_message",
-        detail: "<proposed_plan>\n# Not a OmniMind plan\n</proposed_plan>",
+        detail: "<proposed_plan>\n# Not a HarnessOS plan\n</proposed_plan>",
       },
     });
   });
@@ -4297,7 +4301,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
             id: "permission-human-1",
             sessionID: "opencode-session-1",
             permission: "websearch",
-            patterns: ["OmniMind handoff"],
+            patterns: ["HarnessOS handoff"],
             metadata: {},
             always: [],
           },
@@ -4330,7 +4334,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
             id: "permission-human-1",
             sessionID: "opencode-session-1",
             permission: "websearch",
-            patterns: ["OmniMind handoff"],
+            patterns: ["HarnessOS handoff"],
             metadata: {},
             always: [],
           },
@@ -4705,7 +4709,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       id: "permission-list-failure-1",
       sessionID: "opencode-session-1",
       permission: "websearch",
-      patterns: ["OmniMind"],
+      patterns: ["HarnessOS"],
       metadata: {},
       always: [],
     } satisfies PermissionRequest;
@@ -5459,7 +5463,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
             },
           },
         });
-        // The stream part arrives after the grace period. OmniMind must first
+        // The stream part arrives after the grace period. HarnessOS must first
         // recover the engine snapshot, then ignore this duplicate late event.
         yield* Effect.sleep(30);
         eventQueue.push({

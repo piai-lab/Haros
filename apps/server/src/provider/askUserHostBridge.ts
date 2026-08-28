@@ -1,4 +1,4 @@
-import type { AskUserResult, AskUserToolInput } from "@harnessos/om-ask";
+import type { AskUserResult, AskUserToolInput } from "@harnessos/oa-ask";
 import type { CanonicalUserInputRequest, CanonicalUserInputResponse } from "@harnessos/contracts";
 
 export interface AskUserHostProjection {

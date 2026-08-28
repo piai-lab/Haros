@@ -355,7 +355,7 @@ function StartupSplashShellBridge() {
 }
 
 /**
- * App-level composition for isolated OmniMind web pages. Publishing here keeps
+ * App-level composition for isolated HarnessOS web pages. Publishing here keeps
  * the global appearance snapshot available on Settings and other non-ChatView
  * routes without introducing a second theme store or feature-owned bridge.
  */

@@ -47,20 +47,20 @@ export function readNativeApiServerCapabilityState(capability: string): boolean 
     }
     if (capability === WS_HARNESSOS_MODEL_SERVICES_CAPABILITY) {
       return (
-        typeof window.nativeApi.omnimindModelServices?.list === "function" &&
-        typeof window.nativeApi.omnimindModelServices?.get === "function"
+        typeof window.nativeApi.oaModelServices?.list === "function" &&
+        typeof window.nativeApi.oaModelServices?.get === "function"
       );
     }
     if (capability === WS_HARNESSOS_ECOSYSTEM_CAPABILITY) {
       return (
-        typeof window.nativeApi.omnimindEcosystem?.list === "function" &&
-        typeof window.nativeApi.omnimindEcosystem?.listResources === "function"
+        typeof window.nativeApi.oaEcosystem?.list === "function" &&
+        typeof window.nativeApi.oaEcosystem?.listResources === "function"
       );
     }
     if (capability === WS_HARNESSOS_AGENT_PROMPTS_CAPABILITY) {
       return (
-        typeof window.nativeApi.omnimindAgentPrompts?.getSnapshot === "function" &&
-        typeof window.nativeApi.omnimindAgentPrompts?.mutate === "function"
+        typeof window.nativeApi.oaAgentPrompts?.getSnapshot === "function" &&
+        typeof window.nativeApi.oaAgentPrompts?.mutate === "function"
       );
     }
     return false;

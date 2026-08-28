@@ -389,7 +389,7 @@ export class IosSimulatorBackend implements DeviceBackend {
     const helperBuilt = runtimeInstalled ? await this.cachedHelperPath().then(Boolean) : false;
     steps.push({
       id: "build-device-helper",
-      label: "Build the OmniMind device helper",
+      label: "Build the HarnessOS device helper",
       done: helperBuilt,
       detail: helperBuilt ? undefined : "Built automatically the first time you attach a device.",
     });
@@ -524,7 +524,7 @@ export class IosSimulatorBackend implements DeviceBackend {
     // Captured to a temp file either way, because `simctl io screenshot` only
     // writes to a path. When the caller wants it kept, it is moved next to the
     // recordings afterwards rather than captured somewhere different.
-    const directory = await mkdtemp(path.join(tmpdir(), "omnimind-device-"));
+    const directory = await mkdtemp(path.join(tmpdir(), "harnessos-device-"));
     const file = path.join(directory, "screenshot.png");
     try {
       const result = await this.simctl(["io", udid, "screenshot", file]);
@@ -623,7 +623,7 @@ export class IosSimulatorBackend implements DeviceBackend {
    *
    * The helper's HID client is bound to one boot of one simulator. When it goes
    * stale (the app under test relaunched, the device was rebooted outside
-   * OmniMind, SimulatorKit dropped the connection) the injection silently
+   * HarnessOS, SimulatorKit dropped the connection) the injection silently
    * vanishes. The helper now reports that instead of acking it, and a forced
    * re-attach rebuilds the client, so the retry lands on a live one.
    */
@@ -1123,7 +1123,7 @@ export class IosSimulatorBackend implements DeviceBackend {
       await helper.attach(udid, options);
       remember();
     } catch (error) {
-      // A device can also be rebooted outside OmniMind (Simulator.app, or simctl
+      // A device can also be rebooted outside HarnessOS (Simulator.app, or simctl
       // in the agent's own shell), which no invalidation hook here can observe.
       // A dead-descriptor failure is therefore retried once with a forced
       // re-attach, which rebinds against the current boot.

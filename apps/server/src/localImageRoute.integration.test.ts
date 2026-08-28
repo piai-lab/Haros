@@ -38,7 +38,7 @@ function makeTempDir(prefix: string): string {
 }
 
 function makeServerConfig(overrides: Partial<ServerConfigShape> = {}): ServerConfigShape {
-  const baseDir = makeTempDir("omnimind-effect-route-");
+  const baseDir = makeTempDir("harnessos-effect-route-");
   return {
     mode: "web",
     port: 0,
@@ -163,7 +163,7 @@ async function withEffectServer(
 
 describe("localImageEffectRouteLayer", () => {
   it("serves an allowlisted workspace image and signals downloads via Content-Disposition", async () => {
-    const workspace = makeTempDir("omnimind-effect-image-workspace-");
+    const workspace = makeTempDir("harnessos-effect-image-workspace-");
     writeFileSync(path.join(workspace, ".git"), "gitdir: .git");
     const imagePath = path.join(workspace, "hero.png");
     writeFileSync(imagePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
@@ -184,9 +184,9 @@ describe("localImageEffectRouteLayer", () => {
   });
 
   it("serves an absolute local image outside the workspace for file-panel previews", async () => {
-    const workspace = makeTempDir("omnimind-effect-image-workspace-");
+    const workspace = makeTempDir("harnessos-effect-image-workspace-");
     writeFileSync(path.join(workspace, ".git"), "gitdir: .git");
-    const externalRoot = makeTempDir("omnimind-effect-external-preview-");
+    const externalRoot = makeTempDir("harnessos-effect-external-preview-");
     const imagePath = path.join(externalRoot, "downloads-file.pdf");
     writeFileSync(imagePath, Buffer.from("%PDF-1.7"));
     const config = makeServerConfig({ cwd: workspace });
@@ -206,7 +206,7 @@ describe("localImageEffectRouteLayer", () => {
   });
 
   it("serves an allowlisted workspace PDF and only allows the desktop app origin to read it", async () => {
-    const workspace = makeTempDir("omnimind-effect-pdf-workspace-");
+    const workspace = makeTempDir("harnessos-effect-pdf-workspace-");
     writeFileSync(path.join(workspace, ".git"), "gitdir: .git");
     const pdfPath = path.join(workspace, "spec.pdf");
     writeFileSync(pdfPath, Buffer.from("%PDF-1.4"));
@@ -235,7 +235,7 @@ describe("localImageEffectRouteLayer", () => {
   });
 
   it("allows the configured Vite dev origin to read PDF bytes", async () => {
-    const workspace = makeTempDir("omnimind-effect-pdf-dev-origin-");
+    const workspace = makeTempDir("harnessos-effect-pdf-dev-origin-");
     writeFileSync(path.join(workspace, ".git"), "gitdir: .git");
     const pdfPath = path.join(workspace, "spec.pdf");
     writeFileSync(pdfPath, Buffer.from("%PDF-1.4"));
@@ -256,7 +256,7 @@ describe("localImageEffectRouteLayer", () => {
   });
 
   it("does not expose local preview bytes to untrusted web origins through CORS", async () => {
-    const workspace = makeTempDir("omnimind-effect-pdf-untrusted-origin-");
+    const workspace = makeTempDir("harnessos-effect-pdf-untrusted-origin-");
     writeFileSync(path.join(workspace, ".git"), "gitdir: .git");
     const pdfPath = path.join(workspace, "spec.pdf");
     writeFileSync(pdfPath, Buffer.from("%PDF-1.4"));
@@ -275,7 +275,7 @@ describe("localImageEffectRouteLayer", () => {
   });
 
   it("returns 404 when the requested path has an unsupported extension", async () => {
-    const workspace = makeTempDir("omnimind-effect-image-bad-ext-");
+    const workspace = makeTempDir("harnessos-effect-image-bad-ext-");
     writeFileSync(path.join(workspace, ".git"), "gitdir: .git");
     const docPath = path.join(workspace, "notes.txt");
     writeFileSync(docPath, "hello");
@@ -289,7 +289,7 @@ describe("localImageEffectRouteLayer", () => {
   });
 
   it("returns 404 for missing files", async () => {
-    const workspace = makeTempDir("omnimind-effect-image-missing-");
+    const workspace = makeTempDir("harnessos-effect-image-missing-");
     writeFileSync(path.join(workspace, ".git"), "gitdir: .git");
     const ghostPath = path.join(workspace, "does-not-exist.png");
     const config = makeServerConfig({ cwd: workspace });

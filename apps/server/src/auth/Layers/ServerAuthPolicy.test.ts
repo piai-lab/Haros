@@ -18,7 +18,7 @@ const makeLayer = (overrides: Partial<ServerConfigShape>) =>
       ).pipe(
         Layer.provide(
           ServerConfig.layerTest(process.cwd(), {
-            prefix: "omnimind-auth-policy-test-",
+            prefix: "harnessos-auth-policy-test-",
           }),
         ),
       ),

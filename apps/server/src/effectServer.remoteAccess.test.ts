@@ -33,7 +33,7 @@ async function runInvalidConfig(config: ServerConfigShape): Promise<ServerLifecy
 describe("createEffectServer remote policy guard", () => {
   it("rejects an invalid public URL before constructing runtime services", async () => {
     const error = await runInvalidConfig(
-      failFastConfig({ publicUrl: new URL("http://omnimind.example.test/") }),
+      failFastConfig({ publicUrl: new URL("http://harnessos.example.test/") }),
     );
 
     expect(error.operation).toBe("validateRemoteAccessPolicy");
@@ -43,7 +43,7 @@ describe("createEffectServer remote policy guard", () => {
   it("rejects a proxied dev URL before constructing runtime services", async () => {
     const error = await runInvalidConfig(
       failFastConfig({
-        publicUrl: new URL("https://omnimind.example.test/"),
+        publicUrl: new URL("https://harnessos.example.test/"),
         devUrl: new URL("http://localhost:5173/"),
       }),
     );

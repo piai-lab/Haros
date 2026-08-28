@@ -24,7 +24,7 @@ function toPiGatewayToolResult(result: unknown): AgentToolResult<unknown> {
           )
           .join("\n")
       : "";
-    throw new Error(message || "OmniMind gateway tool failed.");
+    throw new Error(message || "HarnessOS gateway tool failed.");
   }
   const content =
     isRecord(result) && Array.isArray(result.content)

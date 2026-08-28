@@ -82,7 +82,7 @@ function makeBoardInput(overrides: Partial<BuildKanbanBoardInput> = {}): BuildKa
       newThread: "New thread",
       newTerminal: "New terminal",
     },
-    projects: [{ id: ProjectId.makeUnsafe("project-1"), kind: "project", name: "OmniMind" }],
+    projects: [{ id: ProjectId.makeUnsafe("project-1"), kind: "project", name: "HarnessOS" }],
     threads: [],
     draftThreads: [],
     composerDraftByThreadId: {},
@@ -959,7 +959,7 @@ describe("resolveDraftDropAction", () => {
       resolveDraftDropAction({
         ...baseCard,
         envMode: "worktree",
-        worktreePath: "/tmp/omnimind-worktree",
+        worktreePath: "/tmp/harnessos-worktree",
       }),
     ).toBe("dispatch");
   });
@@ -991,7 +991,7 @@ describe("flattenProjectBoardForOverview", () => {
     const done = columns.done ?? [];
     return {
       projectId: ProjectId.makeUnsafe("project-1"),
-      projectName: "OmniMind",
+      projectName: "HarnessOS",
       projectKind: "project" as const,
       draft,
       inProgress,

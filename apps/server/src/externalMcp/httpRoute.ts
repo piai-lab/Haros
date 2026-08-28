@@ -97,7 +97,7 @@ const localExternalMcpEnabled = Effect.gen(function* () {
 
 const disabledResponse = () =>
   HttpServerResponse.jsonUnsafe(
-    { error: "External MCP is available only from a loopback-only OmniMind instance." },
+    { error: "External MCP is available only from a loopback-only HarnessOS instance." },
     { status: 404 },
   );
 

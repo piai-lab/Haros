@@ -38,7 +38,7 @@ describe("parseCustomTitleBarPreference", () => {
 
 describe("custom title bar preference filesystem", () => {
   it("round-trips the preference and returns null for missing files", () => {
-    const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "omnimind-title-bar-"));
+    const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "harnessos-title-bar-"));
     temporaryDirectories.push(directory);
     const filePath = Path.join(directory, "nested", "custom-title-bar.json");
 

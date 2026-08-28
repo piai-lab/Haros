@@ -9,8 +9,8 @@ import {
 
 describe("parseBareComposerLink", () => {
   it("returns the URL when the whole text is one bare link", () => {
-    expect(parseBareComposerLink("https://github.com/Emanuele-web04/omnimind")).toBe(
-      "https://github.com/Emanuele-web04/omnimind",
+    expect(parseBareComposerLink("https://github.com/Emanuele-web04/harnessos")).toBe(
+      "https://github.com/Emanuele-web04/harnessos",
     );
   });
 
@@ -61,7 +61,7 @@ describe("normalizeComposerLinkUrl", () => {
 describe("describeLinkChip", () => {
   it("shortens GitHub pull request URLs to owner/repo#number", () => {
     expect(describeLinkChip("https://github.com/Emanuele-web04/harnessos/pull/155")).toEqual({
-      label: "Emanuele-web04/omnimind#155",
+      label: "Emanuele-web04/harnessos#155",
       isGitHub: true,
     });
   });

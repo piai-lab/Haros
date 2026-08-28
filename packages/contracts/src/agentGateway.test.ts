@@ -2,16 +2,16 @@ import { assert, describe, it } from "@effect/vitest";
 import { Schema } from "effect";
 
 import {
-  OmniMindCapabilitiesResult,
-  OmniMindCreateThreadsInput,
-  OmniMindCreateThreadsResult,
-  OmniMindGatewayErrorResult,
-  OmniMindWaitForThreadsInput,
-  OmniMindWaitForThreadsResult,
+  HarnessOSCapabilitiesResult,
+  HarnessOSCreateThreadsInput,
+  HarnessOSCreateThreadsResult,
+  HarnessOSGatewayErrorResult,
+  HarnessOSWaitForThreadsInput,
+  HarnessOSWaitForThreadsResult,
 } from "./agentGateway";
 
-const decodeCreate = Schema.decodeUnknownSync(OmniMindCreateThreadsInput);
-const decodeWait = Schema.decodeUnknownSync(OmniMindWaitForThreadsInput);
+const decodeCreate = Schema.decodeUnknownSync(HarnessOSCreateThreadsInput);
+const decodeWait = Schema.decodeUnknownSync(HarnessOSWaitForThreadsInput);
 
 const thread = {
   prompt: "Explain this repository",
@@ -80,7 +80,7 @@ describe("agent gateway contracts", () => {
 
   it("decodes typed capability, creation, wait, and error results", () => {
     assert.doesNotThrow(() =>
-      Schema.decodeUnknownSync(OmniMindCapabilitiesResult)({
+      Schema.decodeUnknownSync(HarnessOSCapabilitiesResult)({
         targetConstruction: {
           codex: {
             modelValueSource: "engines[].models[].slug",
@@ -130,7 +130,7 @@ describe("agent gateway contracts", () => {
       }),
     );
     assert.doesNotThrow(() =>
-      Schema.decodeUnknownSync(OmniMindCreateThreadsResult)({
+      Schema.decodeUnknownSync(HarnessOSCreateThreadsResult)({
         operationId: "gateway:create:1",
         requestId: "request-1",
         requestedCount: 1,
@@ -155,7 +155,7 @@ describe("agent gateway contracts", () => {
       }),
     );
     assert.doesNotThrow(() =>
-      Schema.decodeUnknownSync(OmniMindWaitForThreadsResult)({
+      Schema.decodeUnknownSync(HarnessOSWaitForThreadsResult)({
         callerThreadId: "thread-parent",
         runIds: ["turn-1"],
         allTerminal: true,
@@ -179,7 +179,7 @@ describe("agent gateway contracts", () => {
       }),
     );
     assert.doesNotThrow(() =>
-      Schema.decodeUnknownSync(OmniMindGatewayErrorResult)({
+      Schema.decodeUnknownSync(HarnessOSGatewayErrorResult)({
         error: { code: "creation_plan_locked", message: "A plan already exists." },
       }),
     );

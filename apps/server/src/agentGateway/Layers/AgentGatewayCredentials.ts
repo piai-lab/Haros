@@ -2,7 +2,7 @@
  * AgentGatewayCredentialsLive - Live layer for agent gateway credentials.
  *
  * Issues opaque in-memory credentials. Tokens live for the engine session,
- * can be revoked independently, and intentionally do not survive a OmniMind
+ * can be revoked independently, and intentionally do not survive a HarnessOS
  * restart.
  *
  * @module agentGateway/Layers/AgentGatewayCredentials

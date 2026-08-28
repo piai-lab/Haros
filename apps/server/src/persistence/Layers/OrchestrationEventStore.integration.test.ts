@@ -284,7 +284,7 @@ layer("OrchestrationEventStore", (it) => {
     }),
   );
 
-  it.effect("normalizes imported OmniMind model-selection shapes during replay", () =>
+  it.effect("normalizes imported HarnessOS model-selection shapes during replay", () =>
     Effect.gen(function* () {
       const eventStore = yield* OrchestrationEventStore;
       const sql = yield* SqlClient.SqlClient;

@@ -1,0 +1,90 @@
+{
+  "name": "@harnessos/oa-web-access",
+  "version": "0.25.0-oa.0",
+  "private": true,
+  "description": "Bundled Pi-native web access for HarnessOS Agent.",
+  "keywords": [
+    "extension",
+    "fetch",
+    "perplexity",
+    "pi",
+    "pi-coding-agent",
+    "pi-package",
+    "querit",
+    "scraping",
+    "search1api",
+    "searchinfinity",
+    "tinyfish",
+    "web-search"
+  ],
+  "homepage": "https://github.com/nicobailon/pi-web-access#readme",
+  "bugs": {
+    "url": "https://github.com/nicobailon/pi-web-access/issues"
+  },
+  "license": "MIT",
+  "author": "Nico Bailon",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nicobailon/pi-web-access.git"
+  },
+  "files": [
+    "*.ts",
+    "CHANGELOG.md",
+    "SECURITY.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./index.ts"
+    },
+    "./config-service": {
+      "types": "./dist/config-service.d.ts",
+      "default": "./config-service.ts"
+    },
+    "./curator-presentation": {
+      "types": "./dist/curator-presentation.d.ts",
+      "default": "./curator-presentation.ts"
+    },
+    "./settings-runtime": {
+      "types": "./dist/settings-runtime.d.ts",
+      "default": "./settings-runtime.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.types.json",
+    "test": "node --test --test-concurrency=4",
+    "test:unit": "node --test --test-concurrency=4",
+    "test:related": "node --test --test-concurrency=4",
+    "typecheck": "tsc && tsc -p tsconfig.types.json",
+    "audit:runtime": "npm audit --omit=dev --omit=peer"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "defuddle": "0.19.3",
+    "linkedom": "^0.16.0",
+    "marked": "15.0.12",
+    "p-limit": "^6.1.0",
+    "promise.try": "^2.0.1",
+    "turndown": "^7.2.0",
+    "typebox": "^1.1.38",
+    "undici": "^8.9.0",
+    "unpdf": "^1.6.2"
+  },
+  "devDependencies": {
+    "@types/turndown": "^5.0.6",
+    "typescript": "^5.7.3"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "0.84.3",
+    "@earendil-works/pi-coding-agent": "0.84.3",
+    "@earendil-works/pi-tui": "0.84.3",
+    "@harnessos/contracts": "0.1.0-alpha.0"
+  },
+  "peerDependenciesMeta": {
+    "@harnessos/contracts": {
+      "optional": true
+    }
+  }
+}

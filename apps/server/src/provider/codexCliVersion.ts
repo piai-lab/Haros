@@ -153,5 +153,5 @@ export function formatCodexCliUpgradeMessage(
   minimumVersion = MINIMUM_CODEX_CLI_VERSION,
 ): string {
   const versionLabel = version ? `v${version}` : "the installed version";
-  return `Codex CLI ${versionLabel} is too old for OmniMind. Upgrade to v${minimumVersion} or newer and restart OmniMind.`;
+  return `Codex CLI ${versionLabel} is too old for HarnessOS. Upgrade to v${minimumVersion} or newer and restart HarnessOS.`;
 }

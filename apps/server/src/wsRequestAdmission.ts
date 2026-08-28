@@ -67,13 +67,13 @@ const EXPENSIVE_READ_METHODS = new Set<string>([
   WS_METHODS.providerListSkillsCatalog,
   WS_METHODS.providerListPlugins,
   WS_METHODS.providerReadPlugin,
-  WS_METHODS.omnimindModelServicesList,
-  WS_METHODS.omnimindModelServicesGet,
-  WS_METHODS.omnimindModelServicesDiscoverCustom,
-  WS_METHODS.omnimindModelServicesTestCustom,
-  WS_METHODS.omnimindWebSearchTestProvider,
-  WS_METHODS.omnimindWebSearchRecheck,
-  WS_METHODS.omnimindWebSearchGeminiDiagnostic,
+  WS_METHODS.oaModelServicesList,
+  WS_METHODS.oaModelServicesGet,
+  WS_METHODS.oaModelServicesDiscoverCustom,
+  WS_METHODS.oaModelServicesTestCustom,
+  WS_METHODS.oaWebSearchTestProvider,
+  WS_METHODS.oaWebSearchRecheck,
+  WS_METHODS.oaWebSearchGeminiDiagnostic,
 ]);
 
 export function classifyWsRequest(method: string): WsRequestClass {

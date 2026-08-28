@@ -65,7 +65,7 @@ export function ShareDialog({ stats, tokenStats, open, onOpenChange }: ShareDial
     setBusy("save");
     setStatus(null);
     const blob = await render();
-    if (blob) downloadBlob(blob, `omnimind-usage-insights-${stats.timezone.today}.png`);
+    if (blob) downloadBlob(blob, `harnessos-usage-insights-${stats.timezone.today}.png`);
     setStatus(t(blob ? "settings.profileImageSaved" : "settings.profileImageRenderFailed"));
     setBusy(null);
   }, [render, stats.timezone.today, t]);

@@ -25,7 +25,7 @@ import { GrokAdapter } from "../Services/GrokAdapter.ts";
 import { KiloAdapter } from "../Services/KiloAdapter.ts";
 import { OpenCodeAdapter } from "../Services/OpenCodeAdapter.ts";
 import { PiAdapter } from "../Services/PiAdapter.ts";
-import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
+import { OAAgentAdapter } from "../Services/OAAgentAdapter.ts";
 import { AntigravityAdapter } from "../Services/AntigravityAdapter.ts";
 
 export interface EngineAdapterRegistryLiveOptions {
@@ -46,7 +46,7 @@ const makeProviderAdapterRegistry = (options?: EngineAdapterRegistryLiveOptions)
             yield* DroidAdapter,
             yield* KiloAdapter,
             yield* OpenCodeAdapter,
-            yield* OmniMindAgentAdapter,
+            yield* OAAgentAdapter,
             yield* PiAdapter,
           ];
 

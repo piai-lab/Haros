@@ -64,7 +64,7 @@ const testLayer = Layer.mergeAll(ProfileStatsQueryLive, ProfileStatsArchiveLive)
   Layer.provideMerge(SqlitePersistenceMemory),
   Layer.provide(
     ServerConfig.layerTest(process.cwd(), {
-      prefix: "omnimind-profile-stats-archive-test-",
+      prefix: "harnessos-profile-stats-archive-test-",
     }),
   ),
   Layer.provide(NodeServices.layer),
@@ -500,7 +500,7 @@ describe("ProfileStatsArchive", () => {
             capabilities_json, created_at, expires_at, rate_limit_per_minute,
             concurrency_limit
           ) VALUES (
-            'integration-purge', 'Purge integration', 'omnimind.external-mcp', 'other',
+            'integration-purge', 'Purge integration', 'harnessos.external-mcp', 'other',
             'credential-purge', '["tasks.create","tasks.read"]',
             '2026-06-13T17:00:00.000Z', '2027-06-13T17:00:00.000Z', 60, 1
           )

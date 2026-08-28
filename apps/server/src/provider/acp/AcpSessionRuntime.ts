@@ -236,7 +236,7 @@ export interface AcpSessionRuntimeOptions {
   /**
    * MCP servers to attach to the session. Invoked after `initialize` so the
    * builder can pick a transport based on the agent's advertised
-   * `mcpCapabilities` (e.g. HTTP vs stdio for the OmniMind agent gateway).
+   * `mcpCapabilities` (e.g. HTTP vs stdio for the HarnessOS agent gateway).
    */
   readonly buildMcpServers?: (initializeResult: Acp.InitializeResponse) => Array<Acp.McpServer>;
   readonly authenticateMeta?: Record<string, unknown>;
@@ -387,7 +387,7 @@ export const awaitAcpChildExit = (child: AcpOwnedChildProcess): Effect.Effect<vo
   child.exitCode.pipe(Effect.exit, Effect.asVoid);
 
 /**
- * Bridges Effect's child-process exit signal into OmniMind's process-tree proof. This is deliberately
+ * Bridges Effect's child-process exit signal into HarnessOS's process-tree proof. This is deliberately
  * a finalizer defect on failure: adapter scope cleanup may ignore typed failures, but it must never
  * publish a successful stop when the ACP process tree has not been proven gone.
  */

@@ -416,7 +416,7 @@ describe("useEngineModelCatalog", () => {
     ]);
   });
 
-  it("does not surface an unavailable exact OmniMind binding as a static model option", () => {
+  it("does not surface an unavailable exact HarnessOS binding as a static model option", () => {
     modelQueries.set("oa", {
       data: {
         models: [{ slug: "deepseek/deepseek-chat", name: "DeepSeek Chat" }],

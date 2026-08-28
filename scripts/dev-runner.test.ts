@@ -205,7 +205,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           baseEnv: {},
           serverOffset: 0,
           webOffset: 0,
-          harnessosHome: "/tmp/custom-omnimind",
+          harnessosHome: "/tmp/custom-harnessos",
           authToken: "secret",
           noBrowser: true,
           autoBootstrapProjectFromCwd: false,
@@ -215,7 +215,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: new URL("http://localhost:7331"),
         });
 
-        assert.equal(env.HARNESSOS_HOME, resolve("/tmp/custom-omnimind"));
+        assert.equal(env.HARNESSOS_HOME, resolve("/tmp/custom-harnessos"));
         assert.equal(env.HARNESSOS_PORT, "4222");
         assert.equal(env.HARNESSOS_NO_BROWSER, "1");
         assert.equal(env.HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD, "0");
@@ -278,7 +278,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           baseEnv: {},
           serverOffset: 0,
           webOffset: 0,
-          harnessosHome: "/tmp/my-omnimind",
+          harnessosHome: "/tmp/my-harnessos",
           authToken: undefined,
           noBrowser: undefined,
           autoBootstrapProjectFromCwd: undefined,
@@ -288,9 +288,9 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: undefined,
         });
 
-        assert.equal(env.HARNESSOS_HOME, resolve("/tmp/my-omnimind"));
-        assert.equal(env.HARNESSOS_HOME, resolve("/tmp/my-omnimind"));
-        assert.equal(env.HARNESSOS_HOME, resolve("/tmp/my-omnimind"));
+        assert.equal(env.HARNESSOS_HOME, resolve("/tmp/my-harnessos"));
+        assert.equal(env.HARNESSOS_HOME, resolve("/tmp/my-harnessos"));
+        assert.equal(env.HARNESSOS_HOME, resolve("/tmp/my-harnessos"));
       }),
     );
   });

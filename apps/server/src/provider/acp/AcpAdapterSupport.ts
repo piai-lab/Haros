@@ -141,7 +141,7 @@ export function resolveAcpFullAccessPermissionOutcome(
 }
 
 /**
- * Applies OmniMind's turn-scoped permission precedence to ACP reverse requests.
+ * Applies HarnessOS's turn-scoped permission precedence to ACP reverse requests.
  *
  * `interactionMode: undefined` means that no turn owns the request. Those
  * requests are cancelled so replay or late engine activity cannot inherit a

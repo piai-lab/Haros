@@ -9,8 +9,8 @@ import {
 
 const paths = {
   homeDir: "/Users/tester",
-  chatWorkspaceRoot: "/Users/tester/Documents/OmniMind/Chats",
-  studioWorkspaceRoot: "/Users/tester/Documents/OmniMind/Studio",
+  chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS/Chats",
+  studioWorkspaceRoot: "/Users/tester/Documents/HarnessOS/Studio",
 };
 
 function successfulHandler() {
@@ -25,7 +25,7 @@ describe("startFreshChatForActiveSurface", () => {
     await startFreshChatForActiveSurface({
       activeProject: {
         kind: "studio",
-        cwd: "/Users/tester/Documents/OmniMind/Studio",
+        cwd: "/Users/tester/Documents/HarnessOS/Studio",
       },
       isStudioRoute: false,
       paths,

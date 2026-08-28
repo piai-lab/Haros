@@ -194,7 +194,7 @@ describe("DeviceManager discovery before the helper exists", () => {
       { id: "install-xcode" as const, label: "Install Xcode", done: true },
       {
         id: "build-device-helper" as const,
-        label: "Build the OmniMind device helper",
+        label: "Build the HarnessOS device helper",
         done: false,
       },
     ],
@@ -381,7 +381,7 @@ describe("DeviceManager stream transition ordering", () => {
 });
 
 describe("DeviceManager boot ownership", () => {
-  it("marks devices it booted as omnimind-owned and leaves discovered ones alone", async () => {
+  it("marks devices it booted as harnessos-owned and leaves discovered ones alone", async () => {
     const { backend, manager } = makeManager();
     backend.bootExternally(DEVICE_B);
 
@@ -404,7 +404,7 @@ describe("DeviceManager boot ownership", () => {
     expect(result.kind).toBe("boot-limit-reached");
     if (result.kind !== "boot-limit-reached") throw new Error("expected boot-limit-reached");
     expect(result.limit).toBe(3);
-    expect(result.omnimindBooted.map((device) => device.udid)).toEqual([
+    expect(result.harnessosBooted.map((device) => device.udid)).toEqual([
       DEVICE_A,
       DEVICE_B,
       DEVICE_C,
@@ -437,7 +437,7 @@ describe("DeviceManager boot ownership", () => {
 
     // Still at the cap on paper, but B is gone, so it must not be offered as
     // something the user can free.
-    expect((await manager.omnimindBootedDevices()).map((device) => device.udid)).toEqual([
+    expect((await manager.harnessosBootedDevices()).map((device) => device.udid)).toEqual([
       DEVICE_A,
       DEVICE_C,
     ]);
@@ -456,7 +456,7 @@ describe("DeviceManager boot ownership", () => {
     expect(backend.callsOfKind("boot").map((call) => call.udid)).not.toContain(DEVICE_D);
   });
 
-  it("frees a cap slot when a omnimind-booted device is shut down", async () => {
+  it("frees a cap slot when a harnessos-booted device is shut down", async () => {
     const { manager } = makeManager();
     await manager.boot(DEVICE_A);
     await manager.boot(DEVICE_B);
@@ -489,7 +489,7 @@ describe("DeviceManager idle shutdown", () => {
     vi.useRealTimers();
   });
 
-  it("shuts down a omnimind-booted device after the idle timeout following detach", async () => {
+  it("shuts down a harnessos-booted device after the idle timeout following detach", async () => {
     const { backend, manager } = makeManager();
     await manager.boot(DEVICE_A);
     await manager.attach(THREAD_A, DEVICE_A);
@@ -688,7 +688,7 @@ describe("surviving a crash", () => {
   });
 
   it("leaves the devices of a server that is still running", async () => {
-    // Two OmniMind processes can overlap; the record belongs to the live one.
+    // Two HarnessOS processes can overlap; the record belongs to the live one.
     const owner = makeStore();
     const { backend, manager } = makeManager(new FakeDeviceBackend(), {
       bootOwnership: owner.store,
@@ -704,7 +704,7 @@ describe("surviving a crash", () => {
 });
 
 describe("DeviceManager lifecycle and agent activity", () => {
-  it("shuts down only omnimind-booted devices on dispose", async () => {
+  it("shuts down only harnessos-booted devices on dispose", async () => {
     const { backend, manager } = makeManager();
     await manager.boot(DEVICE_A);
     backend.bootExternally(DEVICE_B);

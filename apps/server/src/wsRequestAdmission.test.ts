@@ -17,15 +17,13 @@ describe("WsRequestAdmission", () => {
     expect(classifyWsRequest(WS_METHODS.projectsSearchContent)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.providerListModels)).toBe("engine-discovery");
     expect(classifyWsRequest(WS_METHODS.providerListAgents)).toBe("engine-discovery");
-    expect(classifyWsRequest(WS_METHODS.omnimindModelServicesList)).toBe("expensive-read");
-    expect(classifyWsRequest(WS_METHODS.omnimindModelServicesGet)).toBe("expensive-read");
-    expect(classifyWsRequest(WS_METHODS.omnimindModelServicesDiscoverCustom)).toBe(
-      "expensive-read",
-    );
-    expect(classifyWsRequest(WS_METHODS.omnimindAgentPromptsGetSnapshot)).toBe("standard");
-    expect(classifyWsRequest(WS_METHODS.omnimindWebSearchOpen)).toBe("standard");
-    expect(classifyWsRequest(WS_METHODS.omnimindWebSearchTestProvider)).toBe("expensive-read");
-    expect(classifyWsRequest(WS_METHODS.omnimindWebSearchRecheck)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.oaModelServicesList)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.oaModelServicesGet)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.oaModelServicesDiscoverCustom)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.oaAgentPromptsGetSnapshot)).toBe("standard");
+    expect(classifyWsRequest(WS_METHODS.oaWebSearchOpen)).toBe("standard");
+    expect(classifyWsRequest(WS_METHODS.oaWebSearchTestProvider)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.oaWebSearchRecheck)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.terminalAckOutput)).toBe("control");
   });
 
@@ -36,10 +34,7 @@ describe("WsRequestAdmission", () => {
         const first = yield* admission.acquire(1, ORCHESTRATION_WS_METHODS.getSnapshot);
         const second = yield* admission.acquire(1, WS_METHODS.gitReadWorkingTreeDiff);
 
-        const promptSnapshot = yield* admission.acquire(
-          1,
-          WS_METHODS.omnimindAgentPromptsGetSnapshot,
-        );
+        const promptSnapshot = yield* admission.acquire(1, WS_METHODS.oaAgentPromptsGetSnapshot);
         expect(promptSnapshot.requestClass).toBe("standard");
 
         yield* admission.release(first);

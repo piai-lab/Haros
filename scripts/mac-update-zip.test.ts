@@ -37,29 +37,29 @@ describe("mac-update-zip", () => {
   });
 
   it("builds Electron framework symlink paths for the top-level app bundle", () => {
-    assert.deepStrictEqual(buildMacUpdateZipSymlinkEntries("OmniMind.app"), [
-      "OmniMind.app/Contents/Frameworks/Electron Framework.framework/Electron Framework",
-      "OmniMind.app/Contents/Frameworks/Electron Framework.framework/Helpers",
-      "OmniMind.app/Contents/Frameworks/Electron Framework.framework/Libraries",
-      "OmniMind.app/Contents/Frameworks/Electron Framework.framework/Resources",
-      "OmniMind.app/Contents/Frameworks/Electron Framework.framework/Versions/Current",
+    assert.deepStrictEqual(buildMacUpdateZipSymlinkEntries("HarnessOS.app"), [
+      "HarnessOS.app/Contents/Frameworks/Electron Framework.framework/Electron Framework",
+      "HarnessOS.app/Contents/Frameworks/Electron Framework.framework/Helpers",
+      "HarnessOS.app/Contents/Frameworks/Electron Framework.framework/Libraries",
+      "HarnessOS.app/Contents/Frameworks/Electron Framework.framework/Resources",
+      "HarnessOS.app/Contents/Frameworks/Electron Framework.framework/Versions/Current",
     ]);
   });
 
   it("resolves exactly one top-level .app from update zip entries", () => {
     assert.equal(
       resolveSingleTopLevelMacAppBundle([
-        "__MACOSX/OmniMind.app/Contents/Info.plist",
-        "OmniMind.app/Contents/Info.plist",
-        "OmniMind.app/Contents/MacOS/OmniMind",
+        "__MACOSX/HarnessOS.app/Contents/Info.plist",
+        "HarnessOS.app/Contents/Info.plist",
+        "HarnessOS.app/Contents/MacOS/HarnessOS",
       ]),
-      "OmniMind.app",
+      "HarnessOS.app",
     );
 
     assert.throws(
       () =>
         resolveSingleTopLevelMacAppBundle([
-          "OmniMind.app/Contents/Info.plist",
+          "HarnessOS.app/Contents/Info.plist",
           "Other.app/Contents/Info.plist",
         ]),
       /Expected one top-level \.app bundle/,
@@ -69,16 +69,16 @@ describe("mac-update-zip", () => {
   it("resolves exactly one macOS update zip artifact", () => {
     assert.equal(
       resolveSingleMacUpdateZipFileName([
-        "OmniMind-0.1.5-arm64.dmg",
-        "OmniMind-0.1.5-arm64.zip",
+        "HarnessOS-0.1.5-arm64.dmg",
+        "HarnessOS-0.1.5-arm64.zip",
         "latest-mac.yml",
       ]),
-      "OmniMind-0.1.5-arm64.zip",
+      "HarnessOS-0.1.5-arm64.zip",
     );
 
     assert.throws(
       () =>
-        resolveSingleMacUpdateZipFileName(["OmniMind-0.1.5-arm64.zip", "OmniMind-0.1.5-x64.zip"]),
+        resolveSingleMacUpdateZipFileName(["HarnessOS-0.1.5-arm64.zip", "HarnessOS-0.1.5-x64.zip"]),
       /Expected one macOS update zip artifact/,
     );
   });
@@ -86,15 +86,15 @@ describe("mac-update-zip", () => {
   it("requires at least one macOS update manifest", () => {
     assert.deepStrictEqual(
       resolveMacUpdateManifestFileNames([
-        "OmniMind-0.1.5-arm64.dmg",
-        "OmniMind-0.1.5-arm64.zip",
+        "HarnessOS-0.1.5-arm64.dmg",
+        "HarnessOS-0.1.5-arm64.zip",
         "latest-mac.yml",
       ]),
       ["latest-mac.yml"],
     );
 
     assert.throws(
-      () => resolveMacUpdateManifestFileNames(["OmniMind-0.1.5-arm64.dmg"]),
+      () => resolveMacUpdateManifestFileNames(["HarnessOS-0.1.5-arm64.dmg"]),
       /Expected at least one macOS update manifest/,
     );
   });
@@ -102,18 +102,18 @@ describe("mac-update-zip", () => {
   it("updates the macOS zip file entry and matching top-level sha", () => {
     const manifest = `version: 0.1.4
 files:
-  - url: OmniMind-0.1.4-arm64.zip
+  - url: HarnessOS-0.1.4-arm64.zip
     sha512: oldzip
     size: 100
-  - url: OmniMind-0.1.4-arm64.dmg
+  - url: HarnessOS-0.1.4-arm64.dmg
     sha512: olddmg
     size: 200
-path: 'OmniMind-0.1.4-arm64.zip'
+path: 'HarnessOS-0.1.4-arm64.zip'
 sha512: oldzip
 releaseDate: '2026-06-07T12:00:00.000Z'
 `;
 
-    const updated = updateMacUpdateManifestZipEntry(manifest, "OmniMind-0.1.4-arm64.zip", {
+    const updated = updateMacUpdateManifestZipEntry(manifest, "HarnessOS-0.1.4-arm64.zip", {
       sha512: "newzip",
       size: 12345,
     });
@@ -122,13 +122,13 @@ releaseDate: '2026-06-07T12:00:00.000Z'
       updated,
       `version: 0.1.4
 files:
-  - url: OmniMind-0.1.4-arm64.zip
+  - url: HarnessOS-0.1.4-arm64.zip
     sha512: newzip
     size: 12345
-  - url: OmniMind-0.1.4-arm64.dmg
+  - url: HarnessOS-0.1.4-arm64.dmg
     sha512: olddmg
     size: 200
-path: 'OmniMind-0.1.4-arm64.zip'
+path: 'HarnessOS-0.1.4-arm64.zip'
 sha512: newzip
 releaseDate: '2026-06-07T12:00:00.000Z'
 `,
@@ -138,20 +138,20 @@ releaseDate: '2026-06-07T12:00:00.000Z'
   it("drops the stale blockMapSize from the repacked zip entry but keeps the dmg blockMapSize", () => {
     const manifest = `version: 0.1.4
 files:
-  - url: OmniMind-0.1.4-arm64.zip
+  - url: HarnessOS-0.1.4-arm64.zip
     sha512: oldzip
     size: 100
     blockMapSize: 50
-  - url: OmniMind-0.1.4-arm64.dmg
+  - url: HarnessOS-0.1.4-arm64.dmg
     sha512: olddmg
     size: 200
     blockMapSize: 75
-path: 'OmniMind-0.1.4-arm64.zip'
+path: 'HarnessOS-0.1.4-arm64.zip'
 sha512: oldzip
 releaseDate: '2026-06-07T12:00:00.000Z'
 `;
 
-    const updated = updateMacUpdateManifestZipEntry(manifest, "OmniMind-0.1.4-arm64.zip", {
+    const updated = updateMacUpdateManifestZipEntry(manifest, "HarnessOS-0.1.4-arm64.zip", {
       sha512: "newzip",
       size: 12345,
     });
@@ -160,14 +160,14 @@ releaseDate: '2026-06-07T12:00:00.000Z'
       updated,
       `version: 0.1.4
 files:
-  - url: OmniMind-0.1.4-arm64.zip
+  - url: HarnessOS-0.1.4-arm64.zip
     sha512: newzip
     size: 12345
-  - url: OmniMind-0.1.4-arm64.dmg
+  - url: HarnessOS-0.1.4-arm64.dmg
     sha512: olddmg
     size: 200
     blockMapSize: 75
-path: 'OmniMind-0.1.4-arm64.zip'
+path: 'HarnessOS-0.1.4-arm64.zip'
 sha512: newzip
 releaseDate: '2026-06-07T12:00:00.000Z'
 `,
@@ -180,35 +180,35 @@ releaseDate: '2026-06-07T12:00:00.000Z'
         updateMacUpdateManifestZipEntry(
           `version: 0.1.4
 files:
-  - url: OmniMind-0.1.4-arm64.dmg
+  - url: HarnessOS-0.1.4-arm64.dmg
     sha512: olddmg
     size: 200
 releaseDate: '2026-06-07T12:00:00.000Z'
 `,
-          "OmniMind-0.1.4-arm64.zip",
+          "HarnessOS-0.1.4-arm64.zip",
           {
             sha512: "newzip",
             size: 12345,
           },
         ),
-      /Could not update OmniMind-0.1.4-arm64.zip entry/,
+      /Could not update HarnessOS-0.1.4-arm64.zip entry/,
     );
   });
 
   it("validates manifest metadata after zip repack", () => {
     const manifest = `version: 0.1.5
 files:
-  - url: OmniMind-0.1.5-arm64.zip
+  - url: HarnessOS-0.1.5-arm64.zip
     sha512: newzip
     size: 12345
-path: OmniMind-0.1.5-arm64.zip
+path: HarnessOS-0.1.5-arm64.zip
 sha512: newzip
 releaseDate: '2026-06-07T12:00:00.000Z'
 `;
     const metadata = { sha512: "newzip", size: 12345 };
 
     assert.deepStrictEqual(
-      validateMacUpdateManifestZipMetadata(manifest, "OmniMind-0.1.5-arm64.zip", metadata),
+      validateMacUpdateManifestZipMetadata(manifest, "HarnessOS-0.1.5-arm64.zip", metadata),
       {
         manifestHasZipPath: true,
         manifestHasZipSha: true,
@@ -216,7 +216,7 @@ releaseDate: '2026-06-07T12:00:00.000Z'
       },
     );
     assert.deepStrictEqual(
-      assertMacUpdateManifestZipMetadata(manifest, "OmniMind-0.1.5-arm64.zip", metadata),
+      assertMacUpdateManifestZipMetadata(manifest, "HarnessOS-0.1.5-arm64.zip", metadata),
       {
         manifestHasZipPath: true,
         manifestHasZipSha: true,

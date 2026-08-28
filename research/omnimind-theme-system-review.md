@@ -18,7 +18,7 @@ OmniMind 已经有一套值得保留的主题内核，不应重写：
 
 2026-08-24审计证明的主要问题不在核心，而在外围修改半径：
 
-1. `@harnessos/om-web-access` 的内部Curator/observer只收到`light|dark`，又维护一套固定黑白palette；自定义暖色或未来主题会在这里静默失效。
+1. `@harnessos/oa-web-access` 的内部Curator/observer只收到`light|dark`，又维护一套固定黑白palette；自定义暖色或未来主题会在这里静默失效。
 2. 主题seed catalog已经拥有实际预设字节，但另有手写预设列表及按preset ID分叉的字段应用metadata，重复声明ID、顺序、明暗槽与字体/对比度/窗口材质套用语义；新增rich主题需要同步多份事实。
 3. UI把整套App palette预设称为“代码主题”，但Shiki与Pierre Diff实际只根据`light|dark`选择固定GitHub syntax theme；用户语言和代码概念不诚实。
 4. 全仓存在大量硬编码颜色，但不能用“全部替换成token”处理：其中混合了产品chrome、品牌identity、内容、截图/导出、设备bezel、图片遮罩、状态语义、第三方页和首帧fallback。机械清理会破坏真实边界。

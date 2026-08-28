@@ -24,7 +24,7 @@ export function resolveBaseCodexHomePath(
   return explicitHomePath?.trim() || env.CODEX_HOME?.trim() || path.join(homedir(), ".codex");
 }
 
-export function resolveOmniMindCodexHomeOverlayPath(
+export function resolveHarnessOSCodexHomeOverlayPath(
   env: NodeJS.ProcessEnv,
   sourceHomePath: string,
 ): string {
@@ -36,13 +36,13 @@ export function resolveOmniMindCodexHomeOverlayPath(
 
 /**
  * Returns the home directory that the codex app-server child process actually
- * writes under. OmniMind keeps its generated config isolated from the user's
+ * writes under. HarnessOS keeps its generated config isolated from the user's
  * source Codex home while linking shared state such as authentication.
  */
 export function resolveActiveCodexHomeWritePath(input: CodexHomePathsInput = {}): string {
   const env = input.env ?? process.env;
   const source = resolveBaseCodexHomePath(env, input.homePath);
-  const overlay = resolveOmniMindCodexHomeOverlayPath(env, source);
+  const overlay = resolveHarnessOSCodexHomeOverlayPath(env, source);
   return path.resolve(source) === path.resolve(overlay) ? source : overlay;
 }
 
@@ -59,7 +59,7 @@ export function resolveCodexHomeAllowlistCandidates(
 ): readonly string[] {
   const env = input.env ?? process.env;
   const source = resolveBaseCodexHomePath(env, input.homePath);
-  const overlay = resolveOmniMindCodexHomeOverlayPath(env, source);
+  const overlay = resolveHarnessOSCodexHomeOverlayPath(env, source);
   const sourceResolved = path.resolve(source);
   const overlayResolved = path.resolve(overlay);
   return sourceResolved === overlayResolved ? [source] : [source, overlay];

@@ -191,12 +191,12 @@ describe("exportThreadArchive", () => {
   it("slugifies the title and stamps the date bucket into the filename", () => {
     expect(
       threadArchiveFileName({ title: "Fix: nasty bug!!", isoTimestamp: "2026-06-28T01:02:03Z" }),
-    ).toBe("omnimind-thread-fix-nasty-bug-20260628.zip");
+    ).toBe("harnessos-thread-fix-nasty-bug-20260628.zip");
   });
 
   it("falls back to a generic slug when the title has no safe characters", () => {
     expect(threadArchiveFileName({ title: "   ", isoTimestamp: "2026-06-28T00:00:00Z" })).toBe(
-      "omnimind-thread-thread-20260628.zip",
+      "harnessos-thread-thread-20260628.zip",
     );
   });
 });

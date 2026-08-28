@@ -1,4 +1,4 @@
-// Verifies the current OmniMind ACP boundary against an official-SDK subprocess.
+// Verifies the current HarnessOS ACP boundary against an official-SDK subprocess.
 
 import { spawn } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -31,7 +31,7 @@ interface FixtureLogEntry {
 }
 
 function createFixtureLog(): string {
-  const directory = mkdtempSync(path.join(os.tmpdir(), "omnimind-acp-conformance-"));
+  const directory = mkdtempSync(path.join(os.tmpdir(), "harnessos-acp-conformance-"));
   temporaryDirectories.push(directory);
   return path.join(directory, "fixture.jsonl");
 }
@@ -101,11 +101,11 @@ function runtimeLayer(logPath: string, env: Record<string, string> = {}) {
         nested: { source: "oa" },
       },
     },
-    clientInfo: { name: "omnimind-conformance-test", version: "0.0.0" },
+    clientInfo: { name: "harnessos-conformance-test", version: "0.0.0" },
     authMethodId: "test",
     authenticateMeta: {
       primitive: 11,
-      nested: { source: "omnimind-auth" },
+      nested: { source: "harnessos-auth" },
     },
   });
 }
@@ -116,7 +116,7 @@ afterEach(() => {
   }
 });
 
-describe("official ACP SDK conformance at the current OmniMind boundary", () => {
+describe("official ACP SDK conformance at the current HarnessOS boundary", () => {
   it.effect("negotiates initialize and authentication using official SDK handlers", () => {
     const logPath = createFixtureLog();
     return Effect.gen(function* () {
@@ -148,7 +148,7 @@ describe("official ACP SDK conformance at the current OmniMind boundary", () => 
       ]);
       expect(entries[0]?.payload).toMatchObject({
         protocolVersion: 1,
-        clientInfo: { name: "omnimind-conformance-test", version: "0.0.0" },
+        clientInfo: { name: "harnessos-conformance-test", version: "0.0.0" },
         clientCapabilities: {
           fs: { readTextFile: false, writeTextFile: false },
           terminal: false,
@@ -162,7 +162,7 @@ describe("official ACP SDK conformance at the current OmniMind boundary", () => 
         methodId: "test",
         _meta: {
           primitive: 11,
-          nested: { source: "omnimind-auth" },
+          nested: { source: "harnessos-auth" },
         },
       });
     }).pipe(
@@ -246,17 +246,17 @@ describe("official ACP SDK conformance at the current OmniMind boundary", () => 
 
       yield* runtime.notify("conformance/notice", {
         primitive: false,
-        nested: { source: "omnimind-notice" },
+        nested: { source: "harnessos-notice" },
       });
       const response = yield* runtime.request("conformance/echo", {
         primitive: 42,
-        nested: { source: "omnimind-request" },
+        nested: { source: "harnessos-request" },
       });
 
       expect(response).toEqual({
         echo: {
           primitive: 42,
-          nested: { source: "omnimind-request" },
+          nested: { source: "harnessos-request" },
         },
         _meta: {
           primitive: true,

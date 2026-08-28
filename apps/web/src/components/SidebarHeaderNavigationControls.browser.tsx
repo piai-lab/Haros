@@ -54,8 +54,8 @@ describe("SidebarProductMark", () => {
     if (!slot || !logo || !images) throw new Error("Sidebar product mark is missing");
 
     expect(logo.getAttribute("aria-hidden")).toBe("true");
-    expect(images[0]?.getAttribute("src")).toBe("/brand/omnimind-logo-flat.svg");
-    expect(images[1]?.getAttribute("src")).toBe("/brand/omnimind-logo-flat-dark.svg");
+    expect(images[0]?.getAttribute("src")).toBe("/brand/harnessos-logo-flat.svg");
+    expect(images[1]?.getAttribute("src")).toBe("/brand/harnessos-logo-flat-dark.svg");
     await expect.poll(() => images[0]?.naturalWidth ?? 0).toBeGreaterThan(0);
     await expect.poll(() => images[1]?.naturalWidth ?? 0).toBeGreaterThan(0);
   });

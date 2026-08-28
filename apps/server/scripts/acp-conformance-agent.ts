@@ -26,7 +26,7 @@ if (malformedPrefix) {
   process.stdout.write("{not-json}\n");
 }
 
-const app = agent({ name: "omnimind-official-sdk-conformance-agent" })
+const app = agent({ name: "harnessos-official-sdk-conformance-agent" })
   .onRequest(methods.agent.initialize, (ctx) => {
     log("initialize", ctx.params);
     return {

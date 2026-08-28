@@ -45,7 +45,7 @@ import {
 } from "../Errors.ts";
 import {
   HARNESSOS_HARNESS_POLICY_VERSION,
-  takeOmniMindHarnessPolicyForProviderSession,
+  takeHarnessOSHarnessPolicyForProviderSession,
 } from "../../agentGateway/harnessPolicy.ts";
 import {
   buildOpenCodeMcpServer,
@@ -198,7 +198,7 @@ interface OpenCodeSessionContext {
   readonly pendingPermissions: Map<string, PermissionRequest>;
   readonly replyingPermissions: Map<string, "once" | "always" | "reject">;
   readonly settlingPermissions: Map<string, Deferred.Deferred<boolean>>;
-  /** Permission request ids resolved by OmniMind policy and never surfaced to the UI. */
+  /** Permission request ids resolved by HarnessOS policy and never surfaced to the UI. */
   readonly policyResolvedPermissionIds: Set<string>;
   /** Human replies settled from permission.list while their permission.replied echo is pending. */
   readonly locallyResolvedPermissionIds: Set<string>;
@@ -262,8 +262,8 @@ const installOpenCodeGatewayMcp = Effect.fn("installOpenCodeGatewayMcp")(functio
     operation: "mcp.add",
     detail:
       status?.status === "failed"
-        ? `${input.displayName} OmniMind MCP connection failed: ${status.error}`
-        : `${input.displayName} OmniMind MCP connection did not become ready.`,
+        ? `${input.displayName} HarnessOS MCP connection failed: ${status.error}`
+        : `${input.displayName} HarnessOS MCP connection did not become ready.`,
   });
 });
 
@@ -1773,7 +1773,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                   turnId,
                   messageId: deferredFinalAssistantMessageId,
                   raw: {
-                    source: "omnimind.opencode.deferred-idle-completion",
+                    source: "harnessos.opencode.deferred-idle-completion",
                     event: raw,
                   },
                 }))
@@ -1790,7 +1790,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                 yield* completeOpenCodeTurn(context, {
                   turnId,
                   raw: {
-                    source: "omnimind.opencode.deferred-idle-local-part",
+                    source: "harnessos.opencode.deferred-idle-local-part",
                     event: raw,
                   },
                   totalCostUsd: context.latestTurnCostUsd,
@@ -1817,7 +1817,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                   turnId,
                   messageId: retriedFinalAssistantMessageId,
                   raw: {
-                    source: "omnimind.opencode.deferred-idle-completion-retry",
+                    source: "harnessos.opencode.deferred-idle-completion-retry",
                     event: raw,
                   },
                 }))
@@ -1831,7 +1831,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                 yield* completeOpenCodeTurn(context, {
                   turnId,
                   raw: {
-                    source: "omnimind.opencode.deferred-idle-local-part-retry",
+                    source: "harnessos.opencode.deferred-idle-local-part-retry",
                     event: raw,
                   },
                   totalCostUsd: context.latestTurnCostUsd,
@@ -1846,7 +1846,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             const completed = yield* completeOpenCodeTurn(context, {
               turnId,
               raw: {
-                source: "omnimind.opencode.idle-after-tool-calls",
+                source: "harnessos.opencode.idle-after-tool-calls",
                 event: raw,
               },
               errorMessage: message,
@@ -1857,7 +1857,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                 threadId: context.session.threadId,
                 turnId,
                 raw: {
-                  source: "omnimind.opencode.idle-after-tool-calls",
+                  source: "harnessos.opencode.idle-after-tool-calls",
                   event: raw,
                 },
               }),
@@ -2031,7 +2031,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             turnId: input.turnId,
             assistantEntry,
             raw: {
-              source: "omnimind.opencode.prompt.recovery",
+              source: "harnessos.opencode.prompt.recovery",
               message: assistantEntry,
             },
           });
@@ -2104,7 +2104,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                 "OpenCode did not produce any activity for this prompt. The session may be stuck; try sending again or restart OpenCode.";
               const completed = yield* completeOpenCodeTurn(context, {
                 turnId: input.turnId,
-                raw: { source: "omnimind.opencode.prompt.watchdog" },
+                raw: { source: "harnessos.opencode.prompt.watchdog" },
                 errorMessage: message,
               });
               if (!completed) return;
@@ -2112,7 +2112,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                 ...buildEventBase({
                   threadId: context.session.threadId,
                   turnId: input.turnId,
-                  raw: { source: "omnimind.opencode.prompt.watchdog" },
+                  raw: { source: "harnessos.opencode.prompt.watchdog" },
                 }),
                 type: "runtime.error",
                 payload: {
@@ -2639,7 +2639,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
 
           case "permission.replied": {
             if (context.policyResolvedPermissionIds.has(event.properties.requestID)) {
-              // OmniMind policy resolved this request; nothing was surfaced to the UI.
+              // HarnessOS policy resolved this request; nothing was surfaced to the UI.
               break;
             }
             if (context.locallyResolvedPermissionIds.has(event.properties.requestID)) {
@@ -2857,7 +2857,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           }
 
           // Newer OpenCode servers can emit session.next.* events for the active
-          // agent loop. Mirror them into OmniMind's canonical transcript stream.
+          // agent loop. Mirror them into HarnessOS's canonical transcript stream.
           case "session.next.text.delta": {
             if (!turnId || event.properties.delta.length === 0) {
               break;
@@ -3677,7 +3677,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
 
           // OpenCode's MCP registry is process/directory scoped, not session
           // scoped. Issue a gateway token only for a managed server isolated to
-          // this exact OmniMind thread.
+          // this exact HarnessOS thread.
           const agentGatewaySessionLease = serverUrl
             ? undefined
             : acquireAgentGatewaySessionLease(agentGatewayCredentials, input.threadId, engine);
@@ -3720,7 +3720,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                           Effect.sync(() => agentGatewaySessionLease?.release()).pipe(
                             Effect.andThen(
                               Effect.logWarning(
-                                `${adapterConfig.displayName} could not install thread-scoped OmniMind MCP control`,
+                                `${adapterConfig.displayName} could not install thread-scoped HarnessOS MCP control`,
                                 Cause.squash(cause),
                               ),
                             ),
@@ -3731,10 +3731,10 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                     }
                     const createSessionId = resumedSessionId
                       ? // A resumed engine may still be executing an interrupted Plan turn.
-                        // Install the read-only ruleset until OmniMind dispatches a new turn with a
+                        // Install the read-only ruleset until HarnessOS dispatches a new turn with a
                         // known interaction mode. This must succeed before the event pump starts:
                         // otherwise an already-running Full Access session could mutate state
-                        // without ever emitting a permission request for OmniMind to reject.
+                        // without ever emitting a permission request for HarnessOS to reject.
                         runOpenCodeSdk("session.update", () =>
                           client.session.update({
                             sessionID: resumedSessionId,
@@ -3761,7 +3761,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                               : {}),
                             ...(initialAgent ? { agent: initialAgent } : {}),
                             permission: buildOpenCodePermissionRules(input.runtimeMode),
-                            title: `OmniMind ${input.threadId}`,
+                            title: `HarnessOS ${input.threadId}`,
                           };
                           return client.session.create(
                             sessionCreateInput as unknown as Parameters<
@@ -3994,7 +3994,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             issue: `${adapterConfig.displayName} turns require text input or at least one attachment.`,
           });
         }
-        const harnessPolicy = takeOmniMindHarnessPolicyForProviderSession(
+        const harnessPolicy = takeHarnessOSHarnessPolicyForProviderSession(
           {
             ...(context.harnessPolicyDelivered ? { harnessPolicyDelivered: true } : {}),
           },
@@ -4027,9 +4027,9 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         context.activeTurnFinalAssistantMessageId = undefined;
         context.activeTurnToolCallIdleWatchdogStarted = false;
         context.activeInteractionMode = interactionMode;
-        // Always pin OmniMind's interaction mode to OpenCode's primary agent.
+        // Always pin HarnessOS's interaction mode to OpenCode's primary agent.
         // Otherwise a user config with default agent=plan (or a stale options.agent=plan
-        // after leaving OmniMind plan mode) can trap default turns in plan mode.
+        // after leaving HarnessOS plan mode) can trap default turns in plan mode.
         const modePinnedAgent =
           interactionMode === "plan" ? adapterConfig.planAgent : adapterConfig.defaultAgent;
         context.activeAgent =
@@ -4072,7 +4072,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             excludedMessageIds: recoveryBaselineMessageIds,
           });
           // Kilo's own editor client uses promptAsync so execution is owned by the
-          // server rather than by one long-lived HTTP request. Keep OmniMind's event
+          // server rather than by one long-lived HTTP request. Keep HarnessOS's event
           // and message-snapshot recovery as the authoritative completion paths.
           yield* submitOpenCodePromptAsync(context, {
             turnId,
@@ -4508,7 +4508,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             return yield* new EngineAdapterValidationError({
               engine,
               operation: "forkThread",
-              issue: `The source ${adapterConfig.displayName} session has a turn in flight; OmniMind will rebuild the fork from its retained transcript.`,
+              issue: `The source ${adapterConfig.displayName} session has a turn in flight; HarnessOS will rebuild the fork from its retained transcript.`,
             });
           }
           const sourceSessionId =

@@ -322,7 +322,7 @@ describe("WsTransport", () => {
       kind: "completed" as const,
       result: {
         worktree: {
-          path: "/repo/.codex/worktrees/generated/omnimind",
+          path: "/repo/.codex/worktrees/generated/harnessos",
           ref: "0123456789abcdef0123456789abcdef01234567",
           branch: "harnessos/abcd1234",
         },

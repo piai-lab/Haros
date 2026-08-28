@@ -133,7 +133,7 @@ describe("recent view MRU logic", () => {
 
   it("prefers terminal visual identity over thread engine for display icons", () => {
     const terminalThreadId = threadId("thread-terminal");
-    const project = { id: projectId("project-1"), name: "OmniMind" } as Project;
+    const project = { id: projectId("project-1"), name: "HarnessOS" } as Project;
     const threadSummary = {
       id: terminalThreadId,
       projectId: project.id,
@@ -165,7 +165,7 @@ describe("recent view MRU logic", () => {
       icon: { kind: "terminal", iconKey: "terminal" },
       isTerminal: true,
       engine: "codex",
-      subtitle: "OmniMind · Terminal",
+      subtitle: "HarnessOS · Terminal",
       terminalVisualIdentity: {
         cliKind: null,
         iconKey: "terminal",

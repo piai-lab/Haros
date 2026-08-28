@@ -29,13 +29,13 @@ import {
 } from "../../agentGateway/Services/AgentGatewayCredentials.ts";
 import { AUTOMATION_RUN_GATEWAY_TOOL_NAMES } from "../../automation/runEnvelope.ts";
 import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "../goalMode.ts";
-import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
+import { OAAgentAdapter } from "../Services/OAAgentAdapter.ts";
 import { PiAdapter } from "../Services/PiAdapter.ts";
-import { publishOmniMindModelRuntimeMutation } from "../omnimindModelRuntimeMutation.ts";
+import { publishOAModelRuntimeMutation } from "../oaModelRuntimeMutation.ts";
 import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
 import {
   createPiModelRuntime,
-  createOmniMindModelRuntime,
+  createOAModelRuntime,
   findModelInRegistry,
   getPiDiscoverableModels,
   getPiSupportedThinkingOptions,
@@ -43,7 +43,7 @@ import {
   makePiBashProcessSupervisor,
   makePiGatewayLoadWarning,
   makePiHostSystemPrompt,
-  makeOmniMindEngineSystemPrompt,
+  makeHarnessOSEngineSystemPrompt,
   makePiRuntimeEventBase,
   normalizePiTokenUsage,
   makePiUserInputOptions,
@@ -52,7 +52,7 @@ import {
   piToolTimelineDetail,
   PLAIN_PI_EXTENSION_THEME,
   toPiProviderModelDescriptor,
-  makeOmniMindAgentAdapterLive,
+  makeOAAgentAdapterLive,
   promptRequiredAgentGatewayToolNames,
 } from "./PiAdapter";
 
@@ -102,7 +102,7 @@ describe("normalizePiTokenUsage", () => {
 });
 
 describe("Pi native resource projection", () => {
-  it("keeps native slash input in Pi and injects OmniMind policy through its system prompt", () => {
+  it("keeps native slash input in Pi and injects HarnessOS policy through its system prompt", () => {
     const prompt = makePiHostSystemPrompt({
       gatewayControlAvailable: true,
       enabledBuiltInGroups: ["tasks"],
@@ -110,19 +110,19 @@ describe("Pi native resource projection", () => {
 
     expect(prompt).toContain("<harnessos_host_context>");
     expect(prompt).toContain("Use the exposed capability metadata");
-    expect(prompt).not.toContain("OmniMind MCP control is unavailable");
+    expect(prompt).not.toContain("HarnessOS MCP control is unavailable");
   });
 
-  it("keeps usable native tools visible when OmniMind MCP discovery fails", () => {
-    expect(makePiGatewayLoadWarning("OmniMind Agent")).toEqual({
+  it("keeps usable native tools visible when HarnessOS MCP discovery fails", () => {
+    expect(makePiGatewayLoadWarning("HarnessOS Agent")).toEqual({
       message:
-        "OmniMind MCP tools could not be loaded for this OmniMind Agent session. Engine-native tools remain available; OmniMind MCP actions are unavailable.",
-      detail: { source: "omnimind-mcp", availability: "failed" },
+        "HarnessOS MCP tools could not be loaded for this HarnessOS Agent session. Engine-native tools remain available; HarnessOS MCP actions are unavailable.",
+      detail: { source: "harnessos-mcp", availability: "failed" },
     });
   });
 
   it("keeps Todo guidance out of the immutable engine contract", () => {
-    const omniMindPrompt = makeOmniMindEngineSystemPrompt({
+    const omniMindPrompt = makeHarnessOSEngineSystemPrompt({
       workSurface: "agent",
     });
     const stockPiPrompt = makePiHostSystemPrompt({
@@ -135,18 +135,18 @@ describe("Pi native resource projection", () => {
     expect(stockPiPrompt).not.toContain("harnessos_update_tasks");
   });
 
-  it("keeps OmniMind identity immutable while selecting three distinct Product contracts", () => {
-    const chatPrompt = makeOmniMindEngineSystemPrompt({
+  it("keeps HarnessOS identity immutable while selecting three distinct Product contracts", () => {
+    const chatPrompt = makeHarnessOSEngineSystemPrompt({
       workSurface: "chat",
     });
-    const agentPrompt = makeOmniMindEngineSystemPrompt({
+    const agentPrompt = makeHarnessOSEngineSystemPrompt({
       workSurface: "agent",
     });
-    const studioPrompt = makeOmniMindEngineSystemPrompt({
+    const studioPrompt = makeHarnessOSEngineSystemPrompt({
       productSurface: "studio",
     });
     const identity =
-      "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).";
+      "You are HarnessOS, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).";
     const officialChineseIdentity =
       "The academy's official Chinese name is 广东智慧医学国际研究院.";
 
@@ -188,7 +188,7 @@ describe("Pi native resource projection", () => {
       gatewayControlAvailable: true,
       enabledBuiltInGroups: ["browser", "device"],
     });
-    const enginePrompt = makeOmniMindEngineSystemPrompt({ workSurface: "agent" });
+    const enginePrompt = makeHarnessOSEngineSystemPrompt({ workSurface: "agent" });
 
     expect(hostPrompt).toContain("approval-required download");
     expect(hostPrompt).toContain("per-call authorization");
@@ -213,12 +213,12 @@ describe("Pi native resource projection", () => {
     ).toEqual(AUTOMATION_RUN_GATEWAY_TOOL_NAMES);
   });
 
-  it("does not give stock Pi the OmniMind identity or work-surface contract", () => {
+  it("does not give stock Pi the HarnessOS identity or work-surface contract", () => {
     const prompt = makePiHostSystemPrompt({
       gatewayControlAvailable: false,
     });
 
-    expect(prompt).not.toContain("You are OmniMind");
+    expect(prompt).not.toContain("You are HarnessOS");
     expect(prompt).not.toContain("In Chat,");
     expect(prompt).not.toContain("In Agent,");
   });
@@ -243,9 +243,9 @@ describe("Pi credential gate", () => {
   });
 });
 
-describe("OmniMind Agent Plan lifecycle", () => {
+describe("HarnessOS Agent Plan lifecycle", () => {
   it("wraps slash input and emits one proposed plan before terminal settlement", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-plan-lifecycle-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-plan-lifecycle-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     mkdirSync(agentDir, { recursive: true });
@@ -281,7 +281,7 @@ describe("OmniMind Agent Plan lifecycle", () => {
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000093");
 
     try {
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(ServerSettingsService.layerTest()),
         Layer.provideMerge(NodeServices.layer),
@@ -289,7 +289,7 @@ describe("OmniMind Agent Plan lifecycle", () => {
       await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
@@ -350,17 +350,17 @@ describe("OmniMind Agent Plan lifecycle", () => {
             .map((block: any) => block.text)
             .join("\n")
         : String(firstUserContent ?? "");
-      expect(firstUserMessage).toContain("OmniMind plan mode is active.");
+      expect(firstUserMessage).toContain("HarnessOS plan mode is active.");
       expect(firstUserMessage).toContain("/reload and inspect the workspace");
       expect(firstUserMessage.startsWith("/reload")).toBe(false);
-      expect(firstUserMessage.match(/OmniMind plan mode is active\./g)).toHaveLength(1);
+      expect(firstUserMessage.match(/HarnessOS plan mode is active\./g)).toHaveLength(1);
       expect(firstUserMessage.indexOf("/reload and inspect the workspace")).toBeLessThan(
-        firstUserMessage.indexOf("OmniMind plan mode is active."),
+        firstUserMessage.indexOf("HarnessOS plan mode is active."),
       );
       const secondUserContent = requestBodies[1]?.messages
         ?.filter((message: any) => message.role === "user")
         .at(-1)?.content;
-      expect(JSON.stringify(secondUserContent)).not.toContain("OmniMind plan mode is active.");
+      expect(JSON.stringify(secondUserContent)).not.toContain("HarnessOS plan mode is active.");
       const proposed = events.filter((event) => event.type === "turn.proposed.completed");
       expect(proposed).toHaveLength(1);
       expect(proposed[0]?.payload).toEqual({ planMarkdown: "- Inspect\n- Implement" });
@@ -376,7 +376,7 @@ describe("OmniMind Agent Plan lifecycle", () => {
   });
 });
 
-describe("Pi native OmniMind gateway tools", () => {
+describe("Pi native HarnessOS gateway tools", () => {
   it("uses canonical MCP schemas and keeps same-cwd thread tokens distinct", async () => {
     const requests: Array<{ readonly token: string | null; readonly body: any }> = [];
     const fetch = async (_input: string | URL | Request, init?: RequestInit) => {
@@ -394,7 +394,7 @@ describe("Pi native OmniMind gateway tools", () => {
                 tools: [
                   {
                     name: "harnessos_list_threads",
-                    description: "List OmniMind threads.",
+                    description: "List HarnessOS threads.",
                     _meta: {
                       "harnessos/owner": "agent-gateway",
                       "harnessos/group": "tasks",
@@ -462,7 +462,7 @@ describe("Pi native OmniMind gateway tools", () => {
             tools: [
               {
                 name: "harnessos_create_threads",
-                description: "Create OmniMind threads.",
+                description: "Create HarnessOS threads.",
                 _meta: {
                   "harnessos/owner": "agent-gateway",
                   "harnessos/group": "tasks",
@@ -502,8 +502,8 @@ describe("Pi native OmniMind gateway tools", () => {
     expect(controller.signal.aborted).toBe(true);
   });
 
-  it("projects eager Host tools only for OmniMind while leaving other owners opaque", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-eager-host-"));
+  it("projects eager Host tools only for HarnessOS while leaving other owners opaque", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-eager-host-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     mkdirSync(agentDir, { recursive: true });
@@ -546,7 +546,7 @@ describe("Pi native OmniMind gateway tools", () => {
     const chatThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000082");
 
     try {
-      const layer = makeOmniMindAgentAdapterLive({ agentGatewayFetch: gateway.fetch }).pipe(
+      const layer = makeOAAgentAdapterLive({ agentGatewayFetch: gateway.fetch }).pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
         Layer.provideMerge(makeGatewayCredentialsLayer()),
@@ -554,7 +554,7 @@ describe("Pi native OmniMind gateway tools", () => {
       await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
@@ -695,7 +695,7 @@ describe("Pi native OmniMind gateway tools", () => {
       const hostContexts = requestBodies.map(piRequestHostContext);
       expect(hostContexts.every(Boolean)).toBe(true);
       for (const body of requestBodies) {
-        expect(piRequestSystemPrompt(body)).not.toContain("OmniMind MCP control is unavailable");
+        expect(piRequestSystemPrompt(body)).not.toContain("HarnessOS MCP control is unavailable");
       }
       expect(piRequestSystemPrompt(requestBodies[0])).toContain("thread-scoped in-app page");
       expect(gateway.requests.map(({ method }) => method)).toEqual(
@@ -708,7 +708,7 @@ describe("Pi native OmniMind gateway tools", () => {
   });
 
   it("exposes the trusted Ask tool only with a presenter and replans after a structured answer", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-ask-user-journey-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-ask-user-journey-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     const noUiThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000091");
@@ -752,7 +752,7 @@ describe("Pi native OmniMind gateway tools", () => {
     const events: EngineRuntimeEvent[] = [];
 
     try {
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(ServerSettingsService.layerTest()),
         Layer.provideMerge(NodeServices.layer),
@@ -760,7 +760,7 @@ describe("Pi native OmniMind gateway tools", () => {
       await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
@@ -847,7 +847,7 @@ describe("Pi native OmniMind gateway tools", () => {
             expect(lateResponse._tag).toBe("Failure");
             if (lateResponse._tag === "Failure") {
               expect(Cause.pretty(lateResponse.cause)).toContain(
-                "Stale OmniMind ask_user response",
+                "Stale HarnessOS ask_user response",
               );
             }
             const disconnectedTurn = yield* adapter.sendTurn({
@@ -1090,7 +1090,7 @@ describe("Pi native OmniMind gateway tools", () => {
   });
 
   it("verifies exact synthetic-turn closures before the same eager model request", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-host-preflight-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-host-preflight-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     mkdirSync(agentDir, { recursive: true });
@@ -1133,7 +1133,7 @@ describe("Pi native OmniMind gateway tools", () => {
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000084");
 
     try {
-      const layer = makeOmniMindAgentAdapterLive({ agentGatewayFetch: gateway.fetch }).pipe(
+      const layer = makeOAAgentAdapterLive({ agentGatewayFetch: gateway.fetch }).pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
         Layer.provideMerge(makeGatewayCredentialsLayer()),
@@ -1141,7 +1141,7 @@ describe("Pi native OmniMind gateway tools", () => {
       await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
@@ -1223,7 +1223,7 @@ describe("Pi native OmniMind gateway tools", () => {
   });
 
   it("blocks disabled preflight without killing the current Pi Session", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-host-policy-preflight-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-host-policy-preflight-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     mkdirSync(agentDir, { recursive: true });
@@ -1265,7 +1265,7 @@ describe("Pi native OmniMind gateway tools", () => {
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000085");
 
     try {
-      const layer = makeOmniMindAgentAdapterLive({ agentGatewayFetch: gateway.fetch }).pipe(
+      const layer = makeOAAgentAdapterLive({ agentGatewayFetch: gateway.fetch }).pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
         Layer.provideMerge(makeGatewayCredentialsLayer()),
@@ -1273,7 +1273,7 @@ describe("Pi native OmniMind gateway tools", () => {
       const exit = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
@@ -1653,7 +1653,7 @@ function isPiAutoRetryWarning(event: EngineRuntimeEvent) {
   );
 }
 
-function isOmniMindTaskUnavailableWarning(event: EngineRuntimeEvent) {
+function isHarnessOSTaskUnavailableWarning(event: EngineRuntimeEvent) {
   if (event.type !== "runtime.warning") return false;
   const detail = event.payload.detail;
   return (
@@ -1716,7 +1716,7 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("isolates extension engines between sessions that share an agent directory", async () => {
-    const agentDir = mkdtempSync(path.join(tmpdir(), "omnimind-pi-runtime-isolation-"));
+    const agentDir = mkdtempSync(path.join(tmpdir(), "harnessos-pi-runtime-isolation-"));
     const isolatedRuntimeSdk = {
       ModelRuntime: {
         create: (options?: Parameters<typeof ModelRuntime.create>[0]) =>
@@ -1761,7 +1761,7 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("includes custom-engine models authenticated through auth.json semantics", async () => {
-    const agentDir = mkdtempSync(path.join(tmpdir(), "omnimind-pi-models-"));
+    const agentDir = mkdtempSync(path.join(tmpdir(), "harnessos-pi-models-"));
     const modelsPath = path.join(agentDir, "models.json");
     const authPath = path.join(agentDir, "auth.json");
 
@@ -1802,8 +1802,8 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("uses the product safe reader for OmniMind create and refresh", async () => {
-    const agentDir = mkdtempSync(path.join(tmpdir(), "omnimind-agent-model-reader-"));
+  it("uses the product safe reader for HarnessOS create and refresh", async () => {
+    const agentDir = mkdtempSync(path.join(tmpdir(), "harnessos-agent-model-reader-"));
     const modelsPath = path.join(agentDir, "models.json");
     const authPath = path.join(agentDir, "auth.json");
     const modelConfig = (engine: string, model: string) =>
@@ -1823,7 +1823,7 @@ describe("getPiDiscoverableModels", () => {
         authPath,
         JSON.stringify({ "custom-one": { type: "api_key", key: "test-key" } }),
       );
-      const runtime = await createOmniMindModelRuntime(agentDir);
+      const runtime = await createOAModelRuntime(agentDir);
 
       expect(runtime.getModelConfigProviderIds()).toEqual(["custom-one"]);
       expect(runtime.getModel("custom-one", "model-one")).toBeDefined();
@@ -1845,10 +1845,10 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("uses the accepted product catalog for discovery and Session creation", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-adapter-reader-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-agent-adapter-reader-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
-    const threadId = ThreadId.makeUnsafe("omnimind-model-reader-thread");
+    const threadId = ThreadId.makeUnsafe("harnessos-model-reader-thread");
     mkdirSync(agentDir, { recursive: true });
     mkdirSync(cwd, { recursive: true });
 
@@ -1869,7 +1869,7 @@ describe("getPiDiscoverableModels", () => {
         path.join(agentDir, "auth.json"),
         JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
       );
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
@@ -1877,7 +1877,7 @@ describe("getPiDiscoverableModels", () => {
       const result = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const catalog = yield* adapter.listModels!({ engine: "oa", cwd });
             const session = yield* adapter.startSession({
               engine: "oa",
@@ -1911,8 +1911,8 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("keeps passive OmniMind discovery global-only and does not execute Project extensions", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-untrusted-discovery-"));
+  it("keeps passive HarnessOS discovery global-only and does not execute Project extensions", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-untrusted-discovery-"));
     const cwd = path.join(serverRoot, "workspace");
     mkdirSync(path.join(serverRoot, "agent"), { recursive: true });
     mkdirSync(path.join(cwd, ".harnessos", "skills", "project-skill"), { recursive: true });
@@ -1932,14 +1932,14 @@ describe("getPiDiscoverableModels", () => {
     );
 
     try {
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
       const result = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const models = yield* adapter.listModels!({ engine: "oa", cwd });
             const skills = yield* adapter.listSkills!({ engine: "oa", cwd });
             const commands = yield* adapter.listCommands!({ engine: "oa", cwd });
@@ -1962,7 +1962,7 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("reuses an active ResourceLoader only when its frozen authoritative scope identity matches", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-active-scope-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-active-scope-"));
     const agentDir = path.join(serverRoot, "agent");
     const projectA = path.join(serverRoot, "project-a");
     const projectB = path.join(serverRoot, "project-b");
@@ -2017,14 +2017,14 @@ describe("getPiDiscoverableModels", () => {
     const studioThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000093");
 
     try {
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(projectA, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
       const result = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             yield* adapter.startSession({
               engine: "oa",
               threadId: agentThreadId,
@@ -2218,17 +2218,17 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("keeps the final request identity immutable and excludes Agent task behavior from Chat and stock Pi", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-final-prompt-contract-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-final-prompt-contract-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     const agentThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000061");
     const chatThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000062");
     const stockThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000063");
     const identity =
-      "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).";
+      "You are HarnessOS, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).";
     const officialChineseIdentity =
       "The academy's official Chinese name is 广东智慧医学国际研究院.";
-    const immutableAgentPrompt = makeOmniMindEngineSystemPrompt({
+    const immutableAgentPrompt = makeHarnessOSEngineSystemPrompt({
       workSurface: "agent",
     });
     mkdirSync(path.join(cwd, ".harnessos", "extensions"), { recursive: true });
@@ -2279,14 +2279,14 @@ describe("getPiDiscoverableModels", () => {
         `Turn '${turnId}' did not settle.`,
       );
     try {
-      const omniLayer = makeOmniMindAgentAdapterLive().pipe(
+      const omniLayer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
       await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
@@ -2438,7 +2438,7 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("applies the global default when a Chat Session starts without hot-changing it", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-chat-default-prompt-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-chat-default-prompt-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000065");
@@ -2474,7 +2474,7 @@ describe("getPiDiscoverableModels", () => {
     });
 
     try {
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(ServerSettingsService.layerTest()),
         Layer.provideMerge(NodeServices.layer),
@@ -2482,14 +2482,14 @@ describe("getPiDiscoverableModels", () => {
       await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const serverSettings = yield* ServerSettingsService;
             const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             expect(
-              yield* serverSettings.mutateOmniMindDefaultPrompt(
+              yield* serverSettings.mutateHarnessOSDefaultPrompt(
                 null,
                 "customized-chat-default-marker",
               ),
@@ -2524,7 +2524,7 @@ describe("getPiDiscoverableModels", () => {
               });
             yield* send("capture Chat native default");
             expect(
-              yield* serverSettings.mutateOmniMindDefaultPrompt(
+              yield* serverSettings.mutateHarnessOSDefaultPrompt(
                 "customized-chat-default-marker",
                 "customized-chat-default-v2",
               ),
@@ -2558,7 +2558,7 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("keeps native Prompt resources session-scoped until explicit reload", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-native-prompt-reload-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-native-prompt-reload-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     const projectAgentDir = path.join(cwd, ".harnessos");
@@ -2605,7 +2605,7 @@ describe("getPiDiscoverableModels", () => {
       );
 
     try {
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(ServerSettingsService.layerTest()),
         Layer.provideMerge(NodeServices.layer),
@@ -2613,7 +2613,7 @@ describe("getPiDiscoverableModels", () => {
       await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const serverSettings = yield* ServerSettingsService;
             const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
@@ -2641,7 +2641,7 @@ describe("getPiDiscoverableModels", () => {
 
             yield* send("initial resources");
             expect(
-              yield* serverSettings.mutateOmniMindDefaultPrompt(null, "customized-default-v1"),
+              yield* serverSettings.mutateHarnessOSDefaultPrompt(null, "customized-default-v1"),
             ).toMatchObject({ state: "changed" });
             yield* Effect.sync(() => {
               writeFileSync(path.join(agentDir, "AGENTS.md"), "global-context-v2");
@@ -2659,7 +2659,7 @@ describe("getPiDiscoverableModels", () => {
 
             yield* Effect.sync(() => unlinkSync(path.join(agentDir, "SYSTEM.md")));
             expect(
-              yield* serverSettings.mutateOmniMindDefaultPrompt("customized-default-v1", null),
+              yield* serverSettings.mutateHarnessOSDefaultPrompt("customized-default-v1", null),
             ).toMatchObject({ state: "changed" });
             expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
             yield* send("restored factory default");
@@ -2716,8 +2716,8 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("fails closed when Product admission omits or contradicts the OmniMind work surface", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-work-surface-admission-"));
+  it("fails closed when Product admission omits or contradicts the HarnessOS work surface", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-work-surface-admission-"));
     const cwd = path.join(serverRoot, "workspace");
     const otherRoot = path.join(serverRoot, "other-project");
     mkdirSync(path.join(serverRoot, "agent"), { recursive: true });
@@ -2725,18 +2725,18 @@ describe("getPiDiscoverableModels", () => {
     mkdirSync(otherRoot, { recursive: true });
 
     try {
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
       const result = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const missingSurface = yield* Effect.exit(
               adapter.startSession({
                 engine: "oa",
-                threadId: ThreadId.makeUnsafe("omnimind-missing-surface"),
+                threadId: ThreadId.makeUnsafe("harnessos-missing-surface"),
                 cwd,
                 runtimeMode: "full-access",
               }),
@@ -2744,7 +2744,7 @@ describe("getPiDiscoverableModels", () => {
             const missingRoot = yield* Effect.exit(
               adapter.startSession({
                 engine: "oa",
-                threadId: ThreadId.makeUnsafe("omnimind-missing-root"),
+                threadId: ThreadId.makeUnsafe("harnessos-missing-root"),
                 cwd,
                 workSurface: "agent",
                 runtimeMode: "full-access",
@@ -2753,7 +2753,7 @@ describe("getPiDiscoverableModels", () => {
             const chatWithRoot = yield* Effect.exit(
               adapter.startSession({
                 engine: "oa",
-                threadId: ThreadId.makeUnsafe("omnimind-chat-with-root"),
+                threadId: ThreadId.makeUnsafe("harnessos-chat-with-root"),
                 cwd,
                 workSurface: "chat",
                 projectContextRoot: cwd,
@@ -2763,7 +2763,7 @@ describe("getPiDiscoverableModels", () => {
             const cwdOutsideRoot = yield* Effect.exit(
               adapter.startSession({
                 engine: "oa",
-                threadId: ThreadId.makeUnsafe("omnimind-cwd-outside-root"),
+                threadId: ThreadId.makeUnsafe("harnessos-cwd-outside-root"),
                 cwd,
                 workSurface: "agent",
                 projectContextRoot: otherRoot,
@@ -2800,7 +2800,7 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("keeps Chat Todo product-owned when a same-named Extension collides", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-chat-task-name-collision-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-chat-task-name-collision-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000064");
@@ -2814,7 +2814,7 @@ describe("getPiDiscoverableModels", () => {
         "  pi.registerTool({",
         '    name: "harnessos_update_tasks",',
         '    label: "Third-party same-name tool",',
-        '    description: "A third-party tool that does not own OmniMind Agent tasks.",',
+        '    description: "A third-party tool that does not own HarnessOS Agent tasks.",',
         "    parameters: Type.Object({}),",
         '    execute: async () => ({ content: [{ type: "text", text: "extension result" }] }),',
         "  });",
@@ -2851,14 +2851,14 @@ describe("getPiDiscoverableModels", () => {
 
     try {
       const events: EngineRuntimeEvent[] = [];
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
       const turn = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
@@ -2904,7 +2904,7 @@ describe("getPiDiscoverableModels", () => {
       expect(
         events.some((event) => event.type === "turn.tasks.updated" && event.turnId === turn.turnId),
       ).toBe(false);
-      expect(events.some(isOmniMindTaskUnavailableWarning)).toBe(true);
+      expect(events.some(isHarnessOSTaskUnavailableWarning)).toBe(true);
     } finally {
       vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });
@@ -2912,7 +2912,7 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("keeps the Agent usable but disables Product Todo projection on same-name global/project Extensions", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-task-name-collision-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-agent-task-name-collision-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000065");
@@ -2978,14 +2978,14 @@ describe("getPiDiscoverableModels", () => {
 
     try {
       const events: EngineRuntimeEvent[] = [];
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
       const result = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
@@ -3023,7 +3023,7 @@ describe("getPiDiscoverableModels", () => {
 
       expect(requestCount).toBe(2);
       expect(result.exists).toBe(true);
-      expect(events.filter(isOmniMindTaskUnavailableWarning)).toHaveLength(1);
+      expect(events.filter(isHarnessOSTaskUnavailableWarning)).toHaveLength(1);
       expect(
         events.some(
           (event) => event.type === "turn.tasks.updated" && event.turnId === result.turn.turnId,
@@ -3044,7 +3044,7 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("keeps the Session usable but disables Product Todo when reload introduces a collision", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-task-reload-collision-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-agent-task-reload-collision-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000066");
@@ -3080,14 +3080,14 @@ describe("getPiDiscoverableModels", () => {
 
     try {
       const events: EngineRuntimeEvent[] = [];
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
       const result = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
@@ -3145,7 +3145,7 @@ describe("getPiDiscoverableModels", () => {
       expect(requestCount).toBe(2);
       expect(result.reloaded).toBe("reloaded");
       expect(result.exists).toBe(true);
-      expect(events.filter(isOmniMindTaskUnavailableWarning)).toHaveLength(1);
+      expect(events.filter(isHarnessOSTaskUnavailableWarning)).toHaveLength(1);
       expect(
         events.some(
           (event) => event.type === "turn.tasks.updated" && event.turnId === result.turn.turnId,
@@ -3157,8 +3157,8 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("projects the bundled OmniMind task tool into the canonical turn task list", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-task-projection-"));
+  it("projects the bundled HarnessOS task tool into the canonical turn task list", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-agent-task-projection-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000051");
@@ -3194,14 +3194,14 @@ describe("getPiDiscoverableModels", () => {
 
     try {
       const events: Array<EngineRuntimeEvent> = [];
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
       const turn = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
@@ -3261,11 +3261,11 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("reconciles an existing OmniMind Session on the next send after credential mutation", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-credential-reconcile-"));
+  it("reconciles an existing HarnessOS Session on the next send after credential mutation", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-agent-credential-reconcile-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
-    const threadId = ThreadId.makeUnsafe("omnimind-credential-reconcile-thread");
+    const threadId = ThreadId.makeUnsafe("harnessos-credential-reconcile-thread");
     mkdirSync(agentDir, { recursive: true });
     mkdirSync(cwd, { recursive: true });
     writeFileSync(
@@ -3295,14 +3295,14 @@ describe("getPiDiscoverableModels", () => {
     });
 
     try {
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
       const result = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             yield* adapter.startSession({
               engine: "oa",
               threadId,
@@ -3325,7 +3325,7 @@ describe("getPiDiscoverableModels", () => {
                 path.join(agentDir, "auth.json"),
                 JSON.stringify({ local: { type: "api_key", key: "test-only-api-key" } }),
               );
-              publishOmniMindModelRuntimeMutation(agentDir);
+              publishOAModelRuntimeMutation(agentDir);
             });
             const after = yield* adapter.sendTurn({
               threadId,
@@ -3350,9 +3350,9 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("keeps an active OmniMind turn on its original credentials and reconciles only the next send", async () => {
+  it("keeps an active HarnessOS turn on its original credentials and reconciles only the next send", async () => {
     const serverRoot = mkdtempSync(
-      path.join(tmpdir(), "omnimind-agent-active-credential-reconcile-"),
+      path.join(tmpdir(), "harnessos-agent-active-credential-reconcile-"),
     );
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
@@ -3401,14 +3401,14 @@ describe("getPiDiscoverableModels", () => {
     });
 
     try {
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
       const result = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             yield* adapter.startSession({
               engine: "oa",
               threadId,
@@ -3431,7 +3431,7 @@ describe("getPiDiscoverableModels", () => {
                 path.join(agentDir, "auth.json"),
                 JSON.stringify({ local: { type: "api_key", key: "test-new-key" } }),
               );
-              publishOmniMindModelRuntimeMutation(agentDir);
+              publishOAModelRuntimeMutation(agentDir);
             });
             const overlapping = yield* Effect.exit(
               adapter.sendTurn({
@@ -3469,7 +3469,7 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("keeps one active turn across a retryable attempt and emits one terminal success", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-auto-retry-success-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-agent-auto-retry-success-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000044");
@@ -3509,14 +3509,14 @@ describe("getPiDiscoverableModels", () => {
 
     try {
       const events: Array<EngineRuntimeEvent> = [];
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
       const result = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
@@ -3623,7 +3623,7 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("emits one failed terminal only after Pi exhausts its retry budget", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-auto-retry-exhausted-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-agent-auto-retry-exhausted-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000045");
@@ -3657,14 +3657,14 @@ describe("getPiDiscoverableModels", () => {
 
     try {
       const events: Array<EngineRuntimeEvent> = [];
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
       const result = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
@@ -3722,7 +3722,7 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("settles once when a user aborts during Pi retry backoff", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-auto-retry-abort-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-agent-auto-retry-abort-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000046");
@@ -3756,14 +3756,14 @@ describe("getPiDiscoverableModels", () => {
 
     try {
       const events: Array<EngineRuntimeEvent> = [];
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
       const result = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
@@ -3828,7 +3828,7 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("keeps one Product turn while Pi compacts an overflow and continues the prompt", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-overflow-compaction-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-agent-overflow-compaction-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000047");
@@ -3881,14 +3881,14 @@ describe("getPiDiscoverableModels", () => {
 
     try {
       const events: Array<EngineRuntimeEvent> = [];
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
       const result = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
@@ -3969,7 +3969,7 @@ describe("getPiDiscoverableModels", () => {
         "";
       expect(
         finalContinuationPrompt.split(
-          "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).",
+          "You are HarnessOS, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).",
         ),
       ).toHaveLength(2);
       expect(
@@ -4008,7 +4008,7 @@ describe("getPiDiscoverableModels", () => {
   });
 
   it("settles loaded no-Agent extension command and input outcomes exactly once", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-command-outcome-"));
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "harnessos-agent-command-outcome-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000048");
@@ -4073,14 +4073,14 @@ describe("getPiDiscoverableModels", () => {
 
     try {
       const events: Array<EngineRuntimeEvent> = [];
-      const layer = makeOmniMindAgentAdapterLive().pipe(
+      const layer = makeOAAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
       );
       const result = await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
-            const adapter = yield* OmniMindAgentAdapter;
+            const adapter = yield* OAAgentAdapter;
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);

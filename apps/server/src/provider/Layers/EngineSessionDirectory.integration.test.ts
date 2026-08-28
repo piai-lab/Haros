@@ -200,7 +200,7 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
 
   it("rehydrates persisted mappings across layer restart", () =>
     Effect.gen(function* () {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-engine-directory-"));
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-engine-directory-"));
       const dbPath = path.join(tempDir, "orchestration.sqlite");
       const directoryLayer = makeDirectoryLayer(makeSqlitePersistenceLive(dbPath));
 
@@ -242,7 +242,9 @@ it.layer(makeDirectoryLayer(SqlitePersistenceMemory))("EngineSessionDirectoryLiv
 
   it("rehydrates persisted OpenCode bindings across layer restart", () =>
     Effect.gen(function* () {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-engine-directory-opencode-"));
+      const tempDir = fs.mkdtempSync(
+        path.join(os.tmpdir(), "harnessos-engine-directory-opencode-"),
+      );
       const dbPath = path.join(tempDir, "orchestration.sqlite");
       const directoryLayer = makeDirectoryLayer(makeSqlitePersistenceLive(dbPath));
 

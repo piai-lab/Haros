@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 const roots: string[] = [];
 
 function makeRoot(): string {
-  const root = mkdtempSync(path.join(tmpdir(), "omnimind-pi-isolation-"));
+  const root = mkdtempSync(path.join(tmpdir(), "harnessos-pi-isolation-"));
   roots.push(root);
   return root;
 }

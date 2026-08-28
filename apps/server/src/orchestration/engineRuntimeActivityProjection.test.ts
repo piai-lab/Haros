@@ -781,7 +781,7 @@ describe("engine runtime activity projection", () => {
     const payload = activity?.payload as { data?: Record<string, unknown> };
 
     expect(JSON.stringify(payload.data).length).toBeLessThanOrEqual(16_000);
-    expect(payload.data?.__omnimindTruncated).toBe(true);
+    expect(payload.data?.__harnessosTruncated).toBe(true);
     expect(payload.data?.originalJsonChars).toBeGreaterThan(300_000);
   });
 
@@ -904,7 +904,7 @@ describe("engine runtime activity projection", () => {
       payload: {
         nativeEventType: "item/agentMessage/completed",
         detail: "Finished the refactor",
-        data: expect.objectContaining({ __omnimindTruncated: true }),
+        data: expect.objectContaining({ __harnessosTruncated: true }),
       },
     });
     const serializedPayload = JSON.stringify(activity?.payload);

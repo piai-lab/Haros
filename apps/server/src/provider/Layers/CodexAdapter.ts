@@ -135,7 +135,7 @@ function compactCodexNativeEventForIngress(event: EngineEvent): {
   const compactedEvent: EngineEvent = {
     ...event,
     payload: {
-      omnimindTruncated: true,
+      harnessosTruncated: true,
       reason: "Codex native event exceeded the callback ingress size limit",
       originalBytes,
     },
@@ -921,7 +921,7 @@ function mapUnmappedCodexEvent(
     raw: {
       source: eventRawSource(event),
       method: nativeType,
-      payload: { omnimindSanitized: true },
+      payload: { harnessosSanitized: true },
     },
     type: "event.unmapped",
     payload: {

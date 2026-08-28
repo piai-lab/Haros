@@ -13,7 +13,7 @@ import { ACP_LOG_REDACTED_VALUE, makeAcpNativeLoggers } from "./AcpNativeLogging
 describe("AcpNativeLogging", () => {
   it.effect("redacts gateway credentials from request and protocol NDJSON logs", () =>
     Effect.gen(function* () {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-acp-secret-log-"));
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-acp-secret-log-"));
       const basePath = path.join(tempDir, "engine-native.ndjson");
       const threadId = ThreadId.makeUnsafe("thread-secret-redaction");
       const sentinelToken = "sagw_session_SENTINEL_MUST_NEVER_REACH_NDJSON";

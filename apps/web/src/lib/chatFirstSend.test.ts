@@ -33,7 +33,7 @@ describe("resolveFirstSendTarget", () => {
   it("creates a managed date/slug chat project for a plain general chat first send", () => {
     const result = resolveFirstSendTarget({
       activeProject: makeProject(),
-      chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
       createdAt: new Date(2026, 5, 11, 23, 30, 43),
       defaultEngineSelection,
       isFirstMessage: true,
@@ -47,7 +47,7 @@ describe("resolveFirstSendTarget", () => {
     expect(result).toMatchObject({
       kind: "create-project",
       creation: {
-        workspaceRoot: "/Users/tester/Documents/OmniMind/2026-06-11/yes-it-takes-all-the-skills",
+        workspaceRoot: "/Users/tester/Documents/HarnessOS/2026-06-11/yes-it-takes-all-the-skills",
         title: "Yes it takes",
         kind: "chat",
         createWorkspaceRootIfMissing: true,
@@ -59,7 +59,7 @@ describe("resolveFirstSendTarget", () => {
   it("ignores a stale workspace selection and still creates a managed Chat", () => {
     const result = resolveFirstSendTarget({
       activeProject: makeProject(),
-      chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
       createdAt: new Date(2026, 5, 11, 23, 30, 43),
       defaultEngineSelection,
       isFirstMessage: true,
@@ -73,7 +73,7 @@ describe("resolveFirstSendTarget", () => {
     expect(result).toMatchObject({
       kind: "create-project",
       creation: {
-        workspaceRoot: "/Users/tester/Documents/OmniMind/2026-06-11/use-app",
+        workspaceRoot: "/Users/tester/Documents/HarnessOS/2026-06-11/use-app",
         title: "Use app",
         kind: "chat",
         createWorkspaceRootIfMissing: true,
@@ -86,7 +86,7 @@ describe("resolveFirstSendTarget", () => {
     const activeProject = makeProject({ id: "project-app" as ProjectId, kind: "project" });
     const result = resolveFirstSendTarget({
       activeProject,
-      chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
       createdAt: new Date(2026, 5, 11, 23, 30, 43),
       defaultEngineSelection,
       isFirstMessage: false,
@@ -112,11 +112,11 @@ describe("resolveFirstSendTarget", () => {
       kind: "studio",
       name: "Studio",
       remoteName: "Studio",
-      cwd: "/Users/tester/Documents/OmniMind/Studio",
+      cwd: "/Users/tester/Documents/HarnessOS/Studio",
     });
     const result = resolveFirstSendTarget({
       activeProject,
-      chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
       createdAt: new Date(2026, 5, 11, 23, 30, 43),
       defaultEngineSelection,
       isFirstMessage: true,
@@ -132,7 +132,7 @@ describe("resolveFirstSendTarget", () => {
       target: {
         targetProjectId: "project-studio",
         targetProjectKind: "studio",
-        targetProjectCwd: "/Users/tester/Documents/OmniMind/Studio",
+        targetProjectCwd: "/Users/tester/Documents/HarnessOS/Studio",
       },
     });
   });
@@ -143,11 +143,11 @@ describe("resolveFirstSendTarget", () => {
       kind: "studio",
       name: "Studio",
       remoteName: "Studio",
-      cwd: "/Users/tester/Documents/OmniMind/Studio",
+      cwd: "/Users/tester/Documents/HarnessOS/Studio",
     });
     const result = resolveFirstSendTarget({
       activeProject,
-      chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
       createdAt: new Date(2026, 5, 11, 23, 30, 43),
       defaultEngineSelection,
       isFirstMessage: true,
@@ -163,7 +163,7 @@ describe("resolveFirstSendTarget", () => {
       target: {
         targetProjectId: "project-studio",
         targetProjectKind: "studio",
-        targetProjectCwd: "/Users/tester/Documents/OmniMind/Studio",
+        targetProjectCwd: "/Users/tester/Documents/HarnessOS/Studio",
       },
     });
   });

@@ -33,17 +33,17 @@ export interface DesktopUpdateCopy {
 const DEFAULT_DESKTOP_UPDATE_COPY: DesktopUpdateCopy = {
   correctArchitecture: "This install is using the correct architecture.",
   armPreparing:
-    "This Mac has Apple Silicon, but OmniMind is still running the Intel build under Rosetta. OmniMind is preparing the native Apple Silicon update.",
+    "This Mac has Apple Silicon, but HarnessOS is still running the Intel build under Rosetta. HarnessOS is preparing the native Apple Silicon update.",
   armReady:
-    "This Mac has Apple Silicon, but OmniMind is still running the Intel build under Rosetta. Click Update to restart into the native Apple Silicon build.",
+    "This Mac has Apple Silicon, but HarnessOS is still running the Intel build under Rosetta. Click Update to restart into the native Apple Silicon build.",
   armNextUpdate:
-    "This Mac has Apple Silicon, but OmniMind is still running the Intel build under Rosetta. The next app update will replace it with the native Apple Silicon build.",
+    "This Mac has Apple Silicon, but HarnessOS is still running the Intel build under Rosetta. The next app update will replace it with the native Apple Silicon build.",
   applying: "Applying update...",
   check: "Check for updates",
   checking: "Checking for updates...",
   upToDate: (version) => `You're up to date on ${version}. Click to check again.`,
   restartedNotInstalled: (version) =>
-    `OmniMind restarted, but update ${version} was not installed. Click to try again.`,
+    `HarnessOS restarted, but update ${version} was not installed. Click to try again.`,
   prepareFailed: (version) => `Could not prepare update ${version}. Click to retry.`,
   installFailed: (version) => `Could not install update ${version}. Click to retry.`,
   preparingVersion: (version) => `Preparing update ${version}`.trim(),

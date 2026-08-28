@@ -243,7 +243,7 @@ export const makeOrchestrationIntegrationHarness = (
         } as typeof EngineAdapterRegistry.Service)
       : null;
     const rootDir = yield* fileSystem.makeTempDirectoryScoped({
-      prefix: "omnimind-orchestration-integration-",
+      prefix: "harnessos-orchestration-integration-",
     });
     const workspaceDir = path.join(rootDir, "workspace");
     const { stateDir, dbPath } = yield* deriveServerPaths(rootDir, undefined).pipe(

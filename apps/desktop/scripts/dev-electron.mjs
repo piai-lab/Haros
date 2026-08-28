@@ -82,7 +82,7 @@ function cleanupStaleDevApps() {
 
   const executable = escapeExtendedRegex(resolveElectronPath());
   const devRoot = escapeExtendedRegex(desktopDir);
-  const commandPattern = `^${executable}[[:space:]]+--omnimind-dev-root=${devRoot}([[:space:]]|$)`;
+  const commandPattern = `^${executable}[[:space:]]+--harnessos-dev-root=${devRoot}([[:space:]]|$)`;
   spawnSync("pkill", ["-f", "--", commandPattern], { stdio: "ignore" });
 }
 
@@ -159,7 +159,7 @@ function startApp() {
 
   const app = spawn(
     resolveElectronPath(),
-    [`--omnimind-dev-root=${desktopDir}`, "dist-electron/main.js"],
+    [`--harnessos-dev-root=${desktopDir}`, "dist-electron/main.js"],
     {
       cwd: desktopDir,
       env: {

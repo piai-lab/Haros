@@ -1,5 +1,5 @@
 // FILE: FactoryPluginDiscovery.ts
-// Purpose: Reads Factory's local plugin marketplaces into OmniMind's engine discovery contracts.
+// Purpose: Reads Factory's local plugin marketplaces into HarnessOS's engine discovery contracts.
 // Layer: Engine filesystem discovery
 // Exports: listFactoryPlugins and readFactoryPlugin.
 

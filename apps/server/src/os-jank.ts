@@ -13,7 +13,7 @@ import {
 import { createCachedLoginShellPathReader } from "@harnessos/shared/loginShellEnvironment";
 import {
   expandHomePath as expandHomePathSync,
-  resolveOmniMindHomeDirectory,
+  resolveHarnessOSHomeDirectory,
 } from "@harnessos/shared/harnessosHome";
 
 function logPathHydrationWarning(message: string, error?: unknown): void {
@@ -52,7 +52,7 @@ export function fixPath(
     const readLaunchctlFallbackPath = (): string | undefined =>
       platform === "darwin" ? (options.readLaunchctlPath ?? readPathFromLaunchctl)() : undefined;
 
-    // Cached by default: the probe result is persisted under the OmniMind home and reused
+    // Cached by default: the probe result is persisted under the HarnessOS home and reused
     // until the shell, the user, or any of its startup files changes.
     const readPath = options.readPath ?? createCachedLoginShellPathReader({ env, platform });
 
@@ -86,4 +86,4 @@ export const expandHomePath = (input: string): Effect.Effect<string> =>
   Effect.succeed(expandHomePathSync(input));
 
 export const resolveBaseDir = (raw: string | undefined): Effect.Effect<string> =>
-  Effect.succeed(resolveOmniMindHomeDirectory({ configuredHome: raw }));
+  Effect.succeed(resolveHarnessOSHomeDirectory({ configuredHome: raw }));

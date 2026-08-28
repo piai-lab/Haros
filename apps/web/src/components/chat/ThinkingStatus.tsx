@@ -45,7 +45,7 @@ export function ThinkingStatus({ accessibleLabel, fontSizePx, hints, theme }: Th
 
   return (
     <div
-      className="omnimind-thinking-status font-system-ui text-[var(--color-text-foreground-secondary)]"
+      className="harnessos-thinking-status font-system-ui text-[var(--color-text-foreground-secondary)]"
       data-testid="thinking-status"
       role="status"
       aria-label={accessibleLabel}
@@ -53,13 +53,13 @@ export function ThinkingStatus({ accessibleLabel, fontSizePx, hints, theme }: Th
       aria-atomic="true"
       style={{ fontSize: `${fontSizePx}px` }}
     >
-      <span className="omnimind-thinking-status__visual" aria-hidden="true">
+      <span className="harnessos-thinking-status__visual" aria-hidden="true">
         <ComposingOrb theme={theme} />
-        <span className="omnimind-thinking-status__hint-shell">
-          <span key={hintIndex} className="omnimind-thinking-status__hint">
+        <span className="harnessos-thinking-status__hint-shell">
+          <span key={hintIndex} className="harnessos-thinking-status__hint">
             {hint}
           </span>
-          <span className="omnimind-thinking-status__dots">
+          <span className="harnessos-thinking-status__dots">
             <i />
             <i />
             <i />

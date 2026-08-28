@@ -1,6 +1,6 @@
 import {
   type EngineSelection,
-  type OmniMindModelServiceDescriptor,
+  type OAModelServiceDescriptor,
   ENGINE_KINDS,
   type EngineKind,
   type ServerProviderStatus,
@@ -26,10 +26,10 @@ export function hasUsableExactModelBinding(input: {
   return ENGINE_KINDS.some((engine) => {
     const selection = input.exactEngineSelections[engine];
     const status = findProviderStatus(input.providerStatuses, engine);
-    // Bundled OmniMind/stock Pi runtimes can enumerate models before any
+    // Bundled HarnessOS/stock Pi runtimes can enumerate models before any
     // credential exists, and their Engine health intentionally reports auth as
     // unknown. Their exact catalog rows are therefore not send authority.
-    // OmniMind is upgraded separately by the passive Model-services projection;
+    // HarnessOS is upgraded separately by the passive Model-services projection;
     // stock Pi stays recoverable until its own health can prove authentication.
     if ((engine === "oa" || engine === "pi") && status?.authStatus !== "authenticated") {
       return false;
@@ -40,12 +40,12 @@ export function hasUsableExactModelBinding(input: {
   });
 }
 
-export function hasUsableOmniMindModelServiceBinding(input: {
+export function hasUsableOAModelServiceBinding(input: {
   readonly selection: EngineSelection | undefined;
   readonly selectionIsExplicit: boolean;
   readonly catalogState: EngineModelCatalogState | undefined;
   readonly modelOptions: ReadonlyArray<EngineModelOption>;
-  readonly services: ReadonlyArray<OmniMindModelServiceDescriptor>;
+  readonly services: ReadonlyArray<OAModelServiceDescriptor>;
 }): boolean {
   if (input.selection?.engine !== "oa") return false;
   const model = input.modelOptions.find((option) => option.slug === input.selection?.model);

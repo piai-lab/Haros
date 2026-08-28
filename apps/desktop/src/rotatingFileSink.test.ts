@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 const tempRoots: string[] = [];
 
 function makeTempDir(): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-rotating-log-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-rotating-log-"));
   tempRoots.push(dir);
   return dir;
 }

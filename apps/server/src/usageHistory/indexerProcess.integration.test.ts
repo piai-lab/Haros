@@ -13,7 +13,7 @@ import type { UsageHistoryParseFile, UsageHistoryParserState } from "./protocol"
 const roots: string[] = [];
 
 async function makeRoot(): Promise<string> {
-  const root = await mkdtemp(path.join(os.tmpdir(), "omnimind-usage-indexer-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "harnessos-usage-indexer-"));
   roots.push(root);
   return root;
 }

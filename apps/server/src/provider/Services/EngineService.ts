@@ -12,8 +12,8 @@
  * @module EngineService
  */
 import type {
-  OmniMindEcosystemReloadInput,
-  OmniMindEcosystemReloadResult,
+  OAEcosystemReloadInput,
+  OAEcosystemReloadResult,
   EngineBackgroundTaskInput,
   EngineForkThreadInput,
   EngineForkThreadResult,
@@ -147,10 +147,10 @@ export interface EngineServiceShape {
    */
   readonly stopSession: (input: EngineStopSessionInput) => Effect.Effect<void, EngineServiceError>;
 
-  /** Reload resources only on the exact live OmniMind Agent session. */
+  /** Reload resources only on the exact live HarnessOS Agent session. */
   readonly reloadSessionResources: (
-    input: OmniMindEcosystemReloadInput,
-  ) => Effect.Effect<OmniMindEcosystemReloadResult, EngineServiceError>;
+    input: OAEcosystemReloadInput,
+  ) => Effect.Effect<OAEcosystemReloadResult, EngineServiceError>;
 
   /**
    * Stop only the live adapter process/session while preserving the persisted

@@ -1,5 +1,5 @@
 // FILE: PluginLibrary.browser.tsx
-// Purpose: Browser proof for capability-gated OmniMind Agent package management.
+// Purpose: Browser proof for capability-gated HarnessOS Agent package management.
 // Layer: Browser UI regression
 
 import "../index.css";
@@ -38,7 +38,7 @@ vi.mock("../localPreferences", async (importOriginal) => {
 vi.mock("../nativeApi", () => ({
   ensureNativeApi: () => ({
     dialogs: { confirm: fixture.confirm },
-    omnimindEcosystem: {
+    oaEcosystem: {
       list: fixture.list,
       listResources: fixture.listResources,
       install: fixture.install,
@@ -105,7 +105,7 @@ async function renderLibrary(sourceThreadId: ThreadId | null = null) {
   return { queryClient, screen };
 }
 
-describe("PluginLibrary OmniMind Agent packages", () => {
+describe("PluginLibrary HarnessOS Agent packages", () => {
   beforeEach(() => {
     fixture.capability = true;
     fixture.list.mockReset().mockResolvedValue({
@@ -165,7 +165,7 @@ describe("PluginLibrary OmniMind Agent packages", () => {
     await renderLibrary();
     await page.getByRole("button", { name: "Packages" }).click();
 
-    await expect.poll(() => document.body.textContent).toContain("OmniMind Agent packages");
+    await expect.poll(() => document.body.textContent).toContain("HarnessOS Agent packages");
     await expect.poll(() => document.body.textContent).toContain("@team/agent-tools");
     expect(fixture.list).toHaveBeenCalledWith();
     expect(fixture.listResources).not.toHaveBeenCalled();
@@ -180,7 +180,7 @@ describe("PluginLibrary OmniMind Agent packages", () => {
     expect(fixture.listResources).toHaveBeenCalledWith({ packageId });
   });
 
-  it("reloads resources only for the exact active OmniMind task", async () => {
+  it("reloads resources only for the exact active HarnessOS task", async () => {
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000091");
     fixture.sourceThread = {
       id: threadId,
@@ -208,14 +208,14 @@ describe("PluginLibrary OmniMind Agent packages", () => {
       .toContain("Resources were reloaded for the current task.");
   });
 
-  it("keeps reload unavailable when the Library has no active OmniMind task", async () => {
+  it("keeps reload unavailable when the Library has no active HarnessOS task", async () => {
     await renderLibrary();
     await page.getByRole("button", { name: "Packages" }).click();
 
     const reloadButton = page.getByRole("button", { name: "Reload current task" }).element();
     expect((reloadButton as HTMLButtonElement).disabled).toBe(true);
     expect(reloadButton.getAttribute("title")).toBe(
-      "Open Library from an active OmniMind Agent task to reload its resources.",
+      "Open Library from an active HarnessOS Agent task to reload its resources.",
     );
     expect(fixture.reload).not.toHaveBeenCalled();
   });

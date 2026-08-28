@@ -16,7 +16,7 @@ import {
 const temporaryDirectories: string[] = [];
 
 async function makeTemporaryDirectory(): Promise<string> {
-  const directory = await mkdtemp(join(tmpdir(), "omnimind-local-html-"));
+  const directory = await mkdtemp(join(tmpdir(), "harnessos-local-html-"));
   temporaryDirectories.push(directory);
   return directory;
 }
@@ -36,7 +36,9 @@ describe("LocalHtmlPreviewRegistry", () => {
 
     const runtimeUrl = registry.toRuntimeUrl(sourceUrl);
 
-    expect(runtimeUrl).toBe("omnimind-local-preview://preview-token/index.html?theme=dark#content");
+    expect(runtimeUrl).toBe(
+      "harnessos-local-preview://preview-token/index.html?theme=dark#content",
+    );
     expect(registry.toDisplayUrl(runtimeUrl)).toBe(sourceUrl);
     expect(isLocalFileUrl(sourceUrl)).toBe(true);
     expect(isLocalHtmlPreviewUrl(runtimeUrl)).toBe(true);

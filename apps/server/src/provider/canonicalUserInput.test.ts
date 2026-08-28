@@ -3,7 +3,7 @@ import {
   CANONICAL_USER_INPUT_MAX_NODES,
   CANONICAL_USER_INPUT_MAX_UTF8_BYTES,
 } from "@harnessos/contracts";
-import { ASK_USER_MAX_NODES, ASK_USER_MAX_UTF8_BYTES } from "@harnessos/om-ask";
+import { ASK_USER_MAX_NODES, ASK_USER_MAX_UTF8_BYTES } from "@harnessos/oa-ask";
 
 import {
   canonicalUserInputRequestFromQuestions,

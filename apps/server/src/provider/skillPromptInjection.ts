@@ -1,7 +1,7 @@
 // FILE: skillPromptInjection.ts
 // Purpose: Inlines portable skill instructions into the outgoing prompt for engines
 //          that cannot natively load the referenced skill files. This is the fallback
-//          that makes OmniMind catalog skills usable on every engine.
+//          that makes HarnessOS catalog skills usable on every engine.
 // Layer: Server engine helper
 // Exports: shouldInlineSkillForProvider, buildInlineSkillInstructions
 
@@ -52,13 +52,13 @@ export function shouldInlineSkillForProvider(engine: EngineKind, skillPath: stri
       return true;
     case "codex":
       // Codex injects structured skill items only from roots it knows: its own
-      // folders plus `~/.harnessos/skills`, which OmniMind registers at session start
+      // folders plus `~/.harnessos/skills`, which HarnessOS registers at session start
       // via skills/extraRoots/set. Skills resolved from other engines' folders
       // must be inlined.
       return [".claude", ".cursor", ".agents"].some((dir) => segments.has(dir));
     case "cursor":
       // cursor-agent natively scans .cursor/.agents/.claude/.codex skill roots;
-      // only OmniMind-owned paths need inlining.
+      // only HarnessOS-owned paths need inlining.
       return segments.has(".harnessos");
     case "claude":
       // Claude Code only loads skills from .claude/skills folders.
@@ -68,7 +68,7 @@ export function shouldInlineSkillForProvider(engine: EngineKind, skillPath: stri
       // folder is portable and must be inlined.
       return CROSS_PROVIDER_SKILL_DIR_NAMES.some((dir) => segments.has(dir));
     case "oa":
-      // OmniMind's explicit multi-skill Composer selection is a Host-owned
+      // HarnessOS's explicit multi-skill Composer selection is a Host-owned
       // inline path. Pi remains the owner of native discovery and model-invoked
       // skills; this branch makes the Host boundary explicit instead of relying
       // on the default fallback.

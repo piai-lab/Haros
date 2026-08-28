@@ -21,7 +21,7 @@ interface IntegrationRow {
   readonly integrationId: string;
   readonly name: string;
   readonly clientKind: ExternalMcpClientKind;
-  readonly audience: "omnimind.external-mcp";
+  readonly audience: "harnessos.external-mcp";
   readonly credentialHash: string | null;
   readonly capabilitiesJson: string;
   readonly projectScope: ExternalMcpProjectScope;

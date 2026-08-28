@@ -13,8 +13,8 @@ describe("bootstrapSignedOutScreen", () => {
 
     expect(english).toContain("color-scheme: light dark");
     expect(english).toContain("@media (prefers-color-scheme: dark)");
-    expect(english).toContain("This browser no longer controls OmniMind.");
-    expect(chinese).toContain("此浏览器已不再控制 OmniMind");
+    expect(english).toContain("This browser no longer controls HarnessOS.");
+    expect(chinese).toContain("此浏览器已不再控制 HarnessOS");
     expect(english).toContain("background:var(--startup-canvas)");
   });
 

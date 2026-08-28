@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { buildProviderChildEnvironment } from "./providerChildEnvironment";
 
 describe("buildProviderChildEnvironment", () => {
-  it("strips OmniMind control-plane and inherited native capabilities", () => {
+  it("strips HarnessOS control-plane and inherited native capabilities", () => {
     const env = buildProviderChildEnvironment({
       engine: "antigravity",
       baseEnv: {
@@ -36,7 +36,7 @@ describe("buildProviderChildEnvironment", () => {
         HARNESSOS_ALLOWED_CAPABILITY: "allowed",
         NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS: "/tmp/browser.sock",
       },
-      inheritedOmniMindKeys: ["HARNESSOS_ALLOWED_CAPABILITY"],
+      inheritedHarnessOSKeys: ["HARNESSOS_ALLOWED_CAPABILITY"],
       inheritedNativeCapabilityKeys: ["NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS"],
     });
 

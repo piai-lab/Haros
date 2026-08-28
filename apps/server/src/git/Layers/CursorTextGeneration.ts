@@ -111,7 +111,7 @@ const makeCursorTextGeneration = Effect.gen(function* () {
         cursorSettings: resolveCursorSettings(engineOptions),
         childProcessSpawner: commandSpawner,
         cwd,
-        clientInfo: { name: "omnimind-git-text", version: "0.0.0" },
+        clientInfo: { name: "harnessos-git-text", version: "0.0.0" },
       });
 
       yield* runtime.handleSessionUpdate((notification) => {

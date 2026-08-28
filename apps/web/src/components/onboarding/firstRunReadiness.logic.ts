@@ -24,7 +24,7 @@ export function deriveFirstRunReadinessState(input: {
   readonly factsSettled: boolean;
   readonly hasUsableExactBinding: boolean;
   readonly hasRememberedIndependentEngineBinding: boolean;
-  readonly hasRememberedOmniMindBinding: boolean;
+  readonly hasRememberedHarnessOSBinding: boolean;
   readonly modelServicesCapability: boolean | null;
   readonly modelServicesTransport:
     | "open"
@@ -51,7 +51,7 @@ export function deriveFirstRunReadinessState(input: {
   }
 
   if (input.hasRememberedIndependentEngineBinding) return "recover-engine";
-  if (input.hasRememberedOmniMindBinding || input.passiveModelServicesState === "configured") {
+  if (input.hasRememberedHarnessOSBinding || input.passiveModelServicesState === "configured") {
     return "recover-model-service";
   }
 

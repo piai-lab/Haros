@@ -32,7 +32,7 @@ const EN_MESSAGES = {
   "projectActions.icon.debug": "Debug",
   "projectSource.label": "Project source",
   "projectSource.folder": "Folder",
-  "projectSource.githubUnavailable": "Update the OmniMind server to add GitHub projects.",
+  "projectSource.githubUnavailable": "Update the HarnessOS server to add GitHub projects.",
   "groups.addConversations": "Add conversations…",
   "groups.addConversationsDescription":
     "Choose conversations for {group}. Projects stay unchanged.",
@@ -77,7 +77,7 @@ const EN_MESSAGES = {
   "project.unknown": "Unknown project",
   "project.repositoryRequired":
     "Enter a GitHub repository as owner/repository or a GitHub.com repository URL.",
-  "project.githubUnavailable": "Update OmniMind before adding a project from GitHub.",
+  "project.githubUnavailable": "Update HarnessOS before adding a project from GitHub.",
   "project.cloneParentRequired": "Choose the parent folder for the cloned repository.",
   "project.folderNameInvalid":
     "Choose a valid folder name without slashes, reserved device names, or a trailing dot.",
@@ -101,7 +101,7 @@ const EN_MESSAGES = {
   "project.githubRepositoryInstructionEnd": "name or its GitHub URL.",
   "project.destination": "Destination",
   "project.destinationInstruction":
-    "Choose the parent folder where OmniMind should create the checkout.",
+    "Choose the parent folder where HarnessOS should create the checkout.",
   "project.privateAccess": "Private access",
   "project.privateAccessInstructionStart":
     "Public repositories work immediately. For private repositories, run",
@@ -317,7 +317,7 @@ const ZH_CN_MESSAGES = {
   "projectActions.icon.debug": "调试",
   "projectSource.label": "项目来源",
   "projectSource.folder": "文件夹",
-  "projectSource.githubUnavailable": "请更新 OmniMind 服务端以添加 GitHub 项目。",
+  "projectSource.githubUnavailable": "请更新 HarnessOS 服务端以添加 GitHub 项目。",
   "groups.addConversations": "添加会话…",
   "groups.addConversationsDescription": "选择要加入“{group}”的会话；项目位置不会改变。",
   "groups.addToGroups": "添加到分组…",
@@ -358,7 +358,7 @@ const ZH_CN_MESSAGES = {
   "project.githubSyncPending": "GitHub 项目已添加，但尚未显示在侧栏中。请稍后重试。",
   "project.unknown": "未知项目",
   "project.repositoryRequired": "请输入 owner/repository 或 GitHub.com 代码仓库 URL。",
-  "project.githubUnavailable": "请先更新 OmniMind，再从 GitHub 添加项目。",
+  "project.githubUnavailable": "请先更新 HarnessOS，再从 GitHub 添加项目。",
   "project.cloneParentRequired": "请选择代码仓库要克隆到的父文件夹。",
   "project.folderNameInvalid": "请输入有效的文件夹名称，不能包含斜杠、保留设备名或末尾句点。",
   "project.validatingRepository": "正在验证代码仓库",
@@ -380,7 +380,7 @@ const ZH_CN_MESSAGES = {
   "project.githubRepositoryInstructionStart": "粘贴",
   "project.githubRepositoryInstructionEnd": "名称或对应的 GitHub URL。",
   "project.destination": "保存位置",
-  "project.destinationInstruction": "选择 OmniMind 创建工作副本的父文件夹。",
+  "project.destinationInstruction": "选择 HarnessOS 创建工作副本的父文件夹。",
   "project.privateAccess": "私有仓库访问",
   "project.privateAccessInstructionStart": "公开仓库可直接使用。访问私有仓库时，请运行",
   "project.privateAccessInstructionEnd": "或配置 Git 凭据。",

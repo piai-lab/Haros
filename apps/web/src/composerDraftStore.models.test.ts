@@ -81,7 +81,7 @@ describe("resolvePreferredComposerEngineSelection", () => {
     ).toBeNull();
   });
 
-  it("keeps an unbound OmniMind intent fail-closed until its runtime catalog provides a model", () => {
+  it("keeps an unbound HarnessOS intent fail-closed until its runtime catalog provides a model", () => {
     expect(
       resolvePreferredComposerEngineSelection({
         draft: {
@@ -494,7 +494,7 @@ describe("composerDraftStore engineSelection", () => {
     expect(state.selectedModel).toBeNull();
   });
 
-  it("does not silently replace a removed OmniMind service with another service model", () => {
+  it("does not silently replace a removed HarnessOS service with another service model", () => {
     const state = deriveEffectiveComposerModelState({
       draft: {
         engineSelectionByEngine: {
@@ -514,7 +514,7 @@ describe("composerDraftStore engineSelection", () => {
     expect(state.selectedModel).toBeNull();
   });
 
-  it("selects the first OmniMind catalog model only when no exact selection was remembered", () => {
+  it("selects the first HarnessOS catalog model only when no exact selection was remembered", () => {
     const state = deriveEffectiveComposerModelState({
       draft: { engineSelectionByEngine: {}, activeProvider: "oa" },
       selectedProvider: "oa",
@@ -529,7 +529,7 @@ describe("composerDraftStore engineSelection", () => {
     expect(state.selectedModel).toBe("service-b/model-b");
   });
 
-  it("uses an authority-selected OmniMind catalog fallback instead of the first catalog row", () => {
+  it("uses an authority-selected HarnessOS catalog fallback instead of the first catalog row", () => {
     const state = deriveEffectiveComposerModelState({
       draft: { engineSelectionByEngine: {}, activeProvider: "oa" },
       selectedProvider: "oa",
@@ -1127,7 +1127,7 @@ describe("composerDraftStore engine-scoped option updates", () => {
     );
   });
 
-  it("retains OmniMind max thinking level in engine-scoped options", () => {
+  it("retains HarnessOS max thinking level in engine-scoped options", () => {
     const store = useComposerDraftStore.getState();
 
     store.setProviderModelOptions(

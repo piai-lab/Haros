@@ -1,5 +1,5 @@
 // FILE: FeedbackDialog.tsx
-// Purpose: Collects categorized OmniMind feedback with privacy-safe diagnostics.
+// Purpose: Collects categorized HarnessOS feedback with privacy-safe diagnostics.
 // Layer: Shared UI component
 // Depends on: Feedback delivery logic and the shared dialog primitives.
 

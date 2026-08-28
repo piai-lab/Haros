@@ -172,7 +172,7 @@ describe("packaged desktop verification", () => {
   });
 
   it("gives one packaged proof exclusive ownership of the host", () => {
-    const root = mkdtempSync(join(tmpdir(), "omnimind-packaged-proof-lease-test-"));
+    const root = mkdtempSync(join(tmpdir(), "harnessos-packaged-proof-lease-test-"));
     temporaryRoots.push(root);
 
     const firstLease = acquirePackagedProofLease(sourceCommit, root);
@@ -183,13 +183,13 @@ describe("packaged desktop verification", () => {
     firstLease.release();
     const nextLease = acquirePackagedProofLease(sourceCommit, root);
     nextLease.release();
-    expect(existsSync(join(root, "omnimind-packaged-proof.lock"))).toBe(false);
+    expect(existsSync(join(root, "harnessos-packaged-proof.lock"))).toBe(false);
   });
 
   it("reclaims a packaged proof lease whose owner exited", () => {
-    const root = mkdtempSync(join(tmpdir(), "omnimind-packaged-proof-stale-test-"));
+    const root = mkdtempSync(join(tmpdir(), "harnessos-packaged-proof-stale-test-"));
     temporaryRoots.push(root);
-    const leaseDirectory = join(root, "omnimind-packaged-proof.lock");
+    const leaseDirectory = join(root, "harnessos-packaged-proof.lock");
     mkdirSync(leaseDirectory);
     writeFileSync(
       join(leaseDirectory, "owner.json"),
@@ -206,7 +206,7 @@ describe("packaged desktop verification", () => {
   });
 
   it("isolates user state and removes inherited runtime authority", () => {
-    const root = mkdtempSync(join(tmpdir(), "omnimind-packaged-proof-env-test-"));
+    const root = mkdtempSync(join(tmpdir(), "harnessos-packaged-proof-env-test-"));
     temporaryRoots.push(root);
 
     const env = createPackagedDesktopEnvironment(

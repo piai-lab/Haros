@@ -1,5 +1,5 @@
 /**
- * HTTP route for the OmniMind agent gateway MCP endpoint.
+ * HTTP route for the HarnessOS agent gateway MCP endpoint.
  *
  * Registers `POST /mcp` (streamable-HTTP MCP, stateless JSON responses) plus
  * spec-mandated method handling for GET/DELETE. Authentication is a

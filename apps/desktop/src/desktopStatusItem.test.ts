@@ -25,8 +25,8 @@ function makeWindow(
 
 describe("revealDesktopStatusItemWindow", () => {
   it("selects native status-item resources for macOS and Windows", () => {
-    expect(desktopStatusItemResourceName("darwin")).toBe("omnimind-statusTemplate.png");
-    expect(desktopStatusItemResourceName("win32")).toBe("omnimind-status.ico");
+    expect(desktopStatusItemResourceName("darwin")).toBe("harnessos-statusTemplate.png");
+    expect(desktopStatusItemResourceName("win32")).toBe("harnessos-status.ico");
     expect(desktopStatusItemResourceName("linux")).toBeNull();
   });
 

@@ -29,7 +29,7 @@ export function isReasoningUpdateWorkEntry(
   if (entry.activityKind === "reasoning.updated" || entry.activityKind === "reasoning.completed") {
     return true;
   }
-  // Read-only compatibility for activities persisted by older OmniMind builds.
+  // Read-only compatibility for activities persisted by older HarnessOS builds.
   const heading = normalizeWorkText(entry.toolTitle ?? entry.label);
   return (
     heading === "reasoning" ||

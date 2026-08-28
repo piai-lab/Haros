@@ -20,8 +20,8 @@ export interface RevealDesktopStatusItemWindowOptions<TWindow extends DesktopSta
 export type DesktopStatusItemPlatform = "darwin" | "linux" | "win32";
 
 export function desktopStatusItemResourceName(platform: DesktopStatusItemPlatform): string | null {
-  if (platform === "darwin") return "omnimind-statusTemplate.png";
-  if (platform === "win32") return "omnimind-status.ico";
+  if (platform === "darwin") return "harnessos-statusTemplate.png";
+  if (platform === "win32") return "harnessos-status.ico";
   return null;
 }
 

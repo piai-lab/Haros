@@ -24,7 +24,7 @@ layer("039_ReconcileLegacyPinnedThreads", (it) => {
       `;
 
       // The lineage reconciler spots the foreign row at ID 36 before the
-      // migrator runs, so OmniMind's 36 is replayed in the same pass instead of
+      // migrator runs, so HarnessOS's 36 is replayed in the same pass instead of
       // being skipped by the max-ID gate.
       yield* runMigrations({ toMigrationInclusive: 38 });
 

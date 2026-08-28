@@ -15,7 +15,7 @@ import { expect, it } from "vitest";
 it.runIf(process.platform === "win32")(
   "forwards encoded Codex arguments verbatim through the Effect Node spawner",
   async () => {
-    const root = mkdtempSync(Path.join(tmpdir(), "omnimind-effect-windows-process-"));
+    const root = mkdtempSync(Path.join(tmpdir(), "harnessos-effect-windows-process-"));
     const commandDir = Path.join(root, "tools(x86)");
     const scriptPath = Path.join(commandDir, "capture.mjs");
     const commandPath = Path.join(commandDir, "codex.cmd");

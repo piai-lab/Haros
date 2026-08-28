@@ -33,7 +33,7 @@ function fixture(
     undeclaredLicense?: boolean;
   } = {},
 ) {
-  const root = mkdtempSync(join(tmpdir(), "omnimind-release-legal-"));
+  const root = mkdtempSync(join(tmpdir(), "harnessos-release-legal-"));
   temporaryRoots.push(root);
   const piNames = [
     "@earendil-works/pi-agent-core",
@@ -106,7 +106,7 @@ afterEach(() => {
 
 describe("release legal metadata", () => {
   it("uses Server, Desktop and bundled Web as repository dependency owners", () => {
-    const root = mkdtempSync(join(tmpdir(), "omnimind-release-roots-"));
+    const root = mkdtempSync(join(tmpdir(), "harnessos-release-roots-"));
     temporaryRoots.push(root);
     write(
       join(root, "apps/server/package.json"),
@@ -276,12 +276,12 @@ describe("release legal metadata", () => {
     ]) {
       expect(inventory.components.some((component) => component.name === name)).toBe(true);
     }
-    const ask = inventory.components.find((component) => component.name === "@harnessos/om-ask");
+    const ask = inventory.components.find((component) => component.name === "@harnessos/oa-ask");
     expect(ask?.locations).toEqual(["bundled:apps/server/dist/index.mjs"]);
     expect(ask?.licenseFiles).toHaveLength(1);
     expect(ask?.licenseFiles[0]?.provenance).toMatchObject({
       kind: "bundled-source",
-      sourcePath: "packages/om-ask/LICENSE",
+      sourcePath: "packages/oa-ask/LICENSE",
     });
   });
 });

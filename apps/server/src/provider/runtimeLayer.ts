@@ -17,13 +17,13 @@ import { makeAntigravityAdapterLive } from "./Layers/AntigravityAdapter";
 import { makeDroidAdapterLive } from "./Layers/DroidAdapter";
 import { makeGrokAdapterLive } from "./Layers/GrokAdapter";
 import { makeKiloAdapterLive, makeOpenCodeAdapterLive } from "./Layers/OpenCodeAdapter";
-import { makeOmniMindAgentAdapterLive, makePiAdapterLive } from "./Layers/PiAdapter";
+import { makeOAAgentAdapterLive, makePiAdapterLive } from "./Layers/PiAdapter";
 import { EngineAdapterRegistryLive } from "./Layers/EngineAdapterRegistry";
 import { EngineDiscoveryServiceLive } from "./Layers/EngineDiscoveryService";
-import { OmniMindEcosystemLive } from "./Layers/OmniMindEcosystem";
-import { OmniMindAgentPromptFilesLive } from "./Layers/OmniMindAgentPromptFiles";
-import { OmniMindWebSearchSettingsLive } from "./Layers/OmniMindWebSearchSettings";
-import { OmniMindModelServicesLive } from "./Layers/OmniMindModelServices";
+import { OAEcosystemLive } from "./Layers/OAEcosystem";
+import { OAAgentPromptFilesLive } from "./Layers/OAAgentPromptFiles";
+import { OAWebSearchSettingsLive } from "./Layers/OAWebSearchSettings";
+import { OAModelServicesLive } from "./Layers/OAModelServices";
 import { makeDurableProviderServiceLive } from "./Layers/EngineService";
 import { EngineSessionDirectoryLive } from "./Layers/EngineSessionDirectory";
 import { EngineSessionRuntimeRepositoryLive } from "../persistence/Layers/EngineSessionRuntime";
@@ -89,7 +89,7 @@ export function makeServerProviderLayer(
     const piAdapterLayer = makePiAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
     ).pipe(Layer.provide(agentGatewayCredentialsLayer), Layer.provide(BrowserAutomationHostLive));
-    const omniMindAgentAdapterLayer = makeOmniMindAgentAdapterLive(
+    const omniMindAgentAdapterLayer = makeOAAgentAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
     ).pipe(
       Layer.provide(agentGatewayCredentialsLayer),
@@ -123,11 +123,11 @@ export function makeServerProviderLayer(
       // layer is memoized so this reuses the instance built at the top level.
       Layer.provide(ServerSettingsLive),
     );
-    const omniMindModelServicesLayer = OmniMindModelServicesLive.pipe(
+    const omniMindModelServicesLayer = OAModelServicesLive.pipe(
       Layer.provide(providerServiceLayer),
     );
-    const omniMindEcosystemLayer = OmniMindEcosystemLive.pipe(Layer.provide(providerServiceLayer));
-    const omniMindAgentPromptFilesLayer = OmniMindAgentPromptFilesLive.pipe(
+    const omniMindEcosystemLayer = OAEcosystemLive.pipe(Layer.provide(providerServiceLayer));
+    const omniMindAgentPromptFilesLayer = OAAgentPromptFilesLive.pipe(
       Layer.provide(ServerSettingsLive),
     );
     return Layer.mergeAll(
@@ -135,7 +135,7 @@ export function makeServerProviderLayer(
       engineDiscoveryLayer,
       omniMindEcosystemLayer,
       omniMindAgentPromptFilesLayer,
-      OmniMindWebSearchSettingsLive,
+      OAWebSearchSettingsLive,
       omniMindModelServicesLayer,
       adapterRegistryLayer,
       providerSessionDirectoryLayer,

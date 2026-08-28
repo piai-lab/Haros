@@ -212,7 +212,7 @@ Claude Sonnet 5 (Thinking)
 
 describe("Antigravity CLI integration helpers", () => {
   it("rotates the gateway lease per print turn and rejects a retained prior bootstrap", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-antigravity-turn-lease-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "harnessos-antigravity-turn-lease-"));
     const liveTokens = new Set<string>();
     const bootstrapOwners = new Map<string, string>();
     const revokedTokens: string[] = [];
@@ -342,10 +342,10 @@ describe("Antigravity CLI integration helpers", () => {
     }
   });
 
-  it("installs the generated OmniMind MCP plugin alongside the capture hooks", async () => {
-    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-antigravity-home-test-"));
+  it("installs the generated HarnessOS MCP plugin alongside the capture hooks", async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "harnessos-antigravity-home-test-"));
     const stdioProxy = {
-      command: "/Applications/OmniMind.app/Contents/MacOS/OmniMind",
+      command: "/Applications/HarnessOS.app/Contents/MacOS/HarnessOS",
       args: ["/state/agent-gateway-mcp-proxy.mjs"],
     };
     const invocations: Array<{
@@ -370,7 +370,7 @@ describe("Antigravity CLI integration helpers", () => {
         ".gemini",
         "antigravity-cli",
         "plugins",
-        "omnimind-capture",
+        "harnessos-capture",
       );
       expect(invocations).toEqual([
         {
@@ -458,7 +458,7 @@ describe("Antigravity CLI integration helpers", () => {
       hasGatewaySessionLease: false,
     });
     expect(identityOnlyPrompt).not.toContain("browser_*");
-    expect(identityOnlyPrompt).toContain("OmniMind MCP control is unavailable");
+    expect(identityOnlyPrompt).toContain("HarnessOS MCP control is unavailable");
 
     const envWithoutLease = buildAntigravityTurnProcessEnvironment({
       eventFile: "/tmp/thread-b-hooks.ndjson",
@@ -490,7 +490,7 @@ describe("Antigravity CLI integration helpers", () => {
     });
   });
 
-  it("keeps the globally installed hook neutral outside OmniMind sessions", () => {
+  it("keeps the globally installed hook neutral outside HarnessOS sessions", () => {
     const command = buildAntigravityCaptureCommand(
       "__harnessos_gui_must_not_launch__",
       "__capture_script_must_not_run__",
@@ -544,7 +544,7 @@ describe("Antigravity CLI integration helpers", () => {
   });
 
   it("answers pre-tool with a decision from the capture script when capture is inactive", async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-antigravity-hook-test-"));
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "harnessos-antigravity-hook-test-"));
     const scriptPath = path.join(directory, "capture.cjs");
     try {
       await fs.writeFile(scriptPath, hookScriptSource(), { mode: 0o700 });
@@ -566,8 +566,8 @@ describe("Antigravity CLI integration helpers", () => {
     }
   });
 
-  it("runs the capture script for OmniMind-managed sessions", async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-antigravity-hook-test-"));
+  it("runs the capture script for HarnessOS-managed sessions", async () => {
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "harnessos-antigravity-hook-test-"));
     const scriptPath = path.join(directory, "capture.cjs");
     const eventPath = path.join(directory, "events.ndjson");
     try {
@@ -600,20 +600,20 @@ describe("Antigravity CLI integration helpers", () => {
     }
   });
 
-  it("runs packaged Electron as Node only for OmniMind-managed sessions", () => {
+  it("runs packaged Electron as Node only for HarnessOS-managed sessions", () => {
     expect(
       buildAntigravityCaptureCommand(
-        "/Applications/OmniMind.app/Contents/MacOS/OmniMind",
-        "/tmp/omnimind-capture/capture.cjs",
+        "/Applications/HarnessOS.app/Contents/MacOS/HarnessOS",
+        "/tmp/harnessos-capture/capture.cjs",
         "pre-tool",
         "darwin",
       ),
     ).toBe(
-      `if [ -z "\${HARNESSOS_ANTIGRAVITY_EVENTS:-}" ]; then cat >/dev/null 2>&1 || :; printf '%s\\n' '{"decision":"ask"}'; else ELECTRON_RUN_AS_NODE=1 '/Applications/OmniMind.app/Contents/MacOS/OmniMind' '/tmp/omnimind-capture/capture.cjs' 'pre-tool'; fi`,
+      `if [ -z "\${HARNESSOS_ANTIGRAVITY_EVENTS:-}" ]; then cat >/dev/null 2>&1 || :; printf '%s\\n' '{"decision":"ask"}'; else ELECTRON_RUN_AS_NODE=1 '/Applications/HarnessOS.app/Contents/MacOS/HarnessOS' '/tmp/harnessos-capture/capture.cjs' 'pre-tool'; fi`,
     );
     expect(
       buildAntigravityCaptureCommand(
-        String.raw`C:\Users\test\AppData\Local\Programs\OmniMind\OmniMind.exe`,
+        String.raw`C:\Users\test\AppData\Local\Programs\HarnessOS\HarnessOS.exe`,
         String.raw`C:\Users\test\.gemini\capture.cjs`,
         "pre-tool",
         "win32",
@@ -623,29 +623,29 @@ describe("Antigravity CLI integration helpers", () => {
       // escapes intact, so `"` arrives as `\"` and quoted paths fail to
       // execute ("not recognized as an internal or external command"). The
       // win32 command must stay free of double quotes.
-      String.raw`if not defined HARNESSOS_ANTIGRAVITY_EVENTS (more >nul 2>nul & echo {"decision":"ask"}) else (set ELECTRON_RUN_AS_NODE=1&& C:\Users\test\AppData\Local\Programs\OmniMind\OmniMind.exe C:\Users\test\.gemini\capture.cjs pre-tool)`,
+      String.raw`if not defined HARNESSOS_ANTIGRAVITY_EVENTS (more >nul 2>nul & echo {"decision":"ask"}) else (set ELECTRON_RUN_AS_NODE=1&& C:\Users\test\AppData\Local\Programs\HarnessOS\HarnessOS.exe C:\Users\test\.gemini\capture.cjs pre-tool)`,
     );
     // PreInvocation gates the LLM invocation: answer allow so subagent
     // launches are not denied (which would make the parent CLI exit 1).
     expect(
       buildAntigravityCaptureCommand(
-        String.raw`C:\Users\test\AppData\Local\Programs\OmniMind\OmniMind.exe`,
+        String.raw`C:\Users\test\AppData\Local\Programs\HarnessOS\HarnessOS.exe`,
         String.raw`C:\Users\test\.gemini\capture.cjs`,
         "pre-invocation",
         "win32",
       ),
     ).toBe(
-      String.raw`if not defined HARNESSOS_ANTIGRAVITY_EVENTS (more >nul 2>nul & echo {"decision":"allow"}) else (set ELECTRON_RUN_AS_NODE=1&& C:\Users\test\AppData\Local\Programs\OmniMind\OmniMind.exe C:\Users\test\.gemini\capture.cjs pre-invocation)`,
+      String.raw`if not defined HARNESSOS_ANTIGRAVITY_EVENTS (more >nul 2>nul & echo {"decision":"allow"}) else (set ELECTRON_RUN_AS_NODE=1&& C:\Users\test\AppData\Local\Programs\HarnessOS\HarnessOS.exe C:\Users\test\.gemini\capture.cjs pre-invocation)`,
     );
     expect(
       buildAntigravityCaptureCommand(
-        "/Applications/OmniMind.app/Contents/MacOS/OmniMind",
-        "/tmp/omnimind-capture/capture.cjs",
+        "/Applications/HarnessOS.app/Contents/MacOS/HarnessOS",
+        "/tmp/harnessos-capture/capture.cjs",
         "pre-invocation",
         "darwin",
       ),
     ).toBe(
-      `if [ -z "\${HARNESSOS_ANTIGRAVITY_EVENTS:-}" ]; then cat >/dev/null 2>&1 || :; printf '%s\\n' '{"decision":"allow"}'; else ELECTRON_RUN_AS_NODE=1 '/Applications/OmniMind.app/Contents/MacOS/OmniMind' '/tmp/omnimind-capture/capture.cjs' 'pre-invocation'; fi`,
+      `if [ -z "\${HARNESSOS_ANTIGRAVITY_EVENTS:-}" ]; then cat >/dev/null 2>&1 || :; printf '%s\\n' '{"decision":"allow"}'; else ELECTRON_RUN_AS_NODE=1 '/Applications/HarnessOS.app/Contents/MacOS/HarnessOS' '/tmp/harnessos-capture/capture.cjs' 'pre-invocation'; fi`,
     );
   });
 
@@ -659,7 +659,7 @@ describe("Antigravity CLI integration helpers", () => {
 
   it("marks every generated hook as a command hook", () => {
     expect(buildAntigravityHookConfig((event) => `capture ${event}`)).toEqual({
-      "omnimind-capture": {
+      "harnessos-capture": {
         PreToolUse: [
           {
             matcher: "*",
@@ -680,7 +680,7 @@ describe("Antigravity CLI integration helpers", () => {
   });
 
   it("advances file offsets only past complete JSONL records", async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-antigravity-test-"));
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "harnessos-antigravity-test-"));
     const file = path.join(directory, "events.ndjson");
     try {
       await fs.writeFile(file, '{"first":true}\n{"second"');
@@ -696,7 +696,7 @@ describe("Antigravity CLI integration helpers", () => {
   });
 
   it("streams hook tool names and terminal states with arguments", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-antigravity-tool-events-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "harnessos-antigravity-tool-events-"));
     let eventFile: string | undefined;
     let child: ChildProcess | undefined;
     const spawnProcess = ((
@@ -1301,7 +1301,7 @@ describe("Antigravity CLI integration helpers", () => {
   // #465: an active Stop hook must not emit a non-standard decision that can
   // hang the print process after the assistant reply is already visible.
   it("answers stop hooks with a neutral allow-exit payload", async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-antigravity-stop-hook-"));
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), "harnessos-antigravity-stop-hook-"));
     const scriptPath = path.join(directory, "capture.cjs");
     const eventPath = path.join(directory, "events.ndjson");
     try {
@@ -1350,7 +1350,7 @@ describe("Antigravity turn settle on cancel (#465)", () => {
   };
 
   it("unlocks Cancel without letting a late close settle the follow-up", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-antigravity-interrupt-hung-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "harnessos-antigravity-interrupt-hung-"));
     const children: ChildProcess[] = [];
     const spawnProcess = makeSpawnProcess(children);
 

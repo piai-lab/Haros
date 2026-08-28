@@ -644,7 +644,7 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     },
   ],
   // Antigravity owns its model catalog. The web app populates this provider from
-  // `agy models` so CLI updates appear without a OmniMind release.
+  // `agy models` so CLI updates appear without a HarnessOS release.
   antigravity: [],
   grok: [
     {

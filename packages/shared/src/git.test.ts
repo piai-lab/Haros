@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   WORKTREE_BRANCH_PREFIX,
-  buildOmniMindBranchName,
+  buildHarnessOSBranchName,
   buildTemporaryWorktreeBranchName,
   isTemporaryWorktreeBranch,
-  resolveUniqueOmniMindBranchName,
+  resolveUniqueHarnessOSBranchName,
   resolveThreadBranchRegressionGuard,
 } from "./git";
 
@@ -70,34 +70,34 @@ describe("resolveThreadBranchRegressionGuard", () => {
   });
 });
 
-describe("buildOmniMindBranchName", () => {
-  it("uses omnimind as the branch namespace", () => {
-    expect(buildOmniMindBranchName("fix toast copy")).toBe("harnessos/fix-toast-copy");
+describe("buildHarnessOSBranchName", () => {
+  it("uses harnessos as the branch namespace", () => {
+    expect(buildHarnessOSBranchName("fix toast copy")).toBe("harnessos/fix-toast-copy");
   });
 
-  it("keeps non-OmniMind namespaces inside the OmniMind branch", () => {
-    expect(buildOmniMindBranchName("feature/refine-toolbar-actions")).toBe(
+  it("keeps non-HarnessOS namespaces inside the HarnessOS branch", () => {
+    expect(buildHarnessOSBranchName("feature/refine-toolbar-actions")).toBe(
       "harnessos/feature/refine-toolbar-actions",
     );
   });
 
   it("normalizes legacy prefixes before rebuilding the branch", () => {
     for (const namespace of PRE_CUTOVER_NAMESPACE_FIXTURES) {
-      expect(buildOmniMindBranchName(`${namespace}/refine toolbar actions`)).toBe(
+      expect(buildHarnessOSBranchName(`${namespace}/refine toolbar actions`)).toBe(
         "harnessos/refine-toolbar-actions",
       );
     }
   });
 
   it("falls back to harnessos/update when no preferred name is provided", () => {
-    expect(buildOmniMindBranchName()).toBe("harnessos/update");
+    expect(buildHarnessOSBranchName()).toBe("harnessos/update");
   });
 });
 
-describe("resolveUniqueOmniMindBranchName", () => {
-  it("increments suffix when the OmniMind branch already exists", () => {
+describe("resolveUniqueHarnessOSBranchName", () => {
+  it("increments suffix when the HarnessOS branch already exists", () => {
     expect(
-      resolveUniqueOmniMindBranchName(
+      resolveUniqueHarnessOSBranchName(
         ["main", "harnessos/fix-toast-copy", "harnessos/fix-toast-copy-2"],
         "fix toast copy",
       ),

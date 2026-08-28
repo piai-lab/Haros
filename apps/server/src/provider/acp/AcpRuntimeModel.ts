@@ -200,7 +200,7 @@ function normalizeToolCallStatus(
   }
 }
 
-// Converts ACP's unstable usage updates into OmniMind's context-window snapshot shape.
+// Converts ACP's unstable usage updates into HarnessOS's context-window snapshot shape.
 function tokenUsageSnapshotFromAcpUsageUpdate(input: {
   readonly size: unknown;
   readonly used: unknown;

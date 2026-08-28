@@ -54,35 +54,35 @@ afterEach(() => {
 });
 
 describe("isHomeChatContainerProject", () => {
-  it("matches the managed Documents/OmniMind general-chat root used by older drafts", () => {
+  it("matches the managed Documents/HarnessOS general-chat root used by older drafts", () => {
     expect(
       isHomeChatContainerProject(
         {
-          cwd: "/Users/tester/Documents/OmniMind",
+          cwd: "/Users/tester/Documents/HarnessOS",
           kind: "chat",
           name: "Home",
           remoteName: "Home",
         },
         {
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+          chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
         },
       ),
     ).toBe(true);
   });
 
-  it("matches Codex-style date/slug chat workspaces under Documents/OmniMind", () => {
+  it("matches Codex-style date/slug chat workspaces under Documents/HarnessOS", () => {
     expect(
       isHomeChatContainerProject(
         {
-          cwd: "/Users/tester/Documents/OmniMind/2026-06-11/yes-it-takes-all-the-skills",
+          cwd: "/Users/tester/Documents/HarnessOS/2026-06-11/yes-it-takes-all-the-skills",
           kind: "chat",
           name: "Yes it takes",
           remoteName: "Yes it takes",
         },
         {
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+          chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
         },
       ),
     ).toBe(true);
@@ -99,7 +99,7 @@ describe("isHomeChatContainerProject", () => {
         },
         {
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+          chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
         },
       ),
     ).toBe(true);
@@ -111,7 +111,7 @@ describe("isHomeChatContainerProject", () => {
     expect(
       isHomeChatContainerProject(
         {
-          cwd: "/Users/tester/Documents/OmniMind/2026-06-11/some-chat",
+          cwd: "/Users/tester/Documents/HarnessOS/2026-06-11/some-chat",
           kind: "chat",
           name: "Some chat",
           remoteName: "Some chat",
@@ -132,18 +132,18 @@ describe("isHomeChatContainerProject", () => {
     ).toBe(false);
   });
 
-  it("does not classify ordinary projects under Documents/OmniMind as home chat containers", () => {
+  it("does not classify ordinary projects under Documents/HarnessOS as home chat containers", () => {
     expect(
       isHomeChatContainerProject(
         {
-          cwd: "/Users/tester/Documents/OmniMind",
+          cwd: "/Users/tester/Documents/HarnessOS",
           kind: "project",
-          name: "OmniMind",
-          remoteName: "OmniMind",
+          name: "HarnessOS",
+          remoteName: "HarnessOS",
         },
         {
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+          chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
         },
       ),
     ).toBe(false);
@@ -153,14 +153,14 @@ describe("isHomeChatContainerProject", () => {
     expect(
       isHomeChatContainerProject(
         {
-          cwd: "/Users/tester/Documents/OmniMind/2026-06-11/yes-it-takes-all-the-skills",
+          cwd: "/Users/tester/Documents/HarnessOS/2026-06-11/yes-it-takes-all-the-skills",
           kind: "project",
           name: "yes-it-takes-all-the-skills",
           remoteName: "yes-it-takes-all-the-skills",
         },
         {
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+          chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
         },
       ),
     ).toBe(false);
@@ -175,7 +175,7 @@ describe("isHomeChatContainerProject", () => {
 
     const projectPromise = ensureHomeChatProject({
       homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
     });
     await Promise.resolve();
 
@@ -213,7 +213,7 @@ describe("isHomeChatContainerProject", () => {
 
       const projectPromise = ensureHomeChatProject({
         homeDir: "/Users/tester",
-        chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+        chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
       });
 
       await vi.advanceTimersByTimeAsync(PROJECT_SNAPSHOT_HYDRATION_TIMEOUT_MS);
@@ -234,7 +234,7 @@ describe("isHomeChatContainerProject", () => {
 
     const paths = {
       homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
     };
     const firstProjectPromise = ensureHomeChatProject(paths);
     const secondProjectPromise = ensureHomeChatProject(paths);
@@ -279,7 +279,7 @@ describe("isHomeChatContainerProject", () => {
 
     const projectId = await ensureHomeChatProject({
       homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
     });
 
     expect(projectId).toBe(existingProjectId);
@@ -326,7 +326,7 @@ describe("isHomeChatContainerProject", () => {
 
     const projectId = await ensureHomeChatProject({
       homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
     });
 
     expect(projectId).toBe(existingProjectId);
@@ -371,7 +371,7 @@ describe("isHomeChatContainerProject", () => {
     await expect(
       ensureHomeChatProject({
         homeDir: "/Users/tester",
-        chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+        chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
       }),
     ).rejects.toThrow(duplicateError.message);
     expect(dispatchCommand).not.toHaveBeenCalledWith(

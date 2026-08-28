@@ -1,5 +1,5 @@
 // FILE: ModelsSettingsPanel.tsx
-// Purpose: Own OmniMind model-service discovery, authentication, catalog, and recovery workflows.
+// Purpose: Own HarnessOS model-service discovery, authentication, catalog, and recovery workflows.
 // Layer: Settings panel
 
 import {
@@ -7,19 +7,19 @@ import {
   HARNESSOS_CUSTOM_MODEL_COST_TIERS_MAX_COUNT,
   HARNESSOS_CUSTOM_MODEL_COMPAT_FIELDS_BY_API,
   WS_HARNESSOS_MODEL_SERVICES_CAPABILITY,
-  type OmniMindModelServiceAuthEvent,
-  type OmniMindModelServiceAuthPrompt,
-  type OmniMindModelServiceAuthResult,
-  type OmniMindModelServiceDescriptor,
-  type OmniMindModelServiceOAuthPromptMode,
-  type OmniMindModelServiceModel,
-  type OmniMindCustomModelServiceApi,
-  type OmniMindCustomModelServiceConfigInput,
-  type OmniMindCustomModelServiceCredentialInput,
-  type OmniMindCustomModelServiceDiscoveredModel,
-  type OmniMindCustomModelHeaderMetadata,
-  type OmniMindCustomModelHeaderMutation,
-  type OmniMindCustomModelServiceModelInput,
+  type OAModelServiceAuthEvent,
+  type OAModelServiceAuthPrompt,
+  type OAModelServiceAuthResult,
+  type OAModelServiceDescriptor,
+  type OAModelServiceOAuthPromptMode,
+  type OAModelServiceModel,
+  type HarnessOSCustomModelServiceApi,
+  type HarnessOSCustomModelServiceConfigInput,
+  type HarnessOSCustomModelServiceCredentialInput,
+  type HarnessOSCustomModelServiceDiscoveredModel,
+  type HarnessOSCustomModelHeaderMetadata,
+  type HarnessOSCustomModelHeaderMutation,
+  type HarnessOSCustomModelServiceModelInput,
   type EngineSelection,
 } from "@harnessos/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -43,11 +43,11 @@ import {
   readNativeApiTransportState,
 } from "~/nativeApi";
 import {
-  cancelOmniMindModelServicesAddIntentQueries,
+  cancelOAModelServicesAddIntentQueries,
   omniMindModelServicesQueryKeys,
   omniMindModelServiceDetailQueryOptions,
   omniMindModelServicesListQueryOptions,
-} from "~/lib/omnimindModelServicesReactQuery";
+} from "~/lib/oaModelServicesReactQuery";
 import { engineDiscoveryQueryKeys } from "~/lib/engineDiscoveryReactQuery";
 import { cn } from "~/lib/utils";
 import { useI18n, type MessageKey } from "~/i18n";
@@ -93,10 +93,10 @@ interface ModelServiceAuthDialogState {
   readonly serviceId: string;
   readonly serviceName: string;
   readonly authType: "api_key" | "oauth";
-  readonly oauthPromptMode: OmniMindModelServiceOAuthPromptMode | null;
+  readonly oauthPromptMode: OAModelServiceOAuthPromptMode | null;
   readonly requestId?: string;
-  readonly prompt?: OmniMindModelServiceAuthPrompt;
-  readonly events: ReadonlyArray<OmniMindModelServiceAuthEvent>;
+  readonly prompt?: OAModelServiceAuthPrompt;
+  readonly events: ReadonlyArray<OAModelServiceAuthEvent>;
   readonly busy: boolean;
   readonly error: string | null;
   readonly value: string;
@@ -108,18 +108,18 @@ interface ModelServiceNotice {
 }
 
 export interface PreparedModelService {
-  readonly service: OmniMindModelServiceDescriptor;
-  readonly models: ReadonlyArray<OmniMindModelServiceModel>;
+  readonly service: OAModelServiceDescriptor;
+  readonly models: ReadonlyArray<OAModelServiceModel>;
 }
 
 interface CustomHeaderEditorEntry {
   readonly name: string;
-  readonly existingSource: OmniMindCustomModelHeaderMetadata["source"] | null;
+  readonly existingSource: HarnessOSCustomModelHeaderMetadata["source"] | null;
   readonly mode: "preserve" | "environment" | "clear";
   readonly variableName: string;
 }
 
-type CustomModelEditorModel = Omit<OmniMindCustomModelServiceModelInput, "headerMutations"> & {
+type CustomModelEditorModel = Omit<HarnessOSCustomModelServiceModelInput, "headerMutations"> & {
   readonly headers: ReadonlyArray<CustomHeaderEditorEntry>;
 };
 
@@ -127,14 +127,14 @@ interface CustomModelServiceEditorState {
   readonly mode: "create" | "edit";
   readonly serviceId: string | null;
   readonly displayName: string;
-  readonly api: OmniMindCustomModelServiceApi;
+  readonly api: HarnessOSCustomModelServiceApi;
   readonly baseUrl: string;
   readonly authHeader: boolean | undefined;
   readonly credentialMode: "preserve" | "stored_key" | "environment" | "command";
   readonly apiKey: string;
   readonly environmentVariableName: string;
   readonly credentialCommand: string;
-  readonly existingAuthSource: OmniMindModelServiceDescriptor["authSource"];
+  readonly existingAuthSource: OAModelServiceDescriptor["authSource"];
   readonly headers: ReadonlyArray<CustomHeaderEditorEntry>;
   readonly models: ReadonlyArray<CustomModelEditorModel>;
   readonly testedFingerprint: string | null;
@@ -143,7 +143,7 @@ interface CustomModelServiceEditorState {
 
 interface CustomModelDiscoveryState {
   readonly status: "idle" | "loading" | "success";
-  readonly models: ReadonlyArray<OmniMindCustomModelServiceDiscoveredModel>;
+  readonly models: ReadonlyArray<HarnessOSCustomModelServiceDiscoveredModel>;
   readonly selectedModelIds: ReadonlySet<string>;
 }
 
@@ -179,7 +179,7 @@ const CUSTOM_MODEL_THINKING_LEVEL_LABEL_KEYS = {
   xhigh: "settings.customApiThinkingLevel.xhigh",
   max: "settings.customApiThinkingLevel.max",
 } as const;
-type CustomModelCompat = NonNullable<OmniMindCustomModelServiceModelInput["compat"]>;
+type CustomModelCompat = NonNullable<HarnessOSCustomModelServiceModelInput["compat"]>;
 type CustomModelBooleanCompatField = Exclude<keyof CustomModelCompat, "maxTokensField">;
 const CUSTOM_MODEL_COMPAT_LABEL_KEYS: Record<CustomModelBooleanCompatField, MessageKey> = {
   supportsDeveloperRole: "settings.customApiCompat.supportsDeveloperRole",
@@ -218,7 +218,7 @@ const PREFERRED_MODEL_SERVICE_RANK = new Map<string, number>(
 );
 
 function customHeaderEditorEntries(
-  headers: ReadonlyArray<OmniMindCustomModelHeaderMetadata> | undefined,
+  headers: ReadonlyArray<HarnessOSCustomModelHeaderMetadata> | undefined,
 ): ReadonlyArray<CustomHeaderEditorEntry> {
   return (headers ?? []).map((header) => ({
     name: header.name,
@@ -230,8 +230,8 @@ function customHeaderEditorEntries(
 
 function customHeaderMutations(
   entries: ReadonlyArray<CustomHeaderEditorEntry>,
-): ReadonlyArray<OmniMindCustomModelHeaderMutation> {
-  return entries.flatMap<OmniMindCustomModelHeaderMutation>((entry) => {
+): ReadonlyArray<HarnessOSCustomModelHeaderMutation> {
+  return entries.flatMap<HarnessOSCustomModelHeaderMutation>((entry) => {
     if (entry.mode === "preserve") return [];
     const name = entry.name.trim();
     if (entry.mode === "clear") return [{ name, type: "clear" as const }];
@@ -293,7 +293,7 @@ function createCustomModelServiceEditor(): CustomModelServiceEditorState {
 
 function customModelServiceConfig(
   editor: CustomModelServiceEditorState,
-): OmniMindCustomModelServiceConfigInput {
+): HarnessOSCustomModelServiceConfigInput {
   const headerMutations = customHeaderMutations(editor.headers);
   return {
     serviceId: editor.serviceId,
@@ -354,7 +354,7 @@ function customModelServiceFingerprint(editor: CustomModelServiceEditorState): s
 
 function customModelServiceCredentialInput(
   editor: CustomModelServiceEditorState,
-): OmniMindCustomModelServiceCredentialInput | null {
+): HarnessOSCustomModelServiceCredentialInput | null {
   switch (editor.credentialMode) {
     case "preserve":
       return editor.mode === "edit" ? { type: "preserve" } : null;
@@ -431,7 +431,7 @@ function countCustomServiceReferences(serviceId: string): number {
 }
 
 function customApiDeleteDescriptionKey(
-  service: OmniMindModelServiceDescriptor | null,
+  service: OAModelServiceDescriptor | null,
 ):
   | "settings.customApiDeleteDescriptionStored"
   | "settings.customApiDeleteDescriptionEnvironment"
@@ -785,7 +785,7 @@ const subscribeModelServicesTransport = (listener: () => void) =>
 const readModelServicesTransport = () => readNativeApiTransportState();
 const readServerModelServicesTransport = () => null;
 
-function authEventExternalUrl(event: OmniMindModelServiceAuthEvent): string | null {
+function authEventExternalUrl(event: OAModelServiceAuthEvent): string | null {
   return event.type === "auth_url"
     ? event.url
     : event.type === "device_code"
@@ -793,7 +793,7 @@ function authEventExternalUrl(event: OmniMindModelServiceAuthEvent): string | nu
       : null;
 }
 
-function authEventExternalHost(event: OmniMindModelServiceAuthEvent): string | null {
+function authEventExternalHost(event: OAModelServiceAuthEvent): string | null {
   const url = authEventExternalUrl(event);
   return url ? new URL(url).hostname : null;
 }
@@ -884,9 +884,10 @@ function ActiveModelsSettingsPanel({
     "overview" | "browser"
   >("overview");
   const [authDialog, setAuthDialog] = useState<ModelServiceAuthDialogState | null>(null);
-  const [logoutService, setLogoutService] = useState<OmniMindModelServiceDescriptor | null>(null);
-  const [removeCustomService, setRemoveCustomService] =
-    useState<OmniMindModelServiceDescriptor | null>(null);
+  const [logoutService, setLogoutService] = useState<OAModelServiceDescriptor | null>(null);
+  const [removeCustomService, setRemoveCustomService] = useState<OAModelServiceDescriptor | null>(
+    null,
+  );
   const removeCustomServiceReferenceCount = removeCustomService
     ? countCustomServiceReferences(removeCustomService.serviceId)
     : 0;
@@ -949,12 +950,12 @@ function ActiveModelsSettingsPanel({
 
   useEffect(() => {
     if (active && modelServicesCapability === true && modelServiceBrowserOpen) return;
-    void cancelOmniMindModelServicesAddIntentQueries(queryClient);
+    void cancelOAModelServicesAddIntentQueries(queryClient);
   }, [active, modelServiceBrowserOpen, modelServicesCapability, queryClient]);
 
   useEffect(
     () => () => {
-      void cancelOmniMindModelServicesAddIntentQueries(queryClient);
+      void cancelOAModelServicesAddIntentQueries(queryClient);
     },
     [queryClient],
   );
@@ -968,7 +969,7 @@ function ActiveModelsSettingsPanel({
   }, [modelServiceDetailReturnView, queryClient, selectedModelServiceId]);
   const finishSetupIfReady = useCallback(
     async (
-      service: OmniMindModelServiceDescriptor | null | undefined,
+      service: OAModelServiceDescriptor | null | undefined,
       completionController?: AbortController,
     ) => {
       const completionIsCurrent = () =>
@@ -1066,7 +1067,7 @@ function ActiveModelsSettingsPanel({
     authRequestIdRef.current = null;
     return requestId
       ? ensureNativeApi()
-          .omnimindModelServices.cancelLogin({ requestId })
+          .oaModelServices.cancelLogin({ requestId })
           .catch(() => null)
       : null;
   }, []);
@@ -1129,7 +1130,7 @@ function ActiveModelsSettingsPanel({
       ? modelServiceDetailQuery.data.models
       : undefined;
   const selectedModelServiceModelsKnown = projectedModelServiceModels !== undefined;
-  const selectedModelServiceModels: ReadonlyArray<OmniMindModelServiceModel> =
+  const selectedModelServiceModels: ReadonlyArray<OAModelServiceModel> =
     projectedModelServiceModels ?? [];
   const selectedModelServiceApiKeyMethod = selectedModelService?.authMethods.find(
     (method) => method.type === "api_key" && method.canLogin,
@@ -1159,7 +1160,7 @@ function ActiveModelsSettingsPanel({
   ]);
 
   const modelServiceInstanceLabel = useCallback(
-    (service: OmniMindModelServiceDescriptor) =>
+    (service: OAModelServiceDescriptor) =>
       (modelServiceDisplayNameCounts.get(service.displayName) ?? 0) > 1
         ? t("settings.modelServiceInstanceNamed", {
             name: service.displayName,
@@ -1170,7 +1171,7 @@ function ActiveModelsSettingsPanel({
   );
 
   const modelServiceAuthLabel = useCallback(
-    (service: OmniMindModelServiceDescriptor) => {
+    (service: OAModelServiceDescriptor) => {
       switch (service.authState) {
         case "configured":
           return t("settings.modelServiceConfigured");
@@ -1186,7 +1187,7 @@ function ActiveModelsSettingsPanel({
   );
 
   const modelServiceCatalogLabel = useCallback(
-    (service: OmniMindModelServiceDescriptor) => {
+    (service: OAModelServiceDescriptor) => {
       switch (service.catalogState) {
         case "stale":
           return t("settings.modelServiceCatalogStale");
@@ -1202,7 +1203,7 @@ function ActiveModelsSettingsPanel({
   );
 
   const modelServiceOriginLabel = useCallback(
-    (service: OmniMindModelServiceDescriptor) => {
+    (service: OAModelServiceDescriptor) => {
       switch (service.origin) {
         case "builtin":
           return t("settings.modelServiceOriginBuiltIn");
@@ -1218,7 +1219,7 @@ function ActiveModelsSettingsPanel({
   );
 
   const modelServiceCredentialSourceLabel = useCallback(
-    (service: OmniMindModelServiceDescriptor) => {
+    (service: OAModelServiceDescriptor) => {
       switch (service.authSource) {
         case "stored":
           return service.storedCredentialType === "oauth"
@@ -1259,17 +1260,14 @@ function ActiveModelsSettingsPanel({
   }, [queryClient]);
 
   const refreshModelService = useCallback(
-    async (
-      service: OmniMindModelServiceDescriptor,
-      options?: { readonly preserveNotice?: boolean },
-    ) => {
+    async (service: OAModelServiceDescriptor, options?: { readonly preserveNotice?: boolean }) => {
       modelServiceRefreshControllerRef.current?.abort();
       const controller = new AbortController();
       modelServiceRefreshControllerRef.current = controller;
       setModelServiceMutation(`refresh:${service.serviceId}`);
       if (!options?.preserveNotice) setModelServiceNotice(null);
       try {
-        const result = await ensureNativeApi().omnimindModelServices.refresh(
+        const result = await ensureNativeApi().oaModelServices.refresh(
           {
             serviceId: service.serviceId,
             ...(service.origin === "extension" ? { origin: "extension" as const } : {}),
@@ -1320,7 +1318,7 @@ function ActiveModelsSettingsPanel({
   );
 
   const applyAuthResult = useCallback(
-    async (result: OmniMindModelServiceAuthResult, authType: "api_key" | "oauth") => {
+    async (result: OAModelServiceAuthResult, authType: "api_key" | "oauth") => {
       let authUrlOpenFailed = false;
       for (const event of result.events) {
         const externalUrl = authEventExternalUrl(event);
@@ -1453,7 +1451,7 @@ function ActiveModelsSettingsPanel({
 
   const consumeAuthResult = useCallback(
     async (
-      initialResult: OmniMindModelServiceAuthResult,
+      initialResult: OAModelServiceAuthResult,
       controller: AbortController,
       authType: "api_key" | "oauth",
     ) => {
@@ -1463,7 +1461,7 @@ function ActiveModelsSettingsPanel({
         !controller.signal.aborted
       ) {
         await applyAuthResult(result, authType);
-        result = await ensureNativeApi().omnimindModelServices.pollLogin(
+        result = await ensureNativeApi().oaModelServices.pollLogin(
           {
             requestId: result.requestId,
             afterEventCount: result.events.length,
@@ -1482,9 +1480,9 @@ function ActiveModelsSettingsPanel({
 
   const beginModelServiceLogin = useCallback(
     async (
-      service: OmniMindModelServiceDescriptor,
+      service: OAModelServiceDescriptor,
       authType: "api_key" | "oauth",
-      oauthPromptMode: OmniMindModelServiceOAuthPromptMode = "provider_default",
+      oauthPromptMode: OAModelServiceOAuthPromptMode = "provider_default",
     ) => {
       modelServiceApiKeyControllerRef.current?.abort();
       setRevealedModelServiceApiKey(null);
@@ -1505,7 +1503,7 @@ function ActiveModelsSettingsPanel({
         value: "",
       });
       try {
-        const result = await ensureNativeApi().omnimindModelServices.beginLogin(
+        const result = await ensureNativeApi().oaModelServices.beginLogin(
           authType === "oauth"
             ? {
                 serviceId: service.serviceId,
@@ -1550,7 +1548,7 @@ function ActiveModelsSettingsPanel({
     const value = current.value;
     setAuthDialog({ ...current, busy: true, error: null, value: "" });
     try {
-      const result = await ensureNativeApi().omnimindModelServices.answerLogin(
+      const result = await ensureNativeApi().oaModelServices.answerLogin(
         {
           requestId: current.requestId,
           promptId: current.prompt.promptId,
@@ -1589,7 +1587,7 @@ function ActiveModelsSettingsPanel({
   }, [applyAuthResult, authDialog?.authType, cancelCurrentAuthRequest]);
 
   const logoutModelService = useCallback(
-    async (requestedService?: OmniMindModelServiceDescriptor) => {
+    async (requestedService?: OAModelServiceDescriptor) => {
       const service = requestedService ?? logoutService;
       if (!service) return;
       const isOAuth = service.storedCredentialType === "oauth";
@@ -1601,7 +1599,7 @@ function ActiveModelsSettingsPanel({
       setModelServiceMutation(`logout:${service.serviceId}`);
       setModelServiceNotice(null);
       try {
-        const result = await ensureNativeApi().omnimindModelServices.logout({
+        const result = await ensureNativeApi().oaModelServices.logout({
           serviceId: service.serviceId,
           ...(service.origin === "extension" ? { origin: "extension" as const } : {}),
         });
@@ -1637,7 +1635,7 @@ function ActiveModelsSettingsPanel({
 
   const readStoredModelServiceApiKey = useCallback(
     async (
-      service: OmniMindModelServiceDescriptor,
+      service: OAModelServiceDescriptor,
       intent: "reveal" | "copy",
     ): Promise<string | null> => {
       modelServiceApiKeyControllerRef.current?.abort();
@@ -1646,7 +1644,7 @@ function ActiveModelsSettingsPanel({
       setModelServiceApiKeyAccess(intent);
       setModelServiceApiKeyError(null);
       try {
-        const result = await ensureNativeApi().omnimindModelServices.revealApiKey(
+        const result = await ensureNativeApi().oaModelServices.revealApiKey(
           { serviceId: service.serviceId },
           { signal: controller.signal },
         );
@@ -1803,7 +1801,7 @@ function ActiveModelsSettingsPanel({
     setCustomServiceEditor({ ...editor, testState: "testing" });
     setModelServiceNotice(null);
     try {
-      const result = await ensureNativeApi().omnimindModelServices.testCustom(
+      const result = await ensureNativeApi().oaModelServices.testCustom(
         {
           config: customModelServiceConfig(editor),
           credential,
@@ -1878,7 +1876,7 @@ function ActiveModelsSettingsPanel({
     });
     setModelServiceNotice(null);
     try {
-      const result = await ensureNativeApi().omnimindModelServices.discoverCustom(
+      const result = await ensureNativeApi().oaModelServices.discoverCustom(
         {
           config: customModelServiceDiscoveryConfig(editor),
           credential,
@@ -1969,7 +1967,7 @@ function ActiveModelsSettingsPanel({
     setModelServiceMutation("custom:save");
     setModelServiceNotice(null);
     try {
-      const result = await ensureNativeApi().omnimindModelServices.saveCustom({
+      const result = await ensureNativeApi().oaModelServices.saveCustom({
         config: customModelServiceConfig(editor),
         credential,
       });
@@ -2096,7 +2094,7 @@ function ActiveModelsSettingsPanel({
     setModelServiceMutation(`custom:remove:${service.serviceId}`);
     setModelServiceNotice(null);
     try {
-      const result = await ensureNativeApi().omnimindModelServices.removeCustom({
+      const result = await ensureNativeApi().oaModelServices.removeCustom({
         serviceId: service.serviceId,
       });
       if (result.state === "blocked_active_operation") {
@@ -2189,7 +2187,7 @@ function ActiveModelsSettingsPanel({
     [otherConnectableModelServices, preferredConnectableModelServices],
   );
   const modelServiceAuthMethodsLabel = useCallback(
-    (service: OmniMindModelServiceDescriptor) => {
+    (service: OAModelServiceDescriptor) => {
       const labels = [
         ...new Set(
           service.authMethods
@@ -2217,7 +2215,7 @@ function ActiveModelsSettingsPanel({
   }, [locale, modelServiceModelSearch, selectedModelServiceModels]);
 
   const modelContextLabel = useCallback(
-    (model: OmniMindModelServiceModel) =>
+    (model: OAModelServiceModel) =>
       t("settings.modelServiceContextWindow", {
         count: new Intl.NumberFormat(locale, {
           notation: "compact",
@@ -2775,7 +2773,7 @@ function ActiveModelsSettingsPanel({
                     value={customServiceEditor.api}
                     onValueChange={(value) =>
                       updateCustomServiceEditor((current) => {
-                        const api = value as OmniMindCustomModelServiceApi;
+                        const api = value as HarnessOSCustomModelServiceApi;
                         return {
                           ...current,
                           api,
@@ -3213,7 +3211,7 @@ function ActiveModelsSettingsPanel({
                                   const api =
                                     value === "provider_default"
                                       ? undefined
-                                      : (value as OmniMindCustomModelServiceApi);
+                                      : (value as HarnessOSCustomModelServiceApi);
                                   const protocolChanged =
                                     (entry.api ?? current.api) !== (api ?? current.api);
                                   return {

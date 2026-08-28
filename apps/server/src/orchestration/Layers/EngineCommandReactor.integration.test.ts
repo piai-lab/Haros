@@ -218,7 +218,7 @@ describe("EngineCommandReactor", () => {
     readonly builtInGroupOverrides?: BuiltInToolGroupOverrides;
   }) {
     const now = new Date().toISOString();
-    const baseDir = input?.baseDir ?? fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-reactor-"));
+    const baseDir = input?.baseDir ?? fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-reactor-"));
     createdBaseDirs.add(baseDir);
     const { stateDir } = deriveServerPathsSync(baseDir, undefined);
     createdStateDirs.add(stateDir);
@@ -2775,10 +2775,10 @@ describe("EngineCommandReactor", () => {
     expect(providerInput).not.toContain("Use /docs for the latest segment");
   });
 
-  it("persists one deterministic Skill delivery receipt per selected OmniMind Skill", async () => {
+  it("persists one deterministic Skill delivery receipt per selected HarnessOS Skill", async () => {
     const harness = await createHarness({
       startReactor: false,
-      threadEngineSelection: { engine: "oa", model: "omnimind-test" },
+      threadEngineSelection: { engine: "oa", model: "harnessos-test" },
     });
     const skillPath = path.join(harness.stateDir, "skills", "aihot", "SKILL.md");
     fs.mkdirSync(path.dirname(skillPath), { recursive: true });
@@ -2789,10 +2789,10 @@ describe("EngineCommandReactor", () => {
     await Effect.runPromise(
       harness.engine.dispatch({
         type: "thread.turn.start",
-        commandId: CommandId.makeUnsafe("command-omnimind-skill-delivery-receipt"),
+        commandId: CommandId.makeUnsafe("command-harnessos-skill-delivery-receipt"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         message: {
-          messageId: asMessageId("omnimind-skill-delivery-message"),
+          messageId: asMessageId("harnessos-skill-delivery-message"),
           role: "user",
           text: "Summarize the latest AI news",
           attachments: [],
@@ -2818,10 +2818,10 @@ describe("EngineCommandReactor", () => {
     );
     expect(receipts).toHaveLength(1);
     expect(receipts?.[0]).toMatchObject({
-      id: "skill-delivery:omnimind-skill-delivery-message:0:Aihot",
+      id: "skill-delivery:harnessos-skill-delivery-message:0:Aihot",
       turnId: "turn-1",
       payload: {
-        messageId: "omnimind-skill-delivery-message",
+        messageId: "harnessos-skill-delivery-message",
         skillName: "Aihot",
         deliveryMode: "inline",
       },
@@ -3334,7 +3334,7 @@ describe("EngineCommandReactor", () => {
         type: "thread.meta.update",
         commandId: CommandId.makeUnsafe("cmd-goal-before-reactor-restart"),
         threadId: ThreadId.makeUnsafe("thread-1"),
-        goal: "Resume after OmniMind restarts",
+        goal: "Resume after HarnessOS restarts",
         goalStartBehavior: "defer",
       }),
     );
@@ -6311,7 +6311,7 @@ describe("EngineCommandReactor", () => {
     );
   });
 
-  it("keeps Product work-surface fields out of non-OmniMind engine bindings", async () => {
+  it("keeps Product work-surface fields out of non-HarnessOS engine bindings", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
 
@@ -6341,7 +6341,7 @@ describe("EngineCommandReactor", () => {
     expect(harness.startSession.mock.calls[0]?.[1]).not.toHaveProperty("projectContextRoot");
   });
 
-  it("derives the bundled OmniMind Agent surface and canonical Project root", async () => {
+  it("derives the bundled HarnessOS Agent surface and canonical Project root", async () => {
     const harness = await createHarness({
       threadEngineSelection: { engine: "oa", model: "deepseek/deepseek-chat" },
     });
@@ -6350,10 +6350,10 @@ describe("EngineCommandReactor", () => {
     await Effect.runPromise(
       harness.engine.dispatch({
         type: "thread.turn.start",
-        commandId: CommandId.makeUnsafe("cmd-omnimind-agent-surface"),
+        commandId: CommandId.makeUnsafe("cmd-harnessos-agent-surface"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         message: {
-          messageId: asMessageId("user-message-omnimind-agent-surface"),
+          messageId: asMessageId("user-message-harnessos-agent-surface"),
           role: "user",
           text: "inspect the project",
           attachments: [],

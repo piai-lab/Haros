@@ -42,7 +42,7 @@ describe("desktop artifact candidate ownership", () => {
   });
 
   it("refuses to overwrite an existing artifact directory", () => {
-    const outputDirectory = mkdtempSync(join(tmpdir(), "omnimind-artifact-output-test-"));
+    const outputDirectory = mkdtempSync(join(tmpdir(), "harnessos-artifact-output-test-"));
     temporaryRoots.push(outputDirectory);
     writeFileSync(join(outputDirectory, "existing-artifact.zip"), "immutable");
 

@@ -38,7 +38,7 @@ describe("Mermaid sandbox output", () => {
     ["class", "classDiagram\nAnimal <|-- Duck"],
     ["state", "stateDiagram-v2\n[*] --> Ready"],
     ["er", "erDiagram\nUSER ||--o{ ORDER : places"],
-    ["mindmap", "mindmap\n  root((OmniMind))\n    Fast"],
+    ["mindmap", "mindmap\n  root((HarnessOS))\n    Fast"],
   ])("rebuilds a locked-down Host srcDoc for %s", async (_name, source) => {
     const result = await renderMermaidPresentation({
       source,

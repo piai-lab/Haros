@@ -10,7 +10,7 @@ const makeLayer = () =>
   ServerSecretStoreLive.pipe(
     Layer.provide(
       ServerConfig.layerTest(process.cwd(), {
-        prefix: "omnimind-secret-store-test-",
+        prefix: "harnessos-secret-store-test-",
       }),
     ),
     Layer.provide(NodeServices.layer),

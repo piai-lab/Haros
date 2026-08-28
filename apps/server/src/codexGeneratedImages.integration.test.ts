@@ -73,26 +73,26 @@ describe("generatedImagePathFromRuntimeEvent", () => {
 });
 
 describe("resolveCodexGeneratedImagesRoot(s)", () => {
-  const previousOmniMindHome = process.env.HARNESSOS_HOME;
+  const previousHarnessOSHome = process.env.HARNESSOS_HOME;
 
   afterEach(() => {
-    if (previousOmniMindHome === undefined) delete process.env.HARNESSOS_HOME;
-    else process.env.HARNESSOS_HOME = previousOmniMindHome;
+    if (previousHarnessOSHome === undefined) delete process.env.HARNESSOS_HOME;
+    else process.env.HARNESSOS_HOME = previousHarnessOSHome;
   });
 
   it("returns the overlay generated_images directory as the active write root by default", () => {
-    process.env.HARNESSOS_HOME = "/omnimind-test/runtime";
+    process.env.HARNESSOS_HOME = "/harnessos-test/runtime";
     assert.equal(
       resolveCodexGeneratedImagesRoot("/codex-test/.codex"),
-      path.join("/omnimind-test/runtime", "codex-home-overlay", "generated_images"),
+      path.join("/harnessos-test/runtime", "codex-home-overlay", "generated_images"),
     );
   });
 
   it("returns both source and overlay generated_images roots for the allowlist", () => {
-    process.env.HARNESSOS_HOME = "/omnimind-test/runtime";
+    process.env.HARNESSOS_HOME = "/harnessos-test/runtime";
     assert.deepEqual(resolveCodexGeneratedImagesRoots("/codex-test/.codex"), [
       path.join("/codex-test/.codex", "generated_images"),
-      path.join("/omnimind-test/runtime", "codex-home-overlay", "generated_images"),
+      path.join("/harnessos-test/runtime", "codex-home-overlay", "generated_images"),
     ]);
   });
 

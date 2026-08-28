@@ -1,11 +1,11 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 export const externalMcpRuntimeSecret = randomBytes(32).toString("base64url");
-export const EXTERNAL_MCP_RUNTIME_CHALLENGE_HEADER = "x-omnimind-runtime-challenge";
+export const EXTERNAL_MCP_RUNTIME_CHALLENGE_HEADER = "x-harnessos-runtime-challenge";
 
 export function computeExternalMcpRuntimeProof(secret: string, nonce: string): string {
   return createHmac("sha256", secret)
-    .update("omnimind.external-mcp.runtime\0")
+    .update("harnessos.external-mcp.runtime\0")
     .update(nonce)
     .digest("base64url");
 }

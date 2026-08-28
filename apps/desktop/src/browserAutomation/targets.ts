@@ -283,7 +283,7 @@ export const resolveBrowserTarget = async (
 
   const object = await evaluateInContext(
     runtime,
-    "globalThis.__omnimindBrowserAutomationV1.currentTarget",
+    "globalThis.__harnessosBrowserAutomationV1.currentTarget",
     {
       contextId,
       returnByValue: false,

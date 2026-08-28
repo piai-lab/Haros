@@ -13,8 +13,8 @@ import {
   type EngineInteractionMode,
   type EngineKind,
   type EngineExecutionCapabilities,
-  type OmniMindCreateThreadsInput,
-  type OmniMindCreateThreadsResult,
+  type HarnessOSCreateThreadsInput,
+  type HarnessOSCreateThreadsResult,
 } from "@harnessos/contracts";
 import { buildPromptThreadTitleFallback } from "@harnessos/shared/chatThreads";
 import { WORKTREE_BRANCH_PREFIX } from "@harnessos/shared/git";
@@ -261,7 +261,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
       return yield* Effect.fail(
         new GatewayToolError(
           "operation_failed",
-          "The original thread-creation operation is still in progress. Retry only with the same request id; OmniMind will not create replacement threads.",
+          "The original thread-creation operation is still in progress. Retry only with the same request id; HarnessOS will not create replacement threads.",
           { operationId, status: operation?.status ?? "missing" },
         ),
       );
@@ -270,7 +270,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
   const appendThreadCreationRecap = (input: {
     readonly callerThreadId: string;
     readonly callerTurnId: string;
-    readonly result: OmniMindCreateThreadsResult;
+    readonly result: HarnessOSCreateThreadsResult;
   }) => {
     const marker = stableGatewayDigest({
       operationId: input.result.operationId,
@@ -286,8 +286,8 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
         activity: {
           id: EventId.makeUnsafe(`gateway:${marker}:threads-created-recap`),
           tone: "info",
-          kind: "omnimind.threads.created",
-          summary: `Created ${input.result.createdCount} OmniMind ${threadLabel}`,
+          kind: "harnessos.threads.created",
+          summary: `Created ${input.result.createdCount} HarnessOS ${threadLabel}`,
           payload: {
             source: "harnessos_mcp",
             operationId: input.result.operationId,
@@ -312,7 +312,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
       );
   };
 
-  const run = (input: typeof OmniMindCreateThreadsInput.Type, context: GatewayCreationContext) => {
+  const run = (input: typeof HarnessOSCreateThreadsInput.Type, context: GatewayCreationContext) => {
     return Effect.gen(function* () {
       if (context.kind === "engine-session" && context.callerTurnId === null) {
         return yield* Effect.fail(
@@ -464,7 +464,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
       if (deprecatedBranchName) {
         return yield* Effect.fail(
           new ToolInputError(
-            '"branchName" is no longer supported for managed worktrees. OmniMind creates a managed temporary branch and renames it after the first prompt; create additional branches inside the new thread if needed.',
+            '"branchName" is no longer supported for managed worktrees. HarnessOS creates a managed temporary branch and renames it after the first prompt; create additional branches inside the new thread if needed.',
           ),
         );
       }
@@ -628,7 +628,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
             if (existsSync(plannedWorktreePath)) {
               return yield* Effect.fail(
                 new ToolInputError(
-                  `Worktree path "${plannedWorktreePath}" already exists. OmniMind will not reuse or remove a pre-existing path.`,
+                  `Worktree path "${plannedWorktreePath}" already exists. HarnessOS will not reuse or remove a pre-existing path.`,
                 ),
               );
             }
@@ -848,7 +848,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
             });
             return new GatewayToolError(
               "operation_failed",
-              "OmniMind could not dispatch the exact creation plan and cleanup is still pending. The durable operation remains compensating and will never create replacements.",
+              "HarnessOS could not dispatch the exact creation plan and cleanup is still pending. The durable operation remains compensating and will never create replacements.",
               { operationId, ...failure, compensationPending: true },
             );
           }
@@ -884,13 +884,13 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
               );
             return new GatewayToolError(
               "operation_failed",
-              "OmniMind compensated the created resources but could not persist a terminal operation status. The operation remains compensating and will never create replacements.",
+              "HarnessOS compensated the created resources but could not persist a terminal operation status. The operation remains compensating and will never create replacements.",
               { operationId, ...failure, compensationPending: true },
             );
           }
           return new GatewayToolError(
             "operation_failed",
-            "OmniMind could not dispatch the exact creation plan. Created operation-owned resources were compensated; no replacements were created.",
+            "HarnessOS could not dispatch the exact creation plan. Created operation-owned resources were compensated; no replacements were created.",
             { operationId, ...failure },
           );
         });
@@ -1174,7 +1174,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
             createdCount: results.length,
             threadIds: results.map((entry) => entry.threadId),
             threads: results,
-          } satisfies OmniMindCreateThreadsResult;
+          } satisfies HarnessOSCreateThreadsResult;
           // Once every deterministic dispatch succeeded, durable completion is
           // the commit point. A late client cancellation must not roll back a
           // fully-created operation or strand it between dispatching/completed.

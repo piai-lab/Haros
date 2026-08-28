@@ -62,17 +62,17 @@ const WRITE_BATCH_MAX_LATENCY_MS = 50;
 const LINK_MATCH_CACHE_LIMIT = 512;
 const OPEN_SNAPSHOT_RECONCILE_DELAY_MS = 250;
 const TERMINAL_TEXT_ENCODER = new TextEncoder();
-const TERMINAL_PARKING_CONTAINER_ID = "omnimind-terminal-parking";
+const TERMINAL_PARKING_CONTAINER_ID = "harnessos-terminal-parking";
 
-type OmniMindTerminalOptions = NonNullable<ConstructorParameters<typeof Terminal>[0]> & {
+type HarnessOSTerminalOptions = NonNullable<ConstructorParameters<typeof Terminal>[0]> & {
   fontWeight?: string | number;
   fontWeightBold?: string | number;
   scrollbar?: { showScrollbar?: boolean };
   vtExtensions?: { kittyKeyboard?: boolean };
 };
 
-const TERMINAL_CURSOR_STYLE: NonNullable<OmniMindTerminalOptions["cursorStyle"]> = "bar";
-const TERMINAL_INACTIVE_CURSOR_STYLE: NonNullable<OmniMindTerminalOptions["cursorInactiveStyle"]> =
+const TERMINAL_CURSOR_STYLE: NonNullable<HarnessOSTerminalOptions["cursorStyle"]> = "bar";
+const TERMINAL_INACTIVE_CURSOR_STYLE: NonNullable<HarnessOSTerminalOptions["cursorInactiveStyle"]> =
   "bar";
 const TERMINAL_CURSOR_WIDTH = 1;
 
@@ -517,7 +517,7 @@ function syncTheme(entry: TerminalRuntimeEntry): void {
   const shouldClearTextureAtlas = nextFontKey !== (entry.wrapper.dataset.fontKey ?? "");
   entry.wrapper.dataset.themeKey = nextAppearanceKey;
   entry.wrapper.dataset.fontKey = nextFontKey;
-  const terminalOptions = entry.terminal.options as OmniMindTerminalOptions;
+  const terminalOptions = entry.terminal.options as HarnessOSTerminalOptions;
   terminalOptions.theme = nextTheme;
   terminalOptions.fontFamily = nextFontFamily;
   terminalOptions.fontSize = nextFontSize;
@@ -757,7 +757,7 @@ export function createRuntimeEntry(config: TerminalRuntimeConfig): TerminalRunti
   const imageAddon = new ImageAddon();
   const searchAddon = new SearchAddon();
   const unicode11Addon = new Unicode11Addon();
-  const terminalOptions: OmniMindTerminalOptions = {
+  const terminalOptions: HarnessOSTerminalOptions = {
     cursorBlink: true,
     fontSize: getTerminalFontSizePx(),
     fontWeight: getTerminalFontWeight(),

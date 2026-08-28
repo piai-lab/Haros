@@ -13,7 +13,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createOrRecoverProjectFromPath } from "./projectCreation";
 
 const NOW_ISO = "2026-06-26T20:00:00.000Z";
-const WORKSPACE_ROOT = "/Users/tester/Developer/omnimind";
+const WORKSPACE_ROOT = "/Users/tester/Developer/harnessos";
 const DEFAULT_PROJECT_MODEL = {
   engine: "oa" as const,
   model: "deepseek/deepseek-chat",
@@ -118,7 +118,7 @@ describe("createOrRecoverProjectFromPath", () => {
     const existingProject = makeProject("project-existing");
     const dispatchCommand = vi.fn(async () => {
       throw new Error(
-        "Orchestration command invariant failed (project.create): Project 'project-existing' already uses workspace root '/Users/tester/Developer/omnimind'.",
+        "Orchestration command invariant failed (project.create): Project 'project-existing' already uses workspace root '/Users/tester/Developer/harnessos'.",
       );
     });
     const loadSnapshot = vi.fn(async () => makeSnapshot([existingProject]));

@@ -25,7 +25,7 @@ import { toastManager } from "./ui/toast";
 // Triggers local-only toast scenarios that are awkward to reproduce through real Git failures.
 function triggerActionFailedToasts(values: Record<ToggleFeatureFlagId, boolean>): void {
   const copyText =
-    "Error: Git command failed in /Users/ibrahime/Documents/Projects/omnimind\n\n" +
+    "Error: Git command failed in /Users/ibrahime/Documents/Projects/harnessos\n\n" +
     "Command: git push upstream main\n" +
     "fatal: unable to access upstream remote for local debug toast preview";
   const toastData = {
@@ -36,13 +36,13 @@ function triggerActionFailedToasts(values: Record<ToggleFeatureFlagId, boolean>)
   toastManager.add({
     type: "error",
     title: "Action failed",
-    description: "Error: Git command failed in /Users/ibrahime/Documents/Projects/omnimind",
+    description: "Error: Git command failed in /Users/ibrahime/Documents/Projects/harnessos",
     data: toastData,
   });
   toastManager.add({
     type: "error",
     title: "Action failed",
-    description: "Error: Git command failed in /Users/ibrahime/Documents/Projects/omnimind",
+    description: "Error: Git command failed in /Users/ibrahime/Documents/Projects/harnessos",
     data: toastData,
   });
 }

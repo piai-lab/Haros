@@ -68,15 +68,15 @@ export interface ServerSettingsShape {
     engine: ExternalEngineServer,
     serverPassword: string,
   ) => Effect.Effect<ServerSettingsView, ServerSettingsError>;
-  readonly mutateOmniMindDefaultPrompt: (
+  readonly mutateHarnessOSDefaultPrompt: (
     expected: string | null,
     next: string | null,
-  ) => Effect.Effect<OmniMindDefaultPromptMutationResult, ServerSettingsError>;
+  ) => Effect.Effect<HarnessOSDefaultPromptMutationResult, ServerSettingsError>;
   readonly streamChanges: Stream.Stream<ServerSettings>;
   readonly streamViews: Stream.Stream<ServerSettingsView>;
 }
 
-export interface OmniMindDefaultPromptMutationResult {
+export interface HarnessOSDefaultPromptMutationResult {
   readonly state: "changed" | "unchanged" | "conflict";
   readonly current: string | null;
 }
@@ -185,14 +185,14 @@ export class ServerSettingsService extends ServiceMap.Service<
             return toServerSettingsView(next);
           }),
         );
-        const mutateOmniMindDefaultPrompt = (expected: string | null, next: string | null) =>
+        const mutateHarnessOSDefaultPrompt = (expected: string | null, next: string | null) =>
           writeSemaphore.withPermits(1)(
             Effect.gen(function* () {
               const currentSettings = yield* Ref.get(currentSettingsRef);
               const current = currentSettings.engines.oa.defaultPrompt;
               if (current !== expected) return { state: "conflict" as const, current };
               if (current === next) return { state: "unchanged" as const, current };
-              const nextSettings = yield* replaceOmniMindDefaultPrompt(
+              const nextSettings = yield* replaceHarnessOSDefaultPrompt(
                 "<memory>",
                 currentSettings,
                 next,
@@ -226,7 +226,7 @@ export class ServerSettingsService extends ServiceMap.Service<
             updateSettings(patch).pipe(Effect.map(toServerSettingsView)),
           resetSettingsView,
           updateEngineCredential,
-          mutateOmniMindDefaultPrompt,
+          mutateHarnessOSDefaultPrompt,
           get streamChanges() {
             return Stream.fromPubSub(changesPubSub).pipe(Stream.map(resolveTextGenerationEngine));
           },
@@ -289,7 +289,7 @@ function normalizeSettings(
   );
 }
 
-function replaceOmniMindDefaultPrompt(
+function replaceHarnessOSDefaultPrompt(
   settingsPath: string,
   current: ServerSettings,
   defaultPrompt: string | null,
@@ -308,7 +308,7 @@ function replaceOmniMindDefaultPrompt(
       (cause) =>
         new ServerSettingsError({
           settingsPath,
-          detail: `failed to normalize OmniMind default prompt: ${SchemaIssue.makeFormatterDefault()(cause.issue)}`,
+          detail: `failed to normalize HarnessOS default prompt: ${SchemaIssue.makeFormatterDefault()(cause.issue)}`,
           cause,
         }),
     ),
@@ -663,14 +663,14 @@ const makeServerSettings = Effect.gen(function* () {
       }),
     );
 
-  const mutateOmniMindDefaultPrompt = (expected: string | null, nextValue: string | null) =>
+  const mutateHarnessOSDefaultPrompt = (expected: string | null, nextValue: string | null) =>
     writeSemaphore.withPermits(1)(
       Effect.gen(function* () {
         const disk = yield* loadSettingsFromDisk;
         const current = disk.settings.engines.oa.defaultPrompt;
         if (current !== expected) return { state: "conflict" as const, current };
         if (current === nextValue) return { state: "unchanged" as const, current };
-        const next = yield* replaceOmniMindDefaultPrompt(settingsPath, disk.settings, nextValue);
+        const next = yield* replaceHarnessOSDefaultPrompt(settingsPath, disk.settings, nextValue);
         const nextRevision = Math.max(disk.revision, yield* Ref.get(revisionRef)) + 1;
         yield* writeSettingsAtomically({
           revision: nextRevision,
@@ -767,7 +767,7 @@ const makeServerSettings = Effect.gen(function* () {
     updateSettingsView: (patch) => updateSettings(patch).pipe(Effect.map(toServerSettingsView)),
     resetSettingsView,
     updateEngineCredential,
-    mutateOmniMindDefaultPrompt,
+    mutateHarnessOSDefaultPrompt,
     get streamChanges() {
       return Stream.fromPubSub(changesPubSub).pipe(Stream.map(resolveTextGenerationEngine));
     },

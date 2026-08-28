@@ -281,7 +281,7 @@ describe("requiresDesktopMigrationRecovery", () => {
     contents: string | null,
     assert: (paths: DesktopMigrationRecoveryPaths) => void,
   ): Promise<void> {
-    const directory = await FS.mkdtemp(Path.join(OS.tmpdir(), "omnimind-recovery-gate-"));
+    const directory = await FS.mkdtemp(Path.join(OS.tmpdir(), "harnessos-recovery-gate-"));
     try {
       const paths = resolveDesktopMigrationRecoveryPaths({
         baseDir: directory,

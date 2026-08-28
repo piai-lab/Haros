@@ -7,7 +7,7 @@ import { assert, it } from "@effect/vitest";
 
 import { normalizePersistedEngineSelection } from "./engineSelectionCompatibility.ts";
 
-it("preserves canonical OmniMind Agent model selections", () => {
+it("preserves canonical HarnessOS Agent model selections", () => {
   assert.deepEqual(
     normalizePersistedEngineSelection({
       engine: "oa",

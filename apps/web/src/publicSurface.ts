@@ -2,9 +2,9 @@
 // Purpose: Resolves the two separately configured outbound Public Surface boundaries.
 // Layer: Web product boundary
 
-export const CANONICAL_PUBLIC_SITE_ORIGIN = "https://omnimind.wisdomeyes.cn";
+export const CANONICAL_PUBLIC_SITE_ORIGIN = "https://harnessos.wisdomeyes.cn";
 export const RESERVED_FEEDBACK_PATH = "/api/v1/feedback";
-export const FEEDBACK_RECIPIENT_LABEL = "OmniMind feedback service (omnimind.wisdomeyes.cn)";
+export const FEEDBACK_RECIPIENT_LABEL = "HarnessOS feedback service (harnessos.wisdomeyes.cn)";
 
 export type PublicSiteSurface = "home" | "docs" | "changelog" | "download" | "privacy" | "support";
 

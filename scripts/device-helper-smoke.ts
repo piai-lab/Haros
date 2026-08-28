@@ -470,7 +470,7 @@ async function main(): Promise<void> {
     assert(Number(attached["pixelWidth"]) > 0, "attach returned a zero-width display");
 
     step(`Streaming at least ${REQUIRED_FRAMES} frames`);
-    const socketDir = mkdtempSync(join(tmpdir(), "omnimind-device-smoke-"));
+    const socketDir = mkdtempSync(join(tmpdir(), "harnessos-device-smoke-"));
     cleanupPaths.push(socketDir);
     const socketPath = join(socketDir, "frames.sock");
     await collector.listen(socketPath);

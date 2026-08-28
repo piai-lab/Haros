@@ -403,7 +403,7 @@ function ActivityScopeMenu({
     scopeSelection === null
       ? t("activity.all")
       : scopeSelection === "chats"
-        ? "OmniMind"
+        ? "HarnessOS"
         : resolveThreadProjectLabel(projectById.get(scopeSelection));
 
   return (
@@ -456,7 +456,7 @@ function ActivityScopeMenu({
                 <span className="min-w-0 flex-1 truncate">
                   {option.kind === "project"
                     ? resolveThreadProjectLabel(projectById.get(option.projectId))
-                    : "OmniMind"}
+                    : "HarnessOS"}
                 </span>
                 <span className="ml-2 shrink-0 tabular-nums text-muted-foreground/60">
                   {option.threadCount}
@@ -787,7 +787,7 @@ export function SidebarActivityView({
     activeScope === null
       ? t("activity.empty")
       : activeScope === "chats"
-        ? t("activity.emptyOmniMind")
+        ? t("activity.emptyHarnessOS")
         : t("activity.emptyProject");
 
   return (
@@ -847,7 +847,7 @@ export function SidebarActivityView({
             <ActivitySectionLabel
               label={
                 group.kind === "chats"
-                  ? "OmniMind"
+                  ? "HarnessOS"
                   : resolveThreadProjectLabel(projectById.get(group.projectId))
               }
               {...(group.kind === "project"

@@ -54,7 +54,7 @@ async function writeClaudePluginManifest(
 
 beforeEach(() => {
   clearSkillsCatalogCacheForTests();
-  root = mkdtempSync(path.join(os.tmpdir(), "omnimind-skills-catalog-"));
+  root = mkdtempSync(path.join(os.tmpdir(), "harnessos-skills-catalog-"));
   homeDir = path.join(root, "home");
   harnessosBaseDir = path.join(homeDir, ".harnessos");
 });
@@ -92,7 +92,7 @@ describe("pathIsWithin", () => {
 });
 
 describe("discoverSkillsCatalog", () => {
-  it("creates the OmniMind skills folder on first discovery", async () => {
+  it("creates the HarnessOS skills folder on first discovery", async () => {
     await discoverSkillsCatalog({ homeDir, harnessosBaseDir });
     await expect(access(path.join(harnessosBaseDir, "skills"))).resolves.toBeUndefined();
   });
@@ -101,7 +101,7 @@ describe("discoverSkillsCatalog", () => {
     await writeSkill(
       path.join(harnessosBaseDir, "skills", "portable"),
       "portable",
-      "OmniMind skill",
+      "HarnessOS skill",
     );
     await writeSkill(path.join(homeDir, ".codex", "skills", "codex-only"), "codex-only", "Codex");
     await writeSkill(
@@ -375,12 +375,12 @@ describe("discoverSkillsCatalog", () => {
     expect(settingsCatalog.map((skill) => skill.scope).sort()).toEqual(["claude", "codex"]);
   });
 
-  it("prefers the engine-native copy and falls back to OmniMind for that engine", async () => {
-    await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "OmniMind copy");
+  it("prefers the engine-native copy and falls back to HarnessOS for that engine", async () => {
+    await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "HarnessOS copy");
     await writeSkill(path.join(homeDir, ".codex", "skills", "shared"), "shared", "Codex copy");
     await writeSkill(
-      path.join(harnessosBaseDir, "skills", "only-omnimind"),
-      "only-omnimind",
+      path.join(harnessosBaseDir, "skills", "only-harnessos"),
+      "only-harnessos",
       "Fallback",
     );
 
@@ -388,9 +388,9 @@ describe("discoverSkillsCatalog", () => {
     const codexShared = codexView.find((skill) => skill.name === "shared");
     expect(codexShared?.scope).toBe("codex");
     expect(codexShared?.path).toContain(path.join(".codex", "skills"));
-    expect(codexView.some((skill) => skill.name === "only-omnimind")).toBe(true);
+    expect(codexView.some((skill) => skill.name === "only-harnessos")).toBe(true);
 
-    // A engine without its own copy resolves the OmniMind fallback.
+    // A engine without its own copy resolves the HarnessOS fallback.
     const claudeView = await discoverSkillsCatalog({
       homeDir,
       harnessosBaseDir,
@@ -400,8 +400,8 @@ describe("discoverSkillsCatalog", () => {
     expect(claudeShared?.scope).toBe("oa");
   });
 
-  it("uses documented engine alias roots before OmniMind fallbacks", async () => {
-    await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "OmniMind copy");
+  it("uses documented engine alias roots before HarnessOS fallbacks", async () => {
+    await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "HarnessOS copy");
     await writeSkill(path.join(homeDir, ".agents", "skills", "shared"), "shared", "Agents alias");
     const antigravityView = await discoverSkillsCatalog({
       homeDir,
@@ -413,7 +413,7 @@ describe("discoverSkillsCatalog", () => {
   });
 
   it("uses engine-native roots before shared aliases for Grok and Pi", async () => {
-    await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "OmniMind copy");
+    await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "HarnessOS copy");
     await writeSkill(path.join(homeDir, ".agents", "skills", "shared"), "shared", "Agents alias");
     await writeSkill(path.join(homeDir, ".grok", "skills", "shared"), "shared", "Grok copy");
     await writeSkill(path.join(homeDir, ".pi", "agent", "skills", "shared"), "shared", "Pi copy");
@@ -510,7 +510,7 @@ description: Direct Pi markdown skill
     const cwd = path.join(homeDir, "projects", "app");
     await mkdir(cwd, { recursive: true });
     await writeSkill(path.join(homeDir, ".codex", "skills", "from-codex"), "from-codex", "Codex");
-    await writeSkill(path.join(harnessosBaseDir, "skills", "portable"), "portable", "OmniMind");
+    await writeSkill(path.join(harnessosBaseDir, "skills", "portable"), "portable", "HarnessOS");
 
     const skills = await discoverSkillsCatalog({ cwd, homeDir, harnessosBaseDir });
 
@@ -583,7 +583,7 @@ describe("mergeSkillsIntoCatalog", () => {
 });
 
 describe("filterDisabledSkills", () => {
-  it("filters OmniMind-owned skills without disabling Engine-native copies", () => {
+  it("filters HarnessOS-owned skills without disabling Engine-native copies", () => {
     const skills: EngineSkillDescriptor[] = [
       {
         name: "Reviewer",

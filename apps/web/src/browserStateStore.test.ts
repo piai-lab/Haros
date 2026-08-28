@@ -101,7 +101,7 @@ describe("browserStateStore selectors", () => {
         {
           id: "internal-tab",
           url: "http://127.0.0.1:43123/?session=must-never-persist",
-          title: "OmniMind Web Access",
+          title: "HarnessOS Web Access",
           status: "live",
           isLoading: false,
           canGoBack: false,

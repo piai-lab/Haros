@@ -14,7 +14,7 @@ describe("ServerEnvironmentLive", () => {
     await Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
       const baseDir = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "omnimind-server-environment-test-",
+        prefix: "harnessos-server-environment-test-",
       });
 
       const first = yield* Effect.gen(function* () {

@@ -14,7 +14,7 @@ export const DOCUMENT_CONTRACT_PATHS = [
   "architecture/product.md",
   "architecture/execution.md",
   "execution-brief.md",
-  "missions/independent-omnimind-v1.md",
+  "missions/independent-harnessos-v1.md",
   "research/README.md",
 ];
 
@@ -26,7 +26,7 @@ const REQUIRED_ROUTES = [
   ["README.md", "architecture/product.md"],
   ["README.md", "architecture/execution.md"],
   ["README.md", "execution-brief.md"],
-  ["README.md", "missions/independent-omnimind-v1.md"],
+  ["README.md", "missions/independent-harnessos-v1.md"],
   ["README.md", "research/README.md"],
   ["README.md", "SOURCE-INTAKE.md"],
   ["README.md", "SYNARA-INTAKE.md"],
@@ -38,7 +38,7 @@ const REQUIRED_ROUTES = [
   ["SOURCE-INTAKE.md", "research/README.md"],
   ["SOURCE-INTAKE.md", "architecture/README.md"],
   ["SOURCE-INTAKE.md", "execution-brief.md"],
-  ["SOURCE-INTAKE.md", "missions/independent-omnimind-v1.md"],
+  ["SOURCE-INTAKE.md", "missions/independent-harnessos-v1.md"],
   ["SYNARA-INTAKE.md", "SOURCE-INTAKE.md"],
   ["SYNARA-INTAKE.md", "source-adoptions.json"],
   ["SYNARA-INTAKE.md", "research/source-review.md"],
@@ -53,9 +53,9 @@ const REQUIRED_ROUTES = [
   ["architecture/README.md", "product.md"],
   ["architecture/README.md", "execution.md"],
   ["architecture/README.md", "../execution-brief.md"],
-  ["architecture/README.md", "../missions/independent-omnimind-v1.md"],
+  ["architecture/README.md", "../missions/independent-harnessos-v1.md"],
   ["architecture/execution.md", "../SOURCE-INTAKE.md"],
-  ["missions/independent-omnimind-v1.md", "../execution-brief.md"],
+  ["missions/independent-harnessos-v1.md", "../execution-brief.md"],
   ["research/README.md", "../SOURCE-INTAKE.md"],
   ["research/README.md", "../SYNARA-INTAKE.md"],
   ["research/README.md", "../PI-ECOSYSTEM-INTAKE.md"],
@@ -69,7 +69,7 @@ const REQUIRED_READ_ORDER = [
   "PI-ECOSYSTEM-INTAKE.md",
   "architecture/README.md",
   "execution-brief.md",
-  "missions/independent-omnimind-v1.md",
+  "missions/independent-harnessos-v1.md",
   "research/README.md",
 ];
 
@@ -293,20 +293,20 @@ function validateSourceAdoptions(findings, documents) {
 }
 
 function validateCurrentState(findings, documents) {
-  const campaign = documents.get("missions/independent-omnimind-v1.md") ?? "";
+  const campaign = documents.get("missions/independent-harnessos-v1.md") ?? "";
   if (!/^Status: active$/m.test(campaign)) {
     addFinding(
       findings,
       "campaign.structure",
-      "missions/independent-omnimind-v1.md",
+      "missions/independent-harnessos-v1.md",
       "active Campaign must declare Status: active",
     );
   }
-  if (!/^Canonical path: `missions\/independent-omnimind-v1\.md`$/m.test(campaign)) {
+  if (!/^Canonical path: `missions\/independent-harnessos-v1\.md`$/m.test(campaign)) {
     addFinding(
       findings,
       "campaign.structure",
-      "missions/independent-omnimind-v1.md",
+      "missions/independent-harnessos-v1.md",
       "Campaign canonical path is missing or changed",
     );
   }

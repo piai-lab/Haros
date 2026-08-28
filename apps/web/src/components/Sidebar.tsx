@@ -475,8 +475,8 @@ function ProjectContextMenuIcon({ icon }: { icon: LucideIcon }) {
 }
 
 type DebugFeatureFlagsWindow = Window & {
-  omnimindShowFeatureFlags?: () => void;
-  omnimindHideFeatureFlags?: () => void;
+  harnessosShowFeatureFlags?: () => void;
+  harnessosHideFeatureFlags?: () => void;
 };
 
 function readDebugFeatureFlagsMenuVisibility(): boolean {
@@ -1498,18 +1498,18 @@ export default function Sidebar() {
       updateVisibility();
     };
 
-    debugWindow.omnimindShowFeatureFlags = showFeatureFlags;
-    debugWindow.omnimindHideFeatureFlags = hideFeatureFlags;
+    debugWindow.harnessosShowFeatureFlags = showFeatureFlags;
+    debugWindow.harnessosHideFeatureFlags = hideFeatureFlags;
     window.addEventListener("storage", updateVisibility);
     updateVisibility();
 
     return () => {
       window.removeEventListener("storage", updateVisibility);
-      if (debugWindow.omnimindShowFeatureFlags === showFeatureFlags) {
-        delete debugWindow.omnimindShowFeatureFlags;
+      if (debugWindow.harnessosShowFeatureFlags === showFeatureFlags) {
+        delete debugWindow.harnessosShowFeatureFlags;
       }
-      if (debugWindow.omnimindHideFeatureFlags === hideFeatureFlags) {
-        delete debugWindow.omnimindHideFeatureFlags;
+      if (debugWindow.harnessosHideFeatureFlags === hideFeatureFlags) {
+        delete debugWindow.harnessosHideFeatureFlags;
       }
     };
   }, []);
@@ -4128,7 +4128,7 @@ export default function Sidebar() {
   }, [activeSidebarThreadId, visibleSidebarThreadIds]);
 
   // Pinned rows share the thread-container label rule (project name, or
-  // "OmniMind" for project-less chats) with the hover cards and Activity rows.
+  // "HarnessOS" for project-less chats) with the hover cards and Activity rows.
   function resolvePinnedThreadProjectLabel(projectId: ProjectId): string {
     return resolveThreadProjectLabel(projectById.get(projectId));
   }
@@ -4773,8 +4773,8 @@ export default function Sidebar() {
       : sidebarHoverRevealHideClassName("project-header");
     const projectRun = projectRunsByProjectId[project.id] ?? null;
     const projectRunServer = projectRunServerByProjectId.get(project.id) ?? null;
-    // A project reads as "running" when OmniMind tracks a run for it or when a
-    // local server (possibly started outside OmniMind) is attributed by cwd.
+    // A project reads as "running" when HarnessOS tracks a run for it or when a
+    // local server (possibly started outside HarnessOS) is attributed by cwd.
     const isProjectRunning = projectRun !== null || projectRunServer !== null;
     const collapsedProjectStatus = project.expanded ? null : projectStatus;
     // The "open dev server" affordance now lives in the project context menu, so

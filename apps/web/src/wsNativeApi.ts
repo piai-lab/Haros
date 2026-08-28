@@ -769,119 +769,118 @@ export function createWsNativeApi(): NativeApi {
           options?.signal ? { signal: options.signal } : undefined,
         ),
     },
-    omnimindModelServices: {
+    oaModelServices: {
       list: (input = {}, options) =>
         transport.request(
-          WS_METHODS.omnimindModelServicesList,
+          WS_METHODS.oaModelServicesList,
           input,
           options?.signal ? { signal: options.signal } : undefined,
         ),
       get: (input, options) =>
         transport.request(
-          WS_METHODS.omnimindModelServicesGet,
+          WS_METHODS.oaModelServicesGet,
           input,
           options?.signal ? { signal: options.signal } : undefined,
         ),
       beginLogin: (input, options) =>
-        transport.request(WS_METHODS.omnimindModelServicesBeginLogin, input, {
+        transport.request(WS_METHODS.oaModelServicesBeginLogin, input, {
           timeoutMs: null,
           ...(options?.signal ? { signal: options.signal } : {}),
         }),
       pollLogin: (input, options) =>
-        transport.request(WS_METHODS.omnimindModelServicesPollLogin, input, {
+        transport.request(WS_METHODS.oaModelServicesPollLogin, input, {
           timeoutMs: null,
           ...(options?.signal ? { signal: options.signal } : {}),
         }),
       answerLogin: (input, options) =>
-        transport.request(WS_METHODS.omnimindModelServicesAnswerLogin, input, {
+        transport.request(WS_METHODS.oaModelServicesAnswerLogin, input, {
           timeoutMs: null,
           ...(options?.signal ? { signal: options.signal } : {}),
         }),
-      cancelLogin: (input) => transport.request(WS_METHODS.omnimindModelServicesCancelLogin, input),
-      logout: (input) => transport.request(WS_METHODS.omnimindModelServicesLogout, input),
+      cancelLogin: (input) => transport.request(WS_METHODS.oaModelServicesCancelLogin, input),
+      logout: (input) => transport.request(WS_METHODS.oaModelServicesLogout, input),
       revealApiKey: (input, options) =>
         transport.request(
-          WS_METHODS.omnimindModelServicesRevealApiKey,
+          WS_METHODS.oaModelServicesRevealApiKey,
           input,
           options?.signal ? { signal: options.signal } : undefined,
         ),
       refresh: (input, options) =>
         transport.request(
-          WS_METHODS.omnimindModelServicesRefresh,
+          WS_METHODS.oaModelServicesRefresh,
           input,
           options?.signal ? { signal: options.signal, timeoutMs: null } : { timeoutMs: null },
         ),
       discoverCustom: (input, options) =>
-        transport.request(WS_METHODS.omnimindModelServicesDiscoverCustom, input, {
+        transport.request(WS_METHODS.oaModelServicesDiscoverCustom, input, {
           timeoutMs: null,
           ...(options?.signal ? { signal: options.signal } : {}),
         }),
       testCustom: (input, options) =>
-        transport.request(WS_METHODS.omnimindModelServicesTestCustom, input, {
+        transport.request(WS_METHODS.oaModelServicesTestCustom, input, {
           timeoutMs: null,
           ...(options?.signal ? { signal: options.signal } : {}),
         }),
       saveCustom: (input, options) =>
-        transport.request(WS_METHODS.omnimindModelServicesSaveCustom, input, {
+        transport.request(WS_METHODS.oaModelServicesSaveCustom, input, {
           timeoutMs: null,
           ...(options?.signal ? { signal: options.signal } : {}),
         }),
       removeCustom: (input, options) =>
-        transport.request(WS_METHODS.omnimindModelServicesRemoveCustom, input, {
+        transport.request(WS_METHODS.oaModelServicesRemoveCustom, input, {
           timeoutMs: null,
           ...(options?.signal ? { signal: options.signal } : {}),
         }),
     },
-    omnimindEcosystem: {
-      list: (input = {}) => transport.request(WS_METHODS.omnimindEcosystemList, input),
-      listResources: (input) => transport.request(WS_METHODS.omnimindEcosystemListResources, input),
+    oaEcosystem: {
+      list: (input = {}) => transport.request(WS_METHODS.oaEcosystemList, input),
+      listResources: (input) => transport.request(WS_METHODS.oaEcosystemListResources, input),
       install: (input) =>
-        transport.request(WS_METHODS.omnimindEcosystemInstall, input, {
+        transport.request(WS_METHODS.oaEcosystemInstall, input, {
           timeoutMs: null,
         }),
       update: (input) =>
-        transport.request(WS_METHODS.omnimindEcosystemUpdate, input, {
+        transport.request(WS_METHODS.oaEcosystemUpdate, input, {
           timeoutMs: null,
         }),
       remove: (input) =>
-        transport.request(WS_METHODS.omnimindEcosystemRemove, input, {
+        transport.request(WS_METHODS.oaEcosystemRemove, input, {
           timeoutMs: null,
         }),
       setResourceEnabled: (input) =>
-        transport.request(WS_METHODS.omnimindEcosystemSetResourceEnabled, input),
+        transport.request(WS_METHODS.oaEcosystemSetResourceEnabled, input),
       reload: (input) =>
-        transport.request(WS_METHODS.omnimindEcosystemReload, input, {
+        transport.request(WS_METHODS.oaEcosystemReload, input, {
           timeoutMs: null,
         }),
     },
-    omnimindAgentPrompts: {
-      getSnapshot: (input = {}) =>
-        transport.request(WS_METHODS.omnimindAgentPromptsGetSnapshot, input),
+    oaAgentPrompts: {
+      getSnapshot: (input = {}) => transport.request(WS_METHODS.oaAgentPromptsGetSnapshot, input),
       mutate: (input) =>
-        transport.request(WS_METHODS.omnimindAgentPromptsMutate, input, {
+        transport.request(WS_METHODS.oaAgentPromptsMutate, input, {
           timeoutMs: null,
         }),
     },
-    omnimindWebSearch: {
-      open: () => transport.request(WS_METHODS.omnimindWebSearchOpen, {}),
-      refresh: (input = {}) => transport.request(WS_METHODS.omnimindWebSearchRefresh, input),
+    oaWebSearch: {
+      open: () => transport.request(WS_METHODS.oaWebSearchOpen, {}),
+      refresh: (input = {}) => transport.request(WS_METHODS.oaWebSearchRefresh, input),
       mutate: (input) =>
-        transport.request(WS_METHODS.omnimindWebSearchMutate, input, {
+        transport.request(WS_METHODS.oaWebSearchMutate, input, {
           timeoutMs: null,
         }),
       testProvider: (input, options) =>
-        transport.request(WS_METHODS.omnimindWebSearchTestProvider, input, {
+        transport.request(WS_METHODS.oaWebSearchTestProvider, input, {
           timeoutMs: null,
           ...(options?.signal ? { signal: options.signal } : {}),
         }),
       recheck: (input, options) =>
-        transport.request(WS_METHODS.omnimindWebSearchRecheck, input, {
+        transport.request(WS_METHODS.oaWebSearchRecheck, input, {
           timeoutMs: null,
           ...(options?.signal ? { signal: options.signal } : {}),
         }),
-      openConfig: (input) => transport.request(WS_METHODS.omnimindWebSearchOpenConfig, input),
+      openConfig: (input) => transport.request(WS_METHODS.oaWebSearchOpenConfig, input),
       diagnoseGemini: (input, options) =>
-        transport.request(WS_METHODS.omnimindWebSearchGeminiDiagnostic, input, {
+        transport.request(WS_METHODS.oaWebSearchGeminiDiagnostic, input, {
           timeoutMs: null,
           ...(options?.signal ? { signal: options.signal } : {}),
         }),

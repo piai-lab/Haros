@@ -21,7 +21,7 @@ import { ServerConfig } from "../../config.ts";
 // ── Helpers ──
 
 const ServerConfigLayer = ServerConfig.layerTest(process.cwd(), {
-  prefix: "omnimind-git-core-test-",
+  prefix: "harnessos-git-core-test-",
 });
 const GitCoreTestLayer = GitCoreLive.pipe(
   Layer.provide(ServerConfigLayer),
@@ -1853,12 +1853,12 @@ it.layer(TestLayer)("git integration", (it) => {
           yield* initRepoWithCommit(tmp);
           const core = yield* GitCore;
 
-          yield* git(tmp, ["remote", "add", "origin", "git@github.com:example-org/omnimind.git"]);
+          yield* git(tmp, ["remote", "add", "origin", "git@github.com:example-org/harnessos.git"]);
 
           const remoteName = yield* core.ensureRemote({
             cwd: tmp,
             preferredName: "origin",
-            url: "git@github.com:example-org/omnimind.git/",
+            url: "git@github.com:example-org/harnessos.git/",
           });
 
           expect(remoteName).toBe("origin");

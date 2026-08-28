@@ -4,7 +4,7 @@
 
 import "../../index.css";
 
-import type { NativeApi, OmniMindWebSearchSettingsSnapshot } from "@harnessos/contracts";
+import type { NativeApi, OAWebSearchSettingsSnapshot } from "@harnessos/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
@@ -55,7 +55,7 @@ function snapshot(
     readonly autoShowSearchProcess?: boolean;
     readonly capabilityStatus?: "possible" | "needs-configuration" | "file-disabled";
   } = {},
-): OmniMindWebSearchSettingsSnapshot {
+): OAWebSearchSettingsSnapshot {
   return {
     state: "ready",
     revision: input.revision ?? "a".repeat(64),
@@ -94,14 +94,14 @@ function snapshot(
 }
 
 function installApi(input: {
-  readonly open?: NativeApi["omnimindWebSearch"]["open"];
-  readonly refresh?: NativeApi["omnimindWebSearch"]["refresh"];
-  readonly mutate?: NativeApi["omnimindWebSearch"]["mutate"];
-  readonly testProvider?: NativeApi["omnimindWebSearch"]["testProvider"];
-  readonly diagnoseGemini?: NativeApi["omnimindWebSearch"]["diagnoseGemini"];
+  readonly open?: NativeApi["oaWebSearch"]["open"];
+  readonly refresh?: NativeApi["oaWebSearch"]["refresh"];
+  readonly mutate?: NativeApi["oaWebSearch"]["mutate"];
+  readonly testProvider?: NativeApi["oaWebSearch"]["testProvider"];
+  readonly diagnoseGemini?: NativeApi["oaWebSearch"]["diagnoseGemini"];
 }) {
   window.nativeApi = {
-    omnimindWebSearch: {
+    oaWebSearch: {
       open: input.open ?? vi.fn().mockResolvedValue(snapshot()),
       refresh: input.refresh ?? vi.fn().mockResolvedValue(snapshot()),
       mutate: input.mutate ?? vi.fn(),
@@ -328,7 +328,7 @@ describe("WebSearchSettingsPanel", () => {
         });
       },
     );
-    installApi({ testProvider: testProvider as NativeApi["omnimindWebSearch"]["testProvider"] });
+    installApi({ testProvider: testProvider as NativeApi["oaWebSearch"]["testProvider"] });
 
     await renderPanel();
     await page.getByRole("button", { name: "Add service" }).click();

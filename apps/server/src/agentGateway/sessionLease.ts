@@ -18,7 +18,7 @@ type AgentGatewaySessionLeaseCredentials = Pick<
   >;
 
 export const AGENT_GATEWAY_CREDENTIAL_ROTATION_REQUIRED = "agentGatewayCredentialRotationRequired";
-export const AGENT_GATEWAY_TURN_AUTHORITY_RETIRED = "omnimindGatewayTurnAuthorityRetired";
+export const AGENT_GATEWAY_TURN_AUTHORITY_RETIRED = "harnessosGatewayTurnAuthorityRetired";
 
 /**
  * One engine runtime's ownership of one gateway credential.

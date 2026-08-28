@@ -808,7 +808,7 @@ it.effect("strips client-sent dispatchOrigin from thread.turn.start commands", (
 
 it.effect("strips client-sent agent dispatchOrigin from thread.turn.start commands", () =>
   Effect.gen(function* () {
-    // The "agent" origin is reserved for turns dispatched through the OmniMind
+    // The "agent" origin is reserved for turns dispatched through the HarnessOS
     // agent gateway; WS clients must not be able to spoof it either.
     const command = yield* decodeClientOrchestrationCommand({
       type: "thread.turn.start",

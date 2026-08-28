@@ -30,7 +30,7 @@ import {
 const temporaryDirectories: string[] = [];
 
 async function makeTemporaryPath(): Promise<string> {
-  const directory = await Fs.mkdtemp(Path.join(Os.tmpdir(), "omnimind-quit-resume-"));
+  const directory = await Fs.mkdtemp(Path.join(Os.tmpdir(), "harnessos-quit-resume-"));
   temporaryDirectories.push(directory);
   await Fs.chmod(directory, 0o700);
   return Path.join(directory, "quit-resume.json");
@@ -238,7 +238,7 @@ describe("quit resume one-shot record", () => {
   });
 
   it("never falls back to Home when the exact workspace cannot be resolved", async () => {
-    const workspace = await Fs.mkdtemp(Path.join(Os.tmpdir(), "omnimind-resume-workspace-"));
+    const workspace = await Fs.mkdtemp(Path.join(Os.tmpdir(), "harnessos-resume-workspace-"));
     temporaryDirectories.push(workspace);
     await expect(
       quitResumeWorkspaceFailureReason(runningThread(), [project(workspace)]),

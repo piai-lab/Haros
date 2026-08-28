@@ -1,13 +1,13 @@
 // FILE: WebSearchSettingsPanel.tsx
-// Purpose: Edit the package-owned OmniMind Web Access configuration without duplicating runtime facts.
+// Purpose: Edit the package-owned HarnessOS Web Access configuration without duplicating runtime facts.
 // Layer: Settings panel
 
 import type {
-  OmniMindWebSearchDraft,
-  OmniMindWebSearchProbeResult,
-  OmniMindWebSearchReadResult,
-  OmniMindWebSearchSettingsSnapshot,
-  OmniMindWebSearchWorkflow,
+  OAWebSearchDraft,
+  OAWebSearchProbeResult,
+  OAWebSearchReadResult,
+  OAWebSearchSettingsSnapshot,
+  OAWebSearchWorkflow,
 } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -36,10 +36,10 @@ import {
 } from "./SettingsPanelPrimitives";
 import { CredentialSecretControls } from "./CredentialSecretControls";
 
-type ReadySnapshot = OmniMindWebSearchSettingsSnapshot;
+type ReadySnapshot = OAWebSearchSettingsSnapshot;
 type DraftState = {
   readonly provider: string | readonly string[];
-  readonly workflow: OmniMindWebSearchWorkflow;
+  readonly workflow: OAWebSearchWorkflow;
   readonly autoShowSearchProcess: boolean;
   readonly fields: Readonly<Record<string, string | null>>;
 };
@@ -54,7 +54,7 @@ type ProbeRun = {
   readonly requestId: string;
   readonly target: string;
   readonly status: "pending" | "settled";
-  readonly result: OmniMindWebSearchProbeResult | null;
+  readonly result: OAWebSearchProbeResult | null;
 };
 type SettingsFailure = "load" | "save" | "open-config";
 
@@ -69,11 +69,7 @@ export function webSearchProviderFieldAccessibleLabel(
 ): string {
   return `${providerName} · ${localizedFieldLabel}`;
 }
-const workflowOptions: readonly OmniMindWebSearchWorkflow[] = [
-  "auto-summary",
-  "summary-review",
-  "none",
-];
+const workflowOptions: readonly OAWebSearchWorkflow[] = ["auto-summary", "summary-review", "none"];
 
 function draftFrom(snapshot: ReadySnapshot): DraftState {
   return {
@@ -88,7 +84,7 @@ function draftFrom(snapshot: ReadySnapshot): DraftState {
   };
 }
 
-function mutationDraft(draft: DraftState): OmniMindWebSearchDraft {
+function mutationDraft(draft: DraftState): OAWebSearchDraft {
   return {
     provider: draft.provider,
     workflow: draft.workflow,
@@ -147,7 +143,7 @@ export function WebSearchSettingsPanel({
 }) {
   const { t } = useI18n();
   const configQuery = useQuery(serverConfigQueryOptions());
-  const [readResult, setReadResult] = useState<OmniMindWebSearchReadResult | null>(null);
+  const [readResult, setReadResult] = useState<OAWebSearchReadResult | null>(null);
   const [base, setBase] = useState<ReadySnapshot | null>(null);
   const [draft, setDraft] = useState<DraftState | null>(null);
   const [conflict, setConflict] = useState<ReadySnapshot | null>(null);
@@ -208,7 +204,7 @@ export function WebSearchSettingsPanel({
   }, []);
 
   const applyReadResult = useCallback(
-    (result: OmniMindWebSearchReadResult, preserveDirty: boolean) => {
+    (result: OAWebSearchReadResult, preserveDirty: boolean) => {
       setReadResult(result);
       if (result.state === "recovery") return;
       if (preserveDirty && dirty && base && result.revision !== base.revision) {
@@ -228,8 +224,8 @@ export function WebSearchSettingsPanel({
         const api = ensureNativeApi();
         const result =
           mode === "open"
-            ? await api.omnimindWebSearch.open()
-            : await api.omnimindWebSearch.refresh(base ? { knownRevision: base.revision } : {});
+            ? await api.oaWebSearch.open()
+            : await api.oaWebSearch.refresh(base ? { knownRevision: base.revision } : {});
         applyReadResult(result, mode === "refresh");
         setFailure(null);
       } catch {
@@ -263,7 +259,7 @@ export function WebSearchSettingsPanel({
       setBusy("saving");
       try {
         const expectedRevision = overwrite && conflict ? conflict.revision : base.revision;
-        const result = await ensureNativeApi().omnimindWebSearch.mutate({
+        const result = await ensureNativeApi().oaWebSearch.mutate({
           expectedRevision,
           draft: mutationDraft(draft),
           ...(overwrite ? { allowOverwriteConflict: true } : {}),
@@ -317,7 +313,7 @@ export function WebSearchSettingsPanel({
           result: null,
         });
         try {
-          const result = await ensureNativeApi().omnimindWebSearch.testProvider({
+          const result = await ensureNativeApi().oaWebSearch.testProvider({
             requestId,
             providerId,
             draft: mutationDraft(draft),
@@ -366,7 +362,7 @@ export function WebSearchSettingsPanel({
         result: null,
       });
       try {
-        const result = await ensureNativeApi().omnimindWebSearch.recheck({
+        const result = await ensureNativeApi().oaWebSearch.recheck({
           requestId,
         });
         setProbeRun((current) =>
@@ -408,7 +404,7 @@ export function WebSearchSettingsPanel({
     }
     setBusy("opening");
     try {
-      await ensureNativeApi().omnimindWebSearch.openConfig({ editor });
+      await ensureNativeApi().oaWebSearch.openConfig({ editor });
       setFailure(null);
     } catch {
       setFailure("open-config");
@@ -427,7 +423,7 @@ export function WebSearchSettingsPanel({
     setGeminiDiagnosticFailed(false);
     try {
       setGeminiDiagnostic(
-        await ensureNativeApi().omnimindWebSearch.diagnoseGemini({
+        await ensureNativeApi().oaWebSearch.diagnoseGemini({
           draft: mutationDraft(draft),
         }),
       );
@@ -531,7 +527,7 @@ export function WebSearchSettingsPanel({
     provider: ReadySnapshot["providers"][number],
     field: ReadySnapshot["providers"][number]["fields"][number],
   ) => webSearchProviderFieldAccessibleLabel(provider.displayName, fieldLabel(field));
-  const probeDescription = (result: OmniMindWebSearchProbeResult) =>
+  const probeDescription = (result: OAWebSearchProbeResult) =>
     t(`settings.webSearch.probeReason.${result.reason}` as const);
 
   const conflictNotice = conflict ? (
@@ -988,12 +984,12 @@ export function WebSearchSettingsPanel({
               value={draft.workflow}
               onValueChange={(value) =>
                 value &&
-                workflowOptions.includes(value as OmniMindWebSearchWorkflow) &&
+                workflowOptions.includes(value as OAWebSearchWorkflow) &&
                 setDraft((current) =>
                   current
                     ? {
                         ...current,
-                        workflow: value as OmniMindWebSearchWorkflow,
+                        workflow: value as OAWebSearchWorkflow,
                       }
                     : current,
                 )

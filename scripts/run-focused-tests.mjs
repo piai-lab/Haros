@@ -10,7 +10,7 @@ const vitestWorkspaces = new Set([
   "apps/desktop",
   "apps/server",
   "packages/contracts",
-  "packages/om-ask",
+  "packages/oa-ask",
   "packages/shared",
   "scripts",
 ]);
@@ -20,8 +20,8 @@ const supportedWorkspaces = [
   "apps/server",
   "apps/web",
   "packages/contracts",
-  "packages/om-ask",
-  "packages/om-web-access",
+  "packages/oa-ask",
+  "packages/oa-web-access",
   "packages/shared",
   "scripts",
 ];
@@ -78,7 +78,7 @@ export function planFocusedTestRuns(inputs, root = repoRoot) {
         files: files.map((file) => file.relativePath),
       };
     }
-    if (workspace === "packages/om-web-access") {
+    if (workspace === "packages/oa-web-access") {
       return {
         workspace,
         command: process.execPath,

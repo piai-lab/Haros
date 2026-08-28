@@ -14,7 +14,7 @@ import { listFactoryPlugins, readFactoryPlugin } from "./FactoryPluginDiscovery.
 const tempDirs: string[] = [];
 
 async function makeFactoryFixture() {
-  const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-factory-plugins-"));
+  const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "harnessos-factory-plugins-"));
   tempDirs.push(homeDir);
   const factoryDir = path.join(homeDir, ".factory");
   const marketplacePath = path.join(factoryDir, "plugins", "marketplaces", "official");

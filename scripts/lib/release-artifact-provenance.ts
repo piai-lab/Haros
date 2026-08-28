@@ -212,7 +212,7 @@ function verifyMacSignatures(
 
   const zip = requireSingleArtifact(artifacts, ".zip");
   const diskImage = requireSingleArtifact(artifacts, ".dmg");
-  const extractionRoot = mkdtempSync(join(tmpdir(), "omnimind-release-provenance-"));
+  const extractionRoot = mkdtempSync(join(tmpdir(), "harnessos-release-provenance-"));
   try {
     runCommand("ditto", ["-x", "-k", join(input.assetsDirectory, zip.fileName), extractionRoot]);
     const appBundles = readdirSync(extractionRoot).filter((entry) => {

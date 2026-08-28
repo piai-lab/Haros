@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { AskUserToolInput } from "@harnessos/om-ask";
+import type { AskUserToolInput } from "@harnessos/oa-ask";
 import { projectAskUserRequest, resolveAskUserResponse } from "./askUserHostBridge.ts";
 
 const request: AskUserToolInput = {

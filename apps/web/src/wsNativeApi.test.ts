@@ -193,7 +193,7 @@ describe("wsNativeApi", () => {
     const payload = {
       cwd: "/tmp/workspace",
       homeDir: "/Users/tester",
-      projectName: "omnimind-code",
+      projectName: "harnessos-code",
     };
     emitPush(WS_CHANNELS.serverWelcome, payload);
 
@@ -217,7 +217,7 @@ describe("wsNativeApi", () => {
     emitPush(WS_CHANNELS.serverWelcome, {
       cwd: "/tmp/workspace",
       homeDir: "/Users/tester",
-      projectName: "omnimind-code",
+      projectName: "harnessos-code",
       bootstrapProjectId: ProjectId.makeUnsafe("project-1"),
       bootstrapThreadId: ThreadId.makeUnsafe("thread-1"),
     });
@@ -227,7 +227,7 @@ describe("wsNativeApi", () => {
       expect.objectContaining({
         cwd: "/tmp/workspace",
         homeDir: "/Users/tester",
-        projectName: "omnimind-code",
+        projectName: "harnessos-code",
         bootstrapProjectId: "project-1",
         bootstrapThreadId: "thread-1",
       }),
@@ -249,7 +249,7 @@ describe("wsNativeApi", () => {
     emitPush(WS_CHANNELS.serverWelcome, {
       cwd: "/tmp/workspace",
       homeDir: "/Users/tester",
-      projectName: "omnimind-code",
+      projectName: "harnessos-code",
     });
 
     expect(listener).toHaveBeenCalledTimes(2);
@@ -257,7 +257,7 @@ describe("wsNativeApi", () => {
       expect.objectContaining({
         cwd: "/tmp/workspace",
         homeDir: "/Users/tester",
-        projectName: "omnimind-code",
+        projectName: "harnessos-code",
       }),
     );
   });
@@ -967,7 +967,7 @@ describe("wsNativeApi", () => {
     });
   });
 
-  it("forwards credential-blind OmniMind model-service reads", async () => {
+  it("forwards credential-blind HarnessOS model-service reads", async () => {
     requestMock
       .mockResolvedValueOnce({ state: "empty", services: [], errorCode: null })
       .mockResolvedValueOnce({ state: "empty", service: null, errorCode: null });
@@ -976,15 +976,12 @@ describe("wsNativeApi", () => {
 
     const listController = new AbortController();
     const getController = new AbortController();
-    await api.omnimindModelServices.list({}, { signal: listController.signal });
-    await api.omnimindModelServices.get(
-      { serviceId: "deepseek" },
-      { signal: getController.signal },
-    );
+    await api.oaModelServices.list({}, { signal: listController.signal });
+    await api.oaModelServices.get({ serviceId: "deepseek" }, { signal: getController.signal });
 
     expect(requestMock).toHaveBeenNthCalledWith(
       1,
-      WS_METHODS.omnimindModelServicesList,
+      WS_METHODS.oaModelServicesList,
       {},
       {
         signal: listController.signal,
@@ -992,7 +989,7 @@ describe("wsNativeApi", () => {
     );
     expect(requestMock).toHaveBeenNthCalledWith(
       2,
-      WS_METHODS.omnimindModelServicesGet,
+      WS_METHODS.oaModelServicesGet,
       { serviceId: "deepseek" },
       { signal: getController.signal },
     );
@@ -1005,51 +1002,51 @@ describe("wsNativeApi", () => {
     const packageId = "a".repeat(64);
     const threadId = ThreadId.makeUnsafe("thread-package-reload");
 
-    await api.omnimindEcosystem.install({ source: "npm:@scope/package@1.2.3" });
-    await api.omnimindEcosystem.listResources({ packageId });
-    await api.omnimindEcosystem.update({ packageId });
-    await api.omnimindEcosystem.reload({ threadId });
+    await api.oaEcosystem.install({ source: "npm:@scope/package@1.2.3" });
+    await api.oaEcosystem.listResources({ packageId });
+    await api.oaEcosystem.update({ packageId });
+    await api.oaEcosystem.reload({ threadId });
 
     expect(requestMock).toHaveBeenNthCalledWith(
       1,
-      WS_METHODS.omnimindEcosystemInstall,
+      WS_METHODS.oaEcosystemInstall,
       { source: "npm:@scope/package@1.2.3" },
       { timeoutMs: null },
     );
-    expect(requestMock).toHaveBeenNthCalledWith(2, WS_METHODS.omnimindEcosystemListResources, {
+    expect(requestMock).toHaveBeenNthCalledWith(2, WS_METHODS.oaEcosystemListResources, {
       packageId,
     });
     expect(requestMock).toHaveBeenNthCalledWith(
       3,
-      WS_METHODS.omnimindEcosystemUpdate,
+      WS_METHODS.oaEcosystemUpdate,
       { packageId },
       { timeoutMs: null },
     );
     expect(requestMock).toHaveBeenNthCalledWith(
       4,
-      WS_METHODS.omnimindEcosystemReload,
+      WS_METHODS.oaEcosystemReload,
       { threadId },
       { timeoutMs: null },
     );
   });
 
-  it("forwards typed OmniMind Agent prompt file intents without path authority", async () => {
+  it("forwards typed HarnessOS Agent prompt file intents without path authority", async () => {
     requestMock.mockResolvedValue({});
     const { createWsNativeApi } = await import("./wsNativeApi");
     const api = createWsNativeApi();
 
-    await api.omnimindAgentPrompts.getSnapshot({});
-    await api.omnimindAgentPrompts.mutate({
+    await api.oaAgentPrompts.getSnapshot({});
+    await api.oaAgentPrompts.mutate({
       action: "updateCustomRules",
       sourceId: "AGENTS.md",
       expectedVersion: "a".repeat(64),
       content: "Be concise.",
     });
 
-    expect(requestMock).toHaveBeenNthCalledWith(1, WS_METHODS.omnimindAgentPromptsGetSnapshot, {});
+    expect(requestMock).toHaveBeenNthCalledWith(1, WS_METHODS.oaAgentPromptsGetSnapshot, {});
     expect(requestMock).toHaveBeenNthCalledWith(
       2,
-      WS_METHODS.omnimindAgentPromptsMutate,
+      WS_METHODS.oaAgentPromptsMutate,
       {
         action: "updateCustomRules",
         sourceId: "AGENTS.md",
@@ -1060,7 +1057,7 @@ describe("wsNativeApi", () => {
     );
   });
 
-  it("forwards typed OmniMind model-service credential operations", async () => {
+  it("forwards typed HarnessOS model-service credential operations", async () => {
     const requestId = "00000000-0000-4000-8000-000000000041";
     const promptId = "00000000-0000-4000-8000-000000000042";
     requestMock
@@ -1074,52 +1071,49 @@ describe("wsNativeApi", () => {
     const api = createWsNativeApi();
     const controller = new AbortController();
 
-    await api.omnimindModelServices.beginLogin(
+    await api.oaModelServices.beginLogin(
       { serviceId: "deepseek", authType: "api_key" },
       { signal: controller.signal },
     );
-    await api.omnimindModelServices.pollLogin(
+    await api.oaModelServices.pollLogin(
       { requestId, afterEventCount: 0 },
       { signal: controller.signal },
     );
-    await api.omnimindModelServices.answerLogin(
+    await api.oaModelServices.answerLogin(
       { requestId, promptId, value: "test-secret" },
       { signal: controller.signal },
     );
-    await api.omnimindModelServices.cancelLogin({ requestId });
-    await api.omnimindModelServices.logout({ serviceId: "deepseek" });
-    await api.omnimindModelServices.refresh(
-      { serviceId: "deepseek" },
-      { signal: controller.signal },
-    );
+    await api.oaModelServices.cancelLogin({ requestId });
+    await api.oaModelServices.logout({ serviceId: "deepseek" });
+    await api.oaModelServices.refresh({ serviceId: "deepseek" }, { signal: controller.signal });
 
     expect(requestMock).toHaveBeenNthCalledWith(
       1,
-      WS_METHODS.omnimindModelServicesBeginLogin,
+      WS_METHODS.oaModelServicesBeginLogin,
       { serviceId: "deepseek", authType: "api_key" },
       { signal: controller.signal, timeoutMs: null },
     );
     expect(requestMock).toHaveBeenNthCalledWith(
       2,
-      WS_METHODS.omnimindModelServicesPollLogin,
+      WS_METHODS.oaModelServicesPollLogin,
       { requestId, afterEventCount: 0 },
       { signal: controller.signal, timeoutMs: null },
     );
     expect(requestMock).toHaveBeenNthCalledWith(
       3,
-      WS_METHODS.omnimindModelServicesAnswerLogin,
+      WS_METHODS.oaModelServicesAnswerLogin,
       { requestId, promptId, value: "test-secret" },
       { signal: controller.signal, timeoutMs: null },
     );
-    expect(requestMock).toHaveBeenNthCalledWith(4, WS_METHODS.omnimindModelServicesCancelLogin, {
+    expect(requestMock).toHaveBeenNthCalledWith(4, WS_METHODS.oaModelServicesCancelLogin, {
       requestId,
     });
-    expect(requestMock).toHaveBeenNthCalledWith(5, WS_METHODS.omnimindModelServicesLogout, {
+    expect(requestMock).toHaveBeenNthCalledWith(5, WS_METHODS.oaModelServicesLogout, {
       serviceId: "deepseek",
     });
     expect(requestMock).toHaveBeenNthCalledWith(
       6,
-      WS_METHODS.omnimindModelServicesRefresh,
+      WS_METHODS.oaModelServicesRefresh,
       { serviceId: "deepseek" },
       { signal: controller.signal, timeoutMs: null },
     );
@@ -1150,7 +1144,7 @@ describe("wsNativeApi", () => {
       ],
     };
 
-    await api.omnimindModelServices.testCustom(
+    await api.oaModelServices.testCustom(
       {
         config,
         credential: { type: "stored_key", apiKey: "test-secret" },
@@ -1158,18 +1152,15 @@ describe("wsNativeApi", () => {
       },
       { signal: controller.signal },
     );
-    await api.omnimindModelServices.saveCustom(
+    await api.oaModelServices.saveCustom(
       { config, credential: { type: "stored_key", apiKey: "test-secret" } },
       { signal: controller.signal },
     );
-    await api.omnimindModelServices.removeCustom(
-      { serviceId: "custom" },
-      { signal: controller.signal },
-    );
+    await api.oaModelServices.removeCustom({ serviceId: "custom" }, { signal: controller.signal });
 
     expect(requestMock).toHaveBeenNthCalledWith(
       1,
-      WS_METHODS.omnimindModelServicesTestCustom,
+      WS_METHODS.oaModelServicesTestCustom,
       {
         config,
         credential: { type: "stored_key", apiKey: "test-secret" },
@@ -1179,13 +1170,13 @@ describe("wsNativeApi", () => {
     );
     expect(requestMock).toHaveBeenNthCalledWith(
       2,
-      WS_METHODS.omnimindModelServicesSaveCustom,
+      WS_METHODS.oaModelServicesSaveCustom,
       { config, credential: { type: "stored_key", apiKey: "test-secret" } },
       { signal: controller.signal, timeoutMs: null },
     );
     expect(requestMock).toHaveBeenNthCalledWith(
       3,
-      WS_METHODS.omnimindModelServicesRemoveCustom,
+      WS_METHODS.oaModelServicesRemoveCustom,
       { serviceId: "custom" },
       { signal: controller.signal, timeoutMs: null },
     );

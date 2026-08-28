@@ -10,9 +10,9 @@ describe("findAsarArchivePath", () => {
   it("resolves the containing archive for a path inside an asar", () => {
     expect(
       findAsarArchivePath(
-        "/Applications/OmniMind.app/Contents/Resources/app.asar/apps/server/dist/client",
+        "/Applications/HarnessOS.app/Contents/Resources/app.asar/apps/server/dist/client",
       ),
-    ).toBe(path.join("/Applications/OmniMind.app/Contents/Resources/app.asar"));
+    ).toBe(path.join("/Applications/HarnessOS.app/Contents/Resources/app.asar"));
   });
 
   it("returns the archive itself when the path is the asar file", () => {

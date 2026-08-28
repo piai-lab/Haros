@@ -24,8 +24,8 @@ import {
   HARNESSOS_AGENT_GATEWAY_URL_ENV,
 } from "../../agentGateway/mcpInjection.ts";
 import {
-  type OmniMindHarnessPolicyDeliveryState,
-  takeOmniMindHarnessPolicyForProviderSession,
+  type HarnessOSHarnessPolicyDeliveryState,
+  takeHarnessOSHarnessPolicyForProviderSession,
 } from "../../agentGateway/harnessPolicy.ts";
 import {
   AgentGatewayCredentials,
@@ -225,7 +225,7 @@ function shellQuote(value: string, platform: NodeJS.Platform = process.platform)
 }
 
 /**
- * Hook output when capture is inactive (the session is not OmniMind-managed).
+ * Hook output when capture is inactive (the session is not HarnessOS-managed).
  * Antigravity requires PreToolUse output to carry a `decision`: an empty
  * object is treated as a denial with an empty reason, which blocks every tool
  * call because the hook is installed globally with `matcher: "*"` (#490).
@@ -236,7 +236,7 @@ function shellQuote(value: string, platform: NodeJS.Platform = process.platform)
  * denial that aborts the invocation. The CLI raises a PreInvocation for the
  * subagent's first model call when the parent agent invokes a subagent, so
  * `{}` there denies the subagent launch and the parent CLI exits with code 1
- * ("Antigravity CLI exited with code 1."). OmniMind-managed sessions spawn
+ * ("Antigravity CLI exited with code 1."). HarnessOS-managed sessions spawn
  * subagents deliberately, so pre-invocation must answer "allow".
  *
  * `{}` stays correct for the other hook points, including Stop, where an
@@ -344,7 +344,7 @@ process.stdin.on("end", () => {
     const decision = process.env.HARNESSOS_ANTIGRAVITY_HOOK_DECISION === "allow" ? "allow" : "ask";
     process.stdout.write(JSON.stringify({ decision }) + "\\n");
   } else if (event === "pre-invocation") {
-    // PreInvocation vetoes the upcoming LLM invocation; OmniMind-managed
+    // PreInvocation vetoes the upcoming LLM invocation; HarnessOS-managed
     // sessions run subagents deliberately, so never block them here. An
     // empty object would deny the launch and the parent CLI exits 1.
     process.stdout.write('{"decision":"allow"}\\n');
@@ -363,7 +363,7 @@ export function buildAntigravityHookConfig(
 ): Record<string, unknown> {
   const hook = (event: string) => ({ type: "command", command: command(event) });
   return {
-    "omnimind-capture": {
+    "harnessos-capture": {
       PreToolUse: [{ matcher: "*", hooks: [hook("pre-tool")] }],
       PostToolUse: [{ matcher: "*", hooks: [hook("post-tool")] }],
       PreInvocation: [hook("pre-invocation")],
@@ -465,7 +465,7 @@ export async function ensureCapturePlugin(
     ".gemini",
     "antigravity-cli",
     "plugins",
-    "omnimind-capture",
+    "harnessos-capture",
   );
   const scriptPath = path.join(pluginDir, "capture.cjs");
   await fs.mkdir(pluginDir, { recursive: true });
@@ -474,8 +474,8 @@ export async function ensureCapturePlugin(
     `${JSON.stringify(
       {
         $schema: "https://antigravity.google/schemas/v1/plugin.json",
-        name: "omnimind-capture",
-        description: "Streams Antigravity CLI lifecycle events to OmniMind when requested.",
+        name: "harnessos-capture",
+        description: "Streams Antigravity CLI lifecycle events to HarnessOS when requested.",
       },
       null,
       2,
@@ -527,7 +527,7 @@ export function buildAntigravityTurnProcessEnvironment(input: {
   return buildProviderChildEnvironment({
     engine: PROVIDER,
     ...(input.baseEnv === undefined ? {} : { baseEnv: input.baseEnv }),
-    inheritedOmniMindKeys: [
+    inheritedHarnessOSKeys: [
       "HARNESSOS_ANTIGRAVITY_EVENTS",
       "HARNESSOS_ANTIGRAVITY_HOOK_DECISION",
       ...gatewayKeys,
@@ -541,13 +541,13 @@ export function buildAntigravityTurnProcessEnvironment(input: {
 }
 
 export function buildAntigravityTurnPrompt(
-  state: OmniMindHarnessPolicyDeliveryState,
+  state: HarnessOSHarnessPolicyDeliveryState,
   input: {
     readonly prompt: string;
     readonly hasGatewaySessionLease: boolean;
   },
 ): string {
-  const harnessPolicy = takeOmniMindHarnessPolicyForProviderSession(state, {
+  const harnessPolicy = takeHarnessOSHarnessPolicyForProviderSession(state, {
     scopedGatewayConnectionAvailable: input.hasGatewaySessionLease,
   });
   return [harnessPolicy, input.prompt].filter(Boolean).join("\n\n");
@@ -583,7 +583,7 @@ export function parseAntigravityCliModelLabel(
 
   // Newer `agy models` rows are `slug<TAB>Display Name (Effort)`. Older builds
   // printed only the display label. Prefer the display column when present so
-  // OmniMind never treats `slug\tName` as a single model id at dispatch.
+  // HarnessOS never treats `slug\tName` as a single model id at dispatch.
   const tabIndex = stripped.indexOf("\t");
   const labelColumn =
     tabIndex >= 0 ? stripped.slice(tabIndex + 1).trim() : stripped.replace(/^(?:[*•-]\s+)+/u, "");
@@ -1945,7 +1945,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             new EngineAdapterRequestError({
               engine: PROVIDER,
               method: "plugin/install",
-              detail: messageFromCause(cause, "Failed to install the OmniMind capture hook."),
+              detail: messageFromCause(cause, "Failed to install the HarnessOS capture hook."),
               cause,
             }),
         });
@@ -2074,7 +2074,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           defaultEffortByModel.get(model),
         );
         const runDir = yield* Effect.tryPromise({
-          try: () => fs.mkdtemp(path.join(os.tmpdir(), "omnimind-antigravity-")),
+          try: () => fs.mkdtemp(path.join(os.tmpdir(), "harnessos-antigravity-")),
           catch: (cause) =>
             new EngineAdapterRequestError({
               engine: PROVIDER,
@@ -2108,7 +2108,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           return yield* new EngineAdapterRequestError({
             engine: PROVIDER,
             method: "turn/prepare",
-            detail: "The OmniMind gateway credential is no longer active for this engine turn.",
+            detail: "The HarnessOS gateway credential is no longer active for this engine turn.",
           });
         }
         if (gatewaySessionLease) context.gatewaySessionLease = gatewaySessionLease;
@@ -2469,7 +2469,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
         sessionModelSwitch: "restart-session",
         conversationRollback: "restart-session",
         supportsSkillMentions: true,
-        // Antigravity can consume the unified OmniMind skill projection, but it does
+        // Antigravity can consume the unified HarnessOS skill projection, but it does
         // not expose a engine-native listSkills() seam.
         supportsSkillDiscovery: false,
         supportsNativeSlashCommandDiscovery: false,

@@ -356,7 +356,7 @@ describe("BuiltInToolsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "OmniMind could not confirm whether your choice was saved. The current choice is kept until the server status refreshes.",
+          "HarnessOS could not confirm whether your choice was saved. The current choice is kept until the server status refreshes.",
         ),
       )
       .toBeVisible();

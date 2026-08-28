@@ -253,7 +253,7 @@ type MessagesTimelineRowContent =
       createdAt: string;
       message: ChatMessage;
       // Read-only response metadata used by final-result projections (image-only
-      // responses and OmniMind creation recaps). These entries render only in
+      // responses and HarnessOS creation recaps). These entries render only in
       // the sibling turn-process row unless they are explicit result receipts.
       turnWorkEntries?: WorkLogEntry[];
       durationStart: string;
@@ -959,7 +959,7 @@ function workLogAutomationsEqual(a: WorkLogEntry["automation"], b: WorkLogEntry[
   );
 }
 
-function workLogOmniMindThreadCreationsEqual(
+function workLogHarnessOSThreadCreationsEqual(
   a: WorkLogEntry["harnessosThreadCreation"],
   b: WorkLogEntry["harnessosThreadCreation"],
 ) {
@@ -1124,7 +1124,7 @@ function workLogEntryContentEqual(a: WorkLogEntry, b: WorkLogEntry): boolean {
     workLogSubagentActionsEqual(a.subagentAction, b.subagentAction) &&
     workLogSubagentsEqual(a.subagents, b.subagents) &&
     workLogAutomationsEqual(a.automation, b.automation) &&
-    workLogOmniMindThreadCreationsEqual(a.harnessosThreadCreation, b.harnessosThreadCreation) &&
+    workLogHarnessOSThreadCreationsEqual(a.harnessosThreadCreation, b.harnessosThreadCreation) &&
     workLogLiveActivitiesEqual(a.liveActivity, b.liveActivity) &&
     workLogToolDetailsEqual(a.toolDetails, b.toolDetails)
   );

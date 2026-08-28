@@ -1,7 +1,7 @@
 /**
  * PiAdapter - Pi direct SDK implementation of the generic engine adapter contract.
  *
- * Pi is intentionally treated as an unopinionated harness: OmniMind does not add
+ * Pi is intentionally treated as an unopinionated harness: HarnessOS does not add
  * permissions or plan-mode semantics on top of it.
  *
  * @module PiAdapter

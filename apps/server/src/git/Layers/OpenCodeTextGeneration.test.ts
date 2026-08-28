@@ -148,11 +148,11 @@ const DEFAULT_TEST_MODEL_SELECTION = {
 const OPENCODE_TEXT_GENERATION_IDLE_TTL_MS = 30_000;
 
 const OpenCodeTextGenerationServerConfigLayer = ServerConfig.layerTest(process.cwd(), {
-  prefix: "omnimind-opencode-text-generation-test-",
+  prefix: "harnessos-opencode-text-generation-test-",
 });
 
 const OpenCodeTextGenerationExistingServerConfigLayer = ServerConfig.layerTest(process.cwd(), {
-  prefix: "omnimind-opencode-text-generation-existing-server-test-",
+  prefix: "harnessos-opencode-text-generation-existing-server-test-",
 });
 
 const OpenCodeTextGenerationTestLayer = Layer.mergeAll(

@@ -33,7 +33,7 @@ vi.mock("./threadRetention", async () => {
   };
 });
 
-import { CliConfig, makeServerStartupLogData, omnimindCli, type CliConfigShape } from "./main";
+import { CliConfig, makeServerStartupLogData, harnessosCli, type CliConfigShape } from "./main";
 
 const start = vi.fn(() => undefined);
 const stop = vi.fn(() => undefined);
@@ -65,10 +65,10 @@ const serverStart = Effect.acquireRelease(
     ),
 ).pipe(Effect.map(({ server }) => server));
 const findAvailablePort = vi.fn((preferred: number) => Effect.succeed(preferred));
-let defaultOmniMindHome = "";
+let defaultHarnessOSHome = "";
 const tempHomes = new Set<string>();
 
-function makeTempHome(prefix = "omnimind-main-test-"): string {
+function makeTempHome(prefix = "harnessos-main-test-"): string {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   tempHomes.add(directory);
   return directory;
@@ -81,7 +81,7 @@ function permissionMode(filePath: string): number {
 // Shared service layer used by this CLI test suite.
 const testLayer = Layer.mergeAll(
   Layer.succeed(CliConfig, {
-    cwd: "/tmp/omnimind-test-workspace",
+    cwd: "/tmp/harnessos-test-workspace",
     fixPath: Effect.void,
     resolveStaticDir: Effect.undefined,
   } satisfies CliConfigShape),
@@ -104,12 +104,12 @@ const testLayer = Layer.mergeAll(
 );
 
 const runCli = (args: ReadonlyArray<string>, env: Record<string, string> = {}) => {
-  const program = Command.runWith(omnimindCli, { version: "0.0.0-test" })(args).pipe(
+  const program = Command.runWith(harnessosCli, { version: "0.0.0-test" })(args).pipe(
     Effect.provide(
       ConfigProvider.layer(
         ConfigProvider.fromEnv({
           env: {
-            HARNESSOS_HOME: defaultOmniMindHome,
+            HARNESSOS_HOME: defaultHarnessOSHome,
             HARNESSOS_NO_BROWSER: "true",
             ...env,
           },
@@ -122,7 +122,7 @@ const runCli = (args: ReadonlyArray<string>, env: Record<string, string> = {}) =
 
 beforeEach(() => {
   vi.clearAllMocks();
-  defaultOmniMindHome = makeTempHome();
+  defaultHarnessOSHome = makeTempHome();
   resolvedConfig = null;
   serverStopSignal = Effect.void;
   retainedSqlClient = null;
@@ -142,7 +142,7 @@ afterEach(() => {
 it.layer(testLayer)("server CLI command", (it) => {
   it.effect("parses all CLI flags and wires scoped start/stop", () =>
     Effect.gen(function* () {
-      const flagHome = makeTempHome("omnimind-main-flag-");
+      const flagHome = makeTempHome("harnessos-main-flag-");
 
       yield* runCli([
         "--mode",
@@ -189,7 +189,7 @@ it.layer(testLayer)("server CLI command", (it) => {
 
   it.effect("passes the root --home-dir flag to MCP subcommands", () =>
     Effect.gen(function* () {
-      const flagHome = makeTempHome("omnimind-main-mcp-flag-");
+      const flagHome = makeTempHome("harnessos-main-mcp-flag-");
 
       const exit = yield* Effect.exit(runCli(["mcp", "serve", "--home-dir", flagHome]));
 
@@ -203,7 +203,7 @@ it.layer(testLayer)("server CLI command", (it) => {
 
   it.effect("discovers the persisted runtime origin for the server status subcommand", () =>
     Effect.gen(function* () {
-      const flagHome = makeTempHome("omnimind-main-status-flag-");
+      const flagHome = makeTempHome("harnessos-main-status-flag-");
       const stateDir = path.join(flagHome, "userdata");
       fs.mkdirSync(stateDir, { recursive: true, mode: 0o700 });
       fs.chmodSync(stateDir, 0o700);
@@ -250,7 +250,7 @@ it.layer(testLayer)("server CLI command", (it) => {
 
   it.effect("rejects a discovered endpoint that cannot prove the persisted runtime identity", () =>
     Effect.gen(function* () {
-      const flagHome = makeTempHome("omnimind-main-status-proof-");
+      const flagHome = makeTempHome("harnessos-main-status-proof-");
       const stateDir = path.join(flagHome, "userdata");
       fs.mkdirSync(stateDir, { recursive: true, mode: 0o700 });
       fs.chmodSync(stateDir, 0o700);
@@ -297,7 +297,7 @@ it.layer(testLayer)("server CLI command", (it) => {
 
   it.effect("reports an unreachable result when no persisted runtime exists", () =>
     Effect.gen(function* () {
-      const flagHome = makeTempHome("omnimind-main-status-missing-");
+      const flagHome = makeTempHome("harnessos-main-status-missing-");
       const previousExitCode = process.exitCode;
       const output: string[] = [];
       const stdout = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
@@ -324,7 +324,7 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("creates fresh local state directories with private permissions", () =>
     Effect.gen(function* () {
       if (process.platform === "win32") return;
-      const homeDir = makeTempHome("omnimind-main-private-fresh-");
+      const homeDir = makeTempHome("harnessos-main-private-fresh-");
 
       yield* runCli(["--home-dir", homeDir]);
 
@@ -346,7 +346,7 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("repairs permissions for an upgraded local state directory", () =>
     Effect.gen(function* () {
       if (process.platform === "win32") return;
-      const homeDir = makeTempHome("omnimind-main-private-upgrade-");
+      const homeDir = makeTempHome("harnessos-main-private-upgrade-");
       const stateDir = path.join(homeDir, "userdata");
       const attachmentDir = path.join(stateDir, "attachments");
       const attachmentPath = path.join(attachmentDir, "existing.bin");
@@ -365,7 +365,7 @@ it.layer(testLayer)("server CLI command", (it) => {
 
   it.effect("uses env fallbacks when flags are not provided", () =>
     Effect.gen(function* () {
-      const envHome = makeTempHome("omnimind-main-env-");
+      const envHome = makeTempHome("harnessos-main-env-");
 
       yield* runCli([], {
         HARNESSOS_MODE: "desktop",
@@ -686,16 +686,16 @@ it.layer(testLayer)("server CLI command", (it) => {
           "--auth-token",
           "remote-secret",
           "--public-url",
-          "https://omnimind.example.test",
+          "https://harnessos.example.test",
         ],
         { HARNESSOS_NO_BROWSER: "false" },
       );
 
-      assert.equal(resolvedConfig?.publicUrl?.origin, "https://omnimind.example.test");
+      assert.equal(resolvedConfig?.publicUrl?.origin, "https://harnessos.example.test");
       assert.equal(openBrowser.mock.calls.length, 1);
       assert.match(
         openBrowser.mock.calls[0]?.[0] ?? "",
-        /^https:\/\/omnimind\.example\.test\/pair#token=/,
+        /^https:\/\/harnessos\.example\.test\/pair#token=/,
       );
     }),
   );
@@ -705,11 +705,11 @@ it.layer(testLayer)("server CLI command", (it) => {
       yield* runCli([], {
         HARNESSOS_HOST: "192.168.1.50",
         HARNESSOS_AUTH_TOKEN: "remote-secret",
-        HARNESSOS_PUBLIC_URL: "https://omnimind.example.test",
+        HARNESSOS_PUBLIC_URL: "https://harnessos.example.test",
       });
 
       assert.equal(start.mock.calls.length, 1);
-      assert.equal(resolvedConfig?.publicUrl?.origin, "https://omnimind.example.test");
+      assert.equal(resolvedConfig?.publicUrl?.origin, "https://harnessos.example.test");
       assert.equal(resolvedConfig?.allowInsecureRemote, false);
     }),
   );
@@ -759,8 +759,8 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("rejects non-root or non-HTTPS public URLs", () =>
     Effect.gen(function* () {
       for (const publicUrl of [
-        "http://omnimind.example.test",
-        "https://omnimind.example.test/app",
+        "http://harnessos.example.test",
+        "https://harnessos.example.test/app",
       ]) {
         const error = yield* Effect.flip(
           runCli(["--host", "0.0.0.0", "--auth-token", "remote-secret", "--public-url", publicUrl]),
@@ -782,7 +782,7 @@ it.layer(testLayer)("server CLI command", (it) => {
 
       assert.equal(start.mock.calls.length, 0);
       assert.equal(resolvedConfig, null);
-      assert.match(String(error), /Refusing to bind OmniMind to non-loopback host 0\.0\.0\.0/);
+      assert.match(String(error), /Refusing to bind HarnessOS to non-loopback host 0\.0\.0\.0/);
     }),
   );
 

@@ -49,7 +49,7 @@ const HARNESSOS_PUBLIC_ASSET_PATH_PREFIXES = [
 ] as const;
 const HARNESSOS_WEB_PUBLIC_WORKSPACE_DIR = "apps/web/public";
 
-function resolveOmniMindPublicAssetOpenTarget(path: string, workspaceRoot: string | null) {
+function resolveHarnessOSPublicAssetOpenTarget(path: string, workspaceRoot: string | null) {
   if (!workspaceRoot) {
     return null;
   }
@@ -87,7 +87,7 @@ export function resolveWorkspaceFileOpenTarget(
   }
   // CentralIcon assets are linked in chat as Vite root URLs
   // (`/central-icons-...`) but the file viewer needs the repo path.
-  return resolveOmniMindPublicAssetOpenTarget(withoutPosition, workspaceRoot);
+  return resolveHarnessOSPublicAssetOpenTarget(withoutPosition, workspaceRoot);
 }
 
 /**

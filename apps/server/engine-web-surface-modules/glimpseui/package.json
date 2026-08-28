@@ -1,6 +1,6 @@
 {
   "name": "glimpseui",
-  "version": "0.0.0-omnimind-host",
+  "version": "0.0.0-harnessos-host",
   "type": "module",
   "exports": "./index.mjs"
 }

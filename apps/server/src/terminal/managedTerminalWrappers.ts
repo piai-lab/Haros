@@ -134,7 +134,7 @@ function buildCodexWrapperScript(input: {
     "  export CODEX_TUI_RECORD_SESSION=1",
     '  if [ -z "${CODEX_TUI_SESSION_LOG_PATH:-}" ]; then',
     '    _harnessos_codex_ts="$(date +%s 2>/dev/null || echo "$$")"',
-    '    export CODEX_TUI_SESSION_LOG_PATH="${TMPDIR:-/tmp}/omnimind-codex-session-$$_${_harnessos_codex_ts}.jsonl"',
+    '    export CODEX_TUI_SESSION_LOG_PATH="${TMPDIR:-/tmp}/harnessos-codex-session-$$_${_harnessos_codex_ts}.jsonl"',
     "  fi",
     "  (",
     '    _harnessos_log="$CODEX_TUI_SESSION_LOG_PATH"',
@@ -224,7 +224,7 @@ function buildWrapperScript(input: {
       : buildCodexWrapperScript({ codexHomeDir, notifyHookPath, targetPath });
   return [
     "#!/bin/sh",
-    `# Managed ${commandName} wrapper injected by omnimind terminal sessions.`,
+    `# Managed ${commandName} wrapper injected by harnessos terminal sessions.`,
     `printf '\\033]0;%s\\007' ${shellQuote(title)}`,
     `export ${HARNESSOS_TERMINAL_CLI_KIND_ENV_KEY}=${shellQuote(cliKind)}`,
     commandBody,
@@ -245,7 +245,7 @@ function writeFileIfChanged(filePath: string, content: string, mode: number): vo
 }
 
 function buildManagedZshRc(quotedZshDir: string): string {
-  return `# OmniMind zsh rc wrapper
+  return `# HarnessOS zsh rc wrapper
 _harnessos_home="\${HARNESSOS_ORIGINAL_ZDOTDIR:-$HOME}"
 export ZDOTDIR="$_harnessos_home"
 [[ -f "$_harnessos_home/.zshrc" ]] && source "$_harnessos_home/.zshrc"
@@ -290,7 +290,7 @@ function ensureManagedZshWrappers(zshDir: string): void {
   const quotedZshDir = shellQuote(zshDir);
   writeFileIfChanged(
     path.join(zshDir, ".zshenv"),
-    `# OmniMind zsh env wrapper
+    `# HarnessOS zsh env wrapper
 _harnessos_home="\${HARNESSOS_ORIGINAL_ZDOTDIR:-$HOME}"
 export ZDOTDIR="$_harnessos_home"
 [[ -f "$_harnessos_home/.zshenv" ]] && source "$_harnessos_home/.zshenv"
@@ -300,7 +300,7 @@ export ZDOTDIR=${quotedZshDir}
   );
   writeFileIfChanged(
     path.join(zshDir, ".zprofile"),
-    `# OmniMind zsh profile wrapper
+    `# HarnessOS zsh profile wrapper
 _harnessos_home="\${HARNESSOS_ORIGINAL_ZDOTDIR:-$HOME}"
 export ZDOTDIR="$_harnessos_home"
 [[ -f "$_harnessos_home/.zprofile" ]] && source "$_harnessos_home/.zprofile"

@@ -1,5 +1,5 @@
 // FILE: AcpElicitationSupport.ts
-// Purpose: Bridges ACP form elicitation schemas to OmniMind's engine-neutral question UI.
+// Purpose: Bridges ACP form elicitation schemas to HarnessOS's engine-neutral question UI.
 // Layer: Engine ACP protocol mapping
 // Exports: question extraction and typed ACP response construction.
 
@@ -79,7 +79,7 @@ function propertyOptions(property: ElicitationProperty): ReadonlyArray<{
   return [];
 }
 
-// Converts primitive ACP form fields into the question shape consumed by OmniMind's composer.
+// Converts primitive ACP form fields into the question shape consumed by HarnessOS's composer.
 export function elicitationQuestionsFromRequest(
   request: FormElicitationRequest,
 ): ReadonlyArray<UserInputQuestion> {

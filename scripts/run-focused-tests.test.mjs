@@ -15,7 +15,7 @@ afterEach(() => {
 });
 
 function createTemporaryRepository() {
-  const root = mkdtempSync(join(tmpdir(), "omnimind-focused-tests-"));
+  const root = mkdtempSync(join(tmpdir(), "harnessos-focused-tests-"));
   temporaryRoots.push(root);
   return root;
 }
@@ -34,14 +34,14 @@ describe("planFocusedTestRuns", () => {
     createRepositoryFixture(root, [
       "apps/server/src/example.integration.test.ts",
       "apps/web/src/example.browser.tsx",
-      "packages/om-web-access/src/example.test.ts",
+      "packages/oa-web-access/src/example.test.ts",
     ]);
 
     const runs = planFocusedTestRuns(
       [
         "apps/server/src/example.integration.test.ts",
         "apps/web/src/example.browser.tsx",
-        "packages/om-web-access/src/example.test.ts",
+        "packages/oa-web-access/src/example.test.ts",
       ],
       root,
     );
@@ -49,7 +49,7 @@ describe("planFocusedTestRuns", () => {
     expect(runs.map((run) => run.workspace)).toEqual([
       "apps/server",
       "apps/web",
-      "packages/om-web-access",
+      "packages/oa-web-access",
     ]);
     expect(runs[0]?.args).toContain("src/example.integration.test.ts");
     expect(runs[1]?.args).toContain("focused");

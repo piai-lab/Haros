@@ -21,7 +21,7 @@ vi.mock("electron", () => ({
 const temporaryDirectories: string[] = [];
 
 const workspaceFixture = async () => {
-  const base = await mkdtemp(join(tmpdir(), "omnimind-browser-upload-"));
+  const base = await mkdtemp(join(tmpdir(), "harnessos-browser-upload-"));
   temporaryDirectories.push(base);
   const workspaceRoot = join(base, "workspace");
   await mkdir(join(workspaceRoot, "fixtures"), { recursive: true });
@@ -53,7 +53,7 @@ const createRuntime = (
       if (expression.includes("const matches = []")) {
         return { result: { value: { count: 1, generation: 1 } } };
       }
-      if (expression.includes("globalThis.__omnimindBrowserAutomationV1.currentTarget")) {
+      if (expression.includes("globalThis.__harnessosBrowserAutomationV1.currentTarget")) {
         return { result: { objectId: "file-input", subtype: "node" } };
       }
     }

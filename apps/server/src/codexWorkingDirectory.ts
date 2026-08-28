@@ -6,7 +6,7 @@ import { statSync } from "node:fs";
  * missing Codex installation so the UI can prompt relocate/reconnect.
  */
 export function formatMissingCodexWorkingDirectoryError(cwd: string): string {
-  return `Project working directory no longer exists: ${cwd}. Relocate or reconnect the project in OmniMind.`;
+  return `Project working directory no longer exists: ${cwd}. Relocate or reconnect the project in HarnessOS.`;
 }
 
 export function assertCodexWorkingDirectoryExists(cwd: string): void {
@@ -14,7 +14,7 @@ export function assertCodexWorkingDirectoryExists(cwd: string): void {
     const stats = statSync(cwd);
     if (!stats.isDirectory()) {
       throw new Error(
-        `Project working directory is not a directory: ${cwd}. Relocate or reconnect the project in OmniMind.`,
+        `Project working directory is not a directory: ${cwd}. Relocate or reconnect the project in HarnessOS.`,
       );
     }
   } catch (error) {

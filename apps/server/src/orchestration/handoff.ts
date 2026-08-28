@@ -210,7 +210,7 @@ export function buildPriorTranscriptBootstrapText(
     thread,
     importedMessages: priorMessages,
     intro:
-      "This engine session may have been restarted without native conversation state. Use this prior OmniMind transcript as context for the latest user message.",
+      "This engine session may have been restarted without native conversation state. Use this prior HarnessOS transcript as context for the latest user message.",
     maxChars,
   });
 }

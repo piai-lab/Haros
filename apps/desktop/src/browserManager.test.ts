@@ -369,9 +369,9 @@ describe("DesktopBrowserManager repeated workflow characterization", () => {
       contents.emit("will-redirect", blockedRedirect);
       expect(blockedRedirect.preventDefault).toHaveBeenCalledOnce();
 
-      contents.currentUrl = "omnimind-local-preview://preview-token/index.html";
+      contents.currentUrl = "harnessos-local-preview://preview-token/index.html";
       const allowedLocalNavigation = {
-        url: "omnimind-local-preview://preview-token/about.html",
+        url: "harnessos-local-preview://preview-token/about.html",
         isMainFrame: true,
         preventDefault: vi.fn(),
       };
@@ -380,7 +380,7 @@ describe("DesktopBrowserManager repeated workflow characterization", () => {
 
       contents.currentUrl = "https://example.test/";
       const blockedLocalNavigation = {
-        url: "omnimind-local-preview://preview-token/about.html",
+        url: "harnessos-local-preview://preview-token/about.html",
         isMainFrame: true,
         preventDefault: vi.fn(),
       };
@@ -400,22 +400,22 @@ describe("DesktopBrowserManager repeated workflow characterization", () => {
     const state = manager.navigate({
       threadId: THREAD_ID,
       tabId,
-      url: "file:///tmp/omnimind-preview/index.html",
+      url: "file:///tmp/harnessos-preview/index.html",
     });
 
     expect(state.tabs.find((tab) => tab.id === tabId)?.url).toBe(
-      "file:///tmp/omnimind-preview/index.html",
+      "file:///tmp/harnessos-preview/index.html",
     );
     await vi.waitFor(() => {
       expect(guest.loadURL).toHaveBeenCalledWith(
-        expect.stringMatching(/^omnimind-local-preview:\/\/[a-f0-9]+\/index\.html$/u),
+        expect.stringMatching(/^harnessos-local-preview:\/\/[a-f0-9]+\/index\.html$/u),
       );
     });
   });
 
   it("preserves an initial file URL while the blank guest starts its preview load", async () => {
     const manager = new DesktopBrowserManager();
-    const sourceUrl = "file:///tmp/omnimind-preview/index.html";
+    const sourceUrl = "file:///tmp/harnessos-preview/index.html";
     const initial = manager.open({ threadId: THREAD_ID, initialUrl: sourceUrl });
     const tabId = initial.activeTabId!;
     const guest = new FakeRendererWebContents(84);
@@ -465,7 +465,7 @@ describe("DesktopBrowserManager repeated workflow characterization", () => {
 
   it("keeps the load error when an initial local file is not HTML", async () => {
     const manager = new DesktopBrowserManager();
-    const sourceUrl = "file:///tmp/omnimind-preview/notes.txt";
+    const sourceUrl = "file:///tmp/harnessos-preview/notes.txt";
     const initial = manager.open({ threadId: THREAD_ID, initialUrl: sourceUrl });
     const tabId = initial.activeTabId!;
     const guest = new FakeRendererWebContents(85);

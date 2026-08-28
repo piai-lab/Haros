@@ -298,15 +298,15 @@ function AlignedActivityRowsTimeline(props: { theme: "light" | "dark" }) {
       "Public reasoning stays collapsed after settlement.",
     ),
     {
-      id: "alignment-omnimind-message",
+      id: "alignment-harnessos-message",
       kind: "work",
       createdAt: "2026-08-24T13:30:42.000Z",
       entry: {
-        id: "alignment-omnimind-message",
+        id: "alignment-harnessos-message",
         createdAt: "2026-08-24T13:30:42.000Z",
         turnId,
-        label: "OmniMind sent a message",
-        toolTitle: "OmniMind sent a message",
+        label: "HarnessOS sent a message",
+        toolTitle: "HarnessOS sent a message",
         toolName: "mcp__harnessos__harnessos_send_message",
         tone: "tool",
         itemType: "mcp_tool_call",
@@ -930,7 +930,7 @@ describe("Timeline public reasoning disclosure", () => {
   });
 
   it.each(["light", "dark"] as const)(
-    "keeps command, reasoning, and OmniMind activity headings on one leading column in %s mode",
+    "keeps command, reasoning, and HarnessOS activity headings on one leading column in %s mode",
     async (theme) => {
       const host = createNarrowHost();
       host.className =
@@ -963,12 +963,12 @@ describe("Timeline public reasoning disclosure", () => {
 
         const brain = host.querySelector<HTMLElement>("[data-central-icon-name='brain-2']");
         const github = host.querySelector<SVGElement>("[data-tool-icon='github'] svg");
-        const omnimind = host.querySelector<SVGElement>("[data-tool-icon='oa'] svg");
+        const harnessos = host.querySelector<SVGElement>("[data-tool-icon='oa'] svg");
         expect(brain?.getBoundingClientRect().width).toBeCloseTo(16, 1);
         expect(github?.getBoundingClientRect().width).toBeCloseTo(14, 1);
         // The product mark has transparent artwork padding, so its narrow icon
         // owner compensates optically while the shared 16px slot stays fixed.
-        expect(omnimind?.getBoundingClientRect().width ?? 0).toBeGreaterThan(14);
+        expect(harnessos?.getBoundingClientRect().width ?? 0).toBeGreaterThan(14);
         expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth);
       } finally {
         await screen.unmount();

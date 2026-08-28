@@ -3,7 +3,7 @@ const DEFAULT_SERVER_STATUS_TIMEOUT_MS = 3_000;
 
 type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
-export interface OmniMindServerHealthSnapshot {
+export interface HarnessOSServerHealthSnapshot {
   readonly status: string;
   readonly startupReady: boolean;
   readonly pushBusReady?: boolean;
@@ -21,12 +21,12 @@ export interface OmniMindServerHealthSnapshot {
   };
 }
 
-export type OmniMindServerStatusResult =
+export type HarnessOSServerStatusResult =
   | {
       readonly reachable: true;
       readonly ready: boolean;
       readonly url: string;
-      readonly health: OmniMindServerHealthSnapshot;
+      readonly health: HarnessOSServerHealthSnapshot;
     }
   | {
       readonly reachable: false;
@@ -35,7 +35,7 @@ export type OmniMindServerStatusResult =
       readonly error: string;
     };
 
-export interface FetchOmniMindServerStatusOptions {
+export interface FetchHarnessOSServerStatusOptions {
   readonly url?: string;
   readonly timeoutMs?: number;
   readonly fetch?: FetchLike;
@@ -68,7 +68,7 @@ function healthUrlFromBaseUrl(rawUrl: string): {
   return { displayUrl, url: url.toString() };
 }
 
-function decodeHealthSnapshot(value: unknown): OmniMindServerHealthSnapshot | null {
+function decodeHealthSnapshot(value: unknown): HarnessOSServerHealthSnapshot | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
   }
@@ -76,12 +76,12 @@ function decodeHealthSnapshot(value: unknown): OmniMindServerHealthSnapshot | nu
   if (typeof snapshot.status !== "string" || typeof snapshot.startupReady !== "boolean") {
     return null;
   }
-  return snapshot as unknown as OmniMindServerHealthSnapshot;
+  return snapshot as unknown as HarnessOSServerHealthSnapshot;
 }
 
-export async function fetchOmniMindServerStatus(
-  options: FetchOmniMindServerStatusOptions = {},
-): Promise<OmniMindServerStatusResult> {
+export async function fetchHarnessOSServerStatus(
+  options: FetchHarnessOSServerStatusOptions = {},
+): Promise<HarnessOSServerStatusResult> {
   const rawUrl = options.url ?? DEFAULT_SERVER_STATUS_URL;
   let healthUrl: { readonly displayUrl: string; readonly url: string };
   try {
@@ -117,7 +117,7 @@ export async function fetchOmniMindServerStatus(
         reachable: false,
         ready: false,
         url: healthUrl.displayUrl,
-        error: "Health response did not match the OmniMind health shape.",
+        error: "Health response did not match the HarnessOS health shape.",
       };
     }
 
@@ -138,15 +138,15 @@ export async function fetchOmniMindServerStatus(
   }
 }
 
-export function formatOmniMindServerStatus(result: OmniMindServerStatusResult): string {
+export function formatHarnessOSServerStatus(result: HarnessOSServerStatusResult): string {
   if (!result.reachable) {
-    return `OmniMind server: unreachable\nURL: ${result.url}\nError: ${result.error}`;
+    return `HarnessOS server: unreachable\nURL: ${result.url}\nError: ${result.error}`;
   }
 
   const projectionState = result.health.projection?.state;
   const status = result.ready ? "ready" : result.health.startupReady ? "not ready" : "starting";
   return [
-    `OmniMind server: ${status}`,
+    `HarnessOS server: ${status}`,
     `URL: ${result.url}`,
     ...(projectionState ? [`Projection: ${projectionState}`] : []),
   ].join("\n");

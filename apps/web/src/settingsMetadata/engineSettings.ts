@@ -16,7 +16,7 @@ export const PROVIDERS_SETTINGS_SEARCH = {
   engineUpdates: defineSettingsSearchRow({
     id: "engines:engine-updates",
     titleKey: "settings.engineUpdates",
-    keywords: "Update installed engine tools that OmniMind can safely update. upgrade cli",
+    keywords: "Update installed engine tools that HarnessOS can safely update. upgrade cli",
     target: SETTINGS_TARGETS.engineUpdates,
   }),
   installedClis: defineSettingsSearchRow({

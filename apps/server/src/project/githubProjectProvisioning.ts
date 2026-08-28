@@ -146,7 +146,7 @@ function classifyCloneFailure(cause: unknown): GitHubProjectProvisioningError {
   if (exceededConfiguredCloneTimeout) {
     return provisioningError(
       "CLONE_TIMEOUT",
-      "The repository clone exceeded OmniMind's 30-minute limit. For very large repositories, clone it manually and add the local folder instead.",
+      "The repository clone exceeded HarnessOS's 30-minute limit. For very large repositories, clone it manually and add the local folder instead.",
       false,
       cause,
     );
@@ -194,7 +194,7 @@ function classifyCloneFailure(cause: unknown): GitHubProjectProvisioningError {
   ) {
     return provisioningError(
       "NETWORK_ERROR",
-      "OmniMind could not reach GitHub. Check the server's network connection and retry.",
+      "HarnessOS could not reach GitHub. Check the server's network connection and retry.",
       true,
       cause,
     );
@@ -210,7 +210,7 @@ function classifyCloneFailure(cause: unknown): GitHubProjectProvisioningError {
   if (lower.includes("permission denied") || lower.includes("operation not permitted")) {
     return provisioningError(
       "PERMISSION_DENIED",
-      "OmniMind does not have permission to write to the selected destination.",
+      "HarnessOS does not have permission to write to the selected destination.",
       false,
       cause,
     );
@@ -240,7 +240,7 @@ function classifyPromotionFailure(cause: unknown): GitHubProjectProvisioningErro
   if (reason === "PermissionDenied") {
     return provisioningError(
       "PERMISSION_DENIED",
-      "OmniMind does not have permission to move the cloned repository into the selected destination.",
+      "HarnessOS does not have permission to move the cloned repository into the selected destination.",
       false,
       cause,
     );
@@ -442,7 +442,7 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
       if (!path.isAbsolute(expandedParent)) {
         return yield* provisioningError(
           "INVALID_DESTINATION",
-          "Choose an absolute destination folder on the OmniMind server.",
+          "Choose an absolute destination folder on the HarnessOS server.",
           false,
         );
       }

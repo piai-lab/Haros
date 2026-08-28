@@ -731,7 +731,7 @@ describe("deriveWorkLogEntries", () => {
               engineWebSurface: {
                 status: "waiting-for-user",
                 provenance: "engine-native",
-                presentation: "omnimind-browser",
+                presentation: "harnessos-browser",
                 surfaceId: "surface-opaque-123",
               },
             },
@@ -744,7 +744,7 @@ describe("deriveWorkLogEntries", () => {
     expect(entries[0]?.engineWebSurface).toEqual({
       status: "waiting-for-user",
       provenance: "engine-native",
-      presentation: "omnimind-browser",
+      presentation: "harnessos-browser",
       surfaceId: "surface-opaque-123",
     });
   });
@@ -1151,12 +1151,12 @@ describe("deriveWorkLogEntries", () => {
         id: "automation-created",
         createdAt: "2026-02-23T00:00:05.000Z",
         kind: "automation.created",
-        summary: "Created automation: Watch OmniMind PR 231 - Every 5m",
+        summary: "Created automation: Watch HarnessOS PR 231 - Every 5m",
         tone: "info",
         payload: {
           source: "chat-composer",
           automationId: "automation-7",
-          automationName: "Watch OmniMind PR 231",
+          automationName: "Watch HarnessOS PR 231",
           cadenceLabel: "Every 5m",
         },
       }),
@@ -1170,7 +1170,7 @@ describe("deriveWorkLogEntries", () => {
     expect(automationEntry).toBeDefined();
     expect(automationEntry?.automation).toEqual({
       id: "automation-7",
-      name: "Watch OmniMind PR 231",
+      name: "Watch HarnessOS PR 231",
       cadenceLabel: "Every 5m",
     });
   });
@@ -1201,14 +1201,14 @@ describe("deriveWorkLogEntries", () => {
     });
   });
 
-  it("exposes a engine-independent OmniMind thread creation recap", () => {
+  it("exposes a engine-independent HarnessOS thread creation recap", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({
-        id: "omnimind-created-threads",
+        id: "harnessos-created-threads",
         createdAt: "2026-02-23T00:00:05.000Z",
         turnId: "turn-1",
-        kind: "omnimind.threads.created",
-        summary: "Created 2 OmniMind threads",
+        kind: "harnessos.threads.created",
+        summary: "Created 2 HarnessOS threads",
         tone: "info",
         payload: {
           operationId: "gateway:create:two-workers",
@@ -1395,7 +1395,7 @@ describe("deriveWorkLogEntries", () => {
         id: "recovery-first",
         createdAt: "2026-02-23T00:00:01.000Z",
         kind: "engine.runtime.reconciled",
-        summary: "OmniMind recovered a stale running state",
+        summary: "HarnessOS recovered a stale running state",
         turnId: "turn-stale",
         payload: recoveryPayload,
       }),
@@ -1409,7 +1409,7 @@ describe("deriveWorkLogEntries", () => {
         id: "recovery-repeat",
         createdAt: "2026-02-23T00:00:03.000Z",
         kind: "engine.runtime.reconciled",
-        summary: "OmniMind recovered a stale running state",
+        summary: "HarnessOS recovered a stale running state",
         turnId: "turn-stale",
         payload: recoveryPayload,
       }),
@@ -2289,7 +2289,7 @@ describe("deriveWorkLogEntries", () => {
               type: "commandExecution",
               id: "call_6OII41pekq8cFCpOCF9pbeMu",
               command: "/bin/zsh -lc 'git status --short'",
-              cwd: "/Users/emanueledipietro/Developer/Testing/omnimind",
+              cwd: "/Users/emanueledipietro/Developer/Testing/harnessos",
               status: "completed",
               commandActions: [{ type: "unknown", command: "git status --short" }],
               aggregatedOutput: " M apps/desktop/src/main.ts\n...",
@@ -3199,20 +3199,20 @@ describe("deriveWorkLogEntries", () => {
   });
 
   it("preserves cancellation when an owning turn aborts", () => {
-    const turnId = TurnId.makeUnsafe("turn-with-cancelled-omnimind-tool");
+    const turnId = TurnId.makeUnsafe("turn-with-cancelled-harnessos-tool");
     const entries = deriveWorkLogEntries(
       [
         makeActivity({
-          id: "cancelled-omnimind-start",
+          id: "cancelled-harnessos-start",
           createdAt: "2026-02-23T00:00:01.000Z",
           kind: "tool.started",
-          summary: "OmniMind create thread",
+          summary: "HarnessOS create thread",
           turnId,
           payload: {
             itemType: "mcp_tool_call",
-            title: "OmniMind create thread",
+            title: "HarnessOS create thread",
             data: {
-              toolCallId: "cancelled-omnimind-call",
+              toolCallId: "cancelled-harnessos-call",
               toolName: "mcp__harnessos__harnessos_create_thread",
             },
           },
@@ -3241,13 +3241,13 @@ describe("deriveWorkLogEntries", () => {
           id: "interrupted-tool",
           createdAt: "2026-02-23T00:00:01.000Z",
           kind: "tool.completed",
-          summary: "OmniMind create thread",
+          summary: "HarnessOS create thread",
           payload: {
             itemType: "mcp_tool_call",
-            title: "OmniMind create thread",
+            title: "HarnessOS create thread",
             status: "interrupted",
             data: {
-              toolCallId: "interrupted-omnimind-call",
+              toolCallId: "interrupted-harnessos-call",
               toolName: "mcp__harnessos__harnessos_create_thread",
             },
           },
@@ -3508,42 +3508,42 @@ describe("deriveWorkLogEntries", () => {
     });
   });
 
-  it("presents OmniMind MCP activity consistently across engine item shapes", () => {
+  it("presents HarnessOS MCP activity consistently across engine item shapes", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({
-        id: "omnimind-mcp-create-thread-progress",
+        id: "harnessos-mcp-create-thread-progress",
         kind: "tool.updated",
         summary: "MCP tool call",
         payload: {
           itemType: "mcp_tool_call",
           title: "MCP tool call",
           data: {
-            toolCallId: "omnimind-mcp-create",
+            toolCallId: "harnessos-mcp-create",
             toolName: "mcp__harnessos__harnessos_create_thread",
           },
         },
       }),
       makeActivity({
-        id: "omnimind-dynamic-send-message-progress",
+        id: "harnessos-dynamic-send-message-progress",
         kind: "tool.updated",
         summary: "Tool call",
         payload: {
           itemType: "dynamic_tool_call",
-          title: "OmniMind__harnessos_send_message",
+          title: "HarnessOS__harnessos_send_message",
           data: {
-            toolCallId: "omnimind-dynamic-send",
+            toolCallId: "harnessos-dynamic-send",
           },
         },
       }),
       makeActivity({
-        id: "omnimind-file-change-list-threads-progress",
+        id: "harnessos-file-change-list-threads-progress",
         kind: "tool.updated",
         summary: "File change",
         payload: {
           itemType: "file_change",
-          title: "mcp__OmniMind__harnessos_list_threads",
+          title: "mcp__HarnessOS__harnessos_list_threads",
           data: {
-            toolCallId: "omnimind-file-change-list",
+            toolCallId: "harnessos-file-change-list",
           },
         },
       }),
@@ -3552,26 +3552,26 @@ describe("deriveWorkLogEntries", () => {
     const entries = deriveWorkLogEntries(activities, undefined);
     expect(entries.map((entry) => [entry.itemType, entry.toolTitle])).toEqual(
       expect.arrayContaining([
-        ["mcp_tool_call", "OmniMind is creating a thread"],
-        ["dynamic_tool_call", "OmniMind is sending a message"],
-        ["file_change", "OmniMind is listing threads"],
+        ["mcp_tool_call", "HarnessOS is creating a thread"],
+        ["dynamic_tool_call", "HarnessOS is sending a message"],
+        ["file_change", "HarnessOS is listing threads"],
       ]),
     );
     expect(entries).toHaveLength(3);
   });
 
-  it("preserves a failed OmniMind MCP result as a failed activity sentence", () => {
+  it("preserves a failed HarnessOS MCP result as a failed activity sentence", () => {
     const [entry] = deriveWorkLogEntries(
       [
         makeActivity({
-          id: "omnimind-create-threads-failed",
+          id: "harnessos-create-threads-failed",
           kind: "tool.completed",
           summary: "harnessos__harnessos_create_threads",
           payload: {
             itemType: "mcp_tool_call",
             status: "failed",
             data: {
-              toolCallId: "omnimind-create-failed",
+              toolCallId: "harnessos-create-failed",
               toolName: "mcp__harnessos__harnessos_create_threads",
               rawOutput: {
                 is_error: 1,
@@ -3588,7 +3588,7 @@ describe("deriveWorkLogEntries", () => {
 
     expect(entry).toMatchObject({
       toolStatus: "failed",
-      toolTitle: "OmniMind couldn't create threads",
+      toolTitle: "HarnessOS couldn't create threads",
       detail: "Invalid target options",
     });
   });
@@ -4783,7 +4783,7 @@ describe("deriveWorkLogEntries Codex find regression", () => {
               id: "call_UmQKQmLCCrj9PF82rupLIFDO",
               command:
                 "/bin/zsh -lc \"find apps packages -maxdepth 2 -name package.json -print -exec sed -n '1,120p' {} \\\\;\"",
-              cwd: "/Users/emanueledipietro/Developer/Testing/omnimind",
+              cwd: "/Users/emanueledipietro/Developer/Testing/harnessos",
               processId: "38005",
               source: "unifiedExecStartup",
               status: "inProgress",
@@ -4821,7 +4821,7 @@ describe("deriveWorkLogEntries Codex find regression", () => {
               id: "call_UmQKQmLCCrj9PF82rupLIFDO",
               command:
                 "/bin/zsh -lc \"find apps packages -maxdepth 2 -name package.json -print -exec sed -n '1,120p' {} \\\\;\"",
-              cwd: "/Users/emanueledipietro/Developer/Testing/omnimind",
+              cwd: "/Users/emanueledipietro/Developer/Testing/harnessos",
               processId: "38005",
               source: "unifiedExecStartup",
               status: "completed",

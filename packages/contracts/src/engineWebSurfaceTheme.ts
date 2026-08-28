@@ -1,5 +1,5 @@
 // FILE: engineWebSurfaceTheme.ts
-// Purpose: Own the bounded, credential-blind palette projected into isolated OmniMind pages.
+// Purpose: Own the bounded, credential-blind palette projected into isolated HarnessOS pages.
 // Layer: Cross-process presentation contract
 
 export interface EngineWebSurfaceThemeSnapshot {

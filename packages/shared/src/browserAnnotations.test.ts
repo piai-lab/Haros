@@ -36,7 +36,7 @@ describe("sanitizeBrowserAnnotationPageTitle", () => {
   });
 
   it.each([
-    "OmniMind",
+    "HarnessOS",
     "React 19 documentation",
     "API keys – Settings",
     "Invoice #1234",

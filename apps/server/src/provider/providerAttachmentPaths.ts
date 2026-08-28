@@ -14,7 +14,7 @@ import type { ManagedAttachmentRepositoryShape } from "../persistence/Services/M
 import { EngineAdapterValidationError } from "./Errors.ts";
 
 const MANAGED_ATTACHMENT_ID_PATTERN = /^att_v2_[0-9a-f]{32}$/u;
-const ENGINE_ATTACHMENT_STORAGE_PATH = Symbol("omnimind.providerAttachmentStoragePath");
+const ENGINE_ATTACHMENT_STORAGE_PATH = Symbol("harnessos.providerAttachmentStoragePath");
 
 type EngineResolvedAttachment = ChatAttachment & {
   readonly [ENGINE_ATTACHMENT_STORAGE_PATH]?: string;

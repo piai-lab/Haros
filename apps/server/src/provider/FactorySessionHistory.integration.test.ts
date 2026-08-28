@@ -18,7 +18,7 @@ afterEach(async () => {
 });
 
 it("reads only user-visible Droid session messages", async () => {
-  const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-factory-session-"));
+  const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), "harnessos-factory-session-"));
   tempDirs.push(homeDir);
   const sessionDir = path.join(homeDir, ".factory", "sessions", "-tmp-project");
   await fs.mkdir(sessionDir, { recursive: true });

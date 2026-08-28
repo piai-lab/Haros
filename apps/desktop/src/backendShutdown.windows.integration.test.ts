@@ -563,7 +563,7 @@ describeWindows("Windows desktop backend shutdown integration", () => {
   it("authenticates a real server, deduplicates shutdown, drains its runtime, and clears its finalizer artifact", async () => {
     const resources = new TestResources();
     try {
-      const homeDir = await resources.makeTempDir("omnimind-windows-shutdown-");
+      const homeDir = await resources.makeTempDir("harnessos-windows-shutdown-");
       const port = await reserveLoopbackPort(resources);
       const shutdownToken = Crypto.randomBytes(32).toString("hex");
       const runtimeStatePath = Path.join(homeDir, RUNTIME_STATE_RELATIVE_PATH);

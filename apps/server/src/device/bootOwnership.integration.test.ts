@@ -17,7 +17,7 @@ afterEach(async () => {
 });
 
 const store = async () => {
-  const dir = await mkdtemp(path.join(tmpdir(), "omnimind-boot-own-"));
+  const dir = await mkdtemp(path.join(tmpdir(), "harnessos-boot-own-"));
   storeDirectories.add(dir);
   return { dir, file: path.join(dir, "ownership.json") };
 };
@@ -74,7 +74,7 @@ describe("deciding which boots to reclaim", () => {
   });
 
   it("leaves a live sibling server's devices alone", () => {
-    // Two OmniMind processes can run at once; the older record belongs to the
+    // Two HarnessOS processes can run at once; the older record belongs to the
     // one still running, and shutting its simulators down would be a bug.
     expect(orphanedBootUdids({ pid: 123, udids: ["A"] }, ["A"], alive)).toEqual([]);
   });

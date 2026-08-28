@@ -13,7 +13,7 @@ const TestLayer = Layer.empty.pipe(
 
 const makeTempDir = Effect.gen(function* () {
   const fileSystem = yield* FileSystem.FileSystem;
-  return yield* fileSystem.makeTempDirectoryScoped({ prefix: "omnimind-project-favicon-" });
+  return yield* fileSystem.makeTempDirectoryScoped({ prefix: "harnessos-project-favicon-" });
 });
 
 const writeTextFile = Effect.fn(function* (cwd: string, relativePath: string, contents: string) {

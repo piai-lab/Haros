@@ -98,7 +98,7 @@ function makeBackend() {
   const helper = new FakeHelper();
   const backend = new IosSimulatorBackend({
     platform: "darwin",
-    helperCacheRoot: "/tmp/omnimind-device-test-cache",
+    helperCacheRoot: "/tmp/harnessos-device-test-cache",
     makeHelperClient: () => helper as unknown as HelperClient,
     run: async (command, args) => {
       if (command === "xcrun" && args[1] === "list") return simctlResult(DEVICE_LIST_JSON);
@@ -109,7 +109,7 @@ function makeBackend() {
   // The helper is normally compiled on first attach; the fake stands in for the
   // compiled binary so these tests never touch the toolchain.
   Object.defineProperty(backend, "compileHelperIfNeeded", {
-    value: async () => "/tmp/omnimind-device-test-cache/harnessos-device-helper",
+    value: async () => "/tmp/harnessos-device-test-cache/harnessos-device-helper",
   });
   return { backend, helper };
 }
@@ -128,7 +128,7 @@ describe("stale descriptor detection", () => {
 });
 
 describe("simulator reboot", () => {
-  it("re-attaches after a OmniMind-driven shutdown and reboot", async () => {
+  it("re-attaches after a HarnessOS-driven shutdown and reboot", async () => {
     const { backend, helper } = makeBackend();
     await backend.tap(DEVICE, 10, 10);
 
@@ -144,7 +144,7 @@ describe("simulator reboot", () => {
     ]);
   });
 
-  it("recovers when the device was rebooted outside OmniMind", async () => {
+  it("recovers when the device was rebooted outside HarnessOS", async () => {
     const { backend, helper } = makeBackend();
     await backend.tap(DEVICE, 10, 10);
 

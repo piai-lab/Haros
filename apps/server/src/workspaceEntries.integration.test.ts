@@ -47,7 +47,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("returns files and directories relative to cwd", async () => {
-    const cwd = makeTempDir("omnimind-workspace-entries-");
+    const cwd = makeTempDir("harnessos-workspace-entries-");
     writeFile(cwd, "src/components/Composer.tsx");
     writeFile(cwd, "src/index.ts");
     writeFile(cwd, "README.md");
@@ -67,7 +67,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("filters and ranks entries by query", async () => {
-    const cwd = makeTempDir("omnimind-workspace-query-");
+    const cwd = makeTempDir("harnessos-workspace-query-");
     writeFile(cwd, "src/components/Composer.tsx");
     writeFile(cwd, "src/components/composePrompt.ts");
     writeFile(cwd, "docs/composition.md");
@@ -84,7 +84,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("ranks name matches above ancestor-only matches", async () => {
-    const cwd = makeTempDir("omnimind-workspace-name-first-");
+    const cwd = makeTempDir("harnessos-workspace-name-first-");
     writeFile(cwd, "apps/web/src/lib/central-icons.tsx");
     writeFile(cwd, "apps/web/public/central-icons-fill/3d.svg");
     writeFile(cwd, "apps/web/public/central-icons-reversed/at.svg");
@@ -94,7 +94,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("breaks equal scores toward shallower entries", async () => {
-    const cwd = makeTempDir("omnimind-workspace-depth-tiebreak-");
+    const cwd = makeTempDir("harnessos-workspace-depth-tiebreak-");
     writeFile(cwd, "zz/deep/nested/config.ts");
     writeFile(cwd, "config.ts");
 
@@ -103,7 +103,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("prewarms the same search index used by the first query", async () => {
-    const cwd = makeTempDir("omnimind-workspace-prewarm-");
+    const cwd = makeTempDir("harnessos-workspace-prewarm-");
     writeFile(cwd, "src/prewarmed.ts");
     expect(prewarmWorkspaceSearchIndex({ cwd })).toEqual({ started: true });
     await expect(
@@ -114,7 +114,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("can restrict search results to files before ranking", async () => {
-    const cwd = makeTempDir("omnimind-workspace-kind-filter-");
+    const cwd = makeTempDir("harnessos-workspace-kind-filter-");
     writeFile(cwd, "src/components/Composer.tsx");
     writeFile(cwd, "src/components/composePrompt.ts");
     writeFile(cwd, "docs/components/guide.md");
@@ -136,7 +136,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("supports fuzzy subsequence queries for composer path search", async () => {
-    const cwd = makeTempDir("omnimind-workspace-fuzzy-query-");
+    const cwd = makeTempDir("harnessos-workspace-fuzzy-query-");
     writeFile(cwd, "src/components/Composer.tsx");
     writeFile(cwd, "src/components/composePrompt.ts");
     writeFile(cwd, "docs/composition.md");
@@ -154,7 +154,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("tracks truncation without sorting every fuzzy match", async () => {
-    const cwd = makeTempDir("omnimind-workspace-fuzzy-limit-");
+    const cwd = makeTempDir("harnessos-workspace-fuzzy-limit-");
     writeFile(cwd, "src/components/Composer.tsx");
     writeFile(cwd, "src/components/composePrompt.ts");
     writeFile(cwd, "docs/composition.md");
@@ -170,7 +170,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("excludes gitignored paths for git repositories", async () => {
-    const cwd = makeTempDir("omnimind-workspace-gitignore-");
+    const cwd = makeTempDir("harnessos-workspace-gitignore-");
     runGit(cwd, ["init"]);
     writeFile(cwd, ".gitignore", ".convex/\nconvex/\nignored.txt\n");
     writeFile(cwd, "src/keep.ts", "export {};");
@@ -189,7 +189,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("excludes tracked paths that match ignore rules", async () => {
-    const cwd = makeTempDir("omnimind-workspace-tracked-gitignore-");
+    const cwd = makeTempDir("harnessos-workspace-tracked-gitignore-");
     runGit(cwd, ["init"]);
     writeFile(cwd, ".convex/local-storage/data.json", "{}");
     writeFile(cwd, "src/keep.ts", "export {};");
@@ -205,7 +205,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("disables fsmonitor and untracked cache helpers during git workspace indexing", async () => {
-    const cwd = makeTempDir("omnimind-workspace-hardened-git-");
+    const cwd = makeTempDir("harnessos-workspace-hardened-git-");
     fs.mkdirSync(path.join(cwd, ".git"));
 
     const runProcessSpy = vi.spyOn(ProcessRunner, "runProcess");
@@ -282,7 +282,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("excludes .convex in non-git workspaces", async () => {
-    const cwd = makeTempDir("omnimind-workspace-non-git-convex-");
+    const cwd = makeTempDir("harnessos-workspace-non-git-convex-");
     writeFile(cwd, ".convex/local-storage/data.json", "{}");
     writeFile(cwd, "src/keep.ts", "export {};");
 
@@ -295,7 +295,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("deduplicates concurrent index builds for the same cwd", async () => {
-    const cwd = makeTempDir("omnimind-workspace-concurrent-build-");
+    const cwd = makeTempDir("harnessos-workspace-concurrent-build-");
     writeFile(cwd, "src/components/Composer.tsx");
 
     let rootReadCount = 0;
@@ -320,7 +320,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("keeps a shared index build alive while a filename-search lease still needs it", async () => {
-    const cwd = makeTempDir("omnimind-workspace-shared-build-lease-");
+    const cwd = makeTempDir("harnessos-workspace-shared-build-lease-");
     writeFile(cwd, "src/keep.ts", "needle\n");
     let releaseRootRead!: () => void;
     const rootReadReleased = new Promise<void>((resolve) => {
@@ -363,7 +363,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("does not let a cleared late build refill the cache or delete its replacement", async () => {
-    const cwd = makeTempDir("omnimind-workspace-cleared-build-");
+    const cwd = makeTempDir("harnessos-workspace-cleared-build-");
     writeFile(cwd, "old.ts", "old\n");
     let releaseFirstRead!: () => void;
     const firstReadReleased = new Promise<void>((resolve) => {
@@ -413,7 +413,7 @@ describe("searchWorkspaceEntries", () => {
   });
 
   it("limits concurrent directory reads while walking the filesystem", async () => {
-    const cwd = makeTempDir("omnimind-workspace-read-concurrency-");
+    const cwd = makeTempDir("harnessos-workspace-read-concurrency-");
     for (let index = 0; index < 80; index += 1) {
       writeFile(cwd, `group-${index}/entry-${index}.ts`, "export {};");
     }
@@ -446,7 +446,7 @@ describe("searchWorkspaceEntries", () => {
   it.skipIf(process.platform === "win32")(
     "bounds non-git file-symlink identity resolution",
     async () => {
-      const cwd = makeTempDir("omnimind-workspace-symlink-concurrency-");
+      const cwd = makeTempDir("harnessos-workspace-symlink-concurrency-");
       writeFile(cwd, "target.ts", "export {};\n");
       for (let index = 0; index < 80; index += 1) {
         fs.symlinkSync(path.join(cwd, "target.ts"), path.join(cwd, `link-${index}.ts`));
@@ -490,7 +490,7 @@ describe("searchLocalEntries", () => {
   });
 
   it("keeps a leading dot meaningful for dotfile search", async () => {
-    const rootPath = makeTempDir("omnimind-local-dotfiles-");
+    const rootPath = makeTempDir("harnessos-local-dotfiles-");
     writeFile(rootPath, ".env", "SECRET=1");
     writeFile(rootPath, "envelope.txt");
 
@@ -511,7 +511,7 @@ describe("listWorkspaceDirectories", () => {
   });
 
   it("can include files after directories for local recursive browsing", async () => {
-    const cwd = makeTempDir("omnimind-workspace-list-directories-");
+    const cwd = makeTempDir("harnessos-workspace-list-directories-");
     writeFile(cwd, "docs/guide.md", "# guide");
     writeFile(cwd, "docs/api/reference.txt", "api");
     writeFile(cwd, "README.md", "root");
@@ -525,7 +525,7 @@ describe("listWorkspaceDirectories", () => {
   });
 
   it("rejects relative paths that escape the workspace root", async () => {
-    const cwd = makeTempDir("omnimind-workspace-list-directories-");
+    const cwd = makeTempDir("harnessos-workspace-list-directories-");
     writeFile(cwd, "docs/guide.md", "# guide");
 
     for (const relativePath of ["..", "../..", "docs/../../etc", "/etc"]) {
@@ -544,8 +544,8 @@ describe("listWorkspaceDirectories", () => {
   });
 
   it("rejects symlinked directories that escape the workspace root", async () => {
-    const cwd = makeTempDir("omnimind-workspace-list-directories-");
-    const outside = makeTempDir("omnimind-workspace-list-outside-");
+    const cwd = makeTempDir("harnessos-workspace-list-directories-");
+    const outside = makeTempDir("harnessos-workspace-list-outside-");
     writeFile(outside, "secret.txt", "top secret");
     fs.symlinkSync(outside, path.join(cwd, "innocent"));
 
@@ -578,7 +578,7 @@ describe("discoverProjectScripts", () => {
   });
 
   it("discovers root package scripts with lockfile-selected commands", async () => {
-    const cwd = makeTempDir("omnimind-script-discovery-root-");
+    const cwd = makeTempDir("harnessos-script-discovery-root-");
     writeFile(
       cwd,
       "package.json",
@@ -606,7 +606,7 @@ describe("discoverProjectScripts", () => {
   });
 
   it("discovers shallow nested package scripts", async () => {
-    const cwd = makeTempDir("omnimind-script-discovery-nested-");
+    const cwd = makeTempDir("harnessos-script-discovery-nested-");
     writeFile(cwd, "apps/web/package.json", JSON.stringify({ scripts: { dev: "vite" } }));
     writeFile(cwd, "apps/web/pnpm-lock.yaml", "");
 
@@ -623,7 +623,7 @@ describe("discoverProjectScripts", () => {
   });
 
   it("ignores invalid package json files", async () => {
-    const cwd = makeTempDir("omnimind-script-discovery-invalid-");
+    const cwd = makeTempDir("harnessos-script-discovery-invalid-");
     writeFile(cwd, "package.json", "{ nope");
     writeFile(cwd, "apps/ok/package.json", JSON.stringify({ scripts: { start: "vite" } }));
 
@@ -633,7 +633,7 @@ describe("discoverProjectScripts", () => {
   });
 
   it("skips ignored package directories", async () => {
-    const cwd = makeTempDir("omnimind-script-discovery-ignored-");
+    const cwd = makeTempDir("harnessos-script-discovery-ignored-");
     writeFile(cwd, "node_modules/pkg/package.json", JSON.stringify({ scripts: { dev: "vite" } }));
     writeFile(cwd, "dist/package.json", JSON.stringify({ scripts: { dev: "vite" } }));
     writeFile(cwd, "packages/app/package.json", JSON.stringify({ scripts: { dev: "vite" } }));
@@ -644,7 +644,7 @@ describe("discoverProjectScripts", () => {
   });
 
   it("prefers package manager lockfiles in discovery order", async () => {
-    const cwd = makeTempDir("omnimind-script-discovery-package-manager-");
+    const cwd = makeTempDir("harnessos-script-discovery-package-manager-");
     writeFile(cwd, "apps/bun/package.json", JSON.stringify({ scripts: { dev: "vite" } }));
     writeFile(cwd, "apps/bun/bun.lockb", "");
     writeFile(cwd, "apps/pnpm/package.json", JSON.stringify({ scripts: { dev: "vite" } }));
@@ -674,7 +674,7 @@ describe("searchWorkspaceContent", () => {
   });
 
   it("returns case-insensitive path, line, and bounded snippet matches", async () => {
-    const cwd = makeTempDir("omnimind-content-search-basic-");
+    const cwd = makeTempDir("harnessos-content-search-basic-");
     writeFile(
       cwd,
       "src/index.ts",
@@ -702,7 +702,7 @@ describe("searchWorkspaceContent", () => {
   });
 
   it("defensively ignores one-character content queries", async () => {
-    const cwd = makeTempDir("omnimind-content-search-short-");
+    const cwd = makeTempDir("harnessos-content-search-short-");
     writeFile(cwd, "a.ts", "x\n");
 
     await expect(searchWorkspaceContent({ cwd, query: "x" } as never)).resolves.toEqual({
@@ -712,7 +712,7 @@ describe("searchWorkspaceContent", () => {
   });
 
   it("skips hidden, ignored, binary, invalid UTF-8, and oversized files", async () => {
-    const cwd = makeTempDir("omnimind-content-search-filtered-");
+    const cwd = makeTempDir("harnessos-content-search-filtered-");
     writeFile(cwd, "src/visible.ts", "visible needle\n");
     writeFile(cwd, ".env", "hidden needle\n");
     writeFile(cwd, ".hidden/secret.ts", "hidden needle\n");
@@ -742,7 +742,7 @@ describe("searchWorkspaceContent", () => {
   });
 
   it("applies hidden and default ignore rules outside git workspaces", async () => {
-    const cwd = makeTempDir("omnimind-content-search-non-git-ignore-");
+    const cwd = makeTempDir("harnessos-content-search-non-git-ignore-");
     writeFile(cwd, "src/visible.ts", "visible needle\n");
     writeFile(cwd, ".hidden/secret.ts", "hidden needle\n");
     writeFile(cwd, ".harnessos-cache/secret.ts", "hidden needle\n");
@@ -757,7 +757,7 @@ describe("searchWorkspaceContent", () => {
   });
 
   it("keeps a confirmed non-git workspace searchable when the git executable is unavailable", async () => {
-    const cwd = makeTempDir("omnimind-content-search-no-git-binary-");
+    const cwd = makeTempDir("harnessos-content-search-no-git-binary-");
     writeFile(cwd, "safe.ts", "safe needle\n");
     const runProcessSpy = vi
       .spyOn(ProcessRunner, "runProcess")
@@ -770,7 +770,7 @@ describe("searchWorkspaceContent", () => {
   });
 
   it("fails closed when a recorded git workspace loses policy execution", async () => {
-    const cwd = makeTempDir("omnimind-content-search-git-policy-unavailable-");
+    const cwd = makeTempDir("harnessos-content-search-git-policy-unavailable-");
     writeFile(cwd, "secret.ts", "private needle\n");
     runGit(cwd, ["init"]);
     runGit(cwd, ["add", "secret.ts"]);
@@ -788,7 +788,7 @@ describe("searchWorkspaceContent", () => {
   });
 
   it("requires a cleared rebuild before a recorded git workspace can become non-git", async () => {
-    const cwd = makeTempDir("omnimind-content-search-git-policy-transition-");
+    const cwd = makeTempDir("harnessos-content-search-git-policy-transition-");
     writeFile(cwd, "safe.ts", "safe needle\n");
     runGit(cwd, ["init"]);
     runGit(cwd, ["add", "safe.ts"]);
@@ -812,8 +812,8 @@ describe("searchWorkspaceContent", () => {
   it.skipIf(process.platform === "win32")(
     "allows indexed in-root symlinks but rejects external, hidden, and ignored targets",
     async () => {
-      const cwd = makeTempDir("omnimind-content-search-symlink-");
-      const outside = makeTempDir("omnimind-content-search-outside-");
+      const cwd = makeTempDir("harnessos-content-search-symlink-");
+      const outside = makeTempDir("harnessos-content-search-outside-");
       writeFile(cwd, "docs/inside.txt", "inside needle\n");
       writeFile(cwd, ".harnessos/secret.txt", "hidden needle\n");
       writeFile(cwd, "private/secret.txt", "ignored needle\n");
@@ -846,7 +846,7 @@ describe("searchWorkspaceContent", () => {
   it.skipIf(process.platform === "win32")(
     "rechecks current root and nested gitignore policy for warm-index files and aliases",
     async () => {
-      const cwd = makeTempDir("omnimind-content-search-current-gitignore-");
+      const cwd = makeTempDir("harnessos-content-search-current-gitignore-");
       writeFile(cwd, "root-secret.ts", "root needle\n");
       writeFile(cwd, "nested/secret.ts", "nested needle\n");
       writeFile(cwd, "alias-target.ts", "alias target needle\n");
@@ -878,7 +878,7 @@ describe("searchWorkspaceContent", () => {
   it.skipIf(process.platform === "win32")(
     "rechecks alias-specific gitignore policy after reading matched files",
     async () => {
-      const cwd = makeTempDir("omnimind-content-search-gitignore-race-");
+      const cwd = makeTempDir("harnessos-content-search-gitignore-race-");
       writeFile(cwd, "target.ts", "policy race needle\n");
       fs.symlinkSync(path.join(cwd, "target.ts"), path.join(cwd, "alias.ts"));
       runGit(cwd, ["init"]);
@@ -916,7 +916,7 @@ describe("searchWorkspaceContent", () => {
   );
 
   it("fails closed without returning matched content when a current policy recheck fails", async () => {
-    const cwd = makeTempDir("omnimind-content-search-gitignore-error-");
+    const cwd = makeTempDir("harnessos-content-search-gitignore-error-");
     writeFile(cwd, "secret.ts", "private needle\n");
     runGit(cwd, ["init"]);
     runGit(cwd, ["add", "secret.ts"]);
@@ -966,8 +966,8 @@ describe("searchWorkspaceContent", () => {
   it.skipIf(process.platform === "win32")(
     "indexes only regular in-root file symlinks outside git workspaces",
     async () => {
-      const cwd = makeTempDir("omnimind-content-search-non-git-symlink-");
-      const outside = makeTempDir("omnimind-content-search-non-git-outside-");
+      const cwd = makeTempDir("harnessos-content-search-non-git-symlink-");
+      const outside = makeTempDir("harnessos-content-search-non-git-outside-");
       writeFile(cwd, "docs/inside.txt", "inside needle\n");
       writeFile(outside, "secret.txt", "outside needle\n");
       fs.symlinkSync(path.join(cwd, "docs/inside.txt"), path.join(cwd, "inside-link.txt"));
@@ -988,8 +988,8 @@ describe("searchWorkspaceContent", () => {
   it.skipIf(process.platform === "win32")(
     "rejects a file swapped to an external symlink between realpath and open",
     async () => {
-      const cwd = makeTempDir("omnimind-content-search-swap-");
-      const outside = makeTempDir("omnimind-content-search-swap-outside-");
+      const cwd = makeTempDir("harnessos-content-search-swap-");
+      const outside = makeTempDir("harnessos-content-search-swap-outside-");
       const targetPath = path.join(cwd, "target.txt");
       writeFile(cwd, "target.txt", "inside needle\n");
       writeFile(outside, "secret.txt", "outside needle\n");
@@ -1015,7 +1015,7 @@ describe("searchWorkspaceContent", () => {
   it.skipIf(process.platform === "win32")(
     "revalidates the canonical target after reading and rejects a hidden swap",
     async () => {
-      const cwd = makeTempDir("omnimind-content-search-hidden-swap-");
+      const cwd = makeTempDir("harnessos-content-search-hidden-swap-");
       const linkPath = path.join(cwd, "visible-link.txt");
       writeFile(cwd, "safe.txt", "safe needle\n");
       writeFile(cwd, ".harnessos/secret.txt", "hidden needle\n");
@@ -1042,7 +1042,7 @@ describe("searchWorkspaceContent", () => {
   );
 
   it("does not treat ordinary workspace directory metadata changes as a root replacement", async () => {
-    const cwd = makeTempDir("omnimind-content-search-root-mtime-");
+    const cwd = makeTempDir("harnessos-content-search-root-mtime-");
     writeFile(cwd, "target.txt", "needle\n");
     await searchWorkspaceEntries({ cwd, query: "", limit: 100 });
     const originalOpen = fsPromises.open.bind(fsPromises);
@@ -1064,7 +1064,7 @@ describe("searchWorkspaceContent", () => {
   });
 
   it("reports an incomplete result when the workspace root inode is replaced mid-read", async () => {
-    const parent = makeTempDir("omnimind-content-search-root-replaced-");
+    const parent = makeTempDir("harnessos-content-search-root-replaced-");
     const cwd = path.join(parent, "workspace");
     fs.mkdirSync(cwd);
     writeFile(cwd, "target.txt", "old needle\n");
@@ -1089,7 +1089,7 @@ describe("searchWorkspaceContent", () => {
   });
 
   it("caps hot files and reports global truncation", async () => {
-    const cwd = makeTempDir("omnimind-content-search-limits-");
+    const cwd = makeTempDir("harnessos-content-search-limits-");
     writeFile(cwd, "hot.ts", Array.from({ length: 10 }, () => "hot needle\n").join(""));
     for (let index = 0; index < 10; index += 1) {
       writeFile(cwd, `src/file${index}.ts`, `needle ${index}\n`);
@@ -1112,7 +1112,7 @@ describe("searchWorkspaceContent", () => {
   });
 
   it("bounds snippets without producing an invalid surrogate", async () => {
-    const cwd = makeTempDir("omnimind-content-search-line-boundary-");
+    const cwd = makeTempDir("harnessos-content-search-line-boundary-");
     writeFile(cwd, "long.ts", `needle ${"a".repeat(1_016)}🙂tail\n`);
 
     const result = await searchWorkspaceContent({ cwd, query: "needle" });
@@ -1122,7 +1122,7 @@ describe("searchWorkspaceContent", () => {
   });
 
   it("honors cancellation before filesystem work starts", async () => {
-    const cwd = makeTempDir("omnimind-content-search-abort-");
+    const cwd = makeTempDir("harnessos-content-search-abort-");
     writeFile(cwd, "a.ts", "needle\n");
     const controller = new AbortController();
     controller.abort();
@@ -1135,7 +1135,7 @@ describe("searchWorkspaceContent", () => {
   });
 
   it("aborts an active index build without letting its stale snapshot fill the cache", async () => {
-    const cwd = makeTempDir("omnimind-content-search-index-abort-");
+    const cwd = makeTempDir("harnessos-content-search-index-abort-");
     writeFile(cwd, "src/old.ts", "old needle\n");
     let releaseRootRead!: () => void;
     const rootReadReleased = new Promise<void>((resolve) => {
@@ -1183,7 +1183,7 @@ describe("searchWorkspaceContent", () => {
   });
 
   it("stops an active scan when its request signal is cancelled", async () => {
-    const cwd = makeTempDir("omnimind-content-search-active-abort-");
+    const cwd = makeTempDir("harnessos-content-search-active-abort-");
     for (let index = 0; index < 20; index += 1) {
       writeFile(cwd, `file-${index}.ts`, "needle\n");
     }
@@ -1213,7 +1213,7 @@ describe("searchWorkspaceContent", () => {
   });
 
   it("counts index acquisition inside the bounded search budget without caching late work", async () => {
-    const cwd = makeTempDir("omnimind-content-search-timeout-");
+    const cwd = makeTempDir("harnessos-content-search-timeout-");
     writeFile(cwd, "a.ts", "needle\n");
     const openSpy = vi.spyOn(fsPromises, "open");
     const nowSpy = vi
@@ -1236,7 +1236,7 @@ describe("searchWorkspaceContent", () => {
   });
 
   it("scans files past the first 2000 in alphabetical order", async () => {
-    const cwd = makeTempDir("omnimind-content-search-no-count-cap-");
+    const cwd = makeTempDir("harnessos-content-search-no-count-cap-");
     fs.mkdirSync(path.join(cwd, "bulk"), { recursive: true });
     for (let index = 0; index < 2_000; index += 1) {
       fs.writeFileSync(

@@ -132,7 +132,7 @@ async function makeOfficialAdapter(): Promise<BenchmarkAdapter> {
     if (!stopped) throw error;
   });
 
-  const connection = Acp.client({ name: "omnimind-acp-benchmark" }).connect(
+  const connection = Acp.client({ name: "harnessos-acp-benchmark" }).connect(
     Acp.ndJsonStream(clientToPeer.writable, peerToClient.readable),
   );
 

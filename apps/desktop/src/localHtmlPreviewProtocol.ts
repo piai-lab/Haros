@@ -8,7 +8,7 @@ import * as FS from "node:fs/promises";
 import * as Path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-export const LOCAL_HTML_PREVIEW_SCHEME = "omnimind-local-preview" as const;
+export const LOCAL_HTML_PREVIEW_SCHEME = "harnessos-local-preview" as const;
 export const LOCAL_HTML_PREVIEW_PROTOCOL = `${LOCAL_HTML_PREVIEW_SCHEME}:` as const;
 
 interface LocalHtmlPreviewGrant {

@@ -117,7 +117,7 @@ afterEach(() => {
 
 describe("external MCP gateway stdio flow", () => {
   it("pairs, filters tools, creates one safe task, waits, reads, and audits without prompt leakage", async () => {
-    const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-external-e2e-"));
+    const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-external-e2e-"));
     temporaryDirectories.push(baseDir);
     const workspaceRoot = path.join(baseDir, "project");
     const worktreesDir = path.join(baseDir, "worktrees");

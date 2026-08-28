@@ -122,7 +122,7 @@ function serverSettings(
 }
 
 describe("getVisibleEngineUpdateStatuses", () => {
-  it("excludes engines hidden from OmniMind so unchecked engines do not nag", () => {
+  it("excludes engines hidden from HarnessOS so unchecked engines do not nag", () => {
     const result = getVisibleEngineUpdateStatuses({
       engines: [providerStatus("codex"), providerStatus("pi")],
       hiddenEngines: ["pi"],
@@ -365,7 +365,7 @@ describe("shouldOfferEngineUpdateAction", () => {
 });
 
 describe("shouldPromptEngineUpdate", () => {
-  // Cursor and Antigravity self-update, so OmniMind has no registry to read a latest
+  // Cursor and Antigravity self-update, so HarnessOS has no registry to read a latest
   // version from and their advisory is pinned to "unknown" forever. Prompting on that
   // left a permanent "Update" badge on a fully up-to-date CLI.
   const selfManaged = providerStatus("cursor", {
@@ -423,7 +423,7 @@ describe("shouldPromptEngineUpdate", () => {
     expect(shouldPromptEngineUpdate(legacy)).toBe(true);
   });
 
-  it("keeps prompting for engines OmniMind can prove are behind", () => {
+  it("keeps prompting for engines HarnessOS can prove are behind", () => {
     expect(shouldPromptEngineUpdate(providerStatus("codex"))).toBe(true);
   });
 });

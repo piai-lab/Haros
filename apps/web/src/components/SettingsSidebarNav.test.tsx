@@ -210,6 +210,6 @@ describe("SettingsSidebarNav", () => {
     expect(markup).toContain("System tools");
     expect(markup).toContain("Archived tasks and chats");
     expect(markup).not.toContain(">App<");
-    expect(markup).not.toContain(">OmniMind<");
+    expect(markup).not.toContain(">HarnessOS<");
   });
 });

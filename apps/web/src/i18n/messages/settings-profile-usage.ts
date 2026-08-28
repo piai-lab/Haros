@@ -9,7 +9,7 @@ const EN_MESSAGES = {
   "providerUsage.window.weeklyOverage": "Weekly (overage)",
   "providerUsage.window.other": "Other limit · {label}",
   "providerUsage.window.remaining": "{label} remaining",
-  "settings.profileDescription": "Understand how you use OmniMind",
+  "settings.profileDescription": "Understand how you use HarnessOS",
   "settings.usagePanelDescription": "See remaining quota and credits for every signed-in engine.",
   "settings.profileLoadFailed": "Couldn’t load your local stats.",
   "settings.tryAgain": "Try again",
@@ -86,11 +86,11 @@ const EN_MESSAGES = {
   "settings.loadingUsageHistory": "Loading usage history…",
   "settings.usageHistoryNotAuthorized": "Permission required",
   "settings.usageHistoryConsentSummary":
-    "OmniMind can build private token statistics from your Codex and Claude session archives. Nothing is read until you allow it.",
+    "HarnessOS can build private token statistics from your Codex and Claude session archives. Nothing is read until you allow it.",
   "settings.enableUsageHistory": "Enable usage history",
   "settings.usageHistoryConsentTitle": "Allow local history indexing?",
   "settings.usageHistoryConsentDetail":
-    "OmniMind will read session archives under the configured Codex sessions and Claude projects directories. It stores only derived token counts, hashed identities, model names, dates, and short workspace labels—not prompts, replies, credentials, or raw events.",
+    "HarnessOS will read session archives under the configured Codex sessions and Claude projects directories. It stores only derived token counts, hashed identities, model names, dates, and short workspace labels—not prompts, replies, credentials, or raw events.",
   "settings.usageHistoryIndexing": "Building usage history",
   "settings.usageHistoryPartial": "Partial history available",
   "settings.usageHistoryPaused": "History indexing paused",
@@ -142,7 +142,7 @@ const EN_MESSAGES = {
     "The derived index will be rebuilt from the original engine archives. Engines and conversations are unaffected.",
   "settings.clearUsageHistoryTitle": "Clear the derived history index?",
   "settings.clearUsageHistoryDetail":
-    "This removes only OmniMind's derived statistics. Original Codex and Claude session files are never deleted.",
+    "This removes only HarnessOS's derived statistics. Original Codex and Claude session files are never deleted.",
   "settings.runCount": "{count} runs",
   "settings.projectPromptCount": "{project} · {count} prompts",
   "settings.activityNotification": "Activity notification",
@@ -168,7 +168,7 @@ const ZH_CN_MESSAGES = {
   "providerUsage.window.weeklyOverage": "每周（超额用量）",
   "providerUsage.window.other": "其他限额 · {label}",
   "providerUsage.window.remaining": "{label} 剩余量",
-  "settings.profileDescription": "了解你如何使用 OmniMind",
+  "settings.profileDescription": "了解你如何使用 HarnessOS",
   "settings.usagePanelDescription": "查看每个已登录引擎的剩余额度与点数。",
   "settings.profileLoadFailed": "无法加载本机统计数据。",
   "settings.tryAgain": "重试",
@@ -244,11 +244,11 @@ const ZH_CN_MESSAGES = {
   "settings.loadingUsageHistory": "正在加载历史用量…",
   "settings.usageHistoryNotAuthorized": "需要授权读取",
   "settings.usageHistoryConsentSummary":
-    "OmniMind 可以从 Codex 和 Claude 的本机会话归档建立私有 Token 统计；获得你的允许前不会读取。",
+    "HarnessOS 可以从 Codex 和 Claude 的本机会话归档建立私有 Token 统计；获得你的允许前不会读取。",
   "settings.enableUsageHistory": "启用历史用量",
   "settings.usageHistoryConsentTitle": "允许索引本机历史用量？",
   "settings.usageHistoryConsentDetail":
-    "OmniMind 将读取已配置 Codex sessions 与 Claude projects 目录中的会话归档。仅保存派生 Token 数、哈希身份、模型名、日期和简短工作区名称；不会保存提示词、回复正文、凭据或原始事件。",
+    "HarnessOS 将读取已配置 Codex sessions 与 Claude projects 目录中的会话归档。仅保存派生 Token 数、哈希身份、模型名、日期和简短工作区名称；不会保存提示词、回复正文、凭据或原始事件。",
   "settings.usageHistoryIndexing": "正在建立历史用量",
   "settings.usageHistoryPartial": "已有部分历史结果",
   "settings.usageHistoryPaused": "历史索引已暂停",
@@ -296,7 +296,7 @@ const ZH_CN_MESSAGES = {
   "settings.reindexUsageHistoryDetail": "将从引擎原始归档重新建立派生索引；不会影响引擎和会话。",
   "settings.clearUsageHistoryTitle": "清除派生历史索引？",
   "settings.clearUsageHistoryDetail":
-    "只会删除 OmniMind 的派生统计，绝不会删除 Codex 或 Claude 的原始会话文件。",
+    "只会删除 HarnessOS 的派生统计，绝不会删除 Codex 或 Claude 的原始会话文件。",
   "settings.runCount": "{count} 次运行",
   "settings.projectPromptCount": "{project} · {count} 条提示词",
   "settings.activityNotification": "活动通知",

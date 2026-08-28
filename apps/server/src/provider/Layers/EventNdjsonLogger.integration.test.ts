@@ -30,7 +30,7 @@ function parseLogLine(line: string) {
 describe("EventNdjsonLogger", () => {
   it.effect("writes effect-style lines to thread-scoped files", () =>
     Effect.gen(function* () {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-engine-log-"));
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-engine-log-"));
       const basePath = path.join(tempDir, "engine-native.ndjson");
 
       try {
@@ -83,7 +83,7 @@ describe("EventNdjsonLogger", () => {
     "falls back to a global segment when orchestration thread id is missing or invalid",
     () =>
       Effect.gen(function* () {
-        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-engine-log-"));
+        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-engine-log-"));
         const basePath = path.join(tempDir, "engine-canonical.ndjson");
 
         try {
@@ -119,7 +119,7 @@ describe("EventNdjsonLogger", () => {
 
   it.effect("rotates per-thread files when max size is exceeded", () =>
     Effect.gen(function* () {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-engine-log-"));
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-engine-log-"));
       const basePath = path.join(tempDir, "engine-native.ndjson");
 
       try {

@@ -120,7 +120,7 @@ async function capabilityCacheKey(): Promise<string> {
  * `cachedHelperPath()` resolves and the probe runs.
  */
 async function makeBackend(capabilities: Record<string, unknown>) {
-  const cacheRoot = await mkdtemp(path.join(tmpdir(), "omnimind-capability-"));
+  const cacheRoot = await mkdtemp(path.join(tmpdir(), "harnessos-capability-"));
   cacheRoots.add(cacheRoot);
   // The directory name must match the key the backend derives, or the cache
   // lookup misses and no probe runs. That key is the stubbed `xcodebuild

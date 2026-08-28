@@ -29,12 +29,12 @@ const READY_CODEX_STATUS = {
 
 function makeServerConfig(engines: readonly ServerProviderStatus[]): ServerConfig {
   return {
-    cwd: "G:\\omnimind",
+    cwd: "G:\\harnessos",
     homeDir: "C:\\Users\\tester",
-    chatWorkspaceRoot: "C:\\Users\\tester\\Documents\\OmniMind",
-    studioWorkspaceRoot: "C:\\Users\\tester\\Documents\\OmniMind\\Studio",
-    worktreesDir: "C:\\OmniMindDev\\worktrees",
-    keybindingsConfigPath: "C:\\OmniMindDev\\keybindings.json",
+    chatWorkspaceRoot: "C:\\Users\\tester\\Documents\\HarnessOS",
+    studioWorkspaceRoot: "C:\\Users\\tester\\Documents\\HarnessOS\\Studio",
+    worktreesDir: "C:\\HarnessOSDev\\worktrees",
+    keybindingsConfigPath: "C:\\HarnessOSDev\\keybindings.json",
     keybindings: [],
     issues: [],
     engines,
@@ -180,7 +180,7 @@ describe("serverLocalServersQueryOptions", () => {
     expect(options.refetchOnWindowFocus).toBe(true);
   });
 
-  it("uses visible polling while a OmniMind-owned project run is active", () => {
+  it("uses visible polling while a HarnessOS-owned project run is active", () => {
     const options = sidebarLocalServersQueryOptions({
       hasActiveProjectRun: true,
       hasProjects: true,

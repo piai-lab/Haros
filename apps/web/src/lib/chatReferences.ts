@@ -28,7 +28,7 @@ export interface ChatFileReference {
 
 // DataTransfer type used when dragging a file row toward the composer. The
 // payload is the already-formatted reference text (mention token).
-export const CHAT_FILE_REFERENCE_DRAG_TYPE = "application/x-omnimind-file-reference";
+export const CHAT_FILE_REFERENCE_DRAG_TYPE = "application/x-harnessos-file-reference";
 
 export function formatLineRangeLabel(startLine: number, endLine: number): string {
   return endLine !== startLine ? `lines ${startLine}-${endLine}` : `line ${startLine}`;

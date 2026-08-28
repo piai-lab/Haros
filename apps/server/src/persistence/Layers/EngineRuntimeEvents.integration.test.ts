@@ -242,13 +242,13 @@ layer("EngineRuntimeEventRepository", (it) => {
       assert.deepStrictEqual(persisted.event.payload, oversized.payload);
       const compactedRaw = rows[0]?.event.raw?.payload as
         | {
-            readonly omnimindTruncated?: unknown;
+            readonly harnessosTruncated?: unknown;
             readonly reason?: unknown;
             readonly originalBytes?: unknown;
           }
         | undefined;
       assert.deepInclude(compactedRaw, {
-        omnimindTruncated: true,
+        harnessosTruncated: true,
         reason: "engine runtime event exceeded the durable journal size limit",
       });
       assert.isNumber(compactedRaw?.originalBytes);
@@ -291,7 +291,7 @@ layer("EngineRuntimeEventRepository", (it) => {
       const data = persisted.event.payload.data as { readonly result?: string } | undefined;
       assert.isBelow(data?.result?.length ?? 0, oversizedResult.length);
       assert.deepInclude(persisted.event.raw?.payload as Record<string, unknown>, {
-        omnimindTruncated: true,
+        harnessosTruncated: true,
       });
 
       const rows = yield* repository.readAfter({

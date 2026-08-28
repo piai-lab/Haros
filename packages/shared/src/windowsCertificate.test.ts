@@ -8,9 +8,9 @@ import { matchesDistinguishedName, parseDistinguishedName } from "./windowsCerti
 
 describe("windowsCertificate", () => {
   it("parses quoted and escaped distinguished-name values", () => {
-    const parsed = parseDistinguishedName('CN=OmniMind, O="Acme, Inc.", OU=Tools\\2C Desktop');
+    const parsed = parseDistinguishedName('CN=HarnessOS, O="Acme, Inc.", OU=Tools\\2C Desktop');
 
-    expect(parsed.get("CN")).toBe("OmniMind");
+    expect(parsed.get("CN")).toBe("HarnessOS");
     expect(parsed.get("O")).toBe("Acme, Inc.");
     expect(parsed.get("OU")).toBe("Tools, Desktop");
   });
@@ -18,16 +18,16 @@ describe("windowsCertificate", () => {
   it("matches expected fields independent of order and extra certificate fields", () => {
     expect(
       matchesDistinguishedName(
-        "CN=OmniMind, O=Acme Tools",
-        "C=US, O=Acme Tools, CN=OmniMind, SERIALNUMBER=1234",
+        "CN=HarnessOS, O=Acme Tools",
+        "C=US, O=Acme Tools, CN=HarnessOS, SERIALNUMBER=1234",
       ),
     ).toBe(true);
   });
 
   it("rejects incomplete pins and mismatched signer fields", () => {
-    expect(matchesDistinguishedName("CN=OmniMind", "CN=OmniMind, O=Acme Tools")).toBe(false);
+    expect(matchesDistinguishedName("CN=HarnessOS", "CN=HarnessOS, O=Acme Tools")).toBe(false);
     expect(
-      matchesDistinguishedName("CN=OmniMind, O=Acme Tools", "CN=OmniMind, O=Other Tools"),
+      matchesDistinguishedName("CN=HarnessOS, O=Acme Tools", "CN=HarnessOS, O=Other Tools"),
     ).toBe(false);
   });
 });

@@ -226,12 +226,12 @@ describe("resolveAssociatedWorktreeMetadataAfterWorkspacePatch", () => {
       resolveAssociatedWorktreeMetadataAfterWorkspacePatch({
         branch: "main",
         worktreePath: null,
-        existingAssociatedWorktreePath: "/repo/.worktrees/omnimind-pi",
+        existingAssociatedWorktreePath: "/repo/.worktrees/harnessos-pi",
         existingAssociatedWorktreeBranch: "harnessos/pi",
         existingAssociatedWorktreeRef: "harnessos/pi",
       }),
     ).toEqual({
-      associatedWorktreePath: "/repo/.worktrees/omnimind-pi",
+      associatedWorktreePath: "/repo/.worktrees/harnessos-pi",
       associatedWorktreeBranch: "harnessos/pi",
       associatedWorktreeRef: "harnessos/pi",
     });
@@ -258,13 +258,13 @@ describe("resolveAssociatedWorktreeMetadataAfterWorkspacePatch", () => {
       resolveAssociatedWorktreeMetadataAfterWorkspacePatch({
         branch: "main",
         worktreePath: null,
-        existingAssociatedWorktreePath: "/repo/.worktrees/omnimind-pi",
+        existingAssociatedWorktreePath: "/repo/.worktrees/harnessos-pi",
         existingAssociatedWorktreeBranch: "harnessos/pi",
         existingAssociatedWorktreeRef: "harnessos/pi",
         patchAssociatedWorktreeBranch: "feature/new-pair",
       }),
     ).toEqual({
-      associatedWorktreePath: "/repo/.worktrees/omnimind-pi",
+      associatedWorktreePath: "/repo/.worktrees/harnessos-pi",
       associatedWorktreeBranch: "feature/new-pair",
       associatedWorktreeRef: "feature/new-pair",
     });

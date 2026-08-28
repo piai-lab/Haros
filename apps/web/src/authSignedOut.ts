@@ -14,13 +14,13 @@ export function createSignedOutMarkup(locale: StartupSurfaceLocale = "en"): stri
     locale === "zh-CN"
       ? {
           eyebrow: "会话已关闭",
-          title: "此浏览器已不再控制 OmniMind",
+          title: "此浏览器已不再控制 HarnessOS",
           message:
             "会话和实时连接已撤销。如需重新连接，请从仍然有效的所有者会话生成新的配对链接，并在此浏览器中打开。",
         }
       : {
           eyebrow: "Session closed",
-          title: "This browser no longer controls OmniMind.",
+          title: "This browser no longer controls HarnessOS.",
           message:
             "The session and its live connections were revoked. To reconnect, generate a fresh pairing link from an active owner session and open it in this browser.",
         };
@@ -42,7 +42,7 @@ function renderSignedOutScreen(): void {
 
   const locale = resolveStartupSurfaceLocale(navigator.languages ?? [navigator.language]);
   document.documentElement.lang = locale;
-  document.title = locale === "zh-CN" ? "已退出登录 · OmniMind" : "Signed out · OmniMind";
+  document.title = locale === "zh-CN" ? "已退出登录 · HarnessOS" : "Signed out · HarnessOS";
   root.innerHTML = createSignedOutMarkup(locale);
   root.querySelector<HTMLElement>("h1")?.focus();
 }

@@ -27,7 +27,7 @@ function repositoryLayer(dbPath: string) {
 }
 
 it("reopens a deferred one-shot owner and settles it without borrowing process state", async () => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-once-owner-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "harnessos-once-owner-"));
   tempDirectories.push(directory);
   const dbPath = path.join(directory, "state.sqlite");
   const automationId = AutomationId.makeUnsafe("automation-reopen-once-owner");

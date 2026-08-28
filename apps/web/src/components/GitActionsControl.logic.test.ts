@@ -2144,22 +2144,22 @@ describe("resolveAutoFeatureBranchName", () => {
 });
 
 describe("resolveDefaultCreateBranchName", () => {
-  it("uses OmniMind as the default namespace", () => {
+  it("uses HarnessOS as the default namespace", () => {
     const branch = resolveDefaultCreateBranchName(["main"], "fix toast copy");
     assert.equal(branch, "harnessos/fix-toast-copy");
   });
 
-  it("normalizes an existing legacy omnimind namespace", () => {
+  it("normalizes an existing legacy harnessos namespace", () => {
     const branch = resolveDefaultCreateBranchName(["main"], "harnessos/refine-toolbar-actions");
     assert.equal(branch, "harnessos/refine-toolbar-actions");
   });
 
-  it("preserves nested namespaces under OmniMind", () => {
+  it("preserves nested namespaces under HarnessOS", () => {
     const branch = resolveDefaultCreateBranchName(["main"], "feature/refine-toolbar-actions");
     assert.equal(branch, "harnessos/feature/refine-toolbar-actions");
   });
 
-  it("increments suffix when the OmniMind branch already exists", () => {
+  it("increments suffix when the HarnessOS branch already exists", () => {
     const branch = resolveDefaultCreateBranchName(
       ["main", "harnessos/fix-toast-copy", "harnessos/fix-toast-copy-2"],
       "fix toast copy",

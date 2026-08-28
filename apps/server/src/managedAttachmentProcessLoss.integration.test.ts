@@ -50,7 +50,7 @@ function relativePath(attachmentId: string) {
 
 describe("managed attachment process-loss recovery", () => {
   it("converges reserve/write/rename/finalize windows while preserving a claimed blob", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-attachment-recovery-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "harnessos-attachment-recovery-"));
     temporaryRoots.push(root);
     const attachmentsDir = path.join(root, "attachments");
     const old = "2020-01-01T00:00:00.000Z";

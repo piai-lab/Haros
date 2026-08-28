@@ -221,7 +221,7 @@ const snapshotHarness = (root: FakeElement): PageHarness => ({
 });
 
 const automationState = (harness: PageHarness): StoredRefState =>
-  harness.globalObject.__omnimindBrowserAutomationV1 as StoredRefState;
+  harness.globalObject.__harnessosBrowserAutomationV1 as StoredRefState;
 
 describe("semantic snapshot context", () => {
   it("redacts password input values regardless of attribute casing", () => {

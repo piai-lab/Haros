@@ -3,7 +3,7 @@ import type {
   GitStackedAction,
   GitStatusResult,
 } from "@harnessos/contracts";
-import { isTemporaryWorktreeBranch, resolveUniqueOmniMindBranchName } from "@harnessos/shared/git";
+import { isTemporaryWorktreeBranch, resolveUniqueHarnessOSBranchName } from "@harnessos/shared/git";
 
 export type GitActionIconName = "commit" | "push" | "pr";
 
@@ -69,7 +69,7 @@ export function resolveDefaultCreateBranchName(
   existingBranchNames: readonly string[],
   preferredBranch?: string,
 ): string {
-  return resolveUniqueOmniMindBranchName(existingBranchNames, preferredBranch);
+  return resolveUniqueHarnessOSBranchName(existingBranchNames, preferredBranch);
 }
 
 export function buildGitActionProgressStages(input: {

@@ -877,7 +877,7 @@ describe("getComposerProviderState", () => {
     });
   });
 
-  it("keeps OmniMind Agent runtime thinking selections on the thinkingLevel field", () => {
+  it("keeps HarnessOS Agent runtime thinking selections on the thinkingLevel field", () => {
     const selection = getComposerTraitSelection(
       "oa",
       "deepseek/deepseek-v4-pro",

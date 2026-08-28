@@ -272,7 +272,7 @@ export function makeAgentGatewayAutomationTools(
     requiredCapability: "automation:write",
     definition: {
       name: "harnessos_create_automation",
-      description: `Create a heartbeat, standalone, or dedicated OmniMind automation with an explicit execution mode and schedule. ${AUTOMATION_AUTHORING_GUIDANCE} Prefer suggested:true unless the user explicitly requested creation.`,
+      description: `Create a heartbeat, standalone, or dedicated HarnessOS automation with an explicit execution mode and schedule. ${AUTOMATION_AUTHORING_GUIDANCE} Prefer suggested:true unless the user explicitly requested creation.`,
       inputSchema: {
         type: "object",
         properties: {
@@ -326,7 +326,7 @@ export function makeAgentGatewayAutomationTools(
         required: ["name", "prompt", "mode", "schedule"],
         additionalProperties: false,
       },
-      annotations: { title: "Create a OmniMind automation", ...WRITE_TOOL_ANNOTATIONS },
+      annotations: { title: "Create a HarnessOS automation", ...WRITE_TOOL_ANNOTATIONS },
     },
     handler: (args, context) =>
       Effect.gen(function* () {
@@ -491,7 +491,7 @@ export function makeAgentGatewayAutomationTools(
     definition: {
       name: "harnessos_list_automations",
       description:
-        "List OmniMind automations (id, name, mode, schedule, target thread, enabled, next run).",
+        "List HarnessOS automations (id, name, mode, schedule, target thread, enabled, next run).",
       inputSchema: {
         type: "object",
         properties: {
@@ -499,7 +499,7 @@ export function makeAgentGatewayAutomationTools(
         },
         additionalProperties: false,
       },
-      annotations: { title: "List OmniMind automations", ...READ_ONLY_TOOL_ANNOTATIONS },
+      annotations: { title: "List HarnessOS automations", ...READ_ONLY_TOOL_ANNOTATIONS },
     },
     handler: (args) =>
       Effect.gen(function* () {
@@ -540,7 +540,7 @@ export function makeAgentGatewayAutomationTools(
         required: ["automationId"],
         additionalProperties: false,
       },
-      annotations: { title: "View a OmniMind automation", ...READ_ONLY_TOOL_ANNOTATIONS },
+      annotations: { title: "View a HarnessOS automation", ...READ_ONLY_TOOL_ANNOTATIONS },
     },
     handler: (args, context) =>
       Effect.gen(function* () {
@@ -613,7 +613,7 @@ export function makeAgentGatewayAutomationTools(
         ],
         additionalProperties: false,
       },
-      annotations: { title: "Replace a OmniMind automation", ...WRITE_TOOL_ANNOTATIONS },
+      annotations: { title: "Replace a HarnessOS automation", ...WRITE_TOOL_ANNOTATIONS },
     },
     handler: (args, context) =>
       Effect.gen(function* () {
@@ -680,7 +680,7 @@ export function makeAgentGatewayAutomationTools(
     definition: {
       name: "harnessos_cancel_automation",
       description:
-        'Stop a OmniMind automation using the definition revision returned by harnessos_view_automation. mode "disable" (default) pauses it and keeps history; "delete" archives it. An automation-dispatched run may always stop its own automation, whatever its mode. Prefer a completionPolicy stop clause for conditions known when the automation is created.',
+        'Stop a HarnessOS automation using the definition revision returned by harnessos_view_automation. mode "disable" (default) pauses it and keeps history; "delete" archives it. An automation-dispatched run may always stop its own automation, whatever its mode. Prefer a completionPolicy stop clause for conditions known when the automation is created.',
       inputSchema: {
         type: "object",
         properties: {
@@ -691,7 +691,7 @@ export function makeAgentGatewayAutomationTools(
         required: ["automationId", "expectedDefinitionRevision"],
         additionalProperties: false,
       },
-      annotations: { title: "Stop a OmniMind automation", ...WRITE_TOOL_ANNOTATIONS },
+      annotations: { title: "Stop a HarnessOS automation", ...WRITE_TOOL_ANNOTATIONS },
     },
     handler: (args, context) =>
       Effect.gen(function* () {

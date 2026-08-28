@@ -1,7 +1,7 @@
 import {
   ENGINE_KINDS,
   type EngineSelection,
-  type OmniMindModelServicesListResult,
+  type OAModelServicesListResult,
   type EngineKind,
 } from "@harnessos/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -21,7 +21,7 @@ import {
 import {
   omniMindModelServicesListQueryOptions,
   omniMindModelServicesQueryKeys,
-} from "~/lib/omnimindModelServicesReactQuery";
+} from "~/lib/oaModelServicesReactQuery";
 import {
   hasReceivedProviderStatusSnapshot,
   serverConfigQueryOptions,
@@ -33,7 +33,7 @@ import { WS_HARNESSOS_MODEL_SERVICES_CAPABILITY } from "@harnessos/contracts";
 import {
   areUsableProviderCatalogsSettled,
   hasUsableExactModelBinding,
-  hasUsableOmniMindModelServiceBinding,
+  hasUsableOAModelServiceBinding,
   isSettledPassiveModelServicesQueryState,
 } from "../chat/modelReadinessPrompt.logic";
 import {
@@ -103,7 +103,7 @@ export function useFirstRunReadinessController(
   const catalog = useEngineModelCatalog({
     selectedProvider,
     discoveryEnabled: false,
-    // First-run classification is passive. OmniMind's engine catalog loads
+    // First-run classification is passive. HarnessOS's engine catalog loads
     // Pi Extensions, so readiness must rely on the credential-blind Model
     // services projection until the user explicitly opens model discovery.
     selectedProviderDiscoveryEnabled: selectedProvider !== "oa",
@@ -176,7 +176,7 @@ export function useFirstRunReadinessController(
     providerStatuses,
     exactEngineSelections: exactSelections,
   });
-  const passiveQueryState = queryClient.getQueryState<OmniMindModelServicesListResult>(
+  const passiveQueryState = queryClient.getQueryState<OAModelServicesListResult>(
     omniMindModelServicesQueryKeys.list(),
   );
   const cachedPassiveServices =
@@ -203,12 +203,12 @@ export function useFirstRunReadinessController(
             ? "configured"
             : "error"
         : "unknown";
-  const explicitOmniMindSelection = rememberedSelections.oa;
-  const hasUsableOmniMindBinding =
+  const explicitHarnessOSSelection = rememberedSelections.oa;
+  const hasUsableHarnessOSBinding =
     cachedPassiveServices?.state === "ready" &&
-    explicitOmniMindSelection !== undefined &&
-    hasUsableOmniMindModelServiceBinding({
-      selection: explicitOmniMindSelection,
+    explicitHarnessOSSelection !== undefined &&
+    hasUsableOAModelServiceBinding({
+      selection: explicitHarnessOSSelection,
       selectionIsExplicit: true,
       catalogState: catalog.catalogStateByEngine.oa,
       modelOptions: catalog.selectableModelOptionsByEngine.oa,
@@ -218,7 +218,7 @@ export function useFirstRunReadinessController(
     engines: ENGINE_KINDS.filter((engine) => engine !== "oa"),
     explicitExactEngineSelections: rememberedSelections,
   });
-  const hasRememberedOmniMindBinding = hasRememberedExactModelBinding({
+  const hasRememberedHarnessOSBinding = hasRememberedExactModelBinding({
     engines: ["oa"],
     explicitExactEngineSelections: rememberedSelections,
   });
@@ -238,9 +238,9 @@ export function useFirstRunReadinessController(
       providerStatuses.length === 0);
   const readiness = deriveFirstRunReadinessState({
     factsSettled,
-    hasUsableExactBinding: hasUsableIndependentBinding || hasUsableOmniMindBinding,
+    hasUsableExactBinding: hasUsableIndependentBinding || hasUsableHarnessOSBinding,
     hasRememberedIndependentEngineBinding,
-    hasRememberedOmniMindBinding,
+    hasRememberedHarnessOSBinding,
     modelServicesCapability,
     modelServicesTransport,
     passiveModelServicesState,

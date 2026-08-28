@@ -19,7 +19,7 @@ describe("remote access policy", () => {
     expect(
       remoteAccessPolicyError({
         ...remoteBase,
-        publicUrl: new URL("https://omnimind.example.test/"),
+        publicUrl: new URL("https://harnessos.example.test/"),
       }),
     ).toBeNull();
     expect(remoteAccessPolicyError({ ...remoteBase, allowInsecureRemote: true })).toBeNull();
@@ -31,15 +31,15 @@ describe("remote access policy", () => {
         ...remoteBase,
         host: "127.0.0.1",
         authToken: undefined,
-        publicUrl: new URL("https://omnimind.example.test/"),
+        publicUrl: new URL("https://harnessos.example.test/"),
       }),
     ).toContain("without HARNESSOS_AUTH_TOKEN");
   });
 
   it("rejects invalid public URLs in the shared embedded-server policy", () => {
     for (const publicUrl of [
-      new URL("http://omnimind.example.test/"),
-      new URL("https://omnimind.example.test/app"),
+      new URL("http://harnessos.example.test/"),
+      new URL("https://harnessos.example.test/app"),
     ]) {
       expect(
         remoteAccessPolicyError({
@@ -57,21 +57,21 @@ describe("remote access policy", () => {
         ...remoteBase,
         host: "127.0.0.1",
         devUrl: new URL("http://localhost:5173/"),
-        publicUrl: new URL("https://omnimind.example.test/"),
+        publicUrl: new URL("https://harnessos.example.test/"),
       }),
     ).toContain("cannot be combined with VITE_DEV_SERVER_URL");
   });
 
   it("accepts only credential-free HTTPS root origins", () => {
-    expect(normalizeHttpsPublicOrigin(new URL("https://omnimind.example.test/"))?.origin).toBe(
-      "https://omnimind.example.test",
+    expect(normalizeHttpsPublicOrigin(new URL("https://harnessos.example.test/"))?.origin).toBe(
+      "https://harnessos.example.test",
     );
     for (const value of [
-      "http://omnimind.example.test/",
-      "https://user:pass@omnimind.example.test/",
-      "https://omnimind.example.test/app",
-      "https://omnimind.example.test/?query=1",
-      "https://omnimind.example.test/#fragment",
+      "http://harnessos.example.test/",
+      "https://user:pass@harnessos.example.test/",
+      "https://harnessos.example.test/app",
+      "https://harnessos.example.test/?query=1",
+      "https://harnessos.example.test/#fragment",
     ]) {
       expect(normalizeHttpsPublicOrigin(new URL(value))).toBeNull();
     }

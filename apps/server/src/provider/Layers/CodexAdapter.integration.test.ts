@@ -1920,7 +1920,7 @@ lifecycleLayer("CodexAdapterLive lifecycle", (it) => {
         assert.equal(serialized.includes("private-token"), false);
         assert.ok(serialized.length < 17_000);
         assert.deepEqual(firstEvent.value.raw?.payload, {
-          omnimindSanitized: true,
+          harnessosSanitized: true,
         });
         // Engine refs still resolved from the raw event.
         assert.equal(firstEvent.value.itemId, "agent_message_9");

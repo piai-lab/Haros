@@ -195,12 +195,12 @@ function verifyReleaseWorkflowSafety(): void {
   );
   assertContains(
     workflow,
-    "VITE_PUBLIC_SITE_ORIGIN: https://omnimind.wisdomeyes.cn",
+    "VITE_PUBLIC_SITE_ORIGIN: https://harnessos.wisdomeyes.cn",
     "Production desktop builds must retain the canonical public-site origin.",
   );
   assertContains(
     workflow,
-    "VITE_FEEDBACK_ENDPOINT: https://omnimind.wisdomeyes.cn/api/v1/feedback",
+    "VITE_FEEDBACK_ENDPOINT: https://harnessos.wisdomeyes.cn/api/v1/feedback",
     "Production desktop builds must retain the independently configured feedback endpoint.",
   );
   assertContains(
@@ -395,12 +395,12 @@ function verifyDesktopStageLockAuthority(): void {
   );
   assertContains(
     buildScript,
-    "omnimindLockfileSha256: resolvedLockfileSha256",
+    "harnessosLockfileSha256: resolvedLockfileSha256",
     "Expected the staged package to carry its repository lockfile digest.",
   );
   assertContains(
     buildScript,
-    "omnimindWindowsPublisherSubject: resolvedBuildConfig.windowsPublisherSubject",
+    "harnessosWindowsPublisherSubject: resolvedBuildConfig.windowsPublisherSubject",
     "Expected signed Windows packages to carry the independently configured certificate subject DN.",
   );
   assertContains(
@@ -428,7 +428,7 @@ function verifyDesktopStageLockAuthority(): void {
   }
 }
 
-const tempRoot = mkdtempSync(join(tmpdir(), "omnimind-release-smoke-"));
+const tempRoot = mkdtempSync(join(tmpdir(), "harnessos-release-smoke-"));
 
 try {
   verifyCanonicalIdentity();

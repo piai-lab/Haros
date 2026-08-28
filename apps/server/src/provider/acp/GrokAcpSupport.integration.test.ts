@@ -247,7 +247,7 @@ describe("Grok ACP permission policy", () => {
     { kind: "reject_once", optionId: "reject-once" },
   ] as const;
 
-  it("surfaces approval-required requests to OmniMind", () => {
+  it("surfaces approval-required requests to HarnessOS", () => {
     expect(
       resolveAcpPermissionPolicy({
         runtimeMode: "approval-required",

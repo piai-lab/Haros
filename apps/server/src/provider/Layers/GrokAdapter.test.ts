@@ -32,7 +32,7 @@ import {
   resolveGrokRuntimeModelSettings,
   scopeGrokRuntimeItemIdForTurn,
   scopeGrokToolCallStateForTurn,
-  takeGrokOmniMindHarnessPolicyTextPart,
+  takeGrokHarnessOSHarnessPolicyTextPart,
 } from "./GrokAdapter.ts";
 
 describe("Grok runtime model settings", () => {
@@ -58,13 +58,13 @@ describe("Grok runtime model settings", () => {
   });
 });
 
-describe("Grok OmniMind harness policy", () => {
+describe("Grok HarnessOS harness policy", () => {
   it("delivers private scoped host context once", () => {
     const state: { harnessPolicyDelivered?: boolean } = {};
-    expect(takeGrokOmniMindHarnessPolicyTextPart(state, true)?.text).toContain(
+    expect(takeGrokHarnessOSHarnessPolicyTextPart(state, true)?.text).toContain(
       HARNESSOS_HARNESS_POLICY_MARKER,
     );
-    expect(takeGrokOmniMindHarnessPolicyTextPart(state, true)).toBeNull();
+    expect(takeGrokHarnessOSHarnessPolicyTextPart(state, true)).toBeNull();
   });
 });
 
@@ -75,7 +75,7 @@ describe("Grok native plan approval", () => {
         text: "Design the change",
         interactionMode: "plan",
       }),
-    ).toMatch(/^OmniMind requested Grok's native plan mode\./u);
+    ).toMatch(/^HarnessOS requested Grok's native plan mode\./u);
   });
 
   it("sets Grok's native prompt mode idempotently on every turn", () => {
@@ -87,28 +87,28 @@ describe("Grok native plan approval", () => {
   it("backs native Plan mode with a fail-closed pre-tool hook", () => {
     expect(
       resolveGrokPlanHookResponse("plan", {
-        hookCallbackId: "omnimind-plan-guard",
+        hookCallbackId: "harnessos-plan-guard",
         hookEventName: "pre_tool_use",
         toolName: "read_file",
       }),
     ).toEqual({});
     expect(
       resolveGrokPlanHookResponse("plan", {
-        hookCallbackId: "omnimind-plan-guard",
+        hookCallbackId: "harnessos-plan-guard",
         hookEventName: "pre_tool_use",
         toolName: "run_terminal_cmd",
       }),
     ).toMatchObject({ decision: "deny" });
     expect(
       resolveGrokPlanHookResponse("plan", {
-        hookCallbackId: "omnimind-plan-guard",
+        hookCallbackId: "harnessos-plan-guard",
         hookEventName: "pre_tool_use",
         toolName: "future_mutating_tool",
       }),
     ).toMatchObject({ decision: "deny" });
     expect(
       resolveGrokPlanHookResponse("default", {
-        hookCallbackId: "omnimind-plan-guard",
+        hookCallbackId: "harnessos-plan-guard",
         hookEventName: "pre_tool_use",
         toolName: "run_terminal_cmd",
       }),
@@ -164,11 +164,11 @@ describe("Grok native plan approval", () => {
     expect(extractGrokExitPlanMarkdown(request)).toBeUndefined();
   });
 
-  it("keeps native plan mode gated after OmniMind captures the plan", () => {
+  it("keeps native plan mode gated after HarnessOS captures the plan", () => {
     expect(makeGrokExitPlanModeCapturedResponse()).toEqual({
       outcome: "cancelled",
       feedback:
-        "OmniMind captured this plan for user review. Do not revise or implement it now. End this turn and wait for the user's next message.",
+        "HarnessOS captured this plan for user review. Do not revise or implement it now. End this turn and wait for the user's next message.",
     });
   });
 
@@ -219,7 +219,7 @@ describe("Grok native user questions", () => {
     ]);
   });
 
-  it("maps OmniMind answers to Grok's question-text keyed response", () => {
+  it("maps HarnessOS answers to Grok's question-text keyed response", () => {
     expect(extractGrokUserInputQuestions(request)[0]).toMatchObject({
       id: "grok-question-0",
       header: "Verification",

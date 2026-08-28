@@ -46,10 +46,10 @@ describe("canary tooling", () => {
   });
 
   it("checks out the managed source during clone so the cleanliness guard starts clean", () => {
-    expect(canaryCloneArgs("git@example.com:omnimind.git", "/tmp/canary-source")).toEqual([
+    expect(canaryCloneArgs("git@example.com:harnessos.git", "/tmp/canary-source")).toEqual([
       "clone",
       "--",
-      "git@example.com:omnimind.git",
+      "git@example.com:harnessos.git",
       "/tmp/canary-source",
     ]);
   });

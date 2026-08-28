@@ -39,7 +39,7 @@ function readPositiveInteger(name: string, fallback: number): number {
 }
 
 function createDatabase(): { readonly database: Database; readonly dispose: () => void } {
-  const directory = mkdtempSync(path.join(os.tmpdir(), "omnimind-runtime-journal-bench-"));
+  const directory = mkdtempSync(path.join(os.tmpdir(), "harnessos-runtime-journal-bench-"));
   const database = new Database(path.join(directory, "runtime.sqlite"), { strict: true });
   database.exec(`
     PRAGMA journal_mode = WAL;

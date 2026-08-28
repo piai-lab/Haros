@@ -4,7 +4,7 @@
 >
 > 角色：Ask User 的 package-specific product decision 与固定 evidence snapshot；不拥有当前施工、packaged 或 release 状态。
 >
-> 固定裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` exact-source lineage 是 `@harnessos/om-ask@5.0.0-omnimind.1` 的减法 fork 母体，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史是 UX/test donor。OmniMind 自己拥有 canonical contract、Composer Question 与 Timeline projection；fork只提供窄 runtime kernel。历史 source、Provider-wire、direct-submit、shutdown、Timeline和packaged证据各自只证明其实际覆盖范围。**
+> 固定裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` exact-source lineage 是 `@harnessos/oa-ask@5.0.0-oa.1` 的减法 fork 母体，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史是 UX/test donor。OmniMind 自己拥有 canonical contract、Composer Question 与 Timeline projection；fork只提供窄 runtime kernel。历史 source、Provider-wire、direct-submit、shutdown、Timeline和packaged证据各自只证明其实际覆盖范围。**
 >
 > Gate A exact runtime candidate：[`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`](https://github.com/mrclrchtr/supi/tree/ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user)
 >
@@ -558,7 +558,7 @@ created -> projected -> waiting -> answered
 | UI owner           | Workbench/Composer projection                                        |
 | distribution owner | OmniMind build、SBOM/license、packaged verification                  |
 
-`@harnessos/om-ask@5.0.0-omnimind.1` 是 monorepo private、Host-neutral runtime fork。它的根 API 和构建产物只导出 Product ToolDefinition/validation/structured result；retained controller/kernel/normalize/result 与 donor comments/`needs_discussion` 只作为 source-and-test-only ancestry 保留，不进入 public `.d.ts` 或发行 JavaScript。构建先精确清理包内 `dist`，再从 `src/api.ts` 编译唯一可达 Product graph，防止旧 artifact 重新泄漏第二 questionnaire contract。该包不自注册、不拥有 UI、Settings、Product State、timer 或 process lifecycle。OmniMind Server 的显式 composition 是唯一 registration owner；AgentGateway 不分发它，stock Pi 不注册它，第三方 Extension 不能取得 Product Ask provenance。是否进入最终 shipped App bytes仍由后续 exact-SHA package gate证明。
+`@harnessos/oa-ask@5.0.0-oa.1` 是 monorepo private、Host-neutral runtime fork。它的根 API 和构建产物只导出 Product ToolDefinition/validation/structured result；retained controller/kernel/normalize/result 与 donor comments/`needs_discussion` 只作为 source-and-test-only ancestry 保留，不进入 public `.d.ts` 或发行 JavaScript。构建先精确清理包内 `dist`，再从 `src/api.ts` 编译唯一可达 Product graph，防止旧 artifact 重新泄漏第二 questionnaire contract。该包不自注册、不拥有 UI、Settings、Product State、timer 或 process lifecycle。OmniMind Server 的显式 composition 是唯一 registration owner；AgentGateway 不分发它，stock Pi 不注册它，第三方 Extension 不能取得 Product Ask provenance。是否进入最终 shipped App bytes仍由后续 exact-SHA package gate证明。
 
 ## 13. Gate B 施工顺序
 
@@ -649,7 +649,7 @@ fork 自身 5 files / 61 tests 通过，覆盖 retained semantics、无产品 ca
 
 该历史 slice 当时尚未解决 typed settlement、Host interaction、ToolDefinition、barrier、provenance 与 restart stale；这些阻断现已由 §13.3 的 source integration 关闭。MiMo/DeepSeek Provider wire 已在 `67813a3557` 闭合；packaged Composer 与 continuation 仍未关闭。
 
-packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818c54f2fbe1` 的 clean-clone arm64 DMG SHA-256 为 `1efe4a1b708bf92482ec71caade6a086f4215e7a9895f6740b92bd37d8758fc3`，通过 241-component legal closure；安装版 `app.asar` SHA-256 为 `b41849354be5ede2eb1318ee53ffd5cd179c698217e6a6450a3f76291c63b679`，嵌入同一 commit，且 exact scan 不含 `@harnessos/om-ask` / `packages/om-ask`。fresh 隔离 profile 与同 profile reopen 都完成 Main window 和 bundled Server ready，Helper/Renderer/Server 全部指向任务 userData，关闭后零候选进程。它证明 canonical UI bytes 可打包、安装和重开；由于 Tool 仍未注册，它故意不声称 Ask 调用、回答 continuation、Cancel/Abort fencing 或 MiMo/DeepSeek 通过。
+packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818c54f2fbe1` 的 clean-clone arm64 DMG SHA-256 为 `1efe4a1b708bf92482ec71caade6a086f4215e7a9895f6740b92bd37d8758fc3`，通过 241-component legal closure；安装版 `app.asar` SHA-256 为 `b41849354be5ede2eb1318ee53ffd5cd179c698217e6a6450a3f76291c63b679`，嵌入同一 commit，且 exact scan 不含 `@harnessos/oa-ask` / `packages/oa-ask`。fresh 隔离 profile 与同 profile reopen 都完成 Main window 和 bundled Server ready，Helper/Renderer/Server 全部指向任务 userData，关闭后零候选进程。它证明 canonical UI bytes 可打包、安装和重开；由于 Tool 仍未注册，它故意不声称 Ask 调用、回答 continuation、Cancel/Abort fencing 或 MiMo/DeepSeek 通过。
 
 ### 13.3 历史 source integration 与最新 direct-submit 收口
 
@@ -665,7 +665,7 @@ packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818
 
 #### Fork 与 Tool
 
-- `@harnessos/om-ask@5.0.0-omnimind.1` 导出唯一 `ask_user` definition、Host-neutral interaction port、validation 与同构 `content`/`details` structured result。
+- `@harnessos/oa-ask@5.0.0-oa.1` 导出唯一 `ask_user` definition、Host-neutral interaction port、validation 与同构 `content`/`details` structured result。
 - Tool input 保留 stable question ID / option value；Server projection 删除 value，response 再由唯一 label→value map 严格还原。
 - schema 不含产品 maxItems；`__omnimind_custom__` 是保留 identity，模型不得 author catch-all sentinel。
 - recommendation、preview、suggestion只作 metadata；不预选、不预填、不进入答案。
@@ -697,7 +697,7 @@ packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818
 
 #### 2026-08-25 source closure snapshot（非当前状态）
 
-- fork 72/72 与旧跨层 matrix 是保留基线。latest shutdown source通过Desktop 65 files / 607 passed（1 file / 5 skipped）、Server 385 files / 4,477 passed（3 files / 16 skipped）、根typecheck 8/8及lint 0 errors（615个既有warnings）；前一UI候选的Contracts 25 files / 274 tests、Web 331 files / 4,184 tests与Panel/Timeline Browser 16/16保持历史source证据。根全仓test此前仍被未修改的`@harnessos/om-web-access` credential-command aborted用例阻断，不能写成全仓test绿色，也不能为Ask跨owner修它。
+- fork 72/72 与旧跨层 matrix 是保留基线。latest shutdown source通过Desktop 65 files / 607 passed（1 file / 5 skipped）、Server 385 files / 4,477 passed（3 files / 16 skipped）、根typecheck 8/8及lint 0 errors（615个既有warnings）；前一UI候选的Contracts 25 files / 274 tests、Web 331 files / 4,184 tests与Panel/Timeline Browser 16/16保持历史source证据。根全仓test此前仍被未修改的`@harnessos/oa-web-access` credential-command aborted用例阻断，不能写成全仓test绿色，也不能为Ask跨owner修它。
 - barrier tests覆盖 Ask位于 sibling前后、sibling hooks/execute为零、multiple barrier、answered continuation、terminal无 continuation；Host bridge覆盖 single/multi/custom/raw whitespace与非法 label/空答案。
 - source present：是。`bd0f9aa002`闭合strict canonical request/response、跨Provider truthful terminal/presenter与Stop exactly-once；`5626d4b7b3`闭合direct-submit、responding/retry、native selection、focused-pane focus与当时的persisted Timeline receipt；`6012c7452e`把Desktop POSIX close改为authenticated request-first，seal presenter并等待异步/晚注册`unavailable` handoff，恢复普通client append在quiesce时fail closed，并在Provider producers/subscribers关闭后做最终engine drain。ACP的0/1/N lease与terminal由Cursor/Grok/Droid共同调用的生产seam测试证明，不扩写成三套真实adapter journey。
 - 本条记录的是该审计时点：runtime activation沿用历史source接入；MiMo/DeepSeek Provider wire只证明旧exact SHA的schema call、程序化answer settlement、structured result与replan，不冒充Composer journey。当时单行Timeline只有source证据，后续实现与packaged状态必须从Git和当前状态owner判断，不能继续执行本段旧“剩余门”。
@@ -861,7 +861,7 @@ runtime_mother:
   direct_install: forbidden
   claim: runtime_kernel_only
   fork_shape: subtractive_not_narrow
-  fork_package: "@harnessos/om-ask@5.0.0-omnimind.1"
+  fork_package: "@harnessos/oa-ask@5.0.0-oa.1"
   activation_commit: 36e3bec7e789122c731028c1a8b791a68a6c1fea
   registered: bundled_extension_always_composed_in_omnimind_session
   model_exposed: true_only_when_presenter_and_provenance_active

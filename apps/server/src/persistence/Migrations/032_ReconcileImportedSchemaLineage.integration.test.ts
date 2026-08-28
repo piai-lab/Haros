@@ -24,19 +24,19 @@ const projectionProjectsColumnNames = (sql: SqlClient.SqlClient) =>
 
 layer("032_ReconcileImportedSchemaLineage", (it) => {
   // Simulates a legacy ~/.harnessos import where the imported `effect_sql_migrations`
-  // tracker has IDs 17-31 recorded under unrelated OmniMind names. The 17-31
+  // tracker has IDs 17-31 recorded under unrelated HarnessOS names. The 17-31
   // body never ran, so the columns those migrations would have added are
   // missing. Without #032, the server crashes on the first SELECT that
   // references env_mode.
-  it.effect("heals an imported OmniMind DB whose tracker skipped 17-31", () =>
+  it.effect("heals an imported HarnessOS DB whose tracker skipped 17-31", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
 
-      // Bring the schema to where OmniMind and OmniMind last agreed.
+      // Bring the schema to where HarnessOS and HarnessOS last agreed.
       yield* runMigrations({ toMigrationInclusive: 16 });
 
-      // Mark IDs 17-31 applied under OmniMind's old names so the migrator
-      // skips OmniMind's renumbered 17-23. Names are illustrative; only the
+      // Mark IDs 17-31 applied under HarnessOS's old names so the migrator
+      // skips HarnessOS's renumbered 17-23. Names are illustrative; only the
       // IDs matter to the migrator's "run anything past max(id)" gate.
       const importedMigrationNames: ReadonlyArray<readonly [number, string]> = [
         [17, "ProjectionThreadsArchivedAt"],
@@ -62,7 +62,7 @@ layer("032_ReconcileImportedSchemaLineage", (it) => {
         `;
       }
 
-      // Seed a thread row with the OmniMind-era column set so the data-rewrite
+      // Seed a thread row with the HarnessOS-era column set so the data-rewrite
       // branches in #032 have something to operate on.
       yield* sql`
         INSERT INTO projection_threads (
@@ -255,7 +255,7 @@ layer("032_ReconcileImportedSchemaLineage", (it) => {
     }),
   );
 
-  it.effect("is a no-op on a fresh OmniMind install", () =>
+  it.effect("is a no-op on a fresh HarnessOS install", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
 

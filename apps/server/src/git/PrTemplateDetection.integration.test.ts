@@ -24,7 +24,7 @@ const TEMPLATE_DIRECTORIES = [
 ] as const;
 
 const ServerConfigLayer = ServerConfig.layerTest(process.cwd(), {
-  prefix: "omnimind-pr-template-test-",
+  prefix: "harnessos-pr-template-test-",
 });
 const PrTemplateDetectionTestLayer = GitCoreLive.pipe(
   Layer.provide(ServerConfigLayer),
@@ -48,7 +48,7 @@ const runWithTempDirectory = <A, E, R>(
   Effect.scoped(
     Effect.gen(function* () {
       const fileSystem = yield* FileSystem.FileSystem;
-      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "omnimind-pr-template-" });
+      const cwd = yield* fileSystem.makeTempDirectoryScoped({ prefix: "harnessos-pr-template-" });
       yield* runGit(cwd, ["init", "--initial-branch=main"]);
       yield* runGit(cwd, ["config", "user.email", "test@example.com"]);
       yield* runGit(cwd, ["config", "user.name", "Test User"]);
@@ -282,7 +282,7 @@ it.effect("rejects a committed template symlink escaping the repository", () =>
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const outsideDirectory = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "omnimind-pr-template-outside-",
+        prefix: "harnessos-pr-template-outside-",
       });
       const outsideTemplate = path.join(outsideDirectory, "secret.md");
       yield* fileSystem.writeFileString(outsideTemplate, "LOCAL_SECRET_SENTINEL");
@@ -308,7 +308,7 @@ it.effect("reads the committed template when a worktree parent is replaced", () 
       const fileSystem = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
       const outsideDirectory = yield* fileSystem.makeTempDirectoryScoped({
-        prefix: "omnimind-pr-template-outside-",
+        prefix: "harnessos-pr-template-outside-",
       });
       const templatePath = yield* writeTemplate(
         cwd,

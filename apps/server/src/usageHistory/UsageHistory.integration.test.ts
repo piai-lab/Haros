@@ -38,7 +38,7 @@ async function waitForSettled(history: UsageHistoryShape) {
 
 describe("UsageHistory", () => {
   it("does not read before consent and refreshes only appended bytes", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "omnimind-usage-service-"));
+    const root = await mkdtemp(path.join(os.tmpdir(), "harnessos-usage-service-"));
     tempRoots.push(root);
     const codexHome = path.join(root, ".codex");
     const sessions = path.join(codexHome, "sessions");
@@ -70,7 +70,7 @@ describe("UsageHistory", () => {
         ServerSettingsService.layerTest({ engines: { codex: { homePath: codexHome } } }),
       ),
       Layer.provide(
-        ServerConfig.layerTest(process.cwd(), { prefix: "omnimind-usage-history-test-" }),
+        ServerConfig.layerTest(process.cwd(), { prefix: "harnessos-usage-history-test-" }),
       ),
       Layer.provide(NodeServices.layer),
     );
@@ -112,7 +112,7 @@ describe("UsageHistory", () => {
   });
 
   it("keeps an unfinished tail as scoped partial data without a read loop", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "omnimind-usage-tail-"));
+    const root = await mkdtemp(path.join(os.tmpdir(), "harnessos-usage-tail-"));
     tempRoots.push(root);
     const codexHome = path.join(root, ".codex");
     const claudeHome = path.join(root, ".claude");
@@ -129,7 +129,9 @@ describe("UsageHistory", () => {
       Layer.provideMerge(
         ServerSettingsService.layerTest({ engines: { codex: { homePath: codexHome } } }),
       ),
-      Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "omnimind-usage-tail-test-" })),
+      Layer.provide(
+        ServerConfig.layerTest(process.cwd(), { prefix: "harnessos-usage-tail-test-" }),
+      ),
       Layer.provide(NodeServices.layer),
     );
 
@@ -151,7 +153,7 @@ describe("UsageHistory", () => {
   });
 
   it("contains repeated worker crashes as a paused history-only failure", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "omnimind-usage-crash-"));
+    const root = await mkdtemp(path.join(os.tmpdir(), "harnessos-usage-crash-"));
     tempRoots.push(root);
     const codexHome = path.join(root, ".codex");
     const claudeHome = path.join(root, ".claude");
@@ -168,7 +170,7 @@ describe("UsageHistory", () => {
         ServerSettingsService.layerTest({ engines: { codex: { homePath: codexHome } } }),
       ),
       Layer.provide(
-        ServerConfig.layerTest(process.cwd(), { prefix: "omnimind-usage-crash-test-" }),
+        ServerConfig.layerTest(process.cwd(), { prefix: "harnessos-usage-crash-test-" }),
       ),
       Layer.provide(NodeServices.layer),
     );
@@ -187,7 +189,7 @@ describe("UsageHistory", () => {
   });
 
   it("keeps last-good usage while a retired scalar cursor pauses and resumes", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "omnimind-usage-cursor-"));
+    const root = await mkdtemp(path.join(os.tmpdir(), "harnessos-usage-cursor-"));
     tempRoots.push(root);
     const codexHome = path.join(root, ".codex");
     const sessions = path.join(codexHome, "sessions");
@@ -217,7 +219,7 @@ describe("UsageHistory", () => {
         ServerSettingsService.layerTest({ engines: { codex: { homePath: codexHome } } }),
       ),
       Layer.provide(
-        ServerConfig.layerTest(process.cwd(), { prefix: "omnimind-usage-cursor-test-" }),
+        ServerConfig.layerTest(process.cwd(), { prefix: "harnessos-usage-cursor-test-" }),
       ),
       Layer.provide(NodeServices.layer),
     );
@@ -262,7 +264,7 @@ describe("UsageHistory", () => {
   });
 
   it("fences an in-flight worker before clearing the derived index", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "omnimind-usage-clear-race-"));
+    const root = await mkdtemp(path.join(os.tmpdir(), "harnessos-usage-clear-race-"));
     tempRoots.push(root);
     const codexHome = path.join(root, ".codex");
     const claudeHome = path.join(root, ".claude");
@@ -291,7 +293,7 @@ process.stdin.on("end", () => setTimeout(() => {
         ServerSettingsService.layerTest({ engines: { codex: { homePath: codexHome } } }),
       ),
       Layer.provide(
-        ServerConfig.layerTest(process.cwd(), { prefix: "omnimind-usage-clear-race-test-" }),
+        ServerConfig.layerTest(process.cwd(), { prefix: "harnessos-usage-clear-race-test-" }),
       ),
       Layer.provide(NodeServices.layer),
     );

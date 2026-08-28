@@ -93,7 +93,7 @@ describe("resolveNewProjectDefaultEngineSelection", () => {
     expect(resolveNewProjectDefaultEngineSelection("pi")).toBeNull();
   });
 
-  it("keeps an OmniMind project unbound until the runtime catalog supplies an exact model", () => {
+  it("keeps an HarnessOS project unbound until the runtime catalog supplies an exact model", () => {
     expect(resolveNewProjectDefaultEngineSelection("oa")).toBeNull();
   });
 
@@ -437,24 +437,24 @@ describe("resolveThreadHoverCardMetadata", () => {
     const metadata = resolveThreadHoverCardMetadata({
       thread: makeSidebarThreadSummary({
         envMode: "worktree",
-        branch: "codex/omnimind-mobile",
+        branch: "codex/harnessos-mobile",
         worktreePath: "/Users/me/.codex/worktrees/1234/Remodex",
         associatedWorktreePath: "/Users/me/.codex/worktrees/1234/Remodex",
-        associatedWorktreeBranch: "codex/omnimind-mobile",
+        associatedWorktreeBranch: "codex/harnessos-mobile",
       }),
       project: {
         kind: "project",
-        name: "omnimind-mobile",
+        name: "harnessos-mobile",
         folderName: "Remodex",
         cwd: "/Users/me/Developer/Remodex",
       },
     });
 
     expect(metadata).toEqual({
-      projectName: "omnimind-mobile",
+      projectName: "harnessos-mobile",
       projectCwd: "/Users/me/Developer/Remodex",
       sourceProjectName: "Remodex",
-      branch: "codex/omnimind-mobile",
+      branch: "codex/harnessos-mobile",
       worktreeName: "Remodex",
     });
   });
@@ -468,13 +468,13 @@ describe("resolveThreadHoverCardMetadata", () => {
         kind: "project",
         name: "oa",
         folderName: "oa",
-        cwd: "/Users/me/Developer/omnimind",
+        cwd: "/Users/me/Developer/harnessos",
       },
     });
 
     expect(metadata).toEqual({
       projectName: "oa",
-      projectCwd: "/Users/me/Developer/omnimind",
+      projectCwd: "/Users/me/Developer/harnessos",
       sourceProjectName: null,
       branch: "main",
       worktreeName: null,
@@ -516,18 +516,18 @@ describe("resolveThreadHoverCardMetadata", () => {
     ).toBeNull();
   });
 
-  it("labels project-less chat containers as OmniMind instead of the slug folder", () => {
+  it("labels project-less chat containers as HarnessOS instead of the slug folder", () => {
     const metadata = resolveThreadHoverCardMetadata({
       thread: makeSidebarThreadSummary({ branch: null }),
       project: {
         kind: "chat",
         name: "open-the-browser-search-house-music",
         folderName: "open-the-browser-search-house-music",
-        cwd: "/Users/me/Documents/OmniMind/2026-08-01/open-the-browser-search-house-music",
+        cwd: "/Users/me/Documents/HarnessOS/2026-08-01/open-the-browser-search-house-music",
       },
     });
 
-    expect(metadata.projectName).toBe("OmniMind");
+    expect(metadata.projectName).toBe("HarnessOS");
   });
 });
 
@@ -924,7 +924,7 @@ describe("add-project error helpers", () => {
 
   it("explains root-absolute add-project paths that probably missed the home directory", () => {
     expect(
-      describeAddProjectError("Failed to create project directory: /Developer/Testing/omnimind"),
+      describeAddProjectError("Failed to create project directory: /Developer/Testing/harnessos"),
     ).toBe("absolute-root-path");
   });
 

@@ -373,7 +373,7 @@ export class HelperClient {
     await this.stopStream();
     await this.attach(udid);
 
-    const directory = await mkdtemp(path.join(tmpdir(), "omnimind-device-frames-"));
+    const directory = await mkdtemp(path.join(tmpdir(), "harnessos-device-frames-"));
     const socketPath = path.join(directory, "frames.sock");
     this.frameSocketDirectory = directory;
 

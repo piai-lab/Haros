@@ -1,6 +1,6 @@
 // FILE: composerSlashCommandPresentation.ts
 // Purpose: Own the bilingual title, description, icon, and localized search projection for
-//          OmniMind's canonical built-in composer slash commands.
+//          HarnessOS's canonical built-in composer slash commands.
 // Layer: Web presentation
 
 import type { BuiltInComposerSlashCommand } from "@harnessos/shared/composerSlashCommands";

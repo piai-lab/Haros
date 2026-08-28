@@ -87,7 +87,7 @@ export function resolveAutoFeatureBranchName(
   return resolveUniqueBranchName(existingBranchNames, resolvedBase);
 }
 
-export function buildOmniMindBranchName(preferredBranch?: string | null): string {
+export function buildHarnessOSBranchName(preferredBranch?: string | null): string {
   const preferred = preferredBranch?.trim() ?? "";
   const separatorIndex = preferred.indexOf("/");
   const existingNamespace =
@@ -103,11 +103,11 @@ export function buildOmniMindBranchName(preferredBranch?: string | null): string
   )}`;
 }
 
-export function resolveUniqueOmniMindBranchName(
+export function resolveUniqueHarnessOSBranchName(
   existingBranchNames: readonly string[],
   preferredBranch?: string | null,
 ): string {
-  const resolvedBase = buildOmniMindBranchName(preferredBranch);
+  const resolvedBase = buildHarnessOSBranchName(preferredBranch);
   return resolveUniqueBranchName(existingBranchNames, resolvedBase);
 }
 

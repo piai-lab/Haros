@@ -7,8 +7,8 @@ import {
   ENGINE_KINDS,
   type ThreadId,
   WS_HARNESSOS_ECOSYSTEM_CAPABILITY,
-  type OmniMindPackageDescriptor,
-  type OmniMindPackageResourceDescriptor,
+  type HarnessOSPackageDescriptor,
+  type HarnessOSPackageResourceDescriptor,
   type EngineKind,
   type EnginePluginDescriptor,
   type EngineSkillDescriptor,
@@ -111,7 +111,7 @@ type PackageMutation =
   | { type: "install"; source: string }
   | { type: "update"; packageId: string }
   | { type: "remove"; packageId: string }
-  | { type: "toggle"; resource: OmniMindPackageResourceDescriptor; enabled: boolean }
+  | { type: "toggle"; resource: HarnessOSPackageResourceDescriptor; enabled: boolean }
   | { type: "reload"; threadId: ThreadId };
 type PackageReloadState = "reloaded" | "no_active_session" | "different_engine" | "busy";
 
@@ -131,7 +131,7 @@ const KNOWN_PLUGIN_BRANDS: Record<string, PluginBrandArtwork> = {
   stripe: { icon: SiStripe, color: "#635BFF" },
   vercel: { icon: SiVercel, color: "#111111" },
 };
-const ecosystemQueryKey = ["omnimind-ecosystem"] as const;
+const ecosystemQueryKey = ["harnessos-ecosystem"] as const;
 
 function subscribeToEcosystemCapability(listener: () => void): () => void {
   return onNativeApiServerCapabilitiesChange(listener);
@@ -401,7 +401,7 @@ function skillSourceLabel(
 ): string {
   const segments = new Set(skill.path.split(/[\\/]+/));
   if (skill.scope === "oa" || segments.has(".harnessos")) {
-    return t("library.omnimindLibrary");
+    return t("library.harnessosLibrary");
   }
   if (skill.scope === "agents") {
     return t("library.compatibleSharedAsset");
@@ -451,7 +451,7 @@ function PackageRow({
   onRemove,
   onUpdate,
 }: {
-  item: OmniMindPackageDescriptor;
+  item: HarnessOSPackageDescriptor;
   busy: boolean;
   onManage: () => void;
   onRemove: () => void;
@@ -514,9 +514,9 @@ function PackageResourceDialog({
   loading: boolean;
   open: boolean;
   packageName: string;
-  resources: readonly OmniMindPackageResourceDescriptor[];
+  resources: readonly HarnessOSPackageResourceDescriptor[];
   onOpenChange: (open: boolean) => void;
-  onToggle: (resource: OmniMindPackageResourceDescriptor, enabled: boolean) => void;
+  onToggle: (resource: HarnessOSPackageResourceDescriptor, enabled: boolean) => void;
 }) {
   const { t } = useI18n();
   return (
@@ -603,7 +603,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   const [packageSource, setPackageSource] = useState("");
   const [managedPackageId, setManagedPackageId] = useState<string | null>(null);
   const [pendingRemovalPackage, setPendingRemovalPackage] =
-    useState<OmniMindPackageDescriptor | null>(null);
+    useState<HarnessOSPackageDescriptor | null>(null);
   const [packageError, setPackageError] = useState(false);
   const [packageReloadState, setPackageReloadState] = useState<PackageReloadState | null>(null);
   const deferredPluginSearch = useDeferredValue(pluginSearch);
@@ -624,17 +624,16 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   const ecosystemQuery = useQuery({
     queryKey: ecosystemQueryKey,
     enabled: selectedTab === "packages" && ecosystemAvailable,
-    queryFn: () => ensureNativeApi().omnimindEcosystem.list(),
+    queryFn: () => ensureNativeApi().oaEcosystem.list(),
   });
   const resourcesQuery = useQuery({
     queryKey: [...ecosystemQueryKey, "resources", managedPackageId],
     enabled: managedPackageId !== null && ecosystemAvailable,
-    queryFn: () =>
-      ensureNativeApi().omnimindEcosystem.listResources({ packageId: managedPackageId! }),
+    queryFn: () => ensureNativeApi().oaEcosystem.listResources({ packageId: managedPackageId! }),
   });
   const ecosystemMutation = useMutation({
     mutationFn: async (action: PackageMutation) => {
-      const ecosystem = ensureNativeApi().omnimindEcosystem;
+      const ecosystem = ensureNativeApi().oaEcosystem;
       switch (action.type) {
         case "install":
           return ecosystem.install({ source: action.source });
@@ -666,7 +665,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ecosystemQueryKey }),
         // An install/update/remove/filter/reload can change the global Extension
-        // engines registered into passive OmniMind model discovery. Keep the
+        // engines registered into passive HarnessOS model discovery. Keep the
         // existing engine-prefix invalidation as the single refresh boundary.
         queryClient.invalidateQueries({
           queryKey: engineDiscoveryQueryKeys.modelsForProvider("oa"),
@@ -679,7 +678,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   const checkPackageUpdates = async () => {
     setPackageError(false);
     try {
-      const snapshot = await ensureNativeApi().omnimindEcosystem.list({ checkUpdates: true });
+      const snapshot = await ensureNativeApi().oaEcosystem.list({ checkUpdates: true });
       queryClient.setQueryData(ecosystemQueryKey, snapshot);
     } catch {
       setPackageError(true);

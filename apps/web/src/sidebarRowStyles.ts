@@ -36,7 +36,7 @@ export const SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME = "text-foreground/95";
 
 /**
  * Quiet section label ("Projects"/"Groups"/"Pinned" and settings
- * "App"/"OmniMind"). Section hierarchy comes from rhythm and placement; the
+ * "App"/"HarnessOS"). Section hierarchy comes from rhythm and placement; the
  * label stays regular-weight so it does not compete with the rows it names.
  */
 export const SIDEBAR_SECTION_LABEL_CLASS_NAME =

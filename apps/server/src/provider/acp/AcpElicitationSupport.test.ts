@@ -1,5 +1,5 @@
 // FILE: AcpElicitationSupport.test.ts
-// Purpose: Verifies ACP form schemas and OmniMind answers round-trip without losing primitive types.
+// Purpose: Verifies ACP form schemas and HarnessOS answers round-trip without losing primitive types.
 // Layer: Engine ACP tests
 // Depends on: AcpElicitationSupport.
 
@@ -38,7 +38,7 @@ const request = {
 };
 
 describe("ACP elicitation mapping", () => {
-  it("maps primitive form fields to OmniMind questions", () => {
+  it("maps primitive form fields to HarnessOS questions", () => {
     expect(elicitationQuestionsFromRequest(request)).toEqual([
       {
         id: "environment",

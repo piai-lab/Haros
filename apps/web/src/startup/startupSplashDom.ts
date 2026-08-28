@@ -38,7 +38,7 @@ export function createStartupSplashDom(): HTMLElement {
           <div class="startup-splash__swarm-breathe">${buildDots()}</div>
         </div>
       </div>
-      <div class="startup-splash__word">OmniMind</div>
+      <div class="startup-splash__word">HarnessOS</div>
     </div>`;
   document.body.append(splash);
   return splash;

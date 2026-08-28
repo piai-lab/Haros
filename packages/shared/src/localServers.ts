@@ -38,7 +38,7 @@ export function localServerPrimaryLabel(server: ServerLocalServerProcess): strin
 
 /**
  * Short folder label for a local dev server — the final segment of its working
- * directory (e.g. "omnimind-website" for ".../Developer/omnimind-website"), or null
+ * directory (e.g. "harnessos-website" for ".../Developer/harnessos-website"), or null
  * when the cwd is unknown. The monitor only resolves a cwd on POSIX hosts, but
  * the split tolerates either separator defensively.
  */

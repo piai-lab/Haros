@@ -3,7 +3,7 @@ import { defineMessageSlice } from "../messageCatalog";
 const EN_MESSAGES = {
   "settings.permissionStatus": "Permission status",
   "settings.permissionStatusDescription":
-    "Grant both permissions to OmniMind under System Settings → Privacy & Security, then recheck here. macOS may require relaunching the app after a change.",
+    "Grant both permissions to HarnessOS under System Settings → Privacy & Security, then recheck here. macOS may require relaunching the app after a change.",
   "settings.permissionGranted": "Granted",
   "settings.permissionDenied": "Denied",
   "settings.permissionNotRequested": "Not requested yet",
@@ -29,9 +29,9 @@ const EN_MESSAGES = {
   "settings.connectCodingAgent": "Connect an external app",
   "settings.connectionName": "Name",
   "settings.connectionNameDescription":
-    "How this connection appears in OmniMind. Works with Codex, Claude Code, and other local apps.",
-  "settings.accessAllOmniMind": "Access all projects",
-  "settings.accessAllOmniMindDescription":
+    "How this connection appears in HarnessOS. Works with Codex, Claude Code, and other local apps.",
+  "settings.accessAllHarnessOS": "Access all projects",
+  "settings.accessAllHarnessOSDescription":
     "The app can discover and work in every project, including ones you add later. Turn off to pick specific projects.",
   "settings.noProjectsAvailable": "No projects are available.",
   "settings.advancedPermissions": "Advanced permissions",
@@ -60,10 +60,10 @@ const EN_MESSAGES = {
   "settings.statusWaitingPairing": "Waiting for pairing",
   "settings.statusPairedUnused": "Paired — not used yet",
   "settings.revokedDescription":
-    "This connection has been revoked and can no longer access OmniMind.",
-  "settings.expiredDescription": "This connection has expired and can no longer access OmniMind.",
+    "This connection has been revoked and can no longer access HarnessOS.",
+  "settings.expiredDescription": "This connection has expired and can no longer access HarnessOS.",
   "settings.pairedDescription":
-    "The private credential is stored locally. If the agent has not registered OmniMind yet, give it the setup prompt below.",
+    "The private credential is stored locally. If the agent has not registered HarnessOS yet, give it the setup prompt below.",
   "settings.pairingExpiredDescription":
     "The one-time pairing code was not used in time. Resume pairing to issue a fresh code without replacing this connection.",
   "settings.waitingPairingDescription":
@@ -76,7 +76,7 @@ const EN_MESSAGES = {
   "settings.done": "Done",
   "settings.setupPromptStep": "1. Give your agent this prompt",
   "settings.setupPromptStepDescription":
-    "Copy the prompt and paste it into the agent you want to connect (Codex, Claude Code, or any MCP-capable app). The agent pairs this computer, registers OmniMind in its own configuration, and verifies the connection by itself.",
+    "Copy the prompt and paste it into the agent you want to connect (Codex, Claude Code, or any MCP-capable app). The agent pairs this computer, registers HarnessOS in its own configuration, and verifies the connection by itself.",
   "settings.pairedPromptDescription":
     "Paired. The prompt now covers only registration and verification.",
   "settings.pairingCodeExpires": "Pairing code expires {time}.",
@@ -101,7 +101,7 @@ const EN_MESSAGES = {
   "settings.revoke": "Revoke",
   "settings.noConnectedAgents": "No external connections",
   "settings.noConnectedAgentsDescription":
-    "Connect Codex, Claude Code, or another local app to create and follow OmniMind tasks.",
+    "Connect Codex, Claude Code, or another local app to create and follow HarnessOS tasks.",
   "settings.allProjects": "All projects, including future ones",
   "settings.noProjects": "No projects",
   "settings.permissionOwnTasks": "Create and follow its own tasks",
@@ -111,7 +111,7 @@ const EN_MESSAGES = {
 const ZH_CN_MESSAGES = {
   "settings.permissionStatus": "权限状态",
   "settings.permissionStatusDescription":
-    "请在“系统设置 → 隐私与安全性”中授予 OmniMind 两项权限，然后重新检查；更改后 macOS 可能要求重启应用。",
+    "请在“系统设置 → 隐私与安全性”中授予 HarnessOS 两项权限，然后重新检查；更改后 macOS 可能要求重启应用。",
   "settings.permissionGranted": "已授权",
   "settings.permissionDenied": "已拒绝",
   "settings.permissionNotRequested": "尚未请求",
@@ -135,9 +135,9 @@ const ZH_CN_MESSAGES = {
   "settings.connectCodingAgent": "连接外部应用",
   "settings.connectionName": "名称",
   "settings.connectionNameDescription":
-    "此连接在 OmniMind 中的名称；适用于 Codex、Claude Code 等本地应用。",
-  "settings.accessAllOmniMind": "访问所有项目",
-  "settings.accessAllOmniMindDescription":
+    "此连接在 HarnessOS 中的名称；适用于 Codex、Claude Code 等本地应用。",
+  "settings.accessAllHarnessOS": "访问所有项目",
+  "settings.accessAllHarnessOSDescription":
     "该应用可以发现并处理所有项目，包括以后添加的项目；关闭后可选择特定项目。",
   "settings.noProjectsAvailable": "没有可用项目。",
   "settings.advancedPermissions": "高级权限",
@@ -164,10 +164,10 @@ const ZH_CN_MESSAGES = {
   "settings.statusPairingExpired": "配对代码已过期",
   "settings.statusWaitingPairing": "等待配对",
   "settings.statusPairedUnused": "已配对——尚未使用",
-  "settings.revokedDescription": "此连接已撤销，无法再访问 OmniMind。",
-  "settings.expiredDescription": "此连接已过期，无法再访问 OmniMind。",
+  "settings.revokedDescription": "此连接已撤销，无法再访问 HarnessOS。",
+  "settings.expiredDescription": "此连接已过期，无法再访问 HarnessOS。",
   "settings.pairedDescription":
-    "私有凭据已保存在本机；若 Agent 尚未注册 OmniMind，请把下方设置提示发给它。",
+    "私有凭据已保存在本机；若 Agent 尚未注册 HarnessOS，请把下方设置提示发给它。",
   "settings.pairingExpiredDescription":
     "一次性配对代码未及时使用；继续配对可签发新代码，不会替换此连接。",
   "settings.waitingPairingDescription": "请把设置提示粘贴到 Agent；配对成功后此页面会自动更新。",
@@ -179,7 +179,7 @@ const ZH_CN_MESSAGES = {
   "settings.done": "完成",
   "settings.setupPromptStep": "1. 把这段提示发给 Agent",
   "settings.setupPromptStepDescription":
-    "复制提示并粘贴到要连接的 Agent（Codex、Claude Code 或任意支持 MCP 的应用）；Agent 会自行配对此电脑、在自己的配置中注册 OmniMind 并验证连接。",
+    "复制提示并粘贴到要连接的 Agent（Codex、Claude Code 或任意支持 MCP 的应用）；Agent 会自行配对此电脑、在自己的配置中注册 HarnessOS 并验证连接。",
   "settings.pairedPromptDescription": "已配对；当前提示只包含注册与验证步骤。",
   "settings.pairingCodeExpires": "配对代码到期时间：{time}。",
   "settings.setupPromptCopied": "设置提示已复制",
@@ -203,7 +203,7 @@ const ZH_CN_MESSAGES = {
   "settings.revoke": "撤销",
   "settings.noConnectedAgents": "没有外部连接",
   "settings.noConnectedAgentsDescription":
-    "连接 Codex、Claude Code 或其他本地应用，以创建并跟进 OmniMind 任务。",
+    "连接 Codex、Claude Code 或其他本地应用，以创建并跟进 HarnessOS 任务。",
   "settings.allProjects": "所有项目（含未来新增）",
   "settings.noProjects": "没有项目",
   "settings.permissionOwnTasks": "创建并跟进自己的任务",

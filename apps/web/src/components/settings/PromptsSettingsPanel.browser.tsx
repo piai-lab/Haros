@@ -7,7 +7,7 @@ import "../../index.css";
 import {
   HARNESSOS_AGENT_PROMPT_MAX_BYTES,
   type NativeApi,
-  type OmniMindAgentPromptSnapshot,
+  type OAAgentPromptSnapshot,
 } from "@harnessos/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
@@ -27,7 +27,7 @@ function snapshot(
     readonly customSource?: "AGENTS.override.md" | "AGENTS.md";
     readonly customUnavailableReason?: "too_large" | "unsupported_text";
   } = {},
-): OmniMindAgentPromptSnapshot {
+): OAAgentPromptSnapshot {
   const customRules = input.customRules ?? null;
   const customSource = input.customSource ?? "AGENTS.md";
   return {
@@ -73,17 +73,17 @@ function snapshot(
 }
 
 function installApi(input: {
-  readonly getSnapshot?: NativeApi["omnimindAgentPrompts"]["getSnapshot"];
-  readonly mutate?: NativeApi["omnimindAgentPrompts"]["mutate"];
-  readonly reload?: NativeApi["omnimindEcosystem"]["reload"];
+  readonly getSnapshot?: NativeApi["oaAgentPrompts"]["getSnapshot"];
+  readonly mutate?: NativeApi["oaAgentPrompts"]["mutate"];
+  readonly reload?: NativeApi["oaEcosystem"]["reload"];
   readonly showInFolder?: NativeApi["shell"]["showInFolder"];
 }) {
   window.nativeApi = {
-    omnimindAgentPrompts: {
+    oaAgentPrompts: {
       getSnapshot: input.getSnapshot ?? vi.fn().mockResolvedValue(snapshot()),
       mutate: input.mutate ?? vi.fn(),
     },
-    omnimindEcosystem: { reload: input.reload ?? vi.fn() },
+    oaEcosystem: { reload: input.reload ?? vi.fn() },
     shell: { showInFolder: input.showInFolder ?? vi.fn() },
   } as unknown as NativeApi;
 }
@@ -110,7 +110,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "OmniMind built-in default. Saved changes apply to tasks and conversations started afterward.",
+          "HarnessOS built-in default. Saved changes apply to tasks and conversations started afterward.",
         ),
       )
       .toBeVisible();
@@ -217,7 +217,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "OmniMind built-in default. Saved changes apply to tasks and conversations started afterward.",
+          "HarnessOS built-in default. Saved changes apply to tasks and conversations started afterward.",
         ),
       )
       .toBeVisible();
@@ -243,7 +243,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "OmniMind built-in default. Saved changes apply to tasks and conversations started afterward.",
+          "HarnessOS built-in default. Saved changes apply to tasks and conversations started afterward.",
         ),
       )
       .toBeVisible();
@@ -260,7 +260,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "Customized for OmniMind Agent. Saved changes apply to tasks and conversations started afterward.",
+          "Customized for HarnessOS Agent. Saved changes apply to tasks and conversations started afterward.",
         ),
       )
       .toBeVisible();
@@ -275,7 +275,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "OmniMind built-in default. Saved changes apply to tasks and conversations started afterward.",
+          "HarnessOS built-in default. Saved changes apply to tasks and conversations started afterward.",
         ),
       )
       .toBeVisible();

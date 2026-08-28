@@ -55,7 +55,7 @@ describe("unmapped engine event safety", () => {
       expect(serialized).not.toContain("private-key-material");
       expect(serialized).toContain("[REDACTED]");
       expect(serialized).toContain("Cookie policy is strict");
-      expect(serialized).toContain("__omnimindTruncated");
+      expect(serialized).toContain("__harnessosTruncated");
     }
   });
 

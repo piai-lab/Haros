@@ -11,10 +11,10 @@ import {
   type AgentGatewayMcpToolDescriptor,
 } from "../agentGateway/mcpInjection.ts";
 import type { AgentGatewayMcpConnection } from "../agentGateway/Services/AgentGatewayCredentials.ts";
-import { renderOmniMindHarnessPolicy } from "../agentGateway/harnessPolicy.ts";
+import { renderHarnessOSHarnessPolicy } from "../agentGateway/harnessPolicy.ts";
 import { buildAgentGatewayPiToolDefinitions } from "./agentGatewayPiProjection.ts";
 
-export const AGENT_GATEWAY_HOST_EXTENSION_NAME = "omnimind-agent-gateway-host";
+export const AGENT_GATEWAY_HOST_EXTENSION_NAME = "harnessos-agent-gateway-host";
 export const AGENT_GATEWAY_HOST_EXTENSION_PATH = `<inline:${AGENT_GATEWAY_HOST_EXTENSION_NAME}>`;
 
 export interface AgentGatewayHostExtensionHandle {
@@ -57,7 +57,7 @@ export class AgentGatewayHostCapabilityUnavailableError extends Error {
   readonly unavailableNames: ReadonlyArray<string>;
 
   constructor(unavailableNames: ReadonlyArray<string>) {
-    super(`Required OmniMind Host tools are unavailable: ${unavailableNames.join(", ")}`);
+    super(`Required HarnessOS Host tools are unavailable: ${unavailableNames.join(", ")}`);
     this.name = "AgentGatewayHostCapabilityUnavailableError";
     this.unavailableNames = unavailableNames;
   }
@@ -141,7 +141,7 @@ export function renderDeliveredAgentGatewayHostGuidance(input: {
   if (deliveredGroups.size === 0) return "";
   return [
     "<harnessos_host_context>",
-    renderOmniMindHarnessPolicy({
+    renderHarnessOSHarnessPolicy({
       gatewayControlAvailable: true,
       projection: { mode: "direct", enabledGroups: [...deliveredGroups] },
     }),

@@ -103,7 +103,7 @@ export function isEngineUpdateActive(engine: ServerProviderStatus): boolean {
   return engine.updateState?.status === "queued" || engine.updateState?.status === "running";
 }
 
-// A engine whose latest version OmniMind cannot look up (self-updating CLIs such as
+// A engine whose latest version HarnessOS cannot look up (self-updating CLIs such as
 // `cursor-agent`) is permanently "unknown". Treating that as an update prompt made its
 // row nag forever, so those engines get the update offered as a manual action instead.
 export function isProviderLatestVersionKnowable(engine: ServerProviderStatus): boolean {
@@ -119,7 +119,7 @@ export function shouldOfferEngineUpdateAction(engine: ServerProviderStatus): boo
   );
 }
 
-// Header affordance: reserved for engines OmniMind can actually assert are outdated.
+// Header affordance: reserved for engines HarnessOS can actually assert are outdated.
 export function shouldPromptEngineUpdate(engine: ServerProviderStatus): boolean {
   return shouldOfferEngineUpdateAction(engine) && isProviderLatestVersionKnowable(engine);
 }

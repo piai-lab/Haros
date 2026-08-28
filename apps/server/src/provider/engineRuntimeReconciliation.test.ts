@@ -562,7 +562,7 @@ describe("planProviderRuntimeReconciliation", () => {
           id: "engine-runtime-reconcile:activity",
           tone: "info",
           kind: "engine.runtime.reconciled",
-          summary: "OmniMind recovered a stale running state",
+          summary: "HarnessOS recovered a stale running state",
           payload: {
             engine: plan.engine,
             action: plan.action,

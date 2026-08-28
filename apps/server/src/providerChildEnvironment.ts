@@ -1,5 +1,5 @@
 // FILE: providerChildEnvironment.ts
-// Purpose: Builds engine child environments without OmniMind control-plane authority.
+// Purpose: Builds engine child environments without HarnessOS control-plane authority.
 // Layer: Server engine process security
 
 export type EngineChildKind =
@@ -79,7 +79,7 @@ const isTestHarnessKey = (key: string, env: NodeJS.ProcessEnv): boolean =>
 export function buildProviderChildEnvironment(input: {
   readonly engine: EngineChildKind;
   readonly baseEnv?: NodeJS.ProcessEnv;
-  readonly inheritedOmniMindKeys?: ReadonlyArray<string>;
+  readonly inheritedHarnessOSKeys?: ReadonlyArray<string>;
   readonly inheritedNativeCapabilityKeys?: ReadonlyArray<string>;
   readonly overrides?: NodeJS.ProcessEnv;
 }): NodeJS.ProcessEnv {
@@ -87,7 +87,7 @@ export function buildProviderChildEnvironment(input: {
     ...(input.baseEnv ?? process.env),
     ...input.overrides,
   };
-  const allowedOmniMindKeys = new Set(input.inheritedOmniMindKeys ?? []);
+  const allowedHarnessOSKeys = new Set(input.inheritedHarnessOSKeys ?? []);
   const allowedNativeCapabilities = new Set(input.inheritedNativeCapabilityKeys ?? []);
   const credentialGrants = ENGINE_CREDENTIAL_GRANTS[input.engine];
   const childEnv: NodeJS.ProcessEnv = {};
@@ -95,7 +95,7 @@ export function buildProviderChildEnvironment(input: {
   for (const [key, value] of Object.entries(baseEnv)) {
     if (
       key.startsWith("HARNESSOS_") &&
-      !allowedOmniMindKeys.has(key) &&
+      !allowedHarnessOSKeys.has(key) &&
       !isTestHarnessKey(key, baseEnv)
     ) {
       continue;

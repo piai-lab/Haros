@@ -13,7 +13,7 @@ import { EngineAdapterRequestError, EngineAdapterValidationError } from "../Erro
  * Fork the runtime's active session when the agent advertises `session/fork`.
  *
  * Fails with a `EngineAdapterValidationError` when the capability is missing
- * so callers fall back to OmniMind's retained-transcript fork, and bounds the
+ * so callers fall back to HarnessOS's retained-transcript fork, and bounds the
  * whole probe+fork exchange with the adapter's request timeout.
  */
 export function forkViaAcpRuntime(input: {
@@ -39,7 +39,7 @@ export function forkViaAcpRuntime(input: {
       return yield* new EngineAdapterValidationError({
         engine: input.engine,
         operation: "forkThread",
-        issue: `This ${input.engine} ACP version advertises session/fork but cannot reopen the forked session; OmniMind will rebuild the fork from its retained transcript.`,
+        issue: `This ${input.engine} ACP version advertises session/fork but cannot reopen the forked session; HarnessOS will rebuild the fork from its retained transcript.`,
       });
     }
     return yield* input.runtime.forkSession({ cwd: input.targetCwd, mcpServers: [] });

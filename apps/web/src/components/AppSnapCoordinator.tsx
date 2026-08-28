@@ -1,5 +1,5 @@
 // FILE: AppSnapCoordinator.tsx
-// Purpose: Routes native macOS AppSnaps into the correct OmniMind composer draft.
+// Purpose: Routes native macOS AppSnaps into the correct HarnessOS composer draft.
 // Layer: Root web coordinator
 // Depends on: Desktop bridge, focused chat context, and existing composer attachment intake.
 
@@ -387,7 +387,7 @@ export function AppSnapCoordinator() {
           // fresh-thread creation: the user actively went somewhere else, so
           // follow them there instead of failing the capture.
           const focused = focusedTargetRef.current;
-          if (!focused) throw new Error("OmniMind could not create a task for this AppSnap.");
+          if (!focused) throw new Error("HarnessOS could not create a task for this AppSnap.");
           target = focused;
           openChatThreadPage(target.threadId);
         }
@@ -407,7 +407,7 @@ export function AppSnapCoordinator() {
         existingAttachmentCount,
       });
       const image = images[0];
-      if (!image) throw new Error(error ?? "OmniMind could not attach the captured AppSnap.");
+      if (!image) throw new Error(error ?? "HarnessOS could not attach the captured AppSnap.");
 
       let imageAddedToDraft = false;
       let blobKey: string | null = null;
@@ -479,7 +479,7 @@ export function AppSnapCoordinator() {
           persistenceResult === "unverified" ? "AppSnap added with a warning" : "AppSnap added",
         description:
           persistenceResult === "unverified"
-            ? "The capture is attached, but OmniMind could not verify its draft metadata. If it is missing after a reload, OmniMind will attach it again."
+            ? "The capture is attached, but HarnessOS could not verify its draft metadata. If it is missing after a reload, HarnessOS will attach it again."
             : capture.sourceAppName
               ? `Captured ${capture.sourceAppName} and added it to the composer.`
               : "The frontmost window was added to the composer.",

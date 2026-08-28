@@ -302,7 +302,7 @@ describe("MessagesTimeline tool details", () => {
         textFontSizePx={13}
         density="compact"
         onImageExpand={onImageExpand}
-        markdownCwd="/private/tmp/omnimind"
+        markdownCwd="/private/tmp/harnessos"
         timestampFormat="24-hour"
       />,
     );
@@ -315,7 +315,7 @@ describe("MessagesTimeline tool details", () => {
     expect(onImageExpand).toHaveBeenCalledWith({
       images: [
         {
-          src: expect.stringContaining("path=%2Fprivate%2Ftmp%2Fomnimind%2Fimage-preview.png"),
+          src: expect.stringContaining("path=%2Fprivate%2Ftmp%2Fharnessos%2Fimage-preview.png"),
           name: "image-preview.png",
         },
       ],

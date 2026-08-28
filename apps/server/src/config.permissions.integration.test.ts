@@ -27,7 +27,7 @@ import {
 const tempDirs = new Set<string>();
 
 function makeTempDir(): string {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-private-state-"));
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-private-state-"));
   tempDirs.add(tempDir);
   return tempDir;
 }

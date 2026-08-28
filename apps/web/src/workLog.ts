@@ -25,11 +25,11 @@ import { summarizeToolRawOutput } from "@harnessos/shared/toolOutputSummary";
 import { pluralize } from "@harnessos/shared/text";
 import {
   deriveReadableToolTitle,
-  deriveOmniMindMcpToolTitle,
+  deriveHarnessOSMcpToolTitle,
   isGenericToolTitle,
   normalizeCompactToolLabel,
   normalizeToolTextForComparison,
-  type OmniMindMcpToolStatus,
+  type HarnessOSMcpToolStatus,
 } from "./lib/toolCallLabel";
 import {
   deriveToolInvocationPreview,
@@ -63,7 +63,7 @@ export interface WorkLogEntry {
   toolTitle?: string;
   toolName?: string;
   toolCallId?: string;
-  toolStatus?: OmniMindMcpToolStatus;
+  toolStatus?: HarnessOSMcpToolStatus;
   liveActivity?: WorkLogLiveActivity;
   toolDetails?: WorkLogToolDetails;
   itemType?: ToolLifecycleItemType;
@@ -71,11 +71,11 @@ export interface WorkLogEntry {
   subagents?: ReadonlyArray<WorkLogSubagent>;
   subagentAction?: WorkLogSubagentAction;
   automation?: WorkLogAutomation;
-  harnessosThreadCreation?: WorkLogOmniMindThreadCreation;
+  harnessosThreadCreation?: WorkLogHarnessOSThreadCreation;
   engineWebSurface?: {
     status: "waiting-for-user" | "unavailable" | "completed";
     provenance: "engine-native";
-    presentation: "omnimind-browser";
+    presentation: "harnessos-browser";
     surfaceId?: string;
   };
   // Source activity kind, kept so the timeline can pick a kind-specific icon
@@ -178,7 +178,7 @@ export interface WorkLogAutomation {
   proposalState?: "pending" | "accepted" | "dismissed";
 }
 
-export interface WorkLogOmniMindCreatedThread {
+export interface WorkLogHarnessOSCreatedThread {
   threadId: string;
   title: string;
   engine: EngineKind;
@@ -187,11 +187,11 @@ export interface WorkLogOmniMindCreatedThread {
   status: string;
 }
 
-export interface WorkLogOmniMindThreadCreation {
+export interface WorkLogHarnessOSThreadCreation {
   operationId: string;
   requestedCount: number;
   createdCount: number;
-  threads: ReadonlyArray<WorkLogOmniMindCreatedThread>;
+  threads: ReadonlyArray<WorkLogHarnessOSCreatedThread>;
 }
 
 export interface WorkLogSubagent {
@@ -435,9 +435,9 @@ function extractWorkLogAutomation(
   };
 }
 
-function extractWorkLogOmniMindThreadCreation(
+function extractWorkLogHarnessOSThreadCreation(
   payload: Record<string, unknown> | null,
-): WorkLogOmniMindThreadCreation | null {
+): WorkLogHarnessOSThreadCreation | null {
   if (!payload) {
     return null;
   }
@@ -446,7 +446,7 @@ function extractWorkLogOmniMindThreadCreation(
   if (!operationId || rawThreads.length === 0) {
     return null;
   }
-  const threads = rawThreads.flatMap((value): WorkLogOmniMindCreatedThread[] => {
+  const threads = rawThreads.flatMap((value): WorkLogHarnessOSCreatedThread[] => {
     const thread = asRecord(value);
     const threadId = asTrimmedString(thread?.threadId);
     const title = asTrimmedString(thread?.title);
@@ -856,15 +856,15 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
       entry.automation = automation;
     }
   }
-  if (activity.kind === "omnimind.threads.created") {
-    const harnessosThreadCreation = extractWorkLogOmniMindThreadCreation(payload);
+  if (activity.kind === "harnessos.threads.created") {
+    const harnessosThreadCreation = extractWorkLogHarnessOSThreadCreation(payload);
     if (harnessosThreadCreation) {
       entry.harnessosThreadCreation = harnessosThreadCreation;
     }
   }
   const readableTitle =
     extractCollabActionTitle(payload) ??
-    deriveOmniMindMcpToolTitle({
+    deriveHarnessOSMcpToolTitle({
       toolName,
       title: commandActionDisplay?.title ?? title,
       fallbackLabel: activity.summary,
@@ -938,14 +938,14 @@ function extractEngineWebSurface(
   if (
     (status !== "waiting-for-user" && status !== "unavailable" && status !== "completed") ||
     surface?.provenance !== "engine-native" ||
-    surface?.presentation !== "omnimind-browser"
+    surface?.presentation !== "harnessos-browser"
   ) {
     return undefined;
   }
   return {
     status,
     provenance: "engine-native",
-    presentation: "omnimind-browser",
+    presentation: "harnessos-browser",
     ...(surfaceId ? { surfaceId } : {}),
   };
 }
@@ -983,7 +983,7 @@ function deriveProviderRuntimeReconciliationCollapseKey(
 function deriveToolLifecycleStatus(
   activityKind: OrchestrationThreadActivity["kind"],
   payload: Record<string, unknown> | null,
-): OmniMindMcpToolStatus | undefined {
+): HarnessOSMcpToolStatus | undefined {
   if (!isRenderableToolLifecycleActivity(activityKind)) return undefined;
   if (isFailedToolLifecyclePayload(payload)) return "failed";
   if (isCancelledToolLifecyclePayload(payload)) return "cancelled";

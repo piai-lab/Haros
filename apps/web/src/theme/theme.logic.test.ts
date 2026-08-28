@@ -1,5 +1,5 @@
 // FILE: theme.logic.test.ts
-// Purpose: Locks down OmniMind theme parsing, preset normalization, and CSS token derivation.
+// Purpose: Locks down HarnessOS theme parsing, preset normalization, and CSS token derivation.
 // Layer: Web appearance domain tests
 // Exports: Vitest coverage for theme.logic.
 
@@ -125,7 +125,7 @@ describe("theme share strings", () => {
       resolveThemePack(DEFAULT_THEME_STATE, "dark"),
     );
 
-    expect(shareString).toMatch(/^omnimind-theme-v1:/);
+    expect(shareString).toMatch(/^harnessos-theme-v1:/);
     expect(parseThemeShareString(shareString)).toEqual({
       presetId: "codex",
       theme: resolveThemePack(DEFAULT_THEME_STATE, "dark").theme,
@@ -469,7 +469,7 @@ describe("buildThemeCssVariables", () => {
     expect(tokens.aliases["--color-token-terminal-ansi-yellow"]).toBe("#f5b44a");
   });
 
-  it("projects a custom palette to isolated OmniMind surfaces without exposing ThemeState", () => {
+  it("projects a custom palette to isolated HarnessOS surfaces without exposing ThemeState", () => {
     const pack = {
       codeThemeId: "custom-light",
       theme: {

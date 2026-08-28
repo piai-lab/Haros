@@ -154,7 +154,7 @@ const makeCodexTextGeneration = Effect.gen(function* () {
     prefix: string,
     content: string,
   ): Effect.Effect<string, TextGenerationError> => {
-    const filePath = path.join(tempDir, `omnimind-${prefix}-${process.pid}-${randomUUID()}.tmp`);
+    const filePath = path.join(tempDir, `harnessos-${prefix}-${process.pid}-${randomUUID()}.tmp`);
     return fileSystem.writeFileString(filePath, content).pipe(
       Effect.mapError(
         (cause) =>
@@ -182,7 +182,7 @@ const makeCodexTextGeneration = Effect.gen(function* () {
       const sourceCodexHome = sourceHomePath?.trim() || resolveCodexHome(process.env);
       const isolatedHomePath = path.join(
         tempDir,
-        `omnimind-codex-home-${process.pid}-${randomUUID()}`,
+        `harnessos-codex-home-${process.pid}-${randomUUID()}`,
       );
 
       yield* fileSystem.makeDirectory(isolatedHomePath, { recursive: true }).pipe(

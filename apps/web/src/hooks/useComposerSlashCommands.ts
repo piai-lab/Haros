@@ -933,7 +933,7 @@ export function useComposerSlashCommands(input: {
     const params = new URLSearchParams({ threadId: threadId });
     void downloadUrlAsBlob({
       url: resolveWsHttpUrl(`/api/thread-export?${params.toString()}`),
-      filename: `omnimind-thread-${threadId}.zip`,
+      filename: `harnessos-thread-${threadId}.zip`,
     }).catch((error: unknown) => {
       toastManager.add({
         type: "error",

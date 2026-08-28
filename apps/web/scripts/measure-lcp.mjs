@@ -40,7 +40,7 @@ const browser = await chromium.launch({ headed: options.headed });
 try {
   const page = await browser.newPage();
   await page.addInitScript(() => {
-    window.__omnimindLcpAudit = {
+    window.__harnessosLcpAudit = {
       largestContentfulPaint: [],
       longTasks: [],
     };
@@ -48,7 +48,7 @@ try {
     new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
         const element = entry.element;
-        window.__omnimindLcpAudit.largestContentfulPaint.push({
+        window.__harnessosLcpAudit.largestContentfulPaint.push({
           startTime: entry.startTime,
           renderTime: entry.renderTime,
           loadTime: entry.loadTime,
@@ -63,7 +63,7 @@ try {
 
     new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
-        window.__omnimindLcpAudit.longTasks.push({
+        window.__harnessosLcpAudit.longTasks.push({
           startTime: entry.startTime,
           duration: entry.duration,
           name: entry.name,
@@ -78,7 +78,7 @@ try {
 
   const result = await page.evaluate(() => {
     const navigation = performance.getEntriesByType("navigation")[0];
-    const audit = window.__omnimindLcpAudit;
+    const audit = window.__harnessosLcpAudit;
     const finalLcp = audit.largestContentfulPaint.at(-1) ?? null;
     const longTasks = audit.longTasks;
 

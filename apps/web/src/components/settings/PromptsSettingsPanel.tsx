@@ -1,13 +1,13 @@
 // FILE: PromptsSettingsPanel.tsx
-// Purpose: Edit OmniMind Agent's native default instruction segment and global custom rules.
+// Purpose: Edit HarnessOS Agent's native default instruction segment and global custom rules.
 // Layer: Settings UI composition
 
 import {
   editableTextByteLength,
   hasDisallowedEditableTextControl,
   hasUnpairedUtf16Surrogate,
-  type OmniMindAgentPromptMutationResult,
-  type OmniMindAgentPromptSnapshot,
+  type OAAgentPromptMutationResult,
+  type OAAgentPromptSnapshot,
 } from "@harnessos/contracts";
 import { useEffect, useState } from "react";
 
@@ -36,17 +36,17 @@ import { PROMPTS_SETTINGS_SEARCH } from "~/settingsMetadata/promptSettings";
 type EditorKind = "defaultPrompt" | "customRules";
 type EditorConflict = {
   readonly reason: "content_changed" | "source_changed" | "state_changed";
-  readonly fresh: OmniMindAgentPromptSnapshot;
+  readonly fresh: OAAgentPromptSnapshot;
 };
 
 export function PromptsSettingsPanel(props: { active: boolean }) {
   const { t } = useI18n();
-  const [snapshot, setSnapshot] = useState<OmniMindAgentPromptSnapshot | null>(null);
+  const [snapshot, setSnapshot] = useState<OAAgentPromptSnapshot | null>(null);
   const [defaultDraft, setDefaultDraft] = useState("");
   const [customRulesDraft, setCustomRulesDraft] = useState("");
   const [defaultBaseVersion, setDefaultBaseVersion] = useState("");
   const [customRulesBase, setCustomRulesBase] = useState<{
-    readonly sourceId: OmniMindAgentPromptSnapshot["customRules"]["sourceId"];
+    readonly sourceId: OAAgentPromptSnapshot["customRules"]["sourceId"];
     readonly version: string | null;
   }>({ sourceId: null, version: null });
   const [conflicts, setConflicts] = useState<Partial<Record<EditorKind, EditorConflict>>>({});
@@ -63,7 +63,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     });
   };
 
-  const adoptSnapshot = (next: OmniMindAgentPromptSnapshot, editor?: EditorKind) => {
+  const adoptSnapshot = (next: OAAgentPromptSnapshot, editor?: EditorKind) => {
     setSnapshot((current) => {
       if (editor === undefined || current === null) return next;
       return editor === "defaultPrompt"
@@ -84,7 +84,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
   };
 
   const load = async () => {
-    const next = await ensureNativeApi().omnimindAgentPrompts.getSnapshot({});
+    const next = await ensureNativeApi().oaAgentPrompts.getSnapshot({});
     adoptSnapshot(next);
   };
 
@@ -93,7 +93,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     let cancelled = false;
     setLoadError(false);
     void ensureNativeApi()
-      .omnimindAgentPrompts.getSnapshot({})
+      .oaAgentPrompts.getSnapshot({})
       .then((next) => {
         if (!cancelled) adoptSnapshot(next);
       })
@@ -120,7 +120,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     }
   };
 
-  const handleMutation = (editor: EditorKind, result: OmniMindAgentPromptMutationResult) => {
+  const handleMutation = (editor: EditorKind, result: OAAgentPromptMutationResult) => {
     if (result.state === "conflict") {
       setSnapshot((current) => {
         if (current === null) return result.snapshot;
@@ -158,7 +158,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     try {
       handleMutation(
         "defaultPrompt",
-        await ensureNativeApi().omnimindAgentPrompts.mutate({
+        await ensureNativeApi().oaAgentPrompts.mutate({
           action: "setDefault",
           expectedVersion: defaultBaseVersion,
           content: defaultDraft,
@@ -181,7 +181,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     try {
       handleMutation(
         "defaultPrompt",
-        await ensureNativeApi().omnimindAgentPrompts.mutate({
+        await ensureNativeApi().oaAgentPrompts.mutate({
           action: "restoreDefault",
           expectedVersion: defaultBaseVersion,
         }),
@@ -204,13 +204,13 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     try {
       const result =
         customRulesBase.sourceId && customRulesBase.version
-          ? await ensureNativeApi().omnimindAgentPrompts.mutate({
+          ? await ensureNativeApi().oaAgentPrompts.mutate({
               action: "updateCustomRules",
               sourceId: customRulesBase.sourceId,
               expectedVersion: customRulesBase.version,
               content: customRulesDraft,
             })
-          : await ensureNativeApi().omnimindAgentPrompts.mutate({
+          : await ensureNativeApi().oaAgentPrompts.mutate({
               action: "createCustomRules",
               content: customRulesDraft,
             });
@@ -232,7 +232,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     try {
       handleMutation(
         "customRules",
-        await ensureNativeApi().omnimindAgentPrompts.mutate({
+        await ensureNativeApi().oaAgentPrompts.mutate({
           action: "removeCustomRules",
           sourceId: customRulesBase.sourceId,
           expectedVersion: customRulesBase.version,

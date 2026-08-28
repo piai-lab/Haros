@@ -1,5 +1,5 @@
 // FILE: vite.config.ts
-// Purpose: Builds the OmniMind web client and controls diagnostic source maps.
+// Purpose: Builds the HarnessOS web client and controls diagnostic source maps.
 // Layer: Web build config
 // Depends on: Vite, Tailwind, React compiler, TanStack Router.
 
@@ -45,7 +45,7 @@ async function listFiles(root: string): Promise<string[]> {
 function webAccessProviderIconPlugin(): Plugin {
   let resolvedOutDir = "dist";
   return {
-    name: "omnimind-web-access-provider-icons",
+    name: "harnessos-web-access-provider-icons",
     apply: "build",
     configResolved(config) {
       resolvedOutDir = path.resolve(config.root, config.build.outDir);
@@ -53,7 +53,7 @@ function webAccessProviderIconPlugin(): Plugin {
     async closeBundle() {
       const sourceDir = path.resolve(
         import.meta.dirname,
-        "../../packages/om-web-access/assets/provider-icons",
+        "../../packages/oa-web-access/assets/provider-icons",
       );
       const targetDir = path.join(resolvedOutDir, WEB_ACCESS_PROVIDER_ICON_DIR);
       await fs.mkdir(targetDir, { recursive: true });
@@ -87,7 +87,7 @@ const PRECOMPRESS_MIN_BYTES = 1024;
 function precompressPlugin(): Plugin {
   let resolvedOutDir = "dist";
   return {
-    name: "omnimind-precompress",
+    name: "harnessos-precompress",
     apply: "build",
     // Run after central-icon pruning so removed files don't get sidecars.
     enforce: "post",

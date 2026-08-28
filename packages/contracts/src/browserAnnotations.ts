@@ -50,7 +50,7 @@ export interface BrowserAnnotationMarker {
 }
 
 /**
- * Resolved OmniMind colors used by the isolated annotation guest.
+ * Resolved HarnessOS colors used by the isolated annotation guest.
  *
  * The guest cannot inherit CSS custom properties from the desktop renderer,
  * so the renderer resolves the active composer theme to bounded, numeric CSS

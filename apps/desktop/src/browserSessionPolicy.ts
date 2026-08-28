@@ -19,7 +19,7 @@ import {
 } from "@harnessos/shared/browserSession";
 import { LOCAL_HTML_PREVIEW_SCHEME, LocalHtmlPreviewRegistry } from "./localHtmlPreviewProtocol";
 
-export const BROWSER_SESSION_PARTITION = "persist:omnimind-browser";
+export const BROWSER_SESSION_PARTITION = "persist:harnessos-browser";
 
 export interface BrowserSessionDownloadEvent {
   readonly event: Electron.Event;

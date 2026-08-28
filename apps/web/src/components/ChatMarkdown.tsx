@@ -1350,7 +1350,7 @@ function ChatMarkdown({
   // stays stable through streaming updates and hydration; punctuation is
   // removed so the generated ids remain straightforward fragment targets.
   const footnoteScopeId = useId().replaceAll(/[^A-Za-z0-9_-]/g, "");
-  const footnoteClobberPrefix = `omnimind-footnote-${footnoteScopeId}-`;
+  const footnoteClobberPrefix = `harnessos-footnote-${footnoteScopeId}-`;
   const footnoteLabelId = `${footnoteClobberPrefix}label`;
   const remarkRehypeOptions = useMemo(
     () => ({

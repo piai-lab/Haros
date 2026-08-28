@@ -388,7 +388,7 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
               cliSpec: config.cliSpec,
             });
             const sessionCreateInput = {
-              title: `OmniMind ${input.operation}`,
+              title: `HarnessOS ${input.operation}`,
               model: {
                 providerID: providerId,
                 id: modelId,

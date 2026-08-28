@@ -21,7 +21,7 @@ import { useI18n } from "~/i18n";
 import {
   buildSettingsSkillGroups,
   buildSettingsSkillSections,
-  isOmniMindSkillSource,
+  isHarnessOSSkillSource,
   providerDisplayName,
   settingsSkillNameKey,
 } from "./skillsSettingsModel";
@@ -99,10 +99,10 @@ export function SkillsSettingsPanel() {
       });
   };
 
-  const omnimindSkillGroups = skillGroups.filter((group) =>
-    group.sources.some((source) => isOmniMindSkillSource(source.skill)),
+  const harnessosSkillGroups = skillGroups.filter((group) =>
+    group.sources.some((source) => isHarnessOSSkillSource(source.skill)),
   );
-  const enabledOmniMindSkills = omnimindSkillGroups.filter(
+  const enabledHarnessOSSkills = harnessosSkillGroups.filter(
     (group) => !disabledSkillNames.has(group.key),
   ).length;
   const harnessosSkillsDir = catalogQuery.data?.harnessosSkillsDir;
@@ -125,8 +125,8 @@ export function SkillsSettingsPanel() {
               {catalogQuery.isLoading
                 ? t("settings.scanning")
                 : t("settings.enabledSkillsSummary", {
-                    enabled: enabledOmniMindSkills,
-                    total: omnimindSkillGroups.length,
+                    enabled: enabledHarnessOSSkills,
+                    total: harnessosSkillGroups.length,
                   })}
             </span>
           }
@@ -155,8 +155,8 @@ export function SkillsSettingsPanel() {
         return (
           <SettingsSection key={section.key} title={section.title}>
             {section.groups.map((group) => {
-              const omnimindOwned = group.sources.some((source) =>
-                isOmniMindSkillSource(source.skill),
+              const harnessosOwned = group.sources.some((source) =>
+                isHarnessOSSkillSource(source.skill),
               );
               const enabled = !disabledSkillNames.has(group.key);
               return (
@@ -191,13 +191,13 @@ export function SkillsSettingsPanel() {
                     </span>
                   }
                   control={
-                    omnimindOwned ? (
+                    harnessosOwned ? (
                       <Switch
                         checked={enabled}
                         onCheckedChange={(checked) =>
                           setSkillEnabled(group.primarySkill.name, Boolean(checked))
                         }
-                        aria-label={t("settings.enableOmniMindSkill", {
+                        aria-label={t("settings.enableHarnessOSSkill", {
                           skill: group.displayName,
                         })}
                       />

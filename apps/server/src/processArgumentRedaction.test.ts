@@ -21,9 +21,9 @@ describe("redactSensitiveProcessArgs", () => {
   it("redacts external MCP pairing codes and credentials from process diagnostics", () => {
     expect(
       redactSensitiveProcessArgs(
-        "omnimind mcp pair --code syn_pair_v1_short-lived syn_mcp_v1_client-secret",
+        "harnessos mcp pair --code syn_pair_v1_short-lived syn_mcp_v1_client-secret",
       ),
-    ).toBe("omnimind mcp pair --code [redacted] [redacted]");
+    ).toBe("harnessos mcp pair --code [redacted] [redacted]");
   });
 
   it("redacts secret environment assignments in process diagnostics", () => {

@@ -22,7 +22,7 @@ afterEach(async () => {
 });
 
 async function makeFixture(options: { readonly finalPathIsDirectory?: boolean } = {}) {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-managed-cleanup-"));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "harnessos-managed-cleanup-"));
   temporaryRoots.push(root);
   const attachmentId = "att_v2_0123456789abcdef0123456789abcdef";
   const relativePath = `objects/01/${attachmentId}.png`;

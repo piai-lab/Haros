@@ -13,16 +13,16 @@ afterEach(() => {
 });
 
 describe("external MCP launcher", () => {
-  it("uses the packaged backend entry instead of assuming a global omnimind command", () => {
+  it("uses the packaged backend entry instead of assuming a global harnessos command", () => {
     process.env.HARNESSOS_SERVER_ENTRY =
-      "/Applications/OmniMind.app/Contents/Resources/server/index.js";
+      "/Applications/HarnessOS.app/Contents/Resources/server/index.js";
     process.env.ELECTRON_RUN_AS_NODE = "1";
     const launcher = externalMcpLauncher(["mcp", "serve", "--integration", "integration-1"]);
 
     expect(launcher).toEqual({
       command: process.execPath,
       args: [
-        "/Applications/OmniMind.app/Contents/Resources/server/index.js",
+        "/Applications/HarnessOS.app/Contents/Resources/server/index.js",
         "mcp",
         "serve",
         "--integration",
@@ -31,21 +31,21 @@ describe("external MCP launcher", () => {
       env: { ELECTRON_RUN_AS_NODE: "1" },
     });
     expect(externalMcpShellCommand(launcher)).toContain("ELECTRON_RUN_AS_NODE='1'");
-    expect(externalMcpShellCommand(launcher)).not.toContain("omnimind mcp serve");
+    expect(externalMcpShellCommand(launcher)).not.toContain("harnessos mcp serve");
   });
 
   it("renders a valid PowerShell command on Windows", () => {
     expect(
       externalMcpShellCommand(
         {
-          command: "C:\\Program Files\\OmniMind\\OmniMind.exe",
-          args: ["mcp", "serve", "--home-dir", "C:\\OmniMind home"],
+          command: "C:\\Program Files\\HarnessOS\\HarnessOS.exe",
+          args: ["mcp", "serve", "--home-dir", "C:\\HarnessOS home"],
           env: { ELECTRON_RUN_AS_NODE: "1" },
         },
         "win32",
       ),
     ).toBe(
-      "$env:ELECTRON_RUN_AS_NODE = '1'; & 'C:\\Program Files\\OmniMind\\OmniMind.exe' 'mcp' 'serve' '--home-dir' 'C:\\OmniMind home'",
+      "$env:ELECTRON_RUN_AS_NODE = '1'; & 'C:\\Program Files\\HarnessOS\\HarnessOS.exe' 'mcp' 'serve' '--home-dir' 'C:\\HarnessOS home'",
     );
   });
 });

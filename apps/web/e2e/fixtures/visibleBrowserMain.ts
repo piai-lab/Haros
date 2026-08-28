@@ -50,11 +50,11 @@ function setPanelVisible(visible: boolean): void {
     return;
   }
   pushState();
-  mainWindow?.webContents.send("omnimind-e2e:open-panel");
+  mainWindow?.webContents.send("harnessos-e2e:open-panel");
 }
 function pushState(): void {
   if (shellReady && latestState && mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send("omnimind-e2e:browser-state", latestState);
+    mainWindow.webContents.send("harnessos-e2e:browser-state", latestState);
   }
 }
 
@@ -63,13 +63,13 @@ browserManager.subscribe((state) => {
   pushState();
 });
 
-ipcMain.on("omnimind-e2e:shell-ready", () => {
+ipcMain.on("harnessos-e2e:shell-ready", () => {
   shellReady = true;
   pushState();
 });
 
 ipcMain.handle(
-  "omnimind-e2e:attach-webview",
+  "harnessos-e2e:attach-webview",
   (event, input: { readonly tabId: string; readonly webContentsId: number }) =>
     browserManager.attachWebview({ threadId, ...input }, event.sender.id),
 );
@@ -96,7 +96,7 @@ const pipeServer = new BrowserHostPipeServer(browserManager, {
 });
 
 Object.assign(globalThis, {
-  __omnimindVisibleBrowserE2E: {
+  __harnessosVisibleBrowserE2E: {
     browserManager,
     annotationEvents,
     threadId,

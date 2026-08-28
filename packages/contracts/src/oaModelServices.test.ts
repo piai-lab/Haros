@@ -1,0 +1,682 @@
+import { Schema } from "effect";
+import { describe, expect, it } from "vitest";
+
+import {
+  HarnessOSCustomModelServiceDiscoverInput,
+  HarnessOSCustomModelServiceDiscoverResult,
+  HarnessOSCustomModelServiceRemoveResult,
+  HarnessOSCustomModelServiceSaveResult,
+  HarnessOSCustomModelServiceTestInput,
+  OAModelServiceAnswerLoginInput,
+  OAModelServiceAuthResult,
+  OAModelServiceBeginLoginInput,
+  OAModelServicePollLoginInput,
+  OAModelServiceRevealApiKeyInput,
+  OAModelServiceRevealApiKeyResult,
+  OAModelServiceDescriptor,
+  OAModelServicesGetResult,
+  OAModelServicesGetInput,
+  OAModelServicesListInput,
+  OAModelServicesListResult,
+} from "./oaModelServices";
+
+const descriptor = {
+  serviceId: "deepseek",
+  providerId: "deepseek",
+  displayName: "DeepSeek",
+  origin: "builtin",
+  authMethods: [
+    { type: "api_key", label: "DeepSeek API key", canLogin: true, subscription: false },
+  ],
+  authState: "configured",
+  authSource: "stored",
+  storedCredentialType: "api_key",
+  knownModelCount: 3,
+  availableModelCount: 3,
+  supportsNetworkRefresh: true,
+  catalogState: "ready",
+  catalogErrorCode: null,
+} as const;
+
+describe("HarnessOS model-services contracts", () => {
+  it("decodes an active-session removal block without exposing runtime details", () => {
+    expect(
+      Schema.decodeUnknownSync(HarnessOSCustomModelServiceRemoveResult)({
+        state: "blocked_active_operation",
+        serviceId: "custom-gateway",
+      }),
+    ).toEqual({ state: "blocked_active_operation", serviceId: "custom-gateway" });
+  });
+
+  it("decodes the credential-blind list projection", () => {
+    const decoded = Schema.decodeUnknownSync(OAModelServicesListResult)({
+      state: "ready",
+      services: [descriptor],
+      connectableServices: [],
+      errorCode: null,
+    });
+
+    expect(decoded.services[0]).toEqual(descriptor);
+  });
+
+  it("only admits the explicit add-service intent and a bounded extension outcome", () => {
+    expect(Schema.decodeUnknownSync(OAModelServicesListInput)({ intent: "add_service" })).toEqual({
+      intent: "add_service",
+    });
+    expect(
+      Schema.decodeUnknownSync(OAModelServicesGetInput)({
+        serviceId: "extension-service",
+        intent: "add_service",
+      }),
+    ).toEqual({ serviceId: "extension-service", intent: "add_service" });
+    expect(() =>
+      Schema.decodeUnknownSync(OAModelServicesListInput)({ intent: "settings_open" }),
+    ).toThrow();
+
+    const decoded = Schema.decodeUnknownSync(OAModelServicesListResult)({
+      state: "empty",
+      services: [],
+      connectableServices: [],
+      extensionProjectionState: "unavailable",
+      errorCode: null,
+    });
+    expect(decoded.state === "empty" ? decoded.extensionProjectionState : undefined).toBe(
+      "unavailable",
+    );
+  });
+
+  it("decodes bounded public model facts without accepting private runtime fields", () => {
+    const decoded = Schema.decodeUnknownSync(OAModelServicesGetResult)({
+      state: "ready",
+      service: descriptor,
+      models: [
+        {
+          modelId: "deepseek/deepseek-v4-pro",
+          displayName: "DeepSeek V4 Pro",
+          available: true,
+          reasoning: true,
+          input: ["text", "image"],
+          contextWindow: 131_072,
+          maxTokens: 16_384,
+          baseUrl: "https://secret.example.test/v1",
+          headers: { Authorization: "Bearer secret" },
+        },
+      ],
+      errorCode: null,
+    });
+
+    expect(decoded.state).toBe("ready");
+    if (decoded.state !== "ready") throw new Error("Expected ready model-service detail");
+    expect(decoded.models?.[0]).toEqual({
+      modelId: "deepseek/deepseek-v4-pro",
+      displayName: "DeepSeek V4 Pro",
+      available: true,
+      reasoning: true,
+      input: ["text", "image"],
+      contextWindow: 131_072,
+      maxTokens: 16_384,
+    });
+    expect(JSON.stringify(decoded)).not.toContain("secret.example.test");
+    expect(JSON.stringify(decoded)).not.toContain("Authorization");
+  });
+
+  it("keeps custom configuration editable without accepting credentials or headers", () => {
+    const decoded = Schema.decodeUnknownSync(OAModelServicesGetResult)({
+      state: "ready",
+      service: { ...descriptor, serviceId: "custom", providerId: "custom", origin: "models_json" },
+      models: [],
+      customConfig: {
+        serviceId: "custom",
+        displayName: "Private gateway",
+        api: "openai-responses",
+        baseUrl: "https://gateway.example.test/v1",
+        models: [
+          {
+            modelId: "model-one",
+            displayName: "Model One",
+            reasoning: true,
+            input: ["text"],
+            contextWindow: 128_000,
+            maxTokens: 16_384,
+          },
+        ],
+        apiKey: "must-not-decode",
+        headers: { Authorization: "must-not-decode" },
+      },
+      errorCode: null,
+    });
+
+    expect(decoded.state).toBe("ready");
+    if (decoded.state !== "ready") throw new Error("Expected ready custom service detail");
+    expect(decoded.customConfig).toEqual({
+      serviceId: "custom",
+      displayName: "Private gateway",
+      api: "openai-responses",
+      baseUrl: "https://gateway.example.test/v1",
+      models: [
+        {
+          modelId: "model-one",
+          displayName: "Model One",
+          reasoning: true,
+          input: ["text"],
+          contextWindow: 128_000,
+          maxTokens: 16_384,
+        },
+      ],
+    });
+    expect(JSON.stringify(decoded)).not.toContain("must-not-decode");
+  });
+
+  it("accepts typed credential intents without returning their private values", () => {
+    expect(
+      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+        config: {
+          serviceId: "custom",
+          displayName: "Custom",
+          api: "anthropic-messages",
+          baseUrl: "https://gateway.example.test",
+          models: [
+            {
+              modelId: "model-one",
+              displayName: "Model One",
+              reasoning: false,
+              input: ["text"],
+              contextWindow: 32_000,
+              maxTokens: 4_096,
+            },
+          ],
+        },
+        credential: { type: "preserve" },
+        testModelId: "model-one",
+      }).credential,
+    ).toEqual({ type: "preserve" });
+    expect(() =>
+      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+        config: {},
+        credential: { type: "stored_key", apiKey: "" },
+        testModelId: "model-one",
+      }),
+    ).toThrow();
+    expect(
+      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+        config: {
+          serviceId: "custom",
+          displayName: "Custom",
+          api: "anthropic-messages",
+          baseUrl: "https://gateway.example.test",
+          models: [
+            {
+              modelId: "model-one",
+              displayName: "Model One",
+              reasoning: false,
+              input: ["text"],
+              contextWindow: 32_000,
+              maxTokens: 4_096,
+            },
+          ],
+        },
+        credential: { type: "environment", variableName: "CUSTOM_API_KEY" },
+        testModelId: "model-one",
+      }).credential,
+    ).toEqual({ type: "environment", variableName: "CUSTOM_API_KEY" });
+    expect(
+      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+        config: {
+          serviceId: null,
+          displayName: "Basic only",
+          api: "openai-completions",
+          baseUrl: "https://gateway.example.test/v1",
+          models: [{ modelId: "model-one" }],
+        },
+        credential: { type: "command", command: "printf private-key" },
+        testModelId: "model-one",
+      }).config.models,
+    ).toEqual([{ modelId: "model-one" }]);
+    expect(() =>
+      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+        config: {
+          serviceId: null,
+          displayName: "Invalid env",
+          api: "openai-completions",
+          baseUrl: "https://gateway.example.test/v1",
+          models: [{ modelId: "model-one" }],
+        },
+        credential: { type: "environment", variableName: "NOT VALID" },
+        testModelId: "model-one",
+      }),
+    ).toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+        config: {
+          serviceId: null,
+          displayName: "Invalid command",
+          api: "openai-completions",
+          baseUrl: "https://gateway.example.test/v1",
+          models: [{ modelId: "model-one" }],
+        },
+        credential: { type: "command", command: "printf key\n" },
+        testModelId: "model-one",
+      }),
+    ).toThrow();
+    expect(
+      Schema.decodeUnknownSync(HarnessOSCustomModelServiceSaveResult)({
+        state: "config_saved_sync_failed",
+        service: null,
+      }),
+    ).toEqual({ state: "config_saved_sync_failed", service: null });
+  });
+
+  it("admits only the closed credential-blind advanced model surface", () => {
+    const decoded = Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+      config: {
+        serviceId: "custom",
+        displayName: "Custom",
+        api: "openai-completions",
+        baseUrl: "https://gateway.example.test/v1",
+        authHeader: false,
+        models: [
+          {
+            modelId: "model-one",
+            api: "openai-responses",
+            baseUrl: "https://model.example.test/v1",
+            thinkingLevelMap: { off: null, low: "low", high: "high" },
+            cost: {
+              input: 1,
+              output: 2,
+              cacheRead: 0.25,
+              cacheWrite: 0.5,
+              tiers: [
+                {
+                  inputTokensAbove: 0,
+                  input: 3,
+                  output: 4,
+                  cacheRead: 0.75,
+                  cacheWrite: 1,
+                },
+              ],
+            },
+            compat: {
+              supportsDeveloperRole: false,
+              supportsStrictMode: true,
+              supportsToolSearch: true,
+            },
+          },
+        ],
+      },
+      credential: { type: "preserve" },
+      testModelId: "model-one",
+    });
+    expect(decoded.config).toMatchObject({
+      authHeader: false,
+      models: [
+        {
+          api: "openai-responses",
+          baseUrl: "https://model.example.test/v1",
+          thinkingLevelMap: { off: null, low: "low", high: "high" },
+          cost: {
+            input: 1,
+            output: 2,
+            cacheRead: 0.25,
+            cacheWrite: 0.5,
+            tiers: [
+              {
+                inputTokensAbove: 0,
+                input: 3,
+                output: 4,
+                cacheRead: 0.75,
+                cacheWrite: 1,
+              },
+            ],
+          },
+          compat: {
+            supportsDeveloperRole: false,
+            supportsStrictMode: true,
+            supportsToolSearch: true,
+          },
+        },
+      ],
+    });
+
+    expect(() =>
+      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+        config: {
+          serviceId: "custom",
+          displayName: "Custom",
+          api: "openai-completions",
+          baseUrl: "https://gateway.example.test/v1",
+          models: [
+            {
+              modelId: "model-one",
+              baseUrl: "file:///private/model",
+            },
+          ],
+        },
+        credential: { type: "preserve" },
+        testModelId: "model-one",
+      }),
+    ).toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+        config: {
+          serviceId: "custom",
+          displayName: "Custom",
+          api: "openai-completions",
+          baseUrl: "https://gateway.example.test/v1",
+          models: [
+            {
+              modelId: "model-one",
+              cost: { input: -1, output: 2, cacheRead: 0, cacheWrite: 0 },
+            },
+          ],
+        },
+        credential: { type: "preserve" },
+        testModelId: "model-one",
+      }),
+    ).toThrow();
+    expect(JSON.stringify(decoded)).not.toContain("headers");
+    expect(JSON.stringify(decoded)).not.toContain("samplingParams");
+    expect(JSON.stringify(decoded)).not.toContain("openRouterRouting");
+  });
+
+  it("admits only write-only environment header mutations and public metadata", () => {
+    const decoded = Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+      config: {
+        serviceId: "custom",
+        displayName: "Custom",
+        api: "openai-completions",
+        baseUrl: "https://gateway.example.test/v1",
+        headerMutations: [
+          { name: "X-Tenant", type: "environment", variableName: "CUSTOM_TENANT" },
+          { name: "X-Legacy", type: "clear" },
+        ],
+        models: [
+          {
+            modelId: "model-one",
+            headerMutations: [
+              { name: "X-Model-Route", type: "environment", variableName: "MODEL_ROUTE" },
+            ],
+          },
+        ],
+      },
+      credential: { type: "preserve" },
+      testModelId: "model-one",
+    });
+    expect(decoded.config).toMatchObject({
+      headerMutations: [
+        { name: "X-Tenant", type: "environment", variableName: "CUSTOM_TENANT" },
+        { name: "X-Legacy", type: "clear" },
+      ],
+      models: [
+        {
+          headerMutations: [
+            { name: "X-Model-Route", type: "environment", variableName: "MODEL_ROUTE" },
+          ],
+        },
+      ],
+    });
+
+    const projected = Schema.decodeUnknownSync(OAModelServicesGetResult)({
+      state: "ready",
+      service: { ...descriptor, serviceId: "custom", providerId: "custom", origin: "models_json" },
+      models: [],
+      customConfig: {
+        serviceId: "custom",
+        displayName: "Custom",
+        api: "openai-completions",
+        baseUrl: "https://gateway.example.test/v1",
+        configuredHeaders: [
+          {
+            name: "X-Tenant",
+            source: "environment",
+            variableName: "MUST_NOT_DECODE",
+            value: "MUST_NOT_DECODE",
+          },
+          { name: "X-Legacy", source: "command", command: "MUST_NOT_DECODE" },
+        ],
+        models: [
+          {
+            modelId: "model-one",
+            configuredHeaders: [
+              { name: "X-Model-Route", source: "external", value: "MUST_NOT_DECODE" },
+            ],
+          },
+        ],
+      },
+      errorCode: null,
+    });
+    expect(projected).toMatchObject({
+      state: "ready",
+      customConfig: {
+        configuredHeaders: [
+          { name: "X-Tenant", source: "environment" },
+          { name: "X-Legacy", source: "command" },
+        ],
+        models: [
+          {
+            configuredHeaders: [{ name: "X-Model-Route", source: "external" }],
+          },
+        ],
+      },
+    });
+    expect(JSON.stringify(projected)).not.toContain("MUST_NOT_DECODE");
+
+    expect(() =>
+      Schema.decodeUnknownSync(HarnessOSCustomModelServiceTestInput)({
+        config: {
+          serviceId: "custom",
+          displayName: "Custom",
+          api: "openai-completions",
+          baseUrl: "https://gateway.example.test/v1",
+          headerMutations: [{ name: "X-Unsafe", type: "command", command: "printf private" }],
+          models: [{ modelId: "model-one" }],
+        },
+        credential: { type: "preserve" },
+        testModelId: "model-one",
+      }),
+    ).toThrow();
+  });
+
+  it("keeps generic model discovery bounded and credential-blind", () => {
+    expect(
+      Schema.decodeUnknownSync(HarnessOSCustomModelServiceDiscoverInput)({
+        config: {
+          serviceId: null,
+          displayName: "Private gateway",
+          api: "openai-responses",
+          baseUrl: "https://gateway.example.test/v1",
+        },
+        credential: { type: "stored_key", apiKey: "discovery-only-secret" },
+      }).config,
+    ).toEqual({
+      serviceId: null,
+      displayName: "Private gateway",
+      api: "openai-responses",
+      baseUrl: "https://gateway.example.test/v1",
+    });
+
+    const decoded = Schema.decodeUnknownSync(HarnessOSCustomModelServiceDiscoverResult)({
+      state: "success",
+      models: [{ modelId: "model-one", displayName: "Model One" }],
+      errorCode: null,
+      apiKey: "must-not-decode",
+      headers: { Authorization: "must-not-decode" },
+    });
+    expect(decoded).toEqual({
+      state: "success",
+      models: [{ modelId: "model-one", displayName: "Model One" }],
+      errorCode: null,
+    });
+    expect(JSON.stringify(decoded)).not.toContain("must-not-decode");
+    expect(() =>
+      Schema.decodeUnknownSync(HarnessOSCustomModelServiceDiscoverResult)({
+        state: "success",
+        models: [],
+        errorCode: null,
+      }),
+    ).toThrow();
+  });
+
+  it("rejects path-shaped get inputs and invalid counts", () => {
+    expect(() =>
+      Schema.decodeUnknownSync(OAModelServicesGetInput)({
+        serviceId: "/private/.harnessos/agent/auth.json",
+      }),
+    ).toThrow();
+    expect(Schema.decodeUnknownSync(OAModelServicesGetInput)({ serviceId: "小米代理" })).toEqual({
+      serviceId: "小米代理",
+    });
+    for (const serviceId of ["..", "provider/child", "provider\\child", "provider\u202esecret"]) {
+      expect(() => Schema.decodeUnknownSync(OAModelServicesGetInput)({ serviceId })).toThrow();
+    }
+    expect(() =>
+      Schema.decodeUnknownSync(OAModelServiceDescriptor)({
+        ...descriptor,
+        availableModelCount: -1,
+      }),
+    ).toThrow();
+  });
+
+  it("rejects path, URL, control, and bidi-shaped display labels", () => {
+    for (const displayName of [
+      "/private/agent/auth.json",
+      "C:\\private\\auth.json",
+      "\\\\server\\share",
+      "file:///private/auth.json",
+      "https://secret.example.test/v1",
+      "Unsafe\u061c label",
+      "Unsafe\u200f label",
+      "Unsafe\u009f label",
+    ]) {
+      expect(() =>
+        Schema.decodeUnknownSync(OAModelServiceDescriptor)({ ...descriptor, displayName }),
+      ).toThrow();
+    }
+  });
+
+  it("rejects contradictory projection and catalog error states", () => {
+    expect(() =>
+      Schema.decodeUnknownSync(OAModelServicesListResult)({
+        state: "error",
+        services: [],
+        connectableServices: [],
+        errorCode: null,
+      }),
+    ).toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(OAModelServiceDescriptor)({
+        ...descriptor,
+        catalogState: "ready",
+        catalogErrorCode: "catalog_unavailable",
+      }),
+    ).toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(OAModelServicesListResult)({
+        state: "ready",
+        services: [],
+        connectableServices: [],
+        errorCode: null,
+      }),
+    ).toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(OAModelServicesListResult)({
+        state: "empty",
+        services: [descriptor],
+        connectableServices: [],
+        errorCode: null,
+      }),
+    ).toThrow();
+  });
+
+  it("strips secret, endpoint, header, and path fields from encoded output", () => {
+    const encoded = Schema.encodeSync(OAModelServiceDescriptor)({
+      ...descriptor,
+      apiKey: "sk-secret",
+      endpoint: "https://secret.example.test/v1",
+      headers: { Authorization: "Bearer secret" },
+      authPath: "/private/.harnessos/agent/auth.json",
+    } as typeof descriptor);
+    const serialized = JSON.stringify(encoded);
+
+    expect(serialized).not.toContain("sk-secret");
+    expect(serialized).not.toContain("secret.example.test");
+    expect(serialized).not.toContain("Authorization");
+    expect(serialized).not.toContain("auth.json");
+  });
+
+  it("decodes typed auth prompts while keeping credentials out of results", () => {
+    const requestId = "00000000-0000-4000-8000-000000000021";
+    const promptId = "00000000-0000-4000-8000-000000000022";
+    expect(
+      Schema.decodeUnknownSync(OAModelServiceBeginLoginInput)({
+        serviceId: "deepseek",
+        authType: "api_key",
+      }),
+    ).toEqual({ serviceId: "deepseek", authType: "api_key" });
+    expect(
+      Schema.decodeUnknownSync(OAModelServiceBeginLoginInput)({
+        serviceId: "openai-codex",
+        authType: "oauth",
+        promptMode: "provider_default",
+        origin: "extension",
+      }),
+    ).toEqual({
+      serviceId: "openai-codex",
+      authType: "oauth",
+      promptMode: "provider_default",
+      origin: "extension",
+    });
+    expect(
+      Schema.decodeUnknownSync(OAModelServicePollLoginInput)({
+        requestId,
+        afterEventCount: 1,
+        afterPromptId: promptId,
+      }),
+    ).toEqual({ requestId, afterEventCount: 1, afterPromptId: promptId });
+    expect(
+      Schema.decodeUnknownSync(OAModelServiceAnswerLoginInput)({
+        requestId,
+        promptId,
+        value: "test-secret",
+      }),
+    ).toEqual({ requestId, promptId, value: "test-secret" });
+    const result = Schema.encodeSync(OAModelServiceAuthResult)({
+      state: "complete",
+      requestId,
+      service: descriptor,
+      events: [{ type: "progress", message: "Credential stored" }],
+      credential: { key: "must-not-cross-the-contract" },
+    } as never);
+    expect(JSON.stringify(result)).not.toContain("must-not-cross-the-contract");
+  });
+
+  it("admits only an explicit bounded saved-key reveal result", () => {
+    expect(
+      Schema.decodeUnknownSync(OAModelServiceRevealApiKeyInput)({
+        serviceId: "deepseek",
+      }),
+    ).toEqual({ serviceId: "deepseek" });
+    expect(
+      Schema.decodeUnknownSync(OAModelServiceRevealApiKeyResult)({
+        state: "ready",
+        apiKey: "test-only-key",
+      }),
+    ).toEqual({ state: "ready", apiKey: "test-only-key" });
+    expect(
+      Schema.decodeUnknownSync(OAModelServiceRevealApiKeyResult)({
+        state: "unavailable",
+        reason: "not_stored_api_key",
+      }),
+    ).toEqual({ state: "unavailable", reason: "not_stored_api_key" });
+    expect(() =>
+      Schema.decodeUnknownSync(OAModelServiceRevealApiKeyInput)({
+        serviceId: "/private/.harnessos/agent/auth.json",
+      }),
+    ).toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(OAModelServiceRevealApiKeyResult)({
+        state: "ready",
+        apiKey: "",
+      }),
+    ).toThrow();
+  });
+});

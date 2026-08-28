@@ -36,13 +36,13 @@ export function createPairingFailureMarkup(locale: StartupSurfaceLocale = "en"):
           eyebrow: "安全配对已中断",
           title: "此配对链接无法使用",
           message:
-            "链接可能不完整、已过期或已被使用。请从 OmniMind Server 生成新的配对链接后重试。",
+            "链接可能不完整、已过期或已被使用。请从 HarnessOS Server 生成新的配对链接后重试。",
         }
       : {
           eyebrow: "Secure pairing interrupted",
           title: "This pairing link could not be used.",
           message:
-            "The link may be incomplete, expired, or already used. Generate a new pairing link from the OmniMind server and try again.",
+            "The link may be incomplete, expired, or already used. Generate a new pairing link from the HarnessOS server and try again.",
         };
   return `
     ${STARTUP_SURFACE_THEME_STYLE}
@@ -61,7 +61,7 @@ function renderPairingFailure(): void {
 
   const locale = resolveStartupSurfaceLocale(navigator.languages ?? [navigator.language]);
   document.documentElement.lang = locale;
-  document.title = locale === "zh-CN" ? "配对失败 · OmniMind" : "Pairing failed · OmniMind";
+  document.title = locale === "zh-CN" ? "配对失败 · HarnessOS" : "Pairing failed · HarnessOS";
   root.innerHTML = createPairingFailureMarkup(locale);
   root.querySelector<HTMLElement>("h1")?.focus();
 }

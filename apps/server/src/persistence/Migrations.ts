@@ -281,7 +281,7 @@ export const findFirstMigrationLineageDivergence = (
   migrationEntries.find(([id, name]) => id <= highWaterMark && recordedNamesById.get(id) !== name);
 
 /**
- * A tracker identity that a *released* OmniMind build wrote for a migration whose
+ * A tracker identity that a *released* HarnessOS build wrote for a migration whose
  * canonical ID later changed.
  *
  * v0.5.5 shipped `[54, "ProjectPullRequestPins"]`; v0.6.0 reserved 54 for the
@@ -293,7 +293,7 @@ export const findFirstMigrationLineageDivergence = (
  * `ALTER TABLE ... ADD COLUMN`, so it dies on `duplicate column name`).
  *
  * `historicalSlotRequiresRerun` is the reviewed answer to a single question:
- * does the migration OmniMind registers at `historicalId` *today* still need to
+ * does the migration HarnessOS registers at `historicalId` *today* still need to
  * run on a database that recorded the historical identity? When it is `false`
  * the row is renamed to the canonical identity in place and nothing replays;
  * when it is `true` the row is removed so the migrator re-runs that one ID.
@@ -377,19 +377,19 @@ export const planMigrationLineageAliasRepairs = (
  * Imported databases can carry their own `effect_sql_migrations` rows,
  * recorded under that lineage's migration names
  * at the same numeric IDs. The migrator gates purely on max(migration_id), so
- * once the imported tracker's high-water mark reaches OmniMind's latest ID,
- * every OmniMind migration is skipped silently and startup crashes on missing
+ * once the imported tracker's high-water mark reaches HarnessOS's latest ID,
+ * every HarnessOS migration is skipped silently and startup crashes on missing
  * columns such as `projection_threads.env_mode`. Renumbering self-heal
  * migrations past the legacy IDs (#023, then #032) loses that race whenever
  * the legacy lineage ships more migrations.
  *
- * Instead, compare the recorded (id, name) pairs against OmniMind's lineage and
+ * Instead, compare the recorded (id, name) pairs against HarnessOS's lineage and
  * delete every tracker row from the first divergence onward. The migrator
  * then re-runs those migrations in order; every migration past
  * {@link LAST_SHARED_LINEAGE_MIGRATION_ID} is idempotent, so re-running them
  * over a legacy-evolved schema is safe and loses no data.
  *
- * Divergences caused by OmniMind renumbering one of its *own* released
+ * Divergences caused by HarnessOS renumbering one of its *own* released
  * migrations are handled first and separately, through
  * {@link MIGRATION_LINEAGE_ALIASES}: those trackers are repaired in place
  * rather than truncated, because the rows below the divergence are genuinely
@@ -432,7 +432,7 @@ export const reconcileMigrationLineage = Effect.gen(function* () {
       SELECT migration_id, name FROM effect_sql_migrations ORDER BY migration_id ASC
     `;
   }
-  // A released OmniMind build may have recorded a migration under an ID it no
+  // A released HarnessOS build may have recorded a migration under an ID it no
   // longer occupies. That is a tracker-metadata problem, not a foreign lineage:
   // repair the affected rows in place and leave every other row untouched, so
   // the migrator still runs exactly the migrations this database has not seen.
@@ -441,7 +441,7 @@ export const reconcileMigrationLineage = Effect.gen(function* () {
   );
   if (aliasRepairs.length > 0) {
     yield* Effect.logInfo(
-      "Migration tracker records a renumbered OmniMind migration; repairing tracker metadata in place",
+      "Migration tracker records a renumbered HarnessOS migration; repairing tracker metadata in place",
     ).pipe(
       Effect.annotateLogs({
         repairs: aliasRepairs.map((repair) =>
@@ -477,7 +477,7 @@ export const reconcileMigrationLineage = Effect.gen(function* () {
   const diverged = findFirstMigrationLineageDivergence(recordedNamesById, highWaterMark);
   if (diverged === undefined) {
     // An exact known prefix followed by unknown migrations is a database from
-    // a newer OmniMind build. Continuing would expose it to stale writable
+    // a newer HarnessOS build. Continuing would expose it to stale writable
     // repositories and background services, so fail before the migrator can
     // mutate either schema or tracker state.
     if (highWaterMark > LATEST_MIGRATION_ID) {
@@ -500,7 +500,7 @@ export const reconcileMigrationLineage = Effect.gen(function* () {
   }
 
   yield* Effect.logWarning(
-    "Migration tracker diverges from the OmniMind lineage (legacy import); re-running migrations from the divergence point",
+    "Migration tracker diverges from the HarnessOS lineage (legacy import); re-running migrations from the divergence point",
   ).pipe(Effect.annotateLogs({ firstDivergedId, expectedName, recordedName, highWaterMark }));
 
   yield* sql`DELETE FROM effect_sql_migrations WHERE migration_id >= ${firstDivergedId}`;

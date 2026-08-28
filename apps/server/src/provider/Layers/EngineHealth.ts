@@ -126,7 +126,7 @@ const PI_PROVIDER = "pi" as const;
 const HARNESSOS_AGENT_PROVIDER = "oa" as const;
 const BUNDLED_PI_VERSION = "0.84.3";
 type EngineStatuses = ReadonlyArray<ServerProviderStatus>;
-const DISABLED_PROVIDER_STATUS_MESSAGE = "Engine is disabled in OmniMind settings.";
+const DISABLED_PROVIDER_STATUS_MESSAGE = "Engine is disabled in HarnessOS settings.";
 const MINIMUM_ANTIGRAVITY_CLI_VERSION = "1.0.12";
 
 const PROVIDERS = ENGINE_KINDS;
@@ -278,7 +278,7 @@ export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
   pi: {
     engine: PI_PROVIDER,
     binaryName: "pi",
-    // Pi is part of the OmniMind App runtime. App updates own this version;
+    // Pi is part of the HarnessOS App runtime. App updates own this version;
     // engine maintenance must never mutate it behind the App's back.
     npmPackageName: null,
     homebrew: null,
@@ -808,7 +808,7 @@ function parseCursorAuthStatusFromOutput(result: CommandResult): {
     return {
       status: "warning",
       authStatus: "unknown",
-      message: "Cursor Agent is installed, but OmniMind could not verify authentication status.",
+      message: "Cursor Agent is installed, but HarnessOS could not verify authentication status.",
     };
   }
 
@@ -1408,7 +1408,7 @@ export const makeCheckDroidProviderStatus = (
         ? { authType: "apiKey", authLabel: "Factory API Key" }
         : {
             message:
-              "Droid CLI is installed. OmniMind can use the CLI's cached device-pairing login; run `droid` to authenticate locally if needed, or set FACTORY_API_KEY.",
+              "Droid CLI is installed. HarnessOS can use the CLI's cached device-pairing login; run `droid` to authenticate locally if needed, or set FACTORY_API_KEY.",
           }),
     } satisfies ServerProviderStatus;
   }).pipe(withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? "droid"));
@@ -1581,7 +1581,7 @@ export const checkPiProviderStatus = (): Effect.Effect<ServerProviderStatus> =>
       }) satisfies ServerProviderStatus,
   );
 
-export const checkOmniMindAgentProviderStatus = (): Effect.Effect<ServerProviderStatus> =>
+export const checkOAAgentProviderStatus = (): Effect.Effect<ServerProviderStatus> =>
   Effect.sync(
     () =>
       ({
@@ -1591,7 +1591,7 @@ export const checkOmniMindAgentProviderStatus = (): Effect.Effect<ServerProvider
         authStatus: "unknown",
         version: BUNDLED_PI_VERSION,
         checkedAt: new Date().toISOString(),
-        message: "OmniMind is bundled and ready. Add engine credentials before sending.",
+        message: "HarnessOS is bundled and ready. Add engine credentials before sending.",
       }) satisfies ServerProviderStatus,
   );
 
@@ -1657,7 +1657,7 @@ export const checkAntigravityProviderStatus = (
         authStatus: "unknown",
         version: parsedVersion,
         checkedAt,
-        message: `Antigravity CLI ${parsedVersion} is too old for OmniMind. Upgrade to ${MINIMUM_ANTIGRAVITY_CLI_VERSION} or newer.`,
+        message: `Antigravity CLI ${parsedVersion} is too old for HarnessOS. Upgrade to ${MINIMUM_ANTIGRAVITY_CLI_VERSION} or newer.`,
       } satisfies ServerProviderStatus;
     }
     const models = yield* runAntigravityCommand(["models"], executable).pipe(
@@ -1688,7 +1688,7 @@ export const checkAntigravityProviderStatus = (
       version: parsedVersion,
       checkedAt,
       message:
-        "Antigravity CLI is installed, but OmniMind could not verify login by listing models.",
+        "Antigravity CLI is installed, but HarnessOS could not verify login by listing models.",
     } satisfies ServerProviderStatus;
   }).pipe(withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? "agy"));
 
@@ -1830,7 +1830,7 @@ export const makeCheckCursorProviderStatus = (
         version: parsedVersion,
         checkedAt,
         message:
-          "Cursor Agent is authenticated, but model discovery timed out before OmniMind could verify available models.",
+          "Cursor Agent is authenticated, but model discovery timed out before HarnessOS could verify available models.",
       } satisfies ServerProviderStatus;
     }
 
@@ -2427,7 +2427,7 @@ export function makeProviderHealthLive(options?: { readonly engineUpdateTimeoutM
                 checkProviderWhenEnabled(
                   settings,
                   HARNESSOS_AGENT_PROVIDER,
-                  checkOmniMindAgentProviderStatus(),
+                  checkOAAgentProviderStatus(),
                 ),
                 checkProviderWhenEnabled(
                   settings,
@@ -2672,7 +2672,7 @@ export function makeProviderHealthLive(options?: { readonly engineUpdateTimeoutM
         if (!isProviderEnabledForSettings(engine, settings)) {
           return yield* new ServerEngineUpdateError({
             engine,
-            reason: "Engine is disabled in OmniMind settings.",
+            reason: "Engine is disabled in HarnessOS settings.",
           });
         }
         const capabilities = yield* getProviderMaintenanceCapabilities(engine).pipe(
@@ -2780,7 +2780,7 @@ export function makeProviderHealthLive(options?: { readonly engineUpdateTimeoutM
               startedAt,
               finishedAt,
               message: stillOutdated
-                ? `Update command completed, but OmniMind still detects an outdated engine version${stillOutdatedVersions}.`
+                ? `Update command completed, but HarnessOS still detects an outdated engine version${stillOutdatedVersions}.`
                 : "Engine updated.",
               output: output ? output.slice(0, UPDATE_OUTPUT_MAX_BYTES) : null,
             }),

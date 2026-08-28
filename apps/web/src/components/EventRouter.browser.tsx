@@ -348,7 +348,7 @@ function resolveWsRpc(tag: string, body?: unknown): unknown {
   if (tag === WS_METHODS.providerListAgents) {
     return { source: "browser.fixture", agents: [] };
   }
-  if (tag === WS_METHODS.omnimindModelServicesList) {
+  if (tag === WS_METHODS.oaModelServicesList) {
     return {
       state: "empty",
       services: [],

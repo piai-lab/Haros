@@ -1,5 +1,5 @@
 // FILE: useTheme.ts
-// Purpose: Persists OmniMind appearance intent and projects one active pack into typed surfaces.
+// Purpose: Persists HarnessOS appearance intent and projects one active pack into typed surfaces.
 // Layer: Web appearance state hook
 // Exports: useTheme for mode, resolved variant, theme-pack import/export, and active theme metadata.
 

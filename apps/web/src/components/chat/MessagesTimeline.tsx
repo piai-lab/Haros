@@ -69,7 +69,7 @@ import { pinActionLabel } from "~/lib/pin";
 import { Button } from "../ui/button";
 import { composerOverlayScrollMaskImage } from "./composerOverlay";
 import { CrossTaskOriginLabel, type CrossTaskOrigin } from "./CrossTaskOriginLabel";
-import { OmniMindThreadCreationCard } from "./OmniMindThreadCreationCard";
+import { HarnessOSThreadCreationCard } from "./HarnessOSThreadCreationCard";
 import { ForkSourceDivider, type ForkSourceReference } from "./ForkSourceDivider";
 import { buildExpandedImagePreview, ExpandedImagePreview } from "./ExpandedImagePreview";
 import { ProposedPlanCard } from "./ProposedPlanCard";
@@ -483,7 +483,7 @@ function AssistantTurnRowFrame({
           engine: selection.engine,
           slug: selection.model,
         })
-      : "OmniMind");
+      : "HarnessOS");
   const engineName = selection ? ENGINE_DISPLAY_NAMES[selection.engine] : null;
   return (
     <div
@@ -564,7 +564,7 @@ interface MessagesTimelineProps {
    * the anchored slide settles; ChatView's auto-follow re-snaps pause while set.
    */
   tailAnchorScrollInFlightRef?: RefObject<boolean> | undefined;
-  /** Provenance for a conversation created from another OmniMind task. */
+  /** Provenance for a conversation created from another HarnessOS task. */
   crossTaskOrigin?: CrossTaskOrigin | null;
   /** Immediate source chat for a forked transcript. */
   forkSource?: ForkSourceReference | null;
@@ -1666,7 +1666,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           (() => {
             const groupId = row.id;
             // Creation milestones are reserved for the end-of-turn recap card.
-            // The engine's actual OmniMind MCP tool rows remain visible here.
+            // The engine's actual HarnessOS MCP tool rows remain visible here.
             const groupedEntries = row.groupedEntries.filter(
               (workEntry) => !workEntry.harnessosThreadCreation,
             );
@@ -1837,7 +1837,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     )}
                   >
                     {/* Keep user-message chrome outside the bubble so the message reads as one simple block. */}
-                    {/* The cross-task origin label already attributes this turn to another OmniMind thread,
+                    {/* The cross-task origin label already attributes this turn to another HarnessOS thread,
                       so suppress the dispatch chip here to avoid a duplicate "Sent by …" marker. */}
                     {showCrossTaskOrigin ? null : (
                       <UserDispatchModeChip
@@ -2080,7 +2080,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                   {!row.assistantTurnInProgress && row.showAssistantCopyButton
                     ? harnessosThreadCreationRecaps.map((creation) => (
                         <div key={creation.operationId} className="mt-2 mb-1">
-                          <OmniMindThreadCreationCard
+                          <HarnessOSThreadCreationCard
                             creation={creation}
                             {...(onOpenThread
                               ? {

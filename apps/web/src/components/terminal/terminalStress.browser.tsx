@@ -10,7 +10,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import { afterEach, describe, expect, it } from "vitest";
 
-type OmniMindTerminalOptions = NonNullable<ConstructorParameters<typeof Terminal>[0]> & {
+type HarnessOSTerminalOptions = NonNullable<ConstructorParameters<typeof Terminal>[0]> & {
   vtExtensions?: { kittyKeyboard?: boolean };
 };
 
@@ -61,7 +61,7 @@ describe("terminal browser stress", () => {
     document.body.append(host);
 
     const fitAddon = new FitAddon();
-    const terminalOptions: OmniMindTerminalOptions = {
+    const terminalOptions: HarnessOSTerminalOptions = {
       allowProposedApi: true,
       cols: 120,
       cursorBlink: false,

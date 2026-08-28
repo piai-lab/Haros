@@ -10,8 +10,8 @@ export const RELEASE_WORKSPACE_MANIFEST_PATHS = [
   "packages/contracts/package.json",
   // Keep the Ask fork importer available while Bun reconstructs the frozen
   // workspace. Server tsdown owns the shipped runtime bytes via noExternal.
-  "packages/om-ask/package.json",
-  "packages/om-web-access/package.json",
+  "packages/oa-ask/package.json",
+  "packages/oa-web-access/package.json",
   "packages/shared/package.json",
   "scripts/package.json",
 ] as const;
@@ -22,14 +22,14 @@ export const HARNESSOS_OA_RUNTIME_PACKAGE_PATH = "vendor/oa-runtime-0.84.3.tgz";
 
 export const SERVER_BUNDLED_WORKSPACE_COMPONENTS = [
   {
-    name: "@harnessos/om-ask",
-    manifestPath: "packages/om-ask/package.json",
+    name: "@harnessos/oa-ask",
+    manifestPath: "packages/oa-ask/package.json",
     runtimePath: "apps/server/dist/index.mjs",
     includeInLegalClosure: true,
   },
   {
-    name: "@harnessos/om-web-access",
-    manifestPath: "packages/om-web-access/package.json",
+    name: "@harnessos/oa-web-access",
+    manifestPath: "packages/oa-web-access/package.json",
     runtimePath: "apps/server/dist/index.mjs",
     includeInLegalClosure: false,
   },

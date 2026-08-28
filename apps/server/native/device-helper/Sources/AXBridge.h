@@ -16,7 +16,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface OmniMindAXBridge : NSObject
+@interface HarnessOSAXBridge : NSObject
 
 /// The `SimDevice` accessibility requests are sent to.
 @property (nonatomic, strong, nullable) id device;

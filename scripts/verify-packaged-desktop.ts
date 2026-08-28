@@ -56,7 +56,7 @@ export interface PackagedProofLease {
   readonly release: () => void;
 }
 
-const PACKAGED_PROOF_LEASE_DIRECTORY = "omnimind-packaged-proof.lock";
+const PACKAGED_PROOF_LEASE_DIRECTORY = "harnessos-packaged-proof.lock";
 const PACKAGED_PROOF_LEASE_OWNER_FILE = "owner.json";
 
 function isProcessAlive(pid: number): boolean {
@@ -491,7 +491,7 @@ export function createPackagedDesktopEnvironment(
     XDG_CONFIG_HOME: join(root, "xdg-config"),
     XDG_CACHE_HOME: join(root, "xdg-cache"),
     XDG_DATA_HOME: join(root, "xdg-data"),
-    HARNESSOS_HOME: join(root, "omnimind-home"),
+    HARNESSOS_HOME: join(root, "harnessos-home"),
     CODEX_HOME: join(root, "provider-home", "codex"),
     CLAUDE_CONFIG_DIR: join(root, "provider-home", "claude"),
     TEMP: isolatedTemp,
@@ -1162,7 +1162,7 @@ export async function verifyPackagedDesktop(options: PackagedDesktopProofOptions
   let temporaryRoot: string | undefined;
 
   try {
-    temporaryRoot = mkdtempSync(join(tmpdir(), `omnimind-packaged-proof-${options.platform}-`));
+    temporaryRoot = mkdtempSync(join(tmpdir(), `harnessos-packaged-proof-${options.platform}-`));
     const extractionRoot = join(temporaryRoot, "payload");
     mkdirSync(extractionRoot, { recursive: true });
     const launch = prepareLaunch(options, extractionRoot);

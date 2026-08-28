@@ -1,5 +1,5 @@
 /**
- * Minimal MCP (Model Context Protocol) JSON-RPC handling for the OmniMind agent
+ * Minimal MCP (Model Context Protocol) JSON-RPC handling for the HarnessOS agent
  * gateway.
  *
  * Implements the stateless subset of the MCP streamable-HTTP transport the
@@ -155,7 +155,7 @@ export function buildMcpInitializeResult(input: {
     },
     serverInfo: {
       name: "oa",
-      title: "OmniMind App Control",
+      title: "HarnessOS App Control",
       version: input.serverVersion,
     },
     instructions: input.instructions,

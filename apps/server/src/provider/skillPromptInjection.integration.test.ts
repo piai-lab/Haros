@@ -15,43 +15,43 @@ import {
   shouldInlineSkillForProvider,
 } from "./skillPromptInjection.ts";
 
-const omnimindSkillPath = "/Users/me/.harnessos/skills/reviewer/SKILL.md";
+const harnessosSkillPath = "/Users/me/.harnessos/skills/reviewer/SKILL.md";
 const codexSkillPath = "/Users/me/.codex/skills/reviewer/SKILL.md";
 const claudeSkillPath = "/Users/me/.claude/skills/reviewer/SKILL.md";
 const cursorSkillPath = "/Users/me/.cursor/skills/reviewer/SKILL.md";
 const piSkillPath = "/Users/me/.pi/agent/skills/reviewer/SKILL.md";
 
 describe("shouldInlineSkillForProvider", () => {
-  it("skips codex-native and omnimind roots for codex but inlines foreign engine roots", () => {
+  it("skips codex-native and harnessos roots for codex but inlines foreign engine roots", () => {
     // Codex loads .codex roots natively and ~/.harnessos/skills via the extra
     // skill root registered at session start.
-    expect(shouldInlineSkillForProvider("codex", omnimindSkillPath)).toBe(false);
+    expect(shouldInlineSkillForProvider("codex", harnessosSkillPath)).toBe(false);
     expect(shouldInlineSkillForProvider("codex", codexSkillPath)).toBe(false);
     expect(shouldInlineSkillForProvider("codex", claudeSkillPath)).toBe(true);
     expect(shouldInlineSkillForProvider("codex", cursorSkillPath)).toBe(true);
   });
 
-  it("inlines only OmniMind-owned paths for cursor", () => {
-    expect(shouldInlineSkillForProvider("cursor", omnimindSkillPath)).toBe(true);
+  it("inlines only HarnessOS-owned paths for cursor", () => {
+    expect(shouldInlineSkillForProvider("cursor", harnessosSkillPath)).toBe(true);
     expect(shouldInlineSkillForProvider("cursor", cursorSkillPath)).toBe(false);
     expect(shouldInlineSkillForProvider("cursor", codexSkillPath)).toBe(false);
   });
 
   it("inlines everything except .claude paths for claudeAgent", () => {
     expect(shouldInlineSkillForProvider("claude", claudeSkillPath)).toBe(false);
-    expect(shouldInlineSkillForProvider("claude", omnimindSkillPath)).toBe(true);
+    expect(shouldInlineSkillForProvider("claude", harnessosSkillPath)).toBe(true);
     expect(shouldInlineSkillForProvider("claude", codexSkillPath)).toBe(true);
   });
 
   it("inlines cross-engine paths for pi but not pi-native skills", () => {
-    expect(shouldInlineSkillForProvider("pi", omnimindSkillPath)).toBe(true);
+    expect(shouldInlineSkillForProvider("pi", harnessosSkillPath)).toBe(true);
     expect(shouldInlineSkillForProvider("pi", claudeSkillPath)).toBe(true);
     expect(shouldInlineSkillForProvider("pi", piSkillPath)).toBe(false);
   });
 
   it("always inlines for engines without native skill support", () => {
     for (const engine of ["antigravity", "grok", "kilo", "opencode"] as const) {
-      expect(shouldInlineSkillForProvider(engine, omnimindSkillPath)).toBe(true);
+      expect(shouldInlineSkillForProvider(engine, harnessosSkillPath)).toBe(true);
       expect(shouldInlineSkillForProvider(engine, claudeSkillPath)).toBe(true);
     }
   });
@@ -112,10 +112,10 @@ describe("buildInlineSkillInstructions", () => {
     }
   });
 
-  it("does not inline omnimind-rooted skills for codex (covered by the extra skill root)", async () => {
+  it("does not inline harnessos-rooted skills for codex (covered by the extra skill root)", async () => {
     const result = await buildInlineSkillInstructions({
       engine: "codex",
-      skills: [{ name: "reviewer", path: omnimindSkillPath }],
+      skills: [{ name: "reviewer", path: harnessosSkillPath }],
       maxChars: 10_000,
     });
     expect(result.text).toBe("");

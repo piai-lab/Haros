@@ -60,7 +60,7 @@ describe("groupCommandItems", () => {
         engine: "codex",
         mention: { name: "Release prep", path: "thread://thread-1" },
         label: "Release prep",
-        description: "OmniMind",
+        description: "HarnessOS",
       },
     ];
 

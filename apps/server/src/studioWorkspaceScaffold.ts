@@ -29,7 +29,7 @@ export const STUDIO_WORKSPACE_SUBDIRECTORIES = [
 // (Codex, Cursor, ...), CLAUDE.md is what Claude Code actually loads.
 const STUDIO_WORKSPACE_INSTRUCTIONS = `# Studio Workspace
 
-This folder is the shared workspace for OmniMind Studio chats. Keep it organized so the
+This folder is the shared workspace for HarnessOS Studio chats. Keep it organized so the
 app can attribute and surface what you produce.
 
 ## Where files go
@@ -41,7 +41,7 @@ app can attribute and surface what you produce.
   need while working. Anything here may be cleaned up at any time.
 - \`Inbox/\` — files the user drops in for you to process. Read from here; do not write.
 - \`Context/\` — reference material and background docs. Read-only unless asked.
-- \`Logs/\` and \`Skills/\` — managed by OmniMind; leave them alone.
+- \`Logs/\` and \`Skills/\` — managed by HarnessOS; leave them alone.
 
 ## Rules
 

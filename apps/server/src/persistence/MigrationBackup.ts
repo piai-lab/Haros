@@ -44,7 +44,7 @@ export class MigrationRecoveryRequiredError extends Error {
     detail?: string,
   ) {
     super(
-      `Migration recovery is required for ${dbPath}.${detail ? ` ${detail}` : ""} Stop every OmniMind process, then run: harnessos-restore-migration-backup ${shellQuote(dbPath)}`,
+      `Migration recovery is required for ${dbPath}.${detail ? ` ${detail}` : ""} Stop every HarnessOS process, then run: harnessos-restore-migration-backup ${shellQuote(dbPath)}`,
     );
     this.name = "MigrationRecoveryRequiredError";
   }
@@ -78,7 +78,7 @@ export class InsufficientMigrationBackupSpaceError extends Error {
     super(
       `Not enough free disk space to back up the database before upgrading it. ` +
         `About ${formatBytes(requiredBytes)} is needed in ${directory}, but only ` +
-        `${formatBytes(availableBytes)} is free. Free up disk space and start OmniMind again.`,
+        `${formatBytes(availableBytes)} is free. Free up disk space and start HarnessOS again.`,
     );
     this.name = "InsufficientMigrationBackupSpaceError";
   }
@@ -745,7 +745,7 @@ const writeRecoveryMarker = (dbPath: string, backup: MigrationBackupResult) =>
       createdAt: new Date().toISOString(),
       resumeAttempts: 0,
       recovery:
-        "OmniMind retries an interrupted migration a bounded number of times on startup. Once that budget is spent it refuses to open this database until an operator stops every OmniMind process and runs the explicit migration-backup restore command.",
+        "HarnessOS retries an interrupted migration a bounded number of times on startup. Once that budget is spent it refuses to open this database until an operator stops every HarnessOS process and runs the explicit migration-backup restore command.",
     });
   });
 
@@ -1084,7 +1084,7 @@ export const resumeMarkedMigration = <A, E, R>(
   });
 
 /**
- * Explicit one-shot recovery path. The operator must stop every OmniMind process
+ * Explicit one-shot recovery path. The operator must stop every HarnessOS process
  * before invoking it; startup itself deliberately never calls this function.
  */
 export const restoreMarkedMigrationBackup = (dbPath: string) =>

@@ -402,10 +402,10 @@ export function normalizeProviderModelOptions(
     omniMindCandidate?.thinkingLevel === "max"
       ? omniMindCandidate.thinkingLevel
       : undefined;
-  const omnimind =
+  const harnessos =
     omniMindThinkingLevel !== undefined ? { thinkingLevel: omniMindThinkingLevel } : undefined;
   if (
-    !omnimind &&
+    !harnessos &&
     !codex &&
     !claude &&
     !cursor &&
@@ -419,7 +419,7 @@ export function normalizeProviderModelOptions(
     return null;
   }
   return {
-    ...(omnimind ? { omnimind } : {}),
+    ...(harnessos ? { harnessos } : {}),
     ...(codex ? { codex } : {}),
     ...(claude ? { claude: claude } : {}),
     ...(cursor ? { cursor } : {}),

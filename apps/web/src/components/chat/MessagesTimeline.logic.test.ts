@@ -573,7 +573,7 @@ describe("computeStableMessagesTimelineRows", () => {
             tone: "info",
             automation: {
               id: "automation-7",
-              name: "Watch OmniMind PR 231",
+              name: "Watch HarnessOS PR 231",
               cadenceLabel: "Every 5m",
             },
           },
@@ -1642,20 +1642,20 @@ describe("deriveMessagesTimelineRows", () => {
     expect(processSignature(rows)).toEqual(["narration:a1", "work:w1"]);
   });
 
-  it("preserves OmniMind tool calls when a separate creation recap is present", () => {
+  it("preserves HarnessOS tool calls when a separate creation recap is present", () => {
     const createTool = workEntry(
-      "omnimind-create-tool",
+      "harnessos-create-tool",
       "2026-01-01T00:00:01Z",
-      "OmniMind created threads",
+      "HarnessOS created threads",
     );
     const creationRecap: TimelineEntry = {
-      id: "entry-omnimind-create-recap",
+      id: "entry-harnessos-create-recap",
       kind: "work",
       createdAt: "2026-01-01T00:00:02Z",
       entry: {
-        id: "omnimind-create-recap",
+        id: "harnessos-create-recap",
         createdAt: "2026-01-01T00:00:02Z",
-        label: "Created 2 OmniMind threads",
+        label: "Created 2 HarnessOS threads",
         tone: "info",
         harnessosThreadCreation: {
           operationId: "gateway:create:two",
@@ -1696,10 +1696,10 @@ describe("deriveMessagesTimelineRows", () => {
       ],
     });
 
-    expect(processSignature(rows)).toEqual(["work:omnimind-create-tool"]);
+    expect(processSignature(rows)).toEqual(["work:harnessos-create-tool"]);
     expect(messageRow(rows, "a1")?.turnWorkEntries?.map((entry) => entry.id)).toEqual([
-      "omnimind-create-tool",
-      "omnimind-create-recap",
+      "harnessos-create-tool",
+      "harnessos-create-recap",
     ]);
   });
 
@@ -1778,7 +1778,7 @@ describe("deriveMessagesTimelineRows", () => {
       webReview.entry.engineWebSurface = {
         status: "waiting-for-user",
         provenance: "engine-native",
-        presentation: "omnimind-browser",
+        presentation: "harnessos-browser",
         surfaceId: "surface-1",
       };
     }

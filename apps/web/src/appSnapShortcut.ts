@@ -1,5 +1,5 @@
 // FILE: appSnapShortcut.ts
-// Purpose: Detect AppSnap shortcut overlap with OmniMind's renderer keybindings.
+// Purpose: Detect AppSnap shortcut overlap with HarnessOS's renderer keybindings.
 
 import type {
   DesktopAppSnapKeyChord,

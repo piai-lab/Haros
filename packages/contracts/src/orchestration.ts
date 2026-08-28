@@ -241,7 +241,7 @@ export const TurnDispatchMode = Schema.Literals(["queue", "steer"]);
 export type TurnDispatchMode = typeof TurnDispatchMode.Type;
 export const DEFAULT_TURN_DISPATCH_MODE: TurnDispatchMode = "queue";
 // Marks who dispatched a user turn: a person typing, an automation run, or
-// another agent through the OmniMind agent gateway (MCP tools).
+// another agent through the HarnessOS agent gateway (MCP tools).
 // Absent is treated as "user"; only server-dispatched turns carry the flag.
 export const MessageDispatchOrigin = Schema.Literals(["user", "automation", "agent"]);
 export type MessageDispatchOrigin = typeof MessageDispatchOrigin.Type;

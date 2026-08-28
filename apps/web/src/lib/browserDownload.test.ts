@@ -84,17 +84,17 @@ describe("browserDownload", () => {
       Promise.resolve(
         new Response("zip", {
           status: 200,
-          headers: { "Content-Disposition": 'attachment; filename="omnimind-thread-pretty.zip"' },
+          headers: { "Content-Disposition": 'attachment; filename="harnessos-thread-pretty.zip"' },
         }),
       ),
     );
 
     await downloadUrlAsBlob({
       url: "http://127.0.0.1:5733/api/thread-export?threadId=thread-1",
-      filename: "omnimind-thread-thread-1.zip",
+      filename: "harnessos-thread-thread-1.zip",
     });
 
-    expect(link.download).toBe("omnimind-thread-pretty.zip");
+    expect(link.download).toBe("harnessos-thread-pretty.zip");
     expect(click).toHaveBeenCalledTimes(1);
   });
 
@@ -110,10 +110,10 @@ describe("browserDownload", () => {
 
     await downloadUrlAsBlob({
       url: "http://127.0.0.1:5733/api/thread-export?threadId=thread-1",
-      filename: "omnimind-thread-thread-1.zip",
+      filename: "harnessos-thread-thread-1.zip",
     });
 
-    expect(link.download).toBe("omnimind-thread-thread-1.zip");
+    expect(link.download).toBe("harnessos-thread-thread-1.zip");
     expect(click).toHaveBeenCalledTimes(1);
   });
 
@@ -130,7 +130,7 @@ describe("browserDownload", () => {
     await expect(
       downloadUrlAsBlob({
         url: "http://127.0.0.1:5733/api/thread-export?threadId=thread-1",
-        filename: "omnimind-thread-thread-1.zip",
+        filename: "harnessos-thread-thread-1.zip",
       }),
     ).rejects.toThrow(
       "Download failed with HTTP 409 Conflict. Thread is still running. Wait for the current turn to finish.",

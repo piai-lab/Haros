@@ -3464,7 +3464,7 @@ const makeProviderService = (options?: EngineServiceLiveOptions) =>
           if (!adapter.reloadSessionResources) {
             return yield* toValidationError(
               operation,
-              "OmniMind Agent does not expose active-session resource reload.",
+              "HarnessOS Agent does not expose active-session resource reload.",
             );
           }
           return {

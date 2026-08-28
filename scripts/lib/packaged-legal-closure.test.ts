@@ -18,7 +18,7 @@ async function archiveFixture(
   extraPackage = false,
   includeBundledWebReceipt = true,
 ): Promise<string> {
-  const root = mkdtempSync(join(tmpdir(), "omnimind-legal-asar-"));
+  const root = mkdtempSync(join(tmpdir(), "harnessos-legal-asar-"));
   roots.push(root);
   const source = join(root, "source");
   const archive = join(root, "app.asar");
@@ -40,8 +40,8 @@ async function archiveFixture(
   }
   const components = packages.map((name) => ({ id: `${name}@0.84.3` }));
   components.push({
-    id: "@harnessos/om-ask@5.0.0-omnimind.1",
-    name: "@harnessos/om-ask",
+    id: "@harnessos/oa-ask@5.0.0-oa.1",
+    name: "@harnessos/oa-ask",
     locations: ["bundled:apps/server/dist/index.mjs"],
   } as (typeof components)[number]);
   components.push({

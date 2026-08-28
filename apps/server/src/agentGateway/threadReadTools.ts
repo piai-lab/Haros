@@ -79,10 +79,10 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
     definition: {
       name: "harnessos_context",
       description:
-        "Inspect the current OmniMind harness identity, caller thread/turn, and authorized coordination capabilities.",
+        "Inspect the current HarnessOS harness identity, caller thread/turn, and authorized coordination capabilities.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
       annotations: {
-        title: "OmniMind context",
+        title: "HarnessOS context",
         readOnlyHint: true,
         destructiveHint: false,
         idempotentHint: true,
@@ -94,7 +94,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
         const caller = yield* requireThreadShell(context.callerThreadId);
         const turnId = caller.latestTurn?.state === "running" ? caller.latestTurn.turnId : null;
         return mcpToolResultJson({
-          harness: { name: "OmniMind", policyVersion: HARNESSOS_HARNESS_POLICY_VERSION },
+          harness: { name: "HarnessOS", policyVersion: HARNESSOS_HARNESS_POLICY_VERSION },
           caller: {
             threadId: caller.id,
             turnId,
@@ -116,10 +116,10 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
     requiredCapability: "thread:read",
     definition: {
       name: "harnessos_capabilities",
-      description: `List canonical OmniMind provider/model targets, exact engine option keys, examples, and gateway limits used to validate thread creation. ${AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION}`,
+      description: `List canonical HarnessOS provider/model targets, exact engine option keys, examples, and gateway limits used to validate thread creation. ${AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION}`,
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
       annotations: {
-        title: "OmniMind capabilities",
+        title: "HarnessOS capabilities",
         readOnlyHint: true,
         destructiveHint: false,
         idempotentHint: true,
@@ -176,9 +176,9 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
     definition: {
       name: "harnessos_list_projects",
       description:
-        "List OmniMind projects (id, title, workspace root). System-managed containers (the Chats and Studio surfaces) are not projects and are excluded. Use before creating a thread in another project.",
+        "List HarnessOS projects (id, title, workspace root). System-managed containers (the Chats and Studio surfaces) are not projects and are excluded. Use before creating a thread in another project.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
-      annotations: { title: "List OmniMind projects", ...READ_ONLY_TOOL_ANNOTATIONS },
+      annotations: { title: "List HarnessOS projects", ...READ_ONLY_TOOL_ANNOTATIONS },
     },
     handler: () =>
       snapshotQuery.getShellSnapshot().pipe(
@@ -210,7 +210,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
     definition: {
       name: "harnessos_list_threads",
       description:
-        "Discover OmniMind threads by project, hierarchy, engine, model, status, title, creation source, or update window. Archived threads are hidden unless includeArchived is true.",
+        "Discover HarnessOS threads by project, hierarchy, engine, model, status, title, creation source, or update window. Archived threads are hidden unless includeArchived is true.",
       inputSchema: {
         type: "object",
         properties: {
@@ -235,7 +235,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
         },
         additionalProperties: false,
       },
-      annotations: { title: "List OmniMind threads", ...READ_ONLY_TOOL_ANNOTATIONS },
+      annotations: { title: "List HarnessOS threads", ...READ_ONLY_TOOL_ANNOTATIONS },
     },
     handler: (args, context) =>
       Effect.gen(function* () {
@@ -287,7 +287,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
     definition: {
       name: "harnessos_read_thread",
       description:
-        "Read one OmniMind thread's status and recent messages (newest last, truncated). Pass the returned nextCursor as cursor to page older messages.",
+        "Read one HarnessOS thread's status and recent messages (newest last, truncated). Pass the returned nextCursor as cursor to page older messages.",
       inputSchema: {
         type: "object",
         properties: {
@@ -302,7 +302,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
         required: ["threadId"],
         additionalProperties: false,
       },
-      annotations: { title: "Read a OmniMind thread", ...READ_ONLY_TOOL_ANNOTATIONS },
+      annotations: { title: "Read a HarnessOS thread", ...READ_ONLY_TOOL_ANNOTATIONS },
     },
     handler: (args, context) =>
       Effect.gen(function* () {
@@ -334,7 +334,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
     requiredCapability: "thread:read",
     definition: {
       name: "harnessos_wait_for_threads",
-      description: `Wait for the pinned turns of 1–20 OmniMind threads and return every outcome in input order. Assistant summaries are capped at ${WAIT_THREAD_SUMMARY_MAX_CHARS} characters; use each result's readThread call to page the full transcript. Timeouts only report progress; they never retry, replace, cancel, or create work.`,
+      description: `Wait for the pinned turns of 1–20 HarnessOS threads and return every outcome in input order. Assistant summaries are capped at ${WAIT_THREAD_SUMMARY_MAX_CHARS} characters; use each result's readThread call to page the full transcript. Timeouts only report progress; they never retry, replace, cancel, or create work.`,
       inputSchema: {
         type: "object",
         properties: {
@@ -361,7 +361,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
         additionalProperties: false,
       },
       annotations: {
-        title: "Wait for OmniMind threads",
+        title: "Wait for HarnessOS threads",
         readOnlyHint: true,
         destructiveHint: false,
         idempotentHint: true,

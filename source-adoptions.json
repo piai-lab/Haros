@@ -216,7 +216,7 @@
       "url": "https://github.com/nicobailon/pi-web-access.git",
       "revision": "08e347f4fe6bea807882c2363527118cce6eb539",
       "paths": [
-        "packages/om-web-access",
+        "packages/oa-web-access",
         "packages/contracts/src/omnimindWebSearch.ts",
         "apps/server/src/engineWebSurface",
         "apps/server/src/browserAutomation",
@@ -243,7 +243,7 @@
       "url": "https://github.com/mrclrchtr/supi.git",
       "revision": "ce8af5f57304ad114319aa75c00920f029ceb8e7",
       "paths": [
-        "packages/om-ask",
+        "packages/oa-ask",
         "apps/server/src/provider/askUserHostBridge.ts",
         "apps/server/src/provider/omnimindAskUserExtension.ts",
         "apps/server/src/provider/userInputPresenterRegistry.ts",
@@ -256,11 +256,11 @@
       "upstreamPackage": "@mrclrchtr/supi-ask-user@5.0.0",
       "upstreamPackageIntegrity": "sha512-uBlvlXTvSrdvTvvdbpapwVwA4I3DMcIaHSGe18mtd4KdWAhd36yY1UwGvAbFXcS2NvJ18VIkaJpi112CSoabJQ==",
       "upstreamTarballSha256": "d687d4d448cc115a67ceb473b8e9ceeb56dddb047901b1f2daa05d6ae0cb300e",
-      "rights": "The fixed supi-ask-user source is MIT-licensed by Marcel Richter under the exact legal text retained in packages/om-ask/LICENSE. The npm artifact omitted LICENSE/NOTICE; OmniMind distributes only the reviewed source fork with retained ancestry and changes, not the upstream package artifact, TUI, branding or supi-core bundle.",
+      "rights": "The fixed supi-ask-user source is MIT-licensed by Marcel Richter under the exact legal text retained in packages/oa-ask/LICENSE. The npm artifact omitted LICENSE/NOTICE; OmniMind distributes only the reviewed source fork with retained ancestry and changes, not the upstream package artifact, TUI, branding or supi-core bundle.",
       "mode": "fork-subtractively",
       "changes": "OmniMind retains the stable question and option identities, choice/text domain, controller, lease and structured-result lineage while deleting the upstream TUI, transcript, supi-core, configuration, events, timers, terminal/session helpers, recommendation preselection, trimming and product caps. The private Host-neutral fork supplies the single ask_user definition and deterministic structured result. OmniMind's canonical contract, Composer Question UI, presenter lease, value-label bridge, terminal settlement, restart fencing and provenance remain product-owned. Registration is limited to bundled OmniMind Agent Sessions with a compatible presenter and exactly one bundled same-name provenance; stock Pi, AgentGateway and third-party Extensions receive no Product Ask authority.",
       "updatePolicy": "Pinned exact version, commit, npm integrity and tarball digest; no latest tracking or direct install. Every update starts at research/pi-ask-user-intake.md, re-runs the retained upstream baseline, replays P1-P7, preserves the author-test disposition and removes the fork if a lower-maintenance mature runtime proves equal. TUI, supi-core, second config/lifecycle owners, arbitrary caps, trim, preselection, ordinary-text fallback and fake restart recovery remain rejected.",
-      "licenseFiles": ["packages/om-ask/LICENSE"]
+      "licenseFiles": ["packages/oa-ask/LICENSE"]
     },
     {
       "id": "pi-agent-core-interactive-barrier",

@@ -168,14 +168,14 @@ describe("toOpenCodeFileParts", () => {
     expect(
       toOpenCodeFileParts({
         attachments: [attachment],
-        resolveAttachmentPath: () => "/tmp/omnimind-attachments/screenshot.png",
+        resolveAttachmentPath: () => "/tmp/harnessos-attachments/screenshot.png",
       }),
     ).toEqual([
       {
         type: "file",
         mime: "image/png",
         filename: "screenshot.png",
-        url: pathToFileURL("/tmp/omnimind-attachments/screenshot.png").href,
+        url: pathToFileURL("/tmp/harnessos-attachments/screenshot.png").href,
       },
     ]);
   });
@@ -192,7 +192,7 @@ describe("toOpenCodeFileParts", () => {
     expect(
       toOpenCodeFileParts({
         attachments: [attachment],
-        resolveAttachmentPath: () => "/tmp/omnimind-attachments/notes.docx",
+        resolveAttachmentPath: () => "/tmp/harnessos-attachments/notes.docx",
       }),
     ).toEqual([]);
   });
@@ -220,7 +220,7 @@ describe("buildOpenCodeServerProcessEnv", () => {
     expect(env.OPENCODE_CONFIG_CONTENT).toBe('{"engine":{"openai":{}}}');
   });
 
-  it("strips inherited OmniMind authority from managed server processes", () => {
+  it("strips inherited HarnessOS authority from managed server processes", () => {
     const env = buildOpenCodeServerProcessEnv({
       baseEnv: {
         OPENAI_API_KEY: "engine-key",
@@ -434,7 +434,7 @@ describe("OpenCodeRuntime local server pool", () => {
             .connectToOpenCodeServer({
               binaryPath: "kilo",
               cliSpec: KILO_CLI_SPEC,
-              poolIsolationKey: "omnimind-kilo-thread",
+              poolIsolationKey: "harnessos-kilo-thread",
             })
             .pipe(Effect.provideService(Scope.Scope, serverScope), Effect.forkChild);
 
@@ -598,14 +598,14 @@ describe("OpenCodeRuntime local server pool", () => {
             .connectToOpenCodeServer({
               binaryPath: "opencode",
               cwd: "/repo",
-              poolIsolationKey: "omnimind-thread-a",
+              poolIsolationKey: "harnessos-thread-a",
             })
             .pipe(Effect.provideService(Scope.Scope, firstScope));
           const second = yield* runtime
             .connectToOpenCodeServer({
               binaryPath: "opencode",
               cwd: "/repo",
-              poolIsolationKey: "omnimind-thread-b",
+              poolIsolationKey: "harnessos-thread-b",
             })
             .pipe(Effect.provideService(Scope.Scope, secondScope));
 

@@ -1,4 +1,4 @@
-const presenterSymbol = Symbol.for("omnimind.engineWebSurface.presenter.v1");
+const presenterSymbol = Symbol.for("harnessos.engineWebSurface.presenter.v1");
 
 function redirectUrlFromHtml(html) {
   if (typeof html !== "string") return null;
@@ -12,7 +12,7 @@ function redirectUrlFromHtml(html) {
   }
 }
 
-class OmniMindEngineWebSurfaceWindow {
+class HarnessOSEngineWebSurfaceWindow {
   #listeners = new Map();
   #closed = false;
 
@@ -40,10 +40,10 @@ export function open(html) {
   const url = redirectUrlFromHtml(html);
   const presenter = globalThis[presenterSymbol];
   if (!url || !presenter || typeof presenter.claim !== "function" || !presenter.claim(url)) {
-    // This optional module is process-visible, but OmniMind must consume only an
+    // This optional module is process-visible, but HarnessOS must consume only an
     // exact current-session intent registered by an Engine adapter. Throwing for
     // every other Glimpse request preserves that extension's native fallback.
-    throw new Error("No matching OmniMind Engine web-surface intent is active.");
+    throw new Error("No matching HarnessOS Engine web-surface intent is active.");
   }
-  return new OmniMindEngineWebSurfaceWindow();
+  return new HarnessOSEngineWebSurfaceWindow();
 }

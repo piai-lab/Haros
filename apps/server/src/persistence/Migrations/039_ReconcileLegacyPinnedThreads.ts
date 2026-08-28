@@ -1,6 +1,6 @@
 /**
  * Repairs imported legacy DBs whose migration tracker already used ID 36 for
- * a pre-OmniMind migration, causing OmniMind's pinned thread column migration to
+ * a pre-HarnessOS migration, causing HarnessOS's pinned thread column migration to
  * be skipped even though read-model queries now require the column.
  */
 import * as SqlClient from "effect/unstable/sql/SqlClient";

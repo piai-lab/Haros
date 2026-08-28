@@ -88,7 +88,7 @@ describe("createDesktopPlatformBuildConfig", () => {
     const win = createDesktopPlatformBuildConfig({
       platform: "win",
       target: "nsis",
-      windowsAzureSignOptions: { publisherName: "OmniMind" },
+      windowsAzureSignOptions: { publisherName: "HarnessOS" },
     });
 
     assert.equal(linux.mac, undefined);
@@ -116,8 +116,8 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.deepStrictEqual(win.win, {
       target: ["nsis"],
       icon: "icon.ico",
-      publisherName: "OmniMind",
-      azureSignOptions: { publisherName: "OmniMind" },
+      publisherName: "HarnessOS",
+      azureSignOptions: { publisherName: "HarnessOS" },
     });
   });
 
@@ -194,7 +194,7 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.ok(issue?.includes("Build mac/arm64 on macOS"));
   });
 
-  it("uses canonical OmniMind app icons instead of browser favicons for desktop", () => {
+  it("uses canonical HarnessOS app icons instead of browser favicons for desktop", () => {
     assert.equal(BRAND_ASSET_PATHS.productionMacIconPng, "assets/brand/exports/app-icon-1024.png");
     assert.equal(
       BRAND_ASSET_PATHS.productionMacLegacyIconPng,

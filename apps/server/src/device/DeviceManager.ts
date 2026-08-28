@@ -9,7 +9,7 @@
  * - Boot source. The backend cannot tell who booted a device, so the manager
  *   records the devices it booted itself. Only those are ever auto-shut-down;
  *   anything the user started (pane picker, Simulator.app) outlives us.
- * - The OmniMind boot cap (`DEVICE_HARNESSOS_BOOT_LIMIT`). Boot past the cap is
+ * - The HarnessOS boot cap (`DEVICE_HARNESSOS_BOOT_LIMIT`). Boot past the cap is
  *   refusable rather than fatal: the caller is handed the shutdown candidates
  *   so the pane can prompt.
  * - Shutdown triggers: app quit (`dispose`), thread removal
@@ -64,7 +64,7 @@ import {
   type DeviceUiTargetMatch,
 } from "./uiTreeTargeting.ts";
 
-/** How long a OmniMind-booted device stays up with no thread attached. */
+/** How long a HarnessOS-booted device stays up with no thread attached. */
 export const DEVICE_IDLE_SHUTDOWN_MS = 10 * 60 * 1000;
 
 /**
@@ -117,7 +117,7 @@ export interface DeviceManagerOptions {
   readonly transport?: DeviceFrameTransport;
   readonly idleShutdownMs?: number;
   readonly bootLimit?: number;
-  /** Remembers OmniMind's boots across a crash; defaults to remembering nothing. */
+  /** Remembers HarnessOS's boots across a crash; defaults to remembering nothing. */
   readonly bootOwnership?: BootOwnershipStore;
   readonly attachDeadlineMs?: number;
   readonly attachRetryMs?: number;
@@ -161,7 +161,7 @@ export class DeviceManager {
 
   private readonly threads = new Map<string, ThreadAttachment>();
   /** Devices this manager booted, and therefore may shut down again. */
-  private readonly omnimindBooted = new Set<string>();
+  private readonly harnessosBooted = new Set<string>();
   private readonly idleTimers = new Map<string, NodeJS.Timeout>();
   private activeStreamUdid: string | null = null;
   private desiredStreamUdid: string | null = null;
@@ -185,7 +185,7 @@ export class DeviceManager {
   }
 
   private async recordBootOwnership(): Promise<void> {
-    await this.bootOwnership.write([...this.omnimindBooted]).catch(() => undefined);
+    await this.bootOwnership.write([...this.harnessosBooted]).catch(() => undefined);
   }
 
   /**
@@ -274,18 +274,18 @@ export class DeviceManager {
   }
 
   /** Devices the pane may offer as shutdown candidates when the cap is hit. */
-  async omnimindBootedDevices(): Promise<readonly DeviceDescriptor[]> {
+  async harnessosBootedDevices(): Promise<readonly DeviceDescriptor[]> {
     const devices = await this.backend.listDevices({ includeShutdown: true }).catch(() => []);
-    this.reconcileOmniMindBooted(devices);
+    this.reconcileHarnessOSBooted(devices);
     return devices
-      .filter((device) => this.omnimindBooted.has(device.udid))
+      .filter((device) => this.harnessosBooted.has(device.udid))
       .map((device) => this.describe(device));
   }
 
   /**
    * Forget devices that are no longer running.
    *
-   * The set is OmniMind's own bookkeeping, but the simulators are not OmniMind's to
+   * The set is HarnessOS's own bookkeeping, but the simulators are not HarnessOS's to
    * keep: `simctl shutdown all` from a shell, Simulator.app quitting, a crashed
    * runtime, or the agent tidying up all shut a device down without telling us.
    * Every one of those left a phantom holding a slot, and three phantoms made
@@ -295,15 +295,15 @@ export class DeviceManager {
    * Reconciled from the listing every caller already has rather than by polling:
    * the cap is only consulted on boot, and that path lists devices anyway.
    */
-  private reconcileOmniMindBooted(devices: readonly DeviceDescriptor[]): void {
+  private reconcileHarnessOSBooted(devices: readonly DeviceDescriptor[]): void {
     const running = new Set(
       devices
         .filter((device) => device.state === "booted" || device.state === "booting")
         .map((device) => device.udid),
     );
-    for (const udid of this.omnimindBooted) {
+    for (const udid of this.harnessosBooted) {
       if (running.has(udid)) continue;
-      this.omnimindBooted.delete(udid);
+      this.harnessosBooted.delete(udid);
       this.clearIdleTimer(udid);
     }
   }
@@ -312,36 +312,36 @@ export class DeviceManager {
 
   async boot(udid: string): Promise<DeviceBootResult> {
     const devices = await this.backend.listDevices({ includeShutdown: true }).catch(() => []);
-    // Devices that stopped without OmniMind doing it still held their slots, so
+    // Devices that stopped without HarnessOS doing it still held their slots, so
     // three shutdowns from a shell were enough to make every later boot refuse.
-    this.reconcileOmniMindBooted(devices);
+    this.reconcileHarnessOSBooted(devices);
     const known = devices.find((device) => device.udid === udid) ?? null;
     // Viewing an already-booted device is uncapped: the cap exists to stop
-    // OmniMind from accumulating simulators, not to limit what the user watches.
+    // HarnessOS from accumulating simulators, not to limit what the user watches.
     if (known?.state === "booted") {
       return { kind: "booted", device: this.describe(known) };
     }
-    if (this.omnimindBooted.size >= this.bootLimit) {
+    if (this.harnessosBooted.size >= this.bootLimit) {
       return {
         kind: "boot-limit-reached",
         limit: this.bootLimit,
-        omnimindBooted: await this.omnimindBootedDevices(),
+        harnessosBooted: await this.harnessosBootedDevices(),
       };
     }
 
     // The slot is taken before the await, not after it. A boot runs for the
     // better part of a minute, so two threads asking for different simulators
     // would both read a size under the limit and both proceed, and the cap that
-    // exists to stop OmniMind accumulating multi-gigabyte simulators would be
+    // exists to stop HarnessOS accumulating multi-gigabyte simulators would be
     // exceeded by however many requests arrived inside that window.
-    this.omnimindBooted.add(udid);
+    this.harnessosBooted.add(udid);
     let device: DeviceDescriptor;
     try {
       device = await this.backend.boot(udid);
     } catch (cause) {
       // A reservation only stands for a boot that actually happened; holding it
       // after a failure would leak the slot for the process lifetime.
-      this.omnimindBooted.delete(udid);
+      this.harnessosBooted.delete(udid);
       throw cause;
     }
     // Persisted before the caller is told the boot succeeded, so a crash in the
@@ -357,7 +357,7 @@ export class DeviceManager {
     await this.stopRecordingIfActive(udid).catch(() => undefined);
     await this.stopStream(udid);
     await this.backend.shutdown(udid);
-    this.omnimindBooted.delete(udid);
+    this.harnessosBooted.delete(udid);
     await this.recordBootOwnership();
     this.clearIdleTimer(udid);
     // Any thread watching this device loses its attachment rather than pointing
@@ -771,7 +771,7 @@ export class DeviceManager {
   // ── Lifecycle ──────────────────────────────────────────────────────
 
   /**
-   * App quit: shut down everything OmniMind booted, leave the user's devices
+   * App quit: shut down everything HarnessOS booted, leave the user's devices
    * alone, and release the backend.
    */
   async dispose(): Promise<void> {
@@ -781,13 +781,13 @@ export class DeviceManager {
     this.idleTimers.clear();
     // Snapshotted: both loops mutate the set they are walking.
     const recording = Array.from(this.recording);
-    const booted = Array.from(this.omnimindBooted);
+    const booted = Array.from(this.harnessosBooted);
     this.desiredStreamUdid = null;
     await this.queueStreamReconciliation().catch(() => undefined);
     for (const udid of recording) await this.stopRecordingIfActive(udid).catch(() => undefined);
     for (const udid of booted) {
       await this.backend.shutdown(udid).catch(() => undefined);
-      this.omnimindBooted.delete(udid);
+      this.harnessosBooted.delete(udid);
     }
     // Nothing is ours any more, so a later start must not adopt these.
     await this.bootOwnership.clear().catch(() => undefined);
@@ -820,7 +820,7 @@ export class DeviceManager {
    * here, so the pane always sees geometry once the device has been attached.
    */
   private describe(device: DeviceDescriptor): DeviceDescriptor {
-    const bootSource = this.omnimindBooted.has(device.udid) ? "oa" : device.bootSource;
+    const bootSource = this.harnessosBooted.has(device.udid) ? "oa" : device.bootSource;
     const geometry = this.backend.geometry(device.udid) ?? device.geometry;
     if (bootSource === device.bootSource && geometry === device.geometry) return device;
     return { ...device, bootSource, ...(geometry ? { geometry } : {}) };
@@ -936,10 +936,10 @@ export class DeviceManager {
 
   /**
    * Nobody is watching this device any more. Stop the stream, and either shut
-   * the device down or start the idle countdown if OmniMind booted it.
+   * the device down or start the idle countdown if HarnessOS booted it.
    *
    * A switch shuts down immediately rather than waiting out the idle window.
-   * The cap is three OmniMind-booted devices, and each one costs a couple of GB
+   * The cap is three HarnessOS-booted devices, and each one costs a couple of GB
    * of RAM, so trying three simulators in a row filled every slot with devices
    * nobody was looking at and made the fourth pick prompt for a shutdown the
    * user had effectively already asked for. A plain detach still uses the idle
@@ -957,7 +957,7 @@ export class DeviceManager {
     if (this.transport.deviceSubscriberCount(udid) === 0) {
       await this.stopStream(udid).catch(() => undefined);
     }
-    if (!this.omnimindBooted.has(udid)) return;
+    if (!this.harnessosBooted.has(udid)) return;
     if (reason === "switched") {
       this.clearIdleTimer(udid);
       // Failure here is not the switch's problem: the new device is already
@@ -984,7 +984,7 @@ export class DeviceManager {
   private async shutdownIfStillIdle(udid: string): Promise<void> {
     if (this.disposed) return;
     // Re-checked at fire time: a thread may have re-attached during the wait.
-    if (this.isAttachedAnywhere(udid) || !this.omnimindBooted.has(udid)) return;
+    if (this.isAttachedAnywhere(udid) || !this.harnessosBooted.has(udid)) return;
     await this.shutdown(udid).catch(() => undefined);
   }
 

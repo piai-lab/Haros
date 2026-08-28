@@ -60,11 +60,11 @@ describe("workspacePathsStore", () => {
 
     const { useWorkspacePathsStore } = await import("./workspacePathsStore");
 
-    useWorkspacePathsStore.getState().setChatWorkspaceRoot("/Users/tester/Documents/OmniMind");
+    useWorkspacePathsStore.getState().setChatWorkspaceRoot("/Users/tester/Documents/HarnessOS");
     useWorkspacePathsStore.getState().setChatWorkspaceRoot(undefined);
 
     expect(useWorkspacePathsStore.getState().chatWorkspaceRoot).toBe(
-      "/Users/tester/Documents/OmniMind",
+      "/Users/tester/Documents/HarnessOS",
     );
   });
 
@@ -76,11 +76,11 @@ describe("workspacePathsStore", () => {
 
     useWorkspacePathsStore
       .getState()
-      .setStudioWorkspaceRoot("/Users/tester/Documents/OmniMind/Studio");
+      .setStudioWorkspaceRoot("/Users/tester/Documents/HarnessOS/Studio");
     useWorkspacePathsStore.getState().setStudioWorkspaceRoot(undefined);
 
     expect(useWorkspacePathsStore.getState().studioWorkspaceRoot).toBe(
-      "/Users/tester/Documents/OmniMind/Studio",
+      "/Users/tester/Documents/HarnessOS/Studio",
     );
   });
 
@@ -92,16 +92,16 @@ describe("workspacePathsStore", () => {
 
     useWorkspacePathsStore.getState().setServerWorkspacePaths({
       homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
-      studioWorkspaceRoot: "/Users/tester/Documents/OmniMind/Studio",
+      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
+      studioWorkspaceRoot: "/Users/tester/Documents/HarnessOS/Studio",
     });
 
     expect(useWorkspacePathsStore.getState().homeDir).toBe("/Users/tester");
     expect(useWorkspacePathsStore.getState().chatWorkspaceRoot).toBe(
-      "/Users/tester/Documents/OmniMind",
+      "/Users/tester/Documents/HarnessOS",
     );
     expect(useWorkspacePathsStore.getState().studioWorkspaceRoot).toBe(
-      "/Users/tester/Documents/OmniMind/Studio",
+      "/Users/tester/Documents/HarnessOS/Studio",
     );
   });
 
@@ -112,8 +112,8 @@ describe("workspacePathsStore", () => {
     let workspaceModule = await import("./workspacePathsStore");
     workspaceModule.useWorkspacePathsStore.getState().setServerWorkspacePaths({
       homeDir: "/Users/tester",
-      chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
-      studioWorkspaceRoot: "/Users/tester/Documents/OmniMind/Studio",
+      chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
+      studioWorkspaceRoot: "/Users/tester/Documents/HarnessOS/Studio",
     });
 
     vi.resetModules();
@@ -121,7 +121,7 @@ describe("workspacePathsStore", () => {
 
     expect(workspaceModule.useWorkspacePathsStore.getState().homeDir).toBe("/Users/tester");
     expect(workspaceModule.useWorkspacePathsStore.getState().chatWorkspaceRoot).toBe(
-      "/Users/tester/Documents/OmniMind",
+      "/Users/tester/Documents/HarnessOS",
     );
     expect(workspaceModule.useWorkspacePathsStore.getState().studioWorkspaceRoot).toBeNull();
   });
@@ -133,7 +133,7 @@ describe("workspacePathsStore", () => {
       JSON.stringify({
         state: {
           homeDir: "/Users/legacy",
-          chatWorkspaceRoot: "/Users/legacy/Documents/OmniMind",
+          chatWorkspaceRoot: "/Users/legacy/Documents/HarnessOS",
           workspacePages: [{ id: "retired-workspace", title: "Workspace 1" }],
         },
         version: 2,
@@ -145,7 +145,7 @@ describe("workspacePathsStore", () => {
 
     expect(useWorkspacePathsStore.getState().homeDir).toBe("/Users/legacy");
     expect(useWorkspacePathsStore.getState().chatWorkspaceRoot).toBe(
-      "/Users/legacy/Documents/OmniMind",
+      "/Users/legacy/Documents/HarnessOS",
     );
     expect(useWorkspacePathsStore.getState()).not.toHaveProperty("workspacePages");
 

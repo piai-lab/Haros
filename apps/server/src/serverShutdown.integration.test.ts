@@ -93,7 +93,7 @@ describe("desktop shutdown authorization", () => {
     ["a wildcard IPv4 bind", { host: "0.0.0.0" }],
     ["a wildcard IPv6 bind", { host: "::" }],
     ["a non-loopback bind", { host: "192.168.1.50" }],
-    ["a public URL", { publicUrl: new URL("https://omnimind.example.test/") }],
+    ["a public URL", { publicUrl: new URL("https://harnessos.example.test/") }],
     ["a missing token", { desktopShutdownToken: undefined }],
     ["an empty token", { desktopShutdownToken: "   " }],
   ] satisfies ReadonlyArray<readonly [string, Partial<ShutdownConfig>]>)(

@@ -55,7 +55,7 @@ describe("AcpSessionRuntime", () => {
               parameterizedModelPicker: true,
             },
           },
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           authMethodId: "test",
           requestLogger: (event) =>
             Effect.sync(() => {
@@ -80,7 +80,7 @@ describe("AcpSessionRuntime", () => {
       expect(sessionStarted?.payload).toMatchObject({
         _meta: {
           "x.ai/hooks": {
-            PreToolUse: [{ matcher: "*", hookCallbackIds: ["omnimind-plan-guard"] }],
+            PreToolUse: [{ matcher: "*", hookCallbackIds: ["harnessos-plan-guard"] }],
           },
         },
       });
@@ -94,10 +94,10 @@ describe("AcpSessionRuntime", () => {
           cwd: process.cwd(),
           sessionMeta: {
             "x.ai/hooks": {
-              PreToolUse: [{ matcher: "*", hookCallbackIds: ["omnimind-plan-guard"] }],
+              PreToolUse: [{ matcher: "*", hookCallbackIds: ["harnessos-plan-guard"] }],
             },
           },
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           authMethodId: "test",
           requestLogger: (event) =>
             Effect.sync(() => {
@@ -139,7 +139,7 @@ describe("AcpSessionRuntime", () => {
             },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           authMethodId: "test",
           freshSessionRetry: {
             shouldRetry: (error) =>
@@ -194,7 +194,7 @@ describe("AcpSessionRuntime", () => {
           },
           cwd: process.cwd(),
           resumeSessionId: "mock-session-1",
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           authMethodId: "test",
         }),
       ),
@@ -223,7 +223,7 @@ describe("AcpSessionRuntime", () => {
           cwd: process.cwd(),
           resumeSessionId: "mock-session-1",
           sessionMeta: { reconnectPolicy: "keep-hooks" },
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           authMethodId: "test",
           requestLogger: (event) =>
             Effect.sync(() => {
@@ -260,7 +260,7 @@ describe("AcpSessionRuntime", () => {
           cwd: process.cwd(),
           resumeSessionId: "mock-session-1",
           sessionMeta: { reconnectPolicy: "keep-hooks" },
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           authMethodId: "test",
           requestLogger: (event) =>
             Effect.sync(() => {
@@ -291,7 +291,7 @@ describe("AcpSessionRuntime", () => {
           },
           cwd: process.cwd(),
           resumeSessionId: "mock-session-1",
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           authMethodId: "test",
           requestLogger: (event) =>
             Effect.sync(() => {
@@ -338,7 +338,7 @@ describe("AcpSessionRuntime", () => {
           },
           cwd: process.cwd(),
           clientCapabilities: { _meta: { parameterizedModelPicker: true } },
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           authMethodId: "test",
           requestLogger: (event) =>
             Effect.sync(() => {
@@ -389,7 +389,7 @@ describe("AcpSessionRuntime", () => {
             },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           authMethodId: "test",
           requestLogger: (event) =>
             Effect.sync(() => {
@@ -412,7 +412,7 @@ describe("AcpSessionRuntime", () => {
         },
         cwd: process.cwd(),
         resumeSessionId: "mock-session-1",
-        clientInfo: { name: "omnimind-test", version: "0.0.0" },
+        clientInfo: { name: "harnessos-test", version: "0.0.0" },
         authMethodId: "test",
       });
 
@@ -484,7 +484,7 @@ describe("AcpSessionRuntime", () => {
             args: [mockAgentPath],
           },
           cwd: process.cwd(),
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           authMethodId: "test",
         }),
       ),
@@ -546,7 +546,7 @@ describe("AcpSessionRuntime", () => {
             },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           authMethodId: "test",
         }),
       ),
@@ -592,7 +592,7 @@ describe("AcpSessionRuntime", () => {
             },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           authMethodId: "test",
         }),
       ),
@@ -641,7 +641,7 @@ describe("AcpSessionRuntime", () => {
             },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           authMethodId: "test",
         }),
       ),
@@ -684,7 +684,7 @@ describe("AcpSessionRuntime", () => {
             },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           authMethodId: "test",
         }),
       ),
@@ -733,7 +733,7 @@ describe("AcpSessionRuntime", () => {
             args: [mockAgentPath],
           },
           cwd: process.cwd(),
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           requestLogger: (event) =>
             Effect.sync(() => {
               requestEvents.push(event);
@@ -768,7 +768,7 @@ describe("AcpSessionRuntime", () => {
             args: [mockAgentPath],
           },
           cwd: process.cwd(),
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           requestLogger: (event) =>
             Effect.sync(() => {
               requestEvents.push(event);
@@ -811,7 +811,7 @@ describe("AcpSessionRuntime", () => {
             args: [mockAgentPath],
           },
           cwd: process.cwd(),
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
           protocolLogging: {
             logIncoming: true,
             logOutgoing: true,
@@ -869,7 +869,7 @@ describe("AcpSessionRuntime", () => {
             },
           },
           cwd: process.cwd(),
-          clientInfo: { name: "omnimind-test", version: "0.0.0" },
+          clientInfo: { name: "harnessos-test", version: "0.0.0" },
         }),
       ),
       Effect.scoped,

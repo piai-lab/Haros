@@ -27,7 +27,7 @@ import {
   resolveScratchWorkspacesRoot,
 } from "./scratchWorkspaces";
 
-const testScratchParent = mkdtempSync(path.join(tmpdir(), "omnimind-scratch-test-"));
+const testScratchParent = mkdtempSync(path.join(tmpdir(), "harnessos-scratch-test-"));
 const testScratchRoot = path.join(testScratchParent, SCRATCH_WORKSPACES_DIRNAME);
 
 afterAll(() => {
@@ -102,7 +102,7 @@ describe("ensureIsolatedScratchWorkspace", () => {
         SCRATCH_WORKSPACES_DIRNAME,
       );
       const legacyRoot = path.join(testScratchParent, "legacy-link");
-      const redirectedRoot = mkdtempSync(path.join(tmpdir(), "omnimind-legacy-redirect-"));
+      const redirectedRoot = mkdtempSync(path.join(tmpdir(), "harnessos-legacy-redirect-"));
       const workspaceSegment = path.basename(
         ensureIsolatedScratchWorkspace(threadId, privateRoot, redirectedRoot),
       );
@@ -238,7 +238,7 @@ describe("ensureIsolatedScratchWorkspace", () => {
     () => {
       const threadId = ThreadId.makeUnsafe("symlinked-private-thread");
       const workspace = ensureTestScratchWorkspace(threadId);
-      const redirected = mkdtempSync(path.join(tmpdir(), "omnimind-scratch-redirect-"));
+      const redirected = mkdtempSync(path.join(tmpdir(), "harnessos-scratch-redirect-"));
       rmSync(workspace, { recursive: true, force: true });
       symlinkSync(redirected, workspace, "dir");
       try {

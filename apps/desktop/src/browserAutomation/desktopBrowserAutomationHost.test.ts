@@ -112,7 +112,7 @@ const createWebContents = () => {
       const expression = String(params?.expression ?? "");
       if (expression.includes("performance.getEntriesByType")) return { result: { value: 0 } };
       if (
-        expression.includes('const key = "__omnimindBrowserAutomationV1"') &&
+        expression.includes('const key = "__harnessosBrowserAutomationV1"') &&
         expression.includes("elements = []")
       ) {
         return {
@@ -141,7 +141,7 @@ const createWebContents = () => {
       ) {
         return { result: { value: { count: 1, generation: 1 } } };
       }
-      if (expression.includes("globalThis.__omnimindBrowserAutomationV1.currentTarget")) {
+      if (expression.includes("globalThis.__harnessosBrowserAutomationV1.currentTarget")) {
         return { result: { objectId: "target-1", type: "object", subtype: "node" } };
       }
       if (expression.includes("document.activeElement || document.body")) {
@@ -2305,7 +2305,7 @@ describe("snapshot target validity", () => {
           if (expression.includes("state.refs.get")) {
             return { result: { value: { count: 1, generation: 999, stale: false } } };
           }
-          if (expression.includes("globalThis.__omnimindBrowserAutomationV1.currentTarget")) {
+          if (expression.includes("globalThis.__harnessosBrowserAutomationV1.currentTarget")) {
             return { result: { objectId: "target-1", type: "object", subtype: "node" } };
           }
         }

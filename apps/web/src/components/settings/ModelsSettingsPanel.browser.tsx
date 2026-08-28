@@ -8,11 +8,11 @@ import {
   ThreadId,
   type NativeApi,
   type EngineSelection,
-  type OmniMindCustomModelServiceModelInput,
-  type OmniMindModelServiceAuthResult,
-  type OmniMindModelServiceDescriptor,
-  type OmniMindModelServicesGetResult,
-  type OmniMindModelServicesListResult,
+  type HarnessOSCustomModelServiceModelInput,
+  type OAModelServiceAuthResult,
+  type OAModelServiceDescriptor,
+  type OAModelServicesGetResult,
+  type OAModelServicesListResult,
 } from "@harnessos/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -62,7 +62,7 @@ import { ModelsSettingsPanel, type PreparedModelService } from "./ModelsSettings
 
 const checkedAt = "2026-08-12T00:00:00.000Z";
 type ServiceOverrides = Omit<
-  Partial<OmniMindModelServiceDescriptor>,
+  Partial<OAModelServiceDescriptor>,
   "catalogState" | "catalogErrorCode"
 > &
   (
@@ -73,9 +73,9 @@ type ServiceOverrides = Omit<
       }
   );
 
-function service(overrides: ServiceOverrides = {}): OmniMindModelServiceDescriptor {
+function service(overrides: ServiceOverrides = {}): OAModelServiceDescriptor {
   const { catalogState = "ready", catalogErrorCode: _catalogErrorCode, ...rest } = overrides;
-  const base: Omit<OmniMindModelServiceDescriptor, "catalogState" | "catalogErrorCode"> = {
+  const base: Omit<OAModelServiceDescriptor, "catalogState" | "catalogErrorCode"> = {
     serviceId: "deepseek",
     providerId: "deepseek",
     displayName: "DeepSeek",
@@ -100,23 +100,23 @@ function setNativeApi(input: {
   readonly list: (
     input?: { readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
-  ) => Promise<OmniMindModelServicesListResult>;
+  ) => Promise<OAModelServicesListResult>;
   readonly get?: (
     input: { readonly serviceId: string; readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
-  ) => Promise<OmniMindModelServicesGetResult>;
+  ) => Promise<OAModelServicesGetResult>;
   readonly supported?: boolean;
-  readonly beginLogin?: NativeApi["omnimindModelServices"]["beginLogin"];
-  readonly pollLogin?: NativeApi["omnimindModelServices"]["pollLogin"];
-  readonly answerLogin?: NativeApi["omnimindModelServices"]["answerLogin"];
-  readonly cancelLogin?: NativeApi["omnimindModelServices"]["cancelLogin"];
-  readonly logout?: NativeApi["omnimindModelServices"]["logout"];
-  readonly revealApiKey?: NativeApi["omnimindModelServices"]["revealApiKey"];
-  readonly refresh?: NativeApi["omnimindModelServices"]["refresh"];
-  readonly discoverCustom?: NativeApi["omnimindModelServices"]["discoverCustom"];
-  readonly testCustom?: NativeApi["omnimindModelServices"]["testCustom"];
-  readonly saveCustom?: NativeApi["omnimindModelServices"]["saveCustom"];
-  readonly removeCustom?: NativeApi["omnimindModelServices"]["removeCustom"];
+  readonly beginLogin?: NativeApi["oaModelServices"]["beginLogin"];
+  readonly pollLogin?: NativeApi["oaModelServices"]["pollLogin"];
+  readonly answerLogin?: NativeApi["oaModelServices"]["answerLogin"];
+  readonly cancelLogin?: NativeApi["oaModelServices"]["cancelLogin"];
+  readonly logout?: NativeApi["oaModelServices"]["logout"];
+  readonly revealApiKey?: NativeApi["oaModelServices"]["revealApiKey"];
+  readonly refresh?: NativeApi["oaModelServices"]["refresh"];
+  readonly discoverCustom?: NativeApi["oaModelServices"]["discoverCustom"];
+  readonly testCustom?: NativeApi["oaModelServices"]["testCustom"];
+  readonly saveCustom?: NativeApi["oaModelServices"]["saveCustom"];
+  readonly removeCustom?: NativeApi["oaModelServices"]["removeCustom"];
   readonly openExternal?: NativeApi["shell"]["openExternal"];
 }) {
   const getConfig = vi.fn().mockResolvedValue(createBrowserTestServerConfig(checkedAt));
@@ -171,7 +171,7 @@ function setNativeApi(input: {
     input.testCustom ??
       (async ({ config }) => ({
         state: "success",
-        models: config.models.map((model: OmniMindCustomModelServiceModelInput) => ({
+        models: config.models.map((model: HarnessOSCustomModelServiceModelInput) => ({
           modelId: model.modelId,
           displayName: model.displayName ?? model.modelId,
           available: true,
@@ -197,7 +197,7 @@ function setNativeApi(input: {
     ...(input.supported === false
       ? {}
       : {
-          omnimindModelServices: {
+          oaModelServices: {
             list,
             get,
             beginLogin,
@@ -242,24 +242,24 @@ async function renderPanel(input: {
   readonly list: (
     input?: { readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
-  ) => Promise<OmniMindModelServicesListResult>;
+  ) => Promise<OAModelServicesListResult>;
   readonly get?: (
     input: { readonly serviceId: string; readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
-  ) => Promise<OmniMindModelServicesGetResult>;
+  ) => Promise<OAModelServicesGetResult>;
   readonly primeServerConfig?: boolean;
   readonly supported?: boolean;
-  readonly beginLogin?: NativeApi["omnimindModelServices"]["beginLogin"];
-  readonly pollLogin?: NativeApi["omnimindModelServices"]["pollLogin"];
-  readonly answerLogin?: NativeApi["omnimindModelServices"]["answerLogin"];
-  readonly cancelLogin?: NativeApi["omnimindModelServices"]["cancelLogin"];
-  readonly logout?: NativeApi["omnimindModelServices"]["logout"];
-  readonly revealApiKey?: NativeApi["omnimindModelServices"]["revealApiKey"];
-  readonly refresh?: NativeApi["omnimindModelServices"]["refresh"];
-  readonly discoverCustom?: NativeApi["omnimindModelServices"]["discoverCustom"];
-  readonly testCustom?: NativeApi["omnimindModelServices"]["testCustom"];
-  readonly saveCustom?: NativeApi["omnimindModelServices"]["saveCustom"];
-  readonly removeCustom?: NativeApi["omnimindModelServices"]["removeCustom"];
+  readonly beginLogin?: NativeApi["oaModelServices"]["beginLogin"];
+  readonly pollLogin?: NativeApi["oaModelServices"]["pollLogin"];
+  readonly answerLogin?: NativeApi["oaModelServices"]["answerLogin"];
+  readonly cancelLogin?: NativeApi["oaModelServices"]["cancelLogin"];
+  readonly logout?: NativeApi["oaModelServices"]["logout"];
+  readonly revealApiKey?: NativeApi["oaModelServices"]["revealApiKey"];
+  readonly refresh?: NativeApi["oaModelServices"]["refresh"];
+  readonly discoverCustom?: NativeApi["oaModelServices"]["discoverCustom"];
+  readonly testCustom?: NativeApi["oaModelServices"]["testCustom"];
+  readonly saveCustom?: NativeApi["oaModelServices"]["saveCustom"];
+  readonly removeCustom?: NativeApi["oaModelServices"]["removeCustom"];
   readonly openExternal?: NativeApi["shell"]["openExternal"];
 }) {
   const calls = setNativeApi(input);
@@ -660,8 +660,8 @@ describe("ModelsSettingsPanel model services", () => {
   });
 
   it("keeps the first load distinct from an empty service list", async () => {
-    let resolveList!: (value: OmniMindModelServicesListResult) => void;
-    const pendingList = new Promise<OmniMindModelServicesListResult>((resolve) => {
+    let resolveList!: (value: OAModelServicesListResult) => void;
+    const pendingList = new Promise<OAModelServicesListResult>((resolve) => {
       resolveList = resolve;
     });
     const mounted = await renderPanel({ list: () => pendingList });
@@ -772,7 +772,7 @@ describe("ModelsSettingsPanel model services", () => {
       catalogErrorCode: null,
     });
     const list = vi.fn(
-      async (input: { intent?: "add_service" } = {}): Promise<OmniMindModelServicesListResult> =>
+      async (input: { intent?: "add_service" } = {}): Promise<OAModelServicesListResult> =>
         input.intent === "add_service"
           ? {
               state: "empty" as const,
@@ -1088,7 +1088,7 @@ describe("ModelsSettingsPanel model services", () => {
     });
     const testCustom = vi.fn(async ({ config }) => ({
       state: "success" as const,
-      models: config.models.map((model: OmniMindCustomModelServiceModelInput) => ({
+      models: config.models.map((model: HarnessOSCustomModelServiceModelInput) => ({
         modelId: model.modelId,
         displayName: model.displayName ?? model.modelId,
         available: true,
@@ -1389,7 +1389,7 @@ describe("ModelsSettingsPanel model services", () => {
     }));
     const testCustom = vi.fn(async ({ config }) => ({
       state: "success" as const,
-      models: config.models.map((model: OmniMindCustomModelServiceModelInput) => ({
+      models: config.models.map((model: HarnessOSCustomModelServiceModelInput) => ({
         modelId: model.modelId,
         displayName: model.displayName ?? model.modelId,
         available: true,
@@ -1522,7 +1522,7 @@ describe("ModelsSettingsPanel model services", () => {
   it("keeps command credentials in the advanced path and does not repeat endpoint trust on save", async () => {
     const testCustom = vi.fn(async ({ config }) => ({
       state: "success" as const,
-      models: config.models.map((model: OmniMindCustomModelServiceModelInput) => ({
+      models: config.models.map((model: HarnessOSCustomModelServiceModelInput) => ({
         modelId: model.modelId,
         displayName: model.modelId,
         available: true,
@@ -1636,7 +1636,7 @@ describe("ModelsSettingsPanel model services", () => {
     }));
     const testCustom = vi.fn(async ({ config }) => ({
       state: "success" as const,
-      models: config.models.map((model: OmniMindCustomModelServiceModelInput) => ({
+      models: config.models.map((model: HarnessOSCustomModelServiceModelInput) => ({
         modelId: model.modelId,
         displayName: model.modelId,
         available: true,
@@ -2112,7 +2112,7 @@ describe("ModelsSettingsPanel model services", () => {
     const mounted = await renderPanel({
       list: (_input, options) => {
         observedSignal = options?.signal;
-        return new Promise<OmniMindModelServicesListResult>(() => undefined);
+        return new Promise<OAModelServicesListResult>(() => undefined);
       },
     });
 
@@ -2340,15 +2340,13 @@ describe("ModelsSettingsPanel model services", () => {
       return { state: "complete" as const, requestId, service: configuredService, events: [] };
     });
     let finishRefresh!: (
-      result: Awaited<ReturnType<NativeApi["omnimindModelServices"]["refresh"]>>,
+      result: Awaited<ReturnType<NativeApi["oaModelServices"]["refresh"]>>,
     ) => void;
     const refresh = vi.fn(
       () =>
-        new Promise<Awaited<ReturnType<NativeApi["omnimindModelServices"]["refresh"]>>>(
-          (resolve) => {
-            finishRefresh = resolve;
-          },
-        ),
+        new Promise<Awaited<ReturnType<NativeApi["oaModelServices"]["refresh"]>>>((resolve) => {
+          finishRefresh = resolve;
+        }),
     );
     const mounted = await renderPanel({
       list: async () => ({
@@ -2521,9 +2519,9 @@ describe("ModelsSettingsPanel model services", () => {
     const onSetupReady = vi.fn();
     let refreshSignal: AbortSignal | undefined;
     let finishRefresh!: (
-      result: Awaited<ReturnType<NativeApi["omnimindModelServices"]["refresh"]>>,
+      result: Awaited<ReturnType<NativeApi["oaModelServices"]["refresh"]>>,
     ) => void;
-    const refresh: NativeApi["omnimindModelServices"]["refresh"] = (_input, options) => {
+    const refresh: NativeApi["oaModelServices"]["refresh"] = (_input, options) => {
       refreshSignal = options?.signal;
       return new Promise((resolve) => {
         finishRefresh = resolve;
@@ -2981,8 +2979,8 @@ describe("ModelsSettingsPanel model services", () => {
     }));
     const pollLogin = vi.fn(
       (
-        _input: Parameters<NativeApi["omnimindModelServices"]["pollLogin"]>[0],
-        options?: Parameters<NativeApi["omnimindModelServices"]["pollLogin"]>[1],
+        _input: Parameters<NativeApi["oaModelServices"]["pollLogin"]>[0],
+        options?: Parameters<NativeApi["oaModelServices"]["pollLogin"]>[1],
       ) =>
         new Promise<never>((_resolve, reject) => {
           const signal = options?.signal;
@@ -3056,8 +3054,8 @@ describe("ModelsSettingsPanel model services", () => {
     let pollCount = 0;
     const pollLogin = vi.fn(
       (
-        _input: Parameters<NativeApi["omnimindModelServices"]["pollLogin"]>[0],
-        options?: Parameters<NativeApi["omnimindModelServices"]["pollLogin"]>[1],
+        _input: Parameters<NativeApi["oaModelServices"]["pollLogin"]>[0],
+        options?: Parameters<NativeApi["oaModelServices"]["pollLogin"]>[1],
       ) => {
         pollCount += 1;
         if (pollCount === 1) {
@@ -3166,10 +3164,10 @@ describe("ModelsSettingsPanel model services", () => {
     const requestId = "00000000-0000-4000-8000-000000000035";
     const promptId = "00000000-0000-4000-8000-000000000036";
     const authUrl = "https://auth.example.test/oauth/authorize?opaque=redacted";
-    let finishBrowserLogin!: (result: OmniMindModelServiceAuthResult) => void;
+    let finishBrowserLogin!: (result: OAModelServiceAuthResult) => void;
     const pollLogin = vi.fn(
       () =>
-        new Promise<OmniMindModelServiceAuthResult>((resolve) => {
+        new Promise<OAModelServiceAuthResult>((resolve) => {
           finishBrowserLogin = resolve;
         }),
     );
@@ -3276,8 +3274,8 @@ describe("ModelsSettingsPanel model services", () => {
       });
     const pollLogin = vi.fn(
       (
-        _input: Parameters<NativeApi["omnimindModelServices"]["pollLogin"]>[0],
-        options?: Parameters<NativeApi["omnimindModelServices"]["pollLogin"]>[1],
+        _input: Parameters<NativeApi["oaModelServices"]["pollLogin"]>[0],
+        options?: Parameters<NativeApi["oaModelServices"]["pollLogin"]>[1],
       ) =>
         new Promise<never>((_resolve, reject) => {
           const signal = options?.signal;
@@ -3450,8 +3448,8 @@ describe("ModelsSettingsPanel model services", () => {
     let observedSignal: AbortSignal | undefined;
     const revealApiKey = vi.fn(
       (
-        _input: Parameters<NativeApi["omnimindModelServices"]["revealApiKey"]>[0],
-        options?: Parameters<NativeApi["omnimindModelServices"]["revealApiKey"]>[1],
+        _input: Parameters<NativeApi["oaModelServices"]["revealApiKey"]>[0],
+        options?: Parameters<NativeApi["oaModelServices"]["revealApiKey"]>[1],
       ) => {
         revealAttempt += 1;
         if (revealAttempt > 1) {

@@ -8,7 +8,7 @@ import * as OS from "node:os";
 import * as Path from "node:path";
 
 import { readEnvironmentFromLoginShell, type ShellEnvironmentReader } from "./shell";
-import { resolveOmniMindHomeDirectory } from "./harnessosHome";
+import { resolveHarnessOSHomeDirectory } from "./harnessosHome";
 
 /**
  * The variables every probe captures, regardless of what the caller asked for.
@@ -52,7 +52,7 @@ export function loginShellEnvironmentCachePath(
   options: { readonly env?: NodeJS.ProcessEnv; readonly homeDirectory?: string } = {},
 ): string {
   return Path.join(
-    resolveOmniMindHomeDirectory(options),
+    resolveHarnessOSHomeDirectory(options),
     "cache",
     LOGIN_SHELL_ENVIRONMENT_CACHE_FILE_NAME,
   );

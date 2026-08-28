@@ -65,7 +65,7 @@ const autoTurnOverrides = {
   sandboxPolicy: { type: "workspaceWrite" },
 } as const;
 
-describe("Codex OmniMind harness policy", () => {
+describe("Codex HarnessOS harness policy", () => {
   it("keeps the same host policy exactly once in default and plan instructions", () => {
     for (const instructions of [
       CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS,
@@ -73,7 +73,7 @@ describe("Codex OmniMind harness policy", () => {
     ]) {
       expect(instructions).toContain(HARNESSOS_HARNESS_POLICY_MARKER);
       expect(instructions.split(HARNESSOS_HARNESS_POLICY_MARKER)).toHaveLength(2);
-      expect(instructions).toContain("OmniMind is the host and harness");
+      expect(instructions).toContain("HarnessOS is the host and harness");
       expect(instructions).toContain("tools actually available");
       expect(instructions).not.toContain("harnessos_create_threads");
       expect(instructions).not.toContain("browser_open");
@@ -82,9 +82,9 @@ describe("Codex OmniMind harness policy", () => {
   });
 
   it("resolves the gateway endpoint when each session environment is built", async () => {
-    const homePath = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-gateway-endpoint-"));
-    const previousOmniMindHome = process.env.HARNESSOS_HOME;
-    process.env.HARNESSOS_HOME = path.join(homePath, "omnimind-home");
+    const homePath = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-gateway-endpoint-"));
+    const previousHarnessOSHome = process.env.HARNESSOS_HOME;
+    process.env.HARNESSOS_HOME = path.join(homePath, "harnessos-home");
     let endpointUrl = "http://127.0.0.1:0/mcp";
     try {
       const manager = new CodexAppServerManager(undefined, {
@@ -110,10 +110,10 @@ describe("Codex OmniMind harness policy", () => {
       const configPath = path.join(env.CODEX_HOME ?? homePath, "config.toml");
       expect(readFileSync(configPath, "utf8")).toContain('url = "http://127.0.0.1:48123/mcp"');
     } finally {
-      if (previousOmniMindHome === undefined) {
+      if (previousHarnessOSHome === undefined) {
         delete process.env.HARNESSOS_HOME;
       } else {
-        process.env.HARNESSOS_HOME = previousOmniMindHome;
+        process.env.HARNESSOS_HOME = previousHarnessOSHome;
       }
       rmSync(homePath, { recursive: true, force: true });
     }
@@ -695,7 +695,7 @@ describe("classifyCodexStderrLine", () => {
 
 describe("codex CLI version gate", () => {
   it("memoizes the version probe per binary and shares concurrent probes", async () => {
-    const dir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-version-"));
+    const dir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-version-"));
     const homePath = path.join(dir, "codex-home");
     mkdirSync(homePath, { recursive: true });
     vi.stubEnv("HARNESSOS_HOME", path.join(dir, "runtime"));
@@ -754,7 +754,7 @@ describe("codex CLI version gate", () => {
   });
 
   it("does not reuse a general-version verdict for the stricter Auto floor", async () => {
-    const dir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-version-auto-floor-"));
+    const dir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-version-auto-floor-"));
     const homePath = path.join(dir, "codex-home");
     mkdirSync(homePath, { recursive: true });
     vi.stubEnv("HARNESSOS_HOME", path.join(dir, "runtime"));
@@ -798,7 +798,7 @@ describe("codex CLI version gate", () => {
   });
 
   it("fails closed for Auto when the Codex CLI version cannot be parsed", async () => {
-    const dir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-version-auto-unknown-"));
+    const dir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-version-auto-unknown-"));
     const homePath = path.join(dir, "codex-home");
     mkdirSync(homePath, { recursive: true });
     vi.stubEnv("HARNESSOS_HOME", path.join(dir, "runtime"));
@@ -834,7 +834,7 @@ describe("codex CLI version gate", () => {
   });
 
   it("re-probes when the binary behind an unchanged path is replaced", async () => {
-    const dir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-version-swap-"));
+    const dir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-version-swap-"));
     const homePath = path.join(dir, "codex-home");
     mkdirSync(homePath, { recursive: true });
     vi.stubEnv("HARNESSOS_HOME", path.join(dir, "runtime"));
@@ -863,7 +863,7 @@ describe("codex CLI version gate", () => {
       writeBinary("0.1.0", "replaced-in-place-by-a-downgrade");
       await expect(
         assertSupportedCodexCliVersion({ binaryPath, cwd: dir, homePath }),
-      ).rejects.toThrow(/too old for OmniMind/);
+      ).rejects.toThrow(/too old for HarnessOS/);
     } finally {
       reset();
       vi.unstubAllEnvs();
@@ -876,7 +876,7 @@ describe("codex CLI version gate", () => {
     // survives PATH resolution. It is taken from the same env object handed to the spawn a few
     // lines later, which is what keeps it pointed at the binary actually being probed even when
     // that env carries a login-shell PATH the process itself never had.
-    const dir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-version-path-"));
+    const dir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-version-path-"));
     const homePath = path.join(dir, "codex-home");
     mkdirSync(homePath, { recursive: true });
     vi.stubEnv("HARNESSOS_HOME", path.join(dir, "runtime"));
@@ -904,7 +904,7 @@ describe("codex CLI version gate", () => {
       writeBinary("0.1.0", "replaced-in-place-by-a-downgrade");
       await expect(
         assertSupportedCodexCliVersion({ binaryPath: "codex", cwd: dir, homePath }),
-      ).rejects.toThrow(/too old for OmniMind/);
+      ).rejects.toThrow(/too old for HarnessOS/);
     } finally {
       reset();
       vi.unstubAllEnvs();
@@ -913,7 +913,7 @@ describe("codex CLI version gate", () => {
   });
 
   it("rejects an unsupported codex version without caching the failure", async () => {
-    const dir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-version-old-"));
+    const dir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-version-old-"));
     const homePath = path.join(dir, "codex-home");
     mkdirSync(homePath, { recursive: true });
     vi.stubEnv("HARNESSOS_HOME", path.join(dir, "runtime"));
@@ -941,10 +941,10 @@ describe("codex CLI version gate", () => {
     try {
       await expect(
         assertSupportedCodexCliVersion({ binaryPath, cwd: dir, homePath }),
-      ).rejects.toThrow(/too old for OmniMind/);
+      ).rejects.toThrow(/too old for HarnessOS/);
       await expect(
         assertSupportedCodexCliVersion({ binaryPath, cwd: dir, homePath }),
-      ).rejects.toThrow(/too old for OmniMind/);
+      ).rejects.toThrow(/too old for HarnessOS/);
       // Failures are re-probed so installing or upgrading Codex takes effect at once.
       expect(probeCount()).toBe(2);
     } finally {
@@ -957,7 +957,7 @@ describe("codex CLI version gate", () => {
 
 describe("buildCodexProcessEnv", () => {
   it("hydrates the active custom engine env_key from the effective CODEX_HOME", async () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-env-"));
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-env-"));
     try {
       writeFileSync(
         path.join(tempDir, "config.toml"),
@@ -1018,7 +1018,7 @@ describe("buildCodexProcessEnv", () => {
   });
 
   it("keeps the private desktop browser host out of the Codex process", async () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-private-host-"));
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-private-host-"));
     const codexHome = path.join(tempDir, "codex-home");
     mkdirSync(codexHome, { recursive: true });
     try {
@@ -1043,9 +1043,9 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("applies durable section suppressions inside OmniMind's Codex overlay", async () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-env-"));
-    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "omnimind-runtime-home-"));
+  it("applies durable section suppressions inside HarnessOS's Codex overlay", async () => {
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-env-"));
+    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "harnessos-runtime-home-"));
     try {
       writeFileSync(
         path.join(tempDir, "config.toml"),
@@ -1067,7 +1067,7 @@ describe("buildCodexProcessEnv", () => {
       const overlayHome = path.join(runtimeHome, "codex-home-overlay");
       mkdirSync(overlayHome, { recursive: true });
       writeFileSync(
-        path.join(overlayHome, "omnimind-config-suppressions-v1.json"),
+        path.join(overlayHome, "harnessos-config-suppressions-v1.json"),
         `${JSON.stringify({
           version: 1,
           sectionHeaders: ['[plugins."historical-plugin@local"]'],
@@ -1107,8 +1107,8 @@ describe("buildCodexProcessEnv", () => {
   });
 
   it("seeds markerless suppressions for conflicting local browser plugins", async () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-env-"));
-    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "omnimind-runtime-home-"));
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-env-"));
+    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "harnessos-runtime-home-"));
     try {
       const conflictingHeader = '[plugins."bridge-browser@local"]';
       writeFileSync(
@@ -1134,7 +1134,7 @@ describe("buildCodexProcessEnv", () => {
         `${conflictingHeader}\nenabled = true`,
       );
       const suppressionMarker = JSON.parse(
-        readFileSync(path.join(overlayHome, "omnimind-config-suppressions-v1.json"), "utf8"),
+        readFileSync(path.join(overlayHome, "harnessos-config-suppressions-v1.json"), "utf8"),
       ) as { sectionHeaders?: string[] };
       expect(suppressionMarker.sectionHeaders).toContain(conflictingHeader);
     } finally {
@@ -1144,15 +1144,15 @@ describe("buildCodexProcessEnv", () => {
   });
 
   it("preserves a recorded suppression after its plugin disappears from source config", async () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-env-"));
-    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "omnimind-runtime-home-"));
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-env-"));
+    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "harnessos-runtime-home-"));
     try {
       writeFileSync(path.join(tempDir, "config.toml"), 'model = "gpt-5.5"', "utf8");
 
       const overlayHome = path.join(runtimeHome, "codex-home-overlay");
       mkdirSync(overlayHome, { recursive: true });
       writeFileSync(
-        path.join(overlayHome, "omnimind-config-suppressions-v1.json"),
+        path.join(overlayHome, "harnessos-config-suppressions-v1.json"),
         `${JSON.stringify({
           version: 1,
           sectionHeaders: ['[plugins."historical-plugin@local"]'],
@@ -1182,9 +1182,9 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("repairs stale real files in OmniMind's Codex home overlay", async () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-env-"));
-    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "omnimind-runtime-home-"));
+  it("repairs stale real files in HarnessOS's Codex home overlay", async () => {
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-env-"));
+    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "harnessos-runtime-home-"));
     try {
       const sourceMemoryPath = path.join(tempDir, "memories_1.sqlite");
       writeFileSync(path.join(tempDir, "config.toml"), 'model = "gpt-5.5"', "utf8");
@@ -1210,9 +1210,9 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("repairs stale auth.json files in OmniMind's Codex home overlay", async () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-env-"));
-    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "omnimind-runtime-home-"));
+  it("repairs stale auth.json files in HarnessOS's Codex home overlay", async () => {
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-env-"));
+    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "harnessos-runtime-home-"));
     try {
       const sourceAuthPath = path.join(tempDir, "auth.json");
       writeFileSync(path.join(tempDir, "config.toml"), 'model = "gpt-5.5"', "utf8");
@@ -1239,9 +1239,9 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("preserves real generated image directories in OmniMind's Codex home overlay", async () => {
-    const tempDir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-env-"));
-    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "omnimind-runtime-home-"));
+  it("preserves real generated image directories in HarnessOS's Codex home overlay", async () => {
+    const tempDir = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-env-"));
+    const runtimeHome = mkdtempSync(path.join(os.tmpdir(), "harnessos-runtime-home-"));
     try {
       writeFileSync(path.join(tempDir, "config.toml"), 'model = "gpt-5.5"', "utf8");
       const sourceGeneratedImagesDir = path.join(tempDir, "generated_images");
@@ -1531,7 +1531,7 @@ describe("startSession", () => {
     expect(buildCodexInitializeParams()).toEqual({
       clientInfo: {
         name: "harnessos_desktop",
-        title: "OmniMind Desktop",
+        title: "HarnessOS Desktop",
         version: "0.1.0",
       },
       capabilities: {
@@ -1542,13 +1542,13 @@ describe("startSession", () => {
 
   it("uses an isolated scratch workspace path when no cwd is provided", () => {
     const cwd = ensureIsolatedScratchWorkspace(asThreadId("thread-1"));
-    expect(cwd).toContain(`${path.sep}omnimind-codex-workspaces${path.sep}thread-1`);
+    expect(cwd).toContain(`${path.sep}harnessos-codex-workspaces${path.sep}thread-1`);
   });
 
   it("reports a missing project working directory instead of a missing Codex CLI", () => {
     const missingCwd = path.join(
       os.tmpdir(),
-      `omnimind-missing-cwd-${randomUUID()}`,
+      `harnessos-missing-cwd-${randomUUID()}`,
       "old-project",
     );
     expect(() => assertCodexWorkingDirectoryExists(missingCwd)).toThrow(
@@ -1563,7 +1563,7 @@ describe("startSession", () => {
   });
 
   it("accepts an existing project working directory", () => {
-    const cwd = mkdtempSync(path.join(os.tmpdir(), "omnimind-existing-cwd-"));
+    const cwd = mkdtempSync(path.join(os.tmpdir(), "harnessos-existing-cwd-"));
     try {
       expect(() => assertCodexWorkingDirectoryExists(cwd)).not.toThrow();
     } finally {
@@ -1583,7 +1583,7 @@ describe("startSession", () => {
     });
     const missingCwd = path.join(
       os.tmpdir(),
-      `omnimind-missing-session-cwd-${randomUUID()}`,
+      `harnessos-missing-session-cwd-${randomUUID()}`,
       "old-project",
     );
 
@@ -1638,7 +1638,7 @@ describe("startSession", () => {
       )
       .mockImplementation(() => {
         throw new Error(
-          "Codex CLI v0.36.0 is too old for OmniMind. Upgrade to v0.37.0 or newer and restart OmniMind.",
+          "Codex CLI v0.36.0 is too old for HarnessOS. Upgrade to v0.37.0 or newer and restart HarnessOS.",
         );
       });
 
@@ -1650,7 +1650,7 @@ describe("startSession", () => {
           runtimeMode: "full-access",
         }),
       ).rejects.toThrow(
-        "Codex CLI v0.36.0 is too old for OmniMind. Upgrade to v0.37.0 or newer and restart OmniMind.",
+        "Codex CLI v0.36.0 is too old for HarnessOS. Upgrade to v0.37.0 or newer and restart HarnessOS.",
       );
       expect(versionCheck).toHaveBeenCalledTimes(1);
       expect(events).toEqual([
@@ -1658,7 +1658,7 @@ describe("startSession", () => {
           method: "session/startFailed",
           kind: "error",
           message:
-            "Codex CLI v0.36.0 is too old for OmniMind. Upgrade to v0.37.0 or newer and restart OmniMind.",
+            "Codex CLI v0.36.0 is too old for HarnessOS. Upgrade to v0.37.0 or newer and restart HarnessOS.",
         },
       ]);
     } finally {

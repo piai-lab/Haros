@@ -6,7 +6,7 @@
 //          `git_handoff_operations` table.
 //
 //          They were not free: on a mature database they cost ~43 MiB each and were
-//          maintained on every event append, which is the hottest write path in OmniMind.
+//          maintained on every event append, which is the hottest write path in HarnessOS.
 //
 //          Forward-only and re-runnable. `001_OrchestrationEvents.ts` is left untouched so
 //          migration lineage stays intact; a fresh database creates the indexes there and

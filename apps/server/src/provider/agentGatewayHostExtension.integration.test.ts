@@ -29,14 +29,14 @@ afterEach(() => {
 const descriptors = [
   {
     name: "browser_open",
-    description: "Open a URL in the OmniMind browser.",
+    description: "Open a URL in the HarnessOS browser.",
     inputSchema: { type: "object", properties: { url: { type: "string" } } },
     group: "browser",
     provenance: "agent-gateway",
   },
   {
     name: "harnessos_list_threads",
-    description: "List OmniMind threads.",
+    description: "List HarnessOS threads.",
     inputSchema: { type: "object", properties: {} },
     group: "tasks",
     provenance: "agent-gateway",
@@ -52,7 +52,7 @@ async function createSession(input: {
   readonly runtime: PiRuntime;
   readonly extensions: StockPi.InlineExtension[];
 }) {
-  const root = mkdtempSync(path.join(tmpdir(), "omnimind-host-extension-"));
+  const root = mkdtempSync(path.join(tmpdir(), "harnessos-host-extension-"));
   temporaryRoots.push(root);
   const cwd = path.join(root, "workspace");
   const agentDir = path.join(root, "agent");
@@ -224,7 +224,7 @@ describe.each([
         requiredNames: ["browser_open"],
         currentlyExposedNames: new Set(["browser_open"]),
       }),
-    ).toThrow("Required OmniMind Host tools are unavailable");
+    ).toThrow("Required HarnessOS Host tools are unavailable");
   });
 
   it("contains an invalid catalog to the Host Extension diagnostic", async () => {

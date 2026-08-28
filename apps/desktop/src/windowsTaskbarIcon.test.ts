@@ -41,7 +41,7 @@ const identity = {
   relaunchDisplayName: "HarnessOS",
 } as const;
 
-const iconPath = "C:\\Users\\omnimind\\userdata\\taskbar-icons\\taskbar-icon.ico";
+const iconPath = "C:\\Users\\harnessos\\userdata\\taskbar-icons\\taskbar-icon.ico";
 
 afterEach(() => {
   clearWindowsTaskbarIconRefresh();
@@ -124,9 +124,9 @@ describe("syncWindowsShortcutIcons", () => {
       iconPath: Path.join("cache", "taskbar-icon.ico"),
       appId: HARNESSOS_PRODUCTION_BUNDLE_ID,
       executablePath: Path.join("Program Files", "HarnessOS", "HarnessOS.exe"),
-      shortcutPaths: ["omnimind.lnk", "other.lnk", "already.lnk"],
+      shortcutPaths: ["harnessos.lnk", "other.lnk", "already.lnk"],
       readShortcut: (shortcutPath) => {
-        if (shortcutPath === "omnimind.lnk") {
+        if (shortcutPath === "harnessos.lnk") {
           return {
             appUserModelId: HARNESSOS_PRODUCTION_BUNDLE_ID,
             target: Path.join("Program Files", "HarnessOS", "HarnessOS.exe"),
@@ -146,11 +146,11 @@ describe("syncWindowsShortcutIcons", () => {
       updateShortcut,
     });
 
-    expect(result.updated).toEqual(["omnimind.lnk"]);
-    expect(result.matched).toEqual(["omnimind.lnk", "already.lnk"]);
+    expect(result.updated).toEqual(["harnessos.lnk"]);
+    expect(result.matched).toEqual(["harnessos.lnk", "already.lnk"]);
     expect(updateShortcut).toHaveBeenCalledTimes(1);
     expect(updateShortcut).toHaveBeenCalledWith(
-      "omnimind.lnk",
+      "harnessos.lnk",
       Path.join("cache", "taskbar-icon.ico"),
       0,
     );
@@ -213,7 +213,7 @@ describe("syncWindowsShortcutIcons", () => {
         "harnessos-desktop",
         "HarnessOS.exe",
       ),
-      shortcutPaths: ["omnimind.lnk"],
+      shortcutPaths: ["harnessos.lnk"],
       readShortcut: () => ({
         target: Path.join(
           "C:",
@@ -229,8 +229,8 @@ describe("syncWindowsShortcutIcons", () => {
       updateShortcut,
     });
 
-    expect(result.matched).toEqual(["omnimind.lnk"]);
-    expect(result.updated).toEqual(["omnimind.lnk"]);
+    expect(result.matched).toEqual(["harnessos.lnk"]);
+    expect(result.updated).toEqual(["harnessos.lnk"]);
     expect(updateShortcut).toHaveBeenCalledTimes(1);
   });
 });
@@ -330,7 +330,7 @@ describe("applyWindowsTaskbarIcon", () => {
   it("cancels an in-flight reregister when a newer icon is applied", () => {
     vi.useFakeTimers();
     const window = makeWindow();
-    const nextIconPath = "C:\\Users\\omnimind\\userdata\\taskbar-icons\\taskbar-default.ico";
+    const nextIconPath = "C:\\Users\\harnessos\\userdata\\taskbar-icons\\taskbar-default.ico";
 
     applyWindowsTaskbarIcon({ window, iconPath, identity, reregisterTaskbarButton: true });
     applyWindowsTaskbarIcon({

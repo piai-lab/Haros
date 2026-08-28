@@ -21,7 +21,7 @@ const testLayer = ProfileStatsQueryLive.pipe(
   Layer.provideMerge(SqlitePersistenceMemory),
   Layer.provide(
     ServerConfig.layerTest(process.cwd(), {
-      prefix: "omnimind-profile-stats-test-",
+      prefix: "harnessos-profile-stats-test-",
     }),
   ),
   Layer.provide(NodeServices.layer),

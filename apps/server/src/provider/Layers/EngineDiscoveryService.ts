@@ -64,10 +64,10 @@ export function combineProviderSkills(input: {
     warnings.push({ source: "engine-native", reason: "discovery-failed" });
   }
   if (input.catalog === "failed") {
-    warnings.push({ source: "omnimind-library", reason: "discovery-failed" });
+    warnings.push({ source: "harnessos-library", reason: "discovery-failed" });
   }
   const nativeSource = nativeResult ? (nativeResult.source ?? "engine-native") : null;
-  const catalogSource = input.catalog === "failed" ? null : "omnimind.catalog";
+  const catalogSource = input.catalog === "failed" ? null : "harnessos.catalog";
   return {
     skills: filterDisabledSkills(
       mergeSkillsIntoCatalog({
@@ -179,7 +179,7 @@ const make = Effect.gen(function* () {
         supportsThreadCompaction: adapter.capabilities.supportsThreadCompaction === true,
         supportsThreadImport: adapter.capabilities.supportsThreadImport === true,
       };
-      // The unified OmniMind skills catalog backs skill discovery for every
+      // The unified HarnessOS skills catalog backs skill discovery for every
       // engine, including ones without native skill support.
       return {
         ...capabilities,
@@ -225,7 +225,7 @@ const make = Effect.gen(function* () {
       ).pipe(
         Effect.map((skills) => ({ _tag: "success", skills }) as const),
         Effect.catchCause(() =>
-          Effect.logWarning("omnimind skills catalog discovery failed", {
+          Effect.logWarning("harnessos skills catalog discovery failed", {
             engine: parsed.engine,
             surface: "skills",
           }).pipe(Effect.as({ _tag: "failed" } as const)),

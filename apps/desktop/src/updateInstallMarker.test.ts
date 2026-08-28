@@ -42,7 +42,7 @@ const artifact = {
 } as const;
 
 function createMarkerPath(): string {
-  const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "omnimind-update-marker-"));
+  const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "harnessos-update-marker-"));
   temporaryDirectories.push(directory);
   return Path.join(directory, "pending-update-install.json");
 }

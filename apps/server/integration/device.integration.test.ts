@@ -1,5 +1,5 @@
 /**
- * Device pane end-to-end verification against a live OmniMind server.
+ * Device pane end-to-end verification against a live HarnessOS server.
  *
  * Gated on `DEVICE_E2E=1` because it boots a real iOS simulator, which needs
  * macOS with Xcode and takes tens of seconds. CI never runs it.
@@ -139,7 +139,7 @@ function firstTappableRow(node: unknown): { readonly x: number; readonly y: numb
 const SETTINGS_BUNDLE_ID = "com.apple.Preferences";
 
 /**
- * Reboot the simulator behind OmniMind's back, the way `simctl` from a terminal,
+ * Reboot the simulator behind HarnessOS's back, the way `simctl` from a terminal,
  * Simulator.app, or an agent's own shell does. Nothing tells the server, so the
  * long-running helper is left holding an attachment bound to the dead boot.
  */
@@ -170,7 +170,7 @@ function terminateApp(udid: string, bundleId: string): Promise<void> {
  * recovery a reboot test must not trigger before its tap.
  */
 async function screenshotViaSimctl(udid: string): Promise<Buffer> {
-  const path = join(tmpdir(), `omnimind-device-e2e-${randomUUID()}.png`);
+  const path = join(tmpdir(), `harnessos-device-e2e-${randomUUID()}.png`);
   try {
     await simctl(["io", udid, "screenshot", path]);
     return await readFile(path);
@@ -506,7 +506,7 @@ describeE2e("device pane end-to-end", () => {
     await rpc.call(DEVICE_WS_METHODS.detach, { threadId: THREAD_ID });
   }, 300_000);
 
-  it("keeps input working after the simulator is rebooted outside OmniMind", async () => {
+  it("keeps input working after the simulator is rebooted outside HarnessOS", async () => {
     if (!target) throw new Error("no target device");
     const udid = target.udid;
 

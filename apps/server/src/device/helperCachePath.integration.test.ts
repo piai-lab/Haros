@@ -29,8 +29,8 @@ describe("helper cache path agreement", () => {
     const commands: Array<{ command: string; args: readonly string[] }> = [];
     const backend = new IosSimulatorBackend({
       platform: "darwin",
-      helperSourceDir: "/tmp/omnimind-helper-src",
-      helperCacheRoot: "/tmp/omnimind-helper-cache",
+      helperSourceDir: "/tmp/harnessos-helper-src",
+      helperCacheRoot: "/tmp/harnessos-helper-cache",
       run: async (command, args) => {
         commands.push({ command, args });
         if (command === "xcodebuild") return result(XCODEBUILD_OUTPUT);
@@ -45,7 +45,7 @@ describe("helper cache path agreement", () => {
 
     const build = commands.find((entry) => entry.command === "/bin/sh");
     const expectedKey = deviceHelperCacheKey(XCODEBUILD_OUTPUT)!;
-    expect(build?.args[1]).toBe(join("/tmp/omnimind-helper-cache", expectedKey));
+    expect(build?.args[1]).toBe(join("/tmp/harnessos-helper-cache", expectedKey));
   });
 
   it("roots the cache where the smoke script writes it", () => {

@@ -10,7 +10,7 @@
 
 ## 1. Scope、authority 与阅读规则
 
-本文只保存 `pi-web-access` / `@harnessos/om-web-access` 的 package-specific 固定证据：
+本文只保存 `pi-web-access` / `@harnessos/oa-web-access` 的 package-specific 固定证据：
 
 - exact source、artifact、rights 与 provenance；
 - 为什么采用 narrow fork，而不是 Host capability、原装接入或重写；
@@ -47,7 +47,7 @@
 | downloaded tgz SHA-256   | `06b3cb2b9d3118f66cd2fe84e5453dc0a8b8feaf099ae05e543ff9ebe80ae103`                                |
 | source/artifact relation | npm `gitHead` 指向 exact commit；发布物 runtime TypeScript 与 exact source 对应文件逐字节一致     |
 
-OmniMind fork 必须保留 upstream repository、exact base、作者、MIT LICENSE 与修改边界。仓库内法定副本位于 [`packages/om-web-access/LICENSE`](../packages/om-web-access/LICENSE) 和 [`LICENSES/pi-web-access-MIT.txt`](../LICENSES/pi-web-access-MIT.txt)。产品改名为 OmniMind Web Access 不抹掉 lineage，也不把上游代码伪装成从零第一方原创。
+OmniMind fork 必须保留 upstream repository、exact base、作者、MIT LICENSE 与修改边界。仓库内法定副本位于 [`packages/oa-web-access/LICENSE`](../packages/oa-web-access/LICENSE) 和 [`LICENSES/pi-web-access-MIT.txt`](../LICENSES/pi-web-access-MIT.txt)。产品改名为 OmniMind Web Access 不抹掉 lineage，也不把上游代码伪装成从零第一方原创。
 
 ### 2.2 发布物与依赖形态
 

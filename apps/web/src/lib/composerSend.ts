@@ -129,7 +129,7 @@ export async function prepareComposerImageAttachmentsFromFiles(input: {
       error =
         cause instanceof ComposerImagePreparationError
           ? cause.message
-          : `OmniMind could not prepare '${file.name || "image"}'.`;
+          : `HarnessOS could not prepare '${file.name || "image"}'.`;
     }
   }
 

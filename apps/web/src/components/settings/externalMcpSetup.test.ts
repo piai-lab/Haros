@@ -10,7 +10,7 @@ import {
 } from "./externalMcpSetup";
 
 const stdio = {
-  command: "/Applications/OmniMind.app/Contents/MacOS/OmniMind",
+  command: "/Applications/HarnessOS.app/Contents/MacOS/HarnessOS",
   args: [
     "server.js",
     "mcp",
@@ -18,7 +18,7 @@ const stdio = {
     "--integration",
     "mcp_int_example",
     "--home-dir",
-    "/tmp/OmniMind home",
+    "/tmp/HarnessOS home",
   ],
   env: { ELECTRON_RUN_AS_NODE: "1" },
 };
@@ -29,10 +29,10 @@ describe("external MCP guided setup", () => {
     const claude = buildExternalMcpClientConfiguration("claudeCode", stdio);
 
     expect(codex.value).toBe(
-      "codex mcp add omnimind --env ELECTRON_RUN_AS_NODE=1 -- /Applications/OmniMind.app/Contents/MacOS/OmniMind server.js mcp serve --integration mcp_int_example --home-dir '/tmp/OmniMind home'",
+      "codex mcp add harnessos --env ELECTRON_RUN_AS_NODE=1 -- /Applications/HarnessOS.app/Contents/MacOS/HarnessOS server.js mcp serve --integration mcp_int_example --home-dir '/tmp/HarnessOS home'",
     );
     expect(claude.value).toBe(
-      "claude mcp add --scope user omnimind -e ELECTRON_RUN_AS_NODE=1 -- /Applications/OmniMind.app/Contents/MacOS/OmniMind server.js mcp serve --integration mcp_int_example --home-dir '/tmp/OmniMind home'",
+      "claude mcp add --scope user harnessos -e ELECTRON_RUN_AS_NODE=1 -- /Applications/HarnessOS.app/Contents/MacOS/HarnessOS server.js mcp serve --integration mcp_int_example --home-dir '/tmp/HarnessOS home'",
     );
     expect(`${codex.value}${claude.value}`).not.toContain("syn_mcp_v1_");
   });
@@ -50,15 +50,15 @@ describe("external MCP guided setup", () => {
   it("builds terminal commands for PowerShell on Windows", () => {
     const codex = buildExternalMcpClientConfiguration("codex", stdio, "Win32");
     expect(codex.value).toBe(
-      "& 'codex' 'mcp' 'add' 'oa' '--env' 'ELECTRON_RUN_AS_NODE=1' '--' '/Applications/OmniMind.app/Contents/MacOS/OmniMind' 'server.js' 'mcp' 'serve' '--integration' 'mcp_int_example' '--home-dir' '/tmp/OmniMind home'",
+      "& 'codex' 'mcp' 'add' 'oa' '--env' 'ELECTRON_RUN_AS_NODE=1' '--' '/Applications/HarnessOS.app/Contents/MacOS/HarnessOS' 'server.js' 'mcp' 'serve' '--integration' 'mcp_int_example' '--home-dir' '/tmp/HarnessOS home'",
     );
     expect(codex.instruction).toContain("PowerShell");
   });
 
   it("builds a project-specific prompt without exposing implementation identifiers", () => {
-    const prompt = buildExternalMcpExamplePrompt("OmniMind app");
+    const prompt = buildExternalMcpExamplePrompt("HarnessOS app");
 
-    expect(prompt).toContain('project named "OmniMind app"');
+    expect(prompt).toContain('project named "HarnessOS app"');
     expect(prompt).toContain("managed worktree");
     expect(prompt).toContain("approval-required");
     expect(prompt).not.toContain("projectId");
@@ -68,13 +68,13 @@ describe("external MCP guided setup", () => {
 
   it("builds one agent-facing setup prompt covering pairing, registration, and verification", () => {
     const prompt = buildExternalMcpSetupPrompt({
-      setupCommand: "omnimind mcp pair --code syn_pair_v1_example --home-dir /tmp/home",
+      setupCommand: "harnessos mcp pair --code syn_pair_v1_example --home-dir /tmp/home",
       stdio,
     });
 
     expect(prompt).toContain("syn_pair_v1_example");
-    expect(prompt).toContain("codex mcp add omnimind");
-    expect(prompt).toContain("claude mcp add --scope user omnimind");
+    expect(prompt).toContain("codex mcp add harnessos");
+    expect(prompt).toContain("claude mcp add --scope user harnessos");
     expect(prompt).toContain('"mcpServers"');
     expect(prompt).toContain("harnessos_overview");
     expect(prompt).not.toContain("syn_mcp_v1_");

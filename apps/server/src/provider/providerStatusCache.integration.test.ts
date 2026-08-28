@@ -28,7 +28,7 @@ describe("providerStatusCache", () => {
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const tempDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "omnimind-engine-status-cache-",
+          prefix: "harnessos-engine-status-cache-",
         });
         const cachePath = resolveProviderStatusCachePath({
           stateDir: tempDir,
@@ -57,7 +57,7 @@ describe("providerStatusCache", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const tempDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "omnimind-engine-status-cache-bad-",
+          prefix: "harnessos-engine-status-cache-bad-",
         });
         const cachePath = resolveProviderStatusCachePath({
           stateDir: tempDir,

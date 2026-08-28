@@ -373,7 +373,7 @@ describe("unmapped engine environment credential redaction", () => {
   it("bounds URL scanning work for long diagnostics without URLs", () => {
     const sanitized = sanitizeUnmappedProviderData("a".repeat(50_000));
 
-    expect(sanitized).toMatchObject({ __omnimindTruncated: true });
+    expect(sanitized).toMatchObject({ __harnessosTruncated: true });
   });
 
   it("fails closed without recursion on excessively nested inspected objects", () => {

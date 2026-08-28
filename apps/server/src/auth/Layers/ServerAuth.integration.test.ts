@@ -30,7 +30,7 @@ const testLayer = ServerAuthLive.pipe(
   Layer.provide(ServerSecretStoreLive),
   Layer.provide(
     ServerConfig.layerTest(process.cwd(), {
-      prefix: "omnimind-auth-server-test-",
+      prefix: "harnessos-auth-server-test-",
     }),
   ),
   Layer.provide(NodeServices.layer),

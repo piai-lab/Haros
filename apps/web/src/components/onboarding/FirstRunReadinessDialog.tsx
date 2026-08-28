@@ -322,7 +322,7 @@ export function FirstRunReadinessDialog() {
                     {ENGINE_LABEL_BY_KIND.oa}
                   </strong>
                   <span className="mt-1 block text-[length:var(--app-font-size-ui-xs,12px)] text-muted-foreground">
-                    {t("onboarding.firstRun.omnimindDescription")}
+                    {t("onboarding.firstRun.harnessosDescription")}
                   </span>
                 </span>
                 <span className="rounded-full bg-primary/10 px-2 py-1 text-[length:var(--app-font-size-ui-2xs,11px)] font-semibold text-primary">

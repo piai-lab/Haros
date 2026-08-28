@@ -41,7 +41,7 @@ vi.mock("../hooks/useTheme", () => ({
 
 async function renderMarkdown(
   text: string,
-  cwd = "C:\\Users\\LENOVO\\omnimind",
+  cwd = "C:\\Users\\LENOVO\\harnessos",
   markers?: readonly ThreadMarker[],
 ) {
   const { default: ChatMarkdown } = await import("./ChatMarkdown");

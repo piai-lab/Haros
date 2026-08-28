@@ -3,7 +3,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 
-import { CliConfig, omnimindCli } from "./main";
+import { CliConfig, harnessosCli } from "./main";
 import { OpenLive } from "./open";
 import { Command } from "effect/unstable/cli";
 import { version } from "../package.json" with { type: "json" };
@@ -24,6 +24,6 @@ const RuntimeLayer = Layer.empty.pipe(
   Layer.provideMerge(FetchHttpClient.layer),
 );
 
-Command.run(omnimindCli, { version })
+Command.run(harnessosCli, { version })
   .pipe(Effect.provide(RuntimeLayer))
   .pipe((program) => NodeRuntime.runMain(program as Effect.Effect<void, unknown, never>));

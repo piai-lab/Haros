@@ -324,7 +324,7 @@ describe("composerSlashCommands", () => {
     expect(shouldHideProviderNativeCommandFromComposerMenu("antigravity", "automation")).toBe(true);
   });
 
-  it("keeps Feedback OmniMind ahead of engine-native /feedback", () => {
+  it("keeps Feedback HarnessOS ahead of engine-native /feedback", () => {
     const availableCommands = getAvailableComposerSlashCommands({
       engine: "claude",
       supportsFastSlashCommand: true,
@@ -340,7 +340,7 @@ describe("composerSlashCommands", () => {
     expect(shouldHideProviderNativeCommandFromComposerMenu("claude", "feedback")).toBe(true);
   });
 
-  it("only exposes OmniMind-owned app commands for claude", () => {
+  it("only exposes HarnessOS-owned app commands for claude", () => {
     expect(
       getAvailableComposerSlashCommands({
         engine: "claude",

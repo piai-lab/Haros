@@ -272,7 +272,7 @@ describe("MessagesTimeline turn process approval cases", () => {
       engineWebSurface: {
         status: "waiting-for-user",
         provenance: "engine-native",
-        presentation: "omnimind-browser",
+        presentation: "harnessos-browser",
         surfaceId: "surface-waiting",
       },
     });
@@ -297,7 +297,7 @@ describe("MessagesTimeline turn process approval cases", () => {
     );
     try {
       expect(processTrigger()?.getAttribute("aria-expanded")).toBe("false");
-      const action = screen.getByRole("button", { name: "Reopen in OmniMind Browser" }).element();
+      const action = screen.getByRole("button", { name: "Reopen in HarnessOS Browser" }).element();
       expect(action.closest("[data-timeline-row-kind='turn-process']")).toBeNull();
     } finally {
       await screen.unmount();
@@ -401,7 +401,7 @@ describe("MessagesTimeline turn process approval cases", () => {
 
       expect(document.querySelectorAll("[data-assistant-turn-identity='visible']")).toHaveLength(1);
       expect(document.body.textContent).toContain("DeepSeek V4 Pro");
-      expect(document.body.textContent).toContain("OmniMind ·");
+      expect(document.body.textContent).toContain("HarnessOS ·");
     } finally {
       document.documentElement.classList.remove("dark");
       await page.viewport(1_280, 720);

@@ -613,7 +613,7 @@ function ImportThemeDialog({
               setValue(event.target.value);
               setError(null);
             }}
-            placeholder='omnimind-theme-v1:{"presetId":"linear",...}'
+            placeholder='harnessos-theme-v1:{"presetId":"linear",...}'
             spellCheck={false}
             rows={5}
             className="font-chat-code text-[11px]"

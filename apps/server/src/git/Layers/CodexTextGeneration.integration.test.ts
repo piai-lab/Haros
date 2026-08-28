@@ -11,7 +11,7 @@ import { TextGeneration } from "../Services/TextGeneration.ts";
 const CodexTextGenerationTestLayer = CodexTextGenerationLive.pipe(
   Layer.provideMerge(
     ServerConfig.layerTest(process.cwd(), {
-      prefix: "omnimind-codex-text-generation-test-",
+      prefix: "harnessos-codex-text-generation-test-",
     }),
   ),
   Layer.provideMerge(NodeServices.layer),
@@ -149,10 +149,10 @@ function withFakeCodexEnv<A, E, R>(
     Effect.gen(function* () {
       const releaseLock = yield* acquireCodexEnvLock();
       const fs = yield* FileSystem.FileSystem;
-      const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-codex-text-" });
+      const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "harnessos-codex-text-" });
       const binDir = yield* makeFakeCodexBinary(tempDir);
       const previousPath = process.env.PATH;
-      const previousOmniMindHome = process.env.HARNESSOS_HOME;
+      const previousHarnessOSHome = process.env.HARNESSOS_HOME;
       const previousOutput = process.env.HARNESSOS_FAKE_CODEX_OUTPUT_B64;
       const previousExitCode = process.env.HARNESSOS_FAKE_CODEX_EXIT_CODE;
       const previousStderr = process.env.HARNESSOS_FAKE_CODEX_STDERR;
@@ -247,7 +247,7 @@ function withFakeCodexEnv<A, E, R>(
 
       return {
         previousPath,
-        previousOmniMindHome,
+        previousHarnessOSHome,
         previousOutput,
         previousExitCode,
         previousStderr,
@@ -267,10 +267,10 @@ function withFakeCodexEnv<A, E, R>(
     (previous) =>
       Effect.sync(() => {
         process.env.PATH = previous.previousPath;
-        if (previous.previousOmniMindHome === undefined) {
+        if (previous.previousHarnessOSHome === undefined) {
           delete process.env.HARNESSOS_HOME;
         } else {
-          process.env.HARNESSOS_HOME = previous.previousOmniMindHome;
+          process.env.HARNESSOS_HOME = previous.previousHarnessOSHome;
         }
 
         if (previous.previousOutput === undefined) {
@@ -708,7 +708,7 @@ it.layer(CodexTextGenerationTestLayer)("CodexTextGenerationLive", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const parent = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-missing-cwd-" });
+      const parent = yield* fs.makeTempDirectoryScoped({ prefix: "harnessos-missing-cwd-" });
       const missingCwd = path.join(parent, "removed-project");
       const textGeneration = yield* TextGeneration;
 
@@ -729,7 +729,7 @@ it.layer(CodexTextGenerationTestLayer)("CodexTextGenerationLive", (it) => {
     Effect.gen(function* () {
       const fs = yield* FileSystem.FileSystem;
       const path = yield* Path.Path;
-      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-existing-cwd-" });
+      const cwd = yield* fs.makeTempDirectoryScoped({ prefix: "harnessos-existing-cwd-" });
       const missingBinary = path.join(cwd, "missing-codex-binary");
       const textGeneration = yield* TextGeneration;
 
@@ -769,10 +769,10 @@ it.layer(CodexTextGenerationTestLayer)("CodexTextGenerationLive", (it) => {
         const fs = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const wrongCodexHome = yield* fs.makeTempDirectoryScoped({
-          prefix: "omnimind-wrong-codex-",
+          prefix: "harnessos-wrong-codex-",
         });
         const customCodexHome = yield* fs.makeTempDirectoryScoped({
-          prefix: "omnimind-custom-codex-",
+          prefix: "harnessos-custom-codex-",
         });
         const previousCodexHome = process.env.CODEX_HOME;
         const previousAzureApiKey = process.env.AZURE_OPENAI_API_KEY;

@@ -12,10 +12,7 @@ import { GrokAdapter, GrokAdapterShape } from "../Services/GrokAdapter.ts";
 import { KiloAdapter, KiloAdapterShape } from "../Services/KiloAdapter.ts";
 import { OpenCodeAdapter, OpenCodeAdapterShape } from "../Services/OpenCodeAdapter.ts";
 import { PiAdapter, PiAdapterShape } from "../Services/PiAdapter.ts";
-import {
-  OmniMindAgentAdapter,
-  OmniMindAgentAdapterShape,
-} from "../Services/OmniMindAgentAdapter.ts";
+import { OAAgentAdapter, OAAgentAdapterShape } from "../Services/OAAgentAdapter.ts";
 import { AntigravityAdapter, AntigravityAdapterShape } from "../Services/AntigravityAdapter.ts";
 import { EngineAdapterRegistry } from "../Services/EngineAdapterRegistry.ts";
 import { EngineAdapterRegistryLive } from "./EngineAdapterRegistry.ts";
@@ -162,7 +159,7 @@ const fakePiAdapter: PiAdapterShape = {
   streamEvents: Stream.empty,
 };
 
-const fakeOmniMindAgentAdapter: OmniMindAgentAdapterShape = {
+const fakeOAAgentAdapter: OAAgentAdapterShape = {
   ...fakePiAdapter,
   engine: "oa",
 };
@@ -197,7 +194,7 @@ const layer = it.layer(
         Layer.succeed(DroidAdapter, fakeDroidAdapter),
         Layer.succeed(KiloAdapter, fakeKiloAdapter),
         Layer.succeed(OpenCodeAdapter, fakeOpenCodeAdapter),
-        Layer.succeed(OmniMindAgentAdapter, fakeOmniMindAgentAdapter),
+        Layer.succeed(OAAgentAdapter, fakeOAAgentAdapter),
         Layer.succeed(PiAdapter, fakePiAdapter),
       ),
     ),
@@ -217,7 +214,7 @@ layer("EngineAdapterRegistryLive", (it) => {
       const droid = yield* registry.getByEngine("droid");
       const kilo = yield* registry.getByEngine("kilo");
       const opencode = yield* registry.getByEngine("opencode");
-      const omnimind = yield* registry.getByEngine("oa");
+      const harnessos = yield* registry.getByEngine("oa");
       const pi = yield* registry.getByEngine("pi");
       assert.equal(codex, fakeCodexAdapter);
       assert.equal(claude, fakeClaudeAdapter);
@@ -227,7 +224,7 @@ layer("EngineAdapterRegistryLive", (it) => {
       assert.equal(droid, fakeDroidAdapter);
       assert.equal(kilo, fakeKiloAdapter);
       assert.equal(opencode, fakeOpenCodeAdapter);
-      assert.equal(omnimind, fakeOmniMindAgentAdapter);
+      assert.equal(harnessos, fakeOAAgentAdapter);
       assert.equal(pi, fakePiAdapter);
 
       const engines = yield* registry.listEngines();

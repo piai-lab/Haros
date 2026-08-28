@@ -297,7 +297,7 @@ import { useThreadHandoff } from "../hooks/useThreadHandoff";
 import { useThreadUnblock } from "../hooks/useThreadUnblock";
 import { useTurnDiffSummaries } from "../hooks/useTurnDiffSummaries";
 import BranchToolbar, { RuntimeUsageControls } from "./BranchToolbar";
-import { OmniMindLogoButton } from "./OmniMindLogoButton";
+import { HarnessOSLogoButton } from "./HarnessOSLogoButton";
 import { ThreadWorktreeHandoffDialog } from "./ThreadWorktreeHandoffDialog";
 import {
   formatShortcutLabel,
@@ -1301,7 +1301,7 @@ function composerPromptStillMatchesRestoredQueuedDraft(
 
 // Builds an ephemeral transcript bubble for the conversational automation-setup
 // exchange. These never reach a engine and are not persisted; they render the
-// back-and-forth (user request, OmniMind's clarifying questions) inline like Codex.
+// back-and-forth (user request, HarnessOS's clarifying questions) inline like Codex.
 function makeAutomationSetupBubble(role: "user" | "assistant", text: string): ChatMessage {
   return {
     id: newMessageId(),
@@ -12697,7 +12697,7 @@ export default function ChatView({
                       CHAT_COLUMN_FRAME_CLASS_NAME,
                     )}
                   >
-                    <OmniMindLogoButton
+                    <HarnessOSLogoButton
                       size={64}
                       variant="satin"
                       aria-label={t("shortcuts.focusComposer")}

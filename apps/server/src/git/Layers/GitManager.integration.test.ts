@@ -145,7 +145,7 @@ function createBareRemote(): Effect.Effect<
   FileSystem.FileSystem | Scope.Scope | GitCore
 > {
   return Effect.gen(function* () {
-    const remoteDir = yield* makeTempDir("omnimind-git-remote-");
+    const remoteDir = yield* makeTempDir("harnessos-git-remote-");
     yield* runGit(remoteDir, ["init", "--bare"]);
     return remoteDir;
   });
@@ -354,7 +354,7 @@ function makeManager(input?: {
   textGeneration?: Partial<FakeGitTextGeneration>;
 }) {
   return Effect.gen(function* () {
-    const baseDir = yield* makeTempDir("omnimind-git-manager-test-");
+    const baseDir = yield* makeTempDir("harnessos-git-manager-test-");
     const { service: gitHubCli, ghCalls } = createGitHubCliWithFakeGh(input?.ghScenario);
     const textGeneration = createTextGeneration(input?.textGeneration);
     const ServerConfigLayer = ServerConfig.layerTest(process.cwd(), baseDir);
@@ -376,14 +376,14 @@ function makeManager(input?: {
 }
 
 const GitManagerTestLayer = GitCoreLive.pipe(
-  Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "omnimind-git-manager-test-" })),
+  Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "harnessos-git-manager-test-" })),
   Layer.provideMerge(NodeServices.layer),
 );
 
 it.layer(GitManagerTestLayer)("GitManager", (it) => {
   it.effect("status includes PR metadata when branch already has an open PR", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/status-open-pr"]);
       const remoteDir = yield* createBareRemote();
@@ -431,7 +431,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("status exposes the configured PR merge base", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/configured-pr-base"]);
       yield* runGit(repoDir, [
@@ -449,7 +449,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("resolves a captured branch PR after the checkout has moved elsewhere", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/captured-pr"]);
       const remoteDir = yield* createBareRemote();
@@ -491,7 +491,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "status detects cross-repo PRs from the upstream remote URL owner",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         const forkDir = yield* createBareRemote();
         yield* runGit(repoDir, ["remote", "add", "fork-seed", forkDir]);
@@ -552,7 +552,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("status returns merged PR state when latest PR was merged", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/status-merged-pr"]);
 
@@ -595,7 +595,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("status prefers open PR when merged PR has newer updatedAt", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/status-open-over-merged"]);
 
@@ -647,7 +647,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("status is resilient to gh lookup failures and returns pr null", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/status-no-gh"]);
       const remoteDir = yield* createBareRemote();
@@ -671,7 +671,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("creates a commit when working tree is dirty", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       fs.writeFileSync(path.join(repoDir, "README.md"), "hello\nworld\n");
 
@@ -695,7 +695,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("falls back to a heuristic commit message when text generation fails", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       fs.writeFileSync(path.join(repoDir, "README.md"), "hello\nfallback\n");
 
@@ -728,7 +728,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("uses custom commit message when provided", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       fs.writeFileSync(path.join(repoDir, "README.md"), "hello\ncustom\n");
       let generatedCount = 0;
@@ -771,7 +771,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("commits only selected files when filePaths is provided", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       fs.writeFileSync(path.join(repoDir, "a.txt"), "file a\n");
       fs.writeFileSync(path.join(repoDir, "b.txt"), "file b\n");
@@ -796,7 +796,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("creates feature branch, commits, and pushes with featureBranch option", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       const remoteDir = yield* createBareRemote();
       yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
@@ -846,7 +846,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("falls back to a derived feature branch when text generation fails", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       const remoteDir = yield* createBareRemote();
       yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
@@ -886,7 +886,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("featureBranch uses custom commit message and derives branch name", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       fs.writeFileSync(path.join(repoDir, "README.md"), "hello\ncustom-feature\n");
       let generatedCount = 0;
@@ -931,7 +931,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "creates feature branch and pushes already-committed work",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         const remoteDir = yield* createBareRemote();
         yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
@@ -977,7 +977,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "creates feature branch, pushes, and opens PR for already-committed work",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         const remoteDir = yield* createBareRemote();
         yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
@@ -1036,7 +1036,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "restores the original branch from a matching remote branch when upstream is unset",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         const remoteDir = yield* createBareRemote();
         yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
@@ -1072,7 +1072,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "blocks feature-branch push when the source branch has no upstream and multiple remotes",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         const originDir = yield* createBareRemote();
         const forkDir = yield* createBareRemote();
@@ -1102,7 +1102,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("skips commit when there are no uncommitted changes", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
 
       const { manager } = yield* makeManager();
@@ -1120,7 +1120,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("featureBranch returns error when worktree is clean", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
 
       const { manager } = yield* makeManager();
@@ -1139,7 +1139,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("commits and pushes with upstream auto-setup when needed", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/stacked-flow"]);
       const remoteDir = yield* createBareRemote();
@@ -1168,7 +1168,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "pushes and creates PR from a no-upstream branch when local commits are ahead of base",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         yield* runGit(repoDir, ["checkout", "-b", "feature/no-upstream-pr"]);
         const remoteDir = yield* createBareRemote();
@@ -1219,7 +1219,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("skips push when branch is already up to date", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/up-to-date"]);
       const remoteDir = yield* createBareRemote();
@@ -1242,7 +1242,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "pushes clean local commits without running the commit step",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         yield* runGit(repoDir, ["checkout", "-b", "feature/push-only"]);
         const remoteDir = yield* createBareRemote();
@@ -1273,7 +1273,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "creates PR from a clean branch and pushes first when upstream is missing",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         yield* runGit(repoDir, ["checkout", "-b", "feature/create-pr-only"]);
         const remoteDir = yield* createBareRemote();
@@ -1322,7 +1322,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "uses provided PR title, body, and draft flag without generating content",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         yield* runGit(repoDir, ["checkout", "-b", "feature/custom-pr-content"]);
         const remoteDir = yield* createBareRemote();
@@ -1380,7 +1380,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "rejects create_pr with uncommitted changes unless the caller opts out of the guard",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         yield* runGit(repoDir, ["checkout", "-b", "feature/dirty-create-pr"]);
         const remoteDir = yield* createBareRemote();
@@ -1439,7 +1439,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "rejects push with uncommitted changes unless the caller opts out of the guard",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         yield* runGit(repoDir, ["checkout", "-b", "feature/dirty-push"]);
         const remoteDir = yield* createBareRemote();
@@ -1477,7 +1477,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("rejects PR creation when base and head resolve to the same branch", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       const remoteDir = yield* createBareRemote();
       yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
@@ -1502,7 +1502,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("allows cross-repo PR creation when head and base branch names match", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       const originDir = yield* createBareRemote();
       const forkDir = yield* createBareRemote();
@@ -1574,7 +1574,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("returns existing PR metadata for commit/push/pr action", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/existing-pr"]);
       const remoteDir = yield* createBareRemote();
@@ -1610,7 +1610,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("ignores mismatched cross-repo PR candidates before reusing an existing PR", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/collision"]);
       const originDir = yield* createBareRemote();
@@ -1680,7 +1680,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "returns existing cross-repo PR metadata using the fork owner selector",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         yield* runGit(repoDir, ["checkout", "-b", "statemachine"]);
         const forkDir = yield* createBareRemote();
@@ -1730,7 +1730,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "prefers owner-qualified selectors before bare branch names for cross-repo PRs",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         yield* runGit(repoDir, ["checkout", "-b", "statemachine"]);
         const forkDir = yield* createBareRemote();
@@ -1792,7 +1792,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "stops probing head selectors after finding an existing PR",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         yield* runGit(repoDir, ["checkout", "-b", "statemachine"]);
         const forkDir = yield* createBareRemote();
@@ -1844,7 +1844,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("creates PR when one does not already exist", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       fs.mkdirSync(path.join(repoDir, ".github"));
       fs.writeFileSync(
@@ -1910,7 +1910,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("opens existing PR when create reports a duplicate branch PR", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/already-created"]);
       const remoteDir = yield* createBareRemote();
@@ -1954,7 +1954,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("uses the local base template when a cross-repo origin ref is absent", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       fs.mkdirSync(path.join(repoDir, ".github"));
       fs.writeFileSync(
@@ -2037,7 +2037,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("rejects push/pr actions from detached HEAD", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "--detach", "HEAD"]);
 
@@ -2055,7 +2055,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("surfaces missing gh binary errors", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/gh-missing"]);
       const remoteDir = yield* createBareRemote();
@@ -2084,7 +2084,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("surfaces gh auth errors with guidance", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/gh-auth"]);
       const remoteDir = yield* createBareRemote();
@@ -2113,7 +2113,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("resolves pull requests from #number references", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
 
       const { manager, ghCalls } = yield* makeManager({
@@ -2153,7 +2153,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("loads PR snapshots with checks and review comments", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
 
       const checks: GitPullRequestCheck[] = [
@@ -2209,7 +2209,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("keeps checks when PR review comments cannot be loaded", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
 
       const checks: GitPullRequestCheck[] = [
@@ -2247,7 +2247,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("fails PR snapshots when the repository cannot be derived from the URL", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
 
       const { manager } = yield* makeManager({
@@ -2275,7 +2275,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("prepares pull request threads in local mode by checking out the PR branch", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/pr-local"]);
       fs.writeFileSync(path.join(repoDir, "local.txt"), "local\n");
@@ -2311,7 +2311,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("prepares pull request threads in worktree mode on the PR head branch", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       const remoteDir = yield* createBareRemote();
       yield* runGit(repoDir, ["remote", "add", "origin", remoteDir]);
@@ -2356,7 +2356,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("preserves fork upstream tracking when preparing a worktree PR thread", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       const originDir = yield* createBareRemote();
       const forkDir = yield* createBareRemote();
@@ -2418,7 +2418,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("preserves fork upstream tracking when preparing a local PR thread", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       const originDir = yield* createBareRemote();
       const forkDir = yield* createBareRemote();
@@ -2471,7 +2471,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("derives fork repository identity from PR URL when GitHub omits nameWithOwner", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       const originDir = yield* createBareRemote();
       const forkDir = yield* createBareRemote();
@@ -2504,7 +2504,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
             headRepositoryOwnerLogin: "binbandit",
           },
           repositoryCloneUrls: {
-            "binbandit/omnimind": {
+            "binbandit/harnessos": {
               url: forkDir,
               sshUrl: forkDir,
             },
@@ -2528,7 +2528,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("reuses an existing dedicated worktree for the PR head branch", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/pr-existing-worktree"]);
       fs.writeFileSync(path.join(repoDir, "existing.txt"), "existing\n");
@@ -2571,7 +2571,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "does not block fork PR worktree prep when the fork head branch collides with root main",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         const originDir = yield* createBareRemote();
         const forkDir = yield* createBareRemote();
@@ -2631,7 +2631,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "does not overwrite an existing local main branch when preparing a fork PR worktree",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
         const originDir = yield* createBareRemote();
         const forkDir = yield* createBareRemote();
@@ -2689,7 +2689,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("reuses an existing PR worktree and restores fork upstream tracking", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       const originDir = yield* createBareRemote();
       const forkDir = yield* createBareRemote();
@@ -2748,7 +2748,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("rejects worktree prep when the PR head branch is checked out in the main repo", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       yield* runGit(repoDir, ["checkout", "-b", "feature/pr-root-only"]);
 
@@ -2780,7 +2780,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("creates a new handoff worktree on a named branch instead of detached HEAD", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
 
       const { manager } = yield* makeManager();
@@ -2821,7 +2821,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
     "carries uncommitted local changes into a new handoff worktree without leaking the stash",
     () =>
       Effect.gen(function* () {
-        const repoDir = yield* makeTempDir("omnimind-git-manager-");
+        const repoDir = yield* makeTempDir("harnessos-git-manager-");
         yield* initRepo(repoDir);
 
         // Create uncommitted working-tree changes so handoffThread takes the stash path.
@@ -2867,7 +2867,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("emits ordered progress events for commit hooks", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       fs.writeFileSync(path.join(repoDir, "hooked.txt"), "hooked\n");
       fs.writeFileSync(
@@ -2930,7 +2930,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
 
   it.effect("emits action_failed when a commit hook rejects", () =>
     Effect.gen(function* () {
-      const repoDir = yield* makeTempDir("omnimind-git-manager-");
+      const repoDir = yield* makeTempDir("harnessos-git-manager-");
       yield* initRepo(repoDir);
       fs.writeFileSync(path.join(repoDir, "hook-failure.txt"), "broken\n");
       fs.writeFileSync(

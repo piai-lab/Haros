@@ -84,7 +84,7 @@ describe("FeedbackDialog", () => {
         context={EMPTY_CONTEXT}
         onOpenChange={onOpenChange}
         deliveryOptions={{
-          configuredEndpoint: "https://omnimind.wisdomeyes.cn/api/v1/feedback",
+          configuredEndpoint: "https://harnessos.wisdomeyes.cn/api/v1/feedback",
           isProduction: true,
         }}
       />,
@@ -116,7 +116,7 @@ describe("FeedbackDialog", () => {
         context={EMPTY_CONTEXT}
         onOpenChange={onOpenChange}
         deliveryOptions={{
-          configuredEndpoint: "https://omnimind.wisdomeyes.cn/api/v1/feedback",
+          configuredEndpoint: "https://harnessos.wisdomeyes.cn/api/v1/feedback",
           isProduction: true,
         }}
       />,

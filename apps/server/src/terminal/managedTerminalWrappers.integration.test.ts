@@ -32,7 +32,7 @@ function prepare(baseEnv: NodeJS.ProcessEnv) {
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(path.join(os.tmpdir(), "omnimind-managed-wrappers-"));
+  dir = mkdtempSync(path.join(os.tmpdir(), "harnessos-managed-wrappers-"));
   binDir = path.join(dir, "bin");
   rootDir = path.join(dir, "managed");
   zshRootDir = path.join(dir, "zsh");

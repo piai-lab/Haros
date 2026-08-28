@@ -6,12 +6,12 @@
 
 /// An empty AXPTranslatorResponse, returned when a request cannot be satisfied.
 /// The translator requires *some* response object; nil wedges the read.
-id OmniMindEmptyTranslatorResponse(void);
+id HarnessOSEmptyTranslatorResponse(void);
 
 // Attribute reads go through objc_msgSend casts rather than declared headers:
 // every one of these classes is private, and a wrong @interface would be a
 // silent ABI mismatch instead of a nil.
-static id OmniMindMsgSend0(id target, NSString *selectorName) {
+static id HarnessOSMsgSend0(id target, NSString *selectorName) {
   SEL selector = NSSelectorFromString(selectorName);
   if (![target respondsToSelector:selector]) {
     return nil;
@@ -19,12 +19,12 @@ static id OmniMindMsgSend0(id target, NSString *selectorName) {
   return ((id (*)(id, SEL))objc_msgSend)(target, selector);
 }
 
-static NSString *OmniMindStringAttribute(id element, NSString *selectorName) {
-  id value = OmniMindMsgSend0(element, selectorName);
+static NSString *HarnessOSStringAttribute(id element, NSString *selectorName) {
+  id value = HarnessOSMsgSend0(element, selectorName);
   return [value isKindOfClass:NSString.class] ? value : nil;
 }
 
-static BOOL OmniMindBoolAttribute(id element, NSString *selectorName) {
+static BOOL HarnessOSBoolAttribute(id element, NSString *selectorName) {
   SEL selector = NSSelectorFromString(selectorName);
   if (![element respondsToSelector:selector]) {
     return NO;
@@ -34,7 +34,7 @@ static BOOL OmniMindBoolAttribute(id element, NSString *selectorName) {
 
 // `accessibilityValue` is genuinely `id`; anything not JSON-representable is
 // rendered with -description so the tree never fails to serialize.
-static id OmniMindJSONValue(id value) {
+static id HarnessOSJSONValue(id value) {
   if (value == nil) {
     return NSNull.null;
   }
@@ -44,7 +44,7 @@ static id OmniMindJSONValue(id value) {
   return [value description] ?: NSNull.null;
 }
 
-@implementation OmniMindAXBridge {
+@implementation HarnessOSAXBridge {
   dispatch_queue_t _callbackQueue;
   id _translator;
 }
@@ -108,7 +108,7 @@ static id OmniMindJSONValue(id value) {
 
   id (^callback)(id) = ^id(id request) {
     if (device == nil) {
-      return OmniMindEmptyTranslatorResponse();
+      return HarnessOSEmptyTranslatorResponse();
     }
     dispatch_group_t group = dispatch_group_create();
     dispatch_group_enter(group);
@@ -126,9 +126,9 @@ static id OmniMindJSONValue(id value) {
     if (dispatch_group_wait(group, deadline) != 0) {
       // A wedged accessibility service must not hang the caller: an empty
       // response ends the read with a partial tree instead of blocking forever.
-      return OmniMindEmptyTranslatorResponse();
+      return HarnessOSEmptyTranslatorResponse();
     }
-    return response ?: OmniMindEmptyTranslatorResponse();
+    return response ?: HarnessOSEmptyTranslatorResponse();
   };
   return [callback copy];
 }
@@ -193,7 +193,7 @@ static id OmniMindJSONValue(id value) {
 - (NSDictionary *)serializeElement:(id)element depth:(NSInteger)depth maxDepth:(NSInteger)maxDepth {
   NSMutableDictionary *node = [NSMutableDictionary new];
 
-  NSString *role = OmniMindStringAttribute(element, @"accessibilityRole");
+  NSString *role = HarnessOSStringAttribute(element, @"accessibilityRole");
   // Roles come back AX-prefixed ("AXButton"); the contract wants the bare role.
   if ([role hasPrefix:@"AX"] && role.length > 2) {
     node[@"role"] = [role substringFromIndex:2];
@@ -201,19 +201,19 @@ static id OmniMindJSONValue(id value) {
     node[@"role"] = role;
   }
 
-  NSString *label = OmniMindStringAttribute(element, @"accessibilityLabel");
+  NSString *label = HarnessOSStringAttribute(element, @"accessibilityLabel");
   if (label.length > 0) {
     node[@"label"] = label;
   }
-  id value = OmniMindJSONValue(OmniMindMsgSend0(element, @"accessibilityValue"));
+  id value = HarnessOSJSONValue(HarnessOSMsgSend0(element, @"accessibilityValue"));
   if (value != NSNull.null) {
     node[@"value"] = value;
   }
-  NSString *identifier = OmniMindStringAttribute(element, @"accessibilityIdentifier");
+  NSString *identifier = HarnessOSStringAttribute(element, @"accessibilityIdentifier");
   if (identifier.length > 0) {
     node[@"identifier"] = identifier;
   }
-  NSString *title = OmniMindStringAttribute(element, @"accessibilityTitle");
+  NSString *title = HarnessOSStringAttribute(element, @"accessibilityTitle");
   if (title.length > 0) {
     node[@"title"] = title;
   }
@@ -243,14 +243,14 @@ static id OmniMindJSONValue(id value) {
 
   // AXCheckBox covers both checkboxes and switches on iOS; the subrole is what
   // distinguishes them, and an agent needs it to know "0"/"1" means off/on.
-  NSString *subrole = OmniMindStringAttribute(element, @"accessibilitySubrole");
+  NSString *subrole = HarnessOSStringAttribute(element, @"accessibilitySubrole");
   if ([subrole hasPrefix:@"AX"] && subrole.length > 2) {
     node[@"subrole"] = [subrole substringFromIndex:2];
   } else if (subrole.length > 0) {
     node[@"subrole"] = subrole;
   }
 
-  node[@"enabled"] = @(OmniMindBoolAttribute(element, @"isAccessibilityEnabled"));
+  node[@"enabled"] = @(HarnessOSBoolAttribute(element, @"isAccessibilityEnabled"));
 
   if (depth >= maxDepth) {
     // Depth-capped rather than dropped, so a pathological tree still returns.
@@ -258,7 +258,7 @@ static id OmniMindJSONValue(id value) {
     return node;
   }
 
-  id rawChildren = OmniMindMsgSend0(element, @"accessibilityChildren");
+  id rawChildren = HarnessOSMsgSend0(element, @"accessibilityChildren");
   if ([rawChildren isKindOfClass:NSArray.class] && [rawChildren count] > 0) {
     NSMutableArray *children = [NSMutableArray new];
     for (id child in (NSArray *)rawChildren) {
@@ -277,7 +277,7 @@ static id OmniMindJSONValue(id value) {
 
 @end
 
-id OmniMindEmptyTranslatorResponse(void) {
+id HarnessOSEmptyTranslatorResponse(void) {
   Class responseClass = NSClassFromString(@"AXPTranslatorResponse");
   SEL emptySelector = NSSelectorFromString(@"empty");
   if (responseClass == nil || ![responseClass respondsToSelector:emptySelector]) {

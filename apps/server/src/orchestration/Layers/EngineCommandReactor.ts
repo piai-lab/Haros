@@ -426,7 +426,7 @@ function providerPromptOverflowIssue(input: {
   }
   return input.goalPromptOverheadChars > 0
     ? "The latest message is too long to include the persistent thread goal. Shorten the message and retry."
-    : "The latest message is too long to include the active OmniMind interaction mode instructions. Shorten the message and retry.";
+    : "The latest message is too long to include the active HarnessOS interaction mode instructions. Shorten the message and retry.";
 }
 
 function isUnknownPendingApprovalRequestError(cause: Cause.Cause<EngineServiceError>): boolean {
@@ -535,7 +535,7 @@ function buildGeneratedWorktreeBranchName(raw: string): string {
     .replace(/^refs\/heads\//, "")
     .replace(/['"`]/g, "");
 
-  const withoutPrefix = normalized.replace(/^omnimind\//, "");
+  const withoutPrefix = normalized.replace(/^harnessos\//, "");
 
   const branchFragment = withoutPrefix
     .replace(/[^a-z0-9/_-]+/g, "-")
@@ -1487,7 +1487,7 @@ const make = Effect.gen(function* () {
     // An explicit user stop is the sole clean-start intent. A runtime that is
     // merely projected `stopped` can still precede a cross-engine next turn;
     // that target has no native cursor continuity and must receive the retained
-    // OmniMind transcript once.
+    // HarnessOS transcript once.
     const shouldRegisterContextBootstrap =
       !suppressContextBootstrapOnNextStartThreadIds.has(threadId);
 
@@ -2439,7 +2439,7 @@ const make = Effect.gen(function* () {
       ) =>
         Effect.gen(function* () {
           // Claude cannot continue from a missing native session; clear the
-          // dead cursor and replay once with OmniMind transcript context.
+          // dead cursor and replay once with HarnessOS transcript context.
           yield* clearStaleProviderResumeState({
             threadId: input.threadId,
             cause,
@@ -5447,7 +5447,7 @@ const make = Effect.gen(function* () {
                 threadId: blocker.threadId,
                 kind: "engine.turn.start.failed",
                 summary: "Previous messages were not sent",
-                detail: `OmniMind recovered an earlier engine failure, but ${skippedPromptCount} ${noun} skipped while the thread was blocked. Resend ${skippedPromptCount === 1 ? "it" : "them"} to continue.`,
+                detail: `HarnessOS recovered an earlier engine failure, but ${skippedPromptCount} ${noun} skipped while the thread was blocked. Resend ${skippedPromptCount === 1 ? "it" : "them"} to continue.`,
                 turnId: null,
                 createdAt,
               });

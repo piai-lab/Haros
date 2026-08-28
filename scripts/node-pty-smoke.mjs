@@ -12,7 +12,7 @@ const repoRoot = resolve(scriptDir, "..");
 const requireRoot =
   process.env.HARNESSOS_NODE_PTY_SMOKE_REQUIRE_ROOT?.trim() || resolve(repoRoot, "apps/server");
 const requireFromTarget = createRequire(resolve(requireRoot, "package.json"));
-const expectedOutput = "omnimind-node-pty-smoke";
+const expectedOutput = "harnessos-node-pty-smoke";
 
 function fail(message, detail) {
   console.error(`[node-pty-smoke] ${message}`);

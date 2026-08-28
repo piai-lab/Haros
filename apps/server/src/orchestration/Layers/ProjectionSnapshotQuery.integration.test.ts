@@ -1270,7 +1270,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
     }),
   );
 
-  it.effect("normalizes imported OmniMind model-selection shapes from projection reads", () =>
+  it.effect("normalizes imported HarnessOS model-selection shapes from projection reads", () =>
     Effect.gen(function* () {
       const snapshotQuery = yield* ProjectionSnapshotQuery;
       const sql = yield* SqlClient.SqlClient;

@@ -51,7 +51,7 @@ function withFakeAcpAgent<A, E, R>(
 ): Effect.Effect<A, E, R> {
   return Effect.acquireUseRelease(
     Effect.sync(() => {
-      const tempDir = mkdtempSync(path.join(os.tmpdir(), "omnimind-cursor-text-acp-"));
+      const tempDir = mkdtempSync(path.join(os.tmpdir(), "harnessos-cursor-text-acp-"));
       return {
         tempDir,
         agentPath: makeAcpAgentWrapper(tempDir, env),
@@ -83,7 +83,7 @@ function waitForFileContent(filePath: string): Effect.Effect<string> {
 
 it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
   it.effect("uses ACP model config options instead of raw CLI model ids", () => {
-    const requestLogDir = mkdtempSync(path.join(os.tmpdir(), "omnimind-cursor-text-log-"));
+    const requestLogDir = mkdtempSync(path.join(os.tmpdir(), "harnessos-cursor-text-log-"));
     const requestLogPath = path.join(requestLogDir, "requests.ndjson");
 
     return withFakeAcpAgent(
@@ -333,7 +333,7 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
   );
 
   it.effect("closes the ACP child process after text generation completes", () => {
-    const exitLogDir = mkdtempSync(path.join(os.tmpdir(), "omnimind-cursor-text-exit-log-"));
+    const exitLogDir = mkdtempSync(path.join(os.tmpdir(), "harnessos-cursor-text-exit-log-"));
     const exitLogPath = path.join(exitLogDir, "exit.log");
 
     return withFakeAcpAgent(

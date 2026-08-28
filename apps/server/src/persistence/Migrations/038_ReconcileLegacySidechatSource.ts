@@ -1,6 +1,6 @@
 /**
  * Repairs imported legacy DBs whose migration tracker already used ID 33 for
- * a pre-OmniMind migration, causing OmniMind's sidechat source column migration to
+ * a pre-HarnessOS migration, causing HarnessOS's sidechat source column migration to
  * be skipped even though read-model queries now require the column.
  */
 import * as Effect from "effect/Effect";

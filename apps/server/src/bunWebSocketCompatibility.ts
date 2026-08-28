@@ -16,7 +16,7 @@ type CloseEventTarget = {
   removeEventListener: (type: string, listener: RawListener, options?: ListenerOptions) => void;
 };
 
-const PATCHED = Symbol.for("omnimind.bunWebSocketCloseEventPatched");
+const PATCHED = Symbol.for("harnessos.bunWebSocketCloseEventPatched");
 
 function isBunRuntime() {
   return typeof (globalThis as { Bun?: unknown }).Bun !== "undefined";

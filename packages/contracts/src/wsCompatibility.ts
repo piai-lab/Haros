@@ -19,24 +19,24 @@ export const WS_STREAM_LIMITS = {
 } as const;
 
 export const WS_COMPATIBILITY_QUERY = {
-  clientBuild: "x-omnimind-client-build",
-  protocolEpoch: "x-omnimind-protocol-epoch",
-  protocolRevision: "x-omnimind-protocol-revision",
-  serverInstanceId: "x-omnimind-server-instance",
+  clientBuild: "x-harnessos-client-build",
+  protocolEpoch: "x-harnessos-protocol-epoch",
+  protocolRevision: "x-harnessos-protocol-revision",
+  serverInstanceId: "x-harnessos-server-instance",
 } as const;
 
 export const WS_NEGOTIATE_QUERY = {
-  clientBuild: "x-omnimind-client-build",
-  protocolEpoch: "x-omnimind-protocol-epoch",
-  minRevision: "x-omnimind-protocol-min-revision",
-  maxRevision: "x-omnimind-protocol-max-revision",
-  requiredCapability: "x-omnimind-required-capability",
+  clientBuild: "x-harnessos-client-build",
+  protocolEpoch: "x-harnessos-protocol-epoch",
+  minRevision: "x-harnessos-protocol-min-revision",
+  maxRevision: "x-harnessos-protocol-max-revision",
+  requiredCapability: "x-harnessos-required-capability",
 } as const;
 
 export const WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY = "projects.github-provisioning";
-export const WS_HARNESSOS_MODEL_SERVICES_CAPABILITY = "omnimind.model-services";
-export const WS_HARNESSOS_ECOSYSTEM_CAPABILITY = "omnimind.ecosystem";
-export const WS_HARNESSOS_AGENT_PROMPTS_CAPABILITY = "omnimind.agent-prompts";
+export const WS_HARNESSOS_MODEL_SERVICES_CAPABILITY = "harnessos.model-services";
+export const WS_HARNESSOS_ECOSYSTEM_CAPABILITY = "harnessos.ecosystem";
+export const WS_HARNESSOS_AGENT_PROMPTS_CAPABILITY = "harnessos.agent-prompts";
 
 // Capabilities the current client refuses to run without. Kept separate from
 // the advertised server list so a newer client can still negotiate with an

@@ -688,7 +688,9 @@ layer("ManagedAttachmentRepository", (it) => {
   );
 
   it.effect("converges file-backed crash windows without deleting claimed bytes", () => {
-    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-managed-process-loss-"));
+    const attachmentsDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "harnessos-managed-process-loss-"),
+    );
     return Effect.gen(function* () {
       yield* resetSchema;
       const repository = yield* ManagedAttachmentRepository;
@@ -801,7 +803,7 @@ layer("ManagedAttachmentRepository", (it) => {
   });
 
   it.effect("reuses deterministic staging after a clone-before-receipt crash", () => {
-    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-managed-fork-replay-"));
+    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-managed-fork-replay-"));
     return Effect.gen(function* () {
       yield* resetSchema;
       const repository = yield* ManagedAttachmentRepository;

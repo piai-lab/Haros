@@ -1,12 +1,12 @@
 /**
- * Which simulators OmniMind booted, remembered across process death.
+ * Which simulators HarnessOS booted, remembered across process death.
  *
  * `DeviceManager` tracks this in memory, which is enough for a clean quit: the
  * finalizer walks the set and shuts each one down. A crash or a SIGKILL runs no
  * finalizer, so the set dies with the process and the simulators outlive it.
  * That was not merely untidy — the orphan reappeared as `bootSource: "user"`,
  * which meant nothing would ever reclaim it: it fell outside the boot cap, the
- * idle sweep, and the next quit's shutdown, all of which are gated on OmniMind
+ * idle sweep, and the next quit's shutdown, all of which are gated on HarnessOS
  * having booted the device. Each crash leaked one simulator, permanently.
  *
  * The record is a plain JSON file rather than a row in the database because it

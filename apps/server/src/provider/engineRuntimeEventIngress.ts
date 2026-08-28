@@ -39,7 +39,7 @@ export function compactProviderRuntimeEventForIngress(
       ...(event.raw.method !== undefined ? { method: event.raw.method } : {}),
       ...(event.raw.messageType !== undefined ? { messageType: event.raw.messageType } : {}),
       payload: {
-        omnimindTruncated: true,
+        harnessosTruncated: true,
         reason: "engine runtime event exceeded the callback ingress size limit",
         originalBytes,
       },

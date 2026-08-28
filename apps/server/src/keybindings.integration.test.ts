@@ -22,7 +22,7 @@ const makeKeybindingsLayer = () => {
     Layer.provideMerge(
       Layer.fresh(
         ServerConfig.layerTest(process.cwd(), {
-          prefix: "omnimind-keybindings-test-",
+          prefix: "harnessos-keybindings-test-",
         }),
       ),
     ),

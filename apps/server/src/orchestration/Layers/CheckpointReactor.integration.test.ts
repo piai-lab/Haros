@@ -224,7 +224,7 @@ function listRevertRescueRefs(cwd: string): ReadonlyArray<string> {
 }
 
 function createGitRepository(hasInitialCommit = true) {
-  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-checkpoint-handler-"));
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-checkpoint-handler-"));
   runGit(cwd, ["init", "--initial-branch=main"]);
   runGit(cwd, ["config", "user.email", "test@example.com"]);
   runGit(cwd, ["config", "user.name", "Test User"]);
@@ -364,7 +364,7 @@ describe("CheckpointReactor", () => {
     ).pipe(Layer.provide(CheckpointStoreLive.pipe(Layer.provide(GitCoreLive))));
 
     const ServerConfigLayer = ServerConfig.layerTest(process.cwd(), {
-      prefix: "omnimind-checkpoint-reactor-test-",
+      prefix: "harnessos-checkpoint-reactor-test-",
     });
 
     const layer = CheckpointReactorLive.pipe(

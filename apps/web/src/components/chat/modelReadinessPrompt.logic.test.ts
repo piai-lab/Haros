@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   areUsableProviderCatalogsSettled,
   hasUsableExactModelBinding,
-  hasUsableOmniMindModelServiceBinding,
+  hasUsableOAModelServiceBinding,
   isSettledPassiveModelServicesQueryState,
 } from "./modelReadinessPrompt.logic";
 
@@ -85,7 +85,7 @@ describe("model readiness facts", () => {
     ).toBe(false);
   });
 
-  it("requires the exact OmniMind service origin to own the configured model", () => {
+  it("requires the exact HarnessOS service origin to own the configured model", () => {
     const selection = {
       engine: "oa",
       model: "gateway/model",
@@ -115,7 +115,7 @@ describe("model readiness facts", () => {
     };
 
     expect(
-      hasUsableOmniMindModelServiceBinding({
+      hasUsableOAModelServiceBinding({
         selection,
         selectionIsExplicit: true,
         catalogState: "ready",
@@ -124,7 +124,7 @@ describe("model readiness facts", () => {
       }),
     ).toBe(false);
     expect(
-      hasUsableOmniMindModelServiceBinding({
+      hasUsableOAModelServiceBinding({
         selection,
         selectionIsExplicit: true,
         catalogState: "ready",
@@ -164,7 +164,7 @@ describe("model readiness facts", () => {
     };
 
     expect(
-      hasUsableOmniMindModelServiceBinding({
+      hasUsableOAModelServiceBinding({
         selection,
         selectionIsExplicit: true,
         catalogState: "ready",
@@ -173,7 +173,7 @@ describe("model readiness facts", () => {
       }),
     ).toBe(true);
     expect(
-      hasUsableOmniMindModelServiceBinding({
+      hasUsableOAModelServiceBinding({
         selection,
         selectionIsExplicit: false,
         catalogState: "ready",
@@ -182,7 +182,7 @@ describe("model readiness facts", () => {
       }),
     ).toBe(false);
     expect(
-      hasUsableOmniMindModelServiceBinding({
+      hasUsableOAModelServiceBinding({
         selection,
         selectionIsExplicit: true,
         catalogState: "ready",
@@ -191,7 +191,7 @@ describe("model readiness facts", () => {
       }),
     ).toBe(false);
     expect(
-      hasUsableOmniMindModelServiceBinding({
+      hasUsableOAModelServiceBinding({
         selection,
         selectionIsExplicit: true,
         catalogState: "stale",

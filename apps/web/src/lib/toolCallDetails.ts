@@ -208,7 +208,7 @@ function extractToolOutputDetails(input: {
     result?.exitCode,
     outputExitCode(input.detail),
   );
-  const truncated = rawOutput?.truncated === true || data?.__omnimindTruncated === true;
+  const truncated = rawOutput?.truncated === true || data?.__harnessosTruncated === true;
   if (!stdout && !stderr && !output && exitCode === undefined && !truncated) {
     return undefined;
   }

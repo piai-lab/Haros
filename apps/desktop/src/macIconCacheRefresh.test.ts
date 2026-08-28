@@ -69,6 +69,6 @@ describe("resolveMacAppBundlePath", () => {
   });
 
   it("returns null when the executable is not inside a .app bundle", () => {
-    expect(resolveMacAppBundlePath("/usr/local/bin/omnimind", "darwin")).toBeNull();
+    expect(resolveMacAppBundlePath("/usr/local/bin/harnessos", "darwin")).toBeNull();
   });
 });

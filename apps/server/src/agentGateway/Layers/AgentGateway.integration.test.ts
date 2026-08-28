@@ -736,7 +736,7 @@ function makeHarnessLayer(
         }
         return {
           worktree: {
-            path: input.path ?? "/tmp/worktrees/generated/omnimind",
+            path: input.path ?? "/tmp/worktrees/generated/harnessos",
             ref: input.ref,
             branch: input.newBranch ?? null,
           },
@@ -1555,7 +1555,7 @@ describe("AgentGateway", () => {
       assert.equal(initResult.protocolVersion, "2025-06-18");
       assert.isString(initResult.instructions);
       assert.isBelow(String(initResult.instructions).length, 200);
-      assert.notInclude(String(initResult.instructions), "[OmniMind harness policy");
+      assert.notInclude(String(initResult.instructions), "[HarnessOS harness policy");
 
       const list = yield* harness.postRaw({
         authorizationHeader: "Bearer token-parent",
@@ -1714,15 +1714,15 @@ describe("AgentGateway", () => {
           ...makeProjectShell(),
           id: ProjectId.makeUnsafe("project-chat-container"),
           kind: "chat",
-          title: "che progetti ci sono in omnimind",
-          workspaceRoot: `${homeDir}/Documents/OmniMind/2026-03-01/chat`,
+          title: "che progetti ci sono in harnessos",
+          workspaceRoot: `${homeDir}/Documents/HarnessOS/2026-03-01/chat`,
         },
         {
           ...makeProjectShell(),
           id: ProjectId.makeUnsafe("project-studio-container"),
           kind: "studio",
           title: "Studio",
-          workspaceRoot: `${homeDir}/Documents/OmniMind/Studio`,
+          workspaceRoot: `${homeDir}/Documents/HarnessOS/Studio`,
         },
         {
           ...makeProjectShell(),
@@ -3070,7 +3070,7 @@ describe("AgentGateway", () => {
       const creationRecaps = harness.dispatched.filter(
         (command) =>
           command.type === "thread.activity.append" &&
-          command.activity.kind === "omnimind.threads.created",
+          command.activity.kind === "harnessos.threads.created",
       );
       assert.equal(creationRecaps.length, 1);
       const creationRecap = creationRecaps[0];

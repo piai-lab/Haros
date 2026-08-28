@@ -1,5 +1,5 @@
 /**
- * Public contracts for the OmniMind agent-control gateway.
+ * Public contracts for the HarnessOS agent-control gateway.
  *
  * New gateway tools decode these schemas before doing any work. Keeping the
  * limits here ensures the MCP surface, server implementation, and tests share
@@ -16,7 +16,7 @@ export const HARNESSOS_GATEWAY_MAX_THREADS_PER_OPERATION = 20;
 export const HARNESSOS_GATEWAY_MAX_REQUEST_ID_LENGTH = 256;
 export const HARNESSOS_GATEWAY_MAX_WAIT_MS = 60_000;
 
-export const OmniMindGatewayErrorCode = Schema.Literals([
+export const HarnessOSGatewayErrorCode = Schema.Literals([
   "caller_session_inactive",
   "caller_turn_inactive",
   "capability_denied",
@@ -31,23 +31,23 @@ export const OmniMindGatewayErrorCode = Schema.Literals([
   "wait_timed_out",
   "operation_failed",
 ]);
-export type OmniMindGatewayErrorCode = typeof OmniMindGatewayErrorCode.Type;
+export type HarnessOSGatewayErrorCode = typeof HarnessOSGatewayErrorCode.Type;
 
-export const OmniMindGatewayError = Schema.Struct({
-  code: OmniMindGatewayErrorCode,
+export const HarnessOSGatewayError = Schema.Struct({
+  code: HarnessOSGatewayErrorCode,
   message: Schema.String,
   details: Schema.optional(Schema.Unknown),
 });
-export type OmniMindGatewayError = typeof OmniMindGatewayError.Type;
+export type HarnessOSGatewayError = typeof HarnessOSGatewayError.Type;
 
-export const OmniMindGatewayErrorResult = Schema.Struct({
-  error: OmniMindGatewayError,
+export const HarnessOSGatewayErrorResult = Schema.Struct({
+  error: HarnessOSGatewayError,
 });
-export type OmniMindGatewayErrorResult = typeof OmniMindGatewayErrorResult.Type;
+export type HarnessOSGatewayErrorResult = typeof HarnessOSGatewayErrorResult.Type;
 
-export const OmniMindContextResult = Schema.Struct({
+export const HarnessOSContextResult = Schema.Struct({
   harness: Schema.Struct({
-    name: Schema.Literal("OmniMind"),
+    name: Schema.Literal("HarnessOS"),
     policyVersion: Schema.String,
   }),
   caller: Schema.Struct({
@@ -63,9 +63,9 @@ export const OmniMindContextResult = Schema.Struct({
     automations: Schema.Boolean,
   }),
 });
-export type OmniMindContextResult = typeof OmniMindContextResult.Type;
+export type HarnessOSContextResult = typeof HarnessOSContextResult.Type;
 
-export const OmniMindCreateThreadSpec = Schema.Struct({
+export const HarnessOSCreateThreadSpec = Schema.Struct({
   prompt: Schema.String.check(Schema.isNonEmpty()),
   title: Schema.optional(Schema.String.check(Schema.isNonEmpty())),
   target: EngineSelection,
@@ -78,21 +78,21 @@ export const OmniMindCreateThreadSpec = Schema.Struct({
   branchName: Schema.optional(Schema.String.check(Schema.isNonEmpty())),
   runtimeMode: Schema.optional(Schema.Literals(["approval-required", "full-access"])),
 });
-export type OmniMindCreateThreadSpec = typeof OmniMindCreateThreadSpec.Type;
+export type HarnessOSCreateThreadSpec = typeof HarnessOSCreateThreadSpec.Type;
 
-const OmniMindGatewayRequestId = Schema.String.check(Schema.isNonEmpty()).check(
+const HarnessOSGatewayRequestId = Schema.String.check(Schema.isNonEmpty()).check(
   Schema.isMaxLength(HARNESSOS_GATEWAY_MAX_REQUEST_ID_LENGTH),
 );
 
-export const OmniMindCreateThreadsInput = Schema.Struct({
-  requestId: OmniMindGatewayRequestId,
-  threads: Schema.Array(OmniMindCreateThreadSpec)
+export const HarnessOSCreateThreadsInput = Schema.Struct({
+  requestId: HarnessOSGatewayRequestId,
+  threads: Schema.Array(HarnessOSCreateThreadSpec)
     .check(Schema.isMinLength(1))
     .check(Schema.isMaxLength(HARNESSOS_GATEWAY_MAX_THREADS_PER_OPERATION)),
 }).annotate({ parseOptions: { onExcessProperty: "error" } });
-export type OmniMindCreateThreadsInput = typeof OmniMindCreateThreadsInput.Type;
+export type HarnessOSCreateThreadsInput = typeof HarnessOSCreateThreadsInput.Type;
 
-export const OmniMindProviderCatalog = Schema.Struct({
+export const HarnessOSProviderCatalog = Schema.Struct({
   engine: EngineKind,
   defaultModel: Schema.NullOr(Schema.String),
   models: Schema.Array(EngineModelDescriptor),
@@ -102,46 +102,46 @@ export const OmniMindProviderCatalog = Schema.Struct({
   source: Schema.optional(Schema.String),
   error: Schema.optional(Schema.String),
 });
-export type OmniMindProviderCatalog = typeof OmniMindProviderCatalog.Type;
+export type HarnessOSProviderCatalog = typeof HarnessOSProviderCatalog.Type;
 
-export const OmniMindGatewayTargetOptionValue = Schema.Union([
+export const HarnessOSGatewayTargetOptionValue = Schema.Union([
   Schema.String,
   Schema.Number,
   Schema.Boolean,
 ]);
-export type OmniMindGatewayTargetOptionValue = typeof OmniMindGatewayTargetOptionValue.Type;
+export type HarnessOSGatewayTargetOptionValue = typeof HarnessOSGatewayTargetOptionValue.Type;
 
-export const OmniMindGatewayTargetOptionRule = Schema.Struct({
+export const HarnessOSGatewayTargetOptionRule = Schema.Struct({
   key: Schema.String,
   valueType: Schema.Literals(["string", "number", "boolean"]),
-  allowedValues: Schema.Array(OmniMindGatewayTargetOptionValue),
+  allowedValues: Schema.Array(HarnessOSGatewayTargetOptionValue),
   allowedValuesSource: Schema.Literals(["engine-contract", "model-discovery"]),
 });
-export type OmniMindGatewayTargetOptionRule = typeof OmniMindGatewayTargetOptionRule.Type;
+export type HarnessOSGatewayTargetOptionRule = typeof HarnessOSGatewayTargetOptionRule.Type;
 
-export const OmniMindGatewayTargetConstruction = Schema.Struct({
+export const HarnessOSGatewayTargetConstruction = Schema.Struct({
   modelValueSource: Schema.Literal("engines[].models[].slug"),
   primaryOptionKey: Schema.String,
   alternativeOptionKeys: Schema.Array(Schema.String),
   optionSelectionRule: Schema.String,
-  engineOptions: Schema.Array(OmniMindGatewayTargetOptionRule),
-  optionsByModel: Schema.Record(Schema.String, Schema.Array(OmniMindGatewayTargetOptionRule)),
+  engineOptions: Schema.Array(HarnessOSGatewayTargetOptionRule),
+  optionsByModel: Schema.Record(Schema.String, Schema.Array(HarnessOSGatewayTargetOptionRule)),
   exampleTarget: Schema.NullOr(EngineSelection),
 });
-export type OmniMindGatewayTargetConstruction = typeof OmniMindGatewayTargetConstruction.Type;
+export type HarnessOSGatewayTargetConstruction = typeof HarnessOSGatewayTargetConstruction.Type;
 
-export const OmniMindCapabilitiesResult = Schema.Struct({
-  targetConstruction: Schema.Record(Schema.String, OmniMindGatewayTargetConstruction),
-  engines: Schema.Array(OmniMindProviderCatalog),
+export const HarnessOSCapabilitiesResult = Schema.Struct({
+  targetConstruction: Schema.Record(Schema.String, HarnessOSGatewayTargetConstruction),
+  engines: Schema.Array(HarnessOSProviderCatalog),
   limits: Schema.Struct({
     maxThreadsPerOperation: Schema.Int,
     maxWaitMs: Schema.Int,
     oneCreationPlanPerActiveTurn: Schema.Boolean,
   }),
 });
-export type OmniMindCapabilitiesResult = typeof OmniMindCapabilitiesResult.Type;
+export type HarnessOSCapabilitiesResult = typeof HarnessOSCapabilitiesResult.Type;
 
-export const OmniMindCreatedThreadResult = Schema.Struct({
+export const HarnessOSCreatedThreadResult = Schema.Struct({
   index: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   threadId: ThreadId,
   projectId: ProjectId,
@@ -155,19 +155,19 @@ export const OmniMindCreatedThreadResult = Schema.Struct({
   worktreePath: Schema.NullOr(Schema.String),
   status: Schema.Literal("task_dispatched"),
 });
-export type OmniMindCreatedThreadResult = typeof OmniMindCreatedThreadResult.Type;
+export type HarnessOSCreatedThreadResult = typeof HarnessOSCreatedThreadResult.Type;
 
-export const OmniMindCreateThreadsResult = Schema.Struct({
+export const HarnessOSCreateThreadsResult = Schema.Struct({
   operationId: Schema.String,
-  requestId: OmniMindGatewayRequestId,
+  requestId: HarnessOSGatewayRequestId,
   requestedCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
   createdCount: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   threadIds: Schema.Array(ThreadId),
-  threads: Schema.Array(OmniMindCreatedThreadResult),
+  threads: Schema.Array(HarnessOSCreatedThreadResult),
 });
-export type OmniMindCreateThreadsResult = typeof OmniMindCreateThreadsResult.Type;
+export type HarnessOSCreateThreadsResult = typeof HarnessOSCreateThreadsResult.Type;
 
-export const OmniMindWaitForThreadsInput = Schema.Struct({
+export const HarnessOSWaitForThreadsInput = Schema.Struct({
   threadIds: Schema.Array(ThreadId)
     .check(Schema.isMinLength(1))
     .check(Schema.isMaxLength(HARNESSOS_GATEWAY_MAX_THREADS_PER_OPERATION)),
@@ -182,9 +182,9 @@ export const OmniMindWaitForThreadsInput = Schema.Struct({
     ),
   ),
 }).annotate({ parseOptions: { onExcessProperty: "error" } });
-export type OmniMindWaitForThreadsInput = typeof OmniMindWaitForThreadsInput.Type;
+export type HarnessOSWaitForThreadsInput = typeof HarnessOSWaitForThreadsInput.Type;
 
-export const OmniMindWaitedThreadResult = Schema.Struct({
+export const HarnessOSWaitedThreadResult = Schema.Struct({
   threadId: ThreadId,
   runId: Schema.NullOr(TurnId),
   state: Schema.Literals(["idle", "pending", "running", "completed", "error", "interrupted"]),
@@ -198,13 +198,13 @@ export const OmniMindWaitedThreadResult = Schema.Struct({
     arguments: Schema.Struct({ threadId: ThreadId }),
   }),
 });
-export type OmniMindWaitedThreadResult = typeof OmniMindWaitedThreadResult.Type;
+export type HarnessOSWaitedThreadResult = typeof HarnessOSWaitedThreadResult.Type;
 
-export const OmniMindWaitForThreadsResult = Schema.Struct({
+export const HarnessOSWaitForThreadsResult = Schema.Struct({
   callerThreadId: ThreadId,
   runIds: Schema.Array(Schema.NullOr(TurnId)),
   allTerminal: Schema.Boolean,
   timedOut: Schema.Boolean,
-  threads: Schema.Array(OmniMindWaitedThreadResult),
+  threads: Schema.Array(HarnessOSWaitedThreadResult),
 });
-export type OmniMindWaitForThreadsResult = typeof OmniMindWaitForThreadsResult.Type;
+export type HarnessOSWaitForThreadsResult = typeof HarnessOSWaitForThreadsResult.Type;

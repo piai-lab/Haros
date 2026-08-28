@@ -31,7 +31,7 @@ import {
 const temporaryRoots: Array<string> = [];
 
 function makeTemporaryRoot(): string {
-  const root = FS.mkdtempSync(Path.join(OS.tmpdir(), "omnimind-login-shell-"));
+  const root = FS.mkdtempSync(Path.join(OS.tmpdir(), "harnessos-login-shell-"));
   temporaryRoots.push(root);
   return root;
 }
@@ -324,7 +324,7 @@ describe("createCachedLoginShellEnvironmentReader", () => {
   it("runs uncached when the home directory cannot be resolved", () => {
     const fixture = makeFixture();
     // Pointed at the fixture root, so a spy that failed to apply writes here (and fails the
-    // call-count assertion below) instead of touching the developer's real OmniMind home.
+    // call-count assertion below) instead of touching the developer's real HarnessOS home.
     const env = { HARNESSOS_HOME: Path.dirname(Path.dirname(fixture.cachePath)) };
     homeDirectoryFailure.active = true;
 
@@ -359,9 +359,9 @@ describe("createCachedLoginShellEnvironmentReader", () => {
 });
 
 describe("loginShellEnvironmentCachePath", () => {
-  it("anchors the cache in the OmniMind home both processes resolve", () => {
-    expect(loginShellEnvironmentCachePath({ env: { HARNESSOS_HOME: "/tmp/omnimind-home" } })).toBe(
-      Path.join("/tmp/omnimind-home", "cache", "login-shell-environment.json"),
+  it("anchors the cache in the HarnessOS home both processes resolve", () => {
+    expect(loginShellEnvironmentCachePath({ env: { HARNESSOS_HOME: "/tmp/harnessos-home" } })).toBe(
+      Path.join("/tmp/harnessos-home", "cache", "login-shell-environment.json"),
     );
     expect(loginShellEnvironmentCachePath({ env: {}, homeDirectory: "/users/test" })).toBe(
       Path.join("/users/test", ".harnessos", "cache", "login-shell-environment.json"),

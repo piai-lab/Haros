@@ -46,7 +46,7 @@
   </head>
   <body>
     <header>
-      OmniMind visible browser E2E shell
+      HarnessOS visible browser E2E shell
       <input id="host-composer" aria-label="Host composer" />
     </header>
     <main id="browser-host"></main>
@@ -84,7 +84,7 @@
           Number(document.documentElement.dataset.attachAttempts || "0") + 1,
         );
         try {
-          await ipcRenderer.invoke("omnimind-e2e:attach-webview", { tabId, webContentsId });
+          await ipcRenderer.invoke("harnessos-e2e:attach-webview", { tabId, webContentsId });
         } catch {
           if (attachedWebviewKey === attachKey) attachedWebviewKey = null;
           if (attachRetryTimer === null) {
@@ -147,7 +147,7 @@
         webview.setAttribute("src", tab.lastCommittedUrl || tab.url || "about:blank");
       };
 
-      ipcRenderer.on("omnimind-e2e:browser-state", (_event, state) => {
+      ipcRenderer.on("harnessos-e2e:browser-state", (_event, state) => {
         latestState = state;
         document.documentElement.dataset.browserVersion = String(state.version);
         if (!state.open || !state.activeTabId) {
@@ -166,9 +166,9 @@
         }
         mountActiveTab();
       });
-      ipcRenderer.on("omnimind-e2e:open-panel", () => mountActiveTab());
+      ipcRenderer.on("harnessos-e2e:open-panel", () => mountActiveTab());
       document.documentElement.dataset.shellReady = "true";
-      ipcRenderer.send("omnimind-e2e:shell-ready");
+      ipcRenderer.send("harnessos-e2e:shell-ready");
     </script>
   </body>
 </html>

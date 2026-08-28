@@ -224,9 +224,9 @@ interface StagePackageJson {
   readonly version: string;
   readonly buildVersion: string;
   readonly harnessosCommitHash: string;
-  readonly omnimindLockfileSha256: string;
-  readonly omnimindSourceTag: string | null;
-  readonly omnimindWindowsPublisherSubject: string | null;
+  readonly harnessosLockfileSha256: string;
+  readonly harnessosSourceTag: string | null;
+  readonly harnessosWindowsPublisherSubject: string | null;
   readonly private: true;
   readonly description: string;
   readonly author: string;
@@ -435,7 +435,7 @@ function stageMacIcons(stageResourcesDir: string, verbose: boolean) {
     }
 
     const tmpRoot = yield* fs.makeTempDirectoryScoped({
-      prefix: "omnimind-icon-build-",
+      prefix: "harnessos-icon-build-",
     });
 
     const iconPngPath = path.join(stageResourcesDir, "icon.png");
@@ -1095,9 +1095,9 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     version: appVersion,
     buildVersion: appVersion,
     harnessosCommitHash: commitHash,
-    omnimindLockfileSha256: resolvedLockfileSha256,
-    omnimindSourceTag: options.sourceTag ?? null,
-    omnimindWindowsPublisherSubject: resolvedBuildConfig.windowsPublisherSubject,
+    harnessosLockfileSha256: resolvedLockfileSha256,
+    harnessosSourceTag: options.sourceTag ?? null,
+    harnessosWindowsPublisherSubject: resolvedBuildConfig.windowsPublisherSubject,
     private: true,
     description: "HarnessOS desktop build",
     author: "HarnessOS",

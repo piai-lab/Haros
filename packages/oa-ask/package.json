@@ -1,0 +1,26 @@
+{
+  "name": "@harnessos/oa-ask",
+  "version": "5.0.0-oa.1",
+  "private": true,
+  "description": "Host-neutral Ask User runtime fork for HarnessOS's canonical user-input product.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/api.d.ts",
+      "default": "./dist/api.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:related": "vitest related --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

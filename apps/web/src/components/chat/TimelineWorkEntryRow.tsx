@@ -61,7 +61,7 @@ import { DiffStatLabel } from "./DiffStatLabel";
 import { type ExpandedImagePreview } from "./ExpandedImagePreview";
 import { LinkChipIcon } from "../LinkChipIcon";
 import { normalizeCompactToolLabel } from "./MessagesTimeline.logic";
-import { OmniMindLogo } from "../OmniMindLogo";
+import { HarnessOSLogo } from "../HarnessOSLogo";
 import { ToolCallDetailsContent } from "./ToolCallDetailsDialog";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
 import { DisclosureRegion } from "../ui/DisclosureRegion";
@@ -73,13 +73,13 @@ import {
 } from "../../lib/toolArgumentSummary";
 import {
   deriveFriendlyCommandTarget,
-  deriveOmniMindMcpToolTitle,
+  deriveHarnessOSMcpToolTitle,
   extractWebFetchUrl,
-  isOmniMindBrowserToolCall,
+  isHarnessOSBrowserToolCall,
   normalizeToolTextForComparison,
   resolveCommandVisualKind,
-  sanitizeOmniMindMcpToolPreview,
-  type OmniMindMcpToolStatus,
+  sanitizeHarnessOSMcpToolPreview,
+  type HarnessOSMcpToolStatus,
 } from "../../lib/toolCallLabel";
 import { formatLiveActivityMeta, useLiveActivityNow } from "../../lib/liveActivityPresentation";
 import { openWorkspaceFileReference, useWorkspaceFileOpener } from "../../lib/workspaceFileOpener";
@@ -102,8 +102,8 @@ type TimelineWorkEntry = WorkLogEntry;
 
 const AgentTaskIcon: LucideIcon = (props) => <BotIcon {...props} />;
 
-const OmniMindToolIcon: LucideIcon = ({ className, ...props }) => (
-  <OmniMindLogo {...props} className={cn("scale-[1.15] text-current", className)} />
+const HarnessOSToolIcon: LucideIcon = ({ className, ...props }) => (
+  <HarnessOSLogo {...props} className={cn("scale-[1.15] text-current", className)} />
 );
 
 function workToneIcon(tone: TimelineWorkEntry["tone"]): {
@@ -299,8 +299,8 @@ export function workEntryLeftIcon(workEntry: TimelineWorkEntry): LucideIcon {
     return AskUserIcon;
   }
   if (isGitHubMcpToolCall(workEntry)) return GitHubIcon;
-  if (isOmniMindBrowserWorkEntry(workEntry)) return GlobeIcon;
-  if (isOmniMindToolCall(workEntry)) return OmniMindToolIcon;
+  if (isHarnessOSBrowserWorkEntry(workEntry)) return GlobeIcon;
+  if (isHarnessOSToolCall(workEntry)) return HarnessOSToolIcon;
   if (workEntry.itemType === "mcp_tool_call") return McpIcon;
   return workEntryIcon(workEntry);
 }
@@ -310,20 +310,20 @@ function isGitHubMcpToolCall(workEntry: TimelineWorkEntry): boolean {
   return Boolean(toolName?.startsWith("mcp__codex_apps__github"));
 }
 
-// OmniMind's own agent-gateway tools (harnessos_list_threads, harnessos_create_thread,
-// ...) get the OmniMind mark instead of the generic MCP glyph. Engines report
+// HarnessOS's own agent-gateway tools (harnessos_list_threads, harnessos_create_thread,
+// ...) get the HarnessOS mark instead of the generic MCP glyph. Engines report
 // the call differently: Claude prefixes the MCP server (mcp__harnessos__*), ACP
 // agents surface the bare tool name (harnessos_*), and Codex reports server/tool
-// pairs that the label humanizer renders as "OmniMind: ...".
-function toolWorkEntryStatus(workEntry: TimelineWorkEntry): OmniMindMcpToolStatus {
+// pairs that the label humanizer renders as "HarnessOS: ...".
+function toolWorkEntryStatus(workEntry: TimelineWorkEntry): HarnessOSMcpToolStatus {
   if (workEntry.toolStatus) return workEntry.toolStatus;
   return workEntry.activityKind !== undefined && workEntry.activityKind !== "tool.completed"
     ? "running"
     : "completed";
 }
 
-function isOmniMindBrowserWorkEntry(workEntry: TimelineWorkEntry): boolean {
-  return isOmniMindBrowserToolCall({
+function isHarnessOSBrowserWorkEntry(workEntry: TimelineWorkEntry): boolean {
+  return isHarnessOSBrowserToolCall({
     toolName: workEntry.toolName,
     title: workEntry.toolTitle,
     fallbackLabel: workEntry.label,
@@ -331,9 +331,9 @@ function isOmniMindBrowserWorkEntry(workEntry: TimelineWorkEntry): boolean {
   });
 }
 
-function isOmniMindToolCall(workEntry: TimelineWorkEntry): boolean {
+function isHarnessOSToolCall(workEntry: TimelineWorkEntry): boolean {
   return (
-    deriveOmniMindMcpToolTitle({
+    deriveHarnessOSMcpToolTitle({
       toolName: workEntry.toolName,
       title: workEntry.toolTitle,
       fallbackLabel: workEntry.label,
@@ -398,14 +398,14 @@ function normalizeBundledWebAccessToolName(value: string | null | undefined): st
 }
 
 function toolWorkEntryHeading(workEntry: TimelineWorkEntry): string {
-  const omnimindTitle = deriveOmniMindMcpToolTitle({
+  const harnessosTitle = deriveHarnessOSMcpToolTitle({
     toolName: workEntry.toolName,
     title: workEntry.toolTitle,
     fallbackLabel: workEntry.label,
     status: toolWorkEntryStatus(workEntry),
   });
-  if (omnimindTitle) {
-    return omnimindTitle;
+  if (harnessosTitle) {
+    return harnessosTitle;
   }
   if (!workEntry.toolTitle) {
     return capitalizePhrase(normalizeCompactToolLabel(workEntry.label));
@@ -598,22 +598,22 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   // Standard tool rows keep one discoverable left glyph. Codex status rows
   // deliberately skip it and reuse only the shared tool-label typography.
   const isGitHubToolRow = isGitHubMcpToolCall(workEntry);
-  const isOmniMindBrowserToolRow = !isGitHubToolRow && isOmniMindBrowserWorkEntry(workEntry);
-  const isOmniMindToolRow =
-    !isGitHubToolRow && !isOmniMindBrowserToolRow && isOmniMindToolCall(workEntry);
+  const isHarnessOSBrowserToolRow = !isGitHubToolRow && isHarnessOSBrowserWorkEntry(workEntry);
+  const isHarnessOSToolRow =
+    !isGitHubToolRow && !isHarnessOSBrowserToolRow && isHarnessOSToolCall(workEntry);
   const isMcpToolRow =
     workEntry.itemType === "mcp_tool_call" &&
     !isGitHubToolRow &&
-    !isOmniMindBrowserToolRow &&
-    !isOmniMindToolRow;
+    !isHarnessOSBrowserToolRow &&
+    !isHarnessOSToolRow;
   const LeftIcon = workEntryLeftIcon(workEntry);
   const leftIconKind = webFetchUrl
     ? "web-fetch"
     : isGitHubToolRow || EntryIcon === GitHubIcon
       ? "github"
-      : isOmniMindBrowserToolRow
+      : isHarnessOSBrowserToolRow
         ? "browser"
-        : isOmniMindToolRow
+        : isHarnessOSToolRow
           ? "oa"
           : isMcpToolRow
             ? "mcp"
@@ -665,8 +665,8 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
       ? ""
       : workEntryPreview(workEntry);
   const preview =
-    isOmniMindBrowserToolRow || isOmniMindToolRow
-      ? sanitizeOmniMindMcpToolPreview({
+    isHarnessOSBrowserToolRow || isHarnessOSToolRow
+      ? sanitizeHarnessOSMcpToolPreview({
           preview: rawPreview,
           heading,
           status: toolWorkEntryStatus(workEntry),

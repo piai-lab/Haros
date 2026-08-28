@@ -99,7 +99,7 @@ function makeServerAuth(sideEffects: { count: number }): ServerAuthShape {
       Effect.fail(new AuthError({ message: "Not used in auth route tests.", status: 401 })),
     issueWebSocketToken: () => mutate({ token: "ws-token", expiresAt }),
     issueStartupPairingUrl: () =>
-      Effect.succeed("https://omnimind.example.test/pair#token=PAIRINGTOKEN"),
+      Effect.succeed("https://harnessos.example.test/pair#token=PAIRINGTOKEN"),
   } satisfies ServerAuthShape;
 }
 
@@ -247,7 +247,7 @@ describe("authEffectRouteLayer", () => {
     const sideEffects = { count: 0 };
     const config = {
       host: "0.0.0.0",
-      publicUrl: new URL("https://omnimind.example.test/"),
+      publicUrl: new URL("https://harnessos.example.test/"),
     } as ServerConfigShape;
     await withAuthEffectServer(config, makeServerAuth(sideEffects), async (serverOrigin) => {
       for (const route of mutationRoutes) {
@@ -315,13 +315,13 @@ describe("authEffectRouteLayer", () => {
     const sideEffects = { count: 0 };
     const config = {
       host: "0.0.0.0",
-      publicUrl: new URL("https://omnimind.example.test/"),
+      publicUrl: new URL("https://harnessos.example.test/"),
     } as ServerConfigShape;
     await withAuthEffectServer(config, makeServerAuth(sideEffects), async (serverOrigin) => {
       const response = await fetch(
         `${serverOrigin}/api/auth/logout`,
         mutationRequest({
-          origin: "https://omnimind.example.test",
+          origin: "https://harnessos.example.test",
           credential: "cookie",
         }),
       );
@@ -345,7 +345,7 @@ describe("binaryUploadEffectRouteLayer", () => {
   it("allows credentialed Canary attachment upload preflights", async () => {
     const config = {
       host: "127.0.0.1",
-      attachmentsDir: fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-upload-cors-")),
+      attachmentsDir: fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-upload-cors-")),
     } as ServerConfigShape;
     try {
       await withAuthEffectServer(
@@ -379,10 +379,10 @@ describe("binaryUploadEffectRouteLayer", () => {
   });
 
   it("rejects ambient cookie uploads without an origin and accepts explicit bearer auth", async () => {
-    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-upload-route-"));
+    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-upload-route-"));
     const config = {
       host: "0.0.0.0",
-      publicUrl: new URL("https://omnimind.example.test/"),
+      publicUrl: new URL("https://harnessos.example.test/"),
       attachmentsDir,
     } as ServerConfigShape;
     try {

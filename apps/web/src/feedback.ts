@@ -18,7 +18,7 @@ export const FEEDBACK_CATEGORIES = [
   { value: "bug", label: "Bug", lead: "I ran into a bug" },
   { value: "session", label: "Session", lead: "I hit a session problem" },
   { value: "ui", label: "UI", lead: "Something looked wrong" },
-  { value: "performance", label: "Performance", lead: "OmniMind felt slow" },
+  { value: "performance", label: "Performance", lead: "HarnessOS felt slow" },
   { value: "idea", label: "Idea", lead: "I have an idea" },
   { value: "other", label: "Other", lead: "I have some feedback" },
 ] as const;
@@ -154,9 +154,11 @@ export function formatFeedbackSummary(input: {
     .filter((row): row is [string, string] => row[1] !== null && row[1] !== "")
     .map(([label, value]) => `${label}: ${value}`);
 
-  return [`${lead} in OmniMind ${diagnostics.appVersion}${usageContext}.`, "", ...detailLines].join(
-    "\n",
-  );
+  return [
+    `${lead} in HarnessOS ${diagnostics.appVersion}${usageContext}.`,
+    "",
+    ...detailLines,
+  ].join("\n");
 }
 
 export function buildFeedbackSubmission(input: {
@@ -391,7 +393,7 @@ export async function submitFeedback(
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-omnimind-feedback": "1",
+        "x-harnessos-feedback": "1",
       },
       body,
       signal: controller.signal,

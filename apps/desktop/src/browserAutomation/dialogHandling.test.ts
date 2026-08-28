@@ -142,7 +142,7 @@ describe("browser JavaScript dialog handling", () => {
         debuggerInstance.commands.push({ method, params });
         if (
           method === "Runtime.evaluate" &&
-          String(params.expression ?? "") === "window.__omnimindBlockingEvaluation"
+          String(params.expression ?? "") === "window.__harnessosBlockingEvaluation"
         ) {
           await new Promise<void>((resolve) => {
             releaseEvaluation = resolve;
@@ -155,7 +155,7 @@ describe("browser JavaScript dialog handling", () => {
     const pending = withDialogHandling(
       runtime,
       () =>
-        evaluateInContext(runtime, "window.__omnimindBlockingEvaluation", {
+        evaluateInContext(runtime, "window.__harnessosBlockingEvaluation", {
           signal: controller.signal,
         }),
       controller.signal,

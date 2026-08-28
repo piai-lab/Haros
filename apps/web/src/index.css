@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "./styles/omnimind-motion.css";
+@import "./styles/harnessos-motion.css";
 
 @custom-variant dark (&:is(.dark, .dark *));
 
@@ -1461,8 +1461,8 @@ label:has(> select#reasoning-effort) select {
     0 1px 4px -2px color-mix(in srgb, var(--color-black, #000) 16%, transparent);
 }
 
-/* Rounded chip holding the OmniMind mark in the box header, echoing the source
-   file's row gutter badge so the comment reads as "from OmniMind". */
+/* Rounded chip holding the HarnessOS mark in the box header, echoing the source
+   file's row gutter badge so the comment reads as "from HarnessOS". */
 .editor-file-viewer__comment-badge {
   display: inline-flex;
   align-items: center;
@@ -2538,7 +2538,7 @@ label:has(> select#reasoning-effort) select {
 
 /* Live-status choreography. The hint entry/breathe timing is copied-adapted
    from BitFun commit f9aebc102b21d6d4ac3ffd4088defebf7f4baff1
-   (ProcessingIndicator.scss, MIT). The symmetric tide is OmniMind-owned.
+   (ProcessingIndicator.scss, MIT). The symmetric tide is HarnessOS-owned.
    Source and rights: LICENSES/bitfun-MIT.txt. */
 .harnessos-thinking-status {
   width: 100%;
@@ -2578,8 +2578,8 @@ label:has(> select#reasoning-effort) select {
   text-overflow: ellipsis;
   vertical-align: top;
   animation:
-    omnimind-thinking-hint-enter 400ms ease forwards,
-    omnimind-thinking-hint-breathe 1.6s ease-in-out 400ms infinite;
+    harnessos-thinking-hint-enter 400ms ease forwards,
+    harnessos-thinking-hint-breathe 1.6s ease-in-out 400ms infinite;
   will-change: opacity, transform;
 }
 
@@ -2602,7 +2602,7 @@ label:has(> select#reasoning-effort) select {
   border-radius: 50%;
   background: currentColor;
   opacity: 0.42;
-  animation: omnimind-thinking-dot-symmetric 1.7s ease-in-out infinite;
+  animation: harnessos-thinking-dot-symmetric 1.7s ease-in-out infinite;
   will-change: opacity, transform;
 }
 
@@ -2615,7 +2615,7 @@ label:has(> select#reasoning-effort) select {
   animation-delay: 850ms;
 }
 
-@keyframes omnimind-thinking-hint-enter {
+@keyframes harnessos-thinking-hint-enter {
   from {
     opacity: 0;
     transform: translateX(-4px);
@@ -2626,7 +2626,7 @@ label:has(> select#reasoning-effort) select {
   }
 }
 
-@keyframes omnimind-thinking-hint-breathe {
+@keyframes harnessos-thinking-hint-breathe {
   0%,
   100% {
     opacity: 1;
@@ -2636,7 +2636,7 @@ label:has(> select#reasoning-effort) select {
   }
 }
 
-@keyframes omnimind-thinking-dot-symmetric {
+@keyframes harnessos-thinking-dot-symmetric {
   0%,
   100% {
     opacity: 0.42;
@@ -3375,7 +3375,7 @@ diffs-container {
   --picker-option-py: 0.3125rem;
 }
 
-/* Sidebar OmniMind/Studio surface switcher: tight shell inset, airy option rows.
+/* Sidebar HarnessOS/Studio surface switcher: tight shell inset, airy option rows.
    Composer picker tokens otherwise pin option py to ~1px and win over Tailwind. */
 .sidebar-surface-picker-menu {
   --picker-menu-body-p: 0.25rem;

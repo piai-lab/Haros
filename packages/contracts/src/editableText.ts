@@ -3,7 +3,7 @@
 // byte into six bytes and exceed the existing 2 MiB WebSocket admission limit.
 export const EDITABLE_TEXT_FILE_MAX_BYTES = 1_000_000;
 
-// OmniMind exposes two independently editable prompt segments. A stable 8 KiB
+// HarnessOS exposes two independently editable prompt segments. A stable 8 KiB
 // bound per segment keeps their combined worst-case byte contribution within
 // half of the smallest currently supported 32k-token model context even under
 // the conservative one-token-per-byte estimate, leaving the other half for the
@@ -48,7 +48,7 @@ export function isEditableTextContent(value: string): boolean {
   );
 }
 
-export function isOmniMindAgentPromptContent(value: string): boolean {
+export function isOAAgentPromptContent(value: string): boolean {
   return (
     !hasDisallowedEditableTextControl(value) &&
     !hasUnpairedUtf16Surrogate(value) &&

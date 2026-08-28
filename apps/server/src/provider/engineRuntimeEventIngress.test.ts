@@ -43,7 +43,7 @@ describe("engine runtime event ingress sizing", () => {
     const callsBeforeAssertion = stringify.mock.calls.length;
     expect(sized.event).not.toBe(event);
     expect(sized.event.raw?.payload).toMatchObject({
-      omnimindTruncated: true,
+      harnessosTruncated: true,
       originalBytes: expect.any(Number),
     });
     expect(sized.event.raw?.payload).not.toEqual({});

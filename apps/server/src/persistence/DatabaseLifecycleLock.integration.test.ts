@@ -19,7 +19,7 @@ import { restoreMarkedMigrationBackup } from "./MigrationBackup.ts";
 const tempDirectories: Array<string> = [];
 
 async function makeDbPath(): Promise<string> {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "omnimind-db-lock-"));
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "harnessos-db-lock-"));
   tempDirectories.push(directory);
   return path.join(directory, "state.sqlite");
 }

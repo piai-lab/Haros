@@ -82,7 +82,7 @@ const normalizeDialog = (opening: Record<string, unknown>): BrowserHandledDialog
 };
 
 const DIALOG_SHIM_INSTALL = String.raw`(() => {
-  const key = "__omnimindBrowserAutomationDialogStateV1";
+  const key = "__harnessosBrowserAutomationDialogStateV1";
   const state = window[key] || { dialogs: [], installed: false };
   window[key] = state;
   if (state.installed) {
@@ -132,13 +132,13 @@ const DIALOG_SHIM_INSTALL = String.raw`(() => {
 })()`;
 
 const DIALOG_SHIM_DRAIN = String.raw`(() => {
-  const state = window.__omnimindBrowserAutomationDialogStateV1;
+  const state = window.__harnessosBrowserAutomationDialogStateV1;
   if (!state || !Array.isArray(state.dialogs)) return [];
   return state.dialogs.splice(0, 20);
 })()`;
 
 const DIALOG_SHIM_RESTORE = String.raw`(() => {
-  const key = "__omnimindBrowserAutomationDialogStateV1";
+  const key = "__harnessosBrowserAutomationDialogStateV1";
   const state = window[key];
   if (!state) return true;
   if (state.installed && window.alert === state.alertShim && typeof state.originalAlert === "function") {

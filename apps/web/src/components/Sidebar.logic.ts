@@ -116,7 +116,7 @@ export function pullRequestRepositoryConfigFingerprint(
  * Shared project roots can serve several threads, so their live Git status only belongs to a
  * thread when the checked-out branch matches the persisted thread branch. A materialized
  * worktree is thread-scoped, though, and coding agents may checkout or create a new branch
- * without going through OmniMind's branch picker. In that case the worktree's checked-out branch
+ * without going through HarnessOS's branch picker. In that case the worktree's checked-out branch
  * is authoritative even when the persisted branch metadata is stale.
  */
 export function shouldUseLivePullRequestForSidebarThread(input: {
@@ -223,7 +223,7 @@ export function resolveThreadProjectLabel(
   project: Pick<Project, "kind" | "name" | "folderName"> | null | undefined,
 ): string {
   if (!project || project.kind !== "project") {
-    return "OmniMind";
+    return "HarnessOS";
   }
   return nonEmptyDisplayValue(project.name) ?? project.folderName;
 }

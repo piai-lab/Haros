@@ -164,7 +164,7 @@ function resolveTerminalThemeColors(
   probe.style.pointerEvents = "none";
   probe.style.opacity = "0";
   for (const [name, cssColor] of Object.entries(sources)) {
-    probe.style.setProperty(`--omnimind-terminal-${name}`, cssColor);
+    probe.style.setProperty(`--harnessos-terminal-${name}`, cssColor);
   }
   document.body.append(probe);
 
@@ -175,7 +175,7 @@ function resolveTerminalThemeColors(
   const theme: Record<string, string> = {};
   for (const [name, fallback] of Object.entries(fallbacks)) {
     theme[name] = toLegacyXtermColor(
-      computedStyle.getPropertyValue(`--omnimind-terminal-${name}`),
+      computedStyle.getPropertyValue(`--harnessos-terminal-${name}`),
       fallback,
     );
   }

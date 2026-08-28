@@ -21,8 +21,8 @@ const workspaceConsumers = {
     "apps/web",
     "scripts",
   ],
-  "packages/om-ask": ["packages/om-ask", "apps/server"],
-  "packages/om-web-access": ["packages/om-web-access", "apps/server"],
+  "packages/oa-ask": ["packages/oa-ask", "apps/server"],
+  "packages/oa-web-access": ["packages/oa-web-access", "apps/server"],
   "packages/shared": ["packages/shared", "apps/desktop", "apps/server", "apps/web", "scripts"],
   scripts: ["scripts"],
 };
@@ -39,7 +39,7 @@ for (const absolutePath of requestedPaths) {
 
 const runTarget = (workspace) =>
   new Promise((resolve, reject) => {
-    const passPaths = workspace !== "packages/om-web-access";
+    const passPaths = workspace !== "packages/oa-web-access";
     const child = spawn(
       "bun",
       ["run", "--cwd", workspace, "test:related", ...(passPaths ? ["--", ...requestedPaths] : [])],

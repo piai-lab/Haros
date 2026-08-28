@@ -101,7 +101,7 @@ describe("EnvironmentPullRequestSection", () => {
           enabled
           activeThreadId={threadId}
           projectId={null}
-          configuredRepositories={[{ nameWithOwner: "example/omnimind" }]}
+          configuredRepositories={[{ nameWithOwner: "example/harnessos" }]}
           onOpenUrl={vi.fn()}
           onClose={onClose}
         />
@@ -141,7 +141,7 @@ describe("EnvironmentPullRequestSection", () => {
           enabled
           activeThreadId={threadId}
           projectId={null}
-          configuredRepositories={[{ nameWithOwner: "example/omnimind" }]}
+          configuredRepositories={[{ nameWithOwner: "example/harnessos" }]}
           onOpenUrl={vi.fn()}
           onClose={vi.fn()}
         />

@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSettingsSkillGroups,
   buildSettingsSkillSections,
-  isOmniMindSkillSource,
+  isHarnessOSSkillSource,
   ORIGIN_SECTION_ORDER,
   skillOriginInfo,
 } from "./skillsSettingsModel";
@@ -74,15 +74,15 @@ describe("buildSettingsSkillGroups", () => {
   });
 });
 
-describe("isOmniMindSkillSource", () => {
-  it("distinguishes OmniMind-owned assets from Engine-native homes", () => {
+describe("isHarnessOSSkillSource", () => {
+  it("distinguishes HarnessOS-owned assets from Engine-native homes", () => {
     expect(
-      isOmniMindSkillSource(
+      isHarnessOSSkillSource(
         skill({ path: "/Users/test/.harnessos/skills/reviewer/SKILL.md", scope: "project" }),
       ),
     ).toBe(true);
     expect(
-      isOmniMindSkillSource(
+      isHarnessOSSkillSource(
         skill({ path: "/Users/test/.codex/skills/reviewer/SKILL.md", scope: "codex" }),
       ),
     ).toBe(false);
@@ -125,7 +125,7 @@ describe("Settings skill Engine projection", () => {
       const origin = engine === "claude" ? "claude" : engine;
       const info = skillOriginInfo(origin);
       if (engine === "oa") {
-        expect(info).toEqual({ label: "OmniMind", engine: null });
+        expect(info).toEqual({ label: "HarnessOS", engine: null });
       } else {
         expect(info).toEqual({ label: ENGINE_DISPLAY_NAMES[engine], engine });
       }

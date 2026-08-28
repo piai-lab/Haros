@@ -14,7 +14,7 @@ export default mergeConfig(appConfig, {
   },
   build: {
     emptyOutDir: true,
-    outDir: path.join(os.tmpdir(), "omnimind-perf-dist"),
+    outDir: path.join(os.tmpdir(), "harnessos-perf-dist"),
     rollupOptions: {
       input: {
         index: path.resolve(import.meta.dirname, "index.html"),

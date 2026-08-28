@@ -13,7 +13,7 @@ import {
 const tempDirs: string[] = [];
 
 function makeTempCodexHome(configContent?: string): string {
-  const tempDir = mkdtempSync(join(OS.tmpdir(), "omnimind-codex-config-"));
+  const tempDir = mkdtempSync(join(OS.tmpdir(), "harnessos-codex-config-"));
   tempDirs.push(tempDir);
 
   if (configContent !== undefined) {

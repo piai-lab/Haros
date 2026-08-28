@@ -14,20 +14,20 @@ import {
 } from "./browserSession";
 
 const ELECTRON_UA =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) OmniMind/0.3.1 Chrome/124.0.6367.91 Electron/30.0.1 Safari/537.36";
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HarnessOS/0.3.1 Chrome/124.0.6367.91 Electron/30.0.1 Safari/537.36";
 
 describe("deriveChromeUserAgent", () => {
   it("strips Electron and app product tokens to leave a vanilla Chrome UA", () => {
-    expect(deriveChromeUserAgent(ELECTRON_UA, ["OmniMind"])).toBe(
+    expect(deriveChromeUserAgent(ELECTRON_UA, ["HarnessOS"])).toBe(
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.91 Safari/537.36",
     );
   });
 
   it("preserves the platform and Chrome version from the base UA", () => {
-    const derived = deriveChromeUserAgent(ELECTRON_UA, ["OmniMind"]);
+    const derived = deriveChromeUserAgent(ELECTRON_UA, ["HarnessOS"]);
     expect(derived).toContain("Chrome/124.0.6367.91");
     expect(derived).not.toMatch(/Electron/i);
-    expect(derived).not.toMatch(/OmniMind/i);
+    expect(derived).not.toMatch(/HarnessOS/i);
   });
 });
 
@@ -43,7 +43,7 @@ describe("chromeMajorVersionFromUserAgent", () => {
 
 describe("buildChromeClientHints", () => {
   it("builds a Chrome-matching sec-ch-ua brand list per platform", () => {
-    const derived = deriveChromeUserAgent(ELECTRON_UA, ["OmniMind"]);
+    const derived = deriveChromeUserAgent(ELECTRON_UA, ["HarnessOS"]);
     expect(buildChromeClientHints(derived, "darwin")).toEqual({
       "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not=A?Brand";v="24"',
       "sec-ch-ua-mobile": "?0",

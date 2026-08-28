@@ -1,5 +1,5 @@
 // FILE: piBarrierPatch.test.ts
-// Purpose: Locks OmniMind's exact Pi 0.84.3 interactive barrier semantics.
+// Purpose: Locks HarnessOS's exact Pi 0.84.3 interactive barrier semantics.
 // Layer: Pinned agent-core patch conformance tests.
 
 import { runAgentLoop, type AgentTool } from "@earendil-works/pi-agent-core";

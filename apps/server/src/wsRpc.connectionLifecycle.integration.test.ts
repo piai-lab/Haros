@@ -184,7 +184,7 @@ function ping(socket: WebSocket, timeoutMs = 2_000): Promise<void> {
 
 async function startTestServer(): Promise<RunningTestServer> {
   const baseConfigLayer = ServerConfig.layerTest(process.cwd(), {
-    prefix: "omnimind-ws-lifecycle-test-",
+    prefix: "harnessos-ws-lifecycle-test-",
   }).pipe(Layer.provide(NodeServices.layer));
   const configLayer = Layer.effect(
     ServerConfig,

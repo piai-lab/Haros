@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { createDesktopStaticProtocolResolver } from "./desktopStaticProtocol";
 
-const staticRoot = Path.resolve("/virtual/omnimind-static");
+const staticRoot = Path.resolve("/virtual/harnessos-static");
 const rootIndex = Path.join(staticRoot, "index.html");
 
 function resolverWithExistingPaths(paths: ReadonlyArray<string>) {

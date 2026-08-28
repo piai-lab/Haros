@@ -20,7 +20,7 @@ describe("engine Debug mode prompt", () => {
     const twice = withProviderDebugModePrompt({ text: once, interactionMode: "debug" });
 
     expect(once).toContain("observe -> reproduce -> investigate -> fix -> verify");
-    expect(once).toContain("OmniMind Debug mode");
+    expect(once).toContain("HarnessOS Debug mode");
     expect(once).not.toContain("Synara");
     expect(once).toContain('"Reproduced", "Could not reproduce", and "Cancel"');
     expect(once).toContain("send the same instructions as normal text");

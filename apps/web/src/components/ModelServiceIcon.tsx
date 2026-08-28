@@ -41,7 +41,7 @@ import xAIIconUrl from "@lobehub/icons-static-svg/icons/xai.svg";
 import xiaomiIconUrl from "@lobehub/icons-static-svg/icons/xiaomimimo.svg";
 import zaiIconUrl from "@lobehub/icons-static-svg/icons/zai.svg";
 import zhipuIconUrl from "@lobehub/icons-static-svg/icons/zhipu-color.svg";
-import type { OmniMindModelServiceOrigin } from "@harnessos/contracts";
+import type { OAModelServiceOrigin } from "@harnessos/contracts";
 
 import { BrainIcon, LinkIcon, PluginIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
@@ -199,7 +199,7 @@ function resolveKnownBrandIcon(serviceId: string): string | null {
 export function resolveModelSpecificIcon(input: {
   readonly serviceId: string;
   readonly modelId: string;
-  readonly origin?: OmniMindModelServiceOrigin;
+  readonly origin?: OAModelServiceOrigin;
 }): string | null {
   if (
     input.origin === "models_json" ||
@@ -222,7 +222,7 @@ export function resolveModelSpecificIcon(input: {
 
 export function resolveModelServiceIcon(input: {
   readonly serviceId: string;
-  readonly origin?: OmniMindModelServiceOrigin;
+  readonly origin?: OAModelServiceOrigin;
 }): ModelServiceIconResolution {
   if (input.origin === "models_json") return { kind: "custom", src: null };
   if (input.origin === "extension") return { kind: "extension", src: null };
@@ -246,7 +246,7 @@ export function ModelServiceIcon({
 }: {
   readonly serviceId: string;
   readonly modelId?: string;
-  readonly origin?: OmniMindModelServiceOrigin;
+  readonly origin?: OAModelServiceOrigin;
   readonly allowModelFamily?: boolean;
   readonly className?: string;
 }) {

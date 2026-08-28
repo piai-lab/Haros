@@ -1,5 +1,5 @@
 // FILE: verify-ask-user-live.ts
-// Purpose: Proves Product Ask round-trip and Converge's Ask-first gate through real OmniMind Agent journeys.
+// Purpose: Proves Product Ask round-trip and Converge's Ask-first gate through real HarnessOS Agent journeys.
 // Layer: Maintainer-only live verification; credentials are accepted only through engine env vars.
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -12,9 +12,9 @@ import { Effect, Fiber, Layer, Stream } from "effect";
 
 import { ServerConfig } from "../src/config.ts";
 import { ServerSettingsService } from "../src/serverSettings.ts";
-import { OmniMindAgentAdapter } from "../src/provider/Services/OmniMindAgentAdapter.ts";
+import { OAAgentAdapter } from "../src/provider/Services/OAAgentAdapter.ts";
 import { ENGINE_CONVERGE_MODE_ENVELOPE } from "../src/provider/interactionMode.ts";
-import { makeOmniMindAgentAdapterLive } from "../src/provider/Layers/PiAdapter.ts";
+import { makeOAAgentAdapterLive } from "../src/provider/Layers/PiAdapter.ts";
 import { userInputPresenterRegistry } from "../src/provider/userInputPresenterRegistry.ts";
 
 const LIVE_CUSTOM_TEXT = "live custom answer  \n";
@@ -165,7 +165,7 @@ async function run() {
     throw new Error(`Missing required credential environment: ${target.credentialEnv}`);
   }
 
-  const root = mkdtempSync(path.join(tmpdir(), `omnimind-ask-live-${target.providerId}-`));
+  const root = mkdtempSync(path.join(tmpdir(), `harnessos-ask-live-${target.providerId}-`));
   const cwd = path.join(root, "workspace");
   const agentDir = path.join(root, "agent");
   mkdirSync(cwd, { recursive: true });
@@ -202,7 +202,7 @@ async function run() {
 
   try {
     presenterLease = userInputPresenterRegistry.acquire(`ask-live-${target.providerId}`, 1);
-    const layer = makeOmniMindAgentAdapterLive({ agentGatewayFetch: gatewayFetch }).pipe(
+    const layer = makeOAAgentAdapterLive({ agentGatewayFetch: gatewayFetch }).pipe(
       Layer.provideMerge(ServerConfig.layerTest(cwd, root)),
       Layer.provideMerge(ServerSettingsService.layerTest()),
       Layer.provideMerge(NodeServices.layer),
@@ -211,7 +211,7 @@ async function run() {
     await Effect.runPromise(
       Effect.scoped(
         Effect.gen(function* () {
-          const adapter = yield* OmniMindAgentAdapter;
+          const adapter = yield* OAAgentAdapter;
           const eventFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
             Effect.sync(() => {
               events.push(event);

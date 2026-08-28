@@ -203,10 +203,10 @@ describe("MessagesTimeline", () => {
     expect(markup.match(/data-assistant-turn-identity="visible"/g)).toHaveLength(1);
     expect(markup).toContain('data-assistant-turn-avatar="model"');
     expect(markup.toLowerCase()).toContain("%3ctitle%3edeepseek%3c/title%3e");
-    expect(markup).not.toContain("omnimind.svg");
+    expect(markup).not.toContain("harnessos.svg");
     expect(markup).toContain('data-assistant-turn-identity="continuation"');
     expect(markup).toContain("DeepSeek V4 Pro");
-    expect(markup).toContain("OmniMind ·");
+    expect(markup).toContain("HarnessOS ·");
     expect(markup.indexOf("DeepSeek V4 Pro")).toBeLessThan(markup.indexOf("Read source"));
     expect(markup.indexOf("Read source")).toBeLessThan(markup.indexOf("Finished."));
   });
@@ -234,7 +234,7 @@ describe("MessagesTimeline", () => {
               engineWebSurface: {
                 status: "waiting-for-user",
                 provenance: "engine-native",
-                presentation: "omnimind-browser",
+                presentation: "harnessos-browser",
                 surfaceId: "surface-opaque-123",
               },
             },
@@ -244,7 +244,7 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain('data-engine-web-surface-status="waiting-for-user"');
-    expect(markup).toContain('aria-label="Reopen in OmniMind Browser"');
+    expect(markup).toContain('aria-label="Reopen in HarnessOS Browser"');
     expect(markup).toContain("Waiting for curation");
     expect(markup).not.toContain("session=");
   });
@@ -272,7 +272,7 @@ describe("MessagesTimeline", () => {
               engineWebSurface: {
                 status: "completed",
                 provenance: "engine-native",
-                presentation: "omnimind-browser",
+                presentation: "harnessos-browser",
                 surfaceId: "surface-opaque-123",
               },
             },
@@ -281,7 +281,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).not.toContain("Reopen in OmniMind Browser");
+    expect(markup).not.toContain("Reopen in HarnessOS Browser");
     expect(markup).not.toContain("Waiting for curation");
     expect(markup).not.toContain("session=");
   });
@@ -560,9 +560,9 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup.match(/data-cross-task-origin="true"/g)).toHaveLength(1);
-    expect(markup).toContain("Sent by OmniMind from another thread");
+    expect(markup).toContain("Sent by HarnessOS from another thread");
     expect(markup).toContain('aria-label="Open source thread"');
-    expect(markup.indexOf("Sent by OmniMind from another thread")).toBeLessThan(
+    expect(markup.indexOf("Sent by HarnessOS from another thread")).toBeLessThan(
       markup.indexOf("Inspect the repository"),
     );
   });
@@ -611,7 +611,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Sent by OmniMind from another thread");
+    expect(markup).toContain("Sent by HarnessOS from another thread");
     expect(markup).not.toContain("Sent by agent");
   });
 
@@ -2979,7 +2979,7 @@ describe("MessagesTimeline", () => {
     expect(markup).toContain('data-tool-icon="mcp"');
   });
 
-  it("shows the OmniMind mark for every engine-specific tool row shape", async () => {
+  it("shows the HarnessOS mark for every engine-specific tool row shape", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const baseProps = makeTimelineBaseProps();
 
@@ -2989,18 +2989,18 @@ describe("MessagesTimeline", () => {
         {...baseProps}
         timelineEntries={[
           {
-            id: "entry-inline-omnimind-claude",
+            id: "entry-inline-harnessos-claude",
             kind: "work",
             createdAt: "2026-03-17T19:12:28.000Z",
             entry: {
-              id: "work-inline-omnimind-claude",
+              id: "work-inline-harnessos-claude",
               createdAt: "2026-03-17T19:12:28.000Z",
               label: "MCP tool call",
               tone: "tool",
               itemType: "dynamic_tool_call",
-              toolTitle: "OmniMind__harnessos_create_thread",
-              toolName: "OmniMind__harnessos_create_thread",
-              detail: "OmniMind__harnessos_create_thread",
+              toolTitle: "HarnessOS__harnessos_create_thread",
+              toolName: "HarnessOS__harnessos_create_thread",
+              detail: "HarnessOS__harnessos_create_thread",
               activityKind: "tool.started",
             },
           },
@@ -3009,8 +3009,8 @@ describe("MessagesTimeline", () => {
     );
     expect(claudeMarkup).toContain('data-tool-icon="oa"');
     expect(claudeMarkup).not.toContain('data-tool-icon="mcp"');
-    expect(claudeMarkup).toContain("OmniMind is creating a thread");
-    expect(claudeMarkup).not.toContain("OmniMind__harnessos_create_thread");
+    expect(claudeMarkup).toContain("HarnessOS is creating a thread");
+    expect(claudeMarkup).not.toContain("HarnessOS__harnessos_create_thread");
 
     // A engine may misclassify an MCP action containing "create" or "list"
     // as a file change. Tool identity still wins over that transport category.
@@ -3019,36 +3019,36 @@ describe("MessagesTimeline", () => {
         {...baseProps}
         timelineEntries={[
           {
-            id: "entry-inline-omnimind-codex",
+            id: "entry-inline-harnessos-codex",
             kind: "work",
             createdAt: "2026-03-17T19:12:28.000Z",
             entry: {
-              id: "work-inline-omnimind-codex",
+              id: "work-inline-harnessos-codex",
               createdAt: "2026-03-17T19:12:28.000Z",
               label: "MCP tool call",
               tone: "tool",
               itemType: "file_change",
-              toolTitle: "mcp__OmniMind__harnessos_list_threads",
-              detail: "mcp__OmniMind__harnessos_list_threads",
+              toolTitle: "mcp__HarnessOS__harnessos_list_threads",
+              detail: "mcp__HarnessOS__harnessos_list_threads",
             },
           },
         ]}
       />,
     );
     expect(codexMarkup).toContain('data-tool-icon="oa"');
-    expect(codexMarkup).toContain("OmniMind listed threads");
-    expect(codexMarkup).not.toContain("mcp__OmniMind__harnessos_list_threads");
+    expect(codexMarkup).toContain("HarnessOS listed threads");
+    expect(codexMarkup).not.toContain("mcp__HarnessOS__harnessos_list_threads");
 
     const failedMarkup = renderToStaticMarkup(
       <MessagesTimeline
         {...baseProps}
         timelineEntries={[
           {
-            id: "entry-inline-omnimind-failed",
+            id: "entry-inline-harnessos-failed",
             kind: "work",
             createdAt: "2026-03-17T19:12:28.000Z",
             entry: {
-              id: "work-inline-omnimind-failed",
+              id: "work-inline-harnessos-failed",
               createdAt: "2026-03-17T19:12:28.000Z",
               label: "MCP tool call",
               tone: "tool",
@@ -3062,24 +3062,24 @@ describe("MessagesTimeline", () => {
         ]}
       />,
     );
-    expect(failedMarkup).toContain("OmniMind couldn&#x27;t create threads");
+    expect(failedMarkup).toContain("HarnessOS couldn&#x27;t create threads");
     expect(failedMarkup).toContain("Claude rejected reasoningEffort");
   });
 
-  // Browser calls get the globe rather than the generic OmniMind mark: a browsing
+  // Browser calls get the globe rather than the generic HarnessOS mark: a browsing
   // row is about a page, and the surface it acted on is the first thing to read.
-  it("uses the browser icon and action name for OmniMind browser calls", async () => {
+  it("uses the browser icon and action name for HarnessOS browser calls", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const markup = renderToStaticMarkup(
       <MessagesTimeline
         {...makeTimelineBaseProps()}
         timelineEntries={[
           {
-            id: "entry-inline-omnimind-browser",
+            id: "entry-inline-harnessos-browser",
             kind: "work",
             createdAt: "2026-03-17T19:12:28.000Z",
             entry: {
-              id: "work-inline-omnimind-browser",
+              id: "work-inline-harnessos-browser",
               createdAt: "2026-03-17T19:12:28.000Z",
               label: "MCP tool call",
               tone: "tool",
@@ -3088,7 +3088,7 @@ describe("MessagesTimeline", () => {
               toolStatus: "completed",
               liveActivity: {
                 state: "completed",
-                label: "OmniMind: Browser Open",
+                label: "HarnessOS: Browser Open",
                 startedAt: "2026-03-17T19:12:27.000Z",
                 lastActivityAt: "2026-03-17T19:12:28.000Z",
                 elapsedSeconds: 1,
@@ -3104,7 +3104,7 @@ describe("MessagesTimeline", () => {
     // A settled call reads as its action alone — no lifecycle or timing tail.
     expect(markup).not.toContain("elapsed");
     expect(markup).not.toContain("Completed tool");
-    expect(markup).not.toContain("OmniMind: Browser Open");
+    expect(markup).not.toContain("HarnessOS: Browser Open");
 
     const presentationOnlyMarkup = renderToStaticMarkup(
       <MessagesTimeline
@@ -3151,7 +3151,7 @@ describe("MessagesTimeline", () => {
       );
 
     const readThreadMarkup = renderSingleToolRow({
-      id: "work-omnimind-read-thread-args",
+      id: "work-harnessos-read-thread-args",
       createdAt: "2026-03-17T19:12:28.000Z",
       label: "MCP tool call",
       tone: "tool",
@@ -3160,12 +3160,12 @@ describe("MessagesTimeline", () => {
       detail: 'mcp__harnessos__harnessos_read_thread: {"threadId":"c357d8c5-b4c1-47d0"}',
       activityKind: "tool.completed",
     });
-    expect(readThreadMarkup).toContain("OmniMind read a thread");
+    expect(readThreadMarkup).toContain("HarnessOS read a thread");
     expect(readThreadMarkup).not.toContain("mcp__harnessos__harnessos_read_thread:");
     expect(readThreadMarkup).not.toContain("threadId");
 
     const diagnoseMarkup = renderSingleToolRow({
-      id: "work-omnimind-diagnose-args",
+      id: "work-harnessos-diagnose-args",
       createdAt: "2026-03-17T19:12:28.000Z",
       label: "MCP tool call",
       tone: "tool",
@@ -3174,7 +3174,7 @@ describe("MessagesTimeline", () => {
       detail: 'mcp__harnessos__harnessos_diagnose_thread: {"threadId":"09a1615d-084f-40b9"}',
       activityKind: "tool.completed",
     });
-    expect(diagnoseMarkup).toContain("OmniMind diagnosed a thread");
+    expect(diagnoseMarkup).toContain("HarnessOS diagnosed a thread");
     expect(diagnoseMarkup).not.toContain("mcp__harnessos__harnessos_diagnose_thread:");
     expect(diagnoseMarkup).not.toContain("threadId");
 
@@ -3195,7 +3195,7 @@ describe("MessagesTimeline", () => {
     // Failed calls are exempt: the JSON-shaped detail may be the only place
     // the error surfaces, so it stays visible inline.
     const failedArgsMarkup = renderSingleToolRow({
-      id: "work-omnimind-failed-args",
+      id: "work-harnessos-failed-args",
       createdAt: "2026-03-17T19:12:28.000Z",
       label: "MCP tool call",
       tone: "tool",
@@ -3205,39 +3205,39 @@ describe("MessagesTimeline", () => {
       detail: 'McpError: {"code":-32602,"message":"Invalid params"}',
       activityKind: "tool.completed",
     });
-    expect(failedArgsMarkup).toContain("OmniMind couldn&#x27;t create threads");
+    expect(failedArgsMarkup).toContain("HarnessOS couldn&#x27;t create threads");
     expect(failedArgsMarkup).toContain("Invalid params");
   });
 
-  it("keeps OmniMind tool calls and adds a thread creation recap at the end of the turn", async () => {
+  it("keeps HarnessOS tool calls and adds a thread creation recap at the end of the turn", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
-    const assistantMessageId = MessageId.makeUnsafe("message-omnimind-recap");
+    const assistantMessageId = MessageId.makeUnsafe("message-harnessos-recap");
     const workEntries = [
       {
-        id: "entry-omnimind-create-tool",
+        id: "entry-harnessos-create-tool",
         kind: "work",
         createdAt: "2026-03-17T19:12:28.000Z",
         entry: {
-          id: "work-omnimind-create-tool",
+          id: "work-harnessos-create-tool",
           createdAt: "2026-03-17T19:12:28.000Z",
           label: "MCP tool call",
           tone: "tool",
           itemType: "mcp_tool_call",
           toolName: "mcp__harnessos__harnessos_create_threads",
-          toolTitle: "OmniMind created threads",
+          toolTitle: "HarnessOS created threads",
           activityKind: "tool.completed",
         },
       },
       {
-        id: "entry-omnimind-create-recap",
+        id: "entry-harnessos-create-recap",
         kind: "work",
         createdAt: "2026-03-17T19:12:29.000Z",
         entry: {
-          id: "work-omnimind-create-recap",
+          id: "work-harnessos-create-recap",
           createdAt: "2026-03-17T19:12:29.000Z",
-          label: "Created 2 OmniMind threads",
+          label: "Created 2 HarnessOS threads",
           tone: "info",
-          activityKind: "omnimind.threads.created",
+          activityKind: "harnessos.threads.created",
           harnessosThreadCreation: {
             operationId: "gateway:create:two-workers",
             requestedCount: 2,
@@ -3277,8 +3277,8 @@ describe("MessagesTimeline", () => {
         timelineEntries={[...workEntries]}
       />,
     );
-    expect(liveMarkup).toContain("OmniMind created threads");
-    expect(liveMarkup).not.toContain('data-omnimind-thread-creation-card="true"');
+    expect(liveMarkup).toContain("HarnessOS created threads");
+    expect(liveMarkup).not.toContain('data-harnessos-thread-creation-card="true"');
 
     const markup = renderToStaticMarkup(
       <MessagesTimeline
@@ -3290,7 +3290,7 @@ describe("MessagesTimeline", () => {
             [
               assistantMessageId,
               {
-                turnId: TurnId.makeUnsafe("turn-omnimind-recap"),
+                turnId: TurnId.makeUnsafe("turn-harnessos-recap"),
                 checkpointTurnCount: 1,
                 checkpointTurnCounts: [1],
                 checkpointRef: CheckpointRef.makeUnsafe(
@@ -3307,7 +3307,7 @@ describe("MessagesTimeline", () => {
         timelineEntries={[
           ...workEntries,
           {
-            id: "entry-omnimind-recap-assistant",
+            id: "entry-harnessos-recap-assistant",
             kind: "message",
             createdAt: "2026-03-17T19:12:30.000Z",
             message: {
@@ -3326,7 +3326,7 @@ describe("MessagesTimeline", () => {
     // The original MCP tool call is preserved inside the settled turn's
     // "Worked for..." disclosure; the recap is an additional final artifact.
     expect(markup).toContain("Worked for");
-    expect(markup).toContain('data-omnimind-thread-creation-card="true"');
+    expect(markup).toContain('data-harnessos-thread-creation-card="true"');
     expect(markup).toContain("2 tasks created");
     expect(markup).toContain("2/2 requested tasks created");
     expect(markup).toContain("Explain the repository with Terra");
@@ -3334,9 +3334,9 @@ describe("MessagesTimeline", () => {
     expect(markup).toContain("GPT-5.6 Terra");
     expect(markup).toContain("Claude Sonnet 5");
     expect(markup.indexOf("Both threads are running.")).toBeLessThan(
-      markup.indexOf('data-omnimind-thread-creation-card="true"'),
+      markup.indexOf('data-harnessos-thread-creation-card="true"'),
     );
-    expect(markup.indexOf('data-omnimind-thread-creation-card="true"')).toBeLessThan(
+    expect(markup.indexOf('data-harnessos-thread-creation-card="true"')).toBeLessThan(
       markup.indexOf("Edited 1 file"),
     );
     expect(markup.indexOf("Edited 1 file")).toBeLessThan(

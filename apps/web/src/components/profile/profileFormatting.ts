@@ -40,7 +40,7 @@ export function toDisplayName(basename: string): string {
     .trim()
     .replace(/\s+/g, " ");
   if (!cleaned) {
-    return "OmniMind";
+    return "HarnessOS";
   }
   return cleaned
     .split(" ")

@@ -58,7 +58,7 @@ function makeTempDir(prefix: string): string {
 }
 
 function makeConfig(overrides: Partial<ServerConfigShape> = {}): ServerConfigShape {
-  const baseDir = makeTempDir("omnimind-effect-http-");
+  const baseDir = makeTempDir("harnessos-effect-http-");
   return {
     mode: "web",
     port: 0,
@@ -215,7 +215,7 @@ describe("production Effect HTTP routes", () => {
     ).toBe(false);
     expect(
       isLegacyTokenAuthorized({
-        config: { ...loopback, publicUrl: new URL("https://omnimind.example.test/") },
+        config: { ...loopback, publicUrl: new URL("https://harnessos.example.test/") },
         url: new URL("http://127.0.0.1/attachments/id?token=desktop-secret"),
       }),
     ).toBe(false);
@@ -347,7 +347,7 @@ describe("production Effect HTTP routes", () => {
       { mode: "web" },
       { mode: "desktop", host: "0.0.0.0", allowInsecureRemote: true },
       { mode: "desktop", host: "192.168.1.50", allowInsecureRemote: true },
-      { mode: "desktop", publicUrl: new URL("https://omnimind.example.test/") },
+      { mode: "desktop", publicUrl: new URL("https://harnessos.example.test/") },
       { mode: "desktop", desktopShutdownToken: undefined },
     ];
 
@@ -394,9 +394,9 @@ describe("production Effect HTTP routes", () => {
       },
     );
 
-    const staticDir = makeTempDir("omnimind-effect-static-");
+    const staticDir = makeTempDir("harnessos-effect-static-");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
-    writeFileSync(path.join(staticDir, "index.html"), "<main>OmniMind shell</main>");
+    writeFileSync(path.join(staticDir, "index.html"), "<main>HarnessOS shell</main>");
     writeFileSync(path.join(staticDir, "assets", "app.js"), "globalThis.oa = true;");
     await withEffectServer(makeConfig({ staticDir }), { kind: "static" }, async (origin) => {
       const asset = await fetch(`${origin}/assets/app.js`);
@@ -406,12 +406,12 @@ describe("production Effect HTTP routes", () => {
       const fallback = await fetch(`${origin}/chat/thread-id`);
       expect(fallback.status).toBe(200);
       expect(fallback.headers.get("content-type")).toContain("text/html");
-      await expect(fallback.text()).resolves.toContain("OmniMind shell");
+      await expect(fallback.text()).resolves.toContain("HarnessOS shell");
     });
   });
 
   it("serves precompressed sidecars by Accept-Encoding with identity fallback", async () => {
-    const staticDir = makeTempDir("omnimind-effect-static-");
+    const staticDir = makeTempDir("harnessos-effect-static-");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
     const source = "globalThis.oa = true;".repeat(64);
     writeFileSync(path.join(staticDir, "assets", "app-abc123.js"), source);
@@ -469,10 +469,10 @@ describe("production Effect HTTP routes", () => {
   });
 
   it("refuses symlinks that escape the static root", async () => {
-    const parentDir = makeTempDir("omnimind-effect-static-");
+    const parentDir = makeTempDir("harnessos-effect-static-");
     const staticDir = path.join(parentDir, "static");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
-    writeFileSync(path.join(staticDir, "index.html"), "<main>OmniMind shell</main>");
+    writeFileSync(path.join(staticDir, "index.html"), "<main>HarnessOS shell</main>");
     const secretPath = path.join(parentDir, "secret.js");
     writeFileSync(secretPath, "outside root");
     writeFileSync(`${secretPath}.gz`, zlib.gzipSync("outside root"));
@@ -500,10 +500,10 @@ describe("production Effect HTTP routes", () => {
   });
 
   it("returns 406 when no acceptable encoding exists and identity is excluded", async () => {
-    const staticDir = makeTempDir("omnimind-effect-static-");
+    const staticDir = makeTempDir("harnessos-effect-static-");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
     const source = "globalThis.oa = true;".repeat(64);
-    writeFileSync(path.join(staticDir, "index.html"), "<main>OmniMind shell</main>");
+    writeFileSync(path.join(staticDir, "index.html"), "<main>HarnessOS shell</main>");
     writeFileSync(path.join(staticDir, "assets", "plain-def456.js"), source);
 
     await withEffectServer(makeConfig({ staticDir }), { kind: "static" }, async (origin) => {
@@ -525,10 +525,10 @@ describe("production Effect HTTP routes", () => {
   });
 
   it("revalidates with ETags and answers matching conditionals with 304", async () => {
-    const staticDir = makeTempDir("omnimind-effect-static-");
+    const staticDir = makeTempDir("harnessos-effect-static-");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
     const source = "globalThis.oa = true;".repeat(64);
-    writeFileSync(path.join(staticDir, "index.html"), "<main>OmniMind shell</main>");
+    writeFileSync(path.join(staticDir, "index.html"), "<main>HarnessOS shell</main>");
     writeFileSync(path.join(staticDir, "assets", "app-abc123.js"), source);
     writeFileSync(path.join(staticDir, "assets", "app-abc123.js.gz"), zlib.gzipSync(source));
 
@@ -563,9 +563,9 @@ describe("production Effect HTTP routes", () => {
   });
 
   it("marks hashed assets immutable and keeps index.html revalidating", async () => {
-    const staticDir = makeTempDir("omnimind-effect-static-");
+    const staticDir = makeTempDir("harnessos-effect-static-");
     mkdirSync(path.join(staticDir, "assets"), { recursive: true });
-    writeFileSync(path.join(staticDir, "index.html"), "<main>OmniMind shell</main>");
+    writeFileSync(path.join(staticDir, "index.html"), "<main>HarnessOS shell</main>");
     writeFileSync(path.join(staticDir, "assets", "app-abc123.js"), "globalThis.oa = true;");
 
     await withEffectServer(makeConfig({ staticDir }), { kind: "static" }, async (origin) => {
@@ -582,10 +582,10 @@ describe("production Effect HTTP routes", () => {
   });
 
   it("rejects traversal attempts including sidecar-shaped paths", async () => {
-    const parentDir = makeTempDir("omnimind-effect-static-");
+    const parentDir = makeTempDir("harnessos-effect-static-");
     const staticDir = path.join(parentDir, "static");
     mkdirSync(staticDir, { recursive: true });
-    writeFileSync(path.join(staticDir, "index.html"), "<main>OmniMind shell</main>");
+    writeFileSync(path.join(staticDir, "index.html"), "<main>HarnessOS shell</main>");
     writeFileSync(path.join(parentDir, "secret.js"), "outside root");
     writeFileSync(path.join(parentDir, "secret.js.gz"), zlib.gzipSync("outside root"));
     writeFileSync(path.join(parentDir, "secret.js.br"), zlib.brotliCompressSync("outside root"));
@@ -632,7 +632,7 @@ describe("production Effect HTTP routes", () => {
         expect([200, 400, 404], traversal).toContain(response.status);
         expect(response.body, traversal).not.toContain("outside root");
         if (response.status === 200) {
-          expect(response.body, traversal).toContain("OmniMind shell");
+          expect(response.body, traversal).toContain("HarnessOS shell");
         }
       }
     });

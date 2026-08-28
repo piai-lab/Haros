@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   DEFAULT_SERVER_STATUS_URL,
-  fetchOmniMindServerStatus,
-  formatOmniMindServerStatus,
+  fetchHarnessOSServerStatus,
+  formatHarnessOSServerStatus,
 } from "./serverStatusCli.ts";
 
 describe("server status CLI probe", () => {
@@ -17,7 +17,7 @@ describe("server status CLI probe", () => {
       });
     });
 
-    const result = await fetchOmniMindServerStatus({ fetch });
+    const result = await fetchHarnessOSServerStatus({ fetch });
 
     expect(result).toMatchObject({
       reachable: true,
@@ -28,13 +28,13 @@ describe("server status CLI probe", () => {
         projection: { state: "healthy" },
       },
     });
-    expect(formatOmniMindServerStatus(result)).toBe(
-      "OmniMind server: ready\nURL: http://127.0.0.1:3773\nProjection: healthy",
+    expect(formatHarnessOSServerStatus(result)).toBe(
+      "HarnessOS server: ready\nURL: http://127.0.0.1:3773\nProjection: healthy",
     );
   });
 
   it("reports a reachable server that is still starting", async () => {
-    const result = await fetchOmniMindServerStatus({
+    const result = await fetchHarnessOSServerStatus({
       fetch: async () =>
         Response.json({
           status: "ok",
@@ -44,11 +44,11 @@ describe("server status CLI probe", () => {
     });
 
     expect(result).toMatchObject({ reachable: true, ready: false });
-    expect(formatOmniMindServerStatus(result)).toContain("OmniMind server: starting");
+    expect(formatHarnessOSServerStatus(result)).toContain("HarnessOS server: starting");
   });
 
   it("distinguishes an unhealthy projection from a server that is still starting", async () => {
-    const result = await fetchOmniMindServerStatus({
+    const result = await fetchHarnessOSServerStatus({
       fetch: async () =>
         Response.json({
           status: "ok",
@@ -58,12 +58,12 @@ describe("server status CLI probe", () => {
     });
 
     expect(result).toMatchObject({ reachable: true, ready: false });
-    expect(formatOmniMindServerStatus(result)).toContain("OmniMind server: not ready");
+    expect(formatHarnessOSServerStatus(result)).toContain("HarnessOS server: not ready");
   });
 
   it("treats an unknown or missing projection health state as not ready", async () => {
     for (const projection of [{ state: "unknown" }, undefined]) {
-      const result = await fetchOmniMindServerStatus({
+      const result = await fetchHarnessOSServerStatus({
         fetch: async () =>
           Response.json({
             status: "ok",
@@ -81,26 +81,26 @@ describe("server status CLI probe", () => {
       Response.json({ status: "ok", startupReady: true, projection: { state: "healthy" } }),
     );
 
-    await fetchOmniMindServerStatus({
-      url: "https://omnimind.example.com/some/path?ignored=1#hash",
+    await fetchHarnessOSServerStatus({
+      url: "https://harnessos.example.com/some/path?ignored=1#hash",
       fetch,
     });
 
     expect(fetch).toHaveBeenCalledWith(
-      "https://omnimind.example.com/health",
+      "https://harnessos.example.com/health",
       expect.objectContaining({ headers: { Accept: "application/json" } }),
     );
   });
 
   it("rejects credentials and never reports URL secrets", async () => {
-    const result = await fetchOmniMindServerStatus({
-      url: "https://user:password@omnimind.example.com/path?token=secret#fragment",
+    const result = await fetchHarnessOSServerStatus({
+      url: "https://user:password@harnessos.example.com/path?token=secret#fragment",
     });
 
     expect(result).toEqual({
       reachable: false,
       ready: false,
-      url: "https://omnimind.example.com",
+      url: "https://harnessos.example.com",
       error: "Server URL must not contain credentials.",
     });
     expect(JSON.stringify(result)).not.toContain("password");
@@ -108,26 +108,26 @@ describe("server status CLI probe", () => {
   });
 
   it("fails closed for invalid URLs and malformed health responses", async () => {
-    await expect(fetchOmniMindServerStatus({ url: "file:///tmp/omnimind" })).resolves.toMatchObject(
-      {
-        reachable: false,
-        ready: false,
-        error: "Server URL must use http:// or https://.",
-      },
-    );
-
     await expect(
-      fetchOmniMindServerStatus({ fetch: async () => Response.json({ status: "ok" }) }),
+      fetchHarnessOSServerStatus({ url: "file:///tmp/harnessos" }),
     ).resolves.toMatchObject({
       reachable: false,
       ready: false,
-      error: "Health response did not match the OmniMind health shape.",
+      error: "Server URL must use http:// or https://.",
+    });
+
+    await expect(
+      fetchHarnessOSServerStatus({ fetch: async () => Response.json({ status: "ok" }) }),
+    ).resolves.toMatchObject({
+      reachable: false,
+      ready: false,
+      error: "Health response did not match the HarnessOS health shape.",
     });
   });
 
   it("reports HTTP and transport failures without throwing", async () => {
     await expect(
-      fetchOmniMindServerStatus({
+      fetchHarnessOSServerStatus({
         fetch: async () => new Response("offline", { status: 503 }),
       }),
     ).resolves.toMatchObject({
@@ -136,7 +136,7 @@ describe("server status CLI probe", () => {
       error: "Health request returned HTTP 503.",
     });
 
-    const result = await fetchOmniMindServerStatus({
+    const result = await fetchHarnessOSServerStatus({
       fetch: async () => {
         throw new Error("connection refused");
       },
@@ -146,6 +146,6 @@ describe("server status CLI probe", () => {
       ready: false,
       error: "connection refused",
     });
-    expect(formatOmniMindServerStatus(result)).toContain("OmniMind server: unreachable");
+    expect(formatHarnessOSServerStatus(result)).toContain("HarnessOS server: unreachable");
   });
 });

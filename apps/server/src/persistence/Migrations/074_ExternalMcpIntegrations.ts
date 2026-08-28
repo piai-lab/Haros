@@ -8,7 +8,7 @@ export default Effect.gen(function* () {
     CREATE TABLE IF NOT EXISTS external_mcp_integrations (
       integration_id TEXT PRIMARY KEY,
       name TEXT NOT NULL CHECK (length(name) BETWEEN 1 AND 120),
-      audience TEXT NOT NULL CHECK (audience = 'omnimind.external-mcp'),
+      audience TEXT NOT NULL CHECK (audience = 'harnessos.external-mcp'),
       client_kind TEXT NOT NULL CHECK (
         client_kind IN ('codex', 'claudeCode', 'claudeDesktop', 'other')
       ),

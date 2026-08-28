@@ -16,7 +16,7 @@ typedef struct {
   unsigned int msgh_local_port;
   unsigned int msgh_voucher_port;
   unsigned int msgh_id;
-} OmniMindIndigoMachHeader;
+} HarnessOSIndigoMachHeader;
 
 typedef struct {
   unsigned int field1;
@@ -37,7 +37,7 @@ typedef struct {
   double field16;
   double field17;
   double field18;
-} OmniMindIndigoTouch;
+} HarnessOSIndigoTouch;
 
 typedef struct {
   unsigned int eventSource;
@@ -45,27 +45,27 @@ typedef struct {
   unsigned int eventTarget;
   unsigned int keyCode;
   unsigned int field5;
-} OmniMindIndigoButton;
+} HarnessOSIndigoButton;
 
 typedef union {
-  OmniMindIndigoTouch touch;
-  OmniMindIndigoButton button;
+  HarnessOSIndigoTouch touch;
+  HarnessOSIndigoButton button;
   unsigned char raw[144];
-} OmniMindIndigoEvent;
+} HarnessOSIndigoEvent;
 
 typedef struct {
   unsigned int field1;
   unsigned long long timestamp;
   unsigned int field3;
-  OmniMindIndigoEvent event;
-} OmniMindIndigoPayload;
+  HarnessOSIndigoEvent event;
+} HarnessOSIndigoPayload;
 
 typedef struct {
-  OmniMindIndigoMachHeader header;
+  HarnessOSIndigoMachHeader header;
   unsigned int innerSize;
   unsigned char eventType;
-  OmniMindIndigoPayload payload;
-} OmniMindIndigoMessage;
+  HarnessOSIndigoPayload payload;
+} HarnessOSIndigoMessage;
 
 #pragma pack(pop)
 
@@ -91,57 +91,57 @@ static const int kButtonOpUp = 0x2;
 // The mouse/touch seed message target, ported from idb.
 static const int kTouchTarget = 0x32;
 
-typedef OmniMindIndigoMessage *(*OmniMindIndigoButtonFn)(int keyCode, int op, int target);
-typedef OmniMindIndigoMessage *(*OmniMindIndigoKeyboardFn)(uint32_t usage, int op);
-typedef OmniMindIndigoMessage *(*OmniMindIndigoMouseFn)(CGPoint *point0, CGPoint *point1, int target,
+typedef HarnessOSIndigoMessage *(*HarnessOSIndigoButtonFn)(int keyCode, int op, int target);
+typedef HarnessOSIndigoMessage *(*HarnessOSIndigoKeyboardFn)(uint32_t usage, int op);
+typedef HarnessOSIndigoMessage *(*HarnessOSIndigoMouseFn)(CGPoint *point0, CGPoint *point1, int target,
                                                     int eventType, BOOL extra);
-typedef OmniMindIndigoMessage *(*OmniMindIndigoArbitraryFn)(int target, uint32_t page, uint32_t usage,
+typedef HarnessOSIndigoMessage *(*HarnessOSIndigoArbitraryFn)(int target, uint32_t page, uint32_t usage,
                                                         int op);
 
-BOOL OmniMindHardwareButtonFromName(NSString *name, OmniMindHardwareButton *outButton) {
+BOOL HarnessOSHardwareButtonFromName(NSString *name, HarnessOSHardwareButton *outButton) {
   NSDictionary<NSString *, NSNumber *> *map = @{
-    @"home": @(OmniMindHardwareButtonHome),
-    @"lock": @(OmniMindHardwareButtonLock),
-    @"side": @(OmniMindHardwareButtonSide),
-    @"siri": @(OmniMindHardwareButtonSiri),
-    @"volume-up": @(OmniMindHardwareButtonVolumeUp),
-    @"volume-down": @(OmniMindHardwareButtonVolumeDown),
+    @"home": @(HarnessOSHardwareButtonHome),
+    @"lock": @(HarnessOSHardwareButtonLock),
+    @"side": @(HarnessOSHardwareButtonSide),
+    @"siri": @(HarnessOSHardwareButtonSiri),
+    @"volume-up": @(HarnessOSHardwareButtonVolumeUp),
+    @"volume-down": @(HarnessOSHardwareButtonVolumeDown),
   };
   NSNumber *found = map[name.lowercaseString];
   if (found == nil) {
     return NO;
   }
   if (outButton != NULL) {
-    *outButton = (OmniMindHardwareButton)found.integerValue;
+    *outButton = (HarnessOSHardwareButton)found.integerValue;
   }
   return YES;
 }
 
-static int OmniMindButtonSource(OmniMindHardwareButton button) {
+static int HarnessOSButtonSource(HarnessOSHardwareButton button) {
   switch (button) {
-    case OmniMindHardwareButtonHome: return kButtonSourceHome;
-    case OmniMindHardwareButtonLock: return kButtonSourceLock;
-    case OmniMindHardwareButtonSide: return kButtonSourceSide;
-    case OmniMindHardwareButtonSiri: return kButtonSourceSiri;
-    case OmniMindHardwareButtonVolumeUp:
-    case OmniMindHardwareButtonVolumeDown: return -1;
+    case HarnessOSHardwareButtonHome: return kButtonSourceHome;
+    case HarnessOSHardwareButtonLock: return kButtonSourceLock;
+    case HarnessOSHardwareButtonSide: return kButtonSourceSide;
+    case HarnessOSHardwareButtonSiri: return kButtonSourceSiri;
+    case HarnessOSHardwareButtonVolumeUp:
+    case HarnessOSHardwareButtonVolumeDown: return -1;
   }
   return kButtonSourceHome;
 }
 
 /// Consumer-page usage for the two volume keys, or 0 for the buttons that
 /// travel as Indigo button events instead.
-static uint32_t OmniMindConsumerUsage(OmniMindHardwareButton button) {
+static uint32_t HarnessOSConsumerUsage(HarnessOSHardwareButton button) {
   switch (button) {
-    case OmniMindHardwareButtonVolumeUp: return kHIDUsageVolumeIncrement;
-    case OmniMindHardwareButtonVolumeDown: return kHIDUsageVolumeDecrement;
+    case HarnessOSHardwareButtonVolumeUp: return kHIDUsageVolumeIncrement;
+    case HarnessOSHardwareButtonVolumeDown: return kHIDUsageVolumeDecrement;
     default: return 0;
   }
 }
 
 /// USB HID usage for a printable ASCII character, plus whether shift is needed.
 /// Returns 0 for characters with no mapping.
-static uint32_t OmniMindUsageForCharacter(unichar c, BOOL *outShift) {
+static uint32_t HarnessOSUsageForCharacter(unichar c, BOOL *outShift) {
   BOOL shift = NO;
   uint32_t usage = 0;
 
@@ -205,13 +205,13 @@ static uint32_t OmniMindUsageForCharacter(unichar c, BOOL *outShift) {
 
 static const uint32_t kUsageLeftShift = 225;
 
-@implementation OmniMindHIDBridge {
+@implementation HarnessOSHIDBridge {
   id _client;
   dispatch_queue_t _sendQueue;
-  OmniMindIndigoButtonFn _buttonFn;
-  OmniMindIndigoKeyboardFn _keyboardFn;
-  OmniMindIndigoMouseFn _mouseFn;
-  OmniMindIndigoArbitraryFn _arbitraryFn;
+  HarnessOSIndigoButtonFn _buttonFn;
+  HarnessOSIndigoKeyboardFn _keyboardFn;
+  HarnessOSIndigoMouseFn _mouseFn;
+  HarnessOSIndigoArbitraryFn _arbitraryFn;
   NSInteger _undelivered;
 }
 
@@ -259,10 +259,10 @@ static const uint32_t kUsageLeftShift = 225;
     return NO;
   }
 
-  _arbitraryFn = (OmniMindIndigoArbitraryFn)dlsym(kit, "IndigoHIDMessageForHIDArbitrary");
-  _buttonFn = (OmniMindIndigoButtonFn)dlsym(kit, "IndigoHIDMessageForButton");
-  _keyboardFn = (OmniMindIndigoKeyboardFn)dlsym(kit, "IndigoHIDMessageForKeyboardArbitrary");
-  _mouseFn = (OmniMindIndigoMouseFn)dlsym(kit, "IndigoHIDMessageForMouseNSEvent");
+  _arbitraryFn = (HarnessOSIndigoArbitraryFn)dlsym(kit, "IndigoHIDMessageForHIDArbitrary");
+  _buttonFn = (HarnessOSIndigoButtonFn)dlsym(kit, "IndigoHIDMessageForButton");
+  _keyboardFn = (HarnessOSIndigoKeyboardFn)dlsym(kit, "IndigoHIDMessageForKeyboardArbitrary");
+  _mouseFn = (HarnessOSIndigoMouseFn)dlsym(kit, "IndigoHIDMessageForMouseNSEvent");
   if (_buttonFn == NULL || _keyboardFn == NULL || _mouseFn == NULL || _arbitraryFn == NULL) {
     if (error) {
       *error = [NSError errorWithDomain:@"ai.piai.harnessos.device-helper.hid"
@@ -303,7 +303,7 @@ static const uint32_t kUsageLeftShift = 225;
   return YES;
 }
 
-- (void)sendMessage:(OmniMindIndigoMessage *)message {
+- (void)sendMessage:(HarnessOSIndigoMessage *)message {
   if (_client == nil || message == NULL) {
     [self noteUndelivered];
     return;
@@ -312,7 +312,7 @@ static const uint32_t kUsageLeftShift = 225;
   void (^completion)(NSError *) = ^(NSError *sendError) {
     // Errors here are per-event and non-fatal; the stream keeps going.
   };
-  ((void (*)(id, SEL, OmniMindIndigoMessage *, BOOL, dispatch_queue_t, void (^)(NSError *)))objc_msgSend)(
+  ((void (*)(id, SEL, HarnessOSIndigoMessage *, BOOL, dispatch_queue_t, void (^)(NSError *)))objc_msgSend)(
       _client, selector, message, YES, _sendQueue, completion);
 }
 
@@ -322,7 +322,7 @@ static const uint32_t kUsageLeftShift = 225;
     return;
   }
   CGPoint point = CGPointMake(x, y);
-  OmniMindIndigoMessage *seed = _mouseFn(&point, NULL, kTouchTarget, down ? kButtonOpDown : kButtonOpUp, NO);
+  HarnessOSIndigoMessage *seed = _mouseFn(&point, NULL, kTouchTarget, down ? kButtonOpDown : kButtonOpUp, NO);
   if (seed == NULL) {
     [self noteUndelivered];
     return;
@@ -330,8 +330,8 @@ static const uint32_t kUsageLeftShift = 225;
 
   // A touch is delivered as two payloads in one message; the seed only supplies
   // the first, so it is duplicated and the digitizer fields fixed up.
-  size_t stride = sizeof(OmniMindIndigoPayload);
-  OmniMindIndigoMessage *message = calloc(1, sizeof(OmniMindIndigoMessage) + stride);
+  size_t stride = sizeof(HarnessOSIndigoPayload);
+  HarnessOSIndigoMessage *message = calloc(1, sizeof(HarnessOSIndigoMessage) + stride);
   if (message == NULL) {
     free(seed);
     [self noteUndelivered];
@@ -342,14 +342,14 @@ static const uint32_t kUsageLeftShift = 225;
   message->payload.field1 = 0x0000000b;
   message->payload.timestamp = mach_absolute_time();
 
-  memcpy(&message->payload.event.touch, &seed->payload.event.touch, sizeof(OmniMindIndigoTouch));
+  memcpy(&message->payload.event.touch, &seed->payload.event.touch, sizeof(HarnessOSIndigoTouch));
   message->payload.event.touch.xRatio = x;
   message->payload.event.touch.yRatio = y;
 
   void *first = &message->payload;
   void *second = (void *)((uintptr_t)first + stride);
   memcpy(second, first, stride);
-  OmniMindIndigoPayload *secondPayload = (OmniMindIndigoPayload *)second;
+  HarnessOSIndigoPayload *secondPayload = (HarnessOSIndigoPayload *)second;
   secondPayload->event.touch.field1 = 0x00000001;
   secondPayload->event.touch.field2 = 0x00000002;
 
@@ -390,7 +390,7 @@ static const uint32_t kUsageLeftShift = 225;
     [self noteUndelivered];
     return;
   }
-  OmniMindIndigoMessage *message = _keyboardFn(usage, down ? kButtonOpDown : kButtonOpUp);
+  HarnessOSIndigoMessage *message = _keyboardFn(usage, down ? kButtonOpDown : kButtonOpUp);
   [self sendMessage:message];
 }
 
@@ -406,7 +406,7 @@ static const uint32_t kUsageLeftShift = 225;
   for (NSUInteger index = 0; index < length; index++) {
     unichar character = [text characterAtIndex:index];
     BOOL needsShift = NO;
-    uint32_t usage = OmniMindUsageForCharacter(character, &needsShift);
+    uint32_t usage = HarnessOSUsageForCharacter(character, &needsShift);
     if (usage == 0) {
       skipped++;
       continue;
@@ -424,9 +424,9 @@ static const uint32_t kUsageLeftShift = 225;
   return skipped;
 }
 
-- (void)sendButton:(OmniMindHardwareButton)button down:(BOOL)down {
+- (void)sendButton:(HarnessOSHardwareButton)button down:(BOOL)down {
   int op = down ? kButtonOpDown : kButtonOpUp;
-  uint32_t consumerUsage = OmniMindConsumerUsage(button);
+  uint32_t consumerUsage = HarnessOSConsumerUsage(button);
 
   if (consumerUsage != 0) {
     if (_arbitraryFn == NULL) {
@@ -441,10 +441,10 @@ static const uint32_t kUsageLeftShift = 225;
     [self noteUndelivered];
     return;
   }
-  [self sendMessage:_buttonFn(OmniMindButtonSource(button), op, kButtonTargetHardware)];
+  [self sendMessage:_buttonFn(HarnessOSButtonSource(button), op, kButtonTargetHardware)];
 }
 
-- (void)tapButton:(OmniMindHardwareButton)button {
+- (void)tapButton:(HarnessOSHardwareButton)button {
   [self sendButton:button down:YES];
   usleep(90000);
   [self sendButton:button down:NO];

@@ -106,10 +106,10 @@ import { ProjectionStateIncompleteError } from "./persistence/Errors";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEvents";
 import { EngineDiscoveryService } from "./provider/Services/EngineDiscoveryService";
-import { OmniMindEcosystem } from "./provider/Services/OmniMindEcosystem";
-import { OmniMindAgentPromptFiles } from "./provider/Services/OmniMindAgentPromptFiles";
-import { OmniMindWebSearchSettings } from "./provider/Services/OmniMindWebSearchSettings";
-import { OmniMindModelServices } from "./provider/Services/OmniMindModelServices";
+import { OAEcosystem } from "./provider/Services/OAEcosystem";
+import { OAAgentPromptFiles } from "./provider/Services/OAAgentPromptFiles";
+import { OAWebSearchSettings } from "./provider/Services/OAWebSearchSettings";
+import { OAModelServices } from "./provider/Services/OAModelServices";
 import { discoverSkillsCatalog, harnessosSkillsDir } from "./provider/skillsCatalog";
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
 import { EngineAdapterRegistry } from "./provider/Services/EngineAdapterRegistry";
@@ -382,10 +382,10 @@ const makeWsRpcHandlersLayer = () =>
       const providerAdapterRegistry = yield* EngineAdapterRegistry;
       const engineExecutionCapabilities = yield* EngineExecutionCapabilities;
       const engineDiscoveryService = yield* EngineDiscoveryService;
-      const omniMindEcosystem = yield* OmniMindEcosystem;
-      const omniMindAgentPromptFiles = yield* OmniMindAgentPromptFiles;
-      const omniMindWebSearchSettings = yield* OmniMindWebSearchSettings;
-      const omniMindModelServices = yield* OmniMindModelServices;
+      const omniMindEcosystem = yield* OAEcosystem;
+      const omniMindAgentPromptFiles = yield* OAAgentPromptFiles;
+      const omniMindWebSearchSettings = yield* OAWebSearchSettings;
+      const omniMindModelServices = yield* OAModelServices;
       const providerHealth = yield* EngineHealth;
       const providerService = yield* EngineService;
       const lifecycleEvents = yield* ServerLifecycleEvents;
@@ -1345,7 +1345,7 @@ const makeWsRpcHandlersLayer = () =>
                     operationId: input.operationId,
                     kind: "phase",
                     phase: "registering",
-                    message: "Adding project to OmniMind",
+                    message: "Adding project to HarnessOS",
                   });
 
                   const { command: normalizedCommand, prepareWorkspaceRoot } =
@@ -2117,162 +2117,162 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [WS_METHODS.providerListAgents]: (input) =>
           rpcEffect(engineDiscoveryService.listAgents(input), "Failed to list agents"),
-        [WS_METHODS.omnimindEcosystemList]: (input) =>
+        [WS_METHODS.oaEcosystemList]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.list(input))),
-            "Failed to list OmniMind Agent packages",
+            "Failed to list HarnessOS Agent packages",
           ),
-        [WS_METHODS.omnimindEcosystemListResources]: (input) =>
+        [WS_METHODS.oaEcosystemListResources]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.listResources(input))),
-            "Failed to list OmniMind Agent package resources",
+            "Failed to list HarnessOS Agent package resources",
           ),
-        [WS_METHODS.omnimindEcosystemInstall]: (input) =>
+        [WS_METHODS.oaEcosystemInstall]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.install(input))),
-            "Failed to install an OmniMind Agent package",
+            "Failed to install an HarnessOS Agent package",
           ),
-        [WS_METHODS.omnimindEcosystemUpdate]: (input) =>
+        [WS_METHODS.oaEcosystemUpdate]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.update(input))),
-            "Failed to update an OmniMind Agent package",
+            "Failed to update an HarnessOS Agent package",
           ),
-        [WS_METHODS.omnimindEcosystemRemove]: (input) =>
+        [WS_METHODS.oaEcosystemRemove]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.remove(input))),
-            "Failed to remove an OmniMind Agent package",
+            "Failed to remove an HarnessOS Agent package",
           ),
-        [WS_METHODS.omnimindEcosystemSetResourceEnabled]: (input) =>
+        [WS_METHODS.oaEcosystemSetResourceEnabled]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.setResourceEnabled(input))),
-            "Failed to change an OmniMind Agent package resource",
+            "Failed to change an HarnessOS Agent package resource",
           ),
-        [WS_METHODS.omnimindEcosystemReload]: (input) =>
+        [WS_METHODS.oaEcosystemReload]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.reload(input))),
-            "Failed to reload OmniMind Agent resources",
+            "Failed to reload HarnessOS Agent resources",
           ),
-        [WS_METHODS.omnimindAgentPromptsGetSnapshot]: (input) =>
+        [WS_METHODS.oaAgentPromptsGetSnapshot]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindAgentPromptFiles.getSnapshot(input))),
-            "Failed to read OmniMind Agent prompt files",
+            "Failed to read HarnessOS Agent prompt files",
           ),
-        [WS_METHODS.omnimindAgentPromptsMutate]: (input) =>
+        [WS_METHODS.oaAgentPromptsMutate]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindAgentPromptFiles.mutate(input))),
-            "Failed to change an OmniMind Agent prompt file",
+            "Failed to change an HarnessOS Agent prompt file",
           ),
-        [WS_METHODS.omnimindWebSearchOpen]: () =>
+        [WS_METHODS.oaWebSearchOpen]: () =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindWebSearchSettings.open())),
             "Failed to open Web search settings",
           ),
-        [WS_METHODS.omnimindWebSearchRefresh]: (input) =>
+        [WS_METHODS.oaWebSearchRefresh]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindWebSearchSettings.refresh(input))),
             "Failed to refresh Web search settings",
           ),
-        [WS_METHODS.omnimindWebSearchMutate]: (input) =>
+        [WS_METHODS.oaWebSearchMutate]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindWebSearchSettings.mutate(input))),
             "Failed to change Web search settings",
           ),
-        [WS_METHODS.omnimindWebSearchTestProvider]: (input, { clientId }) =>
+        [WS_METHODS.oaWebSearchTestProvider]: (input, { clientId }) =>
           rpcEffect(
             requireOwnerRole.pipe(
               Effect.andThen(omniMindWebSearchSettings.testProvider(input, String(clientId))),
             ),
             "Failed to test Web search Engine",
           ),
-        [WS_METHODS.omnimindWebSearchRecheck]: (input, { clientId }) =>
+        [WS_METHODS.oaWebSearchRecheck]: (input, { clientId }) =>
           rpcEffect(
             requireOwnerRole.pipe(
               Effect.andThen(omniMindWebSearchSettings.recheck(input, String(clientId))),
             ),
             "Failed to recheck Web search",
           ),
-        [WS_METHODS.omnimindWebSearchOpenConfig]: (input) =>
+        [WS_METHODS.oaWebSearchOpenConfig]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(
               Effect.andThen(omniMindWebSearchSettings.openConfig(input.editor)),
             ),
             "Failed to open Web search configuration",
           ),
-        [WS_METHODS.omnimindWebSearchGeminiDiagnostic]: (input) =>
+        [WS_METHODS.oaWebSearchGeminiDiagnostic]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindWebSearchSettings.diagnoseGemini(input))),
             "Failed to inspect Gemini Web account",
           ),
-        [WS_METHODS.omnimindModelServicesList]: (input) =>
+        [WS_METHODS.oaModelServicesList]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.list(input))),
-            "Failed to list OmniMind model services",
+            "Failed to list HarnessOS model services",
           ),
-        [WS_METHODS.omnimindModelServicesGet]: (input) =>
+        [WS_METHODS.oaModelServicesGet]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.get(input))),
-            "Failed to read an OmniMind model service",
+            "Failed to read an HarnessOS model service",
           ),
-        [WS_METHODS.omnimindModelServicesBeginLogin]: (input, { clientId }) =>
+        [WS_METHODS.oaModelServicesBeginLogin]: (input, { clientId }) =>
           rpcEffect(
             requireOwnerRole.pipe(
               Effect.andThen(omniMindModelServices.beginLogin(clientId, input)),
             ),
-            "Failed to begin OmniMind model-service login",
+            "Failed to begin HarnessOS model-service login",
           ),
-        [WS_METHODS.omnimindModelServicesPollLogin]: (input, { clientId }) =>
+        [WS_METHODS.oaModelServicesPollLogin]: (input, { clientId }) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.pollLogin(clientId, input))),
-            "Failed to poll OmniMind model-service login",
+            "Failed to poll HarnessOS model-service login",
           ),
-        [WS_METHODS.omnimindModelServicesAnswerLogin]: (input, { clientId }) =>
+        [WS_METHODS.oaModelServicesAnswerLogin]: (input, { clientId }) =>
           rpcEffect(
             requireOwnerRole.pipe(
               Effect.andThen(omniMindModelServices.answerLogin(clientId, input)),
             ),
-            "Failed to continue OmniMind model-service login",
+            "Failed to continue HarnessOS model-service login",
           ),
-        [WS_METHODS.omnimindModelServicesCancelLogin]: (input, { clientId }) =>
+        [WS_METHODS.oaModelServicesCancelLogin]: (input, { clientId }) =>
           rpcEffect(
             requireOwnerRole.pipe(
               Effect.andThen(omniMindModelServices.cancelLogin(clientId, input)),
             ),
-            "Failed to cancel OmniMind model-service login",
+            "Failed to cancel HarnessOS model-service login",
           ),
-        [WS_METHODS.omnimindModelServicesLogout]: (input) =>
+        [WS_METHODS.oaModelServicesLogout]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.logout(input))),
-            "Failed to remove OmniMind model-service credentials",
+            "Failed to remove HarnessOS model-service credentials",
           ),
-        [WS_METHODS.omnimindModelServicesRevealApiKey]: (input) =>
+        [WS_METHODS.oaModelServicesRevealApiKey]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.revealApiKey(input))),
-            "Failed to reveal an OmniMind model-service API key",
+            "Failed to reveal an HarnessOS model-service API key",
           ),
-        [WS_METHODS.omnimindModelServicesRefresh]: (input) =>
+        [WS_METHODS.oaModelServicesRefresh]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.refresh(input))),
-            "Failed to refresh an OmniMind model service",
+            "Failed to refresh an HarnessOS model service",
           ),
-        [WS_METHODS.omnimindModelServicesDiscoverCustom]: (input) =>
+        [WS_METHODS.oaModelServicesDiscoverCustom]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.discoverCustom(input))),
-            "Failed to discover models for an OmniMind custom model service",
+            "Failed to discover models for an HarnessOS custom model service",
           ),
-        [WS_METHODS.omnimindModelServicesTestCustom]: (input) =>
+        [WS_METHODS.oaModelServicesTestCustom]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.testCustom(input))),
-            "Failed to test an OmniMind custom model service",
+            "Failed to test an HarnessOS custom model service",
           ),
-        [WS_METHODS.omnimindModelServicesSaveCustom]: (input) =>
+        [WS_METHODS.oaModelServicesSaveCustom]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.saveCustom(input))),
-            "Failed to save an OmniMind custom model service",
+            "Failed to save an HarnessOS custom model service",
           ),
-        [WS_METHODS.omnimindModelServicesRemoveCustom]: (input) =>
+        [WS_METHODS.oaModelServicesRemoveCustom]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.removeCustom(input))),
-            "Failed to remove an OmniMind custom model service",
+            "Failed to remove an HarnessOS custom model service",
           ),
         [WS_METHODS.automationList]: (input) =>
           rpcEffect(automationService.list(input), "Failed to list automations"),

@@ -4,13 +4,13 @@ import {
   deriveInlineCommandCall,
   deriveReadableCommandDisplay,
   deriveReadableToolTitle,
-  deriveOmniMindMcpToolTitle,
+  deriveHarnessOSMcpToolTitle,
   extractWebFetchUrl,
   isInspectCommand,
-  isOmniMindBrowserToolCall,
+  isHarnessOSBrowserToolCall,
   normalizeCompactToolLabel,
   resolveCommandVisualKind,
-  sanitizeOmniMindMcpToolPreview,
+  sanitizeHarnessOSMcpToolPreview,
 } from "./toolCallLabel";
 
 describe("extractWebFetchUrl", () => {
@@ -61,11 +61,11 @@ describe("normalizeCompactToolLabel", () => {
   });
 });
 
-describe("deriveOmniMindMcpToolTitle", () => {
-  it("uses stable action-first names for OmniMind browser tools", () => {
+describe("deriveHarnessOSMcpToolTitle", () => {
+  it("uses stable action-first names for HarnessOS browser tools", () => {
     for (const status of ["running", "completed", "failed"] as const) {
       expect(
-        deriveOmniMindMcpToolTitle({
+        deriveHarnessOSMcpToolTitle({
           toolName: "mcp__harnessos__browser_open",
           status,
         }),
@@ -73,225 +73,236 @@ describe("deriveOmniMindMcpToolTitle", () => {
     }
 
     expect(
-      deriveOmniMindMcpToolTitle({
-        title: "OmniMind: Browser Snapshot",
+      deriveHarnessOSMcpToolTitle({
+        title: "HarnessOS: Browser Snapshot",
         status: "completed",
       }),
     ).toBe("Snapshot browser page");
   });
 
-  it("has intentional running and completed copy for every OmniMind gateway action", () => {
+  it("has intentional running and completed copy for every HarnessOS gateway action", () => {
     const cases = [
-      ["harnessos_context", "OmniMind is checking its context", "OmniMind checked its context"],
+      ["harnessos_context", "HarnessOS is checking its context", "HarnessOS checked its context"],
       [
         "harnessos_capabilities",
-        "OmniMind is checking available agents",
-        "OmniMind checked available agents",
+        "HarnessOS is checking available agents",
+        "HarnessOS checked available agents",
       ],
-      ["harnessos_list_projects", "OmniMind is listing projects", "OmniMind listed projects"],
-      ["harnessos_list_threads", "OmniMind is listing threads", "OmniMind listed threads"],
-      ["harnessos_read_thread", "OmniMind is reading a thread", "OmniMind read a thread"],
+      ["harnessos_list_projects", "HarnessOS is listing projects", "HarnessOS listed projects"],
+      ["harnessos_list_threads", "HarnessOS is listing threads", "HarnessOS listed threads"],
+      ["harnessos_read_thread", "HarnessOS is reading a thread", "HarnessOS read a thread"],
       [
         "harnessos_read_thread_activity",
-        "OmniMind is reading thread activity",
-        "OmniMind read thread activity",
+        "HarnessOS is reading thread activity",
+        "HarnessOS read thread activity",
       ],
       [
         "harnessos_read_thread_events",
-        "OmniMind is reading thread events",
-        "OmniMind read thread events",
+        "HarnessOS is reading thread events",
+        "HarnessOS read thread events",
       ],
       [
         "harnessos_read_thread_runtime_events",
-        "OmniMind is reading thread runtime events",
-        "OmniMind read thread runtime events",
+        "HarnessOS is reading thread runtime events",
+        "HarnessOS read thread runtime events",
       ],
       [
         "harnessos_diagnose_thread",
-        "OmniMind is diagnosing a thread",
-        "OmniMind diagnosed a thread",
+        "HarnessOS is diagnosing a thread",
+        "HarnessOS diagnosed a thread",
       ],
-      ["harnessos_create_thread", "OmniMind is creating a thread", "OmniMind created a thread"],
-      ["harnessos_create_threads", "OmniMind is creating threads", "OmniMind created threads"],
+      ["harnessos_create_thread", "HarnessOS is creating a thread", "HarnessOS created a thread"],
+      ["harnessos_create_threads", "HarnessOS is creating threads", "HarnessOS created threads"],
       [
         "harnessos_wait_for_threads",
-        "OmniMind is waiting for threads",
-        "OmniMind finished waiting for threads",
+        "HarnessOS is waiting for threads",
+        "HarnessOS finished waiting for threads",
       ],
-      ["harnessos_send_message", "OmniMind is sending a message", "OmniMind sent a message"],
+      ["harnessos_send_message", "HarnessOS is sending a message", "HarnessOS sent a message"],
       [
         "harnessos_interrupt_thread",
-        "OmniMind is interrupting a thread",
-        "OmniMind interrupted a thread",
+        "HarnessOS is interrupting a thread",
+        "HarnessOS interrupted a thread",
       ],
-      ["harnessos_set_thread_title", "OmniMind is renaming a thread", "OmniMind renamed a thread"],
+      [
+        "harnessos_set_thread_title",
+        "HarnessOS is renaming a thread",
+        "HarnessOS renamed a thread",
+      ],
       [
         "harnessos_set_thread_archived",
-        "OmniMind is updating a thread",
-        "OmniMind updated a thread",
+        "HarnessOS is updating a thread",
+        "HarnessOS updated a thread",
       ],
       [
         "harnessos_create_automation",
-        "OmniMind is creating an automation",
-        "OmniMind created an automation",
+        "HarnessOS is creating an automation",
+        "HarnessOS created an automation",
       ],
       [
         "harnessos_list_automations",
-        "OmniMind is listing automations",
-        "OmniMind listed automations",
+        "HarnessOS is listing automations",
+        "HarnessOS listed automations",
       ],
       [
         "harnessos_cancel_automation",
-        "OmniMind is stopping an automation",
-        "OmniMind stopped an automation",
+        "HarnessOS is stopping an automation",
+        "HarnessOS stopped an automation",
       ],
-      ["harnessos_overview", "OmniMind is gathering an overview", "OmniMind gathered an overview"],
+      [
+        "harnessos_overview",
+        "HarnessOS is gathering an overview",
+        "HarnessOS gathered an overview",
+      ],
       [
         "harnessos_list_allowed_projects",
-        "OmniMind is listing allowed projects",
-        "OmniMind listed allowed projects",
+        "HarnessOS is listing allowed projects",
+        "HarnessOS listed allowed projects",
       ],
-      ["harnessos_create_task", "OmniMind is creating a task", "OmniMind created a task"],
+      ["harnessos_create_task", "HarnessOS is creating a task", "HarnessOS created a task"],
       [
         "harnessos_wait_for_task",
-        "OmniMind is waiting for a task",
-        "OmniMind finished waiting for a task",
+        "HarnessOS is waiting for a task",
+        "HarnessOS finished waiting for a task",
       ],
-      ["harnessos_read_task", "OmniMind is reading a task", "OmniMind read a task"],
+      ["harnessos_read_task", "HarnessOS is reading a task", "HarnessOS read a task"],
     ] as const;
 
     for (const [toolName, running, completed] of cases) {
-      expect(deriveOmniMindMcpToolTitle({ toolName, status: "running" })).toBe(running);
-      expect(deriveOmniMindMcpToolTitle({ toolName, status: "completed" })).toBe(completed);
+      expect(deriveHarnessOSMcpToolTitle({ toolName, status: "running" })).toBe(running);
+      expect(deriveHarnessOSMcpToolTitle({ toolName, status: "completed" })).toBe(completed);
     }
 
     expect(
-      deriveOmniMindMcpToolTitle({
+      deriveHarnessOSMcpToolTitle({
         toolName: "harnessos_create_threads",
         status: "failed",
       }),
-    ).toBe("OmniMind couldn't create threads");
+    ).toBe("HarnessOS couldn't create threads");
     expect(
-      deriveOmniMindMcpToolTitle({
+      deriveHarnessOSMcpToolTitle({
         toolName: "harnessos_create_thread",
         status: "cancelled",
       }),
-    ).toBe("OmniMind stopped creating a thread");
+    ).toBe("HarnessOS stopped creating a thread");
   });
 
   it("turns engine-specific create-thread identifiers into activity sentences", () => {
     expect(
-      deriveOmniMindMcpToolTitle({
-        toolName: "OmniMind__harnessos_create_thread",
+      deriveHarnessOSMcpToolTitle({
+        toolName: "HarnessOS__harnessos_create_thread",
         status: "running",
       }),
-    ).toBe("OmniMind is creating a thread");
+    ).toBe("HarnessOS is creating a thread");
     expect(
-      deriveOmniMindMcpToolTitle({
+      deriveHarnessOSMcpToolTitle({
         toolName: "mcp__harnessos__harnessos_create_thread",
         status: "completed",
       }),
-    ).toBe("OmniMind created a thread");
+    ).toBe("HarnessOS created a thread");
   });
 
-  it("recognizes bare and already-humanized OmniMind tool names", () => {
+  it("recognizes bare and already-humanized HarnessOS tool names", () => {
     expect(
-      deriveOmniMindMcpToolTitle({ toolName: "harnessos_send_message", status: "running" }),
-    ).toBe("OmniMind is sending a message");
+      deriveHarnessOSMcpToolTitle({ toolName: "harnessos_send_message", status: "running" }),
+    ).toBe("HarnessOS is sending a message");
     expect(
-      deriveOmniMindMcpToolTitle({ title: "OmniMind: OmniMind List Threads", status: "completed" }),
-    ).toBe("OmniMind listed threads");
+      deriveHarnessOSMcpToolTitle({
+        title: "HarnessOS: HarnessOS List Threads",
+        status: "completed",
+      }),
+    ).toBe("HarnessOS listed threads");
   });
 
   it("ignores tools from other MCP servers", () => {
     expect(
-      deriveOmniMindMcpToolTitle({
+      deriveHarnessOSMcpToolTitle({
         toolName: "mcp__codex_apps__github_fetch_pr",
         status: "running",
       }),
     ).toBeNull();
   });
 
-  it("keeps future OmniMind actions branded without exposing raw identifiers", () => {
+  it("keeps future HarnessOS actions branded without exposing raw identifiers", () => {
     expect(
-      deriveOmniMindMcpToolTitle({
+      deriveHarnessOSMcpToolTitle({
         toolName: "mcp__harnessos__harnessos_delete_project",
         status: "running",
       }),
-    ).toBe("OmniMind is handling delete project");
+    ).toBe("HarnessOS is handling delete project");
     expect(
-      deriveOmniMindMcpToolTitle({
-        toolName: "OmniMind__harnessos_delete_project",
+      deriveHarnessOSMcpToolTitle({
+        toolName: "HarnessOS__harnessos_delete_project",
         status: "completed",
       }),
-    ).toBe("OmniMind handled delete project");
+    ).toBe("HarnessOS handled delete project");
     expect(
-      deriveOmniMindMcpToolTitle({
+      deriveHarnessOSMcpToolTitle({
         toolName: "harnessos_is_handling_delete_project",
         status: "completed",
       }),
-    ).toBe("OmniMind handled delete project");
+    ).toBe("HarnessOS handled delete project");
   });
 
   it("does not reinterpret free text beginning with fallback status copy", () => {
     expect(
-      deriveOmniMindMcpToolTitle({
-        title: "OmniMind is handling delete project after recovery",
+      deriveHarnessOSMcpToolTitle({
+        title: "HarnessOS is handling delete project after recovery",
         status: "completed",
       }),
     ).toBeNull();
     expect(
-      deriveOmniMindMcpToolTitle({
-        title: "OmniMind handled delete project after recovery",
+      deriveHarnessOSMcpToolTitle({
+        title: "HarnessOS handled delete project after recovery",
         status: "running",
       }),
     ).toBeNull();
     expect(
-      deriveOmniMindMcpToolTitle({
-        title: "OmniMind couldn't handle delete project after recovery",
+      deriveHarnessOSMcpToolTitle({
+        title: "HarnessOS couldn't handle delete project after recovery",
         status: "failed",
       }),
     ).toBeNull();
   });
 
-  it("leaves free-text activity summaries starting with OmniMind untouched", () => {
+  it("leaves free-text activity summaries starting with HarnessOS untouched", () => {
     expect(
-      deriveOmniMindMcpToolTitle({
-        title: "OmniMind recovered a stale running state",
+      deriveHarnessOSMcpToolTitle({
+        title: "HarnessOS recovered a stale running state",
         status: "completed",
       }),
     ).toBeNull();
     expect(
-      deriveOmniMindMcpToolTitle({
-        fallbackLabel: "OmniMind restarted the engine session",
+      deriveHarnessOSMcpToolTitle({
+        fallbackLabel: "HarnessOS restarted the engine session",
         status: "running",
       }),
     ).toBeNull();
   });
 
-  it("removes transport identifiers without hiding meaningful OmniMind details", () => {
+  it("removes transport identifiers without hiding meaningful HarnessOS details", () => {
     expect(
-      sanitizeOmniMindMcpToolPreview({
-        preview: "OmniMind__harnessos_create_threads",
-        heading: "OmniMind created threads",
+      sanitizeHarnessOSMcpToolPreview({
+        preview: "HarnessOS__harnessos_create_threads",
+        heading: "HarnessOS created threads",
         status: "completed",
       }),
     ).toBeNull();
     expect(
-      sanitizeOmniMindMcpToolPreview({
+      sanitizeHarnessOSMcpToolPreview({
         preview: 'Unexpected key "reasoningEffort" for Claude Agent',
-        heading: "OmniMind couldn't create threads",
+        heading: "HarnessOS couldn't create threads",
         status: "failed",
       }),
     ).toBe('Unexpected key "reasoningEffort" for Claude Agent');
   });
 });
 
-describe("isOmniMindBrowserToolCall", () => {
+describe("isHarnessOSBrowserToolCall", () => {
   it("recognizes canonical presentation titles without a tool identifier", () => {
-    expect(isOmniMindBrowserToolCall({ title: "Open browser tab" })).toBe(true);
-    expect(isOmniMindBrowserToolCall({ fallbackLabel: "Snapshot browser page" })).toBe(true);
-    expect(isOmniMindBrowserToolCall({ title: "OmniMind listed threads" })).toBe(false);
+    expect(isHarnessOSBrowserToolCall({ title: "Open browser tab" })).toBe(true);
+    expect(isHarnessOSBrowserToolCall({ fallbackLabel: "Snapshot browser page" })).toBe(true);
+    expect(isHarnessOSBrowserToolCall({ title: "HarnessOS listed threads" })).toBe(false);
   });
 });
 

@@ -265,7 +265,7 @@ function requestInput(): ReadableStream<Uint8Array> {
   );
 }
 
-const app = OfficialAcp.agent({ name: "omnimind-acp-mock" });
+const app = OfficialAcp.agent({ name: "harnessos-acp-mock" });
 
 app.onRequest(OfficialAcp.methods.agent.initialize, ({ params: request }) =>
   runEffect(

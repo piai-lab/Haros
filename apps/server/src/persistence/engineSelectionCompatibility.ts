@@ -37,7 +37,7 @@ function readTrimmedString(record: Record<string, unknown>, key: string): string
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-// Imported instance ids may be runtime names rather than OmniMind engine literals.
+// Imported instance ids may be runtime names rather than HarnessOS engine literals.
 function inferProviderFromLabel(label: string): ModelProviderKind | undefined {
   const lowerLabel = label.toLowerCase();
   if (lowerLabel.includes("oa")) {
@@ -198,8 +198,8 @@ export function normalizePersistedEngineSelection(input: unknown): unknown {
     return input;
   }
 
-  // Newer OmniMind writes engine-less selections as { instanceId, model } and
-  // option rows as [{ id, value }]; OmniMind stores canonical provider/options objects.
+  // Newer HarnessOS writes engine-less selections as { instanceId, model } and
+  // option rows as [{ id, value }]; HarnessOS stores canonical provider/options objects.
   return normalizeLegacyEngineSelection({
     engine: input.engine ?? input.instanceId,
     model,

@@ -93,7 +93,7 @@ const encodePersistableEvent = (event: EngineRuntimeEvent) =>
 
     // Preserve the canonical event instead of quarantining it solely because a
     // engine copied a huge tool result into payload detail/data. Raw keeps a
-    // compact OmniMind diagnostic marker because retaining its duplicate bulk
+    // compact HarnessOS diagnostic marker because retaining its duplicate bulk
     // would immediately consume the journal budget again.
     const compactedEvent = {
       ...event,
@@ -107,7 +107,7 @@ const encodePersistableEvent = (event: EngineRuntimeEvent) =>
                 ? { messageType: event.raw.messageType }
                 : {}),
               payload: {
-                omnimindTruncated: true,
+                harnessosTruncated: true,
                 reason: "engine runtime event exceeded the durable journal size limit",
                 originalBytes,
               },

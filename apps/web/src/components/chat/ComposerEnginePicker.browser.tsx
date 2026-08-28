@@ -241,13 +241,13 @@ describe("ComposerEnginePicker", () => {
     }
   });
 
-  it("names OmniMind explicitly in the trigger and tooltip", async () => {
+  it("names HarnessOS explicitly in the trigger and tooltip", async () => {
     const mounted = await mountPicker({ engine: "oa" });
     try {
-      const trigger = page.getByRole("button", { name: "Change engine. Current: OmniMind" });
+      const trigger = page.getByRole("button", { name: "Change engine. Current: HarnessOS" });
       await expect.element(trigger).toBeVisible();
       await userEvent.hover(trigger);
-      await expect.element(page.getByText("Engine · OmniMind")).toBeVisible();
+      await expect.element(page.getByText("Engine · HarnessOS")).toBeVisible();
     } finally {
       await mounted.cleanup();
     }

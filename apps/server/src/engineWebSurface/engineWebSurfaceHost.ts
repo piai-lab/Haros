@@ -1,5 +1,5 @@
 // FILE: engineWebSurfaceHost.ts
-// Purpose: Presents short-lived, provenance-backed Engine web surfaces in OmniMind.
+// Purpose: Presents short-lived, provenance-backed Engine web surfaces in HarnessOS.
 // Layer: Server host integration
 // Exports: narrow intent registration plus Pi curator extraction/sanitization helpers
 
@@ -10,12 +10,12 @@ import type {
 } from "@harnessos/contracts";
 import { parseEngineWebSurfaceThemeSnapshot } from "@harnessos/contracts";
 
-const ENGINE_WEB_SURFACE_PRESENTER_SYMBOL = Symbol.for("omnimind.engineWebSurface.presenter.v1");
+const ENGINE_WEB_SURFACE_PRESENTER_SYMBOL = Symbol.for("harnessos.engineWebSurface.presenter.v1");
 const ENGINE_WEB_SURFACE_INTENT_TTL_MS = 10 * 60 * 1_000;
 const MAX_ENGINE_WEB_SURFACE_URL_LENGTH = 2_048;
 const MIN_SESSION_TOKEN_LENGTH = 8;
 const MAX_SESSION_TOKEN_LENGTH = 512;
-const REDACTED_ENGINE_WEB_SURFACE = "[OmniMind Browser temporary page]";
+const REDACTED_ENGINE_WEB_SURFACE = "[HarnessOS Browser temporary page]";
 
 export type EngineWebSurfaceStatus = "waiting-for-user" | "unavailable" | "completed";
 
@@ -59,7 +59,7 @@ export function requireReadyEngineWebSurfaceContext(
     (context.theme !== "light" && context.theme !== "dark") ||
     themeSnapshot === null
   ) {
-    throw new Error("The OmniMind appearance snapshot is not ready for this internal page.");
+    throw new Error("The HarnessOS appearance snapshot is not ready for this internal page.");
   }
   return {
     locale: context.locale,
@@ -262,6 +262,6 @@ export const engineWebSurfacePresentationMetadata = (
 ) => ({
   status,
   provenance: "engine-native",
-  presentation: "omnimind-browser",
+  presentation: "harnessos-browser",
   ...(surfaceId === undefined ? {} : { surfaceId }),
 });

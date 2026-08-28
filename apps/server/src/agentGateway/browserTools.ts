@@ -323,7 +323,7 @@ function withGatewayIdempotencyKey(
   const digest = createHash("sha256").update(requestFingerprint).digest("hex");
   return {
     ...argumentsValue,
-    idempotencyKey: `omnimind-mcp-${digest.slice(0, 40)}`,
+    idempotencyKey: `harnessos-mcp-${digest.slice(0, 40)}`,
   };
 }
 

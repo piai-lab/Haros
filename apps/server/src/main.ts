@@ -53,7 +53,7 @@ import {
   verifyServerRuntime,
 } from "./externalMcp/bridge";
 import { externalMcpLauncher, externalMcpShellCommand } from "./externalMcp/launcher";
-import { fetchOmniMindServerStatus, formatOmniMindServerStatus } from "./serverStatusCli";
+import { fetchHarnessOSServerStatus, formatHarnessOSServerStatus } from "./serverStatusCli";
 
 export class StartupError extends Data.TaggedError("StartupError")<{
   readonly message: string;
@@ -214,7 +214,7 @@ const ServerConfigLive = (input: CliInput) =>
       if (configuredPublicUrl && publicUrl === undefined) {
         return yield* new StartupError({
           message:
-            "HARNESSOS_PUBLIC_URL/--public-url must be an HTTPS root origin without credentials, path, query, or fragment (for example https://omnimind.example.com).",
+            "HARNESSOS_PUBLIC_URL/--public-url must be an HTTPS root origin without credentials, path, query, or fragment (for example https://harnessos.example.com).",
         });
       }
       const allowInsecureRemote = resolveBooleanConfig(
@@ -229,7 +229,10 @@ const ServerConfigLive = (input: CliInput) =>
       yield* Effect.try({
         try: () => preparePrivateServerPaths(derivedPaths),
         catch: (cause) =>
-          new StartupError({ message: "Failed to secure OmniMind's local state directory", cause }),
+          new StartupError({
+            message: "Failed to secure HarnessOS's local state directory",
+            cause,
+          }),
       });
       const noBrowser = resolveBooleanConfig(input.noBrowser, env.noBrowser, mode === "desktop");
       const authToken = Option.getOrUndefined(input.authToken) ?? env.authToken;
@@ -404,7 +407,7 @@ const makeServerProgram = (input: CliInput) =>
       }),
     );
 
-    yield* Effect.logInfo("OmniMind running", makeServerStartupLogData(config));
+    yield* Effect.logInfo("HarnessOS running", makeServerStartupLogData(config));
     if (startupPairingUrl) {
       if (config.allowInsecureRemote && !config.publicUrl) {
         yield* Effect.logWarning(
@@ -461,7 +464,7 @@ const hostFlag = Flag.string("host").pipe(
   Flag.optional,
 );
 const harnessosHomeFlag = Flag.string("home-dir").pipe(
-  Flag.withDescription("Base directory for all OmniMind data (equivalent to HARNESSOS_HOME)."),
+  Flag.withDescription("Base directory for all HarnessOS data (equivalent to HARNESSOS_HOME)."),
   Flag.optional,
 );
 const devUrlFlag = Flag.string("dev-url").pipe(
@@ -510,7 +513,7 @@ const mcpIntegrationFlag = Flag.string("integration").pipe(
   Flag.optional,
 );
 
-// Base `omnimind` command defined before the MCP subcommands so they can yield
+// Base `harnessos` command defined before the MCP subcommands so they can yield
 // its parsed input (notably `--home-dir` / `harnessosHome`) via Effect's command
 // context. This avoids a duplicate `--home-dir` flag between the root command
 // and its MCP subcommands, which the Effect CLI assigns to the parent and
@@ -528,7 +531,7 @@ const baseServerCommand = Command.make("oa", {
   autoBootstrapProjectFromCwd: autoBootstrapProjectFromCwdFlag,
   logProviderEvents: logProviderEventsFlag,
   logWebSocketEvents: logWebSocketEventsFlag,
-}).pipe(Command.withDescription("Run the OmniMind server."));
+}).pipe(Command.withDescription("Run the HarnessOS server."));
 
 const mcpServeCommand = Command.make(
   "serve",
@@ -549,7 +552,7 @@ const mcpServeCommand = Command.make(
     }),
 ).pipe(
   Command.withDescription(
-    "Serve the paired OmniMind external MCP integration over stdio for Codex, Claude, and other MCP clients.",
+    "Serve the paired HarnessOS external MCP integration over stdio for Codex, Claude, and other MCP clients.",
   ),
 );
 
@@ -557,7 +560,7 @@ const mcpPairCommand = Command.make(
   "pair",
   {
     code: Flag.string("code").pipe(
-      Flag.withDescription("Short-lived pairing code issued by OmniMind Settings."),
+      Flag.withDescription("Short-lived pairing code issued by HarnessOS Settings."),
     ),
   },
   ({ code }) =>
@@ -573,21 +576,21 @@ const mcpPairCommand = Command.make(
         catch: (cause) => new StartupError({ message: "External MCP pairing failed.", cause }),
       });
       process.stdout.write(
-        `Paired OmniMind external MCP integration "${paired.paired.name}".\nCredential stored privately at ${paired.storePath}.\nConfigure the MCP client command as: ${externalMcpShellCommand(externalMcpLauncher(["mcp", "serve", "--integration", paired.paired.integrationId, "--home-dir", baseDir]))}\n`,
+        `Paired HarnessOS external MCP integration "${paired.paired.name}".\nCredential stored privately at ${paired.storePath}.\nConfigure the MCP client command as: ${externalMcpShellCommand(externalMcpLauncher(["mcp", "serve", "--integration", paired.paired.integrationId, "--home-dir", baseDir]))}\n`,
       );
       if (process.platform === "win32") {
         process.stdout.write(
-          "Windows note: OmniMind stores this credential under your user profile, but Windows does not expose POSIX 0600 permission checks. Protect the profile and its OmniMind data directory.\n",
+          "Windows note: HarnessOS stores this credential under your user profile, but Windows does not expose POSIX 0600 permission checks. Protect the profile and its HarnessOS data directory.\n",
         );
       }
     }),
-).pipe(Command.withDescription("Pair this CLI with a user-approved OmniMind MCP integration."));
+).pipe(Command.withDescription("Pair this CLI with a user-approved HarnessOS MCP integration."));
 
 const serverStatusCommand = Command.make(
   "status",
   {
     url: Flag.string("url").pipe(
-      Flag.withDescription("OmniMind server base URL to probe."),
+      Flag.withDescription("HarnessOS server base URL to probe."),
       Flag.optional,
     ),
     json: Flag.boolean("json").pipe(
@@ -610,7 +613,7 @@ const serverStatusCommand = Command.make(
                 error:
                   cause instanceof Error
                     ? cause.message
-                    : "Failed to discover a running OmniMind server.",
+                    : "Failed to discover a running HarnessOS server.",
               };
             }
           })();
@@ -627,7 +630,7 @@ const serverStatusCommand = Command.make(
                 if ("runtime" in discovered) {
                   await verifyServerRuntime(discovered.runtime, globalThis.fetch);
                 }
-                return await fetchOmniMindServerStatus({ url: discovered.url });
+                return await fetchHarnessOSServerStatus({ url: discovered.url });
               } catch (cause) {
                 return {
                   reachable: false as const,
@@ -636,26 +639,26 @@ const serverStatusCommand = Command.make(
                   error:
                     cause instanceof Error
                       ? cause.message
-                      : "Failed to verify the discovered OmniMind server.",
+                      : "Failed to verify the discovered HarnessOS server.",
                 };
               }
             });
       process.stdout.write(
-        json ? `${JSON.stringify(result, null, 2)}\n` : `${formatOmniMindServerStatus(result)}\n`,
+        json ? `${JSON.stringify(result, null, 2)}\n` : `${formatHarnessOSServerStatus(result)}\n`,
       );
       if (!result.ready) {
         process.exitCode = 1;
       }
     }),
-).pipe(Command.withDescription("Check whether an OmniMind server is reachable and ready."));
+).pipe(Command.withDescription("Check whether an HarnessOS server is reachable and ready."));
 
 const serverToolsCommand = Command.make("server").pipe(
-  Command.withDescription("Inspect and manage a running OmniMind server."),
+  Command.withDescription("Inspect and manage a running HarnessOS server."),
   Command.withSubcommands([serverStatusCommand]),
 );
 
 const mcpCommand = Command.make("mcp").pipe(
-  Command.withDescription("Manage OmniMind's loopback external MCP bridge."),
+  Command.withDescription("Manage HarnessOS's loopback external MCP bridge."),
   Command.withSubcommands([mcpServeCommand, mcpPairCommand]),
 );
 
@@ -664,4 +667,4 @@ const serverCommand = baseServerCommand.pipe(
   Command.withSubcommands([serverToolsCommand, mcpCommand]),
 );
 
-export const omnimindCli = serverCommand;
+export const harnessosCli = serverCommand;

@@ -77,7 +77,7 @@ describe("agent gateway MCP protocol", () => {
     assert.equal(result.instructions, "use the tools");
     assert.deepEqual(result.serverInfo, {
       name: "oa",
-      title: "OmniMind App Control",
+      title: "HarnessOS App Control",
       version: "1.2.3",
     });
   });
@@ -85,16 +85,16 @@ describe("agent gateway MCP protocol", () => {
   it("supports MCP tool annotations without changing protocol shaping", () => {
     const tool: McpToolDefinition = {
       name: "harnessos_context",
-      description: "Inspect the current OmniMind harness context.",
+      description: "Inspect the current HarnessOS harness context.",
       inputSchema: { type: "object" },
       annotations: {
-        title: "OmniMind context",
+        title: "HarnessOS context",
         readOnlyHint: true,
         destructiveHint: false,
         idempotentHint: true,
         openWorldHint: false,
       },
     };
-    assert.equal(tool.annotations?.title, "OmniMind context");
+    assert.equal(tool.annotations?.title, "HarnessOS context");
   });
 });

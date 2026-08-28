@@ -45,7 +45,7 @@ async function stopChild(child: ChildProcessWithoutNullStreams): Promise<void> {
 
 describe("agent gateway stdio proxy", () => {
   it("forwards cancellation immediately and lets a later ping bypass a hung request", async () => {
-    const stateDir = mkdtempSync(join(tmpdir(), "omnimind-stdio-proxy-"));
+    const stateDir = mkdtempSync(join(tmpdir(), "harnessos-stdio-proxy-"));
     const slowStarted = deferred<void>();
     const duplicateStarted = deferred<void>();
     const slowAborted = deferred<void>();
@@ -189,7 +189,7 @@ describe("agent gateway stdio proxy", () => {
   });
 
   it("exchanges an ambient one-shot bootstrap and keeps the bearer inside the proxy", async () => {
-    const stateDir = mkdtempSync(join(tmpdir(), "omnimind-stdio-bootstrap-"));
+    const stateDir = mkdtempSync(join(tmpdir(), "harnessos-stdio-bootstrap-"));
     const bootstrapStarted = deferred<void>();
     let bootstrapExchanges = 0;
     let forwardedRequests = 0;
@@ -310,7 +310,7 @@ describe("agent gateway stdio proxy", () => {
   });
 
   it("aborts a hung eager bootstrap when stdin closes", async () => {
-    const stateDir = mkdtempSync(join(tmpdir(), "omnimind-stdio-bootstrap-abort-"));
+    const stateDir = mkdtempSync(join(tmpdir(), "harnessos-stdio-bootstrap-abort-"));
     const bootstrapStarted = deferred<void>();
     let server: Server | undefined;
     let child: ChildProcessWithoutNullStreams | undefined;

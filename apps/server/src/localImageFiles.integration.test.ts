@@ -22,7 +22,7 @@ afterEach(() => {
 
 describe("resolveAllowedLocalPreviewFile", () => {
   it("allows images inside the current workspace", async () => {
-    const workspace = makeTempDir("omnimind-image-workspace-");
+    const workspace = makeTempDir("harnessos-image-workspace-");
     writeFileSync(path.join(workspace, ".git"), "gitdir: .git");
     const imagePath = path.join(workspace, "preview.png");
     writeFileSync(imagePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
@@ -37,7 +37,7 @@ describe("resolveAllowedLocalPreviewFile", () => {
   });
 
   it("allows images inside Codex generated_images without a cwd", async () => {
-    const codexHome = makeTempDir("omnimind-codex-home-");
+    const codexHome = makeTempDir("harnessos-codex-home-");
     const previousCodexHome = process.env.CODEX_HOME;
     process.env.CODEX_HOME = codexHome;
     try {
@@ -62,8 +62,8 @@ describe("resolveAllowedLocalPreviewFile", () => {
   });
 
   it("allows images written to the HARNESSOS_HOME codex-home-overlay generated_images root", async () => {
-    // Codex app-server is launched with CODEX_HOME pointing at a OmniMind overlay
-    // directory (see resolveOmniMindCodexHomeOverlayPath). Generated images therefore
+    // Codex app-server is launched with CODEX_HOME pointing at a HarnessOS overlay
+    // directory (see resolveHarnessOSCodexHomeOverlayPath). Generated images therefore
     // live under <HARNESSOS_HOME>/codex-home-overlay/generated_images/<thread>/<call>.png,
     // which sits outside both the user's `~/.codex` source home and any workspace
     // root. The allowlist must still serve them.
@@ -84,7 +84,7 @@ describe("resolveAllowedLocalPreviewFile", () => {
     mkdirSync(overlayImageDir, { recursive: true });
     writeFileSync(imagePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
 
-    const previousOmniMindHome = process.env.HARNESSOS_HOME;
+    const previousHarnessOSHome = process.env.HARNESSOS_HOME;
     process.env.HARNESSOS_HOME = harnessosHome;
     try {
       const result = await resolveAllowedLocalPreviewFile({
@@ -95,17 +95,17 @@ describe("resolveAllowedLocalPreviewFile", () => {
 
       assert.equal(result?.path, realpathSync(imagePath));
     } finally {
-      if (previousOmniMindHome === undefined) {
+      if (previousHarnessOSHome === undefined) {
         delete process.env.HARNESSOS_HOME;
       } else {
-        process.env.HARNESSOS_HOME = previousOmniMindHome;
+        process.env.HARNESSOS_HOME = previousHarnessOSHome;
       }
       rmSync(fakeRoot, { recursive: true, force: true });
     }
   });
 
   it("allows PDFs inside the current workspace", async () => {
-    const workspace = makeTempDir("omnimind-pdf-workspace-");
+    const workspace = makeTempDir("harnessos-pdf-workspace-");
     writeFileSync(path.join(workspace, ".git"), "gitdir: .git");
     const pdfPath = path.join(workspace, "docs", "spec.pdf");
     mkdirSync(path.dirname(pdfPath), { recursive: true });
@@ -123,9 +123,9 @@ describe("resolveAllowedLocalPreviewFile", () => {
 
   it("allows PDFs inside a per-thread scratch workspace without a cwd", async () => {
     // Sessions that start before a project workspace exists run in
-    // <tmpdir>/omnimind-codex-workspaces/<threadId>; files agents create there
+    // <tmpdir>/harnessos-codex-workspaces/<threadId>; files agents create there
     // are workspace-equivalent, so documents must be servable from that root.
-    const scratchRoot = path.join(os.tmpdir(), "omnimind-codex-workspaces");
+    const scratchRoot = path.join(os.tmpdir(), "harnessos-codex-workspaces");
     const threadDir = path.join(scratchRoot, `test-thread-${process.pid}-${Date.now()}`);
     const pdfPath = path.join(threadDir, "viewer-test.pdf");
     mkdirSync(threadDir, { recursive: true });
@@ -149,7 +149,7 @@ describe("resolveAllowedLocalPreviewFile", () => {
   it("rejects PDFs outside the workspace even under the temp-dir image roots", async () => {
     // Temp/generated-image roots exist for agent-produced images in chat
     // markdown; documents must only ever be served from the workspace.
-    const tempDir = makeTempDir("omnimind-pdf-outside-");
+    const tempDir = makeTempDir("harnessos-pdf-outside-");
     const pdfPath = path.join(tempDir, "leak.pdf");
     writeFileSync(pdfPath, Buffer.from("%PDF-1.4"));
 
@@ -162,7 +162,7 @@ describe("resolveAllowedLocalPreviewFile", () => {
   });
 
   it("still allows images under the temp-dir roots without a workspace", async () => {
-    const tempDir = makeTempDir("omnimind-image-tmp-root-");
+    const tempDir = makeTempDir("harnessos-image-tmp-root-");
     const imagePath = path.join(tempDir, "clip.png");
     writeFileSync(imagePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
 

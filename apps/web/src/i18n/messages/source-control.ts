@@ -56,7 +56,7 @@ const EN_MESSAGES = {
     "Unable to confirm the current branch. Refresh Git status and try again.",
   "git.branch.stashNotReapplied": "Changes saved, but not reapplied.",
   "git.branch.stashNotReappliedDescription":
-    "OmniMind switched branches and kept your changes in a stash because they could not be restored cleanly.",
+    "HarnessOS switched branches and kept your changes in a stash because they could not be restored cleanly.",
   "git.branch.conflictingFiles": "Some files still block the branch switch.",
   "git.branch.conflictingFilesDescription":
     "Ignored or otherwise unstashed files may conflict. Move or remove them before switching.",
@@ -207,10 +207,10 @@ const EN_MESSAGES = {
   "git.action.defaultPushContinue": "Push to {branch}",
   "git.action.defaultPrWithCommitTitle": "Create a feature branch, commit, and PR?",
   "git.action.defaultPrWithCommitDescription":
-    "A PR cannot target the same branch it comes from. OmniMind will create a feature branch from {branch}, commit your changes there, push it, and create the PR.",
+    "A PR cannot target the same branch it comes from. HarnessOS will create a feature branch from {branch}, commit your changes there, push it, and create the PR.",
   "git.action.defaultPrTitle": "Create a feature branch and PR?",
   "git.action.defaultPrDescription":
-    "A PR cannot target the same branch it comes from. OmniMind will create a feature branch from the current commits on {branch}, push it, and create the PR.",
+    "A PR cannot target the same branch it comes from. HarnessOS will create a feature branch from the current commits on {branch}, push it, and create the PR.",
   "git.action.createBranchDescription":
     "Create and switch from the current HEAD. Future commits, pushes, and PRs will use the new branch.",
   "diff.options": "Diff options",
@@ -407,7 +407,7 @@ const EN_MESSAGES = {
   "pullRequest.githubCliSignIn": "Sign in to GitHub CLI",
   "pullRequest.unavailable": "Pull requests are unavailable",
   "pullRequest.githubCliRequiredDescription":
-    "OmniMind reads GitHub data only through the gh CLI. Install it, then reopen this view.",
+    "HarnessOS reads GitHub data only through the gh CLI. Install it, then reopen this view.",
   "pullRequest.githubCliSignInDescription":
     "Authenticate the GitHub CLI in a terminal, then retry.",
   "pullRequest.requestFailed": "The pull request request failed.",
@@ -489,7 +489,7 @@ const ZH_CN_MESSAGES = {
   "git.branch.statusUnavailable": "无法确认当前分支，请刷新 Git 状态后重试。",
   "git.branch.stashNotReapplied": "更改已保存，但未能重新应用。",
   "git.branch.stashNotReappliedDescription":
-    "OmniMind 已切换分支，并将更改保留在 stash 中，因为这些更改无法干净地恢复。",
+    "HarnessOS 已切换分支，并将更改保留在 stash 中，因为这些更改无法干净地恢复。",
   "git.branch.conflictingFiles": "仍有文件阻止分支切换。",
   "git.branch.conflictingFilesDescription":
     "忽略文件或其他未被 stash 保存的文件可能存在冲突，请先移动或移除它们。",
@@ -639,10 +639,10 @@ const ZH_CN_MESSAGES = {
   "git.action.defaultPushContinue": "推送到 {branch}",
   "git.action.defaultPrWithCommitTitle": "创建功能分支、提交并创建 PR？",
   "git.action.defaultPrWithCommitDescription":
-    "PR 不能来自并指向同一分支。OmniMind 将从 {branch} 创建功能分支，在新分支提交更改、推送并创建 PR。",
+    "PR 不能来自并指向同一分支。HarnessOS 将从 {branch} 创建功能分支，在新分支提交更改、推送并创建 PR。",
   "git.action.defaultPrTitle": "创建功能分支和 PR？",
   "git.action.defaultPrDescription":
-    "PR 不能来自并指向同一分支。OmniMind 将从 {branch} 的当前提交创建功能分支，推送并创建 PR。",
+    "PR 不能来自并指向同一分支。HarnessOS 将从 {branch} 的当前提交创建功能分支，推送并创建 PR。",
   "git.action.createBranchDescription":
     "从当前 HEAD 创建并切换到新分支；后续提交、推送和 PR 都将使用该分支。",
   "diff.options": "差异选项",
@@ -828,7 +828,7 @@ const ZH_CN_MESSAGES = {
   "pullRequest.githubCliSignIn": "登录 GitHub CLI",
   "pullRequest.unavailable": "拉取请求暂不可用",
   "pullRequest.githubCliRequiredDescription":
-    "OmniMind 仅通过 gh CLI 读取 GitHub 数据。安装后请重新打开此页面。",
+    "HarnessOS 仅通过 gh CLI 读取 GitHub 数据。安装后请重新打开此页面。",
   "pullRequest.githubCliSignInDescription": "请在终端中登录 GitHub CLI，然后重试。",
   "pullRequest.requestFailed": "拉取请求失败。",
   "pullRequest.installInstructions": "安装说明",

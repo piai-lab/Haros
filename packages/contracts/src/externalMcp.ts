@@ -3,7 +3,7 @@ import { Schema } from "effect";
 import { IsoDateTime, ProjectId, ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
 import { EngineKind, RuntimeMode } from "./orchestration";
 
-export const EXTERNAL_MCP_AUDIENCE = "omnimind.external-mcp" as const;
+export const EXTERNAL_MCP_AUDIENCE = "harnessos.external-mcp" as const;
 export const EXTERNAL_MCP_MAX_PROMPT_CHARS = 100_000;
 export const EXTERNAL_MCP_MAX_REQUEST_ID_LENGTH = 256;
 export const EXTERNAL_MCP_DEFAULT_WAIT_MS = 30_000;

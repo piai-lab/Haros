@@ -264,12 +264,12 @@ export function ExternalConnectionsSettingsPanel(props: { active: boolean }) {
             }
           />
           <SettingsRow
-            title={t("settings.accessAllOmniMind")}
-            description={t("settings.accessAllOmniMindDescription")}
+            title={t("settings.accessAllHarnessOS")}
+            description={t("settings.accessAllHarnessOSDescription")}
             control={
               <Switch
                 checked={allProjects}
-                aria-label={t("settings.accessAllOmniMind")}
+                aria-label={t("settings.accessAllHarnessOS")}
                 onCheckedChange={setAllProjects}
               />
             }

@@ -779,7 +779,7 @@ describe("store projection", () => {
     expect(threadsOf(next)[0]?.engineSelection.model).toBe("claude-sonnet-5");
   });
 
-  it("preserves OmniMind Agent as the active session engine", () => {
+  it("preserves HarnessOS Agent as the active session engine", () => {
     const initialState = makeState(makeThread());
     const readModel = makeReadModel(
       makeReadModelThread({
@@ -793,7 +793,7 @@ describe("store projection", () => {
           providerName: "oa",
           runtimeMode: "full-access",
           activeTurnId: null,
-          lastError: "OmniMind Agent credentials are not configured.",
+          lastError: "HarnessOS Agent credentials are not configured.",
           updatedAt: "2026-02-27T00:00:00.000Z",
         },
       }),

@@ -23,13 +23,13 @@ const MAX_CONTEXT_ANCESTORS = 4;
 const MAX_DOM_ELEMENTS_VISITED = 20_000;
 const MAX_VISIBLE_TEXT_NODES_VISITED = 20_000;
 const MAX_SCREENSHOT_BYTES = 8 * 1024 * 1024;
-export const BROWSER_AUTOMATION_WORLD_NAME = "omnimind-browser-automation-v1";
+export const BROWSER_AUTOMATION_WORLD_NAME = "harnessos-browser-automation-v1";
 
 // Shared by snapshots and locator resolution so whichever operation reaches a
 // page first installs the same bounded state without making ordinary locators
 // pay the cost of the semantic fingerprint helpers.
 export const BROWSER_AUTOMATION_BASE_STATE_BOOTSTRAP = String.raw`
-  const key = "__omnimindBrowserAutomationV1";
+  const key = "__harnessosBrowserAutomationV1";
   let state = globalThis[key];
   if (!state || typeof state !== "object") {
     state = {};

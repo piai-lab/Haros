@@ -138,60 +138,60 @@ import {
 } from "./orchestration";
 import { EngineCompactThreadInput } from "./engine";
 import {
-  OmniMindCustomModelServiceRemoveInput,
-  OmniMindCustomModelServiceRemoveResult,
-  OmniMindCustomModelServiceSaveInput,
-  OmniMindCustomModelServiceSaveResult,
-  OmniMindCustomModelServiceDiscoverInput,
-  OmniMindCustomModelServiceDiscoverResult,
-  OmniMindCustomModelServiceTestInput,
-  OmniMindCustomModelServiceTestResult,
-  OmniMindModelServiceAnswerLoginInput,
-  OmniMindModelServiceAuthResult,
-  OmniMindModelServiceBeginLoginInput,
-  OmniMindModelServiceCancelLoginInput,
-  OmniMindModelServicePollLoginInput,
-  OmniMindModelServiceLogoutInput,
-  OmniMindModelServiceLogoutResult,
-  OmniMindModelServiceRevealApiKeyInput,
-  OmniMindModelServiceRevealApiKeyResult,
-  OmniMindModelServiceRefreshInput,
-  OmniMindModelServiceRefreshResult,
-  OmniMindModelServicesGetInput,
-  OmniMindModelServicesGetResult,
-  OmniMindModelServicesListInput,
-  OmniMindModelServicesListResult,
-} from "./omnimindModelServices";
+  HarnessOSCustomModelServiceRemoveInput,
+  HarnessOSCustomModelServiceRemoveResult,
+  HarnessOSCustomModelServiceSaveInput,
+  HarnessOSCustomModelServiceSaveResult,
+  HarnessOSCustomModelServiceDiscoverInput,
+  HarnessOSCustomModelServiceDiscoverResult,
+  HarnessOSCustomModelServiceTestInput,
+  HarnessOSCustomModelServiceTestResult,
+  OAModelServiceAnswerLoginInput,
+  OAModelServiceAuthResult,
+  OAModelServiceBeginLoginInput,
+  OAModelServiceCancelLoginInput,
+  OAModelServicePollLoginInput,
+  OAModelServiceLogoutInput,
+  OAModelServiceLogoutResult,
+  OAModelServiceRevealApiKeyInput,
+  OAModelServiceRevealApiKeyResult,
+  OAModelServiceRefreshInput,
+  OAModelServiceRefreshResult,
+  OAModelServicesGetInput,
+  OAModelServicesGetResult,
+  OAModelServicesListInput,
+  OAModelServicesListResult,
+} from "./oaModelServices";
 import {
-  OmniMindEcosystemInstallInput,
-  OmniMindEcosystemListInput,
-  OmniMindEcosystemListResourcesResult,
-  OmniMindEcosystemMutationResult,
-  OmniMindEcosystemPackageInput,
-  OmniMindEcosystemReloadInput,
-  OmniMindEcosystemReloadResult,
-  OmniMindEcosystemResourceToggleInput,
-  OmniMindEcosystemSnapshot,
-} from "./omnimindEcosystem";
+  OAEcosystemInstallInput,
+  OAEcosystemListInput,
+  OAEcosystemListResourcesResult,
+  OAEcosystemMutationResult,
+  OAEcosystemPackageInput,
+  OAEcosystemReloadInput,
+  OAEcosystemReloadResult,
+  OAEcosystemResourceToggleInput,
+  OAEcosystemSnapshot,
+} from "./oaEcosystem";
 import {
-  OmniMindAgentPromptGetSnapshotInput,
-  OmniMindAgentPromptMutationInput,
-  OmniMindAgentPromptMutationResult,
-  OmniMindAgentPromptSnapshot,
-} from "./omnimindAgentPrompts";
+  OAAgentPromptGetSnapshotInput,
+  OAAgentPromptMutationInput,
+  OAAgentPromptMutationResult,
+  OAAgentPromptSnapshot,
+} from "./oaAgentPrompts";
 import {
-  OmniMindWebSearchGeminiDiagnosticInput,
-  OmniMindWebSearchGeminiDiagnosticResult,
-  OmniMindWebSearchMutationInput,
-  OmniMindWebSearchMutationResult,
-  OmniMindWebSearchOpenConfigInput,
-  OmniMindWebSearchOpenInput,
-  OmniMindWebSearchProbeResult,
-  OmniMindWebSearchProviderTestInput,
-  OmniMindWebSearchReadResult,
-  OmniMindWebSearchRecheckInput,
-  OmniMindWebSearchRefreshInput,
-} from "./omnimindWebSearch";
+  OAWebSearchGeminiDiagnosticInput,
+  OAWebSearchGeminiDiagnosticResult,
+  OAWebSearchMutationInput,
+  OAWebSearchMutationResult,
+  OAWebSearchOpenConfigInput,
+  OAWebSearchOpenInput,
+  OAWebSearchProbeResult,
+  OAWebSearchProviderTestInput,
+  OAWebSearchReadResult,
+  OAWebSearchRecheckInput,
+  OAWebSearchRefreshInput,
+} from "./oaWebSearch";
 import {
   EngineGetComposerCapabilitiesInput,
   EngineComposerCapabilities,
@@ -1239,196 +1239,160 @@ export const WsProviderListAgentsRpc = Rpc.make(WS_METHODS.providerListAgents, {
   error: WsRpcError,
 });
 
-export const WsOmniMindModelServicesListRpc = Rpc.make(WS_METHODS.omnimindModelServicesList, {
-  payload: OmniMindModelServicesListInput,
-  success: OmniMindModelServicesListResult,
+export const WsOAModelServicesListRpc = Rpc.make(WS_METHODS.oaModelServicesList, {
+  payload: OAModelServicesListInput,
+  success: OAModelServicesListResult,
   error: WsRpcError,
 });
 
-export const WsOmniMindModelServicesGetRpc = Rpc.make(WS_METHODS.omnimindModelServicesGet, {
-  payload: OmniMindModelServicesGetInput,
-  success: OmniMindModelServicesGetResult,
+export const WsOAModelServicesGetRpc = Rpc.make(WS_METHODS.oaModelServicesGet, {
+  payload: OAModelServicesGetInput,
+  success: OAModelServicesGetResult,
   error: WsRpcError,
 });
 
-export const WsOmniMindModelServicesBeginLoginRpc = Rpc.make(
-  WS_METHODS.omnimindModelServicesBeginLogin,
-  {
-    payload: OmniMindModelServiceBeginLoginInput,
-    success: OmniMindModelServiceAuthResult,
-    error: WsRpcError,
-  },
-);
-export const WsOmniMindModelServicesPollLoginRpc = Rpc.make(
-  WS_METHODS.omnimindModelServicesPollLogin,
-  {
-    payload: OmniMindModelServicePollLoginInput,
-    success: OmniMindModelServiceAuthResult,
-    error: WsRpcError,
-  },
-);
-export const WsOmniMindModelServicesAnswerLoginRpc = Rpc.make(
-  WS_METHODS.omnimindModelServicesAnswerLogin,
-  {
-    payload: OmniMindModelServiceAnswerLoginInput,
-    success: OmniMindModelServiceAuthResult,
-    error: WsRpcError,
-  },
-);
-export const WsOmniMindModelServicesCancelLoginRpc = Rpc.make(
-  WS_METHODS.omnimindModelServicesCancelLogin,
-  {
-    payload: OmniMindModelServiceCancelLoginInput,
-    success: OmniMindModelServiceAuthResult,
-    error: WsRpcError,
-  },
-);
-export const WsOmniMindModelServicesLogoutRpc = Rpc.make(WS_METHODS.omnimindModelServicesLogout, {
-  payload: OmniMindModelServiceLogoutInput,
-  success: OmniMindModelServiceLogoutResult,
+export const WsOAModelServicesBeginLoginRpc = Rpc.make(WS_METHODS.oaModelServicesBeginLogin, {
+  payload: OAModelServiceBeginLoginInput,
+  success: OAModelServiceAuthResult,
   error: WsRpcError,
 });
-export const WsOmniMindModelServicesRevealApiKeyRpc = Rpc.make(
-  WS_METHODS.omnimindModelServicesRevealApiKey,
-  {
-    payload: OmniMindModelServiceRevealApiKeyInput,
-    success: OmniMindModelServiceRevealApiKeyResult,
-    error: WsRpcError,
-  },
-);
-export const WsOmniMindModelServicesRefreshRpc = Rpc.make(WS_METHODS.omnimindModelServicesRefresh, {
-  payload: OmniMindModelServiceRefreshInput,
-  success: OmniMindModelServiceRefreshResult,
+export const WsOAModelServicesPollLoginRpc = Rpc.make(WS_METHODS.oaModelServicesPollLogin, {
+  payload: OAModelServicePollLoginInput,
+  success: OAModelServiceAuthResult,
   error: WsRpcError,
 });
-export const WsOmniMindModelServicesDiscoverCustomRpc = Rpc.make(
-  WS_METHODS.omnimindModelServicesDiscoverCustom,
+export const WsOAModelServicesAnswerLoginRpc = Rpc.make(WS_METHODS.oaModelServicesAnswerLogin, {
+  payload: OAModelServiceAnswerLoginInput,
+  success: OAModelServiceAuthResult,
+  error: WsRpcError,
+});
+export const WsOAModelServicesCancelLoginRpc = Rpc.make(WS_METHODS.oaModelServicesCancelLogin, {
+  payload: OAModelServiceCancelLoginInput,
+  success: OAModelServiceAuthResult,
+  error: WsRpcError,
+});
+export const WsOAModelServicesLogoutRpc = Rpc.make(WS_METHODS.oaModelServicesLogout, {
+  payload: OAModelServiceLogoutInput,
+  success: OAModelServiceLogoutResult,
+  error: WsRpcError,
+});
+export const WsOAModelServicesRevealApiKeyRpc = Rpc.make(WS_METHODS.oaModelServicesRevealApiKey, {
+  payload: OAModelServiceRevealApiKeyInput,
+  success: OAModelServiceRevealApiKeyResult,
+  error: WsRpcError,
+});
+export const WsOAModelServicesRefreshRpc = Rpc.make(WS_METHODS.oaModelServicesRefresh, {
+  payload: OAModelServiceRefreshInput,
+  success: OAModelServiceRefreshResult,
+  error: WsRpcError,
+});
+export const WsOAModelServicesDiscoverCustomRpc = Rpc.make(
+  WS_METHODS.oaModelServicesDiscoverCustom,
   {
-    payload: OmniMindCustomModelServiceDiscoverInput,
-    success: OmniMindCustomModelServiceDiscoverResult,
+    payload: HarnessOSCustomModelServiceDiscoverInput,
+    success: HarnessOSCustomModelServiceDiscoverResult,
     error: WsRpcError,
   },
 );
-export const WsOmniMindModelServicesTestCustomRpc = Rpc.make(
-  WS_METHODS.omnimindModelServicesTestCustom,
-  {
-    payload: OmniMindCustomModelServiceTestInput,
-    success: OmniMindCustomModelServiceTestResult,
-    error: WsRpcError,
-  },
-);
-export const WsOmniMindModelServicesSaveCustomRpc = Rpc.make(
-  WS_METHODS.omnimindModelServicesSaveCustom,
-  {
-    payload: OmniMindCustomModelServiceSaveInput,
-    success: OmniMindCustomModelServiceSaveResult,
-    error: WsRpcError,
-  },
-);
-export const WsOmniMindModelServicesRemoveCustomRpc = Rpc.make(
-  WS_METHODS.omnimindModelServicesRemoveCustom,
-  {
-    payload: OmniMindCustomModelServiceRemoveInput,
-    success: OmniMindCustomModelServiceRemoveResult,
-    error: WsRpcError,
-  },
-);
+export const WsOAModelServicesTestCustomRpc = Rpc.make(WS_METHODS.oaModelServicesTestCustom, {
+  payload: HarnessOSCustomModelServiceTestInput,
+  success: HarnessOSCustomModelServiceTestResult,
+  error: WsRpcError,
+});
+export const WsOAModelServicesSaveCustomRpc = Rpc.make(WS_METHODS.oaModelServicesSaveCustom, {
+  payload: HarnessOSCustomModelServiceSaveInput,
+  success: HarnessOSCustomModelServiceSaveResult,
+  error: WsRpcError,
+});
+export const WsOAModelServicesRemoveCustomRpc = Rpc.make(WS_METHODS.oaModelServicesRemoveCustom, {
+  payload: HarnessOSCustomModelServiceRemoveInput,
+  success: HarnessOSCustomModelServiceRemoveResult,
+  error: WsRpcError,
+});
 
-export const WsOmniMindEcosystemListRpc = Rpc.make(WS_METHODS.omnimindEcosystemList, {
-  payload: OmniMindEcosystemListInput,
-  success: OmniMindEcosystemSnapshot,
+export const WsOAEcosystemListRpc = Rpc.make(WS_METHODS.oaEcosystemList, {
+  payload: OAEcosystemListInput,
+  success: OAEcosystemSnapshot,
   error: WsRpcError,
 });
-export const WsOmniMindEcosystemListResourcesRpc = Rpc.make(
-  WS_METHODS.omnimindEcosystemListResources,
+export const WsOAEcosystemListResourcesRpc = Rpc.make(WS_METHODS.oaEcosystemListResources, {
+  payload: OAEcosystemPackageInput,
+  success: OAEcosystemListResourcesResult,
+  error: WsRpcError,
+});
+export const WsOAEcosystemInstallRpc = Rpc.make(WS_METHODS.oaEcosystemInstall, {
+  payload: OAEcosystemInstallInput,
+  success: OAEcosystemMutationResult,
+  error: WsRpcError,
+});
+export const WsOAEcosystemUpdateRpc = Rpc.make(WS_METHODS.oaEcosystemUpdate, {
+  payload: OAEcosystemPackageInput,
+  success: OAEcosystemMutationResult,
+  error: WsRpcError,
+});
+export const WsOAEcosystemRemoveRpc = Rpc.make(WS_METHODS.oaEcosystemRemove, {
+  payload: OAEcosystemPackageInput,
+  success: OAEcosystemMutationResult,
+  error: WsRpcError,
+});
+export const WsOAEcosystemSetResourceEnabledRpc = Rpc.make(
+  WS_METHODS.oaEcosystemSetResourceEnabled,
   {
-    payload: OmniMindEcosystemPackageInput,
-    success: OmniMindEcosystemListResourcesResult,
+    payload: OAEcosystemResourceToggleInput,
+    success: OAEcosystemMutationResult,
     error: WsRpcError,
   },
 );
-export const WsOmniMindEcosystemInstallRpc = Rpc.make(WS_METHODS.omnimindEcosystemInstall, {
-  payload: OmniMindEcosystemInstallInput,
-  success: OmniMindEcosystemMutationResult,
+export const WsOAEcosystemReloadRpc = Rpc.make(WS_METHODS.oaEcosystemReload, {
+  payload: OAEcosystemReloadInput,
+  success: OAEcosystemReloadResult,
   error: WsRpcError,
 });
-export const WsOmniMindEcosystemUpdateRpc = Rpc.make(WS_METHODS.omnimindEcosystemUpdate, {
-  payload: OmniMindEcosystemPackageInput,
-  success: OmniMindEcosystemMutationResult,
+export const WsOAAgentPromptsGetSnapshotRpc = Rpc.make(WS_METHODS.oaAgentPromptsGetSnapshot, {
+  payload: OAAgentPromptGetSnapshotInput,
+  success: OAAgentPromptSnapshot,
   error: WsRpcError,
 });
-export const WsOmniMindEcosystemRemoveRpc = Rpc.make(WS_METHODS.omnimindEcosystemRemove, {
-  payload: OmniMindEcosystemPackageInput,
-  success: OmniMindEcosystemMutationResult,
+export const WsOAAgentPromptsMutateRpc = Rpc.make(WS_METHODS.oaAgentPromptsMutate, {
+  payload: OAAgentPromptMutationInput,
+  success: OAAgentPromptMutationResult,
   error: WsRpcError,
 });
-export const WsOmniMindEcosystemSetResourceEnabledRpc = Rpc.make(
-  WS_METHODS.omnimindEcosystemSetResourceEnabled,
-  {
-    payload: OmniMindEcosystemResourceToggleInput,
-    success: OmniMindEcosystemMutationResult,
-    error: WsRpcError,
-  },
-);
-export const WsOmniMindEcosystemReloadRpc = Rpc.make(WS_METHODS.omnimindEcosystemReload, {
-  payload: OmniMindEcosystemReloadInput,
-  success: OmniMindEcosystemReloadResult,
+export const WsOAWebSearchOpenRpc = Rpc.make(WS_METHODS.oaWebSearchOpen, {
+  payload: OAWebSearchOpenInput,
+  success: OAWebSearchReadResult,
   error: WsRpcError,
 });
-export const WsOmniMindAgentPromptsGetSnapshotRpc = Rpc.make(
-  WS_METHODS.omnimindAgentPromptsGetSnapshot,
-  {
-    payload: OmniMindAgentPromptGetSnapshotInput,
-    success: OmniMindAgentPromptSnapshot,
-    error: WsRpcError,
-  },
-);
-export const WsOmniMindAgentPromptsMutateRpc = Rpc.make(WS_METHODS.omnimindAgentPromptsMutate, {
-  payload: OmniMindAgentPromptMutationInput,
-  success: OmniMindAgentPromptMutationResult,
+export const WsOAWebSearchRefreshRpc = Rpc.make(WS_METHODS.oaWebSearchRefresh, {
+  payload: OAWebSearchRefreshInput,
+  success: OAWebSearchReadResult,
   error: WsRpcError,
 });
-export const WsOmniMindWebSearchOpenRpc = Rpc.make(WS_METHODS.omnimindWebSearchOpen, {
-  payload: OmniMindWebSearchOpenInput,
-  success: OmniMindWebSearchReadResult,
+export const WsOAWebSearchMutateRpc = Rpc.make(WS_METHODS.oaWebSearchMutate, {
+  payload: OAWebSearchMutationInput,
+  success: OAWebSearchMutationResult,
   error: WsRpcError,
 });
-export const WsOmniMindWebSearchRefreshRpc = Rpc.make(WS_METHODS.omnimindWebSearchRefresh, {
-  payload: OmniMindWebSearchRefreshInput,
-  success: OmniMindWebSearchReadResult,
+export const WsOAWebSearchTestProviderRpc = Rpc.make(WS_METHODS.oaWebSearchTestProvider, {
+  payload: OAWebSearchProviderTestInput,
+  success: OAWebSearchProbeResult,
   error: WsRpcError,
 });
-export const WsOmniMindWebSearchMutateRpc = Rpc.make(WS_METHODS.omnimindWebSearchMutate, {
-  payload: OmniMindWebSearchMutationInput,
-  success: OmniMindWebSearchMutationResult,
+export const WsOAWebSearchRecheckRpc = Rpc.make(WS_METHODS.oaWebSearchRecheck, {
+  payload: OAWebSearchRecheckInput,
+  success: OAWebSearchProbeResult,
   error: WsRpcError,
 });
-export const WsOmniMindWebSearchTestProviderRpc = Rpc.make(
-  WS_METHODS.omnimindWebSearchTestProvider,
-  {
-    payload: OmniMindWebSearchProviderTestInput,
-    success: OmniMindWebSearchProbeResult,
-    error: WsRpcError,
-  },
-);
-export const WsOmniMindWebSearchRecheckRpc = Rpc.make(WS_METHODS.omnimindWebSearchRecheck, {
-  payload: OmniMindWebSearchRecheckInput,
-  success: OmniMindWebSearchProbeResult,
-  error: WsRpcError,
-});
-export const WsOmniMindWebSearchOpenConfigRpc = Rpc.make(WS_METHODS.omnimindWebSearchOpenConfig, {
-  payload: OmniMindWebSearchOpenConfigInput,
+export const WsOAWebSearchOpenConfigRpc = Rpc.make(WS_METHODS.oaWebSearchOpenConfig, {
+  payload: OAWebSearchOpenConfigInput,
   success: Schema.Void,
   error: WsRpcError,
 });
-export const WsOmniMindWebSearchGeminiDiagnosticRpc = Rpc.make(
-  WS_METHODS.omnimindWebSearchGeminiDiagnostic,
-  {
-    payload: OmniMindWebSearchGeminiDiagnosticInput,
-    success: OmniMindWebSearchGeminiDiagnosticResult,
-    error: WsRpcError,
-  },
-);
+export const WsOAWebSearchGeminiDiagnosticRpc = Rpc.make(WS_METHODS.oaWebSearchGeminiDiagnostic, {
+  payload: OAWebSearchGeminiDiagnosticInput,
+  success: OAWebSearchGeminiDiagnosticResult,
+  error: WsRpcError,
+});
 
 export const WsAutomationListRpc = Rpc.make(WS_METHODS.automationList, {
   payload: AutomationListInput,
@@ -1623,36 +1587,36 @@ const WsServerAndProviderRpcGroup = RpcGroup.make(
   WsProviderListAgentsRpc,
 );
 
-const WsOmniMindAndAutomationRpcGroup = RpcGroup.make(
-  WsOmniMindModelServicesListRpc,
-  WsOmniMindModelServicesGetRpc,
-  WsOmniMindModelServicesBeginLoginRpc,
-  WsOmniMindModelServicesPollLoginRpc,
-  WsOmniMindModelServicesAnswerLoginRpc,
-  WsOmniMindModelServicesCancelLoginRpc,
-  WsOmniMindModelServicesLogoutRpc,
-  WsOmniMindModelServicesRevealApiKeyRpc,
-  WsOmniMindModelServicesRefreshRpc,
-  WsOmniMindModelServicesDiscoverCustomRpc,
-  WsOmniMindModelServicesTestCustomRpc,
-  WsOmniMindModelServicesSaveCustomRpc,
-  WsOmniMindModelServicesRemoveCustomRpc,
-  WsOmniMindEcosystemListRpc,
-  WsOmniMindEcosystemListResourcesRpc,
-  WsOmniMindEcosystemInstallRpc,
-  WsOmniMindEcosystemUpdateRpc,
-  WsOmniMindEcosystemRemoveRpc,
-  WsOmniMindEcosystemSetResourceEnabledRpc,
-  WsOmniMindEcosystemReloadRpc,
-  WsOmniMindAgentPromptsGetSnapshotRpc,
-  WsOmniMindAgentPromptsMutateRpc,
-  WsOmniMindWebSearchOpenRpc,
-  WsOmniMindWebSearchRefreshRpc,
-  WsOmniMindWebSearchMutateRpc,
-  WsOmniMindWebSearchTestProviderRpc,
-  WsOmniMindWebSearchRecheckRpc,
-  WsOmniMindWebSearchOpenConfigRpc,
-  WsOmniMindWebSearchGeminiDiagnosticRpc,
+const WsHarnessOSAndAutomationRpcGroup = RpcGroup.make(
+  WsOAModelServicesListRpc,
+  WsOAModelServicesGetRpc,
+  WsOAModelServicesBeginLoginRpc,
+  WsOAModelServicesPollLoginRpc,
+  WsOAModelServicesAnswerLoginRpc,
+  WsOAModelServicesCancelLoginRpc,
+  WsOAModelServicesLogoutRpc,
+  WsOAModelServicesRevealApiKeyRpc,
+  WsOAModelServicesRefreshRpc,
+  WsOAModelServicesDiscoverCustomRpc,
+  WsOAModelServicesTestCustomRpc,
+  WsOAModelServicesSaveCustomRpc,
+  WsOAModelServicesRemoveCustomRpc,
+  WsOAEcosystemListRpc,
+  WsOAEcosystemListResourcesRpc,
+  WsOAEcosystemInstallRpc,
+  WsOAEcosystemUpdateRpc,
+  WsOAEcosystemRemoveRpc,
+  WsOAEcosystemSetResourceEnabledRpc,
+  WsOAEcosystemReloadRpc,
+  WsOAAgentPromptsGetSnapshotRpc,
+  WsOAAgentPromptsMutateRpc,
+  WsOAWebSearchOpenRpc,
+  WsOAWebSearchRefreshRpc,
+  WsOAWebSearchMutateRpc,
+  WsOAWebSearchTestProviderRpc,
+  WsOAWebSearchRecheckRpc,
+  WsOAWebSearchOpenConfigRpc,
+  WsOAWebSearchGeminiDiagnosticRpc,
   WsAutomationListRpc,
   WsAutomationGetMemoryRpc,
   WsAutomationCreateRpc,
@@ -1670,13 +1634,13 @@ type WsFeatureRpc =
   | RpcGroup.Rpcs<typeof WsOrchestrationAndProjectRpcGroup>
   | RpcGroup.Rpcs<typeof WsGitAndTerminalRpcGroup>
   | RpcGroup.Rpcs<typeof WsServerAndProviderRpcGroup>
-  | RpcGroup.Rpcs<typeof WsOmniMindAndAutomationRpcGroup>;
+  | RpcGroup.Rpcs<typeof WsHarnessOSAndAutomationRpcGroup>;
 
 export const WsFeatureRpcGroup: RpcGroup.RpcGroup<WsFeatureRpc> =
   WsOrchestrationAndProjectRpcGroup.merge(
     WsGitAndTerminalRpcGroup,
     WsServerAndProviderRpcGroup,
-    WsOmniMindAndAutomationRpcGroup,
+    WsHarnessOSAndAutomationRpcGroup,
   );
 
 /** @deprecated Use WsFeatureRpcGroup. Bootstrap is intentionally a separate endpoint/group. */

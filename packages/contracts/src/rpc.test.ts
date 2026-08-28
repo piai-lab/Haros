@@ -26,21 +26,19 @@ describe("WS RPC contracts", () => {
     expect(WsFeatureRpcGroup.requests.has(ORCHESTRATION_WS_METHODS.reconcileProviderDelivery)).toBe(
       true,
     );
-    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesList)).toBe(true);
-    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesGet)).toBe(true);
-    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesBeginLogin)).toBe(true);
-    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesAnswerLogin)).toBe(true);
-    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesCancelLogin)).toBe(true);
-    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesLogout)).toBe(true);
-    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesRevealApiKey)).toBe(true);
-    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesRefresh)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.oaModelServicesList)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.oaModelServicesGet)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.oaModelServicesBeginLogin)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.oaModelServicesAnswerLogin)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.oaModelServicesCancelLogin)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.oaModelServicesLogout)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.oaModelServicesRevealApiKey)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.oaModelServicesRefresh)).toBe(true);
     expect(WsFeatureRpcGroup.requests.has(WS_METHODS.projectsSearchContent)).toBe(true);
-    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesDiscoverCustom)).toBe(
-      true,
-    );
-    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesTestCustom)).toBe(true);
-    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesSaveCustom)).toBe(true);
-    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesRemoveCustom)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.oaModelServicesDiscoverCustom)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.oaModelServicesTestCustom)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.oaModelServicesSaveCustom)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.oaModelServicesRemoveCustom)).toBe(true);
   });
 
   it("uses a schema-backed transport error", () => {

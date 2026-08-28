@@ -17,7 +17,7 @@ layer("078_ExternalMcpLiveTurnCapacity", (it) => {
           integration_id, name, client_kind, audience, capabilities_json,
           created_at, expires_at, rate_limit_per_minute, concurrency_limit
         ) VALUES (
-          'integration-migration-78', 'Migration 78', 'other', 'omnimind.external-mcp',
+          'integration-migration-78', 'Migration 78', 'other', 'harnessos.external-mcp',
           '[]', '2026-07-21T00:00:00.000Z', '2027-07-21T00:00:00.000Z', 60, 1
         )
       `;

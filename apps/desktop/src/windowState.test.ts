@@ -45,7 +45,7 @@ describe("desktop window state", () => {
   });
 
   it("round-trips state through the filesystem", () => {
-    const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "omnimind-window-state-"));
+    const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "harnessos-window-state-"));
     temporaryDirectories.push(directory);
     const filePath = Path.join(directory, "nested", "window-state.json");
     const state = {

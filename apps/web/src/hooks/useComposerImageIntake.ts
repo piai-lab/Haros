@@ -73,7 +73,7 @@ export class ComposerImageIntakeQueue {
       })
       .catch((cause) => {
         if (this.#isStale(generation)) return;
-        job.onError(cause instanceof Error ? cause.message : "OmniMind could not prepare image.");
+        job.onError(cause instanceof Error ? cause.message : "HarnessOS could not prepare image.");
       })
       .finally(() => this.#setPendingCount(Math.max(0, this.#pendingCount - job.files.length)));
     this.#tail = task;

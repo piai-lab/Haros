@@ -56,7 +56,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
   }
 
   const site = await startVisibleBrowserFixtureSite();
-  const home = mkdtempSync(join(tmpdir(), "omnimind-annotations-e2e-"));
+  const home = mkdtempSync(join(tmpdir(), "harnessos-annotations-e2e-"));
   const workspaceRoot = join(home, "workspace");
   mkdirSync(workspaceRoot);
   const pipePath = join(home, "browser-host.sock");
@@ -117,7 +117,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
         (_electron, input) => {
           const manager = (
             globalThis as typeof globalThis & {
-              __omnimindVisibleBrowserE2E: {
+              __harnessosVisibleBrowserE2E: {
                 browserManager: {
                   runtimes: Map<
                     string,
@@ -126,7 +126,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
                 };
               };
             }
-          ).__omnimindVisibleBrowserE2E.browserManager;
+          ).__harnessosVisibleBrowserE2E.browserManager;
           const runtime = manager.runtimes.get(`${input.threadId}:${input.tabId}`);
           if (!runtime) throw new Error("Expected the native annotation runtime to be live.");
           runtime.webContents.sendInputEvent(input.event);
@@ -138,13 +138,13 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
         (_electron, input) => {
           const manager = (
             globalThis as typeof globalThis & {
-              __omnimindVisibleBrowserE2E: {
+              __harnessosVisibleBrowserE2E: {
                 browserManager: {
                   runtimes: Map<string, { webContents: { insertText(text: string): void } }>;
                 };
               };
             }
-          ).__omnimindVisibleBrowserE2E.browserManager;
+          ).__harnessosVisibleBrowserE2E.browserManager;
           const runtime = manager.runtimes.get(`${input.threadId}:${input.tabId}`);
           if (!runtime) throw new Error("Expected the native annotation runtime to be live.");
           runtime.webContents.insertText(input.text);
@@ -197,7 +197,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
         (_electron, input) => {
           const fixture = (
             globalThis as typeof globalThis & {
-              __omnimindVisibleBrowserE2E: {
+              __harnessosVisibleBrowserE2E: {
                 browserManager: {
                   getVisibleAutomationRuntime(value: { threadId: string; tabId: string }): {
                     webContents: { executeJavaScript(script: string): Promise<unknown> };
@@ -205,7 +205,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
                 };
               };
             }
-          ).__omnimindVisibleBrowserE2E;
+          ).__harnessosVisibleBrowserE2E;
           return fixture.browserManager
             .getVisibleAutomationRuntime({ threadId: input.threadId, tabId: input.tabId })
             .webContents.executeJavaScript(input.script);
@@ -224,11 +224,11 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
         (_electron, input) => {
           const fixture = (
             globalThis as typeof globalThis & {
-              __omnimindVisibleBrowserE2E: {
+              __harnessosVisibleBrowserE2E: {
                 browserManager: Record<string, (value: unknown) => unknown>;
               };
             }
-          ).__omnimindVisibleBrowserE2E;
+          ).__harnessosVisibleBrowserE2E;
           return fixture.browserManager[input.method]?.(input.payload) ?? null;
         },
         { method, payload },
@@ -238,9 +238,9 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
       electronApp.evaluate(() => {
         const fixture = (
           globalThis as typeof globalThis & {
-            __omnimindVisibleBrowserE2E: { annotationEvents: BrowserAnnotationEvent[] };
+            __harnessosVisibleBrowserE2E: { annotationEvents: BrowserAnnotationEvent[] };
           }
-        ).__omnimindVisibleBrowserE2E;
+        ).__harnessosVisibleBrowserE2E;
         return fixture.annotationEvents;
       });
     const annotationEventKinds = async (): Promise<string[]> =>
@@ -273,7 +273,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
     // would highlight one element while the real pointer sat on another, and a
     // synthetic Enter would publish a half-typed comment.
     const spoofingReachedOverlayHost = await runInGuest(
-      "(() => { const host = document.querySelector('[data-omnimind-browser-annotations]'); document.dispatchEvent(new PointerEvent('pointermove', { clientX: 3, clientY: 3, bubbles: true })); document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); host?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); return host !== null; })()",
+      "(() => { const host = document.querySelector('[data-harnessos-browser-annotations]'); document.dispatchEvent(new PointerEvent('pointermove', { clientX: 3, clientY: 3, bubbles: true })); document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); host?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); return host !== null; })()",
     );
     expect(spoofingReachedOverlayHost).toBe(true);
     const kindsAfterSpoofing = await annotationEventKinds();
@@ -308,7 +308,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
       .poll(
         () =>
           runInGuest(
-            "document.activeElement?.matches('[data-omnimind-browser-annotations]') ?? false",
+            "document.activeElement?.matches('[data-harnessos-browser-annotations]') ?? false",
           ),
         { timeout: 5_000, intervals: [25, 50, 100] },
       )

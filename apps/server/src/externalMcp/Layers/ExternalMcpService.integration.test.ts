@@ -43,7 +43,7 @@ const layer = ExternalMcpServiceLive.pipe(
       getThreadShellById: () => Effect.succeed({ _tag: "None" }),
     } as never),
   ),
-  Layer.provide(Layer.succeed(ServerConfig, { baseDir: "/tmp/omnimind-test" } as never)),
+  Layer.provide(Layer.succeed(ServerConfig, { baseDir: "/tmp/harnessos-test" } as never)),
 );
 
 const run = <A, E>(effect: Effect.Effect<A, E, ExternalMcpService | SqlClient.SqlClient>) =>
@@ -81,7 +81,7 @@ describe("ExternalMcpService", () => {
         expect(created.setupCommand).toContain("syn_pair_v1_");
         expect(created.stdio.command).toBe(process.execPath);
         expect(created.stdio.args).toContain(created.integration.integrationId);
-        expect(created.stdio.args).toContain("/tmp/omnimind-test");
+        expect(created.stdio.args).toContain("/tmp/harnessos-test");
         expect(JSON.stringify(created.integration)).not.toContain("credential");
         const credential = "syn_mcp_v1_client-generated-secret";
         const paired = yield* service.pair(created.pairingCode, credential);

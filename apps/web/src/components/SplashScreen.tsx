@@ -2,7 +2,7 @@
 // Purpose: Render the branded startup face while the app is still booting a route or session.
 // Layer: Shared app loading presentation
 
-import { OmniMindLogo } from "~/components/OmniMindLogo";
+import { HarnessOSLogo } from "~/components/HarnessOSLogo";
 
 export function SplashScreen({
   errorMessage,
@@ -16,7 +16,7 @@ export function SplashScreen({
   return (
     <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-5 select-none">
-        <OmniMindLogo size={96} variant="satin" aria-label="OmniMind" />
+        <HarnessOSLogo size={96} variant="satin" aria-label="HarnessOS" />
 
         {errorMessage ? (
           <div className="flex max-w-sm flex-col items-center gap-3 px-6 text-center">

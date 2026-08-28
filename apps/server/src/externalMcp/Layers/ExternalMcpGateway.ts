@@ -87,7 +87,7 @@ import {
 } from "../Services/ExternalMcpGateway.ts";
 
 const EXTERNAL_MCP_INSTRUCTIONS =
-  "This is OmniMind's loopback-only external integration. Call harnessos_overview first to discover the allowed projects (with on-disk paths), engine availability, and granted scopes. Tools are restricted to the integration's allowed projects and scopes. Task creation is one task per stable requestId and defaults to a managed worktree with approval-required execution.";
+  "This is HarnessOS's loopback-only external integration. Call harnessos_overview first to discover the allowed projects (with on-disk paths), engine availability, and granted scopes. Tools are restricted to the integration's allowed projects and scopes. Task creation is one task per stable requestId and defaults to a managed worktree with approval-required execution.";
 const MCP_MAX_BATCH_MESSAGES = 50;
 
 interface ExternalToolContext {
@@ -242,7 +242,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
         required: ["projectId"],
         additionalProperties: false,
       },
-      annotations: { title: "OmniMind integration capabilities", ...READ_ONLY_TOOL_ANNOTATIONS },
+      annotations: { title: "HarnessOS integration capabilities", ...READ_ONLY_TOOL_ANNOTATIONS },
     },
     handler: (args, context) =>
       Effect.gen(function* () {
@@ -301,9 +301,9 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
     requiredCapability: "projects:read",
     definition: {
       name: "harnessos_list_allowed_projects",
-      description: "List only the OmniMind projects explicitly granted to this integration.",
+      description: "List only the HarnessOS projects explicitly granted to this integration.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
-      annotations: { title: "List allowed OmniMind projects", ...READ_ONLY_TOOL_ANNOTATIONS },
+      annotations: { title: "List allowed HarnessOS projects", ...READ_ONLY_TOOL_ANNOTATIONS },
     },
     handler: (_args, context) =>
       snapshotQuery.getShellSnapshot().pipe(
@@ -323,9 +323,9 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
     definition: {
       name: "harnessos_overview",
       description:
-        "Discover everything this integration can use in one call: every allowed OmniMind project with its on-disk path and activity, engine availability, granted scopes, and safe defaults. Call this first to orient yourself.",
+        "Discover everything this integration can use in one call: every allowed HarnessOS project with its on-disk path and activity, engine availability, granted scopes, and safe defaults. Call this first to orient yourself.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
-      annotations: { title: "OmniMind overview", ...READ_ONLY_TOOL_ANNOTATIONS },
+      annotations: { title: "HarnessOS overview", ...READ_ONLY_TOOL_ANNOTATIONS },
     },
     handler: (_args, context) =>
       Effect.gen(function* () {
@@ -372,7 +372,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
     definition: {
       name: "harnessos_create_task",
       description:
-        "Create exactly one OmniMind task in an explicitly allowed project. requestId is a stable idempotency key and cannot be reused with a different plan. Defaults to a managed worktree and approval-required runtime.",
+        "Create exactly one HarnessOS task in an explicitly allowed project. requestId is a stable idempotency key and cannot be reused with a different plan. Defaults to a managed worktree and approval-required runtime.",
       inputSchema: {
         type: "object",
         properties: {
@@ -391,7 +391,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
         additionalProperties: false,
       },
       annotations: {
-        title: "Create one OmniMind task",
+        title: "Create one HarnessOS task",
         readOnlyHint: false,
         destructiveHint: true,
         idempotentHint: true,
@@ -470,7 +470,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
         required: ["threadId"],
         additionalProperties: false,
       },
-      annotations: { title: "Read a permitted OmniMind task", ...READ_ONLY_TOOL_ANNOTATIONS },
+      annotations: { title: "Read a permitted HarnessOS task", ...READ_ONLY_TOOL_ANNOTATIONS },
     },
     handler: (args, context) =>
       Effect.gen(function* () {
@@ -514,7 +514,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
         required: ["threadId"],
         additionalProperties: false,
       },
-      annotations: { title: "Wait for a permitted OmniMind task", ...READ_ONLY_TOOL_ANNOTATIONS },
+      annotations: { title: "Wait for a permitted HarnessOS task", ...READ_ONLY_TOOL_ANNOTATIONS },
     },
     handler: (args, context) =>
       Effect.gen(function* () {

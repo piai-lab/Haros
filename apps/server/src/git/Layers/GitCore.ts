@@ -76,7 +76,7 @@ const MAX_UNTRACKED_DIFF_CONCURRENCY = 4;
 const MAX_QUEUED_REPOSITORY_MUTATIONS = 64;
 const MOVE_AWARE_WORKING_TREE_STATUS_TIMEOUT_MS = 15_000;
 const AUTO_DETACHED_WORKTREE_DIRNAME = "oa";
-const WORKTREE_OWNERSHIP_MARKER = "omnimind-agent-gateway-owner.json";
+const WORKTREE_OWNERSHIP_MARKER = "harnessos-agent-gateway-owner.json";
 const WORKTREE_TRANSFER_MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
 const NON_REPOSITORY_STATUS_DETAILS = Object.freeze({
   isRepo: false,
@@ -387,7 +387,7 @@ const createTrace2Monitor = Effect.fn(function* (
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const traceFilePath = yield* fs.makeTempFileScoped({
-    prefix: `omnimind-git-trace2-${process.pid}-`,
+    prefix: `harnessos-git-trace2-${process.pid}-`,
     suffix: ".json",
   });
   const hookStartByChildKey = new Map<string, { hookName: string; startedAtMs: number }>();
@@ -848,7 +848,7 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
           }
 
           const tempIndexDir = yield* fileSystem.makeTempDirectoryScoped({
-            prefix: `omnimind-git-status-index-${process.pid}-`,
+            prefix: `harnessos-git-status-index-${process.pid}-`,
           });
           const tempIndexPath = nodePath.join(tempIndexDir, "index");
           yield* Effect.tryPromise(() =>
@@ -2464,7 +2464,7 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
         if (patch.length > 0) {
           yield* Effect.acquireUseRelease(
             Effect.tryPromise({
-              try: () => nodeFs.mkdtemp(nodePath.join(tmpdir(), "omnimind-worktree-patch-")),
+              try: () => nodeFs.mkdtemp(nodePath.join(tmpdir(), "harnessos-worktree-patch-")),
               catch: (cause) =>
                 createGitCommandError(
                   "GitCore.copyCheckoutChanges",

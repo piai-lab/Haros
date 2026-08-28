@@ -18,7 +18,7 @@ export default Effect.gen(function* () {
         OR stop_after_consecutive_failures >= 1
       )
     `;
-    // OmniMind is pre-public: translate the legacy boolean to the product default instead of
+    // HarnessOS is pre-public: translate the legacy boolean to the product default instead of
     // preserving a one-failure compatibility policy for users that do not exist.
     yield* sql`
       UPDATE automation_definitions

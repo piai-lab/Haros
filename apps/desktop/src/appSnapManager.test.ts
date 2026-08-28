@@ -67,7 +67,7 @@ describe("desktop AppSnap platform state", () => {
     const manager = new DesktopAppSnapManager({
       platform: "darwin",
       helperPath: "/tmp/harnessos-appsnap-helper-that-does-not-exist",
-      captureDirectory: "/tmp/omnimind-appsnap-test",
+      captureDirectory: "/tmp/harnessos-appsnap-test",
       excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       onState: vi.fn(),
       onCaptured: vi.fn(),
@@ -89,7 +89,7 @@ describe("AppSnap shortcut availability", () => {
     const manager = new DesktopAppSnapManager({
       platform: "darwin",
       helperPath: "/tmp/missing-appsnap-helper",
-      captureDirectory: "/tmp/omnimind-appsnap-test",
+      captureDirectory: "/tmp/harnessos-appsnap-test",
       excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       shortcutRegistry: { register, unregister },
       onState: vi.fn(),
@@ -111,7 +111,7 @@ describe("AppSnap shortcut availability", () => {
     const manager = new DesktopAppSnapManager({
       platform: "darwin",
       helperPath: "/tmp/missing-appsnap-helper",
-      captureDirectory: "/tmp/omnimind-appsnap-test",
+      captureDirectory: "/tmp/harnessos-appsnap-test",
       excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       shortcutRegistry: { register: () => false, unregister: vi.fn() },
       onState: vi.fn(),
@@ -145,7 +145,7 @@ describe("AppSnap shortcut availability", () => {
     const manager = new DesktopAppSnapManager({
       platform: "darwin",
       helperPath: process.execPath,
-      captureDirectory: "/tmp/omnimind-appsnap-test",
+      captureDirectory: "/tmp/harnessos-appsnap-test",
       excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       shortcutRegistry: { register, unregister },
@@ -174,7 +174,7 @@ describe("AppSnap shortcut availability", () => {
       [
         "--watch",
         "--output-dir",
-        "/tmp/omnimind-appsnap-test",
+        "/tmp/harnessos-appsnap-test",
         "--excluded-bundle-id",
         HARNESSOS_DEVELOPMENT_BUNDLE_ID,
         "--external-trigger",
@@ -250,7 +250,7 @@ describe("AppSnap helper protocol", () => {
     const manager = new DesktopAppSnapManager({
       platform: "darwin",
       helperPath: process.execPath,
-      captureDirectory: "/tmp/omnimind-appsnap-test",
+      captureDirectory: "/tmp/harnessos-appsnap-test",
       excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       onState: vi.fn(),
@@ -323,7 +323,7 @@ describe("AppSnap helper protocol", () => {
     const manager = new DesktopAppSnapManager({
       platform: "darwin",
       helperPath: process.execPath,
-      captureDirectory: "/tmp/omnimind-appsnap-test",
+      captureDirectory: "/tmp/harnessos-appsnap-test",
       excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       shortcutRegistry: { register, unregister },
@@ -394,7 +394,7 @@ describe("AppSnap helper protocol", () => {
     const manager = new DesktopAppSnapManager({
       platform: "darwin",
       helperPath: process.execPath,
-      captureDirectory: "/tmp/omnimind-appsnap-test",
+      captureDirectory: "/tmp/harnessos-appsnap-test",
       excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       onState: vi.fn(),
@@ -438,7 +438,7 @@ describe("AppSnap helper protocol", () => {
     const manager = new DesktopAppSnapManager({
       platform: "darwin",
       helperPath: process.execPath,
-      captureDirectory: "/tmp/omnimind-appsnap-test",
+      captureDirectory: "/tmp/harnessos-appsnap-test",
       excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       shortcutRegistry: { register, unregister },
@@ -482,7 +482,7 @@ describe("AppSnap helper protocol", () => {
   });
 
   it("coalesces concurrent listener reconciliation while the capture directory is prepared", async () => {
-    const captureDirectory = mkdtempSync(join(tmpdir(), "omnimind-appsnap-reconcile-"));
+    const captureDirectory = mkdtempSync(join(tmpdir(), "harnessos-appsnap-reconcile-"));
     const firstCheckChild = createFakeChildProcess();
     const secondCheckChild = createFakeChildProcess();
     const watchChild = createFakeChildProcess();
@@ -561,7 +561,7 @@ describe("AppSnap helper protocol", () => {
   });
 
   it("retains a full composer batch and reports any overflow", async () => {
-    const captureDirectory = mkdtempSync(join(tmpdir(), "omnimind-appsnap-test-"));
+    const captureDirectory = mkdtempSync(join(tmpdir(), "harnessos-appsnap-test-"));
     const checkChild = createFakeChildProcess();
     const watchChild = createFakeChildProcess();
     const spawn = vi
@@ -639,7 +639,7 @@ describe("AppSnap helper protocol", () => {
     const manager = new DesktopAppSnapManager({
       platform: "darwin",
       helperPath: process.execPath,
-      captureDirectory: "/tmp/omnimind-appsnap-test",
+      captureDirectory: "/tmp/harnessos-appsnap-test",
       excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       onState: vi.fn(),
@@ -693,7 +693,7 @@ describe("AppSnap helper protocol", () => {
   });
 
   it("keeps the helper capture file when persisting the pending copy fails", async () => {
-    const captureDirectory = mkdtempSync(join(tmpdir(), "omnimind-appsnap-persist-fail-"));
+    const captureDirectory = mkdtempSync(join(tmpdir(), "harnessos-appsnap-persist-fail-"));
     const checkChild = createFakeChildProcess();
     const watchChild = createFakeChildProcess();
     const spawn = vi
@@ -762,7 +762,7 @@ describe("AppSnap helper protocol", () => {
   });
 
   it("restores pending captures after a manager restart and removes them only after ack", async () => {
-    const captureDirectory = mkdtempSync(join(tmpdir(), "omnimind-appsnap-pending-"));
+    const captureDirectory = mkdtempSync(join(tmpdir(), "harnessos-appsnap-pending-"));
     const checkChild = createFakeChildProcess();
     const watchChild = createFakeChildProcess();
     const spawn = vi

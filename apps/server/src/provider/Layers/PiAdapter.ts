@@ -25,7 +25,7 @@ import {
   type AskUserProductInteractionPort,
   type AskUserResult,
   type AskUserToolInput,
-} from "@harnessos/om-ask";
+} from "@harnessos/oa-ask";
 import {
   ApprovalRequestId,
   type BuiltInToolGroupId,
@@ -54,7 +54,7 @@ import {
 import { Effect, FileSystem, Layer, Option, Queue, Stream } from "effect";
 import type { ProductSurface } from "@harnessos/shared/productSurface";
 
-import { renderOmniMindHarnessPolicy } from "../../agentGateway/harnessPolicy.ts";
+import { renderHarnessOSHarnessPolicy } from "../../agentGateway/harnessPolicy.ts";
 import {
   agentGatewayGroupsFromToolDescriptors,
   listAgentGatewayMcpTools,
@@ -89,23 +89,23 @@ import {
   EngineAdapterValidationError,
 } from "../Errors.ts";
 import { PiAdapter, type PiAdapterShape } from "../Services/PiAdapter.ts";
-import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
+import { OAAgentAdapter } from "../Services/OAAgentAdapter.ts";
 import { buildAgentGatewayPiToolDefinitions } from "../agentGatewayPiProjection.ts";
-import { inspectOmniMindWebAccessRegistration } from "@harnessos/om-web-access";
-import type { CuratorPresenter } from "@harnessos/om-web-access/curator-presentation";
+import { inspectOAWebAccessRegistration } from "@harnessos/oa-web-access";
+import type { CuratorPresenter } from "@harnessos/oa-web-access/curator-presentation";
 import { type AgentGatewayHostExtensionHandle } from "../agentGatewayHostExtension.ts";
 import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "../goalMode.ts";
 import { AUTOMATION_RUN_GATEWAY_TOOL_NAMES } from "../../automation/runEnvelope.ts";
 import {
-  inspectOmniMindTaskListExtensionRegistration,
+  inspectOATaskListExtensionRegistration,
   HARNESSOS_TASK_LIST_TOOL_NAME,
-} from "../omnimindTaskListExtension.ts";
-import { inspectOmniMindAskUserRegistration } from "../omnimindAskUserExtension.ts";
+} from "../oaTaskListExtension.ts";
+import { inspectOAAskUserRegistration } from "../oaAskUserExtension.ts";
 import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
 import {
-  buildOmniMindSessionExtensions,
-  type OmniMindSessionExtensionComposition,
-} from "../omnimindSessionExtensions.ts";
+  buildOASessionExtensions,
+  type OASessionExtensionComposition,
+} from "../oaSessionExtensions.ts";
 import {
   ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
   type EngineAdapterShape,
@@ -145,18 +145,18 @@ import {
   loadOARuntimeModule,
   resolveOAAgentDir,
 } from "../oaRuntime.ts";
-import { getOmniMindModelRuntimeMutationRevision } from "../omnimindModelRuntimeMutation.ts";
+import { getOAModelRuntimeMutationRevision } from "../oaModelRuntimeMutation.ts";
 import { resolveRealPathWithinRoot } from "../../workspace/realPathContainment.ts";
 import { engineExecutionStructure } from "../engineExecutionStructure.ts";
 import { projectAskUserRequest, resolveAskUserResponse } from "../askUserHostBridge.ts";
 import { extractProposedPlanMarkdown, withProviderPlanModePrompt } from "../planMode.ts";
-import type { OmniMindPlanModeController } from "../omnimindPlanModeExtension.ts";
+import type { OAPlanModeController } from "../oaPlanModeExtension.ts";
 import { askUserMetrics } from "../askUserMetrics.ts";
 
 type PiFamilyProvider = Extract<EngineKind, "pi" | "oa">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
 const HARNESSOS_IDENTITY_AND_COGNITIVE_CONTRACT = [
-  "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).",
+  "You are HarnessOS, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).",
   "The academy's official Chinese name is 广东智慧医学国际研究院.",
   "",
   "Understand what the user is ultimately trying to achieve. Do not treat the user's first wording as a complete specification or assume specialized knowledge in the current domain. Adapt the density of explanation to evidence from the conversation without quizzing the user about their level.",
@@ -183,7 +183,7 @@ const HARNESSOS_CHAT_CONTRACT = [
   "",
   "Explicit file and folder references are inputs for the current conversation. They are not a working directory, Project, or trusted project root, and must not be treated as permission to scan nearby paths.",
   "Treat external references as read-and-understand inputs by default. If the user explicitly asks to write a named path or run an available Engine-native operation, follow the real permission and risk rules; Chat is not a hard filesystem, Git, or Terminal sandbox.",
-  "When you produce ordinary file results without an explicit destination, use the managed Chat workspace already provided by OmniMind.",
+  "When you produce ordinary file results without an explicit destination, use the managed Chat workspace already provided by HarnessOS.",
   "Use available tools when they materially improve accuracy, timeliness, or completeness. When the work naturally needs a durable Project boundary, sustained project execution, or trusted project-local context and resources, explain that boundary and suggest Send to Agent.",
 ].join("\n");
 const HARNESSOS_AGENT_CONTRACT = [
@@ -198,7 +198,7 @@ const HARNESSOS_AGENT_CONTRACT = [
   "Inspect existing state and applicable project rules, preserve existing work, execute the necessary steps, verify the result proportionately, and close the loop. Do not stop after superficial steps or hand back work that can be completed within available capabilities. If blocked, explain the exact cause, what is complete, and the smallest decision needed.",
 ].join("\n");
 const HARNESSOS_STUDIO_CONTRACT = [
-  "In Studio, work inside OmniMind's managed creative workspace and its established workspace instructions, drafts, files, and outputs.",
+  "In Studio, work inside HarnessOS's managed creative workspace and its established workspace instructions, drafts, files, and outputs.",
   "Create, edit, and organize the requested work in that managed Studio environment, and make useful results visible through its existing outputs and file surfaces.",
   "Studio is not an Agent Project trust root. Do not infer project-local resources or broader filesystem authority from its managed working directory.",
 ].join("\n");
@@ -431,7 +431,7 @@ export function makePiBashProcessSupervisor(
 }
 
 // Loads the Pi SDK only when the Pi engine is actually used. The SDK brings in
-// a native clipboard module, so importing it during OmniMind startup can bloat the
+// a native clipboard module, so importing it during HarnessOS startup can bloat the
 // desktop backend before any Pi session exists.
 const loadPiCodingAgentModule: () => Promise<PiCodingAgentModule> = lazyModule(
   () => import("@earendil-works/pi-coding-agent"),
@@ -460,7 +460,7 @@ const loadOAAdapterModule: () => Promise<PiCodingAgentModule> = lazyModule(async
   } as unknown as PiCodingAgentModule;
 });
 
-export async function createOmniMindModelRuntime(agentDir: string) {
+export async function createOAModelRuntime(agentDir: string) {
   const sdk = await loadOARuntimeModule();
   return sdk.ModelRuntime.create({
     authPath: path.join(agentDir, "auth.json"),
@@ -493,12 +493,12 @@ const STOCK_PI_FAMILY = {
 
 const HARNESSOS_AGENT_FAMILY = {
   engine: "oa",
-  displayName: "OmniMind",
+  displayName: "HarnessOS",
   loadModule: loadOAAdapterModule,
   // Product state is App-owned and cannot be redirected into stock Pi state.
   resolveAgentDir: (_requestedAgentDir, serverBaseDir) => resolveOAAgentDir(serverBaseDir),
   createModelRuntime: async (agentDir: string) =>
-    (await createOmniMindModelRuntime(agentDir)) as unknown as ModelRuntime,
+    (await createOAModelRuntime(agentDir)) as unknown as ModelRuntime,
 } satisfies PiFamilyAdapterConfig<"oa">;
 
 interface PiSessionContext {
@@ -509,7 +509,7 @@ interface PiSessionContext {
   /** Frozen discovery trust for this native ResourceLoader; not a second policy owner. */
   readonly resourceScopeIdentity: string;
   readonly hostProjection?: AgentGatewayHostExtensionHandle;
-  readonly planModeController?: OmniMindPlanModeController;
+  readonly planModeController?: OAPlanModeController;
   gatewaySessionLease?: AgentGatewaySessionLease;
   gatewayConnection?: AgentGatewayMcpConnection;
   readonly lifecycleGeneration?: string;
@@ -624,7 +624,7 @@ export async function buildPiAgentGatewayCustomTools(input: {
     ...(input.fetch === undefined ? {} : { fetch: input.fetch }),
   });
   if (tools.length === 0) {
-    throw new Error("OmniMind MCP returned an empty tool catalog.");
+    throw new Error("HarnessOS MCP returned an empty tool catalog.");
   }
   input.onCatalog?.(tools);
   return buildPiAgentGatewayCustomToolsFromDescriptors({ ...input, tools });
@@ -723,7 +723,7 @@ function hasModelConfigProviderIdentity(
 
 /**
  * Pi extensions own their model-provider catalogs, so normalize their display metadata
- * before it crosses OmniMind's trimmed-string RPC contract. A single malformed
+ * before it crosses HarnessOS's trimmed-string RPC contract. A single malformed
  * extension model must not make the complete Pi catalog unavailable.
  */
 export function toPiProviderModelDescriptor(
@@ -1080,8 +1080,8 @@ export function piToolTimelineDetail(result: unknown): string | undefined {
 
 export function makePiGatewayLoadWarning(displayName: string) {
   return {
-    message: `OmniMind MCP tools could not be loaded for this ${displayName} session. Engine-native tools remain available; OmniMind MCP actions are unavailable.`,
-    detail: { source: "omnimind-mcp", availability: "failed" } as const,
+    message: `HarnessOS MCP tools could not be loaded for this ${displayName} session. Engine-native tools remain available; HarnessOS MCP actions are unavailable.`,
+    detail: { source: "harnessos-mcp", availability: "failed" } as const,
   };
 }
 
@@ -1096,7 +1096,7 @@ export function makePiHostSystemPrompt(input: {
 }): string {
   return [
     "<harnessos_host_context>",
-    renderOmniMindHarnessPolicy({
+    renderHarnessOSHarnessPolicy({
       gatewayControlAvailable: input.gatewayControlAvailable,
       projection: {
         mode: "direct",
@@ -1119,8 +1119,8 @@ export function promptRequiredAgentGatewayToolNames(
   return [];
 }
 
-/** Stable OmniMind identity and work-surface behavior that user Prompt resources cannot replace. */
-export function makeOmniMindEngineSystemPrompt(input: {
+/** Stable HarnessOS identity and work-surface behavior that user Prompt resources cannot replace. */
+export function makeHarnessOSEngineSystemPrompt(input: {
   readonly productSurface?: ProductSurface;
   /** Backward-compatible test/embedding fallback; production passes ProductSurface. */
   readonly workSurface?: EngineWorkSurface;
@@ -1693,7 +1693,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       tracked: PiTrackedToolCall,
     ) => {
       const message =
-        "OmniMind Browser could not open this temporary Engine page. The Engine tool remains active; check Browser availability, then rerun the tool.";
+        "HarnessOS Browser could not open this temporary Engine page. The Engine tool remains active; check Browser availability, then rerun the tool.";
       offerRuntimeEvent({
         ...makeEventBase(context),
         itemId: tracked.itemId,
@@ -2008,7 +2008,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       });
     };
 
-    // Bridges the common Pi extension UI primitives onto OmniMind's existing
+    // Bridges the common Pi extension UI primitives onto HarnessOS's existing
     // pending user-input flow; terminal/TUI-only APIs remain no-op by design.
     const makePiExtensionUIContext = (context: PiSessionContext): ExtensionUIContext => {
       const unsupportedWarnings = new Set<string>();
@@ -2021,7 +2021,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ...makeEventBase(context, { includeTurnId: false }),
           type: "runtime.warning",
           payload: {
-            message: `${extensionLabel} UI API '${method}' is not supported in OmniMind yet.`,
+            message: `${extensionLabel} UI API '${method}' is not supported in HarnessOS yet.`,
             detail: { method },
           },
           raw: {
@@ -2992,7 +2992,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
 
     const warnIfTaskListExtensionUnavailable = (context: PiSessionContext) => {
       if (engine !== "oa" || context.workSurface === undefined) return;
-      const inspection = inspectOmniMindTaskListExtensionRegistration({
+      const inspection = inspectOATaskListExtensionRegistration({
         extensions: context.runtime.session.resourceLoader.getExtensions(),
         tools: context.runtime.session.getAllTools(),
         activeToolNames: context.runtime.session.getActiveToolNames(),
@@ -3003,7 +3003,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         type: "runtime.warning",
         payload: {
           message:
-            "Task progress is unavailable for this OmniMind session. Other capabilities remain available.",
+            "Task progress is unavailable for this HarnessOS session. Other capabilities remain available.",
           detail: {
             source: "pi-resource-loader",
             capability: "turn-task-projection",
@@ -3024,7 +3024,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
 
     const reconcileAskUserTool = (context: PiSessionContext) => {
       if (engine !== "oa") return undefined;
-      const inspection = inspectOmniMindAskUserRegistration({
+      const inspection = inspectOAAskUserRegistration({
         extensions: context.runtime.session.resourceLoader.getExtensions(),
         tools: context.runtime.session.getAllTools(),
         activeToolNames: context.runtime.session.getActiveToolNames(),
@@ -3151,7 +3151,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       let resolvedGatewayControlAvailable =
         engine !== "oa" && (input.gatewayTools?.length ?? 0) > 0;
       let resolvedHostProjection: AgentGatewayHostExtensionHandle | undefined;
-      let resolvedPlanModeController: OmniMindPlanModeController | undefined;
+      let resolvedPlanModeController: OAPlanModeController | undefined;
       const hostProjectionDiagnostics: string[] = [];
       const webAccessDiagnostics: string[] = [];
       const createRuntime: CreateAgentSessionRuntimeFactory = async ({
@@ -3160,10 +3160,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         sessionManager,
         sessionStartEvent,
       }) => {
-        const composition: Pick<OmniMindSessionExtensionComposition, "extensions"> &
-          Partial<Pick<OmniMindSessionExtensionComposition, "host" | "planModeController">> =
+        const composition: Pick<OASessionExtensionComposition, "extensions"> &
+          Partial<Pick<OASessionExtensionComposition, "host" | "planModeController">> =
           engine === "oa"
-            ? buildOmniMindSessionExtensions({
+            ? buildOASessionExtensions({
                 agentDir,
                 defineTool: (tool) => input.sdk.defineTool(tool),
                 ...(curatorPresenter === undefined ? {} : { curatorPresenter }),
@@ -3252,9 +3252,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           hostProjectionDiagnostics.push(...inspection.diagnostics);
         }
         if (engine === "oa") {
-          const inspection = inspectOmniMindWebAccessRegistration(
-            createdSession.session.getAllTools(),
-          );
+          const inspection = inspectOAWebAccessRegistration(createdSession.session.getAllTools());
           webAccessDiagnostics.push(...inspection.diagnostics);
         }
         return {
@@ -3291,7 +3289,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           return yield* new EngineAdapterValidationError({
             engine,
             operation: "session/start",
-            issue: "OmniMind work surface is missing from Product session admission.",
+            issue: "HarnessOS work surface is missing from Product session admission.",
           });
         }
         if (workSurface === "agent" && !projectContextRoot) {
@@ -3336,7 +3334,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                     new EngineAdapterRequestError({
                       engine,
                       method: "session/start",
-                      detail: "Failed to load OmniMind settings.",
+                      detail: "Failed to load HarnessOS settings.",
                       cause,
                     }),
                 ),
@@ -3352,7 +3350,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           return yield* new EngineAdapterValidationError({
             engine,
             operation: "session/start",
-            issue: "OmniMind default instructions are unavailable.",
+            issue: "HarnessOS default instructions are unavailable.",
           });
         }
         const processSupervisor = makePiBashProcessSupervisor({
@@ -3423,7 +3421,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   }).pipe(
                     Effect.andThen(
                       Effect.logWarning(
-                        "Pi could not install thread-scoped OmniMind gateway tools",
+                        "Pi could not install thread-scoped HarnessOS gateway tools",
                         {
                           engine,
                           reason: "gateway-discovery-failed",
@@ -3540,7 +3538,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 ...(defaultPrompt === undefined ? {} : { defaultPrompt }),
                 ...(engine === "oa" && workSurface !== undefined
                   ? {
-                      immutableSystemPrompt: makeOmniMindEngineSystemPrompt({
+                      immutableSystemPrompt: makeHarnessOSEngineSystemPrompt({
                         productSurface,
                       }),
                     }
@@ -3584,7 +3582,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           runtime,
           agentDir,
           appliedModelRuntimeMutationRevision:
-            engine === "oa" ? getOmniMindModelRuntimeMutationRevision(agentDir) : 0,
+            engine === "oa" ? getOAModelRuntimeMutationRevision(agentDir) : 0,
           ...(workSurface === undefined ? {} : { workSurface }),
           ...(engine === "oa" ? { productSurface } : {}),
           resourceScopeIdentity: resourceScopeIdentity(
@@ -3684,7 +3682,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             type: "runtime.warning",
             payload: {
               message:
-                "Some OmniMind Host capabilities could not be projected into this Agent session. Other Agent capabilities remain available.",
+                "Some HarnessOS Host capabilities could not be projected into this Agent session. Other Agent capabilities remain available.",
               detail: {
                 source: "pi-resource-loader",
                 capability: "agent-gateway-host-projection",
@@ -3709,10 +3707,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             type: "runtime.warning",
             payload: {
               message:
-                "OmniMind Web Access could not register every canonical tool in this Agent session. The winning foreign tools remain untouched.",
+                "HarnessOS Web Access could not register every canonical tool in this Agent session. The winning foreign tools remain untouched.",
               detail: {
                 source: "pi-resource-loader",
-                capability: "omnimind-web-access",
+                capability: "harnessos-web-access",
                 availability: "degraded",
                 diagnostics,
               },
@@ -3721,7 +3719,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               source: "pi.sdk.event",
               method: "extension/resource-diagnostic",
               payload: {
-                capability: "omnimind-web-access",
+                capability: "harnessos-web-access",
                 diagnosticCount: diagnostics.length,
               },
             },
@@ -3738,7 +3736,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             ...makeEventBase(context, { includeTurnId: false }),
             type: "runtime.warning",
             payload: {
-              message: `${displayName} extensions are loaded with OmniMind's limited UI bridge. select/confirm/input/notify/status are supported; TUI-only widgets and editor hooks are ignored.`,
+              message: `${displayName} extensions are loaded with HarnessOS's limited UI bridge. select/confirm/input/notify/status are supported; TUI-only widgets and editor hooks are ignored.`,
               detail: {
                 extensionCount: loadedExtensions.length,
                 extensions: extensionNames,
@@ -3851,7 +3849,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             });
           }
           if (engine === "oa") {
-            const currentRevision = getOmniMindModelRuntimeMutationRevision(context.agentDir);
+            const currentRevision = getOAModelRuntimeMutationRevision(context.agentDir);
             if (currentRevision > context.appliedModelRuntimeMutationRevision) {
               yield* Effect.tryPromise({
                 try: async () => {
@@ -3860,7 +3858,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   });
                   const configurationError = context.runtime.services.modelRuntime.getError();
                   if (configurationError !== undefined) {
-                    throw new Error("OmniMind model-service state could not be reconciled.");
+                    throw new Error("HarnessOS model-service state could not be reconciled.");
                   }
                   const piSdk = await family.loadModule();
                   context.modelRegistry = modelRegistryFacade(
@@ -3873,7 +3871,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   new EngineAdapterRequestError({
                     engine,
                     method: "model-services/reconcile",
-                    detail: "OmniMind model-service changes could not be applied to this session.",
+                    detail: "HarnessOS model-service changes could not be applied to this session.",
                     cause,
                   }),
               });
@@ -3896,7 +3894,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   new EngineAdapterRequestError({
                     engine,
                     method: "host-catalog/reconcile",
-                    detail: "OmniMind Host tool changes could not be applied to this session.",
+                    detail: "HarnessOS Host tool changes could not be applied to this session.",
                     cause,
                   }),
               });
@@ -3959,7 +3957,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 engine,
                 operation: "sendTurn",
                 issue:
-                  "This synthetic OmniMind turn requires Host capabilities that are unavailable in the current Agent session.",
+                  "This synthetic HarnessOS turn requires Host capabilities that are unavailable in the current Agent session.",
               });
             }
             yield* Effect.tryPromise({
@@ -3982,7 +3980,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   engine,
                   operation: "sendTurn",
                   issue:
-                    "This synthetic OmniMind turn requires Host capabilities that are disabled, unavailable, or collided in the current Agent session.",
+                    "This synthetic HarnessOS turn requires Host capabilities that are disabled, unavailable, or collided in the current Agent session.",
                   cause,
                 }),
             });
@@ -4208,7 +4206,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         new EngineAdapterRequestError({
           engine: engine,
           method,
-          detail: `${displayName} does not expose OmniMind approval/user-input requests for thread ${threadId}.`,
+          detail: `${displayName} does not expose HarnessOS approval/user-input requests for thread ${threadId}.`,
         }),
       );
 
@@ -4321,7 +4319,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                       new EngineAdapterRequestError({
                         engine,
                         method: "session/reload",
-                        detail: "Failed to load OmniMind settings.",
+                        detail: "Failed to load HarnessOS settings.",
                         cause,
                       }),
                   ),
@@ -4338,7 +4336,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             return yield* new EngineAdapterValidationError({
               engine,
               operation: "session/reload",
-              issue: "OmniMind default instructions are unavailable.",
+              issue: "HarnessOS default instructions are unavailable.",
             });
           }
           yield* Effect.tryPromise({
@@ -4689,11 +4687,11 @@ export function makePiAdapterLive(options?: PiAdapterLiveOptions) {
   return Layer.effect(PiAdapter, makePiAdapter(STOCK_PI_FAMILY, options));
 }
 
-export const OmniMindAgentAdapterLive = Layer.effect(
-  OmniMindAgentAdapter,
+export const OAAgentAdapterLive = Layer.effect(
+  OAAgentAdapter,
   makePiAdapter(HARNESSOS_AGENT_FAMILY),
 );
 
-export function makeOmniMindAgentAdapterLive(options?: PiAdapterLiveOptions) {
-  return Layer.effect(OmniMindAgentAdapter, makePiAdapter(HARNESSOS_AGENT_FAMILY, options));
+export function makeOAAgentAdapterLive(options?: PiAdapterLiveOptions) {
+  return Layer.effect(OAAgentAdapter, makePiAdapter(HARNESSOS_AGENT_FAMILY, options));
 }

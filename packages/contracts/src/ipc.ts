@@ -262,59 +262,59 @@ import type {
 } from "./engineExecution";
 import type { EngineCompactThreadInput } from "./engine";
 import type {
-  OmniMindCustomModelServiceRemoveInput,
-  OmniMindCustomModelServiceRemoveResult,
-  OmniMindCustomModelServiceDiscoverInput,
-  OmniMindCustomModelServiceDiscoverResult,
-  OmniMindCustomModelServiceSaveInput,
-  OmniMindCustomModelServiceSaveResult,
-  OmniMindCustomModelServiceTestInput,
-  OmniMindCustomModelServiceTestResult,
-  OmniMindModelServiceAnswerLoginInput,
-  OmniMindModelServiceAuthResult,
-  OmniMindModelServiceBeginLoginInput,
-  OmniMindModelServiceCancelLoginInput,
-  OmniMindModelServicePollLoginInput,
-  OmniMindModelServiceLogoutInput,
-  OmniMindModelServiceLogoutResult,
-  OmniMindModelServiceRevealApiKeyInput,
-  OmniMindModelServiceRevealApiKeyResult,
-  OmniMindModelServiceRefreshInput,
-  OmniMindModelServiceRefreshResult,
-  OmniMindModelServicesGetInput,
-  OmniMindModelServicesGetResult,
-  OmniMindModelServicesListInput,
-  OmniMindModelServicesListResult,
-} from "./omnimindModelServices";
+  HarnessOSCustomModelServiceRemoveInput,
+  HarnessOSCustomModelServiceRemoveResult,
+  HarnessOSCustomModelServiceDiscoverInput,
+  HarnessOSCustomModelServiceDiscoverResult,
+  HarnessOSCustomModelServiceSaveInput,
+  HarnessOSCustomModelServiceSaveResult,
+  HarnessOSCustomModelServiceTestInput,
+  HarnessOSCustomModelServiceTestResult,
+  OAModelServiceAnswerLoginInput,
+  OAModelServiceAuthResult,
+  OAModelServiceBeginLoginInput,
+  OAModelServiceCancelLoginInput,
+  OAModelServicePollLoginInput,
+  OAModelServiceLogoutInput,
+  OAModelServiceLogoutResult,
+  OAModelServiceRevealApiKeyInput,
+  OAModelServiceRevealApiKeyResult,
+  OAModelServiceRefreshInput,
+  OAModelServiceRefreshResult,
+  OAModelServicesGetInput,
+  OAModelServicesGetResult,
+  OAModelServicesListInput,
+  OAModelServicesListResult,
+} from "./oaModelServices";
 import type {
-  OmniMindEcosystemInstallInput,
-  OmniMindEcosystemListInput,
-  OmniMindEcosystemListResourcesResult,
-  OmniMindEcosystemMutationResult,
-  OmniMindEcosystemPackageInput,
-  OmniMindEcosystemReloadInput,
-  OmniMindEcosystemReloadResult,
-  OmniMindEcosystemResourceToggleInput,
-  OmniMindEcosystemSnapshot,
-} from "./omnimindEcosystem";
+  OAEcosystemInstallInput,
+  OAEcosystemListInput,
+  OAEcosystemListResourcesResult,
+  OAEcosystemMutationResult,
+  OAEcosystemPackageInput,
+  OAEcosystemReloadInput,
+  OAEcosystemReloadResult,
+  OAEcosystemResourceToggleInput,
+  OAEcosystemSnapshot,
+} from "./oaEcosystem";
 import type {
-  OmniMindAgentPromptGetSnapshotInput,
-  OmniMindAgentPromptMutationInput,
-  OmniMindAgentPromptMutationResult,
-  OmniMindAgentPromptSnapshot,
-} from "./omnimindAgentPrompts";
+  OAAgentPromptGetSnapshotInput,
+  OAAgentPromptMutationInput,
+  OAAgentPromptMutationResult,
+  OAAgentPromptSnapshot,
+} from "./oaAgentPrompts";
 import type {
-  OmniMindWebSearchGeminiDiagnosticInput,
-  OmniMindWebSearchGeminiDiagnosticResult,
-  OmniMindWebSearchMutationInput,
-  OmniMindWebSearchMutationResult,
-  OmniMindWebSearchOpenConfigInput,
-  OmniMindWebSearchProbeResult,
-  OmniMindWebSearchProviderTestInput,
-  OmniMindWebSearchReadResult,
-  OmniMindWebSearchRecheckInput,
-  OmniMindWebSearchRefreshInput,
-} from "./omnimindWebSearch";
+  OAWebSearchGeminiDiagnosticInput,
+  OAWebSearchGeminiDiagnosticResult,
+  OAWebSearchMutationInput,
+  OAWebSearchMutationResult,
+  OAWebSearchOpenConfigInput,
+  OAWebSearchProbeResult,
+  OAWebSearchProviderTestInput,
+  OAWebSearchReadResult,
+  OAWebSearchRecheckInput,
+  OAWebSearchRefreshInput,
+} from "./oaWebSearch";
 import type {
   StatsGetProfileStatsInput,
   StatsGetProfileStatsResult,
@@ -447,7 +447,7 @@ export interface EngineWebSurfacePresentationContext {
   locale: "en" | "zh-CN";
   theme: "light" | "dark";
   /**
-   * Credential-blind, fully resolved colors for OmniMind-owned pages that live
+   * Credential-blind, fully resolved colors for HarnessOS-owned pages that live
    * outside the renderer DOM. The renderer theme owner creates this snapshot;
    * Browser and Engine packages may project it, but never reinterpret a theme
    * preset or persist a second palette.
@@ -962,92 +962,86 @@ export interface NativeApi {
       options?: { readonly signal?: AbortSignal },
     ) => Promise<EngineListAgentsResult>;
   };
-  omnimindModelServices: {
+  oaModelServices: {
     list: (
-      input?: OmniMindModelServicesListInput,
+      input?: OAModelServicesListInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<OmniMindModelServicesListResult>;
+    ) => Promise<OAModelServicesListResult>;
     get: (
-      input: OmniMindModelServicesGetInput,
+      input: OAModelServicesGetInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<OmniMindModelServicesGetResult>;
+    ) => Promise<OAModelServicesGetResult>;
     beginLogin: (
-      input: OmniMindModelServiceBeginLoginInput,
+      input: OAModelServiceBeginLoginInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<OmniMindModelServiceAuthResult>;
+    ) => Promise<OAModelServiceAuthResult>;
     pollLogin: (
-      input: OmniMindModelServicePollLoginInput,
+      input: OAModelServicePollLoginInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<OmniMindModelServiceAuthResult>;
+    ) => Promise<OAModelServiceAuthResult>;
     answerLogin: (
-      input: OmniMindModelServiceAnswerLoginInput,
+      input: OAModelServiceAnswerLoginInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<OmniMindModelServiceAuthResult>;
-    cancelLogin: (
-      input: OmniMindModelServiceCancelLoginInput,
-    ) => Promise<OmniMindModelServiceAuthResult>;
-    logout: (input: OmniMindModelServiceLogoutInput) => Promise<OmniMindModelServiceLogoutResult>;
+    ) => Promise<OAModelServiceAuthResult>;
+    cancelLogin: (input: OAModelServiceCancelLoginInput) => Promise<OAModelServiceAuthResult>;
+    logout: (input: OAModelServiceLogoutInput) => Promise<OAModelServiceLogoutResult>;
     revealApiKey: (
-      input: OmniMindModelServiceRevealApiKeyInput,
+      input: OAModelServiceRevealApiKeyInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<OmniMindModelServiceRevealApiKeyResult>;
+    ) => Promise<OAModelServiceRevealApiKeyResult>;
     refresh: (
-      input: OmniMindModelServiceRefreshInput,
+      input: OAModelServiceRefreshInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<OmniMindModelServiceRefreshResult>;
+    ) => Promise<OAModelServiceRefreshResult>;
     testCustom: (
-      input: OmniMindCustomModelServiceTestInput,
+      input: HarnessOSCustomModelServiceTestInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<OmniMindCustomModelServiceTestResult>;
+    ) => Promise<HarnessOSCustomModelServiceTestResult>;
     discoverCustom: (
-      input: OmniMindCustomModelServiceDiscoverInput,
+      input: HarnessOSCustomModelServiceDiscoverInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<OmniMindCustomModelServiceDiscoverResult>;
+    ) => Promise<HarnessOSCustomModelServiceDiscoverResult>;
     saveCustom: (
-      input: OmniMindCustomModelServiceSaveInput,
+      input: HarnessOSCustomModelServiceSaveInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<OmniMindCustomModelServiceSaveResult>;
+    ) => Promise<HarnessOSCustomModelServiceSaveResult>;
     removeCustom: (
-      input: OmniMindCustomModelServiceRemoveInput,
+      input: HarnessOSCustomModelServiceRemoveInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<OmniMindCustomModelServiceRemoveResult>;
+    ) => Promise<HarnessOSCustomModelServiceRemoveResult>;
   };
-  omnimindEcosystem: {
-    list: (input?: OmniMindEcosystemListInput) => Promise<OmniMindEcosystemSnapshot>;
-    listResources: (
-      input: OmniMindEcosystemPackageInput,
-    ) => Promise<OmniMindEcosystemListResourcesResult>;
-    install: (input: OmniMindEcosystemInstallInput) => Promise<OmniMindEcosystemMutationResult>;
-    update: (input: OmniMindEcosystemPackageInput) => Promise<OmniMindEcosystemMutationResult>;
-    remove: (input: OmniMindEcosystemPackageInput) => Promise<OmniMindEcosystemMutationResult>;
+  oaEcosystem: {
+    list: (input?: OAEcosystemListInput) => Promise<OAEcosystemSnapshot>;
+    listResources: (input: OAEcosystemPackageInput) => Promise<OAEcosystemListResourcesResult>;
+    install: (input: OAEcosystemInstallInput) => Promise<OAEcosystemMutationResult>;
+    update: (input: OAEcosystemPackageInput) => Promise<OAEcosystemMutationResult>;
+    remove: (input: OAEcosystemPackageInput) => Promise<OAEcosystemMutationResult>;
     setResourceEnabled: (
-      input: OmniMindEcosystemResourceToggleInput,
-    ) => Promise<OmniMindEcosystemMutationResult>;
-    reload: (input: OmniMindEcosystemReloadInput) => Promise<OmniMindEcosystemReloadResult>;
+      input: OAEcosystemResourceToggleInput,
+    ) => Promise<OAEcosystemMutationResult>;
+    reload: (input: OAEcosystemReloadInput) => Promise<OAEcosystemReloadResult>;
   };
-  omnimindAgentPrompts: {
-    getSnapshot: (
-      input?: OmniMindAgentPromptGetSnapshotInput,
-    ) => Promise<OmniMindAgentPromptSnapshot>;
-    mutate: (input: OmniMindAgentPromptMutationInput) => Promise<OmniMindAgentPromptMutationResult>;
+  oaAgentPrompts: {
+    getSnapshot: (input?: OAAgentPromptGetSnapshotInput) => Promise<OAAgentPromptSnapshot>;
+    mutate: (input: OAAgentPromptMutationInput) => Promise<OAAgentPromptMutationResult>;
   };
-  omnimindWebSearch: {
-    open: () => Promise<OmniMindWebSearchReadResult>;
-    refresh: (input?: OmniMindWebSearchRefreshInput) => Promise<OmniMindWebSearchReadResult>;
-    mutate: (input: OmniMindWebSearchMutationInput) => Promise<OmniMindWebSearchMutationResult>;
+  oaWebSearch: {
+    open: () => Promise<OAWebSearchReadResult>;
+    refresh: (input?: OAWebSearchRefreshInput) => Promise<OAWebSearchReadResult>;
+    mutate: (input: OAWebSearchMutationInput) => Promise<OAWebSearchMutationResult>;
     testProvider: (
-      input: OmniMindWebSearchProviderTestInput,
+      input: OAWebSearchProviderTestInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<OmniMindWebSearchProbeResult>;
+    ) => Promise<OAWebSearchProbeResult>;
     recheck: (
-      input: OmniMindWebSearchRecheckInput,
+      input: OAWebSearchRecheckInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<OmniMindWebSearchProbeResult>;
-    openConfig: (input: OmniMindWebSearchOpenConfigInput) => Promise<void>;
+    ) => Promise<OAWebSearchProbeResult>;
+    openConfig: (input: OAWebSearchOpenConfigInput) => Promise<void>;
     diagnoseGemini: (
-      input: OmniMindWebSearchGeminiDiagnosticInput,
+      input: OAWebSearchGeminiDiagnosticInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<OmniMindWebSearchGeminiDiagnosticResult>;
+    ) => Promise<OAWebSearchGeminiDiagnosticResult>;
   };
   orchestration: {
     getSnapshot: () => Promise<OrchestrationReadModel>;

@@ -27,7 +27,7 @@ const temporaryDirectories: string[] = [];
 const RUNTIME_SECRET = "bridge-test-runtime-secret-000000001";
 
 function makeBaseDir() {
-  const value = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-mcp-bridge-test-"));
+  const value = fs.mkdtempSync(path.join(os.tmpdir(), "harnessos-mcp-bridge-test-"));
   temporaryDirectories.push(value);
   return value;
 }
@@ -158,11 +158,11 @@ describe("external MCP stdio bridge", () => {
 
   it("fails clearly for missing and multiple running instances", () => {
     const baseDir = makeBaseDir();
-    expect(() => discoverExternalMcpRuntime(baseDir)).toThrow(/No running OmniMind instance/);
+    expect(() => discoverExternalMcpRuntime(baseDir)).toThrow(/No running HarnessOS instance/);
     writeRuntime(baseDir, "userdata", 3773);
     writeRuntime(baseDir, "dev", 4773);
     expect(() => discoverExternalMcpRuntime(baseDir)).toThrow(
-      /Multiple running OmniMind instances/,
+      /Multiple running HarnessOS instances/,
     );
   });
 
@@ -314,7 +314,7 @@ describe("external MCP stdio bridge", () => {
         if (urls.length === 1) {
           fs.rmSync(path.join(baseDir, "userdata", "server-runtime.json"));
           writeRuntime(baseDir, "userdata", 4773);
-          throw new TypeError("old OmniMind instance stopped");
+          throw new TypeError("old HarnessOS instance stopped");
         }
         return new Response(JSON.stringify({ jsonrpc: "2.0", id: "restart", result: {} }), {
           status: 200,

@@ -1272,7 +1272,7 @@ export const ComposerPromptEditor = forwardRef<
   const normalizedMentionReferences = mentionReferences ?? [];
   const initialMentionReferencesRef = useRef(normalizedMentionReferences);
   const initialConfig: InitialConfigType = {
-    namespace: "omnimind-composer-editor",
+    namespace: "harnessos-composer-editor",
     editable: true,
     nodes: [...COMPOSER_NODE_CLASSES],
     editorState: () => {

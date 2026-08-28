@@ -11,13 +11,13 @@ import { ConversationGroupPickerDialog } from "./ConversationGroupPickerDialog";
 const firstGroupId = SpaceId.makeUnsafe("group-research");
 const secondGroupId = SpaceId.makeUnsafe("group-release");
 const project: Project = {
-  id: ProjectId.makeUnsafe("project-omnimind"),
+  id: ProjectId.makeUnsafe("project-harnessos"),
   kind: "project",
-  name: "OmniMind",
-  remoteName: "OmniMind",
-  folderName: "OmniMind",
+  name: "HarnessOS",
+  remoteName: "HarnessOS",
+  folderName: "HarnessOS",
   localName: null,
-  cwd: "/tmp/OmniMind",
+  cwd: "/tmp/HarnessOS",
   defaultEngineSelection: null,
   expanded: true,
   spaceId: null,
@@ -109,7 +109,7 @@ describe("ConversationGroupPickerDialog", () => {
     await expect
       .element(page.getByRole("checkbox", { name: /Polish conversation groups/ }))
       .toHaveAttribute("aria-checked", "true");
-    expect(document.body.textContent).toContain("OmniMind");
+    expect(document.body.textContent).toContain("HarnessOS");
   });
 
   it("reports a partial multi-conversation save and restores last confirmed selections", async () => {

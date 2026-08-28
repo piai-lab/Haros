@@ -94,7 +94,7 @@ export const EngineListSkillsInput = Schema.Struct({
 export type EngineListSkillsInput = typeof EngineListSkillsInput.Type;
 
 export const EngineSkillDiscoveryWarning = Schema.Struct({
-  source: Schema.Literals(["engine-native", "omnimind-library"]),
+  source: Schema.Literals(["engine-native", "harnessos-library"]),
   reason: Schema.Literal("discovery-failed"),
 });
 export type EngineSkillDiscoveryWarning = typeof EngineSkillDiscoveryWarning.Type;
@@ -107,7 +107,7 @@ export const EngineListSkillsResult = Schema.Struct({
 });
 export type EngineListSkillsResult = typeof EngineListSkillsResult.Type;
 
-// Unified cross-engine skills catalog (OmniMind portable skills). Descriptors use
+// Unified cross-engine skills catalog (HarnessOS portable skills). Descriptors use
 // `scope` to carry the origin label ("oa", "codex", "claude", "cursor", ...).
 export const EngineSkillsCatalogInput = Schema.Struct({
   cwd: Schema.optional(TrimmedNonEmptyString),

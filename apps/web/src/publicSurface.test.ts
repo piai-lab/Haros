@@ -27,7 +27,7 @@ describe("public site exits", () => {
     ).toBeNull();
     expect(
       resolvePublicSiteLink("docs", {
-        configuredOrigin: "http://omnimind.wisdomeyes.cn",
+        configuredOrigin: "http://harnessos.wisdomeyes.cn",
         isProduction: true,
       }).href,
     ).toBeNull();
@@ -91,7 +91,7 @@ describe("feedback endpoint", () => {
     ).toBeNull();
     expect(
       resolveFeedbackEndpoint({
-        configuredEndpoint: `http://omnimind.wisdomeyes.cn${RESERVED_FEEDBACK_PATH}`,
+        configuredEndpoint: `http://harnessos.wisdomeyes.cn${RESERVED_FEEDBACK_PATH}`,
         isProduction: true,
       }),
     ).toBeNull();
@@ -103,7 +103,7 @@ describe("feedback endpoint", () => {
     ).toBeNull();
     expect(
       resolveFeedbackEndpoint({
-        configuredEndpoint: `https://user:secret@omnimind.wisdomeyes.cn${RESERVED_FEEDBACK_PATH}`,
+        configuredEndpoint: `https://user:secret@harnessos.wisdomeyes.cn${RESERVED_FEEDBACK_PATH}`,
         isProduction: true,
       }),
     ).toBeNull();

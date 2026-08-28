@@ -48,7 +48,7 @@ async function withExternalMcpServer(
         integration: {
           integrationId,
           name: "Route test",
-          audience: "omnimind.external-mcp",
+          audience: "harnessos.external-mcp",
           credentialHash: "hash-only",
           capabilities: ["projects:read"],
           projectIds: ["project-route-test"],

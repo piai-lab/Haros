@@ -47,8 +47,8 @@
         "@effect/platform-node": "catalog:",
         "@effect/sql-sqlite-bun": "catalog:",
         "@harnessos/oa-runtime": "file:../../vendor/oa-runtime-0.84.3.tgz",
-        "@harnessos/om-ask": "workspace:*",
-        "@harnessos/om-web-access": "workspace:*",
+        "@harnessos/oa-ask": "workspace:*",
+        "@harnessos/oa-web-access": "workspace:*",
         "@opencode-ai/sdk": "^1.15.13",
         "@pierre/diffs": "^1.2.12",
         "@xterm/headless": "^6.0.0",
@@ -161,17 +161,17 @@
         "vitest": "catalog:",
       },
     },
-    "packages/om-ask": {
-      "name": "@harnessos/om-ask",
-      "version": "5.0.0-omnimind.1",
+    "packages/oa-ask": {
+      "name": "@harnessos/oa-ask",
+      "version": "5.0.0-oa.1",
       "devDependencies": {
         "typescript": "catalog:",
         "vitest": "catalog:",
       },
     },
-    "packages/om-web-access": {
-      "name": "@harnessos/om-web-access",
-      "version": "0.25.0-omnimind.0",
+    "packages/oa-web-access": {
+      "name": "@harnessos/oa-web-access",
+      "version": "0.25.0-oa.0",
       "dependencies": {
         "@mozilla/readability": "^0.6.0",
         "defuddle": "0.19.3",
@@ -561,9 +561,9 @@
 
     "@harnessos/oa-runtime": ["@harnessos/oa-runtime@../../vendor/oa-runtime-0.84.3.tgz", { "dependencies": { "@earendil-works/pi-agent-core": "0.84.3", "@earendil-works/pi-ai": "0.84.3", "@earendil-works/pi-client": "0.84.3", "@earendil-works/pi-protocol": "0.84.3", "@earendil-works/pi-tui": "0.84.3", "@silvia-odwyer/photon-node": "0.3.4", "chalk": "5.6.2", "cross-spawn": "7.0.6", "diff": "8.0.4", "grok-mermaid": "0.2.2", "highlight.js": "10.7.3", "hosted-git-info": "9.0.3", "ignore": "7.0.5", "jiti": "2.7.0", "jsonc-parser": "3.3.1", "minimatch": "10.2.5", "proper-lockfile": "4.1.2", "semver": "7.8.0", "typebox": "1.3.7", "undici": "8.9.0", "yaml": "2.9.0" }, "optionalDependencies": { "@mariozechner/clipboard": "0.3.9" } }, "sha512-ovBPAzjEZan3vMo1icSNh+cB1F2DmdkX1h3Ixnx/pjvOpjTyp2GVBwoWnzs7Ls6LK8juAar/9vcm3Yw5+SFyDw=="],
 
-    "@harnessos/om-ask": ["@harnessos/om-ask@workspace:packages/om-ask"],
+    "@harnessos/oa-ask": ["@harnessos/oa-ask@workspace:packages/oa-ask"],
 
-    "@harnessos/om-web-access": ["@harnessos/om-web-access@workspace:packages/om-web-access"],
+    "@harnessos/oa-web-access": ["@harnessos/oa-web-access@workspace:packages/oa-web-access"],
 
     "@harnessos/scripts": ["@harnessos/scripts@workspace:scripts"],
 

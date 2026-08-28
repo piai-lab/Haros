@@ -237,15 +237,15 @@ describe("browser annotation protocol", () => {
     };
     expect(
       hardenBrowserAnnotationWebviewPreferences({
-        partition: "persist:omnimind-browser",
-        expectedPartition: "persist:omnimind-browser",
+        partition: "persist:harnessos-browser",
+        expectedPartition: "persist:harnessos-browser",
         preloadPath: "/app/browserAnnotations/guestPreload.js",
         webPreferences,
       }),
     ).toBe(true);
     expect(webPreferences).toMatchObject({
       preload: "/app/browserAnnotations/guestPreload.js",
-      partition: "persist:omnimind-browser",
+      partition: "persist:harnessos-browser",
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
@@ -256,7 +256,7 @@ describe("browser annotation protocol", () => {
     expect(
       hardenBrowserAnnotationWebviewPreferences({
         partition: "persist:other",
-        expectedPartition: "persist:omnimind-browser",
+        expectedPartition: "persist:harnessos-browser",
         preloadPath: "/app/browserAnnotations/guestPreload.js",
         webPreferences: {},
       }),

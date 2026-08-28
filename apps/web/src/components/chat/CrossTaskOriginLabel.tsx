@@ -1,11 +1,11 @@
 // FILE: CrossTaskOriginLabel.tsx
-// Purpose: Identify the source thread for conversations created by another OmniMind agent.
+// Purpose: Identify the source thread for conversations created by another HarnessOS agent.
 // Layer: Chat transcript UI
 
 import { type EngineKind, type ThreadId } from "@harnessos/contracts";
 import { memo, type ReactNode } from "react";
 
-import { OmniMindLogo } from "../OmniMindLogo";
+import { HarnessOSLogo } from "../HarnessOSLogo";
 import { cn } from "~/lib/utils";
 
 export interface CrossTaskOrigin {
@@ -14,15 +14,15 @@ export interface CrossTaskOrigin {
 }
 
 // A single, app-level attribution: the message reached this thread from another
-// OmniMind thread, so it always reads as "Sent by OmniMind" with the OmniMind mark
+// HarnessOS thread, so it always reads as "Sent by HarnessOS" with the HarnessOS mark
 // (the origin engine is not surfaced here to keep one consistent label).
 function OriginContent(): ReactNode {
   return (
     <>
       <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground/70">
-        <OmniMindLogo size={16} aria-label="OmniMind" />
+        <HarnessOSLogo size={16} aria-label="HarnessOS" />
       </span>
-      <span className="truncate">Sent by OmniMind from another thread</span>
+      <span className="truncate">Sent by HarnessOS from another thread</span>
     </>
   );
 }

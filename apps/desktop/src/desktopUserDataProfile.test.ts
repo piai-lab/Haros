@@ -5,11 +5,11 @@ import { resolveDesktopAppDataBase, resolveDesktopUserDataPath } from "./desktop
 describe("desktopUserDataProfile", () => {
   it("resolves the canonical HarnessOS profile names", () => {
     const appDataBase = "/Users/tester/Library/Application Support";
-    expect(resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "omnimind-dev" })).toBe(
-      "/Users/tester/Library/Application Support/omnimind-dev",
-    );
+    expect(
+      resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "harnessos-dev" }),
+    ).toBe("/Users/tester/Library/Application Support/harnessos-dev");
     expect(resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "oa" })).toBe(
-      "/Users/tester/Library/Application Support/omnimind",
+      "/Users/tester/Library/Application Support/harnessos",
     );
     expect(
       resolveDesktopUserDataPath({ appDataBase, userDataDirectoryName: "harnessos-canary" }),
@@ -30,9 +30,9 @@ describe("desktopUserDataProfile", () => {
     expect(
       resolveDesktopUserDataPath({
         appDataBase: "/Users/tester/Library/Application Support",
-        userDataDirectoryName: "omnimind-dev",
+        userDataDirectoryName: "harnessos-dev",
         productHome: "/tmp/product/.harnessos",
       }),
-    ).toBe("/tmp/product/.harnessos/electron/omnimind-dev");
+    ).toBe("/tmp/product/.harnessos/electron/harnessos-dev");
   });
 });

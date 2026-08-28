@@ -987,7 +987,7 @@ function withStudioProject(snapshot: OrchestrationReadModel): OrchestrationReadM
         id: STUDIO_PROJECT_ID,
         kind: "studio",
         title: "Studio",
-        workspaceRoot: "/Users/tester/Documents/OmniMind/Studio",
+        workspaceRoot: "/Users/tester/Documents/HarnessOS/Studio",
         defaultEngineSelection: {
           engine: "codex",
           model: "gpt-5",
@@ -1475,7 +1475,7 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
   if (tag === WS_METHODS.gitCreateDetachedWorktree) {
     return {
       worktree: {
-        path: "/repo/.codex/worktrees/generated/omnimind",
+        path: "/repo/.codex/worktrees/generated/harnessos",
         ref: "0123456789abcdef0123456789abcdef01234567",
         branch: typeof body.newBranch === "string" ? body.newBranch : null,
       },
@@ -2906,7 +2906,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     localStorage.removeItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY);
     const cookieSet = vi.spyOn(cookieStore, "set");
     const mounted = await mountChatView({
-      // Match the user's 1894px OmniMind capture: the reading column must follow
+      // Match the user's 1894px HarnessOS capture: the reading column must follow
       // the center of the real canvas while the left boundary moves.
       viewport: { ...DEFAULT_VIEWPORT, width: 1894 },
       snapshot: createSnapshotForTargetUser({
@@ -4535,8 +4535,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
                 nextFixture.welcome = {
                   ...nextFixture.welcome,
                   homeDir: "/Users/tester",
-                  chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
-                  studioWorkspaceRoot: "/Users/tester/Documents/OmniMind/Studio",
+                  chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
+                  studioWorkspaceRoot: "/Users/tester/Documents/HarnessOS/Studio",
                 };
               },
             }
@@ -4622,8 +4622,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.welcome = {
           ...nextFixture.welcome,
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
-          studioWorkspaceRoot: "/Users/tester/Documents/OmniMind/Studio",
+          chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
+          studioWorkspaceRoot: "/Users/tester/Documents/HarnessOS/Studio",
         };
       },
     });
@@ -9039,8 +9039,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.welcome = {
           ...nextFixture.welcome,
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
-          studioWorkspaceRoot: "/Users/tester/Documents/OmniMind/Studio",
+          chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
+          studioWorkspaceRoot: "/Users/tester/Documents/HarnessOS/Studio",
         };
       },
     });
@@ -9154,7 +9154,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.welcome = {
           ...nextFixture.welcome,
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+          chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
         };
       },
     });
@@ -9212,7 +9212,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           project.id === HOME_PROJECT_ID
             ? {
                 ...project,
-                workspaceRoot: "/Users/tester/Documents/OmniMind/2026/send-to-agent",
+                workspaceRoot: "/Users/tester/Documents/HarnessOS/2026/send-to-agent",
               }
             : project,
         ),
@@ -9221,7 +9221,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.welcome = {
           ...nextFixture.welcome,
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+          chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
         };
       },
     });
@@ -9448,7 +9448,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.welcome = {
           ...nextFixture.welcome,
           homeDir: "/Users/tester",
-          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+          chatWorkspaceRoot: "/Users/tester/Documents/HarnessOS",
         };
         nextFixture.gitBranchByCwd = {
           "/Users/tester": "home-main",
@@ -9492,7 +9492,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
     let catalogProjected = false;
-    const readyOmniMindStatus = {
+    const readyHarnessOSStatus = {
       engine: "oa" as const,
       status: "ready" as const,
       available: true,
@@ -9517,7 +9517,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       checkedAt: NOW_ISO,
     };
     const refreshEngines = vi.fn(async () => ({
-      engines: catalogProjected ? [readyOmniMindStatus] : [],
+      engines: catalogProjected ? [readyHarnessOSStatus] : [],
     }));
     const setupService = {
       serviceId: "deepseek",
@@ -9609,7 +9609,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       };
       fixture.serverConfig = {
         ...fixture.serverConfig,
-        engines: [readyOmniMindStatus],
+        engines: [readyHarnessOSStatus],
       };
       return {
         state: "complete" as const,
@@ -9626,8 +9626,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
           ...nativeApi.server,
           refreshEngines,
         },
-        omnimindModelServices: {
-          ...nativeApi.omnimindModelServices,
+        oaModelServices: {
+          ...nativeApi.oaModelServices,
           list: listModelServices,
           get: getModelService,
           beginLogin,
@@ -9649,7 +9649,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       configureFixture: (nextFixture) => {
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
-          engines: [readyOmniMindStatus, readyPiStatus, readyUnselectedOpenCodeStatus],
+          engines: [readyHarnessOSStatus, readyPiStatus, readyUnselectedOpenCodeStatus],
         };
         nextFixture.providerPassivePresence = ["oa", "pi", "opencode"];
         nextFixture.providerModelsByEngine = {
@@ -9849,8 +9849,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         configurable: true,
         value: {
           ...nativeApi,
-          omnimindModelServices: {
-            ...nativeApi.omnimindModelServices,
+          oaModelServices: {
+            ...nativeApi.oaModelServices,
             list: listModelServices,
           },
         },
@@ -9956,8 +9956,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
       configurable: true,
       value: {
         ...nativeApi,
-        omnimindModelServices: {
-          ...nativeApi.omnimindModelServices,
+        oaModelServices: {
+          ...nativeApi.oaModelServices,
           list: listModelServices,
         },
       },
@@ -10067,8 +10067,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
       configurable: true,
       value: {
         ...nativeApi,
-        omnimindModelServices: {
-          ...nativeApi.omnimindModelServices,
+        oaModelServices: {
+          ...nativeApi.oaModelServices,
           list: listModelServices,
         },
       },
@@ -10189,8 +10189,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
       configurable: true,
       value: {
         ...nativeApi,
-        omnimindModelServices: {
-          ...nativeApi.omnimindModelServices,
+        oaModelServices: {
+          ...nativeApi.oaModelServices,
           list: listModelServices,
         },
       },
@@ -10283,7 +10283,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("routes a stale OmniMind service selection back to Model services", async () => {
+  it("routes a stale HarnessOS service selection back to Model services", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     useComposerDraftStore.getState().setStickyEngineSelection({
       engine: "oa",
@@ -10302,8 +10302,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
       configurable: true,
       value: {
         ...nativeApi,
-        omnimindModelServices: {
-          ...nativeApi.omnimindModelServices,
+        oaModelServices: {
+          ...nativeApi.oaModelServices,
           list: listModelServices,
         },
       },
@@ -10358,7 +10358,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await waitForURL(
         mounted.router,
         (path) => path === "/settings",
-        "A stale OmniMind service selection should open Model services recovery.",
+        "A stale HarnessOS service selection should open Model services recovery.",
       );
       expect(mounted.router.state.location.search).toMatchObject({ section: "models" });
       expect(mounted.router.state.location.search).not.toHaveProperty("target");
@@ -10387,8 +10387,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
       configurable: true,
       value: {
         ...nativeApi,
-        omnimindModelServices: {
-          ...nativeApi.omnimindModelServices,
+        oaModelServices: {
+          ...nativeApi.oaModelServices,
           list: listModelServices,
         },
       },
@@ -10720,7 +10720,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           expect(createWorktreeRequest).toBeTruthy();
           const temporaryBranch = createWorktreeRequest?.newBranch;
           expect(typeof temporaryBranch).toBe("string");
-          expect(temporaryBranch).toMatch(/^omnimind\/[0-9a-f]{8}$/);
+          expect(temporaryBranch).toMatch(/^harnessos\/[0-9a-f]{8}$/);
 
           const createThreadRequest = wsRequests.find(
             (request) =>
@@ -10736,8 +10736,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
           expect(createThreadRequest?.command).toMatchObject({
             envMode: "worktree",
             branch: temporaryBranch,
-            worktreePath: "/repo/.codex/worktrees/generated/omnimind",
-            associatedWorktreePath: "/repo/.codex/worktrees/generated/omnimind",
+            worktreePath: "/repo/.codex/worktrees/generated/harnessos",
+            associatedWorktreePath: "/repo/.codex/worktrees/generated/harnessos",
             associatedWorktreeBranch: temporaryBranch,
             associatedWorktreeRef: "0123456789abcdef0123456789abcdef01234567",
           });
@@ -10860,7 +10860,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         { timeout: 10_000, interval: 16 },
       );
       const createWorktreeIndex = wsRequests.indexOf(createWorktreeRequest);
-      const worktreePath = "/repo/.codex/worktrees/generated/omnimind";
+      const worktreePath = "/repo/.codex/worktrees/generated/harnessos";
 
       const terminalOpenRequest = await vi.waitFor(
         () => {

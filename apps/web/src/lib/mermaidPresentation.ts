@@ -463,7 +463,7 @@ export async function renderMermaidPresentation(input: {
       performance.mark("harnessos:mermaid-render-attempt");
       const renderStartedAt = performance.now();
       const rendered = await mermaid.render(
-        `omnimind-mermaid-${cacheKey.slice(0, 16)}`,
+        `harnessos-mermaid-${cacheKey.slice(0, 16)}`,
         input.source,
       );
       performance.measure("harnessos:mermaid-render-duration", {

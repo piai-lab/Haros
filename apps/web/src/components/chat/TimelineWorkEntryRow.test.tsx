@@ -84,7 +84,7 @@ describe("canonical User Input Timeline identity", () => {
         engineWebSurface: {
           status: "waiting-for-user",
           provenance: "engine-native",
-          presentation: "omnimind-browser",
+          presentation: "harnessos-browser",
         },
       }),
     ]) {

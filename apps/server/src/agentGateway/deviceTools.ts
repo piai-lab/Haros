@@ -268,7 +268,7 @@ export function makeAgentGatewayDeviceTools(
       definition: {
         name: "device_list",
         description:
-          "List iOS simulators OmniMind can drive, with their runtime, boot state, and who booted them. Call this before any other device_* tool to get a udid.",
+          "List iOS simulators HarnessOS can drive, with their runtime, boot state, and who booted them. Call this before any other device_* tool to get a udid.",
         inputSchema: {
           type: "object",
           properties: {
@@ -290,7 +290,7 @@ export function makeAgentGatewayDeviceTools(
       definition: {
         name: "device_boot",
         description:
-          'Boot a simulator. OmniMind caps the number of simulators it boots itself; past the cap this returns kind "boot-limit-reached" with the devices to shut down, which is a refusal to relay to the user, not an error to retry.',
+          'Boot a simulator. HarnessOS caps the number of simulators it boots itself; past the cap this returns kind "boot-limit-reached" with the devices to shut down, which is a refusal to relay to the user, not an error to retry.',
         inputSchema: {
           type: "object",
           properties: { udid: UDID_PROPERTY },
@@ -317,7 +317,7 @@ export function makeAgentGatewayDeviceTools(
       definition: {
         name: "device_install",
         description:
-          "Install a built .app bundle on a booted simulator. OmniMind never builds the app: run your own build first and pass the resulting bundle path.",
+          "Install a built .app bundle on a booted simulator. HarnessOS never builds the app: run your own build first and pass the resulting bundle path.",
         inputSchema: {
           type: "object",
           properties: {
@@ -403,7 +403,7 @@ export function makeAgentGatewayDeviceTools(
       definition: {
         name: "device_tap",
         description:
-          "Tap an element by label, or a raw point. Prefer label: OmniMind re-reads the accessibility tree, scrolls the element into view if it sits below the fold, and taps its own point, which is the only thing that works for a control merged into its row (a switch's row centre is dead space). Never swipe first to reach something you are about to tap. Pass role alongside label only to disambiguate. Use x and y just for something the tree does not label; they are device points from device_describe_ui, never screenshot pixels.",
+          "Tap an element by label, or a raw point. Prefer label: HarnessOS re-reads the accessibility tree, scrolls the element into view if it sits below the fold, and taps its own point, which is the only thing that works for a control merged into its row (a switch's row centre is dead space). Never swipe first to reach something you are about to tap. Pass role alongside label only to disambiguate. Use x and y just for something the tree does not label; they are device points from device_describe_ui, never screenshot pixels.",
         inputSchema: {
           type: "object",
           properties: {
@@ -609,7 +609,7 @@ export function makeAgentGatewayDeviceTools(
       definition: {
         name: "device_scroll_to_element",
         description:
-          "Scroll a labelled element into view, in one call. OmniMind swipes and re-reads the tree until the element sits in the tappable band, then returns it with its tap point. Use this instead of a manual device_swipe loop for anything you are looking for. You do not need it before device_tap with a label, which scrolls on its own; reach for it to read something below the fold, or to confirm a screen contains what you expect.",
+          "Scroll a labelled element into view, in one call. HarnessOS swipes and re-reads the tree until the element sits in the tappable band, then returns it with its tap point. Use this instead of a manual device_swipe loop for anything you are looking for. You do not need it before device_tap with a label, which scrolls on its own; reach for it to read something below the fold, or to confirm a screen contains what you expect.",
         inputSchema: {
           type: "object",
           properties: {

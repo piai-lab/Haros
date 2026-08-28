@@ -94,12 +94,12 @@ describe("trustedOrigins", () => {
     const remoteConfig = {
       ...config,
       host: "0.0.0.0",
-      publicUrl: new URL("https://omnimind.example.test/"),
+      publicUrl: new URL("https://harnessos.example.test/"),
     };
     expect(
       isTrustedAppOrigin({
-        origin: "https://omnimind.example.test",
-        requestOrigin: "http://omnimind.example.test",
+        origin: "https://harnessos.example.test",
+        requestOrigin: "http://harnessos.example.test",
         config: remoteConfig,
       }),
     ).toBe(true);
@@ -194,7 +194,7 @@ describe("trustedOrigins", () => {
       requiresWebSocketAuthentication({
         host: "127.0.0.1",
         authToken: undefined,
-        publicUrl: new URL("https://omnimind.example.test/"),
+        publicUrl: new URL("https://harnessos.example.test/"),
       }),
     ).toBe(true);
   });

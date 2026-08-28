@@ -53,7 +53,7 @@ function providerForSkillOrigin(origin: string): EngineKind | null {
 export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
   switch (scope) {
     case "oa":
-      return { label: "OmniMind", engine: null };
+      return { label: "HarnessOS", engine: null };
     case "agents":
       return { label: "Shared (.agents)", engine: null };
     case "project":
@@ -80,7 +80,7 @@ export function skillDisplayName(skill: EngineSkillDescriptor): string {
   return skill.interface?.displayName ?? skill.name;
 }
 
-export function isOmniMindSkillSource(skill: EngineSkillDescriptor): boolean {
+export function isHarnessOSSkillSource(skill: EngineSkillDescriptor): boolean {
   return skill.scope === "oa" || skill.path.split(/[\\/]+/).includes(".harnessos");
 }
 

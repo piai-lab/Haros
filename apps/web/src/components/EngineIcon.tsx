@@ -8,7 +8,7 @@ import { type EngineKind } from "@harnessos/contracts";
 import type { ReactNode, SVGProps } from "react";
 
 import { CentralIcon } from "~/lib/central-icons";
-import { OmniMindLogo } from "./OmniMindLogo";
+import { HarnessOSLogo } from "./HarnessOSLogo";
 import { cn } from "~/lib/utils";
 import {
   AntigravityIcon,
@@ -65,7 +65,7 @@ const OpenCodeProviderIcon = ({
 };
 
 export const ENGINE_ICON_COMPONENT_BY_PROVIDER: Record<EngineKind, Icon> = {
-  oa: OmniMindLogo,
+  oa: HarnessOSLogo,
   codex: OpenAI,
   claude: ClaudeAI,
   cursor: CursorIcon,

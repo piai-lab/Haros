@@ -95,7 +95,7 @@ function shouldKeepBuiltInSlashCommandDespiteNativeCollision(
     command === "automation" ||
     command === "export" ||
     command === "feedback" ||
-    // /fork always uses OmniMind's thread fork lifecycle. A engine-native
+    // /fork always uses HarnessOS's thread fork lifecycle. A engine-native
     // command with the same spelling must not replace that product action.
     command === "fork" ||
     command === "goal" ||
@@ -348,10 +348,10 @@ export function getAvailableComposerSlashCommands(input: {
         ]
       : [
           // Claude owns most slash-command UX natively; sidechat remains app-level because it
-          // creates a OmniMind split/context clone before the engine sees the first turn.
+          // creates a HarnessOS split/context clone before the engine sees the first turn.
           // Fork is app-level for the same reason: it creates a Product thread with durable
           // fork lineage rather than forwarding engine-native command text.
-          // /export is app-level too — OmniMind owns the thread transcript, so the download
+          // /export is app-level too — HarnessOS owns the thread transcript, so the download
           // happens in the app rather than being forwarded to Claude's native /export.
           ...(input.canOfferForkCommand ? (["fork"] as const) : []),
           ...(input.canOfferSideCommand ? (["side"] as const) : []),

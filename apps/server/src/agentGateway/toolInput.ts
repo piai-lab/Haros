@@ -1,7 +1,7 @@
 import {
   DEFAULT_MODEL_BY_PROVIDER,
-  OmniMindCreateThreadsInput,
-  OmniMindWaitForThreadsInput,
+  HarnessOSCreateThreadsInput,
+  HarnessOSWaitForThreadsInput,
   ENGINE_KINDS,
   type EngineSelection,
   type EngineKind,
@@ -134,16 +134,16 @@ export function buildEngineSelection(
 
 export function decodeCreateThreadsInput(value: unknown) {
   try {
-    return Schema.decodeUnknownSync(OmniMindCreateThreadsInput)(value);
+    return Schema.decodeUnknownSync(HarnessOSCreateThreadsInput)(value);
   } catch (error) {
-    throw new ToolInputError(`Invalid OmniMind creation plan: ${errorText(error)}`);
+    throw new ToolInputError(`Invalid HarnessOS creation plan: ${errorText(error)}`);
   }
 }
 
 export function decodeWaitForThreadsInput(value: unknown) {
   try {
-    return Schema.decodeUnknownSync(OmniMindWaitForThreadsInput)(value);
+    return Schema.decodeUnknownSync(HarnessOSWaitForThreadsInput)(value);
   } catch (error) {
-    throw new ToolInputError(`Invalid OmniMind wait request: ${errorText(error)}`);
+    throw new ToolInputError(`Invalid HarnessOS wait request: ${errorText(error)}`);
   }
 }

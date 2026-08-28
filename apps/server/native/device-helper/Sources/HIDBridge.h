@@ -16,19 +16,19 @@ NS_ASSUME_NONNULL_BEGIN
 /// Hardware buttons addressable over HID. Rotation is deliberately absent: the
 /// simulator exposes no rotation button, so orientation changes go through
 /// `simctl` at the UI level instead (see HEADER.md).
-typedef NS_ENUM(NSInteger, OmniMindHardwareButton) {
-  OmniMindHardwareButtonHome,
-  OmniMindHardwareButtonLock,
-  OmniMindHardwareButtonSide,
-  OmniMindHardwareButtonSiri,
-  OmniMindHardwareButtonVolumeUp,
-  OmniMindHardwareButtonVolumeDown,
+typedef NS_ENUM(NSInteger, HarnessOSHardwareButton) {
+  HarnessOSHardwareButtonHome,
+  HarnessOSHardwareButtonLock,
+  HarnessOSHardwareButtonSide,
+  HarnessOSHardwareButtonSiri,
+  HarnessOSHardwareButtonVolumeUp,
+  HarnessOSHardwareButtonVolumeDown,
 };
 
 /// Returns NO (and fills `name`-specific errors) for an unknown button name.
-BOOL OmniMindHardwareButtonFromName(NSString *name, OmniMindHardwareButton *outButton);
+BOOL HarnessOSHardwareButtonFromName(NSString *name, HarnessOSHardwareButton *outButton);
 
-@interface OmniMindHIDBridge : NSObject
+@interface HarnessOSHIDBridge : NSObject
 
 /// Connects a HID client to `device` (a `SimDevice`). Returns NO on failure.
 - (BOOL)attachToDevice:(id)device
@@ -72,9 +72,9 @@ BOOL OmniMindHardwareButtonFromName(NSString *name, OmniMindHardwareButton *outB
 /// Returns the count of characters that had no mapping (skipped).
 - (NSInteger)typeText:(NSString *)text NS_SWIFT_NAME(type(text:));
 
-- (void)sendButton:(OmniMindHardwareButton)button down:(BOOL)down
+- (void)sendButton:(HarnessOSHardwareButton)button down:(BOOL)down
     NS_SWIFT_NAME(sendButton(_:down:));
-- (void)tapButton:(OmniMindHardwareButton)button NS_SWIFT_NAME(tapButton(_:));
+- (void)tapButton:(HarnessOSHardwareButton)button NS_SWIFT_NAME(tapButton(_:));
 
 @end
 

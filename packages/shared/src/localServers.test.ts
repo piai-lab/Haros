@@ -50,8 +50,8 @@ describe("localServerAddressLabel", () => {
 describe("localServerPrimaryLabel", () => {
   it("prefers the live page title when one was resolved", () => {
     expect(
-      localServerPrimaryLabel(makeServer({ pageTitle: "OmniMind", displayName: "Vite" })),
-    ).toBe("OmniMind");
+      localServerPrimaryLabel(makeServer({ pageTitle: "HarnessOS", displayName: "Vite" })),
+    ).toBe("HarnessOS");
   });
 
   it("falls back to the detected display name when no page title is known", () => {
@@ -62,8 +62,8 @@ describe("localServerPrimaryLabel", () => {
 describe("localServerFolderLabel", () => {
   it("returns the final segment of a POSIX cwd", () => {
     expect(
-      localServerFolderLabel(makeServer({ cwd: "/Users/me/Developer/omnimind-website" })),
-    ).toBe("omnimind-website");
+      localServerFolderLabel(makeServer({ cwd: "/Users/me/Developer/harnessos-website" })),
+    ).toBe("harnessos-website");
   });
 
   it("ignores a trailing separator", () => {

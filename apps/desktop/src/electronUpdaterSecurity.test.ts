@@ -204,7 +204,7 @@ describe("electronUpdaterSecurity", () => {
     const updaterModule = { BaseUpdater: FakeBaseUpdater };
     const prototype = FakeBaseUpdater.prototype as {
       spawnSyncLog?: (cmd: string, args?: string[]) => string;
-      __omnimindSpawnSyncLogPatched?: boolean;
+      __harnessosSpawnSyncLogPatched?: boolean;
     };
 
     hardenElectronUpdater(updaterModule, {}, "darwin");
@@ -217,7 +217,7 @@ describe("electronUpdaterSecurity", () => {
     const output = prototype.spawnSyncLog?.call(instance, process.execPath, ["--version"]);
 
     expect(output).toMatch(/^v\d+\.\d+\.\d+/);
-    expect(prototype.__omnimindSpawnSyncLogPatched).toBe(true);
+    expect(prototype.__harnessosSpawnSyncLogPatched).toBe(true);
   });
 
   it("replaces the NSIS signature verifier on Windows", async () => {

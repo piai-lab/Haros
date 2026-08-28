@@ -16,17 +16,17 @@ afterEach(() => {
 });
 
 function createAssets(): string {
-  const root = mkdtempSync(join(tmpdir(), "omnimind-artifact-provenance-test-"));
+  const root = mkdtempSync(join(tmpdir(), "harnessos-artifact-provenance-test-"));
   temporaryRoots.push(root);
-  writeFileSync(join(root, "OmniMind-1.2.3-x64.AppImage"), "app-image-bytes");
+  writeFileSync(join(root, "HarnessOS-1.2.3-x64.AppImage"), "app-image-bytes");
   writeFileSync(join(root, "latest-linux.yml"), "version: 1.2.3\n");
   return root;
 }
 
 function createWindowsAssets(): string {
-  const root = mkdtempSync(join(tmpdir(), "omnimind-windows-provenance-test-"));
+  const root = mkdtempSync(join(tmpdir(), "harnessos-windows-provenance-test-"));
   temporaryRoots.push(root);
-  writeFileSync(join(root, "OmniMind-1.2.3-x64.exe"), "unsigned-windows-bytes");
+  writeFileSync(join(root, "HarnessOS-1.2.3-x64.exe"), "unsigned-windows-bytes");
   writeFileSync(join(root, "latest.yml"), "version: 1.2.3\n");
   return root;
 }
@@ -57,11 +57,11 @@ describe("release artifact provenance", () => {
     });
     expect(result.manifest.artifacts.map((artifact) => artifact.fileName)).toEqual([
       "latest-linux.yml",
-      "OmniMind-1.2.3-x64.AppImage",
+      "HarnessOS-1.2.3-x64.AppImage",
     ]);
     expect(
       result.manifest.artifacts.find(
-        (artifact) => artifact.fileName === "OmniMind-1.2.3-x64.AppImage",
+        (artifact) => artifact.fileName === "HarnessOS-1.2.3-x64.AppImage",
       )?.sha256,
     ).toBe(createHash("sha256").update("app-image-bytes").digest("hex"));
     expect(JSON.parse(readFileSync(result.path, "utf8"))).toEqual(result.manifest);

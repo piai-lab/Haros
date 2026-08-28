@@ -32,7 +32,7 @@ const DIAGNOSTICS: FeedbackDiagnostics = {
   ...CONTEXT,
   appVersion: "0.5.1",
   submittedAt: "2026-07-15T18:00:00.000Z",
-  userAgent: "OmniMind test agent",
+  userAgent: "HarnessOS test agent",
   platform: "MacIntel",
   language: "en-US",
   viewport: "1440x900",
@@ -47,7 +47,7 @@ describe("formatFeedbackSummary", () => {
 
     expect(summary).toBe(
       [
-        "I ran into a bug in OmniMind 0.5.1, using codex with gpt-5.6-sol.",
+        "I ran into a bug in HarnessOS 0.5.1, using codex with gpt-5.6-sol.",
         "",
         "Report type: Bug",
         "App version: 0.5.1",
@@ -63,7 +63,7 @@ describe("formatFeedbackSummary", () => {
         "At submission: the thread was in an error state, the agent was waiting for input.",
         "Platform: MacIntel, viewport 1440x900",
         "Language: en-US",
-        "User agent: OmniMind test agent",
+        "User agent: HarnessOS test agent",
         "Submitted at: 2026-07-15T18:00:00.000Z",
       ].join("\n"),
     );
@@ -85,7 +85,7 @@ describe("formatFeedbackSummary", () => {
     });
 
     expect(summary).toContain(
-      "I have some feedback in OmniMind 0.5.1, using codex with gpt-5.6-sol.",
+      "I have some feedback in HarnessOS 0.5.1, using codex with gpt-5.6-sol.",
     );
     expect(summary).toContain("Report type: Unspecified");
     expect(summary).toContain("At submission: nothing pending.");
@@ -99,7 +99,7 @@ describe("formatFeedbackSummary", () => {
     ({ value, label, lead }) => {
       const summary = formatFeedbackSummary({ category: value, diagnostics: DIAGNOSTICS });
 
-      expect(summary.startsWith(`${lead} in OmniMind 0.5.1`)).toBe(true);
+      expect(summary.startsWith(`${lead} in HarnessOS 0.5.1`)).toBe(true);
       expect(summary).toContain(`Report type: ${label}`);
     },
   );
@@ -120,7 +120,7 @@ describe("formatFeedbackSummary", () => {
       },
     });
 
-    expect(summary).toContain("I have some feedback in OmniMind 0.5.1 outside an active chat.");
+    expect(summary).toContain("I have some feedback in HarnessOS 0.5.1 outside an active chat.");
     expect(summary).not.toContain("Engine:");
     expect(summary).not.toContain("Model:");
   });
@@ -139,7 +139,7 @@ describe("buildFeedbackSubmission", () => {
       details: "  The composer stopped responding.  ",
       context: hostileContext,
       now: new Date("2026-07-15T18:00:00.000Z"),
-      userAgent: "OmniMind test agent",
+      userAgent: "HarnessOS test agent",
       platform: "MacIntel",
       language: "en-US",
       viewport: { width: 1_440, height: 900 },
@@ -153,7 +153,7 @@ describe("buildFeedbackSubmission", () => {
         engine: "codex",
         model: "gpt-5.6-sol",
         submittedAt: "2026-07-15T18:00:00.000Z",
-        userAgent: "OmniMind test agent",
+        userAgent: "HarnessOS test agent",
         platform: "MacIntel",
         language: "en-US",
         viewport: "1440x900",
@@ -246,7 +246,7 @@ describe("submitFeedback", () => {
 
     await expect(
       submitFeedback(hostileSubmission, {
-        configuredEndpoint: "https://omnimind.wisdomeyes.cn/api/v1/feedback",
+        configuredEndpoint: "https://harnessos.wisdomeyes.cn/api/v1/feedback",
         isProduction: true,
         fetchImplementation,
       }),
@@ -256,7 +256,7 @@ describe("submitFeedback", () => {
     const call = fetchImplementation.mock.calls[0];
     expect(call).toBeDefined();
     const [url, request] = call!;
-    expect(url).toBe("https://omnimind.wisdomeyes.cn/api/v1/feedback");
+    expect(url).toBe("https://harnessos.wisdomeyes.cn/api/v1/feedback");
     expect(request?.method).toBe("POST");
     expect(request?.credentials).toBe("omit");
     expect(request?.referrerPolicy).toBe("no-referrer");
@@ -288,7 +288,7 @@ describe("submitFeedback", () => {
       submitFeedback(
         { ...submission, category: "credential" as never },
         {
-          configuredEndpoint: "https://omnimind.wisdomeyes.cn/api/v1/feedback",
+          configuredEndpoint: "https://harnessos.wisdomeyes.cn/api/v1/feedback",
           isProduction: true,
           fetchImplementation,
         },
@@ -309,7 +309,7 @@ describe("submitFeedback", () => {
           },
         },
         {
-          configuredEndpoint: "https://omnimind.wisdomeyes.cn/api/v1/feedback",
+          configuredEndpoint: "https://harnessos.wisdomeyes.cn/api/v1/feedback",
           isProduction: true,
           fetchImplementation,
         },
@@ -347,7 +347,7 @@ describe("submitFeedback", () => {
 
     await expect(
       submitFeedback(hostile, {
-        configuredEndpoint: "https://omnimind.wisdomeyes.cn/api/v1/feedback",
+        configuredEndpoint: "https://harnessos.wisdomeyes.cn/api/v1/feedback",
         isProduction: true,
         fetchImplementation,
       }),
@@ -366,7 +366,7 @@ describe("submitFeedback", () => {
     });
 
     const pending = submitFeedback(submission, {
-      configuredEndpoint: "https://omnimind.wisdomeyes.cn/api/v1/feedback",
+      configuredEndpoint: "https://harnessos.wisdomeyes.cn/api/v1/feedback",
       isProduction: true,
       fetchImplementation,
       signal: caller.signal,
@@ -386,7 +386,7 @@ describe("submitFeedback", () => {
 
     await expect(
       submitFeedback(submission, {
-        configuredEndpoint: "https://omnimind.wisdomeyes.cn/api/v1/feedback",
+        configuredEndpoint: "https://harnessos.wisdomeyes.cn/api/v1/feedback",
         isProduction: true,
         fetchImplementation,
       }),

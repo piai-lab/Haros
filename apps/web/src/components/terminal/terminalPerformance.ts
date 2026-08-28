@@ -14,7 +14,7 @@ interface TerminalWriteSample {
 
 declare global {
   interface Window {
-    __omnimindTerminalPerf?: {
+    __harnessosTerminalPerf?: {
       samples: TerminalWriteSample[];
       reset: () => void;
     };
@@ -33,13 +33,13 @@ function terminalPerfEnabled(): boolean {
 }
 
 function getTerminalPerfStore() {
-  window.__omnimindTerminalPerf ??= {
+  window.__harnessosTerminalPerf ??= {
     samples: [],
     reset() {
       this.samples.length = 0;
     },
   };
-  return window.__omnimindTerminalPerf;
+  return window.__harnessosTerminalPerf;
 }
 
 // Records a write only after xterm reports that its parser consumed the data.

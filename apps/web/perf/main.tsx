@@ -40,7 +40,7 @@ type PerfSnapshot = {
 
 declare global {
   interface Window {
-    __omnimindPerf: {
+    __harnessosPerf: {
       appendStreamingChunks: (count?: number) => Promise<FrameReport>;
       resetMetrics: () => void;
       scrollCycle: (cycles?: number) => Promise<FrameReport>;
@@ -198,7 +198,7 @@ function PerformanceHarness() {
   }, []);
 
   useEffect(() => {
-    window.__omnimindPerf = {
+    window.__harnessosPerf = {
       appendStreamingChunks,
       resetMetrics,
       scrollCycle,
@@ -208,7 +208,7 @@ function PerformanceHarness() {
 
   return (
     <main className="flex h-screen min-h-0 w-screen bg-background text-foreground">
-      <Profiler id="omnimind-transcript-perf" onRender={handleRender}>
+      <Profiler id="harnessos-transcript-perf" onRender={handleRender}>
         <ChatTranscriptPane
           activeThreadId="perf-thread"
           activeTurnId={working ? TurnId.makeUnsafe("perf-turn-streaming") : null}

@@ -40,7 +40,7 @@ function thread(input: {
 
 describe("buildThreadMentionComposerItems", () => {
   const projects = [
-    project("project", "project", "OmniMind"),
+    project("project", "project", "HarnessOS"),
     project("chats", "chat", "Home"),
     project("studio", "studio", "Studio workspace"),
   ];
@@ -52,7 +52,7 @@ describe("buildThreadMentionComposerItems", () => {
       query: "release",
       threads: [
         thread({ id: "current", projectId: "project", title: "Release current" }),
-        thread({ id: "project-thread", projectId: "project", title: "Release OmniMind" }),
+        thread({ id: "project-thread", projectId: "project", title: "Release HarnessOS" }),
         thread({ id: "chat-thread", projectId: "chats", title: "Release notes" }),
         thread({
           id: "studio-thread",
@@ -71,7 +71,7 @@ describe("buildThreadMentionComposerItems", () => {
     ]);
     expect(Object.fromEntries(items.map((item) => [item.id, item.description]))).toEqual({
       "thread:chat-thread": "Chat",
-      "thread:project-thread": "OmniMind",
+      "thread:project-thread": "HarnessOS",
       "thread:studio-thread": "Chat",
     });
     expect(items.find((item) => item.id === "thread:studio-thread")).toMatchObject({
@@ -148,7 +148,7 @@ describe("buildThreadMentionComposerItems", () => {
     const mentionNamesById = Object.fromEntries(
       items.map((item) => [item.id, item.type === "thread" ? item.mention.name : null]),
     );
-    expect(mentionNamesById["thread:in-project"]).toBe("Planning (OmniMind)");
+    expect(mentionNamesById["thread:in-project"]).toBe("Planning (HarnessOS)");
     expect(mentionNamesById["thread:in-chats"]).toBe("Planning (Chat)");
     expect(mentionNamesById["thread:unique"]).toBe("Planning extras");
     expect(items.every((item) => item.label.startsWith("Planning"))).toBe(true);
@@ -166,7 +166,7 @@ describe("buildThreadMentionComposerItems", () => {
     });
 
     const names = items.map((item) => (item.type === "thread" ? item.mention.name : "")).toSorted();
-    expect(names).toEqual(["Planning (OmniMind, aaa111)", "Planning (OmniMind, bbb222)"]);
+    expect(names).toEqual(["Planning (HarnessOS, aaa111)", "Planning (HarnessOS, bbb222)"]);
   });
 
   it("keeps generated names unique when a qualified name matches another real title", () => {
@@ -180,15 +180,15 @@ describe("buildThreadMentionComposerItems", () => {
         thread({
           id: "thread-333333",
           projectId: "project",
-          title: "Planning (OmniMind)",
+          title: "Planning (HarnessOS)",
         }),
       ],
     });
 
     const names = items.map((item) => (item.type === "thread" ? item.mention.name : ""));
     expect(new Set(names.map((name) => name.toLowerCase())).size).toBe(names.length);
-    expect(names).toContain("Planning (OmniMind) (111111)");
-    expect(names).toContain("Planning (OmniMind) (333333)");
+    expect(names).toContain("Planning (HarnessOS) (111111)");
+    expect(names).toContain("Planning (HarnessOS) (333333)");
   });
 
   it("treats casing-only title differences as the same mention token", () => {

@@ -20,8 +20,8 @@ const TEST_CAPABILITY = "harnessos-browser-host-client-test-capability-012345678
 
 function pipePathForTest(name: string): string {
   return process.platform === "win32"
-    ? String.raw`\\.\pipe\omnimind-${name}-${process.pid}-${crypto.randomUUID()}`
-    : path.join("/tmp", `omnimind-${process.pid}-${crypto.randomUUID().slice(0, 8)}.sock`);
+    ? String.raw`\\.\pipe\harnessos-${name}-${process.pid}-${crypto.randomUUID()}`
+    : path.join("/tmp", `harnessos-${process.pid}-${crypto.randomUUID().slice(0, 8)}.sock`);
 }
 
 function encodeFrame(value: unknown): Buffer {
@@ -150,7 +150,7 @@ describe("browser host RPC client", () => {
             threadId: "thread-engine-surface" as never,
             surfaceId: "surface-opaque-123",
             url: "http://127.0.0.1:43123/?session=private-token",
-            title: "OmniMind 网络访问",
+            title: "HarnessOS 网络访问",
             expiresAt: Date.now() + 60_000,
           }),
         ).resolves.toEqual({ surfaceId: "surface-opaque-123", tabId: "tab-1" });

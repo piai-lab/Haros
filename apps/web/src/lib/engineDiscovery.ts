@@ -249,7 +249,7 @@ export function formatSkillScope(scope: string | undefined, locale: AppLocale = 
   if (normalized.length === 0) return locale === "zh-CN" ? "个人" : "Personal";
   const normalizedLower = normalized.toLowerCase();
   if (normalizedLower === "oa") {
-    return locale === "zh-CN" ? "OmniMind 能力库" : "OmniMind Library";
+    return locale === "zh-CN" ? "HarnessOS 能力库" : "HarnessOS Library";
   }
   if (locale === "zh-CN") {
     const localized = {
@@ -269,7 +269,7 @@ export function formatSkillDiscoveryWarning(
   providerLabel: string,
 ): string {
   if (warning.source === "engine-native") {
-    return `${providerLabel} native skill discovery failed. Any available OmniMind Library skills are shown below.`;
+    return `${providerLabel} native skill discovery failed. Any available HarnessOS Library skills are shown below.`;
   }
-  return `OmniMind Library discovery failed. Any available ${providerLabel} native skills are shown below.`;
+  return `HarnessOS Library discovery failed. Any available ${providerLabel} native skills are shown below.`;
 }

@@ -40,8 +40,8 @@ export {
   type WorkLogLiveActivityState,
   type WorkLogSubagent,
   type WorkLogSubagentAction,
-  type WorkLogOmniMindCreatedThread,
-  type WorkLogOmniMindThreadCreation,
+  type WorkLogHarnessOSCreatedThread,
+  type WorkLogHarnessOSThreadCreation,
 } from "./workLog";
 
 export type EnginePickerKind = EngineKind;

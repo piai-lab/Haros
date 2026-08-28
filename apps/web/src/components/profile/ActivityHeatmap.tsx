@@ -21,7 +21,7 @@ export const APP_HEATMAP_INTENSITY_CLASSES: readonly string[] = [
 ];
 
 // Export uses the same semantic theme ramp as the in-app chart; html-to-image resolves the
-// active OmniMind theme variables into the local PNG.
+// active HarnessOS theme variables into the local PNG.
 export const CARD_HEATMAP_INTENSITY_CLASSES: readonly string[] = [
   "bg-[var(--color-background-elevated-secondary)]",
   "bg-[color-mix(in_srgb,var(--info)_22%,transparent)]",

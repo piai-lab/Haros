@@ -19,7 +19,7 @@ import {
 const temporaryRoots: string[] = [];
 
 async function makeManagedRoot(count: number) {
-  const root = await fs.mkdtemp(path.join(tmpdir(), "omnimind-managed-worktrees-"));
+  const root = await fs.mkdtemp(path.join(tmpdir(), "harnessos-managed-worktrees-"));
   temporaryRoots.push(root);
   const paths: string[] = [];
   for (let index = 0; index < count; index += 1) {
@@ -143,7 +143,7 @@ describe("managed worktrees", () => {
     const count = MANAGED_WORKTREE_RETENTION_COUNT + 1;
     const { root, paths } = await makeManagedRoot(count);
     const canonicalRoot = await fs.realpath(root);
-    const linkRoot = await fs.mkdtemp(path.join(tmpdir(), "omnimind-managed-worktrees-link-"));
+    const linkRoot = await fs.mkdtemp(path.join(tmpdir(), "harnessos-managed-worktrees-link-"));
     temporaryRoots.push(linkRoot);
     const symlinkedRoot = path.join(linkRoot, "worktrees");
     await fs.symlink(canonicalRoot, symlinkedRoot);

@@ -48,14 +48,14 @@ export function remoteAccessPolicyError(
 ): string | null {
   const isRemoteBind = !isLoopbackHost(config.host);
   if (config.publicUrl && !normalizeHttpsPublicOrigin(config.publicUrl)) {
-    return "HARNESSOS_PUBLIC_URL/--public-url must be an HTTPS root origin without credentials, path, query, or fragment (for example https://omnimind.example.com).";
+    return "HARNESSOS_PUBLIC_URL/--public-url must be an HTTPS root origin without credentials, path, query, or fragment (for example https://harnessos.example.com).";
   }
   const isPubliclyExposed = isRemoteBind || Boolean(config.publicUrl);
   if (!isPubliclyExposed) return null;
   if (!config.authToken?.trim()) {
     return config.publicUrl
-      ? "Refusing to publish OmniMind through HARNESSOS_PUBLIC_URL/--public-url without HARNESSOS_AUTH_TOKEN/--auth-token."
-      : `Refusing to bind OmniMind to non-loopback host ${config.host ?? "<unspecified>"} without HARNESSOS_AUTH_TOKEN/--auth-token.`;
+      ? "Refusing to publish HarnessOS through HARNESSOS_PUBLIC_URL/--public-url without HARNESSOS_AUTH_TOKEN/--auth-token."
+      : `Refusing to bind HarnessOS to non-loopback host ${config.host ?? "<unspecified>"} without HARNESSOS_AUTH_TOKEN/--auth-token.`;
   }
   if (config.devUrl) {
     return "Remote server binds cannot be combined with VITE_DEV_SERVER_URL/--dev-url yet; use a loopback host for development or run the built web UI for remote access.";
@@ -174,7 +174,7 @@ export function resolveDefaultChatWorkspaceRoot(input: {
   const homeDir = input.homeDir.trim();
   const platform = input.platform ?? process.platform;
   const pathApi = platform === "win32" ? pathWin32 : pathPosix;
-  return pathApi.join(homeDir, "Documents", "OmniMind");
+  return pathApi.join(homeDir, "Documents", "HarnessOS");
 }
 
 export function resolveDefaultStudioWorkspaceRoot(input: {
@@ -238,7 +238,7 @@ export class ServerConfig extends ServiceMap.Service<ServerConfig, ServerConfigS
             : yield* fs.makeTempDirectoryScoped({
                 prefix:
                   typeof baseDirOrPrefix === "string"
-                    ? "omnimind-server-config-test-"
+                    ? "harnessos-server-config-test-"
                     : baseDirOrPrefix.prefix,
               });
         const derivedPaths = yield* deriveServerPaths(baseDir, devUrl);

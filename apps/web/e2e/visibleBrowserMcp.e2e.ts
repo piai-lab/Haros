@@ -64,7 +64,7 @@ test("production MCP controls one persistent Electron page across visibility cha
   const mainPath = process.env.HARNESSOS_E2E_ELECTRON_MAIN;
   if (!mainPath) throw new Error("Electron E2E main bundle was not prepared.");
   const site = await startVisibleBrowserFixtureSite();
-  const home = mkdtempSync(join(tmpdir(), "omnimind-visible-browser-e2e-"));
+  const home = mkdtempSync(join(tmpdir(), "harnessos-visible-browser-e2e-"));
   const workspaceRoot = join(home, "workspace");
   mkdirSync(workspaceRoot);
   writeFileSync(join(workspaceRoot, "fixture-upload.txt"), "visible-browser-upload\n", "utf8");
@@ -98,13 +98,13 @@ test("production MCP controls one persistent Electron page across visibility cha
         (_electron, input) => {
           const state = (
             globalThis as typeof globalThis & {
-              __omnimindVisibleBrowserE2E: {
+              __harnessosVisibleBrowserE2E: {
                 browserManager: {
                   runtimes: Map<string, { webContents: { id: number; getURL(): string } }>;
                 };
               };
             }
-          ).__omnimindVisibleBrowserE2E;
+          ).__harnessosVisibleBrowserE2E;
           const runtime = state.browserManager.runtimes.get(`${input.threadId}:${input.tabId}`);
           if (!runtime) throw new Error("Expected the native browser runtime to be live.");
           return { id: runtime.webContents.id, url: runtime.webContents.getURL() };
@@ -116,7 +116,7 @@ test("production MCP controls one persistent Electron page across visibility cha
         (_electron, input) => {
           const state = (
             globalThis as typeof globalThis & {
-              __omnimindVisibleBrowserE2E: {
+              __harnessosVisibleBrowserE2E: {
                 browserManager: {
                   runtimes: Map<
                     string,
@@ -125,7 +125,7 @@ test("production MCP controls one persistent Electron page across visibility cha
                 };
               };
             }
-          ).__omnimindVisibleBrowserE2E;
+          ).__harnessosVisibleBrowserE2E;
           const runtime = state.browserManager.runtimes.get(`${input.threadId}:${input.tabId}`);
           if (!runtime) throw new Error("Expected the native browser runtime to be live.");
           runtime.webContents.sendInputEvent(input.event);
@@ -165,9 +165,9 @@ test("production MCP controls one persistent Electron page across visibility cha
     await electronApp.evaluate(() => {
       (
         globalThis as typeof globalThis & {
-          __omnimindVisibleBrowserE2E: { setPanelRevealEnabled(enabled: boolean): void };
+          __harnessosVisibleBrowserE2E: { setPanelRevealEnabled(enabled: boolean): void };
         }
-      ).__omnimindVisibleBrowserE2E.setPanelRevealEnabled(false);
+      ).__harnessosVisibleBrowserE2E.setPanelRevealEnabled(false);
     });
     await mcp.call("browser_evaluate", {
       expression: `document.body.dataset.backgroundAgent = "continued"; true`,
@@ -182,9 +182,9 @@ test("production MCP controls one persistent Electron page across visibility cha
     await electronApp.evaluate(() => {
       (
         globalThis as typeof globalThis & {
-          __omnimindVisibleBrowserE2E: { setPanelRevealEnabled(enabled: boolean): void };
+          __harnessosVisibleBrowserE2E: { setPanelRevealEnabled(enabled: boolean): void };
         }
-      ).__omnimindVisibleBrowserE2E.setPanelRevealEnabled(true);
+      ).__harnessosVisibleBrowserE2E.setPanelRevealEnabled(true);
     });
 
     const navigated = await mcp.call("browser_navigate", {
@@ -778,9 +778,9 @@ test("production MCP controls one persistent Electron page across visibility cha
     const runtimeCount = await electronApp.evaluate(() => {
       const manager = (
         globalThis as typeof globalThis & {
-          __omnimindVisibleBrowserE2E: { browserManager: { runtimes: Map<string, unknown> } };
+          __harnessosVisibleBrowserE2E: { browserManager: { runtimes: Map<string, unknown> } };
         }
-      ).__omnimindVisibleBrowserE2E.browserManager;
+      ).__harnessosVisibleBrowserE2E.browserManager;
       return manager.runtimes.size;
     });
     expect(runtimeCount).toBe(0);

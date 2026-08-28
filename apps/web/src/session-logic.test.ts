@@ -911,7 +911,7 @@ describe("hasLiveTurnTailWork", () => {
 
 describe("ENGINE_OPTIONS", () => {
   it("lists every discoverable engine without claiming runtime availability", () => {
-    const omnimind = ENGINE_OPTIONS.find((option) => option.value === "oa");
+    const harnessos = ENGINE_OPTIONS.find((option) => option.value === "oa");
     const claude = ENGINE_OPTIONS.find((option) => option.value === "claude");
     const cursor = ENGINE_OPTIONS.find((option) => option.value === "cursor");
     const grok = ENGINE_OPTIONS.find((option) => option.value === "grok");
@@ -920,7 +920,7 @@ describe("ENGINE_OPTIONS", () => {
     const opencode = ENGINE_OPTIONS.find((option) => option.value === "opencode");
     const pi = ENGINE_OPTIONS.find((option) => option.value === "pi");
     expect(ENGINE_OPTIONS).toEqual([
-      { value: "oa", label: "OmniMind" },
+      { value: "oa", label: "HarnessOS" },
       { value: "codex", label: "Codex" },
       { value: "claude", label: "Claude" },
       { value: "cursor", label: "Cursor" },
@@ -931,9 +931,9 @@ describe("ENGINE_OPTIONS", () => {
       { value: "opencode", label: "OpenCode" },
       { value: "pi", label: "Pi" },
     ]);
-    expect(omnimind).toEqual({
+    expect(harnessos).toEqual({
       value: "oa",
-      label: "OmniMind",
+      label: "HarnessOS",
     });
     expect(claude).toEqual({
       value: "claude",

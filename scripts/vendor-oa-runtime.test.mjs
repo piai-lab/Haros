@@ -17,7 +17,7 @@ const stockPatchPath = path.join(
   "@earendil-works%2Fpi-coding-agent@0.84.3.patch",
 );
 
-describe("OmniMind Pi vendor generator", () => {
+describe("HarnessOS Pi vendor generator", () => {
   it("accepts only the exact adopted source patch bytes", async () => {
     const adoptedPatch = await readFile(patchPath);
     expect(assertPatchDigest(adoptedPatch)).toMatch(/^[a-f0-9]{64}$/);

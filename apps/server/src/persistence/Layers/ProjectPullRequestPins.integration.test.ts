@@ -27,13 +27,13 @@ layer("ProjectPullRequestPins", (it) => {
 
       yield* pins.setPinned({
         projectId: projectA,
-        repositoryKey: "acme/omnimind",
+        repositoryKey: "acme/harnessos",
         number: 42,
         isPinned: true,
       });
       yield* pins.setPinned({
         projectId: projectB,
-        repositoryKey: "acme/omnimind",
+        repositoryKey: "acme/harnessos",
         number: 42,
         isPinned: true,
       });
@@ -41,14 +41,14 @@ layer("ProjectPullRequestPins", (it) => {
       assert.deepStrictEqual(yield* pins.listByProjectIds({ projectIds: [projectA] }), [
         {
           projectId: projectA,
-          repositoryKey: "acme/omnimind",
+          repositoryKey: "acme/harnessos",
           number: 42,
         },
       ]);
       assert.deepStrictEqual(yield* pins.listByProjectIds({ projectIds: [projectB] }), [
         {
           projectId: projectB,
-          repositoryKey: "acme/omnimind",
+          repositoryKey: "acme/harnessos",
           number: 42,
         },
       ]);

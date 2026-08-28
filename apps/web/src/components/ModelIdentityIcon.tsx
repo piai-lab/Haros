@@ -5,7 +5,7 @@
 import type {
   ModelPresentationIdentity,
   EngineSelection,
-  OmniMindModelServiceOrigin,
+  OAModelServiceOrigin,
 } from "@harnessos/contracts";
 
 import type { EngineModelOption } from "~/providerModelOptions";
@@ -14,7 +14,7 @@ import { ModelServiceIcon } from "./ModelServiceIcon";
 
 function originFromSource(
   source: ModelPresentationIdentity["source"],
-): OmniMindModelServiceOrigin | undefined {
+): OAModelServiceOrigin | undefined {
   if (source === "user-configured") return "models_json";
   if (source === "extension") return "extension";
   if (source === "unknown") return "unknown";
