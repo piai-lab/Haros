@@ -154,7 +154,6 @@ import {
   type DevicePromptAttachmentResolution,
 } from "../lib/devicePromptContext";
 import {
-  buildComposerFileAttachmentsFromFiles,
   stageUploadComposerAttachments,
   cloneComposerImageAttachment,
   effectiveComposerAttachmentCount,
@@ -179,7 +178,6 @@ import {
 } from "../lib/automationDraft";
 import { dispatchThreadRename } from "../lib/threadRename";
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
-import { splitComposerDropzoneFiles, useComposerDropzone } from "../hooks/useComposerDropzone";
 import { useComposerImageIntake } from "../hooks/useComposerImageIntake";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import {
@@ -376,7 +374,6 @@ import { resolveWsHttpUrl } from "../lib/wsHttpUrl";
 import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useComposerFocusRequestStore } from "../composerFocusRequestStore";
 import { useWorkflowRunUiStore, useWorkflowRunUiThreadState } from "../workflowRunUiStore";
-import { appendComposerPromptText } from "../lib/chatReferences";
 import {
   appendOriginalComposerPromptBlocks,
   appendTerminalContextsToPrompt,
@@ -418,6 +415,7 @@ import {
   deriveSelectedContextWindowSnapshot,
 } from "../lib/contextWindow";
 import { useComposerVoiceController } from "./chat/useComposerVoiceController";
+import { useComposerAttachmentController } from "./chat/useComposerAttachmentController";
 import { readFirstRunReadinessPreference } from "./onboarding/firstRunReadinessPreference";
 import { requestFirstRunReadinessResume } from "./onboarding/FirstRunReadinessDialog";
 import {
@@ -6824,96 +6822,27 @@ export default function ChatView({
     submitComposerVoiceRecording,
   ]);
 
-  // --- Composer attachment entry points -------------------------------------
-  const addComposerImages = useCallback(
-    (files: readonly File[]) => {
-      if (!activeThreadId || files.length === 0) return;
-
-      if (pendingUserInputs.length > 0) {
-        toastManager.add({
-          type: "error",
-          title: t("conversation.answerPlanBeforeImages"),
-        });
-        return;
-      }
-
-      enqueueComposerImages(files);
-    },
-    [activeThreadId, enqueueComposerImages, pendingUserInputs.length, t],
-  );
-
-  const removeComposerImage = (imageId: string) => {
-    removeComposerImageFromDraft(imageId);
-  };
-
-  const addComposerFiles = useCallback(
-    (files: readonly File[]) => {
-      if (!activeThreadId || files.length === 0) return;
-
-      if (pendingUserInputs.length > 0) {
-        toastManager.add({
-          type: "error",
-          title: t("conversation.answerPlanBeforeFiles"),
-        });
-        return;
-      }
-
-      const { files: nextFiles, error } = buildComposerFileAttachmentsFromFiles({
-        files,
-        existingAttachmentCount: effectiveComposerAttachmentCount(
-          useComposerDraftStore.getState().draftsByThreadId[activeThreadId],
-        ),
-      });
-
-      const insertedCount = nextFiles.length > 0 ? addComposerFilesToDraft(nextFiles) : 0;
-      setThreadError(
-        activeThreadId,
-        insertedCount < nextFiles.length
-          ? t("browser.attachmentLimit", {
-              count: ENGINE_SEND_TURN_MAX_ATTACHMENTS,
-            })
-          : error,
-      );
-    },
-    [activeThreadId, addComposerFilesToDraft, pendingUserInputs.length, setThreadError, t],
-  );
-
-  const addComposerAttachments = useCallback(
-    (files: readonly File[]) => {
-      const { imageFiles, genericFiles } = splitComposerDropzoneFiles(files);
-      if (imageFiles.length > 0) {
-        addComposerImages(imageFiles);
-      }
-      if (genericFiles.length > 0) {
-        addComposerFiles(genericFiles);
-      }
-    },
-    [addComposerFiles, addComposerImages],
-  );
-
-  const removeComposerFile = (fileId: string) => {
-    discardPromptHistoryNavigationForComposerMutation();
-    removeComposerDraftFile(threadId, fileId);
-  };
-
   const {
+    addComposerAttachments,
+    addComposerFiles,
+    addComposerImages,
+    removeComposerFile,
+    removeComposerImage,
     onComposerPaste,
     onComposerDragEnter,
     onComposerDragOver,
     onComposerDragLeave,
     onComposerDrop,
-  } = useComposerDropzone({
-    addImages: addComposerImages,
-    fileSupport: {
-      genericFiles: "accept",
-      addFiles: addComposerFiles,
-    },
-    appendReferenceText: (referenceText) => appendComposerPromptText(threadId, referenceText),
-    appendPathMentions: (paths) => {
-      for (const absolutePath of paths) {
-        appendComposerPromptText(threadId, formatComposerMentionToken(absolutePath));
-      }
-    },
+  } = useComposerAttachmentController({
+    activeThreadId,
+    threadId,
+    pendingUserInputCount: pendingUserInputs.length,
+    enqueueComposerImages,
+    addComposerFilesToDraft,
+    removeComposerImageFromDraft,
+    removeComposerDraftFile,
+    discardPromptHistoryNavigation: discardPromptHistoryNavigationForComposerMutation,
+    setThreadError,
     dragDepthRef,
     focusComposer,
     setIsDragOverComposer,
