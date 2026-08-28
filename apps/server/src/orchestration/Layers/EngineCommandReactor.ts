@@ -127,7 +127,10 @@ import { QueuedTurnPromotionRepository } from "../../persistence/Services/Queued
 import { ManagedAttachmentRepository } from "../../persistence/Services/ManagedAttachments.ts";
 import { ServerConfig } from "../../config.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
-import { engineStartOptionsFromServerSettings } from "@harnessos/shared/serverSettings";
+import {
+  engineStartOptionsFromServerSettings,
+  isServerEngineEnabled,
+} from "@harnessos/shared/serverSettings";
 import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import {
   buildPriorTranscriptBootstrapText,
@@ -1501,7 +1504,7 @@ const make = Effect.gen(function* () {
     const desiredEngineSelection = requestedEngineSelection ?? thread.engineSelection;
     const targetEngine = desiredEngineSelection.engine;
     const settingsSnapshot = yield* serverSettings.getSnapshot;
-    if (!settingsSnapshot.settings.engines[targetEngine].enabled) {
+    if (!isServerEngineEnabled(settingsSnapshot.settings, targetEngine)) {
       return yield* new EngineAdapterValidationError({
         engine: targetEngine,
         operation: "thread.turn.start",

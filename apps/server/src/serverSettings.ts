@@ -21,6 +21,7 @@ import {
 import { deepMerge, type DeepPartial } from "@harnessos/shared/Struct";
 import {
   applyServerSettingsPatch,
+  isServerEngineEnabled,
   normalizeServerSettings,
   validateServerSettingsPatch,
 } from "@harnessos/shared/serverSettings";
@@ -245,11 +246,11 @@ const ENGINE_ORDER: readonly EngineWithDefaultModel[] = ["codex", "claude", "kil
 
 function resolveTextGenerationEngine(settings: ServerSettings): ServerSettings {
   const selection = settings.textGenerationEngineSelection;
-  if (settings.engines[selection.engine].enabled) {
+  if (isServerEngineEnabled(settings, selection.engine)) {
     return settings;
   }
 
-  const fallback = ENGINE_ORDER.find((engine) => settings.engines[engine].enabled);
+  const fallback = ENGINE_ORDER.find((engine) => isServerEngineEnabled(settings, engine));
   if (!fallback) {
     return settings;
   }

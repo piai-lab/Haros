@@ -11,6 +11,7 @@ import {
   type EngineKind,
   type ServerEngineStatus,
 } from "@harnessos/contracts";
+import { isServerEngineEnabled } from "@harnessos/shared/serverSettings";
 import { Effect, Layer, Option, Schema } from "effect";
 
 import { GitCore } from "../../git/Services/GitCore.ts";
@@ -189,7 +190,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
         return [
           engine,
           {
-            enabled: serverSettings.engines[engine].enabled,
+            enabled: isServerEngineEnabled(serverSettings, engine),
             ...(status
               ? {
                   available: status.available,

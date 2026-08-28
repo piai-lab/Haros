@@ -240,7 +240,19 @@ const ENGINE_TARGET_OPTION_RULES = {
       }),
     },
   }),
-} as const satisfies Record<EngineKind, EngineTargetOptionConfig>;
+} as const satisfies Partial<Record<EngineKind, EngineTargetOptionConfig>>;
+
+const EMPTY_ENGINE_TARGET_OPTION_CONFIG: EngineTargetOptionConfig = {
+  primaryOptionKey: "",
+  options: {},
+};
+
+function engineTargetOptionConfig(engine: EngineKind): EngineTargetOptionConfig {
+  return (
+    (ENGINE_TARGET_OPTION_RULES as Partial<Record<EngineKind, EngineTargetOptionConfig>>)[engine] ??
+    EMPTY_ENGINE_TARGET_OPTION_CONFIG
+  );
+}
 
 function engineDefaultModel(engine: EngineKind): string | null {
   return getDefaultModel(engine);
@@ -300,7 +312,7 @@ export function loadHostGatewayEngineCatalog(input: {
 }
 
 function engineTargetOptionRules(engine: EngineKind): ReadonlyArray<HostGatewayTargetOptionRule> {
-  return Object.entries(ENGINE_TARGET_OPTION_RULES[engine].options)
+  return Object.entries(engineTargetOptionConfig(engine).options)
     .filter(([, option]) => option.advertised)
     .map(([key, { valueType, allowedValues, allowedValuesSource, allowsCustomValue }]) => ({
       key,
@@ -312,7 +324,7 @@ function engineTargetOptionRules(engine: EngineKind): ReadonlyArray<HostGatewayT
 }
 
 function enginePrimaryOptionKey(engine: EngineKind): string {
-  return ENGINE_TARGET_OPTION_RULES[engine].primaryOptionKey;
+  return engineTargetOptionConfig(engine).primaryOptionKey;
 }
 
 function convertDiscoveredOptionValue(
@@ -466,7 +478,7 @@ function engineOptionRuleSpec(
   engine: EngineKind,
   optionId: string,
 ): ResolvedEngineTargetOptionRuleSpec | undefined {
-  const rule = ENGINE_TARGET_OPTION_RULES[engine].options[optionId];
+  const rule = engineTargetOptionConfig(engine).options[optionId];
   return rule ? { key: optionId, ...rule } : undefined;
 }
 

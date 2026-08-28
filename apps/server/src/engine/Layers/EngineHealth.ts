@@ -42,6 +42,7 @@ import {
   Stream,
 } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
+import { isServerEngineEnabled } from "@harnessos/shared/serverSettings";
 
 import { resolveExecutable } from "../../executableLookup.ts";
 
@@ -1997,7 +1998,7 @@ export function isProviderEnabledForSettings(
   engine: EngineKind,
   settings: ServerSettings,
 ): boolean {
-  return settings.engines[engine]?.enabled !== false && settings.engines[engine] !== undefined;
+  return isServerEngineEnabled(settings, engine);
 }
 
 export function resolvePassiveProviderPresence(

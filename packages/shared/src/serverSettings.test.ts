@@ -5,12 +5,34 @@ import {
   applyServerSettingsPatch,
   normalizeBuiltInGroupOverrides,
   engineStartOptionsFromServerSettings,
+  isServerEngineEnabled,
   validateServerSettingsPatch,
 } from "./serverSettings";
 
 const decodeEngineSessionStartInput = Schema.decodeUnknownSync(EngineSessionStartInput);
 
 describe("applyServerSettingsPatch", () => {
+  it("treats only an explicit false engine setting as disabled", () => {
+    expect(isServerEngineEnabled(DEFAULT_SERVER_SETTINGS, "oa")).toBe(true);
+    expect(
+      isServerEngineEnabled(
+        { engines: {} } as Pick<typeof DEFAULT_SERVER_SETTINGS, "engines">,
+        "oa",
+      ),
+    ).toBe(true);
+    expect(
+      isServerEngineEnabled(
+        {
+          engines: {
+            ...DEFAULT_SERVER_SETTINGS.engines,
+            oa: { ...DEFAULT_SERVER_SETTINGS.engines.oa, enabled: false },
+          },
+        },
+        "oa",
+      ),
+    ).toBe(false);
+  });
+
   it("normalizes surface overrides without discarding unknown bounded ids", () => {
     expect(
       normalizeBuiltInGroupOverrides({

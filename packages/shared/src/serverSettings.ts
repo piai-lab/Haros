@@ -2,6 +2,7 @@ import {
   BUILT_IN_TOOL_SURFACES,
   type BuiltInToolGroupOverrides,
   type EngineSelection,
+  type EngineKind,
   type EngineStartOptions,
   type ServerSettings,
   type ServerSettingsPatch,
@@ -10,6 +11,14 @@ import {
 import { deepMerge, type DeepPartial } from "./Struct";
 import { isBuiltInToolGroupId, resolveHostGroupSurfacePolicy } from "./hostToolSurfacePolicy";
 import { getDefaultModel } from "./model";
+
+export function isServerEngineEnabled(
+  settings: Pick<ServerSettings | ServerSettingsView, "engines">,
+  engine: EngineKind,
+): boolean {
+  const engines = settings.engines as Partial<Record<EngineKind, { readonly enabled?: boolean }>>;
+  return engines[engine]?.enabled !== false;
+}
 
 function shouldReplaceTextGenerationEngineSelection(
   patch: ServerSettingsPatch["textGenerationEngineSelection"] | undefined,

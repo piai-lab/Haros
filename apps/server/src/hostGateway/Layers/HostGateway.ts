@@ -33,6 +33,7 @@ import {
   isEngineRuntimeModePermanentlyUnsupported,
   runtimeModeEscalatesPrivilege,
 } from "@harnessos/shared/runtimeMode";
+import { isServerEngineEnabled } from "@harnessos/shared/serverSettings";
 import { Effect, Layer, Option } from "effect";
 
 import { GitCore } from "../../git/Services/GitCore.ts";
@@ -169,7 +170,7 @@ export const makeHostGateway = Effect.gen(function* () {
         return [
           engine,
           {
-            enabled: settings.engines[engine].enabled,
+            enabled: isServerEngineEnabled(settings, engine),
             ...(status
               ? {
                   available: status.available,

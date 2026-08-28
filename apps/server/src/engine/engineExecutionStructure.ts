@@ -49,8 +49,13 @@ export const ENGINE_EXECUTION_STRUCTURE = {
   kilo: defineStructure(false, ["full-access", "approval-required"], PRODUCT_INTERACTION_MODES),
   opencode: defineStructure(false, ["full-access", "approval-required"], PRODUCT_INTERACTION_MODES),
   pi: defineStructure(true, ["full-access"], HOST_INTERACTION_MODES),
-} as const satisfies Record<EngineKind, EngineExecutionStructure>;
+} as const satisfies Partial<Record<EngineKind, EngineExecutionStructure>>;
+
+const EMPTY_ENGINE_EXECUTION_STRUCTURE = defineStructure(false, [], []);
 
 export function engineExecutionStructure(engine: EngineKind): EngineExecutionStructure {
-  return ENGINE_EXECUTION_STRUCTURE[engine];
+  return (
+    (ENGINE_EXECUTION_STRUCTURE as Partial<Record<EngineKind, EngineExecutionStructure>>)[engine] ??
+    EMPTY_ENGINE_EXECUTION_STRUCTURE
+  );
 }

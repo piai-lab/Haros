@@ -1,4 +1,4 @@
-import { ENGINE_KINDS } from "@harnessos/contracts";
+import { ENGINE_KINDS, type EngineKind } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { resolveEngineExecutionCapabilities } from "./executionCapabilityProjection.ts";
@@ -17,6 +17,13 @@ const readyStatus = (engine: (typeof ENGINE_KINDS)[number]) => ({
 });
 
 describe("engine execution capability projection", () => {
+  it("projects no execution capability for an engine without registered structure", () => {
+    const structure = engineExecutionStructure("unregistered" as EngineKind);
+    expect(structure.supportsTurnSteering).toBe(false);
+    expect([...structure.supportedRuntimeModes]).toEqual([]);
+    expect([...structure.supportedInteractionModes]).toEqual([]);
+  });
+
   it("keeps the structural descriptor exhaustive over canonical identity", () => {
     expect(Object.keys(ENGINE_EXECUTION_STRUCTURE)).toEqual([...ENGINE_KINDS]);
   });

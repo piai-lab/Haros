@@ -15,6 +15,7 @@ import {
   type EngineSkillDescriptor,
   ThreadId,
 } from "@harnessos/contracts";
+import { isServerEngineEnabled } from "@harnessos/shared/serverSettings";
 import { Effect, Layer, Option, Schema, SchemaIssue } from "effect";
 
 import { ServerConfig } from "../../config.ts";
@@ -316,7 +317,7 @@ const make = Effect.gen(function* () {
       const settings = yield* serverSettings.getSettings.pipe(
         Effect.catch(() => Effect.succeed(null)),
       );
-      if (settings !== null && !settings.engines[parsed.engine].enabled) {
+      if (settings !== null && !isServerEngineEnabled(settings, parsed.engine)) {
         return {
           models: [],
           source: "disabled",
