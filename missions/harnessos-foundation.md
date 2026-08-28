@@ -6,9 +6,9 @@
 - Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`, Git worktree for HarnessOS.
 - Repository identity: `github.com/piai-lab/HarnessOS`
 - Campaign origin revision: `698d305e63a600ff00bb1873e87b2cb825a6496d`.
-- Last reconciled revision: `712c829b3e768b9e6e5178997f8ec30e319fe83d`.
-- Worktree state: dirty only in `missions/harnessos-foundation.md` and `missions/evidence/harnessos-foundation/E-007-alpha-ui-update.txt` for this Campaign reconciliation.
-- Last reconciled at: `2026-08-28T11:30:19+08:00`.
+- Last reconciled revision: `393d66372b0b5db6bc0e9316b08c5de06836b6d4`.
+- Worktree state: clean.
+- Last reconciled at: `2026-08-28T11:39:21+08:00`.
 - Active branch/worktree: `codex/harnessos-foundation` at `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`.
 - Applicable instructions: user-locked HarnessOS implementation plan; root `AGENTS.md`; repository authority routes in `README.md` and `architecture/README.md`.
 - Superseded state sources: no competing state files were found after the recursive scan; historical tombstones remain at `execution-brief.md` and `missions/independent-omnimind-v1.md`.
