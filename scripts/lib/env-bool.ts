@@ -1,6 +1,6 @@
 // FILE: env-bool.ts
 // Purpose: Parses release-script boolean environment values consistently.
-// Layer: Release/build helper
+// Layer: Build helper
 // Exports: parseBooleanEnvValue and parseOptionalBooleanEnvValue.
 
 const TRUE_VALUES = new Set(["1", "true", "yes", "y", "on"]);

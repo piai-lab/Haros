@@ -1,21 +1,21 @@
 // FILE: packaged-legal-closure.ts
 // Purpose: Proves packaged ASAR dependency identities equal its disclosed legal inventory.
-// Layer: Release/build helper
+// Layer: Packaging/legal helper
 
 import { extractFile, listPackage } from "@electron/asar";
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import {
-  RELEASE_DEPENDENCY_INVENTORY_FILE,
-  RELEASE_NOTICES_FILE,
-  RELEASE_SBOM_FILE,
-  type ReleaseDependencyInventory,
-} from "./release-legal-metadata.ts";
-import { SERVER_BUNDLED_WORKSPACE_COMPONENTS } from "./release-workspace-manifests.ts";
+  DEPENDENCY_INVENTORY_FILE,
+  NOTICES_FILE,
+  SBOM_FILE,
+  type DependencyInventory,
+} from "./legal-metadata.ts";
+import { SERVER_BUNDLED_WORKSPACE_COMPONENTS } from "./packaged-workspace-manifests.ts";
 
 const LEGAL_DIRECTORY = "apps/server/dist/client/licenses";
-const REQUIRED_PI_PACKAGES = [
+const REQUIRED_LINEAGE_PACKAGES = [
   "@earendil-works/pi-agent-core",
   "@earendil-works/pi-ai",
   "@earendil-works/pi-client",
@@ -58,24 +58,23 @@ export function verifyPackagedLegalClosureArchive(archivePath: string): {
   const archiveEntries = new Set(
     listPackage(archivePath, { isPack: false }).map(normalizedArchivePath),
   );
-  for (const name of [RELEASE_DEPENDENCY_INVENTORY_FILE, RELEASE_SBOM_FILE, RELEASE_NOTICES_FILE]) {
+  for (const name of [DEPENDENCY_INVENTORY_FILE, SBOM_FILE, NOTICES_FILE]) {
     const path = `${LEGAL_DIRECTORY}/${name}`;
     if (!archiveEntries.has(path)) throw new Error(`Packaged legal artifact is missing: ${path}`);
   }
 
   const inventory = JSON.parse(
-    readArchiveFile(
-      archivePath,
-      `${LEGAL_DIRECTORY}/${RELEASE_DEPENDENCY_INVENTORY_FILE}`,
-    ).toString("utf8"),
-  ) as ReleaseDependencyInventory;
+    readArchiveFile(archivePath, `${LEGAL_DIRECTORY}/${DEPENDENCY_INVENTORY_FILE}`).toString(
+      "utf8",
+    ),
+  ) as DependencyInventory;
   if (
     inventory.schemaVersion !== 3 ||
     inventory.derivation !== "installed-production-and-bundled-workspace-closure" ||
-    inventory.target?.kind !== "release-target" ||
+    inventory.target?.kind !== "packaged-target" ||
     inventory.componentCount !== inventory.components.length
   ) {
-    throw new Error("Packaged release dependency inventory contract is invalid.");
+    throw new Error("Packaged dependency inventory contract is invalid.");
   }
 
   const disclosed = new Set(inventory.components.map((component) => component.id));
@@ -92,7 +91,7 @@ export function verifyPackagedLegalClosureArchive(archivePath: string): {
   if (missing.length > 0 || phantom.length > 0) {
     throw new Error(
       [
-        "Packaged dependency closure does not match release-dependencies.json.",
+        "Packaged dependency closure does not match packaged-dependencies.json.",
         missing.length > 0 ? `Undisclosed packaged IDs: ${missing.join(", ")}` : "",
         phantom.length > 0 ? `Disclosed but absent IDs: ${phantom.join(", ")}` : "",
       ]
@@ -111,9 +110,9 @@ export function verifyPackagedLegalClosureArchive(archivePath: string): {
       }
     }
   }
-  for (const name of REQUIRED_PI_PACKAGES) {
+  for (const name of REQUIRED_LINEAGE_PACKAGES) {
     if (![...packaged].some((id) => id.startsWith(`${name}@`))) {
-      throw new Error(`Packaged dependency closure omitted required Pi package ${name}.`);
+      throw new Error(`Packaged dependency closure omitted required lineage package ${name}.`);
     }
   }
   for (const descriptor of SERVER_BUNDLED_WORKSPACE_COMPONENTS) {

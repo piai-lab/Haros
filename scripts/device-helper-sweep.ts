@@ -1,6 +1,6 @@
 // FILE: device-helper-sweep.ts
 // Purpose: Run the device helper smoke check against every locally installed Xcode.
-// Layer: Release/CI smoke check (macOS only; not part of normal CI).
+// Layer: Packaging/CI smoke check (macOS only; not part of normal CI).
 // Depends on: scripts/device-helper-smoke.ts.
 //
 // The helper dlopen's private CoreSimulator/SimulatorKit symbols, which move
@@ -73,7 +73,7 @@ function discoverToolchains(): Toolchain[] {
     // standard layout, so this is not worth reporting as an error.
   }
 
-  return [...developerDirs].sort().map((developerDir) => ({
+  return [...developerDirs].toSorted().map((developerDir) => ({
     developerDir,
     label: readToolchainLabel(developerDir) ?? developerDir,
   }));

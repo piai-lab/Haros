@@ -1,6 +1,6 @@
-// FILE: release-legal-metadata.ts
-// Purpose: Derives deterministic notices and SBOM data from the installed release dependency closure.
-// Layer: Release/build helper
+// FILE: legal-metadata.ts
+// Purpose: Derives deterministic notices and SBOM data from the installed packaged dependency closure.
+// Layer: Packaging/legal helper
 
 import { createHash } from "node:crypto";
 import {
@@ -14,11 +14,11 @@ import {
 } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 
-import { SERVER_BUNDLED_WORKSPACE_COMPONENTS } from "./release-workspace-manifests.ts";
+import { SERVER_BUNDLED_WORKSPACE_COMPONENTS } from "./packaged-workspace-manifests.ts";
 
-export const RELEASE_DEPENDENCY_INVENTORY_FILE = "release-dependencies.json";
-export const RELEASE_SBOM_FILE = "sbom.cdx.json";
-export const RELEASE_NOTICES_FILE = "THIRD-PARTY-NOTICES.txt";
+export const DEPENDENCY_INVENTORY_FILE = "packaged-dependencies.json";
+export const SBOM_FILE = "sbom.cdx.json";
+export const NOTICES_FILE = "THIRD-PARTY-NOTICES.txt";
 
 const PI_PACKAGE_NAMES = [
   "@earendil-works/pi-agent-core",
@@ -43,12 +43,12 @@ interface PackageManifest {
   readonly peerDependencies?: Record<string, unknown>;
 }
 
-export interface ReleaseDependencyRoot {
+export interface DependencyRoot {
   readonly name: string;
   readonly fromDirectory: string;
 }
 
-export interface ReleaseLicenseFile {
+export interface LicenseFile {
   readonly name: string;
   readonly sha256: string;
   readonly text: string;
@@ -61,7 +61,7 @@ export interface ReleaseLicenseFile {
   };
 }
 
-interface ReleaseLegalOverride {
+interface LegalOverride {
   readonly packageIds: ReadonlyArray<string>;
   readonly license: string;
   readonly kind: "exact-upstream" | "canonical-spdx-recovery";
@@ -75,7 +75,7 @@ interface ReleaseLegalOverride {
   readonly upstreamLegalTextAbsent: boolean;
 }
 
-export interface ReleaseDependencyComponent {
+export interface DependencyComponent {
   readonly name: string;
   readonly version: string;
   readonly id: string;
@@ -85,21 +85,21 @@ export interface ReleaseDependencyComponent {
   readonly homepage: string | null;
   readonly manifestSha256: string;
   readonly locations: ReadonlyArray<string>;
-  readonly licenseFiles: ReadonlyArray<ReleaseLicenseFile>;
+  readonly licenseFiles: ReadonlyArray<LicenseFile>;
   readonly dependencies: ReadonlyArray<string>;
 }
 
-export interface ReleaseDependencyInventory {
+export interface DependencyInventory {
   readonly schemaVersion: 3;
   readonly derivation: "installed-production-and-bundled-workspace-closure";
   readonly target: {
-    readonly kind: "development-host" | "release-target";
+    readonly kind: "development-host" | "packaged-target";
     readonly platform: string;
     readonly arch: string;
   };
   readonly componentCount: number;
   readonly roots: ReadonlyArray<string>;
-  readonly components: ReadonlyArray<ReleaseDependencyComponent>;
+  readonly components: ReadonlyArray<DependencyComponent>;
 }
 
 function sha256(value: string | Buffer): string {
@@ -158,7 +158,7 @@ function packageCandidate(
   return null;
 }
 
-function packageLicenseFiles(packageDirectory: string): ReleaseLicenseFile[] {
+function packageLicenseFiles(packageDirectory: string): LicenseFile[] {
   const names = readdirSync(packageDirectory)
     .filter((name) => /^(?:licen[cs]e|copying|notice)(?:[._-].*)?$/iu.test(name))
     .filter((name) => statSync(join(packageDirectory, name)).isFile())
@@ -183,21 +183,21 @@ function packageLicenseFiles(packageDirectory: string): ReleaseLicenseFile[] {
   });
 }
 
-function loadLegalOverrides(repositoryRoot: string): Map<string, ReleaseLegalOverride> {
-  const manifestPath = join(repositoryRoot, "assets/licenses/release-legal-overrides.json");
+function loadLegalOverrides(repositoryRoot: string): Map<string, LegalOverride> {
+  const manifestPath = join(repositoryRoot, "assets/licenses/legal-overrides.json");
   const parsed = JSON.parse(readFileSync(manifestPath, "utf8")) as {
     schemaVersion?: unknown;
     entries?: unknown;
   };
   if (parsed.schemaVersion !== 1 || !Array.isArray(parsed.entries)) {
-    throw new Error("Release legal overrides manifest is invalid.");
+    throw new Error("Legal overrides manifest is invalid.");
   }
-  const overrides = new Map<string, ReleaseLegalOverride>();
+  const overrides = new Map<string, LegalOverride>();
   for (const value of parsed.entries) {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
-      throw new Error("Release legal override entry must be an object.");
+      throw new Error("Legal override entry must be an object.");
     }
-    const entry = value as unknown as ReleaseLegalOverride;
+    const entry = value as unknown as LegalOverride;
     const manifestEntries =
       entry.manifestSha256ByPackageId &&
       typeof entry.manifestSha256ByPackageId === "object" &&
@@ -222,7 +222,7 @@ function loadLegalOverrides(repositoryRoot: string): Map<string, ReleaseLegalOve
       ) ||
       entry.upstreamLegalTextAbsent !== (entry.kind === "canonical-spdx-recovery")
     ) {
-      throw new Error("Release legal override entry has invalid provenance fields.");
+      throw new Error("Legal override entry has invalid provenance fields.");
     }
     if (
       entry.kind === "canonical-spdx-recovery" &&
@@ -233,20 +233,18 @@ function loadLegalOverrides(repositoryRoot: string): Map<string, ReleaseLegalOve
     const asset = resolve(repositoryRoot, entry.assetPath);
     const relation = relative(resolve(repositoryRoot), asset);
     if (relation.startsWith("..") || isAbsolute(relation)) {
-      throw new Error(`Release legal override asset escaped the repository: ${entry.assetPath}`);
+      throw new Error(`Legal override asset escaped the repository: ${entry.assetPath}`);
     }
     const text = readFileSync(asset, "utf8")
       .replace(/\r\n?/gu, "\n")
       .replace(/[ \t]+$/gmu, "")
       .trimEnd();
     if (sha256(text) !== entry.sha256) {
-      throw new Error(`Release legal override digest mismatch for ${entry.assetPath}.`);
+      throw new Error(`Legal override digest mismatch for ${entry.assetPath}.`);
     }
     for (const packageId of entry.packageIds) {
       if (typeof packageId !== "string" || overrides.has(packageId)) {
-        throw new Error(
-          `Release legal override package id is invalid or duplicated: ${packageId}.`,
-        );
+        throw new Error(`Legal override package id is invalid or duplicated: ${packageId}.`);
       }
       overrides.set(packageId, entry);
     }
@@ -258,7 +256,7 @@ function relativeLocation(packageRoot: string, packageDirectory: string): string
   const root = existsSync(packageRoot) ? realpathSync(packageRoot) : resolve(packageRoot);
   const location = relative(root, realpathSync(packageDirectory)).replaceAll("\\", "/");
   if (!location || location.startsWith("../") || isAbsolute(location)) {
-    throw new Error(`Installed dependency escaped the release root: ${packageDirectory}`);
+    throw new Error(`Installed dependency escaped the packaging root: ${packageDirectory}`);
   }
   return location;
 }
@@ -267,14 +265,14 @@ function packageId(name: string, version: string): string {
   return `${name}@${version}`;
 }
 
-export function collectReleaseDependencyInventory(options: {
+export function collectDependencyInventory(options: {
   readonly packageRoot: string;
-  readonly roots: ReadonlyArray<ReleaseDependencyRoot>;
+  readonly roots: ReadonlyArray<DependencyRoot>;
   readonly repositoryRoot: string;
-  readonly target: ReleaseDependencyInventory["target"];
+  readonly target: DependencyInventory["target"];
   readonly includeBundledWorkspaceComponents?: boolean;
   readonly validateRequiredPiPackages?: boolean;
-}): ReleaseDependencyInventory {
+}): DependencyInventory {
   const legalOverrides = loadLegalOverrides(options.repositoryRoot);
   const byDirectory = new Map<
     string,
@@ -313,7 +311,7 @@ export function collectReleaseDependencyInventory(options: {
     if (!packageDirectory) {
       if (request.optional) continue;
       throw new Error(
-        `Release dependency ${request.name} was not installed from ${request.fromDirectory}.`,
+        `Packaged dependency ${request.name} was not installed from ${request.fromDirectory}.`,
       );
     }
     if (byDirectory.has(packageDirectory)) continue;
@@ -357,7 +355,7 @@ export function collectReleaseDependencyInventory(options: {
       homepage: string | null;
       manifestHashes: Set<string>;
       locations: Set<string>;
-      licenseFiles: Map<string, ReleaseLicenseFile>;
+      licenseFiles: Map<string, LicenseFile>;
       dependencies: Set<string>;
     }
   >();
@@ -378,7 +376,7 @@ export function collectReleaseDependencyInventory(options: {
     const license = declaredLicense ?? override?.license ?? "UNDECLARED";
     let licenseFiles = packageLicenseFiles(record.packageDirectory);
     if (license === "UNDECLARED") {
-      throw new Error(`Release dependency ${id} has no declared license.`);
+      throw new Error(`Packaged dependency ${id} has no declared license.`);
     }
     if (!declaredLicense) {
       // An exact, manifest-bound override owns both the missing metadata and legal text.
@@ -387,16 +385,16 @@ export function collectReleaseDependencyInventory(options: {
     }
     if (licenseFiles.length === 0) {
       if (!override) {
-        throw new Error(`Release dependency ${id} has no packaged legal text or exact override.`);
+        throw new Error(`Packaged dependency ${id} has no legal text or exact override.`);
       }
       if (override.license !== license) {
         throw new Error(
-          `Release legal override license mismatch for ${id}: ${override.license} != ${license}.`,
+          `Legal override license mismatch for ${id}: ${override.license} != ${license}.`,
         );
       }
       const manifestDigest = sha256(record.manifestText);
       if (override.manifestSha256ByPackageId[id] !== manifestDigest) {
-        throw new Error(`Release legal override manifest digest changed for ${id}.`);
+        throw new Error(`Legal override manifest digest changed for ${id}.`);
       }
       const text = readFileSync(resolve(options.repositoryRoot, override.assetPath), "utf8")
         .replace(/\r\n?/gu, "\n")
@@ -432,7 +430,7 @@ export function collectReleaseDependencyInventory(options: {
       homepage: metadataText(record.manifest.homepage),
       manifestHashes: new Set<string>(),
       locations: new Set<string>(),
-      licenseFiles: new Map<string, ReleaseLicenseFile>(),
+      licenseFiles: new Map<string, LicenseFile>(),
       dependencies: new Set<string>(),
     };
     current.manifestHashes.add(sha256(record.manifestText));
@@ -530,7 +528,7 @@ export function collectReleaseDependencyInventory(options: {
 
   const components = [...merged.values()]
     .map(
-      (component): ReleaseDependencyComponent => ({
+      (component): DependencyComponent => ({
         name: component.name,
         version: component.version,
         id: packageId(component.name, component.version),
@@ -552,7 +550,7 @@ export function collectReleaseDependencyInventory(options: {
   if (options.validateRequiredPiPackages !== false) {
     for (const piName of PI_PACKAGE_NAMES) {
       if (![...ids].some((id) => id.startsWith(`${piName}@`))) {
-        throw new Error(`Release dependency closure omitted required Pi package ${piName}.`);
+        throw new Error(`Packaged dependency closure omitted required lineage package ${piName}.`);
       }
     }
   }
@@ -572,10 +570,10 @@ export function collectReleaseDependencyInventory(options: {
 }
 
 export function mergeBundledRuntimeInventory(
-  installed: ReleaseDependencyInventory,
-  bundled: ReleaseDependencyInventory,
+  installed: DependencyInventory,
+  bundled: DependencyInventory,
   runtimePath: string,
-): ReleaseDependencyInventory {
+): DependencyInventory {
   const normalizedRuntimePath = runtimePath.replace(/^[/\\]+/u, "").replaceAll("\\", "/");
   if (
     !normalizedRuntimePath ||
@@ -594,7 +592,7 @@ export function mergeBundledRuntimeInventory(
 
   const components = new Map(installed.components.map((component) => [component.id, component]));
   for (const source of bundled.components) {
-    const bundledComponent: ReleaseDependencyComponent = {
+    const bundledComponent: DependencyComponent = {
       ...source,
       locations: [`bundled:${normalizedRuntimePath}`],
     };
@@ -657,13 +655,10 @@ function cyclonedxLicense(
   return canonicalId ? { license: { id: canonicalId } } : { license: { name: license } };
 }
 
-export function renderReleaseLegalMetadata(
-  inventory: ReleaseDependencyInventory,
+export function renderLegalMetadata(
+  inventory: DependencyInventory,
   appVersion: string,
-): Record<
-  typeof RELEASE_DEPENDENCY_INVENTORY_FILE | typeof RELEASE_SBOM_FILE | typeof RELEASE_NOTICES_FILE,
-  string
-> {
+): Record<typeof DEPENDENCY_INVENTORY_FILE | typeof SBOM_FILE | typeof NOTICES_FILE, string> {
   const inventoryText = `${JSON.stringify(inventory, null, 2)}\n`;
   const appRef = `pkg:npm/harnessos-desktop@${appVersion}`;
   const sbom = {
@@ -730,11 +725,11 @@ export function renderReleaseLegalMetadata(
     `Target: ${inventory.target.kind} ${inventory.target.platform}/${inventory.target.arch}`,
     `Installed production components: ${inventory.componentCount}`,
     "",
-    ...(inventory.target.kind === "release-target"
+    ...(inventory.target.kind === "packaged-target"
       ? [
           "This file is generated from package manifests and license files in the exact installed",
           "dependency closure used as Electron packaging input. The packaged app is checked against",
-          "the sibling release-dependencies.json before a release artifact is accepted.",
+          "the sibling packaged-dependencies.json before a packaged artifact is accepted.",
         ]
       : [
           "This development-host snapshot is generated on demand and is not committed to source.",
@@ -768,22 +763,22 @@ export function renderReleaseLegalMetadata(
   }
 
   return {
-    [RELEASE_DEPENDENCY_INVENTORY_FILE]: inventoryText,
-    [RELEASE_SBOM_FILE]: `${JSON.stringify(sbom, null, 2)}\n`,
-    [RELEASE_NOTICES_FILE]: `${notices.join("\n").trimEnd()}\n`,
+    [DEPENDENCY_INVENTORY_FILE]: inventoryText,
+    [SBOM_FILE]: `${JSON.stringify(sbom, null, 2)}\n`,
+    [NOTICES_FILE]: `${notices.join("\n").trimEnd()}\n`,
   };
 }
 
 function resolveDependencyRootsFromManifests(
   packageRoot: string,
   workspaceManifests: ReadonlyArray<string>,
-): ReleaseDependencyRoot[] {
+): DependencyRoot[] {
   const existingWorkspaceManifests = workspaceManifests.filter(existsSync);
   const manifests =
     existingWorkspaceManifests.length > 0
       ? existingWorkspaceManifests
       : [join(packageRoot, "package.json")];
-  const roots: ReleaseDependencyRoot[] = [];
+  const roots: DependencyRoot[] = [];
   for (const manifestPath of manifests) {
     const manifest = readJson(manifestPath);
     for (const [name, specification] of Object.entries(manifest.dependencies ?? {}).toSorted(
@@ -796,7 +791,7 @@ function resolveDependencyRootsFromManifests(
   return roots;
 }
 
-export function resolveReleaseDependencyRoots(packageRoot: string): ReleaseDependencyRoot[] {
+export function resolveDependencyRoots(packageRoot: string): DependencyRoot[] {
   return resolveDependencyRootsFromManifests(packageRoot, [
     join(packageRoot, "apps/server/package.json"),
     join(packageRoot, "apps/desktop/package.json"),
@@ -804,17 +799,17 @@ export function resolveReleaseDependencyRoots(packageRoot: string): ReleaseDepen
   ]);
 }
 
-export function writeReleaseLegalMetadata(options: {
+export function writeLegalMetadata(options: {
   readonly packageRoot: string;
   readonly repositoryRoot: string;
   readonly outputDirectory: string;
   readonly appVersion: string;
-  readonly target: ReleaseDependencyInventory["target"];
+  readonly target: DependencyInventory["target"];
   readonly bundledWebRuntimePath?: string;
-}): ReleaseDependencyInventory {
-  let inventory = collectReleaseDependencyInventory({
+}): DependencyInventory {
+  let inventory = collectDependencyInventory({
     packageRoot: options.packageRoot,
-    roots: resolveReleaseDependencyRoots(options.packageRoot),
+    roots: resolveDependencyRoots(options.packageRoot),
     repositoryRoot: options.repositoryRoot,
     target: options.target,
   });
@@ -823,7 +818,7 @@ export function writeReleaseLegalMetadata(options: {
     if (!existsSync(webManifestPath)) {
       throw new Error("Bundled Web legal closure requires apps/web/package.json.");
     }
-    const webInventory = collectReleaseDependencyInventory({
+    const webInventory = collectDependencyInventory({
       packageRoot: options.repositoryRoot,
       roots: resolveDependencyRootsFromManifests(options.repositoryRoot, [webManifestPath]),
       repositoryRoot: options.repositoryRoot,
@@ -837,7 +832,7 @@ export function writeReleaseLegalMetadata(options: {
       options.bundledWebRuntimePath,
     );
   }
-  const rendered = renderReleaseLegalMetadata(inventory, options.appVersion);
+  const rendered = renderLegalMetadata(inventory, options.appVersion);
   mkdirSync(options.outputDirectory, { recursive: true });
   for (const [name, text] of Object.entries(rendered)) {
     writeFileSync(join(options.outputDirectory, name), text);

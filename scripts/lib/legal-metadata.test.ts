@@ -1,17 +1,17 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  collectReleaseDependencyInventory,
+  collectDependencyInventory,
   mergeBundledRuntimeInventory,
-  renderReleaseLegalMetadata,
-  resolveReleaseDependencyRoots,
-  type ReleaseDependencyInventory,
-} from "./release-legal-metadata";
+  renderLegalMetadata,
+  resolveDependencyRoots,
+  type DependencyInventory,
+} from "./legal-metadata";
 
 const temporaryRoots: string[] = [];
 const revision = "0123456789abcdef0123456789abcdef01234567";
@@ -33,7 +33,7 @@ function fixture(
     undeclaredLicense?: boolean;
   } = {},
 ) {
-  const root = mkdtempSync(join(tmpdir(), "harnessos-release-legal-"));
+  const root = mkdtempSync(join(tmpdir(), "harnessos-legal-"));
   temporaryRoots.push(root);
   const piNames = [
     "@earendil-works/pi-agent-core",
@@ -64,7 +64,7 @@ function fixture(
   const legalText = "fixture exact legal text";
   write(join(root, "assets/licenses/exact.txt"), legalText);
   write(
-    join(root, "assets/licenses/release-legal-overrides.json"),
+    join(root, "assets/licenses/legal-overrides.json"),
     `${JSON.stringify(
       {
         schemaVersion: 1,
@@ -104,9 +104,9 @@ afterEach(() => {
   for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-describe("release legal metadata", () => {
+describe("legal metadata", () => {
   it("uses Server, Desktop and bundled Web as repository dependency owners", () => {
-    const root = mkdtempSync(join(tmpdir(), "harnessos-release-roots-"));
+    const root = mkdtempSync(join(tmpdir(), "harnessos-packaged-roots-"));
     temporaryRoots.push(root);
     write(
       join(root, "apps/server/package.json"),
@@ -127,7 +127,7 @@ describe("release legal metadata", () => {
       JSON.stringify({ dependencies: { "@harnessos/shared": "workspace:*", mermaid: "11.17.2" } }),
     );
 
-    expect(resolveReleaseDependencyRoots(root)).toEqual([
+    expect(resolveDependencyRoots(root)).toEqual([
       {
         name: "@earendil-works/pi-agent-core",
         fromDirectory: join(root, "apps/server"),
@@ -139,7 +139,7 @@ describe("release legal metadata", () => {
   });
 
   it("accepts an exact legal source only for the locked package manifest", () => {
-    const inventory = collectReleaseDependencyInventory(fixture());
+    const inventory = collectDependencyInventory(fixture());
     const target = inventory.components.find(
       (component) => component.name === "@earendil-works/pi-agent-core",
     );
@@ -148,7 +148,7 @@ describe("release legal metadata", () => {
   });
 
   it("accepts missing license metadata only from an exact manifest-bound override", () => {
-    const inventory = collectReleaseDependencyInventory(fixture({ undeclaredLicense: true }));
+    const inventory = collectDependencyInventory(fixture({ undeclaredLicense: true }));
     const target = inventory.components.find(
       (component) => component.name === "@earendil-works/pi-agent-core",
     );
@@ -157,9 +157,9 @@ describe("release legal metadata", () => {
   });
 
   it("merges a bundled Web closure with an exact packaged runtime receipt", () => {
-    const installed = collectReleaseDependencyInventory(fixture());
+    const installed = collectDependencyInventory(fixture());
     const template = installed.components[0]!;
-    const web: ReleaseDependencyInventory = {
+    const web: DependencyInventory = {
       ...installed,
       componentCount: 1,
       roots: ["mermaid"],
@@ -188,26 +188,26 @@ describe("release legal metadata", () => {
   });
 
   it("fails closed when packaged legal text and an exact override are both absent", () => {
-    expect(() => collectReleaseDependencyInventory(fixture({ override: false }))).toThrow(
-      "has no packaged legal text or exact override",
+    expect(() => collectDependencyInventory(fixture({ override: false }))).toThrow(
+      "has no legal text or exact override",
     );
   });
 
   it("fails closed when exact package manifest bytes change", () => {
-    expect(() =>
-      collectReleaseDependencyInventory(fixture({ manifestDigest: "0".repeat(64) })),
-    ).toThrow("override manifest digest changed");
+    expect(() => collectDependencyInventory(fixture({ manifestDigest: "0".repeat(64) }))).toThrow(
+      "override manifest digest changed",
+    );
   });
 
   it("fails closed when the vendored legal text digest changes", () => {
-    expect(() =>
-      collectReleaseDependencyInventory(fixture({ assetDigest: "0".repeat(64) })),
-    ).toThrow("override digest mismatch");
+    expect(() => collectDependencyInventory(fixture({ assetDigest: "0".repeat(64) }))).toThrow(
+      "override digest mismatch",
+    );
   });
 
   it("renders deterministically and canonicalizes only controlled SPDX identifiers", () => {
-    const inventory = collectReleaseDependencyInventory(fixture());
-    const pierre: ReleaseDependencyInventory = {
+    const inventory = collectDependencyInventory(fixture());
+    const pierre: DependencyInventory = {
       ...inventory,
       componentCount: inventory.componentCount + 1,
       components: [
@@ -221,11 +221,11 @@ describe("release legal metadata", () => {
         },
       ],
     };
-    const first = renderReleaseLegalMetadata(pierre, "1.2.3");
-    const second = renderReleaseLegalMetadata(pierre, "1.2.3");
+    const first = renderLegalMetadata(pierre, "1.2.3");
+    const second = renderLegalMetadata(pierre, "1.2.3");
     expect(second).toEqual(first);
     expect(first["sbom.cdx.json"]).toContain('"id": "Apache-2.0"');
-    expect(first["release-dependencies.json"]).toContain('"license": "apache-2.0"');
+    expect(first["packaged-dependencies.json"]).toContain('"license": "apache-2.0"');
   });
 
   it("does not disclose installed peer dependencies that the packager does not ship", () => {
@@ -250,16 +250,16 @@ describe("release legal metadata", () => {
     );
     write(join(input.packageRoot, "node_modules/peer-only/LICENSE"), "peer-only license\n");
 
-    const inventory = collectReleaseDependencyInventory(input);
+    const inventory = collectDependencyInventory(input);
     expect(inventory.components.some((component) => component.name === "peer-only")).toBe(false);
   });
 
   it("keeps the generated real closure complete, including every Pi package", () => {
     const repositoryRoot = join(import.meta.dirname, "../..");
-    const inventory = collectReleaseDependencyInventory({
+    const inventory = collectDependencyInventory({
       packageRoot: repositoryRoot,
       repositoryRoot,
-      roots: resolveReleaseDependencyRoots(repositoryRoot),
+      roots: resolveDependencyRoots(repositoryRoot),
       target: { kind: "development-host", platform: process.platform, arch: process.arch },
     });
     expect(inventory.componentCount).toBe(inventory.components.length);

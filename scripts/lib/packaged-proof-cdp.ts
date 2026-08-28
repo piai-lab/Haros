@@ -1,6 +1,6 @@
 // FILE: packaged-proof-cdp.ts
 // Purpose: Drives the one packaged Renderer journey over Chromium's loopback CDP endpoint.
-// Layer: Release verification
+// Layer: Packaged verification
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

@@ -54,11 +54,11 @@ async function archiveFixture(
     write(join(source, "apps/server/dist/client/index.html"), "<!doctype html>\n");
   }
   write(
-    join(source, "apps/server/dist/client/licenses/release-dependencies.json"),
+    join(source, "apps/server/dist/client/licenses/packaged-dependencies.json"),
     JSON.stringify({
       schemaVersion: 3,
       derivation: "installed-production-and-bundled-workspace-closure",
-      target: { kind: "release-target", platform: "fixture", arch: "fixture" },
+      target: { kind: "packaged-target", platform: "fixture", arch: "fixture" },
       componentCount: components.length,
       roots: packages,
       components,

@@ -1,8 +1,8 @@
-// FILE: release-workspace-manifests.ts
-// Purpose: Single source for workspace importers copied into release verification/staging roots.
-// Layer: Release/build helper
+// FILE: packaged-workspace-manifests.ts
+// Purpose: Single source for workspace importers copied into packaged verification/staging roots.
+// Layer: Desktop packaging helper
 
-export const RELEASE_WORKSPACE_MANIFEST_PATHS = [
+export const PACKAGED_WORKSPACE_MANIFEST_PATHS = [
   "package.json",
   "apps/server/package.json",
   "apps/desktop/package.json",
@@ -16,8 +16,8 @@ export const RELEASE_WORKSPACE_MANIFEST_PATHS = [
   "scripts/package.json",
 ] as const;
 
-export const RELEASE_LOCKFILE_PATH = "bun.lock";
-export const RELEASE_PATCHES_PATH = "patches";
+export const PACKAGED_LOCKFILE_PATH = "bun.lock";
+export const PACKAGED_PATCHES_PATH = "patches";
 export const HARNESSOS_OA_RUNTIME_PACKAGE_PATH = "vendor/oa-runtime-0.84.3.tgz";
 
 export const SERVER_BUNDLED_WORKSPACE_COMPONENTS = [

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // FILE: node-pty-smoke.mjs
 // Purpose: Verifies that the native node-pty dependency can load and spawn a PTY.
-// Layer: Release/CI smoke check
+// Layer: Packaging/CI smoke check
 
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";

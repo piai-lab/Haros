@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // FILE: verify-packaged-desktop.ts
 // Purpose: Proves a packaged desktop payload from an isolated temporary tree before upload.
-// Layer: Release verification script
+// Layer: Packaged verification script
 
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";

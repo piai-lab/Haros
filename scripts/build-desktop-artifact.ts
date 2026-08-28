@@ -24,14 +24,14 @@ import {
 import { HARNESSOS_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
 import { parseBooleanEnvValue } from "./lib/env-bool.ts";
 import { verifyPackagedLegalClosure } from "./lib/packaged-legal-closure.ts";
-import { writeReleaseLegalMetadata } from "./lib/release-legal-metadata.ts";
+import { writeLegalMetadata } from "./lib/legal-metadata.ts";
 import {
   HARNESSOS_OA_RUNTIME_PACKAGE_PATH,
   omitBundledServerWorkspaceDependencies,
-  RELEASE_LOCKFILE_PATH,
-  RELEASE_PATCHES_PATH,
-  RELEASE_WORKSPACE_MANIFEST_PATHS,
-} from "./lib/release-workspace-manifests.ts";
+  PACKAGED_LOCKFILE_PATH,
+  PACKAGED_PATCHES_PATH,
+  PACKAGED_WORKSPACE_MANIFEST_PATHS,
+} from "./lib/packaged-workspace-manifests.ts";
 import { resolveCatalogDependencies } from "./lib/resolve-catalog.ts";
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
@@ -406,7 +406,7 @@ function stageMacIcons(stageResourcesDir: string, verbose: boolean) {
       })`sips -z 512 512 ${modernIconSource} --out ${iconPngPath}`,
     );
 
-    // The solid ICNS is the bundle icon on every macOS release; Icon Composer glass alters the mark.
+    // The solid ICNS is the bundle icon in every packaged macOS app; Icon Composer glass alters the mark.
     yield* runCommand(
       ChildProcess.make({
         ...commandOutputOptions(verbose),
@@ -595,18 +595,18 @@ const installFrozenStageDependencies = Effect.fn("installFrozenStageDependencies
   const path = yield* Path.Path;
   const fs = yield* FileSystem.FileSystem;
 
-  for (const relativePath of RELEASE_WORKSPACE_MANIFEST_PATHS) {
+  for (const relativePath of PACKAGED_WORKSPACE_MANIFEST_PATHS) {
     const destination = path.join(stageAppDir, relativePath);
     yield* fs.makeDirectory(path.dirname(destination), { recursive: true });
     yield* fs.copyFile(path.join(repoRoot, relativePath), destination);
   }
   yield* fs.copyFile(
-    path.join(repoRoot, RELEASE_LOCKFILE_PATH),
-    path.join(stageAppDir, RELEASE_LOCKFILE_PATH),
+    path.join(repoRoot, PACKAGED_LOCKFILE_PATH),
+    path.join(stageAppDir, PACKAGED_LOCKFILE_PATH),
   );
   yield* fs.copy(
-    path.join(repoRoot, RELEASE_PATCHES_PATH),
-    path.join(stageAppDir, RELEASE_PATCHES_PATH),
+    path.join(repoRoot, PACKAGED_PATCHES_PATH),
+    path.join(stageAppDir, PACKAGED_PATCHES_PATH),
   );
   yield* fs.makeDirectory(path.dirname(path.join(stageAppDir, HARNESSOS_OA_RUNTIME_PACKAGE_PATH)), {
     recursive: true,
@@ -658,13 +658,13 @@ const installFrozenStageDependencies = Effect.fn("installFrozenStageDependencies
 
   yield* verifyStagedPatchedDependencies(repoRoot, stageAppDir);
 
-  for (const relativePath of RELEASE_WORKSPACE_MANIFEST_PATHS) {
+  for (const relativePath of PACKAGED_WORKSPACE_MANIFEST_PATHS) {
     if (relativePath !== "package.json") {
       yield* fs.remove(path.join(stageAppDir, relativePath));
     }
   }
-  yield* fs.remove(path.join(stageAppDir, RELEASE_LOCKFILE_PATH));
-  yield* fs.remove(path.join(stageAppDir, RELEASE_PATCHES_PATH), { recursive: true });
+  yield* fs.remove(path.join(stageAppDir, PACKAGED_LOCKFILE_PATH));
+  yield* fs.remove(path.join(stageAppDir, PACKAGED_PATCHES_PATH), { recursive: true });
   yield* fs.remove(path.join(stageAppDir, HARNESSOS_OA_RUNTIME_PACKAGE_PATH));
 });
 
@@ -1003,13 +1003,13 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
 
   const legalInventory = yield* Effect.try({
     try: () =>
-      writeReleaseLegalMetadata({
+      writeLegalMetadata({
         packageRoot: stageAppDir,
         repositoryRoot: repoRoot,
         outputDirectory: path.join(stageAppDir, "apps/server/dist/client/licenses"),
         appVersion,
         target: {
-          kind: "release-target",
+          kind: "packaged-target",
           platform: options.platform,
           arch: options.arch,
         },

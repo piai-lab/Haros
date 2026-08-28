@@ -8,9 +8,9 @@ import { fileURLToPath } from "node:url";
 
 import { HARNESSOS_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
 import {
-  RELEASE_LOCKFILE_PATH,
-  RELEASE_WORKSPACE_MANIFEST_PATHS,
-} from "./lib/release-workspace-manifests.ts";
+  PACKAGED_LOCKFILE_PATH,
+  PACKAGED_WORKSPACE_MANIFEST_PATHS,
+} from "./lib/packaged-workspace-manifests.ts";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -131,11 +131,11 @@ function verifyPackagerDeniesAmbientPublication(): void {
     "Packager must discard ambient GitHub publication authority.",
   );
 
-  const lockfile = read(RELEASE_LOCKFILE_PATH);
+  const lockfile = read(PACKAGED_LOCKFILE_PATH);
   const packagesSectionOffset = lockfile.indexOf('\n  "packages": {');
   if (packagesSectionOffset < 0) throw new Error("Expected bun.lock packages section.");
   const workspaceImporters = lockfile.slice(0, packagesSectionOffset);
-  for (const manifestPath of RELEASE_WORKSPACE_MANIFEST_PATHS) {
+  for (const manifestPath of PACKAGED_WORKSPACE_MANIFEST_PATHS) {
     const workspacePath = manifestPath === "package.json" ? "" : dirname(manifestPath);
     if (workspaceImporters.indexOf(`${JSON.stringify(workspacePath)}: {`) < 0) {
       throw new Error(`Expected ${manifestPath} to have a matching bun.lock importer.`);

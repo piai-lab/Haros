@@ -1,6 +1,6 @@
 // FILE: packaged-proof-rpc.ts
 // Purpose: Opens one typed Effect RPC session to the bundled Server for deterministic fixtures.
-// Layer: Release verification
+// Layer: Packaged verification
 
 import { createRequire } from "node:module";
 

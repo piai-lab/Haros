@@ -1,6 +1,6 @@
 // FILE: device-helper-smoke.ts
 // Purpose: End-to-end smoke test for the native device helper against a real iOS Simulator.
-// Layer: Release/CI smoke check (macOS + Xcode only; not part of normal CI).
+// Layer: Packaging/CI smoke check (macOS + Xcode only; not part of normal CI).
 // Depends on: apps/server/native/device-helper/build.sh and `xcrun simctl`.
 //
 // Compiles the helper with the user's toolchain, boots (or reuses) a simulator,

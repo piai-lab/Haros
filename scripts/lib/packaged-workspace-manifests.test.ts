@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   omitBundledServerWorkspaceDependencies,
-  RELEASE_WORKSPACE_MANIFEST_PATHS,
-} from "./release-workspace-manifests";
+  PACKAGED_WORKSPACE_MANIFEST_PATHS,
+} from "./packaged-workspace-manifests";
 
 const repositoryRoot = path.resolve(import.meta.dirname, "../..");
 
@@ -16,10 +16,10 @@ async function readPackage(relativePath: string): Promise<{
   return JSON.parse(await readFile(path.join(repositoryRoot, relativePath), "utf8"));
 }
 
-describe("release workspace manifests", () => {
+describe("packaged workspace manifests", () => {
   it("stages every production workspace dependency needed by Desktop and Server", async () => {
     const stagedPackageNames = new Set(
-      (await Promise.all(RELEASE_WORKSPACE_MANIFEST_PATHS.map(readPackage)))
+      (await Promise.all(PACKAGED_WORKSPACE_MANIFEST_PATHS.map(readPackage)))
         .map(({ name }) => name)
         .filter((name): name is string => typeof name === "string"),
     );
@@ -33,10 +33,10 @@ describe("release workspace manifests", () => {
         .map(([name]) => name),
     );
 
-    expect([...new Set(requiredWorkspaceDependencies)].sort()).toEqual(
+    expect([...new Set(requiredWorkspaceDependencies)].toSorted()).toEqual(
       [
         ...new Set(requiredWorkspaceDependencies.filter((name) => stagedPackageNames.has(name))),
-      ].sort(),
+      ].toSorted(),
     );
   });
 
@@ -49,7 +49,7 @@ describe("release workspace manifests", () => {
   });
 
   it("ships the Ask fork through the Server bundle without creating a second Desktop dependency", async () => {
-    expect(RELEASE_WORKSPACE_MANIFEST_PATHS).toContain("packages/oa-ask/package.json");
+    expect(PACKAGED_WORKSPACE_MANIFEST_PATHS).toContain("packages/oa-ask/package.json");
     const desktop = await readPackage("apps/desktop/package.json");
     const server = await readPackage("apps/server/package.json");
     expect(desktop.dependencies?.["@harnessos/oa-ask"]).toBeUndefined();
