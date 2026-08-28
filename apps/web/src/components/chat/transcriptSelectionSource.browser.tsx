@@ -106,7 +106,7 @@ describe("transcript selection source projection", () => {
   });
 
   it("detects whether the active native selection intersects a file chip", () => {
-    const chip = sourceSpan("execution-brief.md", 0, 18);
+    const chip = sourceSpan("docs/architecture.md", 0, 18);
     const other = sourceSpan(" other", 18, 24);
     mountMessage(chip, other);
     const selection = window.getSelection()!;

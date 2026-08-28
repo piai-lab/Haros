@@ -188,7 +188,7 @@ function TranscriptSelectionHarness(props: { onAddSelection: (text: string) => v
 }
 
 const CHIP_SELECTION_RAW_TEXT =
-  "状态入口： [execution-brief.md](execution-brief.md) · **Campaign** · Prompt 研究稿";
+  "参考： [docs/architecture.md](docs/architecture.md) · **Project note** · Prompt 设计稿";
 
 function ExactMarkdownSelectionHarness(props: {
   streaming?: boolean;
@@ -376,10 +376,10 @@ describe("ChatTranscriptPane", () => {
       selection.removeAllRanges();
       selection.addRange(range);
 
-      expect(selection.toString()).toContain("execution-brief.md");
+      expect(selection.toString()).toContain("docs/architecture.md");
       expect(selection.toString()).toContain("Campaign");
-      expect(selection.toString()).toContain("Prompt 研究稿");
-      const fileChip = transcript.querySelector<HTMLElement>('a[title*="execution-brief.md"]')!;
+      expect(selection.toString()).toContain("Prompt 设计稿");
+      const fileChip = transcript.querySelector<HTMLElement>('a[title*="docs/architecture.md"]')!;
       const selectedContextMenuEvent = new MouseEvent("contextmenu", {
         bubbles: true,
         cancelable: true,
@@ -430,7 +430,7 @@ describe("ChatTranscriptPane", () => {
         }),
       );
       await page.getByRole("button", { name: "Add to Chat" }).click();
-      expect(addedSelections).toEqual(["状态入口： execution-brief.md · Campaign · Prompt 研究稿"]);
+      expect(addedSelections).toEqual(["参考： docs/architecture.md · Campaign · Prompt 设计稿"]);
     } finally {
       if (originalNativeApi) {
         window.nativeApi = originalNativeApi;
@@ -473,7 +473,7 @@ describe("ChatTranscriptPane", () => {
       expect(document.querySelector('button[aria-label="Highlight"]')).toBeNull();
       expect(document.querySelector('button[aria-label="Underline"]')).toBeNull();
       await page.getByRole("button", { name: "Add to Chat" }).click();
-      expect(addedSelections[0]).toContain("execution-brief.md");
+      expect(addedSelections[0]).toContain("docs/architecture.md");
     } finally {
       window.getSelection()?.removeAllRanges();
       await screen.unmount();
@@ -495,17 +495,17 @@ describe("ChatTranscriptPane", () => {
       transcript.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       const promptTextNode = Array.from(
         transcript.querySelectorAll<HTMLElement>("[data-transcript-source-start]"),
-      ).find((element) => element.textContent?.includes("Prompt 研究稿"))?.firstChild;
+      ).find((element) => element.textContent?.includes("Prompt 设计稿"))?.firstChild;
       expect(promptTextNode).toBeInstanceOf(Text);
 
       const selection = window.getSelection()!;
       const promptText = promptTextNode!.textContent ?? "";
-      const promptStart = promptText.indexOf("Prompt 研究稿");
+      const promptStart = promptText.indexOf("Prompt 设计稿");
       selection.setBaseAndExtent(promptTextNode!, promptText.length, promptTextNode!, promptStart);
       document.dispatchEvent(new Event("selectionchange"));
       await expect.element(page.getByRole("button", { name: "Add to Chat" })).toBeVisible();
       await page.getByRole("button", { name: "Add to Chat" }).click();
-      expect(addedSelections).toEqual(["Prompt 研究稿"]);
+      expect(addedSelections).toEqual(["Prompt 设计稿"]);
 
       const campaignTextNode = Array.from(
         transcript.querySelectorAll<HTMLElement>("[data-transcript-source-start]"),
@@ -518,7 +518,7 @@ describe("ChatTranscriptPane", () => {
       transcript.dispatchEvent(new Event("touchend", { bubbles: true }));
       await expect.element(page.getByRole("button", { name: "Add to Chat" })).toBeVisible();
       await page.getByRole("button", { name: "Add to Chat" }).click();
-      expect(addedSelections).toEqual(["Prompt 研究稿", "Campaign"]);
+      expect(addedSelections).toEqual(["Prompt 设计稿", "Campaign"]);
     } finally {
       window.getSelection()?.removeAllRanges();
       await screen.unmount();
@@ -554,7 +554,7 @@ describe("ChatTranscriptPane", () => {
       expect(document.querySelector('button[aria-label="Highlight"]')).toBeNull();
       expect(document.querySelector('button[aria-label="Underline"]')).toBeNull();
       await page.getByRole("button", { name: "Add to Chat" }).click();
-      expect(addedSelections[0]).toContain("execution-brief.md");
+      expect(addedSelections[0]).toContain("docs/architecture.md");
     } finally {
       window.getSelection()?.removeAllRanges();
       await screen.unmount();
