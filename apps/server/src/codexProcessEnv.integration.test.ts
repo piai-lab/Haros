@@ -10,7 +10,7 @@ import {
   linkOrCopyCodexOverlayEntry,
   prioritizeCodexOverlayEntries,
 } from "./codexProcessEnv";
-import { isEngineCredentialKey } from "./providerChildEnvironment.ts";
+import { isEngineCredentialKey } from "./engine/engineChildEnvironment.ts";
 
 describe("linkOrCopyCodexOverlayEntry", () => {
   it("copies auth.json when symlink creation is unavailable", async () => {
@@ -141,10 +141,10 @@ describe("buildCodexProcessEnv", () => {
     const managedConfig = [
       "[mcp_servers.harnessos]",
       'url = "http://127.0.0.1:3773/mcp"',
-      'bearer_token_env_var = "HARNESSOS_AGENT_GATEWAY_TOKEN"',
+      'bearer_token_env_var = "HARNESSOS_HOST_GATEWAY_TOKEN"',
       "",
       "[shell_environment_policy]",
-      'exclude = ["HARNESSOS_AGENT_GATEWAY_TOKEN"]',
+      'exclude = ["HARNESSOS_HOST_GATEWAY_TOKEN"]',
     ].join("\n");
     const sourceConfigPath = path.join(sourceHome, "config.toml");
     writeFileSync(sourceConfigPath, sourceConfig, "utf8");
@@ -164,7 +164,7 @@ describe("buildCodexProcessEnv", () => {
 
       expect(overlayConfig.match(/^\[mcp_servers\.harnessos\]$/gm)).toHaveLength(1);
       expect(overlayConfig).toContain('url = "http://127.0.0.1:3773/mcp"');
-      expect(overlayConfig).toContain('bearer_token_env_var = "HARNESSOS_AGENT_GATEWAY_TOKEN"');
+      expect(overlayConfig).toContain('bearer_token_env_var = "HARNESSOS_HOST_GATEWAY_TOKEN"');
       expect(overlayConfig).not.toContain("http://127.0.0.1:1111/stale-mcp");
       expect(overlayConfig).not.toContain("STALE_GATEWAY_TOKEN");
       expect(overlayConfig).not.toContain("stale-inline-secret");
@@ -177,7 +177,7 @@ describe("buildCodexProcessEnv", () => {
         '[mcp_servers.user-tool]\nurl = "http://127.0.0.1:2222/user-tool"',
       );
       expect(overlayConfig).toContain('inherit = "core"');
-      expect(overlayConfig).toContain('exclude = ["HARNESSOS_AGENT_GATEWAY_TOKEN", "USER_SECRET"]');
+      expect(overlayConfig).toContain('exclude = ["HARNESSOS_HOST_GATEWAY_TOKEN", "USER_SECRET"]');
       expect(readFileSync(sourceConfigPath, "utf8")).toBe(sourceConfig);
     } finally {
       rmSync(sourceHome, { recursive: true, force: true });

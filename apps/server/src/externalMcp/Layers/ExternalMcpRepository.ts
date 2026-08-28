@@ -6,7 +6,7 @@ import type {
 import { Effect, Layer } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
-import { recordCreatedWorktreeInPlan } from "../../agentGateway/operationPlan.ts";
+import { recordCreatedWorktreeInPlan } from "../../hostGateway/operationPlan.ts";
 import {
   ExternalMcpRepository,
   type ExternalMcpIntegrationRecord,

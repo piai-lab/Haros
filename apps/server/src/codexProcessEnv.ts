@@ -19,9 +19,9 @@ import {
   resolveHarnessOSCodexHomeOverlayPath,
 } from "./codexHomePaths.ts";
 import {
-  buildProviderChildEnvironment,
+  buildEngineChildEnvironment,
   registerEngineCredentialKey,
-} from "./providerChildEnvironment.ts";
+} from "./engine/engineChildEnvironment.ts";
 
 const CODEX_PROCESS_SHELL_ENV_NAMES = ["PATH", "SSH_AUTH_SOCK"] as const;
 const CODEX_OVERLAY_SHARED_STATE_FILES = new Set(["auth.json"]);
@@ -720,7 +720,7 @@ export async function buildCodexProcessEnv(
       ? { ...baseEnv, CODEX_HOME: overlayHomePath ?? input.homePath }
       : baseEnv;
   const platform = input.platform ?? process.platform;
-  const effectiveEnv = buildProviderChildEnvironment({
+  const effectiveEnv = buildEngineChildEnvironment({
     engine: "codex",
     baseEnv: configuredEnv,
   });

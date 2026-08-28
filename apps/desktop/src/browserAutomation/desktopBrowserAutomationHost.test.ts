@@ -534,7 +534,7 @@ describe("DesktopBrowserAutomationHost", () => {
     });
   });
 
-  it("binds one provider session to exactly one thread", async () => {
+  it("binds one engine session to exactly one thread", async () => {
     const { manager } = createManager();
     const host = new DesktopBrowserAutomationHost(manager);
     await host.executeTool({
@@ -558,7 +558,7 @@ describe("DesktopBrowserAutomationHost", () => {
     });
   });
 
-  it("never evicts or rebinds an authenticated provider-session identity", async () => {
+  it("never evicts or rebinds an authenticated engine-session identity", async () => {
     const { manager } = createManager();
     const host = new DesktopBrowserAutomationHost(manager);
     await host.executeTool({
@@ -595,7 +595,7 @@ describe("DesktopBrowserAutomationHost", () => {
         name: "browser_status",
         arguments: {},
       }),
-    ).rejects.toMatchObject({ browserError: { code: "BrowserProviderProcessMismatch" } });
+    ).rejects.toMatchObject({ browserError: { code: "BrowserEngineProcessMismatch" } });
   });
 
   it("opens the requested thread, keeps tab affinity and deduplicates an identical intention", async () => {

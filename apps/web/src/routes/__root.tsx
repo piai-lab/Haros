@@ -6,7 +6,7 @@ import {
   type OrchestrationShellStreamEvent,
   type OrchestrationThread,
   type ServerConfig,
-  type ServerProviderStatus,
+  type ServerEngineStatus,
   type WsCompatibilityError,
 } from "@harnessos/contracts";
 import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
@@ -42,7 +42,7 @@ import { useFeedbackDialogStore } from "../feedbackDialogStore";
 import type { FeedbackThreadContext } from "../feedback";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import {
-  reconcileServerProviderStatuses,
+  reconcileServerEngineStatuses,
   refreshServerConfigAfterTransportOpen,
   serverConfigQueryOptions,
   serverQueryKeys,
@@ -61,7 +61,7 @@ import { selectThreadTerminalState, useTerminalStateStore } from "../terminalSta
 import { terminalActivityFromEvent } from "../terminalActivity";
 import {
   onServerConfigUpdated,
-  onServerProviderStatusesUpdated,
+  onServerEngineStatusesUpdated,
   onServerSettingsUpdated,
   onServerWelcome,
   onThreadStreamFailure,
@@ -192,7 +192,7 @@ type ActiveEngineUpdateToast =
 
 function engineUpdateProgressTitle(params: {
   readonly current: number;
-  readonly engine: ServerProviderStatus;
+  readonly engine: ServerEngineStatus;
   readonly t: ReturnType<typeof useI18n>["t"];
   readonly total: number;
 }): string {
@@ -503,7 +503,7 @@ function EngineStatusRefreshCoordinator() {
 // React Compiler does not compile module functions, so the finally block is fine
 // here even though it would bail out the component body.
 async function runEngineUpdateAll(params: {
-  engines: ReadonlyArray<ServerProviderStatus>;
+  engines: ReadonlyArray<ServerEngineStatus>;
   queryClient: QueryClient;
   activeToastRef: { current: ActiveEngineUpdateToast | null };
   isUpdatingAllRef: { current: boolean };
@@ -568,7 +568,7 @@ async function runEngineUpdateAll(params: {
     timeout: 0,
   });
 
-  const failures: Array<{ engine: ServerProviderStatus; reason: string }> = [];
+  const failures: Array<{ engine: ServerEngineStatus; reason: string }> = [];
 
   try {
     const api = ensureNativeApi();
@@ -597,7 +597,7 @@ async function runEngineUpdateAll(params: {
           engine: engine.engine,
           request: api.server.updateEngine({ engine: engine.engine }),
         });
-        void reconcileServerProviderStatuses(queryClient, result.engines).catch(() => undefined);
+        void reconcileServerEngineStatuses(queryClient, result.engines).catch(() => undefined);
         const refreshed = result.engines.find((entry) => entry.engine === engine.engine);
         const updateState = refreshed?.updateState;
         if (updateState?.status === "failed" || updateState?.status === "unchanged") {
@@ -733,7 +733,7 @@ function EngineUpdateNotifications({
   const notificationKey = engineUpdateNotificationKey(outdatedProviders);
 
   const updateAll = useCallback(
-    (engines: ReadonlyArray<ServerProviderStatus>) =>
+    (engines: ReadonlyArray<ServerEngineStatus>) =>
       runEngineUpdateAll({
         engines,
         queryClient,
@@ -2342,7 +2342,7 @@ function EventRouter() {
         },
       });
     });
-    const unsubProviderStatusesUpdated = onServerProviderStatusesUpdated((payload) => {
+    const unsubEngineStatusesUpdated = onServerEngineStatusesUpdated((payload) => {
       const nextProviderDiscoveryFingerprints = providerModelDiscoveryInvalidationFingerprints(
         payload.engines,
       );
@@ -2360,11 +2360,11 @@ function EventRouter() {
         : [];
       engineDiscoveryInvalidationFingerprints = nextProviderDiscoveryFingerprints;
 
-      void reconcileServerProviderStatuses(
+      void reconcileServerEngineStatuses(
         queryClient,
         payload.engines,
         payload.passivePresence
-          ? { passivePresence: payload.passivePresence.recoverableProviders }
+          ? { passivePresence: payload.passivePresence.recoverableEngines }
           : undefined,
       ).catch(() => undefined);
       if (changedProviders.length > 0) {
@@ -2504,7 +2504,7 @@ function EventRouter() {
       unsubDevServerEvent();
       unsubWelcome();
       unsubServerConfigUpdated();
-      unsubProviderStatusesUpdated();
+      unsubEngineStatusesUpdated();
       unsubWsTransportState();
       unsubServerSettingsUpdated();
     };

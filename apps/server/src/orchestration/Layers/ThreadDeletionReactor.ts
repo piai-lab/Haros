@@ -10,7 +10,7 @@ import { DeviceService } from "../../device/Services/DeviceService";
 import { GitCore } from "../../git/Services/GitCore";
 import { pruneProjectedArchivedManagedWorktrees } from "../../managedWorktrees";
 import { ProfileStatsArchive } from "../../profileStatsArchive";
-import { EngineService } from "../../provider/Services/EngineService";
+import { EngineService } from "../../engine/Services/EngineService";
 import { TerminalManager } from "../../terminal/Services/Manager";
 import { THREAD_RETENTION_COMMAND_ID_PREFIX } from "../../threadRetention";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine";
@@ -109,7 +109,7 @@ export const detachThreadDevice = (threadId: ThreadId) =>
 const make = Effect.gen(function* () {
   const orchestrationEngine = yield* OrchestrationEngineService;
   const profileStatsArchive = yield* ProfileStatsArchive;
-  const providerService = yield* EngineService;
+  const engineService = yield* EngineService;
   const terminalManager = yield* TerminalManager;
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
   const serverConfig = yield* ServerConfig;
@@ -148,7 +148,7 @@ const make = Effect.gen(function* () {
       }),
     );
 
-  const stopProviderSessionWithoutBinding = (
+  const stopEngineSessionWithoutBinding = (
     threadId: ThreadDeletedEvent["payload"]["threadId"],
     cause: Cause.Cause<unknown>,
   ) =>
@@ -157,17 +157,17 @@ const make = Effect.gen(function* () {
       cause: Cause.pretty(cause),
     }).pipe(Effect.as(true));
 
-  const stopProviderSession = Effect.fn(function* (
+  const stopEngineSession = Effect.fn(function* (
     threadId: ThreadDeletedEvent["payload"]["threadId"],
   ) {
-    return yield* providerService.stopSession({ threadId }).pipe(
+    return yield* engineService.stopSession({ threadId }).pipe(
       Effect.as(true),
       Effect.catchCause((cause) => {
         if (Cause.hasInterruptsOnly(cause)) {
           return Effect.failCause(cause);
         }
         if (Cause.pretty(cause).includes(MISSING_PROVIDER_BINDING_DETAIL)) {
-          return stopProviderSessionWithoutBinding(threadId, cause);
+          return stopEngineSessionWithoutBinding(threadId, cause);
         }
         return Effect.logDebug("thread deletion cleanup skipped engine session stop", {
           threadId,
@@ -240,7 +240,7 @@ const make = Effect.gen(function* () {
   const cleanupThreadBeforePurge = Effect.fn(function* (
     threadId: ThreadDeletedEvent["payload"]["threadId"],
   ) {
-    const providerCleanupSucceeded = yield* stopProviderSession(threadId);
+    const providerCleanupSucceeded = yield* stopEngineSession(threadId);
     const terminalCleanupSucceeded = yield* closeThreadTerminals(threadId, true);
     return providerCleanupSucceeded && terminalCleanupSucceeded;
   });

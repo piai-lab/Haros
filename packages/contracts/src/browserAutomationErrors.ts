@@ -10,7 +10,7 @@ export const BrowserErrorCode = Schema.Literals([
   "BrowserConduitAttachRejected",
   "BrowserConduitDisconnected",
   "BrowserTransportDisconnected",
-  "BrowserProviderProcessMismatch",
+  "BrowserEngineProcessMismatch",
   "BrowserTransportIsolationUnavailable",
   "BrowserHostUnavailable",
   "BrowserRuntimeDisconnected",
@@ -54,7 +54,7 @@ export const BrowserErrorCode = Schema.Literals([
   "BrowserRequestConflict",
   "BrowserAmbiguousResult",
   "BrowserMcpNameConflict",
-  "BrowserProviderIsolationUnavailable",
+  "BrowserEngineIsolationUnavailable",
 ]);
 
 export type BrowserErrorCode = typeof BrowserErrorCode.Type;
@@ -103,12 +103,10 @@ export const BrowserAutomationErrorMessages = Object.freeze({
   BrowserUnauthorized: "Browser access is not authorized for this request.",
   BrowserAuthorizationRequired: "Browser authorization is required before this request can run.",
   BrowserAuthorizationDenied: "Browser authorization was denied.",
-  BrowserConduitAttachRejected:
-    "The browser conduit could not be attached to this provider session.",
+  BrowserConduitAttachRejected: "The browser conduit could not be attached to this engine session.",
   BrowserConduitDisconnected: "The browser conduit disconnected before a result was delivered.",
   BrowserTransportDisconnected: "The browser transport disconnected before a result was delivered.",
-  BrowserProviderProcessMismatch:
-    "The provider process does not match the authorized browser session.",
+  BrowserEngineProcessMismatch: "The engine process does not match the authorized browser session.",
   BrowserTransportIsolationUnavailable: "The required isolated browser transport is unavailable.",
   BrowserHostUnavailable: "No browser host is available for this workspace.",
   BrowserRuntimeDisconnected: "The browser runtime disconnected before a result was delivered.",
@@ -160,9 +158,8 @@ export const BrowserAutomationErrorMessages = Object.freeze({
     "The idempotency key is already associated with a different browser request.",
   BrowserAmbiguousResult:
     "A prior browser action may have completed, but its result is no longer available. Observe with browser_tabs or browser_snapshot before deciding on a new intention and idempotency key.",
-  BrowserMcpNameConflict: "A browser tool name conflicts with another provider tool.",
-  BrowserProviderIsolationUnavailable:
-    "The provider cannot satisfy browser isolation requirements.",
+  BrowserMcpNameConflict: "A browser tool name conflicts with another engine tool.",
+  BrowserEngineIsolationUnavailable: "The engine cannot satisfy browser isolation requirements.",
 } as const satisfies Record<BrowserErrorCode, string>);
 
 export const BrowserFixedAutomationErrorInvariants = Object.freeze({

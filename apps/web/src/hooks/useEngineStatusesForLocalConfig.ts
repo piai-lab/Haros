@@ -3,23 +3,23 @@
 // Layer: Web hook
 // Depends on: server config query, app settings, and engine availability normalization.
 
-import type { ServerProviderStatus } from "@harnessos/contracts";
+import type { ServerEngineStatus } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
 
 import { getCustomBinaryPathForProvider } from "../engineSettings";
 import { useServerSettings } from "../serverSettings";
-import { normalizeProviderStatusForLocalConfig } from "../lib/engineAvailability";
+import { normalizeEngineStatusForLocalConfig } from "../lib/engineAvailability";
 import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 
-const EMPTY_PROVIDER_STATUSES: ServerProviderStatus[] = [];
+const EMPTY_PROVIDER_STATUSES: ServerEngineStatus[] = [];
 
-export function useEngineStatusesForLocalConfig(): readonly ServerProviderStatus[] {
+export function useEngineStatusesForLocalConfig(): readonly ServerEngineStatus[] {
   const { settings } = useServerSettings();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
 
   return (serverConfigQuery.data?.engines ?? EMPTY_PROVIDER_STATUSES)
     .map((status) =>
-      normalizeProviderStatusForLocalConfig({
+      normalizeEngineStatusForLocalConfig({
         engine: status.engine,
         status,
         customBinaryPath: settings ? getCustomBinaryPathForProvider(settings, status.engine) : "",

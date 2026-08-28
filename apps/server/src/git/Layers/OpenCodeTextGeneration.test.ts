@@ -14,7 +14,7 @@ import {
   OpenCodeRuntime,
   OpenCodeRuntimeError,
   type OpenCodeRuntimeShape,
-} from "../../provider/opencodeRuntime.ts";
+} from "../../engine/opencodeRuntime.ts";
 import { OpenCodeTextGeneration } from "../Services/TextGeneration.ts";
 import {
   makeOpenCodeTextGenerationServiceLive,

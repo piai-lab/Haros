@@ -632,7 +632,7 @@ export class DesktopBrowserAutomationHost {
     if (existing) {
       if (existing.provider !== request.provider) {
         browserHostError({
-          code: "BrowserProviderProcessMismatch",
+          code: "BrowserEngineProcessMismatch",
           retryable: false,
           phase: "routing",
           effectMayHaveCommitted: false,
@@ -1385,7 +1385,7 @@ export class DesktopBrowserAutomationHost {
               } else if (!url) {
                 // prepareAutomationTab runs before the per-tab lease is known.
                 // Reassert its selection now that the thread visibility lease
-                // protects this open from every other provider session.
+                // protects this open from every other engine session.
                 this.browserManager.selectAutomationTab({
                   threadId: affinity.threadId,
                   tabId: selected,

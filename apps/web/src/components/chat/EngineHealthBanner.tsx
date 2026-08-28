@@ -3,7 +3,7 @@
 // Layer: Chat status presentation
 // Exports: EngineHealthBanner
 
-import type { ServerProviderStatus } from "@harnessos/contracts";
+import type { ServerEngineStatus } from "@harnessos/contracts";
 import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "../ui/alert";
 import { IconButton } from "../ui/icon-button";
@@ -20,7 +20,7 @@ export const EngineHealthBanner = function EngineHealthBanner({
   status,
 }: {
   onDismiss?: () => void;
-  status: ServerProviderStatus | null;
+  status: ServerEngineStatus | null;
 }) {
   if (!status || status.status === "ready") {
     return null;

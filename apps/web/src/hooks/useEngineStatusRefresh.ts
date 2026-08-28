@@ -2,48 +2,48 @@
 // Purpose: Shared engine-status refresh hooks — focus/periodic version checks plus an
 //          imperative refresh callback for UI affordances (voice auth retry, banners).
 // Layer: Web hooks
-// Exports: useEngineStatusRefresh, useRefreshProviderStatusesNow
+// Exports: useEngineStatusRefresh, useRefreshEngineStatusesNow
 
 import { useEffect } from "react";
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
-import type { EngineKind, ServerProviderStatus } from "@harnessos/contracts";
+import type { EngineKind, ServerEngineStatus } from "@harnessos/contracts";
 import { toastManager } from "../components/ui/toast";
 import { readNativeApi } from "../nativeApi";
-import { reconcileServerProviderStatuses } from "../lib/serverReactQuery";
+import { reconcileServerEngineStatuses } from "../lib/serverReactQuery";
 
-export type RefreshProviderStatusesOptions = {
+export type RefreshEngineStatusesOptions = {
   readonly silent?: boolean;
 };
 
-export type RefreshProviderStatusesNow = (
-  options?: RefreshProviderStatusesOptions,
-) => Promise<readonly ServerProviderStatus[] | null>;
+export type RefreshEngineStatusesNow = (
+  options?: RefreshEngineStatusesOptions,
+) => Promise<readonly ServerEngineStatus[] | null>;
 
-function writeProviderStatusesToConfigCache(
+function writeEngineStatusesToConfigCache(
   queryClient: QueryClient,
-  engines: readonly ServerProviderStatus[],
+  engines: readonly ServerEngineStatus[],
   passivePresence?: ReadonlyArray<EngineKind>,
 ) {
   return passivePresence
-    ? reconcileServerProviderStatuses(queryClient, engines, { passivePresence })
-    : reconcileServerProviderStatuses(queryClient, engines);
+    ? reconcileServerEngineStatuses(queryClient, engines, { passivePresence })
+    : reconcileServerEngineStatuses(queryClient, engines);
 }
 
 /**
  * Imperative one-shot engine-status refresh: re-checks engines on the server
  * and folds the result into the cached server config. Surfaces failures as a toast.
  */
-export function useRefreshProviderStatusesNow(): RefreshProviderStatusesNow {
+export function useRefreshEngineStatusesNow(): RefreshEngineStatusesNow {
   const queryClient = useQueryClient();
-  return async (options?: RefreshProviderStatusesOptions) => {
+  return async (options?: RefreshEngineStatusesOptions) => {
     const api = readNativeApi();
     if (!api) return null;
     try {
       const result = await api.server.refreshEngines();
-      await writeProviderStatusesToConfigCache(
+      await writeEngineStatusesToConfigCache(
         queryClient,
         result.engines,
-        result.passivePresence?.recoverableProviders,
+        result.passivePresence?.recoverableEngines,
       );
       return result.engines;
     } catch (error) {
@@ -90,7 +90,7 @@ export function useEngineStatusRefresh(options: EngineStatusRefreshOptions): voi
     let startupRefreshPending = false;
     let lastRefreshAttemptAtMs = 0;
     let refreshInFlight: Promise<boolean> | null = null;
-    const refreshProviderStatuses = (input?: {
+    const refreshEngineStatuses = (input?: {
       readonly ignoreMinInterval?: boolean;
     }): Promise<boolean> => {
       if (document.visibilityState !== "visible") {
@@ -118,10 +118,10 @@ export function useEngineStatusRefresh(options: EngineStatusRefreshOptions): voi
           if (disposed) {
             return false;
           }
-          await writeProviderStatusesToConfigCache(
+          await writeEngineStatusesToConfigCache(
             queryClient,
             result.engines,
-            result.passivePresence?.recoverableProviders,
+            result.passivePresence?.recoverableEngines,
           );
           if (!disposed) {
             hasSuccessfulRefresh = true;
@@ -149,7 +149,7 @@ export function useEngineStatusRefresh(options: EngineStatusRefreshOptions): voi
       startupRefreshPending = true;
       // A failed early focus refresh must not consume the throttle window and
       // suppress the one scheduled startup attempt.
-      await refreshProviderStatuses({ ignoreMinInterval: true });
+      await refreshEngineStatuses({ ignoreMinInterval: true });
     };
 
     const initialRefreshId =
@@ -158,7 +158,7 @@ export function useEngineStatusRefresh(options: EngineStatusRefreshOptions): voi
         : null;
     const refreshIntervalId =
       typeof intervalMs === "number" && intervalMs > 0
-        ? window.setInterval(() => void refreshProviderStatuses(), intervalMs)
+        ? window.setInterval(() => void refreshEngineStatuses(), intervalMs)
         : null;
     let focusRefreshArmed = refreshOnFocusAfterLossOnly && document.visibilityState !== "visible";
     const armFocusRefresh = () => {
@@ -171,7 +171,7 @@ export function useEngineStatusRefresh(options: EngineStatusRefreshOptions): voi
       }
       if (refreshOnFocusAfterLossOnly && !focusRefreshArmed) return;
       focusRefreshArmed = false;
-      void refreshProviderStatuses({ ignoreMinInterval: startupRefreshPending });
+      void refreshEngineStatuses({ ignoreMinInterval: startupRefreshPending });
     };
 
     if (refreshOnFocus) {

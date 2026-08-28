@@ -3,7 +3,7 @@
 // for engine runtime events so UI components can stay presentation-only.
 
 import type { OrchestrationThread } from "@harnessos/contracts";
-import { providerUsageLearnMoreHref } from "@harnessos/shared/providerUsage";
+import { engineUsageLearnMoreHref } from "@harnessos/shared/engineUsage";
 
 export interface RateLimitWindow {
   window: string;
@@ -416,11 +416,11 @@ export function deriveRateLimitLearnMoreHref(
   if (engines.size !== 1) return null;
 
   const [engine] = engines;
-  return deriveProviderUsageLearnMoreHref(engine);
+  return deriveEngineUsageLearnMoreHref(engine);
 }
 
-export function deriveProviderUsageLearnMoreHref(engine: string | null | undefined): string | null {
-  return providerUsageLearnMoreHref(engine);
+export function deriveEngineUsageLearnMoreHref(engine: string | null | undefined): string | null {
+  return engineUsageLearnMoreHref(engine);
 }
 
 function timestampMs(value: string | undefined): number {

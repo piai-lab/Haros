@@ -395,7 +395,7 @@ export function buildSlashReviewComposerPrompt(args: string): string {
 }
 
 export interface SideSlashCommandArgs {
-  targetProvider: EngineKind | null;
+  targetEngine: EngineKind | null;
   prompt: string;
   unavailableProvider: EngineKind | null;
 }
@@ -424,16 +424,16 @@ export function parseSideSlashCommandArgs(
   const firstToken = trimmedArgs.split(/\s+/, 1)[0] ?? "";
   const matchedProvider = firstToken.length > 0 ? matchSideProviderToken(firstToken) : null;
   if (!matchedProvider) {
-    return { targetProvider: null, prompt: trimmedArgs, unavailableProvider: null };
+    return { targetEngine: null, prompt: trimmedArgs, unavailableProvider: null };
   }
   const prompt = trimmedArgs.slice(firstToken.length).trim();
   if (matchedProvider === input.currentProvider) {
-    return { targetProvider: null, prompt, unavailableProvider: null };
+    return { targetEngine: null, prompt, unavailableProvider: null };
   }
   if (!input.availableTargetProviders.includes(matchedProvider)) {
-    return { targetProvider: null, prompt, unavailableProvider: matchedProvider };
+    return { targetEngine: null, prompt, unavailableProvider: matchedProvider };
   }
-  return { targetProvider: matchedProvider, prompt, unavailableProvider: null };
+  return { targetEngine: matchedProvider, prompt, unavailableProvider: null };
 }
 
 // `/fork` optionally accepts only an explicit target shorthand like `/fork local`.

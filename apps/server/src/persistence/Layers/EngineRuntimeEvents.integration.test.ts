@@ -18,7 +18,7 @@ import {
 } from "../Services/EngineRuntimeEvents.ts";
 import { EngineRuntimeEventRepositoryLive, truncateUtf8ToBytes } from "./EngineRuntimeEvents.ts";
 import { SqlitePersistenceMemory } from "./Sqlite.ts";
-import { assignDerivedProviderRuntimeEventIds } from "../../provider/engineRuntimeEventIdentity.ts";
+import { assignDerivedEngineRuntimeEventIds } from "../../engine/engineRuntimeEventIdentity.ts";
 
 const layer = it.layer(
   EngineRuntimeEventRepositoryLive.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
@@ -362,7 +362,7 @@ layer("EngineRuntimeEventRepository", (it) => {
         threadId: ThreadId.makeUnsafe("thread-derived-runtime-journal"),
         turnId: TurnId.makeUnsafe("turn-derived-runtime-journal"),
       };
-      const derived = assignDerivedProviderRuntimeEventIds([
+      const derived = assignDerivedEngineRuntimeEventIds([
         {
           ...common,
           type: "task.completed",

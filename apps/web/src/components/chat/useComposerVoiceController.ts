@@ -3,7 +3,7 @@
 // Layer: Chat composer hook
 // Depends on: useVoiceRecorder, ChatView voice helper logic, and the native API voice endpoint.
 
-import { type EngineKind, type ServerProviderStatus, type ThreadId } from "@harnessos/contracts";
+import { type EngineKind, type ServerEngineStatus, type ThreadId } from "@harnessos/contracts";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { Project } from "../../types";
@@ -13,7 +13,7 @@ import {
   useVoiceRecorder,
 } from "../../lib/voiceRecorder";
 import { readNativeApi } from "../../nativeApi";
-import type { RefreshProviderStatusesNow } from "../../hooks/useEngineStatusRefresh";
+import type { RefreshEngineStatusesNow } from "../../hooks/useEngineStatusRefresh";
 import { toastManager } from "../ui/toast";
 import {
   deriveComposerVoiceState,
@@ -39,10 +39,10 @@ export interface UseComposerVoiceControllerOptions {
   activeThreadId: ThreadId | null;
   threadId: ThreadId;
   selectedProvider: EngineKind;
-  activeProviderStatus: ServerProviderStatus | null;
+  activeEngineStatus: ServerEngineStatus | null;
   pendingUserInputCount: number;
   onTranscriptReady: (transcript: string) => void;
-  refreshVoiceStatus: RefreshProviderStatusesNow;
+  refreshVoiceStatus: RefreshEngineStatusesNow;
   actionArmDelayMs?: number;
   failureCopy?: Partial<ComposerVoiceFailureCopy>;
   onGuardWarning?: (message: string, details: ComposerVoiceGuardDetails) => void;
@@ -77,7 +77,7 @@ export function useComposerVoiceController(
     activeThreadId,
     threadId,
     selectedProvider,
-    activeProviderStatus,
+    activeEngineStatus,
     pendingUserInputCount,
     onTranscriptReady,
     refreshVoiceStatus,
@@ -112,8 +112,8 @@ export function useComposerVoiceController(
 
   const voiceRecordingDurationLabel = formatVoiceRecordingDuration(voiceRecordingDurationMs);
   const { canStartVoiceNotes, showVoiceNotesControl } = deriveComposerVoiceState({
-    authStatus: activeProviderStatus?.authStatus,
-    voiceTranscriptionAvailable: activeProviderStatus?.voiceTranscriptionAvailable,
+    authStatus: activeEngineStatus?.authStatus,
+    voiceTranscriptionAvailable: activeEngineStatus?.voiceTranscriptionAvailable,
     isRecording: isVoiceRecording,
     isTranscribing: isVoiceTranscribing,
   });
@@ -144,8 +144,8 @@ export function useComposerVoiceController(
       return;
     }
     onGuardWarning?.("cancelled active voice recording because voice became unavailable", {
-      authStatus: activeProviderStatus?.authStatus ?? null,
-      voiceTranscriptionAvailable: activeProviderStatus?.voiceTranscriptionAvailable ?? null,
+      authStatus: activeEngineStatus?.authStatus ?? null,
+      voiceTranscriptionAvailable: activeEngineStatus?.voiceTranscriptionAvailable ?? null,
       isVoiceRecording,
     });
     const invalidatedRequestId = voiceTranscriptionRequestIdRef.current + 1;
@@ -157,8 +157,8 @@ export function useComposerVoiceController(
       }
     });
   }, [
-    activeProviderStatus?.authStatus,
-    activeProviderStatus?.voiceTranscriptionAvailable,
+    activeEngineStatus?.authStatus,
+    activeEngineStatus?.voiceTranscriptionAvailable,
     canStartVoiceNotes,
     cancelVoiceRecording,
     isVoiceRecording,
@@ -183,7 +183,7 @@ export function useComposerVoiceController(
     if (!activeProject) {
       return;
     }
-    if (activeProviderStatus?.authStatus === "unauthenticated") {
+    if (activeEngineStatus?.authStatus === "unauthenticated") {
       toastManager.add({
         type: "error",
         title: "Sign in to ChatGPT in Codex before using voice notes.",

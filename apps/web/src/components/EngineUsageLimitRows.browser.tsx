@@ -16,10 +16,10 @@ vi.mock("../localPreferences", async (importOriginal) => ({
 }));
 
 import { I18nProvider } from "../i18n";
-import { deriveProviderUsageDisplayRows } from "../lib/providerUsageDisplay";
+import { deriveEngineUsageDisplayRows } from "../lib/engineUsageDisplay";
 import { EngineUsageLimitRows } from "./EngineUsageLimitRows";
 
-const rows = deriveProviderUsageDisplayRows([
+const rows = deriveEngineUsageDisplayRows([
   {
     engine: "claude",
     updatedAt: "2099-04-08T18:00:00.000Z",

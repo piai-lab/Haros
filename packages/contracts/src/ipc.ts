@@ -180,14 +180,14 @@ import type {
   ServerGetUsageHistoryResult,
   ServerCommandUsageHistoryInput,
   ServerCommandUsageHistoryResult,
-  ServerListProviderUsageInput,
-  ServerListProviderUsageResult,
+  ServerListEngineUsageInput,
+  ServerListEngineUsageResult,
   ServerGetSettingsResult,
   ServerListLocalServersResult,
   ServerListWorktreesResult,
   ServerEngineUpdateInput,
   ServerEngineUpdateResult,
-  ServerRefreshProvidersResult,
+  ServerRefreshEnginesResult,
   ServerResetSettingsResult,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
@@ -222,10 +222,10 @@ import type {
   OrchestrationGetThreadDetailSnapshotResult,
   OrchestrationImportThreadInput,
   OrchestrationImportThreadResult,
-  OrchestrationListProviderDeliveryBlockersInput,
-  OrchestrationListProviderDeliveryBlockersResult,
-  OrchestrationReconcileProviderDeliveryInput,
-  OrchestrationReconcileProviderDeliveryResult,
+  OrchestrationListEngineDeliveryBlockersInput,
+  OrchestrationListEngineDeliveryBlockersResult,
+  OrchestrationReconcileEngineDeliveryInput,
+  OrchestrationReconcileEngineDeliveryResult,
   OrchestrationGetTurnDiffInput,
   OrchestrationGetTurnDiffResult,
   OrchestrationEvent,
@@ -909,14 +909,12 @@ export interface NativeApi {
     refreshExternalMcpPairing: (
       input: ExternalMcpRefreshPairingInput,
     ) => Promise<ExternalMcpCreateIntegrationResult>;
-    refreshEngines: () => Promise<ServerRefreshProvidersResult>;
+    refreshEngines: () => Promise<ServerRefreshEnginesResult>;
     updateEngine: (input: ServerEngineUpdateInput) => Promise<ServerEngineUpdateResult>;
     listWorktrees: () => Promise<ServerListWorktreesResult>;
     listLocalServers: () => Promise<ServerListLocalServersResult>;
     stopLocalServer: (input: ServerStopLocalServerInput) => Promise<ServerStopLocalServerResult>;
-    listProviderUsage: (
-      input: ServerListProviderUsageInput,
-    ) => Promise<ServerListProviderUsageResult>;
+    listEngineUsage: (input: ServerListEngineUsageInput) => Promise<ServerListEngineUsageResult>;
     getUsageHistory: (input: ServerGetUsageHistoryInput) => Promise<ServerGetUsageHistoryResult>;
     commandUsageHistory: (
       input: ServerCommandUsageHistoryInput,
@@ -1062,12 +1060,12 @@ export interface NativeApi {
       fromSequenceExclusive: number,
       threadId?: ThreadId,
     ) => Promise<OrchestrationEvent[]>;
-    listProviderDeliveryBlockers: (
-      input?: OrchestrationListProviderDeliveryBlockersInput,
-    ) => Promise<OrchestrationListProviderDeliveryBlockersResult>;
-    reconcileProviderDelivery: (
-      input: OrchestrationReconcileProviderDeliveryInput,
-    ) => Promise<OrchestrationReconcileProviderDeliveryResult>;
+    listEngineDeliveryBlockers: (
+      input?: OrchestrationListEngineDeliveryBlockersInput,
+    ) => Promise<OrchestrationListEngineDeliveryBlockersResult>;
+    reconcileEngineDelivery: (
+      input: OrchestrationReconcileEngineDeliveryInput,
+    ) => Promise<OrchestrationReconcileEngineDeliveryResult>;
     subscribeShell: () => Promise<void>;
     unsubscribeShell: () => Promise<void>;
     subscribeThread: (input: OrchestrationSubscribeThreadInput) => Promise<void>;

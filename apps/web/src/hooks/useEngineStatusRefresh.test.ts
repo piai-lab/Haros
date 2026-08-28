@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   cleanup: undefined as (() => void) | undefined,
   queryClient: {},
   readNativeApi: vi.fn(),
-  reconcileServerProviderStatuses: vi.fn(async () => undefined),
+  reconcileServerEngineStatuses: vi.fn(async () => undefined),
 }));
 
 vi.mock("react", async () => {
@@ -26,7 +26,7 @@ vi.mock("../nativeApi", () => ({
 }));
 
 vi.mock("../lib/serverReactQuery", () => ({
-  reconcileServerProviderStatuses: mocks.reconcileServerProviderStatuses,
+  reconcileServerEngineStatuses: mocks.reconcileServerEngineStatuses,
 }));
 
 import { useEngineStatusRefresh } from "./useEngineStatusRefresh";
@@ -66,7 +66,7 @@ describe("useEngineStatusRefresh", () => {
     vi.useFakeTimers();
     mocks.cleanup = undefined;
     mocks.readNativeApi.mockReset();
-    mocks.reconcileServerProviderStatuses.mockClear();
+    mocks.reconcileServerEngineStatuses.mockClear();
   });
 
   afterEach(() => {
@@ -91,7 +91,7 @@ describe("useEngineStatusRefresh", () => {
     windowTarget.dispatchEvent(new Event("focus"));
     await vi.advanceTimersByTimeAsync(0);
     expect(refreshEngines).toHaveBeenCalledOnce();
-    expect(mocks.reconcileServerProviderStatuses).toHaveBeenCalledWith(mocks.queryClient, []);
+    expect(mocks.reconcileServerEngineStatuses).toHaveBeenCalledWith(mocks.queryClient, []);
   });
 
   it("still runs the startup refresh after an early focus attempt fails", async () => {

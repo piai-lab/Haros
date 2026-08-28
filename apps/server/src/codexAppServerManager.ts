@@ -44,24 +44,24 @@ import {
   isCodexCliVersionSupported,
   MINIMUM_CODEX_AUTO_REVIEW_CLI_VERSION,
   parseCodexCliVersion,
-} from "./provider/codexCliVersion";
+} from "./engine/codexCliVersion";
 import {
   buildCodexMcpConfigToml,
-  HARNESSOS_AGENT_GATEWAY_TOKEN_ENV,
-} from "./agentGateway/mcpInjection.ts";
-import { HARNESSOS_GATEWAY_HARNESS_POLICY } from "./agentGateway/harnessPolicy.ts";
+  HARNESSOS_HOST_GATEWAY_TOKEN_ENV,
+} from "./hostGateway/mcpInjection.ts";
+import { HARNESSOS_GATEWAY_HARNESS_POLICY } from "./hostGateway/harnessPolicy.ts";
 import {
-  AGENT_GATEWAY_TURN_AUTHORITY_RETIRED,
-  type AgentGatewaySessionLease,
-} from "./agentGateway/sessionLease.ts";
+  HOST_GATEWAY_TURN_AUTHORITY_RETIRED,
+  type HostGatewaySessionLease,
+} from "./hostGateway/sessionLease.ts";
 import { isNonFatalCodexErrorMessage } from "./codexErrorClassification.ts";
 import { buildCodexProcessEnv } from "./codexProcessEnv.ts";
 import { assertCodexWorkingDirectoryExists } from "./codexWorkingDirectory.ts";
 import { executableIdentity, resolveExecutable } from "./executableLookup.ts";
 import {
   teardownChildProcessTree,
-  teardownProviderProcessTree,
-} from "./provider/supervisedProcessTeardown.ts";
+  teardownEngineProcessTree,
+} from "./engine/supervisedProcessTeardown.ts";
 import { resolveScratchWorkspaceCwd } from "./scratchWorkspaces.ts";
 import { createLogger } from "./logger";
 import { transcribeVoiceWithChatGptSession } from "./voiceTranscription.ts";
@@ -80,7 +80,7 @@ import {
   parseCodexPluginListResponse,
   parseCodexPluginReadResponse,
   parseCodexSkillsListResponse,
-} from "./provider/codexDiscoveryCatalog.ts";
+} from "./engine/codexDiscoveryCatalog.ts";
 
 const log = createLogger("codex");
 
@@ -152,7 +152,7 @@ type CodexSessionApprovalOverride = {
 };
 
 interface CodexSessionContext {
-  readonly gatewaySessionLease?: AgentGatewaySessionLease;
+  readonly gatewaySessionLease?: HostGatewaySessionLease;
   /** Set once this runtime's bearer is permanently fenced to a terminal turn. */
   gatewayCredentialRetired?: boolean;
   session: EngineSession;
@@ -945,24 +945,24 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
   private runPromise: (effect: Effect.Effect<unknown, never>) => Promise<unknown>;
   private readonly harnessosSkillsDir: string | undefined;
-  private readonly agentGatewayMcp:
+  private readonly hostGatewayMcp:
     | {
         readonly endpointUrl: () => string;
-        readonly acquireSessionLease: (threadId: ThreadId) => AgentGatewaySessionLease;
+        readonly acquireSessionLease: (threadId: ThreadId) => HostGatewaySessionLease;
       }
     | undefined;
-  private readonly teardownProcessTree: typeof teardownProviderProcessTree;
+  private readonly teardownProcessTree: typeof teardownEngineProcessTree;
   private readonly taskCompleteFallbackGraceMs: number;
   private readonly discoverySessionIdleMs: number;
   constructor(
     services?: ServiceMap.ServiceMap<never>,
     options?: {
       readonly harnessosSkillsDir?: string;
-      readonly agentGatewayMcp?: {
+      readonly hostGatewayMcp?: {
         readonly endpointUrl: () => string;
-        readonly acquireSessionLease: (threadId: ThreadId) => AgentGatewaySessionLease;
+        readonly acquireSessionLease: (threadId: ThreadId) => HostGatewaySessionLease;
       };
-      readonly teardownProcessTree?: typeof teardownProviderProcessTree;
+      readonly teardownProcessTree?: typeof teardownEngineProcessTree;
       readonly taskCompleteFallbackGraceMs?: number;
       readonly discoverySessionIdleMs?: number;
     },
@@ -970,8 +970,8 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     super();
     this.runPromise = services ? Effect.runPromiseWith(services) : Effect.runPromise;
     this.harnessosSkillsDir = options?.harnessosSkillsDir;
-    this.agentGatewayMcp = options?.agentGatewayMcp;
-    this.teardownProcessTree = options?.teardownProcessTree ?? teardownProviderProcessTree;
+    this.hostGatewayMcp = options?.hostGatewayMcp;
+    this.teardownProcessTree = options?.teardownProcessTree ?? teardownEngineProcessTree;
     this.taskCompleteFallbackGraceMs = Math.max(0, options?.taskCompleteFallbackGraceMs ?? 750);
     this.discoverySessionIdleMs = Math.max(
       0,
@@ -988,12 +988,12 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   ) {
     const env = await buildCodexProcessEnv({
       ...(homePath ? { homePath } : {}),
-      ...(this.agentGatewayMcp
-        ? { appendConfigToml: buildCodexMcpConfigToml(this.agentGatewayMcp.endpointUrl()) }
+      ...(this.hostGatewayMcp
+        ? { appendConfigToml: buildCodexMcpConfigToml(this.hostGatewayMcp.endpointUrl()) }
         : {}),
     });
     if (gatewayBearerToken) {
-      env[HARNESSOS_AGENT_GATEWAY_TOKEN_ENV] = gatewayBearerToken;
+      env[HARNESSOS_HOST_GATEWAY_TOKEN_ENV] = gatewayBearerToken;
     }
     return env;
   }
@@ -1021,7 +1021,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     const threadId = input.threadId;
     const now = new Date().toISOString();
     let context: CodexSessionContext | undefined;
-    let gatewaySessionLease: AgentGatewaySessionLease | undefined;
+    let gatewaySessionLease: HostGatewaySessionLease | undefined;
 
     try {
       const existing = this.sessions.get(threadId);
@@ -1053,7 +1053,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
           : {}),
         ...(codexHomePath ? { homePath: codexHomePath } : {}),
       });
-      gatewaySessionLease = this.agentGatewayMcp?.acquireSessionLease(threadId);
+      gatewaySessionLease = this.hostGatewayMcp?.acquireSessionLease(threadId);
       const child = spawnCodexAppServer({
         binaryPath: codexBinaryPath,
         cwd: resolvedCwd,
@@ -1794,7 +1794,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     const threadId = input.threadId;
     const now = new Date().toISOString();
     let context: CodexSessionContext | undefined;
-    let gatewaySessionLease: AgentGatewaySessionLease | undefined;
+    let gatewaySessionLease: HostGatewaySessionLease | undefined;
 
     try {
       const existing = this.sessions.get(threadId);
@@ -1802,8 +1802,8 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         await this.stopSession(threadId);
       }
 
-      const sourceProviderThreadId = readResumeCursorThreadId(input.sourceResumeCursor);
-      if (!sourceProviderThreadId) {
+      const sourceEngineThreadId = readResumeCursorThreadId(input.sourceResumeCursor);
+      if (!sourceEngineThreadId) {
         throw new Error("Engine fork is missing the source thread resume id.");
       }
 
@@ -1838,7 +1838,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
           : {}),
         ...(codexHomePath ? { homePath: codexHomePath } : {}),
       });
-      gatewaySessionLease = this.agentGatewayMcp?.acquireSessionLease(threadId);
+      gatewaySessionLease = this.hostGatewayMcp?.acquireSessionLease(threadId);
       const child = spawnCodexAppServer({
         binaryPath: codexBinaryPath,
         cwd: resolvedCwd,
@@ -1894,7 +1894,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         input.engineSelection?.engine === "codex" &&
         getEngineSelectionBooleanOptionValue(input.engineSelection, "fastMode") === true;
       const forkParams = {
-        threadId: sourceProviderThreadId,
+        threadId: sourceEngineThreadId,
         ...(normalizedModel ? { model: normalizedModel } : {}),
         ...(useFastServiceTier ? { serviceTier: "fast" as const } : {}),
         cwd: resolvedCwd,
@@ -1904,7 +1904,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       this.emitLifecycleEvent(
         context,
         "session/threadOpenRequested",
-        `Forking Codex thread ${sourceProviderThreadId}.`,
+        `Forking Codex thread ${sourceEngineThreadId}.`,
       );
       const response = await this.sendRequest(context, "thread/fork", forkParams);
       const forkedProviderThreadId = this.readThreadIdFromResponse("thread/fork", response);
@@ -3067,7 +3067,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     const eventPayload = gatewayTurnAuthorityRetired
       ? {
           ...(this.readObject(notification.params) ?? {}),
-          [AGENT_GATEWAY_TURN_AUTHORITY_RETIRED]: true,
+          [HOST_GATEWAY_TURN_AUTHORITY_RETIRED]: true,
         }
       : notification.params;
 
@@ -3554,7 +3554,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
             status: "completed",
           },
           recoveredFrom: "codex/event/task_complete",
-          ...(gatewayTurnAuthorityRetired ? { [AGENT_GATEWAY_TURN_AUTHORITY_RETIRED]: true } : {}),
+          ...(gatewayTurnAuthorityRetired ? { [HOST_GATEWAY_TURN_AUTHORITY_RETIRED]: true } : {}),
         },
       });
     }, this.taskCompleteFallbackGraceMs);
@@ -3607,7 +3607,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
           status: "completed",
         },
         ...(context.gatewayCredentialRetired === true
-          ? { [AGENT_GATEWAY_TURN_AUTHORITY_RETIRED]: true }
+          ? { [HOST_GATEWAY_TURN_AUTHORITY_RETIRED]: true }
           : {}),
       },
     });

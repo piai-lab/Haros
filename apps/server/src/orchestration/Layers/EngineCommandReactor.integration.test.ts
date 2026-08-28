@@ -29,7 +29,7 @@ import {
   ThreadId,
   TurnId,
 } from "@harnessos/contracts";
-import { ENGINE_DELIVERY_BLOCK_SUMMARY } from "@harnessos/shared/providerDeliveryBlock";
+import { ENGINE_DELIVERY_BLOCK_SUMMARY } from "@harnessos/shared/engineDeliveryBlock";
 import {
   Duration,
   Effect,
@@ -44,8 +44,8 @@ import {
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AgentGatewayOperationRepositoryLive } from "../../agentGateway/Layers/AgentGatewayOperationRepository.ts";
-import { AgentGatewayOperationRepository } from "../../agentGateway/Services/AgentGatewayOperationRepository.ts";
+import { HostGatewayOperationRepositoryLive } from "../../hostGateway/Layers/HostGatewayOperationRepository.ts";
+import { HostGatewayOperationRepository } from "../../hostGateway/Services/HostGatewayOperationRepository.ts";
 import { deriveServerPaths, ServerConfig } from "../../config.ts";
 import { TextGenerationError } from "../../git/Errors.ts";
 import {
@@ -53,7 +53,7 @@ import {
   EngineAdapterRequestError,
   EngineAdapterValidationError,
   EngineValidationError,
-} from "../../provider/Errors.ts";
+} from "../../engine/Errors.ts";
 import { OrchestrationEventStoreLive } from "../../persistence/Layers/OrchestrationEventStore.ts";
 import { OrchestrationEventStore } from "../../persistence/Services/OrchestrationEventStore.ts";
 import { OrchestrationCommandReceiptRepositoryLive } from "../../persistence/Layers/OrchestrationCommandReceipts.ts";
@@ -67,7 +67,7 @@ import { QueuedTurnPromotionRepository } from "../../persistence/Services/Queued
 import { ProjectionPendingInteractionRepository } from "../../persistence/Services/ProjectionPendingInteractions.ts";
 import { ManagedAttachmentRepository } from "../../persistence/Services/ManagedAttachments.ts";
 import { SqlitePersistenceMemory } from "../../persistence/Layers/Sqlite.ts";
-import { EngineService, type EngineServiceShape } from "../../provider/Services/EngineService.ts";
+import { EngineService, type EngineServiceShape } from "../../engine/Services/EngineService.ts";
 import { GitCore, type GitCoreShape } from "../../git/Services/GitCore.ts";
 import { TextGeneration, type TextGenerationShape } from "../../git/Services/TextGeneration.ts";
 import { OrchestrationEngineLive } from "./OrchestrationEngine.ts";
@@ -90,13 +90,13 @@ import {
   type StudioOutputReactorShape,
 } from "../Services/StudioOutputReactor.ts";
 import { attachmentRelativePath } from "../../attachmentStore.ts";
-import { resolveProviderAttachmentPath } from "../../provider/providerAttachmentPaths.ts";
-import { engineExecutionStructure } from "../../provider/engineExecutionStructure.ts";
+import { resolveEngineAttachmentPath } from "../../engine/engineAttachmentPaths.ts";
+import { engineExecutionStructure } from "../../engine/engineExecutionStructure.ts";
 import {
   ENGINE_CONVERGE_MODE_ENVELOPE,
   ENGINE_LEARN_MODE_ENVELOPE,
-} from "../../provider/interactionMode.ts";
-import { ENGINE_DEBUG_MODE_PROMPT_PREFIX } from "../../provider/debugMode.ts";
+} from "../../engine/interactionMode.ts";
+import { ENGINE_DEBUG_MODE_PROMPT_PREFIX } from "../../engine/debugMode.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { checkpointRefForThreadTurn } from "../../checkpointing/Utils.ts";
 import {
@@ -561,7 +561,7 @@ describe("EngineCommandReactor", () => {
       Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
       Layer.provideMerge(NodeServices.layer),
       Layer.provideMerge(OrchestrationEventDeliveryRepositoryLive),
-      Layer.provideMerge(AgentGatewayOperationRepositoryLive),
+      Layer.provideMerge(HostGatewayOperationRepositoryLive),
       Layer.provideMerge(SqlitePersistenceMemory),
     );
     const runtime = ManagedRuntime.make(layer);
@@ -601,7 +601,7 @@ describe("EngineCommandReactor", () => {
       Effect.service(ProjectionPendingInteractionRepository),
     );
     const gatewayOperations = await runtime.runPromise(
-      Effect.service(AgentGatewayOperationRepository),
+      Effect.service(HostGatewayOperationRepository),
     );
     scope = await Effect.runPromise(Scope.make("sequential"));
     let reactorStarted = false;
@@ -4234,7 +4234,7 @@ describe("EngineCommandReactor", () => {
         state: "failed",
         errorMessage: "ACP prompt failed after dispatch",
       },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
     await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -4271,7 +4271,7 @@ describe("EngineCommandReactor", () => {
       payload: {
         state: "completed",
       },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
     await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -4792,7 +4792,7 @@ describe("EngineCommandReactor", () => {
     expect(sentAttachment).toMatchObject(imageAttachment);
     expect(
       sentAttachment &&
-        resolveProviderAttachmentPath({
+        resolveEngineAttachmentPath({
           attachmentsDir: path.join(harness.stateDir, "attachments"),
           attachment: sentAttachment,
         }),
@@ -4802,7 +4802,7 @@ describe("EngineCommandReactor", () => {
     const titleAttachment = harness.generateThreadTitle.mock.calls[0]?.[0].attachments?.[0];
     expect(
       titleAttachment &&
-        resolveProviderAttachmentPath({
+        resolveEngineAttachmentPath({
           attachmentsDir: path.join(harness.stateDir, "attachments"),
           attachment: titleAttachment,
         }),
@@ -4992,7 +4992,7 @@ describe("EngineCommandReactor", () => {
       payload: {
         state: "completed",
       },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
@@ -7023,7 +7023,7 @@ describe("EngineCommandReactor", () => {
       payload: {
         state: "completed",
       },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
@@ -7115,7 +7115,7 @@ describe("EngineCommandReactor", () => {
       payload: {
         state: "completed",
       },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
   };
 
@@ -7422,7 +7422,7 @@ describe("EngineCommandReactor", () => {
       payload: {
         state: "completed",
       },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
@@ -7456,7 +7456,7 @@ describe("EngineCommandReactor", () => {
       payload: {
         reason: "interrupted",
       },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
     await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -7473,7 +7473,7 @@ describe("EngineCommandReactor", () => {
       payload: {
         state: "completed",
       },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 2);
@@ -7543,7 +7543,7 @@ describe("EngineCommandReactor", () => {
       createdAt: now,
       turnId: asTurnId("turn-running-before-idless-abort"),
       payload: { state: "completed" },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
 
@@ -7555,7 +7555,7 @@ describe("EngineCommandReactor", () => {
       threadId: ThreadId.makeUnsafe("thread-1"),
       createdAt: now,
       payload: { reason: "interrupted" },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 2);
@@ -7627,7 +7627,7 @@ describe("EngineCommandReactor", () => {
       payload: {
         state: "completed",
       },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
@@ -7720,7 +7720,7 @@ describe("EngineCommandReactor", () => {
       createdAt: new Date().toISOString(),
       turnId: asTurnId("turn-parent-before-stop"),
       payload: { state: "completed" },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
     await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -7802,7 +7802,7 @@ describe("EngineCommandReactor", () => {
       payload: {
         state: "completed",
       },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 2);
@@ -8030,7 +8030,7 @@ describe("EngineCommandReactor", () => {
       payload: {
         state: "completed",
       },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
@@ -8371,7 +8371,7 @@ describe("EngineCommandReactor", () => {
       createdAt: new Date().toISOString(),
       turnId: activeTurnId,
       payload: { state: "interrupted" },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
@@ -8480,7 +8480,7 @@ describe("EngineCommandReactor", () => {
       createdAt: new Date().toISOString(),
       turnId: activeTurnId,
       payload: { state: "interrupted" },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
@@ -8702,7 +8702,7 @@ describe("EngineCommandReactor", () => {
         createdAt: new Date().toISOString(),
         turnId: activeTurnId,
         payload: { state: "interrupted" },
-        providerRefs: {},
+        engineRefs: {},
       } as EngineRuntimeEvent);
 
       await waitFor(() => harness.sendTurn.mock.calls.length === 1);
@@ -8930,7 +8930,7 @@ describe("EngineCommandReactor", () => {
       payload: {
         state: "interrupted",
       },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
@@ -10418,7 +10418,7 @@ describe("EngineCommandReactor", () => {
       createdAt: new Date().toISOString(),
       turnId: asTurnId("turn-1"),
       payload: { state: "completed" },
-      providerRefs: {},
+      engineRefs: {},
     } as EngineRuntimeEvent);
     await harness.drain();
 

@@ -45,8 +45,8 @@ import {
   type OrchestrationEngineShape,
 } from "../Services/OrchestrationEngine.ts";
 import { CheckpointReactor } from "../Services/CheckpointReactor.ts";
-import { EngineService, type EngineServiceShape } from "../../provider/Services/EngineService.ts";
-import { EngineSessionNotFoundError, type EngineServiceError } from "../../provider/Errors.ts";
+import { EngineService, type EngineServiceShape } from "../../engine/Services/EngineService.ts";
+import { EngineSessionNotFoundError, type EngineServiceError } from "../../engine/Errors.ts";
 import {
   CHECKPOINT_REFS_PREFIX,
   checkpointRefForThreadMessageStart,
@@ -59,7 +59,7 @@ import { ServerConfig } from "../../config.ts";
 const asProjectId = (value: string): ProjectId => ProjectId.makeUnsafe(value);
 const asTurnId = (value: string): TurnId => TurnId.makeUnsafe(value);
 
-type LegacyProviderRuntimeEvent = {
+type LegacyEngineRuntimeEvent = {
   readonly type: string;
   readonly eventId: EventId;
   readonly engine: EngineKind;
@@ -72,12 +72,12 @@ type LegacyProviderRuntimeEvent = {
   readonly [key: string]: unknown;
 };
 
-function createProviderServiceHarness(
+function createEngineServiceHarness(
   cwd: string,
   hasSession = true,
   sessionCwd = cwd,
   providerName: EngineSession["engine"] = "codex",
-  providerStatus: EngineSession["status"] = "ready",
+  engineStatus: EngineSession["status"] = "ready",
   activeTurnId?: TurnId,
 ) {
   const now = new Date().toISOString();
@@ -96,7 +96,7 @@ function createProviderServiceHarness(
       ? Effect.succeed([
           {
             engine: providerName,
-            status: providerStatus,
+            status: engineStatus,
             runtimeMode: "full-access",
             threadId: ThreadId.makeUnsafe("thread-1"),
             cwd: sessionCwd,
@@ -131,7 +131,7 @@ function createProviderServiceHarness(
     streamEvents: Stream.fromPubSub(runtimeEventPubSub),
   };
 
-  const emit = (event: LegacyProviderRuntimeEvent): void => {
+  const emit = (event: LegacyEngineRuntimeEvent): void => {
     Effect.runSync(PubSub.publish(runtimeEventPubSub, event as unknown as EngineRuntimeEvent));
   };
 
@@ -309,20 +309,20 @@ describe("CheckpointReactor", () => {
     readonly seedFilesystemCheckpoints?: boolean;
     readonly projectWorkspaceRoot?: string;
     readonly threadWorktreePath?: string | null;
-    readonly providerSessionCwd?: string;
+    readonly engineSessionCwd?: string;
     readonly providerName?: EngineKind;
-    readonly providerStatus?: EngineSession["status"];
+    readonly engineStatus?: EngineSession["status"];
     readonly providerActiveTurnId?: TurnId;
     readonly hasInitialCommit?: boolean;
   }) {
     const cwd = createGitRepository(options?.hasInitialCommit ?? true);
     tempDirs.push(cwd);
-    const engineHarness = createProviderServiceHarness(
+    const engineHarness = createEngineServiceHarness(
       cwd,
       options?.hasSession ?? true,
-      options?.providerSessionCwd ?? cwd,
+      options?.engineSessionCwd ?? cwd,
       options?.providerName ?? "codex",
-      options?.providerStatus ?? "ready",
+      options?.engineStatus ?? "ready",
       options?.providerActiveTurnId,
     );
 
@@ -1799,7 +1799,7 @@ describe("CheckpointReactor", () => {
 
   it("rechecks live engine state before mutating a projected-idle thread", async () => {
     const harness = await createHarness({
-      providerStatus: "running",
+      engineStatus: "running",
       providerActiveTurnId: asTurnId("runtime-turn"),
     });
     const createdAt = new Date().toISOString();
@@ -1862,7 +1862,7 @@ describe("CheckpointReactor", () => {
 
   it("rejects a child-thread revert while its parent-owned engine session is active", async () => {
     const harness = await createHarness({
-      providerStatus: "running",
+      engineStatus: "running",
       providerActiveTurnId: asTurnId("parent-runtime-turn"),
     });
     const createdAt = new Date().toISOString();

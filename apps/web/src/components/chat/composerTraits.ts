@@ -10,7 +10,7 @@ import {
 } from "@harnessos/contracts";
 import {
   getProviderOptionCurrentValue,
-  getProviderOptionDescriptors,
+  getEngineOptionDescriptors,
   isClaudeUltrathinkPrompt,
   trimOrNull,
 } from "@harnessos/shared/model";
@@ -103,7 +103,7 @@ export function getComposerTraitSelection(
   runtimeModel?: EngineModelDescriptor,
 ) {
   const caps = getRuntimeAwareModelCapabilities({ engine, model, runtimeModel });
-  const descriptors = getProviderOptionDescriptors({
+  const descriptors = getEngineOptionDescriptors({
     engine,
     caps,
     selections: modelOptions as Record<string, unknown> | undefined,

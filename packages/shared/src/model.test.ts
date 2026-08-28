@@ -41,7 +41,7 @@ import {
   resolveModelSlugForProvider,
   getDefaultEffort,
   getProviderOptionCurrentLabel,
-  getProviderOptionDescriptors,
+  getEngineOptionDescriptors,
   buildProviderOptionSelectionsFromDescriptors,
   hasEffortLevel,
   resolveGrokEffortFamily,
@@ -323,7 +323,7 @@ describe("getModelCapabilities reasoningEffortLevels", () => {
       controlSource: "api-effort",
     });
     expect(sonnet5Levels.find((option) => option.value === "ultracode")).toMatchObject({
-      controlSource: "engine-setting",
+      controlSource: "provider-setting",
       apiEffortValue: "xhigh",
     });
 
@@ -441,7 +441,7 @@ describe("resolveGrokEffortFamily", () => {
 
 describe("engine option descriptor helpers", () => {
   it("projects legacy Codex capability flags into generic option descriptors", () => {
-    const descriptors = getProviderOptionDescriptors({
+    const descriptors = getEngineOptionDescriptors({
       engine: "codex",
       caps: getModelCapabilities("codex", "gpt-5.4"),
       selections: { reasoningEffort: "xhigh", fastMode: true },
@@ -462,7 +462,7 @@ describe("engine option descriptor helpers", () => {
   });
 
   it("projects Grok reasoning effort into a generic option descriptor", () => {
-    const descriptors = getProviderOptionDescriptors({
+    const descriptors = getEngineOptionDescriptors({
       engine: "grok",
       caps: getModelCapabilities("grok", "grok-build"),
       selections: { reasoningEffort: "high" },
@@ -473,7 +473,7 @@ describe("engine option descriptor helpers", () => {
       currentValue: "high",
     });
 
-    const grok46 = getProviderOptionDescriptors({
+    const grok46 = getEngineOptionDescriptors({
       engine: "grok",
       caps: getModelCapabilities("grok", "grok-4.6"),
       selections: { reasoningEffort: "xhigh" },
@@ -490,7 +490,7 @@ describe("engine option descriptor helpers", () => {
   });
 
   it("maps Pi reasoning controls onto the thinkingLevel option", () => {
-    const descriptors = getProviderOptionDescriptors({
+    const descriptors = getEngineOptionDescriptors({
       engine: "pi",
       caps: {
         reasoningEffortLevels: [
@@ -512,7 +512,7 @@ describe("engine option descriptor helpers", () => {
     });
     expect(descriptors.some((descriptor) => descriptor.id === "reasoningEffort")).toBe(false);
 
-    const omniMindDescriptors = getProviderOptionDescriptors({
+    const omniMindDescriptors = getEngineOptionDescriptors({
       engine: "oa",
       caps: {
         reasoningEffortLevels: [{ value: "high", label: "High", isDefault: true }],
@@ -530,7 +530,7 @@ describe("engine option descriptor helpers", () => {
   });
 
   it("honors explicit descriptors and serializes their current values", () => {
-    const descriptors = getProviderOptionDescriptors({
+    const descriptors = getEngineOptionDescriptors({
       engine: "codex",
       caps: {
         ...getModelCapabilities("codex", "gpt-5.4"),

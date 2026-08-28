@@ -3,7 +3,7 @@
 // Layer: Chat composer presentation
 // Depends on: engine availability metadata, shared menu primitives, and picker trigger styling.
 
-import { type ModelSlug, type EngineKind, type ServerProviderStatus } from "@harnessos/contracts";
+import { type ModelSlug, type EngineKind, type ServerEngineStatus } from "@harnessos/contracts";
 import { resolveSelectableModel } from "@harnessos/shared/model";
 import * as Schema from "effect/Schema";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
@@ -115,7 +115,7 @@ type EngineModelMenuItemsProps = {
   engine: EngineKind;
   model: ModelSlug | null;
   lockedProvider: EngineKind | null;
-  engines?: ReadonlyArray<ServerProviderStatus>;
+  engines?: ReadonlyArray<ServerEngineStatus>;
   modelOptionsByEngine: Record<EngineKind, ReadonlyArray<EngineModelOption>>;
   loadingModelProviders?: Partial<Record<EngineKind, boolean>>;
   hiddenEngines?: ReadonlyArray<EngineKind>;
@@ -400,7 +400,7 @@ type EngineModelPickerProps = {
   engine: EngineKind;
   model: ModelSlug | null;
   lockedProvider: EngineKind | null;
-  engines?: ReadonlyArray<ServerProviderStatus>;
+  engines?: ReadonlyArray<ServerEngineStatus>;
   modelOptionsByEngine: Record<EngineKind, ReadonlyArray<EngineModelOption>>;
   loadingModelProviders?: Partial<Record<EngineKind, boolean>>;
   catalogStateByEngine?: Partial<Record<EngineKind, EngineModelCatalogState>>;

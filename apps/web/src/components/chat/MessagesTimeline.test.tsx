@@ -514,7 +514,7 @@ describe("MessagesTimeline", () => {
         activeTurnStartedAt={null}
         crossTaskOrigin={{
           sourceThreadId: ThreadId.makeUnsafe("source-thread"),
-          sourceProvider: "codex",
+          sourceEngine: "codex",
         }}
         timelineEntries={[
           {
@@ -577,7 +577,7 @@ describe("MessagesTimeline", () => {
         activeTurnStartedAt={null}
         crossTaskOrigin={{
           sourceThreadId: ThreadId.makeUnsafe("source-thread"),
-          sourceProvider: "codex",
+          sourceEngine: "codex",
         }}
         timelineEntries={[
           {

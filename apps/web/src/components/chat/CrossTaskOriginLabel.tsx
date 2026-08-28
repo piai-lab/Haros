@@ -10,7 +10,7 @@ import { cn } from "~/lib/utils";
 
 export interface CrossTaskOrigin {
   readonly sourceThreadId: ThreadId;
-  readonly sourceProvider: EngineKind | null;
+  readonly sourceEngine: EngineKind | null;
 }
 
 // A single, app-level attribution: the message reached this thread from another

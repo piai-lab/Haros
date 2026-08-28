@@ -191,7 +191,7 @@ export function buildHandoffBootstrapText(
   return buildImportedMessagesBootstrapText({
     thread,
     importedMessages,
-    intro: `This conversation was handed off from ${thread.handoff.sourceProvider}.`,
+    intro: `This conversation was handed off from ${thread.handoff.sourceEngine}.`,
     maxChars,
   });
 }

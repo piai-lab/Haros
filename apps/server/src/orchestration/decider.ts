@@ -27,7 +27,7 @@ import {
 } from "@harnessos/shared/threadWorkspace";
 import { doThreadMarkerRangesOverlap } from "@harnessos/shared/threadMarkers";
 import { collectSubagentDescendants } from "@harnessos/shared/threadHierarchy";
-import { engineExecutionStructure } from "../provider/engineExecutionStructure.ts";
+import { engineExecutionStructure } from "../engine/engineExecutionStructure.ts";
 import {
   collectTailTurnIds,
   resolveTailUserMessageEditTarget,
@@ -1068,7 +1068,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       // HarnessOS never starts a session for them, so the Auto-mode capability
       // check can only reject the projection (and durably poison the runtime
       // journal replaying it), never prevent an unverified Auto session.
-      if (command.creationSource !== "provider_native") {
+      if (command.creationSource !== "engine_native") {
         yield* validateStructuralRuntimeMode(command, command.engineSelection, command.runtimeMode);
       }
       return {
@@ -1176,7 +1176,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           forkScope: null,
           handoff: {
             sourceThreadId: command.sourceThreadId,
-            sourceProvider: sourceThread.engineSelection.engine,
+            sourceEngine: sourceThread.engineSelection.engine,
             importedAt: command.createdAt,
             bootstrapStatus: "pending",
           },

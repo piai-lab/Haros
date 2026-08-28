@@ -18,7 +18,7 @@ const PROJECT_ID = ProjectId.makeUnsafe("project-auto-claude");
 
 function makeReadModel(
   supportsAutoMode: boolean,
-  threadOverrides?: { creationSource?: "provider_native" },
+  threadOverrides?: { creationSource?: "engine_native" },
 ): OrchestrationReadModel {
   return {
     snapshotSequence: 1,
@@ -239,7 +239,7 @@ describe("decider Auto model compatibility", () => {
           worktreePath: null,
           createBranchFlowCompleted: false,
           parentThreadId: THREAD_ID,
-          creationSource: "provider_native",
+          creationSource: "engine_native",
           sourceThreadId: THREAD_ID,
           createdAt: NOW,
         },
@@ -263,7 +263,7 @@ describe("decider Auto model compatibility", () => {
             model: "claude-fable-5",
           },
         },
-        readModel: makeReadModel(true, { creationSource: "provider_native" }),
+        readModel: makeReadModel(true, { creationSource: "engine_native" }),
       }),
     );
 

@@ -12,7 +12,7 @@ import { resolveCodexHome } from "@harnessos/shared/codexConfig";
 import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@harnessos/shared/git";
 import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
 
-import { resolveProviderAttachmentPath } from "../../provider/providerAttachmentPaths.ts";
+import { resolveEngineAttachmentPath } from "../../engine/engineAttachmentPaths.ts";
 import { buildCodexProcessEnv } from "../../codexProcessEnv.ts";
 import { formatMissingCodexWorkingDirectoryError } from "../../codexWorkingDirectory.ts";
 import { ServerConfig } from "../../config.ts";
@@ -253,7 +253,7 @@ const makeCodexTextGeneration = Effect.gen(function* () {
           continue;
         }
 
-        const resolvedPath = resolveProviderAttachmentPath({
+        const resolvedPath = resolveEngineAttachmentPath({
           attachmentsDir: serverConfig.attachmentsDir,
           attachment,
         });

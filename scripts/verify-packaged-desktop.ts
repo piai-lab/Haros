@@ -924,7 +924,7 @@ async function createPackagedJourneyFixture(input: {
     createBranchFlowCompleted: false,
     isPinned: true,
     parentThreadId: null,
-    creationSource: "provider_native",
+    creationSource: "engine_native",
     createdAt,
   });
   return { projectId, threadId, threadTitle, draft };

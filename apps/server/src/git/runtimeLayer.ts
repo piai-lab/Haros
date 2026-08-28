@@ -11,7 +11,7 @@ import {
   makeOpenCodeTextGenerationServiceLive,
 } from "./Layers/OpenCodeTextGeneration";
 import { EngineTextGenerationLive } from "./Layers/EngineTextGeneration";
-import { OpenCodeRuntimeLive } from "../provider/opencodeRuntime";
+import { OpenCodeRuntimeLive } from "../engine/opencodeRuntime";
 import {
   makeEngineServerPasswordResolver,
   EngineCredentials,

@@ -41,18 +41,18 @@ import { copyAndAttributeStudioGeneratedImage } from "../../studioGeneratedImage
 import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import { parseCheckpointFilesFromUnifiedDiff } from "../../checkpointing/Diffs.ts";
 import { EngineSessionRuntimeRepositoryLive } from "../../persistence/Layers/EngineSessionRuntime.ts";
-import { EngineSessionDirectoryLive } from "../../provider/Layers/EngineSessionDirectory.ts";
-import { EngineService } from "../../provider/Services/EngineService.ts";
-import { EngineSessionDirectory } from "../../provider/Services/EngineSessionDirectory.ts";
-import { activeThreadGoal } from "../../provider/goalMode.ts";
+import { EngineSessionDirectoryLive } from "../../engine/Layers/EngineSessionDirectory.ts";
+import { EngineService } from "../../engine/Services/EngineService.ts";
+import { EngineSessionDirectory } from "../../engine/Services/EngineSessionDirectory.ts";
+import { activeThreadGoal } from "../../engine/goalMode.ts";
 import {
-  isProviderInterruptTurnSettlement,
+  isEngineInterruptTurnSettlement,
   ENGINE_INTERRUPT_RUNTIME_FENCED_EVENT,
-} from "../../provider/providerInterruptSettlement.ts";
+} from "../../engine/engineInterruptSettlement.ts";
 import {
   classifyTerminalTurnApplicability,
   isStartedTurnApplicable,
-} from "../../provider/terminalTurnApplicability.ts";
+} from "../../engine/terminalTurnApplicability.ts";
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
 import { ProjectionTurnRepositoryLive } from "../../persistence/Layers/ProjectionTurns.ts";
 import { ProjectionPendingInteractionRepository } from "../../persistence/Services/ProjectionPendingInteractions.ts";
@@ -63,7 +63,7 @@ import { OrchestrationCommandReceiptRepository } from "../../persistence/Service
 import {
   ENGINE_RUNTIME_INGESTION_CONSUMER,
   EngineRuntimeEventRepository,
-  type PersistedProviderRuntimeEvent,
+  type PersistedEngineRuntimeEvent,
 } from "../../persistence/Services/EngineRuntimeEvents.ts";
 import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";
 import { isGitRepository } from "../../git/isRepo.ts";
@@ -612,10 +612,10 @@ const takeCached = <Key, Value>(cache: Cache.Cache<Key, Value>, key: Key) =>
 
 export function selectProviderRuntimeJournalStream(input: {
   readonly streamEvents: Stream.Stream<EngineRuntimeEvent>;
-  readonly streamPersistedEvents?: Stream.Stream<PersistedProviderRuntimeEvent>;
+  readonly streamPersistedEvents?: Stream.Stream<PersistedEngineRuntimeEvent>;
   readonly append: (
     event: EngineRuntimeEvent,
-  ) => Effect.Effect<PersistedProviderRuntimeEvent, unknown>;
+  ) => Effect.Effect<PersistedEngineRuntimeEvent, unknown>;
 }) {
   return (
     input.streamPersistedEvents ??
@@ -643,8 +643,8 @@ export function selectProviderRuntimeJournalStream(input: {
 const make = Effect.gen(function* () {
   const orchestrationEngine = yield* OrchestrationEngineService;
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
-  const providerService = yield* EngineService;
-  const providerSessionDirectory = yield* EngineSessionDirectory;
+  const engineService = yield* EngineService;
+  const engineSessionDirectory = yield* EngineSessionDirectory;
   const projectionTurnRepository = yield* ProjectionTurnRepository;
   const pendingInteractions = yield* ProjectionPendingInteractionRepository;
   const runtimeEvents = yield* EngineRuntimeEventRepository;
@@ -1019,7 +1019,7 @@ const make = Effect.gen(function* () {
   const supportsLiveTurnDiffPatch = Effect.fnUntraced(function* (
     engine: EngineRuntimeEvent["engine"],
   ) {
-    const capabilities = yield* providerService
+    const capabilities = yield* engineService
       .getCapabilities(engine)
       .pipe(Effect.catch(() => Effect.succeed(null)));
     return capabilities?.supportsLiveTurnDiffPatch === true;
@@ -1918,7 +1918,7 @@ const make = Effect.gen(function* () {
       return null;
     }
 
-    const expectedTurnId = (yield* providerService.listSessions()).find(
+    const expectedTurnId = (yield* engineService.listSessions()).find(
       (entry) => entry.threadId === threadId,
     )?.activeTurnId;
     if (!sameId(expectedTurnId, eventTurnId)) {
@@ -2175,7 +2175,7 @@ const make = Effect.gen(function* () {
       // caught here: journal retry is safer than silently dropping a
       // possibly-current engine event.
       const binding = Option.getOrUndefined(
-        yield* providerSessionDirectory.getBinding(event.threadId),
+        yield* engineSessionDirectory.getBinding(event.threadId),
       );
       const bindingRuntimePayload =
         binding === undefined ? undefined : asObject(binding.runtimePayload);
@@ -2189,7 +2189,7 @@ const make = Effect.gen(function* () {
         binding !== undefined &&
         binding.engine === event.engine &&
         bindingRuntimePayload?.lastRuntimeEvent === ENGINE_INTERRUPT_RUNTIME_FENCED_EVENT &&
-        isProviderInterruptTurnSettlement(event);
+        isEngineInterruptTurnSettlement(event);
       if (
         binding === undefined ||
         (binding !== undefined &&
@@ -2289,7 +2289,7 @@ const make = Effect.gen(function* () {
                   kind: "subagent.materialization.capped",
                   summary: `HarnessOS limited this engine turn to ${MAX_NATIVE_CHILDREN_PER_PARENT_TURN} visible native subagents.`,
                   payload: {
-                    source: "provider_native",
+                    source: "engine_native",
                     cap: MAX_NATIVE_CHILDREN_PER_PARENT_TURN,
                   },
                   turnId: sourceTurnId,
@@ -2319,7 +2319,7 @@ const make = Effect.gen(function* () {
               associatedWorktreeBranch: parentThread.associatedWorktreeBranch,
               associatedWorktreeRef: parentThread.associatedWorktreeRef,
               parentThreadId: parentThread.id,
-              creationSource: "provider_native",
+              creationSource: "engine_native",
               sourceThreadId: parentThread.id,
               ...(sourceTurnId !== null ? { sourceTurnId } : {}),
               subagentAgentId: identity?.agentId ?? null,
@@ -2376,7 +2376,7 @@ const make = Effect.gen(function* () {
                   nativeThreadId,
                 }),
                 parentThreadId: parentThread.id,
-                creationSource: "provider_native" as const,
+                creationSource: "engine_native" as const,
                 sourceThreadId: parentThread.id,
                 sourceTurnId,
                 gatewayOperationId: null,
@@ -2421,10 +2421,8 @@ const make = Effect.gen(function* () {
         }
       }
 
-      const nativeThreadId = normalizeNonEmptyString(event.providerRefs?.nativeThreadId);
-      const nativeParentThreadId = normalizeNonEmptyString(
-        event.providerRefs?.nativeParentThreadId,
-      );
+      const nativeThreadId = normalizeNonEmptyString(event.engineRefs?.nativeThreadId);
+      const nativeParentThreadId = normalizeNonEmptyString(event.engineRefs?.nativeParentThreadId);
       const targetThreadResolution =
         nativeThreadId !== undefined &&
         nativeParentThreadId !== undefined &&
@@ -3159,7 +3157,7 @@ const make = Effect.gen(function* () {
     });
 
   const processRuntimeEvent = (event: EngineRuntimeEvent, runtimeSequence: number) =>
-    providerService.withRuntimeEventProjectionLease(
+    engineService.withRuntimeEventProjectionLease(
       event.threadId,
       processRuntimeEventWithinLease(event, runtimeSequence),
     );
@@ -3190,7 +3188,7 @@ const make = Effect.gen(function* () {
       if (isNativeSteer) {
         let activeTurnId = thread?.session?.activeTurnId ?? undefined;
         if (!activeTurnId) {
-          const runtimeSession = (yield* providerService.listSessions()).find(
+          const runtimeSession = (yield* engineService.listSessions()).find(
             (session) => session.threadId === event.payload.threadId,
           );
           activeTurnId = toTurnId(runtimeSession?.activeTurnId);
@@ -3554,9 +3552,9 @@ const make = Effect.gen(function* () {
   const start: EngineRuntimeIngestionShape["start"] = startDrainableWorkerProducers(
     worker,
     Effect.gen(function* () {
-      const streamPersistedEvents = providerService.streamPersistedEvents;
+      const streamPersistedEvents = engineService.streamPersistedEvents;
       const persistedRuntimeEvents = selectProviderRuntimeJournalStream({
-        streamEvents: providerService.streamEvents,
+        streamEvents: engineService.streamEvents,
         ...(streamPersistedEvents === undefined ? {} : { streamPersistedEvents }),
         append: (event) => runtimeEvents.append(event),
       });

@@ -2,7 +2,7 @@ import { Effect, Scope } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
 import { closeServerRuntimePipeline } from "./effectServer.ts";
-import { UserInputPresenterRegistry } from "./provider/userInputPresenterRegistry.ts";
+import { UserInputPresenterRegistry } from "./engine/userInputPresenterRegistry.ts";
 
 describe("server runtime pipeline shutdown", () => {
   it("persists accepted engine terminal work before the engine stops", async () => {
@@ -39,7 +39,7 @@ describe("server runtime pipeline shutdown", () => {
             order.push("engine-stopped");
           }),
         },
-        providerService: {
+        engineService: {
           closeRuntimeEvents: Effect.sync(() => {
             terminalAccepted = true;
             order.push("engine-terminal-events-fenced");
@@ -93,7 +93,7 @@ describe("server runtime pipeline shutdown", () => {
           drain: Effect.sync(() => order.push("engine-drained")),
           stop: Effect.sync(() => order.push("engine-stopped")),
         },
-        providerService: {
+        engineService: {
           closeRuntimeEvents: Effect.sync(() => {
             order.push("engine-producers-closed");
             registry.onUnavailable(() => undefined);

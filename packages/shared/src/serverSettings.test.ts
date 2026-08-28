@@ -8,7 +8,7 @@ import {
   validateServerSettingsPatch,
 } from "./serverSettings";
 
-const decodeProviderSessionStartInput = Schema.decodeUnknownSync(EngineSessionStartInput);
+const decodeEngineSessionStartInput = Schema.decodeUnknownSync(EngineSessionStartInput);
 
 describe("applyServerSettingsPatch", () => {
   it("normalizes surface overrides without discarding unknown bounded ids", () => {
@@ -149,7 +149,7 @@ describe("providerStartOptionsFromServerSettings", () => {
     const engineOptions = providerStartOptionsFromServerSettings(settings);
 
     expect(() =>
-      decodeProviderSessionStartInput({
+      decodeEngineSessionStartInput({
         threadId: "thread-1",
         engine: "codex",
         engineOptions,

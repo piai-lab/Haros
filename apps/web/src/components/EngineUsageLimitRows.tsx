@@ -3,10 +3,10 @@
 // popovers. Keeps labels, progress tracks, pace details, and tones consistent.
 
 import {
-  providerUsagePaceDetails,
-  providerUsageProgressTrackProps,
+  engineUsagePaceDetails,
+  engineUsageProgressTrackProps,
   type EngineUsageDisplayRow,
-} from "~/lib/providerUsageDisplay";
+} from "~/lib/engineUsageDisplay";
 import { cn } from "~/lib/utils";
 import { useI18n } from "~/i18n";
 
@@ -29,7 +29,7 @@ function EngineUsagePaceLine({
   row: EngineUsageDisplayRow;
   surface: EngineUsageLimitRowsSurface;
 }) {
-  const paceDetails = providerUsagePaceDetails(row);
+  const paceDetails = engineUsagePaceDetails(row);
   if (!paceDetails) return null;
 
   if (surface === "popover") {
@@ -66,7 +66,7 @@ function EngineUsageTrack({
   surface: EngineUsageLimitRowsSurface;
   ariaLabel: string;
 }) {
-  const trackProps = providerUsageProgressTrackProps(row);
+  const trackProps = engineUsageProgressTrackProps(row);
 
   return (
     <UsageProgressTrack
@@ -87,7 +87,7 @@ function SettingsUsageLimitRow({
   displayLabel: string;
   ariaLabel: string;
 }) {
-  const trackProps = providerUsageProgressTrackProps(row);
+  const trackProps = engineUsageProgressTrackProps(row);
 
   return (
     <div className="space-y-1.5">
@@ -151,11 +151,11 @@ export function EngineUsageLimitRows({
       {rows.map((row) => {
         const displayLabel =
           row.label === "Weekly (overage)"
-            ? t("providerUsage.window.weeklyOverage")
+            ? t("engineUsage.window.weeklyOverage")
             : STANDARD_PROVIDER_USAGE_WINDOW_LABELS.has(row.label)
               ? row.label
-              : t("providerUsage.window.other", { label: row.label });
-        const ariaLabel = t("providerUsage.window.remaining", { label: displayLabel });
+              : t("engineUsage.window.other", { label: row.label });
+        const ariaLabel = t("engineUsage.window.remaining", { label: displayLabel });
 
         return surface === "settings" ? (
           <SettingsUsageLimitRow

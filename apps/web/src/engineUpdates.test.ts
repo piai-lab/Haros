@@ -3,7 +3,7 @@
 // Layer: Web utility tests
 // Exports: Vitest suites for engineUpdates.ts
 
-import type { EngineKind, ServerProviderStatus, ServerSettingsView } from "@harnessos/contracts";
+import type { EngineKind, ServerEngineStatus, ServerSettingsView } from "@harnessos/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -57,10 +57,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function providerStatus(
+function engineStatus(
   engine: EngineKind,
-  overrides: Partial<ServerProviderStatus> = {},
-): ServerProviderStatus {
+  overrides: Partial<ServerEngineStatus> = {},
+): ServerEngineStatus {
   return {
     engine,
     status: "ready",
@@ -124,7 +124,7 @@ function serverSettings(
 describe("getVisibleEngineUpdateStatuses", () => {
   it("excludes engines hidden from HarnessOS so unchecked engines do not nag", () => {
     const result = getVisibleEngineUpdateStatuses({
-      engines: [providerStatus("codex"), providerStatus("pi")],
+      engines: [engineStatus("codex"), engineStatus("pi")],
       hiddenEngines: ["pi"],
       serverSettings: serverSettings(),
     });
@@ -134,7 +134,7 @@ describe("getVisibleEngineUpdateStatuses", () => {
 
   it("excludes server-disabled engines", () => {
     const result = getVisibleEngineUpdateStatuses({
-      engines: [providerStatus("codex"), providerStatus("pi")],
+      engines: [engineStatus("codex"), engineStatus("pi")],
       serverSettings: serverSettings({
         pi: { enabled: false, binaryPath: "pi", agentDir: "", customModels: [] },
       }),
@@ -145,7 +145,7 @@ describe("getVisibleEngineUpdateStatuses", () => {
 
   it("waits for server settings before showing engine updates", () => {
     const result = getVisibleEngineUpdateStatuses({
-      engines: [providerStatus("codex")],
+      engines: [engineStatus("codex")],
       serverSettings: null,
     });
 
@@ -154,7 +154,7 @@ describe("getVisibleEngineUpdateStatuses", () => {
 
   it("excludes engine updates when automatic update checks are disabled", () => {
     const result = getVisibleEngineUpdateStatuses({
-      engines: [providerStatus("codex")],
+      engines: [engineStatus("codex")],
       serverSettings: { ...serverSettings(), enableEngineUpdateChecks: false },
     });
 
@@ -162,7 +162,7 @@ describe("getVisibleEngineUpdateStatuses", () => {
   });
 
   it("can narrow notifications to one-click updates while settings keep manual updates visible", () => {
-    const manualOnly = providerStatus("pi", {
+    const manualOnly = engineStatus("pi", {
       versionAdvisory: {
         status: "behind_latest",
         currentVersion: "1.0.0",
@@ -176,13 +176,13 @@ describe("getVisibleEngineUpdateStatuses", () => {
 
     expect(
       getVisibleEngineUpdateStatuses({
-        engines: [providerStatus("codex"), manualOnly],
+        engines: [engineStatus("codex"), manualOnly],
         serverSettings: serverSettings(),
       }).map((engine) => engine.engine),
     ).toEqual(["codex", "pi"]);
     expect(
       getVisibleEngineUpdateStatuses({
-        engines: [providerStatus("codex"), manualOnly],
+        engines: [engineStatus("codex"), manualOnly],
         serverSettings: serverSettings(),
         oneClickOnly: true,
       }).map((engine) => engine.engine),
@@ -192,7 +192,7 @@ describe("getVisibleEngineUpdateStatuses", () => {
 
 describe("getNotifiableEngineUpdateStatuses", () => {
   it("suppresses cached update advisories until a live version check completes", () => {
-    const engines = [providerStatus("claude")];
+    const engines = [engineStatus("claude")];
     const settings = serverSettings();
 
     expect(
@@ -212,9 +212,9 @@ describe("getNotifiableEngineUpdateStatuses", () => {
   });
 
   it("keeps notifications limited to one-click updates after verification", () => {
-    const manualOnly = providerStatus("claude", {
+    const manualOnly = engineStatus("claude", {
       versionAdvisory: {
-        ...providerStatus("claude").versionAdvisory!,
+        ...engineStatus("claude").versionAdvisory!,
         updateCommand: null,
         canUpdate: false,
       },
@@ -233,19 +233,19 @@ describe("getNotifiableEngineUpdateStatuses", () => {
 describe("engineUpdateNotificationKey", () => {
   it("keys by engine/version and ignores ordering", () => {
     const left = engineUpdateNotificationKey([
-      providerStatus("pi", {
+      engineStatus("pi", {
         versionAdvisory: {
-          ...providerStatus("pi").versionAdvisory!,
+          ...engineStatus("pi").versionAdvisory!,
           latestVersion: "2.0.0",
         },
       }),
-      providerStatus("codex"),
+      engineStatus("codex"),
     ]);
     const right = engineUpdateNotificationKey([
-      providerStatus("codex"),
-      providerStatus("pi", {
+      engineStatus("codex"),
+      engineStatus("pi", {
         versionAdvisory: {
-          ...providerStatus("pi").versionAdvisory!,
+          ...engineStatus("pi").versionAdvisory!,
           latestVersion: "2.0.0",
         },
       }),
@@ -257,8 +257,8 @@ describe("engineUpdateNotificationKey", () => {
 
 describe("shouldShowEngineUpdateStatus", () => {
   it("matches the list filter for hidden and server-disabled engines", () => {
-    const codex = providerStatus("codex");
-    const hiddenPi = providerStatus("pi");
+    const codex = engineStatus("codex");
+    const hiddenPi = engineStatus("pi");
     const settings = serverSettings({
       codex: { enabled: false, binaryPath: "codex", homePath: "", customModels: [] },
     });
@@ -288,14 +288,14 @@ describe("isEngineUpdateActive", () => {
       finishedAt: null,
       message: null,
       output: null,
-    } satisfies NonNullable<ServerProviderStatus["updateState"]>;
+    } satisfies NonNullable<ServerEngineStatus["updateState"]>;
     const succeededState = {
       ...queuedState,
       status: "succeeded",
-    } satisfies NonNullable<ServerProviderStatus["updateState"]>;
+    } satisfies NonNullable<ServerEngineStatus["updateState"]>;
 
-    expect(isEngineUpdateActive(providerStatus("codex", { updateState: queuedState }))).toBe(true);
-    expect(isEngineUpdateActive(providerStatus("codex", { updateState: succeededState }))).toBe(
+    expect(isEngineUpdateActive(engineStatus("codex", { updateState: queuedState }))).toBe(true);
+    expect(isEngineUpdateActive(engineStatus("codex", { updateState: succeededState }))).toBe(
       false,
     );
   });
@@ -348,7 +348,7 @@ describe("shouldOfferEngineUpdateAction", () => {
   it("offers native AGY updates even when upstream latest-version metadata is unavailable", () => {
     expect(
       shouldOfferEngineUpdateAction(
-        providerStatus("antigravity", {
+        engineStatus("antigravity", {
           versionAdvisory: {
             status: "unknown",
             currentVersion: "1.1.2",
@@ -368,7 +368,7 @@ describe("shouldPromptEngineUpdate", () => {
   // Cursor and Antigravity self-update, so HarnessOS has no registry to read a latest
   // version from and their advisory is pinned to "unknown" forever. Prompting on that
   // left a permanent "Update" badge on a fully up-to-date CLI.
-  const selfManaged = providerStatus("cursor", {
+  const selfManaged = engineStatus("cursor", {
     version: "2026.07.09-c59fd9a",
     versionAdvisory: {
       status: "unknown",
@@ -390,7 +390,7 @@ describe("shouldPromptEngineUpdate", () => {
   });
 
   it("still prompts when a lookup source exists but the latest version is missing", () => {
-    const transient = providerStatus("antigravity", {
+    const transient = engineStatus("antigravity", {
       versionAdvisory: {
         status: "unknown",
         currentVersion: "1.1.2",
@@ -407,7 +407,7 @@ describe("shouldPromptEngineUpdate", () => {
   });
 
   it("assumes a lookup source when an older server omits the flag", () => {
-    const legacy = providerStatus("kilo", {
+    const legacy = engineStatus("kilo", {
       versionAdvisory: {
         status: "unknown",
         currentVersion: "1.1.2",
@@ -424,6 +424,6 @@ describe("shouldPromptEngineUpdate", () => {
   });
 
   it("keeps prompting for engines HarnessOS can prove are behind", () => {
-    expect(shouldPromptEngineUpdate(providerStatus("codex"))).toBe(true);
+    expect(shouldPromptEngineUpdate(engineStatus("codex"))).toBe(true);
   });
 });

@@ -3,7 +3,7 @@
 // Layer: Chat composer presentation
 // Depends on: canonical engine metadata, asset registry, live health, and shared menu primitives.
 
-import type { EngineKind, ServerProviderStatus } from "@harnessos/contracts";
+import type { EngineKind, ServerEngineStatus } from "@harnessos/contracts";
 import { useState } from "react";
 
 import { useI18n } from "~/i18n";
@@ -11,7 +11,7 @@ import { cn } from "~/lib/utils";
 import { ENGINE_OPTIONS } from "../../session-logic";
 import {
   deriveProviderPickerAvailability,
-  findProviderStatus,
+  findEngineStatus,
   type EnginePickerAvailabilityState,
 } from "../../lib/engineAvailability";
 import { compareProvidersByOrder, filterProviderOptionsByVisibility } from "../../engineOrdering";
@@ -23,7 +23,7 @@ import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 
 type ComposerEnginePickerProps = {
   engine: EngineKind;
-  engines: ReadonlyArray<ServerProviderStatus>;
+  engines: ReadonlyArray<ServerEngineStatus>;
   hiddenEngines?: ReadonlyArray<EngineKind>;
   engineOrder?: ReadonlyArray<EngineKind>;
   disabled?: boolean;
@@ -126,7 +126,7 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
           }}
         >
           {options.map((option) => {
-            const liveStatus = findProviderStatus(props.engines, option.value);
+            const liveStatus = findEngineStatus(props.engines, option.value);
             const availability = deriveProviderPickerAvailability(liveStatus);
             const trailing =
               availability.state === "ready" ? null : (

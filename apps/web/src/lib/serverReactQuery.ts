@@ -2,8 +2,8 @@ import type {
   EngineKind,
   ServerConfig,
   ServerGetUsageHistoryInput,
-  ServerListProviderUsageInput,
-  ServerProviderStatus,
+  ServerListEngineUsageInput,
+  ServerEngineStatus,
   ServerStopLocalServerInput,
   ThreadId,
 } from "@harnessos/contracts";
@@ -22,7 +22,7 @@ export const serverQueryKeys = {
   settings: () => ["server", "settings"] as const,
   worktrees: () => ["server", "worktrees"] as const,
   localServers: () => ["server", "localServers"] as const,
-  allProviderUsage: () => ["server", "allProviderUsage"] as const,
+  allEngineUsage: () => ["server", "allEngineUsage"] as const,
   usageHistoryAll: () => ["server", "usageHistory"] as const,
   usageHistory: (range: string, groupBy: string) =>
     ["server", "usageHistory", range, groupBy] as const,
@@ -51,36 +51,36 @@ export function serverConfigQueryOptions() {
 
 interface EngineStatusSnapshot {
   readonly revision: number;
-  readonly engines: readonly ServerProviderStatus[];
+  readonly engines: readonly ServerEngineStatus[];
   readonly passivePresence: ReadonlyArray<EngineKind> | null;
 }
 
-const latestProviderStatusSnapshotByQueryClient = new WeakMap<QueryClient, EngineStatusSnapshot>();
+const latestEngineStatusSnapshotByQueryClient = new WeakMap<QueryClient, EngineStatusSnapshot>();
 
-export function hasReceivedProviderStatusSnapshot(queryClient: QueryClient): boolean {
+export function hasReceivedEngineStatusSnapshot(queryClient: QueryClient): boolean {
   return (
-    (latestProviderStatusSnapshotByQueryClient.get(queryClient)?.passivePresence ?? null) !== null
+    (latestEngineStatusSnapshotByQueryClient.get(queryClient)?.passivePresence ?? null) !== null
   );
 }
 
 export function readPassiveProviderPresence(
   queryClient: QueryClient,
 ): ReadonlyArray<EngineKind> | null {
-  return latestProviderStatusSnapshotByQueryClient.get(queryClient)?.passivePresence ?? null;
+  return latestEngineStatusSnapshotByQueryClient.get(queryClient)?.passivePresence ?? null;
 }
 
-function recordProviderStatusSnapshot(
+function recordEngineStatusSnapshot(
   queryClient: QueryClient,
-  engines: readonly ServerProviderStatus[],
+  engines: readonly ServerEngineStatus[],
   passivePresence?: ReadonlyArray<EngineKind>,
 ): EngineStatusSnapshot {
-  const previous = latestProviderStatusSnapshotByQueryClient.get(queryClient);
+  const previous = latestEngineStatusSnapshotByQueryClient.get(queryClient);
   const snapshot = {
     revision: (previous?.revision ?? 0) + 1,
     engines,
     passivePresence: passivePresence ?? previous?.passivePresence ?? null,
   };
-  latestProviderStatusSnapshotByQueryClient.set(queryClient, snapshot);
+  latestEngineStatusSnapshotByQueryClient.set(queryClient, snapshot);
   return snapshot;
 }
 
@@ -89,15 +89,15 @@ function recordProviderStatusSnapshot(
  * can win the race against the initial config query, so retain the latest
  * snapshot and apply it after config hydration instead of dropping it.
  */
-export async function reconcileServerProviderStatuses(
+export async function reconcileServerEngineStatuses(
   queryClient: QueryClient,
-  engines: readonly ServerProviderStatus[],
+  engines: readonly ServerEngineStatus[],
   options?: {
     readonly loadConfig?: () => Promise<ServerConfig>;
     readonly passivePresence?: ReadonlyArray<EngineKind>;
   },
 ): Promise<void> {
-  recordProviderStatusSnapshot(queryClient, engines, options?.passivePresence);
+  recordEngineStatusSnapshot(queryClient, engines, options?.passivePresence);
 
   let applied = false;
   queryClient.setQueryData<ServerConfig>(serverQueryKeys.config(), (current) => {
@@ -116,7 +116,7 @@ export async function reconcileServerProviderStatuses(
       }));
   const hydratedConfig = await loadConfig();
   const latestProviders =
-    latestProviderStatusSnapshotByQueryClient.get(queryClient)?.engines ?? engines;
+    latestEngineStatusSnapshotByQueryClient.get(queryClient)?.engines ?? engines;
   queryClient.setQueryData<ServerConfig>(serverQueryKeys.config(), (current) => ({
     ...(current ?? hydratedConfig),
     engines: latestProviders,
@@ -134,7 +134,7 @@ export async function refreshServerConfigAfterTransportOpen(
   },
 ): Promise<void> {
   const providerRevisionAtStart =
-    latestProviderStatusSnapshotByQueryClient.get(queryClient)?.revision ?? 0;
+    latestEngineStatusSnapshotByQueryClient.get(queryClient)?.revision ?? 0;
   const loadConfig =
     options?.loadConfig ??
     (() =>
@@ -143,7 +143,7 @@ export async function refreshServerConfigAfterTransportOpen(
         staleTime: 0,
       }));
   const config = await loadConfig();
-  const latestProviderSnapshot = latestProviderStatusSnapshotByQueryClient.get(queryClient);
+  const latestProviderSnapshot = latestEngineStatusSnapshotByQueryClient.get(queryClient);
   queryClient.setQueryData<ServerConfig>(serverQueryKeys.config(), {
     ...config,
     engines:
@@ -296,9 +296,9 @@ export function serverStopLocalServerMutationOptions(input: { queryClient: Query
   });
 }
 
-export async function fetchAllProviderUsage(input: ServerListProviderUsageInput = {}) {
+export async function fetchAllEngineUsage(input: ServerListEngineUsageInput = {}) {
   const api = ensureNativeApi();
-  return api.server.listProviderUsage(input);
+  return api.server.listEngineUsage(input);
 }
 
 export function serverUsageHistoryQueryOptions(input: ServerGetUsageHistoryInput = {}) {
@@ -365,7 +365,7 @@ export function serverProfileTokenStatsQueryOptions(input: { enabled?: boolean }
 // Live remaining-usage for every engine. Always fetches the full batch under a single query
 // key so every surface (settings panel, header chips, branch toolbar) shares one cache entry
 // and one request cycle; the server caches per-engine snapshots, so the batch is cheap.
-export function serverAllProviderUsageQueryOptions(
+export function serverAllEngineUsageQueryOptions(
   input:
     | boolean
     | {
@@ -374,12 +374,12 @@ export function serverAllProviderUsageQueryOptions(
 ) {
   const enabled = typeof input === "boolean" ? input : (input.enabled ?? true);
   return queryOptions({
-    queryKey: serverQueryKeys.allProviderUsage(),
+    queryKey: serverQueryKeys.allEngineUsage(),
     enabled,
     staleTime: 60_000,
     refetchInterval: 60_000,
     refetchOnWindowFocus: false,
     retry: false,
-    queryFn: async () => fetchAllProviderUsage(),
+    queryFn: async () => fetchAllEngineUsage(),
   });
 }

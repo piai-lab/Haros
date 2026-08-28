@@ -19,15 +19,15 @@ import {
   EngineAdapterSessionNotFoundError,
   EngineAdapterValidationError,
   type EngineAdapterError,
-} from "../src/provider/Errors.ts";
+} from "../src/engine/Errors.ts";
 import type {
   EngineAdapterShape,
   EngineThreadSnapshot,
   EngineThreadTurnSnapshot,
-} from "../src/provider/Services/EngineAdapter.ts";
+} from "../src/engine/Services/EngineAdapter.ts";
 
 export interface TestTurnResponse {
-  readonly events: ReadonlyArray<FixtureProviderRuntimeEvent>;
+  readonly events: ReadonlyArray<FixtureEngineRuntimeEvent>;
   readonly deferCompletion?: boolean;
   readonly mutateWorkspace?: (input: {
     readonly cwd: string;
@@ -35,7 +35,7 @@ export interface TestTurnResponse {
   }) => Effect.Effect<void, never>;
 }
 
-export type FixtureProviderRuntimeEvent = {
+export type FixtureEngineRuntimeEvent = {
   readonly type: string;
   readonly eventId: EventId;
   readonly engine: EngineKind;
@@ -49,7 +49,7 @@ export type FixtureProviderRuntimeEvent = {
 };
 
 // Temporary alias while fixtures migrate to the new name.
-export type LegacyProviderRuntimeEvent = FixtureProviderRuntimeEvent;
+export type LegacyEngineRuntimeEvent = FixtureEngineRuntimeEvent;
 
 interface SessionState {
   readonly session: EngineSession;
@@ -180,7 +180,7 @@ function normalizeFixtureEvent(rawEvent: Record<string, unknown>): EngineRuntime
   }
 }
 
-export interface TestProviderAdapterHarness {
+export interface TestEngineAdapterHarness {
   readonly adapter: EngineAdapterShape<EngineAdapterError>;
   readonly engine: EngineKind;
   readonly queueTurnResponse: (
@@ -201,7 +201,7 @@ export interface TestProviderAdapterHarness {
   }>;
 }
 
-interface MakeTestProviderAdapterHarnessOptions {
+interface MakeTestEngineAdapterHarnessOptions {
   readonly engine?: EngineKind;
 }
 
@@ -226,7 +226,7 @@ function missingSessionEffect(
   return Effect.fail(sessionNotFound(engine, threadId));
 }
 
-export const makeTestProviderAdapterHarness = (options?: MakeTestProviderAdapterHarnessOptions) =>
+export const makeTestEngineAdapterHarness = (options?: MakeTestEngineAdapterHarnessOptions) =>
   Effect.gen(function* () {
     const engine = options?.engine ?? "codex";
     const runtimeEvents = yield* PubSub.unbounded<EngineRuntimeEvent>();
@@ -591,5 +591,5 @@ export const makeTestProviderAdapterHarness = (options?: MakeTestProviderAdapter
       getInterruptCalls,
       listActiveSessionIds,
       getApprovalResponses,
-    } satisfies TestProviderAdapterHarness;
+    } satisfies TestEngineAdapterHarness;
   });

@@ -253,8 +253,8 @@ import {
   ServerGetUsageHistoryResult,
   ServerCommandUsageHistoryInput,
   ServerCommandUsageHistoryResult,
-  ServerListProviderUsageInput,
-  ServerListProviderUsageResult,
+  ServerListEngineUsageInput,
+  ServerListEngineUsageResult,
   ServerLifecycleStreamEvent,
   ServerGetSettingsResult,
   ServerListLocalServersResult,
@@ -264,7 +264,7 @@ import {
   ServerEngineUpdateResult,
   ServerUpdateEngineCredentialInput,
   ServerUpdateEngineCredentialResult,
-  ServerRefreshProvidersResult,
+  ServerRefreshEnginesResult,
   ServerResetSettingsResult,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
@@ -382,20 +382,20 @@ export const WsOrchestrationReplayEventsRpc = Rpc.make(ORCHESTRATION_WS_METHODS.
   error: WsRpcError,
 });
 
-export const WsOrchestrationListProviderDeliveryBlockersRpc = Rpc.make(
-  ORCHESTRATION_WS_METHODS.listProviderDeliveryBlockers,
+export const WsOrchestrationListEngineDeliveryBlockersRpc = Rpc.make(
+  ORCHESTRATION_WS_METHODS.listEngineDeliveryBlockers,
   {
-    payload: OrchestrationRpcSchemas.listProviderDeliveryBlockers.input,
-    success: OrchestrationRpcSchemas.listProviderDeliveryBlockers.output,
+    payload: OrchestrationRpcSchemas.listEngineDeliveryBlockers.input,
+    success: OrchestrationRpcSchemas.listEngineDeliveryBlockers.output,
     error: WsRpcError,
   },
 );
 
-export const WsOrchestrationReconcileProviderDeliveryRpc = Rpc.make(
-  ORCHESTRATION_WS_METHODS.reconcileProviderDelivery,
+export const WsOrchestrationReconcileEngineDeliveryRpc = Rpc.make(
+  ORCHESTRATION_WS_METHODS.reconcileEngineDelivery,
   {
-    payload: OrchestrationRpcSchemas.reconcileProviderDelivery.input,
-    success: OrchestrationRpcSchemas.reconcileProviderDelivery.output,
+    payload: OrchestrationRpcSchemas.reconcileEngineDelivery.input,
+    success: OrchestrationRpcSchemas.reconcileEngineDelivery.output,
     error: WsRpcError,
   },
 );
@@ -1000,13 +1000,13 @@ export const WsServerUpdateEngineCredentialRpc = Rpc.make(WS_METHODS.serverUpdat
   error: WsRpcError,
 });
 
-export const WsServerRefreshProvidersRpc = Rpc.make(WS_METHODS.serverRefreshProviders, {
+export const WsServerRefreshEnginesRpc = Rpc.make(WS_METHODS.serverRefreshEngines, {
   payload: Schema.Struct({}),
-  success: ServerRefreshProvidersResult,
+  success: ServerRefreshEnginesResult,
   error: WsRpcError,
 });
 
-export const WsServerUpdateProviderRpc = Rpc.make(WS_METHODS.serverUpdateProvider, {
+export const WsServerUpdateEngineRpc = Rpc.make(WS_METHODS.serverUpdateEngine, {
   payload: ServerEngineUpdateInput,
   success: ServerEngineUpdateResult,
   error: ServerEngineUpdateError,
@@ -1066,9 +1066,9 @@ export const WsServerStopLocalServerRpc = Rpc.make(WS_METHODS.serverStopLocalSer
   error: WsRpcError,
 });
 
-export const WsServerListProviderUsageRpc = Rpc.make(WS_METHODS.serverListProviderUsage, {
-  payload: ServerListProviderUsageInput,
-  success: ServerListProviderUsageResult,
+export const WsServerListEngineUsageRpc = Rpc.make(WS_METHODS.serverListEngineUsage, {
+  payload: ServerListEngineUsageInput,
+  success: ServerListEngineUsageResult,
   error: WsRpcError,
 });
 
@@ -1156,11 +1156,11 @@ export const WsSubscribeServerConfigRpc = Rpc.make(WS_METHODS.subscribeServerCon
   stream: true,
 });
 
-export const WsSubscribeServerProviderStatusesRpc = Rpc.make(
-  WS_METHODS.subscribeServerProviderStatuses,
+export const WsSubscribeServerEngineStatusesRpc = Rpc.make(
+  WS_METHODS.subscribeServerEngineStatuses,
   {
     payload: Schema.Struct({}),
-    success: ServerRefreshProvidersResult,
+    success: ServerRefreshEnginesResult,
     error: WsRpcError,
     stream: true,
   },
@@ -1173,8 +1173,8 @@ export const WsSubscribeServerSettingsRpc = Rpc.make(WS_METHODS.subscribeServerS
   stream: true,
 });
 
-export const WsProviderGetComposerCapabilitiesRpc = Rpc.make(
-  WS_METHODS.providerGetComposerCapabilities,
+export const WsEngineGetComposerCapabilitiesRpc = Rpc.make(
+  WS_METHODS.engineGetComposerCapabilities,
   {
     payload: EngineGetComposerCapabilitiesInput,
     success: EngineComposerCapabilities,
@@ -1182,8 +1182,8 @@ export const WsProviderGetComposerCapabilitiesRpc = Rpc.make(
   },
 );
 
-export const WsProviderGetExecutionCapabilitiesRpc = Rpc.make(
-  WS_METHODS.providerGetExecutionCapabilities,
+export const WsEngineGetExecutionCapabilitiesRpc = Rpc.make(
+  WS_METHODS.engineGetExecutionCapabilities,
   {
     payload: EngineExecutionCapabilitiesInput,
     success: EngineExecutionCapabilities,
@@ -1191,49 +1191,49 @@ export const WsProviderGetExecutionCapabilitiesRpc = Rpc.make(
   },
 );
 
-export const WsProviderCompactThreadRpc = Rpc.make(WS_METHODS.providerCompactThread, {
+export const WsEngineCompactThreadRpc = Rpc.make(WS_METHODS.engineCompactThread, {
   payload: EngineCompactThreadInput,
   success: Schema.Void,
   error: WsRpcError,
 });
 
-export const WsProviderListCommandsRpc = Rpc.make(WS_METHODS.providerListCommands, {
+export const WsEngineListCommandsRpc = Rpc.make(WS_METHODS.engineListCommands, {
   payload: EngineListCommandsInput,
   success: EngineListCommandsResult,
   error: WsRpcError,
 });
 
-export const WsProviderListSkillsRpc = Rpc.make(WS_METHODS.providerListSkills, {
+export const WsEngineListSkillsRpc = Rpc.make(WS_METHODS.engineListSkills, {
   payload: EngineListSkillsInput,
   success: EngineListSkillsResult,
   error: WsRpcError,
 });
 
-export const WsProviderListSkillsCatalogRpc = Rpc.make(WS_METHODS.providerListSkillsCatalog, {
+export const WsEngineListSkillsCatalogRpc = Rpc.make(WS_METHODS.engineListSkillsCatalog, {
   payload: EngineSkillsCatalogInput,
   success: EngineSkillsCatalogResult,
   error: WsRpcError,
 });
 
-export const WsProviderListPluginsRpc = Rpc.make(WS_METHODS.providerListPlugins, {
+export const WsEngineListPluginsRpc = Rpc.make(WS_METHODS.engineListPlugins, {
   payload: EngineListPluginsInput,
   success: EngineListPluginsResult,
   error: WsRpcError,
 });
 
-export const WsProviderReadPluginRpc = Rpc.make(WS_METHODS.providerReadPlugin, {
+export const WsEngineReadPluginRpc = Rpc.make(WS_METHODS.providerReadPlugin, {
   payload: EngineReadPluginInput,
   success: EngineReadPluginResult,
   error: WsRpcError,
 });
 
-export const WsProviderListModelsRpc = Rpc.make(WS_METHODS.providerListModels, {
+export const WsEngineListModelsRpc = Rpc.make(WS_METHODS.engineListModels, {
   payload: EngineListModelsInput,
   success: EngineListModelsResult,
   error: WsRpcError,
 });
 
-export const WsProviderListAgentsRpc = Rpc.make(WS_METHODS.providerListAgents, {
+export const WsEngineListAgentsRpc = Rpc.make(WS_METHODS.engineListAgents, {
   payload: EngineListAgentsInput,
   success: EngineListAgentsResult,
   error: WsRpcError,
@@ -1473,8 +1473,8 @@ const WsOrchestrationAndProjectRpcGroup = RpcGroup.make(
   WsOrchestrationGetTurnDiffRpc,
   WsOrchestrationGetFullThreadDiffRpc,
   WsOrchestrationReplayEventsRpc,
-  WsOrchestrationListProviderDeliveryBlockersRpc,
-  WsOrchestrationReconcileProviderDeliveryRpc,
+  WsOrchestrationListEngineDeliveryBlockersRpc,
+  WsOrchestrationReconcileEngineDeliveryRpc,
   WsOrchestrationSubscribeShellRpc,
   WsOrchestrationUnsubscribeShellRpc,
   WsOrchestrationSubscribeThreadRpc,
@@ -1543,7 +1543,7 @@ const WsGitAndTerminalRpcGroup = RpcGroup.make(
   WsSubscribeTerminalEventsRpc,
 );
 
-const WsServerAndProviderRpcGroup = RpcGroup.make(
+const WsServerAndEngineRpcGroup = RpcGroup.make(
   WsServerGetConfigRpc,
   WsServerGetEnvironmentRpc,
   WsServerGetBuiltInToolGroupsRpc,
@@ -1551,8 +1551,8 @@ const WsServerAndProviderRpcGroup = RpcGroup.make(
   WsServerUpdateSettingsRpc,
   WsServerResetSettingsRpc,
   WsServerUpdateEngineCredentialRpc,
-  WsServerRefreshProvidersRpc,
-  WsServerUpdateProviderRpc,
+  WsServerRefreshEnginesRpc,
+  WsServerUpdateEngineRpc,
   WsServerListExternalMcpIntegrationsRpc,
   WsServerCreateExternalMcpIntegrationRpc,
   WsServerRevokeExternalMcpIntegrationRpc,
@@ -1560,7 +1560,7 @@ const WsServerAndProviderRpcGroup = RpcGroup.make(
   WsServerListWorktreesRpc,
   WsServerListLocalServersRpc,
   WsServerStopLocalServerRpc,
-  WsServerListProviderUsageRpc,
+  WsServerListEngineUsageRpc,
   WsServerGetUsageHistoryRpc,
   WsServerCommandUsageHistoryRpc,
   WsStatsGetProfileStatsRpc,
@@ -1573,18 +1573,18 @@ const WsServerAndProviderRpcGroup = RpcGroup.make(
   WsServerUpsertKeybindingRpc,
   WsSubscribeServerLifecycleRpc,
   WsSubscribeServerConfigRpc,
-  WsSubscribeServerProviderStatusesRpc,
+  WsSubscribeServerEngineStatusesRpc,
   WsSubscribeServerSettingsRpc,
-  WsProviderGetComposerCapabilitiesRpc,
-  WsProviderGetExecutionCapabilitiesRpc,
-  WsProviderCompactThreadRpc,
-  WsProviderListCommandsRpc,
-  WsProviderListSkillsRpc,
-  WsProviderListSkillsCatalogRpc,
-  WsProviderListPluginsRpc,
-  WsProviderReadPluginRpc,
-  WsProviderListModelsRpc,
-  WsProviderListAgentsRpc,
+  WsEngineGetComposerCapabilitiesRpc,
+  WsEngineGetExecutionCapabilitiesRpc,
+  WsEngineCompactThreadRpc,
+  WsEngineListCommandsRpc,
+  WsEngineListSkillsRpc,
+  WsEngineListSkillsCatalogRpc,
+  WsEngineListPluginsRpc,
+  WsEngineReadPluginRpc,
+  WsEngineListModelsRpc,
+  WsEngineListAgentsRpc,
 );
 
 const WsHarnessOSAndAutomationRpcGroup = RpcGroup.make(
@@ -1633,13 +1633,13 @@ const WsHarnessOSAndAutomationRpcGroup = RpcGroup.make(
 type WsFeatureRpc =
   | RpcGroup.Rpcs<typeof WsOrchestrationAndProjectRpcGroup>
   | RpcGroup.Rpcs<typeof WsGitAndTerminalRpcGroup>
-  | RpcGroup.Rpcs<typeof WsServerAndProviderRpcGroup>
+  | RpcGroup.Rpcs<typeof WsServerAndEngineRpcGroup>
   | RpcGroup.Rpcs<typeof WsHarnessOSAndAutomationRpcGroup>;
 
 export const WsFeatureRpcGroup: RpcGroup.RpcGroup<WsFeatureRpc> =
   WsOrchestrationAndProjectRpcGroup.merge(
     WsGitAndTerminalRpcGroup,
-    WsServerAndProviderRpcGroup,
+    WsServerAndEngineRpcGroup,
     WsHarnessOSAndAutomationRpcGroup,
   );
 

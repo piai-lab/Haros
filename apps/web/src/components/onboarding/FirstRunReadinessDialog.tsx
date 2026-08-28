@@ -108,10 +108,10 @@ export function FirstRunReadinessDialog() {
   const focusReturnRef = useRef<HTMLElement | null>(null);
   const completionCommittedRef = useRef(false);
 
-  const selectedProviderStatus = controller.providerStatuses.find(
+  const selectedEngineStatus = controller.engineStatuses.find(
     (status) => status.engine === selectedProvider,
   );
-  const selectedEngineAvailability = deriveProviderPickerAvailability(selectedProviderStatus);
+  const selectedEngineAvailability = deriveProviderPickerAvailability(selectedEngineStatus);
   const selectedProviderPrepared =
     selectedEngineAvailability.state === "ready" || selectedEngineAvailability.state === "limited";
   const selectedProviderModels = controller.modelOptionsByEngine[selectedProvider];
@@ -340,7 +340,7 @@ export function FirstRunReadinessDialog() {
               <div className="grid grid-cols-4 gap-2.5 max-lg:grid-cols-2">
                 {INDEPENDENT_ENGINE_OPTIONS.map((option) => {
                   const engine = option.value;
-                  const status = controller.providerStatuses.find(
+                  const status = controller.engineStatuses.find(
                     (candidate) => candidate.engine === engine,
                   );
                   const availability = deriveProviderPickerAvailability(status);

@@ -2,7 +2,7 @@ import { ThreadId, TurnId } from "@harnessos/contracts";
 import { Effect } from "effect";
 
 import type { ProjectionTurnRepositoryShape } from "../persistence/Services/ProjectionTurns.ts";
-import { GatewayToolError } from "../agentGateway/toolRuntime.ts";
+import { GatewayToolError } from "../hostGateway/toolRuntime.ts";
 
 export type ExternalMcpWaitState =
   | "idle"

@@ -18,7 +18,7 @@ import {
   type OrchestrationCommand,
   type OrchestrationProjectShell,
   type OrchestrationThreadShell,
-  type ServerProviderStatus,
+  type ServerEngineStatus,
 } from "@harnessos/contracts";
 import { isTemporaryWorktreeBranch } from "@harnessos/shared/git";
 import { Deferred, Duration, Effect, Fiber, Layer, Option, Stream } from "effect";
@@ -33,12 +33,12 @@ import { ProjectionSnapshotQuery } from "../../orchestration/Services/Projection
 import type { ProjectionSnapshotQueryShape } from "../../orchestration/Services/ProjectionSnapshotQuery.ts";
 import { AutomationRepositoryLive } from "../../persistence/Layers/AutomationRepository.ts";
 import { ProjectionTurnRepositoryLive } from "../../persistence/Layers/ProjectionTurns.ts";
-import { resolveProviderExecutionCapabilities } from "../../provider/executionCapabilityProjection.ts";
-import { engineExecutionStructure } from "../../provider/engineExecutionStructure.ts";
+import { resolveEngineExecutionCapabilities } from "../../engine/executionCapabilityProjection.ts";
+import { engineExecutionStructure } from "../../engine/engineExecutionStructure.ts";
 import {
   EngineExecutionCapabilities,
   type EngineExecutionCapabilitiesShape,
-} from "../../provider/Services/EngineExecutionCapabilities.ts";
+} from "../../engine/Services/EngineExecutionCapabilities.ts";
 import { SqlitePersistenceMemory } from "../../persistence/Layers/Sqlite.ts";
 import {
   AutomationRepository,
@@ -128,7 +128,7 @@ function resetHarness() {
   failDispatchType = null;
   dispatchHook = null;
   activeProjectKind = "project";
-  providerStatuses = [...readyProviderStatuses];
+  engineStatuses = [...readyEngineStatuses];
 }
 
 // Build a partial thread shell; only the fields reconcileThread reads are populated.
@@ -556,7 +556,7 @@ const gitCore = {
     }),
 } as unknown as GitCoreShape;
 
-const readyProviderStatuses: ServerProviderStatus[] = ENGINE_KINDS.map((engine) => ({
+const readyEngineStatuses: ServerEngineStatus[] = ENGINE_KINDS.map((engine) => ({
   engine,
   status: "ready" as const,
   available: true,
@@ -564,14 +564,14 @@ const readyProviderStatuses: ServerProviderStatus[] = ENGINE_KINDS.map((engine) 
   supportsAutoRuntimeMode: true,
   checkedAt: "2026-08-25T00:00:00.000Z",
 }));
-let providerStatuses = [...readyProviderStatuses];
+let engineStatuses = [...readyEngineStatuses];
 const engineExecutionCapabilities: EngineExecutionCapabilitiesShape = {
   get: (engineSelection) =>
     Effect.sync(() =>
-      resolveProviderExecutionCapabilities({
+      resolveEngineExecutionCapabilities({
         engineSelection,
         adapterCapabilities: engineExecutionStructure(engineSelection.engine),
-        providerStatus: providerStatuses.find((status) => status.engine === engineSelection.engine),
+        engineStatus: engineStatuses.find((status) => status.engine === engineSelection.engine),
       }),
     ),
 };
@@ -646,7 +646,7 @@ layer("AutomationService", (it) => {
   it.effect("keeps structural support but rejects a currently unauthenticated runtime", () =>
     Effect.gen(function* () {
       resetHarness();
-      providerStatuses = readyProviderStatuses.map((status) =>
+      engineStatuses = readyEngineStatuses.map((status) =>
         status.engine === "codex"
           ? {
               ...status,

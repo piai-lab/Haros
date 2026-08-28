@@ -621,7 +621,7 @@ export function useComposerSlashCommands(input: {
 
   const sidechatCreationByKeyRef = useRef(new Map<string, SidechatCreationFlight>());
   const createSidechatFromSlashCommand = useCallback(
-    (inputOptions?: { initialPrompt?: string; targetProvider?: EngineKind }): Promise<true> => {
+    (inputOptions?: { initialPrompt?: string; targetEngine?: EngineKind }): Promise<true> => {
       if (!selectedEngineSelection) {
         toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
         return Promise.resolve(true);
@@ -642,12 +642,12 @@ export function useComposerSlashCommands(input: {
         return Promise.resolve(true);
       }
 
-      const targetProvider = inputOptions?.targetProvider ?? null;
+      const targetEngine = inputOptions?.targetEngine ?? null;
       const sidechatEngineSelection =
-        targetProvider && targetProvider !== selectedEngineSelection.engine
+        targetEngine && targetEngine !== selectedEngineSelection.engine
           ? resolveThreadHandoffEngineSelection({
               sourceThread: activeThread,
-              targetProvider,
+              targetEngine,
               projectDefaultEngineSelection: activeProject.defaultEngineSelection,
               stickyEngineSelectionByEngine:
                 useComposerDraftStore.getState().stickyEngineSelectionByEngine,
@@ -1112,7 +1112,7 @@ export function useComposerSlashCommands(input: {
           });
           return true;
         }
-        const { targetProvider, prompt, unavailableProvider } = parseSideSlashCommandArgs(
+        const { targetEngine, prompt, unavailableProvider } = parseSideSlashCommandArgs(
           slashInvocation.args,
           {
             currentProvider: selectedProvider,
@@ -1131,8 +1131,8 @@ export function useComposerSlashCommands(input: {
         }
         // Hoisted out of the `try` below: React Compiler cannot lower `?:` inside
         // a try block and would bail out of compiling this whole hook.
-        const sidechatOptions = targetProvider
-          ? { initialPrompt: prompt, targetProvider }
+        const sidechatOptions = targetEngine
+          ? { initialPrompt: prompt, targetEngine }
           : { initialPrompt: prompt };
         try {
           editorActions.clearComposerSlashDraft();

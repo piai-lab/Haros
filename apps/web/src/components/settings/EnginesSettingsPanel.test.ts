@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_SERVER_SETTINGS_VIEW, type ServerProviderStatus } from "@harnessos/contracts";
+import { DEFAULT_SERVER_SETTINGS_VIEW, type ServerEngineStatus } from "@harnessos/contracts";
 
 import {
   createProviderInstallResetPatch,
@@ -137,7 +137,7 @@ describe("engineUpdateFailureMessage", () => {
         checkedAt: "2026-08-10T00:00:00.000Z",
         message: "Update available.",
       },
-    } satisfies ServerProviderStatus;
+    } satisfies ServerEngineStatus;
 
     expect(engineUpdateFailureMessage(engine, "Update incomplete.")).toBe("Update incomplete.");
   });
@@ -156,7 +156,7 @@ describe("engineUpdateFailureMessage", () => {
         message: "Update command exited with code 1.",
         output: "\u001b[2J[999D Upgrading\n".repeat(100),
       },
-    } satisfies ServerProviderStatus;
+    } satisfies ServerEngineStatus;
 
     expect(engineUpdateFailureMessage(engine, "Update incomplete.")).toBe(
       "Update command exited with code 1.",

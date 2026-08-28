@@ -21,9 +21,9 @@ describe("WS RPC contracts", () => {
     expect(WsBootstrapRpcGroup.requests.has("bootstrap.negotiate")).toBe(true);
     expect(WsFeatureRpcGroup.requests.has("bootstrap.negotiate")).toBe(false);
     expect(
-      WsFeatureRpcGroup.requests.has(ORCHESTRATION_WS_METHODS.listProviderDeliveryBlockers),
+      WsFeatureRpcGroup.requests.has(ORCHESTRATION_WS_METHODS.listEngineDeliveryBlockers),
     ).toBe(true);
-    expect(WsFeatureRpcGroup.requests.has(ORCHESTRATION_WS_METHODS.reconcileProviderDelivery)).toBe(
+    expect(WsFeatureRpcGroup.requests.has(ORCHESTRATION_WS_METHODS.reconcileEngineDelivery)).toBe(
       true,
     );
     expect(WsFeatureRpcGroup.requests.has(WS_METHODS.oaModelServicesList)).toBe(true);

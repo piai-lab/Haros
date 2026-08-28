@@ -38,7 +38,7 @@ import { ProjectFaviconResolver } from "./project/Services/ProjectFaviconResolve
 import { OrchestrationEngineService } from "./orchestration/Services/OrchestrationEngine";
 import { clearQuitResumeRecord, prepareQuitResumeForShutdown } from "./orchestration/quitResume";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
-import { EngineAdapterRegistry } from "./provider/Services/EngineAdapterRegistry";
+import { EngineAdapterRegistry } from "./engine/Services/EngineAdapterRegistry";
 import { threadArchiveChunks, threadArchiveFileName } from "./orchestration/exportThreadArchive";
 import type { ServerReadiness } from "./server/readiness";
 import { isLoopbackHost } from "./startupAccess";

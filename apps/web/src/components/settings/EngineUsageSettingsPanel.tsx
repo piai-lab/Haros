@@ -6,7 +6,7 @@
 // official endpoint; the panel itself never receives credential material.
 
 import type {
-  ServerProviderUsageSnapshot,
+  ServerEngineUsageSnapshot,
   UsageHistoryRow,
   UsageHistoryGroupBy,
   UsageHistoryRange,
@@ -15,9 +15,9 @@ import { USAGE_HISTORY_UNKNOWN_MODEL, USAGE_HISTORY_UNKNOWN_WORKSPACE } from "@h
 import { formatBytes } from "@harnessos/shared/formatBytes";
 import {
   ENGINE_USAGE_PROVIDERS,
-  providerUsageDisplayName,
-  selectVisibleProviderUsageSnapshots,
-} from "@harnessos/shared/providerUsage";
+  engineUsageDisplayName,
+  selectVisibleEngineUsageSnapshots,
+} from "@harnessos/shared/engineUsage";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -29,10 +29,10 @@ import { Button } from "~/components/ui/button";
 import { useAccountCapacity } from "~/hooks/useAccountCapacity";
 import { useUsageHistory } from "~/hooks/useUsageHistory";
 import { RotateCcwIcon, TriangleAlertIcon } from "~/lib/icons";
-import { deriveProviderUsageDisplayRows } from "~/lib/providerUsageDisplay";
+import { deriveEngineUsageDisplayRows } from "~/lib/engineUsageDisplay";
 import {
-  fetchAllProviderUsage,
-  serverAllProviderUsageQueryOptions,
+  fetchAllEngineUsage,
+  serverAllEngineUsageQueryOptions,
   serverQueryKeys,
 } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
@@ -54,7 +54,7 @@ interface StatusPill {
   className: string;
 }
 
-function statusPill(status: ServerProviderUsageSnapshot["status"]): StatusPill | null {
+function statusPill(status: ServerEngineUsageSnapshot["status"]): StatusPill | null {
   switch (status) {
     case "needs-auth":
       return {
@@ -73,7 +73,7 @@ function statusPill(status: ServerProviderUsageSnapshot["status"]): StatusPill |
   }
 }
 
-function EngineUsageCard({ snapshot }: { snapshot: ServerProviderUsageSnapshot }) {
+function EngineUsageCard({ snapshot }: { snapshot: ServerEngineUsageSnapshot }) {
   const { t } = useI18n();
   const engine = snapshot.engine;
   const status = snapshot.status ?? "ok";
@@ -81,7 +81,7 @@ function EngineUsageCard({ snapshot }: { snapshot: ServerProviderUsageSnapshot }
     engine,
     providerSnapshot: snapshot,
   });
-  const meterRows = deriveProviderUsageDisplayRows(usageSummary.rateLimits);
+  const meterRows = deriveEngineUsageDisplayRows(usageSummary.rateLimits);
   const usageLines = usageSummary.usageLines;
 
   const hasUsage = meterRows.length > 0 || usageLines.length > 0;
@@ -96,7 +96,7 @@ function EngineUsageCard({ snapshot }: { snapshot: ServerProviderUsageSnapshot }
               <EngineIcon engine={engine} className="size-4" />
             </span>
             <span className="truncate text-sm font-semibold text-foreground">
-              {providerUsageDisplayName(engine)}
+              {engineUsageDisplayName(engine)}
             </span>
           </div>
           {status === "ok" && snapshot.planName ? (
@@ -134,13 +134,13 @@ function EngineUsageCard({ snapshot }: { snapshot: ServerProviderUsageSnapshot }
             {status === "ok"
               ? t("settings.noUsageData")
               : status === "needs-auth"
-                ? t("settings.providerUsageSignIn")
+                ? t("settings.engineUsageSignIn")
                 : (snapshot.detail ?? t("settings.noUsageData"))}
           </p>
         )}
         {status === "error" ? (
           <p className="text-[11px] leading-relaxed text-muted-foreground">
-            {t("settings.providerUsageErrorScope")}
+            {t("settings.engineUsageErrorScope")}
           </p>
         ) : null}
       </div>
@@ -148,10 +148,10 @@ function EngineUsageCard({ snapshot }: { snapshot: ServerProviderUsageSnapshot }
   );
 }
 
-function mergeProviderUsageRefresh(
-  previous: readonly ServerProviderUsageSnapshot[] | undefined,
-  next: readonly ServerProviderUsageSnapshot[],
-): readonly ServerProviderUsageSnapshot[] {
+function mergeEngineUsageRefresh(
+  previous: readonly ServerEngineUsageSnapshot[] | undefined,
+  next: readonly ServerEngineUsageSnapshot[],
+): readonly ServerEngineUsageSnapshot[] {
   if (!previous) {
     return next;
   }
@@ -159,7 +159,7 @@ function mergeProviderUsageRefresh(
   const nextByEngine = new Map(next.map((snapshot) => [snapshot.engine, snapshot]));
   return ENGINE_USAGE_PROVIDERS.map(
     (engine) => nextByEngine.get(engine) ?? previousByEngine.get(engine),
-  ).filter((snapshot): snapshot is ServerProviderUsageSnapshot => snapshot !== undefined);
+  ).filter((snapshot): snapshot is ServerEngineUsageSnapshot => snapshot !== undefined);
 }
 
 const HISTORY_RANGES = ["24h", "7d", "30d", "all"] as const;
@@ -213,7 +213,7 @@ export function usageHistoryDimensionLabel(
   row: UsageHistoryRow,
   t: (key: MessageKey) => string,
 ): string {
-  if (row.engine) return providerUsageDisplayName(row.engine);
+  if (row.engine) return engineUsageDisplayName(row.engine);
   if (row.model === USAGE_HISTORY_UNKNOWN_MODEL) return t("settings.usageHistoryUnknownModel");
   if (row.workspace === USAGE_HISTORY_UNKNOWN_WORKSPACE)
     return t("settings.usageHistoryUnknownWorkspace");
@@ -350,7 +350,7 @@ export function UsageHistorySection() {
                       className="flex items-center justify-between gap-3 rounded-lg bg-muted/35 px-3 py-2 text-xs"
                     >
                       <span className="font-medium text-foreground">
-                        {providerUsageDisplayName(engine.engine)}
+                        {engineUsageDisplayName(engine.engine)}
                       </span>
                       <span className="text-right text-muted-foreground">
                         {engine.status === "unsupported"
@@ -523,20 +523,20 @@ export function UsageHistorySection() {
 export function EngineUsageSettingsPanel() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
-  const usageQuery = useQuery(serverAllProviderUsageQueryOptions());
+  const usageQuery = useQuery(serverAllEngineUsageQueryOptions());
   const refreshMutation = useMutation({
-    mutationFn: () => fetchAllProviderUsage({ forceRefresh: true }),
+    mutationFn: () => fetchAllEngineUsage({ forceRefresh: true }),
     onSuccess: (data) => {
-      queryClient.setQueryData<readonly ServerProviderUsageSnapshot[]>(
-        serverQueryKeys.allProviderUsage(),
-        (previous) => mergeProviderUsageRefresh(previous, data),
+      queryClient.setQueryData<readonly ServerEngineUsageSnapshot[]>(
+        serverQueryKeys.allEngineUsage(),
+        (previous) => mergeEngineUsageRefresh(previous, data),
       );
     },
   });
 
   // Use the live payload only. Inventing error placeholders for omitted engines
   // would count as "connected" and hide unsigned cards.
-  const cards = selectVisibleProviderUsageSnapshots(usageQuery.data ?? []);
+  const cards = selectVisibleEngineUsageSnapshots(usageQuery.data ?? []);
 
   const showInitialLoading = usageQuery.isPending && !usageQuery.data;
 
@@ -562,7 +562,7 @@ export function EngineUsageSettingsPanel() {
         {showInitialLoading ? (
           <SettingsCard>
             <div className="px-4 py-3.5 text-xs text-muted-foreground">
-              {t("settings.loadingProviderUsage")}
+              {t("settings.loadingEngineUsage")}
             </div>
           </SettingsCard>
         ) : (
@@ -574,7 +574,7 @@ export function EngineUsageSettingsPanel() {
         )}
 
         <p className="px-2 text-[11px] leading-relaxed text-muted-foreground">
-          {t("settings.providerUsagePrivacy")}
+          {t("settings.engineUsagePrivacy")}
         </p>
       </SettingsSectionShell>
       <UsageHistorySection />

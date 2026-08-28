@@ -46,8 +46,8 @@ export const ORCHESTRATION_WS_METHODS = {
   getTurnDiff: "orchestration.getTurnDiff",
   getFullThreadDiff: "orchestration.getFullThreadDiff",
   replayEvents: "orchestration.replayEvents",
-  listProviderDeliveryBlockers: "orchestration.listProviderDeliveryBlockers",
-  reconcileProviderDelivery: "orchestration.reconcileProviderDelivery",
+  listEngineDeliveryBlockers: "orchestration.listEngineDeliveryBlockers",
+  reconcileEngineDelivery: "orchestration.reconcileEngineDelivery",
   subscribeShell: "orchestration.subscribeShell",
   unsubscribeShell: "orchestration.unsubscribeShell",
   subscribeThread: "orchestration.subscribeThread",
@@ -241,14 +241,14 @@ export const TurnDispatchMode = Schema.Literals(["queue", "steer"]);
 export type TurnDispatchMode = typeof TurnDispatchMode.Type;
 export const DEFAULT_TURN_DISPATCH_MODE: TurnDispatchMode = "queue";
 // Marks who dispatched a user turn: a person typing, an automation run, or
-// another agent through the HarnessOS agent gateway (MCP tools).
+// another agent through the HarnessOS HostGateway (MCP tools).
 // Absent is treated as "user"; only server-dispatched turns carry the flag.
 export const MessageDispatchOrigin = Schema.Literals(["user", "automation", "agent"]);
 export type MessageDispatchOrigin = typeof MessageDispatchOrigin.Type;
 export const ThreadCreationSource = Schema.Literals([
   "harnessos_mcp",
   "external_mcp",
-  "provider_native",
+  "engine_native",
 ]);
 export type ThreadCreationSource = typeof ThreadCreationSource.Type;
 export const EngineReviewTarget = Schema.Union([
@@ -569,7 +569,7 @@ export type OrchestrationMessage = typeof OrchestrationMessage.Type;
 
 export const ThreadHandoff = Schema.Struct({
   sourceThreadId: ThreadId,
-  sourceProvider: EngineKind,
+  sourceEngine: EngineKind,
   importedAt: IsoDateTime,
   bootstrapStatus: ThreadHandoffBootstrapStatus,
 });
@@ -2632,38 +2632,38 @@ export const EngineDeliveryBlockingEvidence = Schema.Struct({
 });
 export type EngineDeliveryBlockingEvidence = typeof EngineDeliveryBlockingEvidence.Type;
 
-export const OrchestrationListProviderDeliveryBlockersInput = Schema.Struct({
+export const OrchestrationListEngineDeliveryBlockersInput = Schema.Struct({
   threadId: Schema.optional(ThreadId),
   limit: Schema.optional(PositiveInt),
 });
-export type OrchestrationListProviderDeliveryBlockersInput =
-  typeof OrchestrationListProviderDeliveryBlockersInput.Type;
+export type OrchestrationListEngineDeliveryBlockersInput =
+  typeof OrchestrationListEngineDeliveryBlockersInput.Type;
 
-export const OrchestrationListProviderDeliveryBlockersResult = Schema.Array(
+export const OrchestrationListEngineDeliveryBlockersResult = Schema.Array(
   EngineDeliveryBlockingEvidence,
 );
-export type OrchestrationListProviderDeliveryBlockersResult =
-  typeof OrchestrationListProviderDeliveryBlockersResult.Type;
+export type OrchestrationListEngineDeliveryBlockersResult =
+  typeof OrchestrationListEngineDeliveryBlockersResult.Type;
 
-export const OrchestrationReconcileProviderDeliveryInput = Schema.Struct({
+export const OrchestrationReconcileEngineDeliveryInput = Schema.Struct({
   eventSequence: NonNegativeInt,
   threadId: ThreadId,
   expectedState: Schema.Literals(["dead", "uncertain"]),
   outcome: EngineDeliveryReconciliationOutcome,
   note: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(2_000))),
 });
-export type OrchestrationReconcileProviderDeliveryInput =
-  typeof OrchestrationReconcileProviderDeliveryInput.Type;
+export type OrchestrationReconcileEngineDeliveryInput =
+  typeof OrchestrationReconcileEngineDeliveryInput.Type;
 
-export const OrchestrationReconcileProviderDeliveryResult = Schema.Struct({
+export const OrchestrationReconcileEngineDeliveryResult = Schema.Struct({
   eventSequence: NonNegativeInt,
   threadId: ThreadId,
   outcome: EngineDeliveryReconciliationOutcome,
   state: Schema.Literals(["retry", "succeeded", "dead", "uncertain"]),
   reconciledAt: IsoDateTime,
 });
-export type OrchestrationReconcileProviderDeliveryResult =
-  typeof OrchestrationReconcileProviderDeliveryResult.Type;
+export type OrchestrationReconcileEngineDeliveryResult =
+  typeof OrchestrationReconcileEngineDeliveryResult.Type;
 
 export const OrchestrationSubscribeShellInput = Schema.Struct({});
 export type OrchestrationSubscribeShellInput = typeof OrchestrationSubscribeShellInput.Type;
@@ -2746,13 +2746,13 @@ export const OrchestrationRpcSchemas = {
     input: OrchestrationReplayEventsInput,
     output: OrchestrationReplayEventsResult,
   },
-  listProviderDeliveryBlockers: {
-    input: OrchestrationListProviderDeliveryBlockersInput,
-    output: OrchestrationListProviderDeliveryBlockersResult,
+  listEngineDeliveryBlockers: {
+    input: OrchestrationListEngineDeliveryBlockersInput,
+    output: OrchestrationListEngineDeliveryBlockersResult,
   },
-  reconcileProviderDelivery: {
-    input: OrchestrationReconcileProviderDeliveryInput,
-    output: OrchestrationReconcileProviderDeliveryResult,
+  reconcileEngineDelivery: {
+    input: OrchestrationReconcileEngineDeliveryInput,
+    output: OrchestrationReconcileEngineDeliveryResult,
   },
   subscribeShell: {
     input: OrchestrationSubscribeShellInput,

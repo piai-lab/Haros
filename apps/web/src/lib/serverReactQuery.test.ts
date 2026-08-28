@@ -2,17 +2,17 @@
 // Purpose: Locks down server React Query polling profiles and cache options.
 // Layer: Web data-fetching unit tests
 
-import type { ServerConfig, ServerProviderStatus } from "@harnessos/contracts";
+import type { ServerConfig, ServerEngineStatus } from "@harnessos/contracts";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
 import {
-  hasReceivedProviderStatusSnapshot,
+  hasReceivedEngineStatusSnapshot,
   LOCAL_SERVERS_VISIBLE_REFETCH_INTERVAL_MS,
-  reconcileServerProviderStatuses,
+  reconcileServerEngineStatuses,
   readPassiveProviderPresence,
   refreshServerConfigAfterTransportOpen,
-  serverAllProviderUsageQueryOptions,
+  serverAllEngineUsageQueryOptions,
   serverLocalServersQueryOptions,
   serverUsageHistoryQueryOptions,
   serverQueryKeys,
@@ -25,9 +25,9 @@ const READY_CODEX_STATUS = {
   available: true,
   authStatus: "authenticated",
   checkedAt: "2026-07-26T16:41:38.945Z",
-} satisfies ServerProviderStatus;
+} satisfies ServerEngineStatus;
 
-function makeServerConfig(engines: readonly ServerProviderStatus[]): ServerConfig {
+function makeServerConfig(engines: readonly ServerEngineStatus[]): ServerConfig {
   return {
     cwd: "G:\\harnessos",
     homeDir: "C:\\Users\\tester",
@@ -47,11 +47,11 @@ describe("server engine status reconciliation", () => {
     const queryClient = new QueryClient();
     queryClient.setQueryData(serverQueryKeys.config(), makeServerConfig([]));
 
-    expect(hasReceivedProviderStatusSnapshot(queryClient)).toBe(false);
-    await reconcileServerProviderStatuses(queryClient, []);
-    expect(hasReceivedProviderStatusSnapshot(queryClient)).toBe(false);
-    await reconcileServerProviderStatuses(queryClient, [], { passivePresence: [] });
-    expect(hasReceivedProviderStatusSnapshot(queryClient)).toBe(true);
+    expect(hasReceivedEngineStatusSnapshot(queryClient)).toBe(false);
+    await reconcileServerEngineStatuses(queryClient, []);
+    expect(hasReceivedEngineStatusSnapshot(queryClient)).toBe(false);
+    await reconcileServerEngineStatuses(queryClient, [], { passivePresence: [] });
+    expect(hasReceivedEngineStatusSnapshot(queryClient)).toBe(true);
     expect(readPassiveProviderPresence(queryClient)).toEqual([]);
   });
 
@@ -62,7 +62,7 @@ describe("server engine status reconciliation", () => {
       resolveConfig = resolve;
     });
 
-    const reconciliation = reconcileServerProviderStatuses(queryClient, [READY_CODEX_STATUS], {
+    const reconciliation = reconcileServerEngineStatuses(queryClient, [READY_CODEX_STATUS], {
       loadConfig: () => configProjection,
     });
 
@@ -88,12 +88,12 @@ describe("server engine status reconciliation", () => {
       available: false,
       authStatus: "unknown",
       checkedAt: "2026-07-26T16:40:00.000Z",
-    } satisfies ServerProviderStatus;
+    } satisfies ServerEngineStatus;
 
-    const first = reconcileServerProviderStatuses(queryClient, [unavailableStatus], {
+    const first = reconcileServerEngineStatuses(queryClient, [unavailableStatus], {
       loadConfig: () => configProjection,
     });
-    const second = reconcileServerProviderStatuses(queryClient, [READY_CODEX_STATUS], {
+    const second = reconcileServerEngineStatuses(queryClient, [READY_CODEX_STATUS], {
       loadConfig: () => configProjection,
     });
 
@@ -113,7 +113,7 @@ describe("server engine status reconciliation", () => {
       available: false,
       authStatus: "unknown",
       checkedAt: "2026-07-26T16:40:00.000Z",
-    } satisfies ServerProviderStatus;
+    } satisfies ServerEngineStatus;
     queryClient.setQueryData(serverQueryKeys.config(), makeServerConfig([unavailableStatus]));
     let resolveConfig!: (config: ServerConfig) => void;
     const configProjection = new Promise<ServerConfig>((resolve) => {
@@ -123,7 +123,7 @@ describe("server engine status reconciliation", () => {
     const refresh = refreshServerConfigAfterTransportOpen(queryClient, {
       loadConfig: () => configProjection,
     });
-    await reconcileServerProviderStatuses(queryClient, [READY_CODEX_STATUS]);
+    await reconcileServerEngineStatuses(queryClient, [READY_CODEX_STATUS]);
     resolveConfig(makeServerConfig([unavailableStatus]));
     await refresh;
 
@@ -140,9 +140,9 @@ describe("server engine status reconciliation", () => {
       available: false,
       authStatus: "unknown",
       checkedAt: "2026-07-26T16:40:00.000Z",
-    } satisfies ServerProviderStatus;
+    } satisfies ServerEngineStatus;
     queryClient.setQueryData(serverQueryKeys.config(), makeServerConfig([unavailableStatus]));
-    await reconcileServerProviderStatuses(queryClient, [unavailableStatus]);
+    await reconcileServerEngineStatuses(queryClient, [unavailableStatus]);
 
     await refreshServerConfigAfterTransportOpen(queryClient, {
       loadConfig: async () => makeServerConfig([READY_CODEX_STATUS]),
@@ -201,17 +201,17 @@ describe("serverLocalServersQueryOptions", () => {
   });
 });
 
-describe("serverAllProviderUsageQueryOptions", () => {
+describe("serverAllEngineUsageQueryOptions", () => {
   it("can be disabled by engine-scoped usage surfaces", () => {
-    const options = serverAllProviderUsageQueryOptions(false);
+    const options = serverAllEngineUsageQueryOptions(false);
 
     expect(options.enabled).toBe(false);
   });
 
   it("shares one batch query key across every usage surface", () => {
-    const options = serverAllProviderUsageQueryOptions();
+    const options = serverAllEngineUsageQueryOptions();
 
-    expect(options.queryKey).toEqual(serverQueryKeys.allProviderUsage());
+    expect(options.queryKey).toEqual(serverQueryKeys.allEngineUsage());
   });
 });
 

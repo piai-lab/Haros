@@ -310,7 +310,7 @@ function isGitHubMcpToolCall(workEntry: TimelineWorkEntry): boolean {
   return Boolean(toolName?.startsWith("mcp__codex_apps__github"));
 }
 
-// HarnessOS's own agent-gateway tools (harnessos_list_threads, harnessos_create_thread,
+// HarnessOS's own host-gateway tools (harnessos_list_threads, harnessos_create_thread,
 // ...) get the HarnessOS mark instead of the generic MCP glyph. Engines report
 // the call differently: Claude prefixes the MCP server (mcp__harnessos__*), ACP
 // agents surface the bare tool name (harnessos_*), and Codex reports server/tool

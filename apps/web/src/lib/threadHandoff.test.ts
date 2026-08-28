@@ -5,7 +5,7 @@ import {
   type EngineSelection,
   type OrchestrationThreadActivity,
   type EngineKind,
-  type ServerProviderStatus,
+  type ServerEngineStatus,
 } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 import {
@@ -238,8 +238,8 @@ describe("threadHandoff", () => {
   it("excludes disabled, missing, unavailable, and unauthenticated handoff targets", () => {
     const readyStatus = (
       engine: EngineKind,
-      overrides: Partial<ServerProviderStatus> = {},
-    ): ServerProviderStatus => ({
+      overrides: Partial<ServerEngineStatus> = {},
+    ): ServerEngineStatus => ({
       engine,
       status: "ready",
       available: true,
@@ -257,9 +257,9 @@ describe("threadHandoff", () => {
 
     expect(
       resolveAvailableHandoffTargetProviders({
-        sourceProvider: "codex",
+        sourceEngine: "codex",
         engineSettings,
-        providerStatuses: [
+        engineStatuses: [
           readyStatus("codex"),
           readyStatus("claude"),
           readyStatus("cursor", { available: false, status: "error" }),
@@ -274,9 +274,9 @@ describe("threadHandoff", () => {
   it("does not expose targets before enabled-engine settings are available", () => {
     expect(
       resolveAvailableHandoffTargetProviders({
-        sourceProvider: "codex",
+        sourceEngine: "codex",
         engineSettings: undefined,
-        providerStatuses: [
+        engineStatuses: [
           {
             engine: "claude",
             status: "ready",
@@ -310,7 +310,7 @@ describe("threadHandoff", () => {
             model: "claude-sonnet-4-6",
           },
         },
-        targetProvider: "antigravity",
+        targetEngine: "antigravity",
         projectDefaultEngineSelection: {
           engine: "antigravity",
           model: "Claude Sonnet 4.6",
@@ -331,7 +331,7 @@ describe("threadHandoff", () => {
             model: "Gemini 3.5 Flash",
           },
         },
-        targetProvider: "codex",
+        targetEngine: "codex",
         projectDefaultEngineSelection: null,
         stickyEngineSelectionByEngine: {},
       }),

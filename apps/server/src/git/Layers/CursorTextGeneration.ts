@@ -9,7 +9,7 @@ import {
   applyCursorAcpEngineSelection,
   makeCursorAcpRuntime,
   type CursorAcpRuntimeCursorSettings,
-} from "../../provider/acp/CursorAcpSupport.ts";
+} from "../../engine/acp/CursorAcpSupport.ts";
 import { TextGenerationError } from "../Errors.ts";
 import {
   CursorTextGeneration,

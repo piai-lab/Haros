@@ -19,10 +19,7 @@ import {
   repairPrivateFileSync,
 } from "./privatePathPermissions";
 import { writeFileStringAtomically } from "./atomicWrite";
-import {
-  resolveProviderStatusCachePath,
-  writeProviderStatusCache,
-} from "./provider/providerStatusCache";
+import { resolveEngineStatusCachePath, writeEngineStatusCache } from "./engine/engineStatusCache";
 
 const tempDirs = new Set<string>();
 
@@ -72,7 +69,7 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
   it("creates representative fresh state files with owner-only permissions", async () => {
     const paths = derivePaths(makeTempDir());
     preparePrivateServerPaths(paths);
-    const providerCachePath = resolveProviderStatusCachePath({
+    const providerCachePath = resolveEngineStatusCachePath({
       stateDir: paths.stateDir,
       engine: "codex",
     });
@@ -86,7 +83,7 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
         ]) {
           yield* writeFileStringAtomically({ filePath, contents: "private\n" });
         }
-        yield* writeProviderStatusCache({
+        yield* writeEngineStatusCache({
           filePath: providerCachePath,
           engine: {
             engine: "codex",

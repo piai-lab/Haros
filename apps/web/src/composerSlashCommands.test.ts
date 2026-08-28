@@ -160,32 +160,32 @@ describe("composerSlashCommands", () => {
       availableTargetProviders: ["codex", "cursor"],
     } as const;
     expect(parseSideSlashCommandArgs("codex is this safe?", context)).toEqual({
-      targetProvider: "codex",
+      targetEngine: "codex",
       prompt: "is this safe?",
       unavailableProvider: null,
     });
     expect(parseSideSlashCommandArgs("Codex", context)).toEqual({
-      targetProvider: "codex",
+      targetEngine: "codex",
       prompt: "",
       unavailableProvider: null,
     });
     expect(parseSideSlashCommandArgs("claude compare this", context)).toEqual({
-      targetProvider: null,
+      targetEngine: null,
       prompt: "compare this",
       unavailableProvider: null,
     });
     expect(parseSideSlashCommandArgs("is this safe?", context)).toEqual({
-      targetProvider: null,
+      targetEngine: null,
       prompt: "is this safe?",
       unavailableProvider: null,
     });
     expect(parseSideSlashCommandArgs("", context)).toEqual({
-      targetProvider: null,
+      targetEngine: null,
       prompt: "",
       unavailableProvider: null,
     });
     expect(parseSideSlashCommandArgs("grok compare this", context)).toEqual({
-      targetProvider: null,
+      targetEngine: null,
       prompt: "compare this",
       unavailableProvider: "grok",
     });

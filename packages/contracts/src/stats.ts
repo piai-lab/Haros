@@ -145,7 +145,7 @@ export const ProfileTokenStats = Schema.Struct({
     outputTokens: NonNegativeInt,
     cacheHitPercent: Schema.NullOr(Schema.Number),
     coverage: ProfileCoverage,
-    unavailableProviders: Schema.Array(EngineKind),
+    unavailableEngines: Schema.Array(EngineKind),
     days: Schema.Array(
       Schema.Struct({
         day: TrimmedNonEmptyString,

@@ -11,7 +11,7 @@ import {
   type EngineInteractionMode,
   type EngineRequestKind,
   type RuntimeMode,
-  type ServerProviderAuthStatus,
+  type ServerEngineAuthStatus,
   type ThreadId as ThreadIdType,
 } from "@harnessos/contracts";
 import { normalizeModelSlug } from "@harnessos/shared/model";
@@ -57,7 +57,7 @@ export const DISMISSED_PROVIDER_HEALTH_BANNERS_KEY = "harnessos:dismissed-engine
 export const PROMPT_HISTORY_MAX_ENTRIES = 100;
 
 export const LastInvokedScriptByProjectSchema = Schema.Record(ProjectId, Schema.String);
-export const DismissedProviderHealthBannersSchema = Schema.Array(Schema.String);
+export const DismissedEngineHealthBannersSchema = Schema.Array(Schema.String);
 
 export interface PendingFileUndo {
   readonly threadId: ThreadIdType;
@@ -316,7 +316,7 @@ export async function persistEngineSelectionBeforeRuntimeMode(input: {
   }
 }
 
-export function shouldRenderProviderHealthBanner(input: {
+export function shouldRenderEngineHealthBanner(input: {
   threadEntryPoint: ThreadPrimarySurface;
   terminalWorkspaceTerminalTabActive: boolean;
 }): boolean {
@@ -954,7 +954,7 @@ export function describeVoiceRecordingStartError(error: unknown): string {
 }
 
 export function deriveComposerVoiceState(input: {
-  authStatus: ServerProviderAuthStatus | null | undefined;
+  authStatus: ServerEngineAuthStatus | null | undefined;
   voiceTranscriptionAvailable: boolean | undefined;
   isRecording: boolean;
   isTranscribing: boolean;

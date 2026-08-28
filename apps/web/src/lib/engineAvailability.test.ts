@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ServerProviderStatus } from "@harnessos/contracts";
+import type { ServerEngineStatus } from "@harnessos/contracts";
 import {
   deriveProviderPickerAvailability,
   isProviderUsable,
-  normalizeProviderStatusForLocalConfig,
+  normalizeEngineStatusForLocalConfig,
   providerUnavailableReason,
   resolveProviderSendAvailabilityWithRefresh,
 } from "./engineAvailability";
 
-const BASE_STATUS: ServerProviderStatus = {
+const BASE_STATUS: ServerEngineStatus = {
   engine: "antigravity",
   status: "error",
   available: false,
@@ -18,17 +18,17 @@ const BASE_STATUS: ServerProviderStatus = {
   message: "Antigravity CLI (`agy`) is not installed or not on PATH.",
 };
 
-const READY_STATUS: ServerProviderStatus = {
+const READY_STATUS: ServerEngineStatus = {
   ...BASE_STATUS,
   available: true,
   status: "ready",
   authStatus: "authenticated",
 };
 
-describe("normalizeProviderStatusForLocalConfig", () => {
+describe("normalizeEngineStatusForLocalConfig", () => {
   it("keeps Antigravity interactive when a custom binary path is configured locally", () => {
     expect(
-      normalizeProviderStatusForLocalConfig({
+      normalizeEngineStatusForLocalConfig({
         engine: "antigravity",
         status: BASE_STATUS,
         customBinaryPath: "/opt/homebrew/bin/agy",
@@ -44,7 +44,7 @@ describe("normalizeProviderStatusForLocalConfig", () => {
 
   it("drops a stale not-installed fact for an unprobed custom binary path", () => {
     expect(
-      normalizeProviderStatusForLocalConfig({
+      normalizeEngineStatusForLocalConfig({
         engine: "antigravity",
         status: { ...BASE_STATUS, unavailableReason: "not_installed" },
         customBinaryPath: "/opt/homebrew/bin/agy",
@@ -60,7 +60,7 @@ describe("normalizeProviderStatusForLocalConfig", () => {
 
   it("applies the same custom-path fallback to Claude", () => {
     expect(
-      normalizeProviderStatusForLocalConfig({
+      normalizeEngineStatusForLocalConfig({
         engine: "claude",
         status: {
           ...BASE_STATUS,
@@ -81,7 +81,7 @@ describe("normalizeProviderStatusForLocalConfig", () => {
 
   it("marks a custom-path engine ready after a successful session confirms it", () => {
     expect(
-      normalizeProviderStatusForLocalConfig({
+      normalizeEngineStatusForLocalConfig({
         engine: "opencode",
         status: {
           ...BASE_STATUS,
@@ -102,7 +102,7 @@ describe("normalizeProviderStatusForLocalConfig", () => {
 
   it("keeps warning when a different custom path was confirmed", () => {
     expect(
-      normalizeProviderStatusForLocalConfig({
+      normalizeEngineStatusForLocalConfig({
         engine: "opencode",
         status: {
           ...BASE_STATUS,
@@ -124,7 +124,7 @@ describe("normalizeProviderStatusForLocalConfig", () => {
 
   it("preserves authenticated and unauthenticated statuses", () => {
     expect(
-      normalizeProviderStatusForLocalConfig({
+      normalizeEngineStatusForLocalConfig({
         engine: "antigravity",
         status: { ...BASE_STATUS, available: true, status: "ready", authStatus: "authenticated" },
         customBinaryPath: "/opt/homebrew/bin/agy",
@@ -132,7 +132,7 @@ describe("normalizeProviderStatusForLocalConfig", () => {
     ).toEqual({ ...BASE_STATUS, available: true, status: "ready", authStatus: "authenticated" });
 
     expect(
-      normalizeProviderStatusForLocalConfig({
+      normalizeEngineStatusForLocalConfig({
         engine: "antigravity",
         status: { ...BASE_STATUS, authStatus: "unauthenticated" },
         customBinaryPath: "/opt/homebrew/bin/agy",
@@ -141,7 +141,7 @@ describe("normalizeProviderStatusForLocalConfig", () => {
   });
 
   it("does not reuse Auto capability from a different Claude binary", () => {
-    const status: ServerProviderStatus = {
+    const status: ServerEngineStatus = {
       engine: "claude",
       status: "ready",
       available: true,
@@ -152,7 +152,7 @@ describe("normalizeProviderStatusForLocalConfig", () => {
     };
 
     expect(
-      normalizeProviderStatusForLocalConfig({
+      normalizeEngineStatusForLocalConfig({
         engine: "claude",
         status,
         customBinaryPath: "/custom/bin/claude",
@@ -167,7 +167,7 @@ describe("normalizeProviderStatusForLocalConfig", () => {
   });
 
   it("preserves Auto capability probed from the selected Codex binary", () => {
-    const status: ServerProviderStatus = {
+    const status: ServerEngineStatus = {
       engine: "codex",
       status: "ready",
       available: true,
@@ -179,7 +179,7 @@ describe("normalizeProviderStatusForLocalConfig", () => {
     };
 
     expect(
-      normalizeProviderStatusForLocalConfig({
+      normalizeEngineStatusForLocalConfig({
         engine: "codex",
         status,
         customBinaryPath: "/custom/bin/codex",
@@ -191,21 +191,21 @@ describe("normalizeProviderStatusForLocalConfig", () => {
     "keeps an older Server's exact %s probe conservatively unavailable",
     (engine) => {
       const customBinaryPath = `/custom/bin/${engine}`;
-      const legacyStatus: ServerProviderStatus = {
+      const legacyStatus: ServerEngineStatus = {
         ...BASE_STATUS,
         engine,
         autoRuntimeModeBinaryPath: customBinaryPath,
       };
 
       expect(
-        normalizeProviderStatusForLocalConfig({
+        normalizeEngineStatusForLocalConfig({
           engine,
           status: legacyStatus,
           customBinaryPath,
         }),
       ).toEqual(legacyStatus);
       expect(
-        normalizeProviderStatusForLocalConfig({
+        normalizeEngineStatusForLocalConfig({
           engine,
           status: legacyStatus,
           customBinaryPath: `${customBinaryPath}-next`,
@@ -215,7 +215,7 @@ describe("normalizeProviderStatusForLocalConfig", () => {
   );
 
   it("preserves a non-Codex missing fact only for the exact checked custom binary", () => {
-    const checkedStatus: ServerProviderStatus = {
+    const checkedStatus: ServerEngineStatus = {
       ...BASE_STATUS,
       engine: "opencode",
       unavailableReason: "not_installed",
@@ -223,14 +223,14 @@ describe("normalizeProviderStatusForLocalConfig", () => {
     };
 
     expect(
-      normalizeProviderStatusForLocalConfig({
+      normalizeEngineStatusForLocalConfig({
         engine: "opencode",
         status: checkedStatus,
         customBinaryPath: "/custom/bin/opencode",
       }),
     ).toEqual(checkedStatus);
     expect(
-      normalizeProviderStatusForLocalConfig({
+      normalizeEngineStatusForLocalConfig({
         engine: "opencode",
         status: checkedStatus,
         customBinaryPath: "/custom/bin/opencode-next",
@@ -239,21 +239,21 @@ describe("normalizeProviderStatusForLocalConfig", () => {
   });
 
   it("does not reuse a ready fact from a different checked custom binary", () => {
-    const checkedStatus: ServerProviderStatus = {
+    const checkedStatus: ServerEngineStatus = {
       ...READY_STATUS,
       engine: "opencode",
       checkedBinaryPath: "/custom/bin/opencode-old",
     };
 
     expect(
-      normalizeProviderStatusForLocalConfig({
+      normalizeEngineStatusForLocalConfig({
         engine: "opencode",
         status: checkedStatus,
         customBinaryPath: "/custom/bin/opencode-old",
       }),
     ).toEqual(checkedStatus);
     expect(
-      normalizeProviderStatusForLocalConfig({
+      normalizeEngineStatusForLocalConfig({
         engine: "opencode",
         status: checkedStatus,
         customBinaryPath: "/custom/bin/opencode-next",

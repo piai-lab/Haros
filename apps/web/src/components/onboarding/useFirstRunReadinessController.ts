@@ -22,10 +22,7 @@ import {
   omniMindModelServicesListQueryOptions,
   omniMindModelServicesQueryKeys,
 } from "~/lib/oaModelServicesReactQuery";
-import {
-  hasReceivedProviderStatusSnapshot,
-  serverConfigQueryOptions,
-} from "~/lib/serverReactQuery";
+import { hasReceivedEngineStatusSnapshot, serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { useStore } from "~/store";
 import { createThreadShellsSelector } from "~/storeSelectors";
 import { WS_HARNESSOS_MODEL_SERVICES_CAPABILITY } from "@harnessos/contracts";
@@ -58,7 +55,7 @@ export interface FirstRunReadinessController {
   readonly readiness: FirstRunReadinessState;
   readonly focusedThreadId: ReturnType<typeof useFocusedChatContext>["focusedThreadId"];
   readonly activeProject: ReturnType<typeof useFocusedChatContext>["activeProject"];
-  readonly providerStatuses: ReturnType<typeof useEngineStatusesForLocalConfig>;
+  readonly engineStatuses: ReturnType<typeof useEngineStatusesForLocalConfig>;
   readonly modelOptionsByEngine: ReturnType<
     typeof useEngineModelCatalog
   >["selectableModelOptionsByEngine"];
@@ -82,7 +79,7 @@ export function useFirstRunReadinessController(
   );
   const stickyActiveProvider = useComposerDraftStore((state) => state.stickyActiveProvider);
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const providerStatuses = useEngineStatusesForLocalConfig();
+  const engineStatuses = useEngineStatusesForLocalConfig();
   const modelServicesCapability = useSyncExternalStore(
     subscribeModelServicesCapability,
     readModelServicesCapability,
@@ -148,7 +145,7 @@ export function useFirstRunReadinessController(
       null;
     if (focusedSelection) result[focusedProvider] = focusedSelection;
     for (const engine of ENGINE_KINDS) {
-      const status = providerStatuses.find((candidate) => candidate.engine === engine);
+      const status = engineStatuses.find((candidate) => candidate.engine === engine);
       if (
         result[engine] &&
         status?.authStatus === "unknown" &&
@@ -166,14 +163,14 @@ export function useFirstRunReadinessController(
     focusedContext.activeProject,
     focusedContext.activeThread,
     focusedContext.focusedThreadId,
-    providerStatuses,
+    engineStatuses,
     rememberedSelections,
     settingsSnapshot.defaultEngine,
     stickyActiveProvider,
     stickyEngineSelectionByEngine,
   ]);
   const hasUsableIndependentBinding = hasUsableExactModelBinding({
-    providerStatuses,
+    engineStatuses,
     exactEngineSelections: exactSelections,
   });
   const passiveQueryState = queryClient.getQueryState<OAModelServicesListResult>(
@@ -223,7 +220,7 @@ export function useFirstRunReadinessController(
     explicitExactEngineSelections: rememberedSelections,
   });
   const catalogsSettled = areUsableProviderCatalogsSettled({
-    providerStatuses,
+    engineStatuses,
     catalogStateByEngine: catalog.catalogStateByEngine,
     explicitExactEngineSelections: rememberedSelections,
   });
@@ -234,8 +231,8 @@ export function useFirstRunReadinessController(
     catalogsSettled &&
     passiveModelServicesState !== "unknown" &&
     (passiveModelServicesState !== "empty" ||
-      hasReceivedProviderStatusSnapshot(queryClient) ||
-      providerStatuses.length === 0);
+      hasReceivedEngineStatusSnapshot(queryClient) ||
+      engineStatuses.length === 0);
   const readiness = deriveFirstRunReadinessState({
     factsSettled,
     hasUsableExactBinding: hasUsableIndependentBinding || hasUsableHarnessOSBinding,
@@ -251,7 +248,7 @@ export function useFirstRunReadinessController(
     readiness,
     focusedThreadId: focusedContext.focusedThreadId,
     activeProject: focusedContext.activeProject,
-    providerStatuses,
+    engineStatuses,
     modelOptionsByEngine: catalog.selectableModelOptionsByEngine,
     catalogStateByEngine: catalog.catalogStateByEngine,
     loadingModelProviders: catalog.loadingModelProviders,

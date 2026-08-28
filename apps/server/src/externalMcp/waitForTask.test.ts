@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 
-import { GatewayToolError } from "../agentGateway/toolRuntime.ts";
+import { GatewayToolError } from "../hostGateway/toolRuntime.ts";
 import {
   latestExternalMcpWaitState,
   requestedExternalMcpRunId,

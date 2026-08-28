@@ -82,7 +82,7 @@ const tokenStats = {
     outputTokens: 1000,
     cacheHitPercent: 0,
     coverage: "complete",
-    unavailableProviders: [],
+    unavailableEngines: [],
     days: [],
   },
 } satisfies ProfileTokenStats;

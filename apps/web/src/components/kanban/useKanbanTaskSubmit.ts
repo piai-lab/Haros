@@ -9,7 +9,7 @@ import type {
   EngineInteractionMode,
   EngineKind,
   RuntimeMode,
-  ServerProviderStatus,
+  ServerEngineStatus,
   ServerSettingsView,
   ThreadId,
 } from "@harnessos/contracts";
@@ -20,7 +20,7 @@ import { toastManager } from "~/components/ui/toast";
 import { runtimeModeAvailabilityMessageKeyFromError } from "~/components/chat/RuntimeModeAvailabilityHint";
 import type { DraftThreadEnvMode } from "~/composerDraftStore";
 import { useComposerDraftStore } from "~/composerDraftStore";
-import { useRefreshProviderStatusesNow } from "~/hooks/useEngineStatusRefresh";
+import { useRefreshEngineStatusesNow } from "~/hooks/useEngineStatusRefresh";
 import { useI18n } from "~/i18n";
 import { createAndSendKanbanTask, createKanbanDraftTask } from "~/lib/kanbanTaskCreate";
 import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
@@ -42,7 +42,7 @@ interface UseKanbanTaskSubmitInput {
   readonly envMode: DraftThreadEnvMode;
   readonly sendAsDraft: boolean;
   readonly resolveServerSettingsForDispatch: () => Promise<ServerSettingsView>;
-  readonly providerStatuses: readonly ServerProviderStatus[];
+  readonly engineStatuses: readonly ServerEngineStatus[];
   readonly isPreparingImages: boolean;
   readonly waitForPendingImages: () => Promise<void>;
   readonly onOpenChange: (open: boolean) => void;
@@ -64,14 +64,14 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
     envMode,
     sendAsDraft,
     resolveServerSettingsForDispatch,
-    providerStatuses,
+    engineStatuses,
     isPreparingImages,
     waitForPendingImages,
     onOpenChange,
   } = input;
   const navigate = useNavigate();
   const [isCreating, setIsCreating] = useState(false);
-  const refreshProviderStatuses = useRefreshProviderStatusesNow();
+  const refreshEngineStatuses = useRefreshEngineStatusesNow();
   // Synchronous re-entry guard: repeated Cmd+Enter can fire before React flushes
   // the loading state, and two passes here would create two tasks.
   const isCreatingRef = useRef(false);
@@ -137,8 +137,8 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
     // Send now: create + promote + dispatch straight to In Progress.
     const sendAvailability = await resolveProviderSendAvailabilityWithRefresh({
       engine: engineSelection.engine,
-      statuses: providerStatuses,
-      refreshStatuses: () => refreshProviderStatuses({ silent: true }),
+      statuses: engineStatuses,
+      refreshStatuses: () => refreshEngineStatuses({ silent: true }),
     });
     if (!sendAvailability.usable) {
       toastManager.add({

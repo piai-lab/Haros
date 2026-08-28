@@ -1,7 +1,7 @@
 // FILE: threadUnblock.ts
 // Purpose: Abandons the engine delivery blockers that quarantine a thread.
 // Layer: Web orchestration helper
-// Exports: unblockThreadFromClient, describeThreadUnblockResult, isProviderDeliveryReconciliationConflict, type ThreadUnblockResult
+// Exports: unblockThreadFromClient, describeThreadUnblockResult, isEngineDeliveryReconciliationConflict, type ThreadUnblockResult
 
 import type { NativeApi, ThreadId } from "@harnessos/contracts";
 
@@ -13,7 +13,7 @@ const UNBLOCK_NOTE = "Abandoned from the thread error banner; the command was ne
 
 type ThreadUnblockApi = Pick<
   NativeApi["orchestration"],
-  "listProviderDeliveryBlockers" | "reconcileProviderDelivery"
+  "listEngineDeliveryBlockers" | "reconcileEngineDelivery"
 >;
 
 export type ThreadUnblockResult =
@@ -28,7 +28,7 @@ export type ThreadUnblockResult =
  * The reconciliation conflict is expected, not exceptional: two clients (or a
  * client and a server restart) can race to settle the same blocker.
  */
-export function isProviderDeliveryReconciliationConflict(error: unknown): boolean {
+export function isEngineDeliveryReconciliationConflict(error: unknown): boolean {
   return (
     typeof error === "object" &&
     error !== null &&
@@ -50,7 +50,7 @@ export async function unblockThreadFromClient(
   api: ThreadUnblockApi,
   threadId: ThreadId,
 ): Promise<ThreadUnblockResult> {
-  const blockers = await api.listProviderDeliveryBlockers({ threadId });
+  const blockers = await api.listEngineDeliveryBlockers({ threadId });
   if (blockers.length === 0) return { kind: "already-clear" };
 
   const ordered = blockers.toSorted((left, right) => left.eventSequence - right.eventSequence);
@@ -58,7 +58,7 @@ export async function unblockThreadFromClient(
   let conflictCount = 0;
   for (const blocker of ordered) {
     try {
-      await api.reconcileProviderDelivery({
+      await api.reconcileEngineDelivery({
         eventSequence: blocker.eventSequence,
         threadId,
         expectedState: blocker.state,
@@ -67,7 +67,7 @@ export async function unblockThreadFromClient(
       });
       reconciledCount += 1;
     } catch (error) {
-      if (!isProviderDeliveryReconciliationConflict(error)) throw error;
+      if (!isEngineDeliveryReconciliationConflict(error)) throw error;
       conflictCount += 1;
     }
   }

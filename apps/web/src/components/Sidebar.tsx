@@ -685,7 +685,7 @@ function resolveThreadRowMetaChips(input: {
   }
 
   const handoffBadgeLabel = input.thread.handoff
-    ? input.handoffFromLabel(ENGINE_DISPLAY_NAMES[input.thread.handoff.sourceProvider])
+    ? input.handoffFromLabel(ENGINE_DISPLAY_NAMES[input.thread.handoff.sourceEngine])
     : null;
   if (input.includeHandoffBadge && !input.handoffShownInAvatar && handoffBadgeLabel) {
     chips.push({
@@ -1518,7 +1518,7 @@ export default function Sidebar() {
     select: (config) => config.keybindings,
   });
   const keybindings = keybindingsQuery.data ?? EMPTY_KEYBINDINGS;
-  const providerStatuses = useEngineStatusesForLocalConfig();
+  const engineStatuses = useEngineStatusesForLocalConfig();
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   // Declared next to `keybindings` (rather than further down) because the project-row render
   // helpers above read these labels. A const declared after the closure that captures it
@@ -2865,9 +2865,9 @@ export default function Sidebar() {
   const copyThreadIdToClipboard = useCopyThreadIdToClipboard();
   const copyPathToClipboard = useCopyPathToClipboard();
   const handoffThread = useCallback(
-    async (thread: Thread, targetProvider: EngineKind) => {
+    async (thread: Thread, targetEngine: EngineKind) => {
       try {
-        await createThreadHandoff(thread, targetProvider);
+        await createThreadHandoff(thread, targetEngine);
       } catch (error) {
         toastManager.add({
           type: "error",
@@ -2923,9 +2923,9 @@ export default function Sidebar() {
       const threadStatus = threadSummary ? resolveThreadStatusForSidebar(threadSummary) : null;
       const handoffTargets = canHandoff
         ? resolveAvailableHandoffTargetProviders({
-            sourceProvider: thread.engineSelection.engine,
+            sourceEngine: thread.engineSelection.engine,
             engineSettings: serverSettingsQuery.data?.engines,
-            providerStatuses,
+            engineStatuses,
           })
         : [];
       const handoffItems = handoffTargets.map((engine, index) => ({
@@ -2998,9 +2998,9 @@ export default function Sidebar() {
         return;
       }
       if (typeof clicked === "string" && clicked.startsWith("handoff:")) {
-        const targetProvider = clicked.slice("handoff:".length);
-        if (handoffTargets.includes(targetProvider as EngineKind)) {
-          await handoffThread(thread, targetProvider as EngineKind);
+        const targetEngine = clicked.slice("handoff:".length);
+        if (handoffTargets.includes(targetEngine as EngineKind)) {
+          await handoffThread(thread, targetEngine as EngineKind);
         }
         return;
       }
@@ -3131,7 +3131,7 @@ export default function Sidebar() {
       pinnedThreadIdSet,
       projectCwdById,
       projectById,
-      providerStatuses,
+      engineStatuses,
       resolveThreadStatusForSidebar,
       serverSettingsQuery.data?.engines,
       sidebarThreadSummaryById,
@@ -4367,7 +4367,7 @@ export default function Sidebar() {
       handoffShownInAvatar:
         threadEntryPoint !== "terminal" &&
         !isGenericChatThreadTitle(thread.title) &&
-        Boolean(thread.handoff?.sourceProvider),
+        Boolean(thread.handoff?.sourceEngine),
       threadAutomations: automationsByThreadId.get(thread.id),
       locale,
       pausedLabel: t("automation.paused"),
@@ -4565,7 +4565,7 @@ export default function Sidebar() {
       handoffShownInAvatar:
         threadEntryPoint !== "terminal" &&
         !isGenericChatThreadTitle(thread.title) &&
-        Boolean(thread.handoff?.sourceProvider),
+        Boolean(thread.handoff?.sourceEngine),
       threadAutomations: automationsByThreadId.get(thread.id),
       locale,
       pausedLabel: t("automation.paused"),

@@ -1184,7 +1184,7 @@ describe("deriveWorkLogEntries", () => {
         summary: "Suggested automation: Watch CI",
         tone: "info",
         payload: {
-          source: "agent-gateway",
+          source: "host-gateway",
           automationId: "automation-proposal-1",
           automationName: "Watch CI",
           cadenceLabel: "Every 5m",

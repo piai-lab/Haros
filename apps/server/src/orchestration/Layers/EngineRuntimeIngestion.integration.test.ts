@@ -34,14 +34,14 @@ import {
   ENGINE_RUNTIME_INGESTION_CONSUMER,
   EngineRuntimeEventRepository,
 } from "../../persistence/Services/EngineRuntimeEvents.ts";
-import { EngineService, type EngineServiceShape } from "../../provider/Services/EngineService.ts";
-import { EngineSessionDirectoryLive } from "../../provider/Layers/EngineSessionDirectory.ts";
-import { EngineSessionDirectory } from "../../provider/Services/EngineSessionDirectory.ts";
+import { EngineService, type EngineServiceShape } from "../../engine/Services/EngineService.ts";
+import { EngineSessionDirectoryLive } from "../../engine/Layers/EngineSessionDirectory.ts";
+import { EngineSessionDirectory } from "../../engine/Services/EngineSessionDirectory.ts";
 import {
   ENGINE_INTERRUPT_EVENT_ID_PREFIX,
   ENGINE_INTERRUPT_REASON,
   ENGINE_INTERRUPT_RUNTIME_FENCED_EVENT,
-} from "../../provider/providerInterruptSettlement.ts";
+} from "../../engine/engineInterruptSettlement.ts";
 import { OrchestrationEngineLive } from "./OrchestrationEngine.ts";
 import { OrchestrationProjectionPipelineLive } from "./ProjectionPipeline.ts";
 import { OrchestrationProjectionSnapshotQueryLive } from "./ProjectionSnapshotQuery.ts";
@@ -67,7 +67,7 @@ const asMessageId = (value: string): MessageId => MessageId.makeUnsafe(value);
 const asThreadId = (value: string): ThreadId => ThreadId.makeUnsafe(value);
 const asTurnId = (value: string): TurnId => TurnId.makeUnsafe(value);
 
-type LegacyProviderRuntimeEvent = {
+type LegacyEngineRuntimeEvent = {
   readonly type: string;
   readonly eventId: EventId;
   readonly engine: EngineKind;
@@ -81,7 +81,7 @@ type LegacyProviderRuntimeEvent = {
   readonly [key: string]: unknown;
 };
 
-function createProviderServiceHarness() {
+function createEngineServiceHarness() {
   const runtimeEventPubSub = Effect.runSync(PubSub.unbounded<EngineRuntimeEvent>());
   const runtimeSessions: EngineSession[] = [];
   let runtimeProjectionLeaseDepth = 0;
@@ -144,7 +144,7 @@ function createProviderServiceHarness() {
     runtimeSessions.push(session);
   };
 
-  const emit = (event: LegacyProviderRuntimeEvent): void => {
+  const emit = (event: LegacyEngineRuntimeEvent): void => {
     const canonicalEvent = (() => {
       if (event.payload !== undefined) return event;
       const {
@@ -351,7 +351,7 @@ describe("EngineRuntimeIngestion", () => {
   }) {
     const workspaceRoot = makeTempDir("harnessos-engine-project-");
     execFileSync("git", ["init", "--quiet", workspaceRoot], { stdio: "ignore" });
-    const engineHarness = createProviderServiceHarness();
+    const engineHarness = createEngineServiceHarness();
     const orchestrationLayer = OrchestrationEngineLive.pipe(
       Layer.provide(OrchestrationProjectionPipelineLive),
       Layer.provide(OrchestrationProjectionSnapshotQueryLive),
@@ -396,18 +396,18 @@ describe("EngineRuntimeIngestion", () => {
     const runtimeEventRepositoryLayer = EngineRuntimeEventRepositoryLive.pipe(
       Layer.provideMerge(SqlitePersistenceMemory),
     );
-    const providerSessionRuntimeRepositoryLayer = EngineSessionRuntimeRepositoryLive.pipe(
+    const engineSessionRuntimeRepositoryLayer = EngineSessionRuntimeRepositoryLive.pipe(
       Layer.provide(SqlitePersistenceMemory),
     );
-    const providerSessionDirectoryLayer = EngineSessionDirectoryLive.pipe(
-      Layer.provide(providerSessionRuntimeRepositoryLayer),
+    const engineSessionDirectoryLayer = EngineSessionDirectoryLive.pipe(
+      Layer.provide(engineSessionRuntimeRepositoryLayer),
     );
     const layer = EngineRuntimeIngestionLive.pipe(
       Layer.provideMerge(ingestionOrchestrationLayer),
       Layer.provideMerge(OrchestrationProjectionSnapshotQueryLive),
       Layer.provideMerge(SqlitePersistenceMemory),
       Layer.provideMerge(runtimeEventRepositoryLayer),
-      Layer.provideMerge(providerSessionDirectoryLayer),
+      Layer.provideMerge(engineSessionDirectoryLayer),
       Layer.provideMerge(Layer.succeed(EngineService, engineHarness.service)),
       Layer.provideMerge(ServerConfig.layerTest(process.cwd(), process.cwd())),
       Layer.provideMerge(NodeServices.layer),
@@ -418,9 +418,7 @@ describe("EngineRuntimeIngestion", () => {
     const runtimeEventRepository = await runtime.runPromise(
       Effect.service(EngineRuntimeEventRepository),
     );
-    const providerSessionDirectory = await runtime.runPromise(
-      Effect.service(EngineSessionDirectory),
-    );
+    const engineSessionDirectory = await runtime.runPromise(Effect.service(EngineSessionDirectory));
     scope = await Effect.runPromise(Scope.make("sequential"));
     let ingestionStarted = false;
     const startIngestion = async () => {
@@ -437,7 +435,7 @@ describe("EngineRuntimeIngestion", () => {
       threadId: ThreadId = ThreadId.makeUnsafe("thread-1"),
     ) =>
       Effect.runPromise(
-        providerSessionDirectory.replace({
+        engineSessionDirectory.replace({
           threadId,
           engine: providerKind,
           status: "running",
@@ -499,7 +497,7 @@ describe("EngineRuntimeIngestion", () => {
     // Give those rows the only authority production still accepts: an exact
     // same-engine binding whose own generation is explicitly legacy.
     await Effect.runPromise(
-      providerSessionDirectory.replace({
+      engineSessionDirectory.replace({
         threadId: ThreadId.makeUnsafe("thread-1"),
         engine: "codex",
         status: "running",
@@ -526,7 +524,7 @@ describe("EngineRuntimeIngestion", () => {
       bindLegacyRuntimeSource,
       startIngestion,
       runtimeEventRepository,
-      providerSessionDirectory,
+      engineSessionDirectory,
       workspaceRoot,
     };
   }
@@ -617,7 +615,7 @@ describe("EngineRuntimeIngestion", () => {
     const restoredGeneration = "generation-restored-codex";
 
     await Effect.runPromise(
-      harness.providerSessionDirectory.upsert({
+      harness.engineSessionDirectory.upsert({
         threadId,
         engine: "codex",
         status: "running",
@@ -716,7 +714,7 @@ describe("EngineRuntimeIngestion", () => {
     const threadId = asThreadId("thread-1");
 
     await Effect.runPromise(
-      harness.providerSessionDirectory.replace({
+      harness.engineSessionDirectory.replace({
         threadId,
         engine: "codex",
         status: "running",
@@ -774,7 +772,7 @@ describe("EngineRuntimeIngestion", () => {
     );
 
     await Effect.runPromise(
-      harness.providerSessionDirectory.upsert({
+      harness.engineSessionDirectory.upsert({
         threadId,
         engine: "codex",
         status: "error",
@@ -823,7 +821,7 @@ describe("EngineRuntimeIngestion", () => {
     const threadId = asThreadId("thread-1");
     const failedAt = "2026-08-12T08:11:00.000Z";
 
-    await Effect.runPromise(harness.providerSessionDirectory.remove(threadId));
+    await Effect.runPromise(harness.engineSessionDirectory.remove(threadId));
     await Effect.runPromise(
       harness.engine.dispatch({
         type: "thread.session.set",
@@ -1167,7 +1165,7 @@ describe("EngineRuntimeIngestion", () => {
       `engine:${collisionEvent.eventId}:thread-activity-append:${threadId}:runtime.warning:${collisionEvent.eventId}`,
     );
     await Effect.runPromise(
-      harness.providerSessionDirectory.replace({
+      harness.engineSessionDirectory.replace({
         threadId,
         engine: "cursor",
         status: "running",
@@ -1294,7 +1292,7 @@ describe("EngineRuntimeIngestion", () => {
       payload: { message: "Warning for a rejected command" },
     };
     await Effect.runPromise(
-      harness.providerSessionDirectory.replace({
+      harness.engineSessionDirectory.replace({
         threadId,
         engine: "cursor",
         status: "running",
@@ -1302,7 +1300,7 @@ describe("EngineRuntimeIngestion", () => {
       }),
     );
     await Effect.runPromise(
-      harness.providerSessionDirectory.replace({
+      harness.engineSessionDirectory.replace({
         threadId: lateThreadId,
         engine: "cursor",
         status: "running",
@@ -2924,7 +2922,7 @@ describe("EngineRuntimeIngestion", () => {
     const interruptedGeneration = "generation-before-user-interrupt";
 
     await Effect.runPromise(
-      harness.providerSessionDirectory.replace({
+      harness.engineSessionDirectory.replace({
         threadId,
         engine: "codex",
         status: "running",
@@ -2965,7 +2963,7 @@ describe("EngineRuntimeIngestion", () => {
     expect(liveReasoning).toBeDefined();
 
     await Effect.runPromise(
-      harness.providerSessionDirectory.upsert({
+      harness.engineSessionDirectory.upsert({
         threadId,
         engine: "codex",
         status: "stopped",
@@ -6812,7 +6810,7 @@ describe("EngineRuntimeIngestion", () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
     await Effect.runPromise(
-      harness.providerSessionDirectory.upsert({
+      harness.engineSessionDirectory.upsert({
         threadId: asThreadId("thread-1"),
         engine: "codex",
         status: "running",
@@ -8178,7 +8176,7 @@ describe("EngineRuntimeIngestion", () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
     await Effect.runPromise(
-      harness.providerSessionDirectory.upsert({
+      harness.engineSessionDirectory.upsert({
         threadId: asThreadId("thread-1"),
         engine: "codex",
         status: "running",
@@ -8272,7 +8270,7 @@ describe("EngineRuntimeIngestion", () => {
     const lifecycleGeneration = "shutdown-user-input-generation";
     const requestId = ApprovalRequestId.makeUnsafe("req-shutdown-user-input");
     await Effect.runPromise(
-      harness.providerSessionDirectory.upsert({
+      harness.engineSessionDirectory.upsert({
         threadId: asThreadId("thread-1"),
         engine: "codex",
         status: "running",
@@ -8373,7 +8371,7 @@ describe("EngineRuntimeIngestion", () => {
       threadId: asThreadId("thread-1"),
       turnId: asTurnId("turn-child"),
       parentTurnId: asTurnId("turn-parent"),
-      providerRefs: {
+      engineRefs: {
         nativeThreadId: "child-engine-1",
         nativeParentThreadId: "parent-engine-1",
         nativeTurnId: "turn-child",
@@ -8395,7 +8393,7 @@ describe("EngineRuntimeIngestion", () => {
     );
 
     expect(childThread.title).toBe("Locke [explorer]");
-    expect(childThread.creationSource).toBe("provider_native");
+    expect(childThread.creationSource).toBe("engine_native");
     expect(childThread.sourceThreadId).toBe("thread-1");
     expect(childThread.sourceTurnId).toBe("turn-parent");
 
@@ -8423,7 +8421,7 @@ describe("EngineRuntimeIngestion", () => {
       turnId: asTurnId("turn-child"),
       parentTurnId: asTurnId("turn-parent"),
       itemId: asItemId("item-collab-child"),
-      providerRefs: {
+      engineRefs: {
         nativeThreadId: "child-engine-same-event",
         nativeParentThreadId: "parent-engine-1",
         nativeTurnId: "turn-child",
@@ -8701,7 +8699,7 @@ describe("EngineRuntimeIngestion", () => {
     expect(
       nativeChildren.every(
         (thread) =>
-          thread.creationSource === "provider_native" &&
+          thread.creationSource === "engine_native" &&
           thread.sourceThreadId === "thread-1" &&
           thread.gatewayOperationId === null,
       ),
@@ -8717,7 +8715,7 @@ describe("EngineRuntimeIngestion", () => {
     const now = new Date().toISOString();
     const childThreadId = asThreadId("subagent:thread-1:child-engine-unmapped");
     const childTurnId = asTurnId("turn-child-unmapped");
-    const providerRefs = {
+    const engineRefs = {
       nativeThreadId: "child-engine-unmapped",
       nativeParentThreadId: "parent-engine-1",
     } as const;
@@ -8745,7 +8743,7 @@ describe("EngineRuntimeIngestion", () => {
       threadId: asThreadId("thread-1"),
       turnId: childTurnId,
       itemId: asItemId("item-unmapped-child-message"),
-      providerRefs,
+      engineRefs,
       payload: {
         streamKind: "assistant_text",
         delta: "Child-only answer",
@@ -8759,7 +8757,7 @@ describe("EngineRuntimeIngestion", () => {
       threadId: asThreadId("thread-1"),
       turnId: childTurnId,
       itemId: asItemId("item-unmapped-child-message"),
-      providerRefs,
+      engineRefs,
       payload: {
         itemType: "assistant_message",
         status: "completed",
@@ -8773,7 +8771,7 @@ describe("EngineRuntimeIngestion", () => {
       threadId: asThreadId("thread-1"),
       turnId: childTurnId,
       requestId: ApprovalRequestId.makeUnsafe("req-unmapped-child-approval"),
-      providerRefs,
+      engineRefs,
       payload: {
         requestType: "command_execution_approval",
         detail: "run child command",
@@ -8787,7 +8785,7 @@ describe("EngineRuntimeIngestion", () => {
       threadId: asThreadId("thread-1"),
       turnId: childTurnId,
       requestId: ApprovalRequestId.makeUnsafe("req-unmapped-child-user-input"),
-      providerRefs,
+      engineRefs,
       payload: {
         questions: [
           {
@@ -8838,7 +8836,7 @@ describe("EngineRuntimeIngestion", () => {
       threadId: asThreadId("thread-1"),
       turnId: childTurnId,
       requestId: ApprovalRequestId.makeUnsafe("req-unmapped-child-approval"),
-      providerRefs,
+      engineRefs,
       payload: {
         requestType: "command_execution_approval",
         decision: "accept",
@@ -8852,7 +8850,7 @@ describe("EngineRuntimeIngestion", () => {
       threadId: asThreadId("thread-1"),
       turnId: childTurnId,
       requestId: ApprovalRequestId.makeUnsafe("req-unmapped-child-user-input"),
-      providerRefs,
+      engineRefs,
       payload: {
         answers: {
           scope: "child-only",
@@ -8866,7 +8864,7 @@ describe("EngineRuntimeIngestion", () => {
       createdAt: now,
       threadId: asThreadId("thread-1"),
       turnId: childTurnId,
-      providerRefs,
+      engineRefs,
       payload: {
         explanation: "Child work only",
         tasks: [{ task: "Finish child work", status: "completed" }],
@@ -8880,7 +8878,7 @@ describe("EngineRuntimeIngestion", () => {
       threadId: asThreadId("thread-1"),
       turnId: childTurnId,
       itemId: asItemId("item-unmapped-child-file-change"),
-      providerRefs,
+      engineRefs,
       payload: {
         itemType: "file_change",
         status: "completed",
@@ -8899,7 +8897,7 @@ describe("EngineRuntimeIngestion", () => {
       threadId: asThreadId("thread-1"),
       turnId: childTurnId,
       itemId: asItemId("item-unmapped-child-message"),
-      providerRefs,
+      engineRefs,
       payload: {
         unifiedDiff: [
           "diff --git a/child-only.txt b/child-only.txt",

@@ -189,7 +189,7 @@ function normalizeSubprocessActivity(
     : result;
 }
 
-function isProviderSessionBusy(session: TerminalSessionState, now: number): boolean {
+function isEngineSessionBusy(session: TerminalSessionState, now: number): boolean {
   const lastInputAt = session.lastInputAt ?? 0;
   const lastOutputAt = session.lastOutputAt ?? 0;
   const latestSignalAt = Math.max(lastInputAt, lastOutputAt);
@@ -2055,7 +2055,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     const base = this.subprocessPollIntervalMs;
     for (const session of this.sessions.values()) {
       if (session.status !== "running" || session.pid === null) continue;
-      if (session.hasRunningSubprocess || isProviderSessionBusy(session, now)) {
+      if (session.hasRunningSubprocess || isEngineSessionBusy(session, now)) {
         return Math.max(base, this.processSnapshotObserver?.retryDelayMs() ?? 0);
       }
     }
@@ -2160,7 +2160,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
             shouldClearDetectedCliKind =
               session.detectedCliKind !== null &&
               !subprocessActivity.hasProviderDescendant &&
-              (providerDescendantObserved || !isProviderSessionBusy(session, Date.now()));
+              (providerDescendantObserved || !isEngineSessionBusy(session, Date.now()));
             session.providerDescendantObserved = providerDescendantObserved;
             if (session.managedAgentObserved) {
               // Hooks have fired — trust them as the sole source of truth (superset model).
@@ -2171,7 +2171,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
               // No hooks observed — fall back to process-tree + output heuristic.
               hasRunningSubprocess = subprocessActivity.hasProviderDescendant
                 ? subprocessActivity.hasNonEngineSubprocess ||
-                  isProviderSessionBusy(session, Date.now())
+                  isEngineSessionBusy(session, Date.now())
                 : subprocessActivity.hasRunningSubprocess;
             }
           } catch (error) {

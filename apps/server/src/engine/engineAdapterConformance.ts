@@ -1,0 +1,69 @@
+import type { EngineAdapterCapabilities, EngineAdapterShape } from "./Services/EngineAdapter.ts";
+
+type CapabilityFlag = Exclude<
+  keyof EngineAdapterCapabilities,
+  | "sessionModelSwitch"
+  | "conversationRollback"
+  | "supportsSkillMentions"
+  | "supportsPluginMentions"
+  | "supportedRuntimeModes"
+  | "supportsLiveTurnDiffPatch"
+>;
+
+type OptionalAdapterMethod =
+  | "steerTurn"
+  | "listSkills"
+  | "listCommands"
+  | "listPlugins"
+  | "readPlugin"
+  | "listModels"
+  | "compactThread";
+
+export interface EngineAdapterConformanceIssue {
+  readonly capability: CapabilityFlag;
+  readonly missingMethod: OptionalAdapterMethod;
+}
+
+const CAPABILITY_METHOD_REQUIREMENTS: ReadonlyArray<{
+  readonly capability: CapabilityFlag;
+  readonly methods: ReadonlyArray<OptionalAdapterMethod>;
+}> = [
+  { capability: "supportsTurnSteering", methods: ["steerTurn"] },
+  { capability: "supportsSkillDiscovery", methods: ["listSkills"] },
+  { capability: "supportsNativeSlashCommandDiscovery", methods: ["listCommands"] },
+  { capability: "supportsPluginDiscovery", methods: ["listPlugins", "readPlugin"] },
+  { capability: "supportsRuntimeModelList", methods: ["listModels"] },
+  { capability: "supportsThreadCompaction", methods: ["compactThread"] },
+];
+
+export function engineAdapterConformanceIssues(
+  adapter: EngineAdapterShape<unknown>,
+): EngineAdapterConformanceIssue[] {
+  const issues: EngineAdapterConformanceIssue[] = [];
+  for (const requirement of CAPABILITY_METHOD_REQUIREMENTS) {
+    if (adapter.capabilities[requirement.capability] !== true) {
+      continue;
+    }
+    for (const method of requirement.methods) {
+      if (typeof adapter[method] !== "function") {
+        issues.push({
+          capability: requirement.capability,
+          missingMethod: method,
+        });
+      }
+    }
+  }
+  return issues;
+}
+
+export function assertEngineAdapterConformance(adapter: EngineAdapterShape<unknown>): void {
+  const issues = engineAdapterConformanceIssues(adapter);
+  if (issues.length === 0) {
+    return;
+  }
+
+  const detail = issues
+    .map((issue) => `${issue.capability} requires ${issue.missingMethod}()`)
+    .join(", ");
+  throw new Error(`Engine adapter "${adapter.engine}" has invalid capabilities: ${detail}.`);
+}

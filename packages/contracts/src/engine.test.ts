@@ -3,12 +3,12 @@ import { Schema } from "effect";
 
 import { EngineSendTurnInput, EngineSessionStartInput } from "./engine";
 
-const decodeProviderSessionStartInput = Schema.decodeUnknownSync(EngineSessionStartInput);
+const decodeEngineSessionStartInput = Schema.decodeUnknownSync(EngineSessionStartInput);
 const decodeProviderSendTurnInput = Schema.decodeUnknownSync(EngineSendTurnInput);
 
 describe("EngineSessionStartInput", () => {
   it("accepts codex-compatible payloads", () => {
-    const parsed = decodeProviderSessionStartInput({
+    const parsed = decodeEngineSessionStartInput({
       threadId: "thread-1",
       engine: "codex",
       cwd: "/tmp/workspace",
@@ -41,7 +41,7 @@ describe("EngineSessionStartInput", () => {
   });
 
   it("accepts the product-derived work surface and project context root", () => {
-    const parsed = decodeProviderSessionStartInput({
+    const parsed = decodeEngineSessionStartInput({
       threadId: "thread-agent",
       engine: "oa",
       cwd: "/tmp/workspace/packages/app",
@@ -56,7 +56,7 @@ describe("EngineSessionStartInput", () => {
 
   it("rejects payloads without runtime mode", () => {
     expect(() =>
-      decodeProviderSessionStartInput({
+      decodeEngineSessionStartInput({
         threadId: "thread-1",
         engine: "codex",
       }),
@@ -64,7 +64,7 @@ describe("EngineSessionStartInput", () => {
   });
 
   it("accepts claude runtime knobs", () => {
-    const parsed = decodeProviderSessionStartInput({
+    const parsed = decodeEngineSessionStartInput({
       threadId: "thread-1",
       engine: "claude",
       cwd: "/tmp/workspace",

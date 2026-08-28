@@ -1,7 +1,7 @@
 // FILE: usageHistory/protocol.ts
 // Purpose: Bounded one-request/one-response protocol for the archive reader child process.
 
-import type { UsageHistoryProvider } from "@harnessos/contracts";
+import type { UsageHistoryEngine } from "@harnessos/contracts";
 
 export const USAGE_HISTORY_PARSER_VERSION = 2;
 export const USAGE_HISTORY_DISCOVERY_BATCH_FILES = 128;
@@ -22,7 +22,7 @@ export interface UsageHistoryDiscoveredFile {
 
 export interface UsageHistoryDiscoverRequest {
   readonly type: "discover";
-  readonly engine: UsageHistoryProvider;
+  readonly engine: UsageHistoryEngine;
   readonly rootPath: string;
   readonly cursor: string | null;
   readonly limit: number;
@@ -62,7 +62,7 @@ export interface UsageHistoryParseFile {
 
 export interface UsageHistoryParseRequest {
   readonly type: "parse";
-  readonly engine: UsageHistoryProvider;
+  readonly engine: UsageHistoryEngine;
   readonly rootPath: string;
   readonly files: ReadonlyArray<UsageHistoryParseFile>;
   readonly workspaceHashSalt: string;

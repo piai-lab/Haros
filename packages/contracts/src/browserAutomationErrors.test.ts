@@ -18,7 +18,7 @@ const browserErrorCodes = [
   "BrowserConduitAttachRejected",
   "BrowserConduitDisconnected",
   "BrowserTransportDisconnected",
-  "BrowserProviderProcessMismatch",
+  "BrowserEngineProcessMismatch",
   "BrowserTransportIsolationUnavailable",
   "BrowserHostUnavailable",
   "BrowserRuntimeDisconnected",
@@ -62,7 +62,7 @@ const browserErrorCodes = [
   "BrowserRequestConflict",
   "BrowserAmbiguousResult",
   "BrowserMcpNameConflict",
-  "BrowserProviderIsolationUnavailable",
+  "BrowserEngineIsolationUnavailable",
 ] as const;
 
 const validError = {

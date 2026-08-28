@@ -6,10 +6,10 @@ import {
 } from "@harnessos/contracts";
 import { Effect, Option } from "effect";
 
-import { makeAgentGatewayBrowserTools } from "../../src/agentGateway/browserTools";
-import { makeAgentGatewayInFlightRequestRegistry } from "../../src/agentGateway/inFlightRequestRegistry";
-import { makeAgentGatewayMcpTransport } from "../../src/agentGateway/mcpTransport";
-import { makeAgentGatewaySessionRegistry } from "../../src/agentGateway/Layers/AgentGatewaySessionRegistry";
+import { makeHostGatewayBrowserTools } from "../../src/hostGateway/browserTools";
+import { makeHostGatewayInFlightRequestRegistry } from "../../src/hostGateway/inFlightRequestRegistry";
+import { makeHostGatewayMcpTransport } from "../../src/hostGateway/mcpTransport";
+import { makeHostGatewaySessionRegistry } from "../../src/hostGateway/Layers/HostGatewaySessionRegistry";
 import { makeBrowserAutomationHost } from "../../src/browserAutomation/Layers/BrowserAutomationHost";
 
 const PROVIDER: EngineKind = "codex";
@@ -40,8 +40,8 @@ export function createBrowserMcpHarness(input: {
   readonly workspaceRoot: string;
 }): BrowserMcpHarness {
   const threadId = ThreadId.makeUnsafe(input.threadId);
-  const registry = makeAgentGatewaySessionRegistry();
-  const inFlightRequests = makeAgentGatewayInFlightRequestRegistry();
+  const registry = makeHostGatewaySessionRegistry();
+  const inFlightRequests = makeHostGatewayInFlightRequestRegistry();
   const issued = registry.issue(threadId, PROVIDER);
   const credentials = {
     verifySession: registry.verify,
@@ -49,7 +49,7 @@ export function createBrowserMcpHarness(input: {
     verifyTurnAuthority: registry.verifyTurnAuthority,
     registerInFlightRequest: inFlightRequests.register,
     cancelInFlightRequests: inFlightRequests.cancel,
-  } satisfies Parameters<typeof makeAgentGatewayMcpTransport>[0]["credentials"];
+  } satisfies Parameters<typeof makeHostGatewayMcpTransport>[0]["credentials"];
   const shell = {
     id: threadId,
     engineSelection: { engine: PROVIDER, model: "e2e-fixture" },
@@ -59,14 +59,14 @@ export function createBrowserMcpHarness(input: {
   const snapshotQuery = {
     getThreadShellById: () => Effect.succeed(Option.some(shell)),
   } as never;
-  const tools = makeAgentGatewayBrowserTools(
+  const tools = makeHostGatewayBrowserTools(
     makeBrowserAutomationHost({
       HARNESSOS_BROWSER_HOST_PIPE_PATH: input.pipePath,
       HARNESSOS_BROWSER_HOST_CAPABILITY: input.capability,
     }),
     { resolveWorkspaceRoot: () => Effect.succeed(input.workspaceRoot) },
   );
-  const handle = makeAgentGatewayMcpTransport({
+  const handle = makeHostGatewayMcpTransport({
     credentials,
     snapshotQuery,
     tools,

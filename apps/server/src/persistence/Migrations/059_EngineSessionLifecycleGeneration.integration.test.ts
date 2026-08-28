@@ -7,7 +7,7 @@ import * as NodeSqliteClient from "../NodeSqliteClient.ts";
 
 const layer = it.layer(Layer.mergeAll(NodeSqliteClient.layerMemory()));
 
-layer("059_ProviderSessionLifecycleGeneration", (it) => {
+layer("059_EngineSessionLifecycleGeneration", (it) => {
   it.effect("marks legacy bindings and persists a new opaque generation", () =>
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;

@@ -13,7 +13,7 @@ import {
 import {
   getModelCapabilities,
   getProviderOptionCurrentValue,
-  getProviderOptionDescriptors,
+  getEngineOptionDescriptors,
 } from "@harnessos/shared/model";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -1043,7 +1043,7 @@ function ModelOptionRows({
 }) {
   const { engine, model } = engineSelection;
   const caps = getModelCapabilities(engine, model);
-  const descriptors = getProviderOptionDescriptors({
+  const descriptors = getEngineOptionDescriptors({
     engine,
     caps,
     selections: engineSelection.options as Record<string, unknown> | undefined,

@@ -38,7 +38,7 @@ import {
   type ProjectDevServerEvent,
   type ServerConfigStreamEvent,
   type ServerLifecycleStreamEvent,
-  type ServerProviderStatusesUpdatedPayload,
+  type ServerEngineStatusesUpdatedPayload,
   type ServerSettingsUpdatedPayload,
   type DeviceEvent,
   type TerminalEvent,
@@ -1346,13 +1346,13 @@ export class WsTransport {
             },
             restartChannel,
           );
-        } else if (channel === WS_CHANNELS.serverProviderStatusesUpdated) {
+        } else if (channel === WS_CHANNELS.serverEngineStatusesUpdated) {
           this.startStream(
             client,
             "server.engines",
-            client[WS_METHODS.subscribeServerProviderStatuses]({}),
-            (payload: ServerProviderStatusesUpdatedPayload) =>
-              this.emit(WS_CHANNELS.serverProviderStatusesUpdated, payload),
+            client[WS_METHODS.subscribeServerEngineStatuses]({}),
+            (payload: ServerEngineStatusesUpdatedPayload) =>
+              this.emit(WS_CHANNELS.serverEngineStatusesUpdated, payload),
             restartChannel,
           );
         } else if (channel === WS_CHANNELS.serverSettingsUpdated) {
@@ -1423,8 +1423,7 @@ export class WsTransport {
     if (isServerLifecyclePushChannel(channel)) {
       if (!this.shouldKeepLifecycleStream()) this.stopStream("server.lifecycle");
     } else if (channel === WS_CHANNELS.serverConfigUpdated) this.stopStream("server.config");
-    else if (channel === WS_CHANNELS.serverProviderStatusesUpdated)
-      this.stopStream("server.engines");
+    else if (channel === WS_CHANNELS.serverEngineStatusesUpdated) this.stopStream("server.engines");
     else if (channel === WS_CHANNELS.serverSettingsUpdated) this.stopStream("server.settings");
     else if (channel === WS_CHANNELS.terminalEvent) this.stopStream("terminal.events");
     else if (channel === WS_CHANNELS.projectDevServerEvent) this.stopStream("project.devServers");

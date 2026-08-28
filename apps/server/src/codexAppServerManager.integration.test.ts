@@ -41,12 +41,12 @@ import {
 } from "./codexWorkingDirectory";
 import { CodexJsonlFramer, CodexJsonlWriter } from "./codexAppServerTransport";
 import { ensureIsolatedScratchWorkspace } from "./scratchWorkspaces";
-import { HARNESSOS_HARNESS_POLICY_MARKER } from "./agentGateway/harnessPolicy.ts";
+import { HARNESSOS_HARNESS_POLICY_MARKER } from "./hostGateway/harnessPolicy.ts";
 import {
-  AGENT_GATEWAY_TURN_AUTHORITY_RETIRED,
-  acquireAgentGatewaySessionLease,
-} from "./agentGateway/sessionLease.ts";
-import { MINIMUM_CODEX_AUTO_REVIEW_CLI_VERSION } from "./provider/codexCliVersion.ts";
+  HOST_GATEWAY_TURN_AUTHORITY_RETIRED,
+  acquireHostGatewaySessionLease,
+} from "./hostGateway/sessionLease.ts";
+import { MINIMUM_CODEX_AUTO_REVIEW_CLI_VERSION } from "./engine/codexCliVersion.ts";
 
 const asThreadId = (value: string): ThreadId => ThreadId.makeUnsafe(value);
 const fullAccessTurnOverrides = {
@@ -88,7 +88,7 @@ describe("Codex HarnessOS harness policy", () => {
     let endpointUrl = "http://127.0.0.1:0/mcp";
     try {
       const manager = new CodexAppServerManager(undefined, {
-        agentGatewayMcp: {
+        hostGatewayMcp: {
           endpointUrl: () => endpointUrl,
           acquireSessionLease: () => ({
             connection: { url: endpointUrl, bearerToken: "token" },
@@ -528,7 +528,7 @@ describe("Codex app-server teardown", () => {
     const manager = new CodexAppServerManager(undefined, { teardownProcessTree });
     const threadId = asThreadId("thread-codex-exit-proof");
     const revokeSessionToken = vi.fn();
-    const gatewaySessionLease = acquireAgentGatewaySessionLease(
+    const gatewaySessionLease = acquireHostGatewaySessionLease(
       {
         connectionForThread: () => ({
           url: "http://127.0.0.1:48123/mcp",
@@ -598,7 +598,7 @@ describe("Codex app-server teardown", () => {
     const manager = new CodexAppServerManager();
     const threadId = asThreadId("thread-codex-spontaneous-exit");
     const revokeSessionToken = vi.fn();
-    const gatewaySessionLease = acquireAgentGatewaySessionLease(
+    const gatewaySessionLease = acquireHostGatewaySessionLease(
       {
         connectionForThread: () => ({
           url: "http://127.0.0.1:48123/mcp",
@@ -4210,7 +4210,7 @@ describe("handleServerNotification error normalization", () => {
           turnId: "turn_parent",
           payload: expect.objectContaining({
             recoveredFrom: "codex/event/task_complete",
-            [AGENT_GATEWAY_TURN_AUTHORITY_RETIRED]: true,
+            [HOST_GATEWAY_TURN_AUTHORITY_RETIRED]: true,
           }),
         }),
       );
@@ -4320,7 +4320,7 @@ describe("handleServerNotification error normalization", () => {
       expect(emitEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           payload: expect.objectContaining({
-            [AGENT_GATEWAY_TURN_AUTHORITY_RETIRED]: true,
+            [HOST_GATEWAY_TURN_AUTHORITY_RETIRED]: true,
           }),
         }),
       );

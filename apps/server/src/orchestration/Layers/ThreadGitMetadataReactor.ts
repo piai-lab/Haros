@@ -9,7 +9,7 @@ import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";
 import { GitCore } from "../../git/Services/GitCore.ts";
 import { GitManager } from "../../git/Services/GitManager.ts";
 import type { ProjectionRepositoryError } from "../../persistence/Errors.ts";
-import { EngineService } from "../../provider/Services/EngineService.ts";
+import { EngineService } from "../../engine/Services/EngineService.ts";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../Services/ProjectionSnapshotQuery.ts";
 import {
@@ -54,7 +54,7 @@ const serverCommandId = (): CommandId =>
 const make = Effect.gen(function* () {
   const orchestrationEngine = yield* OrchestrationEngineService;
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
-  const providerService = yield* EngineService;
+  const engineService = yield* EngineService;
   const gitCore = yield* GitCore;
   const gitManager = yield* GitManager;
 
@@ -324,9 +324,9 @@ const make = Effect.gen(function* () {
 
   const processProviderEvent = (event: EngineRuntimeEvent) => {
     // Native subagent lifecycle events carry the parent HarnessOS thread id and the child identity
-    // in providerRefs. Treating them as parent turns would make shared-root ownership ambiguous
+    // in engineRefs. Treating them as parent turns would make shared-root ownership ambiguous
     // and suppress reconciliation when the actual parent turn completes.
-    if (event.providerRefs?.nativeParentThreadId !== undefined) return Effect.void;
+    if (event.engineRefs?.nativeParentThreadId !== undefined) return Effect.void;
     if (event.type === "turn.started") return trackTurnStart(event);
     if (event.type === "vcs.state.changed") return captureVcsMetadata(event);
     if (
@@ -356,7 +356,7 @@ const make = Effect.gen(function* () {
     worker,
     Effect.gen(function* () {
       yield* Effect.forkScoped(
-        Stream.runForEach(providerService.streamEvents, processProviderEventSafely),
+        Stream.runForEach(engineService.streamEvents, processProviderEventSafely),
       );
     }),
   );

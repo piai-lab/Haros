@@ -15,7 +15,7 @@ import {
 import { resolveThreadWorkspaceCwd } from "@harnessos/shared/threadEnvironment";
 import { Cause, Effect, Layer, ServiceMap } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
-import { redactCreationPlanForPurgedCaller } from "./agentGateway/operationPlan.ts";
+import { redactCreationPlanForPurgedCaller } from "./hostGateway/operationPlan.ts";
 
 import { CheckpointStore } from "./checkpointing/Services/CheckpointStore";
 import {
@@ -26,7 +26,7 @@ import {
 } from "./checkpointing/Utils";
 import { aggregateProfileSkillUsageRows, turnEngineSelectionCte } from "./profileStats";
 import { ENGINE_COMMAND_REACTOR_CONSUMER } from "./persistence/Services/OrchestrationEventDeliveries";
-import { isProviderIntentEventType } from "./orchestration/providerIntentClassification";
+import { isEngineIntentEventType } from "./orchestration/engineIntentClassification";
 import { THREAD_RETENTION_COMMAND_ID_PREFIX } from "./threadRetention";
 
 interface PurgeThreadRow {
@@ -528,7 +528,7 @@ const makeProfileStatsArchive = Effect.gen(function* () {
             OR json_extract(e.payload_json, '$.threadId') = ${threadId}
           )
       `;
-      return unconsumedRows.some((row) => isProviderIntentEventType(row.eventType));
+      return unconsumedRows.some((row) => isEngineIntentEventType(row.eventType));
     });
 
   const loadThreadCheckpointCleanup = (threadId: string) =>
@@ -872,7 +872,7 @@ const makeProfileStatsArchive = Effect.gen(function* () {
           AND status IN ('planned', 'created')
       `;
       yield* sql`
-        DELETE FROM agent_gateway_operations
+        DELETE FROM host_gateway_operations
         WHERE caller_thread_id = ${threadId}
           AND status IN ('reserved', 'completed', 'failed')
       `;
@@ -881,7 +881,7 @@ const makeProfileStatsArchive = Effect.gen(function* () {
         readonly planJson: string;
       }>`
         SELECT operation_id AS "operationId", plan_json AS "planJson"
-        FROM agent_gateway_operations
+        FROM host_gateway_operations
         WHERE caller_thread_id = ${threadId}
           AND status IN ('dispatching', 'compensating')
       `;
@@ -893,7 +893,7 @@ const makeProfileStatsArchive = Effect.gen(function* () {
             operationId: operation.operationId,
           });
           return sql`
-            UPDATE agent_gateway_operations
+            UPDATE host_gateway_operations
             SET plan_json = ${recoveryPlanJson},
                 caller_thread_id = 'purged-thread:' || operation_id,
                 caller_turn_id = 'purged-turn:' || operation_id,

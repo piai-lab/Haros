@@ -13,8 +13,7 @@ const described = <S extends Schema.Top>(schema: S, description: string): S =>
   schema.annotate({ description }) as S;
 
 export const BROWSER_FIELD_INSTRUCTION_COPY = {
-  tabId:
-    "Optional scoped tab returned by browser_tabs/open; omit to use provider-session affinity.",
+  tabId: "Optional scoped tab returned by browser_tabs/open; omit to use engine-session affinity.",
   timeoutMs: "Optional end-to-end action deadline in milliseconds within the published bounds.",
   idempotencyKey:
     "Optional advanced retry key. HarnessOS derives a stable key from the authenticated tool request when omitted; provide one only to deliberately deduplicate a byte-identical retry.",

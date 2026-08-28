@@ -27,7 +27,7 @@ import {
   authEffectRouteLayer,
   binaryUploadEffectRouteLayer,
 } from "./http";
-import { EngineAdapterRegistry } from "./provider/Services/EngineAdapterRegistry";
+import { EngineAdapterRegistry } from "./engine/Services/EngineAdapterRegistry";
 
 const currentSessionId = AuthSessionId.makeUnsafe("11111111-1111-4111-8111-111111111111");
 const otherSessionId = AuthSessionId.makeUnsafe("22222222-2222-4222-8222-222222222222");

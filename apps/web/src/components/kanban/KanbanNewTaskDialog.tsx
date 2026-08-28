@@ -53,7 +53,7 @@ import {
 } from "~/components/ui/dialog";
 import { Switch } from "~/components/ui/switch";
 import { useEngineModelCatalog } from "~/hooks/useEngineModelCatalog";
-import { useRefreshProviderStatusesNow } from "~/hooks/useEngineStatusRefresh";
+import { useRefreshEngineStatusesNow } from "~/hooks/useEngineStatusRefresh";
 import { useEngineStatusesForLocalConfig } from "~/hooks/useEngineStatusesForLocalConfig";
 import { useComposerDropzone } from "~/hooks/useComposerDropzone";
 import { toastManager } from "~/components/ui/toast";
@@ -61,7 +61,7 @@ import { useTheme } from "~/hooks/useTheme";
 import { useI18n } from "~/i18n";
 import { ChevronRightIcon, LoaderCircleIcon, PaperclipIcon } from "~/lib/icons";
 import { formatComposerMentionToken } from "~/lib/composerMentions";
-import { findProviderStatus } from "~/lib/engineAvailability";
+import { findEngineStatus } from "~/lib/engineAvailability";
 import { resolveProviderDiscoveryCwd } from "~/lib/engineDiscovery";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
@@ -122,8 +122,8 @@ export function KanbanNewTaskDialog({
   );
   const projects = useStore((state) => state.projects);
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const providerStatuses = useEngineStatusesForLocalConfig();
-  const refreshProviderStatuses = useRefreshProviderStatusesNow();
+  const engineStatuses = useEngineStatusesForLocalConfig();
+  const refreshEngineStatuses = useRefreshEngineStatusesNow();
   const composerEditorRef = useRef<ComposerPromptEditorHandle>(null);
   const localDirectoryMenuRef = useRef<ComposerLocalDirectoryMenuHandle | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -185,9 +185,9 @@ export function KanbanNewTaskDialog({
 
   // Voice transcription always rides on the Codex ChatGPT session, regardless of
   // which engine the task targets — gate the mic on the Codex status.
-  const voiceProviderStatus = useMemo(
-    () => findProviderStatus(providerStatuses, "codex"),
-    [providerStatuses],
+  const voiceEngineStatus = useMemo(
+    () => findEngineStatus(engineStatuses, "codex"),
+    [engineStatuses],
   );
   const modelHintByEngine = useMemo<Partial<Record<EngineKind, string | null>>>(
     () => ({ [selectedProvider]: selectedModel }),
@@ -265,7 +265,7 @@ export function KanbanNewTaskDialog({
     envMode,
     sendAsDraft,
     resolveServerSettingsForDispatch: fetchSettings,
-    providerStatuses,
+    engineStatuses,
     isPreparingImages,
     waitForPendingImages,
     onOpenChange,
@@ -358,10 +358,10 @@ export function KanbanNewTaskDialog({
     activeThreadId: null,
     threadId: scratchThreadId,
     selectedProvider,
-    activeProviderStatus: voiceProviderStatus,
+    activeEngineStatus: voiceEngineStatus,
     pendingUserInputCount: 0,
     onTranscriptReady: handleTranscriptReady,
-    refreshVoiceStatus: refreshProviderStatuses,
+    refreshVoiceStatus: refreshEngineStatuses,
   });
 
   useEffect(() => {
@@ -591,7 +591,7 @@ export function KanbanNewTaskDialog({
                     engine={selectedProvider}
                     model={selectedModel}
                     lockedProvider={null}
-                    engines={providerStatuses}
+                    engines={engineStatuses}
                     modelOptionsByEngine={modelOptionsByEngine}
                     catalogStateByEngine={catalogStateByEngine}
                     loadingModelProviders={loadingModelProviders}

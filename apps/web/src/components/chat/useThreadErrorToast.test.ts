@@ -4,14 +4,14 @@
 // Depends on: the toast option builder and the engine-delivery block format.
 
 import { ThreadId } from "@harnessos/contracts";
-import { formatProviderDeliveryBlockDetail } from "@harnessos/shared/providerDeliveryBlock";
+import { formatEngineDeliveryBlockDetail } from "@harnessos/shared/engineDeliveryBlock";
 import { describe, expect, it } from "vitest";
 
 import { buildThreadErrorToastOptions, threadErrorToastId } from "./useThreadErrorToast";
 
 const threadId = ThreadId.makeUnsafe("11111111-1111-4111-8111-111111111111");
 
-const blockedError = formatProviderDeliveryBlockDetail(
+const blockedError = formatEngineDeliveryBlockDetail(
   "External engine command claim expired without a durable acceptance result; execution was not replayed.",
 );
 

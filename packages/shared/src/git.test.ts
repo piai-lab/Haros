@@ -9,11 +9,6 @@ import {
   resolveThreadBranchRegressionGuard,
 } from "./git";
 
-const PRE_CUTOVER_NAMESPACE_FIXTURES = [
-  String.fromCharCode(100, 112, 99, 111, 100, 101),
-  String.fromCharCode(116, 51, 99, 111, 100, 101),
-] as const;
-
 describe("isTemporaryWorktreeBranch", () => {
   it("matches generated temporary worktree branches", () => {
     expect(isTemporaryWorktreeBranch(buildTemporaryWorktreeBranchName())).toBe(true);
@@ -22,13 +17,6 @@ describe("isTemporaryWorktreeBranch", () => {
   it("matches generated temporary worktree branches", () => {
     expect(isTemporaryWorktreeBranch(`${WORKTREE_BRANCH_PREFIX}/deadbeef`)).toBe(true);
     expect(isTemporaryWorktreeBranch(` ${WORKTREE_BRANCH_PREFIX}/DEADBEEF `)).toBe(true);
-  });
-
-  it("keeps recognizing only exact pre-cutover temporary namespaces", () => {
-    for (const namespace of PRE_CUTOVER_NAMESPACE_FIXTURES) {
-      expect(isTemporaryWorktreeBranch(`${namespace}/deadbeef`)).toBe(true);
-      expect(isTemporaryWorktreeBranch(`${namespace}/semantic-branch`)).toBe(false);
-    }
   });
 
   it("rejects semantic branch names", () => {
@@ -81,12 +69,10 @@ describe("buildHarnessOSBranchName", () => {
     );
   });
 
-  it("normalizes legacy prefixes before rebuilding the branch", () => {
-    for (const namespace of PRE_CUTOVER_NAMESPACE_FIXTURES) {
-      expect(buildHarnessOSBranchName(`${namespace}/refine toolbar actions`)).toBe(
-        "harnessos/refine-toolbar-actions",
-      );
-    }
+  it("normalizes the canonical prefix before rebuilding the branch", () => {
+    expect(buildHarnessOSBranchName("harnessos/refine toolbar actions")).toBe(
+      "harnessos/refine-toolbar-actions",
+    );
   });
 
   it("falls back to harnessos/update when no preferred name is provided", () => {

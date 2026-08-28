@@ -34,7 +34,7 @@ import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import { CheckpointStore } from "../../checkpointing/Services/CheckpointStore.ts";
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
 import { ProjectionTurnRepositoryLive } from "../../persistence/Layers/ProjectionTurns.ts";
-import { EngineService } from "../../provider/Services/EngineService.ts";
+import { EngineService } from "../../engine/Services/EngineService.ts";
 import { CheckpointReactor, type CheckpointReactorShape } from "../Services/CheckpointReactor.ts";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../Services/ProjectionSnapshotQuery.ts";
@@ -48,7 +48,7 @@ import {
   threadHasInFlightTurn,
 } from "../commandInvariants.ts";
 import { isGitRepository } from "../../git/isRepo.ts";
-import { resolveProviderSessionThread } from "../providerSessionThread.ts";
+import { resolveEngineSessionThread } from "../engineSessionThread.ts";
 
 type ReactorInput =
   | {
@@ -75,7 +75,7 @@ function sameId(left: string | null | undefined, right: string | null | undefine
   return left === right;
 }
 
-function providerSessionHasInFlightTurn(session: EngineSession | undefined): boolean {
+function engineSessionHasInFlightTurn(session: EngineSession | undefined): boolean {
   return (
     session?.status === "connecting" ||
     session?.status === "running" ||
@@ -134,7 +134,7 @@ function resolveExistingAssistantMessageIdForTurn(
 
 const make = Effect.gen(function* () {
   const orchestrationEngine = yield* OrchestrationEngineService;
-  const providerService = yield* EngineService;
+  const engineService = yield* EngineService;
   const checkpointStore = yield* CheckpointStore;
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
   const projectionTurnRepository = yield* ProjectionTurnRepository;
@@ -152,7 +152,7 @@ const make = Effect.gen(function* () {
   const supportsLiveTurnDiffPatch = Effect.fnUntraced(function* (
     engine: EngineRuntimeEvent["engine"],
   ) {
-    const capabilities = yield* providerService
+    const capabilities = yield* engineService
       .getCapabilities(engine)
       .pipe(Effect.catch(() => Effect.succeed(null)));
     return capabilities?.supportsLiveTurnDiffPatch === true;
@@ -304,7 +304,7 @@ const make = Effect.gen(function* () {
       return Option.none();
     }
 
-    const sessions = yield* providerService.listSessions();
+    const sessions = yield* engineService.listSessions();
 
     const findSessionWithCwd = (
       session: (typeof sessions)[number] | undefined,
@@ -315,7 +315,7 @@ const make = Effect.gen(function* () {
       return Option.some({ threadId: session.threadId, cwd: session.cwd });
     };
 
-    const providerThread = yield* resolveProviderSessionThread(
+    const providerThread = yield* resolveEngineSessionThread(
       projectionSnapshotQuery,
       thread.value.id,
     );
@@ -950,12 +950,12 @@ const make = Effect.gen(function* () {
       sessionThreadId === event.payload.threadId
         ? [event.payload.threadId]
         : [event.payload.threadId, sessionThreadId];
-    const [commandReadModel, pendingTurnStarts, providerSessions] = yield* Effect.all([
+    const [commandReadModel, pendingTurnStarts, engineSessions] = yield* Effect.all([
       orchestrationEngine.getReadModel(),
       Effect.forEach(relevantThreadIds, (threadId) =>
         projectionTurnRepository.getPendingTurnStartByThreadId({ threadId }),
       ),
-      providerService.listSessions(),
+      engineService.listSessions(),
     ]);
     const commandThread = commandReadModel.threads.find(
       (entry) => entry.id === event.payload.threadId,
@@ -963,9 +963,7 @@ const make = Effect.gen(function* () {
     const sessionCommandThread = commandReadModel.threads.find(
       (entry) => entry.id === sessionThreadId,
     );
-    const providerSession = providerSessions.find(
-      (session) => session.threadId === sessionThreadId,
-    );
+    const engineSession = engineSessions.find((session) => session.threadId === sessionThreadId);
     const currentThread = commandThread ?? thread;
     const hasPendingNonTerminalTurnStart = pendingTurnStarts.some(
       (pendingTurnStart, index) =>
@@ -977,7 +975,7 @@ const make = Effect.gen(function* () {
       threadHasInFlightTurn(currentThread) ||
       (sessionCommandThread !== undefined && threadHasInFlightTurn(sessionCommandThread)) ||
       hasPendingNonTerminalTurnStart ||
-      providerSessionHasInFlightTurn(providerSession)
+      engineSessionHasInFlightTurn(engineSession)
     ) {
       yield* appendRevertFailureActivity({
         threadId: event.payload.threadId,
@@ -1322,7 +1320,7 @@ const make = Effect.gen(function* () {
     clearWorkspaceIndexCache(checkpointCwd);
 
     if (rolledBackTurns > 0) {
-      const conversationRollbackFailure = yield* providerService
+      const conversationRollbackFailure = yield* engineService
         .rollbackConversation({
           threadId: sessionThreadId,
           numTurns: rolledBackTurns,
@@ -1412,7 +1410,7 @@ const make = Effect.gen(function* () {
     event: Extract<OrchestrationEvent, { type: "thread.checkpoint-revert-requested" }>,
   ) =>
     Effect.gen(function* () {
-      const providerThread = yield* resolveProviderSessionThread(
+      const providerThread = yield* resolveEngineSessionThread(
         projectionSnapshotQuery,
         event.payload.threadId,
       );
@@ -1559,7 +1557,7 @@ const make = Effect.gen(function* () {
       );
 
       yield* Effect.forkScoped(
-        Stream.runForEach(providerService.streamEvents, (event) => {
+        Stream.runForEach(engineService.streamEvents, (event) => {
           if (event.type === "turn.started" || event.type === "turn.completed") {
             return worker.enqueue({ source: "runtime", event });
           }

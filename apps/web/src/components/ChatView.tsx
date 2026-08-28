@@ -23,7 +23,7 @@ import {
   type PinnedMessage,
   ENGINE_SEND_TURN_MAX_ATTACHMENTS,
   type ResolvedKeybindingsConfig,
-  type ServerProviderStatus,
+  type ServerEngineStatus,
   ThreadId,
   ThreadMarkerId,
   type ThreadGoalAchievement,
@@ -106,7 +106,7 @@ import {
   serverQueryKeys,
   serverSettingsQueryOptions,
 } from "~/lib/serverReactQuery";
-import { useRefreshProviderStatusesNow } from "~/hooks/useEngineStatusRefresh";
+import { useRefreshEngineStatusesNow } from "~/hooks/useEngineStatusRefresh";
 import { reportFocusedComposerReadiness } from "~/startup/startupSplash";
 import { isTerminalStartupCatalogState } from "~/startup/startupReadiness";
 import { SINGLE_CHAT_PANE_SCOPE_ID } from "~/lib/chatPaneScope";
@@ -122,9 +122,9 @@ import {
 import { joinProjectPath } from "~/lib/projectPaths";
 import { getLocalFolderBrowseRootPath, isLocalFolderMentionQuery } from "~/lib/localFolderMentions";
 import {
-  findProviderStatus,
+  findEngineStatus,
   normalizeCustomBinaryPath,
-  normalizeProviderStatusForLocalConfig,
+  normalizeEngineStatusForLocalConfig,
   resolveProviderSendAvailabilityWithRefresh,
 } from "~/lib/engineAvailability";
 import {
@@ -566,7 +566,7 @@ import {
   buildExpiredTerminalContextToastCopy,
   buildLocalDraftThread,
   DISMISSED_PROVIDER_HEALTH_BANNERS_KEY,
-  DismissedProviderHealthBannersSchema,
+  DismissedEngineHealthBannersSchema,
   collectUserMessageBlobPreviewUrls,
   deriveComposerSendState,
   dispatchExactCommandWithOneReplay,
@@ -591,7 +591,7 @@ import {
   PullRequestDialogState,
   type QueuedSteerGate,
   resolveQueuedSteerGateTransition,
-  shouldRenderProviderHealthBanner,
+  shouldRenderEngineHealthBanner,
   resolveRuntimeModeAfterApprovalDecision,
   revokeBlobPreviewUrl,
   revokeUserMessagePreviewUrls,
@@ -1052,7 +1052,7 @@ function canHandleComposerPickerShortcut(
   );
 }
 const EMPTY_AVAILABLE_EDITORS: EditorId[] = [];
-const EMPTY_PROVIDER_STATUSES: ServerProviderStatus[] = [];
+const EMPTY_PROVIDER_STATUSES: ServerEngineStatus[] = [];
 const EMPTY_TERMINAL_RUNTIME_ENV: Record<string, string> = {};
 const MAX_DISMISSED_PROVIDER_HEALTH_BANNERS = 50;
 const EMPTY_LAST_INVOKED_SCRIPT_BY_PROJECT: Record<string, string> = {};
@@ -1104,7 +1104,7 @@ function getEngineStartOptionsCustomBinaryPath(
   }
 }
 
-function getProviderHealthBannerDismissalKey(status: ServerProviderStatus | null): string | null {
+function getEngineHealthBannerDismissalKey(status: ServerEngineStatus | null): string | null {
   if (!status || status.status === "ready") {
     return null;
   }
@@ -1550,7 +1550,7 @@ export default function ChatView({
       crossTaskSourceThreadId
         ? {
             sourceThreadId: crossTaskSourceThreadId,
-            sourceProvider: crossTaskSourceThread?.engineSelection.engine ?? null,
+            sourceEngine: crossTaskSourceThread?.engineSelection.engine ?? null,
           }
         : null,
     [crossTaskSourceThread?.engineSelection.engine, crossTaskSourceThreadId],
@@ -1709,10 +1709,10 @@ export default function ChatView({
     EMPTY_LAST_INVOKED_SCRIPT_BY_PROJECT,
     LastInvokedScriptByProjectSchema,
   );
-  const [dismissedProviderHealthBannerKeys, setDismissedProviderHealthBannerKeys] = useLocalStorage(
+  const [dismissedEngineHealthBannerKeys, setDismissedEngineHealthBannerKeys] = useLocalStorage(
     DISMISSED_PROVIDER_HEALTH_BANNERS_KEY,
     EMPTY_DISMISSED_PROVIDER_HEALTH_BANNERS,
-    DismissedProviderHealthBannersSchema,
+    DismissedEngineHealthBannersSchema,
   );
   const [dismissedRateLimitBannerKey, setDismissedRateLimitBannerKey] = useState<string | null>(
     null,
@@ -2424,7 +2424,7 @@ export default function ChatView({
   const showDebugTaskBanner = import.meta.env.DEV && featureFlags["show-debug-task-banner"];
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
-  const providerStatuses = useMemo(
+  const engineStatuses = useMemo(
     () =>
       (serverConfigQuery.data?.engines ?? EMPTY_PROVIDER_STATUSES)
         .map((status) => {
@@ -2432,7 +2432,7 @@ export default function ChatView({
             serverSettingsSnapshot,
             status.engine,
           );
-          return normalizeProviderStatusForLocalConfig({
+          return normalizeEngineStatusForLocalConfig({
             engine: status.engine,
             status,
             customBinaryPath,
@@ -4121,12 +4121,12 @@ export default function ChatView({
   useEffect(() => {
     saveConfirmedCustomBinaryPaths(confirmedCustomBinaryPathsByEngine);
   }, [confirmedCustomBinaryPathsByEngine]);
-  const refreshProviderStatuses = useRefreshProviderStatusesNow();
+  const refreshEngineStatuses = useRefreshEngineStatusesNow();
   const handoffBadgeLabel = useMemo(
     () => (activeThread ? resolveThreadHandoffBadgeLabel(activeThread) : null),
     [activeThread],
   );
-  const handoffBadgeSourceProvider = activeThread?.handoff?.sourceProvider ?? null;
+  const handoffBadgeSourceProvider = activeThread?.handoff?.sourceEngine ?? null;
   const handoffBadgeTargetProvider = activeThread?.handoff
     ? activeThread.engineSelection.engine
     : null;
@@ -4134,19 +4134,19 @@ export default function ChatView({
     () =>
       activeThread
         ? resolveAvailableHandoffTargetProviders({
-            sourceProvider: activeThread.engineSelection.engine,
+            sourceEngine: activeThread.engineSelection.engine,
             engineSettings: serverSettingsQuery.data?.engines,
-            providerStatuses,
+            engineStatuses,
           })
         : [],
-    [activeThread, providerStatuses, serverSettingsQuery.data?.engines],
+    [activeThread, engineStatuses, serverSettingsQuery.data?.engines],
   );
   const handoffActionLabel = activeThread
     ? t("composer.handoffThread")
     : t("composer.createHandoffThread");
-  const activeProviderStatus = useMemo(
-    () => findProviderStatus(providerStatuses, selectedProvider),
-    [selectedProvider, providerStatuses],
+  const activeEngineStatus = useMemo(
+    () => findEngineStatus(engineStatuses, selectedProvider),
+    [selectedProvider, engineStatuses],
   );
   useEffect(() => {
     if (!isFocusedPane) return;
@@ -4155,15 +4155,15 @@ export default function ChatView({
       serverConfigQuery.isError ||
       serverSettingsQuery.isError ||
       serverSettingsSnapshot.engines[selectedProvider]?.enabled === false ||
-      activeProviderStatus?.authStatus === "unauthenticated" ||
-      (activeProviderStatus !== null && activeProviderStatus.available === false);
+      activeEngineStatus?.authStatus === "unauthenticated" ||
+      (activeEngineStatus !== null && activeEngineStatus.available === false);
     reportFocusedComposerReadiness(
       snapshotsSettled &&
         (deterministicRecovery ||
           isTerminalStartupCatalogState(catalogStateByEngine[selectedProvider])),
     );
   }, [
-    activeProviderStatus,
+    activeEngineStatus,
     catalogStateByEngine,
     isFocusedPane,
     selectedProvider,
@@ -4173,18 +4173,18 @@ export default function ChatView({
     serverSettingsQuery.isPending,
     serverSettingsSnapshot.engines,
   ]);
-  const activeProviderHealthBannerDismissalKey = useMemo(
-    () => getProviderHealthBannerDismissalKey(activeProviderStatus),
-    [activeProviderStatus],
+  const activeEngineHealthBannerDismissalKey = useMemo(
+    () => getEngineHealthBannerDismissalKey(activeEngineStatus),
+    [activeEngineStatus],
   );
-  const visibleActiveProviderStatus =
-    activeProviderHealthBannerDismissalKey &&
-    dismissedProviderHealthBannerKeys.includes(activeProviderHealthBannerDismissalKey)
+  const visibleActiveEngineStatus =
+    activeEngineHealthBannerDismissalKey &&
+    dismissedEngineHealthBannerKeys.includes(activeEngineHealthBannerDismissalKey)
       ? null
-      : activeProviderStatus;
-  const voiceProviderStatus = useMemo(
-    () => findProviderStatus(providerStatuses, "codex"),
-    [providerStatuses],
+      : activeEngineStatus;
+  const voiceEngineStatus = useMemo(
+    () => findEngineStatus(engineStatuses, "codex"),
+    [engineStatuses],
   );
   const activeProjectCwd = activeProject?.cwd ?? null;
   const activeThreadWorktreePath = isStudioContainer ? null : (activeThread?.worktreePath ?? null);
@@ -4378,7 +4378,7 @@ export default function ChatView({
     (activeThread.messages.length > 0 ||
       (activeThread.session !== null && activeThread.session.status !== "closed")),
   );
-  const shouldShowProviderHealthBanner = shouldRenderProviderHealthBanner({
+  const shouldShowEngineHealthBanner = shouldRenderEngineHealthBanner({
     threadEntryPoint: terminalState.entryPoint,
     terminalWorkspaceTerminalTabActive,
   });
@@ -4621,10 +4621,10 @@ export default function ChatView({
     activeThreadId: activeThread?.id ?? null,
     threadId,
     selectedProvider,
-    activeProviderStatus: voiceProviderStatus,
+    activeEngineStatus: voiceEngineStatus,
     pendingUserInputCount: pendingUserInputs.length,
     onTranscriptReady: appendVoiceTranscriptToComposer,
-    refreshVoiceStatus: refreshProviderStatuses,
+    refreshVoiceStatus: refreshEngineStatuses,
     actionArmDelayMs: VOICE_RECORDER_ACTION_ARM_DELAY_MS,
     failureCopy: {
       transcriptionFailedTitle: "Couldn't transcribe voice note",
@@ -7177,13 +7177,13 @@ export default function ChatView({
   );
 
   const onCreateHandoffThread = useCallback(
-    async (targetProvider: EngineKind) => {
+    async (targetEngine: EngineKind) => {
       if (!activeThread || handoffDisabled) {
         return;
       }
 
       try {
-        await createThreadHandoff(activeThread, targetProvider);
+        await createThreadHandoff(activeThread, targetEngine);
       } catch (error) {
         toastManager.add({
           type: "error",
@@ -8155,8 +8155,8 @@ export default function ChatView({
     sendPreflightInFlightRef.current = true;
     const sendEngineAvailability = await resolveProviderSendAvailabilityWithRefresh({
       engine: selectedEngineSelectionForSend.engine,
-      statuses: providerStatuses,
-      refreshStatuses: () => refreshProviderStatuses({ silent: true }),
+      statuses: engineStatuses,
+      refreshStatuses: () => refreshEngineStatuses({ silent: true }),
     }).finally(() => {
       sendPreflightInFlightRef.current = false;
     });
@@ -10059,7 +10059,7 @@ export default function ChatView({
     <>
       <ComposerEnginePicker
         engine={selectedProvider}
-        engines={providerStatuses}
+        engines={engineStatuses}
         hiddenEngines={settings.hiddenEngines}
         engineOrder={settings.engineOrder}
         onEngineChange={onComposerEngineSelect}
@@ -11493,18 +11493,18 @@ export default function ChatView({
     onUnblock: unblockActiveThread,
     unblocking: unblockingActiveThread,
   });
-  const dismissActiveProviderHealthBanner = useCallback(() => {
-    if (!activeProviderHealthBannerDismissalKey) return;
-    setDismissedProviderHealthBannerKeys((current) => {
-      if (current.includes(activeProviderHealthBannerDismissalKey)) {
+  const dismissActiveEngineHealthBanner = useCallback(() => {
+    if (!activeEngineHealthBannerDismissalKey) return;
+    setDismissedEngineHealthBannerKeys((current) => {
+      if (current.includes(activeEngineHealthBannerDismissalKey)) {
         return current;
       }
-      return [activeProviderHealthBannerDismissalKey, ...current].slice(
+      return [activeEngineHealthBannerDismissalKey, ...current].slice(
         0,
         MAX_DISMISSED_PROVIDER_HEALTH_BANNERS,
       );
     });
-  }, [activeProviderHealthBannerDismissalKey, setDismissedProviderHealthBannerKeys]);
+  }, [activeEngineHealthBannerDismissalKey, setDismissedEngineHealthBannerKeys]);
   const dismissActiveRateLimitBanner = useCallback(() => {
     if (!activeRateLimitBannerDismissalKey) return;
     setDismissedRateLimitBannerKey(activeRateLimitBannerDismissalKey);
@@ -12640,8 +12640,8 @@ export default function ChatView({
       {/* Thread-level errors render as a toast (see `useThreadErrorToast`) so they
           never displace the transcript. */}
       <EngineHealthBanner
-        status={shouldShowProviderHealthBanner ? visibleActiveProviderStatus : null}
-        onDismiss={dismissActiveProviderHealthBanner}
+        status={shouldShowEngineHealthBanner ? visibleActiveEngineStatus : null}
+        onDismiss={dismissActiveEngineHealthBanner}
       />
       <RateLimitBanner
         rateLimitStatus={visibleActiveRateLimitStatus}

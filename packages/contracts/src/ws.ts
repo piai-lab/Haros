@@ -122,8 +122,8 @@ import {
   ServerEngineUpdateInput,
   ServerUpdateEngineCredentialInput,
   ServerUpdateSettingsInput,
-  ServerListProviderUsageInput,
-  ServerProviderStatusesUpdatedPayload,
+  ServerListEngineUsageInput,
+  ServerEngineStatusesUpdatedPayload,
   ServerSettingsUpdatedPayload,
   ServerStopLocalServerInput,
   ServerVoicePrewarmInput,
@@ -281,8 +281,8 @@ export const WS_METHODS = {
   serverUpdateSettings: "server.updateSettings",
   serverResetSettings: "server.resetSettings",
   serverUpdateEngineCredential: "server.updateEngineCredential",
-  serverRefreshProviders: "server.refreshEngines",
-  serverUpdateProvider: "server.updateEngine",
+  serverRefreshEngines: "server.refreshEngines",
+  serverUpdateEngine: "server.updateEngine",
   serverListExternalMcpIntegrations: "server.listExternalMcpIntegrations",
   serverCreateExternalMcpIntegration: "server.createExternalMcpIntegration",
   serverRevokeExternalMcpIntegration: "server.revokeExternalMcpIntegration",
@@ -290,7 +290,7 @@ export const WS_METHODS = {
   serverListWorktrees: "server.listWorktrees",
   serverListLocalServers: "server.listLocalServers",
   serverStopLocalServer: "server.stopLocalServer",
-  serverListProviderUsage: "server.listProviderUsage",
+  serverListEngineUsage: "server.listEngineUsage",
   serverGetUsageHistory: "server.getUsageHistory",
   serverCommandUsageHistory: "server.commandUsageHistory",
   statsGetProfileStats: "stats.getProfileStats",
@@ -303,7 +303,7 @@ export const WS_METHODS = {
   serverUpsertKeybinding: "server.upsertKeybinding",
   subscribeServerLifecycle: "server.subscribeLifecycle",
   subscribeServerConfig: "server.subscribeConfig",
-  subscribeServerProviderStatuses: "server.subscribeProviderStatuses",
+  subscribeServerEngineStatuses: "server.subscribeEngineStatuses",
   subscribeServerSettings: "server.subscribeSettings",
   orchestrationUserInputPresenter: "orchestration.user-input.presenter",
 
@@ -312,16 +312,16 @@ export const WS_METHODS = {
   subscribeOrchestrationDomainEvents: "orchestration.subscribeDomainEvents",
 
   // Engine discovery
-  providerGetComposerCapabilities: "engine.getComposerCapabilities",
-  providerGetExecutionCapabilities: "engine.getExecutionCapabilities",
-  providerCompactThread: "engine.compactThread",
-  providerListCommands: "engine.listCommands",
-  providerListSkills: "engine.listSkills",
-  providerListSkillsCatalog: "engine.listSkillsCatalog",
-  providerListPlugins: "engine.listPlugins",
+  engineGetComposerCapabilities: "engine.getComposerCapabilities",
+  engineGetExecutionCapabilities: "engine.getExecutionCapabilities",
+  engineCompactThread: "engine.compactThread",
+  engineListCommands: "engine.listCommands",
+  engineListSkills: "engine.listSkills",
+  engineListSkillsCatalog: "engine.listSkillsCatalog",
+  engineListPlugins: "engine.listPlugins",
   providerReadPlugin: "engine.readPlugin",
-  providerListModels: "engine.listModels",
-  providerListAgents: "engine.listAgents",
+  engineListModels: "engine.listModels",
+  engineListAgents: "engine.listAgents",
 
   // HarnessOS Agent model services
   oaModelServicesList: "oaModelServices.list",
@@ -380,7 +380,7 @@ export const WS_CHANNELS = {
   serverWelcome: "server.welcome",
   serverMaintenanceUpdated: "server.maintenanceUpdated",
   serverConfigUpdated: "server.configUpdated",
-  serverProviderStatusesUpdated: "server.providerStatusesUpdated",
+  serverEngineStatusesUpdated: "server.engineStatusesUpdated",
   serverSettingsUpdated: "server.settingsUpdated",
 } as const;
 
@@ -549,8 +549,8 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.serverUpdateSettings, ServerUpdateSettingsInput),
   tagRequestBody(WS_METHODS.serverResetSettings, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverUpdateEngineCredential, ServerUpdateEngineCredentialInput),
-  tagRequestBody(WS_METHODS.serverRefreshProviders, Schema.Struct({})),
-  tagRequestBody(WS_METHODS.serverUpdateProvider, ServerEngineUpdateInput),
+  tagRequestBody(WS_METHODS.serverRefreshEngines, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.serverUpdateEngine, ServerEngineUpdateInput),
   tagRequestBody(WS_METHODS.serverListExternalMcpIntegrations, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverCreateExternalMcpIntegration, ExternalMcpCreateIntegrationInput),
   tagRequestBody(WS_METHODS.serverRevokeExternalMcpIntegration, ExternalMcpRevokeIntegrationInput),
@@ -558,7 +558,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.serverListWorktrees, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverListLocalServers, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverStopLocalServer, ServerStopLocalServerInput),
-  tagRequestBody(WS_METHODS.serverListProviderUsage, ServerListProviderUsageInput),
+  tagRequestBody(WS_METHODS.serverListEngineUsage, ServerListEngineUsageInput),
   tagRequestBody(WS_METHODS.statsGetProfileStats, StatsGetProfileStatsInput),
   tagRequestBody(WS_METHODS.statsGetProfileTokenStats, StatsGetProfileTokenStatsInput),
   tagRequestBody(WS_METHODS.serverGetDiagnostics, Schema.Struct({})),
@@ -569,16 +569,16 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.serverUpsertKeybinding, KeybindingRule),
 
   // Engine discovery
-  tagRequestBody(WS_METHODS.providerGetComposerCapabilities, EngineGetComposerCapabilitiesInput),
-  tagRequestBody(WS_METHODS.providerGetExecutionCapabilities, EngineExecutionCapabilitiesInput),
-  tagRequestBody(WS_METHODS.providerCompactThread, EngineCompactThreadInput),
-  tagRequestBody(WS_METHODS.providerListCommands, EngineListCommandsInput),
-  tagRequestBody(WS_METHODS.providerListSkills, EngineListSkillsInput),
-  tagRequestBody(WS_METHODS.providerListSkillsCatalog, EngineSkillsCatalogInput),
-  tagRequestBody(WS_METHODS.providerListPlugins, EngineListPluginsInput),
+  tagRequestBody(WS_METHODS.engineGetComposerCapabilities, EngineGetComposerCapabilitiesInput),
+  tagRequestBody(WS_METHODS.engineGetExecutionCapabilities, EngineExecutionCapabilitiesInput),
+  tagRequestBody(WS_METHODS.engineCompactThread, EngineCompactThreadInput),
+  tagRequestBody(WS_METHODS.engineListCommands, EngineListCommandsInput),
+  tagRequestBody(WS_METHODS.engineListSkills, EngineListSkillsInput),
+  tagRequestBody(WS_METHODS.engineListSkillsCatalog, EngineSkillsCatalogInput),
+  tagRequestBody(WS_METHODS.engineListPlugins, EngineListPluginsInput),
   tagRequestBody(WS_METHODS.providerReadPlugin, EngineReadPluginInput),
-  tagRequestBody(WS_METHODS.providerListModels, EngineListModelsInput),
-  tagRequestBody(WS_METHODS.providerListAgents, EngineListAgentsInput),
+  tagRequestBody(WS_METHODS.engineListModels, EngineListModelsInput),
+  tagRequestBody(WS_METHODS.engineListAgents, EngineListAgentsInput),
   tagRequestBody(WS_METHODS.oaModelServicesList, OAModelServicesListInput),
   tagRequestBody(WS_METHODS.oaModelServicesGet, OAModelServicesGetInput),
   tagRequestBody(WS_METHODS.oaModelServicesBeginLogin, OAModelServiceBeginLoginInput),
@@ -645,7 +645,7 @@ export interface WsPushPayloadByChannel {
   readonly [WS_CHANNELS.serverWelcome]: WsWelcomePayload;
   readonly [WS_CHANNELS.serverMaintenanceUpdated]: ServerLifecycleStreamEvent;
   readonly [WS_CHANNELS.serverConfigUpdated]: typeof ServerConfigUpdatedPayload.Type;
-  readonly [WS_CHANNELS.serverProviderStatusesUpdated]: typeof ServerProviderStatusesUpdatedPayload.Type;
+  readonly [WS_CHANNELS.serverEngineStatusesUpdated]: typeof ServerEngineStatusesUpdatedPayload.Type;
   readonly [WS_CHANNELS.serverSettingsUpdated]: typeof ServerSettingsUpdatedPayload.Type;
   readonly [WS_CHANNELS.automationEvent]: typeof AutomationStreamEvent.Type;
   readonly [WS_CHANNELS.gitActionProgress]: typeof GitActionProgressEvent.Type;
@@ -682,9 +682,9 @@ export const WsPushServerConfigUpdated = makeWsPushSchema(
   WS_CHANNELS.serverConfigUpdated,
   ServerConfigUpdatedPayload,
 );
-export const WsPushServerProviderStatusesUpdated = makeWsPushSchema(
-  WS_CHANNELS.serverProviderStatusesUpdated,
-  ServerProviderStatusesUpdatedPayload,
+export const WsPushServerEngineStatusesUpdated = makeWsPushSchema(
+  WS_CHANNELS.serverEngineStatusesUpdated,
+  ServerEngineStatusesUpdatedPayload,
 );
 export const WsPushServerSettingsUpdated = makeWsPushSchema(
   WS_CHANNELS.serverSettingsUpdated,
@@ -732,7 +732,7 @@ export const WsPushChannelSchema = Schema.Literals([
   WS_CHANNELS.serverWelcome,
   WS_CHANNELS.serverMaintenanceUpdated,
   WS_CHANNELS.serverConfigUpdated,
-  WS_CHANNELS.serverProviderStatusesUpdated,
+  WS_CHANNELS.serverEngineStatusesUpdated,
   WS_CHANNELS.serverSettingsUpdated,
   WS_CHANNELS.automationEvent,
   WS_CHANNELS.terminalEvent,
@@ -748,7 +748,7 @@ export const WsPush = Schema.Union([
   WsPushServerWelcome,
   WsPushServerMaintenanceUpdated,
   WsPushServerConfigUpdated,
-  WsPushServerProviderStatusesUpdated,
+  WsPushServerEngineStatusesUpdated,
   WsPushServerSettingsUpdated,
   WsPushAutomationEvent,
   WsPushGitActionProgress,

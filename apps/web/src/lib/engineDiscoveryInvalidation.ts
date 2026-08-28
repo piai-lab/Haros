@@ -3,13 +3,13 @@
 // Layer: Web UI engine discovery
 // Exports: per-engine fingerprints and exact changed-engine detection
 
-import { ENGINE_KINDS, type EngineKind, type ServerProviderStatus } from "@harnessos/contracts";
+import { ENGINE_KINDS, type EngineKind, type ServerEngineStatus } from "@harnessos/contracts";
 
 type EngineModelDiscoveryFingerprintEntry = readonly [
-  engine: ServerProviderStatus["engine"],
-  status: ServerProviderStatus["status"],
+  engine: ServerEngineStatus["engine"],
+  status: ServerEngineStatus["status"],
   available: boolean,
-  authStatus: ServerProviderStatus["authStatus"],
+  authStatus: ServerEngineStatus["authStatus"],
   authType: string | null,
   authLabel: string | null,
   version: string | null,
@@ -18,7 +18,7 @@ type EngineModelDiscoveryFingerprintEntry = readonly [
 export type EngineModelDiscoveryInvalidationFingerprints = Partial<Record<EngineKind, string>>;
 
 export function providerModelDiscoveryInvalidationFingerprints(
-  engines: ReadonlyArray<ServerProviderStatus>,
+  engines: ReadonlyArray<ServerEngineStatus>,
 ): EngineModelDiscoveryInvalidationFingerprints {
   const result: EngineModelDiscoveryInvalidationFingerprints = {};
   for (const engine of engines) {

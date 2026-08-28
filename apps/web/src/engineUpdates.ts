@@ -3,7 +3,7 @@
 // Layer: Web settings/notification utility
 // Exports: update candidate helpers, notification keys, and auto-refresh timing.
 
-import type { EngineKind, ServerProviderStatus, ServerSettingsView } from "@harnessos/contracts";
+import type { EngineKind, ServerEngineStatus, ServerSettingsView } from "@harnessos/contracts";
 
 export const ENGINE_UPDATE_INITIAL_REFRESH_DELAY_MS = 10_000;
 export const ENGINE_UPDATE_REFRESH_INTERVAL_MS = 60 * 60 * 1_000;
@@ -79,7 +79,7 @@ export async function withEngineUpdateTimeout<T>(input: {
 }
 
 type EngineUpdateFilterInput = {
-  readonly engines: ReadonlyArray<ServerProviderStatus>;
+  readonly engines: ReadonlyArray<ServerEngineStatus>;
   readonly hiddenEngines?: ReadonlyArray<EngineKind>;
   readonly serverSettings?:
     | Pick<ServerSettingsView, "engines" | "enableEngineUpdateChecks">
@@ -89,7 +89,7 @@ type EngineUpdateFilterInput = {
 };
 
 type EngineUpdateVisibilityInput = {
-  readonly engine: ServerProviderStatus;
+  readonly engine: ServerEngineStatus;
   readonly hiddenEngines?: ReadonlyArray<EngineKind>;
   readonly hiddenProviderSet?: ReadonlySet<EngineKind>;
   readonly serverSettings?:
@@ -99,18 +99,18 @@ type EngineUpdateVisibilityInput = {
   readonly oneClickOnly?: boolean;
 };
 
-export function isEngineUpdateActive(engine: ServerProviderStatus): boolean {
+export function isEngineUpdateActive(engine: ServerEngineStatus): boolean {
   return engine.updateState?.status === "queued" || engine.updateState?.status === "running";
 }
 
 // A engine whose latest version HarnessOS cannot look up (self-updating CLIs such as
 // `cursor-agent`) is permanently "unknown". Treating that as an update prompt made its
 // row nag forever, so those engines get the update offered as a manual action instead.
-export function isProviderLatestVersionKnowable(engine: ServerProviderStatus): boolean {
+export function isProviderLatestVersionKnowable(engine: ServerEngineStatus): boolean {
   return engine.versionAdvisory?.latestVersionKnowable !== false;
 }
 
-export function shouldOfferEngineUpdateAction(engine: ServerProviderStatus): boolean {
+export function shouldOfferEngineUpdateAction(engine: ServerEngineStatus): boolean {
   const advisory = engine.versionAdvisory;
   return (
     advisory?.canUpdate === true &&
@@ -120,7 +120,7 @@ export function shouldOfferEngineUpdateAction(engine: ServerProviderStatus): boo
 }
 
 // Header affordance: reserved for engines HarnessOS can actually assert are outdated.
-export function shouldPromptEngineUpdate(engine: ServerProviderStatus): boolean {
+export function shouldPromptEngineUpdate(engine: ServerEngineStatus): boolean {
   return shouldOfferEngineUpdateAction(engine) && isProviderLatestVersionKnowable(engine);
 }
 
@@ -156,7 +156,7 @@ export function shouldShowEngineUpdateStatus(input: EngineUpdateVisibilityInput)
 
 export function getVisibleEngineUpdateStatuses(
   input: EngineUpdateFilterInput,
-): ServerProviderStatus[] {
+): ServerEngineStatus[] {
   const hiddenProviderSet = new Set(input.hiddenEngines ?? []);
   const oneClickOnly = input.oneClickOnly ?? false;
 
@@ -172,7 +172,7 @@ export function getVisibleEngineUpdateStatuses(
 
 export function getNotifiableEngineUpdateStatuses(
   input: EngineUpdateFilterInput & { readonly liveVersionCheckCompleted: boolean },
-): ServerProviderStatus[] {
+): ServerEngineStatus[] {
   if (!input.liveVersionCheckCompleted) {
     return [];
   }
@@ -180,7 +180,7 @@ export function getNotifiableEngineUpdateStatuses(
 }
 
 export function engineUpdateNotificationKey(
-  engines: ReadonlyArray<ServerProviderStatus>,
+  engines: ReadonlyArray<ServerEngineStatus>,
 ): string | null {
   const parts = engines
     .map((engine) => [engine.engine, engine.versionAdvisory?.latestVersion ?? "unknown"].join(":"))

@@ -698,7 +698,7 @@ describe("ProfileStatsArchive", () => {
           },
         ]);
         yield* sql`
-          INSERT INTO agent_gateway_operations (
+          INSERT INTO host_gateway_operations (
             operation_id, caller_thread_id, caller_turn_id, operation_kind,
             request_id, fingerprint, requested_count, plan_json, status,
             result_json, error_json, created_at, updated_at
@@ -738,7 +738,7 @@ describe("ProfileStatsArchive", () => {
             caller_turn_id AS "callerTurnId", request_id AS "requestId", fingerprint,
             plan_json AS "planJson", status, result_json AS "resultJson",
             error_json AS "errorJson", caller_purged_at AS "callerPurgedAt"
-          FROM agent_gateway_operations
+          FROM host_gateway_operations
           WHERE operation_id = 'operation-live'
         `;
         expect(rows).toHaveLength(1);
@@ -755,7 +755,7 @@ describe("ProfileStatsArchive", () => {
         });
         const retainedCallerIds = yield* sql<{ readonly count: number }>`
           SELECT COUNT(*) AS count
-          FROM agent_gateway_operations
+          FROM host_gateway_operations
           WHERE caller_thread_id = 'thread-purge'
              OR caller_turn_id IN ('turn-purge-terminal', 'turn-purge-live')
         `;

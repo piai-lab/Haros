@@ -107,7 +107,7 @@ const EN_MESSAGES = {
   "search.importFromProviderDescription":
     "Create a local task and resume it from an existing engine ID.",
   "search.noImportProviders": "No connected engines support Chat import in this build.",
-  "search.providerSessionResume": "{engine} resumes a persisted session by session ID.",
+  "search.engineSessionResume": "{engine} resumes a persisted session by session ID.",
   "search.providerThreadResume": "{engine} resumes an existing task by task ID.",
   "search.importing": "Importing…",
   "search.import": "Import",
@@ -354,7 +354,7 @@ const ZH_CN_MESSAGES = {
   "search.importFromProvider": "从引擎导入任务",
   "search.importFromProviderDescription": "创建本机任务，并从现有引擎 ID 恢复。",
   "search.noImportProviders": "当前没有已连接的引擎支持导入 Chat。",
-  "search.providerSessionResume": "{engine} 会通过会话 ID 恢复持久会话。",
+  "search.engineSessionResume": "{engine} 会通过会话 ID 恢复持久会话。",
   "search.providerThreadResume": "{engine} 会通过任务 ID 恢复持久任务。",
   "search.importing": "正在导入…",
   "search.import": "导入",

@@ -129,7 +129,7 @@ describe("EnvironmentPullRequestSection", () => {
       id: `long-${index}`,
       author: "chatgpt-codex-connector",
       body: `**Finding ${index}: gateway compensation skips branch cleanup**\n\n<sub>Medium Severity</sub> <!-- DESCRIPTION START --> When a worktree creation partially fails, the compensation path returns before deleting the branch revision that was created, leaving orphaned refs behind. <!-- DESCRIPTION END -->`,
-      path: "apps/server/src/agentGateway/creationCoordinator.ts",
+      path: "apps/server/src/hostGateway/creationCoordinator.ts",
       url: `${pullRequest.url}#discussion_r${index}`,
       createdAt: "2026-08-07T10:00:00Z",
     }));

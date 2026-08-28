@@ -231,7 +231,7 @@ const worker = setupWorker(
         return;
       }
       if (
-        method === WS_METHODS.subscribeServerProviderStatuses ||
+        method === WS_METHODS.subscribeServerEngineStatuses ||
         method === WS_METHODS.subscribeServerSettings ||
         method === WS_METHODS.subscribeTerminalEvents ||
         method === WS_METHODS.subscribeOrchestrationDomainEvents ||

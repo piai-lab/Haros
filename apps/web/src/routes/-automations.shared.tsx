@@ -1004,7 +1004,7 @@ export function AutomationModelPicker({
 }) {
   const { preferences: settings } = useLocalPreferences();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const providerStatuses = useEngineStatusesForLocalConfig();
+  const engineStatuses = useEngineStatusesForLocalConfig();
   const [open, setOpen] = useState(false);
   const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
   const [prefetchProviders, setPrefetchProviders] = useState<ReadonlyArray<EngineKind>>([]);
@@ -1054,7 +1054,7 @@ export function AutomationModelPicker({
       engine={value.engine}
       model={value.model}
       lockedProvider={null}
-      engines={providerStatuses}
+      engines={engineStatuses}
       modelOptionsByEngine={modelOptionsByEngine}
       catalogStateByEngine={catalogStateByEngine}
       loadingModelProviders={loadingModelProviders}

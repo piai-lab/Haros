@@ -29,7 +29,7 @@ const GetRuntimeRequestSchema = Schema.Struct({
 
 const DeleteRuntimeRequestSchema = GetRuntimeRequestSchema;
 
-const makeProviderSessionRuntimeRepository = Effect.gen(function* () {
+const makeEngineSessionRuntimeRepository = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
 
   const upsertRuntimeRow = SqlSchema.void({
@@ -193,5 +193,5 @@ const makeProviderSessionRuntimeRepository = Effect.gen(function* () {
 
 export const EngineSessionRuntimeRepositoryLive = Layer.effect(
   EngineSessionRuntimeRepository,
-  makeProviderSessionRuntimeRepository,
+  makeEngineSessionRuntimeRepository,
 );

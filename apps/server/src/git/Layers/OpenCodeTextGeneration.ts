@@ -17,9 +17,9 @@ import { sanitizeGeneratedThreadTitle } from "@harnessos/shared/chatThreads";
 import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@harnessos/shared/git";
 import { getEngineSelectionStringOptionValue } from "@harnessos/shared/model";
 
-import { resolveProviderAttachmentPath } from "../../provider/providerAttachmentPaths.ts";
+import { resolveEngineAttachmentPath } from "../../engine/engineAttachmentPaths.ts";
 import { ServerConfig } from "../../config.ts";
-import { appendFileAttachmentsPromptBlock } from "../../provider/attachmentProjection.ts";
+import { appendFileAttachmentsPromptBlock } from "../../engine/attachmentProjection.ts";
 import {
   OpenCodeRuntime,
   KILO_CLI_SPEC,
@@ -30,7 +30,7 @@ import {
   openCodeRuntimeErrorDetail,
   parseOpenCodeModelSlug,
   toOpenCodeFileParts,
-} from "../../provider/opencodeRuntime.ts";
+} from "../../engine/opencodeRuntime.ts";
 import { TextGenerationError } from "../Errors.ts";
 import {
   type TextGenerationOperation,
@@ -372,7 +372,7 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
       const fileParts = toOpenCodeFileParts({
         attachments: input.attachments,
         resolveAttachmentPath: (attachment) =>
-          resolveProviderAttachmentPath({
+          resolveEngineAttachmentPath({
             attachmentsDir: serverConfig.attachmentsDir,
             attachment,
           }),

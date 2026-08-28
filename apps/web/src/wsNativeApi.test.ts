@@ -21,7 +21,7 @@ import {
   WS_CHANNELS,
   WS_METHODS,
   type WsPush,
-  type ServerProviderStatus,
+  type ServerEngineStatus,
 } from "@harnessos/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -121,7 +121,7 @@ function getWindowForTest(): Window & typeof globalThis & { desktopBridge?: unkn
   return testGlobal.window;
 }
 
-const defaultEngines: ReadonlyArray<ServerProviderStatus> = [
+const defaultEngines: ReadonlyArray<ServerEngineStatus> = [
   {
     engine: "codex",
     status: "ready",
@@ -172,12 +172,12 @@ describe("wsNativeApi", () => {
     await api.engine.listAgents({ engine: "codex" }, { signal: controller.signal });
 
     expect(requestMock).toHaveBeenCalledWith(
-      WS_METHODS.providerListModels,
+      WS_METHODS.engineListModels,
       { engine: "codex" },
       { signal: controller.signal },
     );
     expect(requestMock).toHaveBeenCalledWith(
-      WS_METHODS.providerListAgents,
+      WS_METHODS.engineListAgents,
       { engine: "codex" },
       { signal: controller.signal },
     );
@@ -314,26 +314,26 @@ describe("wsNativeApi", () => {
   });
 
   it("delivers and caches engine-only status updates", async () => {
-    const { createWsNativeApi, onServerProviderStatusesUpdated } = await import("./wsNativeApi");
+    const { createWsNativeApi, onServerEngineStatusesUpdated } = await import("./wsNativeApi");
 
     createWsNativeApi();
     const listener = vi.fn();
-    onServerProviderStatusesUpdated(listener);
+    onServerEngineStatusesUpdated(listener);
 
     const payload = {
       engines: defaultEngines,
       passivePresence: {
         state: "settled",
-        recoverableProviders: ["codex"],
+        recoverableEngines: ["codex"],
       },
     } as const;
-    emitPush(WS_CHANNELS.serverProviderStatusesUpdated, payload);
+    emitPush(WS_CHANNELS.serverEngineStatusesUpdated, payload);
 
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith(payload);
 
     const lateListener = vi.fn();
-    onServerProviderStatusesUpdated(lateListener);
+    onServerEngineStatusesUpdated(lateListener);
     expect(lateListener).toHaveBeenCalledTimes(1);
     expect(lateListener).toHaveBeenCalledWith(payload);
   });
@@ -942,11 +942,11 @@ describe("wsNativeApi", () => {
     const { createWsNativeApi } = await import("./wsNativeApi");
     const api = createWsNativeApi();
 
-    await api.orchestration.listProviderDeliveryBlockers({
+    await api.orchestration.listEngineDeliveryBlockers({
       threadId: ThreadId.makeUnsafe("thread-1"),
       limit: 10,
     });
-    await api.orchestration.reconcileProviderDelivery({
+    await api.orchestration.reconcileEngineDelivery({
       eventSequence: 42,
       threadId: ThreadId.makeUnsafe("thread-1"),
       expectedState: "uncertain",
@@ -954,11 +954,11 @@ describe("wsNativeApi", () => {
       note: "The engine confirms it did not accept the command.",
     });
 
-    expect(requestMock).toHaveBeenCalledWith(
-      ORCHESTRATION_WS_METHODS.listProviderDeliveryBlockers,
-      { threadId: "thread-1", limit: 10 },
-    );
-    expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.reconcileProviderDelivery, {
+    expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.listEngineDeliveryBlockers, {
+      threadId: "thread-1",
+      limit: 10,
+    });
+    expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.reconcileEngineDelivery, {
       eventSequence: 42,
       threadId: "thread-1",
       expectedState: "uncertain",

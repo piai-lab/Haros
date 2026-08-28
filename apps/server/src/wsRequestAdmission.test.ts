@@ -15,8 +15,8 @@ describe("WsRequestAdmission", () => {
     expect(classifyWsRequest(WS_METHODS.serverPrewarmVoice)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.serverGetUsageHistory)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.projectsSearchContent)).toBe("expensive-read");
-    expect(classifyWsRequest(WS_METHODS.providerListModels)).toBe("engine-discovery");
-    expect(classifyWsRequest(WS_METHODS.providerListAgents)).toBe("engine-discovery");
+    expect(classifyWsRequest(WS_METHODS.engineListModels)).toBe("engine-discovery");
+    expect(classifyWsRequest(WS_METHODS.engineListAgents)).toBe("engine-discovery");
     expect(classifyWsRequest(WS_METHODS.oaModelServicesList)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.oaModelServicesGet)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.oaModelServicesDiscoverCustom)).toBe("expensive-read");
@@ -91,7 +91,7 @@ describe("WsRequestAdmission", () => {
           ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot,
         );
 
-        const modelCatalog = yield* admission.acquire(1, WS_METHODS.providerListModels);
+        const modelCatalog = yield* admission.acquire(1, WS_METHODS.engineListModels);
         expect(modelCatalog.requestClass).toBe("engine-discovery");
 
         yield* admission.release(shellSnapshot);

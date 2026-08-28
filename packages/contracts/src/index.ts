@@ -24,7 +24,7 @@ export * from "./oaAgentPrompts";
 export * from "./oaWebSearch";
 export * from "./model";
 export * from "./agentMentions";
-export * from "./agentGateway";
+export * from "./hostGateway";
 export * from "./agentTools";
 export * from "./externalMcp";
 export * from "./ws";

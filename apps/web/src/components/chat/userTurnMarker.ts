@@ -5,7 +5,7 @@
 // what gets rendered and what gets measured can never drift apart.
 // Layer: web chat feature (pure logic, no I/O).
 
-// Server-dispatched turns (automation runs, agent gateway tools) take
+// Server-dispatched turns (automation runs, HostGateway tools) take
 // precedence over the steer marker so the origin stays visible even for
 // steered dispatches.
 export type UserTurnMarkerKind = "automation" | "agent" | "steer";

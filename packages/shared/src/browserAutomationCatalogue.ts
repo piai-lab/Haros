@@ -110,7 +110,7 @@ export const DESTRUCTIVE_LOCAL = {
 const BROWSER_COMMON_AGENT_GUIDANCE =
   "Controls only this thread's shared HarnessOS browser runtime (same DOM, cookies and session), never chat or desktop. It may continue in the background when another chat is active; no approval prompt is required.";
 const BROWSER_TAB_SCOPED_AGENT_GUIDANCE =
-  " Omit tabId to use this provider session's assigned tab; only pass a tabId returned by browser_tabs/open in this thread scope.";
+  " Omit tabId to use this engine session's assigned tab; only pass a tabId returned by browser_tabs/open in this thread scope.";
 const BROWSER_SNAPSHOT_TARGET_GUIDANCE =
   ' Use an explicit snapshot target such as {"ref":"e3","snapshotId":"<snapshotId>"}. A bare ref or elementId without its snapshotId is always rejected so an old e3 can never be rebound to a newer page.';
 

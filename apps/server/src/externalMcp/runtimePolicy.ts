@@ -1,6 +1,6 @@
 import type { ExternalMcpCapability, RuntimeMode } from "@harnessos/contracts";
 
-import { GatewayToolError } from "../agentGateway/toolRuntime.ts";
+import { GatewayToolError } from "../hostGateway/toolRuntime.ts";
 
 type ExternalMcpRuntimeMode = Exclude<RuntimeMode, "auto">;
 

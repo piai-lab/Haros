@@ -12,7 +12,7 @@ import { nonEmptyTrimmed } from "@harnessos/shared/text";
 import {
   sanitizeUnmappedProviderData,
   sanitizeUnmappedProviderDetail,
-} from "../provider/unmappedEngineEvents.ts";
+} from "../engine/unmappedEngineEvents.ts";
 
 const MAX_ACTIVITY_DATA_JSON_CHARS = 16_000;
 const MAX_ACTIVITY_DATA_STRING_CHARS = 2_000;

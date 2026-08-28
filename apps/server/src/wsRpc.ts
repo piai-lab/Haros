@@ -32,7 +32,7 @@ import {
   type ServerConfigStreamEvent,
   type ServerDiagnosticsResult,
   type ServerLifecycleStreamEvent,
-  type ServerProviderStatus,
+  type ServerEngineStatus,
 } from "@harnessos/contracts";
 import { clamp } from "effect/Number";
 import { Effect, FileSystem, Layer, Option, Path, Queue, Schema, Scope, Stream } from "effect";
@@ -105,20 +105,20 @@ import { EngineCommandReactor } from "./orchestration/Services/EngineCommandReac
 import { ProjectionStateIncompleteError } from "./persistence/Errors";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEvents";
-import { EngineDiscoveryService } from "./provider/Services/EngineDiscoveryService";
-import { OAEcosystem } from "./provider/Services/OAEcosystem";
-import { OAAgentPromptFiles } from "./provider/Services/OAAgentPromptFiles";
-import { OAWebSearchSettings } from "./provider/Services/OAWebSearchSettings";
-import { OAModelServices } from "./provider/Services/OAModelServices";
-import { discoverSkillsCatalog, harnessosSkillsDir } from "./provider/skillsCatalog";
+import { EngineDiscoveryService } from "./engine/Services/EngineDiscoveryService";
+import { OAEcosystem } from "./engine/Services/OAEcosystem";
+import { OAAgentPromptFiles } from "./engine/Services/OAAgentPromptFiles";
+import { OAWebSearchSettings } from "./engine/Services/OAWebSearchSettings";
+import { OAModelServices } from "./engine/Services/OAModelServices";
+import { discoverSkillsCatalog, harnessosSkillsDir } from "./engine/skillsCatalog";
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
-import { EngineAdapterRegistry } from "./provider/Services/EngineAdapterRegistry";
-import { EngineExecutionCapabilities } from "./provider/Services/EngineExecutionCapabilities";
-import { EngineHealth } from "./provider/Services/EngineHealth";
-import { EngineService } from "./provider/Services/EngineService";
-import { toProviderModelDiscoveryRpcError } from "./provider/providerModelDiscoveryRpcError";
-import { userInputPresenterRegistry } from "./provider/userInputPresenterRegistry";
-import { listProviderUsage } from "./providerUsage";
+import { EngineAdapterRegistry } from "./engine/Services/EngineAdapterRegistry";
+import { EngineExecutionCapabilities } from "./engine/Services/EngineExecutionCapabilities";
+import { EngineHealth } from "./engine/Services/EngineHealth";
+import { EngineService } from "./engine/Services/EngineService";
+import { toEngineModelDiscoveryRpcError } from "./engine/engineModelDiscoveryRpcError";
+import { userInputPresenterRegistry } from "./engine/userInputPresenterRegistry";
+import { listEngineUsage } from "./engineUsage";
 import { UsageHistory } from "./usageHistory/UsageHistory";
 import { ProfileStatsQuery } from "./profileStats";
 import { redactSensitiveProcessArgs } from "./processArgumentRedaction";
@@ -127,7 +127,7 @@ import { ExternalMcpService } from "./externalMcp/Services/ExternalMcpService";
 import { ServerLifecycleEvents } from "./serverLifecycleEvents";
 import { ServerRuntimeStartup } from "./serverRuntimeStartup";
 import { ServerSettingsService } from "./serverSettings";
-import { AgentGateway } from "./agentGateway/Services/AgentGateway";
+import { HostGateway } from "./hostGateway/Services/HostGateway";
 import { isLoopbackHost } from "./startupAccess";
 import { TerminalManager } from "./terminal/Services/Manager";
 import { TerminalThreadTitleTracker } from "./terminal/terminalThreadTitleTracker";
@@ -361,7 +361,7 @@ const makeWsRpcHandlersLayer = () =>
     Effect.gen(function* () {
       const checkpointDiffQuery = yield* CheckpointDiffQuery;
       const automationService = yield* AutomationService;
-      const agentGateway = yield* AgentGateway;
+      const hostGateway = yield* HostGateway;
       const config = yield* ServerConfig;
       const devServerManager = yield* DevServerManager;
       const fileSystem = yield* FileSystem.FileSystem;
@@ -379,15 +379,15 @@ const makeWsRpcHandlersLayer = () =>
       const profileStatsQuery = yield* ProfileStatsQuery;
       const usageHistory = yield* UsageHistory;
       const projectionReadModelQuery = yield* ProjectionSnapshotQuery;
-      const providerAdapterRegistry = yield* EngineAdapterRegistry;
+      const engineAdapterRegistry = yield* EngineAdapterRegistry;
       const engineExecutionCapabilities = yield* EngineExecutionCapabilities;
       const engineDiscoveryService = yield* EngineDiscoveryService;
       const omniMindEcosystem = yield* OAEcosystem;
       const omniMindAgentPromptFiles = yield* OAAgentPromptFiles;
       const omniMindWebSearchSettings = yield* OAWebSearchSettings;
       const omniMindModelServices = yield* OAModelServices;
-      const providerHealth = yield* EngineHealth;
-      const providerService = yield* EngineService;
+      const engineHealth = yield* EngineHealth;
+      const engineService = yield* EngineService;
       const lifecycleEvents = yield* ServerLifecycleEvents;
       const runtimeStartup = yield* ServerRuntimeStartup;
       const serverEnvironment = yield* ServerEnvironment;
@@ -421,7 +421,7 @@ const makeWsRpcHandlersLayer = () =>
         );
       const validateExternalRuntimeModeAdmission = (command: OrchestrationCommand) =>
         Effect.gen(function* () {
-          if (command.type === "thread.create" && command.creationSource === "provider_native") {
+          if (command.type === "thread.create" && command.creationSource === "engine_native") {
             return;
           }
           if (
@@ -697,8 +697,8 @@ const makeWsRpcHandlersLayer = () =>
         path,
         platform: process.platform,
         projectionSnapshotQuery: projectionReadModelQuery,
-        providerAdapterRegistry,
-        providerService,
+        engineAdapterRegistry,
+        engineService,
       });
 
       const dispatchOrchestrationCommand = (command: OrchestrationCommand) =>
@@ -769,7 +769,7 @@ const makeWsRpcHandlersLayer = () =>
 
       const loadServerConfig = Effect.gen(function* () {
         const keybindingsConfig = yield* keybindings.loadConfigState;
-        const providerStatuses = yield* providerHealth.getStatuses;
+        const engineStatuses = yield* engineHealth.getStatuses;
         return {
           cwd: config.cwd,
           homeDir: config.homeDir,
@@ -779,18 +779,18 @@ const makeWsRpcHandlersLayer = () =>
           keybindingsConfigPath: config.keybindingsConfigPath,
           keybindings: keybindingsConfig.keybindings,
           issues: keybindingsConfig.issues,
-          engines: providerStatuses,
+          engines: engineStatuses,
           availableEditors: resolveAvailableEditors(),
         };
       });
 
-      const providerStatusPayload = (engines: ReadonlyArray<ServerProviderStatus>) =>
-        providerHealth.getPassivePresence.pipe(
-          Effect.map((recoverableProviders) => ({
+      const engineStatusPayload = (engines: ReadonlyArray<ServerEngineStatus>) =>
+        engineHealth.getPassivePresence.pipe(
+          Effect.map((recoverableEngines) => ({
             engines,
             passivePresence: {
               state: "settled" as const,
-              recoverableProviders,
+              recoverableEngines,
             },
           })),
         );
@@ -1038,7 +1038,7 @@ const makeWsRpcHandlersLayer = () =>
             "Failed to replay orchestration events",
           );
         },
-        [ORCHESTRATION_WS_METHODS.listProviderDeliveryBlockers]: (input) =>
+        [ORCHESTRATION_WS_METHODS.listEngineDeliveryBlockers]: (input) =>
           rpcEffect(
             providerCommandReactor.listBlockingDeliveries({
               ...(input.threadId === undefined ? {} : { threadId: input.threadId }),
@@ -1046,7 +1046,7 @@ const makeWsRpcHandlersLayer = () =>
             }),
             "Failed to load engine delivery blockers",
           ),
-        [ORCHESTRATION_WS_METHODS.reconcileProviderDelivery]: (input) =>
+        [ORCHESTRATION_WS_METHODS.reconcileEngineDelivery]: (input) =>
           rpcEffect(
             Effect.gen(function* () {
               const principal = yield* CurrentManagedAttachmentPrincipal;
@@ -1765,7 +1765,7 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.serverGetEnvironment]: () =>
           rpcEffect(serverEnvironment.getDescriptor, "Failed to load server environment"),
         [WS_METHODS.serverGetBuiltInToolGroups]: () =>
-          rpcEffect(agentGateway.getBuiltInToolGroups, "Failed to load built-in tool groups"),
+          rpcEffect(hostGateway.getBuiltInToolGroups, "Failed to load built-in tool groups"),
         [WS_METHODS.serverGetSettings]: () =>
           rpcEffect(serverSettings.getSettingsView, "Failed to load server settings"),
         [WS_METHODS.serverUpdateSettings]: (input) =>
@@ -1777,12 +1777,12 @@ const makeWsRpcHandlersLayer = () =>
             serverSettings.updateEngineCredential(input.engine, input.serverPassword),
             "Failed to update engine credential",
           ),
-        [WS_METHODS.serverRefreshProviders]: () =>
+        [WS_METHODS.serverRefreshEngines]: () =>
           rpcEffect(
-            providerHealth.refresh.pipe(Effect.flatMap(providerStatusPayload)),
+            engineHealth.refresh.pipe(Effect.flatMap(engineStatusPayload)),
             "Failed to refresh engines",
           ),
-        [WS_METHODS.serverUpdateProvider]: (input) => providerHealth.updateEngine(input),
+        [WS_METHODS.serverUpdateEngine]: (input) => engineHealth.updateEngine(input),
         [WS_METHODS.serverListExternalMcpIntegrations]: () =>
           rpcEffect(
             requireOwner.pipe(Effect.andThen(externalMcp.listIntegrations())),
@@ -1825,8 +1825,8 @@ const makeWsRpcHandlersLayer = () =>
             profileStatsQuery.getProfileTokenStats(input),
             "Failed to load profile token stats",
           ),
-        [WS_METHODS.serverListProviderUsage]: (input) =>
-          rpcEffect(listProviderUsage(input), "Failed to load engine usage"),
+        [WS_METHODS.serverListEngineUsage]: (input) =>
+          rpcEffect(listEngineUsage(input), "Failed to load engine usage"),
         [WS_METHODS.serverGetUsageHistory]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(usageHistory.get(input))),
@@ -1872,7 +1872,7 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [WS_METHODS.serverPrewarmVoice]: (input) =>
           rpcEffect(
-            providerAdapterRegistry
+            engineAdapterRegistry
               .getByEngine(input.engine)
               .pipe(
                 Effect.flatMap((adapter) =>
@@ -1890,7 +1890,7 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.serverTranscribeVoice]: (input) =>
           rpcEffect(
             voiceUploadAdmissionGate.run(
-              providerAdapterRegistry
+              engineAdapterRegistry
                 .getByEngine(input.engine)
                 .pipe(
                   Effect.flatMap((adapter) =>
@@ -2009,12 +2009,12 @@ const makeWsRpcHandlersLayer = () =>
                   })),
                 ),
                 Stream.merge(
-                  bufferLiveUiStream(providerHealth.streamChanges, {
+                  bufferLiveUiStream(engineHealth.streamChanges, {
                     label: "server.engine-statuses",
                     onDroppedEvents: failLiveUiStreamForSnapshotResync,
                   }).pipe(
                     Stream.map((engines) => ({
-                      type: "providerStatuses" as const,
+                      type: "engineStatuses" as const,
                       payload: { engines },
                     })),
                   ),
@@ -2031,18 +2031,16 @@ const makeWsRpcHandlersLayer = () =>
               ),
             ).pipe(Stream.mapError((cause) => toWsRpcError(cause, "Server config stream failed"))),
           ),
-        [WS_METHODS.subscribeServerProviderStatuses]: (_, { clientId }) =>
+        [WS_METHODS.subscribeServerEngineStatuses]: (_, { clientId }) =>
           streamAdmission.guard(
             clientId,
             { key: "server.engine-statuses" },
             Stream.concat(
-              Stream.fromEffect(
-                providerHealth.getStatuses.pipe(Effect.flatMap(providerStatusPayload)),
-              ),
-              bufferLiveUiStream(providerHealth.streamChanges, {
+              Stream.fromEffect(engineHealth.getStatuses.pipe(Effect.flatMap(engineStatusPayload))),
+              bufferLiveUiStream(engineHealth.streamChanges, {
                 label: "server.engine-statuses",
                 onDroppedEvents: failLiveUiStreamForSnapshotResync,
-              }).pipe(Stream.mapEffect(providerStatusPayload)),
+              }).pipe(Stream.mapEffect(engineStatusPayload)),
             ),
           ),
         [WS_METHODS.subscribeServerSettings]: (_, { clientId }) =>
@@ -2062,23 +2060,23 @@ const makeWsRpcHandlersLayer = () =>
             ),
           ),
 
-        [WS_METHODS.providerGetComposerCapabilities]: (input) =>
+        [WS_METHODS.engineGetComposerCapabilities]: (input) =>
           rpcEffect(
             engineDiscoveryService.getComposerCapabilities(input),
             "Failed to get composer capabilities",
           ),
-        [WS_METHODS.providerGetExecutionCapabilities]: (input) =>
+        [WS_METHODS.engineGetExecutionCapabilities]: (input) =>
           rpcEffect(
             engineExecutionCapabilities.get(input.engineSelection),
             "Failed to get engine execution capabilities",
           ),
-        [WS_METHODS.providerCompactThread]: (input) =>
-          rpcEffect(providerService.compactThread(input), "Failed to compact thread"),
-        [WS_METHODS.providerListCommands]: (input) =>
+        [WS_METHODS.engineCompactThread]: (input) =>
+          rpcEffect(engineService.compactThread(input), "Failed to compact thread"),
+        [WS_METHODS.engineListCommands]: (input) =>
           rpcEffect(engineDiscoveryService.listCommands(input), "Failed to list commands"),
-        [WS_METHODS.providerListSkills]: (input) =>
+        [WS_METHODS.engineListSkills]: (input) =>
           rpcEffect(engineDiscoveryService.listSkills(input), "Failed to list skills"),
-        [WS_METHODS.providerListSkillsCatalog]: (input) =>
+        [WS_METHODS.engineListSkillsCatalog]: (input) =>
           rpcEffect(
             Effect.tryPromise(() =>
               discoverSkillsCatalog({
@@ -2095,17 +2093,17 @@ const makeWsRpcHandlersLayer = () =>
             ),
             "Failed to list the skills catalog",
           ),
-        [WS_METHODS.providerListPlugins]: (input) =>
+        [WS_METHODS.engineListPlugins]: (input) =>
           rpcEffect(engineDiscoveryService.listPlugins(input), "Failed to list plugins"),
         [WS_METHODS.providerReadPlugin]: (input) =>
           rpcEffect(engineDiscoveryService.readPlugin(input), "Failed to read plugin"),
-        [WS_METHODS.providerListModels]: (input) =>
+        [WS_METHODS.engineListModels]: (input) =>
           engineDiscoveryService.listModels(input).pipe(
             Effect.catch((cause) =>
-              providerHealth.getStatuses.pipe(
+              engineHealth.getStatuses.pipe(
                 Effect.flatMap((statuses) =>
                   Effect.fail(
-                    toProviderModelDiscoveryRpcError({
+                    toEngineModelDiscoveryRpcError({
                       cause,
                       engine: input.engine,
                       statuses,
@@ -2115,7 +2113,7 @@ const makeWsRpcHandlersLayer = () =>
               ),
             ),
           ),
-        [WS_METHODS.providerListAgents]: (input) =>
+        [WS_METHODS.engineListAgents]: (input) =>
           rpcEffect(engineDiscoveryService.listAgents(input), "Failed to list agents"),
         [WS_METHODS.oaEcosystemList]: (input) =>
           rpcEffect(

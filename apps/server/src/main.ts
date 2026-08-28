@@ -35,10 +35,10 @@ import * as SqlitePersistence from "./persistence/Layers/Sqlite";
 import { EngineRuntimeEventRepositoryLive } from "./persistence/Layers/EngineRuntimeEvents";
 import { makeServerApplicationLayers } from "./serverLayers";
 import { startServerMemoryDiagnostics } from "./memoryDiagnostics";
-import { startClaudeCredentialKeepalive } from "./provider/claudeCredentialKeepalive";
+import { startClaudeCredentialKeepalive } from "./engine/claudeCredentialKeepalive";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
-import { EngineSessionReaperLive } from "./provider/Layers/EngineSessionReaper";
-import { EngineRuntimeReconcilerLive } from "./provider/Layers/EngineRuntimeReconciler";
+import { EngineSessionReaperLive } from "./engine/Layers/EngineSessionReaper";
+import { EngineRuntimeReconcilerLive } from "./engine/Layers/EngineRuntimeReconciler";
 import { Server } from "./effectServer";
 import { ServerLoggerLive } from "./serverLogger";
 import { ServerSettingsService } from "./serverSettings";
@@ -304,23 +304,23 @@ const ServerConfigLive = (input: CliInput) =>
   );
 
 const LayerLive = (input: CliInput) => {
-  const { runtimeServicesLayer, providerLayer } = makeServerApplicationLayers();
-  const providerSessionReaperLayer = EngineSessionReaperLive.pipe(
+  const { runtimeServicesLayer, engineLayer } = makeServerApplicationLayers();
+  const engineSessionReaperLayer = EngineSessionReaperLive.pipe(
     // The reaper coordinates orchestration state with live engine sessions,
     // so it belongs at the top level where both layers are available.
     Layer.provideMerge(runtimeServicesLayer),
-    Layer.provideMerge(providerLayer),
+    Layer.provideMerge(engineLayer),
   );
   const engineRuntimeReconcilerLayer = EngineRuntimeReconcilerLive.pipe(
     Layer.provide(EngineRuntimeEventRepositoryLive),
     Layer.provideMerge(runtimeServicesLayer),
-    Layer.provideMerge(providerLayer),
+    Layer.provideMerge(engineLayer),
   );
 
   return Layer.empty.pipe(
     Layer.provideMerge(runtimeServicesLayer),
-    Layer.provideMerge(providerLayer),
-    Layer.provideMerge(providerSessionReaperLayer),
+    Layer.provideMerge(engineLayer),
+    Layer.provideMerge(engineSessionReaperLayer),
     Layer.provideMerge(engineRuntimeReconcilerLayer),
     Layer.provideMerge(SqlitePersistence.layerConfig),
     Layer.provideMerge(ServerLoggerLive),

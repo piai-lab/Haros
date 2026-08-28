@@ -7,10 +7,10 @@ import { type ReactNode } from "react";
 
 import { useAccountCapacity } from "~/hooks/useAccountCapacity";
 import {
-  deriveProviderUsageDisplayRows,
-  selectPrimaryProviderUsageDisplayRow,
+  deriveEngineUsageDisplayRows,
+  selectPrimaryEngineUsageDisplayRow,
   type EngineUsageDisplayRow,
-} from "~/lib/providerUsageDisplay";
+} from "~/lib/engineUsageDisplay";
 import type { OpenUsageUsageLine } from "~/lib/openUsageRateLimits";
 import type { EngineRateLimit } from "~/lib/rateLimits";
 
@@ -34,8 +34,8 @@ export function useEngineUsageMenuModel(engine: EngineKind): EngineUsageMenuMode
   const usageSummary = useAccountCapacity({
     engine,
   });
-  const usageRows = deriveProviderUsageDisplayRows(usageSummary.rateLimits);
-  const primaryRow = selectPrimaryProviderUsageDisplayRow(usageRows);
+  const usageRows = deriveEngineUsageDisplayRows(usageSummary.rateLimits);
+  const primaryRow = selectPrimaryEngineUsageDisplayRow(usageRows);
 
   if (!primaryRow) {
     return null;

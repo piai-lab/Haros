@@ -9,7 +9,7 @@ import {
   type OrchestrationThreadActivity,
   type EngineSelection,
   type EngineKind,
-  type ServerProviderStatus,
+  type ServerEngineStatus,
   type ServerSettingsView,
   type ThreadHandoffImportedMessage,
   type ThreadForkScope,
@@ -19,7 +19,7 @@ import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { sanitizeImportedUserMessageText } from "@harnessos/shared/importedTranscript";
 import { type Thread } from "../types";
 import { DEFAULT_PROVIDER_ORDER } from "../engineOrdering";
-import { findProviderStatus, isProviderUsable } from "./engineAvailability";
+import { findEngineStatus, isProviderUsable } from "./engineAvailability";
 import { randomUUID } from "./utils";
 
 const IMPORTABLE_THREAD_ACTIVITY_KINDS = new Set([
@@ -43,30 +43,30 @@ function isImportableThreadActivity(
 }
 
 export function isEligibleHandoffTargetProvider(input: {
-  readonly sourceProvider: EngineKind;
-  readonly targetProvider: EngineKind;
-  readonly targetProviderEnabled: boolean | null | undefined;
-  readonly targetProviderStatus: ServerProviderStatus | null | undefined;
+  readonly sourceEngine: EngineKind;
+  readonly targetEngine: EngineKind;
+  readonly targetEngineEnabled: boolean | null | undefined;
+  readonly targetEngineStatus: ServerEngineStatus | null | undefined;
 }): boolean {
   return (
-    input.targetProvider !== input.sourceProvider &&
-    input.targetProviderEnabled === true &&
-    input.targetProviderStatus?.engine === input.targetProvider &&
-    isProviderUsable(input.targetProviderStatus)
+    input.targetEngine !== input.sourceEngine &&
+    input.targetEngineEnabled === true &&
+    input.targetEngineStatus?.engine === input.targetEngine &&
+    isProviderUsable(input.targetEngineStatus)
   );
 }
 
 export function resolveAvailableHandoffTargetProviders(input: {
-  readonly sourceProvider: EngineKind;
+  readonly sourceEngine: EngineKind;
   readonly engineSettings: ServerSettingsView["engines"] | null | undefined;
-  readonly providerStatuses: readonly ServerProviderStatus[];
+  readonly engineStatuses: readonly ServerEngineStatus[];
 }): ReadonlyArray<EngineKind> {
-  return DEFAULT_PROVIDER_ORDER.filter((targetProvider) =>
+  return DEFAULT_PROVIDER_ORDER.filter((targetEngine) =>
     isEligibleHandoffTargetProvider({
-      sourceProvider: input.sourceProvider,
-      targetProvider,
-      targetProviderEnabled: input.engineSettings?.[targetProvider].enabled,
-      targetProviderStatus: findProviderStatus(input.providerStatuses, targetProvider),
+      sourceEngine: input.sourceEngine,
+      targetEngine,
+      targetEngineEnabled: input.engineSettings?.[targetEngine].enabled,
+      targetEngineStatus: findEngineStatus(input.engineStatuses, targetEngine),
     }),
   );
 }
@@ -75,7 +75,7 @@ export function resolveThreadHandoffBadgeLabel(thread: Pick<Thread, "handoff">):
   if (!thread.handoff) {
     return null;
   }
-  return `Handoff from ${ENGINE_DISPLAY_NAMES[thread.handoff.sourceProvider]}`;
+  return `Handoff from ${ENGINE_DISPLAY_NAMES[thread.handoff.sourceEngine]}`;
 }
 
 // Preserve the visible source thread name when creating the destination thread.
@@ -233,32 +233,32 @@ export function canCreateThreadHandoff(input: {
 
 export function resolveThreadHandoffEngineSelection(input: {
   readonly sourceThread: Pick<Thread, "engineSelection">;
-  readonly targetProvider: EngineKind;
+  readonly targetEngine: EngineKind;
   readonly projectDefaultEngineSelection: EngineSelection | null | undefined;
   readonly stickyEngineSelectionByEngine: Partial<Record<EngineKind, EngineSelection>>;
 }): EngineSelection {
   const isCompatibleSelection = (
     selection: EngineSelection | null | undefined,
   ): selection is EngineSelection => {
-    if (!selection || selection.engine !== input.targetProvider) {
+    if (!selection || selection.engine !== input.targetEngine) {
       return false;
     }
-    return input.targetProvider !== "kilo" || selection.model.startsWith("kilo/");
+    return input.targetEngine !== "kilo" || selection.model.startsWith("kilo/");
   };
 
-  const stickySelection = input.stickyEngineSelectionByEngine[input.targetProvider];
+  const stickySelection = input.stickyEngineSelectionByEngine[input.targetEngine];
   if (isCompatibleSelection(stickySelection)) {
     return stickySelection;
   }
   if (isCompatibleSelection(input.projectDefaultEngineSelection)) {
     return input.projectDefaultEngineSelection;
   }
-  const defaultModel = getDefaultModel(input.targetProvider);
+  const defaultModel = getDefaultModel(input.targetEngine);
   if (!defaultModel) {
     throw new Error("Select a Pi model before handing off to Pi.");
   }
   return {
-    engine: input.targetProvider,
+    engine: input.targetEngine,
     model: defaultModel,
   };
 }

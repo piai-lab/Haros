@@ -11,7 +11,7 @@ export const BrowserDesktopRuntimeId = BrowserUuidId("BrowserDesktopRuntimeId");
 export const BrowserHostConnectionId = BrowserUuidId("BrowserHostConnectionId");
 export const BrowserClientId = BrowserUuidId("BrowserClientId");
 export const BrowserOperationId = BrowserUuidId("BrowserOperationId");
-export const BrowserProviderSessionId = BrowserUuidId("BrowserProviderSessionId");
+export const BrowserEngineSessionId = BrowserUuidId("BrowserEngineSessionId");
 export const BrowserTabId = BrowserUuidId("BrowserTabId");
 export const BrowserSnapshotId = BrowserUuidId("BrowserSnapshotId");
 export const BrowserElementRef = Schema.String.check(Schema.isPattern(/^e[1-9][0-9]{0,3}$/u)).pipe(
@@ -34,8 +34,8 @@ export const BrowserAuthorizationRequestId = BrowserUuidId("BrowserAuthorization
 export const BrowserAuthorizationEpoch = PositiveInt.pipe(
   Schema.brand("BrowserAuthorizationEpoch"),
 );
-export const BrowserProviderRuntimeGeneration = PositiveInt.pipe(
-  Schema.brand("BrowserProviderRuntimeGeneration"),
+export const BrowserEngineRuntimeGeneration = PositiveInt.pipe(
+  Schema.brand("BrowserEngineRuntimeGeneration"),
 );
 export const BrowserRuntimeGeneration = PositiveInt.pipe(Schema.brand("BrowserRuntimeGeneration"));
 export const BrowserControlEpoch = NonNegativeInt.pipe(Schema.brand("BrowserControlEpoch"));
@@ -52,7 +52,7 @@ export type BrowserDesktopRuntimeId = typeof BrowserDesktopRuntimeId.Type;
 export type BrowserHostConnectionId = typeof BrowserHostConnectionId.Type;
 export type BrowserClientId = typeof BrowserClientId.Type;
 export type BrowserOperationId = typeof BrowserOperationId.Type;
-export type BrowserProviderSessionId = typeof BrowserProviderSessionId.Type;
+export type BrowserEngineSessionId = typeof BrowserEngineSessionId.Type;
 export type BrowserTabId = typeof BrowserTabId.Type;
 export type BrowserSnapshotId = typeof BrowserSnapshotId.Type;
 export type BrowserElementRef = typeof BrowserElementRef.Type;
@@ -62,7 +62,7 @@ export type BrowserThreadId = typeof BrowserThreadId.Type;
 export type BrowserCommandId = typeof BrowserCommandId.Type;
 export type BrowserAuthorizationRequestId = typeof BrowserAuthorizationRequestId.Type;
 export type BrowserAuthorizationEpoch = typeof BrowserAuthorizationEpoch.Type;
-export type BrowserProviderRuntimeGeneration = typeof BrowserProviderRuntimeGeneration.Type;
+export type BrowserEngineRuntimeGeneration = typeof BrowserEngineRuntimeGeneration.Type;
 export type BrowserRuntimeGeneration = typeof BrowserRuntimeGeneration.Type;
 export type BrowserControlEpoch = typeof BrowserControlEpoch.Type;
 export type BrowserTabRecordVersion = typeof BrowserTabRecordVersion.Type;

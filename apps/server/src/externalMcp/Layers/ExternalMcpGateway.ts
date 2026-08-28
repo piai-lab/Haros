@@ -9,7 +9,7 @@ import {
   ThreadId,
   type ExternalMcpCapability,
   type EngineKind,
-  type ServerProviderStatus,
+  type ServerEngineStatus,
 } from "@harnessos/contracts";
 import { Effect, Layer, Option, Schema } from "effect";
 
@@ -18,14 +18,14 @@ import { ServerConfig } from "../../config.ts";
 import { OrchestrationEngineService } from "../../orchestration/Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../../orchestration/Services/ProjectionSnapshotQuery.ts";
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
-import { EngineDiscoveryService } from "../../provider/Services/EngineDiscoveryService.ts";
-import { EngineHealth } from "../../provider/Services/EngineHealth.ts";
-import { EngineExecutionCapabilities } from "../../provider/Services/EngineExecutionCapabilities.ts";
+import { EngineDiscoveryService } from "../../engine/Services/EngineDiscoveryService.ts";
+import { EngineHealth } from "../../engine/Services/EngineHealth.ts";
+import { EngineExecutionCapabilities } from "../../engine/Services/EngineExecutionCapabilities.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
-import { AgentGatewayOperationRepository } from "../../agentGateway/Services/AgentGatewayOperationRepository.ts";
-import { makeCreateThreadsHandler } from "../../agentGateway/creationCoordinator.ts";
-import { recoverInterruptedAgentGatewayOperations } from "../../agentGateway/startupRecovery.ts";
-import { extractBearerToken } from "../../agentGateway/bearerToken.ts";
+import { HostGatewayOperationRepository } from "../../hostGateway/Services/HostGatewayOperationRepository.ts";
+import { makeCreateThreadsHandler } from "../../hostGateway/creationCoordinator.ts";
+import { recoverInterruptedHostGatewayOperations } from "../../hostGateway/startupRecovery.ts";
+import { extractBearerToken } from "../../hostGateway/bearerToken.ts";
 import {
   buildMcpInitializeResult,
   JSON_RPC_INVALID_PARAMS,
@@ -39,30 +39,27 @@ import {
   type JsonRpcId,
   type JsonRpcRequest,
   type McpToolCallResult,
-} from "../../agentGateway/protocol.ts";
+} from "../../hostGateway/protocol.ts";
 import {
   gatewayToolErrorResult,
   GatewayToolError,
   READ_ONLY_TOOL_ANNOTATIONS,
   type ExternalClientPrincipal,
   type McpToolEntry,
-} from "../../agentGateway/toolRuntime.ts";
+} from "../../hostGateway/toolRuntime.ts";
 import {
-  AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION,
-  agentGatewayTargetOptionGuidance,
-  loadAgentGatewayProviderCatalog,
-  type AgentGatewayEngineAvailability,
-} from "../../agentGateway/targetResolver.ts";
+  HOST_GATEWAY_TARGET_OPTIONS_DESCRIPTION,
+  hostGatewayTargetOptionGuidance,
+  loadHostGatewayProviderCatalog,
+  type HostGatewayEngineAvailability,
+} from "../../hostGateway/targetResolver.ts";
 import {
   decodeCreateThreadsInput,
   errorText,
   ENGINE_KINDS,
   ToolInputError,
-} from "../../agentGateway/toolInput.ts";
-import {
-  summarizeThreadDetail,
-  summarizeWaitThreadText,
-} from "../../agentGateway/threadSummary.ts";
+} from "../../hostGateway/toolInput.ts";
+import { summarizeThreadDetail, summarizeWaitThreadText } from "../../hostGateway/threadSummary.ts";
 import {
   latestExternalMcpWaitState,
   requestedExternalMcpRunId,
@@ -156,15 +153,15 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
   const snapshotQuery = yield* ProjectionSnapshotQuery;
   const projectionTurns = yield* ProjectionTurnRepository;
   const engineDiscovery = yield* EngineDiscoveryService;
-  const providerHealth = yield* EngineHealth;
+  const engineHealth = yield* EngineHealth;
   const engineExecutionCapabilities = yield* EngineExecutionCapabilities;
   const settings = yield* ServerSettingsService;
   const orchestrationEngine = yield* OrchestrationEngineService;
   const git = yield* GitCore;
   const serverConfig = yield* ServerConfig;
-  const operationRepository = yield* AgentGatewayOperationRepository;
+  const operationRepository = yield* HostGatewayOperationRepository;
 
-  yield* recoverInterruptedAgentGatewayOperations({
+  yield* recoverInterruptedHostGatewayOperations({
     operationRepository: {
       listNonTerminal: externalRepository.listNonTerminalOperations,
       markCompensating: externalRepository.markOperationCompensating,
@@ -181,12 +178,12 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
   const loadProviderAvailabilities = Effect.gen(function* () {
     const [serverSettings, statuses] = yield* Effect.all([
       settings.getSettings,
-      providerHealth.getStatuses,
+      engineHealth.getStatuses,
     ]);
-    const statusByEngine = new Map<EngineKind, ServerProviderStatus>(
+    const statusByEngine = new Map<EngineKind, ServerEngineStatus>(
       statuses.map((status) => [status.engine, status]),
     );
-    return new Map<EngineKind, AgentGatewayEngineAvailability>(
+    return new Map<EngineKind, HostGatewayEngineAvailability>(
       ENGINE_KINDS.map((engine) => {
         const status = statusByEngine.get(engine);
         return [
@@ -226,7 +223,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
     externalMcpRepository: externalRepository,
     serverConfig,
     loadProviderAvailabilities,
-    getProviderExecutionCapabilities: engineExecutionCapabilities.get,
+    getEngineExecutionCapabilities: engineExecutionCapabilities.get,
     requireThreadShell,
   });
 
@@ -262,7 +259,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
           );
         const availabilities = yield* loadProviderAvailabilities;
         const engines = yield* Effect.forEach(ENGINE_KINDS, (engine) =>
-          loadAgentGatewayProviderCatalog({
+          loadHostGatewayProviderCatalog({
             engine,
             discovery: engineDiscovery,
             ...(availabilities.get(engine) ? { availability: availabilities.get(engine)! } : {}),
@@ -281,7 +278,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
               engine.engine,
               {
                 modelValueSource: "engines[].models[].slug",
-                ...agentGatewayTargetOptionGuidance(engine),
+                ...hostGatewayTargetOptionGuidance(engine),
               },
             ]),
           ),
@@ -380,7 +377,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
           projectId: { type: "string" },
           engine: { type: "string", enum: [...ENGINE_KINDS] },
           model: { type: "string" },
-          options: { type: "object", description: AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION },
+          options: { type: "object", description: HOST_GATEWAY_TARGET_OPTIONS_DESCRIPTION },
           prompt: { type: "string", maxLength: EXTERNAL_MCP_MAX_PROMPT_CHARS },
           title: { type: "string", maxLength: 240 },
           environment: { type: "string", enum: ["worktree", "local"] },

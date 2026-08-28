@@ -11,7 +11,7 @@ import {
   ENGINE_RUNTIME_EVENT_MAX_BYTES,
   ENGINE_RUNTIME_EVENT_RETAIN_ACCEPTED,
   EngineRuntimeEventRepository,
-  type PersistedProviderRuntimeEvent,
+  type PersistedEngineRuntimeEvent,
   type EngineRuntimeEventRepositoryShape,
 } from "../Services/EngineRuntimeEvents.ts";
 
@@ -180,7 +180,7 @@ const make = Effect.gen(function* () {
       return {
         sequence: persisted.sequence,
         event: persistedEvent,
-      } satisfies PersistedProviderRuntimeEvent;
+      } satisfies PersistedEngineRuntimeEvent;
     });
 
   const getHighWaterSequence = sql<{ readonly highWaterSequence: number }>`
@@ -214,7 +214,7 @@ const make = Effect.gen(function* () {
                 toPersistenceDecodeError(`EngineRuntimeEvent.readAfter(sequence=${row.sequence})`),
               ),
             );
-            return { sequence: row.sequence, event } satisfies PersistedProviderRuntimeEvent;
+            return { sequence: row.sequence, event } satisfies PersistedEngineRuntimeEvent;
           }),
         { concurrency: 1 },
       );
@@ -273,7 +273,7 @@ const make = Effect.gen(function* () {
                 ),
               ),
             );
-            return { sequence: row.sequence, event } satisfies PersistedProviderRuntimeEvent;
+            return { sequence: row.sequence, event } satisfies PersistedEngineRuntimeEvent;
           }),
         { concurrency: 1 },
       );
@@ -316,7 +316,7 @@ const make = Effect.gen(function* () {
                   ),
                 ),
               );
-              return { sequence: row.sequence, event } satisfies PersistedProviderRuntimeEvent;
+              return { sequence: row.sequence, event } satisfies PersistedEngineRuntimeEvent;
             }),
           { concurrency: 1 },
         );

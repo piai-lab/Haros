@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 
-import { parseOpenCodeModelSlug } from "../../provider/opencodeRuntime.ts";
+import { parseOpenCodeModelSlug } from "../../engine/opencodeRuntime.ts";
 import {
   CodexTextGeneration,
   CursorTextGeneration,

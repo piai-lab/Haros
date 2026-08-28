@@ -83,7 +83,7 @@ import {
   usesReservedCommandAdmission,
 } from "../orchestrationAdmission.ts";
 import { decideOrchestrationCommand } from "../decider.ts";
-import { engineExecutionStructure } from "../../provider/engineExecutionStructure.ts";
+import { engineExecutionStructure } from "../../engine/engineExecutionStructure.ts";
 import { PROJECT_METADATA_SNAPSHOT_PROJECTORS } from "../projectMetadataProjection.ts";
 import { createEmptyReadModel, projectEvent } from "../projector.ts";
 import {

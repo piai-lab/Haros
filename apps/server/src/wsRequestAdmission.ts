@@ -14,7 +14,7 @@ export const WS_REQUEST_CLASS_LIMITS: Readonly<Record<WsRequestClass, number>> =
 
 const CONTROL_METHODS = new Set<string>([
   ORCHESTRATION_WS_METHODS.dispatchCommand,
-  ORCHESTRATION_WS_METHODS.reconcileProviderDelivery,
+  ORCHESTRATION_WS_METHODS.reconcileEngineDelivery,
   WS_METHODS.terminalWrite,
   WS_METHODS.terminalAckOutput,
   WS_METHODS.terminalResize,
@@ -29,8 +29,8 @@ const CONTROL_METHODS = new Set<string>([
 // engine catalog bounded, but give it an independent lane so two long-running
 // snapshot/diff reads cannot strand every Engine until a window-focus refetch.
 const ENGINE_DISCOVERY_METHODS = new Set<string>([
-  WS_METHODS.providerListModels,
-  WS_METHODS.providerListAgents,
+  WS_METHODS.engineListModels,
+  WS_METHODS.engineListAgents,
 ]);
 
 const EXPENSIVE_READ_METHODS = new Set<string>([
@@ -40,7 +40,7 @@ const EXPENSIVE_READ_METHODS = new Set<string>([
   ORCHESTRATION_WS_METHODS.getTurnDiff,
   ORCHESTRATION_WS_METHODS.getFullThreadDiff,
   ORCHESTRATION_WS_METHODS.replayEvents,
-  ORCHESTRATION_WS_METHODS.listProviderDeliveryBlockers,
+  ORCHESTRATION_WS_METHODS.listEngineDeliveryBlockers,
   WS_METHODS.projectsSearchEntries,
   WS_METHODS.projectsSearchContent,
   WS_METHODS.projectsSearchLocalEntries,
@@ -52,7 +52,7 @@ const EXPENSIVE_READ_METHODS = new Set<string>([
   WS_METHODS.gitWorkingTreeDiffStats,
   WS_METHODS.gitSummarizeDiff,
   WS_METHODS.gitPullRequestSnapshot,
-  WS_METHODS.serverListProviderUsage,
+  WS_METHODS.serverListEngineUsage,
   WS_METHODS.serverGetUsageHistory,
   WS_METHODS.serverGetDiagnostics,
   WS_METHODS.serverPrewarmVoice,
@@ -61,11 +61,11 @@ const EXPENSIVE_READ_METHODS = new Set<string>([
   WS_METHODS.serverTranscribeVoice,
   WS_METHODS.statsGetProfileStats,
   WS_METHODS.statsGetProfileTokenStats,
-  WS_METHODS.providerCompactThread,
-  WS_METHODS.providerListCommands,
-  WS_METHODS.providerListSkills,
-  WS_METHODS.providerListSkillsCatalog,
-  WS_METHODS.providerListPlugins,
+  WS_METHODS.engineCompactThread,
+  WS_METHODS.engineListCommands,
+  WS_METHODS.engineListSkills,
+  WS_METHODS.engineListSkillsCatalog,
+  WS_METHODS.engineListPlugins,
   WS_METHODS.providerReadPlugin,
   WS_METHODS.oaModelServicesList,
   WS_METHODS.oaModelServicesGet,

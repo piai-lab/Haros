@@ -23,7 +23,7 @@ import { useServerSettings } from "~/serverSettings";
 import { toastManager } from "~/components/ui/toast";
 import { runtimeModeAvailabilityMessageKeyFromError } from "~/components/chat/RuntimeModeAvailabilityHint";
 import { useEngineStatusesForLocalConfig } from "~/hooks/useEngineStatusesForLocalConfig";
-import { useRefreshProviderStatusesNow } from "~/hooks/useEngineStatusRefresh";
+import { useRefreshEngineStatusesNow } from "~/hooks/useEngineStatusRefresh";
 import { useI18n } from "~/i18n";
 import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
 import { dispatchKanbanDraftCard } from "../../lib/kanbanDispatch";
@@ -71,8 +71,8 @@ export function KanbanProjectBoardView({
 }) {
   const { t } = useI18n();
   const { fetchSettings } = useServerSettings();
-  const providerStatuses = useEngineStatusesForLocalConfig();
-  const refreshProviderStatuses = useRefreshProviderStatusesNow();
+  const engineStatuses = useEngineStatusesForLocalConfig();
+  const refreshEngineStatuses = useRefreshEngineStatusesNow();
   const setDraftOrder = useKanbanUiStore((state) => state.setDraftOrder);
   const [activeCard, setActiveCard] = useState<KanbanCard | null>(null);
   // A completed drag still emits a click on the source card; swallow exactly that one
@@ -103,11 +103,11 @@ export function KanbanProjectBoardView({
       });
       return;
     }
-    const targetProvider = card.engine ?? settingsSnapshot.defaultEngine;
+    const targetEngine = card.engine ?? settingsSnapshot.defaultEngine;
     const sendAvailability = await resolveProviderSendAvailabilityWithRefresh({
-      engine: targetProvider,
-      statuses: providerStatuses,
-      refreshStatuses: () => refreshProviderStatuses({ silent: true }),
+      engine: targetEngine,
+      statuses: engineStatuses,
+      refreshStatuses: () => refreshEngineStatuses({ silent: true }),
     });
     if (!sendAvailability.usable) {
       toastManager.add({

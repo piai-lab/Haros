@@ -685,13 +685,13 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                 />
                 <p className="text-xs text-muted-foreground">
                   {importProvider === "claude"
-                    ? t("search.providerSessionResume", { engine: "Claude" })
+                    ? t("search.engineSessionResume", { engine: "Claude" })
                     : importProvider === "cursor"
-                      ? t("search.providerSessionResume", { engine: "Cursor" })
+                      ? t("search.engineSessionResume", { engine: "Cursor" })
                       : importProvider === "kilo"
-                        ? t("search.providerSessionResume", { engine: "Kilo" })
+                        ? t("search.engineSessionResume", { engine: "Kilo" })
                         : importProvider === "opencode"
-                          ? t("search.providerSessionResume", { engine: "OpenCode" })
+                          ? t("search.engineSessionResume", { engine: "OpenCode" })
                           : t("search.providerThreadResume", { engine: "Codex" })}
                 </p>
               </div>

@@ -15,7 +15,7 @@ import {
 import { Effect, Exit, Layer, ManagedRuntime, Option, PubSub, Scope, Stream } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { EngineService, type EngineServiceShape } from "../../provider/Services/EngineService.ts";
+import { EngineService, type EngineServiceShape } from "../../engine/Services/EngineService.ts";
 import {
   OrchestrationEngineService,
   type OrchestrationEngineShape,
@@ -65,7 +65,7 @@ describe("StudioOutputReactor", () => {
     const runtimeEvents = Effect.runSync(PubSub.unbounded<EngineRuntimeEvent>());
     const commands: OrchestrationCommand[] = [];
 
-    const providerService = {
+    const engineService = {
       streamEvents: Stream.fromPubSub(runtimeEvents),
     } as unknown as EngineServiceShape;
     const orchestrationEngine = {
@@ -98,7 +98,7 @@ describe("StudioOutputReactor", () => {
     } as unknown as ProjectionSnapshotQueryShape;
 
     const layer = StudioOutputReactorLive.pipe(
-      Layer.provideMerge(Layer.succeed(EngineService, providerService)),
+      Layer.provideMerge(Layer.succeed(EngineService, engineService)),
       Layer.provideMerge(Layer.succeed(OrchestrationEngineService, orchestrationEngine)),
       Layer.provideMerge(Layer.succeed(ProjectionSnapshotQuery, projectionSnapshotQuery)),
       Layer.provideMerge(NodeServices.layer),

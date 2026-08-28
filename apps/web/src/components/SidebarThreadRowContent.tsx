@@ -37,7 +37,7 @@ function EngineAvatarWithTerminal({
 }) {
   const { t } = useI18n();
   const engine = thread.session?.engine ?? thread.engineSelection.engine;
-  const handoffSourceProvider = thread.handoff?.sourceProvider ?? null;
+  const handoffSourceProvider = thread.handoff?.sourceEngine ?? null;
   const handoffTooltip = handoffSourceProvider
     ? t("thread.handoffFrom", { engine: ENGINE_DISPLAY_NAMES[handoffSourceProvider] })
     : null;

@@ -6,7 +6,7 @@ import type {
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
 
-import type { AgentGatewayOperationRecord } from "../../agentGateway/Services/AgentGatewayOperationRepository.ts";
+import type { HostGatewayOperationRecord } from "../../hostGateway/Services/HostGatewayOperationRepository.ts";
 
 export interface ExternalMcpIntegrationRecord {
   readonly integrationId: string;
@@ -32,7 +32,7 @@ export interface ExternalMcpProjectRecord {
 }
 
 export interface ExternalMcpOperationRecord extends Omit<
-  AgentGatewayOperationRecord,
+  HostGatewayOperationRecord,
   "callerThreadId" | "callerTurnId"
 > {
   readonly integrationId: string;

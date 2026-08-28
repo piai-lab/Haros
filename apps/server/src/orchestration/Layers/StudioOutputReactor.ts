@@ -39,7 +39,7 @@ import {
   type StudioWorkspaceScan,
 } from "../../studioOutputs.ts";
 import { diffStudioWorkspaceScans } from "../../studioOutputs.ts";
-import { EngineService } from "../../provider/Services/EngineService.ts";
+import { EngineService } from "../../engine/Services/EngineService.ts";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../Services/ProjectionSnapshotQuery.ts";
 import {
@@ -71,7 +71,7 @@ interface ActiveStudioTurnBaseline extends StudioTurnBaseline {
 
 const make = Effect.gen(function* () {
   const orchestrationEngine = yield* OrchestrationEngineService;
-  const providerService = yield* EngineService;
+  const engineService = yield* EngineService;
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -313,7 +313,7 @@ const make = Effect.gen(function* () {
     worker,
     Effect.gen(function* () {
       yield* Effect.forkScoped(
-        Stream.runForEach(providerService.streamEvents, (event) =>
+        Stream.runForEach(engineService.streamEvents, (event) =>
           event.type === "turn.started" ||
           event.type === "turn.completed" ||
           event.type === "turn.aborted" ||

@@ -1348,7 +1348,7 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
   if (tag === WS_METHODS.serverGetSettings) {
     return fixture.serverSettings;
   }
-  if (tag === WS_METHODS.providerListModels) {
+  if (tag === WS_METHODS.engineListModels) {
     const engine = typeof body.engine === "string" ? (body.engine as EngineKind) : null;
     return engine
       ? (fixture.providerModelsByEngine[engine] ?? {
@@ -1357,7 +1357,7 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
         })
       : { source: "browser.fixture", models: [] };
   }
-  if (tag === WS_METHODS.providerGetComposerCapabilities) {
+  if (tag === WS_METHODS.engineGetComposerCapabilities) {
     const engine = typeof body.engine === "string" ? (body.engine as EngineKind) : "codex";
     return {
       engine,
@@ -1372,7 +1372,7 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
       supportsThreadImport: false,
     };
   }
-  if (tag === WS_METHODS.providerGetExecutionCapabilities) {
+  if (tag === WS_METHODS.engineGetExecutionCapabilities) {
     const engineSelection = body.engineSelection as {
       engine: EngineKind;
       model: string;
@@ -1403,7 +1403,7 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
       interactionModes,
     };
   }
-  if (tag === WS_METHODS.providerListCommands) {
+  if (tag === WS_METHODS.engineListCommands) {
     const engine = typeof body.engine === "string" ? (body.engine as EngineKind) : null;
     return engine
       ? (fixture.providerCommandsByEngine[engine] ?? {
@@ -1412,7 +1412,7 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
         })
       : { source: "browser.fixture", commands: [] };
   }
-  if (tag === WS_METHODS.providerListAgents) {
+  if (tag === WS_METHODS.engineListAgents) {
     return { source: "browser.fixture", agents: [] };
   }
   if (tag === WS_METHODS.projectsListDevServers) {
@@ -1710,12 +1710,12 @@ const worker = setupWorker(
         });
         return;
       }
-      if (method === WS_METHODS.subscribeServerProviderStatuses) {
+      if (method === WS_METHODS.subscribeServerEngineStatuses) {
         sendEffectRpcChunk(client, parsed.request.id, {
           engines: fixture.serverConfig.engines,
           passivePresence: {
             state: "settled",
-            recoverableProviders:
+            recoverableEngines:
               fixture.providerPassivePresence ??
               fixture.serverConfig.engines.map((status) => status.engine),
           },
@@ -5744,7 +5744,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           wsRequests.some(
             (request) =>
-              request._tag === WS_METHODS.providerListCommands &&
+              request._tag === WS_METHODS.engineListCommands &&
               request.engine === "claude",
           ),
         ).toBe(true);
@@ -7140,7 +7140,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     const requestedModelProviders = () =>
       wsRequests.flatMap((request) =>
-        request._tag === WS_METHODS.providerListModels && typeof request.engine === "string"
+        request._tag === WS_METHODS.engineListModels && typeof request.engine === "string"
           ? [request.engine]
           : [],
       );
@@ -7388,7 +7388,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           wsRequests.some(
             (request) =>
-              request._tag === WS_METHODS.providerListModels && request.engine === "claude",
+              request._tag === WS_METHODS.engineListModels && request.engine === "claude",
           ),
         ).toBe(true);
         expect(
@@ -8723,7 +8723,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
       await vi.waitFor(() => {
         expect(
-          wsRequests.filter((request) => request._tag === WS_METHODS.providerListModels),
+          wsRequests.filter((request) => request._tag === WS_METHODS.engineListModels),
         ).toEqual([expect.objectContaining({ engine: "claude" })]);
         expect(
           useComposerDraftStore.getState().draftsByThreadId[targetDraftThreadId],
@@ -9678,13 +9678,13 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(
         wsRequests.filter(
           (request) =>
-            request._tag === WS_METHODS.providerListModels && request.engine === "oa",
+            request._tag === WS_METHODS.engineListModels && request.engine === "oa",
         ),
       ).toHaveLength(1);
       expect(
         wsRequests.filter(
           (request) =>
-            request._tag === WS_METHODS.providerListModels &&
+            request._tag === WS_METHODS.engineListModels &&
             (request.engine === "pi" || request.engine === "droid"),
         ),
       ).toHaveLength(0);
@@ -10136,7 +10136,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           wsRequests.filter(
             (request) =>
-              request._tag === WS_METHODS.providerListModels && request.engine === "oa",
+              request._tag === WS_METHODS.engineListModels && request.engine === "oa",
           ).length,
         ).toBeGreaterThan(0);
       });
@@ -10267,7 +10267,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           wsRequests.filter(
             (request) =>
-              request._tag === WS_METHODS.providerListModels && request.engine === "codex",
+              request._tag === WS_METHODS.engineListModels && request.engine === "codex",
           ),
         ).toHaveLength(1);
       });

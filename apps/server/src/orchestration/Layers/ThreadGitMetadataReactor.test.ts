@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { GitManagerError } from "../../git/Errors.ts";
 import { GitCore, type GitCoreShape, type GitStatusDetails } from "../../git/Services/GitCore.ts";
 import { GitManager, type GitManagerShape } from "../../git/Services/GitManager.ts";
-import { EngineService, type EngineServiceShape } from "../../provider/Services/EngineService.ts";
+import { EngineService, type EngineServiceShape } from "../../engine/Services/EngineService.ts";
 import {
   OrchestrationEngineService,
   type OrchestrationEngineShape,
@@ -93,7 +93,7 @@ describe("ThreadGitMetadataReactor", () => {
     const threads = new Map(input.threads.map((thread) => [thread.id, thread]));
     const projectId = input.threads[0]!.projectId;
 
-    const providerService = {
+    const engineService = {
       streamEvents: Stream.fromPubSub(runtimeEvents),
     } as unknown as EngineServiceShape;
     const projectionSnapshotQuery = {
@@ -153,7 +153,7 @@ describe("ThreadGitMetadataReactor", () => {
     } as unknown as OrchestrationEngineShape;
 
     const layer = ThreadGitMetadataReactorLive.pipe(
-      Layer.provideMerge(Layer.succeed(EngineService, providerService)),
+      Layer.provideMerge(Layer.succeed(EngineService, engineService)),
       Layer.provideMerge(Layer.succeed(ProjectionSnapshotQuery, projectionSnapshotQuery)),
       Layer.provideMerge(Layer.succeed(GitCore, gitCore)),
       Layer.provideMerge(Layer.succeed(GitManager, gitManager)),
@@ -306,11 +306,11 @@ describe("ThreadGitMetadataReactor", () => {
     await harness.publish(startedEvent(threadId, parentTurnId));
     await harness.publish({
       ...startedEvent(threadId, childTurnId),
-      providerRefs: childProviderRefs,
+      engineRefs: childProviderRefs,
     });
     await harness.publish({
       ...completedEvent(threadId, childTurnId),
-      providerRefs: childProviderRefs,
+      engineRefs: childProviderRefs,
     });
     await harness.publish(completedEvent(threadId, parentTurnId));
     await waitFor(() => harness.commands.length === 1);

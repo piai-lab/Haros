@@ -37,28 +37,28 @@ export type ServerConfigIssue = typeof ServerConfigIssue.Type;
 
 const ServerConfigIssues = Schema.Array(ServerConfigIssue);
 
-export const ServerProviderStatusState = Schema.Literals(["ready", "warning", "error"]);
-export type ServerProviderStatusState = typeof ServerProviderStatusState.Type;
+export const ServerEngineStatusState = Schema.Literals(["ready", "warning", "error"]);
+export type ServerEngineStatusState = typeof ServerEngineStatusState.Type;
 
-export const ServerProviderAuthStatus = Schema.Literals([
+export const ServerEngineAuthStatus = Schema.Literals([
   "authenticated",
   "unauthenticated",
   "unknown",
 ]);
-export type ServerProviderAuthStatus = typeof ServerProviderAuthStatus.Type;
+export type ServerEngineAuthStatus = typeof ServerEngineAuthStatus.Type;
 
 // Optional so newer servers can add an observed installation fact without
 // making older server payloads incompatible. Absence means only "unavailable";
 // clients must not infer installation state from diagnostic copy.
-export const ServerProviderUnavailableReason = Schema.Literal("not_installed");
-export type ServerProviderUnavailableReason = typeof ServerProviderUnavailableReason.Type;
+export const ServerEngineUnavailableReason = Schema.Literal("not_installed");
+export type ServerEngineUnavailableReason = typeof ServerEngineUnavailableReason.Type;
 
-export const ServerProviderStatus = Schema.Struct({
+export const ServerEngineStatus = Schema.Struct({
   engine: EngineKind,
-  status: ServerProviderStatusState,
+  status: ServerEngineStatusState,
   available: Schema.Boolean,
-  authStatus: ServerProviderAuthStatus,
-  unavailableReason: Schema.optional(ServerProviderUnavailableReason),
+  authStatus: ServerEngineAuthStatus,
+  unavailableReason: Schema.optional(ServerEngineUnavailableReason),
   // Exact configured CLI identity used to produce this status. Clients compare
   // it with a local override before reusing installation or capability facts.
   checkedBinaryPath: Schema.optional(TrimmedNonEmptyString),
@@ -96,12 +96,12 @@ export const ServerProviderStatus = Schema.Struct({
     }),
   ),
 });
-export type ServerProviderStatus = typeof ServerProviderStatus.Type;
+export type ServerEngineStatus = typeof ServerEngineStatus.Type;
 
-export type ServerProviderVersionAdvisory = NonNullable<ServerProviderStatus["versionAdvisory"]>;
-export type ServerEngineUpdateState = NonNullable<ServerProviderStatus["updateState"]>;
+export type ServerEngineVersionAdvisory = NonNullable<ServerEngineStatus["versionAdvisory"]>;
+export type ServerEngineUpdateState = NonNullable<ServerEngineStatus["updateState"]>;
 
-const ServerProviderStatuses = Schema.Array(ServerProviderStatus);
+const ServerEngineStatuses = Schema.Array(ServerEngineStatus);
 
 export const ServerConfig = Schema.Struct({
   cwd: TrimmedNonEmptyString,
@@ -112,7 +112,7 @@ export const ServerConfig = Schema.Struct({
   keybindingsConfigPath: TrimmedNonEmptyString,
   keybindings: ResolvedKeybindingsConfig,
   issues: ServerConfigIssues,
-  engines: ServerProviderStatuses,
+  engines: ServerEngineStatuses,
   availableEditors: Schema.Array(EditorId),
 });
 export type ServerConfig = typeof ServerConfig.Type;
@@ -128,7 +128,7 @@ export const ServerListWorktreesResult = Schema.Struct({
 });
 export type ServerListWorktreesResult = typeof ServerListWorktreesResult.Type;
 
-export const ServerProviderUsageLimit = Schema.Struct({
+export const ServerEngineUsageLimit = Schema.Struct({
   window: TrimmedNonEmptyString,
   usedPercent: Schema.optional(
     Schema.Number.check(Schema.isGreaterThanOrEqualTo(0)).check(Schema.isLessThanOrEqualTo(100)),
@@ -136,14 +136,14 @@ export const ServerProviderUsageLimit = Schema.Struct({
   resetsAt: Schema.optional(IsoDateTime),
   windowDurationMins: Schema.optional(NonNegativeInt),
 });
-export type ServerProviderUsageLimit = typeof ServerProviderUsageLimit.Type;
+export type ServerEngineUsageLimit = typeof ServerEngineUsageLimit.Type;
 
-export const ServerProviderUsageLine = Schema.Struct({
+export const ServerEngineUsageLine = Schema.Struct({
   label: TrimmedNonEmptyString,
   value: TrimmedNonEmptyString,
   subtitle: Schema.optional(TrimmedNonEmptyString),
 });
-export type ServerProviderUsageLine = typeof ServerProviderUsageLine.Type;
+export type ServerEngineUsageLine = typeof ServerEngineUsageLine.Type;
 
 // Lifecycle of a live engine usage fetch. Absent status is treated as "ok" so
 // existing local-archive snapshots stay valid without setting it.
@@ -154,11 +154,11 @@ export type ServerProviderUsageLine = typeof ServerProviderUsageLine.Type;
 export const EngineUsageStatus = Schema.Literals(["ok", "needs-auth", "unsupported", "error"]);
 export type EngineUsageStatus = typeof EngineUsageStatus.Type;
 
-export const ServerProviderUsageSnapshot = Schema.Struct({
+export const ServerEngineUsageSnapshot = Schema.Struct({
   engine: EngineKind,
   updatedAt: IsoDateTime,
-  limits: Schema.Array(ServerProviderUsageLimit),
-  usageLines: Schema.Array(ServerProviderUsageLine),
+  limits: Schema.Array(ServerEngineUsageLimit),
+  usageLines: Schema.Array(ServerEngineUsageLine),
   source: TrimmedNonEmptyString,
   status: Schema.optional(EngineUsageStatus),
   planName: Schema.optional(TrimmedNonEmptyString),
@@ -167,22 +167,22 @@ export const ServerProviderUsageSnapshot = Schema.Struct({
   // fetches) rather than a fresh read; `updatedAt` then still reflects the original fetch time.
   stale: Schema.optional(Schema.Boolean),
 });
-export type ServerProviderUsageSnapshot = typeof ServerProviderUsageSnapshot.Type;
+export type ServerEngineUsageSnapshot = typeof ServerEngineUsageSnapshot.Type;
 
 // Batch live-usage fetch for supported engines, powering the Settings → Usage section and
 // engine-scoped usage chips. Unfiltered requests return one entry per supported engine
 // (including needs-auth/error) so the UI can render a row each.
-export const ServerListProviderUsageInput = Schema.Struct({
+export const ServerListEngineUsageInput = Schema.Struct({
   forceRefresh: Schema.optional(Schema.Boolean),
   engine: Schema.optional(EngineKind),
 });
-export type ServerListProviderUsageInput = typeof ServerListProviderUsageInput.Type;
+export type ServerListEngineUsageInput = typeof ServerListEngineUsageInput.Type;
 
-export const ServerListProviderUsageResult = Schema.Array(ServerProviderUsageSnapshot);
-export type ServerListProviderUsageResult = typeof ServerListProviderUsageResult.Type;
+export const ServerListEngineUsageResult = Schema.Array(ServerEngineUsageSnapshot);
+export type ServerListEngineUsageResult = typeof ServerListEngineUsageResult.Type;
 
-export const UsageHistoryProvider = Schema.Literals(["codex", "claude"]);
-export type UsageHistoryProvider = typeof UsageHistoryProvider.Type;
+export const UsageHistoryEngine = Schema.Literals(["codex", "claude"]);
+export type UsageHistoryEngine = typeof UsageHistoryEngine.Type;
 
 export const UsageHistoryRange = Schema.Literals(["24h", "7d", "30d", "all"]);
 export type UsageHistoryRange = typeof UsageHistoryRange.Type;
@@ -205,7 +205,7 @@ export const UsageHistoryStatus = Schema.Literals([
 ]);
 export type UsageHistoryStatus = typeof UsageHistoryStatus.Type;
 
-export const UsageHistoryProviderStatus = Schema.Literals([
+export const UsageHistoryEngineStatus = Schema.Literals([
   "pending",
   "indexing",
   "ready",
@@ -213,7 +213,7 @@ export const UsageHistoryProviderStatus = Schema.Literals([
   "paused",
   "unsupported",
 ]);
-export type UsageHistoryProviderStatus = typeof UsageHistoryProviderStatus.Type;
+export type UsageHistoryEngineStatus = typeof UsageHistoryEngineStatus.Type;
 
 export const UsageHistoryProgress = Schema.Struct({
   filesDiscovered: NonNegativeInt,
@@ -225,18 +225,18 @@ export const UsageHistoryProgress = Schema.Struct({
 });
 export type UsageHistoryProgress = typeof UsageHistoryProgress.Type;
 
-export const UsageHistoryProviderSummary = Schema.Struct({
-  engine: UsageHistoryProvider,
-  status: UsageHistoryProviderStatus,
+export const UsageHistoryEngineSummary = Schema.Struct({
+  engine: UsageHistoryEngine,
+  status: UsageHistoryEngineStatus,
   progress: UsageHistoryProgress,
   detailCode: Schema.optional(TrimmedNonEmptyString),
   lastCompletedAt: Schema.optional(IsoDateTime),
 });
-export type UsageHistoryProviderSummary = typeof UsageHistoryProviderSummary.Type;
+export type UsageHistoryEngineSummary = typeof UsageHistoryEngineSummary.Type;
 
 export const UsageHistoryRow = Schema.Struct({
   key: TrimmedNonEmptyString,
-  engine: Schema.optional(UsageHistoryProvider),
+  engine: Schema.optional(UsageHistoryEngine),
   model: Schema.optional(TrimmedNonEmptyString),
   workspace: Schema.optional(TrimmedNonEmptyString),
   date: Schema.optional(TrimmedNonEmptyString),
@@ -264,7 +264,7 @@ export const ServerGetUsageHistoryResult = Schema.Struct({
   lastCompletedAt: Schema.optional(IsoDateTime),
   pricingVersion: TrimmedNonEmptyString,
   progress: UsageHistoryProgress,
-  engines: Schema.Array(UsageHistoryProviderSummary),
+  engines: Schema.Array(UsageHistoryEngineSummary),
   rows: Schema.Array(UsageHistoryRow),
 });
 export type ServerGetUsageHistoryResult = typeof ServerGetUsageHistoryResult.Type;
@@ -474,20 +474,20 @@ export type ServerUpsertKeybindingResult = typeof ServerUpsertKeybindingResult.T
 
 export const ServerConfigUpdatedPayload = Schema.Struct({
   issues: ServerConfigIssues,
-  engines: ServerProviderStatuses,
+  engines: ServerEngineStatuses,
 });
 export type ServerConfigUpdatedPayload = typeof ServerConfigUpdatedPayload.Type;
 
-export const ServerProviderStatusesUpdatedPayload = Schema.Struct({
-  engines: ServerProviderStatuses,
+export const ServerEngineStatusesUpdatedPayload = Schema.Struct({
+  engines: ServerEngineStatuses,
   passivePresence: Schema.optionalKey(
     Schema.Struct({
       state: Schema.Literal("settled"),
-      recoverableProviders: Schema.Array(EngineKind),
+      recoverableEngines: Schema.Array(EngineKind),
     }),
   ),
 });
-export type ServerProviderStatusesUpdatedPayload = typeof ServerProviderStatusesUpdatedPayload.Type;
+export type ServerEngineStatusesUpdatedPayload = typeof ServerEngineStatusesUpdatedPayload.Type;
 
 export const ServerSettingsUpdatedPayload = Schema.Struct({
   settings: ServerSettingsView,
@@ -541,8 +541,8 @@ export const ServerConfigStreamEvent = Schema.Union([
     payload: ServerConfigUpdatedPayload,
   }),
   Schema.Struct({
-    type: Schema.Literal("providerStatuses"),
-    payload: ServerProviderStatusesUpdatedPayload,
+    type: Schema.Literal("engineStatuses"),
+    payload: ServerEngineStatusesUpdatedPayload,
   }),
   Schema.Struct({
     type: Schema.Literal("settingsUpdated"),
@@ -551,8 +551,8 @@ export const ServerConfigStreamEvent = Schema.Union([
 ]);
 export type ServerConfigStreamEvent = typeof ServerConfigStreamEvent.Type;
 
-export const ServerRefreshProvidersResult = ServerProviderStatusesUpdatedPayload;
-export type ServerRefreshProvidersResult = typeof ServerRefreshProvidersResult.Type;
+export const ServerRefreshEnginesResult = ServerEngineStatusesUpdatedPayload;
+export type ServerRefreshEnginesResult = typeof ServerRefreshEnginesResult.Type;
 
 export const ServerEngineUpdateInput = Schema.Struct({
   engine: EngineKind,
@@ -571,7 +571,7 @@ export class ServerEngineUpdateError extends Schema.TaggedErrorClass<ServerEngin
   }
 }
 
-export const ServerEngineUpdateResult = ServerProviderStatusesUpdatedPayload;
+export const ServerEngineUpdateResult = ServerEngineStatusesUpdatedPayload;
 export type ServerEngineUpdateResult = typeof ServerEngineUpdateResult.Type;
 
 export const ServerGetSettingsResult = ServerSettingsView;

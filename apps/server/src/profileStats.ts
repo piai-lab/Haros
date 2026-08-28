@@ -1500,7 +1500,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
           cacheHitPercent:
             recentInputTokens > 0 ? percent1(recentCachedInputTokens, recentInputTokens) : null,
           coverage: recentTokenCoverage,
-          unavailableProviders: recentUnavailableProviders,
+          unavailableEngines: recentUnavailableProviders,
           days: recentTokenDays,
         },
       } satisfies ProfileTokenStats;

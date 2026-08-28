@@ -7,8 +7,8 @@ import {
 import { Effect, Layer, Option, Schema, Semaphore } from "effect";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
 
-import { readMcpJsonBody, type McpBodyReadResult } from "../agentGateway/httpRoute.ts";
-import { extractBearerToken } from "../agentGateway/bearerToken.ts";
+import { readMcpJsonBody, type McpBodyReadResult } from "../hostGateway/httpRoute.ts";
+import { extractBearerToken } from "../hostGateway/bearerToken.ts";
 import { makeEffectAuthRequest } from "../auth/effectHttp.ts";
 import { ServerAuth } from "../auth/Services/ServerAuth.ts";
 import { ServerConfig } from "../config.ts";

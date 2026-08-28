@@ -53,7 +53,7 @@ import {
   type DeferredOneShotOwnerTransition,
 } from "../../persistence/Services/AutomationRepository.ts";
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
-import { EngineExecutionCapabilities } from "../../provider/Services/EngineExecutionCapabilities.ts";
+import { EngineExecutionCapabilities } from "../../engine/Services/EngineExecutionCapabilities.ts";
 import { runWorktreeSetupScript } from "../../worktreeSetup.ts";
 import type { ProjectionTurn } from "../../persistence/Services/ProjectionTurns.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";

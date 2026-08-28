@@ -3,11 +3,11 @@ import {
   type OAModelServiceDescriptor,
   ENGINE_KINDS,
   type EngineKind,
-  type ServerProviderStatus,
+  type ServerEngineStatus,
 } from "@harnessos/contracts";
 
 import type { EngineModelCatalogState } from "~/hooks/useEngineModelCatalog";
-import { findProviderStatus, isProviderUsable } from "~/lib/engineAvailability";
+import { findEngineStatus, isProviderUsable } from "~/lib/engineAvailability";
 import type { EngineModelOption } from "~/providerModelOptions";
 export type { PassiveModelServicesState } from "../onboarding/firstRunReadiness.logic";
 
@@ -20,12 +20,12 @@ export function isSettledPassiveModelServicesQueryState(input: {
 }
 
 export function hasUsableExactModelBinding(input: {
-  readonly providerStatuses: readonly ServerProviderStatus[];
+  readonly engineStatuses: readonly ServerEngineStatus[];
   readonly exactEngineSelections: Partial<Record<EngineKind, EngineSelection>>;
 }): boolean {
   return ENGINE_KINDS.some((engine) => {
     const selection = input.exactEngineSelections[engine];
-    const status = findProviderStatus(input.providerStatuses, engine);
+    const status = findEngineStatus(input.engineStatuses, engine);
     // Bundled HarnessOS/stock Pi runtimes can enumerate models before any
     // credential exists, and their Engine health intentionally reports auth as
     // unknown. Their exact catalog rows are therefore not send authority.
@@ -77,14 +77,14 @@ export function hasUsableOAModelServiceBinding(input: {
 }
 
 export function areUsableProviderCatalogsSettled(input: {
-  readonly providerStatuses: readonly ServerProviderStatus[];
+  readonly engineStatuses: readonly ServerEngineStatus[];
   readonly catalogStateByEngine: Partial<Record<EngineKind, EngineModelCatalogState>>;
   readonly explicitExactEngineSelections: Partial<Record<EngineKind, EngineSelection>>;
 }): boolean {
   return ENGINE_KINDS.every(
     (engine) =>
       input.explicitExactEngineSelections[engine] === undefined ||
-      !isProviderUsable(findProviderStatus(input.providerStatuses, engine)) ||
+      !isProviderUsable(findEngineStatus(input.engineStatuses, engine)) ||
       input.catalogStateByEngine[engine] !== "checking",
   );
 }

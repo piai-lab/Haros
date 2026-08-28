@@ -12,10 +12,10 @@ import { Effect, Fiber, Layer, Stream } from "effect";
 
 import { ServerConfig } from "../src/config.ts";
 import { ServerSettingsService } from "../src/serverSettings.ts";
-import { OAAgentAdapter } from "../src/provider/Services/OAAgentAdapter.ts";
-import { ENGINE_CONVERGE_MODE_ENVELOPE } from "../src/provider/interactionMode.ts";
-import { makeOAAgentAdapterLive } from "../src/provider/Layers/PiAdapter.ts";
-import { userInputPresenterRegistry } from "../src/provider/userInputPresenterRegistry.ts";
+import { OAAgentAdapter } from "../src/engine/Services/OAAgentAdapter.ts";
+import { ENGINE_CONVERGE_MODE_ENVELOPE } from "../src/engine/interactionMode.ts";
+import { makeOAAgentAdapterLive } from "../src/engine/Layers/PiAdapter.ts";
+import { userInputPresenterRegistry } from "../src/engine/userInputPresenterRegistry.ts";
 
 const LIVE_CUSTOM_TEXT = "live custom answer  \n";
 const TIMEOUT_MS = 120_000;
@@ -202,7 +202,7 @@ async function run() {
 
   try {
     presenterLease = userInputPresenterRegistry.acquire(`ask-live-${target.providerId}`, 1);
-    const layer = makeOAAgentAdapterLive({ agentGatewayFetch: gatewayFetch }).pipe(
+    const layer = makeOAAgentAdapterLive({ hostGatewayFetch: gatewayFetch }).pipe(
       Layer.provideMerge(ServerConfig.layerTest(cwd, root)),
       Layer.provideMerge(ServerSettingsService.layerTest()),
       Layer.provideMerge(NodeServices.layer),

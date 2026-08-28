@@ -3,17 +3,17 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it, assert } from "@effect/vitest";
 import { Effect, FileSystem, Layer, Path } from "effect";
 
-import { EngineUnsupportedError } from "../src/provider/Errors.ts";
-import { EngineAdapterRegistry } from "../src/provider/Services/EngineAdapterRegistry.ts";
-import { EngineSessionDirectoryLive } from "../src/provider/Layers/EngineSessionDirectory.ts";
-import { makeProviderServiceLive } from "../src/provider/Layers/EngineService.ts";
-import { EngineService, type EngineServiceShape } from "../src/provider/Services/EngineService.ts";
+import { EngineUnsupportedError } from "../src/engine/Errors.ts";
+import { EngineAdapterRegistry } from "../src/engine/Services/EngineAdapterRegistry.ts";
+import { EngineSessionDirectoryLive } from "../src/engine/Layers/EngineSessionDirectory.ts";
+import { makeEngineServiceLive } from "../src/engine/Layers/EngineService.ts";
+import { EngineService, type EngineServiceShape } from "../src/engine/Services/EngineService.ts";
 import { SqlitePersistenceMemory } from "../src/persistence/Layers/Sqlite.ts";
 import { EngineSessionRuntimeRepositoryLive } from "../src/persistence/Layers/EngineSessionRuntime.ts";
 
 import {
-  makeTestProviderAdapterHarness,
-  type TestProviderAdapterHarness,
+  makeTestEngineAdapterHarness,
+  type TestEngineAdapterHarness,
   type TestTurnResponse,
 } from "./TestEngineAdapter.integration.ts";
 import {
@@ -32,13 +32,13 @@ const makeWorkspaceDirectory = Effect.gen(function* () {
 
 interface IntegrationFixture {
   readonly cwd: string;
-  readonly harness: TestProviderAdapterHarness;
+  readonly harness: TestEngineAdapterHarness;
   readonly layer: Layer.Layer<EngineService, unknown, never>;
 }
 
 const makeIntegrationFixture = Effect.gen(function* () {
   const cwd = yield* makeWorkspaceDirectory;
-  const harness = yield* makeTestProviderAdapterHarness();
+  const harness = yield* makeTestEngineAdapterHarness();
 
   const registry: typeof EngineAdapterRegistry.Service = {
     getByEngine: (engine) =>
@@ -57,7 +57,7 @@ const makeIntegrationFixture = Effect.gen(function* () {
     Layer.succeed(EngineAdapterRegistry, registry),
   ).pipe(Layer.provide(SqlitePersistenceMemory));
 
-  const layer = makeProviderServiceLive().pipe(Layer.provide(shared));
+  const layer = makeEngineServiceLive().pipe(Layer.provide(shared));
 
   return {
     cwd,
@@ -68,7 +68,7 @@ const makeIntegrationFixture = Effect.gen(function* () {
 
 const runTurn = (input: {
   readonly engine: EngineServiceShape;
-  readonly harness: TestProviderAdapterHarness;
+  readonly harness: TestEngineAdapterHarness;
   readonly threadId: ThreadId;
   readonly userText: string;
   readonly response: TestTurnResponse;

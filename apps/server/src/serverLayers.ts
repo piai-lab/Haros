@@ -1,9 +1,9 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Layer } from "effect";
 
-import { AgentGatewayLive } from "./agentGateway/Layers/AgentGateway";
-import { AgentGatewayOperationRepositoryLive } from "./agentGateway/Layers/AgentGatewayOperationRepository";
-import { AgentGatewayCredentialsWithSecretsLive } from "./agentGateway/Layers/AgentGatewayCredentials";
+import { HostGatewayLive } from "./hostGateway/Layers/HostGateway";
+import { HostGatewayOperationRepositoryLive } from "./hostGateway/Layers/HostGatewayOperationRepository";
+import { HostGatewayCredentialsWithSecretsLive } from "./hostGateway/Layers/HostGatewayCredentials";
 import { BrowserAutomationHostLive } from "./browserAutomation/Layers/BrowserAutomationHost";
 import { AutomationRunReactorLive } from "./automation/Layers/AutomationRunReactor";
 import { AutomationSchedulerLive } from "./automation/Layers/AutomationScheduler";
@@ -54,11 +54,11 @@ import { EngineRuntimeEventRepositoryLive } from "./persistence/Layers/EngineRun
 import { ThreadDiagnosticsQueryLive } from "./diagnostics/Layers/ThreadDiagnosticsQuery";
 import { ManagedAttachmentCleanupLive } from "./managedAttachmentCleanup";
 import { PullRequestServiceLive } from "./pullRequests/Layers/PullRequestService";
-import { EngineHealthLive } from "./provider/Layers/EngineHealth";
-import { EngineExecutionCapabilitiesLive } from "./provider/Layers/EngineExecutionCapabilities";
-import { makeServerProviderLayer } from "./provider/runtimeLayer";
+import { EngineHealthLive } from "./engine/Layers/EngineHealth";
+import { EngineExecutionCapabilitiesLive } from "./engine/Layers/EngineExecutionCapabilities";
+import { makeServerEngineLayer } from "./engine/runtimeLayer";
 
-export { makeServerProviderLayer } from "./provider/runtimeLayer";
+export { makeServerEngineLayer } from "./engine/runtimeLayer";
 
 export function provideThreadDeletionReactorDeviceService<
   ReactorServices,
@@ -75,14 +75,14 @@ export function provideThreadDeletionReactorDeviceService<
 
 export function makeServerRuntimeServicesLayer(
   options: {
-    readonly agentGatewayCredentialsLayer?: typeof AgentGatewayCredentialsWithSecretsLive;
+    readonly hostGatewayCredentialsLayer?: typeof HostGatewayCredentialsWithSecretsLive;
   } = {},
 ) {
-  const agentGatewayCredentialsLayer =
-    options.agentGatewayCredentialsLayer ?? AgentGatewayCredentialsWithSecretsLive;
-  const providerHealthLayer = EngineHealthLive.pipe(Layer.provideMerge(ServerSettingsLive));
+  const hostGatewayCredentialsLayer =
+    options.hostGatewayCredentialsLayer ?? HostGatewayCredentialsWithSecretsLive;
+  const engineHealthLayer = EngineHealthLive.pipe(Layer.provideMerge(ServerSettingsLive));
   const engineExecutionCapabilitiesLayer = EngineExecutionCapabilitiesLive.pipe(
-    Layer.provideMerge(providerHealthLayer),
+    Layer.provideMerge(engineHealthLayer),
   );
   const checkpointStoreLayer = CheckpointStoreLive.pipe(Layer.provide(GitCoreLive));
 
@@ -118,7 +118,7 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(GitCoreLive),
     Layer.provideMerge(TextGenerationLayerLive),
     Layer.provideMerge(ServerSettingsLive),
-    Layer.provideMerge(AgentGatewayOperationRepositoryLive),
+    Layer.provideMerge(HostGatewayOperationRepositoryLive),
   );
   const checkpointReactorLayer = CheckpointReactorLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
@@ -192,23 +192,23 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(runtimeServicesLayer),
     Layer.provideMerge(GitCoreLive),
     Layer.provideMerge(ProjectionTurnRepositoryLive),
-    Layer.provideMerge(AgentGatewayOperationRepositoryLive),
+    Layer.provideMerge(HostGatewayOperationRepositoryLive),
     Layer.provideMerge(ServerSettingsLive),
-    Layer.provideMerge(providerHealthLayer),
+    Layer.provideMerge(engineHealthLayer),
     Layer.provideMerge(engineExecutionCapabilitiesLayer),
   );
-  const agentGatewayLayer = AgentGatewayLive.pipe(
-    Layer.provideMerge(agentGatewayCredentialsLayer),
+  const hostGatewayLayer = HostGatewayLive.pipe(
+    Layer.provideMerge(hostGatewayCredentialsLayer),
     Layer.provideMerge(automationServiceLayer),
     Layer.provideMerge(runtimeServicesLayer),
     Layer.provideMerge(GitCoreLive),
     Layer.provideMerge(ProjectionTurnRepositoryLive),
-    Layer.provideMerge(AgentGatewayOperationRepositoryLive),
+    Layer.provideMerge(HostGatewayOperationRepositoryLive),
     Layer.provideMerge(OrchestrationEventDeliveryRepositoryLive),
     Layer.provideMerge(EngineRuntimeEventRepositoryLive),
     Layer.provideMerge(ThreadDiagnosticsQueryLive),
     Layer.provideMerge(ServerSettingsLive),
-    Layer.provideMerge(providerHealthLayer),
+    Layer.provideMerge(engineHealthLayer),
     Layer.provideMerge(engineExecutionCapabilitiesLayer),
     Layer.provideMerge(BrowserAutomationHostLive),
     // The gateway exposes device_* tools only where a backend can exist, but it
@@ -222,19 +222,19 @@ export function makeServerRuntimeServicesLayer(
   );
 
   return Layer.mergeAll(
-    agentGatewayCredentialsLayer,
-    agentGatewayLayer,
+    hostGatewayCredentialsLayer,
+    hostGatewayLayer,
     BrowserAutomationHostLive,
     automationServiceLayer,
     automationSchedulerLayer,
     automationRunReactorLayer,
     managedAttachmentCleanupLayer,
     AutomationRepositoryLive,
-    AgentGatewayOperationRepositoryLive,
+    HostGatewayOperationRepositoryLive,
     ExternalMcpRepositoryLive,
     externalMcpServiceLayer,
     externalMcpGatewayLayer,
-    providerHealthLayer,
+    engineHealthLayer,
     engineExecutionCapabilitiesLayer,
     ProjectPullRequestPinsLive,
     pullRequestServiceLayer,
@@ -266,11 +266,11 @@ export function makeServerRuntimeServicesLayer(
  * same tokens, so constructing them independently would break scoped MCP.
  */
 export function makeServerApplicationLayers() {
-  const agentGatewayCredentialsLayer = AgentGatewayCredentialsWithSecretsLive;
+  const hostGatewayCredentialsLayer = HostGatewayCredentialsWithSecretsLive;
   return {
     runtimeServicesLayer: makeServerRuntimeServicesLayer({
-      agentGatewayCredentialsLayer,
+      hostGatewayCredentialsLayer,
     }),
-    providerLayer: makeServerProviderLayer({ agentGatewayCredentialsLayer }),
+    engineLayer: makeServerEngineLayer({ hostGatewayCredentialsLayer }),
   } as const;
 }

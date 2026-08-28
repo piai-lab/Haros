@@ -8,7 +8,7 @@ export const ENGINE_RUNTIME_INGESTION_CONSUMER = "engine-runtime-ingestion.v1";
 export const ENGINE_RUNTIME_EVENT_MAX_BYTES = 2 * 1024 * 1024;
 export const ENGINE_RUNTIME_EVENT_RETAIN_ACCEPTED = 512;
 
-export interface PersistedProviderRuntimeEvent {
+export interface PersistedEngineRuntimeEvent {
   readonly sequence: number;
   readonly event: EngineRuntimeEvent;
 }
@@ -18,14 +18,14 @@ export type EngineRuntimeEventRepositoryError = PersistenceSqlError | Persistenc
 export interface EngineRuntimeEventRepositoryShape {
   readonly append: (
     event: EngineRuntimeEvent,
-  ) => Effect.Effect<PersistedProviderRuntimeEvent, EngineRuntimeEventRepositoryError>;
+  ) => Effect.Effect<PersistedEngineRuntimeEvent, EngineRuntimeEventRepositoryError>;
   readonly getHighWaterSequence: Effect.Effect<number, PersistenceSqlError>;
   readonly readAfter: (input: {
     readonly sequenceExclusive: number;
     readonly throughSequenceInclusive: number;
     readonly limit: number;
   }) => Effect.Effect<
-    ReadonlyArray<PersistedProviderRuntimeEvent>,
+    ReadonlyArray<PersistedEngineRuntimeEvent>,
     EngineRuntimeEventRepositoryError
   >;
   readonly getThreadCoverage: (threadId: string) => Effect.Effect<
@@ -44,7 +44,7 @@ export interface EngineRuntimeEventRepositoryShape {
     readonly turnId?: string;
     readonly eventTypes?: ReadonlyArray<string>;
   }) => Effect.Effect<
-    ReadonlyArray<PersistedProviderRuntimeEvent>,
+    ReadonlyArray<PersistedEngineRuntimeEvent>,
     EngineRuntimeEventRepositoryError
   >;
   readonly readAcceptedOpenTurnEvents: (input: {
@@ -52,7 +52,7 @@ export interface EngineRuntimeEventRepositoryShape {
     readonly sequenceExclusive: number;
     readonly limit: number;
   }) => Effect.Effect<
-    ReadonlyArray<PersistedProviderRuntimeEvent>,
+    ReadonlyArray<PersistedEngineRuntimeEvent>,
     EngineRuntimeEventRepositoryError
   >;
   readonly pruneSettledOpenTurns: Effect.Effect<void, PersistenceSqlError>;

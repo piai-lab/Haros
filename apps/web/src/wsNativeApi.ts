@@ -28,7 +28,7 @@ import {
   type OrchestrationShellStreamItem,
   type OrchestrationThreadStreamItem,
   type ProjectDevServerEvent,
-  type ServerProviderStatusesUpdatedPayload,
+  type ServerEngineStatusesUpdatedPayload,
   type ServerLifecycleStreamEvent,
   type ServerSettingsUpdatedPayload,
   type ServerVoiceTranscriptionResult,
@@ -126,8 +126,8 @@ function subscribeWithReplay<T>(input: {
 
 const welcomeListeners = createListenerRegistry<WsWelcomePayload>();
 const serverConfigUpdatedListeners = createListenerRegistry<ServerConfigUpdatedPayload>();
-const serverProviderStatusesUpdatedListeners =
-  createListenerRegistry<ServerProviderStatusesUpdatedPayload>();
+const serverEngineStatusesUpdatedListeners =
+  createListenerRegistry<ServerEngineStatusesUpdatedPayload>();
 const serverMaintenanceUpdatedListeners = createListenerRegistry<ServerLifecycleStreamEvent>();
 const serverSettingsUpdatedListeners = createListenerRegistry<ServerSettingsUpdatedPayload>();
 const gitActionProgressListeners = createListenerRegistry<GitActionProgressEvent>();
@@ -149,7 +149,7 @@ const fallbackBrowserStates = new Map<ThreadId, ThreadBrowserState>();
 function clearWsNativeApiListeners(): void {
   welcomeListeners.clear();
   serverConfigUpdatedListeners.clear();
-  serverProviderStatusesUpdatedListeners.clear();
+  serverEngineStatusesUpdatedListeners.clear();
   serverMaintenanceUpdatedListeners.clear();
   serverSettingsUpdatedListeners.clear();
   gitActionProgressListeners.clear();
@@ -360,15 +360,15 @@ export function onServerConfigUpdated(
 /**
  * Subscribe to engine status updates without forcing a full config reload.
  */
-export function onServerProviderStatusesUpdated(
-  listener: (payload: ServerProviderStatusesUpdatedPayload) => void,
+export function onServerEngineStatusesUpdated(
+  listener: (payload: ServerEngineStatusesUpdatedPayload) => void,
 ): () => void {
-  const latestProviderStatuses =
-    instance?.transport.getLatestPush(WS_CHANNELS.serverProviderStatusesUpdated)?.data ?? null;
+  const latestEngineStatuses =
+    instance?.transport.getLatestPush(WS_CHANNELS.serverEngineStatusesUpdated)?.data ?? null;
   return subscribeWithReplay({
-    registry: serverProviderStatusesUpdatedListeners,
+    registry: serverEngineStatusesUpdatedListeners,
     listener,
-    latest: latestProviderStatuses,
+    latest: latestEngineStatuses,
   });
 }
 
@@ -431,8 +431,8 @@ export function createWsNativeApi(): NativeApi {
   transport.subscribe(WS_CHANNELS.serverConfigUpdated, (message) => {
     serverConfigUpdatedListeners.emit(message.data);
   });
-  transport.subscribe(WS_CHANNELS.serverProviderStatusesUpdated, (message) => {
-    serverProviderStatusesUpdatedListeners.emit(message.data);
+  transport.subscribe(WS_CHANNELS.serverEngineStatusesUpdated, (message) => {
+    serverEngineStatusesUpdatedListeners.emit(message.data);
   });
   transport.subscribe(WS_CHANNELS.serverMaintenanceUpdated, (message) => {
     serverMaintenanceUpdatedListeners.emit(message.data);
@@ -697,17 +697,17 @@ export function createWsNativeApi(): NativeApi {
         transport.request(WS_METHODS.serverRevokeExternalMcpIntegration, input),
       refreshExternalMcpPairing: (input: ExternalMcpRefreshPairingInput) =>
         transport.request(WS_METHODS.serverRefreshExternalMcpPairing, input),
-      refreshEngines: () => transport.request(WS_METHODS.serverRefreshProviders),
+      refreshEngines: () => transport.request(WS_METHODS.serverRefreshEngines),
       // Engine updates run up to 2 minutes server-side; callers wrap this in
       // withEngineUpdateTimeout, which owns the client-side watchdog.
       updateEngine: (input) =>
-        transport.request(WS_METHODS.serverUpdateProvider, input, {
+        transport.request(WS_METHODS.serverUpdateEngine, input, {
           timeoutMs: null,
         }),
       listWorktrees: () => transport.request(WS_METHODS.serverListWorktrees),
       listLocalServers: () => transport.request(WS_METHODS.serverListLocalServers),
       stopLocalServer: (input) => transport.request(WS_METHODS.serverStopLocalServer, input),
-      listProviderUsage: (input) => transport.request(WS_METHODS.serverListProviderUsage, input),
+      listEngineUsage: (input) => transport.request(WS_METHODS.serverListEngineUsage, input),
       getUsageHistory: (input) => transport.request(WS_METHODS.serverGetUsageHistory, input),
       commandUsageHistory: (input) =>
         transport.request(WS_METHODS.serverCommandUsageHistory, input),
@@ -742,29 +742,29 @@ export function createWsNativeApi(): NativeApi {
     },
     engine: {
       getComposerCapabilities: (input) =>
-        transport.request(WS_METHODS.providerGetComposerCapabilities, input),
+        transport.request(WS_METHODS.engineGetComposerCapabilities, input),
       getExecutionCapabilities: (input) =>
-        transport.request(WS_METHODS.providerGetExecutionCapabilities, input),
+        transport.request(WS_METHODS.engineGetExecutionCapabilities, input),
       // Compaction is capped server-side per engine (ACP engines allow up
       // to the 10-minute turn-idle ceiling), so the server owns this bound.
       compactThread: (input) =>
-        transport.request(WS_METHODS.providerCompactThread, input, {
+        transport.request(WS_METHODS.engineCompactThread, input, {
           timeoutMs: null,
         }),
-      listCommands: (input) => transport.request(WS_METHODS.providerListCommands, input),
-      listSkills: (input) => transport.request(WS_METHODS.providerListSkills, input),
-      listSkillsCatalog: (input) => transport.request(WS_METHODS.providerListSkillsCatalog, input),
-      listPlugins: (input) => transport.request(WS_METHODS.providerListPlugins, input),
+      listCommands: (input) => transport.request(WS_METHODS.engineListCommands, input),
+      listSkills: (input) => transport.request(WS_METHODS.engineListSkills, input),
+      listSkillsCatalog: (input) => transport.request(WS_METHODS.engineListSkillsCatalog, input),
+      listPlugins: (input) => transport.request(WS_METHODS.engineListPlugins, input),
       readPlugin: (input) => transport.request(WS_METHODS.providerReadPlugin, input),
       listModels: (input, options) =>
         transport.request(
-          WS_METHODS.providerListModels,
+          WS_METHODS.engineListModels,
           input,
           options?.signal ? { signal: options.signal } : undefined,
         ),
       listAgents: (input, options) =>
         transport.request(
-          WS_METHODS.providerListAgents,
+          WS_METHODS.engineListAgents,
           input,
           options?.signal ? { signal: options.signal } : undefined,
         ),
@@ -905,10 +905,10 @@ export function createWsNativeApi(): NativeApi {
           fromSequenceExclusive,
           ...(threadId === undefined ? {} : { threadId }),
         }),
-      listProviderDeliveryBlockers: (input = {}) =>
-        transport.request(ORCHESTRATION_WS_METHODS.listProviderDeliveryBlockers, input),
-      reconcileProviderDelivery: (input) =>
-        transport.request(ORCHESTRATION_WS_METHODS.reconcileProviderDelivery, input),
+      listEngineDeliveryBlockers: (input = {}) =>
+        transport.request(ORCHESTRATION_WS_METHODS.listEngineDeliveryBlockers, input),
+      reconcileEngineDelivery: (input) =>
+        transport.request(ORCHESTRATION_WS_METHODS.reconcileEngineDelivery, input),
       subscribeShell: () => transport.request<void>(ORCHESTRATION_WS_METHODS.subscribeShell, {}),
       unsubscribeShell: () =>
         transport.request<void>(ORCHESTRATION_WS_METHODS.unsubscribeShell, {}),

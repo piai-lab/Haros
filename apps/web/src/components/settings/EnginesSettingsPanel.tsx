@@ -4,7 +4,7 @@
 
 import {
   type EngineKind,
-  type ServerProviderStatus,
+  type ServerEngineStatus,
   type ServerSettingsPatch,
   type ServerSettingsView,
 } from "@harnessos/contracts";
@@ -41,14 +41,14 @@ import { useLocalPreferences } from "~/localPreferences";
 import { useServerSettings } from "~/serverSettings";
 import {
   deriveProviderPickerAvailability,
-  normalizeProviderStatusForLocalConfig,
+  normalizeEngineStatusForLocalConfig,
   type EnginePickerAvailabilityState,
 } from "~/lib/engineAvailability";
 import { getModelOptions, normalizeModelSlug } from "@harnessos/shared/model";
 import { CentralIcon } from "~/lib/central-icons";
 import { DownloadIcon, ExternalLinkIcon, Loader2Icon, PlusIcon, XIcon } from "~/lib/icons";
 import {
-  reconcileServerProviderStatuses,
+  reconcileServerEngineStatuses,
   serverConfigQueryOptions,
   serverQueryKeys,
 } from "~/lib/serverReactQuery";
@@ -662,7 +662,7 @@ function providerVisibilityStatusLabel(
 
 function SortableProviderVisibilityRow(props: {
   option: { engine: EngineKind; title: string };
-  providerStatus: ServerProviderStatus | undefined;
+  engineStatus: ServerEngineStatus | undefined;
   statusPending: boolean;
   isHidden: boolean;
   onHiddenChange: (hidden: boolean) => void;
@@ -679,8 +679,8 @@ function SortableProviderVisibilityRow(props: {
   } = useSortable({ id: props.option.engine });
   const availability = props.statusPending
     ? ({ disabled: false, state: "checking" } as const)
-    : props.providerStatus
-      ? deriveProviderPickerAvailability(props.providerStatus)
+    : props.engineStatus
+      ? deriveProviderPickerAvailability(props.engineStatus)
       : ({ disabled: false, state: "unavailable" } as const);
 
   return (
@@ -755,10 +755,7 @@ function formatProviderVersion(value: string | null | undefined): string | null 
   return trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
 }
 
-function engineUpdateStatusLabel(
-  engine: ServerProviderStatus,
-  t: SettingsTranslator,
-): string | null {
+function engineUpdateStatusLabel(engine: ServerEngineStatus, t: SettingsTranslator): string | null {
   const state = engine.updateState?.status;
   if (state === "queued") return t("settings.updateQueued");
   if (state === "running") return t("settings.updatingProvider");
@@ -778,7 +775,7 @@ function engineUpdateStatusLabel(
 }
 
 export function engineUpdateFailureMessage(
-  engine: ServerProviderStatus | undefined,
+  engine: ServerEngineStatus | undefined,
   fallback: string,
 ): string | null {
   const state = engine?.updateState;
@@ -792,13 +789,13 @@ export function engineUpdateFailureMessage(
 }
 
 function EngineUpdateAction(props: {
-  providerStatus: ServerProviderStatus;
+  engineStatus: ServerEngineStatus;
   active: boolean;
   disabled: boolean;
   onUpdate: (engine: EngineKind) => void;
 }) {
   const { t } = useI18n();
-  const advisory = props.providerStatus.versionAdvisory;
+  const advisory = props.engineStatus.versionAdvisory;
   return (
     <Button
       type="button"
@@ -812,7 +809,7 @@ function EngineUpdateAction(props: {
       }
       onClick={(event: MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation();
-        props.onUpdate(props.providerStatus.engine);
+        props.onUpdate(props.engineStatus.engine);
       }}
     >
       {props.active ? (
@@ -1017,7 +1014,7 @@ function EngineToolRow(props: {
   defaults: ServerSettingsView;
   hiddenProviderSet: ReadonlySet<EngineKind>;
   serverSettings: Pick<ServerSettingsView, "engines" | "enableEngineUpdateChecks"> | null;
-  providerStatus: ServerProviderStatus | undefined;
+  engineStatus: ServerEngineStatus | undefined;
   updatingProviders: ReadonlySet<EngineKind>;
   onOpenChange: (open: boolean) => void;
   onUpdate: (engine: EngineKind) => void;
@@ -1146,39 +1143,39 @@ function EngineToolRow(props: {
   const isDirty =
     dirtyKeys.size > 0 ||
     isProviderInstallConfigDirty(props.config, props.settings, props.defaults);
-  const showEngineUpdateStatus = props.providerStatus
+  const showEngineUpdateStatus = props.engineStatus
     ? shouldShowEngineUpdateStatus({
-        engine: props.providerStatus,
+        engine: props.engineStatus,
         hiddenProviderSet: props.hiddenProviderSet,
         serverSettings: props.serverSettings,
       })
     : false;
-  const updateAdvisory = props.providerStatus?.versionAdvisory;
+  const updateAdvisory = props.engineStatus?.versionAdvisory;
   const engineUpdateSuppressed =
     updateAdvisory?.status === "behind_latest" && !showEngineUpdateStatus;
-  const currentProviderVersion = formatProviderVersion(props.providerStatus?.version);
-  const engineUpdateLabel = props.providerStatus
+  const currentProviderVersion = formatProviderVersion(props.engineStatus?.version);
+  const engineUpdateLabel = props.engineStatus
     ? !props.settings.enableEngineUpdateChecks
       ? currentProviderVersion
         ? t("settings.currentVersion", { version: currentProviderVersion })
         : null
       : engineUpdateSuppressed
         ? null
-        : engineUpdateStatusLabel(props.providerStatus, t)
+        : engineUpdateStatusLabel(props.engineStatus, t)
     : null;
   const updateActive = Boolean(
-    (props.providerStatus && isEngineUpdateActive(props.providerStatus)) ||
+    (props.engineStatus && isEngineUpdateActive(props.engineStatus)) ||
     props.updatingProviders.has(props.config.engine),
   );
-  const showUpdateButton = props.providerStatus
-    ? shouldPromptEngineUpdate(props.providerStatus) &&
+  const showUpdateButton = props.engineStatus
+    ? shouldPromptEngineUpdate(props.engineStatus) &&
       (showEngineUpdateStatus || updateAdvisory?.status === "unknown")
     : false;
   // Self-updating CLIs never report a latest version, so the update stays available
   // inside the panel rather than as a header badge that can never be satisfied.
-  const showSelfManagedUpdate = props.providerStatus
-    ? shouldOfferEngineUpdateAction(props.providerStatus) &&
-      !isProviderLatestVersionKnowable(props.providerStatus)
+  const showSelfManagedUpdate = props.engineStatus
+    ? shouldOfferEngineUpdateAction(props.engineStatus) &&
+      !isProviderLatestVersionKnowable(props.engineStatus)
     : false;
 
   return (
@@ -1212,9 +1209,9 @@ function EngineToolRow(props: {
               className="size-4 shrink-0 text-muted-foreground"
             />
           </CollapsibleTrigger>
-          {showUpdateButton && props.providerStatus ? (
+          {showUpdateButton && props.engineStatus ? (
             <EngineUpdateAction
-              providerStatus={props.providerStatus}
+              engineStatus={props.engineStatus}
               active={updateActive}
               disabled={updateActive}
               onUpdate={props.onUpdate}
@@ -1238,13 +1235,13 @@ function EngineToolRow(props: {
                   )}
                 </div>
               ) : null}
-              {showSelfManagedUpdate && props.providerStatus ? (
+              {showSelfManagedUpdate && props.engineStatus ? (
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0 text-xs text-muted-foreground">
                     {t("settings.selfManagedUpdate", { engine: title })}
                   </div>
                   <EngineUpdateAction
-                    providerStatus={props.providerStatus}
+                    engineStatus={props.engineStatus}
                     active={updateActive}
                     disabled={updateActive}
                     onUpdate={props.onUpdate}
@@ -1363,7 +1360,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
     preferences.engineOrder,
     preferenceDefaults.engineOrder,
   );
-  const providerStatusByEngine = useMemo(
+  const engineStatusByEngine = useMemo(
     () => new Map((serverConfigQuery.data?.engines ?? []).map((status) => [status.engine, status])),
     [serverConfigQuery.data?.engines],
   );
@@ -1371,7 +1368,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
     () =>
       new Map(
         (serverConfigQuery.data?.engines ?? []).flatMap((status) => {
-          const normalized = normalizeProviderStatusForLocalConfig({
+          const normalized = normalizeEngineStatusForLocalConfig({
             engine: status.engine,
             status,
             customBinaryPath: settings
@@ -1396,7 +1393,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
         : null,
     [settings],
   );
-  const outdatedProviderStatuses = useMemo(
+  const outdatedEngineStatuses = useMemo(
     () =>
       getVisibleEngineUpdateStatuses({
         engines: serverConfigQuery.data?.engines ?? [],
@@ -1405,7 +1402,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
       }),
     [engineUpdateServerSettings, serverConfigQuery.data?.engines, preferences.hiddenEngines],
   );
-  const outdatedProviderCount = outdatedProviderStatuses.length;
+  const outdatedProviderCount = outdatedEngineStatuses.length;
   const installSettingsDirty = settings
     ? isProviderInstallSettingsDirty(settings, defaults)
     : false;
@@ -1452,7 +1449,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
         request: ensureNativeApi().server.updateEngine({ engine }),
       })
         .then((result) => {
-          void reconcileServerProviderStatuses(queryClient, result.engines).catch(() => undefined);
+          void reconcileServerEngineStatuses(queryClient, result.engines).catch(() => undefined);
           const refreshedProvider = result.engines.find((status) => status.engine === engine);
           const failureMessage = refreshedProvider
             ? engineUpdateFailureMessage(refreshedProvider, t("settings.engineUpdateIncomplete"))
@@ -1591,7 +1588,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
                   : t("settings.noEngineUpdates")
             }
           >
-            {settings.enableEngineUpdateChecks && outdatedProviderStatuses.length > 0 ? (
+            {settings.enableEngineUpdateChecks && outdatedEngineStatuses.length > 0 ? (
               <div
                 className={cn(
                   "mt-4",
@@ -1599,20 +1596,20 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
                   SETTINGS_STACKED_ROWS_DIVIDER_CLASS_NAME,
                 )}
               >
-                {outdatedProviderStatuses.map((providerStatus) => {
+                {outdatedEngineStatuses.map((engineStatus) => {
                   const updateActive =
-                    isEngineUpdateActive(providerStatus) ||
-                    updatingProviders.has(providerStatus.engine);
-                  const updateLabel = engineUpdateStatusLabel(providerStatus, t);
+                    isEngineUpdateActive(engineStatus) ||
+                    updatingProviders.has(engineStatus.engine);
+                  const updateLabel = engineUpdateStatusLabel(engineStatus, t);
                   return (
                     <SettingsListRow
-                      key={providerStatus.engine}
-                      title={ENGINE_DISPLAY_NAMES[providerStatus.engine]}
+                      key={engineStatus.engine}
+                      title={ENGINE_DISPLAY_NAMES[engineStatus.engine]}
                       description={updateLabel || undefined}
                       actions={
-                        providerStatus.versionAdvisory?.canUpdate ? (
+                        engineStatus.versionAdvisory?.canUpdate ? (
                           <EngineUpdateAction
-                            providerStatus={providerStatus}
+                            engineStatus={engineStatus}
                             active={updateActive}
                             disabled={updateActive}
                             onUpdate={(engine) => void runEngineUpdate(engine)}
@@ -1680,7 +1677,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
                   <SortableProviderVisibilityRow
                     key={option.engine}
                     option={option}
-                    providerStatus={providerPickerStatusByEngine.get(option.engine)}
+                    engineStatus={providerPickerStatusByEngine.get(option.engine)}
                     statusPending={serverConfigQuery.isPending}
                     isHidden={hiddenProviderSet.has(option.engine)}
                     onHiddenChange={(hidden) =>
@@ -1735,7 +1732,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
                     defaults={defaults}
                     hiddenProviderSet={hiddenProviderSet}
                     serverSettings={engineUpdateServerSettings}
-                    providerStatus={providerStatusByEngine.get(config.engine)}
+                    engineStatus={engineStatusByEngine.get(config.engine)}
                     updatingProviders={updatingProviders}
                     onOpenChange={(open) =>
                       setOpenInstallProviders((existing) => ({

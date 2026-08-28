@@ -4,7 +4,7 @@
 // Exports: useThreadErrorToast, buildThreadErrorToastOptions, threadErrorToastId
 
 import type { ThreadId } from "@harnessos/contracts";
-import { isProviderDeliveryBlockDetail } from "@harnessos/shared/providerDeliveryBlock";
+import { isEngineDeliveryBlockDetail } from "@harnessos/shared/engineDeliveryBlock";
 import { useEffect, useRef, type RefObject } from "react";
 
 import { toastManager } from "../ui/toast";
@@ -24,7 +24,7 @@ export function buildThreadErrorToastOptions(input: {
   threadId: ThreadId;
   unblocking: boolean;
 }): ThreadErrorToastOptions {
-  const canUnblock = isProviderDeliveryBlockDetail(input.error);
+  const canUnblock = isEngineDeliveryBlockDetail(input.error);
   return {
     id: threadErrorToastId(input.threadId),
     type: "error",

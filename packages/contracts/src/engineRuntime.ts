@@ -104,7 +104,7 @@ const RuntimeSessionExitKind = Schema.Literals(["graceful", "error"]);
 export type RuntimeSessionExitKind = typeof RuntimeSessionExitKind.Type;
 
 const RuntimeErrorClass = Schema.Literals([
-  "provider_error",
+  "engine_error",
   "transport_error",
   "permission_error",
   "validation_error",
@@ -275,7 +275,7 @@ const EngineRuntimeEventBase = Schema.Struct({
   itemId: Schema.optional(RuntimeItemId),
   requestId: Schema.optional(RuntimeRequestId),
   lifecycleGeneration: Schema.optional(TrimmedNonEmptyStringSchema),
-  providerRefs: Schema.optional(EngineRefs),
+  engineRefs: Schema.optional(EngineRefs),
   raw: Schema.optional(RuntimeEventRaw),
 });
 export type EngineRuntimeEventBase = typeof EngineRuntimeEventBase.Type;

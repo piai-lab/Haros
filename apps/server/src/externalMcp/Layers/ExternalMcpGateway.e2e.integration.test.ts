@@ -8,25 +8,25 @@ import type {
   OrchestrationProjectShell,
   OrchestrationThread,
   OrchestrationThreadShell,
-  ServerProviderStatus,
+  ServerEngineStatus,
 } from "@harnessos/contracts";
 import { MessageId, ProjectId, TurnId } from "@harnessos/contracts";
 import { Effect, Fiber, Layer, Option, Stream } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { AgentGatewayOperationRepositoryLive } from "../../agentGateway/Layers/AgentGatewayOperationRepository.ts";
+import { HostGatewayOperationRepositoryLive } from "../../hostGateway/Layers/HostGatewayOperationRepository.ts";
 import { ServerConfig } from "../../config.ts";
 import { GitCore } from "../../git/Services/GitCore.ts";
 import { OrchestrationEngineService } from "../../orchestration/Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../../orchestration/Services/ProjectionSnapshotQuery.ts";
 import { SqlitePersistenceMemory } from "../../persistence/Layers/Sqlite.ts";
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
-import { EngineDiscoveryService } from "../../provider/Services/EngineDiscoveryService.ts";
-import { EngineHealth } from "../../provider/Services/EngineHealth.ts";
-import { EngineExecutionCapabilities } from "../../provider/Services/EngineExecutionCapabilities.ts";
-import { resolveProviderExecutionCapabilities } from "../../provider/executionCapabilityProjection.ts";
-import { engineExecutionStructure } from "../../provider/engineExecutionStructure.ts";
+import { EngineDiscoveryService } from "../../engine/Services/EngineDiscoveryService.ts";
+import { EngineHealth } from "../../engine/Services/EngineHealth.ts";
+import { EngineExecutionCapabilities } from "../../engine/Services/EngineExecutionCapabilities.ts";
+import { resolveEngineExecutionCapabilities } from "../../engine/executionCapabilityProjection.ts";
+import { engineExecutionStructure } from "../../engine/engineExecutionStructure.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { serveExternalMcpStdio, writeExternalMcpClientCredential } from "../bridge.ts";
 import {
@@ -285,7 +285,7 @@ describe("external MCP gateway stdio flow", () => {
           source: "test",
         }),
     } as never);
-    const providerStatuses: ReadonlyArray<ServerProviderStatus> = [
+    const engineStatuses: ReadonlyArray<ServerEngineStatus> = [
       "codex",
       "claude",
       "cursor",
@@ -296,15 +296,15 @@ describe("external MCP gateway stdio flow", () => {
       "opencode",
       "pi",
     ].map((engine) => ({
-      engine: engine as ServerProviderStatus["engine"],
+      engine: engine as ServerEngineStatus["engine"],
       status: "ready",
       available: true,
       authStatus: "authenticated",
       checkedAt: NOW,
     }));
-    const providerHealthLayer = Layer.succeed(EngineHealth, {
-      getStatuses: Effect.succeed(providerStatuses),
-      refresh: Effect.succeed(providerStatuses),
+    const engineHealthLayer = Layer.succeed(EngineHealth, {
+      getStatuses: Effect.succeed(engineStatuses),
+      refresh: Effect.succeed(engineStatuses),
       updateEngine: () => Effect.die("not used"),
       streamChanges: Stream.empty,
     } as never);
@@ -322,7 +322,7 @@ describe("external MCP gateway stdio flow", () => {
     const repositoryLayer = ExternalMcpRepositoryLive.pipe(
       Layer.provideMerge(SqlitePersistenceMemory),
     );
-    const operationLayer = AgentGatewayOperationRepositoryLive.pipe(
+    const operationLayer = HostGatewayOperationRepositoryLive.pipe(
       Layer.provideMerge(SqlitePersistenceMemory),
     );
     const serviceLayer = ExternalMcpServiceLive.pipe(
@@ -337,15 +337,15 @@ describe("external MCP gateway stdio flow", () => {
       Layer.provide(engineLayer),
       Layer.provide(gitLayer),
       Layer.provide(engineDiscoveryLayer),
-      Layer.provide(providerHealthLayer),
+      Layer.provide(engineHealthLayer),
       Layer.provide(
         Layer.succeed(EngineExecutionCapabilities, {
           get: (engineSelection) =>
             Effect.succeed(
-              resolveProviderExecutionCapabilities({
+              resolveEngineExecutionCapabilities({
                 engineSelection,
                 adapterCapabilities: engineExecutionStructure(engineSelection.engine),
-                providerStatus: {
+                engineStatus: {
                   engine: engineSelection.engine,
                   status: "ready",
                   available: true,

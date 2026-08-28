@@ -36,13 +36,13 @@ import { EngineSessionRuntimeRepositoryLive } from "../src/persistence/Layers/En
 import { makeSqlitePersistenceLive } from "../src/persistence/Layers/Sqlite.ts";
 import { ProjectionCheckpointRepository } from "../src/persistence/Services/ProjectionCheckpoints.ts";
 import { ProjectionPendingInteractionRepository } from "../src/persistence/Services/ProjectionPendingInteractions.ts";
-import { EngineUnsupportedError } from "../src/provider/Errors.ts";
-import { EngineAdapterRegistry } from "../src/provider/Services/EngineAdapterRegistry.ts";
-import { EngineSessionDirectoryLive } from "../src/provider/Layers/EngineSessionDirectory.ts";
-import { makeProviderServiceLive } from "../src/provider/Layers/EngineService.ts";
-import { makeCodexAdapterLive } from "../src/provider/Layers/CodexAdapter.ts";
-import { CodexAdapter } from "../src/provider/Services/CodexAdapter.ts";
-import { EngineService } from "../src/provider/Services/EngineService.ts";
+import { EngineUnsupportedError } from "../src/engine/Errors.ts";
+import { EngineAdapterRegistry } from "../src/engine/Services/EngineAdapterRegistry.ts";
+import { EngineSessionDirectoryLive } from "../src/engine/Layers/EngineSessionDirectory.ts";
+import { makeEngineServiceLive } from "../src/engine/Layers/EngineService.ts";
+import { makeCodexAdapterLive } from "../src/engine/Layers/CodexAdapter.ts";
+import { CodexAdapter } from "../src/engine/Services/CodexAdapter.ts";
+import { EngineService } from "../src/engine/Services/EngineService.ts";
 import { ServerSettingsService } from "../src/serverSettings.ts";
 import { CheckpointReactorLive } from "../src/orchestration/Layers/CheckpointReactor.ts";
 import { StudioOutputReactorLive } from "../src/orchestration/Layers/StudioOutputReactor.ts";
@@ -51,7 +51,7 @@ import { OrchestrationProjectionPipelineLive } from "../src/orchestration/Layers
 import { OrchestrationProjectionSnapshotQueryLive } from "../src/orchestration/Layers/ProjectionSnapshotQuery.ts";
 import { RuntimeReceiptBusLive } from "../src/orchestration/Layers/RuntimeReceiptBus.ts";
 import { OrchestrationReactorLive } from "../src/orchestration/Layers/OrchestrationReactor.ts";
-import { AgentGatewayOperationRepositoryLive } from "../src/agentGateway/Layers/AgentGatewayOperationRepository.ts";
+import { HostGatewayOperationRepositoryLive } from "../src/hostGateway/Layers/HostGatewayOperationRepository.ts";
 import { EngineCommandReactorLive } from "../src/orchestration/Layers/EngineCommandReactor.ts";
 import { EngineRuntimeIngestionLive } from "../src/orchestration/Layers/EngineRuntimeIngestion.ts";
 import { TurnCheckpointCoordinatorLive } from "../src/orchestration/Layers/TurnCheckpointCoordinator.ts";
@@ -68,8 +68,8 @@ import {
 } from "../src/orchestration/Services/RuntimeReceiptBus.ts";
 
 import {
-  makeTestProviderAdapterHarness,
-  type TestProviderAdapterHarness,
+  makeTestEngineAdapterHarness,
+  type TestEngineAdapterHarness,
 } from "./TestEngineAdapter.integration.ts";
 import { deriveServerPaths, ServerConfig } from "../src/config.ts";
 
@@ -167,10 +167,10 @@ export interface OrchestrationIntegrationHarness {
   readonly rootDir: string;
   readonly workspaceDir: string;
   readonly dbPath: string;
-  readonly adapterHarness: TestProviderAdapterHarness | null;
+  readonly adapterHarness: TestEngineAdapterHarness | null;
   readonly engine: OrchestrationEngineShape;
   readonly snapshotQuery: ProjectionSnapshotQuery["Service"];
-  readonly providerService: EngineService["Service"];
+  readonly engineService: EngineService["Service"];
   readonly checkpointStore: CheckpointStore["Service"];
   readonly checkpointRepository: ProjectionCheckpointRepository["Service"];
   readonly waitForThread: (
@@ -230,7 +230,7 @@ export const makeOrchestrationIntegrationHarness = (
     const useRealCodex = options?.realCodex === true;
     const adapterHarness = useRealCodex
       ? null
-      : yield* makeTestProviderAdapterHarness({
+      : yield* makeTestEngineAdapterHarness({
           engine: engineKind,
         });
     const fakeRegistry = adapterHarness
@@ -261,7 +261,7 @@ export const makeOrchestrationIntegrationHarness = (
       Layer.provide(eventStoreLayer),
       Layer.provide(OrchestrationCommandReceiptRepositoryLive),
     );
-    const providerSessionDirectoryLayer = EngineSessionDirectoryLive.pipe(
+    const engineSessionDirectoryLayer = EngineSessionDirectoryLive.pipe(
       Layer.provide(EngineSessionRuntimeRepositoryLive),
     );
     const realCodexRegistry = Layer.effect(
@@ -280,15 +280,15 @@ export const makeOrchestrationIntegrationHarness = (
       Layer.provide(makeCodexAdapterLive()),
       Layer.provideMerge(ServerConfig.layerTest(workspaceDir, rootDir)),
       Layer.provideMerge(NodeServices.layer),
-      Layer.provideMerge(providerSessionDirectoryLayer),
+      Layer.provideMerge(engineSessionDirectoryLayer),
     );
-    const providerLayer = useRealCodex
-      ? makeProviderServiceLive().pipe(
-          Layer.provide(providerSessionDirectoryLayer),
+    const engineLayer = useRealCodex
+      ? makeEngineServiceLive().pipe(
+          Layer.provide(engineSessionDirectoryLayer),
           Layer.provide(realCodexRegistry),
         )
-      : makeProviderServiceLive().pipe(
-          Layer.provide(providerSessionDirectoryLayer),
+      : makeEngineServiceLive().pipe(
+          Layer.provide(engineSessionDirectoryLayer),
           Layer.provide(fakeRegistry!),
         );
 
@@ -300,7 +300,7 @@ export const makeOrchestrationIntegrationHarness = (
       ProjectionCheckpointRepositoryLive,
       ProjectionPendingInteractionRepositoryLive,
       checkpointStoreLayer,
-      providerLayer,
+      engineLayer,
       RuntimeReceiptBusLive,
       TurnCheckpointCoordinatorLive,
     );
@@ -324,7 +324,7 @@ export const makeOrchestrationIntegrationHarness = (
       Layer.provideMerge(gitCoreLayer),
       Layer.provideMerge(textGenerationLayer),
       Layer.provideMerge(ServerSettingsService.layerTest()),
-      Layer.provideMerge(AgentGatewayOperationRepositoryLive),
+      Layer.provideMerge(HostGatewayOperationRepositoryLive),
     );
     const checkpointReactorLayer = CheckpointReactorLive.pipe(
       Layer.provideMerge(runtimeServicesLayer),
@@ -356,7 +356,7 @@ export const makeOrchestrationIntegrationHarness = (
     const snapshotQuery = yield* tryRuntimePromise("load ProjectionSnapshotQuery service", () =>
       runtime.runPromise(Effect.service(ProjectionSnapshotQuery)),
     ).pipe(Effect.orDie);
-    const providerService = yield* tryRuntimePromise("load EngineService service", () =>
+    const engineService = yield* tryRuntimePromise("load EngineService service", () =>
       runtime.runPromise(Effect.service(EngineService)),
     ).pipe(Effect.orDie);
     const checkpointStore = yield* tryRuntimePromise("load CheckpointStore service", () =>
@@ -517,7 +517,7 @@ export const makeOrchestrationIntegrationHarness = (
       adapterHarness,
       engine,
       snapshotQuery,
-      providerService,
+      engineService,
       checkpointStore,
       checkpointRepository,
       waitForThread,

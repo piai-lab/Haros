@@ -3,13 +3,13 @@
 // Layer: Web orchestration helper tests
 // Depends on: threadUnblock helpers with a stubbed orchestration API.
 
-import type { OrchestrationListProviderDeliveryBlockersResult } from "@harnessos/contracts";
+import type { OrchestrationListEngineDeliveryBlockersResult } from "@harnessos/contracts";
 import { ThreadId } from "@harnessos/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import {
   describeThreadUnblockResult,
-  isProviderDeliveryReconciliationConflict,
+  isEngineDeliveryReconciliationConflict,
   ENGINE_DELIVERY_RECONCILIATION_CONFLICT_CODE,
   unblockThreadFromClient,
 } from "./threadUnblock";
@@ -19,7 +19,7 @@ const threadId = ThreadId.makeUnsafe("thread-blocked");
 function blocker(input: {
   readonly eventSequence: number;
   readonly state: "dead" | "uncertain";
-}): OrchestrationListProviderDeliveryBlockersResult[number] {
+}): OrchestrationListEngineDeliveryBlockersResult[number] {
   return {
     consumerName: "engine-command-reactor.v1",
     eventSequence: input.eventSequence,
@@ -35,7 +35,7 @@ function blocker(input: {
     lastReconciledAt: null,
     lastReconciledBy: null,
     lastReconciliationNote: null,
-  } as OrchestrationListProviderDeliveryBlockersResult[number];
+  } as OrchestrationListEngineDeliveryBlockersResult[number];
 }
 
 function conflictError() {
@@ -46,11 +46,11 @@ function conflictError() {
 
 describe("unblockThreadFromClient", () => {
   it("abandons every blocker oldest-first", async () => {
-    const listProviderDeliveryBlockers = vi.fn(async () => [
+    const listEngineDeliveryBlockers = vi.fn(async () => [
       blocker({ eventSequence: 42, state: "dead" }),
       blocker({ eventSequence: 17, state: "uncertain" }),
     ]);
-    const reconcileProviderDelivery = vi.fn(async (input: { eventSequence: number }) => ({
+    const reconcileEngineDelivery = vi.fn(async (input: { eventSequence: number }) => ({
       eventSequence: input.eventSequence,
       threadId,
       outcome: "abandon" as const,
@@ -60,49 +60,49 @@ describe("unblockThreadFromClient", () => {
 
     const result = await unblockThreadFromClient(
       {
-        listProviderDeliveryBlockers,
-        reconcileProviderDelivery,
+        listEngineDeliveryBlockers,
+        reconcileEngineDelivery,
       } as never,
       threadId,
     );
 
     expect(result).toEqual({ kind: "unblocked", reconciledCount: 2 });
-    expect(listProviderDeliveryBlockers).toHaveBeenCalledWith({ threadId });
+    expect(listEngineDeliveryBlockers).toHaveBeenCalledWith({ threadId });
     expect(
-      reconcileProviderDelivery.mock.calls.map(
+      reconcileEngineDelivery.mock.calls.map(
         ([input]) => (input as never as { eventSequence: number }).eventSequence,
       ),
     ).toEqual([17, 42]);
-    expect(reconcileProviderDelivery.mock.calls[0]?.[0]).toMatchObject({
+    expect(reconcileEngineDelivery.mock.calls[0]?.[0]).toMatchObject({
       threadId,
       expectedState: "uncertain",
       outcome: "abandon",
     });
-    expect(reconcileProviderDelivery.mock.calls[1]?.[0]).toMatchObject({ expectedState: "dead" });
+    expect(reconcileEngineDelivery.mock.calls[1]?.[0]).toMatchObject({ expectedState: "dead" });
   });
 
   it("reports an already-clear thread without reconciling anything", async () => {
-    const reconcileProviderDelivery = vi.fn();
+    const reconcileEngineDelivery = vi.fn();
 
     const result = await unblockThreadFromClient(
       {
-        listProviderDeliveryBlockers: vi.fn(async () => []),
-        reconcileProviderDelivery,
+        listEngineDeliveryBlockers: vi.fn(async () => []),
+        reconcileEngineDelivery,
       } as never,
       threadId,
     );
 
     expect(result).toEqual({ kind: "already-clear" });
-    expect(reconcileProviderDelivery).not.toHaveBeenCalled();
+    expect(reconcileEngineDelivery).not.toHaveBeenCalled();
   });
 
   it("treats a reconciliation conflict as settled elsewhere", async () => {
     const result = await unblockThreadFromClient(
       {
-        listProviderDeliveryBlockers: vi.fn(async () => [
+        listEngineDeliveryBlockers: vi.fn(async () => [
           blocker({ eventSequence: 17, state: "uncertain" }),
         ]),
-        reconcileProviderDelivery: vi.fn(async () => {
+        reconcileEngineDelivery: vi.fn(async () => {
           throw conflictError();
         }),
       } as never,
@@ -116,11 +116,11 @@ describe("unblockThreadFromClient", () => {
     let call = 0;
     const result = await unblockThreadFromClient(
       {
-        listProviderDeliveryBlockers: vi.fn(async () => [
+        listEngineDeliveryBlockers: vi.fn(async () => [
           blocker({ eventSequence: 17, state: "uncertain" }),
           blocker({ eventSequence: 42, state: "uncertain" }),
         ]),
-        reconcileProviderDelivery: vi.fn(async () => {
+        reconcileEngineDelivery: vi.fn(async () => {
           call += 1;
           if (call === 2) throw conflictError();
           return {
@@ -142,10 +142,10 @@ describe("unblockThreadFromClient", () => {
     await expect(
       unblockThreadFromClient(
         {
-          listProviderDeliveryBlockers: vi.fn(async () => [
+          listEngineDeliveryBlockers: vi.fn(async () => [
             blocker({ eventSequence: 17, state: "uncertain" }),
           ]),
-          reconcileProviderDelivery: vi.fn(async () => {
+          reconcileEngineDelivery: vi.fn(async () => {
             throw new Error("Socket closed");
           }),
         } as never,
@@ -155,12 +155,12 @@ describe("unblockThreadFromClient", () => {
   });
 });
 
-describe("isProviderDeliveryReconciliationConflict", () => {
+describe("isEngineDeliveryReconciliationConflict", () => {
   it("matches only the server conflict code", () => {
-    expect(isProviderDeliveryReconciliationConflict(conflictError())).toBe(true);
-    expect(isProviderDeliveryReconciliationConflict(new Error("Socket closed"))).toBe(false);
-    expect(isProviderDeliveryReconciliationConflict(null)).toBe(false);
-    expect(isProviderDeliveryReconciliationConflict({ code: "WS_REQUEST_TIMEOUT" })).toBe(false);
+    expect(isEngineDeliveryReconciliationConflict(conflictError())).toBe(true);
+    expect(isEngineDeliveryReconciliationConflict(new Error("Socket closed"))).toBe(false);
+    expect(isEngineDeliveryReconciliationConflict(null)).toBe(false);
+    expect(isEngineDeliveryReconciliationConflict({ code: "WS_REQUEST_TIMEOUT" })).toBe(false);
   });
 });
 

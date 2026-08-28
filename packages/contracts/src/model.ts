@@ -68,25 +68,25 @@ const EngineOptionDescriptorBase = {
   description: Schema.optional(TrimmedNonEmptyString),
 } as const;
 
-export const SelectProviderOptionDescriptor = Schema.Struct({
+export const SelectEngineOptionDescriptor = Schema.Struct({
   ...EngineOptionDescriptorBase,
   type: Schema.Literal("select"),
   options: Schema.Array(EngineOptionChoice),
   currentValue: Schema.optional(TrimmedNonEmptyString),
   promptInjectedValues: Schema.optional(Schema.Array(TrimmedNonEmptyString)),
 });
-export type SelectProviderOptionDescriptor = typeof SelectProviderOptionDescriptor.Type;
+export type SelectEngineOptionDescriptor = typeof SelectEngineOptionDescriptor.Type;
 
-export const BooleanProviderOptionDescriptor = Schema.Struct({
+export const BooleanEngineOptionDescriptor = Schema.Struct({
   ...EngineOptionDescriptorBase,
   type: Schema.Literal("boolean"),
   currentValue: Schema.optional(Schema.Boolean),
 });
-export type BooleanProviderOptionDescriptor = typeof BooleanProviderOptionDescriptor.Type;
+export type BooleanEngineOptionDescriptor = typeof BooleanEngineOptionDescriptor.Type;
 
 export const EngineOptionDescriptor = Schema.Union([
-  SelectProviderOptionDescriptor,
-  BooleanProviderOptionDescriptor,
+  SelectEngineOptionDescriptor,
+  BooleanEngineOptionDescriptor,
 ]);
 export type EngineOptionDescriptor = typeof EngineOptionDescriptor.Type;
 

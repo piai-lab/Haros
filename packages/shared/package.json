@@ -240,9 +240,9 @@
       "types": "./src/editorIcons.ts",
       "import": "./src/editorIcons.ts"
     },
-    "./providerUsage": {
-      "types": "./src/providerUsage.ts",
-      "import": "./src/providerUsage.ts"
+    "./engineUsage": {
+      "types": "./src/engineUsage.ts",
+      "import": "./src/engineUsage.ts"
     },
     "./engineMetadata": {
       "types": "./src/engineMetadata.ts",
@@ -288,9 +288,9 @@
       "types": "./src/unifiedPatchStats.ts",
       "import": "./src/unifiedPatchStats.ts"
     },
-    "./providerDeliveryBlock": {
-      "types": "./src/providerDeliveryBlock.ts",
-      "import": "./src/providerDeliveryBlock.ts"
+    "./engineDeliveryBlock": {
+      "types": "./src/engineDeliveryBlock.ts",
+      "import": "./src/engineDeliveryBlock.ts"
     },
     "./browserAnnotations": {
       "types": "./src/browserAnnotations.ts",

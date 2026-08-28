@@ -258,14 +258,14 @@ describe("createOrJoinSidechat", () => {
   function run(input: {
     flights: Map<string, SidechatCreationFlight>;
     sourceThreadId: ThreadId;
-    targetProvider?: string;
+    targetEngine?: string;
     initialPrompt?: string | undefined;
     startCreation: (initialPrompt?: string | undefined) => Promise<SidechatCreationResult>;
     sendQueuedPrompt: (threadId: ThreadId, prompt: string) => Promise<void>;
   }): Promise<true> {
     return createOrJoinSidechat({
       inFlightByKey: input.flights,
-      flightKey: `${input.sourceThreadId}:${input.targetProvider ?? "codex"}`,
+      flightKey: `${input.sourceThreadId}:${input.targetEngine ?? "codex"}`,
       initialPrompt: input.initialPrompt,
       startCreation: input.startCreation,
       sendQueuedPrompt: input.sendQueuedPrompt,
@@ -379,14 +379,14 @@ describe("createOrJoinSidechat", () => {
       run({
         flights,
         sourceThreadId,
-        targetProvider: "codex",
+        targetEngine: "codex",
         startCreation: startCodex,
         sendQueuedPrompt: vi.fn().mockResolvedValue(undefined),
       }),
       run({
         flights,
         sourceThreadId,
-        targetProvider: "cursor",
+        targetEngine: "cursor",
         startCreation: startCursor,
         sendQueuedPrompt: vi.fn().mockResolvedValue(undefined),
       }),

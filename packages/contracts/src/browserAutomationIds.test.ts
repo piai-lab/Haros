@@ -16,8 +16,8 @@ import {
   BrowserHostConnectionId,
   BrowserIdempotencyKey,
   BrowserOperationId,
-  BrowserProviderRuntimeGeneration,
-  BrowserProviderSessionId,
+  BrowserEngineRuntimeGeneration,
+  BrowserEngineSessionId,
   BrowserRoutingInventoryVersion,
   BrowserRuntimeGeneration,
   BrowserSnapshotId,
@@ -42,7 +42,7 @@ describe("browser automation identities", () => {
       BrowserHostConnectionId,
       BrowserClientId,
       BrowserOperationId,
-      BrowserProviderSessionId,
+      BrowserEngineSessionId,
       BrowserSnapshotId,
       BrowserAuthorizationRequestId,
     ];
@@ -115,7 +115,7 @@ describe("browser automation identities", () => {
   it("uses positive integers for authorization and runtime generations", () => {
     for (const schema of [
       BrowserAuthorizationEpoch,
-      BrowserProviderRuntimeGeneration,
+      BrowserEngineRuntimeGeneration,
       BrowserRuntimeGeneration,
     ]) {
       expect(Schema.is(schema)(1)).toBe(true);

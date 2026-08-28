@@ -8,7 +8,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { type EngineKind } from "@harnessos/contracts";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useEngineStatusesForLocalConfig } from "./useEngineStatusesForLocalConfig";
-import { useRefreshProviderStatusesNow } from "./useEngineStatusRefresh";
+import { useRefreshEngineStatusesNow } from "./useEngineStatusRefresh";
 import {
   buildThreadHandoffImportedActivities,
   buildThreadHandoffImportedMessages,
@@ -28,13 +28,13 @@ export function useThreadHandoff() {
   const navigate = useNavigate();
   const projects = useStore((store) => store.projects);
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
-  const providerStatuses = useEngineStatusesForLocalConfig();
-  const refreshProviderStatuses = useRefreshProviderStatusesNow();
+  const engineStatuses = useEngineStatusesForLocalConfig();
+  const refreshEngineStatuses = useRefreshEngineStatusesNow();
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
 
   const createThreadHandoff = async (
     thread: Thread,
-    targetProvider: EngineKind,
+    targetEngine: EngineKind,
   ): Promise<Thread["id"]> => {
     const api = readNativeApi();
     if (!api) {
@@ -50,16 +50,16 @@ export function useThreadHandoff() {
       throw new Error("This thread cannot be handed off yet.");
     }
     const targetAvailability = await resolveProviderSendAvailabilityWithRefresh({
-      engine: targetProvider,
-      statuses: providerStatuses,
-      refreshStatuses: () => refreshProviderStatuses({ silent: true }),
+      engine: targetEngine,
+      statuses: engineStatuses,
+      refreshStatuses: () => refreshEngineStatuses({ silent: true }),
     });
     if (
       !isEligibleHandoffTargetProvider({
-        sourceProvider: thread.engineSelection.engine,
-        targetProvider,
-        targetProviderEnabled: serverSettingsQuery.data?.engines[targetProvider].enabled,
-        targetProviderStatus: targetAvailability.status,
+        sourceEngine: thread.engineSelection.engine,
+        targetEngine,
+        targetEngineEnabled: serverSettingsQuery.data?.engines[targetEngine].enabled,
+        targetEngineStatus: targetAvailability.status,
       })
     ) {
       throw new Error(
@@ -85,7 +85,7 @@ export function useThreadHandoff() {
       title: resolveThreadHandoffTitle(thread),
       engineSelection: resolveThreadHandoffEngineSelection({
         sourceThread: thread,
-        targetProvider,
+        targetEngine,
         projectDefaultEngineSelection: project.defaultEngineSelection,
         stickyEngineSelectionByEngine,
       }),

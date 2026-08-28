@@ -935,7 +935,7 @@ describe("decider project scripts", () => {
           worktreePath: null,
           handoff: {
             sourceThreadId: ThreadId.makeUnsafe("thread-original"),
-            sourceProvider: "claude",
+            sourceEngine: "claude",
             importedAt: now,
             bootstrapStatus: "pending",
           },
@@ -1057,7 +1057,7 @@ describe("decider project scripts", () => {
           worktreePath: null,
           handoff: {
             sourceThreadId: ThreadId.makeUnsafe("thread-original"),
-            sourceProvider: "claude",
+            sourceEngine: "claude",
             importedAt: now,
             bootstrapStatus: "completed",
           },

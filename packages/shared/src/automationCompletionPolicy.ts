@@ -1,6 +1,6 @@
 // FILE: automationCompletionPolicy.ts
 // Purpose: Single source for translating a stop clause to the saved completion policy shape.
-// Layer: Shared runtime utility (web composer + server agent gateway)
+// Layer: Shared runtime utility (web composer + server HostGateway)
 // Exports: stop-clause builders and extractors.
 // Depends on: automation contracts shared with the native API.
 //

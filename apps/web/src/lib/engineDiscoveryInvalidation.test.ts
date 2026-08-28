@@ -2,7 +2,7 @@
 // Purpose: Verifies engine-discovery invalidation ignores engine-status metadata noise.
 // Layer: Web UI engine discovery tests
 
-import { ENGINE_KINDS, type ServerProviderStatus } from "@harnessos/contracts";
+import { ENGINE_KINDS, type ServerEngineStatus } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -28,7 +28,7 @@ const BASE_PROVIDER_STATUS = {
     checkedAt: "2026-06-04T10:00:00.000Z",
     message: null,
   },
-} satisfies ServerProviderStatus;
+} satisfies ServerEngineStatus;
 
 describe("engine model discovery invalidation", () => {
   it("ignores engine checkedAt, message, and advisory metadata churn", () => {
@@ -76,7 +76,7 @@ describe("engine model discovery invalidation", () => {
       ...BASE_PROVIDER_STATUS,
       engine: "codex",
       version: "1.2.3",
-    } satisfies ServerProviderStatus;
+    } satisfies ServerEngineStatus;
 
     const previous = providerModelDiscoveryInvalidationFingerprints([
       BASE_PROVIDER_STATUS,
@@ -97,7 +97,7 @@ describe("engine model discovery invalidation", () => {
           ...BASE_PROVIDER_STATUS,
           engine: candidate,
           version: "1.0.0",
-        }) satisfies ServerProviderStatus,
+        }) satisfies ServerEngineStatus,
     );
     const previous = providerModelDiscoveryInvalidationFingerprints(statuses);
     const next = providerModelDiscoveryInvalidationFingerprints(

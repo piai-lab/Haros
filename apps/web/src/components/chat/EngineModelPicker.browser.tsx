@@ -1,6 +1,6 @@
 import "../../index.css";
 
-import { type ModelSlug, type EngineKind, type ServerProviderStatus } from "@harnessos/contracts";
+import { type ModelSlug, type EngineKind, type ServerEngineStatus } from "@harnessos/contracts";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -165,7 +165,7 @@ async function mountPicker(props: {
   engine: EngineKind;
   model: ModelSlug;
   lockedProvider: EngineKind | null;
-  engines?: ReadonlyArray<ServerProviderStatus>;
+  engines?: ReadonlyArray<ServerEngineStatus>;
   loadingModelProviders?: Partial<Record<EngineKind, boolean>>;
   catalogStateByEngine?: Partial<Record<EngineKind, EngineModelCatalogState>>;
   onSelectionCommitted?: () => void;

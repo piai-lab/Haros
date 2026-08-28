@@ -76,7 +76,7 @@ const MAX_UNTRACKED_DIFF_CONCURRENCY = 4;
 const MAX_QUEUED_REPOSITORY_MUTATIONS = 64;
 const MOVE_AWARE_WORKING_TREE_STATUS_TIMEOUT_MS = 15_000;
 const AUTO_DETACHED_WORKTREE_DIRNAME = "oa";
-const WORKTREE_OWNERSHIP_MARKER = "harnessos-agent-gateway-owner.json";
+const WORKTREE_OWNERSHIP_MARKER = "harnessos-host-gateway-owner.json";
 const WORKTREE_TRANSFER_MAX_OUTPUT_BYTES = 64 * 1024 * 1024;
 const NON_REPOSITORY_STATUS_DETAILS = Object.freeze({
   isRepo: false,

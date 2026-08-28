@@ -3,22 +3,22 @@
 // rate-limit rows and archive-derived local usage lines in the same popover.
 
 import type { EngineKind } from "@harnessos/contracts";
-import { providerUsageLabel } from "@harnessos/shared/providerUsage";
+import { engineUsageLabel } from "@harnessos/shared/engineUsage";
 
 import { ExternalLinkIcon, TriangleAlertIcon } from "~/lib/icons";
 import type { OpenUsageUsageLine } from "~/lib/openUsageRateLimits";
 import {
-  deriveProviderUsageLearnMoreHref,
+  deriveEngineUsageLearnMoreHref,
   deriveRateLimitLearnMoreHref,
   type EngineRateLimit,
 } from "~/lib/rateLimits";
-import { deriveProviderUsageDisplayRows } from "~/lib/providerUsageDisplay";
+import { deriveEngineUsageDisplayRows } from "~/lib/engineUsageDisplay";
 import { cn } from "~/lib/utils";
 
 import { EngineUsageLimitRows } from "./EngineUsageLimitRows";
 import { EngineUsageLineList } from "./EngineUsageLineList";
 
-export { providerUsageLabel };
+export { engineUsageLabel };
 
 export function EngineUsagePanelContent(props: {
   engine: EngineKind | null | undefined;
@@ -32,17 +32,17 @@ export function EngineUsagePanelContent(props: {
   showLearnMore?: boolean | undefined;
   className?: string | undefined;
 }) {
-  const visibleRows = deriveProviderUsageDisplayRows(props.rateLimits);
+  const visibleRows = deriveEngineUsageDisplayRows(props.rateLimits);
   const learnMoreHref =
     props.learnMoreHref ??
     deriveRateLimitLearnMoreHref(props.rateLimits) ??
-    deriveProviderUsageLearnMoreHref(props.engine);
+    deriveEngineUsageLearnMoreHref(props.engine);
 
   return (
     <div className={cn("space-y-2", props.className)}>
       {props.showTitle !== false ? (
         <div className="text-[length:var(--app-font-size-chat-meta,10px)] font-medium text-muted-foreground">
-          {providerUsageLabel(props.engine)}
+          {engineUsageLabel(props.engine)}
         </div>
       ) : null}
       {props.notice ? (

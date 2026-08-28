@@ -1612,7 +1612,7 @@ describe("ProfileStatsQuery", () => {
           outputTokens: 37,
           cacheHitPercent: 68.1,
           coverage: "complete",
-          unavailableProviders: [],
+          unavailableEngines: [],
         });
         expect(tokenStats.lifetimeTotalTokens).toBe(272);
       }),

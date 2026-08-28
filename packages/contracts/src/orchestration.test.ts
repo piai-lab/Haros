@@ -809,7 +809,7 @@ it.effect("strips client-sent dispatchOrigin from thread.turn.start commands", (
 it.effect("strips client-sent agent dispatchOrigin from thread.turn.start commands", () =>
   Effect.gen(function* () {
     // The "agent" origin is reserved for turns dispatched through the HarnessOS
-    // agent gateway; WS clients must not be able to spoof it either.
+    // HostGateway; WS clients must not be able to spoof it either.
     const command = yield* decodeClientOrchestrationCommand({
       type: "thread.turn.start",
       commandId: "cmd-turn-start-agent-origin",
@@ -1175,7 +1175,7 @@ it.effect("decodes orchestration session runtime mode defaults", () =>
       threadId: "thread-1",
       status: "idle",
       providerName: null,
-      providerSessionId: null,
+      engineSessionId: null,
       nativeThreadId: null,
       activeTurnId: null,
       lastError: null,

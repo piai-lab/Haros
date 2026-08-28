@@ -55,7 +55,7 @@ import {
   THREAD_SIDEBAR_MIN_WIDTH_PX,
   THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
 } from "~/appearanceMigrations";
-import { useRefreshProviderStatusesNow } from "~/hooks/useEngineStatusRefresh";
+import { useRefreshEngineStatusesNow } from "~/hooks/useEngineStatusRefresh";
 import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
 import { toastManager } from "~/components/ui/toast";
 import {
@@ -316,8 +316,8 @@ function ChatRouteGlobalShortcuts() {
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const keybindings = serverConfigQuery.data?.keybindings ?? EMPTY_KEYBINDINGS;
   const platform = typeof navigator === "undefined" ? "" : navigator.platform;
-  const providerStatuses = useEngineStatusesForLocalConfig();
-  const refreshProviderStatuses = useRefreshProviderStatusesNow();
+  const engineStatuses = useEngineStatusesForLocalConfig();
+  const refreshEngineStatuses = useRefreshEngineStatusesNow();
   const activeThreadTerminalState = activeContextThreadId
     ? selectThreadTerminalState(terminalStateByThreadId, activeContextThreadId)
     : null;
@@ -500,8 +500,8 @@ function ChatRouteGlobalShortcuts() {
         void (async () => {
           const engineAvailability = await resolveProviderSendAvailabilityWithRefresh({
             engine,
-            statuses: providerStatuses,
-            refreshStatuses: () => refreshProviderStatuses({ silent: true }),
+            statuses: engineStatuses,
+            refreshStatuses: () => refreshEngineStatuses({ silent: true }),
           });
           if (!engineAvailability.usable) {
             toastManager.add({
@@ -554,8 +554,8 @@ function ChatRouteGlobalShortcuts() {
     latestUsableProjectId,
     openOrAdvanceRecentSwitcher,
     platform,
-    providerStatuses,
-    refreshProviderStatuses,
+    engineStatuses,
+    refreshEngineStatuses,
     recentSwitcherState,
     selectedThreadIdsSize,
     terminalOpen,

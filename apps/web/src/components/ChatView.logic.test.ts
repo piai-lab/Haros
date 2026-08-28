@@ -69,7 +69,7 @@ import {
   shouldConsumePendingCustomBinaryConfirmation,
   shouldEnableComposerPastedTextCollapse,
   shouldHandlePromptHistoryNavigationKey,
-  shouldRenderProviderHealthBanner,
+  shouldRenderEngineHealthBanner,
   shouldShowActiveThreadHeaderIdentity,
   shouldStartActiveTurnLayoutGrace,
   shouldRenderTerminalWorkspace,
@@ -1701,10 +1701,10 @@ describe("resolveProjectScriptTerminalTarget", () => {
   });
 });
 
-describe("shouldRenderProviderHealthBanner", () => {
+describe("shouldRenderEngineHealthBanner", () => {
   it("does not show chat engine health while a terminal thread is active", () => {
     expect(
-      shouldRenderProviderHealthBanner({
+      shouldRenderEngineHealthBanner({
         threadEntryPoint: "terminal",
         terminalWorkspaceTerminalTabActive: false,
       }),
@@ -1713,7 +1713,7 @@ describe("shouldRenderProviderHealthBanner", () => {
 
   it("does not show chat engine health while the terminal workspace tab is active", () => {
     expect(
-      shouldRenderProviderHealthBanner({
+      shouldRenderEngineHealthBanner({
         threadEntryPoint: "chat",
         terminalWorkspaceTerminalTabActive: true,
       }),
@@ -1722,7 +1722,7 @@ describe("shouldRenderProviderHealthBanner", () => {
 
   it("shows chat engine health only on the chat surface", () => {
     expect(
-      shouldRenderProviderHealthBanner({
+      shouldRenderEngineHealthBanner({
         threadEntryPoint: "chat",
         terminalWorkspaceTerminalTabActive: false,
       }),

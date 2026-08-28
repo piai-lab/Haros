@@ -5,8 +5,8 @@ import { Effect, Exit, FileSystem, Layer, Path, Schema, Scope, ServiceMap } from
 import { HttpRouter } from "effect/unstable/http";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
-import { agentGatewayRouteLayer } from "./agentGateway/httpRoute";
-import { AgentGatewayCredentials } from "./agentGateway/Services/AgentGatewayCredentials";
+import { hostGatewayRouteLayer } from "./hostGateway/httpRoute";
+import { HostGatewayCredentials } from "./hostGateway/Services/HostGatewayCredentials";
 import { AutomationRunReactor } from "./automation/Services/AutomationRunReactor";
 import { AutomationScheduler } from "./automation/Services/AutomationScheduler";
 import { AutomationService } from "./automation/Services/AutomationService";
@@ -36,10 +36,10 @@ import {
   resumeQuitInterruptedTasks,
 } from "./orchestration/quitResume";
 import { reconcileRestartStuckTurns } from "./orchestration/startupTurnReconciliation";
-import { EngineSessionReaper } from "./provider/Services/EngineSessionReaper";
-import { EngineRuntimeReconciler } from "./provider/Services/EngineRuntimeReconciler";
-import { EngineService, type EngineServiceShape } from "./provider/Services/EngineService";
-import { userInputPresenterRegistry } from "./provider/userInputPresenterRegistry";
+import { EngineSessionReaper } from "./engine/Services/EngineSessionReaper";
+import { EngineRuntimeReconciler } from "./engine/Services/EngineRuntimeReconciler";
+import { EngineService, type EngineServiceShape } from "./engine/Services/EngineService";
+import { userInputPresenterRegistry } from "./engine/userInputPresenterRegistry";
 import { ServerLifecycleEvents } from "./serverLifecycleEvents";
 import { ServerRuntimeStartup } from "./serverRuntimeStartup";
 import { ServerSettingsService } from "./serverSettings";
@@ -58,7 +58,7 @@ export interface ServerShape {
     ServerLifecycleError | ServerSettingsError,
     | Scope.Scope
     | ServerConfig
-    | AgentGatewayCredentials
+    | HostGatewayCredentials
     | ExternalMcpGateway
     | ExternalMcpService
     | FileSystem.FileSystem
@@ -97,7 +97,7 @@ export class ServerLifecycleError extends Schema.TaggedErrorClass<ServerLifecycl
 
 export function closeServerRuntimePipeline(input: {
   readonly orchestrationEngine: Pick<OrchestrationEngineShape, "quiesce" | "drain" | "stop">;
-  readonly providerService: Pick<EngineServiceShape, "closeRuntimeEvents">;
+  readonly engineService: Pick<EngineServiceShape, "closeRuntimeEvents">;
   readonly managedAttachmentCleanup: Pick<ManagedAttachmentCleanupShape, "drain">;
   readonly subscriptionsScope: Scope.Closeable;
   readonly sealUserInputPresenters: Effect.Effect<void>;
@@ -111,7 +111,7 @@ export function closeServerRuntimePipeline(input: {
     // close then fences terminal runtime events into subscriber workers; scope
     // close drains those workers before the engine accepts its final stop.
     Effect.andThen(input.orchestrationEngine.drain),
-    Effect.andThen(input.providerService.closeRuntimeEvents),
+    Effect.andThen(input.engineService.closeRuntimeEvents),
     Effect.andThen(input.drainUserInputPresenterHandoffs),
     Effect.andThen(Scope.close(input.subscriptionsScope, Exit.void)),
     // Engine Runtime ingestion owns a trusted quiescing admission seam for
@@ -134,7 +134,7 @@ export const createEffectServer = Effect.fn(function* (
       cause: new Error(remotePolicyError),
     });
   }
-  const agentGatewayCredentials = yield* AgentGatewayCredentials;
+  const hostGatewayCredentials = yield* HostGatewayCredentials;
   const automationRunReactor = yield* AutomationRunReactor;
   const automationScheduler = yield* AutomationScheduler;
   const keybindings = yield* Keybindings;
@@ -142,8 +142,8 @@ export const createEffectServer = Effect.fn(function* (
   const lifecycleEvents = yield* ServerLifecycleEvents;
   const orchestrationEngine = yield* OrchestrationEngineService;
   const orchestrationReactor = yield* OrchestrationReactor;
-  const providerService = yield* EngineService;
-  const providerSessionReaper = yield* EngineSessionReaper;
+  const engineService = yield* EngineService;
+  const engineSessionReaper = yield* EngineSessionReaper;
   const engineRuntimeReconciler = yield* EngineRuntimeReconciler;
   const runtimeStartup = yield* ServerRuntimeStartup;
   const serverSettings = yield* ServerSettingsService;
@@ -178,7 +178,7 @@ export const createEffectServer = Effect.fn(function* (
   const routesLayer = Layer.mergeAll(
     makeEffectHttpRouteLayer(readiness, shutdownController),
     websocketRpcRouteLayer,
-    agentGatewayRouteLayer,
+    hostGatewayRouteLayer,
     externalMcpRouteLayer,
   );
   const httpApp = yield* HttpRouter.toHttpEffect(routesLayer);
@@ -192,7 +192,7 @@ export const createEffectServer = Effect.fn(function* (
     (nodeServer as http.Server | null)?.address() ?? null,
     config.port,
   );
-  agentGatewayCredentials.setListeningPort(listeningPort);
+  hostGatewayCredentials.setListeningPort(listeningPort);
   yield* persistServerRuntimeState({
     path: config.serverRuntimeStatePath,
     state: makePersistedServerRuntimeState({
@@ -211,7 +211,7 @@ export const createEffectServer = Effect.fn(function* (
   yield* Effect.addFinalizer(() =>
     closeServerRuntimePipeline({
       orchestrationEngine,
-      providerService,
+      engineService,
       managedAttachmentCleanup,
       subscriptionsScope,
       sealUserInputPresenters: Effect.promise(() =>
@@ -238,7 +238,7 @@ export const createEffectServer = Effect.fn(function* (
   yield* Scope.provide(automationScheduler.start(), subscriptionsScope);
   yield* Scope.provide(automationRunReactor.start(), subscriptionsScope);
   yield* Scope.provide(threadDeletionReactor.start(), subscriptionsScope);
-  yield* Scope.provide(providerSessionReaper.start(), subscriptionsScope);
+  yield* Scope.provide(engineSessionReaper.start(), subscriptionsScope);
   yield* Scope.provide(engineRuntimeReconciler.start(), subscriptionsScope);
   yield* readiness.markOrchestrationSubscriptionsReady;
   yield* readiness.markTerminalSubscriptionsReady;

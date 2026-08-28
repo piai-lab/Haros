@@ -199,7 +199,7 @@ describe("useComposerVoiceController", () => {
       activeThreadId: THREAD_A,
       threadId: THREAD_A,
       selectedProvider: "codex",
-      activeProviderStatus: null,
+      activeEngineStatus: null,
       pendingUserInputCount: 0,
       onTranscriptReady: vi.fn(),
       refreshVoiceStatus: vi.fn(),
@@ -370,7 +370,7 @@ describe("useComposerVoiceController", () => {
 
     voiceAvailability.canStartVoiceNotes = false;
     render({
-      activeProviderStatus: {
+      activeEngineStatus: {
         engine: "codex",
         status: "error",
         available: false,

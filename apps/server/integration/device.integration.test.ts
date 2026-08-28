@@ -50,9 +50,9 @@ import WebSocket, { type RawData } from "ws";
 
 import { DeviceManager } from "../src/device/DeviceManager.ts";
 import { IosSimulatorBackend } from "../src/device/IosSimulatorBackend.ts";
-import { makeAgentGatewayDeviceTools } from "../src/agentGateway/deviceTools.ts";
-import type { McpToolCallResult } from "../src/agentGateway/protocol.ts";
-import type { ToolContext } from "../src/agentGateway/toolRuntime.ts";
+import { makeHostGatewayDeviceTools } from "../src/hostGateway/deviceTools.ts";
+import type { McpToolCallResult } from "../src/hostGateway/protocol.ts";
+import type { ToolContext } from "../src/hostGateway/toolRuntime.ts";
 
 const ENABLED = process.env.DEVICE_E2E === "1";
 const ORIGIN = process.env.DEVICE_E2E_ORIGIN ?? "http://127.0.0.1:3899";
@@ -613,7 +613,7 @@ describeE2e("device pane end-to-end", () => {
       if (event.type === "device.open-pane-requested") openPaneRequests.push(event);
     });
     const tools = new Map(
-      makeAgentGatewayDeviceTools({ manager }).map((tool) => [tool.definition.name, tool]),
+      makeHostGatewayDeviceTools({ manager }).map((tool) => [tool.definition.name, tool]),
     );
     const context = {
       principal: {
@@ -717,12 +717,12 @@ describeE2e("device pane end-to-end", () => {
     }
   }, 300_000);
 
-  it("serves device_list and device_screenshot through the agent gateway tools", async () => {
+  it("serves device_list and device_screenshot through the HostGateway tools", async () => {
     const backend = new IosSimulatorBackend({ platform: process.platform });
     const manager = new DeviceManager({ backend });
     try {
       const tools = new Map(
-        makeAgentGatewayDeviceTools({ manager }).map((tool) => [tool.definition.name, tool]),
+        makeHostGatewayDeviceTools({ manager }).map((tool) => [tool.definition.name, tool]),
       );
       const context = makeToolContext();
 

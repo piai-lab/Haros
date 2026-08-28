@@ -1,6 +1,6 @@
 import "../../index.css";
 
-import type { EngineKind, ServerProviderStatus } from "@harnessos/contracts";
+import type { EngineKind, ServerEngineStatus } from "@harnessos/contracts";
 import { page, userEvent } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -17,10 +17,10 @@ vi.mock("../../localPreferences", () => ({
 
 const READY_AT = "2026-08-12T00:00:00.000Z";
 
-function providerStatus(
+function engineStatus(
   engine: EngineKind,
-  overrides: Partial<ServerProviderStatus> = {},
-): ServerProviderStatus {
+  overrides: Partial<ServerEngineStatus> = {},
+): ServerEngineStatus {
   return {
     engine,
     status: "ready",
@@ -31,7 +31,7 @@ function providerStatus(
   };
 }
 
-const READY_PROVIDERS: ReadonlyArray<ServerProviderStatus> = [
+const READY_PROVIDERS: ReadonlyArray<ServerEngineStatus> = [
   "oa",
   "codex",
   "claude",
@@ -42,11 +42,11 @@ const READY_PROVIDERS: ReadonlyArray<ServerProviderStatus> = [
   "kilo",
   "opencode",
   "pi",
-].map((engine) => providerStatus(engine as EngineKind));
+].map((engine) => engineStatus(engine as EngineKind));
 
 async function mountPicker(input: {
   engine?: EngineKind;
-  engines?: ReadonlyArray<ServerProviderStatus>;
+  engines?: ReadonlyArray<ServerEngineStatus>;
   hiddenEngines?: ReadonlyArray<EngineKind>;
   engineOrder?: ReadonlyArray<EngineKind>;
   locale?: "en" | "zh-CN";
@@ -162,15 +162,15 @@ describe("ComposerEnginePicker", () => {
   it("shows honest states while keeping recoverable Engines selectable", async () => {
     const mounted = await mountPicker({
       engines: [
-        providerStatus("codex"),
-        providerStatus("claude", { authStatus: "unauthenticated" }),
-        providerStatus("cursor", {
+        engineStatus("codex"),
+        engineStatus("claude", { authStatus: "unauthenticated" }),
+        engineStatus("cursor", {
           available: false,
           status: "error",
           unavailableReason: "not_installed",
         }),
-        providerStatus("antigravity", { available: false, status: "error" }),
-        providerStatus("grok", { status: "warning" }),
+        engineStatus("antigravity", { available: false, status: "error" }),
+        engineStatus("grok", { status: "warning" }),
       ],
     });
     try {
@@ -202,13 +202,13 @@ describe("ComposerEnginePicker", () => {
     const mounted = await mountPicker({
       locale: "zh-CN",
       engines: [
-        providerStatus("codex"),
-        providerStatus("cursor", {
+        engineStatus("codex"),
+        engineStatus("cursor", {
           available: false,
           status: "error",
           unavailableReason: "not_installed",
         }),
-        providerStatus("antigravity", { available: false, status: "error" }),
+        engineStatus("antigravity", { available: false, status: "error" }),
       ],
     });
     try {

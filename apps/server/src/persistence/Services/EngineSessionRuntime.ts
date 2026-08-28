@@ -29,11 +29,11 @@ export const EngineSessionRuntime = Schema.Struct({
 });
 export type EngineSessionRuntime = typeof EngineSessionRuntime.Type;
 
-export const GetProviderSessionRuntimeInput = Schema.Struct({ threadId: ThreadId });
-export type GetProviderSessionRuntimeInput = typeof GetProviderSessionRuntimeInput.Type;
+export const GetEngineSessionRuntimeInput = Schema.Struct({ threadId: ThreadId });
+export type GetEngineSessionRuntimeInput = typeof GetEngineSessionRuntimeInput.Type;
 
-export const DeleteProviderSessionRuntimeInput = Schema.Struct({ threadId: ThreadId });
-export type DeleteProviderSessionRuntimeInput = typeof DeleteProviderSessionRuntimeInput.Type;
+export const DeleteEngineSessionRuntimeInput = Schema.Struct({ threadId: ThreadId });
+export type DeleteEngineSessionRuntimeInput = typeof DeleteEngineSessionRuntimeInput.Type;
 
 /**
  * EngineSessionRuntimeRepositoryShape - Service API for engine runtime records.
@@ -52,7 +52,7 @@ export interface EngineSessionRuntimeRepositoryShape {
    * Read engine runtime state by canonical thread id.
    */
   readonly getByThreadId: (
-    input: GetProviderSessionRuntimeInput,
+    input: GetEngineSessionRuntimeInput,
   ) => Effect.Effect<Option.Option<EngineSessionRuntime>, EngineSessionRuntimeRepositoryError>;
 
   /**
@@ -69,7 +69,7 @@ export interface EngineSessionRuntimeRepositoryShape {
    * Delete engine runtime state by canonical thread id.
    */
   readonly deleteByThreadId: (
-    input: DeleteProviderSessionRuntimeInput,
+    input: DeleteEngineSessionRuntimeInput,
   ) => Effect.Effect<void, EngineSessionRuntimeRepositoryError>;
 }
 

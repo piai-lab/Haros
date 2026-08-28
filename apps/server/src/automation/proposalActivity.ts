@@ -50,7 +50,7 @@ export function buildAutomationProposalActivity(input: {
     kind: "automation.created",
     summary: `${stateLabel} automation: ${definition.name}`,
     payload: {
-      source: "agent-gateway",
+      source: "host-gateway",
       automationId: definition.id,
       automationName: definition.name,
       mode: definition.mode,

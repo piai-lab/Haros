@@ -18,11 +18,11 @@ import type { FileSystem, Path } from "effect";
 import { Data, Effect, Option } from "effect";
 
 import { resolveThreadWorkspaceCwd } from "../checkpointing/Utils";
-import { loadClaudeAgentSdk } from "../provider/claudeAgentSdk.ts";
+import { loadClaudeAgentSdk } from "../engine/claudeAgentSdk.ts";
 import type { OrchestrationEngineShape } from "./Services/OrchestrationEngine";
 import type { ProjectionSnapshotQueryShape } from "./Services/ProjectionSnapshotQuery";
-import type { EngineAdapterRegistryShape } from "../provider/Services/EngineAdapterRegistry";
-import type { EngineServiceShape } from "../provider/Services/EngineService";
+import type { EngineAdapterRegistryShape } from "../engine/Services/EngineAdapterRegistry";
+import type { EngineServiceShape } from "../engine/Services/EngineService";
 import { parseManagedWorktreeWorkspaceRoot } from "../workspace/managedWorktree";
 import {
   mapClaudeSessionMessages,
@@ -55,7 +55,7 @@ function providerResumeCursorForImport(engine: EngineKind, externalId: string): 
   }
 }
 
-function mapProviderSessionStatusToOrchestrationStatus(
+function mapEngineSessionStatusToOrchestrationStatus(
   status: "connecting" | "ready" | "running" | "error" | "closed",
 ): "starting" | "ready" | "running" | "error" | "stopped" {
   switch (status) {
@@ -79,8 +79,8 @@ export interface ImportThreadHandlerOptions {
   readonly path: Path.Path;
   readonly platform: NodeJS.Platform;
   readonly projectionSnapshotQuery: ProjectionSnapshotQueryShape;
-  readonly providerAdapterRegistry: EngineAdapterRegistryShape;
-  readonly providerService: EngineServiceShape;
+  readonly engineAdapterRegistry: EngineAdapterRegistryShape;
+  readonly engineService: EngineServiceShape;
 }
 
 export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
@@ -141,7 +141,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
     readonly projectWorkspaceRoot: string;
     readonly fallbackCwd?: string;
   }) {
-    const adapter = yield* options.providerAdapterRegistry.getByEngine(input.engine);
+    const adapter = yield* options.engineAdapterRegistry.getByEngine(input.engine);
     if (!adapter.readExternalThread) return null;
 
     const snapshot = yield* adapter
@@ -225,7 +225,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
     readonly importedAt: string;
     readonly threadId: ThreadId;
   }) {
-    const adapter = yield* options.providerAdapterRegistry.getByEngine("codex");
+    const adapter = yield* options.engineAdapterRegistry.getByEngine("codex");
     const snapshot = yield* adapter
       .readThread(input.threadId)
       .pipe(
@@ -284,7 +284,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
     readonly engine: "kilo" | "opencode";
     readonly threadId: ThreadId;
   }) {
-    const adapter = yield* options.providerAdapterRegistry.getByEngine(input.engine);
+    const adapter = yield* options.engineAdapterRegistry.getByEngine(input.engine);
     const snapshot = yield* adapter
       .readThread(input.threadId)
       .pipe(
@@ -313,7 +313,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
     readonly importedAt: string;
     readonly threadId: ThreadId;
   }) {
-    const adapter = yield* options.providerAdapterRegistry.getByEngine("droid");
+    const adapter = yield* options.engineAdapterRegistry.getByEngine("droid");
     if (!adapter.readExternalThread) {
       return yield* Effect.fail(importMessagesError("Droid session import is unavailable."));
     }
@@ -404,7 +404,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
       thread.engineSelection.engine,
       externalId,
     );
-    const session = yield* options.providerService.startSession(thread.id, {
+    const session = yield* options.engineService.startSession(thread.id, {
       threadId: thread.id,
       engine: thread.engineSelection.engine,
       ...((importedProviderContext?.runtimeCwd ?? cwd)
@@ -450,7 +450,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
       Effect.onError(() =>
         // Startup precedes history materialization. Roll it back when import
         // cannot finish so no engine child or persisted binding is orphaned.
-        options.providerService.stopSession({ threadId: thread.id }).pipe(Effect.ignore),
+        options.engineService.stopSession({ threadId: thread.id }).pipe(Effect.ignore),
       ),
     );
 
@@ -460,7 +460,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
       threadId: thread.id,
       session: {
         threadId: thread.id,
-        status: mapProviderSessionStatusToOrchestrationStatus(session.status),
+        status: mapEngineSessionStatusToOrchestrationStatus(session.status),
         providerName: session.engine,
         runtimeMode: thread.runtimeMode,
         activeTurnId: null,

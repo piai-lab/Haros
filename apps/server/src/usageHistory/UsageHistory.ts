@@ -13,8 +13,8 @@ import type {
   ServerGetUsageHistoryInput,
   ServerGetUsageHistoryResult,
   UsageHistoryGroupBy,
-  UsageHistoryProvider,
-  UsageHistoryProviderSummary,
+  UsageHistoryEngine,
+  UsageHistoryEngineSummary,
   UsageHistoryProgress,
   UsageHistoryRow,
 } from "@harnessos/contracts";
@@ -39,7 +39,7 @@ import {
   type UsageHistoryWorkerResponse,
 } from "./protocol";
 
-const PROVIDERS = ["codex", "claude"] as const satisfies readonly UsageHistoryProvider[];
+const PROVIDERS = ["codex", "claude"] as const satisfies readonly UsageHistoryEngine[];
 const WORKER_TIMEOUT_MS = 20_000;
 const WORKER_STDOUT_LIMIT = 16 * 1024 * 1024;
 const MAX_PROVIDER_RESTARTS = 2;
@@ -54,8 +54,8 @@ interface ControlRow {
 }
 
 interface EngineRow {
-  readonly engine: UsageHistoryProvider;
-  readonly status: UsageHistoryProviderSummary["status"];
+  readonly engine: UsageHistoryEngine;
+  readonly status: UsageHistoryEngineSummary["status"];
   readonly discoveryCursor: string | null;
   readonly discoveryGeneration: number;
   readonly discoveryComplete: number;
@@ -90,7 +90,7 @@ interface FileRow {
 
 interface AggregateRow {
   readonly key: string;
-  readonly engine: UsageHistoryProvider | null;
+  readonly engine: UsageHistoryEngine | null;
   readonly model: string | null;
   readonly workspace: string | null;
   readonly date: string | null;
@@ -209,7 +209,7 @@ const dateFloor = (range: ServerGetUsageHistoryInput["range"]): string | null =>
   return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 };
 
-const asProviderSummary = (row: EngineRow): UsageHistoryProviderSummary => ({
+const asProviderSummary = (row: EngineRow): UsageHistoryEngineSummary => ({
   engine: row.engine,
   status: row.status,
   progress: {
@@ -233,8 +233,8 @@ const makeUsageHistory = Effect.gen(function* () {
   let stopped = false;
   let pauseRequested = false;
   let rerunRequested = false;
-  const rootWatchers = new Map<UsageHistoryProvider, FSWatcher>();
-  const rootRefreshTimers = new Map<UsageHistoryProvider, NodeJS.Timeout>();
+  const rootWatchers = new Map<UsageHistoryEngine, FSWatcher>();
+  const rootRefreshTimers = new Map<UsageHistoryEngine, NodeJS.Timeout>();
   let startBackground: () => void = () => {
     rerunRequested = true;
   };
@@ -305,10 +305,10 @@ const makeUsageHistory = Effect.gen(function* () {
     return {
       codex: path.join(codexHome, "sessions"),
       claude: path.join(claudeHome, "projects"),
-    } satisfies Record<UsageHistoryProvider, string>;
+    } satisfies Record<UsageHistoryEngine, string>;
   });
 
-  const scheduleRootRefresh = (engine: UsageHistoryProvider) => {
+  const scheduleRootRefresh = (engine: UsageHistoryEngine) => {
     const existing = rootRefreshTimers.get(engine);
     if (existing) clearTimeout(existing);
     rootRefreshTimers.set(
@@ -343,7 +343,7 @@ const makeUsageHistory = Effect.gen(function* () {
     );
   };
 
-  const installRootWatchers = (providerRoots: Record<UsageHistoryProvider, string>) => {
+  const installRootWatchers = (providerRoots: Record<UsageHistoryEngine, string>) => {
     for (const engine of PROVIDERS) {
       if (rootWatchers.has(engine) || !existsSync(providerRoots[engine])) continue;
       try {
@@ -386,7 +386,7 @@ const makeUsageHistory = Effect.gen(function* () {
   // this small DB-only fence, then the dedicated Usage surface resumes discovery.
   const versionMismatches = yield* sql<{
     readonly fileId: number;
-    readonly engine: UsageHistoryProvider;
+    readonly engine: UsageHistoryEngine;
   }>`
     SELECT file_id AS "fileId", engine FROM usage_history_files
     WHERE parser_version <> ${USAGE_HISTORY_PARSER_VERSION}
@@ -428,7 +428,7 @@ const makeUsageHistory = Effect.gen(function* () {
     persistedControl.consentState === "authorized" &&
     (persistedControl.status === "paused" || persistedControl.status === "idle");
 
-  const discoverBatch = (engine: UsageHistoryProvider, rootPath: string, state: EngineRow) =>
+  const discoverBatch = (engine: UsageHistoryEngine, rootPath: string, state: EngineRow) =>
     Effect.gen(function* () {
       const response = yield* Effect.tryPromise(() =>
         runWorker(
@@ -539,7 +539,7 @@ const makeUsageHistory = Effect.gen(function* () {
     });
 
   const parseBatch = (
-    engine: UsageHistoryProvider,
+    engine: UsageHistoryEngine,
     rootPath: string,
     salt: string,
     expectedGeneration: number,
@@ -732,7 +732,7 @@ const makeUsageHistory = Effect.gen(function* () {
         UPDATE usage_history_control SET status = 'indexing', updated_at = ${new Date().toISOString()}
         WHERE singleton_id = 1 AND consent_state = 'authorized'
       `;
-      const activeProviders = new Set<UsageHistoryProvider>(PROVIDERS);
+      const activeProviders = new Set<UsageHistoryEngine>(PROVIDERS);
       while (activeProviders.size > 0) {
         if (stopped || pauseRequested) break;
         for (const engine of PROVIDERS) {
@@ -880,7 +880,7 @@ const makeUsageHistory = Effect.gen(function* () {
         const current = aggregates.get(row.key);
         aggregates.set(row.key, {
           key: row.key,
-          engine: groupBy === "engine" ? (row.key as UsageHistoryProvider) : null,
+          engine: groupBy === "engine" ? (row.key as UsageHistoryEngine) : null,
           model: groupBy === "model" ? row.key : null,
           workspace: groupBy === "workspace" ? row.label : null,
           date: groupBy === "date" ? row.key : null,

@@ -7,7 +7,7 @@ import "../../index.css";
 import {
   DEFAULT_SERVER_SETTINGS_VIEW,
   type NativeApi,
-  type ServerProviderStatus,
+  type ServerEngineStatus,
 } from "@harnessos/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -26,7 +26,7 @@ import { EnginesSettingsPanel } from "./EnginesSettingsPanel";
 
 const checkedAt = "2026-08-11T00:00:00.000Z";
 
-function outdatedCodex(): ServerProviderStatus {
+function outdatedCodex(): ServerEngineStatus {
   return {
     engine: "codex",
     status: "ready",
@@ -196,7 +196,7 @@ describe("EnginesSettingsPanel engine update feedback", () => {
   });
 
   it("moves a single Engine update from loading to success", async () => {
-    const updatedCodex: ServerProviderStatus = {
+    const updatedCodex: ServerEngineStatus = {
       ...outdatedCodex(),
       version: "1.1.0",
       updateState: {

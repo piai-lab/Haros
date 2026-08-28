@@ -1,5 +1,5 @@
 import { EventId, RuntimeRequestId } from "@harnessos/contracts";
-import type { LegacyProviderRuntimeEvent } from "../TestEngineAdapter.integration.ts";
+import type { LegacyEngineRuntimeEvent } from "../TestEngineAdapter.integration.ts";
 
 const PROVIDER = "codex" as const;
 const SESSION_ID = "fixture-session";
@@ -10,7 +10,7 @@ const REQUEST_ID = RuntimeRequestId.makeUnsafe("req-1");
 function baseEvent(
   eventId: string,
   createdAt: string,
-): Pick<LegacyProviderRuntimeEvent, "eventId" | "engine" | "sessionId" | "createdAt"> {
+): Pick<LegacyEngineRuntimeEvent, "eventId" | "engine" | "sessionId" | "createdAt"> {
   return {
     eventId: EventId.makeUnsafe(eventId),
     engine: PROVIDER,
@@ -56,7 +56,7 @@ export const codexTurnTextFixture = [
       state: "completed",
     },
   },
-] satisfies ReadonlyArray<LegacyProviderRuntimeEvent>;
+] satisfies ReadonlyArray<LegacyEngineRuntimeEvent>;
 
 export const codexTurnToolFixture = [
   {
@@ -108,7 +108,7 @@ export const codexTurnToolFixture = [
       state: "completed",
     },
   },
-] satisfies ReadonlyArray<LegacyProviderRuntimeEvent>;
+] satisfies ReadonlyArray<LegacyEngineRuntimeEvent>;
 
 export const codexTurnApprovalFixture = [
   {
@@ -159,4 +159,4 @@ export const codexTurnApprovalFixture = [
       state: "completed",
     },
   },
-] satisfies ReadonlyArray<LegacyProviderRuntimeEvent>;
+] satisfies ReadonlyArray<LegacyEngineRuntimeEvent>;

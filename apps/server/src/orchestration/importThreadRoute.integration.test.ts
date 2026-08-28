@@ -10,8 +10,8 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it, vi } from "@effect/vitest";
 import { Effect, FileSystem, Option, Path } from "effect";
 
-import type { EngineAdapterRegistryShape } from "../provider/Services/EngineAdapterRegistry";
-import type { EngineServiceShape } from "../provider/Services/EngineService";
+import type { EngineAdapterRegistryShape } from "../engine/Services/EngineAdapterRegistry";
+import type { EngineServiceShape } from "../engine/Services/EngineService";
 import type { OrchestrationEngineShape } from "./Services/OrchestrationEngine";
 import type { ProjectionSnapshotQueryShape } from "./Services/ProjectionSnapshotQuery";
 import { makeImportThreadHandler } from "./importThreadRoute";
@@ -102,13 +102,13 @@ it.effect("imports Codex history through a engine-owned fork", () =>
         getThreadDetailById: () => Effect.succeed(Option.some(makeCodexThread())),
         getProjectShellById: () => Effect.succeed(Option.none()),
       } as unknown as ProjectionSnapshotQueryShape,
-      providerAdapterRegistry: {
+      engineAdapterRegistry: {
         getByEngine: () =>
           Effect.succeed({
             readThread,
           } as never),
       } as unknown as EngineAdapterRegistryShape,
-      providerService: {
+      engineService: {
         startSession,
         stopSession: () => Effect.void,
       } as unknown as EngineServiceShape,

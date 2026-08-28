@@ -2,7 +2,7 @@ import { Effect, Fiber } from "effect";
 import { describe, expect, it } from "vitest";
 
 import type { ServerConfigShape } from "./config";
-import { buildProviderChildEnvironment } from "./providerChildEnvironment";
+import { buildEngineChildEnvironment } from "./engine/engineChildEnvironment";
 import {
   authorizeDesktopShutdown,
   isDesktopShutdownLoopbackPeer,
@@ -137,7 +137,7 @@ describe("desktop shutdown authorization", () => {
   });
 
   it("does not grant the shutdown secret to engine descendants", () => {
-    const providerEnvironment = buildProviderChildEnvironment({
+    const providerEnvironment = buildEngineChildEnvironment({
       engine: "codex",
       baseEnv: {
         PATH: process.env.PATH,

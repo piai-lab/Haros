@@ -182,7 +182,7 @@ type EngineOptionSelectionsInput =
   | null
   | undefined;
 
-function cloneProviderOptionDescriptor(descriptor: EngineOptionDescriptor): EngineOptionDescriptor {
+function cloneEngineOptionDescriptor(descriptor: EngineOptionDescriptor): EngineOptionDescriptor {
   if (descriptor.type === "select") {
     return {
       ...descriptor,
@@ -355,13 +355,13 @@ function legacyCapabilityDescriptors(
   return descriptors;
 }
 
-export function getProviderOptionDescriptors(input: {
+export function getEngineOptionDescriptors(input: {
   engine: EngineKind;
   caps: ModelCapabilities;
   selections?: EngineOptionSelectionsInput;
 }): ReadonlyArray<EngineOptionDescriptor> {
   const descriptors =
-    input.caps.optionDescriptors?.map(cloneProviderOptionDescriptor) ??
+    input.caps.optionDescriptors?.map(cloneEngineOptionDescriptor) ??
     legacyCapabilityDescriptors(input.engine, input.caps);
   return descriptors.map((descriptor) =>
     withProviderOptionCurrentValue(

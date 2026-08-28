@@ -339,13 +339,13 @@ function resolveWsRpc(tag: string, body?: unknown): unknown {
   if (tag === WS_METHODS.serverListLocalServers) {
     return { generatedAt: NOW_ISO, servers: [] };
   }
-  if (tag === WS_METHODS.serverListProviderUsage) {
+  if (tag === WS_METHODS.serverListEngineUsage) {
     return [];
   }
-  if (tag === WS_METHODS.providerListModels) {
+  if (tag === WS_METHODS.engineListModels) {
     return { models: [] };
   }
-  if (tag === WS_METHODS.providerListAgents) {
+  if (tag === WS_METHODS.engineListAgents) {
     return { source: "browser.fixture", agents: [] };
   }
   if (tag === WS_METHODS.oaModelServicesList) {
@@ -356,7 +356,7 @@ function resolveWsRpc(tag: string, body?: unknown): unknown {
       errorCode: null,
     };
   }
-  if (tag === WS_METHODS.providerGetComposerCapabilities) {
+  if (tag === WS_METHODS.engineGetComposerCapabilities) {
     const request = body as { readonly engine?: string } | null;
     return {
       engine: request?.engine ?? "codex",
@@ -368,7 +368,7 @@ function resolveWsRpc(tag: string, body?: unknown): unknown {
       supportsRuntimeModelList: false,
     };
   }
-  if (tag === WS_METHODS.providerGetExecutionCapabilities) {
+  if (tag === WS_METHODS.engineGetExecutionCapabilities) {
     const request = body as {
       readonly engineSelection?: { readonly engine?: string; readonly model?: string };
     } | null;
@@ -449,7 +449,7 @@ const worker = setupWorker(
         return;
       }
       if (
-        method === WS_METHODS.subscribeServerProviderStatuses ||
+        method === WS_METHODS.subscribeServerEngineStatuses ||
         method === WS_METHODS.subscribeServerSettings ||
         method === WS_METHODS.subscribeTerminalEvents ||
         method === WS_METHODS.subscribeOrchestrationDomainEvents ||

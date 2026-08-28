@@ -1,4 +1,4 @@
-import type { EngineSelection, ServerProviderStatus } from "@harnessos/contracts";
+import type { EngineSelection, ServerEngineStatus } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,10 +8,10 @@ import {
   isSettledPassiveModelServicesQueryState,
 } from "./modelReadinessPrompt.logic";
 
-function providerStatus(
-  engine: ServerProviderStatus["engine"],
-  overrides: Partial<ServerProviderStatus> = {},
-): ServerProviderStatus {
+function engineStatus(
+  engine: ServerEngineStatus["engine"],
+  overrides: Partial<ServerEngineStatus> = {},
+): ServerEngineStatus {
   return {
     engine,
     available: true,
@@ -61,7 +61,7 @@ describe("model readiness facts", () => {
 
     expect(
       hasUsableExactModelBinding({
-        providerStatuses: [providerStatus("codex")],
+        engineStatuses: [engineStatus("codex")],
         exactEngineSelections,
       }),
     ).toBe(true);
@@ -70,9 +70,9 @@ describe("model readiness facts", () => {
   it("does not mistake bundled Engine health with unknown auth for configured user state", () => {
     expect(
       hasUsableExactModelBinding({
-        providerStatuses: [
-          providerStatus("oa", { authStatus: "unknown" }),
-          providerStatus("pi", { authStatus: "unknown" }),
+        engineStatuses: [
+          engineStatus("oa", { authStatus: "unknown" }),
+          engineStatus("pi", { authStatus: "unknown" }),
         ],
         exactEngineSelections: {
           oa: {
@@ -204,46 +204,46 @@ describe("model readiness facts", () => {
   it("does not count an unavailable or model-less Engine as sendable", () => {
     expect(
       hasUsableExactModelBinding({
-        providerStatuses: [providerStatus("codex", { available: false })],
+        engineStatuses: [engineStatus("codex", { available: false })],
         exactEngineSelections: { codex: { engine: "codex", model: "gpt-5.5" } },
       }),
     ).toBe(false);
     expect(
       hasUsableExactModelBinding({
-        providerStatuses: [providerStatus("oa")],
+        engineStatuses: [engineStatus("oa")],
         exactEngineSelections: {},
       }),
     ).toBe(false);
   });
 
   it("waits only for a usable Engine catalog that has remembered exact user intent", () => {
-    const statuses = [providerStatus("oa"), providerStatus("codex")];
+    const statuses = [engineStatus("oa"), engineStatus("codex")];
     const codexSelection = { codex: { engine: "codex", model: "gpt-5.5" } } as const;
 
     expect(
       areUsableProviderCatalogsSettled({
-        providerStatuses: statuses,
+        engineStatuses: statuses,
         catalogStateByEngine: { codex: "checking", oa: "empty" },
         explicitExactEngineSelections: codexSelection,
       }),
     ).toBe(false);
     expect(
       areUsableProviderCatalogsSettled({
-        providerStatuses: statuses,
+        engineStatuses: statuses,
         catalogStateByEngine: { codex: "ready", oa: "empty" },
         explicitExactEngineSelections: codexSelection,
       }),
     ).toBe(true);
     expect(
       areUsableProviderCatalogsSettled({
-        providerStatuses: [providerStatus("codex", { available: false })],
+        engineStatuses: [engineStatus("codex", { available: false })],
         catalogStateByEngine: { codex: "checking" },
         explicitExactEngineSelections: codexSelection,
       }),
     ).toBe(true);
     expect(
       areUsableProviderCatalogsSettled({
-        providerStatuses: statuses,
+        engineStatuses: statuses,
         catalogStateByEngine: { codex: "checking", oa: "checking" },
         explicitExactEngineSelections: {},
       }),

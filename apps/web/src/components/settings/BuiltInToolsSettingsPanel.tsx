@@ -1,7 +1,7 @@
 // FILE: BuiltInToolsSettingsPanel.tsx
 // Purpose: Projects the server-owned built-in tool policy across Agent, Chat, and Studio.
 // Layer: Settings UI
-// Depends on: One AgentGateway read model, ServerSettings intent, and shared Settings primitives.
+// Depends on: One HostGateway read model, ServerSettings intent, and shared Settings primitives.
 
 import {
   BUILT_IN_TOOL_GROUP_IDS,
