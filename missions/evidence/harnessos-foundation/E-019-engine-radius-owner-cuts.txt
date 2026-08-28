@@ -1,0 +1,20 @@
+Campaign-ID: harnessos-foundation
+Evidence-ID: E-019
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/HarnessOS
+Repository-Identity: github.com/piai-lab/HarnessOS
+Candidate-Version: b767bd9d9700b82a1962c3a5bfce2d4dd87bc7c2
+Command: bun run typecheck && (cd packages/contracts && bun run test:unit -- src/agentMentions.test.ts) && (cd packages/shared && bun run test:unit -- src/model.test.ts src/agentMentions.test.ts) && (cd apps/web && bun run test:unit -- src/components/Sidebar.logic.test.ts src/components/Sidebar.import.test.ts src/components/SidebarSearchPalette.logic.test.ts src/components/chat/composerEngineRegistry.test.tsx src/composerDraftStore.models.test.ts) && ! rg -n -i "omni" apps packages scripts .github assets docs README.md package.json --glob '!docs/provenance.md' && git diff --check
+Exit-Code: 0
+Result: PASS
+Claims: C-003, C-005 (partial descriptor/radius owner cuts; full fixture Engine drill remains open)
+
+Observed output:
+- All eight workspace typechecks passed.
+- Contracts/shared focused suites passed 103 tests; Sidebar/Composer focused suites passed 247 tests.
+- Sidebar import discovery and search keywords now derive from `ENGINE_DESCRIPTORS`; Sidebar owns no import-Engine list.
+- A generic fixture in `Sidebar.logic` projects automatically when its runtime capability allows import.
+- Engines without dedicated alias/model metadata now receive empty metadata and preserve explicit model selections.
+- Composer removed ten duplicate Engine registry entries; an Engine without dedicated trait metadata receives the generic no-traits projection.
+- A temporary full EngineKind fixture drill no longer required ChatView or Sidebar edits. It still exposed Settings/selection-schema and model-catalog record owners, so the structural-radius Claim remains open.
+- Shipped source, packages, scripts, assets, and normal docs outside the sole provenance file contain no retired product token.
