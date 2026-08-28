@@ -298,6 +298,8 @@ describe("ModelServiceIcon", () => {
     );
     expect(markup).toContain('data-model-service-icon-render="contained-image"');
     expect(markup).toContain("bg-[#111827]");
+    expect(markup).toContain("size-[72%]");
+    expect(markup).not.toContain("p-[14%]");
     expect(markup.toLowerCase()).toContain("%3ctitle%3ekimi%3c/title%3e");
   });
 });

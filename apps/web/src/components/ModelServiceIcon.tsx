@@ -294,10 +294,10 @@ export function ModelServiceIcon({
           data-model-service-icon-render="contained-image"
           className={cn(
             sharedClassName,
-            "inline-flex items-center justify-center rounded-[22%] bg-[#111827] p-[14%]",
+            "inline-flex items-center justify-center rounded-[22%] bg-[#111827]",
           )}
         >
-          <img src={resolution.src} alt="" className="size-full object-contain" />
+          <img src={resolution.src} alt="" className="size-[72%] object-contain" />
         </span>
       );
     }

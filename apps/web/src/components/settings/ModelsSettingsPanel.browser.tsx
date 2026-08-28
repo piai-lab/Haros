@@ -338,6 +338,54 @@ afterEach(async () => {
 });
 
 describe("ModelsSettingsPanel model services", () => {
+  it("keeps contained brand icons within the service row geometry", async () => {
+    await page.viewport(680, 720);
+    const kimi = service({
+      serviceId: "kimi-for-coding",
+      providerId: "kimi-for-coding",
+      displayName: "Kimi For Coding",
+      knownModelCount: 4,
+      availableModelCount: 4,
+    });
+    const xiaomi = service({
+      serviceId: "xiaomi-token-plan-cn",
+      providerId: "xiaomi-token-plan-cn",
+      displayName: "Xiaomi Token Plan CN",
+    });
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "ready",
+        services: [kimi, xiaomi],
+        connectableServices: [],
+        errorCode: null,
+      }),
+    });
+
+    await expect.poll(() => document.body.textContent).toContain("Kimi For Coding");
+    const kimiIcon = document.querySelector<HTMLElement>(
+      '[data-model-service-icon-render="contained-image"]',
+    );
+    const xiaomiIcon = document.querySelector<HTMLElement>(
+      '[data-model-service-icon-render="mask"]',
+    );
+    const kimiRow = kimiIcon?.closest<HTMLElement>('[data-slot="settings-row"]');
+    const xiaomiRow = xiaomiIcon?.closest<HTMLElement>('[data-slot="settings-row"]');
+
+    expect(kimiIcon?.getBoundingClientRect().width).toBe(24);
+    expect(kimiIcon?.getBoundingClientRect().height).toBe(24);
+    expect(xiaomiIcon?.getBoundingClientRect().width).toBe(24);
+    expect(
+      Math.abs(
+        (kimiRow?.getBoundingClientRect().height ?? 0) -
+          (xiaomiRow?.getBoundingClientRect().height ?? 0),
+      ),
+    ).toBeLessThanOrEqual(1);
+    expect(kimiRow?.getBoundingClientRect().height).toBeLessThan(90);
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
   it("enters Add directly for Chat setup and returns only after an exact usable service exists", async () => {
     const setupService = service({
       authState: "setup_required",

@@ -11,12 +11,17 @@ describe("ModelIdentityIcon", () => {
     document.body.innerHTML = "";
   });
 
-  it.each(["light", "dark"] as const)(
-    "keeps Kimi legible in a narrow %s surface",
-    async (theme) => {
+  it.each([
+    ["light", 24],
+    ["light", 620],
+    ["dark", 24],
+    ["dark", 620],
+  ] as const)(
+    "keeps Kimi at its requested size in a %s surface %ipx wide",
+    async (theme, width) => {
       document.documentElement.classList.toggle("dark", theme === "dark");
       const host = document.createElement("div");
-      host.style.width = "24px";
+      host.style.width = `${width}px`;
       document.body.append(host);
       const screen = await render(
         <ModelIdentityIcon
@@ -37,6 +42,8 @@ describe("ModelIdentityIcon", () => {
         expect(carrier?.getBoundingClientRect().height).toBe(20);
         expect(getComputedStyle(carrier!).backgroundColor).toBe("rgb(17, 24, 39)");
         expect(getComputedStyle(image!).objectFit).toBe("contain");
+        expect(image?.getBoundingClientRect().width).toBeCloseTo(14.4, 1);
+        expect(image?.getBoundingClientRect().height).toBeCloseTo(14.4, 1);
         expect(image?.naturalWidth).toBeGreaterThan(0);
       } finally {
         await screen.unmount();
