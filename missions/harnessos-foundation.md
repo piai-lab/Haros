@@ -6,9 +6,9 @@
 - Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`, Git worktree for HarnessOS.
 - Repository identity: `github.com/piai-lab/HarnessOS`
 - Campaign origin revision: `698d305e63a600ff00bb1873e87b2cb825a6496d`.
-- Last reconciled revision: `698d305e63a600ff00bb1873e87b2cb825a6496d`.
-- Worktree state: dirty with `AGENTS.md`, `README.md`, `architecture/README.md`, `architecture/product.md`, `architecture/workbench.md`, `research/agent-tools-mcp-settings-review.md`, `research/omnimind-agent-core-ecosystem-orchestration-review.md`, `research/pi-native-product-integration-review.md`, `research/interface-surface-inventory.md`, `research/model-services-composer-product-design.md`, `research/omnimind-scientist-subagent-cognition.md`, `research/omnimind-prompt-management-review.md`, `research/chat-work-surface-contract-review.md`, `scripts/document-contract.mjs`, `execution-brief.md`, `missions/independent-omnimind-v1.md`, `missions/harnessos-foundation.md`, `missions/harnessos-foundation-goal.md`, and `missions/evidence/harnessos-foundation/`; all are the bounded Campaign control, stable-owner rename, reference rewrite or proof receipt transition.
-- Last reconciled at: `2026-08-28T11:16:17+08:00`.
+- Last reconciled revision: `925d7a60fa248798fe1b2805c19c21b6e9c83cdf`.
+- Worktree state: clean.
+- Last reconciled at: `2026-08-28T11:23:21+08:00`.
 - Active branch/worktree: `codex/harnessos-foundation` at `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`.
 - Applicable instructions: user-locked HarnessOS implementation plan; root `AGENTS.md`; repository authority routes in `README.md` and `architecture/README.md`.
 - Superseded state sources: no competing state files were found after the recursive scan; historical tombstones remain at `execution-brief.md` and `missions/independent-omnimind-v1.md`.
@@ -82,7 +82,7 @@
 - Active Claim: C-002.
 - Next safe action: commit the Campaign control transition, then perform the first mechanical HarnessOS package/app identity cut with focused absence and build checks.
 - Blockers: none.
-- Last material change: remote `main`, foundation branch and annotated fork-base tag were created at the exact base.
+- Last material change: commit `925d7a60fa248798fe1b2805c19c21b6e9c83cdf` installed the canonical Campaign, retired competing status sources and renamed the stable Product owner to avoid state-source ambiguity.
 
 ## 已知问题与方向
 
