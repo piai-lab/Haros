@@ -38,14 +38,14 @@ export function makeServerEngineLayer(
   return Effect.gen(function* () {
     const credentials = yield* EngineCredentials;
     const resolveEngineServerPassword = makeEngineServerPasswordResolver(credentials);
-    const { logProviderEvents, providerEventLogPath } = yield* ServerConfig;
-    const nativeEventLogger = logProviderEvents
-      ? yield* makeEventNdjsonLogger(providerEventLogPath, {
+    const { logEngineEvents, engineEventLogPath } = yield* ServerConfig;
+    const nativeEventLogger = logEngineEvents
+      ? yield* makeEventNdjsonLogger(engineEventLogPath, {
           stream: "native",
         })
       : undefined;
-    const canonicalEventLogger = logProviderEvents
-      ? yield* makeEventNdjsonLogger(providerEventLogPath, {
+    const canonicalEventLogger = logEngineEvents
+      ? yield* makeEventNdjsonLogger(engineEventLogPath, {
           stream: "canonical",
         })
       : undefined;

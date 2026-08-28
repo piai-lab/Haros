@@ -315,11 +315,11 @@ const make = Effect.gen(function* () {
       return Option.some({ threadId: session.threadId, cwd: session.cwd });
     };
 
-    const providerThread = yield* resolveEngineSessionThread(
+    const engineSessionThread = yield* resolveEngineSessionThread(
       projectionSnapshotQuery,
       thread.value.id,
     );
-    const sessionThreadId = providerThread?.id ?? thread.value.id;
+    const sessionThreadId = engineSessionThread?.id ?? thread.value.id;
     const projectedSession = sessions.find((session) => session.threadId === sessionThreadId);
     const fromProjected = findSessionWithCwd(projectedSession);
     if (Option.isSome(fromProjected)) {
@@ -1410,11 +1410,11 @@ const make = Effect.gen(function* () {
     event: Extract<OrchestrationEvent, { type: "thread.checkpoint-revert-requested" }>,
   ) =>
     Effect.gen(function* () {
-      const providerThread = yield* resolveEngineSessionThread(
+      const engineSessionThread = yield* resolveEngineSessionThread(
         projectionSnapshotQuery,
         event.payload.threadId,
       );
-      const sessionThreadId = providerThread?.id ?? event.payload.threadId;
+      const sessionThreadId = engineSessionThread?.id ?? event.payload.threadId;
 
       // The per-thread lease is shared with checkpoint capture, which can park
       // on a slow git command or be held by a turn that never settles. Bound

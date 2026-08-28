@@ -262,7 +262,7 @@ describe("HostGateway stdio proxy", () => {
       // run, it inherits no real bearer and the ambient one-shot credential is
       // already spent.
       await withTimeout(bootstrapStarted.promise);
-      const runProviderDescendant = async (): Promise<unknown> => {
+      const runEngineDescendant = async (): Promise<unknown> => {
         const descendant = spawn(
           process.execPath,
           [
@@ -282,7 +282,7 @@ describe("HostGateway stdio proxy", () => {
       };
       // Before the first MCP initialize/ping message, the proxy has already
       // consumed the bootstrap and a peer descendant cannot win the race.
-      expect(await runProviderDescendant()).toEqual({ status: 401, bearer: null });
+      expect(await runEngineDescendant()).toEqual({ status: 401, bearer: null });
 
       for (const id of ["first", "second"]) {
         const response = deferred<Record<string, unknown>>();
@@ -296,7 +296,7 @@ describe("HostGateway stdio proxy", () => {
       }
 
       // Replay remains impossible after normal MCP traffic as well.
-      expect(await runProviderDescendant()).toEqual({ status: 401, bearer: null });
+      expect(await runEngineDescendant()).toEqual({ status: 401, bearer: null });
 
       expect(bootstrapExchanges).toBe(3);
       expect(forwardedRequests).toBe(2);

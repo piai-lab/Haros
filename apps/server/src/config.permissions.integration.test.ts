@@ -57,7 +57,7 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
       paths.secretsDir,
       paths.attachmentsDir,
       paths.logsDir,
-      paths.providerLogsDir,
+      paths.engineLogsDir,
       paths.terminalLogsDir,
     ]) {
       expect(mode(directoryPath)).toBe(PRIVATE_DIRECTORY_MODE);
@@ -69,7 +69,7 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
   it("creates representative fresh state files with owner-only permissions", async () => {
     const paths = derivePaths(makeTempDir());
     preparePrivateServerPaths(paths);
-    const providerCachePath = resolveEngineStatusCachePath({
+    const engineCachePath = resolveEngineStatusCachePath({
       stateDir: paths.stateDir,
       engine: "codex",
     });
@@ -84,7 +84,7 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
           yield* writeFileStringAtomically({ filePath, contents: "private\n" });
         }
         yield* writeEngineStatusCache({
-          filePath: providerCachePath,
+          filePath: engineCachePath,
           engine: {
             engine: "codex",
             status: "ready",
@@ -101,11 +101,11 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
       paths.settingsPath,
       paths.serverRuntimeStatePath,
       paths.environmentIdPath,
-      providerCachePath,
+      engineCachePath,
     ]) {
       expect(mode(filePath)).toBe(PRIVATE_FILE_MODE);
     }
-    expect(mode(path.dirname(providerCachePath))).toBe(PRIVATE_DIRECTORY_MODE);
+    expect(mode(path.dirname(engineCachePath))).toBe(PRIVATE_DIRECTORY_MODE);
   });
 
   it("repairs an upgraded home without following symlinks", () => {

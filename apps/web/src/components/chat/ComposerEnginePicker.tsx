@@ -113,14 +113,14 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
         <MenuRadioGroup
           value={props.engine}
           onValueChange={(value) => {
-            const nextProvider = options.find((option) => option.value === value)?.value;
-            if (!nextProvider || nextProvider === props.engine) {
+            const nextEngine = options.find((option) => option.value === value)?.value;
+            if (!nextEngine || nextEngine === props.engine) {
               setOpen(false);
               props.onSelectionCommitted?.();
               return;
             }
-            props.onEngineIntent?.(nextProvider);
-            props.onEngineChange(nextProvider);
+            props.onEngineIntent?.(nextEngine);
+            props.onEngineChange(nextEngine);
             setOpen(false);
             props.onSelectionCommitted?.();
           }}

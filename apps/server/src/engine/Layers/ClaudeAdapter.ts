@@ -172,7 +172,7 @@ import {
   type ProcessExitHandle,
 } from "../supervisedProcessTeardown.ts";
 
-const PROVIDER = "claude" as const;
+const ENGINE = "claude" as const;
 const CLAUDE_DISCOVERY_THREAD_ID = ThreadId.makeUnsafe("claude:discovery");
 type ClaudeTextStreamKind = Extract<RuntimeContentStreamKind, "assistant_text" | "reasoning_text">;
 type ClaudeToolResultStreamKind = Extract<
@@ -1233,7 +1233,7 @@ function buildUserMessageEffect(
       });
       if (!attachmentPath) {
         return yield* new EngineAdapterRequestError({
-          engine: PROVIDER,
+          engine: ENGINE,
           method: "turn/start",
           detail: `Invalid attachment id '${attachment.id}'.`,
         });
@@ -1243,7 +1243,7 @@ function buildUserMessageEffect(
         Effect.mapError(
           (cause) =>
             new EngineAdapterRequestError({
-              engine: PROVIDER,
+              engine: ENGINE,
               method: "turn/start",
               detail: toMessage(cause, "Failed to read attachment file."),
               cause,
@@ -1568,14 +1568,14 @@ function toSessionError(
   const normalized = toMessage(cause, "").toLowerCase();
   if (normalized.includes("unknown session") || normalized.includes("not found")) {
     return new EngineAdapterSessionNotFoundError({
-      engine: PROVIDER,
+      engine: ENGINE,
       threadId,
       cause,
     });
   }
   if (normalized.includes("closed")) {
     return new EngineAdapterSessionClosedError({
-      engine: PROVIDER,
+      engine: ENGINE,
       threadId,
       cause,
     });
@@ -1589,7 +1589,7 @@ function toRequestError(threadId: ThreadId, method: string, cause: unknown): Eng
     return sessionError;
   }
   return new EngineAdapterRequestError({
-    engine: PROVIDER,
+    engine: ENGINE,
     method,
     detail: toMessage(cause, `${method} failed`),
     cause,
@@ -1808,7 +1808,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           try: () => input.queryRuntime.supportedModels(),
           catch: (cause) =>
             new EngineAdapterValidationError({
-              engine: PROVIDER,
+              engine: ENGINE,
               operation: input.operation,
               issue: toMessage(
                 cause,
@@ -1824,7 +1824,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             cause instanceof EngineAdapterValidationError
               ? cause
               : new EngineAdapterValidationError({
-                  engine: PROVIDER,
+                  engine: ENGINE,
                   operation: input.operation,
                   issue: `Could not verify that Claude model "${requestedModel}" supports Auto mode before the model discovery timeout.`,
                 }),
@@ -1847,7 +1847,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         );
         if (selectedModel?.supportsAutoMode !== true) {
           return yield* new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: input.operation,
             issue: selectedModel
               ? `Claude model "${selectedModel.displayName}" does not support Auto mode.`
@@ -1887,7 +1887,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         try: () => teardownChildProcessTree(process, teardownProcessTree),
         catch: (cause) =>
           new EngineAdapterProcessError({
-            engine: PROVIDER,
+            engine: ENGINE,
             threadId,
             detail: toMessage(cause, "Failed to prove Claude process-tree exit."),
             cause,
@@ -1968,7 +1968,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
                   ? message.uuid
                   : crypto.randomUUID(),
               kind: "notification",
-              engine: PROVIDER,
+              engine: ENGINE,
               createdAt: observedAt,
               method: sdkNativeMethod(message),
               ...(typeof message.session_id === "string"
@@ -1999,7 +1999,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         const threadId = context.session.threadId;
         if (!threadId) {
           return yield* new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "readThread",
             issue: "Session thread id is not initialized yet.",
           });
@@ -2127,7 +2127,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* offerRuntimeEvent(context, {
             type: "content.delta",
             eventId: deltaStamp.eventId,
-            engine: PROVIDER,
+            engine: ENGINE,
             createdAt: deltaStamp.createdAt,
             threadId: context.session.threadId,
             turnId: turnState.turnId,
@@ -2158,7 +2158,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* offerRuntimeEvent(context, {
           type: "item.completed",
           eventId: stamp.eventId,
-          engine: PROVIDER,
+          engine: ENGINE,
           createdAt: stamp.createdAt,
           itemId: asRuntimeItemId(block.itemId),
           threadId: context.session.threadId,
@@ -2263,7 +2263,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* offerRuntimeEvent(context, {
             type: "thread.started",
             eventId: stamp.eventId,
-            engine: PROVIDER,
+            engine: ENGINE,
             createdAt: stamp.createdAt,
             threadId: context.session.threadId,
             payload: {
@@ -2295,7 +2295,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* offerRuntimeEvent(context, {
           type: "runtime.error",
           eventId: stamp.eventId,
-          engine: PROVIDER,
+          engine: ENGINE,
           createdAt: stamp.createdAt,
           threadId: context.session.threadId,
           ...(turnState ? { turnId: asCanonicalTurnId(turnState.turnId) } : {}),
@@ -2319,7 +2319,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* offerRuntimeEvent(context, {
           type: "runtime.warning",
           eventId: stamp.eventId,
-          engine: PROVIDER,
+          engine: ENGINE,
           createdAt: stamp.createdAt,
           threadId: context.session.threadId,
           ...(turnState ? { turnId: asCanonicalTurnId(turnState.turnId) } : {}),
@@ -2429,7 +2429,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* offerRuntimeEvent(context, {
           type: "turn.proposed.completed",
           eventId: stamp.eventId,
-          engine: PROVIDER,
+          engine: ENGINE,
           createdAt: stamp.createdAt,
           threadId: context.session.threadId,
           turnId: turnState.turnId,
@@ -2472,7 +2472,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* offerRuntimeEvent(context, {
           type: "turn.tasks.updated",
           eventId: stamp.eventId,
-          engine: PROVIDER,
+          engine: ENGINE,
           createdAt: stamp.createdAt,
           threadId: context.session.threadId,
           turnId: turnState.turnId,
@@ -2505,7 +2505,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* offerRuntimeEvent(context, {
           type: "turn.tasks.updated",
           eventId: stamp.eventId,
-          engine: PROVIDER,
+          engine: ENGINE,
           createdAt: stamp.createdAt,
           threadId: context.session.threadId,
           turnId: turnState.turnId,
@@ -2547,7 +2547,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* offerRuntimeEvent(context, {
             type: "request.resolved",
             eventId: stamp.eventId,
-            engine: PROVIDER,
+            engine: ENGINE,
             createdAt: stamp.createdAt,
             threadId: context.session.threadId,
             ...(pending.turnId ? { turnId: pending.turnId } : {}),
@@ -2603,7 +2603,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             yield* offerRuntimeEvent(context, {
               type: "user-input.resolved",
               eventId: stamp.eventId,
-              engine: PROVIDER,
+              engine: ENGINE,
               createdAt: stamp.createdAt,
               threadId: context.session.threadId,
               ...(pending.turnId ? { turnId: pending.turnId } : {}),
@@ -2795,7 +2795,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             yield* offerRuntimeEvent(context, {
               type: "thread.token-usage.updated",
               eventId: usageStamp.eventId,
-              engine: PROVIDER,
+              engine: ENGINE,
               createdAt: usageStamp.createdAt,
               threadId: context.session.threadId,
               payload: {
@@ -2820,7 +2820,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* offerRuntimeEvent(context, {
             type: "turn.completed",
             eventId: stamp.eventId,
-            engine: PROVIDER,
+            engine: ENGINE,
             createdAt: stamp.createdAt,
             threadId: context.session.threadId,
             ...(settledTurnId !== undefined ? { turnId: settledTurnId } : {}),
@@ -2848,7 +2848,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* offerRuntimeEvent(context, {
             type: "item.completed",
             eventId: toolStamp.eventId,
-            engine: PROVIDER,
+            engine: ENGINE,
             createdAt: toolStamp.createdAt,
             threadId: context.session.threadId,
             turnId: turnState.turnId,
@@ -2896,7 +2896,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* offerRuntimeEvent(context, {
             type: "thread.token-usage.updated",
             eventId: usageStamp.eventId,
-            engine: PROVIDER,
+            engine: ENGINE,
             createdAt: usageStamp.createdAt,
             threadId: context.session.threadId,
             turnId: turnState.turnId,
@@ -2913,7 +2913,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* offerRuntimeEvent(context, {
             type: "turn.diff.updated",
             eventId: diffStamp.eventId,
-            engine: PROVIDER,
+            engine: ENGINE,
             createdAt: diffStamp.createdAt,
             threadId: context.session.threadId,
             turnId: turnState.turnId,
@@ -2933,7 +2933,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* offerRuntimeEvent(context, {
           type: "turn.completed",
           eventId: stamp.eventId,
-          engine: PROVIDER,
+          engine: ENGINE,
           createdAt: stamp.createdAt,
           threadId: context.session.threadId,
           turnId: turnState.turnId,
@@ -3092,7 +3092,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* offerRuntimeEvent(context, {
           type: "item.started",
           eventId: stamp.eventId,
-          engine: PROVIDER,
+          engine: ENGINE,
           createdAt: stamp.createdAt,
           threadId: context.session.threadId,
           ...(context.turnState ? { turnId: asCanonicalTurnId(context.turnState.turnId) } : {}),
@@ -3165,7 +3165,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             yield* offerRuntimeEvent(context, {
               type: "content.delta",
               eventId: stamp.eventId,
-              engine: PROVIDER,
+              engine: ENGINE,
               createdAt: stamp.createdAt,
               threadId: context.session.threadId,
               turnId: context.turnState.turnId,
@@ -3228,7 +3228,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             yield* offerRuntimeEvent(context, {
               type: "item.updated",
               eventId: stamp.eventId,
-              engine: PROVIDER,
+              engine: ENGINE,
               createdAt: stamp.createdAt,
               threadId: context.session.threadId,
               ...(context.turnState ? { turnId: asCanonicalTurnId(context.turnState.turnId) } : {}),
@@ -3353,7 +3353,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* offerRuntimeEvent(context, {
             type: "item.updated",
             eventId: updatedStamp.eventId,
-            engine: PROVIDER,
+            engine: ENGINE,
             createdAt: updatedStamp.createdAt,
             threadId: context.session.threadId,
             ...(context.turnState ? { turnId: asCanonicalTurnId(context.turnState.turnId) } : {}),
@@ -3379,7 +3379,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             yield* offerRuntimeEvent(context, {
               type: "content.delta",
               eventId: deltaStamp.eventId,
-              engine: PROVIDER,
+              engine: ENGINE,
               createdAt: deltaStamp.createdAt,
               threadId: context.session.threadId,
               turnId: context.turnState.turnId,
@@ -3433,7 +3433,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             yield* offerRuntimeEvent(context, {
               type: "task.updated",
               eventId: launchStamp.eventId,
-              engine: PROVIDER,
+              engine: ENGINE,
               createdAt: launchStamp.createdAt,
               threadId: context.session.threadId,
               ...(context.turnState ? { turnId: asCanonicalTurnId(context.turnState.turnId) } : {}),
@@ -3464,7 +3464,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* offerRuntimeEvent(context, {
             type: "item.completed",
             eventId: completedStamp.eventId,
-            engine: PROVIDER,
+            engine: ENGINE,
             createdAt: completedStamp.createdAt,
             threadId: context.session.threadId,
             ...(context.turnState ? { turnId: asCanonicalTurnId(context.turnState.turnId) } : {}),
@@ -3527,7 +3527,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* offerRuntimeEvent(context, {
           type: "turn.started",
           eventId: turnStartedStamp.eventId,
-          engine: PROVIDER,
+          engine: ENGINE,
           createdAt: turnStartedStamp.createdAt,
           threadId: context.session.threadId,
           turnId,
@@ -3556,7 +3556,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* offerRuntimeEvent(run.context, {
           type: "turn.steered",
           eventId: stamp.eventId,
-          engine: PROVIDER,
+          engine: ENGINE,
           createdAt: stamp.createdAt,
           threadId: run.context.session.threadId,
           ...(run.context.turnState
@@ -3701,7 +3701,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             yield* offerRuntimeEvent(context, {
               type: "thread.token-usage.updated",
               eventId: usageStamp.eventId,
-              engine: PROVIDER,
+              engine: ENGINE,
               createdAt: usageStamp.createdAt,
               threadId: context.session.threadId,
               ...(context.turnState ? { turnId: asCanonicalTurnId(context.turnState.turnId) } : {}),
@@ -3790,7 +3790,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* offerRuntimeEvent(target, {
           type: "thread.token-usage.updated",
           eventId: stamp.eventId,
-          engine: PROVIDER,
+          engine: ENGINE,
           createdAt: stamp.createdAt,
           threadId: target.session.threadId,
           ...(target.turnState ? { turnId: asCanonicalTurnId(target.turnState.turnId) } : {}),
@@ -3876,7 +3876,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* offerRuntimeEvent(context, {
             type: "task.progress",
             eventId: stamp.eventId,
-            engine: PROVIDER,
+            engine: ENGINE,
             createdAt: stamp.createdAt,
             threadId: context.session.threadId,
             ...(context.turnState ? { turnId: asCanonicalTurnId(context.turnState.turnId) } : {}),
@@ -3973,7 +3973,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* offerRuntimeEvent(context, {
             type: "task.updated",
             eventId: taskStamp.eventId,
-            engine: PROVIDER,
+            engine: ENGINE,
             createdAt: taskStamp.createdAt,
             threadId: context.session.threadId,
             ...(context.turnState ? { turnId: asCanonicalTurnId(context.turnState.turnId) } : {}),
@@ -3999,7 +3999,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* offerRuntimeEvent(run.context, {
             type: "session.state.changed",
             eventId: stamp.eventId,
-            engine: PROVIDER,
+            engine: ENGINE,
             createdAt: stamp.createdAt,
             threadId: run.context.session.threadId,
             ...(run.context.turnState
@@ -4038,7 +4038,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         const stamp = yield* makeEventStamp();
         const base = {
           eventId: stamp.eventId,
-          engine: PROVIDER,
+          engine: ENGINE,
           createdAt: stamp.createdAt,
           threadId: context.session.threadId,
           ...(context.turnState ? { turnId: asCanonicalTurnId(context.turnState.turnId) } : {}),
@@ -4403,7 +4403,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         const stamp = yield* makeEventStamp();
         const base = {
           eventId: stamp.eventId,
-          engine: PROVIDER,
+          engine: ENGINE,
           createdAt: stamp.createdAt,
           threadId: context.session.threadId,
           ...(context.turnState ? { turnId: asCanonicalTurnId(context.turnState.turnId) } : {}),
@@ -4683,7 +4683,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* offerRuntimeEvent(context, {
             type: "session.exited",
             eventId: stamp.eventId,
-            engine: PROVIDER,
+            engine: ENGINE,
             createdAt: stamp.createdAt,
             threadId: context.session.threadId,
             payload: {
@@ -4734,7 +4734,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       if (!context) {
         return Effect.fail(
           new EngineAdapterSessionNotFoundError({
-            engine: PROVIDER,
+            engine: ENGINE,
             threadId,
           }),
         );
@@ -4742,7 +4742,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       if (context.stopped || context.session.status === "closed") {
         return Effect.fail(
           new EngineAdapterSessionClosedError({
-            engine: PROVIDER,
+            engine: ENGINE,
             threadId,
           }),
         );
@@ -4752,11 +4752,11 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
 
     const startSessionUnlocked: ClaudeAdapterShape["startSession"] = (input) =>
       Effect.gen(function* () {
-        if (input.engine !== undefined && input.engine !== PROVIDER) {
+        if (input.engine !== undefined && input.engine !== ENGINE) {
           return yield* new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "startSession",
-            issue: `Expected engine '${PROVIDER}' but received '${input.engine}'.`,
+            issue: `Expected engine '${ENGINE}' but received '${input.engine}'.`,
           });
         }
 
@@ -4841,7 +4841,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             yield* offerRuntimeEvent(context, {
               type: "user-input.requested",
               eventId: requestedStamp.eventId,
-              engine: PROVIDER,
+              engine: ENGINE,
               createdAt: requestedStamp.createdAt,
               threadId: context.session.threadId,
               ...(interactionTurnId !== undefined
@@ -5050,7 +5050,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
               yield* offerRuntimeEvent(context, {
                 type: "request.opened",
                 eventId: requestedStamp.eventId,
-                engine: PROVIDER,
+                engine: ENGINE,
                 createdAt: requestedStamp.createdAt,
                 threadId: context.session.threadId,
                 ...(interactionTurnId !== undefined
@@ -5194,14 +5194,14 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
               }),
             catch: (cause) =>
               new EngineAdapterValidationError({
-                engine: PROVIDER,
+                engine: ENGINE,
                 operation: "startSession",
                 issue: `Could not verify Auto mode support for Claude CLI at "${binaryPath}": ${toMessage(cause, "version probe failed")}`,
               }),
           });
           if (!isClaudeAutoModeCliVersionSupported(installedVersion)) {
             return yield* new EngineAdapterValidationError({
-              engine: PROVIDER,
+              engine: ENGINE,
               operation: "startSession",
               issue:
                 installedVersion === null
@@ -5227,7 +5227,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         const gatewaySessionLease = acquireHostGatewaySessionLease(
           hostGatewayCredentials,
           threadId,
-          PROVIDER,
+          ENGINE,
         );
         const queryOptions: ClaudeQueryOptions = {
           ...(input.cwd ? { cwd: input.cwd } : {}),
@@ -5286,7 +5286,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             }),
           catch: (cause) =>
             new EngineAdapterProcessError({
-              engine: PROVIDER,
+              engine: ENGINE,
               threadId,
               detail: toMessage(cause, "Failed to start Claude runtime session."),
               cause,
@@ -5367,7 +5367,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
 
           const session: EngineSession = {
             threadId,
-            engine: PROVIDER,
+            engine: ENGINE,
             status: "ready",
             runtimeMode: input.runtimeMode,
             ...(input.cwd ? { cwd: input.cwd } : {}),
@@ -5455,7 +5455,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             yield* offerRuntimeEvent(context, {
               type: "session.started",
               eventId: sessionStartedStamp.eventId,
-              engine: PROVIDER,
+              engine: ENGINE,
               createdAt: sessionStartedStamp.createdAt,
               threadId,
               payload: input.resumeCursor !== undefined ? { resume: input.resumeCursor } : {},
@@ -5466,7 +5466,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             yield* offerRuntimeEvent(context, {
               type: "session.configured",
               eventId: configuredStamp.eventId,
-              engine: PROVIDER,
+              engine: ENGINE,
               createdAt: configuredStamp.createdAt,
               threadId,
               payload: {
@@ -5491,7 +5491,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             yield* offerRuntimeEvent(context, {
               type: "session.state.changed",
               eventId: readyStamp.eventId,
-              engine: PROVIDER,
+              engine: ENGINE,
               createdAt: readyStamp.createdAt,
               threadId,
               payload: {
@@ -5658,7 +5658,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* offerRuntimeEvent(context, {
             type: "session.configured",
             eventId: configuredStamp.eventId,
-            engine: PROVIDER,
+            engine: ENGINE,
             createdAt: configuredStamp.createdAt,
             threadId: input.threadId,
             payload: { config: configuredWindow },
@@ -5759,7 +5759,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         yield* offerRuntimeEvent(context, {
           type: "turn.started",
           eventId: turnStartedStamp.eventId,
-          engine: PROVIDER,
+          engine: ENGINE,
           createdAt: turnStartedStamp.createdAt,
           threadId: context.session.threadId,
           turnId,
@@ -5849,7 +5849,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           yield* offerRuntimeEvent(context, {
             type: "turn.steered",
             eventId: stamp.eventId,
-            engine: PROVIDER,
+            engine: ENGINE,
             createdAt: stamp.createdAt,
             threadId: context.session.threadId,
             turnId: liveTurnState.turnId,
@@ -5933,7 +5933,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         );
         if (Option.isNone(acknowledged)) {
           return yield* new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "turn/interrupt",
             detail: `The Claude CLI did not acknowledge the interrupt within ${Duration.toMillis(
               CLAUDE_INTERRUPT_TIMEOUT,
@@ -5972,7 +5972,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         const context = yield* requireSession(threadId);
         if (!context.subagentRuns.has(nativeThreadId)) {
           return yield* new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "turn/steerSubagent",
             detail: `Subagent '${nativeThreadId}' already finished; the message was not delivered.`,
           });
@@ -6003,7 +6003,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
     const rollbackThread: ClaudeAdapterShape["rollbackThread"] = (threadId, _numTurns) =>
       Effect.fail(
         new EngineAdapterValidationError({
-          engine: PROVIDER,
+          engine: ENGINE,
           operation: "rollbackThread",
           issue:
             `Claude rollback requires a session restart for thread '${threadId}'. ` +
@@ -6021,7 +6021,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         // state. Let the retained-transcript fallback handle busy sources.
         if (liveSource?.turnState !== undefined) {
           return yield* new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "forkThread",
             issue:
               "The source Claude session has a turn in flight; HarnessOS will rebuild the fork from its retained transcript.",
@@ -6031,7 +6031,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         const sourceSessionId = liveSource?.resumeSessionId ?? sourceState?.resume;
         if (!sourceSessionId) {
           return yield* new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "forkThread",
             issue: "The source Claude session has no resumable native cursor.",
           });
@@ -6046,7 +6046,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             }),
           catch: (cause) =>
             new EngineAdapterRequestError({
-              engine: PROVIDER,
+              engine: ENGINE,
               method: "session/fork",
               detail: toMessage(cause, "Failed to fork the Claude session transcript."),
               cause,
@@ -6074,7 +6074,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         const pending = context.pendingApprovals.get(requestId);
         if (!pending) {
           return yield* new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "item/requestApproval/decision",
             detail: `Unknown pending approval request: ${requestId}`,
           });
@@ -6083,7 +6083,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         const settledDecision = yield* settlePendingApproval(context, requestId, pending, decision);
         if (settledDecision !== decision) {
           return yield* new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "item/requestApproval/decision",
             detail: `Approval request ${requestId} was already resolved as ${settledDecision}.`,
           });
@@ -6100,7 +6100,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         const pending = context.pendingUserInputs.get(requestId);
         if (!pending) {
           return yield* new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "item/tool/respondToUserInput",
             detail: `Unknown pending user-input request: ${requestId}`,
           });
@@ -6119,7 +6119,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         );
         if (settledResult !== submittedResult) {
           return yield* new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "item/tool/respondToUserInput",
             detail: `User-input request ${requestId} was already resolved.`,
           });
@@ -6265,7 +6265,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           try: () => discoveryPromise,
           catch: (cause) =>
             new EngineAdapterProcessError({
-              engine: PROVIDER,
+              engine: ENGINE,
               threadId: ThreadId.makeUnsafe("discovery"),
               detail: toMessage(cause, "Failed to discover Claude commands."),
               cause,
@@ -6372,7 +6372,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           try: () => discoveryPromise,
           catch: (cause) =>
             new EngineAdapterProcessError({
-              engine: PROVIDER,
+              engine: ENGINE,
               threadId: CLAUDE_DISCOVERY_THREAD_ID,
               detail: toMessage(cause, "Failed to discover Claude models."),
               cause,
@@ -6423,9 +6423,9 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       });
 
     return {
-      engine: PROVIDER,
+      engine: ENGINE,
       capabilities: {
-        ...engineExecutionStructure(PROVIDER),
+        ...engineExecutionStructure(ENGINE),
         sessionModelSwitch: "in-session",
         conversationRollback: "restart-session",
         supportsSkillMentions: false,

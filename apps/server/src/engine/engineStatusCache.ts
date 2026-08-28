@@ -30,7 +30,7 @@ export function resolveEngineStatusCachePath(input: {
   readonly stateDir: string;
   readonly engine: ServerEngineStatus["engine"];
 }): string {
-  return `${input.stateDir}/provider-status/${input.engine}.json`;
+  return `${input.stateDir}/engine-status/${input.engine}.json`;
 }
 
 // Ignore unreadable or malformed cache entries so the server can still boot

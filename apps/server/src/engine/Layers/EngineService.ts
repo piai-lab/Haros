@@ -298,7 +298,7 @@ function unboundModelServiceAdmissionKey(threadId: ThreadId): string {
   return `\u0000${threadId}`;
 }
 
-function readPersistedProviderOptions(
+function readPersistedEngineOptions(
   runtimePayload: EngineRuntimeBinding["runtimePayload"],
 ): EngineStartOptions | undefined {
   const raw = runtimePayloadRecord(runtimePayload).engineOptions;
@@ -1725,7 +1725,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
 
             const persistedCwd = readPersistedCwd(binding.runtimePayload);
             const persistedEngineSelection = readPersistedEngineSelection(binding.runtimePayload);
-            const persistedEngineOptions = readPersistedProviderOptions(binding.runtimePayload);
+            const persistedEngineOptions = readPersistedEngineOptions(binding.runtimePayload);
             const persistedWorkSurface =
               binding.engine === "oa" || binding.engine === "pi"
                 ? readPersistedWorkSurface(binding.runtimePayload)
@@ -2084,7 +2084,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
             const effectiveEngineOptions =
               input.engineOptions ??
               (persistedBinding?.engine === input.engine
-                ? readPersistedProviderOptions(persistedBinding.runtimePayload)
+                ? readPersistedEngineOptions(persistedBinding.runtimePayload)
                 : undefined);
             const effectiveWorkSurface =
               input.engine === "oa" || input.engine === "pi"
@@ -2335,7 +2335,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
             const previousEngineSelection = readPersistedEngineSelection(
               persistedBinding.runtimePayload,
             );
-            const previousProviderOptions = readPersistedProviderOptions(
+            const previousEngineOptions = readPersistedEngineOptions(
               persistedBinding.runtimePayload,
             );
             const previousWorkSurface =
@@ -2456,8 +2456,8 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
                       ...(previousEngineSelection !== undefined
                         ? { engineSelection: previousEngineSelection }
                         : {}),
-                      ...(previousProviderOptions !== undefined
-                        ? { engineOptions: previousProviderOptions }
+                      ...(previousEngineOptions !== undefined
+                        ? { engineOptions: previousEngineOptions }
                         : {}),
                       ...(previousWorkSurface !== undefined
                         ? { workSurface: previousWorkSurface }
@@ -2479,8 +2479,8 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
                   ...(previousEngineSelection !== undefined
                     ? { engineSelection: previousEngineSelection }
                     : {}),
-                  ...(previousProviderOptions !== undefined
-                    ? { engineOptions: previousProviderOptions }
+                  ...(previousEngineOptions !== undefined
+                    ? { engineOptions: previousEngineOptions }
                     : {}),
                   ...(previousWorkSurface !== undefined
                     ? { workSurface: previousWorkSurface }
@@ -2505,7 +2505,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
                   upsertSessionBinding(restored, threadId, {
                     lifecycleGeneration: restoreGeneration,
                     engineSelection: previousEngineSelection,
-                    engineOptions: previousProviderOptions,
+                    engineOptions: previousEngineOptions,
                     ...(previousWorkSurface === undefined
                       ? {}
                       : {
@@ -2618,7 +2618,7 @@ const makeEngineService = (options?: EngineServiceLiveOptions) =>
         }
 
         const effectiveEngineOptions =
-          input.engineOptions ?? readPersistedProviderOptions(sourceBinding.runtimePayload);
+          input.engineOptions ?? readPersistedEngineOptions(sourceBinding.runtimePayload);
         const sourceCwd = readPersistedCwd(sourceBinding.runtimePayload);
         const targetCwd = input.cwd ?? sourceCwd;
         yield* validateRuntimeModeStructure(

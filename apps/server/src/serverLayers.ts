@@ -111,7 +111,7 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(runtimeServicesLayer),
     Layer.provideMerge(GitLayerLive),
   );
-  const providerCommandReactorLayer = EngineCommandReactorLive.pipe(
+  const engineCommandReactorLayer = EngineCommandReactorLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
     Layer.provideMerge(OrchestrationEventDeliveryRepositoryLive),
     Layer.provideMerge(studioOutputReactorLayer),
@@ -129,7 +129,7 @@ export function makeServerRuntimeServicesLayer(
   const usageHistoryLayer = UsageHistoryLive.pipe(Layer.provideMerge(ServerSettingsLive));
   const orchestrationReactorLayer = OrchestrationReactorLive.pipe(
     Layer.provideMerge(runtimeIngestionLayer),
-    Layer.provideMerge(providerCommandReactorLayer),
+    Layer.provideMerge(engineCommandReactorLayer),
     Layer.provideMerge(checkpointReactorLayer),
     Layer.provideMerge(studioOutputReactorLayer),
     Layer.provideMerge(threadGitMetadataReactorLayer),
@@ -239,7 +239,7 @@ export function makeServerRuntimeServicesLayer(
     ProjectPullRequestPinsLive,
     pullRequestServiceLayer,
     orchestrationReactorLayer,
-    providerCommandReactorLayer,
+    engineCommandReactorLayer,
     threadGitMetadataReactorLayer,
     threadDeletionReactorLayer,
     devServerManagerLayer,

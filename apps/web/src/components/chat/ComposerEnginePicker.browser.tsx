@@ -31,7 +31,7 @@ function engineStatus(
   };
 }
 
-const READY_PROVIDERS: ReadonlyArray<ServerEngineStatus> = [
+const READY_ENGINES: ReadonlyArray<ServerEngineStatus> = [
   "oa",
   "codex",
   "claude",
@@ -58,17 +58,17 @@ async function mountPicker(input: {
   document.body.append(host);
 
   function Harness() {
-    const [engine, setProvider] = useState<EngineKind>(input.engine ?? "codex");
+    const [engine, setEngine] = useState<EngineKind>(input.engine ?? "codex");
     return (
       <I18nProvider>
         <ComposerEnginePicker
           engine={engine}
-          engines={input.engines ?? READY_PROVIDERS}
+          engines={input.engines ?? READY_ENGINES}
           {...(input.hiddenEngines ? { hiddenEngines: input.hiddenEngines } : {})}
           {...(input.engineOrder ? { engineOrder: input.engineOrder } : {})}
-          onEngineChange={(nextProvider) => {
-            onEngineChange(nextProvider);
-            setProvider(nextProvider);
+          onEngineChange={(nextEngine) => {
+            onEngineChange(nextEngine);
+            setEngine(nextEngine);
           }}
           onEngineIntent={onEngineIntent}
         />

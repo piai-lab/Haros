@@ -172,7 +172,7 @@ it.layer(testLayer)("server CLI command", (it) => {
       assert.equal(resolvedConfig?.publicUrl, undefined);
       assert.equal(resolvedConfig?.allowInsecureRemote, false);
       assert.equal(resolvedConfig?.autoBootstrapProjectFromCwd, false);
-      assert.equal(resolvedConfig?.logProviderEvents, false);
+      assert.equal(resolvedConfig?.logEngineEvents, false);
       assert.equal(resolvedConfig?.logWebSocketEvents, false);
       assert.equal(stop.mock.calls.length, 1);
     }),
@@ -389,7 +389,7 @@ it.layer(testLayer)("server CLI command", (it) => {
       assert.equal(resolvedConfig?.authToken, "env-token");
       assert.equal(resolvedConfig?.desktopShutdownToken, "shutdown-token");
       assert.equal(resolvedConfig?.autoBootstrapProjectFromCwd, false);
-      assert.equal(resolvedConfig?.logProviderEvents, false);
+      assert.equal(resolvedConfig?.logEngineEvents, false);
       assert.equal(resolvedConfig?.logWebSocketEvents, false);
       assert.equal(findAvailablePort.mock.calls.length, 0);
     }),
@@ -580,14 +580,14 @@ it.layer(testLayer)("server CLI command", (it) => {
           HARNESSOS_MODE: "desktop",
           HARNESSOS_NO_BROWSER: "true",
           HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
-          HARNESSOS_LOG_PROVIDER_EVENTS: "true",
+          HARNESSOS_LOG_ENGINE_EVENTS: "true",
           HARNESSOS_LOG_WS_EVENTS: "true",
         },
       );
 
       assert.equal(resolvedConfig?.noBrowser, false);
       assert.equal(resolvedConfig?.autoBootstrapProjectFromCwd, false);
-      assert.equal(resolvedConfig?.logProviderEvents, false);
+      assert.equal(resolvedConfig?.logEngineEvents, false);
       assert.equal(resolvedConfig?.logWebSocketEvents, false);
     }),
   );
@@ -818,7 +818,7 @@ it.layer(testLayer)("server CLI command", (it) => {
     Effect.gen(function* () {
       yield* runCli(["--auto-bootstrap-project-from-cwd"], {
         HARNESSOS_MODE: "desktop",
-        HARNESSOS_LOG_PROVIDER_EVENTS: "true",
+        HARNESSOS_LOG_ENGINE_EVENTS: "true",
         HARNESSOS_LOG_WS_EVENTS: "false",
         HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
         HARNESSOS_NO_BROWSER: "true",
@@ -826,7 +826,7 @@ it.layer(testLayer)("server CLI command", (it) => {
 
       assert.equal(start.mock.calls.length, 1);
       assert.equal(resolvedConfig?.autoBootstrapProjectFromCwd, true);
-      assert.equal(resolvedConfig?.logProviderEvents, true);
+      assert.equal(resolvedConfig?.logEngineEvents, true);
       assert.equal(resolvedConfig?.logWebSocketEvents, false);
     }),
   );
@@ -835,7 +835,7 @@ it.layer(testLayer)("server CLI command", (it) => {
     Effect.gen(function* () {
       const error = yield* Effect.flip(
         runCli([], {
-          HARNESSOS_LOG_PROVIDER_EVENTS: "sometimes",
+          HARNESSOS_LOG_ENGINE_EVENTS: "sometimes",
         }),
       );
 

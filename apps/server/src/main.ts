@@ -90,7 +90,7 @@ interface CliInput {
   readonly noBrowser: BooleanFlagInput;
   readonly authToken: Option.Option<string>;
   readonly autoBootstrapProjectFromCwd: BooleanFlagInput;
-  readonly logProviderEvents: BooleanFlagInput;
+  readonly logEngineEvents: BooleanFlagInput;
   readonly logWebSocketEvents: BooleanFlagInput;
 }
 
@@ -171,7 +171,7 @@ const CliEnvConfig = Config.all({
   autoBootstrapProjectFromCwd: optionalBooleanEnvironmentConfig(
     "HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
   ),
-  logProviderEvents: optionalBooleanEnvironmentConfig("HARNESSOS_LOG_PROVIDER_EVENTS"),
+  logEngineEvents: optionalBooleanEnvironmentConfig("HARNESSOS_LOG_ENGINE_EVENTS"),
   logWebSocketEvents: optionalBooleanEnvironmentConfig("HARNESSOS_LOG_WS_EVENTS"),
 });
 
@@ -244,9 +244,9 @@ const ServerConfigLive = (input: CliInput) =>
       );
       // Engine event NDJSON logging is helpful for debugging, but it is too
       // expensive to keep enabled on the streaming hot path by default.
-      const logProviderEvents = resolveBooleanConfig(
-        input.logProviderEvents,
-        env.logProviderEvents,
+      const logEngineEvents = resolveBooleanConfig(
+        input.logEngineEvents,
+        env.logEngineEvents,
         false,
       );
       // Keep websocket payload logging opt-in in dev. Terminal/TUI traffic is
@@ -295,7 +295,7 @@ const ServerConfigLive = (input: CliInput) =>
         authToken,
         desktopShutdownToken,
         autoBootstrapProjectFromCwd,
-        logProviderEvents,
+        logEngineEvents,
         logWebSocketEvents,
       } satisfies ServerConfigShape;
 
@@ -496,9 +496,9 @@ const authTokenFlag = Flag.string("auth-token").pipe(
 const autoBootstrapProjectFromCwdFlag = optionalBooleanFlag("auto-bootstrap-project-from-cwd", {
   description: "Create a project for the current working directory on startup when missing.",
 });
-const logProviderEventsFlag = optionalBooleanFlag("log-engine-events", {
+const logEngineEventsFlag = optionalBooleanFlag("log-engine-events", {
   description:
-    "Emit native/canonical engine NDJSON logs for debugging (equivalent to HARNESSOS_LOG_PROVIDER_EVENTS).",
+    "Emit native/canonical engine NDJSON logs for debugging (equivalent to HARNESSOS_LOG_ENGINE_EVENTS).",
 });
 const logWebSocketEventsFlag = optionalBooleanFlag("log-websocket-events", {
   description:
@@ -529,7 +529,7 @@ const baseServerCommand = Command.make("oa", {
   noBrowser: noBrowserFlag,
   authToken: authTokenFlag,
   autoBootstrapProjectFromCwd: autoBootstrapProjectFromCwdFlag,
-  logProviderEvents: logProviderEventsFlag,
+  logEngineEvents: logEngineEventsFlag,
   logWebSocketEvents: logWebSocketEventsFlag,
 }).pipe(Command.withDescription("Run the HarnessOS server."));
 

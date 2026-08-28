@@ -81,8 +81,8 @@ export interface ServerDerivedPaths {
   readonly serverLogPath: string;
   readonly serverRuntimeStatePath: string;
   readonly quitResumeStatePath: string;
-  readonly providerLogsDir: string;
-  readonly providerEventLogPath: string;
+  readonly engineLogsDir: string;
+  readonly engineEventLogPath: string;
   readonly terminalLogsDir: string;
   readonly environmentIdPath: string;
 }
@@ -107,7 +107,7 @@ export interface ServerConfigShape extends ServerDerivedPaths {
   readonly authToken: string | undefined;
   readonly desktopShutdownToken?: string | undefined;
   readonly autoBootstrapProjectFromCwd: boolean;
-  readonly logProviderEvents: boolean;
+  readonly logEngineEvents: boolean;
   readonly logWebSocketEvents: boolean;
 }
 
@@ -120,7 +120,7 @@ export function preparePrivateServerPaths(
     paths.secretsDir,
     paths.attachmentsDir,
     paths.logsDir,
-    paths.providerLogsDir,
+    paths.engineLogsDir,
     paths.terminalLogsDir,
   ]) {
     ensurePrivateDirectorySync(directoryPath, platform);
@@ -147,7 +147,7 @@ export const deriveServerPaths = Effect.fn(function* (
   const dbPath = join(stateDir, "state.sqlite");
   const attachmentsDir = join(stateDir, "attachments");
   const logsDir = join(stateDir, "logs");
-  const providerLogsDir = join(logsDir, "engine");
+  const engineLogsDir = join(logsDir, "engine");
   return {
     stateDir,
     secretsDir,
@@ -160,8 +160,8 @@ export const deriveServerPaths = Effect.fn(function* (
     serverLogPath: join(logsDir, "server.log"),
     serverRuntimeStatePath: join(stateDir, "server-runtime.json"),
     quitResumeStatePath: join(stateDir, "quit-resume.json"),
-    providerLogsDir,
-    providerEventLogPath: join(providerLogsDir, "events.log"),
+    engineLogsDir,
+    engineEventLogPath: join(engineLogsDir, "events.log"),
     terminalLogsDir: join(logsDir, "terminals"),
     environmentIdPath: join(stateDir, "environment-id"),
   };
@@ -257,7 +257,7 @@ export class ServerConfig extends ServiceMap.Service<ServerConfig, ServerConfigS
           ...derivedPaths,
           mode: "web",
           autoBootstrapProjectFromCwd: false,
-          logProviderEvents: false,
+          logEngineEvents: false,
           logWebSocketEvents: false,
           port: 0,
           host: undefined,

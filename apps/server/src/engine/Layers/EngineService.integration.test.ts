@@ -2671,7 +2671,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         model: "gpt-5-codex",
         options: { reasoningEffort: "high", fastMode: true },
       };
-      const previousProviderOptions = {
+      const previousEngineOptions = {
         codex: { binaryPath: "/tmp/codex-old" },
       };
       const initial = yield* engine.startSession(threadId, {
@@ -2680,7 +2680,7 @@ routing.layer("EngineServiceLive routing", (it) => {
         cwd: "/tmp/failed-engine-replacement",
         runtimeMode: "full-access",
         engineSelection: previousEngineSelection,
-        engineOptions: previousProviderOptions,
+        engineOptions: previousEngineOptions,
       });
       const originalBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
       // A live null is an explicit cursor clear and must beat the older persisted cursor.
@@ -2728,7 +2728,7 @@ routing.layer("EngineServiceLive routing", (it) => {
       assert.notEqual(initial.resumeCursor, null);
       assert.equal(restoreCall?.resumeCursor, null);
       assert.deepEqual(restoreCall?.engineSelection, previousEngineSelection);
-      assert.deepEqual(restoreCall?.engineOptions, previousProviderOptions);
+      assert.deepEqual(restoreCall?.engineOptions, previousEngineOptions);
       assert.equal(restoreCall?.cwd, "/tmp/failed-engine-replacement");
       assert.equal(restoreCall?.runtimeMode, "full-access");
       assert.equal(restoreCall?.lifecycleGeneration, restoredBinding?.lifecycleGeneration);

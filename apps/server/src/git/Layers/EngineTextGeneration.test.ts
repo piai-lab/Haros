@@ -90,7 +90,7 @@ function createTextGenerationDouble(label: string) {
   };
 }
 
-function makeProviderTextGenerationTestLayer() {
+function makeEngineTextGenerationTestLayer() {
   const codex = createTextGenerationDouble("codex");
   const cursor = createTextGenerationDouble("cursor");
   const kilo = createTextGenerationDouble("kilo");
@@ -107,7 +107,7 @@ function makeProviderTextGenerationTestLayer() {
 
 describe("EngineTextGenerationLive", () => {
   it("routes standard git-writing models to Codex", async () => {
-    const { layer, codex, cursor, opencode } = makeProviderTextGenerationTestLayer();
+    const { layer, codex, cursor, opencode } = makeEngineTextGenerationTestLayer();
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
@@ -127,7 +127,7 @@ describe("EngineTextGenerationLive", () => {
   });
 
   it("routes OpenCode provider/model slugs to OpenCode", async () => {
-    const { layer, codex, cursor, opencode } = makeProviderTextGenerationTestLayer();
+    const { layer, codex, cursor, opencode } = makeEngineTextGenerationTestLayer();
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
@@ -147,7 +147,7 @@ describe("EngineTextGenerationLive", () => {
   });
 
   it("routes explicit Kilo model selections through Kilo text generation", async () => {
-    const { layer, codex, kilo, opencode } = makeProviderTextGenerationTestLayer();
+    const { layer, codex, kilo, opencode } = makeEngineTextGenerationTestLayer();
 
     await Effect.runPromise(
       Effect.gen(function* () {
@@ -169,7 +169,7 @@ describe("EngineTextGenerationLive", () => {
   });
 
   it("routes explicit OpenCode model selections and preserves engine options", async () => {
-    const { layer, codex, cursor, opencode } = makeProviderTextGenerationTestLayer();
+    const { layer, codex, cursor, opencode } = makeEngineTextGenerationTestLayer();
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
@@ -219,7 +219,7 @@ describe("EngineTextGenerationLive", () => {
   });
 
   it("routes explicit Cursor model selections and preserves engine options", async () => {
-    const { layer, codex, cursor, opencode } = makeProviderTextGenerationTestLayer();
+    const { layer, codex, cursor, opencode } = makeEngineTextGenerationTestLayer();
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
@@ -269,7 +269,7 @@ describe("EngineTextGenerationLive", () => {
   });
 
   it("routes automation intent generation through the selected engine", async () => {
-    const { layer, codex, cursor, opencode } = makeProviderTextGenerationTestLayer();
+    const { layer, codex, cursor, opencode } = makeEngineTextGenerationTestLayer();
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
@@ -299,7 +299,7 @@ describe("EngineTextGenerationLive", () => {
   });
 
   it("routes automation completion evaluation through the selected engine", async () => {
-    const { layer, codex, cursor, opencode } = makeProviderTextGenerationTestLayer();
+    const { layer, codex, cursor, opencode } = makeEngineTextGenerationTestLayer();
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {

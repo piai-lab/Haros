@@ -663,7 +663,7 @@ describe("automation shared route helpers", () => {
   });
 
   it("preserves saved engine options when editing without changing models", () => {
-    const savedProviderOptions: EngineStartOptions = {
+    const savedEngineOptions: EngineStartOptions = {
       opencode: { binaryPath: "/old/opencode", serverUrl: "http://old.example" },
     };
     const currentEngineOptions: EngineStartOptions = {
@@ -671,17 +671,17 @@ describe("automation shared route helpers", () => {
     };
     const definition = definitionWith({
       engineSelection: { engine: "opencode", model: "openai/gpt-5" },
-      engineOptions: savedProviderOptions,
+      engineOptions: savedEngineOptions,
     });
     const form = formFromDefinition(definition, "project-1");
 
     expect(engineOptionsForAutomationEdit(definition, form, currentEngineOptions)).toEqual(
-      savedProviderOptions,
+      savedEngineOptions,
     );
   });
 
   it("uses current engine options when an automation edit changes models", () => {
-    const savedProviderOptions: EngineStartOptions = {
+    const savedEngineOptions: EngineStartOptions = {
       opencode: { binaryPath: "/old/opencode", serverUrl: "http://old.example" },
     };
     const currentEngineOptions: EngineStartOptions = {
@@ -689,7 +689,7 @@ describe("automation shared route helpers", () => {
     };
     const definition = definitionWith({
       engineSelection: { engine: "opencode", model: "openai/gpt-5" },
-      engineOptions: savedProviderOptions,
+      engineOptions: savedEngineOptions,
     });
     const nextEngineSelection = { engine: "cursor" as const, model: "composer-2" };
 
@@ -703,7 +703,7 @@ describe("automation shared route helpers", () => {
   });
 
   it("preserves saved engine options when only model capability options change", () => {
-    const savedProviderOptions: EngineStartOptions = {
+    const savedEngineOptions: EngineStartOptions = {
       codex: { binaryPath: "/old/codex", homePath: "/old/home" },
     };
     const currentEngineOptions: EngineStartOptions = {
@@ -715,7 +715,7 @@ describe("automation shared route helpers", () => {
         model: "gpt-5-codex",
         options: { reasoningEffort: "medium" },
       },
-      engineOptions: savedProviderOptions,
+      engineOptions: savedEngineOptions,
     });
 
     expect(
@@ -728,7 +728,7 @@ describe("automation shared route helpers", () => {
         },
         currentEngineOptions,
       ),
-    ).toEqual(savedProviderOptions);
+    ).toEqual(savedEngineOptions);
   });
 
   it("clears stale engine options when an automation edit changes models without current options", () => {

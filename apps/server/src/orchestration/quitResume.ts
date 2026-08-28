@@ -94,7 +94,7 @@ export type QuitResumeRecordRead =
  * binary paths, agent directories and endpoints remain owned by the live
  * Engine Registry and never enter the one-shot recovery file.
  */
-export function sanitizeQuitResumeProviderOptions(
+export function sanitizeQuitResumeEngineOptions(
   options: EngineStartOptions | undefined,
 ): QuitResumeRecord["threads"][number]["binding"]["engineOptions"] | undefined {
   const claudeAgent = options?.claude;
@@ -155,7 +155,7 @@ export async function readExactQuitResumeBinding(
   ) {
     return null;
   }
-  const engineOptions = sanitizeQuitResumeProviderOptions(event.payload.engineOptions);
+  const engineOptions = sanitizeQuitResumeEngineOptions(event.payload.engineOptions);
   return {
     engineSelection: event.payload.engineSelection,
     ...(engineOptions !== undefined ? { engineOptions } : {}),

@@ -711,7 +711,7 @@ const make = Effect.gen(function* () {
     return matchingAdmissions.length === 1 ? matchingAdmissions[0]! : null;
   });
 
-  const threadProviderOptions = new Map<string, EngineStartOptions>();
+  const threadEngineOptions = new Map<string, EngineStartOptions>();
   // The selection last applied to each live session. Keep this separate from
   // projected thread metadata so an option changed mid-turn is still compared
   // against the old subprocess configuration before the next turn starts.
@@ -865,7 +865,7 @@ const make = Effect.gen(function* () {
       input.engineSelection ??
       thread?.engineSelection ??
       threadSessionEngineSelections.get(input.threadId);
-    const engineOptions = input.engineOptions ?? threadProviderOptions.get(input.threadId);
+    const engineOptions = input.engineOptions ?? threadEngineOptions.get(input.threadId);
     const threadTextGenerationInput = resolveTextGenerationInputForSelection(
       engineSelection,
       engineOptions,
@@ -1157,12 +1157,12 @@ const make = Effect.gen(function* () {
 
   const withEngineSessionLease = <A, E, R>(threadId: ThreadId, effect: Effect.Effect<A, E, R>) =>
     resolveEngineSessionThread(threadId).pipe(
-      Effect.flatMap((providerThread) =>
-        turnCheckpointCoordinator.withThreadLease(providerThread?.id ?? threadId, effect),
+      Effect.flatMap((engineSessionThread) =>
+        turnCheckpointCoordinator.withThreadLease(engineSessionThread?.id ?? threadId, effect),
       ),
     );
 
-  const resolveSubagentProviderThreadId = (
+  const resolveSubagentEngineThreadId = (
     threadId: ThreadId,
     parentThreadId: ThreadId | null | undefined,
   ): string | undefined => {
@@ -1196,8 +1196,8 @@ const make = Effect.gen(function* () {
   // lookup must resolve to the session-owning thread — a raw child-id lookup
   // would always miss and drain queued child messages into a live turn.
   const resolveLiveEngineSession = Effect.fnUntraced(function* (threadId: ThreadId) {
-    const providerThread = yield* resolveEngineSessionThread(threadId);
-    const sessionThreadId = providerThread?.id ?? threadId;
+    const engineSessionThread = yield* resolveEngineSessionThread(threadId);
+    const sessionThreadId = engineSessionThread?.id ?? threadId;
     return yield* engineService
       .listSessions()
       .pipe(Effect.map((sessions) => sessions.find((entry) => entry.threadId === sessionThreadId)));
@@ -1272,7 +1272,7 @@ const make = Effect.gen(function* () {
 
   const clearThreadRuntimeCaches = (threadId: ThreadId) =>
     Effect.sync(() => {
-      threadProviderOptions.delete(threadId);
+      threadEngineOptions.delete(threadId);
       threadSessionEngineSelections.delete(threadId);
       const editResendPrefix = `${threadId}:`;
       for (const key of editResendTurnStartKeys) {
@@ -1508,7 +1508,7 @@ const make = Effect.gen(function* () {
         issue: `Engine '${targetEngine}' is disabled in server settings revision ${settingsSnapshot.revision}.`,
       });
     }
-    const resolvedProviderOptions =
+    const resolvedEngineOptions =
       options?.engineOptions ?? engineStartOptionsFromServerSettings(settingsSnapshot.settings);
     const project = yield* resolveThreadWorkspaceProject(thread);
     if (!project) {
@@ -1549,7 +1549,7 @@ const make = Effect.gen(function* () {
           }
         : {}),
       engineSelection: desiredEngineSelection,
-      engineOptions: resolvedProviderOptions,
+      engineOptions: resolvedEngineOptions,
       runtimeMode: desiredRuntimeMode,
     };
 
@@ -1822,17 +1822,17 @@ const make = Effect.gen(function* () {
     // interrupt seam), never the session-bootstrap path below. Parent metadata
     // may be absent on older/local-only rows, so synthetic ids use the same
     // projection-backed parent inference as interrupt routing.
-    const providerThread = yield* resolveEngineSessionThread(input.threadId);
-    const subagentProviderThreadId = providerThread
-      ? resolveSubagentProviderThreadId(thread.id, providerThread.id)
+    const engineSessionThread = yield* resolveEngineSessionThread(input.threadId);
+    const subagentEngineThreadId = engineSessionThread
+      ? resolveSubagentEngineThreadId(thread.id, engineSessionThread.id)
       : undefined;
-    if (providerThread && subagentProviderThreadId) {
+    if (engineSessionThread && subagentEngineThreadId) {
       // Parity with the steerTurn path below: inline portable skill
       // instructions, normalize skill/agent mentions, and forward the
       // structured context so the adapter can project attachments into the
       // text-only subagent steering channel.
-      const steerEngine = (providerThread.session?.engine ??
-        providerThread.engineSelection.engine) as EngineKind;
+      const steerEngine = (engineSessionThread.session?.engine ??
+        engineSessionThread.engineSelection.engine) as EngineKind;
       const steerSkillResult =
         input.skills !== undefined && input.skills.length > 0
           ? yield* Effect.tryPromise(() =>
@@ -1905,8 +1905,8 @@ const make = Effect.gen(function* () {
         operation: "thread.turn.start",
       });
       yield* engineService.steerSubagent({
-        threadId: providerThread.id,
-        nativeThreadId: subagentProviderThreadId,
+        threadId: engineSessionThread.id,
+        nativeThreadId: subagentEngineThreadId,
         ...(normalizedSteerInput ? { input: normalizedSteerInput } : {}),
         ...(normalizedSteerAttachments.length > 0
           ? { attachments: normalizedSteerAttachments }
@@ -1933,9 +1933,9 @@ const make = Effect.gen(function* () {
     const projectedEngine = Schema.is(EngineKind)(thread.session?.engine)
       ? thread.session.engine
       : thread.engineSelection.engine;
-    const previousProvider = preEnsureLiveSession?.engine ?? projectedEngine;
+    const previousEngine = preEnsureLiveSession?.engine ?? projectedEngine;
     const requiresCrossProviderTranscriptBootstrap =
-      targetEngine !== previousProvider &&
+      targetEngine !== previousEngine &&
       !suppressContextBootstrapOnNextStartThreadIds.has(input.threadId) &&
       thread.sidechatSourceThreadId === null &&
       thread.handoff?.bootstrapStatus !== "pending" &&
@@ -1966,7 +1966,7 @@ const make = Effect.gen(function* () {
         commitBinding: input.dispatchOrigin !== "automation",
       });
     if (input.engineOptions !== undefined) {
-      threadProviderOptions.set(input.threadId, input.engineOptions);
+      threadEngineOptions.set(input.threadId, input.engineOptions);
     }
     if (input.engineSelection !== undefined) {
       threadSessionEngineSelections.set(input.threadId, input.engineSelection);
@@ -2832,7 +2832,7 @@ const make = Effect.gen(function* () {
     };
     yield* Effect.logDebug("engine command reactor generating thread title", {
       ...textGenerationLogContext,
-      hasProviderOptions: Boolean(textGenerationInput.engineOptions),
+      hasEngineOptions: Boolean(textGenerationInput.engineOptions),
     });
     const titleGenerationInput: ThreadTitleGenerationInput = {
       cwd: cwd ?? process.cwd(),
@@ -3398,8 +3398,8 @@ const make = Effect.gen(function* () {
     const queuedThreadIds = new Set<ThreadId>([threadId]);
     for (const queuedThreadId of yield* queuedTurnPromotions.listPendingThreadIds) {
       const queuedThread = ThreadId.makeUnsafe(queuedThreadId);
-      const providerThread = yield* resolveEngineSessionThread(queuedThread);
-      const queuedSessionThreadId = providerThread?.id ?? queuedThread;
+      const engineSessionThread = yield* resolveEngineSessionThread(queuedThread);
+      const queuedSessionThreadId = engineSessionThread?.id ?? queuedThread;
       if (queuedSessionThreadId === sessionThreadId) {
         queuedThreadIds.add(queuedThread);
       }
@@ -3416,8 +3416,8 @@ const make = Effect.gen(function* () {
     }
     for (const queuedThreadId of yield* queuedTurnPromotions.listPendingThreadIds) {
       const queuedThread = ThreadId.makeUnsafe(queuedThreadId);
-      const providerThread = yield* resolveEngineSessionThread(queuedThread);
-      if ((providerThread?.id ?? queuedThread) === sessionThreadId) {
+      const engineSessionThread = yield* resolveEngineSessionThread(queuedThread);
+      if ((engineSessionThread?.id ?? queuedThread) === sessionThreadId) {
         return true;
       }
     }
@@ -3781,7 +3781,7 @@ const make = Effect.gen(function* () {
     readonly createdAt: string;
   }) {
     const thread = yield* resolveThread(input.threadId);
-    const providerThread = yield* resolveEngineSessionThread(input.threadId);
+    const engineSessionThread = yield* resolveEngineSessionThread(input.threadId);
     if (!thread) {
       return;
     }
@@ -3798,7 +3798,11 @@ const make = Effect.gen(function* () {
         ...(settlementStatus ? { settlementStatus } : {}),
       });
 
-    if (!providerThread || !providerThread.session || providerThread.session.status === "stopped") {
+    if (
+      !engineSessionThread ||
+      !engineSessionThread.session ||
+      engineSessionThread.session.status === "stopped"
+    ) {
       yield* reportInterruptFailure("No active engine session is bound to this thread.");
       if (expectedTurnId) {
         yield* settleInterruptedUserInputs({
@@ -3816,7 +3820,7 @@ const make = Effect.gen(function* () {
 
     // Forward the observed turn only as an expectation. EngineService owns the
     // exact generation-scoped engine turn and rejects a stale mismatch.
-    const nativeThreadId = resolveSubagentProviderThreadId(thread.id, providerThread.id);
+    const nativeThreadId = resolveSubagentEngineThreadId(thread.id, engineSessionThread.id);
     const liveTurnId = yield* resolveLiveProviderTurnId(input.threadId);
     if (input.turnId !== undefined && liveTurnId !== undefined && input.turnId !== liveTurnId) {
       yield* reportInterruptFailure(
@@ -3829,7 +3833,7 @@ const make = Effect.gen(function* () {
       label: "The engine interrupt",
       timeout: ENGINE_COMMAND_INTERRUPT_TIMEOUT,
       call: engineService.interruptTurn({
-        threadId: providerThread.id,
+        threadId: engineSessionThread.id,
         ...(turnId ? { turnId } : {}),
         ...(nativeThreadId ? { nativeThreadId } : {}),
       }),
@@ -3915,9 +3919,10 @@ const make = Effect.gen(function* () {
   const processTaskStopRequested = Effect.fnUntraced(function* (
     event: Extract<EngineIntentEvent, { type: "thread.task-stop-requested" }>,
   ) {
-    const providerThread = yield* resolveEngineSessionThread(event.payload.threadId);
-    const hasSession = providerThread?.session && providerThread.session.status !== "stopped";
-    if (!providerThread || !hasSession) {
+    const engineSessionThread = yield* resolveEngineSessionThread(event.payload.threadId);
+    const hasSession =
+      engineSessionThread?.session && engineSessionThread.session.status !== "stopped";
+    if (!engineSessionThread || !hasSession) {
       return yield* appendProviderFailureActivity({
         threadId: event.payload.threadId,
         kind: "engine.task.stop.failed",
@@ -3930,7 +3935,7 @@ const make = Effect.gen(function* () {
 
     yield* engineService
       .stopTask({
-        threadId: providerThread.id,
+        threadId: engineSessionThread.id,
         taskId: event.payload.taskId,
       })
       .pipe(
@@ -3950,9 +3955,10 @@ const make = Effect.gen(function* () {
   const processTaskBackgroundRequested = Effect.fnUntraced(function* (
     event: Extract<EngineIntentEvent, { type: "thread.task-background-requested" }>,
   ) {
-    const providerThread = yield* resolveEngineSessionThread(event.payload.threadId);
-    const hasSession = providerThread?.session && providerThread.session.status !== "stopped";
-    if (!providerThread || !hasSession) {
+    const engineSessionThread = yield* resolveEngineSessionThread(event.payload.threadId);
+    const hasSession =
+      engineSessionThread?.session && engineSessionThread.session.status !== "stopped";
+    if (!engineSessionThread || !hasSession) {
       return yield* appendProviderFailureActivity({
         threadId: event.payload.threadId,
         kind: "engine.task.background.failed",
@@ -3965,7 +3971,7 @@ const make = Effect.gen(function* () {
 
     yield* engineService
       .backgroundTask({
-        threadId: providerThread.id,
+        threadId: engineSessionThread.id,
         toolUseId: event.payload.toolUseId,
       })
       .pipe(
@@ -4070,8 +4076,8 @@ const make = Effect.gen(function* () {
       });
       return null;
     }
-    const providerThread = yield* resolveEngineSessionThread(event.payload.threadId);
-    if (!providerThread) {
+    const engineSessionThread = yield* resolveEngineSessionThread(event.payload.threadId);
+    if (!engineSessionThread) {
       // The claim above already marked the row `responding`; bailing without a
       // settlement would orphan it and silently swallow every future response.
       yield* appendInteractionResponseFailure(event, {
@@ -4081,7 +4087,7 @@ const make = Effect.gen(function* () {
       });
       return null;
     }
-    if (providerThread.session?.status !== "stopped") return providerThread.id;
+    if (engineSessionThread.session?.status !== "stopped") return engineSessionThread.id;
     yield* appendInteractionResponseFailure(event, {
       interactionKind: input.interactionKind,
       detail: "No active engine session is bound to this thread.",
@@ -4176,16 +4182,16 @@ const make = Effect.gen(function* () {
       );
     }
     if (event.payload.numTurns > 0) {
-      const providerThread = yield* resolveEngineSessionThread(event.payload.threadId);
+      const engineSessionThread = yield* resolveEngineSessionThread(event.payload.threadId);
       if (
         thread &&
-        providerThread?.session?.status === "running" &&
-        providerThread.session.activeTurnId !== null
+        engineSessionThread?.session?.status === "running" &&
+        engineSessionThread.session.activeTurnId !== null
       ) {
-        const nativeThreadId = resolveSubagentProviderThreadId(thread.id, providerThread.id);
+        const nativeThreadId = resolveSubagentEngineThreadId(thread.id, engineSessionThread.id);
         yield* engineService.interruptTurn({
-          threadId: providerThread.id,
-          turnId: providerThread.session.activeTurnId,
+          threadId: engineSessionThread.id,
+          turnId: engineSessionThread.session.activeTurnId,
           ...(nativeThreadId ? { nativeThreadId } : {}),
         });
       }
@@ -4378,18 +4384,18 @@ const make = Effect.gen(function* () {
     event: Extract<EngineIntentEvent, { type: "thread.message-edit-resend-requested" }>,
   ) {
     const thread = yield* resolveThread(event.payload.threadId);
-    const providerThread = yield* resolveEngineSessionThread(event.payload.threadId);
+    const engineSessionThread = yield* resolveEngineSessionThread(event.payload.threadId);
     const liveSession = yield* resolveLiveEngineSession(event.payload.threadId);
     const activeTurnId =
       liveSession?.status === "running"
         ? (liveSession.activeTurnId ?? null)
-        : providerThread?.session?.status === "running"
-          ? (providerThread.session.activeTurnId ?? null)
+        : engineSessionThread?.session?.status === "running"
+          ? (engineSessionThread.session.activeTurnId ?? null)
           : null;
     const activeEngine =
       liveSession?.engine ??
-      (Schema.is(EngineKind)(providerThread?.session?.engine)
-        ? providerThread.session.engine
+      (Schema.is(EngineKind)(engineSessionThread?.session?.engine)
+        ? engineSessionThread.session.engine
         : thread?.engineSelection.engine);
     const replacementRequirement =
       thread !== undefined
@@ -4401,7 +4407,7 @@ const make = Effect.gen(function* () {
             requestedEngineSelection: event.payload.engineSelection,
             currentRuntimeMode:
               liveSession?.runtimeMode ??
-              providerThread?.session?.runtimeMode ??
+              engineSessionThread?.session?.runtimeMode ??
               thread.runtimeMode,
             desiredRuntimeMode: event.payload.runtimeMode,
           })
@@ -4456,7 +4462,7 @@ const make = Effect.gen(function* () {
       // second native-context rollback protocol on target-start failure.
       if (!engineServiceOwnsReplacement) {
         yield* stopActiveProviderRuntimeForEdit({
-          threadId: providerThread?.id ?? event.payload.threadId,
+          threadId: engineSessionThread?.id ?? event.payload.threadId,
         });
       }
       yield* processMessageEditResendPayload(event.payload, {
@@ -4488,13 +4494,13 @@ const make = Effect.gen(function* () {
     readonly createdAt: string;
   }) {
     const thread = yield* resolveThread(input.threadId);
-    const providerThread = yield* resolveEngineSessionThread(input.threadId);
+    const engineSessionThread = yield* resolveEngineSessionThread(input.threadId);
     if (!thread) {
       return;
     }
 
-    const stoppedSessionThreadId = providerThread?.id ?? thread.id;
-    const stopsEngineSession = providerThread === null || providerThread.id === thread.id;
+    const stoppedSessionThreadId = engineSessionThread?.id ?? thread.id;
+    const stopsEngineSession = engineSessionThread === null || engineSessionThread.id === thread.id;
     const clearedQueuedThreadIds = new Set<ThreadId>([thread.id]);
     if (stopsEngineSession) {
       for (const queuedThreadId of yield* queuedTurnPromotions.listPendingThreadIds) {
@@ -4528,11 +4534,13 @@ const make = Effect.gen(function* () {
     suppressContextBootstrapOnNextStartThreadIds.add(thread.id);
 
     const nativeThreadId =
-      providerThread !== null
-        ? resolveSubagentProviderThreadId(thread.id, providerThread.id)
+      engineSessionThread !== null
+        ? resolveSubagentEngineThreadId(thread.id, engineSessionThread.id)
         : undefined;
     const isChildProviderRuntime =
-      providerThread !== null && providerThread.id !== thread.id && nativeThreadId !== undefined;
+      engineSessionThread !== null &&
+      engineSessionThread.id !== thread.id &&
+      nativeThreadId !== undefined;
 
     // Child subagents share the parent engine session, so stop requests need
     // to interrupt the child turn rather than terminate the whole session.
@@ -4541,14 +4549,14 @@ const make = Effect.gen(function* () {
       thread.session &&
       thread.session.status === "running" &&
       thread.session.activeTurnId !== null &&
-      providerThread.session &&
-      providerThread.session.status !== "stopped"
+      engineSessionThread.session &&
+      engineSessionThread.session.status !== "stopped"
     ) {
       const childInterrupt = yield* runBoundedProviderCall({
         label: "The engine interrupt",
         timeout: ENGINE_COMMAND_INTERRUPT_TIMEOUT,
         call: engineService.interruptTurn({
-          threadId: providerThread.id,
+          threadId: engineSessionThread.id,
           turnId: thread.session.activeTurnId,
           nativeThreadId,
         }),
@@ -4591,14 +4599,14 @@ const make = Effect.gen(function* () {
       return;
     }
 
-    const ownsEngineSession = providerThread !== null && providerThread.id === thread.id;
+    const ownsEngineSession = engineSessionThread !== null && engineSessionThread.id === thread.id;
     if (thread.session && thread.session.status !== "stopped" && ownsEngineSession) {
       // A stop that cannot finish must still settle the projection: the session
       // row below is the only thing that releases the turn in the UI.
       const stopped = yield* runBoundedProviderCall({
         label: "The engine session stop",
         timeout: ENGINE_COMMAND_STOP_TIMEOUT,
-        call: engineService.stopSession({ threadId: providerThread.id }),
+        call: engineService.stopSession({ threadId: engineSessionThread.id }),
       });
       if (stopped._tag !== "ok") {
         yield* appendProviderFailureActivity({

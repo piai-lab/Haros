@@ -15,7 +15,7 @@ import {
   NOTIFICATIONS_SETTINGS_SEARCH,
 } from "./settingsMetadata/desktopSettings";
 import { PROMPTS_SETTINGS_SEARCH } from "./settingsMetadata/promptSettings";
-import { PROVIDERS_SETTINGS_SEARCH } from "./settingsMetadata/engineSettings";
+import { ENGINES_SETTINGS_SEARCH } from "./settingsMetadata/engineSettings";
 import { WEB_SEARCH_SETTINGS_SEARCH } from "./settingsMetadata/webSearchSettings";
 import {
   SETTINGS_TARGETS,
@@ -162,7 +162,7 @@ export const SETTINGS_NAV_ITEMS = [
     labelKey: "settings.engines",
     descriptionKey: "settings.enginesDescription",
     icon: "puzzle",
-    searchRecords: Object.values(PROVIDERS_SETTINGS_SEARCH),
+    searchRecords: Object.values(ENGINES_SETTINGS_SEARCH),
   },
   {
     id: "models",

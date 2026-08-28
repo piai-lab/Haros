@@ -111,27 +111,27 @@ const DEFAULT_TIMEOUT_MS = 4_000;
 const CLAUDE_HEALTH_TIMEOUT_MS = 20_000;
 const OPENCODE_HEALTH_TIMEOUT_MS = 20_000;
 const CODEX_AUTH_STATUS_ARGS = ["-c", "mcp_servers={}", "login", "status"] as const;
-const CODEX_PROVIDER = "codex" as const;
-const CLAUDE_AGENT_PROVIDER = "claude" as const;
-const CURSOR_PROVIDER = "cursor" as const;
-const ANTIGRAVITY_PROVIDER = "antigravity" as const;
-const GROK_PROVIDER = "grok" as const;
-const DROID_PROVIDER = "droid" as const;
-const KILO_PROVIDER = "kilo" as const;
-const OPENCODE_PROVIDER = "opencode" as const;
-const PI_PROVIDER = "pi" as const;
-const HARNESSOS_AGENT_PROVIDER = "oa" as const;
-const BUNDLED_PI_VERSION = "0.84.3";
+const CODEX_ENGINE = "codex" as const;
+const CLAUDE_ENGINE = "claude" as const;
+const CURSOR_ENGINE = "cursor" as const;
+const ANTIGRAVITY_ENGINE = "antigravity" as const;
+const GROK_ENGINE = "grok" as const;
+const DROID_ENGINE = "droid" as const;
+const KILO_ENGINE = "kilo" as const;
+const OPENCODE_ENGINE = "opencode" as const;
+const PI_ENGINE = "pi" as const;
+const OA_ENGINE = "oa" as const;
+const BUNDLED_OA_RUNTIME_VERSION = "0.84.3";
 type EngineStatuses = ReadonlyArray<ServerEngineStatus>;
-const DISABLED_PROVIDER_STATUS_MESSAGE = "Engine is disabled in HarnessOS settings.";
+const DISABLED_ENGINE_STATUS_MESSAGE = "Engine is disabled in HarnessOS settings.";
 const MINIMUM_ANTIGRAVITY_CLI_VERSION = "1.0.12";
 
-const PROVIDERS = ENGINE_KINDS;
+const ENGINES = ENGINE_KINDS;
 
 const engineChildKind = (engine: EngineKind): EngineChildKind =>
-  engine === CLAUDE_AGENT_PROVIDER ? "claude" : engine === HARNESSOS_AGENT_PROVIDER ? "pi" : engine;
+  engine === CLAUDE_ENGINE ? "claude" : engine === OA_ENGINE ? "pi" : engine;
 
-const providerCommandEnv = (engine: EngineKind): NodeJS.ProcessEnv =>
+const engineCommandEnv = (engine: EngineKind): NodeJS.ProcessEnv =>
   buildEngineChildEnvironment({ engine: engineChildKind(engine) });
 
 const UPDATE_OUTPUT_MAX_BYTES = 10_000;
@@ -183,14 +183,14 @@ export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
   Record<EngineKind, PackageManagedEngineMaintenanceDefinition>
 > = {
   codex: {
-    engine: CODEX_PROVIDER,
+    engine: CODEX_ENGINE,
     binaryName: "codex",
     npmPackageName: "@openai/codex",
     homebrew: { name: "codex", kind: "cask" },
     nativeUpdate: null,
   },
   claude: {
-    engine: CLAUDE_AGENT_PROVIDER,
+    engine: CLAUDE_ENGINE,
     binaryName: "claude",
     npmPackageName: "@anthropic-ai/claude-code",
     homebrew: {
@@ -216,7 +216,7 @@ export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
     },
   },
   antigravity: {
-    engine: ANTIGRAVITY_PROVIDER,
+    engine: ANTIGRAVITY_ENGINE,
     binaryName: "agy",
     // Antigravity is distributed as a native binary and owns its update channel.
     npmPackageName: null,
@@ -230,7 +230,7 @@ export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
     },
   },
   droid: {
-    engine: DROID_PROVIDER,
+    engine: DROID_ENGINE,
     binaryName: "droid",
     npmPackageName: "@factory/cli",
     homebrew: null,
@@ -242,7 +242,7 @@ export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
     },
   },
   kilo: {
-    engine: KILO_PROVIDER,
+    engine: KILO_ENGINE,
     binaryName: "kilo",
     npmPackageName: "@kilocode/cli",
     homebrew: null,
@@ -255,7 +255,7 @@ export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
     },
   },
   opencode: {
-    engine: OPENCODE_PROVIDER,
+    engine: OPENCODE_ENGINE,
     binaryName: "opencode",
     npmPackageName: "opencode-ai",
     homebrew: { name: "anomalyco/tap/opencode", kind: "formula" },
@@ -273,7 +273,7 @@ export const PACKAGE_MANAGED_PROVIDER_UPDATES: Partial<
     },
   },
   pi: {
-    engine: PI_PROVIDER,
+    engine: PI_ENGINE,
     binaryName: "pi",
     // Pi is part of the HarnessOS App runtime. App updates own this version;
     // engine maintenance must never mutate it behind the App's back.
@@ -657,7 +657,7 @@ const collectStreamAsString = <E>(stream: Stream.Stream<Uint8Array, E>): Effect.
     (acc, chunk) => acc + new TextDecoder().decode(chunk),
   );
 
-const runProviderCommand = (
+const runEngineCommand = (
   executable: string,
   args: ReadonlyArray<string>,
   env: NodeJS.ProcessEnv,
@@ -691,9 +691,9 @@ const runProviderCommand = (
 const runCodexCommand = (
   args: ReadonlyArray<string>,
   executable = "codex",
-  env: NodeJS.ProcessEnv = providerCommandEnv(CODEX_PROVIDER),
+  env: NodeJS.ProcessEnv = engineCommandEnv(CODEX_ENGINE),
 ) =>
-  runProviderCommand(executable, args, env).pipe(
+  runEngineCommand(executable, args, env).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
         ? Effect.fail(makeCommandMissingCause(executable))
@@ -706,7 +706,7 @@ const runClaudeCommand = (
   executable = "claude",
   env: NodeJS.ProcessEnv = buildClaudeProcessEnv(),
 ) =>
-  runProviderCommand(executable, args, env).pipe(
+  runEngineCommand(executable, args, env).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
         ? Effect.fail(makeCommandMissingCause(executable))
@@ -715,7 +715,7 @@ const runClaudeCommand = (
   );
 
 const runGrokCommand = (args: ReadonlyArray<string>, executable = "grok") =>
-  runProviderCommand(executable, args, providerCommandEnv(GROK_PROVIDER)).pipe(
+  runEngineCommand(executable, args, engineCommandEnv(GROK_ENGINE)).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
         ? Effect.fail(makeCommandMissingCause(executable))
@@ -724,7 +724,7 @@ const runGrokCommand = (args: ReadonlyArray<string>, executable = "grok") =>
   );
 
 const runOpenCodeCommand = (args: ReadonlyArray<string>, executable = "opencode") =>
-  runProviderCommand(executable, args, providerCommandEnv(OPENCODE_PROVIDER)).pipe(
+  runEngineCommand(executable, args, engineCommandEnv(OPENCODE_ENGINE)).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
         ? Effect.fail(makeCommandMissingCause(executable))
@@ -733,7 +733,7 @@ const runOpenCodeCommand = (args: ReadonlyArray<string>, executable = "opencode"
   );
 
 const runKiloCommand = (args: ReadonlyArray<string>, executable = "kilo") =>
-  runProviderCommand(executable, args, providerCommandEnv(KILO_PROVIDER)).pipe(
+  runEngineCommand(executable, args, engineCommandEnv(KILO_ENGINE)).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
         ? Effect.fail(makeCommandMissingCause(executable))
@@ -746,7 +746,7 @@ const runCursorCommand = (
   executable = DEFAULT_CURSOR_AGENT_BINARY,
 ) => {
   const command = buildCursorAgentCommand(executable, args);
-  return runProviderCommand(command.command, command.args, buildCursorAgentHeadlessEnv()).pipe(
+  return runEngineCommand(command.command, command.args, buildCursorAgentHeadlessEnv()).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
         ? Effect.fail(makeCommandMissingCause(command.command))
@@ -828,7 +828,7 @@ function cursorModelsOutputHasNoModels(output: string): boolean {
 }
 
 const runAntigravityCommand = (args: ReadonlyArray<string>, executable = "agy") =>
-  runProviderCommand(executable, args, providerCommandEnv(ANTIGRAVITY_PROVIDER)).pipe(
+  runEngineCommand(executable, args, engineCommandEnv(ANTIGRAVITY_ENGINE)).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
         ? Effect.fail(makeCommandMissingCause(executable))
@@ -890,7 +890,7 @@ export const makeCheckCodexEngineStatus = (
     if (versionProbe.outcome === "missing" || versionProbe.outcome === "failure") {
       const error = versionProbe.cause;
       return {
-        engine: CODEX_PROVIDER,
+        engine: CODEX_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -907,7 +907,7 @@ export const makeCheckCodexEngineStatus = (
 
     if (versionProbe.outcome === "timeout") {
       return {
-        engine: CODEX_PROVIDER,
+        engine: CODEX_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -920,7 +920,7 @@ export const makeCheckCodexEngineStatus = (
       const version = versionProbe.result;
       const detail = detailFromResult(version);
       return {
-        engine: CODEX_PROVIDER,
+        engine: CODEX_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -935,7 +935,7 @@ export const makeCheckCodexEngineStatus = (
     const parsedVersion = parseCodexCliVersion(`${version.stdout}\n${version.stderr}`);
     if (parsedVersion && !isCodexCliVersionSupported(parsedVersion)) {
       return {
-        engine: CODEX_PROVIDER,
+        engine: CODEX_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -955,7 +955,7 @@ export const makeCheckCodexEngineStatus = (
     // fine.  Skip the auth probe entirely for non-OpenAI engines.
     if (yield* hasCustomModelProviderForEnv(probeEnv)) {
       return {
-        engine: CODEX_PROVIDER,
+        engine: CODEX_ENGINE,
         status: "ready" as const,
         available: true,
         authStatus: "unknown" as const,
@@ -974,7 +974,7 @@ export const makeCheckCodexEngineStatus = (
     if (Result.isFailure(authProbe)) {
       const error = authProbe.failure;
       return {
-        engine: CODEX_PROVIDER,
+        engine: CODEX_ENGINE,
         status: "warning" as const,
         available: true,
         authStatus: "unknown" as const,
@@ -990,7 +990,7 @@ export const makeCheckCodexEngineStatus = (
 
     if (Option.isNone(authProbe.success)) {
       return {
-        engine: CODEX_PROVIDER,
+        engine: CODEX_ENGINE,
         status: "warning" as const,
         available: true,
         authStatus: "unknown" as const,
@@ -1017,7 +1017,7 @@ export const makeCheckCodexEngineStatus = (
         : undefined;
 
     return {
-      engine: CODEX_PROVIDER,
+      engine: CODEX_ENGINE,
       status: parsed.status,
       available: true,
       authStatus: parsed.authStatus,
@@ -1068,7 +1068,7 @@ export const makeCheckClaudeEngineStatus = (
     if (versionProbe.outcome === "missing" || versionProbe.outcome === "failure") {
       const error = versionProbe.cause;
       return {
-        engine: CLAUDE_AGENT_PROVIDER,
+        engine: CLAUDE_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1085,7 +1085,7 @@ export const makeCheckClaudeEngineStatus = (
 
     if (versionProbe.outcome === "timeout") {
       return {
-        engine: CLAUDE_AGENT_PROVIDER,
+        engine: CLAUDE_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1099,7 +1099,7 @@ export const makeCheckClaudeEngineStatus = (
       const version = versionProbe.result;
       const detail = detailFromResult(version);
       return {
-        engine: CLAUDE_AGENT_PROVIDER,
+        engine: CLAUDE_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1131,7 +1131,7 @@ export const makeCheckClaudeEngineStatus = (
     if (Result.isFailure(authProbe)) {
       const error = authProbe.failure;
       return {
-        engine: CLAUDE_AGENT_PROVIDER,
+        engine: CLAUDE_ENGINE,
         status: "warning" as const,
         available: true,
         authStatus: "unknown" as const,
@@ -1147,7 +1147,7 @@ export const makeCheckClaudeEngineStatus = (
 
     if (Option.isNone(authProbe.success)) {
       return {
-        engine: CLAUDE_AGENT_PROVIDER,
+        engine: CLAUDE_ENGINE,
         status: "warning" as const,
         available: true,
         authStatus: "unknown" as const,
@@ -1221,7 +1221,7 @@ export const makeCheckClaudeEngineStatus = (
     const authMetadata = claudeAuthMetadata({ subscriptionType, authMethod });
 
     return {
-      engine: CLAUDE_AGENT_PROVIDER,
+      engine: CLAUDE_ENGINE,
       status: effectiveParsed.status,
       available: true,
       authStatus: effectiveParsed.authStatus,
@@ -1262,7 +1262,7 @@ export const makeCheckGrokEngineStatus = (
     if (versionProbe.outcome === "missing" || versionProbe.outcome === "failure") {
       const error = versionProbe.cause;
       return {
-        engine: GROK_PROVIDER,
+        engine: GROK_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1279,7 +1279,7 @@ export const makeCheckGrokEngineStatus = (
 
     if (versionProbe.outcome === "timeout") {
       return {
-        engine: GROK_PROVIDER,
+        engine: GROK_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1292,7 +1292,7 @@ export const makeCheckGrokEngineStatus = (
       const version = versionProbe.result;
       const detail = detailFromResult(version);
       return {
-        engine: GROK_PROVIDER,
+        engine: GROK_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1307,7 +1307,7 @@ export const makeCheckGrokEngineStatus = (
     const hasApiKey = hasGrokApiKeyEnv();
 
     return {
-      engine: GROK_PROVIDER,
+      engine: GROK_ENGINE,
       status: "ready" as const,
       available: true,
       authStatus: hasApiKey ? ("authenticated" as const) : ("unknown" as const),
@@ -1327,7 +1327,7 @@ export const checkGrokEngineStatus = makeCheckGrokEngineStatus();
 // ── Droid health check ─────────────────────────────────────────────
 
 const runDroidCommand = (args: ReadonlyArray<string>, executable = "droid") =>
-  runProviderCommand(executable, args, providerCommandEnv(DROID_PROVIDER)).pipe(
+  runEngineCommand(executable, args, engineCommandEnv(DROID_ENGINE)).pipe(
     Effect.flatMap((result) =>
       isWindowsShellCommandMissingResult({ code: result.code, stderr: result.stderr })
         ? Effect.fail(makeCommandMissingCause(executable))
@@ -1350,7 +1350,7 @@ export const makeCheckDroidEngineStatus = (
     if (versionProbe.outcome === "missing" || versionProbe.outcome === "failure") {
       const error = versionProbe.cause;
       return {
-        engine: DROID_PROVIDER,
+        engine: DROID_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1367,7 +1367,7 @@ export const makeCheckDroidEngineStatus = (
 
     if (versionProbe.outcome === "timeout") {
       return {
-        engine: DROID_PROVIDER,
+        engine: DROID_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1380,7 +1380,7 @@ export const makeCheckDroidEngineStatus = (
       const version = versionProbe.result;
       const detail = detailFromResult(version);
       return {
-        engine: DROID_PROVIDER,
+        engine: DROID_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1395,7 +1395,7 @@ export const makeCheckDroidEngineStatus = (
     const hasApiKey = hasDroidApiKeyEnv();
 
     return {
-      engine: DROID_PROVIDER,
+      engine: DROID_ENGINE,
       status: "ready" as const,
       available: true,
       authStatus: hasApiKey ? ("authenticated" as const) : ("unknown" as const),
@@ -1429,7 +1429,7 @@ export const makeCheckOpenCodeEngineStatus = (
     if (versionProbe.outcome === "missing" || versionProbe.outcome === "failure") {
       const error = versionProbe.cause;
       return {
-        engine: OPENCODE_PROVIDER,
+        engine: OPENCODE_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1446,7 +1446,7 @@ export const makeCheckOpenCodeEngineStatus = (
 
     if (versionProbe.outcome === "timeout") {
       return {
-        engine: OPENCODE_PROVIDER,
+        engine: OPENCODE_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1459,7 +1459,7 @@ export const makeCheckOpenCodeEngineStatus = (
       const version = versionProbe.result;
       const detail = detailFromResult(version);
       return {
-        engine: OPENCODE_PROVIDER,
+        engine: OPENCODE_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1473,7 +1473,7 @@ export const makeCheckOpenCodeEngineStatus = (
     const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
 
     return {
-      engine: OPENCODE_PROVIDER,
+      engine: OPENCODE_ENGINE,
       status: "ready" as const,
       available: true,
       authStatus: "unknown" as const,
@@ -1502,7 +1502,7 @@ export const makeCheckKiloEngineStatus = (
     if (versionProbe.outcome === "missing" || versionProbe.outcome === "failure") {
       const error = versionProbe.cause;
       return {
-        engine: KILO_PROVIDER,
+        engine: KILO_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1519,7 +1519,7 @@ export const makeCheckKiloEngineStatus = (
 
     if (versionProbe.outcome === "timeout") {
       return {
-        engine: KILO_PROVIDER,
+        engine: KILO_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1532,7 +1532,7 @@ export const makeCheckKiloEngineStatus = (
       const version = versionProbe.result;
       const detail = detailFromResult(version);
       return {
-        engine: KILO_PROVIDER,
+        engine: KILO_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1546,7 +1546,7 @@ export const makeCheckKiloEngineStatus = (
     const parsedVersion = parseGenericCliVersion(`${version.stdout}\n${version.stderr}`);
 
     return {
-      engine: KILO_PROVIDER,
+      engine: KILO_ENGINE,
       status: "ready" as const,
       available: true,
       authStatus: "unknown" as const,
@@ -1567,11 +1567,11 @@ export const checkPiEngineStatus = (): Effect.Effect<ServerEngineStatus> =>
   Effect.sync(
     () =>
       ({
-        engine: PI_PROVIDER,
+        engine: PI_ENGINE,
         status: "ready",
         available: true,
         authStatus: "unknown",
-        version: BUNDLED_PI_VERSION,
+        version: BUNDLED_OA_RUNTIME_VERSION,
         checkedAt: new Date().toISOString(),
         message:
           "Pi 0.84.3 is bundled. Native Pi discovery and state access begin only after you select Pi.",
@@ -1582,11 +1582,11 @@ export const checkOAAgentEngineStatus = (): Effect.Effect<ServerEngineStatus> =>
   Effect.sync(
     () =>
       ({
-        engine: HARNESSOS_AGENT_PROVIDER,
+        engine: OA_ENGINE,
         status: "ready",
         available: true,
         authStatus: "unknown",
-        version: BUNDLED_PI_VERSION,
+        version: BUNDLED_OA_RUNTIME_VERSION,
         checkedAt: new Date().toISOString(),
         message: "HarnessOS is bundled and ready. Add engine credentials before sending.",
       }) satisfies ServerEngineStatus,
@@ -1606,7 +1606,7 @@ export const checkAntigravityEngineStatus = (
     );
     if (versionProbe.outcome === "missing" || versionProbe.outcome === "failure") {
       return {
-        engine: ANTIGRAVITY_PROVIDER,
+        engine: ANTIGRAVITY_ENGINE,
         status: "error",
         available: false,
         authStatus: "unknown",
@@ -1622,7 +1622,7 @@ export const checkAntigravityEngineStatus = (
     }
     if (versionProbe.outcome === "timeout") {
       return {
-        engine: ANTIGRAVITY_PROVIDER,
+        engine: ANTIGRAVITY_ENGINE,
         status: "warning",
         available: true,
         authStatus: "unknown",
@@ -1633,7 +1633,7 @@ export const checkAntigravityEngineStatus = (
     if (versionProbe.outcome === "nonzero") {
       const version = versionProbe.result;
       return {
-        engine: ANTIGRAVITY_PROVIDER,
+        engine: ANTIGRAVITY_ENGINE,
         status: "error",
         available: false,
         authStatus: "unknown",
@@ -1648,7 +1648,7 @@ export const checkAntigravityEngineStatus = (
       compareSemverVersions(parsedVersion, MINIMUM_ANTIGRAVITY_CLI_VERSION) < 0
     ) {
       return {
-        engine: ANTIGRAVITY_PROVIDER,
+        engine: ANTIGRAVITY_ENGINE,
         status: "error",
         available: false,
         authStatus: "unknown",
@@ -1668,7 +1668,7 @@ export const checkAntigravityEngineStatus = (
       models.success.value.stdout.trim().length > 0
     ) {
       return {
-        engine: ANTIGRAVITY_PROVIDER,
+        engine: ANTIGRAVITY_ENGINE,
         status: "ready",
         available: true,
         authStatus: "authenticated",
@@ -1678,7 +1678,7 @@ export const checkAntigravityEngineStatus = (
       } satisfies ServerEngineStatus;
     }
     return {
-      engine: ANTIGRAVITY_PROVIDER,
+      engine: ANTIGRAVITY_ENGINE,
       status: "warning",
       available: true,
       authStatus: "unknown",
@@ -1706,7 +1706,7 @@ export const makeCheckCursorEngineStatus = (
     if (versionProbe.outcome === "missing" || versionProbe.outcome === "failure") {
       const error = versionProbe.cause;
       return {
-        engine: CURSOR_PROVIDER,
+        engine: CURSOR_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1723,7 +1723,7 @@ export const makeCheckCursorEngineStatus = (
 
     if (versionProbe.outcome === "timeout") {
       return {
-        engine: CURSOR_PROVIDER,
+        engine: CURSOR_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1737,7 +1737,7 @@ export const makeCheckCursorEngineStatus = (
       const version = versionProbe.result;
       const detail = detailFromResult(version);
       return {
-        engine: CURSOR_PROVIDER,
+        engine: CURSOR_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "unknown" as const,
@@ -1758,7 +1758,7 @@ export const makeCheckCursorEngineStatus = (
     if (Result.isFailure(authProbe)) {
       const error = authProbe.failure;
       return {
-        engine: CURSOR_PROVIDER,
+        engine: CURSOR_ENGINE,
         status: "warning" as const,
         available: true,
         authStatus: "unknown" as const,
@@ -1773,7 +1773,7 @@ export const makeCheckCursorEngineStatus = (
 
     if (Option.isNone(authProbe.success)) {
       return {
-        engine: CURSOR_PROVIDER,
+        engine: CURSOR_ENGINE,
         status: "warning" as const,
         available: true,
         authStatus: "unknown" as const,
@@ -1787,7 +1787,7 @@ export const makeCheckCursorEngineStatus = (
     const parsedAuth = parseCursorAuthStatusFromOutput(authProbe.success.value);
     if (parsedAuth.authStatus !== "authenticated") {
       return {
-        engine: CURSOR_PROVIDER,
+        engine: CURSOR_ENGINE,
         status: parsedAuth.status,
         available: true,
         authStatus: parsedAuth.authStatus,
@@ -1805,7 +1805,7 @@ export const makeCheckCursorEngineStatus = (
     if (Result.isFailure(modelsProbe)) {
       const error = modelsProbe.failure;
       return {
-        engine: CURSOR_PROVIDER,
+        engine: CURSOR_ENGINE,
         status: "warning" as const,
         available: true,
         authStatus: "authenticated" as const,
@@ -1820,7 +1820,7 @@ export const makeCheckCursorEngineStatus = (
 
     if (Option.isNone(modelsProbe.success)) {
       return {
-        engine: CURSOR_PROVIDER,
+        engine: CURSOR_ENGINE,
         status: "warning" as const,
         available: true,
         authStatus: "authenticated" as const,
@@ -1836,7 +1836,7 @@ export const makeCheckCursorEngineStatus = (
     const modelAuth = parseCursorAuthStatusFromOutput(modelsResult);
     if (modelAuth.authStatus === "unauthenticated") {
       return {
-        engine: CURSOR_PROVIDER,
+        engine: CURSOR_ENGINE,
         status: modelAuth.status,
         available: true,
         authStatus: modelAuth.authStatus,
@@ -1847,7 +1847,7 @@ export const makeCheckCursorEngineStatus = (
     }
     if (cursorModelsOutputHasNoModels(modelsOutput)) {
       return {
-        engine: CURSOR_PROVIDER,
+        engine: CURSOR_ENGINE,
         status: "error" as const,
         available: false,
         authStatus: "authenticated" as const,
@@ -1860,7 +1860,7 @@ export const makeCheckCursorEngineStatus = (
     if (modelsResult.code !== 0) {
       const detail = detailFromResult(modelsResult);
       return {
-        engine: CURSOR_PROVIDER,
+        engine: CURSOR_ENGINE,
         status: "warning" as const,
         available: true,
         authStatus: "authenticated" as const,
@@ -1873,7 +1873,7 @@ export const makeCheckCursorEngineStatus = (
     }
     if (!cursorModelsOutputHasModels(modelsOutput)) {
       return {
-        engine: CURSOR_PROVIDER,
+        engine: CURSOR_ENGINE,
         status: "warning" as const,
         available: true,
         authStatus: "authenticated" as const,
@@ -1885,7 +1885,7 @@ export const makeCheckCursorEngineStatus = (
     }
 
     return {
-      engine: CURSOR_PROVIDER,
+      engine: CURSOR_ENGINE,
       status: "ready" as const,
       available: true,
       authStatus: "authenticated" as const,
@@ -2005,52 +2005,52 @@ export function resolvePassiveProviderPresence(
   resolveCommand: (command: string) => string | null = resolveExecutable,
 ): ReadonlyArray<EngineKind> {
   const recoverable: EngineKind[] = [];
-  for (const engine of PROVIDERS) {
+  for (const engine of ENGINES) {
     if (!isProviderEnabledForSettings(engine, settings)) continue;
-    if (engine === HARNESSOS_AGENT_PROVIDER || engine === PI_PROVIDER) {
+    if (engine === OA_ENGINE || engine === PI_ENGINE) {
       recoverable.push(engine);
       continue;
     }
     const isRecoverable = (() => {
       switch (engine) {
-        case CODEX_PROVIDER:
+        case CODEX_ENGINE:
           return (
             settings.engines.codex.customModels.length > 0 ||
             resolveCommand(settings.engines.codex.binaryPath) !== null
           );
-        case CLAUDE_AGENT_PROVIDER:
+        case CLAUDE_ENGINE:
           return (
             settings.engines.claude.customModels.length > 0 ||
             resolveCommand(settings.engines.claude.binaryPath) !== null
           );
-        case CURSOR_PROVIDER:
+        case CURSOR_ENGINE:
           return (
             settings.engines.cursor.customModels.length > 0 ||
             settings.engines.cursor.apiEndpoint.trim().length > 0 ||
             resolveCommand(settings.engines.cursor.binaryPath) !== null
           );
-        case ANTIGRAVITY_PROVIDER:
+        case ANTIGRAVITY_ENGINE:
           return (
             settings.engines.antigravity.customModels.length > 0 ||
             resolveCommand(settings.engines.antigravity.binaryPath) !== null
           );
-        case GROK_PROVIDER:
+        case GROK_ENGINE:
           return (
             settings.engines.grok.customModels.length > 0 ||
             resolveCommand(settings.engines.grok.binaryPath) !== null
           );
-        case DROID_PROVIDER:
+        case DROID_ENGINE:
           return (
             settings.engines.droid.customModels.length > 0 ||
             resolveCommand(settings.engines.droid.binaryPath) !== null
           );
-        case KILO_PROVIDER:
+        case KILO_ENGINE:
           return (
             settings.engines.kilo.customModels.length > 0 ||
             settings.engines.kilo.serverUrl.trim().length > 0 ||
             resolveCommand(settings.engines.kilo.binaryPath) !== null
           );
-        case OPENCODE_PROVIDER:
+        case OPENCODE_ENGINE:
           return (
             settings.engines.opencode.customModels.length > 0 ||
             settings.engines.opencode.serverUrl.trim().length > 0 ||
@@ -2073,12 +2073,12 @@ export function makeDisabledEngineStatus(
     available: false,
     authStatus: "unknown" as const,
     checkedAt,
-    message: DISABLED_PROVIDER_STATUS_MESSAGE,
+    message: DISABLED_ENGINE_STATUS_MESSAGE,
   } satisfies ServerEngineStatus;
 }
 
 function isDisabledEngineStatusOverlay(status: ServerEngineStatus): boolean {
-  return status.message === DISABLED_PROVIDER_STATUS_MESSAGE && status.available === false;
+  return status.message === DISABLED_ENGINE_STATUS_MESSAGE && status.available === false;
 }
 
 function mergeEngineStatusUpdates(
@@ -2127,7 +2127,7 @@ export function projectEngineStatusesForSettings(
   const statusByEngine = new Map(statuses.map((status) => [status.engine, status] as const));
   const projected: ServerEngineStatus[] = [];
 
-  for (const engine of PROVIDERS) {
+  for (const engine of ENGINES) {
     const status = statusByEngine.get(engine);
     if (!isProviderEnabledForSettings(engine, settings)) {
       const disabledStatus = makeDisabledEngineStatus(engine, status?.checkedAt ?? checkedAt);
@@ -2173,7 +2173,7 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
       yield* Effect.addFinalizer(() => Scope.close(refreshScope, Exit.void));
 
       const cachePathByEngine = new Map(
-        PROVIDERS.map(
+        ENGINES.map(
           (engine) =>
             [
               engine,
@@ -2186,7 +2186,7 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
       );
 
       const cachedStatuses: EngineStatuses = yield* Effect.forEach(
-        PROVIDERS,
+        ENGINES,
         (engine) =>
           readEngineStatusCache(cachePathByEngine.get(engine)!).pipe(
             Effect.provideService(FileSystem.FileSystem, fileSystem),
@@ -2229,7 +2229,7 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
         Effect.map((probe) => probe?.subscriptionType),
       );
 
-      const getProviderBinaryPath = (engine: EngineKind, settings: ServerSettings) => {
+      const getEngineBinaryPath = (engine: EngineKind, settings: ServerSettings) => {
         switch (engine) {
           case "oa":
             return null;
@@ -2255,12 +2255,10 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
       };
 
       const resolveEngineMaintenanceBinaryPath = (engine: EngineKind, settings: ServerSettings) => {
-        const configuredPath = getProviderBinaryPath(engine, settings);
+        const configuredPath = getEngineBinaryPath(engine, settings);
         // Droid's installer commonly writes outside the PATH inherited by a GUI app.
         // Keep maintenance on the same executable resolution used by health and ACP runtime.
-        return engine === DROID_PROVIDER
-          ? resolveDroidCliBinaryPath(configuredPath)
-          : configuredPath;
+        return engine === DROID_ENGINE ? resolveDroidCliBinaryPath(configuredPath) : configuredPath;
       };
 
       const getEngineMaintenanceCapabilities = Effect.fn("getEngineMaintenanceCapabilities")(
@@ -2277,7 +2275,7 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
             });
           }
           if (engine === "cursor") {
-            const command = buildCursorAgentCommand(getProviderBinaryPath(engine, settings), [
+            const command = buildCursorAgentCommand(getEngineBinaryPath(engine, settings), [
               "update",
             ]);
             return makeEngineMaintenanceCapabilities({
@@ -2300,7 +2298,7 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
           }
           return yield* resolveEngineMaintenanceCapabilitiesEffect(definition, {
             binaryPath: resolveEngineMaintenanceBinaryPath(engine, settings),
-            env: providerCommandEnv(engine),
+            env: engineCommandEnv(engine),
             platform: process.platform,
           }).pipe(Effect.provideService(FileSystem.FileSystem, fileSystem));
         },
@@ -2418,14 +2416,10 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
           Effect.flatMap((settings) =>
             Effect.all(
               [
+                checkProviderWhenEnabled(settings, OA_ENGINE, checkOAAgentEngineStatus()),
                 checkProviderWhenEnabled(
                   settings,
-                  HARNESSOS_AGENT_PROVIDER,
-                  checkOAAgentEngineStatus(),
-                ),
-                checkProviderWhenEnabled(
-                  settings,
-                  CODEX_PROVIDER,
+                  CODEX_ENGINE,
                   makeCheckCodexEngineStatus(
                     settings.engines.codex.binaryPath,
                     settings.engines.codex.homePath,
@@ -2433,7 +2427,7 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
                 ),
                 checkProviderWhenEnabled(
                   settings,
-                  CLAUDE_AGENT_PROVIDER,
+                  CLAUDE_ENGINE,
                   makeCheckClaudeEngineStatus(
                     resolveClaudeSubscription,
                     settings.engines.claude.binaryPath,
@@ -2442,35 +2436,35 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
                 ),
                 checkProviderWhenEnabled(
                   settings,
-                  CURSOR_PROVIDER,
+                  CURSOR_ENGINE,
                   makeCheckCursorEngineStatus(settings.engines.cursor.binaryPath),
                 ),
                 checkProviderWhenEnabled(
                   settings,
-                  ANTIGRAVITY_PROVIDER,
+                  ANTIGRAVITY_ENGINE,
                   checkAntigravityEngineStatus(settings.engines.antigravity.binaryPath),
                 ),
                 checkProviderWhenEnabled(
                   settings,
-                  GROK_PROVIDER,
+                  GROK_ENGINE,
                   makeCheckGrokEngineStatus(settings.engines.grok.binaryPath),
                 ),
                 checkProviderWhenEnabled(
                   settings,
-                  DROID_PROVIDER,
+                  DROID_ENGINE,
                   makeCheckDroidEngineStatus(settings.engines.droid.binaryPath),
                 ),
                 checkProviderWhenEnabled(
                   settings,
-                  KILO_PROVIDER,
+                  KILO_ENGINE,
                   makeCheckKiloEngineStatus(settings.engines.kilo.binaryPath),
                 ),
                 checkProviderWhenEnabled(
                   settings,
-                  OPENCODE_PROVIDER,
+                  OPENCODE_ENGINE,
                   makeCheckOpenCodeEngineStatus(settings.engines.opencode.binaryPath),
                 ),
-                checkProviderWhenEnabled(settings, PI_PROVIDER, checkPiEngineStatus()),
+                checkProviderWhenEnabled(settings, PI_ENGINE, checkPiEngineStatus()),
               ],
               {
                 concurrency: "unbounded",
@@ -2574,7 +2568,7 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
       const getPassivePresence = serverSettings.ready.pipe(
         Effect.flatMap(() => serverSettings.getSettings),
         Effect.map((settings) => resolvePassiveProviderPresence(settings)),
-        Effect.catch(() => Effect.succeed(PROVIDERS)),
+        Effect.catch(() => Effect.succeed(ENGINES)),
       );
 
       const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
@@ -2612,7 +2606,7 @@ export function makeEngineHealthLive(options?: { readonly engineUpdateTimeoutMs?
         readonly args: ReadonlyArray<string>;
         readonly pathPrepend?: string;
       }) {
-        const baseEnv = providerCommandEnv(input.engine);
+        const baseEnv = engineCommandEnv(input.engine);
         const updateEnv = input.pathPrepend
           ? {
               ...baseEnv,

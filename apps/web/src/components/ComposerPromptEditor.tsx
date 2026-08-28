@@ -862,7 +862,7 @@ function ComposerThreadMentionEnginePlugin() {
   const threadMentionSources = useStore(
     useMemo(() => createComposerThreadMentionSourcesSelector(), []),
   );
-  const providerByThreadId = useMemo(
+  const engineByThreadId = useMemo(
     () => new Map(threadMentionSources.map((source) => [source.id as string, source.engine])),
     [threadMentionSources],
   );
@@ -871,7 +871,7 @@ function ComposerThreadMentionEnginePlugin() {
     const staleProvider = (node: ComposerMentionNode): boolean => {
       const threadId = node.getMentionThreadId();
       if (!threadId) return false;
-      const engine = providerByThreadId.get(threadId);
+      const engine = engineByThreadId.get(threadId);
       return engine !== undefined && engine !== node.getMentionEngine();
     };
     const needsUpdate = editor
@@ -882,13 +882,13 @@ function ComposerThreadMentionEnginePlugin() {
       () => {
         for (const node of $nodesOfType(ComposerMentionNode)) {
           if (!staleProvider(node)) continue;
-          const engine = providerByThreadId.get(node.getMentionThreadId() ?? "");
+          const engine = engineByThreadId.get(node.getMentionThreadId() ?? "");
           if (engine) node.setMentionEngine(engine);
         }
       },
       { tag: "history-merge" },
     );
-  }, [editor, providerByThreadId]);
+  }, [editor, engineByThreadId]);
 
   return null;
 }

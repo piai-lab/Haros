@@ -2343,22 +2343,22 @@ function EventRouter() {
       });
     });
     const unsubEngineStatusesUpdated = onServerEngineStatusesUpdated((payload) => {
-      const nextProviderDiscoveryFingerprints = engineModelDiscoveryInvalidationFingerprints(
+      const nextEngineDiscoveryFingerprints = engineModelDiscoveryInvalidationFingerprints(
         payload.engines,
       );
       const currentConfig = queryClient.getQueryData<ServerConfig>(serverQueryKeys.config());
-      const previousProviderDiscoveryFingerprints =
+      const previousEngineDiscoveryFingerprints =
         engineDiscoveryInvalidationFingerprints ??
         (currentConfig
           ? engineModelDiscoveryInvalidationFingerprints(currentConfig.engines)
           : null);
-      const changedProviders = previousProviderDiscoveryFingerprints
+      const changedEngines = previousEngineDiscoveryFingerprints
         ? changedEngineModelDiscoveryEngines(
-            previousProviderDiscoveryFingerprints,
-            nextProviderDiscoveryFingerprints,
+            previousEngineDiscoveryFingerprints,
+            nextEngineDiscoveryFingerprints,
           )
         : [];
-      engineDiscoveryInvalidationFingerprints = nextProviderDiscoveryFingerprints;
+      engineDiscoveryInvalidationFingerprints = nextEngineDiscoveryFingerprints;
 
       void reconcileServerEngineStatuses(
         queryClient,
@@ -2367,10 +2367,10 @@ function EventRouter() {
           ? { passivePresence: payload.passivePresence.recoverableEngines }
           : undefined,
       ).catch(() => undefined);
-      if (changedProviders.length > 0) {
+      if (changedEngines.length > 0) {
         // Model and agent discovery can depend on auth, availability, and installed versions,
         // but not on every engine-status timestamp replay.
-        for (const engine of changedProviders) {
+        for (const engine of changedEngines) {
           void queryClient.invalidateQueries({
             queryKey: engineDiscoveryQueryKeys.modelsForEngine(engine),
           });

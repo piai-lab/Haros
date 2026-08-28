@@ -58,7 +58,7 @@ function makeServerConfig(overrides: Partial<ServerConfigShape> = {}): ServerCon
     noBrowser: true,
     authToken: undefined,
     autoBootstrapProjectFromCwd: false,
-    logProviderEvents: false,
+    logEngineEvents: false,
     logWebSocketEvents: false,
     ...overrides,
   } as ServerConfigShape;

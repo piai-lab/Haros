@@ -14,7 +14,7 @@ import {
   GENERAL_SETTINGS_SEARCH,
 } from "../settingsMetadata/coreSettings";
 import { PROMPTS_SETTINGS_SEARCH } from "../settingsMetadata/promptSettings";
-import { PROVIDERS_SETTINGS_SEARCH } from "../settingsMetadata/engineSettings";
+import { ENGINES_SETTINGS_SEARCH } from "../settingsMetadata/engineSettings";
 import { SETTINGS_NAV_ITEMS, SETTINGS_TARGETS } from "../settingsNavigation";
 import { defineSettingsSearchRow } from "../settingsSearchMetadata";
 import {
@@ -158,7 +158,7 @@ describe("rankSettingsSearchEntries", () => {
 
   it("keeps the former Installed CLIs deep link stable after the row broadens", () => {
     expect(SETTINGS_TARGETS.engineDetails).toBe("setting-installed-clis");
-    expect(PROVIDERS_SETTINGS_SEARCH.installedClis.target).toBe("setting-installed-clis");
+    expect(ENGINES_SETTINGS_SEARCH.installedClis.target).toBe("setting-installed-clis");
     expect(rankSettingsSearchEntries("independent engine models", 1, translateEn)[0]?.id).toBe(
       "engines:installed-clis",
     );

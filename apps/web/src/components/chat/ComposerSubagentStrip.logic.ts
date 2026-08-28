@@ -198,7 +198,7 @@ export function deriveComposerSubagentStripItems(input: {
     ? entriesWithSubagents.filter((entry) => entry.turnId === input.liveTurnId)
     : [];
   if (liveTurnEntries.length > 0) {
-    const liveTurnProviderThreadIds = new Set(
+    const liveTurnEngineThreadIds = new Set(
       collectStripItems(liveTurnEntries, backgroundedThreadIds, viewedThreadId).map(
         (item) => item.nativeThreadId,
       ),
@@ -209,7 +209,7 @@ export function deriveComposerSubagentStripItems(input: {
       viewedThreadId,
     ).filter(
       (item) =>
-        liveTurnProviderThreadIds.has(item.nativeThreadId) ||
+        liveTurnEngineThreadIds.has(item.nativeThreadId) ||
         item.statusKind === "running" ||
         item.statusKind === "queued",
     );

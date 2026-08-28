@@ -77,7 +77,7 @@ const makeConfigLayer = () =>
         noBrowser: true,
         authToken: undefined,
         autoBootstrapProjectFromCwd: false,
-        logProviderEvents: false,
+        logEngineEvents: false,
         logWebSocketEvents: false,
       } satisfies ServerConfigShape;
     }),

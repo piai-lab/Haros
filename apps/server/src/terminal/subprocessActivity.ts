@@ -18,7 +18,7 @@ const POSIX_SUBPROCESS_TREE_WALK_MAX_VISITED = 256;
 export interface TerminalSubprocessActivity {
   cliKind: TerminalCliKind | null;
   hasRunningSubprocess: boolean;
-  hasProviderDescendant: boolean;
+  hasEngineDescendant: boolean;
   hasNonEngineSubprocess: boolean;
 }
 
@@ -44,7 +44,7 @@ function emptySubprocessActivity(): TerminalSubprocessActivity {
   return {
     cliKind: null,
     hasNonEngineSubprocess: false,
-    hasProviderDescendant: false,
+    hasEngineDescendant: false,
     hasRunningSubprocess: false,
   };
 }
@@ -79,10 +79,8 @@ function includeChildActivity(
   const isShellLike = isShellLikeProcessName(command);
   return {
     cliKind: activity.cliKind ?? childCliKind ?? nestedActivity.cliKind,
-    hasProviderDescendant:
-      activity.hasProviderDescendant ||
-      childCliKind !== null ||
-      nestedActivity.hasProviderDescendant,
+    hasEngineDescendant:
+      activity.hasEngineDescendant || childCliKind !== null || nestedActivity.hasEngineDescendant,
     hasNonEngineSubprocess:
       activity.hasNonEngineSubprocess ||
       (!childCliKind && !isShellLike) ||
@@ -178,7 +176,7 @@ async function checkPosixSubprocessActivityByTreeWalk(
       return {
         cliKind: null,
         hasNonEngineSubprocess: true,
-        hasProviderDescendant: false,
+        hasEngineDescendant: false,
         hasRunningSubprocess: true,
       };
     }

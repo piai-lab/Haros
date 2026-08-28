@@ -646,14 +646,14 @@ function legacyReplaceProviderModelOptions(
 ): EngineModelOptions | null {
   const { [engine]: _discardedProviderModelOptions, ...otherProviderModelOptions } =
     currentModelOptions ?? {};
-  const normalizedNextProviderOptions = normalizeEngineModelOptions(
+  const normalizedNextEngineOptions = normalizeEngineModelOptions(
     { [engine]: nextEngineOptions },
     engine,
   );
 
   return normalizeEngineModelOptions({
     ...otherProviderModelOptions,
-    ...(normalizedNextProviderOptions ? normalizedNextProviderOptions : {}),
+    ...(normalizedNextEngineOptions ? normalizedNextEngineOptions : {}),
   });
 }
 

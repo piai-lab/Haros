@@ -66,7 +66,7 @@ import {
   createEngineUpdateToastData,
   withEngineUpdateTimeout,
 } from "~/engineUpdates";
-import { PROVIDERS_SETTINGS_SEARCH } from "~/settingsMetadata/engineSettings";
+import { ENGINES_SETTINGS_SEARCH } from "~/settingsMetadata/engineSettings";
 import {
   SETTINGS_INSET_LIST_CLASS_NAME,
   SETTINGS_INSET_RADIUS_CLASS_NAME,
@@ -1541,10 +1541,10 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
 
   return (
     <div className="space-y-6">
-      <div id={PROVIDERS_SETTINGS_SEARCH.engineUpdates.target}>
+      <div id={ENGINES_SETTINGS_SEARCH.engineUpdates.target}>
         <SettingsSection title={t("settings.updates")}>
           <SettingsRow
-            anchorId={PROVIDERS_SETTINGS_SEARCH.automaticCliUpdateChecks.target}
+            anchorId={ENGINES_SETTINGS_SEARCH.automaticCliUpdateChecks.target}
             title={t("settings.automaticCliUpdates")}
             description={t("settings.automaticCliUpdatesDescription")}
             resetAction={
@@ -1623,7 +1623,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
 
       <SettingsSection title={t("settings.enginePicker")}>
         <SettingsRow
-          anchorId={PROVIDERS_SETTINGS_SEARCH.visibleEngines.target}
+          anchorId={ENGINES_SETTINGS_SEARCH.visibleEngines.target}
           title={t("settings.visibleEngines")}
           description={t("settings.visibleEnginesDescription")}
           status={
@@ -1692,7 +1692,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
       <div>
         <SettingsSection title={t("settings.engineTools")}>
           <SettingsRow
-            anchorId={PROVIDERS_SETTINGS_SEARCH.installedClis.target}
+            anchorId={ENGINES_SETTINGS_SEARCH.installedClis.target}
             title={t("settings.installedClis")}
             description={t("settings.installedClisDescription")}
             status={

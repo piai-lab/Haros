@@ -10,7 +10,7 @@ import {
   TextGeneration,
 } from "../Services/TextGeneration.ts";
 
-const makeProviderTextGeneration = Effect.gen(function* () {
+const makeEngineTextGeneration = Effect.gen(function* () {
   const codexTextGeneration = yield* CodexTextGeneration;
   const cursorTextGeneration = yield* CursorTextGeneration;
   const kiloTextGeneration = yield* KiloTextGeneration;
@@ -48,4 +48,4 @@ const makeProviderTextGeneration = Effect.gen(function* () {
   } satisfies TextGenerationShape;
 });
 
-export const EngineTextGenerationLive = Layer.effect(TextGeneration, makeProviderTextGeneration);
+export const EngineTextGenerationLive = Layer.effect(TextGeneration, makeEngineTextGeneration);

@@ -183,7 +183,7 @@ function normalizeSubprocessActivity(
     ? {
         cliKind: null,
         hasNonEngineSubprocess: result,
-        hasProviderDescendant: false,
+        hasEngineDescendant: false,
         hasRunningSubprocess: result,
       }
     : result;
@@ -202,7 +202,7 @@ function isEngineSessionBusy(session: TerminalSessionState, now: number): boolea
   return now - lastInputAt <= ENGINE_INPUT_ACTIVITY_GRACE_MS;
 }
 
-function normalizeProviderOutputSignature(visibleText: string): string {
+function normalizeEngineOutputSignature(visibleText: string): string {
   return visibleText
     .replace(/\u001b\[[0-?]*[ -/]*[@-~]/g, "")
     .replace(/\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g, "")
@@ -708,7 +708,7 @@ function resetSessionHistory(session: TerminalSessionState): void {
   session.managedAgentRunning = false;
   session.managedAgentState = null;
   session.managedAgentObserved = false;
-  session.providerDescendantObserved = false;
+  session.engineDescendantObserved = false;
 }
 
 function deriveActivityAgentState(session: TerminalSessionState): TerminalActivityState | null {
@@ -885,7 +885,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
           unsubscribeExit: null,
           hasRunningSubprocess: false,
           detectedCliKind: cliKindFromRuntimeEnv(normalizedRuntimeEnv(input.env)),
-          providerDescendantObserved: false,
+          engineDescendantObserved: false,
           managedAgentRunning: false,
           managedAgentState: null,
           managedAgentObserved: false,
@@ -1004,7 +1004,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
       nextIdentityState.identity.cliKind !== session.detectedCliKind
     ) {
       session.detectedCliKind = nextIdentityState.identity.cliKind;
-      session.providerDescendantObserved = false;
+      session.engineDescendantObserved = false;
       this.emitActivityEvent(session);
     }
     const submittedPrompt = input.data.includes("\r") || input.data.includes("\n");
@@ -1095,7 +1095,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
           unsubscribeExit: null,
           hasRunningSubprocess: false,
           detectedCliKind: cliKindFromRuntimeEnv(normalizedRuntimeEnv(input.env)),
-          providerDescendantObserved: false,
+          engineDescendantObserved: false,
           managedAgentRunning: false,
           managedAgentState: null,
           managedAgentObserved: false,
@@ -1254,7 +1254,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     session.exitSignal = null;
     session.hasRunningSubprocess = false;
     session.detectedCliKind = cliKindFromRuntimeEnv(session.runtimeEnv);
-    session.providerDescendantObserved = false;
+    session.engineDescendantObserved = false;
     session.managedAgentRunning = false;
     session.managedAgentState = null;
     session.managedAgentObserved = false;
@@ -1358,7 +1358,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
       session.process = null;
       session.hasRunningSubprocess = false;
       session.detectedCliKind = null;
-      session.providerDescendantObserved = false;
+      session.engineDescendantObserved = false;
       session.managedAgentRunning = false;
       session.managedAgentState = null;
       session.managedAgentObserved = false;
@@ -1427,18 +1427,18 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
       const nextManagedAgentRunning = latestHookEvent !== "Stop";
       const nextManagedAgentState = agentStateFromHookEvent(latestHookEvent);
       const nextDetectedCliKind = latestHookEvent === "Stop" ? null : session.detectedCliKind;
-      const nextProviderDescendantObserved =
-        latestHookEvent === "Stop" ? false : session.providerDescendantObserved;
+      const nextEngineDescendantObserved =
+        latestHookEvent === "Stop" ? false : session.engineDescendantObserved;
       if (
         session.managedAgentRunning !== nextManagedAgentRunning ||
         session.managedAgentState !== nextManagedAgentState ||
         session.detectedCliKind !== nextDetectedCliKind ||
-        session.providerDescendantObserved !== nextProviderDescendantObserved
+        session.engineDescendantObserved !== nextEngineDescendantObserved
       ) {
         session.managedAgentRunning = nextManagedAgentRunning;
         session.managedAgentState = nextManagedAgentState;
         session.detectedCliKind = nextDetectedCliKind;
-        session.providerDescendantObserved = nextProviderDescendantObserved;
+        session.engineDescendantObserved = nextEngineDescendantObserved;
         session.hasRunningSubprocess = nextManagedAgentRunning;
         this.emitActivityEvent(session);
       }
@@ -1446,7 +1446,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     if (sanitized.visibleText.length > 0) {
       session.history.append(sanitized.visibleText);
       this.queuePersist(session);
-      const normalizedSignature = normalizeProviderOutputSignature(sanitized.visibleText);
+      const normalizedSignature = normalizeEngineOutputSignature(sanitized.visibleText);
       if (normalizedSignature.length > 0 && normalizedSignature !== session.lastOutputSignature) {
         // Only refresh on genuinely new output. Repeated identical redraws (idle prompt
         // repaints) are ignored so they do not pin the engine in a "busy" state forever.
@@ -1636,7 +1636,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     session.pid = null;
     session.hasRunningSubprocess = false;
     session.detectedCliKind = null;
-    session.providerDescendantObserved = false;
+    session.engineDescendantObserved = false;
     session.managedAgentRunning = false;
     session.managedAgentState = null;
     session.managedAgentObserved = false;
@@ -1672,7 +1672,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
     session.pid = null;
     session.hasRunningSubprocess = false;
     session.detectedCliKind = null;
-    session.providerDescendantObserved = false;
+    session.engineDescendantObserved = false;
     session.managedAgentRunning = false;
     session.managedAgentState = null;
     session.managedAgentObserved = false;
@@ -2152,16 +2152,16 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
               sharedChildrenMap !== null
                 ? inspectSubprocessActivity(terminalPid, sharedChildrenMap)
                 : normalizeSubprocessActivity(await this.subprocessChecker(terminalPid));
-            const providerDescendantObserved =
-              session.providerDescendantObserved ||
-              (session.detectedCliKind !== null && subprocessActivity.hasProviderDescendant);
+            const engineDescendantObserved =
+              session.engineDescendantObserved ||
+              (session.detectedCliKind !== null && subprocessActivity.hasEngineDescendant);
             // Process-tree engine matches affect busy-state only. Branding follows explicit
             // env/input/hook signals so dev servers that spawn agents stay generic.
             shouldClearDetectedCliKind =
               session.detectedCliKind !== null &&
-              !subprocessActivity.hasProviderDescendant &&
-              (providerDescendantObserved || !isEngineSessionBusy(session, Date.now()));
-            session.providerDescendantObserved = providerDescendantObserved;
+              !subprocessActivity.hasEngineDescendant &&
+              (engineDescendantObserved || !isEngineSessionBusy(session, Date.now()));
+            session.engineDescendantObserved = engineDescendantObserved;
             if (session.managedAgentObserved) {
               // Hooks have fired — trust them as the sole source of truth (superset model).
               // Only override with non-engine subprocesses (e.g. user spawned a build).
@@ -2169,7 +2169,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
                 session.managedAgentRunning || subprocessActivity.hasNonEngineSubprocess;
             } else {
               // No hooks observed — fall back to process-tree + output heuristic.
-              hasRunningSubprocess = subprocessActivity.hasProviderDescendant
+              hasRunningSubprocess = subprocessActivity.hasEngineDescendant
                 ? subprocessActivity.hasNonEngineSubprocess ||
                   isEngineSessionBusy(session, Date.now())
                 : subprocessActivity.hasRunningSubprocess;
@@ -2192,19 +2192,19 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
             shouldClearDetectedCliKind && liveSession.detectedCliKind === session.detectedCliKind
               ? null
               : liveSession.detectedCliKind;
-          const nextProviderDescendantObserved =
-            nextDetectedCliKind === null ? false : session.providerDescendantObserved;
+          const nextEngineDescendantObserved =
+            nextDetectedCliKind === null ? false : session.engineDescendantObserved;
           if (
             liveSession.hasRunningSubprocess === hasRunningSubprocess &&
             liveSession.detectedCliKind === nextDetectedCliKind &&
-            liveSession.providerDescendantObserved === nextProviderDescendantObserved
+            liveSession.engineDescendantObserved === nextEngineDescendantObserved
           ) {
             return;
           }
 
           liveSession.hasRunningSubprocess = hasRunningSubprocess;
           liveSession.detectedCliKind = nextDetectedCliKind;
-          liveSession.providerDescendantObserved = nextProviderDescendantObserved;
+          liveSession.engineDescendantObserved = nextEngineDescendantObserved;
           liveSession.updatedAt = new Date().toISOString();
           this.emitActivityEvent(liveSession);
         }),

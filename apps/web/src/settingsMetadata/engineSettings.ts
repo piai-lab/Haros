@@ -1,11 +1,11 @@
 import { SETTINGS_TARGETS, defineSettingsSearchRow } from "../settingsSearchMetadata";
 
-export const PROVIDERS_SETTINGS_SEARCH = {
+export const ENGINES_SETTINGS_SEARCH = {
   automaticCliUpdateChecks: defineSettingsSearchRow({
     id: "engines:automatic-cli-update-checks",
     titleKey: "settings.automaticCliUpdates",
     keywords:
-      "Check Codex Claude and other engine CLIs for newer versions in the background. updates upgrade disable nags",
+      "Check installed engine CLIs for newer versions in the background. updates upgrade disable nags",
   }),
   visibleEngines: defineSettingsSearchRow({
     id: "engines:visible-engines",

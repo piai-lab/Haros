@@ -51,7 +51,7 @@ export interface TerminalSessionState {
   hasRunningSubprocess: boolean;
   detectedCliKind: TerminalCliKind | null;
   /** True once this branded session has actually shown a engine child process. */
-  providerDescendantObserved: boolean;
+  engineDescendantObserved: boolean;
   managedAgentRunning: boolean;
   managedAgentState: TerminalActivityState | null;
   /** True once at least one hook event (Start/Stop/PermissionRequest) has been observed. */

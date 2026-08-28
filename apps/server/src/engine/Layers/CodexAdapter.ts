@@ -95,7 +95,7 @@ import {
 } from "../unmappedEngineEvents.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 
-const PROVIDER = "codex" as const;
+const ENGINE = "codex" as const;
 
 // Backstop for an alive-but-silent codex app-server: if a turn produces no
 // activity at all for this long, abort it instead of showing "Working" forever.
@@ -191,7 +191,7 @@ function codexEngineSelectionOverrides(
   engineSelection: EngineSelection | undefined,
 ): Pick<CodexAppServerSendTurnInput, "model" | "effort"> &
   Pick<CodexAppServerStartSessionInput, "serviceTier"> {
-  if (engineSelection?.engine !== PROVIDER) {
+  if (engineSelection?.engine !== ENGINE) {
     return {};
   }
 
@@ -211,7 +211,7 @@ function toSessionError(
   const normalized = toMessage(cause, "").toLowerCase();
   if (normalized.includes("unknown session") || normalized.includes("unknown engine session")) {
     return new EngineAdapterSessionNotFoundError({
-      engine: PROVIDER,
+      engine: ENGINE,
       threadId,
       cause,
     });
@@ -221,7 +221,7 @@ function toSessionError(
   // instead of surfacing a raw request failure.
   if (normalized.includes("session is closed") || normalized.includes("stdin closed")) {
     return new EngineAdapterSessionClosedError({
-      engine: PROVIDER,
+      engine: ENGINE,
       threadId,
       cause,
     });
@@ -235,7 +235,7 @@ function toRequestError(threadId: ThreadId, method: string, cause: unknown): Eng
     return sessionError;
   }
   return new EngineAdapterRequestError({
-    engine: PROVIDER,
+    engine: ENGINE,
     method,
     detail: toMessage(cause, `${method} failed`),
     cause,
@@ -1761,7 +1761,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
                   hostGatewayMcp: {
                     endpointUrl: () => hostGatewayCredentials.mcpEndpointUrl,
                     acquireSessionLease: (threadId) =>
-                      acquireHostGatewaySessionLease(hostGatewayCredentials, threadId, PROVIDER)!,
+                      acquireHostGatewaySessionLease(hostGatewayCredentials, threadId, ENGINE)!,
                   },
                 }
               : {}),
@@ -1888,7 +1888,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
               const cause = new Error(`Invalid attachment id '${attachment.id}'.`);
               return Effect.fail(
                 new EngineAdapterRequestError({
-                  engine: PROVIDER,
+                  engine: ENGINE,
                   method,
                   detail: cause.message,
                   cause,
@@ -1919,12 +1919,12 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       });
 
     const startSession: CodexAdapterShape["startSession"] = (input) => {
-      if (input.engine !== undefined && input.engine !== PROVIDER) {
+      if (input.engine !== undefined && input.engine !== ENGINE) {
         return Effect.fail(
           new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "startSession",
-            issue: `Expected engine '${PROVIDER}' but received '${input.engine}'.`,
+            issue: `Expected engine '${ENGINE}' but received '${input.engine}'.`,
           }),
         );
       }
@@ -1949,7 +1949,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         try: () => manager.startSession(managerInput),
         catch: (cause) =>
           new EngineAdapterProcessError({
-            engine: PROVIDER,
+            engine: ENGINE,
             threadId: input.threadId,
             detail: toMessage(cause, "Failed to start Codex adapter session."),
             cause,
@@ -1995,7 +1995,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
             return Queue.offer(runtimeEventQueue, {
               type: "turn.steered",
               eventId: EventId.makeUnsafe(crypto.randomUUID()),
-              engine: PROVIDER,
+              engine: ENGINE,
               threadId: input.threadId,
               turnId: result.turnId,
               createdAt: new Date().toISOString(),
@@ -2050,7 +2050,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         try: () => manager.readExternalThread(input),
         catch: (cause) =>
           new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "thread/read",
             detail: toMessage(cause, "Failed to read external Codex thread."),
             cause,
@@ -2067,7 +2067,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       if (!Number.isInteger(numTurns) || numTurns < 1) {
         return Effect.fail(
           new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "rollbackThread",
             issue: "numTurns must be an integer >= 1.",
           }),
@@ -2134,7 +2134,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         try: () => manager.stopSession(threadId),
         catch: (cause) =>
           new EngineAdapterProcessError({
-            engine: PROVIDER,
+            engine: ENGINE,
             threadId,
             detail: toMessage(cause, "Failed to stop Codex adapter session."),
             cause,
@@ -2154,7 +2154,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         try: () => manager.stopAll(),
         catch: (cause) =>
           new EngineAdapterProcessError({
-            engine: PROVIDER,
+            engine: ENGINE,
             threadId: ThreadId.makeUnsafe("codex:all"),
             detail: toMessage(cause, "Failed to stop all Codex app-server processes."),
             cause,
@@ -2172,7 +2172,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           }),
         catch: (cause) =>
           new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "skills/list",
             detail: toMessage(cause, "skills/list failed"),
             cause,
@@ -2192,7 +2192,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           }),
         catch: (cause) =>
           new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "plugin/list",
             detail: toMessage(cause, "plugin/list failed"),
             cause,
@@ -2208,7 +2208,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           }),
         catch: (cause) =>
           new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "plugin/read",
             detail: toMessage(cause, "plugin/read failed"),
             cause,
@@ -2220,7 +2220,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         try: () => manager.listModels(),
         catch: (cause) =>
           new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "model/list",
             detail: toMessage(cause, "model/list failed"),
             cause,
@@ -2232,7 +2232,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         try: () => manager.readAccountRateLimits(),
         catch: (cause) =>
           new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "account/rateLimits/read",
             detail: toMessage(cause, "account/rateLimits/read failed"),
             cause,
@@ -2244,7 +2244,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         try: () => manager.transcribeVoice(input),
         catch: (cause) =>
           new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "voice/transcribe",
             detail: toMessage(cause, "voice/transcribe failed"),
             cause,
@@ -2260,7 +2260,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           }),
         catch: (cause) =>
           new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "voice/prewarm",
             detail: toMessage(cause, "voice/prewarm failed"),
             cause,
@@ -2458,9 +2458,9 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
     );
 
     return {
-      engine: PROVIDER,
+      engine: ENGINE,
       capabilities: {
-        ...engineExecutionStructure(PROVIDER),
+        ...engineExecutionStructure(ENGINE),
         sessionModelSwitch: "in-session",
         supportsSkillMentions: true,
         supportsSkillDiscovery: true,

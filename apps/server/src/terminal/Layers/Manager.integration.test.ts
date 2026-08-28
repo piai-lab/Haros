@@ -770,7 +770,7 @@ describe("TerminalManager", () => {
       subprocessChecker: async () => ({
         cliKind: "codex",
         hasNonEngineSubprocess: true,
-        hasProviderDescendant: true,
+        hasEngineDescendant: true,
         hasRunningSubprocess: true,
       }),
       subprocessPollIntervalMs: 20,
@@ -844,13 +844,13 @@ describe("TerminalManager", () => {
     let subprocessActivity: TerminalSubprocessActivity = {
       cliKind: null,
       hasNonEngineSubprocess: false,
-      hasProviderDescendant: false,
+      hasEngineDescendant: false,
       hasRunningSubprocess: false,
     };
     let providerDescendantPolls = 0;
     const { manager } = makeManager(5, {
       subprocessChecker: async () => {
-        if (subprocessActivity.hasProviderDescendant) {
+        if (subprocessActivity.hasEngineDescendant) {
           providerDescendantPolls += 1;
         }
         return subprocessActivity;
@@ -871,7 +871,7 @@ describe("TerminalManager", () => {
     subprocessActivity = {
       cliKind: "codex",
       hasNonEngineSubprocess: false,
-      hasProviderDescendant: true,
+      hasEngineDescendant: true,
       hasRunningSubprocess: true,
     };
     await waitFor(() => providerDescendantPolls > 0, 1_200);
@@ -879,7 +879,7 @@ describe("TerminalManager", () => {
     subprocessActivity = {
       cliKind: null,
       hasNonEngineSubprocess: false,
-      hasProviderDescendant: false,
+      hasEngineDescendant: false,
       hasRunningSubprocess: false,
     };
     await waitFor(

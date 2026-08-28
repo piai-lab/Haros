@@ -138,7 +138,7 @@ import { GrokAdapter, type GrokAdapterShape } from "../Services/GrokAdapter.ts";
 import { engineExecutionStructure } from "../engineExecutionStructure.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 
-const PROVIDER = "grok" as const;
+const ENGINE = "grok" as const;
 
 export const takeGrokHarnessOSHarnessPolicyTextPart = (
   state: HarnessOSHarnessPolicyDeliveryState,
@@ -328,7 +328,7 @@ function mapGrokModelDiscoveryError(cause: unknown): EngineAdapterRequestError {
     return cause;
   }
   return new EngineAdapterRequestError({
-    engine: PROVIDER,
+    engine: ENGINE,
     method: "model/list",
     detail: cause instanceof Error ? cause.message : String(cause),
     cause,
@@ -432,7 +432,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export function scopeGrokRuntimeItemIdForTurn(turnId: TurnId, itemId: string): string {
-  return scopeAcpRuntimeItemIdForTurn(PROVIDER, turnId, itemId);
+  return scopeAcpRuntimeItemIdForTurn(ENGINE, turnId, itemId);
 }
 
 // Grok can close a stale assistant segment before any visible text arrives.
@@ -448,7 +448,7 @@ export function scopeGrokToolCallStateForTurn(
   turnId: TurnId,
   toolCall: AcpToolCallState,
 ): AcpToolCallState {
-  return scopeAcpToolCallStateForTurn(PROVIDER, turnId, toolCall);
+  return scopeAcpToolCallStateForTurn(ENGINE, turnId, toolCall);
 }
 
 function parseGrokResume(raw: unknown): { sessionId: string } | undefined {
@@ -658,7 +658,7 @@ function fetchXaiLanguageModels(input: {
     },
     catch: (cause) =>
       new EngineAdapterRequestError({
-        engine: PROVIDER,
+        engine: ENGINE,
         method: "model/list",
         detail: cause instanceof Error ? cause.message : String(cause),
         cause,
@@ -765,7 +765,7 @@ export function makeGrokAdapter(
             event: {
               id: crypto.randomUUID(),
               kind: "notification",
-              engine: PROVIDER,
+              engine: ENGINE,
               createdAt: observedAt,
               method,
               threadId,
@@ -793,7 +793,7 @@ export function makeGrokAdapter(
           ctx.lifecycleGeneration,
           makeAcpPlanUpdatedEvent({
             stamp: yield* makeEventStamp(),
-            engine: PROVIDER,
+            engine: ENGINE,
             threadId: ctx.threadId,
             turnId: ctx.activeTurnId,
             payload,
@@ -809,7 +809,7 @@ export function makeGrokAdapter(
     ): Effect.Effect<GrokSessionContext, EngineAdapterSessionNotFoundError> => {
       const ctx = sessions.get(threadId);
       if (!ctx || ctx.stopped) {
-        return Effect.fail(new EngineAdapterSessionNotFoundError({ engine: PROVIDER, threadId }));
+        return Effect.fail(new EngineAdapterSessionNotFoundError({ engine: ENGINE, threadId }));
       }
       return Effect.succeed(ctx);
     };
@@ -839,7 +839,7 @@ export function makeGrokAdapter(
         yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
           type: "session.exited",
           ...(yield* makeEventStamp()),
-          engine: PROVIDER,
+          engine: ENGINE,
           threadId: ctx.threadId,
           payload: { exitKind: "graceful" },
         });
@@ -864,7 +864,7 @@ export function makeGrokAdapter(
         yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
           type: "turn.completed",
           ...(yield* makeEventStamp()),
-          engine: PROVIDER,
+          engine: ENGINE,
           threadId: ctx.threadId,
           turnId,
           payload: { state: "completed", stopReason: null, ...completedCost },
@@ -924,7 +924,7 @@ export function makeGrokAdapter(
         yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
           type: input.lifecycle,
           ...(yield* makeEventStamp()),
-          engine: PROVIDER,
+          engine: ENGINE,
           threadId: ctx.threadId,
           itemId: RuntimeItemId.makeUnsafe(`grok-compaction:${ctx.threadId}`),
           payload: {
@@ -1061,24 +1061,24 @@ export function makeGrokAdapter(
       withThreadLock(
         input.threadId,
         Effect.gen(function* () {
-          if (input.engine !== undefined && input.engine !== PROVIDER) {
+          if (input.engine !== undefined && input.engine !== ENGINE) {
             return yield* new EngineAdapterValidationError({
-              engine: PROVIDER,
+              engine: ENGINE,
               operation: "startSession",
-              issue: `Expected engine '${PROVIDER}' but received '${input.engine}'.`,
+              issue: `Expected engine '${ENGINE}' but received '${input.engine}'.`,
             });
           }
           const cwd = resolveGrokSessionCwd(input.cwd, serverConfig);
           if (cwd === undefined) {
             return yield* new EngineAdapterValidationError({
-              engine: PROVIDER,
+              engine: ENGINE,
               operation: "startSession",
               issue: "cwd is required and no server cwd fallback is available.",
             });
           }
 
           const grokEngineSelection =
-            input.engineSelection?.engine === PROVIDER ? input.engineSelection : undefined;
+            input.engineSelection?.engine === ENGINE ? input.engineSelection : undefined;
           const existing = sessions.get(input.threadId);
           if (existing && !existing.stopped) {
             yield* stopSessionInternal(existing);
@@ -1091,7 +1091,7 @@ export function makeGrokAdapter(
           const gatewaySessionLease = acquireHostGatewaySessionLease(
             hostGatewayCredentials,
             input.threadId,
-            PROVIDER,
+            ENGINE,
           );
           yield* Effect.addFinalizer(() =>
             sessionScopeTransferred ? Effect.void : Scope.close(sessionScope, Exit.void),
@@ -1106,13 +1106,13 @@ export function makeGrokAdapter(
           const resumeSessionId = parseGrokResume(input.resumeCursor)?.sessionId;
           const acpNativeLoggers = makeAcpNativeLoggers({
             nativeEventLogger,
-            engine: PROVIDER,
+            engine: ENGINE,
             threadId: input.threadId,
           });
           const acpRuntimeLoggers = makeAcpDebugLoggers({
             base: acpNativeLoggers,
             enabled: isGrokAcpDebugEnabled(),
-            engine: PROVIDER,
+            engine: ENGINE,
             marker: GROK_ACP_TRANSPORT_DEBUG_MARKER,
             payloadLimit: GROK_ACP_LOG_PAYLOAD_LIMIT,
             shouldMirrorIncomingRaw: (payload) =>
@@ -1167,7 +1167,7 @@ export function makeGrokAdapter(
           }).pipe(
             Effect.provideService(Scope.Scope, sessionScope),
             Effect.mapError((cause) =>
-              mapAcpToAdapterError(PROVIDER, input.threadId, "session/start", cause),
+              mapAcpToAdapterError(ENGINE, input.threadId, "session/start", cause),
             ),
           );
 
@@ -1189,7 +1189,7 @@ export function makeGrokAdapter(
                   yield* offerRuntimeEvent(input.lifecycleGeneration, {
                     type: "user-input.requested",
                     ...(yield* makeEventStamp()),
-                    engine: PROVIDER,
+                    engine: ENGINE,
                     threadId: input.threadId,
                     turnId: ctx?.activeTurnId,
                     requestId: runtimeRequestId,
@@ -1212,7 +1212,7 @@ export function makeGrokAdapter(
                     yield* offerRuntimeEvent(input.lifecycleGeneration, {
                       type: "user-input.resolved",
                       ...(yield* makeEventStamp()),
-                      engine: PROVIDER,
+                      engine: ENGINE,
                       threadId: input.threadId,
                       turnId: ctx?.activeTurnId,
                       requestId: runtimeRequestId,
@@ -1242,7 +1242,7 @@ export function makeGrokAdapter(
                     yield* offerRuntimeEvent(input.lifecycleGeneration, {
                       type: "turn.proposed.completed",
                       ...(yield* makeEventStamp()),
-                      engine: PROVIDER,
+                      engine: ENGINE,
                       threadId: input.threadId,
                       ...(turnId !== undefined
                         ? { turnId }
@@ -1315,7 +1315,7 @@ export function makeGrokAdapter(
                   input.lifecycleGeneration,
                   makeAcpRequestOpenedEvent({
                     stamp: yield* makeEventStamp(),
-                    engine: PROVIDER,
+                    engine: ENGINE,
                     threadId: input.threadId,
                     turnId: ctx?.activeTurnId,
                     requestId: runtimeRequestId,
@@ -1333,7 +1333,7 @@ export function makeGrokAdapter(
                   input.lifecycleGeneration,
                   makeAcpRequestResolvedEvent({
                     stamp: yield* makeEventStamp(),
-                    engine: PROVIDER,
+                    engine: ENGINE,
                     threadId: input.threadId,
                     turnId: ctx?.activeTurnId,
                     requestId: runtimeRequestId,
@@ -1363,7 +1363,7 @@ export function makeGrokAdapter(
             return yield* acp.start();
           }).pipe(
             Effect.mapError((error) =>
-              mapAcpToAdapterError(PROVIDER, input.threadId, "session/start", error),
+              mapAcpToAdapterError(ENGINE, input.threadId, "session/start", error),
             ),
           );
           yield* startHostGatewaySessionLeaseExitWatcher(gatewaySessionLease, acp.awaitExit);
@@ -1373,7 +1373,7 @@ export function makeGrokAdapter(
           const sessionConfigReady = yield* Deferred.make<void>();
           const now = yield* nowIso;
           const session: EngineSession = {
-            engine: PROVIDER,
+            engine: ENGINE,
             status: "ready",
             runtimeMode: input.runtimeMode,
             cwd,
@@ -1467,7 +1467,7 @@ export function makeGrokAdapter(
                         input.lifecycleGeneration,
                         makeAcpAssistantItemEvent({
                           stamp: yield* makeEventStamp(),
-                          engine: PROVIDER,
+                          engine: ENGINE,
                           threadId: ctx.threadId,
                           turnId: activeTurnId,
                           itemId: scopedItemId,
@@ -1562,7 +1562,7 @@ export function makeGrokAdapter(
                           input.lifecycleGeneration,
                           makeAcpToolCallEvent({
                             stamp: yield* makeEventStamp(),
-                            engine: PROVIDER,
+                            engine: ENGINE,
                             threadId: ctx.threadId,
                             turnId: lateTurnId,
                             toolCall: scopeGrokToolCallStateForTurn(lateTurnId, event.toolCall),
@@ -1585,7 +1585,7 @@ export function makeGrokAdapter(
                         input.lifecycleGeneration,
                         makeAcpToolCallEvent({
                           stamp: yield* makeEventStamp(),
-                          engine: PROVIDER,
+                          engine: ENGINE,
                           threadId: ctx.threadId,
                           turnId: activeTurnId,
                           toolCall: scopeGrokToolCallStateForTurn(activeTurnId, event.toolCall),
@@ -1617,7 +1617,7 @@ export function makeGrokAdapter(
                         input.lifecycleGeneration,
                         makeAcpContentDeltaEvent({
                           stamp: yield* makeEventStamp(),
-                          engine: PROVIDER,
+                          engine: ENGINE,
                           threadId: ctx.threadId,
                           turnId: activeTurnId,
                           ...(scopedItemId ? { itemId: scopedItemId } : {}),
@@ -1640,7 +1640,7 @@ export function makeGrokAdapter(
                         input.lifecycleGeneration,
                         makeAcpTokenUsageEvent({
                           stamp: yield* makeEventStamp(),
-                          engine: PROVIDER,
+                          engine: ENGINE,
                           threadId: ctx.threadId,
                           turnId: activeTurnId,
                           usage: event.usage,
@@ -1680,7 +1680,7 @@ export function makeGrokAdapter(
               runtime: acp,
               engineSelection: grokEngineSelection,
               mapError: ({ cause, method }) =>
-                mapAcpToAdapterError(PROVIDER, input.threadId, method, cause),
+                mapAcpToAdapterError(ENGINE, input.threadId, method, cause),
             });
             // Startup configuration has settled; turns gated on this deferred
             // can now prompt. Grok model options are process-start settings.
@@ -1702,21 +1702,21 @@ export function makeGrokAdapter(
             yield* offerRuntimeEvent(input.lifecycleGeneration, {
               type: "session.started",
               ...(yield* makeEventStamp()),
-              engine: PROVIDER,
+              engine: ENGINE,
               threadId: input.threadId,
               payload: { resume: started.initializeResult },
             });
             yield* offerRuntimeEvent(input.lifecycleGeneration, {
               type: "session.state.changed",
               ...(yield* makeEventStamp()),
-              engine: PROVIDER,
+              engine: ENGINE,
               threadId: input.threadId,
               payload: { state: "ready", reason: "Grok ACP session ready" },
             });
             yield* offerRuntimeEvent(input.lifecycleGeneration, {
               type: "thread.started",
               ...(yield* makeEventStamp()),
-              engine: PROVIDER,
+              engine: ENGINE,
               threadId: input.threadId,
               payload: { nativeThreadId: started.sessionId },
             });
@@ -1762,7 +1762,7 @@ export function makeGrokAdapter(
         yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
           type: "turn.completed",
           ...(yield* makeEventStamp()),
-          engine: PROVIDER,
+          engine: ENGINE,
           threadId: ctx.threadId,
           turnId,
           payload: {
@@ -1795,7 +1795,7 @@ export function makeGrokAdapter(
         // compaction prompt cannot slip into that window.
         if (ctx.compactingThread) {
           return yield* new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "sendTurn",
             issue: "Cannot start a turn while Grok context compaction is in progress.",
           });
@@ -1805,7 +1805,7 @@ export function makeGrokAdapter(
         // turn dispatch anyway) and race two ACP prompts; reject it instead.
         if (ctx.turnStarting) {
           return yield* new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "sendTurn",
             issue: "Another Grok turn is still starting for this thread.",
           });
@@ -1841,13 +1841,13 @@ export function makeGrokAdapter(
         // session.
         if (ctx.stopped) {
           return yield* new EngineAdapterSessionNotFoundError({
-            engine: PROVIDER,
+            engine: ENGINE,
             threadId: input.threadId,
           });
         }
         const turnId = TurnId.makeUnsafe(crypto.randomUUID());
         const turnEngineSelection =
-          input.engineSelection?.engine === PROVIDER ? input.engineSelection : undefined;
+          input.engineSelection?.engine === ENGINE ? input.engineSelection : undefined;
         const model = turnEngineSelection?.model ?? ctx.session.model;
         const interactionMode = resolveAcpTurnInteractionMode(input.interactionMode);
         yield* applyRequestedEngineSelection({
@@ -1860,7 +1860,7 @@ export function makeGrokAdapter(
                   options: turnEngineSelection?.options,
                 },
           mapError: ({ cause, method }) =>
-            mapAcpToAdapterError(PROVIDER, input.threadId, method, cause),
+            mapAcpToAdapterError(ENGINE, input.threadId, method, cause),
         });
         const promptParts: Array<Acp.ContentBlock> = [];
         const promptText = appendFileAttachmentsPromptBlock({
@@ -1882,7 +1882,7 @@ export function makeGrokAdapter(
           ...(yield* loadProviderPromptImageBlocks({
             attachments: input.attachments,
             attachmentsDir: serverConfig.attachmentsDir,
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "session/prompt",
             readFile: fileSystem.readFile,
           })),
@@ -1890,7 +1890,7 @@ export function makeGrokAdapter(
 
         if (promptParts.length === 0) {
           return yield* new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "sendTurn",
             issue: "Turn requires non-empty text or attachments.",
           });
@@ -1908,7 +1908,7 @@ export function makeGrokAdapter(
         // phantom cancelled completion) for a session that already exited.
         if (ctx.stopped) {
           return yield* new EngineAdapterSessionNotFoundError({
-            engine: PROVIDER,
+            engine: ENGINE,
             threadId: input.threadId,
           });
         }
@@ -1938,7 +1938,7 @@ export function makeGrokAdapter(
         yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
           type: "turn.started",
           ...(yield* makeEventStamp()),
-          engine: PROVIDER,
+          engine: ENGINE,
           threadId: input.threadId,
           turnId,
           payload: { ...(model ? { model } : {}) },
@@ -1959,7 +1959,7 @@ export function makeGrokAdapter(
               }),
         ).pipe(
           Effect.mapError((error) =>
-            mapAcpToAdapterError(PROVIDER, input.threadId, "session/prompt", error),
+            mapAcpToAdapterError(ENGINE, input.threadId, "session/prompt", error),
           ),
           Effect.matchEffect({
             onFailure: (error) =>
@@ -1985,7 +1985,7 @@ export function makeGrokAdapter(
                 yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
                   type: "turn.completed",
                   ...(yield* makeEventStamp()),
-                  engine: PROVIDER,
+                  engine: ENGINE,
                   threadId: input.threadId,
                   turnId,
                   payload: {
@@ -2017,7 +2017,7 @@ export function makeGrokAdapter(
                   yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
                     type: "turn.proposed.completed",
                     ...(yield* makeEventStamp()),
-                    engine: PROVIDER,
+                    engine: ENGINE,
                     threadId: input.threadId,
                     turnId,
                     payload: { planMarkdown: terminalPlanMarkdown },
@@ -2061,7 +2061,7 @@ export function makeGrokAdapter(
                 yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
                   type: "turn.completed",
                   ...(yield* makeEventStamp()),
-                  engine: PROVIDER,
+                  engine: ENGINE,
                   threadId: input.threadId,
                   turnId,
                   payload: {
@@ -2093,7 +2093,7 @@ export function makeGrokAdapter(
               yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
                 type: "turn.completed",
                 ...(yield* makeEventStamp()),
-                engine: PROVIDER,
+                engine: ENGINE,
                 threadId: input.threadId,
                 turnId,
                 payload: {
@@ -2162,7 +2162,7 @@ export function makeGrokAdapter(
             yield* Effect.ignore(
               ctx.acp.cancel.pipe(
                 Effect.mapError((error) =>
-                  mapAcpToAdapterError(PROVIDER, threadId, "session/cancel", error),
+                  mapAcpToAdapterError(ENGINE, threadId, "session/cancel", error),
                 ),
               ),
             );
@@ -2183,7 +2183,7 @@ export function makeGrokAdapter(
         const pending = ctx.pendingApprovals.get(requestId);
         if (!pending) {
           return yield* new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "session/request_permission",
             detail: `Unknown pending approval request: ${requestId}`,
           });
@@ -2201,7 +2201,7 @@ export function makeGrokAdapter(
         const pending = ctx.pendingUserInputs.get(requestId);
         if (!pending) {
           return yield* new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "x.ai/ask_user_question",
             detail: `Unknown pending user-input request: ${requestId}`,
           });
@@ -2221,7 +2221,7 @@ export function makeGrokAdapter(
         const ctx = yield* requireSession(threadId);
         if (!Number.isInteger(numTurns) || numTurns < 1) {
           return yield* new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "rollbackThread",
             issue: "numTurns must be an integer >= 1.",
           });
@@ -2289,7 +2289,7 @@ export function makeGrokAdapter(
         // session that the original compaction request never targeted.
         if (ctx !== preLockCtx) {
           return yield* new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "compactThread",
             issue:
               "The Grok session was restarted while waiting to compact; retry once it settles.",
@@ -2299,7 +2299,7 @@ export function makeGrokAdapter(
           // The session was restarted while waiting above and its new replay
           // window is still settling; reject instead of blocking the lock.
           return yield* new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "compactThread",
             issue: "Cannot compact while the resumed Grok thread is still replaying history.",
           });
@@ -2308,7 +2308,7 @@ export function makeGrokAdapter(
         // reach this point while one is already in flight; reject it here.
         if (ctx.compactingThread) {
           return yield* new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "compactThread",
             issue: "A Grok context compaction is already in progress.",
           });
@@ -2318,7 +2318,7 @@ export function makeGrokAdapter(
         // below stay in one synchronous block so the two paths cannot interleave.
         if (ctx.activeTurnId !== undefined || ctx.turnStarting) {
           return yield* new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "compactThread",
             issue: "Cannot compact while a Grok turn is still active.",
           });
@@ -2341,7 +2341,7 @@ export function makeGrokAdapter(
 
         const compactResult = yield* runGrokAcpCompactionCommand(ctx.acp).pipe(
           Effect.mapError((error) =>
-            mapAcpToAdapterError(PROVIDER, ctx.threadId, "session/prompt", error),
+            mapAcpToAdapterError(ENGINE, ctx.threadId, "session/prompt", error),
           ),
           Effect.timeoutOption(GROK_COMPACT_TIMEOUT_MS),
           Effect.exit,
@@ -2362,7 +2362,7 @@ export function makeGrokAdapter(
           });
           return yield* Effect.fail(
             new EngineAdapterRequestError({
-              engine: PROVIDER,
+              engine: ENGINE,
               method: "session/prompt",
               detail,
             }),
@@ -2394,7 +2394,7 @@ export function makeGrokAdapter(
           });
           return yield* Effect.fail(
             new EngineAdapterRequestError({
-              engine: PROVIDER,
+              engine: ENGINE,
               method: "session/prompt",
               detail,
             }),
@@ -2420,7 +2420,7 @@ export function makeGrokAdapter(
           });
           return yield* Effect.fail(
             new EngineAdapterRequestError({
-              engine: PROVIDER,
+              engine: ENGINE,
               method: "session/prompt",
               detail,
             }),
@@ -2440,7 +2440,7 @@ export function makeGrokAdapter(
           });
           return yield* Effect.fail(
             new EngineAdapterRequestError({
-              engine: PROVIDER,
+              engine: ENGINE,
               method: "session/prompt",
               detail: failedToolDetail,
             }),
@@ -2453,7 +2453,7 @@ export function makeGrokAdapter(
         yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
           type: "thread.state.changed",
           ...(yield* makeEventStamp()),
-          engine: PROVIDER,
+          engine: ENGINE,
           threadId: ctx.threadId,
           payload: {
             state: "compacted",
@@ -2487,7 +2487,7 @@ export function makeGrokAdapter(
           );
           if (exitCode !== 0) {
             return yield* new EngineAdapterRequestError({
-              engine: PROVIDER,
+              engine: ENGINE,
               method: "model/list",
               detail:
                 stderr.trim() ||
@@ -2525,7 +2525,7 @@ export function makeGrokAdapter(
             return yield* apiError;
           }
           return yield* new EngineAdapterRequestError({
-            engine: PROVIDER,
+            engine: ENGINE,
             method: "model/list",
             detail: "Grok model discovery returned no models.",
           });
@@ -2544,7 +2544,7 @@ export function makeGrokAdapter(
             onNone: () =>
               Effect.fail(
                 new EngineAdapterRequestError({
-                  engine: PROVIDER,
+                  engine: ENGINE,
                   method: "model/list",
                   detail: "Timed out while discovering Grok models via CLI.",
                 }),
@@ -2557,7 +2557,7 @@ export function makeGrokAdapter(
 
     const grokForkTimeoutError = (method: string): EngineAdapterRequestError =>
       new EngineAdapterRequestError({
-        engine: PROVIDER,
+        engine: ENGINE,
         method,
         detail: `Grok ACP did not respond to ${method} within ${GROK_ACP_FORK_TIMEOUT_MS / 1000}s.`,
       });
@@ -2568,7 +2568,7 @@ export function makeGrokAdapter(
         const targetCwd = resolveGrokSessionCwd(input.cwd ?? input.sourceCwd, serverConfig);
         if (!sourceCwd || !targetCwd) {
           return yield* new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "forkThread",
             issue: "A source and target cwd are required to fork a Grok session.",
           });
@@ -2576,7 +2576,7 @@ export function makeGrokAdapter(
 
         const forkRuntime = (runtime: AcpSessionRuntimeShape) =>
           forkViaAcpRuntime({
-            engine: PROVIDER,
+            engine: ENGINE,
             runtime,
             targetCwd,
             unsupportedIssue:
@@ -2590,7 +2590,7 @@ export function makeGrokAdapter(
         // let the retained-transcript fallback handle busy sources.
         if (activeSource?.activeTurnId !== undefined) {
           return yield* new EngineAdapterValidationError({
-            engine: PROVIDER,
+            engine: ENGINE,
             operation: "forkThread",
             issue:
               "The source Grok session has a turn in flight; HarnessOS will rebuild the fork from its retained transcript.",
@@ -2602,7 +2602,7 @@ export function makeGrokAdapter(
               const sourceSessionId = parseGrokResume(input.sourceResumeCursor)?.sessionId;
               if (!sourceSessionId) {
                 return yield* new EngineAdapterValidationError({
-                  engine: PROVIDER,
+                  engine: ENGINE,
                   operation: "forkThread",
                   issue: "The source Grok session has no resumable native cursor.",
                 });
@@ -2655,7 +2655,7 @@ export function makeGrokAdapter(
           cause instanceof EngineAdapterSessionNotFoundError ||
           cause instanceof EngineAdapterValidationError
             ? cause
-            : mapAcpToAdapterError(PROVIDER, input.sourceThreadId, "session/fork", cause),
+            : mapAcpToAdapterError(ENGINE, input.sourceThreadId, "session/fork", cause),
         ),
       );
 
@@ -2672,9 +2672,9 @@ export function makeGrokAdapter(
     const streamEvents = Stream.fromPubSub(runtimeEventPubSub);
 
     return {
-      engine: PROVIDER,
+      engine: ENGINE,
       capabilities: {
-        ...engineExecutionStructure(PROVIDER),
+        ...engineExecutionStructure(ENGINE),
         sessionModelSwitch: "restart-session",
         supportsSkillMentions: false,
         supportsSkillDiscovery: false,

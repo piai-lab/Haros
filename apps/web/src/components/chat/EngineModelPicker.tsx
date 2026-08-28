@@ -167,7 +167,7 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
   if (props.lockedEngine !== null) {
     protectedEngineSet.add(props.lockedEngine);
   }
-  const visibleProviderOptions = filterEngineOptionsByVisibility(
+  const visibleEngineOptions = filterEngineOptionsByVisibility(
     ENGINE_MODEL_OPTIONS.toSorted((left, right) =>
       compareEnginesByOrder(engineOrder ?? [], left.value, right.value),
     ),
@@ -308,7 +308,7 @@ export const EngineModelMenuItems = function EngineModelMenuItems(
 
   return (
     <>
-      {visibleProviderOptions.map((option) => {
+      {visibleEngineOptions.map((option) => {
         const OptionIcon = ENGINE_ICON_COMPONENT_BY_PROVIDER[option.value];
         const liveEngine = props.engines?.find((entry) => entry.engine === option.value);
         const availability = deriveEnginePickerAvailability(liveEngine);

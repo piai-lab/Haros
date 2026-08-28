@@ -21,7 +21,7 @@ describe("inspectSubprocessActivity", () => {
     expect(inspectSubprocessActivity(100, map)).toEqual({
       cliKind: null,
       hasNonEngineSubprocess: false,
-      hasProviderDescendant: false,
+      hasEngineDescendant: false,
       hasRunningSubprocess: false,
     });
   });
@@ -34,7 +34,7 @@ describe("inspectSubprocessActivity", () => {
     expect(inspectSubprocessActivity(100, map)).toEqual({
       cliKind: null,
       hasNonEngineSubprocess: false,
-      hasProviderDescendant: false,
+      hasEngineDescendant: false,
       hasRunningSubprocess: false,
     });
   });
@@ -44,7 +44,7 @@ describe("inspectSubprocessActivity", () => {
     expect(inspectSubprocessActivity(100, map)).toEqual({
       cliKind: null,
       hasNonEngineSubprocess: true,
-      hasProviderDescendant: false,
+      hasEngineDescendant: false,
       hasRunningSubprocess: true,
     });
   });
@@ -57,7 +57,7 @@ describe("inspectSubprocessActivity", () => {
     expect(inspectSubprocessActivity(100, map)).toEqual({
       cliKind: "codex",
       hasNonEngineSubprocess: false,
-      hasProviderDescendant: true,
+      hasEngineDescendant: true,
       hasRunningSubprocess: true,
     });
   });
@@ -72,7 +72,7 @@ describe("inspectSubprocessActivity", () => {
     expect(inspectSubprocessActivity(100, map)).toEqual({
       cliKind: "codex",
       hasNonEngineSubprocess: true,
-      hasProviderDescendant: true,
+      hasEngineDescendant: true,
       hasRunningSubprocess: true,
     });
   });
@@ -90,7 +90,7 @@ describe("inspectSubprocessActivity", () => {
     expect(inspectSubprocessActivity(100, map)).toEqual({
       cliKind: "codex",
       hasNonEngineSubprocess: false,
-      hasProviderDescendant: true,
+      hasEngineDescendant: true,
       hasRunningSubprocess: true,
     });
   });
@@ -103,12 +103,12 @@ describe("inspectSubprocessActivity", () => {
       { ppid: 400, pid: 500, command: "zsh" },
     ]);
 
-    expect(inspectSubprocessActivity(100, map).hasProviderDescendant).toBe(true);
+    expect(inspectSubprocessActivity(100, map).hasEngineDescendant).toBe(true);
     expect(inspectSubprocessActivity(100, map).cliKind).toBe("codex");
     expect(inspectSubprocessActivity(400, map)).toEqual({
       cliKind: null,
       hasNonEngineSubprocess: false,
-      hasProviderDescendant: false,
+      hasEngineDescendant: false,
       hasRunningSubprocess: false,
     });
   });

@@ -1,7 +1,7 @@
 import { EventId, RuntimeRequestId } from "@harnessos/contracts";
 import type { LegacyEngineRuntimeEvent } from "../TestEngineAdapter.integration.ts";
 
-const PROVIDER = "codex" as const;
+const ENGINE = "codex" as const;
 const SESSION_ID = "fixture-session";
 const THREAD_ID = "fixture-thread";
 const TURN_ID = "fixture-turn";
@@ -13,7 +13,7 @@ function baseEvent(
 ): Pick<LegacyEngineRuntimeEvent, "eventId" | "engine" | "sessionId" | "createdAt"> {
   return {
     eventId: EventId.makeUnsafe(eventId),
-    engine: PROVIDER,
+    engine: ENGINE,
     sessionId: SESSION_ID,
     createdAt,
   };

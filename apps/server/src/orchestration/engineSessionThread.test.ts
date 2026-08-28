@@ -48,9 +48,9 @@ describe("resolveEngineSessionThread", () => {
 
           const contender = yield* Effect.forkScoped(
             resolveEngineSessionThread(projectionSnapshotQuery, childId).pipe(
-              Effect.flatMap((providerThread) =>
+              Effect.flatMap((engineSessionThread) =>
                 coordinator.withThreadLease(
-                  providerThread?.id ?? childId,
+                  engineSessionThread?.id ?? childId,
                   Effect.sync(() => {
                     childMutationStarted = true;
                   }),

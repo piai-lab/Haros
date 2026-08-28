@@ -22,7 +22,7 @@ import {
   quitResumeWorkspaceFailureReason,
   readQuitResumeRecord,
   readExactQuitResumeBinding,
-  sanitizeQuitResumeProviderOptions,
+  sanitizeQuitResumeEngineOptions,
   writeQuitResumeRecord,
   type QuitResumeRecord,
 } from "./quitResume";
@@ -152,7 +152,7 @@ describe("quit resume one-shot record", () => {
   });
 
   it("reads the exact turn admission and strips private engine locations", async () => {
-    const rawProviderOptions = {
+    const rawEngineOptions = {
       codex: { binaryPath: "/private/codex", homePath: "/private/provider-home" },
       claude: {
         binaryPath: "/private/claude",
@@ -173,7 +173,7 @@ describe("quit resume one-shot record", () => {
           model: "claude-opus-4-1",
           options: { thinking: true, effort: "max" },
         },
-        engineOptions: rawProviderOptions,
+        engineOptions: rawEngineOptions,
         reviewTarget: { type: "baseBranch", branch: "main" },
         assistantDeliveryMode: "streaming",
         runtimeMode: "approval-required",
@@ -200,7 +200,7 @@ describe("quit resume one-shot record", () => {
       runtimeMode: "approval-required",
       interactionMode: "plan",
     });
-    expect(JSON.stringify(sanitizeQuitResumeProviderOptions(rawProviderOptions))).not.toMatch(
+    expect(JSON.stringify(sanitizeQuitResumeEngineOptions(rawEngineOptions))).not.toMatch(
       /private|endpoint|binary|home|agentDir/iu,
     );
   });

@@ -39,10 +39,10 @@ import {
   type UsageHistoryWorkerResponse,
 } from "./protocol";
 
-const PROVIDERS = ["codex", "claude"] as const satisfies readonly UsageHistoryEngine[];
+const ENGINES = ["codex", "claude"] as const satisfies readonly UsageHistoryEngine[];
 const WORKER_TIMEOUT_MS = 20_000;
 const WORKER_STDOUT_LIMIT = 16 * 1024 * 1024;
-const MAX_PROVIDER_RESTARTS = 2;
+const MAX_ENGINE_RESTARTS = 2;
 
 interface ControlRow {
   readonly consentState: "not-authorized" | "authorized";
@@ -209,7 +209,7 @@ const dateFloor = (range: ServerGetUsageHistoryInput["range"]): string | null =>
   return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 };
 
-const asProviderSummary = (row: EngineRow): UsageHistoryEngineSummary => ({
+const asEngineSummary = (row: EngineRow): UsageHistoryEngineSummary => ({
   engine: row.engine,
   status: row.status,
   progress: {
@@ -245,7 +245,7 @@ const makeUsageHistory = Effect.gen(function* () {
     ) VALUES (1, 'not-authorized', 'not-authorized', ${USAGE_HISTORY_PRICING_VERSION}, ${randomBytes(32).toString("hex")})
     ON CONFLICT (singleton_id) DO UPDATE SET pricing_version = excluded.pricing_version
   `;
-  for (const engine of PROVIDERS) {
+  for (const engine of ENGINES) {
     yield* sql`
       INSERT INTO usage_history_engine_state (engine, status)
       VALUES (${engine}, 'pending')
@@ -277,7 +277,7 @@ const makeUsageHistory = Effect.gen(function* () {
       FROM usage_history_control WHERE singleton_id = 1
     `.pipe(Effect.map((rows) => rows[0]!));
 
-  const readProviders = () =>
+  const readEngines = () =>
     sql<EngineRow>`
       SELECT engine, status,
         discovery_cursor AS "discoveryCursor",
@@ -343,12 +343,12 @@ const makeUsageHistory = Effect.gen(function* () {
     );
   };
 
-  const installRootWatchers = (providerRoots: Record<UsageHistoryEngine, string>) => {
-    for (const engine of PROVIDERS) {
-      if (rootWatchers.has(engine) || !existsSync(providerRoots[engine])) continue;
+  const installRootWatchers = (engineRoots: Record<UsageHistoryEngine, string>) => {
+    for (const engine of ENGINES) {
+      if (rootWatchers.has(engine) || !existsSync(engineRoots[engine])) continue;
       try {
         const watcher = watch(
-          providerRoots[engine],
+          engineRoots[engine],
           {
             persistent: false,
             recursive: process.platform === "darwin" || process.platform === "win32",
@@ -727,17 +727,17 @@ const makeUsageHistory = Effect.gen(function* () {
     try {
       const control = yield* readControl();
       if (control.consentState !== "authorized") return;
-      const providerRoots = yield* roots;
+      const engineRoots = yield* roots;
       yield* sql`
         UPDATE usage_history_control SET status = 'indexing', updated_at = ${new Date().toISOString()}
         WHERE singleton_id = 1 AND consent_state = 'authorized'
       `;
-      const activeEngines = new Set<UsageHistoryEngine>(PROVIDERS);
+      const activeEngines = new Set<UsageHistoryEngine>(ENGINES);
       while (activeEngines.size > 0) {
         if (stopped || pauseRequested) break;
-        for (const engine of PROVIDERS) {
+        for (const engine of ENGINES) {
           if (!activeEngines.has(engine) || stopped || pauseRequested) continue;
-          const current = (yield* readProviders()).find((row) => row.engine === engine)!;
+          const current = (yield* readEngines()).find((row) => row.engine === engine)!;
           if (current.status === "paused" || current.status === "unsupported") {
             activeEngines.delete(engine);
             continue;
@@ -749,15 +749,15 @@ const makeUsageHistory = Effect.gen(function* () {
           const stepExit = yield* Effect.exit(
             Effect.gen(function* () {
               if (current.discoveryComplete !== 1) {
-                yield* discoverBatch(engine, providerRoots[engine], current);
+                yield* discoverBatch(engine, engineRoots[engine], current);
               }
               const parsed = yield* parseBatch(
                 engine,
-                providerRoots[engine],
+                engineRoots[engine],
                 control.workspaceHashSalt,
                 current.discoveryGeneration,
               );
-              const next = (yield* readProviders()).find((row) => row.engine === engine)!;
+              const next = (yield* readEngines()).find((row) => row.engine === engine)!;
               return next.discoveryComplete !== 1 || parsed;
             }),
           );
@@ -767,7 +767,7 @@ const makeUsageHistory = Effect.gen(function* () {
               WHERE engine = ${engine} AND discovery_generation = ${current.discoveryGeneration}
             `;
             if (!stepExit.value) {
-              const settled = (yield* readProviders()).find((row) => row.engine === engine)!;
+              const settled = (yield* readEngines()).find((row) => row.engine === engine)!;
               if (settled.status !== "paused" && settled.status !== "unsupported") {
                 const partial = Number(settled.skippedFiles) > 0 || settled.detailCode !== null;
                 yield* sql`
@@ -784,19 +784,19 @@ const makeUsageHistory = Effect.gen(function* () {
             const attempts = Number(current.restartAttempts) + 1;
             yield* sql`
               UPDATE usage_history_engine_state SET restart_attempts = ${attempts},
-                status = ${attempts >= MAX_PROVIDER_RESTARTS ? "paused" : "partial"},
+                status = ${attempts >= MAX_ENGINE_RESTARTS ? "paused" : "partial"},
                 detail_code = 'indexer-interrupted'
               WHERE engine = ${engine} AND discovery_generation = ${current.discoveryGeneration}
             `;
-            if (attempts >= MAX_PROVIDER_RESTARTS) activeEngines.delete(engine);
+            if (attempts >= MAX_ENGINE_RESTARTS) activeEngines.delete(engine);
           }
           yield* Effect.yieldNow;
         }
       }
       if (pauseRequested || stopped) return;
-      const providerStates = yield* readProviders();
-      const hasPaused = providerStates.some((row) => row.status === "paused");
-      const hasPartial = providerStates.some(
+      const engineStates = yield* readEngines();
+      const hasPaused = engineStates.some((row) => row.status === "paused");
+      const hasPartial = engineStates.some(
         (row) => row.status === "partial" || row.status === "unsupported",
       );
       const completedAt = new Date().toISOString();
@@ -806,7 +806,7 @@ const makeUsageHistory = Effect.gen(function* () {
           updated_at = ${completedAt}, last_completed_at = ${completedAt}
         WHERE singleton_id = 1
       `;
-      yield* Effect.sync(() => installRootWatchers(providerRoots));
+      yield* Effect.sync(() => installRootWatchers(engineRoots));
     } finally {
       running = false;
       activeChild = null;
@@ -919,10 +919,10 @@ const makeUsageHistory = Effect.gen(function* () {
         control.status !== "paused" &&
         control.status !== "idle"
       ) {
-        const providerRoots = yield* roots;
-        yield* Effect.sync(() => installRootWatchers(providerRoots));
+        const engineRoots = yield* roots;
+        yield* Effect.sync(() => installRootWatchers(engineRoots));
       }
-      const providerRows = yield* readProviders();
+      const engineRows = yield* readEngines();
       const aggregates = control.consentState === "authorized" ? yield* queryAggregates(input) : [];
       const rows: UsageHistoryRow[] = aggregates.map((row) => {
         const inputTokens = Number(row.inputTokens ?? 0);
@@ -946,7 +946,7 @@ const makeUsageHistory = Effect.gen(function* () {
           estimateUncertain: true,
         };
       });
-      const engines = providerRows.map(asProviderSummary);
+      const engines = engineRows.map(asEngineSummary);
       return {
         status: control.consentState === "authorized" ? control.status : "not-authorized",
         ...(control.authorizedAt ? { authorizedAt: control.authorizedAt } : {}),
