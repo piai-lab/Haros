@@ -6,9 +6,9 @@
 - Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`, Git worktree for HarnessOS.
 - Repository identity: `github.com/piai-lab/HarnessOS`
 - Campaign origin revision: `f310080bfa1df72eade006d3d74143892c05f9b4`.
-- Last reconciled revision: `871497111851f04fbc98fb631d92f658993d4000`.
+- Last reconciled revision: `80a9b969838879aa891ba9130657a9aa871a0373`.
 - Worktree state: dirty only under `missions/` while this canonical Campaign reconciliation is being recorded; no product path is dirty.
-- Last reconciled at: `2026-08-28T15:39:38+08:00`.
+- Last reconciled at: `2026-08-28T15:43:04+08:00`.
 - Active branch/worktree: `codex/harnessos-foundation` at `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`.
 - Applicable instructions: user-locked HarnessOS implementation plan; root `AGENTS.md`; public architecture in `docs/architecture.md`.
 - Superseded state sources: no competing state files remain; this Campaign directory is temporary and must be deleted before public push.
@@ -70,6 +70,7 @@
 | E-013 | task | focused | C-007 unused release publication control-plane removal | `file:missions/evidence/harnessos-foundation/E-013-release-control-plane-removal.txt#L1-L15` | revision `ab40bc8c16031fd4fd40b8a629c18aa56ef86d4d`; receipt sha256 `fc731d7c1cbc32acf7f2730c6113d19c0e44206809bdf8d0040c361a918a0dce` | `bunx oxfmt --write .github/workflows/packaged-proof.yml package.json scripts/packaged-proof-smoke.ts && bunx oxlint --quiet --report-unused-disable-directives scripts/packaged-proof-smoke.ts && bun run proof:packaged:smoke && (cd scripts && bun run typecheck && bun run test:unit) && git diff --check` | current until packaged proof or release-publication surface changes |
 | E-014 | task | focused | C-009 macOS unsigned packaged journey | `file:missions/evidence/harnessos-foundation/E-014-unsigned-macos-packaged-journey.txt#L1-L16` | revision `b990aea8ea202b31702cd03883d0f31d261a89eb`; receipt sha256 `d0fb7cca79d10ce0e334f730e0322d8b6993135993977d0f63bcca4d0c4f3d5d` | `set -euo pipefail; proof_output_dir=$(mktemp -d /tmp/harnessos-unsigned-dmg-XXXXXX); bun run dist:desktop:artifact -- --platform mac --target dmg --arch arm64 --build-version 0.1.0-alpha.0 --source-commit b990aea8ea202b31702cd03883d0f31d261a89eb --lockfile-sha256 1d568a6378808de0daeaf4f3228aa4391ac34a8fcc82895715b38d0ce7b49caa --output-dir "$proof_output_dir"; node scripts/verify-packaged-desktop.ts --assets-dir "$proof_output_dir" --platform mac --arch arm64 --version 0.1.0-alpha.0 --source-commit b990aea8ea202b31702cd03883d0f31d261a89eb --proof journey; find "$proof_output_dir" -maxdepth 1 -type f -print` | current only for macOS arm64 focused proof; final frozen cross-platform proof pending |
 | E-015 | task | focused | C-007 deterministic packaged legal owner | `file:missions/evidence/harnessos-foundation/E-015-packaged-legal-owner.txt#L1-L16` | revision `871497111851f04fbc98fb631d92f658993d4000`; receipt sha256 `eabe71c814bb95d5d83e0709d9bac9296ae15d97797a67412d3d5461b41b2eae` | `(cd scripts && bun run typecheck && bun run test:unit) && bun run licenses:check && bun run proof:packaged:smoke && git diff --check` | current until dependency roots, legal overrides, packaged inventory, or closure verification changes |
+| E-016 | task | focused | C-004 OA/stock lifecycle and state isolation | `file:missions/evidence/harnessos-foundation/E-016-engine-state-isolation.txt#L1-L17` | revision `80a9b969838879aa891ba9130657a9aa871a0373`; receipt sha256 `b18eb6c12334581fc4e9008a3220860805082b09effadd46c3f3c5a6e05a63f7` | `(cd apps/server && bun run typecheck && bun run test -- src/engine/oaRuntime.integration.test.ts src/engine/Layers/PiRuntimeIsolation.integration.test.ts src/engine/Layers/PiAdapter.integration.test.ts) && ! rg -n -i "omni" apps packages scripts .github assets docs README.md CONTRIBUTING.md SECURITY.md NOTICE LICENSE source-adoptions.json AGENTS.md --glob '!apps/web/dist/**' --glob '!**/node_modules/**' --glob '!docs/provenance.md' && git diff --check` | current until OA/stock runtime roots, private reads, resources, Sessions, packages, or adapter lifecycle changes |
 
 ## 验收矩阵
 
@@ -78,7 +79,7 @@
 | C-001 | [required] private HarnessOS fork has the exact `f310080bfa` base, 1,193-history reachability and only intended refs | deterministic remote proof | open | E-002, E-003, E-009 | pending final remote synchronization |
 | C-002 | [required] package, app, URL, env, storage and MCP identities are HarnessOS-only with one provenance exception | absence + focused build | open | pending | pending |
 | C-003 | [required] canonical `Engine*` contract and sole `ENGINE_DESCRIPTORS` owner drive registration, settings and UI with OA default | contract/radius proof | open | pending | pending |
-| C-004 | [required] OA and stock Pi independently satisfy lifecycle and state-isolation journeys without fallback | integration + isolated-state proof | open | pending | pending |
+| C-004 | [required] OA and stock Pi independently satisfy lifecycle and state-isolation journeys without fallback | integration + isolated-state proof | open | E-016 partial; explicit fresh HOME writer-set/failure/cancel/shutdown audit pending | `80a9b969838879aa891ba9130657a9aa871a0373` partial |
 | C-005 | [required] HostGateway, Pi-family adapter, Conversation Workbench and Sidebar owner cuts reduce the promised modification radius | characterization + radius proof | open | E-011, E-012 partial; remaining lifecycle cuts and fixture radius drill pending | `6b36a5debba3b0987f5fc4ddad85c6ab85a18865` partial |
 | C-006 | [required] selected HarnessOS/OA identity, all user surfaces and Chinese/English rendering pass real-shell visual and accessibility review | deterministic assets + browser/Electron rubric | open | E-007, E-010 partial; Electron and complete bilingual surface audit pending | `8e8ea265ac1c7ecf8271154644ad458849fff354` partial |
 | C-007 | [required] Apache-2.0 root, retained third-party rights, 12 source records, docs and clean repository surface are closed | legal/source/structure proof | open | E-013 and E-015 partial; source/complete structure proof pending | `871497111851f04fbc98fb631d92f658993d4000` partial |
@@ -88,11 +89,11 @@
 
 ## 当前状态
 
-- Current checkpoint: source ancestry, HarnessOS/OA identity, Engine contract, HostGateway, clean persistence schema, Pi-family deep projections, public docs and selected constrained-loop brand are implemented locally. Sidebar project pinning and Workbench Environment/Plan presentation now have single controller owners. Formal release/signing/feed build authority has been removed; deterministic packaged legal ownership is neutrally named and still closes 537 components; a real macOS arm64 unsigned DMG passed isolated startup, persistence, window-close, and relaunch journeys. Public push, complete lifecycle/state isolation, remaining owner cuts and final cross-platform packaged gates remain open.
+- Current checkpoint: source ancestry, HarnessOS/OA identity, Engine contract, HostGateway, clean persistence schema, Pi-family deep projections, public docs and selected constrained-loop brand are implemented locally. Sidebar project pinning and Workbench Environment/Plan presentation now have single controller owners. Formal release/signing/feed build authority has been removed; deterministic packaged legal ownership is neutrally named and still closes 537 components; a real macOS arm64 unsigned DMG passed isolated startup, persistence, window-close, and relaunch journeys. The existing OA/stock isolation matrix passes 72 focused tests with no residual example-product identity. Public push, explicit fresh-HOME writer audit, remaining owner cuts and final cross-platform packaged gates remain open.
 - Active Claim: C-005.
 - Next safe action: characterize and extract the remaining Conversation Workbench and Sidebar responsibilities into their existing domain hooks/controllers without creating a global store, manager or registry.
 - Blockers: none.
-- Last material change: commit `871497111851f04fbc98fb631d92f658993d4000` renamed the retained legal and packaging owners directly, removing release-control-plane vocabulary without changing the 537-component closure; E-015 binds the focused proof.
+- Last material change: commit `80a9b969838879aa891ba9130657a9aa871a0373` removed the remaining generic/example product-name residue while preserving the 72-test runtime isolation matrix; E-016 binds the focused proof.
 
 ## 已知问题与方向
 

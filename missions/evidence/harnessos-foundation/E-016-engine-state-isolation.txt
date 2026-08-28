@@ -1,0 +1,17 @@
+Campaign-ID: harnessos-foundation
+Evidence-ID: E-016
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/HarnessOS
+Repository-Identity: github.com/piai-lab/HarnessOS
+Candidate-Version: 80a9b969838879aa891ba9130657a9aa871a0373
+Command: (cd apps/server && bun run typecheck && bun run test -- src/engine/oaRuntime.integration.test.ts src/engine/Layers/PiRuntimeIsolation.integration.test.ts src/engine/Layers/PiAdapter.integration.test.ts) && ! rg -n -i "omni" apps packages scripts .github assets docs README.md CONTRIBUTING.md SECURITY.md NOTICE LICENSE source-adoptions.json AGENTS.md --glob '!apps/web/dist/**' --glob '!**/node_modules/**' --glob '!docs/provenance.md' && git diff --check
+Exit-Code: 0
+Result: PASS
+Claims: C-004 (focused OA/stock lifecycle and state isolation; full Claim remains open)
+
+Observed output:
+- Server typecheck passed and 72 focused runtime/adapter tests passed.
+- The matrix keeps module identity, global/project resources, Sessions, package roots, and runtime configuration physically separate.
+- OA private-state reads reject symlink, hard-link, root overlap, replacement, deletion, and read-race escapes.
+- Normal adapter lifecycle, restart/resume, resource reload, rollback, Agent/Chat surfaces, and independent stock runtime coverage remained green.
+- Shipped source/test/docs outside the sole provenance file contain no residual `omni` token.
