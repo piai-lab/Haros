@@ -4,6 +4,7 @@ import type { ImageContent, TextContent } from "@earendil-works/pi-ai";
 
 import {
   callHostGatewayMcpTool,
+  listHostGatewayMcpTools,
   type HostGatewayMcpFetch,
   type HostGatewayMcpToolDescriptor,
 } from "../hostGateway/mcpInjection.ts";
@@ -106,4 +107,37 @@ export function buildHostGatewayPiToolDefinitions(input: {
       ...(input.fetch === undefined ? {} : { fetch: input.fetch }),
     }),
   );
+}
+
+/** Load and project the canonical HostGateway catalog for one Pi-family Session. */
+export async function buildPiHostGatewayCustomTools(input: {
+  readonly connection: HostGatewayMcpConnection;
+  readonly defineTool: (tool: ToolDefinition) => ToolDefinition;
+  readonly fetch?: HostGatewayMcpFetch;
+  readonly onCatalog?: (tools: ReadonlyArray<HostGatewayMcpToolDescriptor>) => void;
+}): Promise<ReadonlyArray<ToolDefinition>> {
+  const tools = await listHostGatewayMcpTools({
+    connection: input.connection,
+    ...(input.fetch === undefined ? {} : { fetch: input.fetch }),
+  });
+  if (tools.length === 0) {
+    throw new Error("HarnessOS MCP returned an empty tool catalog.");
+  }
+  input.onCatalog?.(tools);
+  return buildPiHostGatewayCustomToolsFromDescriptors({ ...input, tools });
+}
+
+/** Project a previously frozen HostGateway catalog without re-reading authority. */
+export function buildPiHostGatewayCustomToolsFromDescriptors(input: {
+  readonly connection: HostGatewayMcpConnection;
+  readonly defineTool: (tool: ToolDefinition) => ToolDefinition;
+  readonly tools: ReadonlyArray<HostGatewayMcpToolDescriptor>;
+  readonly fetch?: HostGatewayMcpFetch;
+}): ReadonlyArray<ToolDefinition> {
+  return buildHostGatewayPiToolDefinitions({
+    connection: input.connection,
+    defineTool: input.defineTool,
+    descriptors: input.tools,
+    ...(input.fetch === undefined ? {} : { fetch: input.fetch }),
+  });
 }

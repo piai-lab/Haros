@@ -54,7 +54,6 @@ import {
 import { Effect, FileSystem, Layer, Option, Queue, Stream } from "effect";
 import type { ProductSurface } from "@harnessos/shared/productSurface";
 
-import { renderHarnessOSHarnessPolicy } from "../../hostGateway/harnessPolicy.ts";
 import {
   hostGatewayGroupsFromToolDescriptors,
   listHostGatewayMcpTools,
@@ -90,12 +89,13 @@ import {
 } from "../Errors.ts";
 import { PiAdapter, type PiAdapterShape } from "../Services/PiAdapter.ts";
 import { OAAgentAdapter } from "../Services/OAAgentAdapter.ts";
-import { buildHostGatewayPiToolDefinitions } from "../hostGatewayPiProjection.ts";
+import {
+  buildPiHostGatewayCustomTools,
+  buildPiHostGatewayCustomToolsFromDescriptors,
+} from "../hostGatewayPiProjection.ts";
 import { inspectOAWebAccessRegistration } from "@harnessos/oa-web-access";
 import type { CuratorPresenter } from "@harnessos/oa-web-access/curator-presentation";
 import { type HostGatewayHostExtensionHandle } from "../hostGatewayHostExtension.ts";
-import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "../goalMode.ts";
-import { AUTOMATION_RUN_GATEWAY_TOOL_NAMES } from "../../automation/runEnvelope.ts";
 import {
   inspectOATaskListExtensionRegistration,
   HARNESSOS_TASK_LIST_TOOL_NAME,
@@ -111,7 +111,6 @@ import {
   type EngineAdapterShape,
   type EngineResourceDiscoveryScope,
   type EngineThreadSnapshot,
-  type EngineTurnDispatchContext,
 } from "../Services/EngineAdapter.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { makeBoundedCallbackIngress } from "../boundedCallbackIngress.ts";
@@ -152,56 +151,14 @@ import { projectAskUserRequest, resolveAskUserResponse } from "../askUserHostBri
 import { extractProposedPlanMarkdown, withEnginePlanModePrompt } from "../planMode.ts";
 import type { OAPlanModeController } from "../oaPlanModeExtension.ts";
 import { askUserMetrics } from "../askUserMetrics.ts";
+import {
+  makeOAEngineSystemPrompt,
+  makePiHostSystemPrompt,
+  promptRequiredHostGatewayToolNames,
+} from "../piFamilyPrompt.ts";
 
-type PiFamilyProvider = Extract<EngineKind, "pi" | "oa">;
+type PiFamilyEngine = Extract<EngineKind, "pi" | "oa">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
-const HARNESSOS_IDENTITY_AND_COGNITIVE_CONTRACT = [
-  "You are HarnessOS, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).",
-  "The academy's official Chinese name is 广东智慧医学国际研究院.",
-  "",
-  "Understand what the user is ultimately trying to achieve. Do not treat the user's first wording as a complete specification or assume specialized knowledge in the current domain. Adapt the density of explanation to evidence from the conversation without quizzing the user about their level.",
-  "",
-  "Separate facts you can investigate from intent only the user can provide. Use available context and tools to investigate facts yourself. Ask focused questions when the user's goal, preferences, constraints, or quality bar could materially change the result. Include your recommended interpretation or path instead of handing the decision back without judgment.",
-  "",
-  "Look beyond the literal request for important blind spots, risks, and meaningfully better paths. Improvements that preserve the same goal, scope, cost, and risk can be incorporated directly. Before changing any of those, explain the better path and align with the user.",
-  "",
-  "If the user asks you to proceed without questions, state and use reasonable assumptions for low-risk, reversible ambiguity. Do not bypass a material intent fork or high-risk boundary.",
-  "",
-  "Be honest and independent-minded. When evidence or constraints conflict with the user's premise, explain the conflict concretely and continue toward a workable path. Never claim an action or verification that did not occur.",
-  "",
-  "By default, communicate naturally in the user's language, lead with the outcome, and stay concise but complete; expand when complexity, risk, learning, or evidence requires it. If asked who you are, answer directly without unnecessary preamble.",
-  "Honor explicit user preferences for language, tone, format, level of detail, and working style when they do not conflict with identity, work-surface boundaries, alignment and task-completion policy, truthfulness, or safety.",
-].join("\n");
-const HARNESSOS_CHAT_CONTRACT = [
-  "In Chat, help the user understand, explore, decide, learn, and produce useful work.",
-  "",
-  "Give a clear, usable starting answer whenever it can be done without misleading the user, and clarify in parallel. Ask before answering when different plausible intents would reverse the answer, create material risk, or waste substantial effort.",
-  "",
-  "Explain necessary concepts in place and connect prerequisites when the user is learning, without hiding essential complexity or burdening them with unrelated advanced detail.",
-  "",
-  "When several approaches are reasonable, recommend a primary path and explain why and its key tradeoffs; include alternatives only when useful.",
-  "",
-  "Explicit file and folder references are inputs for the current conversation. They are not a working directory, Project, or trusted project root, and must not be treated as permission to scan nearby paths.",
-  "Treat external references as read-and-understand inputs by default. If the user explicitly asks to write a named path or run an available Engine-native operation, follow the real permission and risk rules; Chat is not a hard filesystem, Git, or Terminal sandbox.",
-  "When you produce ordinary file results without an explicit destination, use the managed Chat workspace already provided by HarnessOS.",
-  "Use available tools when they materially improve accuracy, timeliness, or completeness. When the work naturally needs a durable Project boundary, sustained project execution, or trusted project-local context and resources, explain that boundary and suggest Send to Agent.",
-].join("\n");
-const HARNESSOS_AGENT_CONTRACT = [
-  "In Agent, understand the user's actual desired outcome and carry aligned work through to a verified result.",
-  "",
-  "Before substantive execution, ensure the intended outcome, material boundaries, important constraints, and success criteria are sufficiently aligned. Alignment is sufficient when no unresolved ambiguity would materially change the result; it does not require the user to specify every low-risk implementation detail.",
-  "",
-  "While alignment is incomplete, continue with safe read-only investigation, analysis, and reversible preparation, but do not make direction-locking, persistent, costly, or externally consequential changes.",
-  "",
-  "Once aligned, act proactively within scope. Make ordinary, reversible, low-risk decisions and tool choices without repeated permission. Confirm before destructive, irreversible, costly, permission-expanding, externally publishing or sending, security-boundary-changing, or out-of-scope actions.",
-  "",
-  "Inspect existing state and applicable project rules, preserve existing work, execute the necessary steps, verify the result proportionately, and close the loop. Do not stop after superficial steps or hand back work that can be completed within available capabilities. If blocked, explain the exact cause, what is complete, and the smallest decision needed.",
-].join("\n");
-const HARNESSOS_STUDIO_CONTRACT = [
-  "In Studio, work inside HarnessOS's managed creative workspace and its established workspace instructions, drafts, files, and outputs.",
-  "Create, edit, and organize the requested work in that managed Studio environment, and make useful results visible through its existing outputs and file surfaces.",
-  "Studio is not an Agent Project trust root. Do not infer project-local resources or broader filesystem authority from its managed working directory.",
-].join("\n");
 const PI_THINKING_OPTIONS: ReadonlyArray<{
   readonly value: ThinkingLevel;
   readonly label: string;
@@ -470,7 +427,7 @@ export async function createOAModelRuntime(agentDir: string) {
   });
 }
 
-interface PiFamilyAdapterConfig<P extends PiFamilyProvider> {
+interface PiFamilyAdapterConfig<P extends PiFamilyEngine> {
   readonly engine: P;
   readonly displayName: string;
   readonly loadModule: () => Promise<PiCodingAgentModule>;
@@ -491,9 +448,9 @@ const STOCK_PI_FAMILY = {
     createPiModelRuntime(agentDir, await loadPiCodingAgentModule()),
 } satisfies PiFamilyAdapterConfig<"pi">;
 
-const HARNESSOS_AGENT_FAMILY = {
+const OA_FAMILY = {
   engine: "oa",
-  displayName: "HarnessOS",
+  displayName: "OA",
   loadModule: loadOAAdapterModule,
   // Product state is App-owned and cannot be redirected into stock Pi state.
   resolveAgentDir: (_requestedAgentDir, serverBaseDir) => resolveOAAgentDir(serverBaseDir),
@@ -537,7 +494,7 @@ interface PiSessionContext {
 
 export function makePiRuntimeEventBase(
   context: {
-    readonly engine?: PiFamilyProvider;
+    readonly engine?: PiFamilyEngine;
     readonly lifecycleGeneration?: string;
     readonly session: Pick<EngineSession, "threadId">;
     readonly activeTurnId: TurnId | undefined;
@@ -608,41 +565,7 @@ export interface PiAdapterLiveOptions {
   readonly hostGatewayFetch?: HostGatewayMcpFetch;
 }
 
-/**
- * Project the canonical MCP catalog into Pi's native custom-tool API. Tool
- * schemas and execution both remain owned by the gateway; Pi only adapts the
- * engine boundary.
- */
-export async function buildPiHostGatewayCustomTools(input: {
-  readonly connection: HostGatewayMcpConnection;
-  readonly defineTool: (tool: ToolDefinition) => ToolDefinition;
-  readonly fetch?: HostGatewayMcpFetch;
-  readonly onCatalog?: (tools: ReadonlyArray<HostGatewayMcpToolDescriptor>) => void;
-}): Promise<ReadonlyArray<ToolDefinition>> {
-  const tools = await listHostGatewayMcpTools({
-    connection: input.connection,
-    ...(input.fetch === undefined ? {} : { fetch: input.fetch }),
-  });
-  if (tools.length === 0) {
-    throw new Error("HarnessOS MCP returned an empty tool catalog.");
-  }
-  input.onCatalog?.(tools);
-  return buildPiHostGatewayCustomToolsFromDescriptors({ ...input, tools });
-}
-
-export function buildPiHostGatewayCustomToolsFromDescriptors(input: {
-  readonly connection: HostGatewayMcpConnection;
-  readonly defineTool: (tool: ToolDefinition) => ToolDefinition;
-  readonly tools: ReadonlyArray<HostGatewayMcpToolDescriptor>;
-  readonly fetch?: HostGatewayMcpFetch;
-}): ReadonlyArray<ToolDefinition> {
-  return buildHostGatewayPiToolDefinitions({
-    connection: input.connection,
-    defineTool: input.defineTool,
-    descriptors: input.tools,
-    ...(input.fetch === undefined ? {} : { fetch: input.fetch }),
-  });
-}
+export { buildPiHostGatewayCustomTools } from "../hostGatewayPiProjection.ts";
 
 function toMessage(cause: unknown, fallback: string): string {
   if (cause instanceof Error && cause.message.trim().length > 0) {
@@ -822,7 +745,7 @@ function getSessionFile(session: PiAgentSession): string | undefined {
 
 function makeSessionSnapshot(
   context: PiSessionContext,
-  engine: PiFamilyProvider = "pi",
+  engine: PiFamilyEngine = "pi",
 ): EngineSession {
   const resumeCursor = getSessionFile(context.runtime.session);
   return {
@@ -1085,61 +1008,11 @@ export function makePiGatewayLoadWarning(displayName: string) {
   };
 }
 
-/**
- * Pi owns native Prompt, Skill, Extension, and input-hook expansion. Keep the
- * general Host/tool policy in Pi's existing mutable system-prompt projection
- * so slash input reaches that source-locked pipeline unchanged.
- */
-export function makePiHostSystemPrompt(input: {
-  readonly gatewayControlAvailable: boolean;
-  readonly enabledBuiltInGroups?: ReadonlyArray<BuiltInToolGroupId>;
-}): string {
-  return [
-    "<harnessos_host_context>",
-    renderHarnessOSHarnessPolicy({
-      gatewayControlAvailable: input.gatewayControlAvailable,
-      projection: {
-        mode: "direct",
-        enabledGroups: input.enabledBuiltInGroups ?? [],
-      },
-    }),
-    "</harnessos_host_context>",
-  ].join("\n");
-}
-
-export function promptRequiredHostGatewayToolNames(
-  dispatchContext: EngineTurnDispatchContext | undefined,
-): ReadonlyArray<string> {
-  if (dispatchContext?.turnKind === "goal-continuation") {
-    return GOAL_CONTINUATION_GATEWAY_TOOL_NAMES;
-  }
-  if (dispatchContext?.dispatchOrigin === "automation") {
-    return AUTOMATION_RUN_GATEWAY_TOOL_NAMES;
-  }
-  return [];
-}
-
-/** Stable HarnessOS identity and work-surface behavior that user Prompt resources cannot replace. */
-export function makeHarnessOSEngineSystemPrompt(input: {
-  readonly productSurface?: ProductSurface;
-  /** Backward-compatible test/embedding fallback; production passes ProductSurface. */
-  readonly workSurface?: EngineWorkSurface;
-}): string {
-  const surface = input.productSurface ?? (input.workSurface === "agent" ? "agent" : "chat");
-  const surfaceContract =
-    surface === "agent"
-      ? HARNESSOS_AGENT_CONTRACT
-      : surface === "studio"
-        ? HARNESSOS_STUDIO_CONTRACT
-        : HARNESSOS_CHAT_CONTRACT;
-  return [
-    "<harnessos_engine_contract>",
-    HARNESSOS_IDENTITY_AND_COGNITIVE_CONTRACT,
-    "",
-    surfaceContract,
-    "</harnessos_engine_contract>",
-  ].join("\n");
-}
+export {
+  makeOAEngineSystemPrompt,
+  makePiHostSystemPrompt,
+  promptRequiredHostGatewayToolNames,
+} from "../piFamilyPrompt.ts";
 
 function toolExitCode(result: unknown): number | null | undefined {
   const record = toolRecord(result);
@@ -1568,7 +1441,34 @@ export const PLAIN_PI_EXTENSION_THEME = {
   },
 } as unknown as ExtensionUIContext["theme"];
 
-const makePiAdapter = <P extends PiFamilyProvider>(
+function piProductDiscoveryOptions(
+  sdk: PiCodingAgentModule,
+  cwd: string,
+  agentDir: string,
+  scope: "global-only" | "project" = "global-only",
+) {
+  return scope === "global-only"
+    ? {
+        settingsManager: sdk.SettingsManager.create(cwd, agentDir, {
+          projectTrusted: false,
+        }),
+        resourceLoaderOptions: {
+          noContextFiles: false,
+          projectContextRoot: false,
+        },
+      }
+    : {};
+}
+
+function piResourceScopeIdentity(
+  scope:
+    | EngineResourceDiscoveryScope
+    | { readonly kind: "project"; readonly authoritativeRoot: string },
+): string {
+  return scope.kind === "project" ? `project:${scope.authoritativeRoot}` : "global-only";
+}
+
+const makePiAdapter = <P extends PiFamilyEngine>(
   family: PiFamilyAdapterConfig<P>,
   options?: PiAdapterLiveOptions,
 ) =>
@@ -1591,28 +1491,6 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
     );
     const sessions = new Map<ThreadId, PiSessionContext>();
-    const productDiscoveryOptions = (
-      sdk: PiCodingAgentModule,
-      cwd: string,
-      agentDir: string,
-      scope: "global-only" | "project" = "global-only",
-    ) =>
-      scope === "global-only"
-        ? {
-            settingsManager: sdk.SettingsManager.create(cwd, agentDir, {
-              projectTrusted: false,
-            }),
-            resourceLoaderOptions: {
-              noContextFiles: false,
-              projectContextRoot: false,
-            },
-          }
-        : {};
-    const resourceScopeIdentity = (
-      scope:
-        | EngineResourceDiscoveryScope
-        | { readonly kind: "project"; readonly authoritativeRoot: string },
-    ): string => (scope.kind === "project" ? `project:${scope.authoritativeRoot}` : "global-only");
     const sessionResourceAdmission = makeKeyedLock<ThreadId>();
     const ownsNativeEventLogger = options?.nativeEventLogger === undefined;
     const nativeEventLogger =
@@ -3538,7 +3416,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 ...(defaultPrompt === undefined ? {} : { defaultPrompt }),
                 ...(engine === "oa" && workSurface !== undefined
                   ? {
-                      immutableSystemPrompt: makeHarnessOSEngineSystemPrompt({
+                      immutableSystemPrompt: makeOAEngineSystemPrompt({
                         productSurface,
                       }),
                     }
@@ -3585,7 +3463,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             engine === "oa" ? getOAModelRuntimeMutationRevision(agentDir) : 0,
           ...(workSurface === undefined ? {} : { workSurface }),
           ...(engine === "oa" ? { productSurface } : {}),
-          resourceScopeIdentity: resourceScopeIdentity(
+          resourceScopeIdentity: piResourceScopeIdentity(
             workSurface === "chat"
               ? { kind: "global-only" }
               : workSurface === "agent"
@@ -4449,7 +4327,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             cwd,
             agentDir,
             modelRuntime,
-            ...productDiscoveryOptions(piSdk, cwd, agentDir),
+            ...piProductDiscoveryOptions(piSdk, cwd, agentDir),
           });
           const registry = modelRegistryFacade(services.modelRuntime, piSdk);
           const extensionProviderIds = new Set(services.modelRuntime.getRegisteredProviderIds());
@@ -4499,7 +4377,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             kind: "global-only" as const,
           };
           const reusableActive =
-            active?.resourceScopeIdentity === resourceScopeIdentity(requestedScope)
+            active?.resourceScopeIdentity === piResourceScopeIdentity(requestedScope)
               ? active
               : undefined;
           const loader = reusableActive?.runtime.session.resourceLoader;
@@ -4517,7 +4395,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               cwd: input.cwd,
               agentDir,
               modelRuntime,
-              ...productDiscoveryOptions(piSdk, input.cwd, agentDir, requestedScope.kind),
+              ...piProductDiscoveryOptions(piSdk, input.cwd, agentDir, requestedScope.kind),
             });
           }
           if (services && input.forceReload) {
@@ -4563,7 +4441,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             kind: "global-only" as const,
           };
           const session =
-            active?.resourceScopeIdentity === resourceScopeIdentity(requestedScope)
+            active?.resourceScopeIdentity === piResourceScopeIdentity(requestedScope)
               ? active.runtime.session
               : undefined;
           const reloadCommand = {
@@ -4601,7 +4479,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             cwd: input.cwd,
             agentDir,
             modelRuntime,
-            ...productDiscoveryOptions(piSdk, input.cwd, agentDir, requestedScope.kind),
+            ...piProductDiscoveryOptions(piSdk, input.cwd, agentDir, requestedScope.kind),
           });
           if (input.forceReload) {
             await services.resourceLoader.reload();
@@ -4687,11 +4565,8 @@ export function makePiAdapterLive(options?: PiAdapterLiveOptions) {
   return Layer.effect(PiAdapter, makePiAdapter(STOCK_PI_FAMILY, options));
 }
 
-export const OAAgentAdapterLive = Layer.effect(
-  OAAgentAdapter,
-  makePiAdapter(HARNESSOS_AGENT_FAMILY),
-);
+export const OAAgentAdapterLive = Layer.effect(OAAgentAdapter, makePiAdapter(OA_FAMILY));
 
 export function makeOAAgentAdapterLive(options?: PiAdapterLiveOptions) {
-  return Layer.effect(OAAgentAdapter, makePiAdapter(HARNESSOS_AGENT_FAMILY, options));
+  return Layer.effect(OAAgentAdapter, makePiAdapter(OA_FAMILY, options));
 }

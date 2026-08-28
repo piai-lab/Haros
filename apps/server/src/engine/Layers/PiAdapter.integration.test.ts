@@ -43,7 +43,7 @@ import {
   makePiBashProcessSupervisor,
   makePiGatewayLoadWarning,
   makePiHostSystemPrompt,
-  makeHarnessOSEngineSystemPrompt,
+  makeOAEngineSystemPrompt,
   makePiRuntimeEventBase,
   normalizePiTokenUsage,
   makePiUserInputOptions,
@@ -122,27 +122,27 @@ describe("Pi native resource projection", () => {
   });
 
   it("keeps Todo guidance out of the immutable engine contract", () => {
-    const omniMindPrompt = makeHarnessOSEngineSystemPrompt({
+    const oaPrompt = makeOAEngineSystemPrompt({
       workSurface: "agent",
     });
     const stockPiPrompt = makePiHostSystemPrompt({
       gatewayControlAvailable: true,
     });
 
-    expect(omniMindPrompt).not.toContain("<harnessos_agent_task_policy>");
-    expect(omniMindPrompt).not.toContain("harnessos_update_tasks");
+    expect(oaPrompt).not.toContain("<harnessos_agent_task_policy>");
+    expect(oaPrompt).not.toContain("harnessos_update_tasks");
     expect(stockPiPrompt).not.toContain("<harnessos_agent_task_policy>");
     expect(stockPiPrompt).not.toContain("harnessos_update_tasks");
   });
 
   it("keeps HarnessOS identity immutable while selecting three distinct Product contracts", () => {
-    const chatPrompt = makeHarnessOSEngineSystemPrompt({
+    const chatPrompt = makeOAEngineSystemPrompt({
       workSurface: "chat",
     });
-    const agentPrompt = makeHarnessOSEngineSystemPrompt({
+    const agentPrompt = makeOAEngineSystemPrompt({
       workSurface: "agent",
     });
-    const studioPrompt = makeHarnessOSEngineSystemPrompt({
+    const studioPrompt = makeOAEngineSystemPrompt({
       productSurface: "studio",
     });
     const identity =
@@ -188,7 +188,7 @@ describe("Pi native resource projection", () => {
       gatewayControlAvailable: true,
       enabledBuiltInGroups: ["browser", "device"],
     });
-    const enginePrompt = makeHarnessOSEngineSystemPrompt({ workSurface: "agent" });
+    const enginePrompt = makeOAEngineSystemPrompt({ workSurface: "agent" });
 
     expect(hostPrompt).toContain("approval-required download");
     expect(hostPrompt).toContain("per-call authorization");
@@ -846,9 +846,7 @@ describe("Pi native HarnessOS gateway tools", () => {
             );
             expect(lateResponse._tag).toBe("Failure");
             if (lateResponse._tag === "Failure") {
-              expect(Cause.pretty(lateResponse.cause)).toContain(
-                "Stale HarnessOS ask_user response",
-              );
+              expect(Cause.pretty(lateResponse.cause)).toContain("Stale OA ask_user response");
             }
             const disconnectedTurn = yield* adapter.sendTurn({
               threadId: askThreadId,
@@ -2228,7 +2226,7 @@ describe("getPiDiscoverableModels", () => {
       "You are HarnessOS, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).";
     const officialChineseIdentity =
       "The academy's official Chinese name is 广东智慧医学国际研究院.";
-    const immutableAgentPrompt = makeHarnessOSEngineSystemPrompt({
+    const immutableAgentPrompt = makeOAEngineSystemPrompt({
       workSurface: "agent",
     });
     mkdirSync(path.join(cwd, ".harnessos", "extensions"), { recursive: true });
