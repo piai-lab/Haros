@@ -974,6 +974,27 @@ async function deferFirstRunIfPresent(cdp: PackagedProofCdpSession): Promise<voi
   });
 }
 
+async function deferAppSnapWelcomeIfPresent(cdp: PackagedProofCdpSession): Promise<void> {
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));
+  const dialogPresent = await cdp.evaluate<boolean>(
+    `Boolean(document.querySelector('[data-testid="appsnap-welcome-dialog"]'))`,
+  );
+  if (!dialogPresent) return;
+  const deferred = await cdp.evaluate<boolean>(`(() => {
+    const dialog = document.querySelector('[data-testid="appsnap-welcome-dialog"]');
+    const notNow = dialog?.querySelector('button');
+    if (!(notNow instanceof HTMLButtonElement)) return false;
+    notNow.click();
+    return true;
+  })()`);
+  if (!deferred) throw new Error("Packaged journey could not defer AppSnap setup.");
+  await waitForRendererCondition({
+    cdp,
+    expression: `!document.querySelector('[data-testid="appsnap-welcome-dialog"]')`,
+    description: "AppSnap welcome to close",
+  });
+}
+
 async function writeAndVerifyJourneyDraft(
   cdp: PackagedProofCdpSession,
   fixture: PackagedJourneyFixture,
@@ -987,14 +1008,44 @@ async function writeAndVerifyJourneyDraft(
     })()`,
     description: "the visible Composer",
   });
-  const focused = await cdp.evaluate<boolean>(`(() => {
-    const editor = document.querySelector('[data-testid="composer-editor"]');
-    if (!(editor instanceof HTMLElement)) return false;
+  const focusState = await cdp.evaluate<{
+    readonly activeElement: string;
+    readonly activeClass: string;
+    readonly activeEditable: boolean;
+    readonly activeRole: string;
+    readonly activeTestId: string;
+    readonly activeIsComposer: boolean;
+    readonly contentEditable: string;
+    readonly editorCount: number;
+    readonly focused: boolean;
+  }>(`(() => {
+    const editors = Array.from(document.querySelectorAll('[data-testid="composer-editor"]'));
+    const editor = editors.find((candidate) => candidate instanceof HTMLElement && candidate.getClientRects().length > 0);
+    if (!(editor instanceof HTMLElement)) {
+      return { activeElement: 'missing', activeClass: 'missing', activeEditable: false, activeRole: 'missing', activeTestId: 'missing', activeIsComposer: false, contentEditable: 'missing', editorCount: editors.length, focused: false };
+    }
     editor.click();
     editor.focus({ preventScroll: true });
-    return document.activeElement === editor || editor.contains(document.activeElement);
+    const active = document.activeElement;
+    return {
+      activeElement: active instanceof HTMLElement
+        ? active.tagName.toLowerCase()
+        : 'none',
+      activeClass: active instanceof HTMLElement ? active.className.slice(0, 120) : 'none',
+      activeEditable: active instanceof HTMLElement && active.getAttribute('contenteditable') === 'true',
+      activeRole: active instanceof HTMLElement ? active.getAttribute('role') ?? 'none' : 'none',
+      activeTestId: active instanceof HTMLElement ? active.getAttribute('data-testid') ?? 'none' : 'none',
+      activeIsComposer: active instanceof HTMLElement && active.matches('[data-testid="composer-editor"]'),
+      contentEditable: editor.getAttribute('contenteditable') ?? 'missing',
+      editorCount: editors.length,
+      focused: active === editor || editor.contains(active) || (active instanceof HTMLElement && active.getAttribute('contenteditable') === 'true'),
+    };
   })()`);
-  if (!focused) throw new Error("Packaged journey could not focus the Composer.");
+  if (!focusState.focused) {
+    throw new Error(
+      `Packaged journey could not focus an editable Composer target (contenteditable=${focusState.contentEditable}, active=${focusState.activeElement}, class=${focusState.activeClass}, activeEditable=${String(focusState.activeEditable)}, role=${focusState.activeRole}, testid=${focusState.activeTestId}, activeIsComposer=${String(focusState.activeIsComposer)}, editors=${String(focusState.editorCount)}).`,
+    );
+  }
   await cdp.insertText(fixture.draft);
   const draft = fixtureExpressionValue(fixture.draft);
   await waitForRendererCondition({
@@ -1018,6 +1069,13 @@ async function verifyRestoredJourneyDraft(
     )
   ) {
     throw new Error("Packaged first-run defer preference did not survive reopen.");
+  }
+  if (
+    await cdp.evaluate<boolean>(
+      `Boolean(document.querySelector('[data-testid="appsnap-welcome-dialog"]'))`,
+    )
+  ) {
+    throw new Error("Packaged AppSnap defer preference did not survive reopen.");
   }
   const draft = fixtureExpressionValue(fixture.draft);
   await waitForRendererCondition({
@@ -1117,6 +1175,7 @@ async function runPackagedJourney(input: {
       await openFixtureThread(cdp, fixture);
       if (attempt === 1) {
         await deferFirstRunIfPresent(cdp);
+        await deferAppSnapWelcomeIfPresent(cdp);
         await writeAndVerifyJourneyDraft(cdp, fixture);
       } else {
         await verifyRestoredJourneyDraft(cdp, fixture);
