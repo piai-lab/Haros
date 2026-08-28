@@ -43,7 +43,7 @@ function fixture(
     "@earendil-works/pi-protocol",
     "@earendil-works/pi-telemetry",
     "@earendil-works/pi-tui",
-    "@harnessos/pi-coding-agent",
+    "@harnessos/oa-runtime",
   ];
   let targetManifest = "";
   for (const name of piNames) {
@@ -254,13 +254,14 @@ describe("release legal metadata", () => {
     expect(inventory.components.some((component) => component.name === "peer-only")).toBe(false);
   });
 
-  it("keeps the checked-in real closure complete, including every Pi package", () => {
-    const inventory = JSON.parse(
-      readFileSync(
-        new URL("../../apps/web/public/licenses/release-dependencies.json", import.meta.url),
-        "utf8",
-      ),
-    ) as ReleaseDependencyInventory;
+  it("keeps the generated real closure complete, including every Pi package", () => {
+    const repositoryRoot = join(import.meta.dirname, "../..");
+    const inventory = collectReleaseDependencyInventory({
+      packageRoot: repositoryRoot,
+      repositoryRoot,
+      roots: resolveReleaseDependencyRoots(repositoryRoot),
+      target: { kind: "development-host", platform: process.platform, arch: process.arch },
+    });
     expect(inventory.componentCount).toBe(inventory.components.length);
     expect(inventory.components.every((component) => component.licenseFiles.length > 0)).toBe(true);
     for (const name of [
@@ -271,7 +272,7 @@ describe("release legal metadata", () => {
       "@earendil-works/pi-protocol",
       "@earendil-works/pi-telemetry",
       "@earendil-works/pi-tui",
-      "@harnessos/pi-coding-agent",
+      "@harnessos/oa-runtime",
     ]) {
       expect(inventory.components.some((component) => component.name === name)).toBe(true);
     }

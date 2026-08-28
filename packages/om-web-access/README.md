@@ -6,12 +6,6 @@ It is composed only into the bundled OmniMind Agent. It is not a Host capability
 
 The bundled OmniMind profile defaults to `workflow: "auto-summary"` and `autoOpenBrowser: false`. In this profile `autoOpenBrowser` is an independent, nonblocking Right Dock process display for `auto-summary` and `none`; it never changes their result workflow or creates waiting-for-user. The retained upstream/default export still follows the author's UI-dependent workflow and browser-opening semantics described below.
 
----
-
-<p>
-  <img src="banner.png" alt="pi-web-access" width="1100">
-</p>
-
 # Pi Web Access
 
 **Web search, content extraction, and video understanding for Pi agent. OpenAI/Codex search, zero-config Exa search, Brave, Parallel, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, AnySearch, Valyu, xAI/Grok, Bright Data SERP, SerpBase, Serper, self-hosted SearXNG, keyless DuckDuckGo, optional browser-cookie Gemini Web, Kimi Code Plan search, or bring your own API keys.**

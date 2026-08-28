@@ -16,7 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ServerConfig } from "../../config.ts";
 import { MAX_WEBSOCKET_MESSAGE_BYTES } from "../../nodeHttpServer.ts";
 import { ServerSettingsService, type ServerSettingsShape } from "../../serverSettings.ts";
-import type { OmniMindCodingAgentModule } from "../omnimindAgentRuntime.ts";
+import type { OARuntimeModule } from "../oaRuntime.ts";
 import {
   OmniMindAgentPromptFiles,
   type OmniMindAgentPromptFilesShape,
@@ -62,7 +62,7 @@ function harness(options: OmniMindAgentPromptFilesLiveOptions = {}) {
   const sdk = {
     DEFAULT_BASE_INSTRUCTIONS: "Factory instructions",
     loadProjectContextFiles,
-  } as unknown as OmniMindCodingAgentModule;
+  } as unknown as OARuntimeModule;
   const layer = makeOmniMindAgentPromptFilesLive({
     ...options,
     loadModule: async () => sdk,

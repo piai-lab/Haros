@@ -30,7 +30,7 @@ async function archiveFixture(
     "@earendil-works/pi-protocol",
     "@earendil-works/pi-telemetry",
     "@earendil-works/pi-tui",
-    "@harnessos/pi-coding-agent",
+    "@harnessos/oa-runtime",
   ];
   for (const name of extraPackage ? [...packages, "undisclosed"] : packages) {
     write(

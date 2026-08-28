@@ -22,10 +22,10 @@ import { ServerConfig } from "../../config.ts";
 import { PRIVATE_FILE_MODE } from "../../privatePathPermissions.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import {
-  loadOmniMindCodingAgentModule,
-  resolveOmniMindAgentDir,
-  type OmniMindCodingAgentModule,
-} from "../omnimindAgentRuntime.ts";
+  loadOARuntimeModule,
+  resolveOAAgentDir,
+  type OARuntimeModule,
+} from "../oaRuntime.ts";
 import {
   OmniMindAgentPromptFiles,
   type OmniMindAgentPromptFilesShape,
@@ -250,7 +250,7 @@ async function safeRead(
 }
 
 async function discover(input: {
-  readonly sdk: OmniMindCodingAgentModule;
+  readonly sdk: OARuntimeModule;
   readonly agentDir: string;
   readonly hooks: SafeReadHooks | undefined;
 }): Promise<Discovery> {
@@ -300,7 +300,7 @@ async function discover(input: {
 }
 
 async function makeSnapshot(input: {
-  readonly sdk: OmniMindCodingAgentModule;
+  readonly sdk: OARuntimeModule;
   readonly agentDir: string;
   readonly homeDir: string;
   readonly factoryContent: string;
@@ -372,13 +372,13 @@ async function makeSnapshot(input: {
 }
 
 function assertCurrentAgentDir(baseDir: string, expectedAgentDir: string): void {
-  if (resolveOmniMindAgentDir(baseDir) !== expectedAgentDir) {
+  if (resolveOAAgentDir(baseDir) !== expectedAgentDir) {
     throw new PromptConflict("state_changed");
   }
 }
 
 export interface OmniMindAgentPromptFilesLiveOptions {
-  readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
+  readonly loadModule?: () => Promise<OARuntimeModule>;
   /** Deterministic race seams for focused tests; production leaves these absent. */
   readonly safeReadHooks?: SafeReadHooks;
 }
@@ -393,8 +393,8 @@ export function makeOmniMindAgentPromptFilesLive(
       const serverSettings = yield* ServerSettingsService;
       let mutationTail = Promise.resolve();
       const owners = async () => ({
-        sdk: await (options.loadModule ?? loadOmniMindCodingAgentModule)(),
-        agentDir: resolveOmniMindAgentDir(config.baseDir),
+        sdk: await (options.loadModule ?? loadOARuntimeModule)(),
+        agentDir: resolveOAAgentDir(config.baseDir),
       });
       const snapshot = async () => {
         const current = await owners();

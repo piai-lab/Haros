@@ -4,7 +4,7 @@ import { ThreadId } from "@harnessos/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import { ServerConfig } from "../../config.ts";
-import type { OmniMindCodingAgentModule } from "../omnimindAgentRuntime.ts";
+import type { OARuntimeModule } from "../oaRuntime.ts";
 import { OmniMindEcosystem, type OmniMindEcosystemShape } from "../Services/OmniMindEcosystem.ts";
 import { ProviderService, type ProviderServiceShape } from "../Services/ProviderService.ts";
 import { makeOmniMindEcosystemLive } from "./OmniMindEcosystem.ts";
@@ -58,7 +58,7 @@ function makeHarness() {
       updatePublicPackage = updatePublicPackage;
       removePublicPackage = removePublicPackage;
     },
-  } as unknown as OmniMindCodingAgentModule;
+  } as unknown as OARuntimeModule;
   const layer = makeOmniMindEcosystemLive({ loadModule: async () => sdk }).pipe(
     Layer.provideMerge(ServerConfig.layerTest(process.cwd(), "/tmp/omnimind-ecosystem-test")),
     Layer.provideMerge(

@@ -53,13 +53,13 @@ import { Effect, Layer } from "effect";
 import { ServerConfig } from "../../config.ts";
 import { CurrentWsConnectionSignal } from "../../wsConnectionSessions.ts";
 import {
-  createOmniMindModelsConfigReader,
-  loadOmniMindCodingAgentModule,
-  readOmniMindPrivateTextFile,
-  resolveOmniMindAgentDir,
-  type OmniMindCodingAgentModule,
-  type OmniMindPrivateRuntimeFilename,
-} from "../omnimindAgentRuntime.ts";
+  createOAModelsConfigReader,
+  loadOARuntimeModule,
+  readOAPrivateTextFile,
+  resolveOAAgentDir,
+  type OARuntimeModule,
+  type OAPrivateRuntimeFilename,
+} from "../oaRuntime.ts";
 import {
   createOmniMindOAuthPageRenderer,
   loadOmniMindOAuthLogoDataUrl,
@@ -116,7 +116,7 @@ function compactThinkingLevelMap(
 }
 
 export interface OmniMindModelServicesLiveOptions {
-  readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
+  readonly loadModule?: () => Promise<OARuntimeModule>;
   readonly readTextFile?: ReadTextFile;
   readonly authRequestTimeoutMs?: number;
   readonly modelServiceRefreshTimeoutMs?: number;
@@ -262,7 +262,7 @@ function customProviderConfig(input: OmniMindCustomModelServiceConfigInput) {
 function clearOmittedCompatAfterApiChange(
   input: OmniMindCustomModelServiceConfigInput,
   previous: ReturnType<
-    OmniMindCodingAgentModule["ModelRuntime"]["prototype"]["getModelConfigProvider"]
+    OARuntimeModule["ModelRuntime"]["prototype"]["getModelConfigProvider"]
   >,
 ): OmniMindCustomModelServiceConfigInput {
   if (!previous || !isCustomApiProtocol(previous.api)) return input;
@@ -291,7 +291,7 @@ function customProviderDiscoveryConfig(input: OmniMindCustomModelServiceDiscover
 
 function headerReferencesForMutation(
   input: OmniMindCustomModelServiceConfigInput | OmniMindCustomModelServiceDiscoveryConfigInput,
-): ReadonlyArray<import("@harnessos/pi-coding-agent").ModelConfigHeaderReferenceMutation> {
+): ReadonlyArray<import("@harnessos/oa-runtime").ModelConfigHeaderReferenceMutation> {
   const providerReferences = (input.headerMutations ?? []).map((mutation) => ({
     scope: { type: "provider" as const },
     name: mutation.name,
@@ -371,10 +371,10 @@ function isPublicCustomModelCost(cost: {
 function projectCustomConfig(
   serviceId: string,
   provider: ReturnType<
-    OmniMindCodingAgentModule["ModelRuntime"]["prototype"]["getModelConfigProvider"]
+    OARuntimeModule["ModelRuntime"]["prototype"]["getModelConfigProvider"]
   >,
   headerMetadata: ReturnType<
-    OmniMindCodingAgentModule["ModelRuntime"]["prototype"]["getModelConfigProviderHeaderMetadata"]
+    OARuntimeModule["ModelRuntime"]["prototype"]["getModelConfigProviderHeaderMetadata"]
   >,
 ): OmniMindCustomModelServiceConfig | undefined {
   if (!provider?.baseUrl || !isCustomApiProtocol(provider.api) || !provider.models?.length) {
@@ -799,14 +799,14 @@ function environmentVariablesFromAuthStatus(input: {
 }
 
 type OmniMindModelRuntime = Awaited<
-  ReturnType<OmniMindCodingAgentModule["ModelRuntime"]["create"]>
+  ReturnType<OARuntimeModule["ModelRuntime"]["create"]>
 >;
 type OmniMindExtensionServices = Awaited<
-  ReturnType<OmniMindCodingAgentModule["createAgentSessionServices"]>
+  ReturnType<OARuntimeModule["createAgentSessionServices"]>
 >;
 
 async function loadIntentScopedExtensionServices(input: {
-  readonly sdk: OmniMindCodingAgentModule;
+  readonly sdk: OARuntimeModule;
   readonly runtime: OmniMindModelRuntime;
   readonly agentDir: string;
   readonly signal: AbortSignal;
@@ -849,7 +849,7 @@ function retireIntentScopedExtensionServices(services: OmniMindExtensionServices
 
 async function projectModelServices(input: {
   readonly serverBaseDir: string;
-  readonly loadModule: () => Promise<OmniMindCodingAgentModule>;
+  readonly loadModule: () => Promise<OARuntimeModule>;
   readonly readTextFile?: ReadTextFile;
   readonly signal: AbortSignal;
   readonly intent?: OmniMindModelServicesProjectionIntent;
@@ -866,18 +866,18 @@ async function projectModelServices(input: {
   input.signal.throwIfAborted();
   const sdk = await input.loadModule();
   input.signal.throwIfAborted();
-  const agentDir = resolveOmniMindAgentDir(input.serverBaseDir);
+  const agentDir = resolveOAAgentDir(input.serverBaseDir);
   const readTextFile =
     input.readTextFile ??
     ((filePath, signal) => {
       if (path.dirname(filePath) !== agentDir) {
         throw new Error("Model-services read escaped the private agent directory");
       }
-      const filename = path.basename(filePath) as OmniMindPrivateRuntimeFilename;
+      const filename = path.basename(filePath) as OAPrivateRuntimeFilename;
       if (!(["auth.json", "models.json", "models-store.json"] as const).includes(filename)) {
         throw new Error("Model-services requested an unknown private runtime file");
       }
-      return readOmniMindPrivateTextFile({
+      return readOAPrivateTextFile({
         agentDir,
         filename,
         ...(signal ? { signal } : {}),
@@ -894,7 +894,7 @@ async function projectModelServices(input: {
           throw error;
         }
       }
-    : createOmniMindModelsConfigReader(agentDir);
+    : createOAModelsConfigReader(agentDir);
   const credentials = await StaticCredentialStore.create({
     authPath,
     readTextFile,
@@ -1148,7 +1148,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
       const project = (signal: AbortSignal, intent?: OmniMindModelServicesProjectionIntent) =>
         projectModelServices({
           serverBaseDir: config.baseDir,
-          loadModule: options.loadModule ?? loadOmniMindCodingAgentModule,
+          loadModule: options.loadModule ?? loadOARuntimeModule,
           ...(options.readTextFile ? { readTextFile: options.readTextFile } : {}),
           signal,
           ...(intent ? { intent } : {}),
@@ -1164,13 +1164,13 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
       };
 
       const createMutationRuntime = async (signal: AbortSignal) => {
-        const agentDir = resolveOmniMindAgentDir(config.baseDir);
-        const sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
+        const agentDir = resolveOAAgentDir(config.baseDir);
+        const sdk = await (options.loadModule ?? loadOARuntimeModule)();
         signal.throwIfAborted();
         const runtime = await sdk.ModelRuntime.create({
           authPath: path.join(agentDir, "auth.json"),
           modelsPath: null,
-          modelsConfigReader: createOmniMindModelsConfigReader(agentDir),
+          modelsConfigReader: createOAModelsConfigReader(agentDir),
           modelsStorePath: path.join(agentDir, "models-store.json"),
           allowModelNetwork: false,
           signal,
@@ -1184,7 +1184,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
         signal: AbortSignal,
         operation: (input: {
           readonly agentDir: string;
-          readonly sdk: OmniMindCodingAgentModule;
+          readonly sdk: OARuntimeModule;
           readonly runtime: OmniMindModelRuntime;
           readonly extensionLoaded: boolean;
         }) => Promise<A>,
@@ -1224,7 +1224,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
       }) => {
         const projection = await projectModelServices({
           serverBaseDir: config.baseDir,
-          loadModule: options.loadModule ?? loadOmniMindCodingAgentModule,
+          loadModule: options.loadModule ?? loadOARuntimeModule,
           ...(options.readTextFile ? { readTextFile: options.readTextFile } : {}),
           signal: input.signal,
           preparedRuntime: input.runtime,
@@ -1261,18 +1261,18 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
             throw new InvalidCustomServiceEditError();
           }
         }
-        const sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
+        const sdk = await (options.loadModule ?? loadOARuntimeModule)();
         input.signal.throwIfAborted();
-        const agentDir = resolveOmniMindAgentDir(config.baseDir);
+        const agentDir = resolveOAAgentDir(config.baseDir);
         const providerId = input.serviceId ?? "omnimind-custom-preview";
         const credentials: CredentialStore =
           input.credential.type === "preserve"
             ? await StaticCredentialStore.create({
                 authPath: path.join(agentDir, "auth.json"),
                 readTextFile: (filePath, readSignal) =>
-                  readOmniMindPrivateTextFile({
+                  readOAPrivateTextFile({
                     agentDir,
-                    filename: path.basename(filePath) as OmniMindPrivateRuntimeFilename,
+                    filename: path.basename(filePath) as OAPrivateRuntimeFilename,
                     ...(readSignal ? { signal: readSignal } : {}),
                   }),
                 signal: input.signal,
@@ -1290,7 +1290,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
           ...(input.serviceId === null
             ? {}
             : {
-                modelsConfigReader: createOmniMindModelsConfigReader(agentDir),
+                modelsConfigReader: createOAModelsConfigReader(agentDir),
               }),
           allowModelNetwork: false,
           refreshOnCreate: false,
@@ -1752,7 +1752,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
         revealApiKey: (input) =>
           Effect.promise((signal) =>
             serializeMutation(async () => {
-              const agentDir = resolveOmniMindAgentDir(config.baseDir);
+              const agentDir = resolveOAAgentDir(config.baseDir);
               let credential: Credential | undefined;
               try {
                 const credentials = await StaticCredentialStore.create({
@@ -1760,9 +1760,9 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                   readTextFile: (filePath, readSignal) =>
                     options.readTextFile
                       ? options.readTextFile(filePath, readSignal)
-                      : readOmniMindPrivateTextFile({
+                      : readOAPrivateTextFile({
                           agentDir,
-                          filename: path.basename(filePath) as OmniMindPrivateRuntimeFilename,
+                          filename: path.basename(filePath) as OAPrivateRuntimeFilename,
                           ...(readSignal ? { signal: readSignal } : {}),
                         }),
                   signal,
@@ -1854,7 +1854,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               options.customModelDiscoveryTimeoutMs ?? CUSTOM_MODEL_DISCOVERY_TIMEOUT_MS,
             );
             const signal = AbortSignal.any([requestSignal, timeoutSignal]);
-            let sdk: OmniMindCodingAgentModule | undefined;
+            let sdk: OARuntimeModule | undefined;
             try {
               const preview = await createCustomPreviewRuntime({
                 serviceId: input.config.serviceId,
@@ -2036,8 +2036,8 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               if (input.config.serviceId === null && input.credential.type === "preserve") {
                 throw new Error("A new custom model service requires a credential source");
               }
-              const agentDir = resolveOmniMindAgentDir(config.baseDir);
-              const sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
+              const agentDir = resolveOAAgentDir(config.baseDir);
+              const sdk = await (options.loadModule ?? loadOARuntimeModule)();
               signal.throwIfAborted();
               const previous =
                 input.config.serviceId === null
@@ -2197,8 +2197,8 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 if (previous.origin !== "models_json") {
                   throw new Error("Only a models.json model service can be removed");
                 }
-                const agentDir = resolveOmniMindAgentDir(config.baseDir);
-                const sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
+                const agentDir = resolveOAAgentDir(config.baseDir);
+                const sdk = await (options.loadModule ?? loadOARuntimeModule)();
                 const { runtime } = await createMutationRuntime(signal);
                 let synchronizationFailed = false;
                 try {

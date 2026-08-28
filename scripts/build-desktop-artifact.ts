@@ -28,7 +28,7 @@ import { finalizeMacUpdateZip } from "./lib/mac-update-zip-finalize.ts";
 import { verifyPackagedLegalClosure } from "./lib/packaged-legal-closure.ts";
 import { writeReleaseLegalMetadata } from "./lib/release-legal-metadata.ts";
 import {
-  HARNESSOS_PI_RUNTIME_PACKAGE_PATH,
+  HARNESSOS_OA_RUNTIME_PACKAGE_PATH,
   omitBundledServerWorkspaceDependencies,
   RELEASE_LOCKFILE_PATH,
   RELEASE_PATCHES_PATH,
@@ -672,12 +672,12 @@ const installFrozenStageDependencies = Effect.fn("installFrozenStageDependencies
     path.join(repoRoot, RELEASE_PATCHES_PATH),
     path.join(stageAppDir, RELEASE_PATCHES_PATH),
   );
-  yield* fs.makeDirectory(path.dirname(path.join(stageAppDir, HARNESSOS_PI_RUNTIME_PACKAGE_PATH)), {
+  yield* fs.makeDirectory(path.dirname(path.join(stageAppDir, HARNESSOS_OA_RUNTIME_PACKAGE_PATH)), {
     recursive: true,
   });
   yield* fs.copyFile(
-    path.join(repoRoot, HARNESSOS_PI_RUNTIME_PACKAGE_PATH),
-    path.join(stageAppDir, HARNESSOS_PI_RUNTIME_PACKAGE_PATH),
+    path.join(repoRoot, HARNESSOS_OA_RUNTIME_PACKAGE_PATH),
+    path.join(stageAppDir, HARNESSOS_OA_RUNTIME_PACKAGE_PATH),
   );
 
   yield* Effect.log(
@@ -729,7 +729,7 @@ const installFrozenStageDependencies = Effect.fn("installFrozenStageDependencies
   }
   yield* fs.remove(path.join(stageAppDir, RELEASE_LOCKFILE_PATH));
   yield* fs.remove(path.join(stageAppDir, RELEASE_PATCHES_PATH), { recursive: true });
-  yield* fs.remove(path.join(stageAppDir, HARNESSOS_PI_RUNTIME_PACKAGE_PATH));
+  yield* fs.remove(path.join(stageAppDir, HARNESSOS_OA_RUNTIME_PACKAGE_PATH));
 });
 
 const createBuildConfig = Effect.fn("createBuildConfig")(function* (

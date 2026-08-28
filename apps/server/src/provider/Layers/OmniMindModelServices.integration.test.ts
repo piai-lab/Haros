@@ -22,7 +22,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ServerConfig } from "../../config.ts";
 import { LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL } from "../../managedAttachmentPrincipal.ts";
 import { provideWsConnectionSession } from "../../wsConnectionSessions.ts";
-import type { OmniMindCodingAgentModule } from "../omnimindAgentRuntime.ts";
+import type { OARuntimeModule } from "../oaRuntime.ts";
 import { OmniMindModelServices } from "../Services/OmniMindModelServices.ts";
 import { ProviderService, type ProviderServiceShape } from "../Services/ProviderService.ts";
 import { makeOmniMindModelServicesLive } from "./OmniMindModelServices.ts";
@@ -141,7 +141,7 @@ async function snapshotDirectory(directory: string) {
 
 async function loadService(input: {
   readonly root: string;
-  readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
+  readonly loadModule?: () => Promise<OARuntimeModule>;
   readonly readTextFile?: (filePath: string, signal?: AbortSignal) => Promise<string>;
   readonly intent?: "add_service";
 }) {
@@ -161,7 +161,7 @@ async function loadService(input: {
 
 function makeTestLayer(input: {
   readonly root: string;
-  readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
+  readonly loadModule?: () => Promise<OARuntimeModule>;
   readonly readTextFile?: (filePath: string, signal?: AbortSignal) => Promise<string>;
   readonly authRequestTimeoutMs?: number;
   readonly modelServiceRefreshTimeoutMs?: number;
@@ -369,12 +369,12 @@ describe("OmniMindModelServicesLive", () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     await mkdir(path.join(root, "agent"), { recursive: true });
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     const createAgentSessionServices = vi.fn(sdk.createAgentSessionServices);
 
     const result = await loadService({
       root,
-      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OARuntimeModule,
     });
 
     expect(result.list.state).toBe("empty");
@@ -387,7 +387,7 @@ describe("OmniMindModelServicesLive", () => {
     await isolateProviderEnvironment(root);
     const agentDir = path.join(root, "agent");
     await mkdir(agentDir, { recursive: true });
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     const invalidate = vi.fn();
     const createAgentSessionServices = vi.fn(
       async (options: Parameters<typeof sdk.createAgentSessionServices>[0]) => {
@@ -433,7 +433,7 @@ describe("OmniMindModelServicesLive", () => {
     );
     const layer = makeTestLayer({
       root,
-      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OARuntimeModule,
     });
 
     const result = await Effect.runPromise(
@@ -498,7 +498,7 @@ describe("OmniMindModelServicesLive", () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     await mkdir(path.join(root, "agent"), { recursive: true });
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     const controller = new AbortController();
     const invalidate = vi.fn();
     const createAgentSessionServices = vi.fn(
@@ -518,7 +518,7 @@ describe("OmniMindModelServicesLive", () => {
     );
     const layer = makeTestLayer({
       root,
-      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OARuntimeModule,
     });
 
     const running = Effect.runPromise(
@@ -538,7 +538,7 @@ describe("OmniMindModelServicesLive", () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     await mkdir(path.join(root, "agent"), { recursive: true });
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     const createAgentSessionServices = vi.fn(
       async (options: Parameters<typeof sdk.createAgentSessionServices>[0]) => {
         expect(
@@ -551,7 +551,7 @@ describe("OmniMindModelServicesLive", () => {
     const result = await loadService({
       root,
       intent: "add_service",
-      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OARuntimeModule,
     });
     const auth = await Effect.runPromise(
       Effect.gen(function* () {
@@ -566,7 +566,7 @@ describe("OmniMindModelServicesLive", () => {
           makeTestLayer({
             root,
             loadModule: async () =>
-              ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+              ({ ...sdk, createAgentSessionServices }) as OARuntimeModule,
           }),
         ),
       ),
@@ -594,7 +594,7 @@ describe("OmniMindModelServicesLive", () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     await mkdir(path.join(root, "agent"), { recursive: true });
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     const invalidate = vi.fn();
     const extensionModels = [
       {
@@ -643,7 +643,7 @@ describe("OmniMindModelServicesLive", () => {
     );
     const layer = makeTestLayer({
       root,
-      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OARuntimeModule,
     });
 
     const result = await Effect.runPromise(
@@ -724,7 +724,7 @@ describe("OmniMindModelServicesLive", () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     await mkdir(path.join(root, "agent"), { recursive: true });
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     const invalidate = vi.fn();
     const createAgentSessionServices = vi.fn(
       async (options: Parameters<typeof sdk.createAgentSessionServices>[0]) => {
@@ -754,7 +754,7 @@ describe("OmniMindModelServicesLive", () => {
     );
     const layer = makeTestLayer({
       root,
-      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OARuntimeModule,
     });
 
     const result = await Effect.runPromise(
@@ -783,7 +783,7 @@ describe("OmniMindModelServicesLive", () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     await mkdir(path.join(root, "agent"), { recursive: true });
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     const invalidate = vi.fn();
     const extensionRefresh = vi.fn(async () => []);
     const createAgentSessionServices = vi.fn(
@@ -821,7 +821,7 @@ describe("OmniMindModelServicesLive", () => {
       },
     );
     const loadModule = async () =>
-      ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule;
+      ({ ...sdk, createAgentSessionServices }) as OARuntimeModule;
     const layer = makeTestLayer({ root, loadModule });
 
     const result = await Effect.runPromise(
@@ -867,11 +867,11 @@ describe("OmniMindModelServicesLive", () => {
     const providerHome = await isolateProviderEnvironment(root);
     const agentDir = path.join(root, "agent");
     await mkdir(agentDir, { recursive: true });
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     const createAgentSessionServices = vi.fn(sdk.createAgentSessionServices);
     const layer = makeTestLayer({
       root,
-      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OmniMindCodingAgentModule,
+      loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OARuntimeModule,
     });
     const request = await Effect.runPromise(
       Effect.gen(function* () {
@@ -996,7 +996,7 @@ describe("OmniMindModelServicesLive", () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     await mkdir(path.join(root, "agent"), { recursive: true });
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     const unexpectedRefresh = vi.fn(async () => {
       throw new Error("prepared runtime projection must not refresh every provider");
     });
@@ -1018,7 +1018,7 @@ describe("OmniMindModelServicesLive", () => {
             };
           },
         }),
-      }) as OmniMindCodingAgentModule;
+      }) as OARuntimeModule;
     const layer = makeTestLayer({ root, loadModule });
 
     const result = await Effect.runPromise(
@@ -2535,12 +2535,12 @@ describe("OmniMindModelServicesLive", () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     const fetchRequest = vi.spyOn(globalThis, "fetch");
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     const createAgentSessionServices = vi.fn();
     const layer = makeTestLayer({
       root,
       loadModule: async () =>
-        ({ ...sdk, createAgentSessionServices }) as unknown as OmniMindCodingAgentModule,
+        ({ ...sdk, createAgentSessionServices }) as unknown as OARuntimeModule,
     });
     const run = (serviceId: string) =>
       Effect.runPromise(
@@ -3206,7 +3206,7 @@ describe("OmniMindModelServicesLive", () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     await seedStoredCustomService(root, "transition");
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     const mutateModelConfigProvider = vi.fn(sdk.mutateModelConfigProvider);
     const loadModule = async () =>
       ({
@@ -3231,7 +3231,7 @@ describe("OmniMindModelServicesLive", () => {
             };
           },
         }),
-      }) as OmniMindCodingAgentModule;
+      }) as OARuntimeModule;
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const service = yield* OmniMindModelServices;
@@ -3261,7 +3261,7 @@ describe("OmniMindModelServicesLive", () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     await seedStoredCustomService(root, "transition");
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     const loadModule = async () =>
       ({
         ...sdk,
@@ -3290,7 +3290,7 @@ describe("OmniMindModelServicesLive", () => {
             };
           },
         }),
-      }) as OmniMindCodingAgentModule;
+      }) as OARuntimeModule;
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const service = yield* OmniMindModelServices;
@@ -3319,14 +3319,14 @@ describe("OmniMindModelServicesLive", () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     await seedStoredCustomService(root, "transition");
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     const loadModule = async () =>
       ({
         ...sdk,
         mutateModelConfigProvider: async () => {
           throw new Error("config mutation rejected");
         },
-      }) as OmniMindCodingAgentModule;
+      }) as OARuntimeModule;
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const service = yield* OmniMindModelServices;
@@ -3359,7 +3359,7 @@ describe("OmniMindModelServicesLive", () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     await seedReferencedCustomService(root, "transition");
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     let loginCalls = 0;
     const loadModule = async () =>
       ({
@@ -3386,7 +3386,7 @@ describe("OmniMindModelServicesLive", () => {
             };
           },
         }),
-      }) as OmniMindCodingAgentModule;
+      }) as OARuntimeModule;
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const service = yield* OmniMindModelServices;
@@ -3416,7 +3416,7 @@ describe("OmniMindModelServicesLive", () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     await seedReferencedCustomService(root, "transition");
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     const loadModule = async () =>
       ({
         ...sdk,
@@ -3439,7 +3439,7 @@ describe("OmniMindModelServicesLive", () => {
             };
           },
         }),
-      }) as OmniMindCodingAgentModule;
+      }) as OARuntimeModule;
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const service = yield* OmniMindModelServices;
@@ -3471,7 +3471,7 @@ describe("OmniMindModelServicesLive", () => {
   it("keeps a custom service visible when Pi cannot delete its credential", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
-    const sdk = await import("@harnessos/pi-coding-agent");
+    const sdk = await import("@harnessos/oa-runtime");
     let rejectLogout = false;
     const loadModule = async () =>
       ({
@@ -3495,7 +3495,7 @@ describe("OmniMindModelServicesLive", () => {
             };
           },
         }),
-      }) as OmniMindCodingAgentModule;
+      }) as OARuntimeModule;
     const layer = makeTestLayer({ root, loadModule });
     const result = await Effect.runPromise(
       Effect.gen(function* () {

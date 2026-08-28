@@ -22,10 +22,10 @@ vi.mock("node:fs/promises", async () => {
 });
 
 import {
-  createOmniMindModelsConfigReader,
-  readOmniMindPrivateTextFile,
-  resolveOmniMindAgentDir,
-} from "./omnimindAgentRuntime.ts";
+  createOAModelsConfigReader,
+  readOAPrivateTextFile,
+  resolveOAAgentDir,
+} from "./oaRuntime.ts";
 
 const roots: string[] = [];
 
@@ -36,7 +36,7 @@ afterEach(async () => {
 });
 
 async function makeRoot(): Promise<string> {
-  const root = await mkdtemp(path.join(os.tmpdir(), "omnimind-agent-root-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "harnessos-oa-root-"));
   roots.push(root);
   return root;
 }
@@ -49,13 +49,13 @@ async function isolateProviderHome(root: string): Promise<string> {
   return providerHome;
 }
 
-describe("resolveOmniMindAgentDir", () => {
+describe("resolveOAAgentDir", () => {
   it("resolves a physical product-owned agent directory", async () => {
     const root = await makeRoot();
     await isolateProviderHome(root);
     await mkdir(path.join(root, "agent"));
 
-    expect(resolveOmniMindAgentDir(root)).toBe(path.join(await realpath(root), "agent"));
+    expect(resolveOAAgentDir(root)).toBe(path.join(await realpath(root), "agent"));
   });
 
   it("fails closed when the agent directory is a symlink", async () => {
@@ -65,9 +65,7 @@ describe("resolveOmniMindAgentDir", () => {
     await mkdir(escaped);
     await symlink(escaped, path.join(root, "agent"), "dir");
 
-    expect(() => resolveOmniMindAgentDir(root)).toThrow(
-      "OmniMind Agent state root is not a private directory",
-    );
+    expect(() => resolveOAAgentDir(root)).toThrow("OA state root is not a private directory");
   });
 
   it("fails closed when a runtime file is a symlink", async () => {
@@ -77,9 +75,7 @@ describe("resolveOmniMindAgentDir", () => {
     await mkdir(path.join(root, "agent"));
     await symlink(escaped, path.join(root, "agent", "auth.json"), "file");
 
-    expect(() => resolveOmniMindAgentDir(root)).toThrow(
-      "OmniMind Agent state contains a non-private runtime file",
-    );
+    expect(() => resolveOAAgentDir(root)).toThrow("OA state contains a non-private runtime file");
   });
 
   it("fails closed when a runtime file aliases another state tree by hard link", async () => {
@@ -90,20 +86,18 @@ describe("resolveOmniMindAgentDir", () => {
     await writeFile(escaped, "{}");
     await link(escaped, path.join(root, "agent", "auth.json"));
 
-    expect(() => resolveOmniMindAgentDir(root)).toThrow(
-      "OmniMind Agent state contains a non-private runtime file",
-    );
+    expect(() => resolveOAAgentDir(root)).toThrow("OA state contains a non-private runtime file");
   });
 
-  it("rejects an OmniMind home physically rooted inside isolated stock Pi state", async () => {
+  it("rejects an OA home physically rooted inside isolated stock Pi state", async () => {
     const providerHome = await makeRoot();
     const stockPiDir = path.join(providerHome, ".pi");
     await mkdir(stockPiDir);
     vi.stubEnv("HOME", providerHome);
     vi.stubEnv("USERPROFILE", providerHome);
 
-    expect(() => resolveOmniMindAgentDir(stockPiDir)).toThrow(
-      "OmniMind Agent state must be physically separate from stock Pi state",
+    expect(() => resolveOAAgentDir(stockPiDir)).toThrow(
+      "OA state must be physically separate from stock Pi state",
     );
   });
 
@@ -119,11 +113,11 @@ describe("resolveOmniMindAgentDir", () => {
       process.platform === "win32" ? "junction" : "dir",
     );
 
-    expect(() => resolveOmniMindAgentDir(aliasedStockState)).toThrow(
-      "OmniMind Agent state must be physically separate from stock Pi state",
+    expect(() => resolveOAAgentDir(aliasedStockState)).toThrow(
+      "OA state must be physically separate from stock Pi state",
     );
-    expect(() => resolveOmniMindAgentDir(aliasedChild)).toThrow(
-      "OmniMind Agent state must be physically separate from stock Pi state",
+    expect(() => resolveOAAgentDir(aliasedChild)).toThrow(
+      "OA state must be physically separate from stock Pi state",
     );
   });
 
@@ -138,8 +132,8 @@ describe("resolveOmniMindAgentDir", () => {
       process.platform === "win32" ? "junction" : "dir",
     );
 
-    expect(() => resolveOmniMindAgentDir(root)).toThrow(
-      "OmniMind Agent state must be physically separate from stock Pi state",
+    expect(() => resolveOAAgentDir(root)).toThrow(
+      "OA state must be physically separate from stock Pi state",
     );
   });
 
@@ -153,13 +147,13 @@ describe("resolveOmniMindAgentDir", () => {
       process.platform === "win32" ? "junction" : "dir",
     );
 
-    expect(() => resolveOmniMindAgentDir(root)).toThrow(
-      "OmniMind Agent state must be physically separate from stock Pi state",
+    expect(() => resolveOAAgentDir(root)).toThrow(
+      "OA state must be physically separate from stock Pi state",
     );
   });
 });
 
-describe("readOmniMindPrivateTextFile", () => {
+describe("readOAPrivateTextFile", () => {
   it("reads one ordinary fixed leaf and treats a missing models config as absent", async () => {
     const root = await makeRoot();
     await isolateProviderHome(root);
@@ -169,11 +163,11 @@ describe("readOmniMindPrivateTextFile", () => {
       mode: 0o600,
     });
 
-    await expect(readOmniMindPrivateTextFile({ agentDir, filename: "models.json" })).resolves.toBe(
+    await expect(readOAPrivateTextFile({ agentDir, filename: "models.json" })).resolves.toBe(
       "{\n  // Pi parses this\n}\n",
     );
     await rm(path.join(agentDir, "models.json"));
-    await expect(createOmniMindModelsConfigReader(agentDir)({})).resolves.toBeUndefined();
+    await expect(createOAModelsConfigReader(agentDir)({})).resolves.toBeUndefined();
   });
 
   it("rejects disappearance after the models config was observed", async () => {
@@ -191,8 +185,8 @@ describe("readOmniMindPrivateTextFile", () => {
       }
     };
 
-    await expect(createOmniMindModelsConfigReader(agentDir)({})).rejects.toThrow(
-      "OmniMind Agent state changed during the safe read",
+    await expect(createOAModelsConfigReader(agentDir)({})).rejects.toThrow(
+      "OA state changed during the safe read",
     );
   });
 
@@ -203,12 +197,12 @@ describe("readOmniMindPrivateTextFile", () => {
     const modelsPath = path.join(agentDir, "models.json");
     await mkdir(agentDir);
     await writeFile(modelsPath, "{}");
-    const reader = createOmniMindModelsConfigReader(agentDir);
+    const reader = createOAModelsConfigReader(agentDir);
 
     await expect(reader({})).resolves.toBe("{}");
     await rm(modelsPath);
 
-    await expect(reader({})).rejects.toThrow("OmniMind Agent state changed during the safe read");
+    await expect(reader({})).rejects.toThrow("OA state changed during the safe read");
   });
 
   it("rejects replacement after the same reader accepted the models config", async () => {
@@ -219,13 +213,13 @@ describe("readOmniMindPrivateTextFile", () => {
     const replacementPath = path.join(agentDir, "models.next.json");
     await mkdir(agentDir);
     await writeFile(modelsPath, '{"version":1}');
-    const reader = createOmniMindModelsConfigReader(agentDir);
+    const reader = createOAModelsConfigReader(agentDir);
 
     await expect(reader({})).resolves.toBe('{"version":1}');
     await writeFile(replacementPath, '{"version":2}');
     await rename(replacementPath, modelsPath);
 
-    await expect(reader({})).rejects.toThrow("OmniMind Agent state changed during the safe read");
+    await expect(reader({})).rejects.toThrow("OA state changed during the safe read");
   });
 
   it.each(["symbolic link", "hard link"] as const)("rejects a %s leaf", async (kind) => {
@@ -241,8 +235,8 @@ describe("readOmniMindPrivateTextFile", () => {
       await link(outside, path.join(agentDir, "models.json"));
     }
 
-    await expect(createOmniMindModelsConfigReader(agentDir)({})).rejects.toThrow(
-      "OmniMind Agent state is not a private regular file",
+    await expect(createOAModelsConfigReader(agentDir)({})).rejects.toThrow(
+      "OA state is not a private regular file",
     );
   });
 
@@ -259,8 +253,8 @@ describe("readOmniMindPrivateTextFile", () => {
       process.platform === "win32" ? "junction" : "dir",
     );
 
-    await expect(createOmniMindModelsConfigReader(linkedAgentDir)({})).rejects.toThrow(
-      "OmniMind Agent state root is not a private directory",
+    await expect(createOAModelsConfigReader(linkedAgentDir)({})).rejects.toThrow(
+      "OA state root is not a private directory",
     );
   });
 
@@ -271,12 +265,10 @@ describe("readOmniMindPrivateTextFile", () => {
     const modelsPath = path.join(agentDir, "models.json");
     await mkdir(agentDir);
     await writeFile(modelsPath, new Uint8Array(4 * 1024 * 1024 + 1));
-    await expect(createOmniMindModelsConfigReader(agentDir)({})).rejects.toThrow(
-      "safe read boundary",
-    );
+    await expect(createOAModelsConfigReader(agentDir)({})).rejects.toThrow("safe read boundary");
 
     await writeFile(modelsPath, new Uint8Array([0xc3, 0x28]));
-    await expect(createOmniMindModelsConfigReader(agentDir)({})).rejects.toThrow();
+    await expect(createOAModelsConfigReader(agentDir)({})).rejects.toThrow();
   });
 
   it("honors cancellation before opening the private file", async () => {
@@ -289,7 +281,7 @@ describe("readOmniMindPrivateTextFile", () => {
     controller.abort();
 
     await expect(
-      createOmniMindModelsConfigReader(agentDir)({ signal: controller.signal }),
+      createOAModelsConfigReader(agentDir)({ signal: controller.signal }),
     ).rejects.toMatchObject({ name: "AbortError" });
   });
 });

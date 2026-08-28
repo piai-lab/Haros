@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { HARNESSOS_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
 
 import {
-  HARNESSOS_PI_RUNTIME_PACKAGE_PATH,
+  HARNESSOS_OA_RUNTIME_PACKAGE_PATH,
   RELEASE_LOCKFILE_PATH,
   RELEASE_PATCHES_PATH,
   RELEASE_WORKSPACE_MANIFEST_PATHS,
@@ -31,9 +31,9 @@ function copyWorkspaceManifestFixture(targetRoot: string): void {
   cpSync(resolve(repoRoot, RELEASE_PATCHES_PATH), resolve(targetRoot, RELEASE_PATCHES_PATH), {
     recursive: true,
   });
-  const runtimePackageDestination = resolve(targetRoot, HARNESSOS_PI_RUNTIME_PACKAGE_PATH);
+  const runtimePackageDestination = resolve(targetRoot, HARNESSOS_OA_RUNTIME_PACKAGE_PATH);
   mkdirSync(dirname(runtimePackageDestination), { recursive: true });
-  cpSync(resolve(repoRoot, HARNESSOS_PI_RUNTIME_PACKAGE_PATH), runtimePackageDestination);
+  cpSync(resolve(repoRoot, HARNESSOS_OA_RUNTIME_PACKAGE_PATH), runtimePackageDestination);
 }
 
 function writeMacManifestFixtures(targetRoot: string): { arm64Path: string; x64Path: string } {

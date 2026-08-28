@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import * as StockPi from "@earendil-works/pi-coding-agent";
-import * as ProductPi from "@harnessos/pi-coding-agent";
+import * as OARuntime from "@harnessos/oa-runtime";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { AgentGatewayMcpToolDescriptor } from "../agentGateway/mcpInjection.ts";
@@ -99,7 +99,7 @@ function foreignExtension(name: string): StockPi.InlineExtension {
 
 describe.each([
   ["stock", StockPi as PiRuntime],
-  ["product", ProductPi as unknown as PiRuntime],
+  ["product", OARuntime as unknown as PiRuntime],
 ])("eager AgentGateway Host projection on %s Pi", (_label, runtime) => {
   it("registers every canonical definition active without touching another owner", async () => {
     const handle = makeAgentGatewayHostExtension({

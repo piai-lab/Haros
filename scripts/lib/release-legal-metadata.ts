@@ -28,7 +28,7 @@ const PI_PACKAGE_NAMES = [
   "@earendil-works/pi-protocol",
   "@earendil-works/pi-telemetry",
   "@earendil-works/pi-tui",
-  "@harnessos/pi-coding-agent",
+  "@harnessos/oa-runtime",
 ] as const;
 
 interface PackageManifest {
@@ -672,7 +672,7 @@ export function renderReleaseLegalMetadata(
     specVersion: "1.6",
     version: 1,
     metadata: {
-      component: { type: "application", name: "OmniMind", version: appVersion, "bom-ref": appRef },
+      component: { type: "application", name: "HarnessOS", version: appVersion, "bom-ref": appRef },
       properties: [
         { name: "harnessos:derivation", value: inventory.derivation },
         { name: "harnessos:target-kind", value: inventory.target.kind },
@@ -722,7 +722,7 @@ export function renderReleaseLegalMetadata(
   };
 
   const notices: string[] = [
-    "OmniMind third-party notices",
+    "HarnessOS third-party notices",
     "==============================",
     "",
     `Application version: ${appVersion}`,
@@ -737,8 +737,8 @@ export function renderReleaseLegalMetadata(
           "the sibling release-dependencies.json before a release artifact is accepted.",
         ]
       : [
-          "This checked-in copy is a development-host snapshot for local browsing and source checks.",
-          "Each release target regenerates these files from its staged dependency closure and is",
+          "This development-host snapshot is generated on demand and is not committed to source.",
+          "Each packaged target regenerates these files from its staged dependency closure and is",
           "accepted only after the resulting inventory exactly matches that target's packaged ASAR.",
         ]),
     "",

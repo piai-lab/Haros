@@ -11,18 +11,18 @@ import type {
 import { Effect, Layer } from "effect";
 
 import { ServerConfig } from "../../config.ts";
-import { loadOmniMindCodingAgentModule, resolveOmniMindAgentDir } from "../omnimindAgentRuntime.ts";
+import { loadOARuntimeModule, resolveOAAgentDir } from "../oaRuntime.ts";
 import { OmniMindEcosystem, type OmniMindEcosystemShape } from "../Services/OmniMindEcosystem.ts";
 import { ProviderService } from "../Services/ProviderService.ts";
 
-type OmniMindCodingAgentModule = Awaited<ReturnType<typeof loadOmniMindCodingAgentModule>>;
+type OARuntimeModule = Awaited<ReturnType<typeof loadOARuntimeModule>>;
 
 export interface OmniMindEcosystemLiveOptions {
-  readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
+  readonly loadModule?: () => Promise<OARuntimeModule>;
 }
 
 function createOwners(input: {
-  readonly sdk: OmniMindCodingAgentModule;
+  readonly sdk: OARuntimeModule;
   readonly agentDir: string;
 }) {
   const settingsManager = input.sdk.SettingsManager.create(input.agentDir, input.agentDir, {
@@ -37,7 +37,7 @@ function createOwners(input: {
 }
 
 async function snapshot(input: {
-  readonly sdk: OmniMindCodingAgentModule;
+  readonly sdk: OARuntimeModule;
   readonly agentDir: string;
   readonly checkUpdates?: boolean;
 }): Promise<OmniMindEcosystemSnapshot> {
@@ -92,13 +92,13 @@ export function makeOmniMindEcosystemLive(options: OmniMindEcosystemLiveOptions 
         });
 
       const withOwners = async () => {
-        const sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
-        const agentDir = resolveOmniMindAgentDir(config.baseDir);
+        const sdk = await (options.loadModule ?? loadOARuntimeModule)();
+        const agentDir = resolveOAAgentDir(config.baseDir);
         return { sdk, agentDir, ...createOwners({ sdk, agentDir }) };
       };
       const readSnapshot = async (checkUpdates = false) => {
-        const sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
-        const agentDir = resolveOmniMindAgentDir(config.baseDir);
+        const sdk = await (options.loadModule ?? loadOARuntimeModule)();
+        const agentDir = resolveOAAgentDir(config.baseDir);
         return snapshot({ sdk, agentDir, checkUpdates });
       };
       const mutationResult = async (

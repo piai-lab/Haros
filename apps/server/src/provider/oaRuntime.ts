@@ -1,5 +1,5 @@
-// FILE: omnimindAgentRuntime.ts
-// Purpose: Owns the bundled OmniMind Agent package loader and fixed private state root.
+// FILE: oaRuntime.ts
+// Purpose: Owns the bundled OA Engine runtime loader and fixed HarnessOS-private state root.
 // Layer: Server provider runtime
 
 import { constants as fsConstants, lstatSync, realpathSync } from "node:fs";
@@ -7,23 +7,23 @@ import { lstat, open, realpath } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import type { ModelConfigReader } from "@harnessos/pi-coding-agent";
+import type { ModelConfigReader } from "@harnessos/oa-runtime";
 
 import { lazyModule } from "../lazyModule.ts";
 
-export type OmniMindCodingAgentModule = typeof import("@harnessos/pi-coding-agent");
+export type OARuntimeModule = typeof import("@harnessos/oa-runtime");
 
 // Keep this lazy because the SDK includes native modules that should not load at
 // Server startup. The package is rebuilt from the same pinned source; this
 // product-owned package now publishes its exact enhanced types, so this loader
 // does not cast through the stock module or maintain a parallel API description.
-export const loadOmniMindCodingAgentModule: () => Promise<OmniMindCodingAgentModule> = lazyModule(
-  () => import("@harnessos/pi-coding-agent"),
+export const loadOARuntimeModule: () => Promise<OARuntimeModule> = lazyModule(
+  () => import("@harnessos/oa-runtime"),
 );
 
 const MAX_PRIVATE_RUNTIME_FILE_BYTES = 4 * 1024 * 1024;
 const PRIVATE_RUNTIME_READ_CHUNK_BYTES = 64 * 1024;
-export type OmniMindPrivateRuntimeFilename = "auth.json" | "models.json" | "models-store.json";
+export type OAPrivateRuntimeFilename = "auth.json" | "models.json" | "models-store.json";
 
 function isMissingPathError(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
@@ -54,16 +54,16 @@ function resolveExistingPhysicalPath(value: string): string | null {
     if (isMissingPathError(error)) {
       return null;
     }
-    throw new Error("OmniMind Agent state isolation could not be verified");
+    throw new Error("OA state isolation could not be verified");
   }
 }
 
-export function resolveOmniMindAgentDir(serverBaseDir: string): string {
+export function resolveOAAgentDir(serverBaseDir: string): string {
   const resolvedBaseDir = path.resolve(serverBaseDir);
   const canonicalHomeDir = realpathSync.native(os.homedir());
   const lexicalStockPiDir = path.join(canonicalHomeDir, ".pi");
   if (isWithinPhysicalRoot(resolvedBaseDir, lexicalStockPiDir)) {
-    throw new Error("OmniMind Agent state must be physically separate from stock Pi state");
+    throw new Error("OA state must be physically separate from stock Pi state");
   }
   const canonicalBaseDir = realpathSync.native(resolvedBaseDir);
   const physicalStockPiDir = resolveExistingPhysicalPath(lexicalStockPiDir);
@@ -74,30 +74,30 @@ export function resolveOmniMindAgentDir(serverBaseDir: string): string {
       (isWithinPhysicalRoot(canonicalBaseDir, physicalStockPiDir) ||
         physicalRootsOverlap(agentDir, physicalStockPiDir)))
   ) {
-    throw new Error("OmniMind Agent state must be physically separate from stock Pi state");
+    throw new Error("OA state must be physically separate from stock Pi state");
   }
 
   try {
     const metadata = lstatSync(agentDir);
     if (metadata.isSymbolicLink() || !metadata.isDirectory()) {
-      throw new Error("OmniMind Agent state root is not a private directory");
+      throw new Error("OA state root is not a private directory");
     }
     const canonicalAgentDir = realpathSync.native(agentDir);
     if (
       canonicalAgentDir !== agentDir ||
       !canonicalAgentDir.startsWith(`${canonicalBaseDir}${path.sep}`)
     ) {
-      throw new Error("OmniMind Agent state root escapes its private directory");
+      throw new Error("OA state root escapes its private directory");
     }
     for (const filename of ["auth.json", "models.json", "models-store.json"]) {
       const filePath = path.join(canonicalAgentDir, filename);
       try {
         const fileMetadata = lstatSync(filePath);
         if (fileMetadata.isSymbolicLink() || !fileMetadata.isFile() || fileMetadata.nlink !== 1) {
-          throw new Error("OmniMind Agent state contains a non-private runtime file");
+          throw new Error("OA state contains a non-private runtime file");
         }
         if (path.dirname(realpathSync.native(filePath)) !== canonicalAgentDir) {
-          throw new Error("OmniMind Agent runtime file escapes its private directory");
+          throw new Error("OA runtime file escapes its private directory");
         }
       } catch (error) {
         if (!isMissingPathError(error)) {
@@ -120,35 +120,35 @@ function sameFileIdentity(
   return left.dev === right.dev && left.ino === right.ino;
 }
 
-type OmniMindPrivateFileIdentity = Pick<Awaited<ReturnType<typeof lstat>>, "dev" | "ino">;
+type OAPrivateFileIdentity = Pick<Awaited<ReturnType<typeof lstat>>, "dev" | "ino">;
 
-async function readOmniMindPrivateTextFileWithIdentity(input: {
+async function readOAPrivateTextFileWithIdentity(input: {
   readonly agentDir: string;
-  readonly filename: OmniMindPrivateRuntimeFilename;
+  readonly filename: OAPrivateRuntimeFilename;
   readonly signal?: AbortSignal;
-}): Promise<{ readonly content: string; readonly identity: OmniMindPrivateFileIdentity }> {
+}): Promise<{ readonly content: string; readonly identity: OAPrivateFileIdentity }> {
   input.signal?.throwIfAborted();
   const expectedAgentDir = path.resolve(input.agentDir);
   const rootBefore = await lstat(expectedAgentDir);
   if (rootBefore.isSymbolicLink() || !rootBefore.isDirectory()) {
-    throw new Error("OmniMind Agent state root is not a private directory");
+    throw new Error("OA state root is not a private directory");
   }
   const physicalAgentDir = await realpath(expectedAgentDir);
 
   const filePath = path.join(expectedAgentDir, input.filename);
   if (path.dirname(filePath) !== expectedAgentDir) {
-    throw new Error("OmniMind Agent state read escaped its private directory");
+    throw new Error("OA state read escaped its private directory");
   }
   const leafBefore = await lstat(filePath);
   if (leafBefore.isSymbolicLink() || !leafBefore.isFile() || leafBefore.nlink !== 1) {
-    throw new Error("OmniMind Agent state is not a private regular file");
+    throw new Error("OA state is not a private regular file");
   }
   const physicalPath = await realpath(filePath);
   if (
     canonicalPathForComparison(path.dirname(physicalPath)) !==
     canonicalPathForComparison(physicalAgentDir)
   ) {
-    throw new Error("OmniMind Agent state escaped its private directory");
+    throw new Error("OA state escaped its private directory");
   }
 
   const flags = fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0);
@@ -161,7 +161,7 @@ async function readOmniMindPrivateTextFileWithIdentity(input: {
       handleMetadata.nlink !== 1 ||
       handleMetadata.size > MAX_PRIVATE_RUNTIME_FILE_BYTES
     ) {
-      throw new Error("OmniMind Agent state changed or exceeds the safe read boundary");
+      throw new Error("OA state changed or exceeds the safe read boundary");
     }
 
     const chunks: Uint8Array[] = [];
@@ -176,7 +176,7 @@ async function readOmniMindPrivateTextFileWithIdentity(input: {
       bytesRead += read.bytesRead;
     }
     if (bytesRead > MAX_PRIVATE_RUNTIME_FILE_BYTES) {
-      throw new Error("OmniMind Agent state exceeds the safe read boundary");
+      throw new Error("OA state exceeds the safe read boundary");
     }
     input.signal?.throwIfAborted();
 
@@ -195,7 +195,7 @@ async function readOmniMindPrivateTextFileWithIdentity(input: {
       canonicalPathForComparison(path.dirname(await realpath(filePath))) !==
         canonicalPathForComparison(physicalAgentDir)
     ) {
-      throw new Error("OmniMind Agent state changed during the safe read");
+      throw new Error("OA state changed during the safe read");
     }
 
     const content = new Uint8Array(bytesRead);
@@ -214,49 +214,49 @@ async function readOmniMindPrivateTextFileWithIdentity(input: {
 }
 
 /**
- * Reads one fixed OmniMind Agent state leaf without following links or copying
+ * Reads one fixed OA state leaf without following links or copying
  * secret-bearing bytes to a second path. Parsing remains the caller's owner.
  */
-export async function readOmniMindPrivateTextFile(input: {
+export async function readOAPrivateTextFile(input: {
   readonly agentDir: string;
-  readonly filename: OmniMindPrivateRuntimeFilename;
+  readonly filename: OAPrivateRuntimeFilename;
   readonly signal?: AbortSignal;
 }): Promise<string> {
-  return (await readOmniMindPrivateTextFileWithIdentity(input)).content;
+  return (await readOAPrivateTextFileWithIdentity(input)).content;
 }
 
-export function createOmniMindModelsConfigReader(agentDir: string): ModelConfigReader {
-  let observedIdentity: OmniMindPrivateFileIdentity | undefined;
+export function createOAModelsConfigReader(agentDir: string): ModelConfigReader {
+  let observedIdentity: OAPrivateFileIdentity | undefined;
   return async ({ signal }) => {
     signal?.throwIfAborted();
     const modelsPath = path.join(path.resolve(agentDir), "models.json");
     try {
       const currentIdentity = await lstat(modelsPath);
       if (observedIdentity && !sameFileIdentity(currentIdentity, observedIdentity)) {
-        throw new Error("OmniMind Agent state changed during the safe read");
+        throw new Error("OA state changed during the safe read");
       }
     } catch (error) {
       if (isMissingPathError(error) && !observedIdentity) return undefined;
       if (isMissingPathError(error)) {
-        throw new Error("OmniMind Agent state changed during the safe read");
+        throw new Error("OA state changed during the safe read");
       }
       throw error;
     }
 
     try {
-      const result = await readOmniMindPrivateTextFileWithIdentity({
+      const result = await readOAPrivateTextFileWithIdentity({
         agentDir,
         filename: "models.json",
         ...(signal ? { signal } : {}),
       });
       if (observedIdentity && !sameFileIdentity(result.identity, observedIdentity)) {
-        throw new Error("OmniMind Agent state changed during the safe read");
+        throw new Error("OA state changed during the safe read");
       }
       observedIdentity ??= result.identity;
       return result.content;
     } catch (error) {
       if (isMissingPathError(error)) {
-        throw new Error("OmniMind Agent state changed during the safe read");
+        throw new Error("OA state changed during the safe read");
       }
       throw error;
     }

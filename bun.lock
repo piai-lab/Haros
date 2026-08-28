@@ -46,9 +46,9 @@
         "@earendil-works/pi-coding-agent": "0.84.3",
         "@effect/platform-node": "catalog:",
         "@effect/sql-sqlite-bun": "catalog:",
+        "@harnessos/oa-runtime": "file:../../vendor/oa-runtime-0.84.3.tgz",
         "@harnessos/om-ask": "workspace:*",
         "@harnessos/om-web-access": "workspace:*",
-        "@harnessos/pi-coding-agent": "file:../../vendor/omnimind-pi-coding-agent-0.84.3.tgz",
         "@opencode-ai/sdk": "^1.15.13",
         "@pierre/diffs": "^1.2.12",
         "@xterm/headless": "^6.0.0",
@@ -559,11 +559,11 @@
 
     "@harnessos/desktop": ["@harnessos/desktop@workspace:apps/desktop"],
 
+    "@harnessos/oa-runtime": ["@harnessos/oa-runtime@../../vendor/oa-runtime-0.84.3.tgz", { "dependencies": { "@earendil-works/pi-agent-core": "0.84.3", "@earendil-works/pi-ai": "0.84.3", "@earendil-works/pi-client": "0.84.3", "@earendil-works/pi-protocol": "0.84.3", "@earendil-works/pi-tui": "0.84.3", "@silvia-odwyer/photon-node": "0.3.4", "chalk": "5.6.2", "cross-spawn": "7.0.6", "diff": "8.0.4", "grok-mermaid": "0.2.2", "highlight.js": "10.7.3", "hosted-git-info": "9.0.3", "ignore": "7.0.5", "jiti": "2.7.0", "jsonc-parser": "3.3.1", "minimatch": "10.2.5", "proper-lockfile": "4.1.2", "semver": "7.8.0", "typebox": "1.3.7", "undici": "8.9.0", "yaml": "2.9.0" }, "optionalDependencies": { "@mariozechner/clipboard": "0.3.9" } }, "sha512-ovBPAzjEZan3vMo1icSNh+cB1F2DmdkX1h3Ixnx/pjvOpjTyp2GVBwoWnzs7Ls6LK8juAar/9vcm3Yw5+SFyDw=="],
+
     "@harnessos/om-ask": ["@harnessos/om-ask@workspace:packages/om-ask"],
 
     "@harnessos/om-web-access": ["@harnessos/om-web-access@workspace:packages/om-web-access"],
-
-    "@harnessos/pi-coding-agent": ["@omnimind/pi-coding-agent@../../vendor/omnimind-pi-coding-agent-0.84.3.tgz", { "dependencies": { "@earendil-works/pi-agent-core": "0.84.3", "@earendil-works/pi-ai": "0.84.3", "@earendil-works/pi-client": "0.84.3", "@earendil-works/pi-protocol": "0.84.3", "@earendil-works/pi-tui": "0.84.3", "@silvia-odwyer/photon-node": "0.3.4", "chalk": "5.6.2", "cross-spawn": "7.0.6", "diff": "8.0.4", "grok-mermaid": "0.2.2", "highlight.js": "10.7.3", "hosted-git-info": "9.0.3", "ignore": "7.0.5", "jiti": "2.7.0", "jsonc-parser": "3.3.1", "minimatch": "10.2.5", "proper-lockfile": "4.1.2", "semver": "7.8.0", "typebox": "1.3.7", "undici": "8.9.0", "yaml": "2.9.0" }, "optionalDependencies": { "@mariozechner/clipboard": "0.3.9" } }, "sha512-GHVfEpov68abIfvG/D7nR3+8gkPgNlOjCJo4fuiWrvO3EA/tAct5mYwBioZjYrnHpkWfs8HJT9mVjHDHSJuxvA=="],
 
     "@harnessos/scripts": ["@harnessos/scripts@workspace:scripts"],
 
@@ -3037,7 +3037,7 @@
 
     "@electron/windows-sign/fs-extra": ["fs-extra@11.3.5", "", { "dependencies": { "graceful-fs": "^4.2.0", "jsonfile": "^6.0.1", "universalify": "^2.0.0" } }, "sha512-eKpRKAovdpZtR1WopLHxlBWvAgPny3c4gX1G5Jhwmmw4XJj0ifSD5qB5TOo8hmA0wlRKDAOAhEE1yVPgs6Fgcg=="],
 
-    "@harnessos/pi-coding-agent/semver": ["semver@7.8.0", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-AcM7dV/5ul4EekoQ29Agm5vri8JNqRyj39o0qpX6vDF2GZrtutZl5RwgD1XnZjiTAfncsJhMI48QQH3sN87YNA=="],
+    "@harnessos/oa-runtime/semver": ["semver@7.8.0", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-AcM7dV/5ul4EekoQ29Agm5vri8JNqRyj39o0qpX6vDF2GZrtutZl5RwgD1XnZjiTAfncsJhMI48QQH3sN87YNA=="],
 
     "@inquirer/core/signal-exit": ["signal-exit@4.1.0", "", {}, "sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw=="],
 

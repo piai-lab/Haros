@@ -13,7 +13,7 @@ const PI_AI_INTEGRITY =
   "sha512-M0YUV8vNO3y2WwWSyY8ijKJV5W4gkSUixuvk+Z00ZBjsyMfsdXfITsHEwP1UIf09YRWXT6oGn0GlCamt+P32XQ==";
 const PATCH_SHA256 = "23cd289d663b21fa8a3f6fce4e1c90543662793adad217f4268ad40c1684b53a";
 const STOCK_PATCH_SHA256 = "b5c6c034862394e59eca73ef4d143a4618362a610312bd82238f9dd6b510e063";
-const PRODUCT_ARCHIVE_NAME = `omnimind-pi-coding-agent-${PI_VERSION}.tgz`;
+const PRODUCT_ARCHIVE_NAME = `oa-runtime-${PI_VERSION}.tgz`;
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = path.resolve(SCRIPT_DIR, "..");
 const PATCH_PATH = path.join(
@@ -62,8 +62,7 @@ function parseArguments(argv) {
       fail(`Unknown argument: ${argument}`);
     }
   }
-  if (!source)
-    fail("Usage: node scripts/vendor-omnimind-pi-runtime.mjs --source <clean-pi-checkout>");
+  if (!source) fail("Usage: node scripts/vendor-oa-runtime.mjs --source <clean-pi-checkout>");
   return { source: path.resolve(source), output };
 }
 
@@ -125,8 +124,8 @@ async function prepareGeneratedModelData(worktree, temporaryRoot) {
 async function writeProductManifest(worktree) {
   const manifestPath = path.join(worktree, "packages", "coding-agent", "package.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  manifest.name = "@harnessos/pi-coding-agent";
-  manifest.description = `OmniMind product-owned Pi ${PI_VERSION} runtime`;
+  manifest.name = "@harnessos/oa-runtime";
+  manifest.description = `HarnessOS OA runtime derived from Pi ${PI_VERSION}`;
   manifest.piConfig = { configDir: ".harnessos", name: "oa" };
   manifest.files = ["dist", "LICENSE"];
   delete manifest.bin;
@@ -176,7 +175,7 @@ async function main() {
     fail("Pi source checkout must be clean");
   }
 
-  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "omnimind-pi-vendor-"));
+  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "harnessos-oa-runtime-"));
   const worktree = path.join(temporaryRoot, "pi");
   try {
     run("git", ["clone", "--quiet", "--no-hardlinks", source, worktree]);

@@ -19,7 +19,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { Api, ImageContent, Model, TextContent } from "@earendil-works/pi-ai";
-import type { PromptOutcome as OmniMindPromptOutcome } from "@harnessos/pi-coding-agent";
+import type { PromptOutcome as OAPromptOutcome } from "@harnessos/oa-runtime";
 import {
   ASK_USER_TOOL_NAME,
   type AskUserProductInteractionPort,
@@ -141,10 +141,10 @@ import {
   sanitizeEngineWebSurfacePayload,
 } from "../../engineWebSurface/engineWebSurfaceHost.ts";
 import {
-  createOmniMindModelsConfigReader,
-  loadOmniMindCodingAgentModule,
-  resolveOmniMindAgentDir,
-} from "../omnimindAgentRuntime.ts";
+  createOAModelsConfigReader,
+  loadOARuntimeModule,
+  resolveOAAgentDir,
+} from "../oaRuntime.ts";
 import { getOmniMindModelRuntimeMutationRevision } from "../omnimindModelRuntimeMutation.ts";
 import { resolveRealPathWithinRoot } from "../../workspace/realPathContainment.ts";
 import { providerExecutionStructure } from "../providerExecutionStructure.ts";
@@ -252,7 +252,7 @@ type PiAgentRuntime = Awaited<ReturnType<PiCodingAgentModule["createAgentSession
 type PiShellConfig = ReturnType<PiCodingAgentModule["getShellConfig"]>;
 type PiPromptSettlementEvent = {
   readonly type: "prompt_handled";
-  readonly outcome: Extract<OmniMindPromptOutcome, { readonly kind: "handled-without-agent" }>;
+  readonly outcome: Extract<OAPromptOutcome, { readonly kind: "handled-without-agent" }>;
 };
 type PiTurnSettlementInput = {
   readonly state: "completed" | "failed" | "interrupted" | "cancelled";
@@ -442,8 +442,8 @@ const loadPiCodingAgentModule: () => Promise<PiCodingAgentModule> = lazyModule(
 // Keep the compatibility boundary limited to the exact SDK members consumed by
 // this shared session adapter. Model-services code uses the product module's
 // real exported type and never casts the complete module to stock Pi.
-const loadOmniMindAdapterModule: () => Promise<PiCodingAgentModule> = lazyModule(async () => {
-  const sdk = await loadOmniMindCodingAgentModule();
+const loadOAAdapterModule: () => Promise<PiCodingAgentModule> = lazyModule(async () => {
+  const sdk = await loadOARuntimeModule();
   return {
     ModelRegistry: sdk.ModelRegistry,
     ModelRuntime: sdk.ModelRuntime,
@@ -461,11 +461,11 @@ const loadOmniMindAdapterModule: () => Promise<PiCodingAgentModule> = lazyModule
 });
 
 export async function createOmniMindModelRuntime(agentDir: string) {
-  const sdk = await loadOmniMindCodingAgentModule();
+  const sdk = await loadOARuntimeModule();
   return sdk.ModelRuntime.create({
     authPath: path.join(agentDir, "auth.json"),
     modelsPath: null,
-    modelsConfigReader: createOmniMindModelsConfigReader(agentDir),
+    modelsConfigReader: createOAModelsConfigReader(agentDir),
     modelsStorePath: path.join(agentDir, "models-store.json"),
   });
 }
@@ -494,9 +494,9 @@ const STOCK_PI_FAMILY = {
 const HARNESSOS_AGENT_FAMILY = {
   provider: "oa",
   displayName: "OmniMind",
-  loadModule: loadOmniMindAdapterModule,
+  loadModule: loadOAAdapterModule,
   // Product state is App-owned and cannot be redirected into stock Pi state.
-  resolveAgentDir: (_requestedAgentDir, serverBaseDir) => resolveOmniMindAgentDir(serverBaseDir),
+  resolveAgentDir: (_requestedAgentDir, serverBaseDir) => resolveOAAgentDir(serverBaseDir),
   createModelRuntime: async (agentDir: string) =>
     (await createOmniMindModelRuntime(agentDir)) as unknown as ModelRuntime,
 } satisfies PiFamilyAdapterConfig<"oa">;
@@ -2572,7 +2572,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     const handlePromptOutcome = (
       context: PiSessionContext,
       turnId: TurnId,
-      outcome: OmniMindPromptOutcome | void,
+      outcome: OAPromptOutcome | void,
     ) => {
       if (
         context.activeTurnId !== turnId ||
@@ -2608,7 +2608,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     const resolvePromptSubmission = (
       context: PiSessionContext,
       turnId: TurnId,
-      outcome: OmniMindPromptOutcome | void,
+      outcome: OAPromptOutcome | void,
     ) => {
       const pending = context.pendingPromptSubmission;
       if (!pending || pending.turnId !== turnId) return;
@@ -2628,12 +2628,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       turnId: TurnId,
       text: string,
       images: ReadonlyArray<ImageContent>,
-    ): Promise<OmniMindPromptOutcome | void> => {
+    ): Promise<OAPromptOutcome | void> => {
       context.pendingPromptSubmission = { turnId };
       return context.runtime.session.prompt(
         text,
         images.length > 0 ? { images: [...images] } : undefined,
-      ) as Promise<OmniMindPromptOutcome | void>;
+      ) as Promise<OAPromptOutcome | void>;
     };
 
     const handleSessionEvent = (context: PiSessionContext, event: AgentSessionEvent) => {

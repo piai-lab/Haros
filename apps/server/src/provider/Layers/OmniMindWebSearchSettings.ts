@@ -19,7 +19,7 @@ import { Effect, Layer } from "effect";
 
 import { ServerConfig } from "../../config.ts";
 import { Open } from "../../open.ts";
-import { resolveOmniMindAgentDir } from "../omnimindAgentRuntime.ts";
+import { resolveOAAgentDir } from "../oaRuntime.ts";
 import {
   OmniMindWebSearchSettings,
   type OmniMindWebSearchSettingsShape,
@@ -34,7 +34,7 @@ export const OmniMindWebSearchSettingsLive = Layer.effect(
   Effect.gen(function* () {
     const config = yield* ServerConfig;
     const open = yield* Open;
-    const service = getWebSearchConfigService(resolveOmniMindAgentDir(config.baseDir));
+    const service = getWebSearchConfigService(resolveOAAgentDir(config.baseDir));
     const inFlight = new Map<string, Promise<unknown>>();
 
     const read = (ensure: boolean, knownRevision?: string): OmniMindWebSearchReadResult => {

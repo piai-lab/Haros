@@ -30,6 +30,9 @@ release/
 apps/web/.playwright
 apps/web/playwright-report
 apps/web/test-results
+/apps/web/public/licenses/THIRD-PARTY-NOTICES.txt
+/apps/web/public/licenses/release-dependencies.json
+/apps/web/public/licenses/sbom.cdx.json
 .playwright-cli/
 output/playwright/
 apps/web/src/components/__screenshots__
