@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   describeThreadUnblockResult,
   isProviderDeliveryReconciliationConflict,
-  PROVIDER_DELIVERY_RECONCILIATION_CONFLICT_CODE,
+  ENGINE_DELIVERY_RECONCILIATION_CONFLICT_CODE,
   unblockThreadFromClient,
 } from "./threadUnblock";
 
@@ -21,7 +21,7 @@ function blocker(input: {
   readonly state: "dead" | "uncertain";
 }): OrchestrationListProviderDeliveryBlockersResult[number] {
   return {
-    consumerName: "provider-command-reactor.v1",
+    consumerName: "engine-command-reactor.v1",
     eventSequence: input.eventSequence,
     eventId: "event-1",
     eventType: "thread.turn-start-requested",
@@ -29,7 +29,7 @@ function blocker(input: {
     threadId,
     state: input.state,
     attemptCount: 1,
-    lastError: "External provider command claim expired without a durable acceptance result;",
+    lastError: "External engine command claim expired without a durable acceptance result;",
     updatedAt: "2026-07-26T10:00:00.000Z",
     lastReconciliationOutcome: null,
     lastReconciledAt: null,
@@ -39,8 +39,8 @@ function blocker(input: {
 }
 
 function conflictError() {
-  return Object.assign(new Error("Provider delivery no longer matches the requested thread."), {
-    code: PROVIDER_DELIVERY_RECONCILIATION_CONFLICT_CODE,
+  return Object.assign(new Error("Engine delivery no longer matches the requested thread."), {
+    code: ENGINE_DELIVERY_RECONCILIATION_CONFLICT_CODE,
   });
 }
 

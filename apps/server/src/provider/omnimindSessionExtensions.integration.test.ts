@@ -54,7 +54,7 @@ describe("bundled OmniMind Web Access composition", () => {
     ]);
     expect(JSON.parse(readFileSync(configPath, "utf8"))).toEqual({
       schemaVersion: 1,
-      provider: "auto",
+      engine: "auto",
       workflow: "auto-summary",
       autoOpenBrowser: false,
     });

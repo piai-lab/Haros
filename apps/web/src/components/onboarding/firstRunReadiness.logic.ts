@@ -1,4 +1,4 @@
-import type { ModelSelection, EngineKind } from "@harnessos/contracts";
+import type { EngineSelection, EngineKind } from "@harnessos/contracts";
 
 export type PassiveModelServicesState = "unknown" | "empty" | "configured" | "error";
 
@@ -11,12 +11,12 @@ export type FirstRunReadinessState =
   | "unknown";
 
 export function hasRememberedExactModelBinding(input: {
-  readonly providers: readonly EngineKind[];
-  readonly explicitExactModelSelections: Partial<Record<EngineKind, ModelSelection>>;
+  readonly engines: readonly EngineKind[];
+  readonly explicitExactEngineSelections: Partial<Record<EngineKind, EngineSelection>>;
 }): boolean {
-  return input.providers.some((provider) => {
-    const selection = input.explicitExactModelSelections[provider];
-    return selection?.provider === provider && selection.model.trim().length > 0;
+  return input.engines.some((engine) => {
+    const selection = input.explicitExactEngineSelections[engine];
+    return selection?.engine === engine && selection.model.trim().length > 0;
   });
 }
 

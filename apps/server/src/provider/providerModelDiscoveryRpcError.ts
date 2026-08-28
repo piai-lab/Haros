@@ -1,9 +1,9 @@
 // FILE: providerModelDiscoveryRpcError.ts
 // Purpose: Projects model-catalog failures into stable, credential-blind RPC recovery semantics.
-// Layer: Server provider transport projection
+// Layer: Server engine transport projection
 
 import {
-  PROVIDER_MODEL_DISCOVERY_ERROR_CODES,
+  ENGINE_MODEL_DISCOVERY_ERROR_CODES,
   WsRpcError,
   type EngineKind,
   type ServerProviderStatus,
@@ -11,77 +11,77 @@ import {
 import { Schema } from "effect";
 
 import {
-  ProviderAdapterProcessError,
-  ProviderAdapterRequestError,
-  ProviderAdapterValidationError,
-  ProviderUnsupportedError,
-  ProviderValidationError,
+  EngineAdapterProcessError,
+  EngineAdapterRequestError,
+  EngineAdapterValidationError,
+  EngineUnsupportedError,
+  EngineValidationError,
 } from "./Errors";
 
 const STARTUP_RETRY_AFTER_MS = 250;
 
 function statusForProvider(
   statuses: ReadonlyArray<ServerProviderStatus>,
-  provider: EngineKind,
+  engine: EngineKind,
 ): ServerProviderStatus | undefined {
-  return statuses.find((status) => status.provider === provider);
+  return statuses.find((status) => status.engine === engine);
 }
 
 export function toProviderModelDiscoveryRpcError(input: {
   readonly cause: unknown;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly statuses: ReadonlyArray<ServerProviderStatus>;
 }): WsRpcError {
   if (
-    Schema.is(ProviderAdapterValidationError)(input.cause) ||
-    Schema.is(ProviderValidationError)(input.cause)
+    Schema.is(EngineAdapterValidationError)(input.cause) ||
+    Schema.is(EngineValidationError)(input.cause)
   ) {
     return new WsRpcError({
-      message: "Provider model discovery configuration is invalid.",
-      code: PROVIDER_MODEL_DISCOVERY_ERROR_CODES.configuration,
+      message: "Engine model discovery configuration is invalid.",
+      code: ENGINE_MODEL_DISCOVERY_ERROR_CODES.configuration,
       retryable: false,
     });
   }
 
-  const status = statusForProvider(input.statuses, input.provider);
+  const status = statusForProvider(input.statuses, input.engine);
   if (status?.authStatus === "unauthenticated") {
     return new WsRpcError({
-      message: "Provider authentication is required before models can be discovered.",
-      code: PROVIDER_MODEL_DISCOVERY_ERROR_CODES.authRequired,
+      message: "Engine authentication is required before models can be discovered.",
+      code: ENGINE_MODEL_DISCOVERY_ERROR_CODES.authRequired,
       retryable: false,
     });
   }
   if (status && !status.available) {
     return new WsRpcError({
-      message: "Provider model discovery is unavailable.",
-      code: PROVIDER_MODEL_DISCOVERY_ERROR_CODES.unavailable,
+      message: "Engine model discovery is unavailable.",
+      code: ENGINE_MODEL_DISCOVERY_ERROR_CODES.unavailable,
       retryable: false,
     });
   }
 
   if (
-    Schema.is(ProviderAdapterRequestError)(input.cause) ||
-    Schema.is(ProviderAdapterProcessError)(input.cause)
+    Schema.is(EngineAdapterRequestError)(input.cause) ||
+    Schema.is(EngineAdapterProcessError)(input.cause)
   ) {
     return new WsRpcError({
-      message: "Provider model discovery is still starting.",
-      code: PROVIDER_MODEL_DISCOVERY_ERROR_CODES.starting,
+      message: "Engine model discovery is still starting.",
+      code: ENGINE_MODEL_DISCOVERY_ERROR_CODES.starting,
       retryable: true,
       retryAfterMs: STARTUP_RETRY_AFTER_MS,
     });
   }
 
-  if (Schema.is(ProviderUnsupportedError)(input.cause)) {
+  if (Schema.is(EngineUnsupportedError)(input.cause)) {
     return new WsRpcError({
-      message: "Provider model discovery is unavailable.",
-      code: PROVIDER_MODEL_DISCOVERY_ERROR_CODES.unavailable,
+      message: "Engine model discovery is unavailable.",
+      code: ENGINE_MODEL_DISCOVERY_ERROR_CODES.unavailable,
       retryable: false,
     });
   }
 
   return new WsRpcError({
-    message: "Provider model discovery is unavailable.",
-    code: PROVIDER_MODEL_DISCOVERY_ERROR_CODES.unavailable,
+    message: "Engine model discovery is unavailable.",
+    code: ENGINE_MODEL_DISCOVERY_ERROR_CODES.unavailable,
     retryable: false,
   });
 }

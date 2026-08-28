@@ -12,7 +12,7 @@ export type AgentGatewayCapability =
 export interface AgentGatewaySessionIdentity {
   readonly sessionKey: string;
   readonly threadId: ThreadId;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly issuedAt: number;
   readonly capabilities: ReadonlySet<AgentGatewayCapability>;
 }
@@ -24,7 +24,7 @@ export interface AgentGatewayIssuedSession extends AgentGatewaySessionIdentity {
 /**
  * Non-secret authority captured when an MCP HTTP request enters the gateway.
  *
- * Provider-session credentials can survive across turns until their adapter
+ * Engine-session credentials can survive across turns until their adapter
  * explicitly retires them. Tool-call authority is narrower: one request/batch is
  * pinned to the exact running turn observed at ingress and must never be
  * rebound to a later `latestTurn` while it executes.
@@ -32,19 +32,19 @@ export interface AgentGatewayIssuedSession extends AgentGatewaySessionIdentity {
 export interface AgentGatewayTurnAuthority {
   readonly sessionKey: string;
   readonly threadId: ThreadId;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly turnId: string;
 }
 
 export interface AgentGatewaySessionRegistryShape {
-  readonly issue: (threadId: ThreadId, provider: EngineKind) => AgentGatewayIssuedSession;
+  readonly issue: (threadId: ThreadId, engine: EngineKind) => AgentGatewayIssuedSession;
   readonly verify: (token: string) => AgentGatewaySessionIdentity | null;
   readonly bindTurnAuthority: (token: string, turnId: string) => AgentGatewayTurnAuthority | null;
   readonly verifyTurnAuthority: (authority: AgentGatewayTurnAuthority) => boolean;
   /**
    * Permanently retire this credential's authority for one terminal turn.
    *
-   * A provider-session bearer may authenticate MCP discovery traffic for the
+   * A engine-session bearer may authenticate MCP discovery traffic for the
    * rest of its runtime, but it can never acquire tool-call authority for a
    * later turn after this transition.
    */

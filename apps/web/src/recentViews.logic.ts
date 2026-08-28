@@ -38,13 +38,13 @@ export interface RecentViewDisplayEntry {
   isPinned: boolean;
   isSplit: boolean;
   isTerminal: boolean;
-  provider?: EngineKind | undefined;
+  engine?: EngineKind | undefined;
   terminalVisualIdentity?: ResolvedTerminalVisualIdentity | undefined;
 }
 
 export type RecentViewDisplayIcon =
   | { kind: "chat" }
-  | { kind: "provider"; provider: EngineKind }
+  | { kind: "engine"; engine: EngineKind }
   | { kind: "terminal"; iconKey: TerminalIconKey }
   | { kind: "settings" }
   | { kind: "plugins" };
@@ -65,7 +65,7 @@ export interface RecentViewAvailability {
 const SETTINGS_LABELS: Readonly<Record<string, string>> = {
   general: "General",
   appearance: "Appearance",
-  providers: "Providers",
+  engines: "Engines",
   integrations: "Integrations",
   keybindings: "Keybindings",
 };
@@ -181,14 +181,14 @@ function normalizeAvailableView(
 }
 
 function resolveThreadDisplayIcon(input: {
-  provider?: EngineKind | undefined;
+  engine?: EngineKind | undefined;
   terminalVisualIdentity?: ResolvedTerminalVisualIdentity | null | undefined;
 }): RecentViewDisplayIcon {
   if (input.terminalVisualIdentity) {
     return { kind: "terminal", iconKey: input.terminalVisualIdentity.iconKey };
   }
-  if (input.provider) {
-    return { kind: "provider", provider: input.provider };
+  if (input.engine) {
+    return { kind: "engine", engine: input.engine };
   }
   return { kind: "chat" };
 }
@@ -248,7 +248,7 @@ export function buildRecentViewDisplayEntries(input: {
         const summary = input.threadsById[view.threadId];
         const thread = summary ?? input.draftThreadsById?.[view.threadId];
         const projectName = thread ? projectNameById.get(thread.projectId) : null;
-        const provider = summary?.modelSelection.provider;
+        const engine = summary?.engineSelection.engine;
         const rawTitle = normalizeOptionalId(thread?.title) ?? "New chat";
         const title = resolveThreadDisplayTitle({
           title: rawTitle,
@@ -262,8 +262,8 @@ export function buildRecentViewDisplayEntries(input: {
         ].filter((part): part is string => Boolean(part));
         return {
           ...base,
-          icon: resolveThreadDisplayIcon({ provider, terminalVisualIdentity }),
-          provider,
+          icon: resolveThreadDisplayIcon({ engine, terminalVisualIdentity }),
+          engine,
           title,
           subtitle: subtitleParts.join(" · "),
           isPinned: pinnedThreadIds.has(view.threadId) || Boolean(thread?.isPinned),

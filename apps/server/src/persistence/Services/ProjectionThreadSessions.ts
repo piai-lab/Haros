@@ -1,7 +1,7 @@
 /**
  * ProjectionThreadSessionRepository - Repository interface for thread sessions.
  *
- * Owns persistence operations for projected provider-session linkage and
+ * Owns persistence operations for projected engine-session linkage and
  * runtime status for each thread.
  *
  * @module ProjectionThreadSessionRepository

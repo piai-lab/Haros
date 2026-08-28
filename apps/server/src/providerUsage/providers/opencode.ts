@@ -19,7 +19,7 @@ import {
   needsAuthSnapshot,
   unsupportedSnapshot,
 } from "../parse";
-import type { ProviderUsageContext, ProviderUsageFetcher } from "../types";
+import type { EngineUsageContext, EngineUsageFetcher } from "../types";
 
 const SOURCE = "opencode-go-usage";
 const USAGE_URL = "https://opencode.ai/zen/go/v1/usage";
@@ -33,7 +33,7 @@ const WINDOW_MINUTES = [
 ] as const;
 
 async function readAuthRecord(
-  ctx: ProviderUsageContext,
+  ctx: EngineUsageContext,
 ): Promise<{ path: string; record: Record<string, unknown> } | null> {
   for (const authPath of resolveOpenCodeCompatibleAuthPaths({
     homeDir: ctx.homeDir,
@@ -74,7 +74,7 @@ export function parseOpenCodeGoUsage(input: { json: unknown; nowMs: number }) {
     });
   }
   return buildSnapshot({
-    provider: "opencode",
+    engine: "opencode",
     nowMs: input.nowMs,
     status: "ok",
     source: SOURCE,
@@ -85,7 +85,7 @@ export function parseOpenCodeGoUsage(input: { json: unknown; nowMs: number }) {
 
 function signedInWithoutGoQuota(nowMs: number) {
   return buildSnapshot({
-    provider: "opencode",
+    engine: "opencode",
     nowMs,
     status: "ok",
     source: SOURCE,
@@ -99,8 +99,8 @@ function signedInWithoutGoQuota(nowMs: number) {
   });
 }
 
-export const opencodeUsageFetcher: ProviderUsageFetcher = {
-  provider: "opencode",
+export const opencodeUsageFetcher: EngineUsageFetcher = {
+  engine: "opencode",
   async cacheKey(ctx) {
     const auth = await readAuthRecord(ctx);
     if (!auth) return `${ctx.homeDir}:none`;
@@ -119,7 +119,7 @@ export const opencodeUsageFetcher: ProviderUsageFetcher = {
 
     try {
       const result = await fetchJson({
-        service: "provider-usage-opencode",
+        service: "engine-usage-opencode",
         url: USAGE_URL,
         allowedOrigins: [USAGE_ORIGIN],
         headers: { Authorization: `Bearer ${goKey}` },

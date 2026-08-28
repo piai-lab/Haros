@@ -1,6 +1,6 @@
 // FILE: promptAttachments.test.ts
-// Purpose: Locks provider prompt attachment filtering so UI-only context chips do not reach native providers.
-// Layer: Provider adapter utility tests
+// Purpose: Locks engine prompt attachment filtering so UI-only context chips do not reach native engines.
+// Layer: Engine adapter utility tests
 // Depends on: promptAttachments helper and shared chat attachment contracts.
 
 import { MessageId, type ChatAttachment } from "@harnessos/contracts";
@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { filterProviderPromptImageAttachments } from "./promptAttachments.ts";
 
 describe("filterProviderPromptImageAttachments", () => {
-  it("keeps images while dropping assistant selections from provider-native prompts", () => {
+  it("keeps images while dropping assistant selections from engine-native prompts", () => {
     const imageAttachment = {
       type: "image",
       id: "thread-1-image-1",

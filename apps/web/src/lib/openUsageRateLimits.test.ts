@@ -4,7 +4,7 @@ import { normalizeOpenUsageSnapshot, normalizeOpenUsageUsageLines } from "./open
 import { mergeProviderRateLimits } from "./rateLimits";
 
 describe("openUsageRateLimits", () => {
-  it("normalizes OpenUsage progress lines into shared provider rate limits", () => {
+  it("normalizes OpenUsage progress lines into shared engine rate limits", () => {
     expect(
       normalizeOpenUsageSnapshot({
         providerId: "codex",
@@ -29,7 +29,7 @@ describe("openUsageRateLimits", () => {
         ],
       }),
     ).toEqual({
-      provider: "codex",
+      engine: "codex",
       updatedAt: "2099-04-08T18:00:00.000Z",
       limits: [
         {
@@ -48,12 +48,12 @@ describe("openUsageRateLimits", () => {
     });
   });
 
-  it("merges runtime and OpenUsage windows for the same provider", () => {
+  it("merges runtime and OpenUsage windows for the same engine", () => {
     expect(
       mergeProviderRateLimits(
         [
           {
-            provider: "codex",
+            engine: "codex",
             updatedAt: "2099-04-08T18:05:00.000Z",
             limits: [
               {
@@ -67,7 +67,7 @@ describe("openUsageRateLimits", () => {
         ],
         [
           {
-            provider: "codex",
+            engine: "codex",
             updatedAt: "2099-04-08T18:00:00.000Z",
             limits: [
               {
@@ -82,7 +82,7 @@ describe("openUsageRateLimits", () => {
       ),
     ).toEqual([
       {
-        provider: "codex",
+        engine: "codex",
         updatedAt: "2099-04-08T18:05:00.000Z",
         limits: [
           {
@@ -102,12 +102,12 @@ describe("openUsageRateLimits", () => {
     ]);
   });
 
-  it("keeps the freshest window when two sources report the same provider limit", () => {
+  it("keeps the freshest window when two sources report the same engine limit", () => {
     expect(
       mergeProviderRateLimits(
         [
           {
-            provider: "codex",
+            engine: "codex",
             updatedAt: "2099-04-08T18:00:00.000Z",
             limits: [
               {
@@ -121,7 +121,7 @@ describe("openUsageRateLimits", () => {
         ],
         [
           {
-            provider: "codex",
+            engine: "codex",
             updatedAt: "2099-04-08T18:05:00.000Z",
             limits: [
               {
@@ -136,7 +136,7 @@ describe("openUsageRateLimits", () => {
       ),
     ).toEqual([
       {
-        provider: "codex",
+        engine: "codex",
         updatedAt: "2099-04-08T18:05:00.000Z",
         limits: [
           {
@@ -155,7 +155,7 @@ describe("openUsageRateLimits", () => {
       mergeProviderRateLimits(
         [
           {
-            provider: "codex",
+            engine: "codex",
             updatedAt: "2099-04-08T18:00:00.000Z",
             limits: [
               {
@@ -169,7 +169,7 @@ describe("openUsageRateLimits", () => {
         ],
         [
           {
-            provider: "codex",
+            engine: "codex",
             updatedAt: "2099-04-08T18:05:00.000Z",
             limits: [
               {
@@ -182,7 +182,7 @@ describe("openUsageRateLimits", () => {
       ),
     ).toEqual([
       {
-        provider: "codex",
+        engine: "codex",
         updatedAt: "2099-04-08T18:05:00.000Z",
         limits: [
           {

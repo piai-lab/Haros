@@ -11,9 +11,9 @@ import {
 } from "./model";
 import {
   ModelPresentationIdentity,
-  ProviderMentionReference,
-  ProviderSkillReference,
-} from "./providerDiscovery";
+  EngineMentionReference,
+  EngineSkillReference,
+} from "./engineDiscovery";
 import { DEFAULT_ENGINE_KIND, ENGINE_KINDS, EngineKind } from "./engineIdentity";
 export { DEFAULT_ENGINE_KIND, ENGINE_KINDS, EngineKind } from "./engineIdentity";
 import { ProjectKind } from "./project";
@@ -28,7 +28,7 @@ import {
   PositiveInt,
   ProjectId,
   SpaceId,
-  ProviderItemId,
+  EngineItemId,
   ThreadId,
   ThreadMarkerId,
   TrimmedNonEmptyString,
@@ -60,186 +60,180 @@ export const ORCHESTRATION_WS_CHANNELS = {
   threadEvent: "orchestration.threadEvent",
 } as const;
 
-export const ProviderApprovalPolicy = Schema.Literals([
+export const EngineApprovalPolicy = Schema.Literals([
   "untrusted",
   "on-failure",
   "on-request",
   "never",
 ]);
-export type ProviderApprovalPolicy = typeof ProviderApprovalPolicy.Type;
-export const ProviderSandboxMode = Schema.Literals([
+export type EngineApprovalPolicy = typeof EngineApprovalPolicy.Type;
+export const EngineSandboxMode = Schema.Literals([
   "read-only",
   "workspace-write",
   "danger-full-access",
 ]);
-export type ProviderSandboxMode = typeof ProviderSandboxMode.Type;
+export type EngineSandboxMode = typeof EngineSandboxMode.Type;
 
-export const OmniMindModelSelection = Schema.Struct({
-  provider: Schema.Literal("oa"),
+export const OAEngineSelection = Schema.Struct({
+  engine: Schema.Literal("oa"),
   model: TrimmedNonEmptyString,
   options: Schema.optional(PiModelOptions),
 });
-export type OmniMindModelSelection = typeof OmniMindModelSelection.Type;
+export type OAEngineSelection = typeof OAEngineSelection.Type;
 
-export const CodexModelSelection = Schema.Struct({
-  provider: Schema.Literal("codex"),
+export const CodexEngineSelection = Schema.Struct({
+  engine: Schema.Literal("codex"),
   model: TrimmedNonEmptyString,
   options: Schema.optional(CodexModelOptions),
 });
-export type CodexModelSelection = typeof CodexModelSelection.Type;
+export type CodexEngineSelection = typeof CodexEngineSelection.Type;
 
-export const ClaudeModelSelection = Schema.Struct({
-  provider: Schema.Literal("claude"),
+export const ClaudeEngineSelection = Schema.Struct({
+  engine: Schema.Literal("claude"),
   model: TrimmedNonEmptyString,
   options: Schema.optional(ClaudeModelOptions),
   supportsAutoMode: Schema.optional(Schema.Boolean),
 });
-export type ClaudeModelSelection = typeof ClaudeModelSelection.Type;
+export type ClaudeEngineSelection = typeof ClaudeEngineSelection.Type;
 
-export const CursorModelSelection = Schema.Struct({
-  provider: Schema.Literal("cursor"),
+export const CursorEngineSelection = Schema.Struct({
+  engine: Schema.Literal("cursor"),
   model: TrimmedNonEmptyString,
   options: Schema.optional(CursorModelOptions),
 });
-export type CursorModelSelection = typeof CursorModelSelection.Type;
+export type CursorEngineSelection = typeof CursorEngineSelection.Type;
 
-export const AntigravityModelSelection = Schema.Struct({
-  provider: Schema.Literal("antigravity"),
+export const AntigravityEngineSelection = Schema.Struct({
+  engine: Schema.Literal("antigravity"),
   model: TrimmedNonEmptyString,
   options: Schema.optional(AntigravityModelOptions),
 });
-export type AntigravityModelSelection = typeof AntigravityModelSelection.Type;
+export type AntigravityEngineSelection = typeof AntigravityEngineSelection.Type;
 
-export const GrokModelSelection = Schema.Struct({
-  provider: Schema.Literal("grok"),
+export const GrokEngineSelection = Schema.Struct({
+  engine: Schema.Literal("grok"),
   model: TrimmedNonEmptyString,
   options: Schema.optional(GrokModelOptions),
 });
-export type GrokModelSelection = typeof GrokModelSelection.Type;
+export type GrokEngineSelection = typeof GrokEngineSelection.Type;
 
-export const DroidModelSelection = Schema.Struct({
-  provider: Schema.Literal("droid"),
+export const DroidEngineSelection = Schema.Struct({
+  engine: Schema.Literal("droid"),
   model: TrimmedNonEmptyString,
   options: Schema.optional(DroidModelOptions),
 });
-export type DroidModelSelection = typeof DroidModelSelection.Type;
+export type DroidEngineSelection = typeof DroidEngineSelection.Type;
 
-export const OpenCodeModelSelection = Schema.Struct({
-  provider: Schema.Literal("opencode"),
+export const OpenCodeEngineSelection = Schema.Struct({
+  engine: Schema.Literal("opencode"),
   model: TrimmedNonEmptyString,
   options: Schema.optional(OpenCodeModelOptions),
 });
-export type OpenCodeModelSelection = typeof OpenCodeModelSelection.Type;
+export type OpenCodeEngineSelection = typeof OpenCodeEngineSelection.Type;
 
-export const KiloModelSelection = Schema.Struct({
-  provider: Schema.Literal("kilo"),
+export const KiloEngineSelection = Schema.Struct({
+  engine: Schema.Literal("kilo"),
   model: TrimmedNonEmptyString,
   options: Schema.optional(OpenCodeModelOptions),
 });
-export type KiloModelSelection = typeof KiloModelSelection.Type;
+export type KiloEngineSelection = typeof KiloEngineSelection.Type;
 
-export const PiModelSelection = Schema.Struct({
-  provider: Schema.Literal("pi"),
+export const PiEngineSelection = Schema.Struct({
+  engine: Schema.Literal("pi"),
   model: TrimmedNonEmptyString,
   options: Schema.optional(PiModelOptions),
 });
-export type PiModelSelection = typeof PiModelSelection.Type;
+export type PiEngineSelection = typeof PiEngineSelection.Type;
 
-export const ModelSelection = Schema.Union([
-  OmniMindModelSelection,
-  CodexModelSelection,
-  ClaudeModelSelection,
-  CursorModelSelection,
-  AntigravityModelSelection,
-  GrokModelSelection,
-  DroidModelSelection,
-  KiloModelSelection,
-  OpenCodeModelSelection,
-  PiModelSelection,
+export const EngineSelection = Schema.Union([
+  OAEngineSelection,
+  CodexEngineSelection,
+  ClaudeEngineSelection,
+  CursorEngineSelection,
+  AntigravityEngineSelection,
+  GrokEngineSelection,
+  DroidEngineSelection,
+  KiloEngineSelection,
+  OpenCodeEngineSelection,
+  PiEngineSelection,
 ]);
-export type ModelSelection = typeof ModelSelection.Type;
+export type EngineSelection = typeof EngineSelection.Type;
 
-export const CodexProviderStartOptions = Schema.Struct({
+export const CodexEngineStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   homePath: Schema.optional(TrimmedNonEmptyString),
 });
 
-export const ClaudeProviderStartOptions = Schema.Struct({
+export const ClaudeEngineStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   permissionMode: Schema.optional(TrimmedNonEmptyString),
   maxThinkingTokens: Schema.optional(NonNegativeInt),
 });
 
-export const AntigravityProviderStartOptions = Schema.Struct({
+export const AntigravityEngineStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
 });
 
-export const CursorProviderStartOptions = Schema.Struct({
+export const CursorEngineStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   apiEndpoint: Schema.optional(TrimmedNonEmptyString),
 });
 
-export const GrokProviderStartOptions = Schema.Struct({
+export const GrokEngineStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
 });
 
-export const DroidProviderStartOptions = Schema.Struct({
+export const DroidEngineStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
 });
 
-export const OpenCodeProviderStartOptions = Schema.Struct({
+export const OpenCodeEngineStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   serverUrl: Schema.optional(TrimmedNonEmptyString),
   experimentalWebSockets: Schema.optional(Schema.Boolean),
 });
 
-export const KiloProviderStartOptions = Schema.Struct({
+export const KiloEngineStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   serverUrl: Schema.optional(TrimmedNonEmptyString),
 });
 
-export const PiProviderStartOptions = Schema.Struct({
+export const PiEngineStartOptions = Schema.Struct({
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   agentDir: Schema.optional(TrimmedNonEmptyString),
 });
 
-export const ProviderStartOptions = Schema.Struct({
+export const EngineStartOptions = Schema.Struct({
   oa: Schema.optional(Schema.Struct({})),
-  codex: Schema.optional(CodexProviderStartOptions),
-  claude: Schema.optional(ClaudeProviderStartOptions),
-  cursor: Schema.optional(CursorProviderStartOptions),
-  antigravity: Schema.optional(AntigravityProviderStartOptions),
-  grok: Schema.optional(GrokProviderStartOptions),
-  droid: Schema.optional(DroidProviderStartOptions),
-  kilo: Schema.optional(KiloProviderStartOptions),
-  opencode: Schema.optional(OpenCodeProviderStartOptions),
-  pi: Schema.optional(PiProviderStartOptions),
+  codex: Schema.optional(CodexEngineStartOptions),
+  claude: Schema.optional(ClaudeEngineStartOptions),
+  cursor: Schema.optional(CursorEngineStartOptions),
+  antigravity: Schema.optional(AntigravityEngineStartOptions),
+  grok: Schema.optional(GrokEngineStartOptions),
+  droid: Schema.optional(DroidEngineStartOptions),
+  kilo: Schema.optional(KiloEngineStartOptions),
+  opencode: Schema.optional(OpenCodeEngineStartOptions),
+  pi: Schema.optional(PiEngineStartOptions),
 });
-export type ProviderStartOptions = typeof ProviderStartOptions.Type;
+export type EngineStartOptions = typeof EngineStartOptions.Type;
 
 export const RuntimeMode = Schema.Literals(["approval-required", "auto", "full-access"]);
 export type RuntimeMode = typeof RuntimeMode.Type;
 export const DEFAULT_RUNTIME_MODE: RuntimeMode = "full-access";
-export const PROVIDER_INTERACTION_MODES = [
-  "default",
-  "plan",
-  "debug",
-  "converge",
-  "learn",
-] as const;
-export const ProviderInteractionMode = Schema.Literals(PROVIDER_INTERACTION_MODES);
-export type ProviderInteractionMode = typeof ProviderInteractionMode.Type;
-export const DEFAULT_PROVIDER_INTERACTION_MODE: ProviderInteractionMode = "default";
+export const ENGINE_INTERACTION_MODES = ["default", "plan", "debug", "converge", "learn"] as const;
+export const EngineInteractionMode = Schema.Literals(ENGINE_INTERACTION_MODES);
+export type EngineInteractionMode = typeof EngineInteractionMode.Type;
+export const DEFAULT_ENGINE_INTERACTION_MODE: EngineInteractionMode = "default";
 const SidechatSourceThreadId = Schema.optional(Schema.NullOr(ThreadId)).pipe(
   Schema.withDecodingDefault(() => null),
 );
-export const ProviderRequestKind = Schema.Literals([
+export const EngineRequestKind = Schema.Literals([
   "command",
   "file-read",
   "file-change",
   "permissions",
 ]);
-export type ProviderRequestKind = typeof ProviderRequestKind.Type;
+export type EngineRequestKind = typeof EngineRequestKind.Type;
 export const AssistantDeliveryMode = Schema.Literals(["buffered", "streaming"]);
 export type AssistantDeliveryMode = typeof AssistantDeliveryMode.Type;
 // Queue is the default "send message" behavior; steer is an urgent redirect.
@@ -257,7 +251,7 @@ export const ThreadCreationSource = Schema.Literals([
   "provider_native",
 ]);
 export type ThreadCreationSource = typeof ThreadCreationSource.Type;
-export const ProviderReviewTarget = Schema.Union([
+export const EngineReviewTarget = Schema.Union([
   Schema.Struct({
     type: Schema.Literal("uncommittedChanges"),
   }),
@@ -266,24 +260,24 @@ export const ProviderReviewTarget = Schema.Union([
     branch: TrimmedNonEmptyString,
   }),
 ]);
-export type ProviderReviewTarget = typeof ProviderReviewTarget.Type;
-export const ProviderApprovalDecision = Schema.Literals([
+export type EngineReviewTarget = typeof EngineReviewTarget.Type;
+export const EngineApprovalDecision = Schema.Literals([
   "accept",
   "acceptForSession",
   "decline",
   "cancel",
 ]);
-export type ProviderApprovalDecision = typeof ProviderApprovalDecision.Type;
-export const ProviderUserInputAnswer = Schema.NullOr(
+export type EngineApprovalDecision = typeof EngineApprovalDecision.Type;
+export const EngineUserInputAnswer = Schema.NullOr(
   Schema.Union([Schema.String, Schema.Array(Schema.String)]),
 );
-export type ProviderUserInputAnswer = typeof ProviderUserInputAnswer.Type;
-export const ProviderUserInputAnswers = Schema.Record(Schema.String, ProviderUserInputAnswer);
-export type ProviderUserInputAnswers = typeof ProviderUserInputAnswers.Type;
+export type EngineUserInputAnswer = typeof EngineUserInputAnswer.Type;
+export const EngineUserInputAnswers = Schema.Record(Schema.String, EngineUserInputAnswer);
+export type EngineUserInputAnswers = typeof EngineUserInputAnswers.Type;
 /**
  * Product-owned answer envelope for every user-input projection.
  *
- * Provider-native protocols may still encode answers as a scalar or string array,
+ * Engine-native protocols may still encode answers as a scalar or string array,
  * but the Product command/result boundary keeps preset selections, the user's own
  * answer as independent facts.
  * String fields intentionally use the raw Schema.String contract: consumers may
@@ -342,13 +336,13 @@ export const OrchestrationMessageSource = Schema.Literals([
 ]);
 export type OrchestrationMessageSource = typeof OrchestrationMessageSource.Type;
 
-export const PROVIDER_SEND_TURN_MAX_INPUT_CHARS = 120_000;
-export const PROVIDER_SEND_TURN_MAX_ATTACHMENTS = 8;
-export const PROVIDER_SEND_TURN_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-// Raw local images may exceed the provider-safe payload limit when they can be
+export const ENGINE_SEND_TURN_MAX_INPUT_CHARS = 120_000;
+export const ENGINE_SEND_TURN_MAX_ATTACHMENTS = 8;
+export const ENGINE_SEND_TURN_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+// Raw local images may exceed the engine-safe payload limit when they can be
 // normalized on-device before upload (for example Retina PNG screenshots).
-export const PROVIDER_SEND_TURN_MAX_IMAGE_IMPORT_BYTES = 32 * 1024 * 1024;
-export const PROVIDER_SEND_TURN_MAX_FILE_BYTES = 25 * 1024 * 1024;
+export const ENGINE_SEND_TURN_MAX_IMAGE_IMPORT_BYTES = 32 * 1024 * 1024;
+export const ENGINE_SEND_TURN_MAX_FILE_BYTES = 25 * 1024 * 1024;
 export const MAX_PINNED_PROJECTS = 3;
 const CHAT_ATTACHMENT_ID_MAX_CHARS = 128;
 export const CHAT_ASSISTANT_SELECTION_TEXT_MAX_CHARS = 4_000;
@@ -374,7 +368,7 @@ export const ChatImageAttachment = Schema.Struct({
   id: ChatAttachmentId,
   name: TrimmedNonEmptyString.check(Schema.isMaxLength(255)),
   mimeType: TrimmedNonEmptyString.check(Schema.isMaxLength(100), Schema.isPattern(/^image\//i)),
-  sizeBytes: NonNegativeInt.check(Schema.isLessThanOrEqualTo(PROVIDER_SEND_TURN_MAX_IMAGE_BYTES)),
+  sizeBytes: NonNegativeInt.check(Schema.isLessThanOrEqualTo(ENGINE_SEND_TURN_MAX_IMAGE_BYTES)),
 });
 export type ChatImageAttachment = typeof ChatImageAttachment.Type;
 
@@ -383,7 +377,7 @@ export const ChatFileAttachment = Schema.Struct({
   id: ChatAttachmentId,
   name: TrimmedNonEmptyString.check(Schema.isMaxLength(255)),
   mimeType: TrimmedNonEmptyString.check(Schema.isMaxLength(100)),
-  sizeBytes: NonNegativeInt.check(Schema.isLessThanOrEqualTo(PROVIDER_SEND_TURN_MAX_FILE_BYTES)),
+  sizeBytes: NonNegativeInt.check(Schema.isLessThanOrEqualTo(ENGINE_SEND_TURN_MAX_FILE_BYTES)),
 });
 export type ChatFileAttachment = typeof ChatFileAttachment.Type;
 
@@ -422,7 +416,7 @@ export const ChatAttachment = Schema.Union([
 ]);
 export type ChatAttachment = typeof ChatAttachment.Type;
 const ChatAttachmentList = Schema.Array(ChatAttachment).check(
-  Schema.isMaxLength(PROVIDER_SEND_TURN_MAX_ATTACHMENTS),
+  Schema.isMaxLength(ENGINE_SEND_TURN_MAX_ATTACHMENTS),
 );
 const UploadChatAttachment = Schema.Union([
   ChatImageAttachment,
@@ -431,7 +425,7 @@ const UploadChatAttachment = Schema.Union([
 ]);
 export type UploadChatAttachment = typeof UploadChatAttachment.Type;
 const UploadChatAttachmentList = Schema.Array(UploadChatAttachment).check(
-  Schema.isMaxLength(PROVIDER_SEND_TURN_MAX_ATTACHMENTS),
+  Schema.isMaxLength(ENGINE_SEND_TURN_MAX_ATTACHMENTS),
 );
 const TurnMessageContentCheck = Schema.makeFilter(
   (input: { readonly text: string; readonly attachments: ReadonlyArray<unknown> }) =>
@@ -520,7 +514,7 @@ export const OrchestrationProject = Schema.Struct({
   kind: Schema.optional(ProjectKind).pipe(Schema.withDecodingDefault(() => "project")),
   title: TrimmedNonEmptyString,
   workspaceRoot: TrimmedNonEmptyString,
-  defaultModelSelection: Schema.NullOr(ModelSelection),
+  defaultEngineSelection: Schema.NullOr(EngineSelection),
   scripts: Schema.Array(ProjectScript),
   isPinned: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => false)),
   spaceId: Schema.optional(Schema.NullOr(SpaceId)).pipe(Schema.withDecodingDefault(() => null)),
@@ -535,7 +529,7 @@ export const OrchestrationProjectShell = Schema.Struct({
   kind: Schema.optional(ProjectKind).pipe(Schema.withDecodingDefault(() => "project")),
   title: TrimmedNonEmptyString,
   workspaceRoot: TrimmedNonEmptyString,
-  defaultModelSelection: Schema.NullOr(ModelSelection),
+  defaultEngineSelection: Schema.NullOr(EngineSelection),
   scripts: Schema.Array(ProjectScript),
   isPinned: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => false)),
   spaceId: Schema.optional(Schema.NullOr(SpaceId)).pipe(Schema.withDecodingDefault(() => null)),
@@ -561,8 +555,8 @@ export const OrchestrationMessage = Schema.Struct({
   text: Schema.String,
   textSegments: Schema.optional(Schema.Array(OrchestrationMessageTextSegment)),
   attachments: Schema.optional(Schema.Array(ChatAttachment)),
-  skills: Schema.optional(Schema.Array(ProviderSkillReference)),
-  mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
+  skills: Schema.optional(Schema.Array(EngineSkillReference)),
+  mentions: Schema.optional(Schema.Array(EngineMentionReference)),
   dispatchMode: Schema.optional(TurnDispatchMode),
   dispatchOrigin: Schema.optional(MessageDispatchOrigin),
   turnId: Schema.NullOr(TurnId),
@@ -666,8 +660,8 @@ export const OrchestrationThreadActivityTone = Schema.Literals([
 ]);
 export type OrchestrationThreadActivityTone = typeof OrchestrationThreadActivityTone.Type;
 
-export const ProviderTurnStartFailureReason = Schema.Literals(["active-edit-requires-stop"]);
-export type ProviderTurnStartFailureReason = typeof ProviderTurnStartFailureReason.Type;
+export const EngineTurnStartFailureReason = Schema.Literals(["active-edit-requires-stop"]);
+export type EngineTurnStartFailureReason = typeof EngineTurnStartFailureReason.Type;
 
 export const OrchestrationThreadActivity = Schema.Struct({
   id: EventId,
@@ -824,10 +818,10 @@ export const ProjectionPendingInteractionStatus = Schema.Literals([
 ]);
 export type ProjectionPendingInteractionStatus = typeof ProjectionPendingInteractionStatus.Type;
 
-export const ProjectionPendingInteractionDecision = Schema.NullOr(ProviderApprovalDecision);
+export const ProjectionPendingInteractionDecision = Schema.NullOr(EngineApprovalDecision);
 export type ProjectionPendingInteractionDecision = typeof ProjectionPendingInteractionDecision.Type;
 
-/** Unresolved provider interaction settlement exposed to thread-detail consumers. */
+/** Unresolved engine interaction settlement exposed to thread-detail consumers. */
 export const OrchestrationPendingInteraction = Schema.Struct({
   interactionKind: ProjectionPendingInteractionKind,
   requestId: ApprovalRequestId,
@@ -847,7 +841,7 @@ export type OrchestrationPendingInteraction = typeof OrchestrationPendingInterac
 export const OrchestrationTurnProvenance = Schema.Struct({
   pendingMessageId: MessageId,
   turnId: Schema.NullOr(TurnId),
-  modelSelection: ModelSelection,
+  engineSelection: EngineSelection,
   modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
   requestedAt: IsoDateTime,
 });
@@ -858,10 +852,10 @@ export const OrchestrationThread = Schema.Struct({
   projectId: ProjectId,
   groupIds: Schema.optional(Schema.Array(SpaceId)).pipe(Schema.withDecodingDefault(() => [])),
   title: TrimmedNonEmptyString,
-  modelSelection: ModelSelection,
+  engineSelection: EngineSelection,
   runtimeMode: RuntimeMode,
-  interactionMode: ProviderInteractionMode.pipe(
-    Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
+  interactionMode: EngineInteractionMode.pipe(
+    Schema.withDecodingDefault(() => DEFAULT_ENGINE_INTERACTION_MODE),
   ),
   envMode: Schema.optional(ThreadEnvironmentMode).pipe(Schema.withDecodingDefault(() => "local")),
   branch: Schema.NullOr(TrimmedNonEmptyString),
@@ -955,10 +949,10 @@ export const OrchestrationThreadShell = Schema.Struct({
   projectId: ProjectId,
   groupIds: Schema.optional(Schema.Array(SpaceId)).pipe(Schema.withDecodingDefault(() => [])),
   title: TrimmedNonEmptyString,
-  modelSelection: ModelSelection,
+  engineSelection: EngineSelection,
   runtimeMode: RuntimeMode,
-  interactionMode: ProviderInteractionMode.pipe(
-    Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
+  interactionMode: EngineInteractionMode.pipe(
+    Schema.withDecodingDefault(() => DEFAULT_ENGINE_INTERACTION_MODE),
   ),
   envMode: Schema.optional(ThreadEnvironmentMode).pipe(Schema.withDecodingDefault(() => "local")),
   branch: Schema.NullOr(TrimmedNonEmptyString),
@@ -1142,7 +1136,7 @@ export const ProjectCreateCommand = Schema.Struct({
   createWorkspaceRootIfMissing: Schema.optional(Schema.Boolean).pipe(
     Schema.withDecodingDefault(() => false),
   ),
-  defaultModelSelection: Schema.optional(Schema.NullOr(ModelSelection)),
+  defaultEngineSelection: Schema.optional(Schema.NullOr(EngineSelection)),
   isPinned: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => false)),
   createdAt: IsoDateTime,
 });
@@ -1157,7 +1151,7 @@ const ProjectMetaUpdateCommand = Schema.Struct({
   createWorkspaceRootIfMissing: Schema.optional(Schema.Boolean).pipe(
     Schema.withDecodingDefault(() => false),
   ),
-  defaultModelSelection: Schema.optional(Schema.NullOr(ModelSelection)),
+  defaultEngineSelection: Schema.optional(Schema.NullOr(EngineSelection)),
   scripts: Schema.optional(Schema.Array(ProjectScript)),
   isPinned: Schema.optional(Schema.Boolean),
 });
@@ -1174,10 +1168,10 @@ const ThreadCreateCommand = Schema.Struct({
   threadId: ThreadId,
   projectId: ProjectId,
   title: TrimmedNonEmptyString,
-  modelSelection: ModelSelection,
+  engineSelection: EngineSelection,
   runtimeMode: RuntimeMode,
-  interactionMode: ProviderInteractionMode.pipe(
-    Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
+  interactionMode: EngineInteractionMode.pipe(
+    Schema.withDecodingDefault(() => DEFAULT_ENGINE_INTERACTION_MODE),
   ),
   envMode: Schema.optional(ThreadEnvironmentMode).pipe(Schema.withDecodingDefault(() => "local")),
   branch: Schema.NullOr(TrimmedNonEmptyString),
@@ -1220,7 +1214,7 @@ export const ThreadHandoffImportedMessage = Schema.Struct({
   role: Schema.Literals(["user", "assistant"]),
   text: Schema.String,
   attachments: Schema.optional(Schema.Array(ChatAttachment)),
-  mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
+  mentions: Schema.optional(Schema.Array(EngineMentionReference)),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -1233,10 +1227,10 @@ const ThreadHandoffCreateCommand = Schema.Struct({
   sourceThreadId: ThreadId,
   projectId: ProjectId,
   title: TrimmedNonEmptyString,
-  modelSelection: ModelSelection,
+  engineSelection: EngineSelection,
   runtimeMode: RuntimeMode,
-  interactionMode: ProviderInteractionMode.pipe(
-    Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
+  interactionMode: EngineInteractionMode.pipe(
+    Schema.withDecodingDefault(() => DEFAULT_ENGINE_INTERACTION_MODE),
   ),
   envMode: Schema.optional(ThreadEnvironmentMode).pipe(Schema.withDecodingDefault(() => "local")),
   branch: Schema.NullOr(TrimmedNonEmptyString),
@@ -1259,10 +1253,10 @@ const ThreadForkCreateCommand = Schema.Struct({
   sourceThreadId: ThreadId,
   projectId: ProjectId,
   title: TrimmedNonEmptyString,
-  modelSelection: ModelSelection,
+  engineSelection: EngineSelection,
   runtimeMode: RuntimeMode,
-  interactionMode: ProviderInteractionMode.pipe(
-    Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
+  interactionMode: EngineInteractionMode.pipe(
+    Schema.withDecodingDefault(() => DEFAULT_ENGINE_INTERACTION_MODE),
   ),
   envMode: Schema.optional(ThreadEnvironmentMode).pipe(Schema.withDecodingDefault(() => "local")),
   branch: Schema.NullOr(TrimmedNonEmptyString),
@@ -1308,7 +1302,7 @@ const ThreadMetaUpdateCommand = Schema.Struct({
   threadId: ThreadId,
   groupIds: Schema.optional(Schema.Array(SpaceId).check(Schema.isMaxLength(SPACES_MAX_COUNT))),
   title: Schema.optional(TrimmedNonEmptyString),
-  modelSelection: Schema.optional(ModelSelection),
+  engineSelection: Schema.optional(EngineSelection),
   envMode: Schema.optional(ThreadEnvironmentMode),
   branch: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   worktreePath: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
@@ -1421,7 +1415,7 @@ const ThreadInteractionModeSetCommand = Schema.Struct({
   type: Schema.Literal("thread.interaction-mode.set"),
   commandId: CommandId,
   threadId: ThreadId,
-  interactionMode: ProviderInteractionMode,
+  interactionMode: EngineInteractionMode,
   createdAt: IsoDateTime,
 });
 
@@ -1432,15 +1426,15 @@ export const ThreadTurnStartCommand = Schema.Struct({
   message: Schema.Struct({
     messageId: MessageId,
     role: Schema.Literal("user"),
-    text: Schema.String.check(Schema.isMaxLength(PROVIDER_SEND_TURN_MAX_INPUT_CHARS)),
+    text: Schema.String.check(Schema.isMaxLength(ENGINE_SEND_TURN_MAX_INPUT_CHARS)),
     attachments: ChatAttachmentList,
-    skills: Schema.optional(Schema.Array(ProviderSkillReference)),
-    mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
+    skills: Schema.optional(Schema.Array(EngineSkillReference)),
+    mentions: Schema.optional(Schema.Array(EngineMentionReference)),
   }).check(TurnMessageContentCheck),
-  modelSelection: Schema.optional(ModelSelection),
+  engineSelection: Schema.optional(EngineSelection),
   modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
-  providerOptions: Schema.optional(ProviderStartOptions),
-  reviewTarget: Schema.optional(ProviderReviewTarget),
+  engineOptions: Schema.optional(EngineStartOptions),
+  reviewTarget: Schema.optional(EngineReviewTarget),
   assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),
   dispatchMode: Schema.optional(TurnDispatchMode).pipe(
     Schema.withDecodingDefault(() => DEFAULT_TURN_DISPATCH_MODE),
@@ -1449,8 +1443,8 @@ export const ThreadTurnStartCommand = Schema.Struct({
   // ClientThreadTurnStartCommand omits the field, so decoding strips any spoofed value.
   dispatchOrigin: Schema.optional(MessageDispatchOrigin),
   runtimeMode: RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
-  interactionMode: ProviderInteractionMode.pipe(
-    Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
+  interactionMode: EngineInteractionMode.pipe(
+    Schema.withDecodingDefault(() => DEFAULT_ENGINE_INTERACTION_MODE),
   ),
   sourceProposedPlan: Schema.optional(SourceProposedPlanReference),
   // Server-only one-shot quit recovery fence. ClientThreadTurnStartCommand
@@ -1471,21 +1465,21 @@ const ClientThreadTurnStartCommand = Schema.Struct({
   message: Schema.Struct({
     messageId: MessageId,
     role: Schema.Literal("user"),
-    text: Schema.String.check(Schema.isMaxLength(PROVIDER_SEND_TURN_MAX_INPUT_CHARS)),
+    text: Schema.String.check(Schema.isMaxLength(ENGINE_SEND_TURN_MAX_INPUT_CHARS)),
     attachments: UploadChatAttachmentList,
-    skills: Schema.optional(Schema.Array(ProviderSkillReference)),
-    mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
+    skills: Schema.optional(Schema.Array(EngineSkillReference)),
+    mentions: Schema.optional(Schema.Array(EngineMentionReference)),
   }).check(TurnMessageContentCheck),
-  modelSelection: Schema.optional(ModelSelection),
+  engineSelection: Schema.optional(EngineSelection),
   modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
-  providerOptions: Schema.optional(ProviderStartOptions),
-  reviewTarget: Schema.optional(ProviderReviewTarget),
+  engineOptions: Schema.optional(EngineStartOptions),
+  reviewTarget: Schema.optional(EngineReviewTarget),
   assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),
   dispatchMode: Schema.optional(TurnDispatchMode).pipe(
     Schema.withDecodingDefault(() => DEFAULT_TURN_DISPATCH_MODE),
   ),
   runtimeMode: RuntimeMode,
-  interactionMode: ProviderInteractionMode,
+  interactionMode: EngineInteractionMode,
   sourceProposedPlan: Schema.optional(SourceProposedPlanReference),
   createdAt: IsoDateTime,
 });
@@ -1519,18 +1513,18 @@ const ThreadDispatchQueuedTurnCommand = Schema.Struct({
   commandId: CommandId,
   threadId: ThreadId,
   messageId: MessageId,
-  modelSelection: Schema.optional(ModelSelection),
+  engineSelection: Schema.optional(EngineSelection),
   modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
-  providerOptions: Schema.optional(ProviderStartOptions),
-  reviewTarget: Schema.optional(ProviderReviewTarget),
+  engineOptions: Schema.optional(EngineStartOptions),
+  reviewTarget: Schema.optional(EngineReviewTarget),
   assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),
   dispatchMode: Schema.optional(TurnDispatchMode).pipe(
     Schema.withDecodingDefault(() => DEFAULT_TURN_DISPATCH_MODE),
   ),
   dispatchOrigin: Schema.optional(MessageDispatchOrigin),
   runtimeMode: RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
-  interactionMode: ProviderInteractionMode.pipe(
-    Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
+  interactionMode: EngineInteractionMode.pipe(
+    Schema.withDecodingDefault(() => DEFAULT_ENGINE_INTERACTION_MODE),
   ),
   sourceProposedPlan: Schema.optional(SourceProposedPlanReference),
   createdAt: IsoDateTime,
@@ -1542,7 +1536,7 @@ const ThreadApprovalRespondCommand = Schema.Struct({
   threadId: ThreadId,
   requestId: ApprovalRequestId,
   lifecycleGeneration: Schema.optional(TrimmedNonEmptyString),
-  decision: ProviderApprovalDecision,
+  decision: EngineApprovalDecision,
   createdAt: IsoDateTime,
 });
 
@@ -1579,13 +1573,13 @@ const ThreadMessageEditAndResendCommand = Schema.Struct({
   commandId: CommandId,
   threadId: ThreadId,
   messageId: MessageId,
-  text: TrimmedNonEmptyString.check(Schema.isMaxLength(PROVIDER_SEND_TURN_MAX_INPUT_CHARS)),
-  modelSelection: Schema.optional(ModelSelection),
+  text: TrimmedNonEmptyString.check(Schema.isMaxLength(ENGINE_SEND_TURN_MAX_INPUT_CHARS)),
+  engineSelection: Schema.optional(EngineSelection),
   modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
-  providerOptions: Schema.optional(ProviderStartOptions),
+  engineOptions: Schema.optional(EngineStartOptions),
   assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),
   runtimeMode: RuntimeMode,
-  interactionMode: ProviderInteractionMode,
+  interactionMode: EngineInteractionMode,
   createdAt: IsoDateTime,
 });
 
@@ -1688,9 +1682,9 @@ const ThreadSessionSetCommand = Schema.Struct({
   session: OrchestrationSession,
   binding: Schema.optional(
     Schema.Struct({
-      modelSelection: ModelSelection,
+      engineSelection: EngineSelection,
       runtimeMode: RuntimeMode,
-      interactionMode: ProviderInteractionMode,
+      interactionMode: EngineInteractionMode,
     }),
   ),
   expectedSessionStatus: Schema.optional(OrchestrationSessionStatus),
@@ -1860,7 +1854,7 @@ export type OrchestrationEventType = typeof OrchestrationEventType.Type;
 
 export const OrchestrationAggregateKind = Schema.Literals(["space", "project", "thread"]);
 export type OrchestrationAggregateKind = typeof OrchestrationAggregateKind.Type;
-export const OrchestrationActorKind = Schema.Literals(["client", "server", "provider"]);
+export const OrchestrationActorKind = Schema.Literals(["client", "server", "engine"]);
 
 export const SpaceCreatedPayload = Schema.Struct({
   spaceId: SpaceId,
@@ -1894,7 +1888,7 @@ export const ProjectCreatedPayload = Schema.Struct({
   kind: Schema.optional(ProjectKind).pipe(Schema.withDecodingDefault(() => "project")),
   title: TrimmedNonEmptyString,
   workspaceRoot: TrimmedNonEmptyString,
-  defaultModelSelection: Schema.NullOr(ModelSelection),
+  defaultEngineSelection: Schema.NullOr(EngineSelection),
   scripts: Schema.Array(ProjectScript),
   isPinned: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => false)),
   spaceId: Schema.optional(Schema.NullOr(SpaceId)).pipe(Schema.withDecodingDefault(() => null)),
@@ -1907,7 +1901,7 @@ export const ProjectMetaUpdatedPayload = Schema.Struct({
   kind: Schema.optional(ProjectKind),
   title: Schema.optional(TrimmedNonEmptyString),
   workspaceRoot: Schema.optional(TrimmedNonEmptyString),
-  defaultModelSelection: Schema.optional(Schema.NullOr(ModelSelection)),
+  defaultEngineSelection: Schema.optional(Schema.NullOr(EngineSelection)),
   scripts: Schema.optional(Schema.Array(ProjectScript)),
   isPinned: Schema.optional(Schema.Boolean),
   spaceId: Schema.optional(Schema.NullOr(SpaceId)),
@@ -1923,10 +1917,10 @@ export const ThreadCreatedPayload = Schema.Struct({
   threadId: ThreadId,
   projectId: ProjectId,
   title: TrimmedNonEmptyString,
-  modelSelection: ModelSelection,
+  engineSelection: EngineSelection,
   runtimeMode: RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
-  interactionMode: ProviderInteractionMode.pipe(
-    Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
+  interactionMode: EngineInteractionMode.pipe(
+    Schema.withDecodingDefault(() => DEFAULT_ENGINE_INTERACTION_MODE),
   ),
   envMode: Schema.optional(ThreadEnvironmentMode).pipe(Schema.withDecodingDefault(() => "local")),
   branch: Schema.NullOr(TrimmedNonEmptyString),
@@ -2003,7 +1997,7 @@ export const ThreadMetaUpdatedPayload = Schema.Struct({
   threadId: ThreadId,
   groupIds: Schema.optional(Schema.Array(SpaceId).check(Schema.isMaxLength(SPACES_MAX_COUNT))),
   title: Schema.optional(TrimmedNonEmptyString),
-  modelSelection: Schema.optional(ModelSelection),
+  engineSelection: Schema.optional(EngineSelection),
   envMode: Schema.optional(ThreadEnvironmentMode),
   branch: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   worktreePath: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
@@ -2092,9 +2086,9 @@ export const ThreadRuntimeModeSetPayload = Schema.Struct({
 
 export const ThreadInteractionModeSetPayload = Schema.Struct({
   threadId: ThreadId,
-  previousInteractionMode: Schema.optional(ProviderInteractionMode),
-  interactionMode: ProviderInteractionMode.pipe(
-    Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
+  previousInteractionMode: Schema.optional(EngineInteractionMode),
+  interactionMode: EngineInteractionMode.pipe(
+    Schema.withDecodingDefault(() => DEFAULT_ENGINE_INTERACTION_MODE),
   ),
   updatedAt: IsoDateTime,
 });
@@ -2107,8 +2101,8 @@ export const ThreadMessageSentPayload = Schema.Struct({
   segmentStartedAt: Schema.optional(IsoDateTime),
   segmentSequence: Schema.optional(NonNegativeInt),
   attachments: Schema.optional(Schema.Array(ChatAttachment)),
-  skills: Schema.optional(Schema.Array(ProviderSkillReference)),
-  mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
+  skills: Schema.optional(Schema.Array(EngineSkillReference)),
+  mentions: Schema.optional(Schema.Array(EngineMentionReference)),
   dispatchMode: Schema.optional(TurnDispatchMode),
   dispatchOrigin: Schema.optional(MessageDispatchOrigin),
   turnId: Schema.NullOr(TurnId),
@@ -2124,17 +2118,17 @@ export type SteeringDisposition = typeof SteeringDisposition.Type;
 export const ThreadTurnStartRequestedPayload = Schema.Struct({
   threadId: ThreadId,
   messageId: MessageId,
-  modelSelection: Schema.optional(ModelSelection),
+  engineSelection: Schema.optional(EngineSelection),
   modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
-  providerOptions: Schema.optional(ProviderStartOptions),
-  reviewTarget: Schema.optional(ProviderReviewTarget),
+  engineOptions: Schema.optional(EngineStartOptions),
+  reviewTarget: Schema.optional(EngineReviewTarget),
   assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),
   dispatchMode: TurnDispatchMode.pipe(Schema.withDecodingDefault(() => DEFAULT_TURN_DISPATCH_MODE)),
   steeringDisposition: Schema.optional(SteeringDisposition),
   dispatchOrigin: Schema.optional(MessageDispatchOrigin),
   runtimeMode: RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
-  interactionMode: ProviderInteractionMode.pipe(
-    Schema.withDecodingDefault(() => DEFAULT_PROVIDER_INTERACTION_MODE),
+  interactionMode: EngineInteractionMode.pipe(
+    Schema.withDecodingDefault(() => DEFAULT_ENGINE_INTERACTION_MODE),
   ),
   sourceProposedPlan: Schema.optional(SourceProposedPlanReference),
   createdAt: IsoDateTime,
@@ -2172,7 +2166,7 @@ export const ThreadApprovalResponseRequestedPayload = Schema.Struct({
   threadId: ThreadId,
   requestId: ApprovalRequestId,
   lifecycleGeneration: Schema.optional(TrimmedNonEmptyString),
-  decision: ProviderApprovalDecision,
+  decision: EngineApprovalDecision,
   createdAt: IsoDateTime,
 });
 
@@ -2216,15 +2210,15 @@ export const ThreadConversationRolledBackPayload = Schema.Struct({
 export const ThreadMessageEditResendRequestedPayload = Schema.Struct({
   threadId: ThreadId,
   messageId: MessageId,
-  text: TrimmedNonEmptyString.check(Schema.isMaxLength(PROVIDER_SEND_TURN_MAX_INPUT_CHARS)),
+  text: TrimmedNonEmptyString.check(Schema.isMaxLength(ENGINE_SEND_TURN_MAX_INPUT_CHARS)),
   rollbackTurnCount: Schema.optional(NonNegativeInt),
   removedTurnIds: Schema.optional(Schema.Array(TurnId)),
-  modelSelection: Schema.optional(ModelSelection),
+  engineSelection: Schema.optional(EngineSelection),
   modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
-  providerOptions: Schema.optional(ProviderStartOptions),
+  engineOptions: Schema.optional(EngineStartOptions),
   assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),
   runtimeMode: RuntimeMode,
-  interactionMode: ProviderInteractionMode,
+  interactionMode: EngineInteractionMode,
   createdAt: IsoDateTime,
 });
 
@@ -2261,8 +2255,8 @@ export const ThreadActivityAppendedPayload = Schema.Struct({
 });
 
 export const OrchestrationEventMetadata = Schema.Struct({
-  providerTurnId: Schema.optional(TrimmedNonEmptyString),
-  providerItemId: Schema.optional(ProviderItemId),
+  nativeTurnId: Schema.optional(TrimmedNonEmptyString),
+  nativeItemId: Schema.optional(EngineItemId),
   adapterKey: Schema.optional(TrimmedNonEmptyString),
   requestId: Schema.optional(ApprovalRequestId),
   ingestedAt: Schema.optional(IsoDateTime),
@@ -2533,13 +2527,13 @@ export const ThreadTurnDiff = TurnCountRange.mapFields(
   { unsafePreserveChecks: true },
 );
 
-export const ProviderSessionRuntimeStatus = Schema.Literals([
+export const EngineSessionRuntimeStatus = Schema.Literals([
   "starting",
   "running",
   "stopped",
   "error",
 ]);
-export type ProviderSessionRuntimeStatus = typeof ProviderSessionRuntimeStatus.Type;
+export type EngineSessionRuntimeStatus = typeof EngineSessionRuntimeStatus.Type;
 
 const ProjectionThreadTurnStatus = Schema.Literals([
   "running",
@@ -2613,15 +2607,14 @@ export type OrchestrationReplayEventsInput = typeof OrchestrationReplayEventsInp
 const OrchestrationReplayEventsResult = Schema.Array(OrchestrationEvent);
 export type OrchestrationReplayEventsResult = typeof OrchestrationReplayEventsResult.Type;
 
-export const ProviderDeliveryReconciliationOutcome = Schema.Literals([
+export const EngineDeliveryReconciliationOutcome = Schema.Literals([
   "accepted",
   "safe_retry",
   "abandon",
 ]);
-export type ProviderDeliveryReconciliationOutcome =
-  typeof ProviderDeliveryReconciliationOutcome.Type;
+export type EngineDeliveryReconciliationOutcome = typeof EngineDeliveryReconciliationOutcome.Type;
 
-export const ProviderDeliveryBlockingEvidence = Schema.Struct({
+export const EngineDeliveryBlockingEvidence = Schema.Struct({
   consumerName: Schema.String,
   eventSequence: NonNegativeInt,
   eventId: EventId,
@@ -2632,12 +2625,12 @@ export const ProviderDeliveryBlockingEvidence = Schema.Struct({
   attemptCount: NonNegativeInt,
   lastError: Schema.NullOr(Schema.String),
   updatedAt: IsoDateTime,
-  lastReconciliationOutcome: Schema.NullOr(ProviderDeliveryReconciliationOutcome),
+  lastReconciliationOutcome: Schema.NullOr(EngineDeliveryReconciliationOutcome),
   lastReconciledAt: Schema.NullOr(IsoDateTime),
   lastReconciledBy: Schema.NullOr(Schema.String),
   lastReconciliationNote: Schema.NullOr(Schema.String),
 });
-export type ProviderDeliveryBlockingEvidence = typeof ProviderDeliveryBlockingEvidence.Type;
+export type EngineDeliveryBlockingEvidence = typeof EngineDeliveryBlockingEvidence.Type;
 
 export const OrchestrationListProviderDeliveryBlockersInput = Schema.Struct({
   threadId: Schema.optional(ThreadId),
@@ -2647,7 +2640,7 @@ export type OrchestrationListProviderDeliveryBlockersInput =
   typeof OrchestrationListProviderDeliveryBlockersInput.Type;
 
 export const OrchestrationListProviderDeliveryBlockersResult = Schema.Array(
-  ProviderDeliveryBlockingEvidence,
+  EngineDeliveryBlockingEvidence,
 );
 export type OrchestrationListProviderDeliveryBlockersResult =
   typeof OrchestrationListProviderDeliveryBlockersResult.Type;
@@ -2656,7 +2649,7 @@ export const OrchestrationReconcileProviderDeliveryInput = Schema.Struct({
   eventSequence: NonNegativeInt,
   threadId: ThreadId,
   expectedState: Schema.Literals(["dead", "uncertain"]),
-  outcome: ProviderDeliveryReconciliationOutcome,
+  outcome: EngineDeliveryReconciliationOutcome,
   note: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(2_000))),
 });
 export type OrchestrationReconcileProviderDeliveryInput =
@@ -2665,7 +2658,7 @@ export type OrchestrationReconcileProviderDeliveryInput =
 export const OrchestrationReconcileProviderDeliveryResult = Schema.Struct({
   eventSequence: NonNegativeInt,
   threadId: ThreadId,
-  outcome: ProviderDeliveryReconciliationOutcome,
+  outcome: EngineDeliveryReconciliationOutcome,
   state: Schema.Literals(["retry", "succeeded", "dead", "uncertain"]),
   reconciledAt: IsoDateTime,
 });

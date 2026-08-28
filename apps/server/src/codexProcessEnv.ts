@@ -17,7 +17,7 @@ import {
 import { resolveBaseCodexHomePath, resolveOmniMindCodexHomeOverlayPath } from "./codexHomePaths.ts";
 import {
   buildProviderChildEnvironment,
-  registerProviderCredentialKey,
+  registerEngineCredentialKey,
 } from "./providerChildEnvironment.ts";
 
 const CODEX_PROCESS_SHELL_ENV_NAMES = ["PATH", "SSH_AUTH_SOCK"] as const;
@@ -718,12 +718,12 @@ export async function buildCodexProcessEnv(
       : baseEnv;
   const platform = input.platform ?? process.platform;
   const effectiveEnv = buildProviderChildEnvironment({
-    provider: "codex",
+    engine: "codex",
     baseEnv: configuredEnv,
   });
   const providerEnvKey = readActiveCodexProviderEnvKey(effectiveEnv);
   if (providerEnvKey) {
-    registerProviderCredentialKey(providerEnvKey);
+    registerEngineCredentialKey(providerEnvKey);
   }
 
   if (platform === "darwin" || platform === "linux") {

@@ -157,7 +157,7 @@ export default Effect.gen(function* () {
             ORDER BY created_at DESC, activity_id DESC
           ) AS row_number
         FROM projection_thread_activities
-        WHERE kind = 'provider.approval.respond.failed'
+        WHERE kind = 'engine.approval.respond.failed'
           AND json_extract(payload_json, '$.requestId') IS NOT NULL
           AND (
             lower(COALESCE(json_extract(payload_json, '$.detail'), ''))
@@ -223,7 +223,7 @@ export default Effect.gen(function* () {
               AND activity.kind IN (
                 'user-input.requested',
                 'user-input.resolved',
-                'provider.user-input.respond.failed'
+                'engine.user-input.respond.failed'
               )
           ) AS latest
           WHERE latest.row_number = 1
@@ -232,7 +232,7 @@ export default Effect.gen(function* () {
         FROM latest_user_input_states
         WHERE latest_user_input_states.kind = 'user-input.requested'
           OR (
-            latest_user_input_states.kind = 'provider.user-input.respond.failed'
+            latest_user_input_states.kind = 'engine.user-input.respond.failed'
             AND latest_user_input_states.detail NOT LIKE '%stale pending user-input request%'
             AND latest_user_input_states.detail NOT LIKE '%unknown pending user-input request%'
           )

@@ -26,11 +26,11 @@ function makeThread(overrides: Partial<Thread>): Thread {
     codexThreadId: null,
     projectId: "project-1" as ProjectId,
     title: "Polish notifications",
-    modelSelection: { provider: "codex", model: "gpt-5.4-mini" },
+    engineSelection: { engine: "codex", model: "gpt-5.4-mini" },
     runtimeMode: "full-access",
     interactionMode: "default",
     session: {
-      provider: "codex",
+      engine: "codex",
       status: "running",
       orchestrationStatus: "running",
       createdAt: "2026-04-05T10:00:00.000Z",
@@ -85,7 +85,7 @@ function buildCollectedTaskCompletionCopy(assistantText: string) {
     [
       makeThread({
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-04-05T10:00:00.000Z",
@@ -140,7 +140,7 @@ describe("collectCompletedThreadCandidates", () => {
     const previous = [
       makeThread({
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "running",
           orchestrationStatus: "running",
           createdAt: "2026-04-05T10:00:00.000Z",
@@ -151,7 +151,7 @@ describe("collectCompletedThreadCandidates", () => {
     const next = [
       makeThread({
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-04-05T10:00:00.000Z",
@@ -196,7 +196,7 @@ describe("collectCompletedThreadCandidates", () => {
     const next = [
       makeThread({
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-04-05T10:00:00.000Z",
@@ -244,7 +244,7 @@ describe("collectCompletedThreadCandidates", () => {
     const next = [
       makeThread({
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-04-05T10:00:00.000Z",
@@ -292,7 +292,7 @@ describe("collectCompletedThreadCandidates", () => {
     const next = [
       makeThread({
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-04-05T10:00:00.000Z",
@@ -341,7 +341,7 @@ describe("collectCompletedThreadCandidates", () => {
     const previous = [
       makeThread({
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "ready",
           orchestrationStatus: "ready",
           activeTurnId: TurnId.makeUnsafe("turn-1"),
@@ -362,7 +362,7 @@ describe("collectCompletedThreadCandidates", () => {
     const next = [
       makeThread({
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-04-05T10:00:00.000Z",
@@ -406,7 +406,7 @@ describe("collectCompletedThreadCandidates", () => {
     const previous = [
       makeThread({
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "running",
           orchestrationStatus: "running",
           activeTurnId: TurnId.makeUnsafe("turn-1"),
@@ -418,7 +418,7 @@ describe("collectCompletedThreadCandidates", () => {
     const next = [
       makeThread({
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "running",
           orchestrationStatus: "running",
           activeTurnId: TurnId.makeUnsafe("turn-1"),
@@ -454,7 +454,7 @@ describe("collectCompletedThreadCandidates", () => {
     const previous = [
       makeThread({
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "running",
           orchestrationStatus: "running",
           activeTurnId: TurnId.makeUnsafe("turn-1"),
@@ -485,7 +485,7 @@ describe("collectCompletedThreadCandidates", () => {
     const next = [
       makeThread({
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-04-05T10:00:00.000Z",
@@ -531,7 +531,7 @@ describe("collectCompletedThreadCandidates", () => {
       const previous = [
         makeThread({
           session: {
-            provider: "codex",
+            engine: "codex",
             status: "running",
             orchestrationStatus: "running",
             activeTurnId: TurnId.makeUnsafe("turn-1"),
@@ -543,7 +543,7 @@ describe("collectCompletedThreadCandidates", () => {
       const next = [
         makeThread({
           session: {
-            provider: "codex",
+            engine: "codex",
             status: "ready",
             orchestrationStatus: "ready",
             createdAt: "2026-04-05T10:00:00.000Z",
@@ -580,14 +580,14 @@ describe("collectCompletedThreadCandidates", () => {
       sourceProposedPlan: undefined,
     } as const;
     const idleSession = {
-      provider: "codex",
+      engine: "codex",
       status: "ready",
       orchestrationStatus: "ready",
       createdAt: "2026-04-05T10:00:00.000Z",
       updatedAt: "2026-04-05T10:00:05.000Z",
     } as const;
     const followUpStartingSession = {
-      provider: "codex",
+      engine: "codex",
       status: "running",
       orchestrationStatus: "running",
       createdAt: "2026-04-05T10:00:00.000Z",
@@ -626,14 +626,14 @@ describe("collectCompletedThreadCandidates", () => {
         sourceProposedPlan: undefined,
       }) as const;
     const idleSession = {
-      provider: "codex",
+      engine: "codex",
       status: "ready",
       orchestrationStatus: "ready",
       createdAt: "2026-04-05T10:00:00.000Z",
       updatedAt: "2026-04-05T10:00:05.000Z",
     } as const;
     const followUpStartingSession = {
-      provider: "codex",
+      engine: "codex",
       status: "running",
       orchestrationStatus: "running",
       createdAt: "2026-04-05T10:00:00.000Z",
@@ -668,7 +668,7 @@ describe("collectCompletedThreadCandidates", () => {
     const next = [
       makeThread({
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-04-05T10:00:00.000Z",

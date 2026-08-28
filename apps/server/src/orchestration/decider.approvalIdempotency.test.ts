@@ -1,7 +1,7 @@
 import {
   ApprovalRequestId,
   CommandId,
-  DEFAULT_PROVIDER_INTERACTION_MODE,
+  DEFAULT_ENGINE_INTERACTION_MODE,
   DEFAULT_RUNTIME_MODE,
   EventId,
   ProjectId,
@@ -38,7 +38,7 @@ async function createThreadReadModel(now: string): Promise<OrchestrationReadMode
         kind: "project",
         title: "Project",
         workspaceRoot: "/tmp/project",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         scripts: [],
         createdAt: now,
         updatedAt: now,
@@ -62,11 +62,11 @@ async function createThreadReadModel(now: string): Promise<OrchestrationReadMode
         threadId: THREAD_ID,
         projectId: PROJECT_ID,
         title: "Approval thread",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: DEFAULT_RUNTIME_MODE,
         envMode: "local",
         branch: null,
@@ -223,7 +223,7 @@ describe("decider approval idempotency", () => {
     expect(event.type).toBe("thread.approval-response-requested");
   });
 
-  it("accepts a retry after a retryable provider delivery failure", async () => {
+  it("accepts a retry after a retryable engine delivery failure", async () => {
     const now = new Date().toISOString();
     const withThread = await createThreadReadModel(now);
     const withResponse = await appendApprovalResponse(withThread, {
@@ -256,7 +256,7 @@ describe("decider approval idempotency", () => {
     expect(event.type).toBe("thread.approval-response-requested");
   });
 
-  it("keeps rejecting retries after an uncertain provider delivery failure", async () => {
+  it("keeps rejecting retries after an uncertain engine delivery failure", async () => {
     const now = new Date().toISOString();
     const withThread = await createThreadReadModel(now);
     const withResponse = await appendApprovalResponse(withThread, {

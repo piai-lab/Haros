@@ -19,19 +19,19 @@ import { MigrationLineageError, MigrationSchemaTooNewError } from "./Errors.ts";
 import Migration0001 from "./Migrations/001_OrchestrationEvents.ts";
 import Migration0002 from "./Migrations/002_OrchestrationCommandReceipts.ts";
 import Migration0003 from "./Migrations/003_CheckpointDiffBlobs.ts";
-import Migration0004 from "./Migrations/004_ProviderSessionRuntime.ts";
+import Migration0004 from "./Migrations/004_EngineSessionRuntime.ts";
 import Migration0005 from "./Migrations/005_Projections.ts";
 import Migration0006 from "./Migrations/006_ProjectionThreadSessionRuntimeModeColumns.ts";
 import Migration0007 from "./Migrations/007_ProjectionThreadMessageAttachments.ts";
 import Migration0008 from "./Migrations/008_ProjectionThreadActivitySequence.ts";
-import Migration0009 from "./Migrations/009_ProviderSessionRuntimeMode.ts";
+import Migration0009 from "./Migrations/009_EngineSessionRuntimeMode.ts";
 import Migration0010 from "./Migrations/010_ProjectionThreadsRuntimeMode.ts";
 import Migration0011 from "./Migrations/011_OrchestrationThreadCreatedRuntimeMode.ts";
 import Migration0012 from "./Migrations/012_ProjectionThreadsInteractionMode.ts";
 import Migration0013 from "./Migrations/013_ProjectionThreadProposedPlans.ts";
 import Migration0014 from "./Migrations/014_ProjectionThreadProposedPlanImplementation.ts";
 import Migration0015 from "./Migrations/015_ProjectionTurnsSourceProposedPlan.ts";
-import Migration0016 from "./Migrations/016_CanonicalizeModelSelections.ts";
+import Migration0016 from "./Migrations/016_CanonicalizeEngineSelections.ts";
 import Migration0017 from "./Migrations/017_ThreadHandoffMetadata.ts";
 import Migration0018 from "./Migrations/018_ProjectionThreadMessageMentions.ts";
 import Migration0019 from "./Migrations/019_ProjectionThreadsEnvMode.ts";
@@ -50,7 +50,7 @@ import Migration0031 from "./Migrations/031_ProjectionThreadsCreateBranchFlowCom
 import Migration0032 from "./Migrations/032_ReconcileImportedSchemaLineage.ts";
 import Migration0033 from "./Migrations/033_ProjectionThreadsSidechatSource.ts";
 import Migration0034 from "./Migrations/034_AuthAccessManagement.ts";
-import Migration0035 from "./Migrations/035_NormalizeLegacyModelSelectionOptions.ts";
+import Migration0035 from "./Migrations/035_NormalizeLegacyEngineSelectionOptions.ts";
 import Migration0036 from "./Migrations/036_ProjectionThreadsPinned.ts";
 import Migration0037 from "./Migrations/037_ProjectionSnapshotCapIndexes.ts";
 import Migration0038 from "./Migrations/038_ReconcileLegacySidechatSource.ts";
@@ -69,20 +69,20 @@ import Migration0050 from "./Migrations/050_ProfileStatsArchive.ts";
 import Migration0051 from "./Migrations/051_ProfileStatsDeletedTokensModel.ts";
 import Migration0052 from "./Migrations/052_ProjectionThreadUserMessageSummaryIndex.ts";
 import Migration0053 from "./Migrations/053_BackfillThreadActivitySequence.ts";
-import Migration0054 from "./Migrations/054_ReservedDurableProviderCommandDelivery.ts";
+import Migration0054 from "./Migrations/054_ReservedDurableEngineCommandDelivery.ts";
 import Migration0055 from "./Migrations/055_ManagedAttachments.ts";
 import Migration0056 from "./Migrations/056_CommandReceiptFingerprints.ts";
 import Migration0057 from "./Migrations/057_ThreadScopedProjectionMessageIdentity.ts";
 import Migration0058 from "./Migrations/058_ThreadScopedPendingApprovalIdentity.ts";
-import Migration0059 from "./Migrations/059_ProviderSessionLifecycleGeneration.ts";
+import Migration0059 from "./Migrations/059_EngineSessionLifecycleGeneration.ts";
 import Migration0060 from "./Migrations/060_PendingApprovalLifecycleGeneration.ts";
 import Migration0061 from "./Migrations/061_PendingApprovalSettlementState.ts";
 import Migration0062 from "./Migrations/062_PendingInteractionSettlementParity.ts";
 import Migration0063 from "./Migrations/063_ProjectionMessageCausalSequence.ts";
-import Migration0064 from "./Migrations/064_DurableProviderCommandDelivery.ts";
+import Migration0064 from "./Migrations/064_DurableEngineCommandDelivery.ts";
 import Migration0065 from "./Migrations/065_DurableQueuedTurnPromotions.ts";
-import Migration0066 from "./Migrations/066_DurableProviderRuntimeEvents.ts";
-import Migration0067 from "./Migrations/067_ProviderDeliveryReconciliation.ts";
+import Migration0066 from "./Migrations/066_DurableEngineRuntimeEvents.ts";
+import Migration0067 from "./Migrations/067_EngineDeliveryReconciliation.ts";
 import Migration0068 from "./Migrations/068_GitHandoffOperations.ts";
 import Migration0069 from "./Migrations/069_ProjectPullRequestPins.ts";
 import Migration0070 from "./Migrations/070_AgentGatewayOperations.ts";
@@ -133,19 +133,19 @@ export const migrationEntries = [
   [1, "OrchestrationEvents", Migration0001],
   [2, "OrchestrationCommandReceipts", Migration0002],
   [3, "CheckpointDiffBlobs", Migration0003],
-  [4, "ProviderSessionRuntime", Migration0004],
+  [4, "EngineSessionRuntime", Migration0004],
   [5, "Projections", Migration0005],
   [6, "ProjectionThreadSessionRuntimeModeColumns", Migration0006],
   [7, "ProjectionThreadMessageAttachments", Migration0007],
   [8, "ProjectionThreadActivitySequence", Migration0008],
-  [9, "ProviderSessionRuntimeMode", Migration0009],
+  [9, "EngineSessionRuntimeMode", Migration0009],
   [10, "ProjectionThreadsRuntimeMode", Migration0010],
   [11, "OrchestrationThreadCreatedRuntimeMode", Migration0011],
   [12, "ProjectionThreadsInteractionMode", Migration0012],
   [13, "ProjectionThreadProposedPlans", Migration0013],
   [14, "ProjectionThreadProposedPlanImplementation", Migration0014],
   [15, "ProjectionTurnsSourceProposedPlan", Migration0015],
-  [16, "CanonicalizeModelSelections", Migration0016],
+  [16, "CanonicalizeEngineSelections", Migration0016],
   [17, "ThreadHandoffMetadata", Migration0017],
   [18, "ProjectionThreadMessageMentions", Migration0018],
   [19, "ProjectionThreadsEnvMode", Migration0019],
@@ -164,7 +164,7 @@ export const migrationEntries = [
   [32, "ReconcileImportedSchemaLineage", Migration0032],
   [33, "ProjectionThreadsSidechatSource", Migration0033],
   [34, "AuthAccessManagement", Migration0034],
-  [35, "NormalizeLegacyModelSelectionOptions", Migration0035],
+  [35, "NormalizeLegacyEngineSelectionOptions", Migration0035],
   [36, "ProjectionThreadsPinned", Migration0036],
   [37, "ProjectionSnapshotCapIndexes", Migration0037],
   [38, "ReconcileLegacySidechatSource", Migration0038],
@@ -184,14 +184,14 @@ export const migrationEntries = [
   [52, "ProjectionThreadUserMessageSummaryIndex", Migration0052],
   [53, "BackfillThreadActivitySequence", Migration0053],
   // Private development builds briefly recorded this tracker identity while
-  // exercising provider delivery. Keep the ID/name canonical as a no-op; the
+  // exercising engine delivery. Keep the ID/name canonical as a no-op; the
   // production cutover is registered independently at migration 64.
   [54, "DurableProviderCommandDelivery", Migration0054],
   [55, "ManagedAttachments", Migration0055],
   [56, "CommandReceiptFingerprints", Migration0056],
   [57, "ThreadScopedProjectionMessageIdentity", Migration0057],
   [58, "ThreadScopedPendingApprovalIdentity", Migration0058],
-  [59, "ProviderSessionLifecycleGeneration", Migration0059],
+  [59, "EngineSessionLifecycleGeneration", Migration0059],
   [60, "PendingApprovalLifecycleGeneration", Migration0060],
   [61, "PendingApprovalSettlementState", Migration0061],
   [62, "PendingInteractionSettlementParity", Migration0062],
@@ -199,7 +199,7 @@ export const migrationEntries = [
   [64, "DurableProviderCommandDeliveryCutover", Migration0064],
   [65, "DurableQueuedTurnPromotions", Migration0065],
   [66, "DurableProviderRuntimeEvents", Migration0066],
-  [67, "ProviderDeliveryReconciliation", Migration0067],
+  [67, "EngineDeliveryReconciliation", Migration0067],
   [68, "GitHandoffOperations", Migration0068],
   [69, "ProjectPullRequestPins", Migration0069],
   [70, "AgentGatewayOperations", Migration0070],

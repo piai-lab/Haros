@@ -1,7 +1,7 @@
 import {
   ApprovalRequestId,
   CommandId,
-  DEFAULT_PROVIDER_INTERACTION_MODE,
+  DEFAULT_ENGINE_INTERACTION_MODE,
   EventId,
   ProjectId,
   ThreadId,
@@ -38,7 +38,7 @@ async function createProjectReadModel(now: string, kind: "project" | "studio" = 
         kind,
         title: kind === "studio" ? "Studio" : "Project",
         workspaceRoot: kind === "studio" ? "/tmp/Studio" : "/tmp/project",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         scripts: [],
         createdAt: now,
         updatedAt: now,
@@ -66,11 +66,11 @@ async function createWorktreeThreadReadModel(now: string, kind: "project" | "stu
         threadId: THREAD_ID,
         projectId: PROJECT_ID,
         title: "Worktree thread",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "full-access",
         envMode: "worktree",
         branch: WORKTREE_BRANCH,
@@ -105,11 +105,11 @@ describe("decider worktree metadata", () => {
           threadId: THREAD_ID,
           projectId: PROJECT_ID,
           title: "Studio thread",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "full-access",
           envMode: "worktree",
           branch: WORKTREE_BRANCH,
@@ -250,11 +250,11 @@ describe("decider worktree metadata", () => {
           threadId: THREAD_ID,
           projectId: PROJECT_ID,
           title: "Worktree thread",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "full-access",
           envMode: "worktree",
           branch: WORKTREE_BRANCH,
@@ -291,11 +291,11 @@ describe("decider worktree metadata", () => {
           sourceThreadId: THREAD_ID,
           projectId: PROJECT_ID,
           title: "Forked thread",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "full-access",
           envMode: "worktree",
           branch: WORKTREE_BRANCH,
@@ -335,11 +335,11 @@ describe("decider worktree metadata", () => {
           sidechatSourceThreadId: THREAD_ID,
           projectId: PROJECT_ID,
           title: "Sidechat: Worktree thread",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           envMode: "local",
           branch: null,

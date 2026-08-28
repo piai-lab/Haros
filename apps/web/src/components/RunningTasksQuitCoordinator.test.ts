@@ -40,7 +40,7 @@ describe("quit dialog running-task filter", () => {
     ).toEqual([{ id: "eligible", title: "eligible" }]);
   });
 
-  it("accepts renderer and provider startup phases and sorts deterministically", () => {
+  it("accepts renderer and engine startup phases and sorts deterministically", () => {
     expect(
       filterEligibleRunningTasks([
         thread("b", {

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { resolveAcpPermissionPolicy } from "./AcpAdapterSupport.ts";
 import {
-  applyGrokAcpModelSelection,
+  applyGrokAcpEngineSelection,
   buildGrokAcpSpawnInput,
   isGrokSessionStoragePathNotFoundError,
   resolveGrokAcpAuthMethodId,
@@ -257,7 +257,7 @@ describe("Grok ACP permission policy", () => {
     ).toBeUndefined();
   });
 
-  it("auto-allows Full Access requests with the provider's request-scoped option", () => {
+  it("auto-allows Full Access requests with the engine's request-scoped option", () => {
     expect(
       resolveAcpPermissionPolicy({
         runtimeMode: "full-access",
@@ -278,7 +278,7 @@ describe("Grok ACP permission policy", () => {
   });
 });
 
-describe("applyGrokAcpModelSelection", () => {
+describe("applyGrokAcpEngineSelection", () => {
   it("does not call Grok's unsupported ACP config-option method", async () => {
     const calls: Array<
       { type: "model"; value: string } | { type: "config"; id: string; value: string }
@@ -309,7 +309,7 @@ describe("applyGrokAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyGrokAcpModelSelection({
+      applyGrokAcpEngineSelection({
         runtime,
         model: "grok-build",
         options: { reasoningEffort: "high" },

@@ -10,24 +10,24 @@ describe("resolveThreadModelSummary", () => {
 
   it("summarizes a codex selection with its reasoning effort", () => {
     const summary = resolveThreadModelSummary({
-      provider: "codex",
+      engine: "codex",
       model: "gpt-5.5",
       options: { reasoningEffort: "high" },
     });
 
-    expect(summary?.provider).toBe("codex");
+    expect(summary?.engine).toBe("codex");
     expect(summary?.modelLabel.length).toBeGreaterThan(0);
     expect(summary?.statusLabel?.toLowerCase()).toBe("high");
   });
 
   it("falls back to the model's default effort when none is stored", () => {
     const withEffort = resolveThreadModelSummary({
-      provider: "codex",
+      engine: "codex",
       model: "gpt-5.5",
       options: { reasoningEffort: "low" },
     });
     const withoutOptions = resolveThreadModelSummary({
-      provider: "codex",
+      engine: "codex",
       model: "gpt-5.5",
     });
 
@@ -38,12 +38,12 @@ describe("resolveThreadModelSummary", () => {
 
   it("summarizes a claude selection", () => {
     const summary = resolveThreadModelSummary({
-      provider: "claude",
+      engine: "claude",
       model: "claude-sonnet-5",
       options: { effort: "high" },
     });
 
-    expect(summary?.provider).toBe("claude");
+    expect(summary?.engine).toBe("claude");
     expect(summary?.modelLabel.length).toBeGreaterThan(0);
     expect(summary?.fastMode).toBe(false);
   });

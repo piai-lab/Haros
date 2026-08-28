@@ -10,7 +10,7 @@ import type { BrowserHostRpcError } from "../browserHostRpcClient.ts";
 
 export interface BrowserAutomationHostCall {
   readonly sessionKey: string;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly threadId: ThreadId;
   readonly name: BrowserToolName;
   readonly arguments: Record<string, unknown>;

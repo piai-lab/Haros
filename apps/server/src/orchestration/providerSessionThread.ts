@@ -4,7 +4,7 @@ import { Effect, Option } from "effect";
 import type { ProjectionSnapshotQueryShape } from "./Services/ProjectionSnapshotQuery.ts";
 
 /**
- * Resolves the projection thread that owns provider-session side effects.
+ * Resolves the projection thread that owns engine-session side effects.
  * Lookup failures intentionally propagate: falling back to the child id on a
  * transient failure would let independent reactors choose different lease keys.
  */

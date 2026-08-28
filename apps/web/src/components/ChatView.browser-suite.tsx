@@ -13,13 +13,13 @@ import {
   MessageId,
   DEVICE_WS_METHODS,
   ORCHESTRATION_WS_METHODS,
-  PROVIDER_INTERACTION_MODES,
+  ENGINE_INTERACTION_MODES,
   type OrchestrationReadModel,
   type ProjectId,
-  type ProviderExecutionCapabilities,
+  type EngineExecutionCapabilities,
   type EngineKind,
-  type ProviderListCommandsResult,
-  type ProviderListModelsResult,
+  type EngineListCommandsResult,
+  type EngineListModelsResult,
   type ServerConfig,
   type ServerSettingsView,
   DEFAULT_SERVER_SETTINGS_VIEW,
@@ -64,7 +64,7 @@ import { isMacPlatform } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
 import { resetHomeChatProjectPrewarmStateForTests } from "../lib/chatProjects";
 import { resetStudioProjectPrewarmStateForTests } from "../lib/studioProjects";
-import { providerModelsQueryOptions } from "../lib/providerDiscoveryReactQuery";
+import { providerModelsQueryOptions } from "../lib/engineDiscoveryReactQuery";
 import { getRouter } from "../router";
 import { useSplitViewStore } from "../splitViewStore";
 import { useStore } from "../store";
@@ -84,7 +84,7 @@ import { resetRetainedThreadDetailSubscriptionsForTests } from "../threadDetailS
 import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { useRightDockStore } from "../rightDockStore";
 import type { RightDockPane, RightDockPaneKind } from "../rightDockStore.logic";
-import { PROVIDER_OPTIONS } from "../session-logic";
+import { ENGINE_OPTIONS } from "../session-logic";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
 import { FIRST_RUN_READINESS_PREFERENCE_KEY } from "./onboarding/firstRunReadinessPreference";
 import { toastManager } from "./ui/toast";
@@ -146,11 +146,11 @@ interface TestFixture {
   welcome: WsWelcomePayload;
   gitBranchByCwd: Record<string, string>;
   gitHasWorkingTreeChanges?: boolean;
-  providerCommandsByProvider: Partial<Record<EngineKind, ProviderListCommandsResult>>;
-  providerExecutionCapabilitiesByProvider: Partial<
-    Record<EngineKind, ProviderExecutionCapabilities>
+  providerCommandsByEngine: Partial<Record<EngineKind, EngineListCommandsResult>>;
+  engineExecutionCapabilitiesByEngine: Partial<
+    Record<EngineKind, EngineExecutionCapabilities>
   >;
-  providerModelsByProvider: Partial<Record<EngineKind, ProviderListModelsResult>>;
+  providerModelsByEngine: Partial<Record<EngineKind, EngineListModelsResult>>;
 }
 
 let fixture: TestFixture;
@@ -379,8 +379,8 @@ function createSnapshotForTargetUser(options: {
         kind: "project",
         title: "Project",
         workspaceRoot: "/repo/project",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5",
         },
         scripts: [],
@@ -394,8 +394,8 @@ function createSnapshotForTargetUser(options: {
         id: THREAD_ID,
         projectId: PROJECT_ID,
         title: THREAD_TITLE,
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5",
         },
         interactionMode: "default",
@@ -523,7 +523,7 @@ function withTurnStartFailureRestoredToCodex(
       thread.id === THREAD_ID
         ? {
             ...thread,
-            modelSelection: { provider: "codex", model: "gpt-5" },
+            engineSelection: { engine: "codex", model: "gpt-5" },
             runtimeMode: "full-access",
             interactionMode: "default",
             messages: [
@@ -538,15 +538,15 @@ function withTurnStartFailureRestoredToCodex(
             activities: [
               ...thread.activities,
               {
-                id: EventId.makeUnsafe(`activity-cross-provider-failure-${input.messageId}`),
+                id: EventId.makeUnsafe(`activity-cross-engine-failure-${input.messageId}`),
                 createdAt: failedAt,
-                kind: "provider.turn.start.failed",
-                summary: "Provider turn start failed",
+                kind: "engine.turn.start.failed",
+                summary: "Engine turn start failed",
                 tone: "error" as const,
                 turnId: null,
                 payload: {
                   messageId: input.messageId,
-                  detail: "Target provider failed to start.",
+                  detail: "Target engine failed to start.",
                 },
               },
             ],
@@ -595,13 +595,13 @@ function withTurnStartFailureUnrecovered(
               {
                 id: EventId.makeUnsafe(`activity-unrecovered-failure-${input.messageId}`),
                 createdAt: failedAt,
-                kind: "provider.turn.start.failed",
-                summary: "Provider turn start failed",
+                kind: "engine.turn.start.failed",
+                summary: "Engine turn start failed",
                 tone: "error" as const,
                 turnId: null,
                 payload: {
                   messageId: input.messageId,
-                  detail: "Target provider failed to start and the prior runtime did not recover.",
+                  detail: "Target engine failed to start and the prior runtime did not recover.",
                 },
               },
             ],
@@ -611,7 +611,7 @@ function withTurnStartFailureUnrecovered(
                   status: "error" as const,
                   providerName: "claude" as const,
                   activeTurnId: null,
-                  lastError: "Target provider failed to start.",
+                  lastError: "Target engine failed to start.",
                   updatedAt: failedAt,
                 }
               : null,
@@ -712,9 +712,9 @@ function buildFixture(snapshot: OrchestrationReadModel): TestFixture {
     serverConfig: createBaseServerConfig(),
     serverSettings: DEFAULT_SERVER_SETTINGS_VIEW,
     gitBranchByCwd: {},
-    providerCommandsByProvider: {},
-    providerExecutionCapabilitiesByProvider: {},
-    providerModelsByProvider: {
+    providerCommandsByEngine: {},
+    engineExecutionCapabilitiesByEngine: {},
+    providerModelsByEngine: {
       codex: {
         source: "browser.fixture",
         models: ["gpt-5", "gpt-5.5", "gpt-5.4", "gpt-5.2"].map((slug) => ({ slug, name: slug })),
@@ -730,16 +730,16 @@ function buildFixture(snapshot: OrchestrationReadModel): TestFixture {
 }
 
 function configureClaudeNewThreadShortcut(nextFixture: TestFixture): void {
-  nextFixture.providerModelsByProvider.claude = {
+  nextFixture.providerModelsByEngine.claude = {
     source: "browser.fixture",
     models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
   };
   nextFixture.serverConfig = {
     ...nextFixture.serverConfig,
-    providers: [
-      ...nextFixture.serverConfig.providers,
+    engines: [
+      ...nextFixture.serverConfig.engines,
       {
-        provider: "claude",
+        engine: "claude",
         status: "ready",
         available: true,
         authStatus: "authenticated",
@@ -786,8 +786,8 @@ function addThreadToSnapshot(
         id: threadId,
         projectId: PROJECT_ID,
         title: "New thread",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5",
         },
         interactionMode: "default",
@@ -830,7 +830,7 @@ function withSettledThreadBranch(
             ...thread,
             branch,
             settledAt: NOW_ISO,
-            modelSelection: { provider: "codex", model: "gpt-5.5" },
+            engineSelection: { engine: "codex", model: "gpt-5.5" },
           }
         : thread,
     ),
@@ -856,7 +856,7 @@ function createAutomationDefinitionFromCreateRequest(
     schedule: input.schedule,
     enabled: input.enabled ?? true,
     nextRunAt: null,
-    modelSelection: input.modelSelection,
+    engineSelection: input.engineSelection,
     runtimeMode: input.runtimeMode ?? "approval-required",
     interactionMode: input.interactionMode ?? "default",
     worktreeMode: input.worktreeMode ?? "auto",
@@ -882,9 +882,9 @@ function createAutomationDefinitionFromCreateRequest(
     updatedAt: NOW_ISO,
     archivedAt: null,
   };
-  return input.providerOptions === undefined
+  return input.engineOptions === undefined
     ? definition
-    : { ...definition, providerOptions: input.providerOptions };
+    : { ...definition, engineOptions: input.engineOptions };
 }
 
 function createDraftOnlySnapshot(): OrchestrationReadModel {
@@ -932,8 +932,8 @@ function withOpenProjectPickerFixtures(snapshot: OrchestrationReadModel): Orches
         kind: "project",
         title: "Other Project",
         workspaceRoot: "/repo/other",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5",
         },
         scripts: [],
@@ -955,8 +955,8 @@ function withHomeChatProject(snapshot: OrchestrationReadModel): OrchestrationRea
         kind: "chat",
         title: "Home",
         workspaceRoot: "/Users/tester",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5",
         },
         scripts: [],
@@ -988,8 +988,8 @@ function withStudioProject(snapshot: OrchestrationReadModel): OrchestrationReadM
         kind: "studio",
         title: "Studio",
         workspaceRoot: "/Users/tester/Documents/OmniMind/Studio",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5",
         },
         scripts: [],
@@ -1301,13 +1301,13 @@ function recordProjectCreateCommand(command: unknown): boolean {
               : "project",
           title: String(command.title),
           workspaceRoot: String(command.workspaceRoot),
-          defaultModelSelection:
-            "defaultModelSelection" in command &&
-            command.defaultModelSelection &&
-            typeof command.defaultModelSelection === "object"
-              ? (command.defaultModelSelection as OrchestrationReadModel["projects"][number]["defaultModelSelection"])
+          defaultEngineSelection:
+            "defaultEngineSelection" in command &&
+            command.defaultEngineSelection &&
+            typeof command.defaultEngineSelection === "object"
+              ? (command.defaultEngineSelection as OrchestrationReadModel["projects"][number]["defaultEngineSelection"])
               : {
-                  provider: "codex" as const,
+                  engine: "codex" as const,
                   model: "gpt-5",
                 },
           scripts: [],
@@ -1349,22 +1349,22 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
     return fixture.serverSettings;
   }
   if (tag === WS_METHODS.providerListModels) {
-    const provider = typeof body.provider === "string" ? (body.provider as EngineKind) : null;
-    return provider
-      ? (fixture.providerModelsByProvider[provider] ?? {
+    const engine = typeof body.engine === "string" ? (body.engine as EngineKind) : null;
+    return engine
+      ? (fixture.providerModelsByEngine[engine] ?? {
           source: "browser.fixture",
           models: [],
         })
       : { source: "browser.fixture", models: [] };
   }
   if (tag === WS_METHODS.providerGetComposerCapabilities) {
-    const provider = typeof body.provider === "string" ? (body.provider as EngineKind) : "codex";
+    const engine = typeof body.engine === "string" ? (body.engine as EngineKind) : "codex";
     return {
-      provider,
+      engine,
       supportsSkillMentions: false,
       supportsSkillDiscovery: false,
       supportsNativeSlashCommandDiscovery:
-        fixture.providerCommandsByProvider[provider] !== undefined,
+        fixture.providerCommandsByEngine[engine] !== undefined,
       supportsPluginMentions: false,
       supportsPluginDiscovery: false,
       supportsRuntimeModelList: false,
@@ -1373,12 +1373,12 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
     };
   }
   if (tag === WS_METHODS.providerGetExecutionCapabilities) {
-    const modelSelection = body.modelSelection as {
-      provider: EngineKind;
+    const engineSelection = body.engineSelection as {
+      engine: EngineKind;
       model: string;
       supportsAutoMode?: boolean;
     };
-    const configured = fixture.providerExecutionCapabilitiesByProvider[modelSelection.provider];
+    const configured = fixture.engineExecutionCapabilitiesByEngine[engineSelection.engine];
     if (configured) return configured;
     const capability = (mode: "full-access" | "auto" | "approval-required") => ({
       mode,
@@ -1386,14 +1386,14 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
       status: "ready" as const,
     });
     const interactionModes = Object.fromEntries(
-      PROVIDER_INTERACTION_MODES.map((mode) => [
+      ENGINE_INTERACTION_MODES.map((mode) => [
         mode,
         { mode, structurallySupported: true, status: "ready" as const },
       ]),
-    ) as ProviderExecutionCapabilities["interactionModes"];
+    ) as EngineExecutionCapabilities["interactionModes"];
     return {
-      provider: modelSelection.provider,
-      model: modelSelection.model,
+      engine: engineSelection.engine,
+      model: engineSelection.model,
       supportsNativeTurnSteering: false,
       runtimeModes: {
         "full-access": capability("full-access"),
@@ -1404,9 +1404,9 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
     };
   }
   if (tag === WS_METHODS.providerListCommands) {
-    const provider = typeof body.provider === "string" ? (body.provider as EngineKind) : null;
-    return provider
-      ? (fixture.providerCommandsByProvider[provider] ?? {
+    const engine = typeof body.engine === "string" ? (body.engine as EngineKind) : null;
+    return engine
+      ? (fixture.providerCommandsByEngine[engine] ?? {
           source: "browser.fixture",
           commands: [],
         })
@@ -1712,12 +1712,12 @@ const worker = setupWorker(
       }
       if (method === WS_METHODS.subscribeServerProviderStatuses) {
         sendEffectRpcChunk(client, parsed.request.id, {
-          providers: fixture.serverConfig.providers,
+          engines: fixture.serverConfig.engines,
           passivePresence: {
             state: "settled",
             recoverableProviders:
               fixture.providerPassivePresence ??
-              fixture.serverConfig.providers.map((status) => status.provider),
+              fixture.serverConfig.engines.map((status) => status.engine),
           },
         });
         return;
@@ -2092,7 +2092,7 @@ function dispatchComposerFocusToggleShortcut(): KeyboardEvent {
 }
 
 // The composer model/effort shortcuts both drop into the same combined picker,
-// rendered as a Base UI menu popup. Provider and effort detail live in lazily
+// rendered as a Base UI menu popup. Engine and effort detail live in lazily
 // mounted submenus, so the reliable signal that the surface opened is the popup
 // mounting with the active model label (the fixture pins the thread to gpt-5).
 async function waitForComposerPickerSurfaceOpen(): Promise<void> {
@@ -2399,14 +2399,14 @@ async function mountChatView(options: {
       initialEntries: [initialEntry],
     }),
   );
-  for (const provider of ["codex", "claude"] as const) {
-    const knownCatalog = fixture.providerModelsByProvider[provider];
+  for (const engine of ["codex", "claude"] as const) {
+    const knownCatalog = fixture.providerModelsByEngine[engine];
     if (!knownCatalog) continue;
     // Existing-thread journeys begin with a previously known exact catalog,
     // without authorizing any mount-time discovery. Mark it stale so a real
-    // provider intent still refreshes through the production query owner.
+    // engine intent still refreshes through the production query owner.
     router.options.context.queryClient.setQueryData(
-      providerModelsQueryOptions({ provider }).queryKey,
+      providerModelsQueryOptions({ engine }).queryKey,
       knownCatalog,
       { updatedAt: 0 },
     );
@@ -2523,7 +2523,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       draftsByThreadId: {},
       draftThreadsByThreadId: {},
       projectDraftThreadIdByProjectId: {},
-      stickyModelSelectionByProvider: {},
+      stickyEngineSelectionByEngine: {},
       stickyActiveProvider: null,
     });
     useStore.setState({
@@ -4602,7 +4602,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("shows only a real Chat title without claiming a single Provider identity", async () => {
+  it("shows only a real Chat title without claiming a single Engine identity", async () => {
     const baseSnapshot = createSnapshotForTargetUser({
       targetMessageId: "msg-user-chat-header-title" as MessageId,
       targetText: "chat header title",
@@ -4746,8 +4746,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
       viewport: DEFAULT_VIEWPORT,
       snapshot,
       configureFixture: (nextFixture) => {
-        nextFixture.providerExecutionCapabilitiesByProvider.codex = {
-          provider: "codex",
+        nextFixture.engineExecutionCapabilitiesByEngine.codex = {
+          engine: "codex",
           model: "gpt-5",
           supportsNativeTurnSteering: true,
           runtimeModes: {
@@ -5520,7 +5520,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
 
       // Server ack: durable user message + turn requested, but session still ready
-      // (provider session not live yet). The same status row must survive this gap.
+      // (engine session not live yet). The same status row must survive this gap.
       const requestedTurnId = TurnId.makeUnsafe("turn-thinking-bridge");
       syncActiveThread((thread) => ({
         ...thread,
@@ -5695,8 +5695,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it("keyboard-selects the unique app /fork when Claude also advertises native fork", async () => {
-    useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
-      provider: "claude",
+    useComposerDraftStore.getState().setEngineSelection(THREAD_ID, {
+      engine: "claude",
       model: "claude-sonnet-4-5",
     });
     useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "claude");
@@ -5707,16 +5707,16 @@ describe("ChatView timeline estimator parity (full app)", () => {
         targetText: "app fork collision target",
       }),
       configureFixture: (nextFixture) => {
-        nextFixture.providerModelsByProvider.claude = {
+        nextFixture.providerModelsByEngine.claude = {
           source: "browser.fixture",
           models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
         };
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
-          providers: [
-            ...nextFixture.serverConfig.providers,
+          engines: [
+            ...nextFixture.serverConfig.engines,
             {
-              provider: "claude",
+              engine: "claude",
               status: "ready",
               available: true,
               authStatus: "authenticated",
@@ -5725,11 +5725,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
             },
           ],
         };
-        nextFixture.providerCommandsByProvider.claude = {
+        nextFixture.providerCommandsByEngine.claude = {
           source: "browser.fixture",
           commands: [
-            { name: "fork", description: "Provider-native fork" },
-            { name: "branch", description: "Provider-native branch" },
+            { name: "fork", description: "Engine-native fork" },
+            { name: "branch", description: "Engine-native branch" },
           ],
         };
       },
@@ -5745,7 +5745,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           wsRequests.some(
             (request) =>
               request._tag === WS_METHODS.providerListCommands &&
-              request.provider === "claude",
+              request.engine === "claude",
           ),
         ).toBe(true);
         const visibleForkItems = Array.from(
@@ -5767,9 +5767,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("submits provider-native /fork when the app fork action is unavailable", async () => {
-    useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
-      provider: "claude",
+  it("submits engine-native /fork when the app fork action is unavailable", async () => {
+    useComposerDraftStore.getState().setEngineSelection(THREAD_ID, {
+      engine: "claude",
       model: "claude-sonnet-4-5",
     });
     useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "claude");
@@ -5781,16 +5781,16 @@ describe("ChatView timeline estimator parity (full app)", () => {
         targetText: "native fork fallback target",
       }),
       configureFixture: (nextFixture) => {
-        nextFixture.providerModelsByProvider.claude = {
+        nextFixture.providerModelsByEngine.claude = {
           source: "browser.fixture",
           models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
         };
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
-          providers: [
-            ...nextFixture.serverConfig.providers,
+          engines: [
+            ...nextFixture.serverConfig.engines,
             {
-              provider: "claude",
+              engine: "claude",
               status: "ready",
               available: true,
               authStatus: "authenticated",
@@ -5799,9 +5799,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
             },
           ],
         };
-        nextFixture.providerCommandsByProvider.claude = {
+        nextFixture.providerCommandsByEngine.claude = {
           source: "browser.fixture",
-          commands: [{ name: "fork", description: "Provider-native fork" }],
+          commands: [{ name: "fork", description: "Engine-native fork" }],
         };
       },
     });
@@ -5811,7 +5811,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       composerEditor.focus();
       await userEvent.keyboard("/fork");
 
-      await expect.element(page.getByText("Provider-native fork", { exact: true })).toBeVisible();
+      await expect.element(page.getByText("Engine-native fork", { exact: true })).toBeVisible();
       expect(
         Array.from(document.querySelectorAll<HTMLElement>('[data-slot="command-item"]')).filter(
           (item) => item.textContent?.includes("/fork"),
@@ -6252,8 +6252,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         [PROJECT_ID]: THREAD_ID,
       },
     });
-    useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
-      provider: "codex",
+    useComposerDraftStore.getState().setEngineSelection(THREAD_ID, {
+      engine: "codex",
       model: "gpt-5.4",
       options: {
         reasoningEffort: "low",
@@ -6304,8 +6304,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
             associatedWorktreePath: "/repo/worktrees/draft-automation",
             associatedWorktreeBranch: "feature/draft-automation",
             associatedWorktreeRef: "feature/draft-automation",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5.4",
               options: {
                 reasoningEffort: "low",
@@ -6846,8 +6846,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         const ready = (mode: "full-access" | "auto" | "approval-required") => ({
           mode, structurallySupported: true, status: "ready" as const,
         });
-        nextFixture.providerExecutionCapabilitiesByProvider.codex = {
-          provider: "codex",
+        nextFixture.engineExecutionCapabilitiesByEngine.codex = {
+          engine: "codex",
           model: "gpt-5",
           supportsNativeTurnSteering: true,
           runtimeModes: {
@@ -7095,8 +7095,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it("wires Engine selection into the active Composer catalog", async () => {
-    useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
-      provider: "claude",
+    useComposerDraftStore.getState().setEngineSelection(THREAD_ID, {
+      engine: "claude",
       model: "claude-sonnet-4-5",
     });
     useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "codex");
@@ -7107,27 +7107,27 @@ describe("ChatView timeline estimator parity (full app)", () => {
         targetText: "Current Engine model discovery",
       }),
       configureFixture: (nextFixture) => {
-        nextFixture.providerModelsByProvider.codex = {
+        nextFixture.providerModelsByEngine.codex = {
           source: "browser.fixture",
           models: [{ slug: "gpt-5", name: "GPT-5" }],
         };
-        nextFixture.providerModelsByProvider.claude = {
+        nextFixture.providerModelsByEngine.claude = {
           source: "browser.fixture",
           models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
         };
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
-          providers: [
-            ...nextFixture.serverConfig.providers,
+          engines: [
+            ...nextFixture.serverConfig.engines,
             {
-              provider: "oa",
+              engine: "oa",
               status: "ready",
               available: true,
               authStatus: "authenticated",
               checkedAt: NOW_ISO,
             },
             {
-              provider: "claude",
+              engine: "claude",
               status: "ready",
               available: true,
               authStatus: "authenticated",
@@ -7140,8 +7140,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     const requestedModelProviders = () =>
       wsRequests.flatMap((request) =>
-        request._tag === WS_METHODS.providerListModels && typeof request.provider === "string"
-          ? [request.provider]
+        request._tag === WS_METHODS.providerListModels && typeof request.engine === "string"
+          ? [request.engine]
           : [],
       );
 
@@ -7159,7 +7159,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           "claude",
         );
       });
-      expect(requestedModelProviders().every((provider) => provider === "claude")).toBe(true);
+      expect(requestedModelProviders().every((engine) => engine === "claude")).toBe(true);
 
       await page.getByRole("button", { name: "Model and options" }).click();
       await expect
@@ -7269,7 +7269,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           sessionStatus,
         }),
         configureFixture: (nextFixture) => {
-          nextFixture.providerModelsByProvider.pi = {
+          nextFixture.providerModelsByEngine.pi = {
             source: "browser.fixture",
             models: [],
           };
@@ -7332,32 +7332,32 @@ describe("ChatView timeline estimator parity (full app)", () => {
   it("restores a cross-Engine send after the exact target-start failure rolls back", async () => {
     const restoreNativeApi = installDeterministicSendNativeApi();
     let currentSnapshot = createSnapshotForTargetUser({
-      targetMessageId: "msg-user-cross-provider-recovery" as MessageId,
-      targetText: "cross-provider recovery baseline",
+      targetMessageId: "msg-user-cross-engine-recovery" as MessageId,
+      targetText: "cross-engine recovery baseline",
       sessionStatus: "ready",
     });
     const failedPrompt = "preserve this prompt when Claude fails to start";
     const failedImage = createComposerImage({
-      id: "cross-provider-recovery-image",
-      previewUrl: "blob:cross-provider-recovery-image",
-      name: "cross-provider-recovery.png",
+      id: "cross-engine-recovery-image",
+      previewUrl: "blob:cross-engine-recovery-image",
+      name: "cross-engine-recovery.png",
     });
     const failedFile = createComposerFile({
-      id: "cross-provider-recovery-file",
-      name: "cross-provider-recovery.txt",
+      id: "cross-engine-recovery-file",
+      name: "cross-engine-recovery.txt",
       sizeBytes: 11,
     });
     const configureClaudeFixture = (nextFixture: TestFixture) => {
-      nextFixture.providerModelsByProvider.claude = {
+      nextFixture.providerModelsByEngine.claude = {
         source: "browser.fixture",
         models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
       };
       nextFixture.serverConfig = {
         ...nextFixture.serverConfig,
-        providers: [
-          ...nextFixture.serverConfig.providers,
+        engines: [
+          ...nextFixture.serverConfig.engines,
           {
-            provider: "claude",
+            engine: "claude",
             status: "ready",
             available: true,
             authStatus: "authenticated",
@@ -7374,8 +7374,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
-        provider: "claude",
+      useComposerDraftStore.getState().setEngineSelection(THREAD_ID, {
+        engine: "claude",
         model: "claude-sonnet-4-5",
       });
       await waitForServerConfigToApply();
@@ -7388,7 +7388,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           wsRequests.some(
             (request) =>
-              request._tag === WS_METHODS.providerListModels && request.provider === "claude",
+              request._tag === WS_METHODS.providerListModels && request.engine === "claude",
           ),
         ).toBe(true);
         expect(
@@ -7401,7 +7401,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       useComposerDraftStore.getState().addFiles(THREAD_ID, [failedFile]);
       useComposerDraftStore.getState().addAssistantSelection(THREAD_ID, {
         type: "assistant-selection",
-        id: "cross-provider-recovery-selection",
+        id: "cross-engine-recovery-selection",
         assistantMessageId: "msg-assistant-3",
         text: "preserve this referenced answer",
       });
@@ -7430,8 +7430,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
                 command.message.text.includes(failedPrompt),
             );
           expect(turnStart).toBeDefined();
-          expect(turnStart?.modelSelection).toMatchObject({
-            provider: "claude",
+          expect(turnStart?.engineSelection).toMatchObject({
+            engine: "claude",
             model: "claude-sonnet-4-5",
           });
           const message = turnStart?.message as
@@ -7489,7 +7489,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         draftsByThreadId: hydratedState.draftsByThreadId,
         draftThreadsByThreadId: hydratedState.draftThreadsByThreadId,
         projectDraftThreadIdByProjectId: hydratedState.projectDraftThreadIdByProjectId,
-        stickyModelSelectionByProvider: hydratedState.stickyModelSelectionByProvider,
+        stickyEngineSelectionByEngine: hydratedState.stickyEngineSelectionByEngine,
         stickyActiveProvider: hydratedState.stickyActiveProvider,
       });
       expect(
@@ -7551,16 +7551,16 @@ describe("ChatView timeline estimator parity (full app)", () => {
           const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
           expect(draft?.prompt).toBe(failedPrompt);
           expect(draft?.activeProvider).toBe("codex");
-          expect(draft?.modelSelectionByProvider.codex).toMatchObject({
-            provider: "codex",
+          expect(draft?.engineSelectionByEngine.codex).toMatchObject({
+            engine: "codex",
             model: "gpt-5",
           });
           expect(draft?.runtimeMode).toBe("full-access");
-          expect(draft?.images.map((image) => image.name)).toEqual(["cross-provider-recovery.png"]);
-          expect(draft?.files.map((file) => file.name)).toEqual(["cross-provider-recovery.txt"]);
+          expect(draft?.images.map((image) => image.name)).toEqual(["cross-engine-recovery.png"]);
+          expect(draft?.files.map((file) => file.name)).toEqual(["cross-engine-recovery.txt"]);
           expect(draft?.assistantSelections).toEqual([
             expect.objectContaining({
-              id: "cross-provider-recovery-selection",
+              id: "cross-engine-recovery-selection",
               text: "preserve this referenced answer",
             }),
           ]);
@@ -7621,15 +7621,15 @@ describe("ChatView timeline estimator parity (full app)", () => {
         { timeout: 8_000, interval: 16 },
       );
 
-      useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
-        provider: "codex",
+      useComposerDraftStore.getState().setEngineSelection(THREAD_ID, {
+        engine: "codex",
         model: "gpt-5.4",
       });
       useComposerDraftStore.getState().setRuntimeMode(THREAD_ID, "approval-required");
       await vi.waitFor(() => {
         const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
         expect(draft?.activeProvider).toBe("codex");
-        expect(draft?.modelSelectionByProvider.codex).toMatchObject({ model: "gpt-5.4" });
+        expect(draft?.engineSelectionByEngine.codex).toMatchObject({ model: "gpt-5.4" });
         expect(draft?.runtimeMode).toBe("approval-required");
       });
 
@@ -7646,12 +7646,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
           const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
           expect(draft?.prompt).toBe(secondFailedPrompt);
           expect(draft?.activeProvider).toBe("codex");
-          expect(draft?.modelSelectionByProvider.codex).toMatchObject({
-            provider: "codex",
+          expect(draft?.engineSelectionByEngine.codex).toMatchObject({
+            engine: "codex",
             model: "gpt-5.4",
           });
           expect(draft?.runtimeMode).toBe("approval-required");
-          expect(draft?.images.map((image) => image.name)).toEqual(["cross-provider-recovery.png"]);
+          expect(draft?.images.map((image) => image.name)).toEqual(["cross-engine-recovery.png"]);
           expect(
             wsRequests
               .map(readDispatchedCommand)
@@ -7716,8 +7716,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
   it("restores a same-Engine exact binding unless a newer draft supersedes it", async () => {
     const restoreNativeApi = installDeterministicSendNativeApi();
     let currentSnapshot = createSnapshotForTargetUser({
-      targetMessageId: "msg-user-same-provider-recovery" as MessageId,
-      targetText: "same-provider recovery baseline",
+      targetMessageId: "msg-user-same-engine-recovery" as MessageId,
+      targetText: "same-engine recovery baseline",
       sessionStatus: "ready",
     });
     const mounted = await mountChatView({
@@ -7726,8 +7726,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     const selectTargetBinding = () => {
-      useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
-        provider: "codex",
+      useComposerDraftStore.getState().setEngineSelection(THREAD_ID, {
+        engine: "codex",
         model: "gpt-5.4",
         options: { reasoningEffort: "low" },
       });
@@ -7760,8 +7760,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
                 "text" in command.message &&
                 command.message.text === prompt,
             );
-          expect(turnStart?.modelSelection).toEqual({
-            provider: "codex",
+          expect(turnStart?.engineSelection).toEqual({
+            engine: "codex",
             model: "gpt-5.4",
             options: { reasoningEffort: "low" },
           });
@@ -7778,7 +7778,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     try {
       await waitForServerConfigToApply();
       selectTargetBinding();
-      const firstPrompt = "restore my same-provider model restart";
+      const firstPrompt = "restore my same-engine model restart";
       const firstMessageId = await sendAndReadMessageId(firstPrompt);
 
       currentSnapshot = withTurnStartFailureRestoredToCodex(currentSnapshot, {
@@ -7792,8 +7792,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         () => {
           const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
           expect(draft?.prompt).toBe(firstPrompt);
-          expect(draft?.modelSelectionByProvider.codex).toEqual({
-            provider: "codex",
+          expect(draft?.engineSelectionByEngine.codex).toEqual({
+            engine: "codex",
             model: "gpt-5",
           });
           expect(draft?.runtimeMode).toBe("full-access");
@@ -7809,8 +7809,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await editor.fill("");
       // A binding ABA is still newer intent: returning to the failed target
       // must not make the old one-shot recovery snapshot authoritative again.
-      useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
-        provider: "codex",
+      useComposerDraftStore.getState().setEngineSelection(THREAD_ID, {
+        engine: "codex",
         model: "gpt-5.5",
       });
       selectTargetBinding();
@@ -7826,8 +7826,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         () => {
           const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
           expect(draft?.prompt ?? "").toBe("");
-          expect(draft?.modelSelectionByProvider.codex).toEqual({
-            provider: "codex",
+          expect(draft?.engineSelectionByEngine.codex).toEqual({
+            engine: "codex",
             model: "gpt-5.4",
             options: { reasoningEffort: "low" },
           });
@@ -7846,7 +7846,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("cycles the active provider model without opening the picker", async () => {
+  it("cycles the active engine model without opening the picker", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({
@@ -7863,18 +7863,18 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await dispatchModelCycleShortcutWhenReady(composerEditor, "]");
       await vi.waitFor(() => {
         expect(
-          useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
+          useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.engineSelectionByEngine
             .codex,
-        ).toMatchObject({ provider: "codex", model: "gpt-5.5" });
+        ).toMatchObject({ engine: "codex", model: "gpt-5.5" });
       });
       expect(document.querySelector('[data-slot="menu-popup"]')).toBeNull();
 
       await dispatchModelCycleShortcutWhenReady(composerEditor, "[");
       await vi.waitFor(() => {
         expect(
-          useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
+          useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.engineSelectionByEngine
             .codex,
-        ).toMatchObject({ provider: "codex", model: "gpt-5" });
+        ).toMatchObject({ engine: "codex", model: "gpt-5" });
       });
     } finally {
       await mounted.cleanup();
@@ -8308,8 +8308,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         selectedProvider: "codex",
         selectedModel: "gpt-5",
         selectedPromptEffort: null,
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5",
         },
         runtimeMode: "full-access",
@@ -8334,8 +8334,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         selectedProvider: "codex",
         selectedModel: "gpt-5",
         selectedPromptEffort: null,
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5",
         },
         runtimeMode: "full-access",
@@ -8405,7 +8405,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         sessionStatus: "ready",
       }),
       configureFixture: (nextFixture) => {
-        nextFixture.providerModelsByProvider.pi = {
+        nextFixture.providerModelsByEngine.pi = {
           source: "browser.fixture",
           models: [],
         };
@@ -8469,8 +8469,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         selectedProvider: "codex",
         selectedModel: "gpt-5",
         selectedPromptEffort: null,
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5",
           options: {
             reasoningEffort: "xhigh",
@@ -8501,8 +8501,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
               request.command.message.text.includes(queuedPrompt),
           );
           expect(turnStartRequest).toBeTruthy();
-          expect(readDispatchedCommand(turnStartRequest!)?.modelSelection).toEqual({
-            provider: "codex",
+          expect(readDispatchedCommand(turnStartRequest!)?.engineSelection).toEqual({
+            engine: "codex",
             model: "gpt-5",
             options: {
               reasoningEffort: "xhigh",
@@ -8565,8 +8565,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         selectedProvider: "codex",
         selectedModel: "gpt-5",
         selectedPromptEffort: null,
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5",
         },
         runtimeMode: "full-access",
@@ -8724,7 +8724,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(() => {
         expect(
           wsRequests.filter((request) => request._tag === WS_METHODS.providerListModels),
-        ).toEqual([expect.objectContaining({ provider: "claude" })]);
+        ).toEqual([expect.objectContaining({ engine: "claude" })]);
         expect(
           useComposerDraftStore.getState().draftsByThreadId[targetDraftThreadId],
         ).toMatchObject({
@@ -9493,7 +9493,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     const nativeApi = window.nativeApi!;
     let catalogProjected = false;
     const readyOmniMindStatus = {
-      provider: "oa" as const,
+      engine: "oa" as const,
       status: "ready" as const,
       available: true,
       authStatus: "unknown" as const,
@@ -9501,7 +9501,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       checkedAt: NOW_ISO,
     };
     const readyPiStatus = {
-      provider: "pi" as const,
+      engine: "pi" as const,
       status: "ready" as const,
       available: true,
       authStatus: "unknown" as const,
@@ -9509,15 +9509,15 @@ describe("ChatView timeline estimator parity (full app)", () => {
       checkedAt: NOW_ISO,
     };
     const readyUnselectedOpenCodeStatus = {
-      provider: "opencode" as const,
+      engine: "opencode" as const,
       status: "ready" as const,
       available: true,
       authStatus: "unknown" as const,
       supportsAutoRuntimeMode: false,
       checkedAt: NOW_ISO,
     };
-    const refreshProviders = vi.fn(async () => ({
-      providers: catalogProjected ? [readyOmniMindStatus] : [],
+    const refreshEngines = vi.fn(async () => ({
+      engines: catalogProjected ? [readyOmniMindStatus] : [],
     }));
     const setupService = {
       serviceId: "deepseek",
@@ -9589,13 +9589,13 @@ describe("ChatView timeline estimator parity (full app)", () => {
       prompt: {
         promptId: "00000000-0000-4000-8000-000000000082",
         type: "secret" as const,
-        message: "Provider-owned instruction",
+        message: "Engine-owned instruction",
       },
       events: [],
     }));
     const answerLogin = vi.fn(async () => {
       catalogProjected = true;
-      fixture.providerModelsByProvider.oa = {
+      fixture.providerModelsByEngine.oa = {
         source: "browser.fixture",
         models: [
           {
@@ -9609,7 +9609,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       };
       fixture.serverConfig = {
         ...fixture.serverConfig,
-        providers: [readyOmniMindStatus],
+        engines: [readyOmniMindStatus],
       };
       return {
         state: "complete" as const,
@@ -9624,7 +9624,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         ...nativeApi,
         server: {
           ...nativeApi.server,
-          refreshProviders,
+          refreshEngines,
         },
         omnimindModelServices: {
           ...nativeApi.omnimindModelServices,
@@ -9643,17 +9643,17 @@ describe("ChatView timeline estimator parity (full app)", () => {
         ...freshSnapshot,
         projects: freshSnapshot.projects.map((project) => ({
           ...project,
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
         })),
       },
       configureFixture: (nextFixture) => {
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
-          providers: [readyOmniMindStatus, readyPiStatus, readyUnselectedOpenCodeStatus],
+          engines: [readyOmniMindStatus, readyPiStatus, readyUnselectedOpenCodeStatus],
         };
         nextFixture.providerPassivePresence = ["oa", "pi", "opencode"];
-        nextFixture.providerModelsByProvider = {
-          ...nextFixture.providerModelsByProvider,
+        nextFixture.providerModelsByEngine = {
+          ...nextFixture.providerModelsByEngine,
           // Bundled Pi can enumerate builtin models without any configured
           // credential. That exact catalog row must not suppress first-run setup.
           oa: {
@@ -9678,14 +9678,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(
         wsRequests.filter(
           (request) =>
-            request._tag === WS_METHODS.providerListModels && request.provider === "oa",
+            request._tag === WS_METHODS.providerListModels && request.engine === "oa",
         ),
       ).toHaveLength(1);
       expect(
         wsRequests.filter(
           (request) =>
             request._tag === WS_METHODS.providerListModels &&
-            (request.provider === "pi" || request.provider === "droid"),
+            (request.engine === "pi" || request.engine === "droid"),
         ),
       ).toHaveLength(0);
       const setupDialogNode = document.querySelector<HTMLElement>(
@@ -9703,7 +9703,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const engineStep = setupDialogNode.querySelector<HTMLElement>(
         '[data-first-run-step="engine"]',
       )!;
-      const independentEngineOptions = PROVIDER_OPTIONS.filter(
+      const independentEngineOptions = ENGINE_OPTIONS.filter(
         (option) => option.value !== "oa",
       );
       expect(engineGrid.querySelectorAll("button")).toHaveLength(independentEngineOptions.length);
@@ -9742,11 +9742,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
         );
       }
       await mounted.setViewport(DEFAULT_VIEWPORT);
-      expect(refreshProviders).not.toHaveBeenCalled();
-      expect(useComposerDraftStore.getState().stickyModelSelectionByProvider).toEqual({});
+      expect(refreshEngines).not.toHaveBeenCalled();
+      expect(useComposerDraftStore.getState().stickyEngineSelectionByEngine).toEqual({});
       expect(
         useStore.getState().projects.find((project) => project.id === PROJECT_ID)
-          ?.defaultModelSelection,
+          ?.defaultEngineSelection,
       ).toBeNull();
       expect(useStore.getState().threadShellById?.[THREAD_ID]).toBeUndefined();
       await setupDialog.getByRole("button", { name: EN_MESSAGES["common.forward"] }).click();
@@ -9793,16 +9793,16 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toMatchObject({
           prompt: "Keep this draft while I connect a model.",
           activeProvider: "oa",
-          modelSelectionByProvider: {
-            oa: { provider: "oa", model: "deepseek/deepseek-v4-flash" },
+          engineSelectionByEngine: {
+            oa: { engine: "oa", model: "deepseek/deepseek-v4-flash" },
           },
         });
       });
       expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.images).toEqual([
         setupImage,
       ]);
-      expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.oa).toEqual({
-        provider: "oa",
+      expect(useComposerDraftStore.getState().stickyEngineSelectionByEngine.oa).toEqual({
+        engine: "oa",
         model: "deepseek/deepseek-v4-flash",
       });
       const sendButton = await waitForSendButton();
@@ -9815,8 +9815,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
             .filter((command) => command?.type === "thread.turn.start");
           expect(turnStarts).toHaveLength(1);
           expect(turnStarts[0]).toMatchObject({
-            modelSelection: {
-              provider: "oa",
+            engineSelection: {
+              engine: "oa",
               model: "deepseek/deepseek-v4-flash",
             },
             message: {
@@ -9864,14 +9864,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
         ...snapshot,
         projects: snapshot.projects.map((project) => ({
           ...project,
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
         })),
       };
     };
     const configureEmptyProduct = (nextFixture: TestFixture) => {
-      nextFixture.serverConfig = { ...nextFixture.serverConfig, providers: [] };
+      nextFixture.serverConfig = { ...nextFixture.serverConfig, engines: [] };
       nextFixture.providerPassivePresence = [];
-      nextFixture.providerModelsByProvider = {
+      nextFixture.providerModelsByEngine = {
         oa: { source: "browser.fixture", models: [] },
         pi: { source: "browser.fixture", models: [] },
       };
@@ -9969,15 +9969,15 @@ describe("ChatView timeline estimator parity (full app)", () => {
         ...snapshot,
         projects: snapshot.projects.map((project) => ({
           ...project,
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
         })),
       },
       configureFixture: (nextFixture) => {
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
-          providers: [
+          engines: [
             {
-              provider: "codex",
+              engine: "codex",
               status: "ready",
               available: true,
               authStatus: "authenticated",
@@ -10013,8 +10013,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await setupDialog
         .getByRole("button", { name: EN_MESSAGES["onboarding.firstRun.complete"] })
         .click();
-      useComposerDraftStore.getState().setModelSelectionAndSticky(THREAD_ID, {
-        provider: "claude",
+      useComposerDraftStore.getState().setEngineSelectionAndSticky(THREAD_ID, {
+        engine: "claude",
         model: "claude-sonnet-4",
       });
       await setupDialog
@@ -10023,12 +10023,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await expect.element(setupDialog).not.toBeInTheDocument();
       expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toMatchObject({
         activeProvider: "claude",
-        modelSelectionByProvider: {
-          claude: { provider: "claude", model: "claude-sonnet-4" },
+        engineSelectionByEngine: {
+          claude: { engine: "claude", model: "claude-sonnet-4" },
         },
       });
       expect(
-        useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
+        useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.engineSelectionByEngine
           .codex,
       ).toBeUndefined();
     } finally {
@@ -10080,9 +10080,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       configureFixture: (nextFixture) => {
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
-          providers: [
+          engines: [
             {
-              provider: "oa",
+              engine: "oa",
               status: "ready",
               available: true,
               authStatus: "unknown",
@@ -10092,8 +10092,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
           ],
         };
         nextFixture.providerPassivePresence = ["oa"];
-        nextFixture.providerModelsByProvider = {
-          ...nextFixture.providerModelsByProvider,
+        nextFixture.providerModelsByEngine = {
+          ...nextFixture.providerModelsByEngine,
           oa: {
             source: "browser.fixture",
             models: [
@@ -10136,7 +10136,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           wsRequests.filter(
             (request) =>
-              request._tag === WS_METHODS.providerListModels && request.provider === "oa",
+              request._tag === WS_METHODS.providerListModels && request.engine === "oa",
           ).length,
         ).toBeGreaterThan(0);
       });
@@ -10151,8 +10151,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
           .filter((command) => command?.type === "thread.turn.start");
         expect(turnStarts).toHaveLength(1);
         expect(turnStarts[0]).toMatchObject({
-          modelSelection: {
-            provider: "oa",
+          engineSelection: {
+            engine: "oa",
             model: "deepseek/deepseek-v4-flash",
           },
         });
@@ -10202,9 +10202,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       configureFixture: (nextFixture) => {
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
-          providers: [
+          engines: [
             {
-              provider: "codex",
+              engine: "codex",
               status: "error",
               available: true,
               authStatus: "unauthenticated",
@@ -10212,7 +10212,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
               checkedAt: NOW_ISO,
             },
             {
-              provider: "claude",
+              engine: "claude",
               status: "error",
               available: true,
               authStatus: "unauthenticated",
@@ -10220,7 +10220,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
               checkedAt: NOW_ISO,
             },
             {
-              provider: "oa",
+              engine: "oa",
               status: "ready",
               available: true,
               authStatus: "unknown",
@@ -10228,7 +10228,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
               checkedAt: NOW_ISO,
             },
             {
-              provider: "opencode",
+              engine: "opencode",
               status: "ready",
               available: true,
               authStatus: "unknown",
@@ -10236,7 +10236,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
               checkedAt: NOW_ISO,
             },
             {
-              provider: "pi",
+              engine: "pi",
               status: "ready",
               available: true,
               authStatus: "unknown",
@@ -10252,8 +10252,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
           "opencode",
           "pi",
         ];
-        nextFixture.providerModelsByProvider = {
-          ...nextFixture.providerModelsByProvider,
+        nextFixture.providerModelsByEngine = {
+          ...nextFixture.providerModelsByEngine,
           codex: { source: "browser.fixture", models: [] },
           oa: { source: "browser.fixture", models: [] },
           opencode: { source: "browser.fixture", models: [] },
@@ -10267,7 +10267,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           wsRequests.filter(
             (request) =>
-              request._tag === WS_METHODS.providerListModels && request.provider === "codex",
+              request._tag === WS_METHODS.providerListModels && request.engine === "codex",
           ),
         ).toHaveLength(1);
       });
@@ -10285,8 +10285,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
   it("routes a stale OmniMind service selection back to Model services", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
-    useComposerDraftStore.getState().setStickyModelSelection({
-      provider: "oa",
+    useComposerDraftStore.getState().setStickyEngineSelection({
+      engine: "oa",
       model: "deleted-service/deleted-model",
     });
     useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "oa");
@@ -10315,9 +10315,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       configureFixture: (nextFixture) => {
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
-          providers: [
+          engines: [
             {
-              provider: "oa",
+              engine: "oa",
               status: "ready",
               available: true,
               authStatus: "unknown",
@@ -10327,8 +10327,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
           ],
         };
         nextFixture.providerPassivePresence = ["oa"];
-        nextFixture.providerModelsByProvider = {
-          ...nextFixture.providerModelsByProvider,
+        nextFixture.providerModelsByEngine = {
+          ...nextFixture.providerModelsByEngine,
           oa: { source: "browser.fixture", models: [] },
           pi: { source: "browser.fixture", models: [] },
         };
@@ -10370,9 +10370,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
   it("keeps an unrequested stock Pi catalog with a remembered exact model out of first-run setup", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
-    useComposerDraftStore.getState().setStickyModelSelection({
-      provider: "pi",
-      model: "pi/provider-model",
+    useComposerDraftStore.getState().setStickyEngineSelection({
+      engine: "pi",
+      model: "pi/engine-model",
     });
     useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "pi");
     const restoreNativeApi = installDeterministicSendNativeApi();
@@ -10400,9 +10400,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       configureFixture: (nextFixture) => {
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
-          providers: [
+          engines: [
             {
-              provider: "pi",
+              engine: "pi",
               status: "ready",
               available: true,
               authStatus: "unknown",
@@ -10412,8 +10412,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
           ],
         };
         nextFixture.providerPassivePresence = ["pi"];
-        nextFixture.providerModelsByProvider = {
-          ...nextFixture.providerModelsByProvider,
+        nextFixture.providerModelsByEngine = {
+          ...nextFixture.providerModelsByEngine,
           oa: { source: "browser.fixture", models: [] },
           pi: { source: "browser.fixture", models: [] },
         };
@@ -10661,8 +10661,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "Route should have changed to a new draft thread UUID.",
       );
       const newThreadId = newThreadPath.slice(1) as ThreadId;
-      useComposerDraftStore.getState().setModelSelection(newThreadId, {
-        provider: "codex",
+      useComposerDraftStore.getState().setEngineSelection(newThreadId, {
+        engine: "codex",
         model: "gpt-5.5",
       });
 
@@ -10928,11 +10928,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("hydrates the provider alongside a sticky claude model", async () => {
+  it("hydrates the engine alongside a sticky claude model", async () => {
     useComposerDraftStore.setState({
-      stickyModelSelectionByProvider: {
+      stickyEngineSelectionByEngine: {
         claude: {
-          provider: "claude",
+          engine: "claude",
           model: "claude-opus-4-6",
           options: {
             effort: "max",
@@ -10965,9 +10965,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const newThreadId = newThreadPath.slice(1) as ThreadId;
 
       expect(useComposerDraftStore.getState().draftsByThreadId[newThreadId]).toMatchObject({
-        modelSelectionByProvider: {
+        engineSelectionByEngine: {
           claude: {
-            provider: "claude",
+            engine: "claude",
             model: "claude-opus-4-6",
             options: {
               effort: "max",
@@ -10984,9 +10984,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
   it("reuses the existing draft thread when the user clicks new thread again", async () => {
     useComposerDraftStore.setState({
-      stickyModelSelectionByProvider: {
+      stickyEngineSelectionByEngine: {
         codex: {
-          provider: "codex",
+          engine: "codex",
           model: "gpt-5.3-codex",
           options: {
             reasoningEffort: "medium",
@@ -11019,9 +11019,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const threadId = threadPath.slice(1) as ThreadId;
 
       expect(useComposerDraftStore.getState().draftsByThreadId[threadId]).toMatchObject({
-        modelSelectionByProvider: {
+        engineSelectionByEngine: {
           codex: {
-            provider: "codex",
+            engine: "codex",
             model: "gpt-5.3-codex",
             options: {
               fastMode: true,
@@ -11031,8 +11031,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         activeProvider: "codex",
       });
 
-      useComposerDraftStore.getState().setModelSelection(threadId, {
-        provider: "codex",
+      useComposerDraftStore.getState().setEngineSelection(threadId, {
+        engine: "codex",
         model: "gpt-5.4",
         options: {
           reasoningEffort: "low",
@@ -11042,9 +11042,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(
         () => {
           expect(useComposerDraftStore.getState().draftsByThreadId[threadId]).toMatchObject({
-            modelSelectionByProvider: {
+            engineSelectionByEngine: {
               codex: {
-                provider: "codex",
+                engine: "codex",
                 model: "gpt-5.4",
                 options: {
                   reasoningEffort: "low",
@@ -11210,8 +11210,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
   it.each(["oa", "pi"] as const)(
     "keeps a no-model Pi terminal rename local when the app default is %s",
-    async (defaultProvider) => {
-      const draftThreadId = ThreadId.makeUnsafe(`thread-terminal-pi-rename-${defaultProvider}`);
+    async (defaultEngine) => {
+      const draftThreadId = ThreadId.makeUnsafe(`thread-terminal-pi-rename-${defaultEngine}`);
       seedLocalDraftThread({
         threadId: draftThreadId,
         projectId: PROJECT_ID,
@@ -11226,9 +11226,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
         configureFixture: (nextFixture) => {
           nextFixture.serverSettings = {
             ...nextFixture.serverSettings,
-            defaultProvider,
+            defaultEngine,
           };
-          nextFixture.providerModelsByProvider.pi = {
+          nextFixture.providerModelsByEngine.pi = {
             source: "browser.fixture",
             models: [],
           };
@@ -11298,9 +11298,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
           skills: [],
           mentions: [],
           queuedTurns: [],
-          modelSelectionByProvider: {
+          engineSelectionByEngine: {
             claude: {
-              provider: "claude",
+              engine: "claude",
               model: "claude-opus-4-6",
               options: {
                 effort: "max",
@@ -11328,7 +11328,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       projectDraftThreadIdByProjectId: {
         [`${PROJECT_ID}::terminal`]: draftThreadId,
       },
-      stickyModelSelectionByProvider: {},
+      stickyEngineSelectionByEngine: {},
       stickyActiveProvider: null,
     });
 
@@ -11394,8 +11394,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
             branch: "feature/terminal-title",
             worktreePath: "/repo/project/.worktrees/terminal-title",
             runtimeMode: "approval-required",
-            modelSelection: {
-              provider: "claude",
+            engineSelection: {
+              engine: "claude",
               model: "claude-opus-4-6",
               options: {
                 effort: "max",

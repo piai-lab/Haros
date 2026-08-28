@@ -136,7 +136,7 @@ import {
   OrchestrationShellStreamItem,
   OrchestrationThreadStreamItem,
 } from "./orchestration";
-import { ProviderCompactThreadInput } from "./provider";
+import { EngineCompactThreadInput } from "./engine";
 import {
   OmniMindCustomModelServiceRemoveInput,
   OmniMindCustomModelServiceRemoveResult,
@@ -193,27 +193,24 @@ import {
   OmniMindWebSearchRefreshInput,
 } from "./omnimindWebSearch";
 import {
-  ProviderGetComposerCapabilitiesInput,
-  ProviderComposerCapabilities,
-  ProviderListAgentsInput,
-  ProviderListAgentsResult,
-  ProviderListCommandsInput,
-  ProviderListCommandsResult,
-  ProviderListModelsInput,
-  ProviderListModelsResult,
-  ProviderListPluginsInput,
-  ProviderListPluginsResult,
-  ProviderListSkillsInput,
-  ProviderListSkillsResult,
-  ProviderSkillsCatalogInput,
-  ProviderSkillsCatalogResult,
-  ProviderReadPluginInput,
-  ProviderReadPluginResult,
-} from "./providerDiscovery";
-import {
-  ProviderExecutionCapabilitiesInput,
-  ProviderExecutionCapabilities,
-} from "./providerExecution";
+  EngineGetComposerCapabilitiesInput,
+  EngineComposerCapabilities,
+  EngineListAgentsInput,
+  EngineListAgentsResult,
+  EngineListCommandsInput,
+  EngineListCommandsResult,
+  EngineListModelsInput,
+  EngineListModelsResult,
+  EngineListPluginsInput,
+  EngineListPluginsResult,
+  EngineListSkillsInput,
+  EngineListSkillsResult,
+  EngineSkillsCatalogInput,
+  EngineSkillsCatalogResult,
+  EngineReadPluginInput,
+  EngineReadPluginResult,
+} from "./engineDiscovery";
+import { EngineExecutionCapabilitiesInput, EngineExecutionCapabilities } from "./engineExecution";
 import {
   ProjectCreateLocalFilePreviewGrantInput,
   ProjectCreateLocalFilePreviewGrantResult,
@@ -262,11 +259,11 @@ import {
   ServerGetSettingsResult,
   ServerListLocalServersResult,
   ServerListWorktreesResult,
-  ServerProviderUpdateError,
-  ServerProviderUpdateInput,
-  ServerProviderUpdateResult,
-  ServerUpdateProviderCredentialInput,
-  ServerUpdateProviderCredentialResult,
+  ServerEngineUpdateError,
+  ServerEngineUpdateInput,
+  ServerEngineUpdateResult,
+  ServerUpdateEngineCredentialInput,
+  ServerUpdateEngineCredentialResult,
   ServerRefreshProvidersResult,
   ServerResetSettingsResult,
   ServerStopLocalServerInput,
@@ -997,14 +994,11 @@ export const WsServerResetSettingsRpc = Rpc.make(WS_METHODS.serverResetSettings,
   error: WsRpcError,
 });
 
-export const WsServerUpdateProviderCredentialRpc = Rpc.make(
-  WS_METHODS.serverUpdateProviderCredential,
-  {
-    payload: ServerUpdateProviderCredentialInput,
-    success: ServerUpdateProviderCredentialResult,
-    error: WsRpcError,
-  },
-);
+export const WsServerUpdateEngineCredentialRpc = Rpc.make(WS_METHODS.serverUpdateEngineCredential, {
+  payload: ServerUpdateEngineCredentialInput,
+  success: ServerUpdateEngineCredentialResult,
+  error: WsRpcError,
+});
 
 export const WsServerRefreshProvidersRpc = Rpc.make(WS_METHODS.serverRefreshProviders, {
   payload: Schema.Struct({}),
@@ -1013,9 +1007,9 @@ export const WsServerRefreshProvidersRpc = Rpc.make(WS_METHODS.serverRefreshProv
 });
 
 export const WsServerUpdateProviderRpc = Rpc.make(WS_METHODS.serverUpdateProvider, {
-  payload: ServerProviderUpdateInput,
-  success: ServerProviderUpdateResult,
-  error: ServerProviderUpdateError,
+  payload: ServerEngineUpdateInput,
+  success: ServerEngineUpdateResult,
+  error: ServerEngineUpdateError,
 });
 
 export const WsServerListExternalMcpIntegrationsRpc = Rpc.make(
@@ -1182,8 +1176,8 @@ export const WsSubscribeServerSettingsRpc = Rpc.make(WS_METHODS.subscribeServerS
 export const WsProviderGetComposerCapabilitiesRpc = Rpc.make(
   WS_METHODS.providerGetComposerCapabilities,
   {
-    payload: ProviderGetComposerCapabilitiesInput,
-    success: ProviderComposerCapabilities,
+    payload: EngineGetComposerCapabilitiesInput,
+    success: EngineComposerCapabilities,
     error: WsRpcError,
   },
 );
@@ -1191,57 +1185,57 @@ export const WsProviderGetComposerCapabilitiesRpc = Rpc.make(
 export const WsProviderGetExecutionCapabilitiesRpc = Rpc.make(
   WS_METHODS.providerGetExecutionCapabilities,
   {
-    payload: ProviderExecutionCapabilitiesInput,
-    success: ProviderExecutionCapabilities,
+    payload: EngineExecutionCapabilitiesInput,
+    success: EngineExecutionCapabilities,
     error: WsRpcError,
   },
 );
 
 export const WsProviderCompactThreadRpc = Rpc.make(WS_METHODS.providerCompactThread, {
-  payload: ProviderCompactThreadInput,
+  payload: EngineCompactThreadInput,
   success: Schema.Void,
   error: WsRpcError,
 });
 
 export const WsProviderListCommandsRpc = Rpc.make(WS_METHODS.providerListCommands, {
-  payload: ProviderListCommandsInput,
-  success: ProviderListCommandsResult,
+  payload: EngineListCommandsInput,
+  success: EngineListCommandsResult,
   error: WsRpcError,
 });
 
 export const WsProviderListSkillsRpc = Rpc.make(WS_METHODS.providerListSkills, {
-  payload: ProviderListSkillsInput,
-  success: ProviderListSkillsResult,
+  payload: EngineListSkillsInput,
+  success: EngineListSkillsResult,
   error: WsRpcError,
 });
 
 export const WsProviderListSkillsCatalogRpc = Rpc.make(WS_METHODS.providerListSkillsCatalog, {
-  payload: ProviderSkillsCatalogInput,
-  success: ProviderSkillsCatalogResult,
+  payload: EngineSkillsCatalogInput,
+  success: EngineSkillsCatalogResult,
   error: WsRpcError,
 });
 
 export const WsProviderListPluginsRpc = Rpc.make(WS_METHODS.providerListPlugins, {
-  payload: ProviderListPluginsInput,
-  success: ProviderListPluginsResult,
+  payload: EngineListPluginsInput,
+  success: EngineListPluginsResult,
   error: WsRpcError,
 });
 
 export const WsProviderReadPluginRpc = Rpc.make(WS_METHODS.providerReadPlugin, {
-  payload: ProviderReadPluginInput,
-  success: ProviderReadPluginResult,
+  payload: EngineReadPluginInput,
+  success: EngineReadPluginResult,
   error: WsRpcError,
 });
 
 export const WsProviderListModelsRpc = Rpc.make(WS_METHODS.providerListModels, {
-  payload: ProviderListModelsInput,
-  success: ProviderListModelsResult,
+  payload: EngineListModelsInput,
+  success: EngineListModelsResult,
   error: WsRpcError,
 });
 
 export const WsProviderListAgentsRpc = Rpc.make(WS_METHODS.providerListAgents, {
-  payload: ProviderListAgentsInput,
-  success: ProviderListAgentsResult,
+  payload: EngineListAgentsInput,
+  success: EngineListAgentsResult,
   error: WsRpcError,
 });
 
@@ -1592,7 +1586,7 @@ const WsServerAndProviderRpcGroup = RpcGroup.make(
   WsServerGetSettingsRpc,
   WsServerUpdateSettingsRpc,
   WsServerResetSettingsRpc,
-  WsServerUpdateProviderCredentialRpc,
+  WsServerUpdateEngineCredentialRpc,
   WsServerRefreshProvidersRpc,
   WsServerUpdateProviderRpc,
   WsServerListExternalMcpIntegrationsRpc,

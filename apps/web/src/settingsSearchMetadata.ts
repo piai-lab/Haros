@@ -39,7 +39,7 @@ export function defineSettingsSearchPanel<const Id extends string>(
  * visible product copy and search terms evolve independently.
  */
 export const SETTINGS_TARGETS = {
-  providerUpdates: "provider-updates",
+  engineUpdates: "engine-updates",
   engineDetails: "setting-installed-clis",
   environmentPanel: "environment-panel",
   gitWritingModel: "setting-git-writing-model",

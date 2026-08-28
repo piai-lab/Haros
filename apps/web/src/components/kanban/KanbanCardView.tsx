@@ -1,5 +1,5 @@
 // FILE: KanbanCardView.tsx
-// Purpose: Presentational kanban card — title, draft preview, provider/branch/env/PR
+// Purpose: Presentational kanban card — title, draft preview, engine/branch/env/PR
 //          meta row with status pill and relative timestamp.
 // Layer: UI component (pure; drag wiring lives in KanbanColumn)
 // Exports: KanbanCardView
@@ -14,7 +14,7 @@ import {
 import { PrStateChip } from "../pullRequest/PrStateChip";
 import { resolveThreadStatusPill } from "../Sidebar.logic";
 import { ThreadStatusPillChip } from "../ThreadStatusPillChip";
-import { ProviderIcon } from "../ProviderIcon";
+import { EngineIcon } from "../EngineIcon";
 import {
   GitBranchIcon,
   LoaderIcon,
@@ -169,8 +169,8 @@ function KanbanCardViewComponent({
       ) : null}
       <span className="flex min-w-0 items-center gap-2 pt-0.5">
         {card.isTerminal ? null : (
-          <ProviderIcon
-            provider={card.provider}
+          <EngineIcon
+            engine={card.engine}
             className="size-3.5 shrink-0 opacity-80"
             fallback={
               <span className="size-3.5 shrink-0 rounded-full border border-dashed border-muted-foreground/40" />

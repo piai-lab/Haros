@@ -5,11 +5,11 @@ import {
   type CanonicalUserInputResponse,
   type CanonicalUserInputSettlement,
   EventId,
-  type ProviderInteractionMode,
+  type EngineInteractionMode,
   type EngineKind,
-  type ProviderListCommandsResult,
-  type ProviderRuntimeEvent,
-  type ProviderSession,
+  type EngineListCommandsResult,
+  type EngineRuntimeEvent,
+  type EngineSession,
   RuntimeItemId,
   RuntimeRequestId,
   type ThreadTokenUsageSnapshot,
@@ -37,11 +37,11 @@ import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
 import { ServerConfig } from "../../config.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 import {
-  ProviderAdapterProcessError,
-  ProviderAdapterRequestError,
-  ProviderAdapterSessionClosedError,
-  ProviderAdapterSessionNotFoundError,
-  ProviderAdapterValidationError,
+  EngineAdapterProcessError,
+  EngineAdapterRequestError,
+  EngineAdapterSessionClosedError,
+  EngineAdapterSessionNotFoundError,
+  EngineAdapterValidationError,
 } from "../Errors.ts";
 import {
   HARNESSOS_HARNESS_POLICY_VERSION,
@@ -60,7 +60,7 @@ import {
 } from "../../agentGateway/sessionLease.ts";
 import { KiloAdapter, type KiloAdapterShape } from "../Services/KiloAdapter.ts";
 import { OpenCodeAdapter, type OpenCodeAdapterShape } from "../Services/OpenCodeAdapter.ts";
-import { PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY } from "../Services/ProviderAdapter.ts";
+import { ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY } from "../Services/EngineAdapter.ts";
 import {
   buildOpenCodePermissionRules,
   KILO_CLI_SPEC,
@@ -96,17 +96,17 @@ import {
   resolvePreferredOpenCodeModelProviders,
 } from "../OpenCodeDiscovery.ts";
 import { nonNegativeFiniteNumber, nonNegativeInteger, positiveInteger } from "../tokenUsage.ts";
-import { providerExecutionStructure } from "../providerExecutionStructure.ts";
+import { engineExecutionStructure } from "../engineExecutionStructure.ts";
 
 export { flattenOpenCodeCliModels, flattenOpenCodeModels, resolvePreferredOpenCodeModelProviders };
 
 type OpenCodeCompatibleProvider = Extract<EngineKind, "opencode" | "kilo">;
 
 interface OpenCodeCompatibleAdapterConfig {
-  readonly provider: OpenCodeCompatibleProvider;
+  readonly engine: OpenCodeCompatibleProvider;
   readonly displayName: string;
   readonly defaultBinaryPath: string;
-  readonly providerOptionsKey: OpenCodeCompatibleProvider;
+  readonly engineOptionsKey: OpenCodeCompatibleProvider;
   readonly runtimeEventSource: "opencode.sdk.event" | "kilo.sdk.event";
   readonly turnIdPrefix: string;
   readonly cliModelSource: string;
@@ -117,10 +117,10 @@ interface OpenCodeCompatibleAdapterConfig {
 }
 
 const OPENCODE_ADAPTER_CONFIG: OpenCodeCompatibleAdapterConfig = {
-  provider: "opencode",
+  engine: "opencode",
   displayName: "OpenCode",
   defaultBinaryPath: "opencode",
-  providerOptionsKey: "opencode",
+  engineOptionsKey: "opencode",
   runtimeEventSource: "opencode.sdk.event",
   turnIdPrefix: "opencode-turn",
   cliModelSource: "opencode-cli",
@@ -131,10 +131,10 @@ const OPENCODE_ADAPTER_CONFIG: OpenCodeCompatibleAdapterConfig = {
 };
 
 const KILO_ADAPTER_CONFIG: OpenCodeCompatibleAdapterConfig = {
-  provider: "kilo",
+  engine: "kilo",
   displayName: "Kilo",
   defaultBinaryPath: "kilo",
-  providerOptionsKey: "kilo",
+  engineOptionsKey: "kilo",
   runtimeEventSource: "kilo.sdk.event",
   turnIdPrefix: "kilo-turn",
   cliModelSource: "kilo-cli",
@@ -189,7 +189,7 @@ interface OpenCodeSessionContext {
   pendingHarnessPolicyTurnId: TurnId | undefined;
   readonly gatewayControlAvailable: boolean;
   gatewaySessionLease?: AgentGatewaySessionLease;
-  session: ProviderSession;
+  session: EngineSession;
   readonly lifecycleGeneration?: string;
   readonly client: OpencodeClient;
   readonly server: OpenCodeServerConnection;
@@ -228,7 +228,7 @@ interface OpenCodeSessionContext {
   activeTurnSawFinalAssistant: boolean;
   activeTurnFinalAssistantMessageId: string | undefined;
   activeTurnToolCallIdleWatchdogStarted: boolean;
-  activeInteractionMode: ProviderInteractionMode | undefined;
+  activeInteractionMode: EngineInteractionMode | undefined;
   appliedPermissionInteractionMode: "default" | "plan";
   activeAgent: string | undefined;
   activeVariant: string | undefined;
@@ -292,8 +292,8 @@ export interface OpenCodeAdapterLiveOptions {
   readonly prematureIdleCompletionGraceMs?: number;
   readonly beforeSessionInstall?: Effect.Effect<void>;
   readonly resolveServerPassword?: (
-    provider: OpenCodeCompatibleProvider,
-  ) => Effect.Effect<string | undefined, ProviderAdapterValidationError>;
+    engine: OpenCodeCompatibleProvider,
+  ) => Effect.Effect<string | undefined, EngineAdapterValidationError>;
 }
 
 function nowIso(): string {
@@ -301,11 +301,11 @@ function nowIso(): string {
 }
 
 function toRequestError(
-  provider: OpenCodeCompatibleProvider,
+  engine: OpenCodeCompatibleProvider,
   cause: OpenCodeRuntimeError,
-): ProviderAdapterRequestError {
-  return new ProviderAdapterRequestError({
-    provider,
+): EngineAdapterRequestError {
+  return new EngineAdapterRequestError({
+    engine,
     method: cause.operation,
     detail: cause.detail,
     cause: cause.cause,
@@ -313,12 +313,12 @@ function toRequestError(
 }
 
 function toProcessError(
-  provider: OpenCodeCompatibleProvider,
+  engine: OpenCodeCompatibleProvider,
   threadId: ThreadId,
   cause: unknown,
-): ProviderAdapterProcessError {
-  return new ProviderAdapterProcessError({
-    provider,
+): EngineAdapterProcessError {
+  return new EngineAdapterProcessError({
+    engine,
     threadId,
     detail: OpenCodeRuntimeError.is(cause) ? cause.detail : openCodeRuntimeErrorDetail(cause),
     cause,
@@ -330,7 +330,7 @@ function asRuntimeItemId(value: string) {
 }
 
 function buildProviderEventBase(input: {
-  readonly provider: OpenCodeCompatibleProvider;
+  readonly engine: OpenCodeCompatibleProvider;
   readonly runtimeEventSource: "opencode.sdk.event" | "kilo.sdk.event";
   readonly threadId: ThreadId;
   readonly turnId?: TurnId | undefined;
@@ -339,12 +339,12 @@ function buildProviderEventBase(input: {
   readonly createdAt?: string | undefined;
   readonly raw?: unknown;
 }): Pick<
-  ProviderRuntimeEvent,
-  "eventId" | "provider" | "threadId" | "createdAt" | "turnId" | "itemId" | "requestId" | "raw"
+  EngineRuntimeEvent,
+  "eventId" | "engine" | "threadId" | "createdAt" | "turnId" | "itemId" | "requestId" | "raw"
 > {
   return {
     eventId: EventId.makeUnsafe(randomUUID()),
-    provider: input.provider,
+    engine: input.engine,
     threadId: input.threadId,
     createdAt: input.createdAt ?? nowIso(),
     ...(input.turnId ? { turnId: input.turnId } : {}),
@@ -523,20 +523,20 @@ function isFinalAssistantMessageSnapshot(snapshot: OpenCodeMessageSnapshot): boo
 }
 
 function ensureSessionContext(
-  provider: OpenCodeCompatibleProvider,
+  engine: OpenCodeCompatibleProvider,
   sessions: ReadonlyMap<ThreadId, OpenCodeSessionContext>,
   threadId: ThreadId,
 ): OpenCodeSessionContext {
   const session = sessions.get(threadId);
   if (!session) {
-    throw new ProviderAdapterSessionNotFoundError({
-      provider,
+    throw new EngineAdapterSessionNotFoundError({
+      engine,
       threadId,
     });
   }
   if (Ref.getUnsafe(session.stopped)) {
-    throw new ProviderAdapterSessionClosedError({
-      provider,
+    throw new EngineAdapterSessionClosedError({
+      engine,
       threadId,
     });
   }
@@ -745,17 +745,17 @@ function isOpenCodeContextOverflowError(error: unknown): boolean {
 
 function updateProviderSession(
   context: OpenCodeSessionContext,
-  patch: Partial<ProviderSession>,
+  patch: Partial<EngineSession>,
   options?: {
     readonly clearActiveTurnId?: boolean;
     readonly clearLastError?: boolean;
   },
-): ProviderSession {
+): EngineSession {
   const nextSession = {
     ...context.session,
     ...patch,
     updatedAt: nowIso(),
-  } as ProviderSession & Record<string, unknown>;
+  } as EngineSession & Record<string, unknown>;
   const mutableSession = nextSession as Record<string, unknown>;
   if (options?.clearActiveTurnId) {
     delete mutableSession.activeTurnId;
@@ -1325,24 +1325,20 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
       const agentGatewayCredentials = Option.getOrUndefined(
         yield* Effect.serviceOption(AgentGatewayCredentials),
       );
-      const provider = adapterConfig.provider;
+      const engine = adapterConfig.engine;
       const buildEventBase = (
-        input: Omit<
-          Parameters<typeof buildProviderEventBase>[0],
-          "provider" | "runtimeEventSource"
-        >,
+        input: Omit<Parameters<typeof buildProviderEventBase>[0], "engine" | "runtimeEventSource">,
       ) =>
         buildProviderEventBase({
-          provider,
+          engine,
           runtimeEventSource: adapterConfig.runtimeEventSource,
           ...input,
         });
-      const toAdapterRequestError = (cause: OpenCodeRuntimeError) =>
-        toRequestError(provider, cause);
+      const toAdapterRequestError = (cause: OpenCodeRuntimeError) => toRequestError(engine, cause);
       const toAdapterProcessError = (threadId: ThreadId, cause: unknown) =>
-        toProcessError(provider, threadId, cause);
+        toProcessError(engine, threadId, cause);
       const ensureAdapterSessionContext = (threadId: ThreadId) =>
-        ensureSessionContext(provider, sessions, threadId);
+        ensureSessionContext(engine, sessions, threadId);
       const promptAcceptedActivityTimeoutMs =
         options?.promptAcceptedActivityTimeoutMs ?? OPENCODE_PROMPT_ACCEPTED_ACTIVITY_TIMEOUT_MS;
       const promptAcceptedRecoveryDelaysMs =
@@ -1365,8 +1361,8 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           : undefined);
       const managedNativeEventLogger =
         options?.nativeEventLogger === undefined ? nativeEventLogger : undefined;
-      const runtimeEvents = yield* Queue.bounded<ProviderRuntimeEvent>(
-        options?.runtimeEventBufferCapacity ?? PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
+      const runtimeEvents = yield* Queue.bounded<EngineRuntimeEvent>(
+        options?.runtimeEventBufferCapacity ?? ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
       );
       const sessions = new Map<ThreadId, OpenCodeSessionContext>();
 
@@ -1385,7 +1381,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         }),
       );
 
-      const emit = (context: OpenCodeSessionContext, event: ProviderRuntimeEvent) =>
+      const emit = (context: OpenCodeSessionContext, event: EngineRuntimeEvent) =>
         Queue.offer(runtimeEvents, {
           ...event,
           ...(context.lifecycleGeneration !== undefined
@@ -1455,7 +1451,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           type: "thread.state.changed",
           payload: {
             state: "compacted",
-            detail: { source: provider },
+            detail: { source: engine },
           },
         });
       });
@@ -1754,7 +1750,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           yield* Effect.gen(function* () {
             // A normal final response only needs a short event-stream quiet
             // window. Early idle with no completed part keeps the longer grace
-            // period used for delayed provider recovery.
+            // period used for delayed engine recovery.
             const needsRecoveryGrace =
               idleBeforeAssistantActivity || idleAfterToolCalls || idleBeforeFinalAssistantParts;
             const initialQuietMs = needsRecoveryGrace
@@ -2138,7 +2134,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           readonly promptInput: Parameters<OpencodeClient["session"]["promptAsync"]>[0];
         },
       ) {
-        const settled = yield* Deferred.make<ProviderAdapterRequestError | null, never>();
+        const settled = yield* Deferred.make<EngineAdapterRequestError | null, never>();
         yield* runOpenCodeSdk("session.promptAsync", () =>
           context.client.session.promptAsync(input.promptInput),
         ).pipe(
@@ -2323,7 +2319,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         const turnId = context.activeTurnId;
         if (turnId) {
           context.activeTurnEventSerial += 1;
-          // User-message echoes should not disable prompt recovery; track provider-side
+          // User-message echoes should not disable prompt recovery; track engine-side
           // activity separately for the "accepted but nothing started" watchdog.
           if (isOpenCodeTurnProviderActivityEvent(context, event)) {
             markOpenCodeHarnessPolicyDelivered(context, turnId);
@@ -2333,9 +2329,9 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         yield* writeNativeEventBestEffort(context.session.threadId, {
           observedAt: nowIso(),
           event: {
-            provider,
+            engine,
             threadId: context.session.threadId,
-            providerThreadId: context.openCodeSessionId,
+            nativeThreadId: context.openCodeSessionId,
             type: event.type,
             ...(turnId ? { turnId } : {}),
             payload: event,
@@ -2523,7 +2519,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                   state: part.state,
                 },
               };
-              const runtimeEvent: ProviderRuntimeEvent = {
+              const runtimeEvent: EngineRuntimeEvent = {
                 ...buildEventBase({
                   threadId: context.session.threadId,
                   turnId,
@@ -2548,7 +2544,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                 turnId,
                 raw: event,
                 detail: part.overflow
-                  ? "Compacting context after provider context overflow"
+                  ? "Compacting context after engine context overflow"
                   : "Compacting context",
                 data: {
                   auto: part.auto,
@@ -2598,7 +2594,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                 Cause.squash(replyExit.cause),
               );
               // A Full-access or Plan turn must never degrade into a human approval. Abort the
-              // provider turn and surface an actionable failure instead.
+              // engine turn and surface an actionable failure instead.
               yield* runOpenCodeSdk("session.abort", () =>
                 context.client.session.abort({ sessionID: context.openCodeSessionId }),
               ).pipe(Effect.ignore({ log: true }));
@@ -3405,9 +3401,9 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           yield* writeNativeEventBestEffort(context.session.threadId, {
             observedAt: nowIso(),
             event: {
-              provider,
+              engine,
               threadId: context.session.threadId,
-              providerThreadId: context.openCodeSessionId,
+              nativeThreadId: context.openCodeSessionId,
               type: "turn.snapshot-watchdog.disabled",
               detail: openCodeRuntimeErrorDetail(Cause.squash(snapshotsExit.cause)),
             },
@@ -3456,10 +3452,10 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         }
       });
 
-      // Completion backstop for OpenCode-family providers: the SSE stream can drop or
+      // Completion backstop for OpenCode-family engines: the SSE stream can drop or
       // delay the terminal `session.idle` event (child-session gating, reconnects,
-      // provider-specific final-message shapes), which leaves a turn stuck in
-      // "working" even though the provider already finished. This independent fiber
+      // engine-specific final-message shapes), which leaves a turn stuck in
+      // "working" even though the engine already finished. This independent fiber
       // polls session status and, once the session looks idle with a fresh final
       // assistant message, synthesizes the idle event so the turn completes.
       //
@@ -3533,9 +3529,9 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             writeNativeEventBestEffort(context.session.threadId, {
               observedAt: nowIso(),
               event: {
-                provider,
+                engine,
                 threadId: context.session.threadId,
-                providerThreadId: context.openCodeSessionId,
+                nativeThreadId: context.openCodeSessionId,
                 type: "turn.snapshot-watchdog.error",
                 turnId,
                 detail: openCodeRuntimeErrorDetail(Cause.squash(cause)),
@@ -3647,29 +3643,29 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
 
       const startSession: OpenCodeAdapterShape["startSession"] = Effect.fn("startSession")(
         function* (input) {
-          const providerOptions = input.providerOptions?.[adapterConfig.providerOptionsKey];
-          const binaryPath = providerOptions?.binaryPath?.trim() || adapterConfig.defaultBinaryPath;
-          const serverUrl = providerOptions?.serverUrl?.trim();
+          const engineOptions = input.engineOptions?.[adapterConfig.engineOptionsKey];
+          const binaryPath = engineOptions?.binaryPath?.trim() || adapterConfig.defaultBinaryPath;
+          const serverUrl = engineOptions?.serverUrl?.trim();
           const serverPassword = options?.resolveServerPassword
-            ? yield* options.resolveServerPassword(provider)
+            ? yield* options.resolveServerPassword(engine)
             : undefined;
           const experimentalWebSockets =
-            adapterConfig.providerOptionsKey === "opencode"
-              ? input.providerOptions?.opencode?.experimentalWebSockets
+            adapterConfig.engineOptionsKey === "opencode"
+              ? input.engineOptions?.opencode?.experimentalWebSockets
               : undefined;
           const resumeDirectory = extractResumeCwd(input.resumeCursor);
           const directory = input.cwd ?? resumeDirectory ?? serverConfig.cwd;
           const initialParsedModel =
-            input.modelSelection?.provider === adapterConfig.provider
-              ? parseOpenCodeModelSlug(input.modelSelection.model)
+            input.engineSelection?.engine === adapterConfig.engine
+              ? parseOpenCodeModelSlug(input.engineSelection.model)
               : null;
           const initialAgent =
-            input.modelSelection?.provider === adapterConfig.provider
-              ? input.modelSelection.options?.agent
+            input.engineSelection?.engine === adapterConfig.engine
+              ? input.engineSelection.options?.agent
               : undefined;
           const initialVariant =
-            input.modelSelection?.provider === adapterConfig.provider
-              ? input.modelSelection.options?.variant
+            input.engineSelection?.engine === adapterConfig.engine
+              ? input.engineSelection.options?.variant
               : undefined;
           const resumedSessionId = extractResumeSessionId(input.resumeCursor);
           const persistedHarnessPolicyDelivery = extractHarnessPolicyDelivery(input.resumeCursor);
@@ -3684,7 +3680,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           // this exact OmniMind thread.
           const agentGatewaySessionLease = serverUrl
             ? undefined
-            : acquireAgentGatewaySessionLease(agentGatewayCredentials, input.threadId, provider);
+            : acquireAgentGatewaySessionLease(agentGatewayCredentials, input.threadId, engine);
           const agentGatewayConnection = agentGatewaySessionLease?.connection;
           const poolIsolationKey = agentGatewayConnection ? randomUUID() : undefined;
 
@@ -3700,7 +3696,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                       cliSpec: adapterConfig.cliSpec,
                       cwd: directory,
                       ...(serverUrl ? { serverUrl } : {}),
-                      ...(provider === "opencode" && experimentalWebSockets
+                      ...(engine === "opencode" && experimentalWebSockets
                         ? { experimentalWebSockets: true }
                         : {}),
                       ...(poolIsolationKey ? { poolIsolationKey } : {}),
@@ -3734,7 +3730,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                       );
                     }
                     const createSessionId = resumedSessionId
-                      ? // A resumed provider may still be executing an interrupted Plan turn.
+                      ? // A resumed engine may still be executing an interrupted Plan turn.
                         // Install the read-only ruleset until OmniMind dispatches a new turn with a
                         // known interaction mode. This must succeed before the event pump starts:
                         // otherwise an already-running Full Access session could mutate state
@@ -3840,12 +3836,12 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                 }
 
                 const createdAt = nowIso();
-                const session: ProviderSession = {
-                  provider,
+                const session: EngineSession = {
+                  engine,
                   status: "ready",
                   runtimeMode: input.runtimeMode,
                   cwd: directory,
-                  ...(input.modelSelection ? { model: input.modelSelection.model } : {}),
+                  ...(input.engineSelection ? { model: input.engineSelection.model } : {}),
                   threadId: input.threadId,
                   resumeCursor: buildOpenCodeResumeCursor({
                     openCodeSessionId: started.openCodeSessionId,
@@ -3947,7 +3943,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             ...buildEventBase({ threadId: input.threadId }),
             type: "thread.started",
             payload: {
-              providerThreadId: context.openCodeSessionId,
+              nativeThreadId: context.openCodeSessionId,
             },
           });
 
@@ -3960,13 +3956,13 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         turnId: TurnId,
       ) {
         const context = ensureAdapterSessionContext(input.threadId);
-        const modelSelection =
-          input.modelSelection ??
-          (context.session.model ? { provider, model: context.session.model } : undefined);
-        const parsedModel = parseOpenCodeModelSlug(modelSelection?.model);
+        const engineSelection =
+          input.engineSelection ??
+          (context.session.model ? { engine, model: context.session.model } : undefined);
+        const parsedModel = parseOpenCodeModelSlug(engineSelection?.model);
         if (!parsedModel) {
-          return yield* new ProviderAdapterValidationError({
-            provider,
+          return yield* new EngineAdapterValidationError({
+            engine,
             operation: "sendTurn",
             issue: `${adapterConfig.displayName} model selection must use the 'provider/model' format.`,
           });
@@ -3992,8 +3988,8 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             }),
         });
         if ((!text || text.length === 0) && fileParts.length === 0) {
-          return yield* new ProviderAdapterValidationError({
-            provider,
+          return yield* new EngineAdapterValidationError({
+            engine,
             operation: "sendTurn",
             issue: `${adapterConfig.displayName} turns require text input or at least one attachment.`,
           });
@@ -4009,12 +4005,12 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         const providerText = [harnessPolicy, text].filter(Boolean).join("\n\n");
 
         const requestedAgent =
-          input.modelSelection?.provider === provider
-            ? input.modelSelection.options?.agent
+          input.engineSelection?.engine === engine
+            ? input.engineSelection.options?.agent
             : undefined;
         const variant =
-          input.modelSelection?.provider === provider
-            ? input.modelSelection.options?.variant
+          input.engineSelection?.engine === engine
+            ? input.engineSelection.options?.variant
             : undefined;
 
         const interactionMode = input.interactionMode ?? "default";
@@ -4046,7 +4042,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           {
             status: "running",
             activeTurnId: turnId,
-            model: modelSelection?.model ?? context.session.model,
+            model: engineSelection?.model ?? context.session.model,
             resumeCursor: buildOpenCodeResumeCursor({
               openCodeSessionId: context.openCodeSessionId,
               cwd: context.directory,
@@ -4061,12 +4057,12 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           ...buildEventBase({ threadId: input.threadId, turnId }),
           type: "turn.started",
           payload: {
-            model: modelSelection?.model ?? context.session.model,
+            model: engineSelection?.model ?? context.session.model,
             ...(variant ? { effort: variant } : {}),
           },
         });
 
-        if (provider === "kilo") {
+        if (engine === "kilo") {
           const snapshotWatchdogBaseline = yield* captureTurnSnapshotWatchdogBaseline(context);
           const recoveryBaselineMessageIds = yield* captureOpenCodeRecoveryBaseline(context);
           const providerActivitySerial = context.activeTurnProviderActivitySerial;
@@ -4167,7 +4163,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           const context = ensureAdapterSessionContext(threadId);
           if (turnId !== undefined && turnId !== context.activeTurnId) {
             yield* Effect.logWarning("opencode.stale_interrupt_ignored", {
-              provider,
+              engine,
               threadId,
               requestedTurnId: turnId,
               activeTurnId: context.activeTurnId,
@@ -4271,8 +4267,8 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             return;
           }
 
-          return yield* new ProviderAdapterRequestError({
-            provider,
+          return yield* new EngineAdapterRequestError({
+            engine,
             method: "permission.reply.acknowledge",
             detail: lastListError
               ? `${adapterConfig.displayName} could not verify that permission ${input.requestId} was resolved: ${openCodeRuntimeErrorDetail(lastListError)}`
@@ -4288,16 +4284,16 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         const context = ensureAdapterSessionContext(threadId);
         const reply = toOpenCodePermissionReply(decision);
         if (!context.pendingPermissions.has(requestId)) {
-          return yield* new ProviderAdapterRequestError({
-            provider,
+          return yield* new EngineAdapterRequestError({
+            engine,
             method: "permission.reply",
             detail: `Unknown pending permission request: ${requestId}`,
           });
         }
         const responseInFlight = context.replyingPermissions.get(requestId);
         if (responseInFlight !== undefined) {
-          return yield* new ProviderAdapterRequestError({
-            provider,
+          return yield* new EngineAdapterRequestError({
+            engine,
             method: "permission.reply",
             detail: `Permission request ${requestId} already has a ${responseInFlight} response in flight.`,
           });
@@ -4329,8 +4325,8 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         const context = ensureAdapterSessionContext(threadId);
         const pending = context.pendingQuestions.get(requestId);
         if (!pending) {
-          return yield* new ProviderAdapterRequestError({
-            provider,
+          return yield* new EngineAdapterRequestError({
+            engine,
             method: "question.reply",
             detail: `Unknown pending user-input request: ${requestId}`,
           });
@@ -4487,8 +4483,8 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           const context = ensureAdapterSessionContext(threadId);
           const parsedModel = parseOpenCodeModelSlug(context.session.model);
           if (!parsedModel) {
-            return yield* new ProviderAdapterValidationError({
-              provider,
+            return yield* new EngineAdapterValidationError({
+              engine,
               operation: "compactThread",
               issue: `${adapterConfig.displayName} compaction requires a current 'provider/model' selection.`,
             });
@@ -4509,8 +4505,8 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           // Forking mid-turn would branch from incomplete in-flight state, so
           // let the retained-transcript fallback handle busy sources.
           if (sourceContext?.activeTurnId !== undefined) {
-            return yield* new ProviderAdapterValidationError({
-              provider,
+            return yield* new EngineAdapterValidationError({
+              engine,
               operation: "forkThread",
               issue: `The source ${adapterConfig.displayName} session has a turn in flight; OmniMind will rebuild the fork from its retained transcript.`,
             });
@@ -4518,18 +4514,18 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           const sourceSessionId =
             sourceContext?.openCodeSessionId ?? extractResumeSessionId(input.sourceResumeCursor);
           if (!sourceSessionId) {
-            return yield* new ProviderAdapterValidationError({
-              provider,
+            return yield* new EngineAdapterValidationError({
+              engine,
               operation: "forkThread",
               issue: `${adapterConfig.displayName} native fork requires a resumable source session id.`,
             });
           }
 
-          const providerOptions = input.providerOptions?.[adapterConfig.providerOptionsKey];
-          const binaryPath = providerOptions?.binaryPath?.trim() || adapterConfig.defaultBinaryPath;
-          const serverUrl = providerOptions?.serverUrl?.trim();
+          const engineOptions = input.engineOptions?.[adapterConfig.engineOptionsKey];
+          const binaryPath = engineOptions?.binaryPath?.trim() || adapterConfig.defaultBinaryPath;
+          const serverUrl = engineOptions?.serverUrl?.trim();
           const serverPassword = options?.resolveServerPassword
-            ? yield* options.resolveServerPassword(provider)
+            ? yield* options.resolveServerPassword(engine)
             : undefined;
           const persistedSourceDirectory =
             sourceContext?.directory ??
@@ -4538,8 +4534,8 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           const targetDirectory = input.cwd ?? persistedSourceDirectory ?? serverConfig.cwd;
           const sourceDirectory = persistedSourceDirectory ?? targetDirectory;
           if (sourceDirectory !== targetDirectory) {
-            return yield* new ProviderAdapterValidationError({
-              provider,
+            return yield* new EngineAdapterValidationError({
+              engine,
               operation: "forkThread",
               issue: `${adapterConfig.displayName} native fork cannot cross cwd boundaries.`,
             });
@@ -4577,14 +4573,14 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
 
           const forkedSessionId = forked.data?.id?.trim();
           if (!forkedSessionId) {
-            return yield* new ProviderAdapterRequestError({
-              provider,
+            return yield* new EngineAdapterRequestError({
+              engine,
               method: "session.fork",
               detail: `${adapterConfig.displayName} session.fork returned no session payload.`,
             });
           }
 
-          // Return only the cursor: ProviderService registers the binding under
+          // Return only the cursor: EngineService registers the binding under
           // a committed lifecycle lease and the target's first turn resumes it
           // there. Starting the runtime here would capture an undefined
           // lifecycle generation, orphaning the fork's approval requests.
@@ -4606,8 +4602,8 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         fn: (input: {
           readonly client: OpencodeClient;
           readonly activeContext?: OpenCodeSessionContext;
-        }) => Effect.Effect<A, ProviderAdapterRequestError>,
-      ): Effect.Effect<A, ProviderAdapterRequestError> =>
+        }) => Effect.Effect<A, EngineAdapterRequestError>,
+      ): Effect.Effect<A, EngineAdapterRequestError> =>
         Effect.gen(function* () {
           const requestedCwd = input.cwd?.trim();
           const requestedServerUrl = input.serverUrl?.trim();
@@ -4631,11 +4627,11 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             Effect.gen(function* () {
               const serverUrl = input.serverUrl?.trim();
               const serverPassword = options?.resolveServerPassword
-                ? yield* options.resolveServerPassword(provider).pipe(
+                ? yield* options.resolveServerPassword(engine).pipe(
                     Effect.mapError(
                       (cause) =>
-                        new ProviderAdapterRequestError({
-                          provider,
+                        new EngineAdapterRequestError({
+                          engine,
                           method: cause.operation,
                           detail: cause.issue,
                           cause,
@@ -4649,7 +4645,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                   cliSpec: adapterConfig.cliSpec,
                   cwd: input.cwd?.trim() || serverConfig.cwd,
                   ...(serverUrl ? { serverUrl } : {}),
-                  ...(provider === "opencode" && input.experimentalWebSockets
+                  ...(engine === "opencode" && input.experimentalWebSockets
                     ? { experimentalWebSockets: true }
                     : {}),
                 })
@@ -4674,8 +4670,8 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           readonly client: OpencodeClient;
           readonly inventory: OpenCodeInventory;
           readonly credentialProviderIDs: ReadonlyArray<string>;
-        }) => Effect.Effect<A, ProviderAdapterRequestError>,
-      ): Effect.Effect<A, ProviderAdapterRequestError> =>
+        }) => Effect.Effect<A, EngineAdapterRequestError>,
+      ): Effect.Effect<A, EngineAdapterRequestError> =>
         withDiscoveryClient(
           {
             ...input,
@@ -4707,7 +4703,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
 
       const listModels: NonNullable<OpenCodeAdapterShape["listModels"]> = (input) => {
         const binaryPath = input.binaryPath?.trim() || adapterConfig.defaultBinaryPath;
-        const freeOnlyProviderID = adapterConfig.provider === "kilo" ? "kilo" : undefined;
+        const freeOnlyProviderID = adapterConfig.engine === "kilo" ? "kilo" : undefined;
         return Effect.gen(function* () {
           const cliModelsEffect = openCodeRuntime
             .listOpenCodeCliModels({
@@ -4741,7 +4737,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
               resolvePreferredOpenCodeModelProviders({
                 inventory,
                 credentialProviderIDs,
-              }).map((provider) => provider.id),
+              }).map((engine) => engine.id),
             );
             const inventoryModels = flattenOpenCodeModels({
               inventory,
@@ -4801,8 +4797,8 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           }
 
           const inventoryFailure = Cause.squash(inventoryExit.cause);
-          return yield* new ProviderAdapterRequestError({
-            provider,
+          return yield* new EngineAdapterRequestError({
+            engine,
             method: "listModels",
             detail: openCodeRuntimeErrorDetail(inventoryFailure),
             cause: inventoryFailure,
@@ -4842,7 +4838,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                   commands: flattenOpenCodeCommands(commands.data ?? []),
                   source: adapterConfig.fallbackModelSource,
                   cached: false,
-                }) satisfies ProviderListCommandsResult,
+                }) satisfies EngineListCommandsResult,
             ),
             Effect.catch((cause) =>
               isUnsupportedOpenCodeCommandListError(cause)
@@ -4850,7 +4846,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                     commands: [],
                     source: "unsupported",
                     cached: false,
-                  } satisfies ProviderListCommandsResult)
+                  } satisfies EngineListCommandsResult)
                 : Effect.fail(cause),
             ),
             Effect.mapError(toAdapterRequestError),
@@ -4870,12 +4866,12 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         });
 
       return {
-        provider,
+        engine,
         capabilities: {
-          ...providerExecutionStructure(provider),
+          ...engineExecutionStructure(engine),
           sessionModelSwitch: "in-session",
           supportsRuntimeModelList: true,
-          supportsNativeSlashCommandDiscovery: provider === "opencode",
+          supportsNativeSlashCommandDiscovery: engine === "opencode",
           supportsSkillMentions: false,
           supportsSkillDiscovery: false,
           supportsPluginMentions: false,
@@ -4899,7 +4895,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         stopAll,
         listModels,
         listAgents,
-        ...(provider === "opencode" ? { listCommands } : {}),
+        ...(engine === "opencode" ? { listCommands } : {}),
         get streamEvents() {
           return Stream.fromQueue(runtimeEvents);
         },

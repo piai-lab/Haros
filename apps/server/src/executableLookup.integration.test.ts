@@ -1,6 +1,6 @@
 // FILE: executableLookup.test.ts
 // Purpose: Pin the PATH/PATHEXT rules now shared by editor discovery, terminal wrappers,
-//          provider maintenance and the Codex version gate. The win32 cases run on any host
+//          engine maintenance and the Codex version gate. The win32 cases run on any host
 //          because the platform is injected and only affects PATH/PATHEXT semantics.
 
 import { mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";

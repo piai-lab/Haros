@@ -23,7 +23,7 @@ import {
   titleCase,
 } from "../parse";
 import { readItemTableValues } from "../sqlite";
-import type { ProviderUsageContext, ProviderUsageFetcher } from "../types";
+import type { EngineUsageContext, EngineUsageFetcher } from "../types";
 
 const SOURCE = "cursor-dashboard";
 const USAGE_URL = "https://api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage";
@@ -38,7 +38,7 @@ interface CursorAuth {
 }
 
 export function cursorStateDbPaths(
-  ctx: Pick<ProviderUsageContext, "homeDir" | "env" | "platform">,
+  ctx: Pick<EngineUsageContext, "homeDir" | "env" | "platform">,
 ): string[] {
   const segments = ["Cursor", "User", "globalStorage", "state.vscdb"];
   if (ctx.platform === "darwin") {
@@ -52,7 +52,7 @@ export function cursorStateDbPaths(
   return [nodePath.join(configHome, ...segments)];
 }
 
-async function resolveCursorAuth(ctx: ProviderUsageContext): Promise<CursorAuth | null> {
+async function resolveCursorAuth(ctx: EngineUsageContext): Promise<CursorAuth | null> {
   for (const dbPath of cursorStateDbPaths(ctx)) {
     const values = await readItemTableValues({ dbPath, keys: [ACCESS_TOKEN_KEY, PLAN_KEY] });
     const accessToken = asString(values[ACCESS_TOKEN_KEY]);
@@ -79,7 +79,7 @@ function cursorHeaders(accessToken: string): Record<string, string> {
   };
 }
 
-function cursorAuthCacheKey(ctx: ProviderUsageContext, auth: CursorAuth | null): string {
+function cursorAuthCacheKey(ctx: EngineUsageContext, auth: CursorAuth | null): string {
   return auth ? `${ctx.homeDir}:${credentialFingerprint(auth.accessToken)}` : `${ctx.homeDir}:none`;
 }
 
@@ -135,7 +135,7 @@ export function parseCursorUsage(input: {
   }
 
   return buildSnapshot({
-    provider: "cursor",
+    engine: "cursor",
     nowMs: input.nowMs,
     status: "ok",
     source: SOURCE,
@@ -145,8 +145,8 @@ export function parseCursorUsage(input: {
   });
 }
 
-export const cursorUsageFetcher: ProviderUsageFetcher = {
-  provider: "cursor",
+export const cursorUsageFetcher: EngineUsageFetcher = {
+  engine: "cursor",
   async cacheKey(ctx) {
     return cursorAuthCacheKey(ctx, await resolveCursorAuth(ctx));
   },
@@ -162,7 +162,7 @@ export const cursorUsageFetcher: ProviderUsageFetcher = {
 
     try {
       const usageResult = await fetchJson({
-        service: "provider-usage-cursor",
+        service: "engine-usage-cursor",
         url: USAGE_URL,
         allowedOrigins: [new URL(USAGE_URL).origin],
         method: "POST",
@@ -185,7 +185,7 @@ export const cursorUsageFetcher: ProviderUsageFetcher = {
       let creditsJson: unknown;
       try {
         const creditsResult = await fetchJson({
-          service: "provider-usage-cursor",
+          service: "engine-usage-cursor",
           url: CREDITS_URL,
           allowedOrigins: [new URL(CREDITS_URL).origin],
           method: "POST",

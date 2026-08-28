@@ -19,7 +19,7 @@ function makeInput(destinationParent: string): GitHubProjectProvisionInput {
     directoryName: "codex",
     commandId: CommandId.makeUnsafe("command-1"),
     projectId: ProjectId.makeUnsafe("project-1"),
-    defaultModelSelection: { provider: "codex", model: "gpt-5" },
+    defaultEngineSelection: { engine: "codex", model: "gpt-5" },
     createdAt: "2026-08-04T00:00:00.000Z",
   };
 }

@@ -5,10 +5,10 @@
 // `thread.create` invariant failures as user-visible toasts.
 
 import {
-  type ModelSelection,
+  type EngineSelection,
   type OrchestrationThreadPullRequest,
   type ProjectId,
-  type ProviderInteractionMode,
+  type EngineInteractionMode,
   type RuntimeMode,
   type ThreadId,
 } from "@harnessos/contracts";
@@ -26,9 +26,9 @@ export async function dispatchThreadRename(input: {
   createIfMissing?:
     | {
         projectId: ProjectId;
-        modelSelection: ModelSelection;
+        engineSelection: EngineSelection;
         runtimeMode: RuntimeMode;
-        interactionMode: ProviderInteractionMode;
+        interactionMode: EngineInteractionMode;
         envMode: DraftThreadEnvMode;
         branch: string | null;
         worktreePath: string | null;
@@ -59,7 +59,7 @@ export async function dispatchThreadRename(input: {
         threadId: input.threadId,
         projectId: input.createIfMissing.projectId,
         title: trimmed,
-        modelSelection: input.createIfMissing.modelSelection,
+        engineSelection: input.createIfMissing.engineSelection,
         runtimeMode: input.createIfMissing.runtimeMode,
         interactionMode: input.createIfMissing.interactionMode,
         envMode: input.createIfMissing.envMode,

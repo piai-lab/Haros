@@ -3,7 +3,7 @@
 // Exports: Payload decoders for receiver ids, receiver agents, agent states, and identity hints.
 
 export interface ParsedSubagentReceiverAgent {
-  providerThreadId: string;
+  nativeThreadId: string;
   agentId?: string | undefined;
   nickname?: string | undefined;
   role?: string | undefined;
@@ -26,7 +26,7 @@ export interface ParsedSubagentAgentState {
 }
 
 export interface ParsedSubagentIdentityHint {
-  providerThreadId?: string | undefined;
+  nativeThreadId?: string | undefined;
   agentId?: string | undefined;
   nickname?: string | undefined;
   role?: string | undefined;
@@ -93,7 +93,7 @@ function extractSubagentIdentityFromSource(
   const subagent =
     asRecord(source?.subAgent) ?? asRecord(source?.sub_agent) ?? asRecord(item.subAgent);
   const threadSpawn = asRecord(subagent?.thread_spawn) ?? asRecord(subagent?.threadSpawn);
-  const providerThreadId =
+  const nativeThreadId =
     asTrimmedString(
       item.threadId ??
         item.thread_id ??
@@ -116,12 +116,12 @@ function extractSubagentIdentityFromSource(
       firstStringValue(subagent, ["agentRole", "agent_role", "agentType", "agent_type"]),
   );
 
-  if (!providerThreadId && !agentId && !nickname && !role) {
+  if (!nativeThreadId && !agentId && !nickname && !role) {
     return null;
   }
 
   return {
-    ...(providerThreadId ? { providerThreadId } : {}),
+    ...(nativeThreadId ? { nativeThreadId } : {}),
     ...(agentId ? { agentId } : {}),
     ...(nickname ? { nickname } : {}),
     ...(role ? { role } : {}),
@@ -197,7 +197,7 @@ export function decodeSubagentReceiverAgents(
         return [];
       }
 
-      const providerThreadId =
+      const nativeThreadId =
         firstStringValue(object, [
           "threadId",
           "thread_id",
@@ -208,7 +208,7 @@ export function decodeSubagentReceiverAgents(
         ]) ??
         fallbackThreadIds[index] ??
         undefined;
-      if (!providerThreadId) {
+      if (!nativeThreadId) {
         return [];
       }
 
@@ -254,7 +254,7 @@ export function decodeSubagentReceiverAgents(
 
       return [
         {
-          providerThreadId,
+          nativeThreadId,
           ...(agentId ? { agentId } : {}),
           ...(nickname ? { nickname } : {}),
           ...(role ? { role } : {}),
@@ -271,8 +271,8 @@ export function decodeSubagentReceiverAgents(
     return decodedAgents;
   }
 
-  const providerThreadId = fallbackThreadIds[0];
-  if (!providerThreadId) {
+  const nativeThreadId = fallbackThreadIds[0];
+  if (!nativeThreadId) {
     return [];
   }
 
@@ -300,7 +300,7 @@ export function decodeSubagentReceiverAgents(
 
   return [
     {
-      providerThreadId,
+      nativeThreadId,
       ...(agentId ? { agentId } : {}),
       ...(nickname ? { nickname } : {}),
       ...(role ? { role } : {}),
@@ -407,14 +407,14 @@ export function collectSubagentProviderThreadIds(
     pushUniqueThreadId(orderedThreadIds, seen, threadId);
   }
   for (const agent of decodeSubagentReceiverAgents(item, orderedThreadIds)) {
-    pushUniqueThreadId(orderedThreadIds, seen, agent.providerThreadId);
+    pushUniqueThreadId(orderedThreadIds, seen, agent.nativeThreadId);
   }
   for (const threadId of Object.keys(decodeSubagentAgentStates(item))) {
     pushUniqueThreadId(orderedThreadIds, seen, threadId);
   }
 
   const sourceIdentity = extractSubagentIdentityFromSource(item);
-  pushUniqueThreadId(orderedThreadIds, seen, sourceIdentity?.providerThreadId);
+  pushUniqueThreadId(orderedThreadIds, seen, sourceIdentity?.nativeThreadId);
 
   pushUniqueThreadId(
     orderedThreadIds,
@@ -441,7 +441,7 @@ export function extractSubagentIdentityHints(
       return;
     }
     const key = [
-      hint.providerThreadId ?? "",
+      hint.nativeThreadId ?? "",
       hint.agentId ?? "",
       hint.nickname ?? "",
       hint.role ?? "",
@@ -462,7 +462,7 @@ export function extractSubagentIdentityHints(
 
   pushHint(extractSubagentIdentityFromSource(item));
   pushHint({
-    providerThreadId: firstStringValue(item, [
+    nativeThreadId: firstStringValue(item, [
       "newThreadId",
       "new_thread_id",
       "receiverThreadId",
@@ -508,7 +508,7 @@ export function extractSubagentIdentityHints(
 
   for (const state of Object.values(decodeSubagentAgentStates(item))) {
     pushHint({
-      providerThreadId: state.threadId,
+      nativeThreadId: state.threadId,
       agentId: state.agentId,
       nickname: state.nickname,
       role: state.role,
@@ -521,7 +521,7 @@ export function extractSubagentIdentityHints(
 
   return hints.filter(
     (hint) =>
-      hint.providerThreadId !== undefined ||
+      hint.nativeThreadId !== undefined ||
       hint.agentId !== undefined ||
       hint.nickname !== undefined ||
       hint.role !== undefined,
@@ -565,7 +565,7 @@ function mergeSubagentIdentityHints(
 ): ParsedSubagentIdentityHint {
   const mergedModel = selectMergedModel({ existing, incoming });
   return {
-    providerThreadId: incoming.providerThreadId ?? existing?.providerThreadId,
+    nativeThreadId: incoming.nativeThreadId ?? existing?.nativeThreadId,
     agentId: incoming.agentId ?? existing?.agentId,
     nickname: incoming.nickname ?? existing?.nickname,
     role: incoming.role ?? existing?.role,
@@ -586,10 +586,10 @@ export function buildSubagentIdentityDirectory(
   const byAgentId = new Map<string, ParsedSubagentIdentityHint>();
 
   const upsert = (hint: ParsedSubagentIdentityHint) => {
-    const providerThreadId = asTrimmedString(hint.providerThreadId);
+    const nativeThreadId = asTrimmedString(hint.nativeThreadId);
     const agentId = asTrimmedString(hint.agentId);
     if (
-      providerThreadId === undefined &&
+      nativeThreadId === undefined &&
       agentId === undefined &&
       hint.nickname === undefined &&
       hint.role === undefined
@@ -597,9 +597,7 @@ export function buildSubagentIdentityDirectory(
       return;
     }
 
-    const existingByThread = providerThreadId
-      ? byProviderThreadId.get(providerThreadId)
-      : undefined;
+    const existingByThread = nativeThreadId ? byProviderThreadId.get(nativeThreadId) : undefined;
     const existingByAgent = agentId ? byAgentId.get(agentId) : undefined;
     const existing =
       existingByAgent !== undefined
@@ -607,18 +605,18 @@ export function buildSubagentIdentityDirectory(
         : existingByThread;
     const merged = mergeSubagentIdentityHints(existing, {
       ...hint,
-      ...(providerThreadId ? { providerThreadId } : {}),
+      ...(nativeThreadId ? { nativeThreadId } : {}),
       ...(agentId ? { agentId } : {}),
     });
 
-    if (providerThreadId) {
-      byProviderThreadId.set(providerThreadId, merged);
+    if (nativeThreadId) {
+      byProviderThreadId.set(nativeThreadId, merged);
     }
     if (agentId) {
       byAgentId.set(agentId, merged);
     }
-    if (merged.providerThreadId && merged.agentId) {
-      byProviderThreadId.set(merged.providerThreadId, merged);
+    if (merged.nativeThreadId && merged.agentId) {
+      byProviderThreadId.set(merged.nativeThreadId, merged);
       byAgentId.set(merged.agentId, merged);
     }
   };
@@ -636,11 +634,11 @@ export function buildSubagentIdentityDirectory(
 export function resolveSubagentIdentityFromDirectory(
   directory: ParsedSubagentIdentityDirectory,
   input: {
-    providerThreadId?: string | null | undefined;
+    nativeThreadId?: string | null | undefined;
     agentId?: string | null | undefined;
   },
 ): ParsedSubagentIdentityHint | undefined {
-  const normalizedProviderThreadId = asTrimmedString(input.providerThreadId);
+  const normalizedProviderThreadId = asTrimmedString(input.nativeThreadId);
   const normalizedAgentId = asTrimmedString(input.agentId);
   const threadEntry = normalizedProviderThreadId
     ? directory.byProviderThreadId.get(normalizedProviderThreadId)
@@ -652,15 +650,15 @@ export function resolveSubagentIdentityFromDirectory(
 
   return mergeSubagentIdentityHints(agentEntry, {
     ...threadEntry,
-    providerThreadId:
-      threadEntry?.providerThreadId ?? agentEntry?.providerThreadId ?? normalizedProviderThreadId,
+    nativeThreadId:
+      threadEntry?.nativeThreadId ?? agentEntry?.nativeThreadId ?? normalizedProviderThreadId,
     agentId: threadEntry?.agentId ?? agentEntry?.agentId ?? normalizedAgentId,
   });
 }
 
 export function resolveSubagentIdentityHint(input: {
   hints: ReadonlyArray<ParsedSubagentIdentityHint>;
-  providerThreadId?: string | null | undefined;
+  nativeThreadId?: string | null | undefined;
   agentId?: string | null | undefined;
 }): ParsedSubagentIdentityHint | undefined {
   return resolveSubagentIdentityFromDirectory(buildSubagentIdentityDirectory(input.hints), input);

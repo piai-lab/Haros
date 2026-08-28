@@ -33,16 +33,16 @@ import {
   type CanonicalUserInputResponse,
   type CanonicalUserInputSettlement,
   EventId,
-  type ProviderListCommandsResult,
-  type ProviderListModelsResult,
-  type ProviderListSkillsResult,
+  type EngineListCommandsResult,
+  type EngineListModelsResult,
+  type EngineListSkillsResult,
   type EngineKind,
-  type ProviderInteractionMode,
-  ProviderItemId,
-  type ProviderRuntimeEvent,
-  type ProviderSession,
-  type ProviderUserInputAnswers,
-  type ProviderWorkSurface,
+  type EngineInteractionMode,
+  EngineItemId,
+  type EngineRuntimeEvent,
+  type EngineSession,
+  type EngineUserInputAnswers,
+  type EngineWorkSurface,
   RuntimeItemId,
   RuntimeRequestId,
   ThreadId,
@@ -82,11 +82,11 @@ import { ServerSettingsService } from "../../serverSettings.ts";
 import { lazyModule } from "../../lazyModule.ts";
 import { buildProviderChildEnvironment } from "../../providerChildEnvironment.ts";
 import {
-  type ProviderAdapterError,
-  ProviderAdapterRequestError,
-  ProviderAdapterSessionClosedError,
-  ProviderAdapterSessionNotFoundError,
-  ProviderAdapterValidationError,
+  type EngineAdapterError,
+  EngineAdapterRequestError,
+  EngineAdapterSessionClosedError,
+  EngineAdapterSessionNotFoundError,
+  EngineAdapterValidationError,
 } from "../Errors.ts";
 import { PiAdapter, type PiAdapterShape } from "../Services/PiAdapter.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
@@ -107,12 +107,12 @@ import {
   type OmniMindSessionExtensionComposition,
 } from "../omnimindSessionExtensions.ts";
 import {
-  PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
-  type ProviderAdapterShape,
-  type ProviderResourceDiscoveryScope,
-  type ProviderThreadSnapshot,
-  type ProviderTurnDispatchContext,
-} from "../Services/ProviderAdapter.ts";
+  ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
+  type EngineAdapterShape,
+  type EngineResourceDiscoveryScope,
+  type EngineThreadSnapshot,
+  type EngineTurnDispatchContext,
+} from "../Services/EngineAdapter.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { makeBoundedCallbackIngress } from "../boundedCallbackIngress.ts";
 import { makeKeyedLock } from "../keyedLock.ts";
@@ -120,10 +120,10 @@ import { classifyPiTurnFailure } from "../piTurnFailure.ts";
 import {
   compactProviderRuntimeEventForIngress,
   isTerminalProviderRuntimeEvent,
-  PROVIDER_RUNTIME_CALLBACK_BUFFER_MAX_BYTES,
-  PROVIDER_RUNTIME_CALLBACK_TERMINAL_RESERVE,
+  ENGINE_RUNTIME_CALLBACK_BUFFER_MAX_BYTES,
+  ENGINE_RUNTIME_CALLBACK_TERMINAL_RESERVE,
   type SizedProviderRuntimeEvent,
-} from "../providerRuntimeEventIngress.ts";
+} from "../engineRuntimeEventIngress.ts";
 import { clampUsagePercent, nonNegativeFiniteNumber, positiveFiniteNumber } from "../tokenUsage.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 import {
@@ -147,7 +147,7 @@ import {
 } from "../oaRuntime.ts";
 import { getOmniMindModelRuntimeMutationRevision } from "../omnimindModelRuntimeMutation.ts";
 import { resolveRealPathWithinRoot } from "../../workspace/realPathContainment.ts";
-import { providerExecutionStructure } from "../providerExecutionStructure.ts";
+import { engineExecutionStructure } from "../engineExecutionStructure.ts";
 import { projectAskUserRequest, resolveAskUserResponse } from "../askUserHostBridge.ts";
 import { extractProposedPlanMarkdown, withProviderPlanModePrompt } from "../planMode.ts";
 import type { OmniMindPlanModeController } from "../omnimindPlanModeExtension.ts";
@@ -342,7 +342,7 @@ export function makePiBashProcessSupervisor(
           cwd,
           detached: process.platform !== "win32",
           env: buildProviderChildEnvironment({
-            provider: "pi",
+            engine: "pi",
             baseEnv: execution.env ?? process.env,
           }),
           stdio: [commandFromStdin ? "pipe" : "ignore", "pipe", "pipe"],
@@ -430,7 +430,7 @@ export function makePiBashProcessSupervisor(
   };
 }
 
-// Loads the Pi SDK only when the Pi provider is actually used. The SDK brings in
+// Loads the Pi SDK only when the Pi engine is actually used. The SDK brings in
 // a native clipboard module, so importing it during OmniMind startup can bloat the
 // desktop backend before any Pi session exists.
 const loadPiCodingAgentModule: () => Promise<PiCodingAgentModule> = lazyModule(
@@ -471,7 +471,7 @@ export async function createOmniMindModelRuntime(agentDir: string) {
 }
 
 interface PiFamilyAdapterConfig<P extends PiFamilyProvider> {
-  readonly provider: P;
+  readonly engine: P;
   readonly displayName: string;
   readonly loadModule: () => Promise<PiCodingAgentModule>;
   readonly resolveAgentDir: (
@@ -483,7 +483,7 @@ interface PiFamilyAdapterConfig<P extends PiFamilyProvider> {
 }
 
 const STOCK_PI_FAMILY = {
-  provider: "pi",
+  engine: "pi",
   displayName: "Pi",
   loadModule: loadPiCodingAgentModule,
   resolveAgentDir: (requestedAgentDir, _serverBaseDir, sdk) => makeAgentDir(requestedAgentDir, sdk),
@@ -492,7 +492,7 @@ const STOCK_PI_FAMILY = {
 } satisfies PiFamilyAdapterConfig<"pi">;
 
 const HARNESSOS_AGENT_FAMILY = {
-  provider: "oa",
+  engine: "oa",
   displayName: "OmniMind",
   loadModule: loadOAAdapterModule,
   // Product state is App-owned and cannot be redirected into stock Pi state.
@@ -504,7 +504,7 @@ const HARNESSOS_AGENT_FAMILY = {
 interface PiSessionContext {
   readonly agentDir: string;
   appliedModelRuntimeMutationRevision: number;
-  readonly workSurface?: ProviderWorkSurface;
+  readonly workSurface?: EngineWorkSurface;
   readonly productSurface?: ProductSurface;
   /** Frozen discovery trust for this native ResourceLoader; not a second policy owner. */
   readonly resourceScopeIdentity: string;
@@ -516,10 +516,10 @@ interface PiSessionContext {
   runtime: PiAgentRuntime;
   readonly processSupervisor: PiBashProcessSupervisor;
   modelRegistry: PiModelRegistry;
-  session: ProviderSession;
+  session: EngineSession;
   turns: PiStoredTurn[];
   activeTurnId: TurnId | undefined;
-  activeInteractionMode: ProviderInteractionMode | undefined;
+  activeInteractionMode: EngineInteractionMode | undefined;
   proposedPlanCandidate: string | undefined;
   startedTurnId: TurnId | undefined;
   activeAssistantItemId: RuntimeItemId | undefined;
@@ -537,16 +537,16 @@ interface PiSessionContext {
 
 export function makePiRuntimeEventBase(
   context: {
-    readonly provider?: PiFamilyProvider;
+    readonly engine?: PiFamilyProvider;
     readonly lifecycleGeneration?: string;
-    readonly session: Pick<ProviderSession, "threadId">;
+    readonly session: Pick<EngineSession, "threadId">;
     readonly activeTurnId: TurnId | undefined;
   },
   options?: { readonly includeTurnId?: boolean },
 ) {
   return {
     eventId: EventId.makeUnsafe(crypto.randomUUID()),
-    provider: context.provider ?? "pi",
+    engine: context.engine ?? "pi",
     threadId: context.session.threadId,
     createdAt: new Date().toISOString(),
     ...(context.lifecycleGeneration !== undefined
@@ -611,7 +611,7 @@ export interface PiAdapterLiveOptions {
 /**
  * Project the canonical MCP catalog into Pi's native custom-tool API. Tool
  * schemas and execution both remain owned by the gateway; Pi only adapts the
- * provider boundary.
+ * engine boundary.
  */
 export async function buildPiAgentGatewayCustomTools(input: {
   readonly connection: AgentGatewayMcpConnection;
@@ -722,7 +722,7 @@ function hasModelConfigProviderIdentity(
 }
 
 /**
- * Pi extensions own their provider catalogs, so normalize their display metadata
+ * Pi extensions own their model-provider catalogs, so normalize their display metadata
  * before it crosses OmniMind's trimmed-string RPC contract. A single malformed
  * extension model must not make the complete Pi catalog unavailable.
  */
@@ -730,7 +730,7 @@ export function toPiProviderModelDescriptor(
   model: Model<Api>,
   getProviderDisplayName: (provider: string) => string,
   getProviderOrigin: (provider: string) => "builtin" | "models_json" | "extension" | "unknown",
-): ProviderListModelsResult["models"][number] | null {
+): EngineListModelsResult["models"][number] | null {
   const provider = trimToUndefined(model.provider);
   const modelId = trimToUndefined(model.id);
   if (!provider || !modelId || provider !== model.provider || modelId !== model.id) {
@@ -822,11 +822,11 @@ function getSessionFile(session: PiAgentSession): string | undefined {
 
 function makeSessionSnapshot(
   context: PiSessionContext,
-  provider: PiFamilyProvider = "pi",
-): ProviderSession {
+  engine: PiFamilyProvider = "pi",
+): EngineSession {
   const resumeCursor = getSessionFile(context.runtime.session);
   return {
-    provider,
+    engine,
     status: context.stopped ? "closed" : context.activeTurnId ? "running" : "ready",
     runtimeMode: context.session.runtimeMode,
     threadId: context.session.threadId,
@@ -979,7 +979,7 @@ function classifyPiRuntimeError(
     normalized.includes("quota") ||
     normalized.includes("usage limit") ||
     normalized.includes("overloaded") ||
-    normalized.includes("provider")
+    normalized.includes("engine")
   ) {
     return "provider_error";
   }
@@ -1108,7 +1108,7 @@ export function makePiHostSystemPrompt(input: {
 }
 
 export function promptRequiredAgentGatewayToolNames(
-  dispatchContext: ProviderTurnDispatchContext | undefined,
+  dispatchContext: EngineTurnDispatchContext | undefined,
 ): ReadonlyArray<string> {
   if (dispatchContext?.turnKind === "goal-continuation") {
     return GOAL_CONTINUATION_GATEWAY_TOOL_NAMES;
@@ -1123,7 +1123,7 @@ export function promptRequiredAgentGatewayToolNames(
 export function makeOmniMindEngineSystemPrompt(input: {
   readonly productSurface?: ProductSurface;
   /** Backward-compatible test/embedding fallback; production passes ProductSurface. */
-  readonly workSurface?: ProviderWorkSurface;
+  readonly workSurface?: EngineWorkSurface;
 }): string {
   const surface = input.productSurface ?? (input.workSurface === "agent" ? "agent" : "chat");
   const surfaceContract =
@@ -1465,7 +1465,7 @@ export function piModelHasConfiguredCredentials(
   return model !== undefined && modelRuntime.hasConfiguredAuth(model.provider);
 }
 
-// Keep session runtimes isolated so project extension provider registrations
+// Keep session runtimes isolated so project extension engine registrations
 // cannot leak between threads that share an agent directory.
 export async function createPiModelRuntime(
   agentDir: string,
@@ -1516,7 +1516,7 @@ export function makePiUserInputOptions(
 }
 
 function firstPiUserInputAnswer(
-  answers: ProviderUserInputAnswers,
+  answers: EngineUserInputAnswers,
   questionId: string,
 ): string | undefined {
   const answer = answers[questionId];
@@ -1573,7 +1573,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
   options?: PiAdapterLiveOptions,
 ) =>
   Effect.gen(function* () {
-    const provider = family.provider;
+    const engine = family.engine;
     const displayName = family.displayName;
     const extensionLabel = `${displayName} extension`;
     const serverConfig = yield* ServerConfig;
@@ -1587,8 +1587,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     const browserAutomationHost = Option.getOrUndefined(
       yield* Effect.serviceOption(BrowserAutomationHost),
     );
-    const runtimeEventQueue = yield* Queue.bounded<ProviderRuntimeEvent>(
-      PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
+    const runtimeEventQueue = yield* Queue.bounded<EngineRuntimeEvent>(
+      ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
     );
     const sessions = new Map<ThreadId, PiSessionContext>();
     const productDiscoveryOptions = (
@@ -1610,7 +1610,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         : {};
     const resourceScopeIdentity = (
       scope:
-        | ProviderResourceDiscoveryScope
+        | EngineResourceDiscoveryScope
         | { readonly kind: "project"; readonly authoritativeRoot: string },
     ): string => (scope.kind === "project" ? `project:${scope.authoritativeRoot}` : "global-only");
     const sessionResourceAdmission = makeKeyedLock<ThreadId>();
@@ -1633,9 +1633,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           : Effect.void
         ).pipe(Effect.andThen(Queue.offer(runtimeEventQueue, item.event)), Effect.asVoid),
       {
-        capacity: PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
-        maxBufferedBytes: PROVIDER_RUNTIME_CALLBACK_BUFFER_MAX_BYTES,
-        terminalReserve: PROVIDER_RUNTIME_CALLBACK_TERMINAL_RESERVE,
+        capacity: ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
+        maxBufferedBytes: ENGINE_RUNTIME_CALLBACK_BUFFER_MAX_BYTES,
+        terminalReserve: ENGINE_RUNTIME_CALLBACK_TERMINAL_RESERVE,
         isTerminal: (item) => isTerminalProviderRuntimeEvent(item.event),
         sizeOf: (item) => item.bytes,
       },
@@ -1645,8 +1645,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       Effect.tryPromise({
         try: () => family.loadModule(),
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: provider,
+          new EngineAdapterRequestError({
+            engine: engine,
             method,
             detail: toMessage(cause, `Failed to load ${displayName} runtime.`),
             cause,
@@ -1656,9 +1656,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     const makeEventBase = (
       context: Parameters<typeof makePiRuntimeEventBase>[0],
       eventOptions?: Parameters<typeof makePiRuntimeEventBase>[1],
-    ) => makePiRuntimeEventBase({ ...context, provider }, eventOptions);
+    ) => makePiRuntimeEventBase({ ...context, engine }, eventOptions);
 
-    const offerRuntimeEvent = (event: ProviderRuntimeEvent) => {
+    const offerRuntimeEvent = (event: EngineRuntimeEvent) => {
       runtimeEventIngress.offer(compactProviderRuntimeEventForIngress(event));
     };
 
@@ -1685,7 +1685,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ...(input.messageType ? { messageType: input.messageType } : {}),
           payload: input.cause ?? { message: input.message },
         },
-      } satisfies ProviderRuntimeEvent);
+      } satisfies EngineRuntimeEvent);
     };
 
     const offerEngineWebSurfaceUnavailable = (
@@ -1698,7 +1698,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         ...makeEventBase(context),
         itemId: tracked.itemId,
         providerRefs: {
-          providerItemId: ProviderItemId.makeUnsafe(tracked.toolCallId),
+          nativeItemId: EngineItemId.makeUnsafe(tracked.toolCallId),
         },
         type: "item.updated",
         payload: {
@@ -1718,7 +1718,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           method: "engine-web-surface/unavailable",
           payload: { toolCallId: tracked.toolCallId, message },
         },
-      } satisfies ProviderRuntimeEvent);
+      } satisfies EngineRuntimeEvent);
     };
 
     const registerPiCuratorWebSurface = (
@@ -1731,7 +1731,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       const unregister = registerEngineWebSurfaceIntent({
         url,
         identity: {
-          provider,
+          engine,
           threadId: context.session.threadId,
           toolCallId: tracked.toolCallId,
         },
@@ -1743,8 +1743,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           try {
             await Effect.runPromise(
               browserAutomationHost.execute({
-                sessionKey: `engine-web-surface:${provider}:${context.session.threadId}:${tracked.toolCallId}`,
-                provider,
+                sessionKey: `engine-web-surface:${engine}:${context.session.threadId}:${tracked.toolCallId}`,
+                engine,
                 threadId: context.session.threadId,
                 name: "browser_open",
                 arguments: { url, show: true, reuse: true },
@@ -1808,13 +1808,13 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           type: "user-input.requested",
           requestId: runtimeRequestId,
           payload: projection.request,
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
         offerRuntimeEvent({
           ...makeEventBase(context),
           type: "user-input.resolved",
           requestId: runtimeRequestId,
           payload: { settlement: { status: "unavailable" } },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
         askUserMetrics.settle("unavailable", Date.now() - requestedAt);
         return Promise.resolve(result);
       }
@@ -1853,7 +1853,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 method: "ask_user/settled",
                 payload: { requestId, toolCallId: input.toolCallId, status: result.status },
               },
-            } satisfies ProviderRuntimeEvent);
+            } satisfies EngineRuntimeEvent);
           }
           resolve(result);
         };
@@ -1913,7 +1913,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               questionCount: projection.request.questions.length,
             },
           },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
       });
     };
 
@@ -1925,7 +1925,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         readonly opts?: Parameters<ExtensionUIContext["select"]>[2];
         readonly rawPayload?: Record<string, unknown>;
       },
-    ): Promise<ProviderUserInputAnswers> => {
+    ): Promise<EngineUserInputAnswers> => {
       if (context.stopped || input.opts?.signal?.aborted) {
         return Promise.resolve({});
       }
@@ -1964,7 +1964,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 method: `${input.method}/settled`,
                 payload: { requestId, status: settlement.status },
               },
-            } satisfies ProviderRuntimeEvent);
+            } satisfies EngineRuntimeEvent);
           }
           resolve(
             settlement.status === "answered"
@@ -1998,7 +1998,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               question: input.question,
             },
           },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
         removeUnavailableListener = userInputPresenterRegistry.onUnavailable(() =>
           finish({ status: "unavailable" }),
         );
@@ -2029,7 +2029,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             method: "extension/ui-unsupported",
             payload: { method },
           },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
       };
       const emitPluginProgress = (summary: string) => {
         const normalized = trimToUndefined(summary);
@@ -2043,7 +2043,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             method: "extension/ui-progress",
             payload: { summary: normalized },
           },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
       };
 
       const uiContext: ExtensionUIContext = {
@@ -2112,7 +2112,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 method: "extension/ui/notify",
                 payload: { message: normalized, type },
               },
-            } satisfies ProviderRuntimeEvent);
+            } satisfies EngineRuntimeEvent);
             return;
           }
           emitPluginProgress(normalized);
@@ -2222,7 +2222,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       context.activeAssistantItemId = undefined;
       context.activeReasoningItemId = undefined;
       context.activeToolItems.clear();
-      context.session = makeSessionSnapshot(context, provider);
+      context.session = makeSessionSnapshot(context, engine);
       offerRuntimeEvent({
         ...completionBase,
         type: "turn.completed",
@@ -2232,7 +2232,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           errorMessage: message,
         },
         raw: { source: "pi.sdk.event", method: "prompt", payload: cause },
-      } satisfies ProviderRuntimeEvent);
+      } satisfies EngineRuntimeEvent);
     };
 
     const recordItem = (context: PiSessionContext, item: unknown) => {
@@ -2245,14 +2245,14 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     const requireSession = Effect.fn("PiAdapter.requireSession")(function* (threadId: ThreadId) {
       const context = sessions.get(threadId);
       if (!context) {
-        return yield* new ProviderAdapterSessionNotFoundError({
-          provider: provider,
+        return yield* new EngineAdapterSessionNotFoundError({
+          engine: engine,
           threadId,
         });
       }
       if (context.stopped) {
-        return yield* new ProviderAdapterSessionClosedError({
-          provider: provider,
+        return yield* new EngineAdapterSessionClosedError({
+          engine: engine,
           threadId,
         });
       }
@@ -2333,7 +2333,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               messageType: event.type,
               payload: event,
             },
-          } satisfies ProviderRuntimeEvent);
+          } satisfies EngineRuntimeEvent);
         }
         recordItem(context, { type: "assistant_message", delta: update.delta });
         offerRuntimeEvent({
@@ -2350,7 +2350,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             messageType: event.type,
             payload: event,
           },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
         return;
       }
       if (update.type === "thinking_delta") {
@@ -2372,7 +2372,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               messageType: event.type,
               payload: event,
             },
-          } satisfies ProviderRuntimeEvent);
+          } satisfies EngineRuntimeEvent);
         }
         recordItem(context, { type: "reasoning", delta: update.delta });
         offerRuntimeEvent({
@@ -2389,7 +2389,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             messageType: event.type,
             payload: event,
           },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
       }
     };
 
@@ -2413,7 +2413,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             messageType: event.type,
             payload: event,
           },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
       }
       if (context.activeReasoningItemId) {
         offerRuntimeEvent({
@@ -2430,7 +2430,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             messageType: event.type,
             payload: event,
           },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
       }
       context.activeAssistantItemId = undefined;
       context.activeReasoningItemId = undefined;
@@ -2452,7 +2452,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       }
       const completionBase = makeEventBase(context);
       if (
-        provider === "oa" &&
+        engine === "oa" &&
         input.state === "completed" &&
         context.activeInteractionMode === "plan" &&
         context.proposedPlanCandidate
@@ -2466,7 +2466,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             messageType: event.type,
             payload: { source: "proposed_plan" },
           },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
       }
       if (context.gatewaySessionLease && context.gatewayConnection) {
         const outgoingLease = context.gatewaySessionLease;
@@ -2475,7 +2475,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         const replacementLease = acquireAgentGatewaySessionLease(
           agentGatewayCredentials,
           context.session.threadId,
-          provider,
+          engine,
         );
         if (replacementLease) {
           context.gatewaySessionLease = replacementLease;
@@ -2502,7 +2502,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       context.activeAssistantItemId = undefined;
       context.activeReasoningItemId = undefined;
       context.activeToolItems.clear();
-      context.session = makeSessionSnapshot(context, provider);
+      context.session = makeSessionSnapshot(context, engine);
       offerRuntimeEvent({
         ...completionBase,
         type: "turn.completed",
@@ -2517,7 +2517,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           messageType: event.type,
           payload: event,
         },
-      } satisfies ProviderRuntimeEvent);
+      } satisfies EngineRuntimeEvent);
     };
 
     const finalizePiTurnSettlement = (context: PiSessionContext, settlement: PiTurnSettlement) => {
@@ -2566,7 +2566,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           messageType: event.type,
           payload: event,
         },
-      } satisfies ProviderRuntimeEvent);
+      } satisfies EngineRuntimeEvent);
     };
 
     const handlePromptOutcome = (
@@ -2648,7 +2648,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               messageType: event.type,
               payload: event,
             },
-          } satisfies ProviderRuntimeEvent);
+          } satisfies EngineRuntimeEvent);
           return;
         case "turn_start": {
           ensurePiTurnStarted(context, event);
@@ -2683,7 +2683,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               ...makeEventBase(context),
               itemId,
               providerRefs: {
-                providerItemId: ProviderItemId.makeUnsafe(event.toolCallId),
+                nativeItemId: EngineItemId.makeUnsafe(event.toolCallId),
               },
               type: "item.started",
               payload: {
@@ -2701,7 +2701,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 messageType: event.type,
                 payload: event,
               },
-            } satisfies ProviderRuntimeEvent);
+            } satisfies EngineRuntimeEvent);
           }
           return;
         }
@@ -2744,7 +2744,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             ...makeEventBase(context),
             itemId: tracked.itemId,
             providerRefs: {
-              providerItemId: ProviderItemId.makeUnsafe(event.toolCallId),
+              nativeItemId: EngineItemId.makeUnsafe(event.toolCallId),
             },
             type: "item.updated",
             payload: {
@@ -2771,7 +2771,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               messageType: event.type,
               payload: safeEvent,
             },
-          } satisfies ProviderRuntimeEvent);
+          } satisfies EngineRuntimeEvent);
           return;
         }
         case "tool_execution_end": {
@@ -2806,7 +2806,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             ...makeEventBase(context),
             itemId: tracked.itemId,
             providerRefs: {
-              providerItemId: ProviderItemId.makeUnsafe(event.toolCallId),
+              nativeItemId: EngineItemId.makeUnsafe(event.toolCallId),
             },
             type: "item.completed",
             payload: {
@@ -2835,7 +2835,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               messageType: event.type,
               payload: safeEvent,
             },
-          } satisfies ProviderRuntimeEvent);
+          } satisfies EngineRuntimeEvent);
           return;
         }
         case "compaction_start": {
@@ -2854,7 +2854,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               messageType: event.type,
               payload: event,
             },
-          } satisfies ProviderRuntimeEvent);
+          } satisfies EngineRuntimeEvent);
           return;
         }
         case "compaction_end": {
@@ -2874,7 +2874,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               messageType: event.type,
               payload: event,
             },
-          } satisfies ProviderRuntimeEvent);
+          } satisfies EngineRuntimeEvent);
           return;
         }
         case "auto_retry_start": {
@@ -2898,7 +2898,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               messageType: event.type,
               payload: event,
             },
-          } satisfies ProviderRuntimeEvent);
+          } satisfies EngineRuntimeEvent);
           return;
         }
         case "auto_retry_end": {
@@ -2933,7 +2933,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             ? context.turns.find((candidate) => candidate.id === turnId)
             : undefined;
           if (turn) turn.leafId = leafId;
-          if (provider === "oa" && context.activeInteractionMode === "plan") {
+          if (engine === "oa" && context.activeInteractionMode === "plan") {
             context.proposedPlanCandidate = extractProposedPlanMarkdown(
               latestAssistantText(event.messages),
             );
@@ -2951,9 +2951,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 messageType: event.type,
                 payload: event,
               },
-            } satisfies ProviderRuntimeEvent);
+            } satisfies EngineRuntimeEvent);
           }
-          context.session = makeSessionSnapshot(context, provider);
+          context.session = makeSessionSnapshot(context, engine);
           return;
         }
         case "agent_settled": {
@@ -2991,7 +2991,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     };
 
     const warnIfTaskListExtensionUnavailable = (context: PiSessionContext) => {
-      if (provider !== "oa" || context.workSurface === undefined) return;
+      if (engine !== "oa" || context.workSurface === undefined) return;
       const inspection = inspectOmniMindTaskListExtensionRegistration({
         extensions: context.runtime.session.resourceLoader.getExtensions(),
         tools: context.runtime.session.getAllTools(),
@@ -3019,11 +3019,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             diagnosticCount: inspection.diagnostics.length,
           },
         },
-      } satisfies ProviderRuntimeEvent);
+      } satisfies EngineRuntimeEvent);
     };
 
     const reconcileAskUserTool = (context: PiSessionContext) => {
-      if (provider !== "oa") return undefined;
+      if (engine !== "oa") return undefined;
       const inspection = inspectOmniMindAskUserRegistration({
         extensions: context.runtime.session.resourceLoader.getExtensions(),
         tools: context.runtime.session.getAllTools(),
@@ -3047,7 +3047,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     };
 
     const warnIfAskUserUnavailable = (context: PiSessionContext) => {
-      if (provider !== "oa" || !userInputPresenterRegistry.available) return;
+      if (engine !== "oa" || !userInputPresenterRegistry.available) return;
       const inspection = reconcileAskUserTool(context);
       if (inspection?.available) return;
       offerRuntimeEvent({
@@ -3070,7 +3070,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             diagnosticCount: inspection?.diagnostics.length ?? 0,
           },
         },
-      } satisfies ProviderRuntimeEvent);
+      } satisfies EngineRuntimeEvent);
     };
 
     const createSdkRuntime = async (input: {
@@ -3093,13 +3093,13 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       hostSystemPrompt: (gatewayControlAvailable: boolean) => string;
       defaultPrompt?: string;
       immutableSystemPrompt?: string;
-      workSurface?: ProviderWorkSurface;
+      workSurface?: EngineWorkSurface;
       productSurface?: ProductSurface;
       projectContextRoot?: string;
     }) => {
       const modelRuntime = await family.createModelRuntime(input.agentDir);
       const curatorPresenter: CuratorPresenter | undefined =
-        provider === "oa" &&
+        engine === "oa" &&
         browserAutomationHost?.available &&
         browserAutomationHost.getEngineWebSurfaceContext &&
         browserAutomationHost.presentEngineWebSurface &&
@@ -3109,7 +3109,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 requireReadyEngineWebSurfaceContext(
                   await Effect.runPromise(
                     browserAutomationHost.getEngineWebSurfaceContext!(
-                      `engine-web-surface:${provider}:${input.threadId}`,
+                      `engine-web-surface:${engine}:${input.threadId}`,
                     ),
                   ),
                 ),
@@ -3117,7 +3117,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 try {
                   const result = await Effect.runPromise(
                     browserAutomationHost.presentEngineWebSurface!({
-                      sessionKey: `engine-web-surface:${provider}:${input.threadId}`,
+                      sessionKey: `engine-web-surface:${engine}:${input.threadId}`,
                       threadId: input.threadId,
                       surfaceId: request.surfaceId,
                       url: request.url,
@@ -3139,7 +3139,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               settle: async ({ surfaceId, preserveTab }) => {
                 await Effect.runPromise(
                   browserAutomationHost.settleEngineWebSurface!({
-                    sessionKey: `engine-web-surface:${provider}:${input.threadId}`,
+                    sessionKey: `engine-web-surface:${engine}:${input.threadId}`,
                     threadId: input.threadId,
                     surfaceId,
                     ...(preserveTab === undefined ? {} : { preserveTab }),
@@ -3149,7 +3149,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             }
           : undefined;
       let resolvedGatewayControlAvailable =
-        provider !== "oa" && (input.gatewayTools?.length ?? 0) > 0;
+        engine !== "oa" && (input.gatewayTools?.length ?? 0) > 0;
       let resolvedHostProjection: AgentGatewayHostExtensionHandle | undefined;
       let resolvedPlanModeController: OmniMindPlanModeController | undefined;
       const hostProjectionDiagnostics: string[] = [];
@@ -3162,7 +3162,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       }) => {
         const composition: Pick<OmniMindSessionExtensionComposition, "extensions"> &
           Partial<Pick<OmniMindSessionExtensionComposition, "host" | "planModeController">> =
-          provider === "oa"
+          engine === "oa"
             ? buildOmniMindSessionExtensions({
                 agentDir,
                 defineTool: (tool) => input.sdk.defineTool(tool),
@@ -3188,7 +3188,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         const resourceLoaderOptions = {
           appendSystemPromptOverride: (base: string[]) => [
             ...base,
-            ...(provider === "oa" ? [] : [input.hostSystemPrompt(resolvedGatewayControlAvailable)]),
+            ...(engine === "oa" ? [] : [input.hostSystemPrompt(resolvedGatewayControlAvailable)]),
           ],
           ...(inlineExtensions.length === 0 ? {} : { extensionFactories: inlineExtensions }),
           ...(input.workSurface !== undefined
@@ -3251,7 +3251,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           resolvedGatewayControlAvailable = inspection.available;
           hostProjectionDiagnostics.push(...inspection.diagnostics);
         }
-        if (provider === "oa") {
+        if (engine === "oa") {
           const inspection = inspectOmniMindWebAccessRegistration(
             createdSession.session.getAllTools(),
           );
@@ -3287,23 +3287,23 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         const workSurface = input.workSurface;
         const productSurface = input.productSurface ?? (workSurface === "agent" ? "agent" : "chat");
         const projectContextRoot = trimToUndefined(input.projectContextRoot);
-        if (provider === "oa" && workSurface === undefined) {
-          return yield* new ProviderAdapterValidationError({
-            provider,
+        if (engine === "oa" && workSurface === undefined) {
+          return yield* new EngineAdapterValidationError({
+            engine,
             operation: "session/start",
             issue: "OmniMind work surface is missing from Product session admission.",
           });
         }
         if (workSurface === "agent" && !projectContextRoot) {
-          return yield* new ProviderAdapterValidationError({
-            provider,
+          return yield* new EngineAdapterValidationError({
+            engine,
             operation: "session/start",
             issue: `${displayName} Agent requires a canonical Project context root.`,
           });
         }
         if (workSurface === "chat" && projectContextRoot) {
-          return yield* new ProviderAdapterValidationError({
-            provider,
+          return yield* new EngineAdapterValidationError({
+            engine,
             operation: "session/start",
             issue: `${displayName} Chat cannot receive a Project context root.`,
           });
@@ -3312,16 +3312,16 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           const containedCwd = yield* Effect.tryPromise({
             try: () => resolveRealPathWithinRoot(projectContextRoot, cwd),
             catch: (cause) =>
-              new ProviderAdapterValidationError({
-                provider,
+              new EngineAdapterValidationError({
+                engine,
                 operation: "session/start",
                 issue: `${displayName} Agent Project context containment could not be verified.`,
                 cause,
               }),
           });
           if (containedCwd === null) {
-            return yield* new ProviderAdapterValidationError({
-              provider,
+            return yield* new EngineAdapterValidationError({
+              engine,
               operation: "session/start",
               issue: `${displayName} Agent working directory is outside its canonical Project context root.`,
             });
@@ -3329,12 +3329,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         }
         const piSdk = yield* loadPiSdk("session/start");
         const currentServerSettings =
-          provider === "oa" && serverSettings
+          engine === "oa" && serverSettings
             ? yield* serverSettings.getSettings.pipe(
                 Effect.mapError(
                   (cause) =>
-                    new ProviderAdapterRequestError({
-                      provider,
+                    new EngineAdapterRequestError({
+                      engine,
                       method: "session/start",
                       detail: "Failed to load OmniMind settings.",
                       cause,
@@ -3343,14 +3343,14 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               )
             : undefined;
         const configuredDefaultPrompt =
-          provider === "oa" ? currentServerSettings?.providers.oa.defaultPrompt : null;
+          engine === "oa" ? currentServerSettings?.engines.oa.defaultPrompt : null;
         const defaultPrompt =
-          provider === "oa"
+          engine === "oa"
             ? (configuredDefaultPrompt ?? piSdk.DEFAULT_BASE_INSTRUCTIONS)
             : undefined;
-        if (provider === "oa" && defaultPrompt === undefined) {
-          return yield* new ProviderAdapterValidationError({
-            provider,
+        if (engine === "oa" && defaultPrompt === undefined) {
+          return yield* new EngineAdapterValidationError({
+            engine,
             operation: "session/start",
             issue: "OmniMind default instructions are unavailable.",
           });
@@ -3363,7 +3363,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             : {}),
         });
         const agentDir = family.resolveAgentDir(
-          input.providerOptions?.pi?.agentDir,
+          input.engineOptions?.pi?.agentDir,
           serverConfig.baseDir,
           piSdk,
         );
@@ -3372,18 +3372,18 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ? piSdk.SessionManager.open(sessionFile, undefined, cwd)
           : piSdk.SessionManager.create(cwd, piSessionDir(agentDir, cwd));
         const modelId =
-          input.modelSelection?.provider === provider ? input.modelSelection.model : undefined;
+          input.engineSelection?.engine === engine ? input.engineSelection.model : undefined;
         const thinkingLevel =
-          input.modelSelection?.provider === provider
-            ? normalizePiThinkingLevel(input.modelSelection.options?.thinkingLevel)
+          input.engineSelection?.engine === engine
+            ? normalizePiThinkingLevel(input.engineSelection.options?.thinkingLevel)
             : undefined;
         const existingContext = sessions.get(input.threadId);
         if (existingContext) {
           yield* Effect.tryPromise({
             try: () => disposeSessionContext(existingContext),
             catch: (cause) =>
-              new ProviderAdapterRequestError({
-                provider: provider,
+              new EngineAdapterRequestError({
+                engine: engine,
                 method: "session/restart",
                 detail: toMessage(cause, `Failed to dispose previous ${displayName} session.`),
                 cause,
@@ -3396,13 +3396,13 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         const agentGatewaySessionLease = acquireAgentGatewaySessionLease(
           agentGatewayCredentials,
           input.threadId,
-          provider,
+          engine,
         );
         const agentGatewayConnection = agentGatewaySessionLease?.connection;
         let gatewayToolLoadFailed = false;
         let enabledBuiltInGroups: ReadonlyArray<BuiltInToolGroupId> = [];
         const gatewayDescriptors =
-          agentGatewayConnection && provider !== "oa"
+          agentGatewayConnection && engine !== "oa"
             ? yield* releaseAgentGatewaySessionLeaseOnInterrupt(
                 agentGatewaySessionLease,
                 Effect.tryPromise({
@@ -3425,7 +3425,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                       Effect.logWarning(
                         "Pi could not install thread-scoped OmniMind gateway tools",
                         {
-                          provider,
+                          engine,
                           reason: "gateway-discovery-failed",
                         },
                       ),
@@ -3437,7 +3437,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             : [];
         enabledBuiltInGroups = agentGatewayGroupsFromToolDescriptors(gatewayDescriptors);
         const gatewayTools =
-          provider === "oa" || !agentGatewayConnection
+          engine === "oa" || !agentGatewayConnection
             ? []
             : buildPiAgentGatewayCustomToolsFromDescriptors({
                 connection: agentGatewayConnection,
@@ -3447,13 +3447,13 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   ? {}
                   : { fetch: options.agentGatewayFetch }),
               });
-        if (provider !== "oa" && gatewayDescriptors.length === 0) {
+        if (engine !== "oa" && gatewayDescriptors.length === 0) {
           agentGatewaySessionLease?.release();
         }
         let taskProjectionContext: PiSessionContext | undefined;
         let askProjectionContext: PiSessionContext | undefined;
         const askUserInteraction: AskUserProductInteractionPort | undefined =
-          provider === "oa"
+          engine === "oa"
             ? {
                 present: ({ toolCallId, request, signal }) => {
                   const current = askProjectionContext;
@@ -3494,7 +3494,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 ...(thinkingLevel ? { thinkingLevel } : {}),
                 processSupervisor,
                 ...(gatewayTools.length > 0 ? { gatewayTools } : {}),
-                ...(provider === "oa" && agentGatewayConnection !== undefined
+                ...(engine === "oa" && agentGatewayConnection !== undefined
                   ? {
                       gatewayConnection: agentGatewayConnection!,
                       ...(options?.agentGatewayFetch === undefined
@@ -3503,9 +3503,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                     }
                   : {}),
                 ...(workSurface === undefined ? {} : { workSurface }),
-                ...(provider === "oa" ? { productSurface } : {}),
+                ...(engine === "oa" ? { productSurface } : {}),
                 ...(projectContextRoot === undefined ? {} : { projectContextRoot }),
-                ...(provider === "oa" && workSurface !== undefined
+                ...(engine === "oa" && workSurface !== undefined
                   ? {
                       onTaskListUpdate: ({ toolCallId, payload }) => {
                         const current = taskProjectionContext;
@@ -3526,7 +3526,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                             messageType: HARNESSOS_TASK_LIST_TOOL_NAME,
                             payload: { toolCallId },
                           },
-                        } satisfies ProviderRuntimeEvent);
+                        } satisfies EngineRuntimeEvent);
                       },
                     }
                   : {}),
@@ -3534,11 +3534,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 hostSystemPrompt: (available) =>
                   makePiHostSystemPrompt({
                     gatewayControlAvailable:
-                      provider === "oa" ? agentGatewayConnection !== undefined : available,
+                      engine === "oa" ? agentGatewayConnection !== undefined : available,
                     enabledBuiltInGroups,
                   }),
                 ...(defaultPrompt === undefined ? {} : { defaultPrompt }),
-                ...(provider === "oa" && workSurface !== undefined
+                ...(engine === "oa" && workSurface !== undefined
                   ? {
                       immutableSystemPrompt: makeOmniMindEngineSystemPrompt({
                         productSurface,
@@ -3547,8 +3547,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   : {}),
               }),
             catch: (cause) =>
-              new ProviderAdapterRequestError({
-                provider: provider,
+              new EngineAdapterRequestError({
+                engine: engine,
                 method: "session/start",
                 detail: toMessage(cause, `Failed to start ${displayName} session.`),
                 cause,
@@ -3566,8 +3566,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ? `${runtime.session.model.provider}/${runtime.session.model.id}`
           : modelId;
         const resumeCursor = getSessionFile(runtime.session);
-        const session: ProviderSession = {
-          provider: provider,
+        const session: EngineSession = {
+          engine: engine,
           status: "ready",
           runtimeMode: input.runtimeMode,
           cwd,
@@ -3584,9 +3584,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           runtime,
           agentDir,
           appliedModelRuntimeMutationRevision:
-            provider === "oa" ? getOmniMindModelRuntimeMutationRevision(agentDir) : 0,
+            engine === "oa" ? getOmniMindModelRuntimeMutationRevision(agentDir) : 0,
           ...(workSurface === undefined ? {} : { workSurface }),
-          ...(provider === "oa" ? { productSurface } : {}),
+          ...(engine === "oa" ? { productSurface } : {}),
           resourceScopeIdentity: resourceScopeIdentity(
             workSurface === "chat"
               ? { kind: "global-only" }
@@ -3635,8 +3635,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               uiContext: makePiExtensionUIContext(context),
             }),
           catch: (cause) =>
-            new ProviderAdapterRequestError({
-              provider: provider,
+            new EngineAdapterRequestError({
+              engine: engine,
               method: "extension/bind",
               detail: toMessage(cause, `Failed to bind ${displayName} extensions.`),
               cause,
@@ -3647,8 +3647,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               yield* Effect.tryPromise({
                 try: () => disposeSessionContext(context),
                 catch: (cause) =>
-                  new ProviderAdapterRequestError({
-                    provider: provider,
+                  new EngineAdapterRequestError({
+                    engine: engine,
                     method: "session/start-cleanup",
                     detail: toMessage(
                       cause,
@@ -3673,9 +3673,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             raw: {
               source: "pi.sdk.event",
               method: "gateway/discovery-failed",
-              payload: { provider },
+              payload: { engine },
             },
-          } satisfies ProviderRuntimeEvent);
+          } satisfies EngineRuntimeEvent);
         }
         if (hostProjectionDiagnostics.length > 0) {
           const diagnostics = [...new Set(hostProjectionDiagnostics)];
@@ -3700,7 +3700,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 diagnosticCount: diagnostics.length,
               },
             },
-          } satisfies ProviderRuntimeEvent);
+          } satisfies EngineRuntimeEvent);
         }
         if (webAccessDiagnostics.length > 0) {
           const diagnostics = [...new Set(webAccessDiagnostics)];
@@ -3725,7 +3725,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 diagnosticCount: diagnostics.length,
               },
             },
-          } satisfies ProviderRuntimeEvent);
+          } satisfies EngineRuntimeEvent);
         }
         warnIfTaskListExtensionUnavailable(context);
         warnIfAskUserUnavailable(context);
@@ -3752,7 +3752,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 extensions: extensionNames,
               },
             },
-          } satisfies ProviderRuntimeEvent);
+          } satisfies EngineRuntimeEvent);
         }
         offerRuntimeEvent({
           ...makeEventBase(context),
@@ -3761,12 +3761,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             message: `${displayName} session started`,
             resume: session.resumeCursor,
           },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
         offerRuntimeEvent({
           ...makeEventBase(context),
           type: "thread.started",
-          payload: { providerThreadId: runtime.session.sessionId },
-        } satisfies ProviderRuntimeEvent);
+          payload: { nativeThreadId: runtime.session.sessionId },
+        } satisfies EngineRuntimeEvent);
         const initialUsage = normalizePiTokenUsage(
           runtime.session.getSessionStats(),
           runtime.session.model?.contextWindow,
@@ -3779,7 +3779,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             ...makeEventBase(context),
             type: "thread.token-usage.updated",
             payload: { usage: initialUsage },
-          } satisfies ProviderRuntimeEvent);
+          } satisfies EngineRuntimeEvent);
         }
         return session;
       });
@@ -3806,8 +3806,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 attachment,
               });
               if (!attachmentPath) {
-                return yield* new ProviderAdapterValidationError({
-                  provider: provider,
+                return yield* new EngineAdapterValidationError({
+                  engine: engine,
                   operation: "turn/start",
                   issue: `Invalid attachment id '${attachment.id}'.`,
                 });
@@ -3815,8 +3815,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               const bytes = yield* fileSystem.readFile(attachmentPath).pipe(
                 Effect.mapError(
                   (cause) =>
-                    new ProviderAdapterRequestError({
-                      provider: provider,
+                    new EngineAdapterRequestError({
+                      engine: engine,
                       method: "turn/start",
                       detail: toMessage(cause, "Failed to read attachment file."),
                       cause,
@@ -3844,13 +3844,13 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           const context = yield* requireSession(input.threadId);
           let currentHostDescriptors: ReadonlyArray<AgentGatewayMcpToolDescriptor> | undefined;
           if (context.activeTurnId) {
-            return yield* new ProviderAdapterValidationError({
-              provider: provider,
+            return yield* new EngineAdapterValidationError({
+              engine: engine,
               operation: "sendTurn",
               issue: `A ${displayName} turn is already active for this thread.`,
             });
           }
-          if (provider === "oa") {
+          if (engine === "oa") {
             const currentRevision = getOmniMindModelRuntimeMutationRevision(context.agentDir);
             if (currentRevision > context.appliedModelRuntimeMutationRevision) {
               yield* Effect.tryPromise({
@@ -3870,8 +3870,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   context.appliedModelRuntimeMutationRevision = currentRevision;
                 },
                 catch: (cause) =>
-                  new ProviderAdapterRequestError({
-                    provider,
+                  new EngineAdapterRequestError({
+                    engine,
                     method: "model-services/reconcile",
                     detail: "OmniMind model-service changes could not be applied to this session.",
                     cause,
@@ -3893,8 +3893,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   await context.runtime.session.reload();
                 },
                 catch: (cause) =>
-                  new ProviderAdapterRequestError({
-                    provider,
+                  new EngineAdapterRequestError({
+                    engine,
                     method: "host-catalog/reconcile",
                     detail: "OmniMind Host tool changes could not be applied to this session.",
                     cause,
@@ -3904,37 +3904,37 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             }
             reconcileAskUserTool(context);
           }
-          if (input.modelSelection?.provider === provider) {
-            const model = findModelInRegistry(context.modelRegistry, input.modelSelection.model);
+          if (input.engineSelection?.engine === engine) {
+            const model = findModelInRegistry(context.modelRegistry, input.engineSelection.model);
             if (!model) {
-              return yield* new ProviderAdapterValidationError({
-                provider: provider,
+              return yield* new EngineAdapterValidationError({
+                engine: engine,
                 operation: "model/set",
-                issue: `${displayName} model '${input.modelSelection.model}' is not available in the current runtime catalog. Choose a discovered model and try again.`,
+                issue: `${displayName} model '${input.engineSelection.model}' is not available in the current runtime catalog. Choose a discovered model and try again.`,
               });
             }
             // Pi's setModel rejects an unauthenticated model before the adapter's
             // general send gate runs. Check the requested model first so the product
             // reports a deliberate credential block instead of leaking an SDK stack.
             if (!piModelHasConfiguredCredentials(context.runtime.services.modelRuntime, model)) {
-              return yield* new ProviderAdapterValidationError({
-                provider: provider,
+              return yield* new EngineAdapterValidationError({
+                engine: engine,
                 operation: "sendTurn",
-                issue: `${displayName} cannot send with provider '${model.provider}' because no credentials are configured. Add credentials for ${displayName}, then retry.`,
+                issue: `${displayName} cannot send with model provider '${model.provider}' because no credentials are configured. Add credentials for ${displayName}, then retry.`,
               });
             }
             yield* Effect.tryPromise({
               try: () => context.runtime.session.setModel(model),
               catch: (cause) =>
-                new ProviderAdapterRequestError({
-                  provider: provider,
+                new EngineAdapterRequestError({
+                  engine: engine,
                   method: "model/set",
                   detail: toMessage(cause, `Failed to set ${displayName} model.`),
                   cause,
                 }),
             });
             const thinkingLevel = normalizePiThinkingLevel(
-              input.modelSelection.options?.thinkingLevel,
+              input.engineSelection.options?.thinkingLevel,
             );
             if (thinkingLevel) {
               context.runtime.session.setThinkingLevel(thinkingLevel);
@@ -3944,19 +3944,19 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           if (
             !piModelHasConfiguredCredentials(context.runtime.services.modelRuntime, activeModel)
           ) {
-            return yield* new ProviderAdapterValidationError({
-              provider: provider,
+            return yield* new EngineAdapterValidationError({
+              engine: engine,
               operation: "sendTurn",
               issue: activeModel
-                ? `${displayName} cannot send with provider '${activeModel.provider}' because no credentials are configured. Add credentials for ${displayName}, then retry.`
+                ? `${displayName} cannot send with model provider '${activeModel.provider}' because no credentials are configured. Add credentials for ${displayName}, then retry.`
                 : `${displayName} cannot send because no model with configured credentials is selected.`,
             });
           }
           const promptRequiredNames = promptRequiredAgentGatewayToolNames(dispatchContext);
-          if (provider === "oa" && promptRequiredNames.length > 0) {
+          if (engine === "oa" && promptRequiredNames.length > 0) {
             if (context.gatewayConnection === undefined || context.hostProjection === undefined) {
-              return yield* new ProviderAdapterValidationError({
-                provider,
+              return yield* new EngineAdapterValidationError({
+                engine,
                 operation: "sendTurn",
                 issue:
                   "This synthetic OmniMind turn requires Host capabilities that are unavailable in the current Agent session.",
@@ -3978,8 +3978,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 });
               },
               catch: (cause) =>
-                new ProviderAdapterValidationError({
-                  provider,
+                new EngineAdapterValidationError({
+                  engine,
                   operation: "sendTurn",
                   issue:
                     "This synthetic OmniMind turn requires Host capabilities that are disabled, unavailable, or collided in the current Agent session.",
@@ -3991,20 +3991,20 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           const turnId = TurnId.makeUnsafe(crypto.randomUUID());
           const interactionMode = input.interactionMode ?? "default";
           const promptText =
-            provider === "oa"
+            engine === "oa"
               ? withProviderPlanModePrompt({ text: payload.text, interactionMode })
               : payload.text;
           context.activeTurnId = turnId;
           context.activeInteractionMode = interactionMode;
           context.proposedPlanCandidate = undefined;
-          if (provider === "oa" && interactionMode === "plan") {
+          if (engine === "oa" && interactionMode === "plan") {
             context.planModeController?.activate(turnId);
           } else {
             context.planModeController?.deactivate();
           }
           context.startedTurnId = undefined;
           context.turns.push({ id: turnId, items: [] });
-          context.session = makeSessionSnapshot(context, provider);
+          context.session = makeSessionSnapshot(context, engine);
           if (payload.images.length === 0 && isPiReloadCommand(promptText)) {
             offerRuntimeEvent({
               ...makeEventBase(context),
@@ -4022,12 +4022,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 method: "reload",
                 payload: { command: payload.text },
               },
-            } satisfies ProviderRuntimeEvent);
+            } satisfies EngineRuntimeEvent);
             yield* Effect.tryPromise({
               try: () => context.runtime.session.reload(),
               catch: (cause) =>
-                new ProviderAdapterRequestError({
-                  provider: provider,
+                new EngineAdapterRequestError({
+                  engine: engine,
                   method: "session/reload",
                   detail: toMessage(cause, `Failed to reload ${displayName} resources.`),
                   cause,
@@ -4049,7 +4049,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                       method: "reload",
                       payload: error,
                     },
-                  } satisfies ProviderRuntimeEvent);
+                  } satisfies EngineRuntimeEvent);
                   offerRuntimeError(context, {
                     message,
                     method: "session/reload",
@@ -4061,7 +4061,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   context.activeInteractionMode = undefined;
                   context.proposedPlanCandidate = undefined;
                   context.startedTurnId = undefined;
-                  context.session = makeSessionSnapshot(context, provider);
+                  context.session = makeSessionSnapshot(context, engine);
                   return yield* Effect.fail(error);
                 }),
               ),
@@ -4075,14 +4075,14 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 method: "reload",
                 payload: { command: payload.text },
               },
-            } satisfies ProviderRuntimeEvent);
+            } satisfies EngineRuntimeEvent);
             yield* cancelAgentGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
             context.planModeController?.deactivate(turnId);
             context.activeTurnId = undefined;
             context.activeInteractionMode = undefined;
             context.proposedPlanCandidate = undefined;
             context.startedTurnId = undefined;
-            context.session = makeSessionSnapshot(context, provider);
+            context.session = makeSessionSnapshot(context, engine);
             return {
               threadId: input.threadId,
               turnId,
@@ -4114,7 +4114,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             ? (context.activeInteractionMode ?? "default")
             : (input.interactionMode ?? "default");
           const promptText =
-            provider === "oa"
+            engine === "oa"
               ? withProviderPlanModePrompt({ text: payload.text, interactionMode })
               : payload.text;
           const turnId = context.activeTurnId ?? TurnId.makeUnsafe(crypto.randomUUID());
@@ -4122,7 +4122,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             context.activeTurnId = turnId;
             context.activeInteractionMode = interactionMode;
             context.proposedPlanCandidate = undefined;
-            if (provider === "oa" && interactionMode === "plan") {
+            if (engine === "oa" && interactionMode === "plan") {
               context.planModeController?.activate(turnId);
             } else {
               context.planModeController?.deactivate();
@@ -4134,8 +4134,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             yield* Effect.tryPromise({
               try: () => context.runtime.session.steer(promptText, payload.images),
               catch: (cause) =>
-                new ProviderAdapterRequestError({
-                  provider: provider,
+                new EngineAdapterRequestError({
+                  engine: engine,
                   method: "turn/steer",
                   detail: toMessage(cause, `Failed to steer ${displayName} turn.`),
                   cause,
@@ -4171,8 +4171,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         }
         const activeTurnId = turnId ?? context.activeTurnId;
         if (activeTurnId === undefined) return;
-        // Cancel both Pi's retry backoff and any active provider I/O without
-        // awaiting AgentSession.abort(); ProviderService owns deterministic
+        // Cancel both Pi's retry backoff and any active engine I/O without
+        // awaiting AgentSession.abort(); EngineService owns deterministic
         // runtime teardown and the orchestration projection settlement.
         yield* withAgentGatewayTurnCancellation(
           context.gatewaySessionLease,
@@ -4193,8 +4193,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               context.runtime.session.agent.abort();
             },
             catch: (cause) =>
-              new ProviderAdapterRequestError({
-                provider: provider,
+              new EngineAdapterRequestError({
+                engine: engine,
                 method: "turn/interrupt",
                 detail: toMessage(cause, `Failed to interrupt ${displayName} turn.`),
                 cause,
@@ -4205,8 +4205,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
 
     const respondUnsupported = (threadId: ThreadId, method: string) =>
       Effect.fail(
-        new ProviderAdapterRequestError({
-          provider: provider,
+        new EngineAdapterRequestError({
+          engine: engine,
           method,
           detail: `${displayName} does not expose OmniMind approval/user-input requests for thread ${threadId}.`,
         }),
@@ -4229,15 +4229,15 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ) {
             productPending.settleStale();
             askUserMetrics.increment("late_response_rejected");
-            return yield* new ProviderAdapterRequestError({
-              provider: provider,
+            return yield* new EngineAdapterRequestError({
+              engine: engine,
               method: "user-input/respond",
               detail: `Stale ${displayName} ask_user correlation: ${requestId}`,
             });
           }
           if (!productPending.resolve(canonicalResponse)) {
-            return yield* new ProviderAdapterRequestError({
-              provider: provider,
+            return yield* new EngineAdapterRequestError({
+              engine: engine,
               method: "user-input/respond",
               detail: `Invalid or stale ${displayName} ask_user response: ${requestId}`,
             });
@@ -4246,15 +4246,15 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         }
         if (context.settledProductUserInputIds.has(requestId)) {
           askUserMetrics.increment("late_response_rejected");
-          return yield* new ProviderAdapterRequestError({
-            provider: provider,
+          return yield* new EngineAdapterRequestError({
+            engine: engine,
             method: "user-input/respond",
             detail: `Stale ${displayName} ask_user response: ${requestId}`,
           });
         }
         if (!resolvePiExtensionUserInput(context, requestId, canonicalResponse)) {
-          return yield* new ProviderAdapterRequestError({
-            provider: provider,
+          return yield* new EngineAdapterRequestError({
+            engine: engine,
             method: "user-input/respond",
             detail: `Unknown pending ${displayName} user-input request: ${requestId}`,
           });
@@ -4271,8 +4271,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         yield* Effect.tryPromise({
           try: () => disposeSessionContext(context),
           catch: (cause) =>
-            new ProviderAdapterRequestError({
-              provider: provider,
+            new EngineAdapterRequestError({
+              engine: engine,
               method: "session/stop",
               detail: toMessage(cause, `Failed to stop ${displayName} session.`),
               cause,
@@ -4285,12 +4285,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ...makeEventBase(context),
           type: "thread.state.changed",
           payload: { state: "closed", detail: { reason: "stopped" } },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
         offerRuntimeEvent({
           ...makeEventBase(context),
           type: "session.exited",
           payload: { reason: "stopped", exitKind: "graceful" },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
       });
 
     const reloadSessionResources: NonNullable<PiAdapterShape["reloadSessionResources"]> = (
@@ -4314,12 +4314,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           context.activeInteractionMode = undefined;
           context.proposedPlanCandidate = undefined;
           const currentServerSettings =
-            provider === "oa" && serverSettings
+            engine === "oa" && serverSettings
               ? yield* serverSettings.getSettings.pipe(
                   Effect.mapError(
                     (cause) =>
-                      new ProviderAdapterRequestError({
-                        provider,
+                      new EngineAdapterRequestError({
+                        engine,
                         method: "session/reload",
                         detail: "Failed to load OmniMind settings.",
                         cause,
@@ -4327,16 +4327,16 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   ),
                 )
               : undefined;
-          const reloadSdk = provider === "oa" ? yield* loadPiSdk("session/reload") : null;
+          const reloadSdk = engine === "oa" ? yield* loadPiSdk("session/reload") : null;
           const configuredDefaultPrompt =
-            provider === "oa" ? currentServerSettings?.providers.oa.defaultPrompt : null;
+            engine === "oa" ? currentServerSettings?.engines.oa.defaultPrompt : null;
           const defaultPrompt =
-            provider === "oa"
+            engine === "oa"
               ? (configuredDefaultPrompt ?? reloadSdk?.DEFAULT_BASE_INSTRUCTIONS)
               : undefined;
-          if (provider === "oa" && defaultPrompt === undefined) {
-            return yield* new ProviderAdapterValidationError({
-              provider,
+          if (engine === "oa" && defaultPrompt === undefined) {
+            return yield* new EngineAdapterValidationError({
+              engine,
               operation: "session/reload",
               issue: "OmniMind default instructions are unavailable.",
             });
@@ -4350,8 +4350,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 }) => Promise<void>
               )(defaultPrompt === undefined ? undefined : { defaultPrompt }),
             catch: (cause) =>
-              new ProviderAdapterRequestError({
-                provider,
+              new EngineAdapterRequestError({
+                engine,
                 method: "session/reload",
                 detail: toMessage(cause, `Failed to reload ${displayName} resources.`),
                 cause,
@@ -4365,13 +4365,13 @@ const makePiAdapter = <P extends PiFamilyProvider>(
 
     const listSessions: PiAdapterShape["listSessions"] = () =>
       Effect.sync(() =>
-        Array.from(sessions.values()).map((context) => makeSessionSnapshot(context, provider)),
+        Array.from(sessions.values()).map((context) => makeSessionSnapshot(context, engine)),
       );
 
     const hasSession: PiAdapterShape["hasSession"] = (threadId) =>
       Effect.sync(() => sessions.has(threadId));
 
-    const snapshotThread = (context: PiSessionContext): ProviderThreadSnapshot => {
+    const snapshotThread = (context: PiSessionContext): EngineThreadSnapshot => {
       const historyItems = mapMessageHistory(context.runtime.session);
       const activeTurn = context.activeTurnId
         ? context.turns.find((turn) => turn.id === context.activeTurnId)
@@ -4423,8 +4423,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           Effect.tryPromise({
             try: () => context.runtime.session.compact(),
             catch: (cause) =>
-              new ProviderAdapterRequestError({
-                provider: provider,
+              new EngineAdapterRequestError({
+                engine: engine,
                 method: "thread/compact",
                 detail: toMessage(cause, `Failed to compact ${displayName} thread.`),
                 cause,
@@ -4470,7 +4470,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   ? "extension"
                   : configuredProviderIds.has(providerId)
                     ? "models_json"
-                    : family.provider === "oa" && services.modelRuntime.getProvider(providerId)
+                    : family.engine === "oa" && services.modelRuntime.getProvider(providerId)
                       ? "builtin"
                       : "unknown",
             );
@@ -4480,11 +4480,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             models,
             source: extensionCount > 0 ? "pi.sdk+extensions" : "pi.sdk",
             cached: false,
-          } satisfies ProviderListModelsResult;
+          } satisfies EngineListModelsResult;
         },
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: provider,
+          new EngineAdapterRequestError({
+            engine: engine,
             method: "model/list",
             detail: toMessage(cause, `Failed to list ${displayName} models.`),
             cause,
@@ -4544,11 +4544,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             }),
             source: "pi.sdk",
             cached: false,
-          } satisfies ProviderListSkillsResult;
+          } satisfies EngineListSkillsResult;
         },
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: provider,
+          new EngineAdapterRequestError({
+            engine: engine,
             method: "skill/list",
             detail: toMessage(cause, `Failed to list ${displayName} skills.`),
             cause,
@@ -4594,7 +4594,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               commands: [reloadCommand, ...extensionCommands, ...promptCommands, ...skillCommands],
               source: "pi.sdk",
               cached: false,
-            } satisfies ProviderListCommandsResult;
+            } satisfies EngineListCommandsResult;
           }
           const piSdk = await family.loadModule();
           const agentDir = family.resolveAgentDir(input.agentDir, serverConfig.baseDir, piSdk);
@@ -4620,11 +4620,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             commands: [reloadCommand, ...promptCommands, ...skillCommands],
             source: "pi.sdk",
             cached: false,
-          } satisfies ProviderListCommandsResult;
+          } satisfies EngineListCommandsResult;
         },
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: provider,
+          new EngineAdapterRequestError({
+            engine: engine,
             method: "command/list",
             detail: toMessage(cause, `Failed to list ${displayName} commands.`),
             cause,
@@ -4645,9 +4645,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     );
 
     return {
-      provider: provider,
+      engine: engine,
       capabilities: {
-        ...providerExecutionStructure(provider),
+        ...engineExecutionStructure(engine),
         sessionModelSwitch: "in-session",
         supportsSkillMentions: true,
         supportsSkillDiscovery: true,
@@ -4678,8 +4678,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       get streamEvents() {
         return Stream.fromQueue(runtimeEventQueue);
       },
-    } satisfies ProviderAdapterShape<ProviderAdapterError> & {
-      readonly provider: P;
+    } satisfies EngineAdapterShape<EngineAdapterError> & {
+      readonly engine: P;
     };
   });
 

@@ -1,7 +1,7 @@
 /**
- * AgentGateway - OmniMind app-control tool surface for provider agents.
+ * AgentGateway - OmniMind app-control tool surface for engine agents.
  *
- * Serves the `harnessos_*` MCP tools that let any provider session (Codex,
+ * Serves the `harnessos_*` MCP tools that let any engine session (Codex,
  * Claude, Grok, ...) inspect and control OmniMind itself: list projects and
  * threads, read thread status, spawn child threads, send messages, and manage
  * heartbeat automations. The HTTP route delegates every `POST /mcp` request

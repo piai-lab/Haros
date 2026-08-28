@@ -1,11 +1,11 @@
 // FILE: providerUsage/parse.ts
 // Purpose: Small, dependency-free parsing/formatting helpers and snapshot builders shared by
-// the per-provider usage fetchers. Kept pure so the per-provider parsers can be unit-tested
+// the per-engine usage fetchers. Kept pure so the per-engine parsers can be unit-tested
 // without touching the network, filesystem, or keychain.
 
 import type {
   EngineKind,
-  ProviderUsageStatus,
+  EngineUsageStatus,
   ServerProviderUsageLimit,
   ServerProviderUsageLine,
   ServerProviderUsageSnapshot,
@@ -20,7 +20,7 @@ export function asFiniteNumber(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value;
   }
-  // Several provider APIs send numeric quotas as strings (e.g. unix-ms timestamps).
+  // Several engine APIs send numeric quotas as strings (e.g. unix-ms timestamps).
   if (typeof value === "string" && value.trim().length > 0) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : undefined;
@@ -96,9 +96,9 @@ export function formatUsd(amount: number): string {
 }
 
 export interface SnapshotInput {
-  provider: EngineKind;
+  engine: EngineKind;
   nowMs: number;
-  status: ProviderUsageStatus;
+  status: EngineUsageStatus;
   source: string;
   limits?: ReadonlyArray<ServerProviderUsageLimit>;
   usageLines?: ReadonlyArray<ServerProviderUsageLine>;
@@ -108,7 +108,7 @@ export interface SnapshotInput {
 
 export function buildSnapshot(input: SnapshotInput): ServerProviderUsageSnapshot {
   return {
-    provider: input.provider,
+    engine: input.engine,
     updatedAt: new Date(input.nowMs).toISOString(),
     limits: input.limits ?? [],
     usageLines: input.usageLines ?? [],
@@ -120,33 +120,33 @@ export function buildSnapshot(input: SnapshotInput): ServerProviderUsageSnapshot
 }
 
 export function needsAuthSnapshot(
-  provider: EngineKind,
+  engine: EngineKind,
   nowMs: number,
   source: string,
 ): ServerProviderUsageSnapshot {
   return buildSnapshot({
-    provider,
+    engine,
     nowMs,
     status: "needs-auth",
     source,
-    detail: providerUsageNeedsAuthDetail(provider),
+    detail: providerUsageNeedsAuthDetail(engine),
   });
 }
 
 export function unsupportedSnapshot(
-  provider: EngineKind,
+  engine: EngineKind,
   nowMs: number,
   source: string,
   detail: string,
 ): ServerProviderUsageSnapshot {
-  return buildSnapshot({ provider, nowMs, status: "unsupported", source, detail });
+  return buildSnapshot({ engine, nowMs, status: "unsupported", source, detail });
 }
 
 export function errorSnapshot(
-  provider: EngineKind,
+  engine: EngineKind,
   nowMs: number,
   source: string,
   detail: string,
 ): ServerProviderUsageSnapshot {
-  return buildSnapshot({ provider, nowMs, status: "error", source, detail });
+  return buildSnapshot({ engine, nowMs, status: "error", source, detail });
 }

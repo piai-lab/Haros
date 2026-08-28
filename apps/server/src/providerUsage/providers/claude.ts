@@ -43,10 +43,10 @@ import {
   titleCase,
 } from "../parse";
 import { createRateLimitResilience } from "../rateLimitResilience";
-import type { ProviderUsageContext, ProviderUsageFetcher } from "../types";
+import type { EngineUsageContext, EngineUsageFetcher } from "../types";
 
 const execFileAsync = promisify(execFile);
-const log = createLogger("provider-usage:claude");
+const log = createLogger("engine-usage:claude");
 
 const SOURCE = "claude-oauth-usage";
 const USAGE_URL = "https://api.anthropic.com/api/oauth/usage";
@@ -97,7 +97,7 @@ function readClaudeCreds(
   };
 }
 
-async function resolveClaudeCredCandidates(ctx: ProviderUsageContext): Promise<ClaudeCreds[]> {
+async function resolveClaudeCredCandidates(ctx: EngineUsageContext): Promise<ClaudeCreds[]> {
   const candidates: ClaudeCreds[] = [];
   const paths: string[] = [];
   if (ctx.env.CLAUDE_CONFIG_DIR) {
@@ -165,13 +165,13 @@ function claudePlanName(creds: ClaudeCreds): string | undefined {
 }
 
 // Builds a non-secret cooldown key tied to the credential currently resolved from disk/keychain.
-function claudeCredentialCacheKey(ctx: ProviderUsageContext, creds: ClaudeCreds): string {
+function claudeCredentialCacheKey(ctx: EngineUsageContext, creds: ClaudeCreds): string {
   const stableSecret = creds.refreshToken ?? creds.accessToken;
   return `${ctx.homeDir}:${credentialFingerprint(stableSecret)}`;
 }
 
 function claudeCredentialsCacheKey(
-  ctx: ProviderUsageContext,
+  ctx: EngineUsageContext,
   credentials: ReadonlyArray<ClaudeCreds>,
 ): string {
   if (credentials.length === 0) {
@@ -184,7 +184,7 @@ function claudeCredentialsCacheKey(
 // `claude auth status` validates the stored OAuth token and, when it is at/near expiry, redeems the
 // refresh token and persists the rotated pair back to its own store (file or keychain, with the
 // CLI's own keychain ACL). Serialized through the shared lock so it can never race the credential
-// keepalive, a provider-health probe, or a session start redeeming the same single-use token.
+// keepalive, a engine-health probe, or a session start redeeming the same single-use token.
 
 interface ClaudeAuthNudgeDeps {
   acquireLock: () => Promise<() => void>;
@@ -211,13 +211,13 @@ const defaultAuthNudgeDeps: ClaudeAuthNudgeDeps = {
 let authNudgeDeps: ClaudeAuthNudgeDeps = defaultAuthNudgeDeps;
 const authNudgeNotBeforeMs = new Map<string, number>();
 
-function authNudgeKey(ctx: ProviderUsageContext): string {
+function authNudgeKey(ctx: EngineUsageContext): string {
   return `${ctx.homeDir}:${ctx.env.CLAUDE_CONFIG_DIR ?? ""}`;
 }
 
 /** Let the Claude CLI refresh its own credential. Resolves true when the nudge ran (successfully
  * or not, the stored credential may have changed and should be re-read). */
-async function nudgeClaudeCliAuthRefresh(ctx: ProviderUsageContext): Promise<boolean> {
+async function nudgeClaudeCliAuthRefresh(ctx: EngineUsageContext): Promise<boolean> {
   const key = authNudgeKey(ctx);
   const notBefore = authNudgeNotBeforeMs.get(key) ?? 0;
   if (ctx.nowMs < notBefore) {
@@ -294,7 +294,7 @@ export function parseClaudeUsage(input: { json: unknown; nowMs: number; planName
   }
 
   return buildSnapshot({
-    provider: "claude",
+    engine: "claude",
     nowMs: input.nowMs,
     status: "ok",
     source: SOURCE,
@@ -310,7 +310,7 @@ export function parseClaudeUsage(input: { json: unknown; nowMs: number; planName
 // and keeps serving it — with a staleness note — while backing off. Keyed by a credential fingerprint
 // so a removed or switched Claude login can't be served another account's cached numbers.
 const claudeRateLimit = createRateLimitResilience({
-  provider: "claude",
+  engine: "claude",
   source: SOURCE,
   detail: (retryMins) =>
     `Anthropic is rate-limiting usage checks — showing your last values, retrying in ~${retryMins}m. Manual refreshes only extend the limit.`,
@@ -321,8 +321,8 @@ export function __resetClaudeUsageRateLimitState(): void {
   claudeRateLimit.reset();
 }
 
-export const claudeUsageFetcher: ProviderUsageFetcher = {
-  provider: "claude",
+export const claudeUsageFetcher: EngineUsageFetcher = {
+  engine: "claude",
   async cacheKey(ctx) {
     return claudeCredentialsCacheKey(ctx, await resolveClaudeCredCandidates(ctx));
   },
@@ -352,7 +352,7 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
       if (!hasProfileScope(original)) {
         const planName = claudePlanName(original);
         inferenceOnlySnapshot = buildSnapshot({
-          provider: "claude",
+          engine: "claude",
           nowMs: ctx.nowMs,
           status: "ok",
           source: SOURCE,
@@ -453,7 +453,7 @@ export const claudeUsageFetcher: ProviderUsageFetcher = {
 
 function fetchClaudeUsage(accessToken: string) {
   return fetchJson({
-    service: "provider-usage-claude",
+    service: "engine-usage-claude",
     url: USAGE_URL,
     allowedOrigins: [new URL(USAGE_URL).origin],
     headers: {

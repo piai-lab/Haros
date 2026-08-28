@@ -221,14 +221,14 @@ describe("deriveComposerSubagentStripItems", () => {
             subagents: [
               subagent({
                 threadId: "sub-fg",
-                providerThreadId: "sub-fg",
+                nativeThreadId: "sub-fg",
                 nickname: "Ada",
                 rawStatus: "running",
                 isActive: true,
               }),
               subagent({
                 threadId: "sub-bg-spawn",
-                providerThreadId: "sub-bg-spawn",
+                nativeThreadId: "sub-bg-spawn",
                 nickname: "Blue",
                 background: true,
                 rawStatus: "running",
@@ -236,7 +236,7 @@ describe("deriveComposerSubagentStripItems", () => {
               }),
               subagent({
                 threadId: "sub-bg-patch",
-                providerThreadId: "sub-bg-patch",
+                nativeThreadId: "sub-bg-patch",
                 nickname: "Cleo",
                 rawStatus: "running",
                 isActive: true,
@@ -249,7 +249,7 @@ describe("deriveComposerSubagentStripItems", () => {
       }),
     );
 
-    expect(items.map((item) => [item.providerThreadId, item.isBackground])).toEqual([
+    expect(items.map((item) => [item.nativeThreadId, item.isBackground])).toEqual([
       ["sub-fg", false],
       ["sub-bg-spawn", true],
       ["sub-bg-patch", true],
@@ -266,7 +266,7 @@ describe("deriveComposerSubagentStripItems", () => {
             subagents: [
               subagent({
                 threadId: "agent-1",
-                providerThreadId: "toolu_1",
+                nativeThreadId: "toolu_1",
                 nickname: "Ada",
                 rawStatus: "running",
                 isActive: true,
@@ -279,7 +279,7 @@ describe("deriveComposerSubagentStripItems", () => {
       }),
     );
 
-    expect(items[0]).toMatchObject({ providerThreadId: "toolu_1", isBackground: true });
+    expect(items[0]).toMatchObject({ nativeThreadId: "toolu_1", isBackground: true });
   });
 
   it("falls back to prior subagents when the live turn spawned none", () => {
@@ -420,17 +420,17 @@ describe("deriveComposerSubagentStripItems", () => {
 
     // A finished subagent's thread parks in an idle session state; the row must
     // surface the work log's terminal status instead of "Idle".
-    function settledSubagentThread(providerThreadId: string): Thread {
+    function settledSubagentThread(nativeThreadId: string): Thread {
       return {
-        id: localSubagentThreadId(parentThreadId, providerThreadId),
+        id: localSubagentThreadId(parentThreadId, nativeThreadId),
         codexThreadId: null,
         projectId: "project-1" as Thread["projectId"],
         title: "Subagent task",
-        modelSelection: { provider: "claude", model: "sonnet" },
+        engineSelection: { engine: "claude", model: "sonnet" },
         runtimeMode: "full-access",
         interactionMode: "default",
         session: {
-          provider: "claude",
+          engine: "claude",
           status: "ready",
           createdAt: "2026-07-14T00:00:01.000Z",
           updatedAt: "2026-07-14T00:00:02.000Z",
@@ -472,7 +472,7 @@ describe("deriveComposerSubagentStripItems", () => {
           subagents: [
             subagent({
               threadId: "toolu_x",
-              providerThreadId: "toolu_x",
+              nativeThreadId: "toolu_x",
               nickname: "Ada",
               rawStatus: "completed",
             }),
@@ -494,7 +494,7 @@ describe("deriveComposerSubagentStripItems", () => {
           itemType: "collab_agent_tool_call",
           subagentAction: { tool: "spawnAgent", status: "failed", summaryText: "Agent activity" },
           subagents: [
-            subagent({ threadId: "toolu_x", providerThreadId: "toolu_x", nickname: "Ada" }),
+            subagent({ threadId: "toolu_x", nativeThreadId: "toolu_x", nickname: "Ada" }),
           ],
         }),
       );
@@ -517,7 +517,7 @@ describe("deriveComposerSubagentStripItems", () => {
             summaryText: "Agent activity",
           },
           subagents: [
-            subagent({ threadId: "toolu_x", providerThreadId: "toolu_x", nickname: "Ada" }),
+            subagent({ threadId: "toolu_x", nativeThreadId: "toolu_x", nickname: "Ada" }),
           ],
         }),
       );
@@ -559,11 +559,11 @@ describe("deriveComposerSubagentStripItems", () => {
       codexThreadId: null,
       projectId: "project-1" as Thread["projectId"],
       title: "Subagent task",
-      modelSelection: { provider: "claude", model: "sonnet" },
+      engineSelection: { engine: "claude", model: "sonnet" },
       runtimeMode: "full-access",
       interactionMode: "default",
       session: {
-        provider: "claude",
+        engine: "claude",
         status: "running",
         createdAt: "2026-07-14T00:00:01.000Z",
         updatedAt: "2026-07-14T00:00:01.000Z",
@@ -591,7 +591,7 @@ describe("deriveComposerSubagentStripItems", () => {
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({
       threadId: subagentThread.id,
-      providerThreadId: "toolu_x",
+      nativeThreadId: "toolu_x",
       statusKind: "running",
       isActive: true,
     });
@@ -729,7 +729,7 @@ describe("collectForegroundRunningSubagentStripItems", () => {
             }),
             subagent({
               threadId: "sub-bg-patch",
-              providerThreadId: "toolu_patch",
+              nativeThreadId: "toolu_patch",
               nickname: "Cleo",
               rawStatus: "running",
               isActive: true,

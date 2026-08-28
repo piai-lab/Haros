@@ -67,7 +67,7 @@ const PRODUCT_COPY_SOURCES = [
   "components/chat/ComposerLocalDirectoryMenu.tsx",
   "components/chat/ComposerEnginePicker.tsx",
   "components/chat/ComposerModelEffortPicker.tsx",
-  "components/chat/ProviderModelPicker.tsx",
+  "components/chat/EngineModelPicker.tsx",
   "components/chat/ContextWindowMeter.tsx",
   "components/chat/DockExplorerPane.tsx",
   "components/chat/DockFilePane.tsx",
@@ -146,8 +146,8 @@ const PRODUCT_COPY_SOURCES = [
   "components/settings/KeyboardShortcutsSettingsPanel.tsx",
   "components/settings/ModelsSettingsPanel.tsx",
   "components/settings/ProfileSettingsPanel.tsx",
-  "components/settings/ProviderUsageSettingsPanel.tsx",
-  "components/settings/ProvidersSettingsPanel.tsx",
+  "components/settings/EngineUsageSettingsPanel.tsx",
+  "components/settings/EnginesSettingsPanel.tsx",
   "components/settings/SettingControls.tsx",
   "components/settings/SkillsSettingsPanel.tsx",
   "components/settings/ThemeModePicker.tsx",
@@ -262,10 +262,10 @@ const RAW_FACT_ALLOWLIST = [
   'ThemePackEditor.tsx:attribute:"JetBrains Mono"',
   "ThemePackEditor.tsx:text:Aa",
   'ThemePackEditor.tsx:attribute:omnimind-theme-v1:{"presetId":"linear",...}',
-  "ProvidersSettingsPanel.tsx:property:CODEX_HOME",
-  "ProvidersSettingsPanel.tsx:property:https://api2.cursor.sh",
-  "ProvidersSettingsPanel.tsx:property:droid",
-  "ProvidersSettingsPanel.tsx:property:http://127.0.0.1:4096",
+  "EnginesSettingsPanel.tsx:property:CODEX_HOME",
+  "EnginesSettingsPanel.tsx:property:https://api2.cursor.sh",
+  "EnginesSettingsPanel.tsx:property:droid",
+  "EnginesSettingsPanel.tsx:property:http://127.0.0.1:4096",
   "SidebarSearchPalette.tsx:text:Aa",
   "SidebarSearchPalette.tsx:text:Claude",
   "SidebarSearchPalette.tsx:text:Cursor",
@@ -546,10 +546,10 @@ describe("reachable OmniMind-owned product copy", () => {
     expect(ZH_CN_MESSAGES["settings.customApiCredentialCommandExecutionWarning"]).toContain(
       "提供隐藏值",
     );
-    expect(EN_MESSAGES["settings.customApiHeaderCommandDescription.provider"]).toContain(
+    expect(EN_MESSAGES["settings.customApiHeaderCommandDescription.engine"]).toContain(
       "without another Settings confirmation",
     );
-    expect(ZH_CN_MESSAGES["settings.customApiHeaderCommandDescription.provider"]).toContain(
+    expect(ZH_CN_MESSAGES["settings.customApiHeaderCommandDescription.engine"]).toContain(
       "不会再次经过设置页确认",
     );
   });

@@ -1,5 +1,5 @@
 // FILE: providerReactQuery.test.ts
-// Purpose: Verifies provider query keys, RPC dispatch, and checkpoint retry behavior.
+// Purpose: Verifies engine query keys, RPC dispatch, and checkpoint retry behavior.
 // Layer: Web data fetching tests
 // Depends on: Vitest, React Query, and the native API bridge mock.
 
@@ -79,7 +79,7 @@ describe("providerQueryKeys.checkpointDiff", () => {
 });
 
 describe("checkpointDiffQueryOptions", () => {
-  it("forwards checkpoint range to the provider API", async () => {
+  it("forwards checkpoint range to the engine API", async () => {
     const getTurnDiff = vi.fn().mockResolvedValue({ diff: "patch" });
     const getFullThreadDiff = vi.fn().mockResolvedValue({ diff: "patch" });
     mockNativeApi({ getTurnDiff, getFullThreadDiff });
@@ -153,7 +153,7 @@ describe("checkpointDiffQueryOptions", () => {
     expect(getFullThreadDiff).not.toHaveBeenCalled();
   });
 
-  it("fails fast on invalid range and does not call provider RPC", async () => {
+  it("fails fast on invalid range and does not call engine RPC", async () => {
     const getTurnDiff = vi.fn().mockResolvedValue({ diff: "patch" });
     const getFullThreadDiff = vi.fn().mockResolvedValue({ diff: "patch" });
     mockNativeApi({ getTurnDiff, getFullThreadDiff });

@@ -1,6 +1,6 @@
 // FILE: OmniMindEcosystem.ts
 // Purpose: Bridges explicit OmniMind Agent ecosystem intents to its bundled Pi owners.
-// Layer: Server provider implementation
+// Layer: Server engine implementation
 
 import type {
   OmniMindEcosystemListResourcesResult,
@@ -13,7 +13,7 @@ import { Effect, Layer } from "effect";
 import { ServerConfig } from "../../config.ts";
 import { loadOARuntimeModule, resolveOAAgentDir } from "../oaRuntime.ts";
 import { OmniMindEcosystem, type OmniMindEcosystemShape } from "../Services/OmniMindEcosystem.ts";
-import { ProviderService } from "../Services/ProviderService.ts";
+import { EngineService } from "../Services/EngineService.ts";
 
 type OARuntimeModule = Awaited<ReturnType<typeof loadOARuntimeModule>>;
 
@@ -21,10 +21,7 @@ export interface OmniMindEcosystemLiveOptions {
   readonly loadModule?: () => Promise<OARuntimeModule>;
 }
 
-function createOwners(input: {
-  readonly sdk: OARuntimeModule;
-  readonly agentDir: string;
-}) {
+function createOwners(input: { readonly sdk: OARuntimeModule; readonly agentDir: string }) {
   const settingsManager = input.sdk.SettingsManager.create(input.agentDir, input.agentDir, {
     projectTrusted: false,
   });
@@ -76,7 +73,7 @@ export function makeOmniMindEcosystemLive(options: OmniMindEcosystemLiveOptions 
     OmniMindEcosystem,
     Effect.gen(function* () {
       const config = yield* ServerConfig;
-      const providerService = yield* ProviderService;
+      const providerService = yield* EngineService;
       let mutationTail = Promise.resolve();
       const run = <A>(operation: () => Promise<A>) =>
         Effect.tryPromise({

@@ -16,11 +16,11 @@ import { CentralIcon, createCentralIconElement } from "~/lib/central-icons";
 import { MessageCircleIcon, PluginIcon } from "~/lib/icons";
 import { COMPOSER_INLINE_MENTION_CHIP_ICON_CLASS_NAME } from "../composerInlineChip";
 import { FolderClosed } from "../FolderClosed";
-import type { ProviderMentionReference } from "@harnessos/contracts";
+import type { EngineMentionReference } from "@harnessos/contracts";
 import { threadIdFromThreadMentionPath } from "@harnessos/shared/threadMentions";
 import { useStore } from "~/store";
 import { resolveThreadDisplayProvider } from "~/lib/threadDisplayProvider";
-import { ProviderIcon } from "../ProviderIcon";
+import { EngineIcon } from "../EngineIcon";
 
 export type { MentionChipKind };
 
@@ -42,7 +42,7 @@ export const MentionChipIcon = function MentionChipIcon(props: {
   path: string;
   theme: "light" | "dark";
   kind?: MentionChipKind;
-  mentionReferences?: ReadonlyArray<ProviderMentionReference>;
+  mentionReferences?: ReadonlyArray<EngineMentionReference>;
   className?: string;
 }) {
   const className = props.className ?? COMPOSER_INLINE_MENTION_CHIP_ICON_CLASS_NAME;
@@ -64,8 +64,8 @@ export const MentionChipIcon = function MentionChipIcon(props: {
   });
   if (resolvedKind === "thread") {
     return (
-      <ProviderIcon
-        provider={threadProvider}
+      <EngineIcon
+        engine={threadProvider}
         className={className}
         fallback={<MessageCircleIcon className={className} />}
       />

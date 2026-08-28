@@ -62,7 +62,7 @@ async function parseCodex(
 ) {
   const response = await handleUsageHistoryWorkerRequest({
     type: "parse",
-    provider: "codex",
+    engine: "codex",
     rootPath: root,
     files: [file],
     workspaceHashSalt: "test-salt",
@@ -91,7 +91,7 @@ describe("usage history indexer", () => {
     for (;;) {
       const response = await handleUsageHistoryWorkerRequest({
         type: "discover",
-        provider: "codex",
+        engine: "codex",
         rootPath: root,
         cursor,
         limit: 128,
@@ -122,7 +122,7 @@ describe("usage history indexer", () => {
       await expect(
         handleUsageHistoryWorkerRequest({
           type: "discover",
-          provider: "codex",
+          engine: "codex",
           rootPath: root,
           cursor,
           limit: 128,
@@ -131,14 +131,14 @@ describe("usage history indexer", () => {
     }
   });
 
-  it("ignores symlinks and never discovers files outside the allowed provider root", async () => {
+  it("ignores symlinks and never discovers files outside the allowed engine root", async () => {
     const root = await makeRoot();
     const outside = await makeRoot();
     await writeFile(path.join(outside, "secret.jsonl"), "{}\n");
     await symlink(path.join(outside, "secret.jsonl"), path.join(root, "escape.jsonl"));
     const response = await handleUsageHistoryWorkerRequest({
       type: "discover",
-      provider: "codex",
+      engine: "codex",
       rootPath: root,
       cursor: null,
       limit: 128,
@@ -154,7 +154,7 @@ describe("usage history indexer", () => {
 
     const response = await handleUsageHistoryWorkerRequest({
       type: "discover",
-      provider: "codex",
+      engine: "codex",
       rootPath: root,
       cursor: null,
       limit: 128,
@@ -179,7 +179,7 @@ describe("usage history indexer", () => {
       try {
         const response = await handleUsageHistoryWorkerRequest({
           type: "discover",
-          provider: "codex",
+          engine: "codex",
           rootPath: root,
           cursor: null,
           limit: 128,

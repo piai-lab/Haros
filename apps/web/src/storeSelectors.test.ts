@@ -26,7 +26,7 @@ const summaryA = {
   id: threadIdA,
   projectId,
   title: "A",
-  modelSelection: { provider: "codex", model: "gpt-5-codex" },
+  engineSelection: { engine: "codex", model: "gpt-5-codex" },
   session: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   latestUserMessageAt: null,

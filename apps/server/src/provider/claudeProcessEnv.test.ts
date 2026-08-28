@@ -1,6 +1,6 @@
 // FILE: claudeProcessEnv.test.ts
 // Purpose: Covers Claude env sanitization so stale process tokens do not shadow CLI OAuth.
-// Layer: Provider utility tests.
+// Layer: Engine utility tests.
 // Exports: Vitest coverage for apps/server/src/provider/claudeProcessEnv.ts.
 import { describe, it, assert } from "@effect/vitest";
 

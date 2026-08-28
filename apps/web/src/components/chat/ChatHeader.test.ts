@@ -12,7 +12,7 @@ describe("resolveChatHeaderThreadIconKind", () => {
     expect(resolveChatHeaderThreadIconKind("terminal")).toBe("terminal");
   });
 
-  it("never uses provider branding for ordinary Agent or Chat threads", () => {
+  it("never uses engine branding for ordinary Agent or Chat threads", () => {
     expect(resolveChatHeaderThreadIconKind("chat")).toBe("none");
   });
 });

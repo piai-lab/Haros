@@ -27,7 +27,7 @@ function resolvePiAiPackageIndex(): string {
 }
 
 describe("patched Pi OAuth page presentation seam", () => {
-  it("routes every Pi browser callback provider through the request-scoped renderer", () => {
+  it("routes every Pi browser callback engine through the request-scoped renderer", () => {
     const authRoot = path.join(path.dirname(resolvePiAiPackageIndex()), "auth", "oauth");
 
     for (const providerFile of ["anthropic.js", "openai-codex.js", "openrouter.js", "radius.js"]) {
@@ -48,14 +48,14 @@ describe("patched Pi OAuth page presentation seam", () => {
 
   it("uses a request-scoped renderer and falls back safely if presentation fails", async () => {
     const { oauthErrorHtml, oauthSuccessHtml } = await loadOAuthPageModule();
-    const rendered = oauthErrorHtml("Provider failure", "technical detail", (input) =>
+    const rendered = oauthErrorHtml("Engine failure", "technical detail", (input) =>
       JSON.stringify(input),
     );
     expect(JSON.parse(rendered)).toEqual({
       kind: "error",
     });
 
-    const received = oauthSuccessHtml("Provider-owned pre-exchange message", (input) =>
+    const received = oauthSuccessHtml("Engine-owned pre-exchange message", (input) =>
       JSON.stringify(input),
     );
     expect(JSON.parse(received)).toEqual({ kind: "authorization_received" });

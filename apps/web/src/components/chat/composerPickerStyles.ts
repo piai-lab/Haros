@@ -23,7 +23,7 @@ export const COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME =
  */
 export const COMPOSER_TOOLBAR_PICKER_TRIGGER_CLASS_NAME = `inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 ${ELEVATED_HOVER_SURFACE_CLASS_NAME} ${COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME}`;
 
-/** Caps model-provider submenu height; pairs with the list scroll class below. */
+/** Caps model-engine submenu height; pairs with the list scroll class below. */
 export const COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME =
   "[--available-height:min(20rem,55vh)]";
 
@@ -35,11 +35,11 @@ export const COMPOSER_PICKER_SEARCH_HEADER_CLASS_NAME =
 export const COMPOSER_PICKER_SEARCH_INPUT_CLASS_NAME =
   "rounded-lg border-[color:color-mix(in_srgb,var(--foreground)_10%,transparent)] bg-[var(--color-background-control-opaque)] shadow-none before:hidden has-focus-visible:border-[color:color-mix(in_srgb,var(--foreground)_18%,transparent)] has-focus-visible:ring-0 [&_input]:font-sans [&_input]:placeholder:text-[var(--color-text-foreground-tertiary)]";
 
-/** Scrollable model list body inside searchable provider submenus. */
+/** Scrollable model list body inside searchable engine submenus. */
 export const COMPOSER_PICKER_MODEL_LIST_MAX_HEIGHT_CLASS_NAME =
   "max-h-[min(var(--available-height,20rem),20rem)]";
 
-/** Scroll chrome for long model-provider lists. */
+/** Scroll chrome for long model-engine lists. */
 export const COMPOSER_PICKER_MODEL_LIST_SCROLL_CLASS_NAME = "composer-picker-scroll";
 
 /** Corner radius for picker panel chrome and panel-level surfaces. */
@@ -48,7 +48,7 @@ export const COMPOSER_PICKER_RADIUS_CLASS_NAME = "rounded-[0.65rem]";
 /** Tighter corner radius for option rows / selection pills inside picker panels. */
 export const COMPOSER_PICKER_OPTION_RADIUS_CLASS_NAME = "rounded-[0.5rem]";
 
-/** Collapsible section headers inside model provider lists. */
+/** Collapsible section headers inside model engine lists. */
 export const COMPOSER_PICKER_MODEL_GROUP_HEADER_CLASS_NAME = `grid w-full grid-cols-[0.75rem_minmax(0,1fr)_2.5rem] items-center gap-x-1.5 ${COMPOSER_PICKER_RADIUS_CLASS_NAME} px-2 py-1.5 text-left text-[length:var(--app-font-size-ui-xs,12px)] font-medium text-[var(--color-text-foreground-secondary)] outline-none transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_5%,transparent)] focus-visible:ring-0`;
 
 /** Indents model row labels under collapsible group headers. */

@@ -27,7 +27,7 @@ async function disposeThreadTerminalRuntimes(threadId: ThreadId): Promise<void> 
     terminalRuntimeRegistry.disposeThread(threadId);
   } catch (error) {
     // A failed chunk fetch must not abort the delete sequence: the durable delete
-    // already landed server-side and the server owns provider/terminal teardown.
+    // already landed server-side and the server owns engine/terminal teardown.
     console.error("Failed to dispose terminal runtimes for deleted thread", { threadId, error });
   }
 }
@@ -86,7 +86,7 @@ export async function deleteActiveThreadFromClient<TPrepared = undefined>(input:
     commandId: newCommandId(),
     threadId: input.threadId,
   });
-  // Provider and terminal cleanup are owned by the server-side lifecycle
+  // Engine and terminal cleanup are owned by the server-side lifecycle
   // reactor. Dispose only the local renderer after the durable delete intent
   // was accepted, so a rejected delete never tears down a live client session.
   await disposeThreadTerminalRuntimes(input.threadId);

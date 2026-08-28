@@ -7,7 +7,7 @@ import {
 } from "./runtimeTaskList.ts";
 
 describe("runtimeTaskList", () => {
-  it("normalizes provider task statuses", () => {
+  it("normalizes engine task statuses", () => {
     expect(normalizeRuntimeTaskStatus("pending")).toBe("pending");
     expect(normalizeRuntimeTaskStatus("in_progress")).toBe("inProgress");
     expect(normalizeRuntimeTaskStatus("inProgress")).toBe("inProgress");

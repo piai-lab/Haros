@@ -13,7 +13,7 @@ import { Effect, FileSystem, Path } from "effect";
 // Compared case-insensitively so an agent-created "logs"/"TMP" variant is excluded too.
 const EXCLUDED_TOP_LEVEL_DIRECTORY_NAMES = new Set(["tmp", "logs", "inbox", "context", "skills"]);
 
-// Managed provider instruction files live at the workspace root. They are
+// Managed engine instruction files live at the workspace root. They are
 // infrastructure even when the self-healing scaffold creates them mid-turn.
 const EXCLUDED_ROOT_FILE_NAMES = new Set(["agents.md", "claude.md"]);
 
@@ -115,7 +115,7 @@ function collectActivityPathValues(value: unknown, paths: string[], depth = 0): 
 }
 
 /**
- * Extracts newest-first file paths from completed file-change activities. Providers use
+ * Extracts newest-first file paths from completed file-change activities. Engines use
  * different nested payload shapes, so only explicit path keys are accepted.
  */
 export function collectFileChangeActivityPathCandidates(

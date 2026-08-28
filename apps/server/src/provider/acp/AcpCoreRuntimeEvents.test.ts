@@ -15,7 +15,7 @@ describe("AcpCoreRuntimeEvents", () => {
   it("stamps one captured lifecycle generation without mutating legacy events", () => {
     const event = makeAcpContentDeltaEvent({
       stamp: { eventId: "event-generation" as never, createdAt: "2026-07-14T00:00:00.000Z" },
-      provider: "cursor",
+      engine: "cursor",
       threadId: "thread-generation" as never,
       turnId: TurnId.makeUnsafe("turn-generation"),
       text: "hello",
@@ -49,7 +49,7 @@ describe("AcpCoreRuntimeEvents", () => {
     expect(
       makeAcpRequestOpenedEvent({
         stamp,
-        provider: "cursor",
+        engine: "cursor",
         threadId: "thread-1" as never,
         turnId,
         requestId: RuntimeRequestId.makeUnsafe("request-1"),
@@ -71,7 +71,7 @@ describe("AcpCoreRuntimeEvents", () => {
     expect(
       makeAcpRequestResolvedEvent({
         stamp,
-        provider: "cursor",
+        engine: "cursor",
         threadId: "thread-1" as never,
         turnId,
         requestId: RuntimeRequestId.makeUnsafe("request-1"),
@@ -94,7 +94,7 @@ describe("AcpCoreRuntimeEvents", () => {
     expect(
       makeAcpPlanUpdatedEvent({
         stamp,
-        provider: "cursor",
+        engine: "cursor",
         threadId: "thread-1" as never,
         turnId,
         payload: {
@@ -117,7 +117,7 @@ describe("AcpCoreRuntimeEvents", () => {
     expect(
       makeAcpToolCallEvent({
         stamp,
-        provider: "cursor",
+        engine: "cursor",
         threadId: "thread-1" as never,
         turnId,
         toolCall: {
@@ -141,7 +141,7 @@ describe("AcpCoreRuntimeEvents", () => {
     expect(
       makeAcpToolCallEvent({
         stamp,
-        provider: "cursor",
+        engine: "cursor",
         threadId: "thread-1" as never,
         turnId,
         toolCall: {
@@ -165,7 +165,7 @@ describe("AcpCoreRuntimeEvents", () => {
     expect(
       makeAcpToolCallEvent({
         stamp,
-        provider: "cursor",
+        engine: "cursor",
         threadId: "thread-1" as never,
         turnId,
         toolCall: {
@@ -188,7 +188,7 @@ describe("AcpCoreRuntimeEvents", () => {
     expect(
       makeAcpContentDeltaEvent({
         stamp,
-        provider: "cursor",
+        engine: "cursor",
         threadId: "thread-1" as never,
         turnId,
         itemId: "assistant:session-1:segment:0",
@@ -207,7 +207,7 @@ describe("AcpCoreRuntimeEvents", () => {
     expect(
       makeAcpContentDeltaEvent({
         stamp,
-        provider: "cursor",
+        engine: "cursor",
         threadId: "thread-1" as never,
         turnId,
         text: "thinking",
@@ -225,7 +225,7 @@ describe("AcpCoreRuntimeEvents", () => {
     expect(
       makeAcpAssistantItemEvent({
         stamp,
-        provider: "cursor",
+        engine: "cursor",
         threadId: "thread-1" as never,
         turnId,
         itemId: "assistant:session-1:segment:0",

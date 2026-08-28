@@ -3,7 +3,7 @@
 // Layer: Chat composer presentation
 // Depends on: shared menu primitives, icon buttons, and caller-owned composer state callbacks.
 
-import { type ProviderInteractionMode } from "@harnessos/contracts";
+import { type EngineInteractionMode } from "@harnessos/contracts";
 import { useId, useRef, type ChangeEvent } from "react";
 import { GoTasklist } from "react-icons/go";
 
@@ -14,7 +14,7 @@ import { Button } from "../ui/button";
 import { Menu, MenuCheckboxItem, MenuItem, MenuSeparator, MenuTrigger } from "../ui/menu";
 
 export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
-  interactionMode: ProviderInteractionMode;
+  interactionMode: EngineInteractionMode;
   planModeAvailable: boolean;
   onAddAttachments: (files: File[]) => void;
   onAddFileReference?: () => void;

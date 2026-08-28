@@ -10,7 +10,7 @@ import {
 } from "./Migrations.ts";
 import { MigrationSchemaTooNewError } from "./Errors.ts";
 import * as NodeSqliteClient from "./NodeSqliteClient.ts";
-import DurableProviderCommandDeliveryMigration from "./Migrations/064_DurableProviderCommandDelivery.ts";
+import DurableProviderCommandDeliveryMigration from "./Migrations/064_DurableEngineCommandDelivery.ts";
 import ProjectionThreadsGatewayProvenanceMigration from "./Migrations/071_ProjectionThreadsGatewayProvenance.ts";
 import ProjectPullRequestPinsMigration from "./Migrations/069_ProjectPullRequestPins.ts";
 import SpacesMigration from "./Migrations/079_Spaces.ts";
@@ -188,7 +188,7 @@ providerDeliveryCutoverLayer(
         const rows = yield* sql<{ readonly lastAckedSequence: number }>`
         SELECT last_acked_sequence AS "lastAckedSequence"
         FROM orchestration_consumer_state
-        WHERE consumer_name = 'provider-command-reactor.v1'
+        WHERE consumer_name = 'engine-command-reactor.v1'
       `;
         assert.strictEqual(rows[0]?.lastAckedSequence, inserted[0]?.sequence);
 
@@ -196,7 +196,7 @@ providerDeliveryCutoverLayer(
         const idempotentRows = yield* sql<{ readonly count: number }>`
         SELECT COUNT(*) AS count
         FROM orchestration_consumer_state
-        WHERE consumer_name = 'provider-command-reactor.v1'
+        WHERE consumer_name = 'engine-command-reactor.v1'
       `;
         assert.strictEqual(idempotentRows[0]?.count, 1);
       }),
@@ -217,7 +217,7 @@ managedAttachmentsFreshLayer("managed attachment migration on a fresh database",
       assert.deepInclude(executed, [64, "DurableProviderCommandDeliveryCutover"]);
       assert.deepInclude(executed, [65, "DurableQueuedTurnPromotions"]);
       assert.deepInclude(executed, [66, "DurableProviderRuntimeEvents"]);
-      assert.deepInclude(executed, [67, "ProviderDeliveryReconciliation"]);
+      assert.deepInclude(executed, [67, "EngineDeliveryReconciliation"]);
       assert.deepInclude(executed, [79, "Spaces"]);
 
       const tables = yield* sql<{ readonly name: string }>`
@@ -262,7 +262,7 @@ managedAttachmentsLegacyLayer("managed attachment migration after private migrat
         [56, "CommandReceiptFingerprints"],
         [57, "ThreadScopedProjectionMessageIdentity"],
         [58, "ThreadScopedPendingApprovalIdentity"],
-        [59, "ProviderSessionLifecycleGeneration"],
+        [59, "EngineSessionLifecycleGeneration"],
         [60, "PendingApprovalLifecycleGeneration"],
         [61, "PendingApprovalSettlementState"],
         [62, "PendingInteractionSettlementParity"],
@@ -270,7 +270,7 @@ managedAttachmentsLegacyLayer("managed attachment migration after private migrat
         [64, "DurableProviderCommandDeliveryCutover"],
         [65, "DurableQueuedTurnPromotions"],
         [66, "DurableProviderRuntimeEvents"],
-        [67, "ProviderDeliveryReconciliation"],
+        [67, "EngineDeliveryReconciliation"],
         [68, "GitHandoffOperations"],
         [69, "ProjectPullRequestPins"],
         [70, "AgentGatewayOperations"],
@@ -314,7 +314,7 @@ managedAttachmentsLegacyLayer("managed attachment migration after private migrat
         { migration_id: 56, name: "CommandReceiptFingerprints" },
         { migration_id: 57, name: "ThreadScopedProjectionMessageIdentity" },
         { migration_id: 58, name: "ThreadScopedPendingApprovalIdentity" },
-        { migration_id: 59, name: "ProviderSessionLifecycleGeneration" },
+        { migration_id: 59, name: "EngineSessionLifecycleGeneration" },
         { migration_id: 60, name: "PendingApprovalLifecycleGeneration" },
         { migration_id: 61, name: "PendingApprovalSettlementState" },
         { migration_id: 62, name: "PendingInteractionSettlementParity" },
@@ -322,7 +322,7 @@ managedAttachmentsLegacyLayer("managed attachment migration after private migrat
         { migration_id: 64, name: "DurableProviderCommandDeliveryCutover" },
         { migration_id: 65, name: "DurableQueuedTurnPromotions" },
         { migration_id: 66, name: "DurableProviderRuntimeEvents" },
-        { migration_id: 67, name: "ProviderDeliveryReconciliation" },
+        { migration_id: 67, name: "EngineDeliveryReconciliation" },
         { migration_id: 68, name: "GitHandoffOperations" },
         { migration_id: 69, name: "ProjectPullRequestPins" },
         { migration_id: 70, name: "AgentGatewayOperations" },

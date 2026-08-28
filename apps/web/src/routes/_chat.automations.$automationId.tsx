@@ -3,8 +3,8 @@ import {
   type AutomationRun,
   type AutomationUpdateInput,
   type AutomationWorktreeMode,
-  type ModelSelection,
-  type ProviderOptionDescriptor,
+  type EngineSelection,
+  type EngineOptionDescriptor,
 } from "@harnessos/contracts";
 import {
   automationContinuationThreadId,
@@ -19,7 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { getProviderStartOptions } from "~/providerSettings";
+import { getEngineStartOptions } from "~/engineSettings";
 import { useServerSettings } from "~/serverSettings";
 import { AutomationProposalActions } from "~/components/automation/AutomationProposalActions";
 import {
@@ -53,10 +53,10 @@ import { useI18n, type MessageKey } from "~/i18n";
 import type { AppLocale } from "~/locale";
 import { cn } from "~/lib/utils";
 import {
-  buildModelSelection,
+  buildEngineSelection,
   buildNextProviderOptions,
   buildProviderOptionPatch,
-  type ProviderOptions,
+  type EngineOptions,
 } from "~/providerModelOptions";
 import { ensureNativeApi } from "~/nativeApi";
 import { useStore } from "~/store";
@@ -77,8 +77,8 @@ import {
   isTriageRun,
   isFormSubmittable,
   maxIterationOptions,
-  providerOptionsForAutomationEdit,
-  providerOptionsForAutomationModelSelection,
+  engineOptionsForAutomationEdit,
+  engineOptionsForAutomationEngineSelection,
   runResultSummary,
   runResultTitle,
   runStatusLabel,
@@ -225,7 +225,7 @@ function AutomationDetailView() {
   const streamedMemory =
     (data.memories ?? []).find((candidate) => candidate.automationId === automationId) ?? null;
   const memory = streamedMemory ?? memoryQuery.data ?? null;
-  const providerOptionsForDispatch = settings ? getProviderStartOptions(settings) : undefined;
+  const engineOptionsForDispatch = settings ? getEngineStartOptions(settings) : undefined;
 
   if (!definition) {
     return (
@@ -338,16 +338,16 @@ function AutomationDetailView() {
   const approvalBusy = updateMutation.isPending || runNowMutation.isPending;
 
   // Applying a new model selection (model swap or a capability tweak) refreshes the saved
-  // provider start options the same way the model picker does, then patches both at once.
-  const applyModelSelection = (nextModelSelection: ModelSelection) => {
-    const providerOptions = providerOptionsForAutomationModelSelection(
+  // engine start options the same way the model picker does, then patches both at once.
+  const applyEngineSelection = (nextEngineSelection: EngineSelection) => {
+    const engineOptions = engineOptionsForAutomationEngineSelection(
       definition,
-      nextModelSelection,
-      providerOptionsForDispatch,
+      nextEngineSelection,
+      engineOptionsForDispatch,
     );
     patch({
-      modelSelection: nextModelSelection,
-      ...(providerOptions ? { providerOptions } : {}),
+      engineSelection: nextEngineSelection,
+      ...(engineOptions ? { engineOptions } : {}),
     });
   };
 
@@ -385,7 +385,7 @@ function AutomationDetailView() {
       updateInputFromForm(
         definition,
         form,
-        providerOptionsForAutomationEdit(definition, form, providerOptionsForDispatch),
+        engineOptionsForAutomationEdit(definition, form, engineOptionsForDispatch),
         acknowledgedRisks,
         editDefinitionRevision ?? definition.definitionRevision,
       ),
@@ -779,14 +779,14 @@ function AutomationDetailView() {
                 ) : null}
                 <EditRow label={t("term.model")}>
                   <AutomationModelPicker
-                    value={definition.modelSelection}
+                    value={definition.engineSelection}
                     projectCwd={project?.cwd ?? null}
-                    onChange={applyModelSelection}
+                    onChange={applyEngineSelection}
                   />
                 </EditRow>
                 <ModelOptionRows
-                  modelSelection={definition.modelSelection}
-                  onChange={applyModelSelection}
+                  engineSelection={definition.engineSelection}
+                  onChange={applyEngineSelection}
                 />
                 <DetailRow label={t("automation.mode")}>
                   {t(
@@ -1029,42 +1029,42 @@ function InlineToggle({
 
 /**
  * Inline edit rows for the selected model's capabilities — reasoning effort, fast mode,
- * thinking, context window, etc. The knobs are derived from the provider's capability
- * descriptors, so each provider surfaces exactly the controls it supports (and none when it
+ * thinking, context window, etc. The knobs are derived from the engine's capability
+ * descriptors, so each engine surfaces exactly the controls it supports (and none when it
  * supports nothing). Changing a value reuses the same model-selection patch path as the
- * model picker, keeping provider start options in sync.
+ * model picker, keeping engine start options in sync.
  */
 function ModelOptionRows({
-  modelSelection,
+  engineSelection,
   onChange,
 }: {
-  readonly modelSelection: ModelSelection;
-  readonly onChange: (next: ModelSelection) => void;
+  readonly engineSelection: EngineSelection;
+  readonly onChange: (next: EngineSelection) => void;
 }) {
-  const { provider, model } = modelSelection;
-  const caps = getModelCapabilities(provider, model);
+  const { engine, model } = engineSelection;
+  const caps = getModelCapabilities(engine, model);
   const descriptors = getProviderOptionDescriptors({
-    provider,
+    engine,
     caps,
-    selections: modelSelection.options as Record<string, unknown> | undefined,
+    selections: engineSelection.options as Record<string, unknown> | undefined,
   });
   if (descriptors.length === 0) {
     return null;
   }
 
-  const setOption = (descriptor: ProviderOptionDescriptor, value: string | boolean) => {
-    const optionPatch = buildProviderOptionPatch(provider, descriptor.id, value);
+  const setOption = (descriptor: EngineOptionDescriptor, value: string | boolean) => {
+    const optionPatch = buildProviderOptionPatch(engine, descriptor.id, value);
     const nextOptions = buildNextProviderOptions(
-      provider,
-      modelSelection.options as ProviderOptions | undefined,
+      engine,
+      engineSelection.options as EngineOptions | undefined,
       optionPatch,
     );
     onChange(
-      buildModelSelection(
-        provider,
+      buildEngineSelection(
+        engine,
         model,
         nextOptions,
-        modelSelection.provider === "claude" ? modelSelection.supportsAutoMode : undefined,
+        engineSelection.engine === "claude" ? engineSelection.supportsAutoMode : undefined,
       ),
     );
   };

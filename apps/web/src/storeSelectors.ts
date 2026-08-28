@@ -256,7 +256,7 @@ export function createComposerThreadMentionSourcesSelector(): (
               id: thread.id,
               projectId: thread.projectId,
               title: thread.title,
-              provider: resolveThreadDisplayProvider(thread),
+              engine: resolveThreadDisplayProvider(thread),
               createdAt: thread.createdAt,
               latestUserMessageAt: thread.latestUserMessageAt,
               ...(thread.archivedAt !== undefined ? { archivedAt: thread.archivedAt } : {}),
@@ -275,7 +275,7 @@ export function createComposerThreadMentionSourcesSelector(): (
           source.id === previous?.id &&
           source.projectId === previous.projectId &&
           source.title === previous.title &&
-          source.provider === previous.provider &&
+          source.engine === previous.engine &&
           source.createdAt === previous.createdAt &&
           source.archivedAt === previous.archivedAt &&
           source.lastVisitedAt === previous.lastVisitedAt &&

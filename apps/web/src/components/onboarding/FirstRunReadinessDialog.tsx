@@ -1,9 +1,9 @@
-import type { ModelSelection, EngineKind, ThreadId } from "@harnessos/contracts";
+import type { EngineSelection, EngineKind, ThreadId } from "@harnessos/contracts";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useComposerDraftStore } from "~/composerDraftStore";
-import { ProviderIcon } from "~/components/ProviderIcon";
+import { EngineIcon } from "~/components/EngineIcon";
 import {
   ModelsSettingsPanel,
   type PreparedModelService,
@@ -20,9 +20,9 @@ import {
 } from "~/components/ui/dialog";
 import { useI18n, type MessageKey } from "~/i18n";
 import { CheckIcon, ChevronRightIcon } from "~/lib/icons";
-import { deriveProviderPickerAvailability } from "~/lib/providerAvailability";
+import { deriveProviderPickerAvailability } from "~/lib/engineAvailability";
 import { cn } from "~/lib/utils";
-import { PROVIDER_OPTIONS } from "~/session-logic";
+import { ENGINE_OPTIONS } from "~/session-logic";
 import { SETTINGS_TARGETS } from "~/settingsNavigation";
 import { useStore } from "~/store";
 
@@ -34,9 +34,9 @@ import { useFirstRunReadinessController } from "./useFirstRunReadinessController
 
 type WizardStep = "engine" | "prepare" | "model" | "ready";
 
-const INDEPENDENT_ENGINE_OPTIONS = PROVIDER_OPTIONS.filter((option) => option.value !== "oa");
-const PROVIDER_LABEL_BY_KIND = Object.fromEntries(
-  PROVIDER_OPTIONS.map((option) => [option.value, option.label]),
+const INDEPENDENT_ENGINE_OPTIONS = ENGINE_OPTIONS.filter((option) => option.value !== "oa");
+const ENGINE_LABEL_BY_KIND = Object.fromEntries(
+  ENGINE_OPTIONS.map((option) => [option.value, option.label]),
 ) as Record<EngineKind, string>;
 
 type OnboardingEngineAvailabilityState =
@@ -56,11 +56,11 @@ const ENGINE_STATUS_KEY_BY_STATE = {
 function readSelectionIntentFingerprint(threadId: ThreadId): string {
   const composerState = useComposerDraftStore.getState();
   const draft = composerState.draftsByThreadId[threadId];
-  const draftModels = Object.entries(draft?.modelSelectionByProvider ?? {})
-    .map(([provider, selection]) => [provider, selection?.model ?? null] as const)
+  const draftModels = Object.entries(draft?.engineSelectionByEngine ?? {})
+    .map(([engine, selection]) => [engine, selection?.model ?? null] as const)
     .toSorted(([left], [right]) => left.localeCompare(right));
-  const stickyModels = Object.entries(composerState.stickyModelSelectionByProvider)
-    .map(([provider, selection]) => [provider, selection?.model ?? null] as const)
+  const stickyModels = Object.entries(composerState.stickyEngineSelectionByEngine)
+    .map(([engine, selection]) => [engine, selection?.model ?? null] as const)
     .toSorted(([left], [right]) => left.localeCompare(right));
   return JSON.stringify({
     activeProvider: draft?.activeProvider ?? null,
@@ -109,14 +109,13 @@ export function FirstRunReadinessDialog() {
   const completionCommittedRef = useRef(false);
 
   const selectedProviderStatus = controller.providerStatuses.find(
-    (status) => status.provider === selectedProvider,
+    (status) => status.engine === selectedProvider,
   );
-  const selectedProviderAvailability = deriveProviderPickerAvailability(selectedProviderStatus);
+  const selectedEngineAvailability = deriveProviderPickerAvailability(selectedProviderStatus);
   const selectedProviderPrepared =
-    selectedProviderAvailability.state === "ready" ||
-    selectedProviderAvailability.state === "limited";
-  const selectedProviderModels = controller.modelOptionsByProvider[selectedProvider];
-  const selectedProviderCatalogState = controller.catalogStateByProvider[selectedProvider];
+    selectedEngineAvailability.state === "ready" || selectedEngineAvailability.state === "limited";
+  const selectedProviderModels = controller.modelOptionsByEngine[selectedProvider];
+  const selectedProviderCatalogState = controller.catalogStateByEngine[selectedProvider];
   const selectedProviderModelsReady =
     selectedProviderModels.length > 0 &&
     (selectedProviderCatalogState === "ready" || selectedProviderCatalogState === "stale");
@@ -207,7 +206,7 @@ export function FirstRunReadinessDialog() {
     setOpen(false);
     void navigate({
       to: "/settings",
-      search: { section: "providers", target: SETTINGS_TARGETS.engineDetails },
+      search: { section: "engines", target: SETTINGS_TARGETS.engineDetails },
     });
   }, [navigate]);
 
@@ -239,8 +238,8 @@ export function FirstRunReadinessDialog() {
       readSelectionIntentFingerprint(targetThreadId) === capturedIntent &&
       selectedModel
     ) {
-      const selection: ModelSelection = { provider: selectedProvider, model: selectedModel };
-      useComposerDraftStore.getState().setModelSelectionAndSticky(targetThreadId, selection);
+      const selection: EngineSelection = { engine: selectedProvider, model: selectedModel };
+      useComposerDraftStore.getState().setEngineSelectionAndSticky(targetThreadId, selection);
     }
     clearFirstRunReadinessPreference();
     completionCommittedRef.current = true;
@@ -250,7 +249,7 @@ export function FirstRunReadinessDialog() {
   }, [selectedModel, selectedProvider]);
 
   const currentStepNumber = step === "engine" ? 1 : step === "prepare" ? 2 : 3;
-  const selectedProviderLabel = PROVIDER_LABEL_BY_KIND[selectedProvider];
+  const selectedProviderLabel = ENGINE_LABEL_BY_KIND[selectedProvider];
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -261,7 +260,7 @@ export function FirstRunReadinessDialog() {
         data-testid="first-run-readiness-dialog"
       >
         <DialogHeader className="h-[70px] shrink-0 flex-row items-center border-b border-border/60 px-7 py-0 font-system-ui">
-          <ProviderIcon provider="oa" className="size-[34px]" />
+          <EngineIcon engine="oa" className="size-[34px]" />
           <span className="text-[length:var(--app-font-size-ui-lg,15px)] font-semibold">
             {t("onboarding.firstRun.header")}
           </span>
@@ -317,10 +316,10 @@ export function FirstRunReadinessDialog() {
                 )}
                 onClick={() => setSelectedProvider("oa")}
               >
-                <ProviderIcon provider="oa" className="size-12" />
+                <EngineIcon engine="oa" className="size-12" />
                 <span className="min-w-0 flex-1">
                   <strong className="block text-[length:var(--app-font-size-ui-lg,15px)]">
-                    {PROVIDER_LABEL_BY_KIND.oa}
+                    {ENGINE_LABEL_BY_KIND.oa}
                   </strong>
                   <span className="mt-1 block text-[length:var(--app-font-size-ui-xs,12px)] text-muted-foreground">
                     {t("onboarding.firstRun.omnimindDescription")}
@@ -340,15 +339,15 @@ export function FirstRunReadinessDialog() {
               </div>
               <div className="grid grid-cols-4 gap-2.5 max-lg:grid-cols-2">
                 {INDEPENDENT_ENGINE_OPTIONS.map((option) => {
-                  const provider = option.value;
+                  const engine = option.value;
                   const status = controller.providerStatuses.find(
-                    (candidate) => candidate.provider === provider,
+                    (candidate) => candidate.engine === engine,
                   );
                   const availability = deriveProviderPickerAvailability(status);
-                  const selected = selectedProvider === provider;
+                  const selected = selectedProvider === engine;
                   return (
                     <button
-                      key={provider}
+                      key={engine}
                       type="button"
                       aria-pressed={selected}
                       disabled={availability.disabled}
@@ -356,10 +355,10 @@ export function FirstRunReadinessDialog() {
                         "flex min-w-0 items-center gap-2 rounded-[13px] border px-2.5 py-3 text-left outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:cursor-default disabled:opacity-55 motion-reduce:transition-none",
                         selected && "border-primary/45 bg-primary/[0.05]",
                       )}
-                      onClick={() => setSelectedProvider(provider)}
+                      onClick={() => setSelectedProvider(engine)}
                     >
                       <span className="grid size-[34px] shrink-0 place-items-center rounded-[9px] border border-border/70 bg-muted/30">
-                        <ProviderIcon provider={provider} className="size-[21px]" />
+                        <EngineIcon engine={engine} className="size-[21px]" />
                       </span>
                       <span className="min-w-0">
                         <strong className="block truncate text-[length:var(--app-font-size-ui-sm,13px)]">
@@ -420,7 +419,7 @@ export function FirstRunReadinessDialog() {
                   </DialogDescription>
                   <div className="mt-7 flex items-center gap-4 rounded-2xl border border-border p-5">
                     <span className="grid size-14 place-items-center rounded-2xl border border-border bg-muted/30">
-                      <ProviderIcon provider={selectedProvider} className="size-8" />
+                      <EngineIcon engine={selectedProvider} className="size-8" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <strong className="text-[length:var(--app-font-size-ui-lg,15px)]">
@@ -508,7 +507,7 @@ export function FirstRunReadinessDialog() {
             >
               <div>
                 <span className="mx-auto mb-5 grid size-[66px] place-items-center rounded-[21px] bg-emerald-500/10 text-emerald-600">
-                  <ProviderIcon provider={selectedProvider} className="size-[42px]" />
+                  <EngineIcon engine={selectedProvider} className="size-[42px]" />
                 </span>
                 <DialogTitle className="text-[length:calc(var(--app-font-size-ui-lg,15px)*1.7333)] tracking-[-0.035em]">
                   {t("onboarding.firstRun.readyTitle")}

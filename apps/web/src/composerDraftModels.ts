@@ -1,5 +1,5 @@
 // FILE: composerDraftModels.ts
-// Purpose: Normalizes provider-scoped model selections and resolves effective composer models.
+// Purpose: Normalizes engine-scoped model selections and resolves effective composer models.
 // Exports: Model state helpers used by persistence, actions, and the public facade.
 
 import {
@@ -11,10 +11,10 @@ import {
   type CursorModelOptions,
   type DroidReasoningEffort,
   type GrokReasoningEffort,
-  type ModelSelection,
+  type EngineSelection,
   type ModelSlug,
   type PiThinkingLevel,
-  type ProviderModelOptions,
+  type EngineModelOptions,
 } from "@harnessos/contracts";
 import * as Schema from "effect/Schema";
 
@@ -43,57 +43,57 @@ const ANTIGRAVITY_REASONING_EFFORT_SET = new Set(["low", "medium", "high", "thin
 
 export interface EffectiveComposerModelState {
   selectedModel: ModelSlug | null;
-  modelOptions: ProviderModelOptions | null;
+  modelOptions: EngineModelOptions | null;
 }
 
 function mergeProviderModelOptionsFromSelections(
-  ...selections: ReadonlyArray<ModelSelection | null | undefined>
-): ProviderModelOptions | null {
-  const result: Partial<Record<EngineKind, ProviderModelOptions[EngineKind]>> = {};
+  ...selections: ReadonlyArray<EngineSelection | null | undefined>
+): EngineModelOptions | null {
+  const result: Partial<Record<EngineKind, EngineModelOptions[EngineKind]>> = {};
   for (const selection of selections) {
     if (!selection) continue;
     if (selection.options) {
-      result[selection.provider] = selection.options;
+      result[selection.engine] = selection.options;
     } else {
-      delete result[selection.provider];
+      delete result[selection.engine];
     }
   }
-  return Object.keys(result).length > 0 ? (result as ProviderModelOptions) : null;
+  return Object.keys(result).length > 0 ? (result as EngineModelOptions) : null;
 }
 
 function deriveEffectiveComposerModelOptions(input: {
   draft:
-    | Pick<ComposerThreadDraftState, "modelSelectionByProvider" | "activeProvider">
+    | Pick<ComposerThreadDraftState, "engineSelectionByEngine" | "activeProvider">
     | null
     | undefined;
-  threadModelSelection: ModelSelection | null | undefined;
-  projectModelSelection: ModelSelection | null | undefined;
-  stickyModelSelection?: ModelSelection | null | undefined;
-}): ProviderModelOptions | null {
+  threadEngineSelection: EngineSelection | null | undefined;
+  projectEngineSelection: EngineSelection | null | undefined;
+  stickyEngineSelection?: EngineSelection | null | undefined;
+}): EngineModelOptions | null {
   const baseOptions = mergeProviderModelOptionsFromSelections(
-    input.stickyModelSelection,
-    input.projectModelSelection,
-    input.threadModelSelection,
+    input.stickyEngineSelection,
+    input.projectEngineSelection,
+    input.threadEngineSelection,
   );
-  const draftSelections = input.draft?.modelSelectionByProvider;
+  const draftSelections = input.draft?.engineSelectionByEngine;
   if (!draftSelections) {
     return baseOptions;
   }
 
-  const result: Partial<Record<EngineKind, ProviderModelOptions[EngineKind]>> = baseOptions
+  const result: Partial<Record<EngineKind, EngineModelOptions[EngineKind]>> = baseOptions
     ? { ...baseOptions }
     : {};
-  for (const [provider, selection] of Object.entries(draftSelections) as Array<
-    [EngineKind, ModelSelection | undefined]
+  for (const [engine, selection] of Object.entries(draftSelections) as Array<
+    [EngineKind, EngineSelection | undefined]
   >) {
     if (!selection) continue;
     if (selection.options) {
-      result[provider] = selection.options;
+      result[engine] = selection.options;
     } else {
-      delete result[provider];
+      delete result[engine];
     }
   }
-  return Object.keys(result).length > 0 ? (result as ProviderModelOptions) : null;
+  return Object.keys(result).length > 0 ? (result as EngineModelOptions) : null;
 }
 
 export function normalizeProviderKind(value: unknown): EngineKind | null {
@@ -115,96 +115,96 @@ function isGrokReasoningEffort(value: unknown): value is GrokReasoningEffort {
   return typeof value === "string" && GROK_REASONING_EFFORT_SET.has(value);
 }
 
-export function makeModelSelection(
-  provider: EngineKind,
+export function makeEngineSelection(
+  engine: EngineKind,
   model: string,
-  options?: ProviderModelOptions[EngineKind],
+  options?: EngineModelOptions[EngineKind],
   supportsAutoMode?: boolean,
-): ModelSelection {
-  switch (provider) {
+): EngineSelection {
+  switch (engine) {
     case "oa":
       return {
-        provider,
+        engine,
         model,
         ...(options
-          ? { options: options as Extract<ModelSelection, { provider: "oa" }>["options"] }
+          ? { options: options as Extract<EngineSelection, { engine: "oa" }>["options"] }
           : {}),
       };
     case "antigravity":
       return {
-        provider,
+        engine,
         model,
         ...(options
           ? {
-              options: options as Extract<ModelSelection, { provider: "antigravity" }>["options"],
+              options: options as Extract<EngineSelection, { engine: "antigravity" }>["options"],
             }
           : {}),
       };
     case "codex":
       return {
-        provider,
+        engine,
         model,
         ...(options
-          ? { options: options as Extract<ModelSelection, { provider: "codex" }>["options"] }
+          ? { options: options as Extract<EngineSelection, { engine: "codex" }>["options"] }
           : {}),
       };
     case "claude":
       return {
-        provider,
+        engine,
         model,
         ...(options
           ? {
-              options: options as Extract<ModelSelection, { provider: "claude" }>["options"],
+              options: options as Extract<EngineSelection, { engine: "claude" }>["options"],
             }
           : {}),
         ...(typeof supportsAutoMode === "boolean" ? { supportsAutoMode } : {}),
       };
     case "cursor":
       return {
-        provider,
+        engine,
         model,
         ...(options
-          ? { options: options as Extract<ModelSelection, { provider: "cursor" }>["options"] }
+          ? { options: options as Extract<EngineSelection, { engine: "cursor" }>["options"] }
           : {}),
       };
     case "grok":
       return {
-        provider,
+        engine,
         model,
         ...(options
-          ? { options: options as Extract<ModelSelection, { provider: "grok" }>["options"] }
+          ? { options: options as Extract<EngineSelection, { engine: "grok" }>["options"] }
           : {}),
       };
     case "droid":
       return {
-        provider,
+        engine,
         model,
         ...(options
-          ? { options: options as Extract<ModelSelection, { provider: "droid" }>["options"] }
+          ? { options: options as Extract<EngineSelection, { engine: "droid" }>["options"] }
           : {}),
       };
     case "kilo":
       return {
-        provider,
+        engine,
         model,
         ...(options
-          ? { options: options as Extract<ModelSelection, { provider: "kilo" }>["options"] }
+          ? { options: options as Extract<EngineSelection, { engine: "kilo" }>["options"] }
           : {}),
       };
     case "opencode":
       return {
-        provider,
+        engine,
         model,
         ...(options
-          ? { options: options as Extract<ModelSelection, { provider: "opencode" }>["options"] }
+          ? { options: options as Extract<EngineSelection, { engine: "opencode" }>["options"] }
           : {}),
       };
     case "pi":
       return {
-        provider,
+        engine,
         model,
         ...(options
-          ? { options: options as Extract<ModelSelection, { provider: "pi" }>["options"] }
+          ? { options: options as Extract<EngineSelection, { engine: "pi" }>["options"] }
           : {}),
       };
   }
@@ -212,9 +212,9 @@ export function makeModelSelection(
 
 export function normalizeProviderModelOptions(
   value: unknown,
-  provider?: EngineKind | null,
+  engine?: EngineKind | null,
   legacy?: LegacyCodexFields,
-): ProviderModelOptions | null {
+): EngineModelOptions | null {
   const candidate = value && typeof value === "object" ? (value as Record<string, unknown>) : null;
   const codexCandidate =
     candidate?.codex && typeof candidate.codex === "object"
@@ -259,13 +259,13 @@ export function normalizeProviderModelOptions(
 
   const codexReasoningEffort: CodexReasoningEffort | undefined =
     trimStringOrUndefined(codexCandidate?.reasoningEffort) ??
-    (provider === "codex" ? trimStringOrUndefined(legacy?.effort) : undefined);
+    (engine === "codex" ? trimStringOrUndefined(legacy?.effort) : undefined);
   const codexFastMode =
     codexCandidate?.fastMode === true
       ? true
       : codexCandidate?.fastMode === false
         ? false
-        : (provider === "codex" && legacy?.codexFastMode === true) ||
+        : (engine === "codex" && legacy?.codexFastMode === true) ||
             (typeof legacy?.serviceTier === "string" && legacy.serviceTier === "fast")
           ? true
           : undefined;
@@ -432,20 +432,20 @@ export function normalizeProviderModelOptions(
   };
 }
 
-export function normalizeModelSelection(
+export function normalizeEngineSelection(
   value: unknown,
   legacy?: {
-    provider?: unknown;
+    engine?: unknown;
     model?: unknown;
     modelOptions?: unknown;
     legacyCodex?: LegacyCodexFields;
   },
-): ModelSelection | null {
+): EngineSelection | null {
   const candidate = value && typeof value === "object" ? (value as Record<string, unknown>) : null;
-  const rawProvider = candidate?.provider ?? legacy?.provider;
+  const rawProvider = candidate?.engine ?? legacy?.engine;
   const migratedGeminiSelection = rawProvider === "gemini";
-  const provider = normalizeProviderKind(rawProvider);
-  if (provider === null) {
+  const engine = normalizeProviderKind(rawProvider);
+  if (engine === null) {
     return null;
   }
   const rawModel = candidate?.model ?? legacy?.model;
@@ -453,7 +453,7 @@ export function normalizeModelSelection(
     return null;
   }
   const antigravityLegacyMatch =
-    provider === "antigravity" ? rawModel.trim().match(/^(.*?)\s+\(([^()]+)\)$/u) : null;
+    engine === "antigravity" ? rawModel.trim().match(/^(.*?)\s+\(([^()]+)\)$/u) : null;
   const antigravityLegacyEffort = antigravityLegacyMatch?.[2]?.trim().toLowerCase();
   const hasLegacyAntigravityEffort =
     antigravityLegacyMatch?.[1] !== undefined &&
@@ -465,22 +465,22 @@ export function normalizeModelSelection(
       ? antigravityLegacyMatch[1]!.trim()
       : rawModel;
   const inferredClaudeAutoCompactWindow =
-    provider === "claude" && /\[1m\]$/iu.test(rawModel) ? "1m" : undefined;
-  const model = normalizeModelSlug(normalizedRawModel, provider);
+    engine === "claude" && /\[1m\]$/iu.test(rawModel) ? "1m" : undefined;
+  const model = normalizeModelSlug(normalizedRawModel, engine);
   if (!model) {
     return null;
   }
   const modelOptions = migratedGeminiSelection
     ? null
     : normalizeProviderModelOptions(
-        candidate?.options ? { [provider]: candidate.options } : legacy?.modelOptions,
-        provider,
-        provider === "codex" ? legacy?.legacyCodex : undefined,
+        candidate?.options ? { [engine]: candidate.options } : legacy?.modelOptions,
+        engine,
+        engine === "codex" ? legacy?.legacyCodex : undefined,
       );
   const options =
-    provider === "codex"
+    engine === "codex"
       ? modelOptions?.codex
-      : provider === "claude"
+      : engine === "claude"
         ? inferredClaudeAutoCompactWindow !== undefined
           ? {
               ...modelOptions?.claude,
@@ -488,99 +488,95 @@ export function normalizeModelSelection(
                 modelOptions?.claude?.autoCompactWindow ?? inferredClaudeAutoCompactWindow,
             }
           : modelOptions?.claude
-        : provider === "antigravity"
+        : engine === "antigravity"
           ? modelOptions?.antigravity
-          : provider === "grok"
+          : engine === "grok"
             ? normalizeGrokModelOptions(model, modelOptions?.grok)
-            : provider === "droid"
+            : engine === "droid"
               ? modelOptions?.droid
-              : provider === "kilo"
+              : engine === "kilo"
                 ? modelOptions?.kilo
-                : provider === "cursor"
+                : engine === "cursor"
                   ? modelOptions?.cursor
-                  : provider === "opencode"
+                  : engine === "opencode"
                     ? modelOptions?.opencode
-                    : provider === "oa"
+                    : engine === "oa"
                       ? modelOptions?.oa
-                      : provider === "pi"
+                      : engine === "pi"
                         ? modelOptions?.pi
                         : undefined;
   const normalizedOptions =
-    provider === "antigravity" && hasLegacyAntigravityEffort
+    engine === "antigravity" && hasLegacyAntigravityEffort
       ? {
           reasoningEffort: modelOptions?.antigravity?.reasoningEffort ?? antigravityLegacyEffort,
         }
       : options;
-  return makeModelSelection(
-    provider,
+  return makeEngineSelection(
+    engine,
     model,
     normalizedOptions,
-    provider === "claude" && typeof candidate?.supportsAutoMode === "boolean"
+    engine === "claude" && typeof candidate?.supportsAutoMode === "boolean"
       ? candidate.supportsAutoMode
       : undefined,
   );
 }
 
-export function reconcileProviderScopedModelSelection(
-  requested: ModelSelection,
-  current: ModelSelection | null | undefined,
-): ModelSelection {
-  if (requested.options !== undefined || current?.provider !== requested.provider) {
+export function reconcileProviderScopedEngineSelection(
+  requested: EngineSelection,
+  current: EngineSelection | null | undefined,
+): EngineSelection {
+  if (requested.options !== undefined || current?.engine !== requested.engine) {
     return requested;
   }
   if (current.model === requested.model) {
     const currentSupportsAutoMode =
-      current.provider === "claude" ? current.supportsAutoMode : undefined;
-    return makeModelSelection(
-      requested.provider,
+      current.engine === "claude" ? current.supportsAutoMode : undefined;
+    return makeEngineSelection(
+      requested.engine,
       requested.model,
       current.options,
-      requested.provider === "claude"
+      requested.engine === "claude"
         ? (requested.supportsAutoMode ?? currentSupportsAutoMode)
         : undefined,
     );
   }
-  if (
-    current.provider !== "codex" &&
-    current.provider !== "cursor" &&
-    current.provider !== "claude"
-  ) {
+  if (current.engine !== "codex" && current.engine !== "cursor" && current.engine !== "claude") {
     return requested;
   }
   let preservedOptions = current.options;
   const effort =
-    current.provider === "claude"
+    current.engine === "claude"
       ? current.options?.effort
-      : current.provider === "codex" || current.provider === "cursor"
+      : current.engine === "codex" || current.engine === "cursor"
         ? current.options?.reasoningEffort
         : undefined;
   if (
     effort !== undefined &&
     classifyProviderReasoningEffortSupport({
-      provider: requested.provider,
+      engine: requested.engine,
       model: requested.model,
       effort,
     }) !== "supported"
   ) {
-    if (current.provider === "claude") {
+    if (current.engine === "claude") {
       const { effort: _effort, ...remainingOptions } = current.options ?? {};
       preservedOptions = Object.keys(remainingOptions).length > 0 ? remainingOptions : undefined;
-    } else if (current.provider === "codex" || current.provider === "cursor") {
+    } else if (current.engine === "codex" || current.engine === "cursor") {
       const { reasoningEffort: _reasoningEffort, ...remainingOptions } = current.options ?? {};
       preservedOptions = Object.keys(remainingOptions).length > 0 ? remainingOptions : undefined;
     }
   }
-  return makeModelSelection(
-    requested.provider,
+  return makeEngineSelection(
+    requested.engine,
     requested.model,
     preservedOptions,
-    requested.provider === "claude" ? requested.supportsAutoMode : undefined,
+    requested.engine === "claude" ? requested.supportsAutoMode : undefined,
   );
 }
 
-export function stripNonStickyModelOptions(selection: ModelSelection): ModelSelection {
+export function stripNonStickyModelOptions(selection: EngineSelection): EngineSelection {
   if (
-    selection.provider !== "claude" ||
+    selection.engine !== "claude" ||
     (!selection.options?.contextWindow && !selection.options?.autoCompactWindow)
   ) {
     return selection;
@@ -590,20 +586,20 @@ export function stripNonStickyModelOptions(selection: ModelSelection): ModelSele
     autoCompactWindow: _autoCompactWindow,
     ...rest
   } = selection.options;
-  return makeModelSelection(
-    selection.provider,
+  return makeEngineSelection(
+    selection.engine,
     selection.model,
     Object.keys(rest).length > 0 ? rest : undefined,
     selection.supportsAutoMode,
   );
 }
 
-export function sanitizeStickyModelSelectionMap(
-  map: Partial<Record<EngineKind, ModelSelection>>,
-): Partial<Record<EngineKind, ModelSelection>> {
+export function sanitizeStickyEngineSelectionMap(
+  map: Partial<Record<EngineKind, EngineSelection>>,
+): Partial<Record<EngineKind, EngineSelection>> {
   const claude = map.claude;
   if (
-    claude?.provider !== "claude" ||
+    claude?.engine !== "claude" ||
     (!claude.options?.contextWindow && !claude.options?.autoCompactWindow)
   ) {
     return map;
@@ -611,49 +607,49 @@ export function sanitizeStickyModelSelectionMap(
   return { ...map, claude: stripNonStickyModelOptions(claude) };
 }
 
-export function legacySyncModelSelectionOptions(
-  modelSelection: ModelSelection | null,
-  modelOptions: ProviderModelOptions | null | undefined,
-): ModelSelection | null {
-  if (modelSelection === null) {
+export function legacySyncEngineSelectionOptions(
+  engineSelection: EngineSelection | null,
+  modelOptions: EngineModelOptions | null | undefined,
+): EngineSelection | null {
+  if (engineSelection === null) {
     return null;
   }
   const normalizedOptions =
-    modelSelection.provider === "grok"
-      ? normalizeGrokModelOptions(modelSelection.model, modelOptions?.grok)
-      : modelOptions?.[modelSelection.provider];
-  return makeModelSelection(
-    modelSelection.provider,
-    modelSelection.model,
+    engineSelection.engine === "grok"
+      ? normalizeGrokModelOptions(engineSelection.model, modelOptions?.grok)
+      : modelOptions?.[engineSelection.engine];
+  return makeEngineSelection(
+    engineSelection.engine,
+    engineSelection.model,
     normalizedOptions,
-    modelSelection.provider === "claude" ? modelSelection.supportsAutoMode : undefined,
+    engineSelection.engine === "claude" ? engineSelection.supportsAutoMode : undefined,
   );
 }
 
-export function legacyMergeModelSelectionIntoProviderModelOptions(
-  modelSelection: ModelSelection | null,
-  currentModelOptions: ProviderModelOptions | null | undefined,
-): ProviderModelOptions | null {
-  if (modelSelection?.options === undefined) {
+export function legacyMergeEngineSelectionIntoProviderModelOptions(
+  engineSelection: EngineSelection | null,
+  currentModelOptions: EngineModelOptions | null | undefined,
+): EngineModelOptions | null {
+  if (engineSelection?.options === undefined) {
     return normalizeProviderModelOptions(currentModelOptions);
   }
   return legacyReplaceProviderModelOptions(
     normalizeProviderModelOptions(currentModelOptions),
-    modelSelection.provider,
-    modelSelection.options,
+    engineSelection.engine,
+    engineSelection.options,
   );
 }
 
 function legacyReplaceProviderModelOptions(
-  currentModelOptions: ProviderModelOptions | null | undefined,
-  provider: EngineKind,
-  nextProviderOptions: ProviderModelOptions[EngineKind] | null | undefined,
-): ProviderModelOptions | null {
-  const { [provider]: _discardedProviderModelOptions, ...otherProviderModelOptions } =
+  currentModelOptions: EngineModelOptions | null | undefined,
+  engine: EngineKind,
+  nextProviderOptions: EngineModelOptions[EngineKind] | null | undefined,
+): EngineModelOptions | null {
+  const { [engine]: _discardedProviderModelOptions, ...otherProviderModelOptions } =
     currentModelOptions ?? {};
   const normalizedNextProviderOptions = normalizeProviderModelOptions(
-    { [provider]: nextProviderOptions },
-    provider,
+    { [engine]: nextProviderOptions },
+    engine,
   );
 
   return normalizeProviderModelOptions({
@@ -662,72 +658,72 @@ function legacyReplaceProviderModelOptions(
   });
 }
 
-export function legacyToModelSelectionByProvider(
-  modelSelection: ModelSelection | null,
-  modelOptions: ProviderModelOptions | null | undefined,
-): Partial<Record<EngineKind, ModelSelection>> {
-  const result: Partial<Record<EngineKind, ModelSelection>> = {};
-  // Add entries from the options bag (for non-active providers)
+export function legacyToEngineSelectionByEngine(
+  engineSelection: EngineSelection | null,
+  modelOptions: EngineModelOptions | null | undefined,
+): Partial<Record<EngineKind, EngineSelection>> {
+  const result: Partial<Record<EngineKind, EngineSelection>> = {};
+  // Add entries from the options bag (for non-active engines)
   if (modelOptions) {
-    for (const provider of ENGINE_KINDS) {
-      const options = modelOptions[provider];
+    for (const engine of ENGINE_KINDS) {
+      const options = modelOptions[engine];
       if (options && Object.keys(options).length > 0) {
         const model =
-          modelSelection?.provider === provider ? modelSelection.model : getDefaultModel(provider);
+          engineSelection?.engine === engine ? engineSelection.model : getDefaultModel(engine);
         if (model) {
-          result[provider] = makeModelSelection(
-            provider,
+          result[engine] = makeEngineSelection(
+            engine,
             model,
-            provider === "grok" ? normalizeGrokModelOptions(model, modelOptions.grok) : options,
+            engine === "grok" ? normalizeGrokModelOptions(model, modelOptions.grok) : options,
           );
         }
       }
     }
   }
-  // Add/overwrite the active selection (it's authoritative for its provider)
-  if (modelSelection) {
-    result[modelSelection.provider] = modelSelection;
+  // Add/overwrite the active selection (it's authoritative for its engine)
+  if (engineSelection) {
+    result[engineSelection.engine] = engineSelection;
   }
   return result;
 }
 
 export function deriveEffectiveComposerModelState(input: {
   draft:
-    | Pick<ComposerThreadDraftState, "modelSelectionByProvider" | "activeProvider">
+    | Pick<ComposerThreadDraftState, "engineSelectionByEngine" | "activeProvider">
     | null
     | undefined;
   selectedProvider: EngineKind;
-  threadModelSelection: ModelSelection | null | undefined;
-  projectModelSelection: ModelSelection | null | undefined;
-  stickyModelSelection?: ModelSelection | null | undefined;
+  threadEngineSelection: EngineSelection | null | undefined;
+  projectEngineSelection: EngineSelection | null | undefined;
+  stickyEngineSelection?: EngineSelection | null | undefined;
   runtimeCatalogFallbackModel?: ModelSlug | null | undefined;
-  customModelsByProvider: Partial<Record<EngineKind, readonly string[]>>;
-  availableModelOptionsByProvider?: Partial<
+  customModelsByEngine: Partial<Record<EngineKind, readonly string[]>>;
+  availableModelOptionsByEngine?: Partial<
     Record<EngineKind, ReadonlyArray<{ slug: string; name: string }>>
   >;
 }): EffectiveComposerModelState {
   const resolveAvailableModel = (candidate: string | null | undefined): ModelSlug | null => {
-    const availableOptions = input.availableModelOptionsByProvider?.[input.selectedProvider];
+    const availableOptions = input.availableModelOptionsByEngine?.[input.selectedProvider];
     if (!availableOptions || availableOptions.length === 0) {
       return null;
     }
     return resolveSelectableModel(input.selectedProvider, candidate, availableOptions);
   };
-  const activeSelection = input.draft?.modelSelectionByProvider?.[input.selectedProvider];
+  const activeSelection = input.draft?.engineSelectionByEngine?.[input.selectedProvider];
   const selectionCandidates = [
     activeSelection,
-    input.threadModelSelection?.provider === input.selectedProvider
-      ? input.threadModelSelection
+    input.threadEngineSelection?.engine === input.selectedProvider
+      ? input.threadEngineSelection
       : null,
-    input.projectModelSelection?.provider === input.selectedProvider
-      ? input.projectModelSelection
+    input.projectEngineSelection?.engine === input.selectedProvider
+      ? input.projectEngineSelection
       : null,
-    input.stickyModelSelection?.provider === input.selectedProvider
-      ? input.stickyModelSelection
+    input.stickyEngineSelection?.engine === input.selectedProvider
+      ? input.stickyEngineSelection
       : null,
   ] as const;
   let selectedModel: ModelSlug | null = null;
-  let selectedSource: ModelSelection | null = null;
+  let selectedSource: EngineSelection | null = null;
   for (const candidate of selectionCandidates) {
     const resolvedModel = resolveAvailableModel(candidate?.model);
     if (!resolvedModel) continue;
@@ -745,7 +741,7 @@ export function deriveEffectiveComposerModelState(input: {
       input.runtimeCatalogFallbackModel !== undefined
         ? resolveAvailableModel(input.runtimeCatalogFallbackModel)
         : (resolveAvailableModel(getDefaultModel(input.selectedProvider)) ??
-          input.availableModelOptionsByProvider?.[input.selectedProvider]?.[0]?.slug ??
+          input.availableModelOptionsByEngine?.[input.selectedProvider]?.[0]?.slug ??
           null);
   }
 
@@ -762,38 +758,37 @@ export function deriveEffectiveComposerModelState(input: {
   };
 }
 
-export function resolvePreferredComposerModelSelection(input: {
+export function resolvePreferredComposerEngineSelection(input: {
   draft:
-    | Pick<ComposerThreadDraftState, "modelSelectionByProvider" | "activeProvider">
+    | Pick<ComposerThreadDraftState, "engineSelectionByEngine" | "activeProvider">
     | null
     | undefined;
-  threadModelSelection: ModelSelection | null | undefined;
-  projectModelSelection: ModelSelection | null | undefined;
-  defaultProvider?: EngineKind | null | undefined;
-}): ModelSelection | null {
+  threadEngineSelection: EngineSelection | null | undefined;
+  projectEngineSelection: EngineSelection | null | undefined;
+  defaultEngine?: EngineKind | null | undefined;
+}): EngineSelection | null {
   const draftProviderWithSelection =
-    ENGINE_KINDS.find(
-      (provider) => input.draft?.modelSelectionByProvider?.[provider] !== undefined,
-    ) ?? null;
+    ENGINE_KINDS.find((engine) => input.draft?.engineSelectionByEngine?.[engine] !== undefined) ??
+    null;
   const preferredProvider =
     input.draft?.activeProvider ??
     draftProviderWithSelection ??
-    input.threadModelSelection?.provider ??
-    input.projectModelSelection?.provider ??
-    input.defaultProvider ??
+    input.threadEngineSelection?.engine ??
+    input.projectEngineSelection?.engine ??
+    input.defaultEngine ??
     "codex";
 
   return (
-    input.draft?.modelSelectionByProvider?.[preferredProvider] ??
-    (input.threadModelSelection?.provider === preferredProvider
-      ? input.threadModelSelection
+    input.draft?.engineSelectionByEngine?.[preferredProvider] ??
+    (input.threadEngineSelection?.engine === preferredProvider
+      ? input.threadEngineSelection
       : null) ??
-    (input.projectModelSelection?.provider === preferredProvider
-      ? input.projectModelSelection
+    (input.projectEngineSelection?.engine === preferredProvider
+      ? input.projectEngineSelection
       : null) ??
     (() => {
       const model = getDefaultModel(preferredProvider);
-      return model ? { provider: preferredProvider, model } : null;
+      return model ? { engine: preferredProvider, model } : null;
     })()
   );
 }

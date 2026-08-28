@@ -13,7 +13,7 @@ import { transcribeVoiceWithChatGptSession } from "./voiceTranscription";
 const WAV_BASE64 = Buffer.from("RIFF0000WAVE", "ascii").toString("base64");
 
 const baseRequest: ServerVoiceTranscriptionInput = {
-  provider: "codex",
+  engine: "codex",
   cwd: "/tmp/project",
   mimeType: "audio/wav",
   sampleRateHz: 24_000,
@@ -69,7 +69,7 @@ describe("transcribeVoiceWithChatGptSession", () => {
     expect(request).toHaveBeenCalledTimes(2);
   });
 
-  it("rejects a provider-returned transcription origin before forwarding the token", async () => {
+  it("rejects a engine-returned transcription origin before forwarding the token", async () => {
     await expect(
       transcribeVoiceWithChatGptSession({
         request: baseRequest,

@@ -59,10 +59,10 @@ layer("ProjectionThreadMessageRepository", (it) => {
     }),
   );
 
-  it.effect("keeps equal provider message IDs independent across threads", () =>
+  it.effect("keeps equal engine message IDs independent across threads", () =>
     Effect.gen(function* () {
       const repository = yield* ProjectionThreadMessageRepository;
-      const messageId = MessageId.makeUnsafe("shared-provider-message");
+      const messageId = MessageId.makeUnsafe("shared-engine-message");
       const threadA = ThreadId.makeUnsafe("thread-message-scope-a");
       const threadB = ThreadId.makeUnsafe("thread-message-scope-b");
       const createdAt = "2026-07-14T00:00:00.000Z";

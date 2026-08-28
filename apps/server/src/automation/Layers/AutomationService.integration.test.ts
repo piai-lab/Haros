@@ -34,11 +34,11 @@ import type { ProjectionSnapshotQueryShape } from "../../orchestration/Services/
 import { AutomationRepositoryLive } from "../../persistence/Layers/AutomationRepository.ts";
 import { ProjectionTurnRepositoryLive } from "../../persistence/Layers/ProjectionTurns.ts";
 import { resolveProviderExecutionCapabilities } from "../../provider/executionCapabilityProjection.ts";
-import { providerExecutionStructure } from "../../provider/providerExecutionStructure.ts";
+import { engineExecutionStructure } from "../../provider/engineExecutionStructure.ts";
 import {
-  ProviderExecutionCapabilities,
-  type ProviderExecutionCapabilitiesShape,
-} from "../../provider/Services/ProviderExecutionCapabilities.ts";
+  EngineExecutionCapabilities,
+  type EngineExecutionCapabilitiesShape,
+} from "../../provider/Services/EngineExecutionCapabilities.ts";
 import { SqlitePersistenceMemory } from "../../persistence/Layers/Sqlite.ts";
 import {
   AutomationRepository,
@@ -57,8 +57,8 @@ const project: OrchestrationProjectShell = {
   kind: "project",
   title: "Automation Project",
   workspaceRoot: "/tmp/automation-project",
-  defaultModelSelection: {
-    provider: "codex",
+  defaultEngineSelection: {
+    engine: "codex",
     model: "gpt-5-codex",
   },
   scripts: [],
@@ -349,8 +349,8 @@ const createInput = (
   projectId,
   prompt: "Check stale dependencies.",
   schedule: { type: "manual" },
-  modelSelection: {
-    provider: "codex",
+  engineSelection: {
+    engine: "codex",
     model: "gpt-5-codex",
   },
   worktreeMode,
@@ -556,8 +556,8 @@ const gitCore = {
     }),
 } as unknown as GitCoreShape;
 
-const readyProviderStatuses: ServerProviderStatus[] = ENGINE_KINDS.map((provider) => ({
-  provider,
+const readyProviderStatuses: ServerProviderStatus[] = ENGINE_KINDS.map((engine) => ({
+  engine,
   status: "ready" as const,
   available: true,
   authStatus: "authenticated" as const,
@@ -565,15 +565,13 @@ const readyProviderStatuses: ServerProviderStatus[] = ENGINE_KINDS.map((provider
   checkedAt: "2026-08-25T00:00:00.000Z",
 }));
 let providerStatuses = [...readyProviderStatuses];
-const providerExecutionCapabilities: ProviderExecutionCapabilitiesShape = {
-  get: (modelSelection) =>
+const engineExecutionCapabilities: EngineExecutionCapabilitiesShape = {
+  get: (engineSelection) =>
     Effect.sync(() =>
       resolveProviderExecutionCapabilities({
-        modelSelection,
-        adapterCapabilities: providerExecutionStructure(modelSelection.provider),
-        providerStatus: providerStatuses.find(
-          (status) => status.provider === modelSelection.provider,
-        ),
+        engineSelection,
+        adapterCapabilities: engineExecutionStructure(engineSelection.engine),
+        providerStatus: providerStatuses.find((status) => status.engine === engineSelection.engine),
       }),
     ),
 };
@@ -587,7 +585,7 @@ const layer = it.layer(
     Layer.provideMerge(Layer.succeed(ProjectionSnapshotQuery, projectionSnapshotQuery)),
     Layer.provideMerge(Layer.succeed(TextGeneration, textGeneration)),
     Layer.provideMerge(ServerSettingsService.layerTest()),
-    Layer.provideMerge(Layer.succeed(ProviderExecutionCapabilities, providerExecutionCapabilities)),
+    Layer.provideMerge(Layer.succeed(EngineExecutionCapabilities, engineExecutionCapabilities)),
     Layer.provideMerge(Layer.succeed(GitCore, gitCore)),
   ),
 );
@@ -611,8 +609,8 @@ layer("AutomationService", (it) => {
     Effect.gen(function* () {
       resetHarness();
       const service = yield* AutomationService;
-      const unsupportedModelSelection = {
-        provider: "claude" as const,
+      const unsupportedEngineSelection = {
+        engine: "claude" as const,
         model: "claude-haiku-4-5",
         supportsAutoMode: false,
       };
@@ -620,16 +618,16 @@ layer("AutomationService", (it) => {
       const createError = yield* service
         .create({
           ...createInput(),
-          modelSelection: unsupportedModelSelection,
+          engineSelection: unsupportedEngineSelection,
           runtimeMode: "auto",
         })
         .pipe(Effect.flip);
-      assert.match(createError.message, /not supported by this Provider and model/);
+      assert.match(createError.message, /not supported by this Engine and model/);
 
       const definition = yield* service.create({
         ...createInput(),
-        modelSelection: {
-          ...unsupportedModelSelection,
+        engineSelection: {
+          ...unsupportedEngineSelection,
           supportsAutoMode: true,
         },
         runtimeMode: "auto",
@@ -638,10 +636,10 @@ layer("AutomationService", (it) => {
         .update({
           id: definition.id,
           expectedDefinitionRevision: definition.definitionRevision,
-          modelSelection: unsupportedModelSelection,
+          engineSelection: unsupportedEngineSelection,
         })
         .pipe(Effect.flip);
-      assert.match(updateError.message, /not supported by this Provider and model/);
+      assert.match(updateError.message, /not supported by this Engine and model/);
     }),
   );
 
@@ -649,7 +647,7 @@ layer("AutomationService", (it) => {
     Effect.gen(function* () {
       resetHarness();
       providerStatuses = readyProviderStatuses.map((status) =>
-        status.provider === "codex"
+        status.engine === "codex"
           ? {
               ...status,
               status: "warning" as const,
@@ -1757,7 +1755,7 @@ layer("AutomationService", (it) => {
       threadShell = Option.some(
         makeThreadShell({
           latestTurn: makeLatestTurn("error"),
-          lastError: "provider exploded",
+          lastError: "engine exploded",
         }),
       );
       yield* service.reconcileThread({ threadId });
@@ -1765,7 +1763,7 @@ layer("AutomationService", (it) => {
       const reloaded = yield* service.list({ projectId });
       const reconciled = reloaded.runs.find((entry) => entry.id === run.id);
       assert.strictEqual(reconciled?.status, "failed");
-      assert.strictEqual(reconciled?.error, "provider exploded");
+      assert.strictEqual(reconciled?.error, "engine exploded");
     }),
   );
 
@@ -1948,7 +1946,7 @@ layer("AutomationService", (it) => {
       const { run } = yield* service.runNow({ automationId: created.id });
       assert.isNotNull(run.messageId);
 
-      // The run's own turn started but never settled — the provider session was
+      // The run's own turn started but never settled — the engine session was
       // taken over by a manual user turn before this turn reached a terminal state.
       yield* projectionTurns.upsertByTurnId({
         threadId: targetThreadId,
@@ -2100,8 +2098,8 @@ layer("AutomationService", (it) => {
         trigger: { type: "manual" },
         scheduledFor: "2000-01-01T00:00:00.000Z",
         permissionSnapshot: {
-          provider: "codex",
-          modelSelection: { provider: "codex", model: "gpt-5-codex" },
+          engine: "codex",
+          engineSelection: { engine: "codex", model: "gpt-5-codex" },
           runtimeMode: "approval-required",
           interactionMode: "default",
           worktreeMode: "local",
@@ -2165,8 +2163,8 @@ layer("AutomationService", (it) => {
         trigger: { type: "manual" },
         scheduledFor: "2000-01-01T00:00:00.000Z",
         permissionSnapshot: {
-          provider: "codex",
-          modelSelection: { provider: "codex", model: "gpt-5-codex" },
+          engine: "codex",
+          engineSelection: { engine: "codex", model: "gpt-5-codex" },
           runtimeMode: "approval-required",
           interactionMode: "default",
           worktreeMode: "local",
@@ -2574,8 +2572,8 @@ layer("AutomationService", (it) => {
               scheduledFor: "2099-08-17T10:00:00.000Z",
               deferredUntil: "2099-08-17T10:00:15.000Z",
               permissionSnapshot: {
-                provider: "codex",
-                modelSelection: created.modelSelection,
+                engine: "codex",
+                engineSelection: created.engineSelection,
                 runtimeMode: created.runtimeMode,
                 interactionMode: created.interactionMode,
                 worktreeMode: created.worktreeMode,
@@ -2805,7 +2803,7 @@ layer("AutomationService", (it) => {
         description: "hung stop evaluation to start",
       });
 
-      // The user clears the completion policy while the provider call is still hung.
+      // The user clears the completion policy while the engine call is still hung.
       yield* service.update({
         id: created.id,
         expectedDefinitionRevision: created.definitionRevision + 1,
@@ -2928,8 +2926,8 @@ layer("AutomationService", (it) => {
               scheduledFor: "2099-08-17T11:00:00.000Z",
               deferredUntil: "2099-08-17T11:00:15.000Z",
               permissionSnapshot: {
-                provider: "codex",
-                modelSelection: created.modelSelection,
+                engine: "codex",
+                engineSelection: created.engineSelection,
                 runtimeMode: created.runtimeMode,
                 interactionMode: created.interactionMode,
                 worktreeMode: created.worktreeMode,
@@ -3279,17 +3277,17 @@ layer("AutomationService", (it) => {
     }),
   );
 
-  it.effect("uses the configured text-generation model for unsupported heartbeat providers", () =>
+  it.effect("uses the configured text-generation model for unsupported heartbeat engines", () =>
     Effect.gen(function* () {
       resetHarness();
       const service = yield* AutomationService;
       const serverSettings = yield* ServerSettingsService;
-      const targetThreadId = ThreadId.makeUnsafe("heartbeat-stop-provider-fallback");
-      const automationTurnId = TurnId.makeUnsafe("turn-stop-provider-fallback");
+      const targetThreadId = ThreadId.makeUnsafe("heartbeat-stop-engine-fallback");
+      const automationTurnId = TurnId.makeUnsafe("turn-stop-engine-fallback");
       threadShell = Option.some(makeThreadShell({ id: targetThreadId }));
       yield* serverSettings.updateSettings({
-        textGenerationModelSelection: {
-          provider: "cursor",
+        textGenerationEngineSelection: {
+          engine: "cursor",
           model: "composer-2",
         },
       });
@@ -3298,8 +3296,8 @@ layer("AutomationService", (it) => {
         ...createInput("local"),
         mode: "heartbeat",
         targetThreadId,
-        modelSelection: {
-          provider: "claude",
+        engineSelection: {
+          engine: "claude",
           model: "claude-opus-4-8",
         },
         completionPolicy: aiCompletionPolicy("the PR is ready"),
@@ -3314,14 +3312,14 @@ layer("AutomationService", (it) => {
       yield* service.reconcileThread({ threadId: targetThreadId });
       yield* waitForAutomationList({
         service,
-        description: "provider-fallback stop evaluation",
+        description: "engine-fallback stop evaluation",
         predicate: (listed) =>
           listed.runs.find((entry) => entry.id === run.id)?.result?.completionEvaluation !==
           undefined,
       });
 
-      assert.deepStrictEqual(completionEvaluationInputs.at(-1)?.modelSelection, {
-        provider: "cursor",
+      assert.deepStrictEqual(completionEvaluationInputs.at(-1)?.engineSelection, {
+        engine: "cursor",
         model: "composer-2",
       });
     }),
@@ -3548,7 +3546,7 @@ layer("AutomationService", (it) => {
         const targetThreadId = ThreadId.makeUnsafe("heartbeat-stop-evaluator-failure");
         const automationTurnId = TurnId.makeUnsafe("turn-stop-evaluator-failure");
         threadShell = Option.some(makeThreadShell({ id: targetThreadId }));
-        completionEvaluationFailure = new Error("provider unavailable");
+        completionEvaluationFailure = new Error("engine unavailable");
 
         const created = yield* service.create({
           ...createInput("local"),
@@ -5255,8 +5253,8 @@ layer("AutomationService", (it) => {
         trigger: { type: "scheduled" },
         scheduledFor: "2026-06-16T10:00:00.000Z",
         permissionSnapshot: {
-          provider: "codex",
-          modelSelection: { provider: "codex", model: "gpt-5-codex" },
+          engine: "codex",
+          engineSelection: { engine: "codex", model: "gpt-5-codex" },
           runtimeMode: "approval-required",
           interactionMode: "default",
           worktreeMode: "local",
@@ -5313,8 +5311,8 @@ layer("AutomationService", (it) => {
             trigger: { type: "scheduled" },
             scheduledFor: now,
             permissionSnapshot: {
-              provider: "codex",
-              modelSelection: { provider: "codex", model: "gpt-5-codex" },
+              engine: "codex",
+              engineSelection: { engine: "codex", model: "gpt-5-codex" },
               runtimeMode: "approval-required",
               interactionMode: "default",
               worktreeMode: "local",
@@ -5363,8 +5361,8 @@ layer("AutomationService", (it) => {
         trigger: { type: "scheduled" },
         scheduledFor: "2026-06-16T10:00:00.000Z",
         permissionSnapshot: {
-          provider: "codex",
-          modelSelection: { provider: "codex", model: "gpt-5-codex" },
+          engine: "codex",
+          engineSelection: { engine: "codex", model: "gpt-5-codex" },
           runtimeMode: "approval-required",
           interactionMode: "default",
           worktreeMode: "local",
@@ -5509,8 +5507,8 @@ layer("AutomationService", (it) => {
           trigger: { type: "scheduled" },
           scheduledFor,
           permissionSnapshot: {
-            provider: "codex",
-            modelSelection: { provider: "codex", model: "gpt-5-codex" },
+            engine: "codex",
+            engineSelection: { engine: "codex", model: "gpt-5-codex" },
             runtimeMode: "approval-required",
             interactionMode: "default",
             worktreeMode: "local",
@@ -5604,8 +5602,8 @@ layer("AutomationService", (it) => {
           scheduledFor: "2099-08-17T19:00:00.000Z",
           deferredUntil: "2099-08-17T19:00:15.000Z",
           permissionSnapshot: {
-            provider: "codex",
-            modelSelection: created.modelSelection,
+            engine: "codex",
+            engineSelection: created.engineSelection,
             runtimeMode: created.runtimeMode,
             interactionMode: created.interactionMode,
             worktreeMode: created.worktreeMode,
@@ -5731,8 +5729,8 @@ layer("AutomationService", (it) => {
             trigger: { type: "manual" },
             scheduledFor: now,
             permissionSnapshot: {
-              provider: "codex",
-              modelSelection: { provider: "codex", model: "gpt-5-codex" },
+              engine: "codex",
+              engineSelection: { engine: "codex", model: "gpt-5-codex" },
               runtimeMode: "approval-required",
               interactionMode: "default",
               worktreeMode: "local",
@@ -5878,8 +5876,8 @@ layer("AutomationService", (it) => {
           trigger: { type: "manual" },
           scheduledFor: now,
           permissionSnapshot: {
-            provider: "codex",
-            modelSelection: { provider: "codex", model: "gpt-5-codex" },
+            engine: "codex",
+            engineSelection: { engine: "codex", model: "gpt-5-codex" },
             runtimeMode: "approval-required",
             interactionMode: "default",
             worktreeMode: "local",
@@ -5964,8 +5962,8 @@ layer("AutomationService", (it) => {
               scheduledFor: "2099-08-17T10:00:00.000Z",
               deferredUntil: "2099-08-17T10:00:15.000Z",
               permissionSnapshot: {
-                provider: "codex",
-                modelSelection: definition.modelSelection,
+                engine: "codex",
+                engineSelection: definition.engineSelection,
                 runtimeMode: definition.runtimeMode,
                 interactionMode: definition.interactionMode,
                 worktreeMode: definition.worktreeMode,
@@ -6011,12 +6009,12 @@ layer("AutomationService", (it) => {
         "skipped",
       );
 
-      const providerCase = yield* makeOwnedDeferredOneShot("provider");
+      const providerCase = yield* makeOwnedDeferredOneShot("engine");
       threadShell = Option.some(makeThreadShell({ id: providerCase.definition.targetThreadId! }));
       yield* service.update({
         id: providerCase.definition.id,
         expectedDefinitionRevision: providerCase.definition.definitionRevision,
-        modelSelection: { provider: "codex", model: "gpt-5" },
+        engineSelection: { engine: "codex", model: "gpt-5" },
       });
       assert.strictEqual(
         Option.getOrThrow(yield* repository.getRunById({ id: providerCase.runId })).status,
@@ -6073,8 +6071,8 @@ layer("AutomationService", (it) => {
           scheduledFor: "2099-08-17T16:00:00.000Z",
           deferredUntil: "2099-08-17T16:00:15.000Z",
           permissionSnapshot: {
-            provider: "codex",
-            modelSelection: created.modelSelection,
+            engine: "codex",
+            engineSelection: created.engineSelection,
             runtimeMode: created.runtimeMode,
             interactionMode: created.interactionMode,
             worktreeMode: created.worktreeMode,
@@ -6163,8 +6161,8 @@ layer("AutomationService", (it) => {
           scheduledFor: "2099-08-17T17:00:00.000Z",
           deferredUntil: "2099-08-17T17:00:15.000Z",
           permissionSnapshot: {
-            provider: "codex",
-            modelSelection: created.modelSelection,
+            engine: "codex",
+            engineSelection: created.engineSelection,
             runtimeMode: created.runtimeMode,
             interactionMode: created.interactionMode,
             worktreeMode: created.worktreeMode,
@@ -6232,8 +6230,8 @@ layer("AutomationService", (it) => {
           trigger: { type: "manual" },
           scheduledFor: `2099-08-17T17:0${index}:00.000Z`,
           permissionSnapshot: {
-            provider: "codex",
-            modelSelection: created.modelSelection,
+            engine: "codex",
+            engineSelection: created.engineSelection,
             runtimeMode: created.runtimeMode,
             interactionMode: created.interactionMode,
             worktreeMode: created.worktreeMode,
@@ -6262,8 +6260,8 @@ layer("AutomationService", (it) => {
           scheduledFor: "2099-08-17T18:00:00.000Z",
           deferredUntil: "2099-08-17T18:00:15.000Z",
           permissionSnapshot: {
-            provider: "codex",
-            modelSelection: created.modelSelection,
+            engine: "codex",
+            engineSelection: created.engineSelection,
             runtimeMode: created.runtimeMode,
             interactionMode: created.interactionMode,
             worktreeMode: created.worktreeMode,

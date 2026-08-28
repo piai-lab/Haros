@@ -15,7 +15,7 @@ import {
 } from "./providerMaintenance";
 
 const CODEX_DEFINITION = {
-  provider: "codex",
+  engine: "codex",
   binaryName: "codex",
   npmPackageName: "@openai/codex",
   homebrew: { name: "codex", kind: "cask" },
@@ -23,7 +23,7 @@ const CODEX_DEFINITION = {
 } as const satisfies PackageManagedProviderMaintenanceDefinition;
 
 const OPENCODE_DEFINITION = {
-  provider: "opencode",
+  engine: "opencode",
   binaryName: "opencode",
   npmPackageName: "opencode-ai",
   homebrew: { name: "anomalyco/tap/opencode", kind: "formula" },
@@ -41,7 +41,7 @@ const OPENCODE_DEFINITION = {
 } as const satisfies PackageManagedProviderMaintenanceDefinition;
 
 const DROID_DEFINITION = {
-  provider: "droid",
+  engine: "droid",
   binaryName: "droid",
   npmPackageName: "@factory/cli",
   homebrew: null,
@@ -54,7 +54,7 @@ const DROID_DEFINITION = {
 } as const satisfies PackageManagedProviderMaintenanceDefinition;
 
 const CLAUDE_DEFINITION = {
-  provider: "claude",
+  engine: "claude",
   binaryName: "claude",
   npmPackageName: "@anthropic-ai/claude-code",
   homebrew: {
@@ -162,7 +162,7 @@ describe("providerMaintenance", () => {
     assert.strictEqual(capabilities.packageName, null);
   });
 
-  it("keeps native provider update truth with the provider when explicitly configured", () => {
+  it("keeps native engine update truth with the engine when explicitly configured", () => {
     const capabilities = resolvePackageManagedProviderMaintenance(CLAUDE_DEFINITION, {
       binaryPath: "claude",
       realCommandPath: "/Users/test/.local/share/claude/versions/2.1.100/claude",
@@ -197,7 +197,7 @@ describe("providerMaintenance", () => {
     });
   });
 
-  it("uses provider-native update commands with detected install method", () => {
+  it("uses engine-native update commands with detected install method", () => {
     const capabilities = resolvePackageManagedProviderMaintenance(OPENCODE_DEFINITION, {
       binaryPath: "opencode",
       realCommandPath: "/Users/test/.local/share/pnpm/opencode",
@@ -375,7 +375,7 @@ describe("providerMaintenance", () => {
 
   it("marks older semver versions as behind latest", () => {
     const advisory = createProviderVersionAdvisory({
-      provider: "codex",
+      engine: "codex",
       currentVersion: "0.129.0",
       latestVersion: "0.130.0",
     });
@@ -386,14 +386,14 @@ describe("providerMaintenance", () => {
     assert.strictEqual(advisory.latestVersionKnowable, true);
   });
 
-  it("reports an unknowable latest version for self-updating providers", () => {
+  it("reports an unknowable latest version for self-updating engines", () => {
     // `cursor-agent update` exists, but no registry publishes its version, so the
     // advisory can never reach "current" — callers must not read that as "outdated".
     const advisory = createProviderVersionAdvisory({
-      provider: "cursor",
+      engine: "cursor",
       currentVersion: "2026.07.09-c59fd9a",
       maintenanceCapabilities: makeProviderMaintenanceCapabilities({
-        provider: "cursor",
+        engine: "cursor",
         packageName: null,
         updateExecutable: "cursor-agent",
         updateArgs: ["update"],

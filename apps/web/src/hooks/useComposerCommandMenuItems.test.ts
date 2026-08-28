@@ -12,7 +12,7 @@ function project(id: string, kind: Project["kind"], name: string): Project {
     folderName: name,
     localName: null,
     cwd: `/workspace/${id}`,
-    defaultModelSelection: null,
+    defaultEngineSelection: null,
     expanded: true,
     scripts: [],
   } as unknown as Project;
@@ -22,7 +22,7 @@ function thread(input: {
   id: string;
   projectId: string;
   title: string;
-  provider?: "codex" | "claude";
+  engine?: "codex" | "claude";
   updatedAt?: string;
   archivedAt?: string | null;
 }): ComposerThreadMentionSource {
@@ -30,7 +30,7 @@ function thread(input: {
     id: input.id,
     projectId: input.projectId,
     title: input.title,
-    provider: input.provider ?? "codex",
+    engine: input.engine ?? "codex",
     createdAt: input.updatedAt ?? "2026-01-01T00:00:00.000Z",
     updatedAt: input.updatedAt,
     archivedAt: input.archivedAt ?? null,
@@ -58,7 +58,7 @@ describe("buildThreadMentionComposerItems", () => {
           id: "studio-thread",
           projectId: "studio",
           title: "Release artwork",
-          provider: "claude",
+          engine: "claude",
         }),
         thread({ id: "unrelated", projectId: "project", title: "Bug triage" }),
       ],
@@ -75,7 +75,7 @@ describe("buildThreadMentionComposerItems", () => {
       "thread:studio-thread": "Chat",
     });
     expect(items.find((item) => item.id === "thread:studio-thread")).toMatchObject({
-      provider: "claude",
+      engine: "claude",
       mention: { name: "Release artwork", path: "thread://studio-thread" },
     });
   });

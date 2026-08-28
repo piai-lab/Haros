@@ -7,7 +7,7 @@ import {
   TrimmedNonEmptyString,
 } from "./baseSchemas";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
-import { ModelSelection, ProviderStartOptions } from "./orchestration";
+import { EngineSelection, EngineStartOptions } from "./orchestration";
 
 const TrimmedNonEmptyStringSchema = TrimmedNonEmptyString;
 
@@ -154,11 +154,11 @@ export const GitSummarizeDiffInput = Schema.Struct({
     Schema.withConstructorDefault(() => Option.some("workingTree" as const)),
   ),
   codexHomePath: Schema.optional(TrimmedNonEmptyStringSchema),
-  providerOptions: Schema.optional(ProviderStartOptions),
+  engineOptions: Schema.optional(EngineStartOptions),
   textGenerationModel: Schema.optional(TrimmedNonEmptyStringSchema).pipe(
     Schema.withConstructorDefault(() => Option.some(DEFAULT_GIT_TEXT_GENERATION_MODEL)),
   ),
-  textGenerationModelSelection: Schema.optional(ModelSelection),
+  textGenerationEngineSelection: Schema.optional(EngineSelection),
 });
 export type GitSummarizeDiffInput = typeof GitSummarizeDiffInput.Type;
 
@@ -179,11 +179,11 @@ export const GitRunStackedActionInput = Schema.Struct({
     Schema.Array(TrimmedNonEmptyStringSchema).check(Schema.isMinLength(1)),
   ),
   codexHomePath: Schema.optional(TrimmedNonEmptyStringSchema),
-  providerOptions: Schema.optional(ProviderStartOptions),
+  engineOptions: Schema.optional(EngineStartOptions),
   textGenerationModel: Schema.optional(TrimmedNonEmptyStringSchema).pipe(
     Schema.withConstructorDefault(() => Option.some(DEFAULT_GIT_TEXT_GENERATION_MODEL)),
   ),
-  textGenerationModelSelection: Schema.optional(ModelSelection),
+  textGenerationEngineSelection: Schema.optional(EngineSelection),
 });
 export type GitRunStackedActionInput = typeof GitRunStackedActionInput.Type;
 

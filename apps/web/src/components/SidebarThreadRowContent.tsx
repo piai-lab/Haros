@@ -16,7 +16,7 @@ import { SIDEBAR_ROW_LABEL_TEXT_CLASS_NAME } from "../sidebarRowStyles";
 import type { SidebarThreadSummary } from "../types";
 import { TerminalIcon } from "../lib/icons";
 import { cn } from "../lib/utils";
-import { ProviderIcon } from "./ProviderIcon";
+import { EngineIcon } from "./EngineIcon";
 import { SidebarGlyph } from "./sidebarGlyphs";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
 
@@ -26,7 +26,7 @@ export interface SidebarThreadTerminalStatus {
   pulse: boolean;
 }
 
-function ProviderAvatarWithTerminal({
+function EngineAvatarWithTerminal({
   thread,
   terminalStatus,
   terminalCount,
@@ -36,10 +36,10 @@ function ProviderAvatarWithTerminal({
   terminalCount: number;
 }) {
   const { t } = useI18n();
-  const provider = thread.session?.provider ?? thread.modelSelection.provider;
+  const engine = thread.session?.engine ?? thread.engineSelection.engine;
   const handoffSourceProvider = thread.handoff?.sourceProvider ?? null;
   const handoffTooltip = handoffSourceProvider
-    ? t("thread.handoffFrom", { provider: ENGINE_DISPLAY_NAMES[handoffSourceProvider] })
+    ? t("thread.handoffFrom", { engine: ENGINE_DISPLAY_NAMES[handoffSourceProvider] })
     : null;
   const showBadge = terminalCount > 1 || terminalStatus !== null;
   const badgeTooltip =
@@ -56,15 +56,15 @@ function ProviderAvatarWithTerminal({
   const avatarNode = hasHandoff ? (
     <span className={containerClass}>
       <span className="sidebar-icon-chip absolute left-0 top-1/2 inline-flex size-3 -translate-y-1/2 items-center justify-center rounded-full">
-        <ProviderIcon provider={handoffSourceProvider!} className="size-2" />
+        <EngineIcon engine={handoffSourceProvider!} className="size-2" />
       </span>
       <span className="sidebar-icon-chip absolute right-0 top-1/2 z-10 inline-flex size-3 -translate-y-1/2 items-center justify-center rounded-full">
-        <ProviderIcon provider={provider} className="size-2" />
+        <EngineIcon engine={engine} className="size-2" />
       </span>
     </span>
   ) : (
     <span className={containerClass}>
-      <ProviderIcon provider={provider} className="size-3" />
+      <EngineIcon engine={engine} className="size-3" />
     </span>
   );
 
@@ -231,7 +231,7 @@ export function SidebarThreadRowContent({
       ) : terminalEntryPoint ? (
         <SidebarGlyph icon={TerminalIcon} variant="chrome" />
       ) : showThreadProviderAvatar ? (
-        <ProviderAvatarWithTerminal
+        <EngineAvatarWithTerminal
           thread={thread}
           terminalStatus={terminalStatus}
           terminalCount={terminalCount}

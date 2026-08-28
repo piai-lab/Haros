@@ -2,8 +2,8 @@
 // Purpose: Renders the chat thread's compact workspace controls, including the
 // local usage popover, inline workspace handoff actions, and runtime access toggle.
 import type {
-  ModelSelection,
-  ProviderExecutionCapabilities,
+  EngineSelection,
+  EngineExecutionCapabilities,
   ThreadId,
   RuntimeMode,
 } from "@harnessos/contracts";
@@ -20,7 +20,7 @@ import { readNativeApi } from "../nativeApi";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useAccountCapacity } from "../hooks/useAccountCapacity";
 import { resolveThreadEnvironmentPresentation } from "../lib/threadEnvironment";
-import { providerExecutionCapabilitiesQueryOptions } from "../lib/providerDiscoveryReactQuery";
+import { engineExecutionCapabilitiesQueryOptions } from "../lib/engineDiscoveryReactQuery";
 import { RuntimeModeAvailabilityHint } from "./chat/RuntimeModeAvailabilityHint";
 import { useStore } from "../store";
 import { createProjectSelector, createThreadSelector } from "../storeSelectors";
@@ -48,7 +48,7 @@ import {
   EnvironmentRowChevron,
 } from "./chat/environment/EnvironmentRow";
 import type { ContextWindowSnapshot } from "../lib/contextWindow";
-import { ProviderUsagePanelContent } from "./ProviderUsagePanelContent";
+import { EngineUsagePanelContent } from "./EngineUsagePanelContent";
 import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
 import { Button } from "./ui/button";
 import { Collapsible, CollapsiblePanel } from "./ui/collapsible";
@@ -113,7 +113,7 @@ function RuntimeModeMenuItem({
   mode: RuntimeMode;
   icon: ReactNode;
   accent?: boolean;
-  capability?: ProviderExecutionCapabilities["runtimeModes"][RuntimeMode] | undefined;
+  capability?: EngineExecutionCapabilities["runtimeModes"][RuntimeMode] | undefined;
   capabilityResolution?: "pending" | "failed" | "resolved";
 }) {
   const { t } = useI18n();
@@ -184,7 +184,7 @@ export interface BranchToolbarProps {
 }
 
 export interface RuntimeUsageControlsProps {
-  modelSelection?: ModelSelection | null | undefined;
+  engineSelection?: EngineSelection | null | undefined;
   runtimeMode?: RuntimeMode | undefined;
   onRuntimeModeChange?: ((mode: RuntimeMode) => void) | undefined;
   contextWindow?: ContextWindowSnapshot | null | undefined;
@@ -199,7 +199,7 @@ export interface RuntimeUsageControlsProps {
 }
 
 export function RuntimeUsageControls({
-  modelSelection,
+  engineSelection,
   runtimeMode,
   onRuntimeModeChange,
   className,
@@ -207,10 +207,10 @@ export function RuntimeUsageControls({
 }: RuntimeUsageControlsProps) {
   const { t } = useI18n();
   const executionCapabilitiesQuery = useQuery({
-    ...providerExecutionCapabilitiesQueryOptions(
-      modelSelection ?? { provider: "oa", model: "default" },
+    ...engineExecutionCapabilitiesQueryOptions(
+      engineSelection ?? { engine: "oa", model: "default" },
     ),
-    enabled: modelSelection !== undefined,
+    enabled: engineSelection !== undefined,
   });
   const executionCapabilities = executionCapabilitiesQuery.data;
   const capabilityResolution = executionCapabilitiesQuery.isPending
@@ -372,7 +372,7 @@ export default function BranchToolbar({
     ? (serverThread.workingDirectory ?? null)
     : (draftThread?.workingDirectory ?? null);
   const activeProvider =
-    serverThread?.session?.provider ?? serverThread?.modelSelection.provider ?? null;
+    serverThread?.session?.engine ?? serverThread?.engineSelection.engine ?? null;
   const usesFixedLocalWorkspace = fixedLocalWorkspaceCwd !== undefined;
   const branchCwd = usesFixedLocalWorkspace
     ? fixedLocalWorkspaceCwd
@@ -534,7 +534,7 @@ export default function BranchToolbar({
   const showEnvPicker = effectiveEnvMode === "local" || canSwitchToLocal;
 
   const usageSummary = useAccountCapacity({
-    provider: activeProvider,
+    engine: activeProvider,
   });
   const [rateLimitsOpen, setRateLimitsOpen] = useState(true);
   const [envPickerOpen, setEnvPickerOpen] = useState(false);
@@ -653,8 +653,8 @@ export default function BranchToolbar({
                   />
                 </MenuItem>
                 <CollapsiblePanel>
-                  <ProviderUsagePanelContent
-                    provider={activeProvider}
+                  <EngineUsagePanelContent
+                    engine={activeProvider}
                     rateLimits={usageSummary.rateLimits}
                     usageLines={usageSummary.usageLines}
                     notice={usageSummary.usageNotice}

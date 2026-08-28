@@ -1,13 +1,13 @@
 import "../../index.css";
 
 import {
-  type ModelSelection,
+  type EngineSelection,
   ClaudeModelOptions,
   CodexModelOptions,
   type CursorModelOptions,
   DEFAULT_MODEL_BY_PROVIDER,
   type OpenCodeModelOptions,
-  type ProviderModelDescriptor,
+  type EngineModelDescriptor,
   ProjectId,
   ThreadId,
 } from "@harnessos/contracts";
@@ -39,16 +39,16 @@ const CLAUDE_THREAD_ID = ThreadId.makeUnsafe("thread-claude-traits");
 
 function ClaudeTraitsPickerHarness(props: {
   model: string;
-  fallbackModelSelection: ModelSelection | null;
+  fallbackEngineSelection: EngineSelection | null;
 }) {
   const prompt = useComposerThreadDraft(CLAUDE_THREAD_ID).prompt;
   const setPrompt = useComposerDraftStore((store) => store.setPrompt);
   const { modelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId: CLAUDE_THREAD_ID,
     selectedProvider: "claude",
-    threadModelSelection: props.fallbackModelSelection,
-    projectModelSelection: null,
-    customModelsByProvider: {
+    threadEngineSelection: props.fallbackEngineSelection,
+    projectEngineSelection: null,
+    customModelsByEngine: {
       oa: [],
       codex: [],
       claude: [],
@@ -60,7 +60,7 @@ function ClaudeTraitsPickerHarness(props: {
       opencode: [],
       pi: [],
     },
-    availableModelOptionsByProvider: {
+    availableModelOptionsByEngine: {
       claude: [{ slug: props.model, name: props.model }],
     },
   });
@@ -70,7 +70,7 @@ function ClaudeTraitsPickerHarness(props: {
 
   return (
     <TraitsPicker
-      provider="claude"
+      engine="claude"
       threadId={CLAUDE_THREAD_ID}
       model={selectedModel ?? props.model}
       prompt={prompt}
@@ -111,11 +111,11 @@ async function mountClaudePicker(props?: {
       skills: [],
       mentions: [],
       queuedTurns: [],
-      modelSelectionByProvider: props?.skipDraftModelOptions
+      engineSelectionByEngine: props?.skipDraftModelOptions
         ? {}
         : {
             claude: {
-              provider: "claude",
+              engine: "claude",
               model,
               ...(claudeOptions && Object.keys(claudeOptions).length > 0
                 ? { options: claudeOptions }
@@ -134,16 +134,16 @@ async function mountClaudePicker(props?: {
   });
   const host = document.createElement("div");
   document.body.append(host);
-  const fallbackModelSelection =
+  const fallbackEngineSelection =
     props?.fallbackModelOptions !== undefined
       ? ({
-          provider: "claude",
+          engine: "claude",
           model,
           options: props.fallbackModelOptions ?? undefined,
-        } satisfies ModelSelection)
+        } satisfies EngineSelection)
       : null;
   const screen = await render(
-    <ClaudeTraitsPickerHarness model={model} fallbackModelSelection={fallbackModelSelection} />,
+    <ClaudeTraitsPickerHarness model={model} fallbackEngineSelection={fallbackEngineSelection} />,
     { container: host },
   );
 
@@ -165,7 +165,7 @@ describe("TraitsPicker (Claude)", () => {
       draftsByThreadId: {},
       draftThreadsByThreadId: {},
       projectDraftThreadIdByProjectId: {},
-      stickyModelSelectionByProvider: {},
+      stickyEngineSelectionByEngine: {},
     });
   });
 
@@ -302,8 +302,8 @@ describe("TraitsPicker (Claude)", () => {
     await page.getByRole("button").click();
     await page.getByRole("menuitemradio", { name: "Max" }).click();
 
-    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.claude).toMatchObject({
-      provider: "claude",
+    expect(useComposerDraftStore.getState().stickyEngineSelectionByEngine.claude).toMatchObject({
+      engine: "claude",
       options: {
         effort: "max",
       },
@@ -332,8 +332,8 @@ describe("TraitsPicker (Claude)", () => {
 
     // A 1M thread can grow far beyond the normal compaction point: keep the explicit
     // thread choice, but never leak it into sticky defaults for future threads.
-    const sticky = useComposerDraftStore.getState().stickyModelSelectionByProvider.claude;
-    expect(sticky?.provider === "claude" ? sticky.options?.autoCompactWindow : undefined).toBe(
+    const sticky = useComposerDraftStore.getState().stickyEngineSelectionByEngine.claude;
+    expect(sticky?.engine === "claude" ? sticky.options?.autoCompactWindow : undefined).toBe(
       undefined,
     );
   });
@@ -360,9 +360,9 @@ async function mountCodexPicker(props: { model?: string; options?: CodexModelOpt
       skills: [],
       mentions: [],
       queuedTurns: [],
-      modelSelectionByProvider: {
+      engineSelectionByEngine: {
         codex: {
-          provider: "codex",
+          engine: "codex",
           model,
           ...(props.options ? { options: props.options } : {}),
         },
@@ -384,7 +384,7 @@ async function mountCodexPicker(props: { model?: string; options?: CodexModelOpt
   document.body.append(host);
   const screen = await render(
     <TraitsPicker
-      provider="codex"
+      engine="codex"
       threadId={threadId}
       model={props.model ?? DEFAULT_MODEL_BY_PROVIDER.codex}
       prompt=""
@@ -413,7 +413,7 @@ describe("TraitsPicker (Codex)", () => {
       draftsByThreadId: {},
       draftThreadsByThreadId: {},
       projectDraftThreadIdByProjectId: {},
-      stickyModelSelectionByProvider: {},
+      stickyEngineSelectionByEngine: {},
     });
   });
 
@@ -486,8 +486,8 @@ describe("TraitsPicker (Codex)", () => {
     await page.getByRole("button").click();
     await page.getByRole("menuitemcheckbox", { name: "Fast mode" }).click();
 
-    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.codex).toMatchObject({
-      provider: "codex",
+    expect(useComposerDraftStore.getState().stickyEngineSelectionByEngine.codex).toMatchObject({
+      engine: "codex",
       options: { fastMode: true },
     });
 
@@ -515,8 +515,8 @@ describe("TraitsPicker (Codex)", () => {
     await expect.poll(() => document.activeElement === fastItem.element()).toBe(true);
     await userEvent.keyboard(" ");
 
-    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.codex).toMatchObject({
-      provider: "codex",
+    expect(useComposerDraftStore.getState().stickyEngineSelectionByEngine.codex).toMatchObject({
+      engine: "codex",
       options: { fastMode: true },
     });
     await expect.element(fastItem).toBeVisible();
@@ -526,7 +526,7 @@ describe("TraitsPicker (Codex)", () => {
 // ── Cursor TraitsPicker tests ─────────────────────────────────────────
 
 async function mountCursorPicker(props: {
-  runtimeModel: ProviderModelDescriptor;
+  runtimeModel: EngineModelDescriptor;
   options?: CursorModelOptions;
 }) {
   const threadId = ThreadId.makeUnsafe("thread-cursor-traits");
@@ -535,7 +535,7 @@ async function mountCursorPicker(props: {
   const screen = await render(
     <I18nProvider>
       <TraitsPicker
-        provider="cursor"
+        engine="cursor"
         threadId={threadId}
         model={props.runtimeModel.slug}
         runtimeModel={props.runtimeModel}
@@ -563,7 +563,7 @@ describe("TraitsPicker (Cursor)", () => {
     document.body.innerHTML = "";
   });
 
-  const fastOnlyComposerRuntimeModel: ProviderModelDescriptor = {
+  const fastOnlyComposerRuntimeModel: EngineModelDescriptor = {
     slug: "composer-2[fast=false]",
     name: "Composer 2",
     supportsFastMode: true,
@@ -663,7 +663,7 @@ describe("TraitsPicker (Cursor)", () => {
 // ── OpenCode TraitsPicker tests ───────────────────────────────────────
 
 const OPENCODE_THREAD_ID = ThreadId.makeUnsafe("thread-opencode-traits");
-const OPENCODE_RUNTIME_MODEL_WITH_REASONING: ProviderModelDescriptor = {
+const OPENCODE_RUNTIME_MODEL_WITH_REASONING: EngineModelDescriptor = {
   slug: "openai/gpt-5.4",
   name: "GPT-5.4",
   upstreamProviderId: "openai",
@@ -678,7 +678,7 @@ const OPENCODE_RUNTIME_MODEL_WITH_REASONING: ProviderModelDescriptor = {
   defaultReasoningEffort: "medium",
 };
 
-const OPENCODE_RUNTIME_MODEL_WITHOUT_DEFAULT: ProviderModelDescriptor = {
+const OPENCODE_RUNTIME_MODEL_WITHOUT_DEFAULT: EngineModelDescriptor = {
   slug: "opencode/gpt-5-nano",
   name: "GPT-5 Nano",
   upstreamProviderId: "opencode",
@@ -693,8 +693,8 @@ const OPENCODE_RUNTIME_MODEL_WITHOUT_DEFAULT: ProviderModelDescriptor = {
 
 function OpenCodeTraitsPickerHarness(props: {
   model: string;
-  runtimeModel?: ProviderModelDescriptor;
-  fallbackModelSelection: ModelSelection | null;
+  runtimeModel?: EngineModelDescriptor;
+  fallbackEngineSelection: EngineSelection | null;
   shortcutLabel?: string;
 }) {
   const prompt = useComposerThreadDraft(OPENCODE_THREAD_ID).prompt;
@@ -702,9 +702,9 @@ function OpenCodeTraitsPickerHarness(props: {
   const { modelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId: OPENCODE_THREAD_ID,
     selectedProvider: "opencode",
-    threadModelSelection: props.fallbackModelSelection,
-    projectModelSelection: null,
-    customModelsByProvider: {
+    threadEngineSelection: props.fallbackEngineSelection,
+    projectEngineSelection: null,
+    customModelsByEngine: {
       oa: [],
       codex: [],
       claude: [],
@@ -716,7 +716,7 @@ function OpenCodeTraitsPickerHarness(props: {
       opencode: [],
       pi: [],
     },
-    availableModelOptionsByProvider: {
+    availableModelOptionsByEngine: {
       opencode: [{ slug: props.model, name: props.model }],
     },
   });
@@ -726,7 +726,7 @@ function OpenCodeTraitsPickerHarness(props: {
 
   return (
     <TraitsPicker
-      provider="opencode"
+      engine="opencode"
       threadId={OPENCODE_THREAD_ID}
       model={selectedModel ?? props.model}
       runtimeModel={props.runtimeModel}
@@ -741,7 +741,7 @@ function OpenCodeTraitsPickerHarness(props: {
 async function mountOpenCodePicker(props?: {
   model?: string;
   options?: OpenCodeModelOptions;
-  runtimeModel?: ProviderModelDescriptor;
+  runtimeModel?: EngineModelDescriptor;
   fallbackModelOptions?: OpenCodeModelOptions | null;
   shortcutLabel?: string;
   locale?: "en" | "zh-CN";
@@ -764,9 +764,9 @@ async function mountOpenCodePicker(props?: {
       queuedTurns: [],
       assistantSelections: [],
       browserAnnotations: [],
-      modelSelectionByProvider: {
+      engineSelectionByEngine: {
         opencode: {
-          provider: "opencode",
+          engine: "opencode",
           model,
           ...(props?.options ? { options: props.options } : {}),
         },
@@ -784,8 +784,8 @@ async function mountOpenCodePicker(props?: {
   });
   const host = document.createElement("div");
   document.body.append(host);
-  const fallbackModelSelection: ModelSelection = {
-    provider: "opencode",
+  const fallbackEngineSelection: EngineSelection = {
+    engine: "opencode",
     model,
     ...(props?.fallbackModelOptions ? { options: props.fallbackModelOptions } : {}),
   };
@@ -795,7 +795,7 @@ async function mountOpenCodePicker(props?: {
         model={model}
         {...(props?.runtimeModel ? { runtimeModel: props.runtimeModel } : {})}
         {...(props?.shortcutLabel ? { shortcutLabel: props.shortcutLabel } : {})}
-        fallbackModelSelection={fallbackModelSelection}
+        fallbackEngineSelection={fallbackEngineSelection}
       />
     </I18nProvider>,
     { container: host },
@@ -821,7 +821,7 @@ describe("TraitsPicker (OpenCode)", () => {
       draftsByThreadId: {},
       draftThreadsByThreadId: {},
       projectDraftThreadIdByProjectId: {},
-      stickyModelSelectionByProvider: {},
+      stickyEngineSelectionByEngine: {},
     });
     i18nHarness.settings.localePreference = "en";
   });
@@ -892,8 +892,8 @@ describe("TraitsPicker (OpenCode)", () => {
 
     await page.getByRole("menuitemradio", { name: /^High$/u }).click();
 
-    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.opencode).toMatchObject({
-      provider: "opencode",
+    expect(useComposerDraftStore.getState().stickyEngineSelectionByEngine.opencode).toMatchObject({
+      engine: "opencode",
       options: {
         variant: "high",
       },
@@ -912,7 +912,7 @@ describe("TraitsPicker (OpenCode)", () => {
     const screen = await render(
       <I18nProvider>
         <TraitsPicker
-          provider="kilo"
+          engine="kilo"
           threadId={ThreadId.makeUnsafe("thread-kilo-options-a11y")}
           model="kilo/kilo-auto/free"
           runtimeAgents={[
@@ -952,20 +952,20 @@ describe("TraitsPicker (OpenCode)", () => {
 
 describe("TraitsPicker (Pi-backed thinking)", () => {
   it.each([
-    { provider: "pi", locale: "en", trigger: "Options", label: "Thinking level" },
-    { provider: "oa", locale: "en", trigger: "Options", label: "Thinking level" },
-    { provider: "pi", locale: "zh-CN", trigger: "选项", label: "思考强度" },
-    { provider: "oa", locale: "zh-CN", trigger: "选项", label: "思考强度" },
-  ] as const)("labels $provider native options truthfully in $locale", async (testCase) => {
+    { engine: "pi", locale: "en", trigger: "Options", label: "Thinking level" },
+    { engine: "oa", locale: "en", trigger: "Options", label: "Thinking level" },
+    { engine: "pi", locale: "zh-CN", trigger: "选项", label: "思考强度" },
+    { engine: "oa", locale: "zh-CN", trigger: "选项", label: "思考强度" },
+  ] as const)("labels $engine native options truthfully in $locale", async (testCase) => {
     i18nHarness.settings.localePreference = testCase.locale;
     const host = document.createElement("div");
     document.body.append(host);
-    const model = `${testCase.provider}/thinking-model`;
+    const model = `${testCase.engine}/thinking-model`;
     const screen = await render(
       <I18nProvider>
         <TraitsPicker
-          provider={testCase.provider}
-          threadId={ThreadId.makeUnsafe(`thread-${testCase.provider}-${testCase.locale}`)}
+          engine={testCase.engine}
+          threadId={ThreadId.makeUnsafe(`thread-${testCase.engine}-${testCase.locale}`)}
           model={model}
           runtimeModel={{
             slug: model,

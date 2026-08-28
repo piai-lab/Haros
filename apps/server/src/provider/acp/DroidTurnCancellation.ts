@@ -1,6 +1,6 @@
 // FILE: DroidTurnCancellation.ts
 // Purpose: Sends ACP turn cancellation, waits for the prompt response, then escalates if needed.
-// Layer: Provider ACP lifecycle coordination
+// Layer: Engine ACP lifecycle coordination
 
 import { Cause, Effect, Exit, Fiber, Option } from "effect";
 

@@ -7,7 +7,7 @@ import {
   encodeDiagnosticCursor,
 } from "./diagnosticCursor.ts";
 import { sanitizeDiagnosticValue } from "./diagnosticSanitizer.ts";
-import { registerProviderCredentialKey } from "../providerChildEnvironment.ts";
+import { registerEngineCredentialKey } from "../providerChildEnvironment.ts";
 import { shapeDiagnosticEvents } from "./threadDiagnosticSummary.ts";
 
 describe("diagnostic cursor", () => {
@@ -135,7 +135,7 @@ describe("diagnostic sanitizer", () => {
   });
 
   it("redacts typed environment maps, tuples, and name/value records", () => {
-    registerProviderCredentialKey("ACME-LICENSE");
+    registerEngineCredentialKey("ACME-LICENSE");
     expect(
       sanitizeDiagnosticValue({
         env: {

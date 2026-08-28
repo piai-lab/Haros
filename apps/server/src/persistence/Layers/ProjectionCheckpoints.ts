@@ -97,7 +97,7 @@ const makeProjectionCheckpointRepository = Effect.gen(function* () {
           completed_at AS "completedAt"
         FROM projection_turns
         -- Checkpoint repository rows expose the completed checkpoint contract;
-        -- provider-diff placeholders remain readable through ProjectionTurns.
+        -- engine-diff placeholders remain readable through ProjectionTurns.
         WHERE thread_id = ${threadId}
           AND checkpoint_turn_count IS NOT NULL
           AND completed_at IS NOT NULL
@@ -120,7 +120,7 @@ const makeProjectionCheckpointRepository = Effect.gen(function* () {
           assistant_message_id AS "assistantMessageId",
           completed_at AS "completedAt"
         FROM projection_turns
-        -- Incomplete provider-diff placeholders do not satisfy ProjectionCheckpoint.
+        -- Incomplete engine-diff placeholders do not satisfy ProjectionCheckpoint.
         WHERE thread_id = ${threadId}
           AND checkpoint_turn_count = ${checkpointTurnCount}
           AND completed_at IS NOT NULL

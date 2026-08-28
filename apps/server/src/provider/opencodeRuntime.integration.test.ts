@@ -1,6 +1,6 @@
 // FILE: opencodeRuntime.test.ts
 // Purpose: Covers OpenCode runtime parsing and local server startup diagnostics.
-// Layer: Provider runtime tests
+// Layer: Engine runtime tests
 // Exports: Vitest suites for opencodeRuntime.ts
 
 import os from "node:os";
@@ -213,23 +213,23 @@ describe("buildOpenCodeServerProcessEnv", () => {
   it("preserves an explicitly configured config-content environment value", () => {
     const env = buildOpenCodeServerProcessEnv({
       baseEnv: {
-        OPENCODE_CONFIG_CONTENT: '{"provider":{"openai":{}}}',
+        OPENCODE_CONFIG_CONTENT: '{"engine":{"openai":{}}}',
       },
     });
 
-    expect(env.OPENCODE_CONFIG_CONTENT).toBe('{"provider":{"openai":{}}}');
+    expect(env.OPENCODE_CONFIG_CONTENT).toBe('{"engine":{"openai":{}}}');
   });
 
   it("strips inherited OmniMind authority from managed server processes", () => {
     const env = buildOpenCodeServerProcessEnv({
       baseEnv: {
-        OPENAI_API_KEY: "provider-key",
+        OPENAI_API_KEY: "engine-key",
         HARNESSOS_AUTH_TOKEN: "server-secret",
         HARNESSOS_BROWSER_HOST_PIPE_PATH: "/tmp/browser.sock",
       },
     });
 
-    expect(env.OPENAI_API_KEY).toBe("provider-key");
+    expect(env.OPENAI_API_KEY).toBe("engine-key");
     expect(env.HARNESSOS_AUTH_TOKEN).toBeUndefined();
     expect(env.HARNESSOS_BROWSER_HOST_PIPE_PATH).toBeUndefined();
   });
@@ -317,7 +317,7 @@ describe("OpenCodeRuntime startup diagnostics", () => {
             Layer.provide(
               mockOpenCodeServerSpawnerLayer({
                 stdout: "booting custom OpenCode wrapper\n",
-                stderr: "loading provider credentials\n",
+                stderr: "loading engine credentials\n",
               }),
             ),
           ),
@@ -332,7 +332,7 @@ describe("OpenCodeRuntime startup diagnostics", () => {
     );
     expect(error.detail).toContain('OpenCode ready prefix: "opencode server listening"');
     expect(error.detail).toContain("stdout:\nbooting custom OpenCode wrapper");
-    expect(error.detail).toContain("stderr:\nloading provider credentials");
+    expect(error.detail).toContain("stderr:\nloading engine credentials");
   });
 
   it("redacts likely secrets from startup timeout diagnostics and causes", async () => {
@@ -1037,7 +1037,7 @@ amazon-bedrock/nova-reel
 });
 
 describe("parseOpenCodeCredentialProviderIDs", () => {
-  it("returns top-level provider ids from the OpenCode credential store", () => {
+  it("returns top-level engine ids from the OpenCode credential store", () => {
     const providerIDs = parseOpenCodeCredentialProviderIDs(`{
   "openai": {
     "type": "oauth"

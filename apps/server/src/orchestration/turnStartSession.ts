@@ -1,33 +1,33 @@
 import type {
-  ModelSelection,
+  EngineSelection,
   OrchestrationSession,
-  ProviderInteractionMode,
+  EngineInteractionMode,
   RuntimeMode,
   ThreadId,
 } from "@harnessos/contracts";
 import { Equal } from "effect";
 
-export function deriveTurnStartModelSelection(input: {
-  readonly currentModelSelection: ModelSelection;
-  readonly requestedModelSelection: ModelSelection | undefined;
+export function deriveTurnStartEngineSelection(input: {
+  readonly currentEngineSelection: EngineSelection;
+  readonly requestedEngineSelection: EngineSelection | undefined;
   readonly canAdoptRequestedProvider: boolean;
-}): ModelSelection {
-  const requestedModelSelection = input.requestedModelSelection;
-  return requestedModelSelection !== undefined &&
-    (requestedModelSelection.provider === input.currentModelSelection.provider ||
+}): EngineSelection {
+  const requestedEngineSelection = input.requestedEngineSelection;
+  return requestedEngineSelection !== undefined &&
+    (requestedEngineSelection.engine === input.currentEngineSelection.engine ||
       input.canAdoptRequestedProvider)
-    ? requestedModelSelection
-    : input.currentModelSelection;
+    ? requestedEngineSelection
+    : input.currentEngineSelection;
 }
 
 export function shouldDeferTurnStartBindingProjection(input: {
-  readonly currentModelSelection: ModelSelection;
+  readonly currentEngineSelection: EngineSelection;
   readonly currentRuntimeMode: RuntimeMode;
-  readonly currentInteractionMode: ProviderInteractionMode;
+  readonly currentInteractionMode: EngineInteractionMode;
   readonly currentSession: OrchestrationSession | null;
-  readonly requestedModelSelection: ModelSelection | undefined;
+  readonly requestedEngineSelection: EngineSelection | undefined;
   readonly requestedRuntimeMode: RuntimeMode;
-  readonly requestedInteractionMode: ProviderInteractionMode;
+  readonly requestedInteractionMode: EngineInteractionMode;
   readonly canAdoptRequestedProvider: boolean;
 }): boolean {
   if (input.canAdoptRequestedProvider || input.currentSession === null) {
@@ -35,23 +35,23 @@ export function shouldDeferTurnStartBindingProjection(input: {
   }
 
   return (
-    (input.requestedModelSelection !== undefined &&
-      !Equal.equals(input.requestedModelSelection, input.currentModelSelection)) ||
+    (input.requestedEngineSelection !== undefined &&
+      !Equal.equals(input.requestedEngineSelection, input.currentEngineSelection)) ||
     input.requestedRuntimeMode !== input.currentRuntimeMode ||
     input.requestedInteractionMode !== input.currentInteractionMode
   );
 }
 
 export function turnStartBindingMatchesCommitted(input: {
-  readonly currentModelSelection: ModelSelection;
+  readonly currentEngineSelection: EngineSelection;
   readonly currentRuntimeMode: RuntimeMode;
-  readonly currentInteractionMode: ProviderInteractionMode;
-  readonly requestedModelSelection: ModelSelection;
+  readonly currentInteractionMode: EngineInteractionMode;
+  readonly requestedEngineSelection: EngineSelection;
   readonly requestedRuntimeMode: RuntimeMode;
-  readonly requestedInteractionMode: ProviderInteractionMode;
+  readonly requestedInteractionMode: EngineInteractionMode;
 }): boolean {
   return (
-    Equal.equals(input.currentModelSelection, input.requestedModelSelection) &&
+    Equal.equals(input.currentEngineSelection, input.requestedEngineSelection) &&
     input.currentRuntimeMode === input.requestedRuntimeMode &&
     input.currentInteractionMode === input.requestedInteractionMode
   );

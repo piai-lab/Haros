@@ -36,7 +36,7 @@ describe("099_BackfillAutomationRunThreadSource", () => {
         ) VALUES
           (
             'dedicated-automation', 'project-1', 'Dedicated', 'Prompt', '{"type":"manual"}', 1,
-            '{"provider":"codex","model":"gpt-5-codex"}', 'approval-required',
+            '{"engine":"codex","model":"gpt-5-codex"}', 'approval-required',
             'default', 'auto', 'dedicated', ${dedicatedThreadId}, 1, '{"type":"none"}', 0,
             60, '{"type":"none"}', 'coalesce', '[]', 0,
             '2026-08-01T10:00:00.000Z', '2026-08-01T10:00:00.000Z'
@@ -44,7 +44,7 @@ describe("099_BackfillAutomationRunThreadSource", () => {
           (
             'null-target-automation', 'project-1', 'Null target', 'Prompt',
             '{"type":"manual"}', 1,
-            '{"provider":"codex","model":"gpt-5-codex"}', 'approval-required',
+            '{"engine":"codex","model":"gpt-5-codex"}', 'approval-required',
             'default', 'auto', 'standalone', NULL, 1, '{"type":"none"}', 0,
             60, '{"type":"none"}', 'coalesce', '[]', 0,
             '2026-08-01T10:00:00.000Z', '2026-08-01T10:00:00.000Z'

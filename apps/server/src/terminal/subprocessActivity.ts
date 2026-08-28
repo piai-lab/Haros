@@ -1,5 +1,5 @@
 // FILE: subprocessActivity.ts
-// Purpose: Detects subprocess and coding-provider activity below terminal PTY processes.
+// Purpose: Detects subprocess and coding-engine activity below terminal PTY processes.
 // Layer: Terminal infrastructure
 
 import path from "node:path";
@@ -19,7 +19,7 @@ export interface TerminalSubprocessActivity {
   cliKind: TerminalCliKind | null;
   hasRunningSubprocess: boolean;
   hasProviderDescendant: boolean;
-  hasNonProviderSubprocess: boolean;
+  hasNonEngineSubprocess: boolean;
 }
 
 const SHELL_LIKE_PROCESS_NAMES = new Set([
@@ -43,7 +43,7 @@ const SHELL_LIKE_PROCESS_NAMES = new Set([
 function emptySubprocessActivity(): TerminalSubprocessActivity {
   return {
     cliKind: null,
-    hasNonProviderSubprocess: false,
+    hasNonEngineSubprocess: false,
     hasProviderDescendant: false,
     hasRunningSubprocess: false,
   };
@@ -83,10 +83,10 @@ function includeChildActivity(
       activity.hasProviderDescendant ||
       childCliKind !== null ||
       nestedActivity.hasProviderDescendant,
-    hasNonProviderSubprocess:
-      activity.hasNonProviderSubprocess ||
+    hasNonEngineSubprocess:
+      activity.hasNonEngineSubprocess ||
       (!childCliKind && !isShellLike) ||
-      nestedActivity.hasNonProviderSubprocess,
+      nestedActivity.hasNonEngineSubprocess,
     hasRunningSubprocess:
       activity.hasRunningSubprocess || !isShellLike || nestedActivity.hasRunningSubprocess,
   };
@@ -177,7 +177,7 @@ async function checkPosixSubprocessActivityByTreeWalk(
     if (visited >= POSIX_SUBPROCESS_TREE_WALK_MAX_VISITED) {
       return {
         cliKind: null,
-        hasNonProviderSubprocess: true,
+        hasNonEngineSubprocess: true,
         hasProviderDescendant: false,
         hasRunningSubprocess: true,
       };

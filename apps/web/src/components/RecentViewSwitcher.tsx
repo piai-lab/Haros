@@ -16,7 +16,7 @@ import {
 import { cn } from "../lib/utils";
 import { useI18n } from "../i18n";
 import type { RecentViewDisplayEntry } from "../recentViews.logic";
-import { ProviderIcon } from "./ProviderIcon";
+import { EngineIcon } from "./EngineIcon";
 import TerminalIdentityIcon from "./terminal/TerminalIdentityIcon";
 import { Kbd } from "./ui/kbd";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
@@ -71,8 +71,8 @@ function EntryIcon(props: { entry: RecentViewDisplayEntry }) {
   switch (props.entry.icon.kind) {
     case "terminal":
       return <TerminalIdentityIcon className={className} iconKey={props.entry.icon.iconKey} />;
-    case "provider":
-      return <ProviderIcon provider={props.entry.icon.provider} className={className} />;
+    case "engine":
+      return <EngineIcon engine={props.entry.icon.engine} className={className} />;
     case "chat":
       return <MessageCircleIcon className={className} aria-hidden="true" />;
     case "settings":

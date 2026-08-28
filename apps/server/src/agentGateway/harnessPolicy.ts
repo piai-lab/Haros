@@ -1,6 +1,6 @@
 import type { BuiltInToolGroupId } from "@harnessos/contracts";
 
-/** Canonical, versioned host policy delivered to every supported provider. */
+/** Canonical, versioned host policy delivered to every supported engine. */
 export const HARNESSOS_HARNESS_POLICY_VERSION = "2026-08-21.1";
 export const HARNESSOS_HARNESS_POLICY_MARKER = `[OmniMind harness policy ${HARNESSOS_HARNESS_POLICY_VERSION}]`;
 
@@ -13,8 +13,8 @@ export interface OmniMindHarnessCapabilities {
 }
 
 const TASKS_GROUP_GUIDANCE = [
-  "Provider-native subagent or Task tools are implementation details: they do not create OmniMind threads and must not substitute for an explicit request to create OmniMind threads.",
-  "Use the exposed capability metadata instead of guessing provider, model, option, project, or thread identifiers.",
+  "Engine-native subagent or Task tools are implementation details: they do not create OmniMind threads and must not substitute for an explicit request to create OmniMind threads.",
+  "Use the exposed capability metadata instead of guessing engine, model, option, project, or thread identifiers.",
 ];
 
 const AUTOMATIONS_GROUP_GUIDANCE = [
@@ -49,7 +49,7 @@ export function renderAgentGatewayDirectToolGuidance(
   return directControlPolicy(new Set(enabledGroups)).join("\n");
 }
 
-/** Compact native-MCP guidance; full schemas remain the provider's direct tool surface. */
+/** Compact native-MCP guidance; full schemas remain the engine's direct tool surface. */
 export function renderAgentGatewayMcpInstructions(
   enabledGroups: ReadonlyArray<BuiltInToolGroupId>,
 ): string {
@@ -61,11 +61,11 @@ export function renderAgentGatewayMcpInstructions(
     browser: "Browser",
     device: "Device",
   };
-  return `OmniMind tools are thread-scoped; use only tools exposed in this provider session. Enabled groups: ${enabledGroups.map((group) => labels[group]).join(", ")}. Follow each tool schema and current authorization.`;
+  return `OmniMind tools are thread-scoped; use only tools exposed in this engine session. Enabled groups: ${enabledGroups.map((group) => labels[group]).join(", ")}. Follow each tool schema and current authorization.`;
 }
 
 /**
- * Render one truthful policy. Providers without a safely thread-scoped MCP
+ * Render one truthful policy. Engines without a safely thread-scoped MCP
  * connection still receive host identity, but are never told they can mutate
  * OmniMind resources.
  */
@@ -76,12 +76,12 @@ export function renderOmniMindHarnessPolicy(capabilities: OmniMindHarnessCapabil
   };
   const controlPolicy = capabilities.gatewayControlAvailable
     ? [
-        "Use only the OmniMind tools actually available in this provider session; their native tool definitions and server guidance are authoritative.",
+        "Use only the OmniMind tools actually available in this engine session; their native tool definitions and server guidance are authoritative.",
         ...directControlPolicy(new Set(projection.enabledGroups)),
       ]
     : [
-        "OmniMind MCP control is unavailable in this provider session. Do not claim that OmniMind threads, projects, or automations were created or changed.",
-        "Provider-native subagent or Task tools do not create OmniMind threads. If the user explicitly requests OmniMind resource management, explain that this session cannot perform it.",
+        "OmniMind MCP control is unavailable in this engine session. Do not claim that OmniMind threads, projects, or automations were created or changed.",
+        "Engine-native subagent or Task tools do not create OmniMind threads. If the user explicitly requests OmniMind resource management, explain that this session cannot perform it.",
       ];
 
   return [
@@ -105,7 +105,7 @@ export interface OmniMindHarnessPolicyDeliveryState {
   harnessPolicyDelivered?: boolean | undefined;
 }
 
-/** Return the private host-context block exactly once for one provider session. */
+/** Return the private host-context block exactly once for one engine session. */
 export function takeOmniMindHarnessPolicyForSession(
   state: OmniMindHarnessPolicyDeliveryState,
   capabilities: OmniMindHarnessCapabilities,

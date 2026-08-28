@@ -47,7 +47,7 @@ function record(): QuitResumeRecord {
         threadId: ThreadId.makeUnsafe("thread-1"),
         activeTurnId: TurnId.makeUnsafe("turn-1"),
         binding: {
-          modelSelection: { provider: "codex", model: "gpt-5.4" },
+          engineSelection: { engine: "codex", model: "gpt-5.4" },
           assistantDeliveryMode: "buffered",
           runtimeMode: "approval-required",
           interactionMode: "default",
@@ -151,7 +151,7 @@ describe("quit resume one-shot record", () => {
     }
   });
 
-  it("reads the exact turn admission and strips private provider locations", async () => {
+  it("reads the exact turn admission and strips private engine locations", async () => {
     const rawProviderOptions = {
       codex: { binaryPath: "/private/codex", homePath: "/private/provider-home" },
       claude: {
@@ -168,12 +168,12 @@ describe("quit resume one-shot record", () => {
       payload: {
         threadId: ThreadId.makeUnsafe("thread-1"),
         messageId: "message-1",
-        modelSelection: {
-          provider: "claude",
+        engineSelection: {
+          engine: "claude",
           model: "claude-opus-4-1",
           options: { thinking: true, effort: "max" },
         },
-        providerOptions: rawProviderOptions,
+        engineOptions: rawProviderOptions,
         reviewTarget: { type: "baseBranch", branch: "main" },
         assistantDeliveryMode: "streaming",
         runtimeMode: "approval-required",
@@ -187,12 +187,12 @@ describe("quit resume one-shot record", () => {
     } as unknown as OrchestrationEventStoreShape;
 
     await expect(readExactQuitResumeBinding(eventStore, runningThread())).resolves.toEqual({
-      modelSelection: {
-        provider: "claude",
+      engineSelection: {
+        engine: "claude",
         model: "claude-opus-4-1",
         options: { thinking: true, effort: "max" },
       },
-      providerOptions: {
+      engineOptions: {
         claude: { permissionMode: "default", maxThinkingTokens: 24_000 },
       },
       reviewTarget: { type: "baseBranch", branch: "main" },
@@ -212,7 +212,7 @@ describe("quit resume one-shot record", () => {
       payload: {
         threadId: ThreadId.makeUnsafe("thread-1"),
         messageId: "message-1",
-        modelSelection: { provider: "codex", model: "gpt-5.4" },
+        engineSelection: { engine: "codex", model: "gpt-5.4" },
         assistantDeliveryMode: "streaming",
         runtimeMode: "full-access",
         interactionMode: "default",
@@ -231,7 +231,7 @@ describe("quit resume one-shot record", () => {
     });
 
     await expect(readExactQuitResumeBinding(eventStore, liveThread)).resolves.toMatchObject({
-      modelSelection: { provider: "codex", model: "gpt-5.4" },
+      engineSelection: { engine: "codex", model: "gpt-5.4" },
       runtimeMode: "full-access",
       interactionMode: "default",
     });
@@ -272,7 +272,7 @@ describe("quit resume one-shot record", () => {
         role: "user",
         text: "continue",
       },
-      modelSelection: { provider: "codex", model: "gpt-5.4" },
+      engineSelection: { engine: "codex", model: "gpt-5.4" },
       runtimeMode: "approval-required",
       interactionMode: "default",
       dispatchMode: "queue",

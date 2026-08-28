@@ -33,7 +33,7 @@ export const applyProjectMetadataProjection = (input: {
           kind: input.event.payload.kind ?? "project",
           title: input.event.payload.title,
           workspaceRoot: input.event.payload.workspaceRoot,
-          defaultModelSelection: input.event.payload.defaultModelSelection,
+          defaultEngineSelection: input.event.payload.defaultEngineSelection,
           scripts: input.event.payload.scripts,
           isPinned: input.event.payload.isPinned ?? false,
           spaceId: input.event.payload.spaceId ?? null,
@@ -57,8 +57,8 @@ export const applyProjectMetadataProjection = (input: {
             ...(input.event.payload.workspaceRoot !== undefined
               ? { workspaceRoot: input.event.payload.workspaceRoot }
               : {}),
-            ...(input.event.payload.defaultModelSelection !== undefined
-              ? { defaultModelSelection: input.event.payload.defaultModelSelection }
+            ...(input.event.payload.defaultEngineSelection !== undefined
+              ? { defaultEngineSelection: input.event.payload.defaultEngineSelection }
               : {}),
             ...(input.event.payload.scripts !== undefined
               ? { scripts: input.event.payload.scripts }

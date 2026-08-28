@@ -4,7 +4,7 @@
 // Layer: Web UI state persistence
 
 import type { ProjectId, EngineKind, ThreadId } from "@harnessos/contracts";
-import { isProviderKind } from "./providerOrdering";
+import { isProviderKind } from "./engineOrdering";
 
 const EDITOR_VIEW_STATE_STORAGE_KEY = "harnessos:editor:view-state-by-thread:v1";
 const EDITOR_RAIL_CHAT_TABS_STORAGE_KEY = "harnessos:editor:rail-chat-tabs-by-project:v1";
@@ -25,7 +25,7 @@ type PersistedEditorViewStateMap = Record<string, PersistedEditorViewState>;
 export interface EditorRailChatTabSnapshot {
   id: ThreadId;
   title: string;
-  provider: EngineKind;
+  engine: EngineKind;
 }
 
 type PersistedEditorRailChatTabsMap = Record<string, ReadonlyArray<EditorRailChatTabSnapshot>>;
@@ -94,7 +94,7 @@ function normalizeEditorRailChatTabs(
     normalized.push({
       id: tab.id,
       title: tab.title.trim() || "New thread",
-      provider: tab.provider,
+      engine: tab.engine,
     });
     if (normalized.length >= MAX_EDITOR_RAIL_CHAT_TABS) {
       break;
@@ -127,8 +127,8 @@ function readEditorRailChatTabsMap(): PersistedEditorRailChatTabsMap {
           if (
             typeof candidate.id !== "string" ||
             typeof candidate.title !== "string" ||
-            typeof candidate.provider !== "string" ||
-            !isProviderKind(candidate.provider)
+            typeof candidate.engine !== "string" ||
+            !isProviderKind(candidate.engine)
           ) {
             return [];
           }
@@ -136,7 +136,7 @@ function readEditorRailChatTabsMap(): PersistedEditorRailChatTabsMap {
             {
               id: candidate.id as ThreadId,
               title: candidate.title,
-              provider: candidate.provider,
+              engine: candidate.engine,
             },
           ];
         }),

@@ -1,6 +1,6 @@
 // FILE: KanbanNewTaskDialog.tsx
 // Purpose: Linear-style "New task" dialog — a compact composer that drafts a task
-//          (prompt + provider/model/effort + permissions + mode + environment + voice)
+//          (prompt + engine/model/effort + permissions + mode + environment + voice)
 //          and drops it into the board's Draft column. Model state is driven through
 //          a scratch composer-draft-store thread so the split model + effort/options
 //          pickers work exactly like a fresh chat composer; the project's regular
@@ -10,14 +10,14 @@
 
 import type {
   ProjectId,
-  ProviderInteractionMode,
+  EngineInteractionMode,
   EngineKind,
   RuntimeMode,
 } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { getProviderStartOptions } from "~/providerSettings";
+import { getEngineStartOptions } from "~/engineSettings";
 import { useLocalPreferences } from "~/localPreferences";
 import { useServerSettings } from "~/serverSettings";
 import { RuntimeUsageControls } from "~/components/BranchToolbar";
@@ -26,7 +26,7 @@ import {
   type ComposerPromptEditorHandle,
 } from "~/components/ComposerPromptEditor";
 import { ComposerCommandMenu } from "~/components/chat/ComposerCommandMenu";
-import { ProviderModelPicker } from "~/components/chat/ProviderModelPicker";
+import { EngineModelPicker } from "~/components/chat/EngineModelPicker";
 import { TraitsPicker } from "~/components/chat/TraitsPicker";
 import {
   ComposerLocalDirectoryMenu,
@@ -52,17 +52,17 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Switch } from "~/components/ui/switch";
-import { useProviderModelCatalog } from "~/hooks/useProviderModelCatalog";
-import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
-import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
+import { useEngineModelCatalog } from "~/hooks/useEngineModelCatalog";
+import { useRefreshProviderStatusesNow } from "~/hooks/useEngineStatusRefresh";
+import { useEngineStatusesForLocalConfig } from "~/hooks/useEngineStatusesForLocalConfig";
 import { useComposerDropzone } from "~/hooks/useComposerDropzone";
 import { toastManager } from "~/components/ui/toast";
 import { useTheme } from "~/hooks/useTheme";
 import { useI18n } from "~/i18n";
 import { ChevronRightIcon, LoaderCircleIcon, PaperclipIcon } from "~/lib/icons";
 import { formatComposerMentionToken } from "~/lib/composerMentions";
-import { findProviderStatus } from "~/lib/providerAvailability";
-import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
+import { findProviderStatus } from "~/lib/engineAvailability";
+import { resolveProviderDiscoveryCwd } from "~/lib/engineDiscovery";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
 import {
@@ -70,7 +70,7 @@ import {
   type DraftThreadEnvMode,
   useComposerDraftStore,
 } from "../../composerDraftStore";
-import { buildModelSelection } from "../../providerModelOptions";
+import { buildEngineSelection } from "../../providerModelOptions";
 import { type ExpandedImagePreview } from "../chat/ExpandedImagePreview";
 import { ExpandedImageOverlay } from "../chat/ExpandedImageOverlay";
 import { useStore } from "../../store";
@@ -116,13 +116,13 @@ export function KanbanNewTaskDialog({
   const { settings, defaults, fetchSettings } = useServerSettings();
   const settingsSnapshot = settings ?? defaults;
   const { resolvedTheme } = useTheme();
-  const providerOptionsForDispatch = useMemo(
-    () => getProviderStartOptions(settingsSnapshot),
+  const engineOptionsForDispatch = useMemo(
+    () => getEngineStartOptions(settingsSnapshot),
     [settingsSnapshot],
   );
   const projects = useStore((state) => state.projects);
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const providerStatuses = useProviderStatusesForLocalConfig();
+  const providerStatuses = useEngineStatusesForLocalConfig();
   const refreshProviderStatuses = useRefreshProviderStatusesNow();
   const composerEditorRef = useRef<ComposerPromptEditorHandle>(null);
   const localDirectoryMenuRef = useRef<ComposerLocalDirectoryMenuHandle | null>(null);
@@ -156,12 +156,12 @@ export function KanbanNewTaskDialog({
     clearComposerAssistantSelections,
     clearComposerFileComments,
     removeComposerTerminalContext,
-  } = useKanbanTaskScratchDraft({ defaultProvider: settingsSnapshot.defaultProvider });
+  } = useKanbanTaskScratchDraft({ defaultEngine: settingsSnapshot.defaultEngine });
   const promptRef = useRef(prompt);
 
   const [runtimeMode, setRuntimeMode] = useState<RuntimeMode>(DEFAULT_RUNTIME_MODE);
   const [interactionMode, setInteractionMode] =
-    useState<ProviderInteractionMode>(DEFAULT_INTERACTION_MODE);
+    useState<EngineInteractionMode>(DEFAULT_INTERACTION_MODE);
   const [envMode, setEnvMode] = useState<DraftThreadEnvMode>("local");
   // Off by default: a new task is sent straight to In Progress (like starting a
   // fresh chat). The Draft column's "+" opens the dialog with the toggle on, so
@@ -184,33 +184,33 @@ export function KanbanNewTaskDialog({
   });
 
   // Voice transcription always rides on the Codex ChatGPT session, regardless of
-  // which provider the task targets — gate the mic on the Codex status.
+  // which engine the task targets — gate the mic on the Codex status.
   const voiceProviderStatus = useMemo(
     () => findProviderStatus(providerStatuses, "codex"),
     [providerStatuses],
   );
-  const modelHintByProvider = useMemo<Partial<Record<EngineKind, string | null>>>(
+  const modelHintByEngine = useMemo<Partial<Record<EngineKind, string | null>>>(
     () => ({ [selectedProvider]: selectedModel }),
     [selectedProvider, selectedModel],
   );
   const {
-    modelOptionsByProvider,
-    catalogStateByProvider,
+    modelOptionsByEngine,
+    catalogStateByEngine,
     loadingModelProviders,
-    runtimeModelsByProvider,
+    runtimeModelsByEngine,
     selectedRuntimeModel,
     selectedRuntimeAgents,
-  } = useProviderModelCatalog({
+  } = useEngineModelCatalog({
     selectedProvider,
     // Keep discovery warm whenever either picker can open so cursor/codex effort
     // and fast-mode controls are populated, not just the model list.
     discoveryEnabled: isModelPickerOpen || isTraitsPickerOpen,
     piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
-    modelHintByProvider,
+    modelHintByEngine,
     // The current Engine stays authoritative. A different Engine enters the
     // discovery set only when the user opens that submenu, so this picker does
-    // not cold-start every CLI/provider at once.
+    // not cold-start every CLI/engine at once.
     prefetchProviders,
   });
   const selectedRuntimeModelForCapabilities = useMemo(
@@ -226,15 +226,15 @@ export function KanbanNewTaskDialog({
     [selectedModel, selectedModelSupportsAutoMode, selectedProvider, selectedRuntimeModel],
   );
   const handleProviderModelChange = useCallback(
-    (provider: EngineKind, model: Parameters<typeof setScratchProviderModel>[1]) => {
+    (engine: EngineKind, model: Parameters<typeof setScratchProviderModel>[1]) => {
       const runtimeModel = resolveRuntimeModelDescriptor({
-        provider,
+        engine,
         model,
-        runtimeModels: runtimeModelsByProvider[provider],
+        runtimeModels: runtimeModelsByEngine[engine],
       });
-      setScratchProviderModel(provider, model, runtimeModel?.supportsAutoMode);
+      setScratchProviderModel(engine, model, runtimeModel?.supportsAutoMode);
     },
-    [runtimeModelsByProvider, setScratchProviderModel],
+    [runtimeModelsByEngine, setScratchProviderModel],
   );
   const trimmedPrompt = prompt.trim();
   const hasSendableContent =
@@ -302,45 +302,45 @@ export function KanbanNewTaskDialog({
     composerMentions,
     scratchThreadId,
     selectedProvider,
-    modelOptionsByProvider,
+    modelOptionsByEngine,
     selectedRuntimeAgents,
     selectedProjectCwd: selectedProject?.cwd ?? null,
     serverCwd: serverConfigQuery.data?.cwd ?? null,
     serverHomeDir: serverConfigQuery.data?.homeDir ?? null,
-    providerOptionsForDispatch,
-    hiddenProviders: preferences.hiddenProviders,
-    providerOrder: preferences.providerOrder,
-    piAgentDir: settingsSnapshot.providers.pi.agentDir || null,
+    engineOptionsForDispatch,
+    hiddenEngines: preferences.hiddenEngines,
+    engineOrder: preferences.engineOrder,
+    piAgentDir: settingsSnapshot.engines.pi.agentDir || null,
     handleProviderModelChange,
     setInteractionMode,
     onCreate: handleCreateRequest,
   });
 
-  // Providers without a static default (e.g. Pi) resolve their model once
+  // Engines without a static default (e.g. Pi) resolve their model once
   // discovery delivers the catalog.
   useEffect(() => {
     if (selectedModel !== null) {
       return;
     }
-    const firstOption = modelOptionsByProvider[selectedProvider][0];
+    const firstOption = modelOptionsByEngine[selectedProvider][0];
     if (firstOption) {
-      useComposerDraftStore.getState().setModelSelection(
+      useComposerDraftStore.getState().setEngineSelection(
         scratchThreadId,
-        buildModelSelection(
+        buildEngineSelection(
           selectedProvider,
           firstOption.slug,
           undefined,
           resolveRuntimeModelDescriptor({
-            provider: selectedProvider,
+            engine: selectedProvider,
             model: firstOption.slug,
-            runtimeModels: runtimeModelsByProvider[selectedProvider],
+            runtimeModels: runtimeModelsByEngine[selectedProvider],
           })?.supportsAutoMode,
         ),
       );
     }
   }, [
-    modelOptionsByProvider,
-    runtimeModelsByProvider,
+    modelOptionsByEngine,
+    runtimeModelsByEngine,
     scratchThreadId,
     selectedModel,
     selectedProvider,
@@ -567,9 +567,9 @@ export function KanbanNewTaskDialog({
                     onEnvModeChange={setEnvMode}
                   />
                   <RuntimeUsageControls
-                    modelSelection={
+                    engineSelection={
                       selectedModel
-                        ? buildModelSelection(
+                        ? buildEngineSelection(
                             selectedProvider,
                             selectedModel,
                             undefined,
@@ -586,18 +586,18 @@ export function KanbanNewTaskDialog({
                 <div className="flex shrink-0 items-center gap-1.5">
                   {/* Same split controls as a fresh chat composer: model picker plus
                       the separate effort/thinking/speed picker. */}
-                  <ProviderModelPicker
+                  <EngineModelPicker
                     compact
-                    provider={selectedProvider}
+                    engine={selectedProvider}
                     model={selectedModel}
                     lockedProvider={null}
-                    providers={providerStatuses}
-                    modelOptionsByProvider={modelOptionsByProvider}
-                    catalogStateByProvider={catalogStateByProvider}
+                    engines={providerStatuses}
+                    modelOptionsByEngine={modelOptionsByEngine}
+                    catalogStateByEngine={catalogStateByEngine}
                     loadingModelProviders={loadingModelProviders}
-                    hiddenProviders={preferences.hiddenProviders}
-                    providerOrder={preferences.providerOrder}
-                    onProviderModelChange={handleProviderModelChange}
+                    hiddenEngines={preferences.hiddenEngines}
+                    engineOrder={preferences.engineOrder}
+                    onEngineModelChange={handleProviderModelChange}
                     open={isModelPickerOpen}
                     onOpenChange={(open) => {
                       setIsModelPickerOpen(open);
@@ -606,19 +606,19 @@ export function KanbanNewTaskDialog({
                         setPrefetchProviders([]);
                       }
                     }}
-                    onProviderBrowse={(provider) => {
+                    onEngineBrowse={(engine) => {
                       setPrefetchProviders((current) =>
-                        current.includes(provider) ? current : [...current, provider],
+                        current.includes(engine) ? current : [...current, engine],
                       );
-                      if (provider === "pi") setPiDiscoveryRequested(true);
+                      if (engine === "pi") setPiDiscoveryRequested(true);
                     }}
                   />
                   <TraitsPicker
-                    provider={selectedProvider}
+                    engine={selectedProvider}
                     threadId={scratchThreadId}
                     model={selectedModel}
                     runtimeModel={selectedRuntimeModel}
-                    runtimeModels={runtimeModelsByProvider[selectedProvider]}
+                    runtimeModels={runtimeModelsByEngine[selectedProvider]}
                     runtimeAgents={selectedRuntimeAgents}
                     modelOptions={selectedProviderModelOptions}
                     prompt={prompt}

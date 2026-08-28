@@ -7,7 +7,7 @@ import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { memo } from "react";
 
 import type { WorkLogOmniMindThreadCreation } from "../../session-logic";
-import { ProviderIcon } from "../ProviderIcon";
+import { EngineIcon } from "../EngineIcon";
 import { OmniMindLogo } from "../OmniMindLogo";
 import { Button } from "../ui/button";
 import { useI18n } from "../../i18n";
@@ -27,7 +27,7 @@ export const OmniMindThreadCreationCard = memo(function OmniMindThreadCreationCa
         ? "threadCreation.environmentWorktree"
         : "threadCreation.environmentLocal",
     );
-    return `${ENGINE_DISPLAY_NAMES[thread.provider]} · ${model} · ${environment}`;
+    return `${ENGINE_DISPLAY_NAMES[thread.engine]} · ${model} · ${environment}`;
   };
   const singleThread = creation.threads.length === 1 ? creation.threads[0] : undefined;
   const title = singleThread
@@ -58,7 +58,7 @@ export const OmniMindThreadCreationCard = memo(function OmniMindThreadCreationCa
           </p>
           {singleThread ? (
             <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground/52">
-              <ProviderIcon provider={singleThread.provider} className="size-3 shrink-0" />
+              <EngineIcon engine={singleThread.engine} className="size-3 shrink-0" />
               <span className="truncate">{threadMeta(singleThread)}</span>
             </div>
           ) : null}
@@ -83,7 +83,7 @@ export const OmniMindThreadCreationCard = memo(function OmniMindThreadCreationCa
               key={thread.threadId}
               className="flex min-w-0 items-center gap-2.5 border-t border-[color:var(--color-border-light)] px-3 py-2 first:border-t-0"
             >
-              <ProviderIcon provider={thread.provider} className="size-4 shrink-0" />
+              <EngineIcon engine={thread.engine} className="size-4 shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-system-ui text-[length:var(--app-font-size-ui,12px)] font-medium text-foreground/90">
                   {thread.title}

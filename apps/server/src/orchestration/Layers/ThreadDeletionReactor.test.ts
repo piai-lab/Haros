@@ -52,7 +52,7 @@ describe("logCleanupCauseUnlessInterrupted", () => {
     const exit = await Effect.runPromiseExit(
       logCleanupCauseUnlessInterrupted({
         effect: Effect.fail("cleanup failed"),
-        message: "thread deletion cleanup skipped provider session stop",
+        message: "thread deletion cleanup skipped engine session stop",
         threadId,
       }),
     );
@@ -64,7 +64,7 @@ describe("logCleanupCauseUnlessInterrupted", () => {
     const exit = await Effect.runPromiseExit(
       logCleanupCauseUnlessInterrupted({
         effect: Effect.interrupt,
-        message: "thread deletion cleanup skipped provider session stop",
+        message: "thread deletion cleanup skipped engine session stop",
         threadId,
       }),
     );
@@ -83,7 +83,7 @@ describe("cleanupSucceededUnlessInterrupted", () => {
     const result = await Effect.runPromise(
       cleanupSucceededUnlessInterrupted({
         effect: Effect.void,
-        message: "thread deletion cleanup skipped provider session stop",
+        message: "thread deletion cleanup skipped engine session stop",
         threadId,
       }),
     );
@@ -95,7 +95,7 @@ describe("cleanupSucceededUnlessInterrupted", () => {
     const result = await Effect.runPromise(
       cleanupSucceededUnlessInterrupted({
         effect: Effect.fail("cleanup failed"),
-        message: "thread deletion cleanup skipped provider session stop",
+        message: "thread deletion cleanup skipped engine session stop",
         threadId,
       }),
     );
@@ -107,7 +107,7 @@ describe("cleanupSucceededUnlessInterrupted", () => {
     const exit = await Effect.runPromiseExit(
       cleanupSucceededUnlessInterrupted({
         effect: Effect.interrupt,
-        message: "thread deletion cleanup skipped provider session stop",
+        message: "thread deletion cleanup skipped engine session stop",
         threadId,
       }),
     );

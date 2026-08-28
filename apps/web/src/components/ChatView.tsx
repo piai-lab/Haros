@@ -4,7 +4,7 @@ import {
   type ApprovalRequestId,
   EventId,
   MessageId,
-  type ModelSelection,
+  type EngineSelection,
   type NativeApi,
   type OrchestrationShellSnapshot,
   type ProjectScript,
@@ -12,16 +12,16 @@ import {
   type EngineKind,
   type ProjectEntry,
   type ProjectId,
-  type ProviderApprovalDecision,
-  type ProviderMentionReference,
-  type ProviderNativeCommandDescriptor,
-  type ProviderPluginDescriptor,
-  type ProviderRequestKind,
-  type ProviderSkillDescriptor,
-  type ProviderSkillReference,
-  type ProviderStartOptions,
+  type EngineApprovalDecision,
+  type EngineMentionReference,
+  type EngineNativeCommandDescriptor,
+  type EnginePluginDescriptor,
+  type EngineRequestKind,
+  type EngineSkillDescriptor,
+  type EngineSkillReference,
+  type EngineStartOptions,
   type PinnedMessage,
-  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+  ENGINE_SEND_TURN_MAX_ATTACHMENTS,
   type ResolvedKeybindingsConfig,
   type ServerProviderStatus,
   ThreadId,
@@ -34,7 +34,7 @@ import {
   type EditorId,
   type KeybindingCommand,
   OrchestrationThreadActivity,
-  ProviderInteractionMode,
+  EngineInteractionMode,
   RuntimeMode,
 } from "@harnessos/contracts";
 import { automationRequiresTargetThread } from "@harnessos/shared/automationMode";
@@ -85,28 +85,28 @@ import {
   gitBranchesQueryOptions,
   gitStatusQueryOptions,
 } from "~/lib/gitReactQuery";
-import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
+import { resolveProviderDiscoveryCwd } from "~/lib/engineDiscovery";
 import {
   isProviderDiscoverySessionActive,
   isProviderInteractionModeExecutable,
   providerComposerCapabilitiesQueryOptions,
-  providerExecutionCapabilitiesQueryOptions,
+  engineExecutionCapabilitiesQueryOptions,
   providerCommandsQueryOptions,
-  providerDiscoveryQueryKeys,
+  engineDiscoveryQueryKeys,
   providerPluginsQueryOptions,
   providerSkillsQueryOptions,
   supportsNativeSlashCommandDiscovery,
   supportsPluginDiscovery,
   supportsSkillDiscovery,
   supportsThreadCompaction,
-} from "~/lib/providerDiscoveryReactQuery";
+} from "~/lib/engineDiscoveryReactQuery";
 import { projectSearchEntriesQueryOptions } from "~/lib/projectReactQuery";
 import {
   serverConfigQueryOptions,
   serverQueryKeys,
   serverSettingsQueryOptions,
 } from "~/lib/serverReactQuery";
-import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
+import { useRefreshProviderStatusesNow } from "~/hooks/useEngineStatusRefresh";
 import { reportFocusedComposerReadiness } from "~/startup/startupSplash";
 import { isTerminalStartupCatalogState } from "~/startup/startupReadiness";
 import { SINGLE_CHAT_PANE_SCOPE_ID } from "~/lib/chatPaneScope";
@@ -126,7 +126,7 @@ import {
   normalizeCustomBinaryPath,
   normalizeProviderStatusForLocalConfig,
   resolveProviderSendAvailabilityWithRefresh,
-} from "~/lib/providerAvailability";
+} from "~/lib/engineAvailability";
 import {
   loadConfirmedCustomBinaryPaths,
   saveConfirmedCustomBinaryPaths,
@@ -192,9 +192,9 @@ import {
   desiredBindingCanPersistWithoutActiveSession,
   enrichSubagentWorkEntries,
   hasFileUndoSettled,
-  persistModelSelectionBeforeRuntimeMode,
+  persistEngineSelectionBeforeRuntimeMode,
   promptStillMatchesActiveHistoryBrowse,
-  modelSelectionsEqual,
+  engineSelectionsEqual,
   type PendingFileUndo,
   type PromptHistoryNavigationState,
   resolveActiveThreadTitle,
@@ -292,7 +292,7 @@ import {
   buildSearchableModelOptions,
   useComposerCommandMenuItems,
 } from "../hooks/useComposerCommandMenuItems";
-import { useProviderModelCatalog } from "../hooks/useProviderModelCatalog";
+import { useEngineModelCatalog } from "../hooks/useEngineModelCatalog";
 import { useThreadHandoff } from "../hooks/useThreadHandoff";
 import { useThreadUnblock } from "../hooks/useThreadUnblock";
 import { useTurnDiffSummaries } from "../hooks/useTurnDiffSummaries";
@@ -348,9 +348,9 @@ import { readFavoriteModelSlugs } from "~/lib/modelFavorites";
 import { resolveFollowUpDispatchMode, useLocalPreferences } from "../localPreferences";
 import {
   getCustomBinaryPathForProvider,
-  getProviderStartOptions,
+  getEngineStartOptions,
   resolveAssistantDeliveryMode,
-} from "../providerSettings";
+} from "../engineSettings";
 import { useServerSettings } from "../serverSettings";
 import { useI18n } from "../i18n";
 import { isTerminalFocused } from "../lib/terminalFocus";
@@ -469,8 +469,8 @@ import {
   formatCadence,
   automationsForThread,
   isFormSubmittable,
-  providerOptionsForAutomationEdit,
-  projectModelSelection as automationProjectModelSelection,
+  engineOptionsForAutomationEdit,
+  projectEngineSelection as automationProjectEngineSelection,
   type AutomationFormState,
   updateInputFromForm,
 } from "../routes/-automations.shared";
@@ -480,8 +480,8 @@ import type { MessagesTimelineController } from "./chat/MessagesTimeline";
 import { buildTurnDiffSummaryByAssistantMessageId } from "./chat/MessagesTimeline.logic";
 import { deriveAgentActivityTimelineState } from "./chat/agentActivity.logic";
 import { ExpandedImagePreview } from "./chat/ExpandedImagePreview";
-import { PROVIDER_MODEL_OPTIONS, resolveProviderModelLabel } from "./chat/ProviderModelPicker";
-import { providerModelsPrefetchQueryOptions } from "../lib/providerModelPrefetch";
+import { ENGINE_MODEL_OPTIONS, resolveProviderModelLabel } from "./chat/EngineModelPicker";
+import { providerModelsPrefetchQueryOptions } from "../lib/engineModelPrefetch";
 import { ComposerModelEffortPicker } from "./chat/ComposerModelEffortPicker";
 import { ComposerEnginePicker } from "./chat/ComposerEnginePicker";
 import { resolveComposerModelFallbackMessageKey } from "./chat/modelCatalogPresentation";
@@ -531,7 +531,7 @@ import {
   dispatchThreadMarkerLabelSet,
   dispatchThreadMarkerRemove,
 } from "../threadMarkers";
-import { getComposerProviderState } from "./chat/composerProviderRegistry";
+import { getComposerProviderState } from "./chat/composerEngineRegistry";
 import { composerTranscriptBottomInsetPx, useComposerOverlayHeight } from "./chat/composerOverlay";
 import {
   COMPOSER_COMMAND_MENU_FLOATING_WRAPPER_CLASS_NAME,
@@ -551,7 +551,7 @@ import {
 } from "./chat/runtimeModelCapabilities";
 import { ProjectPicker } from "./chat/ProjectPicker";
 import { FolderClosed } from "./FolderClosed";
-import { ProviderHealthBanner } from "./chat/ProviderHealthBanner";
+import { EngineHealthBanner } from "./chat/EngineHealthBanner";
 import { useThreadErrorToast } from "./chat/useThreadErrorToast";
 import {
   RateLimitBanner,
@@ -611,7 +611,7 @@ import {
   resolveDiffEnvironmentState,
   resolveThreadEnvironmentMode,
 } from "../lib/threadEnvironment";
-import { buildModelSelection, resolveModelPresentationIdentity } from "../providerModelOptions";
+import { buildEngineSelection, resolveModelPresentationIdentity } from "../providerModelOptions";
 import {
   isDuplicateProjectCreateError,
   waitForRecoverableProjectForDuplicateCreate,
@@ -631,8 +631,8 @@ const EMPTY_GOAL_ACHIEVEMENTS: readonly ThreadGoalAchievement[] = [];
 const EMPTY_PINNED_TEXT: ReadonlyMap<MessageId, string> = new Map();
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
 const EMPTY_PROJECT_ENTRIES: ProjectEntry[] = [];
-const EMPTY_PROVIDER_NATIVE_COMMANDS: ProviderNativeCommandDescriptor[] = [];
-const EMPTY_PROVIDER_SKILLS: ProviderSkillDescriptor[] = [];
+const EMPTY_PROVIDER_NATIVE_COMMANDS: EngineNativeCommandDescriptor[] = [];
+const EMPTY_PROVIDER_SKILLS: EngineSkillDescriptor[] = [];
 const LOCAL_PROJECT_DRAFT_CONTEXT = {
   envMode: "local",
   worktreePath: null,
@@ -1058,49 +1058,49 @@ const MAX_DISMISSED_PROVIDER_HEALTH_BANNERS = 50;
 const EMPTY_LAST_INVOKED_SCRIPT_BY_PROJECT: Record<string, string> = {};
 const EMPTY_DISMISSED_PROVIDER_HEALTH_BANNERS: ReadonlyArray<string> = [];
 
-function getThreadProviderCustomBinaryPathKey(threadId: Thread["id"], provider: EngineKind) {
-  return `${threadId}:${provider}`;
+function getThreadProviderCustomBinaryPathKey(threadId: Thread["id"], engine: EngineKind) {
+  return `${threadId}:${engine}`;
 }
 
 function getConfirmedCustomBinarySessionKey(
   thread: Thread | null | undefined,
-  provider: EngineKind,
+  engine: EngineKind,
 ): string | null {
   const session = thread?.session;
-  if (!thread || session?.provider !== provider) {
+  if (!thread || session?.engine !== engine) {
     return null;
   }
   if (session.status !== "ready" && session.status !== "running") {
     return null;
   }
-  return getThreadProviderCustomBinaryPathKey(thread.id, provider);
+  return getThreadProviderCustomBinaryPathKey(thread.id, engine);
 }
 
-function getProviderStartOptionsCustomBinaryPath(
-  providerOptions: ProviderStartOptions | undefined,
-  provider: EngineKind,
+function getEngineStartOptionsCustomBinaryPath(
+  engineOptions: EngineStartOptions | undefined,
+  engine: EngineKind,
 ): string | null {
-  switch (provider) {
+  switch (engine) {
     case "oa":
       return null;
     case "codex":
-      return normalizeCustomBinaryPath(providerOptions?.codex?.binaryPath);
+      return normalizeCustomBinaryPath(engineOptions?.codex?.binaryPath);
     case "claude":
-      return normalizeCustomBinaryPath(providerOptions?.claude?.binaryPath);
+      return normalizeCustomBinaryPath(engineOptions?.claude?.binaryPath);
     case "antigravity":
-      return normalizeCustomBinaryPath(providerOptions?.antigravity?.binaryPath);
+      return normalizeCustomBinaryPath(engineOptions?.antigravity?.binaryPath);
     case "grok":
-      return normalizeCustomBinaryPath(providerOptions?.grok?.binaryPath);
+      return normalizeCustomBinaryPath(engineOptions?.grok?.binaryPath);
     case "droid":
-      return normalizeCustomBinaryPath(providerOptions?.droid?.binaryPath);
+      return normalizeCustomBinaryPath(engineOptions?.droid?.binaryPath);
     case "kilo":
-      return normalizeCustomBinaryPath(providerOptions?.kilo?.binaryPath);
+      return normalizeCustomBinaryPath(engineOptions?.kilo?.binaryPath);
     case "opencode":
-      return normalizeCustomBinaryPath(providerOptions?.opencode?.binaryPath);
+      return normalizeCustomBinaryPath(engineOptions?.opencode?.binaryPath);
     case "cursor":
-      return normalizeCustomBinaryPath(providerOptions?.cursor?.binaryPath);
+      return normalizeCustomBinaryPath(engineOptions?.cursor?.binaryPath);
     case "pi":
-      return normalizeCustomBinaryPath(providerOptions?.pi?.binaryPath);
+      return normalizeCustomBinaryPath(engineOptions?.pi?.binaryPath);
   }
 }
 
@@ -1109,7 +1109,7 @@ function getProviderHealthBannerDismissalKey(status: ServerProviderStatus | null
     return null;
   }
   return [
-    status.provider,
+    status.engine,
     status.status,
     status.available ? "available" : "unavailable",
     status.authStatus,
@@ -1133,8 +1133,8 @@ function getRateLimitBannerDismissalKey(
 }
 
 type ComposerPluginSuggestion = {
-  plugin: ProviderPluginDescriptor;
-  mention: ProviderMentionReference;
+  plugin: EnginePluginDescriptor;
+  mention: EngineMentionReference;
 };
 
 const EMPTY_COMPOSER_PLUGIN_SUGGESTIONS: ComposerPluginSuggestion[] = [];
@@ -1300,7 +1300,7 @@ function composerPromptStillMatchesRestoredQueuedDraft(
 }
 
 // Builds an ephemeral transcript bubble for the conversational automation-setup
-// exchange. These never reach a provider and are not persisted; they render the
+// exchange. These never reach a engine and are not persisted; they render the
 // back-and-forth (user request, OmniMind's clarifying questions) inline like Codex.
 function makeAutomationSetupBubble(role: "user" | "assistant", text: string): ChatMessage {
   return {
@@ -1360,8 +1360,8 @@ export default function ChatView({
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
     useDesktopTopBarWindowControlsGutterClassName();
-  const setComposerDraftModelSelectionAndSticky = useComposerDraftStore(
-    (store) => store.setModelSelectionAndSticky,
+  const setComposerDraftEngineSelectionAndSticky = useComposerDraftStore(
+    (store) => store.setEngineSelectionAndSticky,
   );
   const setComposerDraftActiveProviderAndSticky = useComposerDraftStore(
     (store) => store.setActiveProviderAndSticky,
@@ -1439,7 +1439,9 @@ export default function ChatView({
   const restoreComposerDraftPromptHistorySavedDraft = useComposerDraftStore(
     (store) => store.restorePromptHistorySavedDraft,
   );
-  const setComposerDraftModelSelection = useComposerDraftStore((store) => store.setModelSelection);
+  const setComposerDraftEngineSelection = useComposerDraftStore(
+    (store) => store.setEngineSelection,
+  );
   const setComposerDraftProviderModelOptions = useComposerDraftStore(
     (store) => store.setProviderModelOptions,
   );
@@ -1548,10 +1550,10 @@ export default function ChatView({
       crossTaskSourceThreadId
         ? {
             sourceThreadId: crossTaskSourceThreadId,
-            sourceProvider: crossTaskSourceThread?.modelSelection.provider ?? null,
+            sourceProvider: crossTaskSourceThread?.engineSelection.engine ?? null,
           }
         : null,
-    [crossTaskSourceThread?.modelSelection.provider, crossTaskSourceThreadId],
+    [crossTaskSourceThread?.engineSelection.engine, crossTaskSourceThreadId],
   );
   const forkSourceThreadId = serverThread?.sidechatSourceThreadId
     ? null
@@ -1634,7 +1636,7 @@ export default function ChatView({
   const composerFooterTierRef = useRef(0);
   const composerFooterDemotionWidthsRef = useRef<ReadonlyArray<number | undefined>>([]);
   const composerFooterLayoutSyncRef = useRef<(() => void) | null>(null);
-  const [confirmedCustomBinaryPathsByProvider, setConfirmedCustomBinaryPathsByProvider] = useState<
+  const [confirmedCustomBinaryPathsByEngine, setConfirmedCustomBinaryPathsByEngine] = useState<
     Partial<Record<EngineKind, string>>
   >(loadConfirmedCustomBinaryPaths);
   const confirmedCustomBinarySessionKeysRef = useRef<Set<string>>(new Set());
@@ -1660,14 +1662,14 @@ export default function ChatView({
   const [composerTrigger, setComposerTrigger] = useState<ComposerTrigger | null>(() =>
     detectComposerTrigger(prompt, prompt.length),
   );
-  const [selectedComposerSkills, setSelectedComposerSkills] = useState<ProviderSkillReference[]>(
+  const [selectedComposerSkills, setSelectedComposerSkills] = useState<EngineSkillReference[]>(
     () => composerSkills,
   );
   const [selectedComposerMentions, setSelectedComposerMentions] = useState<
-    ProviderMentionReference[]
+    EngineMentionReference[]
   >(() => composerMentions);
-  const selectedComposerSkillsRef = useRef<ProviderSkillReference[]>(selectedComposerSkills);
-  const selectedComposerMentionsRef = useRef<ProviderMentionReference[]>(selectedComposerMentions);
+  const selectedComposerSkillsRef = useRef<EngineSkillReference[]>(selectedComposerSkills);
+  const selectedComposerMentionsRef = useRef<EngineMentionReference[]>(selectedComposerMentions);
   // The setters below stamp these refs synchronously; layout effects backstop
   // external state changes before another browser event can read stale values.
   useLayoutEffect(() => {
@@ -1678,9 +1680,7 @@ export default function ChatView({
   }, [selectedComposerMentions]);
   const updateSelectedComposerSkills = useCallback(
     (
-      next:
-        | ProviderSkillReference[]
-        | ((existing: ProviderSkillReference[]) => ProviderSkillReference[]),
+      next: EngineSkillReference[] | ((existing: EngineSkillReference[]) => EngineSkillReference[]),
     ) => {
       const existing = selectedComposerSkillsRef.current;
       const resolved = typeof next === "function" ? next(existing) : next;
@@ -1693,8 +1693,8 @@ export default function ChatView({
   const updateSelectedComposerMentions = useCallback(
     (
       next:
-        | ProviderMentionReference[]
-        | ((existing: ProviderMentionReference[]) => ProviderMentionReference[]),
+        | EngineMentionReference[]
+        | ((existing: EngineMentionReference[]) => EngineMentionReference[]),
     ) => {
       const existing = selectedComposerMentionsRef.current;
       const resolved = typeof next === "function" ? next(existing) : next;
@@ -1787,7 +1787,7 @@ export default function ChatView({
   );
   const autoDispatchingQueuedTurnRef = useRef(false);
   // Holds queued-composer auto-dispatch through a non-natively-steerable
-  // provider steer's interrupt→re-dispatch gap; see
+  // engine steer's interrupt→re-dispatch gap; see
   // resolveQueuedSteerGateTransition.
   const [queuedSteerGate, setQueuedSteerGate] = useState<QueuedSteerGate | null>(null);
   // Bumped to re-evaluate auto-dispatch when only non-reactive guards (refs)
@@ -1999,29 +1999,29 @@ export default function ChatView({
     if (!draftThread) return undefined;
     const desiredProvider =
       composerDraft.activeProvider ??
-      fallbackDraftProject?.defaultModelSelection?.provider ??
-      serverSettingsSnapshot.defaultProvider;
-    const desiredModelSelection =
-      composerDraft.modelSelectionByProvider[desiredProvider] ??
-      (fallbackDraftProject?.defaultModelSelection?.provider === desiredProvider
-        ? fallbackDraftProject.defaultModelSelection
+      fallbackDraftProject?.defaultEngineSelection?.engine ??
+      serverSettingsSnapshot.defaultEngine;
+    const desiredEngineSelection =
+      composerDraft.engineSelectionByEngine[desiredProvider] ??
+      (fallbackDraftProject?.defaultEngineSelection?.engine === desiredProvider
+        ? fallbackDraftProject.defaultEngineSelection
         : null);
     return buildLocalDraftThread(
       threadId,
       draftThread,
-      desiredModelSelection ?? {
-        provider: desiredProvider,
+      desiredEngineSelection ?? {
+        engine: desiredProvider,
         model: getDefaultModel(desiredProvider) ?? "",
       },
       localDraftError,
     );
   }, [
     composerDraft.activeProvider,
-    composerDraft.modelSelectionByProvider,
+    composerDraft.engineSelectionByEngine,
     draftThread,
-    fallbackDraftProject?.defaultModelSelection,
+    fallbackDraftProject?.defaultEngineSelection,
     localDraftError,
-    serverSettingsSnapshot.defaultProvider,
+    serverSettingsSnapshot.defaultEngine,
     threadId,
   ]);
   const activeThread = serverThread ?? localDraftThread;
@@ -2105,11 +2105,11 @@ export default function ChatView({
     activeRateLimitBannerDismissalKey === dismissedRateLimitBannerKey
       ? null
       : activeRateLimitStatus;
-  const latestTurnSettledByProvider = isLatestTurnSettled(
+  const latestTurnSettledByEngine = isLatestTurnSettled(
     activeLatestTurn,
     activeThread?.session ?? null,
   );
-  const latestTurnSettled = latestTurnSettledByProvider && !hasLiveTurnTail;
+  const latestTurnSettled = latestTurnSettledByEngine && !hasLiveTurnTail;
   // `latestTurnSettled` is also false when there is NO started turn (a brand-new
   // chat), because `isLatestTurnSettled` treats a non-existent turn as unsettled.
   // Gate live-turn UI on an actually-started turn so composer chrome cannot
@@ -2409,16 +2409,16 @@ export default function ChatView({
 
   const selectedProviderByThreadId = composerDraft.activeProvider ?? null;
   const threadProvider =
-    serverThread?.modelSelection.provider ?? activeProject?.defaultModelSelection?.provider ?? null;
+    serverThread?.engineSelection.engine ?? activeProject?.defaultEngineSelection?.engine ?? null;
   const selectedProvider: EngineKind =
-    selectedProviderByThreadId ?? threadProvider ?? serverSettingsSnapshot.defaultProvider;
+    selectedProviderByThreadId ?? threadProvider ?? serverSettingsSnapshot.defaultEngine;
   const hasActiveProviderDiscoverySession = isProviderDiscoverySessionActive({
-    provider: selectedProvider,
+    engine: selectedProvider,
     session: activeThread?.session,
   });
   const previousSelectedProviderRef = useRef<{
     threadId: ThreadId;
-    provider: EngineKind;
+    engine: EngineKind;
   } | null>(null);
   const featureFlags = useFeatureFlags();
   const showDebugTaskBanner = import.meta.env.DEV && featureFlags["show-debug-task-banner"];
@@ -2426,35 +2426,31 @@ export default function ChatView({
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   const providerStatuses = useMemo(
     () =>
-      (serverConfigQuery.data?.providers ?? EMPTY_PROVIDER_STATUSES)
+      (serverConfigQuery.data?.engines ?? EMPTY_PROVIDER_STATUSES)
         .map((status) => {
           const customBinaryPath = getCustomBinaryPathForProvider(
             serverSettingsSnapshot,
-            status.provider,
+            status.engine,
           );
           return normalizeProviderStatusForLocalConfig({
-            provider: status.provider,
+            engine: status.engine,
             status,
             customBinaryPath,
-            confirmedCustomBinaryPath: confirmedCustomBinaryPathsByProvider[status.provider],
+            confirmedCustomBinaryPath: confirmedCustomBinaryPathsByEngine[status.engine],
           });
         })
         .flatMap((status) => (status ? [status] : [])),
-    [
-      confirmedCustomBinaryPathsByProvider,
-      serverConfigQuery.data?.providers,
-      serverSettingsSnapshot,
-    ],
+    [confirmedCustomBinaryPathsByEngine, serverConfigQuery.data?.engines, serverSettingsSnapshot],
   );
-  const composerModelHintByProvider = useMemo<Record<EngineKind, string | null>>(() => {
-    const threadModelSelection = serverThread?.modelSelection ?? null;
-    const projectModelSelection = activeProject?.defaultModelSelection ?? null;
-    const draftSelections = composerDraft.modelSelectionByProvider;
+  const composerModelHintByEngine = useMemo<Record<EngineKind, string | null>>(() => {
+    const threadEngineSelection = serverThread?.engineSelection ?? null;
+    const projectEngineSelection = activeProject?.defaultEngineSelection ?? null;
+    const draftSelections = composerDraft.engineSelectionByEngine;
 
-    const resolveHint = (provider: EngineKind): string | null =>
-      draftSelections[provider]?.model ??
-      (threadModelSelection?.provider === provider ? threadModelSelection.model : null) ??
-      (projectModelSelection?.provider === provider ? projectModelSelection.model : null);
+    const resolveHint = (engine: EngineKind): string | null =>
+      draftSelections[engine]?.model ??
+      (threadEngineSelection?.engine === engine ? threadEngineSelection.model : null) ??
+      (projectEngineSelection?.engine === engine ? projectEngineSelection.model : null);
 
     return {
       oa: resolveHint("oa"),
@@ -2469,9 +2465,9 @@ export default function ChatView({
       pi: resolveHint("pi"),
     };
   }, [
-    activeProject?.defaultModelSelection,
-    composerDraft.modelSelectionByProvider,
-    serverThread?.modelSelection,
+    activeProject?.defaultEngineSelection,
+    composerDraft.engineSelectionByEngine,
+    serverThread?.engineSelection,
   ]);
   const providerModelDiscoveryCwd = resolveProviderDiscoveryCwd({
     activeThreadWorktreePath: resolvedThreadWorktreePath,
@@ -2479,49 +2475,49 @@ export default function ChatView({
     serverCwd: serverConfigQuery.data?.cwd ?? null,
   });
   const {
-    customModelsByProvider,
-    catalogStateByProvider,
-    modelOptionsByProvider,
-    selectableModelOptionsByProvider,
+    customModelsByEngine,
+    catalogStateByEngine,
+    modelOptionsByEngine,
+    selectableModelOptionsByEngine,
     loadingModelProviders,
-    runtimeModelsByProvider,
+    runtimeModelsByEngine,
     selectedRuntimeAgents: dynamicAgents,
-  } = useProviderModelCatalog({
+  } = useEngineModelCatalog({
     selectedProvider,
     discoveryEnabled: false,
     piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
-    modelHintByProvider: composerModelHintByProvider,
+    modelHintByEngine: composerModelHintByEngine,
   });
   const { modelOptions: composerModelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId,
     selectedProvider,
-    threadModelSelection: serverThread?.modelSelection,
-    projectModelSelection: activeProject?.defaultModelSelection,
+    threadEngineSelection: serverThread?.engineSelection,
+    projectEngineSelection: activeProject?.defaultEngineSelection,
     // The Composer may inherit an exact draft/thread/project/sticky selection,
     // but must never synthesize a send target from a static default or the first
     // catalog row. First-run and recovery both require an explicit user choice.
     runtimeCatalogFallbackModel: null,
-    customModelsByProvider,
-    availableModelOptionsByProvider: selectableModelOptionsByProvider,
+    customModelsByEngine,
+    availableModelOptionsByEngine: selectableModelOptionsByEngine,
   });
-  const draftModelSelectionForSelectedProvider =
-    composerDraft.modelSelectionByProvider[selectedProvider] ?? null;
+  const draftEngineSelectionForSelectedProvider =
+    composerDraft.engineSelectionByEngine[selectedProvider] ?? null;
   const persistedClaudeSupportsAutoMode =
     selectedProvider === "claude"
-      ? draftModelSelectionForSelectedProvider?.provider === "claude" &&
-        draftModelSelectionForSelectedProvider.model === selectedModel
-        ? draftModelSelectionForSelectedProvider.supportsAutoMode
-        : serverThread?.modelSelection.provider === "claude" &&
-            serverThread.modelSelection.model === selectedModel
-          ? serverThread.modelSelection.supportsAutoMode
+      ? draftEngineSelectionForSelectedProvider?.engine === "claude" &&
+        draftEngineSelectionForSelectedProvider.model === selectedModel
+        ? draftEngineSelectionForSelectedProvider.supportsAutoMode
+        : serverThread?.engineSelection.engine === "claude" &&
+            serverThread.engineSelection.model === selectedModel
+          ? serverThread.engineSelection.supportsAutoMode
           : undefined
       : undefined;
   const selectedRuntimeModel = useMemo(() => {
     const discovered = resolveRuntimeModelDescriptor({
-      provider: selectedProvider,
+      engine: selectedProvider,
       model: selectedModel,
-      runtimeModels: runtimeModelsByProvider[selectedProvider],
+      runtimeModels: runtimeModelsByEngine[selectedProvider],
     });
     if (discovered) {
       return discovered;
@@ -2535,11 +2531,11 @@ export default function ChatView({
           supportsAutoMode: persistedClaudeSupportsAutoMode,
         }
       : undefined;
-  }, [persistedClaudeSupportsAutoMode, runtimeModelsByProvider, selectedModel, selectedProvider]);
-  const composerProviderState = useMemo(
+  }, [persistedClaudeSupportsAutoMode, runtimeModelsByEngine, selectedModel, selectedProvider]);
+  const composerEngineState = useMemo(
     () =>
       getComposerProviderState({
-        provider: selectedProvider,
+        engine: selectedProvider,
         model: selectedModel,
         runtimeModel: selectedRuntimeModel,
         prompt,
@@ -2547,32 +2543,32 @@ export default function ChatView({
       }),
     [composerModelOptions, prompt, selectedModel, selectedProvider, selectedRuntimeModel],
   );
-  const selectedPromptEffort = composerProviderState.promptEffort;
-  const selectedModelOptionsForDispatch = composerProviderState.modelOptionsForDispatch;
-  const selectedModelSelection = useMemo<ModelSelection | null>(() => {
+  const selectedPromptEffort = composerEngineState.promptEffort;
+  const selectedModelOptionsForDispatch = composerEngineState.modelOptionsForDispatch;
+  const selectedEngineSelection = useMemo<EngineSelection | null>(() => {
     if (selectedModel === null) {
       return null;
     }
-    return buildModelSelection(
+    return buildEngineSelection(
       selectedProvider,
       selectedModel,
       selectedModelOptionsForDispatch,
       selectedProvider === "claude" ? selectedRuntimeModel?.supportsAutoMode : undefined,
     );
   }, [
-    draftModelSelectionForSelectedProvider,
+    draftEngineSelectionForSelectedProvider,
     selectedModel,
     selectedModelOptionsForDispatch,
     selectedProvider,
     selectedRuntimeModel,
   ]);
-  const executionCapabilitySelection = selectedModelSelection ?? {
-    provider: selectedProvider,
+  const executionCapabilitySelection = selectedEngineSelection ?? {
+    engine: selectedProvider,
     model: "__unselected__",
   };
   const executionCapabilitiesQuery = useQuery({
-    ...providerExecutionCapabilitiesQueryOptions(executionCapabilitySelection),
-    enabled: selectedModelSelection !== null,
+    ...engineExecutionCapabilitiesQueryOptions(executionCapabilitySelection),
+    enabled: selectedEngineSelection !== null,
   });
   const planModeCapability = executionCapabilitiesQuery.data?.interactionModes.plan;
   const planModeAvailable = isProviderInteractionModeExecutable(planModeCapability);
@@ -2583,38 +2579,38 @@ export default function ChatView({
         ? "composer.planModeUnsupported"
         : "composer.planModeUnavailable",
   );
-  const providerOptionsForDispatch = useMemo(
-    () => getProviderStartOptions(serverSettingsSnapshot),
+  const engineOptionsForDispatch = useMemo(
+    () => getEngineStartOptions(serverSettingsSnapshot),
     [serverSettingsSnapshot],
   );
   const selectedModelForPicker =
-    selectedModelSelection?.provider === selectedProvider
-      ? selectedModelSelection.model
+    selectedEngineSelection?.engine === selectedProvider
+      ? selectedEngineSelection.model
       : selectedModel;
   const selectedModelForPickerWithCustomFallback = useMemo(() => {
-    const currentOptions = modelOptionsByProvider[selectedProvider];
+    const currentOptions = modelOptionsByEngine[selectedProvider];
     if (selectedModelForPicker === null) {
       return null;
     }
     return currentOptions.some((option) => option.slug === selectedModelForPicker)
       ? selectedModelForPicker
       : (normalizeModelSlug(selectedModelForPicker, selectedProvider) ?? selectedModelForPicker);
-  }, [modelOptionsByProvider, selectedModelForPicker, selectedProvider]);
+  }, [modelOptionsByEngine, selectedModelForPicker, selectedProvider]);
   const searchableModelOptions = useMemo(
     () =>
       buildSearchableModelOptions({
-        providerOptions: PROVIDER_MODEL_OPTIONS,
-        modelOptionsByProvider: selectableModelOptionsByProvider,
-        providerOrder: settings.providerOrder,
-        hiddenProviders: settings.hiddenProviders,
+        engineOptions: ENGINE_MODEL_OPTIONS,
+        modelOptionsByEngine: selectableModelOptionsByEngine,
+        engineOrder: settings.engineOrder,
+        hiddenEngines: settings.hiddenEngines,
         protectedProviders: [selectedProvider],
         lockedProvider: null,
       }),
     [
-      selectableModelOptionsByProvider,
+      selectableModelOptionsByEngine,
       selectedProvider,
-      settings.hiddenProviders,
-      settings.providerOrder,
+      settings.hiddenEngines,
+      settings.engineOrder,
     ],
   );
   const phase = derivePhase(activeThread?.session ?? null);
@@ -2646,7 +2642,7 @@ export default function ChatView({
     });
     return entries.map((entry) => {
       if (
-        entry.activityKind === "provider.turn.start.failed" &&
+        entry.activityKind === "engine.turn.start.failed" &&
         entry.failureReason === "active-edit-requires-stop"
       ) {
         return {
@@ -2978,7 +2974,7 @@ export default function ChatView({
         : deriveActiveBackgroundTasksState(threadActivities, activeLatestTurn?.turnId ?? undefined),
     [activeLatestTurn?.turnId, latestTurnSettled, threadActivities],
   );
-  // Task tool_use_ids the provider confirmed as backgrounded via task_updated
+  // Task tool_use_ids the engine confirmed as backgrounded via task_updated
   // patches (last patch wins, so re-foregrounded tasks drop back out).
   const backgroundedSubagentToolUseIds = useMemo(() => {
     const toolUseIds = new Set<string>();
@@ -3030,10 +3026,10 @@ export default function ChatView({
     const refs = new Map<string, WorkflowSubagentThreadRef>();
     for (const entry of enrichedWorkLogEntries) {
       for (const subagent of entry.subagents ?? []) {
-        if (!subagent.providerThreadId) {
+        if (!subagent.nativeThreadId) {
           continue;
         }
-        refs.set(subagent.providerThreadId, {
+        refs.set(subagent.nativeThreadId, {
           threadId: subagent.resolvedThreadId ?? subagent.threadId,
           model: subagent.model,
           effort: subagent.effort,
@@ -3127,7 +3123,7 @@ export default function ChatView({
   const activeWorktreeSetup = localDispatch?.worktreeSetup ?? null;
   const isPreparingWorktree = activeWorktreeSetup !== null;
   const hasLiveTurn = phase === "running";
-  // Providers that clear `activeTurnId` on every terminal event (Claude) would
+  // Engines that clear `activeTurnId` on every terminal event (Claude) would
   // otherwise leave the transcript with no active turn while work is still in
   // progress, collapsing the newest answer into a closed "Worked for" disclosure.
   // The latest turn is the transcript's own notion of "current", so fall back to it.
@@ -3194,7 +3190,7 @@ export default function ChatView({
     setComposerDraftPrompt,
   });
   // Keep the live status through the post-ack gap where the server has the message /
-  // turn request but the provider session is not live yet (common on first send).
+  // turn request but the engine session is not live yet (common on first send).
   const isWorking =
     hasLiveTurn || isSendBusy || isConnecting || isRevertingCheckpoint || isAwaitingTurnStart;
   const hasStreamingAssistantText =
@@ -3783,33 +3779,33 @@ export default function ChatView({
     providerComposerCapabilitiesQueryOptions(selectedProvider),
   );
   const canCompactActiveSession =
-    activeThread?.session?.provider === selectedProvider &&
+    activeThread?.session?.engine === selectedProvider &&
     activeThread.session.status !== "closed" &&
     supportsThreadCompaction(providerComposerCapabilitiesQuery.data);
   const providerCommandsQuery = useQuery(
     providerCommandsQueryOptions({
-      provider: selectedProvider,
+      engine: selectedProvider,
       cwd: composerSkillCwd,
       threadId,
       activeSession: hasActiveProviderDiscoverySession,
       binaryPath:
         (selectedProvider === "opencode"
-          ? providerOptionsForDispatch?.opencode?.binaryPath
+          ? engineOptionsForDispatch?.opencode?.binaryPath
           : selectedProvider === "kilo"
-            ? providerOptionsForDispatch?.kilo?.binaryPath
+            ? engineOptionsForDispatch?.kilo?.binaryPath
             : null) ?? null,
       serverUrl:
         (selectedProvider === "opencode"
-          ? providerOptionsForDispatch?.opencode?.serverUrl
+          ? engineOptionsForDispatch?.opencode?.serverUrl
           : selectedProvider === "kilo"
-            ? providerOptionsForDispatch?.kilo?.serverUrl
+            ? engineOptionsForDispatch?.kilo?.serverUrl
             : null) ?? null,
       experimentalWebSockets:
         selectedProvider === "opencode"
-          ? providerOptionsForDispatch?.opencode?.experimentalWebSockets
+          ? engineOptionsForDispatch?.opencode?.experimentalWebSockets
           : undefined,
       agentDir:
-        selectedProvider === "pi" ? serverSettingsSnapshot.providers.pi.agentDir || null : null,
+        selectedProvider === "pi" ? serverSettingsSnapshot.engines.pi.agentDir || null : null,
       enabled:
         (composerTriggerKind === "slash-command" || composerTriggerKind === "slash-model") &&
         supportsNativeSlashCommandDiscovery(providerComposerCapabilitiesQuery.data) &&
@@ -3820,12 +3816,12 @@ export default function ChatView({
     selectedProvider === "pi" || supportsSkillDiscovery(providerComposerCapabilitiesQuery.data);
   const providerSkillsQuery = useQuery(
     providerSkillsQueryOptions({
-      provider: selectedProvider,
+      engine: selectedProvider,
       cwd: composerSkillCwd,
       threadId,
       activeSession: hasActiveProviderDiscoverySession,
       agentDir:
-        selectedProvider === "pi" ? serverSettingsSnapshot.providers.pi.agentDir || null : null,
+        selectedProvider === "pi" ? serverSettingsSnapshot.engines.pi.agentDir || null : null,
       enabled:
         (isSkillTrigger || composerTriggerKind === "slash-command" || selectedProvider === "pi") &&
         canDiscoverProviderSkills &&
@@ -3834,7 +3830,7 @@ export default function ChatView({
   );
   const providerPluginsQuery = useQuery(
     providerPluginsQueryOptions({
-      provider: selectedProvider,
+      engine: selectedProvider,
       cwd: composerSkillCwd,
       threadId,
       enabled:
@@ -3876,7 +3872,7 @@ export default function ChatView({
           mention: {
             name: plugin.name,
             path: `plugin://${plugin.name}@${marketplace.name}`,
-          } satisfies ProviderMentionReference,
+          } satisfies EngineMentionReference,
         })),
       ) ?? EMPTY_COMPOSER_PLUGIN_SUGGESTIONS,
     [providerPluginsQuery.data],
@@ -3909,7 +3905,7 @@ export default function ChatView({
   const selectedModelCaps = useMemo(
     () =>
       getRuntimeAwareModelCapabilities({
-        provider: selectedProvider,
+        engine: selectedProvider,
         model: selectedModel,
         runtimeModel: selectedRuntimeModel,
       }),
@@ -3965,7 +3961,7 @@ export default function ChatView({
     threadExportBlockedReason(activeThread) === null;
   const normalComposerMenuItems = useComposerCommandMenuItems({
     composerTrigger: effectiveComposerTrigger,
-    provider: selectedProvider,
+    engine: selectedProvider,
     providerPlugins,
     providerNativeCommands,
     providerSkills,
@@ -4060,13 +4056,13 @@ export default function ChatView({
   const rememberCustomBinaryPathForDispatch = useCallback(
     (input: {
       threadId: Thread["id"];
-      provider: EngineKind;
-      providerOptions: ProviderStartOptions | undefined;
+      engine: EngineKind;
+      engineOptions: EngineStartOptions | undefined;
     }) => {
-      const pendingKey = getThreadProviderCustomBinaryPathKey(input.threadId, input.provider);
-      const customBinaryPath = getProviderStartOptionsCustomBinaryPath(
-        input.providerOptions,
-        input.provider,
+      const pendingKey = getThreadProviderCustomBinaryPathKey(input.threadId, input.engine);
+      const customBinaryPath = getEngineStartOptionsCustomBinaryPath(
+        input.engineOptions,
+        input.engine,
       );
       if (!customBinaryPath) {
         pendingCustomBinaryPathsByThreadProviderRef.current.delete(pendingKey);
@@ -4077,15 +4073,15 @@ export default function ChatView({
     [],
   );
   useEffect(() => {
-    const provider = activeThread?.session?.provider;
-    if (!activeThread || !provider) {
+    const engine = activeThread?.session?.engine;
+    if (!activeThread || !engine) {
       return;
     }
 
-    const sessionKey = getConfirmedCustomBinarySessionKey(activeThread, provider);
+    const sessionKey = getConfirmedCustomBinarySessionKey(activeThread, engine);
     if (!sessionKey) {
       confirmedCustomBinarySessionKeysRef.current.delete(
-        getThreadProviderCustomBinaryPathKey(activeThread.id, provider),
+        getThreadProviderCustomBinaryPathKey(activeThread.id, engine),
       );
       return;
     }
@@ -4106,25 +4102,25 @@ export default function ChatView({
       return;
     }
 
-    setConfirmedCustomBinaryPathsByProvider((existing) =>
-      existing[provider] === customBinaryPath
+    setConfirmedCustomBinaryPathsByEngine((existing) =>
+      existing[engine] === customBinaryPath
         ? existing
         : {
             ...existing,
-            [provider]: customBinaryPath,
+            [engine]: customBinaryPath,
           },
     );
   }, [
     activeThread,
     activeThread?.id,
-    activeThread?.session?.provider,
+    activeThread?.session?.engine,
     activeThread?.session?.status,
   ]);
   // Persist confirmations so a custom binary path that already started a session
   // stays trusted across restarts, instead of re-showing the availability warning.
   useEffect(() => {
-    saveConfirmedCustomBinaryPaths(confirmedCustomBinaryPathsByProvider);
-  }, [confirmedCustomBinaryPathsByProvider]);
+    saveConfirmedCustomBinaryPaths(confirmedCustomBinaryPathsByEngine);
+  }, [confirmedCustomBinaryPathsByEngine]);
   const refreshProviderStatuses = useRefreshProviderStatusesNow();
   const handoffBadgeLabel = useMemo(
     () => (activeThread ? resolveThreadHandoffBadgeLabel(activeThread) : null),
@@ -4132,18 +4128,18 @@ export default function ChatView({
   );
   const handoffBadgeSourceProvider = activeThread?.handoff?.sourceProvider ?? null;
   const handoffBadgeTargetProvider = activeThread?.handoff
-    ? activeThread.modelSelection.provider
+    ? activeThread.engineSelection.engine
     : null;
   const handoffTargetProviders = useMemo(
     () =>
       activeThread
         ? resolveAvailableHandoffTargetProviders({
-            sourceProvider: activeThread.modelSelection.provider,
-            providerSettings: serverSettingsQuery.data?.providers,
+            sourceProvider: activeThread.engineSelection.engine,
+            engineSettings: serverSettingsQuery.data?.engines,
             providerStatuses,
           })
         : [],
-    [activeThread, providerStatuses, serverSettingsQuery.data?.providers],
+    [activeThread, providerStatuses, serverSettingsQuery.data?.engines],
   );
   const handoffActionLabel = activeThread
     ? t("composer.handoffThread")
@@ -4158,24 +4154,24 @@ export default function ChatView({
     const deterministicRecovery =
       serverConfigQuery.isError ||
       serverSettingsQuery.isError ||
-      serverSettingsSnapshot.providers[selectedProvider]?.enabled === false ||
+      serverSettingsSnapshot.engines[selectedProvider]?.enabled === false ||
       activeProviderStatus?.authStatus === "unauthenticated" ||
       (activeProviderStatus !== null && activeProviderStatus.available === false);
     reportFocusedComposerReadiness(
       snapshotsSettled &&
         (deterministicRecovery ||
-          isTerminalStartupCatalogState(catalogStateByProvider[selectedProvider])),
+          isTerminalStartupCatalogState(catalogStateByEngine[selectedProvider])),
     );
   }, [
     activeProviderStatus,
-    catalogStateByProvider,
+    catalogStateByEngine,
     isFocusedPane,
     selectedProvider,
     serverConfigQuery.isError,
     serverConfigQuery.isPending,
     serverSettingsQuery.isError,
     serverSettingsQuery.isPending,
-    serverSettingsSnapshot.providers,
+    serverSettingsSnapshot.engines,
   ]);
   const activeProviderHealthBannerDismissalKey = useMemo(
     () => getProviderHealthBannerDismissalKey(activeProviderStatus),
@@ -4545,17 +4541,17 @@ export default function ChatView({
     [selectedModel],
   );
   const handleProviderBrowse = useCallback(
-    (provider: EngineKind) => {
-      if (provider === "pi") {
+    (engine: EngineKind) => {
+      if (engine === "pi") {
         setPiDiscoveryRequested(true);
       }
       // Selection is exact Engine intent. Start the target in the same event turn;
       // the enabled catalog hook on the next render shares this canonical query.
       // A cached health/auth failure must not block catalog truth until the delayed
-      // live status refresh; provider health remains the separate send-admission owner.
+      // live status refresh; engine health remains the separate send-admission owner.
       void queryClient.prefetchQuery(
         providerModelsPrefetchQueryOptions({
-          provider,
+          engine,
           settings: serverSettingsSnapshot,
           cwd: providerModelDiscoveryCwd,
         }),
@@ -4885,8 +4881,8 @@ export default function ChatView({
     cwd: threadWorkspaceCwd,
     enabled: environmentPanelVisible,
     latestTurnSettled,
-    codexHomePath: serverSettingsSnapshot.providers.codex.homePath || null,
-    providerOptions: providerOptionsForDispatch ?? null,
+    codexHomePath: serverSettingsSnapshot.engines.codex.homePath || null,
+    engineOptions: engineOptionsForDispatch ?? null,
   });
   const hasRightDockPanes = useRightDockStore(
     (store) => selectRightDockState(threadId)(store).panes.length > 0,
@@ -5273,8 +5269,8 @@ export default function ChatView({
       }
       return queue.persist(mode, async (currentMode, nextMode) => {
         if (serverThread) {
-          const nextModelSelection = nextMode === "auto" ? selectedModelSelection : undefined;
-          if (nextMode === "auto" && !nextModelSelection) {
+          const nextEngineSelection = nextMode === "auto" ? selectedEngineSelection : undefined;
+          if (nextMode === "auto" && !nextEngineSelection) {
             toastManager.add({
               type: "warning",
               title: t("composer.modelRequiredToSend"),
@@ -5291,16 +5287,16 @@ export default function ChatView({
             return false;
           }
           const persistenceInput = {
-            currentModelSelection: serverThread.modelSelection,
-            ...(nextModelSelection ? { nextModelSelection } : {}),
+            currentEngineSelection: serverThread.engineSelection,
+            ...(nextEngineSelection ? { nextEngineSelection } : {}),
             currentRuntimeMode: currentMode,
             nextRuntimeMode: nextMode,
-            persistModelSelection: (modelSelection: ModelSelection) =>
+            persistEngineSelection: (engineSelection: EngineSelection) =>
               api.orchestration.dispatchCommand({
                 type: "thread.meta.update",
                 commandId: newCommandId(),
                 threadId,
-                modelSelection,
+                engineSelection,
               }),
             persistRuntimeMode: (runtimeMode: RuntimeMode) =>
               api.orchestration.dispatchCommand({
@@ -5312,7 +5308,7 @@ export default function ChatView({
               }),
           };
           try {
-            await persistModelSelectionBeforeRuntimeMode(persistenceInput);
+            await persistEngineSelectionBeforeRuntimeMode(persistenceInput);
           } catch (error) {
             const runtimeModeMessageKey = runtimeModeAvailabilityMessageKeyFromError(error);
             toastManager.add({
@@ -5330,7 +5326,7 @@ export default function ChatView({
         return true;
       });
     },
-    [runtimeMode, selectedModelSelection, serverThread, t, threadId],
+    [runtimeMode, selectedEngineSelection, serverThread, t, threadId],
   );
   const setNextTurnRuntimeMode = useCallback(
     (mode: RuntimeMode) => {
@@ -5351,11 +5347,11 @@ export default function ChatView({
   const desiredBindingCanPersistRuntimeMode = useMemo(
     () =>
       desiredBindingCanPersistWithoutActiveSession({
-        desiredModelSelection: selectedModelSelection,
-        serverModelSelection: serverThread?.modelSelection ?? null,
+        desiredEngineSelection: selectedEngineSelection,
+        serverEngineSelection: serverThread?.engineSelection ?? null,
         activeSession: serverThread?.session ?? null,
       }),
-    [selectedModelSelection, serverThread?.modelSelection, serverThread?.session],
+    [selectedEngineSelection, serverThread?.engineSelection, serverThread?.session],
   );
   const handleRuntimeModeChange = useCallback(
     (mode: RuntimeMode) => {
@@ -5370,7 +5366,7 @@ export default function ChatView({
   );
 
   const handleInteractionModeChange = useCallback(
-    (mode: ProviderInteractionMode) => {
+    (mode: EngineInteractionMode) => {
       if (mode === interactionMode) return;
       if (mode === "plan" && !planModeAvailable) {
         toastManager.add({
@@ -6027,14 +6023,14 @@ export default function ChatView({
     });
   }, [prompt, updateSelectedComposerMentions]);
 
-  // Provider references are provider-specific; keep draft restores from looking like manual switches.
+  // Engine references are engine-specific; keep draft restores from looking like manual switches.
   useEffect(() => {
     const previous = previousSelectedProviderRef.current;
     previousSelectedProviderRef.current = {
       threadId,
-      provider: selectedProvider,
+      engine: selectedProvider,
     };
-    if (!previous || previous.threadId !== threadId || previous.provider === selectedProvider) {
+    if (!previous || previous.threadId !== threadId || previous.engine === selectedProvider) {
       return;
     }
     updateSelectedComposerSkills([]);
@@ -6533,7 +6529,7 @@ export default function ChatView({
         type: "thread.task.background",
         commandId: newCommandId(),
         threadId: stripSourceThreadId,
-        toolUseId: item.providerThreadId,
+        toolUseId: item.nativeThreadId,
         createdAt: new Date().toISOString(),
       });
     },
@@ -6552,7 +6548,7 @@ export default function ChatView({
       await api.orchestration.dispatchCommand({
         type: "thread.turn.interrupt",
         commandId: newCommandId(),
-        threadId: localSubagentThreadId(stripSourceThreadId, item.providerThreadId),
+        threadId: localSubagentThreadId(stripSourceThreadId, item.nativeThreadId),
         createdAt: new Date().toISOString(),
       });
     },
@@ -6588,31 +6584,31 @@ export default function ChatView({
     markWorkflowRunDismissed(activeThreadId, workflowTaskId);
   }, [activeThreadId, markWorkflowRunDismissed, workflowRunState]);
 
-  const onProviderModelSelect = useCallback(
-    async (provider: EngineKind, model: ModelSlug) => {
+  const onEngineModelSelect = useCallback(
+    async (engine: EngineKind, model: ModelSlug) => {
       if (!activeThread) return;
       const resolvedModel = resolveCommittedProviderModel({
         selectedModel: model,
-        availableOptions: selectableModelOptionsByProvider[provider],
+        availableOptions: selectableModelOptionsByEngine[engine],
       });
       if (!resolvedModel) {
         scheduleComposerFocus();
         return;
       }
       const runtimeModel = resolveRuntimeModelDescriptor({
-        provider,
+        engine,
         model: resolvedModel,
-        runtimeModels: runtimeModelsByProvider[provider],
+        runtimeModels: runtimeModelsByEngine[engine],
       });
-      const nextModelSelection = buildModelSelection(
-        provider,
+      const nextEngineSelection = buildEngineSelection(
+        engine,
         resolvedModel,
         undefined,
-        provider === "claude" ? runtimeModel?.supportsAutoMode : undefined,
+        engine === "claude" ? runtimeModel?.supportsAutoMode : undefined,
       );
-      setComposerDraftModelSelectionAndSticky(activeThread.id, nextModelSelection);
-      if (provider === "cursor") {
-        setComposerDraftProviderModelOptions(activeThread.id, provider, undefined, {
+      setComposerDraftEngineSelectionAndSticky(activeThread.id, nextEngineSelection);
+      if (engine === "cursor") {
+        setComposerDraftProviderModelOptions(activeThread.id, engine, undefined, {
           persistSticky: true,
           model: resolvedModel,
         });
@@ -6621,18 +6617,18 @@ export default function ChatView({
     },
     [
       activeThread,
-      runtimeModelsByProvider,
-      selectableModelOptionsByProvider,
+      runtimeModelsByEngine,
+      selectableModelOptionsByEngine,
       scheduleComposerFocus,
-      setComposerDraftModelSelectionAndSticky,
+      setComposerDraftEngineSelectionAndSticky,
       setComposerDraftProviderModelOptions,
     ],
   );
   const onComposerEngineSelect = useCallback(
-    (provider: EngineKind) => {
+    (engine: EngineKind) => {
       if (!activeThread) return;
-      if (provider === selectedProvider) return;
-      setComposerDraftActiveProviderAndSticky(activeThread.id, provider);
+      if (engine === selectedProvider) return;
+      setComposerDraftActiveProviderAndSticky(activeThread.id, engine);
       scheduleComposerFocus();
     },
     [
@@ -6731,15 +6727,15 @@ export default function ChatView({
         event.preventDefault();
         event.stopPropagation();
         const direction = command === "model.next" ? "next" : "previous";
-        const providerOptions = selectableModelOptionsByProvider[selectedProvider] ?? [];
+        const engineOptions = selectableModelOptionsByEngine[selectedProvider] ?? [];
         const nextSlug = resolveCycledModelSlug({
           currentModel: selectedModel,
-          options: providerOptions,
+          options: engineOptions,
           favoriteSlugs: readFavoriteModelSlugs(selectedProvider),
           direction,
         });
         if (!nextSlug) return;
-        onProviderModelSelect(selectedProvider, nextSlug as ModelSlug);
+        onEngineModelSelect(selectedProvider, nextSlug as ModelSlug);
         return;
       }
 
@@ -6963,8 +6959,8 @@ export default function ChatView({
     activeThread,
     selectedProvider,
     selectedModel,
-    modelOptionsByProvider,
-    onProviderModelSelect,
+    modelOptionsByEngine,
+    onEngineModelSelect,
     copyThreadIdToClipboard,
   ]);
 
@@ -7032,7 +7028,7 @@ export default function ChatView({
         activeThreadId,
         insertedCount < nextFiles.length
           ? t("browser.attachmentLimit", {
-              count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+              count: ENGINE_SEND_TURN_MAX_ATTACHMENTS,
             })
           : error,
       );
@@ -7136,7 +7132,7 @@ export default function ChatView({
         [
           "Undo the file changes shown in this card?",
           "Earlier file changes will remain available to undo.",
-          "Messages and provider conversation history will be kept.",
+          "Messages and engine conversation history will be kept.",
           "This action cannot be undone.",
         ].join("\n"),
       );
@@ -7227,7 +7223,7 @@ export default function ChatView({
       readonly form: AutomationFormState;
       readonly warnings: readonly AutomationDraftWarning[];
       readonly acknowledgedWarningIds: ReadonlySet<AutomationDraftWarningId>;
-      readonly providerOptions?: ProviderStartOptions;
+      readonly engineOptions?: EngineStartOptions;
       readonly activityThreadId?: ThreadId | null;
     }): Promise<boolean> => {
       const api = readNativeApi();
@@ -7252,7 +7248,7 @@ export default function ChatView({
       const createdAt = new Date().toISOString();
       const automationInput = createInputFromForm(
         input.form,
-        input.providerOptions ?? providerOptionsForDispatch,
+        input.engineOptions ?? engineOptionsForDispatch,
         acknowledgedRisks,
         activityThreadId,
       );
@@ -7332,7 +7328,7 @@ export default function ChatView({
       automationDraftSubmittingRef,
       clearComposerInput,
       isServerThread,
-      providerOptionsForDispatch,
+      engineOptionsForDispatch,
       queryClient,
       resetAutomationDraftState,
       setIsAutomationDraftSubmitting,
@@ -7344,9 +7340,9 @@ export default function ChatView({
   const ensureAutomationTargetThread = useCallback(
     async (input: {
       readonly titleSeed: string;
-      readonly threadModelSelection: ModelSelection;
+      readonly threadEngineSelection: EngineSelection;
       readonly threadRuntimeMode: RuntimeMode;
-      readonly threadInteractionMode: ProviderInteractionMode;
+      readonly threadInteractionMode: EngineInteractionMode;
     }): Promise<ThreadId | null> => {
       const api = readNativeApi();
       if (!api || !activeProject || !activeThread) {
@@ -7372,7 +7368,7 @@ export default function ChatView({
             threadId: activeThread.id,
             projectId: activeProject.id,
             title,
-            modelSelection: input.threadModelSelection,
+            engineSelection: input.threadEngineSelection,
             runtimeMode: input.threadRuntimeMode,
             interactionMode: input.threadInteractionMode,
             envMode: activeThread.envMode ?? (activeThread.worktreePath ? "worktree" : "local"),
@@ -7434,7 +7430,7 @@ export default function ChatView({
 
       // Draft review can keep the local draft ID in the form; promote it only when
       // the automation is actually submitted so cancelling review leaves no empty thread.
-      if (!selectedModelSelection) {
+      if (!selectedEngineSelection) {
         toastManager.add({
           type: "warning",
           title: t("composer.modelRequiredToSend"),
@@ -7443,7 +7439,7 @@ export default function ChatView({
       }
       const targetThreadId = await ensureAutomationTargetThread({
         titleSeed: form.prompt || form.name,
-        threadModelSelection: selectedModelSelection,
+        threadEngineSelection: selectedEngineSelection,
         threadRuntimeMode: runtimeMode,
         threadInteractionMode: interactionMode,
       });
@@ -7461,7 +7457,7 @@ export default function ChatView({
       interactionMode,
       isServerThread,
       runtimeMode,
-      selectedModelSelection,
+      selectedEngineSelection,
       t,
     ],
   );
@@ -7472,7 +7468,7 @@ export default function ChatView({
       readonly form: AutomationFormState;
       readonly warnings: readonly AutomationDraftWarning[];
       readonly acknowledgedWarningIds: ReadonlySet<AutomationDraftWarningId>;
-      readonly providerOptions?: ProviderStartOptions;
+      readonly engineOptions?: EngineStartOptions;
     }): Promise<boolean> => {
       if (automationDraftSubmittingRef.current) {
         return false;
@@ -7490,15 +7486,11 @@ export default function ChatView({
       automationDraftSubmittingRef.current = true;
       setIsAutomationDraftSubmitting(true);
       return await (async () => {
-        const providerOptions =
-          input.providerOptions ??
-          providerOptionsForAutomationEdit(
-            input.definition,
-            input.form,
-            providerOptionsForDispatch,
-          );
+        const engineOptions =
+          input.engineOptions ??
+          engineOptionsForAutomationEdit(input.definition, input.form, engineOptionsForDispatch);
         const updated = await automationUpdateMutation.mutateAsync(
-          updateInputFromForm(input.definition, input.form, providerOptions, acknowledgedRisks),
+          updateInputFromForm(input.definition, input.form, engineOptions, acknowledgedRisks),
         );
         resetAutomationDraftState();
         toastManager.add({
@@ -7520,7 +7512,7 @@ export default function ChatView({
     [
       automationDraftSubmittingRef,
       automationUpdateMutation,
-      providerOptionsForDispatch,
+      engineOptionsForDispatch,
       resetAutomationDraftState,
       setIsAutomationDraftSubmitting,
       t,
@@ -7574,7 +7566,7 @@ export default function ChatView({
       const restoredBinding =
         restoredBindingOverride === undefined
           ? {
-              modelSelection: queuedTurn.modelSelection,
+              engineSelection: queuedTurn.engineSelection,
               runtimeMode: queuedTurn.runtimeMode,
               interactionMode: queuedTurn.interactionMode,
             }
@@ -7640,7 +7632,7 @@ export default function ChatView({
           : null,
       );
       if (restoredBinding) {
-        setComposerDraftModelSelection(activeThread.id, restoredBinding.modelSelection);
+        setComposerDraftEngineSelection(activeThread.id, restoredBinding.engineSelection);
         setComposerDraftRuntimeMode(activeThread.id, restoredBinding.runtimeMode);
         setComposerDraftInteractionMode(activeThread.id, restoredBinding.interactionMode);
       }
@@ -7662,7 +7654,7 @@ export default function ChatView({
       setDraftThreadContext,
       setRestoredQueuedSourceProposedPlan,
       setComposerDraftInteractionMode,
-      setComposerDraftModelSelection,
+      setComposerDraftEngineSelection,
       setComposerDraftPrompt,
       setComposerDraftRuntimeMode,
       updateSelectedComposerMentions,
@@ -7678,13 +7670,13 @@ export default function ChatView({
 
     const disposition = resolveTurnStartRecoveryDisposition({
       messageId: pendingRecovery.messageId,
-      previousModelSelection: pendingRecovery.previousBinding.modelSelection,
+      previousEngineSelection: pendingRecovery.previousBinding.engineSelection,
       previousRuntimeMode: pendingRecovery.previousBinding.runtimeMode,
       previousInteractionMode: pendingRecovery.previousBinding.interactionMode,
-      targetModelSelection: pendingRecovery.targetBinding.modelSelection,
+      targetEngineSelection: pendingRecovery.targetBinding.engineSelection,
       targetRuntimeMode: pendingRecovery.targetBinding.runtimeMode,
       targetInteractionMode: pendingRecovery.targetBinding.interactionMode,
-      threadModelSelection: serverThread.modelSelection,
+      threadEngineSelection: serverThread.engineSelection,
       threadRuntimeMode: serverThread.runtimeMode,
       threadInteractionMode: serverThread.interactionMode,
       session: serverThread.session,
@@ -7867,16 +7859,17 @@ export default function ChatView({
     const selectedModelForSend = queuedChatTurn?.selectedModel ?? selectedModel;
     const selectedPromptEffortForSend =
       queuedChatTurn?.selectedPromptEffort ?? selectedPromptEffort;
-    const selectedModelSelectionForSend = queuedChatTurn?.modelSelection ?? selectedModelSelection;
-    const modelPresentationIdentityForSend = selectedModelSelectionForSend
+    const selectedEngineSelectionForSend =
+      queuedChatTurn?.engineSelection ?? selectedEngineSelection;
+    const modelPresentationIdentityForSend = selectedEngineSelectionForSend
       ? (queuedChatTurn?.modelPresentationIdentity ??
         resolveModelPresentationIdentity({
-          selection: selectedModelSelectionForSend,
-          options: modelOptionsByProvider[selectedModelSelectionForSend.provider],
+          selection: selectedEngineSelectionForSend,
+          options: modelOptionsByEngine[selectedEngineSelectionForSend.engine],
         }))
       : undefined;
-    const providerOptionsForDispatchForSend =
-      queuedChatTurn?.providerOptionsForDispatch ?? providerOptionsForDispatch;
+    const engineOptionsForDispatchForSend =
+      queuedChatTurn?.engineOptionsForDispatch ?? engineOptionsForDispatch;
     const runtimeModeForSend = queuedChatTurn?.runtimeMode ?? runtimeMode;
     let interactionModeForSend = queuedChatTurn?.interactionMode ?? interactionMode;
     const envModeForSend = queuedChatTurn?.envMode ?? envMode;
@@ -7922,7 +7915,7 @@ export default function ChatView({
     // Queued chat turns already captured their intended mode. Live plan follow-ups
     // with attachments must use the normal send path so references are preserved.
     if (isLivePlanFollowUpSubmission) {
-      if (!selectedModelSelectionForSend) {
+      if (!selectedEngineSelectionForSend) {
         toastManager.add({
           type: "warning",
           title: t("composer.modelRequiredToSend"),
@@ -7951,11 +7944,11 @@ export default function ChatView({
             selectedProvider,
             selectedModel,
             selectedPromptEffort,
-            modelSelection: selectedModelSelectionForSend,
+            engineSelection: selectedEngineSelectionForSend,
             ...(modelPresentationIdentityForSend
               ? { modelPresentationIdentity: modelPresentationIdentityForSend }
               : {}),
-            ...(providerOptionsForDispatch ? { providerOptionsForDispatch } : {}),
+            ...(engineOptionsForDispatch ? { engineOptionsForDispatch } : {}),
             runtimeMode,
           });
           return true;
@@ -7977,7 +7970,7 @@ export default function ChatView({
       composerFileCommentsForSend.length === 0 &&
       sendableComposerTerminalContexts.length === 0 &&
       sendableComposerPastedTexts.length === 0 &&
-      // Provider mentions are structured turn metadata, and automation definitions persist text only.
+      // Engine mentions are structured turn metadata, and automation definitions persist text only.
       selectedComposerMentionsForSend.length === 0;
     const hasPromptOnlySendableContent = hasNoStructuredComposerContext;
     if (hasPromptOnlySendableContent) {
@@ -7999,7 +7992,7 @@ export default function ChatView({
       });
       return false;
     }
-    if (!selectedModelSelectionForSend) {
+    if (!selectedEngineSelectionForSend) {
       toastManager.add({
         type: "warning",
         title: t("composer.modelRequiredToSend"),
@@ -8067,7 +8060,7 @@ export default function ChatView({
             return true;
           }
           // Render the exchange in-thread: echo the user's words as a bubble and ask for
-          // what's missing as an assistant bubble. Nothing reaches a provider; the cleaned
+          // what's missing as an assistant bubble. Nothing reaches a engine; the cleaned
           // automationMessage accumulates for the next re-resolve and for Cancel's restore.
           const question = automationClarificationPrompt(automationRequest.missingFields);
           const priorBubbles = conversation?.bubbles ?? [];
@@ -8103,11 +8096,11 @@ export default function ChatView({
         const automationDraft = buildComposerAutomationDraft({
           resolution: automationRequest.resolution,
           projectId: activeProject.id,
-          projectModelSelection: automationProjectModelSelection(
+          projectEngineSelection: automationProjectEngineSelection(
             automationProjects,
             activeProject.id,
           ),
-          selectedModelSelection: selectedModelSelectionForSend,
+          selectedEngineSelection: selectedEngineSelectionForSend,
           targetThreadId: automationTargetThreadId,
           hasEphemeralContext: !hasPromptOnlySendableContent,
         });
@@ -8146,8 +8139,8 @@ export default function ChatView({
           warnings: automationDraft.warnings,
           acknowledgedWarningIds: automationDraft.acknowledgedWarningIds,
           activityThreadId: preparedAutomation.activityThreadId,
-          ...(providerOptionsForDispatchForSend
-            ? { providerOptions: providerOptionsForDispatchForSend }
+          ...(engineOptionsForDispatchForSend
+            ? { engineOptions: engineOptionsForDispatchForSend }
             : {}),
         });
         return true;
@@ -8160,17 +8153,17 @@ export default function ChatView({
       }
     }
     sendPreflightInFlightRef.current = true;
-    const sendProviderAvailability = await resolveProviderSendAvailabilityWithRefresh({
-      provider: selectedModelSelectionForSend.provider,
+    const sendEngineAvailability = await resolveProviderSendAvailabilityWithRefresh({
+      engine: selectedEngineSelectionForSend.engine,
       statuses: providerStatuses,
       refreshStatuses: () => refreshProviderStatuses({ silent: true }),
     }).finally(() => {
       sendPreflightInFlightRef.current = false;
     });
-    if (!sendProviderAvailability.usable) {
+    if (!sendEngineAvailability.usable) {
       toastManager.add({
         type: "error",
-        title: sendProviderAvailability.unavailableReason,
+        title: sendEngineAvailability.unavailableReason,
       });
       return false;
     }
@@ -8192,13 +8185,13 @@ export default function ChatView({
         composerFilesForSend.length +
         composerAssistantSelectionsForSend.length +
         (browserPromptAttachment.image ? 1 : 0);
-      if (nextAttachmentCount <= PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
+      if (nextAttachmentCount <= ENGINE_SEND_TURN_MAX_ATTACHMENTS) {
         composerImagesForSend = [...composerImagesForSend, browserPromptAttachment.image];
       } else {
         toastManager.add({
           type: "warning",
           title: t("browser.attachmentLimit", {
-            count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+            count: ENGINE_SEND_TURN_MAX_ATTACHMENTS,
           }),
           description: t("conversation.browserAttachmentSkipped"),
         });
@@ -8236,13 +8229,13 @@ export default function ChatView({
         composerFilesForSend.length +
         composerAssistantSelectionsForSend.length +
         1;
-      if (nextAttachmentCount <= PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
+      if (nextAttachmentCount <= ENGINE_SEND_TURN_MAX_ATTACHMENTS) {
         composerImagesForSend = [...composerImagesForSend, devicePromptAttachment.image];
       } else {
         toastManager.add({
           type: "warning",
           title: t("browser.attachmentLimit", {
-            count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+            count: ENGINE_SEND_TURN_MAX_ATTACHMENTS,
           }),
           description: t("conversation.deviceAttachmentSkipped"),
         });
@@ -8305,12 +8298,12 @@ export default function ChatView({
         selectedProvider: selectedProviderForSend,
         selectedModel: selectedModelForSend,
         selectedPromptEffort: selectedPromptEffortForSend,
-        modelSelection: selectedModelSelectionForSend,
+        engineSelection: selectedEngineSelectionForSend,
         ...(modelPresentationIdentityForSend
           ? { modelPresentationIdentity: modelPresentationIdentityForSend }
           : {}),
-        ...(providerOptionsForDispatchForSend
-          ? { providerOptionsForDispatch: providerOptionsForDispatchForSend }
+        ...(engineOptionsForDispatchForSend
+          ? { engineOptionsForDispatch: engineOptionsForDispatchForSend }
           : {}),
         ...(sourceProposedPlanForSend ? { sourceProposedPlan: sourceProposedPlanForSend } : {}),
         runtimeMode: runtimeModeForSend,
@@ -8354,7 +8347,7 @@ export default function ChatView({
       activeProject,
       chatWorkspaceRoot,
       createdAt: firstSendCreatedAt,
-      defaultModelSelection: selectedModelSelectionForSend,
+      defaultEngineSelection: selectedEngineSelectionForSend,
       isFirstMessage,
       isHomeChatContainer,
       isStudioContainer,
@@ -8412,7 +8405,7 @@ export default function ChatView({
             title: firstSendTarget.creation.title,
             workspaceRoot: firstSendTarget.creation.workspaceRoot,
             createWorkspaceRootIfMissing: firstSendTarget.creation.createWorkspaceRootIfMissing,
-            defaultModelSelection: firstSendTarget.creation.defaultModelSelection,
+            defaultEngineSelection: firstSendTarget.creation.defaultEngineSelection,
             createdAt,
           });
           targetProjectIdForSend = projectId;
@@ -8589,10 +8582,10 @@ export default function ChatView({
       currentSessionForRecovery &&
       (currentSessionForRecovery.orchestrationStatus === "ready" ||
         currentSessionForRecovery.orchestrationStatus === "running") &&
-      currentSessionForRecovery.provider === currentThreadForRecovery.modelSelection.provider &&
-      (!modelSelectionsEqual(
-        currentThreadForRecovery.modelSelection,
-        selectedModelSelectionForSend,
+      currentSessionForRecovery.engine === currentThreadForRecovery.engineSelection.engine &&
+      (!engineSelectionsEqual(
+        currentThreadForRecovery.engineSelection,
+        selectedEngineSelectionForSend,
       ) ||
         currentThreadForRecovery.runtimeMode !== nextRuntimeModeForSend ||
         currentThreadForRecovery.interactionMode !== interactionModeForSend)
@@ -8602,12 +8595,12 @@ export default function ChatView({
         commandId: turnStartCommandId,
         messageId: messageIdForSend,
         previousBinding: {
-          modelSelection: currentThreadForRecovery.modelSelection,
+          engineSelection: currentThreadForRecovery.engineSelection,
           runtimeMode: currentThreadForRecovery.runtimeMode,
           interactionMode: currentThreadForRecovery.interactionMode,
         },
         targetBinding: {
-          modelSelection: selectedModelSelectionForSend,
+          engineSelection: selectedEngineSelectionForSend,
           runtimeMode: nextRuntimeModeForSend,
           interactionMode: interactionModeForSend,
         },
@@ -8658,12 +8651,12 @@ export default function ChatView({
           selectedProvider: selectedProviderForSend,
           selectedModel: selectedModelForSend,
           selectedPromptEffort: selectedPromptEffortForSend,
-          modelSelection: selectedModelSelectionForSend,
+          engineSelection: selectedEngineSelectionForSend,
           ...(modelPresentationIdentityForSend
             ? { modelPresentationIdentity: modelPresentationIdentityForSend }
             : {}),
-          ...(providerOptionsForDispatchForSend
-            ? { providerOptionsForDispatch: providerOptionsForDispatchForSend }
+          ...(engineOptionsForDispatchForSend
+            ? { engineOptionsForDispatch: engineOptionsForDispatchForSend }
             : {}),
           ...(sourceProposedPlanForSend ? { sourceProposedPlan: sourceProposedPlanForSend } : {}),
           runtimeMode: nextRuntimeModeForSend,
@@ -8675,7 +8668,7 @@ export default function ChatView({
     const outgoingTextSeed =
       messageTextForSend || (composerImagesSnapshot.length > 0 ? IMAGE_ONLY_BOOTSTRAP_PROMPT : "");
     const outgoingMessageText = formatOutgoingComposerPrompt({
-      provider: selectedProviderForSend,
+      engine: selectedProviderForSend,
       model: selectedModelForSend,
       effort: selectedPromptEffortForSend,
       text: outgoingTextSeed,
@@ -8927,7 +8920,7 @@ export default function ChatView({
         }
       }
 
-      const threadCreateModelSelection: ModelSelection = selectedModelSelectionForSend;
+      const threadCreateEngineSelection: EngineSelection = selectedEngineSelectionForSend;
 
       if (isLocalDraftThread) {
         const promotionCommand = {
@@ -8936,7 +8929,7 @@ export default function ChatView({
           threadId: threadIdForSend,
           projectId: targetProjectIdForSend,
           title,
-          modelSelection: threadCreateModelSelection,
+          engineSelection: threadCreateEngineSelection,
           runtimeMode: nextRuntimeModeForSend,
           interactionMode: interactionModeForSend,
           envMode: nextThreadEnvMode,
@@ -9032,8 +9025,8 @@ export default function ChatView({
       });
       rememberCustomBinaryPathForDispatch({
         threadId: threadIdForSend,
-        provider: selectedModelSelectionForSend.provider,
-        providerOptions: providerOptionsForDispatchForSend,
+        engine: selectedEngineSelectionForSend.engine,
+        engineOptions: engineOptionsForDispatchForSend,
       });
       turnStartAttempted = true;
       const dispatchResult = await api.orchestration.dispatchCommand({
@@ -9050,12 +9043,12 @@ export default function ChatView({
             ? { mentions: mentionedPluginMentionsForSend }
             : {}),
         },
-        modelSelection: selectedModelSelectionForSend,
+        engineSelection: selectedEngineSelectionForSend,
         ...(modelPresentationIdentityForSend
           ? { modelPresentationIdentity: modelPresentationIdentityForSend }
           : {}),
-        ...(providerOptionsForDispatchForSend
-          ? { providerOptions: providerOptionsForDispatchForSend }
+        ...(engineOptionsForDispatchForSend
+          ? { engineOptions: engineOptionsForDispatchForSend }
           : {}),
         assistantDeliveryMode,
         dispatchMode,
@@ -9068,7 +9061,7 @@ export default function ChatView({
       turnStartSucceeded = true;
       armLocalDispatchAckFallback(threadIdForSend);
       // Consume the exact admission result instead of independently guessing
-      // capability from a Provider id after the command was accepted.
+      // capability from a Engine id after the command was accepted.
       if (dispatchResult.steeringDisposition === "queue-interrupt-redispatch") {
         setQueuedSteerGate({
           sawInterruptGap: false,
@@ -9291,9 +9284,9 @@ export default function ChatView({
   const onRespondToApproval = useCallback(
     async (
       requestId: ApprovalRequestId,
-      decision: ProviderApprovalDecision,
+      decision: EngineApprovalDecision,
       lifecycleGeneration?: string,
-      requestKind?: ProviderRequestKind,
+      requestKind?: EngineRequestKind,
     ) => {
       const api = readNativeApi();
       if (!api || !activeThreadId) return;
@@ -9370,8 +9363,8 @@ export default function ChatView({
     if (!trimmed) {
       return false;
     }
-    const modelSelectionForPlanDispatch = queuedTurn?.modelSelection ?? selectedModelSelection;
-    if (!modelSelectionForPlanDispatch) {
+    const engineSelectionForPlanDispatch = queuedTurn?.engineSelection ?? selectedEngineSelection;
+    if (!engineSelectionForPlanDispatch) {
       toastManager.add({
         type: "warning",
         title: t("composer.modelRequiredToSend"),
@@ -9381,15 +9374,15 @@ export default function ChatView({
     const modelPresentationIdentityForPlanDispatch =
       queuedTurn?.modelPresentationIdentity ??
       resolveModelPresentationIdentity({
-        selection: modelSelectionForPlanDispatch,
-        options: modelOptionsByProvider[modelSelectionForPlanDispatch.provider],
+        selection: engineSelectionForPlanDispatch,
+        options: modelOptionsByEngine[engineSelectionForPlanDispatch.engine],
       });
 
     const threadIdForSend = activeThread.id;
     const messageIdForSend = newMessageId();
     const messageCreatedAt = new Date().toISOString();
     const outgoingMessageText = formatOutgoingComposerPrompt({
-      provider: queuedTurn?.selectedProvider ?? selectedProvider,
+      engine: queuedTurn?.selectedProvider ?? selectedProvider,
       model: queuedTurn?.selectedModel ?? selectedModel,
       effort: queuedTurn?.selectedPromptEffort ?? selectedPromptEffort,
       text: trimmed,
@@ -9421,8 +9414,8 @@ export default function ChatView({
       // while the same-thread implementation turn is starting.
       setComposerDraftInteractionMode(threadIdForSend, nextInteractionMode);
 
-      const providerOptionsForPlanDispatch =
-        queuedTurn?.providerOptionsForDispatch ?? providerOptionsForDispatch;
+      const engineOptionsForPlanDispatch =
+        queuedTurn?.engineOptionsForDispatch ?? engineOptionsForDispatch;
       const sourceProposedPlan =
         nextInteractionMode === "default"
           ? buildSourceProposedPlanReference({
@@ -9432,8 +9425,8 @@ export default function ChatView({
           : undefined;
       rememberCustomBinaryPathForDispatch({
         threadId: threadIdForSend,
-        provider: modelSelectionForPlanDispatch.provider,
-        providerOptions: providerOptionsForPlanDispatch,
+        engine: engineSelectionForPlanDispatch.engine,
+        engineOptions: engineOptionsForPlanDispatch,
       });
       const dispatchResult = await api.orchestration.dispatchCommand({
         type: "thread.turn.start",
@@ -9445,11 +9438,11 @@ export default function ChatView({
           text: outgoingMessageText,
           attachments: [],
         },
-        modelSelection: modelSelectionForPlanDispatch,
+        engineSelection: engineSelectionForPlanDispatch,
         modelPresentationIdentity: modelPresentationIdentityForPlanDispatch,
-        ...(providerOptionsForPlanDispatch
+        ...(engineOptionsForPlanDispatch
           ? {
-              providerOptions: providerOptionsForPlanDispatch,
+              engineOptions: engineOptionsForPlanDispatch,
             }
           : {}),
         assistantDeliveryMode,
@@ -9524,7 +9517,7 @@ export default function ChatView({
         setThreadError(activeThread.id, "Wait for the current send to start before editing.");
         return false;
       }
-      if (!selectedModelSelection) {
+      if (!selectedEngineSelection) {
         toastManager.add({
           type: "warning",
           title: t("composer.modelRequiredToSend"),
@@ -9541,7 +9534,7 @@ export default function ChatView({
         messageId,
       });
       const outgoingMessageText = formatOutgoingComposerPrompt({
-        provider: selectedProvider,
+        engine: selectedProvider,
         model: selectedModel,
         effort: selectedPromptEffort,
         text: editedTextWithOriginalContext,
@@ -9553,12 +9546,12 @@ export default function ChatView({
           threadId: activeThread.id,
           messageId,
           text: outgoingMessageText,
-          modelSelection: selectedModelSelection,
+          engineSelection: selectedEngineSelection,
           modelPresentationIdentity: resolveModelPresentationIdentity({
-            selection: selectedModelSelection,
-            options: modelOptionsByProvider[selectedModelSelection.provider],
+            selection: selectedEngineSelection,
+            options: modelOptionsByEngine[selectedEngineSelection.engine],
           }),
-          ...(providerOptionsForDispatch ? { providerOptions: providerOptionsForDispatch } : {}),
+          ...(engineOptionsForDispatch ? { engineOptions: engineOptionsForDispatch } : {}),
           assistantDeliveryMode,
           runtimeMode,
           interactionMode,
@@ -9584,11 +9577,11 @@ export default function ChatView({
       isSendBusy,
       isServerThread,
       interactionMode,
-      modelOptionsByProvider,
-      providerOptionsForDispatch,
+      modelOptionsByEngine,
+      engineOptionsForDispatch,
       runtimeMode,
       selectedModel,
-      selectedModelSelection,
+      selectedEngineSelection,
       selectedPromptEffort,
       selectedProvider,
       serverSettingsReady,
@@ -9625,7 +9618,7 @@ export default function ChatView({
     if (!workflowRunState?.scriptPath || !workflowRunState.runId) return;
     const lateSendHandlers = lateComposerSendHandlersRef.current;
     if (!lateSendHandlers) return;
-    if (!selectedModelSelection) {
+    if (!selectedEngineSelection) {
       toastManager.add({
         type: "warning",
         title: t("composer.modelRequiredToSend"),
@@ -9652,8 +9645,8 @@ export default function ChatView({
       selectedProvider,
       selectedModel,
       selectedPromptEffort,
-      modelSelection: selectedModelSelection,
-      ...(providerOptionsForDispatch ? { providerOptionsForDispatch } : {}),
+      engineSelection: selectedEngineSelection,
+      ...(engineOptionsForDispatch ? { engineOptionsForDispatch } : {}),
       runtimeMode,
       interactionMode,
       envMode,
@@ -9666,10 +9659,10 @@ export default function ChatView({
     envMode,
     interactionMode,
     markWorkflowRunDismissed,
-    providerOptionsForDispatch,
+    engineOptionsForDispatch,
     runtimeMode,
     selectedModel,
-    selectedModelSelection,
+    selectedEngineSelection,
     selectedPromptEffort,
     selectedProvider,
     t,
@@ -9807,7 +9800,7 @@ export default function ChatView({
       isSendBusy ||
       isConnecting ||
       sendInFlightRef.current ||
-      !selectedModelSelection
+      !selectedEngineSelection
     ) {
       return;
     }
@@ -9817,16 +9810,16 @@ export default function ChatView({
     const planMarkdown = activeProposedPlan.planMarkdown;
     const implementationPrompt = buildPlanImplementationPrompt(planMarkdown);
     const outgoingImplementationPrompt = formatOutgoingComposerPrompt({
-      provider: selectedProvider,
+      engine: selectedProvider,
       model: selectedModel,
       effort: selectedPromptEffort,
       text: implementationPrompt,
     });
     const nextThreadTitle = truncateTitle(buildPlanImplementationThreadTitle(planMarkdown));
-    const nextThreadModelSelection: ModelSelection = selectedModelSelection;
+    const nextThreadEngineSelection: EngineSelection = selectedEngineSelection;
     const nextThreadModelPresentationIdentity = resolveModelPresentationIdentity({
-      selection: nextThreadModelSelection,
-      options: modelOptionsByProvider[nextThreadModelSelection.provider],
+      selection: nextThreadEngineSelection,
+      options: modelOptionsByEngine[nextThreadEngineSelection.engine],
     });
     const sourceProposedPlan = buildSourceProposedPlanReference({
       threadId: activeThread.id,
@@ -9847,7 +9840,7 @@ export default function ChatView({
         threadId: nextThreadId,
         projectId: activeProject.id,
         title: nextThreadTitle,
-        modelSelection: nextThreadModelSelection,
+        engineSelection: nextThreadEngineSelection,
         runtimeMode,
         interactionMode: "default",
         envMode: activeThread.envMode ?? (activeThread.worktreePath ? "worktree" : "local"),
@@ -9863,8 +9856,8 @@ export default function ChatView({
       .then(() => {
         rememberCustomBinaryPathForDispatch({
           threadId: nextThreadId,
-          provider: nextThreadModelSelection.provider,
-          providerOptions: providerOptionsForDispatch,
+          engine: nextThreadEngineSelection.engine,
+          engineOptions: engineOptionsForDispatch,
         });
         return api.orchestration.dispatchCommand({
           type: "thread.turn.start",
@@ -9876,9 +9869,9 @@ export default function ChatView({
             text: outgoingImplementationPrompt,
             attachments: [],
           },
-          modelSelection: nextThreadModelSelection,
+          engineSelection: nextThreadEngineSelection,
           modelPresentationIdentity: nextThreadModelPresentationIdentity,
-          ...(providerOptionsForDispatch ? { providerOptions: providerOptionsForDispatch } : {}),
+          ...(engineOptionsForDispatch ? { engineOptions: engineOptionsForDispatch } : {}),
           assistantDeliveryMode,
           dispatchMode: "queue",
           runtimeMode,
@@ -9939,15 +9932,15 @@ export default function ChatView({
     resetLocalDispatch,
     runtimeMode,
     selectedPromptEffort,
-    selectedModelSelection,
-    providerOptionsForDispatch,
+    selectedEngineSelection,
+    engineOptionsForDispatch,
     rememberCustomBinaryPathForDispatch,
     selectedProvider,
     assistantDeliveryMode,
     syncServerShellSnapshot,
     t,
     selectedModel,
-    modelOptionsByProvider,
+    modelOptionsByEngine,
     serverSettingsReady,
   ]);
 
@@ -10000,14 +9993,14 @@ export default function ChatView({
   // let the measured-overflow loop demote again before paint if needed.
   const composerFooterModelLabel = selectedModelForPickerWithCustomFallback
     ? resolveProviderModelLabel({
-        provider: selectedProvider,
+        engine: selectedProvider,
         lockedProvider: selectedProvider,
         model: selectedModelForPickerWithCustomFallback,
-        modelOptionsByProvider: selectableModelOptionsByProvider,
+        modelOptionsByEngine: selectableModelOptionsByEngine,
       })
-    : t(resolveComposerModelFallbackMessageKey(catalogStateByProvider[selectedProvider]));
+    : t(resolveComposerModelFallbackMessageKey(catalogStateByEngine[selectedProvider]));
   const composerFooterTraitsSummary = resolveTraitsTriggerSummary({
-    provider: selectedProvider,
+    engine: selectedProvider,
     model: selectedModelForPickerWithCustomFallback,
     prompt,
     modelOptions: selectedProviderModelOptions,
@@ -10051,26 +10044,26 @@ export default function ChatView({
   );
   const refreshSelectedProviderModels = useCallback(() => {
     void queryClient.invalidateQueries({
-      queryKey: providerDiscoveryQueryKeys.modelsForProvider(selectedProvider),
+      queryKey: engineDiscoveryQueryKeys.modelsForProvider(selectedProvider),
     });
   }, [queryClient, selectedProvider]);
-  const openSelectedProviderSettings = useCallback(() => {
+  const openSelectedEngineSettings = useCallback(() => {
     void navigate({
       to: "/settings",
       search: {
-        section: selectedProvider === "oa" ? "models" : "providers",
+        section: selectedProvider === "oa" ? "models" : "engines",
       },
     });
   }, [navigate, selectedProvider]);
   const composerPickerControls = (
     <>
       <ComposerEnginePicker
-        provider={selectedProvider}
-        providers={providerStatuses}
-        hiddenProviders={settings.hiddenProviders}
-        providerOrder={settings.providerOrder}
-        onProviderChange={onComposerEngineSelect}
-        onProviderIntent={handleProviderBrowse}
+        engine={selectedProvider}
+        engines={providerStatuses}
+        hiddenEngines={settings.hiddenEngines}
+        engineOrder={settings.engineOrder}
+        onEngineChange={onComposerEngineSelect}
+        onEngineIntent={handleProviderBrowse}
         onSelectionCommitted={scheduleComposerFocus}
         open={isEnginePickerOpen}
         onOpenChange={handleEnginePickerOpenChange}
@@ -10079,21 +10072,21 @@ export default function ChatView({
         compact={isComposerFooterCompact}
         hideModelLabel={!composerFooterControlsPlan.showModelLabel}
         hideStatusLabel={!composerFooterControlsPlan.showTraitsLabel}
-        provider={selectedProvider}
+        engine={selectedProvider}
         model={selectedModelForPickerWithCustomFallback}
-        catalogState={catalogStateByProvider[selectedProvider]}
-        modelOptionsByProvider={selectableModelOptionsByProvider}
+        catalogState={catalogStateByEngine[selectedProvider]}
+        modelOptionsByEngine={selectableModelOptionsByEngine}
         loadingModelProviders={loadingModelProviders}
         threadId={threadId}
         runtimeModel={selectedRuntimeModel}
-        runtimeModels={runtimeModelsByProvider[selectedProvider]}
+        runtimeModels={runtimeModelsByEngine[selectedProvider]}
         runtimeAgents={dynamicAgents}
         modelOptions={selectedProviderModelOptions}
         prompt={prompt}
         onPromptChange={setPromptFromTraits}
-        onProviderModelChange={onProviderModelSelect}
+        onEngineModelChange={onEngineModelSelect}
         onRefreshModels={refreshSelectedProviderModels}
-        onOpenSettings={openSelectedProviderSettings}
+        onOpenSettings={openSelectedEngineSettings}
         onSelectionCommitted={scheduleComposerFocus}
         open={isComposerModelEffortPickerOpen}
         onOpenChange={handleComposerModelEffortPickerOpenChange}
@@ -10355,7 +10348,7 @@ export default function ChatView({
       if (!api) {
         throw new Error(t("composer.local.connecting"));
       }
-      if (!selectedModelSelection) {
+      if (!selectedEngineSelection) {
         throw new Error(t("composer.modelRequiredToSend"));
       }
       const existingProject = useStore
@@ -10373,7 +10366,7 @@ export default function ChatView({
         api,
         workspaceRoot,
         createIfMissing: false,
-        defaultModelSelection: selectedModelSelection,
+        defaultEngineSelection: selectedEngineSelection,
         loadSnapshot: () => api.orchestration.getShellSnapshot().catch(() => null),
       });
       if (creationResult.snapshot) {
@@ -10391,7 +10384,7 @@ export default function ChatView({
       handleSelectProjectForEmptyDraft,
       isLocalDraftThread,
       moveEmptyDraftToLocalProject,
-      selectedModelSelection,
+      selectedEngineSelection,
       syncServerShellSnapshot,
       t,
     ],
@@ -10409,7 +10402,7 @@ export default function ChatView({
       if (!api || !activeThread || !canSendToAgent || !activeChatWorkspaceRoot) {
         throw new Error(t("error.prepareAgent"));
       }
-      if (!selectedModelSelection) {
+      if (!selectedEngineSelection) {
         throw new Error(t("composer.modelRequiredToSend"));
       }
       const attemptKey = `${activeThread.id}:${projectId}`;
@@ -10423,7 +10416,7 @@ export default function ChatView({
             sourceThreadId: activeThread.id,
             projectId,
             title: activeThread.title,
-            modelSelection: selectedModelSelection,
+            engineSelection: selectedEngineSelection,
             runtimeMode,
             interactionMode,
             envMode: "local",
@@ -10469,7 +10462,7 @@ export default function ChatView({
       if (!attempt.draftCopied) {
         const draftStore = useComposerDraftStore.getState();
         draftStore.copyTransferableComposerState(threadId, targetThreadId);
-        draftStore.setModelSelection(targetThreadId, attempt.command.modelSelection);
+        draftStore.setEngineSelection(targetThreadId, attempt.command.engineSelection);
         attempt.draftCopied = true;
       }
       const outputsPath = joinProjectPath(activeChatWorkspaceRoot, "outputs");
@@ -10522,7 +10515,7 @@ export default function ChatView({
       canSendToAgent,
       navigate,
       runtimeMode,
-      selectedModelSelection,
+      selectedEngineSelection,
       syncServerShellSnapshot,
       t,
       threadId,
@@ -10535,7 +10528,7 @@ export default function ChatView({
       if (!api) {
         throw new Error(t("composer.local.connecting"));
       }
-      if (!selectedModelSelection) {
+      if (!selectedEngineSelection) {
         throw new Error(t("composer.modelRequiredToSend"));
       }
       const existingProject = useStore
@@ -10553,7 +10546,7 @@ export default function ChatView({
         api,
         workspaceRoot,
         createIfMissing: false,
-        defaultModelSelection: selectedModelSelection,
+        defaultEngineSelection: selectedEngineSelection,
         loadSnapshot: () => api.orchestration.getShellSnapshot().catch(() => null),
       });
       if (creationResult.snapshot) {
@@ -10567,7 +10560,7 @@ export default function ChatView({
       }
       await handleSendToAgentProject(creationResult.project.id);
     },
-    [handleSendToAgentProject, selectedModelSelection, syncServerShellSnapshot, t],
+    [handleSendToAgentProject, selectedEngineSelection, syncServerShellSnapshot, t],
   );
 
   const applyPromptReplacement = useCallback(
@@ -10643,7 +10636,7 @@ export default function ChatView({
   }, [readComposerSnapshot]);
 
   // Shared insertion path for picker selections (mentions, plugins, skills,
-  // agents, provider-native commands, local folders). Guarantees the replacement
+  // agents, engine-native commands, local folders). Guarantees the replacement
   // is flanked by a leading space when landing next to a non-whitespace char and
   // absorbs an existing trailing space so we don't end up with double spaces.
   const applyComposerTriggerReplacement = useCallback(
@@ -10701,7 +10694,7 @@ export default function ChatView({
               name: absolutePath,
               path: absolutePath,
               resourceKind: "directory",
-            } satisfies ProviderMentionReference;
+            } satisfies EngineMentionReference;
             return [...existing.filter((mention) => mention.path !== absolutePath), nextMention];
           });
         },
@@ -10729,7 +10722,7 @@ export default function ChatView({
           name: basenameOfPath(absolutePath) || absolutePath,
           path: absolutePath,
           resourceKind,
-        } satisfies ProviderMentionReference;
+        } satisfies EngineMentionReference;
         return [...existing.filter((mention) => mention.path !== absolutePath), nextMention];
       });
     },
@@ -10844,7 +10837,7 @@ export default function ChatView({
     providerCommandDiscoveryCwd: composerSkillCwd,
     selectedProvider,
     currentProviderModelOptions,
-    selectedModelSelection,
+    selectedEngineSelection,
     environmentMode: envMode ?? null,
     runtimeMode,
     interactionMode,
@@ -10898,10 +10891,10 @@ export default function ChatView({
 
   const historyOnlyForkableAssistantMessageIds = useMemo(
     () =>
-      isServerThread && activeThread && selectedModelSelection
+      isServerThread && activeThread && selectedEngineSelection
         ? deriveHistoryOnlyForkableAssistantMessageIds(activeThread)
         : new Set<MessageId>(),
-    [activeThread, isServerThread, selectedModelSelection],
+    [activeThread, isServerThread, selectedEngineSelection],
   );
   const canForkMessage = useCallback(
     (messageId: MessageId) => historyOnlyForkableAssistantMessageIds.has(messageId),
@@ -10957,7 +10950,7 @@ export default function ChatView({
                 name: basenameOfPath(item.path) || item.path,
                 path: item.path,
                 resourceKind: item.pathKind,
-              } satisfies ProviderMentionReference;
+              } satisfies EngineMentionReference;
               return [...existing.filter((mention) => mention.path !== item.path), nextMention];
             });
           },
@@ -10972,7 +10965,7 @@ export default function ChatView({
         handleSlashCommandSelection(item);
         return;
       }
-      if (item.type === "provider-native-command") {
+      if (item.type === "engine-native-command") {
         if (selectedProvider === "codex" && item.command.toLowerCase() === "review") {
           setComposerCommandPicker("review-target");
           setComposerHighlightedItemId("review-target:changes");
@@ -10996,7 +10989,7 @@ export default function ChatView({
               const nextSkill = {
                 name: item.skill.name,
                 path: item.skill.path,
-              } satisfies ProviderSkillReference;
+              } satisfies EngineSkillReference;
               return existing.some(
                 (skill) => skill.name === nextSkill.name && skill.path === nextSkill.path,
               )
@@ -11025,7 +11018,7 @@ export default function ChatView({
         return;
       }
       if (item.type === "model") {
-        onProviderModelSelect(item.provider, item.model);
+        onEngineModelSelect(item.engine, item.model);
         applyComposerTriggerReplacement({ snapshot, trigger, base: "" });
         return;
       }
@@ -11046,7 +11039,7 @@ export default function ChatView({
       handleNavigateLocalFolder,
       handleReviewTargetSelection,
       handleSlashCommandSelection,
-      onProviderModelSelect,
+      onEngineModelSelect,
       setComposerCommandPicker,
       localFolderBrowseRootPath,
       selectedProvider,
@@ -11578,10 +11571,10 @@ export default function ChatView({
 
   const handleRenameActiveThread = async (newTitle: string) => {
     const localDraftPromotion =
-      isLocalDraftThread && selectedModelSelection
+      isLocalDraftThread && selectedEngineSelection
         ? {
             projectId: activeThread.projectId,
-            modelSelection: selectedModelSelection,
+            engineSelection: selectedEngineSelection,
             runtimeMode: activeThread.runtimeMode,
             interactionMode: activeThread.interactionMode,
             envMode: activeThread.envMode ?? "local",
@@ -11628,7 +11621,7 @@ export default function ChatView({
   };
 
   const runtimeUsageControlsProps = {
-    modelSelection: selectedModelSelection,
+    engineSelection: selectedEngineSelection,
     runtimeMode,
     onRuntimeModeChange: handleRuntimeModeChange,
     contextWindow: runtimeUsageContextWindow,
@@ -11813,7 +11806,7 @@ export default function ChatView({
     keybindings,
     availableEditors,
     activeThreadId: activeThread.id,
-    activeProvider: activeThread.session?.provider ?? activeThread.modelSelection.provider,
+    activeProvider: activeThread.session?.engine ?? activeThread.engineSelection.engine,
     isStudioChat: isStudioContainer,
     studioFolderPath: isStudioContainer ? resolvedThreadWorkingDirectory : null,
     showGitActions,
@@ -12013,14 +12006,14 @@ export default function ChatView({
             <div
               className={cn(
                 COMPOSER_INPUT_SHELL_CLASS_NAME,
-                composerProviderState.composerFrameClassName,
+                composerEngineState.composerFrameClassName,
                 composerMenuOpen && !isComposerApprovalState && "overflow-visible",
               )}
             >
               <div
                 className={cn(
                   COMPOSER_INPUT_SURFACE_CLASS_NAME,
-                  composerProviderState.composerSurfaceClassName,
+                  composerEngineState.composerSurfaceClassName,
                   composerMenuOpen && !isComposerApprovalState && "overflow-visible",
                 )}
               >
@@ -12317,7 +12310,7 @@ export default function ChatView({
                                 isSendBusy ||
                                 isConnecting ||
                                 !serverSettingsReady ||
-                                !selectedModelSelection ||
+                                !selectedEngineSelection ||
                                 !planModeAvailable
                               }
                             >
@@ -12335,7 +12328,7 @@ export default function ChatView({
                                   isSendBusy ||
                                   isConnecting ||
                                   !serverSettingsReady ||
-                                  !selectedModelSelection
+                                  !selectedEngineSelection
                                 }
                               >
                                 {isConnecting || isSendBusy
@@ -12354,7 +12347,7 @@ export default function ChatView({
                                         isSendBusy ||
                                         isConnecting ||
                                         !serverSettingsReady ||
-                                        !selectedModelSelection
+                                        !selectedEngineSelection
                                       }
                                     />
                                   }
@@ -12367,7 +12360,7 @@ export default function ChatView({
                                       isSendBusy ||
                                       isConnecting ||
                                       !serverSettingsReady ||
-                                      !selectedModelSelection
+                                      !selectedEngineSelection
                                     }
                                     onClick={() => void onImplementPlanInNewThread()}
                                   >
@@ -12399,7 +12392,7 @@ export default function ChatView({
                                 !serverSettingsReady ||
                                 isVoiceTranscribing ||
                                 isPreparingComposerImages ||
-                                !selectedModelSelection ||
+                                !selectedEngineSelection ||
                                 (interactionMode === "plan" && !planModeAvailable) ||
                                 !composerSendState.hasSendableContent
                               }
@@ -12510,7 +12503,7 @@ export default function ChatView({
           activeThreadTitle={activeThreadDisplayTitle}
           activeThreadEntryPoint={terminalState.entryPoint}
           showThreadIdentity={showActiveThreadHeaderIdentity}
-          activeProvider={activeThread.session?.provider ?? activeThread.modelSelection.provider}
+          activeProvider={activeThread.session?.engine ?? activeThread.engineSelection.engine}
           activeProjectName={isEditorRail ? undefined : activeProjectDisplayName}
           threadBreadcrumbs={threadBreadcrumbs}
           {...(isEditorRail
@@ -12646,7 +12639,7 @@ export default function ChatView({
 
       {/* Thread-level errors render as a toast (see `useThreadErrorToast`) so they
           never displace the transcript. */}
-      <ProviderHealthBanner
+      <EngineHealthBanner
         status={shouldShowProviderHealthBanner ? visibleActiveProviderStatus : null}
         onDismiss={dismissActiveProviderHealthBanner}
       />

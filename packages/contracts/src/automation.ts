@@ -13,8 +13,8 @@ import {
   TrimmedNonEmptyString,
   TurnId,
 } from "./baseSchemas";
-import { ModelSelection, EngineKind, ProviderStartOptions, RuntimeMode } from "./orchestration";
-import { ModelPresentationIdentity } from "./providerDiscovery";
+import { EngineSelection, EngineKind, EngineStartOptions, RuntimeMode } from "./orchestration";
+import { ModelPresentationIdentity } from "./engineDiscovery";
 
 export const DEFAULT_AUTOMATION_RUNTIME_MODE: RuntimeMode = "approval-required";
 export const AutomationInteractionMode = Schema.Literals(["default", "plan"]);
@@ -93,7 +93,7 @@ export type AutomationNotificationPolicy = typeof AutomationNotificationPolicy.T
 
 export const DEFAULT_AUTOMATION_NOTIFICATION_POLICY: AutomationNotificationPolicy = "all";
 export const DEFAULT_AUTOMATION_HEARTBEAT_COOLDOWN_SECONDS = 60;
-// Tolerate isolated provider/network failures while still stopping repeated unattended failures.
+// Tolerate isolated engine/network failures while still stopping repeated unattended failures.
 export const DEFAULT_AUTOMATION_STOP_AFTER_CONSECUTIVE_FAILURES = 3;
 
 export const AutomationDisabledReason = Schema.Literals([
@@ -158,11 +158,11 @@ export const AutomationAllowedCapability = Schema.Literals([
 export type AutomationAllowedCapability = typeof AutomationAllowedCapability.Type;
 
 export const AutomationPermissionSnapshot = Schema.Struct({
-  provider: EngineKind,
+  engine: EngineKind,
   settingsRevision: Schema.optional(NonNegativeInt),
-  modelSelection: ModelSelection,
+  engineSelection: EngineSelection,
   modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
-  providerOptions: Schema.optional(ProviderStartOptions),
+  engineOptions: Schema.optional(EngineStartOptions),
   completionPolicyVersion: Schema.optional(NonNegativeInt),
   /** Stable one-based iteration ordinal claimed for this run. */
   iterationNumber: Schema.optional(PositiveInt),
@@ -222,9 +222,9 @@ export const AutomationDefinition = Schema.Struct({
   schedule: AutomationSchedule,
   enabled: Schema.Boolean,
   nextRunAt: Schema.NullOr(AutomationIsoDateTime),
-  modelSelection: ModelSelection,
+  engineSelection: EngineSelection,
   modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
-  providerOptions: Schema.optional(ProviderStartOptions),
+  engineOptions: Schema.optional(EngineStartOptions),
   runtimeMode: RuntimeMode,
   interactionMode: AutomationInteractionMode,
   worktreeMode: AutomationWorktreeMode,
@@ -298,9 +298,9 @@ const AutomationDefinitionConfig = Schema.Struct({
   prompt: TrimmedNonEmptyString.check(Schema.isMaxLength(64_000)),
   schedule: AutomationSchedule,
   enabled: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => true)),
-  modelSelection: ModelSelection,
+  engineSelection: EngineSelection,
   modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
-  providerOptions: Schema.optional(ProviderStartOptions),
+  engineOptions: Schema.optional(EngineStartOptions),
   runtimeMode: Schema.optional(RuntimeMode).pipe(
     Schema.withDecodingDefault(() => DEFAULT_AUTOMATION_RUNTIME_MODE),
   ),
@@ -363,9 +363,9 @@ export const AutomationUpdateInput = Schema.Struct({
   prompt: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(64_000))),
   schedule: Schema.optional(AutomationSchedule),
   enabled: Schema.optional(Schema.Boolean),
-  modelSelection: Schema.optional(ModelSelection),
+  engineSelection: Schema.optional(EngineSelection),
   modelPresentationIdentity: Schema.optional(ModelPresentationIdentity),
-  providerOptions: Schema.optional(ProviderStartOptions),
+  engineOptions: Schema.optional(EngineStartOptions),
   runtimeMode: Schema.optional(RuntimeMode),
   interactionMode: Schema.optional(AutomationInteractionMode),
   worktreeMode: Schema.optional(AutomationWorktreeMode),

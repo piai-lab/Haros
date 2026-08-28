@@ -1,5 +1,5 @@
 // FILE: providerReactQuery.ts
-// Purpose: Builds React Query options for provider-backed orchestration RPC calls.
+// Purpose: Builds React Query options for engine-backed orchestration RPC calls.
 // Layer: Web data fetching helpers
 // Depends on: native API bridge, orchestration contracts, and React Query.
 
@@ -22,10 +22,10 @@ interface CheckpointDiffQueryInput {
 }
 
 export const providerQueryKeys = {
-  all: ["providers"] as const,
+  all: ["engines"] as const,
   checkpointDiff: (input: CheckpointDiffQueryInput) =>
     [
-      "providers",
+      "engines",
       "checkpointDiff",
       input.threadId,
       input.fromTurnCount,

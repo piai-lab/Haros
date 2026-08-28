@@ -1,4 +1,4 @@
-import type { ModelSelection, EngineKind } from "@harnessos/contracts";
+import type { EngineSelection, EngineKind } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -58,7 +58,7 @@ describe("first-run readiness classifier", () => {
       expected: "recover-model-service",
     },
     {
-      name: "provider facts still loading",
+      name: "engine facts still loading",
       overrides: { factsSettled: false },
       expected: "unknown",
     },
@@ -89,20 +89,20 @@ describe("first-run readiness classifier", () => {
   });
 
   it("treats only explicit user selections as remembered recovery intent", () => {
-    const explicitExactModelSelections = {
-      codex: { provider: "codex", model: "gpt-5.6-sol" },
-    } satisfies Partial<Record<EngineKind, ModelSelection>>;
+    const explicitExactEngineSelections = {
+      codex: { engine: "codex", model: "gpt-5.6-sol" },
+    } satisfies Partial<Record<EngineKind, EngineSelection>>;
 
     expect(
       hasRememberedExactModelBinding({
-        providers: ["codex"],
-        explicitExactModelSelections,
+        engines: ["codex"],
+        explicitExactEngineSelections,
       }),
     ).toBe(true);
     expect(
       hasRememberedExactModelBinding({
-        providers: ["claude", "cursor", "pi"],
-        explicitExactModelSelections,
+        engines: ["claude", "cursor", "pi"],
+        explicitExactEngineSelections,
       }),
     ).toBe(false);
   });
@@ -112,8 +112,8 @@ describe("first-run readiness classifier", () => {
       deriveFirstRunReadinessState({
         ...settledEmpty,
         hasRememberedIndependentEngineBinding: hasRememberedExactModelBinding({
-          providers: ["codex", "claude", "cursor", "pi"],
-          explicitExactModelSelections: {},
+          engines: ["codex", "claude", "cursor", "pi"],
+          explicitExactEngineSelections: {},
         }),
       }),
     ).toBe("first-run");

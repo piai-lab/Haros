@@ -124,7 +124,7 @@ export const SortIcon: LucideIcon = centralIconWrapper("arrow-top-bottom");
 // createCentralIconElement.
 export const AGENT_ROBOT_ICON_NAME = "robot";
 export const BotIcon: LucideIcon = centralIconWrapper(AGENT_ROBOT_ICON_NAME);
-// Public provider reasoning has its own Timeline meaning. Keep this Central
+// Public engine reasoning has its own Timeline meaning. Keep this Central
 // brain-2 wrapper separate from BrainIcon, whose Tabler glyph belongs to the
 // model/thinking selector contract.
 export const ReasoningIcon: LucideIcon = centralIconWrapper("brain-2");
@@ -228,7 +228,7 @@ export const McpIcon: LucideIcon = (props) => (
   <VscMcp className={props.className} style={props.style} />
 );
 export const PluginIcon: LucideIcon = centralIconWrapper("puzzle");
-// Single hammer/build glyph (tool-call rows, codex provider, "build" scripts).
+// Single hammer/build glyph (tool-call rows, codex engine, "build" scripts).
 // Sourced from the Central set so it matches the other work-row icons (pencil,
 // terminal, skill cube) it sits beside, instead of the Tabler wrench it used to be.
 export const HammerIcon: LucideIcon = centralIconWrapper("hammer");

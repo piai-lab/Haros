@@ -1,7 +1,7 @@
 // FILE: Diffs.ts
 // Purpose: Parses unified diffs into turn/checkpoint file summaries.
 // Layer: Server checkpointing helper
-// Exports: turn diff file parsers used by checkpoint capture and provider live-diff ingestion
+// Exports: turn diff file parsers used by checkpoint capture and engine live-diff ingestion
 
 import type { OrchestrationCheckpointFile } from "@harnessos/contracts";
 import { Effect } from "effect";

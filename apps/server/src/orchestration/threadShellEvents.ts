@@ -3,10 +3,10 @@ import type { OrchestrationEvent } from "@harnessos/contracts";
 const THREAD_SHELL_SUMMARY_ACTIVITY_KINDS = new Set([
   "approval.requested",
   "approval.resolved",
-  "provider.approval.respond.failed",
+  "engine.approval.respond.failed",
   "user-input.requested",
   "user-input.resolved",
-  "provider.user-input.respond.failed",
+  "engine.user-input.respond.failed",
 ]);
 
 export const THREAD_PROJECTION_EVENT_TYPES = new Set<OrchestrationEvent["type"]>([

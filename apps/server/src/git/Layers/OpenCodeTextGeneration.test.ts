@@ -141,7 +141,7 @@ const OpenCodeRuntimeTestDouble: OpenCodeRuntimeShape = {
 };
 
 const DEFAULT_TEST_MODEL_SELECTION = {
-  provider: "opencode" as const,
+  engine: "opencode" as const,
   model: "openai/gpt-5",
 };
 
@@ -194,14 +194,14 @@ it.layer(OpenCodeTextGenerationTestLayer)("OpenCodeTextGenerationServiceLive", (
         branch: "feature/opencode-reuse",
         stagedSummary: "M README.md",
         stagedPatch: "diff --git a/README.md b/README.md",
-        modelSelection: DEFAULT_TEST_MODEL_SELECTION,
+        engineSelection: DEFAULT_TEST_MODEL_SELECTION,
       });
       yield* textGeneration.generateCommitMessage({
         cwd: process.cwd(),
         branch: "feature/opencode-reuse",
         stagedSummary: "M README.md",
         stagedPatch: "diff --git a/README.md b/README.md",
-        modelSelection: DEFAULT_TEST_MODEL_SELECTION,
+        engineSelection: DEFAULT_TEST_MODEL_SELECTION,
       });
 
       expect(runtimeMock.state.startCalls).toEqual(["opencode"]);
@@ -226,7 +226,7 @@ it.layer(OpenCodeTextGenerationTestLayer)("OpenCodeTextGenerationServiceLive", (
         branch: "feature/opencode-reuse",
         stagedSummary: "M README.md",
         stagedPatch: "diff --git a/README.md b/README.md",
-        modelSelection: DEFAULT_TEST_MODEL_SELECTION,
+        engineSelection: DEFAULT_TEST_MODEL_SELECTION,
       });
 
       yield* advanceIdleClock;
@@ -236,7 +236,7 @@ it.layer(OpenCodeTextGenerationTestLayer)("OpenCodeTextGenerationServiceLive", (
         branch: "feature/opencode-reuse",
         stagedSummary: "M README.md",
         stagedPatch: "diff --git a/README.md b/README.md",
-        modelSelection: DEFAULT_TEST_MODEL_SELECTION,
+        engineSelection: DEFAULT_TEST_MODEL_SELECTION,
       });
 
       expect(runtimeMock.state.startCalls).toEqual(["opencode", "opencode"]);
@@ -258,7 +258,7 @@ it.layer(OpenCodeTextGenerationTestLayer)("OpenCodeTextGenerationServiceLive", (
         branch: "feature/opencode-config",
         stagedSummary: "M README.md",
         stagedPatch: "diff --git a/README.md b/README.md",
-        modelSelection: DEFAULT_TEST_MODEL_SELECTION,
+        engineSelection: DEFAULT_TEST_MODEL_SELECTION,
       });
 
       expect(runtimeMock.state.startCalls).toEqual(["opencode"]);
@@ -275,14 +275,14 @@ it.layer(OpenCodeTextGenerationTestLayer)("OpenCodeTextGenerationServiceLive", (
         branch: "feature/opencode-alpha",
         stagedSummary: "M README.md",
         stagedPatch: "diff --git a/README.md b/README.md",
-        modelSelection: DEFAULT_TEST_MODEL_SELECTION,
+        engineSelection: DEFAULT_TEST_MODEL_SELECTION,
       });
       yield* textGeneration.generateCommitMessage({
         cwd: "/repo/beta",
         branch: "feature/opencode-beta",
         stagedSummary: "M README.md",
         stagedPatch: "diff --git a/README.md b/README.md",
-        modelSelection: DEFAULT_TEST_MODEL_SELECTION,
+        engineSelection: DEFAULT_TEST_MODEL_SELECTION,
       });
 
       expect(runtimeMock.state.startCalls).toEqual(["opencode", "opencode"]);
@@ -309,7 +309,7 @@ it.layer(OpenCodeTextGenerationTestLayer)("OpenCodeTextGenerationServiceLive", (
           branch: "feature/opencode-alpha",
           stagedSummary: "M README.md",
           stagedPatch: "diff --git a/README.md b/README.md",
-          modelSelection: DEFAULT_TEST_MODEL_SELECTION,
+          engineSelection: DEFAULT_TEST_MODEL_SELECTION,
         })
         .pipe(Effect.forkChild);
 
@@ -320,7 +320,7 @@ it.layer(OpenCodeTextGenerationTestLayer)("OpenCodeTextGenerationServiceLive", (
         branch: "feature/opencode-beta",
         stagedSummary: "M README.md",
         stagedPatch: "diff --git a/README.md b/README.md",
-        modelSelection: DEFAULT_TEST_MODEL_SELECTION,
+        engineSelection: DEFAULT_TEST_MODEL_SELECTION,
       });
 
       releaseFirstPrompt();
@@ -347,7 +347,7 @@ it.layer(OpenCodeTextGenerationTestLayer)("OpenCodeTextGenerationServiceLive", (
           branch: "feature/opencode-reuse",
           stagedSummary: "M README.md",
           stagedPatch: "diff --git a/README.md b/README.md",
-          modelSelection: DEFAULT_TEST_MODEL_SELECTION,
+          engineSelection: DEFAULT_TEST_MODEL_SELECTION,
         })
         .pipe(Effect.flip);
 
@@ -374,7 +374,7 @@ it.layer(OpenCodeTextGenerationTestLayer)("OpenCodeTextGenerationServiceLive", (
         branch: "feature/opencode-reuse",
         stagedSummary: "M README.md",
         stagedPatch: "diff --git a/README.md b/README.md",
-        modelSelection: DEFAULT_TEST_MODEL_SELECTION,
+        engineSelection: DEFAULT_TEST_MODEL_SELECTION,
       });
 
       expect(result).toEqual({
@@ -396,8 +396,8 @@ it.layer(OpenCodeTextGenerationTestLayer)("OpenCodeTextGenerationServiceLive", (
       yield* textGeneration.generateThreadTitle({
         cwd: process.cwd(),
         message: "which model are you",
-        modelSelection: {
-          provider: "opencode",
+        engineSelection: {
+          engine: "opencode",
           model: "opencode/big-pickle",
           options: {
             agent: "build",
@@ -438,7 +438,7 @@ it.layer(OpenCodeTextGenerationTestLayer)("OpenCodeTextGenerationServiceLive", (
             sizeBytes: 4_096,
           },
         ],
-        modelSelection: DEFAULT_TEST_MODEL_SELECTION,
+        engineSelection: DEFAULT_TEST_MODEL_SELECTION,
       });
 
       const parts = runtimeMock.state.promptInputs[0]?.parts as
@@ -479,7 +479,7 @@ it.layer(OpenCodeTextGenerationTestLayer)("OpenCodeTextGenerationServiceLive", (
           branch: "feature/opencode-reuse",
           stagedSummary: "M README.md",
           stagedPatch: "diff --git a/README.md b/README.md",
-          modelSelection: DEFAULT_TEST_MODEL_SELECTION,
+          engineSelection: DEFAULT_TEST_MODEL_SELECTION,
         })
         .pipe(Effect.flip);
 
@@ -500,8 +500,8 @@ it.layer(OpenCodeTextGenerationExistingServerTestLayer)(
           branch: "feature/opencode-reuse",
           stagedSummary: "M README.md",
           stagedPatch: "diff --git a/README.md b/README.md",
-          modelSelection: DEFAULT_TEST_MODEL_SELECTION,
-          providerOptions: {
+          engineSelection: DEFAULT_TEST_MODEL_SELECTION,
+          engineOptions: {
             opencode: {
               serverUrl: "http://127.0.0.1:9999",
             },
@@ -512,8 +512,8 @@ it.layer(OpenCodeTextGenerationExistingServerTestLayer)(
           branch: "feature/opencode-reuse",
           stagedSummary: "M README.md",
           stagedPatch: "diff --git a/README.md b/README.md",
-          modelSelection: DEFAULT_TEST_MODEL_SELECTION,
-          providerOptions: {
+          engineSelection: DEFAULT_TEST_MODEL_SELECTION,
+          engineOptions: {
             opencode: {
               serverUrl: "http://127.0.0.1:9999",
             },

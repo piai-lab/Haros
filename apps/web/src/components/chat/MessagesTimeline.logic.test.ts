@@ -249,8 +249,8 @@ describe("computeStableMessagesTimelineRows", () => {
             tone: "tool",
             itemType: "dynamic_tool_call",
             toolTitle: "Read",
-            detail: "apps/server/src/orchestration/Layers/ProviderRuntimeIngestion.ts:12",
-            changedFiles: ["apps/server/src/orchestration/Layers/ProviderRuntimeIngestion.ts"],
+            detail: "apps/server/src/orchestration/Layers/EngineRuntimeIngestion.ts:12",
+            changedFiles: ["apps/server/src/orchestration/Layers/EngineRuntimeIngestion.ts"],
           },
         ],
       },
@@ -839,7 +839,7 @@ describe("buildTurnDiffSummaryByAssistantMessageId", () => {
         makeSummary({
           turnId: "turn-empty-placeholder",
           status: "missing",
-          checkpointRef: CheckpointRef.makeUnsafe("provider-diff:event-empty"),
+          checkpointRef: CheckpointRef.makeUnsafe("engine-diff:event-empty"),
           files: [],
         }),
       ],
@@ -876,7 +876,7 @@ describe("buildTurnDiffSummaryByAssistantMessageId", () => {
         makeSummary({
           turnId: "turn-placeholder",
           checkpointTurnCount: 3,
-          checkpointRef: CheckpointRef.makeUnsafe("provider-diff:event-3"),
+          checkpointRef: CheckpointRef.makeUnsafe("engine-diff:event-3"),
         }),
         makeSummary({
           turnId: "turn-missing",
@@ -1227,8 +1227,8 @@ describe("deriveMessagesTimelineRows", () => {
     const provenance = {
       pendingMessageId,
       turnId: TurnId.makeUnsafe("t-model"),
-      modelSelection: {
-        provider: "oa" as const,
+      engineSelection: {
+        engine: "oa" as const,
         model: "deepseek/deepseek-v4-pro",
       },
       requestedAt: "2026-08-27T02:21:00.000Z",
@@ -1442,7 +1442,7 @@ describe("deriveMessagesTimelineRows", () => {
     expect(processSignature(rows)).toEqual(["work:reasoning-1"]);
   });
 
-  it("keeps provider failure and retry facts in canonical process order", () => {
+  it("keeps engine failure and retry facts in canonical process order", () => {
     const rows = deriveMessagesTimelineRows({
       ...baseInput,
       timelineEntries: [
@@ -1450,7 +1450,7 @@ describe("deriveMessagesTimelineRows", () => {
         workEntry("w1", "2026-01-01T00:00:05Z", "long tool work"),
         assistantEntry("a1", "2026-01-01T00:22:20Z", {
           turnId: "t1",
-          text: "The provider run failed",
+          text: "The engine run failed",
           completedAt: "2026-01-01T00:22:20Z",
         }),
         workEntry("w2", "2026-01-01T00:22:30Z", "retry work"),
@@ -1573,7 +1573,7 @@ describe("deriveMessagesTimelineRows", () => {
     expect(rows.some((row) => row.kind === "work")).toBe(false);
   });
 
-  it("preserves adjacent provider mini-turn narration in causal order", () => {
+  it("preserves adjacent engine mini-turn narration in causal order", () => {
     const rows = deriveMessagesTimelineRows({
       ...baseInput,
       timelineEntries: [
@@ -1665,7 +1665,7 @@ describe("deriveMessagesTimelineRows", () => {
             {
               threadId: "thread-1",
               title: "First",
-              provider: "codex",
+              engine: "codex",
               model: "gpt-5.6-terra",
               environment: "local",
               status: "task_dispatched",
@@ -1673,7 +1673,7 @@ describe("deriveMessagesTimelineRows", () => {
             {
               threadId: "thread-2",
               title: "Second",
-              provider: "claude",
+              engine: "claude",
               model: "claude-sonnet-5",
               environment: "local",
               status: "task_dispatched",

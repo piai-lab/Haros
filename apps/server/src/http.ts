@@ -6,8 +6,8 @@ import {
   AuthCreatePairingCredentialInput,
   AuthRevokeClientSessionInput,
   AuthRevokePairingLinkInput,
-  PROVIDER_SEND_TURN_MAX_FILE_BYTES,
-  PROVIDER_SEND_TURN_MAX_IMAGE_BYTES,
+  ENGINE_SEND_TURN_MAX_FILE_BYTES,
+  ENGINE_SEND_TURN_MAX_IMAGE_BYTES,
   SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES,
   ThreadId,
 } from "@harnessos/contracts";
@@ -38,7 +38,7 @@ import { ProjectFaviconResolver } from "./project/Services/ProjectFaviconResolve
 import { OrchestrationEngineService } from "./orchestration/Services/OrchestrationEngine";
 import { clearQuitResumeRecord, prepareQuitResumeForShutdown } from "./orchestration/quitResume";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
-import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
+import { EngineAdapterRegistry } from "./provider/Services/EngineAdapterRegistry";
 import { threadArchiveChunks, threadArchiveFileName } from "./orchestration/exportThreadArchive";
 import type { ServerReadiness } from "./server/readiness";
 import { isLoopbackHost } from "./startupAccess";
@@ -917,7 +917,7 @@ const binaryUploadEffectHandler = Effect.gen(function* () {
       );
     }
     const maxBytes =
-      type === "image" ? PROVIDER_SEND_TURN_MAX_IMAGE_BYTES : PROVIDER_SEND_TURN_MAX_FILE_BYTES;
+      type === "image" ? ENGINE_SEND_TURN_MAX_IMAGE_BYTES : ENGINE_SEND_TURN_MAX_FILE_BYTES;
     const declaredLength = Number(request.headers["content-length"] ?? "0");
     if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
       return HttpServerResponse.jsonUnsafe(
@@ -1004,14 +1004,14 @@ const binaryUploadEffectHandler = Effect.gen(function* () {
   }
 
   if (url.pathname === VOICE_TRANSCRIPTION_UPLOAD_ROUTE_PATH) {
-    const provider = url.searchParams.get("provider")?.trim() ?? "";
+    const engine = url.searchParams.get("engine")?.trim() ?? "";
     const cwd = url.searchParams.get("cwd")?.trim() ?? "";
     const threadId = url.searchParams.get("threadId")?.trim() || undefined;
     const mimeType = url.searchParams.get("mimeType")?.trim() ?? "";
     const sampleRateHz = Number(url.searchParams.get("sampleRateHz"));
     const durationMs = Number(url.searchParams.get("durationMs"));
     if (
-      !provider ||
+      !engine ||
       !cwd ||
       !mimeType ||
       !Number.isSafeInteger(sampleRateHz) ||
@@ -1031,16 +1031,16 @@ const binaryUploadEffectHandler = Effect.gen(function* () {
     }
     return yield* Effect.gen(function* () {
       const bytes = yield* readEffectBinary(request, SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES);
-      const registry = yield* ProviderAdapterRegistry;
-      const adapter = yield* registry.getByProvider(provider as never);
+      const registry = yield* EngineAdapterRegistry;
+      const adapter = yield* registry.getByEngine(engine as never);
       if (!adapter.transcribeVoice) {
         return HttpServerResponse.jsonUnsafe(
-          { error: `Voice transcription is unavailable for provider '${provider}'.` },
+          { error: `Voice transcription is unavailable for engine '${engine}'.` },
           { status: 400, headers: corsHeaders },
         );
       }
       const result = yield* adapter.transcribeVoice({
-        provider: provider as never,
+        engine: engine as never,
         cwd,
         ...(threadId ? { threadId: ThreadId.makeUnsafe(threadId) } : {}),
         mimeType,

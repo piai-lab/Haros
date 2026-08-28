@@ -1,10 +1,7 @@
-import type {
-  ProviderAdapterCapabilities,
-  ProviderAdapterShape,
-} from "./Services/ProviderAdapter.ts";
+import type { EngineAdapterCapabilities, EngineAdapterShape } from "./Services/EngineAdapter.ts";
 
 type CapabilityFlag = Exclude<
-  keyof ProviderAdapterCapabilities,
+  keyof EngineAdapterCapabilities,
   | "sessionModelSwitch"
   | "conversationRollback"
   | "supportsSkillMentions"
@@ -22,7 +19,7 @@ type OptionalAdapterMethod =
   | "listModels"
   | "compactThread";
 
-export interface ProviderAdapterConformanceIssue {
+export interface EngineAdapterConformanceIssue {
   readonly capability: CapabilityFlag;
   readonly missingMethod: OptionalAdapterMethod;
 }
@@ -40,9 +37,9 @@ const CAPABILITY_METHOD_REQUIREMENTS: ReadonlyArray<{
 ];
 
 export function providerAdapterConformanceIssues(
-  adapter: ProviderAdapterShape<unknown>,
-): ProviderAdapterConformanceIssue[] {
-  const issues: ProviderAdapterConformanceIssue[] = [];
+  adapter: EngineAdapterShape<unknown>,
+): EngineAdapterConformanceIssue[] {
+  const issues: EngineAdapterConformanceIssue[] = [];
   for (const requirement of CAPABILITY_METHOD_REQUIREMENTS) {
     if (adapter.capabilities[requirement.capability] !== true) {
       continue;
@@ -59,7 +56,7 @@ export function providerAdapterConformanceIssues(
   return issues;
 }
 
-export function assertProviderAdapterConformance(adapter: ProviderAdapterShape<unknown>): void {
+export function assertProviderAdapterConformance(adapter: EngineAdapterShape<unknown>): void {
   const issues = providerAdapterConformanceIssues(adapter);
   if (issues.length === 0) {
     return;
@@ -68,5 +65,5 @@ export function assertProviderAdapterConformance(adapter: ProviderAdapterShape<u
   const detail = issues
     .map((issue) => `${issue.capability} requires ${issue.missingMethod}()`)
     .join(", ");
-  throw new Error(`Provider adapter "${adapter.provider}" has invalid capabilities: ${detail}.`);
+  throw new Error(`Engine adapter "${adapter.engine}" has invalid capabilities: ${detail}.`);
 }

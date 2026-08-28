@@ -72,7 +72,7 @@ const whenThreadJumpAvailable = whenAnd(
   whenNotTerminalFocus,
   whenNot(whenIdentifier("terminalWorkspaceOpen")),
 );
-// App-level `mod` chords (new chat/terminal/provider chat/split, copy thread id) bind to
+// App-level `mod` chords (new chat/terminal/engine chat/split, copy thread id) bind to
 // `mod`, which is Cmd on macOS. xterm never forwards a Cmd-chord to the PTY, so a bare
 // `!terminalFocus` guard silently dropped these chords whenever the terminal had focus
 // — the chord did nothing instead of running the command. `|| isMac` lets them fire from

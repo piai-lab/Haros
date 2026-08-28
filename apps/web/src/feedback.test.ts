@@ -13,7 +13,7 @@ import {
 } from "./feedback";
 
 const CONTEXT: FeedbackThreadContext = {
-  provider: "codex",
+  engine: "codex",
   model: "gpt-5.6-sol",
   projectKind: "project",
   environmentMode: "worktree",
@@ -51,7 +51,7 @@ describe("formatFeedbackSummary", () => {
         "",
         "Report type: Bug",
         "App version: 0.5.1",
-        "Provider: codex",
+        "Engine: codex",
         "Model: gpt-5.6-sol",
         "Project kind: project",
         "Environment mode: worktree",
@@ -104,12 +104,12 @@ describe("formatFeedbackSummary", () => {
     },
   );
 
-  it("describes feedback sent outside an active chat without inventing provider context", () => {
+  it("describes feedback sent outside an active chat without inventing engine context", () => {
     const summary = formatFeedbackSummary({
       category: "other",
       diagnostics: {
         ...DIAGNOSTICS,
-        provider: null,
+        engine: null,
         model: null,
         projectKind: null,
         environmentMode: null,
@@ -121,7 +121,7 @@ describe("formatFeedbackSummary", () => {
     });
 
     expect(summary).toContain("I have some feedback in OmniMind 0.5.1 outside an active chat.");
-    expect(summary).not.toContain("Provider:");
+    expect(summary).not.toContain("Engine:");
     expect(summary).not.toContain("Model:");
   });
 });
@@ -150,7 +150,7 @@ describe("buildFeedbackSubmission", () => {
       details: "The composer stopped responding.",
       contactEmail: null,
       diagnostics: {
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5.6-sol",
         submittedAt: "2026-07-15T18:00:00.000Z",
         userAgent: "OmniMind test agent",
@@ -319,7 +319,7 @@ describe("submitFeedback", () => {
   });
 
   it.each([
-    ["provider", { nested: "secret-token" }],
+    ["engine", { nested: "secret-token" }],
     ["model", ["private prompt"]],
     ["projectKind", "repository"],
     ["environmentMode", "remote"],

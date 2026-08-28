@@ -150,7 +150,7 @@ describe("ProfileStatsQuery", () => {
     ).toEqual([{ name: "check-code", displayName: "$check-code", kind: "skill", runCount: 1 }]);
   });
 
-  it("aggregates prompts, model usage, provider usage, and reasoning from local projections", async () => {
+  it("aggregates prompts, model usage, engine usage, and reasoning from local projections", async () => {
     await runProfileStatsTest(
       Effect.gen(function* () {
         const sql = yield* SqlClient.SqlClient;
@@ -174,7 +174,7 @@ describe("ProfileStatsQuery", () => {
               'thread-codex',
               'project-profile',
               'Codex Thread',
-              '{"provider":"codex","model":"gpt-5-codex","options":{"reasoningEffort":"high"}}',
+              '{"engine":"codex","model":"gpt-5-codex","options":{"reasoningEffort":"high"}}',
               'full-access',
               'default',
               'local',
@@ -186,7 +186,7 @@ describe("ProfileStatsQuery", () => {
               'thread-claude',
               'project-profile',
               'Claude Thread',
-              '{"provider":"claude","model":"claude-sonnet-4-6","options":{"effort":"max"}}',
+              '{"engine":"claude","model":"claude-sonnet-4-6","options":{"effort":"max"}}',
               'full-access',
               'default',
               'local',
@@ -265,7 +265,7 @@ describe("ProfileStatsQuery", () => {
               'thread.turn-start-requested',
               '2026-06-13T09:05:00.000Z',
               'client',
-              '{"threadId":"thread-codex","modelSelection":{"provider":"codex","model":"gpt-5-codex","options":{"reasoningEffort":"high"}}}',
+              '{"threadId":"thread-codex","engineSelection":{"engine":"codex","model":"gpt-5-codex","options":{"reasoningEffort":"high"}}}',
               '{}'
             ),
             (
@@ -276,7 +276,7 @@ describe("ProfileStatsQuery", () => {
               'thread.turn-start-requested',
               '2026-06-13T09:35:00.000Z',
               'client',
-              '{"threadId":"thread-codex","modelSelection":{"provider":"codex","model":"gpt-5-codex","options":{"reasoningEffort":"high"}}}',
+              '{"threadId":"thread-codex","engineSelection":{"engine":"codex","model":"gpt-5-codex","options":{"reasoningEffort":"high"}}}',
               '{}'
             ),
             (
@@ -287,7 +287,7 @@ describe("ProfileStatsQuery", () => {
               'thread.turn-start-requested',
               '2026-06-14T10:05:00.000Z',
               'client',
-              '{"threadId":"thread-claude","modelSelection":{"provider":"claude","model":"claude-sonnet-4-6","options":{"effort":"max"}}}',
+              '{"threadId":"thread-claude","engineSelection":{"engine":"claude","model":"claude-sonnet-4-6","options":{"effort":"max"}}}',
               '{}'
             )
         `;
@@ -318,13 +318,13 @@ describe("ProfileStatsQuery", () => {
           ) VALUES
             (
               'thread-reused-user', 'project-profile', 'User Thread',
-              '{"provider":"codex","model":"gpt-5-codex"}', 'full-access',
+              '{"engine":"codex","model":"gpt-5-codex"}', 'full-access',
               'default', 'local', '2026-06-13T09:00:00.000Z',
               '2026-06-13T09:00:00.000Z', NULL
             ),
             (
               'thread-reused-agent', 'project-profile', 'Agent Thread',
-              '{"provider":"claude","model":"claude-sonnet-4-6"}', 'full-access',
+              '{"engine":"claude","model":"claude-sonnet-4-6"}', 'full-access',
               'default', 'local', '2026-06-13T10:00:00.000Z',
               '2026-06-13T10:00:00.000Z', NULL
             )
@@ -352,12 +352,12 @@ describe("ProfileStatsQuery", () => {
             (
               'event-reused-user', 'thread', 'thread-reused-user', 1,
               'thread.turn-start-requested', ${recentNow}, 'client',
-              '{"threadId":"thread-reused-user","messageId":"shared-message-id","modelSelection":{"provider":"codex","model":"gpt-5-codex"}}', '{}'
+              '{"threadId":"thread-reused-user","messageId":"shared-message-id","engineSelection":{"engine":"codex","model":"gpt-5-codex"}}', '{}'
             ),
             (
               'event-reused-agent', 'thread', 'thread-reused-agent', 1,
               'thread.turn-start-requested', ${recentNow}, 'system',
-              '{"threadId":"thread-reused-agent","messageId":"shared-message-id","modelSelection":{"provider":"claude","model":"claude-sonnet-4-6"}}', '{}'
+              '{"threadId":"thread-reused-agent","messageId":"shared-message-id","engineSelection":{"engine":"claude","model":"claude-sonnet-4-6"}}', '{}'
             )
         `;
 
@@ -366,7 +366,7 @@ describe("ProfileStatsQuery", () => {
         expect(stats.recentModelUsage.totalTurns).toBe(1);
         expect(stats.recentModelUsage.models).toEqual([
           {
-            provider: "codex",
+            engine: "codex",
             model: "gpt-5-codex",
             turnCount: 1,
             percent: 100,
@@ -401,7 +401,7 @@ describe("ProfileStatsQuery", () => {
               'thread-codex',
               'project-profile',
               'Codex Thread',
-              '{"provider":"codex","model":"gpt-5-codex"}',
+              '{"engine":"codex","model":"gpt-5-codex"}',
               'full-access',
               'default',
               'local',
@@ -413,7 +413,7 @@ describe("ProfileStatsQuery", () => {
               'thread-claude',
               'project-profile',
               'Claude Thread',
-              '{"provider":"claude","model":"claude-sonnet-4-6"}',
+              '{"engine":"claude","model":"claude-sonnet-4-6"}',
               'full-access',
               'default',
               'local',
@@ -444,7 +444,7 @@ describe("ProfileStatsQuery", () => {
               'thread.turn-start-requested',
               '2026-06-13T09:05:00.000Z',
               'client',
-              '{"threadId":"thread-codex","modelSelection":{"provider":"codex","model":"gpt-5-codex"}}',
+              '{"threadId":"thread-codex","engineSelection":{"engine":"codex","model":"gpt-5-codex"}}',
               '{}'
             ),
             (
@@ -455,7 +455,7 @@ describe("ProfileStatsQuery", () => {
               'thread.turn-start-requested',
               '2026-06-13T09:35:00.000Z',
               'client',
-              '{"threadId":"thread-codex","modelSelection":{"provider":"codex","model":"gpt-5-codex"}}',
+              '{"threadId":"thread-codex","engineSelection":{"engine":"codex","model":"gpt-5-codex"}}',
               '{}'
             ),
             (
@@ -466,7 +466,7 @@ describe("ProfileStatsQuery", () => {
               'thread.turn-start-requested',
               '2026-06-13T10:05:00.000Z',
               'client',
-              '{"threadId":"thread-claude","modelSelection":{"provider":"claude","model":"claude-sonnet-4-6"}}',
+              '{"threadId":"thread-claude","engineSelection":{"engine":"claude","model":"claude-sonnet-4-6"}}',
               '{}'
             )
         `;
@@ -548,7 +548,7 @@ describe("ProfileStatsQuery", () => {
               'thread-switch',
               'project-profile',
               'Switch Thread',
-              '{"provider":"claude","model":"claude-opus-4-8"}',
+              '{"engine":"claude","model":"claude-opus-4-8"}',
               'full-access',
               'default',
               'local',
@@ -560,7 +560,7 @@ describe("ProfileStatsQuery", () => {
               'thread-mixed',
               'project-profile',
               'Mixed Counters Thread',
-              '{"provider":"codex","model":"gpt-5-codex"}',
+              '{"engine":"codex","model":"gpt-5-codex"}',
               'full-access',
               'default',
               'local',
@@ -591,7 +591,7 @@ describe("ProfileStatsQuery", () => {
               'thread.turn-start-requested',
               '2026-06-13T09:01:00.000Z',
               'client',
-              '{"threadId":"thread-switch","messageId":"message-switch-1","modelSelection":{"provider":"claude","model":"claude-fable-5"}}',
+              '{"threadId":"thread-switch","messageId":"message-switch-1","engineSelection":{"engine":"claude","model":"claude-fable-5"}}',
               '{}'
             ),
             (
@@ -602,7 +602,7 @@ describe("ProfileStatsQuery", () => {
               'thread.turn-start-requested',
               '2026-06-13T09:20:00.000Z',
               'client',
-              '{"threadId":"thread-switch","messageId":"message-switch-2","modelSelection":{"provider":"claude","model":"claude-opus-4-8"}}',
+              '{"threadId":"thread-switch","messageId":"message-switch-2","engineSelection":{"engine":"claude","model":"claude-opus-4-8"}}',
               '{}'
             )
         `;
@@ -751,7 +751,7 @@ describe("ProfileStatsQuery", () => {
             'thread-hybrid',
             'project-profile',
             'Hybrid Telemetry Thread',
-            '{"provider":"codex","model":"gpt-5-codex"}',
+            '{"engine":"codex","model":"gpt-5-codex"}',
             'full-access',
             'default',
             'local',
@@ -782,7 +782,7 @@ describe("ProfileStatsQuery", () => {
               'thread.turn-start-requested',
               '2026-06-13T12:01:00.000Z',
               'client',
-              '{"threadId":"thread-hybrid","messageId":"message-hybrid-codex","modelSelection":{"provider":"codex","model":"gpt-5-codex"}}',
+              '{"threadId":"thread-hybrid","messageId":"message-hybrid-codex","engineSelection":{"engine":"codex","model":"gpt-5-codex"}}',
               '{}'
             ),
             (
@@ -793,7 +793,7 @@ describe("ProfileStatsQuery", () => {
               'thread.turn-start-requested',
               '2026-06-13T12:10:00.000Z',
               'client',
-              '{"threadId":"thread-hybrid","messageId":"message-hybrid-claude","modelSelection":{"provider":"claude","model":"claude-haiku-4-5"}}',
+              '{"threadId":"thread-hybrid","messageId":"message-hybrid-claude","engineSelection":{"engine":"claude","model":"claude-haiku-4-5"}}',
               '{}'
             )
         `;
@@ -930,7 +930,7 @@ describe("ProfileStatsQuery", () => {
               'thread-skills',
               'project-profile',
               'Skill Thread',
-              '{"provider":"codex","model":"gpt-5-codex"}',
+              '{"engine":"codex","model":"gpt-5-codex"}',
               'full-access',
               'default',
               'local',
@@ -942,7 +942,7 @@ describe("ProfileStatsQuery", () => {
               'thread-retention-hidden',
               'project-profile',
               'Retention Hidden Skill Thread',
-              '{"provider":"codex","model":"gpt-5-codex"}',
+              '{"engine":"codex","model":"gpt-5-codex"}',
               'full-access',
               'default',
               'local',
@@ -954,7 +954,7 @@ describe("ProfileStatsQuery", () => {
               'thread-manual-deleted',
               'project-profile',
               'Manual Deleted Skill Thread',
-              '{"provider":"codex","model":"gpt-5-codex"}',
+              '{"engine":"codex","model":"gpt-5-codex"}',
               'full-access',
               'default',
               'local',
@@ -1169,7 +1169,7 @@ describe("ProfileStatsQuery", () => {
               'thread-alpha',
               'project-alpha',
               'Alpha Thread',
-              '{"provider":"codex","model":"gpt-5-codex"}',
+              '{"engine":"codex","model":"gpt-5-codex"}',
               'full-access',
               'default',
               'local',
@@ -1181,7 +1181,7 @@ describe("ProfileStatsQuery", () => {
               'thread-beta',
               'project-beta',
               'Beta Thread',
-              '{"provider":"codex","model":"gpt-5-codex"}',
+              '{"engine":"codex","model":"gpt-5-codex"}',
               'full-access',
               'default',
               'local',
@@ -1193,7 +1193,7 @@ describe("ProfileStatsQuery", () => {
               'thread-alpha-deleted',
               'project-alpha',
               'Deleted Alpha Thread',
-              '{"provider":"codex","model":"gpt-5-codex"}',
+              '{"engine":"codex","model":"gpt-5-codex"}',
               'full-access',
               'default',
               'local',
@@ -1205,7 +1205,7 @@ describe("ProfileStatsQuery", () => {
               'thread-deleted-project',
               'project-deleted',
               'Deleted Project Thread',
-              '{"provider":"codex","model":"gpt-5-codex"}',
+              '{"engine":"codex","model":"gpt-5-codex"}',
               'full-access',
               'default',
               'local',
@@ -1368,7 +1368,7 @@ describe("ProfileStatsQuery", () => {
             'thread-streak',
             'project-streak',
             'Streak Thread',
-            '{"provider":"codex","model":"gpt-5-codex"}',
+            '{"engine":"codex","model":"gpt-5-codex"}',
             'full-access',
             'default',
             'local',
@@ -1434,7 +1434,7 @@ describe("ProfileStatsQuery", () => {
     );
   });
 
-  it("uses the activity provider stamp when a legacy thread has malformed model JSON", async () => {
+  it("uses the activity engine stamp when a legacy thread has malformed model JSON", async () => {
     await runProfileStatsTest(
       Effect.gen(function* () {
         const sql = yield* SqlClient.SqlClient;
@@ -1487,7 +1487,7 @@ describe("ProfileStatsQuery", () => {
               'info',
               'context-window.updated',
               'tokens updated',
-              '{"totalProcessedTokens":1000,"provider":"claude"}',
+              '{"totalProcessedTokens":1000,"engine":"claude"}',
               1,
               '2026-06-14T09:05:00.000Z'
             ),
@@ -1498,7 +1498,7 @@ describe("ProfileStatsQuery", () => {
               'info',
               'context-window.updated',
               'tokens updated',
-              '{"totalProcessedTokens":1500,"provider":"claude"}',
+              '{"totalProcessedTokens":1500,"engine":"claude"}',
               2,
               '2026-06-14T09:10:00.000Z'
             )
@@ -1525,7 +1525,7 @@ describe("ProfileStatsQuery", () => {
             interaction_mode, env_mode, created_at, updated_at, deleted_at
           ) VALUES (
             'thread-recent-usage', 'project-recent-usage', 'Recent usage',
-            '{"provider":"codex","model":"gpt-5-codex"}',
+            '{"engine":"codex","model":"gpt-5-codex"}',
             'full-access', 'default', 'local', ${now}, ${now}, NULL
           )
         `;
@@ -1537,12 +1537,12 @@ describe("ProfileStatsQuery", () => {
             (
               'event-recent-usage-1', 'thread', 'thread-recent-usage', 1,
               'thread.turn-start-requested', ${now}, 'client',
-              '{"threadId":"thread-recent-usage","modelSelection":{"provider":"codex","model":"gpt-5-codex"}}', '{}'
+              '{"threadId":"thread-recent-usage","engineSelection":{"engine":"codex","model":"gpt-5-codex"}}', '{}'
             ),
             (
               'event-recent-usage-2', 'thread', 'thread-recent-usage', 2,
               'thread.turn-start-requested', ${now}, 'client',
-              '{"threadId":"thread-recent-usage","modelSelection":{"provider":"codex","model":"gpt-5-codex"}}', '{}'
+              '{"threadId":"thread-recent-usage","engineSelection":{"engine":"codex","model":"gpt-5-codex"}}', '{}'
             ),
             (
               'event-recent-usage-3', 'thread', 'thread-recent-usage', 3,
@@ -1558,25 +1558,25 @@ describe("ProfileStatsQuery", () => {
             (
               'activity-recent-usage-1', 'thread-recent-usage', NULL, 'info',
               'context-window.updated', 'tokens updated',
-              '{"provider":"codex","totalProcessedTokens":175,"totalTokenBreakdown":{"cachedInputTokens":100,"uncachedInputTokens":50,"outputTokens":25}}',
+              '{"engine":"codex","totalProcessedTokens":175,"totalTokenBreakdown":{"cachedInputTokens":100,"uncachedInputTokens":50,"outputTokens":25}}',
               1, ${now}
             ),
             (
               'activity-recent-usage-2', 'thread-recent-usage', NULL, 'info',
               'context-window.updated', 'tokens updated',
-              '{"provider":"codex","totalProcessedTokens":255,"totalTokenBreakdown":{"cachedInputTokens":150,"uncachedInputTokens":70,"outputTokens":35}}',
+              '{"engine":"codex","totalProcessedTokens":255,"totalTokenBreakdown":{"cachedInputTokens":150,"uncachedInputTokens":70,"outputTokens":35}}',
               2, ${now}
             ),
             (
               'activity-recent-usage-duplicate', 'thread-recent-usage', NULL, 'info',
               'context-window.updated', 'tokens updated',
-              '{"provider":"codex","totalProcessedTokens":255,"totalTokenBreakdown":{"cachedInputTokens":150,"uncachedInputTokens":70,"outputTokens":35}}',
+              '{"engine":"codex","totalProcessedTokens":255,"totalTokenBreakdown":{"cachedInputTokens":150,"uncachedInputTokens":70,"outputTokens":35}}',
               3, ${now}
             ),
             (
               'activity-recent-usage-reset', 'thread-recent-usage', NULL, 'info',
               'context-window.updated', 'tokens updated',
-              '{"provider":"codex","totalProcessedTokens":17,"totalTokenBreakdown":{"cachedInputTokens":10,"uncachedInputTokens":5,"outputTokens":2}}',
+              '{"engine":"codex","totalProcessedTokens":17,"totalTokenBreakdown":{"cachedInputTokens":10,"uncachedInputTokens":5,"outputTokens":2}}',
               4, ${now}
             )
         `;
@@ -1590,14 +1590,14 @@ describe("ProfileStatsQuery", () => {
           coverage: "partial",
           models: [
             {
-              provider: "codex",
+              engine: "codex",
               model: "gpt-5-codex",
               turnCount: 2,
               percent: 66.7,
               kind: "model",
             },
             {
-              provider: "unknown",
+              engine: "unknown",
               model: "unknown",
               turnCount: 1,
               percent: 33.3,

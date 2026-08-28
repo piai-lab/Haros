@@ -14,8 +14,8 @@ import { CheckpointReactorLive } from "./orchestration/Layers/CheckpointReactor"
 import { OrchestrationReactorLive } from "./orchestration/Layers/OrchestrationReactor";
 import { StudioOutputReactorLive } from "./orchestration/Layers/StudioOutputReactor";
 import { ThreadGitMetadataReactorLive } from "./orchestration/Layers/ThreadGitMetadataReactor";
-import { ProviderCommandReactorLive } from "./orchestration/Layers/ProviderCommandReactor";
-import { ProviderRuntimeIngestionLive } from "./orchestration/Layers/ProviderRuntimeIngestion";
+import { EngineCommandReactorLive } from "./orchestration/Layers/EngineCommandReactor";
+import { EngineRuntimeIngestionLive } from "./orchestration/Layers/EngineRuntimeIngestion";
 import { RuntimeReceiptBusLive } from "./orchestration/Layers/RuntimeReceiptBus";
 import { ThreadDeletionReactorLive } from "./orchestration/Layers/ThreadDeletionReactor";
 import { TurnCheckpointCoordinatorLive } from "./orchestration/Layers/TurnCheckpointCoordinator";
@@ -50,12 +50,12 @@ import { AutomationRepositoryLive } from "./persistence/Layers/AutomationReposit
 import { ProjectPullRequestPinsLive } from "./persistence/Layers/ProjectPullRequestPins";
 import { ProjectionTurnRepositoryLive } from "./persistence/Layers/ProjectionTurns";
 import { OrchestrationEventDeliveryRepositoryLive } from "./persistence/Layers/OrchestrationEventDeliveries";
-import { ProviderRuntimeEventRepositoryLive } from "./persistence/Layers/ProviderRuntimeEvents";
+import { EngineRuntimeEventRepositoryLive } from "./persistence/Layers/EngineRuntimeEvents";
 import { ThreadDiagnosticsQueryLive } from "./diagnostics/Layers/ThreadDiagnosticsQuery";
 import { ManagedAttachmentCleanupLive } from "./managedAttachmentCleanup";
 import { PullRequestServiceLive } from "./pullRequests/Layers/PullRequestService";
-import { ProviderHealthLive } from "./provider/Layers/ProviderHealth";
-import { ProviderExecutionCapabilitiesLive } from "./provider/Layers/ProviderExecutionCapabilities";
+import { EngineHealthLive } from "./provider/Layers/EngineHealth";
+import { EngineExecutionCapabilitiesLive } from "./provider/Layers/EngineExecutionCapabilities";
 import { makeServerProviderLayer } from "./provider/runtimeLayer";
 
 export { makeServerProviderLayer } from "./provider/runtimeLayer";
@@ -80,8 +80,8 @@ export function makeServerRuntimeServicesLayer(
 ) {
   const agentGatewayCredentialsLayer =
     options.agentGatewayCredentialsLayer ?? AgentGatewayCredentialsWithSecretsLive;
-  const providerHealthLayer = ProviderHealthLive.pipe(Layer.provideMerge(ServerSettingsLive));
-  const providerExecutionCapabilitiesLayer = ProviderExecutionCapabilitiesLive.pipe(
+  const providerHealthLayer = EngineHealthLive.pipe(Layer.provideMerge(ServerSettingsLive));
+  const engineExecutionCapabilitiesLayer = EngineExecutionCapabilitiesLive.pipe(
     Layer.provideMerge(providerHealthLayer),
   );
   const checkpointStoreLayer = CheckpointStoreLive.pipe(Layer.provide(GitCoreLive));
@@ -101,7 +101,7 @@ export function makeServerRuntimeServicesLayer(
   const managedAttachmentCleanupLayer = ManagedAttachmentCleanupLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
   );
-  const runtimeIngestionLayer = ProviderRuntimeIngestionLive.pipe(
+  const runtimeIngestionLayer = EngineRuntimeIngestionLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
   );
   const studioOutputReactorLayer = StudioOutputReactorLive.pipe(
@@ -111,7 +111,7 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(runtimeServicesLayer),
     Layer.provideMerge(GitLayerLive),
   );
-  const providerCommandReactorLayer = ProviderCommandReactorLive.pipe(
+  const providerCommandReactorLayer = EngineCommandReactorLive.pipe(
     Layer.provideMerge(runtimeServicesLayer),
     Layer.provideMerge(OrchestrationEventDeliveryRepositoryLive),
     Layer.provideMerge(studioOutputReactorLayer),
@@ -172,7 +172,7 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(GitCoreLive),
     Layer.provideMerge(TextGenerationLayerLive),
     Layer.provideMerge(ServerSettingsLive),
-    Layer.provideMerge(providerExecutionCapabilitiesLayer),
+    Layer.provideMerge(engineExecutionCapabilitiesLayer),
     Layer.provideMerge(runtimeServicesLayer),
   );
   const automationSchedulerLayer = AutomationSchedulerLive.pipe(
@@ -195,7 +195,7 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(AgentGatewayOperationRepositoryLive),
     Layer.provideMerge(ServerSettingsLive),
     Layer.provideMerge(providerHealthLayer),
-    Layer.provideMerge(providerExecutionCapabilitiesLayer),
+    Layer.provideMerge(engineExecutionCapabilitiesLayer),
   );
   const agentGatewayLayer = AgentGatewayLive.pipe(
     Layer.provideMerge(agentGatewayCredentialsLayer),
@@ -205,11 +205,11 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(ProjectionTurnRepositoryLive),
     Layer.provideMerge(AgentGatewayOperationRepositoryLive),
     Layer.provideMerge(OrchestrationEventDeliveryRepositoryLive),
-    Layer.provideMerge(ProviderRuntimeEventRepositoryLive),
+    Layer.provideMerge(EngineRuntimeEventRepositoryLive),
     Layer.provideMerge(ThreadDiagnosticsQueryLive),
     Layer.provideMerge(ServerSettingsLive),
     Layer.provideMerge(providerHealthLayer),
-    Layer.provideMerge(providerExecutionCapabilitiesLayer),
+    Layer.provideMerge(engineExecutionCapabilitiesLayer),
     Layer.provideMerge(BrowserAutomationHostLive),
     // The gateway exposes device_* tools only where a backend can exist, but it
     // resolves the service on every platform to make that decision.
@@ -235,7 +235,7 @@ export function makeServerRuntimeServicesLayer(
     externalMcpServiceLayer,
     externalMcpGatewayLayer,
     providerHealthLayer,
-    providerExecutionCapabilitiesLayer,
+    engineExecutionCapabilitiesLayer,
     ProjectPullRequestPinsLive,
     pullRequestServiceLayer,
     orchestrationReactorLayer,
@@ -261,7 +261,7 @@ export function makeServerRuntimeServicesLayer(
 }
 
 /**
- * Compose the two top-level server graphs around one credential layer. Provider
+ * Compose the two top-level server graphs around one credential layer. Engine
  * adapters issue tokens from this registry and the HTTP gateway verifies those
  * same tokens, so constructing them independently would break scoped MCP.
  */

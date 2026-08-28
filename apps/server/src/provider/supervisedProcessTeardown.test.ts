@@ -7,7 +7,7 @@ import type {
   TerminalKillSignal,
 } from "../terminal/processTreeKiller";
 import {
-  ProviderProcessExitUnprovenError,
+  EngineProcessExitUnprovenError,
   teardownProviderProcessTree,
 } from "./supervisedProcessTeardown";
 
@@ -24,7 +24,7 @@ function deterministicClock() {
 describe("teardownProviderProcessTree", () => {
   it("escalates ignored TERM and returns only after root and descendants prove exit", async () => {
     const tree: CapturedProcessTree = {
-      descendants: [{ pid: 102, command: "provider-worker" }],
+      descendants: [{ pid: 102, command: "engine-worker" }],
       captureComplete: true,
     };
     const runningDescendants = new Map<number, CapturedProcess>([[102, tree.descendants[0]!]]);
@@ -63,7 +63,7 @@ describe("teardownProviderProcessTree", () => {
 
   it("force-kills captured descendants without re-signalling a root that exited after TERM", async () => {
     const tree: CapturedProcessTree = {
-      descendants: [{ pid: 202, command: "provider-grandchild" }],
+      descendants: [{ pid: 202, command: "engine-grandchild" }],
       captureComplete: true,
     };
     let descendantsRunning = true;
@@ -121,7 +121,7 @@ describe("teardownProviderProcessTree", () => {
       },
     ).catch((error: unknown) => error);
 
-    expect(failure).toBeInstanceOf(ProviderProcessExitUnprovenError);
+    expect(failure).toBeInstanceOf(EngineProcessExitUnprovenError);
     expect(failure).toMatchObject({
       rootPid: 401,
       rootExited: true,
@@ -149,13 +149,13 @@ describe("teardownProviderProcessTree", () => {
         ...clock,
       },
     ).catch((error: unknown) => error);
-    expect(failure).toBeInstanceOf(ProviderProcessExitUnprovenError);
+    expect(failure).toBeInstanceOf(EngineProcessExitUnprovenError);
     expect(failure).toMatchObject({ rootPid: 501, rootExited: false, captureComplete: false });
   });
 
   it("fails closed when forced termination cannot prove process-tree exit", async () => {
     const tree: CapturedProcessTree = {
-      descendants: [{ pid: 302, command: "stuck-provider" }],
+      descendants: [{ pid: 302, command: "stuck-engine" }],
       captureComplete: true,
     };
     const clock = deterministicClock();
@@ -171,9 +171,9 @@ describe("teardownProviderProcessTree", () => {
         ...clock,
       },
     ).catch((error: unknown) => error);
-    expect(failure).toBeInstanceOf(ProviderProcessExitUnprovenError);
+    expect(failure).toBeInstanceOf(EngineProcessExitUnprovenError);
     expect(failure).toMatchObject({
-      name: "ProviderProcessExitUnprovenError",
+      name: "EngineProcessExitUnprovenError",
       rootPid: 301,
       rootExited: false,
       remainingDescendantPids: [302],
@@ -185,7 +185,7 @@ describe("teardownProviderProcessTree", () => {
     // wait until the root has exited, so polling it beforehand only blocks the
     // event loop. Only the two give-up scans that build the failure detail remain.
     const tree: CapturedProcessTree = {
-      descendants: [{ pid: 602, command: "stuck-provider" }],
+      descendants: [{ pid: 602, command: "stuck-engine" }],
       captureComplete: true,
     };
     let inspectCalls = 0;
@@ -217,7 +217,7 @@ describe("teardownProviderProcessTree", () => {
 
   it("throttles descendant scans instead of running one per poll", async () => {
     const tree: CapturedProcessTree = {
-      descendants: [{ pid: 702, command: "provider-worker" }],
+      descendants: [{ pid: 702, command: "engine-worker" }],
       captureComplete: true,
     };
     let inspectCalls = 0;

@@ -38,7 +38,7 @@ describe("AcpAdapterSupport", () => {
     expect(acpPermissionOutcome("decline")).toBe("reject-once");
   });
 
-  it("selects the provider's real permission option id for approval decisions", () => {
+  it("selects the engine's real permission option id for approval decisions", () => {
     const options = [
       { kind: "reject_once", optionId: "deny-now" },
       { kind: "allow_once", optionId: "allow-this-tool" },
@@ -63,7 +63,7 @@ describe("AcpAdapterSupport", () => {
     ).toBe("allow-session");
   });
 
-  it("keeps Full Access operational with the allow options offered by the provider", () => {
+  it("keeps Full Access operational with the allow options offered by the engine", () => {
     expect(
       resolveAcpFullAccessPermissionOutcome([{ kind: "allow_always", optionId: "allow-session" }]),
     ).toEqual({ outcome: "selected", optionId: "allow-session" });
@@ -136,7 +136,7 @@ describe("AcpAdapterSupport", () => {
     expect(readAcpFailedToolDetail({ status: "completed", detail: "ignored" })).toBeUndefined();
   });
 
-  it("classifies provider-cancelled turns with failed tools as failed", () => {
+  it("classifies engine-cancelled turns with failed tools as failed", () => {
     expect(
       classifyAcpPromptTurnCompletion({
         stopReason: "cancelled",
@@ -157,7 +157,7 @@ describe("AcpAdapterSupport", () => {
     ).toEqual({ state: "completed" });
   });
 
-  it("maps ACP request errors to provider adapter request errors", () => {
+  it("maps ACP request errors to engine adapter request errors", () => {
     const error = mapAcpToAdapterError(
       "cursor",
       "thread-1" as never,
@@ -168,11 +168,11 @@ describe("AcpAdapterSupport", () => {
       }),
     );
 
-    expect(error._tag).toBe("ProviderAdapterRequestError");
+    expect(error._tag).toBe("EngineAdapterRequestError");
     expect(error.message).toContain("Invalid params");
   });
 
-  it("surfaces provider detail from generic ACP internal errors", () => {
+  it("surfaces engine detail from generic ACP internal errors", () => {
     const error = mapAcpToAdapterError(
       "droid",
       "thread-1" as never,

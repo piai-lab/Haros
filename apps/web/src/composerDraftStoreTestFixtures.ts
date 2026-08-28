@@ -1,4 +1,4 @@
-import { ThreadId, type ModelSelection, type ProviderModelOptions } from "@harnessos/contracts";
+import { ThreadId, type EngineSelection, type EngineModelOptions } from "@harnessos/contracts";
 import {
   useComposerDraftStore,
   type ComposerFileAttachment,
@@ -114,8 +114,8 @@ export function makeQueuedTurn(id: string): QueuedComposerTurn {
     selectedProvider: "codex",
     selectedModel: "gpt-5",
     selectedPromptEffort: null,
-    modelSelection: {
-      provider: "codex",
+    engineSelection: {
+      engine: "codex",
       model: "gpt-5",
     },
     runtimeMode: "full-access",
@@ -144,8 +144,8 @@ export function makeQueuedChatTurn(
     selectedProvider: "codex",
     selectedModel: "gpt-5",
     selectedPromptEffort: null,
-    modelSelection: {
-      provider: "codex",
+    engineSelection: {
+      engine: "codex",
       model: "gpt-5",
     },
     sourceProposedPlan: {
@@ -163,23 +163,23 @@ export function resetComposerDraftStore() {
     draftsByThreadId: {},
     draftThreadsByThreadId: {},
     projectDraftThreadIdByProjectId: {},
-    stickyModelSelectionByProvider: {},
+    stickyEngineSelectionByEngine: {},
     stickyActiveProvider: null,
   });
 }
 
-export function modelSelection(
-  provider: ModelSelection["provider"],
+export function engineSelection(
+  engine: EngineSelection["engine"],
   model: string,
-  options?: ModelSelection["options"],
-): ModelSelection {
+  options?: EngineSelection["options"],
+): EngineSelection {
   return {
-    provider,
+    engine,
     model,
     ...(options ? { options } : {}),
-  } as ModelSelection;
+  } as EngineSelection;
 }
 
-export function providerModelOptions(options: ProviderModelOptions): ProviderModelOptions {
+export function providerModelOptions(options: EngineModelOptions): EngineModelOptions {
   return options;
 }

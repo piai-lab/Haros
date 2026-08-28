@@ -12,8 +12,8 @@ describe("AgentGatewaySessionRegistry", () => {
     assert.notEqual(first.token, second.token);
     assert.equal(registry.verify(first.token)?.threadId, "thread-1");
     assert.equal(registry.verify(second.token)?.threadId, "thread-1");
-    assert.equal(registry.verify(first.token)?.provider, "codex");
-    assert.equal(registry.verify(second.token)?.provider, "claude");
+    assert.equal(registry.verify(first.token)?.engine, "codex");
+    assert.equal(registry.verify(second.token)?.engine, "claude");
   });
 
   it("keeps replacement runtime credentials independent from outgoing-session revocation", () => {
@@ -63,7 +63,7 @@ describe("AgentGatewaySessionRegistry", () => {
     assert.isTrue(registry.verifyTurnAuthority(turnBAuthority!));
   });
 
-  it("keeps credentials valid for a long-lived provider session but not across restart", () => {
+  it("keeps credentials valid for a long-lived engine session but not across restart", () => {
     let time = 1_000;
     const firstRegistry = makeAgentGatewaySessionRegistry({
       now: () => time,

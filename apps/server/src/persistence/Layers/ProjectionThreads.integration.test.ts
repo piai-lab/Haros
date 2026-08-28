@@ -26,7 +26,7 @@ layer("ProjectionThreadRepository fork scope", (it) => {
         projectId: ProjectId.makeUnsafe("project-1"),
         groupIds: [],
         title: "Scoped fork",
-        modelSelection: { provider: "codex" as const, model: "gpt-5.4" },
+        engineSelection: { engine: "codex" as const, model: "gpt-5.4" },
         runtimeMode: "full-access" as const,
         interactionMode: "default" as const,
         envMode: "local" as const,

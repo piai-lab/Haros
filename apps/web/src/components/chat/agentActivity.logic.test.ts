@@ -199,21 +199,21 @@ describe("deriveAgentActivityTimelineState", () => {
         id: "reasoning-item-1",
         label: "Reasoning",
         toolTitle: "Reasoning",
-        toolCallId: "provider-reasoning-1",
+        toolCallId: "engine-reasoning-1",
         detail: "Inspect the protocol",
       }),
       workEntry({
         id: "reasoning-item-2",
         label: "Reasoning",
         toolTitle: "Reasoning",
-        toolCallId: "provider-reasoning-2",
+        toolCallId: "engine-reasoning-2",
         detail: "Update the adapter",
       }),
       workEntry({
         id: "reasoning-item-3",
         label: "Reasoning",
         toolTitle: "Reasoning",
-        toolCallId: "provider-reasoning-3",
+        toolCallId: "engine-reasoning-3",
         detail: "Verify the result",
       }),
     ]);
@@ -259,7 +259,7 @@ describe("deriveAgentActivityTimelineState", () => {
         id: "reasoning-visible",
         label: "Reasoning trace",
         toolTitle: "Reasoning trace",
-        toolCallId: "provider-reasoning-visible",
+        toolCallId: "engine-reasoning-visible",
         detail:
           "**Planning Codex threads inspection**\n\n<!-- -->\n\n**Refining the display logic**\n\n<!-- -->",
       }),
@@ -267,7 +267,7 @@ describe("deriveAgentActivityTimelineState", () => {
         id: "reasoning-empty",
         label: "Reasoning trace",
         toolTitle: "Reasoning trace",
-        toolCallId: "provider-reasoning-empty",
+        toolCallId: "engine-reasoning-empty",
       }),
     ]);
 
@@ -391,11 +391,11 @@ describe("deriveAgentActivityTimelineState", () => {
       id: "legacy-reasoning-preview",
       label: "Reasoning trace",
       detail: "Reasoning",
-      preview: "Running Inspect the provider sequence",
+      preview: "Running Inspect the engine sequence",
       tone: "thinking",
     });
 
-    expect(formatAgentActivityEntryPreview(entry)).toBe("Inspect the provider sequence");
+    expect(formatAgentActivityEntryPreview(entry)).toBe("Inspect the engine sequence");
   });
 
   it("keeps generic agent task rows openable without compacting them away", () => {
@@ -448,13 +448,13 @@ describe("deriveAgentActivityTimelineState", () => {
   });
 });
 
-describe("unmapped provider events", () => {
+describe("unmapped engine events", () => {
   it("labels an unmapped event with its native type and safe detail", () => {
     const entry = workEntry({
       id: "unmapped-1",
       label: "item/agentMessage/completed",
       toolTitle: "item/agentMessage/completed",
-      activityKind: "provider.event.unmapped",
+      activityKind: "engine.event.unmapped",
       nativeEventType: "item/agentMessage/completed",
       detail: "Finished the refactor",
       tone: "info",
@@ -473,7 +473,7 @@ describe("unmapped provider events", () => {
     const entry = workEntry({
       id: "unmapped-2",
       label: "done",
-      activityKind: "provider.event.unmapped",
+      activityKind: "engine.event.unmapped",
       nativeEventType: "done",
       tone: "info",
     });

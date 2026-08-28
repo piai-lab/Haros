@@ -1,6 +1,6 @@
 // FILE: rateLimits.ts
 // Purpose: Centralizes rate-limit parsing, normalization, formatting, and row derivation
-// for provider runtime events so UI components can stay presentation-only.
+// for engine runtime events so UI components can stay presentation-only.
 
 import type { OrchestrationThread } from "@harnessos/contracts";
 import { providerUsageLearnMoreHref } from "@harnessos/shared/providerUsage";
@@ -13,8 +13,8 @@ export interface RateLimitWindow {
   windowDurationMins?: number;
 }
 
-export interface ProviderRateLimit {
-  provider: string;
+export interface EngineRateLimit {
+  engine: string;
   updatedAt: string;
   limits?: RateLimitWindow[];
   usedPercent?: number;
@@ -282,8 +282,8 @@ function extractFallbackLimits(payload: Record<string, unknown>): RateLimitWindo
 
 export function deriveAccountRateLimits(
   threads: ReadonlyArray<Pick<OrchestrationThread, "activities">>,
-): ProviderRateLimit[] {
-  const byProvider = new Map<string, ProviderRateLimit>();
+): EngineRateLimit[] {
+  const byProvider = new Map<string, EngineRateLimit>();
   const nowMs = Date.now();
 
   for (const thread of threads) {
@@ -298,8 +298,8 @@ export function deriveAccountRateLimits(
       const payload = asRecord(activity.payload);
       if (!payload) continue;
 
-      const provider = typeof payload.provider === "string" ? payload.provider : "unknown";
-      const existing = byProvider.get(provider);
+      const engine = typeof payload.engine === "string" ? payload.engine : "unknown";
+      const existing = byProvider.get(engine);
       if (existing && existing.updatedAt > activity.createdAt) continue;
 
       const claudePayload = extractLimitsFromClaudePayload(payload);
@@ -315,8 +315,8 @@ export function deriveAccountRateLimits(
 
       if (!limits || limits.length === 0) continue;
 
-      byProvider.set(provider, {
-        provider,
+      byProvider.set(engine, {
+        engine,
         updatedAt: activity.createdAt,
         limits,
         ...(claudePayload?.status ? { status: claudePayload.status } : {}),
@@ -328,7 +328,7 @@ export function deriveAccountRateLimits(
 }
 
 export function deriveVisibleRateLimitRows(
-  rateLimits: ReadonlyArray<ProviderRateLimit>,
+  rateLimits: ReadonlyArray<EngineRateLimit>,
 ): VisibleRateLimitRow[] {
   const rowsByLabel = new Map<string, VisibleRateLimitRow & { usedPercent: number }>();
 
@@ -356,7 +356,7 @@ export function deriveVisibleRateLimitRows(
 
       const label = normalizeRateLimitLabel(limit.window, limit.windowDurationMins);
       const row = {
-        id: `${rateLimit.provider}-${label}`,
+        id: `${rateLimit.engine}-${label}`,
         label,
         remainingPercent: Math.round(100 - usedPercent),
         ...(limit.resetsAt ? { resetsAt: limit.resetsAt } : {}),
@@ -410,19 +410,17 @@ export function formatRateLimitResetCountdown(resetsAt: string): string {
 }
 
 export function deriveRateLimitLearnMoreHref(
-  rateLimits: ReadonlyArray<ProviderRateLimit>,
+  rateLimits: ReadonlyArray<EngineRateLimit>,
 ): string | null {
-  const providers = new Set(rateLimits.map((rateLimit) => rateLimit.provider));
-  if (providers.size !== 1) return null;
+  const engines = new Set(rateLimits.map((rateLimit) => rateLimit.engine));
+  if (engines.size !== 1) return null;
 
-  const [provider] = providers;
-  return deriveProviderUsageLearnMoreHref(provider);
+  const [engine] = engines;
+  return deriveProviderUsageLearnMoreHref(engine);
 }
 
-export function deriveProviderUsageLearnMoreHref(
-  provider: string | null | undefined,
-): string | null {
-  return providerUsageLearnMoreHref(provider);
+export function deriveProviderUsageLearnMoreHref(engine: string | null | undefined): string | null {
+  return providerUsageLearnMoreHref(engine);
 }
 
 function timestampMs(value: string | undefined): number {
@@ -470,13 +468,13 @@ function mergeRateLimitWindowSets(
 }
 
 function mergeProviderRateLimit(
-  preferred: ProviderRateLimit,
-  fallback: ProviderRateLimit | undefined,
-): ProviderRateLimit {
+  preferred: EngineRateLimit,
+  fallback: EngineRateLimit | undefined,
+): EngineRateLimit {
   if (!fallback) return preferred;
 
   return {
-    provider: preferred.provider,
+    engine: preferred.engine,
     updatedAt:
       timestampMs(preferred.updatedAt) >= timestampMs(fallback.updatedAt)
         ? preferred.updatedAt
@@ -494,20 +492,17 @@ function mergeProviderRateLimit(
 }
 
 export function mergeProviderRateLimits(
-  preferred: ReadonlyArray<ProviderRateLimit>,
-  fallback: ReadonlyArray<ProviderRateLimit>,
-): ProviderRateLimit[] {
-  const merged = new Map<string, ProviderRateLimit>();
+  preferred: ReadonlyArray<EngineRateLimit>,
+  fallback: ReadonlyArray<EngineRateLimit>,
+): EngineRateLimit[] {
+  const merged = new Map<string, EngineRateLimit>();
 
   for (const rateLimit of fallback) {
-    merged.set(rateLimit.provider, rateLimit);
+    merged.set(rateLimit.engine, rateLimit);
   }
 
   for (const rateLimit of preferred) {
-    merged.set(
-      rateLimit.provider,
-      mergeProviderRateLimit(rateLimit, merged.get(rateLimit.provider)),
-    );
+    merged.set(rateLimit.engine, mergeProviderRateLimit(rateLimit, merged.get(rateLimit.engine)));
   }
 
   return Array.from(merged.values());

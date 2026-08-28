@@ -132,7 +132,7 @@ function readTranscriptionErrorMessage(response: OutboundHttpResponse): string {
       errorMessage = providerMessage;
     }
   } catch {
-    // Keep the generic status-based message when the provider body is empty or invalid.
+    // Keep the generic status-based message when the engine body is empty or invalid.
   }
 
   if (response.status === 401 || response.status === 403) {

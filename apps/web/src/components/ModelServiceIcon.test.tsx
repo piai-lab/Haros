@@ -100,7 +100,7 @@ describe("ModelServiceIcon", () => {
     expect(resolveModelServiceIcon({ serviceId: "ant-ling", origin: "builtin" }).kind).toBe(
       "brand",
     );
-    expect(resolveModelServiceIcon({ serviceId: "future-provider", origin: "builtin" })).toEqual({
+    expect(resolveModelServiceIcon({ serviceId: "future-engine", origin: "builtin" })).toEqual({
       kind: "generic",
       src: null,
     });

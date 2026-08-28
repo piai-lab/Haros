@@ -21,7 +21,7 @@ describe("102_AutomationModelPresentationIdentity", () => {
           misfire_policy, acknowledged_risks_json, iteration_count, created_at, updated_at
         ) VALUES (
           'automation-legacy', 'project-1', 'Legacy', 'Prompt', '{"type":"manual"}', 1, NULL,
-          '{"provider":"opencode","model":"deepseek/deepseek-v4-flash"}',
+          '{"engine":"opencode","model":"deepseek/deepseek-v4-flash"}',
           'approval-required', 'default', 'auto', 'standalone', 1, 60, 3600,
           '{"type":"none"}', 'coalesce', '[]', 0,
           '2026-08-28T00:00:00.000Z', '2026-08-28T00:00:00.000Z'

@@ -5,10 +5,10 @@
 
 import {
   DEFAULT_RUNTIME_MODE,
-  type ModelSelection,
+  type EngineSelection,
   type OrchestrationThreadPullRequest,
   type ProjectId,
-  type ProviderInteractionMode,
+  type EngineInteractionMode,
   type EngineKind,
   type RuntimeMode,
   type ThreadEnvironmentMode,
@@ -19,7 +19,7 @@ import {
   type ComposerThreadDraftState,
   type DraftThreadEnvMode,
   type DraftThreadState,
-  resolvePreferredComposerModelSelection,
+  resolvePreferredComposerEngineSelection,
 } from "../composerDraftStore";
 import { DEFAULT_INTERACTION_MODE, type Thread, type ThreadPrimarySurface } from "../types";
 
@@ -30,7 +30,7 @@ export interface NewThreadOptions {
   envMode?: DraftThreadEnvMode;
   entryPoint?: ThreadPrimarySurface;
   temporary?: boolean;
-  provider?: EngineKind;
+  engine?: EngineKind;
   fresh?: boolean;
 }
 
@@ -95,9 +95,9 @@ export function resolveInheritedThreadContext(input: {
 
 interface ActiveThreadSnapshot {
   projectId: ProjectId;
-  modelSelection: ModelSelection;
+  engineSelection: EngineSelection;
   runtimeMode: RuntimeMode;
-  interactionMode: ProviderInteractionMode;
+  interactionMode: EngineInteractionMode;
   envMode?: ThreadEnvironmentMode | undefined;
   lastKnownPr?: OrchestrationThreadPullRequest | null;
 }
@@ -123,20 +123,20 @@ export type ThreadBootstrapPlan = DraftReusePlanStored | DraftReusePlanRoute | D
 interface ResolveTerminalThreadCreationStateInput {
   activeDraftThread: DraftThreadState | null;
   activeThread: ActiveThreadSnapshot | null;
-  defaultProvider?: EngineKind | null | undefined;
+  defaultEngine?: EngineKind | null | undefined;
   draftComposerState: ComposerThreadDraftState | null;
   draftThread: DraftThreadState | null;
   options: NewThreadOptions | undefined;
-  projectDefaultModelSelection: ModelSelection | null;
+  projectDefaultEngineSelection: EngineSelection | null;
   projectId: ProjectId;
 }
 
 export interface TerminalThreadCreationState {
   branch: string | null;
   envMode: DraftThreadEnvMode;
-  interactionMode: ProviderInteractionMode;
+  interactionMode: EngineInteractionMode;
   lastKnownPr: OrchestrationThreadPullRequest | null;
-  modelSelection: ModelSelection | null;
+  engineSelection: EngineSelection | null;
   runtimeMode: RuntimeMode;
   title: string;
   worktreePath: string | null;
@@ -147,8 +147,8 @@ export interface TerminalThreadCreationState {
 export function createActiveThreadSnapshot(
   activeThread:
     | {
-        interactionMode: ProviderInteractionMode;
-        modelSelection: ModelSelection;
+        interactionMode: EngineInteractionMode;
+        engineSelection: EngineSelection;
         projectId: ProjectId;
         runtimeMode: RuntimeMode;
         envMode?: ThreadEnvironmentMode | undefined;
@@ -163,7 +163,7 @@ export function createActiveThreadSnapshot(
   }
   return {
     projectId: activeThread.projectId,
-    modelSelection: activeThread.modelSelection,
+    engineSelection: activeThread.engineSelection,
     runtimeMode: activeThread.runtimeMode,
     interactionMode: activeThread.interactionMode,
     envMode: activeThread.envMode,
@@ -323,14 +323,14 @@ export function resolveTerminalThreadCreationState(
 
   return {
     title: input.draftThread?.title ?? "New terminal",
-    modelSelection: resolvePreferredComposerModelSelection({
+    engineSelection: resolvePreferredComposerEngineSelection({
       draft: input.draftComposerState,
-      threadModelSelection:
+      threadEngineSelection:
         input.activeThread?.projectId === input.projectId
-          ? input.activeThread.modelSelection
+          ? input.activeThread.engineSelection
           : null,
-      projectModelSelection: input.projectDefaultModelSelection,
-      defaultProvider: input.defaultProvider,
+      projectEngineSelection: input.projectDefaultEngineSelection,
+      defaultEngine: input.defaultEngine,
     }),
     runtimeMode:
       input.draftThread?.runtimeMode ??

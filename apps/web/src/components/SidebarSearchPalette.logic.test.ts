@@ -33,8 +33,8 @@ const actions: SidebarSearchAction[] = [
   {
     id: "usage-settings",
     label: "Usage settings",
-    description: "Open provider usage and remaining credits.",
-    keywords: ["usage", "limits", "credits", "quota", "providers"],
+    description: "Open engine usage and remaining credits.",
+    keywords: ["usage", "limits", "credits", "quota", "engines"],
     shortcutLabel: "⇧⌘U",
   },
 ];
@@ -111,7 +111,7 @@ const threads: SidebarSearchThread[] = [
     projectName: "Alpha Repo",
     projectRemoteName: "Alpha Repo",
     sectionName: "Projects",
-    provider: "claude",
+    engine: "claude",
     createdAt: "2026-04-09T09:00:00.000Z",
     updatedAt: "2026-04-09T11:30:00.000Z",
     messages: [
@@ -127,7 +127,7 @@ const threads: SidebarSearchThread[] = [
     projectName: "Alpha Repo",
     projectRemoteName: "Alpha Repo",
     sectionName: "Projects",
-    provider: "codex",
+    engine: "codex",
     createdAt: "2026-04-09T08:00:00.000Z",
     updatedAt: "2026-04-09T10:30:00.000Z",
     messages: [
@@ -146,7 +146,7 @@ const threads: SidebarSearchThread[] = [
     projectName: "Docs",
     projectRemoteName: "Beta Repo",
     sectionName: "Chat",
-    provider: "claude",
+    engine: "claude",
     createdAt: "2026-04-09T07:00:00.000Z",
     updatedAt: "2026-04-09T09:00:00.000Z",
     messages: [

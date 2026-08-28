@@ -7,10 +7,10 @@ import type { ToolContext } from "./toolRuntime.ts";
 
 const context: ToolContext = {
   principal: {
-    kind: "provider-session",
+    kind: "engine-session",
     sessionKey: "gateway-session:test",
     threadId: "thread-a",
-    provider: "claude",
+    engine: "claude",
     turnId: "turn-a",
   },
   callerThreadId: "thread-a",
@@ -66,7 +66,7 @@ const typeOutput = () => ({
 });
 
 describe("agent gateway browser tools", () => {
-  it("normalizes provider-friendly browser aliases before validation", () => {
+  it("normalizes engine-friendly browser aliases before validation", () => {
     expect(
       normalizeGatewayBrowserArguments("browser_type", {
         ref: "e3",
@@ -329,7 +329,7 @@ describe("agent gateway browser tools", () => {
     expect(execute).toHaveBeenCalledWith(
       expect.objectContaining({
         sessionKey: "gateway-session:test",
-        provider: "claude",
+        engine: "claude",
         threadId: "thread-a",
         name: "browser_tabs",
       }),

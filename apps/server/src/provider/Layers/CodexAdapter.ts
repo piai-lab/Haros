@@ -1,8 +1,8 @@
 /**
- * CodexAdapterLive - Scoped live implementation for the Codex provider adapter.
+ * CodexAdapterLive - Scoped live implementation for the Codex engine adapter.
  *
  * Wraps `CodexAppServerManager` behind the `CodexAdapter` service contract and
- * maps manager failures into the shared `ProviderAdapterError` algebra.
+ * maps manager failures into the shared `EngineAdapterError` algebra.
  *
  * @module CodexAdapterLive
  */
@@ -12,38 +12,38 @@ import {
   type CanonicalItemType,
   type CanonicalRequestType,
   type CanonicalUserInputResponse,
-  type ModelSelection,
-  type ProviderEvent,
-  type ProviderListModelsResult,
-  type ProviderListPluginsResult,
-  type ProviderReadPluginResult,
-  type ProviderSendTurnInput,
-  type ProviderListSkillsResult,
-  type ProviderRuntimeEvent,
+  type EngineSelection,
+  type EngineEvent,
+  type EngineListModelsResult,
+  type EngineListPluginsResult,
+  type EngineReadPluginResult,
+  type EngineSendTurnInput,
+  type EngineListSkillsResult,
+  type EngineRuntimeEvent,
   type ServerVoiceTranscriptionResult,
   type ThreadTokenUsageSnapshot,
-  type ProviderUserInputAnswers,
+  type EngineUserInputAnswers,
   EventId,
   RuntimeItemId,
   RuntimeRequestId,
   RuntimeTaskId,
-  ProviderApprovalDecision,
-  ProviderItemId,
+  EngineApprovalDecision,
+  EngineItemId,
   ThreadId,
   TurnId,
 } from "@harnessos/contracts";
 import { Cause, Effect, Layer, Option, Queue, Schema, ServiceMap, Stream } from "effect";
 
 import {
-  ProviderAdapterProcessError,
-  ProviderAdapterRequestError,
-  ProviderAdapterSessionClosedError,
-  ProviderAdapterSessionNotFoundError,
-  ProviderAdapterValidationError,
-  type ProviderAdapterError,
+  EngineAdapterProcessError,
+  EngineAdapterRequestError,
+  EngineAdapterSessionClosedError,
+  EngineAdapterSessionNotFoundError,
+  EngineAdapterValidationError,
+  type EngineAdapterError,
 } from "../Errors.ts";
 import { CodexAdapter, type CodexAdapterShape } from "../Services/CodexAdapter.ts";
-import { PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY } from "../Services/ProviderAdapter.ts";
+import { ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY } from "../Services/EngineAdapter.ts";
 import {
   CodexAppServerManager,
   parseCodexUserInputQuestions,
@@ -77,22 +77,22 @@ import { extractProposedPlanMarkdown } from "../planMode.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { harnessosSkillsDir } from "../skillsCatalog.ts";
 import { makeBoundedCallbackIngress } from "../boundedCallbackIngress.ts";
-import { assignDerivedProviderRuntimeEventIds } from "../providerRuntimeEventIdentity.ts";
-import { providerExecutionStructure } from "../providerExecutionStructure.ts";
+import { assignDerivedProviderRuntimeEventIds } from "../engineRuntimeEventIdentity.ts";
+import { engineExecutionStructure } from "../engineExecutionStructure.ts";
 import {
   compactProviderRuntimeEventForIngress,
   isTerminalProviderRuntimeEvent,
-  PROVIDER_RUNTIME_CALLBACK_BUFFER_MAX_BYTES,
-  PROVIDER_RUNTIME_CALLBACK_TERMINAL_RESERVE,
-  PROVIDER_RUNTIME_INGRESS_EVENT_MAX_BYTES,
-} from "../providerRuntimeEventIngress.ts";
+  ENGINE_RUNTIME_CALLBACK_BUFFER_MAX_BYTES,
+  ENGINE_RUNTIME_CALLBACK_TERMINAL_RESERVE,
+  ENGINE_RUNTIME_INGRESS_EVENT_MAX_BYTES,
+} from "../engineRuntimeEventIngress.ts";
 import {
   makeUnmappedProviderEventGate,
   sanitizeUnmappedProviderData,
   sanitizeUnmappedProviderDetail,
   sanitizeUnmappedProviderEvent,
   sanitizeUnmappedProviderNativeType,
-} from "../unmappedProviderEvents.ts";
+} from "../unmappedEngineEvents.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 
 const PROVIDER = "codex" as const;
@@ -114,25 +114,25 @@ interface CodexTurnWatchdogEntry {
 }
 
 type CodexRuntimeIngressItem = {
-  readonly nativeEvent: ProviderEvent;
-  readonly runtimeEvents: ReadonlyArray<ProviderRuntimeEvent>;
+  readonly nativeEvent: EngineEvent;
+  readonly runtimeEvents: ReadonlyArray<EngineRuntimeEvent>;
   readonly bytes: number;
 };
 
-function compactCodexNativeEventForIngress(event: ProviderEvent): {
-  readonly event: ProviderEvent;
+function compactCodexNativeEventForIngress(event: EngineEvent): {
+  readonly event: EngineEvent;
   readonly bytes: number;
 } {
   let originalBytes: number;
   try {
     originalBytes = Buffer.byteLength(JSON.stringify(event), "utf8");
   } catch {
-    originalBytes = PROVIDER_RUNTIME_INGRESS_EVENT_MAX_BYTES + 1;
+    originalBytes = ENGINE_RUNTIME_INGRESS_EVENT_MAX_BYTES + 1;
   }
-  if (originalBytes <= PROVIDER_RUNTIME_INGRESS_EVENT_MAX_BYTES) {
+  if (originalBytes <= ENGINE_RUNTIME_INGRESS_EVENT_MAX_BYTES) {
     return { event, bytes: originalBytes };
   }
-  const compactedEvent: ProviderEvent = {
+  const compactedEvent: EngineEvent = {
     ...event,
     payload: {
       omnimindTruncated: true,
@@ -144,7 +144,7 @@ function compactCodexNativeEventForIngress(event: ProviderEvent): {
   try {
     compactedBytes = Buffer.byteLength(JSON.stringify(compactedEvent), "utf8");
   } catch {
-    compactedBytes = PROVIDER_RUNTIME_INGRESS_EVENT_MAX_BYTES;
+    compactedBytes = ENGINE_RUNTIME_INGRESS_EVENT_MAX_BYTES;
   }
   return { event: compactedEvent, bytes: compactedBytes };
 }
@@ -187,31 +187,31 @@ function composeCodexInputWithFileAttachments(input: {
   });
 }
 
-function codexModelSelectionOverrides(
-  modelSelection: ModelSelection | undefined,
+function codexEngineSelectionOverrides(
+  engineSelection: EngineSelection | undefined,
 ): Pick<CodexAppServerSendTurnInput, "model" | "effort"> &
   Pick<CodexAppServerStartSessionInput, "serviceTier"> {
-  if (modelSelection?.provider !== PROVIDER) {
+  if (engineSelection?.engine !== PROVIDER) {
     return {};
   }
 
   return {
-    model: modelSelection.model,
-    ...(modelSelection.options?.reasoningEffort !== undefined
-      ? { effort: modelSelection.options.reasoningEffort }
+    model: engineSelection.model,
+    ...(engineSelection.options?.reasoningEffort !== undefined
+      ? { effort: engineSelection.options.reasoningEffort }
       : {}),
-    ...(modelSelection.options?.fastMode ? { serviceTier: "fast" } : {}),
+    ...(engineSelection.options?.fastMode ? { serviceTier: "fast" } : {}),
   };
 }
 
 function toSessionError(
   threadId: ThreadId,
   cause: unknown,
-): ProviderAdapterSessionNotFoundError | ProviderAdapterSessionClosedError | undefined {
+): EngineAdapterSessionNotFoundError | EngineAdapterSessionClosedError | undefined {
   const normalized = toMessage(cause, "").toLowerCase();
-  if (normalized.includes("unknown session") || normalized.includes("unknown provider session")) {
-    return new ProviderAdapterSessionNotFoundError({
-      provider: PROVIDER,
+  if (normalized.includes("unknown session") || normalized.includes("unknown engine session")) {
+    return new EngineAdapterSessionNotFoundError({
+      engine: PROVIDER,
       threadId,
       cause,
     });
@@ -220,8 +220,8 @@ function toSessionError(
   // process; treat it as a closed session so callers recover via resume
   // instead of surfacing a raw request failure.
   if (normalized.includes("session is closed") || normalized.includes("stdin closed")) {
-    return new ProviderAdapterSessionClosedError({
-      provider: PROVIDER,
+    return new EngineAdapterSessionClosedError({
+      engine: PROVIDER,
       threadId,
       cause,
     });
@@ -229,13 +229,13 @@ function toSessionError(
   return undefined;
 }
 
-function toRequestError(threadId: ThreadId, method: string, cause: unknown): ProviderAdapterError {
+function toRequestError(threadId: ThreadId, method: string, cause: unknown): EngineAdapterError {
   const sessionError = toSessionError(threadId, cause);
   if (sessionError) {
     return sessionError;
   }
-  return new ProviderAdapterRequestError({
-    provider: PROVIDER,
+  return new EngineAdapterRequestError({
+    engine: PROVIDER,
     method,
     detail: toMessage(cause, `${method} failed`),
     cause,
@@ -267,7 +267,7 @@ function asNumber(value: unknown): number | undefined {
 }
 
 // Keep manager-emitted stderr lines visible without escalating them into a fatal thread error.
-function providerErrorMapsToWarning(event: ProviderEvent): boolean {
+function providerErrorMapsToWarning(event: EngineEvent): boolean {
   return (
     event.kind === "error" &&
     (event.method === "process/stderr" ||
@@ -337,8 +337,8 @@ function toTurnId(value: string | undefined): TurnId | undefined {
   return value?.trim() ? TurnId.makeUnsafe(value) : undefined;
 }
 
-function toProviderItemId(value: string | undefined): ProviderItemId | undefined {
-  return value?.trim() ? ProviderItemId.makeUnsafe(value) : undefined;
+function toProviderItemId(value: string | undefined): EngineItemId | undefined {
+  return value?.trim() ? EngineItemId.makeUnsafe(value) : undefined;
 }
 
 function toTurnStatus(value: unknown): "completed" | "failed" | "cancelled" | "interrupted" {
@@ -536,8 +536,8 @@ function toRequestTypeFromResolvedPayload(
 }
 
 function toCanonicalUserInputAnswers(
-  answers: ProviderUserInputAnswers | undefined,
-): ProviderUserInputAnswers {
+  answers: EngineUserInputAnswers | undefined,
+): EngineUserInputAnswers {
   if (!answers) {
     return {};
   }
@@ -612,7 +612,7 @@ function contentStreamKindFromMethod(
   }
 }
 
-function asRuntimeItemId(itemId: ProviderItemId): RuntimeItemId {
+function asRuntimeItemId(itemId: EngineItemId): RuntimeItemId {
   return RuntimeItemId.makeUnsafe(itemId);
 }
 
@@ -631,9 +631,9 @@ function codexEventMessage(
 }
 
 function codexEventBase(
-  event: ProviderEvent,
+  event: EngineEvent,
   canonicalThreadId: ThreadId,
-): Omit<ProviderRuntimeEvent, "type" | "payload"> {
+): Omit<EngineRuntimeEvent, "type" | "payload"> {
   const payload = asObject(event.payload);
   const msg = codexEventMessage(payload);
   const turnId = event.turnId ?? toTurnId(asString(msg?.turn_id) ?? asString(msg?.turnId));
@@ -643,14 +643,14 @@ function codexEventBase(
   const providerRefs = base.providerRefs
     ? {
         ...base.providerRefs,
-        ...(turnId ? { providerTurnId: turnId } : {}),
-        ...(itemId ? { providerItemId: itemId } : {}),
-        ...(requestId ? { providerRequestId: requestId } : {}),
+        ...(turnId ? { nativeTurnId: turnId } : {}),
+        ...(itemId ? { nativeItemId: itemId } : {}),
+        ...(requestId ? { nativeRequestId: requestId } : {}),
       }
     : {
-        ...(turnId ? { providerTurnId: turnId } : {}),
-        ...(itemId ? { providerItemId: itemId } : {}),
-        ...(requestId ? { providerRequestId: requestId } : {}),
+        ...(turnId ? { nativeTurnId: turnId } : {}),
+        ...(itemId ? { nativeItemId: itemId } : {}),
+        ...(requestId ? { nativeRequestId: requestId } : {}),
       };
 
   return {
@@ -663,7 +663,7 @@ function codexEventBase(
 }
 
 function codexGeneratedImageThreadId(
-  event: ProviderEvent,
+  event: EngineEvent,
   payload: Record<string, unknown> | undefined,
 ): string | undefined {
   const msg = codexEventMessage(payload);
@@ -672,12 +672,12 @@ function codexGeneratedImageThreadId(
     firstStringValue(msg, ["thread_id", "threadId", "threadID", "thread"]) ??
     firstStringValue(nestedEvent, ["thread_id", "threadId", "threadID", "thread"]) ??
     firstStringValue(payload, ["thread_id", "threadId", "threadID", "thread"]) ??
-    event.providerThreadId ??
+    event.nativeThreadId ??
     event.threadId
   );
 }
 
-function sanitizeGeneratedImagePayload(event: ProviderEvent, canonicalThreadId: ThreadId): unknown {
+function sanitizeGeneratedImagePayload(event: EngineEvent, canonicalThreadId: ThreadId): unknown {
   const payload = asObject(event.payload);
   return sanitizeNestedCodexGeneratedImagePayloads({
     value: event.payload ?? {},
@@ -686,10 +686,10 @@ function sanitizeGeneratedImagePayload(event: ProviderEvent, canonicalThreadId: 
 }
 
 function withSanitizedGeneratedImageRaw(
-  base: Omit<ProviderRuntimeEvent, "type" | "payload">,
-  event: ProviderEvent,
+  base: Omit<EngineRuntimeEvent, "type" | "payload">,
+  event: EngineEvent,
   canonicalThreadId: ThreadId,
-): Omit<ProviderRuntimeEvent, "type" | "payload"> {
+): Omit<EngineRuntimeEvent, "type" | "payload"> {
   return {
     ...base,
     raw: {
@@ -700,7 +700,7 @@ function withSanitizedGeneratedImageRaw(
   };
 }
 
-function generatedImageEventCandidate(event: ProviderEvent): Record<string, unknown> | undefined {
+function generatedImageEventCandidate(event: EngineEvent): Record<string, unknown> | undefined {
   const payload = asObject(event.payload);
   const msg = codexEventMessage(payload);
   const item = asObject(payload?.item);
@@ -730,9 +730,9 @@ function generatedImageEventCandidate(event: ProviderEvent): Record<string, unkn
 }
 
 function mapGeneratedImageEndEvent(
-  event: ProviderEvent,
+  event: EngineEvent,
   canonicalThreadId: ThreadId,
-): ProviderRuntimeEvent | undefined {
+): EngineRuntimeEvent | undefined {
   if (
     event.method !== "codex/event/image_generation_end" &&
     event.method !== "image_generation_end"
@@ -791,32 +791,30 @@ function mapGeneratedImageEndEvent(
   };
 }
 
-function eventRawSource(event: ProviderEvent): NonNullable<ProviderRuntimeEvent["raw"]>["source"] {
+function eventRawSource(event: EngineEvent): NonNullable<EngineRuntimeEvent["raw"]>["source"] {
   return event.kind === "request" ? "codex.app-server.request" : "codex.app-server.notification";
 }
 
-function providerRefsFromEvent(
-  event: ProviderEvent,
-): ProviderRuntimeEvent["providerRefs"] | undefined {
+function providerRefsFromEvent(event: EngineEvent): EngineRuntimeEvent["providerRefs"] | undefined {
   const refs: Record<string, string> = {};
-  if (event.providerThreadId) refs.providerThreadId = event.providerThreadId;
-  if (event.providerParentThreadId) refs.providerParentThreadId = event.providerParentThreadId;
-  if (event.turnId) refs.providerTurnId = event.turnId;
-  if (event.parentTurnId) refs.parentProviderTurnId = event.parentTurnId;
-  if (event.itemId) refs.providerItemId = event.itemId;
-  if (event.requestId) refs.providerRequestId = event.requestId;
+  if (event.nativeThreadId) refs.nativeThreadId = event.nativeThreadId;
+  if (event.nativeParentThreadId) refs.nativeParentThreadId = event.nativeParentThreadId;
+  if (event.turnId) refs.nativeTurnId = event.turnId;
+  if (event.parentTurnId) refs.parentNativeTurnId = event.parentTurnId;
+  if (event.itemId) refs.nativeItemId = event.itemId;
+  if (event.requestId) refs.nativeRequestId = event.requestId;
 
-  return Object.keys(refs).length > 0 ? (refs as ProviderRuntimeEvent["providerRefs"]) : undefined;
+  return Object.keys(refs).length > 0 ? (refs as EngineRuntimeEvent["providerRefs"]) : undefined;
 }
 
 function runtimeEventBase(
-  event: ProviderEvent,
+  event: EngineEvent,
   canonicalThreadId: ThreadId,
-): Omit<ProviderRuntimeEvent, "type" | "payload"> {
+): Omit<EngineRuntimeEvent, "type" | "payload"> {
   const refs = providerRefsFromEvent(event);
   return {
     eventId: event.id,
-    provider: event.provider,
+    engine: event.engine,
     threadId: canonicalThreadId,
     createdAt: event.createdAt,
     ...(event.lifecycleGeneration !== undefined
@@ -836,10 +834,10 @@ function runtimeEventBase(
 }
 
 function mapItemLifecycle(
-  event: ProviderEvent,
+  event: EngineEvent,
   canonicalThreadId: ThreadId,
   lifecycle: "item.started" | "item.updated" | "item.completed",
-): ProviderRuntimeEvent | undefined {
+): EngineRuntimeEvent | undefined {
   const payload = asObject(event.payload);
   const item = asObject(payload?.item);
   const source = item ?? payload;
@@ -869,7 +867,7 @@ function mapItemLifecycle(
   const canonicalItemType =
     lifecycle === "item.completed" && itemType === "review_exited" ? "assistant_message" : itemType;
 
-  // Only the provider-authored summary is user-visible reasoning. Raw content
+  // Only the engine-authored summary is user-visible reasoning. Raw content
   // may contain model trace data and must not leak into transcript activities.
   const detail =
     itemType === "reasoning" ? reasoningSummaryDetail(source) : itemDetail(source, payload ?? {});
@@ -903,9 +901,9 @@ function mapItemLifecycle(
 }
 
 function mapUnmappedCodexEvent(
-  event: ProviderEvent,
+  event: EngineEvent,
   canonicalThreadId: ThreadId,
-): ProviderRuntimeEvent {
+): EngineRuntimeEvent {
   const payload = asObject(event.payload);
   const msg = codexEventMessage(payload);
   const nativeType = sanitizeUnmappedProviderNativeType(event.method);
@@ -935,9 +933,9 @@ function mapUnmappedCodexEvent(
 }
 
 function mapToRuntimeEvents(
-  event: ProviderEvent,
+  event: EngineEvent,
   canonicalThreadId: ThreadId,
-): ReadonlyArray<ProviderRuntimeEvent> {
+): ReadonlyArray<EngineRuntimeEvent> {
   const payload = asObject(event.payload);
   const turn = asObject(payload?.turn);
   const generatedImageEndEvent = mapGeneratedImageEndEvent(event, canonicalThreadId);
@@ -996,7 +994,7 @@ function mapToRuntimeEvents(
   }
 
   if (event.method === "item/requestApproval/decision" && event.requestId) {
-    const decision = Schema.decodeUnknownSync(ProviderApprovalDecision)(payload?.decision);
+    const decision = Schema.decodeUnknownSync(EngineApprovalDecision)(payload?.decision);
     const requestType =
       event.requestKind !== undefined
         ? toRequestTypeFromKind(event.requestKind)
@@ -1090,8 +1088,8 @@ function mapToRuntimeEvents(
 
   if (event.method === "thread/started") {
     const payloadThreadId = asString(asObject(payload?.thread)?.id);
-    const providerThreadId = payloadThreadId ?? asString(payload?.threadId);
-    if (!providerThreadId) {
+    const nativeThreadId = payloadThreadId ?? asString(payload?.threadId);
+    if (!nativeThreadId) {
       return [];
     }
     return [
@@ -1099,7 +1097,7 @@ function mapToRuntimeEvents(
         ...runtimeEventBase(event, canonicalThreadId),
         type: "thread.started",
         payload: {
-          providerThreadId,
+          nativeThreadId,
         },
       },
     ];
@@ -1405,7 +1403,7 @@ function mapToRuntimeEvents(
         type: "user-input.resolved",
         payload: {
           answers: toCanonicalUserInputAnswers(
-            asObject(event.payload)?.answers as ProviderUserInputAnswers | undefined,
+            asObject(event.payload)?.answers as EngineUserInputAnswers | undefined,
           ),
         },
       },
@@ -1450,7 +1448,7 @@ function mapToRuntimeEvents(
         },
       ];
     }
-    const events: ProviderRuntimeEvent[] = [
+    const events: EngineRuntimeEvent[] = [
       {
         ...codexEventBase(event, canonicalThreadId),
         type: "task.completed",
@@ -1665,7 +1663,7 @@ function mapToRuntimeEvents(
 
   if (event.method === "error") {
     const message =
-      asString(asObject(payload?.error)?.message) ?? event.message ?? "Provider runtime error";
+      asString(asObject(payload?.error)?.message) ?? event.message ?? "Engine runtime error";
     const willRetry = payload?.willRetry === true;
     const treatAsWarning = willRetry || isNonFatalCodexErrorMessage(message);
     return [
@@ -1727,7 +1725,7 @@ function mapToRuntimeEvents(
 
   // No explicit mapping matched: keep the event visible instead of dropping
   // it. The raw native method becomes the row title and the raw payload the
-  // preview, so a provider protocol addition degrades to a readable row rather
+  // preview, so a engine protocol addition degrades to a readable row rather
   // than silence.
   return [mapUnmappedCodexEvent(event, canonicalThreadId)];
 }
@@ -1773,8 +1771,8 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       (manager) => Effect.promise(() => manager.stopAll()),
     );
 
-    const runtimeEventQueue = yield* Queue.bounded<ProviderRuntimeEvent>(
-      PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
+    const runtimeEventQueue = yield* Queue.bounded<EngineRuntimeEvent>(
+      ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
     );
     const shouldSurfaceUnmappedEvent = makeUnmappedProviderEventGate();
 
@@ -1813,7 +1811,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
 
     const trackTurnWatchdogActivity = (
       threadId: ThreadId,
-      runtimeEvents: ReadonlyArray<ProviderRuntimeEvent>,
+      runtimeEvents: ReadonlyArray<EngineRuntimeEvent>,
     ): void => {
       const entry = turnWatchdogs.get(threadId);
       if (entry) {
@@ -1875,9 +1873,9 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
     };
 
     const prepareCodexManagerTurnInput = (
-      input: ProviderSendTurnInput,
+      input: EngineSendTurnInput,
       method: "turn/start" | "turn/steer",
-    ): Effect.Effect<CodexAppServerSendTurnInput, ProviderAdapterRequestError> =>
+    ): Effect.Effect<CodexAppServerSendTurnInput, EngineAdapterRequestError> =>
       Effect.gen(function* () {
         const nativeCodexAttachments = yield* Effect.forEach(
           filterProviderPromptImageAttachments(input.attachments),
@@ -1889,8 +1887,8 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
             if (!attachmentPath) {
               const cause = new Error(`Invalid attachment id '${attachment.id}'.`);
               return Effect.fail(
-                new ProviderAdapterRequestError({
-                  provider: PROVIDER,
+                new EngineAdapterRequestError({
+                  engine: PROVIDER,
                   method,
                   detail: cause.message,
                   cause,
@@ -1912,7 +1910,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           ...(composedInput !== undefined ? { input: composedInput } : {}),
           ...(input.skills !== undefined ? { skills: input.skills } : {}),
           ...(input.mentions !== undefined ? { mentions: input.mentions } : {}),
-          ...codexModelSelectionOverrides(input.modelSelection),
+          ...codexEngineSelectionOverrides(input.engineSelection),
           ...(input.interactionMode !== undefined
             ? { interactionMode: input.interactionMode }
             : {}),
@@ -1921,19 +1919,19 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       });
 
     const startSession: CodexAdapterShape["startSession"] = (input) => {
-      if (input.provider !== undefined && input.provider !== PROVIDER) {
+      if (input.engine !== undefined && input.engine !== PROVIDER) {
         return Effect.fail(
-          new ProviderAdapterValidationError({
-            provider: PROVIDER,
+          new EngineAdapterValidationError({
+            engine: PROVIDER,
             operation: "startSession",
-            issue: `Expected provider '${PROVIDER}' but received '${input.provider}'.`,
+            issue: `Expected engine '${PROVIDER}' but received '${input.engine}'.`,
           }),
         );
       }
 
       const managerInput: CodexAppServerStartSessionInput = {
         threadId: input.threadId,
-        provider: "codex",
+        engine: "codex",
         ...(input.lifecycleGeneration !== undefined
           ? { lifecycleGeneration: input.lifecycleGeneration }
           : {}),
@@ -1942,16 +1940,16 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         ...(input.forkSourceResumeCursor !== undefined
           ? { forkSourceResumeCursor: input.forkSourceResumeCursor }
           : {}),
-        ...(input.providerOptions !== undefined ? { providerOptions: input.providerOptions } : {}),
+        ...(input.engineOptions !== undefined ? { engineOptions: input.engineOptions } : {}),
         runtimeMode: input.runtimeMode,
-        ...codexModelSelectionOverrides(input.modelSelection),
+        ...codexEngineSelectionOverrides(input.engineSelection),
       };
 
       return Effect.tryPromise({
         try: () => manager.startSession(managerInput),
         catch: (cause) =>
-          new ProviderAdapterProcessError({
-            provider: PROVIDER,
+          new EngineAdapterProcessError({
+            engine: PROVIDER,
             threadId: input.threadId,
             detail: toMessage(cause, "Failed to start Codex adapter session."),
             cause,
@@ -1997,7 +1995,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
             return Queue.offer(runtimeEventQueue, {
               type: "turn.steered",
               eventId: EventId.makeUnsafe(crypto.randomUUID()),
-              provider: PROVIDER,
+              engine: PROVIDER,
               threadId: input.threadId,
               turnId: result.turnId,
               createdAt: new Date().toISOString(),
@@ -2026,11 +2024,11 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
     const interruptTurn: CodexAdapterShape["interruptTurn"] = (
       threadId,
       turnId,
-      providerThreadId,
+      nativeThreadId,
     ) => {
       markPendingUserInputs(threadId, "aborted", true);
       return Effect.tryPromise({
-        try: () => manager.interruptTurn(threadId, turnId, providerThreadId),
+        try: () => manager.interruptTurn(threadId, turnId, nativeThreadId),
         catch: (cause) => toRequestError(threadId, "turn/interrupt", cause),
       });
     };
@@ -2051,8 +2049,8 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       Effect.tryPromise({
         try: () => manager.readExternalThread(input),
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "thread/read",
             detail: toMessage(cause, "Failed to read external Codex thread."),
             cause,
@@ -2068,8 +2066,8 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
     const rollbackThread: CodexAdapterShape["rollbackThread"] = (threadId, numTurns) => {
       if (!Number.isInteger(numTurns) || numTurns < 1) {
         return Effect.fail(
-          new ProviderAdapterValidationError({
-            provider: PROVIDER,
+          new EngineAdapterValidationError({
+            engine: PROVIDER,
             operation: "rollbackThread",
             issue: "numTurns must be an integer >= 1.",
           }),
@@ -2135,8 +2133,8 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       return Effect.tryPromise({
         try: () => manager.stopSession(threadId),
         catch: (cause) =>
-          new ProviderAdapterProcessError({
-            provider: PROVIDER,
+          new EngineAdapterProcessError({
+            engine: PROVIDER,
             threadId,
             detail: toMessage(cause, "Failed to stop Codex adapter session."),
             cause,
@@ -2155,8 +2153,8 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       return Effect.tryPromise({
         try: () => manager.stopAll(),
         catch: (cause) =>
-          new ProviderAdapterProcessError({
-            provider: PROVIDER,
+          new EngineAdapterProcessError({
+            engine: PROVIDER,
             threadId: ThreadId.makeUnsafe("codex:all"),
             detail: toMessage(cause, "Failed to stop all Codex app-server processes."),
             cause,
@@ -2173,13 +2171,13 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
             ...(input.forceReload !== undefined ? { forceReload: input.forceReload } : {}),
           }),
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "skills/list",
             detail: toMessage(cause, "skills/list failed"),
             cause,
           }),
-      }).pipe(Effect.map((result) => result satisfies ProviderListSkillsResult));
+      }).pipe(Effect.map((result) => result satisfies EngineListSkillsResult));
 
     const listPlugins: NonNullable<CodexAdapterShape["listPlugins"]> = (input) =>
       Effect.tryPromise({
@@ -2193,13 +2191,13 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
             ...(input.forceReload !== undefined ? { forceReload: input.forceReload } : {}),
           }),
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "plugin/list",
             detail: toMessage(cause, "plugin/list failed"),
             cause,
           }),
-      }).pipe(Effect.map((result) => result satisfies ProviderListPluginsResult));
+      }).pipe(Effect.map((result) => result satisfies EngineListPluginsResult));
 
     const readPlugin: NonNullable<CodexAdapterShape["readPlugin"]> = (input) =>
       Effect.tryPromise({
@@ -2209,32 +2207,32 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
             pluginName: input.pluginName,
           }),
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "plugin/read",
             detail: toMessage(cause, "plugin/read failed"),
             cause,
           }),
-      }).pipe(Effect.map((result) => result satisfies ProviderReadPluginResult));
+      }).pipe(Effect.map((result) => result satisfies EngineReadPluginResult));
 
     const listModels: NonNullable<CodexAdapterShape["listModels"]> = (_input) =>
       Effect.tryPromise({
         try: () => manager.listModels(),
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "model/list",
             detail: toMessage(cause, "model/list failed"),
             cause,
           }),
-      }).pipe(Effect.map((result) => result satisfies ProviderListModelsResult));
+      }).pipe(Effect.map((result) => result satisfies EngineListModelsResult));
 
     const readAccountRateLimits: NonNullable<CodexAdapterShape["readAccountRateLimits"]> = () =>
       Effect.tryPromise({
         try: () => manager.readAccountRateLimits(),
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "account/rateLimits/read",
             detail: toMessage(cause, "account/rateLimits/read failed"),
             cause,
@@ -2245,8 +2243,8 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       Effect.tryPromise({
         try: () => manager.transcribeVoice(input),
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "voice/transcribe",
             detail: toMessage(cause, "voice/transcribe failed"),
             cause,
@@ -2261,8 +2259,8 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
             ...(input.threadId !== undefined ? { threadId: input.threadId } : {}),
           }),
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "voice/prewarm",
             detail: toMessage(cause, "voice/prewarm failed"),
             cause,
@@ -2271,7 +2269,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
 
     yield* Effect.acquireRelease(
       Effect.gen(function* () {
-        const writeNativeEvent = (event: ProviderEvent) =>
+        const writeNativeEvent = (event: EngineEvent) =>
           Effect.gen(function* () {
             if (!nativeEventLogger) {
               return;
@@ -2293,7 +2291,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
               );
               const runtimeEvents = item.runtimeEvents;
               if (runtimeEvents.length === 0) {
-                yield* Effect.logDebug("ignoring unhandled Codex provider event", {
+                yield* Effect.logDebug("ignoring unhandled Codex engine event", {
                   method: item.nativeEvent.method,
                   threadId: item.nativeEvent.threadId,
                   turnId: item.nativeEvent.turnId,
@@ -2304,15 +2302,15 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
               yield* Queue.offerAll(runtimeEventQueue, runtimeEvents);
             }),
           {
-            capacity: PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
-            maxBufferedBytes: PROVIDER_RUNTIME_CALLBACK_BUFFER_MAX_BYTES,
-            terminalReserve: PROVIDER_RUNTIME_CALLBACK_TERMINAL_RESERVE,
+            capacity: ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
+            maxBufferedBytes: ENGINE_RUNTIME_CALLBACK_BUFFER_MAX_BYTES,
+            terminalReserve: ENGINE_RUNTIME_CALLBACK_TERMINAL_RESERVE,
             isTerminal: (item) => item.runtimeEvents.some(isTerminalProviderRuntimeEvent),
             sizeOf: (item) => item.bytes,
           },
         );
-        const listener = (event: ProviderEvent) => {
-          let mappedRuntimeEvents: ReadonlyArray<ProviderRuntimeEvent>;
+        const listener = (event: EngineEvent) => {
+          let mappedRuntimeEvents: ReadonlyArray<EngineRuntimeEvent>;
           try {
             mappedRuntimeEvents = assignDerivedProviderRuntimeEventIds(
               mapToRuntimeEvents(event, event.threadId),
@@ -2352,7 +2350,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
               eventId: EventId.makeUnsafe(`${runtimeEvent.eventId}:unavailable`),
               type: "user-input.resolved" as const,
               payload: { settlement: { status: "unavailable" as const } },
-            } satisfies ProviderRuntimeEvent;
+            } satisfies EngineRuntimeEvent;
             const settleNativeUnavailable = (): Promise<void> | void => {
               if (pendingUserInputTerminals.get(key) !== pending) return undefined;
               pending.status = "unavailable";
@@ -2405,7 +2403,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
                     ? { ...runtimeEvent, payload: { settlement: pending.response } }
                     : runtimeEvent;
             })
-            .filter((runtimeEvent): runtimeEvent is ProviderRuntimeEvent => runtimeEvent !== null);
+            .filter((runtimeEvent): runtimeEvent is EngineRuntimeEvent => runtimeEvent !== null);
           const hasUnmappedEvent = mappedRuntimeEvents.some(
             (runtimeEvent) => runtimeEvent.type === "event.unmapped",
           );
@@ -2460,9 +2458,9 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
     );
 
     return {
-      provider: PROVIDER,
+      engine: PROVIDER,
       capabilities: {
-        ...providerExecutionStructure(PROVIDER),
+        ...engineExecutionStructure(PROVIDER),
         sessionModelSwitch: "in-session",
         supportsSkillMentions: true,
         supportsSkillDiscovery: true,

@@ -7,11 +7,11 @@ import { buildProviderChildEnvironment } from "./providerChildEnvironment";
 describe("buildProviderChildEnvironment", () => {
   it("strips OmniMind control-plane and inherited native capabilities", () => {
     const env = buildProviderChildEnvironment({
-      provider: "antigravity",
+      engine: "antigravity",
       baseEnv: {
         PATH: "/usr/bin",
         HOME: "/home/test",
-        GEMINI_API_KEY: "provider-key",
+        GEMINI_API_KEY: "engine-key",
         HARNESSOS_AUTH_TOKEN: "control-plane-secret",
         HARNESSOS_BROWSER_HOST_PIPE_PATH: "/tmp/browser.sock",
         HARNESSOS_BROWSER_HOST_CAPABILITY: "private-desktop-capability",
@@ -24,13 +24,13 @@ describe("buildProviderChildEnvironment", () => {
     expect(env).toEqual({
       PATH: "/usr/bin",
       HOME: "/home/test",
-      GEMINI_API_KEY: "provider-key",
+      GEMINI_API_KEY: "engine-key",
     });
   });
 
   it("admits only explicitly granted capability keys", () => {
     const env = buildProviderChildEnvironment({
-      provider: "codex",
+      engine: "codex",
       baseEnv: {
         HARNESSOS_AUTH_TOKEN: "control-plane-secret",
         HARNESSOS_ALLOWED_CAPABILITY: "allowed",
@@ -48,7 +48,7 @@ describe("buildProviderChildEnvironment", () => {
 
   it("does not let overlays bypass the capability policy", () => {
     const env = buildProviderChildEnvironment({
-      provider: "opencode",
+      engine: "opencode",
       baseEnv: { PATH: "/usr/bin" },
       overrides: {
         OPENCODE_EXPERIMENTAL_WEBSOCKETS: "true",
@@ -70,27 +70,27 @@ describe("buildProviderChildEnvironment", () => {
     ["antigravity", "GEMINI_API_KEY", "ANTHROPIC_API_KEY"],
     ["grok", "XAI_API_KEY", "GOOGLE_API_KEY"],
   ] as const)(
-    "grants %s only its declared provider credential group",
-    (provider, grantedKey, unrelatedKey) => {
+    "grants %s only its declared engine credential group",
+    (engine, grantedKey, unrelatedKey) => {
       const env = buildProviderChildEnvironment({
-        provider,
+        engine,
         baseEnv: {
           PATH: "/usr/bin",
-          [grantedKey]: "native-provider-secret",
-          [unrelatedKey]: "unrelated-provider-secret",
+          [grantedKey]: "native-engine-secret",
+          [unrelatedKey]: "unrelated-engine-secret",
         },
       });
 
-      expect(env[grantedKey]).toBe("native-provider-secret");
+      expect(env[grantedKey]).toBe("native-engine-secret");
       expect(env[unrelatedKey]).toBeUndefined();
     },
   );
 
   it.each(["claude", "cursor", "droid", "antigravity", "grok"] as const)(
     "does not leak OpenAI credentials into restricted %s children",
-    (provider) => {
+    (engine) => {
       const env = buildProviderChildEnvironment({
-        provider,
+        engine,
         baseEnv: {
           PATH: "/usr/bin",
           OPENAI_API_KEY: "unrelated-openai-secret",
@@ -102,10 +102,10 @@ describe("buildProviderChildEnvironment", () => {
   );
 
   it.each(["codex", "kilo", "opencode", "pi"] as const)(
-    "preserves upstream credential discovery for multi-provider %s",
-    (provider) => {
+    "preserves upstream credential discovery for multi-engine %s",
+    (engine) => {
       const env = buildProviderChildEnvironment({
-        provider,
+        engine,
         baseEnv: {
           ANTHROPIC_API_KEY: "anthropic-secret",
           GEMINI_API_KEY: "gemini-secret",
@@ -119,22 +119,22 @@ describe("buildProviderChildEnvironment", () => {
     },
   );
 
-  it("matches declared provider credential grants case-insensitively", () => {
+  it("matches declared engine credential grants case-insensitively", () => {
     const env = buildProviderChildEnvironment({
-      provider: "claude",
+      engine: "claude",
       baseEnv: {
-        anthropic_api_key: "native-provider-secret",
-        gemini_api_key: "unrelated-provider-secret",
+        anthropic_api_key: "native-engine-secret",
+        gemini_api_key: "unrelated-engine-secret",
       },
     });
 
-    expect(env.anthropic_api_key).toBe("native-provider-secret");
+    expect(env.anthropic_api_key).toBe("native-engine-secret");
     expect(env.gemini_api_key).toBeUndefined();
   });
 
   it("keeps stripped authority absent in descendants", () => {
     const env = buildProviderChildEnvironment({
-      provider: "grok",
+      engine: "grok",
       baseEnv: {
         XAI_API_KEY: "grok-secret",
         ANTHROPIC_API_KEY: "unrelated-secret",

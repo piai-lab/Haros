@@ -28,7 +28,7 @@ interface ProjectLookupInput {
 }
 
 // Defaults to the original "project" kind so existing callers keep their current behavior;
-// other providers (e.g. the Studio hidden container) can opt into their own kind set.
+// other engines (e.g. the Studio hidden container) can opt into their own kind set.
 function isRecoverableProjectKind(
   kind: string | undefined,
   recoverableKinds: ReadonlySet<string> = DEFAULT_RECOVERABLE_PROJECT_KINDS,

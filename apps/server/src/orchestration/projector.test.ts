@@ -63,7 +63,7 @@ function makeSessionSetEvent(input: {
         status: input.status,
         providerName: "codex",
         providerSessionId: "session-1",
-        providerThreadId: "provider-thread-1",
+        nativeThreadId: "engine-thread-1",
         runtimeMode: "full-access",
         activeTurnId: input.activeTurnId,
         lastError: input.lastError,
@@ -89,8 +89,8 @@ async function projectThreadWithRunningTurn(input: { createdAt: string; startedA
           threadId: "thread-1",
           projectId: "project-1",
           title: "demo",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5.3-codex",
           },
           runtimeMode: "full-access",
@@ -138,8 +138,8 @@ describe("orchestration projector", () => {
             threadId: "thread-1",
             projectId: "project-1",
             title: "demo",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5-codex",
             },
             runtimeMode: "full-access",
@@ -159,8 +159,8 @@ describe("orchestration projector", () => {
         projectId: "project-1",
         groupIds: [],
         title: "demo",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         runtimeMode: "full-access",
@@ -223,8 +223,8 @@ describe("orchestration projector", () => {
             threadId: "thread-1",
             projectId: "project-1",
             title: "demo",
-            modelSelection: {
-              provider: "pi",
+            engineSelection: {
+              engine: "pi",
               model: "openai/gpt-5.1",
             },
             runtimeMode: "full-access",
@@ -250,8 +250,8 @@ describe("orchestration projector", () => {
           payload: {
             threadId: "thread-1",
             messageId: "message-1",
-            modelSelection: {
-              provider: "pi",
+            engineSelection: {
+              engine: "pi",
               model: "openai/gpt-5.5",
             },
             runtimeMode: "approval-required",
@@ -262,8 +262,8 @@ describe("orchestration projector", () => {
       ),
     );
 
-    expect(next.threads[0]?.modelSelection).toEqual({
-      provider: "pi",
+    expect(next.threads[0]?.engineSelection).toEqual({
+      engine: "pi",
       model: "openai/gpt-5.5",
     });
     expect(next.threads[0]?.runtimeMode).toBe("approval-required");
@@ -272,8 +272,8 @@ describe("orchestration projector", () => {
       {
         pendingMessageId: "message-1",
         turnId: null,
-        modelSelection: {
-          provider: "pi",
+        engineSelection: {
+          engine: "pi",
           model: "openai/gpt-5.5",
         },
         requestedAt: turnRequestedAt,
@@ -291,7 +291,7 @@ describe("orchestration projector", () => {
     });
   });
 
-  it("lets empty threads adopt the requested first-turn provider", async () => {
+  it("lets empty threads adopt the requested first-turn engine", async () => {
     const createdAt = "2026-02-23T08:00:00.000Z";
     const turnRequestedAt = "2026-02-23T08:00:05.000Z";
     const model = createEmptyReadModel(createdAt);
@@ -310,8 +310,8 @@ describe("orchestration projector", () => {
             threadId: "thread-1",
             projectId: "project-1",
             title: "demo",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5-codex",
             },
             runtimeMode: "full-access",
@@ -337,8 +337,8 @@ describe("orchestration projector", () => {
           payload: {
             threadId: "thread-1",
             messageId: "message-1",
-            modelSelection: {
-              provider: "opencode",
+            engineSelection: {
+              engine: "opencode",
               model: "openai/gpt-5",
             },
             runtimeMode: "approval-required",
@@ -349,8 +349,8 @@ describe("orchestration projector", () => {
       ),
     );
 
-    expect(next.threads[0]?.modelSelection).toEqual({
-      provider: "opencode",
+    expect(next.threads[0]?.engineSelection).toEqual({
+      engine: "opencode",
       model: "openai/gpt-5",
     });
     expect(next.threads[0]?.session).toMatchObject({
@@ -378,8 +378,8 @@ describe("orchestration projector", () => {
               // missing required threadId
               projectId: "project-1",
               title: "demo",
-              modelSelection: {
-                provider: "codex",
+              engineSelection: {
+                engine: "codex",
                 model: "gpt-5-codex",
               },
               branch: null,
@@ -441,8 +441,8 @@ describe("orchestration projector", () => {
             threadId: "thread-1",
             projectId: "project-1",
             title: "demo",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5.3-codex",
             },
             runtimeMode: "full-access",
@@ -472,7 +472,7 @@ describe("orchestration projector", () => {
               status: "running",
               providerName: "codex",
               providerSessionId: "session-1",
-              providerThreadId: "provider-thread-1",
+              nativeThreadId: "engine-thread-1",
               runtimeMode: "approval-required",
               activeTurnId: "turn-1",
               lastError: null,
@@ -508,8 +508,8 @@ describe("orchestration projector", () => {
             threadId: "thread-1",
             projectId: "project-1",
             title: "demo",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5.3-codex",
             },
             runtimeMode: "full-access",
@@ -539,7 +539,7 @@ describe("orchestration projector", () => {
               status: "running",
               providerName: "codex",
               providerSessionId: "session-1",
-              providerThreadId: "provider-thread-1",
+              nativeThreadId: "engine-thread-1",
               runtimeMode: "approval-required",
               activeTurnId: "turn-1",
               lastError: null,
@@ -564,7 +564,7 @@ describe("orchestration projector", () => {
             threadId: "thread-1",
             turnId: "turn-1",
             checkpointTurnCount: 1,
-            checkpointRef: "provider-diff:event-1",
+            checkpointRef: "engine-diff:event-1",
             status: "missing",
             files: [],
             assistantMessageId: null,
@@ -669,7 +669,7 @@ describe("orchestration projector", () => {
             occurredAt: settledAt,
             status,
             activeTurnId: null,
-            lastError: status === "error" ? "provider crashed" : null,
+            lastError: status === "error" ? "engine crashed" : null,
             updatedAt: settledAt,
           }),
         ),
@@ -726,7 +726,7 @@ describe("orchestration projector", () => {
     const afterRunning = await projectThreadWithRunningTurn({ createdAt, startedAt });
 
     // Stop-requested flows emit "interrupted" while keeping the turn active until
-    // the provider's terminal event decides the real outcome.
+    // the engine's terminal event decides the real outcome.
     const afterStopRequested = await Effect.runPromise(
       projectEvent(
         afterRunning,
@@ -785,7 +785,7 @@ describe("orchestration projector", () => {
           occurredAt: erroredAt,
           status: "error",
           activeTurnId: "turn-1",
-          lastError: "provider crashed",
+          lastError: "engine crashed",
           updatedAt: erroredAt,
         }),
       ),
@@ -798,7 +798,7 @@ describe("orchestration projector", () => {
     });
   });
 
-  it("does not let a late provider-diff placeholder unsettle a session-settled turn", async () => {
+  it("does not let a late engine-diff placeholder unsettle a session-settled turn", async () => {
     const createdAt = "2026-02-23T08:00:00.000Z";
     const startedAt = "2026-02-23T08:00:05.000Z";
     const settledAt = "2026-02-23T08:00:10.000Z";
@@ -836,7 +836,7 @@ describe("orchestration projector", () => {
             threadId: "thread-1",
             turnId: "turn-1",
             checkpointTurnCount: 1,
-            checkpointRef: "provider-diff:event-late",
+            checkpointRef: "engine-diff:event-late",
             status: "missing",
             files: [],
             assistantMessageId: null,
@@ -962,8 +962,8 @@ describe("orchestration projector", () => {
             threadId: "thread-1",
             projectId: "project-1",
             title: "demo",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5.3-codex",
             },
             runtimeMode: "full-access",
@@ -1017,7 +1017,7 @@ describe("orchestration projector", () => {
               status: "running",
               providerName: "codex",
               providerSessionId: "session-1",
-              providerThreadId: "provider-thread-1",
+              nativeThreadId: "engine-thread-1",
               runtimeMode: "full-access",
               activeTurnId: "turn-1",
               lastError: null,
@@ -1057,8 +1057,8 @@ describe("orchestration projector", () => {
             threadId: "thread-1",
             projectId: "project-1",
             title: "demo",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5.3-codex",
             },
             runtimeMode: "full-access",
@@ -1114,8 +1114,8 @@ describe("orchestration projector", () => {
             threadId: "thread-1",
             projectId: "project-1",
             title: "demo",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5.3-codex",
             },
             runtimeMode: "full-access",
@@ -1201,8 +1201,8 @@ describe("orchestration projector", () => {
             threadId: "thread-1",
             projectId: "project-1",
             title: "demo",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5.3-codex",
             },
             runtimeMode: "full-access",
@@ -1416,8 +1416,8 @@ describe("orchestration projector", () => {
             threadId: "thread-revert",
             projectId: "project-1",
             title: "demo",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5.3-codex",
             },
             runtimeMode: "full-access",
@@ -1601,7 +1601,7 @@ describe("orchestration projector", () => {
             threadId: "thread-rollback-segments",
             projectId: "project-1",
             title: "rollback segments",
-            modelSelection: { provider: "codex", model: "gpt-5.3-codex" },
+            engineSelection: { engine: "codex", model: "gpt-5.3-codex" },
             runtimeMode: "full-access",
             branch: null,
             worktreePath: null,
@@ -1751,7 +1751,7 @@ describe("orchestration projector", () => {
             threadId: "thread-activity-order",
             projectId: "project-1",
             title: "Activity order",
-            modelSelection: { provider: "codex", model: "gpt-5-codex" },
+            engineSelection: { engine: "codex", model: "gpt-5-codex" },
             runtimeMode: "full-access",
             branch: null,
             worktreePath: null,
@@ -1828,8 +1828,8 @@ describe("orchestration projector", () => {
             threadId: "thread-capped",
             projectId: "project-1",
             title: "capped",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5-codex",
             },
             runtimeMode: "full-access",
@@ -1927,7 +1927,7 @@ describe("orchestration projector", () => {
             threadId: "thread-skewed-revert",
             projectId: "project-1",
             title: "Skewed revert",
-            modelSelection: { provider: "codex", model: "gpt-5-codex" },
+            engineSelection: { engine: "codex", model: "gpt-5-codex" },
             runtimeMode: "full-access",
             branch: null,
             worktreePath: null,
@@ -2026,7 +2026,7 @@ describe("orchestration projector", () => {
             threadId: "thread-stream",
             projectId: "project-1",
             title: "Streaming",
-            modelSelection: { provider: "codex", model: "gpt-5-codex" },
+            engineSelection: { engine: "codex", model: "gpt-5-codex" },
             runtimeMode: "full-access",
             branch: null,
             worktreePath: null,

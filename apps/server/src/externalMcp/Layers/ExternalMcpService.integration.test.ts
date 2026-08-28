@@ -50,7 +50,7 @@ const run = <A, E>(effect: Effect.Effect<A, E, ExternalMcpService | SqlClient.Sq
   Effect.runPromise(effect.pipe(Effect.provide(layer)));
 
 describe("ExternalMcpService", () => {
-  it("keeps browser, server, and provider-session tokens outside the MCP audience", async () => {
+  it("keeps browser, server, and engine-session tokens outside the MCP audience", async () => {
     await run(
       Effect.gen(function* () {
         const service = yield* loadServiceWithProject;

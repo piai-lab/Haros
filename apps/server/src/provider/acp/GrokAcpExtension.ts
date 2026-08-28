@@ -1,4 +1,4 @@
-import type { ProviderUserInputAnswers, UserInputQuestion } from "@harnessos/contracts";
+import type { EngineUserInputAnswers, UserInputQuestion } from "@harnessos/contracts";
 import { Schema } from "effect";
 
 export const GROK_ASK_USER_QUESTION_METHODS = [
@@ -48,7 +48,7 @@ export function extractGrokUserInputQuestions(
 
 export function makeGrokQuestionResponse(
   request: typeof GrokAskUserQuestionRequest.Type,
-  answers: ProviderUserInputAnswers,
+  answers: EngineUserInputAnswers,
 ):
   | {
       readonly outcome: "accepted";

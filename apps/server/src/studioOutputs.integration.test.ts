@@ -100,7 +100,7 @@ describe("collectThreadOutputRelativePaths", () => {
 });
 
 describe("collectFileChangeActivityPathCandidates", () => {
-  it("extracts provider-specific nested path fields newest first", () => {
+  it("extracts engine-specific nested path fields newest first", () => {
     const paths = collectFileChangeActivityPathCandidates([
       {
         status: "completed",

@@ -13,7 +13,7 @@ import {
   DEFAULT_AUTOMATION_STOP_CONFIDENCE_THRESHOLD,
   type AutomationDefinition,
   type AutomationRun,
-  type ProviderStartOptions,
+  type EngineStartOptions,
 } from "@harnessos/contracts";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
@@ -38,9 +38,9 @@ import {
   isFormSubmittable,
   isTriageRun,
   maxIterationOptions,
-  modelSelectionForProjectChange,
-  providerOptionsForAutomationEdit,
-  providerOptionsForAutomationModelSelection,
+  engineSelectionForProjectChange,
+  engineOptionsForAutomationEdit,
+  engineOptionsForAutomationEngineSelection,
   reconcileAutomationFormAutoModeSupport,
   runResultSummary,
   runResultTitle,
@@ -65,8 +65,8 @@ describe("reconcileAutomationFormAutoModeSupport", () => {
   it("persists refreshed Claude capability before an Auto automation is submitted", () => {
     const form = {
       ...formFromDefinition(null, "project-1"),
-      modelSelection: {
-        provider: "claude" as const,
+      engineSelection: {
+        engine: "claude" as const,
         model: "sonnet",
         supportsAutoMode: false,
       },
@@ -74,8 +74,8 @@ describe("reconcileAutomationFormAutoModeSupport", () => {
     };
 
     expect(reconcileAutomationFormAutoModeSupport(form, true)).toMatchObject({
-      modelSelection: {
-        provider: "claude",
+      engineSelection: {
+        engine: "claude",
         model: "sonnet",
         supportsAutoMode: true,
       },
@@ -86,8 +86,8 @@ describe("reconcileAutomationFormAutoModeSupport", () => {
   it("preserves an Auto automation when refreshed capability is unavailable", () => {
     const form = {
       ...formFromDefinition(null, "project-1"),
-      modelSelection: {
-        provider: "claude" as const,
+      engineSelection: {
+        engine: "claude" as const,
         model: "sonnet",
         supportsAutoMode: true,
       },
@@ -95,8 +95,8 @@ describe("reconcileAutomationFormAutoModeSupport", () => {
     };
 
     expect(reconcileAutomationFormAutoModeSupport(form, false)).toMatchObject({
-      modelSelection: {
-        provider: "claude",
+      engineSelection: {
+        engine: "claude",
         model: "sonnet",
         supportsAutoMode: false,
       },
@@ -139,8 +139,8 @@ const baseRun: AutomationRun = {
     archivedAt: null,
   },
   permissionSnapshot: {
-    provider: "codex",
-    modelSelection: { provider: "codex", model: "gpt-5-codex" },
+    engine: "codex",
+    engineSelection: { engine: "codex", model: "gpt-5-codex" },
     runtimeMode: "approval-required",
     interactionMode: "default",
     worktreeMode: "auto",
@@ -160,7 +160,7 @@ const baseDefinition: AutomationDefinition = {
   schedule: { type: "interval", everySeconds: 3600 },
   enabled: true,
   nextRunAt: "2026-06-19T11:00:00.000Z",
-  modelSelection: { provider: "codex", model: "gpt-5-codex" },
+  engineSelection: { engine: "codex", model: "gpt-5-codex" },
   runtimeMode: "approval-required",
   interactionMode: "default",
   worktreeMode: "auto",
@@ -495,40 +495,40 @@ describe("automation shared route helpers", () => {
     const projects = [
       {
         id: projectId("project-old"),
-        defaultModelSelection: { provider: "codex", model: "gpt-5-codex" },
+        defaultEngineSelection: { engine: "codex", model: "gpt-5-codex" },
       },
       {
         id: projectId("project-new"),
-        defaultModelSelection: { provider: "claude", model: "sonnet" },
+        defaultEngineSelection: { engine: "claude", model: "sonnet" },
       },
-    ] as Parameters<typeof modelSelectionForProjectChange>[0];
+    ] as Parameters<typeof engineSelectionForProjectChange>[0];
 
     expect(
-      modelSelectionForProjectChange(projects, "project-old", "project-new", {
-        provider: "codex",
+      engineSelectionForProjectChange(projects, "project-old", "project-new", {
+        engine: "codex",
         model: "gpt-5-codex",
       }),
-    ).toEqual({ provider: "claude", model: "sonnet" });
+    ).toEqual({ engine: "claude", model: "sonnet" });
   });
 
   it("preserves an explicitly chosen model when switching projects", () => {
     const projects = [
       {
         id: projectId("project-old"),
-        defaultModelSelection: { provider: "codex", model: "gpt-5-codex" },
+        defaultEngineSelection: { engine: "codex", model: "gpt-5-codex" },
       },
       {
         id: projectId("project-new"),
-        defaultModelSelection: { provider: "claude", model: "sonnet" },
+        defaultEngineSelection: { engine: "claude", model: "sonnet" },
       },
-    ] as Parameters<typeof modelSelectionForProjectChange>[0];
+    ] as Parameters<typeof engineSelectionForProjectChange>[0];
 
     expect(
-      modelSelectionForProjectChange(projects, "project-old", "project-new", {
-        provider: "cursor",
+      engineSelectionForProjectChange(projects, "project-old", "project-new", {
+        engine: "cursor",
         model: "cursor-default",
       }),
-    ).toEqual({ provider: "cursor", model: "cursor-default" });
+    ).toEqual({ engine: "cursor", model: "cursor-default" });
   });
 
   it("preserves timezone when changing weekly day and time", () => {
@@ -619,7 +619,7 @@ describe("automation shared route helpers", () => {
       ...formFromDefinition(null, "project-1"),
       name: "Check status",
       prompt: "Check status.",
-      modelSelection: { provider: "codex" as const, model: "gpt-5.5" },
+      engineSelection: { engine: "codex" as const, model: "gpt-5.5" },
       modelPresentationIdentity: {
         model: "claude-sonnet-5",
         displayName: "Claude Sonnet 5",
@@ -662,67 +662,67 @@ describe("automation shared route helpers", () => {
     });
   });
 
-  it("preserves saved provider options when editing without changing models", () => {
-    const savedProviderOptions: ProviderStartOptions = {
+  it("preserves saved engine options when editing without changing models", () => {
+    const savedProviderOptions: EngineStartOptions = {
       opencode: { binaryPath: "/old/opencode", serverUrl: "http://old.example" },
     };
-    const currentProviderOptions: ProviderStartOptions = {
+    const currentProviderOptions: EngineStartOptions = {
       opencode: { binaryPath: "/new/opencode", serverUrl: "http://new.example" },
     };
     const definition = definitionWith({
-      modelSelection: { provider: "opencode", model: "openai/gpt-5" },
-      providerOptions: savedProviderOptions,
+      engineSelection: { engine: "opencode", model: "openai/gpt-5" },
+      engineOptions: savedProviderOptions,
     });
     const form = formFromDefinition(definition, "project-1");
 
-    expect(providerOptionsForAutomationEdit(definition, form, currentProviderOptions)).toEqual(
+    expect(engineOptionsForAutomationEdit(definition, form, currentProviderOptions)).toEqual(
       savedProviderOptions,
     );
   });
 
-  it("uses current provider options when an automation edit changes models", () => {
-    const savedProviderOptions: ProviderStartOptions = {
+  it("uses current engine options when an automation edit changes models", () => {
+    const savedProviderOptions: EngineStartOptions = {
       opencode: { binaryPath: "/old/opencode", serverUrl: "http://old.example" },
     };
-    const currentProviderOptions: ProviderStartOptions = {
+    const currentProviderOptions: EngineStartOptions = {
       cursor: { binaryPath: "/current/cursor", apiEndpoint: "http://cursor.example" },
     };
     const definition = definitionWith({
-      modelSelection: { provider: "opencode", model: "openai/gpt-5" },
-      providerOptions: savedProviderOptions,
+      engineSelection: { engine: "opencode", model: "openai/gpt-5" },
+      engineOptions: savedProviderOptions,
     });
-    const nextModelSelection = { provider: "cursor" as const, model: "composer-2" };
+    const nextEngineSelection = { engine: "cursor" as const, model: "composer-2" };
 
     expect(
-      providerOptionsForAutomationModelSelection(
+      engineOptionsForAutomationEngineSelection(
         definition,
-        nextModelSelection,
+        nextEngineSelection,
         currentProviderOptions,
       ),
     ).toEqual(currentProviderOptions);
   });
 
-  it("preserves saved provider options when only model capability options change", () => {
-    const savedProviderOptions: ProviderStartOptions = {
+  it("preserves saved engine options when only model capability options change", () => {
+    const savedProviderOptions: EngineStartOptions = {
       codex: { binaryPath: "/old/codex", homePath: "/old/home" },
     };
-    const currentProviderOptions: ProviderStartOptions = {
+    const currentProviderOptions: EngineStartOptions = {
       codex: { binaryPath: "/new/codex", homePath: "/new/home" },
     };
     const definition = definitionWith({
-      modelSelection: {
-        provider: "codex",
+      engineSelection: {
+        engine: "codex",
         model: "gpt-5-codex",
         options: { reasoningEffort: "medium" },
       },
-      providerOptions: savedProviderOptions,
+      engineOptions: savedProviderOptions,
     });
 
     expect(
-      providerOptionsForAutomationModelSelection(
+      engineOptionsForAutomationEngineSelection(
         definition,
         {
-          provider: "codex",
+          engine: "codex",
           model: "gpt-5-codex",
           options: { reasoningEffort: "high" },
         },
@@ -731,17 +731,17 @@ describe("automation shared route helpers", () => {
     ).toEqual(savedProviderOptions);
   });
 
-  it("clears stale provider options when an automation edit changes models without current options", () => {
+  it("clears stale engine options when an automation edit changes models without current options", () => {
     const definition = definitionWith({
-      modelSelection: { provider: "opencode", model: "openai/gpt-5" },
-      providerOptions: {
+      engineSelection: { engine: "opencode", model: "openai/gpt-5" },
+      engineOptions: {
         opencode: { binaryPath: "/old/opencode", serverUrl: "http://old.example" },
       },
     });
 
     expect(
-      providerOptionsForAutomationModelSelection(definition, {
-        provider: "cursor",
+      engineOptionsForAutomationEngineSelection(definition, {
+        engine: "cursor",
         model: "composer-2",
       }),
     ).toEqual({});

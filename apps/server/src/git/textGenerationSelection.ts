@@ -1,59 +1,55 @@
-import type { ModelSelection, EngineKind, ProviderStartOptions } from "@harnessos/contracts";
+import type { EngineSelection, EngineKind, EngineStartOptions } from "@harnessos/contracts";
 
-export interface TextGenerationProviderInput {
-  readonly modelSelection: ModelSelection;
-  readonly providerOptions?: ProviderStartOptions;
+export interface TextGenerationEngineInput {
+  readonly engineSelection: EngineSelection;
+  readonly engineOptions?: EngineStartOptions;
   readonly codexHomePath?: string;
 }
 
-export function hasDedicatedTextGenerationProvider(provider: EngineKind | undefined): boolean {
-  return (
-    provider === "codex" || provider === "cursor" || provider === "kilo" || provider === "opencode"
-  );
+export function hasDedicatedTextGenerationEngine(engine: EngineKind | undefined): boolean {
+  return engine === "codex" || engine === "cursor" || engine === "kilo" || engine === "opencode";
 }
 
 export function resolveTextGenerationInputForSelection(
-  modelSelection: ModelSelection | undefined,
-  providerOptions: ProviderStartOptions | undefined,
-): TextGenerationProviderInput | null {
-  if (!modelSelection || !hasDedicatedTextGenerationProvider(modelSelection.provider)) {
+  engineSelection: EngineSelection | undefined,
+  engineOptions: EngineStartOptions | undefined,
+): TextGenerationEngineInput | null {
+  if (!engineSelection || !hasDedicatedTextGenerationEngine(engineSelection.engine)) {
     return null;
   }
 
-  if (modelSelection.provider === "codex") {
+  if (engineSelection.engine === "codex") {
     return {
-      modelSelection,
-      ...(providerOptions ? { providerOptions } : {}),
-      ...(providerOptions?.codex?.homePath
-        ? { codexHomePath: providerOptions.codex.homePath }
-        : {}),
+      engineSelection,
+      ...(engineOptions ? { engineOptions } : {}),
+      ...(engineOptions?.codex?.homePath ? { codexHomePath: engineOptions.codex.homePath } : {}),
     };
   }
 
   return {
-    modelSelection,
-    ...(providerOptions ? { providerOptions } : {}),
+    engineSelection,
+    ...(engineOptions ? { engineOptions } : {}),
   };
 }
 
 export function buildGitTextGenerationCallInput(input: {
   readonly textGenerationModel?: string | undefined;
-  readonly textGenerationModelSelection?: ModelSelection | undefined;
+  readonly textGenerationEngineSelection?: EngineSelection | undefined;
   readonly codexHomePath?: string | undefined;
-  readonly providerOptions?: ProviderStartOptions | undefined;
+  readonly engineOptions?: EngineStartOptions | undefined;
 }): {
   readonly model?: string;
-  readonly modelSelection?: ModelSelection;
+  readonly engineSelection?: EngineSelection;
   readonly codexHomePath?: string;
-  readonly providerOptions?: ProviderStartOptions;
+  readonly engineOptions?: EngineStartOptions;
 } {
-  const modelSelection = input.textGenerationModelSelection;
-  const model = input.textGenerationModel?.trim() || modelSelection?.model;
+  const engineSelection = input.textGenerationEngineSelection;
+  const model = input.textGenerationModel?.trim() || engineSelection?.model;
 
   return {
     ...(model ? { model } : {}),
-    ...(modelSelection ? { modelSelection } : {}),
+    ...(engineSelection ? { engineSelection } : {}),
     ...(input.codexHomePath ? { codexHomePath: input.codexHomePath } : {}),
-    ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+    ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
   };
 }

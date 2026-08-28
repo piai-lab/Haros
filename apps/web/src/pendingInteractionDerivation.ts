@@ -380,7 +380,7 @@ export function derivePendingApprovals(
       interactionKind: "approval",
       requestedActivityKind: "approval.requested",
       resolvedActivityKind: "approval.resolved",
-      responseFailedActivityKind: "provider.approval.respond.failed",
+      responseFailedActivityKind: "engine.approval.respond.failed",
       parseRequested: ({ activity, payload, requestId, lifecycleGeneration }) => {
         const requestKind =
           payload?.requestKind === "command" ||
@@ -431,7 +431,7 @@ export function derivePendingUserInputs(
       interactionKind: "userInput",
       requestedActivityKind: "user-input.requested",
       resolvedActivityKind: "user-input.resolved",
-      responseFailedActivityKind: "provider.user-input.respond.failed",
+      responseFailedActivityKind: "engine.user-input.respond.failed",
       parseRequested: ({ activity, payload, requestId, lifecycleGeneration }) => {
         const questions = parseUserInputQuestions(payload);
         if (!questions) {

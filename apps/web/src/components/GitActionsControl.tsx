@@ -9,7 +9,7 @@ import type {
   GitRunStackedActionResult,
   GitStackedAction,
   GitStatusResult,
-  ModelSelection,
+  EngineSelection,
   ThreadId,
 } from "@harnessos/contracts";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -56,7 +56,7 @@ import {
   type GitCreatePrDialogBrowserRequest,
   type GitCreatePrDialogSubmission,
 } from "./GitCreatePrDialog";
-import { getProviderStartOptions } from "~/providerSettings";
+import { getEngineStartOptions } from "~/engineSettings";
 import { useServerSettings } from "~/serverSettings";
 import { formatClockDuration } from "~/session-logic";
 import { Button } from "~/components/ui/button";
@@ -1052,13 +1052,13 @@ export default function GitActionsControl({
         });
         return;
       }
-      const modelSelection: ModelSelection = {
-        provider: authoritativeSettings.textGenerationModelSelection.provider,
+      const engineSelection: EngineSelection = {
+        engine: authoritativeSettings.textGenerationEngineSelection.engine,
         model:
-          authoritativeSettings.textGenerationModelSelection.model ??
+          authoritativeSettings.textGenerationEngineSelection.model ??
           DEFAULT_GIT_TEXT_GENERATION_MODEL,
       };
-      const providerOptions = getProviderStartOptions(authoritativeSettings);
+      const engineOptions = getEngineStartOptions(authoritativeSettings);
       onConfirmed?.();
 
       const progressStages = buildGitActionProgressStages({
@@ -1114,10 +1114,10 @@ export default function GitActionsControl({
         ...(prBody ? { prBody } : {}),
         ...(prDraft ? { prDraft } : {}),
         ...(allowDirtyWorkingTree ? { allowDirtyWorkingTree } : {}),
-        codexHomePath: authoritativeSettings.providers.codex.homePath || null,
-        model: authoritativeSettings.textGenerationModelSelection.model ?? null,
-        modelSelection,
-        ...(providerOptions ? { providerOptions } : {}),
+        codexHomePath: authoritativeSettings.engines.codex.homePath || null,
+        model: authoritativeSettings.textGenerationEngineSelection.model ?? null,
+        engineSelection,
+        ...(engineOptions ? { engineOptions } : {}),
       });
 
       try {

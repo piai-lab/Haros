@@ -166,9 +166,9 @@ function buildThreadLineageSelectionResult(
 
 export function localSubagentThreadId(
   parentThreadId: ThreadIdType,
-  providerThreadId: string,
+  nativeThreadId: string,
 ): ThreadIdType {
-  return ThreadId.makeUnsafe(`subagent:${parentThreadId}:${providerThreadId}`);
+  return ThreadId.makeUnsafe(`subagent:${parentThreadId}:${nativeThreadId}`);
 }
 
 export function createRelevantWorkLogThreadsSelector(input: {
@@ -190,9 +190,9 @@ export function createRelevantWorkLogThreadsSelector(input: {
         directThreadIds.add(ThreadId.makeUnsafe(directThreadId));
       }
 
-      const providerThreadId = subagent.providerThreadId ?? subagent.threadId;
-      if (input.parentThreadId && providerThreadId) {
-        directThreadIds.add(localSubagentThreadId(input.parentThreadId, providerThreadId));
+      const nativeThreadId = subagent.nativeThreadId ?? subagent.threadId;
+      if (input.parentThreadId && nativeThreadId) {
+        directThreadIds.add(localSubagentThreadId(input.parentThreadId, nativeThreadId));
       }
 
       if (subagent.agentId) {

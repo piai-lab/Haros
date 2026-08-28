@@ -89,7 +89,7 @@ describe("browserAnnotations", () => {
     });
   });
 
-  it("keeps exact-page affinity local while serializing provider context", () => {
+  it("keeps exact-page affinity local while serializing engine context", () => {
     const documentKey = `sha256:${"a".repeat(64)}`;
     const prompt = appendBrowserAnnotationsToPrompt(
       "Fix this",
@@ -258,7 +258,7 @@ describe("browserAnnotations", () => {
     });
   });
 
-  it("removes sensitive page titles before durable storage and provider serialization", () => {
+  it("removes sensitive page titles before durable storage and engine serialization", () => {
     const sensitiveTitle =
       "private@example.test · Card 4242 4242 4242 4242 · token=abc123def456ghi789jkl012";
     const annotation = makeAnnotation({

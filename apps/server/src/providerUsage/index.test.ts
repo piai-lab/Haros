@@ -1,31 +1,31 @@
 // FILE: providerUsage/index.test.ts
 // Purpose: Covers the orchestration layer's snapshot cache — TTL reuse, single-flight coalescing
 // of concurrent requests, forceRefresh bypass, and the shorter expiry for degraded snapshots —
-// so UI surfaces polling in parallel can't stampede the provider fetchers.
+// so UI surfaces polling in parallel can't stampede the engine fetchers.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ServerProviderUsageSnapshot } from "@harnessos/contracts";
 
 import { __resetProviderUsageCacheForTests, collectProviderUsageSnapshots } from "./index";
-import type { ProviderUsageContext, ProviderUsageFetcher } from "./types";
+import type { EngineUsageContext, EngineUsageFetcher } from "./types";
 
-const fetchMock = vi.fn<(ctx: ProviderUsageContext) => Promise<ServerProviderUsageSnapshot>>();
-const cacheKeyMock = vi.fn<(ctx: ProviderUsageContext) => Promise<string>>();
+const fetchMock = vi.fn<(ctx: EngineUsageContext) => Promise<ServerProviderUsageSnapshot>>();
+const cacheKeyMock = vi.fn<(ctx: EngineUsageContext) => Promise<string>>();
 
 vi.mock("./registry", () => ({
-  PROVIDER_USAGE_FETCHERS: {
+  ENGINE_USAGE_FETCHERS: {
     codex: {
-      provider: "codex",
-      cacheKey: (ctx: ProviderUsageContext) => cacheKeyMock(ctx),
-      fetch: (ctx: ProviderUsageContext) => fetchMock(ctx),
-    } satisfies ProviderUsageFetcher,
+      engine: "codex",
+      cacheKey: (ctx: EngineUsageContext) => cacheKeyMock(ctx),
+      fetch: (ctx: EngineUsageContext) => fetchMock(ctx),
+    } satisfies EngineUsageFetcher,
   },
 }));
 
 const NOW_MS = 1_780_000_000_000;
 
-function makeCtx(nowMs: number, account = "account-a"): ProviderUsageContext {
+function makeCtx(nowMs: number, account = "account-a"): EngineUsageContext {
   return {
     homeDir: "/nonexistent-home",
     env: { TEST_USAGE_ACCOUNT: account },
@@ -36,7 +36,7 @@ function makeCtx(nowMs: number, account = "account-a"): ProviderUsageContext {
 
 function okSnapshot(nowMs: number, source = "live"): ServerProviderUsageSnapshot {
   return {
-    provider: "codex",
+    engine: "codex",
     updatedAt: new Date(nowMs).toISOString(),
     limits: [],
     usageLines: [],

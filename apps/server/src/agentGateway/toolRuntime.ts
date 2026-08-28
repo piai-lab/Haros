@@ -24,11 +24,11 @@ export const WRITE_TOOL_ANNOTATIONS = {
   openWorldHint: false,
 } as const;
 
-export interface ProviderSessionPrincipal {
-  readonly kind: "provider-session";
+export interface EngineSessionPrincipal {
+  readonly kind: "engine-session";
   readonly sessionKey: string;
   readonly threadId: string;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly turnId: string | null;
 }
 
@@ -38,10 +38,10 @@ export interface ExternalClientPrincipal {
   readonly name: string;
 }
 
-export type AgentGatewayPrincipal = ProviderSessionPrincipal | ExternalClientPrincipal;
+export type AgentGatewayPrincipal = EngineSessionPrincipal | ExternalClientPrincipal;
 
 export interface ToolContext {
-  readonly principal: ProviderSessionPrincipal;
+  readonly principal: EngineSessionPrincipal;
   readonly callerThreadId: string;
   readonly callerSessionKey: string;
   readonly callerProvider: EngineKind;

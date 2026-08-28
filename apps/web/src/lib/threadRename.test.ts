@@ -40,8 +40,8 @@ describe("dispatchThreadRename", () => {
       unchangedTitles: ["New thread"],
       createIfMissing: {
         projectId: "project-chat" as never,
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5",
         },
         runtimeMode: "full-access",

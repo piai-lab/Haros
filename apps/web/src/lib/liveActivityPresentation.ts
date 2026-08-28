@@ -1,5 +1,5 @@
 // FILE: liveActivityPresentation.ts
-// Purpose: Provider-agnostic labels and live timing for normalized transcript activity.
+// Purpose: Engine-agnostic labels and live timing for normalized transcript activity.
 // Layer: Web presentation helper
 
 import { useSyncExternalStore } from "react";

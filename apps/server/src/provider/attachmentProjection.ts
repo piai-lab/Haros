@@ -1,6 +1,6 @@
 // FILE: attachmentProjection.ts
-// Purpose: Builds provider prompt text for attachments that a provider must read from disk.
-// Layer: Provider adapter utility
+// Purpose: Builds engine prompt text for attachments that a engine must read from disk.
+// Layer: Engine adapter utility
 // Depends on: attachmentStore path resolution and shared byte formatting.
 
 import type { ChatAttachment, ChatFileAttachment, ChatImageAttachment } from "@harnessos/contracts";

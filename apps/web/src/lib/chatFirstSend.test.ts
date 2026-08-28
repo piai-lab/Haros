@@ -7,8 +7,8 @@ import { describe, expect, it } from "vitest";
 import type { Project } from "../types";
 import { resolveFirstSendTarget } from "./chatFirstSend";
 
-const defaultModelSelection = {
-  provider: "oa" as const,
+const defaultEngineSelection = {
+  engine: "oa" as const,
   model: "deepseek/deepseek-chat",
 };
 
@@ -21,7 +21,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     folderName: "tester",
     localName: null,
     cwd: "/Users/tester",
-    defaultModelSelection: null,
+    defaultEngineSelection: null,
     expanded: false,
     spaceId: null,
     scripts: [],
@@ -35,7 +35,7 @@ describe("resolveFirstSendTarget", () => {
       activeProject: makeProject(),
       chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
       createdAt: new Date(2026, 5, 11, 23, 30, 43),
-      defaultModelSelection,
+      defaultEngineSelection,
       isFirstMessage: true,
       isHomeChatContainer: true,
       isStudioContainer: false,
@@ -51,7 +51,7 @@ describe("resolveFirstSendTarget", () => {
         title: "Yes it takes",
         kind: "chat",
         createWorkspaceRootIfMissing: true,
-        defaultModelSelection,
+        defaultEngineSelection,
       },
     });
   });
@@ -61,7 +61,7 @@ describe("resolveFirstSendTarget", () => {
       activeProject: makeProject(),
       chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
       createdAt: new Date(2026, 5, 11, 23, 30, 43),
-      defaultModelSelection,
+      defaultEngineSelection,
       isFirstMessage: true,
       isHomeChatContainer: true,
       isStudioContainer: false,
@@ -77,7 +77,7 @@ describe("resolveFirstSendTarget", () => {
         title: "Use app",
         kind: "chat",
         createWorkspaceRootIfMissing: true,
-        defaultModelSelection,
+        defaultEngineSelection,
       },
     });
   });
@@ -88,7 +88,7 @@ describe("resolveFirstSendTarget", () => {
       activeProject,
       chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
       createdAt: new Date(2026, 5, 11, 23, 30, 43),
-      defaultModelSelection,
+      defaultEngineSelection,
       isFirstMessage: false,
       isHomeChatContainer: false,
       isStudioContainer: false,
@@ -118,7 +118,7 @@ describe("resolveFirstSendTarget", () => {
       activeProject,
       chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
       createdAt: new Date(2026, 5, 11, 23, 30, 43),
-      defaultModelSelection,
+      defaultEngineSelection,
       isFirstMessage: true,
       isHomeChatContainer: false,
       isStudioContainer: true,
@@ -149,7 +149,7 @@ describe("resolveFirstSendTarget", () => {
       activeProject,
       chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
       createdAt: new Date(2026, 5, 11, 23, 30, 43),
-      defaultModelSelection,
+      defaultEngineSelection,
       isFirstMessage: true,
       isHomeChatContainer: false,
       isStudioContainer: true,

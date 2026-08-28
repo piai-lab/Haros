@@ -21,7 +21,7 @@ import {
   type AutomationUpdateInput,
   type OrchestrationProjectShell,
   type OrchestrationThreadShell,
-  type ProviderStartOptions,
+  type EngineStartOptions,
   type ThreadEnvironmentMode,
   type TurnId,
 } from "@harnessos/contracts";
@@ -53,7 +53,7 @@ import {
   type DeferredOneShotOwnerTransition,
 } from "../../persistence/Services/AutomationRepository.ts";
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
-import { ProviderExecutionCapabilities } from "../../provider/Services/ProviderExecutionCapabilities.ts";
+import { EngineExecutionCapabilities } from "../../provider/Services/EngineExecutionCapabilities.ts";
 import { runWorktreeSetupScript } from "../../worktreeSetup.ts";
 import type { ProjectionTurn } from "../../persistence/Services/ProjectionTurns.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
@@ -81,7 +81,7 @@ const FAST_INTERVAL_ACKNOWLEDGED_MINIMUM_SECONDS = 1;
 const AUTOMATION_COMPLETION_EVALUATION_WORKERS = 2;
 const AUTOMATION_COMPLETION_EVALUATION_QUEUE_CAPACITY = 100;
 // Hard ceiling on a single AI stop-evaluation. With only a couple of evaluation
-// workers, a hung provider call would otherwise pin a worker indefinitely and
+// workers, a hung engine call would otherwise pin a worker indefinitely and
 // starve stop checks for every other heartbeat automation.
 const AUTOMATION_COMPLETION_EVALUATION_TIMEOUT_MS = 30_000;
 const AUTOMATION_HEARTBEAT_DEFER_RETRY_MS = 15_000;
@@ -169,8 +169,8 @@ const DEFERRED_ONE_SHOT_SUPERSESSION_FIELDS = [
   "prompt",
   "schedule",
   "enabled",
-  "modelSelection",
-  "providerOptions",
+  "engineSelection",
+  "engineOptions",
   "runtimeMode",
   "interactionMode",
   "worktreeMode",
@@ -396,16 +396,16 @@ function makePermissionSnapshot(
   definition: AutomationDefinition,
   now: string,
   settingsRevision?: number,
-  providerOptions?: ProviderStartOptions,
+  engineOptions?: EngineStartOptions,
 ) {
   return {
-    provider: definition.modelSelection.provider,
+    engine: definition.engineSelection.engine,
     ...(settingsRevision !== undefined ? { settingsRevision } : {}),
-    modelSelection: definition.modelSelection,
+    engineSelection: definition.engineSelection,
     ...(definition.modelPresentationIdentity
       ? { modelPresentationIdentity: definition.modelPresentationIdentity }
       : {}),
-    ...(providerOptions ? { providerOptions } : {}),
+    ...(engineOptions ? { engineOptions } : {}),
     completionPolicyVersion: completionPolicyVersionForDefinition(definition),
     iterationNumber: definition.iterationCount + 1,
     runtimeMode: definition.runtimeMode,
@@ -446,7 +446,7 @@ function effectiveMinimumIntervalSeconds(input: {
 // run. Enforced uniformly at create, update, and run (dispatchRun) so an automation can never
 // reach a run unacknowledged. The `local` worktree check applies to every mode: a heartbeat
 // reuses its target thread, but that thread can itself sit on the local checkout, so continuing
-// it still runs the provider against the active project root.
+// it still runs the engine against the active project root.
 function riskAcknowledgementError(input: {
   readonly runtimeMode: AutomationDefinition["runtimeMode"];
   readonly worktreeMode: AutomationDefinition["worktreeMode"];
@@ -558,7 +558,7 @@ function mergeDefinitionUpdate(
   jitterContext: AutomationScheduleJitterContext,
 ): AutomationDefinition {
   const schedule = input.schedule ?? current.schedule;
-  const providerOptions = input.providerOptions ?? current.providerOptions;
+  const engineOptions = input.engineOptions ?? current.engineOptions;
   const mode = input.mode ?? current.mode;
   const currentCompletionPolicy = completionPolicyForDefinition(current);
   const completionPolicy = input.completionPolicy ?? currentCompletionPolicy;
@@ -622,12 +622,12 @@ function mergeDefinitionUpdate(
     schedule,
     enabled: finalEnabled,
     nextRunAt,
-    modelSelection: input.modelSelection ?? current.modelSelection,
+    engineSelection: input.engineSelection ?? current.engineSelection,
     modelPresentationIdentity:
       input.modelPresentationIdentity?.model ===
-      (input.modelSelection ?? current.modelSelection).model
+      (input.engineSelection ?? current.engineSelection).model
         ? input.modelPresentationIdentity
-        : input.modelSelection !== undefined
+        : input.engineSelection !== undefined
           ? undefined
           : current.modelPresentationIdentity,
     runtimeMode: input.runtimeMode ?? current.runtimeMode,
@@ -674,7 +674,7 @@ function mergeDefinitionUpdate(
     updatedAt: now,
   };
 
-  return providerOptions ? { ...nextDefinition, providerOptions } : nextDefinition;
+  return engineOptions ? { ...nextDefinition, engineOptions } : nextDefinition;
 }
 
 type ThreadEnvironment = {
@@ -713,7 +713,7 @@ export const AutomationServiceLive = Layer.effect(
     const git = yield* GitCore;
     const textGeneration = yield* TextGeneration;
     const serverSettings = yield* ServerSettingsService;
-    const providerExecutionCapabilities = yield* ProviderExecutionCapabilities;
+    const engineExecutionCapabilities = yield* EngineExecutionCapabilities;
     const orchestrationEngine = yield* OrchestrationEngineService;
     const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
     const projectionTurnRepository = yield* ProjectionTurnRepository;
@@ -944,10 +944,10 @@ export const AutomationServiceLive = Layer.effect(
     };
 
     const validateRuntimeModeAvailability = Effect.fn(function* (input: {
-      readonly modelSelection: AutomationDefinition["modelSelection"];
+      readonly engineSelection: AutomationDefinition["engineSelection"];
       readonly runtimeMode: AutomationDefinition["runtimeMode"];
     }) {
-      const capability = (yield* providerExecutionCapabilities.get(input.modelSelection))
+      const capability = (yield* engineExecutionCapabilities.get(input.engineSelection))
         .runtimeModes[input.runtimeMode];
       if (isProviderRuntimeModeExecutable(capability)) {
         return;
@@ -956,7 +956,7 @@ export const AutomationServiceLive = Layer.effect(
       return yield* new AutomationServiceError({
         code: capability.reason ?? "runtime-health-unknown",
         message: permanentlyUnsupported
-          ? "The selected runtime mode is not supported by this Provider and model."
+          ? "The selected runtime mode is not supported by this Engine and model."
           : "The selected runtime mode is temporarily unavailable.",
       });
     });
@@ -1250,13 +1250,11 @@ export const AutomationServiceLive = Layer.effect(
                 text: dispatchMessage,
                 attachments: [],
               },
-              modelSelection: definition.modelSelection,
+              engineSelection: definition.engineSelection,
               ...(definition.modelPresentationIdentity
                 ? { modelPresentationIdentity: definition.modelPresentationIdentity }
                 : {}),
-              ...(definition.providerOptions
-                ? { providerOptions: definition.providerOptions }
-                : {}),
+              ...(definition.engineOptions ? { engineOptions: definition.engineOptions } : {}),
               dispatchMode: "queue",
               dispatchOrigin: "automation",
               runtimeMode: definition.runtimeMode,
@@ -1330,7 +1328,7 @@ export const AutomationServiceLive = Layer.effect(
             title: automationOwnsItsThread(definition.mode)
               ? definition.name
               : `${definition.name} - ${now}`,
-            modelSelection: definition.modelSelection,
+            engineSelection: definition.engineSelection,
             runtimeMode: definition.runtimeMode,
             interactionMode: definition.interactionMode,
             envMode: environment.envMode,
@@ -1400,11 +1398,11 @@ export const AutomationServiceLive = Layer.effect(
               text: dispatchMessage,
               attachments: [],
             },
-            modelSelection: definition.modelSelection,
+            engineSelection: definition.engineSelection,
             ...(definition.modelPresentationIdentity
               ? { modelPresentationIdentity: definition.modelPresentationIdentity }
               : {}),
-            ...(definition.providerOptions ? { providerOptions: definition.providerOptions } : {}),
+            ...(definition.engineOptions ? { engineOptions: definition.engineOptions } : {}),
             dispatchMode: "queue",
             dispatchOrigin: "automation",
             runtimeMode: definition.runtimeMode,
@@ -1483,7 +1481,7 @@ export const AutomationServiceLive = Layer.effect(
         readonly deferredUntil?: string | null;
       } = {},
       settingsRevision?: number,
-      providerOptions?: ProviderStartOptions,
+      engineOptions?: EngineStartOptions,
     ) => {
       const runId = makeAutomationRunId();
       const ids = deriveAutomationRunIds(runId);
@@ -1512,7 +1510,7 @@ export const AutomationServiceLive = Layer.effect(
           definition,
           now,
           settingsRevision,
-          providerOptions,
+          engineOptions,
         ),
         now,
       };
@@ -1723,8 +1721,8 @@ export const AutomationServiceLive = Layer.effect(
     const resolveAutomationCompletionTextGenerationInput = (definition: AutomationDefinition) =>
       Effect.gen(function* () {
         const directInput = resolveTextGenerationInputForSelection(
-          definition.modelSelection,
-          definition.providerOptions,
+          definition.engineSelection,
+          definition.engineOptions,
         );
         if (directInput) {
           return directInput;
@@ -1735,8 +1733,8 @@ export const AutomationServiceLive = Layer.effect(
         );
         return (
           resolveTextGenerationInputForSelection(
-            settings.textGenerationModelSelection,
-            definition.providerOptions,
+            settings.textGenerationEngineSelection,
+            definition.engineOptions,
           ) ?? {}
         );
       });
@@ -1832,7 +1830,7 @@ export const AutomationServiceLive = Layer.effect(
           );
         if (Option.isNone(evaluationOption)) {
           // Timed out. Reload the definition first: if the automation was edited, disabled,
-          // archived, or its policy changed while the provider call hung, record the same
+          // archived, or its policy changed while the engine call hung, record the same
           // stale-check result the success path uses rather than surfacing a misleading live
           // "Stop check timed out." warning for a policy the user already changed. Either way
           // keep the heartbeat alive without retrying (a retry would risk another stuck worker).
@@ -2223,7 +2221,7 @@ export const AutomationServiceLive = Layer.effect(
 
         if (!turn || turn.turnId === null || turn.state === "pending" || turn.state === "running") {
           // A heartbeat run's turn can be abandoned mid-flight when the user sends a
-          // manual turn on the same thread: the provider session moves on, the run's
+          // manual turn on the same thread: the engine session moves on, the run's
           // turn row stays pending/running forever, and no reconcile event ever flips
           // the run terminal. Detect the supersession (a strictly newer turn owns the
           // thread) and close the run out as interrupted instead of looping here.
@@ -2647,7 +2645,7 @@ export const AutomationServiceLive = Layer.effect(
           acknowledgedRisks: input.acknowledgedRisks ?? [],
         });
         yield* validateRuntimeModeAvailability({
-          modelSelection: input.modelSelection,
+          engineSelection: input.engineSelection,
           runtimeMode: input.runtimeMode ?? "approval-required",
         });
         yield* validateHeartbeatTarget({

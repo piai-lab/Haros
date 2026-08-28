@@ -98,8 +98,8 @@ function makeModel(input: Omit<TestModelInput, "providerID"> & Pick<Model, "prov
 }
 
 describe("resolvePreferredOpenCodeModelProviders", () => {
-  it("keeps explicit credential providers and OpenCode-managed providers together", () => {
-    const providers = resolvePreferredOpenCodeModelProviders({
+  it("keeps explicit credential engines and OpenCode-managed engines together", () => {
+    const engines = resolvePreferredOpenCodeModelProviders({
       inventory: {
         providerList: {
           connected: ["cloudflare-ai-gateway", "openai", "opencode"],
@@ -128,11 +128,11 @@ describe("resolvePreferredOpenCodeModelProviders", () => {
       credentialProviderIDs: ["openai"],
     });
 
-    expect(providers.map((provider) => provider.id)).toEqual(["openai", "opencode"]);
+    expect(engines.map((engine) => engine.id)).toEqual(["openai", "opencode"]);
   });
 
-  it("adds console-managed connected providers to the preferred set", () => {
-    const providers = resolvePreferredOpenCodeModelProviders({
+  it("adds console-managed connected engines to the preferred set", () => {
+    const engines = resolvePreferredOpenCodeModelProviders({
       inventory: {
         providerList: {
           connected: ["cloudflare-ai-gateway", "openai", "opencode", "openrouter"],
@@ -166,11 +166,11 @@ describe("resolvePreferredOpenCodeModelProviders", () => {
       credentialProviderIDs: ["openai"],
     });
 
-    expect(providers.map((provider) => provider.id)).toEqual(["openai", "opencode", "openrouter"]);
+    expect(engines.map((engine) => engine.id)).toEqual(["openai", "opencode", "openrouter"]);
   });
 
-  it("prefers OpenCode-managed providers before generic non-environment providers", () => {
-    const providers = resolvePreferredOpenCodeModelProviders({
+  it("prefers OpenCode-managed engines before generic non-environment engines", () => {
+    const engines = resolvePreferredOpenCodeModelProviders({
       inventory: {
         providerList: {
           connected: ["cloudflare-ai-gateway", "openai", "opencode"],
@@ -196,11 +196,11 @@ describe("resolvePreferredOpenCodeModelProviders", () => {
       },
     });
 
-    expect(providers.map((provider) => provider.id)).toEqual(["opencode"]);
+    expect(engines.map((engine) => engine.id)).toEqual(["opencode"]);
   });
 
-  it("keeps connected config providers with inline apiKey even without auth.json credentials", () => {
-    const providers = resolvePreferredOpenCodeModelProviders({
+  it("keeps connected config engines with inline apiKey even without auth.json credentials", () => {
+    const engines = resolvePreferredOpenCodeModelProviders({
       inventory: {
         providerList: {
           connected: ["fastapicloud", "opencode"],
@@ -224,11 +224,11 @@ describe("resolvePreferredOpenCodeModelProviders", () => {
       credentialProviderIDs: ["unrelated"],
     });
 
-    expect(providers.map((provider) => provider.id)).toEqual(["fastapicloud", "opencode"]);
+    expect(engines.map((engine) => engine.id)).toEqual(["fastapicloud", "opencode"]);
   });
 
-  it("falls back to non-environment connected providers when no stronger OpenCode signals exist", () => {
-    const providers = resolvePreferredOpenCodeModelProviders({
+  it("falls back to non-environment connected engines when no stronger OpenCode signals exist", () => {
+    const engines = resolvePreferredOpenCodeModelProviders({
       inventory: {
         providerList: {
           connected: ["cloudflare-ai-gateway", "openai", "openrouter"],
@@ -254,11 +254,11 @@ describe("resolvePreferredOpenCodeModelProviders", () => {
       },
     });
 
-    expect(providers.map((provider) => provider.id)).toEqual(["openai", "openrouter"]);
+    expect(engines.map((engine) => engine.id)).toEqual(["openai", "openrouter"]);
   });
 
-  it("falls back to every connected provider when only environment providers are connected", () => {
-    const providers = resolvePreferredOpenCodeModelProviders({
+  it("falls back to every connected engine when only environment engines are connected", () => {
+    const engines = resolvePreferredOpenCodeModelProviders({
       inventory: {
         providerList: {
           connected: ["cloudflare-ai-gateway", "cloudflare-workers-ai"],
@@ -279,7 +279,7 @@ describe("resolvePreferredOpenCodeModelProviders", () => {
       },
     });
 
-    expect(providers.map((provider) => provider.id)).toEqual([
+    expect(engines.map((engine) => engine.id)).toEqual([
       "cloudflare-ai-gateway",
       "cloudflare-workers-ai",
     ]);
@@ -461,7 +461,7 @@ describe("flattenOpenCodeModels", () => {
     ]);
   });
 
-  it("includes upstream provider metadata for grouped OpenCode model menus", () => {
+  it("includes upstream engine metadata for grouped OpenCode model menus", () => {
     const models = flattenOpenCodeModels({
       inventory: {
         providerList: {
@@ -601,7 +601,7 @@ describe("flattenOpenCodeModels", () => {
     ]);
   });
 
-  it("trims upstream provider and model names before exposing runtime models", () => {
+  it("trims upstream engine and model names before exposing runtime models", () => {
     const models = flattenOpenCodeModels({
       inventory: {
         providerList: {
@@ -636,7 +636,7 @@ describe("flattenOpenCodeModels", () => {
     ]);
   });
 
-  it("prefers OpenCode-managed connected providers when no stronger auth metadata exists", () => {
+  it("prefers OpenCode-managed connected engines when no stronger auth metadata exists", () => {
     const models = flattenOpenCodeModels({
       inventory: {
         providerList: {
@@ -766,7 +766,7 @@ describe("OpenCode discovery helpers", () => {
     expect(isUnsupportedOpenCodeCommandListError(error("connection refused"))).toBe(false);
   });
 
-  it("preserves generic provider title-casing when merged CLI models are absent from inventory", () => {
+  it("preserves generic engine title-casing when merged CLI models are absent from inventory", () => {
     const models = mergeOpenCodeCliModelDescriptors({
       inventory: {
         providerList: { connected: [], all: [] },

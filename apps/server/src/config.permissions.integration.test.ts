@@ -74,7 +74,7 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
     preparePrivateServerPaths(paths);
     const providerCachePath = resolveProviderStatusCachePath({
       stateDir: paths.stateDir,
-      provider: "codex",
+      engine: "codex",
     });
 
     await Effect.runPromise(
@@ -88,8 +88,8 @@ describe.skipIf(process.platform === "win32")("private server state permissions"
         }
         yield* writeProviderStatusCache({
           filePath: providerCachePath,
-          provider: {
-            provider: "codex",
+          engine: {
+            engine: "codex",
             status: "ready",
             available: true,
             authStatus: "authenticated",

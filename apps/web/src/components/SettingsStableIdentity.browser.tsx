@@ -66,9 +66,9 @@ function SettingsIdentitySurface() {
         {activeSection === "general" ? (
           <SettingsSection title={t("settings.general")}>
             <SettingsRow
-              anchorId={GENERAL_SETTINGS_SEARCH.defaultProvider.target}
-              title={t("settings.defaultProvider")}
-              description={t("settings.defaultProviderDescription")}
+              anchorId={GENERAL_SETTINGS_SEARCH.defaultEngine.target}
+              title={t("settings.defaultEngine")}
+              description={t("settings.defaultEngineDescription")}
             />
           </SettingsSection>
         ) : (
@@ -107,7 +107,7 @@ describe("Settings stable search identity", () => {
     await englishSearch.fill("Default engine");
     await userEvent.keyboard("{Enter}");
 
-    const stableTarget = GENERAL_SETTINGS_SEARCH.defaultProvider.target;
+    const stableTarget = GENERAL_SETTINGS_SEARCH.defaultEngine.target;
     expect(new URLSearchParams(window.location.search).get("target")).toBe(stableTarget);
     expect(document.getElementById(stableTarget)?.textContent).toContain("Default engine");
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(

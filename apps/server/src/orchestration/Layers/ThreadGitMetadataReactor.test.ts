@@ -5,7 +5,7 @@ import {
   TurnId,
   type OrchestrationCommand,
   type OrchestrationThreadPullRequest,
-  type ProviderRuntimeEvent,
+  type EngineRuntimeEvent,
 } from "@harnessos/contracts";
 import { Effect, Exit, Layer, ManagedRuntime, Option, PubSub, Scope, Stream } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
@@ -13,10 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { GitManagerError } from "../../git/Errors.ts";
 import { GitCore, type GitCoreShape, type GitStatusDetails } from "../../git/Services/GitCore.ts";
 import { GitManager, type GitManagerShape } from "../../git/Services/GitManager.ts";
-import {
-  ProviderService,
-  type ProviderServiceShape,
-} from "../../provider/Services/ProviderService.ts";
+import { EngineService, type EngineServiceShape } from "../../provider/Services/EngineService.ts";
 import {
   OrchestrationEngineService,
   type OrchestrationEngineShape,
@@ -42,7 +39,7 @@ interface MutableThreadShell {
 
 const pullRequest: OrchestrationThreadPullRequest = {
   number: 574,
-  title: "Cache provider usage",
+  title: "Cache engine usage",
   url: "https://github.com/Emanuele-web04/harnessos/pull/574",
   baseBranch: "main",
   headBranch: "feat/provider-usage-snapshot-cache",
@@ -89,7 +86,7 @@ describe("ThreadGitMetadataReactor", () => {
     readonly branchByCwd: Readonly<Record<string, string>>;
     readonly pullRequestLookupFails?: boolean;
   }) => {
-    const runtimeEvents = Effect.runSync(PubSub.unbounded<ProviderRuntimeEvent>());
+    const runtimeEvents = Effect.runSync(PubSub.unbounded<EngineRuntimeEvent>());
     const commands: OrchestrationCommand[] = [];
     const pullRequestLookups: string[] = [];
     const statusCwds: string[] = [];
@@ -98,7 +95,7 @@ describe("ThreadGitMetadataReactor", () => {
 
     const providerService = {
       streamEvents: Stream.fromPubSub(runtimeEvents),
-    } as unknown as ProviderServiceShape;
+    } as unknown as EngineServiceShape;
     const projectionSnapshotQuery = {
       getThreadShellById: (threadId: ThreadId) =>
         Effect.succeed(Option.fromNullishOr(threads.get(threadId) as never)),
@@ -156,7 +153,7 @@ describe("ThreadGitMetadataReactor", () => {
     } as unknown as OrchestrationEngineShape;
 
     const layer = ThreadGitMetadataReactorLive.pipe(
-      Layer.provideMerge(Layer.succeed(ProviderService, providerService)),
+      Layer.provideMerge(Layer.succeed(EngineService, providerService)),
       Layer.provideMerge(Layer.succeed(ProjectionSnapshotQuery, projectionSnapshotQuery)),
       Layer.provideMerge(Layer.succeed(GitCore, gitCore)),
       Layer.provideMerge(Layer.succeed(GitManager, gitManager)),
@@ -169,7 +166,7 @@ describe("ThreadGitMetadataReactor", () => {
     await Effect.runPromise(reactor.start.pipe(Scope.provide(scope)));
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const publish = (event: ProviderRuntimeEvent) =>
+    const publish = (event: EngineRuntimeEvent) =>
       Effect.runPromise(PubSub.publish(runtimeEvents, event).pipe(Effect.asVoid));
 
     return {
@@ -181,20 +178,20 @@ describe("ThreadGitMetadataReactor", () => {
     };
   };
 
-  const startedEvent = (threadId: ThreadId, turnId: TurnId): ProviderRuntimeEvent => ({
+  const startedEvent = (threadId: ThreadId, turnId: TurnId): EngineRuntimeEvent => ({
     type: "turn.started",
     eventId: EventId.makeUnsafe(`started-${turnId}`),
-    provider: "codex",
+    engine: "codex",
     threadId,
     turnId,
     createdAt: "2026-08-07T10:00:00.000Z",
     payload: {},
   });
 
-  const completedEvent = (threadId: ThreadId, turnId: TurnId): ProviderRuntimeEvent => ({
+  const completedEvent = (threadId: ThreadId, turnId: TurnId): EngineRuntimeEvent => ({
     type: "turn.completed",
     eventId: EventId.makeUnsafe(`completed-${turnId}`),
-    provider: "codex",
+    engine: "codex",
     threadId,
     turnId,
     createdAt: "2026-08-07T10:01:00.000Z",
@@ -204,22 +201,22 @@ describe("ThreadGitMetadataReactor", () => {
   const vcsStateChangedEvent = (
     threadId: ThreadId,
     options?: { readonly cwd?: string; readonly eventId?: string },
-  ): ProviderRuntimeEvent => ({
+  ): EngineRuntimeEvent => ({
     type: "vcs.state.changed",
     eventId: EventId.makeUnsafe(options?.eventId ?? `vcs-${threadId}`),
-    provider: "claude",
+    engine: "claude",
     threadId,
     createdAt: "2026-08-07T10:00:30.000Z",
     payload: { kind: "commit", ...(options?.cwd !== undefined ? { cwd: options.cwd } : {}) },
   });
 
-  const runtimeErrorEvent = (threadId: ThreadId): ProviderRuntimeEvent => ({
+  const runtimeErrorEvent = (threadId: ThreadId): EngineRuntimeEvent => ({
     type: "runtime.error",
     eventId: EventId.makeUnsafe(`runtime-error-${threadId}`),
-    provider: "codex",
+    engine: "codex",
     threadId,
     createdAt: "2026-08-07T10:01:00.000Z",
-    payload: { message: "Provider stopped" },
+    payload: { message: "Engine stopped" },
   });
 
   it("persists the actual worktree branch and PR even when branch metadata is stale", async () => {
@@ -289,8 +286,8 @@ describe("ThreadGitMetadataReactor", () => {
     const parentTurnId = TurnId.makeUnsafe("local-parent-turn");
     const childTurnId = TurnId.makeUnsafe("local-child-turn");
     const childProviderRefs = {
-      providerThreadId: "child-provider-thread",
-      providerParentThreadId: "parent-provider-thread",
+      nativeThreadId: "child-engine-thread",
+      nativeParentThreadId: "parent-engine-thread",
     } as const;
     const harness = await createHarness({
       threads: [
@@ -594,7 +591,7 @@ describe("ThreadGitMetadataReactor", () => {
     });
   });
 
-  it("releases ambiguous local turn ownership when the provider runtime exits", async () => {
+  it("releases ambiguous local turn ownership when the engine runtime exits", async () => {
     const staleThreadId = ThreadId.makeUnsafe("stale-local-thread");
     const nextThreadId = ThreadId.makeUnsafe("next-local-thread");
     const projectId = ProjectId.makeUnsafe("project-1");

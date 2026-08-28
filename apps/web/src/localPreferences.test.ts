@@ -50,7 +50,7 @@ describe("local preference owner", () => {
   it("never reads or rewrites the retired mixed key", () => {
     const legacyBytes = JSON.stringify({
       localePreference: "zh-CN",
-      defaultProvider: "pi",
+      defaultEngine: "pi",
       kiloServerPassword: "legacy-secret-canary",
     });
     const storage = createMemoryStorage({

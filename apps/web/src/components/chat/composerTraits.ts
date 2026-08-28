@@ -1,12 +1,12 @@
 // FILE: composerTraits.ts
 // Purpose: Centralizes composer trait resolution so menu surfaces read the same model capability state.
 // Layer: Chat composer state helpers
-// Depends on: shared model capability helpers and provider model option types.
+// Depends on: shared model capability helpers and engine model option types.
 
 import {
-  type ProviderOptionDescriptor,
+  type EngineOptionDescriptor,
   type EngineKind,
-  type ProviderModelDescriptor,
+  type EngineModelDescriptor,
 } from "@harnessos/contracts";
 import {
   getProviderOptionCurrentValue,
@@ -15,7 +15,7 @@ import {
   trimOrNull,
 } from "@harnessos/shared/model";
 
-import type { ProviderOptions } from "../../providerModelOptions";
+import type { EngineOptions } from "../../providerModelOptions";
 import { getRuntimeAwareModelCapabilities } from "./runtimeModelCapabilities";
 
 function getCursorBooleanModelParameter(
@@ -50,22 +50,22 @@ function getCursorBooleanModelParameter(
 }
 
 function asSelectDescriptor(
-  descriptor: ProviderOptionDescriptor | undefined,
-): Extract<ProviderOptionDescriptor, { type: "select" }> | null {
+  descriptor: EngineOptionDescriptor | undefined,
+): Extract<EngineOptionDescriptor, { type: "select" }> | null {
   return descriptor?.type === "select" ? descriptor : null;
 }
 
 function asBooleanDescriptor(
-  descriptor: ProviderOptionDescriptor | undefined,
-): Extract<ProviderOptionDescriptor, { type: "boolean" }> | null {
+  descriptor: EngineOptionDescriptor | undefined,
+): Extract<EngineOptionDescriptor, { type: "boolean" }> | null {
   return descriptor?.type === "boolean" ? descriptor : null;
 }
 
 function primaryTraitSelectDescriptor(
-  descriptors: ReadonlyArray<ProviderOptionDescriptor>,
-): Extract<ProviderOptionDescriptor, { type: "select" }> | null {
+  descriptors: ReadonlyArray<EngineOptionDescriptor>,
+): Extract<EngineOptionDescriptor, { type: "select" }> | null {
   const descriptor = descriptors.find(
-    (candidate): candidate is Extract<ProviderOptionDescriptor, { type: "select" }> =>
+    (candidate): candidate is Extract<EngineOptionDescriptor, { type: "select" }> =>
       candidate.type === "select" &&
       candidate.id !== "contextWindow" &&
       candidate.id !== "autoCompactWindow",
@@ -73,7 +73,7 @@ function primaryTraitSelectDescriptor(
   return descriptor && descriptor.options.length > 1 ? descriptor : null;
 }
 
-function selectOptions(descriptor: Extract<ProviderOptionDescriptor, { type: "select" }> | null) {
+function selectOptions(descriptor: Extract<EngineOptionDescriptor, { type: "select" }> | null) {
   return (
     descriptor?.options.map((option) => ({
       value: option.id,
@@ -87,7 +87,7 @@ function selectOptions(descriptor: Extract<ProviderOptionDescriptor, { type: "se
 // Merges legacy capability flags with descriptor-specific prompt injection hints.
 function promptInjectedValuesForDescriptor(
   capsPromptInjectedValues: ReadonlyArray<string>,
-  descriptor: Extract<ProviderOptionDescriptor, { type: "select" }> | null,
+  descriptor: Extract<EngineOptionDescriptor, { type: "select" }> | null,
 ) {
   return Array.from(
     new Set([...capsPromptInjectedValues, ...(descriptor?.promptInjectedValues ?? [])]),
@@ -96,15 +96,15 @@ function promptInjectedValuesForDescriptor(
 
 // Resolve the currently selected composer traits from capabilities plus draft overrides.
 export function getComposerTraitSelection(
-  provider: EngineKind,
+  engine: EngineKind,
   model: string | null | undefined,
   prompt: string,
-  modelOptions: ProviderOptions | null | undefined,
-  runtimeModel?: ProviderModelDescriptor,
+  modelOptions: EngineOptions | null | undefined,
+  runtimeModel?: EngineModelDescriptor,
 ) {
-  const caps = getRuntimeAwareModelCapabilities({ provider, model, runtimeModel });
+  const caps = getRuntimeAwareModelCapabilities({ engine, model, runtimeModel });
   const descriptors = getProviderOptionDescriptors({
-    provider,
+    engine,
     caps,
     selections: modelOptions as Record<string, unknown> | undefined,
   });
@@ -143,7 +143,7 @@ export function getComposerTraitSelection(
   const effort = resolvedEffort && !isPromptInjected ? resolvedEffort : defaultEffort;
 
   const thinkingEnabled = thinkingDescriptor
-    ? provider === "cursor"
+    ? engine === "cursor"
       ? (thinkingDescriptor.currentValue ??
         getCursorBooleanModelParameter(model, "thinking") ??
         true)
@@ -153,7 +153,7 @@ export function getComposerTraitSelection(
   const fastModeEnabled =
     Boolean(fastModeDescriptor) &&
     (fastModeDescriptor?.currentValue ??
-      (provider === "cursor" ? getCursorBooleanModelParameter(model, "fast") : false)) === true;
+      (engine === "cursor" ? getCursorBooleanModelParameter(model, "fast") : false)) === true;
 
   const contextWindow = resolvedContextWindow ?? defaultContextWindow;
 

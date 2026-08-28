@@ -10,15 +10,12 @@ import {
   ThreadId,
   TurnId,
   type OrchestrationCommand,
-  type ProviderRuntimeEvent,
+  type EngineRuntimeEvent,
 } from "@harnessos/contracts";
 import { Effect, Exit, Layer, ManagedRuntime, Option, PubSub, Scope, Stream } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  ProviderService,
-  type ProviderServiceShape,
-} from "../../provider/Services/ProviderService.ts";
+import { EngineService, type EngineServiceShape } from "../../provider/Services/EngineService.ts";
 import {
   OrchestrationEngineService,
   type OrchestrationEngineShape,
@@ -59,18 +56,18 @@ describe("StudioOutputReactor", () => {
     );
   });
 
-  it("uses the pre-dispatch baseline and captures files when the provider session exits", async () => {
+  it("uses the pre-dispatch baseline and captures files when the engine session exits", async () => {
     const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "omnimind-studio-reactor-"));
     temporaryRoots.push(workspaceRoot);
     const threadId = ThreadId.makeUnsafe("studio-thread");
     const projectId = ProjectId.makeUnsafe("studio-project");
     const turnId = TurnId.makeUnsafe("studio-turn");
-    const runtimeEvents = Effect.runSync(PubSub.unbounded<ProviderRuntimeEvent>());
+    const runtimeEvents = Effect.runSync(PubSub.unbounded<EngineRuntimeEvent>());
     const commands: OrchestrationCommand[] = [];
 
     const providerService = {
       streamEvents: Stream.fromPubSub(runtimeEvents),
-    } as unknown as ProviderServiceShape;
+    } as unknown as EngineServiceShape;
     const orchestrationEngine = {
       dispatch: (command: OrchestrationCommand) =>
         Effect.sync(() => {
@@ -101,7 +98,7 @@ describe("StudioOutputReactor", () => {
     } as unknown as ProjectionSnapshotQueryShape;
 
     const layer = StudioOutputReactorLive.pipe(
-      Layer.provideMerge(Layer.succeed(ProviderService, providerService)),
+      Layer.provideMerge(Layer.succeed(EngineService, providerService)),
       Layer.provideMerge(Layer.succeed(OrchestrationEngineService, orchestrationEngine)),
       Layer.provideMerge(Layer.succeed(ProjectionSnapshotQuery, projectionSnapshotQuery)),
       Layer.provideMerge(NodeServices.layer),
@@ -112,7 +109,7 @@ describe("StudioOutputReactor", () => {
     await Effect.runPromise(reactor.start.pipe(Scope.provide(scope)));
 
     // This file appears after the command reactor's awaited preparation but before
-    // the provider acknowledges turn.started. A turn.started-time scan would miss it.
+    // the engine acknowledges turn.started. A turn.started-time scan would miss it.
     await runtime.runPromise(reactor.captureBaselineBeforeTurn(threadId));
     await writeFile(path.join(workspaceRoot, "report.md"), "finished report");
 
@@ -120,7 +117,7 @@ describe("StudioOutputReactor", () => {
       PubSub.publish(runtimeEvents, {
         type: "turn.started",
         eventId: EventId.makeUnsafe("turn-started"),
-        provider: "codex",
+        engine: "codex",
         threadId,
         turnId,
         createdAt: "2026-07-08T10:00:00.000Z",
@@ -131,10 +128,10 @@ describe("StudioOutputReactor", () => {
       PubSub.publish(runtimeEvents, {
         type: "session.exited",
         eventId: EventId.makeUnsafe("session-exited"),
-        provider: "codex",
+        engine: "codex",
         threadId,
         createdAt: "2026-07-08T10:00:01.000Z",
-        payload: { reason: "provider crashed" },
+        payload: { reason: "engine crashed" },
       }).pipe(Effect.asVoid),
     );
 

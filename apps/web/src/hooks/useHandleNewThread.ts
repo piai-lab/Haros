@@ -23,7 +23,7 @@ import {
   prefetchProviderModelsForNewThread,
   resolveNewThreadModelPrefetchCwd,
   resolveNewThreadModelPrefetchProvider,
-} from "../lib/providerModelPrefetch";
+} from "../lib/engineModelPrefetch";
 import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 import {
   draftNavigationSlotKey,
@@ -74,16 +74,16 @@ export function useHandleNewThread() {
     const entryPoint = options?.entryPoint ?? "chat";
     const wantsTemporaryThread = options?.temporary === true;
     const applyProviderOverride = (threadId: ThreadId) => {
-      if (!options?.provider) {
+      if (!options?.engine) {
         return;
       }
-      const defaultModel = getDefaultModel(options.provider);
+      const defaultModel = getDefaultModel(options.engine);
       if (!defaultModel) {
-        useComposerDraftStore.getState().setActiveProviderAndSticky(threadId, options.provider);
+        useComposerDraftStore.getState().setActiveProviderAndSticky(threadId, options.engine);
         return;
       }
-      setModelSelection(threadId, {
-        provider: options.provider,
+      setEngineSelection(threadId, {
+        engine: options.engine,
         model: defaultModel,
       });
     };
@@ -121,7 +121,7 @@ export function useHandleNewThread() {
       registerDraftThread,
       setDraftThreadContext,
       setProjectDraftThreadId,
-      setModelSelection,
+      setEngineSelection,
     } = useComposerDraftStore.getState();
     const shouldForceFreshThread = options?.fresh === true;
 
@@ -156,12 +156,12 @@ export function useHandleNewThread() {
           ? null
           : (draftStore.draftsByThreadId[bootstrapPlan.threadId] ?? null);
       const project = useStore.getState().projects.find((candidate) => candidate.id === projectId);
-      const provider = resolveNewThreadModelPrefetchProvider({
-        providerOverride: options?.provider ?? null,
+      const engine = resolveNewThreadModelPrefetchProvider({
+        providerOverride: options?.engine ?? null,
         draftActiveProvider: targetComposer?.activeProvider ?? null,
         stickyActiveProvider: draftStore.stickyActiveProvider,
-        projectDefaultProvider: project?.defaultModelSelection?.provider ?? null,
-        defaultProvider: authoritativeSettings.defaultProvider,
+        projectDefaultProvider: project?.defaultEngineSelection?.engine ?? null,
+        defaultEngine: authoritativeSettings.defaultEngine,
       });
       const cwd = resolveNewThreadModelPrefetchCwd({
         worktreePath: options?.worktreePath ?? null,
@@ -174,16 +174,16 @@ export function useHandleNewThread() {
         serverCwd: serverConfigQuery.data?.cwd ?? null,
       });
       prefetchProviderModelsForNewThread(queryClient, {
-        provider,
+        engine,
         settings: authoritativeSettings,
         cwd,
-        enabled: authoritativeSettings.providers[provider]?.enabled !== false,
+        enabled: authoritativeSettings.engines[engine]?.enabled !== false,
       });
     }
     // Read from the store at call time so post-sync sidebar flows can use the latest project defaults.
-    const projectDefaultModelSelection =
+    const projectDefaultEngineSelection =
       useStore.getState().projects.find((project) => project.id === projectId)
-        ?.defaultModelSelection ?? null;
+        ?.defaultEngineSelection ?? null;
     const activeThreadSnapshot = createActiveThreadSnapshot(activeThread, projectId);
     const activeDraftThreadSnapshot = createActiveDraftThreadSnapshot(activeDraftThread, projectId);
     const resolveCreationState = (
@@ -194,12 +194,12 @@ export function useHandleNewThread() {
       resolveTerminalThreadCreationState({
         activeDraftThread: activeDraftThreadSnapshot,
         activeThread: activeThreadSnapshot,
-        defaultProvider: options?.provider ?? authoritativeSettings.defaultProvider,
+        defaultEngine: options?.engine ?? authoritativeSettings.defaultEngine,
         draftComposerState:
           useComposerDraftStore.getState().draftsByThreadId[targetThreadId] ?? null,
         draftThread,
         options: creationOptions,
-        projectDefaultModelSelection,
+        projectDefaultEngineSelection,
         projectId,
       });
     // Terminal-first threads need a real orchestration thread immediately so
@@ -208,7 +208,7 @@ export function useHandleNewThread() {
       threadId: ThreadId,
       creationState: ReturnType<typeof resolveCreationState>,
     ): Promise<void> => {
-      if (!creationState.modelSelection) {
+      if (!creationState.engineSelection) {
         return;
       }
       const api = readNativeApi();
@@ -222,7 +222,7 @@ export function useHandleNewThread() {
           threadId,
           projectId,
           title: creationState.title,
-          modelSelection: creationState.modelSelection,
+          engineSelection: creationState.engineSelection,
           runtimeMode: creationState.runtimeMode,
           interactionMode: creationState.interactionMode,
           envMode: creationState.envMode,

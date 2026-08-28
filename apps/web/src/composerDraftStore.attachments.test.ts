@@ -1,6 +1,6 @@
 import {
   OrchestrationProposedPlanId,
-  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+  ENGINE_SEND_TURN_MAX_ATTACHMENTS,
   ThreadId,
 } from "@harnessos/contracts";
 import * as Schema from "effect/Schema";
@@ -20,7 +20,7 @@ import {
   makeFile,
   makeImage,
   makeTerminalContext,
-  modelSelection,
+  engineSelection,
   resetComposerDraftStore,
 } from "./composerDraftStoreTestFixtures";
 import { removeLocalStorageItem, setLocalStorageItem } from "./hooks/useLocalStorage";
@@ -112,17 +112,15 @@ describe("composerDraftStore addImages", () => {
 
   it("enforces the attachment limit atomically when another reference wins the last slot", () => {
     const store = useComposerDraftStore.getState();
-    const initialImages = Array.from(
-      { length: PROVIDER_SEND_TURN_MAX_ATTACHMENTS - 1 },
-      (_, index) =>
-        makeImage({
-          id: `img-${index}`,
-          name: `image-${index}.png`,
-          sizeBytes: index + 1,
-          previewUrl: `blob:image-${index}`,
-        }),
+    const initialImages = Array.from({ length: ENGINE_SEND_TURN_MAX_ATTACHMENTS - 1 }, (_, index) =>
+      makeImage({
+        id: `img-${index}`,
+        name: `image-${index}.png`,
+        sizeBytes: index + 1,
+        previewUrl: `blob:image-${index}`,
+      }),
     );
-    expect(store.addImages(threadId, initialImages)).toBe(PROVIDER_SEND_TURN_MAX_ATTACHMENTS - 1);
+    expect(store.addImages(threadId, initialImages)).toBe(ENGINE_SEND_TURN_MAX_ATTACHMENTS - 1);
     expect(store.addFiles(threadId, [makeFile({ id: "last-slot" })])).toBe(1);
 
     const lateImage = makeImage({
@@ -134,7 +132,7 @@ describe("composerDraftStore addImages", () => {
 
     const draft = useComposerDraftStore.getState().draftsByThreadId[threadId];
     expect((draft?.images.length ?? 0) + (draft?.files.length ?? 0)).toBe(
-      PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+      ENGINE_SEND_TURN_MAX_ATTACHMENTS,
     );
     expect(revokeSpy).toHaveBeenCalledWith("blob:late-image");
   });
@@ -781,10 +779,10 @@ describe("composerDraftStore copyTransferableComposerState", () => {
   });
 
   it("preserves unrelated target draft state while replacing transferred composer content", () => {
-    useComposerDraftStore.getState().setPrompt(sourceThreadId, "follow-up for the other provider");
-    useComposerDraftStore.getState().setModelSelection(
+    useComposerDraftStore.getState().setPrompt(sourceThreadId, "follow-up for the other engine");
+    useComposerDraftStore.getState().setEngineSelection(
       targetThreadId,
-      modelSelection("claude", "claude-sonnet-4-6", {
+      engineSelection("claude", "claude-sonnet-4-6", {
         effort: "high",
       }),
     );
@@ -792,10 +790,10 @@ describe("composerDraftStore copyTransferableComposerState", () => {
     useComposerDraftStore.getState().copyTransferableComposerState(sourceThreadId, targetThreadId);
 
     expect(useComposerDraftStore.getState().draftsByThreadId[targetThreadId]).toMatchObject({
-      prompt: "follow-up for the other provider",
-      modelSelectionByProvider: {
+      prompt: "follow-up for the other engine",
+      engineSelectionByEngine: {
         claude: {
-          provider: "claude",
+          engine: "claude",
           model: "claude-sonnet-4-6",
           options: {
             effort: "high",
@@ -834,7 +832,7 @@ describe("composerDraftStore syncPersistedAttachments", () => {
       draftsByThreadId: {},
       draftThreadsByThreadId: {},
       projectDraftThreadIdByProjectId: {},
-      stickyModelSelectionByProvider: {},
+      stickyEngineSelectionByEngine: {},
       stickyActiveProvider: null,
     });
   });

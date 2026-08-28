@@ -1,7 +1,7 @@
 /**
  * boundedCallbackIngress - A synchronous admission bridge for callback APIs.
  *
- * Callback-style providers cannot await Effect Queue backpressure. Starting one
+ * Callback-style engines cannot await Effect Queue backpressure. Starting one
  * Promise per Queue.offer only moves an unbounded backlog outside the queue.
  * This bridge admits synchronously into a fixed count/byte budget and runs one
  * serial Effect consumer. Reserved capacity protects terminal lifecycle events.

@@ -1,4 +1,4 @@
-import type { ProviderModelDescriptor } from "@harnessos/contracts";
+import type { EngineModelDescriptor } from "@harnessos/contracts";
 import { parseCursorCliReasoningEffort } from "@harnessos/shared/model";
 
 function uniqueByValue<T extends { readonly value: string }>(values: ReadonlyArray<T>): T[] {
@@ -88,7 +88,7 @@ function defaultEffortForGroup(
   return efforts[0];
 }
 
-function isCursorOneMillionVariant(model: ProviderModelDescriptor): boolean {
+function isCursorOneMillionVariant(model: EngineModelDescriptor): boolean {
   if (model.defaultContextWindow === "1m") {
     return true;
   }
@@ -102,8 +102,8 @@ function isCursorOneMillionVariant(model: ProviderModelDescriptor): boolean {
 
 function fallbackContextWindowOptionsForCursorBase(
   baseSlug: string,
-  variants: ReadonlyArray<ProviderModelDescriptor>,
-): NonNullable<ProviderModelDescriptor["contextWindowOptions"]> {
+  variants: ReadonlyArray<EngineModelDescriptor>,
+): NonNullable<EngineModelDescriptor["contextWindowOptions"]> {
   if (!variants.some(isCursorOneMillionVariant)) {
     return [];
   }
@@ -134,9 +134,9 @@ function fallbackContextWindowOptionsForCursorBase(
 }
 
 export function collapseCursorModelVariants(
-  models: ReadonlyArray<ProviderModelDescriptor>,
-): ProviderModelDescriptor[] {
-  const groups = new Map<string, ProviderModelDescriptor[]>();
+  models: ReadonlyArray<EngineModelDescriptor>,
+): EngineModelDescriptor[] {
+  const groups = new Map<string, EngineModelDescriptor[]>();
   for (const model of models) {
     const baseSlug = normalizeCursorModelVariantBaseId(model.slug) ?? model.slug;
     const group = groups.get(baseSlug);

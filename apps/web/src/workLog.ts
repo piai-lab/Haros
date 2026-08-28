@@ -3,8 +3,8 @@ import {
   MessageId,
   type OrchestrationLatestTurnState,
   type OrchestrationThreadActivity,
-  ProviderTurnStartFailureReason,
-  type ProviderTurnStartFailureReason as ProviderTurnStartFailureReasonValue,
+  EngineTurnStartFailureReason,
+  type EngineTurnStartFailureReason as EngineTurnStartFailureReasonValue,
   EngineKind,
   type ToolLifecycleItemType,
   type TurnId,
@@ -92,17 +92,17 @@ export interface WorkLogEntry {
   /**
    * Read-only Timeline projection assembled from persisted request + settlement
    * facts. It never points at the Composer draft and never changes the payload
-   * returned to the Provider/model.
+   * returned to the Engine/model.
    */
   userInputInteraction?: WorkLogUserInputInteraction;
   askUserProvenanceUnavailable?: boolean;
-  failureReason?: ProviderTurnStartFailureReasonValue;
+  failureReason?: EngineTurnStartFailureReasonValue;
   quitResumeFailureReason?:
     | "workspace-missing"
     | "workspace-unavailable"
     | "project-unavailable"
     | "exact-binding-unavailable";
-  // Provider-native event type carried through the activity payload (e.g.
+  // Engine-native event type carried through the activity payload (e.g.
   // "background_tasks_changed") so the timeline can pick a specific icon.
   nativeEventType?: string;
   taskListProgress?: {
@@ -110,7 +110,7 @@ export interface WorkLogEntry {
     total: number;
   };
   // Public reasoning text grouped for one inline Timeline disclosure. Each
-  // paragraph keeps its source event id and provider-authored text; this is a
+  // paragraph keeps its source event id and engine-authored text; this is a
   // presentation projection only, never a second event model.
   reasoningEntries?: ReadonlyArray<{
     id: string;
@@ -181,7 +181,7 @@ export interface WorkLogAutomation {
 export interface WorkLogOmniMindCreatedThread {
   threadId: string;
   title: string;
-  provider: EngineKind;
+  engine: EngineKind;
   model: string;
   environment: "local" | "worktree";
   status: string;
@@ -196,7 +196,7 @@ export interface WorkLogOmniMindThreadCreation {
 
 export interface WorkLogSubagent {
   threadId: string;
-  providerThreadId?: string | undefined;
+  nativeThreadId?: string | undefined;
   resolvedThreadId?: string | undefined;
   agentId?: string | undefined;
   nickname?: string | undefined;
@@ -306,7 +306,7 @@ export function orderedActivities(
 // Routed subagent work (Claude's agent fan-out) belongs to the composer subagent
 // strip and to the child threads themselves — the transcript never renders a
 // subagent roster. The check runs on derived entries rather than raw activities
-// because providers stream the tool call first and attach receiver metadata on a
+// because engines stream the tool call first and attach receiver metadata on a
 // later lifecycle update that merges into the same entry. Generic OpenCode task
 // calls carry no receiver metadata and keep their ordinary chat row.
 export function isRoutedSubagentWorkEntry(entry: Pick<WorkLogEntry, "itemType" | "subagents">) {
@@ -373,12 +373,12 @@ function shouldKeepActivityForWorkLog(
   latestTurnId: TurnId | undefined,
   visibleTurnIds: ReadonlySet<TurnId | string> | undefined,
 ): boolean {
-  // Thread-level compaction progress has no provider turn id but should stay visible.
+  // Thread-level compaction progress has no engine turn id but should stay visible.
   if (activity.kind === "context-compaction" && activity.turnId === null) {
     return true;
   }
 
-  // Created-automation milestones are thread-scoped and carry no provider turn id;
+  // Created-automation milestones are thread-scoped and carry no engine turn id;
   // keep them so the transcript card survives once the thread has turn-stamped messages.
   if (activity.kind === "automation.created") {
     return true;
@@ -396,7 +396,7 @@ function shouldKeepActivityForWorkLog(
   }
 
   // An empty set means the transcript has no turn-stamped assistant messages
-  // (e.g. providers that never supply turn ids); fall back to the legacy
+  // (e.g. engines that never supply turn ids); fall back to the legacy
   // latest-turn filter instead of hiding the whole work log.
   if (visibleTurnIds && visibleTurnIds.size > 0) {
     return activity.turnId !== null && visibleTurnIds.has(activity.turnId);
@@ -450,11 +450,11 @@ function extractWorkLogOmniMindThreadCreation(
     const thread = asRecord(value);
     const threadId = asTrimmedString(thread?.threadId);
     const title = asTrimmedString(thread?.title);
-    const provider = asTrimmedString(thread?.provider);
+    const engine = asTrimmedString(thread?.engine);
     const model = asTrimmedString(thread?.model);
     const environment = asTrimmedString(thread?.environment);
     const status = asTrimmedString(thread?.status) ?? "created";
-    const providerKind = provider !== null && Schema.is(EngineKind)(provider) ? provider : null;
+    const providerKind = engine !== null && Schema.is(EngineKind)(engine) ? engine : null;
     if (
       !threadId ||
       !title ||
@@ -464,7 +464,7 @@ function extractWorkLogOmniMindThreadCreation(
     ) {
       return [];
     }
-    return [{ threadId, title, provider: providerKind, model, environment, status }];
+    return [{ threadId, title, engine: providerKind, model, environment, status }];
   });
   if (threads.length === 0) {
     return null;
@@ -530,7 +530,7 @@ function extractUserInputResolution(payload: Record<string, unknown> | null): {
       ...(status === "answered" ? { answers: settlement?.answers } : {}),
     };
   }
-  // Named legacy/native decode seam: older persisted Provider activities carried
+  // Named legacy/native decode seam: older persisted Engine activities carried
   // only an answers object. Empty answers stay a genuine answered fact; they are
   // never reverse-inferred as cancellation.
   if (asRecord(payload?.answers)) {
@@ -694,7 +694,7 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     ...(toolStatus ? { toolStatus } : {}),
     ...(engineWebSurface ? { engineWebSurface } : {}),
     ...(reasoningDetailTruncated ? { reasoningDetailTruncated: true } : {}),
-    ...(payload && Schema.is(ProviderTurnStartFailureReason)(payload.failureReason)
+    ...(payload && Schema.is(EngineTurnStartFailureReason)(payload.failureReason)
       ? { failureReason: payload.failureReason }
       : {}),
     ...(activity.kind === "quit-resume.failed" &&
@@ -761,7 +761,7 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     }
   }
   const outputDetail =
-    activity.kind === "provider.event.unmapped" ? null : summarizeToolPayloadOutput(payload);
+    activity.kind === "engine.event.unmapped" ? null : summarizeToolPayloadOutput(payload);
   if (outputDetail && (!entry.detail || toolStatus === "failed")) {
     entry.detail = outputDetail;
   }
@@ -954,15 +954,15 @@ function deriveProviderRuntimeReconciliationCollapseKey(
   activity: OrchestrationThreadActivity,
   payload: Record<string, unknown> | null,
 ): string | undefined {
-  if (activity.kind !== "provider.runtime.reconciled") {
+  if (activity.kind !== "engine.runtime.reconciled") {
     return undefined;
   }
-  const provider = asTrimmedString(payload?.provider);
+  const engine = asTrimmedString(payload?.engine);
   const action = asTrimmedString(payload?.action);
   const projectedTurnId = asTrimmedString(payload?.projectedTurnId) ?? activity.turnId ?? undefined;
   const runtimeTurnId = asTrimmedString(payload?.runtimeTurnId);
   if (
-    !provider ||
+    !engine ||
     !projectedTurnId ||
     (action !== "settle-interrupted" &&
       action !== "settle-terminal-projection" &&
@@ -972,8 +972,8 @@ function deriveProviderRuntimeReconciliationCollapseKey(
   ) {
     return undefined;
   }
-  return `provider-runtime-reconcile:${JSON.stringify([
-    provider,
+  return `engine-runtime-reconcile:${JSON.stringify([
+    engine,
     action,
     projectedTurnId,
     runtimeTurnId ?? null,
@@ -1239,7 +1239,7 @@ function collapseDerivedWorkLogEntries(
 ): DerivedWorkLogEntry[] {
   const collapsed: DerivedWorkLogEntry[] = [];
   // Tools that carry a unique tool-call id (collapseKey "tool:<id>") merge by that
-  // id regardless of position. This is what fixes providers that emit every tool's
+  // id regardless of position. This is what fixes engines that emit every tool's
   // started event before any of their completed events — Claude's parallel tool
   // calls — which the adjacency-only path below renders as a started row plus a
   // separate completed row. The id is unique per call, so distinct calls of the
@@ -1252,7 +1252,7 @@ function collapseDerivedWorkLogEntries(
   const seenRuntimeReconciliationKeys = new Set<string>();
   const taskListIndexByKey = new Map<string, number>();
   for (const entry of entries) {
-    const runtimeReconciliationKey = entry.collapseKey?.startsWith("provider-runtime-reconcile:")
+    const runtimeReconciliationKey = entry.collapseKey?.startsWith("engine-runtime-reconcile:")
       ? entry.collapseKey
       : undefined;
     if (runtimeReconciliationKey !== undefined) {
@@ -1739,7 +1739,7 @@ function mergeChangedFiles(
   return [...new Set(merged)];
 }
 
-// Keep a stable lifecycle key so providers like Claude can stream many
+// Keep a stable lifecycle key so engines like Claude can stream many
 // in-progress tool deltas without turning each partial update into its own row.
 function deriveToolLifecycleCollapseKey(entry: DerivedWorkLogEntry): string | undefined {
   if (!isRenderableToolLifecycleActivity(entry.activityKind)) {
@@ -1929,8 +1929,8 @@ function extractCollabSubagents(
   const receiverThreadIds = decodeSubagentReceiverThreadIds(item);
   const receiverAgents = decodeSubagentReceiverAgents(item, receiverThreadIds).map((agent) => {
     const receiverAgent: WorkLogSubagent = {
-      threadId: agent.providerThreadId,
-      providerThreadId: agent.providerThreadId,
+      threadId: agent.nativeThreadId,
+      nativeThreadId: agent.nativeThreadId,
     };
     if (agent.agentId) receiverAgent.agentId = agent.agentId;
     if (agent.nickname) receiverAgent.nickname = agent.nickname;
@@ -1952,7 +1952,7 @@ function extractCollabSubagents(
       const previous = mergedByThreadId.get(threadId);
       mergedByThreadId.set(threadId, {
         threadId,
-        providerThreadId: previous?.providerThreadId ?? threadId,
+        nativeThreadId: previous?.nativeThreadId ?? threadId,
         ...previous,
         ...(state.agentId ? { agentId: state.agentId } : {}),
         ...(state.nickname ? { nickname: state.nickname } : {}),
@@ -1973,15 +1973,15 @@ function extractCollabSubagents(
     );
   if (!singularThreadId) {
     const fallbackIdentity = extractSubagentIdentityHints(item).find(
-      (entry) => entry.providerThreadId !== undefined,
+      (entry) => entry.nativeThreadId !== undefined,
     );
-    if (!fallbackIdentity?.providerThreadId) {
+    if (!fallbackIdentity?.nativeThreadId) {
       return [];
     }
     return [
       {
-        threadId: fallbackIdentity.providerThreadId,
-        providerThreadId: fallbackIdentity.providerThreadId,
+        threadId: fallbackIdentity.nativeThreadId,
+        nativeThreadId: fallbackIdentity.nativeThreadId,
         ...(fallbackIdentity.agentId ? { agentId: fallbackIdentity.agentId } : {}),
         ...(fallbackIdentity.nickname ? { nickname: fallbackIdentity.nickname } : {}),
         ...(fallbackIdentity.role ? { role: fallbackIdentity.role } : {}),
@@ -1997,7 +1997,7 @@ function extractCollabSubagents(
   return [
     {
       threadId: singularThreadId,
-      providerThreadId: singularThreadId,
+      nativeThreadId: singularThreadId,
       agentId:
         asTrimmedString(item.agentId ?? item.agent_id ?? item.newAgentId ?? item.new_agent_id) ??
         undefined,
@@ -2357,7 +2357,7 @@ function extractWorkLogItemType(
   if (typeof topLevel === "string" && isToolLifecycleItemType(topLevel)) {
     return topLevel;
   }
-  // Defensive: some provider payloads nest the type inside data or data.item
+  // Defensive: some engine payloads nest the type inside data or data.item
   const data = asRecord(payload?.data);
   const item = asRecord(data?.item);
   const nested = data?.itemType ?? item?.type ?? item?.kind ?? payload?.type ?? payload?.kind;

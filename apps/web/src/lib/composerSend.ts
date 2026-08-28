@@ -1,15 +1,15 @@
 // FILE: composerSend.ts
 // Purpose: Shared composer send helpers for attachment intake, prompt formatting, and upload payloads.
 // Layer: Web composer utility
-// Depends on: provider/model contracts plus composer draft attachment shapes.
+// Depends on: engine/model contracts plus composer draft attachment shapes.
 
 import {
   type ChatFileAttachment,
   type ChatImageAttachment,
   MessageId,
-  type ModelSelection,
-  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
-  PROVIDER_SEND_TURN_MAX_FILE_BYTES,
+  type EngineSelection,
+  ENGINE_SEND_TURN_MAX_ATTACHMENTS,
+  ENGINE_SEND_TURN_MAX_FILE_BYTES,
   type ClaudeCodeEffort,
   type EngineKind,
   type UploadChatAttachment,
@@ -43,7 +43,7 @@ export { cloneComposerImageAttachment };
 export { effectiveComposerAttachmentCount } from "./composerAttachmentCapacity";
 
 export const FILE_SIZE_LIMIT_LABEL = `${Math.round(
-  PROVIDER_SEND_TURN_MAX_FILE_BYTES / (1024 * 1024),
+  ENGINE_SEND_TURN_MAX_FILE_BYTES / (1024 * 1024),
 )}MB`;
 
 export interface ComposerImageBuildResult {
@@ -90,8 +90,8 @@ function collectComposerAttachmentFiles(input: {
       error = `'${file.name}' exceeds the ${input.sizeLimitLabel} attachment limit.`;
       continue;
     }
-    if (nextAttachmentCount >= PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
-      error = `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`;
+    if (nextAttachmentCount >= ENGINE_SEND_TURN_MAX_ATTACHMENTS) {
+      error = `You can attach up to ${ENGINE_SEND_TURN_MAX_ATTACHMENTS} references per message.`;
       break;
     }
 
@@ -119,8 +119,8 @@ export async function prepareComposerImageAttachmentsFromFiles(input: {
       error = `Unsupported file type for '${file.name}'. Please attach image files only.`;
       continue;
     }
-    if (input.existingAttachmentCount + images.length >= PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
-      error = `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`;
+    if (input.existingAttachmentCount + images.length >= ENGINE_SEND_TURN_MAX_ATTACHMENTS) {
+      error = `You can attach up to ${ENGINE_SEND_TURN_MAX_ATTACHMENTS} references per message.`;
       break;
     }
     try {
@@ -144,7 +144,7 @@ export function buildComposerFileAttachmentsFromFiles(input: {
   const result = collectComposerAttachmentFiles({
     files: input.files,
     existingAttachmentCount: input.existingAttachmentCount,
-    maxBytes: PROVIDER_SEND_TURN_MAX_FILE_BYTES,
+    maxBytes: ENGINE_SEND_TURN_MAX_FILE_BYTES,
     sizeLimitLabel: FILE_SIZE_LIMIT_LABEL,
     acceptsFile: (file) => !file.type.startsWith("image/"),
   });
@@ -192,40 +192,40 @@ export function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-// Provider-specific prompt massaging. Claude prompt-injected efforts must be
+// Engine-specific prompt massaging. Claude prompt-injected efforts must be
 // applied before filtering skill/mention references and before dispatch.
 export function formatOutgoingComposerPrompt(params: {
-  provider: EngineKind;
+  engine: EngineKind;
   model: string | null;
   effort: string | null;
   text: string;
 }): string {
-  const caps = getModelCapabilities(params.provider, params.model);
+  const caps = getModelCapabilities(params.engine, params.model);
   if (params.effort && caps.promptInjectedEffortLevels.includes(params.effort)) {
     return applyClaudePromptEffortPrefix(params.text, params.effort as ClaudeCodeEffort | null);
   }
   return params.text;
 }
 
-export function resolvePromptEffortFromModelSelection(
-  modelSelection: ModelSelection,
+export function resolvePromptEffortFromEngineSelection(
+  engineSelection: EngineSelection,
 ): string | null {
-  switch (modelSelection.provider) {
+  switch (engineSelection.engine) {
     case "oa":
-      return modelSelection.options?.thinkingLevel ?? null;
+      return engineSelection.options?.thinkingLevel ?? null;
     case "antigravity":
       return null;
     case "codex":
-      return modelSelection.options?.reasoningEffort ?? null;
+      return engineSelection.options?.reasoningEffort ?? null;
     case "claude":
-      return modelSelection.options?.effort ?? null;
+      return engineSelection.options?.effort ?? null;
     case "cursor":
-      return modelSelection.options?.reasoningEffort ?? null;
+      return engineSelection.options?.reasoningEffort ?? null;
     case "grok":
     case "droid":
-      return modelSelection.options?.reasoningEffort ?? null;
+      return engineSelection.options?.reasoningEffort ?? null;
     case "pi":
-      return modelSelection.options?.thinkingLevel ?? null;
+      return engineSelection.options?.thinkingLevel ?? null;
     case "kilo":
     case "opencode":
       return null;

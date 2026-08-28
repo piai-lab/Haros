@@ -339,10 +339,10 @@ async function collectFrames(
 function makeToolContext(): ToolContext {
   return {
     principal: {
-      kind: "provider-session",
+      kind: "engine-session",
       sessionKey: "device-e2e",
       threadId: THREAD_ID,
-      provider: "claude",
+      engine: "claude",
       turnId: "device-e2e-turn",
     },
     callerThreadId: THREAD_ID,
@@ -617,10 +617,10 @@ describeE2e("device pane end-to-end", () => {
     );
     const context = {
       principal: {
-        kind: "provider-session",
+        kind: "engine-session",
         sessionKey: "device-e2e",
         threadId: THREAD_ID,
-        provider: "codex",
+        engine: "codex",
         turnId: "device-e2e-turn",
       },
       callerThreadId: THREAD_ID,

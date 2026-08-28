@@ -51,7 +51,7 @@ describe("message catalogs", () => {
     expect(resolveAppLocale("system", ["en-GB"])).toBe("en");
     expect(resolveAppLocale("system", ["ja-JP"])).toBe("en");
     expect(resolveAppLocale("zh-CN", ["en-US"])).toBe("zh-CN");
-    expect(translate("zh-CN", "library.title", { provider: "Pi" })).toBe("Pi 能力库");
+    expect(translate("zh-CN", "library.title", { engine: "Pi" })).toBe("Pi 能力库");
   });
 
   it("gives revision conflicts actionable copy in both supported languages", () => {
@@ -150,35 +150,35 @@ describe("message catalogs", () => {
   });
 
   it("keeps engine update feedback concise and truthful in both supported languages", () => {
-    expect(translate("en", "updater.updatingProvider", { provider: "Claude" })).toBe(
+    expect(translate("en", "updater.updatingProvider", { engine: "Claude" })).toBe(
       "Updating Claude…",
     );
     expect(
       translate("en", "updater.updatingProviderProgress", {
         current: 2,
-        provider: "Codex",
+        engine: "Codex",
         total: 3,
       }),
     ).toBe("Updating 2/3 · Codex");
     expect(EN_MESSAGES["updater.refreshedDescription"]).toBe("Applies to new sessions");
     expect(EN_MESSAGES["updater.hideProgress"]).toBe("Hide update progress");
-    expect(translate("en", "updater.requestTimedOut", { provider: "Codex" })).toBe(
+    expect(translate("en", "updater.requestTimedOut", { engine: "Codex" })).toBe(
       "Codex update timed out. Try again.",
     );
 
-    expect(translate("zh-CN", "updater.updatingProvider", { provider: "Claude" })).toBe(
+    expect(translate("zh-CN", "updater.updatingProvider", { engine: "Claude" })).toBe(
       "正在更新 Claude…",
     );
     expect(
       translate("zh-CN", "updater.updatingProviderProgress", {
         current: 2,
-        provider: "Codex",
+        engine: "Codex",
         total: 3,
       }),
     ).toBe("正在更新 2/3 · Codex");
     expect(ZH_CN_MESSAGES["updater.refreshedDescription"]).toBe("新会话生效");
     expect(ZH_CN_MESSAGES["updater.hideProgress"]).toBe("隐藏更新进度");
-    expect(translate("zh-CN", "updater.requestTimedOut", { provider: "Codex" })).toBe(
+    expect(translate("zh-CN", "updater.requestTimedOut", { engine: "Codex" })).toBe(
       "更新 Codex 超时，请重试。",
     );
   });
@@ -200,7 +200,7 @@ describe("message catalogs", () => {
         /\bthreads?\b/i,
       );
       if (key !== "settings.customModelProvider") {
-        expect(productCopy(message), `${key} exposes internal Provider vocabulary`).not.toMatch(
+        expect(productCopy(message), `${key} exposes internal Engine vocabulary`).not.toMatch(
           /\bproviders?\b/i,
         );
       }
@@ -211,7 +211,7 @@ describe("message catalogs", () => {
 
     for (const [key, message] of Object.entries(ZH_CN_MESSAGES)) {
       expect(productCopy(message), `${key} mixes untranslated product vocabulary`).not.toMatch(
-        /\b(?:Provider|Providers|Engine|Engines|Skill|Skills|Composer|Workbench|Pull Requests?|App|System|tokens)\b/i,
+        /\b(?:Engine|Engines|Engine|Engines|Skill|Skills|Composer|Workbench|Pull Requests?|App|System|tokens)\b/i,
       );
     }
   });

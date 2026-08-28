@@ -9,7 +9,7 @@ import {
 } from "./baseSchemas";
 import { KeybindingRule, ResolvedKeybindingsConfig } from "./keybindings";
 import { EditorId } from "./editor";
-import { ModelSelection, EngineKind, ProviderStartOptions } from "./orchestration";
+import { EngineSelection, EngineKind, EngineStartOptions } from "./orchestration";
 import { ServerSettingsPatch, ServerSettingsView } from "./settings";
 import { ExecutionEnvironmentDescriptor } from "./environment";
 import { AutomationCompletionPolicy, AutomationMode, AutomationSchedule } from "./automation";
@@ -54,7 +54,7 @@ export const ServerProviderUnavailableReason = Schema.Literal("not_installed");
 export type ServerProviderUnavailableReason = typeof ServerProviderUnavailableReason.Type;
 
 export const ServerProviderStatus = Schema.Struct({
-  provider: EngineKind,
+  engine: EngineKind,
   status: ServerProviderStatusState,
   available: Schema.Boolean,
   authStatus: ServerProviderAuthStatus,
@@ -99,7 +99,7 @@ export const ServerProviderStatus = Schema.Struct({
 export type ServerProviderStatus = typeof ServerProviderStatus.Type;
 
 export type ServerProviderVersionAdvisory = NonNullable<ServerProviderStatus["versionAdvisory"]>;
-export type ServerProviderUpdateState = NonNullable<ServerProviderStatus["updateState"]>;
+export type ServerEngineUpdateState = NonNullable<ServerProviderStatus["updateState"]>;
 
 const ServerProviderStatuses = Schema.Array(ServerProviderStatus);
 
@@ -112,7 +112,7 @@ export const ServerConfig = Schema.Struct({
   keybindingsConfigPath: TrimmedNonEmptyString,
   keybindings: ResolvedKeybindingsConfig,
   issues: ServerConfigIssues,
-  providers: ServerProviderStatuses,
+  engines: ServerProviderStatuses,
   availableEditors: Schema.Array(EditorId),
 });
 export type ServerConfig = typeof ServerConfig.Type;
@@ -145,36 +145,36 @@ export const ServerProviderUsageLine = Schema.Struct({
 });
 export type ServerProviderUsageLine = typeof ServerProviderUsageLine.Type;
 
-// Lifecycle of a live provider usage fetch. Absent status is treated as "ok" so
+// Lifecycle of a live engine usage fetch. Absent status is treated as "ok" so
 // existing local-archive snapshots stay valid without setting it.
-//   ok          – fetched fresh usage from the provider backend
+//   ok          – fetched fresh usage from the engine backend
 //   needs-auth  – no/expired credential, or the backend rejected the token (read-only mode never refreshes)
-//   unsupported – the provider has no fetchable usage source for the current auth (e.g. API-key-only)
+//   unsupported – the engine has no fetchable usage source for the current auth (e.g. API-key-only)
 //   error       – the fetch failed unexpectedly (network/parse); detail carries the reason
-export const ProviderUsageStatus = Schema.Literals(["ok", "needs-auth", "unsupported", "error"]);
-export type ProviderUsageStatus = typeof ProviderUsageStatus.Type;
+export const EngineUsageStatus = Schema.Literals(["ok", "needs-auth", "unsupported", "error"]);
+export type EngineUsageStatus = typeof EngineUsageStatus.Type;
 
 export const ServerProviderUsageSnapshot = Schema.Struct({
-  provider: EngineKind,
+  engine: EngineKind,
   updatedAt: IsoDateTime,
   limits: Schema.Array(ServerProviderUsageLimit),
   usageLines: Schema.Array(ServerProviderUsageLine),
   source: TrimmedNonEmptyString,
-  status: Schema.optional(ProviderUsageStatus),
+  status: Schema.optional(EngineUsageStatus),
   planName: Schema.optional(TrimmedNonEmptyString),
   detail: Schema.optional(TrimmedNonEmptyString),
-  // True when this is a re-served last-good snapshot (e.g. the provider is rate-limiting live
+  // True when this is a re-served last-good snapshot (e.g. the engine is rate-limiting live
   // fetches) rather than a fresh read; `updatedAt` then still reflects the original fetch time.
   stale: Schema.optional(Schema.Boolean),
 });
 export type ServerProviderUsageSnapshot = typeof ServerProviderUsageSnapshot.Type;
 
-// Batch live-usage fetch for supported providers, powering the Settings → Usage section and
-// provider-scoped usage chips. Unfiltered requests return one entry per supported provider
+// Batch live-usage fetch for supported engines, powering the Settings → Usage section and
+// engine-scoped usage chips. Unfiltered requests return one entry per supported engine
 // (including needs-auth/error) so the UI can render a row each.
 export const ServerListProviderUsageInput = Schema.Struct({
   forceRefresh: Schema.optional(Schema.Boolean),
-  provider: Schema.optional(EngineKind),
+  engine: Schema.optional(EngineKind),
 });
 export type ServerListProviderUsageInput = typeof ServerListProviderUsageInput.Type;
 
@@ -187,7 +187,7 @@ export type UsageHistoryProvider = typeof UsageHistoryProvider.Type;
 export const UsageHistoryRange = Schema.Literals(["24h", "7d", "30d", "all"]);
 export type UsageHistoryRange = typeof UsageHistoryRange.Type;
 
-export const UsageHistoryGroupBy = Schema.Literals(["provider", "model", "workspace", "date"]);
+export const UsageHistoryGroupBy = Schema.Literals(["engine", "model", "workspace", "date"]);
 export type UsageHistoryGroupBy = typeof UsageHistoryGroupBy.Type;
 
 // Language-neutral values cross the RPC boundary; the Web catalog owns their display copy.
@@ -226,7 +226,7 @@ export const UsageHistoryProgress = Schema.Struct({
 export type UsageHistoryProgress = typeof UsageHistoryProgress.Type;
 
 export const UsageHistoryProviderSummary = Schema.Struct({
-  provider: UsageHistoryProvider,
+  engine: UsageHistoryProvider,
   status: UsageHistoryProviderStatus,
   progress: UsageHistoryProgress,
   detailCode: Schema.optional(TrimmedNonEmptyString),
@@ -236,7 +236,7 @@ export type UsageHistoryProviderSummary = typeof UsageHistoryProviderSummary.Typ
 
 export const UsageHistoryRow = Schema.Struct({
   key: TrimmedNonEmptyString,
-  provider: Schema.optional(UsageHistoryProvider),
+  engine: Schema.optional(UsageHistoryProvider),
   model: Schema.optional(TrimmedNonEmptyString),
   workspace: Schema.optional(TrimmedNonEmptyString),
   date: Schema.optional(TrimmedNonEmptyString),
@@ -264,7 +264,7 @@ export const ServerGetUsageHistoryResult = Schema.Struct({
   lastCompletedAt: Schema.optional(IsoDateTime),
   pricingVersion: TrimmedNonEmptyString,
   progress: UsageHistoryProgress,
-  providers: Schema.Array(UsageHistoryProviderSummary),
+  engines: Schema.Array(UsageHistoryProviderSummary),
   rows: Schema.Array(UsageHistoryRow),
 });
 export type ServerGetUsageHistoryResult = typeof ServerGetUsageHistoryResult.Type;
@@ -368,7 +368,7 @@ export const ServerDiagnosticsResult = Schema.Struct({
 export type ServerDiagnosticsResult = typeof ServerDiagnosticsResult.Type;
 
 export const ServerVoicePrewarmInput = Schema.Struct({
-  provider: EngineKind,
+  engine: EngineKind,
   cwd: TrimmedNonEmptyString,
   threadId: Schema.optional(ThreadId),
 });
@@ -380,7 +380,7 @@ export const ServerVoicePrewarmResult = Schema.Struct({
 export type ServerVoicePrewarmResult = typeof ServerVoicePrewarmResult.Type;
 
 export const ServerVoiceTranscriptionInput = Schema.Struct({
-  provider: EngineKind,
+  engine: EngineKind,
   cwd: TrimmedNonEmptyString,
   threadId: Schema.optional(ThreadId),
   mimeType: TrimmedNonEmptyString.check(Schema.isMaxLength(100)),
@@ -405,9 +405,9 @@ export const ServerGenerateThreadRecapInput = Schema.Struct({
   newMaterial: Schema.String.check(Schema.isMaxLength(16_000)),
   currentState: Schema.optional(Schema.String.check(Schema.isMaxLength(4_000))),
   codexHomePath: Schema.optional(TrimmedNonEmptyString),
-  providerOptions: Schema.optional(ProviderStartOptions),
+  engineOptions: Schema.optional(EngineStartOptions),
   textGenerationModel: Schema.optional(TrimmedNonEmptyString),
-  textGenerationModelSelection: Schema.optional(ModelSelection),
+  textGenerationEngineSelection: Schema.optional(EngineSelection),
 });
 export type ServerGenerateThreadRecapInput = typeof ServerGenerateThreadRecapInput.Type;
 
@@ -432,9 +432,9 @@ export const ServerGenerateAutomationIntentInput = Schema.Struct({
   defaultMode: Schema.optional(AutomationMode),
   nowIso: IsoDateTime,
   codexHomePath: Schema.optional(TrimmedNonEmptyString),
-  providerOptions: Schema.optional(ProviderStartOptions),
+  engineOptions: Schema.optional(EngineStartOptions),
   textGenerationModel: Schema.optional(TrimmedNonEmptyString),
-  textGenerationModelSelection: Schema.optional(ModelSelection),
+  textGenerationEngineSelection: Schema.optional(EngineSelection),
 });
 export type ServerGenerateAutomationIntentInput = typeof ServerGenerateAutomationIntentInput.Type;
 
@@ -474,12 +474,12 @@ export type ServerUpsertKeybindingResult = typeof ServerUpsertKeybindingResult.T
 
 export const ServerConfigUpdatedPayload = Schema.Struct({
   issues: ServerConfigIssues,
-  providers: ServerProviderStatuses,
+  engines: ServerProviderStatuses,
 });
 export type ServerConfigUpdatedPayload = typeof ServerConfigUpdatedPayload.Type;
 
 export const ServerProviderStatusesUpdatedPayload = Schema.Struct({
-  providers: ServerProviderStatuses,
+  engines: ServerProviderStatuses,
   passivePresence: Schema.optionalKey(
     Schema.Struct({
       state: Schema.Literal("settled"),
@@ -554,25 +554,25 @@ export type ServerConfigStreamEvent = typeof ServerConfigStreamEvent.Type;
 export const ServerRefreshProvidersResult = ServerProviderStatusesUpdatedPayload;
 export type ServerRefreshProvidersResult = typeof ServerRefreshProvidersResult.Type;
 
-export const ServerProviderUpdateInput = Schema.Struct({
-  provider: EngineKind,
+export const ServerEngineUpdateInput = Schema.Struct({
+  engine: EngineKind,
 });
-export type ServerProviderUpdateInput = typeof ServerProviderUpdateInput.Type;
+export type ServerEngineUpdateInput = typeof ServerEngineUpdateInput.Type;
 
-export class ServerProviderUpdateError extends Schema.TaggedErrorClass<ServerProviderUpdateError>()(
-  "ServerProviderUpdateError",
+export class ServerEngineUpdateError extends Schema.TaggedErrorClass<ServerEngineUpdateError>()(
+  "ServerEngineUpdateError",
   {
-    provider: EngineKind,
+    engine: EngineKind,
     reason: TrimmedNonEmptyString,
   },
 ) {
   override get message(): string {
-    return `Provider update failed for ${this.provider}: ${this.reason}`;
+    return `Engine update failed for ${this.engine}: ${this.reason}`;
   }
 }
 
-export const ServerProviderUpdateResult = ServerProviderStatusesUpdatedPayload;
-export type ServerProviderUpdateResult = typeof ServerProviderUpdateResult.Type;
+export const ServerEngineUpdateResult = ServerProviderStatusesUpdatedPayload;
+export type ServerEngineUpdateResult = typeof ServerEngineUpdateResult.Type;
 
 export const ServerGetSettingsResult = ServerSettingsView;
 export type ServerGetSettingsResult = typeof ServerGetSettingsResult.Type;
@@ -589,19 +589,19 @@ export type ServerUpdateSettingsInput = typeof ServerUpdateSettingsInput.Type;
 export const ServerUpdateSettingsResult = ServerSettingsView;
 export type ServerUpdateSettingsResult = typeof ServerUpdateSettingsResult.Type;
 
-export const ServerProviderCredentialProvider = Schema.Literals(["kilo", "opencode"]);
-export type ServerProviderCredentialProvider = typeof ServerProviderCredentialProvider.Type;
+export const ServerEngineCredentialProvider = Schema.Literals(["kilo", "opencode"]);
+export type ServerEngineCredentialProvider = typeof ServerEngineCredentialProvider.Type;
 
-export const ServerUpdateProviderCredentialInput = Schema.Struct({
-  provider: ServerProviderCredentialProvider,
+export const ServerUpdateEngineCredentialInput = Schema.Struct({
+  engine: ServerEngineCredentialProvider,
   serverPassword: Schema.String.check(Schema.isMaxLength(4096)),
 });
-export type ServerUpdateProviderCredentialInput = typeof ServerUpdateProviderCredentialInput.Type;
+export type ServerUpdateEngineCredentialInput = typeof ServerUpdateEngineCredentialInput.Type;
 
 // Credential bytes never cross back to Web. The result is the fresh, credential-blind
 // settings projection emitted to every existing settings subscriber.
-export const ServerUpdateProviderCredentialResult = ServerSettingsView;
-export type ServerUpdateProviderCredentialResult = typeof ServerUpdateProviderCredentialResult.Type;
+export const ServerUpdateEngineCredentialResult = ServerSettingsView;
+export type ServerUpdateEngineCredentialResult = typeof ServerUpdateEngineCredentialResult.Type;
 
 export const ServerResetSettingsResult = ServerSettingsView;
 export type ServerResetSettingsResult = typeof ServerResetSettingsResult.Type;

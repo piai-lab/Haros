@@ -1,4 +1,4 @@
-import type { OrchestrationThread, ProviderMentionReference } from "@harnessos/contracts";
+import type { OrchestrationThread, EngineMentionReference } from "@harnessos/contracts";
 import { Effect, Option } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
@@ -17,7 +17,7 @@ function thread(messages: ReadonlyArray<{ role: "user" | "assistant"; text: stri
     id: "mentioned-thread",
     projectId: "project-1",
     title: "Release planning",
-    modelSelection: { provider: "codex", model: "gpt-test" },
+    engineSelection: { engine: "codex", model: "gpt-test" },
     messages: messages.map((message, index) => ({
       id: `message-${index}`,
       ...message,
@@ -33,7 +33,7 @@ function thread(messages: ReadonlyArray<{ role: "user" | "assistant"; text: stri
 const reference = {
   name: "Release planning",
   path: "thread://mentioned-thread",
-} satisfies ProviderMentionReference;
+} satisfies EngineMentionReference;
 
 describe("thread mention prompt context", () => {
   it("resolves recent messages newest last and removes thread paths from native mentions", async () => {
@@ -57,7 +57,7 @@ describe("thread mention prompt context", () => {
       [
         "<mentioned_thread_context>",
         'Thread: "Release planning"',
-        "Provider: codex",
+        "Engine: codex",
         "Thread ID: mentioned-thread",
         "Recent transcript (newest last):",
         "[user]",
@@ -118,7 +118,7 @@ describe("thread mention prompt context", () => {
     expect(getThreadDetailById.mock.calls.length).toBeLessThan(manyReferences.length);
   });
 
-  it("skips context resolution when the provider input has no remaining budget", async () => {
+  it("skips context resolution when the engine input has no remaining budget", async () => {
     const getThreadDetailById = vi.fn(() => Effect.succeed(Option.some(thread([]))));
     const result = await Effect.runPromise(
       resolveThreadMentionPromptProjection({

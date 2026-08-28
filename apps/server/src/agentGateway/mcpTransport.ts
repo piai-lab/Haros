@@ -156,7 +156,7 @@ export function makeAgentGatewayMcpTransport(input: {
               gatewayToolErrorResult(
                 new GatewayToolError(
                   "capability_denied",
-                  `This provider session is not authorized for ${requiredCapability}.`,
+                  `This engine session is not authorized for ${requiredCapability}.`,
                   { requiredCapability },
                 ),
               ),
@@ -187,7 +187,7 @@ export function makeAgentGatewayMcpTransport(input: {
       if (!token || !callerSession) {
         return invalidRequestResponse(
           401,
-          "caller_session_inactive: Missing, revoked, or invalid provider-session credential.",
+          "caller_session_inactive: Missing, revoked, or invalid engine-session credential.",
         );
       }
       const callerThreadId = callerSession.threadId;
@@ -201,10 +201,10 @@ export function makeAgentGatewayMcpTransport(input: {
         );
       }
       const liveProvider = callerThread.value.session?.providerName;
-      if ((liveProvider ?? callerThread.value.modelSelection.provider) !== callerSession.provider) {
+      if ((liveProvider ?? callerThread.value.engineSelection.engine) !== callerSession.engine) {
         return invalidRequestResponse(
           401,
-          "caller_session_inactive: Provider session no longer owns this thread.",
+          "caller_session_inactive: Engine session no longer owns this thread.",
         );
       }
       const callerTurnAuthority =
@@ -229,7 +229,7 @@ export function makeAgentGatewayMcpTransport(input: {
             return yield* Effect.fail(
               new GatewayToolError(
                 "caller_session_inactive",
-                "This OmniMind tool call was rejected because its provider-session authority is no longer active.",
+                "This OmniMind tool call was rejected because its engine-session authority is no longer active.",
                 { callerThreadId },
               ),
             );
@@ -266,15 +266,15 @@ export function makeAgentGatewayMcpTransport(input: {
         });
       const context: Omit<ToolContext, "jsonRpcRequestId"> = {
         principal: {
-          kind: "provider-session",
+          kind: "engine-session",
           sessionKey: callerSession.sessionKey,
           threadId: callerThreadId,
-          provider: callerSession.provider,
+          engine: callerSession.engine,
           turnId: callerTurnAuthority?.turnId ?? null,
         },
         callerThreadId,
         callerSessionKey: callerSession.sessionKey,
-        callerProvider: callerSession.provider,
+        callerProvider: callerSession.engine,
         callerCapabilities: callerSession.capabilities,
         callerTurnId: callerTurnAuthority?.turnId ?? null,
         assertCallerTurnActive,

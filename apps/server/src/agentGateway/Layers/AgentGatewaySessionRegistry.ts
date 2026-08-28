@@ -9,7 +9,7 @@ import {
   type AgentGatewayTurnAuthority,
 } from "../Services/AgentGatewaySessionRegistry.ts";
 
-const PROVIDER_SESSION_CAPABILITIES = [
+const ENGINE_SESSION_CAPABILITIES = [
   "thread:read",
   "thread:write",
   "automation:write",
@@ -32,8 +32,8 @@ export function makeAgentGatewaySessionRegistry(options?: {
   const sessionsByKey = new Map<string, RegisteredSession>();
 
   return {
-    issue: (threadId, provider) => {
-      // Every provider runtime owns an independent credential. Replacement
+    issue: (threadId, engine) => {
+      // Every engine runtime owns an independent credential. Replacement
       // runtimes overlap their predecessor during startup, and the outgoing
       // runtime revokes its own token during teardown. Reusing a token here
       // would therefore let old-session cleanup invalidate the replacement.
@@ -43,9 +43,9 @@ export function makeAgentGatewaySessionRegistry(options?: {
       const identity: AgentGatewaySessionIdentity = {
         sessionKey,
         threadId,
-        provider,
+        engine,
         issuedAt,
-        capabilities: new Set(PROVIDER_SESSION_CAPABILITIES),
+        capabilities: new Set(ENGINE_SESSION_CAPABILITIES),
       };
       const registered: RegisteredSession = {
         identity,
@@ -63,7 +63,7 @@ export function makeAgentGatewaySessionRegistry(options?: {
       return {
         sessionKey: identity.sessionKey,
         threadId: identity.threadId,
-        provider: identity.provider,
+        engine: identity.engine,
         turnId,
       } satisfies AgentGatewayTurnAuthority;
     },
@@ -74,7 +74,7 @@ export function makeAgentGatewaySessionRegistry(options?: {
         identity !== undefined &&
         registered?.retiredTurnId === undefined &&
         identity.threadId === authority.threadId &&
-        identity.provider === authority.provider
+        identity.engine === authority.engine
       );
     },
     retireTurnAuthority: (token, turnId) => {

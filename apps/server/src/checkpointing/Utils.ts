@@ -95,7 +95,7 @@ export function checkpointRefForThreadTurnLive(threadId: ThreadId, turnId: TurnI
 }
 
 // Throwaway snapshot of the pre-revert working tree. A revert mutates two
-// systems that cannot commit together — the worktree and the provider
+// systems that cannot commit together — the worktree and the engine
 // conversation — so the files are captured here first and restored from here if
 // the conversation rollback fails. Deleted once the revert commits; the token is
 // random so concurrent reverts on the same thread never share one.

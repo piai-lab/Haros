@@ -64,8 +64,8 @@ import {
 import { cn } from "~/lib/utils";
 import { useOpenFavoriteEditorShortcut } from "~/hooks/useOpenFavoriteEditorShortcut";
 import type { RepoDiffTotals } from "~/hooks/useRepoDiffTotals";
-import { ProviderIcon } from "../ProviderIcon";
-import { ProviderUsageMenuControl } from "../ProviderUsageMenuControl";
+import { EngineIcon } from "../EngineIcon";
+import { EngineUsageMenuControl } from "../EngineUsageMenuControl";
 import { EnvironmentToggle, type EnvironmentToggleState } from "./environment/EnvironmentToggle";
 
 /**
@@ -261,8 +261,8 @@ function EditorChatHistoryMenu(props: {
                 }
               }}
             >
-              <ProviderIcon
-                provider={thread.session?.provider ?? thread.modelSelection.provider}
+              <EngineIcon
+                engine={thread.session?.engine ?? thread.engineSelection.engine}
                 tone="header"
                 className="size-3.5 shrink-0"
               />
@@ -307,7 +307,7 @@ function EditorRailTabs(props: {
           {
             id: props.activeThreadId,
             title: props.activeThreadTitle,
-            provider: props.activeProvider,
+            engine: props.activeProvider,
           },
         ];
   });
@@ -317,7 +317,7 @@ function EditorRailTabs(props: {
   const currentChatTab: EditorRailChatTab = {
     id: props.activeThreadId,
     title: props.activeThreadTitle,
-    provider: props.activeProvider,
+    engine: props.activeProvider,
   };
   const setAndStoreOpenChatTabs = (
     updater: (current: ReadonlyArray<EditorRailChatTab>) => ReadonlyArray<EditorRailChatTab>,
@@ -337,7 +337,7 @@ function EditorRailTabs(props: {
               {
                 id: props.activeThreadId,
                 title: props.activeThreadTitle,
-                provider: props.activeProvider,
+                engine: props.activeProvider,
               },
             ],
       );
@@ -361,7 +361,7 @@ function EditorRailTabs(props: {
       const activeChatTab: EditorRailChatTab = {
         id: props.activeThreadId,
         title: props.activeThreadTitle,
-        provider: props.activeProvider,
+        engine: props.activeProvider,
       };
       updateStoredEditorRailChatTabs(setOpenChatTabs, props.projectId, (current) => {
         const existingIndex = current.findIndex((thread) => thread.id === activeChatTab.id);
@@ -369,10 +369,7 @@ function EditorRailTabs(props: {
           return [...current, activeChatTab];
         }
         const existing = current[existingIndex];
-        if (
-          existing?.title === activeChatTab.title &&
-          existing.provider === activeChatTab.provider
-        ) {
+        if (existing?.title === activeChatTab.title && existing.engine === activeChatTab.engine) {
           return current;
         }
         return current.map((thread) => (thread.id === activeChatTab.id ? activeChatTab : thread));
@@ -396,7 +393,7 @@ function EditorRailTabs(props: {
       {
         id: thread.id,
         title: thread.title,
-        provider: thread.session?.provider ?? thread.modelSelection.provider,
+        engine: thread.session?.engine ?? thread.engineSelection.engine,
       },
     ]),
   );
@@ -427,7 +424,7 @@ function EditorRailTabs(props: {
       const nextTab = {
         id: sidebarThread.id,
         title: sidebarThread.title,
-        provider: sidebarThread.session?.provider ?? sidebarThread.modelSelection.provider,
+        engine: sidebarThread.session?.engine ?? sidebarThread.engineSelection.engine,
       };
       setAndStoreOpenChatTabs((current) =>
         current.some((thread) => thread.id === threadId) ? current : [...current, nextTab],
@@ -502,13 +499,7 @@ function EditorRailTabs(props: {
               title={thread.title}
               label={t("workbench.chatNumber", { number: index + 1 })}
               labelClassName="max-w-24"
-              icon={
-                <ProviderIcon
-                  provider={thread.provider}
-                  tone="header"
-                  className="size-3 shrink-0"
-                />
-              }
+              icon={<EngineIcon engine={thread.engine} tone="header" className="size-3 shrink-0" />}
               closeLabel={t("workbench.closeNamed", { name: thread.title })}
               onSelect={() => openChatTab(thread.id)}
               onClose={() => closeChatTab(thread.id)}
@@ -658,10 +649,10 @@ export function ChatHeader({
     };
   }, [isSplitPane]);
 
-  const renderProviderIcon = (provider: EngineKind | null, className: string) => {
+  const renderProviderIcon = (engine: EngineKind | null, className: string) => {
     return (
-      <ProviderIcon
-        provider={provider}
+      <EngineIcon
+        engine={engine}
         tone="header"
         className={className}
         fallback={<FiGitBranch className={className} />}
@@ -859,7 +850,7 @@ export function ChatHeader({
       <div className="flex shrink-0 items-center gap-2 [-webkit-app-region:no-drag]">
         {sendToAgentControl}
         {!minimalChrome && !hideHandoffControls && !environment ? (
-          <ProviderUsageMenuControl provider={activeProvider} />
+          <EngineUsageMenuControl engine={activeProvider} />
         ) : null}
         {!minimalChrome && !hideHandoffControls ? (
           <Menu modal={false}>
@@ -887,13 +878,13 @@ export function ChatHeader({
               <TooltipPopup side="bottom">{handoffActionLabel}</TooltipPopup>
             </Tooltip>
             <ComposerPickerMenuPopup align="end" side="bottom" className="w-48 min-w-48">
-              {handoffActionTargetProviders.map((provider) => (
-                <MenuItem key={provider} onClick={() => onCreateHandoff(provider)}>
+              {handoffActionTargetProviders.map((engine) => (
+                <MenuItem key={engine} onClick={() => onCreateHandoff(engine)}>
                   {/* opacity-100 opts brand icons out of the option row's 80% icon dim. */}
-                  {renderProviderIcon(provider, "size-3.5 shrink-0 opacity-100")}
+                  {renderProviderIcon(engine, "size-3.5 shrink-0 opacity-100")}
                   <span>
                     {t("composer.handoffTo", {
-                      provider: ENGINE_DISPLAY_NAMES[provider],
+                      engine: ENGINE_DISPLAY_NAMES[engine],
                     })}
                   </span>
                 </MenuItem>

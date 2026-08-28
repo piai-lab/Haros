@@ -1,4 +1,4 @@
-import { ProviderExecutionCapabilityReason } from "@harnessos/contracts";
+import { EngineExecutionCapabilityReason } from "@harnessos/contracts";
 import { Schema } from "effect";
 
 export class AutomationServiceError extends Schema.TaggedErrorClass<AutomationServiceError>()(
@@ -8,7 +8,7 @@ export class AutomationServiceError extends Schema.TaggedErrorClass<AutomationSe
     code: Schema.optional(
       Schema.Union([
         Schema.Literal("AUTOMATION_DEFINITION_CONFLICT"),
-        ProviderExecutionCapabilityReason,
+        EngineExecutionCapabilityReason,
       ]),
     ),
     cause: Schema.optional(Schema.Defect),

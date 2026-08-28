@@ -1,7 +1,7 @@
 // FILE: skillsCatalog.test.ts
-// Purpose: Verifies the unified cross-provider skills catalog discovery, dedup
-//          precedence, merge with provider-native results, and toggle filtering.
-// Layer: Server provider tests
+// Purpose: Verifies the unified cross-engine skills catalog discovery, dedup
+//          precedence, merge with engine-native results, and toggle filtering.
+// Layer: Server engine tests
 
 import { mkdtempSync, rmSync } from "node:fs";
 import { mkdir, realpath, symlink, writeFile } from "node:fs/promises";
@@ -9,7 +9,7 @@ import { access } from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import type { ProviderSkillDescriptor } from "@harnessos/contracts";
+import type { EngineSkillDescriptor } from "@harnessos/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -97,7 +97,7 @@ describe("discoverSkillsCatalog", () => {
     await expect(access(path.join(harnessosBaseDir, "skills"))).resolves.toBeUndefined();
   });
 
-  it("aggregates shared provider homes without touching stock Pi state", async () => {
+  it("aggregates shared engine homes without touching stock Pi state", async () => {
     await writeSkill(
       path.join(harnessosBaseDir, "skills", "portable"),
       "portable",
@@ -142,15 +142,15 @@ describe("discoverSkillsCatalog", () => {
       false,
     );
 
-    const piRoots = skillsCatalogRoots({ homeDir, harnessosBaseDir, provider: "pi" });
+    const piRoots = skillsCatalogRoots({ homeDir, harnessosBaseDir, engine: "pi" });
     expect(piRoots.some((root) => root.path.includes(`${path.sep}.pi${path.sep}`))).toBe(true);
   });
 
-  it("does not scan unrelated Engine homes for a selected provider", () => {
+  it("does not scan unrelated Engine homes for a selected engine", () => {
     const codexRoots = skillsCatalogRoots({
       homeDir,
       harnessosBaseDir,
-      provider: "codex",
+      engine: "codex",
     });
     const paths = codexRoots.map((root) => root.path);
 
@@ -190,7 +190,7 @@ describe("discoverSkillsCatalog", () => {
     const skills = await discoverSkillsCatalog({
       homeDir,
       harnessosBaseDir,
-      provider: "grok",
+      engine: "grok",
     });
 
     expect(skills.find((skill) => skill.name === "workflow-kit:feature-delivery")).toMatchObject({
@@ -341,7 +341,7 @@ describe("discoverSkillsCatalog", () => {
     expect(skills.filter((skill) => skill.name === "valid:valid-skill")).toHaveLength(1);
   });
 
-  it("follows symlinked skill directories from provider homes", async () => {
+  it("follows symlinked skill directories from engine homes", async () => {
     const realSkillDir = path.join(root, "linked-skills", "check-code");
     await writeSkill(realSkillDir, "check-code", "Linked Claude skill");
     await mkdir(path.join(homeDir, ".claude", "skills"), { recursive: true });
@@ -375,7 +375,7 @@ describe("discoverSkillsCatalog", () => {
     expect(settingsCatalog.map((skill) => skill.scope).sort()).toEqual(["claude", "codex"]);
   });
 
-  it("prefers the provider-native copy and falls back to OmniMind for that provider", async () => {
+  it("prefers the engine-native copy and falls back to OmniMind for that engine", async () => {
     await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "OmniMind copy");
     await writeSkill(path.join(homeDir, ".codex", "skills", "shared"), "shared", "Codex copy");
     await writeSkill(
@@ -384,35 +384,35 @@ describe("discoverSkillsCatalog", () => {
       "Fallback",
     );
 
-    const codexView = await discoverSkillsCatalog({ homeDir, harnessosBaseDir, provider: "codex" });
+    const codexView = await discoverSkillsCatalog({ homeDir, harnessosBaseDir, engine: "codex" });
     const codexShared = codexView.find((skill) => skill.name === "shared");
     expect(codexShared?.scope).toBe("codex");
     expect(codexShared?.path).toContain(path.join(".codex", "skills"));
     expect(codexView.some((skill) => skill.name === "only-omnimind")).toBe(true);
 
-    // A provider without its own copy resolves the OmniMind fallback.
+    // A engine without its own copy resolves the OmniMind fallback.
     const claudeView = await discoverSkillsCatalog({
       homeDir,
       harnessosBaseDir,
-      provider: "claude",
+      engine: "claude",
     });
     const claudeShared = claudeView.find((skill) => skill.name === "shared");
     expect(claudeShared?.scope).toBe("oa");
   });
 
-  it("uses documented provider alias roots before OmniMind fallbacks", async () => {
+  it("uses documented engine alias roots before OmniMind fallbacks", async () => {
     await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "OmniMind copy");
     await writeSkill(path.join(homeDir, ".agents", "skills", "shared"), "shared", "Agents alias");
     const antigravityView = await discoverSkillsCatalog({
       homeDir,
       harnessosBaseDir,
-      provider: "antigravity",
+      engine: "antigravity",
     });
 
     expect(antigravityView.find((skill) => skill.name === "shared")?.scope).toBe("agents");
   });
 
-  it("uses provider-native roots before shared aliases for Grok and Pi", async () => {
+  it("uses engine-native roots before shared aliases for Grok and Pi", async () => {
     await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "OmniMind copy");
     await writeSkill(path.join(homeDir, ".agents", "skills", "shared"), "shared", "Agents alias");
     await writeSkill(path.join(homeDir, ".grok", "skills", "shared"), "shared", "Grok copy");
@@ -421,12 +421,12 @@ describe("discoverSkillsCatalog", () => {
     const grokView = await discoverSkillsCatalog({
       homeDir,
       harnessosBaseDir,
-      provider: "grok",
+      engine: "grok",
     });
     const piView = await discoverSkillsCatalog({
       homeDir,
       harnessosBaseDir,
-      provider: "pi",
+      engine: "pi",
     });
 
     expect(grokView.find((skill) => skill.name === "shared")?.scope).toBe("grok");
@@ -447,7 +447,7 @@ description: Direct Pi markdown skill
 `,
     );
 
-    const skills = await discoverSkillsCatalog({ homeDir, harnessosBaseDir, provider: "pi" });
+    const skills = await discoverSkillsCatalog({ homeDir, harnessosBaseDir, engine: "pi" });
 
     const directSkill = skills.find((skill) => skill.name === "direct-review");
     expect(directSkill?.scope).toBe("pi");
@@ -532,7 +532,7 @@ description: Direct Pi markdown skill
 });
 
 describe("mergeSkillsIntoCatalog", () => {
-  const descriptor = (name: string, scope: string): ProviderSkillDescriptor => ({
+  const descriptor = (name: string, scope: string): EngineSkillDescriptor => ({
     name,
     path: `/tmp/${scope}/${name}/SKILL.md`,
     enabled: true,
@@ -566,7 +566,7 @@ describe("mergeSkillsIntoCatalog", () => {
     const aliasDir = path.join(root, "skill-alias");
     await writeSkill(skillDir, "shared", "One physical skill");
     await symlink(skillDir, aliasDir, "dir");
-    const native: ProviderSkillDescriptor = {
+    const native: EngineSkillDescriptor = {
       name: "shared",
       path: path.join(skillDir, "SKILL.md"),
       enabled: true,
@@ -584,7 +584,7 @@ describe("mergeSkillsIntoCatalog", () => {
 
 describe("filterDisabledSkills", () => {
   it("filters OmniMind-owned skills without disabling Engine-native copies", () => {
-    const skills: ProviderSkillDescriptor[] = [
+    const skills: EngineSkillDescriptor[] = [
       {
         name: "Reviewer",
         path: "/Users/test/.harnessos/skills/reviewer/SKILL.md",

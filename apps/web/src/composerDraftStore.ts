@@ -3,7 +3,7 @@
 // Exports: Stable composer draft API, hooks, and promotion helpers.
 
 import {
-  type ModelSelection,
+  type EngineSelection,
   type ModelSlug,
   type EngineKind,
   type ThreadId,
@@ -68,7 +68,7 @@ export type {
 export type { BrowserAnnotationDraft } from "./lib/browserAnnotations";
 export {
   deriveEffectiveComposerModelState,
-  resolvePreferredComposerModelSelection,
+  resolvePreferredComposerEngineSelection,
 } from "./composerDraftModels";
 export type { EffectiveComposerModelState } from "./composerDraftModels";
 export { partializeComposerDraftStoreState } from "./composerDraftPersistence";
@@ -113,7 +113,7 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
           draftsByThreadId,
           draftThreadsByThreadId: normalizedPersisted.draftThreadsByThreadId,
           projectDraftThreadIdByProjectId: normalizedPersisted.projectDraftThreadIdByProjectId,
-          stickyModelSelectionByProvider: normalizedPersisted.stickyModelSelectionByProvider ?? {},
+          stickyEngineSelectionByEngine: normalizedPersisted.stickyEngineSelectionByEngine ?? {},
           stickyActiveProvider: normalizedPersisted.stickyActiveProvider ?? null,
         };
       },
@@ -151,30 +151,30 @@ export function useComposerThreadDraft(threadId: ThreadId): ComposerThreadDraftS
 export function useEffectiveComposerModelState(input: {
   threadId: ThreadId;
   selectedProvider: EngineKind;
-  threadModelSelection: ModelSelection | null | undefined;
-  projectModelSelection: ModelSelection | null | undefined;
+  threadEngineSelection: EngineSelection | null | undefined;
+  projectEngineSelection: EngineSelection | null | undefined;
   runtimeCatalogFallbackModel?: ModelSlug | null | undefined;
-  customModelsByProvider: Partial<Record<EngineKind, readonly string[]>>;
-  availableModelOptionsByProvider?: Partial<
+  customModelsByEngine: Partial<Record<EngineKind, readonly string[]>>;
+  availableModelOptionsByEngine?: Partial<
     Record<EngineKind, ReadonlyArray<{ slug: string; name: string }>>
   >;
 }): EffectiveComposerModelState {
   const draft = useComposerThreadDraft(input.threadId);
-  const stickyModelSelection = useComposerDraftStore(
-    (state) => state.stickyModelSelectionByProvider[input.selectedProvider] ?? null,
+  const stickyEngineSelection = useComposerDraftStore(
+    (state) => state.stickyEngineSelectionByEngine[input.selectedProvider] ?? null,
   );
   return deriveEffectiveComposerModelState({
     draft,
     selectedProvider: input.selectedProvider,
-    threadModelSelection: input.threadModelSelection,
-    projectModelSelection: input.projectModelSelection,
-    stickyModelSelection,
+    threadEngineSelection: input.threadEngineSelection,
+    projectEngineSelection: input.projectEngineSelection,
+    stickyEngineSelection,
     ...(input.runtimeCatalogFallbackModel !== undefined
       ? { runtimeCatalogFallbackModel: input.runtimeCatalogFallbackModel }
       : {}),
-    customModelsByProvider: input.customModelsByProvider,
-    ...(input.availableModelOptionsByProvider !== undefined
-      ? { availableModelOptionsByProvider: input.availableModelOptionsByProvider }
+    customModelsByEngine: input.customModelsByEngine,
+    ...(input.availableModelOptionsByEngine !== undefined
+      ? { availableModelOptionsByEngine: input.availableModelOptionsByEngine }
       : {}),
   });
 }

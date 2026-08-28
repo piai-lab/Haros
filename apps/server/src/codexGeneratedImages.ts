@@ -1,15 +1,15 @@
 // FILE: codexGeneratedImages.ts
 // Purpose: Normalizes Codex generated-image events into durable local-file references.
-// Layer: Server provider utilities
+// Layer: Server engine utilities
 // Exports: Codex image path, payload sanitization, and markdown helpers
-// Depends on: node path/os, image MIME allowlist, provider runtime artifact contract
+// Depends on: node path/os, image MIME allowlist, engine runtime artifact contract
 
 import path from "node:path";
 
 import {
   CODEX_GENERATED_IMAGE_ARTIFACT_KIND,
   type CodexGeneratedImageArtifact,
-  type ProviderRuntimeEvent,
+  type EngineRuntimeEvent,
   type ThreadId,
 } from "@harnessos/contracts";
 import { isSupportedLocalImagePath as isSupportedLocalImagePathShared } from "@harnessos/shared/localPreviewFiles";
@@ -269,9 +269,7 @@ export function generatedImageMarkdown(filePath: string): string {
  * Returns the local file path of a Codex-generated image carried by an
  * `item.completed` runtime event, or `undefined` for any other event shape.
  */
-export function generatedImagePathFromRuntimeEvent(
-  event: ProviderRuntimeEvent,
-): string | undefined {
+export function generatedImagePathFromRuntimeEvent(event: EngineRuntimeEvent): string | undefined {
   if (event.type !== "item.completed" || event.payload.itemType !== "image_generation") {
     return undefined;
   }

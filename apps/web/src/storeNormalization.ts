@@ -45,7 +45,7 @@ export type ProjectNormalizationInput = Pick<
   | "kind"
   | "title"
   | "workspaceRoot"
-  | "defaultModelSelection"
+  | "defaultEngineSelection"
   | "scripts"
   | "isPinned"
   | "spaceId"
@@ -95,7 +95,7 @@ export function threadSessionsEqual(
   if (left === right) return true;
   if (left == null || right == null) return false;
   return (
-    left.provider === right.provider &&
+    left.engine === right.engine &&
     left.status === right.status &&
     left.orchestrationStatus === right.orchestrationStatus &&
     left.activeTurnId === right.activeTurnId &&
@@ -149,7 +149,7 @@ export function threadShellsEqual(left: ThreadShell | undefined, right: ThreadSh
     left.codexThreadId === right.codexThreadId &&
     left.projectId === right.projectId &&
     left.title === right.title &&
-    left.modelSelection === right.modelSelection &&
+    left.engineSelection === right.engineSelection &&
     left.runtimeMode === right.runtimeMode &&
     left.interactionMode === right.interactionMode &&
     left.error === right.error &&
@@ -316,11 +316,11 @@ export function deepEqualJson(left: unknown, right: unknown): boolean {
   return true;
 }
 
-export function normalizeModelSelection<T extends { provider: EngineKind; model: string }>(
+export function normalizeEngineSelection<T extends { engine: EngineKind; model: string }>(
   value: T,
   previous: T | null | undefined,
 ): T {
-  const normalizedModel = normalizeModelSlug(value.model, value.provider) ?? value.model;
+  const normalizedModel = normalizeModelSlug(value.model, value.engine) ?? value.model;
   const next = normalizedModel === value.model ? value : { ...value, model: normalizedModel };
   return previous && deepEqualJson(previous, next) ? previous : next;
 }
@@ -345,10 +345,10 @@ export function normalizeProject(
   const folderName = basenameOfPath(incoming.workspaceRoot) ?? incoming.title;
   const localName =
     previous?.localName ?? rememberedUiState.projectNameForCwd(workspaceRootKey) ?? null;
-  const defaultModelSelection =
-    incoming.defaultModelSelection === null
+  const defaultEngineSelection =
+    incoming.defaultEngineSelection === null
       ? null
-      : normalizeModelSelection(incoming.defaultModelSelection, previous?.defaultModelSelection);
+      : normalizeEngineSelection(incoming.defaultEngineSelection, previous?.defaultEngineSelection);
   const scripts = normalizeProjectScripts(incoming.scripts, previous?.scripts);
   const expanded =
     previous?.expanded ??
@@ -365,7 +365,7 @@ export function normalizeProject(
     previous.folderName === folderName &&
     previous.localName === localName &&
     previous.cwd === incoming.workspaceRoot &&
-    previous.defaultModelSelection === defaultModelSelection &&
+    previous.defaultEngineSelection === defaultEngineSelection &&
     previous.expanded === expanded &&
     (previous.isPinned ?? false) === (incoming.isPinned ?? false) &&
     (previous.spaceId ?? null) === (incoming.spaceId ?? null) &&
@@ -384,7 +384,7 @@ export function normalizeProject(
     folderName,
     localName,
     cwd: incoming.workspaceRoot,
-    defaultModelSelection,
+    defaultEngineSelection,
     expanded,
     isPinned: incoming.isPinned ?? false,
     spaceId: incoming.spaceId ?? null,
@@ -812,7 +812,7 @@ function readModelSessionFromThreadSession(
   return {
     threadId: previousThread?.id ?? incomingSession?.threadId ?? ThreadId.makeUnsafe("unknown"),
     status: previousSession.orchestrationStatus,
-    providerName: previousSession.provider,
+    providerName: previousSession.engine,
     runtimeMode: previousThread?.runtimeMode ?? incomingSession?.runtimeMode ?? "full-access",
     activeTurnId: previousSession.activeTurnId ?? null,
     lastError: previousSession.lastError ?? null,
@@ -1346,8 +1346,8 @@ function pendingInteractionRequestIds(
       continue;
     }
     if (
-      (activity.kind === "provider.approval.respond.failed" ||
-        activity.kind === "provider.user-input.respond.failed") &&
+      (activity.kind === "engine.approval.respond.failed" ||
+        activity.kind === "engine.user-input.respond.failed") &&
       isStalePendingRequestFailureDetail(asActivityRecord(activity.payload)?.detail)
     ) {
       pendingRequestIds.delete(requestId);
@@ -1458,7 +1458,7 @@ export function normalizeThreadSession(
       ? incoming.lastError
       : undefined;
   const nextSession = {
-    provider: toLegacyProvider(incoming.providerName),
+    engine: toLegacyProvider(incoming.providerName),
     status: toLegacySessionStatus(incoming.status),
     orchestrationStatus: incoming.status,
     activeTurnId: incoming.activeTurnId ?? undefined,
@@ -1468,7 +1468,7 @@ export function normalizeThreadSession(
   } satisfies NonNullable<Thread["session"]>;
   if (
     previous &&
-    previous.provider === nextSession.provider &&
+    previous.engine === nextSession.engine &&
     previous.status === nextSession.status &&
     previous.orchestrationStatus === nextSession.orchestrationStatus &&
     previous.activeTurnId === nextSession.activeTurnId &&
@@ -1524,7 +1524,10 @@ export function normalizeThreadFromReadModel(
   incoming: ReadModelThread,
   previous: Thread | undefined,
 ): Thread {
-  const modelSelection = normalizeModelSelection(incoming.modelSelection, previous?.modelSelection);
+  const engineSelection = normalizeEngineSelection(
+    incoming.engineSelection,
+    previous?.engineSelection,
+  );
   const incomingGroupIds = incoming.groupIds ?? [];
   const groupIds =
     previous?.groupIds && deepEqualJson(previous.groupIds, incomingGroupIds)
@@ -1634,7 +1637,7 @@ export function normalizeThreadFromReadModel(
     previous.projectId === incoming.projectId &&
     previous.groupIds === groupIds &&
     previous.title === incoming.title &&
-    previous.modelSelection === modelSelection &&
+    previous.engineSelection === engineSelection &&
     previous.runtimeMode === incoming.runtimeMode &&
     previous.interactionMode === incoming.interactionMode &&
     previous.session === session &&
@@ -1693,7 +1696,7 @@ export function normalizeThreadFromReadModel(
     projectId: incoming.projectId,
     groupIds,
     title: incoming.title,
-    modelSelection,
+    engineSelection,
     runtimeMode: incoming.runtimeMode,
     interactionMode: incoming.interactionMode,
     session,
@@ -1762,7 +1765,10 @@ export function normalizeThreadShellSnapshot(
   session: ThreadSession | null;
   turnState: ThreadTurnState;
 } {
-  const modelSelection = normalizeModelSelection(incoming.modelSelection, previous?.modelSelection);
+  const engineSelection = normalizeEngineSelection(
+    incoming.engineSelection,
+    previous?.engineSelection,
+  );
   const incomingGroupIds = incoming.groupIds ?? [];
   const groupIds =
     previous?.groupIds && deepEqualJson(previous.groupIds, incomingGroupIds)
@@ -1822,7 +1828,7 @@ export function normalizeThreadShellSnapshot(
     projectId: incoming.projectId,
     groupIds,
     title: incoming.title,
-    modelSelection,
+    engineSelection,
     runtimeMode: incoming.runtimeMode,
     interactionMode: incoming.interactionMode,
     error,

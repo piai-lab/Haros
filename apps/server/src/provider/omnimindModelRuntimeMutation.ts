@@ -1,6 +1,6 @@
 // FILE: omnimindModelRuntimeMutation.ts
 // Purpose: Invalidates isolated OmniMind Agent runtime snapshots after model-service mutation.
-// Layer: Server provider runtime
+// Layer: Server engine runtime
 
 import { realpathSync } from "node:fs";
 import path from "node:path";

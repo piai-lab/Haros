@@ -7,7 +7,7 @@ describe("groupCommandItems", () => {
       {
         id: "agent:codex:mini",
         type: "agent",
-        provider: "codex",
+        engine: "codex",
         alias: "mini",
         color: "violet",
         label: "@mini",
@@ -57,7 +57,7 @@ describe("groupCommandItems", () => {
         id: "thread:thread-1",
         type: "thread",
         threadId: "thread-1",
-        provider: "codex",
+        engine: "codex",
         mention: { name: "Release prep", path: "thread://thread-1" },
         label: "Release prep",
         description: "OmniMind",
@@ -88,7 +88,7 @@ describe("groupCommandItems", () => {
     ]);
   });
 
-  it("groups slash-menu skills separately from app and provider commands", () => {
+  it("groups slash-menu skills separately from app and engine commands", () => {
     const items: ComposerCommandItem[] = [
       {
         id: "slash:review",
@@ -98,9 +98,9 @@ describe("groupCommandItems", () => {
         description: "Review changes",
       },
       {
-        id: "provider-command:codex:help",
-        type: "provider-native-command",
-        provider: "codex",
+        id: "engine-command:codex:help",
+        type: "engine-native-command",
+        engine: "codex",
         command: "help",
         label: "/help",
         description: "Show help",
@@ -127,7 +127,7 @@ describe("groupCommandItems", () => {
         items: [items[0]],
       },
       {
-        id: "provider",
+        id: "engine",
         label: "Engine",
         items: [items[1]],
       },

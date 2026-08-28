@@ -5,17 +5,17 @@
 import {
   type CommandId,
   type MessageId,
-  type ModelSelection,
+  type EngineSelection,
   type ModelPresentationIdentity,
   type OrchestrationLatestTurn,
   type OrchestrationThreadPullRequest,
   type ProjectId,
-  type ProviderInteractionMode,
+  type EngineInteractionMode,
   type EngineKind,
-  type ProviderMentionReference,
-  type ProviderModelOptions,
-  type ProviderSkillReference,
-  type ProviderStartOptions,
+  type EngineMentionReference,
+  type EngineModelOptions,
+  type EngineSkillReference,
+  type EngineStartOptions,
   type RuntimeMode,
   type ThreadId,
 } from "@harnessos/contracts";
@@ -108,8 +108,8 @@ export interface ComposerPromptHistorySavedDraft {
   terminalContexts: TerminalContextDraft[];
   fileComments: FileCommentDraft[];
   pastedTexts: PastedTextDraft[];
-  skills: ProviderSkillReference[];
-  mentions: ProviderMentionReference[];
+  skills: EngineSkillReference[];
+  mentions: EngineMentionReference[];
 }
 
 export type ComposerAssistantSelectionAttachment = ChatAssistantSelectionAttachment;
@@ -127,17 +127,17 @@ export interface QueuedComposerChatTurn {
   terminalContexts: TerminalContextDraft[];
   fileComments: FileCommentDraft[];
   pastedTexts: PastedTextDraft[];
-  skills: ProviderSkillReference[];
-  mentions: ProviderMentionReference[];
+  skills: EngineSkillReference[];
+  mentions: EngineMentionReference[];
   selectedProvider: EngineKind;
   selectedModel: string | null;
   selectedPromptEffort: string | null;
-  modelSelection: ModelSelection;
+  engineSelection: EngineSelection;
   modelPresentationIdentity?: ModelPresentationIdentity;
-  providerOptionsForDispatch?: ProviderStartOptions | undefined;
+  engineOptionsForDispatch?: EngineStartOptions | undefined;
   sourceProposedPlan?: NonNullable<OrchestrationLatestTurn["sourceProposedPlan"]> | undefined;
   runtimeMode: RuntimeMode;
-  interactionMode: ProviderInteractionMode;
+  interactionMode: EngineInteractionMode;
   envMode: DraftThreadEnvMode;
 }
 
@@ -157,18 +157,18 @@ export interface QueuedComposerPlanFollowUp {
   selectedProvider: EngineKind;
   selectedModel: string | null;
   selectedPromptEffort: string | null;
-  modelSelection: ModelSelection;
+  engineSelection: EngineSelection;
   modelPresentationIdentity?: ModelPresentationIdentity;
-  providerOptionsForDispatch?: ProviderStartOptions | undefined;
+  engineOptionsForDispatch?: EngineStartOptions | undefined;
   runtimeMode: RuntimeMode;
 }
 
 export type QueuedComposerTurn = QueuedComposerChatTurn | QueuedComposerPlanFollowUp;
 
 export interface ComposerBindingSnapshot {
-  readonly modelSelection: ModelSelection;
+  readonly engineSelection: EngineSelection;
   readonly runtimeMode: RuntimeMode;
-  readonly interactionMode: ProviderInteractionMode;
+  readonly interactionMode: EngineInteractionMode;
 }
 
 /**
@@ -213,15 +213,15 @@ export interface ComposerThreadDraftState {
   terminalContexts: TerminalContextDraft[];
   fileComments: FileCommentDraft[];
   pastedTexts: PastedTextDraft[];
-  skills: ProviderSkillReference[];
-  mentions: ProviderMentionReference[];
+  skills: EngineSkillReference[];
+  mentions: EngineMentionReference[];
   queuedTurns: QueuedComposerTurn[];
   pendingDirectTurnRecovery?: PendingDirectTurnRecovery | null;
   restoredSourceProposedPlan?: RestoredComposerSourceProposedPlan | null;
-  modelSelectionByProvider: Partial<Record<EngineKind, ModelSelection>>;
+  engineSelectionByEngine: Partial<Record<EngineKind, EngineSelection>>;
   activeProvider: EngineKind | null;
   runtimeMode: RuntimeMode | null;
-  interactionMode: ProviderInteractionMode | null;
+  interactionMode: EngineInteractionMode | null;
 }
 
 export interface DraftThreadState {
@@ -229,7 +229,7 @@ export interface DraftThreadState {
   title?: string;
   createdAt: string;
   runtimeMode: RuntimeMode;
-  interactionMode: ProviderInteractionMode;
+  interactionMode: EngineInteractionMode;
   entryPoint: ThreadPrimarySurface;
   branch: string | null;
   worktreePath: string | null;
@@ -255,7 +255,7 @@ interface DraftThreadMutationOptions {
   // that spread even though the value sets are identical ("local" | "worktree").
   envMode?: DraftThreadEnvMode | undefined;
   runtimeMode?: RuntimeMode;
-  interactionMode?: ProviderInteractionMode;
+  interactionMode?: EngineInteractionMode;
   entryPoint?: ThreadPrimarySurface;
   isTemporary?: boolean;
   // Empty string clears the staged goal; undefined leaves it unchanged.
@@ -272,7 +272,7 @@ export interface ComposerDraftStoreState {
   draftsByThreadId: Record<ThreadId, ComposerThreadDraftState>;
   draftThreadsByThreadId: Record<ThreadId, DraftThreadState>;
   projectDraftThreadIdByProjectId: Record<string, ThreadId>;
-  stickyModelSelectionByProvider: Partial<Record<EngineKind, ModelSelection>>;
+  stickyEngineSelectionByEngine: Partial<Record<EngineKind, EngineSelection>>;
   stickyActiveProvider: EngineKind | null;
   getDraftThreadByProjectId: (
     projectId: ProjectId,
@@ -301,7 +301,7 @@ export interface ComposerDraftStoreState {
       workingDirectory?: string | null;
       envMode?: DraftThreadEnvMode;
       runtimeMode?: RuntimeMode;
-      interactionMode?: ProviderInteractionMode;
+      interactionMode?: EngineInteractionMode;
       entryPoint?: ThreadPrimarySurface;
       isTemporary?: boolean;
     },
@@ -325,7 +325,7 @@ export interface ComposerDraftStoreState {
   markDraftThreadPromoting: (threadId: ThreadId, promotedTo?: ThreadId) => void;
   finalizePromotedDraftThread: (threadId: ThreadId) => void;
   clearDraftThread: (threadId: ThreadId) => void;
-  setStickyModelSelection: (modelSelection: ModelSelection | null | undefined) => void;
+  setStickyEngineSelection: (engineSelection: EngineSelection | null | undefined) => void;
   setPrompt: (threadId: ThreadId, prompt: string) => void;
   setPromptHistorySavedDraft: (
     threadId: ThreadId,
@@ -338,23 +338,23 @@ export interface ComposerDraftStoreState {
     attachments: PersistedComposerImageAttachment[],
   ) => Promise<ComposerAttachmentPersistenceResult>;
   setTerminalContexts: (threadId: ThreadId, contexts: TerminalContextDraft[]) => void;
-  setSkills: (threadId: ThreadId, skills: ProviderSkillReference[]) => void;
-  setMentions: (threadId: ThreadId, mentions: ProviderMentionReference[]) => void;
-  setModelSelection: (
+  setSkills: (threadId: ThreadId, skills: EngineSkillReference[]) => void;
+  setMentions: (threadId: ThreadId, mentions: EngineMentionReference[]) => void;
+  setEngineSelection: (
     threadId: ThreadId,
-    modelSelection: ModelSelection | null | undefined,
+    engineSelection: EngineSelection | null | undefined,
   ) => void;
-  setActiveProviderAndSticky: (threadId: ThreadId, provider: EngineKind) => void;
-  setModelSelectionAndSticky: (threadId: ThreadId, modelSelection: ModelSelection) => void;
+  setActiveProviderAndSticky: (threadId: ThreadId, engine: EngineKind) => void;
+  setEngineSelectionAndSticky: (threadId: ThreadId, engineSelection: EngineSelection) => void;
   setModelOptions: (
     threadId: ThreadId,
-    modelOptions: ProviderModelOptions | null | undefined,
+    modelOptions: EngineModelOptions | null | undefined,
   ) => void;
   applyStickyState: (threadId: ThreadId) => void;
   setProviderModelOptions: (
     threadId: ThreadId,
-    provider: EngineKind,
-    nextProviderOptions: ProviderModelOptions[EngineKind] | null | undefined,
+    engine: EngineKind,
+    nextProviderOptions: EngineModelOptions[EngineKind] | null | undefined,
     options?: {
       model?: string | null;
       persistSticky?: boolean;
@@ -363,7 +363,7 @@ export interface ComposerDraftStoreState {
   setRuntimeMode: (threadId: ThreadId, runtimeMode: RuntimeMode | null | undefined) => void;
   setInteractionMode: (
     threadId: ThreadId,
-    interactionMode: ProviderInteractionMode | null | undefined,
+    interactionMode: EngineInteractionMode | null | undefined,
   ) => void;
   enqueueQueuedTurn: (threadId: ThreadId, queuedTurn: QueuedComposerTurn) => void;
   insertQueuedTurn: (threadId: ThreadId, queuedTurn: QueuedComposerTurn, index: number) => void;
@@ -593,7 +593,7 @@ export function createEmptyThreadDraft(): ComposerThreadDraftState {
     queuedTurns: [],
     pendingDirectTurnRecovery: null,
     restoredSourceProposedPlan: null,
-    modelSelectionByProvider: {},
+    engineSelectionByEngine: {},
     activeProvider: null,
     runtimeMode: null,
     interactionMode: null,
@@ -893,7 +893,7 @@ export function shouldRemoveDraft(draft: ComposerThreadDraftState): boolean {
     draft.queuedTurns.length === 0 &&
     draft.pendingDirectTurnRecovery == null &&
     draft.restoredSourceProposedPlan == null &&
-    Object.keys(draft.modelSelectionByProvider).length === 0 &&
+    Object.keys(draft.engineSelectionByEngine).length === 0 &&
     draft.activeProvider === null &&
     draft.runtimeMode === null &&
     draft.interactionMode === null
@@ -928,7 +928,7 @@ export function resolvePendingDirectTurnRecoveryMutation(
     return "content";
   }
   if (
-    !Equal.equals(previous.modelSelectionByProvider, current.modelSelectionByProvider) ||
+    !Equal.equals(previous.engineSelectionByEngine, current.engineSelectionByEngine) ||
     previous.activeProvider !== current.activeProvider ||
     previous.runtimeMode !== current.runtimeMode ||
     previous.interactionMode !== current.interactionMode
@@ -952,8 +952,8 @@ const EMPTY_PERSISTED_ATTACHMENTS: PersistedComposerImageAttachment[] = [];
 const EMPTY_TERMINAL_CONTEXTS: TerminalContextDraft[] = [];
 const EMPTY_BROWSER_ANNOTATIONS: BrowserAnnotationDraft[] = [];
 const EMPTY_PASTED_TEXTS: PastedTextDraft[] = [];
-const EMPTY_SKILLS: ProviderSkillReference[] = [];
-const EMPTY_MENTIONS: ProviderMentionReference[] = [];
+const EMPTY_SKILLS: EngineSkillReference[] = [];
+const EMPTY_MENTIONS: EngineMentionReference[] = [];
 const EMPTY_QUEUED_TURNS: QueuedComposerTurn[] = [];
 Object.freeze(EMPTY_IMAGES);
 Object.freeze(EMPTY_FILES);
@@ -965,7 +965,7 @@ Object.freeze(EMPTY_PASTED_TEXTS);
 Object.freeze(EMPTY_SKILLS);
 Object.freeze(EMPTY_MENTIONS);
 Object.freeze(EMPTY_QUEUED_TURNS);
-const EMPTY_MODEL_SELECTION_BY_PROVIDER: Partial<Record<EngineKind, ModelSelection>> =
+const EMPTY_MODEL_SELECTION_BY_PROVIDER: Partial<Record<EngineKind, EngineSelection>> =
   Object.freeze({});
 
 const EMPTY_THREAD_DRAFT = Object.freeze<ComposerThreadDraftState>({
@@ -985,7 +985,7 @@ const EMPTY_THREAD_DRAFT = Object.freeze<ComposerThreadDraftState>({
   queuedTurns: EMPTY_QUEUED_TURNS,
   pendingDirectTurnRecovery: null,
   restoredSourceProposedPlan: null,
-  modelSelectionByProvider: EMPTY_MODEL_SELECTION_BY_PROVIDER,
+  engineSelectionByEngine: EMPTY_MODEL_SELECTION_BY_PROVIDER,
   activeProvider: null,
   runtimeMode: null,
   interactionMode: null,

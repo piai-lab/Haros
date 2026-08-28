@@ -1,6 +1,6 @@
 // FILE: DroidSessionTeardownGate.ts
 // Purpose: Prevents a replacement Droid ACP runtime from starting before its predecessor exits.
-// Layer: Provider ACP lifecycle coordination
+// Layer: Engine ACP lifecycle coordination
 
 import type { ThreadId } from "@harnessos/contracts";
 import { Deferred, Effect } from "effect";

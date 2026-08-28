@@ -38,7 +38,7 @@ async function withGatewayServer(
           ? {
               sessionKey: "session-http-route-test",
               threadId,
-              provider: "cursor",
+              engine: "cursor",
               issuedAt: 1,
               capabilities: new Set([
                 "thread:read",
@@ -62,7 +62,7 @@ async function withGatewayServer(
           ? {
               sessionKey: "session-http-route-test",
               threadId,
-              provider: "cursor",
+              engine: "cursor",
               turnId,
             }
           : null,

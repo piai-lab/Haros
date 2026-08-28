@@ -50,7 +50,7 @@ export interface TerminalSessionState {
   unsubscribeExit: (() => void) | null;
   hasRunningSubprocess: boolean;
   detectedCliKind: TerminalCliKind | null;
-  /** True once this branded session has actually shown a provider child process. */
+  /** True once this branded session has actually shown a engine child process. */
   providerDescendantObserved: boolean;
   managedAgentRunning: boolean;
   managedAgentState: TerminalActivityState | null;

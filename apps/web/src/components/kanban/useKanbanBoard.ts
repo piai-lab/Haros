@@ -30,9 +30,9 @@ import {
   type KanbanDraftThreadSnapshot,
 } from "./kanban.logic";
 
-// An optimistic dispatch that never produces a runtime signal (provider died
+// An optimistic dispatch that never produces a runtime signal (engine died
 // silently, server unreachable mid-flight) reverts to Draft after this window.
-// Generous on purpose: slow provider session init (e.g. Cursor) is the normal case.
+// Generous on purpose: slow engine session init (e.g. Cursor) is the normal case.
 const OPTIMISTIC_DISPATCH_TIMEOUT_MS = 30_000;
 const OPTIMISTIC_DISPATCH_EXPIRY_CHECK_MS = 5_000;
 
@@ -82,8 +82,8 @@ export function useKanbanBoard(): KanbanBoard {
   );
   const terminalStateByThreadId = useTerminalStateStore((state) => state.terminalStateByThreadId);
 
-  // Terminal-first threads are terminals, not provider chats — same rule as the
-  // sidebar, which swaps the provider avatar for the terminal glyph.
+  // Terminal-first threads are terminals, not engine chats — same rule as the
+  // sidebar, which swaps the engine avatar for the terminal glyph.
   const terminalEntryThreadIds = new Set<string>();
   for (const [threadId, terminalState] of Object.entries(terminalStateByThreadId)) {
     if (terminalState.entryPoint === "terminal") {
@@ -108,7 +108,7 @@ export function useKanbanBoard(): KanbanBoard {
 
   // Settle optimistic dispatches once runtime state catches up: from then on the
   // derived column owns the card and the overlay must stop overriding it. A
-  // provider failure (session error after the drop, no turn) reverts immediately
+  // engine failure (session error after the drop, no turn) reverts immediately
   // with the real error instead of waiting for the expiry safety net.
   useEffect(() => {
     const entries = Object.entries(optimisticDispatchByThreadId);
@@ -156,7 +156,7 @@ export function useKanbanBoard(): KanbanBoard {
         .expireOptimisticDispatches(Date.now() - OPTIMISTIC_DISPATCH_TIMEOUT_MS);
       for (const [threadId, entry] of expired) {
         // Entries that outlive the window while the session is still connecting
-        // (slow provider) just stop watching for failure — the card is already
+        // (slow engine) just stop watching for failure — the card is already
         // In Progress from derived state, so a revert toast would be a lie.
         const thread = threadsRef.current.find((candidate) => candidate.id === threadId);
         if (thread && deriveKanbanColumn(thread) === "inProgress") {

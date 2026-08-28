@@ -49,14 +49,14 @@ import { selectThreadTerminalState, useTerminalStateStore } from "../terminalSta
 import { useThreadSelectionStore } from "../threadSelectionStore";
 import { onServerMaintenanceUpdated } from "../wsNativeApi";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
-import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
+import { useEngineStatusesForLocalConfig } from "~/hooks/useEngineStatusesForLocalConfig";
 import {
   resolveMigratedThreadSidebarWidth,
   THREAD_SIDEBAR_MIN_WIDTH_PX,
   THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
 } from "~/appearanceMigrations";
-import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
-import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/providerAvailability";
+import { useRefreshProviderStatusesNow } from "~/hooks/useEngineStatusRefresh";
+import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
 import { toastManager } from "~/components/ui/toast";
 import {
   Sidebar,
@@ -316,7 +316,7 @@ function ChatRouteGlobalShortcuts() {
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const keybindings = serverConfigQuery.data?.keybindings ?? EMPTY_KEYBINDINGS;
   const platform = typeof navigator === "undefined" ? "" : navigator.platform;
-  const providerStatuses = useProviderStatusesForLocalConfig();
+  const providerStatuses = useEngineStatusesForLocalConfig();
   const refreshProviderStatuses = useRefreshProviderStatusesNow();
   const activeThreadTerminalState = activeContextThreadId
     ? selectThreadTerminalState(terminalStateByThreadId, activeContextThreadId)
@@ -487,7 +487,7 @@ function ChatRouteGlobalShortcuts() {
         command === "chat.newCodex" ||
         command === "chat.newCursor"
       ) {
-        const provider =
+        const engine =
           command === "chat.newClaude"
             ? "claude"
             : command === "chat.newCodex"
@@ -498,20 +498,20 @@ function ChatRouteGlobalShortcuts() {
         event.preventDefault();
         event.stopPropagation();
         void (async () => {
-          const providerAvailability = await resolveProviderSendAvailabilityWithRefresh({
-            provider,
+          const engineAvailability = await resolveProviderSendAvailabilityWithRefresh({
+            engine,
             statuses: providerStatuses,
             refreshStatuses: () => refreshProviderStatuses({ silent: true }),
           });
-          if (!providerAvailability.usable) {
+          if (!engineAvailability.usable) {
             toastManager.add({
               type: "error",
-              title: providerAvailability.unavailableReason,
+              title: engineAvailability.unavailableReason,
             });
             return;
           }
           await handleNewThread(target.projectId, {
-            provider,
+            engine,
             ...(target.inheritContext
               ? resolveInheritedThreadContext({ activeThread, activeDraftThread })
               : {}),
@@ -956,7 +956,7 @@ function ChatRouteLayout() {
   // `.chat-content-card` in index.css). It sits OUTSIDE <Sidebar> so it stacks above
   // the card, so SidebarInstanceProvider re-supplies the same resize config/side it
   // would have gotten inside <Sidebar> (otherwise dragging to resize stops working).
-  // `data-sidebar-side` on the provider selects the seam geometry.
+  // `data-sidebar-side` on the engine selects the seam geometry.
   const mainContentShell = (
     <div
       className="relative flex h-svh min-h-0 min-w-0 flex-1"

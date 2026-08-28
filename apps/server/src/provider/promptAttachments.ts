@@ -1,13 +1,13 @@
 // FILE: promptAttachments.ts
-// Purpose: Shared helpers for turning persisted chat attachments into provider-native prompt inputs.
-// Layer: Provider adapter utilities
+// Purpose: Shared helpers for turning persisted chat attachments into engine-native prompt inputs.
+// Layer: Engine adapter utilities
 // Depends on: shared chat attachment contracts.
 
 import type { ChatAttachment, ChatImageAttachment, EngineKind } from "@harnessos/contracts";
 import { Effect } from "effect";
 
 import { resolveProviderAttachmentPath } from "./providerAttachmentPaths.ts";
-import { ProviderAdapterRequestError } from "./Errors.ts";
+import { EngineAdapterRequestError } from "./Errors.ts";
 
 // Assistant selections stay in history as attachments, but the composer serializes them into text.
 export function filterProviderPromptImageAttachments(
@@ -18,7 +18,7 @@ export function filterProviderPromptImageAttachments(
   );
 }
 
-export interface ProviderPromptImageBlock {
+export interface EnginePromptImageBlock {
   readonly type: "image";
   readonly mimeType: string;
   readonly data: string;
@@ -27,15 +27,15 @@ export interface ProviderPromptImageBlock {
 export function loadProviderPromptImageBlocks(input: {
   readonly attachments: ReadonlyArray<ChatAttachment> | undefined;
   readonly attachmentsDir: string;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly method: string;
   readonly readFile: (path: string) => Effect.Effect<Uint8Array, unknown>;
   readonly readErrorDetail?: (cause: unknown) => string;
   readonly invalidAttachmentError?: (
     attachment: ChatImageAttachment,
     cause: Error,
-  ) => ProviderAdapterRequestError;
-}): Effect.Effect<ProviderPromptImageBlock[], ProviderAdapterRequestError> {
+  ) => EngineAdapterRequestError;
+}): Effect.Effect<EnginePromptImageBlock[], EngineAdapterRequestError> {
   return Effect.forEach(
     filterProviderPromptImageAttachments(input.attachments),
     (attachment) => {
@@ -47,8 +47,8 @@ export function loadProviderPromptImageBlocks(input: {
         const cause = new Error(`Invalid attachment id '${attachment.id}'.`);
         return Effect.fail(
           input.invalidAttachmentError?.(attachment, cause) ??
-            new ProviderAdapterRequestError({
-              provider: input.provider,
+            new EngineAdapterRequestError({
+              engine: input.engine,
               method: input.method,
               detail: cause.message,
             }),
@@ -57,8 +57,8 @@ export function loadProviderPromptImageBlocks(input: {
       return input.readFile(attachmentPath).pipe(
         Effect.mapError(
           (cause) =>
-            new ProviderAdapterRequestError({
-              provider: input.provider,
+            new EngineAdapterRequestError({
+              engine: input.engine,
               method: input.method,
               detail:
                 input.readErrorDetail?.(cause) ??

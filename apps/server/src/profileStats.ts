@@ -1,6 +1,6 @@
 // FILE: profileStats.ts
 // Purpose: Compute Profile-page stats from OmniMind's local projection DB only.
-// The share card never reads provider archives or cloud services for metrics.
+// The share card never reads engine archives or cloud services for metrics.
 // Stats are lifetime numbers: deleting a thread purges its rows but snapshots
 // the aggregates into profile_stats_deleted_* first (profileStatsArchive.ts),
 // and every query here merges live projections with those archived aggregates.
@@ -21,7 +21,7 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 const HEATMAP_WINDOW_DAYS = 274; // ~9 months, GitHub-style contribution grid.
 const RECENT_USAGE_WINDOW_DAYS = 30;
 const SKILL_RESULT_LIMIT = 12;
-const PROVIDER_KIND_SET = new Set<EngineKind>(ENGINE_KINDS);
+const ENGINE_KIND_SET = new Set<EngineKind>(ENGINE_KINDS);
 
 type HeatmapCell = ProfileStats["activity"]["heatmap"][number];
 type SkillUsage = ProfileStats["skills"][number];
@@ -36,7 +36,7 @@ interface PromptActivityRow extends CountRow {
 }
 
 interface TurnInsightRow extends CountRow {
-  readonly provider: string | null;
+  readonly engine: string | null;
   readonly model: string | null;
   readonly reasoning: string | null;
 }
@@ -57,7 +57,7 @@ interface ArchivedSkillUsageRow {
 
 interface TokenDayRow {
   readonly day: string | null;
-  readonly provider: string | null;
+  readonly engine: string | null;
   readonly model: string | null;
   readonly tokens: number;
 }
@@ -74,7 +74,7 @@ interface WorkFocusRow {
 
 interface TokenBreakdownDayRow {
   readonly day: string | null;
-  readonly provider: string | null;
+  readonly engine: string | null;
   readonly cachedInputTokens: number;
   readonly uncachedInputTokens: number;
   readonly outputTokens: number;
@@ -424,10 +424,8 @@ function compareNullableText(
 }
 
 function normalizeProviderKind(value: unknown): EngineKind | "unknown" {
-  const provider = nonEmptyString(value);
-  return provider && PROVIDER_KIND_SET.has(provider as EngineKind)
-    ? (provider as EngineKind)
-    : "unknown";
+  const engine = nonEmptyString(value);
+  return engine && ENGINE_KIND_SET.has(engine as EngineKind) ? (engine as EngineKind) : "unknown";
 }
 
 interface TokenActivityAggregate {
@@ -519,7 +517,7 @@ function buildHeatmap(countByDay: ReadonlyMap<string, number>, todayKey: string)
 // turn_id that token activities reference. Shared by the live token stats query
 // and the delete-time archive snapshot so both attribute token deltas the same
 // way. Pass `scope` to restrict the CTE to a single thread (archive path).
-export function turnModelSelectionCte(
+export function turnEngineSelectionCte(
   sql: SqlClient.SqlClient,
   scope?: { readonly threadId: string },
 ) {
@@ -533,8 +531,8 @@ export function turnModelSelectionCte(
     SELECT
       pt.thread_id AS thread_id,
       pt.turn_id AS turn_id,
-      MAX(json_extract(e.payload_json, '$.modelSelection.provider')) AS provider,
-      MAX(json_extract(e.payload_json, '$.modelSelection.model')) AS model
+      MAX(json_extract(e.payload_json, '$.engineSelection.engine')) AS engine,
+      MAX(json_extract(e.payload_json, '$.engineSelection.model')) AS model
     FROM orchestration_events e
     JOIN projection_turns pt
       ON pt.thread_id = ${turnThreadMatch}
@@ -542,7 +540,7 @@ export function turnModelSelectionCte(
     WHERE e.event_type = 'thread.turn-start-requested'
       ${eventThreadScope}
       AND pt.turn_id IS NOT NULL
-      AND json_type(e.payload_json, '$.modelSelection') = 'object'
+      AND json_type(e.payload_json, '$.engineSelection') = 'object'
     GROUP BY pt.thread_id, pt.turn_id
   `;
 }
@@ -627,46 +625,46 @@ const makeProfileStatsQuery = Effect.gen(function* () {
       `,
     );
 
-  // Token usage for EVERY provider, straight from OmniMind's own DB (no external
-  // ~/.codex/~/.claude archives, so it is provider-agnostic AND per-instance). Each
+  // Token usage for EVERY engine, straight from OmniMind's own DB (no external
+  // ~/.codex/~/.claude archives, so it is engine-agnostic AND per-instance). Each
   // `context-window.updated` activity carries a running per-thread token counter;
   // the positive delta is the tokens processed in that step, bucketed by the
   // caller's local day. Deltas are attributed to the provider/model selected for
   // the turn that processed them (activity turn_id → turn's pending message →
-  // turn-start modelSelection); the thread's current selection is only a fallback
+  // turn-start engineSelection); the thread's current selection is only a fallback
   // for legacy rows, so switching models mid-thread keeps history accurate.
   // Counter scale: totalProcessedTokens is the preferred cumulative counter.
   // Some provider/model groups only emit usedTokens; keep those as separate
-  // fallback series so a mixed-provider thread does not drop their tokens.
+  // fallback series so a mixed-engine thread does not drop their tokens.
   const queryTokenActivity = (tz: string) =>
     legacyCompatibleQuery(
       "profileStats.tokenActivity",
       sql<TokenDayRow>`
         WITH turn_model AS (
-          ${turnModelSelectionCte(sql)}
+          ${turnEngineSelectionCte(sql)}
         ),
         ev AS (
           SELECT
             a.thread_id AS thread_id,
             STRFTIME('%Y-%m-%d', DATETIME(a.created_at, ${tz})) AS day,
             COALESCE(
-              tm.provider,
-              json_extract(a.payload_json, '$.provider'),
+              tm.engine,
+              json_extract(a.payload_json, '$.engine'),
               CASE
                 WHEN th.model_selection_json IS NOT NULL AND json_valid(th.model_selection_json)
-                THEN json_extract(th.model_selection_json, '$.provider')
+                THEN json_extract(th.model_selection_json, '$.engine')
               END,
               'unknown'
-            ) AS provider,
+            ) AS engine,
             COALESCE(
               tm.model,
               CASE
                 WHEN th.model_selection_json IS NOT NULL
                   AND json_valid(th.model_selection_json)
                   AND (
-                    json_extract(a.payload_json, '$.provider') IS NULL
-                    OR json_extract(a.payload_json, '$.provider') =
-                      json_extract(th.model_selection_json, '$.provider')
+                    json_extract(a.payload_json, '$.engine') IS NULL
+                    OR json_extract(a.payload_json, '$.engine') =
+                      json_extract(th.model_selection_json, '$.engine')
                   )
                 THEN json_extract(th.model_selection_json, '$.model')
               END,
@@ -696,14 +694,14 @@ const makeProfileStatsQuery = Effect.gen(function* () {
             ) IS NOT NULL
         ),
         provider_model_scale AS (
-          SELECT thread_id, provider, model, MAX(tp IS NOT NULL) AS has_cumulative
+          SELECT thread_id, engine, model, MAX(tp IS NOT NULL) AS has_cumulative
           FROM ev
-          GROUP BY thread_id, provider, model
+          GROUP BY thread_id, engine, model
         ),
         cumulative_kept AS (
           SELECT
             day,
-            provider,
+            engine,
             model,
             thread_id,
             tp AS tot,
@@ -717,7 +715,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         cumulative_delta AS (
           SELECT
             day,
-            provider,
+            engine,
             model,
             dispatch_origin,
             CASE
@@ -727,7 +725,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
           FROM (
             SELECT
               day,
-              provider,
+              engine,
               model,
               dispatch_origin,
               tot,
@@ -745,7 +743,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         used_only_kept AS (
           SELECT
             ev.day AS day,
-            ev.provider AS provider,
+            ev.engine AS engine,
             ev.model AS model,
             ev.thread_id AS thread_id,
             ev.ut AS tot,
@@ -756,7 +754,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
           FROM ev
           JOIN provider_model_scale pms
             ON pms.thread_id = ev.thread_id
-           AND pms.provider = ev.provider
+           AND pms.engine = ev.engine
            AND pms.model = ev.model
           WHERE ev.tp IS NULL
             AND ev.ut IS NOT NULL
@@ -765,20 +763,20 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         used_only_delta AS (
           SELECT
             day,
-            provider,
+            engine,
             model,
             dispatch_origin,
             CASE
               WHEN previous_tot IS NULL THEN tot
               WHEN tot < previous_tot
-                AND (provider != previous_provider OR model != previous_model)
+                AND (engine != previous_provider OR model != previous_model)
               THEN tot
               ELSE MAX(0, tot - previous_tot)
             END AS d
           FROM (
             SELECT
               day,
-              provider,
+              engine,
               model,
               dispatch_origin,
               tot,
@@ -790,7 +788,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
                   created_at ASC,
                   activity_id ASC
               ) AS previous_tot,
-              LAG(provider) OVER (
+              LAG(engine) OVER (
                 PARTITION BY thread_id
                 ORDER BY
                   CASE WHEN sequence IS NULL THEN 0 ELSE 1 END ASC,
@@ -810,22 +808,22 @@ const makeProfileStatsQuery = Effect.gen(function* () {
           )
         ),
         all_tokens AS (
-          SELECT day, provider, model, d FROM cumulative_delta
+          SELECT day, engine, model, d FROM cumulative_delta
           WHERE dispatch_origin IS NULL OR dispatch_origin = 'user'
           UNION ALL
-          SELECT day, provider, model, d FROM used_only_delta
+          SELECT day, engine, model, d FROM used_only_delta
           WHERE dispatch_origin IS NULL OR dispatch_origin = 'user'
           UNION ALL
           SELECT
             STRFTIME('%Y-%m-%d', DATETIME(a.created_at, ${tz})) AS day,
-            COALESCE(a.provider, 'unknown') AS provider,
+            COALESCE(a.engine, 'unknown') AS engine,
             COALESCE(a.model, 'unknown') AS model,
             a.tokens AS d
           FROM profile_stats_deleted_tokens a
         )
-        SELECT day, provider, model, SUM(d) AS tokens
+        SELECT day, engine, model, SUM(d) AS tokens
         FROM all_tokens
-        GROUP BY day, provider, model
+        GROUP BY day, engine, model
       `,
     );
 
@@ -846,26 +844,26 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         WITH per_turn AS (
           SELECT
             CASE
-              WHEN json_type(e.payload_json, '$.modelSelection') = 'object'
-              THEN json_extract(e.payload_json, '$.modelSelection.provider')
+              WHEN json_type(e.payload_json, '$.engineSelection') = 'object'
+              THEN json_extract(e.payload_json, '$.engineSelection.engine')
               ELSE CASE
                 WHEN t.model_selection_json IS NOT NULL AND json_valid(t.model_selection_json)
-                THEN json_extract(t.model_selection_json, '$.provider')
+                THEN json_extract(t.model_selection_json, '$.engine')
               END
-            END AS provider,
+            END AS engine,
             CASE
-              WHEN json_type(e.payload_json, '$.modelSelection') = 'object'
-              THEN json_extract(e.payload_json, '$.modelSelection.model')
+              WHEN json_type(e.payload_json, '$.engineSelection') = 'object'
+              THEN json_extract(e.payload_json, '$.engineSelection.model')
               ELSE CASE
                 WHEN t.model_selection_json IS NOT NULL AND json_valid(t.model_selection_json)
                 THEN json_extract(t.model_selection_json, '$.model')
               END
             END AS model,
             CASE
-              WHEN json_type(e.payload_json, '$.modelSelection') = 'object'
+              WHEN json_type(e.payload_json, '$.engineSelection') = 'object'
               THEN COALESCE(
-                json_extract(e.payload_json, '$.modelSelection.options.reasoningEffort'),
-                json_extract(e.payload_json, '$.modelSelection.options.effort')
+                json_extract(e.payload_json, '$.engineSelection.options.reasoningEffort'),
+                json_extract(e.payload_json, '$.engineSelection.options.effort')
               )
               ELSE CASE
                 WHEN t.model_selection_json IS NOT NULL AND json_valid(t.model_selection_json)
@@ -889,25 +887,25 @@ const makeProfileStatsQuery = Effect.gen(function* () {
             ) = 'user'
         ),
         turn_counts AS (
-          SELECT provider, model, reasoning, COUNT(*) AS count
+          SELECT engine, model, reasoning, COUNT(*) AS count
           FROM per_turn
-          GROUP BY provider, model, reasoning
+          GROUP BY engine, model, reasoning
           UNION ALL
-          SELECT d.provider, d.model, d.reasoning, COUNT(*) AS count
+          SELECT d.engine, d.model, d.reasoning, COUNT(*) AS count
           FROM profile_stats_deleted_turn_events d
           JOIN profile_stats_deleted_threads t ON t.thread_id = d.thread_id
           WHERE t.turn_events_complete = 1
-          GROUP BY d.provider, d.model, d.reasoning
+          GROUP BY d.engine, d.model, d.reasoning
           UNION ALL
-          SELECT d.provider, d.model, d.reasoning, d.turn_count AS count
+          SELECT d.engine, d.model, d.reasoning, d.turn_count AS count
           FROM profile_stats_deleted_turns d
           JOIN profile_stats_deleted_threads t ON t.thread_id = d.thread_id
           WHERE t.turn_events_complete = 0
         )
-        SELECT provider, model, reasoning, SUM(count) AS count
+        SELECT engine, model, reasoning, SUM(count) AS count
         FROM turn_counts
-        GROUP BY provider, model, reasoning
-        ORDER BY count DESC, provider ASC, model ASC, reasoning ASC
+        GROUP BY engine, model, reasoning
+        ORDER BY count DESC, engine ASC, model ASC, reasoning ASC
       `,
     );
 
@@ -977,11 +975,11 @@ const makeProfileStatsQuery = Effect.gen(function* () {
       sql<RecentTurnRow>`
         WITH recent_turns AS (
           SELECT
-            json_extract(e.payload_json, '$.modelSelection.provider') AS provider,
-            json_extract(e.payload_json, '$.modelSelection.model') AS model,
+            json_extract(e.payload_json, '$.engineSelection.engine') AS engine,
+            json_extract(e.payload_json, '$.engineSelection.model') AS model,
             COALESCE(
-              json_extract(e.payload_json, '$.modelSelection.options.reasoningEffort'),
-              json_extract(e.payload_json, '$.modelSelection.options.effort')
+              json_extract(e.payload_json, '$.engineSelection.options.reasoningEffort'),
+              json_extract(e.payload_json, '$.engineSelection.options.effort')
             ) AS reasoning
           FROM orchestration_events e
           LEFT JOIN projection_thread_messages m
@@ -995,16 +993,16 @@ const makeProfileStatsQuery = Effect.gen(function* () {
             ) = 'user'
             AND STRFTIME('%Y-%m-%d', DATETIME(e.occurred_at, ${tz})) BETWEEN ${startDay} AND ${endDay}
           UNION ALL
-          SELECT d.provider, d.model, d.reasoning
+          SELECT d.engine, d.model, d.reasoning
           FROM profile_stats_deleted_turn_events d
           JOIN profile_stats_deleted_threads t ON t.thread_id = d.thread_id
           WHERE t.turn_events_complete = 1
             AND STRFTIME('%Y-%m-%d', DATETIME(d.created_at, ${tz})) BETWEEN ${startDay} AND ${endDay}
         )
-        SELECT provider, model, reasoning, COUNT(*) AS count, 0 AS legacyIncomplete
+        SELECT engine, model, reasoning, COUNT(*) AS count, 0 AS legacyIncomplete
         FROM recent_turns
-        GROUP BY provider, model, reasoning
-        ORDER BY count DESC, provider ASC, model ASC, reasoning ASC
+        GROUP BY engine, model, reasoning
+        ORDER BY count DESC, engine ASC, model ASC, reasoning ASC
       `,
     );
 
@@ -1058,7 +1056,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
             a.created_at,
             a.sequence,
             a.activity_id,
-            COALESCE(json_extract(a.payload_json, '$.provider'), 'unknown') AS provider,
+            COALESCE(json_extract(a.payload_json, '$.engine'), 'unknown') AS engine,
             pm.dispatch_origin,
             CAST(json_extract(a.payload_json, '$.totalTokenBreakdown.cachedInputTokens') AS INTEGER) AS cached,
             CAST(json_extract(a.payload_json, '$.totalTokenBreakdown.uncachedInputTokens') AS INTEGER) AS uncached,
@@ -1077,7 +1075,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         deltas AS (
           SELECT
             STRFTIME('%Y-%m-%d', DATETIME(created_at, ${tz})) AS day,
-            provider,
+            engine,
             dispatch_origin,
             CASE WHEN previous_cached IS NULL OR cached < previous_cached
               THEN cached ELSE MAX(0, cached - previous_cached) END AS cached_delta,
@@ -1099,14 +1097,14 @@ const makeProfileStatsQuery = Effect.gen(function* () {
           )
         ),
         all_rows AS (
-          SELECT day, provider, cached_delta AS cached, uncached_delta AS uncached, output_delta AS output
+          SELECT day, engine, cached_delta AS cached, uncached_delta AS uncached, output_delta AS output
           FROM deltas
           WHERE (dispatch_origin IS NULL OR dispatch_origin = 'user')
             AND day BETWEEN ${startDay} AND ${endDay}
           UNION ALL
           SELECT
             STRFTIME('%Y-%m-%d', DATETIME(d.created_at, ${tz})) AS day,
-            COALESCE(d.provider, 'unknown') AS provider,
+            COALESCE(d.engine, 'unknown') AS engine,
             d.cached_input_tokens AS cached,
             d.uncached_input_tokens AS uncached,
             d.output_tokens AS output
@@ -1116,13 +1114,13 @@ const makeProfileStatsQuery = Effect.gen(function* () {
             AND d.output_tokens IS NOT NULL
             AND STRFTIME('%Y-%m-%d', DATETIME(d.created_at, ${tz})) BETWEEN ${startDay} AND ${endDay}
         )
-        SELECT day, provider,
+        SELECT day, engine,
           SUM(cached) AS cachedInputTokens,
           SUM(uncached) AS uncachedInputTokens,
           SUM(output) AS outputTokens
         FROM all_rows
-        GROUP BY day, provider
-        ORDER BY day ASC, provider ASC
+        GROUP BY day, engine
+        ORDER BY day ASC, engine ASC
       `,
     );
 
@@ -1232,7 +1230,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
       const recentModelCounts = new Map<
         string,
         {
-          provider: EngineKind | "unknown";
+          engine: EngineKind | "unknown";
           model: string;
           count: number;
           kind: "model" | "unknown";
@@ -1242,13 +1240,13 @@ const makeProfileStatsQuery = Effect.gen(function* () {
       for (const row of recentTurnRows) {
         const count = num(row.count);
         recentTotalTurns += count;
-        const provider = normalizeProviderKind(row.provider);
+        const engine = normalizeProviderKind(row.engine);
         const model = nonEmptyString(row.model);
         const kind = model ? "model" : "unknown";
-        const key = `${provider}\u0000${model ?? ""}`;
+        const key = `${engine}\u0000${model ?? ""}`;
         const existing = recentModelCounts.get(key);
         if (existing) existing.count += count;
-        else recentModelCounts.set(key, { provider, model: model ?? "unknown", count, kind });
+        else recentModelCounts.set(key, { engine, model: model ?? "unknown", count, kind });
       }
       const recentRows = [...recentModelCounts.values()].toSorted(
         (left, right) => right.count - left.count || left.model.localeCompare(right.model),
@@ -1261,7 +1259,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
       const otherRecentTurns = knownRecentRows.slice(5).reduce((sum, row) => sum + row.count, 0);
       const recentModelBuckets = [
         ...visibleKnownRows.map((row) => ({
-          provider: row.provider,
+          engine: row.engine,
           model: row.model,
           turnCount: row.count,
           kind: "model" as const,
@@ -1269,7 +1267,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         ...(otherRecentTurns > 0
           ? [
               {
-                provider: "unknown" as const,
+                engine: "unknown" as const,
                 model: "other",
                 turnCount: otherRecentTurns,
                 kind: "other" as const,
@@ -1279,7 +1277,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         ...(unknownRecentTurns > 0
           ? [
               {
-                provider: "unknown" as const,
+                engine: "unknown" as const,
                 model: "unknown",
                 turnCount: unknownRecentTurns,
                 kind: "unknown" as const,
@@ -1449,16 +1447,16 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         current.uncachedInputTokens += num(row.uncachedInputTokens);
         current.outputTokens += num(row.outputTokens);
         breakdownByDay.set(day, current);
-        const provider = normalizeProviderKind(row.provider);
-        if (provider !== "unknown") breakdownProviders.add(provider);
+        const engine = normalizeProviderKind(row.engine);
+        if (engine !== "unknown") breakdownProviders.add(engine);
       }
       const recentTurnProviders = new Set<EngineKind>();
       for (const row of recentTurnRows) {
-        const provider = normalizeProviderKind(row.provider);
-        if (provider !== "unknown") recentTurnProviders.add(provider);
+        const engine = normalizeProviderKind(row.engine);
+        if (engine !== "unknown") recentTurnProviders.add(engine);
       }
       const recentUnavailableProviders = [...recentTurnProviders]
-        .filter((provider) => !breakdownProviders.has(provider))
+        .filter((engine) => !breakdownProviders.has(engine))
         .toSorted();
       const recentTokenDays = recentDays.map((day) => ({
         day,

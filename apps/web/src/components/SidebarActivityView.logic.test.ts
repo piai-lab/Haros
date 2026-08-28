@@ -28,7 +28,7 @@ const PROJECT_ID = ProjectId.makeUnsafe("project-1");
 
 function makeSession(status: ThreadSession["status"]): ThreadSession {
   return {
-    provider: "codex",
+    engine: "codex",
     status,
     createdAt: "2026-08-01T10:00:00.000Z",
     updatedAt: "2026-08-01T10:00:00.000Z",
@@ -56,7 +56,7 @@ function makeThread(input: {
     id: ThreadId.makeUnsafe(input.id),
     projectId: input.projectId ?? PROJECT_ID,
     title: `Thread ${input.id}`,
-    modelSelection: { provider: "codex", model: "gpt-5" },
+    engineSelection: { engine: "codex", model: "gpt-5" },
     interactionMode: "default",
     branch: null,
     worktreePath: null,

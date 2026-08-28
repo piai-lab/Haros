@@ -4,19 +4,19 @@ import path from "node:path";
 import {
   ApprovalRequestId,
   CommandId,
-  DEFAULT_PROVIDER_INTERACTION_MODE,
+  DEFAULT_ENGINE_INTERACTION_MODE,
   DEFAULT_MODEL_BY_PROVIDER,
   EventId,
   MessageId,
   ProjectId,
   EngineKind,
   ThreadId,
-  ModelSelection,
+  EngineSelection,
 } from "@harnessos/contracts";
 import { assert, it } from "@effect/vitest";
 import { Effect, Option, Schema } from "effect";
 
-import type { TestTurnResponse } from "./TestProviderAdapter.integration.ts";
+import type { TestTurnResponse } from "./TestEngineAdapter.integration.ts";
 import {
   gitRefExists,
   gitShowFileAtRef,
@@ -41,7 +41,7 @@ const THREAD_ID = ThreadId.makeUnsafe("thread-1");
 const FIXTURE_TURN_ID = "fixture-turn";
 const APPROVAL_REQUEST_ID = asApprovalRequestId("req-approval-1");
 const itLiveUnlessCi = (process.env.CI ? it.skip : it.live) as typeof it.live;
-type IntegrationProvider = EngineKind;
+type IntegrationEngine = EngineKind;
 
 function nowIso() {
   return new Date().toISOString();
@@ -89,20 +89,20 @@ function waitForGitRefMissing(cwd: string, ref: string) {
   );
 }
 
-function runtimeBase(eventId: string, createdAt: string, provider: IntegrationProvider = "codex") {
+function runtimeBase(eventId: string, createdAt: string, engine: IntegrationEngine = "codex") {
   return {
     eventId: asEventId(eventId),
-    provider,
+    engine,
     createdAt,
   };
 }
 
 function withHarness<A, E>(
   use: (harness: OrchestrationIntegrationHarness) => Effect.Effect<A, E>,
-  provider: IntegrationProvider = "codex",
+  engine: IntegrationEngine = "codex",
 ) {
   return Effect.acquireUseRelease(
-    makeOrchestrationIntegrationHarness({ provider }),
+    makeOrchestrationIntegrationHarness({ engine }),
     use,
     (harness) => harness.dispose,
   ).pipe(Effect.provide(NodeServices.layer));
@@ -112,7 +112,7 @@ function withRealCodexHarness<A, E>(
   use: (harness: OrchestrationIntegrationHarness) => Effect.Effect<A, E>,
 ) {
   return Effect.acquireUseRelease(
-    makeOrchestrationIntegrationHarness({ provider: "codex", realCodex: true }),
+    makeOrchestrationIntegrationHarness({ engine: "codex", realCodex: true }),
     use,
     (harness) => harness.dispose,
   ).pipe(Effect.provide(NodeServices.layer));
@@ -121,11 +121,11 @@ function withRealCodexHarness<A, E>(
 const seedProjectAndThread = (harness: OrchestrationIntegrationHarness) =>
   Effect.gen(function* () {
     const createdAt = nowIso();
-    const provider = harness.adapterHarness?.provider ?? "codex";
-    if (provider === "pi" || provider === "oa") {
+    const engine = harness.adapterHarness?.engine ?? "codex";
+    if (engine === "pi" || engine === "oa") {
       throw new Error("Pi-family integration tests require an explicit model selection.");
     }
-    const defaultModel = DEFAULT_MODEL_BY_PROVIDER[provider];
+    const defaultModel = DEFAULT_MODEL_BY_PROVIDER[engine];
 
     yield* harness.engine.dispatch({
       type: "project.create",
@@ -133,8 +133,8 @@ const seedProjectAndThread = (harness: OrchestrationIntegrationHarness) =>
       projectId: PROJECT_ID,
       title: "Integration Project",
       workspaceRoot: harness.workspaceDir,
-      defaultModelSelection: {
-        provider,
+      defaultEngineSelection: {
+        engine,
         model: defaultModel,
       },
       createdAt,
@@ -146,11 +146,11 @@ const seedProjectAndThread = (harness: OrchestrationIntegrationHarness) =>
       threadId: THREAD_ID,
       projectId: PROJECT_ID,
       title: "Integration Thread",
-      modelSelection: {
-        provider,
+      engineSelection: {
+        engine,
         model: defaultModel,
       },
-      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
       runtimeMode: "approval-required",
       branch: null,
       worktreePath: harness.workspaceDir,
@@ -163,7 +163,7 @@ const startTurn = (input: {
   readonly commandId: string;
   readonly messageId: string;
   readonly text: string;
-  readonly modelSelection?: ModelSelection;
+  readonly engineSelection?: EngineSelection;
 }) =>
   input.harness.engine.dispatch({
     type: "thread.turn.start",
@@ -175,12 +175,12 @@ const startTurn = (input: {
       text: input.text,
       attachments: [],
     },
-    ...(input.modelSelection !== undefined
+    ...(input.engineSelection !== undefined
       ? {
-          modelSelection: input.modelSelection,
+          engineSelection: input.engineSelection,
         }
       : {}),
-    interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+    interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
     runtimeMode: "approval-required",
     createdAt: nowIso(),
   });
@@ -270,7 +270,7 @@ it.live("runs a single turn end-to-end and persists checkpoint state in sqlite +
 );
 
 it.live.skipIf(!process.env.CODEX_BINARY_PATH)(
-  "keeps the same Codex provider thread across runtime mode switches",
+  "keeps the same Codex engine thread across runtime mode switches",
   () =>
     withRealCodexHarness((harness) =>
       Effect.gen(function* () {
@@ -282,8 +282,8 @@ it.live.skipIf(!process.env.CODEX_BINARY_PATH)(
           projectId: PROJECT_ID,
           title: "Integration Project",
           workspaceRoot: harness.workspaceDir,
-          defaultModelSelection: {
-            provider: "codex",
+          defaultEngineSelection: {
+            engine: "codex",
             model: "gpt-5.3-codex",
           },
           createdAt,
@@ -295,11 +295,11 @@ it.live.skipIf(!process.env.CODEX_BINARY_PATH)(
           threadId: THREAD_ID,
           projectId: PROJECT_ID,
           title: "Integration Thread",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5.3-codex",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "full-access",
           branch: null,
           worktreePath: harness.workspaceDir,
@@ -316,7 +316,7 @@ it.live.skipIf(!process.env.CODEX_BINARY_PATH)(
             text: "Reply with exactly ALPHA.",
             attachments: [],
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "full-access",
           createdAt: nowIso(),
         });
@@ -343,7 +343,7 @@ it.live.skipIf(!process.env.CODEX_BINARY_PATH)(
             text: "Reply with exactly BETA.",
             attachments: [],
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           createdAt: nowIso(),
         });
@@ -624,7 +624,7 @@ it.live("tracks approval requests and resolves pending approvals on user respons
       const approvalResponses = yield* waitForSync(
         () => harness.adapterHarness!.getApprovalResponses(THREAD_ID),
         (responses) => responses.length === 1,
-        "provider approval response",
+        "engine approval response",
       );
       assert.equal(approvalResponses.length, 1);
       assert.equal(approvalResponses[0]?.requestId, "req-approval-1");
@@ -913,7 +913,7 @@ it.live(
           (activity) => activity.kind === "checkpoint.revert.failed",
         );
         assert.equal(failureActivity !== undefined, true);
-        // A revert dispatched without a live provider session is no longer rejected up
+        // A revert dispatched without a live engine session is no longer rejected up
         // front: it resolves the checkpoint cwd on its own and fails only when the
         // requested turn has no filesystem checkpoint.
         assert.equal(
@@ -924,7 +924,7 @@ it.live(
     ),
 );
 
-it.live("starts a claudeAgent session on first turn when provider is requested", () =>
+it.live("starts a claudeAgent session on first turn when engine is requested", () =>
   withHarness(
     (harness) =>
       Effect.gen(function* () {
@@ -960,8 +960,8 @@ it.live("starts a claudeAgent session on first turn when provider is requested",
           commandId: "cmd-turn-start-claude-initial",
           messageId: "msg-user-claude-initial",
           text: "Use Claude",
-          modelSelection: {
-            provider: "claude",
+          engineSelection: {
+            engine: "claude",
             model: "claude-sonnet-4-6",
           },
         });
@@ -982,7 +982,7 @@ it.live("starts a claudeAgent session on first turn when provider is requested",
 );
 
 itLiveUnlessCi(
-  "recovers claudeAgent sessions after provider stopAll using persisted resume state",
+  "recovers claudeAgent sessions after engine stopAll using persisted resume state",
   () =>
     withHarness(
       (harness) =>
@@ -1019,8 +1019,8 @@ itLiveUnlessCi(
             commandId: "cmd-turn-start-claude-recover-1",
             messageId: "msg-user-claude-recover-1",
             text: "Before restart",
-            modelSelection: {
-              provider: "claude",
+            engineSelection: {
+              engine: "claude",
               model: "claude-sonnet-4-6",
             },
           });
@@ -1041,7 +1041,7 @@ itLiveUnlessCi(
           yield* waitForSync(
             () => harness.adapterHarness!.listActiveSessionIds(),
             (sessionIds) => sessionIds.length === 0,
-            "provider stopAll",
+            "engine stopAll",
           );
 
           yield* harness.adapterHarness!.queueTurnResponseForNextSession({
@@ -1078,7 +1078,7 @@ itLiveUnlessCi(
           yield* waitForSync(
             () => harness.adapterHarness!.getStartCount(),
             (count) => count >= 2,
-            "claude provider recovery start",
+            "claude engine recovery start",
             10_000,
           );
 
@@ -1089,7 +1089,7 @@ itLiveUnlessCi(
               entry.messages.some(
                 (message) => message.role === "user" && message.text === "After restart",
               ) &&
-              !entry.activities.some((activity) => activity.kind === "provider.turn.start.failed"),
+              !entry.activities.some((activity) => activity.kind === "engine.turn.start.failed"),
           );
           assert.equal(recoveredThread.session?.providerName, "claude");
           assert.equal(recoveredThread.session?.threadId, "thread-1");
@@ -1098,7 +1098,7 @@ itLiveUnlessCi(
     ),
 );
 
-it.live("forwards claudeAgent approval responses to the provider session", () =>
+it.live("forwards claudeAgent approval responses to the engine session", () =>
   withHarness(
     (harness) =>
       Effect.gen(function* () {
@@ -1137,8 +1137,8 @@ it.live("forwards claudeAgent approval responses to the provider session", () =>
           commandId: "cmd-turn-start-claude-approval",
           messageId: "msg-user-claude-approval",
           text: "Need approval",
-          modelSelection: {
-            provider: "claude",
+          engineSelection: {
+            engine: "claude",
             model: "claude-sonnet-4-6",
           },
         });
@@ -1173,7 +1173,7 @@ it.live("forwards claudeAgent approval responses to the provider session", () =>
         const approvalResponses = yield* waitForSync(
           () => harness.adapterHarness!.getApprovalResponses(THREAD_ID),
           (responses) => responses.length === 1,
-          "claude provider approval response",
+          "claude engine approval response",
         );
         assert.equal(approvalResponses[0]?.decision, "accept");
       }),
@@ -1181,7 +1181,7 @@ it.live("forwards claudeAgent approval responses to the provider session", () =>
   ),
 );
 
-it.live("forwards thread.turn.interrupt to claudeAgent provider sessions", () =>
+it.live("forwards thread.turn.interrupt to claudeAgent engine sessions", () =>
   withHarness(
     (harness) =>
       Effect.gen(function* () {
@@ -1218,8 +1218,8 @@ it.live("forwards thread.turn.interrupt to claudeAgent provider sessions", () =>
           commandId: "cmd-turn-start-claude-interrupt",
           messageId: "msg-user-claude-interrupt",
           text: "Start long turn",
-          modelSelection: {
-            provider: "claude",
+          engineSelection: {
+            engine: "claude",
             model: "claude-sonnet-4-6",
           },
         });
@@ -1243,7 +1243,7 @@ it.live("forwards thread.turn.interrupt to claudeAgent provider sessions", () =>
         const interruptCalls = yield* waitForSync(
           () => harness.adapterHarness!.getInterruptCalls(THREAD_ID),
           (calls) => calls.length === 1,
-          "claude provider interrupt call",
+          "claude engine interrupt call",
         );
         assert.equal(interruptCalls.length, 1);
       }),
@@ -1251,7 +1251,7 @@ it.live("forwards thread.turn.interrupt to claudeAgent provider sessions", () =>
   ),
 );
 
-itLiveUnlessCi("reverts claudeAgent turns and rolls back provider conversation state", () =>
+itLiveUnlessCi("reverts claudeAgent turns and rolls back engine conversation state", () =>
   withHarness(
     (harness) =>
       Effect.gen(function* () {
@@ -1291,8 +1291,8 @@ itLiveUnlessCi("reverts claudeAgent turns and rolls back provider conversation s
           commandId: "cmd-turn-start-claude-revert-1",
           messageId: "msg-user-claude-revert-1",
           text: "First Claude edit",
-          modelSelection: {
-            provider: "claude",
+          engineSelection: {
+            engine: "claude",
             model: "claude-sonnet-4-6",
           },
         });

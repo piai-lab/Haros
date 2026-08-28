@@ -17,7 +17,7 @@ describe("095_ProjectionThreadsForkScope", () => {
           created_at, updated_at
         ) VALUES (
           'thread-fork', 'project-1', 'Legacy fork',
-          '{"provider":"codex","model":"gpt-5"}', 'thread-source',
+          '{"engine":"codex","model":"gpt-5"}', 'thread-source',
           '2026-08-17T00:00:00.000Z', '2026-08-17T00:00:00.000Z'
         )
       `;

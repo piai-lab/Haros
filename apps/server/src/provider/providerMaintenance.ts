@@ -11,12 +11,12 @@ import { executableCandidates, hasPathSeparator } from "../executableLookup.ts";
 
 const LATEST_VERSION_CACHE_TTL_MS = 60 * 60 * 1_000;
 const LATEST_VERSION_TIMEOUT_MS = 4_000;
-const PROVIDER_UPDATE_ACTION_MESSAGE = "Install the update now or review provider settings.";
+const ENGINE_UPDATE_ACTION_MESSAGE = "Install the update now or review engine settings.";
 // This is a last-resort safety cap, not a normal download deadline. Homebrew may refresh its
 // own metadata and taps before fetching a large release asset over a slow GitHub connection.
 export const HOMEBREW_PROVIDER_UPDATE_TIMEOUT_MS = 60 * 60_000;
 
-type ProviderInstallSource = "npm" | "bun" | "pnpm" | "homebrew" | "native" | "unknown";
+type EngineInstallSource = "npm" | "bun" | "pnpm" | "homebrew" | "native" | "unknown";
 
 interface ParsedSemver {
   readonly major: number;
@@ -25,36 +25,36 @@ interface ParsedSemver {
   readonly prerelease: ReadonlyArray<string>;
 }
 
-export interface ProviderLatestVersionSource {
+export interface EngineLatestVersionSource {
   readonly kind: "npm" | "homebrew";
   readonly name: string;
   readonly homebrewKind?: "formula" | "cask";
 }
 
-export interface ProviderHomebrewPackageDefinition {
+export interface EngineHomebrewPackageDefinition {
   readonly name: string;
   readonly kind: "formula" | "cask";
   readonly isCommandPath?: (commandPath: string) => boolean;
 }
 
-export interface ProviderMaintenanceCapabilities {
-  readonly provider: EngineKind;
+export interface EngineMaintenanceCapabilities {
+  readonly engine: EngineKind;
   readonly packageName: string | null;
-  readonly latestVersionSource: ProviderLatestVersionSource | null;
-  readonly update: ProviderMaintenanceCommandAction | null;
+  readonly latestVersionSource: EngineLatestVersionSource | null;
+  readonly update: EngineMaintenanceCommandAction | null;
 }
 
-export interface ProviderMaintenanceCommandAction {
+export interface EngineMaintenanceCommandAction {
   readonly command: string;
   readonly executable: string;
   readonly args: ReadonlyArray<string>;
   readonly lockKey: string;
   readonly timeoutMs?: number;
-  /** Put the selected provider binary's directory first so its package manager matches. */
+  /** Put the selected engine binary's directory first so its package manager matches. */
   readonly pathPrepend?: string;
 }
 
-export interface ProviderMaintenanceCapabilityResolutionOptions {
+export interface EngineMaintenanceCapabilityResolutionOptions {
   readonly binaryPath?: string | null;
   readonly env?: NodeJS.ProcessEnv;
   readonly platform?: NodeJS.Platform;
@@ -63,23 +63,23 @@ export interface ProviderMaintenanceCapabilityResolutionOptions {
 }
 
 export interface PackageManagedProviderMaintenanceDefinition {
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly binaryName: string;
   readonly npmPackageName: string | null;
   readonly homebrew:
-    | (ProviderHomebrewPackageDefinition & {
-        readonly variants?: ReadonlyArray<ProviderHomebrewPackageDefinition>;
+    | (EngineHomebrewPackageDefinition & {
+        readonly variants?: ReadonlyArray<EngineHomebrewPackageDefinition>;
       })
     | null;
-  readonly latestVersionSource?: ProviderLatestVersionSource | null;
+  readonly latestVersionSource?: EngineLatestVersionSource | null;
   readonly nativeUpdate: {
     readonly executable: string;
-    readonly args: (installSource: ProviderInstallSource) => ReadonlyArray<string>;
+    readonly args: (installSource: EngineInstallSource) => ReadonlyArray<string>;
     readonly lockKey: string;
     readonly strategy: "always" | "matching-path";
-    /** Explicit source for native installs. Null delegates update truth to the provider CLI. */
-    readonly latestVersionSource?: ProviderLatestVersionSource | null;
-    readonly excludedInstallSources?: ReadonlyArray<ProviderInstallSource>;
+    /** Explicit source for native installs. Null delegates update truth to the engine CLI. */
+    readonly latestVersionSource?: EngineLatestVersionSource | null;
+    readonly excludedInstallSources?: ReadonlyArray<EngineInstallSource>;
     readonly isCommandPath?: (commandPath: string) => boolean;
   } | null;
 }
@@ -211,7 +211,7 @@ export function normalizeCommandPath(commandPath: string): string {
 /**
  * npm resolves its global prefix from the `node` binary that runs it, not from
  * npm's own location, so a bare `npm install -g` can write to a different
- * install tree than the one the detected provider binary lives in (e.g. a
+ * install tree than the one the detected engine binary lives in (e.g. a
  * Homebrew-prefix install checked by OmniMind while nvm's node makes npm install
  * into nvm's prefix). Derive the prefix that owns the detected binary so the
  * update can pin it explicitly.
@@ -232,15 +232,15 @@ export function deriveNpmGlobalPrefix(commandPath: string): string | null {
 }
 
 export function makeProviderMaintenanceCapabilities(input: {
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly packageName: string | null;
-  readonly latestVersionSource?: ProviderLatestVersionSource | null;
+  readonly latestVersionSource?: EngineLatestVersionSource | null;
   readonly updateExecutable: string | null;
   readonly updateArgs: ReadonlyArray<string>;
   readonly updateLockKey: string | null;
   readonly updateTimeoutMs?: number;
   readonly updatePathPrepend?: string | null;
-}): ProviderMaintenanceCapabilities {
+}): EngineMaintenanceCapabilities {
   const update =
     input.updateExecutable === null || input.updateLockKey === null
       ? null
@@ -257,7 +257,7 @@ export function makeProviderMaintenanceCapabilities(input: {
             : {}),
         };
   return {
-    provider: input.provider,
+    engine: input.engine,
     packageName: input.packageName,
     latestVersionSource:
       input.latestVersionSource !== undefined
@@ -270,11 +270,11 @@ export function makeProviderMaintenanceCapabilities(input: {
 }
 
 function makeManualOnlyProviderMaintenanceCapabilities(input: {
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly packageName: string | null;
-}): ProviderMaintenanceCapabilities {
+}): EngineMaintenanceCapabilities {
   return makeProviderMaintenanceCapabilities({
-    provider: input.provider,
+    engine: input.engine,
     packageName: input.packageName,
     updateExecutable: null,
     updateArgs: [],
@@ -286,16 +286,16 @@ function makeNpmGlobalProviderMaintenanceCapabilities(
   definition: PackageManagedProviderMaintenanceDefinition,
   pathPrepend?: string | null,
   commandPath?: string | null,
-): ProviderMaintenanceCapabilities {
+): EngineMaintenanceCapabilities {
   if (!definition.npmPackageName) {
     return makeManualOnlyProviderMaintenanceCapabilities({
-      provider: definition.provider,
+      engine: definition.engine,
       packageName: null,
     });
   }
   const globalPrefix = commandPath ? deriveNpmGlobalPrefix(commandPath) : null;
   return makeProviderMaintenanceCapabilities({
-    provider: definition.provider,
+    engine: definition.engine,
     packageName: definition.npmPackageName,
     updateExecutable: "npm",
     updateArgs: [
@@ -312,15 +312,15 @@ function makeNpmGlobalProviderMaintenanceCapabilities(
 function makeBunGlobalProviderMaintenanceCapabilities(
   definition: PackageManagedProviderMaintenanceDefinition,
   pathPrepend?: string | null,
-): ProviderMaintenanceCapabilities {
+): EngineMaintenanceCapabilities {
   if (!definition.npmPackageName) {
     return makeManualOnlyProviderMaintenanceCapabilities({
-      provider: definition.provider,
+      engine: definition.engine,
       packageName: null,
     });
   }
   return makeProviderMaintenanceCapabilities({
-    provider: definition.provider,
+    engine: definition.engine,
     packageName: definition.npmPackageName,
     updateExecutable: "bun",
     updateArgs: ["i", "-g", `${definition.npmPackageName}@latest`],
@@ -332,15 +332,15 @@ function makeBunGlobalProviderMaintenanceCapabilities(
 function makePnpmGlobalProviderMaintenanceCapabilities(
   definition: PackageManagedProviderMaintenanceDefinition,
   pathPrepend?: string | null,
-): ProviderMaintenanceCapabilities {
+): EngineMaintenanceCapabilities {
   if (!definition.npmPackageName) {
     return makeManualOnlyProviderMaintenanceCapabilities({
-      provider: definition.provider,
+      engine: definition.engine,
       packageName: null,
     });
   }
   return makeProviderMaintenanceCapabilities({
-    provider: definition.provider,
+    engine: definition.engine,
     packageName: definition.npmPackageName,
     updateExecutable: "pnpm",
     updateArgs: ["add", "-g", `${definition.npmPackageName}@latest`],
@@ -351,18 +351,18 @@ function makePnpmGlobalProviderMaintenanceCapabilities(
 
 function makeHomebrewProviderMaintenanceCapabilities(
   definition: PackageManagedProviderMaintenanceDefinition,
-  homebrewPackage: ProviderHomebrewPackageDefinition | null,
+  homebrewPackage: EngineHomebrewPackageDefinition | null,
   pathPrepend?: string | null,
-): ProviderMaintenanceCapabilities {
+): EngineMaintenanceCapabilities {
   if (!homebrewPackage) {
     return makeManualOnlyProviderMaintenanceCapabilities({
-      provider: definition.provider,
+      engine: definition.engine,
       packageName: definition.npmPackageName,
     });
   }
 
   return makeProviderMaintenanceCapabilities({
-    provider: definition.provider,
+    engine: definition.engine,
     packageName: null,
     latestVersionSource: resolveLatestVersionSourceForInstallSource(
       definition,
@@ -382,9 +382,9 @@ function makeHomebrewProviderMaintenanceCapabilities(
 
 function resolveLatestVersionSourceForInstallSource(
   definition: PackageManagedProviderMaintenanceDefinition,
-  installSource: ProviderInstallSource,
-  homebrewPackage?: ProviderHomebrewPackageDefinition | null,
-): ProviderLatestVersionSource | null {
+  installSource: EngineInstallSource,
+  homebrewPackage?: EngineHomebrewPackageDefinition | null,
+): EngineLatestVersionSource | null {
   if (definition.latestVersionSource) {
     return definition.latestVersionSource;
   }
@@ -407,16 +407,16 @@ function resolveLatestVersionSourceForInstallSource(
 
 function makeNativeProviderMaintenanceCapabilities(
   definition: PackageManagedProviderMaintenanceDefinition,
-  installSource: ProviderInstallSource,
+  installSource: EngineInstallSource,
   executable?: string | null,
   pathPrepend?: string | null,
-): ProviderMaintenanceCapabilities | null {
+): EngineMaintenanceCapabilities | null {
   if (!definition.nativeUpdate) {
     return null;
   }
 
   return makeProviderMaintenanceCapabilities({
-    provider: definition.provider,
+    engine: definition.engine,
     packageName: installSource === "homebrew" ? null : definition.npmPackageName,
     // Prefer explicit upstream metadata for channels like third-party Homebrew taps,
     // then fall back to the package manager channel when its public API is usable.
@@ -431,7 +431,7 @@ function makeNativeProviderMaintenanceCapabilities(
 function detectInstallSource(
   definition: PackageManagedProviderMaintenanceDefinition,
   commandPath: string,
-): ProviderInstallSource {
+): EngineInstallSource {
   if (definition.nativeUpdate?.isCommandPath?.(commandPath)) {
     return "native";
   }
@@ -454,13 +454,13 @@ function detectInstallSource(
 
 function makeProviderMaintenanceForInstallSource(input: {
   readonly definition: PackageManagedProviderMaintenanceDefinition;
-  readonly installSource: ProviderInstallSource;
-  readonly homebrewPackage?: ProviderHomebrewPackageDefinition | null;
+  readonly installSource: EngineInstallSource;
+  readonly homebrewPackage?: EngineHomebrewPackageDefinition | null;
   readonly executable?: string | null;
   readonly pathPrepend?: string | null;
   /** Path that matched install-source detection, used to pin the install tree. */
   readonly commandPath?: string | null;
-}): ProviderMaintenanceCapabilities {
+}): EngineMaintenanceCapabilities {
   const { definition, installSource, homebrewPackage, executable, pathPrepend, commandPath } =
     input;
   if (
@@ -475,7 +475,7 @@ function makeProviderMaintenanceForInstallSource(input: {
         pathPrepend,
       ) ??
       makeManualOnlyProviderMaintenanceCapabilities({
-        provider: definition.provider,
+        engine: definition.engine,
         packageName: definition.npmPackageName,
       })
     );
@@ -489,7 +489,7 @@ function makeProviderMaintenanceForInstallSource(input: {
         pathPrepend,
       ) ??
       makeManualOnlyProviderMaintenanceCapabilities({
-        provider: definition.provider,
+        engine: definition.engine,
         packageName: definition.npmPackageName,
       })
     );
@@ -511,7 +511,7 @@ function makeProviderMaintenanceForInstallSource(input: {
     );
   }
   return makeManualOnlyProviderMaintenanceCapabilities({
-    provider: definition.provider,
+    engine: definition.engine,
     packageName: definition.npmPackageName,
   });
 }
@@ -519,7 +519,7 @@ function makeProviderMaintenanceForInstallSource(input: {
 function resolveHomebrewPackageForCommandPath(
   definition: PackageManagedProviderMaintenanceDefinition,
   commandPath: string,
-): ProviderHomebrewPackageDefinition | null {
+): EngineHomebrewPackageDefinition | null {
   const homebrew = definition.homebrew;
   if (!homebrew) {
     return null;
@@ -566,12 +566,12 @@ function isHomebrewCommandPath(commandPath: string): boolean {
 
 export function resolvePackageManagedProviderMaintenance(
   definition: PackageManagedProviderMaintenanceDefinition,
-  options?: ProviderMaintenanceCapabilityResolutionOptions,
-): ProviderMaintenanceCapabilities {
+  options?: EngineMaintenanceCapabilityResolutionOptions,
+): EngineMaintenanceCapabilities {
   const binaryPath = nonEmptyString(options?.binaryPath);
   if (!binaryPath) {
     return makeManualOnlyProviderMaintenanceCapabilities({
-      provider: definition.provider,
+      engine: definition.engine,
       packageName: definition.npmPackageName,
     });
   }
@@ -608,7 +608,7 @@ export function resolvePackageManagedProviderMaintenance(
   }
 
   return makeManualOnlyProviderMaintenanceCapabilities({
-    provider: definition.provider,
+    engine: definition.engine,
     packageName: definition.npmPackageName,
   });
 }
@@ -617,7 +617,7 @@ export const resolveProviderMaintenanceCapabilitiesEffect = Effect.fn(
   "resolveProviderMaintenanceCapabilitiesEffect",
 )(function* (
   definition: PackageManagedProviderMaintenanceDefinition,
-  options?: ProviderMaintenanceCapabilityResolutionOptions,
+  options?: EngineMaintenanceCapabilityResolutionOptions,
 ) {
   const binaryPath = nonEmptyString(options?.binaryPath) ?? definition.binaryName;
   const fileSystem = yield* FileSystem.FileSystem;
@@ -636,7 +636,7 @@ export const resolveProviderMaintenanceCapabilitiesEffect = Effect.fn(
   // extensionless Windows file still counts even though nothing could spawn it directly.
   //
   // `options.env` is used whole, with no per-key fallback to `process.env`. An earlier version
-  // read `options.env.PATH ?? process.env.PATH`, which could report a provider as installed
+  // read `options.env.PATH ?? process.env.PATH`, which could report a engine as installed
   // because *this* process can see it while the child environment we were asked about cannot.
   // The production caller passes `buildProviderChildEnvironment(...)`, which always carries PATH.
   for (const candidate of executableCandidates(binaryPath, {
@@ -662,7 +662,7 @@ export const resolveProviderMaintenanceCapabilitiesEffect = Effect.fn(
   // A stale health/advisory cache must not turn a missing CLI into a spawn attempt.
   // Keep the manual command visible, but only expose one-click update after locating a binary.
   return makeManualOnlyProviderMaintenanceCapabilities({
-    provider: definition.provider,
+    engine: definition.engine,
     packageName: definition.npmPackageName,
   });
 });
@@ -677,22 +677,22 @@ function deriveVersionAdvisory(input: {
   if (compareSemverVersions(input.currentVersion, input.latestVersion) < 0) {
     return {
       status: "behind_latest",
-      message: PROVIDER_UPDATE_ACTION_MESSAGE,
+      message: ENGINE_UPDATE_ACTION_MESSAGE,
     };
   }
   return { status: "current", message: null };
 }
 
 export function createProviderVersionAdvisory(input: {
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly currentVersion: string | null;
   readonly latestVersion?: string | null;
   readonly checkedAt?: string | null;
-  readonly maintenanceCapabilities?: ProviderMaintenanceCapabilities;
+  readonly maintenanceCapabilities?: EngineMaintenanceCapabilities;
 }): ServerProviderVersionAdvisory {
   const capabilities =
     input.maintenanceCapabilities ??
-    makeManualOnlyProviderMaintenanceCapabilities({ provider: input.provider, packageName: null });
+    makeManualOnlyProviderMaintenanceCapabilities({ engine: input.engine, packageName: null });
   const latestVersion = input.latestVersion ?? null;
   const advisory = deriveVersionAdvisory({
     currentVersion: input.currentVersion,
@@ -732,7 +732,7 @@ const fetchNpmLatestVersion = Effect.fn("fetchNpmLatestVersion")(function* (pack
 });
 
 const fetchHomebrewLatestVersion = Effect.fn("fetchHomebrewLatestVersion")(function* (
-  source: ProviderLatestVersionSource,
+  source: EngineLatestVersionSource,
 ) {
   if (source.kind !== "homebrew" || !source.homebrewKind) {
     return null;
@@ -759,7 +759,7 @@ const fetchHomebrewLatestVersion = Effect.fn("fetchHomebrewLatestVersion")(funct
 });
 
 export const resolveLatestProviderVersion = Effect.fn("resolveLatestProviderVersion")(function* (
-  maintenanceCapabilities: ProviderMaintenanceCapabilities,
+  maintenanceCapabilities: EngineMaintenanceCapabilities,
 ) {
   const source = maintenanceCapabilities.latestVersionSource;
   if (!source) {
@@ -789,15 +789,12 @@ export const resolveLatestProviderVersion = Effect.fn("resolveLatestProviderVers
 
 export const enrichProviderStatusWithVersionAdvisory = Effect.fn(
   "enrichProviderStatusWithVersionAdvisory",
-)(function* (
-  status: ServerProviderStatus,
-  maintenanceCapabilities: ProviderMaintenanceCapabilities,
-) {
+)(function* (status: ServerProviderStatus, maintenanceCapabilities: EngineMaintenanceCapabilities) {
   if (!status.available || !status.version) {
     return {
       ...status,
       versionAdvisory: createProviderVersionAdvisory({
-        provider: status.provider,
+        engine: status.engine,
         currentVersion: status.version ?? null,
         checkedAt: status.checkedAt,
         maintenanceCapabilities,
@@ -809,7 +806,7 @@ export const enrichProviderStatusWithVersionAdvisory = Effect.fn(
   return {
     ...status,
     versionAdvisory: createProviderVersionAdvisory({
-      provider: status.provider,
+      engine: status.engine,
       currentVersion: status.version,
       latestVersion,
       checkedAt: DateTime.formatIso(yield* DateTime.now),

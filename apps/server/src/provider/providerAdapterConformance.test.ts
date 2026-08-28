@@ -1,17 +1,17 @@
 import { Effect, Stream } from "effect";
 import { describe, expect, it } from "vitest";
 
-import type { ProviderAdapterShape } from "./Services/ProviderAdapter.ts";
+import type { EngineAdapterShape } from "./Services/EngineAdapter.ts";
 import {
   assertProviderAdapterConformance,
   providerAdapterConformanceIssues,
 } from "./providerAdapterConformance.ts";
 
 function makeAdapter(
-  overrides: Partial<ProviderAdapterShape<never>> = {},
-): ProviderAdapterShape<never> {
+  overrides: Partial<EngineAdapterShape<never>> = {},
+): EngineAdapterShape<never> {
   return {
-    provider: "codex",
+    engine: "codex",
     capabilities: { sessionModelSwitch: "in-session" },
     startSession: () => Effect.die("unused"),
     sendTurn: () => Effect.die("unused"),
@@ -29,7 +29,7 @@ function makeAdapter(
   };
 }
 
-describe("provider adapter conformance", () => {
+describe("engine adapter conformance", () => {
   it("requires turn steering when the capability is advertised", () => {
     const adapter = makeAdapter({
       capabilities: {
@@ -87,7 +87,7 @@ describe("provider adapter conformance", () => {
 
   it("reports all invalid capability declarations in one error", () => {
     const adapter = makeAdapter({
-      provider: "opencode",
+      engine: "opencode",
       capabilities: {
         sessionModelSwitch: "in-session",
         supportsSkillDiscovery: true,
@@ -96,7 +96,7 @@ describe("provider adapter conformance", () => {
     });
 
     expect(() => assertProviderAdapterConformance(adapter)).toThrow(
-      'Provider adapter "opencode" has invalid capabilities: supportsSkillDiscovery requires listSkills(), supportsRuntimeModelList requires listModels().',
+      'Engine adapter "opencode" has invalid capabilities: supportsSkillDiscovery requires listSkills(), supportsRuntimeModelList requires listModels().',
     );
   });
 });

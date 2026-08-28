@@ -22,7 +22,7 @@ export interface UsageHistoryDiscoveredFile {
 
 export interface UsageHistoryDiscoverRequest {
   readonly type: "discover";
-  readonly provider: UsageHistoryProvider;
+  readonly engine: UsageHistoryProvider;
   readonly rootPath: string;
   readonly cursor: string | null;
   readonly limit: number;
@@ -62,7 +62,7 @@ export interface UsageHistoryParseFile {
 
 export interface UsageHistoryParseRequest {
   readonly type: "parse";
-  readonly provider: UsageHistoryProvider;
+  readonly engine: UsageHistoryProvider;
   readonly rootPath: string;
   readonly files: ReadonlyArray<UsageHistoryParseFile>;
   readonly workspaceHashSalt: string;

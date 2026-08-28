@@ -117,13 +117,13 @@ describe("store event reducer", () => {
           providerName: "codex",
           runtimeMode: "full-access",
           activeTurnId: null,
-          lastError: "provider crashed",
+          lastError: "engine crashed",
           updatedAt: "2026-02-27T00:02:00.000Z",
         },
       }),
     ]);
 
-    expect(threadsOf(next)[0]?.error).toBe("provider crashed");
+    expect(threadsOf(next)[0]?.error).toBe("engine crashed");
     expect(threadsOf(next)[0]?.latestTurn).toMatchObject({
       turnId: TurnId.makeUnsafe("turn-running"),
       state: "error",
@@ -261,8 +261,8 @@ describe("store event reducer", () => {
             projectId: ProjectId.makeUnsafe("project-live"),
             title: "Live Project",
             workspaceRoot: "/tmp/live-project",
-            defaultModelSelection: {
-              provider: "codex",
+            defaultEngineSelection: {
+              engine: "codex",
               model: "gpt-5-codex",
             },
             scripts: [],
@@ -312,7 +312,7 @@ describe("store event reducer", () => {
           projectId: ProjectId.makeUnsafe("project-live"),
           title: "Renamed Remotely",
           workspaceRoot: "/tmp/renamed-project",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [
             {
               id: "lint",
@@ -335,7 +335,7 @@ describe("store event reducer", () => {
       folderName: "renamed-project",
       localName: "Local Name",
       cwd: "/tmp/renamed-project",
-      defaultModelSelection: null,
+      defaultEngineSelection: null,
       updatedAt: "2026-02-27T00:05:00.000Z",
       scripts: [
         {
@@ -379,7 +379,7 @@ describe("store event reducer", () => {
     const initialState = makeState(
       makeThread({
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "running",
           orchestrationStatus: "running",
           activeTurnId: TurnId.makeUnsafe("turn-running"),
@@ -525,7 +525,7 @@ describe("store event reducer", () => {
     const messageId = MessageId.makeUnsafe("user-model-provenance");
     const initialState = makeState(
       makeThread({
-        modelSelection: { provider: "codex", model: "gpt-5.6" },
+        engineSelection: { engine: "codex", model: "gpt-5.6" },
         messages: [
           {
             id: messageId,
@@ -544,8 +544,8 @@ describe("store event reducer", () => {
       makeDomainEvent("thread.turn-start-requested", {
         threadId: ThreadId.makeUnsafe("thread-1"),
         messageId,
-        modelSelection: {
-          provider: "oa",
+        engineSelection: {
+          engine: "oa",
           model: "deepseek/deepseek-v4-pro",
         },
         runtimeMode: DEFAULT_RUNTIME_MODE,
@@ -559,8 +559,8 @@ describe("store event reducer", () => {
       {
         pendingMessageId: messageId,
         turnId: null,
-        modelSelection: {
-          provider: "oa",
+        engineSelection: {
+          engine: "oa",
           model: "deepseek/deepseek-v4-pro",
         },
         requestedAt: "2026-08-27T02:21:00.000Z",
@@ -570,7 +570,7 @@ describe("store event reducer", () => {
       makeDomainEvent("thread.turn-start-requested", {
         threadId: ThreadId.makeUnsafe("thread-1"),
         messageId,
-        modelSelection: { provider: "codex", model: "gpt-5.6" },
+        engineSelection: { engine: "codex", model: "gpt-5.6" },
         runtimeMode: DEFAULT_RUNTIME_MODE,
         interactionMode: DEFAULT_INTERACTION_MODE,
         dispatchMode: "queue",
@@ -581,7 +581,7 @@ describe("store event reducer", () => {
       {
         pendingMessageId: messageId,
         turnId: null,
-        modelSelection: { provider: "codex", model: "gpt-5.6" },
+        engineSelection: { engine: "codex", model: "gpt-5.6" },
         requestedAt: "2026-08-27T02:22:00.000Z",
       },
     ]);
@@ -692,7 +692,7 @@ describe("store event reducer", () => {
         associatedWorktreeBranch: "harnessos/tmp-working",
         associatedWorktreeRef: "harnessos/tmp-working",
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-02-27T00:00:00.000Z",
@@ -982,7 +982,7 @@ describe("store event reducer", () => {
     expect(threadsOf(next)[0]?.latestTurn?.assistantMessageId).toBe(existingAssistantMessageId);
   });
 
-  it("keeps an active turn running when an interim provider diff placeholder arrives", () => {
+  it("keeps an active turn running when an interim engine diff placeholder arrives", () => {
     const initialState = makeState(
       makeThread({
         latestTurn: {
@@ -1003,7 +1003,7 @@ describe("store event reducer", () => {
         completedAt: "2026-02-27T00:02:00.000Z",
         status: "missing",
         files: [],
-        checkpointRef: CheckpointRef.makeUnsafe("provider-diff:event-1"),
+        checkpointRef: CheckpointRef.makeUnsafe("engine-diff:event-1"),
         assistantMessageId: null,
         checkpointTurnCount: 1,
       }),
@@ -1017,7 +1017,7 @@ describe("store event reducer", () => {
     });
   });
 
-  it("keeps a settled turn intact when a late provider diff placeholder arrives", () => {
+  it("keeps a settled turn intact when a late engine diff placeholder arrives", () => {
     const initialState = makeState(
       makeThread({
         latestTurn: {
@@ -1038,7 +1038,7 @@ describe("store event reducer", () => {
         completedAt: "2026-02-27T00:01:31.000Z",
         status: "missing",
         files: [],
-        checkpointRef: CheckpointRef.makeUnsafe("provider-diff:event-late"),
+        checkpointRef: CheckpointRef.makeUnsafe("engine-diff:event-late"),
         assistantMessageId: null,
         checkpointTurnCount: 1,
       }),
@@ -1168,14 +1168,14 @@ describe("store event reducer", () => {
           {
             pendingMessageId: MessageId.makeUnsafe("user-1"),
             turnId: TurnId.makeUnsafe("turn-1"),
-            modelSelection: { provider: "codex", model: "gpt-5.6" },
+            engineSelection: { engine: "codex", model: "gpt-5.6" },
             requestedAt: "2026-02-27T00:00:00.000Z",
           },
           {
             pendingMessageId: MessageId.makeUnsafe("user-2"),
             turnId: TurnId.makeUnsafe("turn-2"),
-            modelSelection: {
-              provider: "oa",
+            engineSelection: {
+              engine: "oa",
               model: "deepseek/deepseek-v4-pro",
             },
             requestedAt: "2026-02-27T00:01:00.000Z",
@@ -1240,7 +1240,7 @@ describe("store event reducer", () => {
       {
         pendingMessageId: MessageId.makeUnsafe("user-1"),
         turnId: TurnId.makeUnsafe("turn-1"),
-        modelSelection: { provider: "codex", model: "gpt-5.6" },
+        engineSelection: { engine: "codex", model: "gpt-5.6" },
         requestedAt: "2026-02-27T00:00:00.000Z",
       },
     ]);
@@ -1306,14 +1306,14 @@ describe("store event reducer", () => {
           {
             pendingMessageId: MessageId.makeUnsafe("user-1"),
             turnId: TurnId.makeUnsafe("turn-1"),
-            modelSelection: { provider: "codex", model: "gpt-5.6" },
+            engineSelection: { engine: "codex", model: "gpt-5.6" },
             requestedAt: "2026-02-27T00:00:00.000Z",
           },
           {
             pendingMessageId: MessageId.makeUnsafe("user-2"),
             turnId: TurnId.makeUnsafe("turn-2"),
-            modelSelection: {
-              provider: "oa",
+            engineSelection: {
+              engine: "oa",
               model: "deepseek/deepseek-v4-pro",
             },
             requestedAt: "2026-02-27T00:01:00.000Z",
@@ -1367,7 +1367,7 @@ describe("store event reducer", () => {
       {
         pendingMessageId: MessageId.makeUnsafe("user-1"),
         turnId: TurnId.makeUnsafe("turn-1"),
-        modelSelection: { provider: "codex", model: "gpt-5.6" },
+        engineSelection: { engine: "codex", model: "gpt-5.6" },
         requestedAt: "2026-02-27T00:00:00.000Z",
       },
     ]);
@@ -1579,7 +1579,7 @@ describe("store event reducer", () => {
 
   it("replaces a live reasoning start with completion under its stable activity id", () => {
     const threadId = ThreadId.makeUnsafe("thread-1");
-    const activityId = "provider-reasoning:thread-1:reasoning-1";
+    const activityId = "engine-reasoning:thread-1:reasoning-1";
     const started = makeActivity({
       id: activityId,
       createdAt: "2026-02-27T00:00:01.000Z",
@@ -2010,7 +2010,7 @@ describe("store event reducer", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         activity: makeActivity({
           id: "activity-user-input-retryable",
-          kind: "provider.user-input.respond.failed",
+          kind: "engine.user-input.respond.failed",
           payload: {
             requestId: "request-1",
             lifecycleGeneration: "generation-1",
@@ -2129,7 +2129,7 @@ describe("store event reducer", () => {
         activity: makeActivity({
           id: `activity-failed-${initialClaim.status}`,
           createdAt: "2026-07-14T12:31:01.000Z",
-          kind: "provider.user-input.respond.failed",
+          kind: "engine.user-input.respond.failed",
           payload: {
             requestId,
             lifecycleGeneration,
@@ -2285,8 +2285,8 @@ describe("store event reducer", () => {
         id: threadId,
         projectId: ProjectId.makeUnsafe("project-1"),
         title: "Stale archived thread",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5.3-codex",
         },
         runtimeMode: DEFAULT_RUNTIME_MODE,

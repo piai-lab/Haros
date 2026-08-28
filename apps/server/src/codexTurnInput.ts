@@ -1,4 +1,4 @@
-import type { ProviderMentionReference, ProviderSkillReference } from "@harnessos/contracts";
+import type { EngineMentionReference, EngineSkillReference } from "@harnessos/contracts";
 
 export type CodexImageInputItem =
   | { readonly type: "image"; readonly url: string }
@@ -13,8 +13,8 @@ export type CodexTurnInputItem =
 export function buildCodexTurnInput(input: {
   readonly input?: string;
   readonly attachments?: ReadonlyArray<CodexImageInputItem>;
-  readonly skills?: ReadonlyArray<ProviderSkillReference>;
-  readonly mentions?: ReadonlyArray<ProviderMentionReference>;
+  readonly skills?: ReadonlyArray<EngineSkillReference>;
+  readonly mentions?: ReadonlyArray<EngineMentionReference>;
 }): CodexTurnInputItem[] {
   const items: CodexTurnInputItem[] = [];
   if (input.input) {

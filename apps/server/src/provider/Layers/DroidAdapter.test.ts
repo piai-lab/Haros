@@ -42,12 +42,12 @@ describe("resolveDroidSessionCwd", () => {
 
 describe("DroidAdapter runtime event scoping", () => {
   it("makes reused ACP assistant segment ids unique per turn", () => {
-    const providerItemId = "assistant:droid-session:segment:5";
+    const nativeItemId = "assistant:droid-session:segment:5";
 
-    expect(scopeDroidRuntimeItemIdForTurn(TurnId.makeUnsafe("turn-a"), providerItemId)).toBe(
+    expect(scopeDroidRuntimeItemIdForTurn(TurnId.makeUnsafe("turn-a"), nativeItemId)).toBe(
       "droid:turn-a:assistant:droid-session:segment:5",
     );
-    expect(scopeDroidRuntimeItemIdForTurn(TurnId.makeUnsafe("turn-b"), providerItemId)).toBe(
+    expect(scopeDroidRuntimeItemIdForTurn(TurnId.makeUnsafe("turn-b"), nativeItemId)).toBe(
       "droid:turn-b:assistant:droid-session:segment:5",
     );
   });
@@ -91,7 +91,7 @@ describe("DroidAdapter runtime event scoping", () => {
     ).toEqual({ state: "cancelled" });
   });
 
-  it("preserves the provider tool id while scoping the runtime item id", () => {
+  it("preserves the engine tool id while scoping the runtime item id", () => {
     const scoped = scopeDroidToolCallStateForTurn(TurnId.makeUnsafe("turn-a"), {
       toolCallId: "call-1",
       kind: "execute",

@@ -1,6 +1,6 @@
 // FILE: omnimindTaskListExtension.test.ts
 // Purpose: Verifies the product-bundled Todo Extension's bounded snapshot and provenance contract.
-// Layer: Provider Extension tests
+// Layer: Engine Extension tests
 
 import { describe, expect, it } from "vitest";
 

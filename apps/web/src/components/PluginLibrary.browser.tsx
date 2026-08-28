@@ -47,9 +47,9 @@ vi.mock("../nativeApi", () => ({
       setResourceEnabled: fixture.setResourceEnabled,
       reload: fixture.reload,
     },
-    provider: {
-      getComposerCapabilities: async ({ provider }: { provider: string }) => ({
-        provider,
+    engine: {
+      getComposerCapabilities: async ({ engine }: { engine: string }) => ({
+        engine,
         supportsSkillMentions: false,
         supportsSkillDiscovery: false,
         supportsNativeSlashCommandDiscovery: false,
@@ -88,7 +88,7 @@ vi.mock("../hooks/useDesktopTopBarGutter", () => ({
 }));
 
 import { I18nProvider } from "../i18n";
-import { providerDiscoveryQueryKeys } from "../lib/providerDiscoveryReactQuery";
+import { engineDiscoveryQueryKeys } from "../lib/engineDiscoveryReactQuery";
 import { PluginLibrary } from "./PluginLibrary";
 
 async function renderLibrary(sourceThreadId: ThreadId | null = null) {
@@ -186,8 +186,8 @@ describe("PluginLibrary OmniMind Agent packages", () => {
       id: threadId,
       projectId: "project-1",
       worktreePath: "/workspace",
-      modelSelection: { provider: "oa", model: "deepseek/model" },
-      session: { provider: "oa", status: "ready" },
+      engineSelection: { engine: "oa", model: "deepseek/model" },
+      session: { engine: "oa", status: "ready" },
     };
     fixture.sourceProject = { id: "project-1", cwd: "/workspace" };
     fixture.reload.mockResolvedValue({ state: "reloaded" });
@@ -201,7 +201,7 @@ describe("PluginLibrary OmniMind Agent packages", () => {
     await expect.poll(() => fixture.reload.mock.calls.length).toBe(1);
     expect(fixture.reload).toHaveBeenCalledWith({ threadId });
     expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: providerDiscoveryQueryKeys.modelsForProvider("oa"),
+      queryKey: engineDiscoveryQueryKeys.modelsForProvider("oa"),
     });
     await expect
       .poll(() => document.body.textContent)

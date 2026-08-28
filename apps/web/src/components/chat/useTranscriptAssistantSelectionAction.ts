@@ -2,7 +2,7 @@
 // Purpose: Own the assistant highlight -> floating action -> composer insertion flow for transcript selections.
 // Layer: Chat transcript interaction controller
 
-import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS } from "@harnessos/contracts";
+import { ENGINE_SEND_TURN_MAX_ATTACHMENTS } from "@harnessos/contracts";
 import {
   useEffect,
   useCallback,
@@ -236,13 +236,13 @@ export function useTranscriptAssistantSelectionAction(
       composerImagesRef.current.length +
         composerFilesRef.current.length +
         composerAssistantSelectionsRef.current.length >=
-      PROVIDER_SEND_TURN_MAX_ATTACHMENTS
+      ENGINE_SEND_TURN_MAX_ATTACHMENTS
     ) {
       setPendingTranscriptSelectionAction(null);
       toastManager.add({
         type: "warning",
         title: t("selection.attachmentLimit", {
-          count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+          count: ENGINE_SEND_TURN_MAX_ATTACHMENTS,
         }),
       });
       return;

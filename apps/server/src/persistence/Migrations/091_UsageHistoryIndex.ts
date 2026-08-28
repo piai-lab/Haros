@@ -1,5 +1,5 @@
 // FILE: 091_UsageHistoryIndex.ts
-// Purpose: Adds the rebuildable, consent-gated Provider archive usage projection.
+// Purpose: Adds the rebuildable, consent-gated Engine archive usage projection.
 
 import * as Effect from "effect/Effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
@@ -28,7 +28,7 @@ export default Effect.gen(function* () {
 
   yield* sql`
     CREATE TABLE IF NOT EXISTS usage_history_provider_state (
-      provider TEXT PRIMARY KEY CHECK (provider IN ('codex', 'claude')),
+      engine TEXT PRIMARY KEY CHECK (engine IN ('codex', 'claude')),
       status TEXT NOT NULL CHECK (
         status IN ('pending', 'indexing', 'ready', 'partial', 'paused', 'unsupported')
       ),
@@ -49,7 +49,7 @@ export default Effect.gen(function* () {
   yield* sql`
     CREATE TABLE IF NOT EXISTS usage_history_files (
       file_id INTEGER PRIMARY KEY AUTOINCREMENT,
-      provider TEXT NOT NULL CHECK (provider IN ('codex', 'claude')),
+      engine TEXT NOT NULL CHECK (engine IN ('codex', 'claude')),
       root_key TEXT NOT NULL,
       relative_path TEXT NOT NULL,
       device_id TEXT NOT NULL,
@@ -70,13 +70,13 @@ export default Effect.gen(function* () {
       last_seen_generation INTEGER NOT NULL CHECK (last_seen_generation >= 0),
       state TEXT NOT NULL CHECK (state IN ('pending', 'indexed', 'partial', 'skipped')),
       detail_code TEXT,
-      UNIQUE (provider, root_key, relative_path)
+      UNIQUE (engine, root_key, relative_path)
     )
   `;
 
   yield* sql`
     CREATE TABLE IF NOT EXISTS usage_history_events (
-      provider TEXT NOT NULL CHECK (provider IN ('codex', 'claude')),
+      engine TEXT NOT NULL CHECK (engine IN ('codex', 'claude')),
       event_key TEXT NOT NULL,
       occurred_at TEXT NOT NULL,
       occurred_on TEXT NOT NULL,
@@ -88,29 +88,29 @@ export default Effect.gen(function* () {
       output_tokens INTEGER NOT NULL CHECK (output_tokens >= 0),
       cache_read_tokens INTEGER NOT NULL CHECK (cache_read_tokens >= 0),
       cache_write_tokens INTEGER NOT NULL CHECK (cache_write_tokens >= 0),
-      PRIMARY KEY (provider, event_key)
+      PRIMARY KEY (engine, event_key)
     )
   `;
 
   yield* sql`
     CREATE TABLE IF NOT EXISTS usage_history_event_sources (
       file_id INTEGER NOT NULL REFERENCES usage_history_files(file_id) ON DELETE CASCADE,
-      provider TEXT NOT NULL,
+      engine TEXT NOT NULL,
       event_key TEXT NOT NULL,
-      PRIMARY KEY (file_id, provider, event_key),
-      FOREIGN KEY (provider, event_key)
-        REFERENCES usage_history_events(provider, event_key)
+      PRIMARY KEY (file_id, engine, event_key),
+      FOREIGN KEY (engine, event_key)
+        REFERENCES usage_history_events(engine, event_key)
         ON DELETE CASCADE
     )
   `;
 
   yield* sql`
     CREATE INDEX IF NOT EXISTS usage_history_files_pending_idx
-    ON usage_history_files(provider, state, relative_path)
+    ON usage_history_files(engine, state, relative_path)
   `;
   yield* sql`
     CREATE INDEX IF NOT EXISTS usage_history_events_time_idx
-    ON usage_history_events(occurred_at, provider)
+    ON usage_history_events(occurred_at, engine)
   `;
   yield* sql`
     CREATE INDEX IF NOT EXISTS usage_history_events_model_idx

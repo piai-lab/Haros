@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 import { CommandId, IsoDateTime, ProjectId, TrimmedNonEmptyString } from "./baseSchemas";
-import { ModelSelection } from "./orchestration";
+import { EngineSelection } from "./orchestration";
 
 const BoundedRepositoryInput = TrimmedNonEmptyString.check(Schema.isMaxLength(512));
 const BoundedPath = TrimmedNonEmptyString.check(Schema.isMaxLength(4_096));
@@ -21,7 +21,7 @@ export const GitHubProjectProvisionInput = Schema.Struct({
   directoryName: BoundedDirectoryName,
   commandId: CommandId,
   projectId: ProjectId,
-  defaultModelSelection: Schema.NullOr(ModelSelection),
+  defaultEngineSelection: Schema.NullOr(EngineSelection),
   createdAt: IsoDateTime,
 });
 export type GitHubProjectProvisionInput = typeof GitHubProjectProvisionInput.Type;

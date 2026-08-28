@@ -5,7 +5,7 @@ import {
   ThreadId,
   TurnId,
   type GitWorktreeSetupProgressEvent,
-  type ModelSelection,
+  type EngineSelection,
   type ModelSlug,
   type RuntimeMode,
 } from "@harnessos/contracts";
@@ -23,7 +23,7 @@ import {
   buildTranscriptTailKey,
   createRuntimeModePersistenceQueue,
   desiredBindingCanPersistWithoutActiveSession,
-  persistModelSelectionBeforeRuntimeMode,
+  persistEngineSelectionBeforeRuntimeMode,
   createLocalDispatchSnapshot,
   createWorktreeSetupResolution,
   createWorktreeSetupSnapshot,
@@ -125,14 +125,14 @@ describe("resolvePendingDirectTurnRecoveryMutation", () => {
     const targetBinding = {
       ...baseline,
       activeProvider: "codex" as const,
-      modelSelectionByProvider: {
-        codex: { provider: "codex" as const, model: "gpt-5.4" },
+      engineSelectionByEngine: {
+        codex: { engine: "codex" as const, model: "gpt-5.4" },
       },
     };
     const newerBinding = {
       ...targetBinding,
-      modelSelectionByProvider: {
-        codex: { provider: "codex" as const, model: "gpt-5.5" },
+      engineSelectionByEngine: {
+        codex: { engine: "codex" as const, model: "gpt-5.5" },
       },
     };
     expect(resolvePendingDirectTurnRecoveryMutation(targetBinding, newerBinding)).toBe("binding");
@@ -140,29 +140,29 @@ describe("resolvePendingDirectTurnRecoveryMutation", () => {
 });
 
 const ACTIVE_SESSION: ThreadSession = {
-  provider: "codex",
+  engine: "codex",
   status: "ready",
   orchestrationStatus: "ready",
   createdAt: "2026-08-12T00:00:00.000Z",
   updatedAt: "2026-08-12T00:00:02.000Z",
 };
 
-const CODEX_BINDING: ModelSelection = {
-  provider: "codex",
+const CODEX_BINDING: EngineSelection = {
+  engine: "codex",
   model: "gpt-5.4",
 };
 
-const CLAUDE_BINDING: ModelSelection = {
-  provider: "claude",
+const CLAUDE_BINDING: EngineSelection = {
+  engine: "claude",
   model: "claude-sonnet-4-5",
 };
 
-const CROSS_PROVIDER_MESSAGE_ID = MessageId.makeUnsafe("cross-provider-message");
+const CROSS_PROVIDER_MESSAGE_ID = MessageId.makeUnsafe("cross-engine-message");
 
 describe("turn-start recovery disposition", () => {
   const matchingFailure = [
     {
-      kind: "provider.turn.start.failed",
+      kind: "engine.turn.start.failed",
       payload: { messageId: CROSS_PROVIDER_MESSAGE_ID, detail: "target failed" },
     },
   ];
@@ -171,16 +171,16 @@ describe("turn-start recovery disposition", () => {
     expect(
       resolveTurnStartRecoveryDisposition({
         messageId: CROSS_PROVIDER_MESSAGE_ID,
-        previousModelSelection: CODEX_BINDING,
+        previousEngineSelection: CODEX_BINDING,
         previousRuntimeMode: "full-access",
         previousInteractionMode: "default",
-        targetModelSelection: CLAUDE_BINDING,
+        targetEngineSelection: CLAUDE_BINDING,
         targetRuntimeMode: "approval-required",
         targetInteractionMode: "default",
-        threadModelSelection: CLAUDE_BINDING,
+        threadEngineSelection: CLAUDE_BINDING,
         threadRuntimeMode: "approval-required",
         threadInteractionMode: "default",
-        session: { provider: "claude", orchestrationStatus: "running" },
+        session: { engine: "claude", orchestrationStatus: "running" },
         activities: matchingFailure,
       }),
     ).toBe("target-committed");
@@ -190,19 +190,19 @@ describe("turn-start recovery disposition", () => {
     expect(
       resolveTurnStartRecoveryDisposition({
         messageId: CROSS_PROVIDER_MESSAGE_ID,
-        previousModelSelection: CODEX_BINDING,
+        previousEngineSelection: CODEX_BINDING,
         previousRuntimeMode: "full-access",
         previousInteractionMode: "default",
-        targetModelSelection: CLAUDE_BINDING,
+        targetEngineSelection: CLAUDE_BINDING,
         targetRuntimeMode: "approval-required",
         targetInteractionMode: "default",
-        threadModelSelection: CODEX_BINDING,
+        threadEngineSelection: CODEX_BINDING,
         threadRuntimeMode: "full-access",
         threadInteractionMode: "default",
-        session: { provider: "codex", orchestrationStatus: "ready" },
+        session: { engine: "codex", orchestrationStatus: "ready" },
         activities: [
           {
-            kind: "provider.turn.start.failed",
+            kind: "engine.turn.start.failed",
             payload: { messageId: MessageId.makeUnsafe("another-message") },
           },
         ],
@@ -214,16 +214,16 @@ describe("turn-start recovery disposition", () => {
     expect(
       resolveTurnStartRecoveryDisposition({
         messageId: CROSS_PROVIDER_MESSAGE_ID,
-        previousModelSelection: CODEX_BINDING,
+        previousEngineSelection: CODEX_BINDING,
         previousRuntimeMode: "full-access",
         previousInteractionMode: "default",
-        targetModelSelection: CLAUDE_BINDING,
+        targetEngineSelection: CLAUDE_BINDING,
         targetRuntimeMode: "approval-required",
         targetInteractionMode: "default",
-        threadModelSelection: CODEX_BINDING,
+        threadEngineSelection: CODEX_BINDING,
         threadRuntimeMode: "full-access",
         threadInteractionMode: "default",
-        session: { provider: "codex", orchestrationStatus: "ready" },
+        session: { engine: "codex", orchestrationStatus: "ready" },
         activities: matchingFailure,
       }),
     ).toBe("old-binding-restored");
@@ -233,16 +233,16 @@ describe("turn-start recovery disposition", () => {
     expect(
       resolveTurnStartRecoveryDisposition({
         messageId: CROSS_PROVIDER_MESSAGE_ID,
-        previousModelSelection: CODEX_BINDING,
+        previousEngineSelection: CODEX_BINDING,
         previousRuntimeMode: "full-access",
         previousInteractionMode: "default",
-        targetModelSelection: CLAUDE_BINDING,
+        targetEngineSelection: CLAUDE_BINDING,
         targetRuntimeMode: "approval-required",
         targetInteractionMode: "default",
-        threadModelSelection: CODEX_BINDING,
+        threadEngineSelection: CODEX_BINDING,
         threadRuntimeMode: "full-access",
         threadInteractionMode: "default",
-        session: { provider: "codex", orchestrationStatus: "error" },
+        session: { engine: "codex", orchestrationStatus: "error" },
         activities: matchingFailure,
       }),
     ).toBe("terminal-unrecovered");
@@ -252,16 +252,16 @@ describe("turn-start recovery disposition", () => {
     expect(
       resolveTurnStartRecoveryDisposition({
         messageId: CROSS_PROVIDER_MESSAGE_ID,
-        previousModelSelection: CODEX_BINDING,
+        previousEngineSelection: CODEX_BINDING,
         previousRuntimeMode: "full-access",
         previousInteractionMode: "default",
-        targetModelSelection: CLAUDE_BINDING,
+        targetEngineSelection: CLAUDE_BINDING,
         targetRuntimeMode: "approval-required",
         targetInteractionMode: "plan",
-        threadModelSelection: CLAUDE_BINDING,
+        threadEngineSelection: CLAUDE_BINDING,
         threadRuntimeMode: "approval-required",
         threadInteractionMode: "default",
-        session: { provider: "claude", orchestrationStatus: "running" },
+        session: { engine: "claude", orchestrationStatus: "running" },
         activities: [],
       }),
     ).toBe("pending");
@@ -272,8 +272,8 @@ describe("desiredBindingCanPersistWithoutActiveSession", () => {
   it("accepts an exact durable binding only when no live Session exists", () => {
     expect(
       desiredBindingCanPersistWithoutActiveSession({
-        desiredModelSelection: CODEX_BINDING,
-        serverModelSelection: CODEX_BINDING,
+        desiredEngineSelection: CODEX_BINDING,
+        serverEngineSelection: CODEX_BINDING,
         activeSession: null,
       }),
     ).toBe(true);
@@ -282,18 +282,18 @@ describe("desiredBindingCanPersistWithoutActiveSession", () => {
   it("rejects a different desired Engine without a live Session", () => {
     expect(
       desiredBindingCanPersistWithoutActiveSession({
-        desiredModelSelection: { provider: "pi", model: "anthropic/claude-sonnet-4-5" },
-        serverModelSelection: CODEX_BINDING,
+        desiredEngineSelection: { engine: "pi", model: "anthropic/claude-sonnet-4-5" },
+        serverEngineSelection: CODEX_BINDING,
         activeSession: null,
       }),
     ).toBe(false);
   });
 
-  it("rejects even a newer same-provider Session because it has no model generation", () => {
+  it("rejects even a newer same-engine Session because it has no model generation", () => {
     expect(
       desiredBindingCanPersistWithoutActiveSession({
-        desiredModelSelection: CODEX_BINDING,
-        serverModelSelection: CODEX_BINDING,
+        desiredEngineSelection: CODEX_BINDING,
+        serverEngineSelection: CODEX_BINDING,
         activeSession: ACTIVE_SESSION,
       }),
     ).toBe(false);
@@ -1140,7 +1140,7 @@ describe("voice helpers", () => {
     expect(describeVoiceRecordingStartError(error)).toContain("Microphone access was denied");
   });
 
-  it("derives voice-note availability from provider auth and runtime state", () => {
+  it("derives voice-note availability from engine auth and runtime state", () => {
     expect(
       deriveComposerVoiceState({
         authStatus: "authenticated",
@@ -1702,7 +1702,7 @@ describe("resolveProjectScriptTerminalTarget", () => {
 });
 
 describe("shouldRenderProviderHealthBanner", () => {
-  it("does not show chat provider health while a terminal thread is active", () => {
+  it("does not show chat engine health while a terminal thread is active", () => {
     expect(
       shouldRenderProviderHealthBanner({
         threadEntryPoint: "terminal",
@@ -1711,7 +1711,7 @@ describe("shouldRenderProviderHealthBanner", () => {
     ).toBe(false);
   });
 
-  it("does not show chat provider health while the terminal workspace tab is active", () => {
+  it("does not show chat engine health while the terminal workspace tab is active", () => {
     expect(
       shouldRenderProviderHealthBanner({
         threadEntryPoint: "chat",
@@ -1720,7 +1720,7 @@ describe("shouldRenderProviderHealthBanner", () => {
     ).toBe(false);
   });
 
-  it("shows chat provider health only on the chat surface", () => {
+  it("shows chat engine health only on the chat surface", () => {
     expect(
       shouldRenderProviderHealthBanner({
         threadEntryPoint: "chat",
@@ -2327,7 +2327,7 @@ describe("hasServerAcknowledgedLocalDispatch", () => {
           },
         ],
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-04-13T00:00:00.000Z",
@@ -2356,7 +2356,7 @@ describe("hasServerAcknowledgedLocalDispatch", () => {
         },
         messages: [],
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-04-13T00:00:00.000Z",
@@ -2377,7 +2377,7 @@ describe("hasServerAcknowledgedLocalDispatch", () => {
         latestTurn: null,
         messages: [],
         session: {
-          provider: "claude",
+          engine: "claude",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-04-13T00:00:00.000Z",
@@ -2406,7 +2406,7 @@ describe("hasServerAcknowledgedLocalDispatch", () => {
           },
         ],
         session: {
-          provider: "claude",
+          engine: "claude",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-04-13T00:00:00.000Z",
@@ -2429,7 +2429,7 @@ describe("hasServerAcknowledgedLocalDispatch", () => {
         session: null,
         hasPendingApproval: false,
         hasPendingUserInput: false,
-        threadError: "provider failed",
+        threadError: "engine failed",
       }),
     ).toBe(true);
   });
@@ -2463,7 +2463,7 @@ describe("hasLiveTurnTakenOver", () => {
           sourceProposedPlan: undefined,
         },
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "ready",
           orchestrationStatus: "ready",
           createdAt: "2026-04-13T00:00:00.000Z",
@@ -2509,7 +2509,7 @@ describe("hasLiveTurnTakenOver", () => {
         phase: "ready",
         latestTurn: null,
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "ready",
           orchestrationStatus: "ready",
           activeTurnId: "turn-1" as never,
@@ -2595,7 +2595,7 @@ describe("hasLiveTurnTakenOver", () => {
         session: null,
         hasPendingApproval: false,
         hasPendingUserInput: false,
-        threadError: "provider failed",
+        threadError: "engine failed",
       }),
     ).toBe(true);
   });
@@ -2767,25 +2767,25 @@ describe("createRuntimeModePersistenceQueue", () => {
   });
 });
 
-describe("persistModelSelectionBeforeRuntimeMode", () => {
+describe("persistEngineSelectionBeforeRuntimeMode", () => {
   const previousModel = {
-    provider: "droid",
+    engine: "droid",
     model: "claude-opus-4-8",
   } as const;
   const autoCapableModel = {
-    provider: "codex",
+    engine: "codex",
     model: "gpt-5.6-sol",
   } as const;
 
   it("persists a newly selected model before enabling Auto", async () => {
     const calls: Array<string> = [];
 
-    await persistModelSelectionBeforeRuntimeMode({
-      currentModelSelection: previousModel,
-      nextModelSelection: autoCapableModel,
+    await persistEngineSelectionBeforeRuntimeMode({
+      currentEngineSelection: previousModel,
+      nextEngineSelection: autoCapableModel,
       currentRuntimeMode: "approval-required",
       nextRuntimeMode: "auto",
-      persistModelSelection: async () => {
+      persistEngineSelection: async () => {
         calls.push("model");
       },
       persistRuntimeMode: async () => {
@@ -2800,12 +2800,12 @@ describe("persistModelSelectionBeforeRuntimeMode", () => {
     const calls: Array<string> = [];
 
     await expect(
-      persistModelSelectionBeforeRuntimeMode({
-        currentModelSelection: previousModel,
-        nextModelSelection: autoCapableModel,
+      persistEngineSelectionBeforeRuntimeMode({
+        currentEngineSelection: previousModel,
+        nextEngineSelection: autoCapableModel,
         currentRuntimeMode: "approval-required",
         nextRuntimeMode: "auto",
-        persistModelSelection: async () => {
+        persistEngineSelection: async () => {
           calls.push("model");
           throw new Error("model persistence failed");
         },
@@ -2821,12 +2821,12 @@ describe("persistModelSelectionBeforeRuntimeMode", () => {
   it("downgrades from Auto before persisting an incompatible model", async () => {
     const calls: Array<string> = [];
 
-    await persistModelSelectionBeforeRuntimeMode({
-      currentModelSelection: autoCapableModel,
-      nextModelSelection: previousModel,
+    await persistEngineSelectionBeforeRuntimeMode({
+      currentEngineSelection: autoCapableModel,
+      nextEngineSelection: previousModel,
       currentRuntimeMode: "auto",
       nextRuntimeMode: "approval-required",
-      persistModelSelection: async () => {
+      persistEngineSelection: async () => {
         calls.push("model");
       },
       persistRuntimeMode: async () => {

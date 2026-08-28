@@ -1,5 +1,5 @@
 // FILE: providerStatusCache.test.ts
-// Purpose: Verifies cache helpers for provider readiness snapshots.
+// Purpose: Verifies cache helpers for engine readiness snapshots.
 // Exports: Vitest coverage for tolerant cache reads and atomic cache writes.
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -15,7 +15,7 @@ import {
 } from "./providerStatusCache";
 
 const readyCodexStatus = {
-  provider: "codex" as const,
+  engine: "codex" as const,
   status: "ready" as const,
   available: true,
   authStatus: "authenticated" as const,
@@ -23,21 +23,21 @@ const readyCodexStatus = {
 };
 
 describe("providerStatusCache", () => {
-  it("writes and reads provider status snapshots", async () => {
+  it("writes and reads engine status snapshots", async () => {
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const fileSystem = yield* FileSystem.FileSystem;
         const tempDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "omnimind-provider-status-cache-",
+          prefix: "omnimind-engine-status-cache-",
         });
         const cachePath = resolveProviderStatusCachePath({
           stateDir: tempDir,
-          provider: readyCodexStatus.provider,
+          engine: readyCodexStatus.engine,
         });
 
         yield* writeProviderStatusCache({
           filePath: cachePath,
-          provider: readyCodexStatus,
+          engine: readyCodexStatus,
         });
 
         return {
@@ -57,11 +57,11 @@ describe("providerStatusCache", () => {
         const fileSystem = yield* FileSystem.FileSystem;
         const path = yield* Path.Path;
         const tempDir = yield* fileSystem.makeTempDirectoryScoped({
-          prefix: "omnimind-provider-status-cache-bad-",
+          prefix: "omnimind-engine-status-cache-bad-",
         });
         const cachePath = resolveProviderStatusCachePath({
           stateDir: tempDir,
-          provider: readyCodexStatus.provider,
+          engine: readyCodexStatus.engine,
         });
 
         yield* fileSystem.makeDirectory(path.dirname(cachePath), { recursive: true });
@@ -74,32 +74,32 @@ describe("providerStatusCache", () => {
     expect(result).toBeUndefined();
   });
 
-  it("keeps provider ordering stable for transport consumers", () => {
+  it("keeps engine ordering stable for transport consumers", () => {
     expect(
       orderProviderStatuses([
         {
-          provider: "antigravity",
+          engine: "antigravity",
           status: "ready",
           available: true,
           authStatus: "authenticated",
           checkedAt: "2026-04-15T10:02:00.000Z",
         },
         {
-          provider: "claude",
+          engine: "claude",
           status: "warning",
           available: true,
           authStatus: "unknown",
           checkedAt: "2026-04-15T10:01:00.000Z",
         },
         {
-          provider: "cursor",
+          engine: "cursor",
           status: "ready",
           available: true,
           authStatus: "unknown",
           checkedAt: "2026-04-15T10:03:00.000Z",
         },
         {
-          provider: "grok",
+          engine: "grok",
           status: "ready",
           available: true,
           authStatus: "unknown",
@@ -110,28 +110,28 @@ describe("providerStatusCache", () => {
     ).toEqual([
       readyCodexStatus,
       {
-        provider: "claude",
+        engine: "claude",
         status: "warning",
         available: true,
         authStatus: "unknown",
         checkedAt: "2026-04-15T10:01:00.000Z",
       },
       {
-        provider: "cursor",
+        engine: "cursor",
         status: "ready",
         available: true,
         authStatus: "unknown",
         checkedAt: "2026-04-15T10:03:00.000Z",
       },
       {
-        provider: "antigravity",
+        engine: "antigravity",
         status: "ready",
         available: true,
         authStatus: "authenticated",
         checkedAt: "2026-04-15T10:02:00.000Z",
       },
       {
-        provider: "grok",
+        engine: "grok",
         status: "ready",
         available: true,
         authStatus: "unknown",

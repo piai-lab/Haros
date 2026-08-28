@@ -20,7 +20,7 @@ describe("inspectSubprocessActivity", () => {
     const map = buildChildrenMap([]);
     expect(inspectSubprocessActivity(100, map)).toEqual({
       cliKind: null,
-      hasNonProviderSubprocess: false,
+      hasNonEngineSubprocess: false,
       hasProviderDescendant: false,
       hasRunningSubprocess: false,
     });
@@ -33,36 +33,36 @@ describe("inspectSubprocessActivity", () => {
     ]);
     expect(inspectSubprocessActivity(100, map)).toEqual({
       cliKind: null,
-      hasNonProviderSubprocess: false,
+      hasNonEngineSubprocess: false,
       hasProviderDescendant: false,
       hasRunningSubprocess: false,
     });
   });
 
-  it("flags a non-provider subprocess as running", () => {
+  it("flags a non-engine subprocess as running", () => {
     const map = buildChildrenMap([{ ppid: 100, pid: 200, command: "node build.js" }]);
     expect(inspectSubprocessActivity(100, map)).toEqual({
       cliKind: null,
-      hasNonProviderSubprocess: true,
+      hasNonEngineSubprocess: true,
       hasProviderDescendant: false,
       hasRunningSubprocess: true,
     });
   });
 
-  it("detects a provider descendant nested under a wrapper shell", () => {
+  it("detects a engine descendant nested under a wrapper shell", () => {
     const map = buildChildrenMap([
       { ppid: 100, pid: 200, command: "zsh" },
       { ppid: 200, pid: 300, command: "codex" },
     ]);
     expect(inspectSubprocessActivity(100, map)).toEqual({
       cliKind: "codex",
-      hasNonProviderSubprocess: false,
+      hasNonEngineSubprocess: false,
       hasProviderDescendant: true,
       hasRunningSubprocess: true,
     });
   });
 
-  it("combines provider and non-provider activity across sibling branches", () => {
+  it("combines engine and non-engine activity across sibling branches", () => {
     const map = buildChildrenMap([
       { ppid: 100, pid: 200, command: "zsh" },
       { ppid: 200, pid: 300, command: "codex" },
@@ -71,13 +71,13 @@ describe("inspectSubprocessActivity", () => {
 
     expect(inspectSubprocessActivity(100, map)).toEqual({
       cliKind: "codex",
-      hasNonProviderSubprocess: true,
+      hasNonEngineSubprocess: true,
       hasProviderDescendant: true,
       hasRunningSubprocess: true,
     });
   });
 
-  it("preserves provider and shell semantics for Windows executable names", () => {
+  it("preserves engine and shell semantics for Windows executable names", () => {
     const map = buildChildrenMap([
       {
         ppid: 100,
@@ -89,7 +89,7 @@ describe("inspectSubprocessActivity", () => {
 
     expect(inspectSubprocessActivity(100, map)).toEqual({
       cliKind: "codex",
-      hasNonProviderSubprocess: false,
+      hasNonEngineSubprocess: false,
       hasProviderDescendant: true,
       hasRunningSubprocess: true,
     });
@@ -107,7 +107,7 @@ describe("inspectSubprocessActivity", () => {
     expect(inspectSubprocessActivity(100, map).cliKind).toBe("codex");
     expect(inspectSubprocessActivity(400, map)).toEqual({
       cliKind: null,
-      hasNonProviderSubprocess: false,
+      hasNonEngineSubprocess: false,
       hasProviderDescendant: false,
       hasRunningSubprocess: false,
     });

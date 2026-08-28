@@ -4,7 +4,7 @@ import type { Effect } from "effect";
 
 import type { PersistenceSqlError } from "../Errors.ts";
 
-export const PROVIDER_COMMAND_REACTOR_CONSUMER = "provider-command-reactor.v1";
+export const ENGINE_COMMAND_REACTOR_CONSUMER = "engine-command-reactor.v1";
 
 export const OrchestrationEventDeliveryState = Schema.Literals([
   "inflight",
@@ -38,15 +38,14 @@ export const OrchestrationEventDelivery = Schema.Struct({
 });
 export type OrchestrationEventDelivery = typeof OrchestrationEventDelivery.Type;
 
-export const ProviderDeliveryReconciliationOutcome = Schema.Literals([
+export const EngineDeliveryReconciliationOutcome = Schema.Literals([
   "accepted",
   "safe_retry",
   "abandon",
 ]);
-export type ProviderDeliveryReconciliationOutcome =
-  typeof ProviderDeliveryReconciliationOutcome.Type;
+export type EngineDeliveryReconciliationOutcome = typeof EngineDeliveryReconciliationOutcome.Type;
 
-export const ProviderBlockingDeliveryEvidence = Schema.Struct({
+export const EngineBlockingDeliveryEvidence = Schema.Struct({
   consumerName: Schema.String,
   eventSequence: NonNegativeInt,
   eventId: EventId,
@@ -57,12 +56,12 @@ export const ProviderBlockingDeliveryEvidence = Schema.Struct({
   attemptCount: NonNegativeInt,
   lastError: Schema.NullOr(Schema.String),
   updatedAt: IsoDateTime,
-  lastReconciliationOutcome: Schema.NullOr(ProviderDeliveryReconciliationOutcome),
+  lastReconciliationOutcome: Schema.NullOr(EngineDeliveryReconciliationOutcome),
   lastReconciledAt: Schema.NullOr(IsoDateTime),
   lastReconciledBy: Schema.NullOr(Schema.String),
   lastReconciliationNote: Schema.NullOr(Schema.String),
 });
-export type ProviderBlockingDeliveryEvidence = typeof ProviderBlockingDeliveryEvidence.Type;
+export type EngineBlockingDeliveryEvidence = typeof EngineBlockingDeliveryEvidence.Type;
 
 export interface OrchestrationEventDeliveryRepositoryShape {
   readonly getConsumerState: (
@@ -125,7 +124,7 @@ export interface OrchestrationEventDeliveryRepositoryShape {
     readonly threadId?: string | undefined;
     readonly afterEventSequence?: number | undefined;
     readonly limit: number;
-  }) => Effect.Effect<ReadonlyArray<ProviderBlockingDeliveryEvidence>, PersistenceSqlError>;
+  }) => Effect.Effect<ReadonlyArray<EngineBlockingDeliveryEvidence>, PersistenceSqlError>;
   readonly listRetryableDeliveries: (
     consumerName: string,
   ) => Effect.Effect<ReadonlyArray<OrchestrationEventDelivery>, PersistenceSqlError>;
@@ -135,7 +134,7 @@ export interface OrchestrationEventDeliveryRepositoryShape {
     readonly eventSequence: number;
     readonly threadId: string;
     readonly expectedState: "dead" | "uncertain";
-    readonly outcome: ProviderDeliveryReconciliationOutcome;
+    readonly outcome: EngineDeliveryReconciliationOutcome;
     readonly reconciledBy: string;
     readonly note?: string | undefined;
     readonly reconciledAt: string;

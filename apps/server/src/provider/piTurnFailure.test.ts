@@ -11,7 +11,7 @@ describe("classifyPiTurnFailure", () => {
   });
 
   it("keeps real Pi failures failed", () => {
-    expect(classifyPiTurnFailure("Model provider returned a 500")).toEqual({
+    expect(classifyPiTurnFailure("Model engine returned a 500")).toEqual({
       state: "failed",
       stopReason: "error",
     });

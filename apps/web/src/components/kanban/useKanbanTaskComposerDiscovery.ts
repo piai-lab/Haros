@@ -1,17 +1,17 @@
 // FILE: useKanbanTaskComposerDiscovery.ts
-// Purpose: Builds kanban task composer autocomplete items from provider/workspace discovery.
+// Purpose: Builds kanban task composer autocomplete items from engine/workspace discovery.
 // Layer: Kanban UI hook
 // Exports: useKanbanTaskComposerDiscovery
 
 import type {
   ProjectEntry,
-  ProviderAgentDescriptor,
+  EngineAgentDescriptor,
   EngineKind,
-  ProviderMentionReference,
-  ProviderNativeCommandDescriptor,
-  ProviderPluginDescriptor,
-  ProviderSkillDescriptor,
-  ProviderStartOptions,
+  EngineMentionReference,
+  EngineNativeCommandDescriptor,
+  EnginePluginDescriptor,
+  EngineSkillDescriptor,
+  EngineStartOptions,
   ThreadId,
 } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
@@ -24,7 +24,7 @@ import {
   useComposerCommandMenuItems,
 } from "~/hooks/useComposerCommandMenuItems";
 import { getLocalFolderBrowseRootPath, isLocalFolderMentionQuery } from "~/lib/localFolderMentions";
-import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
+import { resolveProviderDiscoveryCwd } from "~/lib/engineDiscovery";
 import {
   providerCommandsQueryOptions,
   providerComposerCapabilitiesQueryOptions,
@@ -33,39 +33,39 @@ import {
   supportsNativeSlashCommandDiscovery,
   supportsPluginDiscovery,
   supportsSkillDiscovery,
-} from "~/lib/providerDiscoveryReactQuery";
+} from "~/lib/engineDiscoveryReactQuery";
 import { projectSearchEntriesQueryOptions } from "~/lib/projectReactQuery";
 import { isMacPlatform } from "~/lib/utils";
-import { PROVIDER_MODEL_OPTIONS } from "../chat/ProviderModelPicker";
-import type { ProviderModelOption } from "../../providerModelOptions";
+import { ENGINE_MODEL_OPTIONS } from "../chat/EngineModelPicker";
+import type { EngineModelOption } from "../../providerModelOptions";
 
 type ComposerPluginSuggestion = {
-  plugin: ProviderPluginDescriptor;
-  mention: ProviderMentionReference;
+  plugin: EnginePluginDescriptor;
+  mention: EngineMentionReference;
 };
 
 const COMPOSER_PATH_QUERY_DEBOUNCE_MS = 120;
 const EMPTY_PROJECT_ENTRIES: ProjectEntry[] = [];
-const EMPTY_PROVIDER_NATIVE_COMMANDS: ProviderNativeCommandDescriptor[] = [];
-const EMPTY_PROVIDER_SKILLS: ProviderSkillDescriptor[] = [];
+const EMPTY_PROVIDER_NATIVE_COMMANDS: EngineNativeCommandDescriptor[] = [];
+const EMPTY_PROVIDER_SKILLS: EngineSkillDescriptor[] = [];
 const EMPTY_COMPOSER_PLUGIN_SUGGESTIONS: ComposerPluginSuggestion[] = [];
 const KANBAN_SUPPORTED_APP_SLASH_COMMANDS = new Set(["clear", "default", "plan"]);
 
 interface UseKanbanTaskComposerDiscoveryInput {
   readonly composerTrigger: ComposerTrigger | null;
   readonly selectedProvider: EngineKind;
-  readonly modelOptionsByProvider: Record<
+  readonly modelOptionsByEngine: Record<
     EngineKind,
-    ReadonlyArray<ProviderModelOption & { isCustom?: boolean }>
+    ReadonlyArray<EngineModelOption & { isCustom?: boolean }>
   >;
-  readonly selectedRuntimeAgents: readonly ProviderAgentDescriptor[];
+  readonly selectedRuntimeAgents: readonly EngineAgentDescriptor[];
   readonly selectedProjectCwd: string | null;
   readonly serverCwd: string | null;
   readonly serverHomeDir: string | null;
   readonly scratchThreadId: ThreadId;
-  readonly providerOptionsForDispatch: ProviderStartOptions | undefined;
-  readonly hiddenProviders: readonly EngineKind[];
-  readonly providerOrder: readonly EngineKind[];
+  readonly engineOptionsForDispatch: EngineStartOptions | undefined;
+  readonly hiddenEngines: readonly EngineKind[];
+  readonly engineOrder: readonly EngineKind[];
   readonly piAgentDir: string | null;
 }
 
@@ -79,15 +79,15 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
   const {
     composerTrigger,
     selectedProvider,
-    modelOptionsByProvider,
+    modelOptionsByEngine,
     selectedRuntimeAgents,
     selectedProjectCwd,
     serverCwd,
     serverHomeDir,
     scratchThreadId,
-    providerOptionsForDispatch,
-    hiddenProviders,
-    providerOrder,
+    engineOptionsForDispatch,
+    hiddenEngines,
+    engineOrder,
     piAgentDir,
   } = input;
 
@@ -119,24 +119,24 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
   );
   const providerCommandsQuery = useQuery(
     providerCommandsQueryOptions({
-      provider: selectedProvider,
+      engine: selectedProvider,
       cwd: composerSkillCwd,
       threadId: scratchThreadId,
       binaryPath:
         (selectedProvider === "opencode"
-          ? providerOptionsForDispatch?.opencode?.binaryPath
+          ? engineOptionsForDispatch?.opencode?.binaryPath
           : selectedProvider === "kilo"
-            ? providerOptionsForDispatch?.kilo?.binaryPath
+            ? engineOptionsForDispatch?.kilo?.binaryPath
             : null) ?? null,
       serverUrl:
         (selectedProvider === "opencode"
-          ? providerOptionsForDispatch?.opencode?.serverUrl
+          ? engineOptionsForDispatch?.opencode?.serverUrl
           : selectedProvider === "kilo"
-            ? providerOptionsForDispatch?.kilo?.serverUrl
+            ? engineOptionsForDispatch?.kilo?.serverUrl
             : null) ?? null,
       experimentalWebSockets:
         selectedProvider === "opencode"
-          ? providerOptionsForDispatch?.opencode?.experimentalWebSockets
+          ? engineOptionsForDispatch?.opencode?.experimentalWebSockets
           : undefined,
       agentDir: selectedProvider === "pi" ? piAgentDir : null,
       enabled:
@@ -149,7 +149,7 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
     selectedProvider === "pi" || supportsSkillDiscovery(providerComposerCapabilitiesQuery.data);
   const providerSkillsQuery = useQuery(
     providerSkillsQueryOptions({
-      provider: selectedProvider,
+      engine: selectedProvider,
       cwd: composerSkillCwd,
       threadId: scratchThreadId,
       agentDir: selectedProvider === "pi" ? piAgentDir : null,
@@ -161,7 +161,7 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
   );
   const providerPluginsQuery = useQuery(
     providerPluginsQueryOptions({
-      provider: selectedProvider,
+      engine: selectedProvider,
       cwd: composerSkillCwd,
       threadId: scratchThreadId,
       enabled:
@@ -186,17 +186,17 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
         mention: {
           name: plugin.name,
           path: `plugin://${plugin.name}@${marketplace.name}`,
-        } satisfies ProviderMentionReference,
+        } satisfies EngineMentionReference,
       })),
     ) ?? EMPTY_COMPOSER_PLUGIN_SUGGESTIONS;
   const providerNativeCommands =
     providerCommandsQuery.data?.commands ?? EMPTY_PROVIDER_NATIVE_COMMANDS;
   const providerSkills = providerSkillsQuery.data?.skills ?? EMPTY_PROVIDER_SKILLS;
   const searchableModelOptions = buildSearchableModelOptions({
-    providerOptions: PROVIDER_MODEL_OPTIONS,
-    modelOptionsByProvider,
-    providerOrder,
-    hiddenProviders,
+    engineOptions: ENGINE_MODEL_OPTIONS,
+    modelOptionsByEngine,
+    engineOrder,
+    hiddenEngines,
     protectedProviders: [selectedProvider],
   });
   const dynamicAgents = selectedRuntimeAgents.map((agent) =>
@@ -206,7 +206,7 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
   );
   const rawComposerMenuItems = useComposerCommandMenuItems({
     composerTrigger,
-    provider: selectedProvider,
+    engine: selectedProvider,
     providerPlugins,
     providerNativeCommands,
     providerSkills,

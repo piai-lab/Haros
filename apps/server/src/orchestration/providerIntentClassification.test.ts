@@ -9,11 +9,11 @@ import {
 } from "./providerIntentClassification.ts";
 
 describe("providerIntentClassification", () => {
-  it("orders archive cleanup with later provider side effects", () => {
-    const threadId = ThreadId.makeUnsafe("thread-provider-intent-archive");
+  it("orders archive cleanup with later engine side effects", () => {
+    const threadId = ThreadId.makeUnsafe("thread-engine-intent-archive");
     const event = {
       sequence: 1,
-      eventId: EventId.makeUnsafe("event-provider-intent-archive"),
+      eventId: EventId.makeUnsafe("event-engine-intent-archive"),
       aggregateKind: "thread",
       aggregateId: threadId,
       type: "thread.archived",

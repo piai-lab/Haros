@@ -117,10 +117,10 @@ import {
 } from "../routeRestoreRefreshCoordinator";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import {
-  PROVIDER_AUTH_REFRESH_MIN_INTERVAL_MS,
-  useProviderAuthRefreshOnFocus,
-} from "../hooks/useProviderAuthRefreshOnFocus";
-import { useProviderStatusRefresh } from "../hooks/useProviderStatusRefresh";
+  ENGINE_AUTH_REFRESH_MIN_INTERVAL_MS,
+  useEngineAuthRefreshOnFocus,
+} from "../hooks/useEngineAuthRefreshOnFocus";
+import { useEngineStatusRefresh } from "../hooks/useEngineStatusRefresh";
 import { resolveSplitViewThreadIds, selectSplitView, useSplitViewStore } from "../splitViewStore";
 import { useRightDockStore } from "../rightDockStore";
 import { resolveVisibleDockSidechatThreadIds } from "../rightDockStore.logic";
@@ -128,9 +128,9 @@ import { arraysShallowEqual } from "../storeNormalization";
 import {
   changedProviderModelDiscoveryProviders,
   providerModelDiscoveryInvalidationFingerprints,
-  type ProviderModelDiscoveryInvalidationFingerprints,
-} from "../lib/providerDiscoveryInvalidation";
-import { providerDiscoveryQueryKeys } from "../lib/providerDiscoveryReactQuery";
+  type EngineModelDiscoveryInvalidationFingerprints,
+} from "../lib/engineDiscoveryInvalidation";
+import { engineDiscoveryQueryKeys } from "../lib/engineDiscoveryReactQuery";
 import { useLocalPreferences } from "../localPreferences";
 import { DocumentLocaleSync, I18nProvider, useI18n } from "../i18n";
 import {
@@ -139,15 +139,15 @@ import {
 } from "../startup/startupSplash";
 import { startupRouteExpectsComposer } from "../startup/startupReadiness";
 import {
-  getNotifiableProviderUpdateStatuses,
-  isProviderUpdateActive,
-  providerUpdateNotificationKey,
-  PROVIDER_UPDATE_INITIAL_REFRESH_DELAY_MS,
-  PROVIDER_UPDATE_REFRESH_INTERVAL_MS,
-  ProviderUpdateTimeoutError,
-  createProviderUpdateToastData,
-  withProviderUpdateTimeout,
-} from "../providerUpdates";
+  getNotifiableEngineUpdateStatuses,
+  isEngineUpdateActive,
+  engineUpdateNotificationKey,
+  ENGINE_UPDATE_INITIAL_REFRESH_DELAY_MS,
+  ENGINE_UPDATE_REFRESH_INTERVAL_MS,
+  EngineUpdateTimeoutError,
+  createEngineUpdateToastData,
+  withEngineUpdateTimeout,
+} from "../engineUpdates";
 import {
   getGitInvalidationThreadIdForEvent,
   getProjectFileInvalidationThreadIdForEvent,
@@ -174,34 +174,34 @@ const THREAD_DETAIL_REPLAY_MAX_NOOP_STREAK = 2;
 const PENDING_SHELL_EVENT_BUFFER_LIMIT = 1_024;
 const PENDING_THREAD_EVENT_BUFFER_LIMIT = 512;
 const IMMEDIATE_ASSISTANT_FLUSH_ID_LIMIT = 512;
-const seenProviderUpdateNotificationKeys = new Set<string>();
+const seenEngineUpdateNotificationKeys = new Set<string>();
 
-type ProviderUpdateToastId = ReturnType<typeof toastManager.add>;
-type ActiveProviderUpdateToast =
+type EngineUpdateToastId = ReturnType<typeof toastManager.add>;
+type ActiveEngineUpdateToast =
   | {
       readonly kind: "prompt";
       readonly key: string;
       readonly locale: "en" | "zh-CN";
-      readonly toastId: ProviderUpdateToastId;
+      readonly toastId: EngineUpdateToastId;
     }
   | {
       readonly kind: "update";
       readonly key: string;
-      readonly toastId: ProviderUpdateToastId;
+      readonly toastId: EngineUpdateToastId;
     };
 
-function providerUpdateProgressTitle(params: {
+function engineUpdateProgressTitle(params: {
   readonly current: number;
-  readonly provider: ServerProviderStatus;
+  readonly engine: ServerProviderStatus;
   readonly t: ReturnType<typeof useI18n>["t"];
   readonly total: number;
 }): string {
-  const provider = ENGINE_DISPLAY_NAMES[params.provider.provider];
+  const engine = ENGINE_DISPLAY_NAMES[params.engine.engine];
   return params.total === 1
-    ? params.t("updater.updatingProvider", { provider })
+    ? params.t("updater.updatingProvider", { engine })
     : params.t("updater.updatingProviderProgress", {
         current: params.current,
-        provider,
+        engine,
         total: params.total,
       });
 }
@@ -310,7 +310,7 @@ function RootRouteView() {
             />
             <GitProgressToastPreviewDev />
             <EventRouter />
-            <ProviderStatusRefreshCoordinator />
+            <EngineStatusRefreshCoordinator />
             <GlobalShortcutsDialog />
             <GlobalFeedbackDialog />
             <TaskCompletionNotifications />
@@ -443,20 +443,20 @@ function GitProgressToastPreviewDev() {
   return null;
 }
 
-function ProviderStatusRefreshCoordinator() {
+function EngineStatusRefreshCoordinator() {
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   const [transportOpen, setTransportOpen] = useState(false);
   const [liveVersionCheckCompleted, setLiveVersionCheckCompleted] = useState(false);
-  const providerUpdateChecksEnabled = serverSettingsQuery.data?.enableProviderUpdateChecks === true;
-  const providerUpdateRefreshEnabled = providerUpdateChecksEnabled && transportOpen;
+  const engineUpdateChecksEnabled = serverSettingsQuery.data?.enableEngineUpdateChecks === true;
+  const engineUpdateRefreshEnabled = engineUpdateChecksEnabled && transportOpen;
   const markLiveVersionCheckCompleted = useCallback(() => {
     setLiveVersionCheckCompleted(true);
   }, []);
 
   // The update coordinator includes the same focus/visibility refresh. Keep the
   // auth-only loop for the setting-off case so enabling update checks never
-  // launches duplicate provider probes on focus.
-  useProviderAuthRefreshOnFocus({ enabled: !providerUpdateChecksEnabled });
+  // launches duplicate engine probes on focus.
+  useEngineAuthRefreshOnFocus({ enabled: !engineUpdateChecksEnabled });
   useEffect(
     () =>
       addWsTransportStateListener(
@@ -473,18 +473,18 @@ function ProviderStatusRefreshCoordinator() {
   );
 
   useEffect(() => {
-    if (!providerUpdateChecksEnabled) {
+    if (!engineUpdateChecksEnabled) {
       setLiveVersionCheckCompleted(false);
     }
-  }, [providerUpdateChecksEnabled]);
+  }, [engineUpdateChecksEnabled]);
 
-  // Provider latest-version checks are slow/network-backed, so keep this cadence
+  // Engine latest-version checks are slow/network-backed, so keep this cadence
   // coarse while still honoring the automatic update-check setting.
-  useProviderStatusRefresh({
-    enabled: providerUpdateRefreshEnabled,
-    initialDelayMs: PROVIDER_UPDATE_INITIAL_REFRESH_DELAY_MS,
-    intervalMs: PROVIDER_UPDATE_REFRESH_INTERVAL_MS,
-    minIntervalMs: PROVIDER_AUTH_REFRESH_MIN_INTERVAL_MS,
+  useEngineStatusRefresh({
+    enabled: engineUpdateRefreshEnabled,
+    initialDelayMs: ENGINE_UPDATE_INITIAL_REFRESH_DELAY_MS,
+    intervalMs: ENGINE_UPDATE_REFRESH_INTERVAL_MS,
+    minIntervalMs: ENGINE_AUTH_REFRESH_MIN_INTERVAL_MS,
     refreshOnFocus: true,
     refreshOnFocusAfterLossOnly: true,
     onRefreshSuccess: markLiveVersionCheckCompleted,
@@ -493,8 +493,8 @@ function ProviderStatusRefreshCoordinator() {
   // Keep the notifier mounted while the transport is interrupted. Dropping the
   // gate makes it close any active prompt before a reconnect can reuse cached data.
   return (
-    <ProviderUpdateNotifications
-      liveVersionCheckCompleted={providerUpdateRefreshEnabled && liveVersionCheckCompleted}
+    <EngineUpdateNotifications
+      liveVersionCheckCompleted={engineUpdateRefreshEnabled && liveVersionCheckCompleted}
     />
   );
 }
@@ -502,17 +502,17 @@ function ProviderStatusRefreshCoordinator() {
 // Extracted to module scope so its run-always cleanup can stay a try/finally: the
 // React Compiler does not compile module functions, so the finally block is fine
 // here even though it would bail out the component body.
-async function runProviderUpdateAll(params: {
-  providers: ReadonlyArray<ServerProviderStatus>;
+async function runEngineUpdateAll(params: {
+  engines: ReadonlyArray<ServerProviderStatus>;
   queryClient: QueryClient;
-  activeToastRef: { current: ActiveProviderUpdateToast | null };
+  activeToastRef: { current: ActiveEngineUpdateToast | null };
   isUpdatingAllRef: { current: boolean };
   progressToastDismissedRef: { current: boolean };
   setIsUpdatingAll: (value: boolean) => void;
   t: ReturnType<typeof useI18n>["t"];
 }): Promise<void> {
   const {
-    providers,
+    engines,
     queryClient,
     activeToastRef,
     isUpdatingAllRef,
@@ -520,8 +520,8 @@ async function runProviderUpdateAll(params: {
     setIsUpdatingAll,
     t,
   } = params;
-  const activeNotificationKey = providerUpdateNotificationKey(providers);
-  if (isUpdatingAllRef.current || providers.length === 0 || !activeNotificationKey) {
+  const activeNotificationKey = engineUpdateNotificationKey(engines);
+  if (isUpdatingAllRef.current || engines.length === 0 || !activeNotificationKey) {
     return;
   }
 
@@ -529,11 +529,11 @@ async function runProviderUpdateAll(params: {
   progressToastDismissedRef.current = false;
   setIsUpdatingAll(true);
   const trackedToast = activeToastRef.current;
-  const firstProgressTitle = providerUpdateProgressTitle({
+  const firstProgressTitle = engineUpdateProgressTitle({
     current: 1,
-    provider: providers[0]!,
+    engine: engines[0]!,
     t,
-    total: providers.length,
+    total: engines.length,
   });
   const toastId =
     trackedToast?.toastId ??
@@ -560,7 +560,7 @@ async function runProviderUpdateAll(params: {
     title: firstProgressTitle,
     description: undefined,
     actionProps: undefined,
-    data: createProviderUpdateToastData({
+    data: createEngineUpdateToastData({
       stage: "progress",
       closeLabel: t("updater.hideProgress"),
       onClose: dismissProgressToast,
@@ -568,23 +568,23 @@ async function runProviderUpdateAll(params: {
     timeout: 0,
   });
 
-  const failures: Array<{ provider: ServerProviderStatus; reason: string }> = [];
+  const failures: Array<{ engine: ServerProviderStatus; reason: string }> = [];
 
   try {
     const api = ensureNativeApi();
-    for (const [index, provider] of providers.entries()) {
+    for (const [index, engine] of engines.entries()) {
       if (index > 0 && !progressToastDismissedRef.current) {
         toastManager.update(toastId, {
           type: "loading",
-          title: providerUpdateProgressTitle({
+          title: engineUpdateProgressTitle({
             current: index + 1,
-            provider,
+            engine,
             t,
-            total: providers.length,
+            total: engines.length,
           }),
           description: undefined,
           actionProps: undefined,
-          data: createProviderUpdateToastData({
+          data: createEngineUpdateToastData({
             stage: "progress",
             closeLabel: t("updater.hideProgress"),
             onClose: dismissProgressToast,
@@ -593,31 +593,31 @@ async function runProviderUpdateAll(params: {
         });
       }
       try {
-        const result = await withProviderUpdateTimeout({
-          provider: provider.provider,
-          request: api.server.updateProvider({ provider: provider.provider }),
+        const result = await withEngineUpdateTimeout({
+          engine: engine.engine,
+          request: api.server.updateEngine({ engine: engine.engine }),
         });
-        void reconcileServerProviderStatuses(queryClient, result.providers).catch(() => undefined);
-        const refreshed = result.providers.find((entry) => entry.provider === provider.provider);
+        void reconcileServerProviderStatuses(queryClient, result.engines).catch(() => undefined);
+        const refreshed = result.engines.find((entry) => entry.engine === engine.engine);
         const updateState = refreshed?.updateState;
         if (updateState?.status === "failed" || updateState?.status === "unchanged") {
           failures.push({
-            provider,
+            engine,
             reason: updateState.message ?? t("updater.commandFailed"),
           });
         } else if (refreshed?.versionAdvisory?.status === "behind_latest") {
           failures.push({
-            provider,
+            engine,
             reason: t("updater.stillOutdated"),
           });
         }
       } catch (error) {
         failures.push({
-          provider,
+          engine,
           reason:
-            error instanceof ProviderUpdateTimeoutError
+            error instanceof EngineUpdateTimeoutError
               ? t("updater.requestTimedOut", {
-                  provider: ENGINE_DISPLAY_NAMES[error.provider],
+                  engine: ENGINE_DISPLAY_NAMES[error.engine],
                 })
               : error instanceof Error
                 ? error.message
@@ -626,14 +626,14 @@ async function runProviderUpdateAll(params: {
       }
     }
   } catch (error) {
-    for (const provider of providers) {
+    for (const engine of engines) {
       failures.push({
-        provider,
+        engine,
         reason: error instanceof Error ? error.message : t("updater.requestCouldNotStart"),
       });
     }
   } finally {
-    // The update response already reconciles authoritative provider state. Keep
+    // The update response already reconciles authoritative engine state. Keep
     // this best-effort cache refresh behind the feedback transition so it cannot
     // hold a completed progress toast on screen.
     void queryClient
@@ -655,7 +655,7 @@ async function runProviderUpdateAll(params: {
     const manualCommands = Array.from(
       new Set(
         failures
-          .map(({ provider }) => provider.versionAdvisory?.updateCommand)
+          .map(({ engine }) => engine.versionAdvisory?.updateCommand)
           .filter(
             (command): command is string =>
               typeof command === "string" && command.trim().length > 0,
@@ -663,18 +663,18 @@ async function runProviderUpdateAll(params: {
       ),
     );
     const failureLines = failures
-      .map(({ provider, reason }) => `${ENGINE_DISPLAY_NAMES[provider.provider]}: ${reason}`)
+      .map(({ engine, reason }) => `${ENGINE_DISPLAY_NAMES[engine.engine]}: ${reason}`)
       .join("\n");
     toastManager.update(toastId, {
       type: "error",
-      title: failures.length === providers.length ? t("updater.failed") : t("updater.someFailed"),
+      title: failures.length === engines.length ? t("updater.failed") : t("updater.someFailed"),
       description:
         manualCommands.length > 0
           ? `${failureLines}\n\n${t(
               manualCommands.length === 1 ? "updater.copyCommand" : "updater.copyCommands",
             )}`
           : failureLines,
-      data: createProviderUpdateToastData({
+      data: createEngineUpdateToastData({
         stage: "error",
         onClose: dismissProgressToast,
         ...(manualCommands.length > 0 ? { copyText: manualCommands.join("\n") } : {}),
@@ -688,13 +688,13 @@ async function runProviderUpdateAll(params: {
   toastManager.update(toastId, {
     type: "success",
     title:
-      providers.length === 1
-        ? t("updater.providerUpdated", {
-            provider: ENGINE_DISPLAY_NAMES[providers[0]!.provider],
+      engines.length === 1
+        ? t("updater.engineUpdated", {
+            engine: ENGINE_DISPLAY_NAMES[engines[0]!.engine],
           })
-        : t("updater.providersUpdated", { count: providers.length }),
+        : t("updater.providersUpdated", { count: engines.length }),
     description: t("updater.refreshedDescription"),
-    data: createProviderUpdateToastData({
+    data: createEngineUpdateToastData({
       stage: "success",
       onClose: dismissProgressToast,
     }),
@@ -702,7 +702,7 @@ async function runProviderUpdateAll(params: {
   });
 }
 
-function ProviderUpdateNotifications({
+function EngineUpdateNotifications({
   liveVersionCheckCompleted,
 }: {
   readonly liveVersionCheckCompleted: boolean;
@@ -713,31 +713,29 @@ function ProviderUpdateNotifications({
   const { preferences } = useLocalPreferences();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
-  const providerUpdateServerSettings = serverSettingsQuery.data
+  const engineUpdateServerSettings = serverSettingsQuery.data
     ? {
         ...serverSettingsQuery.data,
-        enableProviderUpdateChecks: serverSettingsQuery.data.enableProviderUpdateChecks,
+        enableEngineUpdateChecks: serverSettingsQuery.data.enableEngineUpdateChecks,
       }
     : null;
   const [isUpdatingAll, setIsUpdatingAll] = useState(false);
-  const activeToastRef = useRef<ActiveProviderUpdateToast | null>(null);
+  const activeToastRef = useRef<ActiveEngineUpdateToast | null>(null);
   const isUpdatingAllRef = useRef(false);
   const progressToastDismissedRef = useRef(false);
-  const outdatedProviders = getNotifiableProviderUpdateStatuses({
-    providers: serverConfigQuery.data?.providers ?? [],
-    hiddenProviders: preferences.hiddenProviders,
-    serverSettings: providerUpdateServerSettings,
+  const outdatedProviders = getNotifiableEngineUpdateStatuses({
+    engines: serverConfigQuery.data?.engines ?? [],
+    hiddenEngines: preferences.hiddenEngines,
+    serverSettings: engineUpdateServerSettings,
     liveVersionCheckCompleted,
   });
-  const oneClickProviders = outdatedProviders.filter(
-    (provider) => !isProviderUpdateActive(provider),
-  );
-  const notificationKey = providerUpdateNotificationKey(outdatedProviders);
+  const oneClickProviders = outdatedProviders.filter((engine) => !isEngineUpdateActive(engine));
+  const notificationKey = engineUpdateNotificationKey(outdatedProviders);
 
   const updateAll = useCallback(
-    (providers: ReadonlyArray<ServerProviderStatus>) =>
-      runProviderUpdateAll({
-        providers,
+    (engines: ReadonlyArray<ServerProviderStatus>) =>
+      runEngineUpdateAll({
+        engines,
         queryClient,
         activeToastRef,
         isUpdatingAllRef,
@@ -761,7 +759,7 @@ function ProviderUpdateNotifications({
     ) {
       toastManager.close(activeToast.toastId);
       activeToastRef.current = null;
-      seenProviderUpdateNotificationKeys.delete(notificationKey);
+      seenEngineUpdateNotificationKeys.delete(notificationKey);
     }
 
     if (
@@ -770,33 +768,33 @@ function ProviderUpdateNotifications({
       !notificationKey ||
       isUpdatingAll ||
       activeToastRef.current ||
-      seenProviderUpdateNotificationKeys.has(notificationKey)
+      seenEngineUpdateNotificationKeys.has(notificationKey)
     ) {
       return;
     }
 
-    // Key the prompt by the complete provider/version set so a partial refresh
+    // Key the prompt by the complete engine/version set so a partial refresh
     // cannot stack a second "Update all" prompt on top of the first one.
-    seenProviderUpdateNotificationKeys.add(notificationKey);
+    seenEngineUpdateNotificationKeys.add(notificationKey);
 
     const firstProvider = outdatedProviders[0]!;
     const additionalCount = outdatedProviders.length - 1;
-    const providerName = ENGINE_DISPLAY_NAMES[firstProvider.provider];
+    const providerName = ENGINE_DISPLAY_NAMES[firstProvider.engine];
     const title =
       outdatedProviders.length === 1
-        ? t("updater.providerAvailable", { provider: providerName })
+        ? t("updater.providerAvailable", { engine: providerName })
         : t("updater.providersAvailable", { count: outdatedProviders.length });
     const description =
       outdatedProviders.length === 1
-        ? t("updater.providerDescription", { provider: providerName })
+        ? t("updater.providerDescription", { engine: providerName })
         : additionalCount === 1
-          ? t("updater.providerPairDescription", { provider: providerName })
+          ? t("updater.providerPairDescription", { engine: providerName })
           : t("updater.providersDescription", {
-              provider: providerName,
+              engine: providerName,
               count: additionalCount,
             });
 
-    let toastId!: ProviderUpdateToastId;
+    let toastId!: EngineUpdateToastId;
     const closeTrackedPrompt = () => {
       if (activeToastRef.current?.toastId === toastId) {
         activeToastRef.current = null;
@@ -818,8 +816,8 @@ function ProviderUpdateNotifications({
           void navigate({
             to: "/settings",
             search: {
-              section: "providers",
-              target: SETTINGS_TARGETS.providerUpdates,
+              section: "engines",
+              target: SETTINGS_TARGETS.engineUpdates,
             },
           });
         },
@@ -910,8 +908,8 @@ function GlobalFeedbackDialog() {
   const requestedContext = useFeedbackDialogStore((state) => state.context);
   const setOpen = useFeedbackDialogStore((state) => state.setOpen);
   const context: FeedbackThreadContext = requestedContext ?? {
-    provider: activeThread?.modelSelection.provider ?? null,
-    model: activeThread?.modelSelection.model ?? null,
+    engine: activeThread?.engineSelection.engine ?? null,
+    model: activeThread?.engineSelection.model ?? null,
     projectKind: activeProject?.kind ?? null,
     environmentMode: activeThread?.envMode ?? null,
     runtimeMode: activeThread?.runtimeMode ?? null,
@@ -1266,7 +1264,7 @@ function EventRouter() {
     let pendingStudioOutputInvalidationThreadIds = new Set<ThreadId>();
     let pendingDomainEvents: OrchestrationEvent[] = [];
     const immediatelyFlushedAssistantMessageIds = new Set<string>();
-    let providerDiscoveryInvalidationFingerprints: ProviderModelDiscoveryInvalidationFingerprints | null =
+    let engineDiscoveryInvalidationFingerprints: EngineModelDiscoveryInvalidationFingerprints | null =
       null;
     let previousWsTransportState: WsTransportState | null = null;
     let shellSnapshotSequence = -1;
@@ -2346,13 +2344,13 @@ function EventRouter() {
     });
     const unsubProviderStatusesUpdated = onServerProviderStatusesUpdated((payload) => {
       const nextProviderDiscoveryFingerprints = providerModelDiscoveryInvalidationFingerprints(
-        payload.providers,
+        payload.engines,
       );
       const currentConfig = queryClient.getQueryData<ServerConfig>(serverQueryKeys.config());
       const previousProviderDiscoveryFingerprints =
-        providerDiscoveryInvalidationFingerprints ??
+        engineDiscoveryInvalidationFingerprints ??
         (currentConfig
-          ? providerModelDiscoveryInvalidationFingerprints(currentConfig.providers)
+          ? providerModelDiscoveryInvalidationFingerprints(currentConfig.engines)
           : null);
       const changedProviders = previousProviderDiscoveryFingerprints
         ? changedProviderModelDiscoveryProviders(
@@ -2360,28 +2358,28 @@ function EventRouter() {
             nextProviderDiscoveryFingerprints,
           )
         : [];
-      providerDiscoveryInvalidationFingerprints = nextProviderDiscoveryFingerprints;
+      engineDiscoveryInvalidationFingerprints = nextProviderDiscoveryFingerprints;
 
       void reconcileServerProviderStatuses(
         queryClient,
-        payload.providers,
+        payload.engines,
         payload.passivePresence
           ? { passivePresence: payload.passivePresence.recoverableProviders }
           : undefined,
       ).catch(() => undefined);
       if (changedProviders.length > 0) {
         // Model and agent discovery can depend on auth, availability, and installed versions,
-        // but not on every provider-status timestamp replay.
-        for (const provider of changedProviders) {
+        // but not on every engine-status timestamp replay.
+        for (const engine of changedProviders) {
           void queryClient.invalidateQueries({
-            queryKey: providerDiscoveryQueryKeys.modelsForProvider(provider),
+            queryKey: engineDiscoveryQueryKeys.modelsForProvider(engine),
           });
           void queryClient.invalidateQueries({
-            queryKey: providerDiscoveryQueryKeys.agentsForProvider(provider),
+            queryKey: engineDiscoveryQueryKeys.agentsForProvider(engine),
           });
         }
         void queryClient.invalidateQueries({
-          queryKey: providerDiscoveryQueryKeys.executionCapabilitiesAll,
+          queryKey: engineDiscoveryQueryKeys.executionCapabilitiesAll,
         });
       }
     });
@@ -2398,7 +2396,7 @@ function EventRouter() {
           // the dead transport. Mark every cached catalog stale, but refetch only
           // active observers so reconnect does not fan out across hidden Engines.
           void queryClient.invalidateQueries({
-            queryKey: ["provider-discovery", "models"],
+            queryKey: ["engine-discovery", "models"],
             refetchType: "active",
           });
         }

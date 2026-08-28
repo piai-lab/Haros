@@ -3,7 +3,7 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import { columnExists } from "./schemaHelpers.ts";
 
-/** Make orchestration sequence, not provider time, the projected message order. */
+/** Make orchestration sequence, not engine time, the projected message order. */
 export default Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
   if (!(yield* columnExists(sql, "projection_thread_messages", "sequence"))) {

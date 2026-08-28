@@ -3,7 +3,7 @@
  *
  * The runtime journal drains through a single global consumer cursor, so a
  * deterministically failing head row freezes projection for every thread and
- * every provider, durably, across restarts. This gate watches consecutive
+ * every engine, durably, across restarts. This gate watches consecutive
  * blocked drains and declares the head row poison only when BOTH hold:
  *
  * - enough blocked drain attempts landed on the same cursor, and

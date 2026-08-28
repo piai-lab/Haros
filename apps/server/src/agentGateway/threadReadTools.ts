@@ -13,14 +13,14 @@ import {
 } from "../orchestration/commandInvariants.ts";
 import type { ProjectionSnapshotQueryShape } from "../orchestration/Services/ProjectionSnapshotQuery.ts";
 import type { ProjectionTurnRepositoryShape } from "../persistence/Services/ProjectionTurns.ts";
-import type { ProviderDiscoveryServiceShape } from "../provider/Services/ProviderDiscoveryService.ts";
+import type { EngineDiscoveryServiceShape } from "../provider/Services/EngineDiscoveryService.ts";
 import { HARNESSOS_HARNESS_POLICY_VERSION } from "./harnessPolicy.ts";
 import { mcpToolResultError, mcpToolResultJson } from "./protocol.ts";
 import {
   AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION,
   agentGatewayTargetOptionGuidance,
   loadAgentGatewayProviderCatalog,
-  type AgentGatewayProviderAvailability,
+  type AgentGatewayEngineAvailability,
 } from "./targetResolver.ts";
 import {
   deriveAgentThreadStatus,
@@ -52,9 +52,9 @@ const LIST_THREADS_MAX_LIMIT = 200;
 export interface ThreadReadToolsInput {
   readonly snapshotQuery: ProjectionSnapshotQueryShape;
   readonly projectionTurns: ProjectionTurnRepositoryShape;
-  readonly providerDiscovery: ProviderDiscoveryServiceShape;
+  readonly engineDiscovery: EngineDiscoveryServiceShape;
   readonly loadProviderAvailabilities: Effect.Effect<
-    ReadonlyMap<EngineKind, AgentGatewayProviderAvailability>,
+    ReadonlyMap<EngineKind, AgentGatewayEngineAvailability>,
     unknown,
     never
   >;
@@ -68,7 +68,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
   const {
     snapshotQuery,
     projectionTurns,
-    providerDiscovery,
+    engineDiscovery,
     loadProviderAvailabilities,
     requireThreadShell,
     workspacePaths,
@@ -98,7 +98,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
           caller: {
             threadId: caller.id,
             turnId,
-            provider: context.callerProvider,
+            engine: context.callerProvider,
             projectId: caller.projectId,
           },
           capabilities: {
@@ -116,7 +116,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
     requiredCapability: "thread:read",
     definition: {
       name: "harnessos_capabilities",
-      description: `List canonical OmniMind provider/model targets, exact provider option keys, examples, and gateway limits used to validate thread creation. ${AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION}`,
+      description: `List canonical OmniMind provider/model targets, exact engine option keys, examples, and gateway limits used to validate thread creation. ${AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION}`,
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
       annotations: {
         title: "OmniMind capabilities",
@@ -140,28 +140,28 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
           ),
         );
         const availabilities = yield* loadProviderAvailabilities;
-        const providers = yield* Effect.forEach(ENGINE_KINDS, (provider) =>
+        const engines = yield* Effect.forEach(ENGINE_KINDS, (engine) =>
           loadAgentGatewayProviderCatalog({
-            provider,
-            discovery: providerDiscovery,
-            ...(availabilities.get(provider) !== undefined
-              ? { availability: availabilities.get(provider)! }
+            engine,
+            discovery: engineDiscovery,
+            ...(availabilities.get(engine) !== undefined
+              ? { availability: availabilities.get(engine)! }
               : {}),
             cwd: project.workspaceRoot,
           }),
         );
         const targetConstruction = Object.fromEntries(
-          providers.map((provider) => [
-            provider.provider,
+          engines.map((engine) => [
+            engine.engine,
             {
-              modelValueSource: "providers[].models[].slug",
-              ...agentGatewayTargetOptionGuidance(provider),
+              modelValueSource: "engines[].models[].slug",
+              ...agentGatewayTargetOptionGuidance(engine),
             },
           ]),
         );
         return mcpToolResultJson({
           targetConstruction,
-          providers,
+          engines,
           limits: {
             maxThreadsPerOperation: HARNESSOS_GATEWAY_MAX_THREADS_PER_OPERATION,
             maxWaitMs: 60_000,
@@ -210,7 +210,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
     definition: {
       name: "harnessos_list_threads",
       description:
-        "Discover OmniMind threads by project, hierarchy, provider, model, status, title, creation source, or update window. Archived threads are hidden unless includeArchived is true.",
+        "Discover OmniMind threads by project, hierarchy, engine, model, status, title, creation source, or update window. Archived threads are hidden unless includeArchived is true.",
       inputSchema: {
         type: "object",
         properties: {
@@ -219,7 +219,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
             type: "string",
             description: "Only child threads of this thread (e.g. your own thread id).",
           },
-          provider: { type: "string", enum: [...ENGINE_KINDS] },
+          engine: { type: "string", enum: [...ENGINE_KINDS] },
           model: { type: "string", description: "Exact model slug." },
           status: {
             type: "string",
@@ -241,7 +241,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
       Effect.gen(function* () {
         const projectId = readStringArg(args, "projectId");
         const parentThreadId = readStringArg(args, "parentThreadId");
-        const provider = readStringArg(args, "provider");
+        const engine = readStringArg(args, "engine");
         const model = readStringArg(args, "model");
         const status = readStringArg(args, "status");
         const titleContains = readStringArg(args, "titleContains")?.toLocaleLowerCase();
@@ -262,8 +262,8 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
         const matching = snapshot.threads
           .filter((thread) => (projectId ? thread.projectId === projectId : true))
           .filter((thread) => (parentThreadId ? thread.parentThreadId === parentThreadId : true))
-          .filter((thread) => (provider ? thread.modelSelection.provider === provider : true))
-          .filter((thread) => (model ? thread.modelSelection.model === model : true))
+          .filter((thread) => (engine ? thread.engineSelection.engine === engine : true))
+          .filter((thread) => (model ? thread.engineSelection.model === model : true))
           .filter((thread) => (status ? deriveAgentThreadStatus(thread) === status : true))
           .filter((thread) =>
             titleContains ? thread.title.toLocaleLowerCase().includes(titleContains) : true,

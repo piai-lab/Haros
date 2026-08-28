@@ -1,4 +1,4 @@
-import type { EngineKind, ProviderModelDescriptor } from "@harnessos/contracts";
+import type { EngineKind, EngineModelDescriptor } from "@harnessos/contracts";
 import { getModelCapabilities, hasEffortLevel, trimOrNull } from "@harnessos/shared/model";
 
 export type CodexReasoningEffortSupport = "supported" | "unsupported" | "unknown";
@@ -7,10 +7,10 @@ export type CodexReasoningEffortSupport = "supported" | "unsupported" | "unknown
 // models can still validate built-in efforts; genuinely unknown models remain open
 // to forward-compatible runtime-only values.
 export function classifyProviderReasoningEffortSupport(input: {
-  provider: EngineKind;
+  engine: EngineKind;
   model: string | null | undefined;
   effort: string | null | undefined;
-  runtimeModel?: ProviderModelDescriptor | undefined;
+  runtimeModel?: EngineModelDescriptor | undefined;
 }): CodexReasoningEffortSupport {
   const effort = trimOrNull(input.effort);
   if (!effort) {
@@ -24,7 +24,7 @@ export function classifyProviderReasoningEffortSupport(input: {
       : "unsupported";
   }
 
-  const staticCapabilities = getModelCapabilities(input.provider, input.model);
+  const staticCapabilities = getModelCapabilities(input.engine, input.model);
   if (staticCapabilities.reasoningEffortLevels.length === 0) {
     return "unknown";
   }
@@ -32,7 +32,7 @@ export function classifyProviderReasoningEffortSupport(input: {
 }
 
 export function classifyCodexReasoningEffortSupport(
-  input: Omit<Parameters<typeof classifyProviderReasoningEffortSupport>[0], "provider">,
+  input: Omit<Parameters<typeof classifyProviderReasoningEffortSupport>[0], "engine">,
 ): CodexReasoningEffortSupport {
-  return classifyProviderReasoningEffortSupport({ ...input, provider: "codex" });
+  return classifyProviderReasoningEffortSupport({ ...input, engine: "codex" });
 }

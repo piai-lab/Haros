@@ -67,27 +67,27 @@ describe("server-only OmniMind default prompt settings", () => {
   it("ignores retired OmniMind model hints in persisted settings and public patches", () => {
     const retiredKey = ["custom", "Models"].join("");
     const settings = Schema.decodeUnknownSync(ServerSettings)({
-      providers: {
+      engines: {
         oa: {
           enabled: false,
-          [retiredKey]: ["legacy/provider-model"],
+          [retiredKey]: ["legacy/engine-model"],
           defaultPrompt: null,
         },
       },
     });
     const patch = decodePatch({
-      providers: { oa: { [retiredKey]: ["legacy/provider-model"] } },
+      engines: { oa: { [retiredKey]: ["legacy/engine-model"] } },
     });
 
-    expect(settings.providers.oa).toEqual({ enabled: false, defaultPrompt: null });
-    expect(patch.providers?.oa).toEqual({});
+    expect(settings.engines.oa).toEqual({ enabled: false, defaultPrompt: null });
+    expect(patch.engines?.oa).toEqual({});
   });
 
   it("is not accepted by the public settings patch", () => {
     const patch = decodePatch({
-      providers: { oa: { defaultPrompt: "must stay private" } },
+      engines: { oa: { defaultPrompt: "must stay private" } },
     });
-    expect(patch.providers?.oa).not.toHaveProperty("defaultPrompt");
+    expect(patch.engines?.oa).not.toHaveProperty("defaultPrompt");
   });
 
   it("uses the same UTF-8 byte boundary as the prompt contract", () => {
@@ -95,20 +95,20 @@ describe("server-only OmniMind default prompt settings", () => {
     const withinLimit = emoji.repeat(HARNESSOS_AGENT_PROMPT_MAX_BYTES / 4);
     const decodeSettings = (defaultPrompt: string) =>
       Schema.decodeUnknownSync(ServerSettings)({
-        providers: { oa: { defaultPrompt } },
+        engines: { oa: { defaultPrompt } },
       });
 
-    expect(decodeSettings(withinLimit).providers.oa.defaultPrompt).toBe(withinLimit);
+    expect(decodeSettings(withinLimit).engines.oa.defaultPrompt).toBe(withinLimit);
     expect(() => decodeSettings(`${withinLimit}${emoji}`)).toThrow();
   });
 });
 
-describe("provider credential boundary", () => {
+describe("engine credential boundary", () => {
   it.each(["kilo", "opencode"] as const)(
     "rejects %s secrets from the generic ServerSettings patch",
-    (provider) => {
+    (engine) => {
       expect(() =>
-        decodePatch({ providers: { [provider]: { serverPassword: "must-not-pass" } } }),
+        decodePatch({ engines: { [engine]: { serverPassword: "must-not-pass" } } }),
       ).toThrow();
     },
   );

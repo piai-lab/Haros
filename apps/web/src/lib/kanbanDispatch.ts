@@ -8,7 +8,7 @@ import type {
   AssistantDeliveryMode,
   ProjectId,
   EngineKind,
-  ProviderStartOptions,
+  EngineStartOptions,
   ThreadEnvironmentMode,
   ThreadId,
 } from "@harnessos/contracts";
@@ -22,7 +22,7 @@ import {
   type KanbanDraftOpenThreadReason,
 } from "../components/kanban/kanban.logic";
 import {
-  resolvePreferredComposerModelSelection,
+  resolvePreferredComposerEngineSelection,
   useComposerDraftStore,
 } from "../composerDraftStore";
 import { useKanbanUiStore } from "../kanbanUiStore";
@@ -39,7 +39,7 @@ import {
 import {
   stageUploadComposerAttachments,
   formatOutgoingComposerPrompt,
-  resolvePromptEffortFromModelSelection,
+  resolvePromptEffortFromEngineSelection,
 } from "./composerSend";
 import { appendFileCommentsToPrompt, formatFileCommentTitleSeed } from "./fileComments";
 import {
@@ -66,9 +66,9 @@ export type KanbanDraftDispatchResult =
 
 export async function dispatchKanbanDraftCard(input: {
   card: KanbanCard;
-  defaultProvider: EngineKind;
+  defaultEngine: EngineKind;
   assistantDeliveryMode: AssistantDeliveryMode;
-  providerOptions?: ProviderStartOptions | undefined;
+  engineOptions?: EngineStartOptions | undefined;
 }): Promise<KanbanDraftDispatchResult> {
   const { card } = input;
   if (resolveDraftDropAction(card) !== "dispatch") {
@@ -81,9 +81,9 @@ export async function dispatchKanbanDraftCard(input: {
     threadId: card.threadId,
     projectId: card.projectId,
     thread: card.thread,
-    defaultProvider: input.defaultProvider,
+    defaultEngine: input.defaultEngine,
     assistantDeliveryMode: input.assistantDeliveryMode,
-    providerOptions: input.providerOptions,
+    engineOptions: input.engineOptions,
   });
 }
 
@@ -92,9 +92,9 @@ interface KanbanDraftDispatchInput {
   projectId: ProjectId;
   /** Backing summary; null for local-only draft threads not yet promoted. */
   thread: SidebarThreadSummary | null;
-  defaultProvider: EngineKind;
+  defaultEngine: EngineKind;
   assistantDeliveryMode: AssistantDeliveryMode;
-  providerOptions?: ProviderStartOptions | undefined;
+  engineOptions?: EngineStartOptions | undefined;
 }
 
 // Racing callers (a re-drop before the board re-derives, drag + send-now) must
@@ -146,13 +146,13 @@ async function dispatchKanbanDraftThreadOnce(
   const appState = useStore.getState();
   const project = appState.projects.find((candidate) => candidate.id === projectId) ?? null;
   const existingThread = thread ? getThreadFromState(appState, threadId) : null;
-  const modelSelection = resolvePreferredComposerModelSelection({
+  const engineSelection = resolvePreferredComposerEngineSelection({
     draft: draftComposerState,
-    threadModelSelection: thread?.modelSelection ?? null,
-    projectModelSelection: project?.defaultModelSelection ?? null,
-    defaultProvider: input.defaultProvider,
+    threadEngineSelection: thread?.engineSelection ?? null,
+    projectEngineSelection: project?.defaultEngineSelection ?? null,
+    defaultEngine: input.defaultEngine,
   });
-  if (!modelSelection) {
+  if (!engineSelection) {
     return { kind: "open-thread", reason: "model-unavailable" };
   }
   const draftThread = composerStore.getDraftThread(threadId);
@@ -218,15 +218,15 @@ async function dispatchKanbanDraftThreadOnce(
     messageId,
   );
   const outgoingMessageText = formatOutgoingComposerPrompt({
-    provider: modelSelection.provider,
-    model: modelSelection.model,
-    effort: resolvePromptEffortFromModelSelection(modelSelection),
+    engine: engineSelection.engine,
+    model: engineSelection.model,
+    effort: resolvePromptEffortFromEngineSelection(engineSelection),
     text: messageText || (composerImages.length > 0 ? IMAGE_ONLY_BOOTSTRAP_PROMPT : ""),
   });
   const mentionedSkills = filterPromptSkillReferences(
     outgoingMessageText,
     skills,
-    modelSelection.provider,
+    engineSelection.engine,
   );
   const mentionedMentions = filterPromptProviderMentionReferences(outgoingMessageText, mentions);
   const turnAttachmentsPromise = stageUploadComposerAttachments({
@@ -241,14 +241,14 @@ async function dispatchKanbanDraftThreadOnce(
   const droppedAtMs = Date.now();
   const createdAt = new Date(droppedAtMs).toISOString();
 
-  // Optimistic move: show the card In Progress before any round-trip. Provider
+  // Optimistic move: show the card In Progress before any round-trip. Engine
   // session init can take seconds; runtime events confirm the move (reconciliation
   // clears the entry) or the failure paths below revert it.
   const kanbanUi = useKanbanUiStore.getState();
   kanbanUi.markOptimisticDispatch(threadId, {
     projectId,
     title: thread?.title ?? fallbackTitle,
-    provider: modelSelection.provider,
+    engine: engineSelection.engine,
     baselineTurnId: thread?.latestTurn?.turnId ?? null,
     droppedAtMs,
   });
@@ -260,11 +260,11 @@ async function dispatchKanbanDraftThreadOnce(
       const creationState = resolveTerminalThreadCreationState({
         activeDraftThread: null,
         activeThread: null,
-        defaultProvider: input.defaultProvider,
+        defaultEngine: input.defaultEngine,
         draftComposerState,
         draftThread,
         options: undefined,
-        projectDefaultModelSelection: project?.defaultModelSelection ?? null,
+        projectDefaultEngineSelection: project?.defaultEngineSelection ?? null,
         projectId,
       });
       const promotion = await promoteThreadCreate(
@@ -274,7 +274,7 @@ async function dispatchKanbanDraftThreadOnce(
           threadId,
           projectId,
           title: fallbackTitle,
-          modelSelection,
+          engineSelection,
           runtimeMode,
           interactionMode,
           envMode: creationState.envMode,
@@ -318,9 +318,9 @@ async function dispatchKanbanDraftThreadOnce(
           ...(mentionedSkills.length > 0 ? { skills: mentionedSkills } : {}),
           ...(mentionedMentions.length > 0 ? { mentions: mentionedMentions } : {}),
         },
-        modelSelection,
-        modelPresentationIdentity: resolveModelPresentationIdentity({ selection: modelSelection }),
-        ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+        engineSelection,
+        modelPresentationIdentity: resolveModelPresentationIdentity({ selection: engineSelection }),
+        ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
         assistantDeliveryMode: input.assistantDeliveryMode,
         dispatchMode: "queue",
         runtimeMode,

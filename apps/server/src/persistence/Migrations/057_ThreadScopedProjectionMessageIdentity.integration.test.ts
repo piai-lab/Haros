@@ -22,7 +22,7 @@ layer("057_ThreadScopedProjectionMessageIdentity", (it) => {
           created_at,
           updated_at
         ) VALUES (
-          'provider-message-1',
+          'engine-message-1',
           'thread-a',
           'assistant',
           'legacy row',
@@ -43,7 +43,7 @@ layer("057_ThreadScopedProjectionMessageIdentity", (it) => {
           created_at,
           updated_at
         ) VALUES (
-          'provider-message-1',
+          'engine-message-1',
           'thread-b',
           'assistant',
           'second thread',
@@ -75,7 +75,7 @@ layer("057_ThreadScopedProjectionMessageIdentity", (it) => {
       const rows = yield* sql<{ readonly threadId: string; readonly text: string }>`
         SELECT thread_id AS "threadId", text
         FROM projection_thread_messages
-        WHERE message_id = 'provider-message-1'
+        WHERE message_id = 'engine-message-1'
         ORDER BY thread_id ASC
       `;
       assert.deepStrictEqual(rows, [

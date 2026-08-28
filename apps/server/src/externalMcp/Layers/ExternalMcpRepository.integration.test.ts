@@ -349,7 +349,7 @@ layer("ExternalMcpRepository", (it) => {
           created_at, updated_at, deleted_at
         ) VALUES (
           'external-running-thread', 'project-running-capacity', 'Running external task',
-          '{"provider":"codex","model":"gpt-5.5"}', 'external-running-turn',
+          '{"engine":"codex","model":"gpt-5.5"}', 'external-running-turn',
           '2026-07-20T00:01:02.000Z', '2026-07-20T00:01:03.000Z', NULL
         )
       `;
@@ -491,7 +491,7 @@ layer("ExternalMcpRepository", (it) => {
           created_at, updated_at, deleted_at
         ) VALUES (
           'external-projection-lag-thread', 'project-projection-lag-capacity',
-          'Projection lag task', '{"provider":"codex","model":"gpt-5.5"}', NULL,
+          'Projection lag task', '{"engine":"codex","model":"gpt-5.5"}', NULL,
           '2026-07-20T00:01:02.000Z', '2026-07-20T00:01:05.000Z', NULL
         )
       `;
@@ -502,7 +502,7 @@ layer("ExternalMcpRepository", (it) => {
           thread_id, status, provider_name, active_turn_id, last_error, updated_at
         ) VALUES (
           'external-projection-lag-thread', 'error', 'codex', NULL,
-          'Provider startup failed.', '2026-07-20T00:01:05.000Z'
+          'Engine startup failed.', '2026-07-20T00:01:05.000Z'
         )
       `;
       expect(
@@ -538,7 +538,7 @@ layer("ExternalMcpRepository", (it) => {
       `;
       yield* sql`
         UPDATE projection_thread_sessions
-        SET status = 'error', last_error = 'Later provider startup failed.'
+        SET status = 'error', last_error = 'Later engine startup failed.'
         WHERE thread_id = 'external-projection-lag-thread'
       `;
       assert.equal((yield* repository.reserveOperation(retry)).kind, "concurrency_limited");

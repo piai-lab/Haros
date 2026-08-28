@@ -291,11 +291,11 @@ describe("Antigravity CLI integration helpers", () => {
           const adapter = yield* AntigravityAdapter;
           const threadId = ThreadId.makeUnsafe("thread-antigravity-turn-lease");
           yield* adapter.startSession({
-            provider: "antigravity",
+            engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
             cwd: root,
-            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+            engineOptions: { antigravity: { binaryPath: "/fake/agy" } },
           });
           const waitUntilReady = Effect.gen(function* () {
             for (let attempt = 0; attempt < 100; attempt += 1) {
@@ -482,7 +482,7 @@ describe("Antigravity CLI integration helpers", () => {
         createdAt: "2026-07-17T00:00:00.000Z",
       }),
     ).toMatchObject({
-      provider: "antigravity",
+      engine: "antigravity",
       threadId: "thread-antigravity-lifecycle",
       lifecycleGeneration: "generation-1",
       eventId: "event-1",
@@ -730,11 +730,11 @@ describe("Antigravity CLI integration helpers", () => {
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-tool-events");
           yield* adapter.startSession({
-            provider: "antigravity",
+            engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
             cwd: root,
-            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+            engineOptions: { antigravity: { binaryPath: "/fake/agy" } },
           });
           const turn = yield* adapter.sendTurn({
             threadId,
@@ -887,11 +887,11 @@ describe("Antigravity CLI integration helpers", () => {
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-tool-dedup");
           yield* adapter.startSession({
-            provider: "antigravity",
+            engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
             cwd: root,
-            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+            engineOptions: { antigravity: { binaryPath: "/fake/agy" } },
           });
           const turn = yield* adapter.sendTurn({
             threadId,
@@ -1031,19 +1031,19 @@ describe("Antigravity CLI integration helpers", () => {
             Stream.takeUntil(
               (event) =>
                 event.type === "item.started" &&
-                event.providerRefs?.providerThreadId === "conv-parent-1",
+                event.providerRefs?.nativeThreadId === "conv-parent-1",
             ),
             Stream.runCollect,
             Effect.forkChild,
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-subagent-events");
           yield* adapter.startSession({
-            provider: "antigravity",
+            engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
             cwd: root,
             resumeCursor: { conversationId: "conv-parent-1" },
-            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+            engineOptions: { antigravity: { binaryPath: "/fake/agy" } },
           });
           const turn = yield* adapter.sendTurn({
             threadId,
@@ -1089,26 +1089,26 @@ describe("Antigravity CLI integration helpers", () => {
             yield* Fiber.join(eventsFiber).pipe(Effect.timeout("2 seconds")),
           );
           const childRefs = {
-            providerThreadId: "conv-child-1",
-            providerParentThreadId: "conv-parent-1",
+            nativeThreadId: "conv-child-1",
+            nativeParentThreadId: "conv-parent-1",
           };
           const childThreadStarted = events.find(
             (event) =>
               event.type === "thread.started" &&
-              event.providerRefs?.providerThreadId === "conv-child-1",
+              event.providerRefs?.nativeThreadId === "conv-child-1",
           );
           expect(childThreadStarted?.providerRefs).toEqual(childRefs);
           const childTurnStarted = events.find(
             (event) =>
               event.type === "turn.started" &&
-              event.providerRefs?.providerThreadId === "conv-child-1",
+              event.providerRefs?.nativeThreadId === "conv-child-1",
           );
           expect(childTurnStarted?.turnId).toBe(turn.turnId);
           expect(childTurnStarted?.payload).toMatchObject({ model: "gemini-3.6-flash-medium" });
           const childItemStarted = events.find(
             (event) =>
               event.type === "item.started" &&
-              event.providerRefs?.providerThreadId === "conv-child-1",
+              event.providerRefs?.nativeThreadId === "conv-child-1",
           );
           expect(childItemStarted?.providerRefs).toEqual(childRefs);
           expect(childItemStarted?.payload).toMatchObject({
@@ -1119,7 +1119,7 @@ describe("Antigravity CLI integration helpers", () => {
           const childItemCompleted = events.find(
             (event) =>
               event.type === "item.completed" &&
-              event.providerRefs?.providerThreadId === "conv-child-1",
+              event.providerRefs?.nativeThreadId === "conv-child-1",
           );
           expect(childItemCompleted?.payload).toMatchObject({
             itemType: "command_execution",
@@ -1129,7 +1129,7 @@ describe("Antigravity CLI integration helpers", () => {
           const childTurnCompleted = events.find(
             (event) =>
               event.type === "turn.completed" &&
-              event.providerRefs?.providerThreadId === "conv-child-1",
+              event.providerRefs?.nativeThreadId === "conv-child-1",
           );
           expect(childTurnCompleted?.payload).toEqual({
             state: "completed",
@@ -1139,7 +1139,7 @@ describe("Antigravity CLI integration helpers", () => {
             events.filter(
               (event) =>
                 event.type === "turn.completed" &&
-                event.providerRefs?.providerThreadId === "conv-child-1",
+                event.providerRefs?.nativeThreadId === "conv-child-1",
             ),
           ).toHaveLength(1);
           // The parent thread must not be re-emitted for the subagent, and the
@@ -1149,15 +1149,15 @@ describe("Antigravity CLI integration helpers", () => {
             events.filter(
               (event) =>
                 event.type === "thread.started" &&
-                event.providerRefs?.providerThreadId === "conv-parent-1",
+                event.providerRefs?.nativeThreadId === "conv-parent-1",
             ),
           ).toHaveLength(1);
           const parentItem = events.find(
             (event) =>
               event.type === "item.started" &&
-              event.providerRefs?.providerThreadId === "conv-parent-1",
+              event.providerRefs?.nativeThreadId === "conv-parent-1",
           );
-          expect(parentItem?.providerRefs).toEqual({ providerThreadId: "conv-parent-1" });
+          expect(parentItem?.providerRefs).toEqual({ nativeThreadId: "conv-parent-1" });
           expect(parentItem?.payload).toMatchObject({ title: "run_command" });
 
           child?.emit("close", 0, null);
@@ -1211,19 +1211,19 @@ describe("Antigravity CLI integration helpers", () => {
             Stream.takeUntil(
               (event) =>
                 event.type === "turn.completed" &&
-                event.providerRefs?.providerParentThreadId === undefined,
+                event.providerRefs?.nativeParentThreadId === undefined,
             ),
             Stream.runCollect,
             Effect.forkChild,
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-child-failure");
           yield* adapter.startSession({
-            provider: "antigravity",
+            engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
             cwd: root,
             resumeCursor: { conversationId: "conv-parent-failure" },
-            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+            engineOptions: { antigravity: { binaryPath: "/fake/agy" } },
           });
           yield* adapter.sendTurn({
             threadId,
@@ -1249,12 +1249,12 @@ describe("Antigravity CLI integration helpers", () => {
           const childTerminalIndex = events.findIndex(
             (event) =>
               event.type === "turn.completed" &&
-              event.providerRefs?.providerThreadId === "conv-child-failure",
+              event.providerRefs?.nativeThreadId === "conv-child-failure",
           );
           const parentTerminalIndex = events.findIndex(
             (event) =>
               event.type === "turn.completed" &&
-              event.providerRefs?.providerParentThreadId === undefined,
+              event.providerRefs?.nativeParentThreadId === undefined,
           );
           expect(childTerminalIndex).toBeGreaterThanOrEqual(0);
           expect(childTerminalIndex).toBeLessThan(parentTerminalIndex);
@@ -1266,7 +1266,7 @@ describe("Antigravity CLI integration helpers", () => {
             events.filter(
               (event) =>
                 event.type === "turn.completed" &&
-                event.providerRefs?.providerThreadId === "conv-child-failure",
+                event.providerRefs?.nativeThreadId === "conv-child-failure",
             ),
           ).toHaveLength(1);
 
@@ -1360,11 +1360,11 @@ describe("Antigravity turn settle on cancel (#465)", () => {
           const adapter = yield* AntigravityAdapter;
           const threadId = ThreadId.makeUnsafe("thread-antigravity-interrupt-hung");
           yield* adapter.startSession({
-            provider: "antigravity",
+            engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
             cwd: root,
-            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+            engineOptions: { antigravity: { binaryPath: "/fake/agy" } },
           });
           const turn = yield* adapter.sendTurn({
             threadId,
@@ -1429,11 +1429,11 @@ describe("Antigravity turn settle on cancel (#465)", () => {
           const adapter = yield* AntigravityAdapter;
           const threadId = ThreadId.makeUnsafe("thread-antigravity-stop-button");
           yield* adapter.startSession({
-            provider: "antigravity",
+            engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
             cwd: root,
-            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+            engineOptions: { antigravity: { binaryPath: "/fake/agy" } },
           });
           const turn = yield* adapter.sendTurn({
             threadId,
@@ -1591,11 +1591,11 @@ describe("Antigravity turn settle on cancel (#465)", () => {
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-transcript");
           yield* adapter.startSession({
-            provider: "antigravity",
+            engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
             cwd: root,
-            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+            engineOptions: { antigravity: { binaryPath: "/fake/agy" } },
           });
           yield* adapter.sendTurn({
             threadId,
@@ -1930,11 +1930,11 @@ describe("Antigravity background task helpers (#752)", () => {
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-background-stop");
           yield* adapter.startSession({
-            provider: "antigravity",
+            engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
             cwd: root,
-            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+            engineOptions: { antigravity: { binaryPath: "/fake/agy" } },
           });
           yield* adapter.sendTurn({ threadId, input: "run tests", attachments: [] });
 
@@ -2082,11 +2082,11 @@ describe("Antigravity background task helpers (#752)", () => {
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-final-drain");
           yield* adapter.startSession({
-            provider: "antigravity",
+            engine: "antigravity",
             threadId,
             runtimeMode: "full-access",
             cwd: root,
-            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+            engineOptions: { antigravity: { binaryPath: "/fake/agy" } },
           });
           yield* adapter.sendTurn({ threadId, input: "list files", attachments: [] });
           blockNextTranscriptRead = true;
@@ -2203,11 +2203,11 @@ describe("Antigravity background task helpers (#752)", () => {
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-stale-poll");
           const sessionInput = {
-            provider: "antigravity" as const,
+            engine: "antigravity" as const,
             threadId,
             runtimeMode: "full-access" as const,
             cwd: root,
-            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+            engineOptions: { antigravity: { binaryPath: "/fake/agy" } },
           };
           yield* adapter.startSession(sessionInput);
           yield* adapter.sendTurn({ threadId, input: "start a task", attachments: [] });
@@ -2292,7 +2292,7 @@ describe("Antigravity background task helpers (#752)", () => {
                     ? Deferred.succeed(firstTaskStarted, undefined)
                     : Effect.void,
                   event.type === "thread.started" &&
-                  event.payload.providerThreadId === "conversation-background-restart"
+                  event.payload.nativeThreadId === "conversation-background-restart"
                     ? Deferred.succeed(conversationReady, undefined)
                     : Effect.void,
                   event.type === "item.completed" && event.payload.itemType === "assistant_message"
@@ -2323,11 +2323,11 @@ describe("Antigravity background task helpers (#752)", () => {
           );
           const threadId = ThreadId.makeUnsafe("thread-antigravity-background-restart");
           const sessionInput = {
-            provider: "antigravity" as const,
+            engine: "antigravity" as const,
             threadId,
             runtimeMode: "full-access" as const,
             cwd: root,
-            providerOptions: { antigravity: { binaryPath: "/fake/agy" } },
+            engineOptions: { antigravity: { binaryPath: "/fake/agy" } },
           };
           yield* adapter.startSession(sessionInput);
           yield* adapter.sendTurn({ threadId, input: "run tests", attachments: [] });

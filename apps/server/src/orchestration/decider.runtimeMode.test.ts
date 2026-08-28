@@ -1,6 +1,6 @@
 import {
   CommandId,
-  DEFAULT_PROVIDER_INTERACTION_MODE,
+  DEFAULT_ENGINE_INTERACTION_MODE,
   EventId,
   ProjectId,
   ThreadId,
@@ -30,12 +30,12 @@ function makeReadModel(
         id: THREAD_ID,
         projectId: PROJECT_ID,
         title: "Claude Auto",
-        modelSelection: {
-          provider: "claude",
+        engineSelection: {
+          engine: "claude",
           model: "claude-opus-4-6",
           supportsAutoMode,
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "auto",
         branch: null,
         worktreePath: null,
@@ -75,7 +75,7 @@ async function makeProjectOnlyReadModel(): Promise<OrchestrationReadModel> {
         kind: "project",
         title: "Project",
         workspaceRoot: "/tmp/project",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         scripts: [],
         createdAt: NOW,
         updatedAt: NOW,
@@ -92,8 +92,8 @@ describe("decider Auto model compatibility", () => {
           type: "thread.meta.update",
           commandId: CommandId.makeUnsafe("cmd-unsupported-claude-model"),
           threadId: THREAD_ID,
-          modelSelection: {
-            provider: "claude",
+          engineSelection: {
+            engine: "claude",
             model: "claude-haiku-4-5",
             supportsAutoMode: false,
           },
@@ -129,8 +129,8 @@ describe("decider Auto model compatibility", () => {
           type: "thread.meta.update",
           commandId: CommandId.makeUnsafe("cmd-supported-claude-model"),
           threadId: THREAD_ID,
-          modelSelection: {
-            provider: "claude",
+          engineSelection: {
+            engine: "claude",
             model: "claude-fable-5",
             supportsAutoMode: true,
           },
@@ -142,12 +142,12 @@ describe("decider Auto model compatibility", () => {
     expect("type" in event ? event.type : event[0]?.type).toBe("thread.meta-updated");
   });
 
-  it("commits the provider Session and complete binding tuple in one internal command", async () => {
+  it("commits the engine Session and complete binding tuple in one internal command", async () => {
     const result = await Effect.runPromise(
       decideOrchestrationCommand({
         command: {
           type: "thread.session.set",
-          commandId: CommandId.makeUnsafe("cmd-atomic-provider-binding"),
+          commandId: CommandId.makeUnsafe("cmd-atomic-engine-binding"),
           threadId: THREAD_ID,
           session: {
             threadId: THREAD_ID,
@@ -159,8 +159,8 @@ describe("decider Auto model compatibility", () => {
             updatedAt: NOW,
           },
           binding: {
-            modelSelection: {
-              provider: "claude",
+            engineSelection: {
+              engine: "claude",
               model: "claude-fable-5",
               supportsAutoMode: true,
             },
@@ -177,7 +177,7 @@ describe("decider Auto model compatibility", () => {
       { type: "thread.session-set", payload: { session: { providerName: "claude" } } },
       {
         type: "thread.meta-updated",
-        payload: { modelSelection: { provider: "claude", model: "claude-fable-5" } },
+        payload: { engineSelection: { engine: "claude", model: "claude-fable-5" } },
       },
       { type: "thread.runtime-mode-set", payload: { runtimeMode: "auto" } },
       { type: "thread.interaction-mode-set", payload: { interactionMode: "plan" } },
@@ -196,11 +196,11 @@ describe("decider Auto model compatibility", () => {
             threadId: ThreadId.makeUnsafe("thread-user-auto"),
             projectId: PROJECT_ID,
             title: "User Auto thread",
-            modelSelection: {
-              provider: "claude",
+            engineSelection: {
+              engine: "claude",
               model: "claude-fable-5",
             },
-            interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+            interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
             runtimeMode: "auto",
             envMode: "local",
             branch: null,
@@ -214,10 +214,10 @@ describe("decider Auto model compatibility", () => {
     ).rejects.toThrow("The selected model has not been verified to support Auto mode.");
   });
 
-  it("allows a provider-native subagent thread in Auto without a verified flag", async () => {
-    // Provider-native threads mirror subagents the provider already runs;
+  it("allows a engine-native subagent thread in Auto without a verified flag", async () => {
+    // Engine-native threads mirror subagents the engine already runs;
     // rejecting them would durably poison the runtime journal replaying the
-    // provider event (see ProviderRuntimeIngestion), not stop any session.
+    // engine event (see EngineRuntimeIngestion), not stop any session.
     const readModel = await makeProjectOnlyReadModel();
 
     const result = await Effect.runPromise(
@@ -228,11 +228,11 @@ describe("decider Auto model compatibility", () => {
           threadId: ThreadId.makeUnsafe("subagent:thread-auto-claude:child"),
           projectId: PROJECT_ID,
           title: "Subagent",
-          modelSelection: {
-            provider: "claude",
+          engineSelection: {
+            engine: "claude",
             model: "claude-fable-5",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "auto",
           envMode: "local",
           branch: null,
@@ -251,15 +251,15 @@ describe("decider Auto model compatibility", () => {
     expect(event?.type).toBe("thread.created");
   });
 
-  it("allows model updates on provider-native threads without a verified flag", async () => {
+  it("allows model updates on engine-native threads without a verified flag", async () => {
     const event = await Effect.runPromise(
       decideOrchestrationCommand({
         command: {
           type: "thread.meta.update",
           commandId: CommandId.makeUnsafe("cmd-subagent-model-update"),
           threadId: THREAD_ID,
-          modelSelection: {
-            provider: "claude",
+          engineSelection: {
+            engine: "claude",
             model: "claude-fable-5",
           },
         },

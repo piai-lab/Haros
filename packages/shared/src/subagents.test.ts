@@ -147,7 +147,7 @@ describe("decodeSubagentReceiverAgents", () => {
       ),
     ).toEqual([
       {
-        providerThreadId: "child-provider-1",
+        nativeThreadId: "child-provider-1",
         nickname: "Locke",
         model: "gpt-5.4-mini",
         modelIsRequestedHint: true,
@@ -170,7 +170,7 @@ describe("decodeSubagentReceiverAgents", () => {
       ),
     ).toEqual([
       {
-        providerThreadId: "child-provider-1",
+        nativeThreadId: "child-provider-1",
         nickname: "Deep audit",
         // Worker-tier agent types are internal effort carriers, never a role.
         model: "sonnet",
@@ -198,7 +198,7 @@ describe("extractSubagentIdentityHints", () => {
         },
       }),
     ).toContainEqual({
-      providerThreadId: "child-provider-1",
+      nativeThreadId: "child-provider-1",
       agentId: "agent-1",
       nickname: "Locke",
       role: "explorer",
@@ -223,16 +223,16 @@ describe("extractSubagentIdentityHints", () => {
     });
 
     expect(
-      resolveSubagentIdentityHint({ hints, providerThreadId: "child-provider-1" }),
+      resolveSubagentIdentityHint({ hints, nativeThreadId: "child-provider-1" }),
     ).toMatchObject({
       nickname: "Locke",
       effort: "low",
     });
     expect(
-      resolveSubagentIdentityHint({ hints, providerThreadId: "child-provider-1" })?.role,
+      resolveSubagentIdentityHint({ hints, nativeThreadId: "child-provider-1" })?.role,
     ).toBeUndefined();
     expect(
-      resolveSubagentIdentityHint({ hints, providerThreadId: "child-provider-2" }),
+      resolveSubagentIdentityHint({ hints, nativeThreadId: "child-provider-2" }),
     ).toMatchObject({
       nickname: "Hume",
       role: "explorer",
@@ -249,7 +249,7 @@ describe("extractSubagentIdentityHints", () => {
       },
     });
 
-    const resolved = resolveSubagentIdentityHint({ hints, providerThreadId: "child-provider-1" });
+    const resolved = resolveSubagentIdentityHint({ hints, nativeThreadId: "child-provider-1" });
     expect(resolved?.status).toBe("running");
     expect(resolved?.role).toBeUndefined();
   });
@@ -292,10 +292,10 @@ describe("resolveSubagentIdentityHint", () => {
     expect(
       resolveSubagentIdentityHint({
         hints,
-        providerThreadId: "child-provider-1",
+        nativeThreadId: "child-provider-1",
       }),
     ).toMatchObject({
-      providerThreadId: "child-provider-1",
+      nativeThreadId: "child-provider-1",
       agentId: "agent-1",
       nickname: "Locke",
       role: "explorer",
@@ -307,7 +307,7 @@ describe("resolveSubagentIdentityHint", () => {
   it("links thread and agent identifiers through the same merged directory entry", () => {
     const directory = buildSubagentIdentityDirectory([
       {
-        providerThreadId: "child-provider-1",
+        nativeThreadId: "child-provider-1",
         agentId: "agent-1",
         nickname: "Harper",
       },
@@ -318,7 +318,7 @@ describe("resolveSubagentIdentityHint", () => {
     ]);
 
     expect(directory.byProviderThreadId.get("child-provider-1")).toMatchObject({
-      providerThreadId: "child-provider-1",
+      nativeThreadId: "child-provider-1",
       agentId: "agent-1",
       nickname: "Harper",
       role: "reviewer",

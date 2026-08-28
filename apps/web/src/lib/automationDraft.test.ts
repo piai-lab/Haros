@@ -51,7 +51,7 @@ describe("automation draft warnings", () => {
         requiresAcknowledgement: true,
       },
     ]);
-    expect(warnings[0]?.detail).toContain("provider mentions");
+    expect(warnings[0]?.detail).toContain("engine mentions");
     expect(hasBlockingAutomationDraftWarnings(warnings, new Set())).toBe(true);
   });
 

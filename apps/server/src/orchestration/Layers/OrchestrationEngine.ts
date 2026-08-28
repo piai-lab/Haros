@@ -83,7 +83,7 @@ import {
   usesReservedCommandAdmission,
 } from "../orchestrationAdmission.ts";
 import { decideOrchestrationCommand } from "../decider.ts";
-import { providerExecutionStructure } from "../../provider/providerExecutionStructure.ts";
+import { engineExecutionStructure } from "../../provider/engineExecutionStructure.ts";
 import { PROJECT_METADATA_SNAPSHOT_PROJECTORS } from "../projectMetadataProjection.ts";
 import { createEmptyReadModel, projectEvent } from "../projector.ts";
 import {
@@ -1103,17 +1103,14 @@ const makeOrchestrationEngine = Effect.gen(function* () {
               const thread = deciderReadModel.threads.find(
                 (candidate) => candidate.id === turnCommand.threadId,
               );
-              const sessionProvider = thread?.session?.providerName;
-              const provider =
-                sessionProvider !== undefined && Schema.is(EngineKind)(sessionProvider)
-                  ? sessionProvider
-                  : (thread?.modelSelection.provider ??
-                    turnCommand.modelSelection?.provider ??
-                    "oa");
+              const sessionEngine = thread?.session?.providerName;
+              const engine =
+                sessionEngine !== undefined && Schema.is(EngineKind)(sessionEngine)
+                  ? sessionEngine
+                  : (thread?.engineSelection.engine ?? turnCommand.engineSelection?.engine ?? "oa");
               return {
-                provider,
-                supportsNativeTurnSteering:
-                  providerExecutionStructure(provider).supportsTurnSteering,
+                engine,
+                supportsNativeTurnSteering: engineExecutionStructure(engine).supportsTurnSteering,
               } as const;
             })()
           : undefined;
@@ -1941,7 +1938,7 @@ const makeOrchestrationEngine = Effect.gen(function* () {
     dispatch,
     repairState,
     // Each access creates a fresh PubSub subscription so that multiple
-    // consumers (Effect RPC, ProviderRuntimeIngestion, CheckpointReactor, etc.)
+    // consumers (Effect RPC, EngineRuntimeIngestion, CheckpointReactor, etc.)
     // each independently receive all domain events.
     get streamDomainEvents(): OrchestrationEngineShape["streamDomainEvents"] {
       return Stream.unwrap(subscribeDomainEvents);

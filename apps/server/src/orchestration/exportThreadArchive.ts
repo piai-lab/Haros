@@ -165,7 +165,7 @@ function* threadJsonChunks(thread: OrchestrationThread): Generator<string> {
     {
       threadId: thread.id,
       title: thread.title,
-      modelSelection: thread.modelSelection,
+      engineSelection: thread.engineSelection,
       runtimeMode: thread.runtimeMode,
       createdAt: thread.createdAt,
       updatedAt: thread.updatedAt,

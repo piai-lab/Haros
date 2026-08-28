@@ -10,7 +10,7 @@ import {
   linkOrCopyCodexOverlayEntry,
   prioritizeCodexOverlayEntries,
 } from "./codexProcessEnv";
-import { isProviderCredentialKey } from "./providerChildEnvironment.ts";
+import { isEngineCredentialKey } from "./providerChildEnvironment.ts";
 
 describe("linkOrCopyCodexOverlayEntry", () => {
   it("copies auth.json when symlink creation is unavailable", async () => {
@@ -91,8 +91,8 @@ describe("disableCodexConfigSections", () => {
 });
 
 describe("buildCodexProcessEnv", () => {
-  it("registers the active custom provider env key for diagnostic redaction", async () => {
-    const codexHome = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-provider-key-"));
+  it("registers the active custom engine env key for diagnostic redaction", async () => {
+    const codexHome = mkdtempSync(path.join(os.tmpdir(), "harnessos-codex-engine-key-"));
     writeFileSync(
       path.join(codexHome, "config.toml"),
       [
@@ -106,7 +106,7 @@ describe("buildCodexProcessEnv", () => {
 
     try {
       await buildCodexProcessEnv({ env: { CODEX_HOME: codexHome }, platform: "win32" });
-      expect(isProviderCredentialKey("ACME-LICENSE.INTEGRATION")).toBe(true);
+      expect(isEngineCredentialKey("ACME-LICENSE.INTEGRATION")).toBe(true);
     } finally {
       rmSync(codexHome, { recursive: true, force: true });
     }

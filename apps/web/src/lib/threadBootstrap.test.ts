@@ -1,4 +1,4 @@
-import { ProjectId, type ModelSelection, ThreadId } from "@harnessos/contracts";
+import { ProjectId, type EngineSelection, ThreadId } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 import { type ComposerThreadDraftState, type DraftThreadState } from "../composerDraftStore";
 import {
@@ -16,16 +16,16 @@ import {
 const PROJECT_ID = ProjectId.makeUnsafe("project-bootstrap");
 const THREAD_ID = ThreadId.makeUnsafe("thread-bootstrap");
 
-function modelSelection(
-  provider: "codex" | "claude",
+function engineSelection(
+  engine: "codex" | "claude",
   model: string,
-  options?: ModelSelection["options"],
-): ModelSelection {
+  options?: EngineSelection["options"],
+): EngineSelection {
   return {
-    provider,
+    engine,
     model,
     ...(options ? { options } : {}),
-  } as ModelSelection;
+  } as EngineSelection;
 }
 
 function makeDraftThread(partial?: Partial<DraftThreadState>): DraftThreadState {
@@ -61,8 +61,8 @@ function makeComposerDraftState(
     mentions: [],
     queuedTurns: [],
     pendingDirectTurnRecovery: null,
-    modelSelectionByProvider: {
-      claude: modelSelection("claude", "claude-opus-4-6", { effort: "max" }),
+    engineSelectionByEngine: {
+      claude: engineSelection("claude", "claude-opus-4-6", { effort: "max" }),
     },
     activeProvider: "claude",
     runtimeMode: null,
@@ -154,7 +154,7 @@ describe("threadBootstrap", () => {
       createActiveThreadSnapshot(
         {
           projectId: PROJECT_ID,
-          modelSelection: modelSelection("codex", "gpt-5"),
+          engineSelection: engineSelection("codex", "gpt-5"),
           runtimeMode: "full-access",
           interactionMode: "default",
         },
@@ -162,7 +162,7 @@ describe("threadBootstrap", () => {
       ),
     ).toEqual({
       projectId: PROJECT_ID,
-      modelSelection: modelSelection("codex", "gpt-5"),
+      engineSelection: engineSelection("codex", "gpt-5"),
       runtimeMode: "full-access",
       interactionMode: "default",
       envMode: undefined,
@@ -286,19 +286,19 @@ describe("threadBootstrap", () => {
         activeDraftThread: null,
         activeThread: {
           projectId: PROJECT_ID,
-          modelSelection: modelSelection("codex", "gpt-5"),
+          engineSelection: engineSelection("codex", "gpt-5"),
           runtimeMode: "full-access",
           interactionMode: "default",
         },
         draftComposerState: makeComposerDraftState(),
         draftThread: makeDraftThread(),
         options: undefined,
-        projectDefaultModelSelection: modelSelection("codex", "gpt-5.4"),
+        projectDefaultEngineSelection: engineSelection("codex", "gpt-5.4"),
         projectId: PROJECT_ID,
       }),
     ).toEqual({
       title: "New terminal",
-      modelSelection: modelSelection("claude", "claude-opus-4-6", {
+      engineSelection: engineSelection("claude", "claude-opus-4-6", {
         effort: "max",
       }),
       runtimeMode: "approval-required",
@@ -317,20 +317,20 @@ describe("threadBootstrap", () => {
         activeDraftThread: null,
         activeThread: {
           projectId: PROJECT_ID,
-          modelSelection: modelSelection("codex", "gpt-5.5"),
+          engineSelection: engineSelection("codex", "gpt-5.5"),
           runtimeMode: "full-access",
           interactionMode: "default",
         },
         draftComposerState: {
           ...makeComposerDraftState(),
           activeProvider: "pi",
-          modelSelectionByProvider: {},
+          engineSelectionByEngine: {},
         },
         draftThread: makeDraftThread(),
         options: undefined,
-        projectDefaultModelSelection: null,
+        projectDefaultEngineSelection: null,
         projectId: PROJECT_ID,
-      }).modelSelection,
+      }).engineSelection,
     ).toBeNull();
   });
 
@@ -340,14 +340,14 @@ describe("threadBootstrap", () => {
         activeDraftThread: null,
         activeThread: {
           projectId: PROJECT_ID,
-          modelSelection: modelSelection("codex", "gpt-5"),
+          engineSelection: engineSelection("codex", "gpt-5"),
           runtimeMode: "full-access",
           interactionMode: "plan",
         },
         draftComposerState: makeComposerDraftState(),
         draftThread: null,
         options: undefined,
-        projectDefaultModelSelection: modelSelection("codex", "gpt-5.4"),
+        projectDefaultEngineSelection: engineSelection("codex", "gpt-5.4"),
         projectId: PROJECT_ID,
       }).interactionMode,
     ).toBe("default");
@@ -359,14 +359,14 @@ describe("threadBootstrap", () => {
         activeDraftThread: null,
         activeThread: {
           projectId: PROJECT_ID,
-          modelSelection: modelSelection("codex", "gpt-5"),
+          engineSelection: engineSelection("codex", "gpt-5"),
           runtimeMode: "full-access",
           interactionMode: "default",
         },
         draftComposerState: makeComposerDraftState(),
         draftThread: makeDraftThread({ interactionMode: "plan" }),
         options: undefined,
-        projectDefaultModelSelection: modelSelection("codex", "gpt-5.4"),
+        projectDefaultEngineSelection: engineSelection("codex", "gpt-5.4"),
         projectId: PROJECT_ID,
       }).interactionMode,
     ).toBe("plan");
@@ -380,7 +380,7 @@ describe("threadBootstrap", () => {
         draftComposerState: makeComposerDraftState(),
         draftThread: makeDraftThread({ title: "Local terminal title" }),
         options: undefined,
-        projectDefaultModelSelection: null,
+        projectDefaultEngineSelection: null,
         projectId: PROJECT_ID,
       }).title,
     ).toBe("Local terminal title");
@@ -392,7 +392,7 @@ describe("threadBootstrap", () => {
         activeDraftThread: null,
         activeThread: {
           projectId: PROJECT_ID,
-          modelSelection: modelSelection("codex", "gpt-5"),
+          engineSelection: engineSelection("codex", "gpt-5"),
           runtimeMode: "full-access",
           interactionMode: "default",
           envMode: "worktree",
@@ -402,7 +402,7 @@ describe("threadBootstrap", () => {
         options: {
           envMode: "local",
         },
-        projectDefaultModelSelection: modelSelection("codex", "gpt-5.4"),
+        projectDefaultEngineSelection: engineSelection("codex", "gpt-5.4"),
         projectId: PROJECT_ID,
       }),
     ).toMatchObject({

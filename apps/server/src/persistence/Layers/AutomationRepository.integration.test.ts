@@ -25,8 +25,8 @@ const createInput = {
   projectId: ProjectId.makeUnsafe("project-1"),
   prompt: "Check stale dependencies.",
   schedule: { type: "manual" },
-  modelSelection: {
-    provider: "codex",
+  engineSelection: {
+    engine: "codex",
     model: "gpt-5-codex",
   },
   modelPresentationIdentity: {
@@ -43,9 +43,9 @@ const createInputForProject = (projectId: string) => ({
 });
 
 const permissionSnapshot = {
-  provider: "codex",
-  modelSelection: {
-    provider: "codex",
+  engine: "codex",
+  engineSelection: {
+    engine: "codex",
     model: "gpt-5-codex",
   },
   modelPresentationIdentity: createInput.modelPresentationIdentity,
@@ -121,7 +121,7 @@ layer("AutomationRepository", (it) => {
           '{"type":"manual"}',
           1,
           NULL,
-          '{"provider":"codex","model":"gpt-5-codex"}',
+          '{"engine":"codex","model":"gpt-5-codex"}',
           'approval-required',
           'default',
           'auto',

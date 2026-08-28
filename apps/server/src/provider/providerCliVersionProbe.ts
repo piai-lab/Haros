@@ -2,7 +2,7 @@ import { Effect, Option, Result } from "effect";
 
 import { isCommandMissingCause, type CommandResult } from "./providerCliOutput";
 
-export type ProviderCliVersionProbeOutcome =
+export type EngineCliVersionProbeOutcome =
   | { readonly outcome: "missing"; readonly cause: unknown }
   | { readonly outcome: "failure"; readonly cause: unknown }
   | { readonly outcome: "timeout" }
@@ -12,11 +12,11 @@ export type ProviderCliVersionProbeOutcome =
 export const probeProviderCliVersion = <ErrorType, Requirements>(
   command: Effect.Effect<CommandResult, ErrorType, Requirements>,
   timeoutMs: number,
-): Effect.Effect<ProviderCliVersionProbeOutcome, never, Requirements> =>
+): Effect.Effect<EngineCliVersionProbeOutcome, never, Requirements> =>
   command.pipe(
     Effect.timeoutOption(timeoutMs),
     Effect.result,
-    Effect.map((probe): ProviderCliVersionProbeOutcome => {
+    Effect.map((probe): EngineCliVersionProbeOutcome => {
       if (Result.isFailure(probe)) {
         return isCommandMissingCause(probe.failure)
           ? { outcome: "missing", cause: probe.failure }

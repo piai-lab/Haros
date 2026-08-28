@@ -2,7 +2,7 @@ import { type AutomationDefinition, type AutomationRun } from "@harnessos/contra
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { getProviderStartOptions } from "~/providerSettings";
+import { getEngineStartOptions } from "~/engineSettings";
 import { useServerSettings } from "~/serverSettings";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
@@ -47,8 +47,8 @@ import {
   isLiveRun,
   isRowInteractiveEventTarget,
   isUnresolvedTriageResult,
-  providerOptionsForAutomationEdit,
-  projectModelSelection,
+  engineOptionsForAutomationEdit,
+  projectEngineSelection,
   runStatusLabel,
   updateInputFromForm,
   useAutomations,
@@ -209,7 +209,11 @@ function AutomationsRouteView() {
   }, []);
   const fallbackProjectId = projects[0]?.id ?? "";
   const [form, setForm] = useState<AutomationFormState>(() =>
-    formFromDefinition(null, fallbackProjectId, projectModelSelection(projects, fallbackProjectId)),
+    formFromDefinition(
+      null,
+      fallbackProjectId,
+      projectEngineSelection(projects, fallbackProjectId),
+    ),
   );
 
   const {
@@ -221,7 +225,7 @@ function AutomationsRouteView() {
     deleteMutation,
     runsByAutomationId,
   } = useAutomations((threadId) => void navigate({ to: "/$threadId", params: { threadId } }));
-  const providerOptionsForDispatch = settings ? getProviderStartOptions(settings) : undefined;
+  const engineOptionsForDispatch = settings ? getEngineStartOptions(settings) : undefined;
 
   const updateDialogForm = (nextForm: AutomationFormState) => {
     setForm(nextForm);
@@ -239,7 +243,7 @@ function AutomationsRouteView() {
     const nextForm = formFromDefinition(
       null,
       fallbackProjectId,
-      projectModelSelection(projects, fallbackProjectId),
+      projectEngineSelection(projects, fallbackProjectId),
     );
     setForm(nextForm);
     setDialogWarnings(buildAutomationFormWarnings(nextForm));
@@ -260,7 +264,7 @@ function AutomationsRouteView() {
         updateInputFromForm(
           editingDefinition,
           form,
-          providerOptionsForAutomationEdit(editingDefinition, form, providerOptionsForDispatch),
+          engineOptionsForAutomationEdit(editingDefinition, form, engineOptionsForDispatch),
           acknowledgedRisks,
         ),
         closeOnSuccess,
@@ -268,7 +272,7 @@ function AutomationsRouteView() {
       return;
     }
     createMutation.mutate(
-      createInputFromForm(form, providerOptionsForDispatch, acknowledgedRisks),
+      createInputFromForm(form, engineOptionsForDispatch, acknowledgedRisks),
       closeOnSuccess,
     );
   };

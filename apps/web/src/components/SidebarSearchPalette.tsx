@@ -22,7 +22,7 @@ import { LuArrowDownToLine, LuArrowLeft, LuCornerLeftUp, LuFolderPlus } from "re
 import { type ComponentType, useEffect, useState, type KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FolderClosed } from "./FolderClosed";
-import { ProviderIcon as SharedProviderIcon } from "./ProviderIcon";
+import { EngineIcon as SharedProviderIcon } from "./EngineIcon";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import { readNativeApi } from "~/nativeApi";
 import { isMacPlatform } from "~/lib/utils";
@@ -93,7 +93,7 @@ interface SidebarSearchPaletteProps {
   onOpenProject: (projectId: string) => void;
   onOpenThread: (threadId: string) => void;
   importProviders: readonly ImportProviderKind[];
-  onImportThread: (provider: ImportProviderKind, externalId: string) => Promise<void>;
+  onImportThread: (engine: ImportProviderKind, externalId: string) => Promise<void>;
 }
 
 export type ImportProviderKind = Extract<
@@ -285,10 +285,10 @@ const THEME_MODE_ICONS: Record<"system" | "light" | "dark", IconComponent> = {
   dark: MoonIcon,
 };
 
-function ProviderIcon(props: { provider: EngineKind }) {
+function EngineIcon(props: { engine: EngineKind }) {
   return (
     <div className="flex size-5 shrink-0 items-center justify-center">
-      <SharedProviderIcon provider={props.provider} className="size-[15px]" />
+      <SharedProviderIcon engine={props.engine} className="size-[15px]" />
     </div>
   );
 }
@@ -371,7 +371,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
   const [importId, setImportId] = useState("");
   const [importError, setImportError] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
-  // Derived fallback (no syncing effect): an unavailable provider renders as
+  // Derived fallback (no syncing effect): an unavailable engine renders as
   // the first available one, and the user's pick resurfaces if it comes back.
   const importProvider = props.importProviders.includes(importProviderState)
     ? importProviderState
@@ -490,14 +490,14 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
     importProvider === "codex" ? t("search.threadId") : t("search.sessionId");
   const importPlaceholder =
     importProvider === "claude"
-      ? t("search.pasteSessionId", { provider: "Claude" })
+      ? t("search.pasteSessionId", { engine: "Claude" })
       : importProvider === "cursor"
-        ? t("search.pasteSessionId", { provider: "Cursor" })
+        ? t("search.pasteSessionId", { engine: "Cursor" })
         : importProvider === "kilo"
-          ? t("search.pasteSessionId", { provider: "Kilo" })
+          ? t("search.pasteSessionId", { engine: "Kilo" })
           : importProvider === "opencode"
-            ? t("search.pasteSessionId", { provider: "OpenCode" })
-            : t("search.pasteThreadId", { provider: "Codex" });
+            ? t("search.pasteSessionId", { engine: "OpenCode" })
+            : t("search.pasteThreadId", { engine: "Codex" });
 
   const hasHighlightedFolderItem =
     highlightedItemValue !== null && highlightedItemValue.startsWith("folder:");
@@ -637,27 +637,27 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
             </div>
             <div className="space-y-4 px-4 py-4">
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">{t("search.provider")}</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("search.engine")}</p>
                 <div className="flex gap-2">
-                  {props.importProviders.map((provider) => (
+                  {props.importProviders.map((engine) => (
                     <Button
-                      key={provider}
+                      key={engine}
                       className={
-                        importProvider === provider
+                        importProvider === engine
                           ? "flex-1 justify-start border-border bg-muted text-foreground hover:bg-muted/80"
                           : "flex-1 justify-start"
                       }
                       variant="outline"
-                      onClick={() => setImportProvider(provider)}
+                      onClick={() => setImportProvider(engine)}
                     >
-                      <ProviderIcon provider={provider} />
-                      {provider === "claude"
+                      <EngineIcon engine={engine} />
+                      {engine === "claude"
                         ? "Claude"
-                        : provider === "cursor"
+                        : engine === "cursor"
                           ? "Cursor"
-                          : provider === "kilo"
+                          : engine === "kilo"
                             ? "Kilo"
-                            : provider === "opencode"
+                            : engine === "opencode"
                               ? "OpenCode"
                               : "Codex"}
                     </Button>
@@ -685,14 +685,14 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                 />
                 <p className="text-xs text-muted-foreground">
                   {importProvider === "claude"
-                    ? t("search.providerSessionResume", { provider: "Claude" })
+                    ? t("search.providerSessionResume", { engine: "Claude" })
                     : importProvider === "cursor"
-                      ? t("search.providerSessionResume", { provider: "Cursor" })
+                      ? t("search.providerSessionResume", { engine: "Cursor" })
                       : importProvider === "kilo"
-                        ? t("search.providerSessionResume", { provider: "Kilo" })
+                        ? t("search.providerSessionResume", { engine: "Kilo" })
                         : importProvider === "opencode"
-                          ? t("search.providerSessionResume", { provider: "OpenCode" })
-                          : t("search.providerThreadResume", { provider: "Codex" })}
+                          ? t("search.providerSessionResume", { engine: "OpenCode" })
+                          : t("search.providerThreadResume", { engine: "Codex" })}
                 </p>
               </div>
               {importError ? (
@@ -893,7 +893,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                             }}
                           >
                             {isGenericChatThreadTitle(thread.title) ? null : (
-                              <ProviderIcon provider={thread.provider} />
+                              <EngineIcon engine={thread.engine} />
                             )}
                             <div className="min-w-0 flex-1">
                               <div className="flex items-baseline gap-3">

@@ -23,15 +23,15 @@ const harness = vi.hoisted(() => ({
   serverSettingsError: null as Error | null,
 }));
 
-vi.mock("~/providerSettings", () => ({
-  getProviderStartOptions: () => null,
+vi.mock("~/engineSettings", () => ({
+  getEngineStartOptions: () => null,
 }));
 
 vi.mock("~/serverSettings", () => ({
   useServerSettings: () => {
     const settings = {
-      providers: { codex: { homePath: "" } },
-      textGenerationModelSelection: { provider: "codex", model: null },
+      engines: { codex: { homePath: "" } },
+      textGenerationEngineSelection: { engine: "codex", model: null },
     };
     return {
       settings,

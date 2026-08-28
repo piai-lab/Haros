@@ -2,7 +2,7 @@
 // Purpose: Derives presentation-only startup terminal facts from canonical route and catalog owners.
 // Layer: Web startup presentation
 
-import type { ProviderModelCatalogState } from "../hooks/useProviderModelCatalog";
+import type { EngineModelCatalogState } from "../hooks/useEngineModelCatalog";
 
 const NON_COMPOSER_PREFIXES = [
   "/settings",
@@ -25,6 +25,6 @@ export function shouldInitializeDesktopStartupSplash(
   return presentation === "full" && pathname !== "/pair" && pathname !== "/signed-out";
 }
 
-export function isTerminalStartupCatalogState(state: ProviderModelCatalogState): boolean {
+export function isTerminalStartupCatalogState(state: EngineModelCatalogState): boolean {
   return state === "ready" || state === "empty" || state === "stale" || state === "error";
 }

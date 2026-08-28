@@ -3,7 +3,7 @@
 // Layer: Web-to-server settings boundary
 
 import type {
-  ServerProviderCredentialProvider,
+  ServerEngineCredentialProvider,
   ServerSettingsPatch,
   ServerSettingsView,
 } from "@harnessos/contracts";
@@ -13,7 +13,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
 import { ensureNativeApi } from "./nativeApi";
-import { providerDiscoveryQueryKeys } from "./lib/providerDiscoveryReactQuery";
+import { engineDiscoveryQueryKeys } from "./lib/engineDiscoveryReactQuery";
 import { serverQueryKeys, serverSettingsQueryOptions } from "./lib/serverReactQuery";
 
 export type ServerSettingsMutationResult =
@@ -42,7 +42,7 @@ export function useServerSettings() {
         // authoritative cache owner, so a late RPC snapshot never overwrites a newer push.
         void Promise.all([
           queryClient.invalidateQueries({ queryKey: serverQueryKeys.settings() }),
-          queryClient.invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all }),
+          queryClient.invalidateQueries({ queryKey: engineDiscoveryQueryKeys.all }),
         ]).catch(() => undefined);
         return { state: "saved" };
       } catch (error) {
@@ -55,19 +55,19 @@ export function useServerSettings() {
     [queryClient],
   );
 
-  const updateProviderCredential = useCallback(
+  const updateEngineCredential = useCallback(
     async (
-      provider: ServerProviderCredentialProvider,
+      engine: ServerEngineCredentialProvider,
       serverPassword: string,
     ): Promise<ServerSettingsMutationResult> => {
       try {
-        await ensureNativeApi().server.updateProviderCredential({
-          provider,
+        await ensureNativeApi().server.updateEngineCredential({
+          engine,
           serverPassword,
         });
         void Promise.all([
           queryClient.invalidateQueries({ queryKey: serverQueryKeys.settings() }),
-          queryClient.invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all }),
+          queryClient.invalidateQueries({ queryKey: engineDiscoveryQueryKeys.all }),
         ]).catch(() => undefined);
         return { state: "saved" };
       } catch (error) {
@@ -85,7 +85,7 @@ export function useServerSettings() {
       await ensureNativeApi().server.resetSettings();
       void Promise.all([
         queryClient.invalidateQueries({ queryKey: serverQueryKeys.settings() }),
-        queryClient.invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: engineDiscoveryQueryKeys.all }),
       ]).catch(() => undefined);
       return { state: "saved" };
     } catch (error) {
@@ -101,7 +101,7 @@ export function useServerSettings() {
     settings: query.data,
     defaults: DEFAULT_SERVER_SETTINGS_VIEW,
     updateServerSettings,
-    updateProviderCredential,
+    updateEngineCredential,
     resetServerSettings,
     fetchSettings: () => fetchAuthoritativeServerSettings(queryClient),
   } as const;

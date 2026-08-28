@@ -4,8 +4,8 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { primaryKeyColumns } from "./schemaHelpers.ts";
 
 /**
- * Provider message ids are only stable inside their owning thread. Rebuild the
- * projection table around that durable identity so a provider may reuse an id
+ * Engine message ids are only stable inside their owning thread. Rebuild the
+ * projection table around that durable identity so a engine may reuse an id
  * in another thread without moving or overwriting the original message.
  */
 export default Effect.gen(function* () {

@@ -1,5 +1,5 @@
 // FILE: useThreadHandoff.ts
-// Purpose: Creates provider-to-provider handoff threads from the active web state.
+// Purpose: Creates engine-to-engine handoff threads from the active web state.
 // Layer: Web hook
 // Exports: useThreadHandoff
 
@@ -7,17 +7,17 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { type EngineKind } from "@harnessos/contracts";
 import { useComposerDraftStore } from "../composerDraftStore";
-import { useProviderStatusesForLocalConfig } from "./useProviderStatusesForLocalConfig";
-import { useRefreshProviderStatusesNow } from "./useProviderStatusRefresh";
+import { useEngineStatusesForLocalConfig } from "./useEngineStatusesForLocalConfig";
+import { useRefreshProviderStatusesNow } from "./useEngineStatusRefresh";
 import {
   buildThreadHandoffImportedActivities,
   buildThreadHandoffImportedMessages,
   canCreateThreadHandoff,
   isEligibleHandoffTargetProvider,
-  resolveThreadHandoffModelSelection,
+  resolveThreadHandoffEngineSelection,
   resolveThreadHandoffTitle,
 } from "../lib/threadHandoff";
-import { resolveProviderSendAvailabilityWithRefresh } from "../lib/providerAvailability";
+import { resolveProviderSendAvailabilityWithRefresh } from "../lib/engineAvailability";
 import { serverSettingsQueryOptions } from "../lib/serverReactQuery";
 import { newCommandId, newThreadId } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
@@ -28,7 +28,7 @@ export function useThreadHandoff() {
   const navigate = useNavigate();
   const projects = useStore((store) => store.projects);
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
-  const providerStatuses = useProviderStatusesForLocalConfig();
+  const providerStatuses = useEngineStatusesForLocalConfig();
   const refreshProviderStatuses = useRefreshProviderStatusesNow();
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
 
@@ -50,15 +50,15 @@ export function useThreadHandoff() {
       throw new Error("This thread cannot be handed off yet.");
     }
     const targetAvailability = await resolveProviderSendAvailabilityWithRefresh({
-      provider: targetProvider,
+      engine: targetProvider,
       statuses: providerStatuses,
       refreshStatuses: () => refreshProviderStatuses({ silent: true }),
     });
     if (
       !isEligibleHandoffTargetProvider({
-        sourceProvider: thread.modelSelection.provider,
+        sourceProvider: thread.engineSelection.engine,
         targetProvider,
-        targetProviderEnabled: serverSettingsQuery.data?.providers[targetProvider].enabled,
+        targetProviderEnabled: serverSettingsQuery.data?.engines[targetProvider].enabled,
         targetProviderStatus: targetAvailability.status,
       })
     ) {
@@ -73,7 +73,7 @@ export function useThreadHandoff() {
     const createdAt = new Date().toISOString();
     const importedMessages = buildThreadHandoffImportedMessages(thread);
     const importedActivities = buildThreadHandoffImportedActivities(thread);
-    const { copyTransferableComposerState, stickyModelSelectionByProvider } =
+    const { copyTransferableComposerState, stickyEngineSelectionByEngine } =
       useComposerDraftStore.getState();
 
     await api.orchestration.dispatchCommand({
@@ -83,11 +83,11 @@ export function useThreadHandoff() {
       sourceThreadId: thread.id,
       projectId: thread.projectId,
       title: resolveThreadHandoffTitle(thread),
-      modelSelection: resolveThreadHandoffModelSelection({
+      engineSelection: resolveThreadHandoffEngineSelection({
         sourceThread: thread,
         targetProvider,
-        projectDefaultModelSelection: project.defaultModelSelection,
-        stickyModelSelectionByProvider,
+        projectDefaultEngineSelection: project.defaultEngineSelection,
+        stickyEngineSelectionByEngine,
       }),
       runtimeMode: thread.runtimeMode,
       interactionMode: thread.interactionMode,

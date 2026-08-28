@@ -14,10 +14,10 @@ describe("GitHubProjectProvisionInput", () => {
       directoryName: "repository",
       commandId: "command-github-project-provision",
       projectId: "project-github-project-provision",
-      defaultModelSelection: null,
+      defaultEngineSelection: null,
       createdAt: "2026-08-12T00:00:00.000Z",
     });
 
-    expect(input.defaultModelSelection).toBeNull();
+    expect(input.defaultEngineSelection).toBeNull();
   });
 });

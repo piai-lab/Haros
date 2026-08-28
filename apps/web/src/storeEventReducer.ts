@@ -32,7 +32,7 @@ import {
   deepEqualJson,
   normalizeActivities,
   normalizeChatMessage,
-  normalizeModelSelection,
+  normalizeEngineSelection,
   normalizeProposedPlans,
   normalizeThreadErrorMessage,
   normalizeThreadSession,
@@ -77,10 +77,10 @@ type ReadModelThread = import("@harnessos/contracts").OrchestrationReadModel["th
 const THREAD_SUMMARY_ACTIVITY_KINDS = new Set([
   "approval.requested",
   "approval.resolved",
-  "provider.approval.respond.failed",
+  "engine.approval.respond.failed",
   "user-input.requested",
   "user-input.resolved",
-  "provider.user-input.respond.failed",
+  "engine.user-input.respond.failed",
 ]);
 
 function resolveEventUpdatedAt(thread: Thread, updatedAt: string): string {
@@ -148,11 +148,11 @@ function reconcilePendingInteractionsFromActivity(
   const interactionKind =
     activity.kind === "approval.requested" ||
     activity.kind === "approval.resolved" ||
-    activity.kind === "provider.approval.respond.failed"
+    activity.kind === "engine.approval.respond.failed"
       ? ("approval" as const)
       : activity.kind === "user-input.requested" ||
           activity.kind === "user-input.resolved" ||
-          activity.kind === "provider.user-input.respond.failed"
+          activity.kind === "engine.user-input.respond.failed"
         ? ("userInput" as const)
         : null;
   if (interactionKind === null) {
@@ -179,8 +179,8 @@ function reconcilePendingInteractionsFromActivity(
   }
 
   if (
-    activity.kind === "provider.approval.respond.failed" ||
-    activity.kind === "provider.user-input.respond.failed"
+    activity.kind === "engine.approval.respond.failed" ||
+    activity.kind === "engine.user-input.respond.failed"
   ) {
     const responseCommandId = payload?.responseCommandId;
     if (typeof responseCommandId !== "string" || responseCommandId.length === 0) {
@@ -287,7 +287,7 @@ function checkpointStatusToLatestTurnState(
 }
 
 function isProviderDiffPlaceholderRef(checkpointRef: string | null | undefined): boolean {
-  return checkpointRef?.startsWith("provider-diff:") === true;
+  return checkpointRef?.startsWith("engine-diff:") === true;
 }
 
 function buildLatestTurn(params: {
@@ -346,7 +346,7 @@ function reconcileLatestTurnFromSession(
   // "running", no later event is guaranteed to close the turn (checkpoint diff
   // events only enrich it), so a still-running latestTurn settles here. A retained
   // activeTurnId blocks settlement (except on error): stop-requested flows emit
-  // "interrupted" while keeping the turn active until the provider's terminal
+  // "interrupted" while keeping the turn active until the engine's terminal
   // event decides the real outcome.
   const settledState =
     session.status === "error"
@@ -561,7 +561,7 @@ function applyTurnDiffSummaryToThread(
       )
     : sortTurnDiffSummaries([...thread.turnDiffSummaries, nextSummary]);
 
-  // Mirror of the server projector's placeholder guard: a provider-diff
+  // Mirror of the server projector's placeholder guard: a engine-diff
   // placeholder only carries live diff totals and must never change the turn
   // lifecycle — neither close a running turn nor flip an already-settled one
   // to "interrupted" when it loses the race against session settlement.
@@ -850,7 +850,7 @@ function applyOrchestrationEvent(
           kind: event.payload.kind,
           title: event.payload.title,
           workspaceRoot: event.payload.workspaceRoot,
-          defaultModelSelection: event.payload.defaultModelSelection,
+          defaultEngineSelection: event.payload.defaultEngineSelection,
           scripts: event.payload.scripts,
           isPinned: event.payload.isPinned ?? false,
           spaceId: event.payload.spaceId ?? null,
@@ -874,10 +874,10 @@ function applyOrchestrationEvent(
           kind: event.payload.kind ?? existingProject.kind,
           title: event.payload.title ?? existingProject.remoteName,
           workspaceRoot: event.payload.workspaceRoot ?? existingProject.cwd,
-          defaultModelSelection:
-            event.payload.defaultModelSelection !== undefined
-              ? event.payload.defaultModelSelection
-              : existingProject.defaultModelSelection,
+          defaultEngineSelection:
+            event.payload.defaultEngineSelection !== undefined
+              ? event.payload.defaultEngineSelection
+              : existingProject.defaultEngineSelection,
           scripts: event.payload.scripts ?? existingProject.scripts,
           isPinned: event.payload.isPinned ?? existingProject.isPinned ?? false,
           spaceId:
@@ -904,10 +904,10 @@ function applyOrchestrationEvent(
         state,
         event.payload.threadId,
         (thread) => {
-          const modelSelection =
-            event.payload.modelSelection !== undefined
-              ? normalizeModelSelection(event.payload.modelSelection, thread.modelSelection)
-              : thread.modelSelection;
+          const engineSelection =
+            event.payload.engineSelection !== undefined
+              ? normalizeEngineSelection(event.payload.engineSelection, thread.engineSelection)
+              : thread.engineSelection;
           const nextBranch =
             event.payload.branch !== undefined
               ? resolveThreadBranchRegressionGuard({
@@ -961,7 +961,7 @@ function applyOrchestrationEvent(
             (event.payload.title === undefined || event.payload.title === thread.title) &&
             (event.payload.groupIds === undefined ||
               deepEqualJson(event.payload.groupIds, thread.groupIds ?? [])) &&
-            modelSelection === thread.modelSelection &&
+            engineSelection === thread.engineSelection &&
             (event.payload.envMode === undefined || event.payload.envMode === thread.envMode) &&
             nextBranch === thread.branch &&
             nextWorktreePath === thread.worktreePath &&
@@ -1009,7 +1009,7 @@ function applyOrchestrationEvent(
               ? { groupIds: [...event.payload.groupIds] }
               : {}),
             ...(event.payload.title !== undefined ? { title: event.payload.title } : {}),
-            modelSelection,
+            engineSelection,
             ...(event.payload.envMode !== undefined ? { envMode: event.payload.envMode } : {}),
             branch: nextBranch,
             worktreePath: nextWorktreePath,
@@ -1297,7 +1297,7 @@ function applyOrchestrationEvent(
 
     case "thread.turn-interrupt-requested": {
       // Interrupt requests are best-effort and can fail or time out. Keep the
-      // latest-turn clock/state live until the provider confirms a terminal event.
+      // latest-turn clock/state live until the engine confirms a terminal event.
       return state;
     }
 
@@ -1350,10 +1350,10 @@ function applyOrchestrationEvent(
         state,
         event.payload.threadId,
         (thread) => {
-          const modelSelection =
-            event.payload.modelSelection !== undefined
-              ? normalizeModelSelection(event.payload.modelSelection, thread.modelSelection)
-              : thread.modelSelection;
+          const engineSelection =
+            event.payload.engineSelection !== undefined
+              ? normalizeEngineSelection(event.payload.engineSelection, thread.engineSelection)
+              : thread.engineSelection;
           // Automation-dispatched turns must not repaint the thread's persisted
           // modes (mirrors the server projection): the automation's modes govern
           // its own turn only, while the user's composer selection stays put.
@@ -1363,16 +1363,16 @@ function applyOrchestrationEvent(
             ? event.payload.interactionMode
             : thread.interactionMode;
           const turnProvenance =
-            event.payload.modelSelection === undefined
+            event.payload.engineSelection === undefined
               ? (thread.turnProvenance ?? [])
               : upsertTurnProvenance(thread.turnProvenance, {
                   pendingMessageId: event.payload.messageId,
                   turnId: null,
-                  modelSelection,
+                  engineSelection,
                   requestedAt: event.payload.createdAt,
                 });
           if (
-            modelSelection === thread.modelSelection &&
+            engineSelection === thread.engineSelection &&
             thread.runtimeMode === runtimeMode &&
             thread.interactionMode === interactionMode &&
             turnProvenance === thread.turnProvenance &&
@@ -1383,7 +1383,7 @@ function applyOrchestrationEvent(
           }
           return {
             ...thread,
-            modelSelection,
+            engineSelection,
             turnProvenance,
             runtimeMode,
             interactionMode,

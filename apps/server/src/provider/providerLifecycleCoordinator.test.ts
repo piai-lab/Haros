@@ -1,6 +1,6 @@
 // FILE: providerLifecycleCoordinator.test.ts
 // Purpose: Verifies per-thread lifecycle serialization and generation ownership rules.
-// Layer: Provider lifecycle unit tests
+// Layer: Engine lifecycle unit tests
 // Depends on: makeProviderLifecycleCoordinator.
 
 import { ThreadId } from "@harnessos/contracts";
@@ -41,7 +41,7 @@ describe("makeProviderLifecycleCoordinator", () => {
         );
 
         // A superseded lifecycle mutation (e.g. an idle stop that lost its race
-        // with new work) returns successfully without touching the provider.
+        // with new work) returns successfully without touching the engine.
         // It must not leave behind a generation the live runtime never emits:
         // that would silently drop every later runtime event for the thread.
         const observed = yield* coordinator.run(threadId, (lease) =>

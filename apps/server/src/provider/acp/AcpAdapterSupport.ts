@@ -4,8 +4,8 @@
  * @module AcpAdapterSupport
  */
 import {
-  type ProviderApprovalDecision,
-  type ProviderInteractionMode,
+  type EngineApprovalDecision,
+  type EngineInteractionMode,
   type EngineKind,
   type RuntimeMode,
   type ThreadId,
@@ -14,7 +14,7 @@ import {
 import { Schema } from "effect";
 import * as AcpErrors from "./AcpErrors.ts";
 
-import { ProviderAdapterRequestError, type ProviderAdapterError } from "../Errors.ts";
+import { EngineAdapterRequestError, type EngineAdapterError } from "../Errors.ts";
 
 export function canonicalItemTypeFromAcpToolKind(kind: string | undefined): ToolLifecycleItemType {
   switch (kind) {
@@ -56,28 +56,28 @@ function acpRequestErrorDetail(error: AcpErrors.AcpRequestError): string {
 }
 
 export function mapAcpToAdapterError(
-  provider: EngineKind,
+  engine: EngineKind,
   _threadId: ThreadId,
   method: string,
   error: AcpErrors.AcpError,
-): ProviderAdapterError {
+): EngineAdapterError {
   if (Schema.is(AcpErrors.AcpRequestError)(error)) {
-    return new ProviderAdapterRequestError({
-      provider,
+    return new EngineAdapterRequestError({
+      engine,
       method,
       detail: acpRequestErrorDetail(error),
       cause: error,
     });
   }
-  return new ProviderAdapterRequestError({
-    provider,
+  return new EngineAdapterRequestError({
+    engine,
     method,
     detail: error.message,
     cause: error,
   });
 }
 
-export function acpPermissionOutcome(decision: ProviderApprovalDecision): string {
+export function acpPermissionOutcome(decision: EngineApprovalDecision): string {
   switch (decision) {
     case "acceptForSession":
       return "allow-always";
@@ -99,7 +99,7 @@ export type AcpPermissionPolicyOutcome =
   | { readonly outcome: "cancelled" };
 
 export function selectAcpPermissionOptionId(
-  decision: ProviderApprovalDecision,
+  decision: EngineApprovalDecision,
   options: ReadonlyArray<AcpPermissionOptionLike>,
 ): string | undefined {
   if (decision === "cancel") {
@@ -144,13 +144,13 @@ export function resolveAcpFullAccessPermissionOutcome(
  * Applies OmniMind's turn-scoped permission precedence to ACP reverse requests.
  *
  * `interactionMode: undefined` means that no turn owns the request. Those
- * requests are cancelled so replay or late provider activity cannot inherit a
+ * requests are cancelled so replay or late engine activity cannot inherit a
  * previous Plan turn or a future Full Access turn. Active adapters normalize
  * an omitted turn mode to `default` before dispatching the prompt.
  */
 export function resolveAcpPermissionPolicy(input: {
   readonly runtimeMode: RuntimeMode;
-  readonly interactionMode: ProviderInteractionMode | undefined;
+  readonly interactionMode: EngineInteractionMode | undefined;
   readonly options: ReadonlyArray<AcpPermissionOptionLike>;
 }): AcpPermissionPolicyOutcome | undefined {
   if (input.interactionMode === "plan") {
@@ -173,7 +173,7 @@ type AcpToolCallLike = {
   readonly title?: string | null;
 };
 
-// Converts provider-specific failed tool payloads into a stable turn failure message.
+// Converts engine-specific failed tool payloads into a stable turn failure message.
 export function readAcpFailedToolDetail(toolCall: AcpToolCallLike): string | undefined {
   if (toolCall.status !== "failed") {
     return undefined;

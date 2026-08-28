@@ -14,9 +14,9 @@ import { EngineKind } from "@harnessos/contracts";
 import { DEFAULT_LOCALE_PREFERENCE, LocalePreference } from "./locale";
 import {
   DEFAULT_PROVIDER_ORDER,
-  normalizeHiddenProviders,
-  normalizeProviderOrder,
-} from "./providerOrdering";
+  normalizeHiddenEngines,
+  normalizeEngineOrder,
+} from "./engineOrdering";
 import { DEFAULT_UI_DENSITY, UI_DENSITY_MODES, normalizeUiDensity } from "./lib/appDensity";
 import { DEFAULT_CHAT_WIDTH, CHAT_WIDTH_MODES, normalizeChatWidthMode } from "./lib/chatWidth";
 
@@ -132,8 +132,8 @@ export const LocalPreferencesSchema = Schema.Struct({
   ),
   timestampFormat: TimestampFormat.pipe(withDefaults(() => DEFAULT_TIMESTAMP_FORMAT)),
   uiFontFamily: Schema.String.check(Schema.isMaxLength(256)).pipe(withDefaults(() => "")),
-  hiddenProviders: Schema.Array(PersistedProviderKind).pipe(withDefaults(() => [])),
-  providerOrder: Schema.Array(PersistedProviderKind).pipe(
+  hiddenEngines: Schema.Array(PersistedProviderKind).pipe(withDefaults(() => [])),
+  engineOrder: Schema.Array(PersistedProviderKind).pipe(
     withDefaults(() => [...DEFAULT_PROVIDER_ORDER]),
   ),
 });
@@ -200,8 +200,8 @@ export function normalizeLocalPreferences(preferences: LocalPreferences): LocalP
     chatFontSizePx: normalizeChatFontSizePx(preferences.chatFontSizePx),
     terminalFontSizePx: normalizeTerminalFontSizePx(preferences.terminalFontSizePx),
     terminalFontFamily: normalizeTerminalFontFamily(preferences.terminalFontFamily),
-    hiddenProviders: normalizeHiddenProviders(preferences.hiddenProviders),
-    providerOrder: normalizeProviderOrder(preferences.providerOrder),
+    hiddenEngines: normalizeHiddenEngines(preferences.hiddenEngines),
+    engineOrder: normalizeEngineOrder(preferences.engineOrder),
   };
 }
 

@@ -1,12 +1,12 @@
 // FILE: OpenCodeDiscovery.ts
 // Purpose: Pure normalization for OpenCode-compatible model, agent, and command discovery.
-// Layer: Server provider domain
-// Exports: Discovery inventory inputs and canonical provider discovery projections.
+// Layer: Server engine domain
+// Exports: Discovery inventory inputs and canonical engine discovery projections.
 
 import type {
-  ProviderListAgentsResult,
-  ProviderListCommandsResult,
-  ProviderListModelsResult,
+  EngineListAgentsResult,
+  EngineListCommandsResult,
+  EngineListModelsResult,
 } from "@harnessos/contracts";
 import type { Agent, OpencodeClient } from "@opencode-ai/sdk/v2";
 
@@ -47,7 +47,7 @@ export interface OpenCodeModelInventory {
 }
 
 type OpenCodeInventoryProvider = OpenCodeModelInventory["providerList"]["all"][number];
-type OpenCodeModelDescriptor = ProviderListModelsResult["models"][number];
+type OpenCodeModelDescriptor = EngineListModelsResult["models"][number];
 
 function trimNonEmptyString(value: unknown): string | undefined {
   if (typeof value !== "string") {
@@ -67,10 +67,10 @@ function formatOpenCodeIdentifier(value: string): string {
     .join(" ");
 }
 
-function isOpenCodeManagedProvider(provider: OpenCodeInventoryProvider) {
-  const normalizedId = provider.id.trim().toLowerCase();
-  const normalizedName = provider.name.trim().toLowerCase();
-  const envVars = new Set((provider.env ?? []).map((value) => value.trim().toUpperCase()));
+function isOpenCodeManagedProvider(engine: OpenCodeInventoryProvider) {
+  const normalizedId = engine.id.trim().toLowerCase();
+  const normalizedName = engine.name.trim().toLowerCase();
+  const envVars = new Set((engine.env ?? []).map((value) => value.trim().toUpperCase()));
 
   return (
     envVars.has("OPENCODE_API_KEY") ||
@@ -80,13 +80,13 @@ function isOpenCodeManagedProvider(provider: OpenCodeInventoryProvider) {
   );
 }
 
-// Custom providers declared in opencode.jsonc carry their credential inline
+// Custom engines declared in opencode.jsonc carry their credential inline
 // (`options.apiKey`) instead of through auth.json, so they never appear in
 // credentialProviderIDs even though `connected` already proves they are usable.
-function hasInlineConfiguredApiKey(provider: OpenCodeInventoryProvider): boolean {
+function hasInlineConfiguredApiKey(engine: OpenCodeInventoryProvider): boolean {
   return (
-    trimNonEmptyString(provider.options?.apiKey) !== undefined ||
-    trimNonEmptyString(provider.options?.api_key) !== undefined
+    trimNonEmptyString(engine.options?.apiKey) !== undefined ||
+    trimNonEmptyString(engine.options?.api_key) !== undefined
   );
 }
 
@@ -96,8 +96,8 @@ export function resolvePreferredOpenCodeModelProviders(input: {
 }) {
   const { inventory } = input;
   const connected = new Set(inventory.providerList.connected);
-  const connectedProviders = inventory.providerList.all.filter((provider) =>
-    connected.has(provider.id),
+  const connectedProviders = inventory.providerList.all.filter((engine) =>
+    connected.has(engine.id),
   );
   if (connectedProviders.length === 0) {
     return [];
@@ -105,12 +105,12 @@ export function resolvePreferredOpenCodeModelProviders(input: {
 
   const credentialProviders = new Set(input.credentialProviderIDs ?? []);
   const authenticatedConnectedProviders = connectedProviders.filter(
-    (provider) => credentialProviders.has(provider.id) || hasInlineConfiguredApiKey(provider),
+    (engine) => credentialProviders.has(engine.id) || hasInlineConfiguredApiKey(engine),
   );
 
   const consoleManagedProviders = new Set(inventory.consoleState?.consoleManagedProviders ?? []);
-  const consoleManagedConnectedProviders = connectedProviders.filter((provider) =>
-    consoleManagedProviders.has(provider.id),
+  const consoleManagedConnectedProviders = connectedProviders.filter((engine) =>
+    consoleManagedProviders.has(engine.id),
   );
 
   const openCodeManagedConnectedProviders = connectedProviders.filter(isOpenCodeManagedProvider);
@@ -119,14 +119,14 @@ export function resolvePreferredOpenCodeModelProviders(input: {
       ...authenticatedConnectedProviders,
       ...consoleManagedConnectedProviders,
       ...openCodeManagedConnectedProviders,
-    ].map((provider) => provider.id),
+    ].map((engine) => engine.id),
   );
   if (preferredProviderIDs.size > 0) {
-    return connectedProviders.filter((provider) => preferredProviderIDs.has(provider.id));
+    return connectedProviders.filter((engine) => preferredProviderIDs.has(engine.id));
   }
 
   const nonEnvironmentConnectedProviders = connectedProviders.filter(
-    (provider) => provider.source !== "env",
+    (engine) => engine.source !== "env",
   );
   return nonEnvironmentConnectedProviders.length > 0
     ? nonEnvironmentConnectedProviders
@@ -361,7 +361,7 @@ function resolveOpenCodeContextWindowSupport(
 function toOpenCodeModelDescriptor(input: {
   readonly slug: string;
   readonly name: string;
-  readonly provider: Pick<OpenCodeInventoryProvider, "id" | "name">;
+  readonly engine: Pick<OpenCodeInventoryProvider, "id" | "name">;
   readonly model?: OpenCodeInventoryProvider["models"][string];
   readonly cliModel?: Pick<
     OpenCodeCliModelDescriptor,
@@ -376,7 +376,7 @@ function toOpenCodeModelDescriptor(input: {
     return null;
   }
 
-  const upstreamProviderName = input.provider.name.trim();
+  const upstreamProviderName = input.engine.name.trim();
   const contextSupport =
     input.cliModel?.contextWindowOptions && input.cliModel.contextWindowOptions.length > 0
       ? {
@@ -391,7 +391,7 @@ function toOpenCodeModelDescriptor(input: {
           defaultReasoningEffort:
             input.cliModel.defaultReasoningEffort ??
             inferOpenCodeDefaultReasoningEffort(
-              input.provider.id,
+              input.engine.id,
               input.cliModel.supportedReasoningEfforts,
             ),
         }
@@ -401,13 +401,13 @@ function toOpenCodeModelDescriptor(input: {
             descriptors: resolved.descriptors,
             defaultReasoningEffort:
               resolved.defaultReasoningEffort ??
-              inferOpenCodeDefaultReasoningEffort(input.provider.id, resolved.descriptors),
+              inferOpenCodeDefaultReasoningEffort(input.engine.id, resolved.descriptors),
           };
         })();
   return {
     slug: input.slug,
     name,
-    upstreamProviderId: input.provider.id,
+    upstreamProviderId: input.engine.id,
     ...(upstreamProviderName.length > 0 ? { upstreamProviderName } : {}),
     ...(reasoningSupport.descriptors.length > 0
       ? { supportedReasoningEfforts: reasoningSupport.descriptors }
@@ -483,13 +483,13 @@ function formatOpenCodeCliProviderName(providerId: string): string {
 
 export function flattenOpenCodeCliModels(input: {
   readonly models: ReadonlyArray<OpenCodeCliModelDescriptor>;
-}): ProviderListModelsResult["models"] {
+}): EngineListModelsResult["models"] {
   return input.models
     .flatMap((model) => {
       const descriptor = toOpenCodeModelDescriptor({
         slug: model.slug,
         name: model.name,
-        provider: {
+        engine: {
           id: model.providerID,
           name: formatOpenCodeCliProviderName(model.providerID),
         },
@@ -504,21 +504,21 @@ export function flattenOpenCodeModels(input: {
   readonly inventory: OpenCodeModelInventory;
   readonly credentialProviderIDs?: ReadonlyArray<string>;
   readonly freeOnlyProviderID?: string;
-}): ProviderListModelsResult["models"] {
+}): EngineListModelsResult["models"] {
   return resolvePreferredOpenCodeModelProviders(input)
-    .flatMap((provider) =>
-      Object.values(provider.models).flatMap((model) => {
+    .flatMap((engine) =>
+      Object.values(engine.models).flatMap((model) => {
         if (
           input.freeOnlyProviderID &&
-          provider.id === input.freeOnlyProviderID &&
+          engine.id === input.freeOnlyProviderID &&
           model.isFree !== true
         ) {
           return [];
         }
         const descriptor = toOpenCodeModelDescriptor({
-          slug: `${provider.id}/${model.id}`,
+          slug: `${engine.id}/${model.id}`,
           name: model.name,
-          provider,
+          engine,
           model,
         });
         return descriptor ? [descriptor] : [];
@@ -532,9 +532,9 @@ export function mergeOpenCodeCliModelDescriptors(input: {
   readonly models: ReadonlyArray<OpenCodeModelDescriptor>;
   readonly cliModels: ReadonlyArray<OpenCodeCliModelDescriptor>;
   readonly freeOnlyProviderID?: string;
-}): ProviderListModelsResult["models"] {
+}): EngineListModelsResult["models"] {
   const providerById = new Map(
-    input.inventory.providerList.all.map((provider) => [provider.id, provider] as const),
+    input.inventory.providerList.all.map((engine) => [engine.id, engine] as const),
   );
   const mergedBySlug = new Map(input.models.map((model) => [model.slug, model] as const));
 
@@ -549,7 +549,7 @@ export function mergeOpenCodeCliModelDescriptors(input: {
     if (mergedBySlug.has(cliModel.slug)) {
       continue;
     }
-    const provider =
+    const engine =
       providerById.get(cliModel.providerID) ??
       ({
         id: cliModel.providerID,
@@ -558,7 +558,7 @@ export function mergeOpenCodeCliModelDescriptors(input: {
     const descriptor = toOpenCodeModelDescriptor({
       slug: cliModel.slug,
       name: cliModel.name,
-      provider,
+      engine,
       ...(providerById.get(cliModel.providerID)?.models[cliModel.modelID]
         ? { model: providerById.get(cliModel.providerID)!.models[cliModel.modelID] }
         : {}),
@@ -586,11 +586,11 @@ export function buildOpenCodeModelContextLimitMap(
   inventory: OpenCodeModelInventory,
 ): Map<string, number> {
   const limits = new Map<string, number>();
-  for (const provider of inventory.providerList.all) {
-    for (const model of Object.values(provider.models)) {
+  for (const engine of inventory.providerList.all) {
+    for (const model of Object.values(engine.models)) {
       const contextLimit = positiveInteger(model.limit?.context);
       if (contextLimit !== undefined) {
-        limits.set(`${provider.id}/${model.id}`, contextLimit);
+        limits.set(`${engine.id}/${model.id}`, contextLimit);
       }
     }
   }
@@ -599,7 +599,7 @@ export function buildOpenCodeModelContextLimitMap(
 
 export function flattenOpenCodeAgents(
   agents: ReadonlyArray<Agent>,
-): ProviderListAgentsResult["agents"] {
+): EngineListAgentsResult["agents"] {
   return agents
     .filter((agent) => !agent.hidden && (agent.mode === "primary" || agent.mode === "all"))
     .map((agent) => {
@@ -624,7 +624,7 @@ type OpenCodeCommand = Awaited<ReturnType<OpencodeClient["command"]["list"]>>["d
 
 export function flattenOpenCodeCommands(
   commands: ReadonlyArray<OpenCodeCommand>,
-): ProviderListCommandsResult["commands"] {
+): EngineListCommandsResult["commands"] {
   return commands
     .filter((command) => command.name.trim().length > 0)
     .map((command) => ({

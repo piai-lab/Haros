@@ -111,7 +111,7 @@ export interface EnvironmentPanelProps {
   keybindings: ResolvedKeybindingsConfig;
   availableEditors: ReadonlyArray<EditorId>;
   activeThreadId: ThreadId | null;
-  /** Active provider for the usage row (same chip the header used to show). */
+  /** Active engine for the usage row (same chip the header used to show). */
   activeProvider: EngineKind;
   /**
    * Whether the active thread is a Studio chat. Studio chats show the Output section:
@@ -464,7 +464,7 @@ export function EnvironmentPanel({
         actually shows, so toggling any section via the header gear menu never leaves a doubled or
         dangling rule. Visibility is gated on the per-section local preference flags.
       */}
-      {settings.showEnvironmentUsage ? <EnvironmentUsageSection provider={activeProvider} /> : null}
+      {settings.showEnvironmentUsage ? <EnvironmentUsageSection engine={activeProvider} /> : null}
 
       {settings.showEnvironmentRepository && githubRepository && onOpenGithubRepository ? (
         <EnvironmentLabeledSection label={t("environment.repository")}>

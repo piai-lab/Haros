@@ -42,7 +42,7 @@ async function makeRoot(): Promise<string> {
 }
 
 async function isolateProviderHome(root: string): Promise<string> {
-  const providerHome = path.join(root, "provider-home");
+  const providerHome = path.join(root, "engine-home");
   await mkdir(providerHome);
   vi.stubEnv("HOME", providerHome);
   vi.stubEnv("USERPROFILE", providerHome);
@@ -228,7 +228,7 @@ describe("readOAPrivateTextFile", () => {
     const agentDir = path.join(root, "agent");
     const outside = path.join(root, "outside.json");
     await mkdir(agentDir);
-    await writeFile(outside, '{ "providers": {} }');
+    await writeFile(outside, '{ "engines": {} }');
     if (kind === "symbolic link") {
       await symlink(outside, path.join(agentDir, "models.json"), "file");
     } else {

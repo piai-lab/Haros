@@ -121,9 +121,9 @@ function getWindowForTest(): Window & typeof globalThis & { desktopBridge?: unkn
   return testGlobal.window;
 }
 
-const defaultProviders: ReadonlyArray<ServerProviderStatus> = [
+const defaultEngines: ReadonlyArray<ServerProviderStatus> = [
   {
-    provider: "codex",
+    engine: "codex",
     status: "ready",
     available: true,
     authStatus: "authenticated",
@@ -162,23 +162,23 @@ describe("wsNativeApi", () => {
     expect(readLatestWsTransportState()).toBe("connecting");
   });
 
-  it("forwards provider model discovery cancellation to the WebSocket transport", async () => {
+  it("forwards engine model discovery cancellation to the WebSocket transport", async () => {
     requestMock.mockResolvedValue({ models: [], source: "test", cached: false });
     const { createWsNativeApi } = await import("./wsNativeApi");
     const api = createWsNativeApi();
     const controller = new AbortController();
 
-    await api.provider.listModels({ provider: "codex" }, { signal: controller.signal });
-    await api.provider.listAgents({ provider: "codex" }, { signal: controller.signal });
+    await api.engine.listModels({ engine: "codex" }, { signal: controller.signal });
+    await api.engine.listAgents({ engine: "codex" }, { signal: controller.signal });
 
     expect(requestMock).toHaveBeenCalledWith(
       WS_METHODS.providerListModels,
-      { provider: "codex" },
+      { engine: "codex" },
       { signal: controller.signal },
     );
     expect(requestMock).toHaveBeenCalledWith(
       WS_METHODS.providerListAgents,
-      { provider: "codex" },
+      { engine: "codex" },
       { signal: controller.signal },
     );
   });
@@ -277,7 +277,7 @@ describe("wsNativeApi", () => {
           message: "Entry at index 1 is invalid.",
         },
       ],
-      providers: defaultProviders,
+      engines: defaultEngines,
     } as const;
     emitPush(WS_CHANNELS.serverConfigUpdated, payload);
 
@@ -299,21 +299,21 @@ describe("wsNativeApi", () => {
 
     emitPush(WS_CHANNELS.serverConfigUpdated, {
       issues: [{ kind: "keybindings.malformed-config", message: "bad json" }],
-      providers: defaultProviders,
+      engines: defaultEngines,
     });
     emitPush(WS_CHANNELS.serverConfigUpdated, {
       issues: [],
-      providers: defaultProviders,
+      engines: defaultEngines,
     });
 
     expect(listener).toHaveBeenCalledTimes(2);
     expect(listener).toHaveBeenLastCalledWith({
       issues: [],
-      providers: defaultProviders,
+      engines: defaultEngines,
     });
   });
 
-  it("delivers and caches provider-only status updates", async () => {
+  it("delivers and caches engine-only status updates", async () => {
     const { createWsNativeApi, onServerProviderStatusesUpdated } = await import("./wsNativeApi");
 
     createWsNativeApi();
@@ -321,7 +321,7 @@ describe("wsNativeApi", () => {
     onServerProviderStatusesUpdated(listener);
 
     const payload = {
-      providers: defaultProviders,
+      engines: defaultEngines,
       passivePresence: {
         state: "settled",
         recoverableProviders: ["codex"],
@@ -347,13 +347,13 @@ describe("wsNativeApi", () => {
 
     const payload = {
       settings: {
-        defaultProvider: "oa",
+        defaultEngine: "oa",
         enableAssistantStreaming: true,
-        enableProviderUpdateChecks: true,
+        enableEngineUpdateChecks: true,
         defaultThreadEnvMode: "local",
         addProjectBaseDirectory: "",
-        textGenerationModelSelection: { provider: "codex", model: "gpt-5.4-mini" },
-        providers: {
+        textGenerationEngineSelection: { engine: "codex", model: "gpt-5.4-mini" },
+        engines: {
           oa: { enabled: true },
           codex: { enabled: true, binaryPath: "codex", homePath: "", customModels: [] },
           claude: { enabled: true, binaryPath: "claude", launchArgs: "", customModels: [] },
@@ -434,7 +434,7 @@ describe("wsNativeApi", () => {
         kind: "project",
         title: "Project",
         workspaceRoot: "/tmp/workspace",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         scripts: [],
         createdAt: "2026-02-24T00:00:00.000Z",
         updatedAt: "2026-02-24T00:00:00.000Z",
@@ -554,8 +554,8 @@ describe("wsNativeApi", () => {
       kind: "project",
       title: "Project",
       workspaceRoot: "/tmp/project",
-      defaultModelSelection: {
-        provider: "codex",
+      defaultEngineSelection: {
+        engine: "codex",
         model: "gpt-5-codex",
       },
       createdAt: "2026-02-24T00:00:00.000Z",
@@ -854,7 +854,7 @@ describe("wsNativeApi", () => {
       directoryName: "codex",
       commandId: CommandId.makeUnsafe("command-1"),
       projectId: ProjectId.makeUnsafe("project-1"),
-      defaultModelSelection: { provider: "codex" as const, model: "gpt-5" },
+      defaultEngineSelection: { engine: "codex" as const, model: "gpt-5" },
       createdAt: "2026-08-04T00:00:00.000Z",
     };
     const result = {
@@ -937,7 +937,7 @@ describe("wsNativeApi", () => {
     });
   });
 
-  it("forwards provider delivery inspection and reconciliation", async () => {
+  it("forwards engine delivery inspection and reconciliation", async () => {
     requestMock.mockResolvedValue([]);
     const { createWsNativeApi } = await import("./wsNativeApi");
     const api = createWsNativeApi();
@@ -951,7 +951,7 @@ describe("wsNativeApi", () => {
       threadId: ThreadId.makeUnsafe("thread-1"),
       expectedState: "uncertain",
       outcome: "safe_retry",
-      note: "The provider confirms it did not accept the command.",
+      note: "The engine confirms it did not accept the command.",
     });
 
     expect(requestMock).toHaveBeenCalledWith(
@@ -963,7 +963,7 @@ describe("wsNativeApi", () => {
       threadId: "thread-1",
       expectedState: "uncertain",
       outcome: "safe_retry",
-      note: "The provider confirms it did not accept the command.",
+      note: "The engine confirms it did not accept the command.",
     });
   });
 
@@ -1365,7 +1365,7 @@ describe("wsNativeApi", () => {
     const { createWsNativeApi } = await import("./wsNativeApi");
     const api = createWsNativeApi();
     await api.server.transcribeVoice({
-      provider: "codex",
+      engine: "codex",
       cwd: "/repo",
       audioBase64: "UklGRgAAAAAAAAAAAAAAAAAAAAA=",
       mimeType: "audio/wav",
@@ -1388,10 +1388,10 @@ describe("wsNativeApi", () => {
     const { createWsNativeApi } = await import("./wsNativeApi");
     const api = createWsNativeApi();
 
-    await api.server.prewarmVoice?.({ provider: "codex", cwd: "/repo" });
+    await api.server.prewarmVoice?.({ engine: "codex", cwd: "/repo" });
 
     expect(requestMock).toHaveBeenCalledWith(WS_METHODS.serverPrewarmVoice, {
-      provider: "codex",
+      engine: "codex",
       cwd: "/repo",
     });
   });
@@ -1413,7 +1413,7 @@ describe("wsNativeApi", () => {
     const { createWsNativeApi } = await import("./wsNativeApi");
     const api = createWsNativeApi();
     const result = await api.server.transcribeVoice({
-      provider: "codex",
+      engine: "codex",
       cwd: "/repo",
       audioBase64: "AQID",
       mimeType: "audio/wav",
@@ -1447,7 +1447,7 @@ describe("wsNativeApi", () => {
     const { createWsNativeApi } = await import("./wsNativeApi");
     const api = createWsNativeApi();
     const input = {
-      provider: "codex" as const,
+      engine: "codex" as const,
       cwd: "/repo",
       audioBase64: "AQID",
       mimeType: "audio/wav",

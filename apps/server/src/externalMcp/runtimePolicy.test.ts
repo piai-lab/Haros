@@ -11,7 +11,7 @@ describe("external MCP runtime policy", () => {
       Schema.decodeUnknownSync(ExternalMcpCreateTaskInput)({
         requestId: "prompt-limit",
         projectId: "project-limit",
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5.5",
         prompt: "x".repeat(EXTERNAL_MCP_MAX_PROMPT_CHARS + 1),
       }),

@@ -3,7 +3,7 @@
 // Exports: Runtime UI types consumed across store, routes, and components.
 
 import type {
-  ModelSelection,
+  EngineSelection,
   MessageDispatchOrigin,
   OrchestrationMessageSource,
   OrchestrationMessageTextSegment,
@@ -27,11 +27,11 @@ import type {
   SpaceIconName,
   TurnId,
   MessageId,
-  ProviderMentionReference,
-  ProviderSkillReference,
+  EngineMentionReference,
+  EngineSkillReference,
   EngineKind,
   CheckpointRef,
-  ProviderInteractionMode,
+  EngineInteractionMode,
   ProjectKind,
   RuntimeMode,
   ThreadCreationSource,
@@ -41,7 +41,7 @@ import type {
 export type SessionPhase = "disconnected" | "connecting" | "ready" | "running";
 export const DEFAULT_RUNTIME_MODE: RuntimeMode = "full-access";
 
-export const DEFAULT_INTERACTION_MODE: ProviderInteractionMode = "default";
+export const DEFAULT_INTERACTION_MODE: EngineInteractionMode = "default";
 export const DEFAULT_THREAD_TERMINAL_HEIGHT = 280;
 export const DEFAULT_THREAD_TERMINAL_ID = "default";
 export const MAX_TERMINALS_PER_GROUP = 6;
@@ -112,8 +112,8 @@ export interface ChatMessage {
   text: string;
   textSegments?: OrchestrationMessageTextSegment[];
   attachments?: ChatAttachment[];
-  skills?: ProviderSkillReference[];
-  mentions?: ProviderMentionReference[];
+  skills?: EngineSkillReference[];
+  mentions?: EngineMentionReference[];
   dispatchMode?: TurnDispatchMode;
   dispatchOrigin?: MessageDispatchOrigin;
   turnId?: TurnId | null;
@@ -187,7 +187,7 @@ export interface Project {
   folderName: string;
   localName: string | null;
   cwd: string;
-  defaultModelSelection: ModelSelection | null;
+  defaultEngineSelection: EngineSelection | null;
   expanded: boolean;
   isPinned?: boolean;
   /** Missing on renderer state written before Spaces; normalized snapshots always set it. */
@@ -234,9 +234,9 @@ export interface Thread extends ThreadWorkspaceState {
   projectId: ProjectId;
   groupIds?: SpaceId[];
   title: string;
-  modelSelection: ModelSelection;
+  engineSelection: EngineSelection;
   runtimeMode: RuntimeMode;
-  interactionMode: ProviderInteractionMode;
+  interactionMode: EngineInteractionMode;
   session: ThreadSession | null;
   messages: ChatMessage[];
   turnProvenance?: OrchestrationTurnProvenance[];
@@ -284,9 +284,9 @@ export interface ThreadShell extends ThreadWorkspaceState {
   projectId: ProjectId;
   groupIds?: SpaceId[];
   title: string;
-  modelSelection: ModelSelection;
+  engineSelection: EngineSelection;
   runtimeMode: RuntimeMode;
-  interactionMode: ProviderInteractionMode;
+  interactionMode: EngineInteractionMode;
   error: string | null;
   createdAt: string;
   archivedAt?: string | null;
@@ -335,8 +335,8 @@ export interface SidebarThreadSummary {
   projectId: ProjectId;
   groupIds?: SpaceId[];
   title: string;
-  modelSelection: ModelSelection;
-  interactionMode: ProviderInteractionMode;
+  engineSelection: EngineSelection;
+  interactionMode: EngineInteractionMode;
   envMode?: ThreadEnvironmentMode | undefined;
   branch: string | null;
   worktreePath: string | null;
@@ -373,7 +373,7 @@ export interface ComposerThreadMentionSource {
   id: ThreadId;
   projectId: ProjectId;
   title: string;
-  provider: EngineKind;
+  engine: EngineKind;
   createdAt: string;
   archivedAt?: string | null;
   lastVisitedAt?: string | undefined;
@@ -381,7 +381,7 @@ export interface ComposerThreadMentionSource {
 }
 
 export interface ThreadSession {
-  provider: EngineKind;
+  engine: EngineKind;
   status: SessionPhase | "error" | "closed";
   activeTurnId?: TurnId | undefined;
   createdAt: string;

@@ -96,7 +96,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(function Sha
                   ? t("settings.unknownModel")
                   : entry.model;
             return (
-              <div key={`${entry.kind}:${entry.provider}:${entry.model}`} className="space-y-2">
+              <div key={`${entry.kind}:${entry.engine}:${entry.model}`} className="space-y-2">
                 <div className="flex justify-between gap-8 text-lg">
                   <span className="truncate">{label}</span>
                   <span className="tabular-nums text-muted-foreground">{entry.percent}%</span>

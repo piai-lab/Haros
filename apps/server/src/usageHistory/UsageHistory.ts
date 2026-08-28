@@ -53,8 +53,8 @@ interface ControlRow {
   readonly workspaceHashSalt: string;
 }
 
-interface ProviderRow {
-  readonly provider: UsageHistoryProvider;
+interface EngineRow {
+  readonly engine: UsageHistoryProvider;
   readonly status: UsageHistoryProviderSummary["status"];
   readonly discoveryCursor: string | null;
   readonly discoveryGeneration: number;
@@ -90,7 +90,7 @@ interface FileRow {
 
 interface AggregateRow {
   readonly key: string;
-  readonly provider: UsageHistoryProvider | null;
+  readonly engine: UsageHistoryProvider | null;
   readonly model: string | null;
   readonly workspace: string | null;
   readonly date: string | null;
@@ -209,8 +209,8 @@ const dateFloor = (range: ServerGetUsageHistoryInput["range"]): string | null =>
   return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 };
 
-const asProviderSummary = (row: ProviderRow): UsageHistoryProviderSummary => ({
-  provider: row.provider,
+const asProviderSummary = (row: EngineRow): UsageHistoryProviderSummary => ({
+  engine: row.engine,
   status: row.status,
   progress: {
     filesDiscovered: Number(row.filesDiscovered),
@@ -245,11 +245,11 @@ const makeUsageHistory = Effect.gen(function* () {
     ) VALUES (1, 'not-authorized', 'not-authorized', ${USAGE_HISTORY_PRICING_VERSION}, ${randomBytes(32).toString("hex")})
     ON CONFLICT (singleton_id) DO UPDATE SET pricing_version = excluded.pricing_version
   `;
-  for (const provider of PROVIDERS) {
+  for (const engine of PROVIDERS) {
     yield* sql`
-      INSERT INTO usage_history_provider_state (provider, status)
-      VALUES (${provider}, 'pending')
-      ON CONFLICT (provider) DO NOTHING
+      INSERT INTO usage_history_provider_state (engine, status)
+      VALUES (${engine}, 'pending')
+      ON CONFLICT (engine) DO NOTHING
     `;
   }
 
@@ -278,8 +278,8 @@ const makeUsageHistory = Effect.gen(function* () {
     `.pipe(Effect.map((rows) => rows[0]!));
 
   const readProviders = () =>
-    sql<ProviderRow>`
-      SELECT provider, status,
+    sql<EngineRow>`
+      SELECT engine, status,
         discovery_cursor AS "discoveryCursor",
         discovery_generation AS "discoveryGeneration",
         discovery_complete AS "discoveryComplete",
@@ -291,13 +291,13 @@ const makeUsageHistory = Effect.gen(function* () {
         restart_attempts AS "restartAttempts",
         detail_code AS "detailCode",
         last_completed_at AS "lastCompletedAt"
-      FROM usage_history_provider_state ORDER BY provider
+      FROM usage_history_provider_state ORDER BY engine
     `;
 
   const roots = Effect.gen(function* () {
     const settings = yield* serverSettings.getSettings;
     const codexHome =
-      settings.providers.codex.homePath.trim() ||
+      settings.engines.codex.homePath.trim() ||
       process.env.CODEX_HOME?.trim() ||
       path.join(config.homeDir, ".codex");
     const claudeHome =
@@ -308,13 +308,13 @@ const makeUsageHistory = Effect.gen(function* () {
     } satisfies Record<UsageHistoryProvider, string>;
   });
 
-  const scheduleRootRefresh = (provider: UsageHistoryProvider) => {
-    const existing = rootRefreshTimers.get(provider);
+  const scheduleRootRefresh = (engine: UsageHistoryProvider) => {
+    const existing = rootRefreshTimers.get(engine);
     if (existing) clearTimeout(existing);
     rootRefreshTimers.set(
-      provider,
+      engine,
       setTimeout(() => {
-        rootRefreshTimers.delete(provider);
+        rootRefreshTimers.delete(engine);
         if (stopped || pauseRequested) return;
         Effect.runFork(
           Effect.gen(function* () {
@@ -330,7 +330,7 @@ const makeUsageHistory = Effect.gen(function* () {
                 discovery_generation = discovery_generation + 1, discovery_complete = 0,
                 files_discovered = 0, bytes_discovered = 0, bytes_read = 0,
                 restart_attempts = 0, detail_code = NULL
-              WHERE provider = ${provider}
+              WHERE engine = ${engine}
             `;
             yield* sql`
               UPDATE usage_history_control SET status = 'indexing', updated_at = ${new Date().toISOString()}
@@ -344,22 +344,22 @@ const makeUsageHistory = Effect.gen(function* () {
   };
 
   const installRootWatchers = (providerRoots: Record<UsageHistoryProvider, string>) => {
-    for (const provider of PROVIDERS) {
-      if (rootWatchers.has(provider) || !existsSync(providerRoots[provider])) continue;
+    for (const engine of PROVIDERS) {
+      if (rootWatchers.has(engine) || !existsSync(providerRoots[engine])) continue;
       try {
         const watcher = watch(
-          providerRoots[provider],
+          providerRoots[engine],
           {
             persistent: false,
             recursive: process.platform === "darwin" || process.platform === "win32",
           },
-          () => scheduleRootRefresh(provider),
+          () => scheduleRootRefresh(engine),
         );
         watcher.on("error", () => {
           watcher.close();
-          rootWatchers.delete(provider);
+          rootWatchers.delete(engine);
         });
-        rootWatchers.set(provider, watcher);
+        rootWatchers.set(engine, watcher);
       } catch {
         // Root notification is an optimization. Manual refresh and checkpoint
         // resume remain available when the platform cannot watch this root.
@@ -375,7 +375,7 @@ const makeUsageHistory = Effect.gen(function* () {
           DELETE FROM usage_history_events
           WHERE NOT EXISTS (
             SELECT 1 FROM usage_history_event_sources source
-            WHERE source.provider = usage_history_events.provider
+            WHERE source.engine = usage_history_events.engine
               AND source.event_key = usage_history_events.event_key
           )
         `;
@@ -386,9 +386,9 @@ const makeUsageHistory = Effect.gen(function* () {
   // this small DB-only fence, then the dedicated Usage surface resumes discovery.
   const versionMismatches = yield* sql<{
     readonly fileId: number;
-    readonly provider: UsageHistoryProvider;
+    readonly engine: UsageHistoryProvider;
   }>`
-    SELECT file_id AS "fileId", provider FROM usage_history_files
+    SELECT file_id AS "fileId", engine FROM usage_history_files
     WHERE parser_version <> ${USAGE_HISTORY_PARSER_VERSION}
   `;
   if (versionMismatches.length > 0) {
@@ -402,16 +402,16 @@ const makeUsageHistory = Effect.gen(function* () {
           DELETE FROM usage_history_events
           WHERE NOT EXISTS (
             SELECT 1 FROM usage_history_event_sources source
-            WHERE source.provider = usage_history_events.provider
+            WHERE source.engine = usage_history_events.engine
               AND source.event_key = usage_history_events.event_key
           )
         `;
-        for (const provider of new Set(versionMismatches.map((file) => file.provider))) {
+        for (const engine of new Set(versionMismatches.map((file) => file.engine))) {
           yield* sql`
             UPDATE usage_history_provider_state SET status = 'pending', discovery_cursor = NULL,
               discovery_generation = discovery_generation + 1, discovery_complete = 0,
               restart_attempts = 0, detail_code = 'parser-updated'
-            WHERE provider = ${provider}
+            WHERE engine = ${engine}
           `;
         }
         yield* sql`
@@ -428,13 +428,13 @@ const makeUsageHistory = Effect.gen(function* () {
     persistedControl.consentState === "authorized" &&
     (persistedControl.status === "paused" || persistedControl.status === "idle");
 
-  const discoverBatch = (provider: UsageHistoryProvider, rootPath: string, state: ProviderRow) =>
+  const discoverBatch = (engine: UsageHistoryProvider, rootPath: string, state: EngineRow) =>
     Effect.gen(function* () {
       const response = yield* Effect.tryPromise(() =>
         runWorker(
           {
             type: "discover",
-            provider,
+            engine,
             rootPath,
             cursor: state.discoveryCursor,
             limit: USAGE_HISTORY_DISCOVERY_BATCH_FILES,
@@ -449,7 +449,7 @@ const makeUsageHistory = Effect.gen(function* () {
       const result: UsageHistoryDiscoverResponse = response;
       const currentGeneration = yield* sql<{ readonly discoveryGeneration: number }>`
         SELECT discovery_generation AS "discoveryGeneration"
-        FROM usage_history_provider_state WHERE provider = ${provider}
+        FROM usage_history_provider_state WHERE engine = ${engine}
       `;
       if (Number(currentGeneration[0]?.discoveryGeneration) !== state.discoveryGeneration) return;
       const discoveryIssue = result.issueCodes[0] ?? null;
@@ -458,7 +458,7 @@ const makeUsageHistory = Effect.gen(function* () {
           UPDATE usage_history_provider_state
           SET status = ${discoveryIssue ? "partial" : "unsupported"}, discovery_complete = 1,
               discovery_cursor = NULL, detail_code = ${discoveryIssue ?? "archive-unavailable"}
-          WHERE provider = ${provider} AND discovery_generation = ${state.discoveryGeneration}
+          WHERE engine = ${engine} AND discovery_generation = ${state.discoveryGeneration}
         `;
         return;
       }
@@ -474,7 +474,7 @@ const makeUsageHistory = Effect.gen(function* () {
           SELECT file_id AS "fileId", device_id AS "deviceId", inode_id AS "inodeId",
             indexed_offset AS "indexedOffset", size_bytes AS "sizeBytes", parser_version AS "parserVersion"
           FROM usage_history_files
-          WHERE provider = ${provider} AND root_key = ${provider} AND relative_path = ${file.relativePath}
+          WHERE engine = ${engine} AND root_key = ${engine} AND relative_path = ${file.relativePath}
         `;
         const prior = existing[0];
         const replace =
@@ -486,14 +486,14 @@ const makeUsageHistory = Effect.gen(function* () {
         if (replace && prior) yield* deleteFileContribution(Number(prior.fileId));
         yield* sql`
           INSERT INTO usage_history_files (
-            provider, root_key, relative_path, device_id, inode_id, size_bytes, mtime_ms,
+            engine, root_key, relative_path, device_id, inode_id, size_bytes, mtime_ms,
             indexed_offset, parser_version, last_seen_generation, state, detail_code
           ) VALUES (
-            ${provider}, ${provider}, ${file.relativePath}, ${file.deviceId}, ${file.inodeId},
+            ${engine}, ${engine}, ${file.relativePath}, ${file.deviceId}, ${file.inodeId},
             ${file.sizeBytes}, ${Math.round(file.mtimeMs)}, 0, ${USAGE_HISTORY_PARSER_VERSION},
             ${state.discoveryGeneration}, 'pending', NULL
           )
-          ON CONFLICT (provider, root_key, relative_path) DO UPDATE SET
+          ON CONFLICT (engine, root_key, relative_path) DO UPDATE SET
             device_id = excluded.device_id,
             inode_id = excluded.inode_id,
             size_bytes = excluded.size_bytes,
@@ -523,23 +523,23 @@ const makeUsageHistory = Effect.gen(function* () {
           files_discovered = files_discovered + ${result.files.length},
           bytes_discovered = bytes_discovered + ${result.files.reduce((sum, file) => sum + file.sizeBytes, 0)},
           detail_code = COALESCE(detail_code, ${discoveryIssue})
-        WHERE provider = ${provider} AND discovery_generation = ${state.discoveryGeneration}
+        WHERE engine = ${engine} AND discovery_generation = ${state.discoveryGeneration}
       `;
       if (result.complete && result.issueCodes.length === 0) {
         const missing = yield* sql<{ readonly fileId: number }>`
           SELECT file_id AS "fileId" FROM usage_history_files
-          WHERE provider = ${provider} AND last_seen_generation < ${state.discoveryGeneration}
+          WHERE engine = ${engine} AND last_seen_generation < ${state.discoveryGeneration}
         `;
         for (const file of missing) yield* deleteFileContribution(Number(file.fileId));
         yield* sql`
           DELETE FROM usage_history_files
-          WHERE provider = ${provider} AND last_seen_generation < ${state.discoveryGeneration}
+          WHERE engine = ${engine} AND last_seen_generation < ${state.discoveryGeneration}
         `;
       }
     });
 
   const parseBatch = (
-    provider: UsageHistoryProvider,
+    engine: UsageHistoryProvider,
     rootPath: string,
     salt: string,
     expectedGeneration: number,
@@ -556,7 +556,7 @@ const makeUsageHistory = Effect.gen(function* () {
           , cumulative_cache_read_tokens AS "cumulativeCacheReadTokens"
           , cumulative_cache_write_tokens AS "cumulativeCacheWriteTokens"
         FROM usage_history_files
-        WHERE provider = ${provider} AND state = 'pending'
+        WHERE engine = ${engine} AND state = 'pending'
           AND indexed_offset < size_bytes
         ORDER BY relative_path LIMIT ${USAGE_HISTORY_PARSE_BATCH_FILES}
       `;
@@ -585,7 +585,7 @@ const makeUsageHistory = Effect.gen(function* () {
         runWorker(
           {
             type: "parse",
-            provider,
+            engine,
             rootPath,
             files,
             workspaceHashSalt: salt,
@@ -608,7 +608,7 @@ const makeUsageHistory = Effect.gen(function* () {
         Effect.gen(function* () {
           const currentGeneration = yield* sql<{ readonly discoveryGeneration: number }>`
             SELECT discovery_generation AS "discoveryGeneration"
-            FROM usage_history_provider_state WHERE provider = ${provider}
+            FROM usage_history_provider_state WHERE engine = ${engine}
           `;
           if (Number(currentGeneration[0]?.discoveryGeneration) !== expectedGeneration)
             return false;
@@ -619,7 +619,7 @@ const makeUsageHistory = Effect.gen(function* () {
                 DELETE FROM usage_history_events
                 WHERE NOT EXISTS (
                   SELECT 1 FROM usage_history_event_sources source
-                  WHERE source.provider = usage_history_events.provider
+                  WHERE source.engine = usage_history_events.engine
                     AND source.event_key = usage_history_events.event_key
                 )
               `;
@@ -638,12 +638,12 @@ const makeUsageHistory = Effect.gen(function* () {
               const eventBatch = JSON.stringify(file.events);
               yield* sql`
                 INSERT INTO usage_history_events (
-                  provider, event_key, occurred_at, occurred_on, session_key, model,
+                  engine, event_key, occurred_at, occurred_on, session_key, model,
                   workspace_key, workspace_label, input_tokens, output_tokens,
                   cache_read_tokens, cache_write_tokens
                 )
                 SELECT
-                  ${provider},
+                  ${engine},
                   CAST(json_extract(item.value, '$.eventKey') AS TEXT),
                   CAST(json_extract(item.value, '$.occurredAt') AS TEXT),
                   substr(CAST(json_extract(item.value, '$.occurredAt') AS TEXT), 1, 10),
@@ -657,7 +657,7 @@ const makeUsageHistory = Effect.gen(function* () {
                   CAST(json_extract(item.value, '$.cacheWriteTokens') AS INTEGER)
                 FROM json_each(${eventBatch}) AS item
                 WHERE 1
-                ON CONFLICT (provider, event_key) DO UPDATE SET
+                ON CONFLICT (engine, event_key) DO UPDATE SET
                   occurred_at = excluded.occurred_at, occurred_on = excluded.occurred_on,
                   session_key = excluded.session_key, model = excluded.model,
                   workspace_key = excluded.workspace_key, workspace_label = excluded.workspace_label,
@@ -666,8 +666,8 @@ const makeUsageHistory = Effect.gen(function* () {
                   cache_write_tokens = excluded.cache_write_tokens
               `;
               yield* sql`
-                INSERT OR IGNORE INTO usage_history_event_sources (file_id, provider, event_key)
-                SELECT ${file.fileId}, ${provider},
+                INSERT OR IGNORE INTO usage_history_event_sources (file_id, engine, event_key)
+                SELECT ${file.fileId}, ${engine},
                   CAST(json_extract(item.value, '$.eventKey') AS TEXT)
                 FROM json_each(${eventBatch}) AS item
               `;
@@ -710,10 +710,10 @@ const makeUsageHistory = Effect.gen(function* () {
             UPDATE usage_history_provider_state SET
               bytes_read = bytes_read + ${result.bytesRead},
               files_indexed = (SELECT COUNT(*) FROM usage_history_files
-                WHERE provider = ${provider} AND state = 'indexed'),
+                WHERE engine = ${engine} AND state = 'indexed'),
               skipped_files = (SELECT COUNT(*) FROM usage_history_files
-                WHERE provider = ${provider} AND state IN ('partial', 'skipped'))
-            WHERE provider = ${provider} AND discovery_generation = ${expectedGeneration}
+                WHERE engine = ${engine} AND state IN ('partial', 'skipped'))
+            WHERE engine = ${engine} AND discovery_generation = ${expectedGeneration}
           `;
           return true;
         }),
@@ -735,49 +735,49 @@ const makeUsageHistory = Effect.gen(function* () {
       const activeProviders = new Set<UsageHistoryProvider>(PROVIDERS);
       while (activeProviders.size > 0) {
         if (stopped || pauseRequested) break;
-        for (const provider of PROVIDERS) {
-          if (!activeProviders.has(provider) || stopped || pauseRequested) continue;
-          const current = (yield* readProviders()).find((row) => row.provider === provider)!;
+        for (const engine of PROVIDERS) {
+          if (!activeProviders.has(engine) || stopped || pauseRequested) continue;
+          const current = (yield* readProviders()).find((row) => row.engine === engine)!;
           if (current.status === "paused" || current.status === "unsupported") {
-            activeProviders.delete(provider);
+            activeProviders.delete(engine);
             continue;
           }
           yield* sql`
             UPDATE usage_history_provider_state SET status = 'indexing'
-            WHERE provider = ${provider} AND discovery_generation = ${current.discoveryGeneration}
+            WHERE engine = ${engine} AND discovery_generation = ${current.discoveryGeneration}
           `;
           const stepExit = yield* Effect.exit(
             Effect.gen(function* () {
               if (current.discoveryComplete !== 1) {
-                yield* discoverBatch(provider, providerRoots[provider], current);
+                yield* discoverBatch(engine, providerRoots[engine], current);
               }
               const parsed = yield* parseBatch(
-                provider,
-                providerRoots[provider],
+                engine,
+                providerRoots[engine],
                 control.workspaceHashSalt,
                 current.discoveryGeneration,
               );
-              const next = (yield* readProviders()).find((row) => row.provider === provider)!;
+              const next = (yield* readProviders()).find((row) => row.engine === engine)!;
               return next.discoveryComplete !== 1 || parsed;
             }),
           );
           if (Exit.isSuccess(stepExit)) {
             yield* sql`
               UPDATE usage_history_provider_state SET restart_attempts = 0
-              WHERE provider = ${provider} AND discovery_generation = ${current.discoveryGeneration}
+              WHERE engine = ${engine} AND discovery_generation = ${current.discoveryGeneration}
             `;
             if (!stepExit.value) {
-              const settled = (yield* readProviders()).find((row) => row.provider === provider)!;
+              const settled = (yield* readProviders()).find((row) => row.engine === engine)!;
               if (settled.status !== "paused" && settled.status !== "unsupported") {
                 const partial = Number(settled.skippedFiles) > 0 || settled.detailCode !== null;
                 yield* sql`
                   UPDATE usage_history_provider_state SET status = ${partial ? "partial" : "ready"},
                     last_completed_at = ${new Date().toISOString()}
-                  WHERE provider = ${provider}
+                  WHERE engine = ${engine}
                     AND discovery_generation = ${settled.discoveryGeneration}
                 `;
               }
-              activeProviders.delete(provider);
+              activeProviders.delete(engine);
             }
           } else {
             if (pauseRequested) return;
@@ -786,9 +786,9 @@ const makeUsageHistory = Effect.gen(function* () {
               UPDATE usage_history_provider_state SET restart_attempts = ${attempts},
                 status = ${attempts >= MAX_PROVIDER_RESTARTS ? "paused" : "partial"},
                 detail_code = 'indexer-interrupted'
-              WHERE provider = ${provider} AND discovery_generation = ${current.discoveryGeneration}
+              WHERE engine = ${engine} AND discovery_generation = ${current.discoveryGeneration}
             `;
-            if (attempts >= MAX_PROVIDER_RESTARTS) activeProviders.delete(provider);
+            if (attempts >= MAX_PROVIDER_RESTARTS) activeProviders.delete(engine);
           }
           yield* Effect.yieldNow;
         }
@@ -834,11 +834,11 @@ const makeUsageHistory = Effect.gen(function* () {
   };
 
   const queryAggregates = (input: ServerGetUsageHistoryInput) => {
-    const groupBy: UsageHistoryGroupBy = input.groupBy ?? "provider";
+    const groupBy: UsageHistoryGroupBy = input.groupBy ?? "engine";
     const floor = dateFloor(input.range);
     const groupExpression =
-      groupBy === "provider"
-        ? sql.literal("provider")
+      groupBy === "engine"
+        ? sql.literal("engine")
         : groupBy === "model"
           ? sql.literal("model")
           : groupBy === "workspace"
@@ -880,7 +880,7 @@ const makeUsageHistory = Effect.gen(function* () {
         const current = aggregates.get(row.key);
         aggregates.set(row.key, {
           key: row.key,
-          provider: groupBy === "provider" ? (row.key as UsageHistoryProvider) : null,
+          engine: groupBy === "engine" ? (row.key as UsageHistoryProvider) : null,
           model: groupBy === "model" ? row.key : null,
           workspace: groupBy === "workspace" ? row.label : null,
           date: groupBy === "date" ? row.key : null,
@@ -932,7 +932,7 @@ const makeUsageHistory = Effect.gen(function* () {
         const cost = row.estimatedCostMicros;
         return {
           key: row.key || "unknown",
-          ...(row.provider ? { provider: row.provider } : {}),
+          ...(row.engine ? { engine: row.engine } : {}),
           ...(row.model ? { model: row.model } : {}),
           ...(row.workspace ? { workspace: row.workspace } : {}),
           ...(row.date ? { date: row.date } : {}),
@@ -946,21 +946,21 @@ const makeUsageHistory = Effect.gen(function* () {
           estimateUncertain: true,
         };
       });
-      const providers = providerRows.map(asProviderSummary);
+      const engines = providerRows.map(asProviderSummary);
       return {
         status: control.consentState === "authorized" ? control.status : "not-authorized",
         ...(control.authorizedAt ? { authorizedAt: control.authorizedAt } : {}),
         ...(control.updatedAt ? { updatedAt: control.updatedAt } : {}),
         ...(control.lastCompletedAt ? { lastCompletedAt: control.lastCompletedAt } : {}),
         pricingVersion: USAGE_HISTORY_PRICING_VERSION,
-        progress: providers.reduce<UsageHistoryProgress>(
-          (total, provider) => ({
-            filesDiscovered: total.filesDiscovered + provider.progress.filesDiscovered,
-            filesIndexed: total.filesIndexed + provider.progress.filesIndexed,
-            bytesDiscovered: total.bytesDiscovered + provider.progress.bytesDiscovered,
-            bytesRead: total.bytesRead + provider.progress.bytesRead,
-            skippedFiles: total.skippedFiles + provider.progress.skippedFiles,
-            discoveryComplete: total.discoveryComplete && provider.progress.discoveryComplete,
+        progress: engines.reduce<UsageHistoryProgress>(
+          (total, engine) => ({
+            filesDiscovered: total.filesDiscovered + engine.progress.filesDiscovered,
+            filesIndexed: total.filesIndexed + engine.progress.filesIndexed,
+            bytesDiscovered: total.bytesDiscovered + engine.progress.bytesDiscovered,
+            bytesRead: total.bytesRead + engine.progress.bytesRead,
+            skippedFiles: total.skippedFiles + engine.progress.skippedFiles,
+            discoveryComplete: total.discoveryComplete && engine.progress.discoveryComplete,
           }),
           {
             filesDiscovered: 0,
@@ -971,7 +971,7 @@ const makeUsageHistory = Effect.gen(function* () {
             discoveryComplete: true as boolean,
           },
         ),
-        providers,
+        engines,
         rows,
       } satisfies ServerGetUsageHistoryResult;
     });
@@ -1039,7 +1039,7 @@ const makeUsageHistory = Effect.gen(function* () {
           startBackground();
         }
       }
-      return yield* get({ range: "30d", groupBy: "provider" });
+      return yield* get({ range: "30d", groupBy: "engine" });
     });
 
   return { get, command } satisfies UsageHistoryShape;

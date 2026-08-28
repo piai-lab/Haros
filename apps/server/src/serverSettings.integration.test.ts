@@ -33,12 +33,12 @@ describe("ServerSettingsService", () => {
     );
 
     const { settings } = result;
-    expect(settings.providers.codex.binaryPath).toBe("codex");
-    expect(settings.providers.grok.binaryPath).toBe("grok");
+    expect(settings.engines.codex.binaryPath).toBe("codex");
+    expect(settings.engines.grok.binaryPath).toBe("grok");
     expect(settings.defaultThreadEnvMode).toBe("local");
-    expect(settings.enableProviderUpdateChecks).toBe(true);
-    expect(settings.textGenerationModelSelection).toEqual({
-      provider: "codex",
+    expect(settings.enableEngineUpdateChecks).toBe(true);
+    expect(settings.textGenerationEngineSelection).toEqual({
+      engine: "codex",
       model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
     });
     expect(settings.agentTools.builtInGroupOverrides).toEqual({});
@@ -58,8 +58,8 @@ describe("ServerSettingsService", () => {
             revision: 7,
             migrationVersion: 1,
             settings: {
-              textGenerationModelSelection: {
-                provider: "codex",
+              textGenerationEngineSelection: {
+                engine: "codex",
                 model: "gpt-5.4-mini",
               },
             },
@@ -71,7 +71,7 @@ describe("ServerSettingsService", () => {
         const persisted = JSON.parse(yield* fs.readFileString(settingsPath)) as {
           migrationVersion: number;
           settings: {
-            textGenerationModelSelection: { model: string };
+            textGenerationEngineSelection: { model: string };
             agentTools: { builtInGroupOverrides: Record<string, Record<string, boolean>> };
           };
         };
@@ -79,7 +79,7 @@ describe("ServerSettingsService", () => {
       }),
     );
 
-    expect(result.settings.textGenerationModelSelection.model).toBe("gpt-5.4-mini");
+    expect(result.settings.textGenerationEngineSelection.model).toBe("gpt-5.4-mini");
     expect(result.settings.agentTools.builtInGroupOverrides).toEqual({
       agent: { device: true },
       studio: { device: true },
@@ -90,7 +90,7 @@ describe("ServerSettingsService", () => {
         builtInGroupOverrides: { agent: { device: true }, studio: { device: true } },
       },
     });
-    expect(result.persisted.settings.textGenerationModelSelection.model).toBe("gpt-5.4-mini");
+    expect(result.persisted.settings.textGenerationEngineSelection.model).toBe("gpt-5.4-mini");
   });
 
   it("persists updates and reloads them", async () => {
@@ -103,8 +103,8 @@ describe("ServerSettingsService", () => {
 
         const updated = yield* service.updateSettings({
           enableAssistantStreaming: true,
-          enableProviderUpdateChecks: false,
-          providers: {
+          enableEngineUpdateChecks: false,
+          engines: {
             codex: {
               binaryPath: "/usr/local/bin/codex",
               customModels: ["gpt-custom"],
@@ -117,15 +117,15 @@ describe("ServerSettingsService", () => {
     );
 
     expect(result.updated.enableAssistantStreaming).toBe(true);
-    expect(result.updated.enableProviderUpdateChecks).toBe(false);
-    expect(result.updated.providers.codex.binaryPath).toBe("/usr/local/bin/codex");
+    expect(result.updated.enableEngineUpdateChecks).toBe(false);
+    expect(result.updated.engines.codex.binaryPath).toBe("/usr/local/bin/codex");
     expect(result.parsed).toMatchObject({
       revision: 1,
       migrationVersion: 4,
       settings: {
         enableAssistantStreaming: true,
-        enableProviderUpdateChecks: false,
-        providers: {
+        enableEngineUpdateChecks: false,
+        engines: {
           codex: {
             binaryPath: "/usr/local/bin/codex",
             customModels: ["gpt-custom"],
@@ -151,9 +151,9 @@ describe("ServerSettingsService", () => {
             migrationVersion: 4,
             settings: {
               enableAssistantStreaming: true,
-              enableProviderUpdateChecks: false,
+              enableEngineUpdateChecks: false,
               addProjectBaseDirectory: "/tmp/omnimind-projects",
-              providers: {
+              engines: {
                 oa: {
                   enabled: false,
                   [retiredKey]: ["legacy/provider-model"],
@@ -175,7 +175,7 @@ describe("ServerSettingsService", () => {
           revision: number;
           migrationVersion: number;
           settings: Record<string, unknown> & {
-            providers: Record<string, unknown> & {
+            engines: Record<string, unknown> & {
               oa: Record<string, unknown>;
               codex: { customModels: string[] };
             };
@@ -186,8 +186,8 @@ describe("ServerSettingsService", () => {
     );
 
     expect(result.rawAfterRead).toContain(`"${retiredKey}":["legacy/provider-model"]`);
-    expect(result.view.providers.oa).toEqual({ enabled: false });
-    expect(result.internal.providers.oa).toEqual({
+    expect(result.view.engines.oa).toEqual({ enabled: false });
+    expect(result.internal.engines.oa).toEqual({
       enabled: false,
       defaultPrompt: "private prompt",
     });
@@ -196,16 +196,16 @@ describe("ServerSettingsService", () => {
       migrationVersion: 4,
       settings: {
         enableAssistantStreaming: false,
-        enableProviderUpdateChecks: false,
+        enableEngineUpdateChecks: false,
         addProjectBaseDirectory: "/tmp/omnimind-projects",
-        providers: {
+        engines: {
           oa: { enabled: false, defaultPrompt: "private prompt" },
           codex: { customModels: ["custom/codex-model"] },
         },
         agentTools: { builtInGroupOverrides: {} },
       },
     });
-    expect(result.persisted.settings.providers.oa).not.toHaveProperty(retiredKey);
+    expect(result.persisted.settings.engines.oa).not.toHaveProperty(retiredKey);
   });
 
   it.each([
@@ -465,14 +465,14 @@ describe("ServerSettingsService", () => {
     expect(result.persisted).toMatchObject({ revision: 11, migrationVersion: 1 });
   });
 
-  it("rejects provider-only runtime-catalog switches before persistence", async () => {
+  it("rejects engine-only runtime-catalog switches before persistence", async () => {
     const result = await runWithSettings(
       Effect.gen(function* () {
         const service = yield* ServerSettingsService;
         yield* service.start;
         const updateExit = yield* Effect.exit(
           service.updateSettings({
-            textGenerationModelSelection: { provider: "oa" },
+            textGenerationEngineSelection: { engine: "oa" },
           }),
         );
         return {
@@ -484,8 +484,8 @@ describe("ServerSettingsService", () => {
 
     expect(result.updateExit._tag).toBe("Failure");
     expect(result.snapshot.revision).toBe(0);
-    expect(result.snapshot.settings.textGenerationModelSelection).toEqual({
-      provider: "codex",
+    expect(result.snapshot.settings.textGenerationEngineSelection).toEqual({
+      engine: "codex",
       model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
     });
   });
@@ -517,7 +517,7 @@ describe("ServerSettingsService", () => {
 
   it("persists an explicit runtime-catalog model selection exactly", async () => {
     const selection = {
-      provider: "oa" as const,
+      engine: "oa" as const,
       model: "deepseek/deepseek-v4-pro",
       options: { thinkingLevel: "high" as const },
     };
@@ -526,7 +526,7 @@ describe("ServerSettingsService", () => {
         const service = yield* ServerSettingsService;
         yield* service.start;
         const settings = yield* service.updateSettings({
-          textGenerationModelSelection: selection,
+          textGenerationEngineSelection: selection,
         });
         return {
           settings,
@@ -535,20 +535,20 @@ describe("ServerSettingsService", () => {
       }),
     );
 
-    expect(result.settings.textGenerationModelSelection).toEqual(selection);
+    expect(result.settings.textGenerationEngineSelection).toEqual(selection);
     expect(result.snapshot.revision).toBe(1);
-    expect(result.snapshot.settings.textGenerationModelSelection).toEqual(selection);
+    expect(result.snapshot.settings.textGenerationEngineSelection).toEqual(selection);
   });
 
-  it("keeps provider passwords server-only and returns configured flags to clients", async () => {
+  it("keeps engine passwords server-only and returns configured flags to clients", async () => {
     const result = await runWithSettings(
       Effect.gen(function* () {
         const service = yield* ServerSettingsService;
         const { settingsPath } = yield* ServerConfig;
         const fs = yield* FileSystem.FileSystem;
         yield* service.start;
-        yield* service.updateProviderCredential("kilo", "kilo-secret");
-        const view = yield* service.updateProviderCredential("opencode", "opencode-secret");
+        yield* service.updateEngineCredential("kilo", "kilo-secret");
+        const view = yield* service.updateEngineCredential("opencode", "opencode-secret");
         const internal = yield* service.getSettings;
         const settingsFileExists = yield* fs.exists(settingsPath);
         const persisted = settingsFileExists ? yield* fs.readFileString(settingsPath) : "";
@@ -556,10 +556,10 @@ describe("ServerSettingsService", () => {
       }),
     );
 
-    expect(result.internal.providers.kilo.serverPasswordConfigured).toBe(true);
-    expect(result.internal.providers.opencode.serverPasswordConfigured).toBe(true);
-    expect(result.view.providers.kilo).toMatchObject({ serverPasswordConfigured: true });
-    expect(result.view.providers.opencode).toMatchObject({ serverPasswordConfigured: true });
+    expect(result.internal.engines.kilo.serverPasswordConfigured).toBe(true);
+    expect(result.internal.engines.opencode.serverPasswordConfigured).toBe(true);
+    expect(result.view.engines.kilo).toMatchObject({ serverPasswordConfigured: true });
+    expect(result.view.engines.opencode).toMatchObject({ serverPasswordConfigured: true });
     expect(JSON.stringify(result.internal)).not.toContain("kilo-secret");
     expect(JSON.stringify(result.internal)).not.toContain("opencode-secret");
     expect(JSON.stringify(result.view)).not.toContain("kilo-secret");
@@ -577,10 +577,10 @@ describe("ServerSettingsService", () => {
         const { settingsPath } = yield* ServerConfig;
         const fs = yield* FileSystem.FileSystem;
         yield* service.start;
-        yield* service.updateSettings({ defaultProvider: "codex" });
+        yield* service.updateSettings({ defaultEngine: "codex" });
         const before = yield* fs.readFileString(settingsPath);
         const beforeSnapshot = yield* service.getSnapshot;
-        const view = yield* service.updateProviderCredential("kilo", "credential-canary");
+        const view = yield* service.updateEngineCredential("kilo", "credential-canary");
         const after = yield* fs.readFileString(settingsPath);
         const afterSnapshot = yield* service.getSnapshot;
         return { before, beforeSnapshot, view, after, afterSnapshot };
@@ -589,8 +589,8 @@ describe("ServerSettingsService", () => {
 
     expect(result.after).toBe(result.before);
     expect(result.afterSnapshot.revision).toBe(result.beforeSnapshot.revision);
-    expect(result.view.providers.kilo.serverPasswordConfigured).toBe(true);
-    expect(result.afterSnapshot.settings.providers.kilo.serverPasswordConfigured).toBe(true);
+    expect(result.view.engines.kilo.serverPasswordConfigured).toBe(true);
+    expect(result.afterSnapshot.settings.engines.kilo.serverPasswordConfigured).toBe(true);
     expect(result.after).not.toContain("credential-canary");
   });
 
@@ -601,18 +601,18 @@ describe("ServerSettingsService", () => {
         const { settingsPath } = yield* ServerConfig;
         const fs = yield* FileSystem.FileSystem;
         yield* service.start;
-        yield* service.updateSettings({ defaultProvider: "codex" });
+        yield* service.updateSettings({ defaultEngine: "codex" });
         const external = JSON.parse(yield* fs.readFileString(settingsPath)) as {
           revision: number;
-          settings: { defaultProvider: string; addProjectBaseDirectory: string };
+          settings: { defaultEngine: string; addProjectBaseDirectory: string };
         };
         external.revision = 9;
-        external.settings.defaultProvider = "pi";
+        external.settings.defaultEngine = "pi";
         external.settings.addProjectBaseDirectory = "/tmp/external-projects";
         const externalBytes = `${JSON.stringify(external, null, 2)}\n`;
         yield* fs.writeFileString(settingsPath, externalBytes);
 
-        const view = yield* service.updateProviderCredential("kilo", "credential-canary");
+        const view = yield* service.updateEngineCredential("kilo", "credential-canary");
         const snapshot = yield* service.getSnapshot;
         return {
           view,
@@ -624,9 +624,9 @@ describe("ServerSettingsService", () => {
     );
 
     expect(result.view).toMatchObject({
-      defaultProvider: "pi",
+      defaultEngine: "pi",
       addProjectBaseDirectory: "/tmp/external-projects",
-      providers: { kilo: { serverPasswordConfigured: true } },
+      engines: { kilo: { serverPasswordConfigured: true } },
     });
     expect(result.snapshot.revision).toBe(9);
     expect(result.persisted).toBe(result.externalBytes);
@@ -640,13 +640,13 @@ describe("ServerSettingsService", () => {
         const { settingsPath } = yield* ServerConfig;
         const fs = yield* FileSystem.FileSystem;
         yield* service.start;
-        yield* service.updateSettings({ defaultProvider: "codex" });
-        yield* service.updateProviderCredential("kilo", "credential-canary");
+        yield* service.updateSettings({ defaultEngine: "codex" });
+        yield* service.updateEngineCredential("kilo", "credential-canary");
         const validBytes = yield* fs.readFileString(settingsPath);
         yield* fs.remove(settingsPath);
         yield* fs.makeDirectory(settingsPath);
 
-        const rejected = yield* Effect.exit(service.updateProviderCredential("kilo", ""));
+        const rejected = yield* Effect.exit(service.updateEngineCredential("kilo", ""));
         yield* fs.remove(settingsPath, { recursive: true });
         yield* fs.writeFileString(settingsPath, validBytes);
         const afterRecovery = yield* service.updateSettings({ enableAssistantStreaming: false });
@@ -655,7 +655,7 @@ describe("ServerSettingsService", () => {
     );
 
     expect(result.rejected._tag).toBe("Failure");
-    expect(result.afterRecovery.providers.kilo.serverPasswordConfigured).toBe(true);
+    expect(result.afterRecovery.engines.kilo.serverPasswordConfigured).toBe(true);
   });
 
   it("converges concurrent settings and credential mutations to one fresh projection", async () => {
@@ -673,10 +673,10 @@ describe("ServerSettingsService", () => {
         yield* Effect.all(
           [
             service.updateSettings({
-              defaultProvider: "pi",
+              defaultEngine: "pi",
               addProjectBaseDirectory: "/tmp/latest-projects",
             }),
-            service.updateProviderCredential("opencode", "credential-canary"),
+            service.updateEngineCredential("opencode", "credential-canary"),
           ],
           { concurrency: "unbounded" },
         );
@@ -691,39 +691,39 @@ describe("ServerSettingsService", () => {
 
     for (const subscriber of [result.first, result.second]) {
       expect(subscriber.at(-1)).toMatchObject({
-        defaultProvider: "pi",
+        defaultEngine: "pi",
         addProjectBaseDirectory: "/tmp/latest-projects",
-        providers: { opencode: { serverPasswordConfigured: true } },
+        engines: { opencode: { serverPasswordConfigured: true } },
       });
     }
     expect(result.snapshot.revision).toBe(1);
     expect(result.view).toMatchObject({
-      defaultProvider: "pi",
+      defaultEngine: "pi",
       addProjectBaseDirectory: "/tmp/latest-projects",
-      providers: { opencode: { serverPasswordConfigured: true } },
+      engines: { opencode: { serverPasswordConfigured: true } },
     });
   });
 
-  it("resets non-secret settings independently from provider credentials", async () => {
+  it("resets non-secret settings independently from engine credentials", async () => {
     const result = await runWithSettings(
       Effect.gen(function* () {
         const service = yield* ServerSettingsService;
         yield* service.start;
         yield* service.updateSettings({
-          defaultProvider: "pi",
+          defaultEngine: "pi",
           addProjectBaseDirectory: "/tmp/custom",
         });
-        yield* service.updateProviderCredential("kilo", "credential-canary");
+        yield* service.updateEngineCredential("kilo", "credential-canary");
         const reset = yield* service.resetSettingsView;
-        const cleared = yield* service.updateProviderCredential("kilo", "");
+        const cleared = yield* service.updateEngineCredential("kilo", "");
         return { reset, cleared };
       }),
     );
 
-    expect(result.reset.defaultProvider).toBe("oa");
+    expect(result.reset.defaultEngine).toBe("oa");
     expect(result.reset.addProjectBaseDirectory).toBe("");
-    expect(result.reset.providers.kilo.serverPasswordConfigured).toBe(true);
-    expect(result.cleared.providers.kilo.serverPasswordConfigured).toBe(false);
+    expect(result.reset.engines.kilo.serverPasswordConfigured).toBe(true);
+    expect(result.cleared.engines.kilo.serverPasswordConfigured).toBe(false);
   });
 
   it("keeps the customized default prompt out of public views and streams", async () => {
@@ -740,15 +740,15 @@ describe("ServerSettingsService", () => {
       }).pipe(
         Effect.provide(
           ServerSettingsService.layerTest({
-            providers: { oa: { defaultPrompt: "private one" } },
+            engines: { oa: { defaultPrompt: "private one" } },
           }),
         ),
       ),
     );
 
     expect(result.mutation.state).toBe("changed");
-    expect(result.initialView.providers.oa).not.toHaveProperty("defaultPrompt");
-    expect(result.streamedView.providers.oa).not.toHaveProperty("defaultPrompt");
+    expect(result.initialView.engines.oa).not.toHaveProperty("defaultPrompt");
+    expect(result.streamedView.engines.oa).not.toHaveProperty("defaultPrompt");
     expect(JSON.stringify(result.initialView)).not.toContain("private one");
     expect(JSON.stringify(result.streamedView)).not.toContain("private two");
   });
@@ -772,11 +772,11 @@ describe("ServerSettingsService", () => {
     );
 
     expect(result.mutations.map(({ state }) => state).toSorted()).toEqual(["changed", "conflict"]);
-    expect(["first", "second"]).toContain(result.snapshot.settings.providers.oa.defaultPrompt);
+    expect(["first", "second"]).toContain(result.snapshot.settings.engines.oa.defaultPrompt);
     expect(result.snapshot.revision).toBe(1);
   });
 
-  it("resolves text generation selection away from disabled providers", async () => {
+  it("resolves text generation selection away from disabled engines", async () => {
     const settings = await Effect.runPromise(
       Effect.gen(function* () {
         const service = yield* ServerSettingsService;
@@ -784,11 +784,11 @@ describe("ServerSettingsService", () => {
       }).pipe(
         Effect.provide(
           ServerSettingsService.layerTest({
-            textGenerationModelSelection: {
-              provider: "antigravity",
+            textGenerationEngineSelection: {
+              engine: "antigravity",
               model: DEFAULT_MODEL_BY_PROVIDER.antigravity,
             },
-            providers: {
+            engines: {
               antigravity: { enabled: false },
             },
           }),
@@ -796,7 +796,7 @@ describe("ServerSettingsService", () => {
       ),
     );
 
-    expect(settings.textGenerationModelSelection.provider).toBe("codex");
-    expect(settings.textGenerationModelSelection.model).toBe(DEFAULT_MODEL_BY_PROVIDER.codex);
+    expect(settings.textGenerationEngineSelection.engine).toBe("codex");
+    expect(settings.textGenerationEngineSelection.model).toBe(DEFAULT_MODEL_BY_PROVIDER.codex);
   });
 });

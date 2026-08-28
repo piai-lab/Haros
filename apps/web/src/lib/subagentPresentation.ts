@@ -139,7 +139,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function providerThreadIdForThread(input: {
+function nativeThreadIdForThread(input: {
   threadId: string;
   parentThreadId: string | null;
 }): string {
@@ -185,7 +185,7 @@ function resolveSubagentIdentityFromParentActivity(input: {
       return nextDirectory;
     })();
   const resolved = resolveSubagentIdentityFromDirectory(identityDirectory, {
-    providerThreadId: providerThreadIdForThread({
+    nativeThreadId: nativeThreadIdForThread({
       threadId: input.thread.id,
       parentThreadId,
     }),

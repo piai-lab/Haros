@@ -71,7 +71,7 @@ describe("resolveSubagentPresentation", () => {
     expect(presentation.primaryLabel).toBe("agent-1");
   });
 
-  it("treats provider-id placeholder titles as generic subagent labels", () => {
+  it("treats engine-id placeholder titles as generic subagent labels", () => {
     const presentation = resolveSubagentPresentation({
       title: "Subagent 019d8cae-0628-7bf1-bf86-5cbc31cd582c",
       fallbackId: "subagent:thread-1:agent-1",
@@ -81,7 +81,7 @@ describe("resolveSubagentPresentation", () => {
     expect(presentation.primaryLabel).toBe("agent-1");
   });
 
-  it("keeps readable provider ids intact until richer metadata arrives", () => {
+  it("keeps readable engine ids intact until richer metadata arrives", () => {
     const presentation = resolveSubagentPresentation({
       title: "Subagent 019d8cae-0628-7bf1-bf86-5cbc31cd582c",
       fallbackId: "subagent:thread-1:019d8cae-0628-7bf1-bf86-5cbc31cd582c",
@@ -95,7 +95,7 @@ describe("resolveSubagentPresentationForThread", () => {
   it("derives the nickname from the parent collab activity when thread metadata is still a placeholder", () => {
     const presentation = resolveSubagentPresentationForThread({
       thread: {
-        id: "subagent:thread-1:child-provider-1",
+        id: "subagent:thread-1:child-engine-1",
         title: "Subagent 019d8cae-0628-7bf1-bf86-5cbc31cd582c",
         parentThreadId: "thread-1",
         subagentNickname: null,
@@ -109,10 +109,10 @@ describe("resolveSubagentPresentationForThread", () => {
               payload: {
                 data: {
                   item: {
-                    receiverThreadIds: ["child-provider-1"],
+                    receiverThreadIds: ["child-engine-1"],
                     receiverAgents: [
                       {
-                        threadId: "child-provider-1",
+                        threadId: "child-engine-1",
                         agentNickname: "Locke",
                         agentRole: "explorer",
                       },
@@ -134,8 +134,8 @@ describe("resolveSubagentPresentationForThread", () => {
   it("matches parent activity identity by agent id when the child thread id is namespaced locally", () => {
     const presentation = resolveSubagentPresentationForThread({
       thread: {
-        id: "subagent:thread-1:child-provider-1",
-        title: "Subagent child-provider-1",
+        id: "subagent:thread-1:child-engine-1",
+        title: "Subagent child-engine-1",
         parentThreadId: "thread-1",
         subagentAgentId: "agent-1",
         subagentNickname: null,
@@ -151,7 +151,7 @@ describe("resolveSubagentPresentationForThread", () => {
                   item: {
                     agentStatuses: [
                       {
-                        threadId: "child-provider-2",
+                        threadId: "child-engine-2",
                         agentId: "agent-1",
                         agentNickname: "Harper",
                         agentRole: "reviewer",
@@ -172,8 +172,8 @@ describe("resolveSubagentPresentationForThread", () => {
   it("keeps the earlier nickname when a later parent activity only carries sparse agent state", () => {
     const presentation = resolveSubagentPresentationForThread({
       thread: {
-        id: "subagent:thread-1:child-provider-1",
-        title: "Subagent child-provider-1",
+        id: "subagent:thread-1:child-engine-1",
+        title: "Subagent child-engine-1",
         parentThreadId: "thread-1",
         subagentAgentId: "agent-1",
         subagentNickname: null,
@@ -189,7 +189,7 @@ describe("resolveSubagentPresentationForThread", () => {
                   item: {
                     receiverAgents: [
                       {
-                        threadId: "child-provider-1",
+                        threadId: "child-engine-1",
                         agentId: "agent-1",
                         agentNickname: "Locke",
                         agentRole: "explorer",
@@ -204,7 +204,7 @@ describe("resolveSubagentPresentationForThread", () => {
                 data: {
                   item: {
                     agentStates: {
-                      "child-provider-1": {
+                      "child-engine-1": {
                         status: "completed",
                       },
                     },
@@ -228,7 +228,7 @@ describe("subagentAccentColor", () => {
 });
 
 describe("normalizeSubagentStatusKind", () => {
-  it("maps common provider statuses into Remodex-style buckets", () => {
+  it("maps common engine statuses into Remodex-style buckets", () => {
     expect(normalizeSubagentStatusKind("in_progress")).toBe("running");
     expect(normalizeSubagentStatusKind("completed")).toBe("completed");
     expect(normalizeSubagentStatusKind("errored")).toBe("failed");

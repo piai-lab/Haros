@@ -1,6 +1,6 @@
 // FILE: tokenUsage.ts
-// Purpose: Shared numeric helpers for provider context-window and token-usage snapshots.
-// Layer: Server provider utility
+// Purpose: Shared numeric helpers for engine context-window and token-usage snapshots.
+// Layer: Server engine utility
 // Exports: finite/positive token guards and usage percent math.
 
 export function nonNegativeInteger(value: unknown): number | undefined {

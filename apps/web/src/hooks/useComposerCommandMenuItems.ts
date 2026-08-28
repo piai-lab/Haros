@@ -1,11 +1,11 @@
 import type {
   ProjectEntry,
-  ProviderAgentDescriptor,
-  ProviderNativeCommandDescriptor,
+  EngineAgentDescriptor,
+  EngineNativeCommandDescriptor,
   EngineKind,
-  ProviderMentionReference,
-  ProviderPluginDescriptor,
-  ProviderSkillDescriptor,
+  EngineMentionReference,
+  EnginePluginDescriptor,
+  EngineSkillDescriptor,
 } from "@harnessos/contracts";
 import { getAgentMentionAutocompleteAliases } from "@harnessos/contracts";
 import {
@@ -15,7 +15,7 @@ import {
   isInstalledProviderPlugin,
   normalizeProviderDiscoveryText,
   rankProviderDiscoveryItems,
-} from "~/lib/providerDiscovery";
+} from "~/lib/engineDiscovery";
 import {
   LOCAL_FOLDER_MENTION_NAME,
   matchesLocalFolderMentionShortcut,
@@ -34,18 +34,18 @@ import {
 import { threadMentionPathForThreadId } from "@harnessos/shared/threadMentions";
 
 import type { ComposerCommandItem } from "../components/chat/ComposerCommandMenu";
-import type { ProviderModelOption } from "../providerModelOptions";
-import { compareProvidersByOrder } from "../providerOrdering";
+import type { EngineModelOption } from "../providerModelOptions";
+import { compareProvidersByOrder } from "../engineOrdering";
 import type { ComposerThreadMentionSource, Project } from "../types";
 import { useI18n } from "~/i18n";
 
 type ComposerPluginSuggestion = {
-  plugin: ProviderPluginDescriptor;
-  mention: ProviderMentionReference;
+  plugin: EnginePluginDescriptor;
+  mention: EngineMentionReference;
 };
 
 export type SearchableModelOption = {
-  provider: EngineKind;
+  engine: EngineKind;
   providerLabel: string;
   slug: string;
   name: string;
@@ -123,7 +123,7 @@ function makeUniqueMentionName(input: {
 }
 
 // Mention tokens/chips resolve back to their reference by name, so two chats
-// sharing a title would be indistinguishable once inserted (wrong provider
+// sharing a title would be indistinguishable once inserted (wrong engine
 // icon, ambiguous context). Build friendly project-qualified names first, then
 // guarantee uniqueness across the final serialized names with a stable id suffix.
 function withDisambiguatedMentionNames(
@@ -217,7 +217,7 @@ export function buildThreadMentionComposerItems(input: {
     id: `thread:${thread.id}`,
     type: "thread" as const,
     threadId: thread.id,
-    provider: thread.provider,
+    engine: thread.engine,
     mention: { name: mentionName, path: threadMentionPathForThreadId(thread.id) },
     label: title,
     description: projectName,
@@ -225,28 +225,26 @@ export function buildThreadMentionComposerItems(input: {
 }
 
 export function buildSearchableModelOptions(input: {
-  providerOptions: ReadonlyArray<{ value: EngineKind; label: string }>;
-  modelOptionsByProvider: Record<EngineKind, ReadonlyArray<ProviderModelOption>>;
-  providerOrder: readonly EngineKind[];
-  hiddenProviders: readonly EngineKind[];
+  engineOptions: ReadonlyArray<{ value: EngineKind; label: string }>;
+  modelOptionsByEngine: Record<EngineKind, ReadonlyArray<EngineModelOption>>;
+  engineOrder: readonly EngineKind[];
+  hiddenEngines: readonly EngineKind[];
   protectedProviders: readonly EngineKind[];
   lockedProvider?: EngineKind | null;
 }): SearchableModelOption[] {
-  const hiddenProviderSet = new Set(input.hiddenProviders);
+  const hiddenProviderSet = new Set(input.hiddenEngines);
   const protectedProviderSet = new Set(input.protectedProviders);
-  return input.providerOptions
-    .toSorted((left, right) =>
-      compareProvidersByOrder(input.providerOrder, left.value, right.value),
-    )
+  return input.engineOptions
+    .toSorted((left, right) => compareProvidersByOrder(input.engineOrder, left.value, right.value))
     .filter((option) =>
       input.lockedProvider
         ? option.value === input.lockedProvider
         : protectedProviderSet.has(option.value) || !hiddenProviderSet.has(option.value),
     )
     .flatMap((option) =>
-      input.modelOptionsByProvider[option.value].map(
+      input.modelOptionsByEngine[option.value].map(
         ({ slug, name, upstreamProviderId, upstreamProviderName }) => ({
-          provider: option.value,
+          engine: option.value,
           providerLabel: option.label,
           slug,
           name,
@@ -261,10 +259,10 @@ export function buildSearchableModelOptions(input: {
 
 export function useComposerCommandMenuItems(input: {
   composerTrigger: ComposerTrigger | null;
-  provider: EngineKind;
+  engine: EngineKind;
   providerPlugins: readonly ComposerPluginSuggestion[];
-  providerNativeCommands: readonly ProviderNativeCommandDescriptor[];
-  providerSkills: readonly ProviderSkillDescriptor[];
+  providerNativeCommands: readonly EngineNativeCommandDescriptor[];
+  providerSkills: readonly EngineSkillDescriptor[];
   workspaceEntries: readonly ProjectEntry[];
   searchableModelOptions: readonly SearchableModelOption[];
   supportsFastSlashCommand: boolean;
@@ -274,7 +272,7 @@ export function useComposerCommandMenuItems(input: {
   canOfferSideCommand: boolean;
   canOfferExportCommand: boolean;
   surfaceAppSlashCommands?: ReadonlySet<string>;
-  dynamicAgents: readonly ProviderAgentDescriptor[];
+  dynamicAgents: readonly EngineAgentDescriptor[];
   threadMentionSources?: {
     readonly threads: readonly ComposerThreadMentionSource[];
     readonly projects: readonly Project[];
@@ -284,7 +282,7 @@ export function useComposerCommandMenuItems(input: {
   const { t } = useI18n();
   const {
     composerTrigger,
-    provider,
+    engine,
     providerPlugins,
     providerNativeCommands,
     providerSkills,
@@ -314,9 +312,9 @@ export function useComposerCommandMenuItems(input: {
           { value: name },
           { value: displayName },
         ]).map(({ name, displayName }) => ({
-          id: `agent:${provider}:${name}`,
+          id: `agent:${engine}:${name}`,
           type: "agent" as const,
-          provider,
+          engine,
           alias: name,
           color: "violet" as const,
           label: `@${name}`,
@@ -325,13 +323,13 @@ export function useComposerCommandMenuItems(input: {
       }
       // Static fallback
       return rankProviderDiscoveryItems(
-        getAgentMentionAutocompleteAliases(provider),
+        getAgentMentionAutocompleteAliases(engine),
         query,
         ({ alias, displayName }) => [{ value: alias }, { value: displayName }],
       ).map(({ alias, displayName, color }) => ({
-        id: `agent:${provider}:${alias}`,
+        id: `agent:${engine}:${alias}`,
         type: "agent" as const,
-        provider,
+        engine,
         alias,
         color,
         label: `@${alias}`,
@@ -390,7 +388,7 @@ export function useComposerCommandMenuItems(input: {
   if (composerTrigger.kind === "slash-command") {
     const query = normalizeProviderDiscoveryText(composerTrigger.query);
     const availableCommands = getAvailableComposerSlashCommands({
-      provider,
+      engine,
       supportsFastSlashCommand,
       canOfferCompactCommand,
       canOfferReviewCommand,
@@ -420,31 +418,29 @@ export function useComposerCommandMenuItems(input: {
     const providerCommandItems = providerNativeCommands
       .filter(
         (command) =>
-          !shouldHideProviderNativeCommandFromComposerMenu(provider, command.name, {
+          !shouldHideProviderNativeCommandFromComposerMenu(engine, command.name, {
             availableAppCommands: visibleAppCommandSet,
           }),
       )
       .map((command) => ({
         command,
-        aliasFields: getProviderNativeSlashCommandSearchTerms(provider, command.name).map(
-          (term) => ({
-            value: term,
-          }),
-        ),
+        aliasFields: getProviderNativeSlashCommandSearchTerms(engine, command.name).map((term) => ({
+          value: term,
+        })),
       }));
     const rankedProviderCommandItems = rankProviderDiscoveryItems(
       providerCommandItems,
       query,
       ({ command, aliasFields }) => [...aliasFields, ...buildCommandSearchFields(command)],
     ).map(({ command }) => ({
-      id: `provider-command:${provider}:${command.name}`,
-      type: "provider-native-command" as const,
-      provider,
+      id: `engine-command:${engine}:${command.name}`,
+      type: "engine-native-command" as const,
+      engine,
       command: command.name,
       label: `/${command.name}`,
-      description: command.description ?? t("composer.command.nativeDescription", { provider }),
+      description: command.description ?? t("composer.command.nativeDescription", { engine }),
     }));
-    // `/` is the universal picker surface; provider dispatch can adapt the
+    // `/` is the universal picker surface; engine dispatch can adapt the
     // visible slash token to backend-specific skill syntax when needed.
     const skillItems: ComposerCommandItem[] = rankProviderDiscoveryItems(
       providerSkills,
@@ -481,10 +477,10 @@ export function useComposerCommandMenuItems(input: {
     { value: option.providerLabel, weight: 200 },
     { value: option.searchProvider, weight: 200 },
     { value: option.searchUpstreamProvider, weight: 200 },
-  ]).map(({ provider, providerLabel, slug, name }) => ({
-    id: `model:${provider}:${slug}`,
+  ]).map(({ engine, providerLabel, slug, name }) => ({
+    id: `model:${engine}:${slug}`,
     type: "model" as const,
-    provider,
+    engine,
     model: slug,
     label: name,
     description: `${providerLabel} · ${slug}`,

@@ -15,8 +15,8 @@ describe("WsRequestAdmission", () => {
     expect(classifyWsRequest(WS_METHODS.serverPrewarmVoice)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.serverGetUsageHistory)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.projectsSearchContent)).toBe("expensive-read");
-    expect(classifyWsRequest(WS_METHODS.providerListModels)).toBe("provider-discovery");
-    expect(classifyWsRequest(WS_METHODS.providerListAgents)).toBe("provider-discovery");
+    expect(classifyWsRequest(WS_METHODS.providerListModels)).toBe("engine-discovery");
+    expect(classifyWsRequest(WS_METHODS.providerListAgents)).toBe("engine-discovery");
     expect(classifyWsRequest(WS_METHODS.omnimindModelServicesList)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.omnimindModelServicesGet)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.omnimindModelServicesDiscoverCustom)).toBe(
@@ -86,7 +86,7 @@ describe("WsRequestAdmission", () => {
     );
   });
 
-  it("reserves provider discovery capacity during cold shell restoration", async () => {
+  it("reserves engine discovery capacity during cold shell restoration", async () => {
     await Effect.runPromise(
       Effect.gen(function* () {
         const admission = yield* makeWsRequestAdmission;
@@ -97,7 +97,7 @@ describe("WsRequestAdmission", () => {
         );
 
         const modelCatalog = yield* admission.acquire(1, WS_METHODS.providerListModels);
-        expect(modelCatalog.requestClass).toBe("provider-discovery");
+        expect(modelCatalog.requestClass).toBe("engine-discovery");
 
         yield* admission.release(shellSnapshot);
         yield* admission.release(threadSnapshot);

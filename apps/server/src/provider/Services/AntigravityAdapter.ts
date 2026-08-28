@@ -1,11 +1,11 @@
-/** Antigravity CLI implementation of the generic provider adapter contract. */
+/** Antigravity CLI implementation of the generic engine adapter contract. */
 import { ServiceMap } from "effect";
 
-import type { ProviderAdapterError } from "../Errors.ts";
-import type { ProviderAdapterShape } from "./ProviderAdapter.ts";
+import type { EngineAdapterError } from "../Errors.ts";
+import type { EngineAdapterShape } from "./EngineAdapter.ts";
 
-export interface AntigravityAdapterShape extends ProviderAdapterShape<ProviderAdapterError> {
-  readonly provider: "antigravity";
+export interface AntigravityAdapterShape extends EngineAdapterShape<EngineAdapterError> {
+  readonly engine: "antigravity";
 }
 
 export class AntigravityAdapter extends ServiceMap.Service<

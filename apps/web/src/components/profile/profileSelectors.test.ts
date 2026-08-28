@@ -41,14 +41,14 @@ const baseStats = {
     coverage: "complete",
     models: [
       {
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5-codex",
         turnCount: 2,
         percent: 66.7,
         kind: "model",
       },
       {
-        provider: "claude",
+        engine: "claude",
         model: "claude-sonnet-4-6",
         turnCount: 1,
         percent: 33.3,

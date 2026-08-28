@@ -213,7 +213,7 @@ function workEntryPreview(workEntry: TimelineWorkEntry): string | null {
   return null;
 }
 
-// Provider read tools (e.g. Claude's `Read`) arrive as generic dynamic tool calls
+// Engine read tools (e.g. Claude's `Read`) arrive as generic dynamic tool calls
 // without a `file-read` requestKind, so match their tool name to surface the search icon
 // instead of the generic tool/wrench fallback.
 function isFileReadToolEntry(workEntry: TimelineWorkEntry): boolean {
@@ -289,7 +289,7 @@ export function renderWorkEntryIcon(Icon: LucideIcon, className: string): ReactE
 export function workEntryLeftIcon(workEntry: TimelineWorkEntry): LucideIcon {
   if (workEntry.activityKind === "skill.instructions.failed") return CircleAlertIcon;
   if (workEntry.activityKind === "skill.instructions.delivered") return SkillCubeIcon;
-  // Structure owns User Input identity. It deliberately wins over Provider,
+  // Structure owns User Input identity. It deliberately wins over Engine,
   // Tool-name, MCP, browser, and brand marks so every truthful adapter shares
   // this projection without teaching the Web resolver native Ask aliases.
   if (
@@ -311,7 +311,7 @@ function isGitHubMcpToolCall(workEntry: TimelineWorkEntry): boolean {
 }
 
 // OmniMind's own agent-gateway tools (harnessos_list_threads, harnessos_create_thread,
-// ...) get the OmniMind mark instead of the generic MCP glyph. Providers report
+// ...) get the OmniMind mark instead of the generic MCP glyph. Engines report
 // the call differently: Claude prefixes the MCP server (mcp__harnessos__*), ACP
 // agents surface the bare tool name (harnessos_*), and Codex reports server/tool
 // pairs that the label humanizer renders as "OmniMind: ...".
@@ -1427,7 +1427,7 @@ function ReasoningBodyViewport(props: {
       >
         {props.entries.map((entry) => (
           <div key={entry.id} className="min-w-0 max-w-full">
-            <div className="min-w-0 max-w-full" data-reasoning-provider-text="true">
+            <div className="min-w-0 max-w-full" data-reasoning-engine-text="true">
               <ChatMarkdown
                 text={entry.text}
                 cwd={props.markdownCwd}

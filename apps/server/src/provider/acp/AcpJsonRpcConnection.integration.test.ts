@@ -1,6 +1,6 @@
 // FILE: AcpJsonRpcConnection.test.ts
 // Purpose: Verifies ACP session negotiation, lifecycle, and event normalization.
-// Layer: Provider ACP runtime tests
+// Layer: Engine ACP runtime tests
 
 import * as path from "node:path";
 import * as os from "node:os";
@@ -18,7 +18,7 @@ import {
   type AcpSessionRequestLogEvent,
 } from "./AcpSessionRuntime.ts";
 import { forkViaAcpRuntime } from "./acpFork.ts";
-import { ProviderAdapterRequestError, ProviderAdapterValidationError } from "../Errors.ts";
+import { EngineAdapterRequestError, EngineAdapterValidationError } from "../Errors.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const mockAgentPath = path.join(__dirname, "../../../scripts/acp-mock-agent.ts");
@@ -68,7 +68,7 @@ describe("AcpSessionRuntime", () => {
     );
   });
 
-  it.effect("forwards provider session metadata when creating a session", () => {
+  it.effect("forwards engine session metadata when creating a session", () => {
     const requestEvents: Array<AcpSessionRequestLogEvent> = [];
     return Effect.gen(function* () {
       const runtime = yield* AcpSessionRuntime;
@@ -203,7 +203,7 @@ describe("AcpSessionRuntime", () => {
     ),
   );
 
-  it.effect("forwards provider session metadata when loading a session", () => {
+  it.effect("forwards engine session metadata when loading a session", () => {
     const requestEvents: Array<AcpSessionRequestLogEvent> = [];
     return Effect.gen(function* () {
       const runtime = yield* AcpSessionRuntime;
@@ -360,20 +360,20 @@ describe("AcpSessionRuntime", () => {
       expect(yield* runtime.supportsSessionRecovery).toBe(false);
 
       const error = yield* forkViaAcpRuntime({
-        provider: "test",
+        engine: "test",
         runtime,
         targetCwd: process.cwd(),
         unsupportedIssue: "fork unsupported",
         requestTimeoutMs: 1_000,
         timeoutError: (method) =>
-          new ProviderAdapterRequestError({
-            provider: "test",
+          new EngineAdapterRequestError({
+            engine: "test",
             method,
             detail: "timed out",
           }),
       }).pipe(Effect.flip);
 
-      expect(error).toBeInstanceOf(ProviderAdapterValidationError);
+      expect(error).toBeInstanceOf(EngineAdapterValidationError);
       expect(error.message).toContain("cannot reopen the forked session");
       expect(requestEvents.some((event) => event.method === "session/fork")).toBe(false);
     }).pipe(

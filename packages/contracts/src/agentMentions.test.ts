@@ -11,7 +11,7 @@ describe("agentMentions", () => {
     expect(getAgentMentionAutocompleteAliases("codex")).toEqual([
       {
         alias: "5.5",
-        provider: "codex",
+        engine: "codex",
         kind: "model",
         model: "gpt-5.5",
         displayName: "GPT-5.5",
@@ -19,7 +19,7 @@ describe("agentMentions", () => {
       },
       {
         alias: "5.4",
-        provider: "codex",
+        engine: "codex",
         kind: "model",
         model: "gpt-5.4",
         displayName: "GPT-5.4",
@@ -27,7 +27,7 @@ describe("agentMentions", () => {
       },
       {
         alias: "mini",
-        provider: "codex",
+        engine: "codex",
         kind: "model",
         model: "gpt-5.4-mini",
         displayName: "GPT-5.4 Mini",
@@ -35,7 +35,7 @@ describe("agentMentions", () => {
       },
       {
         alias: "5.3-codex",
-        provider: "codex",
+        engine: "codex",
         kind: "model",
         model: "gpt-5.3-codex",
         displayName: "GPT-5.3 Codex",
@@ -43,7 +43,7 @@ describe("agentMentions", () => {
       },
       {
         alias: "spark",
-        provider: "codex",
+        engine: "codex",
         kind: "model",
         model: "gpt-5.3-codex-spark",
         displayName: "GPT-5.3 Codex Spark",
@@ -51,7 +51,7 @@ describe("agentMentions", () => {
       },
       {
         alias: "5.2",
-        provider: "codex",
+        engine: "codex",
         kind: "model",
         model: "gpt-5.2",
         displayName: "GPT-5.2",
@@ -59,7 +59,7 @@ describe("agentMentions", () => {
       },
       {
         alias: "5.2-codex",
-        provider: "codex",
+        engine: "codex",
         kind: "model",
         model: "gpt-5.2-codex",
         displayName: "GPT-5.2 Codex",
@@ -68,11 +68,11 @@ describe("agentMentions", () => {
     ]);
   });
 
-  it("shows provider-specific Claude subagents in autocomplete", () => {
+  it("shows engine-specific Claude subagents in autocomplete", () => {
     expect(getAgentMentionAutocompleteAliases("claude")).toEqual([
       {
         alias: "explore",
-        provider: "claude",
+        engine: "claude",
         kind: "claude-subagent",
         agentName: "explore",
         displayName: "Explore",
@@ -86,7 +86,7 @@ describe("agentMentions", () => {
       },
       {
         alias: "review",
-        provider: "claude",
+        engine: "claude",
         kind: "claude-subagent",
         agentName: "review",
         displayName: "Code Review",
@@ -100,7 +100,7 @@ describe("agentMentions", () => {
       },
       {
         alias: "build",
-        provider: "claude",
+        engine: "claude",
         kind: "claude-subagent",
         agentName: "build",
         displayName: "Implementer",
@@ -114,7 +114,7 @@ describe("agentMentions", () => {
       },
       {
         alias: "plan",
-        provider: "claude",
+        engine: "claude",
         kind: "claude-subagent",
         agentName: "plan",
         displayName: "Planner",
@@ -140,12 +140,12 @@ describe("agentMentions", () => {
     expect(getAgentMentionAliases("claude").map(({ alias }) => alias)).toContain("planner");
 
     expect(codexCompatAlias?.kind).toBe("model");
-    expect(codexCompatAlias?.provider).toBe("codex");
+    expect(codexCompatAlias?.engine).toBe("codex");
     expect(codexCompatAlias?.kind === "model" ? codexCompatAlias.model : null).toBe(
       "gpt-5.3-codex",
     );
     expect(claudeCompatAlias?.kind).toBe("claude-subagent");
-    expect(claudeCompatAlias?.provider).toBe("claude");
+    expect(claudeCompatAlias?.engine).toBe("claude");
     expect(claudeCompatAlias?.kind === "claude-subagent" ? claudeCompatAlias.agentName : null).toBe(
       "review",
     );

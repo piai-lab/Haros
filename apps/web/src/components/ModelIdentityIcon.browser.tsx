@@ -25,7 +25,7 @@ describe("ModelIdentityIcon", () => {
       document.body.append(host);
       const screen = await render(
         <ModelIdentityIcon
-          selection={{ provider: "opencode", model: "kimi-for-coding/k3" }}
+          selection={{ engine: "opencode", model: "kimi-for-coding/k3" }}
           className="size-5"
         />,
         { container: host },

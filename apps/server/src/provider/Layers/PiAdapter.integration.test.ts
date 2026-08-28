@@ -1,6 +1,6 @@
 // FILE: PiAdapter.test.ts
 // Purpose: Verifies Pi adapter model discovery respects auth and SDK-supported thinking levels.
-// Layer: Provider adapter tests
+// Layer: Engine adapter tests
 // Depends on: PiAdapter discovery helpers and Pi model metadata shapes.
 
 import { EventEmitter } from "node:events";
@@ -18,7 +18,7 @@ import {
   type Api,
   type Model,
 } from "@earendil-works/pi-ai";
-import { ApprovalRequestId, type ProviderRuntimeEvent, ThreadId } from "@harnessos/contracts";
+import { ApprovalRequestId, type EngineRuntimeEvent, ThreadId } from "@harnessos/contracts";
 import { Cause, Effect, Fiber, Layer, Stream } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import { ServerConfig } from "../../config.ts";
@@ -277,7 +277,7 @@ describe("OmniMind Agent Plan lifecycle", () => {
       );
       return piOpenAiSuccessResponse("<proposed_plan>\n- Inspect\n- Implement\n</proposed_plan>");
     });
-    const events: ProviderRuntimeEvent[] = [];
+    const events: EngineRuntimeEvent[] = [];
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000093");
 
     try {
@@ -294,18 +294,18 @@ describe("OmniMind Agent Plan lifecycle", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "chat",
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const planTurn = yield* adapter.sendTurn({
               threadId,
               input: "/reload and inspect the workspace",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               interactionMode: "plan",
             });
             yield* Effect.promise(() =>
@@ -322,7 +322,7 @@ describe("OmniMind Agent Plan lifecycle", () => {
               threadId,
               input: "ordinary continuation",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               interactionMode: "default",
             });
             yield* Effect.promise(() =>
@@ -555,24 +555,24 @@ describe("Pi native OmniMind gateway tools", () => {
         Effect.scoped(
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
-            const events: ProviderRuntimeEvent[] = [];
+            const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             const agentSession = yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId: agentThreadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const agentTurn = yield* adapter.sendTurn({
               threadId: agentThreadId,
               input: "Open a browser page",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -588,7 +588,7 @@ describe("Pi native OmniMind gateway tools", () => {
               threadId: agentThreadId,
               input: "Continue on the native branch",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -605,7 +605,7 @@ describe("Pi native OmniMind gateway tools", () => {
               threadId: agentThreadId,
               input: "Continue after reloading Session resources",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -620,7 +620,7 @@ describe("Pi native OmniMind gateway tools", () => {
             yield* adapter.stopSession(agentThreadId);
 
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId: agentThreadId,
               cwd,
               workSurface: "agent",
@@ -628,14 +628,14 @@ describe("Pi native OmniMind gateway tools", () => {
               ...(agentSession.resumeCursor === undefined
                 ? {}
                 : { resumeCursor: agentSession.resumeCursor }),
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const resumedTurn = yield* adapter.sendTurn({
               threadId: agentThreadId,
               input: "Continue after native resume",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -650,18 +650,18 @@ describe("Pi native OmniMind gateway tools", () => {
             yield* adapter.stopSession(agentThreadId);
 
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId: chatThreadId,
               cwd,
               workSurface: "chat",
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const chatTurn = yield* adapter.sendTurn({
               threadId: chatThreadId,
               input: "Explain the browser capability",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -749,7 +749,7 @@ describe("Pi native OmniMind gateway tools", () => {
       return piOpenAiSuccessResponse("Replanned after the answer.");
     });
     let presenterLease: ReturnType<typeof userInputPresenterRegistry.acquire> | undefined;
-    const events: ProviderRuntimeEvent[] = [];
+    const events: EngineRuntimeEvent[] = [];
 
     try {
       const layer = makeOmniMindAgentAdapterLive().pipe(
@@ -766,18 +766,18 @@ describe("Pi native OmniMind gateway tools", () => {
             ).pipe(Effect.forkChild);
 
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId: noUiThreadId,
               cwd,
               workSurface: "chat",
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const noUiTurn = yield* adapter.sendTurn({
               threadId: noUiThreadId,
               input: "Complete without a presenter.",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -793,7 +793,7 @@ describe("Pi native OmniMind gateway tools", () => {
               threadId: askThreadId,
               input: "Ask before deciding.",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -854,7 +854,7 @@ describe("Pi native OmniMind gateway tools", () => {
               threadId: askThreadId,
               input: "Ask again, then lose the presenter.",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -891,7 +891,7 @@ describe("Pi native OmniMind gateway tools", () => {
               threadId: askThreadId,
               input: "Ask again, then stop the owning turn.",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -931,7 +931,7 @@ describe("Pi native OmniMind gateway tools", () => {
               threadId: askThreadId,
               input: "Continue after a same-name Extension appears.",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -1043,24 +1043,24 @@ describe("Pi native OmniMind gateway tools", () => {
         Effect.scoped(
           Effect.gen(function* () {
             const adapter = yield* PiAdapter;
-            const events: ProviderRuntimeEvent[] = [];
+            const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000083");
             yield* adapter.startSession({
-              provider: "pi",
+              engine: "pi",
               threadId,
               cwd,
-              providerOptions: { pi: { agentDir } },
-              modelSelection: { provider: "pi", model: "local/safe-model" },
+              engineOptions: { pi: { agentDir } },
+              engineSelection: { engine: "pi", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const turn = yield* adapter.sendTurn({
               threadId,
               input: "Open a browser page",
               attachments: [],
-              modelSelection: { provider: "pi", model: "local/safe-model" },
+              engineSelection: { engine: "pi", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -1142,17 +1142,17 @@ describe("Pi native OmniMind gateway tools", () => {
         Effect.scoped(
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
-            const events: ProviderRuntimeEvent[] = [];
+            const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const send = (
@@ -1164,7 +1164,7 @@ describe("Pi native OmniMind gateway tools", () => {
                   threadId,
                   input,
                   attachments: [],
-                  modelSelection: { provider: "oa", model: "local/safe-model" },
+                  engineSelection: { engine: "oa", model: "local/safe-model" },
                 },
                 dispatchContext,
               );
@@ -1274,17 +1274,17 @@ describe("Pi native OmniMind gateway tools", () => {
         Effect.scoped(
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
-            const events: ProviderRuntimeEvent[] = [];
+            const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             enabled = false;
@@ -1294,7 +1294,7 @@ describe("Pi native OmniMind gateway tools", () => {
                   threadId,
                   input: "Continue the goal",
                   attachments: [],
-                  modelSelection: { provider: "oa", model: "local/safe-model" },
+                  engineSelection: { engine: "oa", model: "local/safe-model" },
                 },
                 { turnKind: "goal-continuation", dispatchOrigin: "agent" },
               ),
@@ -1303,7 +1303,7 @@ describe("Pi native OmniMind gateway tools", () => {
               threadId,
               input: "Continue with the ordinary Agent task",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -1573,9 +1573,9 @@ function makeGatewayCredentialsLayer(): Layer.Layer<AgentGatewayCredentials> {
     cancelSessionTurnRequests: () => Promise.resolve(),
     retireSessionTurn: () => Promise.resolve(),
     revokeSessionToken: () => undefined,
-    connectionForThread: (threadId, provider) => ({
+    connectionForThread: (threadId, engine) => ({
       url: "http://127.0.0.1:3773/mcp",
-      bearerToken: `gateway-token:${provider}:${threadId}`,
+      bearerToken: `gateway-token:${engine}:${threadId}`,
     }),
     stdioProxy: { command: "node", args: ["gateway-proxy.mjs"] },
   };
@@ -1642,7 +1642,7 @@ function piContextOverflowResponse() {
   );
 }
 
-function isPiAutoRetryWarning(event: ProviderRuntimeEvent) {
+function isPiAutoRetryWarning(event: EngineRuntimeEvent) {
   if (event.type !== "runtime.warning") return false;
   const detail = event.payload.detail;
   return (
@@ -1653,7 +1653,7 @@ function isPiAutoRetryWarning(event: ProviderRuntimeEvent) {
   );
 }
 
-function isOmniMindTaskUnavailableWarning(event: ProviderRuntimeEvent) {
+function isOmniMindTaskUnavailableWarning(event: EngineRuntimeEvent) {
   if (event.type !== "runtime.warning") return false;
   const detail = event.payload.detail;
   return (
@@ -1715,7 +1715,7 @@ describe("getPiDiscoverableModels", () => {
     ).toBeNull();
   });
 
-  it("isolates extension providers between sessions that share an agent directory", async () => {
+  it("isolates extension engines between sessions that share an agent directory", async () => {
     const agentDir = mkdtempSync(path.join(tmpdir(), "omnimind-pi-runtime-isolation-"));
     const isolatedRuntimeSdk = {
       ModelRuntime: {
@@ -1760,7 +1760,7 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("includes custom-provider models authenticated through auth.json semantics", async () => {
+  it("includes custom-engine models authenticated through auth.json semantics", async () => {
     const agentDir = mkdtempSync(path.join(tmpdir(), "omnimind-pi-models-"));
     const modelsPath = path.join(agentDir, "models.json");
     const authPath = path.join(agentDir, "auth.json");
@@ -1806,10 +1806,10 @@ describe("getPiDiscoverableModels", () => {
     const agentDir = mkdtempSync(path.join(tmpdir(), "omnimind-agent-model-reader-"));
     const modelsPath = path.join(agentDir, "models.json");
     const authPath = path.join(agentDir, "auth.json");
-    const modelConfig = (provider: string, model: string) =>
+    const modelConfig = (engine: string, model: string) =>
       JSON.stringify({
         providers: {
-          [provider]: {
+          [engine]: {
             api: "openai-completions",
             baseUrl: "https://example.test/v1",
             models: [{ id: model }],
@@ -1878,14 +1878,14 @@ describe("getPiDiscoverableModels", () => {
         Effect.scoped(
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
-            const catalog = yield* adapter.listModels!({ provider: "oa", cwd });
+            const catalog = yield* adapter.listModels!({ engine: "oa", cwd });
             const session = yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const reloaded = yield* adapter.reloadSessionResources!(threadId);
@@ -1900,7 +1900,7 @@ describe("getPiDiscoverableModels", () => {
         expect.objectContaining({ slug: "local/safe-model", upstreamProviderId: "local" }),
       );
       expect(result.session).toMatchObject({
-        provider: "oa",
+        engine: "oa",
         model: "local/safe-model",
         status: "ready",
       });
@@ -1940,9 +1940,9 @@ describe("getPiDiscoverableModels", () => {
         Effect.scoped(
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
-            const models = yield* adapter.listModels!({ provider: "oa", cwd });
-            const skills = yield* adapter.listSkills!({ provider: "oa", cwd });
-            const commands = yield* adapter.listCommands!({ provider: "oa", cwd });
+            const models = yield* adapter.listModels!({ engine: "oa", cwd });
+            const skills = yield* adapter.listSkills!({ engine: "oa", cwd });
+            const commands = yield* adapter.listCommands!({ engine: "oa", cwd });
             return { commands, models, skills };
           }).pipe(Effect.provide(layer)),
         ),
@@ -2026,20 +2026,20 @@ describe("getPiDiscoverableModels", () => {
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId: agentThreadId,
               cwd: projectA,
               workSurface: "agent",
               productSurface: "agent",
               projectContextRoot: projectA,
-              modelSelection: {
-                provider: "oa",
+              engineSelection: {
+                engine: "oa",
                 model: "local/safe-model",
               },
               runtimeMode: "full-access",
             });
             const agentA = yield* adapter.listSkills!({
-              provider: "oa",
+              engine: "oa",
               threadId: agentThreadId,
               cwd: projectA,
               resourceScope: {
@@ -2048,19 +2048,19 @@ describe("getPiDiscoverableModels", () => {
               },
             });
             const failClosedSkills = yield* adapter.listSkills!({
-              provider: "oa",
+              engine: "oa",
               threadId: agentThreadId,
               cwd: projectA,
               resourceScope: { kind: "global-only" },
             });
             const failClosedCommands = yield* adapter.listCommands!({
-              provider: "oa",
+              engine: "oa",
               threadId: agentThreadId,
               cwd: projectA,
               resourceScope: { kind: "global-only" },
             });
             const projectBCommands = yield* adapter.listCommands!({
-              provider: "oa",
+              engine: "oa",
               threadId: agentThreadId,
               cwd: projectB,
               resourceScope: {
@@ -2071,19 +2071,19 @@ describe("getPiDiscoverableModels", () => {
             yield* adapter.stopSession(agentThreadId);
 
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId: chatThreadId,
               cwd: projectA,
               workSurface: "chat",
               productSurface: "chat",
-              modelSelection: {
-                provider: "oa",
+              engineSelection: {
+                engine: "oa",
                 model: "local/safe-model",
               },
               runtimeMode: "full-access",
             });
             const chatSkills = yield* adapter.listSkills!({
-              provider: "oa",
+              engine: "oa",
               threadId: chatThreadId,
               cwd: projectA,
               resourceScope: { kind: "global-only" },
@@ -2091,19 +2091,19 @@ describe("getPiDiscoverableModels", () => {
             yield* adapter.stopSession(chatThreadId);
 
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId: studioThreadId,
               cwd: projectB,
               workSurface: "chat",
               productSurface: "studio",
-              modelSelection: {
-                provider: "oa",
+              engineSelection: {
+                engine: "oa",
                 model: "local/safe-model",
               },
               runtimeMode: "full-access",
             });
             const studioCommands = yield* adapter.listCommands!({
-              provider: "oa",
+              engine: "oa",
               threadId: studioThreadId,
               cwd: projectB,
               resourceScope: { kind: "global-only" },
@@ -2149,28 +2149,28 @@ describe("getPiDiscoverableModels", () => {
             const adapter = yield* PiAdapter;
             const contradictoryChatScope = yield* Effect.exit(
               adapter.startSession({
-                provider: "pi",
+                engine: "pi",
                 threadId: ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000094"),
                 cwd: projectA,
                 workSurface: "chat",
                 projectContextRoot: projectA,
-                providerOptions: { pi: { agentDir } },
-                modelSelection: { provider: "pi", model: "local/safe-model" },
+                engineOptions: { pi: { agentDir } },
+                engineSelection: { engine: "pi", model: "local/safe-model" },
                 runtimeMode: "full-access",
               }),
             );
             yield* adapter.startSession({
-              provider: "pi",
+              engine: "pi",
               threadId: chatThreadId,
               cwd: projectA,
               workSurface: "chat",
               productSurface: "chat",
-              providerOptions: { pi: { agentDir } },
-              modelSelection: { provider: "pi", model: "local/safe-model" },
+              engineOptions: { pi: { agentDir } },
+              engineSelection: { engine: "pi", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const chatSkills = yield* adapter.listSkills!({
-              provider: "pi",
+              engine: "pi",
               threadId: chatThreadId,
               cwd: projectA,
               agentDir,
@@ -2179,17 +2179,17 @@ describe("getPiDiscoverableModels", () => {
             yield* adapter.stopSession(chatThreadId);
 
             yield* adapter.startSession({
-              provider: "pi",
+              engine: "pi",
               threadId: studioThreadId,
               cwd: projectB,
               workSurface: "chat",
               productSurface: "studio",
-              providerOptions: { pi: { agentDir } },
-              modelSelection: { provider: "pi", model: "local/safe-model" },
+              engineOptions: { pi: { agentDir } },
+              engineSelection: { engine: "pi", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const studioCommands = yield* adapter.listCommands!({
-              provider: "pi",
+              engine: "pi",
               threadId: studioThreadId,
               cwd: projectB,
               agentDir,
@@ -2273,7 +2273,7 @@ describe("getPiDiscoverableModels", () => {
       return piOpenAiSuccessResponse();
     });
 
-    const waitForTurn = (events: ReadonlyArray<ProviderRuntimeEvent>, turnId: string) =>
+    const waitForTurn = (events: ReadonlyArray<EngineRuntimeEvent>, turnId: string) =>
       waitForTestCondition(
         () => events.some((event) => event.type === "turn.completed" && event.turnId === turnId),
         `Turn '${turnId}' did not settle.`,
@@ -2287,24 +2287,24 @@ describe("getPiDiscoverableModels", () => {
         Effect.scoped(
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
-            const events: ProviderRuntimeEvent[] = [];
+            const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             const agentSession = yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId: agentThreadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const firstAgentTurn = yield* adapter.sendTurn({
               threadId: agentThreadId,
               input: "first Agent turn",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() => waitForTurn(events, firstAgentTurn.turnId));
             yield* adapter.reloadSessionResources!(agentThreadId);
@@ -2312,7 +2312,7 @@ describe("getPiDiscoverableModels", () => {
               threadId: agentThreadId,
               input: "second Agent turn after reload",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() => waitForTurn(events, secondAgentTurn.turnId));
             yield* adapter.rollbackThread(agentThreadId, 1);
@@ -2320,13 +2320,13 @@ describe("getPiDiscoverableModels", () => {
               threadId: agentThreadId,
               input: "third Agent turn after branch rollback",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() => waitForTurn(events, thirdAgentTurn.turnId));
             yield* adapter.stopSession(agentThreadId);
 
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId: agentThreadId,
               cwd,
               workSurface: "agent",
@@ -2334,31 +2334,31 @@ describe("getPiDiscoverableModels", () => {
               ...(agentSession.resumeCursor === undefined
                 ? {}
                 : { resumeCursor: agentSession.resumeCursor }),
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const resumedAgentTurn = yield* adapter.sendTurn({
               threadId: agentThreadId,
               input: "fourth Agent turn after resume",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() => waitForTurn(events, resumedAgentTurn.turnId));
             yield* adapter.stopSession(agentThreadId);
 
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId: chatThreadId,
               cwd,
               workSurface: "chat",
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const chatTurn = yield* adapter.sendTurn({
               threadId: chatThreadId,
               input: "Chat turn",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() => waitForTurn(events, chatTurn.turnId));
             yield* adapter.stopSession(chatThreadId);
@@ -2375,23 +2375,23 @@ describe("getPiDiscoverableModels", () => {
         Effect.scoped(
           Effect.gen(function* () {
             const adapter = yield* PiAdapter;
-            const events: ProviderRuntimeEvent[] = [];
+            const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "pi",
+              engine: "pi",
               threadId: stockThreadId,
               cwd,
-              providerOptions: { pi: { agentDir } },
-              modelSelection: { provider: "pi", model: "local/safe-model" },
+              engineOptions: { pi: { agentDir } },
+              engineSelection: { engine: "pi", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const turn = yield* adapter.sendTurn({
               threadId: stockThreadId,
               input: "stock Pi turn",
               attachments: [],
-              modelSelection: { provider: "pi", model: "local/safe-model" },
+              engineSelection: { engine: "pi", model: "local/safe-model" },
             });
             yield* Effect.promise(() => waitForTurn(events, turn.turnId));
             yield* adapter.stopSession(stockThreadId);
@@ -2484,7 +2484,7 @@ describe("getPiDiscoverableModels", () => {
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
             const serverSettings = yield* ServerSettingsService;
-            const events: ProviderRuntimeEvent[] = [];
+            const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
@@ -2496,11 +2496,11 @@ describe("getPiDiscoverableModels", () => {
             ).toMatchObject({ state: "changed" });
             const start = () =>
               adapter.startSession({
-                provider: "oa",
+                engine: "oa",
                 threadId,
                 cwd,
                 workSurface: "chat",
-                modelSelection: { provider: "oa", model: "local/safe-model" },
+                engineSelection: { engine: "oa", model: "local/safe-model" },
                 runtimeMode: "full-access",
               });
             yield* start();
@@ -2510,7 +2510,7 @@ describe("getPiDiscoverableModels", () => {
                   threadId,
                   input,
                   attachments: [],
-                  modelSelection: { provider: "oa", model: "local/safe-model" },
+                  engineSelection: { engine: "oa", model: "local/safe-model" },
                 });
                 yield* Effect.promise(() =>
                   waitForTestCondition(
@@ -2598,7 +2598,7 @@ describe("getPiDiscoverableModels", () => {
     });
     const prompt = (body: any) =>
       body.messages?.find((message: any) => message.role === "system")?.content ?? "";
-    const waitForTurn = (events: ReadonlyArray<ProviderRuntimeEvent>, turnId: string) =>
+    const waitForTurn = (events: ReadonlyArray<EngineRuntimeEvent>, turnId: string) =>
       waitForTestCondition(
         () => events.some((event) => event.type === "turn.completed" && event.turnId === turnId),
         `Prompt resource turn '${turnId}' did not settle.`,
@@ -2615,17 +2615,17 @@ describe("getPiDiscoverableModels", () => {
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
             const serverSettings = yield* ServerSettingsService;
-            const events: ProviderRuntimeEvent[] = [];
+            const events: EngineRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const send = (input: string) =>
@@ -2634,7 +2634,7 @@ describe("getPiDiscoverableModels", () => {
                   threadId,
                   input,
                   attachments: [],
-                  modelSelection: { provider: "oa", model: "local/safe-model" },
+                  engineSelection: { engine: "oa", model: "local/safe-model" },
                 });
                 yield* Effect.promise(() => waitForTurn(events, turn.turnId));
               });
@@ -2735,7 +2735,7 @@ describe("getPiDiscoverableModels", () => {
             const adapter = yield* OmniMindAgentAdapter;
             const missingSurface = yield* Effect.exit(
               adapter.startSession({
-                provider: "oa",
+                engine: "oa",
                 threadId: ThreadId.makeUnsafe("omnimind-missing-surface"),
                 cwd,
                 runtimeMode: "full-access",
@@ -2743,7 +2743,7 @@ describe("getPiDiscoverableModels", () => {
             );
             const missingRoot = yield* Effect.exit(
               adapter.startSession({
-                provider: "oa",
+                engine: "oa",
                 threadId: ThreadId.makeUnsafe("omnimind-missing-root"),
                 cwd,
                 workSurface: "agent",
@@ -2752,7 +2752,7 @@ describe("getPiDiscoverableModels", () => {
             );
             const chatWithRoot = yield* Effect.exit(
               adapter.startSession({
-                provider: "oa",
+                engine: "oa",
                 threadId: ThreadId.makeUnsafe("omnimind-chat-with-root"),
                 cwd,
                 workSurface: "chat",
@@ -2762,7 +2762,7 @@ describe("getPiDiscoverableModels", () => {
             );
             const cwdOutsideRoot = yield* Effect.exit(
               adapter.startSession({
-                provider: "oa",
+                engine: "oa",
                 threadId: ThreadId.makeUnsafe("omnimind-cwd-outside-root"),
                 cwd,
                 workSurface: "agent",
@@ -2850,7 +2850,7 @@ describe("getPiDiscoverableModels", () => {
     });
 
     try {
-      const events: ProviderRuntimeEvent[] = [];
+      const events: EngineRuntimeEvent[] = [];
       const layer = makeOmniMindAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
@@ -2863,18 +2863,18 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "chat",
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const sent = yield* adapter.sendTurn({
               threadId,
               input: "Use the available extension tool.",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -2977,7 +2977,7 @@ describe("getPiDiscoverableModels", () => {
     });
 
     try {
-      const events: ProviderRuntimeEvent[] = [];
+      const events: EngineRuntimeEvent[] = [];
       const layer = makeOmniMindAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
@@ -2990,19 +2990,19 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const turn = yield* adapter.sendTurn({
               threadId,
               input: "Use the selected project tool.",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3079,7 +3079,7 @@ describe("getPiDiscoverableModels", () => {
     });
 
     try {
-      const events: ProviderRuntimeEvent[] = [];
+      const events: EngineRuntimeEvent[] = [];
       const layer = makeOmniMindAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
@@ -3092,12 +3092,12 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             yield* Effect.sync(() => {
@@ -3124,7 +3124,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "Use the tool selected after reload.",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3193,7 +3193,7 @@ describe("getPiDiscoverableModels", () => {
     });
 
     try {
-      const events: Array<ProviderRuntimeEvent> = [];
+      const events: Array<EngineRuntimeEvent> = [];
       const layer = makeOmniMindAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
@@ -3206,19 +3206,19 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const sent = yield* adapter.sendTurn({
               threadId,
               input: "Do the multi-step request and keep every part visible.",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3304,12 +3304,12 @@ describe("getPiDiscoverableModels", () => {
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const before = yield* Effect.exit(
@@ -3317,7 +3317,7 @@ describe("getPiDiscoverableModels", () => {
                 threadId,
                 input: "before credential mutation",
                 attachments: [],
-                modelSelection: { provider: "oa", model: "local/safe-model" },
+                engineSelection: { engine: "oa", model: "local/safe-model" },
               }),
             );
             yield* Effect.sync(() => {
@@ -3331,7 +3331,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "after credential mutation",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.sleep("50 millis");
             yield* adapter.stopSession(threadId);
@@ -3410,19 +3410,19 @@ describe("getPiDiscoverableModels", () => {
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const first = yield* adapter.sendTurn({
               threadId,
               input: "active turn",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.sleep("20 millis");
             const reloadWhileActive = yield* adapter.reloadSessionResources!(threadId);
@@ -3438,7 +3438,7 @@ describe("getPiDiscoverableModels", () => {
                 threadId,
                 input: "must not hot-switch",
                 attachments: [],
-                modelSelection: { provider: "oa", model: "local/safe-model" },
+                engineSelection: { engine: "oa", model: "local/safe-model" },
               }),
             );
             yield* Effect.sync(releaseFirstRequest);
@@ -3447,7 +3447,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "next turn",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.sleep("50 millis");
             yield* adapter.stopSession(threadId);
@@ -3508,7 +3508,7 @@ describe("getPiDiscoverableModels", () => {
     });
 
     try {
-      const events: Array<ProviderRuntimeEvent> = [];
+      const events: Array<EngineRuntimeEvent> = [];
       const layer = makeOmniMindAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
@@ -3521,19 +3521,19 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const turn = yield* adapter.sendTurn({
               threadId,
               input: "retry once",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3556,7 +3556,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "next turn",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3656,7 +3656,7 @@ describe("getPiDiscoverableModels", () => {
     });
 
     try {
-      const events: Array<ProviderRuntimeEvent> = [];
+      const events: Array<EngineRuntimeEvent> = [];
       const layer = makeOmniMindAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
@@ -3669,19 +3669,19 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const turn = yield* adapter.sendTurn({
               threadId,
               input: "exhaust retry",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3755,7 +3755,7 @@ describe("getPiDiscoverableModels", () => {
     });
 
     try {
-      const events: Array<ProviderRuntimeEvent> = [];
+      const events: Array<EngineRuntimeEvent> = [];
       const layer = makeOmniMindAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
@@ -3768,19 +3768,19 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const turn = yield* adapter.sendTurn({
               threadId,
               input: "cancel retry",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3880,7 +3880,7 @@ describe("getPiDiscoverableModels", () => {
     });
 
     try {
-      const events: Array<ProviderRuntimeEvent> = [];
+      const events: Array<EngineRuntimeEvent> = [];
       const layer = makeOmniMindAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
@@ -3893,19 +3893,19 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const seed = yield* adapter.sendTurn({
               threadId,
               input: "seed enough history for overflow recovery",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -3920,7 +3920,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "recover this turn after context compaction",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -4072,7 +4072,7 @@ describe("getPiDiscoverableModels", () => {
     });
 
     try {
-      const events: Array<ProviderRuntimeEvent> = [];
+      const events: Array<EngineRuntimeEvent> = [];
       const layer = makeOmniMindAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
@@ -4085,12 +4085,12 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "oa",
+              engine: "oa",
               threadId,
               cwd,
               workSurface: "agent",
               projectContextRoot: cwd,
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const requestsAfterStart = requestCount;
@@ -4098,7 +4098,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "/noop",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -4116,7 +4116,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "/fail",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -4132,7 +4132,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "handled input",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -4148,7 +4148,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "/agent",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -4177,7 +4177,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "/mixed",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -4193,7 +4193,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "ordinary next turn",
               attachments: [],
-              modelSelection: { provider: "oa", model: "local/safe-model" },
+              engineSelection: { engine: "oa", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -4335,7 +4335,7 @@ describe("getPiDiscoverableModels", () => {
     });
 
     try {
-      const events: Array<ProviderRuntimeEvent> = [];
+      const events: Array<EngineRuntimeEvent> = [];
       const layer = makePiAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
         Layer.provideMerge(NodeServices.layer),
@@ -4348,18 +4348,18 @@ describe("getPiDiscoverableModels", () => {
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
             yield* adapter.startSession({
-              provider: "pi",
+              engine: "pi",
               threadId,
               cwd,
-              providerOptions: { pi: { agentDir } },
-              modelSelection: { provider: "pi", model: "local/safe-model" },
+              engineOptions: { pi: { agentDir } },
+              engineSelection: { engine: "pi", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
             const commandTurn = yield* adapter.sendTurn({
               threadId,
               input: "/noop",
               attachments: [],
-              modelSelection: { provider: "pi", model: "local/safe-model" },
+              engineSelection: { engine: "pi", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -4375,7 +4375,7 @@ describe("getPiDiscoverableModels", () => {
               threadId,
               input: "ordinary stock Pi turn",
               attachments: [],
-              modelSelection: { provider: "pi", model: "local/safe-model" },
+              engineSelection: { engine: "pi", model: "local/safe-model" },
             });
             yield* Effect.promise(() =>
               waitForTestCondition(
@@ -4462,7 +4462,7 @@ describe("findModelInRegistry", () => {
   const makeModel = (provider: string, id: string) =>
     ({ provider, id, name: id, api: "openai-completions" }) as Model<Api>;
 
-  it("accepts only exact qualified models and never fabricates provider peers", () => {
+  it("accepts only exact qualified models and never fabricates engine peers", () => {
     const existing = makeModel("openai", "gpt-existing");
     const registry = {
       find: (provider: string, id: string) =>
@@ -4476,8 +4476,8 @@ describe("findModelInRegistry", () => {
   });
 
   it("rejects an ambiguous legacy unqualified model id", () => {
-    const first = makeModel("provider-a", "shared-model");
-    const second = makeModel("provider-b", "shared-model");
+    const first = makeModel("engine-a", "shared-model");
+    const second = makeModel("engine-b", "shared-model");
     const registry = {
       find: () => undefined,
       getAll: () => [first, second],
@@ -4527,7 +4527,7 @@ describe("getPiSupportedThinkingOptions", () => {
     ]);
   });
 
-  it("respects provider-level disabled thinking levels", () => {
+  it("respects engine-level disabled thinking levels", () => {
     const options = getPiSupportedThinkingOptions(
       makePiModel({
         reasoning: true,
@@ -4573,7 +4573,7 @@ describe("Pi extension UI helpers", () => {
     });
 
     expect(eventBase).toMatchObject({
-      provider: "pi",
+      engine: "pi",
       threadId: "thread-pi",
       turnId: "turn-pi",
       lifecycleGeneration: "generation-pi-7",

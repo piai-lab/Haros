@@ -1,6 +1,6 @@
 import type {
-  ProviderExecutionCapabilityReason,
-  ProviderRuntimeModeCapability,
+  EngineExecutionCapabilityReason,
+  EngineRuntimeModeCapability,
   RuntimeMode,
 } from "@harnessos/contracts";
 
@@ -18,8 +18,8 @@ export function runtimeModeEscalatesPrivilege(
 }
 
 export function isProviderRuntimeModeExecutable(
-  capability: ProviderRuntimeModeCapability | undefined,
-): capability is ProviderRuntimeModeCapability & { readonly structurallySupported: true } {
+  capability: EngineRuntimeModeCapability | undefined,
+): capability is EngineRuntimeModeCapability & { readonly structurallySupported: true } {
   return (
     capability?.structurallySupported === true &&
     (capability.status === "ready" || capability.status === "degraded")
@@ -27,13 +27,13 @@ export function isProviderRuntimeModeExecutable(
 }
 
 export function isProviderRuntimeModePermanentlyUnsupported(
-  capability: ProviderRuntimeModeCapability | undefined,
+  capability: EngineRuntimeModeCapability | undefined,
 ): boolean {
   return isPermanentRuntimeModeCapabilityReason(capability?.reason);
 }
 
 export function isPermanentRuntimeModeCapabilityReason(
-  reason: ProviderExecutionCapabilityReason | undefined,
+  reason: EngineExecutionCapabilityReason | undefined,
 ): boolean {
   return reason === "mode-unsupported" || reason === "model-unsupported";
 }

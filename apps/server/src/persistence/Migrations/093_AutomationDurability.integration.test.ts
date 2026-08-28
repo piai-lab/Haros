@@ -20,14 +20,14 @@ it.effect("093 upgrades a through-92 database without inventing disable causes",
       ) VALUES
         (
           'legacy-stop', 'project-legacy', 'Legacy stop', 'Run.', '{"type":"manual"}',
-          0, NULL, '{"provider":"codex","model":"gpt-5"}', 'approval-required',
+          0, NULL, '{"engine":"codex","model":"gpt-5"}', 'approval-required',
           'default', 'auto', 'standalone', NULL, 3, 1, '{"type":"none"}', 1, 60,
           3600, '{"type":"none"}', 'coalesce', '[]', 3,
           '2026-08-16T00:00:00.000Z', '2026-08-16T00:00:00.000Z', NULL
         ),
         (
           'legacy-continue', 'project-legacy', 'Legacy continue', 'Run.', '{"type":"manual"}',
-          1, NULL, '{"provider":"codex","model":"gpt-5"}', 'approval-required',
+          1, NULL, '{"engine":"codex","model":"gpt-5"}', 'approval-required',
           'default', 'auto', 'standalone', NULL, NULL, 0, '{"type":"none"}', 1, 60,
           3600, '{"type":"none"}', 'coalesce', '[]', 0,
           '2026-08-16T00:00:00.000Z', '2026-08-16T00:00:00.000Z', NULL

@@ -4,10 +4,10 @@
 
 import {
   type ModelSlug,
-  type ProviderAgentDescriptor,
+  type EngineAgentDescriptor,
   type EngineKind,
-  type ProviderModelDescriptor,
-  type ProviderModelOptions,
+  type EngineModelDescriptor,
+  type EngineModelOptions,
   type ThreadId,
 } from "@harnessos/contracts";
 import { useState } from "react";
@@ -15,8 +15,8 @@ import { useState } from "react";
 import { useI18n } from "~/i18n";
 import { ChevronDownIcon, FastModeIcon, RefreshCwIcon, SettingsIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
-import type { ProviderModelCatalogState } from "../../hooks/useProviderModelCatalog";
-import type { ProviderModelOption } from "../../providerModelOptions";
+import type { EngineModelCatalogState } from "../../hooks/useEngineModelCatalog";
+import type { EngineModelOption } from "../../providerModelOptions";
 import { Button } from "../ui/button";
 import { Menu, MenuItem, MenuSeparator, MenuSub, MenuSubTrigger, MenuTrigger } from "../ui/menu";
 import { ShortcutKbd } from "../ui/shortcut-kbd";
@@ -28,29 +28,29 @@ import {
 } from "./composerPickerStyles";
 import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
 import { resolveComposerModelFallbackMessageKey } from "./modelCatalogPresentation";
-import { renderProviderTraitsMenuContent } from "./composerProviderRegistry";
-import { ProviderModelMenuItems, resolveProviderModelLabel } from "./ProviderModelPicker";
+import { renderProviderTraitsMenuContent } from "./composerEngineRegistry";
+import { EngineModelMenuItems, resolveProviderModelLabel } from "./EngineModelPicker";
 import { resolveTraitsTriggerSummary } from "./TraitsPicker";
 
 type ComposerModelEffortPickerProps = {
-  provider: EngineKind;
+  engine: EngineKind;
   model: ModelSlug | null;
-  catalogState: ProviderModelCatalogState;
-  modelOptionsByProvider: Record<EngineKind, ReadonlyArray<ProviderModelOption>>;
+  catalogState: EngineModelCatalogState;
+  modelOptionsByEngine: Record<EngineKind, ReadonlyArray<EngineModelOption>>;
   loadingModelProviders?: Partial<Record<EngineKind, boolean>>;
   compact?: boolean;
   hideModelLabel?: boolean;
   hideStatusLabel?: boolean;
   disabled?: boolean;
-  onProviderModelChange: (provider: EngineKind, model: ModelSlug) => void;
+  onEngineModelChange: (engine: EngineKind, model: ModelSlug) => void;
   onRefreshModels: () => void;
   onOpenSettings: () => void;
   onSelectionCommitted?: () => void;
   threadId: ThreadId;
-  runtimeModel?: ProviderModelDescriptor | undefined;
-  runtimeModels?: ReadonlyArray<ProviderModelDescriptor> | null | undefined;
-  runtimeAgents?: ReadonlyArray<ProviderAgentDescriptor> | null | undefined;
-  modelOptions: ProviderModelOptions[EngineKind] | undefined;
+  runtimeModel?: EngineModelDescriptor | undefined;
+  runtimeModels?: ReadonlyArray<EngineModelDescriptor> | null | undefined;
+  runtimeAgents?: ReadonlyArray<EngineAgentDescriptor> | null | undefined;
+  modelOptions: EngineModelOptions[EngineKind] | undefined;
   prompt: string;
   onPromptChange: (prompt: string) => void;
   open?: boolean;
@@ -69,14 +69,14 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
 
   const modelLabel = props.model
     ? resolveProviderModelLabel({
-        provider: props.provider,
-        lockedProvider: props.provider,
+        engine: props.engine,
+        lockedProvider: props.engine,
         model: props.model,
-        modelOptionsByProvider: props.modelOptionsByProvider,
+        modelOptionsByEngine: props.modelOptionsByEngine,
       })
     : t(resolveComposerModelFallbackMessageKey(props.catalogState));
   const traitsSummary = resolveTraitsTriggerSummary({
-    provider: props.provider,
+    engine: props.engine,
     model: props.model,
     prompt: props.prompt,
     modelOptions: props.modelOptions,
@@ -96,14 +96,14 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
   const catalogIsIdle = props.catalogState === "idle";
   const catalogIsStale = props.catalogState === "stale";
   const catalogIsError = props.catalogState === "error";
-  const hasSelectableModels = props.modelOptionsByProvider[props.provider].length > 0;
+  const hasSelectableModels = props.modelOptionsByEngine[props.engine].length > 0;
   const closeAndRefocus = () => {
     setMenuOpen(false);
     props.onSelectionCommitted?.();
   };
   const traitsContent = props.model
     ? renderProviderTraitsMenuContent({
-        provider: props.provider,
+        engine: props.engine,
         threadId: props.threadId,
         model: props.model,
         ...(props.runtimeModel ? { runtimeModel: props.runtimeModel } : {}),
@@ -253,7 +253,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                     }}
                   >
                     <SettingsIcon aria-hidden="true" className="size-3.5" />
-                    {props.provider === "oa"
+                    {props.engine === "oa"
                       ? t("composer.openModelServices")
                       : t("composer.openEngineSettings")}
                   </MenuItem>
@@ -273,44 +273,44 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                     fixedWidth
                     className={COMPOSER_PICKER_MODEL_SUBMENU_HEIGHT_CLASS_NAME}
                   >
-                    <ProviderModelMenuItems
-                      provider={props.provider}
+                    <EngineModelMenuItems
+                      engine={props.engine}
                       model={props.model}
-                      lockedProvider={props.provider}
-                      modelOptionsByProvider={props.modelOptionsByProvider}
+                      lockedProvider={props.engine}
+                      modelOptionsByEngine={props.modelOptionsByEngine}
                       {...(props.loadingModelProviders
                         ? { loadingModelProviders: props.loadingModelProviders }
                         : {})}
-                      onProviderModelChange={props.onProviderModelChange}
+                      onEngineModelChange={props.onEngineModelChange}
                       onAfterSelection={closeAndRefocus}
                     />
                   </ComposerPickerMenuSubPopup>
                 </MenuSub>
               </>
             ) : (
-              <ProviderModelMenuItems
-                provider={props.provider}
+              <EngineModelMenuItems
+                engine={props.engine}
                 model={props.model}
-                lockedProvider={props.provider}
-                modelOptionsByProvider={props.modelOptionsByProvider}
+                lockedProvider={props.engine}
+                modelOptionsByEngine={props.modelOptionsByEngine}
                 {...(props.loadingModelProviders
                   ? { loadingModelProviders: props.loadingModelProviders }
                   : {})}
-                onProviderModelChange={props.onProviderModelChange}
+                onEngineModelChange={props.onEngineModelChange}
                 onAfterSelection={closeAndRefocus}
               />
             )}
           </>
         ) : hasSelectableModels ? (
-          <ProviderModelMenuItems
-            provider={props.provider}
+          <EngineModelMenuItems
+            engine={props.engine}
             model={null}
-            lockedProvider={props.provider}
-            modelOptionsByProvider={props.modelOptionsByProvider}
+            lockedProvider={props.engine}
+            modelOptionsByEngine={props.modelOptionsByEngine}
             {...(props.loadingModelProviders
               ? { loadingModelProviders: props.loadingModelProviders }
               : {})}
-            onProviderModelChange={props.onProviderModelChange}
+            onEngineModelChange={props.onEngineModelChange}
             onAfterSelection={closeAndRefocus}
           />
         ) : (
@@ -358,7 +358,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
                   }}
                 >
                   <SettingsIcon aria-hidden="true" className="size-3.5" />
-                  {props.provider === "oa"
+                  {props.engine === "oa"
                     ? t("composer.openModelServices")
                     : t("composer.openEngineSettings")}
                 </MenuItem>

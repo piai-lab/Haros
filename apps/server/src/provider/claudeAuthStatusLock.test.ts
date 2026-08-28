@@ -1,6 +1,6 @@
 // FILE: claudeAuthStatusLock.test.ts
 // Purpose: Regression tests for the in-process `claude auth status` mutex.
-// Layer: Provider utility tests.
+// Layer: Engine utility tests.
 // Exports: Vitest coverage for apps/server/src/provider/claudeAuthStatusLock.ts.
 import { describe, it, assert } from "@effect/vitest";
 

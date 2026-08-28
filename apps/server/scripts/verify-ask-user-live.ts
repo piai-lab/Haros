@@ -1,19 +1,19 @@
 // FILE: verify-ask-user-live.ts
 // Purpose: Proves Product Ask round-trip and Converge's Ask-first gate through real OmniMind Agent journeys.
-// Layer: Maintainer-only live verification; credentials are accepted only through provider env vars.
+// Layer: Maintainer-only live verification; credentials are accepted only through engine env vars.
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { ApprovalRequestId, ThreadId, type ProviderRuntimeEvent } from "@harnessos/contracts";
+import { ApprovalRequestId, ThreadId, type EngineRuntimeEvent } from "@harnessos/contracts";
 import { Effect, Fiber, Layer, Stream } from "effect";
 
 import { ServerConfig } from "../src/config.ts";
 import { ServerSettingsService } from "../src/serverSettings.ts";
 import { OmniMindAgentAdapter } from "../src/provider/Services/OmniMindAgentAdapter.ts";
-import { PROVIDER_CONVERGE_MODE_ENVELOPE } from "../src/provider/interactionMode.ts";
+import { ENGINE_CONVERGE_MODE_ENVELOPE } from "../src/provider/interactionMode.ts";
 import { makeOmniMindAgentAdapterLive } from "../src/provider/Layers/PiAdapter.ts";
 import { userInputPresenterRegistry } from "../src/provider/userInputPresenterRegistry.ts";
 
@@ -86,7 +86,7 @@ function runtimeErrorCategory(message: string) {
     return "model-selection";
   }
   if (/network|fetch|connect|timeout|socket/i.test(message)) return "network";
-  return "provider-runtime";
+  return "engine-runtime";
 }
 
 function gatewayFetch(_input: string | URL | Request, init?: RequestInit) {
@@ -197,7 +197,7 @@ async function run() {
   globalThis.fetch = Object.assign(capturedFetch, { preconnect: originalFetch.preconnect });
 
   const threadId = ThreadId.makeUnsafe(crypto.randomUUID());
-  const events: ProviderRuntimeEvent[] = [];
+  const events: EngineRuntimeEvent[] = [];
   let presenterLease: ReturnType<typeof userInputPresenterRegistry.acquire> | undefined;
 
   try {
@@ -225,12 +225,12 @@ async function run() {
 
           failureStage = "session-start";
           yield* adapter.startSession({
-            provider: "oa",
+            engine: "oa",
             threadId,
             cwd,
             workSurface: "chat",
-            modelSelection: {
-              provider: "oa",
+            engineSelection: {
+              engine: "oa",
               model: `${target.providerId}/${target.modelId}`,
             },
             runtimeMode: "full-access",
@@ -240,7 +240,7 @@ async function run() {
             threadId,
             input:
               scenario === "converge-gate"
-                ? `${PROVIDER_CONVERGE_MODE_ENVELOPE}\n\n我想成为世界最佳，应该怎么干？`
+                ? `${ENGINE_CONVERGE_MODE_ENVELOPE}\n\n我想成为世界最佳，应该怎么干？`
                 : [
                     "This is a bounded product conformance journey.",
                     "Call ask_user exactly once before answering.",
@@ -249,8 +249,8 @@ async function run() {
                     "After the tool result, do not call another tool; reply with the exact token ASK_REPLAN_OK.",
                   ].join(" "),
             attachments: [],
-            modelSelection: {
-              provider: "oa",
+            engineSelection: {
+              engine: "oa",
               model: `${target.providerId}/${target.modelId}`,
             },
           });
@@ -279,7 +279,7 @@ async function run() {
           }
           const question = requestEvent.payload.questions[0];
           if (!question || question.kind !== "choice" || question.options.length < 2) {
-            throw new Error("Provider did not produce the required choice question");
+            throw new Error("Engine did not produce the required choice question");
           }
           failureStage = "answer-settlement";
           yield* adapter.respondToUserInput(
@@ -324,7 +324,7 @@ async function run() {
     const askSchemaCount = modelBodies.filter((body) =>
       toolNames(body).includes("ask_user"),
     ).length;
-    const isAssistantTextDelta = (event: ProviderRuntimeEvent) =>
+    const isAssistantTextDelta = (event: EngineRuntimeEvent) =>
       event.type === "content.delta" && event.payload.streamKind === "assistant_text";
     const firstAskEventIndex = events.findIndex((event) => event.type === "user-input.requested");
     const preAskText = events

@@ -1,6 +1,6 @@
 // FILE: omnimindOAuthCallbackPage.ts
-// Purpose: Renders the OmniMind-owned presentation for provider browser OAuth loopback results.
-// Layer: Server provider presentation boundary
+// Purpose: Renders the OmniMind-owned presentation for engine browser OAuth loopback results.
+// Layer: Server engine presentation boundary
 
 import { readFileSync, statSync } from "node:fs";
 import path from "node:path";

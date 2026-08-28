@@ -61,7 +61,7 @@ export interface SidebarSearchThread {
   projectName: string;
   projectRemoteName: string;
   sectionName: string;
-  provider: EngineKind;
+  engine: EngineKind;
   createdAt: string;
   updatedAt?: string | undefined;
   messages: readonly {

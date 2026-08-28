@@ -5,7 +5,7 @@
 
 import { pathToFileURL } from "node:url";
 
-import type { ChatAttachment, ProviderApprovalDecision, RuntimeMode } from "@harnessos/contracts";
+import type { ChatAttachment, EngineApprovalDecision, RuntimeMode } from "@harnessos/contracts";
 import {
   type ConsoleState,
   createOpencodeClient,
@@ -820,7 +820,7 @@ export function buildOpenCodeServerProcessEnv(input: {
   readonly baseEnv?: NodeJS.ProcessEnv;
 }): NodeJS.ProcessEnv {
   return buildProviderChildEnvironment({
-    provider:
+    engine:
       input.cliSpec?.dataDirectoryName === KILO_CLI_SPEC.dataDirectoryName ? "kilo" : "opencode",
     baseEnv: input.baseEnv ?? process.env,
     overrides: input.experimentalWebSockets ? { OPENCODE_EXPERIMENTAL_WEBSOCKETS: "true" } : {},
@@ -828,7 +828,7 @@ export function buildOpenCodeServerProcessEnv(input: {
 }
 
 export function toOpenCodePermissionReply(
-  decision: ProviderApprovalDecision,
+  decision: EngineApprovalDecision,
 ): "once" | "always" | "reject" {
   switch (decision) {
     case "accept":

@@ -679,7 +679,7 @@ describe("deriveWorkLogEntries", () => {
       [
         makeActivity({
           id: "active-edit-requires-stop",
-          kind: "provider.turn.start.failed",
+          kind: "engine.turn.start.failed",
           summary: "Message edit requires the current response to stop",
           tone: "error",
           payload: {
@@ -767,12 +767,12 @@ describe("deriveWorkLogEntries", () => {
     const [entry] = deriveWorkLogEntries(
       [
         makeActivity({
-          id: "unmapped-provider-event",
-          kind: "provider.event.unmapped",
+          id: "unmapped-engine-event",
+          kind: "engine.event.unmapped",
           summary: "item/future/completed",
           payload: {
             nativeEventType: "item/future/completed",
-            detail: "Safe provider summary",
+            detail: "Safe engine summary",
             data: { arbitrary: "must-not-render" },
           },
         }),
@@ -780,7 +780,7 @@ describe("deriveWorkLogEntries", () => {
       undefined,
     );
 
-    expect(entry?.detail).toBe("Safe provider summary");
+    expect(entry?.detail).toBe("Safe engine summary");
     expect(entry?.preview).toBeUndefined();
   });
 
@@ -788,8 +788,8 @@ describe("deriveWorkLogEntries", () => {
     const [entry] = deriveWorkLogEntries(
       [
         makeActivity({
-          id: "unmapped-provider-output",
-          kind: "provider.event.unmapped",
+          id: "unmapped-engine-output",
+          kind: "engine.event.unmapped",
           summary: "item/future/completed",
           payload: {
             nativeEventType: "item/future/completed",
@@ -1201,7 +1201,7 @@ describe("deriveWorkLogEntries", () => {
     });
   });
 
-  it("exposes a provider-independent OmniMind thread creation recap", () => {
+  it("exposes a engine-independent OmniMind thread creation recap", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({
         id: "omnimind-created-threads",
@@ -1218,7 +1218,7 @@ describe("deriveWorkLogEntries", () => {
             {
               threadId: "thread-terra",
               title: "Explain the repository with Terra",
-              provider: "codex",
+              engine: "codex",
               model: "gpt-5.6-terra",
               environment: "local",
               status: "task_dispatched",
@@ -1226,7 +1226,7 @@ describe("deriveWorkLogEntries", () => {
             {
               threadId: "thread-claude",
               title: "Explain the repository with Claude",
-              provider: "claude",
+              engine: "claude",
               model: "claude-sonnet-5",
               environment: "worktree",
               status: "task_dispatched",
@@ -1245,7 +1245,7 @@ describe("deriveWorkLogEntries", () => {
         {
           threadId: "thread-terra",
           title: "Explain the repository with Terra",
-          provider: "codex",
+          engine: "codex",
           model: "gpt-5.6-terra",
           environment: "local",
           status: "task_dispatched",
@@ -1253,7 +1253,7 @@ describe("deriveWorkLogEntries", () => {
         {
           threadId: "thread-claude",
           title: "Explain the repository with Claude",
-          provider: "claude",
+          engine: "claude",
           model: "claude-sonnet-5",
           environment: "worktree",
           status: "task_dispatched",
@@ -1314,7 +1314,7 @@ describe("deriveWorkLogEntries", () => {
         summary: "OpenCode retrying",
         tone: "info",
         payload: {
-          message: "Provider request failed; retrying.",
+          message: "Engine request failed; retrying.",
         },
       }),
       makeActivity({
@@ -1324,7 +1324,7 @@ describe("deriveWorkLogEntries", () => {
         summary: "OpenCode retrying",
         tone: "info",
         payload: {
-          message: "Provider request failed; retrying.",
+          message: "Engine request failed; retrying.",
         },
       }),
       makeActivity({
@@ -1334,7 +1334,7 @@ describe("deriveWorkLogEntries", () => {
         summary: "OpenCode retrying",
         tone: "info",
         payload: {
-          message: "Provider request failed; retrying.",
+          message: "Engine request failed; retrying.",
         },
       }),
     ];
@@ -1344,8 +1344,8 @@ describe("deriveWorkLogEntries", () => {
     expect(entries[0]).toMatchObject({
       id: "opencode-retry-3",
       label: "OpenCode retrying",
-      detail: "3 notices - Provider request failed; retrying.",
-      preview: "3 notices - Provider request failed; retrying.",
+      detail: "3 notices - Engine request failed; retrying.",
+      preview: "3 notices - Engine request failed; retrying.",
     });
   });
 
@@ -1359,7 +1359,7 @@ describe("deriveWorkLogEntries", () => {
         tone: "info",
         turnId: "turn-1",
         payload: {
-          message: "Provider request failed; retrying.",
+          message: "Engine request failed; retrying.",
         },
       }),
       makeActivity({
@@ -1370,7 +1370,7 @@ describe("deriveWorkLogEntries", () => {
         tone: "info",
         turnId: "turn-2",
         payload: {
-          message: "Provider request failed; retrying.",
+          message: "Engine request failed; retrying.",
         },
       }),
     ];
@@ -1378,14 +1378,14 @@ describe("deriveWorkLogEntries", () => {
     const entries = deriveWorkLogEntries(activities, undefined);
     expect(entries.map((entry) => entry.id)).toEqual(["turn-1-retry", "turn-2-retry"]);
     expect(entries.map((entry) => entry.detail)).toEqual([
-      "Provider request failed; retrying.",
-      "Provider request failed; retrying.",
+      "Engine request failed; retrying.",
+      "Engine request failed; retrying.",
     ]);
   });
 
-  it("hides repeated non-adjacent recovery rows for the same provider turn", () => {
+  it("hides repeated non-adjacent recovery rows for the same engine turn", () => {
     const recoveryPayload = {
-      provider: "codex",
+      engine: "codex",
       action: "settle-terminal-projection",
       projectedTurnId: "turn-stale",
       runtimeTurnId: null,
@@ -1394,7 +1394,7 @@ describe("deriveWorkLogEntries", () => {
       makeActivity({
         id: "recovery-first",
         createdAt: "2026-02-23T00:00:01.000Z",
-        kind: "provider.runtime.reconciled",
+        kind: "engine.runtime.reconciled",
         summary: "OmniMind recovered a stale running state",
         turnId: "turn-stale",
         payload: recoveryPayload,
@@ -1408,7 +1408,7 @@ describe("deriveWorkLogEntries", () => {
       makeActivity({
         id: "recovery-repeat",
         createdAt: "2026-02-23T00:00:03.000Z",
-        kind: "provider.runtime.reconciled",
+        kind: "engine.runtime.reconciled",
         summary: "OmniMind recovered a stale running state",
         turnId: "turn-stale",
         payload: recoveryPayload,
@@ -1425,10 +1425,10 @@ describe("deriveWorkLogEntries", () => {
       makeActivity({
         id: "settle-turn-a",
         createdAt: "2026-02-23T00:00:01.000Z",
-        kind: "provider.runtime.reconciled",
+        kind: "engine.runtime.reconciled",
         summary: "Recovered turn A",
         payload: {
-          provider: "codex",
+          engine: "codex",
           action: "settle-interrupted",
           projectedTurnId: "turn-a",
           runtimeTurnId: null,
@@ -1437,10 +1437,10 @@ describe("deriveWorkLogEntries", () => {
       makeActivity({
         id: "settle-turn-b",
         createdAt: "2026-02-23T00:00:02.000Z",
-        kind: "provider.runtime.reconciled",
+        kind: "engine.runtime.reconciled",
         summary: "Recovered turn B",
         payload: {
-          provider: "codex",
+          engine: "codex",
           action: "settle-interrupted",
           projectedTurnId: "turn-b",
           runtimeTurnId: null,
@@ -1449,10 +1449,10 @@ describe("deriveWorkLogEntries", () => {
       makeActivity({
         id: "error-turn-b",
         createdAt: "2026-02-23T00:00:02.500Z",
-        kind: "provider.runtime.reconciled",
+        kind: "engine.runtime.reconciled",
         summary: "Errored turn B",
         payload: {
-          provider: "codex",
+          engine: "codex",
           action: "settle-error",
           projectedTurnId: "turn-b",
           runtimeTurnId: null,
@@ -1461,10 +1461,10 @@ describe("deriveWorkLogEntries", () => {
       makeActivity({
         id: "align-turn-b",
         createdAt: "2026-02-23T00:00:03.000Z",
-        kind: "provider.runtime.reconciled",
+        kind: "engine.runtime.reconciled",
         summary: "Realigned turn B",
         payload: {
-          provider: "codex",
+          engine: "codex",
           action: "align-running-turn",
           projectedTurnId: "turn-b",
           runtimeTurnId: "turn-live-1",
@@ -1473,10 +1473,10 @@ describe("deriveWorkLogEntries", () => {
       makeActivity({
         id: "align-turn-b-new-runtime",
         createdAt: "2026-02-23T00:00:04.000Z",
-        kind: "provider.runtime.reconciled",
+        kind: "engine.runtime.reconciled",
         summary: "Realigned turn B again",
         payload: {
-          provider: "codex",
+          engine: "codex",
           action: "align-running-turn",
           projectedTurnId: "turn-b",
           runtimeTurnId: "turn-live-2",
@@ -1500,20 +1500,20 @@ describe("deriveWorkLogEntries", () => {
       makeActivity({
         id: "malformed-recovery-1",
         createdAt: "2026-02-23T00:00:01.000Z",
-        kind: "provider.runtime.reconciled",
+        kind: "engine.runtime.reconciled",
         summary: "Recovered an unknown turn",
         payload: {
-          provider: "codex",
+          engine: "codex",
           action: "settle-interrupted",
         },
       }),
       makeActivity({
         id: "malformed-recovery-2",
         createdAt: "2026-02-23T00:00:02.000Z",
-        kind: "provider.runtime.reconciled",
+        kind: "engine.runtime.reconciled",
         summary: "Recovered an unknown turn",
         payload: {
-          provider: "codex",
+          engine: "codex",
           action: "settle-interrupted",
         },
       }),
@@ -1532,10 +1532,10 @@ describe("deriveWorkLogEntries", () => {
       makeActivity({
         id: "recovery-delimited-projected",
         createdAt: "2026-02-23T00:00:01.000Z",
-        kind: "provider.runtime.reconciled",
+        kind: "engine.runtime.reconciled",
         summary: "Realigned a delimited projected turn",
         payload: {
-          provider: "codex",
+          engine: "codex",
           action: "align-running-turn",
           projectedTurnId: "turn:a",
           runtimeTurnId: "turn-b",
@@ -1544,10 +1544,10 @@ describe("deriveWorkLogEntries", () => {
       makeActivity({
         id: "recovery-delimited-runtime",
         createdAt: "2026-02-23T00:00:02.000Z",
-        kind: "provider.runtime.reconciled",
+        kind: "engine.runtime.reconciled",
         summary: "Realigned a delimited runtime turn",
         payload: {
-          provider: "codex",
+          engine: "codex",
           action: "align-running-turn",
           projectedTurnId: "turn",
           runtimeTurnId: "a:turn-b",
@@ -1875,15 +1875,13 @@ describe("deriveWorkLogEntries", () => {
         payload: {
           itemType: "command_execution",
           title: "Ran command",
-          detail: `/bin/zsh -lc "sed -n '240,520p' src/components/provider-card.tsx"`,
+          detail: `/bin/zsh -lc "sed -n '240,520p' src/components/engine-card.tsx"`,
         },
       }),
     ];
 
     const [entry] = deriveWorkLogEntries(activities, undefined);
-    expect(entry?.command).toBe(
-      `/bin/zsh -lc "sed -n '240,520p' src/components/provider-card.tsx"`,
-    );
+    expect(entry?.command).toBe(`/bin/zsh -lc "sed -n '240,520p' src/components/engine-card.tsx"`);
     expect(entry?.toolTitle).toBe("Read");
   });
 
@@ -2791,7 +2789,7 @@ describe("deriveWorkLogEntries", () => {
     expect(isFileChangeWorkLogEntry(readEntryWithFileMetadata)).toBe(false);
   });
 
-  it("identifies provider file edits without counting bare file-change approvals", () => {
+  it("identifies engine file edits without counting bare file-change approvals", () => {
     expect(isProviderFileEditWorkLogEntry({ itemType: "file_change" })).toBe(true);
     expect(
       isProviderFileEditWorkLogEntry({
@@ -2830,7 +2828,7 @@ describe("deriveWorkLogEntries", () => {
             kind: "read",
             locations: [
               {
-                path: "apps/server/src/provider/acp/AcpRuntimeModel.ts",
+                path: "apps/server/src/engine/acp/AcpRuntimeModel.ts",
                 line: 12,
               },
             ],
@@ -2846,7 +2844,7 @@ describe("deriveWorkLogEntries", () => {
       "apps/web/src/session-logic.ts",
     ]);
     expect(entriesById.get("cursor-read-location")?.changedFiles).toEqual([
-      "apps/server/src/provider/acp/AcpRuntimeModel.ts",
+      "apps/server/src/engine/acp/AcpRuntimeModel.ts",
     ]);
   });
 
@@ -2992,7 +2990,7 @@ describe("deriveWorkLogEntries", () => {
     });
   });
 
-  it("merges provider tool lifecycle updates into one universal live activity", () => {
+  it("merges engine tool lifecycle updates into one universal live activity", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({
         id: "activity-start",
@@ -3510,7 +3508,7 @@ describe("deriveWorkLogEntries", () => {
     });
   });
 
-  it("presents OmniMind MCP activity consistently across provider item shapes", () => {
+  it("presents OmniMind MCP activity consistently across engine item shapes", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({
         id: "omnimind-mcp-create-thread-progress",
@@ -3831,7 +3829,7 @@ describe("deriveWorkLogEntries", () => {
     expect(omitRoutedSubagentWorkEntries(entries)).toEqual([]);
   });
 
-  // Providers stream the agent tool call before its receivers, so the routed
+  // Engines stream the agent tool call before its receivers, so the routed
   // entry only becomes recognizable once the later update merges into it.
   it("omits routed collab entries that gain their receivers from a merged update", () => {
     const activities: OrchestrationThreadActivity[] = [
@@ -3902,7 +3900,7 @@ describe("deriveWorkLogEntries", () => {
     expect(entries[0]?.subagents).toEqual([
       expect.objectContaining({
         threadId: "toolu_x",
-        providerThreadId: "toolu_x",
+        nativeThreadId: "toolu_x",
       }),
     ]);
     expect(omitRoutedSubagentWorkEntries(entries)).toEqual([]);
@@ -4104,7 +4102,7 @@ describe("deriveWorkLogEntries", () => {
         id: "runtime-error",
         createdAt: "2026-02-23T00:00:02.000Z",
         kind: "runtime.error",
-        summary: "Provider runtime error",
+        summary: "Engine runtime error",
         tone: "error",
       }),
       makeActivity({

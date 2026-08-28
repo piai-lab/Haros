@@ -1,5 +1,5 @@
 // FILE: providerUsageSnapshot.test.ts
-// Purpose: Locks down provider-usage snapshot normalization edge cases used by
+// Purpose: Locks down engine-usage snapshot normalization edge cases used by
 // compact usage surfaces and Settings usage cards.
 
 import type { ServerProviderUsageSnapshot } from "@harnessos/contracts";
@@ -9,7 +9,7 @@ import { isProviderUsageSnapshotNonOk } from "./providerUsageSnapshot";
 
 function snapshot(input: Partial<ServerProviderUsageSnapshot> = {}): ServerProviderUsageSnapshot {
   return {
-    provider: "claude",
+    engine: "claude",
     updatedAt: "2026-06-09T12:00:00.000Z",
     limits: [],
     usageLines: [],

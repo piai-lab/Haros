@@ -1,7 +1,7 @@
 // FILE: composerPastedText.ts
 // Purpose: Shared helpers for the composer "collapsed big paste" feature. A large
 //   paste is held as an attachment card above the composer (not inline text); its
-//   full content rides to the provider in a trailing <pasted_text> block and is
+//   full content rides to the engine in a trailing <pasted_text> block and is
 //   parsed back out to render the same card in the transcript.
 // Layer: Web composer utility
 // Depends on: nothing (kept import-free so both composer state and message display

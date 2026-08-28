@@ -4,8 +4,8 @@
  * Registers `POST /mcp` (streamable-HTTP MCP, stateless JSON responses) plus
  * spec-mandated method handling for GET/DELETE. Authentication is a
  * per-session bearer token minted by AgentGatewayCredentials and injected into
- * provider sessions; the global server auth stack is deliberately not used
- * here because provider child processes have no session cookies.
+ * engine sessions; the global server auth stack is deliberately not used
+ * here because engine child processes have no session cookies.
  *
  * @module agentGateway/httpRoute
  */
@@ -72,8 +72,7 @@ function unauthorizedResponse() {
       id: null,
       error: {
         code: -32600,
-        message:
-          "caller_session_inactive: Missing, revoked, or invalid provider-session credential.",
+        message: "caller_session_inactive: Missing, revoked, or invalid engine-session credential.",
       },
     },
     { status: 401 },

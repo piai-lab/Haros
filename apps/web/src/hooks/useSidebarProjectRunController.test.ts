@@ -157,7 +157,7 @@ const PROJECT: Project = {
   folderName: "repo",
   localName: null,
   cwd: "/repo",
-  defaultModelSelection: null,
+  defaultEngineSelection: null,
   expanded: true,
   scripts: [
     {

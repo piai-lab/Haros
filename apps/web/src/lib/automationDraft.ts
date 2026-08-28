@@ -10,7 +10,7 @@ import type {
   AutomationSchedule,
   AutomationInteractionMode,
   AutomationWorktreeMode,
-  ModelSelection,
+  EngineSelection,
   ProjectId,
   RuntimeMode,
   ThreadId,
@@ -54,7 +54,7 @@ export interface AutomationCreationDraft {
   readonly mode: AutomationMode;
   readonly targetThreadId: ThreadId | null;
   readonly projectId: ProjectId;
-  readonly modelSelection: ModelSelection;
+  readonly engineSelection: EngineSelection;
   readonly runtimeMode: RuntimeMode;
   readonly interactionMode: AutomationInteractionMode;
   readonly worktreeMode: AutomationWorktreeMode;
@@ -83,7 +83,7 @@ export function buildAutomationDraftWarnings(input: {
       id: "attachments-not-persisted",
       title: "Composer context is not persisted",
       detail:
-        "Attachments, provider mentions, pasted context, and terminal snippets will not be replayed on scheduled runs.",
+        "Attachments, engine mentions, pasted context, and terminal snippets will not be replayed on scheduled runs.",
       requiresAcknowledgement: true,
     });
   }
@@ -153,7 +153,7 @@ export function buildAutomationDraftWarnings(input: {
       id: "skill-reference",
       title: "Skill reference kept in prompt",
       detail:
-        "Skill tokens stay as prompt text unless the selected provider can resolve them at run time.",
+        "Skill tokens stay as prompt text unless the selected engine can resolve them at run time.",
       requiresAcknowledgement: false,
     });
   }

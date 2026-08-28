@@ -1,8 +1,8 @@
 // FILE: providerChildEnvironment.ts
-// Purpose: Builds provider child environments without OmniMind control-plane authority.
-// Layer: Server provider process security
+// Purpose: Builds engine child environments without OmniMind control-plane authority.
+// Layer: Server engine process security
 
-export type ProviderChildKind =
+export type EngineChildKind =
   | "acp"
   | "antigravity"
   | "claude"
@@ -14,7 +14,7 @@ export type ProviderChildKind =
   | "opencode"
   | "pi";
 
-const PROVIDER_CREDENTIAL_KEYS = new Set([
+const ENGINE_CREDENTIAL_KEYS = new Set([
   "ANTHROPIC_API_KEY",
   "ANTHROPIC_AUTH_TOKEN",
   "CLAUDE_CODE_OAUTH_TOKEN",
@@ -32,18 +32,18 @@ const PROVIDER_CREDENTIAL_KEYS = new Set([
   "DOCKER_AUTH_CONFIG",
 ]);
 
-export function registerProviderCredentialKey(key: string): void {
+export function registerEngineCredentialKey(key: string): void {
   const normalized = key.trim().toUpperCase();
   if (/^[A-Z0-9_.-]+$/u.test(normalized)) {
-    PROVIDER_CREDENTIAL_KEYS.add(normalized);
+    ENGINE_CREDENTIAL_KEYS.add(normalized);
   }
 }
 
-export function isProviderCredentialKey(key: string): boolean {
-  return PROVIDER_CREDENTIAL_KEYS.has(key.trim().toUpperCase());
+export function isEngineCredentialKey(key: string): boolean {
+  return ENGINE_CREDENTIAL_KEYS.has(key.trim().toUpperCase());
 }
 
-const PROVIDER_CREDENTIAL_GRANTS: Record<ProviderChildKind, "all" | ReadonlySet<string>> = {
+const ENGINE_CREDENTIAL_GRANTS: Record<EngineChildKind, "all" | ReadonlySet<string>> = {
   antigravity: new Set(["GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_APPLICATION_CREDENTIALS"]),
   claude: new Set([
     "ANTHROPIC_API_KEY",
@@ -57,7 +57,7 @@ const PROVIDER_CREDENTIAL_GRANTS: Record<ProviderChildKind, "all" | ReadonlySet<
   cursor: new Set(["CURSOR_API_KEY"]),
   droid: new Set(["FACTORY_API_KEY"]),
   grok: new Set(["XAI_API_KEY", "GROK_CODE_XAI_API_KEY"]),
-  // These profiles deliberately support arbitrary upstream model providers.
+  // These profiles deliberately support arbitrary upstream model engines.
   acp: "all",
   codex: "all",
   kilo: "all",
@@ -77,7 +77,7 @@ const isTestHarnessKey = (key: string, env: NodeJS.ProcessEnv): boolean =>
   Boolean(env.VITEST) && (key.startsWith("HARNESSOS_FAKE_") || key.startsWith("HARNESSOS_ACP_"));
 
 export function buildProviderChildEnvironment(input: {
-  readonly provider: ProviderChildKind;
+  readonly engine: EngineChildKind;
   readonly baseEnv?: NodeJS.ProcessEnv;
   readonly inheritedOmniMindKeys?: ReadonlyArray<string>;
   readonly inheritedNativeCapabilityKeys?: ReadonlyArray<string>;
@@ -89,7 +89,7 @@ export function buildProviderChildEnvironment(input: {
   };
   const allowedOmniMindKeys = new Set(input.inheritedOmniMindKeys ?? []);
   const allowedNativeCapabilities = new Set(input.inheritedNativeCapabilityKeys ?? []);
-  const credentialGrants = PROVIDER_CREDENTIAL_GRANTS[input.provider];
+  const credentialGrants = ENGINE_CREDENTIAL_GRANTS[input.engine];
   const childEnv: NodeJS.ProcessEnv = {};
 
   for (const [key, value] of Object.entries(baseEnv)) {
@@ -104,7 +104,7 @@ export function buildProviderChildEnvironment(input: {
       continue;
     }
     if (
-      isProviderCredentialKey(key) &&
+      isEngineCredentialKey(key) &&
       credentialGrants !== "all" &&
       !credentialGrants.has(key.toUpperCase())
     ) {

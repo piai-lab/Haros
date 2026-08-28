@@ -5,8 +5,8 @@
 
 import {
   ApprovalRequestId,
-  type ProviderApprovalDecision,
-  type ProviderRequestKind,
+  type EngineApprovalDecision,
+  type EngineRequestKind,
 } from "@harnessos/contracts";
 import { page } from "vitest/browser";
 import { describe, expect, it, vi } from "vitest";
@@ -33,9 +33,9 @@ async function mountApprovalPanel(input?: { approval?: PendingApproval; isRespon
   const onRespond = vi.fn(
     async (
       _requestId: ApprovalRequestId,
-      _decision: ProviderApprovalDecision,
+      _decision: EngineApprovalDecision,
       _lifecycleGeneration?: string,
-      _requestKind?: ProviderRequestKind,
+      _requestKind?: EngineRequestKind,
     ) => undefined,
   );
   const screen = await render(
@@ -80,7 +80,7 @@ describe("ComposerPendingApprovalPanel", () => {
   });
 
   it("renders the request kind prompt and parsed command detail", async () => {
-    const requestKind: ProviderRequestKind = "command";
+    const requestKind: EngineRequestKind = "command";
     const mounted = await mountApprovalPanel({
       approval: makeApproval({ requestKind }),
     });
@@ -93,7 +93,7 @@ describe("ComposerPendingApprovalPanel", () => {
     }
   });
 
-  it("hides session approval when the provider cannot persist it", async () => {
+  it("hides session approval when the engine cannot persist it", async () => {
     const mounted = await mountApprovalPanel({
       approval: makeApproval({ sessionApprovalAvailable: false }),
     });

@@ -1,9 +1,9 @@
 /**
- * Provider event logger helper.
+ * Engine event logger helper.
  *
  * Best-effort writer for observability logs. Each record is formatted as a
  * single effect-style text line in a thread-scoped file. Failures are
- * downgraded to warnings so provider runtime behavior is unaffected.
+ * downgraded to warnings so engine runtime behavior is unaffected.
  */
 import path from "node:path";
 
@@ -22,7 +22,7 @@ const DEFAULT_MAX_BYTES = 10 * 1024 * 1024;
 const DEFAULT_MAX_FILES = 10;
 const DEFAULT_BATCH_WINDOW_MS = 200;
 const GLOBAL_THREAD_SEGMENT = "_global";
-const LOG_SCOPE = "provider-observability";
+const LOG_SCOPE = "engine-observability";
 
 export type EventNdjsonStream = "native" | "canonical" | "orchestration";
 
@@ -89,7 +89,7 @@ function toLogMessage(event: unknown): Effect.Effect<string | undefined> {
     });
 
     if (!serialized.ok) {
-      yield* logWarning("failed to serialize provider event log record", {
+      yield* logWarning("failed to serialize engine event log record", {
         error: serialized.error,
       });
       return undefined;
@@ -130,7 +130,7 @@ function makeThreadWriter(input: {
     });
 
     if (!sinkResult.ok) {
-      yield* logWarning("failed to initialize provider thread log file", {
+      yield* logWarning("failed to initialize engine thread log file", {
         filePath: input.filePath,
         error: sinkResult.error,
       });
@@ -156,7 +156,7 @@ function makeThreadWriter(input: {
           });
 
           if (!flushResult.ok) {
-            yield* logWarning("provider event log batch flush failed", {
+            yield* logWarning("engine event log batch flush failed", {
               filePath: input.filePath,
               error: flushResult.error,
             });
@@ -196,7 +196,7 @@ export function makeEventNdjsonLogger(
       }
     });
     if (directoryReady !== true) {
-      yield* logWarning("failed to create provider event log directory", {
+      yield* logWarning("failed to create engine event log directory", {
         filePath,
         error: directoryReady.error,
       });

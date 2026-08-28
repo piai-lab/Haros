@@ -1,6 +1,6 @@
 // FILE: FactorySessionHistory.ts
 // Purpose: Reads user-visible messages from Factory Droid's local JSONL session store.
-// Layer: Provider persistence compatibility
+// Layer: Engine persistence compatibility
 // Exports: readFactorySessionHistory and FactorySessionMessage.
 
 import * as fs from "node:fs/promises";

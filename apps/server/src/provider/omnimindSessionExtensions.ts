@@ -1,5 +1,5 @@
 import type { InlineExtension, ToolDefinition } from "@earendil-works/pi-coding-agent";
-import type { ProviderWorkSurface, TurnTasksUpdatedPayload } from "@harnessos/contracts";
+import type { EngineWorkSurface, TurnTasksUpdatedPayload } from "@harnessos/contracts";
 import type { AskUserProductInteractionPort } from "@harnessos/om-ask";
 import { makeOmniMindWebAccessInlineExtension } from "@harnessos/om-web-access";
 import type { CuratorPresenter } from "@harnessos/om-web-access/curator-presentation";
@@ -31,7 +31,7 @@ export interface OmniMindSessionExtensionComposition {
 /** Explicit product wiring only; user and third-party Extensions stay in Pi's ResourceLoader. */
 export function buildOmniMindSessionExtensions(input: {
   readonly agentDir: string;
-  readonly workSurface?: ProviderWorkSurface;
+  readonly workSurface?: EngineWorkSurface;
   readonly defineTool: (tool: ToolDefinition) => ToolDefinition;
   readonly gatewayConnection?: AgentGatewayMcpConnection;
   readonly gatewayFetch?: AgentGatewayMcpFetch;

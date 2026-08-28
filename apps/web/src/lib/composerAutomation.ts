@@ -7,7 +7,7 @@
 import { DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS } from "@harnessos/contracts";
 import type {
   AutomationMode,
-  ModelSelection,
+  EngineSelection,
   ProjectId,
   ServerAutomationIntentMissingField,
   ServerGenerateAutomationIntentInput,
@@ -253,14 +253,14 @@ export async function resolveComposerAutomationRequest(input: {
 export function buildComposerAutomationDraft(input: {
   readonly resolution: ResolvedChatAutomationIntent;
   readonly projectId: ProjectId;
-  readonly projectModelSelection: ModelSelection;
-  readonly selectedModelSelection: ModelSelection;
+  readonly projectEngineSelection: EngineSelection;
+  readonly selectedEngineSelection: EngineSelection;
   readonly targetThreadId: ThreadId | null;
   readonly hasEphemeralContext: boolean;
 }): ComposerAutomationDraftDecision {
   const { intent: automationIntent, mode: automationMode } = input.resolution;
   const automationStopWhen = stopWhenFromCompletionPolicy(automationIntent.completionPolicy);
-  const baseForm = formFromDefinition(null, input.projectId, input.projectModelSelection);
+  const baseForm = formFromDefinition(null, input.projectId, input.projectEngineSelection);
   // Chat-created automations should not inherit live Full access; escalating scheduled
   // runs stays an explicit review step in the automation dialog.
   const nextForm = applyScheduleToForm(
@@ -269,7 +269,7 @@ export function buildComposerAutomationDraft(input: {
       name: automationIntent.name,
       prompt: automationIntent.prompt,
       projectId: input.projectId,
-      modelSelection: input.selectedModelSelection,
+      engineSelection: input.selectedEngineSelection,
       runtimeMode: "approval-required",
       worktreeMode: automationIntent.executionScope === "worktree" ? "worktree" : "auto",
       mode: automationMode,

@@ -3,7 +3,7 @@ import * as SqlSchema from "effect/unstable/sql/SqlSchema";
 import { Effect, Layer, Schema, Struct } from "effect";
 import * as SchemaGetter from "effect/SchemaGetter";
 
-import { ModelSelection, ProjectScript } from "@harnessos/contracts";
+import { EngineSelection, ProjectScript } from "@harnessos/contracts";
 import { toPersistenceSqlError } from "../Errors.ts";
 import {
   ClearProjectionProjectSpaceAssignmentsInput,
@@ -23,7 +23,7 @@ const SqliteBoolean = Schema.Number.pipe(
 
 const ProjectionProjectDbRow = ProjectionProject.mapFields(
   Struct.assign({
-    defaultModelSelection: Schema.NullOr(Schema.fromJsonString(ModelSelection)),
+    defaultEngineSelection: Schema.NullOr(Schema.fromJsonString(EngineSelection)),
     scripts: Schema.fromJsonString(Schema.Array(ProjectScript)),
     isPinned: SqliteBoolean,
   }),
@@ -55,7 +55,7 @@ const makeProjectionProjectRepository = Effect.gen(function* () {
           ${row.kind},
           ${row.title},
           ${row.workspaceRoot},
-          ${row.defaultModelSelection !== null ? JSON.stringify(row.defaultModelSelection) : null},
+          ${row.defaultEngineSelection !== null ? JSON.stringify(row.defaultEngineSelection) : null},
           ${JSON.stringify(row.scripts)},
           ${row.isPinned ? 1 : 0},
           ${row.spaceId},
@@ -88,7 +88,7 @@ const makeProjectionProjectRepository = Effect.gen(function* () {
           kind,
           title,
           workspace_root AS "workspaceRoot",
-          default_model_selection_json AS "defaultModelSelection",
+          default_model_selection_json AS "defaultEngineSelection",
           scripts_json AS "scripts",
           is_pinned AS "isPinned",
           space_id AS "spaceId",
@@ -110,7 +110,7 @@ const makeProjectionProjectRepository = Effect.gen(function* () {
           kind,
           title,
           workspace_root AS "workspaceRoot",
-          default_model_selection_json AS "defaultModelSelection",
+          default_model_selection_json AS "defaultEngineSelection",
           scripts_json AS "scripts",
           is_pinned AS "isPinned",
           space_id AS "spaceId",

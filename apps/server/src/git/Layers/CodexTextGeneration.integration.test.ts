@@ -737,7 +737,7 @@ it.layer(CodexTextGenerationTestLayer)("CodexTextGenerationLive", (it) => {
         .generateBranchName({
           cwd,
           message: "Generate a branch name.",
-          providerOptions: {
+          engineOptions: {
             codex: {
               binaryPath: missingBinary,
             },

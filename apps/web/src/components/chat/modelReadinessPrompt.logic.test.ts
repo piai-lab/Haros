@@ -1,4 +1,4 @@
-import type { ModelSelection, ServerProviderStatus } from "@harnessos/contracts";
+import type { EngineSelection, ServerProviderStatus } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -9,11 +9,11 @@ import {
 } from "./modelReadinessPrompt.logic";
 
 function providerStatus(
-  provider: ServerProviderStatus["provider"],
+  engine: ServerProviderStatus["engine"],
   overrides: Partial<ServerProviderStatus> = {},
 ): ServerProviderStatus {
   return {
-    provider,
+    engine,
     available: true,
     status: "ready",
     authStatus: "authenticated",
@@ -55,14 +55,14 @@ describe("model readiness facts", () => {
   });
 
   it("accepts a usable exact independent Engine binding", () => {
-    const exactModelSelections = {
-      codex: { provider: "codex", model: "gpt-5.5" },
-    } satisfies Partial<Record<ModelSelection["provider"], ModelSelection>>;
+    const exactEngineSelections = {
+      codex: { engine: "codex", model: "gpt-5.5" },
+    } satisfies Partial<Record<EngineSelection["engine"], EngineSelection>>;
 
     expect(
       hasUsableExactModelBinding({
         providerStatuses: [providerStatus("codex")],
-        exactModelSelections,
+        exactEngineSelections,
       }),
     ).toBe(true);
   });
@@ -74,12 +74,12 @@ describe("model readiness facts", () => {
           providerStatus("oa", { authStatus: "unknown" }),
           providerStatus("pi", { authStatus: "unknown" }),
         ],
-        exactModelSelections: {
+        exactEngineSelections: {
           oa: {
-            provider: "oa",
+            engine: "oa",
             model: "deepseek/deepseek-v4-flash",
           },
-          pi: { provider: "pi", model: "anthropic/claude-sonnet-4" },
+          pi: { engine: "pi", model: "anthropic/claude-sonnet-4" },
         },
       }),
     ).toBe(false);
@@ -87,9 +87,9 @@ describe("model readiness facts", () => {
 
   it("requires the exact OmniMind service origin to own the configured model", () => {
     const selection = {
-      provider: "oa",
+      engine: "oa",
       model: "gateway/model",
-    } satisfies ModelSelection;
+    } satisfies EngineSelection;
     const modelOptions = [
       {
         slug: "gateway/model",
@@ -136,9 +136,9 @@ describe("model readiness facts", () => {
 
   it("accepts only an explicitly selected available Extension backed by a stored orphan", () => {
     const selection = {
-      provider: "oa",
+      engine: "oa",
       model: "extension-service/extension-model",
-    } satisfies ModelSelection;
+    } satisfies EngineSelection;
     const modelOptions = [
       {
         slug: selection.model,
@@ -205,47 +205,47 @@ describe("model readiness facts", () => {
     expect(
       hasUsableExactModelBinding({
         providerStatuses: [providerStatus("codex", { available: false })],
-        exactModelSelections: { codex: { provider: "codex", model: "gpt-5.5" } },
+        exactEngineSelections: { codex: { engine: "codex", model: "gpt-5.5" } },
       }),
     ).toBe(false);
     expect(
       hasUsableExactModelBinding({
         providerStatuses: [providerStatus("oa")],
-        exactModelSelections: {},
+        exactEngineSelections: {},
       }),
     ).toBe(false);
   });
 
   it("waits only for a usable Engine catalog that has remembered exact user intent", () => {
     const statuses = [providerStatus("oa"), providerStatus("codex")];
-    const codexSelection = { codex: { provider: "codex", model: "gpt-5.5" } } as const;
+    const codexSelection = { codex: { engine: "codex", model: "gpt-5.5" } } as const;
 
     expect(
       areUsableProviderCatalogsSettled({
         providerStatuses: statuses,
-        catalogStateByProvider: { codex: "checking", oa: "empty" },
-        explicitExactModelSelections: codexSelection,
+        catalogStateByEngine: { codex: "checking", oa: "empty" },
+        explicitExactEngineSelections: codexSelection,
       }),
     ).toBe(false);
     expect(
       areUsableProviderCatalogsSettled({
         providerStatuses: statuses,
-        catalogStateByProvider: { codex: "ready", oa: "empty" },
-        explicitExactModelSelections: codexSelection,
+        catalogStateByEngine: { codex: "ready", oa: "empty" },
+        explicitExactEngineSelections: codexSelection,
       }),
     ).toBe(true);
     expect(
       areUsableProviderCatalogsSettled({
         providerStatuses: [providerStatus("codex", { available: false })],
-        catalogStateByProvider: { codex: "checking" },
-        explicitExactModelSelections: codexSelection,
+        catalogStateByEngine: { codex: "checking" },
+        explicitExactEngineSelections: codexSelection,
       }),
     ).toBe(true);
     expect(
       areUsableProviderCatalogsSettled({
         providerStatuses: statuses,
-        catalogStateByProvider: { codex: "checking", oa: "checking" },
-        explicitExactModelSelections: {},
+        catalogStateByEngine: { codex: "checking", oa: "checking" },
+        explicitExactEngineSelections: {},
       }),
     ).toBe(true);
   });

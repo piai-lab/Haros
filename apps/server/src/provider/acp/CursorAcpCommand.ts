@@ -257,12 +257,12 @@ export function buildCursorAgentCommand(
   return wrapPowerShellCommand(resolvedCommand.command, resolvedCommand.args);
 }
 
-// Cursor auth/status probes must stay headless so provider refreshes never open login browsers.
+// Cursor auth/status probes must stay headless so engine refreshes never open login browsers.
 export function buildCursorAgentHeadlessEnv(
   env: NodeJS.ProcessEnv = process.env,
 ): NodeJS.ProcessEnv {
   return buildProviderChildEnvironment({
-    provider: "cursor",
+    engine: "cursor",
     baseEnv: env,
     overrides: CURSOR_AGENT_HEADLESS_PROBE_ENV,
   });

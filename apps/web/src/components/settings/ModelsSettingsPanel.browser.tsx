@@ -7,7 +7,7 @@ import "../../index.css";
 import {
   ThreadId,
   type NativeApi,
-  type ModelSelection,
+  type EngineSelection,
   type OmniMindCustomModelServiceModelInput,
   type OmniMindModelServiceAuthResult,
   type OmniMindModelServiceDescriptor,
@@ -31,7 +31,7 @@ import { serverQueryKeys } from "~/lib/serverReactQuery";
 import { createBrowserTestServerConfig } from "~/test/browserHarness";
 
 const catalogHarness = vi.hoisted(() => ({
-  useProviderModelCatalog: vi.fn(() => ({
+  useEngineModelCatalog: vi.fn(() => ({
     modelOptionsByProvider: { codex: [], kilo: [], opencode: [] },
   })),
 }));
@@ -40,7 +40,7 @@ const nativeApiHarness = vi.hoisted(() => ({
   transportState: "open" as "open" | null,
 }));
 
-vi.mock("~/hooks/useProviderModelCatalog", () => catalogHarness);
+vi.mock("~/hooks/useEngineModelCatalog", () => catalogHarness);
 
 vi.mock("~/nativeApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/nativeApi")>();
@@ -161,8 +161,8 @@ function setNativeApi(input: {
         ({
           state: "success",
           models: [
-            { modelId: "provider-model-a", displayName: "Provider Model A" },
-            { modelId: "provider-model-b", displayName: "Provider Model B" },
+            { modelId: "engine-model-a", displayName: "Engine Model A" },
+            { modelId: "engine-model-b", displayName: "Engine Model B" },
           ],
           errorCode: null,
         }) as const),
@@ -238,7 +238,7 @@ async function renderPanel(input: {
   readonly startInAddFlow?: boolean;
   readonly presentation?: "settings" | "first-run";
   readonly onServicePrepared?: (prepared: PreparedModelService) => void;
-  readonly onSetupReady?: (selection: ModelSelection) => void;
+  readonly onSetupReady?: (selection: EngineSelection) => void;
   readonly list: (
     input?: { readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
@@ -484,7 +484,7 @@ describe("ModelsSettingsPanel model services", () => {
         prompt: {
           promptId,
           type: "secret",
-          message: "Provider-owned instruction",
+          message: "Engine-owned instruction",
         },
         events: [],
       }),
@@ -527,7 +527,7 @@ describe("ModelsSettingsPanel model services", () => {
     });
     await expect.poll(() => onSetupReady).toHaveBeenCalledTimes(1);
     expect(onSetupReady).toHaveBeenCalledWith({
-      provider: "oa",
+      engine: "oa",
       model: "deepseek/deepseek-v4-flash",
     });
     expect(mounted.calls.list).toHaveBeenCalledWith(
@@ -627,7 +627,7 @@ describe("ModelsSettingsPanel model services", () => {
 
     await expect.poll(() => onSetupReady).toHaveBeenCalledTimes(1);
     expect(onSetupReady).toHaveBeenCalledWith({
-      provider: "oa",
+      engine: "oa",
       model: "saved-custom/custom-model",
     });
     expect(intentDetailCalls).toBe(2);
@@ -652,7 +652,7 @@ describe("ModelsSettingsPanel model services", () => {
     expect(mounted.calls.list).not.toHaveBeenCalled();
     expect(mounted.calls.get).not.toHaveBeenCalled();
     expect(mounted.calls.getConfig).not.toHaveBeenCalled();
-    expect(catalogHarness.useProviderModelCatalog).not.toHaveBeenCalled();
+    expect(catalogHarness.useEngineModelCatalog).not.toHaveBeenCalled();
     expect(document.body.textContent?.trim()).toBe("");
 
     await mounted.screen.unmount();
@@ -678,7 +678,7 @@ describe("ModelsSettingsPanel model services", () => {
     expect(document.body.textContent).not.toContain("settings.modelServicesUnavailable");
     expect(document.body.textContent).not.toContain("settings.gitWritingModel");
     expect(document.body.textContent).not.toContain("settings.independentEngineModels");
-    expect(catalogHarness.useProviderModelCatalog).not.toHaveBeenCalled();
+    expect(catalogHarness.useEngineModelCatalog).not.toHaveBeenCalled();
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();
@@ -1154,29 +1154,29 @@ describe("ModelsSettingsPanel model services", () => {
       .getByRole("option", { name: "settings.customApiAuthHeader.bearer" })
       .click();
     await mounted.screen
-      .getByRole("button", { name: "settings.customApiHeaderAdd.provider" })
+      .getByRole("button", { name: "settings.customApiHeaderAdd.engine" })
       .click();
     await mounted.screen
-      .getByLabelText('settings.customApiHeaderName.provider:{"number":1}')
+      .getByLabelText('settings.customApiHeaderName.engine:{"number":1}')
       .fill("Bad Header");
     await mounted.screen
-      .getByLabelText('settings.customApiHeaderEnvironmentVariable.provider:{"number":1}')
+      .getByLabelText('settings.customApiHeaderEnvironmentVariable.engine:{"number":1}')
       .fill("CUSTOM_TENANT");
     expect(document.body.textContent).toContain("settings.customApiHeaderError.name");
     expect(
       mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }),
     ).toBeDisabled();
     await mounted.screen
-      .getByLabelText('settings.customApiHeaderName.provider:{"number":1}')
+      .getByLabelText('settings.customApiHeaderName.engine:{"number":1}')
       .fill("X-Tenant");
     await mounted.screen
-      .getByRole("button", { name: "settings.customApiHeaderAdd.provider" })
+      .getByRole("button", { name: "settings.customApiHeaderAdd.engine" })
       .click();
     await mounted.screen
-      .getByLabelText('settings.customApiHeaderName.provider:{"number":2}')
+      .getByLabelText('settings.customApiHeaderName.engine:{"number":2}')
       .fill("x-tenant");
     await mounted.screen
-      .getByLabelText('settings.customApiHeaderEnvironmentVariable.provider:{"number":2}')
+      .getByLabelText('settings.customApiHeaderEnvironmentVariable.engine:{"number":2}')
       .fill("SECOND_TENANT");
     expect(document.body.textContent).toContain("settings.customApiHeaderError.duplicate");
     expect(
@@ -1184,7 +1184,7 @@ describe("ModelsSettingsPanel model services", () => {
     ).toBeDisabled();
     await mounted.screen
       .getByRole("button", {
-        name: 'settings.customApiHeaderRemove.provider:{"number":2}',
+        name: 'settings.customApiHeaderRemove.engine:{"number":2}',
       })
       .click();
     await mounted.screen.getByRole("button", { name: "settings.customApiHeaderAdd.model" }).click();
@@ -1319,7 +1319,7 @@ describe("ModelsSettingsPanel model services", () => {
     expect(saveButton).toBeEnabled();
 
     await mounted.screen
-      .getByLabelText('settings.customApiHeaderEnvironmentVariable.provider:{"number":1}')
+      .getByLabelText('settings.customApiHeaderEnvironmentVariable.engine:{"number":1}')
       .fill("CUSTOM_TENANT_NEXT");
     expect(saveButton).toBeDisabled();
     await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
@@ -1378,12 +1378,12 @@ describe("ModelsSettingsPanel model services", () => {
     mounted.queryClient.clear();
   });
 
-  it("gets model identities from the provider without guessing their capabilities", async () => {
+  it("gets model identities from the engine without guessing their capabilities", async () => {
     const discoverCustom = vi.fn(async () => ({
       state: "success" as const,
       models: [
-        { modelId: "provider-model-a", displayName: "Provider Model A" },
-        { modelId: "provider-model-b", displayName: "Provider Model B" },
+        { modelId: "engine-model-a", displayName: "Engine Model A" },
+        { modelId: "engine-model-b", displayName: "Engine Model B" },
       ],
       errorCode: null,
     }));
@@ -1461,19 +1461,19 @@ describe("ModelsSettingsPanel model services", () => {
         },
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
-    expect(document.body.textContent).toContain("Provider Model A");
-    expect(document.body.textContent).toContain("Provider Model B");
+    expect(document.body.textContent).toContain("Engine Model A");
+    expect(document.body.textContent).toContain("Engine Model B");
     expect(document.body.textContent).not.toContain("browser-secret");
 
-    await mounted.screen.getByRole("checkbox", { name: /Provider Model B/ }).click();
+    await mounted.screen.getByRole("checkbox", { name: /Engine Model B/ }).click();
     await mounted.screen
       .getByRole("button", { name: "settings.customApiAddSelectedModels" })
       .click();
     expect(mounted.screen.getByLabelText("settings.customApiModelId")).toHaveValue(
-      "provider-model-a",
+      "engine-model-a",
     );
     expect(mounted.screen.getByLabelText("settings.customApiModelName")).toHaveValue(
-      "Provider Model A",
+      "Engine Model A",
     );
     expect(mounted.screen.getByLabelText("settings.customApiContextWindow")).toHaveValue(null);
     expect(mounted.screen.getByLabelText("settings.customApiMaxTokens")).toHaveValue(null);
@@ -1492,10 +1492,10 @@ describe("ModelsSettingsPanel model services", () => {
             displayName: "Custom Service",
             api: "openai-completions",
             baseUrl: "https://api.example.test/v1",
-            models: [{ modelId: "provider-model-a", displayName: "Provider Model A" }],
+            models: [{ modelId: "engine-model-a", displayName: "Engine Model A" }],
           },
           credential: { type: "stored_key", apiKey: "browser-secret" },
-          testModelId: "provider-model-a",
+          testModelId: "engine-model-a",
         },
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
@@ -1510,7 +1510,7 @@ describe("ModelsSettingsPanel model services", () => {
           displayName: "Custom Service",
           api: "openai-completions",
           baseUrl: "https://api.example.test/v1",
-          models: [{ modelId: "provider-model-a", displayName: "Provider Model A" }],
+          models: [{ modelId: "engine-model-a", displayName: "Engine Model A" }],
         },
         credential: { type: "stored_key", apiKey: "browser-secret" },
       });
@@ -1690,7 +1690,7 @@ describe("ModelsSettingsPanel model services", () => {
       .getByRole("option", { name: "settings.customApiHeaderAction.environment" })
       .click();
     await mounted.screen
-      .getByLabelText('settings.customApiHeaderEnvironmentVariable.provider:{"number":1}')
+      .getByLabelText('settings.customApiHeaderEnvironmentVariable.engine:{"number":1}')
       .fill("NEXT_TENANT");
     await mounted.screen
       .getByLabelText('settings.customApiHeaderActionNamed:{"name":"X-Imported"}')
@@ -2066,12 +2066,12 @@ describe("ModelsSettingsPanel model services", () => {
       .poll(() => document.body.textContent)
       .toContain("settings.modelServiceDetailsNamed");
     const referencedSelection = {
-      provider: "oa" as const,
+      engine: "oa" as const,
       model: "saved-custom/saved-model",
     };
     useComposerDraftStore.setState((state) => ({
-      stickyModelSelectionByProvider: {
-        ...state.stickyModelSelectionByProvider,
+      stickyEngineSelectionByEngine: {
+        ...state.stickyEngineSelectionByEngine,
         oa: referencedSelection,
       },
     }));
@@ -2079,7 +2079,7 @@ describe("ModelsSettingsPanel model services", () => {
       ...makeQueuedChatTurn("queued-custom-service"),
       selectedProvider: "oa",
       selectedModel: referencedSelection.model,
-      modelSelection: referencedSelection,
+      engineSelection: referencedSelection,
     });
     await mounted.screen.getByRole("button", { name: "common.delete" }).click();
     const deleteDialog = mounted.screen.getByLabelText("settings.customApiDeleteTitle");
@@ -2099,7 +2099,7 @@ describe("ModelsSettingsPanel model services", () => {
       .click();
     await expect.poll(() => removeCustom).toHaveBeenCalledTimes(2);
     expect(removeCustom).toHaveBeenLastCalledWith({ serviceId: "saved-custom" });
-    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.oa).toEqual(
+    expect(useComposerDraftStore.getState().stickyEngineSelectionByEngine.oa).toEqual(
       referencedSelection,
     );
 
@@ -2229,9 +2229,9 @@ describe("ModelsSettingsPanel model services", () => {
 
   it("completes a static API-key service without starting a catalog refresh", async () => {
     const setupService = service({
-      serviceId: "static-provider",
-      providerId: "static-provider",
-      displayName: "Static Provider",
+      serviceId: "static-engine",
+      providerId: "static-engine",
+      displayName: "Static Engine",
       authState: "setup_required",
       authSource: null,
       storedCredentialType: null,
@@ -2239,9 +2239,9 @@ describe("ModelsSettingsPanel model services", () => {
       supportsNetworkRefresh: false,
     });
     const configuredService = service({
-      serviceId: "static-provider",
-      providerId: "static-provider",
-      displayName: "Static Provider",
+      serviceId: "static-engine",
+      providerId: "static-engine",
+      displayName: "Static Engine",
       supportsNetworkRefresh: false,
     });
     const requestId = "00000000-0000-4000-8000-000000000011";
@@ -2276,7 +2276,7 @@ describe("ModelsSettingsPanel model services", () => {
     });
 
     await mounted.screen
-      .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"Static Provider"}' })
+      .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"Static Engine"}' })
       .click();
     await mounted.screen.getByRole("button", { name: "settings.addApiKey" }).click();
     const secretInput = mounted.screen.getByLabelText("settings.modelServicePromptSecret");
@@ -2290,7 +2290,7 @@ describe("ModelsSettingsPanel model services", () => {
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
     expect(beginLogin).toHaveBeenCalledWith(
-      { serviceId: "static-provider", authType: "api_key" },
+      { serviceId: "static-engine", authType: "api_key" },
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     await expect.poll(() => document.body.textContent).toContain("settings.modelServiceAuthSaved");
@@ -2494,7 +2494,7 @@ describe("ModelsSettingsPanel model services", () => {
         await expect
           .poll(() => onSetupReady)
           .toHaveBeenCalledWith({
-            provider: "oa",
+            engine: "oa",
             model: "deepseek/deepseek-v4-flash",
           });
       } else {
@@ -3025,7 +3025,7 @@ describe("ModelsSettingsPanel model services", () => {
     mounted.queryClient.clear();
   });
 
-  it("renders provider-owned OAuth events, opens only the projected host, and completes manual code", async () => {
+  it("renders engine-owned OAuth events, opens only the projected host, and completes manual code", async () => {
     const oauthService = service({
       serviceId: "openai-codex",
       providerId: "openai-codex",
@@ -3231,7 +3231,7 @@ describe("ModelsSettingsPanel model services", () => {
     mounted.queryClient.clear();
   });
 
-  it("keeps provider-owned device login available behind the one-click browser path", async () => {
+  it("keeps engine-owned device login available behind the one-click browser path", async () => {
     const oauthService = service({
       serviceId: "openai-codex",
       providerId: "openai-codex",

@@ -1,8 +1,8 @@
 /**
- * Serializes provider turn activation and checkpoint reverts for one thread.
+ * Serializes engine turn activation and checkpoint reverts for one thread.
  *
- * Revert admission and provider state checks cannot make a destructive restore
- * safe on their own: a provider turn may activate after the final check. Both
+ * Revert admission and engine state checks cannot make a destructive restore
+ * safe on their own: a engine turn may activate after the final check. Both
  * side-effect reactors therefore hold this shared lease while crossing their
  * respective mutation boundaries.
  */

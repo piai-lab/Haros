@@ -1,13 +1,13 @@
 // FILE: claudeAuthStatusLock.ts
 // Purpose: Serialize every `claude auth status` invocation across this process.
-// Layer: Provider utility (dependency-free, in-process only).
+// Layer: Engine utility (dependency-free, in-process only).
 // Exports: acquireClaudeAuthStatusLock()
 //
 // Why this exists
 // ----------------
 // `claude auth status` can redeem a single-use rotating OAuth refresh token when the
 // stored access token is at/near expiry. If two invocations race (e.g. the macOS
-// credential keepalive timer firing at the same moment as a provider-health probe, or
+// credential keepalive timer firing at the same moment as a engine-health probe, or
 // either racing a Claude session start), the loser observes the token has already been
 // rotated out from under it and reports `{"loggedIn":false}` even though the account is
 // authenticated. Funneling every `claude auth status` call through this FIFO mutex

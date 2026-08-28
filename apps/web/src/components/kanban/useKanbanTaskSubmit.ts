@@ -6,7 +6,7 @@
 import type {
   ModelSlug,
   ProjectId,
-  ProviderInteractionMode,
+  EngineInteractionMode,
   EngineKind,
   RuntimeMode,
   ServerProviderStatus,
@@ -20,12 +20,12 @@ import { toastManager } from "~/components/ui/toast";
 import { runtimeModeAvailabilityMessageKeyFromError } from "~/components/chat/RuntimeModeAvailabilityHint";
 import type { DraftThreadEnvMode } from "~/composerDraftStore";
 import { useComposerDraftStore } from "~/composerDraftStore";
-import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
+import { useRefreshProviderStatusesNow } from "~/hooks/useEngineStatusRefresh";
 import { useI18n } from "~/i18n";
 import { createAndSendKanbanTask, createKanbanDraftTask } from "~/lib/kanbanTaskCreate";
-import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/providerAvailability";
-import { buildModelSelection } from "~/providerModelOptions";
-import { getProviderStartOptions, resolveAssistantDeliveryMode } from "~/providerSettings";
+import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
+import { buildEngineSelection } from "~/providerModelOptions";
+import { getEngineStartOptions, resolveAssistantDeliveryMode } from "~/engineSettings";
 import { truncateKanbanTaskPreview } from "./KanbanNewTaskDialog.logic";
 
 interface UseKanbanTaskSubmitInput {
@@ -38,7 +38,7 @@ interface UseKanbanTaskSubmitInput {
   readonly trimmedPrompt: string;
   readonly scratchThreadId: ThreadId;
   readonly runtimeMode: RuntimeMode;
-  readonly interactionMode: ProviderInteractionMode;
+  readonly interactionMode: EngineInteractionMode;
   readonly envMode: DraftThreadEnvMode;
   readonly sendAsDraft: boolean;
   readonly resolveServerSettingsForDispatch: () => Promise<ServerSettingsView>;
@@ -100,15 +100,15 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
     // The scratch draft carries the full selection (model + reasoning effort +
     // speed) set through the picker; fall back to a bare selection otherwise.
     const scratchState = useComposerDraftStore.getState().draftsByThreadId[scratchThreadId];
-    const storedModelSelection = scratchState?.modelSelectionByProvider[selectedProvider];
+    const storedEngineSelection = scratchState?.engineSelectionByEngine[selectedProvider];
     const storedModelSupportsAutoMode =
-      storedModelSelection?.provider === "claude"
-        ? storedModelSelection.supportsAutoMode
+      storedEngineSelection?.engine === "claude"
+        ? storedEngineSelection.supportsAutoMode
         : undefined;
-    const modelSelection = buildModelSelection(
+    const engineSelection = buildEngineSelection(
       selectedProvider,
       selectedModel,
-      storedModelSelection?.options,
+      storedEngineSelection?.options,
       selectedProvider === "claude"
         ? (selectedModelSupportsAutoMode ?? storedModelSupportsAutoMode)
         : undefined,
@@ -117,7 +117,7 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
       projectId: selectedProjectId,
       prompt: trimmedPrompt,
       sourceComposerThreadId: scratchThreadId,
-      modelSelection,
+      engineSelection,
       runtimeMode,
       interactionMode,
       envMode,
@@ -136,7 +136,7 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
 
     // Send now: create + promote + dispatch straight to In Progress.
     const sendAvailability = await resolveProviderSendAvailabilityWithRefresh({
-      provider: modelSelection.provider,
+      engine: engineSelection.engine,
       statuses: providerStatuses,
       refreshStatuses: () => refreshProviderStatuses({ silent: true }),
     });
@@ -165,9 +165,9 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
     }
     void createAndSendKanbanTask({
       ...taskInput,
-      defaultProvider: serverSettings.defaultProvider,
+      defaultEngine: serverSettings.defaultEngine,
       assistantDeliveryMode: resolveAssistantDeliveryMode(serverSettings),
-      providerOptions: getProviderStartOptions(serverSettings),
+      engineOptions: getEngineStartOptions(serverSettings),
     })
       .then(({ threadId, result }) => {
         if (result.kind === "dispatched") {

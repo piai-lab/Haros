@@ -38,22 +38,22 @@ const EN_MESSAGES = {
   "settings.customApiAuthHeader.bearer": "Also send as Bearer Authorization",
   "settings.customApiAuthHeader.none": "Do not add an Authorization header",
   "settings.customApiHeaders": "Additional request headers",
-  "settings.customApiHeadersDescription.provider":
+  "settings.customApiHeadersDescription.engine":
     "Apply a header to this connection’s model catalog, connection test, and model requests.",
   "settings.customApiHeadersDescription.model":
     "Override or add a header only when requests use this model. Model headers are not used to get the catalog.",
   "settings.customApiHeaderAdd": "Add header",
-  "settings.customApiHeaderAdd.provider": "Add connection header",
+  "settings.customApiHeaderAdd.engine": "Add connection header",
   "settings.customApiHeaderAdd.model": "Add model header",
-  "settings.customApiHeaderRemove.provider": "Remove connection header {number}",
+  "settings.customApiHeaderRemove.engine": "Remove connection header {number}",
   "settings.customApiHeaderRemove.model": "Remove model header {number}",
   "settings.customApiHeaderName": "Header name",
   "settings.customApiHeaderNamePlaceholder": "X-Request-Context",
-  "settings.customApiHeaderName.provider": "Connection header {number} name",
+  "settings.customApiHeaderName.engine": "Connection header {number} name",
   "settings.customApiHeaderName.model": "Model header {number} name",
   "settings.customApiHeaderEnvironmentVariable": "Value from environment variable",
   "settings.customApiHeaderEnvironmentVariablePlaceholder": "MODEL_SERVICE_HEADER",
-  "settings.customApiHeaderEnvironmentVariable.provider":
+  "settings.customApiHeaderEnvironmentVariable.engine":
     "Connection header {number} environment variable",
   "settings.customApiHeaderEnvironmentVariable.model": "Model header {number} environment variable",
   "settings.customApiHeaderAction": "Current value",
@@ -69,7 +69,7 @@ const EN_MESSAGES = {
   "settings.customApiHeaderError.duplicate": "Each header name can appear only once here.",
   "settings.customApiHeadersPrivacy":
     "OmniMind shows only each header name and source type. Existing values and references stay hidden. New values can only be read from an environment variable.",
-  "settings.customApiHeaderCommandDescription.provider":
+  "settings.customApiHeaderCommandDescription.engine":
     "This connection has an imported command-backed header. Getting models or testing asks before running its hidden local command. Future model requests may run it without another Settings confirmation.",
   "settings.customApiHeaderCommandDescription.model":
     "This model has an imported command-backed header. Testing asks before running its hidden local command. Future requests with this model may run it without another Settings confirmation.",
@@ -467,22 +467,22 @@ const ZH_CN_MESSAGES = {
   "settings.customApiAuthHeader.bearer": "同时作为 Bearer Authorization 发送",
   "settings.customApiAuthHeader.none": "不额外添加 Authorization 请求头",
   "settings.customApiHeaders": "附加请求头",
-  "settings.customApiHeadersDescription.provider":
+  "settings.customApiHeadersDescription.engine":
     "为此连接的模型目录、连接测试和模型请求附加请求头。",
   "settings.customApiHeadersDescription.model":
     "仅在请求使用此模型时覆盖或附加请求头；获取模型目录时不会使用模型级请求头。",
   "settings.customApiHeaderAdd": "添加请求头",
-  "settings.customApiHeaderAdd.provider": "添加连接请求头",
+  "settings.customApiHeaderAdd.engine": "添加连接请求头",
   "settings.customApiHeaderAdd.model": "添加模型请求头",
-  "settings.customApiHeaderRemove.provider": "移除连接请求头 {number}",
+  "settings.customApiHeaderRemove.engine": "移除连接请求头 {number}",
   "settings.customApiHeaderRemove.model": "移除模型请求头 {number}",
   "settings.customApiHeaderName": "请求头名称",
   "settings.customApiHeaderNamePlaceholder": "X-Request-Context",
-  "settings.customApiHeaderName.provider": "连接请求头 {number} 名称",
+  "settings.customApiHeaderName.engine": "连接请求头 {number} 名称",
   "settings.customApiHeaderName.model": "模型请求头 {number} 名称",
   "settings.customApiHeaderEnvironmentVariable": "从环境变量读取值",
   "settings.customApiHeaderEnvironmentVariablePlaceholder": "MODEL_SERVICE_HEADER",
-  "settings.customApiHeaderEnvironmentVariable.provider": "连接请求头 {number} 环境变量",
+  "settings.customApiHeaderEnvironmentVariable.engine": "连接请求头 {number} 环境变量",
   "settings.customApiHeaderEnvironmentVariable.model": "模型请求头 {number} 环境变量",
   "settings.customApiHeaderAction": "当前值",
   "settings.customApiHeaderActionNamed": "{name} 的值",
@@ -497,7 +497,7 @@ const ZH_CN_MESSAGES = {
   "settings.customApiHeaderError.duplicate": "同一个请求头名称在这里不能重复。",
   "settings.customApiHeadersPrivacy":
     "OmniMind 只显示请求头名称和来源类型；现有值与引用保持隐藏。新值只能从环境变量读取。",
-  "settings.customApiHeaderCommandDescription.provider":
+  "settings.customApiHeaderCommandDescription.engine":
     "此连接包含导入的命令型请求头。获取模型或测试前会先确认是否执行其隐藏的本机命令；之后发送模型请求时可能执行该命令，且不会再次经过设置页确认。",
   "settings.customApiHeaderCommandDescription.model":
     "此模型包含导入的命令型请求头。测试前会先确认是否执行其隐藏的本机命令；之后使用此模型发送请求时可能执行该命令，且不会再次经过设置页确认。",

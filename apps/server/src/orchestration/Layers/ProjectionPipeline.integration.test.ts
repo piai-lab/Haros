@@ -113,7 +113,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           projectId: ProjectId.makeUnsafe("project-1"),
           title: "Project 1",
           workspaceRoot: "/tmp/project-1",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -134,8 +134,8 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           threadId: ThreadId.makeUnsafe("thread-1"),
           projectId: ProjectId.makeUnsafe("project-1"),
           title: "Thread 1",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           runtimeMode: "full-access",
@@ -235,7 +235,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           projectId: ProjectId.makeUnsafe("project-turn-settings"),
           title: "Project",
           workspaceRoot: "/tmp/project-turn-settings",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt,
           updatedAt: createdAt,
@@ -256,8 +256,8 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           threadId: ThreadId.makeUnsafe("thread-turn-settings"),
           projectId: ProjectId.makeUnsafe("project-turn-settings"),
           title: "Thread",
-          modelSelection: {
-            provider: "pi",
+          engineSelection: {
+            engine: "pi",
             model: "openai/gpt-5.1",
           },
           runtimeMode: "full-access",
@@ -281,8 +281,8 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
         payload: {
           threadId: ThreadId.makeUnsafe("thread-turn-settings"),
           messageId: MessageId.makeUnsafe("message-turn-settings"),
-          modelSelection: {
-            provider: "pi",
+          engineSelection: {
+            engine: "pi",
             model: "openai/gpt-5.5",
           },
           runtimeMode: "approval-required",
@@ -294,13 +294,13 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
       yield* projectionPipeline.bootstrap;
 
       const rows = yield* sql<{
-        readonly modelSelectionJson: string;
+        readonly engineSelectionJson: string;
         readonly runtimeMode: string;
         readonly interactionMode: string;
         readonly updatedAt: string;
       }>`
         SELECT
-          model_selection_json AS "modelSelectionJson",
+          model_selection_json AS "engineSelectionJson",
           runtime_mode AS "runtimeMode",
           interaction_mode AS "interactionMode",
           updated_at AS "updatedAt"
@@ -309,8 +309,8 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
       `;
 
       assert.equal(rows.length, 1);
-      assert.deepEqual(JSON.parse(rows[0]!.modelSelectionJson), {
-        provider: "pi",
+      assert.deepEqual(JSON.parse(rows[0]!.engineSelectionJson), {
+        engine: "pi",
         model: "openai/gpt-5.5",
       });
       assert.equal(rows[0]!.runtimeMode, "approval-required");
@@ -399,18 +399,18 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
       const crossProviderRequestedAt = "2026-02-26T13:00:15.000Z";
       const crossProviderEvent = yield* eventStore.append({
         type: "thread.turn-start-requested",
-        eventId: EventId.makeUnsafe("evt-turn-settings-cross-provider"),
+        eventId: EventId.makeUnsafe("evt-turn-settings-cross-engine"),
         aggregateKind: "thread",
         aggregateId: ThreadId.makeUnsafe("thread-turn-settings"),
         occurredAt: crossProviderRequestedAt,
-        commandId: CommandId.makeUnsafe("cmd-turn-settings-cross-provider"),
+        commandId: CommandId.makeUnsafe("cmd-turn-settings-cross-engine"),
         causationEventId: null,
-        correlationId: CommandId.makeUnsafe("cmd-turn-settings-cross-provider"),
+        correlationId: CommandId.makeUnsafe("cmd-turn-settings-cross-engine"),
         metadata: {},
         payload: {
           threadId: ThreadId.makeUnsafe("thread-turn-settings"),
-          messageId: MessageId.makeUnsafe("message-turn-settings-cross-provider"),
-          modelSelection: { provider: "codex", model: "gpt-5-codex" },
+          messageId: MessageId.makeUnsafe("message-turn-settings-cross-engine"),
+          engineSelection: { engine: "codex", model: "gpt-5-codex" },
           runtimeMode: "full-access",
           interactionMode: "plan",
           createdAt: crossProviderRequestedAt,
@@ -419,13 +419,13 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
       yield* projectionPipeline.projectEvent(crossProviderEvent);
 
       const providerRows = yield* sql<{
-        readonly modelSelectionJson: string;
+        readonly engineSelectionJson: string;
         readonly providerName: string | null;
         readonly runtimeMode: string;
         readonly interactionMode: string;
       }>`
         SELECT
-          threads.model_selection_json AS "modelSelectionJson",
+          threads.model_selection_json AS "engineSelectionJson",
           sessions.provider_name AS "providerName",
           threads.runtime_mode AS "runtimeMode",
           threads.interaction_mode AS "interactionMode"
@@ -434,8 +434,8 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           ON sessions.thread_id = threads.thread_id
         WHERE threads.thread_id = 'thread-turn-settings'
       `;
-      assert.deepEqual(JSON.parse(providerRows[0]!.modelSelectionJson), {
-        provider: "pi",
+      assert.deepEqual(JSON.parse(providerRows[0]!.engineSelectionJson), {
+        engine: "pi",
         model: "openai/gpt-5.5",
       });
       assert.equal(providerRows[0]!.providerName, "pi");
@@ -455,7 +455,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
         metadata: {},
         payload: {
           threadId: ThreadId.makeUnsafe("thread-turn-settings"),
-          modelSelection: { provider: "codex", model: "gpt-5-codex" },
+          engineSelection: { engine: "codex", model: "gpt-5-codex" },
           updatedAt: modelCommitAt,
         },
       });
@@ -498,19 +498,19 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
       yield* projectionPipeline.projectEvent(interactionCommit);
 
       const committedRows = yield* sql<{
-        readonly modelSelectionJson: string;
+        readonly engineSelectionJson: string;
         readonly runtimeMode: string;
         readonly interactionMode: string;
       }>`
         SELECT
-          model_selection_json AS "modelSelectionJson",
+          model_selection_json AS "engineSelectionJson",
           runtime_mode AS "runtimeMode",
           interaction_mode AS "interactionMode"
         FROM projection_threads
         WHERE thread_id = 'thread-turn-settings'
       `;
-      assert.deepEqual(JSON.parse(committedRows[0]!.modelSelectionJson), {
-        provider: "codex",
+      assert.deepEqual(JSON.parse(committedRows[0]!.engineSelectionJson), {
+        engine: "codex",
         model: "gpt-5-codex",
       });
       assert.equal(committedRows[0]!.runtimeMode, "full-access");
@@ -582,7 +582,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           projectId: ProjectId.makeUnsafe("project-retained-error"),
           title: "Retained error project",
           workspaceRoot: "/tmp/project-retained-error",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt,
           updatedAt: createdAt,
@@ -602,7 +602,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           threadId,
           projectId: ProjectId.makeUnsafe("project-retained-error"),
           title: "Retained error thread",
-          modelSelection: { provider: "codex", model: "gpt-5.6-sol" },
+          engineSelection: { engine: "codex", model: "gpt-5.6-sol" },
           runtimeMode: "full-access",
           branch: null,
           worktreePath: null,
@@ -623,7 +623,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
         payload: {
           threadId,
           messageId: MessageId.makeUnsafe("message-retained-error"),
-          modelSelection: { provider: "codex", model: "gpt-5.6-sol" },
+          engineSelection: { engine: "codex", model: "gpt-5.6-sol" },
           runtimeMode: "full-access",
           interactionMode: "default",
           dispatchMode: "queue",
@@ -671,7 +671,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
             providerName: "codex",
             runtimeMode: "full-access",
             activeTurnId: turnId,
-            lastError: "provider failed",
+            lastError: "engine failed",
             updatedAt: failedAt,
           },
         },
@@ -722,14 +722,14 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
 it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("omnimind-message-identity-scope-")))(
   "OrchestrationProjectionPipeline",
   (it) => {
-    it.effect("keeps reused provider message ids thread-scoped through replay", () =>
+    it.effect("keeps reused engine message ids thread-scoped through replay", () =>
       Effect.gen(function* () {
         const eventStore = yield* OrchestrationEventStore;
         const projectionPipeline = yield* OrchestrationProjectionPipeline;
         const sql = yield* SqlClient.SqlClient;
-        const messageId = MessageId.makeUnsafe("shared-provider-message-id");
-        const firstThreadId = ThreadId.makeUnsafe("thread-shared-provider-message-a");
-        const secondThreadId = ThreadId.makeUnsafe("thread-shared-provider-message-b");
+        const messageId = MessageId.makeUnsafe("shared-engine-message-id");
+        const firstThreadId = ThreadId.makeUnsafe("thread-shared-engine-message-a");
+        const secondThreadId = ThreadId.makeUnsafe("thread-shared-engine-message-b");
 
         const appendMessage = (input: {
           readonly eventId: string;
@@ -776,26 +776,26 @@ it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("omnimind-message-i
           });
 
         yield* appendMessage({
-          eventId: "evt-shared-provider-message-a-1",
-          commandId: "cmd-shared-provider-message-a-1",
+          eventId: "evt-shared-engine-message-a-1",
+          commandId: "cmd-shared-engine-message-a-1",
           threadId: firstThreadId,
           text: "first",
           streaming: false,
-          attachmentId: "attachment-shared-provider-a",
+          attachmentId: "attachment-shared-engine-a",
           occurredAt: "2026-07-14T11:00:00.000Z",
         });
         yield* appendMessage({
-          eventId: "evt-shared-provider-message-b-1",
-          commandId: "cmd-shared-provider-message-b-1",
+          eventId: "evt-shared-engine-message-b-1",
+          commandId: "cmd-shared-engine-message-b-1",
           threadId: secondThreadId,
           text: "second",
           streaming: false,
-          attachmentId: "attachment-shared-provider-b",
+          attachmentId: "attachment-shared-engine-b",
           occurredAt: "2026-07-14T11:00:01.000Z",
         });
         yield* appendMessage({
-          eventId: "evt-shared-provider-message-a-2",
-          commandId: "cmd-shared-provider-message-a-2",
+          eventId: "evt-shared-engine-message-a-2",
+          commandId: "cmd-shared-engine-message-a-2",
           threadId: firstThreadId,
           text: " thread",
           streaming: true,
@@ -819,8 +819,8 @@ it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("omnimind-message-i
             attachments: JSON.stringify([
               {
                 type: "file",
-                id: "attachment-shared-provider-a",
-                name: "attachment-shared-provider-a.txt",
+                id: "attachment-shared-engine-a",
+                name: "attachment-shared-engine-a.txt",
                 mimeType: "text/plain",
                 sizeBytes: 1,
               },
@@ -832,8 +832,8 @@ it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("omnimind-message-i
             attachments: JSON.stringify([
               {
                 type: "file",
-                id: "attachment-shared-provider-b",
-                name: "attachment-shared-provider-b.txt",
+                id: "attachment-shared-engine-b",
+                name: "attachment-shared-engine-b.txt",
                 mimeType: "text/plain",
                 sizeBytes: 1,
               },
@@ -1021,14 +1021,14 @@ it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("omnimind-text-segm
 it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("omnimind-approval-identity-scope-")))(
   "OrchestrationProjectionPipeline",
   (it) => {
-    it.effect("keeps reused provider request ids thread-scoped through replay", () =>
+    it.effect("keeps reused engine request ids thread-scoped through replay", () =>
       Effect.gen(function* () {
         const eventStore = yield* OrchestrationEventStore;
         const projectionPipeline = yield* OrchestrationProjectionPipeline;
         const sql = yield* SqlClient.SqlClient;
-        const requestId = ApprovalRequestId.makeUnsafe("shared-provider-request-id");
-        const firstThreadId = ThreadId.makeUnsafe("thread-shared-provider-request-a");
-        const secondThreadId = ThreadId.makeUnsafe("thread-shared-provider-request-b");
+        const requestId = ApprovalRequestId.makeUnsafe("shared-engine-request-id");
+        const firstThreadId = ThreadId.makeUnsafe("thread-shared-engine-request-a");
+        const secondThreadId = ThreadId.makeUnsafe("thread-shared-engine-request-b");
 
         const appendRequest = (input: {
           readonly eventId: string;
@@ -1062,28 +1062,28 @@ it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("omnimind-approval-
           });
 
         yield* appendRequest({
-          eventId: "evt-shared-provider-request-a",
-          commandId: "cmd-shared-provider-request-a",
-          activityId: "activity-shared-provider-request-a",
+          eventId: "evt-shared-engine-request-a",
+          commandId: "cmd-shared-engine-request-a",
+          activityId: "activity-shared-engine-request-a",
           threadId: firstThreadId,
           occurredAt: "2026-07-14T12:30:00.000Z",
         });
         yield* appendRequest({
-          eventId: "evt-shared-provider-request-b",
-          commandId: "cmd-shared-provider-request-b",
-          activityId: "activity-shared-provider-request-b",
+          eventId: "evt-shared-engine-request-b",
+          commandId: "cmd-shared-engine-request-b",
+          activityId: "activity-shared-engine-request-b",
           threadId: secondThreadId,
           occurredAt: "2026-07-14T12:30:01.000Z",
         });
         yield* eventStore.append({
           type: "thread.approval-response-requested",
-          eventId: EventId.makeUnsafe("evt-shared-provider-request-a-response"),
+          eventId: EventId.makeUnsafe("evt-shared-engine-request-a-response"),
           aggregateKind: "thread",
           aggregateId: firstThreadId,
           occurredAt: "2026-07-14T12:30:02.000Z",
-          commandId: CommandId.makeUnsafe("cmd-shared-provider-request-a-response"),
+          commandId: CommandId.makeUnsafe("cmd-shared-engine-request-a-response"),
           causationEventId: null,
-          correlationId: CorrelationId.makeUnsafe("cmd-shared-provider-request-a-response"),
+          correlationId: CorrelationId.makeUnsafe("cmd-shared-engine-request-a-response"),
           metadata: {},
           payload: {
             threadId: firstThreadId,
@@ -1122,13 +1122,13 @@ it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("omnimind-approval-
       }),
     );
 
-    it.effect("does not let an older provider generation settle a reused request id", () =>
+    it.effect("does not let an older engine generation settle a reused request id", () =>
       Effect.gen(function* () {
         const eventStore = yield* OrchestrationEventStore;
         const projectionPipeline = yield* OrchestrationProjectionPipeline;
         const sql = yield* SqlClient.SqlClient;
         const threadId = ThreadId.makeUnsafe("thread-reused-request-generation");
-        const requestId = ApprovalRequestId.makeUnsafe("reused-provider-request");
+        const requestId = ApprovalRequestId.makeUnsafe("reused-engine-request");
 
         const appendRequest = (generation: string, suffix: string, occurredAt: string) =>
           eventStore.append({
@@ -1276,7 +1276,7 @@ it.effect("fast-forwards lagging hot projector cursors before restart replay", (
           projectId,
           title: "Bootstrap fast-forward project",
           workspaceRoot: "/tmp/project-bootstrap-fast-forward",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt,
           updatedAt: createdAt,
@@ -1296,8 +1296,8 @@ it.effect("fast-forwards lagging hot projector cursors before restart replay", (
           threadId,
           projectId,
           title: "Bootstrap fast-forward thread",
-          modelSelection: {
-            provider: "claude",
+          engineSelection: {
+            engine: "claude",
             model: "claude-sonnet-4-5-20250929",
           },
           runtimeMode: "full-access",
@@ -1412,7 +1412,7 @@ it.effect("rebuilds a deleted hot cursor and advances a stalled projector on boo
           projectId,
           title: "Hot cursor repair project",
           workspaceRoot: "/tmp/project-hot-cursor-repair",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt,
           updatedAt: createdAt,
@@ -1432,7 +1432,7 @@ it.effect("rebuilds a deleted hot cursor and advances a stalled projector on boo
           threadId,
           projectId,
           title: "Hot cursor repair thread",
-          modelSelection: { provider: "claude", model: "claude-sonnet-4-5-20250929" },
+          engineSelection: { engine: "claude", model: "claude-sonnet-4-5-20250929" },
           runtimeMode: "full-access",
           branch: null,
           worktreePath: null,
@@ -1551,7 +1551,7 @@ it.effect("rolls back a bootstrap batch when its tail cursor cannot commit", () 
           projectId,
           title: "Bootstrap batch rollback",
           workspaceRoot: "/tmp/project-bootstrap-batch-rollback",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: occurredAt,
           updatedAt: occurredAt,
@@ -1619,7 +1619,7 @@ it.effect("drains 2,501 file-backed events to a captured high-water fence", () =
           projectId,
           title: "Project 0",
           workspaceRoot: "/tmp/project-bootstrap-paged",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: occurredAt,
           updatedAt: occurredAt,
@@ -1845,7 +1845,7 @@ it.layer(
           projectId,
           title: "Approvals Project",
           workspaceRoot: "/tmp/project-approvals",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt,
           updatedAt: createdAt,
@@ -1866,8 +1866,8 @@ it.layer(
           threadId,
           projectId,
           title: "Approvals Thread",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           runtimeMode: "full-access",
@@ -1980,7 +1980,7 @@ it.layer(
           projectId,
           title: "Streaming Shell Project",
           workspaceRoot: "/tmp/project-streaming-shell",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt,
           updatedAt: createdAt,
@@ -2001,8 +2001,8 @@ it.layer(
           threadId,
           projectId,
           title: "Streaming Shell Thread",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           runtimeMode: "full-access",
@@ -2082,7 +2082,7 @@ it.layer(
           projectId,
           title: "User Input Project",
           workspaceRoot: "/tmp/project-user-input",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt,
           updatedAt: createdAt,
@@ -2103,8 +2103,8 @@ it.layer(
           threadId,
           projectId,
           title: "User Input Thread",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           runtimeMode: "full-access",
@@ -2275,13 +2275,13 @@ it.layer(
           activity: {
             id: EventId.makeUnsafe("activity-user-input-response-failed"),
             tone: "error",
-            kind: "provider.user-input.respond.failed",
+            kind: "engine.user-input.respond.failed",
             summary: "User input response failed",
             payload: {
               requestId,
               responseCommandId: "cmd-user-input-responded",
               settlementStatus: "retryable",
-              detail: "No active provider session is bound to this thread.",
+              detail: "No active engine session is bound to this thread.",
             },
             turnId: null,
             createdAt: failedAt,
@@ -2405,7 +2405,7 @@ it.layer(
           projectId,
           title: "Stale Reconcile Project",
           workspaceRoot: "/tmp/project-stale-reconcile",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt,
           updatedAt: createdAt,
@@ -2426,8 +2426,8 @@ it.layer(
           threadId,
           projectId,
           title: "Stale Reconcile Thread",
-          modelSelection: {
-            provider: "claude",
+          engineSelection: {
+            engine: "claude",
             model: "claude-sonnet-5",
           },
           runtimeMode: "full-access",
@@ -2467,7 +2467,7 @@ it.layer(
       });
 
       // Restart/session reconciliation reports the request as stale without a
-      // responseCommandId: nothing ever claimed the row, but the provider
+      // responseCommandId: nothing ever claimed the row, but the engine
       // callback that could consume it is gone. The row must not stay pending.
       yield* eventStore.append({
         type: "thread.activity-appended",
@@ -2484,11 +2484,11 @@ it.layer(
           activity: {
             id: EventId.makeUnsafe("activity-stale-reconcile-failed"),
             tone: "error",
-            kind: "provider.user-input.respond.failed",
-            summary: "Provider user input response failed",
+            kind: "engine.user-input.respond.failed",
+            summary: "Engine user input response failed",
             payload: {
               requestId,
-              detail: `Stale pending user-input request: ${requestId}. Provider callback state does not survive app restarts or recovered sessions. Restart the turn to continue.`,
+              detail: `Stale pending user-input request: ${requestId}. Engine callback state does not survive app restarts or recovered sessions. Restart the turn to continue.`,
             },
             turnId: null,
             createdAt: reconciledAt,
@@ -2621,7 +2621,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
             projectId: ProjectId.makeUnsafe("project-clear-attachments"),
             title: "Project Clear Attachments",
             workspaceRoot: "/tmp/project-clear-attachments",
-            defaultModelSelection: null,
+            defaultEngineSelection: null,
             scripts: [],
             createdAt: now,
             updatedAt: now,
@@ -2642,8 +2642,8 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
             threadId: ThreadId.makeUnsafe("thread-clear-attachments"),
             projectId: ProjectId.makeUnsafe("project-clear-attachments"),
             title: "Thread Clear Attachments",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5-codex",
             },
             runtimeMode: "full-access",
@@ -2751,7 +2751,7 @@ it.layer(
           projectId: ProjectId.makeUnsafe("project-overwrite"),
           title: "Project Overwrite",
           workspaceRoot: "/tmp/project-overwrite",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -2772,8 +2772,8 @@ it.layer(
           threadId: ThreadId.makeUnsafe("thread-overwrite"),
           projectId: ProjectId.makeUnsafe("project-overwrite"),
           title: "Thread Overwrite",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           runtimeMode: "full-access",
@@ -2896,7 +2896,7 @@ it.layer(
           projectId: ProjectId.makeUnsafe("project-rollback"),
           title: "Project Rollback",
           workspaceRoot: "/tmp/project-rollback",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -2917,8 +2917,8 @@ it.layer(
           threadId: ThreadId.makeUnsafe("thread-rollback"),
           projectId: ProjectId.makeUnsafe("project-rollback"),
           title: "Thread Rollback",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           runtimeMode: "full-access",
@@ -3017,7 +3017,7 @@ it.layer(
           projectId,
           title: "Stream Append Project",
           workspaceRoot: "/tmp/project-stream-append",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt,
           updatedAt: createdAt,
@@ -3038,7 +3038,7 @@ it.layer(
           threadId,
           projectId,
           title: "Stream Append Thread",
-          modelSelection: { provider: "codex", model: "gpt-5-codex" },
+          engineSelection: { engine: "codex", model: "gpt-5-codex" },
           runtimeMode: "full-access",
           branch: null,
           worktreePath: null,
@@ -3217,7 +3217,7 @@ it.layer(
           projectId,
           title: "Stream Restart Project",
           workspaceRoot: "/tmp/project-stream-restart",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt,
           updatedAt: createdAt,
@@ -3238,7 +3238,7 @@ it.layer(
           threadId,
           projectId,
           title: "Stream Restart Thread",
-          modelSelection: { provider: "codex", model: "gpt-5-codex" },
+          engineSelection: { engine: "codex", model: "gpt-5-codex" },
           runtimeMode: "full-access",
           branch: null,
           worktreePath: null,
@@ -3385,7 +3385,7 @@ it.layer(
           projectId: ProjectId.makeUnsafe("project-revert-files"),
           title: "Project Revert Files",
           workspaceRoot: "/tmp/project-revert-files",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -3406,8 +3406,8 @@ it.layer(
           threadId,
           projectId: ProjectId.makeUnsafe("project-revert-files"),
           title: "Thread Revert Files",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           runtimeMode: "full-access",
@@ -3661,7 +3661,7 @@ it.layer(
           projectId: ProjectId.makeUnsafe("project-delete-files"),
           title: "Project Delete Files",
           workspaceRoot: "/tmp/project-delete-files",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -3682,8 +3682,8 @@ it.layer(
           threadId,
           projectId: ProjectId.makeUnsafe("project-delete-files"),
           title: "Thread Delete Files",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           runtimeMode: "full-access",
@@ -3819,7 +3819,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           projectId: ProjectId.makeUnsafe("project-a"),
           title: "Project A",
           workspaceRoot: "/tmp/project-a",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -3840,8 +3840,8 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           threadId: ThreadId.makeUnsafe("thread-a"),
           projectId: ProjectId.makeUnsafe("project-a"),
           title: "Thread A",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           runtimeMode: "full-access",
@@ -3946,7 +3946,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           projectId: ProjectId.makeUnsafe("project-empty"),
           title: "Project Empty",
           workspaceRoot: "/tmp/project-empty",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -3967,8 +3967,8 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           threadId: ThreadId.makeUnsafe("thread-empty"),
           projectId: ProjectId.makeUnsafe("project-empty"),
           title: "Thread Empty",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           runtimeMode: "full-access",
@@ -4083,7 +4083,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
             projectId: ProjectId.makeUnsafe("project-conflict"),
             title: "Project Conflict",
             workspaceRoot: "/tmp/project-conflict",
-            defaultModelSelection: null,
+            defaultEngineSelection: null,
             scripts: [],
             createdAt: "2026-02-26T13:00:00.000Z",
             updatedAt: "2026-02-26T13:00:00.000Z",
@@ -4104,8 +4104,8 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
             threadId: ThreadId.makeUnsafe("thread-conflict"),
             projectId: ProjectId.makeUnsafe("project-conflict"),
             title: "Thread Conflict",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5-codex",
             },
             runtimeMode: "full-access",
@@ -4225,7 +4225,7 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           projectId: ProjectId.makeUnsafe("project-revert"),
           title: "Project Revert",
           workspaceRoot: "/tmp/project-revert",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: "2026-02-26T12:00:00.000Z",
           updatedAt: "2026-02-26T12:00:00.000Z",
@@ -4246,8 +4246,8 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           threadId: ThreadId.makeUnsafe("thread-revert"),
           projectId: ProjectId.makeUnsafe("project-revert"),
           title: "Thread Revert",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           runtimeMode: "full-access",
@@ -4721,8 +4721,8 @@ engineLayer("OrchestrationProjectionPipeline via engine dispatch", (it) => {
         projectId: ProjectId.makeUnsafe("project-live"),
         title: "Live Project",
         workspaceRoot: "/tmp/project-live",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         createdAt,
@@ -4788,8 +4788,8 @@ engineLayer("OrchestrationProjectionPipeline via engine dispatch", (it) => {
         projectId: ProjectId.makeUnsafe("project-scripts"),
         title: "Scripts Project",
         workspaceRoot: "/tmp/project-scripts",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         createdAt,
@@ -4809,20 +4809,20 @@ engineLayer("OrchestrationProjectionPipeline via engine dispatch", (it) => {
           },
         ],
         isPinned: true,
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5",
         },
       });
 
       const projectRows = yield* sql<{
         readonly scriptsJson: string;
-        readonly defaultModelSelection: string;
+        readonly defaultEngineSelection: string;
         readonly isPinned: number;
       }>`
         SELECT
           scripts_json AS "scriptsJson",
-          default_model_selection_json AS "defaultModelSelection",
+          default_model_selection_json AS "defaultEngineSelection",
           is_pinned AS "isPinned"
         FROM projection_projects
         WHERE project_id = 'project-scripts'
@@ -4831,7 +4831,7 @@ engineLayer("OrchestrationProjectionPipeline via engine dispatch", (it) => {
         {
           scriptsJson:
             '[{"id":"script-1","name":"Build","command":"bun run build","icon":"build","runOnWorktreeCreate":false}]',
-          defaultModelSelection: '{"provider":"codex","model":"gpt-5"}',
+          defaultEngineSelection: '{"engine":"codex","model":"gpt-5"}',
           isPinned: 1,
         },
       ]);
@@ -4852,7 +4852,7 @@ engineLayer("OrchestrationProjectionPipeline via engine dispatch", (it) => {
         projectId,
         title: "Routed telemetry",
         workspaceRoot: "/tmp/project-routed-telemetry",
-        defaultModelSelection: { provider: "codex", model: "gpt-5-codex" },
+        defaultEngineSelection: { engine: "codex", model: "gpt-5-codex" },
         createdAt,
       });
       yield* engine.dispatch({
@@ -4861,7 +4861,7 @@ engineLayer("OrchestrationProjectionPipeline via engine dispatch", (it) => {
         threadId,
         projectId,
         title: "Routed telemetry",
-        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        engineSelection: { engine: "codex", model: "gpt-5-codex" },
         interactionMode: "default",
         runtimeMode: "full-access",
         branch: null,
@@ -4927,7 +4927,7 @@ engineLayer("OrchestrationProjectionPipeline via engine dispatch", (it) => {
         projectId,
         title: "User input terminal fence",
         workspaceRoot: "/tmp/project-user-input-terminal-fence",
-        defaultModelSelection: { provider: "codex", model: "gpt-5-codex" },
+        defaultEngineSelection: { engine: "codex", model: "gpt-5-codex" },
         createdAt,
       });
       yield* engine.dispatch({
@@ -4936,7 +4936,7 @@ engineLayer("OrchestrationProjectionPipeline via engine dispatch", (it) => {
         threadId,
         projectId,
         title: "User input terminal fence",
-        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        engineSelection: { engine: "codex", model: "gpt-5-codex" },
         interactionMode: "default",
         runtimeMode: "full-access",
         branch: null,
@@ -5258,7 +5258,7 @@ it.layer(
               providerName: "codex",
               runtimeMode: "full-access",
               activeTurnId: scenario.retainsActiveTurn ? turnId : null,
-              lastError: scenario.status === "error" ? "provider crashed" : null,
+              lastError: scenario.status === "error" ? "engine crashed" : null,
               updatedAt: settledAt,
             },
           },

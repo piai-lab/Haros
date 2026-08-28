@@ -5,9 +5,9 @@
 
 import {
   type MessageId,
-  type ModelSelection,
+  type EngineSelection,
   type OrchestrationTurnProvenance,
-  type ProviderMentionReference,
+  type EngineMentionReference,
   ThreadId,
   type ThreadGoalAchievement,
   type ThreadMarker,
@@ -442,7 +442,7 @@ function AssistantTurnAvatar({
 }: {
   readonly provenance: OrchestrationTurnProvenance | null;
 }) {
-  const selection = provenance?.modelSelection ?? null;
+  const selection = provenance?.engineSelection ?? null;
   return (
     <div
       aria-hidden="true"
@@ -475,16 +475,16 @@ function AssistantTurnRowFrame({
   readonly children: ReactNode;
 }) {
   if (!layout) return <>{children}</>;
-  const selection = layout.provenance?.modelSelection ?? null;
+  const selection = layout.provenance?.engineSelection ?? null;
   const modelName =
     layout.provenance?.modelPresentationIdentity?.displayName ??
     (selection
       ? formatProviderModelOptionName({
-          provider: selection.provider,
+          engine: selection.engine,
           slug: selection.model,
         })
       : "OmniMind");
-  const engineName = selection ? ENGINE_DISPLAY_NAMES[selection.provider] : null;
+  const engineName = selection ? ENGINE_DISPLAY_NAMES[selection.engine] : null;
   return (
     <div
       className="grid min-w-0 grid-cols-[30px_minmax(0,1fr)] gap-x-3 max-[560px]:grid-cols-[28px_minmax(0,1fr)] max-[560px]:gap-x-2.5"
@@ -1666,7 +1666,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           (() => {
             const groupId = row.id;
             // Creation milestones are reserved for the end-of-turn recap card.
-            // The provider's actual OmniMind MCP tool rows remain visible here.
+            // The engine's actual OmniMind MCP tool rows remain visible here.
             const groupedEntries = row.groupedEntries.filter(
               (workEntry) => !workEntry.harnessosThreadCreation,
             );
@@ -2111,7 +2111,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       turnSummary.status !== "missing" &&
                       turnSummary.status !== "error" &&
                       turnSummary.checkpointRef !== undefined &&
-                      !turnSummary.checkpointRef.startsWith("provider-diff:") &&
+                      !turnSummary.checkpointRef.startsWith("engine-diff:") &&
                       checkpointTurnCounts.length > 0 &&
                       onUndoTurnFiles !== undefined;
                     const totalAdditions = checkpointFiles.reduce(
@@ -2740,7 +2740,7 @@ function renderUserMessageInlineText(
   text: string,
   keyPrefix: string,
   resolvedTheme: "light" | "dark",
-  mentionReferences: ReadonlyArray<ProviderMentionReference> = [],
+  mentionReferences: ReadonlyArray<EngineMentionReference> = [],
 ): ReactNode[] {
   return splitPromptIntoDisplaySegments(text, mentionReferences).flatMap((segment, index) => {
     const key = `${keyPrefix}:${index}`;
@@ -2790,7 +2790,7 @@ function renderUserMessageInlineText(
 
 function hasOnlyInlineSkillChips(
   text: string,
-  mentionReferences: ReadonlyArray<ProviderMentionReference> = [],
+  mentionReferences: ReadonlyArray<EngineMentionReference> = [],
 ): boolean {
   const segments = splitPromptIntoDisplaySegments(text, mentionReferences);
   let skillCount = 0;
@@ -3000,7 +3000,7 @@ const UserMessageCollapsibleText = memo(function UserMessageCollapsibleText(prop
 
 const UserMessageBody = memo(function UserMessageBody(props: {
   text: string;
-  mentionReferences: ReadonlyArray<ProviderMentionReference>;
+  mentionReferences: ReadonlyArray<EngineMentionReference>;
   terminalContexts: ParsedTerminalContextEntry[];
   chatTypographyStyle: CSSProperties;
   resolvedTheme: "light" | "dark";

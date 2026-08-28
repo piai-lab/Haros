@@ -15,7 +15,7 @@ export interface CrossTaskOrigin {
 
 // A single, app-level attribution: the message reached this thread from another
 // OmniMind thread, so it always reads as "Sent by OmniMind" with the OmniMind mark
-// (the origin provider is not surfaced here to keep one consistent label).
+// (the origin engine is not surfaced here to keep one consistent label).
 function OriginContent(): ReactNode {
   return (
     <>

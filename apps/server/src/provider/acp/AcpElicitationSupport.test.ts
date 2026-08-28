@@ -1,6 +1,6 @@
 // FILE: AcpElicitationSupport.test.ts
 // Purpose: Verifies ACP form schemas and OmniMind answers round-trip without losing primitive types.
-// Layer: Provider ACP tests
+// Layer: Engine ACP tests
 // Depends on: AcpElicitationSupport.
 
 import { describe, expect, it } from "vitest";

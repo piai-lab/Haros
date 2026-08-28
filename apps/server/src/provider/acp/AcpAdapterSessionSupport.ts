@@ -1,16 +1,16 @@
 // FILE: AcpAdapterSessionSupport.ts
-// Purpose: Shares ACP adapter bookkeeping that is independent of a provider's transport details.
-// Layer: Provider ACP adapter support
-// Exports: provider-independent ACP session bookkeeping and turn-local item scoping helpers.
+// Purpose: Shares ACP adapter bookkeeping that is independent of a engine's transport details.
+// Layer: Engine ACP adapter support
+// Exports: engine-independent ACP session bookkeeping and turn-local item scoping helpers.
 
 import * as nodePath from "node:path";
 
 import type {
   CanonicalUserInputSettlement,
-  ProviderApprovalDecision,
-  ProviderInteractionMode,
-  ProviderSession,
-  ProviderUserInputAnswers,
+  EngineApprovalDecision,
+  EngineInteractionMode,
+  EngineSession,
+  EngineUserInputAnswers,
   RuntimeMode,
   TurnId,
 } from "@harnessos/contracts";
@@ -66,13 +66,13 @@ function isAcpPlanMode(mode: AcpSessionMode, planAliases: ReadonlyArray<string>)
 
 /** Omitted turn modes are normal execution turns, never inherited Plan turns. */
 export function resolveAcpTurnInteractionMode(
-  interactionMode: ProviderInteractionMode | undefined,
-): ProviderInteractionMode {
+  interactionMode: EngineInteractionMode | undefined,
+): EngineInteractionMode {
   return interactionMode ?? "default";
 }
 
 export function resolveRequestedAcpSessionModeId(input: {
-  readonly interactionMode: ProviderInteractionMode | undefined;
+  readonly interactionMode: EngineInteractionMode | undefined;
   readonly runtimeMode: RuntimeMode;
   readonly modeState: AcpSessionModeState | undefined;
   readonly aliases: AcpSessionModeAliases;
@@ -138,7 +138,7 @@ export function makeAcpThreadLock(): Effect.Effect<AcpThreadLock> {
 export function settleAcpPendingApprovalsAsCancelled(
   pendingApprovals: ReadonlyMap<
     unknown,
-    { readonly decision: Deferred.Deferred<ProviderApprovalDecision> }
+    { readonly decision: Deferred.Deferred<EngineApprovalDecision> }
   >,
 ): Effect.Effect<void> {
   return Effect.forEach(
@@ -174,7 +174,7 @@ export function settleAcpPendingUserInputs(
 
 export function acpUserInputAnswers(
   settlement: CanonicalUserInputSettlement,
-): ProviderUserInputAnswers {
+): EngineUserInputAnswers {
   if (settlement.status !== "answered") return {};
   return encodeCanonicalUserInputResponse(settlement).answers;
 }
@@ -223,7 +223,7 @@ export function finalizeAcpActiveTurnCost(context: { latestSessionCostUsd: numbe
 
 export function withAcpPlanModePrompt(input: {
   readonly text: string;
-  readonly interactionMode?: ProviderInteractionMode;
+  readonly interactionMode?: EngineInteractionMode;
   readonly promptPrefix: string;
 }): string {
   if (input.interactionMode !== "plan") {
@@ -257,7 +257,7 @@ export function clearAcpActiveTurn<PromptFiber, InteractionMode>(
     activeTurnFailedToolDetail: string | undefined;
     activePromptFiber: PromptFiber | undefined;
     activeInteractionMode: InteractionMode | undefined;
-    session: ProviderSession;
+    session: EngineSession;
   },
   turnId: TurnId,
 ): boolean {
@@ -277,22 +277,22 @@ export function clearAcpActiveTurn<PromptFiber, InteractionMode>(
 }
 
 export function scopeAcpRuntimeItemIdForTurn(
-  provider: string,
+  engine: string,
   turnId: TurnId,
   itemId: string,
 ): string {
-  return `${provider}:${turnId}:${itemId}`;
+  return `${engine}:${turnId}:${itemId}`;
 }
 
-// Preserves the provider-native tool id while making the public runtime id turn-local.
+// Preserves the engine-native tool id while making the public runtime id turn-local.
 export function scopeAcpToolCallStateForTurn(
-  provider: string,
+  engine: string,
   turnId: TurnId,
   toolCall: AcpToolCallState,
 ): AcpToolCallState {
   return {
     ...toolCall,
-    toolCallId: scopeAcpRuntimeItemIdForTurn(provider, turnId, toolCall.toolCallId),
+    toolCallId: scopeAcpRuntimeItemIdForTurn(engine, turnId, toolCall.toolCallId),
     data: {
       ...toolCall.data,
       providerToolCallId: toolCall.toolCallId,

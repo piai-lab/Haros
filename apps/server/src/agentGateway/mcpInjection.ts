@@ -1,8 +1,8 @@
 /**
- * Provider-facing config builders for the HarnessOS agent gateway.
+ * Engine-facing config builders for the HarnessOS agent gateway.
  *
  * One shared module shapes the same MCP connection (endpoint URL + per-thread
- * bearer token) into every provider's native MCP configuration format so the
+ * bearer token) into every engine's native MCP configuration format so the
  * injection rules cannot drift between adapters:
  *
  * - Codex: `[mcp_servers.harnessos]` TOML block (streamable HTTP +
@@ -71,7 +71,7 @@ export interface OpenCodeMcpRemoteServerConfig {
 /**
  * OpenCode's dynamic `mcp.add` endpoint is server/directory scoped rather
  * than session scoped. Callers must install this config through either a
- * provider process dedicated to the owning HarnessOS thread or an exclusive
+ * engine process dedicated to the owning HarnessOS thread or an exclusive
  * external-server/directory lock held for the full agent turn.
  */
 export function buildOpenCodeMcpServer(
@@ -161,7 +161,7 @@ async function postAgentGatewayJsonRpc(input: {
   return payload.result;
 }
 
-/** Load the canonical gateway tool descriptors for native-tool providers. */
+/** Load the canonical gateway tool descriptors for native-tool engines. */
 export async function listAgentGatewayMcpTools(input: {
   readonly connection: AgentGatewayMcpConnection;
   readonly fetch?: AgentGatewayMcpFetch;

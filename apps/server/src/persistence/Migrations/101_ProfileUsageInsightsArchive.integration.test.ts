@@ -17,7 +17,7 @@ describe("101_ProfileUsageInsightsArchive", () => {
       `;
       yield* sql`
         INSERT INTO profile_stats_deleted_tokens (
-          thread_id, created_at, provider, model, tokens
+          thread_id, created_at, engine, model, tokens
         ) VALUES (
           'legacy-thread', '2026-08-01T00:00:00.000Z', 'codex', 'gpt-5-codex', 42
         )

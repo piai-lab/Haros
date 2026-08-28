@@ -10,7 +10,7 @@
 // Exports: InlineMentionChip
 
 import { type MouseEvent, type ReactNode } from "react";
-import type { ProviderMentionReference } from "@harnessos/contracts";
+import type { EngineMentionReference } from "@harnessos/contracts";
 import { basenameOfPath, pathLooksLikeKnownFile } from "~/file-icons";
 import { openWorkspaceFileReference, useWorkspaceFileOpener } from "~/lib/workspaceFileOpener";
 import {
@@ -32,7 +32,7 @@ interface InlineMentionChipProps {
   path: string;
   theme: "light" | "dark";
   kind?: MentionChipKind;
-  mentionReferences?: ReadonlyArray<ProviderMentionReference>;
+  mentionReferences?: ReadonlyArray<EngineMentionReference>;
   /** Defaults to the path basename (composer-style label). */
   label?: ReactNode;
   /** When set, the chip renders as an openable anchor instead of a static span. */

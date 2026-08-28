@@ -1,11 +1,11 @@
 import {
   type ProjectEntry,
   type ModelSlug,
-  type ProviderNativeCommandDescriptor,
-  type ProviderMentionReference,
+  type EngineNativeCommandDescriptor,
+  type EngineMentionReference,
   type EngineKind,
-  type ProviderPluginDescriptor,
-  type ProviderSkillDescriptor,
+  type EnginePluginDescriptor,
+  type EngineSkillDescriptor,
 } from "@harnessos/contracts";
 import { memo, useEffect, useRef, type ReactNode } from "react";
 import { type ComposerTriggerKind } from "../../composer-logic";
@@ -24,7 +24,7 @@ import {
   builtInComposerSlashCommandIcon,
   resolveBuiltInComposerSlashCommandPresentation,
 } from "~/composerSlashCommandPresentation";
-import { formatSkillScope } from "~/lib/providerDiscovery";
+import { formatSkillScope } from "~/lib/engineDiscovery";
 import { cn } from "~/lib/utils";
 import {
   Command,
@@ -35,7 +35,7 @@ import {
   CommandSeparator,
 } from "../ui/command";
 import { FileEntryIcon } from "./FileEntryIcon";
-import { ProviderIcon } from "../ProviderIcon";
+import { EngineIcon } from "../EngineIcon";
 import {
   COMPOSER_COMMAND_MENU_ITEM_ACTIVE_CLASS_NAME,
   COMPOSER_COMMAND_MENU_ITEM_CLASS_NAME,
@@ -52,7 +52,7 @@ function humanizeProviderCommandName(command: string): string {
 }
 
 function commandMenuTitle(
-  item: Extract<ComposerCommandItem, { type: "slash-command" | "provider-native-command" }>,
+  item: Extract<ComposerCommandItem, { type: "slash-command" | "engine-native-command" }>,
   t: ReturnType<typeof useI18n>["t"],
 ): string {
   if (item.type === "slash-command") {
@@ -90,7 +90,7 @@ function commandMenuTrailingMeta(
     return t("term.model");
   }
 
-  if (item.type === "slash-command" || item.type === "provider-native-command") {
+  if (item.type === "slash-command" || item.type === "engine-native-command") {
     return `/${item.command}`;
   }
 
@@ -104,7 +104,7 @@ function commandMenuTrailingMeta(
 }
 
 function commandMenuSecondaryText(item: ComposerCommandItem): string | null {
-  if (item.type === "slash-command" || item.type === "provider-native-command") {
+  if (item.type === "slash-command" || item.type === "engine-native-command") {
     return item.description;
   }
 
@@ -148,9 +148,9 @@ export type ComposerCommandItem =
     }
   | {
       id: string;
-      type: "provider-native-command";
-      provider: EngineKind;
-      command: ProviderNativeCommandDescriptor["name"];
+      type: "engine-native-command";
+      engine: EngineKind;
+      command: EngineNativeCommandDescriptor["name"];
       label: string;
       description: string;
     }
@@ -171,7 +171,7 @@ export type ComposerCommandItem =
   | {
       id: string;
       type: "model";
-      provider: EngineKind;
+      engine: EngineKind;
       model: ModelSlug;
       label: string;
       description: string;
@@ -179,8 +179,8 @@ export type ComposerCommandItem =
   | {
       id: string;
       type: "plugin";
-      plugin: ProviderPluginDescriptor;
-      mention: ProviderMentionReference;
+      plugin: EnginePluginDescriptor;
+      mention: EngineMentionReference;
       label: string;
       description: string;
     }
@@ -188,22 +188,22 @@ export type ComposerCommandItem =
       id: string;
       type: "thread";
       threadId: string;
-      provider: EngineKind;
-      mention: ProviderMentionReference;
+      engine: EngineKind;
+      mention: EngineMentionReference;
       label: string;
       description: string;
     }
   | {
       id: string;
       type: "skill";
-      skill: ProviderSkillDescriptor;
+      skill: EngineSkillDescriptor;
       label: string;
       description: string;
     }
   | {
       id: string;
       type: "agent";
-      provider: EngineKind;
+      engine: EngineKind;
       alias: string;
       color: string;
       label: string;
@@ -283,12 +283,12 @@ export function groupCommandItems(
   }
 
   const builtInItems = items.filter((item) => item.type === "slash-command");
-  const providerItems = items.filter((item) => item.type === "provider-native-command");
+  const providerItems = items.filter((item) => item.type === "engine-native-command");
   const skillItems = items.filter((item) => item.type === "skill");
   const otherItems = items.filter(
     (item) =>
       item.type !== "slash-command" &&
-      item.type !== "provider-native-command" &&
+      item.type !== "engine-native-command" &&
       item.type !== "skill",
   );
 
@@ -297,7 +297,7 @@ export function groupCommandItems(
     groups.push({ id: "built-in", label: labels.builtIn, items: builtInItems });
   }
   if (providerItems.length > 0) {
-    groups.push({ id: "provider", label: labels.engine, items: providerItems });
+    groups.push({ id: "engine", label: labels.engine, items: providerItems });
   }
   if (skillItems.length > 0) {
     groups.push({ id: "skills", label: labels.skills, items: skillItems });
@@ -479,8 +479,8 @@ function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"
       const BuiltInCommandIcon = builtInComposerSlashCommandIcon(item.command);
       return <BuiltInCommandIcon className={cls} />;
     }
-    case "provider-native-command":
-      // Provider native commands surface skills (e.g. Claude exposes skills as
+    case "engine-native-command":
+      // Engine native commands surface skills (e.g. Claude exposes skills as
       // slash commands), so default to the skill block glyph used for skill
       // tokens in the composer/timeline — named commands still keep their icon.
       return <SkillCubeIcon className={cls} />;
@@ -491,7 +491,7 @@ function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"
     case "plugin":
       return <PluginIcon className={cls} />;
     case "thread":
-      return <ProviderIcon provider={item.provider} className={cls} />;
+      return <EngineIcon engine={item.engine} className={cls} />;
     case "skill":
       return <SkillCubeIcon className={cls} />;
     default:
@@ -562,7 +562,7 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem({
       <div className="min-w-0 flex flex-1 items-center gap-3">
         <div className="min-w-0 flex flex-1 items-center gap-1.5 overflow-hidden">
           <span className="shrink-0 text-[length:var(--app-font-size-ui-xs,12px)] font-medium text-foreground/80">
-            {item.type === "slash-command" || item.type === "provider-native-command"
+            {item.type === "slash-command" || item.type === "engine-native-command"
               ? commandMenuTitle(item, t)
               : item.label}
           </span>

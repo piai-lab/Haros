@@ -35,7 +35,7 @@ import {
   type OrchestrationTurnProvenance,
   ThreadHandoff,
   ThreadForkScope,
-  ModelSelection,
+  EngineSelection,
   ModelPresentationIdentity,
 } from "@harnessos/contracts";
 import { Effect, Layer, Option, Schema, Struct } from "effect";
@@ -50,7 +50,7 @@ import {
   toPersistenceSqlError,
   type ProjectionRepositoryError,
 } from "../../persistence/Errors.ts";
-import { normalizePersistedModelSelection } from "../../persistence/modelSelectionCompatibility.ts";
+import { normalizePersistedEngineSelection } from "../../persistence/engineSelectionCompatibility.ts";
 import { deriveThreadSummaryMetadata } from "@harnessos/shared/threadSummary";
 import { ProjectionCheckpoint } from "../../persistence/Services/ProjectionCheckpoints.ts";
 import { ProjectionProject } from "../../persistence/Services/ProjectionProjects.ts";
@@ -85,20 +85,20 @@ const decodeReadModel = Schema.decodeUnknownEffect(OrchestrationReadModel);
 const decodeShellSnapshot = Schema.decodeUnknownEffect(OrchestrationShellSnapshot);
 const decodeThreadDetail = Schema.decodeUnknownEffect(OrchestrationThread);
 const decodeThreadDetailSnapshot = Schema.decodeUnknownEffect(OrchestrationThreadDetailSnapshot);
-const decodeModelSelection = Schema.decodeUnknownEffect(ModelSelection);
-const ModelSelectionJsonUnknown = Schema.fromJsonString(Schema.Unknown);
+const decodeEngineSelection = Schema.decodeUnknownEffect(EngineSelection);
+const EngineSelectionJsonUnknown = Schema.fromJsonString(Schema.Unknown);
 const MAX_THREAD_MESSAGES = 2_000;
 // Bulk read-model snapshot: stays aligned with the in-memory projector window
 // (`orchestration/projector.ts`), which trims every live thread to the same cap.
 const MAX_SNAPSHOT_THREAD_ACTIVITIES = 500;
-// A single opened thread keeps a much deeper window: providers emit hundreds of
+// A single opened thread keeps a much deeper window: engines emit hundreds of
 // activity rows per turn, so a 500-row tail dropped the previous turns' work log.
 const MAX_THREAD_DETAIL_ACTIVITIES = 2_000;
 const MAX_THREAD_FILE_CHANGE_ACTIVITIES = 2_000;
 const MAX_TURN_GENERATED_IMAGE_ACTIVITY_RECORDS = 64;
 const ProjectionProjectDbRowSchema = ProjectionProject.mapFields(
   Struct.assign({
-    defaultModelSelection: Schema.NullOr(ModelSelectionJsonUnknown),
+    defaultEngineSelection: Schema.NullOr(EngineSelectionJsonUnknown),
     scripts: Schema.fromJsonString(Schema.Array(ProjectScript)),
     isPinned: Schema.Number,
   }),
@@ -117,7 +117,7 @@ const ProjectionThreadDbRowSchema = ProjectionThread.mapFields(
     goalAchievements: Schema.optional(
       Schema.NullOr(Schema.fromJsonString(ThreadGoalAchievements)),
     ).pipe(Schema.withDecodingDefault(() => null)),
-    modelSelection: ModelSelectionJsonUnknown,
+    engineSelection: EngineSelectionJsonUnknown,
   }),
 );
 const {
@@ -135,7 +135,7 @@ const ProjectionThreadShellDbRowSchema = Schema.Struct(ProjectionThreadShellFiel
     handoff: Schema.NullOr(Schema.fromJsonString(ThreadHandoff)),
     forkScope: Schema.NullOr(Schema.fromJsonString(ThreadForkScope)),
     lastKnownPr: Schema.NullOr(Schema.fromJsonString(OrchestrationThreadPullRequest)),
-    modelSelection: ModelSelectionJsonUnknown,
+    engineSelection: EngineSelectionJsonUnknown,
   }),
 );
 /**
@@ -175,7 +175,7 @@ const ProjectionTurnProvenanceDbRowSchema = Schema.Struct({
   threadId: ThreadId,
   pendingMessageId: MessageId,
   turnId: Schema.NullOr(TurnId),
-  modelSelection: ModelSelectionJsonUnknown,
+  engineSelection: EngineSelectionJsonUnknown,
   modelPresentationIdentity: Schema.NullOr(Schema.fromJsonString(ModelPresentationIdentity)),
   requestedAt: IsoDateTime,
 });
@@ -259,14 +259,14 @@ type ProjectionThreadDbRowRaw = Schema.Schema.Type<typeof ProjectionThreadDbRowS
 type ProjectionThreadShellDbRowRaw = Schema.Schema.Type<typeof ProjectionThreadShellDbRowSchema>;
 type ProjectionProjectDbRowRaw = Schema.Schema.Type<typeof ProjectionProjectDbRowSchema>;
 type ProjectionSpaceDbRow = Schema.Schema.Type<typeof ProjectionSpace>;
-type ProjectionThreadDbRow = Omit<ProjectionThreadDbRowRaw, "modelSelection"> & {
-  readonly modelSelection: typeof ModelSelection.Type;
+type ProjectionThreadDbRow = Omit<ProjectionThreadDbRowRaw, "engineSelection"> & {
+  readonly engineSelection: typeof EngineSelection.Type;
 };
-type ProjectionThreadShellDbRow = Omit<ProjectionThreadShellDbRowRaw, "modelSelection"> & {
-  readonly modelSelection: typeof ModelSelection.Type;
+type ProjectionThreadShellDbRow = Omit<ProjectionThreadShellDbRowRaw, "engineSelection"> & {
+  readonly engineSelection: typeof EngineSelection.Type;
 };
-type ProjectionProjectDbRow = Omit<ProjectionProjectDbRowRaw, "defaultModelSelection"> & {
-  readonly defaultModelSelection: typeof ModelSelection.Type | null;
+type ProjectionProjectDbRow = Omit<ProjectionProjectDbRowRaw, "defaultEngineSelection"> & {
+  readonly defaultEngineSelection: typeof EngineSelection.Type | null;
 };
 type ProjectionThreadProposedPlanDbRow = Schema.Schema.Type<
   typeof ProjectionThreadProposedPlanDbRowSchema
@@ -279,34 +279,34 @@ type ProjectionStateDbRow = Schema.Schema.Type<typeof ProjectionStateDbRowSchema
 type ProjectionTurnProvenanceDbRowRaw = Schema.Schema.Type<
   typeof ProjectionTurnProvenanceDbRowSchema
 >;
-type ProjectionTurnProvenanceDbRow = Omit<ProjectionTurnProvenanceDbRowRaw, "modelSelection"> & {
-  readonly modelSelection: typeof ModelSelection.Type;
+type ProjectionTurnProvenanceDbRow = Omit<ProjectionTurnProvenanceDbRowRaw, "engineSelection"> & {
+  readonly engineSelection: typeof EngineSelection.Type;
 };
 
 function decodeProjectionProjectRow(
   row: ProjectionProjectDbRowRaw,
 ): Effect.Effect<ProjectionProjectDbRow, Schema.SchemaError> {
-  if (row.defaultModelSelection === null) {
-    return Effect.succeed({ ...row, defaultModelSelection: null });
+  if (row.defaultEngineSelection === null) {
+    return Effect.succeed({ ...row, defaultEngineSelection: null });
   }
-  return decodeModelSelection(normalizePersistedModelSelection(row.defaultModelSelection)).pipe(
-    Effect.map((defaultModelSelection) => ({ ...row, defaultModelSelection })),
+  return decodeEngineSelection(normalizePersistedEngineSelection(row.defaultEngineSelection)).pipe(
+    Effect.map((defaultEngineSelection) => ({ ...row, defaultEngineSelection })),
   );
 }
 
 function decodeProjectionThreadRow(
   row: ProjectionThreadDbRowRaw,
 ): Effect.Effect<ProjectionThreadDbRow, Schema.SchemaError> {
-  return decodeModelSelection(normalizePersistedModelSelection(row.modelSelection)).pipe(
-    Effect.map((modelSelection) => ({ ...row, modelSelection })),
+  return decodeEngineSelection(normalizePersistedEngineSelection(row.engineSelection)).pipe(
+    Effect.map((engineSelection) => ({ ...row, engineSelection })),
   );
 }
 
 function decodeProjectionThreadShellRow(
   row: ProjectionThreadShellDbRowRaw,
 ): Effect.Effect<ProjectionThreadShellDbRow, Schema.SchemaError> {
-  return decodeModelSelection(normalizePersistedModelSelection(row.modelSelection)).pipe(
-    Effect.map((modelSelection) => ({ ...row, modelSelection })),
+  return decodeEngineSelection(normalizePersistedEngineSelection(row.engineSelection)).pipe(
+    Effect.map((engineSelection) => ({ ...row, engineSelection })),
   );
 }
 
@@ -342,8 +342,8 @@ function decodeProjectionTurnProvenanceRows(
   operation: string,
 ): Effect.Effect<ReadonlyArray<ProjectionTurnProvenanceDbRow>, ProjectionRepositoryError> {
   return Effect.forEach(rows, (row) =>
-    decodeModelSelection(normalizePersistedModelSelection(row.modelSelection)).pipe(
-      Effect.map((modelSelection) => ({ ...row, modelSelection })),
+    decodeEngineSelection(normalizePersistedEngineSelection(row.engineSelection)).pipe(
+      Effect.map((engineSelection) => ({ ...row, engineSelection })),
     ),
   ).pipe(Effect.mapError(toPersistenceDecodeError(operation)));
 }
@@ -482,7 +482,7 @@ function toProjectedProject(row: ProjectionProjectDbRow): OrchestrationProject {
     kind: row.kind,
     title: row.title,
     workspaceRoot: row.workspaceRoot,
-    defaultModelSelection: row.defaultModelSelection,
+    defaultEngineSelection: row.defaultEngineSelection,
     scripts: row.scripts,
     isPinned: row.isPinned > 0,
     spaceId: row.spaceId,
@@ -670,7 +670,7 @@ function collectTurnProvenance(rows: ReadonlyArray<ProjectionTurnProvenanceDbRow
     pushGrouped(byThread, row.threadId, {
       pendingMessageId: row.pendingMessageId,
       turnId: row.turnId,
-      modelSelection: row.modelSelection,
+      engineSelection: row.engineSelection,
       ...(row.modelPresentationIdentity
         ? { modelPresentationIdentity: row.modelPresentationIdentity }
         : {}),
@@ -686,7 +686,7 @@ function toProjectedProjectShell(row: ProjectionProjectDbRow): OrchestrationProj
     kind: row.kind,
     title: row.title,
     workspaceRoot: row.workspaceRoot,
-    defaultModelSelection: row.defaultModelSelection,
+    defaultEngineSelection: row.defaultEngineSelection,
     scripts: row.scripts,
     isPinned: row.isPinned > 0,
     spaceId: row.spaceId,
@@ -706,7 +706,7 @@ function toProjectedThreadShellFromStoredSummary(input: {
     projectId: threadRow.projectId,
     groupIds: threadRow.groupIds,
     title: threadRow.title,
-    modelSelection: threadRow.modelSelection,
+    engineSelection: threadRow.engineSelection,
     runtimeMode: threadRow.runtimeMode,
     interactionMode: threadRow.interactionMode,
     envMode: threadRow.envMode,
@@ -766,7 +766,7 @@ function toProjectedThread(input: {
     projectId: threadRow.projectId,
     groupIds: threadRow.groupIds,
     title: threadRow.title,
-    modelSelection: threadRow.modelSelection,
+    engineSelection: threadRow.engineSelection,
     runtimeMode: threadRow.runtimeMode,
     interactionMode: threadRow.interactionMode,
     envMode: threadRow.envMode,
@@ -898,7 +898,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           kind,
           title,
           workspace_root AS "workspaceRoot",
-          default_model_selection_json AS "defaultModelSelection",
+          default_model_selection_json AS "defaultEngineSelection",
           scripts_json AS "scripts",
           is_pinned AS "isPinned",
           space_id AS "spaceId",
@@ -920,7 +920,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           project_id AS "projectId",
           group_ids_json AS "groupIds",
           title,
-          model_selection_json AS "modelSelection",
+          model_selection_json AS "engineSelection",
           runtime_mode AS "runtimeMode",
           interaction_mode AS "interactionMode",
           env_mode AS "envMode",
@@ -979,7 +979,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           project_id AS "projectId",
           group_ids_json AS "groupIds",
           title,
-          model_selection_json AS "modelSelection",
+          model_selection_json AS "engineSelection",
           runtime_mode AS "runtimeMode",
           interaction_mode AS "interactionMode",
           env_mode AS "envMode",
@@ -1131,7 +1131,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           turns.thread_id AS "threadId",
           turns.pending_message_id AS "pendingMessageId",
           turns.turn_id AS "turnId",
-          json_extract(events.payload_json, '$.modelSelection') AS "modelSelection",
+          json_extract(events.payload_json, '$.engineSelection') AS "engineSelection",
           json_extract(events.payload_json, '$.modelPresentationIdentity') AS "modelPresentationIdentity",
           turns.requested_at AS "requestedAt"
         FROM projection_turns AS turns
@@ -1143,7 +1143,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         WHERE turns.thread_id IN (
           SELECT thread_id FROM projection_threads WHERE deleted_at IS NULL
         )
-          AND json_type(events.payload_json, '$.modelSelection') = 'object'
+          AND json_type(events.payload_json, '$.engineSelection') = 'object'
         ORDER BY turns.thread_id ASC, turns.requested_at ASC, turns.pending_message_id ASC
       `,
   });
@@ -1224,7 +1224,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
                   (ranked.kind = 'approval.requested' AND later.kind = 'approval.resolved')
                   OR (
                     ranked.kind = 'approval.requested'
-                    AND later.kind = 'provider.approval.respond.failed'
+                    AND later.kind = 'engine.approval.respond.failed'
                     AND (
                       lower(COALESCE(json_extract(later.payload_json, '$.detail'), '')) LIKE
                         '%stale pending approval request%'
@@ -1237,7 +1237,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
                   OR (ranked.kind = 'user-input.requested' AND later.kind = 'user-input.resolved')
                   OR (
                     ranked.kind = 'user-input.requested'
-                    AND later.kind = 'provider.user-input.respond.failed'
+                    AND later.kind = 'engine.user-input.respond.failed'
                     AND (
                       lower(COALESCE(json_extract(later.payload_json, '$.detail'), '')) LIKE
                         '%stale pending user-input request%'
@@ -1349,7 +1349,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           status,
           provider_name AS "providerName",
           provider_session_id AS "providerSessionId",
-          provider_thread_id AS "providerThreadId",
+          provider_thread_id AS "nativeThreadId",
           runtime_mode AS "runtimeMode",
           active_turn_id AS "activeTurnId",
           last_error AS "lastError",
@@ -1374,7 +1374,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           assistant_message_id AS "assistantMessageId",
           COALESCE(completed_at, started_at, requested_at) AS "completedAt"
         FROM projection_turns
-        -- Provider-diff placeholders can reserve checkpoint metadata before the
+        -- Engine-diff placeholders can reserve checkpoint metadata before the
         -- turn is complete; snapshot checkpoint summaries require completedAt.
         WHERE checkpoint_turn_count IS NOT NULL
           AND completed_at IS NOT NULL
@@ -1460,7 +1460,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           kind,
           title,
           workspace_root AS "workspaceRoot",
-          default_model_selection_json AS "defaultModelSelection",
+          default_model_selection_json AS "defaultEngineSelection",
           scripts_json AS "scripts",
           is_pinned AS "isPinned",
           space_id AS "spaceId",
@@ -1520,7 +1520,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           kind,
           title,
           workspace_root AS "workspaceRoot",
-          default_model_selection_json AS "defaultModelSelection",
+          default_model_selection_json AS "defaultEngineSelection",
           scripts_json AS "scripts",
           is_pinned AS "isPinned",
           space_id AS "spaceId",
@@ -1562,7 +1562,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           project_id AS "projectId",
           group_ids_json AS "groupIds",
           title,
-          model_selection_json AS "modelSelection",
+          model_selection_json AS "engineSelection",
           runtime_mode AS "runtimeMode",
           interaction_mode AS "interactionMode",
           env_mode AS "envMode",
@@ -1622,7 +1622,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           project_id AS "projectId",
           group_ids_json AS "groupIds",
           title,
-          model_selection_json AS "modelSelection",
+          model_selection_json AS "engineSelection",
           runtime_mode AS "runtimeMode",
           interaction_mode AS "interactionMode",
           env_mode AS "envMode",
@@ -1727,7 +1727,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           turns.thread_id AS "threadId",
           turns.pending_message_id AS "pendingMessageId",
           turns.turn_id AS "turnId",
-          json_extract(events.payload_json, '$.modelSelection') AS "modelSelection",
+          json_extract(events.payload_json, '$.engineSelection') AS "engineSelection",
           json_extract(events.payload_json, '$.modelPresentationIdentity') AS "modelPresentationIdentity",
           turns.requested_at AS "requestedAt"
         FROM projection_turns AS turns
@@ -1737,7 +1737,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
          AND json_extract(events.payload_json, '$.messageId') = turns.pending_message_id
          AND json_extract(events.payload_json, '$.createdAt') = turns.requested_at
         WHERE turns.thread_id = ${threadId}
-          AND json_type(events.payload_json, '$.modelSelection') = 'object'
+          AND json_type(events.payload_json, '$.engineSelection') = 'object'
         ORDER BY turns.requested_at ASC, turns.pending_message_id ASC
       `,
   });
@@ -1857,7 +1857,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
                     (ranked.kind = 'approval.requested' AND later.kind = 'approval.resolved')
                     OR (
                       ranked.kind = 'approval.requested'
-                      AND later.kind = 'provider.approval.respond.failed'
+                      AND later.kind = 'engine.approval.respond.failed'
                       AND (
                         lower(COALESCE(json_extract(later.payload_json, '$.detail'), '')) LIKE
                           '%stale pending approval request%'
@@ -1870,7 +1870,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
                     OR (ranked.kind = 'user-input.requested' AND later.kind = 'user-input.resolved')
                     OR (
                       ranked.kind = 'user-input.requested'
-                      AND later.kind = 'provider.user-input.respond.failed'
+                      AND later.kind = 'engine.user-input.respond.failed'
                       AND (
                         lower(COALESCE(json_extract(later.payload_json, '$.detail'), '')) LIKE
                           '%stale pending user-input request%'
@@ -1945,7 +1945,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           status,
           provider_name AS "providerName",
           provider_session_id AS "providerSessionId",
-          provider_thread_id AS "providerThreadId",
+          provider_thread_id AS "nativeThreadId",
           runtime_mode AS "runtimeMode",
           active_turn_id AS "activeTurnId",
           last_error AS "lastError",
@@ -2016,7 +2016,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           assistant_message_id AS "assistantMessageId",
           COALESCE(completed_at, started_at, requested_at) AS "completedAt"
         FROM projection_turns
-        -- Keep incomplete provider-diff placeholders out of the public
+        -- Keep incomplete engine-diff placeholders out of the public
         -- checkpoint summary contract, which requires completedAt.
         WHERE thread_id = ${threadId}
           AND checkpoint_turn_count IS NOT NULL
@@ -2064,7 +2064,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
               AND json_type(payload_json, '$.data.generatedImage') = 'object'
             )
           )
-        -- Provider replay can project the same completion more than once. Collapse
+        -- Engine replay can project the same completion more than once. Collapse
         -- exact payload duplicates before applying the two-records-per-image cap.
         GROUP BY kind, payload_json
         ORDER BY MIN(created_at) ASC, MIN(activity_id) ASC
@@ -2155,7 +2155,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
               Effect.flatMap((rows) =>
                 decodeProjectionProjectRows(
                   rows,
-                  "ProjectionSnapshotQuery.getSnapshot:listProjects:decodeModelSelections",
+                  "ProjectionSnapshotQuery.getSnapshot:listProjects:decodeEngineSelections",
                 ),
               ),
             ),
@@ -2169,7 +2169,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
               Effect.flatMap((rows) =>
                 decodeProjectionThreadRows(
                   rows,
-                  "ProjectionSnapshotQuery.getSnapshot:listThreads:decodeModelSelections",
+                  "ProjectionSnapshotQuery.getSnapshot:listThreads:decodeEngineSelections",
                 ),
               ),
             ),
@@ -2191,7 +2191,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
               Effect.flatMap((rows) =>
                 decodeProjectionTurnProvenanceRows(
                   rows,
-                  "ProjectionSnapshotQuery.getSnapshot:listTurnProvenance:decodeModelSelections",
+                  "ProjectionSnapshotQuery.getSnapshot:listTurnProvenance:decodeEngineSelections",
                 ),
               ),
             ),
@@ -2359,7 +2359,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
               Effect.flatMap((rows) =>
                 decodeProjectionProjectRows(
                   rows,
-                  "ProjectionSnapshotQuery.getCommandReadModel:listProjects:decodeModelSelections",
+                  "ProjectionSnapshotQuery.getCommandReadModel:listProjects:decodeEngineSelections",
                 ),
               ),
             ),
@@ -2373,7 +2373,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
               Effect.flatMap((rows) =>
                 decodeProjectionThreadRows(
                   rows,
-                  "ProjectionSnapshotQuery.getCommandReadModel:listThreads:decodeModelSelections",
+                  "ProjectionSnapshotQuery.getCommandReadModel:listThreads:decodeEngineSelections",
                 ),
               ),
             ),
@@ -2501,7 +2501,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
                 Effect.flatMap((rows) =>
                   decodeProjectionProjectRows(
                     rows,
-                    "ProjectionSnapshotQuery.getShellSnapshot:listProjects:decodeModelSelections",
+                    "ProjectionSnapshotQuery.getShellSnapshot:listProjects:decodeEngineSelections",
                   ),
                 ),
               ),
@@ -2515,7 +2515,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
                 Effect.flatMap((rows) =>
                   decodeProjectionThreadShellRows(
                     rows,
-                    "ProjectionSnapshotQuery.getShellSnapshot:listThreads:decodeModelSelections",
+                    "ProjectionSnapshotQuery.getShellSnapshot:listThreads:decodeEngineSelections",
                   ),
                 ),
               ),
@@ -2693,7 +2693,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         Effect.flatMap((option) =>
           decodeProjectionProjectOption(
             option,
-            "ProjectionSnapshotQuery.getActiveProjectByWorkspaceRoot:decodeModelSelection",
+            "ProjectionSnapshotQuery.getActiveProjectByWorkspaceRoot:decodeEngineSelection",
           ),
         ),
         Effect.map((option) =>
@@ -2704,7 +2704,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
               kind: row.kind,
               title: row.title,
               workspaceRoot: row.workspaceRoot,
-              defaultModelSelection: row.defaultModelSelection,
+              defaultEngineSelection: row.defaultEngineSelection,
               scripts: row.scripts,
               isPinned: row.isPinned > 0,
               spaceId: row.spaceId,
@@ -2727,7 +2727,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
       Effect.flatMap((option) =>
         decodeProjectionProjectOption(
           option,
-          "ProjectionSnapshotQuery.getProjectShellById:decodeModelSelection",
+          "ProjectionSnapshotQuery.getProjectShellById:decodeEngineSelection",
         ),
       ),
       Effect.map((option) => Option.map(option, (row) => toProjectedProjectShell(row))),
@@ -2895,7 +2895,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
             Effect.flatMap((option) =>
               decodeProjectionThreadOption(
                 option,
-                "ProjectionSnapshotQuery.getThreadShellById:getThread:decodeModelSelection",
+                "ProjectionSnapshotQuery.getThreadShellById:getThread:decodeEngineSelection",
               ),
             ),
           );
@@ -2963,7 +2963,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
               Effect.flatMap((option) =>
                 decodeProjectionThreadOption(
                   option,
-                  "ProjectionSnapshotQuery.findSyntheticSubagentParentThread:getThread:decodeModelSelection",
+                  "ProjectionSnapshotQuery.findSyntheticSubagentParentThread:getThread:decodeEngineSelection",
                 ),
               ),
             );
@@ -3009,7 +3009,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         Effect.flatMap((option) =>
           decodeProjectionThreadOption(
             option,
-            `${options.tracePrefix}:getThread:decodeModelSelection`,
+            `${options.tracePrefix}:getThread:decodeEngineSelection`,
           ),
         ),
       );
@@ -3049,7 +3049,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
           Effect.flatMap((rows) =>
             decodeProjectionTurnProvenanceRows(
               rows,
-              `${options.tracePrefix}:listTurnProvenance:decodeModelSelections`,
+              `${options.tracePrefix}:listTurnProvenance:decodeEngineSelections`,
             ),
           ),
         ),
@@ -3123,7 +3123,7 @@ const makeProjectionSnapshotQuery = Effect.gen(function* () {
         turnProvenance: turnProvenanceRows.map((row) => ({
           pendingMessageId: row.pendingMessageId,
           turnId: row.turnId,
-          modelSelection: row.modelSelection,
+          engineSelection: row.engineSelection,
           ...(row.modelPresentationIdentity
             ? { modelPresentationIdentity: row.modelPresentationIdentity }
             : {}),

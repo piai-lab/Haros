@@ -8,14 +8,14 @@ import { Effect, Option } from "effect";
 import type { ProjectionSnapshotQueryShape } from "../orchestration/Services/ProjectionSnapshotQuery.ts";
 import type { ThreadDiagnosticsQueryShape } from "../diagnostics/Services/ThreadDiagnosticsQuery.ts";
 import {
-  PROVIDER_COMMAND_REACTOR_CONSUMER,
+  ENGINE_COMMAND_REACTOR_CONSUMER,
   type OrchestrationEventDeliveryRepositoryShape,
 } from "../persistence/Services/OrchestrationEventDeliveries.ts";
 import type { OrchestrationEventStoreShape } from "../persistence/Services/OrchestrationEventStore.ts";
 import {
-  PROVIDER_RUNTIME_EVENT_RETAIN_ACCEPTED,
-  type ProviderRuntimeEventRepositoryShape,
-} from "../persistence/Services/ProviderRuntimeEvents.ts";
+  ENGINE_RUNTIME_EVENT_RETAIN_ACCEPTED,
+  type EngineRuntimeEventRepositoryShape,
+} from "../persistence/Services/EngineRuntimeEvents.ts";
 import {
   decodeDiagnosticCursor,
   diagnosticFilterFingerprint,
@@ -45,7 +45,7 @@ export function makeThreadDiagnosticTools(input: {
   readonly snapshotQuery: ProjectionSnapshotQueryShape;
   readonly diagnostics: ThreadDiagnosticsQueryShape;
   readonly eventStore: OrchestrationEventStoreShape;
-  readonly providerRuntimeEvents: ProviderRuntimeEventRepositoryShape;
+  readonly engineRuntimeEvents: EngineRuntimeEventRepositoryShape;
   readonly eventDeliveries: OrchestrationEventDeliveryRepositoryShape;
   readonly requireThreadShell: (
     threadId: string,
@@ -250,7 +250,7 @@ export function makeThreadDiagnosticTools(input: {
     definition: {
       name: "harnessos_read_thread_runtime_events",
       description:
-        "Read retained provider-runtime events for one thread. This source has a global accepted-event retention cap; inspect coverage before treating absence as evidence.",
+        "Read retained engine-runtime events for one thread. This source has a global accepted-event retention cap; inspect coverage before treating absence as evidence.",
       inputSchema: {
         type: "object",
         properties: {
@@ -261,7 +261,7 @@ export function makeThreadDiagnosticTools(input: {
           eventTypes: { type: "array", items: { type: "string" } },
           includeDetails: {
             type: "boolean",
-            description: "Include bounded, redacted provider event fields, including raw metadata.",
+            description: "Include bounded, redacted engine event fields, including raw metadata.",
           },
         },
         required: ["threadId"],
@@ -284,9 +284,9 @@ export function makeThreadDiagnosticTools(input: {
         const requestedLimit = readDiagnosticPageLimit(args);
         const includeDetails = readBooleanArg(args, "includeDetails") ?? false;
         const limit = includeDetails ? Math.min(requestedLimit, 25) : requestedLimit;
-        const runtimeCoverage = yield* input.providerRuntimeEvents.getThreadCoverage(threadId);
+        const runtimeCoverage = yield* input.engineRuntimeEvents.getThreadCoverage(threadId);
         const highWaterSequence = cursor?.highWaterSequence ?? runtimeCoverage.highWaterSequence;
-        const rows = yield* input.providerRuntimeEvents.readThreadEvents({
+        const rows = yield* input.engineRuntimeEvents.readThreadEvents({
           threadId,
           throughSequenceInclusive: highWaterSequence,
           ...(cursor ? { beforeSequenceExclusive: cursor.beforeSequence } : {}),
@@ -303,7 +303,7 @@ export function makeThreadDiagnosticTools(input: {
               sequence,
               eventId: event.eventId,
               type: event.type,
-              provider: event.provider,
+              engine: event.engine,
               turnId: event.turnId ?? null,
               itemId: event.itemId ?? null,
               requestId: event.requestId ?? null,
@@ -316,7 +316,7 @@ export function makeThreadDiagnosticTools(input: {
             highWaterSequence,
             oldestRetainedSequence: runtimeCoverage.oldestSequence,
             retainedForThread: runtimeCoverage.retainedCount,
-            globalAcceptedEventCap: PROVIDER_RUNTIME_EVENT_RETAIN_ACCEPTED,
+            globalAcceptedEventCap: ENGINE_RUNTIME_EVENT_RETAIN_ACCEPTED,
             sourceComplete: false,
             pageHasOlder: rows.length > limit,
           },
@@ -342,7 +342,7 @@ export function makeThreadDiagnosticTools(input: {
     definition: {
       name: "harnessos_diagnose_thread",
       description:
-        "Build one bounded forensic snapshot from projected status/messages/activity, durable events, provider delivery blockers, and operational stream incidents.",
+        "Build one bounded forensic snapshot from projected status/messages/activity, durable events, engine delivery blockers, and operational stream incidents.",
       inputSchema: {
         type: "object",
         properties: { threadId: { type: "string" } },
@@ -370,9 +370,9 @@ export function makeThreadDiagnosticTools(input: {
           yield* Effect.all([
             input.diagnostics.getActivityCoverage(threadId),
             input.eventStore.getThreadHighWaterSequence(threadId),
-            input.providerRuntimeEvents.getThreadCoverage(threadId),
+            input.engineRuntimeEvents.getThreadCoverage(threadId),
             input.eventDeliveries.listBlockingDeliveries({
-              consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+              consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
               threadId,
               limit: 20,
             }),
@@ -389,7 +389,7 @@ export function makeThreadDiagnosticTools(input: {
             throughSequenceInclusive: eventHighWater,
             limit: 100,
           }),
-          input.providerRuntimeEvents.readThreadEvents({
+          input.engineRuntimeEvents.readThreadEvents({
             threadId,
             throughSequenceInclusive: runtimeCoverage.highWaterSequence,
             limit: 100,
@@ -441,7 +441,7 @@ export function makeThreadDiagnosticTools(input: {
               sequence,
               eventId: event.eventId,
               type: event.type,
-              provider: event.provider,
+              engine: event.engine,
               turnId: event.turnId ?? null,
               itemId: event.itemId ?? null,
               requestId: event.requestId ?? null,
@@ -476,17 +476,17 @@ export function makeThreadDiagnosticTools(input: {
               retentionDays: 30,
               globalCap: 10_000,
             },
-            providerRuntimeRawEvents: {
+            engineRuntimeRawEvents: {
               included: true,
               source: "provider_runtime_events",
               returnedNewest: runtimeEvents.length,
               highWaterSequence: runtimeCoverage.highWaterSequence,
               oldestRetainedSequence: runtimeCoverage.oldestSequence,
               retainedForThread: runtimeCoverage.retainedCount,
-              globalAcceptedEventCap: PROVIDER_RUNTIME_EVENT_RETAIN_ACCEPTED,
+              globalAcceptedEventCap: ENGINE_RUNTIME_EVENT_RETAIN_ACCEPTED,
               sourceComplete: false,
               reason:
-                "Provider runtime events have bounded global retention; absence is not proof that an event never occurred.",
+                "Engine runtime events have bounded global retention; absence is not proof that an event never occurred.",
             },
           },
         });

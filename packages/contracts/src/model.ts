@@ -47,57 +47,57 @@ export const DROID_REASONING_EFFORT_OPTIONS = [
 // Droid exposes effort values dynamically over ACP; keep the static list only
 // as an offline fallback so newly added values survive transport and drafts.
 export type DroidReasoningEffort = string;
-export type ProviderReasoningEffort =
+export type EngineReasoningEffort =
   | CodexReasoningEffort
   | ClaudeCodeEffort
   | PiThinkingLevel
   | GrokReasoningEffort
   | DroidReasoningEffort;
 
-export const ProviderOptionChoice = Schema.Struct({
+export const EngineOptionChoice = Schema.Struct({
   id: TrimmedNonEmptyString,
   label: TrimmedNonEmptyString,
   description: Schema.optional(TrimmedNonEmptyString),
   isDefault: Schema.optional(Schema.Literal(true)),
 });
-export type ProviderOptionChoice = typeof ProviderOptionChoice.Type;
+export type EngineOptionChoice = typeof EngineOptionChoice.Type;
 
-const ProviderOptionDescriptorBase = {
+const EngineOptionDescriptorBase = {
   id: TrimmedNonEmptyString,
   label: TrimmedNonEmptyString,
   description: Schema.optional(TrimmedNonEmptyString),
 } as const;
 
 export const SelectProviderOptionDescriptor = Schema.Struct({
-  ...ProviderOptionDescriptorBase,
+  ...EngineOptionDescriptorBase,
   type: Schema.Literal("select"),
-  options: Schema.Array(ProviderOptionChoice),
+  options: Schema.Array(EngineOptionChoice),
   currentValue: Schema.optional(TrimmedNonEmptyString),
   promptInjectedValues: Schema.optional(Schema.Array(TrimmedNonEmptyString)),
 });
 export type SelectProviderOptionDescriptor = typeof SelectProviderOptionDescriptor.Type;
 
 export const BooleanProviderOptionDescriptor = Schema.Struct({
-  ...ProviderOptionDescriptorBase,
+  ...EngineOptionDescriptorBase,
   type: Schema.Literal("boolean"),
   currentValue: Schema.optional(Schema.Boolean),
 });
 export type BooleanProviderOptionDescriptor = typeof BooleanProviderOptionDescriptor.Type;
 
-export const ProviderOptionDescriptor = Schema.Union([
+export const EngineOptionDescriptor = Schema.Union([
   SelectProviderOptionDescriptor,
   BooleanProviderOptionDescriptor,
 ]);
-export type ProviderOptionDescriptor = typeof ProviderOptionDescriptor.Type;
+export type EngineOptionDescriptor = typeof EngineOptionDescriptor.Type;
 
-export const ProviderOptionSelection = Schema.Struct({
+export const EngineOptionSelection = Schema.Struct({
   id: TrimmedNonEmptyString,
   value: Schema.Union([TrimmedNonEmptyString, Schema.Boolean]),
 });
-export type ProviderOptionSelection = typeof ProviderOptionSelection.Type;
+export type EngineOptionSelection = typeof EngineOptionSelection.Type;
 
-export const ProviderOptionSelections = Schema.Array(ProviderOptionSelection);
-export type ProviderOptionSelections = typeof ProviderOptionSelections.Type;
+export const EngineOptionSelections = Schema.Array(EngineOptionSelection);
+export type EngineOptionSelections = typeof EngineOptionSelections.Type;
 
 export const CodexModelOptions = Schema.Struct({
   // Codex runtime discovery can expose early-access effort values outside the built-in enum.
@@ -150,7 +150,7 @@ export const DroidModelOptions = Schema.Struct({
 });
 export type DroidModelOptions = typeof DroidModelOptions.Type;
 
-export const ProviderModelOptions = Schema.Struct({
+export const EngineModelOptions = Schema.Struct({
   oa: Schema.optional(PiModelOptions),
   codex: Schema.optional(CodexModelOptions),
   claude: Schema.optional(ClaudeModelOptions),
@@ -162,7 +162,7 @@ export const ProviderModelOptions = Schema.Struct({
   opencode: Schema.optional(OpenCodeModelOptions),
   pi: Schema.optional(PiModelOptions),
 });
-export type ProviderModelOptions = typeof ProviderModelOptions.Type;
+export type EngineModelOptions = typeof EngineModelOptions.Type;
 
 export type ReasoningControlSource = "api-effort" | "provider-setting" | "prompt-prefix";
 
@@ -194,7 +194,7 @@ export type ContextWindowOption = {
 };
 
 export type ModelCapabilities = {
-  readonly optionDescriptors?: readonly ProviderOptionDescriptor[];
+  readonly optionDescriptors?: readonly EngineOptionDescriptor[];
   readonly reasoningEffortLevels: readonly EffortOption[];
   readonly supportsFastMode: boolean;
   readonly supportsThinkingToggle: boolean;
@@ -1064,14 +1064,14 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     },
   ],
 } as const satisfies Record<EngineKind, readonly ModelDefinition[]>;
-export type ModelOptionsByProvider = typeof MODEL_OPTIONS_BY_PROVIDER;
+export type ModelOptionsByEngine = typeof MODEL_OPTIONS_BY_PROVIDER;
 
 type BuiltInModelSlug = (typeof MODEL_OPTIONS_BY_PROVIDER)[EngineKind][number]["slug"];
 export type ModelSlug = BuiltInModelSlug | (string & {});
 
-export type ProviderWithDefaultModel = Exclude<EngineKind, "oa" | "pi">;
+export type EngineWithDefaultModel = Exclude<EngineKind, "oa" | "pi">;
 
-export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderWithDefaultModel, ModelSlug> = {
+export const DEFAULT_MODEL_BY_PROVIDER: Record<EngineWithDefaultModel, ModelSlug> = {
   codex: "gpt-5.5",
   claude: "claude-sonnet-5",
   cursor: "auto",

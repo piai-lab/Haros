@@ -19,7 +19,7 @@ export interface CheckpointReactorShape {
    * The returned effect must be run in a scope so all worker fibers can be
    * finalized on shutdown.
    *
-   * Consumes both orchestration-domain and provider-runtime events via an
+   * Consumes both orchestration-domain and engine-runtime events via an
    * internal queue.
    */
   readonly start: Effect.Effect<void, never, Scope.Scope>;

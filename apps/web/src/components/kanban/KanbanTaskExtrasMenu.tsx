@@ -3,7 +3,7 @@
 // Layer: Kanban UI component
 // Exports: KanbanTaskExtrasMenu
 
-import type { ProviderInteractionMode } from "@harnessos/contracts";
+import type { EngineInteractionMode } from "@harnessos/contracts";
 
 import { ComposerPickerMenuPopup } from "~/components/chat/ComposerPickerMenuPopup";
 import { Button } from "~/components/ui/button";
@@ -21,8 +21,8 @@ import { useI18n } from "~/i18n";
 import type { DraftThreadEnvMode } from "../../composerDraftStore";
 
 interface KanbanTaskExtrasMenuProps {
-  readonly interactionMode: ProviderInteractionMode;
-  readonly onInteractionModeChange: (mode: ProviderInteractionMode) => void;
+  readonly interactionMode: EngineInteractionMode;
+  readonly onInteractionModeChange: (mode: EngineInteractionMode) => void;
   readonly envMode: DraftThreadEnvMode;
   readonly onEnvModeChange: (mode: DraftThreadEnvMode) => void;
 }

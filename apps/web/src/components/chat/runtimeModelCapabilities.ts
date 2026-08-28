@@ -1,13 +1,13 @@
 // FILE: runtimeModelCapabilities.ts
 // Purpose: Bridges runtime-discovered model metadata into composer capabilities without replacing static defaults wholesale.
 // Layer: Chat composer helpers
-// Exports: runtime model lookup and Codex capability overrides derived from provider discovery responses.
+// Exports: runtime model lookup and Codex capability overrides derived from engine discovery responses.
 
 import type {
   EffortOption,
   ModelCapabilities,
   EngineKind,
-  ProviderModelDescriptor,
+  EngineModelDescriptor,
 } from "@harnessos/contracts";
 import {
   getDefaultEffort,
@@ -42,31 +42,31 @@ function runtimeEffortLabel(value: string): string {
   }
 }
 
-// Matches the selected model to its runtime descriptor after provider-specific normalization.
+// Matches the selected model to its runtime descriptor after engine-specific normalization.
 export function resolveRuntimeModelDescriptor(input: {
-  provider: EngineKind;
+  engine: EngineKind;
   model: string | null | undefined;
-  runtimeModels: ReadonlyArray<ProviderModelDescriptor> | null | undefined;
-}): ProviderModelDescriptor | undefined {
-  const { provider, model, runtimeModels } = input;
+  runtimeModels: ReadonlyArray<EngineModelDescriptor> | null | undefined;
+}): EngineModelDescriptor | undefined {
+  const { engine, model, runtimeModels } = input;
   if (!runtimeModels?.length) {
     return undefined;
   }
 
-  const normalizedModel = normalizeModelSlug(model, provider) ?? trimOrNull(model);
+  const normalizedModel = normalizeModelSlug(model, engine) ?? trimOrNull(model);
   if (!normalizedModel) {
     return undefined;
   }
 
   return runtimeModels.find((candidate) => {
-    const normalizedCandidate = normalizeModelSlug(candidate.slug, provider) ?? candidate.slug;
+    const normalizedCandidate = normalizeModelSlug(candidate.slug, engine) ?? candidate.slug;
     const normalizedResolvedModel =
-      normalizeModelSlug(candidate.resolvedModel, provider) ?? candidate.resolvedModel;
+      normalizeModelSlug(candidate.resolvedModel, engine) ?? candidate.resolvedModel;
     if (normalizedCandidate === normalizedModel || normalizedResolvedModel === normalizedModel) {
       return true;
     }
     return (
-      provider === "cursor" &&
+      engine === "cursor" &&
       normalizeCursorModelVariantBaseId(normalizedCandidate) ===
         normalizeCursorModelVariantBaseId(normalizedModel)
     );
@@ -75,14 +75,14 @@ export function resolveRuntimeModelDescriptor(input: {
 
 // Reuses static capability flags but lets runtime-discovered models override exposed effort menus.
 export function getRuntimeAwareModelCapabilities(input: {
-  provider: EngineKind;
+  engine: EngineKind;
   model: string | null | undefined;
-  runtimeModel?: ProviderModelDescriptor | undefined;
+  runtimeModel?: EngineModelDescriptor | undefined;
 }): ModelCapabilities {
-  const staticCapabilities = getModelCapabilities(input.provider, input.model);
+  const staticCapabilities = getModelCapabilities(input.engine, input.model);
   // Runtime discovery is authoritative when available; the static table is only a startup fallback.
   const supportsFastMode =
-    (input.provider === "codex" || input.provider === "cursor") && input.runtimeModel
+    (input.engine === "codex" || input.engine === "cursor") && input.runtimeModel
       ? input.runtimeModel.supportsFastMode === true
       : staticCapabilities.supportsFastMode;
   const supportsThinkingToggle =
@@ -96,17 +96,17 @@ export function getRuntimeAwareModelCapabilities(input: {
   const optionDescriptors =
     input.runtimeModel?.optionDescriptors ?? staticCapabilities.optionDescriptors;
   const runtimeEfforts = input.runtimeModel?.supportedReasoningEfforts;
-  // Providers with dynamic catalogs, including Droid, expose model-specific effort ladders here.
+  // Engines with dynamic catalogs, including Droid, expose model-specific effort ladders here.
   if (
-    (input.provider !== "codex" &&
-      input.provider !== "cursor" &&
-      input.provider !== "antigravity" &&
-      input.provider !== "grok" &&
-      input.provider !== "droid" &&
-      input.provider !== "kilo" &&
-      input.provider !== "opencode" &&
-      input.provider !== "oa" &&
-      input.provider !== "pi") ||
+    (input.engine !== "codex" &&
+      input.engine !== "cursor" &&
+      input.engine !== "antigravity" &&
+      input.engine !== "grok" &&
+      input.engine !== "droid" &&
+      input.engine !== "kilo" &&
+      input.engine !== "opencode" &&
+      input.engine !== "oa" &&
+      input.engine !== "pi") ||
     !runtimeEfforts ||
     runtimeEfforts.length === 0
   ) {
@@ -136,7 +136,7 @@ export function getRuntimeAwareModelCapabilities(input: {
     };
   });
 
-  if (input.provider === "kilo" || input.provider === "opencode") {
+  if (input.engine === "kilo" || input.engine === "opencode") {
     return {
       ...staticCapabilities,
       ...(optionDescriptors ? { optionDescriptors } : {}),

@@ -1,7 +1,7 @@
 // FILE: terminalStress.browser.tsx
 // Purpose: Exercise real xterm parsing/rendering in Chromium under large output bursts.
 // Layer: Browser performance test
-// Depends on: @xterm/xterm and the browser Vitest Playwright provider.
+// Depends on: @xterm/xterm and the browser Vitest Playwright engine.
 
 import "../../index.css";
 import "@xterm/xterm/css/xterm.css";

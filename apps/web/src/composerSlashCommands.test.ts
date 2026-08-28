@@ -64,7 +64,7 @@ describe("composerSlashCommands", () => {
     expect(parseComposerSlashInvocation("review")).toBeNull();
   });
 
-  it("does not parse app slash commands that are shadowed by provider-native commands", () => {
+  it("does not parse app slash commands that are shadowed by engine-native commands", () => {
     expect(parseComposerSlashInvocationForCommands("/fast", ["clear", "model"])).toBeNull();
     expect(parseComposerSlashInvocationForCommands("/clear", ["clear", "model"])).toEqual({
       command: "clear",
@@ -154,7 +154,7 @@ describe("composerSlashCommands", () => {
     ).toBe(false);
   });
 
-  it("parses an optional leading provider token in /side args", () => {
+  it("parses an optional leading engine token in /side args", () => {
     const context = {
       currentProvider: "claude",
       availableTargetProviders: ["codex", "cursor"],
@@ -246,9 +246,9 @@ describe("composerSlashCommands", () => {
     expect(buildReviewPrompt({ target: "base-branch" })).toContain("base branch");
   });
 
-  it("filters app slash commands when a provider exposes the same command natively", () => {
+  it("filters app slash commands when a engine exposes the same command natively", () => {
     const availableCommands = getAvailableComposerSlashCommands({
-      provider: "codex",
+      engine: "codex",
       supportsFastSlashCommand: true,
       canOfferCompactCommand: true,
       canOfferReviewCommand: true,
@@ -267,7 +267,7 @@ describe("composerSlashCommands", () => {
 
   it("keeps app-level /review available for codex even when native review exists", () => {
     const availableCommands = getAvailableComposerSlashCommands({
-      provider: "codex",
+      engine: "codex",
       supportsFastSlashCommand: true,
       canOfferCompactCommand: true,
       canOfferReviewCommand: true,
@@ -282,7 +282,7 @@ describe("composerSlashCommands", () => {
     expect(shouldHideProviderNativeCommandFromComposerMenu("codex", "status")).toBe(false);
   });
 
-  it("does not surface provider-native remote entry points in V1", () => {
+  it("does not surface engine-native remote entry points in V1", () => {
     expect(shouldHideProviderNativeCommandFromComposerMenu("claude", "remote-control")).toBe(true);
     expect(shouldHideProviderNativeCommandFromComposerMenu("claude", "mobile")).toBe(true);
   });
@@ -290,7 +290,7 @@ describe("composerSlashCommands", () => {
   // #218: OpenCode lists native /review but does not honor bare `/review` text turns.
   it("keeps app-level /review for opencode and does not treat review as text-native", () => {
     const availableCommands = getAvailableComposerSlashCommands({
-      provider: "opencode",
+      engine: "opencode",
       supportsFastSlashCommand: false,
       canOfferCompactCommand: true,
       canOfferReviewCommand: true,
@@ -304,13 +304,13 @@ describe("composerSlashCommands", () => {
     expect(shouldHideProviderNativeCommandFromComposerMenu("opencode", "review")).toBe(true);
     expect(providerSupportsTextNativeReviewCommand("opencode", ["review", "status"])).toBe(false);
     expect(providerSupportsTextNativeReviewCommand("opencode", [{ name: "review" }])).toBe(false);
-    // Other providers with a native review still use text pass-through.
+    // Other engines with a native review still use text pass-through.
     expect(providerSupportsTextNativeReviewCommand("claude", ["review"])).toBe(true);
   });
 
-  it("keeps app-level /automation available even if a provider exposes a native collision", () => {
+  it("keeps app-level /automation available even if a engine exposes a native collision", () => {
     const availableCommands = getAvailableComposerSlashCommands({
-      provider: "antigravity",
+      engine: "antigravity",
       supportsFastSlashCommand: false,
       canOfferCompactCommand: false,
       canOfferReviewCommand: true,
@@ -324,9 +324,9 @@ describe("composerSlashCommands", () => {
     expect(shouldHideProviderNativeCommandFromComposerMenu("antigravity", "automation")).toBe(true);
   });
 
-  it("keeps Feedback OmniMind ahead of provider-native /feedback", () => {
+  it("keeps Feedback OmniMind ahead of engine-native /feedback", () => {
     const availableCommands = getAvailableComposerSlashCommands({
-      provider: "claude",
+      engine: "claude",
       supportsFastSlashCommand: true,
       canOfferCompactCommand: true,
       canOfferReviewCommand: true,
@@ -343,7 +343,7 @@ describe("composerSlashCommands", () => {
   it("only exposes OmniMind-owned app commands for claude", () => {
     expect(
       getAvailableComposerSlashCommands({
-        provider: "claude",
+        engine: "claude",
         supportsFastSlashCommand: true,
         canOfferCompactCommand: true,
         canOfferReviewCommand: true,
@@ -368,7 +368,7 @@ describe("composerSlashCommands", () => {
   it("omits app-level /fork for claude when the composer cannot offer it", () => {
     expect(
       getAvailableComposerSlashCommands({
-        provider: "claude",
+        engine: "claude",
         supportsFastSlashCommand: true,
         canOfferCompactCommand: true,
         canOfferReviewCommand: true,
@@ -379,10 +379,10 @@ describe("composerSlashCommands", () => {
     ).not.toContain("fork");
   });
 
-  it("offers the app-level /export command on every provider", () => {
+  it("offers the app-level /export command on every engine", () => {
     expect(
       getAvailableComposerSlashCommands({
-        provider: "codex",
+        engine: "codex",
         supportsFastSlashCommand: true,
         canOfferCompactCommand: true,
         canOfferReviewCommand: true,
@@ -396,7 +396,7 @@ describe("composerSlashCommands", () => {
   it("omits the app-level /export command when no server thread exists", () => {
     expect(
       getAvailableComposerSlashCommands({
-        provider: "codex",
+        engine: "codex",
         supportsFastSlashCommand: true,
         canOfferCompactCommand: true,
         canOfferReviewCommand: true,
@@ -407,9 +407,9 @@ describe("composerSlashCommands", () => {
     ).not.toContain("export");
   });
 
-  it("keeps app-level /export available even if a provider exposes a native collision", () => {
+  it("keeps app-level /export available even if a engine exposes a native collision", () => {
     const availableCommands = getAvailableComposerSlashCommands({
-      provider: "claude",
+      engine: "claude",
       supportsFastSlashCommand: true,
       canOfferCompactCommand: true,
       canOfferReviewCommand: true,
@@ -442,7 +442,7 @@ describe("composerSlashCommands", () => {
   it("only offers /compact when Codex compaction is available", () => {
     expect(
       getAvailableComposerSlashCommands({
-        provider: "codex",
+        engine: "codex",
         supportsFastSlashCommand: true,
         canOfferCompactCommand: true,
         canOfferReviewCommand: true,
@@ -454,7 +454,7 @@ describe("composerSlashCommands", () => {
 
     expect(
       getAvailableComposerSlashCommands({
-        provider: "codex",
+        engine: "codex",
         supportsFastSlashCommand: true,
         canOfferCompactCommand: false,
         canOfferReviewCommand: true,
@@ -468,7 +468,7 @@ describe("composerSlashCommands", () => {
   it("exposes shared app slash commands for Antigravity", () => {
     expect(
       getAvailableComposerSlashCommands({
-        provider: "antigravity",
+        engine: "antigravity",
         supportsFastSlashCommand: false,
         canOfferCompactCommand: false,
         canOfferReviewCommand: true,
@@ -496,15 +496,15 @@ describe("composerSlashCommands", () => {
     ]);
   });
 
-  it("treats real claude aliases like /reset as provider-native collisions", () => {
+  it("treats real claude aliases like /reset as engine-native collisions", () => {
     expect(hasProviderNativeSlashCommand("claude", ["clear"], "reset")).toBe(true);
   });
 
   it.each(["claude", "codex", "opencode"] as const)(
-    "keeps app /fork unique for %s despite provider-native fork and branch commands",
-    (provider) => {
+    "keeps app /fork unique for %s despite engine-native fork and branch commands",
+    (engine) => {
       const availableCommands = getAvailableComposerSlashCommands({
-        provider,
+        engine,
         supportsFastSlashCommand: true,
         canOfferCompactCommand: true,
         canOfferReviewCommand: true,
@@ -517,24 +517,24 @@ describe("composerSlashCommands", () => {
 
       expect(availableCommands.filter((command) => command === "fork")).toEqual(["fork"]);
       expect(
-        shouldHideProviderNativeCommandFromComposerMenu(provider, "fork", {
+        shouldHideProviderNativeCommandFromComposerMenu(engine, "fork", {
           availableAppCommands: visibleAppCommands,
         }),
       ).toBe(true);
       expect(
-        shouldHideProviderNativeCommandFromComposerMenu(provider, "branch", {
+        shouldHideProviderNativeCommandFromComposerMenu(engine, "branch", {
           availableAppCommands: visibleAppCommands,
         }),
       ).toBe(false);
-      expect(hasProviderNativeSlashCommand(provider, ["branch"], "fork")).toBe(false);
+      expect(hasProviderNativeSlashCommand(engine, ["branch"], "fork")).toBe(false);
     },
   );
 
   it.each(["claude", "codex", "opencode"] as const)(
-    "keeps provider-native /fork visible for %s when app /fork is unavailable",
-    (provider) => {
+    "keeps engine-native /fork visible for %s when app /fork is unavailable",
+    (engine) => {
       const availableCommands = getAvailableComposerSlashCommands({
-        provider,
+        engine,
         supportsFastSlashCommand: true,
         canOfferCompactCommand: true,
         canOfferReviewCommand: true,
@@ -546,7 +546,7 @@ describe("composerSlashCommands", () => {
 
       expect(availableCommands).not.toContain("fork");
       expect(
-        shouldHideProviderNativeCommandFromComposerMenu(provider, "fork", {
+        shouldHideProviderNativeCommandFromComposerMenu(engine, "fork", {
           availableAppCommands: new Set(availableCommands),
         }),
       ).toBe(false);

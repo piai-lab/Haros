@@ -1,5 +1,5 @@
 // FILE: providerAttachmentPaths.ts
-// Purpose: Resolves persisted attachment identities to provider-readable storage paths.
+// Purpose: Resolves persisted attachment identities to engine-readable storage paths.
 // Layer: Orchestration/provider boundary utility
 // Depends on: managed attachment persistence and the legacy attachment layout.
 
@@ -11,13 +11,13 @@ import { Effect, Option } from "effect";
 import { resolveAttachmentRelativePath } from "../attachmentPaths.ts";
 import { resolveAttachmentPath } from "../attachmentStore.ts";
 import type { ManagedAttachmentRepositoryShape } from "../persistence/Services/ManagedAttachments.ts";
-import { ProviderAdapterValidationError } from "./Errors.ts";
+import { EngineAdapterValidationError } from "./Errors.ts";
 
 const MANAGED_ATTACHMENT_ID_PATTERN = /^att_v2_[0-9a-f]{32}$/u;
-const PROVIDER_ATTACHMENT_STORAGE_PATH = Symbol("omnimind.providerAttachmentStoragePath");
+const ENGINE_ATTACHMENT_STORAGE_PATH = Symbol("omnimind.providerAttachmentStoragePath");
 
-type ProviderResolvedAttachment = ChatAttachment & {
-  readonly [PROVIDER_ATTACHMENT_STORAGE_PATH]?: string;
+type EngineResolvedAttachment = ChatAttachment & {
+  readonly [ENGINE_ATTACHMENT_STORAGE_PATH]?: string;
 };
 
 function isRegularFile(filePath: string): boolean {
@@ -32,13 +32,13 @@ function markedStoragePath(attachment: unknown): string | null {
   if (typeof attachment !== "object" || attachment === null) {
     return null;
   }
-  const storagePath = (attachment as ProviderResolvedAttachment)[PROVIDER_ATTACHMENT_STORAGE_PATH];
+  const storagePath = (attachment as EngineResolvedAttachment)[ENGINE_ATTACHMENT_STORAGE_PATH];
   return typeof storagePath === "string" && storagePath.length > 0 ? storagePath : null;
 }
 
 function withStoragePath(attachment: ChatAttachment, storagePath: string): ChatAttachment {
-  const resolved = { ...attachment } as ProviderResolvedAttachment;
-  Object.defineProperty(resolved, PROVIDER_ATTACHMENT_STORAGE_PATH, {
+  const resolved = { ...attachment } as EngineResolvedAttachment;
+  Object.defineProperty(resolved, ENGINE_ATTACHMENT_STORAGE_PATH, {
     configurable: false,
     enumerable: false,
     value: storagePath,
@@ -48,18 +48,18 @@ function withStoragePath(attachment: ChatAttachment, storagePath: string): ChatA
 }
 
 function resolutionError(input: {
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly operation: string;
   readonly attachmentId: string;
-}): ProviderAdapterValidationError {
-  return new ProviderAdapterValidationError({
-    provider: input.provider,
+}): EngineAdapterValidationError {
+  return new EngineAdapterValidationError({
+    engine: input.engine,
     operation: input.operation,
     issue: `Attachment '${input.attachmentId}' is unavailable for this message. Reattach the file and retry.`,
   });
 }
 
-/** Resolve an attachment already normalized for provider dispatch, falling back to the legacy layout. */
+/** Resolve an attachment already normalized for engine dispatch, falling back to the legacy layout. */
 export function resolveProviderAttachmentPath(input: {
   readonly attachmentsDir: string;
   readonly attachment: ChatAttachment;
@@ -107,7 +107,7 @@ export function resolveProviderDispatchAttachments(input: {
   readonly repository: Pick<ManagedAttachmentRepositoryShape, "findClaimedById">;
   readonly threadId: ThreadId;
   readonly messageId: string;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly operation: string;
 }) {
   return Effect.forEach(
@@ -123,7 +123,7 @@ export function resolveProviderDispatchAttachments(input: {
           ? Effect.succeed<ChatAttachment>(attachment)
           : Effect.fail(
               resolutionError({
-                provider: input.provider,
+                engine: input.engine,
                 operation: input.operation,
                 attachmentId: attachment.id,
               }),
@@ -139,7 +139,7 @@ export function resolveProviderDispatchAttachments(input: {
           ? Effect.succeed(withStoragePath(attachment, legacyPath))
           : Effect.fail(
               resolutionError({
-                provider: input.provider,
+                engine: input.engine,
                 operation: input.operation,
                 attachmentId: attachment.id,
               }),
@@ -152,7 +152,7 @@ export function resolveProviderDispatchAttachments(input: {
             onNone: () =>
               Effect.fail(
                 resolutionError({
-                  provider: input.provider,
+                  engine: input.engine,
                   operation: input.operation,
                   attachmentId: attachment.id,
                 }),
@@ -178,7 +178,7 @@ export function resolveProviderDispatchAttachments(input: {
               ) {
                 return Effect.fail(
                   resolutionError({
-                    provider: input.provider,
+                    engine: input.engine,
                     operation: input.operation,
                     attachmentId: attachment.id,
                   }),

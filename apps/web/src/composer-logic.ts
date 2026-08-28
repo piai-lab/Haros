@@ -320,7 +320,7 @@ export function detectComposerTrigger(text: string, cursorInput: number): Compos
         return null;
       }
       // `/model` opens the model picker; every other `/query` (known or unknown)
-      // stays in the slash-command lane so provider-native commands and skills
+      // stays in the slash-command lane so engine-native commands and skills
       // can be suggested without borrowing the `$skill` flow.
       if (commandQuery.toLowerCase() === "model") {
         return {

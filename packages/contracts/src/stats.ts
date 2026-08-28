@@ -86,7 +86,7 @@ export const ProfileRecentModelUsage = Schema.Struct({
   coverage: ProfileCoverage,
   models: Schema.Array(
     Schema.Struct({
-      provider: Schema.Union([EngineKind, Schema.Literal("unknown")]),
+      engine: Schema.Union([EngineKind, Schema.Literal("unknown")]),
       model: TrimmedNonEmptyString,
       turnCount: NonNegativeInt,
       percent: Schema.Number,

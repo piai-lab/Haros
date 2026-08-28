@@ -11,8 +11,8 @@ import type { Effect } from "effect";
 import type {
   AutomationMode,
   ChatAttachment,
-  ModelSelection,
-  ProviderStartOptions,
+  EngineSelection,
+  EngineStartOptions,
   ServerGenerateAutomationIntentResult,
 } from "@harnessos/contracts";
 
@@ -28,10 +28,10 @@ export interface CommitMessageGenerationInput {
   includeBranch?: boolean;
   /** Model to use for generation. Uses the Git writing default if not specified. */
   model?: string;
-  /** Optional provider-aware selection for providers that need more than a raw model slug. */
-  modelSelection?: ModelSelection;
-  /** Optional provider startup overrides, such as custom binary paths or server URLs. */
-  providerOptions?: ProviderStartOptions;
+  /** Optional engine-aware selection for engines that need more than a raw model slug. */
+  engineSelection?: EngineSelection;
+  /** Optional engine startup overrides, such as custom binary paths or server URLs. */
+  engineOptions?: EngineStartOptions;
 }
 
 export interface CommitMessageGenerationResult {
@@ -53,10 +53,10 @@ export interface PrContentGenerationInput {
   codexHomePath?: string;
   /** Model to use for generation. Uses the Git writing default if not specified. */
   model?: string;
-  /** Optional provider-aware selection for providers that need more than a raw model slug. */
-  modelSelection?: ModelSelection;
-  /** Optional provider startup overrides, such as custom binary paths or server URLs. */
-  providerOptions?: ProviderStartOptions;
+  /** Optional engine-aware selection for engines that need more than a raw model slug. */
+  engineSelection?: EngineSelection;
+  /** Optional engine startup overrides, such as custom binary paths or server URLs. */
+  engineOptions?: EngineStartOptions;
 }
 
 export interface PrContentGenerationResult {
@@ -70,10 +70,10 @@ export interface DiffSummaryGenerationInput {
   codexHomePath?: string;
   /** Model to use for generation. Uses the Git writing default if not specified. */
   model?: string;
-  /** Optional provider-aware selection for providers that need more than a raw model slug. */
-  modelSelection?: ModelSelection;
-  /** Optional provider startup overrides, such as custom binary paths or server URLs. */
-  providerOptions?: ProviderStartOptions;
+  /** Optional engine-aware selection for engines that need more than a raw model slug. */
+  engineSelection?: EngineSelection;
+  /** Optional engine startup overrides, such as custom binary paths or server URLs. */
+  engineOptions?: EngineStartOptions;
 }
 
 export interface DiffSummaryGenerationResult {
@@ -86,10 +86,10 @@ export interface BranchNameGenerationInput {
   attachments?: ReadonlyArray<ChatAttachment> | undefined;
   /** Model to use for generation. Uses the Git writing default if not specified. */
   model?: string;
-  /** Optional provider-aware selection for providers that need more than a raw model slug. */
-  modelSelection?: ModelSelection;
-  /** Optional provider startup overrides, such as custom binary paths or server URLs. */
-  providerOptions?: ProviderStartOptions;
+  /** Optional engine-aware selection for engines that need more than a raw model slug. */
+  engineSelection?: EngineSelection;
+  /** Optional engine startup overrides, such as custom binary paths or server URLs. */
+  engineOptions?: EngineStartOptions;
 }
 
 export interface BranchNameGenerationResult {
@@ -102,10 +102,10 @@ export interface ThreadTitleGenerationInput {
   attachments?: ReadonlyArray<ChatAttachment> | undefined;
   /** Model to use for generation. Uses the Git writing default if not specified. */
   model?: string;
-  /** Optional provider-aware selection for providers that need more than a raw model slug. */
-  modelSelection?: ModelSelection;
-  /** Optional provider startup overrides, such as custom binary paths or server URLs. */
-  providerOptions?: ProviderStartOptions;
+  /** Optional engine-aware selection for engines that need more than a raw model slug. */
+  engineSelection?: EngineSelection;
+  /** Optional engine startup overrides, such as custom binary paths or server URLs. */
+  engineOptions?: EngineStartOptions;
 }
 
 export interface ThreadTitleGenerationResult {
@@ -120,10 +120,10 @@ export interface ThreadRecapGenerationInput {
   codexHomePath?: string;
   /** Model to use for generation. Uses the Git writing default if not specified. */
   model?: string;
-  /** Optional provider-aware selection for providers that need more than a raw model slug. */
-  modelSelection?: ModelSelection;
-  /** Optional provider startup overrides, such as custom binary paths or server URLs. */
-  providerOptions?: ProviderStartOptions;
+  /** Optional engine-aware selection for engines that need more than a raw model slug. */
+  engineSelection?: EngineSelection;
+  /** Optional engine startup overrides, such as custom binary paths or server URLs. */
+  engineOptions?: EngineStartOptions;
 }
 
 export interface ThreadRecapGenerationResult {
@@ -138,10 +138,10 @@ export interface AutomationIntentGenerationInput {
   codexHomePath?: string;
   /** Model to use for generation. Uses the Git writing default if not specified. */
   model?: string;
-  /** Optional provider-aware selection for providers that need more than a raw model slug. */
-  modelSelection?: ModelSelection;
-  /** Optional provider startup overrides, such as custom binary paths or server URLs. */
-  providerOptions?: ProviderStartOptions;
+  /** Optional engine-aware selection for engines that need more than a raw model slug. */
+  engineSelection?: EngineSelection;
+  /** Optional engine startup overrides, such as custom binary paths or server URLs. */
+  engineOptions?: EngineStartOptions;
 }
 
 export type AutomationIntentGenerationResult = ServerGenerateAutomationIntentResult;
@@ -157,10 +157,10 @@ export interface AutomationCompletionEvaluationInput {
   codexHomePath?: string;
   /** Model to use for generation. Uses the Git writing default if not specified. */
   model?: string;
-  /** Optional provider-aware selection for providers that need more than a raw model slug. */
-  modelSelection?: ModelSelection;
-  /** Optional provider startup overrides, such as custom binary paths or server URLs. */
-  providerOptions?: ProviderStartOptions;
+  /** Optional engine-aware selection for engines that need more than a raw model slug. */
+  engineSelection?: EngineSelection;
+  /** Optional engine startup overrides, such as custom binary paths or server URLs. */
+  engineOptions?: EngineStartOptions;
 }
 
 export interface AutomationCompletionEvaluationResult {
@@ -241,7 +241,7 @@ export interface TextGenerationShape {
 }
 
 /**
- * CodexTextGeneration - Provider-specific Codex implementation for git text generation.
+ * CodexTextGeneration - Engine-specific Codex implementation for git text generation.
  */
 export class CodexTextGeneration extends ServiceMap.Service<
   CodexTextGeneration,
@@ -249,7 +249,7 @@ export class CodexTextGeneration extends ServiceMap.Service<
 >()("harnessos/git/Services/TextGeneration/CodexTextGeneration") {}
 
 /**
- * OpenCodeTextGeneration - Provider-specific OpenCode implementation for git text generation.
+ * OpenCodeTextGeneration - Engine-specific OpenCode implementation for git text generation.
  */
 export class OpenCodeTextGeneration extends ServiceMap.Service<
   OpenCodeTextGeneration,
@@ -257,7 +257,7 @@ export class OpenCodeTextGeneration extends ServiceMap.Service<
 >()("harnessos/git/Services/TextGeneration/OpenCodeTextGeneration") {}
 
 /**
- * KiloTextGeneration - Provider-specific Kilo implementation for git text generation.
+ * KiloTextGeneration - Engine-specific Kilo implementation for git text generation.
  */
 export class KiloTextGeneration extends ServiceMap.Service<
   KiloTextGeneration,
@@ -265,7 +265,7 @@ export class KiloTextGeneration extends ServiceMap.Service<
 >()("harnessos/git/Services/TextGeneration/KiloTextGeneration") {}
 
 /**
- * CursorTextGeneration - Provider-specific Cursor implementation for git text generation.
+ * CursorTextGeneration - Engine-specific Cursor implementation for git text generation.
  */
 export class CursorTextGeneration extends ServiceMap.Service<
   CursorTextGeneration,

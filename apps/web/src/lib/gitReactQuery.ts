@@ -2,9 +2,9 @@ import type {
   GitHandoffThreadInput,
   GitReadWorkingTreeDiffInput,
   GitStackedAction,
-  ModelSelection,
+  EngineSelection,
   NativeApi,
-  ProviderStartOptions,
+  EngineStartOptions,
 } from "@harnessos/contracts";
 import { mutationOptions, queryOptions, type QueryClient } from "@tanstack/react-query";
 import { ensureNativeApi } from "../nativeApi";
@@ -76,9 +76,9 @@ export const gitQueryKeys = {
   diffSummary: (
     cacheScope: string | null,
     model: string | null,
-    modelSelectionKey: string | null,
+    engineSelectionKey: string | null,
     codexHomePath: string | null,
-    providerOptionsKey: string | null,
+    engineOptionsKey: string | null,
     patchKey: string | null,
   ) =>
     [
@@ -86,9 +86,9 @@ export const gitQueryKeys = {
       "diff-summary",
       cacheScope,
       model,
-      modelSelectionKey,
+      engineSelectionKey,
       codexHomePath,
-      providerOptionsKey,
+      engineOptionsKey,
       patchKey,
     ] as const,
 };
@@ -609,9 +609,9 @@ export function gitRunStackedActionMutationOptions(input: {
       prDraft?: boolean;
       allowDirtyWorkingTree?: boolean;
       model?: string | null;
-      modelSelection?: ModelSelection | null;
+      engineSelection?: EngineSelection | null;
       codexHomePath?: string | null;
-      providerOptions?: ProviderStartOptions | null;
+      engineOptions?: EngineStartOptions | null;
     },
     Awaited<ReturnType<NativeApi["git"]["runStackedAction"]>>
   >({
@@ -635,9 +635,9 @@ export function gitRunStackedActionMutationOptions(input: {
         prDraft,
         allowDirtyWorkingTree,
         model,
-        modelSelection,
+        engineSelection,
         codexHomePath,
-        providerOptions,
+        engineOptions,
       },
     ) =>
       api.git.runStackedAction({
@@ -653,8 +653,8 @@ export function gitRunStackedActionMutationOptions(input: {
         ...(allowDirtyWorkingTree ? { allowDirtyWorkingTree } : {}),
         ...(codexHomePath ? { codexHomePath } : {}),
         ...(model ? { textGenerationModel: model } : {}),
-        ...(modelSelection ? { textGenerationModelSelection: modelSelection } : {}),
-        ...(providerOptions ? { providerOptions } : {}),
+        ...(engineSelection ? { textGenerationEngineSelection: engineSelection } : {}),
+        ...(engineOptions ? { engineOptions } : {}),
       }),
   });
 }

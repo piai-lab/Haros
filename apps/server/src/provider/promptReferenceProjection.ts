@@ -1,11 +1,11 @@
 // FILE: promptReferenceProjection.ts
-// Purpose: Projects structured composer references for providers without native mention input items.
-// Layer: Provider prompt compatibility
+// Purpose: Projects structured composer references for engines without native mention input items.
+// Layer: Engine prompt compatibility
 // Exports: appendProviderReferencesPromptBlock.
 
-import type { ProviderMentionReference } from "@harnessos/contracts";
+import type { EngineMentionReference } from "@harnessos/contracts";
 
-function referenceLine(reference: ProviderMentionReference): string {
+function referenceLine(reference: EngineMentionReference): string {
   const kind = reference.path.startsWith("plugin://") ? "Factory plugin" : "local path";
   return `- ${kind}: ${JSON.stringify({ name: reference.name, path: reference.path })}`;
 }
@@ -13,7 +13,7 @@ function referenceLine(reference: ProviderMentionReference): string {
 /** Keeps selected plugin/path chips meaningful when ACP accepts text and images only. */
 export function appendProviderReferencesPromptBlock(input: {
   readonly text: string | undefined;
-  readonly mentions: ReadonlyArray<ProviderMentionReference> | undefined;
+  readonly mentions: ReadonlyArray<EngineMentionReference> | undefined;
 }): string | undefined {
   if (!input.mentions || input.mentions.length === 0) {
     return input.text;

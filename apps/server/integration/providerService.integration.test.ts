@@ -3,27 +3,24 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it, assert } from "@effect/vitest";
 import { Effect, FileSystem, Layer, Path } from "effect";
 
-import { ProviderUnsupportedError } from "../src/provider/Errors.ts";
-import { ProviderAdapterRegistry } from "../src/provider/Services/ProviderAdapterRegistry.ts";
-import { ProviderSessionDirectoryLive } from "../src/provider/Layers/ProviderSessionDirectory.ts";
-import { makeProviderServiceLive } from "../src/provider/Layers/ProviderService.ts";
-import {
-  ProviderService,
-  type ProviderServiceShape,
-} from "../src/provider/Services/ProviderService.ts";
+import { EngineUnsupportedError } from "../src/provider/Errors.ts";
+import { EngineAdapterRegistry } from "../src/provider/Services/EngineAdapterRegistry.ts";
+import { EngineSessionDirectoryLive } from "../src/provider/Layers/EngineSessionDirectory.ts";
+import { makeProviderServiceLive } from "../src/provider/Layers/EngineService.ts";
+import { EngineService, type EngineServiceShape } from "../src/provider/Services/EngineService.ts";
 import { SqlitePersistenceMemory } from "../src/persistence/Layers/Sqlite.ts";
-import { ProviderSessionRuntimeRepositoryLive } from "../src/persistence/Layers/ProviderSessionRuntime.ts";
+import { EngineSessionRuntimeRepositoryLive } from "../src/persistence/Layers/EngineSessionRuntime.ts";
 
 import {
   makeTestProviderAdapterHarness,
   type TestProviderAdapterHarness,
   type TestTurnResponse,
-} from "./TestProviderAdapter.integration.ts";
+} from "./TestEngineAdapter.integration.ts";
 import {
   codexTurnApprovalFixture,
   codexTurnToolFixture,
   codexTurnTextFixture,
-} from "./fixtures/providerRuntime.ts";
+} from "./fixtures/engineRuntime.ts";
 
 const makeWorkspaceDirectory = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
@@ -36,28 +33,28 @@ const makeWorkspaceDirectory = Effect.gen(function* () {
 interface IntegrationFixture {
   readonly cwd: string;
   readonly harness: TestProviderAdapterHarness;
-  readonly layer: Layer.Layer<ProviderService, unknown, never>;
+  readonly layer: Layer.Layer<EngineService, unknown, never>;
 }
 
 const makeIntegrationFixture = Effect.gen(function* () {
   const cwd = yield* makeWorkspaceDirectory;
   const harness = yield* makeTestProviderAdapterHarness();
 
-  const registry: typeof ProviderAdapterRegistry.Service = {
-    getByProvider: (provider) =>
-      provider === "codex"
+  const registry: typeof EngineAdapterRegistry.Service = {
+    getByEngine: (engine) =>
+      engine === "codex"
         ? Effect.succeed(harness.adapter)
-        : Effect.fail(new ProviderUnsupportedError({ provider })),
-    listProviders: () => Effect.succeed(["codex"]),
+        : Effect.fail(new EngineUnsupportedError({ engine })),
+    listEngines: () => Effect.succeed(["codex"]),
   };
 
-  const directoryLayer = ProviderSessionDirectoryLive.pipe(
-    Layer.provide(ProviderSessionRuntimeRepositoryLive),
+  const directoryLayer = EngineSessionDirectoryLive.pipe(
+    Layer.provide(EngineSessionRuntimeRepositoryLive),
   );
 
   const shared = Layer.mergeAll(
     directoryLayer,
-    Layer.succeed(ProviderAdapterRegistry, registry),
+    Layer.succeed(EngineAdapterRegistry, registry),
   ).pipe(Layer.provide(SqlitePersistenceMemory));
 
   const layer = makeProviderServiceLive().pipe(Layer.provide(shared));
@@ -70,7 +67,7 @@ const makeIntegrationFixture = Effect.gen(function* () {
 });
 
 const runTurn = (input: {
-  readonly provider: ProviderServiceShape;
+  readonly engine: EngineServiceShape;
   readonly harness: TestProviderAdapterHarness;
   readonly threadId: ThreadId;
   readonly userText: string;
@@ -79,7 +76,7 @@ const runTurn = (input: {
   Effect.gen(function* () {
     yield* input.harness.queueTurnResponse(input.threadId, input.response);
 
-    yield* input.provider.sendTurn({
+    yield* input.engine.sendTurn({
       threadId: input.threadId,
       input: input.userText,
       attachments: [],
@@ -93,20 +90,17 @@ it.effect("replays typed runtime fixture events", () =>
     const fixture = yield* makeIntegrationFixture;
 
     yield* Effect.gen(function* () {
-      const provider = yield* ProviderService;
-      const session = yield* provider.startSession(
-        ThreadId.makeUnsafe("thread-integration-typed"),
-        {
-          threadId: ThreadId.makeUnsafe("thread-integration-typed"),
-          provider: "codex",
-          cwd: fixture.cwd,
-          runtimeMode: "full-access",
-        },
-      );
+      const engine = yield* EngineService;
+      const session = yield* engine.startSession(ThreadId.makeUnsafe("thread-integration-typed"), {
+        threadId: ThreadId.makeUnsafe("thread-integration-typed"),
+        engine: "codex",
+        cwd: fixture.cwd,
+        runtimeMode: "full-access",
+      });
       assert.equal((session.threadId ?? "").length > 0, true);
 
       const snapshot = yield* runTurn({
-        provider,
+        engine,
         harness: fixture.harness,
         threadId: session.threadId,
         userText: "hello",
@@ -135,20 +129,17 @@ it.effect("replays file-changing fixture turn events", () =>
     const { writeFileString } = yield* FileSystem.FileSystem;
 
     yield* Effect.gen(function* () {
-      const provider = yield* ProviderService;
-      const session = yield* provider.startSession(
-        ThreadId.makeUnsafe("thread-integration-tools"),
-        {
-          threadId: ThreadId.makeUnsafe("thread-integration-tools"),
-          provider: "codex",
-          cwd: fixture.cwd,
-          runtimeMode: "full-access",
-        },
-      );
+      const engine = yield* EngineService;
+      const session = yield* engine.startSession(ThreadId.makeUnsafe("thread-integration-tools"), {
+        threadId: ThreadId.makeUnsafe("thread-integration-tools"),
+        engine: "codex",
+        cwd: fixture.cwd,
+        runtimeMode: "full-access",
+      });
       assert.equal((session.threadId ?? "").length > 0, true);
 
       const snapshot = yield* runTurn({
-        provider,
+        engine,
         harness: fixture.harness,
         threadId: session.threadId,
         userText: "make a small change",
@@ -181,20 +172,17 @@ it.effect("runs multi-turn tool/approval flow", () =>
     const { writeFileString } = yield* FileSystem.FileSystem;
 
     yield* Effect.gen(function* () {
-      const provider = yield* ProviderService;
-      const session = yield* provider.startSession(
-        ThreadId.makeUnsafe("thread-integration-multi"),
-        {
-          threadId: ThreadId.makeUnsafe("thread-integration-multi"),
-          provider: "codex",
-          cwd: fixture.cwd,
-          runtimeMode: "full-access",
-        },
-      );
+      const engine = yield* EngineService;
+      const session = yield* engine.startSession(ThreadId.makeUnsafe("thread-integration-multi"), {
+        threadId: ThreadId.makeUnsafe("thread-integration-multi"),
+        engine: "codex",
+        cwd: fixture.cwd,
+        runtimeMode: "full-access",
+      });
       assert.equal((session.threadId ?? "").length > 0, true);
 
       const firstSnapshot = yield* runTurn({
-        provider,
+        engine,
         harness: fixture.harness,
         threadId: session.threadId,
         userText: "turn 1",
@@ -217,7 +205,7 @@ it.effect("runs multi-turn tool/approval flow", () =>
       ]);
 
       const secondSnapshot = yield* runTurn({
-        provider,
+        engine,
         harness: fixture.harness,
         threadId: session.threadId,
         userText: "turn 2 approval",
@@ -242,19 +230,19 @@ it.effect("runs multi-turn tool/approval flow", () =>
   }).pipe(Effect.provide(NodeServices.layer)),
 );
 
-it.effect("rolls back provider conversation state only", () =>
+it.effect("rolls back engine conversation state only", () =>
   Effect.gen(function* () {
     const fixture = yield* makeIntegrationFixture;
     const { join } = yield* Path.Path;
     const { writeFileString, readFileString } = yield* FileSystem.FileSystem;
 
     yield* Effect.gen(function* () {
-      const provider = yield* ProviderService;
-      const session = yield* provider.startSession(
+      const engine = yield* EngineService;
+      const session = yield* engine.startSession(
         ThreadId.makeUnsafe("thread-integration-rollback"),
         {
           threadId: ThreadId.makeUnsafe("thread-integration-rollback"),
-          provider: "codex",
+          engine: "codex",
           cwd: fixture.cwd,
           runtimeMode: "full-access",
         },
@@ -262,7 +250,7 @@ it.effect("rolls back provider conversation state only", () =>
       assert.equal((session.threadId ?? "").length > 0, true);
 
       yield* runTurn({
-        provider,
+        engine,
         harness: fixture.harness,
         threadId: session.threadId,
         userText: "turn 1",
@@ -274,7 +262,7 @@ it.effect("rolls back provider conversation state only", () =>
       });
 
       yield* runTurn({
-        provider,
+        engine,
         harness: fixture.harness,
         threadId: session.threadId,
         userText: "turn 2 approval",
@@ -285,7 +273,7 @@ it.effect("rolls back provider conversation state only", () =>
         },
       });
 
-      yield* provider.rollbackConversation({
+      yield* engine.rollbackConversation({
         threadId: session.threadId,
         numTurns: 1,
       });

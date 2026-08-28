@@ -18,7 +18,7 @@ import {
   makeQueuedChatTurn,
   makeQueuedTurn,
   makeTerminalContext,
-  modelSelection,
+  engineSelection,
   resetComposerDraftStore,
 } from "./composerDraftStoreTestFixtures";
 import { createDeferredPersistStorage, flushStorageBeforePageHide } from "./lib/storage";
@@ -62,12 +62,12 @@ function makePendingDirectTurnRecovery(
     commandId: CommandId.makeUnsafe(`command-${id}`),
     messageId: MessageId.makeUnsafe(`message-${id}`),
     previousBinding: {
-      modelSelection: modelSelection("codex", "gpt-5"),
+      engineSelection: engineSelection("codex", "gpt-5"),
       runtimeMode: "full-access",
       interactionMode: "default",
     },
     targetBinding: {
-      modelSelection: modelSelection("oa", "gateway/model"),
+      engineSelection: engineSelection("oa", "gateway/model"),
       runtimeMode: "auto",
       interactionMode: "plan",
     },
@@ -116,7 +116,7 @@ describe("composerDraftStore persisted-state hydration", () => {
       draftsByThreadId: {},
       draftThreadsByThreadId: {},
       projectDraftThreadIdByProjectId: {},
-      stickyModelSelectionByProvider: {},
+      stickyEngineSelectionByEngine: {},
       stickyActiveProvider: null,
     };
 
@@ -379,8 +379,8 @@ describe("composerDraftStore restored source proposed plan", () => {
   });
 });
 
-describe("composerDraftStore provider references", () => {
-  const threadId = ThreadId.makeUnsafe("thread-provider-refs");
+describe("composerDraftStore engine references", () => {
+  const threadId = ThreadId.makeUnsafe("thread-engine-refs");
 
   beforeEach(() => {
     resetComposerDraftStore();
@@ -436,7 +436,7 @@ describe("composerDraftStore terminal contexts", () => {
       draftsByThreadId: {},
       draftThreadsByThreadId: {},
       projectDraftThreadIdByProjectId: {},
-      stickyModelSelectionByProvider: {},
+      stickyEngineSelectionByEngine: {},
       stickyActiveProvider: null,
     });
   });
@@ -584,7 +584,7 @@ describe("composerDraftStore terminal contexts", () => {
             prompt: "",
             attachments: "not-an-array",
             terminalContexts: "not-an-array",
-            provider: "bogus-provider",
+            engine: "bogus-engine",
             modelOptions: "not-an-object",
           },
         },
@@ -612,7 +612,7 @@ describe("composerDraftStore terminal contexts", () => {
       {
         draftsByThreadId: {
           [threadId]: {
-            provider: "grok",
+            engine: "grok",
             model: "grok-build",
             modelOptions: {
               grok: {
@@ -627,8 +627,8 @@ describe("composerDraftStore terminal contexts", () => {
       useComposerDraftStore.getInitialState(),
     );
 
-    expect(mergedState.draftsByThreadId[threadId]?.modelSelectionByProvider.grok).toEqual(
-      modelSelection("grok", "grok-build"),
+    expect(mergedState.draftsByThreadId[threadId]?.engineSelectionByEngine.grok).toEqual(
+      engineSelection("grok", "grok-build"),
     );
   });
 
@@ -645,7 +645,7 @@ describe("composerDraftStore terminal contexts", () => {
       {
         draftsByThreadId: {
           [threadId]: {
-            provider: "codex",
+            engine: "codex",
             model: "gpt-5.6-sol",
             effort: "  ultra  ",
           },
@@ -656,12 +656,12 @@ describe("composerDraftStore terminal contexts", () => {
       useComposerDraftStore.getInitialState(),
     );
 
-    expect(mergedState.draftsByThreadId[threadId]?.modelSelectionByProvider.codex).toEqual(
-      modelSelection("codex", "gpt-5.6-sol", { reasoningEffort: "ultra" }),
+    expect(mergedState.draftsByThreadId[threadId]?.engineSelectionByEngine.codex).toEqual(
+      engineSelection("codex", "gpt-5.6-sol", { reasoningEffort: "ultra" }),
     );
   });
 
-  it("restores provider-scoped selections without leaking effort across providers", () => {
+  it("restores engine-scoped selections without leaking effort across engines", () => {
     const persistApi = useComposerDraftStore.persist as unknown as {
       getOptions: () => {
         merge: (
@@ -670,17 +670,17 @@ describe("composerDraftStore terminal contexts", () => {
         ) => ReturnType<typeof useComposerDraftStore.getState>;
       };
     };
-    const codexSelection = modelSelection("codex", "gpt-5.6-sol", {
+    const codexSelection = engineSelection("codex", "gpt-5.6-sol", {
       reasoningEffort: "ultra",
     });
-    const cursorSelection = modelSelection("cursor", "cursor-auto", {
+    const cursorSelection = engineSelection("cursor", "cursor-auto", {
       reasoningEffort: "high",
     });
     const mergedState = persistApi.getOptions().merge(
       {
         draftsByThreadId: {
           [threadId]: {
-            modelSelectionByProvider: {
+            engineSelectionByEngine: {
               codex: codexSelection,
               cursor: cursorSelection,
             },
@@ -694,8 +694,8 @@ describe("composerDraftStore terminal contexts", () => {
     );
 
     const draft = mergedState.draftsByThreadId[threadId];
-    expect(draft?.modelSelectionByProvider.codex).toEqual(codexSelection);
-    expect(draft?.modelSelectionByProvider.cursor).toEqual(cursorSelection);
+    expect(draft?.engineSelectionByEngine.codex).toEqual(codexSelection);
+    expect(draft?.engineSelectionByEngine.cursor).toEqual(cursorSelection);
     expect(draft?.activeProvider).toBe("cursor");
   });
 });
@@ -979,8 +979,8 @@ describe("composerDraftStore direct turn recovery", () => {
     store.armPendingDirectTurnRecovery(threadId, recovery);
     store.setPrompt(threadId, "newer intent");
     store.setPrompt(threadId, "");
-    store.setModelSelection(threadId, recovery.previousBinding.modelSelection);
-    store.setModelSelection(threadId, recovery.targetBinding.modelSelection);
+    store.setEngineSelection(threadId, recovery.previousBinding.engineSelection);
+    store.setEngineSelection(threadId, recovery.targetBinding.engineSelection);
 
     expect(
       useComposerDraftStore.getState().draftsByThreadId[threadId]?.pendingDirectTurnRecovery,

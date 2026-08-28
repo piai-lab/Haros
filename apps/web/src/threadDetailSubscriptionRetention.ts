@@ -328,7 +328,7 @@ export function resolveThreadDetailSubscriptionLeaseIds(input: {
   for (const threadId of input.visibleThreadIds) {
     if (threadIds.size >= WS_STREAM_LIMITS.threadPerClient) break;
     // A visible draft needs a lease before its shell row exists so its first
-    // provider events cannot outrun promotion into the server snapshot.
+    // engine events cannot outrun promotion into the server snapshot.
     threadIds.add(threadId);
   }
   for (const threadId of input.retainedThreadIds) {

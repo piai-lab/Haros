@@ -45,7 +45,7 @@ layer("BackfillThreadActivitySequence", (it) => {
           NULL,
           NULL,
           NULL,
-          'provider',
+          'engine',
           json_object('activity', json_object('id', printf('activity-%06d', value))),
           '{}'
         FROM activity_number

@@ -119,8 +119,8 @@ import {
   ServerGenerateAutomationIntentInput,
   ServerGenerateThreadRecapInput,
   ServerLifecycleStreamEvent,
-  ServerProviderUpdateInput,
-  ServerUpdateProviderCredentialInput,
+  ServerEngineUpdateInput,
+  ServerUpdateEngineCredentialInput,
   ServerUpdateSettingsInput,
   ServerListProviderUsageInput,
   ServerProviderStatusesUpdatedPayload,
@@ -131,17 +131,17 @@ import {
 } from "./server";
 import { StatsGetProfileStatsInput, StatsGetProfileTokenStatsInput } from "./stats";
 import {
-  ProviderListCommandsInput,
-  ProviderGetComposerCapabilitiesInput,
-  ProviderListPluginsInput,
-  ProviderListModelsInput,
-  ProviderListAgentsInput,
-  ProviderReadPluginInput,
-  ProviderListSkillsInput,
-  ProviderSkillsCatalogInput,
-} from "./providerDiscovery";
-import { ProviderExecutionCapabilitiesInput } from "./providerExecution";
-import { ProviderCompactThreadInput } from "./provider";
+  EngineListCommandsInput,
+  EngineGetComposerCapabilitiesInput,
+  EngineListPluginsInput,
+  EngineListModelsInput,
+  EngineListAgentsInput,
+  EngineReadPluginInput,
+  EngineListSkillsInput,
+  EngineSkillsCatalogInput,
+} from "./engineDiscovery";
+import { EngineExecutionCapabilitiesInput } from "./engineExecution";
+import { EngineCompactThreadInput } from "./engine";
 import {
   OmniMindCustomModelServiceRemoveInput,
   OmniMindCustomModelServiceDiscoverInput,
@@ -280,9 +280,9 @@ export const WS_METHODS = {
   serverGetSettings: "server.getSettings",
   serverUpdateSettings: "server.updateSettings",
   serverResetSettings: "server.resetSettings",
-  serverUpdateProviderCredential: "server.updateProviderCredential",
-  serverRefreshProviders: "server.refreshProviders",
-  serverUpdateProvider: "server.updateProvider",
+  serverUpdateEngineCredential: "server.updateEngineCredential",
+  serverRefreshProviders: "server.refreshEngines",
+  serverUpdateProvider: "server.updateEngine",
   serverListExternalMcpIntegrations: "server.listExternalMcpIntegrations",
   serverCreateExternalMcpIntegration: "server.createExternalMcpIntegration",
   serverRevokeExternalMcpIntegration: "server.revokeExternalMcpIntegration",
@@ -311,17 +311,17 @@ export const WS_METHODS = {
   subscribeTerminalEvents: "terminal.subscribeEvents",
   subscribeOrchestrationDomainEvents: "orchestration.subscribeDomainEvents",
 
-  // Provider discovery
-  providerGetComposerCapabilities: "provider.getComposerCapabilities",
-  providerGetExecutionCapabilities: "provider.getExecutionCapabilities",
-  providerCompactThread: "provider.compactThread",
-  providerListCommands: "provider.listCommands",
-  providerListSkills: "provider.listSkills",
-  providerListSkillsCatalog: "provider.listSkillsCatalog",
-  providerListPlugins: "provider.listPlugins",
-  providerReadPlugin: "provider.readPlugin",
-  providerListModels: "provider.listModels",
-  providerListAgents: "provider.listAgents",
+  // Engine discovery
+  providerGetComposerCapabilities: "engine.getComposerCapabilities",
+  providerGetExecutionCapabilities: "engine.getExecutionCapabilities",
+  providerCompactThread: "engine.compactThread",
+  providerListCommands: "engine.listCommands",
+  providerListSkills: "engine.listSkills",
+  providerListSkillsCatalog: "engine.listSkillsCatalog",
+  providerListPlugins: "engine.listPlugins",
+  providerReadPlugin: "engine.readPlugin",
+  providerListModels: "engine.listModels",
+  providerListAgents: "engine.listAgents",
 
   // OmniMind Agent model services
   omnimindModelServicesList: "omnimindModelServices.list",
@@ -554,9 +554,9 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.serverGetSettings, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverUpdateSettings, ServerUpdateSettingsInput),
   tagRequestBody(WS_METHODS.serverResetSettings, Schema.Struct({})),
-  tagRequestBody(WS_METHODS.serverUpdateProviderCredential, ServerUpdateProviderCredentialInput),
+  tagRequestBody(WS_METHODS.serverUpdateEngineCredential, ServerUpdateEngineCredentialInput),
   tagRequestBody(WS_METHODS.serverRefreshProviders, Schema.Struct({})),
-  tagRequestBody(WS_METHODS.serverUpdateProvider, ServerProviderUpdateInput),
+  tagRequestBody(WS_METHODS.serverUpdateProvider, ServerEngineUpdateInput),
   tagRequestBody(WS_METHODS.serverListExternalMcpIntegrations, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverCreateExternalMcpIntegration, ExternalMcpCreateIntegrationInput),
   tagRequestBody(WS_METHODS.serverRevokeExternalMcpIntegration, ExternalMcpRevokeIntegrationInput),
@@ -574,17 +574,17 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.serverGenerateAutomationIntent, ServerGenerateAutomationIntentInput),
   tagRequestBody(WS_METHODS.serverUpsertKeybinding, KeybindingRule),
 
-  // Provider discovery
-  tagRequestBody(WS_METHODS.providerGetComposerCapabilities, ProviderGetComposerCapabilitiesInput),
-  tagRequestBody(WS_METHODS.providerGetExecutionCapabilities, ProviderExecutionCapabilitiesInput),
-  tagRequestBody(WS_METHODS.providerCompactThread, ProviderCompactThreadInput),
-  tagRequestBody(WS_METHODS.providerListCommands, ProviderListCommandsInput),
-  tagRequestBody(WS_METHODS.providerListSkills, ProviderListSkillsInput),
-  tagRequestBody(WS_METHODS.providerListSkillsCatalog, ProviderSkillsCatalogInput),
-  tagRequestBody(WS_METHODS.providerListPlugins, ProviderListPluginsInput),
-  tagRequestBody(WS_METHODS.providerReadPlugin, ProviderReadPluginInput),
-  tagRequestBody(WS_METHODS.providerListModels, ProviderListModelsInput),
-  tagRequestBody(WS_METHODS.providerListAgents, ProviderListAgentsInput),
+  // Engine discovery
+  tagRequestBody(WS_METHODS.providerGetComposerCapabilities, EngineGetComposerCapabilitiesInput),
+  tagRequestBody(WS_METHODS.providerGetExecutionCapabilities, EngineExecutionCapabilitiesInput),
+  tagRequestBody(WS_METHODS.providerCompactThread, EngineCompactThreadInput),
+  tagRequestBody(WS_METHODS.providerListCommands, EngineListCommandsInput),
+  tagRequestBody(WS_METHODS.providerListSkills, EngineListSkillsInput),
+  tagRequestBody(WS_METHODS.providerListSkillsCatalog, EngineSkillsCatalogInput),
+  tagRequestBody(WS_METHODS.providerListPlugins, EngineListPluginsInput),
+  tagRequestBody(WS_METHODS.providerReadPlugin, EngineReadPluginInput),
+  tagRequestBody(WS_METHODS.providerListModels, EngineListModelsInput),
+  tagRequestBody(WS_METHODS.providerListAgents, EngineListAgentsInput),
   tagRequestBody(WS_METHODS.omnimindModelServicesList, OmniMindModelServicesListInput),
   tagRequestBody(WS_METHODS.omnimindModelServicesGet, OmniMindModelServicesGetInput),
   tagRequestBody(WS_METHODS.omnimindModelServicesBeginLogin, OmniMindModelServiceBeginLoginInput),

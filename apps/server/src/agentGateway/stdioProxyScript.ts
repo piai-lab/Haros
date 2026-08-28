@@ -136,7 +136,7 @@ async function resolveToken() {
       if (bootstrapTimeout) clearTimeout(bootstrapTimeout);
       bootstrapTimeout = undefined;
     });
-    // Begin the exchange before the provider can process a prompt or launch
+    // Begin the exchange before the engine can process a prompt or launch
     // command descendants. Keep the rejection observed even if no JSON-RPC
     // request has arrived yet; the first request receives the same failure.
     tokenResolution.catch(() => undefined);

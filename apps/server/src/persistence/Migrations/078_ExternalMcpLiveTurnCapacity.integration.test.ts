@@ -47,7 +47,7 @@ layer("078_ExternalMcpLiveTurnCapacity", (it) => {
           created_at, updated_at
         ) VALUES (
           'thread-migration-78', 'project-migration-78', 'Migration 78 task',
-          '{"provider":"codex","model":"gpt-5.5"}', 'turn-migration-78',
+          '{"engine":"codex","model":"gpt-5.5"}', 'turn-migration-78',
           '2026-07-21T00:00:00.000Z', '2026-07-21T00:01:00.000Z'
         )
       `;

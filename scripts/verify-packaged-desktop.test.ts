@@ -217,7 +217,7 @@ describe("packaged desktop verification", () => {
         LANG: "zh_CN.UTF-8",
         HARNESSOS_AUTH_TOKEN: "must-not-leak",
         OPENAI_API_KEY: "must-not-leak",
-        PROVIDER_ACCESS_TOKEN: "must-not-leak",
+        ENGINE_ACCESS_TOKEN: "must-not-leak",
         ELECTRON_RUN_AS_NODE: "1",
       },
     );
@@ -225,7 +225,7 @@ describe("packaged desktop verification", () => {
     expect(env.HARNESSOS_AUTH_TOKEN).toBeUndefined();
     expect(env.ELECTRON_RUN_AS_NODE).toBeUndefined();
     expect(env.OPENAI_API_KEY).toBeUndefined();
-    expect(env.PROVIDER_ACCESS_TOKEN).toBeUndefined();
+    expect(env.ENGINE_ACCESS_TOKEN).toBeUndefined();
     expect(env.PATH).toBe(process.env.PATH);
     expect(env.LANG).toBe("zh_CN.UTF-8");
     for (const name of [

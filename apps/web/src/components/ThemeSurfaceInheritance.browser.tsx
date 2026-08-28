@@ -54,7 +54,7 @@ describe("global resolved theme inheritance", () => {
           <Input aria-label="API Key" defaultValue="saved expression" />
           <Button>Save</Button>
           <img
-            alt="Provider identity"
+            alt="Engine identity"
             data-testid="brand-content"
             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'%3E%3Cpath fill='%23e24a3b' d='M0 0h1v1H0z'/%3E%3C/svg%3E"
           />

@@ -224,7 +224,7 @@ async function requestVoiceTranscriptionUpload(
   input: Parameters<NativeApi["server"]["transcribeVoice"]>[0],
 ) {
   const params = new URLSearchParams({
-    provider: input.provider,
+    engine: input.engine,
     cwd: input.cwd,
     mimeType: input.mimeType,
     sampleRateHz: String(input.sampleRateHz),
@@ -358,7 +358,7 @@ export function onServerConfigUpdated(
 }
 
 /**
- * Subscribe to provider status updates without forcing a full config reload.
+ * Subscribe to engine status updates without forcing a full config reload.
  */
 export function onServerProviderStatusesUpdated(
   listener: (payload: ServerProviderStatusesUpdatedPayload) => void,
@@ -643,8 +643,8 @@ export function createWsNativeApi(): NativeApi {
       getSettings: () => transport.request(WS_METHODS.serverGetSettings),
       updateSettings: (input) => transport.request(WS_METHODS.serverUpdateSettings, input),
       resetSettings: () => transport.request(WS_METHODS.serverResetSettings),
-      updateProviderCredential: (input) =>
-        transport.request(WS_METHODS.serverUpdateProviderCredential, input),
+      updateEngineCredential: (input) =>
+        transport.request(WS_METHODS.serverUpdateEngineCredential, input),
       getAuthSession: () => requestAuthJson<AuthSessionState>("/api/auth/session"),
       bootstrapAuth: (input: AuthBootstrapInput) =>
         requestAuthJson<AuthBootstrapResult>("/api/auth/bootstrap", {
@@ -697,10 +697,10 @@ export function createWsNativeApi(): NativeApi {
         transport.request(WS_METHODS.serverRevokeExternalMcpIntegration, input),
       refreshExternalMcpPairing: (input: ExternalMcpRefreshPairingInput) =>
         transport.request(WS_METHODS.serverRefreshExternalMcpPairing, input),
-      refreshProviders: () => transport.request(WS_METHODS.serverRefreshProviders),
-      // Provider updates run up to 2 minutes server-side; callers wrap this in
-      // withProviderUpdateTimeout, which owns the client-side watchdog.
-      updateProvider: (input) =>
+      refreshEngines: () => transport.request(WS_METHODS.serverRefreshProviders),
+      // Engine updates run up to 2 minutes server-side; callers wrap this in
+      // withEngineUpdateTimeout, which owns the client-side watchdog.
+      updateEngine: (input) =>
         transport.request(WS_METHODS.serverUpdateProvider, input, {
           timeoutMs: null,
         }),
@@ -740,12 +740,12 @@ export function createWsNativeApi(): NativeApi {
       getProfileTokenStats: (input) =>
         transport.request(WS_METHODS.statsGetProfileTokenStats, input),
     },
-    provider: {
+    engine: {
       getComposerCapabilities: (input) =>
         transport.request(WS_METHODS.providerGetComposerCapabilities, input),
       getExecutionCapabilities: (input) =>
         transport.request(WS_METHODS.providerGetExecutionCapabilities, input),
-      // Compaction is capped server-side per provider (ACP providers allow up
+      // Compaction is capped server-side per engine (ACP engines allow up
       // to the 10-minute turn-idle ceiling), so the server owns this bound.
       compactThread: (input) =>
         transport.request(WS_METHODS.providerCompactThread, input, {

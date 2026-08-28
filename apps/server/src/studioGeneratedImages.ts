@@ -72,7 +72,7 @@ function isPathInside(candidate: string, root: string): boolean {
  * Validates that the copy source is a regular, reasonably sized image file whose real
  * path lives under one of the trusted Codex generated-image roots. Anything else (a
  * crafted path in a replayed payload, a symlink escaping the roots, a directory) is
- * rejected so provider payload data can never exfiltrate arbitrary local files into
+ * rejected so engine payload data can never exfiltrate arbitrary local files into
  * the user-visible Studio folder.
  */
 async function resolveTrustedGeneratedImageSource(
@@ -205,7 +205,7 @@ export const copyGeneratedImageToStudioWorkspace = Effect.fnUntraced(function* (
 /**
  * Copies first, then directly attributes the resulting workspace file. Direct
  * attribution is required even though the turn-end scan may also see the copy:
- * provider-runtime subscribers are independent, so terminal scan ordering cannot
+ * engine-runtime subscribers are independent, so terminal scan ordering cannot
  * be used as a correctness guarantee. The output listing deduplicates both paths.
  */
 export const copyAndAttributeStudioGeneratedImage = Effect.fnUntraced(function* (input: {

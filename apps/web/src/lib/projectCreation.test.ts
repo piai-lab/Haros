@@ -15,7 +15,7 @@ import { createOrRecoverProjectFromPath } from "./projectCreation";
 const NOW_ISO = "2026-06-26T20:00:00.000Z";
 const WORKSPACE_ROOT = "/Users/tester/Developer/omnimind";
 const DEFAULT_PROJECT_MODEL = {
-  provider: "oa" as const,
+  engine: "oa" as const,
   model: "deepseek/deepseek-chat",
 };
 
@@ -25,8 +25,8 @@ function makeProject(id: string, workspaceRoot = WORKSPACE_ROOT) {
     kind: "project" as const,
     title: "oa",
     workspaceRoot,
-    defaultModelSelection: {
-      provider: "codex" as const,
+    defaultEngineSelection: {
+      engine: "codex" as const,
       model: "gpt-5",
     },
     scripts: [],
@@ -69,7 +69,7 @@ describe("createOrRecoverProjectFromPath", () => {
     const result = await createOrRecoverProjectFromPath({
       api: makeApi(dispatchCommand),
       workspaceRoot: WORKSPACE_ROOT,
-      defaultModelSelection: DEFAULT_PROJECT_MODEL,
+      defaultEngineSelection: DEFAULT_PROJECT_MODEL,
       loadSnapshot,
     });
 
@@ -80,7 +80,7 @@ describe("createOrRecoverProjectFromPath", () => {
         title: "oa",
         workspaceRoot: WORKSPACE_ROOT,
         createWorkspaceRootIfMissing: false,
-        defaultModelSelection: DEFAULT_PROJECT_MODEL,
+        defaultEngineSelection: DEFAULT_PROJECT_MODEL,
       }),
     );
     expect(createdProjectId).not.toBeNull();
@@ -101,7 +101,7 @@ describe("createOrRecoverProjectFromPath", () => {
     await createOrRecoverProjectFromPath({
       api: makeApi(dispatchCommand),
       workspaceRoot: WORKSPACE_ROOT,
-      defaultModelSelection: null,
+      defaultEngineSelection: null,
       loadSnapshot: async () =>
         makeSnapshot(createdProjectId ? [makeProject(createdProjectId)] : []),
     });
@@ -109,7 +109,7 @@ describe("createOrRecoverProjectFromPath", () => {
     expect(dispatchCommand).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "project.create",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
       }),
     );
   });
@@ -126,7 +126,7 @@ describe("createOrRecoverProjectFromPath", () => {
     const result = await createOrRecoverProjectFromPath({
       api: makeApi(dispatchCommand),
       workspaceRoot: WORKSPACE_ROOT,
-      defaultModelSelection: DEFAULT_PROJECT_MODEL,
+      defaultEngineSelection: DEFAULT_PROJECT_MODEL,
       loadSnapshot,
     });
 
@@ -147,7 +147,7 @@ describe("createOrRecoverProjectFromPath", () => {
     await createOrRecoverProjectFromPath({
       api: makeApi(dispatchCommand),
       workspaceRoot: WORKSPACE_ROOT,
-      defaultModelSelection: DEFAULT_PROJECT_MODEL,
+      defaultEngineSelection: DEFAULT_PROJECT_MODEL,
       loadSnapshot: async () =>
         makeSnapshot(createdProjectId ? [makeProject(createdProjectId)] : []),
     });

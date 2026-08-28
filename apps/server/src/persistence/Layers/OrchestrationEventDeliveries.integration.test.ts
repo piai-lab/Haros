@@ -4,12 +4,12 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import {
   OrchestrationEventDeliveryRepository,
-  PROVIDER_COMMAND_REACTOR_CONSUMER,
+  ENGINE_COMMAND_REACTOR_CONSUMER,
 } from "../Services/OrchestrationEventDeliveries.ts";
 import { OrchestrationEventDeliveryRepositoryLive } from "./OrchestrationEventDeliveries.ts";
 import { SqlitePersistenceMemory } from "./Sqlite.ts";
-import DurableProviderCommandDeliveryMigration from "../Migrations/064_DurableProviderCommandDelivery.ts";
-import ProviderDeliveryReconciliationMigration from "../Migrations/067_ProviderDeliveryReconciliation.ts";
+import DurableProviderCommandDeliveryMigration from "../Migrations/064_DurableEngineCommandDelivery.ts";
+import EngineDeliveryReconciliationMigration from "../Migrations/067_EngineDeliveryReconciliation.ts";
 
 const layer = it.layer(
   OrchestrationEventDeliveryRepositoryLive.pipe(Layer.provideMerge(SqlitePersistenceMemory)),
@@ -38,7 +38,7 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       const sequence = inserted[0]!.sequence;
 
       const claimed = yield* repository.claim({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: sequence,
         threadId: "thread-delivery",
         claimOwner: "owner-a",
@@ -49,7 +49,7 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       assert.strictEqual(claimed.pipe(Option.getOrThrow).attemptCount, 1);
 
       const competingClaim = yield* repository.claim({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: sequence,
         threadId: "thread-delivery",
         claimOwner: "owner-b",
@@ -58,7 +58,7 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       });
       assert.isTrue(Option.isNone(competingClaim));
       const earlyRequeue = yield* repository.requeueExpired({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: sequence,
         expectedClaimOwner: "owner-a",
         now,
@@ -67,7 +67,7 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       assert.isFalse(earlyRequeue);
 
       const wrongOwnerRetry = yield* repository.markRetryable({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: sequence,
         expectedClaimOwner: "owner-b",
         error: "must not steal",
@@ -75,7 +75,7 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       });
       assert.isFalse(wrongOwnerRetry);
       const wrongOwnerTerminal = yield* repository.markTerminalFailure({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: sequence,
         expectedClaimOwner: "owner-b",
         state: "uncertain",
@@ -96,13 +96,13 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
         RETURNING sequence
       `;
       const skipped = yield* repository.advanceCursor({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: later[0]!.sequence,
         updatedAt: now,
       });
       assert.isFalse(skipped);
       yield* repository.claim({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: later[0]!.sequence,
         threadId: "thread-later",
         claimOwner: "owner-later",
@@ -110,14 +110,14 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
         claimExpiresAt: new Date(Date.now() + 60_000).toISOString(),
       });
       const outOfOrderCompletion = yield* repository.complete({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: later[0]!.sequence,
         claimOwner: "owner-later",
         completedAt: now,
       });
       assert.isTrue(outOfOrderCompletion);
       const outOfOrderDelivery = yield* repository.getDelivery({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: later[0]!.sequence,
       });
       assert.strictEqual(outOfOrderDelivery.pipe(Option.getOrThrow).state, "succeeded");
@@ -131,7 +131,7 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       );
 
       const staleCompletion = yield* repository.complete({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: sequence,
         claimOwner: "stale-owner",
         completedAt: now,
@@ -139,19 +139,19 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       assert.isFalse(staleCompletion);
 
       const completed = yield* repository.complete({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: sequence,
         claimOwner: "owner-a",
         completedAt: now,
       });
       assert.isTrue(completed);
 
-      const state = yield* repository.getConsumerState(PROVIDER_COMMAND_REACTOR_CONSUMER);
+      const state = yield* repository.getConsumerState(ENGINE_COMMAND_REACTOR_CONSUMER);
       assert.strictEqual(state.pipe(Option.getOrThrow).lastAckedSequence, sequence);
 
       yield* sql`DELETE FROM orchestration_events WHERE sequence = ${sequence}`;
       const retained = yield* repository.getDelivery({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: sequence,
       });
       assert.isTrue(Option.isSome(retained));
@@ -179,7 +179,7 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       const sequence = inserted[0]!.sequence;
 
       yield* repository.claim({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: sequence,
         threadId: "thread-expired",
         claimOwner: "dead-process",
@@ -187,7 +187,7 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
         claimExpiresAt: "2020-01-01T00:01:00.000Z",
       });
       const expiredRequeued = yield* repository.requeueExpired({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: sequence,
         expectedClaimOwner: "dead-process",
         now,
@@ -195,7 +195,7 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       });
       assert.isTrue(expiredRequeued);
       const reclaimed = yield* repository.claim({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: sequence,
         threadId: "thread-expired",
         claimOwner: "new-process",
@@ -205,14 +205,14 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       assert.strictEqual(reclaimed.pipe(Option.getOrThrow).attemptCount, 2);
 
       yield* repository.markRetryable({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: sequence,
         expectedClaimOwner: "new-process",
         error: "second transient failure",
         updatedAt: now,
       });
       const finalAttempt = yield* repository.claim({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: sequence,
         threadId: "thread-expired",
         claimOwner: "final-process",
@@ -222,23 +222,23 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       assert.strictEqual(finalAttempt.pipe(Option.getOrThrow).attemptCount, 3);
 
       yield* repository.markTerminalFailure({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence: sequence,
         expectedClaimOwner: "final-process",
         state: "dead",
         error: "bounded retry budget exhausted",
         updatedAt: now,
       });
-      const blocker = yield* repository.firstBlockingDelivery(PROVIDER_COMMAND_REACTOR_CONSUMER);
+      const blocker = yield* repository.firstBlockingDelivery(ENGINE_COMMAND_REACTOR_CONSUMER);
       assert.strictEqual(blocker.pipe(Option.getOrThrow).state, "dead");
       assert.strictEqual(blocker.pipe(Option.getOrThrow).threadId, "thread-expired");
       const threadBlocker = yield* repository.firstBlockingDeliveryForThread({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         threadId: "thread-expired",
       });
       assert.strictEqual(threadBlocker.pipe(Option.getOrThrow).eventSequence, sequence);
       const unrelatedThread = yield* repository.firstBlockingDeliveryForThread({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         threadId: "thread-unrelated",
       });
       assert.isTrue(Option.isNone(unrelatedThread));
@@ -250,7 +250,7 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       const repository = yield* OrchestrationEventDeliveryRepository;
       const sql = yield* SqlClient.SqlClient;
       yield* DurableProviderCommandDeliveryMigration;
-      yield* ProviderDeliveryReconciliationMigration;
+      yield* EngineDeliveryReconciliationMigration;
       const now = new Date().toISOString();
       const inserted = yield* sql<{ readonly sequence: number }>`
         INSERT INTO orchestration_events (
@@ -266,7 +266,7 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       `;
       const eventSequence = inserted[0]!.sequence;
       yield* repository.claim({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence,
         threadId: "thread-reconcile",
         claimOwner: "owner-reconcile",
@@ -274,16 +274,16 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
         claimExpiresAt: now,
       });
       yield* repository.markTerminalFailure({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence,
         expectedClaimOwner: "owner-reconcile",
         state: "uncertain",
-        error: "provider acceptance is unknown",
+        error: "engine acceptance is unknown",
         updatedAt: now,
       });
 
       const blockers = yield* repository.listBlockingDeliveries({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         threadId: "thread-reconcile",
         limit: 10,
       });
@@ -292,7 +292,7 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       assert.strictEqual(blockers[0]?.state, "uncertain");
       assert.strictEqual(
         (yield* repository.listBlockingDeliveries({
-          consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+          consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
           threadId: "thread-reconcile",
           afterEventSequence: eventSequence,
           limit: 10,
@@ -302,7 +302,7 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
 
       const stale = yield* repository.reconcile({
         reconciliationId: "reconcile-stale",
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence,
         threadId: "thread-reconcile",
         expectedState: "dead",
@@ -314,19 +314,19 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
 
       const retry = yield* repository.reconcile({
         reconciliationId: "reconcile-retry",
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence,
         threadId: "thread-reconcile",
         expectedState: "uncertain",
         outcome: "safe_retry",
         reconciledBy: "operator-a",
-        note: "provider confirms it did not accept the interrupt",
+        note: "engine confirms it did not accept the interrupt",
         reconciledAt: now,
       });
       assert.strictEqual(retry.pipe(Option.getOrThrow).state, "retry");
 
       const retried = yield* repository.claim({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence,
         threadId: "thread-reconcile",
         claimOwner: "owner-retried",
@@ -335,16 +335,16 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       });
       assert.isTrue(Option.isSome(retried));
       yield* repository.markTerminalFailure({
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence,
         expectedClaimOwner: "owner-retried",
         state: "dead",
-        error: "provider rejected the retried interrupt",
+        error: "engine rejected the retried interrupt",
         updatedAt: now,
       });
       const accepted = yield* repository.reconcile({
         reconciliationId: "reconcile-accepted",
-        consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+        consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
         eventSequence,
         threadId: "thread-reconcile",
         expectedState: "dead",
@@ -354,12 +354,12 @@ layer("OrchestrationEventDeliveryRepository", (it) => {
       });
       assert.strictEqual(accepted.pipe(Option.getOrThrow).state, "succeeded");
       assert.strictEqual(
-        (yield* repository.listRetryableDeliveries(PROVIDER_COMMAND_REACTOR_CONSUMER)).length,
+        (yield* repository.listRetryableDeliveries(ENGINE_COMMAND_REACTOR_CONSUMER)).length,
         0,
       );
       assert.strictEqual(
         (yield* repository.listBlockingDeliveries({
-          consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
+          consumerName: ENGINE_COMMAND_REACTOR_CONSUMER,
           threadId: "thread-reconcile",
           limit: 10,
         })).length,

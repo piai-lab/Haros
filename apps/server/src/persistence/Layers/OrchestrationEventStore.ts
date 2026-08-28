@@ -26,9 +26,9 @@ import {
   type OrchestrationEventStoreShape,
 } from "../Services/OrchestrationEventStore.ts";
 import {
-  normalizeLegacyModelSelection,
-  normalizePersistedModelSelection,
-} from "../modelSelectionCompatibility.ts";
+  normalizeLegacyEngineSelection,
+  normalizePersistedEngineSelection,
+} from "../engineSelectionCompatibility.ts";
 
 const decodeEvent = Schema.decodeUnknownEffect(OrchestrationEvent);
 const UnknownFromJsonString = Schema.fromJsonString(Schema.Unknown);
@@ -127,44 +127,43 @@ function normalizeLegacyEventRow(row: ParsedPersistedEventRow): ParsedPersistedE
 
   const originalPayload = row.payload;
   let normalizedPayload: Record<string, unknown> | undefined;
-  const payloadWithNormalizedModelSelection = () => {
+  const payloadWithNormalizedEngineSelection = () => {
     normalizedPayload ??= { ...originalPayload };
     return normalizedPayload;
   };
 
   if (
     (row.type === "project.created" || row.type === "project.meta-updated") &&
-    originalPayload.defaultModelSelection !== undefined &&
-    originalPayload.defaultModelSelection !== null
+    originalPayload.defaultEngineSelection !== undefined &&
+    originalPayload.defaultEngineSelection !== null
   ) {
-    payloadWithNormalizedModelSelection().defaultModelSelection = normalizePersistedModelSelection(
-      originalPayload.defaultModelSelection,
-    );
+    payloadWithNormalizedEngineSelection().defaultEngineSelection =
+      normalizePersistedEngineSelection(originalPayload.defaultEngineSelection);
   }
 
   if (
     LEGACY_MODEL_SELECTION_EVENT_TYPES.has(row.type) &&
-    originalPayload.modelSelection !== undefined
+    originalPayload.engineSelection !== undefined
   ) {
-    payloadWithNormalizedModelSelection().modelSelection = normalizePersistedModelSelection(
-      originalPayload.modelSelection,
+    payloadWithNormalizedEngineSelection().engineSelection = normalizePersistedEngineSelection(
+      originalPayload.engineSelection,
     );
   }
 
   if (
     (row.type === "project.created" || row.type === "project.meta-updated") &&
-    originalPayload.defaultModelSelection === undefined
+    originalPayload.defaultEngineSelection === undefined
   ) {
-    const nextPayload = payloadWithNormalizedModelSelection();
+    const nextPayload = payloadWithNormalizedEngineSelection();
     const legacyModel = readTrimmedString(originalPayload, "defaultModel");
-    nextPayload.defaultModelSelection = legacyModel
-      ? normalizeLegacyModelSelection({
-          provider: originalPayload.defaultProvider,
+    nextPayload.defaultEngineSelection = legacyModel
+      ? normalizeLegacyEngineSelection({
+          engine: originalPayload.defaultEngine,
           model: legacyModel,
           options: originalPayload.defaultModelOptions,
         })
       : null;
-    delete nextPayload.defaultProvider;
+    delete nextPayload.defaultEngine;
     delete nextPayload.defaultModel;
     delete nextPayload.defaultModelOptions;
     return { ...row, payload: nextPayload };
@@ -172,20 +171,20 @@ function normalizeLegacyEventRow(row: ParsedPersistedEventRow): ParsedPersistedE
 
   if (
     LEGACY_MODEL_SELECTION_EVENT_TYPES.has(row.type) &&
-    originalPayload.modelSelection === undefined
+    originalPayload.engineSelection === undefined
   ) {
-    const nextPayload = payloadWithNormalizedModelSelection();
+    const nextPayload = payloadWithNormalizedEngineSelection();
     const legacyModel =
       readTrimmedString(originalPayload, "model") ??
       (row.type === "thread.created" ? "gpt-5.5" : undefined);
     if (legacyModel !== undefined) {
-      nextPayload.modelSelection = normalizeLegacyModelSelection({
-        provider: originalPayload.provider,
+      nextPayload.engineSelection = normalizeLegacyEngineSelection({
+        engine: originalPayload.engine,
         model: legacyModel,
         options: originalPayload.modelOptions,
       });
     }
-    delete nextPayload.provider;
+    delete nextPayload.engine;
     delete nextPayload.model;
     delete nextPayload.modelOptions;
     return { ...row, payload: nextPayload };
@@ -317,18 +316,18 @@ function decodePersistedEventRow(
 function inferActorKind(
   event: Omit<OrchestrationEvent, "sequence">,
 ): Schema.Schema.Type<typeof OrchestrationActorKind> {
-  if (event.commandId !== null && event.commandId.startsWith("provider:")) {
-    return "provider";
+  if (event.commandId !== null && event.commandId.startsWith("engine:")) {
+    return "engine";
   }
   if (event.commandId !== null && event.commandId.startsWith("server:")) {
     return "server";
   }
   if (
-    event.metadata.providerTurnId !== undefined ||
-    event.metadata.providerItemId !== undefined ||
+    event.metadata.nativeTurnId !== undefined ||
+    event.metadata.nativeItemId !== undefined ||
     event.metadata.adapterKey !== undefined
   ) {
-    return "provider";
+    return "engine";
   }
   if (event.commandId === null) {
     return "server";

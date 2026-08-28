@@ -12,7 +12,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { useI18n } from "~/i18n";
 import { CentralIcon } from "~/lib/central-icons";
-import { buildModelSelection } from "~/providerModelOptions";
+import { buildEngineSelection } from "~/providerModelOptions";
 import {
   serverProfileStatsQueryOptions,
   serverProfileTokenStatsQueryOptions,
@@ -306,7 +306,7 @@ function ModelUsageSection({ stats }: { readonly stats: ProfileStats }) {
                   ? t("settings.unknownModel")
                   : entry.model;
             return (
-              <Tooltip key={`${entry.kind}:${entry.provider}:${entry.model}`}>
+              <Tooltip key={`${entry.kind}:${entry.engine}:${entry.model}`}>
                 <TooltipTrigger
                   delay={0}
                   render={
@@ -318,9 +318,9 @@ function ModelUsageSection({ stats }: { readonly stats: ProfileStats }) {
                 >
                   <div className="flex items-center justify-between gap-4 text-sm">
                     <span className="flex min-w-0 items-center gap-2">
-                      {entry.provider !== "unknown" && entry.kind === "model" ? (
+                      {entry.engine !== "unknown" && entry.kind === "model" ? (
                         <ModelIdentityIcon
-                          selection={buildModelSelection(entry.provider, entry.model)}
+                          selection={buildEngineSelection(entry.engine, entry.model)}
                           historical
                           className="size-3.5 shrink-0"
                         />

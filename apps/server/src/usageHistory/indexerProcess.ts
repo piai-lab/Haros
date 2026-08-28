@@ -1,5 +1,5 @@
 // FILE: usageHistory/indexerProcess.ts
-// Purpose: Memory-bounded, read-only Provider archive discovery and parsing child process.
+// Purpose: Memory-bounded, read-only Engine archive discovery and parsing child process.
 
 import { createHash, createHmac } from "node:crypto";
 import type { Dirent, Stats } from "node:fs";
@@ -259,7 +259,7 @@ function semanticHash(value: unknown): string {
 }
 
 function workspaceFromPath(
-  provider: UsageHistoryParseRequest["provider"],
+  engine: UsageHistoryParseRequest["engine"],
   salt: string,
   rawPath: string,
   unknownWorkspace: string,
@@ -267,17 +267,17 @@ function workspaceFromPath(
   const normalized = nodePath.resolve(rawPath);
   const basename = nodePath.basename(normalized).trim();
   return {
-    key: hmac(salt, `${provider}:workspace:${normalized}`),
+    key: hmac(salt, `${engine}:workspace:${normalized}`),
     label: basename || unknownWorkspace,
   };
 }
 
 function sessionKey(
-  provider: UsageHistoryParseRequest["provider"],
+  engine: UsageHistoryParseRequest["engine"],
   salt: string,
   rawSession: string,
 ): string {
-  return hmac(salt, `${provider}:session:${rawSession}`);
+  return hmac(salt, `${engine}:session:${rawSession}`);
 }
 
 interface TokenFields {
@@ -287,10 +287,7 @@ interface TokenFields {
   readonly cacheWriteTokens: number;
 }
 
-function readTokenFields(
-  value: unknown,
-  provider: UsageHistoryParseRequest["provider"],
-): TokenFields {
+function readTokenFields(value: unknown, engine: UsageHistoryParseRequest["engine"]): TokenFields {
   const usage = asRecord(value);
   if (!usage) {
     return { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
@@ -311,7 +308,7 @@ function readTokenFields(
   );
   // OpenAI reports cached input as a subset of input; Claude reports cache fields
   // separately. Store mutually exclusive buckets so totals never double count.
-  const inputTokens = provider === "codex" ? Math.max(0, rawInput - cacheReadTokens) : rawInput;
+  const inputTokens = engine === "codex" ? Math.max(0, rawInput - cacheReadTokens) : rawInput;
   return {
     inputTokens,
     outputTokens: nonNegativeInteger(usage.output_tokens ?? usage.outputTokens),
@@ -342,7 +339,7 @@ interface MutableParserState {
 }
 
 function normalizedEvent(input: {
-  provider: UsageHistoryParseRequest["provider"];
+  engine: UsageHistoryParseRequest["engine"];
   salt: string;
   stableIdentity: unknown;
   timestamp: string;
@@ -355,12 +352,11 @@ function normalizedEvent(input: {
   const session = input.state.sessionKey;
   if (!session) return null;
   return {
-    eventKey: hmac(input.salt, `${input.provider}:event:${semanticHash(input.stableIdentity)}`),
+    eventKey: hmac(input.salt, `${input.engine}:event:${semanticHash(input.stableIdentity)}`),
     occurredAt: input.timestamp,
     sessionKey: session,
     model: input.state.model ?? input.unknownModel,
-    workspaceKey:
-      input.state.workspaceKey ?? hmac(input.salt, `${input.provider}:workspace:unknown`),
+    workspaceKey: input.state.workspaceKey ?? hmac(input.salt, `${input.engine}:workspace:unknown`),
     workspaceLabel: input.state.workspaceLabel ?? input.unknownWorkspace,
     ...input.tokens,
   };
@@ -458,7 +454,7 @@ function parseCodexLine(input: {
       `${timestamp}:${semanticHash(usage)}`,
   };
   return normalizedEvent({
-    provider: "codex",
+    engine: "codex",
     salt: input.salt,
     stableIdentity,
     timestamp,
@@ -497,7 +493,7 @@ function parseClaudeLine(input: {
       nonEmptyString(input.record.requestId ?? message?.id ?? input.record.uuid) ??
       `${timestamp}:${semanticHash(usage)}`;
     return normalizedEvent({
-      provider: "claude",
+      engine: "claude",
       salt: input.salt,
       stableIdentity: { session: input.state.sessionKey, kind: "assistant", id: stableId },
       timestamp,
@@ -515,7 +511,7 @@ function parseClaudeLine(input: {
     nonEmptyString(input.record.uuid ?? toolUseResult.agentId ?? input.record.requestId) ??
     `${timestamp}:${semanticHash(usage)}`;
   return normalizedEvent({
-    provider: "claude",
+    engine: "claude",
     salt: input.salt,
     stableIdentity: { session: input.state.sessionKey, kind: "tool-result", id: stableId },
     timestamp,
@@ -618,7 +614,7 @@ async function parseFile(
       return false;
     }
     const event =
-      request.provider === "codex"
+      request.engine === "codex"
         ? parseCodexLine({
             record,
             state: initialState,

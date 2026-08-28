@@ -1,6 +1,6 @@
 import {
   CommandId,
-  DEFAULT_PROVIDER_INTERACTION_MODE,
+  DEFAULT_ENGINE_INTERACTION_MODE,
   MessageId,
   ThreadId,
   type OrchestrationCommand,
@@ -21,7 +21,7 @@ function turnCommand(overrides: Partial<OrchestrationCommand> = {}): Orchestrati
       attachments: [],
     },
     runtimeMode: "approval-required",
-    interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+    interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
     createdAt: "2026-07-14T00:00:00.000Z",
     ...overrides,
   } as OrchestrationCommand;

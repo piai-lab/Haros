@@ -10,7 +10,7 @@ import type {
   OrchestrationProjectShell,
   OrchestrationThread,
   OrchestrationThreadShell,
-  ProviderExecutionCapabilities as ProviderExecutionCapabilitiesSnapshot,
+  EngineExecutionCapabilities as EngineExecutionCapabilitiesSnapshot,
   EngineKind,
   ServerProviderStatus,
   ThreadId as ThreadIdType,
@@ -21,7 +21,7 @@ import {
   DEFAULT_MODEL_BY_PROVIDER,
   EventId,
   MessageId,
-  ModelSelection,
+  EngineSelection,
   ProjectId,
   ThreadId,
   TurnId,
@@ -42,20 +42,20 @@ import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionT
 import { OrchestrationEventStore } from "../../persistence/Services/OrchestrationEventStore.ts";
 import { OrchestrationEventDeliveryRepository } from "../../persistence/Services/OrchestrationEventDeliveries.ts";
 import {
-  ProviderRuntimeEventRepository,
+  EngineRuntimeEventRepository,
   type PersistedProviderRuntimeEvent,
-} from "../../persistence/Services/ProviderRuntimeEvents.ts";
+} from "../../persistence/Services/EngineRuntimeEvents.ts";
 import { ThreadDiagnosticsQuery } from "../../diagnostics/Services/ThreadDiagnosticsQuery.ts";
 import type {
   DiagnosticThreadActivity,
   OperationalDiagnostic,
 } from "../../diagnostics/Services/ThreadDiagnosticsQuery.ts";
-import type { ProviderBlockingDeliveryEvidence } from "../../persistence/Services/OrchestrationEventDeliveries.ts";
-import { ProviderDiscoveryService } from "../../provider/Services/ProviderDiscoveryService.ts";
-import { ProviderHealth } from "../../provider/Services/ProviderHealth.ts";
-import { ProviderExecutionCapabilities } from "../../provider/Services/ProviderExecutionCapabilities.ts";
+import type { EngineBlockingDeliveryEvidence } from "../../persistence/Services/OrchestrationEventDeliveries.ts";
+import { EngineDiscoveryService } from "../../provider/Services/EngineDiscoveryService.ts";
+import { EngineHealth } from "../../provider/Services/EngineHealth.ts";
+import { EngineExecutionCapabilities } from "../../provider/Services/EngineExecutionCapabilities.ts";
 import { resolveProviderExecutionCapabilities } from "../../provider/executionCapabilityProjection.ts";
-import { providerExecutionStructure } from "../../provider/providerExecutionStructure.ts";
+import { engineExecutionStructure } from "../../provider/engineExecutionStructure.ts";
 import { ServerConfig } from "../../config.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { DeviceManager } from "../../device/DeviceManager.ts";
@@ -83,7 +83,7 @@ function makeProjectShell(
     kind,
     title: "Demo project",
     workspaceRoot: "/tmp/demo",
-    defaultModelSelection: null,
+    defaultEngineSelection: null,
     scripts,
     isPinned: false,
     createdAt: NOW,
@@ -99,7 +99,7 @@ function makeThreadShell(
     id: ThreadId.makeUnsafe(id),
     projectId: PROJECT_ID,
     title: `Thread ${id}`,
-    modelSelection: { provider: "codex", model: "gpt-5.5" },
+    engineSelection: { engine: "codex", model: "gpt-5.5" },
     runtimeMode: "approval-required",
     interactionMode: "default",
     envMode: "local",
@@ -207,7 +207,7 @@ function makeAutomationDefinition(
     schedule: { type: "interval", everySeconds: 300 },
     enabled: true,
     nextRunAt: NOW,
-    modelSelection: { provider: "codex", model: "gpt-5.5" },
+    engineSelection: { engine: "codex", model: "gpt-5.5" },
     runtimeMode: "approval-required",
     interactionMode: "default",
     worktreeMode: "local",
@@ -252,8 +252,8 @@ function makeHarnessLayer(
     readonly interruptedOperations?: ReadonlyArray<AgentGatewayOperationRecord>;
     readonly providerStatuses?: ReadonlyArray<ServerProviderStatus>;
     readonly executionCapabilities?: (
-      modelSelection: ModelSelection,
-    ) => ProviderExecutionCapabilitiesSnapshot;
+      engineSelection: EngineSelection,
+    ) => EngineExecutionCapabilitiesSnapshot;
     readonly existingBranches?: ReadonlyArray<string>;
     readonly existingWorktrees?: Readonly<Record<string, string>>;
     readonly verifiedOwnershipTokens?: ReadonlyArray<string>;
@@ -289,9 +289,9 @@ function makeHarnessLayer(
     readonly extraProjects?: ReadonlyArray<OrchestrationProjectShell>;
     readonly diagnosticActivities?: ReadonlyArray<DiagnosticThreadActivity>;
     readonly diagnosticEvents?: ReadonlyArray<OrchestrationEvent>;
-    readonly providerRuntimeEvents?: ReadonlyArray<PersistedProviderRuntimeEvent>;
+    readonly engineRuntimeEvents?: ReadonlyArray<PersistedProviderRuntimeEvent>;
     readonly operationalDiagnostics?: ReadonlyArray<OperationalDiagnostic>;
-    readonly providerDeliveryBlockers?: ReadonlyArray<ProviderBlockingDeliveryEvidence>;
+    readonly providerDeliveryBlockers?: ReadonlyArray<EngineBlockingDeliveryEvidence>;
     readonly automationRuns?: ReadonlyArray<{
       readonly id: string;
       readonly automationId: AutomationDefinition["id"];
@@ -344,7 +344,7 @@ function makeHarnessLayer(
         ? {
             sessionKey: `session-for-${threadId}`,
             threadId: ThreadId.makeUnsafe(threadId),
-            provider: token === "token-parent-claude" ? ("claude" as const) : ("codex" as const),
+            engine: token === "token-parent-claude" ? ("claude" as const) : ("codex" as const),
             issuedAt: 0,
             capabilities:
               token === "token-parent-readonly"
@@ -366,7 +366,7 @@ function makeHarnessLayer(
         ? {
             sessionKey: `session-for-${threadId}`,
             threadId: ThreadId.makeUnsafe(threadId),
-            provider: token === "token-parent-claude" ? ("claude" as const) : ("codex" as const),
+            engine: token === "token-parent-claude" ? ("claude" as const) : ("codex" as const),
             turnId,
           }
         : null;
@@ -551,9 +551,9 @@ function makeHarnessLayer(
           .slice(0, input.limit),
       ),
   } as unknown as (typeof OrchestrationEventDeliveryRepository)["Service"]);
-  const providerRuntimeEventsLayer = Layer.succeed(ProviderRuntimeEventRepository, {
+  const engineRuntimeEventsLayer = Layer.succeed(EngineRuntimeEventRepository, {
     getThreadCoverage: (threadId: string) => {
-      const events = (options.providerRuntimeEvents ?? []).filter(
+      const events = (options.engineRuntimeEvents ?? []).filter(
         (row) => row.event.threadId === threadId,
       );
       return Effect.succeed({
@@ -571,7 +571,7 @@ function makeHarnessLayer(
       eventTypes?: ReadonlyArray<string>;
     }) =>
       Effect.succeed(
-        (options.providerRuntimeEvents ?? [])
+        (options.engineRuntimeEvents ?? [])
           .filter((row) => row.event.threadId === input.threadId)
           .filter((row) => row.sequence <= input.throughSequenceInclusive)
           .filter(
@@ -584,7 +584,7 @@ function makeHarnessLayer(
           .toSorted((left, right) => right.sequence - left.sequence)
           .slice(0, input.limit),
       ),
-  } as unknown as (typeof ProviderRuntimeEventRepository)["Service"]);
+  } as unknown as (typeof EngineRuntimeEventRepository)["Service"]);
 
   const engineLayer = Layer.succeed(OrchestrationEngineService, {
     dispatch: (command: OrchestrationCommand) =>
@@ -801,9 +801,9 @@ function makeHarnessLayer(
       ),
   } as unknown as (typeof GitCore)["Service"]);
 
-  const providerDiscoveryLayer = Layer.succeed(ProviderDiscoveryService, {
-    listModels: ({ provider }: { provider: string }) => {
-      const modelsByProvider: Record<string, ReadonlyArray<Record<string, unknown>>> = {
+  const engineDiscoveryLayer = Layer.succeed(EngineDiscoveryService, {
+    listModels: ({ engine }: { engine: string }) => {
+      const modelsByEngine: Record<string, ReadonlyArray<Record<string, unknown>>> = {
         codex: [
           { slug: "gpt-5.5", name: "GPT-5.5" },
           {
@@ -838,9 +838,9 @@ function makeHarnessLayer(
         opencode: [{ slug: "openai/gpt-5", name: "OpenAI GPT-5" }],
         pi: [{ slug: "test-pi", name: "Test Pi" }],
       };
-      return Effect.succeed({ models: modelsByProvider[provider] ?? [], source: "test" });
+      return Effect.succeed({ models: modelsByEngine[engine] ?? [], source: "test" });
     },
-  } as unknown as (typeof ProviderDiscoveryService)["Service"]);
+  } as unknown as (typeof EngineDiscoveryService)["Service"]);
 
   const providerKinds: ReadonlyArray<EngineKind> = [
     "codex",
@@ -856,20 +856,20 @@ function makeHarnessLayer(
   let providerStatuses =
     options.providerStatuses ??
     providerKinds.map(
-      (provider): ServerProviderStatus => ({
-        provider,
+      (engine): ServerProviderStatus => ({
+        engine,
         status: "ready",
         available: true,
         authStatus: "authenticated",
         checkedAt: NOW,
       }),
     );
-  const providerHealthLayer = Layer.succeed(ProviderHealth, {
+  const providerHealthLayer = Layer.succeed(EngineHealth, {
     getStatuses: Effect.sync(() => providerStatuses),
     refresh: Effect.sync(() => providerStatuses),
-    updateProvider: () => Effect.die("Provider updates are not used by gateway tests."),
+    updateEngine: () => Effect.die("Engine updates are not used by gateway tests."),
     streamChanges: Stream.empty,
-  } as unknown as (typeof ProviderHealth)["Service"]);
+  } as unknown as (typeof EngineHealth)["Service"]);
 
   const operationsByScope = new Map<string, AgentGatewayOperationRecord>();
   for (const operation of options.interruptedOperations ?? []) {
@@ -1152,18 +1152,18 @@ function makeHarnessLayer(
     Layer.provide(engineLayer),
     Layer.provide(automationLayer),
     Layer.provide(gitLayer),
-    Layer.provide(providerDiscoveryLayer),
+    Layer.provide(engineDiscoveryLayer),
     Layer.provide(providerHealthLayer),
     Layer.provide(
-      Layer.succeed(ProviderExecutionCapabilities, {
-        get: (modelSelection) =>
+      Layer.succeed(EngineExecutionCapabilities, {
+        get: (engineSelection) =>
           Effect.succeed(
-            options.executionCapabilities?.(modelSelection) ??
+            options.executionCapabilities?.(engineSelection) ??
               resolveProviderExecutionCapabilities({
-                modelSelection,
-                adapterCapabilities: providerExecutionStructure(modelSelection.provider),
+                engineSelection,
+                adapterCapabilities: engineExecutionStructure(engineSelection.engine),
                 providerStatus: {
-                  provider: modelSelection.provider,
+                  engine: engineSelection.engine,
                   status: "ready",
                   available: true,
                   authStatus: "authenticated",
@@ -1187,7 +1187,7 @@ function makeHarnessLayer(
     Layer.provide(diagnosticsLayer),
     Layer.provide(eventStoreLayer),
     Layer.provide(eventDeliveriesLayer),
-    Layer.provide(providerRuntimeEventsLayer),
+    Layer.provide(engineRuntimeEventsLayer),
     Layer.provide(ServerConfig.layerTest(process.cwd(), process.cwd())),
     Layer.provide(NodeServices.layer),
   );
@@ -1415,7 +1415,7 @@ describe("AgentGateway", () => {
     }).pipe(Effect.provide(gatewayLayer));
   });
 
-  it.effect("rejects a provider-scoped token that no longer owns the thread", () => {
+  it.effect("rejects a engine-scoped token that no longer owns the thread", () => {
     const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
     return Effect.gen(function* () {
       const harness = yield* makeHarness;
@@ -1427,38 +1427,35 @@ describe("AgentGateway", () => {
     }).pipe(Effect.provide(gatewayLayer));
   });
 
-  it.effect(
-    "validates a token against the live session provider instead of the saved model",
-    () => {
-      const threads = baseThreads.map((thread) =>
-        thread.id === "thread-parent"
-          ? {
-              ...thread,
-              session: {
-                threadId: thread.id,
-                status: "running" as const,
-                providerName: "claude",
-                runtimeMode: thread.runtimeMode,
-                activeTurnId: thread.latestTurn?.turnId ?? null,
-                lastError: null,
-                updatedAt: NOW,
-              },
-            }
-          : thread,
-      );
-      const { gatewayLayer, makeHarness } = makeHarnessLayer(threads);
-      return Effect.gen(function* () {
-        const harness = yield* makeHarness;
-        const response = yield* harness.postRaw({
-          authorizationHeader: "Bearer token-parent-claude",
-          body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
-        });
-        assert.equal(response.status, 200);
-      }).pipe(Effect.provide(gatewayLayer));
-    },
-  );
+  it.effect("validates a token against the live session engine instead of the saved model", () => {
+    const threads = baseThreads.map((thread) =>
+      thread.id === "thread-parent"
+        ? {
+            ...thread,
+            session: {
+              threadId: thread.id,
+              status: "running" as const,
+              providerName: "claude",
+              runtimeMode: thread.runtimeMode,
+              activeTurnId: thread.latestTurn?.turnId ?? null,
+              lastError: null,
+              updatedAt: NOW,
+            },
+          }
+        : thread,
+    );
+    const { gatewayLayer, makeHarness } = makeHarnessLayer(threads);
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const response = yield* harness.postRaw({
+        authorizationHeader: "Bearer token-parent-claude",
+        body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      assert.equal(response.status, 200);
+    }).pipe(Effect.provide(gatewayLayer));
+  });
 
-  it.effect("enforces provider-session capabilities before destructive dispatch", () => {
+  it.effect("enforces engine-session capabilities before destructive dispatch", () => {
     const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
     return Effect.gen(function* () {
       const harness = yield* makeHarness;
@@ -1470,7 +1467,7 @@ describe("AgentGateway", () => {
           threads: [
             {
               prompt: "should not run",
-              target: { provider: "codex", model: "gpt-5.5" },
+              target: { engine: "codex", model: "gpt-5.5" },
             },
           ],
         },
@@ -1516,7 +1513,7 @@ describe("AgentGateway", () => {
             threads: [
               {
                 prompt: requestId,
-                target: { provider: "codex", model: "gpt-5.5" },
+                target: { engine: "codex", model: "gpt-5.5" },
               },
             ],
           },
@@ -1752,7 +1749,7 @@ describe("AgentGateway", () => {
     }).pipe(Effect.provide(gatewayLayer));
   });
 
-  it.effect("returns provider-specific target option keys before the model catalog", () => {
+  it.effect("returns engine-specific target option keys before the model catalog", () => {
     const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
     return Effect.gen(function* () {
       const harness = yield* makeHarness;
@@ -1788,7 +1785,7 @@ describe("AgentGateway", () => {
         { effort: "low" },
       );
       const antigravity = targetConstruction.antigravity as {
-        providerOptions: Array<{
+        engineOptions: Array<{
           key: string;
           valueType: string;
           allowedValues: ReadonlyArray<unknown>;
@@ -1807,7 +1804,7 @@ describe("AgentGateway", () => {
       };
       assert.deepEqual(antigravity.exampleTarget.options, { reasoningEffort: "low" });
       assert.deepEqual(
-        antigravity.providerOptions.find((option) => option.key === "reasoningEffort"),
+        antigravity.engineOptions.find((option) => option.key === "reasoningEffort"),
         {
           key: "reasoningEffort",
           valueType: "string",
@@ -1825,11 +1822,11 @@ describe("AgentGateway", () => {
       for (const construction of Object.values(targetConstruction)) {
         const exampleTarget = construction.exampleTarget;
         if (exampleTarget === null || exampleTarget === undefined) continue;
-        assert.deepEqual(Schema.decodeUnknownSync(ModelSelection)(exampleTarget), exampleTarget);
+        assert.deepEqual(Schema.decodeUnknownSync(EngineSelection)(exampleTarget), exampleTarget);
       }
 
       const serialized = JSON.stringify(payload);
-      assert.isBelow(serialized.indexOf('"targetConstruction"'), serialized.indexOf('"providers"'));
+      assert.isBelow(serialized.indexOf('"targetConstruction"'), serialized.indexOf('"engines"'));
     }).pipe(Effect.provide(gatewayLayer));
   });
 
@@ -1880,53 +1877,47 @@ describe("AgentGateway", () => {
     }).pipe(Effect.provide(gatewayLayer));
   });
 
-  it.effect(
-    "filters thread discovery by provider, status, title, source, and update window",
-    () => {
-      const threads = [
-        makeThreadShell("thread-parent", {
-          title: "Investigate stream gap",
+  it.effect("filters thread discovery by engine, status, title, source, and update window", () => {
+    const threads = [
+      makeThreadShell("thread-parent", {
+        title: "Investigate stream gap",
+        creationSource: "harnessos_mcp",
+        updatedAt: "2026-03-02T10:00:00.000Z",
+        latestTurn: {
+          turnId: TurnId.makeUnsafe("turn-running"),
+          state: "running",
+          requestedAt: NOW,
+          startedAt: NOW,
+          completedAt: null,
+          assistantMessageId: null,
+        },
+      }),
+      makeThreadShell("thread-other", {
+        title: "Unrelated task",
+        engineSelection: { engine: "claude", model: "opus-4.8" },
+        updatedAt: "2026-02-01T10:00:00.000Z",
+      }),
+    ];
+    const { gatewayLayer, makeHarness } = makeHarnessLayer(threads);
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const response = yield* harness.callTool({
+        token: "token-parent",
+        name: "harnessos_list_threads",
+        args: {
+          engine: "codex",
+          status: "working",
+          titleContains: "STREAM",
           creationSource: "harnessos_mcp",
-          updatedAt: "2026-03-02T10:00:00.000Z",
-          latestTurn: {
-            turnId: TurnId.makeUnsafe("turn-running"),
-            state: "running",
-            requestedAt: NOW,
-            startedAt: NOW,
-            completedAt: null,
-            assistantMessageId: null,
-          },
-        }),
-        makeThreadShell("thread-other", {
-          title: "Unrelated task",
-          modelSelection: { provider: "claude", model: "opus-4.8" },
-          updatedAt: "2026-02-01T10:00:00.000Z",
-        }),
-      ];
-      const { gatewayLayer, makeHarness } = makeHarnessLayer(threads);
-      return Effect.gen(function* () {
-        const harness = yield* makeHarness;
-        const response = yield* harness.callTool({
-          token: "token-parent",
-          name: "harnessos_list_threads",
-          args: {
-            provider: "codex",
-            status: "working",
-            titleContains: "STREAM",
-            creationSource: "harnessos_mcp",
-            updatedAfter: "2026-03-01T00:00:00.000Z",
-            updatedBefore: "2026-03-03T00:00:00.000Z",
-          },
-        });
-        const payload = toolResultJson(response.result);
-        assert.equal(payload.totalMatching, 1);
-        assert.equal(
-          (payload.threads as Array<{ threadId: string }>)[0]?.threadId,
-          "thread-parent",
-        );
-      }).pipe(Effect.provide(gatewayLayer));
-    },
-  );
+          updatedAfter: "2026-03-01T00:00:00.000Z",
+          updatedBefore: "2026-03-03T00:00:00.000Z",
+        },
+      });
+      const payload = toolResultJson(response.result);
+      assert.equal(payload.totalMatching, 1);
+      assert.equal((payload.threads as Array<{ threadId: string }>)[0]?.threadId, "thread-parent");
+    }).pipe(Effect.provide(gatewayLayer));
+  });
 
   it.effect("pages thread activity with an opaque stable cursor", () => {
     const activities: ReadonlyArray<DiagnosticThreadActivity> = [1, 2, 3].map((sequence) => ({
@@ -2072,13 +2063,13 @@ describe("AgentGateway", () => {
     ];
     const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads, [], {
       diagnosticEvents: events,
-      providerRuntimeEvents: [
+      engineRuntimeEvents: [
         {
           sequence: 9,
           event: {
             type: "runtime.error",
             eventId: EventId.makeUnsafe("runtime-event-diagnostic-9"),
-            provider: "codex",
+            engine: "codex",
             threadId,
             turnId: TurnId.makeUnsafe("turn-parent"),
             createdAt: NOW,
@@ -2100,7 +2091,7 @@ describe("AgentGateway", () => {
       ],
       providerDeliveryBlockers: [
         {
-          consumerName: "provider-command-reactor.v1",
+          consumerName: "engine-command-reactor.v1",
           eventSequence: 7,
           eventId: EventId.makeUnsafe("event-diagnostic-7"),
           eventType: "thread.turn-start-requested",
@@ -2108,7 +2099,7 @@ describe("AgentGateway", () => {
           threadId,
           state: "dead",
           attemptCount: 3,
-          lastError: "provider failed",
+          lastError: "engine failed",
           updatedAt: NOW,
           lastReconciliationOutcome: null,
           lastReconciledAt: null,
@@ -2137,18 +2128,18 @@ describe("AgentGateway", () => {
     }).pipe(Effect.provide(gatewayLayer));
   });
 
-  it.effect("creates a standalone cross-provider thread and dispatches the initial turn", () => {
+  it.effect("creates a standalone cross-engine thread and dispatches the initial turn", () => {
     const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
     return Effect.gen(function* () {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
         name: "harnessos_create_thread",
-        args: { requestId: "create-grok", prompt: "analyze the feature", provider: "grok" },
+        args: { requestId: "create-grok", prompt: "analyze the feature", engine: "grok" },
       });
       assert.isFalse(isToolError(response.result), toolErrorText(response.result));
       const payload = toolResultJson(response.result);
-      assert.equal(payload.provider, "grok");
+      assert.equal(payload.engine, "grok");
       assert.strictEqual("parentThreadId" in payload, false);
 
       assert.equal(harness.dispatched.length, 3);
@@ -2158,8 +2149,8 @@ describe("AgentGateway", () => {
         // Gateway-created threads are ordinary top-level threads, not subagents.
         assert.strictEqual("parentThreadId" in create, false);
         assert.strictEqual("subagentNickname" in create, false);
-        assert.equal(create.modelSelection.provider, "grok");
-        assert.equal(create.modelSelection.model, DEFAULT_MODEL_BY_PROVIDER.grok);
+        assert.equal(create.engineSelection.engine, "grok");
+        assert.equal(create.engineSelection.model, DEFAULT_MODEL_BY_PROVIDER.grok);
         // Project and runtime mode default from the calling thread.
         assert.equal(create.projectId, PROJECT_ID);
         assert.equal(create.runtimeMode, "approval-required");
@@ -2178,15 +2169,15 @@ describe("AgentGateway", () => {
 
   it.effect("rejects creation when the requested runtime mode is not loaded for the target", () => {
     const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads, [], {
-      executionCapabilities: (modelSelection) =>
+      executionCapabilities: (engineSelection) =>
         resolveProviderExecutionCapabilities({
-          modelSelection,
+          engineSelection,
           adapterCapabilities: {
-            ...providerExecutionStructure(modelSelection.provider),
+            ...engineExecutionStructure(engineSelection.engine),
             supportedRuntimeModes: new Set(["full-access"]),
           },
           providerStatus: {
-            provider: modelSelection.provider,
+            engine: engineSelection.engine,
             status: "ready",
             available: true,
             authStatus: "authenticated",
@@ -2199,7 +2190,7 @@ describe("AgentGateway", () => {
       const response = yield* harness.callTool({
         token: "token-parent",
         name: "harnessos_create_thread",
-        args: { requestId: "create-unsupported-mode", prompt: "analyze", provider: "grok" },
+        args: { requestId: "create-unsupported-mode", prompt: "analyze", engine: "grok" },
       });
       assert.isTrue(isToolError(response.result));
       assert.include(toolErrorText(response.result), "not supported");
@@ -2215,12 +2206,12 @@ describe("AgentGateway", () => {
         token: "token-parent",
         name: "harnessos_create_threads",
         args: {
-          requestId: "create-provider-plan-agents",
+          requestId: "create-engine-plan-agents",
           threads: [
             {
               prompt: "plan the OpenCode work",
               target: {
-                provider: "opencode",
+                engine: "opencode",
                 model: "openai/gpt-5",
                 options: { agent: "plan" },
               },
@@ -2228,7 +2219,7 @@ describe("AgentGateway", () => {
             {
               prompt: "plan the Kilo work",
               target: {
-                provider: "kilo",
+                engine: "kilo",
                 model: "kilo/kilo-auto/free",
                 options: { agent: "plan" },
               },
@@ -2244,7 +2235,7 @@ describe("AgentGateway", () => {
       assert.lengthOf(turns, 2);
       for (const command of [...creates, ...turns]) {
         assert.equal(command.interactionMode, "plan");
-        assert.deepInclude(command.modelSelection ?? {}, {
+        assert.deepInclude(command.engineSelection ?? {}, {
           options: { agent: "plan" },
         });
       }
@@ -2261,7 +2252,7 @@ describe("AgentGateway", () => {
         args: {
           requestId: "create-worktree",
           prompt: "refactor module X",
-          provider: "claude",
+          engine: "claude",
           environment: "worktree",
         },
       });
@@ -2299,7 +2290,7 @@ describe("AgentGateway", () => {
         args: {
           requestId: "explicit-head-from-caller-worktree",
           prompt: "continue from this checkout",
-          provider: "codex",
+          engine: "codex",
           environment: "worktree",
           baseRef: "HEAD",
         },
@@ -2324,7 +2315,7 @@ describe("AgentGateway", () => {
         args: {
           requestId: "github-pr-head",
           prompt: "review the pull request",
-          provider: "codex",
+          engine: "codex",
           environment: "worktree",
           baseRef: "https://github.com/example/repo/pull/425",
         },
@@ -2350,7 +2341,7 @@ describe("AgentGateway", () => {
         args: {
           requestId: "local-pull-path-ref",
           prompt: "continue from the local ref",
-          provider: "codex",
+          engine: "codex",
           environment: "worktree",
           baseRef: "feature/pull/425",
         },
@@ -2377,7 +2368,7 @@ describe("AgentGateway", () => {
       const response = yield* harness.callTool({
         token: "token-parent",
         name: "harnessos_create_thread",
-        args: { requestId: "create-crowded", prompt: "one more", provider: "codex" },
+        args: { requestId: "create-crowded", prompt: "one more", engine: "codex" },
       });
       assert.isFalse(isToolError(response.result), toolErrorText(response.result));
       assert.equal(harness.dispatched.length, 3);
@@ -2808,7 +2799,7 @@ describe("AgentGateway", () => {
           threads: [
             {
               prompt: "must not reuse it",
-              target: { provider: "codex", model: "gpt-5.5" },
+              target: { engine: "codex", model: "gpt-5.5" },
               environment: "worktree",
               branchName: "agent/user-owned",
             },
@@ -2847,7 +2838,7 @@ describe("AgentGateway", () => {
           threads: [
             {
               prompt: "create too late",
-              target: { provider: "codex", model: "gpt-5.5" },
+              target: { engine: "codex", model: "gpt-5.5" },
             },
           ],
         },
@@ -2885,7 +2876,7 @@ describe("AgentGateway", () => {
                 threads: [
                   {
                     prompt: "worker from turn A",
-                    target: { provider: "codex", model: "gpt-5.5" },
+                    target: { engine: "codex", model: "gpt-5.5" },
                     environment: "worktree",
                   },
                 ],
@@ -2903,7 +2894,7 @@ describe("AgentGateway", () => {
                 threads: [
                   {
                     prompt: "late worker",
-                    target: { provider: "codex", model: "gpt-5.5" },
+                    target: { engine: "codex", model: "gpt-5.5" },
                   },
                 ],
               },
@@ -2944,7 +2935,7 @@ describe("AgentGateway", () => {
     }).pipe(Effect.provide(gatewayLayer));
   });
 
-  it.effect("rejects every provider tool call after the caller turn completes", () => {
+  it.effect("rejects every engine tool call after the caller turn completes", () => {
     const { gatewayLayer, makeHarness } = makeHarnessLayer([
       makeThreadShell("thread-parent", {
         latestTurn: {
@@ -2965,12 +2956,12 @@ describe("AgentGateway", () => {
           name: "harnessos_create_threads",
           args: {
             requestId: "late-batch",
-            threads: [{ prompt: "late", target: { provider: "codex", model: "gpt-5.5" } }],
+            threads: [{ prompt: "late", target: { engine: "codex", model: "gpt-5.5" } }],
           },
         },
         {
           name: "harnessos_create_thread",
-          args: { requestId: "late-single", prompt: "late", provider: "codex" },
+          args: { requestId: "late-single", prompt: "late", engine: "codex" },
         },
         {
           name: "harnessos_send_message",
@@ -3027,10 +3018,10 @@ describe("AgentGateway", () => {
       const args = {
         requestId: "two-workers",
         threads: [
-          { prompt: "worker one", target: { provider: "codex", model: "gpt-5.5" } },
+          { prompt: "worker one", target: { engine: "codex", model: "gpt-5.5" } },
           {
             prompt: "worker two",
-            target: { provider: "claude", model: "claude-sonnet-5" },
+            target: { engine: "claude", model: "claude-sonnet-5" },
           },
         ],
       };
@@ -3041,7 +3032,7 @@ describe("AgentGateway", () => {
       });
       harness.setProviderStatuses([
         {
-          provider: "codex",
+          engine: "codex",
           status: "error",
           available: false,
           authStatus: "unauthenticated",
@@ -3049,7 +3040,7 @@ describe("AgentGateway", () => {
           message: "temporarily unavailable after dispatch",
         },
         {
-          provider: "claude",
+          engine: "claude",
           status: "error",
           available: false,
           authStatus: "unauthenticated",
@@ -3101,7 +3092,7 @@ describe("AgentGateway", () => {
           threads: [
             {
               prompt: "changed payload",
-              target: { provider: "codex", model: "made-up-model" },
+              target: { engine: "codex", model: "made-up-model" },
             },
           ],
         },
@@ -3148,7 +3139,7 @@ describe("AgentGateway", () => {
             threads: [
               {
                 prompt: "one exact worker",
-                target: { provider: "codex", model: "gpt-5.5" },
+                target: { engine: "codex", model: "gpt-5.5" },
                 environment: "worktree",
               },
             ],
@@ -3186,7 +3177,7 @@ describe("AgentGateway", () => {
           name: "harnessos_create_threads",
           args: {
             requestId,
-            threads: [{ prompt, target: { provider: "codex", model: "gpt-5.5" } }],
+            threads: [{ prompt, target: { engine: "codex", model: "gpt-5.5" } }],
           },
         });
       yield* create("first-plan", "first");
@@ -3198,7 +3189,7 @@ describe("AgentGateway", () => {
           threads: [
             {
               prompt: "invalid second plan",
-              target: { provider: "codex", model: "made-up-model" },
+              target: { engine: "codex", model: "made-up-model" },
             },
           ],
         },
@@ -3227,7 +3218,7 @@ describe("AgentGateway", () => {
           threads: [
             {
               prompt: "inspect repo",
-              target: { provider: "codex", model: "gpt-5.6-terra-low" },
+              target: { engine: "codex", model: "gpt-5.6-terra-low" },
             },
           ],
         },
@@ -3241,11 +3232,11 @@ describe("AgentGateway", () => {
     }).pipe(Effect.provide(gatewayLayer));
   });
 
-  it.effect("rejects an unavailable or unauthenticated provider before dispatch", () => {
+  it.effect("rejects an unavailable or unauthenticated engine before dispatch", () => {
     const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads, [], {
       providerStatuses: [
         {
-          provider: "claude",
+          engine: "claude",
           status: "error",
           available: false,
           authStatus: "unauthenticated",
@@ -3260,11 +3251,11 @@ describe("AgentGateway", () => {
         token: "token-parent",
         name: "harnessos_create_threads",
         args: {
-          requestId: "unavailable-provider",
+          requestId: "unavailable-engine",
           threads: [
             {
               prompt: "must not dispatch",
-              target: { provider: "claude", model: "claude-sonnet-5" },
+              target: { engine: "claude", model: "claude-sonnet-5" },
             },
           ],
         },
@@ -3291,7 +3282,7 @@ describe("AgentGateway", () => {
             {
               prompt: "inspect repo",
               target: {
-                provider: "codex",
+                engine: "codex",
                 model: "gpt-5.6-terra",
                 options: { reasoningEffort: "low" },
               },
@@ -3303,8 +3294,8 @@ describe("AgentGateway", () => {
       const create = harness.dispatched.find((command) => command.type === "thread.create");
       assert.equal(create?.type, "thread.create");
       if (create?.type === "thread.create") {
-        assert.deepEqual(create.modelSelection, {
-          provider: "codex",
+        assert.deepEqual(create.engineSelection, {
+          engine: "codex",
           model: "gpt-5.6-terra",
           options: { reasoningEffort: "low" },
         });
@@ -3322,10 +3313,10 @@ describe("AgentGateway", () => {
         args: {
           requestId: "atomic-preflight",
           threads: [
-            { prompt: "valid", target: { provider: "codex", model: "gpt-5.5" } },
+            { prompt: "valid", target: { engine: "codex", model: "gpt-5.5" } },
             {
               prompt: "invalid",
-              target: { provider: "claude", model: "made-up-claude" },
+              target: { engine: "claude", model: "made-up-claude" },
             },
           ],
         },
@@ -3351,7 +3342,7 @@ describe("AgentGateway", () => {
             threads: [
               {
                 prompt: "must not leak a worktree",
-                target: { provider: "codex", model: "gpt-5.5" },
+                target: { engine: "codex", model: "gpt-5.5" },
                 environment: "worktree",
               },
             ],
@@ -3389,7 +3380,7 @@ describe("AgentGateway", () => {
           threads: [
             {
               prompt: "retain cleanup evidence",
-              target: { provider: "codex", model: "gpt-5.5" },
+              target: { engine: "codex", model: "gpt-5.5" },
               environment: "worktree",
             },
           ],
@@ -3430,7 +3421,7 @@ describe("AgentGateway", () => {
             threads: [
               {
                 prompt: "must not strand a reserved operation",
-                target: { provider: "codex", model: "gpt-5.5" },
+                target: { engine: "codex", model: "gpt-5.5" },
               },
             ],
           },
@@ -3472,7 +3463,7 @@ describe("AgentGateway", () => {
             threads: [
               {
                 prompt: "must compensate the interrupted worktree",
-                target: { provider: "codex", model: "gpt-5.5" },
+                target: { engine: "codex", model: "gpt-5.5" },
                 environment: "worktree",
               },
             ],
@@ -3535,7 +3526,7 @@ describe("AgentGateway", () => {
             threads: [
               {
                 prompt: "must not block interruption on the setup script",
-                target: { provider: "codex", model: "gpt-5.5" },
+                target: { engine: "codex", model: "gpt-5.5" },
                 environment: "worktree",
               },
             ],
@@ -3583,7 +3574,7 @@ describe("AgentGateway", () => {
             threads: [
               {
                 prompt: "must compensate the interrupted child",
-                target: { provider: "codex", model: "gpt-5.5" },
+                target: { engine: "codex", model: "gpt-5.5" },
               },
             ],
           },
@@ -3632,7 +3623,7 @@ describe("AgentGateway", () => {
         threads: [
           {
             prompt: "keep the committed child",
-            target: { provider: "codex", model: "gpt-5.5" },
+            target: { engine: "codex", model: "gpt-5.5" },
           },
         ],
       },
@@ -3689,12 +3680,12 @@ describe("AgentGateway", () => {
           threads: [
             {
               prompt: "first",
-              target: { provider: "codex", model: "gpt-5.5" },
+              target: { engine: "codex", model: "gpt-5.5" },
               environment: "worktree",
             },
             {
               prompt: "second",
-              target: { provider: "claude", model: "claude-sonnet-5" },
+              target: { engine: "claude", model: "claude-sonnet-5" },
               environment: "worktree",
             },
           ],
@@ -3736,7 +3727,7 @@ describe("AgentGateway", () => {
           threads: [
             {
               prompt: "dispatch then compensate",
-              target: { provider: "codex", model: "gpt-5.5" },
+              target: { engine: "codex", model: "gpt-5.5" },
             },
           ],
         },
@@ -3773,7 +3764,7 @@ describe("AgentGateway", () => {
           threads: [
             {
               prompt: "fail and compensate",
-              target: { provider: "codex", model: "gpt-5.5" },
+              target: { engine: "codex", model: "gpt-5.5" },
             },
           ],
         },
@@ -4012,14 +4003,14 @@ describe("AgentGateway", () => {
           {
             prompt: "What is this repository about?",
             target: {
-              provider: "codex",
+              engine: "codex",
               model: "gpt-5.6-terra",
               options: { reasoningEffort: "low" },
             },
           },
           {
             prompt: "What is this repository about?",
-            target: { provider: "claude", model: "claude-sonnet-5" },
+            target: { engine: "claude", model: "claude-sonnet-5" },
           },
         ],
       };
@@ -4043,14 +4034,14 @@ describe("AgentGateway", () => {
         const runId = TurnId.makeUnsafe(`turn-repo-summary-${index}`);
         const messageId = MessageId.makeUnsafe(`message-repo-summary-${index}`);
         const shell = makeThreadShell(threadId, {
-          modelSelection:
+          engineSelection:
             index === 0
               ? {
-                  provider: "codex",
+                  engine: "codex",
                   model: "gpt-5.6-terra",
                   options: { reasoningEffort: "low" },
                 }
-              : { provider: "claude", model: "claude-sonnet-5" },
+              : { engine: "claude", model: "claude-sonnet-5" },
           latestTurn: {
             turnId: runId,
             state: "completed",
@@ -4111,7 +4102,7 @@ describe("AgentGateway", () => {
           threads: [
             {
               prompt: "Try again",
-              target: { provider: "opencode", model: "openai/gpt-5" },
+              target: { engine: "opencode", model: "openai/gpt-5" },
             },
           ],
         },
@@ -4123,14 +4114,14 @@ describe("AgentGateway", () => {
       const creates = harness.dispatched.filter((command) => command.type === "thread.create");
       assert.equal(creates.length, 2);
       assert.deepEqual(
-        creates.map((command) => command.modelSelection),
+        creates.map((command) => command.engineSelection),
         [
           {
-            provider: "codex",
+            engine: "codex",
             model: "gpt-5.6-terra",
             options: { reasoningEffort: "low" },
           },
-          { provider: "claude", model: "claude-sonnet-5" },
+          { engine: "claude", model: "claude-sonnet-5" },
         ],
       );
     }).pipe(Effect.provide(gatewayLayer));
@@ -4287,12 +4278,12 @@ describe("AgentGateway", () => {
 
   it.effect("rejects a send while the persisted runtime mode is unavailable", () => {
     const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads, [], {
-      executionCapabilities: (modelSelection) =>
+      executionCapabilities: (engineSelection) =>
         resolveProviderExecutionCapabilities({
-          modelSelection,
-          adapterCapabilities: providerExecutionStructure(modelSelection.provider),
+          engineSelection,
+          adapterCapabilities: engineExecutionStructure(engineSelection.engine),
           providerStatus: {
-            provider: modelSelection.provider,
+            engine: engineSelection.engine,
             status: "error",
             available: false,
             authStatus: "unknown",
@@ -4445,7 +4436,7 @@ describe("AgentGateway", () => {
         args: {
           requestId: "create-local-rejected",
           prompt: "touch the main checkout",
-          provider: "codex",
+          engine: "codex",
           environment: "local",
         },
       });
@@ -4457,7 +4448,7 @@ describe("AgentGateway", () => {
       const defaulted = yield* harness.callTool({
         token: "token-parent",
         name: "harnessos_create_thread",
-        args: { requestId: "create-isolated", prompt: "do isolated work", provider: "codex" },
+        args: { requestId: "create-isolated", prompt: "do isolated work", engine: "codex" },
       });
       assert.isFalse(isToolError(defaulted.result), toolErrorText(defaulted.result));
       assert.equal(toolResultJson(defaulted.result).environment, "worktree");
@@ -4479,7 +4470,7 @@ describe("AgentGateway", () => {
         args: {
           requestId: "create-escalated",
           prompt: "escalate please",
-          provider: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
         },
       });

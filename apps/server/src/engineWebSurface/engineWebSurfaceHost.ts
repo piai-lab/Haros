@@ -20,7 +20,7 @@ const REDACTED_ENGINE_WEB_SURFACE = "[OmniMind Browser temporary page]";
 export type EngineWebSurfaceStatus = "waiting-for-user" | "unavailable" | "completed";
 
 export interface EngineWebSurfaceIntentIdentity {
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly threadId: ThreadId;
   readonly toolCallId: string;
 }

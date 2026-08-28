@@ -21,7 +21,7 @@ layer("058_ThreadScopedPendingApprovalIdentity", (it) => {
           created_at,
           resolved_at
         ) VALUES (
-          'provider-request-1',
+          'engine-request-1',
           'thread-a',
           'pending',
           NULL,
@@ -40,7 +40,7 @@ layer("058_ThreadScopedPendingApprovalIdentity", (it) => {
           created_at,
           resolved_at
         ) VALUES (
-          'provider-request-1',
+          'engine-request-1',
           'thread-b',
           'resolved',
           'accept',
@@ -75,7 +75,7 @@ layer("058_ThreadScopedPendingApprovalIdentity", (it) => {
       }>`
         SELECT thread_id AS "threadId", status, decision
         FROM projection_pending_approvals
-        WHERE request_id = 'provider-request-1'
+        WHERE request_id = 'engine-request-1'
         ORDER BY thread_id ASC
       `;
       assert.deepStrictEqual(rows, [

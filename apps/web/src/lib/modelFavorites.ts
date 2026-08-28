@@ -1,5 +1,5 @@
 // FILE: modelFavorites.ts
-// Purpose: Shared storage keys + readers for per-provider favorite model slugs.
+// Purpose: Shared storage keys + readers for per-engine favorite model slugs.
 // Layer: Web local-storage helpers used by the model picker and model cycle shortcuts.
 
 import type { EngineKind } from "@harnessos/contracts";
@@ -16,19 +16,17 @@ export type FavoriteModelProvider = keyof typeof FAVORITE_MODEL_STORAGE_KEYS;
 
 const FavoriteModelSlugsSchema = Schema.Array(Schema.String);
 
-export function supportsModelFavorites(provider: EngineKind): provider is FavoriteModelProvider {
-  return (
-    provider === "cursor" || provider === "kilo" || provider === "opencode" || provider === "pi"
-  );
+export function supportsModelFavorites(engine: EngineKind): engine is FavoriteModelProvider {
+  return engine === "cursor" || engine === "kilo" || engine === "opencode" || engine === "pi";
 }
 
 // Read favorite slugs for cycle order. Failures (SSR, parse errors) return [].
-export function readFavoriteModelSlugs(provider: EngineKind): string[] {
-  if (!supportsModelFavorites(provider) || typeof globalThis.localStorage === "undefined") {
+export function readFavoriteModelSlugs(engine: EngineKind): string[] {
+  if (!supportsModelFavorites(engine) || typeof globalThis.localStorage === "undefined") {
     return [];
   }
   try {
-    const raw = globalThis.localStorage.getItem(FAVORITE_MODEL_STORAGE_KEYS[provider]);
+    const raw = globalThis.localStorage.getItem(FAVORITE_MODEL_STORAGE_KEYS[engine]);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     const decoded = Schema.decodeUnknownSync(FavoriteModelSlugsSchema)(parsed);

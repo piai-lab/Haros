@@ -3,7 +3,7 @@
 // Layer: React hook
 // Exports: useThreadRecap for the Environment panel.
 
-import type { ProviderStartOptions, ThreadId } from "@harnessos/contracts";
+import type { EngineStartOptions, ThreadId } from "@harnessos/contracts";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -32,7 +32,7 @@ export interface UseThreadRecapInput {
   readonly enabled: boolean;
   readonly latestTurnSettled: boolean;
   readonly codexHomePath?: string | null;
-  readonly providerOptions?: ProviderStartOptions | null;
+  readonly engineOptions?: EngineStartOptions | null;
   readonly initialIdleMs?: number;
   readonly refreshIdleMs?: number;
   readonly idleMs?: number;
@@ -165,7 +165,7 @@ export function useThreadRecap(input: UseThreadRecapInput): UseThreadRecapResult
           currentState: payload.currentState,
           ...(cacheEntry?.text ? { previousRecap: cacheEntry.text } : {}),
           ...(input.codexHomePath ? { codexHomePath: input.codexHomePath } : {}),
-          ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+          ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
         })
         .then((result) => {
           const isCurrentSource =
@@ -240,7 +240,7 @@ export function useThreadRecap(input: UseThreadRecapInput): UseThreadRecapResult
     input.enabled,
     input.initialIdleMs,
     input.latestTurnSettled,
-    input.providerOptions,
+    input.engineOptions,
     input.refreshIdleMs,
     sourceHasNewMaterial,
     sourceSignature,

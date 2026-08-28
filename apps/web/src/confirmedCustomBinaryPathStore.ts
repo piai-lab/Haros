@@ -1,5 +1,5 @@
 // FILE: confirmedCustomBinaryPathStore.ts
-// Purpose: Persist which custom provider binary paths a successful session has
+// Purpose: Persist which custom engine binary paths a successful session has
 //   already confirmed, so the "uses a custom local binary path" warning does not
 //   reappear on every app restart for a path that is already known to work.
 // Layer: Web UI state utilities
@@ -10,10 +10,10 @@ import { isPlainObject } from "./persistedRecord";
 
 const STORAGE_KEY = "harnessos:confirmed-custom-binary-paths:v1";
 
-const PROVIDER_KIND_SET: ReadonlySet<EngineKind> = new Set(ENGINE_KINDS);
+const ENGINE_KIND_SET: ReadonlySet<EngineKind> = new Set(ENGINE_KINDS);
 
 function isProviderKind(value: string): value is EngineKind {
-  return PROVIDER_KIND_SET.has(value as EngineKind);
+  return ENGINE_KIND_SET.has(value as EngineKind);
 }
 
 export function loadConfirmedCustomBinaryPaths(): Partial<Record<EngineKind, string>> {
@@ -38,7 +38,7 @@ export function loadConfirmedCustomBinaryPaths(): Partial<Record<EngineKind, str
   if (!isPlainObject(parsed)) {
     return {};
   }
-  // Validating keys against the known provider set also blocks prototype
+  // Validating keys against the known engine set also blocks prototype
   // pollution (e.g. "__proto__") from untrusted persisted input.
   const result: Partial<Record<EngineKind, string>> = {};
   for (const [key, value] of Object.entries(parsed)) {

@@ -87,7 +87,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           scripts_json, created_at, updated_at, deleted_at
         ) VALUES (
           'project-turn-provenance', 'Turn provenance', '/tmp/turn-provenance',
-          '{"provider":"codex","model":"gpt-5.6"}', '[]',
+          '{"engine":"codex","model":"gpt-5.6"}', '[]',
           '2026-08-27T02:20:00.000Z', '2026-08-27T02:20:00.000Z', NULL
         )
       `;
@@ -97,7 +97,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           latest_turn_id, created_at, updated_at, deleted_at
         ) VALUES (
           'thread-turn-provenance', 'project-turn-provenance', 'Turn provenance',
-          '{"provider":"codex","model":"gpt-5.6"}', NULL, NULL,
+          '{"engine":"codex","model":"gpt-5.6"}', NULL, NULL,
           'turn-deepseek', '2026-08-27T02:20:00.000Z',
           '2026-08-27T02:21:03.000Z', NULL
         )
@@ -124,14 +124,14 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             'event-turn-provenance-exact', 'thread', 'thread-turn-provenance', 0,
             'thread.turn-start-requested', '2026-08-27T02:21:00.000Z',
             'command-turn-provenance-exact', NULL, NULL, 'client',
-            '{"threadId":"thread-turn-provenance","messageId":"message-user-deepseek","modelSelection":{"provider":"opencode","model":"deepseek/deepseek-v4-pro"},"modelPresentationIdentity":{"model":"deepseek/deepseek-v4-pro","displayName":"DeepSeek V4 Pro","serviceId":"deepseek","serviceName":"DeepSeek","source":"runtime-catalog"},"createdAt":"2026-08-27T02:21:00.000Z"}',
+            '{"threadId":"thread-turn-provenance","messageId":"message-user-deepseek","engineSelection":{"engine":"opencode","model":"deepseek/deepseek-v4-pro"},"modelPresentationIdentity":{"model":"deepseek/deepseek-v4-pro","displayName":"DeepSeek V4 Pro","serviceId":"deepseek","serviceName":"DeepSeek","source":"runtime-catalog"},"createdAt":"2026-08-27T02:21:00.000Z"}',
             '{}'
           ),
           (
             'event-turn-provenance-decoy', 'thread', 'thread-turn-provenance', 1,
             'thread.turn-start-requested', '2026-08-27T02:22:00.000Z',
             'command-turn-provenance-decoy', NULL, NULL, 'client',
-            '{"threadId":"thread-turn-provenance","messageId":"message-user-deepseek","modelSelection":{"provider":"codex","model":"gpt-5.6"},"createdAt":"2026-08-27T02:22:00.000Z"}',
+            '{"threadId":"thread-turn-provenance","messageId":"message-user-deepseek","engineSelection":{"engine":"codex","model":"gpt-5.6"},"createdAt":"2026-08-27T02:22:00.000Z"}',
             '{}'
           )
       `;
@@ -143,8 +143,8 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           {
             pendingMessageId: asMessageId("message-user-deepseek"),
             turnId: asTurnId("turn-deepseek"),
-            modelSelection: {
-              provider: "opencode",
+            engineSelection: {
+              engine: "opencode",
               model: "deepseek/deepseek-v4-pro",
             },
             modelPresentationIdentity: {
@@ -257,7 +257,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'project-1',
           'Project 1',
           '/tmp/project-1',
-          '{"provider":"codex","model":"gpt-5-codex"}',
+          '{"engine":"codex","model":"gpt-5-codex"}',
           '[{"id":"script-1","name":"Build","command":"bun run build","icon":"build","runOnWorktreeCreate":false}]',
           '2026-02-24T00:00:00.000Z',
           '2026-02-24T00:00:01.000Z',
@@ -282,7 +282,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'thread-1',
           'project-1',
           'Thread 1',
-          '{"provider":"codex","model":"gpt-5-codex"}',
+          '{"engine":"codex","model":"gpt-5-codex"}',
           NULL,
           NULL,
           'turn-1',
@@ -379,7 +379,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             'turn-1',
             'info',
             'runtime.note',
-            'provider started',
+            'engine started',
             '{"stage":"start"}',
             '2026-02-24T00:00:06.000Z'
           ),
@@ -421,8 +421,8 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'thread-1',
           'running',
           'codex',
-          'provider-session-1',
-          'provider-thread-1',
+          'engine-session-1',
+          'engine-thread-1',
           'approval-required',
           'turn-1',
           NULL,
@@ -476,7 +476,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             '2026-02-24T00:00:07.500Z',
             NULL,
             2,
-            'provider-diff:placeholder',
+            'engine-diff:placeholder',
             'missing',
             '[]'
           )
@@ -510,8 +510,8 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           spaceId: null,
           title: "Project 1",
           workspaceRoot: "/tmp/project-1",
-          defaultModelSelection: {
-            provider: "codex",
+          defaultEngineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           scripts: [
@@ -534,8 +534,8 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           id: ThreadId.makeUnsafe("thread-1"),
           projectId: asProjectId("project-1"),
           title: "Thread 1",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           interactionMode: "default",
@@ -638,7 +638,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
               id: asEventId("activity-1"),
               tone: "info",
               kind: "runtime.note",
-              summary: "provider started",
+              summary: "engine started",
               payload: { stage: "start" },
               turnId: asTurnId("turn-1"),
               createdAt: "2026-02-24T00:00:06.000Z",
@@ -729,7 +729,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'project-activity-cap',
           'Project Activity Cap',
           '/tmp/project-activity-cap',
-          '{"provider":"codex","model":"gpt-5-codex"}',
+          '{"engine":"codex","model":"gpt-5-codex"}',
           '[]',
           '2026-02-24T00:00:00.000Z',
           '2026-02-24T00:00:00.000Z',
@@ -753,7 +753,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'thread-activity-cap',
           'project-activity-cap',
           'Thread Activity Cap',
-          '{"provider":"codex","model":"gpt-5-codex"}',
+          '{"engine":"codex","model":"gpt-5-codex"}',
           NULL,
           NULL,
           NULL,
@@ -936,7 +936,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           scripts_json, created_at, updated_at, deleted_at
         ) VALUES (
           'project-turn-window', 'Turn window', '/tmp/turn-window',
-          '{"provider":"codex","model":"gpt-5-codex"}', '[]',
+          '{"engine":"codex","model":"gpt-5-codex"}', '[]',
           '2026-02-24T00:00:00.000Z', '2026-02-24T00:00:00.000Z', NULL
         )
       `;
@@ -946,7 +946,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           latest_turn_id, created_at, updated_at, deleted_at
         ) VALUES (
           'thread-turn-window', 'project-turn-window', 'Turn Window',
-          '{"provider":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
+          '{"engine":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
           '2026-02-24T00:00:00.000Z', '2026-02-24T00:00:00.000Z', NULL
         )
       `;
@@ -1022,7 +1022,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           scripts_json, created_at, updated_at, deleted_at
         ) VALUES (
           'project-oversized-turn', 'Oversized turn', '/tmp/oversized-turn',
-          '{"provider":"codex","model":"gpt-5-codex"}', '[]',
+          '{"engine":"codex","model":"gpt-5-codex"}', '[]',
           '2026-02-24T00:00:00.000Z', '2026-02-24T00:00:00.000Z', NULL
         )
       `;
@@ -1032,7 +1032,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           latest_turn_id, created_at, updated_at, deleted_at
         ) VALUES (
           'thread-oversized-turn', 'project-oversized-turn', 'Oversized Turn',
-          '{"provider":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
+          '{"engine":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
           '2026-02-24T00:00:00.000Z', '2026-02-24T00:00:00.000Z', NULL
         )
       `;
@@ -1094,7 +1094,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'project-export-message-cap',
           'Project Export Message Cap',
           '/tmp/project-export-message-cap',
-          '{"provider":"codex","model":"gpt-5-codex"}',
+          '{"engine":"codex","model":"gpt-5-codex"}',
           '[]',
           '2026-02-24T00:00:00.000Z',
           '2026-02-24T00:00:00.000Z',
@@ -1118,7 +1118,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'thread-export-message-cap',
           'project-export-message-cap',
           'Thread Export Message Cap',
-          '{"provider":"codex","model":"gpt-5-codex"}',
+          '{"engine":"codex","model":"gpt-5-codex"}',
           NULL,
           NULL,
           NULL,
@@ -1187,7 +1187,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
         ) VALUES (
           'project-causal-message-snapshot', 'Causal Message Snapshot',
           '/tmp/project-causal-message-snapshot',
-          '{"provider":"codex","model":"gpt-5-codex"}', '[]',
+          '{"engine":"codex","model":"gpt-5-codex"}', '[]',
           '2026-07-14T12:00:00.000Z', '2026-07-14T12:00:00.000Z', NULL
         )
       `;
@@ -1197,7 +1197,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           latest_turn_id, created_at, updated_at, deleted_at
         ) VALUES (
           'thread-causal-message-snapshot', 'project-causal-message-snapshot',
-          'Causal Message Snapshot', '{"provider":"codex","model":"gpt-5-codex"}',
+          'Causal Message Snapshot', '{"engine":"codex","model":"gpt-5-codex"}',
           NULL, NULL, NULL,
           '2026-07-14T12:00:00.000Z', '2026-07-14T12:00:00.000Z', NULL
         )
@@ -1326,7 +1326,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'thread-imported-shape',
           'project-imported-shape',
           'Imported Shape Thread',
-          '{"provider":"codex","model":"gpt-5.5","options":[{"id":"reasoningEffort","value":"medium"}]}',
+          '{"engine":"codex","model":"gpt-5.5","options":[{"id":"reasoningEffort","value":"medium"}]}',
           NULL,
           NULL,
           'full-access',
@@ -1339,12 +1339,12 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
       `;
 
       const expectedProjectSelection = {
-        provider: "codex",
+        engine: "codex",
         model: "imported-project-model",
         options: { reasoningEffort: "medium" },
       } as const;
       const expectedThreadSelection = {
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5.5",
         options: { reasoningEffort: "medium" },
       } as const;
@@ -1368,41 +1368,41 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
 
       assert.deepStrictEqual(
         snapshot.projects.find((project) => project.id === "project-imported-shape")
-          ?.defaultModelSelection,
+          ?.defaultEngineSelection,
         expectedProjectSelection,
       );
       assert.deepStrictEqual(
-        snapshot.threads.find((thread) => thread.id === "thread-imported-shape")?.modelSelection,
+        snapshot.threads.find((thread) => thread.id === "thread-imported-shape")?.engineSelection,
         expectedThreadSelection,
       );
       assert.deepStrictEqual(
         shellSnapshot.projects.find((project) => project.id === "project-imported-shape")
-          ?.defaultModelSelection,
+          ?.defaultEngineSelection,
         expectedProjectSelection,
       );
       assert.deepStrictEqual(
         shellSnapshot.threads.find((thread) => thread.id === "thread-imported-shape")
-          ?.modelSelection,
+          ?.engineSelection,
         expectedThreadSelection,
       );
       assert.deepStrictEqual(
-        Option.getOrNull(activeProject)?.defaultModelSelection,
+        Option.getOrNull(activeProject)?.defaultEngineSelection,
         expectedProjectSelection,
       );
       assert.deepStrictEqual(
-        Option.getOrNull(projectShell)?.defaultModelSelection,
+        Option.getOrNull(projectShell)?.defaultEngineSelection,
         expectedProjectSelection,
       );
       assert.deepStrictEqual(
-        Option.getOrNull(threadShell)?.modelSelection,
+        Option.getOrNull(threadShell)?.engineSelection,
         expectedThreadSelection,
       );
       assert.deepStrictEqual(
-        Option.getOrNull(threadDetail)?.modelSelection,
+        Option.getOrNull(threadDetail)?.engineSelection,
         expectedThreadSelection,
       );
       assert.deepStrictEqual(
-        Option.getOrNull(threadDetailSnapshot)?.thread.modelSelection,
+        Option.getOrNull(threadDetailSnapshot)?.thread.engineSelection,
         expectedThreadSelection,
       );
     }),
@@ -1435,7 +1435,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             'project',
             'Folder Project',
             '/tmp/folder-project',
-            '{"provider":"codex","model":"gpt-5-codex"}',
+            '{"engine":"codex","model":"gpt-5-codex"}',
             '[]',
             '2026-02-25T00:00:00.000Z',
             '2026-02-25T00:00:01.000Z',
@@ -1446,7 +1446,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             'chat',
             'Home',
             '/Users/tester',
-            '{"provider":"codex","model":"gpt-5-codex"}',
+            '{"engine":"codex","model":"gpt-5-codex"}',
             '[]',
             '2026-02-25T00:00:02.000Z',
             '2026-02-25T00:00:03.000Z',
@@ -1519,7 +1519,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'project',
           'PR Project',
           '/tmp/pr-project',
-          '{"provider":"codex","model":"gpt-5-codex"}',
+          '{"engine":"codex","model":"gpt-5-codex"}',
           '[]',
           '2026-02-25T00:00:00.000Z',
           '2026-02-25T00:00:01.000Z',
@@ -1542,7 +1542,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'thread-pr',
           'project-pr',
           'Thread with PR',
-          '{"provider":"codex","model":"gpt-5-codex"}',
+          '{"engine":"codex","model":"gpt-5-codex"}',
           '{"number":1,"title":"Add placeholder temp files","url":"https://github.com/Emanuele-web04/openclap/pull/1","baseBranch":"main","headBranch":"harnessos/greeting-1","state":"open"}',
           '2026-02-25T00:00:02.000Z',
           '2026-02-25T00:00:03.000Z',
@@ -1625,7 +1625,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             'thread-first',
             'project-active',
             'First Thread',
-            '{"provider":"codex","model":"gpt-5-codex"}',
+            '{"engine":"codex","model":"gpt-5-codex"}',
             'full-access',
             'default',
             'local',
@@ -1642,7 +1642,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             'thread-second',
             'project-active',
             'Second Thread',
-            '{"provider":"codex","model":"gpt-5-codex"}',
+            '{"engine":"codex","model":"gpt-5-codex"}',
             'full-access',
             'default',
             'local',
@@ -1659,7 +1659,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             'thread-deleted',
             'project-active',
             'Deleted Thread',
-            '{"provider":"codex","model":"gpt-5-codex"}',
+            '{"engine":"codex","model":"gpt-5-codex"}',
             'full-access',
             'default',
             'local',
@@ -1728,7 +1728,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'project-shell',
           'Shell Project',
           '/tmp/project-shell',
-          '{"provider":"codex","model":"gpt-5-codex"}',
+          '{"engine":"codex","model":"gpt-5-codex"}',
           '[]',
           '2026-03-03T00:00:00.000Z',
           '2026-03-03T00:00:01.000Z',
@@ -1762,7 +1762,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'thread-shell',
           'project-shell',
           'Shell Thread',
-          '{"provider":"codex","model":"gpt-5-codex"}',
+          '{"engine":"codex","model":"gpt-5-codex"}',
           'full-access',
           'default',
           'local',
@@ -1797,8 +1797,8 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'thread-shell',
           'ready',
           'codex',
-          'provider-session-shell',
-          'provider-thread-shell',
+          'engine-session-shell',
+          'engine-thread-shell',
           'full-access',
           NULL,
           NULL,
@@ -1864,8 +1864,8 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           id: ThreadId.makeUnsafe("thread-shell"),
           projectId: asProjectId("project-shell"),
           title: "Shell Thread",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           interactionMode: "default",
@@ -1990,7 +1990,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'thread-context',
           'project-context',
           'Context Thread',
-          '{"provider":"codex","model":"gpt-5-codex"}',
+          '{"engine":"codex","model":"gpt-5-codex"}',
           'full-access',
           'default',
           'local',
@@ -2051,7 +2051,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
             '2026-03-02T00:00:04.500Z',
             NULL,
             3,
-            'provider-diff:placeholder',
+            'engine-diff:placeholder',
             'missing',
             '[]'
           ),
@@ -2275,7 +2275,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           scripts_json, created_at, updated_at, deleted_at
         ) VALUES (
           'project-revert-lifecycle', 'Revert lifecycle', '/tmp/revert-lifecycle',
-          '{"provider":"codex","model":"gpt-5-codex"}', '[]',
+          '{"engine":"codex","model":"gpt-5-codex"}', '[]',
           '2026-07-21T00:00:00.000Z', '2026-07-21T00:00:00.000Z', NULL
         )
       `;
@@ -2285,7 +2285,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           latest_turn_id, created_at, updated_at, deleted_at
         ) VALUES (
           'thread-revert-lifecycle', 'project-revert-lifecycle', 'Revert lifecycle',
-          '{"provider":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
+          '{"engine":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
           '2026-07-21T00:00:00.000Z', '2026-07-21T00:00:00.000Z', NULL
         )
       `;
@@ -2340,7 +2340,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           scripts_json, created_at, updated_at, deleted_at
         ) VALUES (
           'project-runtime-candidates', 'Runtime candidates', '/tmp/runtime-candidates',
-          '{"provider":"codex","model":"gpt-5-codex"}', '[]',
+          '{"engine":"codex","model":"gpt-5-codex"}', '[]',
           '2026-07-23T00:00:00.000Z', '2026-07-23T00:00:00.000Z', NULL
         )
       `;
@@ -2351,33 +2351,33 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
         ) VALUES
           (
             'thread-stale-running', 'project-runtime-candidates', 'Stale',
-            '{"provider":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
+            '{"engine":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
             '2026-07-23T00:00:00.000Z', '2026-07-23T00:00:00.000Z', NULL, NULL
           ),
           (
             'thread-fresh-running', 'project-runtime-candidates', 'Fresh',
-            '{"provider":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
+            '{"engine":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
             '2026-07-23T00:00:00.000Z', '2026-07-23T09:59:00.000Z', NULL, NULL
           ),
           (
             'thread-settled', 'project-runtime-candidates', 'Settled',
-            '{"provider":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
+            '{"engine":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
             '2026-07-23T00:00:00.000Z', '2026-07-23T00:00:00.000Z', NULL, NULL
           ),
           (
             'thread-archived-running', 'project-runtime-candidates', 'Archived',
-            '{"provider":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
+            '{"engine":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
             '2026-07-23T00:00:00.000Z', '2026-07-23T00:00:00.000Z',
             '2026-07-23T08:00:00.000Z', NULL
           ),
           (
             'thread-unbound-oldest', 'project-runtime-candidates', 'Unbound',
-            '{"provider":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
+            '{"engine":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
             '2026-07-22T00:00:00.000Z', '2026-07-22T00:00:00.000Z', NULL, NULL
           ),
           (
             'thread-queued-oldest', 'project-runtime-candidates', 'Queued',
-            '{"provider":"codex","model":"gpt-5-codex"}', NULL, NULL, 'turn-queued',
+            '{"engine":"codex","model":"gpt-5-codex"}', NULL, NULL, 'turn-queued',
             '2026-07-21T00:00:00.000Z', '2026-07-21T00:00:00.000Z', NULL, NULL
           )
       `;
@@ -2493,7 +2493,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           scripts_json, created_at, updated_at, deleted_at
         ) VALUES (
           'project-soft-delete', 'Soft delete', '/tmp/soft-delete',
-          '{"provider":"codex","model":"gpt-5-codex"}', '[]',
+          '{"engine":"codex","model":"gpt-5-codex"}', '[]',
           '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z', NULL
         )
       `;
@@ -2504,12 +2504,12 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
         ) VALUES
           (
             'thread-live', 'project-soft-delete', 'Live',
-            '{"provider":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
+            '{"engine":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
             '2026-07-24T00:00:01.000Z', '2026-07-24T00:00:01.000Z', NULL
           ),
           (
             'thread-soft-deleted', 'project-soft-delete', 'Retention deleted',
-            '{"provider":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
+            '{"engine":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
             '2026-07-24T00:00:02.000Z', '2026-07-24T00:00:09.000Z',
             '2026-07-24T00:00:09.000Z'
           )
@@ -2577,7 +2577,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           scripts_json, created_at, updated_at, deleted_at
         ) VALUES (
           'project-deleted-command', 'Deleted command', '/tmp/deleted-command',
-          '{"provider":"codex","model":"gpt-5-codex"}', '[]',
+          '{"engine":"codex","model":"gpt-5-codex"}', '[]',
           '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z', NULL
         )
       `;
@@ -2587,7 +2587,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           latest_turn_id, created_at, updated_at, deleted_at
         ) VALUES (
           'thread-deleted-command', 'project-deleted-command', 'Deleted command',
-          '{"provider":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
+          '{"engine":"codex","model":"gpt-5-codex"}', NULL, NULL, NULL,
           '2026-07-24T00:00:01.000Z', '2026-07-24T00:00:09.000Z',
           '2026-07-24T00:00:09.000Z'
         )
@@ -2628,7 +2628,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           scripts_json, created_at, updated_at, deleted_at
         ) VALUES (
           'project-worktrees', 'Worktrees', '/tmp/worktrees',
-          '{"provider":"codex","model":"gpt-5-codex"}', '[]',
+          '{"engine":"codex","model":"gpt-5-codex"}', '[]',
           '2026-07-24T00:00:00.000Z', '2026-07-24T00:00:00.000Z', NULL
         )
       `;
@@ -2640,20 +2640,20 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
         ) VALUES
           (
             'thread-worktree-active', 'project-worktrees', 'Active',
-            '{"provider":"codex","model":"gpt-5-codex"}', NULL, '/tmp/wt/active',
+            '{"engine":"codex","model":"gpt-5-codex"}', NULL, '/tmp/wt/active',
             NULL, NULL, '2026-07-24T00:00:01.000Z', '2026-07-24T00:00:01.000Z',
             NULL, NULL
           ),
           (
             'thread-worktree-deleted', 'project-worktrees', 'Retention deleted',
-            '{"provider":"codex","model":"gpt-5-codex"}', NULL, '/tmp/wt/deleted',
+            '{"engine":"codex","model":"gpt-5-codex"}', NULL, '/tmp/wt/deleted',
             '/tmp/wt/deleted-assoc', NULL, '2026-07-24T00:00:02.000Z',
             '2026-07-24T00:00:09.000Z', '2026-07-24T00:00:08.000Z',
             '2026-07-24T00:00:09.000Z'
           ),
           (
             'thread-no-worktree', 'project-worktrees', 'No worktree',
-            '{"provider":"codex","model":"gpt-5-codex"}', NULL, NULL,
+            '{"engine":"codex","model":"gpt-5-codex"}', NULL, NULL,
             NULL, NULL, '2026-07-24T00:00:03.000Z', '2026-07-24T00:00:03.000Z',
             NULL, NULL
           )

@@ -5,7 +5,7 @@
 
 import {
   type NativeApi,
-  type ModelSelection,
+  type EngineSelection,
   type OrchestrationShellSnapshot,
   type ProjectId,
 } from "@harnessos/contracts";
@@ -35,7 +35,7 @@ export async function createOrRecoverProjectFromPath(input: {
   api: NativeApi;
   workspaceRoot: string;
   createIfMissing?: boolean;
-  defaultModelSelection: ModelSelection | null;
+  defaultEngineSelection: EngineSelection | null;
   loadSnapshot: () => Promise<OrchestrationShellSnapshot | null>;
   maxAttempts?: number;
   delayMs?: number;
@@ -65,7 +65,7 @@ export async function createOrRecoverProjectFromPath(input: {
       title,
       workspaceRoot,
       createWorkspaceRootIfMissing: input.createIfMissing === true,
-      defaultModelSelection: input.defaultModelSelection,
+      defaultEngineSelection: input.defaultEngineSelection,
       createdAt,
     });
 

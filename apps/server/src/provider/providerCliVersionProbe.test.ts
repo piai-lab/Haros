@@ -24,7 +24,7 @@ describe("probeProviderCliVersion", () => {
       _tag: "NotFound",
       module: "ChildProcess",
       method: "spawn",
-      description: "provider executable is absent",
+      description: "engine executable is absent",
     });
     await expect(
       Effect.runPromise(probeProviderCliVersion(Effect.fail(missing), 100)),
@@ -45,7 +45,7 @@ describe("probeProviderCliVersion", () => {
       Effect.runPromise(probeProviderCliVersion(Effect.fail(nodeMissing), 100)),
     ).resolves.toEqual({ outcome: "missing", cause: nodeMissing });
 
-    const shellMissing = makeCommandMissingCause("provider-cli");
+    const shellMissing = makeCommandMissingCause("engine-cli");
     await expect(
       Effect.runPromise(probeProviderCliVersion(Effect.fail(shellMissing), 100)),
     ).resolves.toEqual({ outcome: "missing", cause: shellMissing });

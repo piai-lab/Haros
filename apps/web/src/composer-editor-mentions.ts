@@ -16,7 +16,7 @@ import {
   trimTrailingLinkPunctuation,
 } from "./lib/linkChips";
 import { resolveAgentAlias } from "@harnessos/contracts";
-import type { ProviderMentionReference } from "@harnessos/contracts";
+import type { EngineMentionReference } from "@harnessos/contracts";
 import { threadIdFromThreadMentionPath } from "@harnessos/shared/threadMentions";
 
 export type ComposerPromptSegment =
@@ -297,7 +297,7 @@ function splitTextIntoPromptSegments(
   options: {
     includeTrailingTokenAtEnd: boolean;
     includeSlashCommandChips: boolean;
-    mentionReferences?: ReadonlyArray<ProviderMentionReference>;
+    mentionReferences?: ReadonlyArray<EngineMentionReference>;
   },
 ): ComposerPromptSegment[] {
   const segments: ComposerPromptSegment[] = [];
@@ -370,7 +370,7 @@ function splitTextIntoPromptSegments(
 
 export function splitPromptIntoDisplaySegments(
   prompt: string,
-  mentionReferences: ReadonlyArray<ProviderMentionReference> = [],
+  mentionReferences: ReadonlyArray<EngineMentionReference> = [],
 ): ComposerPromptSegment[] {
   return splitTextIntoPromptSegments(prompt, {
     // Sent messages echo the same chips the composer showed while typing, so a
@@ -385,7 +385,7 @@ export function splitPromptIntoDisplaySegments(
 export function splitPromptIntoComposerSegments(
   prompt: string,
   terminalContexts: ReadonlyArray<TerminalContextDraft> = [],
-  mentionReferences: ReadonlyArray<ProviderMentionReference> = [],
+  mentionReferences: ReadonlyArray<EngineMentionReference> = [],
 ): ComposerPromptSegment[] {
   if (!prompt) {
     return [];

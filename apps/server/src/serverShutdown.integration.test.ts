@@ -136,9 +136,9 @@ describe("desktop shutdown authorization", () => {
     expect(isDesktopShutdownLoopbackPeer("::ffff:127.0.0.2")).toBe(false);
   });
 
-  it("does not grant the shutdown secret to provider descendants", () => {
+  it("does not grant the shutdown secret to engine descendants", () => {
     const providerEnvironment = buildProviderChildEnvironment({
-      provider: "codex",
+      engine: "codex",
       baseEnv: {
         PATH: process.env.PATH,
         HARNESSOS_DESKTOP_SHUTDOWN_TOKEN: SHUTDOWN_TOKEN,

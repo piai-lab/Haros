@@ -1,29 +1,29 @@
 // FILE: providerUsageDisplay.ts
-// Purpose: Single source of truth for provider usage rows shown in Settings,
+// Purpose: Single source of truth for engine usage rows shown in Settings,
 // the chat header usage chip, and compact environment/Local popovers.
 
 import {
   deriveVisibleRateLimitRows,
   formatRateLimitRemainingPercent,
   formatRateLimitResetCountdown,
-  type ProviderRateLimit,
+  type EngineRateLimit,
   type VisibleRateLimitRow,
 } from "~/lib/rateLimits";
 import { deriveUsagePace, type UsagePaceSummary } from "~/lib/usagePace";
 
-export type ProviderUsageTone = "healthy" | "warning" | "danger";
+export type EngineUsageTone = "healthy" | "warning" | "danger";
 
-export interface ProviderUsageDisplayRow extends VisibleRateLimitRow {
+export interface EngineUsageDisplayRow extends VisibleRateLimitRow {
   remainingLabel: string;
   leftText: string;
   resetText: string | null;
   pace: UsagePaceSummary | null;
   markerPercent: number | null;
-  remainingTone: ProviderUsageTone;
-  paceTone: ProviderUsageTone;
+  remainingTone: EngineUsageTone;
+  paceTone: EngineUsageTone;
 }
 
-export interface ProviderUsageProgressTrackProps {
+export interface EngineUsageProgressTrackProps {
   label: string;
   remainingPercent: number;
   markerPercent: number | null;
@@ -31,12 +31,12 @@ export interface ProviderUsageProgressTrackProps {
   markerClassName: string;
 }
 
-export interface ProviderUsagePaceDetails {
+export interface EngineUsagePaceDetails {
   amountText: string | null;
   etaText: string | null;
 }
 
-export const PROVIDER_USAGE_TONE_CLASS_NAME: Record<ProviderUsageTone, string> = {
+export const ENGINE_USAGE_TONE_CLASS_NAME: Record<EngineUsageTone, string> = {
   healthy: "bg-emerald-500",
   warning: "bg-amber-500",
   danger: "bg-red-500",
@@ -46,13 +46,13 @@ function clampPercent(value: number): number {
   return Math.min(100, Math.max(0, value));
 }
 
-function remainingTone(remainingPercent: number): ProviderUsageTone {
+function remainingTone(remainingPercent: number): EngineUsageTone {
   if (remainingPercent <= 10) return "danger";
   if (remainingPercent <= 25) return "warning";
   return "healthy";
 }
 
-function paceTone(status: UsagePaceSummary["status"]): ProviderUsageTone {
+function paceTone(status: UsagePaceSummary["status"]): EngineUsageTone {
   switch (status) {
     case "behind":
       return "danger";
@@ -76,13 +76,13 @@ function windowDurationMinsForRow(row: VisibleRateLimitRow): number | undefined 
   return undefined;
 }
 
-export function providerUsageToneClassName(tone: ProviderUsageTone): string {
-  return PROVIDER_USAGE_TONE_CLASS_NAME[tone];
+export function providerUsageToneClassName(tone: EngineUsageTone): string {
+  return ENGINE_USAGE_TONE_CLASS_NAME[tone];
 }
 
 export function providerUsageProgressTrackProps(
-  row: ProviderUsageDisplayRow,
-): ProviderUsageProgressTrackProps {
+  row: EngineUsageDisplayRow,
+): EngineUsageProgressTrackProps {
   return {
     label: `${row.label} remaining`,
     remainingPercent: row.remainingPercent,
@@ -93,8 +93,8 @@ export function providerUsageProgressTrackProps(
 }
 
 export function providerUsagePaceDetails(
-  row: ProviderUsageDisplayRow,
-): ProviderUsagePaceDetails | null {
+  row: EngineUsageDisplayRow,
+): EngineUsagePaceDetails | null {
   if (!row.pace?.amountText && !row.pace?.etaText) {
     return null;
   }
@@ -104,7 +104,7 @@ export function providerUsagePaceDetails(
   };
 }
 
-export function deriveProviderUsageDisplayRow(row: VisibleRateLimitRow): ProviderUsageDisplayRow {
+export function deriveProviderUsageDisplayRow(row: VisibleRateLimitRow): EngineUsageDisplayRow {
   const remainingPercent = clampPercent(row.remainingPercent);
   const pace = deriveUsagePace({
     remainingPercent,
@@ -129,15 +129,15 @@ export function deriveProviderUsageDisplayRow(row: VisibleRateLimitRow): Provide
 }
 
 export function deriveProviderUsageDisplayRows(
-  rateLimits: ReadonlyArray<ProviderRateLimit>,
-): ProviderUsageDisplayRow[] {
+  rateLimits: ReadonlyArray<EngineRateLimit>,
+): EngineUsageDisplayRow[] {
   return deriveVisibleRateLimitRows(rateLimits).map(deriveProviderUsageDisplayRow);
 }
 
 export function selectPrimaryProviderUsageDisplayRow(
-  rows: ReadonlyArray<ProviderUsageDisplayRow>,
-): ProviderUsageDisplayRow | null {
-  return rows.reduce<ProviderUsageDisplayRow | null>((selected, row) => {
+  rows: ReadonlyArray<EngineUsageDisplayRow>,
+): EngineUsageDisplayRow | null {
+  return rows.reduce<EngineUsageDisplayRow | null>((selected, row) => {
     if (!selected || row.remainingPercent < selected.remainingPercent) {
       return row;
     }

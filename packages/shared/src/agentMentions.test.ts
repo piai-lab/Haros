@@ -13,7 +13,7 @@ describe("parseAgentMentionInvocations", () => {
         end: 33,
         definition: {
           alias: "spark",
-          provider: "codex",
+          engine: "codex",
           kind: "model",
           model: "gpt-5.3-codex-spark",
           displayName: "GPT-5.3 Codex Spark",

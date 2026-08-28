@@ -49,7 +49,7 @@ export interface SupervisedProcessTeardownDependencies {
   readonly sleep: (milliseconds: number) => Promise<void>;
 }
 
-export class ProviderProcessExitUnprovenError extends Error {
+export class EngineProcessExitUnprovenError extends Error {
   readonly rootPid: number;
   readonly rootExited: boolean;
   readonly remainingDescendantPids: ReadonlyArray<number> | null;
@@ -68,10 +68,10 @@ export class ProviderProcessExitUnprovenError extends Error {
           ? `descendants still running: ${input.remainingDescendantPids.join(", ")}`
           : "no captured descendants remain";
     super(
-      `Provider process tree ${input.rootPid} did not prove exit ` +
+      `Engine process tree ${input.rootPid} did not prove exit ` +
         `(rootExited=${String(input.rootExited)}, captureComplete=${String(input.captureComplete)}; ${descendantDetail}).`,
     );
-    this.name = "ProviderProcessExitUnprovenError";
+    this.name = "EngineProcessExitUnprovenError";
     this.rootPid = input.rootPid;
     this.rootExited = input.rootExited;
     this.remainingDescendantPids = input.remainingDescendantPids;
@@ -127,7 +127,7 @@ export function teardownEffectProcessTree(
 }
 
 /**
- * Owns the complete provider process-tree stop sequence. Success means the exact root emitted exit
+ * Owns the complete engine process-tree stop sequence. Success means the exact root emitted exit
  * and every identity-matched descendant captured before TERM is gone; sending a signal is not
  * considered completion.
  */
@@ -137,7 +137,7 @@ export async function teardownProviderProcessTree(
 ): Promise<SupervisedProcessTeardownResult> {
   if (!Number.isInteger(input.rootPid) || input.rootPid <= 0) {
     throw new TypeError(
-      `Provider process root PID must be a positive integer, got ${input.rootPid}.`,
+      `Engine process root PID must be a positive integer, got ${input.rootPid}.`,
     );
   }
 
@@ -166,7 +166,7 @@ export async function teardownProviderProcessTree(
 
   // An empty incomplete capture means descendant state is unknown, not verified
   // empty. Releasing ownership on it could let a replacement start while a
-  // reparented descendant from the old provider is still running.
+  // reparented descendant from the old engine is still running.
   const inspectDescendants = (): ReadonlyArray<CapturedProcess> | null => {
     const inspection =
       tree.captureComplete === false ? undefined : deps.processTreeKiller.inspect?.(tree);
@@ -222,7 +222,7 @@ export async function teardownProviderProcessTree(
     return { escalated: true, signalErrors };
   }
 
-  throw new ProviderProcessExitUnprovenError({
+  throw new EngineProcessExitUnprovenError({
     rootPid: input.rootPid,
     rootExited,
     remainingDescendantPids:

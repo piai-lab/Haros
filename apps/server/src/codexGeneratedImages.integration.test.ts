@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { afterEach, describe, it } from "vitest";
 
-import type { ProviderRuntimeEvent } from "@harnessos/contracts";
+import type { EngineRuntimeEvent } from "@harnessos/contracts";
 
 import {
   CODEX_GENERATED_IMAGE_ARTIFACT_KIND,
@@ -15,10 +15,10 @@ import {
 function makeImageGenerationCompletedEvent(overrides?: {
   data?: unknown;
   detail?: string;
-}): ProviderRuntimeEvent {
+}): EngineRuntimeEvent {
   return {
     eventId: "evt-1",
-    provider: "codex",
+    engine: "codex",
     threadId: "thread-1",
     createdAt: new Date(0).toISOString(),
     type: "item.completed",
@@ -35,7 +35,7 @@ function makeImageGenerationCompletedEvent(overrides?: {
           callId: "call-1",
         } as unknown),
     },
-  } as unknown as ProviderRuntimeEvent;
+  } as unknown as EngineRuntimeEvent;
 }
 
 describe("generatedImagePathFromRuntimeEvent", () => {
@@ -58,7 +58,7 @@ describe("generatedImagePathFromRuntimeEvent", () => {
     const startedEvent = {
       ...makeImageGenerationCompletedEvent(),
       type: "item.started",
-    } as ProviderRuntimeEvent;
+    } as EngineRuntimeEvent;
     assert.equal(generatedImagePathFromRuntimeEvent(startedEvent), undefined);
   });
 
@@ -67,7 +67,7 @@ describe("generatedImagePathFromRuntimeEvent", () => {
     const otherItem = {
       ...event,
       payload: { ...event.payload, itemType: "assistant_message" },
-    } as ProviderRuntimeEvent;
+    } as EngineRuntimeEvent;
     assert.equal(generatedImagePathFromRuntimeEvent(otherItem), undefined);
   });
 });

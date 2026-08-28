@@ -1,4 +1,4 @@
-import { type ModelSelection } from "@harnessos/contracts";
+import { type EngineSelection } from "@harnessos/contracts";
 
 import type { Project } from "../types";
 import { buildChatWorkspaceFolderPath } from "./chatWorkspaceFolders";
@@ -8,7 +8,7 @@ export interface FirstSendProjectTarget {
   targetProjectKind: Project["kind"];
   targetProjectCwd: string;
   targetProjectScripts: Project["scripts"];
-  targetProjectDefaultModelSelection: ModelSelection | null;
+  targetProjectDefaultEngineSelection: EngineSelection | null;
 }
 
 export interface FirstSendProjectCreation {
@@ -16,7 +16,7 @@ export interface FirstSendProjectCreation {
   title: string;
   kind: Project["kind"];
   createWorkspaceRootIfMissing: boolean;
-  defaultModelSelection: ModelSelection;
+  defaultEngineSelection: EngineSelection;
 }
 
 export type FirstSendTargetResolution =
@@ -30,7 +30,7 @@ function buildProjectTarget(project: Project): FirstSendProjectTarget {
     targetProjectKind: project.kind,
     targetProjectCwd: project.cwd,
     targetProjectScripts: project.kind === "project" ? project.scripts : [],
-    targetProjectDefaultModelSelection: project.defaultModelSelection ?? null,
+    targetProjectDefaultEngineSelection: project.defaultEngineSelection ?? null,
   };
 }
 
@@ -38,7 +38,7 @@ export function resolveFirstSendTarget(input: {
   activeProject: Project;
   chatWorkspaceRoot: string | null;
   createdAt: Date;
-  defaultModelSelection: ModelSelection;
+  defaultEngineSelection: EngineSelection;
   isFirstMessage: boolean;
   isHomeChatContainer: boolean;
   isStudioContainer: boolean;
@@ -50,7 +50,7 @@ export function resolveFirstSendTarget(input: {
     activeProject,
     chatWorkspaceRoot,
     createdAt,
-    defaultModelSelection,
+    defaultEngineSelection,
     isFirstMessage,
     isHomeChatContainer,
     isStudioContainer,
@@ -96,7 +96,7 @@ export function resolveFirstSendTarget(input: {
       title,
       kind: "chat",
       createWorkspaceRootIfMissing: true,
-      defaultModelSelection,
+      defaultEngineSelection,
     },
   };
 }

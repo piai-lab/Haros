@@ -3,16 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   formatProviderDeliveryBlockDetail,
   isProviderDeliveryBlockDetail,
-  PROVIDER_DELIVERY_BLOCK_SUMMARY,
+  ENGINE_DELIVERY_BLOCK_SUMMARY,
 } from "./providerDeliveryBlock";
 
 describe("providerDeliveryBlock", () => {
   it("formats a detail the matcher recognizes", () => {
     const detail = formatProviderDeliveryBlockDetail(
-      "External provider command claim expired without a durable acceptance result; execution was not replayed.",
+      "External engine command claim expired without a durable acceptance result; execution was not replayed.",
     );
 
-    expect(detail.startsWith(PROVIDER_DELIVERY_BLOCK_SUMMARY)).toBe(true);
+    expect(detail.startsWith(ENGINE_DELIVERY_BLOCK_SUMMARY)).toBe(true);
     expect(isProviderDeliveryBlockDetail(detail)).toBe(true);
   });
 
@@ -20,11 +20,9 @@ describe("providerDeliveryBlock", () => {
     expect(isProviderDeliveryBlockDetail(null)).toBe(false);
     expect(isProviderDeliveryBlockDetail(undefined)).toBe(false);
     expect(isProviderDeliveryBlockDetail("")).toBe(false);
-    expect(isProviderDeliveryBlockDetail("The provider rejected the prompt.")).toBe(false);
+    expect(isProviderDeliveryBlockDetail("The engine rejected the prompt.")).toBe(false);
     expect(
-      isProviderDeliveryBlockDetail(
-        "Turn failed: thread is blocked by an earlier provider failure",
-      ),
+      isProviderDeliveryBlockDetail("Turn failed: thread is blocked by an earlier engine failure"),
     ).toBe(false);
   });
 });

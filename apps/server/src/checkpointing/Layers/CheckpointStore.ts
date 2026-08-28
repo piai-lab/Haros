@@ -5,7 +5,7 @@
  * Effect-native child process execution (`effect/unstable/process`).
  *
  * This layer owns filesystem/Git interactions only; it does not persist
- * checkpoint metadata and does not coordinate provider rollback semantics.
+ * checkpoint metadata and does not coordinate engine rollback semantics.
  *
  * @module CheckpointStoreLive
  */

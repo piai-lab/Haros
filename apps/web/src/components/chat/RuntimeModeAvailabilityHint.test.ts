@@ -50,7 +50,7 @@ describe("runtime mode availability presentation", () => {
     expect(runtimeModeAvailabilityMessageKeyFromError({ code: "authentication-required" })).toBe(
       "composer.runtimeModeAuthenticationRequired",
     );
-    expect(runtimeModeAvailabilityMessageKeyFromError({ code: "provider-not-installed" })).toBe(
+    expect(runtimeModeAvailabilityMessageKeyFromError({ code: "engine-not-installed" })).toBe(
       "composer.runtimeModeProviderNotInstalled",
     );
     expect(

@@ -3,17 +3,17 @@
 // Layer: Settings UI logic
 // Exports: origin metadata, canonical skill grouping, and section ordering helpers.
 
-import { ENGINE_KINDS, type EngineKind, type ProviderSkillDescriptor } from "@harnessos/contracts";
+import { ENGINE_KINDS, type EngineKind, type EngineSkillDescriptor } from "@harnessos/contracts";
 import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
-import { DEFAULT_PROVIDER_ORDER } from "~/providerOrdering";
+import { DEFAULT_PROVIDER_ORDER } from "~/engineOrdering";
 
 export interface SkillOriginInfo {
   readonly label: string;
-  readonly provider: EngineKind | null;
+  readonly engine: EngineKind | null;
 }
 
 export interface SettingsSkillSource {
-  readonly skill: ProviderSkillDescriptor;
+  readonly skill: EngineSkillDescriptor;
   readonly origin: string;
   readonly originInfo: SkillOriginInfo;
 }
@@ -22,8 +22,8 @@ export interface SettingsSkillGroup {
   readonly key: string;
   readonly displayName: string;
   readonly description: string;
-  readonly primarySkill: ProviderSkillDescriptor;
-  readonly providers: ReadonlyArray<EngineKind>;
+  readonly primarySkill: EngineSkillDescriptor;
+  readonly engines: ReadonlyArray<EngineKind>;
   readonly sources: ReadonlyArray<SettingsSkillSource>;
   readonly section: string;
 }
@@ -36,9 +36,9 @@ export interface SettingsSkillSection {
 
 const SHARED_SKILLS_SECTION = "shared";
 const PERSONAL_ORIGIN = "personal";
-const PROVIDER_KIND_SET = new Set<string>(ENGINE_KINDS);
-const skillOriginForProvider = (provider: EngineKind): string =>
-  provider === "claude" ? "claude" : provider;
+const ENGINE_KIND_SET = new Set<string>(ENGINE_KINDS);
+const skillOriginForProvider = (engine: EngineKind): string =>
+  engine === "claude" ? "claude" : engine;
 export const ORIGIN_SECTION_ORDER = [
   ...ENGINE_KINDS.map(skillOriginForProvider),
   "agents",
@@ -47,49 +47,49 @@ export const ORIGIN_SECTION_ORDER = [
 
 function providerForSkillOrigin(origin: string): EngineKind | null {
   const candidate = origin === "claude" ? "claude" : origin;
-  return PROVIDER_KIND_SET.has(candidate) ? (candidate as EngineKind) : null;
+  return ENGINE_KIND_SET.has(candidate) ? (candidate as EngineKind) : null;
 }
 
 export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
   switch (scope) {
     case "oa":
-      return { label: "OmniMind", provider: null };
+      return { label: "OmniMind", engine: null };
     case "agents":
-      return { label: "Shared (.agents)", provider: null };
+      return { label: "Shared (.agents)", engine: null };
     case "project":
-      return { label: "Project", provider: null };
+      return { label: "Project", engine: null };
     default: {
-      const provider = scope === undefined ? null : providerForSkillOrigin(scope);
-      return provider
-        ? { label: ENGINE_DISPLAY_NAMES[provider], provider }
-        : { label: scope ?? "Personal", provider: null };
+      const engine = scope === undefined ? null : providerForSkillOrigin(scope);
+      return engine
+        ? { label: ENGINE_DISPLAY_NAMES[engine], engine }
+        : { label: scope ?? "Personal", engine: null };
     }
   }
 }
 
 export function providersForSkillOrigin(origin: string): EngineKind[] {
-  const provider = skillOriginInfo(origin).provider;
-  return provider ? [provider] : [];
+  const engine = skillOriginInfo(origin).engine;
+  return engine ? [engine] : [];
 }
 
 export function settingsSkillNameKey(name: string): string {
   return name.trim().toLowerCase();
 }
 
-export function skillDisplayName(skill: ProviderSkillDescriptor): string {
+export function skillDisplayName(skill: EngineSkillDescriptor): string {
   return skill.interface?.displayName ?? skill.name;
 }
 
-export function isOmniMindSkillSource(skill: ProviderSkillDescriptor): boolean {
+export function isOmniMindSkillSource(skill: EngineSkillDescriptor): boolean {
   return skill.scope === "oa" || skill.path.split(/[\\/]+/).includes(".harnessos");
 }
 
-export function providerDisplayName(provider: EngineKind): string {
-  return ENGINE_DISPLAY_NAMES[provider];
+export function providerDisplayName(engine: EngineKind): string {
+  return ENGINE_DISPLAY_NAMES[engine];
 }
 
-export function sortProviderStack(providers: ReadonlyArray<EngineKind>): EngineKind[] {
-  return providers.toSorted(
+export function sortProviderStack(engines: ReadonlyArray<EngineKind>): EngineKind[] {
+  return engines.toSorted(
     (left, right) => DEFAULT_PROVIDER_ORDER.indexOf(left) - DEFAULT_PROVIDER_ORDER.indexOf(right),
   );
 }
@@ -117,10 +117,10 @@ function sectionRank(section: string): number {
   return originRank(section);
 }
 
-// Creates one canonical row per normalized skill name. Duplicate provider copies
+// Creates one canonical row per normalized skill name. Duplicate engine copies
 // stay visible as sources instead of letting the first origin hide the rest.
 export function buildSettingsSkillGroups(
-  skills: ReadonlyArray<ProviderSkillDescriptor>,
+  skills: ReadonlyArray<EngineSkillDescriptor>,
 ): SettingsSkillGroup[] {
   const groups = new Map<string, SettingsSkillSource[]>();
   for (const skill of skills) {
@@ -143,10 +143,10 @@ export function buildSettingsSkillGroups(
       if (!primarySkill) {
         return null;
       }
-      const providers = sortProviderStack(
+      const engines = sortProviderStack(
         sources
           .flatMap((source) => providersForSkillOrigin(source.origin))
-          .filter((provider, index, all) => all.indexOf(provider) === index),
+          .filter((engine, index, all) => all.indexOf(engine) === index),
       );
       const section =
         sources.length > 1 ? SHARED_SKILLS_SECTION : (sources[0]?.origin ?? PERSONAL_ORIGIN);
@@ -157,7 +157,7 @@ export function buildSettingsSkillGroups(
         displayName: skillDisplayName(primarySkill),
         description,
         primarySkill,
-        providers,
+        engines,
         sources,
         section,
       } satisfies SettingsSkillGroup;
@@ -167,7 +167,7 @@ export function buildSettingsSkillGroups(
 }
 
 export function buildSettingsSkillSections(
-  skills: ReadonlyArray<ProviderSkillDescriptor>,
+  skills: ReadonlyArray<EngineSkillDescriptor>,
 ): SettingsSkillSection[] {
   const sections = new Map<string, SettingsSkillGroup[]>();
   for (const group of buildSettingsSkillGroups(skills)) {

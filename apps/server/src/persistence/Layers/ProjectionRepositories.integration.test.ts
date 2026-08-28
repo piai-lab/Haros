@@ -33,7 +33,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
         kind: "project" as const,
         title: projectId,
         workspaceRoot: `/tmp/${projectId}`,
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         scripts: [],
         isPinned: false,
         spaceId,
@@ -88,8 +88,8 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
         kind: "project",
         title: "Null options project",
         workspaceRoot: "/tmp/project-null-options",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5.4",
         },
         scripts: [],
@@ -101,9 +101,9 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
       });
 
       const rows = yield* sql<{
-        readonly defaultModelSelection: string | null;
+        readonly defaultEngineSelection: string | null;
       }>`
-        SELECT default_model_selection_json AS "defaultModelSelection"
+        SELECT default_model_selection_json AS "defaultEngineSelection"
         FROM projection_projects
         WHERE project_id = 'project-null-options'
       `;
@@ -113,9 +113,9 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
       }
 
       assert.strictEqual(
-        row.defaultModelSelection,
+        row.defaultEngineSelection,
         JSON.stringify({
-          provider: "codex",
+          engine: "codex",
           model: "gpt-5.4",
         }),
       );
@@ -123,8 +123,8 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
       const persisted = yield* projects.getById({
         projectId: ProjectId.makeUnsafe("project-null-options"),
       });
-      assert.deepStrictEqual(Option.getOrNull(persisted)?.defaultModelSelection, {
-        provider: "codex",
+      assert.deepStrictEqual(Option.getOrNull(persisted)?.defaultEngineSelection, {
+        engine: "codex",
         model: "gpt-5.4",
       });
     }),
@@ -139,8 +139,8 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
         threadId: ThreadId.makeUnsafe("thread-null-options"),
         projectId: ProjectId.makeUnsafe("project-null-options"),
         title: "Null options thread",
-        modelSelection: {
-          provider: "claude",
+        engineSelection: {
+          engine: "claude",
           model: "claude-opus-4-6",
         },
         runtimeMode: "full-access",
@@ -169,9 +169,9 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
       });
 
       const rows = yield* sql<{
-        readonly modelSelection: string | null;
+        readonly engineSelection: string | null;
       }>`
-        SELECT model_selection_json AS "modelSelection"
+        SELECT model_selection_json AS "engineSelection"
         FROM projection_threads
         WHERE thread_id = 'thread-null-options'
       `;
@@ -181,9 +181,9 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
       }
 
       assert.strictEqual(
-        row.modelSelection,
+        row.engineSelection,
         JSON.stringify({
-          provider: "claude",
+          engine: "claude",
           model: "claude-opus-4-6",
         }),
       );
@@ -191,8 +191,8 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
       const persisted = yield* threads.getById({
         threadId: ThreadId.makeUnsafe("thread-null-options"),
       });
-      assert.deepStrictEqual(Option.getOrNull(persisted)?.modelSelection, {
-        provider: "claude",
+      assert.deepStrictEqual(Option.getOrNull(persisted)?.engineSelection, {
+        engine: "claude",
         model: "claude-opus-4-6",
       });
     }),
@@ -210,7 +210,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
         projectId: ProjectId.makeUnsafe("project-groups"),
         groupIds: [removedGroupId, retainedGroupId],
         title: "Grouped thread",
-        modelSelection: { provider: "codex", model: "gpt-5.4" },
+        engineSelection: { engine: "codex", model: "gpt-5.4" },
         runtimeMode: "approval-required",
         interactionMode: "default",
         envMode: "local",
@@ -281,7 +281,7 @@ projectionRepositoriesLayer("Projection repositories", (it) => {
         threadId: ThreadId.makeUnsafe(threadId),
         projectId: ProjectId.makeUnsafe("project-wait-snapshot"),
         title: threadId,
-        modelSelection: { provider: "codex" as const, model: "gpt-5.5" },
+        engineSelection: { engine: "codex" as const, model: "gpt-5.5" },
         runtimeMode: "approval-required" as const,
         interactionMode: "default" as const,
         envMode: "local" as const,

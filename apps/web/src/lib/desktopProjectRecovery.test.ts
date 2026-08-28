@@ -22,8 +22,8 @@ function makeProject(
     kind: "project",
     title: "Project",
     workspaceRoot: "/tmp/project",
-    defaultModelSelection: {
-      provider: "codex",
+    defaultEngineSelection: {
+      engine: "codex",
       model: "gpt-5.3-codex",
     },
     scripts: [],
@@ -41,8 +41,8 @@ function makeThread(
     id: ThreadId.makeUnsafe("thread-1"),
     projectId: ProjectId.makeUnsafe("project-1"),
     title: "Thread",
-    modelSelection: {
-      provider: "codex",
+    engineSelection: {
+      engine: "codex",
       model: "gpt-5.3-codex",
     },
     runtimeMode: "approval-required",
@@ -105,7 +105,7 @@ function makeShellSnapshot(
         kind: project.kind,
         title: project.title,
         workspaceRoot: project.workspaceRoot,
-        defaultModelSelection: project.defaultModelSelection,
+        defaultEngineSelection: project.defaultEngineSelection,
         scripts: project.scripts,
         createdAt: project.createdAt,
         updatedAt: project.updatedAt,
@@ -116,7 +116,7 @@ function makeShellSnapshot(
         id: thread.id,
         projectId: thread.projectId,
         title: thread.title,
-        modelSelection: thread.modelSelection,
+        engineSelection: thread.engineSelection,
         runtimeMode: thread.runtimeMode,
         interactionMode: thread.interactionMode,
         envMode: thread.envMode,

@@ -4,7 +4,7 @@ export const WEB_SEARCH_SETTINGS_SEARCH = {
   routing: defineSettingsSearchRow({
     id: "web-search:routing",
     titleKey: "settings.webSearch.routing",
-    keywords: "web search auto all named parallel quota cost provider routing",
+    keywords: "web search auto all named parallel quota cost engine routing",
   }),
   workflow: defineSettingsSearchRow({
     id: "web-search:workflow",
@@ -14,6 +14,6 @@ export const WEB_SEARCH_SETTINGS_SEARCH = {
   configFile: defineSettingsSearchRow({
     id: "web-search:config-file",
     titleKey: "settings.webSearch.configFile",
-    keywords: "web-search.json keys credentials advanced file provider",
+    keywords: "web-search.json keys credentials advanced file engine",
   }),
 } as const;

@@ -357,7 +357,7 @@ describe("planRestartTurnReconciliation", () => {
       commandId: `restart-reconcile:stuck-with-requests:approval:approval-1:${NOW}`,
       threadId: "stuck-with-requests",
       activity: {
-        kind: "provider.approval.respond.failed",
+        kind: "engine.approval.respond.failed",
         payload: {
           requestId: "approval-1",
           detail: expect.stringContaining("Stale pending approval request: approval-1"),
@@ -491,7 +491,7 @@ describe("planRestartTurnReconciliation", () => {
     expect(commands[0]?.threadId).toBe("orphan-turn");
   });
 
-  it("falls back to the thread runtime mode and a null provider when no session row exists", () => {
+  it("falls back to the thread runtime mode and a null engine when no session row exists", () => {
     const threads = [
       makeThread("no-session-open-turn", {
         runtimeMode: "approval-required",

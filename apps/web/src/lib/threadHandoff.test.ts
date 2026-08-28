@@ -2,7 +2,7 @@ import {
   DEFAULT_SERVER_SETTINGS_VIEW,
   EventId,
   MessageId,
-  type ModelSelection,
+  type EngineSelection,
   type OrchestrationThreadActivity,
   type EngineKind,
   type ServerProviderStatus,
@@ -15,7 +15,7 @@ import {
   deriveHistoryOnlyForkableAssistantMessageIds,
   resolveAvailableHandoffTargetProviders,
   resolveThreadHandoffTitle,
-  resolveThreadHandoffModelSelection,
+  resolveThreadHandoffEngineSelection,
 } from "./threadHandoff";
 import { appendAssistantSelectionsToPrompt } from "./assistantSelections";
 import {
@@ -213,7 +213,7 @@ describe("threadHandoff", () => {
     expect(deriveHistoryOnlyForkableAssistantMessageIds({ messages })).toEqual(new Set());
   });
 
-  it("does not import a source provider's configured context window", () => {
+  it("does not import a source engine's configured context window", () => {
     const activity = (kind: string): OrchestrationThreadActivity => ({
       id: EventId.makeUnsafe(`activity-${kind}`),
       createdAt: "2026-07-21T00:00:00.000Z",
@@ -237,20 +237,20 @@ describe("threadHandoff", () => {
 
   it("excludes disabled, missing, unavailable, and unauthenticated handoff targets", () => {
     const readyStatus = (
-      provider: EngineKind,
+      engine: EngineKind,
       overrides: Partial<ServerProviderStatus> = {},
     ): ServerProviderStatus => ({
-      provider,
+      engine,
       status: "ready",
       available: true,
       authStatus: "authenticated",
       checkedAt: "2026-08-07T12:00:00.000Z",
       ...overrides,
     });
-    const providerSettings = {
-      ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
+    const engineSettings = {
+      ...DEFAULT_SERVER_SETTINGS_VIEW.engines,
       antigravity: {
-        ...DEFAULT_SERVER_SETTINGS_VIEW.providers.antigravity,
+        ...DEFAULT_SERVER_SETTINGS_VIEW.engines.antigravity,
         enabled: false,
       },
     };
@@ -258,7 +258,7 @@ describe("threadHandoff", () => {
     expect(
       resolveAvailableHandoffTargetProviders({
         sourceProvider: "codex",
-        providerSettings,
+        engineSettings,
         providerStatuses: [
           readyStatus("codex"),
           readyStatus("claude"),
@@ -271,14 +271,14 @@ describe("threadHandoff", () => {
     ).toEqual(["claude", "kilo"]);
   });
 
-  it("does not expose targets before enabled-provider settings are available", () => {
+  it("does not expose targets before enabled-engine settings are available", () => {
     expect(
       resolveAvailableHandoffTargetProviders({
         sourceProvider: "codex",
-        providerSettings: undefined,
+        engineSettings: undefined,
         providerStatuses: [
           {
-            provider: "claude",
+            engine: "claude",
             status: "ready",
             available: true,
             authStatus: "authenticated",
@@ -298,45 +298,45 @@ describe("threadHandoff", () => {
 
   it("prefers sticky model selection for the chosen handoff target", () => {
     const stickySelection = {
-      provider: "antigravity",
+      engine: "antigravity",
       model: "Gemini 3.5 Flash",
-    } satisfies ModelSelection;
+    } satisfies EngineSelection;
 
     expect(
-      resolveThreadHandoffModelSelection({
+      resolveThreadHandoffEngineSelection({
         sourceThread: {
-          modelSelection: {
-            provider: "claude",
+          engineSelection: {
+            engine: "claude",
             model: "claude-sonnet-4-6",
           },
         },
         targetProvider: "antigravity",
-        projectDefaultModelSelection: {
-          provider: "antigravity",
+        projectDefaultEngineSelection: {
+          engine: "antigravity",
           model: "Claude Sonnet 4.6",
         },
-        stickyModelSelectionByProvider: {
+        stickyEngineSelectionByEngine: {
           antigravity: stickySelection,
         },
       }),
     ).toEqual(stickySelection);
   });
 
-  it("falls back to the resolved provider default model when no sticky or project default exists", () => {
+  it("falls back to the resolved engine default model when no sticky or project default exists", () => {
     expect(
-      resolveThreadHandoffModelSelection({
+      resolveThreadHandoffEngineSelection({
         sourceThread: {
-          modelSelection: {
-            provider: "antigravity",
+          engineSelection: {
+            engine: "antigravity",
             model: "Gemini 3.5 Flash",
           },
         },
         targetProvider: "codex",
-        projectDefaultModelSelection: null,
-        stickyModelSelectionByProvider: {},
+        projectDefaultEngineSelection: null,
+        stickyEngineSelectionByEngine: {},
       }),
     ).toEqual({
-      provider: "codex",
+      engine: "codex",
       model: "gpt-5.5",
     });
   });

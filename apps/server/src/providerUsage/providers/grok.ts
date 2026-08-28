@@ -31,7 +31,7 @@ import {
   titleCase,
   toUsedPercent,
 } from "../parse";
-import type { ProviderUsageContext, ProviderUsageFetcher } from "../types";
+import type { EngineUsageContext, EngineUsageFetcher } from "../types";
 
 const SOURCE = "grok-xai";
 const API_KEY_URL = "https://api.x.ai/v1/api-key";
@@ -73,7 +73,7 @@ function withRefreshLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
-function grokAuthPath(ctx: ProviderUsageContext): string {
+function grokAuthPath(ctx: EngineUsageContext): string {
   const grokHome = ctx.env.GROK_HOME?.trim() || nodePath.join(ctx.homeDir, ".grok");
   return nodePath.join(grokHome, "auth.json");
 }
@@ -210,7 +210,7 @@ async function refreshGrokSession(
       return live;
     }
     const refreshed = await refreshOAuthAccessToken({
-      service: "provider-usage-grok-refresh",
+      service: "engine-usage-grok-refresh",
       refreshUrl: DEFAULT_TOKEN_URL,
       allowedOrigins: [new URL(DEFAULT_TOKEN_URL).origin],
       refreshToken: live.refreshToken ?? session.refreshToken!,
@@ -310,7 +310,7 @@ export function parseGrokBilling(input: {
   }
 
   return buildSnapshot({
-    provider: "grok",
+    engine: "grok",
     nowMs: input.nowMs,
     status: "ok",
     source: SOURCE,
@@ -334,7 +334,7 @@ export function parseGrokApiKeyIdentity(input: { payload: unknown; nowMs: number
     },
   ];
   return buildSnapshot({
-    provider: "grok",
+    engine: "grok",
     nowMs: input.nowMs,
     status: "ok",
     source: SOURCE,
@@ -345,7 +345,7 @@ export function parseGrokApiKeyIdentity(input: { payload: unknown; nowMs: number
 
 function sessionIdentitySnapshot(session: GrokSession, nowMs: number, detail: string) {
   return buildSnapshot({
-    provider: "grok",
+    engine: "grok",
     nowMs,
     status: "ok",
     source: SOURCE,
@@ -357,7 +357,7 @@ function sessionIdentitySnapshot(session: GrokSession, nowMs: number, detail: st
   });
 }
 
-async function resolveGrokSession(ctx: ProviderUsageContext): Promise<GrokSession | null> {
+async function resolveGrokSession(ctx: EngineUsageContext): Promise<GrokSession | null> {
   const path = grokAuthPath(ctx);
   const fromFile = parseGrokAuthRecord(await readJsonFile(path), path);
   if (fromFile) return fromFile;
@@ -371,7 +371,7 @@ function grokCacheKey(apiKey: string | undefined, session: GrokSession | null): 
   return "none";
 }
 
-async function fetchSessionBilling(session: GrokSession, ctx: ProviderUsageContext) {
+async function fetchSessionBilling(session: GrokSession, ctx: EngineUsageContext) {
   let state = session;
   let allowRedeem = true;
   if (grokSessionNeedsRefresh(state, ctx.nowMs)) {
@@ -385,7 +385,7 @@ async function fetchSessionBilling(session: GrokSession, ctx: ProviderUsageConte
 
   try {
     let billing = await fetchJson({
-      service: "provider-usage-grok",
+      service: "engine-usage-grok",
       url: BILLING_URL,
       allowedOrigins: [CLI_PROXY_ORIGIN],
       headers: grokProxyHeaders(state.accessToken),
@@ -396,7 +396,7 @@ async function fetchSessionBilling(session: GrokSession, ctx: ProviderUsageConte
       if (refreshed && refreshed.accessToken !== state.accessToken) {
         state = refreshed;
         billing = await fetchJson({
-          service: "provider-usage-grok",
+          service: "engine-usage-grok",
           url: BILLING_URL,
           allowedOrigins: [CLI_PROXY_ORIGIN],
           headers: grokProxyHeaders(state.accessToken),
@@ -420,7 +420,7 @@ async function fetchSessionBilling(session: GrokSession, ctx: ProviderUsageConte
     let settingsJson: unknown;
     try {
       const settings = await fetchJson({
-        service: "provider-usage-grok",
+        service: "engine-usage-grok",
         url: SETTINGS_URL,
         allowedOrigins: [CLI_PROXY_ORIGIN],
         headers: grokProxyHeaders(state.accessToken),
@@ -442,8 +442,8 @@ async function fetchSessionBilling(session: GrokSession, ctx: ProviderUsageConte
   }
 }
 
-export const grokUsageFetcher: ProviderUsageFetcher = {
-  provider: "grok",
+export const grokUsageFetcher: EngineUsageFetcher = {
+  engine: "grok",
   async cacheKey(ctx) {
     const session = await resolveGrokSession(ctx);
     return grokCacheKey(getGrokApiKeyEnv(ctx.env), session);
@@ -461,7 +461,7 @@ export const grokUsageFetcher: ProviderUsageFetcher = {
 
     try {
       const result = await fetchJson({
-        service: "provider-usage-grok",
+        service: "engine-usage-grok",
         url: API_KEY_URL,
         allowedOrigins: [new URL(API_KEY_URL).origin],
         headers: { Authorization: `Bearer ${apiKey}` },

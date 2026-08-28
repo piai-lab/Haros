@@ -1,7 +1,7 @@
 // FILE: -rootEventInvalidation.ts
 // Purpose: Classifies streamed orchestration events that invalidate shared query caches.
 // Layer: Root route utility
-// Exports: Event invalidation predicates for provider, project, Git, and Studio output caches.
+// Exports: Event invalidation predicates for engine, project, Git, and Studio output caches.
 
 import {
   STUDIO_OUTPUTS_ACTIVITY_KIND,

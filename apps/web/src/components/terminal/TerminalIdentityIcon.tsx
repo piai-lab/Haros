@@ -1,7 +1,7 @@
 // FILE: TerminalIdentityIcon.tsx
-// Purpose: Renders a terminal/provider icon without extra activity chrome.
+// Purpose: Renders a terminal/engine icon without extra activity chrome.
 // Layer: Terminal presentation primitive
-// Depends on: shared terminal icon keys plus local provider/icon components.
+// Depends on: shared terminal icon keys plus local engine/icon components.
 
 import type { TerminalIconKey } from "@harnessos/shared/terminalThreads";
 
@@ -15,7 +15,7 @@ interface TerminalIdentityIconProps {
   className?: string;
 }
 
-// Keep provider branding reusable across every terminal surface.
+// Keep engine branding reusable across every terminal surface.
 export default function TerminalIdentityIcon({ iconKey, className }: TerminalIdentityIconProps) {
   const IconComponent =
     iconKey === "openai"

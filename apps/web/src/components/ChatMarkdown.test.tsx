@@ -338,7 +338,7 @@ describe("ChatMarkdown", () => {
   it("preserves the raw source when a body row contains cells GFM would drop", async () => {
     const markup = await renderMarkdown(
       [
-        "| Provider | Model | Cost |",
+        "| Engine | Model | Cost |",
         "| --- | --- | --- |",
         "| DeepSeek | reasoner | $18.07 | extra-cell |",
       ].join("\n"),
@@ -354,7 +354,7 @@ describe("ChatMarkdown", () => {
 
   it("preserves the pre-repair source when delimiter repair reveals a lossy body row", async () => {
     const original = [
-      "| Provider | Model | Cost |",
+      "| Engine | Model | Cost |",
       "| --- | --- |",
       "| DeepSeek | reasoner | $18.07 | extra-cell |",
     ].join("\n");

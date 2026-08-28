@@ -197,7 +197,7 @@ const PROJECT = {
   folderName: "actions",
   localName: null,
   cwd: "/repo",
-  defaultModelSelection: null,
+  defaultEngineSelection: null,
   expanded: true,
   scripts: [],
 } satisfies Project;
@@ -207,7 +207,7 @@ function makeThread(id: ThreadId, overrides: Partial<SidebarThreadSummary> = {})
     id,
     projectId: PROJECT_ID,
     title: String(id),
-    modelSelection: { provider: "codex", model: "gpt-5.6" },
+    engineSelection: { engine: "codex", model: "gpt-5.6" },
     interactionMode: "default",
     branch: null,
     worktreePath: null,

@@ -5,12 +5,12 @@
 
 import type {
   ModelSlug,
-  ProviderAgentDescriptor,
-  ProviderInteractionMode,
+  EngineAgentDescriptor,
+  EngineInteractionMode,
   EngineKind,
-  ProviderMentionReference,
-  ProviderSkillReference,
-  ProviderStartOptions,
+  EngineMentionReference,
+  EngineSkillReference,
+  EngineStartOptions,
   ThreadId,
 } from "@harnessos/contracts";
 import {
@@ -31,7 +31,7 @@ import {
   type ComposerTrigger,
 } from "~/composer-logic";
 import type { TerminalContextDraft } from "~/lib/terminalContext";
-import type { ProviderModelOption } from "../../providerModelOptions";
+import type { EngineModelOption } from "../../providerModelOptions";
 import { useKanbanTaskComposerDiscovery } from "./useKanbanTaskComposerDiscovery";
 import { useKanbanTaskComposerEditor } from "./useKanbanTaskComposerEditor";
 
@@ -42,24 +42,24 @@ interface UseKanbanTaskComposerMenuInput {
   readonly composerEditorRef: RefObject<ComposerPromptEditorHandle | null>;
   readonly localDirectoryMenuRef: RefObject<ComposerLocalDirectoryMenuHandle | null>;
   readonly composerTerminalContexts: readonly TerminalContextDraft[];
-  readonly composerSkills: readonly ProviderSkillReference[];
-  readonly composerMentions: readonly ProviderMentionReference[];
+  readonly composerSkills: readonly EngineSkillReference[];
+  readonly composerMentions: readonly EngineMentionReference[];
   readonly scratchThreadId: ThreadId;
   readonly selectedProvider: EngineKind;
-  readonly modelOptionsByProvider: Record<
+  readonly modelOptionsByEngine: Record<
     EngineKind,
-    ReadonlyArray<ProviderModelOption & { isCustom?: boolean }>
+    ReadonlyArray<EngineModelOption & { isCustom?: boolean }>
   >;
-  readonly selectedRuntimeAgents: readonly ProviderAgentDescriptor[];
+  readonly selectedRuntimeAgents: readonly EngineAgentDescriptor[];
   readonly selectedProjectCwd: string | null;
   readonly serverCwd: string | null;
   readonly serverHomeDir: string | null;
-  readonly providerOptionsForDispatch: ProviderStartOptions | undefined;
-  readonly hiddenProviders: readonly EngineKind[];
-  readonly providerOrder: readonly EngineKind[];
+  readonly engineOptionsForDispatch: EngineStartOptions | undefined;
+  readonly hiddenEngines: readonly EngineKind[];
+  readonly engineOrder: readonly EngineKind[];
   readonly piAgentDir: string | null;
-  readonly handleProviderModelChange: (provider: EngineKind, model: ModelSlug) => void;
-  readonly setInteractionMode: Dispatch<SetStateAction<ProviderInteractionMode>>;
+  readonly handleProviderModelChange: (engine: EngineKind, model: ModelSlug) => void;
+  readonly setInteractionMode: Dispatch<SetStateAction<EngineInteractionMode>>;
   readonly onCreate: () => void;
 }
 
@@ -75,14 +75,14 @@ export function useKanbanTaskComposerMenu(input: UseKanbanTaskComposerMenuInput)
     composerMentions,
     scratchThreadId,
     selectedProvider,
-    modelOptionsByProvider,
+    modelOptionsByEngine,
     selectedRuntimeAgents,
     selectedProjectCwd,
     serverCwd,
     serverHomeDir,
-    providerOptionsForDispatch,
-    hiddenProviders,
-    providerOrder,
+    engineOptionsForDispatch,
+    hiddenEngines,
+    engineOrder,
     piAgentDir,
     handleProviderModelChange,
     setInteractionMode,
@@ -111,15 +111,15 @@ export function useKanbanTaskComposerMenu(input: UseKanbanTaskComposerMenuInput)
   } = useKanbanTaskComposerDiscovery({
     composerTrigger,
     selectedProvider,
-    modelOptionsByProvider,
+    modelOptionsByEngine,
     selectedRuntimeAgents,
     selectedProjectCwd,
     serverCwd,
     serverHomeDir,
     scratchThreadId,
-    providerOptionsForDispatch,
-    hiddenProviders,
-    providerOrder,
+    engineOptionsForDispatch,
+    hiddenEngines,
+    engineOrder,
     piAgentDir,
   });
   const activeComposerMenuItem =

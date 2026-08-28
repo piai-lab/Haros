@@ -14,7 +14,7 @@ describe("providerUsageDisplay", () => {
   it("selects the most constrained display row for compact header chips", () => {
     const rows = deriveProviderUsageDisplayRows([
       {
-        provider: "claude",
+        engine: "claude",
         updatedAt: "2099-04-08T18:00:00.000Z",
         limits: [
           {
@@ -45,7 +45,7 @@ describe("providerUsageDisplay", () => {
 
     const [row] = deriveProviderUsageDisplayRows([
       {
-        provider: "codex",
+        engine: "codex",
         updatedAt: "2026-06-09T12:00:00.000Z",
         limits: [
           {
@@ -69,7 +69,7 @@ describe("providerUsageDisplay", () => {
 
     const [row] = deriveProviderUsageDisplayRows([
       {
-        provider: "codex",
+        engine: "codex",
         updatedAt: "2026-06-09T12:00:00.000Z",
         limits: [
           {

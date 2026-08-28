@@ -475,13 +475,13 @@ export default function DiffPanel({
       threadId: activeThreadId,
       serverThread: undefined,
       draftThread,
-      fallbackModelSelection: fallbackDraftProject?.defaultModelSelection ?? null,
+      fallbackEngineSelection: fallbackDraftProject?.defaultEngineSelection ?? null,
     });
     return draftBackedThread ? toDiffPanelThreadCatalog(draftBackedThread) : undefined;
   }, [
     activeThreadId,
     draftThread,
-    fallbackDraftProject?.defaultModelSelection,
+    fallbackDraftProject?.defaultEngineSelection,
     serverThreadCatalog,
   ]);
   const activeProjectId = activeThreadContext?.projectId ?? draftThread?.projectId ?? null;

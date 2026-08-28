@@ -78,7 +78,7 @@ export interface ProjectionFullThreadDiffContext {
  * Narrow projection row backing managed-worktree retention.
  *
  * Soft-deleted threads are intentionally included because purge can be deferred
- * while provider delivery is unresolved; their worktrees must remain eligible
+ * while engine delivery is unresolved; their worktrees must remain eligible
  * for snapshot and reclaim until the rows are removed.
  */
 export interface ProjectionManagedWorktreeThread {

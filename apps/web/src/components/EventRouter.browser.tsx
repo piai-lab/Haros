@@ -120,8 +120,8 @@ function createSnapshot(overrides?: Partial<OrchestrationReadModel["threads"][nu
         kind: "project",
         title: "Project",
         workspaceRoot: "/repo/project",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5",
         },
         scripts: [],
@@ -135,8 +135,8 @@ function createSnapshot(overrides?: Partial<OrchestrationReadModel["threads"][nu
         id: THREAD_ID,
         projectId: PROJECT_ID,
         title: "Root test thread",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5",
         },
         interactionMode: "default",
@@ -357,9 +357,9 @@ function resolveWsRpc(tag: string, body?: unknown): unknown {
     };
   }
   if (tag === WS_METHODS.providerGetComposerCapabilities) {
-    const request = body as { readonly provider?: string } | null;
+    const request = body as { readonly engine?: string } | null;
     return {
-      provider: request?.provider ?? "codex",
+      engine: request?.engine ?? "codex",
       supportsSkillMentions: false,
       supportsSkillDiscovery: false,
       supportsNativeSlashCommandDiscovery: false,
@@ -370,10 +370,10 @@ function resolveWsRpc(tag: string, body?: unknown): unknown {
   }
   if (tag === WS_METHODS.providerGetExecutionCapabilities) {
     const request = body as {
-      readonly modelSelection?: { readonly provider?: string; readonly model?: string };
+      readonly engineSelection?: { readonly engine?: string; readonly model?: string };
     } | null;
-    const provider = request?.modelSelection?.provider ?? "codex";
-    const model = request?.modelSelection?.model ?? "gpt-5";
+    const engine = request?.engineSelection?.engine ?? "codex";
+    const model = request?.engineSelection?.model ?? "gpt-5";
     const runtimeMode = (mode: "full-access" | "auto" | "approval-required") => ({
       mode,
       structurallySupported: true,
@@ -386,7 +386,7 @@ function resolveWsRpc(tag: string, body?: unknown): unknown {
       ...(mode !== "plan" ? {} : { reason: "mode-unsupported" as const }),
     });
     return {
-      provider,
+      engine,
       model,
       supportsNativeTurnSteering: false,
       runtimeModes: {

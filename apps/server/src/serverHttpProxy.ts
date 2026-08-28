@@ -13,7 +13,7 @@ function hasConfiguredHttpProxy(env: NodeJS.ProcessEnv): boolean {
 /**
  * Loading npm undici initializes its own direct global dispatcher and can replace Node's
  * startup env-proxy dispatcher. Re-assert the same explicit env authority after static
- * Server dependencies have loaded so Pi OAuth and provider fetches share one transport.
+ * Server dependencies have loaded so Pi OAuth and engine fetches share one transport.
  */
 export function installServerEnvProxyDispatcher(
   env: NodeJS.ProcessEnv = process.env,

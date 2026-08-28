@@ -39,7 +39,7 @@ export interface OrchestrationCommandQueues<A> {
  *
  * Membership means "this command settles work that is already in flight", so
  * admitting it can only bring the engine closer to idle. A command that starts
- * new work must never be listed here: during quiesce it would spawn a provider
+ * new work must never be listed here: during quiesce it would spawn a engine
  * turn the shutdown is about to fence, orphaning it. Lane priority for user
  * actions is expressed by {@link orchestrationCommandLane} instead.
  */

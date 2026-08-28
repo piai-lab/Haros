@@ -1,5 +1,5 @@
 // FILE: claudeCredentialKeepalive.ts
-// Purpose: Keep the macOS Claude Code OAuth token fresh so long-lived provider sessions
+// Purpose: Keep the macOS Claude Code OAuth token fresh so long-lived engine sessions
 //   don't intermittently report "not logged in" roughly every ~8 hours.
 // Layer: server background job (best-effort, never throws).
 //
@@ -69,7 +69,7 @@ export function resolveClaudeCredentialKeepaliveIntervalMs(env: NodeJS.ProcessEn
 //
 // Held under the shared lock (see claudeAuthStatusLock.ts): the refresh token this probe
 // may redeem is single-use, so it must never race another `claude auth status` invocation
-// (e.g. the provider-health check or a concurrent keepalive tick) started elsewhere in
+// (e.g. the engine-health check or a concurrent keepalive tick) started elsewhere in
 // this process.
 async function nudgeClaudeTokenRefresh(
   binaryPath: string,

@@ -34,7 +34,7 @@ export type ThreadHoverCardContentProps = {
   branch: string | null;
   /** Last path segment of the associated worktree path. */
   worktreeName: string | null;
-  /** Provider/model/effort currently selected for this chat. */
+  /** Engine/model/effort currently selected for this chat. */
   model: ThreadModelSummary | null;
   /** Current live/actionable state, shown as text so compact row glyphs stay discoverable. */
   status: ThreadStatusPill | null;
@@ -54,12 +54,12 @@ function MetaRow({ icon, children }: { icon: ReactNode; children: string }) {
   );
 }
 
-// Model row: provider glyph, model name, then the reasoning/effort label so the
+// Model row: engine glyph, model name, then the reasoning/effort label so the
 // line reads like the composer's model trigger.
 function ModelRow({ model }: { model: ThreadModelSummary }) {
   return (
     <span className={META_ROW_CLASS_NAME}>
-      <ModelIdentityIcon selection={model.modelSelection} className={META_ICON_CLASS_NAME} />
+      <ModelIdentityIcon selection={model.engineSelection} className={META_ICON_CLASS_NAME} />
       <span className="min-w-0 truncate">{model.modelLabel}</span>
       {model.fastMode ? (
         <FastModeIcon aria-hidden className="size-3.5 shrink-0 text-muted-foreground/75" />

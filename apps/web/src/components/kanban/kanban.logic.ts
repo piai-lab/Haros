@@ -29,7 +29,7 @@ export interface KanbanComposerDraftSnapshot {
   prompt: string;
   /** Files, images, terminal contexts, or references attached to the composer draft. */
   hasAttachments: boolean;
-  provider: EngineKind | null;
+  engine: EngineKind | null;
 }
 
 type KanbanComposerDraftSource = Pick<
@@ -62,20 +62,20 @@ export function buildKanbanComposerDraftSnapshot(
       draft.assistantSelections.length > 0 ||
       (draft.browserAnnotations?.length ?? 0) > 0 ||
       draft.fileComments.length > 0,
-    provider: draft.activeProvider,
+    engine: draft.activeProvider,
   };
 }
 
 /**
  * A draft dropped on In Progress whose first runtime signal has not arrived yet.
- * Provider session init can take seconds (e.g. Cursor), so the board shows the
+ * Engine session init can take seconds (e.g. Cursor), so the board shows the
  * card In Progress optimistically until runtime state settles or the entry expires.
  */
 export interface KanbanOptimisticDispatchSnapshot {
   projectId: ProjectId;
   /** Display title for the window where neither thread nor composer prompt exists. */
   title: string;
-  provider: EngineKind | null;
+  engine: EngineKind | null;
   /** latestTurn.turnId at dispatch time; any different (or first) turn settles the entry. */
   baselineTurnId: string | null;
   /** Epoch ms of the drop — recency sort key and expiry baseline. */
@@ -104,7 +104,7 @@ export function areKanbanComposerDraftSnapshotsEqual(
       !rightSnapshot ||
       leftSnapshot.prompt !== rightSnapshot.prompt ||
       leftSnapshot.hasAttachments !== rightSnapshot.hasAttachments ||
-      leftSnapshot.provider !== rightSnapshot.provider
+      leftSnapshot.engine !== rightSnapshot.engine
     ) {
       return false;
     }
@@ -132,8 +132,8 @@ export interface KanbanCard {
   projectId: ProjectId;
   column: KanbanColumnKey;
   title: string;
-  provider: EngineKind | null;
-  /** Terminal-first thread — renders the terminal glyph instead of a provider icon. */
+  engine: EngineKind | null;
+  /** Terminal-first thread — renders the terminal glyph instead of a engine icon. */
   isTerminal: boolean;
   branch: string | null;
   /** Environment intent for the local/worktree badge; mirrored from the thread or draft. */
@@ -184,7 +184,7 @@ export interface BuildKanbanBoardInput {
    * cards keep their true projectId so dispatch still targets the real project.
    */
   projectIdAliases?: Readonly<Record<string, ProjectId | undefined>>;
-  /** Threads whose terminal entryPoint is "terminal" (terminal-first, not provider chats). */
+  /** Threads whose terminal entryPoint is "terminal" (terminal-first, not engine chats). */
   terminalEntryThreadIds?: ReadonlySet<string>;
   /** Dispatched drops still waiting for their first runtime signal (kanban UI store). */
   optimisticDispatchByThreadId?: Readonly<
@@ -266,12 +266,12 @@ function resolveThreadCardTimestamp(
 function resolveComposerDraft(
   composerDraftByThreadId: BuildKanbanBoardInput["composerDraftByThreadId"],
   threadId: ThreadId,
-): { prompt: string; hasAttachments: boolean; provider: EngineKind | null } {
+): { prompt: string; hasAttachments: boolean; engine: EngineKind | null } {
   const snapshot = composerDraftByThreadId[threadId];
   return {
     prompt: snapshot?.prompt.trim() ?? "",
     hasAttachments: snapshot?.hasAttachments ?? false,
-    provider: snapshot?.provider ?? null,
+    engine: snapshot?.engine ?? null,
   };
 }
 
@@ -286,7 +286,7 @@ function buildThreadCard(
   const timestamp = resolveThreadCardTimestamp(thread, column);
   const threadProvider = isTerminal
     ? null
-    : (thread.session?.provider ?? thread.modelSelection.provider);
+    : (thread.session?.engine ?? thread.engineSelection.engine);
   const activeWorkStartedAt =
     column === "inProgress"
       ? deriveActiveWorkStartedAt(thread.latestTurn, thread.session, timestamp)
@@ -301,8 +301,7 @@ function buildThreadCard(
       isTerminal,
       genericTerminalTitle: copy.newTerminal,
     }),
-    provider:
-      column === "draft" && composerDraft.provider ? composerDraft.provider : threadProvider,
+    engine: column === "draft" && composerDraft.engine ? composerDraft.engine : threadProvider,
     isTerminal,
     branch: thread.branch,
     envMode: thread.envMode ?? null,
@@ -336,14 +335,14 @@ function buildUnsentPromptCard(
     composerDraft.prompt.length > 0 ? composerDraft.prompt : copy.attachedReferences;
   const threadProvider = isTerminal
     ? null
-    : (thread.session?.provider ?? thread.modelSelection.provider);
+    : (thread.session?.engine ?? thread.engineSelection.engine);
   return {
     cardId: kanbanDraftCardId(thread.id),
     threadId: thread.id,
     projectId: thread.projectId,
     column: "draft",
     title: buildPromptThreadTitleFallback(titleSeed),
-    provider: composerDraft.provider ?? threadProvider,
+    engine: composerDraft.engine ?? threadProvider,
     isTerminal,
     branch: thread.branch,
     envMode: thread.envMode ?? null,
@@ -377,7 +376,7 @@ function buildLocalDraftCard(
         : composerDraft.hasAttachments
           ? copy.attachedReferences
           : copy.newThread,
-    provider: composerDraft.provider,
+    engine: composerDraft.engine,
     isTerminal: false,
     branch: draftThread.branch,
     envMode: draftThread.envMode ?? null,
@@ -430,7 +429,7 @@ function buildSyntheticOptimisticCard(
     projectId: entry.projectId,
     column: "inProgress",
     title: entry.title,
-    provider: entry.provider,
+    engine: entry.engine,
     isTerminal: false,
     branch: null,
     envMode: null,
@@ -452,7 +451,7 @@ export type KanbanOptimisticDispatchOutcome = "pending" | "settled" | "failed";
  * - "settled": the dispatch produced visible runtime state — the thread derives
  *   In Progress, or a turn other than the dispatch-time baseline exists (covers
  *   turns that settle faster than the board observes the running state).
- * - "failed": the provider reported a session error after the drop without ever
+ * - "failed": the engine reported a session error after the drop without ever
  *   producing a turn — revert the card now instead of waiting for expiry.
  * - "pending": no signal yet; keep the overlay.
  */
@@ -464,7 +463,7 @@ export function resolveOptimisticDispatchOutcome(
     return "settled";
   }
   // A "connecting" session is the pre-init signal the server now emits before
-  // the provider spawns. It must NOT settle the entry: provider init can still
+  // the engine spawns. It must NOT settle the entry: engine init can still
   // fail, and settling here would skip the "failed" toast when the error event
   // follows. The board already renders the card In Progress from derived state
   // during this window, so the entry has no visual effect — it only keeps
@@ -473,7 +472,7 @@ export function resolveOptimisticDispatchOutcome(
     return "settled";
   }
   // A session that errored or closed after the drop without producing a turn
-  // means the dispatch never started (provider failure, manual stop mid-init) —
+  // means the dispatch never started (engine failure, manual stop mid-init) —
   // revert now instead of waiting out the expiry window. The timestamp guard
   // keeps stale terminal states from an earlier run from reverting a fresh
   // dispatch: only transitions at/after the drop count.

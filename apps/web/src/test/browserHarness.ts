@@ -7,9 +7,9 @@ export function createBrowserTestServerConfig(checkedAt: string): ServerConfig {
     keybindingsConfigPath: "/repo/project/.harnessos-keybindings.json",
     keybindings: [],
     issues: [],
-    providers: [
+    engines: [
       {
-        provider: "codex",
+        engine: "codex",
         status: "ready",
         available: true,
         authStatus: "authenticated",

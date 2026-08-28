@@ -52,7 +52,7 @@ export function createBrowserMcpHarness(input: {
   } satisfies Parameters<typeof makeAgentGatewayMcpTransport>[0]["credentials"];
   const shell = {
     id: threadId,
-    modelSelection: { provider: PROVIDER, model: "e2e-fixture" },
+    engineSelection: { engine: PROVIDER, model: "e2e-fixture" },
     session: { providerName: PROVIDER },
     latestTurn: { turnId: "turn-visible-browser-e2e", state: "running" },
   } as unknown as OrchestrationThreadShell;

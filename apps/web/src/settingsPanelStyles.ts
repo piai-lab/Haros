@@ -71,7 +71,7 @@ export const SETTINGS_OUTLINED_SURFACE_CLASS_NAME = [
   SETTINGS_INSET_RADIUS_CLASS_NAME,
 ].join(" ");
 
-/** Nested list/table inside a row (provider installs, updates, etc.) — an outlined surface
+/** Nested list/table inside a row (engine installs, updates, etc.) — an outlined surface
  *  that clips its stacked children so their corners follow the list's. */
 export const SETTINGS_INSET_LIST_CLASS_NAME = `overflow-hidden ${SETTINGS_OUTLINED_SURFACE_CLASS_NAME}`;
 

@@ -1,8 +1,8 @@
 // FILE: skillsSettingsModel.test.ts
-// Purpose: Locks down Settings -> Skills grouping for duplicate provider skill copies.
+// Purpose: Locks down Settings -> Skills grouping for duplicate engine skill copies.
 // Layer: Web settings logic tests
 
-import { ENGINE_KINDS, type ProviderSkillDescriptor } from "@harnessos/contracts";
+import { ENGINE_KINDS, type EngineSkillDescriptor } from "@harnessos/contracts";
 import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { describe, expect, it } from "vitest";
 
@@ -14,7 +14,7 @@ import {
   skillOriginInfo,
 } from "./skillsSettingsModel";
 
-function skill(partial: Partial<ProviderSkillDescriptor>): ProviderSkillDescriptor {
+function skill(partial: Partial<EngineSkillDescriptor>): EngineSkillDescriptor {
   return {
     name: "example",
     enabled: true,
@@ -24,7 +24,7 @@ function skill(partial: Partial<ProviderSkillDescriptor>): ProviderSkillDescript
 }
 
 describe("buildSettingsSkillGroups", () => {
-  it("renders duplicate provider copies as one shared skill group", () => {
+  it("renders duplicate engine copies as one shared skill group", () => {
     const groups = buildSettingsSkillGroups([
       skill({
         name: "check-code",
@@ -47,7 +47,7 @@ describe("buildSettingsSkillGroups", () => {
 
     const shared = groups.find((group) => group.key === "check-code");
     expect(shared?.section).toBe("shared");
-    expect(shared?.providers).toEqual(["codex", "claude"]);
+    expect(shared?.engines).toEqual(["codex", "claude"]);
     expect(shared?.sources.map((source) => source.origin)).toEqual(["codex", "claude"]);
     expect(shared?.sources.map((source) => source.skill.path)).toEqual([
       "/Users/test/.codex/skills/check-code/SKILL.md",
@@ -56,10 +56,10 @@ describe("buildSettingsSkillGroups", () => {
 
     const cursorOnly = groups.find((group) => group.key === "cursor-only");
     expect(cursorOnly?.section).toBe("cursor");
-    expect(cursorOnly?.providers).toEqual(["cursor"]);
+    expect(cursorOnly?.engines).toEqual(["cursor"]);
   });
 
-  it("does not show provider icons for shared alias-only skills", () => {
+  it("does not show engine icons for shared alias-only skills", () => {
     const groups = buildSettingsSkillGroups([
       skill({
         name: "portable-review",
@@ -69,7 +69,7 @@ describe("buildSettingsSkillGroups", () => {
       }),
     ]);
 
-    expect(groups[0]?.providers).toEqual([]);
+    expect(groups[0]?.engines).toEqual([]);
     expect(groups[0]?.section).toBe("agents");
   });
 });
@@ -90,7 +90,7 @@ describe("isOmniMindSkillSource", () => {
 });
 
 describe("buildSettingsSkillSections", () => {
-  it("places shared skill groups before provider-only sections", () => {
+  it("places shared skill groups before engine-only sections", () => {
     const sections = buildSettingsSkillSections([
       skill({
         name: "logic-consolidator",
@@ -114,20 +114,20 @@ describe("buildSettingsSkillSections", () => {
   });
 });
 
-describe("Settings skill Provider projection", () => {
-  it("derives Provider-backed origins from canonical identity instead of a second member list", () => {
+describe("Settings skill Engine projection", () => {
+  it("derives Engine-backed origins from canonical identity instead of a second member list", () => {
     const providerOrigins = ORIGIN_SECTION_ORDER.slice(0, ENGINE_KINDS.length);
     expect(providerOrigins).toEqual(
-      ENGINE_KINDS.map((provider) => (provider === "claude" ? "claude" : provider)),
+      ENGINE_KINDS.map((engine) => (engine === "claude" ? "claude" : engine)),
     );
 
-    for (const provider of ENGINE_KINDS) {
-      const origin = provider === "claude" ? "claude" : provider;
+    for (const engine of ENGINE_KINDS) {
+      const origin = engine === "claude" ? "claude" : engine;
       const info = skillOriginInfo(origin);
-      if (provider === "oa") {
-        expect(info).toEqual({ label: "OmniMind", provider: null });
+      if (engine === "oa") {
+        expect(info).toEqual({ label: "OmniMind", engine: null });
       } else {
-        expect(info).toEqual({ label: ENGINE_DISPLAY_NAMES[provider], provider });
+        expect(info).toEqual({ label: ENGINE_DISPLAY_NAMES[engine], engine });
       }
     }
   });

@@ -1,5 +1,5 @@
 // FILE: RateLimitBanner.tsx
-// Purpose: Derives and renders provider rate-limit warnings for the active chat.
+// Purpose: Derives and renders engine rate-limit warnings for the active chat.
 // Layer: Chat status presentation
 // Exports: RateLimitBanner and rate-limit derivation helpers.
 

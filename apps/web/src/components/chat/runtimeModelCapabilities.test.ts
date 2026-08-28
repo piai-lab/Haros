@@ -1,4 +1,4 @@
-import type { ProviderModelDescriptor } from "@harnessos/contracts";
+import type { EngineModelDescriptor } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,7 +8,7 @@ import {
 
 describe("resolveRuntimeModelDescriptor", () => {
   it("matches a Claude model by its resolved canonical id", () => {
-    const runtimeModels: ReadonlyArray<ProviderModelDescriptor> = [
+    const runtimeModels: ReadonlyArray<EngineModelDescriptor> = [
       {
         slug: "sonnet",
         resolvedModel: "claude-sonnet-5",
@@ -19,7 +19,7 @@ describe("resolveRuntimeModelDescriptor", () => {
 
     expect(
       resolveRuntimeModelDescriptor({
-        provider: "claude",
+        engine: "claude",
         model: "claude-sonnet-5",
         runtimeModels,
       }),
@@ -28,7 +28,7 @@ describe("resolveRuntimeModelDescriptor", () => {
 
   it("keeps OmniMind Agent runtime reasoning options", () => {
     const capabilities = getRuntimeAwareModelCapabilities({
-      provider: "oa",
+      engine: "oa",
       model: "deepseek/deepseek-v4-pro",
       runtimeModel: {
         slug: "deepseek/deepseek-v4-pro",
@@ -50,7 +50,7 @@ describe("resolveRuntimeModelDescriptor", () => {
   it("lets runtime discovery disable Fast for an otherwise Fast-capable Codex model", () => {
     expect(
       getRuntimeAwareModelCapabilities({
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5.4",
         runtimeModel: {
           slug: "gpt-5.4",
@@ -64,7 +64,7 @@ describe("resolveRuntimeModelDescriptor", () => {
   it("lets runtime discovery enable Fast for a new Codex model", () => {
     expect(
       getRuntimeAwareModelCapabilities({
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5.6-preview",
         runtimeModel: {
           slug: "gpt-5.6-preview",

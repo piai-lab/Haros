@@ -1,15 +1,15 @@
 // FILE: codexDiscoveryCatalog.ts
-// Purpose: Normalize Codex app-server discovery responses into provider contracts.
-// Layer: Server provider domain
+// Purpose: Normalize Codex app-server discovery responses into engine contracts.
+// Layer: Server engine domain
 // Exports: Pure skills, plugin, and model discovery response parsers.
 
 import type {
-  ProviderListModelsResult,
-  ProviderListPluginsResult,
-  ProviderPluginAppSummary,
-  ProviderPluginDescriptor,
-  ProviderPluginDetail,
-  ProviderSkillDescriptor,
+  EngineListModelsResult,
+  EngineListPluginsResult,
+  EnginePluginAppSummary,
+  EnginePluginDescriptor,
+  EnginePluginDetail,
+  EngineSkillDescriptor,
 } from "@harnessos/contracts";
 
 function readObject(value: unknown, key?: string): Record<string, unknown> | undefined {
@@ -61,7 +61,7 @@ function readFirstBoolean(value: unknown, keys: readonly string[]): boolean | un
   return undefined;
 }
 
-function parseSkillDescriptor(skill: unknown): ProviderSkillDescriptor | undefined {
+function parseSkillDescriptor(skill: unknown): EngineSkillDescriptor | undefined {
   const record = readObject(skill);
   if (!record) return undefined;
   const name = readString(record, "name")?.trim();
@@ -91,13 +91,13 @@ function parseSkillDescriptor(skill: unknown): ProviderSkillDescriptor | undefin
         }
       : {}),
     ...(record.dependencies !== undefined ? { dependencies: record.dependencies } : {}),
-  } satisfies ProviderSkillDescriptor;
+  } satisfies EngineSkillDescriptor;
 }
 
 export function parseCodexSkillsListResponse(
   response: unknown,
   cwd: string,
-): ProviderSkillDescriptor[] {
+): EngineSkillDescriptor[] {
   const responseRecord = readObject(response);
   const resultRecord = readObject(responseRecord, "result") ?? responseRecord;
   const dataItems = readArray(resultRecord, "data") ?? [];
@@ -117,7 +117,7 @@ export function parseCodexSkillsListResponse(
   return parsedSkills.toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
-function parsePluginInterface(value: unknown): ProviderPluginDescriptor["interface"] | undefined {
+function parsePluginInterface(value: unknown): EnginePluginDescriptor["interface"] | undefined {
   const record = readObject(value);
   if (!record) return undefined;
   const capabilities = (readArray(record, "capabilities") ?? [])
@@ -168,7 +168,7 @@ function parsePluginInterface(value: unknown): ProviderPluginDescriptor["interfa
   };
 }
 
-function parsePluginSummary(plugin: unknown): ProviderPluginDescriptor | undefined {
+function parsePluginSummary(plugin: unknown): EnginePluginDescriptor | undefined {
   const record = readObject(plugin);
   if (!record) return undefined;
   const id = readString(record, "id")?.trim();
@@ -203,12 +203,12 @@ function parsePluginSummary(plugin: unknown): ProviderPluginDescriptor | undefin
     installPolicy,
     authPolicy,
     ...(pluginInterface ? { interface: pluginInterface } : {}),
-  } satisfies ProviderPluginDescriptor;
+  } satisfies EnginePluginDescriptor;
 }
 
 export function parseCodexPluginListResponse(
   response: unknown,
-): Omit<ProviderListPluginsResult, "source" | "cached"> {
+): Omit<EngineListPluginsResult, "source" | "cached"> {
   const responseRecord = readObject(response);
   const resultRecord = readObject(responseRecord, "result") ?? responseRecord;
   const marketplaces = (readArray(resultRecord, "marketplaces") ?? []).flatMap((marketplace) => {
@@ -256,7 +256,7 @@ export function parseCodexPluginListResponse(
   };
 }
 
-function parsePluginAppSummary(value: unknown): ProviderPluginAppSummary | undefined {
+function parsePluginAppSummary(value: unknown): EnginePluginAppSummary | undefined {
   const record = readObject(value);
   if (!record) return undefined;
   const id = readString(record, "id")?.trim();
@@ -275,7 +275,7 @@ function parsePluginAppSummary(value: unknown): ProviderPluginAppSummary | undef
   };
 }
 
-export function parseCodexPluginReadResponse(response: unknown): ProviderPluginDetail {
+export function parseCodexPluginReadResponse(response: unknown): EnginePluginDetail {
   const responseRecord = readObject(response);
   const resultRecord = readObject(responseRecord, "result") ?? responseRecord;
   const pluginRecord = readObject(resultRecord, "plugin") ?? resultRecord;
@@ -309,7 +309,7 @@ export function parseCodexPluginReadResponse(response: unknown): ProviderPluginD
   };
 }
 
-export function parseCodexModelListResponse(response: unknown): ProviderListModelsResult["models"] {
+export function parseCodexModelListResponse(response: unknown): EngineListModelsResult["models"] {
   const responseRecord = readObject(response);
   const resultRecord = readObject(responseRecord, "result") ?? responseRecord;
   const rawModels =

@@ -39,7 +39,7 @@ describe("Kanban task Debug mode", () => {
     const threadId = createKanbanDraftTask({
       projectId,
       prompt: "Investigate the failing task",
-      modelSelection: { provider: "codex", model: "gpt-5.4" },
+      engineSelection: { engine: "codex", model: "gpt-5.4" },
       runtimeMode: "approval-required",
       interactionMode: "debug",
       envMode: "local",
@@ -56,7 +56,7 @@ describe("Kanban task Debug mode", () => {
       threadId,
       projectId,
       thread: { id: threadId, projectId } as unknown as SidebarThreadSummary,
-      defaultProvider: "codex",
+      defaultEngine: "codex",
       assistantDeliveryMode: "buffered",
     });
 

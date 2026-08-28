@@ -18,7 +18,7 @@ import {
 type ComposerPickerMenuPopupProps = Omit<ComponentProps<typeof MenuPopupBase>, "surface"> & {
   /** Override global COMPOSER_PICKER_SIZE for this panel. */
   size?: ComposerPickerSize;
-  /** Apply the fixed picker width (model/effort/provider pickers). Off = content-sized. */
+  /** Apply the fixed picker width (model/effort/engine pickers). Off = content-sized. */
   fixedWidth?: boolean;
 };
 
@@ -76,7 +76,7 @@ export function ComposerPickerSelectPopup({
 type ComposerPickerMenuSubPopupProps = Omit<ComponentProps<typeof MenuSubPopup>, "surface"> & {
   /** Override global COMPOSER_PICKER_SIZE for this submenu. */
   size?: ComposerPickerSize;
-  /** Apply the fixed picker width (model/effort/provider pickers). Off = content-sized. */
+  /** Apply the fixed picker width (model/effort/engine pickers). Off = content-sized. */
   fixedWidth?: boolean;
 };
 

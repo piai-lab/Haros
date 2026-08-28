@@ -4,12 +4,12 @@ import {
   type GitWorktreeSetupPhase,
   type GitWorktreeSetupProgressEvent,
   type MessageId,
-  type ModelSelection,
+  type EngineSelection,
   type ModelSlug,
   type OrchestrationThreadActivity,
-  type ProviderApprovalDecision,
-  type ProviderInteractionMode,
-  type ProviderRequestKind,
+  type EngineApprovalDecision,
+  type EngineInteractionMode,
+  type EngineRequestKind,
   type RuntimeMode,
   type ServerProviderAuthStatus,
   type ThreadId as ThreadIdType,
@@ -50,10 +50,10 @@ import {
   type WorkLogEntry,
 } from "../session-logic";
 import { localSubagentThreadId } from "./ChatView.selectors";
-import type { ProviderModelOption } from "../providerModelOptions";
+import type { EngineModelOption } from "../providerModelOptions";
 
 export const LAST_INVOKED_SCRIPT_BY_PROJECT_KEY = "harnessos:last-invoked-script-by-project";
-export const DISMISSED_PROVIDER_HEALTH_BANNERS_KEY = "harnessos:dismissed-provider-health-banners";
+export const DISMISSED_PROVIDER_HEALTH_BANNERS_KEY = "harnessos:dismissed-engine-health-banners";
 export const PROMPT_HISTORY_MAX_ENTRIES = 100;
 
 export const LastInvokedScriptByProjectSchema = Schema.Record(ProjectId, Schema.String);
@@ -105,21 +105,21 @@ export function hasFileUndoSettled(input: {
 }
 
 /**
- * "Always allow" (acceptForSession) only auto-approves the live provider turn.
+ * "Always allow" (acceptForSession) only auto-approves the live engine turn.
  * Because the client is the source of truth for runtime mode (it sends it with
  * every turn), a supervised thread must also flip to full-access so the choice
  * survives idle-stop and runtime restarts. Auto is different: its AI reviewer
  * remains the durable policy, while acceptForSession applies only to the current
- * live provider session. Returns the runtime mode to persist, or null when
+ * live engine session. Returns the runtime mode to persist, or null when
  * nothing changes.
  */
 export function resolveRuntimeModeAfterApprovalDecision(
   currentRuntimeMode: RuntimeMode,
-  decision: ProviderApprovalDecision,
-  requestKind?: ProviderRequestKind,
+  decision: EngineApprovalDecision,
+  requestKind?: EngineRequestKind,
 ): RuntimeMode | null {
   // Permission-profile grants are narrower than a runtime-mode override.
-  // Their acceptForSession decision is persisted by the provider for only
+  // Their acceptForSession decision is persisted by the engine for only
   // that permission set and must not silently broaden the whole thread.
   if (requestKind === "permissions") {
     return null;
@@ -179,14 +179,14 @@ export function createRuntimeModePersistenceQueue(
   };
 }
 
-export function modelSelectionsEqual(left: ModelSelection, right: ModelSelection): boolean {
+export function engineSelectionsEqual(left: EngineSelection, right: EngineSelection): boolean {
   return (
-    left.provider === right.provider &&
-    (normalizeModelSlug(left.model, left.provider) ?? left.model) ===
-      (normalizeModelSlug(right.model, right.provider) ?? right.model) &&
+    left.engine === right.engine &&
+    (normalizeModelSlug(left.model, left.engine) ?? left.model) ===
+      (normalizeModelSlug(right.model, right.engine) ?? right.model) &&
     JSON.stringify(left.options ?? null) === JSON.stringify(right.options ?? null) &&
-    (left.provider !== "claude" ||
-      right.provider !== "claude" ||
+    (left.engine !== "claude" ||
+      right.engine !== "claude" ||
       left.supportsAutoMode === right.supportsAutoMode)
   );
 }
@@ -207,7 +207,7 @@ function hasExactProviderTurnStartFailure(
   messageId: MessageId,
 ): boolean {
   return activities.some((activity) => {
-    if (activity.kind !== "provider.turn.start.failed") {
+    if (activity.kind !== "engine.turn.start.failed") {
       return false;
     }
     const payload = activity.payload;
@@ -229,21 +229,21 @@ function hasExactProviderTurnStartFailure(
  */
 export function resolveTurnStartRecoveryDisposition(input: {
   readonly messageId: MessageId;
-  readonly previousModelSelection: ModelSelection;
+  readonly previousEngineSelection: EngineSelection;
   readonly previousRuntimeMode: RuntimeMode;
-  readonly previousInteractionMode: ProviderInteractionMode;
-  readonly targetModelSelection: ModelSelection;
+  readonly previousInteractionMode: EngineInteractionMode;
+  readonly targetEngineSelection: EngineSelection;
   readonly targetRuntimeMode: RuntimeMode;
-  readonly targetInteractionMode: ProviderInteractionMode;
-  readonly threadModelSelection: ModelSelection;
+  readonly targetInteractionMode: EngineInteractionMode;
+  readonly threadEngineSelection: EngineSelection;
   readonly threadRuntimeMode: RuntimeMode;
-  readonly threadInteractionMode: ProviderInteractionMode;
-  readonly session: Pick<ThreadSession, "provider" | "orchestrationStatus"> | null;
+  readonly threadInteractionMode: EngineInteractionMode;
+  readonly session: Pick<ThreadSession, "engine" | "orchestrationStatus"> | null;
   readonly activities: ReadonlyArray<Pick<OrchestrationThreadActivity, "kind" | "payload">>;
 }): TurnStartRecoveryDisposition {
   if (
-    input.session?.provider === input.targetModelSelection.provider &&
-    modelSelectionsEqual(input.threadModelSelection, input.targetModelSelection) &&
+    input.session?.engine === input.targetEngineSelection.engine &&
+    engineSelectionsEqual(input.threadEngineSelection, input.targetEngineSelection) &&
     input.threadRuntimeMode === input.targetRuntimeMode &&
     input.threadInteractionMode === input.targetInteractionMode
   ) {
@@ -259,9 +259,9 @@ export function resolveTurnStartRecoveryDisposition(input: {
   }
 
   const oldBindingIsRestored =
-    input.session?.provider === input.previousModelSelection.provider &&
+    input.session?.engine === input.previousEngineSelection.engine &&
     input.session.orchestrationStatus === "ready" &&
-    modelSelectionsEqual(input.threadModelSelection, input.previousModelSelection) &&
+    engineSelectionsEqual(input.threadEngineSelection, input.previousEngineSelection) &&
     input.threadRuntimeMode === input.previousRuntimeMode &&
     input.threadInteractionMode === input.previousInteractionMode;
   return oldBindingIsRestored ? "old-binding-restored" : "pending";
@@ -271,17 +271,17 @@ export function resolveTurnStartRecoveryDisposition(input: {
  * A runtime-mode mutation may touch canonical Thread metadata only when no live
  * Session exists and the desired binding still exactly matches the durable one.
  * The current Session projection has no model/options generation, so a matching
- * Provider or a newer timestamp cannot prove an exact active binding. Every live
+ * Engine or a newer timestamp cannot prove an exact active binding. Every live
  * Session therefore fails closed to a Composer-draft-only update.
  */
 export function desiredBindingCanPersistWithoutActiveSession(input: {
-  desiredModelSelection: ModelSelection | null;
-  serverModelSelection: ModelSelection | null;
+  desiredEngineSelection: EngineSelection | null;
+  serverEngineSelection: EngineSelection | null;
   activeSession: ThreadSession | null;
 }): boolean {
-  const { desiredModelSelection, serverModelSelection, activeSession } = input;
-  if (!desiredModelSelection || !serverModelSelection || activeSession !== null) return false;
-  return modelSelectionsEqual(desiredModelSelection, serverModelSelection);
+  const { desiredEngineSelection, serverEngineSelection, activeSession } = input;
+  if (!desiredEngineSelection || !serverEngineSelection || activeSession !== null) return false;
+  return engineSelectionsEqual(desiredEngineSelection, serverEngineSelection);
 }
 
 /**
@@ -289,18 +289,18 @@ export function desiredBindingCanPersistWithoutActiveSession(input: {
  * model first when enabling Auto, but downgrade from Auto first so an
  * incompatible replacement model is not rejected by the old policy.
  */
-export async function persistModelSelectionBeforeRuntimeMode(input: {
-  currentModelSelection: ModelSelection;
-  nextModelSelection?: ModelSelection;
+export async function persistEngineSelectionBeforeRuntimeMode(input: {
+  currentEngineSelection: EngineSelection;
+  nextEngineSelection?: EngineSelection;
   currentRuntimeMode: RuntimeMode;
   nextRuntimeMode: RuntimeMode;
-  persistModelSelection: (selection: ModelSelection) => Promise<unknown>;
+  persistEngineSelection: (selection: EngineSelection) => Promise<unknown>;
   persistRuntimeMode: (mode: RuntimeMode) => Promise<unknown>;
 }): Promise<void> {
-  const nextModelSelection = input.nextModelSelection;
+  const nextEngineSelection = input.nextEngineSelection;
   const modelChanged =
-    nextModelSelection !== undefined &&
-    !modelSelectionsEqual(input.currentModelSelection, nextModelSelection);
+    nextEngineSelection !== undefined &&
+    !engineSelectionsEqual(input.currentEngineSelection, nextEngineSelection);
   const runtimeChanged = input.currentRuntimeMode !== input.nextRuntimeMode;
   const downgradesFromAuto =
     input.currentRuntimeMode === "auto" && input.nextRuntimeMode !== "auto";
@@ -308,8 +308,8 @@ export async function persistModelSelectionBeforeRuntimeMode(input: {
   if (runtimeChanged && downgradesFromAuto) {
     await input.persistRuntimeMode(input.nextRuntimeMode);
   }
-  if (modelChanged && nextModelSelection !== undefined) {
-    await input.persistModelSelection(nextModelSelection);
+  if (modelChanged && nextEngineSelection !== undefined) {
+    await input.persistEngineSelection(nextEngineSelection);
   }
   if (runtimeChanged && !downgradesFromAuto) {
     await input.persistRuntimeMode(input.nextRuntimeMode);
@@ -788,7 +788,7 @@ export function resolveThreadDetailHydration(input: {
 export function buildLocalDraftThread(
   threadId: ThreadId,
   draftThread: DraftThreadState,
-  fallbackModelSelection: ModelSelection,
+  fallbackEngineSelection: EngineSelection,
   error: string | null,
 ): Thread {
   return {
@@ -797,7 +797,7 @@ export function buildLocalDraftThread(
     projectId: draftThread.projectId,
     title:
       draftThread.title ?? (draftThread.entryPoint === "terminal" ? "New terminal" : "New thread"),
-    modelSelection: fallbackModelSelection,
+    engineSelection: fallbackEngineSelection,
     runtimeMode: draftThread.runtimeMode,
     interactionMode: draftThread.interactionMode,
     session: null,
@@ -846,7 +846,7 @@ export function shouldShowActiveThreadHeaderIdentity(input: {
   return !isGenericChatThreadTitle(input.title);
 }
 
-// Sidechats carry imported fork history for provider context, but their transcript should start
+// Sidechats carry imported fork history for engine context, but their transcript should start
 // visually clean so only new sidechat turns appear in the pane.
 export function filterSidechatTranscriptMessages(
   messages: readonly ChatMessage[],
@@ -975,7 +975,7 @@ export function deriveComposerVoiceState(input: {
 
 export function resolveCommittedProviderModel(input: {
   selectedModel: ModelSlug | null;
-  availableOptions: ReadonlyArray<ProviderModelOption>;
+  availableOptions: ReadonlyArray<EngineModelOption>;
 }): ModelSlug | null {
   const directRuntimeOption = input.availableOptions.find(
     (option) => option.slug === input.selectedModel,
@@ -1379,7 +1379,7 @@ export const LOCAL_DISPATCH_TURN_TAKEOVER_TIMEOUT_MS = 60_000;
  * True once a locally dispatched turn is observably live, finished, or blocked
  * on user interaction. Echo of the user message and a mere
  * `latestTurn.requestedAt`/`turnId` bump are NOT takeover — those arrive in the
- * gap before the provider session is actually running.
+ * gap before the engine session is actually running.
  */
 export function hasLiveTurnTakenOver(input: {
   localDispatch: LocalDispatchSnapshot | null;
@@ -1430,7 +1430,7 @@ export function hasLiveTurnTakenOver(input: {
 }
 
 /**
- * Steering a provider without native mid-turn steering interrupts the live
+ * Steering a engine without native mid-turn steering interrupts the live
  * turn and lets the server re-dispatch the steer text as a fresh turn.
  * Between the abort and the steered turn's start the thread briefly looks
  * idle, which would otherwise let the queued-composer auto-dispatch race the
@@ -1492,7 +1492,7 @@ export function resolveQueuedSteerGateTransition(input: {
   const gapStartedAt = input.gate.gapStartedAt ?? input.now;
   const expiresInMs = QUEUED_STEER_GATE_TIMEOUT_MS - (input.now - gapStartedAt);
   if (expiresInMs <= 0) {
-    // The steered turn never started (lost interrupt, provider failure that
+    // The steered turn never started (lost interrupt, engine failure that
     // didn't surface as a session error). Fail open so the queue can't stall.
     return { kind: "clear" };
   }
@@ -1768,8 +1768,8 @@ function resolveTimelineSubagentThread(input: {
   }
 
   if (input.parentThreadId) {
-    const providerThreadId = input.subagent.providerThreadId ?? input.subagent.threadId;
-    const derivedLocalThreadId = localSubagentThreadId(input.parentThreadId, providerThreadId);
+    const nativeThreadId = input.subagent.nativeThreadId ?? input.subagent.threadId;
+    const derivedLocalThreadId = localSubagentThreadId(input.parentThreadId, nativeThreadId);
     const derivedLocalMatch = input.threadById.get(derivedLocalThreadId);
     if (derivedLocalMatch) {
       return derivedLocalMatch;

@@ -14,7 +14,7 @@ import {
   GENERAL_SETTINGS_SEARCH,
 } from "../settingsMetadata/coreSettings";
 import { PROMPTS_SETTINGS_SEARCH } from "../settingsMetadata/promptSettings";
-import { PROVIDERS_SETTINGS_SEARCH } from "../settingsMetadata/providerSettings";
+import { PROVIDERS_SETTINGS_SEARCH } from "../settingsMetadata/engineSettings";
 import { SETTINGS_NAV_ITEMS, SETTINGS_TARGETS } from "../settingsNavigation";
 import { defineSettingsSearchRow } from "../settingsSearchMetadata";
 import {
@@ -89,7 +89,7 @@ describe("rankSettingsSearchEntries", () => {
 
   it("derives row targets from stable record identity rather than visible copy", () => {
     expect(APPEARANCE_SETTINGS_SEARCH.theme.target).toBe("setting-theme");
-    expect(GENERAL_SETTINGS_SEARCH.defaultProvider.target).toBe("setting-general-default-provider");
+    expect(GENERAL_SETTINGS_SEARCH.defaultEngine.target).toBe("setting-general-default-engine");
     expect(
       SETTINGS_SEARCH_RECORDS.find((record) => record.id === "integrations:external-mcp")?.target,
     ).toBeNull();
@@ -97,7 +97,7 @@ describe("rankSettingsSearchEntries", () => {
     const english = rankSettingsSearchEntries("Default engine", 1, translateEn)[0]!;
     const chinese = rankSettingsSearchEntries("默认引擎", 1, translateZh)[0]!;
     expect(english.title).not.toBe(chinese.title);
-    expect(settingsSearchEntryTarget(english)).toBe("setting-general-default-provider");
+    expect(settingsSearchEntryTarget(english)).toBe("setting-general-default-engine");
     expect(settingsSearchEntryTarget(chinese)).toBe(settingsSearchEntryTarget(english));
 
     const ids = SETTINGS_SEARCH_RECORDS.map((record) => record.id);
@@ -117,7 +117,7 @@ describe("rankSettingsSearchEntries", () => {
   it("keeps target identity stable when visible copy is renamed", () => {
     const before = defineSettingsSearchRow({
       id: "general:copy-rename-fixture",
-      titleKey: "settings.defaultProvider",
+      titleKey: "settings.defaultEngine",
       keywords: "fixture",
     });
     const after = defineSettingsSearchRow({
@@ -146,21 +146,21 @@ describe("rankSettingsSearchEntries", () => {
     );
     const withOwnerIdentity = renderToStaticMarkup(
       <SettingsRow
-        anchorId={GENERAL_SETTINGS_SEARCH.defaultProvider.target}
+        anchorId={GENERAL_SETTINGS_SEARCH.defaultEngine.target}
         title="Renamed visible copy"
         description="Fixture"
       />,
     );
 
     expect(withoutOwnerIdentity).not.toContain("setting-renamed-visible-copy");
-    expect(withOwnerIdentity).toContain(`id="${GENERAL_SETTINGS_SEARCH.defaultProvider.target}"`);
+    expect(withOwnerIdentity).toContain(`id="${GENERAL_SETTINGS_SEARCH.defaultEngine.target}"`);
   });
 
   it("keeps the former Installed CLIs deep link stable after the row broadens", () => {
     expect(SETTINGS_TARGETS.engineDetails).toBe("setting-installed-clis");
     expect(PROVIDERS_SETTINGS_SEARCH.installedClis.target).toBe("setting-installed-clis");
     expect(rankSettingsSearchEntries("independent engine models", 1, translateEn)[0]?.id).toBe(
-      "providers:installed-clis",
+      "engines:installed-clis",
     );
   });
 

@@ -18,9 +18,9 @@ import { ServerConfig } from "../../config.ts";
 import { OrchestrationEngineService } from "../../orchestration/Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../../orchestration/Services/ProjectionSnapshotQuery.ts";
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
-import { ProviderDiscoveryService } from "../../provider/Services/ProviderDiscoveryService.ts";
-import { ProviderHealth } from "../../provider/Services/ProviderHealth.ts";
-import { ProviderExecutionCapabilities } from "../../provider/Services/ProviderExecutionCapabilities.ts";
+import { EngineDiscoveryService } from "../../provider/Services/EngineDiscoveryService.ts";
+import { EngineHealth } from "../../provider/Services/EngineHealth.ts";
+import { EngineExecutionCapabilities } from "../../provider/Services/EngineExecutionCapabilities.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { AgentGatewayOperationRepository } from "../../agentGateway/Services/AgentGatewayOperationRepository.ts";
 import { makeCreateThreadsHandler } from "../../agentGateway/creationCoordinator.ts";
@@ -51,7 +51,7 @@ import {
   AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION,
   agentGatewayTargetOptionGuidance,
   loadAgentGatewayProviderCatalog,
-  type AgentGatewayProviderAvailability,
+  type AgentGatewayEngineAvailability,
 } from "../../agentGateway/targetResolver.ts";
 import {
   decodeCreateThreadsInput,
@@ -87,7 +87,7 @@ import {
 } from "../Services/ExternalMcpGateway.ts";
 
 const EXTERNAL_MCP_INSTRUCTIONS =
-  "This is OmniMind's loopback-only external integration. Call harnessos_overview first to discover the allowed projects (with on-disk paths), provider availability, and granted scopes. Tools are restricted to the integration's allowed projects and scopes. Task creation is one task per stable requestId and defaults to a managed worktree with approval-required execution.";
+  "This is OmniMind's loopback-only external integration. Call harnessos_overview first to discover the allowed projects (with on-disk paths), engine availability, and granted scopes. Tools are restricted to the integration's allowed projects and scopes. Task creation is one task per stable requestId and defaults to a managed worktree with approval-required execution.";
 const MCP_MAX_BATCH_MESSAGES = 50;
 
 interface ExternalToolContext {
@@ -155,9 +155,9 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
   const externalRepository = yield* ExternalMcpRepository;
   const snapshotQuery = yield* ProjectionSnapshotQuery;
   const projectionTurns = yield* ProjectionTurnRepository;
-  const providerDiscovery = yield* ProviderDiscoveryService;
-  const providerHealth = yield* ProviderHealth;
-  const providerExecutionCapabilities = yield* ProviderExecutionCapabilities;
+  const engineDiscovery = yield* EngineDiscoveryService;
+  const providerHealth = yield* EngineHealth;
+  const engineExecutionCapabilities = yield* EngineExecutionCapabilities;
   const settings = yield* ServerSettingsService;
   const orchestrationEngine = yield* OrchestrationEngineService;
   const git = yield* GitCore;
@@ -183,16 +183,16 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
       settings.getSettings,
       providerHealth.getStatuses,
     ]);
-    const statusByProvider = new Map<EngineKind, ServerProviderStatus>(
-      statuses.map((status) => [status.provider, status]),
+    const statusByEngine = new Map<EngineKind, ServerProviderStatus>(
+      statuses.map((status) => [status.engine, status]),
     );
-    return new Map<EngineKind, AgentGatewayProviderAvailability>(
-      ENGINE_KINDS.map((provider) => {
-        const status = statusByProvider.get(provider);
+    return new Map<EngineKind, AgentGatewayEngineAvailability>(
+      ENGINE_KINDS.map((engine) => {
+        const status = statusByEngine.get(engine);
         return [
-          provider,
+          engine,
           {
-            enabled: serverSettings.providers[provider].enabled,
+            enabled: serverSettings.engines[engine].enabled,
             ...(status
               ? {
                   available: status.available,
@@ -221,12 +221,12 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
     snapshotQuery,
     orchestrationEngine,
     git,
-    providerDiscovery,
+    engineDiscovery,
     operationRepository,
     externalMcpRepository: externalRepository,
     serverConfig,
     loadProviderAvailabilities,
-    getProviderExecutionCapabilities: providerExecutionCapabilities.get,
+    getProviderExecutionCapabilities: engineExecutionCapabilities.get,
     requireThreadShell,
   });
 
@@ -261,13 +261,11 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
             ),
           );
         const availabilities = yield* loadProviderAvailabilities;
-        const providers = yield* Effect.forEach(ENGINE_KINDS, (provider) =>
+        const engines = yield* Effect.forEach(ENGINE_KINDS, (engine) =>
           loadAgentGatewayProviderCatalog({
-            provider,
-            discovery: providerDiscovery,
-            ...(availabilities.get(provider)
-              ? { availability: availabilities.get(provider)! }
-              : {}),
+            engine,
+            discovery: engineDiscovery,
+            ...(availabilities.get(engine) ? { availability: availabilities.get(engine)! } : {}),
             cwd: project.workspaceRoot,
           }),
         );
@@ -279,15 +277,15 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
           },
           defaults: { environment: "worktree", runtimeMode: "approval-required" },
           targetConstruction: Object.fromEntries(
-            providers.map((provider) => [
-              provider.provider,
+            engines.map((engine) => [
+              engine.engine,
               {
-                modelValueSource: "providers[].models[].slug",
-                ...agentGatewayTargetOptionGuidance(provider),
+                modelValueSource: "engines[].models[].slug",
+                ...agentGatewayTargetOptionGuidance(engine),
               },
             ]),
           ),
-          providers,
+          engines,
           limits: {
             oneTaskPerRequest: true,
             maxPromptChars: EXTERNAL_MCP_MAX_PROMPT_CHARS,
@@ -325,7 +323,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
     definition: {
       name: "harnessos_overview",
       description:
-        "Discover everything this integration can use in one call: every allowed OmniMind project with its on-disk path and activity, provider availability, granted scopes, and safe defaults. Call this first to orient yourself.",
+        "Discover everything this integration can use in one call: every allowed OmniMind project with its on-disk path and activity, engine availability, granted scopes, and safe defaults. Call this first to orient yourself.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
       annotations: { title: "OmniMind overview", ...READ_ONLY_TOOL_ANNOTATIONS },
     },
@@ -352,8 +350,8 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
             capabilities: [...context.client.capabilities],
           },
           projects,
-          providers: [...availabilities].map(([provider, availability]) => ({
-            provider,
+          engines: [...availabilities].map(([engine, availability]) => ({
+            engine,
             ...availability,
           })),
           defaults: { environment: "worktree", runtimeMode: "approval-required" },
@@ -380,7 +378,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
         properties: {
           requestId: { type: "string", maxLength: 256 },
           projectId: { type: "string" },
-          provider: { type: "string", enum: [...ENGINE_KINDS] },
+          engine: { type: "string", enum: [...ENGINE_KINDS] },
           model: { type: "string" },
           options: { type: "object", description: AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION },
           prompt: { type: "string", maxLength: EXTERNAL_MCP_MAX_PROMPT_CHARS },
@@ -389,7 +387,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
           runtimeMode: { type: "string", enum: ["approval-required", "full-access"] },
           baseRef: { type: "string" },
         },
-        required: ["requestId", "projectId", "provider", "model", "prompt"],
+        required: ["requestId", "projectId", "engine", "model", "prompt"],
         additionalProperties: false,
       },
       annotations: {
@@ -434,7 +432,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
                 prompt: input.prompt,
                 ...(input.title ? { title: input.title } : {}),
                 target: {
-                  provider: input.provider,
+                  engine: input.engine,
                   model: input.model,
                   ...(input.options ? { options: input.options } : {}),
                 },

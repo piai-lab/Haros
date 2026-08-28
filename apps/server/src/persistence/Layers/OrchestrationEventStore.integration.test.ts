@@ -207,7 +207,7 @@ layer("OrchestrationEventStore", (it) => {
           projectId: ProjectId.makeUnsafe("project-roundtrip"),
           title: "Roundtrip Project",
           workspaceRoot: "/tmp/project-roundtrip",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -321,7 +321,7 @@ layer("OrchestrationEventStore", (it) => {
             projectId: "project-imported",
             title: "Imported Project",
             workspaceRoot: "/tmp/imported",
-            defaultModelSelection: {
+            defaultEngineSelection: {
               instanceId: "codex",
               model: "imported-project-model",
             },
@@ -346,8 +346,8 @@ layer("OrchestrationEventStore", (it) => {
             threadId: "thread-imported",
             projectId: "project-imported",
             title: "Imported Thread",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5.5",
               options: [{ id: "reasoningEffort", value: "medium" }],
             },
@@ -374,8 +374,8 @@ layer("OrchestrationEventStore", (it) => {
           ${JSON.stringify({
             threadId: "thread-imported",
             messageId: "message-imported",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5.5",
               options: [{ id: "reasoningEffort", value: "medium" }],
             },
@@ -403,17 +403,17 @@ layer("OrchestrationEventStore", (it) => {
 
       assert.deepStrictEqual(
         projectCreated?.type === "project.created"
-          ? projectCreated.payload.defaultModelSelection
+          ? projectCreated.payload.defaultEngineSelection
           : null,
         {
-          provider: "codex",
+          engine: "codex",
           model: "imported-project-model",
         },
       );
       assert.deepStrictEqual(
-        threadCreated?.type === "thread.created" ? threadCreated.payload.modelSelection : null,
+        threadCreated?.type === "thread.created" ? threadCreated.payload.engineSelection : null,
         {
-          provider: "codex",
+          engine: "codex",
           model: "gpt-5.5",
           options: {
             reasoningEffort: "medium",
@@ -422,10 +422,10 @@ layer("OrchestrationEventStore", (it) => {
       );
       assert.deepStrictEqual(
         turnStartRequested?.type === "thread.turn-start-requested"
-          ? turnStartRequested.payload.modelSelection
+          ? turnStartRequested.payload.engineSelection
           : null,
         {
-          provider: "codex",
+          engine: "codex",
           model: "gpt-5.5",
           options: {
             reasoningEffort: "medium",
@@ -524,7 +524,7 @@ layer("OrchestrationEventStore", (it) => {
             projectId: "project-future-schema",
             title: "Future schema",
             workspaceRoot: "/tmp/project-future-schema",
-            defaultModelSelection: null,
+            defaultEngineSelection: null,
             scripts: [],
             createdAt: now,
             updatedAt: now,

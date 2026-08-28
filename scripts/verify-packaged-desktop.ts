@@ -904,7 +904,7 @@ async function createPackagedJourneyFixture(input: {
     title: "Packaged proof project",
     workspaceRoot: input.workspaceRoot,
     createWorkspaceRootIfMissing: true,
-    defaultModelSelection: null,
+    defaultEngineSelection: null,
     isPinned: true,
     createdAt,
   });
@@ -914,7 +914,7 @@ async function createPackagedJourneyFixture(input: {
     threadId,
     projectId,
     title: threadTitle,
-    modelSelection: { provider: "oa", model: "packaged-proof-offline" },
+    engineSelection: { engine: "oa", model: "packaged-proof-offline" },
     runtimeMode: "full-access",
     interactionMode: "default",
     envMode: "local",

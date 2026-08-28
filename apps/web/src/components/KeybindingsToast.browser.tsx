@@ -61,8 +61,8 @@ function createMinimalSnapshot(): OrchestrationReadModel {
         kind: "project",
         title: "Project",
         workspaceRoot: "/repo/project",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5",
         },
         scripts: [],
@@ -76,8 +76,8 @@ function createMinimalSnapshot(): OrchestrationReadModel {
         id: THREAD_ID,
         projectId: PROJECT_ID,
         title: "Test thread",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5",
         },
         interactionMode: "default",
@@ -268,7 +268,7 @@ async function sendServerConfigUpdatedPush(
     type: "configUpdated",
     payload: {
       issues,
-      providers: fixture.serverConfig.providers,
+      engines: fixture.serverConfig.engines,
     },
   });
 }

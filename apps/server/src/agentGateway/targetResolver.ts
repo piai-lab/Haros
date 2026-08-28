@@ -4,16 +4,16 @@ import {
   DROID_REASONING_EFFORT_OPTIONS,
   GROK_REASONING_EFFORT_OPTIONS,
   PI_THINKING_LEVEL_OPTIONS,
-  type ModelSelection,
+  type EngineSelection,
   type EngineKind,
-  type ProviderListModelsResult,
-  type ProviderModelDescriptor,
+  type EngineListModelsResult,
+  type EngineModelDescriptor,
   type ServerProviderAuthStatus,
 } from "@harnessos/contracts";
 import { getDefaultModel } from "@harnessos/shared/model";
 import { Effect } from "effect";
 
-import type { ProviderDiscoveryServiceShape } from "../provider/Services/ProviderDiscoveryService.ts";
+import type { EngineDiscoveryServiceShape } from "../provider/Services/EngineDiscoveryService.ts";
 
 export type AgentGatewayTargetErrorCode =
   | "provider_unavailable"
@@ -33,9 +33,9 @@ export class AgentGatewayTargetError extends Error {
 }
 
 export interface AgentGatewayProviderCatalog {
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly defaultModel: string | null;
-  readonly models: ReadonlyArray<ProviderModelDescriptor>;
+  readonly models: ReadonlyArray<EngineModelDescriptor>;
   readonly enabled: boolean;
   readonly available: boolean;
   readonly authStatus?: ServerProviderAuthStatus;
@@ -43,7 +43,7 @@ export interface AgentGatewayProviderCatalog {
   readonly error?: string;
 }
 
-export interface AgentGatewayProviderAvailability {
+export interface AgentGatewayEngineAvailability {
   readonly enabled: boolean;
   /** Undefined means health has not produced a trustworthy snapshot yet. */
   readonly available?: boolean;
@@ -52,7 +52,7 @@ export interface AgentGatewayProviderAvailability {
 }
 
 export const AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION =
-  "Provider-specific target options. Use targetConstruction[provider].optionsByModel[model] when present; otherwise use providerOptions. Preserve each option's exact key and valueType. allowedValues are authoritative unless allowsCustomValue is true.";
+  "Engine-specific target options. Use targetConstruction[engine].optionsByModel[model] when present; otherwise use engineOptions. Preserve each option's exact key and valueType. allowedValues are authoritative unless allowsCustomValue is true.";
 
 export type AgentGatewayTargetOptionValue = string | number | boolean;
 
@@ -60,7 +60,7 @@ export interface AgentGatewayTargetOptionRule {
   readonly key: string;
   readonly valueType: "string" | "number" | "boolean";
   readonly allowedValues: ReadonlyArray<AgentGatewayTargetOptionValue>;
-  readonly allowedValuesSource: "provider-contract" | "model-discovery";
+  readonly allowedValuesSource: "engine-contract" | "model-discovery";
   readonly allowsCustomValue?: boolean;
 }
 
@@ -68,26 +68,26 @@ export interface AgentGatewayTargetOptionGuidance {
   readonly primaryOptionKey: string;
   readonly alternativeOptionKeys: ReadonlyArray<string>;
   readonly optionSelectionRule: string;
-  readonly providerOptions: ReadonlyArray<AgentGatewayTargetOptionRule>;
+  readonly engineOptions: ReadonlyArray<AgentGatewayTargetOptionRule>;
   readonly optionsByModel: Readonly<Record<string, ReadonlyArray<AgentGatewayTargetOptionRule>>>;
   readonly exampleTarget: {
-    readonly provider: EngineKind;
+    readonly engine: EngineKind;
     readonly model: string;
     readonly options: Readonly<Record<string, AgentGatewayTargetOptionValue>>;
   } | null;
 }
 
-type ModelSelectionForProvider<P extends EngineKind> = Extract<
-  ModelSelection,
-  { readonly provider: P }
+type EngineSelectionForProvider<P extends EngineKind> = Extract<
+  EngineSelection,
+  { readonly engine: P }
 >;
 
-type ProviderTargetOptionKey<P extends EngineKind> = keyof NonNullable<
-  ModelSelectionForProvider<P>["options"]
+type EngineTargetOptionKey<P extends EngineKind> = keyof NonNullable<
+  EngineSelectionForProvider<P>["options"]
 > &
   string;
 
-type ProviderOptionValidation =
+type EngineOptionValidation =
   | { readonly kind: "effort" }
   | {
       readonly kind: "boolean-capability";
@@ -96,45 +96,45 @@ type ProviderOptionValidation =
   | { readonly kind: "context-window" }
   | { readonly kind: "non-empty-string" };
 
-interface ProviderTargetOptionRuleSpec extends Omit<AgentGatewayTargetOptionRule, "key"> {
+interface EngineTargetOptionRuleSpec extends Omit<AgentGatewayTargetOptionRule, "key"> {
   readonly advertised: boolean;
-  readonly validation: ProviderOptionValidation;
+  readonly validation: EngineOptionValidation;
 }
 
-interface ResolvedProviderTargetOptionRuleSpec extends ProviderTargetOptionRuleSpec {
+interface ResolvedProviderTargetOptionRuleSpec extends EngineTargetOptionRuleSpec {
   readonly key: string;
 }
 
-type ProviderTargetOptionRuleRegistry<P extends EngineKind> = {
-  readonly [Key in ProviderTargetOptionKey<P>]: ProviderTargetOptionRuleSpec;
+type EngineTargetOptionRuleRegistry<P extends EngineKind> = {
+  readonly [Key in EngineTargetOptionKey<P>]: EngineTargetOptionRuleSpec;
 };
 
-interface ProviderTargetOptionConfigInput<P extends EngineKind> {
-  readonly primaryOptionKey: ProviderTargetOptionKey<P>;
-  readonly options: ProviderTargetOptionRuleRegistry<P>;
+interface EngineTargetOptionConfigInput<P extends EngineKind> {
+  readonly primaryOptionKey: EngineTargetOptionKey<P>;
+  readonly options: EngineTargetOptionRuleRegistry<P>;
 }
 
-interface ProviderTargetOptionConfig {
+interface EngineTargetOptionConfig {
   readonly primaryOptionKey: string;
-  readonly options: Readonly<Record<string, ProviderTargetOptionRuleSpec>>;
+  readonly options: Readonly<Record<string, EngineTargetOptionRuleSpec>>;
 }
 
 function defineProviderOptionConfig<P extends EngineKind>(
-  config: ProviderTargetOptionConfigInput<P>,
-): ProviderTargetOptionConfig {
+  config: EngineTargetOptionConfigInput<P>,
+): EngineTargetOptionConfig {
   return config;
 }
 
 function providerOptionRule(
   valueType: AgentGatewayTargetOptionRule["valueType"],
   allowedValues: ReadonlyArray<AgentGatewayTargetOptionValue>,
-  allowedValuesSource: AgentGatewayTargetOptionRule["allowedValuesSource"] = "provider-contract",
+  allowedValuesSource: AgentGatewayTargetOptionRule["allowedValuesSource"] = "engine-contract",
   options?: {
     readonly advertised?: boolean;
-    readonly validation?: ProviderOptionValidation;
+    readonly validation?: EngineOptionValidation;
     readonly allowsCustomValue?: boolean;
   },
-): ProviderTargetOptionRuleSpec {
+): EngineTargetOptionRuleSpec {
   return {
     valueType,
     allowedValues,
@@ -145,7 +145,7 @@ function providerOptionRule(
   };
 }
 
-const PROVIDER_TARGET_OPTION_RULES = {
+const ENGINE_TARGET_OPTION_RULES = {
   codex: defineProviderOptionConfig<"codex">({
     primaryOptionKey: "reasoningEffort",
     options: {
@@ -240,31 +240,31 @@ const PROVIDER_TARGET_OPTION_RULES = {
       }),
     },
   }),
-} as const satisfies Record<EngineKind, ProviderTargetOptionConfig>;
+} as const satisfies Record<EngineKind, EngineTargetOptionConfig>;
 
-function providerDefaultModel(provider: EngineKind): string | null {
-  return getDefaultModel(provider);
+function providerDefaultModel(engine: EngineKind): string | null {
+  return getDefaultModel(engine);
 }
 
 export function loadAgentGatewayProviderCatalog(input: {
-  readonly provider: EngineKind;
-  readonly discovery: ProviderDiscoveryServiceShape;
-  readonly availability?: AgentGatewayProviderAvailability;
+  readonly engine: EngineKind;
+  readonly discovery: EngineDiscoveryServiceShape;
+  readonly availability?: AgentGatewayEngineAvailability;
   readonly cwd?: string;
 }): Effect.Effect<AgentGatewayProviderCatalog> {
-  const defaultModel = providerDefaultModel(input.provider);
+  const defaultModel = providerDefaultModel(input.engine);
   const availability = input.availability ?? { enabled: true };
   const unavailableReason =
     availability.enabled === false
-      ? `Provider "${input.provider}" is disabled in OmniMind settings.`
+      ? `Engine "${input.engine}" is disabled in OmniMind settings.`
       : availability.available === false
-        ? (availability.message ?? `Provider "${input.provider}" is not available.`)
+        ? (availability.message ?? `Engine "${input.engine}" is not available.`)
         : availability.authStatus === "unauthenticated"
-          ? (availability.message ?? `Provider "${input.provider}" is not authenticated.`)
+          ? (availability.message ?? `Engine "${input.engine}" is not authenticated.`)
           : null;
   if (unavailableReason !== null) {
     return Effect.succeed({
-      provider: input.provider,
+      engine: input.engine,
       defaultModel,
       models: [],
       enabled: availability.enabled,
@@ -274,10 +274,10 @@ export function loadAgentGatewayProviderCatalog(input: {
     });
   }
   return input.discovery
-    .listModels({ provider: input.provider, ...(input.cwd ? { cwd: input.cwd } : {}) })
+    .listModels({ engine: input.engine, ...(input.cwd ? { cwd: input.cwd } : {}) })
     .pipe(
-      Effect.map((result: ProviderListModelsResult) => ({
-        provider: input.provider,
+      Effect.map((result: EngineListModelsResult) => ({
+        engine: input.engine,
         defaultModel,
         models: result.models,
         enabled: true,
@@ -287,7 +287,7 @@ export function loadAgentGatewayProviderCatalog(input: {
       })),
       Effect.catch((error) =>
         Effect.succeed({
-          provider: input.provider,
+          engine: input.engine,
           defaultModel,
           models: [],
           enabled: true,
@@ -300,9 +300,9 @@ export function loadAgentGatewayProviderCatalog(input: {
 }
 
 function providerTargetOptionRules(
-  provider: EngineKind,
+  engine: EngineKind,
 ): ReadonlyArray<AgentGatewayTargetOptionRule> {
-  return Object.entries(PROVIDER_TARGET_OPTION_RULES[provider].options)
+  return Object.entries(ENGINE_TARGET_OPTION_RULES[engine].options)
     .filter(([, option]) => option.advertised)
     .map(([key, { valueType, allowedValues, allowedValuesSource, allowsCustomValue }]) => ({
       key,
@@ -313,8 +313,8 @@ function providerTargetOptionRules(
     }));
 }
 
-function providerPrimaryOptionKey(provider: EngineKind): string {
-  return PROVIDER_TARGET_OPTION_RULES[provider].primaryOptionKey;
+function providerPrimaryOptionKey(engine: EngineKind): string {
+  return ENGINE_TARGET_OPTION_RULES[engine].primaryOptionKey;
 }
 
 function convertDiscoveredOptionValue(
@@ -332,10 +332,10 @@ function convertDiscoveredOptionValue(
 }
 
 function modelTargetOptionRules(
-  provider: EngineKind,
-  model: ProviderModelDescriptor,
+  engine: EngineKind,
+  model: EngineModelDescriptor,
 ): ReadonlyArray<AgentGatewayTargetOptionRule> {
-  const rules = providerTargetOptionRules(provider).map(
+  const rules = providerTargetOptionRules(engine).map(
     ({ key, valueType, allowedValues, allowedValuesSource, allowsCustomValue }) => ({
       key,
       valueType,
@@ -361,7 +361,7 @@ function modelTargetOptionRules(
   };
 
   const discoveredEfforts = model.supportedReasoningEfforts?.map((entry) => entry.value) ?? [];
-  replaceAllowedValues(providerPrimaryOptionKey(provider), discoveredEfforts);
+  replaceAllowedValues(providerPrimaryOptionKey(engine), discoveredEfforts);
 
   for (const descriptor of model.optionDescriptors ?? []) {
     const rule = rules.find((candidate) => candidate.key === descriptor.id);
@@ -413,28 +413,28 @@ function exampleOptionsForRules(
 export function agentGatewayTargetOptionGuidance(
   catalog: AgentGatewayProviderCatalog,
 ): AgentGatewayTargetOptionGuidance {
-  const primaryOptionKey = providerPrimaryOptionKey(catalog.provider);
-  const providerOptions = providerTargetOptionRules(catalog.provider);
+  const primaryOptionKey = providerPrimaryOptionKey(catalog.engine);
+  const engineOptions = providerTargetOptionRules(catalog.engine);
   const optionsByModel = Object.fromEntries(
-    catalog.models.map((model) => [model.slug, modelTargetOptionRules(catalog.provider, model)]),
+    catalog.models.map((model) => [model.slug, modelTargetOptionRules(catalog.engine, model)]),
   );
   const exampleModel = catalog.models[0]?.slug ?? catalog.defaultModel;
   const exampleRules = exampleModel
-    ? (optionsByModel[exampleModel] ?? providerOptions)
-    : providerOptions;
+    ? (optionsByModel[exampleModel] ?? engineOptions)
+    : engineOptions;
   return {
     primaryOptionKey,
-    alternativeOptionKeys: providerOptions
+    alternativeOptionKeys: engineOptions
       .map((rule) => rule.key)
       .filter((key) => key !== primaryOptionKey),
     optionSelectionRule:
-      "Use optionsByModel[model] when present. Its keys and valueType are authoritative. Choose from allowedValues unless allowsCustomValue is true; otherwise use providerOptions.",
-    providerOptions,
+      "Use optionsByModel[model] when present. Its keys and valueType are authoritative. Choose from allowedValues unless allowsCustomValue is true; otherwise use engineOptions.",
+    engineOptions,
     optionsByModel,
     exampleTarget:
       catalog.available && exampleModel
         ? {
-            provider: catalog.provider,
+            engine: catalog.engine,
             model: exampleModel,
             options: exampleOptionsForRules(primaryOptionKey, exampleRules),
           }
@@ -443,16 +443,16 @@ export function agentGatewayTargetOptionGuidance(
 }
 
 function failUnavailableOption(
-  target: ModelSelection,
+  target: EngineSelection,
   option: string,
   available?: ReadonlyArray<string>,
 ): never {
   throw new AgentGatewayTargetError(
     "model_option_unavailable",
-    `Option "${option}" is not available for ${target.provider}/${target.model}.${
+    `Option "${option}" is not available for ${target.engine}/${target.model}.${
       available && available.length > 0 ? ` Available values: ${available.join(", ")}.` : ""
     }`,
-    { provider: target.provider, model: target.model, option, available: available ?? [] },
+    { engine: target.engine, model: target.model, option, available: available ?? [] },
   );
 }
 
@@ -465,10 +465,10 @@ const DISCOVERED_EFFORT_OPTION_IDS = new Set([
 ]);
 
 function providerOptionRuleSpec(
-  provider: EngineKind,
+  engine: EngineKind,
   optionId: string,
 ): ResolvedProviderTargetOptionRuleSpec | undefined {
-  const rule = PROVIDER_TARGET_OPTION_RULES[provider].options[optionId];
+  const rule = ENGINE_TARGET_OPTION_RULES[engine].options[optionId];
   return rule ? { key: optionId, ...rule } : undefined;
 }
 
@@ -478,11 +478,11 @@ function normalizedEffortValue(value: unknown): string | undefined {
   return undefined;
 }
 
-function validateOptionsWithoutCatalog(target: ModelSelection): void {
+function validateOptionsWithoutCatalog(target: EngineSelection): void {
   const rawOptions = target.options as Record<string, unknown> | undefined;
   for (const [optionId, value] of Object.entries(rawOptions ?? {})) {
     if (value === undefined) continue;
-    const rule = providerOptionRuleSpec(target.provider, optionId);
+    const rule = providerOptionRuleSpec(target.engine, optionId);
     if (!rule) failUnavailableOption(target, optionId);
     switch (rule.validation.kind) {
       case "effort": {
@@ -510,8 +510,8 @@ function validateOptionsWithoutCatalog(target: ModelSelection): void {
 }
 
 function validateDiscoveredDescriptorOption(
-  target: ModelSelection,
-  descriptor: ProviderModelDescriptor,
+  target: EngineSelection,
+  descriptor: EngineModelDescriptor,
   optionId: string,
   value: unknown,
 ): void {
@@ -526,8 +526,8 @@ function validateDiscoveredDescriptorOption(
 }
 
 function validateEffortOption(
-  target: ModelSelection,
-  descriptor: ProviderModelDescriptor,
+  target: EngineSelection,
+  descriptor: EngineModelDescriptor,
   rule: ResolvedProviderTargetOptionRuleSpec,
   value: unknown,
 ): void {
@@ -557,8 +557,8 @@ function validateEffortOption(
 }
 
 function validateKnownProviderOption(
-  target: ModelSelection,
-  descriptor: ProviderModelDescriptor,
+  target: EngineSelection,
+  descriptor: EngineModelDescriptor,
   rule: ResolvedProviderTargetOptionRuleSpec,
   value: unknown,
 ): void {
@@ -591,13 +591,13 @@ function validateKnownProviderOption(
 }
 
 function validateAdvertisedOption(
-  target: ModelSelection,
-  descriptor: ProviderModelDescriptor,
+  target: EngineSelection,
+  descriptor: EngineModelDescriptor,
 ): void {
   const rawOptions = target.options as Record<string, unknown> | undefined;
   for (const [optionId, value] of Object.entries(rawOptions ?? {})) {
     if (value === undefined) continue;
-    const rule = providerOptionRuleSpec(target.provider, optionId);
+    const rule = providerOptionRuleSpec(target.engine, optionId);
     if (rule) {
       validateKnownProviderOption(target, descriptor, rule, value);
     } else {
@@ -608,14 +608,14 @@ function validateAdvertisedOption(
 
 /** Resolve an exact advertised target before any git/orchestration side effect. */
 export function resolveAgentGatewayTarget(input: {
-  readonly target: ModelSelection;
-  readonly discovery: ProviderDiscoveryServiceShape;
-  readonly availability?: AgentGatewayProviderAvailability;
+  readonly target: EngineSelection;
+  readonly discovery: EngineDiscoveryServiceShape;
+  readonly availability?: AgentGatewayEngineAvailability;
   readonly cwd?: string;
-}): Effect.Effect<ModelSelection, AgentGatewayTargetError> {
+}): Effect.Effect<EngineSelection, AgentGatewayTargetError> {
   return Effect.gen(function* () {
     const catalog = yield* loadAgentGatewayProviderCatalog({
-      provider: input.target.provider,
+      engine: input.target.engine,
       discovery: input.discovery,
       ...(input.availability ? { availability: input.availability } : {}),
       ...(input.cwd ? { cwd: input.cwd } : {}),
@@ -624,9 +624,9 @@ export function resolveAgentGatewayTarget(input: {
       return yield* Effect.fail(
         new AgentGatewayTargetError(
           "provider_unavailable",
-          catalog.error ?? `Provider "${input.target.provider}" is unavailable.`,
+          catalog.error ?? `Engine "${input.target.engine}" is unavailable.`,
           {
-            provider: input.target.provider,
+            engine: input.target.engine,
             enabled: catalog.enabled,
             authStatus: catalog.authStatus,
           },
@@ -639,9 +639,9 @@ export function resolveAgentGatewayTarget(input: {
       return yield* Effect.fail(
         new AgentGatewayTargetError(
           "model_unavailable",
-          `Model "${input.target.model}" is not available for ${input.target.provider}. Use an exact slug from harnessos_capabilities.`,
+          `Model "${input.target.model}" is not available for ${input.target.engine}. Use an exact slug from harnessos_capabilities.`,
           {
-            provider: input.target.provider,
+            engine: input.target.engine,
             requestedModel: input.target.model,
             availableModels: catalog.models.map((model) => model.slug),
           },
@@ -654,8 +654,8 @@ export function resolveAgentGatewayTarget(input: {
         return yield* Effect.fail(
           new AgentGatewayTargetError(
             "provider_unavailable",
-            `Provider "${input.target.provider}" has no available model catalog or configured default.`,
-            { provider: input.target.provider, discoveryError: catalog.error },
+            `Engine "${input.target.engine}" has no available model catalog or configured default.`,
+            { engine: input.target.engine, discoveryError: catalog.error },
           ),
         );
       }
@@ -663,8 +663,8 @@ export function resolveAgentGatewayTarget(input: {
         return yield* Effect.fail(
           new AgentGatewayTargetError(
             "model_unavailable",
-            `The ${input.target.provider} model catalog is unavailable. Only its configured default "${catalog.defaultModel}" can be used safely; custom model "${input.target.model}" was not verified.`,
-            { provider: input.target.provider, requestedModel: input.target.model },
+            `The ${input.target.engine} model catalog is unavailable. Only its configured default "${catalog.defaultModel}" can be used safely; custom model "${input.target.model}" was not verified.`,
+            { engine: input.target.engine, requestedModel: input.target.model },
           ),
         );
       }

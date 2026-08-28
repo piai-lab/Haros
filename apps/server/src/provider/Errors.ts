@@ -3,93 +3,93 @@ import { Schema } from "effect";
 import type { CheckpointServiceError } from "../checkpointing/Errors.ts";
 
 /**
- * ProviderAdapterValidationError - Invalid adapter API input.
+ * EngineAdapterValidationError - Invalid adapter API input.
  */
-export class ProviderAdapterValidationError extends Schema.TaggedErrorClass<ProviderAdapterValidationError>()(
-  "ProviderAdapterValidationError",
+export class EngineAdapterValidationError extends Schema.TaggedErrorClass<EngineAdapterValidationError>()(
+  "EngineAdapterValidationError",
   {
-    provider: Schema.String,
+    engine: Schema.String,
     operation: Schema.String,
     issue: Schema.String,
     cause: Schema.optional(Schema.Defect),
   },
 ) {
   override get message(): string {
-    return `Provider adapter validation failed (${this.provider}) in ${this.operation}: ${this.issue}`;
+    return `Engine adapter validation failed (${this.engine}) in ${this.operation}: ${this.issue}`;
   }
 }
 
 /**
- * ProviderAdapterSessionNotFoundError - Adapter-owned session id is unknown.
+ * EngineAdapterSessionNotFoundError - Adapter-owned session id is unknown.
  */
-export class ProviderAdapterSessionNotFoundError extends Schema.TaggedErrorClass<ProviderAdapterSessionNotFoundError>()(
-  "ProviderAdapterSessionNotFoundError",
+export class EngineAdapterSessionNotFoundError extends Schema.TaggedErrorClass<EngineAdapterSessionNotFoundError>()(
+  "EngineAdapterSessionNotFoundError",
   {
-    provider: Schema.String,
+    engine: Schema.String,
     threadId: Schema.String,
     cause: Schema.optional(Schema.Defect),
   },
 ) {
   override get message(): string {
-    return `Unknown ${this.provider} adapter thread: ${this.threadId}`;
+    return `Unknown ${this.engine} adapter thread: ${this.threadId}`;
   }
 }
 
 /**
- * ProviderAdapterSessionClosedError - Adapter session exists but is closed.
+ * EngineAdapterSessionClosedError - Adapter session exists but is closed.
  */
-export class ProviderAdapterSessionClosedError extends Schema.TaggedErrorClass<ProviderAdapterSessionClosedError>()(
-  "ProviderAdapterSessionClosedError",
+export class EngineAdapterSessionClosedError extends Schema.TaggedErrorClass<EngineAdapterSessionClosedError>()(
+  "EngineAdapterSessionClosedError",
   {
-    provider: Schema.String,
+    engine: Schema.String,
     threadId: Schema.String,
     cause: Schema.optional(Schema.Defect),
   },
 ) {
   override get message(): string {
-    return `${this.provider} adapter thread is closed: ${this.threadId}`;
+    return `${this.engine} adapter thread is closed: ${this.threadId}`;
   }
 }
 
 /**
- * ProviderAdapterRequestError - Provider protocol request failed or timed out.
+ * EngineAdapterRequestError - Engine protocol request failed or timed out.
  */
-export class ProviderAdapterRequestError extends Schema.TaggedErrorClass<ProviderAdapterRequestError>()(
-  "ProviderAdapterRequestError",
+export class EngineAdapterRequestError extends Schema.TaggedErrorClass<EngineAdapterRequestError>()(
+  "EngineAdapterRequestError",
   {
-    provider: Schema.String,
+    engine: Schema.String,
     method: Schema.String,
     detail: Schema.String,
     cause: Schema.optional(Schema.Defect),
   },
 ) {
   override get message(): string {
-    return `Provider adapter request failed (${this.provider}) for ${this.method}: ${this.detail}`;
+    return `Engine adapter request failed (${this.engine}) for ${this.method}: ${this.detail}`;
   }
 }
 
 /**
- * ProviderAdapterProcessError - Provider process lifecycle failure.
+ * EngineAdapterProcessError - Engine process lifecycle failure.
  */
-export class ProviderAdapterProcessError extends Schema.TaggedErrorClass<ProviderAdapterProcessError>()(
-  "ProviderAdapterProcessError",
+export class EngineAdapterProcessError extends Schema.TaggedErrorClass<EngineAdapterProcessError>()(
+  "EngineAdapterProcessError",
   {
-    provider: Schema.String,
+    engine: Schema.String,
     threadId: Schema.String,
     detail: Schema.String,
     cause: Schema.optional(Schema.Defect),
   },
 ) {
   override get message(): string {
-    return `Provider adapter process error (${this.provider}) for thread ${this.threadId}: ${this.detail}`;
+    return `Engine adapter process error (${this.engine}) for thread ${this.threadId}: ${this.detail}`;
   }
 }
 
 /**
- * ProviderValidationError - Invalid provider API input.
+ * EngineValidationError - Invalid engine API input.
  */
-export class ProviderValidationError extends Schema.TaggedErrorClass<ProviderValidationError>()(
-  "ProviderValidationError",
+export class EngineValidationError extends Schema.TaggedErrorClass<EngineValidationError>()(
+  "EngineValidationError",
   {
     operation: Schema.String,
     issue: Schema.String,
@@ -97,45 +97,45 @@ export class ProviderValidationError extends Schema.TaggedErrorClass<ProviderVal
   },
 ) {
   override get message(): string {
-    return `Provider validation failed in ${this.operation}: ${this.issue}`;
+    return `Engine validation failed in ${this.operation}: ${this.issue}`;
   }
 }
 
 /**
- * ProviderUnsupportedError - Requested provider is not implemented.
+ * EngineUnsupportedError - Requested engine is not implemented.
  */
-export class ProviderUnsupportedError extends Schema.TaggedErrorClass<ProviderUnsupportedError>()(
-  "ProviderUnsupportedError",
+export class EngineUnsupportedError extends Schema.TaggedErrorClass<EngineUnsupportedError>()(
+  "EngineUnsupportedError",
   {
-    provider: Schema.String,
+    engine: Schema.String,
     cause: Schema.optional(Schema.Defect),
   },
 ) {
   override get message(): string {
-    return `Provider '${this.provider}' is not implemented`;
+    return `Engine '${this.engine}' is not implemented`;
   }
 }
 
 /**
- * ProviderSessionNotFoundError - Provider-facing session not found.
+ * EngineSessionNotFoundError - Engine-facing session not found.
  */
-export class ProviderSessionNotFoundError extends Schema.TaggedErrorClass<ProviderSessionNotFoundError>()(
-  "ProviderSessionNotFoundError",
+export class EngineSessionNotFoundError extends Schema.TaggedErrorClass<EngineSessionNotFoundError>()(
+  "EngineSessionNotFoundError",
   {
     threadId: Schema.String,
     cause: Schema.optional(Schema.Defect),
   },
 ) {
   override get message(): string {
-    return `Unknown provider thread: ${this.threadId}`;
+    return `Unknown engine thread: ${this.threadId}`;
   }
 }
 
 /**
- * ProviderSessionDirectoryPersistenceError - Session directory persistence failure.
+ * EngineSessionDirectoryPersistenceError - Session directory persistence failure.
  */
-export class ProviderSessionDirectoryPersistenceError extends Schema.TaggedErrorClass<ProviderSessionDirectoryPersistenceError>()(
-  "ProviderSessionDirectoryPersistenceError",
+export class EngineSessionDirectoryPersistenceError extends Schema.TaggedErrorClass<EngineSessionDirectoryPersistenceError>()(
+  "EngineSessionDirectoryPersistenceError",
   {
     operation: Schema.String,
     detail: Schema.String,
@@ -143,21 +143,21 @@ export class ProviderSessionDirectoryPersistenceError extends Schema.TaggedError
   },
 ) {
   override get message(): string {
-    return `Provider session directory persistence error in ${this.operation}: ${this.detail}`;
+    return `Engine session directory persistence error in ${this.operation}: ${this.detail}`;
   }
 }
 
-export type ProviderAdapterError =
-  | ProviderAdapterValidationError
-  | ProviderAdapterSessionNotFoundError
-  | ProviderAdapterSessionClosedError
-  | ProviderAdapterRequestError
-  | ProviderAdapterProcessError;
+export type EngineAdapterError =
+  | EngineAdapterValidationError
+  | EngineAdapterSessionNotFoundError
+  | EngineAdapterSessionClosedError
+  | EngineAdapterRequestError
+  | EngineAdapterProcessError;
 
-export type ProviderServiceError =
-  | ProviderValidationError
-  | ProviderUnsupportedError
-  | ProviderSessionNotFoundError
-  | ProviderSessionDirectoryPersistenceError
-  | ProviderAdapterError
+export type EngineServiceError =
+  | EngineValidationError
+  | EngineUnsupportedError
+  | EngineSessionNotFoundError
+  | EngineSessionDirectoryPersistenceError
+  | EngineAdapterError
   | CheckpointServiceError;

@@ -12,8 +12,8 @@ import {
   encodeCanonicalUserInputResponse,
 } from "./canonicalUserInput";
 
-describe("canonical user-input Provider encoding", () => {
-  it("keeps the fork Tool and cross-Provider Product safety guards aligned", () => {
+describe("canonical user-input Engine encoding", () => {
+  it("keeps the fork Tool and cross-Engine Product safety guards aligned", () => {
     expect(ASK_USER_MAX_NODES).toBe(CANONICAL_USER_INPUT_MAX_NODES);
     expect(ASK_USER_MAX_UTF8_BYTES).toBe(CANONICAL_USER_INPUT_MAX_UTF8_BYTES);
   });

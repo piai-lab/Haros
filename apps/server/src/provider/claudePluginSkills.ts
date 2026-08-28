@@ -1,7 +1,7 @@
 // FILE: claudePluginSkills.ts
 // Purpose: Resolve active Claude Code plugin skill roots from Claude's installed
 //          plugin registry without scanning orphaned cache versions.
-// Layer: Server provider discovery helper
+// Layer: Server engine discovery helper
 // Exports: discoverClaudePluginSkillRoots
 
 import * as fs from "node:fs/promises";

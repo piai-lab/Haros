@@ -30,7 +30,7 @@ describe("RateLimitsPanel helpers", () => {
       {
         activities: [
           makeActivity("activity-1", "account.rate-limits.updated", {
-            provider: "codex",
+            engine: "codex",
             rateLimitsByLimitId: {
               short: {
                 primary: {
@@ -73,10 +73,10 @@ describe("RateLimitsPanel helpers", () => {
     expect(formatRateLimitRemainingPercent(rows[0]?.remainingPercent)).toBe("88%");
   });
 
-  it("keeps the most constrained row when multiple providers report the same window", () => {
+  it("keeps the most constrained row when multiple engines report the same window", () => {
     const rows = deriveVisibleRateLimitRows([
       {
-        provider: "codex",
+        engine: "codex",
         updatedAt: "2099-04-08T18:00:00.000Z",
         limits: [
           {
@@ -88,7 +88,7 @@ describe("RateLimitsPanel helpers", () => {
         ],
       },
       {
-        provider: "claude",
+        engine: "claude",
         updatedAt: "2099-04-08T18:05:00.000Z",
         limits: [
           {
@@ -117,7 +117,7 @@ describe("RateLimitsPanel helpers", () => {
       {
         activities: [
           makeActivity("activity-1", "account.rate-limits.updated", {
-            provider: "codex",
+            engine: "codex",
             rateLimits: {
               limitId: "codex",
               primary: {
@@ -156,12 +156,12 @@ describe("RateLimitsPanel helpers", () => {
     ]);
   });
 
-  it("reads doubly nested codex runtime payloads from provider logs", () => {
+  it("reads doubly nested codex runtime payloads from engine logs", () => {
     const rateLimits = deriveAccountRateLimits([
       {
         activities: [
           makeActivity("activity-1", "account.rate-limits.updated", {
-            provider: "codex",
+            engine: "codex",
             rateLimits: {
               rateLimits: {
                 primary: {
@@ -204,7 +204,7 @@ describe("RateLimitsPanel helpers", () => {
       {
         activities: [
           makeActivity("activity-1", "account.rate-limits.updated", {
-            provider: "claude",
+            engine: "claude",
             rate_limit_info: {
               status: "allowed_warning",
               rateLimitType: "five_hour",
@@ -234,7 +234,7 @@ describe("RateLimitsPanel helpers", () => {
       {
         activities: [
           makeActivity("activity-overage", "account.rate-limits.updated", {
-            provider: "claude",
+            engine: "claude",
             rate_limit_info: {
               status: "allowed",
               rateLimitType: "seven_day_overage_included",
@@ -259,14 +259,14 @@ describe("RateLimitsPanel helpers", () => {
   it("humanizes unknown windows without collapsing their identity or sort order", () => {
     const rows = deriveVisibleRateLimitRows([
       {
-        provider: "codex",
+        engine: "codex",
         updatedAt: "2099-04-08T18:00:00.000Z",
         limits: [
           { window: "new_provider_window", usedPercent: 10 },
           { window: "Weekly", usedPercent: 5 },
-          { window: "another-provider-window", usedPercent: 20 },
+          { window: "another-engine-window", usedPercent: 20 },
           { window: "weekly_overage", usedPercent: 15, windowDurationMins: 10_080 },
-          { window: "new-provider-window", usedPercent: 30 },
+          { window: "new-engine-window", usedPercent: 30 },
           { window: "Sonnet", usedPercent: 25 },
         ],
       },
@@ -283,13 +283,13 @@ describe("RateLimitsPanel helpers", () => {
       },
       { id: "codex-Sonnet", label: "Sonnet", remainingPercent: 75 },
       {
-        id: "codex-Another Provider Window",
-        label: "Another Provider Window",
+        id: "codex-Another Engine Window",
+        label: "Another Engine Window",
         remainingPercent: 80,
       },
       {
-        id: "codex-New Provider Window",
-        label: "New Provider Window",
+        id: "codex-New Engine Window",
+        label: "New Engine Window",
         remainingPercent: 70,
       },
     ]);

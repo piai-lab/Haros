@@ -32,17 +32,17 @@ import { OrchestrationCommandReceiptRepositoryLive } from "../src/persistence/La
 import { OrchestrationEventStoreLive } from "../src/persistence/Layers/OrchestrationEventStore.ts";
 import { ProjectionCheckpointRepositoryLive } from "../src/persistence/Layers/ProjectionCheckpoints.ts";
 import { ProjectionPendingInteractionRepositoryLive } from "../src/persistence/Layers/ProjectionPendingInteractions.ts";
-import { ProviderSessionRuntimeRepositoryLive } from "../src/persistence/Layers/ProviderSessionRuntime.ts";
+import { EngineSessionRuntimeRepositoryLive } from "../src/persistence/Layers/EngineSessionRuntime.ts";
 import { makeSqlitePersistenceLive } from "../src/persistence/Layers/Sqlite.ts";
 import { ProjectionCheckpointRepository } from "../src/persistence/Services/ProjectionCheckpoints.ts";
 import { ProjectionPendingInteractionRepository } from "../src/persistence/Services/ProjectionPendingInteractions.ts";
-import { ProviderUnsupportedError } from "../src/provider/Errors.ts";
-import { ProviderAdapterRegistry } from "../src/provider/Services/ProviderAdapterRegistry.ts";
-import { ProviderSessionDirectoryLive } from "../src/provider/Layers/ProviderSessionDirectory.ts";
-import { makeProviderServiceLive } from "../src/provider/Layers/ProviderService.ts";
+import { EngineUnsupportedError } from "../src/provider/Errors.ts";
+import { EngineAdapterRegistry } from "../src/provider/Services/EngineAdapterRegistry.ts";
+import { EngineSessionDirectoryLive } from "../src/provider/Layers/EngineSessionDirectory.ts";
+import { makeProviderServiceLive } from "../src/provider/Layers/EngineService.ts";
 import { makeCodexAdapterLive } from "../src/provider/Layers/CodexAdapter.ts";
 import { CodexAdapter } from "../src/provider/Services/CodexAdapter.ts";
-import { ProviderService } from "../src/provider/Services/ProviderService.ts";
+import { EngineService } from "../src/provider/Services/EngineService.ts";
 import { ServerSettingsService } from "../src/serverSettings.ts";
 import { CheckpointReactorLive } from "../src/orchestration/Layers/CheckpointReactor.ts";
 import { StudioOutputReactorLive } from "../src/orchestration/Layers/StudioOutputReactor.ts";
@@ -52,8 +52,8 @@ import { OrchestrationProjectionSnapshotQueryLive } from "../src/orchestration/L
 import { RuntimeReceiptBusLive } from "../src/orchestration/Layers/RuntimeReceiptBus.ts";
 import { OrchestrationReactorLive } from "../src/orchestration/Layers/OrchestrationReactor.ts";
 import { AgentGatewayOperationRepositoryLive } from "../src/agentGateway/Layers/AgentGatewayOperationRepository.ts";
-import { ProviderCommandReactorLive } from "../src/orchestration/Layers/ProviderCommandReactor.ts";
-import { ProviderRuntimeIngestionLive } from "../src/orchestration/Layers/ProviderRuntimeIngestion.ts";
+import { EngineCommandReactorLive } from "../src/orchestration/Layers/EngineCommandReactor.ts";
+import { EngineRuntimeIngestionLive } from "../src/orchestration/Layers/EngineRuntimeIngestion.ts";
 import { TurnCheckpointCoordinatorLive } from "../src/orchestration/Layers/TurnCheckpointCoordinator.ts";
 import {
   OrchestrationEngineService,
@@ -70,7 +70,7 @@ import {
 import {
   makeTestProviderAdapterHarness,
   type TestProviderAdapterHarness,
-} from "./TestProviderAdapter.integration.ts";
+} from "./TestEngineAdapter.integration.ts";
 import { deriveServerPaths, ServerConfig } from "../src/config.ts";
 
 function runGit(cwd: string, args: ReadonlyArray<string>) {
@@ -170,7 +170,7 @@ export interface OrchestrationIntegrationHarness {
   readonly adapterHarness: TestProviderAdapterHarness | null;
   readonly engine: OrchestrationEngineShape;
   readonly snapshotQuery: ProjectionSnapshotQuery["Service"];
-  readonly providerService: ProviderService["Service"];
+  readonly providerService: EngineService["Service"];
   readonly checkpointStore: CheckpointStore["Service"];
   readonly checkpointRepository: ProjectionCheckpointRepository["Service"];
   readonly waitForThread: (
@@ -215,7 +215,7 @@ export interface OrchestrationIntegrationHarness {
 }
 
 interface MakeOrchestrationIntegrationHarnessOptions {
-  readonly provider?: EngineKind;
+  readonly engine?: EngineKind;
   readonly realCodex?: boolean;
 }
 
@@ -226,21 +226,21 @@ export const makeOrchestrationIntegrationHarness = (
     const path = yield* Path.Path;
     const fileSystem = yield* FileSystem.FileSystem;
 
-    const provider = options?.provider ?? "codex";
+    const engineKind = options?.engine ?? "codex";
     const useRealCodex = options?.realCodex === true;
     const adapterHarness = useRealCodex
       ? null
       : yield* makeTestProviderAdapterHarness({
-          provider,
+          engine: engineKind,
         });
     const fakeRegistry = adapterHarness
-      ? Layer.succeed(ProviderAdapterRegistry, {
-          getByProvider: (resolvedProvider) =>
-            resolvedProvider === adapterHarness.provider
+      ? Layer.succeed(EngineAdapterRegistry, {
+          getByEngine: (resolvedProvider) =>
+            resolvedProvider === adapterHarness.engine
               ? Effect.succeed(adapterHarness.adapter)
-              : Effect.fail(new ProviderUnsupportedError({ provider: resolvedProvider })),
-          listProviders: () => Effect.succeed([adapterHarness.provider]),
-        } as typeof ProviderAdapterRegistry.Service)
+              : Effect.fail(new EngineUnsupportedError({ engine: resolvedProvider })),
+          listEngines: () => Effect.succeed([adapterHarness.engine]),
+        } as typeof EngineAdapterRegistry.Service)
       : null;
     const rootDir = yield* fileSystem.makeTempDirectoryScoped({
       prefix: "omnimind-orchestration-integration-",
@@ -261,20 +261,20 @@ export const makeOrchestrationIntegrationHarness = (
       Layer.provide(eventStoreLayer),
       Layer.provide(OrchestrationCommandReceiptRepositoryLive),
     );
-    const providerSessionDirectoryLayer = ProviderSessionDirectoryLive.pipe(
-      Layer.provide(ProviderSessionRuntimeRepositoryLive),
+    const providerSessionDirectoryLayer = EngineSessionDirectoryLive.pipe(
+      Layer.provide(EngineSessionRuntimeRepositoryLive),
     );
     const realCodexRegistry = Layer.effect(
-      ProviderAdapterRegistry,
+      EngineAdapterRegistry,
       Effect.gen(function* () {
         const codexAdapter = yield* CodexAdapter;
         return {
-          getByProvider: (resolvedProvider) =>
+          getByEngine: (resolvedProvider) =>
             resolvedProvider === "codex"
               ? Effect.succeed(codexAdapter)
-              : Effect.fail(new ProviderUnsupportedError({ provider: resolvedProvider })),
-          listProviders: () => Effect.succeed(["codex"] as const),
-        } as typeof ProviderAdapterRegistry.Service;
+              : Effect.fail(new EngineUnsupportedError({ engine: resolvedProvider })),
+          listEngines: () => Effect.succeed(["codex"] as const),
+        } as typeof EngineAdapterRegistry.Service;
       }),
     ).pipe(
       Layer.provide(makeCodexAdapterLive()),
@@ -304,7 +304,7 @@ export const makeOrchestrationIntegrationHarness = (
       RuntimeReceiptBusLive,
       TurnCheckpointCoordinatorLive,
     );
-    const runtimeIngestionLayer = ProviderRuntimeIngestionLive.pipe(
+    const runtimeIngestionLayer = EngineRuntimeIngestionLive.pipe(
       Layer.provideMerge(runtimeServicesLayer),
     );
     const gitCoreLayer = Layer.succeed(GitCore, {
@@ -318,7 +318,7 @@ export const makeOrchestrationIntegrationHarness = (
     const studioOutputReactorLayer = StudioOutputReactorLive.pipe(
       Layer.provideMerge(runtimeServicesLayer),
     );
-    const providerCommandReactorLayer = ProviderCommandReactorLive.pipe(
+    const providerCommandReactorLayer = EngineCommandReactorLive.pipe(
       Layer.provideMerge(runtimeServicesLayer),
       Layer.provideMerge(studioOutputReactorLayer),
       Layer.provideMerge(gitCoreLayer),
@@ -356,8 +356,8 @@ export const makeOrchestrationIntegrationHarness = (
     const snapshotQuery = yield* tryRuntimePromise("load ProjectionSnapshotQuery service", () =>
       runtime.runPromise(Effect.service(ProjectionSnapshotQuery)),
     ).pipe(Effect.orDie);
-    const providerService = yield* tryRuntimePromise("load ProviderService service", () =>
-      runtime.runPromise(Effect.service(ProviderService)),
+    const providerService = yield* tryRuntimePromise("load EngineService service", () =>
+      runtime.runPromise(Effect.service(EngineService)),
     ).pipe(Effect.orDie);
     const checkpointStore = yield* tryRuntimePromise("load CheckpointStore service", () =>
       runtime.runPromise(Effect.service(CheckpointStore)),

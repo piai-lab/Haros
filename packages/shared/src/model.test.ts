@@ -93,7 +93,7 @@ describe("normalizeModelSlug", () => {
     expect(normalizeModelSlug("constructor")).toBe("constructor");
   });
 
-  it("uses provider-specific aliases", () => {
+  it("uses engine-specific aliases", () => {
     expect(normalizeModelSlug("sonnet", "claude")).toBe("claude-sonnet-5");
     expect(normalizeModelSlug("opus", "claude")).toBe("claude-opus-5");
     expect(normalizeModelSlug("opus-5", "claude")).toBe("claude-opus-5");
@@ -128,7 +128,7 @@ describe("resolveModelSlug", () => {
     }
   });
 
-  it("supports provider-aware resolution", () => {
+  it("supports engine-aware resolution", () => {
     expect(resolveModelSlugForProvider("claude", undefined)).toBe(DEFAULT_MODEL_BY_PROVIDER.claude);
     expect(resolveModelSlugForProvider("claude", "sonnet")).toBe("claude-sonnet-5");
     expect(resolveModelSlugForProvider("claude", "gpt-5.3-codex")).toBe(
@@ -164,7 +164,7 @@ describe("resolveSelectableModel", () => {
     ).toBe("gpt-5.3-codex");
   });
 
-  it("resolves provider-specific aliases after normalization", () => {
+  it("resolves engine-specific aliases after normalization", () => {
     expect(
       resolveSelectableModel("claude", "sonnet", [
         { slug: "claude-opus-4-6", name: "Claude Opus 4.6" },
@@ -204,7 +204,7 @@ describe("resolveSelectableModel", () => {
     ).toBeNull();
   });
 
-  it("respects provider boundaries", () => {
+  it("respects engine boundaries", () => {
     expect(
       resolveSelectableModel("codex", "sonnet", [{ slug: "gpt-5.3-codex", name: "GPT-5.3 Codex" }]),
     ).toBeNull();
@@ -217,8 +217,8 @@ describe("resolveSelectableModel", () => {
 });
 
 describe("getModelCapabilities reasoningEffortLevels", () => {
-  const values = (provider: "codex" | "claude" | "grok" | "droid", model: string | null) =>
-    getModelCapabilities(provider, model).reasoningEffortLevels.map((l) => l.value);
+  const values = (engine: "codex" | "claude" | "grok" | "droid", model: string | null) =>
+    getModelCapabilities(engine, model).reasoningEffortLevels.map((l) => l.value);
 
   it("returns codex reasoning options for codex", () => {
     expect(values("codex", "gpt-5.5")).toEqual([...CODEX_REASONING_EFFORT_OPTIONS]);
@@ -323,7 +323,7 @@ describe("getModelCapabilities reasoningEffortLevels", () => {
       controlSource: "api-effort",
     });
     expect(sonnet5Levels.find((option) => option.value === "ultracode")).toMatchObject({
-      controlSource: "provider-setting",
+      controlSource: "engine-setting",
       apiEffortValue: "xhigh",
     });
 
@@ -439,10 +439,10 @@ describe("resolveGrokEffortFamily", () => {
   });
 });
 
-describe("provider option descriptor helpers", () => {
+describe("engine option descriptor helpers", () => {
   it("projects legacy Codex capability flags into generic option descriptors", () => {
     const descriptors = getProviderOptionDescriptors({
-      provider: "codex",
+      engine: "codex",
       caps: getModelCapabilities("codex", "gpt-5.4"),
       selections: { reasoningEffort: "xhigh", fastMode: true },
     });
@@ -463,7 +463,7 @@ describe("provider option descriptor helpers", () => {
 
   it("projects Grok reasoning effort into a generic option descriptor", () => {
     const descriptors = getProviderOptionDescriptors({
-      provider: "grok",
+      engine: "grok",
       caps: getModelCapabilities("grok", "grok-build"),
       selections: { reasoningEffort: "high" },
     });
@@ -474,7 +474,7 @@ describe("provider option descriptor helpers", () => {
     });
 
     const grok46 = getProviderOptionDescriptors({
-      provider: "grok",
+      engine: "grok",
       caps: getModelCapabilities("grok", "grok-4.6"),
       selections: { reasoningEffort: "xhigh" },
     });
@@ -491,7 +491,7 @@ describe("provider option descriptor helpers", () => {
 
   it("maps Pi reasoning controls onto the thinkingLevel option", () => {
     const descriptors = getProviderOptionDescriptors({
-      provider: "pi",
+      engine: "pi",
       caps: {
         reasoningEffortLevels: [
           { value: "off", label: "Off" },
@@ -513,7 +513,7 @@ describe("provider option descriptor helpers", () => {
     expect(descriptors.some((descriptor) => descriptor.id === "reasoningEffort")).toBe(false);
 
     const omniMindDescriptors = getProviderOptionDescriptors({
-      provider: "oa",
+      engine: "oa",
       caps: {
         reasoningEffortLevels: [{ value: "high", label: "High", isDefault: true }],
         supportsFastMode: false,
@@ -531,7 +531,7 @@ describe("provider option descriptor helpers", () => {
 
   it("honors explicit descriptors and serializes their current values", () => {
     const descriptors = getProviderOptionDescriptors({
-      provider: "codex",
+      engine: "codex",
       caps: {
         ...getModelCapabilities("codex", "gpt-5.4"),
         optionDescriptors: [
@@ -715,14 +715,14 @@ describe("resolveApiModelId", () => {
   it("keeps native-1M Claude model ids unchanged", () => {
     expect(
       resolveApiModelId({
-        provider: "claude",
+        engine: "claude",
         model: "claude-opus-4-6",
         options: { autoCompactWindow: "1m" },
       }),
     ).toBe("claude-opus-4-6");
     expect(
       resolveApiModelId({
-        provider: "claude",
+        engine: "claude",
         model: "claude-sonnet-5",
         options: { autoCompactWindow: "1m" },
       }),
@@ -732,7 +732,7 @@ describe("resolveApiModelId", () => {
   it("leaves Claude models unchanged for the default context window", () => {
     expect(
       resolveApiModelId({
-        provider: "claude",
+        engine: "claude",
         model: "claude-opus-4-6",
         options: { contextWindow: "200k" },
       }),
@@ -752,7 +752,7 @@ describe("claudeSelectionRequiresRestart", () => {
     },
   ) =>
     ({
-      provider: "claude",
+      engine: "claude",
       model,
       ...(options ? { options } : {}),
     }) as Parameters<typeof claudeSelectionRequiresRestart>[1];
@@ -760,8 +760,8 @@ describe("claudeSelectionRequiresRestart", () => {
   it("never restarts for non-Claude selections", () => {
     expect(
       claudeSelectionRequiresRestart(
-        { provider: "codex", model: "gpt-5.5" },
-        { provider: "codex", model: "gpt-5.4" },
+        { engine: "codex", model: "gpt-5.5" },
+        { engine: "codex", model: "gpt-5.4" },
       ),
     ).toBe(false);
   });

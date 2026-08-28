@@ -7,7 +7,7 @@
 // Layer: Chat composer UI
 // Exports: ComposerPendingApprovalPanel
 
-import { type ApprovalRequestId, type ProviderApprovalDecision } from "@harnessos/contracts";
+import { type ApprovalRequestId, type EngineApprovalDecision } from "@harnessos/contracts";
 import { type KeyboardEvent } from "react";
 import { type PendingApproval } from "../../session-logic";
 import { cn } from "~/lib/utils";
@@ -20,7 +20,7 @@ interface ComposerPendingApprovalPanelProps {
   isResponding: boolean;
   onRespond: (
     requestId: ApprovalRequestId,
-    decision: ProviderApprovalDecision,
+    decision: EngineApprovalDecision,
     lifecycleGeneration?: string,
     requestKind?: PendingApproval["requestKind"],
   ) => Promise<void>;
@@ -35,7 +35,7 @@ type ParsedApproval = {
 };
 
 type ApprovalAction = {
-  decision: ProviderApprovalDecision;
+  decision: EngineApprovalDecision;
   label: string;
   description: string;
   tone: ComposerChoiceTone;

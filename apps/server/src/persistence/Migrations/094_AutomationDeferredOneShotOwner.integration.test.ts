@@ -21,7 +21,7 @@ it.effect("094 adds an empty deferred one-shot owner to every through-93 definit
         (
           'once-enabled', 'project-legacy', 'Enabled', 'Run.',
           '{"type":"once","runAt":"2026-08-17T00:00:00.000Z"}', 1,
-          '2026-08-17T00:00:00.000Z', '{"provider":"codex","model":"gpt-5"}',
+          '2026-08-17T00:00:00.000Z', '{"engine":"codex","model":"gpt-5"}',
           'approval-required', 'default', 'auto', 'heartbeat', 'thread-1', NULL, 0,
           '{"type":"none"}', 1, 60, 3600, '{"type":"none"}', 'coalesce', '[]', 0,
           '2026-08-16T00:00:00.000Z', '2026-08-16T00:00:00.000Z', NULL
@@ -29,7 +29,7 @@ it.effect("094 adds an empty deferred one-shot owner to every through-93 definit
         (
           'once-disabled', 'project-legacy', 'Disabled', 'Run.',
           '{"type":"once","runAt":"2026-08-17T00:00:00.000Z"}', 0, NULL,
-          '{"provider":"codex","model":"gpt-5"}', 'approval-required', 'default',
+          '{"engine":"codex","model":"gpt-5"}', 'approval-required', 'default',
           'auto', 'heartbeat', 'thread-2', NULL, 0, '{"type":"none"}', 1, 60, 3600,
           '{"type":"none"}', 'coalesce', '[]', 0, '2026-08-16T00:00:00.000Z',
           '2026-08-16T00:00:00.000Z', NULL
@@ -37,7 +37,7 @@ it.effect("094 adds an empty deferred one-shot owner to every through-93 definit
         (
           'once-archived', 'project-legacy', 'Archived', 'Run.',
           '{"type":"once","runAt":"2026-08-17T00:00:00.000Z"}', 0, NULL,
-          '{"provider":"codex","model":"gpt-5"}', 'approval-required', 'default',
+          '{"engine":"codex","model":"gpt-5"}', 'approval-required', 'default',
           'auto', 'heartbeat', 'thread-3', NULL, 0, '{"type":"none"}', 1, 60, 3600,
           '{"type":"none"}', 'coalesce', '[]', 0, '2026-08-16T00:00:00.000Z',
           '2026-08-16T00:00:00.000Z', '2026-08-16T00:01:00.000Z'

@@ -8,14 +8,14 @@ import * as Semaphore from "effect/Semaphore";
 
 import type {
   ChatAttachment,
-  KiloModelSelection,
-  OpenCodeModelSelection,
+  KiloEngineSelection,
+  OpenCodeEngineSelection,
   OpenCodeModelOptions,
-  ProviderStartOptions,
+  EngineStartOptions,
 } from "@harnessos/contracts";
 import { sanitizeGeneratedThreadTitle } from "@harnessos/shared/chatThreads";
 import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@harnessos/shared/git";
-import { getModelSelectionStringOptionValue } from "@harnessos/shared/model";
+import { getEngineSelectionStringOptionValue } from "@harnessos/shared/model";
 
 import { resolveProviderAttachmentPath } from "../../provider/providerAttachmentPaths.ts";
 import { ServerConfig } from "../../config.ts";
@@ -115,37 +115,37 @@ interface AcquiredOpenCodeTextGenerationServer {
   serverScope: Scope.Closeable | null;
 }
 
-type OpenCodeCompatibleTextGenerationProvider = "opencode" | "kilo";
-type OpenCodeCompatibleModelSelection = OpenCodeModelSelection | KiloModelSelection;
+type OpenCodeCompatibleTextGenerationEngine = "opencode" | "kilo";
+type OpenCodeCompatibleEngineSelection = OpenCodeEngineSelection | KiloEngineSelection;
 
 interface OpenCodeCompatibleTextGenerationConfig {
-  readonly provider: OpenCodeCompatibleTextGenerationProvider;
+  readonly engine: OpenCodeCompatibleTextGenerationEngine;
   readonly displayName: string;
   readonly serviceName: string;
   readonly cliSpec: OpenCodeCompatibleCliSpec;
   readonly resolveServerPassword?: (
-    provider: OpenCodeCompatibleTextGenerationProvider,
+    engine: OpenCodeCompatibleTextGenerationEngine,
   ) => Effect.Effect<string | undefined>;
 }
 
-function resolveOpenCodeCompatibleModelSelection(
+function resolveOpenCodeCompatibleEngineSelection(
   config: OpenCodeCompatibleTextGenerationConfig,
   input: {
     readonly model?: string;
-    readonly modelSelection?: { provider: string; model: string; options?: unknown };
+    readonly engineSelection?: { engine: string; model: string; options?: unknown };
   },
-): OpenCodeCompatibleModelSelection | null {
-  if (input.modelSelection?.provider === config.provider) {
-    return input.modelSelection as OpenCodeCompatibleModelSelection;
+): OpenCodeCompatibleEngineSelection | null {
+  if (input.engineSelection?.engine === config.engine) {
+    return input.engineSelection as OpenCodeCompatibleEngineSelection;
   }
 
   const model = input.model?.trim();
-  if (config.provider !== "opencode" || !model || parseOpenCodeModelSlug(model) === null) {
+  if (config.engine !== "opencode" || !model || parseOpenCodeModelSlug(model) === null) {
     return null;
   }
 
   return {
-    provider: "opencode",
+    engine: "opencode",
     model,
   };
 }
@@ -338,11 +338,11 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
       readonly prompt: string;
       readonly outputSchemaJson: S;
       readonly rawTextFallback?: RawTextFallback;
-      readonly modelSelection: OpenCodeCompatibleModelSelection;
+      readonly engineSelection: OpenCodeCompatibleEngineSelection;
       readonly attachments?: ReadonlyArray<ChatAttachment> | undefined;
-      readonly providerOptions?: ProviderStartOptions;
+      readonly engineOptions?: EngineStartOptions;
     }) {
-      const parsedModel = parseOpenCodeModelSlug(input.modelSelection.model);
+      const parsedModel = parseOpenCodeModelSlug(input.engineSelection.model);
       if (!parsedModel) {
         return yield* new TextGenerationError({
           operation: input.operation,
@@ -350,17 +350,17 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
         });
       }
 
-      const providerOptions = input.providerOptions?.[config.provider];
-      const binaryPath = providerOptions?.binaryPath?.trim() || config.cliSpec.defaultBinaryPath;
-      const serverUrl = providerOptions?.serverUrl?.trim() || "";
+      const engineOptions = input.engineOptions?.[config.engine];
+      const binaryPath = engineOptions?.binaryPath?.trim() || config.cliSpec.defaultBinaryPath;
+      const serverUrl = engineOptions?.serverUrl?.trim() || "";
       const serverPassword = config.resolveServerPassword
-        ? ((yield* config.resolveServerPassword(config.provider)) ?? "")
+        ? ((yield* config.resolveServerPassword(config.engine)) ?? "")
         : "";
       const providerId = parsedModel.providerID;
       const modelId = parsedModel.modelID;
-      const modelOptions = input.modelSelection.options as OpenCodeModelOptions | undefined;
+      const modelOptions = input.engineSelection.options as OpenCodeModelOptions | undefined;
       const agent = modelOptions?.agent?.trim();
-      const variant = getModelSelectionStringOptionValue(input.modelSelection, "variant")?.trim();
+      const variant = getEngineSelectionStringOptionValue(input.engineSelection, "variant")?.trim();
 
       const promptText =
         appendFileAttachmentsPromptBlock({
@@ -476,8 +476,8 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
     const generateCommitMessage: TextGenerationShape["generateCommitMessage"] = Effect.fn(
       `${config.serviceName}.generateCommitMessage`,
     )(function* (input) {
-      const modelSelection = resolveOpenCodeCompatibleModelSelection(config, input);
-      if (!modelSelection) {
+      const engineSelection = resolveOpenCodeCompatibleEngineSelection(config, input);
+      if (!engineSelection) {
         return yield* new TextGenerationError({
           operation: "generateCommitMessage",
           detail: `Invalid ${config.displayName} model selection.`,
@@ -495,8 +495,8 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
         cwd: input.cwd,
         prompt,
         outputSchemaJson,
-        modelSelection,
-        ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+        engineSelection,
+        ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
       });
 
       return {
@@ -511,8 +511,8 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
     const generatePrContent: TextGenerationShape["generatePrContent"] = Effect.fn(
       `${config.serviceName}.generatePrContent`,
     )(function* (input) {
-      const modelSelection = resolveOpenCodeCompatibleModelSelection(config, input);
-      if (!modelSelection) {
+      const engineSelection = resolveOpenCodeCompatibleEngineSelection(config, input);
+      if (!engineSelection) {
         return yield* new TextGenerationError({
           operation: "generatePrContent",
           detail: `Invalid ${config.displayName} model selection.`,
@@ -532,8 +532,8 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
         cwd: input.cwd,
         prompt,
         outputSchemaJson,
-        modelSelection,
-        ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+        engineSelection,
+        ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
       });
 
       return {
@@ -545,8 +545,8 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
     const generateDiffSummary: TextGenerationShape["generateDiffSummary"] = Effect.fn(
       `${config.serviceName}.generateDiffSummary`,
     )(function* (input) {
-      const modelSelection = resolveOpenCodeCompatibleModelSelection(config, input);
-      if (!modelSelection) {
+      const engineSelection = resolveOpenCodeCompatibleEngineSelection(config, input);
+      if (!engineSelection) {
         return yield* new TextGenerationError({
           operation: "generateDiffSummary",
           detail: `Invalid ${config.displayName} model selection.`,
@@ -562,8 +562,8 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
         prompt,
         outputSchemaJson,
         rawTextFallback,
-        modelSelection,
-        ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+        engineSelection,
+        ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
       });
 
       return {
@@ -574,8 +574,8 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
     const generateBranchName: TextGenerationShape["generateBranchName"] = Effect.fn(
       `${config.serviceName}.generateBranchName`,
     )(function* (input) {
-      const modelSelection = resolveOpenCodeCompatibleModelSelection(config, input);
-      if (!modelSelection) {
+      const engineSelection = resolveOpenCodeCompatibleEngineSelection(config, input);
+      if (!engineSelection) {
         return yield* new TextGenerationError({
           operation: "generateBranchName",
           detail: `Invalid ${config.displayName} model selection.`,
@@ -592,9 +592,9 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
         prompt,
         outputSchemaJson,
         rawTextFallback,
-        modelSelection,
+        engineSelection,
         ...(input.attachments ? { attachments: input.attachments } : {}),
-        ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+        ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
       });
 
       return {
@@ -605,8 +605,8 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
     const generateThreadTitle: TextGenerationShape["generateThreadTitle"] = Effect.fn(
       `${config.serviceName}.generateThreadTitle`,
     )(function* (input) {
-      const modelSelection = resolveOpenCodeCompatibleModelSelection(config, input);
-      if (!modelSelection) {
+      const engineSelection = resolveOpenCodeCompatibleEngineSelection(config, input);
+      if (!engineSelection) {
         return yield* new TextGenerationError({
           operation: "generateThreadTitle",
           detail: `Invalid ${config.displayName} model selection.`,
@@ -623,9 +623,9 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
         prompt,
         outputSchemaJson,
         rawTextFallback,
-        modelSelection,
+        engineSelection,
         ...(input.attachments ? { attachments: input.attachments } : {}),
-        ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+        ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
       });
 
       return {
@@ -636,8 +636,8 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
     const generateThreadRecap: TextGenerationShape["generateThreadRecap"] = Effect.fn(
       `${config.serviceName}.generateThreadRecap`,
     )(function* (input) {
-      const modelSelection = resolveOpenCodeCompatibleModelSelection(config, input);
-      if (!modelSelection) {
+      const engineSelection = resolveOpenCodeCompatibleEngineSelection(config, input);
+      if (!engineSelection) {
         return yield* new TextGenerationError({
           operation: "generateThreadRecap",
           detail: `Invalid ${config.displayName} model selection.`,
@@ -655,8 +655,8 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
         prompt,
         outputSchemaJson,
         rawTextFallback,
-        modelSelection,
-        ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+        engineSelection,
+        ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
       });
 
       return {
@@ -667,8 +667,8 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
     const generateAutomationIntent: TextGenerationShape["generateAutomationIntent"] = Effect.fn(
       `${config.serviceName}.generateAutomationIntent`,
     )(function* (input) {
-      const modelSelection = resolveOpenCodeCompatibleModelSelection(config, input);
-      if (!modelSelection) {
+      const engineSelection = resolveOpenCodeCompatibleEngineSelection(config, input);
+      if (!engineSelection) {
         return yield* new TextGenerationError({
           operation: "generateAutomationIntent",
           detail: `Invalid ${config.displayName} model selection.`,
@@ -685,15 +685,15 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
         cwd: input.cwd,
         prompt,
         outputSchemaJson,
-        modelSelection,
-        ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+        engineSelection,
+        ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
       });
     });
 
     const evaluateAutomationCompletion: TextGenerationShape["evaluateAutomationCompletion"] =
       Effect.fn(`${config.serviceName}.evaluateAutomationCompletion`)(function* (input) {
-        const modelSelection = resolveOpenCodeCompatibleModelSelection(config, input);
-        if (!modelSelection) {
+        const engineSelection = resolveOpenCodeCompatibleEngineSelection(config, input);
+        if (!engineSelection) {
           return yield* new TextGenerationError({
             operation: "evaluateAutomationCompletion",
             detail: `Invalid ${config.displayName} model selection.`,
@@ -706,8 +706,8 @@ const makeOpenCodeCompatibleTextGeneration = (config: OpenCodeCompatibleTextGene
           cwd: input.cwd,
           prompt,
           outputSchemaJson,
-          modelSelection,
-          ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+          engineSelection,
+          ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
         });
       });
 
@@ -729,7 +729,7 @@ export const makeOpenCodeTextGenerationServiceLive = (
   Layer.effect(
     OpenCodeTextGeneration,
     makeOpenCodeCompatibleTextGeneration({
-      provider: "opencode",
+      engine: "opencode",
       displayName: "OpenCode",
       serviceName: "OpenCodeTextGeneration",
       cliSpec: OPENCODE_CLI_SPEC,
@@ -743,7 +743,7 @@ export const makeKiloTextGenerationServiceLive = (
   Layer.effect(
     KiloTextGeneration,
     makeOpenCodeCompatibleTextGeneration({
-      provider: "kilo",
+      engine: "kilo",
       displayName: "Kilo",
       serviceName: "KiloTextGeneration",
       cliSpec: KILO_CLI_SPEC,

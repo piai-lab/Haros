@@ -36,7 +36,7 @@ import {
   runExclusiveProjectAddition,
   runProjectProvisionWithCancellationRecovery,
   resolvePullRequestReviewBadge,
-  resolveNewProjectDefaultModelSelection,
+  resolveNewProjectDefaultEngineSelection,
   resolveSidebarThreadPullRequest,
   resolveThreadDisplayBranch,
   resolveSidebarThreadListPaging,
@@ -88,18 +88,18 @@ describe("isProjectsSidebarSurface", () => {
   });
 });
 
-describe("resolveNewProjectDefaultModelSelection", () => {
+describe("resolveNewProjectDefaultEngineSelection", () => {
   it("keeps a Pi project unbound instead of silently switching to Codex", () => {
-    expect(resolveNewProjectDefaultModelSelection("pi")).toBeNull();
+    expect(resolveNewProjectDefaultEngineSelection("pi")).toBeNull();
   });
 
   it("keeps an OmniMind project unbound until the runtime catalog supplies an exact model", () => {
-    expect(resolveNewProjectDefaultModelSelection("oa")).toBeNull();
+    expect(resolveNewProjectDefaultEngineSelection("oa")).toBeNull();
   });
 
   it("preserves the existing default for other Engines", () => {
-    expect(resolveNewProjectDefaultModelSelection("codex")).toEqual({
-      provider: "codex",
+    expect(resolveNewProjectDefaultEngineSelection("codex")).toEqual({
+      engine: "codex",
       model: "gpt-5.5",
     });
   });
@@ -200,10 +200,10 @@ describe("resolveSidebarThreadPullRequest", () => {
   });
 
   it("keeps persisted PR metadata when the worktree is no longer available", () => {
-    const persisted = openPr(574, "feat/provider-usage-snapshot-cache");
+    const persisted = openPr(574, "feat/engine-usage-snapshot-cache");
     expect(
       resolveSidebarThreadPullRequest({
-        threadBranch: "feat/provider-usage-snapshot-cache",
+        threadBranch: "feat/engine-usage-snapshot-cache",
         liveBranch: null,
         hasLiveStatus: false,
         hasDedicatedWorktree: false,
@@ -945,7 +945,7 @@ describe("pin helpers", () => {
       folderName: id,
       localName: null,
       cwd: `/tmp/${id}`,
-      defaultModelSelection: null,
+      defaultEngineSelection: null,
       expanded: true,
       spaceId: null,
       createdAt: "2026-03-09T10:00:00.000Z",
@@ -959,8 +959,8 @@ describe("pin helpers", () => {
       codexThreadId: null,
       projectId: "project-1" as ProjectId,
       title: id,
-      modelSelection: {
-        provider: "codex",
+      engineSelection: {
+        engine: "codex",
         model: "gpt-5-codex",
       },
       runtimeMode: DEFAULT_RUNTIME_MODE,
@@ -1189,7 +1189,7 @@ describe("resolveThreadStatusPill", () => {
     hasLiveTailWork: false,
     updatedAt: "2026-03-09T10:05:00.000Z",
     session: {
-      provider: "codex" as const,
+      engine: "codex" as const,
       status: "running" as const,
       createdAt: "2026-03-09T10:00:00.000Z",
       updatedAt: "2026-03-09T10:00:00.000Z",
@@ -1874,7 +1874,7 @@ describe("createSidebarThreadHoverAnchorId", () => {
 });
 
 function makeProject(overrides: Partial<Project> = {}): Project {
-  const { defaultModelSelection, ...rest } = overrides;
+  const { defaultEngineSelection, ...rest } = overrides;
   return {
     id: ProjectId.makeUnsafe("project-1"),
     kind: "project",
@@ -1883,10 +1883,10 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     folderName: "project",
     localName: null,
     cwd: "/tmp/project",
-    defaultModelSelection: {
-      provider: "codex",
+    defaultEngineSelection: {
+      engine: "codex",
       model: "gpt-5.4",
-      ...defaultModelSelection,
+      ...defaultEngineSelection,
     },
     expanded: true,
     spaceId: null,
@@ -1903,10 +1903,10 @@ function makeThread(overrides: Partial<Thread> = {}): Thread {
     codexThreadId: null,
     projectId: ProjectId.makeUnsafe("project-1"),
     title: "Thread",
-    modelSelection: {
-      provider: "codex",
+    engineSelection: {
+      engine: "codex",
       model: "gpt-5.4",
-      ...overrides?.modelSelection,
+      ...overrides?.engineSelection,
     },
     runtimeMode: DEFAULT_RUNTIME_MODE,
     interactionMode: DEFAULT_INTERACTION_MODE,
@@ -1932,8 +1932,8 @@ function makeSidebarThreadSummary(
     id: ThreadId.makeUnsafe("thread-1"),
     projectId: ProjectId.makeUnsafe("project-1"),
     title: "Thread",
-    modelSelection: {
-      provider: "codex",
+    engineSelection: {
+      engine: "codex",
       model: "gpt-5.4",
     },
     interactionMode: DEFAULT_INTERACTION_MODE,
@@ -2384,7 +2384,7 @@ describe("sortThreadsForSidebar", () => {
           createdAt: "2026-03-09T09:00:00.000Z",
           updatedAt: "2026-03-09T09:00:00.000Z",
           session: {
-            provider: "codex" as const,
+            engine: "codex" as const,
             status: "running" as const,
             createdAt: "2026-03-09T09:00:00.000Z",
             updatedAt: "2026-03-09T09:00:00.000Z",

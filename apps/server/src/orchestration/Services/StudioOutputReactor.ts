@@ -1,7 +1,7 @@
 /**
  * StudioOutputReactor - Studio output capture service interface.
  *
- * Owns pre-provider snapshots of the Studio workspace tree and the background
+ * Owns pre-engine snapshots of the Studio workspace tree and the background
  * worker that diffs them at turn end, attributing produced files to the thread.
  * Complements Git checkpoints, which intentionally do not run in the
  * (typically non-Git) Studio root.
@@ -17,14 +17,14 @@ import type { Effect, Scope } from "effect";
  */
 export interface StudioOutputReactorShape {
   /**
-   * Capture a non-Git Studio workspace baseline before provider execution begins.
-   * ProviderCommandReactor awaits this immediately before starting a new turn so
+   * Capture a non-Git Studio workspace baseline before engine execution begins.
+   * EngineCommandReactor awaits this immediately before starting a new turn so
    * fast shell writes cannot race into the baseline.
    */
   readonly captureBaselineBeforeTurn: (threadId: ThreadId) => Effect.Effect<void>;
 
   /**
-   * Drop a prepared baseline when provider dispatch fails before a turn starts.
+   * Drop a prepared baseline when engine dispatch fails before a turn starts.
    */
   readonly cancelPendingTurnBaseline: (threadId: ThreadId) => Effect.Effect<void>;
 
@@ -34,9 +34,9 @@ export interface StudioOutputReactorShape {
    * The returned effect must be run in a scope so the worker fiber can be
    * finalized on shutdown.
    *
-   * Consumes provider-runtime turn lifecycle events via an internal queue. A
+   * Consumes engine-runtime turn lifecycle events via an internal queue. A
    * `turn.started` event associates the already captured pre-dispatch baseline
-   * with the provider turn id; terminal events diff and persist it.
+   * with the engine turn id; terminal events diff and persist it.
    */
   readonly start: Effect.Effect<void, never, Scope.Scope>;
 

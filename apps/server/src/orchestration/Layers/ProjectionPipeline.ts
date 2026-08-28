@@ -71,7 +71,7 @@ import { applySpaceMetadataProjection } from "../spaceMetadataProjection.ts";
 import { resolveStableMessageTurnId } from "../messageTurnId.ts";
 import { settleTurnStateFromSession } from "../turnLifecycle.ts";
 import {
-  deriveTurnStartModelSelection,
+  deriveTurnStartEngineSelection,
   deriveTurnStartSession,
   shouldDeferTurnStartBindingProjection,
 } from "../turnStartSession.ts";
@@ -193,10 +193,10 @@ const THREAD_TURN_PROJECTION_EVENT_TYPES = new Set<OrchestrationEvent["type"]>([
 const PENDING_INTERACTION_ACTIVITY_KINDS = new Set([
   "approval.requested",
   "approval.resolved",
-  "provider.approval.respond.failed",
+  "engine.approval.respond.failed",
   "user-input.requested",
   "user-input.resolved",
-  "provider.user-input.respond.failed",
+  "engine.user-input.respond.failed",
 ]);
 
 const PENDING_INTERACTION_EVENT_TYPES = new Set<OrchestrationEvent["type"]>([
@@ -558,7 +558,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             projectId: event.payload.projectId,
             groupIds: [],
             title: event.payload.title,
-            modelSelection: event.payload.modelSelection,
+            engineSelection: event.payload.engineSelection,
             runtimeMode: event.payload.runtimeMode,
             interactionMode: event.payload.interactionMode,
             envMode: isStudio ? "local" : (event.payload.envMode ?? "local"),
@@ -634,8 +634,8 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
               ...thread,
               ...(event.payload.title !== undefined ? { title: event.payload.title } : {}),
               ...(event.payload.groupIds !== undefined ? { groupIds: event.payload.groupIds } : {}),
-              ...(event.payload.modelSelection !== undefined
-                ? { modelSelection: event.payload.modelSelection }
+              ...(event.payload.engineSelection !== undefined
+                ? { engineSelection: event.payload.engineSelection }
                 : {}),
               ...(isStudio
                 ? {
@@ -834,20 +834,20 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             Option.isNone(session) &&
             messages.length <= 1;
           const deferBindingProjection = shouldDeferTurnStartBindingProjection({
-            currentModelSelection: existingRow.value.modelSelection,
+            currentEngineSelection: existingRow.value.engineSelection,
             currentRuntimeMode: existingRow.value.runtimeMode,
             currentInteractionMode: existingRow.value.interactionMode,
             currentSession: Option.getOrNull(session),
-            requestedModelSelection: event.payload.modelSelection,
+            requestedEngineSelection: event.payload.engineSelection,
             requestedRuntimeMode: event.payload.runtimeMode,
             requestedInteractionMode: event.payload.interactionMode,
             canAdoptRequestedProvider: canAdoptFirstTurnProvider,
           });
-          const projectedModelSelection = deferBindingProjection
-            ? existingRow.value.modelSelection
-            : deriveTurnStartModelSelection({
-                currentModelSelection: existingRow.value.modelSelection,
-                requestedModelSelection: event.payload.modelSelection,
+          const projectedEngineSelection = deferBindingProjection
+            ? existingRow.value.engineSelection
+            : deriveTurnStartEngineSelection({
+                currentEngineSelection: existingRow.value.engineSelection,
+                requestedEngineSelection: event.payload.engineSelection,
                 canAdoptRequestedProvider: canAdoptFirstTurnProvider,
               });
           // Automation-dispatched turns run with the automation's modes but must not
@@ -857,8 +857,8 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             event.payload.dispatchOrigin !== "automation" && !deferBindingProjection;
           yield* projectionThreadRepository.upsert({
             ...existingRow.value,
-            ...(projectedModelSelection !== existingRow.value.modelSelection
-              ? { modelSelection: projectedModelSelection }
+            ...(projectedEngineSelection !== existingRow.value.engineSelection
+              ? { engineSelection: projectedEngineSelection }
               : {}),
             ...(adoptTurnModes
               ? {
@@ -1382,7 +1382,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             kind: event.payload.activity.kind,
             summary: event.payload.activity.summary,
             payload: event.payload.activity.payload,
-            // Provider runtime activities already carry the durable runtime-journal
+            // Engine runtime activities already carry the durable runtime-journal
             // causal sequence shared with assistant text segments. The orchestration
             // envelope only sequences generic activities that do not carry one.
             sequence: event.payload.activity.sequence ?? event.sequence,
@@ -1444,9 +1444,9 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             threadId: event.payload.threadId,
             currentSession: Option.getOrNull(currentSession),
             providerName:
-              Option.getOrNull(thread)?.modelSelection.provider ??
+              Option.getOrNull(thread)?.engineSelection.engine ??
               Option.getOrNull(currentSession)?.providerName ??
-              event.payload.modelSelection?.provider ??
+              event.payload.engineSelection?.engine ??
               null,
             requestedRuntimeMode: event.payload.runtimeMode,
             requestedAt: event.payload.createdAt,
@@ -1588,7 +1588,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
               requestedAt: Option.isSome(pendingTurnStart)
                 ? pendingTurnStart.value.requestedAt
                 : event.occurredAt,
-              // Keep `startedAt` tied to provider runtime start, not the earlier user dispatch.
+              // Keep `startedAt` tied to engine runtime start, not the earlier user dispatch.
               startedAt: event.payload.session.updatedAt ?? event.occurredAt,
               completedAt: null,
               checkpointTurnCount: null,
@@ -1653,7 +1653,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
         }
 
         case "thread.turn-interrupt-requested": {
-          // An interrupt request is only intent, not confirmation. The provider
+          // An interrupt request is only intent, not confirmation. The engine
           // can still reject it or time out, so we keep the persisted turn state
           // unchanged until a terminal runtime event arrives.
           return;
@@ -1661,12 +1661,12 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
 
         case "thread.task-stop-requested": {
           // Same as interrupts: intent only. Task state settles via the
-          // provider's task lifecycle events.
+          // engine's task lifecycle events.
           return;
         }
 
         case "thread.task-background-requested": {
-          // Intent only: the provider confirms via a task_updated backgrounded patch.
+          // Intent only: the engine confirms via a task_updated backgrounded patch.
           return;
         }
 
@@ -1677,7 +1677,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
           });
           const isProviderDiffPlaceholder =
             event.payload.status === "missing" &&
-            event.payload.checkpointRef.startsWith("provider-diff:");
+            event.payload.checkpointRef.startsWith("engine-diff:");
           const nextState = isProviderDiffPlaceholder
             ? Option.match(existingTurn, {
                 onNone: () => "running" as const,
@@ -1817,11 +1817,11 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
           const interactionKind =
             activity.kind === "approval.requested" ||
             activity.kind === "approval.resolved" ||
-            activity.kind === "provider.approval.respond.failed"
+            activity.kind === "engine.approval.respond.failed"
               ? ("approval" as const)
               : activity.kind === "user-input.requested" ||
                   activity.kind === "user-input.resolved" ||
-                  activity.kind === "provider.user-input.respond.failed"
+                  activity.kind === "engine.user-input.respond.failed"
                 ? ("userInput" as const)
                 : null;
           if (interactionKind === null) return;
@@ -1878,8 +1878,8 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
               resolvedAt: activity.createdAt,
             } as const;
           } else if (
-            activity.kind === "provider.approval.respond.failed" ||
-            activity.kind === "provider.user-input.respond.failed"
+            activity.kind === "engine.approval.respond.failed" ||
+            activity.kind === "engine.user-input.respond.failed"
           ) {
             if (Option.isNone(existingRow)) {
               return;
@@ -1889,12 +1889,12 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
               "responseCommandId",
             );
             if (responseCommandIdValue === null) {
-              // Reconciliation (server restart, provider session restart)
+              // Reconciliation (server restart, engine session restart)
               // reports stale requests without a claiming response command: no
-              // response was in flight, but the provider callback that could
+              // response was in flight, but the engine callback that could
               // consume the interaction is gone. Settle the row anyway —
               // leaving it `pending` kept threads answerable-looking forever
-              // while every actual response hit a dead provider.
+              // while every actual response hit a dead engine.
               if (
                 existingRow.value.status === "confirmed" ||
                 !isStalePendingRequestFailureDetail(

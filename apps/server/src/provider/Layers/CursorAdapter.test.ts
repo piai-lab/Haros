@@ -1,6 +1,6 @@
 // FILE: CursorAdapter.test.ts
 // Purpose: Characterizes Cursor's private OmniMind host-policy delivery.
-// Layer: Provider adapter tests
+// Layer: Engine adapter tests
 
 import { HARNESSOS_HARNESS_POLICY_MARKER } from "../../agentGateway/harnessPolicy.ts";
 import { describe, expect, it } from "vitest";

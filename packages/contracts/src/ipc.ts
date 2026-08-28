@@ -185,16 +185,16 @@ import type {
   ServerGetSettingsResult,
   ServerListLocalServersResult,
   ServerListWorktreesResult,
-  ServerProviderUpdateInput,
-  ServerProviderUpdateResult,
+  ServerEngineUpdateInput,
+  ServerEngineUpdateResult,
   ServerRefreshProvidersResult,
   ServerResetSettingsResult,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
   ServerUpdateSettingsInput,
   ServerUpdateSettingsResult,
-  ServerUpdateProviderCredentialInput,
-  ServerUpdateProviderCredentialResult,
+  ServerUpdateEngineCredentialInput,
+  ServerUpdateEngineCredentialResult,
   ServerUpsertKeybindingInput,
   ServerUpsertKeybindingResult,
   ServerVoicePrewarmInput,
@@ -239,28 +239,28 @@ import type {
 import type { EditorId } from "./editor";
 import type { ThreadId } from "./baseSchemas";
 import type {
-  ProviderComposerCapabilities,
-  ProviderGetComposerCapabilitiesInput,
-  ProviderListAgentsInput,
-  ProviderListAgentsResult,
-  ProviderListCommandsInput,
-  ProviderListCommandsResult,
-  ProviderListModelsInput,
-  ProviderListModelsResult,
-  ProviderListPluginsInput,
-  ProviderListPluginsResult,
-  ProviderListSkillsInput,
-  ProviderListSkillsResult,
-  ProviderSkillsCatalogInput,
-  ProviderSkillsCatalogResult,
-  ProviderReadPluginInput,
-  ProviderReadPluginResult,
-} from "./providerDiscovery";
+  EngineComposerCapabilities,
+  EngineGetComposerCapabilitiesInput,
+  EngineListAgentsInput,
+  EngineListAgentsResult,
+  EngineListCommandsInput,
+  EngineListCommandsResult,
+  EngineListModelsInput,
+  EngineListModelsResult,
+  EngineListPluginsInput,
+  EngineListPluginsResult,
+  EngineListSkillsInput,
+  EngineListSkillsResult,
+  EngineSkillsCatalogInput,
+  EngineSkillsCatalogResult,
+  EngineReadPluginInput,
+  EngineReadPluginResult,
+} from "./engineDiscovery";
 import type {
-  ProviderExecutionCapabilities,
-  ProviderExecutionCapabilitiesInput,
-} from "./providerExecution";
-import type { ProviderCompactThreadInput } from "./provider";
+  EngineExecutionCapabilities,
+  EngineExecutionCapabilitiesInput,
+} from "./engineExecution";
+import type { EngineCompactThreadInput } from "./engine";
 import type {
   OmniMindCustomModelServiceRemoveInput,
   OmniMindCustomModelServiceRemoveResult,
@@ -883,9 +883,9 @@ export interface NativeApi {
     getSettings: () => Promise<ServerGetSettingsResult>;
     updateSettings: (input: ServerUpdateSettingsInput) => Promise<ServerUpdateSettingsResult>;
     resetSettings: () => Promise<ServerResetSettingsResult>;
-    updateProviderCredential: (
-      input: ServerUpdateProviderCredentialInput,
-    ) => Promise<ServerUpdateProviderCredentialResult>;
+    updateEngineCredential: (
+      input: ServerUpdateEngineCredentialInput,
+    ) => Promise<ServerUpdateEngineCredentialResult>;
     getAuthSession: () => Promise<AuthSessionState>;
     bootstrapAuth: (input: AuthBootstrapInput) => Promise<AuthBootstrapResult>;
     bootstrapBearerAuth: (input: AuthBootstrapInput) => Promise<AuthBearerBootstrapResult>;
@@ -909,8 +909,8 @@ export interface NativeApi {
     refreshExternalMcpPairing: (
       input: ExternalMcpRefreshPairingInput,
     ) => Promise<ExternalMcpCreateIntegrationResult>;
-    refreshProviders: () => Promise<ServerRefreshProvidersResult>;
-    updateProvider: (input: ServerProviderUpdateInput) => Promise<ServerProviderUpdateResult>;
+    refreshEngines: () => Promise<ServerRefreshProvidersResult>;
+    updateEngine: (input: ServerEngineUpdateInput) => Promise<ServerEngineUpdateResult>;
     listWorktrees: () => Promise<ServerListWorktreesResult>;
     listLocalServers: () => Promise<ServerListLocalServersResult>;
     stopLocalServer: (input: ServerStopLocalServerInput) => Promise<ServerStopLocalServerResult>;
@@ -940,27 +940,27 @@ export interface NativeApi {
       input: StatsGetProfileTokenStatsInput,
     ) => Promise<StatsGetProfileTokenStatsResult>;
   };
-  provider: {
+  engine: {
     getComposerCapabilities: (
-      input: ProviderGetComposerCapabilitiesInput,
-    ) => Promise<ProviderComposerCapabilities>;
+      input: EngineGetComposerCapabilitiesInput,
+    ) => Promise<EngineComposerCapabilities>;
     getExecutionCapabilities: (
-      input: ProviderExecutionCapabilitiesInput,
-    ) => Promise<ProviderExecutionCapabilities>;
-    compactThread: (input: ProviderCompactThreadInput) => Promise<void>;
-    listCommands: (input: ProviderListCommandsInput) => Promise<ProviderListCommandsResult>;
-    listSkills: (input: ProviderListSkillsInput) => Promise<ProviderListSkillsResult>;
-    listSkillsCatalog: (input: ProviderSkillsCatalogInput) => Promise<ProviderSkillsCatalogResult>;
-    listPlugins: (input: ProviderListPluginsInput) => Promise<ProviderListPluginsResult>;
-    readPlugin: (input: ProviderReadPluginInput) => Promise<ProviderReadPluginResult>;
+      input: EngineExecutionCapabilitiesInput,
+    ) => Promise<EngineExecutionCapabilities>;
+    compactThread: (input: EngineCompactThreadInput) => Promise<void>;
+    listCommands: (input: EngineListCommandsInput) => Promise<EngineListCommandsResult>;
+    listSkills: (input: EngineListSkillsInput) => Promise<EngineListSkillsResult>;
+    listSkillsCatalog: (input: EngineSkillsCatalogInput) => Promise<EngineSkillsCatalogResult>;
+    listPlugins: (input: EngineListPluginsInput) => Promise<EngineListPluginsResult>;
+    readPlugin: (input: EngineReadPluginInput) => Promise<EngineReadPluginResult>;
     listModels: (
-      input: ProviderListModelsInput,
+      input: EngineListModelsInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<ProviderListModelsResult>;
+    ) => Promise<EngineListModelsResult>;
     listAgents: (
-      input: ProviderListAgentsInput,
+      input: EngineListAgentsInput,
       options?: { readonly signal?: AbortSignal },
-    ) => Promise<ProviderListAgentsResult>;
+    ) => Promise<EngineListAgentsResult>;
   };
   omnimindModelServices: {
     list: (

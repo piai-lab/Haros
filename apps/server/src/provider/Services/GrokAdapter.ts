@@ -1,15 +1,15 @@
 /**
- * GrokAdapter - Grok Build CLI ACP implementation of the generic provider contract.
+ * GrokAdapter - Grok Build CLI ACP implementation of the generic engine contract.
  *
  * @module GrokAdapter
  */
 import { ServiceMap } from "effect";
 
-import type { ProviderAdapterError } from "../Errors.ts";
-import type { ProviderAdapterShape } from "./ProviderAdapter.ts";
+import type { EngineAdapterError } from "../Errors.ts";
+import type { EngineAdapterShape } from "./EngineAdapter.ts";
 
-export interface GrokAdapterShape extends ProviderAdapterShape<ProviderAdapterError> {
-  readonly provider: "grok";
+export interface GrokAdapterShape extends EngineAdapterShape<EngineAdapterError> {
+  readonly engine: "grok";
 }
 
 export class GrokAdapter extends ServiceMap.Service<GrokAdapter, GrokAdapterShape>()(

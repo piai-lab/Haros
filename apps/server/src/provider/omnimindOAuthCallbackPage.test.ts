@@ -32,7 +32,7 @@ describe("OmniMind OAuth callback page", () => {
     expect(html).not.toContain("#09090b");
   });
 
-  it("uses recoverable product copy and never exposes raw provider error details", () => {
+  it("uses recoverable product copy and never exposes raw engine error details", () => {
     const html = createOmniMindOAuthPageRenderer({
       serviceName: '<OpenRouter & "Proxy">',
       logoDataUrl: null,

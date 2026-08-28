@@ -1,5 +1,5 @@
 import type { ResolvedThreadWorkspaceState } from "@harnessos/shared/threadEnvironment";
-import type { ProviderInteractionMode } from "@harnessos/contracts";
+import type { EngineInteractionMode } from "@harnessos/contracts";
 import type { DraftThreadEnvMode } from "../../composerDraftStore";
 import {
   type ContextWindowSnapshot,
@@ -63,7 +63,7 @@ export function ComposerSlashStatusDialog(props: {
   onOpenChange: (open: boolean) => void;
   selectedModel: string | null | undefined;
   nativeOptionsSummary: string;
-  interactionMode: ProviderInteractionMode;
+  interactionMode: EngineInteractionMode;
   envMode: DraftThreadEnvMode;
   envState: ResolvedThreadWorkspaceState;
   branch: string | null;

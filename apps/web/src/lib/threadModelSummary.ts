@@ -1,23 +1,23 @@
 // FILE: threadModelSummary.ts
-// Purpose: Summarize a thread's model selection (provider + model name + reasoning
+// Purpose: Summarize a thread's model selection (engine + model name + reasoning
 //          effort) for read-only surfaces such as the sidebar hover card.
 // Layer: Web presentation helpers
 // Exports: ThreadModelSummary, resolveThreadModelSummary
 // Why: Reuses the composer's trait resolution so a thread's model reads exactly
 //      the same wherever it is displayed.
 
-import type { ModelSelection, EngineKind } from "@harnessos/contracts";
+import type { EngineSelection, EngineKind } from "@harnessos/contracts";
 
 import {
   getComposerTraitSelection,
   resolveComposerTraitStatusLabel,
   showsComposerFastModeBadge,
 } from "~/components/chat/composerTraits";
-import { formatProviderModelOptionName, type ProviderOptions } from "~/providerModelOptions";
+import { formatProviderModelOptionName, type EngineOptions } from "~/providerModelOptions";
 
 export interface ThreadModelSummary {
-  provider: EngineKind;
-  modelSelection: ModelSelection;
+  engine: EngineKind;
+  engineSelection: EngineSelection;
   /** Display name of the selected model, e.g. "Sonnet 4.5". */
   modelLabel: string;
   /** Reasoning effort / thinking label, e.g. "High"; null when the model has none. */
@@ -26,30 +26,30 @@ export interface ThreadModelSummary {
 }
 
 export function resolveThreadModelSummary(
-  modelSelection: ModelSelection | null | undefined,
+  engineSelection: EngineSelection | null | undefined,
 ): ThreadModelSummary | null {
-  if (!modelSelection) {
+  if (!engineSelection) {
     return null;
   }
-  // Deliberately the selection's provider, not `resolveThreadDisplayProvider`:
+  // Deliberately the selection's engine, not `resolveThreadDisplayProvider`:
   // the glyph and the model name must describe the same selection, and a live
-  // session can briefly report a different provider than the stored selection.
-  const provider = modelSelection.provider;
-  const modelLabel = formatProviderModelOptionName({ provider, slug: modelSelection.model });
+  // session can briefly report a different engine than the stored selection.
+  const engine = engineSelection.engine;
+  const modelLabel = formatProviderModelOptionName({ engine, slug: engineSelection.model });
   if (modelLabel.length === 0) {
     return null;
   }
   // The prompt only matters for prompt-injected efforts (Claude's ultrathink),
   // which a stored selection never carries, so an empty draft is correct here.
   const traits = getComposerTraitSelection(
-    provider,
-    modelSelection.model,
+    engine,
+    engineSelection.model,
     "",
-    modelSelection.options as ProviderOptions | undefined,
+    engineSelection.options as EngineOptions | undefined,
   );
   return {
-    provider,
-    modelSelection,
+    engine,
+    engineSelection,
     modelLabel,
     statusLabel: resolveComposerTraitStatusLabel(traits),
     fastMode: showsComposerFastModeBadge(traits),

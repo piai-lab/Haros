@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 
 import { resolveProviderExecutionCapabilities } from "./executionCapabilityProjection.ts";
 import {
-  PROVIDER_EXECUTION_STRUCTURE,
-  providerExecutionStructure,
-} from "./providerExecutionStructure.ts";
+  ENGINE_EXECUTION_STRUCTURE,
+  engineExecutionStructure,
+} from "./engineExecutionStructure.ts";
 
-const readyStatus = (provider: (typeof ENGINE_KINDS)[number]) => ({
-  provider,
+const readyStatus = (engine: (typeof ENGINE_KINDS)[number]) => ({
+  engine,
   status: "ready" as const,
   available: true,
   authStatus: "authenticated" as const,
@@ -16,16 +16,16 @@ const readyStatus = (provider: (typeof ENGINE_KINDS)[number]) => ({
   checkedAt: "2026-08-25T00:00:00.000Z",
 });
 
-describe("provider execution capability projection", () => {
+describe("engine execution capability projection", () => {
   it("keeps the structural descriptor exhaustive over canonical identity", () => {
-    expect(Object.keys(PROVIDER_EXECUTION_STRUCTURE)).toEqual([...ENGINE_KINDS]);
+    expect(Object.keys(ENGINE_EXECUTION_STRUCTURE)).toEqual([...ENGINE_KINDS]);
   });
 
-  it.each(ENGINE_KINDS)("projects the canonical interaction-mode matrix for %s", (provider) => {
+  it.each(ENGINE_KINDS)("projects the canonical interaction-mode matrix for %s", (engine) => {
     const result = resolveProviderExecutionCapabilities({
-      modelSelection: { provider, model: `${provider}-test` },
-      adapterCapabilities: providerExecutionStructure(provider),
-      providerStatus: readyStatus(provider),
+      engineSelection: { engine, model: `${engine}-test` },
+      adapterCapabilities: engineExecutionStructure(engine),
+      providerStatus: readyStatus(engine),
     });
     expect(result.interactionModes.default).toMatchObject({
       mode: "default",
@@ -38,7 +38,7 @@ describe("provider execution capability projection", () => {
       status: "ready",
     });
     expect(result.interactionModes.plan).toMatchObject(
-      provider === "pi" || provider === "antigravity"
+      engine === "pi" || engine === "antigravity"
         ? { mode: "plan", structurallySupported: false, reason: "mode-unsupported" }
         : { mode: "plan", structurallySupported: true, status: "ready" },
     );
@@ -46,7 +46,7 @@ describe("provider execution capability projection", () => {
 
   it("fails closed when the adapter is not registered", () => {
     const result = resolveProviderExecutionCapabilities({
-      modelSelection: { provider: "codex", model: "gpt-test" },
+      engineSelection: { engine: "codex", model: "gpt-test" },
       adapterCapabilities: null,
       providerStatus: readyStatus("codex"),
     });
@@ -65,12 +65,12 @@ describe("provider execution capability projection", () => {
   });
 
   it.each(["oa", "pi"] as const)(
-    "does not advertise approval-required for Pi-family provider %s without a request bridge",
-    (provider) => {
+    "does not advertise approval-required for Pi-family engine %s without a request bridge",
+    (engine) => {
       const result = resolveProviderExecutionCapabilities({
-        modelSelection: { provider, model: `${provider}-test` },
-        adapterCapabilities: providerExecutionStructure(provider),
-        providerStatus: readyStatus(provider),
+        engineSelection: { engine, model: `${engine}-test` },
+        adapterCapabilities: engineExecutionStructure(engine),
+        providerStatus: readyStatus(engine),
       });
 
       expect(result.runtimeModes["full-access"].status).toBe("ready");
@@ -82,10 +82,10 @@ describe("provider execution capability projection", () => {
   );
 
   it("separates model support from current CLI health for Auto", () => {
-    const structure = providerExecutionStructure("claude");
+    const structure = engineExecutionStructure("claude");
     const unsupportedModel = resolveProviderExecutionCapabilities({
-      modelSelection: {
-        provider: "claude",
+      engineSelection: {
+        engine: "claude",
         model: "claude-test",
         supportsAutoMode: false,
       },
@@ -98,8 +98,8 @@ describe("provider execution capability projection", () => {
     });
 
     const unsupportedCli = resolveProviderExecutionCapabilities({
-      modelSelection: { provider: "codex", model: "gpt-test" },
-      adapterCapabilities: providerExecutionStructure("codex"),
+      engineSelection: { engine: "codex", model: "gpt-test" },
+      adapterCapabilities: engineExecutionStructure("codex"),
       providerStatus: { ...readyStatus("codex"), supportsAutoRuntimeMode: false },
     });
     expect(unsupportedCli.runtimeModes.auto).toMatchObject({
@@ -111,8 +111,8 @@ describe("provider execution capability projection", () => {
 
   it("preserves structural support while transient health is degraded", () => {
     const result = resolveProviderExecutionCapabilities({
-      modelSelection: { provider: "codex", model: "gpt-test" },
-      adapterCapabilities: providerExecutionStructure("codex"),
+      engineSelection: { engine: "codex", model: "gpt-test" },
+      adapterCapabilities: engineExecutionStructure("codex"),
       providerStatus: {
         ...readyStatus("codex"),
         status: "warning",
@@ -126,10 +126,10 @@ describe("provider execution capability projection", () => {
     });
   });
 
-  it("keeps provider health failures ahead of Auto-version evidence", () => {
+  it("keeps engine health failures ahead of Auto-version evidence", () => {
     const notInstalled = resolveProviderExecutionCapabilities({
-      modelSelection: { provider: "codex", model: "gpt-test" },
-      adapterCapabilities: providerExecutionStructure("codex"),
+      engineSelection: { engine: "codex", model: "gpt-test" },
+      adapterCapabilities: engineExecutionStructure("codex"),
       providerStatus: {
         ...readyStatus("codex"),
         status: "error",
@@ -141,14 +141,14 @@ describe("provider execution capability projection", () => {
     expect(notInstalled.runtimeModes.auto).toMatchObject({
       structurallySupported: true,
       status: "unavailable",
-      reason: "provider-not-installed",
+      reason: "engine-not-installed",
     });
 
     const unknownVersion = resolveProviderExecutionCapabilities({
-      modelSelection: { provider: "codex", model: "gpt-test" },
-      adapterCapabilities: providerExecutionStructure("codex"),
+      engineSelection: { engine: "codex", model: "gpt-test" },
+      adapterCapabilities: engineExecutionStructure("codex"),
       providerStatus: {
-        provider: "codex",
+        engine: "codex",
         status: "ready",
         available: true,
         authStatus: "authenticated",

@@ -1,6 +1,6 @@
 // FILE: studioWorkspaceScaffold.ts
 // Purpose: Owns the managed Studio workspace layout — the scaffolded subdirectory set and
-//          the agent-facing instruction files (AGENTS.md/CLAUDE.md) that teach providers
+//          the agent-facing instruction files (AGENTS.md/CLAUDE.md) that teach engines
 //          where deliverables belong. Instructions are only written when missing so user
 //          edits are never clobbered.
 // Layer: Server workspace helper
@@ -25,7 +25,7 @@ export const STUDIO_WORKSPACE_SUBDIRECTORIES = [
   "Outbox/YouTube",
 ] as const;
 
-// One source of truth for the instruction text; AGENTS.md is the cross-provider standard
+// One source of truth for the instruction text; AGENTS.md is the cross-engine standard
 // (Codex, Cursor, ...), CLAUDE.md is what Claude Code actually loads.
 const STUDIO_WORKSPACE_INSTRUCTIONS = `# Studio Workspace
 

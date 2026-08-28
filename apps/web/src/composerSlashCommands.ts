@@ -1,11 +1,11 @@
 import {
   THREAD_GOAL_MAX_CHARS,
   type GitBranch,
-  type ProviderInteractionMode,
+  type EngineInteractionMode,
   type EngineKind,
 } from "@harnessos/contracts";
 import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
-import { DEFAULT_PROVIDER_ORDER } from "./providerOrdering";
+import { DEFAULT_PROVIDER_ORDER } from "./engineOrdering";
 import {
   BUILT_IN_COMPOSER_SLASH_COMMANDS,
   isBuiltInComposerSlashCommandName,
@@ -46,18 +46,18 @@ const CLAUDE_NATIVE_COMMAND_ALIASES: Record<string, readonly string[]> = {
 };
 
 function getProviderNativeSlashCommandAliases(
-  provider: EngineKind,
+  engine: EngineKind,
   command: string,
 ): readonly string[] {
   const normalizedCommand = normalizeComposerSlashCommandName(command);
-  if (provider !== "claude") {
+  if (engine !== "claude") {
     return [];
   }
   return CLAUDE_NATIVE_COMMAND_ALIASES[normalizedCommand] ?? [];
 }
 
 function expandProviderNativeSlashCommandNames(
-  provider: EngineKind,
+  engine: EngineKind,
   commandNames: ReadonlyArray<string>,
 ): string[] {
   const expandedNames = new Set<string>();
@@ -67,7 +67,7 @@ function expandProviderNativeSlashCommandNames(
       continue;
     }
     expandedNames.add(normalizedCommandName);
-    for (const alias of getProviderNativeSlashCommandAliases(provider, normalizedCommandName)) {
+    for (const alias of getProviderNativeSlashCommandAliases(engine, normalizedCommandName)) {
       expandedNames.add(alias);
     }
   }
@@ -75,16 +75,16 @@ function expandProviderNativeSlashCommandNames(
 }
 
 /**
- * Providers where app-owned /review (target picker + structured prompt) must
+ * Engines where app-owned /review (target picker + structured prompt) must
  * win over listing a native "review" command. OpenCode exposes /review in its
  * command list but does not honor bare `/review` text turns (#218).
  */
-export function providerUsesAppOwnedReviewSlashCommand(provider: EngineKind): boolean {
-  return provider === "codex" || provider === "opencode";
+export function providerUsesAppOwnedReviewSlashCommand(engine: EngineKind): boolean {
+  return engine === "codex" || engine === "opencode";
 }
 
 function shouldKeepBuiltInSlashCommandDespiteNativeCollision(
-  provider: EngineKind,
+  engine: EngineKind,
   command: ComposerSlashCommand,
 ): boolean {
   return (
@@ -95,16 +95,16 @@ function shouldKeepBuiltInSlashCommandDespiteNativeCollision(
     command === "automation" ||
     command === "export" ||
     command === "feedback" ||
-    // /fork always uses OmniMind's thread fork lifecycle. A provider-native
+    // /fork always uses OmniMind's thread fork lifecycle. A engine-native
     // command with the same spelling must not replace that product action.
     command === "fork" ||
     command === "goal" ||
-    (providerUsesAppOwnedReviewSlashCommand(provider) && command === "review")
+    (providerUsesAppOwnedReviewSlashCommand(engine) && command === "review")
   );
 }
 
 export function shouldHideProviderNativeCommandFromComposerMenu(
-  provider: EngineKind,
+  engine: EngineKind,
   command: string,
   options: { readonly availableAppCommands?: ReadonlySet<string> } = {},
 ): boolean {
@@ -122,7 +122,7 @@ export function shouldHideProviderNativeCommandFromComposerMenu(
     (normalizedCommand === "feedback" && appCommandIsAvailable) ||
     (normalizedCommand === "fork" && appCommandIsAvailable) ||
     (normalizedCommand === "goal" && appCommandIsAvailable) ||
-    (providerUsesAppOwnedReviewSlashCommand(provider) && normalizedCommand === "review")
+    (providerUsesAppOwnedReviewSlashCommand(engine) && normalizedCommand === "review")
   );
 }
 
@@ -131,10 +131,10 @@ export function shouldHideProviderNativeCommandFromComposerMenu(
  * `/review` text. Codex/OpenCode use the app review UX instead (#218).
  */
 export function providerSupportsTextNativeReviewCommand(
-  provider: EngineKind,
+  engine: EngineKind,
   nativeCommandNames: ReadonlyArray<{ readonly name: string } | string>,
 ): boolean {
-  if (providerUsesAppOwnedReviewSlashCommand(provider)) {
+  if (providerUsesAppOwnedReviewSlashCommand(engine)) {
     return false;
   }
   return nativeCommandNames.some((command) => {
@@ -144,11 +144,11 @@ export function providerSupportsTextNativeReviewCommand(
 }
 
 export function getProviderNativeSlashCommandSearchTerms(
-  provider: EngineKind,
+  engine: EngineKind,
   command: string,
 ): readonly string[] {
   const normalizedCommand = normalizeComposerSlashCommandName(command);
-  return [normalizedCommand, ...getProviderNativeSlashCommandAliases(provider, normalizedCommand)];
+  return [normalizedCommand, ...getProviderNativeSlashCommandAliases(engine, normalizedCommand)];
 }
 
 export function isBuiltInComposerSlashCommand(value: string): value is ComposerSlashCommand {
@@ -187,7 +187,7 @@ export function canOfferForkSlashCommand(input: {
   terminalContextCount: number;
   selectedSkillCount: number;
   selectedMentionCount: number;
-  interactionMode: ProviderInteractionMode;
+  interactionMode: EngineInteractionMode;
 }): boolean {
   return (
     !hasMeaningfulComposerText(input.prompt) &&
@@ -205,7 +205,7 @@ export function canOfferSideSlashCommand(input: {
   terminalContextCount: number;
   selectedSkillCount: number;
   selectedMentionCount: number;
-  interactionMode: ProviderInteractionMode;
+  interactionMode: EngineInteractionMode;
   isSidechat: boolean;
 }): boolean {
   return (
@@ -304,7 +304,7 @@ export function resolveComposerSlashRootBranch(input: {
 }
 
 export function getAvailableComposerSlashCommands(input: {
-  provider: EngineKind;
+  engine: EngineKind;
   supportsFastSlashCommand: boolean;
   canOfferCompactCommand: boolean;
   canOfferReviewCommand: boolean;
@@ -315,17 +315,17 @@ export function getAvailableComposerSlashCommands(input: {
 }): ComposerSlashCommand[] {
   const collidingNativeCommandNames = new Set<ComposerSlashCommand>(
     expandProviderNativeSlashCommandNames(
-      input.provider,
+      input.engine,
       input.providerNativeCommandNames ?? [],
     ).filter(
       (name): name is ComposerSlashCommand =>
         isBuiltInComposerSlashCommand(name) &&
-        !shouldKeepBuiltInSlashCommandDespiteNativeCollision(input.provider, name),
+        !shouldKeepBuiltInSlashCommandDespiteNativeCollision(input.engine, name),
     ),
   );
 
   const availableCommands: ComposerSlashCommand[] =
-    input.provider !== "claude"
+    input.engine !== "claude"
       ? [
           "clear",
           ...(input.canOfferCompactCommand ? (["compact"] as const) : []),
@@ -348,9 +348,9 @@ export function getAvailableComposerSlashCommands(input: {
         ]
       : [
           // Claude owns most slash-command UX natively; sidechat remains app-level because it
-          // creates a OmniMind split/context clone before the provider sees the first turn.
+          // creates a OmniMind split/context clone before the engine sees the first turn.
           // Fork is app-level for the same reason: it creates a Product thread with durable
-          // fork lineage rather than forwarding provider-native command text.
+          // fork lineage rather than forwarding engine-native command text.
           // /export is app-level too — OmniMind owns the thread transcript, so the download
           // happens in the app rather than being forwarded to Claude's native /export.
           ...(input.canOfferForkCommand ? (["fork"] as const) : []),
@@ -368,12 +368,12 @@ export function getAvailableComposerSlashCommands(input: {
 }
 
 export function hasProviderNativeSlashCommand(
-  provider: EngineKind,
+  engine: EngineKind,
   commandNames: ReadonlyArray<string>,
   command: string,
 ): boolean {
   const normalizedCommand = normalizeComposerSlashCommandName(command);
-  return expandProviderNativeSlashCommandNames(provider, commandNames).includes(normalizedCommand);
+  return expandProviderNativeSlashCommandNames(engine, commandNames).includes(normalizedCommand);
 }
 
 export function buildSlashReviewComposerPrompt(args: string): string {
@@ -404,15 +404,15 @@ function matchSideProviderToken(token: string): EngineKind | null {
   const normalized = token.toLowerCase();
   return (
     DEFAULT_PROVIDER_ORDER.find(
-      (provider) =>
-        provider.toLowerCase() === normalized ||
-        ENGINE_DISPLAY_NAMES[provider].toLowerCase() === normalized,
+      (engine) =>
+        engine.toLowerCase() === normalized ||
+        ENGINE_DISPLAY_NAMES[engine].toLowerCase() === normalized,
     ) ?? null
   );
 }
 
-// `/side [provider] [prompt]`: an optional leading provider token (kind or
-// display name) starts the sidechat on that provider.
+// `/side [engine] [prompt]`: an optional leading engine token (kind or
+// display name) starts the sidechat on that engine.
 export function parseSideSlashCommandArgs(
   args: string,
   input: {

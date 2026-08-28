@@ -131,14 +131,14 @@ describe("recent view MRU logic", () => {
     ).toBeNull();
   });
 
-  it("prefers terminal visual identity over thread provider for display icons", () => {
+  it("prefers terminal visual identity over thread engine for display icons", () => {
     const terminalThreadId = threadId("thread-terminal");
     const project = { id: projectId("project-1"), name: "OmniMind" } as Project;
     const threadSummary = {
       id: terminalThreadId,
       projectId: project.id,
       title: "Dev server",
-      modelSelection: { provider: "codex", model: "gpt-5" },
+      engineSelection: { engine: "codex", model: "gpt-5" },
     } as SidebarThreadSummary;
 
     const entries = buildRecentViewDisplayEntries({
@@ -164,7 +164,7 @@ describe("recent view MRU logic", () => {
     expect(entries[0]).toMatchObject({
       icon: { kind: "terminal", iconKey: "terminal" },
       isTerminal: true,
-      provider: "codex",
+      engine: "codex",
       subtitle: "OmniMind · Terminal",
       terminalVisualIdentity: {
         cliKind: null,

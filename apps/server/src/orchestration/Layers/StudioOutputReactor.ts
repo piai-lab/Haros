@@ -4,12 +4,12 @@
  * Git checkpoints attribute produced files precisely, but the Studio root is
  * typically not a Git repository, and file-change tool activities miss files
  * created by shell subprocesses (scripts, converters, downloads). This reactor
- * closes that gap: it snapshots the Studio workspace tree before provider turn
+ * closes that gap: it snapshots the Studio workspace tree before engine turn
  * execution, rescans when the turn settles, and persists the diff as a thread activity
  * (`studio.outputs.captured`) that the Studio outputs listing reads back.
  *
  * Codex-generated images live under the Codex home, outside the Studio root, so
- * this scan never sees them; ProviderRuntimeIngestion owns copying those into
+ * this scan never sees them; EngineRuntimeIngestion owns copying those into
  * the workspace (with their own direct attribution) as image items complete.
  *
  * Concurrent Studio chats share one root, so overlapping turns may both claim
@@ -22,7 +22,7 @@ import {
   EventId,
   STUDIO_OUTPUTS_ACTIVITY_KIND,
   ThreadId,
-  type ProviderRuntimeEvent,
+  type EngineRuntimeEvent,
   type TurnId,
 } from "@harnessos/contracts";
 import { Cause, Effect, FileSystem, Layer, Option, Path, Stream } from "effect";
@@ -39,7 +39,7 @@ import {
   type StudioWorkspaceScan,
 } from "../../studioOutputs.ts";
 import { diffStudioWorkspaceScans } from "../../studioOutputs.ts";
-import { ProviderService } from "../../provider/Services/ProviderService.ts";
+import { EngineService } from "../../provider/Services/EngineService.ts";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../Services/ProjectionSnapshotQuery.ts";
 import {
@@ -71,7 +71,7 @@ interface ActiveStudioTurnBaseline extends StudioTurnBaseline {
 
 const make = Effect.gen(function* () {
   const orchestrationEngine = yield* OrchestrationEngineService;
-  const providerService = yield* ProviderService;
+  const providerService = yield* EngineService;
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
   const fileSystem = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
@@ -80,9 +80,9 @@ const make = Effect.gen(function* () {
       Effect.provideService(FileSystem.FileSystem, fileSystem),
       Effect.provideService(Path.Path, path),
     );
-  // ProviderCommandReactor writes this map before invoking sendTurn/startReview.
+  // EngineCommandReactor writes this map before invoking sendTurn/startReview.
   // The subsequent runtime turn.started event promotes the prepared entry into
-  // baselineByTurn without rescanning after provider execution has begun.
+  // baselineByTurn without rescanning after engine execution has begun.
   const pendingBaselineByThread = new Map<ThreadId, StudioTurnBaseline>();
   const baselineByTurn = new Map<string, ActiveStudioTurnBaseline>();
 
@@ -163,7 +163,7 @@ const make = Effect.gen(function* () {
   ) => Effect.sync(() => pendingBaselineByThread.delete(threadId)).pipe(Effect.asVoid);
 
   const associateTurnStartBaseline = Effect.fnUntraced(function* (
-    event: Extract<ProviderRuntimeEvent, { type: "turn.started" }>,
+    event: Extract<EngineRuntimeEvent, { type: "turn.started" }>,
   ) {
     if (event.turnId === undefined) {
       return;
@@ -179,7 +179,7 @@ const make = Effect.gen(function* () {
       return;
     }
 
-    // Provider-native/subagent turns can bypass ProviderCommandReactor. Preserve
+    // Engine-native/subagent turns can bypass EngineCommandReactor. Preserve
     // best-effort capture for those paths, while ordinary user turns always use
     // the awaited pre-dispatch baseline above.
     const workspaceRoot = yield* resolveStudioScanRoot(event.threadId);
@@ -207,9 +207,9 @@ const make = Effect.gen(function* () {
       return;
     }
 
-    // The payload mirrors the provider file-change activity shape (itemType + data
+    // The payload mirrors the engine file-change activity shape (itemType + data
     // holding `path` entries) so the Studio outputs listing extracts paths through
-    // the same collector that already handles provider payloads.
+    // the same collector that already handles engine payloads.
     yield* orchestrationEngine.dispatch({
       type: "thread.activity.append",
       commandId: serverCommandId("studio-outputs-captured"),
@@ -228,10 +228,10 @@ const make = Effect.gen(function* () {
   });
 
   // Runs on turn.completed AND turn.aborted: files produced before an interruption
-  // are still real outputs the panel should list. A pending entry covers providers
+  // are still real outputs the panel should list. A pending entry covers engines
   // that terminate without first emitting turn.started.
   const captureTurnOutputs = Effect.fnUntraced(function* (
-    event: Extract<ProviderRuntimeEvent, { type: "turn.completed" | "turn.aborted" }>,
+    event: Extract<EngineRuntimeEvent, { type: "turn.completed" | "turn.aborted" }>,
   ) {
     let baseline: StudioTurnBaseline | undefined;
     if (event.turnId !== undefined) {
@@ -251,11 +251,11 @@ const make = Effect.gen(function* () {
     });
   });
 
-  // A provider process can exit or error without a matching turn.aborted. Drain
+  // A engine process can exit or error without a matching turn.aborted. Drain
   // every baseline for that thread so real files produced before the failure are
   // still attributed and stale in-memory entries do not accumulate.
   const captureTerminatedSessionOutputs = Effect.fnUntraced(function* (
-    event: Extract<ProviderRuntimeEvent, { type: "session.exited" | "runtime.error" }>,
+    event: Extract<EngineRuntimeEvent, { type: "session.exited" | "runtime.error" }>,
   ) {
     const baselines: Array<{ baseline: StudioTurnBaseline; turnId: TurnId | null }> = [];
     const pending = pendingBaselineByThread.get(event.threadId);
@@ -278,7 +278,7 @@ const make = Effect.gen(function* () {
     );
   });
 
-  const processEvent = (event: ProviderRuntimeEvent) => {
+  const processEvent = (event: EngineRuntimeEvent) => {
     if (event.type === "turn.started") {
       return associateTurnStartBaseline(event);
     }
@@ -291,7 +291,7 @@ const make = Effect.gen(function* () {
     return Effect.void;
   };
 
-  const processEventSafely = (event: ProviderRuntimeEvent) =>
+  const processEventSafely = (event: EngineRuntimeEvent) =>
     processEvent(event).pipe(
       Effect.catchCause((cause) => {
         if (Cause.hasInterruptsOnly(cause)) {

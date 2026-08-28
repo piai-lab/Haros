@@ -1,6 +1,6 @@
 import type {
-  ProviderExecutionCapabilityReason,
-  ProviderRuntimeModeCapability,
+  EngineExecutionCapabilityReason,
+  EngineRuntimeModeCapability,
 } from "@harnessos/contracts";
 import { isProviderRuntimeModeExecutable } from "@harnessos/shared/runtimeMode";
 
@@ -9,14 +9,14 @@ import { cn } from "~/lib/utils";
 
 export function runtimeModeAvailabilityMessageKey(input: {
   readonly structurallySupported: boolean;
-  readonly status?: ProviderRuntimeModeCapability["status"] | undefined;
-  readonly reason?: ProviderExecutionCapabilityReason | undefined;
+  readonly status?: EngineRuntimeModeCapability["status"] | undefined;
+  readonly reason?: EngineExecutionCapabilityReason | undefined;
 }) {
   switch (input.reason) {
     case "mode-unsupported":
     case "model-unsupported":
       return "composer.runtimeModeUnsupported" as const;
-    case "provider-not-installed":
+    case "engine-not-installed":
       return "composer.runtimeModeProviderNotInstalled" as const;
     case "authentication-required":
       return "composer.runtimeModeAuthenticationRequired" as const;
@@ -48,7 +48,7 @@ export function runtimeModeAvailabilityMessageKeyFromError(error: unknown) {
     code !== "mode-unsupported" &&
     code !== "model-unsupported" &&
     code !== "model-capability-unknown" &&
-    code !== "provider-not-installed" &&
+    code !== "engine-not-installed" &&
     code !== "authentication-required" &&
     code !== "runtime-health-unknown" &&
     code !== "runtime-degraded" &&
@@ -67,7 +67,7 @@ export function RuntimeModeAvailabilityHint({
   resolution = "resolved",
   className,
 }: {
-  readonly capability: ProviderRuntimeModeCapability | undefined;
+  readonly capability: EngineRuntimeModeCapability | undefined;
   readonly resolution?: "pending" | "failed" | "resolved" | undefined;
   readonly className?: string | undefined;
 }) {

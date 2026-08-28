@@ -1,12 +1,12 @@
 // FILE: providerModelOptions.test.ts
-// Purpose: Verifies provider-aware model-name formatting for picker and composer labels.
+// Purpose: Verifies engine-aware model-name formatting for picker and composer labels.
 // Layer: Web unit tests
 // Depends on: providerModelOptions shared formatting helpers.
 
 import { describe, expect, it } from "vitest";
 
 import {
-  buildModelSelection,
+  buildEngineSelection,
   buildNextProviderOptions,
   buildProviderOptionPatch,
   formatProviderModelOptionName,
@@ -18,7 +18,7 @@ import {
   resolveModelPresentationIdentity,
   resolveModelGroupDefaultOpen,
   shouldUseCollapsibleModelGroups,
-  type ProviderModelOption,
+  type EngineModelOption,
 } from "./providerModelOptions";
 
 describe("Antigravity model options", () => {
@@ -28,8 +28,8 @@ describe("Antigravity model options", () => {
     });
 
     expect(options).toEqual({ reasoningEffort: "high" });
-    expect(buildModelSelection("antigravity", "Gemini 3.5 Flash", options)).toEqual({
-      provider: "antigravity",
+    expect(buildEngineSelection("antigravity", "Gemini 3.5 Flash", options)).toEqual({
+      engine: "antigravity",
       model: "Gemini 3.5 Flash",
       options: { reasoningEffort: "high" },
     });
@@ -38,8 +38,8 @@ describe("Antigravity model options", () => {
 
 describe("Claude model selections", () => {
   it("preserves the discovered Auto capability with the selected model", () => {
-    expect(buildModelSelection("claude", "claude-haiku-4-5", undefined, false)).toEqual({
-      provider: "claude",
+    expect(buildEngineSelection("claude", "claude-haiku-4-5", undefined, false)).toEqual({
+      engine: "claude",
       model: "claude-haiku-4-5",
       supportsAutoMode: false,
     });
@@ -50,7 +50,7 @@ describe("formatProviderModelOptionName", () => {
   it("humanizes unknown OpenCode runtime model slugs using the model identifier", () => {
     expect(
       formatProviderModelOptionName({
-        provider: "opencode",
+        engine: "opencode",
         slug: "opencode-go/kimi-k2.6",
       }),
     ).toBe("Kimi K2.6");
@@ -59,7 +59,7 @@ describe("formatProviderModelOptionName", () => {
   it("keeps known OpenCode-backed models on their shared display names", () => {
     expect(
       formatProviderModelOptionName({
-        provider: "opencode",
+        engine: "opencode",
         slug: "openai/gpt-5",
       }),
     ).toBe("GPT-5");
@@ -68,7 +68,7 @@ describe("formatProviderModelOptionName", () => {
   it("leaves non-OpenCode unknown slugs unchanged", () => {
     expect(
       formatProviderModelOptionName({
-        provider: "codex",
+        engine: "codex",
         slug: "custom/internal-model",
       }),
     ).toBe("custom/internal-model");
@@ -79,7 +79,7 @@ describe("resolveModelPresentationIdentity", () => {
   it("freezes built-in catalog identity even when the caller has no live descriptor", () => {
     expect(
       resolveModelPresentationIdentity({
-        selection: { provider: "codex", model: "gpt-5.5" },
+        selection: { engine: "codex", model: "gpt-5.5" },
       }),
     ).toEqual({
       model: "gpt-5.5",
@@ -93,7 +93,7 @@ describe("mergeDynamicModelOptions", () => {
   it("does not offer Pi Anthropic models when discovery only returns local models", () => {
     expect(
       mergeDynamicModelOptions({
-        provider: "pi",
+        engine: "pi",
         staticOptions: [],
         dynamicModels: [
           {
@@ -117,7 +117,7 @@ describe("mergeDynamicModelOptions", () => {
   it("offers Pi Fable and Opus when authenticated discovery returns them", () => {
     expect(
       mergeDynamicModelOptions({
-        provider: "pi",
+        engine: "pi",
         staticOptions: [],
         dynamicModels: [
           { slug: "anthropic/claude-fable-5", name: "Claude Fable 5" },
@@ -130,7 +130,7 @@ describe("mergeDynamicModelOptions", () => {
   it("uses the live Antigravity catalog as authoritative and includes newly discovered models", () => {
     expect(
       mergeDynamicModelOptions({
-        provider: "antigravity",
+        engine: "antigravity",
         staticOptions: [
           { slug: "Gemini 3.5 Flash", name: "Gemini 3.5 Flash" },
           { slug: "Claude Sonnet 4.6", name: "Claude Sonnet 4.6" },
@@ -154,7 +154,7 @@ describe("mergeDynamicModelOptions", () => {
 
   it("preserves runtime descriptions without inventing them for custom models", () => {
     const options = mergeDynamicModelOptions({
-      provider: "droid",
+      engine: "droid",
       staticOptions: [{ slug: "custom:model", name: "Custom model", isCustom: true }],
       dynamicModels: [
         {
@@ -180,7 +180,7 @@ describe("mergeDynamicModelOptions", () => {
   it("treats the live Droid catalog as authoritative and drops invalid custom slugs", () => {
     expect(
       mergeDynamicModelOptions({
-        provider: "droid",
+        engine: "droid",
         staticOptions: [
           { slug: "retired-model", name: "Retired" },
           { slug: "made-up-model", name: "Made up", isCustom: true },
@@ -195,7 +195,7 @@ describe("mergeDynamicModelOptions", () => {
   it("deduplicates Cursor transport variants by their base model", () => {
     expect(
       mergeDynamicModelOptions({
-        provider: "cursor",
+        engine: "cursor",
         staticOptions: [
           {
             slug: "grok-4.5[thinking=true]",
@@ -227,7 +227,7 @@ describe("mergeDynamicModelOptions", () => {
   it("orders discovered Claude models by the canonical catalog", () => {
     expect(
       mergeDynamicModelOptions({
-        provider: "claude",
+        engine: "claude",
         staticOptions: [
           { slug: "claude-fable-5", name: "Claude Fable 5" },
           { slug: "claude-opus-5", name: "Claude Opus 5" },
@@ -255,7 +255,7 @@ describe("mergeDynamicModelOptions", () => {
   it("keeps newly discovered unknown Claude models at the top", () => {
     expect(
       mergeDynamicModelOptions({
-        provider: "claude",
+        engine: "claude",
         staticOptions: [
           { slug: "claude-fable-5", name: "Claude Fable 5" },
           { slug: "claude-opus-5", name: "Claude Opus 5" },
@@ -271,7 +271,7 @@ describe("mergeDynamicModelOptions", () => {
   it("treats the live Grok CLI catalog as authoritative", () => {
     expect(
       mergeDynamicModelOptions({
-        provider: "grok",
+        engine: "grok",
         staticOptions: [
           { slug: "grok-4.6", name: "Grok 4.6" },
           { slug: "grok-4.5", name: "Grok 4.5" },
@@ -288,7 +288,7 @@ describe("mergeDynamicModelOptions", () => {
 });
 
 describe("providerModelCostMultiplierLabel", () => {
-  it("formats live provider multipliers without hardcoding their values", () => {
+  it("formats live engine multipliers without hardcoding their values", () => {
     expect(providerModelCostMultiplierLabel("0.38x Factory token rate")).toBe("0.38×");
     expect(providerModelCostMultiplierLabel("12x Factory token rate")).toBe("12×");
   });
@@ -300,10 +300,10 @@ describe("providerModelCostMultiplierLabel", () => {
 });
 
 describe("providerModelOptionProvenanceLabel", () => {
-  it("prefers the discovered upstream provider name", () => {
+  it("prefers the discovered upstream engine name", () => {
     expect(
       providerModelOptionProvenanceLabel({
-        provider: "opencode",
+        engine: "opencode",
         option: {
           slug: "opencode-go/deepseek-v4-flash",
           name: "DeepSeek V4 Flash",
@@ -314,10 +314,10 @@ describe("providerModelOptionProvenanceLabel", () => {
     ).toBe("OpenCode Go");
   });
 
-  it("falls back to a humanized slug provider, then the OmniMind provider", () => {
+  it("falls back to a humanized slug engine, then the OmniMind engine", () => {
     expect(
       providerModelOptionProvenanceLabel({
-        provider: "opencode",
+        engine: "opencode",
         option: {
           slug: "local-runtime/deepseek-v4-flash",
           name: "DeepSeek V4 Flash",
@@ -326,7 +326,7 @@ describe("providerModelOptionProvenanceLabel", () => {
     ).toBe("Local Runtime");
     expect(
       providerModelOptionProvenanceLabel({
-        provider: "cursor",
+        engine: "cursor",
         option: { slug: "auto", name: "Auto" },
       }),
     ).toBe("Cursor");
@@ -349,7 +349,7 @@ describe("buildProviderOptionPatch", () => {
 });
 
 describe("groupProviderModelOptions", () => {
-  it("groups provider models by upstream provider", () => {
+  it("groups engine models by upstream engine", () => {
     const options = [
       {
         slug: "anthropic/claude-sonnet",
@@ -363,7 +363,7 @@ describe("groupProviderModelOptions", () => {
         upstreamProviderId: "openai",
         upstreamProviderName: "OpenAI",
       },
-    ] satisfies ProviderModelOption[];
+    ] satisfies EngineModelOption[];
 
     const groupedOptions = groupProviderModelOptions(options);
 
@@ -421,7 +421,7 @@ describe("groupProviderModelOptions", () => {
 });
 
 describe("groupProviderModelOptionsWithFavorites", () => {
-  it("adds a favourites group ahead of the normal provider groups", () => {
+  it("adds a favourites group ahead of the normal engine groups", () => {
     const options = [
       {
         slug: "anthropic/claude-sonnet",
@@ -435,7 +435,7 @@ describe("groupProviderModelOptionsWithFavorites", () => {
         upstreamProviderId: "openai",
         upstreamProviderName: "OpenAI",
       },
-    ] satisfies ProviderModelOption[];
+    ] satisfies EngineModelOption[];
 
     const groupedOptions = groupProviderModelOptionsWithFavorites({
       options,

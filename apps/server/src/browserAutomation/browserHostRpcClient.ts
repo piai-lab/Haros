@@ -257,7 +257,7 @@ export interface BrowserHostToolCall {
   readonly pipePath: string;
   readonly capability: string;
   readonly sessionKey: string;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly threadId: ThreadId;
   readonly name: BrowserToolName;
   readonly arguments: Record<string, unknown>;
@@ -392,7 +392,7 @@ export async function callBrowserHostTool(input: BrowserHostToolCall): Promise<u
       "executeTool",
       {
         session_id: input.sessionKey,
-        provider: input.provider,
+        engine: input.engine,
         thread_id: input.threadId,
         name: input.name,
         arguments: { ...input.arguments, timeoutMs: executeBudget },

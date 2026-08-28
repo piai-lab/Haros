@@ -4,11 +4,11 @@
 
 import type {
   ModelPresentationIdentity,
-  ModelSelection,
+  EngineSelection,
   OmniMindModelServiceOrigin,
 } from "@harnessos/contracts";
 
-import type { ProviderModelOption } from "~/providerModelOptions";
+import type { EngineModelOption } from "~/providerModelOptions";
 import { resolveModelPresentationIdentity } from "~/providerModelOptions";
 import { ModelServiceIcon } from "./ModelServiceIcon";
 
@@ -22,9 +22,9 @@ function originFromSource(
 }
 
 export function resolveModelIdentityPresentation(input: {
-  selection: ModelSelection;
+  selection: EngineSelection;
   identity?: ModelPresentationIdentity | null;
-  descriptor?: ProviderModelOption | null;
+  descriptor?: EngineModelOption | null;
 }) {
   const admittedIdentity =
     input.identity?.model === input.selection.model ? input.identity : undefined;
@@ -61,9 +61,9 @@ export function ModelIdentityIcon({
   historical = false,
   className,
 }: {
-  readonly selection: ModelSelection;
+  readonly selection: EngineSelection;
   readonly identity?: ModelPresentationIdentity | null;
-  readonly descriptor?: ProviderModelOption | null;
+  readonly descriptor?: EngineModelOption | null;
   readonly historical?: boolean;
   readonly className?: string;
 }) {

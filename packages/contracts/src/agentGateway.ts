@@ -8,8 +8,8 @@
 import { Schema } from "effect";
 
 import { ProjectId, ThreadId, TurnId } from "./baseSchemas";
-import { ModelSelection, EngineKind } from "./orchestration";
-import { ProviderModelDescriptor } from "./providerDiscovery";
+import { EngineSelection, EngineKind } from "./orchestration";
+import { EngineModelDescriptor } from "./engineDiscovery";
 import { ServerProviderAuthStatus } from "./server";
 
 export const HARNESSOS_GATEWAY_MAX_THREADS_PER_OPERATION = 20;
@@ -53,7 +53,7 @@ export const OmniMindContextResult = Schema.Struct({
   caller: Schema.Struct({
     threadId: ThreadId,
     turnId: Schema.NullOr(TurnId),
-    provider: EngineKind,
+    engine: EngineKind,
     projectId: ProjectId,
   }),
   capabilities: Schema.Struct({
@@ -68,7 +68,7 @@ export type OmniMindContextResult = typeof OmniMindContextResult.Type;
 export const OmniMindCreateThreadSpec = Schema.Struct({
   prompt: Schema.String.check(Schema.isNonEmpty()),
   title: Schema.optional(Schema.String.check(Schema.isNonEmpty())),
-  target: ModelSelection,
+  target: EngineSelection,
   projectId: Schema.optional(ProjectId),
   environment: Schema.optional(Schema.Literals(["local", "worktree"])),
   baseRef: Schema.optional(Schema.String.check(Schema.isNonEmpty())),
@@ -93,9 +93,9 @@ export const OmniMindCreateThreadsInput = Schema.Struct({
 export type OmniMindCreateThreadsInput = typeof OmniMindCreateThreadsInput.Type;
 
 export const OmniMindProviderCatalog = Schema.Struct({
-  provider: EngineKind,
+  engine: EngineKind,
   defaultModel: Schema.NullOr(Schema.String),
-  models: Schema.Array(ProviderModelDescriptor),
+  models: Schema.Array(EngineModelDescriptor),
   enabled: Schema.Boolean,
   available: Schema.Boolean,
   authStatus: Schema.optional(ServerProviderAuthStatus),
@@ -115,24 +115,24 @@ export const OmniMindGatewayTargetOptionRule = Schema.Struct({
   key: Schema.String,
   valueType: Schema.Literals(["string", "number", "boolean"]),
   allowedValues: Schema.Array(OmniMindGatewayTargetOptionValue),
-  allowedValuesSource: Schema.Literals(["provider-contract", "model-discovery"]),
+  allowedValuesSource: Schema.Literals(["engine-contract", "model-discovery"]),
 });
 export type OmniMindGatewayTargetOptionRule = typeof OmniMindGatewayTargetOptionRule.Type;
 
 export const OmniMindGatewayTargetConstruction = Schema.Struct({
-  modelValueSource: Schema.Literal("providers[].models[].slug"),
+  modelValueSource: Schema.Literal("engines[].models[].slug"),
   primaryOptionKey: Schema.String,
   alternativeOptionKeys: Schema.Array(Schema.String),
   optionSelectionRule: Schema.String,
-  providerOptions: Schema.Array(OmniMindGatewayTargetOptionRule),
+  engineOptions: Schema.Array(OmniMindGatewayTargetOptionRule),
   optionsByModel: Schema.Record(Schema.String, Schema.Array(OmniMindGatewayTargetOptionRule)),
-  exampleTarget: Schema.NullOr(ModelSelection),
+  exampleTarget: Schema.NullOr(EngineSelection),
 });
 export type OmniMindGatewayTargetConstruction = typeof OmniMindGatewayTargetConstruction.Type;
 
 export const OmniMindCapabilitiesResult = Schema.Struct({
   targetConstruction: Schema.Record(Schema.String, OmniMindGatewayTargetConstruction),
-  providers: Schema.Array(OmniMindProviderCatalog),
+  engines: Schema.Array(OmniMindProviderCatalog),
   limits: Schema.Struct({
     maxThreadsPerOperation: Schema.Int,
     maxWaitMs: Schema.Int,
@@ -146,8 +146,8 @@ export const OmniMindCreatedThreadResult = Schema.Struct({
   threadId: ThreadId,
   projectId: ProjectId,
   title: Schema.String,
-  target: ModelSelection,
-  provider: EngineKind,
+  target: EngineSelection,
+  engine: EngineKind,
   model: Schema.String,
   runtimeMode: Schema.Literals(["approval-required", "full-access"]),
   environment: Schema.Literals(["local", "worktree"]),

@@ -5,7 +5,7 @@
 
 import {
   CommandId,
-  DEFAULT_PROVIDER_INTERACTION_MODE,
+  DEFAULT_ENGINE_INTERACTION_MODE,
   EventId,
   ProjectId,
   ThreadId,
@@ -39,7 +39,7 @@ async function createThreadReadModel(now: string) {
         kind: "project",
         title: "Project",
         workspaceRoot: "/tmp/project",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         scripts: [],
         createdAt: now,
         updatedAt: now,
@@ -63,8 +63,8 @@ async function createThreadReadModel(now: string) {
         threadId: THREAD_ID,
         projectId: PROJECT_ID,
         title: "Thread",
-        modelSelection: { provider: "codex", model: "gpt-5-codex" },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        engineSelection: { engine: "codex", model: "gpt-5-codex" },
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "full-access",
         envMode: "local",
         branch: null,

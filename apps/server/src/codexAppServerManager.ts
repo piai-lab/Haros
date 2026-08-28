@@ -5,35 +5,35 @@ import { EventEmitter } from "node:events";
 import {
   ApprovalRequestId,
   EventId,
-  ProviderItemId,
-  type ProviderListModelsResult,
-  type ProviderListPluginsResult,
-  type ProviderMentionReference,
-  type ProviderForkThreadInput,
-  type ProviderReadPluginResult,
-  type ProviderForkThreadResult,
-  type ProviderListSkillsResult,
-  type ProviderListPluginsInput,
-  type ProviderReadPluginInput,
-  type ProviderStartReviewInput,
-  type ProviderSkillReference,
-  ProviderRequestKind,
-  type ProviderUserInputAnswers,
+  EngineItemId,
+  type EngineListModelsResult,
+  type EngineListPluginsResult,
+  type EngineMentionReference,
+  type EngineForkThreadInput,
+  type EngineReadPluginResult,
+  type EngineForkThreadResult,
+  type EngineListSkillsResult,
+  type EngineListPluginsInput,
+  type EngineReadPluginInput,
+  type EngineStartReviewInput,
+  type EngineSkillReference,
+  EngineRequestKind,
+  type EngineUserInputAnswers,
   ThreadId,
   TurnId,
-  type ProviderApprovalDecision,
-  type ProviderEvent,
-  type ProviderSession,
-  type ProviderSessionStartInput,
-  type ProviderTurnStartResult,
+  type EngineApprovalDecision,
+  type EngineEvent,
+  type EngineSession,
+  type EngineSessionStartInput,
+  type EngineTurnStartResult,
   RuntimeMode,
-  ProviderInteractionMode,
+  EngineInteractionMode,
   type ServerVoiceTranscriptionInput,
   type ServerVoiceTranscriptionResult,
   type UserInputQuestion,
 } from "@harnessos/contracts";
 import { prewarmChatGptVoiceTranscriptionConnection } from "@harnessos/shared/chatGptVoiceTranscription";
-import { getModelSelectionBooleanOptionValue, normalizeModelSlug } from "@harnessos/shared/model";
+import { getEngineSelectionBooleanOptionValue, normalizeModelSlug } from "@harnessos/shared/model";
 import { decodeSubagentReceiverThreadIds } from "@harnessos/shared/subagents";
 import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
 import { Effect, ServiceMap } from "effect";
@@ -101,13 +101,13 @@ interface PendingApprovalRequest {
     | "item/fileChange/requestApproval"
     | "item/fileRead/requestApproval"
     | "item/permissions/requestApproval";
-  requestKind: ProviderRequestKind;
+  requestKind: EngineRequestKind;
   threadId: ThreadId;
   turnId?: TurnId;
   parentTurnId?: TurnId;
-  itemId?: ProviderItemId;
-  providerThreadId?: string;
-  providerParentThreadId?: string;
+  itemId?: EngineItemId;
+  nativeThreadId?: string;
+  nativeParentThreadId?: string;
   requestedPermissions?: Record<string, unknown>;
 }
 
@@ -121,15 +121,15 @@ interface PendingUserInputRequest {
   threadId: ThreadId;
   turnId?: TurnId;
   parentTurnId?: TurnId;
-  itemId?: ProviderItemId;
-  providerThreadId?: string;
-  providerParentThreadId?: string;
+  itemId?: EngineItemId;
+  nativeThreadId?: string;
+  nativeParentThreadId?: string;
 }
 
 interface ResolvedCollaborationRoute {
   readonly parentTurnId?: TurnId;
-  readonly providerThreadId?: string;
-  readonly providerParentThreadId?: string;
+  readonly nativeThreadId?: string;
+  readonly nativeParentThreadId?: string;
   readonly isChildConversation: boolean;
 }
 
@@ -155,7 +155,7 @@ interface CodexSessionContext {
   readonly gatewaySessionLease?: AgentGatewaySessionLease;
   /** Set once this runtime's bearer is permanently fenced to a terminal turn. */
   gatewayCredentialRetired?: boolean;
-  session: ProviderSession;
+  session: EngineSession;
   lifecycleGeneration?: string;
   account: CodexAccountSnapshot;
   child: ChildProcessWithoutNullStreams;
@@ -187,9 +187,9 @@ interface CodexSkillListInput {
   readonly threadId?: string;
 }
 
-interface CodexPluginListInput extends Omit<ProviderListPluginsInput, "provider"> {}
+interface CodexPluginListInput extends Omit<EngineListPluginsInput, "engine"> {}
 
-interface CodexPluginReadInput extends Omit<ProviderReadPluginInput, "provider"> {}
+interface CodexPluginReadInput extends Omit<EngineReadPluginInput, "engine"> {}
 
 interface JsonRpcError {
   code?: number;
@@ -252,26 +252,26 @@ export interface CodexAppServerSendTurnInput {
   readonly threadId: ThreadId;
   readonly input?: string;
   readonly attachments?: ReadonlyArray<CodexImageInputItem>;
-  readonly skills?: ReadonlyArray<ProviderSkillReference>;
-  readonly mentions?: ReadonlyArray<ProviderMentionReference>;
+  readonly skills?: ReadonlyArray<EngineSkillReference>;
+  readonly mentions?: ReadonlyArray<EngineMentionReference>;
   readonly model?: string;
   readonly serviceTier?: string | null;
   readonly effort?: string;
-  readonly interactionMode?: ProviderInteractionMode;
+  readonly interactionMode?: EngineInteractionMode;
 }
 
-type CodexAppServerReviewTarget = ProviderStartReviewInput["target"];
+type CodexAppServerReviewTarget = EngineStartReviewInput["target"];
 
 export interface CodexAppServerStartSessionInput {
   readonly threadId: ThreadId;
-  readonly provider?: "codex";
+  readonly engine?: "codex";
   readonly lifecycleGeneration?: string;
   readonly cwd?: string;
   readonly model?: string;
   readonly serviceTier?: string;
   readonly resumeCursor?: unknown;
   readonly forkSourceResumeCursor?: unknown;
-  readonly providerOptions?: ProviderSessionStartInput["providerOptions"];
+  readonly engineOptions?: EngineSessionStartInput["engineOptions"];
   readonly runtimeMode: RuntimeMode;
 }
 
@@ -734,7 +734,7 @@ export function buildCodexInitializeParams() {
 }
 
 function buildCodexCollaborationMode(input: {
-  readonly interactionMode?: ProviderInteractionMode;
+  readonly interactionMode?: EngineInteractionMode;
   readonly model?: string;
   readonly effort?: string;
 }):
@@ -787,7 +787,7 @@ function toCodexUserInputAnswer(value: unknown): CodexUserInputAnswer {
 }
 
 function toCodexUserInputAnswers(
-  answers: ProviderUserInputAnswers,
+  answers: EngineUserInputAnswers,
 ): Record<string, CodexUserInputAnswer> {
   return Object.fromEntries(
     Object.entries(answers).map(([questionId, value]) => [
@@ -881,20 +881,20 @@ export function isRecoverableThreadResumeError(error: unknown): boolean {
   return RECOVERABLE_THREAD_RESUME_ERROR_SNIPPETS.some((snippet) => message.includes(snippet));
 }
 
-export function formatCodexThreadResumeError(error: unknown, providerThreadId: string): Error {
+export function formatCodexThreadResumeError(error: unknown, nativeThreadId: string): Error {
   const originalError = error instanceof Error ? error : new Error(String(error));
   if (!originalError.message.toLowerCase().includes("already has an active writer")) {
     return originalError;
   }
 
   return new Error(
-    `Codex thread ${providerThreadId} is open in another Codex client. Close that client before continuing the original thread, or import it as a copy instead.`,
+    `Codex thread ${nativeThreadId} is open in another Codex client. Close that client before continuing the original thread, or import it as a copy instead.`,
     { cause: originalError },
   );
 }
 
 export interface CodexAppServerManagerEvents {
-  event: [event: ProviderEvent];
+  event: [event: EngineEvent];
 }
 
 const CODEX_DISCOVERY_CACHE_MAX_ENTRIES = 128;
@@ -938,10 +938,10 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         readonly promise: Promise<CodexVoiceTranscriptionAuthContext>;
       }
     | undefined;
-  private readonly skillsCache = new Map<string, ProviderListSkillsResult>();
-  private readonly pluginsCache = new Map<string, ProviderListPluginsResult>();
-  private readonly pluginDetailCache = new Map<string, ProviderReadPluginResult>();
-  private readonly modelCache = new Map<string, ProviderListModelsResult>();
+  private readonly skillsCache = new Map<string, EngineListSkillsResult>();
+  private readonly pluginsCache = new Map<string, EngineListPluginsResult>();
+  private readonly pluginDetailCache = new Map<string, EngineReadPluginResult>();
+  private readonly modelCache = new Map<string, EngineListModelsResult>();
 
   private runPromise: (effect: Effect.Effect<unknown, never>) => Promise<unknown>;
   private readonly harnessosSkillsDir: string | undefined;
@@ -1017,7 +1017,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     }
   }
 
-  async startSession(input: CodexAppServerStartSessionInput): Promise<ProviderSession> {
+  async startSession(input: CodexAppServerStartSessionInput): Promise<EngineSession> {
     const threadId = input.threadId;
     const now = new Date().toISOString();
     let context: CodexSessionContext | undefined;
@@ -1031,8 +1031,8 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
       const resolvedCwd = resolveScratchWorkspaceCwd(threadId, input.cwd);
 
-      const session: ProviderSession = {
-        provider: "codex",
+      const session: EngineSession = {
+        engine: "codex",
         status: "connecting",
         runtimeMode: input.runtimeMode,
         model: normalizeCodexModelSlug(input.model),
@@ -1215,11 +1215,11 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       if (!threadIdRaw) {
         throw new Error(`${threadOpenMethod} response did not include a thread id.`);
       }
-      const providerThreadId = threadIdRaw;
+      const nativeThreadId = threadIdRaw;
 
       this.updateSession(context, {
         status: "ready",
-        resumeCursor: { threadId: providerThreadId },
+        resumeCursor: { threadId: nativeThreadId },
       });
       this.emitLifecycleEvent(
         context,
@@ -1231,10 +1231,10 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         threadOpenMethod,
         requestedResumeThreadId: resumeThreadId ?? null,
         requestedForkSourceThreadId: forkSourceThreadId ?? null,
-        resolvedThreadId: providerThreadId,
+        resolvedThreadId: nativeThreadId,
         requestedRuntimeMode: input.runtimeMode,
       }).pipe(this.runPromise);
-      this.emitLifecycleEvent(context, "session/ready", `Connected to thread ${providerThreadId}`);
+      this.emitLifecycleEvent(context, "session/ready", `Connected to thread ${nativeThreadId}`);
       return { ...context.session };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to start Codex session.";
@@ -1250,7 +1250,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         this.emitEvent({
           id: EventId.makeUnsafe(randomUUID()),
           kind: "error",
-          provider: "codex",
+          engine: "codex",
           threadId,
           createdAt: new Date().toISOString(),
           ...(input.lifecycleGeneration !== undefined
@@ -1264,30 +1264,30 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     }
   }
 
-  async sendTurn(input: CodexAppServerSendTurnInput): Promise<ProviderTurnStartResult> {
+  async sendTurn(input: CodexAppServerSendTurnInput): Promise<EngineTurnStartResult> {
     const context = this.requireSession(input.threadId);
     if (context.gatewayCredentialRetired === true) {
       throw new Error(
-        "Codex session gateway authority is retired; resume the provider runtime before starting another turn.",
+        "Codex session gateway authority is retired; resume the engine runtime before starting another turn.",
       );
     }
     context.collabReceiverTurns.clear();
     context.collabReceiverParents.clear();
 
     // Normal sends never interrupt active work. The orchestration layer decides
-    // when a queued follow-up is ready to become a provider turn.
+    // when a queued follow-up is ready to become a engine turn.
     const turnInput = buildCodexTurnInput(input);
     if (turnInput.length === 0) {
       throw new Error("Turn input must include text or attachments.");
     }
 
-    const providerThreadId = readResumeThreadId({
+    const nativeThreadId = readResumeThreadId({
       threadId: context.session.threadId,
       runtimeMode: context.session.runtimeMode,
       resumeCursor: context.session.resumeCursor,
     });
-    if (!providerThreadId) {
-      throw new Error("Session is missing provider resume thread id.");
+    if (!nativeThreadId) {
+      throw new Error("Session is missing engine resume thread id.");
     }
     const turnStartParams: {
       threadId: string;
@@ -1308,7 +1308,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         };
       };
     } = {
-      threadId: providerThreadId,
+      threadId: nativeThreadId,
       input: turnInput,
       summary: "auto",
       ...resolveCodexTurnOverrides(context),
@@ -1365,7 +1365,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     };
   }
 
-  async steerTurn(input: CodexAppServerSendTurnInput): Promise<ProviderTurnStartResult> {
+  async steerTurn(input: CodexAppServerSendTurnInput): Promise<EngineTurnStartResult> {
     const context = this.requireSession(input.threadId);
 
     const activeTurnId = context.session.activeTurnId;
@@ -1378,17 +1378,17 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       throw new Error("Turn input must include text or attachments.");
     }
 
-    const providerThreadId = readResumeThreadId({
+    const nativeThreadId = readResumeThreadId({
       threadId: context.session.threadId,
       runtimeMode: context.session.runtimeMode,
       resumeCursor: context.session.resumeCursor,
     });
-    if (!providerThreadId) {
-      throw new Error("Session is missing provider resume thread id.");
+    if (!nativeThreadId) {
+      throw new Error("Session is missing engine resume thread id.");
     }
 
     const response = await this.sendRequest(context, "turn/steer", {
-      threadId: providerThreadId,
+      threadId: nativeThreadId,
       input: turnInput,
       expectedTurnId: activeTurnId,
     });
@@ -1416,24 +1416,24 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     };
   }
 
-  async startReview(input: ProviderStartReviewInput): Promise<ProviderTurnStartResult> {
+  async startReview(input: EngineStartReviewInput): Promise<EngineTurnStartResult> {
     const context = this.requireSession(input.threadId);
     if (context.gatewayCredentialRetired === true) {
       throw new Error(
-        "Codex session gateway authority is retired; resume the provider runtime before starting another review.",
+        "Codex session gateway authority is retired; resume the engine runtime before starting another review.",
       );
     }
-    const providerThreadId = readResumeThreadId({
+    const nativeThreadId = readResumeThreadId({
       threadId: context.session.threadId,
       runtimeMode: context.session.runtimeMode,
       resumeCursor: context.session.resumeCursor,
     });
-    if (!providerThreadId) {
-      throw new Error("Session is missing a provider resume thread id.");
+    if (!nativeThreadId) {
+      throw new Error("Session is missing a engine resume thread id.");
     }
 
     const response = await this.sendRequest(context, "review/start", {
-      threadId: providerThreadId,
+      threadId: nativeThreadId,
       delivery: "inline",
       target: this.toCodexReviewTarget(input.target),
     });
@@ -1447,7 +1447,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     context.reviewTurnIds.add(turnId);
     log.info("[codex-review] review/start acknowledged", {
       threadId: context.session.threadId,
-      providerThreadId,
+      nativeThreadId,
       turnId,
       target: input.target.type,
     });
@@ -1540,7 +1540,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   async interruptTurn(
     threadId: ThreadId,
     turnId?: TurnId,
-    providerThreadIdOverride?: string,
+    nativeThreadIdOverride?: string,
   ): Promise<void> {
     const context = this.requireSession(threadId);
     const effectiveTurnId = turnId ?? context.session.activeTurnId;
@@ -1549,47 +1549,47 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     // turn/interrupt alone does not settle server-initiated requests.
     await this.settlePendingHumanRequests(context, "turn interrupted");
 
-    const providerThreadId =
-      providerThreadIdOverride ??
+    const nativeThreadId =
+      nativeThreadIdOverride ??
       readResumeThreadId({
         threadId: context.session.threadId,
         runtimeMode: context.session.runtimeMode,
         resumeCursor: context.session.resumeCursor,
       });
-    if (!effectiveTurnId || !providerThreadId) {
+    if (!effectiveTurnId || !nativeThreadId) {
       log.info("[codex-review] turn/interrupt skipped", {
         threadId,
         requestedTurnId: turnId ?? null,
         activeTurnId: context.session.activeTurnId ?? null,
-        providerThreadId: providerThreadId ?? null,
+        nativeThreadId: nativeThreadId ?? null,
       });
       return;
     }
 
     log.info("[codex-review] turn/interrupt requested", {
       threadId,
-      providerThreadId,
+      nativeThreadId,
       turnId: effectiveTurnId,
       isTrackedReviewTurn: context.reviewTurnIds.has(effectiveTurnId),
     });
     // Codex app-server currently completes `turn/interrupt` without reliably
     // forwarding MCP `notifications/cancelled` to stdio servers. A collab child
     // shares the parent's gateway credential, and gateway requests therefore
-    // carry the parent turn id rather than the child's provider-native id. On a
+    // carry the parent turn id rather than the child's engine-native id. On a
     // targeted child stop, tombstone the parent gateway turn without stopping
     // the parent runtime. This deliberately disables gateway tools for the rest
     // of that parent turn: without a child-specific transport, re-enabling them
     // would also re-authorize indistinguishable late child requests.
     const gatewayTurnId =
-      providerThreadIdOverride === undefined ? effectiveTurnId : context.session.activeTurnId;
+      nativeThreadIdOverride === undefined ? effectiveTurnId : context.session.activeTurnId;
     const gatewayCancellation = gatewayTurnId
       ? this.cancelGatewayTurn(context, gatewayTurnId)
       : Promise.resolve();
     let gatewayRevocationError: unknown;
     try {
       // A session bearer has no trustworthy per-turn provenance. Revoke it
-      // after tombstoning A but before asking Codex to interrupt; the provider
-      // runtime is retired by ProviderService before another turn can start.
+      // after tombstoning A but before asking Codex to interrupt; the engine
+      // runtime is retired by EngineService before another turn can start.
       context.gatewaySessionLease?.release();
       if (context.gatewaySessionLease) context.gatewayCredentialRetired = true;
     } catch (error) {
@@ -1598,7 +1598,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     try {
       await Promise.all([
         this.sendRequest(context, "turn/interrupt", {
-          threadId: providerThreadId,
+          threadId: nativeThreadId,
           turnId: effectiveTurnId,
         }),
         gatewayCancellation,
@@ -1606,29 +1606,29 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       if (gatewayRevocationError !== undefined) throw gatewayRevocationError;
       log.info("[codex-review] turn/interrupt acknowledged", {
         threadId,
-        providerThreadId,
+        nativeThreadId,
         turnId: effectiveTurnId,
       });
     } catch (error) {
       log.warn("[codex-review] turn/interrupt failed", {
         threadId,
-        providerThreadId,
+        nativeThreadId,
         turnId: effectiveTurnId,
         isTrackedReviewTurn: context.reviewTurnIds.has(effectiveTurnId),
         error: error instanceof Error ? error.message : String(error),
       });
       if (this.isTurnAlreadyIdleError(error)) {
-        log.info("[codex-review] settling stale local turn after provider reported idle", {
+        log.info("[codex-review] settling stale local turn after engine reported idle", {
           threadId,
-          providerThreadId,
+          nativeThreadId,
           turnId: effectiveTurnId,
         });
         this.handleServerNotification(context, {
           method: "turn/aborted",
           params: {
-            threadId: providerThreadId,
+            threadId: nativeThreadId,
             turn: { id: effectiveTurnId },
-            reason: "provider-already-idle",
+            reason: "engine-already-idle",
           },
         });
         return;
@@ -1669,7 +1669,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         });
         await Promise.all([
           this.sendRequest(context, "turn/interrupt", {
-            threadId: providerThreadId,
+            threadId: nativeThreadId,
             turnId: latestReviewTurnId,
           }),
           this.cancelGatewayTurn(context, latestReviewTurnId),
@@ -1741,7 +1741,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "notification",
-      provider: "codex",
+      engine: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
       ...(context.lifecycleGeneration !== undefined
@@ -1762,17 +1762,17 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
   async readThread(threadId: ThreadId): Promise<CodexThreadSnapshot> {
     const context = this.requireSession(threadId);
-    const providerThreadId = readResumeThreadId({
+    const nativeThreadId = readResumeThreadId({
       threadId: context.session.threadId,
       runtimeMode: context.session.runtimeMode,
       resumeCursor: context.session.resumeCursor,
     });
-    if (!providerThreadId) {
-      throw new Error("Session is missing a provider resume thread id.");
+    if (!nativeThreadId) {
+      throw new Error("Session is missing a engine resume thread id.");
     }
 
     const response = await this.sendRequest(context, "thread/read", {
-      threadId: providerThreadId,
+      threadId: nativeThreadId,
       includeTurns: true,
     });
     return this.parseThreadSnapshot("thread/read", response);
@@ -1790,7 +1790,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     return this.parseThreadSnapshot("thread/read", response);
   }
 
-  async forkThread(input: ProviderForkThreadInput): Promise<ProviderForkThreadResult> {
+  async forkThread(input: EngineForkThreadInput): Promise<EngineForkThreadResult> {
     const threadId = input.threadId;
     const now = new Date().toISOString();
     let context: CodexSessionContext | undefined;
@@ -1804,17 +1804,17 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
       const sourceProviderThreadId = readResumeCursorThreadId(input.sourceResumeCursor);
       if (!sourceProviderThreadId) {
-        throw new Error("Provider fork is missing the source thread resume id.");
+        throw new Error("Engine fork is missing the source thread resume id.");
       }
 
       const resolvedCwd = resolveScratchWorkspaceCwd(threadId, input.cwd);
-      const session: ProviderSession = {
-        provider: "codex",
+      const session: EngineSession = {
+        engine: "codex",
         status: "connecting",
         runtimeMode: input.runtimeMode,
         model:
-          input.modelSelection?.provider === "codex"
-            ? normalizeCodexModelSlug(input.modelSelection.model)
+          input.engineSelection?.engine === "codex"
+            ? normalizeCodexModelSlug(input.engineSelection.model)
             : undefined,
         cwd: resolvedCwd,
         threadId,
@@ -1824,7 +1824,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
       const codexOptions = readCodexProviderOptions({
         threadId,
-        ...(input.providerOptions !== undefined ? { providerOptions: input.providerOptions } : {}),
+        ...(input.engineOptions !== undefined ? { engineOptions: input.engineOptions } : {}),
         runtimeMode: input.runtimeMode,
         ...(input.cwd !== undefined ? { cwd: input.cwd } : {}),
       });
@@ -1884,15 +1884,15 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       }
 
       const normalizedModel =
-        input.modelSelection?.provider === "codex"
+        input.engineSelection?.engine === "codex"
           ? resolveCodexModelForAccount(
-              normalizeCodexModelSlug(input.modelSelection.model),
+              normalizeCodexModelSlug(input.engineSelection.model),
               context.account,
             )
           : undefined;
       const useFastServiceTier =
-        input.modelSelection?.provider === "codex" &&
-        getModelSelectionBooleanOptionValue(input.modelSelection, "fastMode") === true;
+        input.engineSelection?.engine === "codex" &&
+        getEngineSelectionBooleanOptionValue(input.engineSelection, "fastMode") === true;
       const forkParams = {
         threadId: sourceProviderThreadId,
         ...(normalizedModel ? { model: normalizedModel } : {}),
@@ -1944,20 +1944,20 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
   async rollbackThread(threadId: ThreadId, numTurns: number): Promise<CodexThreadSnapshot> {
     const context = this.requireSession(threadId);
-    const providerThreadId = readResumeThreadId({
+    const nativeThreadId = readResumeThreadId({
       threadId: context.session.threadId,
       runtimeMode: context.session.runtimeMode,
       resumeCursor: context.session.resumeCursor,
     });
-    if (!providerThreadId) {
-      throw new Error("Session is missing a provider resume thread id.");
+    if (!nativeThreadId) {
+      throw new Error("Session is missing a engine resume thread id.");
     }
     if (!Number.isInteger(numTurns) || numTurns < 1) {
       throw new Error("numTurns must be an integer >= 1.");
     }
 
     const response = await this.sendRequest(context, "thread/rollback", {
-      threadId: providerThreadId,
+      threadId: nativeThreadId,
       numTurns,
     });
     this.updateSession(context, {
@@ -1969,18 +1969,18 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
   async compactThread(threadId: ThreadId): Promise<void> {
     const context = this.requireSession(threadId);
-    const providerThreadId = readResumeThreadId({
+    const nativeThreadId = readResumeThreadId({
       threadId: context.session.threadId,
       runtimeMode: context.session.runtimeMode,
       resumeCursor: context.session.resumeCursor,
     });
-    if (!providerThreadId) {
-      throw new Error("Session is missing a provider resume thread id.");
+    if (!nativeThreadId) {
+      throw new Error("Session is missing a engine resume thread id.");
     }
 
     await Effect.logInfo("codex app-server compact requested", {
       threadId: context.session.threadId,
-      providerThreadId,
+      nativeThreadId,
       runtimeMode: context.session.runtimeMode,
       activeTurnId: context.session.activeTurnId ?? null,
     }).pipe(this.runPromise);
@@ -1995,7 +1995,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "notification",
-      provider: "codex",
+      engine: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
       ...(context.lifecycleGeneration !== undefined
@@ -2005,17 +2005,17 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       method: "thread/compacting",
       message: "Compacting context",
       payload: {
-        threadId: providerThreadId,
+        threadId: nativeThreadId,
         state: "compacting",
       },
     });
     try {
       await this.sendRequest(context, "thread/compact/start", {
-        threadId: providerThreadId,
+        threadId: nativeThreadId,
       });
       await Effect.logInfo("codex app-server compact start acknowledged", {
         threadId: context.session.threadId,
-        providerThreadId,
+        nativeThreadId,
       }).pipe(this.runPromise);
     } catch (error) {
       this.updateSession(context, {
@@ -2024,7 +2024,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       });
       await Effect.logWarning("codex app-server compact failed", {
         threadId: context.session.threadId,
-        providerThreadId,
+        nativeThreadId,
         cause: error,
       }).pipe(this.runPromise);
       throw error;
@@ -2034,7 +2034,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   private async resolveApprovalRequest(
     context: CodexSessionContext,
     pendingRequest: PendingApprovalRequest,
-    decision: ProviderApprovalDecision,
+    decision: EngineApprovalDecision,
   ): Promise<void> {
     const requestedPermissions = pendingRequest.requestedPermissions ?? {};
     const grantedPermissions = {
@@ -2061,7 +2061,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "notification",
-      provider: "codex",
+      engine: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
       ...(context.lifecycleGeneration !== undefined
@@ -2071,8 +2071,8 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       turnId: pendingRequest.turnId,
       parentTurnId: pendingRequest.parentTurnId,
       itemId: pendingRequest.itemId,
-      providerThreadId: pendingRequest.providerThreadId,
-      providerParentThreadId: pendingRequest.providerParentThreadId,
+      nativeThreadId: pendingRequest.nativeThreadId,
+      nativeParentThreadId: pendingRequest.nativeParentThreadId,
       requestId: pendingRequest.requestId,
       requestKind: pendingRequest.requestKind,
       payload: {
@@ -2098,7 +2098,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   async respondToRequest(
     threadId: ThreadId,
     requestId: ApprovalRequestId,
-    decision: ProviderApprovalDecision,
+    decision: EngineApprovalDecision,
   ): Promise<void> {
     const context = this.requireSession(threadId);
     const pendingRequest = context.pendingApprovals.get(requestId);
@@ -2113,7 +2113,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     }
     await this.resolveApprovalRequest(context, pendingRequest, decision);
     if (decision === "cancel" && isPermissionRequest) {
-      await this.interruptTurn(threadId, pendingRequest.turnId, pendingRequest.providerThreadId);
+      await this.interruptTurn(threadId, pendingRequest.turnId, pendingRequest.nativeThreadId);
     }
     if (decision === "acceptForSession" && !isPermissionRequest) {
       await this.resolveRemainingSessionApprovalRequests(context);
@@ -2123,7 +2123,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   async respondToUserInput(
     threadId: ThreadId,
     requestId: ApprovalRequestId,
-    answers: ProviderUserInputAnswers,
+    answers: EngineUserInputAnswers,
   ): Promise<void> {
     const context = this.requireSession(threadId);
     const pendingRequest = context.pendingUserInputs.get(requestId);
@@ -2137,7 +2137,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   private async resolveUserInputRequest(
     context: CodexSessionContext,
     pendingRequest: PendingUserInputRequest,
-    answers: ProviderUserInputAnswers,
+    answers: EngineUserInputAnswers,
   ): Promise<void> {
     const codexAnswers = toCodexUserInputAnswers(answers);
     // The pending entry survives a failed write so the request stays answerable;
@@ -2153,7 +2153,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "notification",
-      provider: "codex",
+      engine: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
       ...(context.lifecycleGeneration !== undefined
@@ -2163,8 +2163,8 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       turnId: pendingRequest.turnId,
       parentTurnId: pendingRequest.parentTurnId,
       itemId: pendingRequest.itemId,
-      providerThreadId: pendingRequest.providerThreadId,
-      providerParentThreadId: pendingRequest.providerParentThreadId,
+      nativeThreadId: pendingRequest.nativeThreadId,
+      nativeParentThreadId: pendingRequest.nativeParentThreadId,
       requestId: pendingRequest.requestId,
       payload: {
         requestId: pendingRequest.requestId,
@@ -2284,7 +2284,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
       // The session becomes unroutable immediately, but remains in the map as a
       // replacement barrier until teardown proves the old process tree exited.
-      // Otherwise a failed proof could let startSession spawn a second provider
+      // Otherwise a failed proof could let startSession spawn a second engine
       // process for the same thread.
       this.updateSession(context, {
         status: "closed",
@@ -2320,7 +2320,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     return stopPromise;
   }
 
-  listSessions(): ProviderSession[] {
+  listSessions(): EngineSession[] {
     return Array.from(this.sessions.values())
       .filter((context) => this.isContextRoutable(context))
       .map(({ session }) => ({
@@ -2357,7 +2357,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     }
   }
 
-  async listSkills(input: CodexSkillListInput): Promise<ProviderListSkillsResult> {
+  async listSkills(input: CodexSkillListInput): Promise<EngineListSkillsResult> {
     const cwd = input.cwd.trim();
     const cacheKey = JSON.stringify({
       cwd,
@@ -2390,7 +2390,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       });
     }
     const skills = parseCodexSkillsListResponse(response, cwd);
-    const result: ProviderListSkillsResult = {
+    const result: EngineListSkillsResult = {
       skills,
       source: "codex-app-server",
       cached: false,
@@ -2399,7 +2399,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     return result;
   }
 
-  async listPlugins(input: CodexPluginListInput): Promise<ProviderListPluginsResult> {
+  async listPlugins(input: CodexPluginListInput): Promise<EngineListPluginsResult> {
     const cwd = input.cwd?.trim() || null;
     const cacheKey = JSON.stringify({
       cwd,
@@ -2421,7 +2421,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       ...(cwd ? { cwds: [cwd] } : {}),
       ...(input.forceRemoteSync ? { forceRemoteSync: true } : {}),
     });
-    const result: ProviderListPluginsResult = {
+    const result: EngineListPluginsResult = {
       ...parseCodexPluginListResponse(response),
       source: "codex-app-server",
       cached: false,
@@ -2430,7 +2430,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     return result;
   }
 
-  async readPlugin(input: CodexPluginReadInput): Promise<ProviderReadPluginResult> {
+  async readPlugin(input: CodexPluginReadInput): Promise<EngineReadPluginResult> {
     const marketplacePath = input.marketplacePath.trim();
     const pluginName = input.pluginName.trim();
     const cacheKey = JSON.stringify({
@@ -2450,7 +2450,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       marketplacePath,
       pluginName,
     });
-    const result: ProviderReadPluginResult = {
+    const result: EngineReadPluginResult = {
       plugin: parseCodexPluginReadResponse(response),
       source: "codex-app-server",
       cached: false,
@@ -2459,7 +2459,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     return result;
   }
 
-  async listModels(threadId?: string): Promise<ProviderListModelsResult> {
+  async listModels(threadId?: string): Promise<EngineListModelsResult> {
     const cacheKey = threadId?.trim() || "__default__";
     const cached = getRecentCacheEntry(this.modelCache, cacheKey);
     if (cached) {
@@ -2476,7 +2476,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       includeHidden: false,
     });
     const models = parseCodexModelListResponse(response);
-    const result: ProviderListModelsResult = {
+    const result: EngineListModelsResult = {
       models,
       source: "codex-app-server",
       cached: false,
@@ -2627,7 +2627,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     readonly refreshToken: boolean;
   }): Promise<CodexVoiceTranscriptionAuthContext> {
     // Auth is account-scoped, so a live thread session remains reusable even when
-    // a worktree project reports a different cwd from the provider session.
+    // a worktree project reports a different cwd from the engine session.
     let context: CodexSessionContext | undefined;
     const normalizedThreadId = input.threadId?.trim();
     if (normalizedThreadId) {
@@ -2721,7 +2721,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     });
     const context: CodexSessionContext = {
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "connecting",
         runtimeMode: "full-access",
         model: CODEX_DEFAULT_MODEL,
@@ -3018,8 +3018,8 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     const resolvedCollaborationRoute = this.resolveCollaborationRoute(context, notification.params);
     const {
       parentTurnId: childParentTurnId,
-      providerThreadId,
-      providerParentThreadId,
+      nativeThreadId,
+      nativeParentThreadId,
       isChildConversation,
     } = resolvedCollaborationRoute;
     if (
@@ -3059,7 +3059,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     const gatewayTurnAuthorityRetired =
       terminalGatewayTurnId !== undefined && context.gatewaySessionLease !== undefined;
     if (gatewayTurnAuthorityRetired) {
-      // Fence synchronously before publishing the terminal event. ProviderService
+      // Fence synchronously before publishing the terminal event. EngineService
       // may admit B as soon as it consumes that event, so A's bearer must already
       // be permanently unable to bind to another latestTurn.
       void this.retireGatewayTurn(context, terminalGatewayTurnId);
@@ -3074,7 +3074,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "notification",
-      provider: "codex",
+      engine: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
       ...(context.lifecycleGeneration !== undefined
@@ -3084,8 +3084,8 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       ...(rawRoute.turnId ? { turnId: rawRoute.turnId } : {}),
       ...(childParentTurnId ? { parentTurnId: childParentTurnId } : {}),
       ...(rawRoute.itemId ? { itemId: rawRoute.itemId } : {}),
-      ...(providerThreadId ? { providerThreadId } : {}),
-      ...(providerParentThreadId ? { providerParentThreadId } : {}),
+      ...(nativeThreadId ? { nativeThreadId } : {}),
+      ...(nativeParentThreadId ? { nativeParentThreadId } : {}),
       textDelta,
       payload: eventPayload,
     });
@@ -3290,8 +3290,8 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     const resolvedCollaborationRoute = this.resolveCollaborationRoute(context, request.params);
     const {
       parentTurnId: childParentTurnId,
-      providerThreadId,
-      providerParentThreadId,
+      nativeThreadId,
+      nativeParentThreadId,
     } = resolvedCollaborationRoute;
     const requestKind = this.requestKindForMethod(request.method);
     let requestId: ApprovalRequestId | undefined;
@@ -3310,8 +3310,8 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         ...(rawRoute.turnId ? { turnId: rawRoute.turnId } : {}),
         ...(childParentTurnId ? { parentTurnId: childParentTurnId } : {}),
         ...(rawRoute.itemId ? { itemId: rawRoute.itemId } : {}),
-        ...(providerThreadId ? { providerThreadId } : {}),
-        ...(providerParentThreadId ? { providerParentThreadId } : {}),
+        ...(nativeThreadId ? { nativeThreadId } : {}),
+        ...(nativeParentThreadId ? { nativeParentThreadId } : {}),
         ...(requestedPermissions ? { requestedPermissions } : {}),
       };
       if (context.sessionApprovalOverride && !isPermissionApprovalRequest(pendingRequest)) {
@@ -3336,15 +3336,15 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         ...(rawRoute.turnId ? { turnId: rawRoute.turnId } : {}),
         ...(childParentTurnId ? { parentTurnId: childParentTurnId } : {}),
         ...(rawRoute.itemId ? { itemId: rawRoute.itemId } : {}),
-        ...(providerThreadId ? { providerThreadId } : {}),
-        ...(providerParentThreadId ? { providerParentThreadId } : {}),
+        ...(nativeThreadId ? { nativeThreadId } : {}),
+        ...(nativeParentThreadId ? { nativeParentThreadId } : {}),
       });
     }
 
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "request",
-      provider: "codex",
+      engine: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
       ...(context.lifecycleGeneration !== undefined
@@ -3354,8 +3354,8 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       ...(rawRoute.turnId ? { turnId: rawRoute.turnId } : {}),
       ...(childParentTurnId ? { parentTurnId: childParentTurnId } : {}),
       ...(rawRoute.itemId ? { itemId: rawRoute.itemId } : {}),
-      ...(providerThreadId ? { providerThreadId } : {}),
-      ...(providerParentThreadId ? { providerParentThreadId } : {}),
+      ...(nativeThreadId ? { nativeThreadId } : {}),
+      ...(nativeParentThreadId ? { nativeParentThreadId } : {}),
       requestId,
       requestKind,
       payload: request.params,
@@ -3457,7 +3457,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "session",
-      provider: "codex",
+      engine: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
       ...(context.lifecycleGeneration !== undefined
@@ -3475,7 +3475,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "error",
-      provider: "codex",
+      engine: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
       ...(context.lifecycleGeneration !== undefined
@@ -3486,7 +3486,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     });
   }
 
-  private emitEvent(event: ProviderEvent): void {
+  private emitEvent(event: EngineEvent): void {
     this.emit("event", event);
   }
 
@@ -3528,7 +3528,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       const gatewayTurnAuthorityRetired = context.gatewaySessionLease !== undefined;
       if (gatewayTurnAuthorityRetired) {
         // Match native terminal notifications: fence the bearer synchronously
-        // before publishing the synthetic completion to ProviderService.
+        // before publishing the synthetic completion to EngineService.
         void this.retireGatewayTurn(context, turnId);
       }
       this.updateSession(context, {
@@ -3539,7 +3539,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       this.emitEvent({
         id: EventId.makeUnsafe(randomUUID()),
         kind: "notification",
-        provider: "codex",
+        engine: "codex",
         threadId: context.session.threadId,
         createdAt: new Date().toISOString(),
         ...(context.lifecycleGeneration !== undefined
@@ -3592,7 +3592,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     this.emitEvent({
       id: EventId.makeUnsafe(randomUUID()),
       kind: "notification",
-      provider: "codex",
+      engine: "codex",
       threadId: context.session.threadId,
       createdAt: new Date().toISOString(),
       ...(context.lifecycleGeneration !== undefined
@@ -3622,7 +3622,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     await assertSupportedCodexCliVersion(input);
   }
 
-  private updateSession(context: CodexSessionContext, updates: Partial<ProviderSession>): void {
+  private updateSession(context: CodexSessionContext, updates: Partial<EngineSession>): void {
     context.session = {
       ...context.session,
       ...updates,
@@ -3630,7 +3630,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     };
   }
 
-  private requestKindForMethod(method: string): ProviderRequestKind | undefined {
+  private requestKindForMethod(method: string): EngineRequestKind | undefined {
     if (method === "item/commandExecution/requestApproval") {
       return "command";
     }
@@ -3733,11 +3733,11 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
 
   private readRouteFields(params: unknown): {
     turnId?: TurnId;
-    itemId?: ProviderItemId;
+    itemId?: EngineItemId;
   } {
     const route: {
       turnId?: TurnId;
-      itemId?: ProviderItemId;
+      itemId?: EngineItemId;
     } = {};
 
     const turnId = toTurnId(
@@ -3776,7 +3776,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
     params: unknown,
   ): ResolvedCollaborationRoute {
     const parentTurnId = this.readChildParentTurnId(context, params);
-    const providerThreadId = normalizeProviderThreadId(this.readProviderConversationId(params));
+    const nativeThreadId = normalizeProviderThreadId(this.readProviderConversationId(params));
     const mappedProviderParentThreadId = this.readChildParentProviderThreadId(context, params);
     const activeProviderThreadId = normalizeProviderThreadId(
       readResumeThreadId({
@@ -3786,27 +3786,27 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       }),
     );
     // A child can emit events before its collab tool-call payload populates the
-    // receiver maps. During a live parent turn, another provider thread belongs
+    // receiver maps. During a live parent turn, another engine thread belongs
     // to that active conversation. Preserve the mapped parent when one exists;
-    // otherwise provide the active provider thread required for child routing.
+    // otherwise provide the active engine thread required for child routing.
     const isUnmappedChildConversation =
       mappedProviderParentThreadId === undefined &&
       context.session.status === "running" &&
       context.session.activeTurnId !== undefined &&
-      providerThreadId !== undefined &&
+      nativeThreadId !== undefined &&
       activeProviderThreadId !== undefined &&
-      providerThreadId !== activeProviderThreadId;
-    const providerParentThreadId =
+      nativeThreadId !== activeProviderThreadId;
+    const nativeParentThreadId =
       mappedProviderParentThreadId ??
       (isUnmappedChildConversation ? activeProviderThreadId : undefined);
 
     return {
       ...(parentTurnId ? { parentTurnId } : {}),
-      ...(providerThreadId ? { providerThreadId } : {}),
-      ...(providerParentThreadId ? { providerParentThreadId } : {}),
+      ...(nativeThreadId ? { nativeThreadId } : {}),
+      ...(nativeParentThreadId ? { nativeParentThreadId } : {}),
       isChildConversation:
         parentTurnId !== undefined ||
-        providerParentThreadId !== undefined ||
+        nativeParentThreadId !== undefined ||
         isUnmappedChildConversation,
     };
   }
@@ -4004,7 +4004,7 @@ function readCodexProviderOptions(input: CodexAppServerStartSessionInput): {
   readonly binaryPath?: string;
   readonly homePath?: string;
 } {
-  const options = input.providerOptions?.codex;
+  const options = input.engineOptions?.codex;
   if (!options) {
     return {};
   }
@@ -4037,7 +4037,7 @@ interface CodexVersionCommandResult {
  * This intentionally mirrors `spawnSync`'s result shape (`error` / `status` /
  * `stdout` / `stderr`) so the version-gate semantics below stay byte-for-byte
  * identical, but without blocking the event loop: a synchronous spawn froze the
- * WebSocket fanout, PTY drains, and every provider's stdio for the duration of the
+ * WebSocket fanout, PTY drains, and every engine's stdio for the duration of the
  * probe (measured ~80-97 ms, up to the 4 s timeout when the binary hangs).
  */
 function runCodexVersionCommand(input: {
@@ -4304,6 +4304,6 @@ function toTurnId(value: string | undefined): TurnId | undefined {
   return brandIfNonEmpty(value, TurnId.makeUnsafe);
 }
 
-function toProviderItemId(value: string | undefined): ProviderItemId | undefined {
-  return brandIfNonEmpty(value, ProviderItemId.makeUnsafe);
+function toProviderItemId(value: string | undefined): EngineItemId | undefined {
+  return brandIfNonEmpty(value, EngineItemId.makeUnsafe);
 }

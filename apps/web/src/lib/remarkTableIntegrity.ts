@@ -75,7 +75,7 @@ function fallbackForTable(
 
   // Delimiter repair can change offsets, but it never adds/removes lines or rewrites the header
   // and body rows. Mapping the parsed table's line/column range back to the pre-repair source
-  // therefore preserves the exact Markdown the user or provider supplied.
+  // therefore preserves the exact Markdown the user or engine supplied.
   const start = offsetForPoint(sourceInput, sourceLineStarts, table.position?.start);
   const end = offsetForPoint(sourceInput, sourceLineStarts, table.position?.end);
   if (start === null || end === null || end < start) {

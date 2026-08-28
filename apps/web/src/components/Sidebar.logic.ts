@@ -5,7 +5,7 @@
 import {
   MAX_PINNED_PROJECTS,
   type KeybindingCommand,
-  type ModelSelection,
+  type EngineSelection,
   type ProjectId,
   type EngineKind,
   type PullRequestReviewRequestCountResult,
@@ -56,11 +56,11 @@ export type SidebarActionBadge = {
   readonly accessibleLabel: string;
 };
 
-export function resolveNewProjectDefaultModelSelection(
-  provider: EngineKind,
-): ModelSelection | null {
-  const model = getDefaultModel(provider);
-  return model ? { provider, model } : null;
+export function resolveNewProjectDefaultEngineSelection(
+  engine: EngineKind,
+): EngineSelection | null {
+  const model = getDefaultModel(engine);
+  return model ? { engine, model } : null;
 }
 
 export function isProjectsSidebarSurface(input: {

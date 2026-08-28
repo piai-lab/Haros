@@ -11,8 +11,8 @@ import {
   BUILT_IN_TOOL_SURFACES,
   DEFAULT_MODEL_BY_PROVIDER,
   DEFAULT_SERVER_SETTINGS,
-  type ModelSelection,
-  type ProviderWithDefaultModel,
+  type EngineSelection,
+  type EngineWithDefaultModel,
   ServerSettings,
   ServerSettingsError,
   type ServerSettingsPatch,
@@ -46,10 +46,10 @@ import * as Semaphore from "effect/Semaphore";
 import { writeFileStringAtomically } from "./atomicWrite";
 import { ServerConfig } from "./config";
 import {
-  ProviderCredentials,
-  ProviderCredentialsLive,
-  type ExternalProviderServer,
-} from "./providerCredentials";
+  EngineCredentials,
+  EngineCredentialsLive,
+  type ExternalEngineServer,
+} from "./engineCredentials";
 
 export interface ServerSettingsShape {
   readonly start: Effect.Effect<void, ServerSettingsError>;
@@ -64,8 +64,8 @@ export interface ServerSettingsShape {
     patch: ServerSettingsPatch,
   ) => Effect.Effect<ServerSettingsView, ServerSettingsError>;
   readonly resetSettingsView: Effect.Effect<ServerSettingsView, ServerSettingsError>;
-  readonly updateProviderCredential: (
-    provider: ExternalProviderServer,
+  readonly updateEngineCredential: (
+    engine: ExternalEngineServer,
     serverPassword: string,
   ) => Effect.Effect<ServerSettingsView, ServerSettingsError>;
   readonly mutateOmniMindDefaultPrompt: (
@@ -97,11 +97,11 @@ const HARNESSOS_FINE_GRAINED_BUILT_IN_GROUPS = [
 ] as const;
 
 export function toServerSettingsView(settings: ServerSettings): ServerSettingsView {
-  const { defaultPrompt: _defaultPrompt, ...oa } = settings.providers.oa;
+  const { defaultPrompt: _defaultPrompt, ...oa } = settings.engines.oa;
   return {
     ...settings,
-    providers: {
-      ...settings.providers,
+    engines: {
+      ...settings.engines,
       oa,
     },
   };
@@ -124,7 +124,7 @@ export class ServerSettingsService extends ServiceMap.Service<
         const emitChange = (settings: ServerSettings) =>
           PubSub.publish(changesPubSub, settings).pipe(Effect.asVoid);
         const getSettings = Ref.get(currentSettingsRef).pipe(
-          Effect.map(resolveTextGenerationProvider),
+          Effect.map(resolveTextGenerationEngine),
         );
         const updateSettings = (patch: ServerSettingsPatch) =>
           writeSemaphore.withPermits(1)(
@@ -135,30 +135,27 @@ export class ServerSettingsService extends ServiceMap.Service<
               Effect.tap((nextSettings) => Ref.set(currentSettingsRef, nextSettings)),
               Effect.tap(() => Ref.update(revisionRef, (revision) => revision + 1)),
               Effect.tap(emitChange),
-              Effect.map(resolveTextGenerationProvider),
+              Effect.map(resolveTextGenerationEngine),
             ),
           );
-        const updateProviderCredential = (
-          provider: ExternalProviderServer,
-          serverPassword: string,
-        ) =>
+        const updateEngineCredential = (engine: ExternalEngineServer, serverPassword: string) =>
           writeSemaphore.withPermits(1)(
             Effect.gen(function* () {
               const configured = serverPassword.trim().length > 0;
               const current = yield* Ref.get(currentSettingsRef);
               const next = {
                 ...current,
-                providers: {
-                  ...current.providers,
-                  [provider]: {
-                    ...current.providers[provider],
+                engines: {
+                  ...current.engines,
+                  [engine]: {
+                    ...current.engines[engine],
                     serverPasswordConfigured: configured,
                   },
                 },
               } satisfies ServerSettings;
               yield* Ref.set(currentSettingsRef, next);
               yield* emitChange(next);
-              return toServerSettingsView(resolveTextGenerationProvider(next));
+              return toServerSettingsView(resolveTextGenerationEngine(next));
             }),
           );
         const resetSettingsView = writeSemaphore.withPermits(1)(
@@ -166,19 +163,19 @@ export class ServerSettingsService extends ServiceMap.Service<
             const current = yield* Ref.get(currentSettingsRef);
             const next = {
               ...DEFAULT_SERVER_SETTINGS,
-              providers: {
-                ...DEFAULT_SERVER_SETTINGS.providers,
+              engines: {
+                ...DEFAULT_SERVER_SETTINGS.engines,
                 oa: {
-                  ...DEFAULT_SERVER_SETTINGS.providers.oa,
-                  defaultPrompt: current.providers.oa.defaultPrompt,
+                  ...DEFAULT_SERVER_SETTINGS.engines.oa,
+                  defaultPrompt: current.engines.oa.defaultPrompt,
                 },
                 kilo: {
-                  ...DEFAULT_SERVER_SETTINGS.providers.kilo,
-                  serverPasswordConfigured: current.providers.kilo.serverPasswordConfigured,
+                  ...DEFAULT_SERVER_SETTINGS.engines.kilo,
+                  serverPasswordConfigured: current.engines.kilo.serverPasswordConfigured,
                 },
                 opencode: {
-                  ...DEFAULT_SERVER_SETTINGS.providers.opencode,
-                  serverPasswordConfigured: current.providers.opencode.serverPasswordConfigured,
+                  ...DEFAULT_SERVER_SETTINGS.engines.opencode,
+                  serverPasswordConfigured: current.engines.opencode.serverPasswordConfigured,
                 },
               },
             } satisfies ServerSettings;
@@ -192,7 +189,7 @@ export class ServerSettingsService extends ServiceMap.Service<
           writeSemaphore.withPermits(1)(
             Effect.gen(function* () {
               const currentSettings = yield* Ref.get(currentSettingsRef);
-              const current = currentSettings.providers.oa.defaultPrompt;
+              const current = currentSettings.engines.oa.defaultPrompt;
               if (current !== expected) return { state: "conflict" as const, current };
               if (current === next) return { state: "unchanged" as const, current };
               const nextSettings = yield* replaceOmniMindDefaultPrompt(
@@ -228,14 +225,14 @@ export class ServerSettingsService extends ServiceMap.Service<
           updateSettingsView: (patch) =>
             updateSettings(patch).pipe(Effect.map(toServerSettingsView)),
           resetSettingsView,
-          updateProviderCredential,
+          updateEngineCredential,
           mutateOmniMindDefaultPrompt,
           get streamChanges() {
-            return Stream.fromPubSub(changesPubSub).pipe(Stream.map(resolveTextGenerationProvider));
+            return Stream.fromPubSub(changesPubSub).pipe(Stream.map(resolveTextGenerationEngine));
           },
           get streamViews() {
             return Stream.fromPubSub(changesPubSub).pipe(
-              Stream.map(resolveTextGenerationProvider),
+              Stream.map(resolveTextGenerationEngine),
               Stream.map(toServerSettingsView),
             );
           },
@@ -244,25 +241,25 @@ export class ServerSettingsService extends ServiceMap.Service<
     );
 }
 
-const PROVIDER_ORDER: readonly ProviderWithDefaultModel[] = ["codex", "claude", "kilo", "opencode"];
+const ENGINE_ORDER: readonly EngineWithDefaultModel[] = ["codex", "claude", "kilo", "opencode"];
 
-function resolveTextGenerationProvider(settings: ServerSettings): ServerSettings {
-  const selection = settings.textGenerationModelSelection;
-  if (settings.providers[selection.provider].enabled) {
+function resolveTextGenerationEngine(settings: ServerSettings): ServerSettings {
+  const selection = settings.textGenerationEngineSelection;
+  if (settings.engines[selection.engine].enabled) {
     return settings;
   }
 
-  const fallback = PROVIDER_ORDER.find((provider) => settings.providers[provider].enabled);
+  const fallback = ENGINE_ORDER.find((engine) => settings.engines[engine].enabled);
   if (!fallback) {
     return settings;
   }
 
   return {
     ...settings,
-    textGenerationModelSelection: {
-      provider: fallback,
+    textGenerationEngineSelection: {
+      engine: fallback,
       model: DEFAULT_MODEL_BY_PROVIDER[fallback],
-    } as ModelSelection,
+    } as EngineSelection,
   };
 }
 
@@ -299,10 +296,10 @@ function replaceOmniMindDefaultPrompt(
 ): Effect.Effect<ServerSettings, ServerSettingsError> {
   return Schema.decodeUnknownEffect(ServerSettings)({
     ...current,
-    providers: {
-      ...current.providers,
+    engines: {
+      ...current.engines,
       oa: {
-        ...current.providers.oa,
+        ...current.engines.oa,
         defaultPrompt,
       },
     },
@@ -320,16 +317,16 @@ function replaceOmniMindDefaultPrompt(
 
 const EXTERNAL_SERVER_PROVIDERS = ["kilo", "opencode"] as const;
 
-function readLegacyProviderPasswords(raw: string): ReadonlyMap<ExternalProviderServer, string> {
+function readLegacyEnginePasswords(raw: string): ReadonlyMap<ExternalEngineServer, string> {
   try {
     const parsed = JSON.parse(raw) as {
-      providers?: Partial<Record<ExternalProviderServer, { readonly serverPassword?: unknown }>>;
+      engines?: Partial<Record<ExternalEngineServer, { readonly serverPassword?: unknown }>>;
     };
-    const passwords = new Map<ExternalProviderServer, string>();
-    for (const provider of EXTERNAL_SERVER_PROVIDERS) {
-      const value = parsed.providers?.[provider]?.serverPassword;
+    const passwords = new Map<ExternalEngineServer, string>();
+    for (const engine of EXTERNAL_SERVER_PROVIDERS) {
+      const value = parsed.engines?.[engine]?.serverPassword;
       if (typeof value === "string" && value.trim().length > 0) {
-        passwords.set(provider, value.trim());
+        passwords.set(engine, value.trim());
       }
     }
     return passwords;
@@ -476,7 +473,7 @@ function decodeSettingsFromJson(settingsPath: string, raw: string) {
 
 const makeServerSettings = Effect.gen(function* () {
   const { settingsPath } = yield* ServerConfig;
-  const providerCredentials = yield* ProviderCredentials;
+  const engineCredentials = yield* EngineCredentials;
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const writeSemaphore = yield* Semaphore.make(1);
@@ -491,20 +488,20 @@ const makeServerSettings = Effect.gen(function* () {
 
   const withCredentialState = (settings: ServerSettings) =>
     Effect.all({
-      kilo: providerCredentials.isServerPasswordConfigured("kilo"),
-      opencode: providerCredentials.isServerPasswordConfigured("opencode"),
+      kilo: engineCredentials.isServerPasswordConfigured("kilo"),
+      opencode: engineCredentials.isServerPasswordConfigured("opencode"),
     }).pipe(
       Effect.map(
         (configured): ServerSettings => ({
           ...settings,
-          providers: {
-            ...settings.providers,
+          engines: {
+            ...settings.engines,
             kilo: {
-              ...settings.providers.kilo,
+              ...settings.engines.kilo,
               serverPasswordConfigured: configured.kilo,
             },
             opencode: {
-              ...settings.providers.opencode,
+              ...settings.engines.opencode,
               serverPasswordConfigured: configured.opencode,
             },
           },
@@ -514,7 +511,7 @@ const makeServerSettings = Effect.gen(function* () {
         (cause) =>
           new ServerSettingsError({
             settingsPath,
-            detail: "failed to read provider credential state",
+            detail: "failed to read engine credential state",
             cause,
           }),
       ),
@@ -564,17 +561,17 @@ const makeServerSettings = Effect.gen(function* () {
         migrated: false,
       };
     }
-    const legacyPasswords = readLegacyProviderPasswords(raw);
+    const legacyPasswords = readLegacyEnginePasswords(raw);
     yield* Effect.forEach(
       legacyPasswords,
-      ([provider, password]) => providerCredentials.replaceServerPassword(provider, password),
+      ([engine, password]) => engineCredentials.replaceServerPassword(engine, password),
       { discard: true },
     ).pipe(
       Effect.mapError(
         (cause) =>
           new ServerSettingsError({
             settingsPath,
-            detail: "failed to migrate provider credentials",
+            detail: "failed to migrate engine credentials",
             cause,
           }),
       ),
@@ -645,7 +642,7 @@ const makeServerSettings = Effect.gen(function* () {
     yield* Deferred.succeed(startedDeferred, undefined).pipe(Effect.orDie);
   });
 
-  const getSettings = Ref.get(settingsRef).pipe(Effect.map(resolveTextGenerationProvider));
+  const getSettings = Ref.get(settingsRef).pipe(Effect.map(resolveTextGenerationEngine));
   const updateSettings = (patch: ServerSettingsPatch) =>
     writeSemaphore.withPermits(1)(
       Effect.gen(function* () {
@@ -662,7 +659,7 @@ const makeServerSettings = Effect.gen(function* () {
         yield* Ref.set(settingsRef, next);
         yield* Ref.set(revisionRef, nextRevision);
         yield* emitChange(next);
-        return resolveTextGenerationProvider(next);
+        return resolveTextGenerationEngine(next);
       }),
     );
 
@@ -670,7 +667,7 @@ const makeServerSettings = Effect.gen(function* () {
     writeSemaphore.withPermits(1)(
       Effect.gen(function* () {
         const disk = yield* loadSettingsFromDisk;
-        const current = disk.settings.providers.oa.defaultPrompt;
+        const current = disk.settings.engines.oa.defaultPrompt;
         if (current !== expected) return { state: "conflict" as const, current };
         if (current === nextValue) return { state: "unchanged" as const, current };
         const next = yield* replaceOmniMindDefaultPrompt(settingsPath, disk.settings, nextValue);
@@ -687,19 +684,19 @@ const makeServerSettings = Effect.gen(function* () {
       }),
     );
 
-  const updateProviderCredential = (provider: ExternalProviderServer, serverPassword: string) =>
+  const updateEngineCredential = (engine: ExternalEngineServer, serverPassword: string) =>
     writeSemaphore.withPermits(1)(
       Effect.gen(function* () {
         // Refresh non-secret settings before committing the credential. If the
         // settings file cannot be read, fail before the secret owner changes;
         // after credential acceptance, projection cannot fail independently.
         const disk = yield* loadSettingsFromDisk;
-        yield* providerCredentials.replaceServerPassword(provider, serverPassword).pipe(
+        yield* engineCredentials.replaceServerPassword(engine, serverPassword).pipe(
           Effect.mapError(
             (cause) =>
               new ServerSettingsError({
                 settingsPath,
-                detail: `failed to update ${provider} server credential`,
+                detail: `failed to update ${engine} server credential`,
                 cause,
               }),
           ),
@@ -708,12 +705,12 @@ const makeServerSettings = Effect.gen(function* () {
         // same serialized snapshot before the credential-blind push is emitted.
         const current = disk.settings;
         const configured = serverPassword.trim().length > 0;
-        const fresh = resolveTextGenerationProvider({
+        const fresh = resolveTextGenerationEngine({
           ...current,
-          providers: {
-            ...current.providers,
-            [provider]: {
-              ...current.providers[provider],
+          engines: {
+            ...current.engines,
+            [engine]: {
+              ...current.engines[engine],
               serverPasswordConfigured: configured,
             },
           },
@@ -731,11 +728,11 @@ const makeServerSettings = Effect.gen(function* () {
       const credentialState = yield* withCredentialState(DEFAULT_SERVER_SETTINGS);
       const next = {
         ...credentialState,
-        providers: {
-          ...credentialState.providers,
+        engines: {
+          ...credentialState.engines,
           oa: {
-            ...credentialState.providers.oa,
-            defaultPrompt: disk.settings.providers.oa.defaultPrompt,
+            ...credentialState.engines.oa,
+            defaultPrompt: disk.settings.engines.oa.defaultPrompt,
           },
         },
       } satisfies ServerSettings;
@@ -748,7 +745,7 @@ const makeServerSettings = Effect.gen(function* () {
       yield* Ref.set(settingsRef, next);
       yield* Ref.set(revisionRef, nextRevision);
       yield* emitChange(next);
-      return toServerSettingsView(resolveTextGenerationProvider(next));
+      return toServerSettingsView(resolveTextGenerationEngine(next));
     }),
   );
 
@@ -769,14 +766,14 @@ const makeServerSettings = Effect.gen(function* () {
     updateSettings,
     updateSettingsView: (patch) => updateSettings(patch).pipe(Effect.map(toServerSettingsView)),
     resetSettingsView,
-    updateProviderCredential,
+    updateEngineCredential,
     mutateOmniMindDefaultPrompt,
     get streamChanges() {
-      return Stream.fromPubSub(changesPubSub).pipe(Stream.map(resolveTextGenerationProvider));
+      return Stream.fromPubSub(changesPubSub).pipe(Stream.map(resolveTextGenerationEngine));
     },
     get streamViews() {
       return Stream.fromPubSub(changesPubSub).pipe(
-        Stream.map(resolveTextGenerationProvider),
+        Stream.map(resolveTextGenerationEngine),
         Stream.map(toServerSettingsView),
       );
     },
@@ -784,5 +781,5 @@ const makeServerSettings = Effect.gen(function* () {
 });
 
 export const ServerSettingsLive = Layer.effect(ServerSettingsService, makeServerSettings).pipe(
-  Layer.provide(ProviderCredentialsLive),
+  Layer.provide(EngineCredentialsLive),
 );

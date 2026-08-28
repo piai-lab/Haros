@@ -25,7 +25,7 @@ import { FeedbackDeliveryCancelledError } from "../feedback";
 import { I18nProvider } from "../i18n";
 
 const EMPTY_CONTEXT = {
-  provider: null,
+  engine: null,
   model: null,
   projectKind: null,
   environmentMode: null,

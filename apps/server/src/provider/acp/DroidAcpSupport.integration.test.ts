@@ -1,6 +1,6 @@
 // FILE: DroidAcpSupport.test.ts
 // Purpose: Verifies Droid ACP spawn, auth, mode, model, and discovery behavior.
-// Layer: Provider ACP support tests
+// Layer: Engine ACP support tests
 
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   applyDroidAcpInteractionMode,
-  applyDroidAcpModelSelection,
+  applyDroidAcpEngineSelection,
   buildDroidAcpSpawnInput,
   discoverDroidAcpModels,
   resolveDroidAcpAuthMethodId,
@@ -72,7 +72,7 @@ describe("buildDroidAcpSpawnInput", () => {
   });
 });
 
-describe("applyDroidAcpModelSelection", () => {
+describe("applyDroidAcpEngineSelection", () => {
   function recordingRuntime(failFor?: string) {
     const calls: Array<{ configId: string; value: string | boolean }> = [];
     return {
@@ -97,7 +97,7 @@ describe("applyDroidAcpModelSelection", () => {
   it("sets the model before the reasoning effort", async () => {
     const { calls, runtime } = recordingRuntime();
     await Effect.runPromise(
-      applyDroidAcpModelSelection({
+      applyDroidAcpEngineSelection({
         runtime,
         model: "minimax-m3",
         reasoningEffort: "high",
@@ -113,7 +113,7 @@ describe("applyDroidAcpModelSelection", () => {
   it("skips the reasoning effort RPC when no effort is requested", async () => {
     const { calls, runtime } = recordingRuntime();
     await Effect.runPromise(
-      applyDroidAcpModelSelection({
+      applyDroidAcpEngineSelection({
         runtime,
         model: "claude-opus-4-8",
         mapError: ({ cause }) => cause,
@@ -125,7 +125,7 @@ describe("applyDroidAcpModelSelection", () => {
   it("maps set_config_option failures through mapError", async () => {
     const { runtime } = recordingRuntime("model");
     const error = await Effect.runPromise(
-      applyDroidAcpModelSelection({
+      applyDroidAcpEngineSelection({
         runtime,
         model: "claude-opus-4-8",
         mapError: ({ method }) => new Error(`failed:${method}`),

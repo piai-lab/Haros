@@ -129,7 +129,7 @@ describe("copyGeneratedImageToStudioWorkspace", () => {
         trustedSourceRoots: [trustedRoot],
       }),
     );
-    // A replayed completion (server restart, provider replay) copies the same bytes.
+    // A replayed completion (server restart, engine replay) copies the same bytes.
     const second = await Effect.runPromise(
       copyGeneratedImageToStudioWorkspace({
         sourcePath,
@@ -165,7 +165,7 @@ describe("copyGeneratedImageToStudioWorkspace", () => {
     const root = await temporaryRoot();
     const trustedRoot = path.join(root, "codex-home", "generated_images");
     await mkdir(trustedRoot, { recursive: true });
-    // A crafted provider payload pointing at an arbitrary local image must not be
+    // A crafted engine payload pointing at an arbitrary local image must not be
     // copied into the user-visible Studio folder.
     const outsideSource = path.join(root, "elsewhere", "private.png");
     await mkdir(path.dirname(outsideSource), { recursive: true });

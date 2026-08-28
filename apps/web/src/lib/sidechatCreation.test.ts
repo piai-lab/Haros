@@ -40,7 +40,7 @@ const project = {
   cwd: "/repo",
 } as Project;
 
-const selectedModelSelection = { provider: "codex", model: "gpt-5.6" } as const;
+const selectedEngineSelection = { engine: "codex", model: "gpt-5.6" } as const;
 
 function makeApi(input?: {
   dispatchCommand?: ReturnType<typeof vi.fn>;
@@ -73,7 +73,7 @@ describe("createSidechatThread", () => {
       api: makeApi({ getShellSnapshot }),
       project,
       sourceThread,
-      selectedModelSelection,
+      selectedEngineSelection,
       openSidechat,
       syncServerShellSnapshot,
     });
@@ -97,7 +97,7 @@ describe("createSidechatThread", () => {
       api: makeApi({ dispatchCommand, getShellSnapshot }),
       project,
       sourceThread,
-      selectedModelSelection,
+      selectedEngineSelection,
       initialPrompt: "Investigate this",
       openSidechat: vi.fn(),
       syncServerShellSnapshot: vi.fn(),
@@ -113,7 +113,7 @@ describe("createSidechatThread", () => {
       api: makeApi({ dispatchCommand }),
       project,
       sourceThread,
-      selectedModelSelection,
+      selectedEngineSelection,
       initialPrompt: "Investigate this",
       openSidechat: vi.fn(),
       syncServerShellSnapshot: vi.fn(),
@@ -140,7 +140,7 @@ describe("createSidechatThread", () => {
       api: makeApi({ getShellSnapshot }),
       project,
       sourceThread,
-      selectedModelSelection,
+      selectedEngineSelection,
       openSidechat: vi.fn(),
       syncServerShellSnapshot: vi.fn(),
     });
@@ -167,7 +167,7 @@ describe("createSidechatThread", () => {
       api: makeApi({ getShellSnapshot }),
       project,
       sourceThread,
-      selectedModelSelection,
+      selectedEngineSelection,
       openSidechat: vi.fn(),
       syncServerShellSnapshot: vi.fn(),
     });
@@ -195,7 +195,7 @@ describe("createSidechatThread", () => {
       api: makeApi({ dispatchCommand }),
       project,
       sourceThread,
-      selectedModelSelection,
+      selectedEngineSelection,
       initialPrompt: "Investigate this",
       openSidechat,
       syncServerShellSnapshot: vi.fn(),
@@ -211,7 +211,7 @@ describe("createSidechatThread", () => {
       api: makeApi({ getShellSnapshot: vi.fn().mockRejectedValue(snapshotError) }),
       project,
       sourceThread,
-      selectedModelSelection,
+      selectedEngineSelection,
       openSidechat: vi.fn(),
       syncServerShellSnapshot: vi.fn(),
     });
@@ -228,7 +228,7 @@ describe("createSidechatThread", () => {
         api: makeApi({ dispatchCommand: vi.fn().mockRejectedValue(new Error("fork failed")) }),
         project,
         sourceThread,
-        selectedModelSelection,
+        selectedEngineSelection,
         openSidechat,
         syncServerShellSnapshot: vi.fn(),
       }),
@@ -366,7 +366,7 @@ describe("createOrJoinSidechat", () => {
     expect(startSecond).toHaveBeenCalledOnce();
   });
 
-  it("creates separate in-flight sidechats for different target providers", async () => {
+  it("creates separate in-flight sidechats for different target engines", async () => {
     const flights = new Map<string, SidechatCreationFlight>();
     const sourceThreadId = ThreadId.makeUnsafe("source-a");
     const startCodex = vi.fn().mockResolvedValue(result);

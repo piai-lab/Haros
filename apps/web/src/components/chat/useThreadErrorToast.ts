@@ -56,7 +56,7 @@ function closeSilently(threadId: ThreadId, silentRef: RefObject<boolean>): void 
 /**
  * Mirrors the thread-level error of `threadId` into a floating toast. Errors used
  * to render as an inline banner above the transcript, which pushed the whole chat
- * column down every time a provider failed; the toast keeps the layout stable.
+ * column down every time a engine failed; the toast keeps the layout stable.
  */
 export function useThreadErrorToast(input: {
   error: string | null;

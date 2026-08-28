@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+  ENGINE_SEND_TURN_MAX_ATTACHMENTS,
   type ServerLocalServerProcess,
   type ThreadBrowserState,
   type ThreadId,
@@ -1408,10 +1408,10 @@ export function BrowserPanel({
 
     const attachmentCount =
       composerDraftImageCount + composerDraftFileCount + composerDraftAssistantSelectionCount;
-    if (attachmentCount >= PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
+    if (attachmentCount >= ENGINE_SEND_TURN_MAX_ATTACHMENTS) {
       setLocalError(
         t("browser.attachmentLimit", {
-          count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+          count: ENGINE_SEND_TURN_MAX_ATTACHMENTS,
         }),
       );
       return;
@@ -1431,7 +1431,7 @@ export function BrowserPanel({
         if (!inserted) {
           throw new Error(
             t("browser.attachmentLimit", {
-              count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+              count: ENGINE_SEND_TURN_MAX_ATTACHMENTS,
             }),
           );
         }

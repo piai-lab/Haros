@@ -35,7 +35,7 @@ describe("terminal visual identity", () => {
     });
   });
 
-  it("does not infer provider icons from stale provider-looking labels", () => {
+  it("does not infer engine icons from stale engine-looking labels", () => {
     const identities = resolveTerminalVisualIdentityMap({
       terminalIds: ["terminal-1"],
       runningTerminalIds: [],

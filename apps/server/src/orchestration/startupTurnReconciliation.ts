@@ -1,7 +1,7 @@
 /**
  * startupTurnReconciliation - heal restart-orphaned turns at server boot.
  *
- * Provider runtimes (Codex app-server, ACP children, etc.) are purely
+ * Engine runtimes (Codex app-server, ACP children, etc.) are purely
  * in-memory: every one of them dies with the server process. A turn only
  * leaves the "running" state when its runtime emits a terminal event, so any
  * turn that was still in flight when the process exited has no surviving runtime
@@ -193,10 +193,8 @@ function buildStalePendingRequestCommand(input: {
     activity: {
       id: EventId.makeUnsafe(commandKey),
       tone: isApproval ? "error" : "info",
-      kind: isApproval ? "provider.approval.respond.failed" : "user-input.resolved",
-      summary: isApproval
-        ? "Provider approval response failed"
-        : "Provider user input response failed",
+      kind: isApproval ? "engine.approval.respond.failed" : "user-input.resolved",
+      summary: isApproval ? "Engine approval response failed" : "Engine user input response failed",
       payload: {
         requestId: input.requestId,
         ...(isApproval

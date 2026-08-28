@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { ProviderSendTurnInput, ThreadId, type ChatAttachment } from "@harnessos/contracts";
+import { EngineSendTurnInput, ThreadId, type ChatAttachment } from "@harnessos/contracts";
 import { Effect, Option, Schema } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -23,7 +23,7 @@ const MESSAGE_ID = "message-1";
 const roots = new Set<string>();
 
 function makeRoot(): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "provider-attachment-paths-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "engine-attachment-paths-"));
   roots.add(root);
   return root;
 }
@@ -77,7 +77,7 @@ function resolve(input: {
     repository: repositoryWith(input.blob),
     threadId: THREAD_ID,
     messageId: MESSAGE_ID,
-    provider: "codex",
+    engine: "codex",
     operation: "thread.turn.start",
   });
 }
@@ -89,7 +89,7 @@ afterEach(() => {
   roots.clear();
 });
 
-describe("provider attachment paths", () => {
+describe("engine attachment paths", () => {
   it.each([
     {
       kind: "image" as const,
@@ -209,7 +209,7 @@ describe("provider attachment paths", () => {
         repository,
         threadId: THREAD_ID,
         messageId: MESSAGE_ID,
-        provider: "codex",
+        engine: "codex",
         operation: "thread.turn.start",
       }),
     );
@@ -218,7 +218,7 @@ describe("provider attachment paths", () => {
       loadProviderPromptImageBlocks({
         attachments,
         attachmentsDir,
-        provider: "codex",
+        engine: "codex",
         method: "turn/start",
         readFile: (filePath) =>
           Effect.tryPromise(async () => {
@@ -311,7 +311,7 @@ describe("provider attachment paths", () => {
     ).rejects.toThrow("unavailable for this message");
   });
 
-  it("carries only the server-resolved path through provider schema decoding", async () => {
+  it("carries only the server-resolved path through engine schema decoding", async () => {
     const attachmentsDir = makeRoot();
     const id = "att_v2_05000000000000000000000000000000";
     const relativePath = `objects/05/${id}.png`;
@@ -333,7 +333,7 @@ describe("provider attachment paths", () => {
     );
     const rawInput = { threadId: THREAD_ID, input: "inspect", attachments: rawAttachments };
     const decoded = await Effect.runPromise(
-      Schema.decodeUnknownEffect(ProviderSendTurnInput)(rawInput),
+      Schema.decodeUnknownEffect(EngineSendTurnInput)(rawInput),
     );
     const [carried] = carryProviderAttachmentPaths(rawInput, decoded.attachments ?? []);
 

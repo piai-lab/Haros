@@ -8,7 +8,7 @@ const decodeProviderStatusesUpdated = Schema.decodeUnknownSync(
   ServerProviderStatusesUpdatedPayload,
 );
 const BASE_STATUS = {
-  provider: "cursor",
+  engine: "cursor",
   status: "error",
   available: false,
   authStatus: "unknown",
@@ -28,9 +28,9 @@ describe("ServerProviderStatus", () => {
     expect(
       decodeServerProviderStatus({
         ...BASE_STATUS,
-        checkedBinaryPath: "/custom/bin/provider",
+        checkedBinaryPath: "/custom/bin/engine",
       }).checkedBinaryPath,
-    ).toBe("/custom/bin/provider");
+    ).toBe("/custom/bin/engine");
   });
 
   it("rejects unowned diagnostic strings as unavailable reasons", () => {
@@ -45,10 +45,10 @@ describe("ServerProviderStatus", () => {
 
 describe("ServerProviderStatusesUpdatedPayload", () => {
   it("distinguishes a passive settled empty result from an older status-only payload", () => {
-    expect(decodeProviderStatusesUpdated({ providers: [] }).passivePresence).toBeUndefined();
+    expect(decodeProviderStatusesUpdated({ engines: [] }).passivePresence).toBeUndefined();
     expect(
       decodeProviderStatusesUpdated({
-        providers: [],
+        engines: [],
         passivePresence: {
           state: "settled",
           recoverableProviders: [],

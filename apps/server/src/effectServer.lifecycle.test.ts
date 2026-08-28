@@ -5,7 +5,7 @@ import { closeServerRuntimePipeline } from "./effectServer.ts";
 import { UserInputPresenterRegistry } from "./provider/userInputPresenterRegistry.ts";
 
 describe("server runtime pipeline shutdown", () => {
-  it("persists accepted provider terminal work before the engine stops", async () => {
+  it("persists accepted engine terminal work before the engine stops", async () => {
     const order: string[] = [];
     let terminalAccepted = false;
     let terminalPersisted = false;
@@ -42,7 +42,7 @@ describe("server runtime pipeline shutdown", () => {
         providerService: {
           closeRuntimeEvents: Effect.sync(() => {
             terminalAccepted = true;
-            order.push("provider-terminal-events-fenced");
+            order.push("engine-terminal-events-fenced");
           }),
         },
         managedAttachmentCleanup: {
@@ -60,7 +60,7 @@ describe("server runtime pipeline shutdown", () => {
       "user-input-presenters-revoked",
       "engine-quiesced",
       "admitted-commands-drained",
-      "provider-terminal-events-fenced",
+      "engine-terminal-events-fenced",
       "user-input-presenter-handoffs-drained",
       "reactors-drained-and-persisted",
       "admitted-commands-drained",
@@ -95,7 +95,7 @@ describe("server runtime pipeline shutdown", () => {
         },
         providerService: {
           closeRuntimeEvents: Effect.sync(() => {
-            order.push("provider-producers-closed");
+            order.push("engine-producers-closed");
             registry.onUnavailable(() => undefined);
             registry.handoffUnavailable(
               () =>
@@ -116,14 +116,14 @@ describe("server runtime pipeline shutdown", () => {
     );
 
     await vi.waitFor(() => expect(releaseLateHandoff).toBeTypeOf("function"));
-    expect(order).toEqual(["engine-quiesced", "engine-drained", "provider-producers-closed"]);
+    expect(order).toEqual(["engine-quiesced", "engine-drained", "engine-producers-closed"]);
     releaseLateHandoff?.();
     await shutdown;
 
     expect(order).toEqual([
       "engine-quiesced",
       "engine-drained",
-      "provider-producers-closed",
+      "engine-producers-closed",
       "late-terminal-handed-off",
       "subscribers-closed",
       "engine-drained",

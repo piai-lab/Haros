@@ -1,9 +1,9 @@
 // FILE: toolArgumentSummary.ts
-// Purpose: Single source of truth for the provider `ToolName: {json}` tool argument-summary wire format.
+// Purpose: Single source of truth for the engine `ToolName: {json}` tool argument-summary wire format.
 // Layer: UI utility
 // Exports: isPrefixedToolArgumentSummary, parseToolArgumentSummary, extractToolArgumentField, toolArgumentSummaryToolName
 
-// Providers report dynamic/MCP tool calls with a detail string of the form
+// Engines report dynamic/MCP tool calls with a detail string of the form
 // `ToolName: {jsonArgs}` (Claude), `ToolName {jsonArgs}` (some ACP agents), or
 // bare `{jsonArgs}`. Every consumer of that format — raw-preview suppression,
 // web-fetch URL extraction, file-path extraction — goes through this module so

@@ -30,8 +30,8 @@ function parseLogLine(line: string) {
 describe("EventNdjsonLogger", () => {
   it.effect("writes effect-style lines to thread-scoped files", () =>
     Effect.gen(function* () {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-provider-log-"));
-      const basePath = path.join(tempDir, "provider-native.ndjson");
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-engine-log-"));
+      const basePath = path.join(tempDir, "engine-native.ndjson");
 
       try {
         const logger = yield* makeEventNdjsonLogger(basePath, { stream: "native" });
@@ -41,11 +41,11 @@ describe("EventNdjsonLogger", () => {
         }
 
         yield* logger.write(
-          { threadId: "provider-thread-1", id: "evt-1" },
+          { threadId: "engine-thread-1", id: "evt-1" },
           ThreadId.makeUnsafe("thread-1"),
         );
         yield* logger.write(
-          { type: "turn.completed", threadId: "provider-thread-2", id: "evt-2" },
+          { type: "turn.completed", threadId: "engine-thread-2", id: "evt-2" },
           ThreadId.makeUnsafe("thread-2"),
         );
         yield* logger.close();
@@ -65,13 +65,13 @@ describe("EventNdjsonLogger", () => {
 
         assert.equal(Number.isNaN(Date.parse(first.observedAt)), false);
         assert.equal(first.stream, "NTIVE");
-        assert.equal(first.payload, '{"threadId":"provider-thread-1","id":"evt-1"}');
+        assert.equal(first.payload, '{"threadId":"engine-thread-1","id":"evt-1"}');
 
         assert.equal(Number.isNaN(Date.parse(second.observedAt)), false);
         assert.equal(second.stream, "NTIVE");
         assert.equal(
           second.payload,
-          '{"type":"turn.completed","threadId":"provider-thread-2","id":"evt-2"}',
+          '{"type":"turn.completed","threadId":"engine-thread-2","id":"evt-2"}',
         );
       } finally {
         fs.rmSync(tempDir, { recursive: true, force: true });
@@ -83,8 +83,8 @@ describe("EventNdjsonLogger", () => {
     "falls back to a global segment when orchestration thread id is missing or invalid",
     () =>
       Effect.gen(function* () {
-        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-provider-log-"));
-        const basePath = path.join(tempDir, "provider-canonical.ndjson");
+        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-engine-log-"));
+        const basePath = path.join(tempDir, "engine-canonical.ndjson");
 
         try {
           const logger = yield* makeEventNdjsonLogger(basePath, { stream: "orchestration" });
@@ -119,8 +119,8 @@ describe("EventNdjsonLogger", () => {
 
   it.effect("rotates per-thread files when max size is exceeded", () =>
     Effect.gen(function* () {
-      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-provider-log-"));
-      const basePath = path.join(tempDir, "provider-native.ndjson");
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-engine-log-"));
+      const basePath = path.join(tempDir, "engine-native.ndjson");
 
       try {
         const logger = yield* makeEventNdjsonLogger(basePath, {
@@ -136,7 +136,7 @@ describe("EventNdjsonLogger", () => {
         for (let index = 0; index < 10; index += 1) {
           yield* logger.write(
             {
-              threadId: "provider-thread-rotate",
+              threadId: "engine-thread-rotate",
               id: `evt-${index}`,
               payload: "x".repeat(40),
             },

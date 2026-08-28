@@ -1,12 +1,12 @@
 import { Effect, Layer, Option, Ref, Schema } from "effect";
 import { ChildProcessSpawner } from "effect/unstable/process";
 
-import type { CursorModelSelection, ProviderStartOptions } from "@harnessos/contracts";
+import type { CursorEngineSelection, EngineStartOptions } from "@harnessos/contracts";
 import { sanitizeGeneratedThreadTitle } from "@harnessos/shared/chatThreads";
 import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@harnessos/shared/git";
 
 import {
-  applyCursorAcpModelSelection,
+  applyCursorAcpEngineSelection,
   makeCursorAcpRuntime,
   type CursorAcpRuntimeCursorSettings,
 } from "../../provider/acp/CursorAcpSupport.ts";
@@ -59,25 +59,25 @@ function isTextGenerationError(error: unknown): error is TextGenerationError {
   );
 }
 
-function resolveCursorModelSelection(input: {
+function resolveCursorEngineSelection(input: {
   readonly model?: string;
-  readonly modelSelection?: {
-    readonly provider: string;
+  readonly engineSelection?: {
+    readonly engine: string;
     readonly model: string;
     readonly options?: unknown;
   };
-}): CursorModelSelection | null {
-  if (input.modelSelection?.provider === "cursor") {
-    return input.modelSelection as CursorModelSelection;
+}): CursorEngineSelection | null {
+  if (input.engineSelection?.engine === "cursor") {
+    return input.engineSelection as CursorEngineSelection;
   }
 
   return null;
 }
 
 function resolveCursorSettings(
-  providerOptions: ProviderStartOptions | undefined,
+  engineOptions: EngineStartOptions | undefined,
 ): CursorAcpRuntimeCursorSettings | undefined {
-  const cursorOptions = providerOptions?.cursor;
+  const cursorOptions = engineOptions?.cursor;
   if (!cursorOptions) return undefined;
   return {
     ...(cursorOptions.binaryPath ? { binaryPath: cursorOptions.binaryPath } : {}),
@@ -94,21 +94,21 @@ const makeCursorTextGeneration = Effect.gen(function* () {
     prompt,
     outputSchemaJson,
     rawTextFallback,
-    modelSelection,
-    providerOptions,
+    engineSelection,
+    engineOptions,
   }: {
     operation: TextGenerationOperation;
     cwd: string;
     prompt: string;
     outputSchemaJson: S;
     rawTextFallback?: RawTextFallback;
-    modelSelection: CursorModelSelection;
-    providerOptions?: ProviderStartOptions;
+    engineSelection: CursorEngineSelection;
+    engineOptions?: EngineStartOptions;
   }): Effect.Effect<S["Type"], TextGenerationError, S["DecodingServices"]> =>
     Effect.gen(function* () {
       const outputRef = yield* Ref.make("");
       const runtime = yield* makeCursorAcpRuntime({
-        cursorSettings: resolveCursorSettings(providerOptions),
+        cursorSettings: resolveCursorSettings(engineOptions),
         childProcessSpawner: commandSpawner,
         cwd,
         clientInfo: { name: "omnimind-git-text", version: "0.0.0" },
@@ -129,10 +129,10 @@ const makeCursorTextGeneration = Effect.gen(function* () {
       const promptResult = yield* Effect.gen(function* () {
         yield* runtime.start();
         yield* Effect.ignore(runtime.setMode("ask"));
-        yield* applyCursorAcpModelSelection({
+        yield* applyCursorAcpEngineSelection({
           runtime,
-          model: modelSelection.model,
-          options: modelSelection.options,
+          model: engineSelection.model,
+          options: engineSelection.options,
           mapError: ({ cause, configId, step }) =>
             mapCursorAcpError(
               operation,
@@ -197,8 +197,8 @@ const makeCursorTextGeneration = Effect.gen(function* () {
   const generateCommitMessage: TextGenerationShape["generateCommitMessage"] = Effect.fn(
     "CursorTextGeneration.generateCommitMessage",
   )(function* (input) {
-    const modelSelection = resolveCursorModelSelection(input);
-    if (!modelSelection) {
+    const engineSelection = resolveCursorEngineSelection(input);
+    if (!engineSelection) {
       return yield* new TextGenerationError({
         operation: "generateCommitMessage",
         detail: "Invalid Cursor model selection.",
@@ -216,8 +216,8 @@ const makeCursorTextGeneration = Effect.gen(function* () {
       cwd: input.cwd,
       prompt,
       outputSchemaJson,
-      modelSelection,
-      ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+      engineSelection,
+      ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
     });
 
     return {
@@ -232,8 +232,8 @@ const makeCursorTextGeneration = Effect.gen(function* () {
   const generatePrContent: TextGenerationShape["generatePrContent"] = Effect.fn(
     "CursorTextGeneration.generatePrContent",
   )(function* (input) {
-    const modelSelection = resolveCursorModelSelection(input);
-    if (!modelSelection) {
+    const engineSelection = resolveCursorEngineSelection(input);
+    if (!engineSelection) {
       return yield* new TextGenerationError({
         operation: "generatePrContent",
         detail: "Invalid Cursor model selection.",
@@ -253,8 +253,8 @@ const makeCursorTextGeneration = Effect.gen(function* () {
       cwd: input.cwd,
       prompt,
       outputSchemaJson,
-      modelSelection,
-      ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+      engineSelection,
+      ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
     });
 
     return {
@@ -266,8 +266,8 @@ const makeCursorTextGeneration = Effect.gen(function* () {
   const generateDiffSummary: TextGenerationShape["generateDiffSummary"] = Effect.fn(
     "CursorTextGeneration.generateDiffSummary",
   )(function* (input) {
-    const modelSelection = resolveCursorModelSelection(input);
-    if (!modelSelection) {
+    const engineSelection = resolveCursorEngineSelection(input);
+    if (!engineSelection) {
       return yield* new TextGenerationError({
         operation: "generateDiffSummary",
         detail: "Invalid Cursor model selection.",
@@ -283,8 +283,8 @@ const makeCursorTextGeneration = Effect.gen(function* () {
       prompt,
       outputSchemaJson,
       rawTextFallback,
-      modelSelection,
-      ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+      engineSelection,
+      ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
     });
 
     return {
@@ -295,8 +295,8 @@ const makeCursorTextGeneration = Effect.gen(function* () {
   const generateBranchName: TextGenerationShape["generateBranchName"] = Effect.fn(
     "CursorTextGeneration.generateBranchName",
   )(function* (input) {
-    const modelSelection = resolveCursorModelSelection(input);
-    if (!modelSelection) {
+    const engineSelection = resolveCursorEngineSelection(input);
+    if (!engineSelection) {
       return yield* new TextGenerationError({
         operation: "generateBranchName",
         detail: "Invalid Cursor model selection.",
@@ -313,8 +313,8 @@ const makeCursorTextGeneration = Effect.gen(function* () {
       prompt,
       outputSchemaJson,
       rawTextFallback,
-      modelSelection,
-      ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+      engineSelection,
+      ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
     });
 
     return {
@@ -325,8 +325,8 @@ const makeCursorTextGeneration = Effect.gen(function* () {
   const generateThreadTitle: TextGenerationShape["generateThreadTitle"] = Effect.fn(
     "CursorTextGeneration.generateThreadTitle",
   )(function* (input) {
-    const modelSelection = resolveCursorModelSelection(input);
-    if (!modelSelection) {
+    const engineSelection = resolveCursorEngineSelection(input);
+    if (!engineSelection) {
       return yield* new TextGenerationError({
         operation: "generateThreadTitle",
         detail: "Invalid Cursor model selection.",
@@ -343,8 +343,8 @@ const makeCursorTextGeneration = Effect.gen(function* () {
       prompt,
       outputSchemaJson,
       rawTextFallback,
-      modelSelection,
-      ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+      engineSelection,
+      ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
     });
 
     return {
@@ -355,8 +355,8 @@ const makeCursorTextGeneration = Effect.gen(function* () {
   const generateThreadRecap: TextGenerationShape["generateThreadRecap"] = Effect.fn(
     "CursorTextGeneration.generateThreadRecap",
   )(function* (input) {
-    const modelSelection = resolveCursorModelSelection(input);
-    if (!modelSelection) {
+    const engineSelection = resolveCursorEngineSelection(input);
+    if (!engineSelection) {
       return yield* new TextGenerationError({
         operation: "generateThreadRecap",
         detail: "Invalid Cursor model selection.",
@@ -374,8 +374,8 @@ const makeCursorTextGeneration = Effect.gen(function* () {
       prompt,
       outputSchemaJson,
       rawTextFallback,
-      modelSelection,
-      ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+      engineSelection,
+      ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
     });
 
     return {
@@ -386,8 +386,8 @@ const makeCursorTextGeneration = Effect.gen(function* () {
   const generateAutomationIntent: TextGenerationShape["generateAutomationIntent"] = Effect.fn(
     "CursorTextGeneration.generateAutomationIntent",
   )(function* (input) {
-    const modelSelection = resolveCursorModelSelection(input);
-    if (!modelSelection) {
+    const engineSelection = resolveCursorEngineSelection(input);
+    if (!engineSelection) {
       return yield* new TextGenerationError({
         operation: "generateAutomationIntent",
         detail: "Invalid Cursor model selection.",
@@ -404,15 +404,15 @@ const makeCursorTextGeneration = Effect.gen(function* () {
       cwd: input.cwd,
       prompt,
       outputSchemaJson,
-      modelSelection,
-      ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+      engineSelection,
+      ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
     });
   });
 
   const evaluateAutomationCompletion: TextGenerationShape["evaluateAutomationCompletion"] =
     Effect.fn("CursorTextGeneration.evaluateAutomationCompletion")(function* (input) {
-      const modelSelection = resolveCursorModelSelection(input);
-      if (!modelSelection) {
+      const engineSelection = resolveCursorEngineSelection(input);
+      if (!engineSelection) {
         return yield* new TextGenerationError({
           operation: "evaluateAutomationCompletion",
           detail: "Invalid Cursor model selection.",
@@ -425,8 +425,8 @@ const makeCursorTextGeneration = Effect.gen(function* () {
         cwd: input.cwd,
         prompt,
         outputSchemaJson,
-        modelSelection,
-        ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+        engineSelection,
+        ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
       });
     });
 

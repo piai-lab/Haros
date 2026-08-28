@@ -3,7 +3,7 @@ import {
   OmniMindCreateThreadsInput,
   OmniMindWaitForThreadsInput,
   ENGINE_KINDS,
-  type ModelSelection,
+  type EngineSelection,
   type EngineKind,
 } from "@harnessos/contracts";
 import { Schema } from "effect";
@@ -16,17 +16,17 @@ export const MODEL_SELECTION_INPUT_SCHEMA = {
   type: "object",
   description: AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION,
   properties: {
-    provider: { type: "string", enum: [...ENGINE_KINDS] },
+    engine: { type: "string", enum: [...ENGINE_KINDS] },
     model: {
       type: "string",
-      description: "Exact model slug from harnessos_capabilities providers[].models[].slug.",
+      description: "Exact model slug from harnessos_capabilities engines[].models[].slug.",
     },
     options: {
       type: "object",
       description: AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION,
     },
   },
-  required: ["provider", "model"],
+  required: ["engine", "model"],
   additionalProperties: false,
 } as const;
 
@@ -114,23 +114,22 @@ export function parseProviderKind(raw: string): EngineKind {
     return raw as EngineKind;
   }
   throw new ToolInputError(
-    `Unknown provider "${raw}". Supported providers: ${ENGINE_KINDS.join(", ")}.`,
+    `Unknown engine "${raw}". Supported engines: ${ENGINE_KINDS.join(", ")}.`,
   );
 }
 
-export function buildModelSelection(
-  provider: EngineKind,
+export function buildEngineSelection(
+  engine: EngineKind,
   model: string | undefined,
-): ModelSelection {
+): EngineSelection {
   const effectiveModel =
-    model ??
-    (provider === "pi" || provider === "oa" ? undefined : DEFAULT_MODEL_BY_PROVIDER[provider]);
+    model ?? (engine === "pi" || engine === "oa" ? undefined : DEFAULT_MODEL_BY_PROVIDER[engine]);
   if (!effectiveModel) {
     throw new ToolInputError(
-      `Provider "${provider}" has no default model; pass an explicit "model" argument.`,
+      `Engine "${engine}" has no default model; pass an explicit "model" argument.`,
     );
   }
-  return { provider, model: effectiveModel } as ModelSelection;
+  return { engine, model: effectiveModel } as EngineSelection;
 }
 
 export function decodeCreateThreadsInput(value: unknown) {

@@ -8,11 +8,11 @@ import {
   ProjectId,
   ThreadId,
   TurnId,
-  type ModelSelection,
+  type EngineSelection,
   type OrchestrationThreadShell,
-  type ProviderInteractionMode,
+  type EngineInteractionMode,
   type EngineKind,
-  type ProviderExecutionCapabilities,
+  type EngineExecutionCapabilities,
   type OmniMindCreateThreadsInput,
   type OmniMindCreateThreadsResult,
 } from "@harnessos/contracts";
@@ -30,7 +30,7 @@ import type { ServerConfigShape } from "../config.ts";
 import type { GitCoreShape } from "../git/Services/GitCore.ts";
 import type { OrchestrationEngineShape } from "../orchestration/Services/OrchestrationEngine.ts";
 import type { ProjectionSnapshotQueryShape } from "../orchestration/Services/ProjectionSnapshotQuery.ts";
-import type { ProviderDiscoveryServiceShape } from "../provider/Services/ProviderDiscoveryService.ts";
+import type { EngineDiscoveryServiceShape } from "../provider/Services/EngineDiscoveryService.ts";
 import { runWorktreeSetupScript } from "../worktreeSetup.ts";
 import type {
   AgentGatewayOperationRecord,
@@ -51,16 +51,16 @@ import { mcpToolResultError, mcpToolResultJson, type McpToolCallResult } from ".
 import {
   AgentGatewayTargetError,
   resolveAgentGatewayTarget,
-  type AgentGatewayProviderAvailability,
+  type AgentGatewayEngineAvailability,
 } from "./targetResolver.ts";
 import { ToolInputError, errorText } from "./toolInput.ts";
 import { GatewayToolError, gatewayToolErrorResult } from "./toolRuntime.ts";
 
 const CREATION_REPLAY_WAIT_MS = 60_000;
 
-function interactionModeForGatewayTarget(target: ModelSelection): ProviderInteractionMode {
+function interactionModeForGatewayTarget(target: EngineSelection): EngineInteractionMode {
   if (
-    (target.provider === "opencode" || target.provider === "kilo") &&
+    (target.engine === "opencode" || target.engine === "kilo") &&
     target.options?.agent === "plan"
   ) {
     return "plan";
@@ -97,17 +97,17 @@ interface CreationCoordinatorDependencies {
   readonly snapshotQuery: ProjectionSnapshotQueryShape;
   readonly orchestrationEngine: OrchestrationEngineShape;
   readonly git: GitCoreShape;
-  readonly providerDiscovery: ProviderDiscoveryServiceShape;
+  readonly engineDiscovery: EngineDiscoveryServiceShape;
   readonly operationRepository: AgentGatewayOperationRepositoryShape;
   readonly externalMcpRepository?: ExternalMcpRepositoryShape;
   readonly serverConfig: ServerConfigShape;
   readonly loadProviderAvailabilities: Effect.Effect<
-    ReadonlyMap<EngineKind, AgentGatewayProviderAvailability>,
+    ReadonlyMap<EngineKind, AgentGatewayEngineAvailability>,
     unknown
   >;
   readonly getProviderExecutionCapabilities: (
-    modelSelection: ModelSelection,
-  ) => Effect.Effect<ProviderExecutionCapabilities, unknown>;
+    engineSelection: EngineSelection,
+  ) => Effect.Effect<EngineExecutionCapabilities, unknown>;
   readonly requireThreadShell: (
     threadId: string,
   ) => Effect.Effect<OrchestrationThreadShell, ToolInputError>;
@@ -115,7 +115,7 @@ interface CreationCoordinatorDependencies {
 
 export type GatewayCreationContext =
   | {
-      readonly kind: "provider-session";
+      readonly kind: "engine-session";
       readonly callerThreadId: string;
       readonly callerTurnId: string | null;
       readonly assertAuthority: () => Effect.Effect<void, GatewayToolError>;
@@ -185,7 +185,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
     snapshotQuery,
     orchestrationEngine,
     git,
-    providerDiscovery,
+    engineDiscovery,
     operationRepository,
     externalMcpRepository,
     serverConfig,
@@ -314,7 +314,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
 
   const run = (input: typeof OmniMindCreateThreadsInput.Type, context: GatewayCreationContext) => {
     return Effect.gen(function* () {
-      if (context.kind === "provider-session" && context.callerTurnId === null) {
+      if (context.kind === "engine-session" && context.callerTurnId === null) {
         return yield* Effect.fail(
           new GatewayToolError(
             "caller_turn_inactive",
@@ -330,15 +330,15 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
           ),
         );
       }
-      const callerTurnId = context.kind === "provider-session" ? context.callerTurnId! : null;
+      const callerTurnId = context.kind === "engine-session" ? context.callerTurnId! : null;
       const caller =
-        context.kind === "provider-session"
+        context.kind === "engine-session"
           ? yield* requireThreadShell(context.callerThreadId)
           : null;
       const operationId = `gateway:create:${stableGatewayDigest({
         principalKind: context.kind,
         principalId:
-          context.kind === "provider-session" ? context.callerThreadId : context.integrationId,
+          context.kind === "engine-session" ? context.callerThreadId : context.integrationId,
         ...(callerTurnId ? { callerTurnId } : {}),
         requestId: input.requestId,
       })}`;
@@ -354,7 +354,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
         );
       }
       const operationStore: CreationOperationStore =
-        context.kind === "provider-session"
+        context.kind === "engine-session"
           ? {
               getExisting: () =>
                 operationRepository.getByScope({
@@ -416,10 +416,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
         .pipe(Effect.mapError((error) => new ToolInputError(errorText(error))));
       if (existingOperation !== null) {
         yield* context.assertAuthority();
-        if (
-          context.kind === "provider-session" &&
-          existingOperation.requestId !== input.requestId
-        ) {
+        if (context.kind === "engine-session" && existingOperation.requestId !== input.requestId) {
           return yield* Effect.fail(
             new GatewayToolError(
               "creation_plan_locked",
@@ -500,11 +497,11 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
               }),
             ),
           );
-          const providerAvailability = providerAvailabilities.get(spec.target.provider);
+          const engineAvailability = providerAvailabilities.get(spec.target.engine);
           const target = yield* resolveAgentGatewayTarget({
             target: spec.target,
-            discovery: providerDiscovery,
-            ...(providerAvailability !== undefined ? { availability: providerAvailability } : {}),
+            discovery: engineDiscovery,
+            ...(engineAvailability !== undefined ? { availability: engineAvailability } : {}),
             cwd: project.workspaceRoot,
           });
           const externalPolicy =
@@ -533,7 +530,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
               ? "approval-required"
               : caller!.runtimeMode);
           if (
-            context.kind === "provider-session" &&
+            context.kind === "engine-session" &&
             runtimeModeEscalatesPrivilege(caller!.runtimeMode, runtimeMode)
           ) {
             return yield* Effect.fail(
@@ -1097,7 +1094,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
                       threadId: entry.ids.threadId,
                       projectId: entry.projectId,
                       title: entry.title,
-                      modelSelection: entry.target,
+                      engineSelection: entry.target,
                       runtimeMode: entry.runtimeMode,
                       interactionMode,
                       envMode: entry.environment,
@@ -1105,7 +1102,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
                       worktreePath,
                       creationSource:
                         context.kind === "external-client" ? "external_mcp" : "harnessos_mcp",
-                      ...(context.kind === "provider-session"
+                      ...(context.kind === "engine-session"
                         ? {
                             sourceThreadId: ThreadId.makeUnsafe(context.callerThreadId),
                             sourceTurnId: TurnId.makeUnsafe(callerTurnId!),
@@ -1138,7 +1135,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
                       text: entry.spec.prompt,
                       attachments: [],
                     },
-                    modelSelection: entry.target,
+                    engineSelection: entry.target,
                     dispatchMode: "queue",
                     dispatchOrigin: "agent",
                     runtimeMode: entry.runtimeMode,
@@ -1158,7 +1155,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
                     projectId: entry.projectId,
                     title: entry.title,
                     target: entry.target,
-                    provider: entry.target.provider,
+                    engine: entry.target.engine,
                     model: entry.target.model,
                     runtimeMode: entry.runtimeMode,
                     environment: entry.environment,
@@ -1204,7 +1201,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
 
       if (outcome.kind === "replay") return outcome.result;
       const result = outcome.result;
-      if (context.kind === "provider-session") {
+      if (context.kind === "engine-session") {
         yield* appendThreadCreationRecap({
           callerThreadId: context.callerThreadId,
           callerTurnId: callerTurnId!,
@@ -1215,7 +1212,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
     }).pipe(
       (effect) =>
         withCreationPlanLock(
-          context.kind === "provider-session"
+          context.kind === "engine-session"
             ? `${context.callerThreadId}\u0000${context.callerTurnId ?? "inactive"}`
             : `${context.integrationId}\u0000${input.requestId}`,
           effect,

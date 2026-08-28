@@ -186,7 +186,7 @@ describe("browser host RPC client", () => {
     });
   });
 
-  it("routes the authenticated provider identity through getInfo and executeTool", async () => {
+  it("routes the authenticated engine identity through getInfo and executeTool", async () => {
     const requests: Array<Record<string, unknown>> = [];
     const result = await withRpcServer(
       (request) => {
@@ -205,7 +205,7 @@ describe("browser host RPC client", () => {
           pipePath,
           capability: TEST_CAPABILITY,
           sessionKey: "gateway-session:one",
-          provider: "claude",
+          engine: "claude",
           threadId: "thread-one" as never,
           name: "browser_tabs",
           arguments: {},
@@ -218,7 +218,7 @@ describe("browser host RPC client", () => {
     expect(requests.map((request) => request.method)).toEqual(["getInfo", "executeTool"]);
     expect(requests[1]?.params).toMatchObject({
       session_id: "gateway-session:one",
-      provider: "claude",
+      engine: "claude",
       thread_id: "thread-one",
       name: "browser_tabs",
       workspace_root: "/workspace/project-one",
@@ -250,7 +250,7 @@ describe("browser host RPC client", () => {
             pipePath,
             capability: TEST_CAPABILITY,
             sessionKey: "gateway-session:denied",
-            provider: "codex",
+            engine: "codex",
             threadId: "thread-denied" as never,
             name: "browser_open",
             arguments: { idempotencyKey: "open-once" },
@@ -291,7 +291,7 @@ describe("browser host RPC client", () => {
             pipePath,
             capability: TEST_CAPABILITY,
             sessionKey: "gateway-session:protocol",
-            provider: "codex",
+            engine: "codex",
             threadId: "thread-protocol" as never,
             name: "browser_status",
             arguments: {},
@@ -308,7 +308,7 @@ describe("browser host RPC client", () => {
     expect(methods).toEqual(["getInfo"]);
   });
 
-  it("cancels a hanging desktop request as soon as its provider effect is interrupted", async () => {
+  it("cancels a hanging desktop request as soon as its engine effect is interrupted", async () => {
     const controller = new AbortController();
     const startedAt = Date.now();
     const error = await withRpcServer(
@@ -321,7 +321,7 @@ describe("browser host RPC client", () => {
           pipePath,
           capability: TEST_CAPABILITY,
           sessionKey: "gateway-session:cancelled",
-          provider: "codex",
+          engine: "codex",
           threadId: "thread-cancelled" as never,
           name: "browser_wait",
           arguments: {},
@@ -366,7 +366,7 @@ describe("browser host RPC client", () => {
           pipePath,
           capability: TEST_CAPABILITY,
           sessionKey: "gateway-session:deadline",
-          provider: "codex",
+          engine: "codex",
           threadId: "thread-deadline" as never,
           name: "browser_tabs",
           arguments: { timeoutMs: 500 },
@@ -398,7 +398,7 @@ describe("browser host RPC client", () => {
             pipePath,
             capability: TEST_CAPABILITY,
             sessionKey: "gateway-session:deadline-timeout",
-            provider: "codex",
+            engine: "codex",
             threadId: "thread-deadline-timeout" as never,
             name: "browser_tabs",
             arguments: {},

@@ -2,7 +2,7 @@
  * Copied-adapted from Percho splash.ts at
  * 575216c2690c7e2b30d9ad10b773f424b469c163 (MIT).
  * OmniMind deliberately replaces donor allSettled/max-timeout completion with
- * readiness reports from the existing transport, settings, Provider, and Composer owners.
+ * readiness reports from the existing transport, settings, Engine, and Composer owners.
  */
 
 import { createStartupSplashDom } from "./startupSplashDom";

@@ -4,7 +4,7 @@ type TurnState = "pending" | "running" | "completed" | "interrupted" | "error";
 
 /**
  * Returns the terminal turn state implied by a session update, or `null` while
- * the provider can still deliver the authoritative terminal event.
+ * the engine can still deliver the authoritative terminal event.
  */
 export function settleTurnStateFromSession(
   session: Pick<OrchestrationSession, "status" | "activeTurnId">,

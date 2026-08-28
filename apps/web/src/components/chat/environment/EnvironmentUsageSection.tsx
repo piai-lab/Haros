@@ -3,11 +3,8 @@
 
 import type { EngineKind } from "@harnessos/contracts";
 
-import {
-  ProviderUsageMenuPopup,
-  useProviderUsageMenuModel,
-} from "~/components/ProviderUsageMenuControl";
-import { ProviderIcon } from "~/components/ProviderIcon";
+import { EngineUsageMenuPopup, useEngineUsageMenuModel } from "~/components/EngineUsageMenuControl";
+import { EngineIcon } from "~/components/EngineIcon";
 import { MenuTrigger } from "~/components/ui/menu";
 import { useI18n } from "~/i18n";
 
@@ -19,9 +16,9 @@ import {
   EnvironmentRowChevron,
 } from "./EnvironmentRow";
 
-export function EnvironmentUsageSection({ provider }: { provider: EngineKind }) {
+export function EnvironmentUsageSection({ engine }: { engine: EngineKind }) {
   const { t } = useI18n();
-  const model = useProviderUsageMenuModel(provider);
+  const model = useEngineUsageMenuModel(engine);
 
   if (!model) {
     return null;
@@ -29,7 +26,7 @@ export function EnvironmentUsageSection({ provider }: { provider: EngineKind }) 
 
   return (
     <EnvironmentLabeledSection label={t("environment.usage")}>
-      <ProviderUsageMenuPopup provider={provider} model={model} align="start">
+      <EngineUsageMenuPopup engine={engine} model={model} align="start">
         <MenuTrigger
           render={
             <button
@@ -41,8 +38,8 @@ export function EnvironmentUsageSection({ provider }: { provider: EngineKind }) 
         >
           <EnvironmentRowBody
             icon={
-              <ProviderIcon
-                provider={provider}
+              <EngineIcon
+                engine={engine}
                 tone="header"
                 className={ENVIRONMENT_ROW_ICON_CLASS_NAME}
               />
@@ -51,7 +48,7 @@ export function EnvironmentUsageSection({ provider }: { provider: EngineKind }) 
             trailing={<EnvironmentRowChevron />}
           />
         </MenuTrigger>
-      </ProviderUsageMenuPopup>
+      </EngineUsageMenuPopup>
     </EnvironmentLabeledSection>
   );
 }

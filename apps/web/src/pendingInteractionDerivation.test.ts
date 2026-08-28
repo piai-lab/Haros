@@ -247,7 +247,7 @@ describe("derivePendingApprovals", () => {
     ]);
   });
 
-  it("clears stale pending approvals when provider reports unknown pending request", () => {
+  it("clears stale pending approvals when engine reports unknown pending request", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({
         id: "approval-open-stale",
@@ -263,8 +263,8 @@ describe("derivePendingApprovals", () => {
       makeActivity({
         id: "approval-failed-stale",
         createdAt: "2026-02-23T00:00:02.000Z",
-        kind: "provider.approval.respond.failed",
-        summary: "Provider approval response failed",
+        kind: "engine.approval.respond.failed",
+        summary: "Engine approval response failed",
         tone: "error",
         payload: {
           requestId: "req-stale-1",
@@ -292,13 +292,13 @@ describe("derivePendingApprovals", () => {
       makeActivity({
         id: "approval-failed-stale-restart",
         createdAt: "2026-02-23T00:00:02.000Z",
-        kind: "provider.approval.respond.failed",
-        summary: "Provider approval response failed",
+        kind: "engine.approval.respond.failed",
+        summary: "Engine approval response failed",
         tone: "error",
         payload: {
           requestId: "req-stale-restart-1",
           detail:
-            "Stale pending approval request: req-stale-restart-1. Provider callback state does not survive app restarts or recovered sessions. Restart the turn to continue.",
+            "Stale pending approval request: req-stale-restart-1. Engine callback state does not survive app restarts or recovered sessions. Restart the turn to continue.",
         },
       }),
     ];
@@ -592,8 +592,8 @@ describe("derivePendingUserInputs", () => {
       makeActivity({
         id: "user-input-current-stale-failure",
         createdAt: "2026-02-23T00:00:02.000Z",
-        kind: "provider.user-input.respond.failed",
-        summary: "Provider user input response failed",
+        kind: "engine.user-input.respond.failed",
+        summary: "Engine user input response failed",
         tone: "error",
         payload: {
           requestId: "req-user-input-current-stale",
@@ -694,7 +694,7 @@ describe("derivePendingUserInputs", () => {
     ]);
   });
 
-  it("clears stale pending user-input prompts when the provider reports an orphaned request", () => {
+  it("clears stale pending user-input prompts when the engine reports an orphaned request", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({
         id: "user-input-open-stale",
@@ -722,13 +722,13 @@ describe("derivePendingUserInputs", () => {
       makeActivity({
         id: "user-input-failed-stale",
         createdAt: "2026-02-23T00:00:02.000Z",
-        kind: "provider.user-input.respond.failed",
-        summary: "Provider user input response failed",
+        kind: "engine.user-input.respond.failed",
+        summary: "Engine user input response failed",
         tone: "error",
         payload: {
           requestId: "req-user-input-stale-1",
           detail:
-            "Stale pending user-input request: req-user-input-stale-1. Provider callback state does not survive app restarts or recovered sessions. Restart the turn to continue.",
+            "Stale pending user-input request: req-user-input-stale-1. Engine callback state does not survive app restarts or recovered sessions. Restart the turn to continue.",
         },
       }),
     ];

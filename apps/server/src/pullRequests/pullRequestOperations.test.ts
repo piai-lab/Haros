@@ -23,7 +23,7 @@ const project: OrchestrationProject = {
   kind: "project",
   title: "Detail",
   workspaceRoot: "/tmp/detail",
-  defaultModelSelection: null,
+  defaultEngineSelection: null,
   scripts: [],
   isPinned: false,
   createdAt: now,

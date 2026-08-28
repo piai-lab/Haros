@@ -19,7 +19,7 @@ function makeThread(threadId: string): OrchestrationThreadShell {
     id: ThreadId.makeUnsafe(threadId),
     projectId: ProjectId.makeUnsafe("project-mcp-cancellation"),
     title: threadId,
-    modelSelection: { provider: "codex", model: "gpt-5.6-sol" },
+    engineSelection: { engine: "codex", model: "gpt-5.6-sol" },
     runtimeMode: "full-access",
     interactionMode: "default",
     envMode: "local",

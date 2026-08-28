@@ -110,7 +110,7 @@ describe("splitPromptIntoComposerSegments", () => {
     ]);
   });
 
-  it("marks selected provider mention references as plugin mentions", () => {
+  it("marks selected engine mention references as plugin mentions", () => {
     expect(
       splitPromptIntoComposerSegments(
         "Use @Gmail please",

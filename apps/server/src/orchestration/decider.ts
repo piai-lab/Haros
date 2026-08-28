@@ -5,7 +5,7 @@ import type {
   OrchestrationEvent,
   OrchestrationReadModel,
   OrchestrationThread,
-  ProviderMentionReference,
+  EngineMentionReference,
   ProjectKind,
   ThreadGoalAchievement,
   ThreadMarker,
@@ -27,7 +27,7 @@ import {
 } from "@harnessos/shared/threadWorkspace";
 import { doThreadMarkerRangesOverlap } from "@harnessos/shared/threadMarkers";
 import { collectSubagentDescendants } from "@harnessos/shared/threadHierarchy";
-import { providerExecutionStructure } from "../provider/providerExecutionStructure.ts";
+import { engineExecutionStructure } from "../provider/engineExecutionStructure.ts";
 import {
   collectTailTurnIds,
   resolveTailUserMessageEditTarget,
@@ -77,23 +77,23 @@ const WORKSPACE_OWNING_PROJECT_KIND_SET = new Set<ProjectKind>(["project", "stud
 
 function admitModelPresentationIdentity(
   identity: ModelPresentationIdentity | undefined,
-  modelSelection: OrchestrationThread["modelSelection"],
+  engineSelection: OrchestrationThread["engineSelection"],
 ) {
-  return identity?.model === modelSelection.model ? identity : undefined;
+  return identity?.model === engineSelection.model ? identity : undefined;
 }
 
 function validateStructuralRuntimeMode(
   command: OrchestrationCommand,
-  modelSelection: OrchestrationThread["modelSelection"],
+  engineSelection: OrchestrationThread["engineSelection"],
   runtimeMode: OrchestrationThread["runtimeMode"],
 ) {
-  const structure = providerExecutionStructure(modelSelection.provider);
+  const structure = engineExecutionStructure(engineSelection.engine);
   const issue = !structure.supportedRuntimeModes.has(runtimeMode)
-    ? `The selected runtime mode is not supported by this Provider.`
+    ? `The selected runtime mode is not supported by this Engine.`
     : runtimeMode === "auto" &&
-        modelSelection.provider === "claude" &&
-        modelSelection.supportsAutoMode !== true
-      ? modelSelection.supportsAutoMode === false
+        engineSelection.engine === "claude" &&
+        engineSelection.supportsAutoMode !== true
+      ? engineSelection.supportsAutoMode === false
         ? `The selected model does not support Auto mode.`
         : `The selected model has not been verified to support Auto mode.`
       : null;
@@ -376,8 +376,8 @@ function chatAttachmentsEqual(
 }
 
 function providerMentionsEqual(
-  left: ReadonlyArray<ProviderMentionReference> | undefined,
-  right: ReadonlyArray<ProviderMentionReference> | undefined,
+  left: ReadonlyArray<EngineMentionReference> | undefined,
+  right: ReadonlyArray<EngineMentionReference> | undefined,
 ): boolean {
   const leftMentions = left ?? [];
   const rightMentions = right ?? [];
@@ -679,7 +679,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
   readonly workspacePaths?: SpaceAssignmentWorkspacePaths | undefined;
   readonly turnAdmissionCapabilities?:
     | {
-        readonly provider: OrchestrationThread["modelSelection"]["provider"];
+        readonly engine: OrchestrationThread["engineSelection"]["engine"];
         readonly supportsNativeTurnSteering: boolean;
       }
     | undefined;
@@ -928,7 +928,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           kind: nextProjectKind,
           title: command.title,
           workspaceRoot: command.workspaceRoot,
-          defaultModelSelection: command.defaultModelSelection ?? null,
+          defaultEngineSelection: command.defaultEngineSelection ?? null,
           scripts: [],
           isPinned: command.isPinned,
           spaceId: null,
@@ -1015,8 +1015,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           ...(command.kind !== undefined ? { kind: command.kind } : {}),
           ...(command.title !== undefined ? { title: command.title } : {}),
           ...(command.workspaceRoot !== undefined ? { workspaceRoot: command.workspaceRoot } : {}),
-          ...(command.defaultModelSelection !== undefined
-            ? { defaultModelSelection: command.defaultModelSelection }
+          ...(command.defaultEngineSelection !== undefined
+            ? { defaultEngineSelection: command.defaultEngineSelection }
             : {}),
           ...(command.scripts !== undefined ? { scripts: command.scripts } : {}),
           ...(command.isPinned !== undefined ? { isPinned: command.isPinned } : {}),
@@ -1064,12 +1064,12 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.threadId,
       });
-      // Provider-native threads mirror subagents the provider already runs;
+      // Engine-native threads mirror subagents the engine already runs;
       // OmniMind never starts a session for them, so the Auto-mode capability
       // check can only reject the projection (and durably poison the runtime
       // journal replaying it), never prevent an unverified Auto session.
       if (command.creationSource !== "provider_native") {
-        yield* validateStructuralRuntimeMode(command, command.modelSelection, command.runtimeMode);
+        yield* validateStructuralRuntimeMode(command, command.engineSelection, command.runtimeMode);
       }
       return {
         ...withEventBase({
@@ -1083,7 +1083,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           threadId: command.threadId,
           projectId: command.projectId,
           title: command.title,
-          modelSelection: command.modelSelection,
+          engineSelection: command.engineSelection,
           runtimeMode: command.runtimeMode,
           interactionMode: command.interactionMode,
           ...resolveCreatedThreadWorkspaceMetadata(project.kind, command),
@@ -1129,7 +1129,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.threadId,
       });
-      yield* validateStructuralRuntimeMode(command, command.modelSelection, command.runtimeMode);
+      yield* validateStructuralRuntimeMode(command, command.engineSelection, command.runtimeMode);
 
       const sourceThread = yield* requireThread({
         readModel,
@@ -1161,7 +1161,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           threadId: command.threadId,
           projectId: command.projectId,
           title: command.title,
-          modelSelection: command.modelSelection,
+          engineSelection: command.engineSelection,
           runtimeMode: command.runtimeMode,
           interactionMode: command.interactionMode,
           ...resolveCreatedThreadWorkspaceMetadata(project.kind, command),
@@ -1176,7 +1176,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           forkScope: null,
           handoff: {
             sourceThreadId: command.sourceThreadId,
-            sourceProvider: sourceThread.modelSelection.provider,
+            sourceProvider: sourceThread.engineSelection.engine,
             importedAt: command.createdAt,
             bootstrapStatus: "pending",
           },
@@ -1234,7 +1234,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.threadId,
       });
-      yield* validateStructuralRuntimeMode(command, command.modelSelection, command.runtimeMode);
+      yield* validateStructuralRuntimeMode(command, command.engineSelection, command.runtimeMode);
 
       const sourceThread = yield* requireThread({
         readModel,
@@ -1292,7 +1292,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
                 sourceThread,
                 listThreadsByProjectId(readModel, command.projectId),
               ),
-          modelSelection: command.modelSelection,
+          engineSelection: command.engineSelection,
           runtimeMode: command.runtimeMode,
           interactionMode: command.interactionMode,
           ...resolveCreatedThreadWorkspaceMetadata(project.kind, command),
@@ -1481,8 +1481,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           threadId: command.threadId,
           ...(command.groupIds !== undefined ? { groupIds: command.groupIds } : {}),
           ...(command.title !== undefined ? { title: command.title } : {}),
-          ...(command.modelSelection !== undefined
-            ? { modelSelection: command.modelSelection }
+          ...(command.engineSelection !== undefined
+            ? { engineSelection: command.engineSelection }
             : {}),
           ...resolveThreadWorkspaceMetadataPatch(project?.kind, command, thread),
           ...(command.isPinned !== undefined ? { isPinned: command.isPinned } : {}),
@@ -1810,7 +1810,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.threadId,
       });
-      yield* validateStructuralRuntimeMode(command, thread.modelSelection, command.runtimeMode);
+      yield* validateStructuralRuntimeMode(command, thread.engineSelection, command.runtimeMode);
       const occurredAt = nowIso();
       return {
         ...withEventBase({
@@ -1877,8 +1877,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         });
       }
       const sourceProposedPlan = command.sourceProposedPlan;
-      const admittedModelSelection = command.modelSelection ?? targetThread.modelSelection;
-      yield* validateStructuralRuntimeMode(command, admittedModelSelection, command.runtimeMode);
+      const admittedEngineSelection = command.engineSelection ?? targetThread.engineSelection;
+      yield* validateStructuralRuntimeMode(command, admittedEngineSelection, command.runtimeMode);
       const sourceThread = sourceProposedPlan
         ? yield* requireThread({
             readModel,
@@ -1935,18 +1935,16 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       };
       const admittedModelPresentationIdentity = admitModelPresentationIdentity(
         command.modelPresentationIdentity,
-        admittedModelSelection,
+        admittedEngineSelection,
       );
       const turnRequestPayloadBase = {
         threadId: command.threadId,
         messageId: command.message.messageId,
-        modelSelection: admittedModelSelection,
+        engineSelection: admittedEngineSelection,
         ...(admittedModelPresentationIdentity !== undefined
           ? { modelPresentationIdentity: admittedModelPresentationIdentity }
           : {}),
-        ...(command.providerOptions !== undefined
-          ? { providerOptions: command.providerOptions }
-          : {}),
+        ...(command.engineOptions !== undefined ? { engineOptions: command.engineOptions } : {}),
         ...(command.reviewTarget !== undefined ? { reviewTarget: command.reviewTarget } : {}),
         assistantDeliveryMode: command.assistantDeliveryMode ?? DEFAULT_ASSISTANT_DELIVERY_MODE,
         dispatchMode,
@@ -1957,19 +1955,19 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         createdAt: command.createdAt,
       } as const;
       const activeProvider =
-        targetThread.session?.providerName ?? targetThread.modelSelection.provider;
+        targetThread.session?.providerName ?? targetThread.engineSelection.engine;
       const isThreadRunning =
         targetThread.session?.status === "running" && targetThread.session.activeTurnId !== null;
       const admittedBindingMatchesCurrent = turnStartBindingMatchesCommitted({
-        currentModelSelection: targetThread.modelSelection,
+        currentEngineSelection: targetThread.engineSelection,
         currentRuntimeMode: targetThread.session?.runtimeMode ?? targetThread.runtimeMode,
         currentInteractionMode: targetThread.interactionMode,
-        requestedModelSelection: admittedModelSelection,
+        requestedEngineSelection: admittedEngineSelection,
         requestedRuntimeMode: command.runtimeMode,
         requestedInteractionMode: command.interactionMode,
       });
       const supportsNativeTurnSteering =
-        turnAdmissionCapabilities?.provider === activeProvider &&
+        turnAdmissionCapabilities?.engine === activeProvider &&
         turnAdmissionCapabilities.supportsNativeTurnSteering;
       const steeringDisposition =
         dispatchMode === "steer" && isThreadRunning
@@ -1984,7 +1982,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       // Subagent threads never queue: their messages steer the running child task
       // through the parent session, so deferring until the turn settles would
       // deliver the message only after the subagent already finished.
-      // Steers ride the live turn natively only on providers whose runtime can
+      // Steers ride the live turn natively only on engines whose runtime can
       // inject mid-turn input; everywhere else they queue and interrupt below.
       const shouldQueue =
         targetThread.parentThreadId === null &&
@@ -2037,16 +2035,16 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           detail: checkpointRevertInProgressDetail(command.threadId),
         });
       }
-      if (command.modelSelection === undefined) {
+      if (command.engineSelection === undefined) {
         return yield* new OrchestrationCommandInvariantError({
           commandType: command.type,
           detail: "Queued turn promotion is missing its admission-time model selection.",
         });
       }
-      yield* validateStructuralRuntimeMode(command, command.modelSelection, command.runtimeMode);
+      yield* validateStructuralRuntimeMode(command, command.engineSelection, command.runtimeMode);
       const admittedModelPresentationIdentity = admitModelPresentationIdentity(
         command.modelPresentationIdentity,
-        command.modelSelection,
+        command.engineSelection,
       );
       return {
         ...withEventBase({
@@ -2059,13 +2057,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         payload: {
           threadId: command.threadId,
           messageId: command.messageId,
-          modelSelection: command.modelSelection,
+          engineSelection: command.engineSelection,
           ...(admittedModelPresentationIdentity !== undefined
             ? { modelPresentationIdentity: admittedModelPresentationIdentity }
             : {}),
-          ...(command.providerOptions !== undefined
-            ? { providerOptions: command.providerOptions }
-            : {}),
+          ...(command.engineOptions !== undefined ? { engineOptions: command.engineOptions } : {}),
           ...(command.reviewTarget !== undefined ? { reviewTarget: command.reviewTarget } : {}),
           assistantDeliveryMode: command.assistantDeliveryMode ?? DEFAULT_ASSISTANT_DELIVERY_MODE,
           dispatchMode: command.dispatchMode ?? "queue",
@@ -2353,12 +2349,12 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           detail: checkpointRevertInProgressDetail(command.threadId),
         });
       }
-      const admittedModelSelection = command.modelSelection ?? thread.modelSelection;
+      const admittedEngineSelection = command.engineSelection ?? thread.engineSelection;
       const admittedModelPresentationIdentity = admitModelPresentationIdentity(
         command.modelPresentationIdentity,
-        admittedModelSelection,
+        admittedEngineSelection,
       );
-      yield* validateStructuralRuntimeMode(command, admittedModelSelection, command.runtimeMode);
+      yield* validateStructuralRuntimeMode(command, admittedEngineSelection, command.runtimeMode);
       const editTarget = resolveTailUserMessageEditTarget({
         messages: thread.messages,
         messageId: command.messageId,
@@ -2385,13 +2381,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           text: command.text,
           rollbackTurnCount: editTarget.rollbackTurnCount,
           removedTurnIds: editTarget.removedTurnIds.map((turnId) => TurnId.makeUnsafe(turnId)),
-          modelSelection: admittedModelSelection,
+          engineSelection: admittedEngineSelection,
           ...(admittedModelPresentationIdentity !== undefined
             ? { modelPresentationIdentity: admittedModelPresentationIdentity }
             : {}),
-          ...(command.providerOptions !== undefined
-            ? { providerOptions: command.providerOptions }
-            : {}),
+          ...(command.engineOptions !== undefined ? { engineOptions: command.engineOptions } : {}),
           ...(command.assistantDeliveryMode !== undefined
             ? { assistantDeliveryMode: command.assistantDeliveryMode }
             : {}),
@@ -2416,7 +2410,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           session: {
             threadId: command.threadId,
             status: "starting",
-            providerName: thread.session?.providerName ?? thread.modelSelection.provider,
+            providerName: thread.session?.providerName ?? thread.engineSelection.engine,
             runtimeMode: command.runtimeMode,
             activeTurnId: null,
             lastError: null,
@@ -2469,21 +2463,21 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         });
       }
       if (command.binding !== undefined) {
-        if (command.binding.modelSelection.provider !== command.session.providerName) {
+        if (command.binding.engineSelection.engine !== command.session.providerName) {
           return yield* new OrchestrationCommandInvariantError({
             commandType: command.type,
-            detail: "Committed model selection must match the provider Session.",
+            detail: "Committed model selection must match the engine Session.",
           });
         }
         if (command.binding.runtimeMode !== command.session.runtimeMode) {
           return yield* new OrchestrationCommandInvariantError({
             commandType: command.type,
-            detail: "Committed runtime mode must match the provider Session.",
+            detail: "Committed runtime mode must match the engine Session.",
           });
         }
         yield* validateStructuralRuntimeMode(
           command,
-          command.binding.modelSelection,
+          command.binding.engineSelection,
           command.binding.runtimeMode,
         );
       }
@@ -2517,7 +2511,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           type: "thread.meta-updated",
           payload: {
             threadId: command.threadId,
-            modelSelection: command.binding.modelSelection,
+            engineSelection: command.binding.engineSelection,
             updatedAt: command.createdAt,
           },
         },

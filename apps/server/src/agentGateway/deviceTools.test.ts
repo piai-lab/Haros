@@ -13,18 +13,18 @@ import type { ToolContext, ToolEntry } from "./toolRuntime.ts";
 const THREAD = "thread-a";
 const DEVICE = "FAKE-0001";
 
-function makeContext(provider: EngineKind = "claude"): ToolContext {
+function makeContext(engine: EngineKind = "claude"): ToolContext {
   return {
     principal: {
-      kind: "provider-session",
+      kind: "engine-session",
       sessionKey: "gateway-session:test",
       threadId: THREAD,
-      provider,
+      engine,
       turnId: "turn-a",
     },
     callerThreadId: THREAD,
     callerSessionKey: "gateway-session:test",
-    callerProvider: provider,
+    callerProvider: engine,
     callerCapabilities: new Set(["device:control"]),
     callerTurnId: "turn-a",
     assertCallerTurnActive: () => Effect.void,
@@ -44,18 +44,18 @@ async function setup() {
   const call = async (
     name: string,
     args: Record<string, unknown>,
-    provider?: EngineKind,
+    engine?: EngineKind,
   ): Promise<McpToolCallResult> => {
     const tool = byName.get(name);
     if (!tool) throw new Error(`no such tool: ${name}`);
-    return await Effect.runPromise(tool.handler(args, makeContext(provider)));
+    return await Effect.runPromise(tool.handler(args, makeContext(engine)));
   };
   const structured = async (
     name: string,
     args: Record<string, unknown>,
-    provider?: EngineKind,
+    engine?: EngineKind,
   ): Promise<unknown> => {
-    const result = await call(name, args, provider);
+    const result = await call(name, args, engine);
     const text = result.content.find((entry) => entry.type === "text");
     return text && text.type === "text" ? JSON.parse(text.text) : null;
   };
@@ -325,7 +325,7 @@ describe("agent gateway device tools without an approval gate", () => {
     expect(screenshot.isError).toBeUndefined();
   });
 
-  it("fails closed for a gated provider when no verified approval fact is supplied", async () => {
+  it("fails closed for a gated engine when no verified approval fact is supplied", async () => {
     const backend = new FakeDeviceBackend();
     const manager = new DeviceManager({ backend });
     await manager.boot(DEVICE);

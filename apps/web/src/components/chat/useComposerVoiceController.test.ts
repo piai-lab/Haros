@@ -152,7 +152,7 @@ const PROJECT: Project = {
   folderName: "project",
   localName: null,
   cwd: "/workspace/project",
-  defaultModelSelection: null,
+  defaultEngineSelection: null,
   expanded: true,
   scripts: [],
 };
@@ -232,13 +232,13 @@ describe("useComposerVoiceController", () => {
     await result.startComposerVoiceRecording();
 
     expect(nativeApi.prewarmVoice).toHaveBeenCalledWith({
-      provider: "codex",
+      engine: "codex",
       cwd: PROJECT.cwd,
       threadId: THREAD_A,
     });
   });
 
-  it.each(["thread", "provider", "cancel"] as const)(
+  it.each(["thread", "engine", "cancel"] as const)(
     "ignores a stale transcription after %s changes",
     async (staleCause) => {
       const transcription = deferred<{ text: string }>();
@@ -249,7 +249,7 @@ describe("useComposerVoiceController", () => {
 
       if (staleCause === "thread") {
         render({ activeThreadId: THREAD_B, threadId: THREAD_B });
-      } else if (staleCause === "provider") {
+      } else if (staleCause === "engine") {
         render({ selectedProvider: "claude" as EngineKind });
       } else {
         result.cancelComposerVoiceRecording();
@@ -371,7 +371,7 @@ describe("useComposerVoiceController", () => {
     voiceAvailability.canStartVoiceNotes = false;
     render({
       activeProviderStatus: {
-        provider: "codex",
+        engine: "codex",
         status: "error",
         available: false,
         authStatus: "unauthenticated",

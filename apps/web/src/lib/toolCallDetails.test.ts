@@ -7,7 +7,7 @@ describe("inspectable tool details", () => {
     data: {
       rawInput: {
         query: "AI agent memory frameworks",
-        provider: "auto",
+        engine: "auto",
         hiddenTransportField: "not product input",
       },
       rawOutput: {
@@ -29,7 +29,7 @@ describe("inspectable tool details", () => {
       kind: "tool",
       title: "Web search",
       toolName: "web_search",
-      input: JSON.stringify({ query: "AI agent memory frameworks", provider: "auto" }, null, 2),
+      input: JSON.stringify({ query: "AI agent memory frameworks", engine: "auto" }, null, 2),
       output: { output: "Search completed with three sources." },
     });
   });

@@ -17,9 +17,9 @@ import {
   needsAuthSnapshot,
   titleCase,
 } from "../parse";
-import type { ProviderUsageFetcher } from "../types";
+import type { EngineUsageFetcher } from "../types";
 
-const log = createLogger("provider-usage:codex");
+const log = createLogger("engine-usage:codex");
 const SOURCE = "codex-app-server-rate-limits";
 
 function pushRateLimitWindow(input: {
@@ -76,7 +76,7 @@ export function parseCodexAppServerRateLimits(input: { readonly json: unknown; n
 
   const planType = asString(rateLimits?.planType);
   return buildSnapshot({
-    provider: "codex",
+    engine: "codex",
     nowMs: input.nowMs,
     status: "ok",
     source: SOURCE,
@@ -91,8 +91,8 @@ function isCodexAuthenticationError(cause: unknown): boolean {
   return /auth|log(?:ged)? in|sign in|account is unavailable|unauthorized/i.test(message);
 }
 
-export const codexUsageFetcher: ProviderUsageFetcher = {
-  provider: "codex",
+export const codexUsageFetcher: EngineUsageFetcher = {
+  engine: "codex",
   async cacheKey() {
     return SOURCE;
   },

@@ -1,21 +1,21 @@
 // FILE: SkillsSettingsPanel.tsx
-// Purpose: Settings → Skills panel. Lists every skill from the unified cross-provider
-// catalog (~/.harnessos/skills plus each provider's skills folder), shows which provider
+// Purpose: Settings → Skills panel. Lists every skill from the unified cross-engine
+// catalog (~/.harnessos/skills plus each engine's skills folder), shows which engine
 // a skill comes from, and lets the user enable/disable each one. Disabled skills are
-// hidden from the composer skill picker on every provider.
+// hidden from the composer skill picker on every engine.
 
 import type { EngineKind, ServerSettings } from "@harnessos/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { ProviderIcon } from "~/components/ProviderIcon";
+import { EngineIcon } from "~/components/EngineIcon";
 import { SettingsRow, SettingsSection } from "~/components/settings/SettingsPanelPrimitives";
 import { Switch } from "~/components/ui/switch";
 import { SkillCubeIcon } from "~/lib/icons";
 import { ensureNativeApi } from "~/nativeApi";
 import {
-  providerDiscoveryQueryKeys,
+  engineDiscoveryQueryKeys,
   skillsCatalogQueryOptions,
-} from "~/lib/providerDiscoveryReactQuery";
+} from "~/lib/engineDiscoveryReactQuery";
 import { serverQueryKeys, serverSettingsQueryOptions } from "~/lib/serverReactQuery";
 import { useI18n } from "~/i18n";
 import {
@@ -26,31 +26,28 @@ import {
   settingsSkillNameKey,
 } from "./skillsSettingsModel";
 
-function SkillProviderStack({ providers }: { providers: ReadonlyArray<EngineKind> }) {
+function SkillProviderStack({ engines }: { engines: ReadonlyArray<EngineKind> }) {
   const { t } = useI18n();
-  if (providers.length === 0) {
+  if (engines.length === 0) {
     return null;
   }
 
-  const label = providers.map(providerDisplayName).join(", ");
-  const stackLabel = t(
-    providers.length === 1 ? "settings.providerCopy" : "settings.providerCopies",
-    {
-      providers: label,
-    },
-  );
+  const label = engines.map(providerDisplayName).join(", ");
+  const stackLabel = t(engines.length === 1 ? "settings.providerCopy" : "settings.providerCopies", {
+    engines: label,
+  });
   return (
     <span
       className="inline-flex shrink-0 items-center -space-x-1"
       aria-label={stackLabel}
       title={stackLabel}
     >
-      {providers.map((provider) => (
+      {engines.map((engine) => (
         <span
-          key={provider}
+          key={engine}
           className="inline-flex size-4 items-center justify-center rounded-full border border-background bg-background"
         >
-          <ProviderIcon provider={provider} className="size-3" />
+          <EngineIcon engine={engine} className="size-3" />
         </span>
       ))}
     </span>
@@ -95,7 +92,7 @@ export function SkillsSettingsPanel() {
       .then((nextSettings) => {
         queryClient.setQueryData(serverQueryKeys.settings(), nextSettings);
         // Composer skill pickers are served filtered by these toggles.
-        void queryClient.invalidateQueries({ queryKey: providerDiscoveryQueryKeys.all });
+        void queryClient.invalidateQueries({ queryKey: engineDiscoveryQueryKeys.all });
       })
       .catch(() => {
         void queryClient.invalidateQueries({ queryKey: serverQueryKeys.settings() });
@@ -178,7 +175,7 @@ export function SkillsSettingsPanel() {
                   status={
                     <span className="flex min-w-0 flex-col gap-1">
                       <span className="flex min-w-0 items-center gap-1.5">
-                        <SkillProviderStack providers={group.providers} />
+                        <SkillProviderStack engines={group.engines} />
                         <span className="truncate text-[11px] text-muted-foreground">
                           {group.sources.map((source) => source.originInfo.label).join(" · ")}
                         </span>

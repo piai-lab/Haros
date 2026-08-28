@@ -1,12 +1,12 @@
 // FILE: cursorSkillsDiscovery.ts
 // Purpose: Finds Cursor-compatible Agent Skill folders from project and user skill roots,
 //          mirroring the roots cursor-agent scans natively.
-// Layer: Server provider discovery helper
+// Layer: Server engine discovery helper
 // Exports: discoverCursorSkills (generic primitives live in skillsCatalog.ts).
 
 import * as nodePath from "node:path";
 
-import type { ProviderSkillDescriptor } from "@harnessos/contracts";
+import type { EngineSkillDescriptor } from "@harnessos/contracts";
 
 import { collectSkillsFromRoots, providerNativeSkillRoots } from "./skillsCatalog.ts";
 
@@ -17,13 +17,13 @@ export interface CursorSkillDiscoveryInput {
 
 export async function discoverCursorSkills(
   input: CursorSkillDiscoveryInput,
-): Promise<ProviderSkillDescriptor[]> {
+): Promise<EngineSkillDescriptor[]> {
   return collectSkillsFromRoots(
     providerNativeSkillRoots({
       cwd: input.cwd,
       homeDir: input.homeDir,
       harnessosBaseDir: nodePath.join(input.homeDir, ".harnessos"),
-      provider: "cursor",
+      engine: "cursor",
     }),
   );
 }

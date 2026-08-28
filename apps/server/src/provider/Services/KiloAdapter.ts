@@ -1,5 +1,5 @@
 /**
- * KiloAdapter - Kilo implementation of the generic provider adapter contract.
+ * KiloAdapter - Kilo implementation of the generic engine adapter contract.
  *
  * Kilo's CLI/server API is OpenCode-compatible, so the live layer reuses the
  * OpenCode adapter implementation with Kilo-specific process settings.
@@ -8,11 +8,11 @@
  */
 import { ServiceMap } from "effect";
 
-import type { ProviderAdapterError } from "../Errors.ts";
-import type { ProviderAdapterShape } from "./ProviderAdapter.ts";
+import type { EngineAdapterError } from "../Errors.ts";
+import type { EngineAdapterShape } from "./EngineAdapter.ts";
 
-export interface KiloAdapterShape extends ProviderAdapterShape<ProviderAdapterError> {
-  readonly provider: "kilo";
+export interface KiloAdapterShape extends EngineAdapterShape<EngineAdapterError> {
+  readonly engine: "kilo";
 }
 
 export class KiloAdapter extends ServiceMap.Service<KiloAdapter, KiloAdapterShape>()(

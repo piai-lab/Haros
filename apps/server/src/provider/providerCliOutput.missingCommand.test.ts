@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { isCommandMissingCause } from "./providerCliOutput";
 import { probeProviderCliVersion } from "./providerCliVersionProbe";
 
-describe("provider CLI missing-command classification", () => {
+describe("engine CLI missing-command classification", () => {
   it("recognizes the process runner's normalized command-not-found error", () => {
     expect(isCommandMissingCause(new Error("Command not found: codex"))).toBe(true);
   });
@@ -14,7 +14,7 @@ describe("provider CLI missing-command classification", () => {
     expect(isCommandMissingCause(new Error("NotFound: codex"))).toBe(true);
   });
 
-  it("classifies normalized runner failures as a missing provider CLI", async () => {
+  it("classifies normalized runner failures as a missing engine CLI", async () => {
     const outcome = await Effect.runPromise(
       probeProviderCliVersion(Effect.fail(new Error("Command not found: codex")), 1_000),
     );

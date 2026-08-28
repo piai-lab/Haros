@@ -154,7 +154,7 @@ function normalizeNestedTarget(rawTarget: unknown): unknown {
   return { ...rest, ref: elementId };
 }
 
-/** Normalize common provider spellings while keeping the desktop schema strict. */
+/** Normalize common engine spellings while keeping the desktop schema strict. */
 export function normalizeGatewayBrowserArguments(
   name: BrowserToolName,
   argumentsValue: Record<string, unknown>,
@@ -465,7 +465,7 @@ export function makeAgentGatewayBrowserTools(
     return {
       requiredCapability: "browser:control" as const,
       // Even read-only browser calls act on the user's shared browser runtime and
-      // must belong to a live provider turn. Detached Codex cells can keep
+      // must belong to a live engine turn. Detached Codex cells can keep
       // running after their parent turn ends; rejecting every browser_* call
       // at this boundary prevents them from observing or touching the browser.
       definition: {
@@ -508,7 +508,7 @@ export function makeAgentGatewayBrowserTools(
           const result = yield* host
             .execute({
               sessionKey: context.callerSessionKey,
-              provider: context.callerProvider,
+              engine: context.callerProvider,
               threadId: ThreadId.makeUnsafe(context.callerThreadId),
               name,
               arguments: decodedArguments,

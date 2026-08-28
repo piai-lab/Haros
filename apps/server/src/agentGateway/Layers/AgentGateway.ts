@@ -2,7 +2,7 @@
  * AgentGatewayLive - OmniMind app-control MCP tool surface.
  *
  * Implements the `harnessos_*` tools served over `POST /mcp` (streamable HTTP,
- * stateless JSON responses). Every provider session gets this endpoint plus a
+ * stateless JSON responses). Every engine session gets this endpoint plus a
  * thread-bound bearer token injected at session start, so any agent running in
  * a OmniMind thread can list/read/create/steer threads and manage heartbeat
  * automations - the same host-tool pattern the Codex desktop app uses.
@@ -44,18 +44,18 @@ import { buildAutomationProposalActivity } from "../../automation/proposalActivi
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
 import { OrchestrationEventStore } from "../../persistence/Services/OrchestrationEventStore.ts";
 import { OrchestrationEventDeliveryRepository } from "../../persistence/Services/OrchestrationEventDeliveries.ts";
-import { ProviderRuntimeEventRepository } from "../../persistence/Services/ProviderRuntimeEvents.ts";
+import { EngineRuntimeEventRepository } from "../../persistence/Services/EngineRuntimeEvents.ts";
 import { ThreadDiagnosticsQuery } from "../../diagnostics/Services/ThreadDiagnosticsQuery.ts";
 import { AgentGateway, type AgentGatewayShape } from "../Services/AgentGateway.ts";
 import { AgentGatewayCredentials } from "../Services/AgentGatewayCredentials.ts";
 import { AgentGatewayOperationRepository } from "../Services/AgentGatewayOperationRepository.ts";
-import { ProviderDiscoveryService } from "../../provider/Services/ProviderDiscoveryService.ts";
-import { ProviderHealth } from "../../provider/Services/ProviderHealth.ts";
-import { ProviderExecutionCapabilities } from "../../provider/Services/ProviderExecutionCapabilities.ts";
+import { EngineDiscoveryService } from "../../provider/Services/EngineDiscoveryService.ts";
+import { EngineHealth } from "../../provider/Services/EngineHealth.ts";
+import { EngineExecutionCapabilities } from "../../provider/Services/EngineExecutionCapabilities.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import {
   AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION,
-  type AgentGatewayProviderAvailability,
+  type AgentGatewayEngineAvailability,
 } from "../targetResolver.ts";
 import { mcpToolResultError, mcpToolResultJson } from "../protocol.ts";
 import { gatewayIsoNow as isoNow } from "../creationUtils.ts";
@@ -63,7 +63,7 @@ import {
   MODEL_SELECTION_INPUT_SCHEMA,
   ENGINE_KINDS,
   ToolInputError,
-  buildModelSelection,
+  buildEngineSelection,
   decodeCreateThreadsInput,
   errorText,
   parseProviderKind,
@@ -93,7 +93,7 @@ import { pruneProjectedArchivedManagedWorktrees } from "../../managedWorktrees.t
 import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";
 import { renderAgentGatewayMcpInstructions } from "../harnessPolicy.ts";
 
-// Providers already receive the versioned host policy exactly once in their
+// Engines already receive the versioned host policy exactly once in their
 // private prompt. MCP clients prepend initialize.instructions to every exposed
 // tool definition, so repeating the full policy here adds tens of thousands of
 // context characters per round without adding authority or safety.
@@ -136,15 +136,15 @@ export const makeAgentGateway = Effect.gen(function* () {
   const orchestrationEngine = yield* OrchestrationEngineService;
   const automationService = yield* AutomationService;
   const git = yield* GitCore;
-  const providerDiscovery = yield* ProviderDiscoveryService;
-  const providerHealth = yield* ProviderHealth;
-  const providerExecutionCapabilities = yield* ProviderExecutionCapabilities;
+  const engineDiscovery = yield* EngineDiscoveryService;
+  const providerHealth = yield* EngineHealth;
+  const engineExecutionCapabilities = yield* EngineExecutionCapabilities;
   const serverSettings = yield* ServerSettingsService;
   const operationRepository = yield* AgentGatewayOperationRepository;
   const projectionTurns = yield* ProjectionTurnRepository;
   const eventStore = yield* OrchestrationEventStore;
   const eventDeliveries = yield* OrchestrationEventDeliveryRepository;
-  const providerRuntimeEvents = yield* ProviderRuntimeEventRepository;
+  const engineRuntimeEvents = yield* EngineRuntimeEventRepository;
   const diagnostics = yield* ThreadDiagnosticsQuery;
   const serverConfig = yield* ServerConfig;
   const browserAutomationHost = Option.getOrElse(
@@ -160,16 +160,16 @@ export const makeAgentGateway = Effect.gen(function* () {
       serverSettings.getSettings,
       providerHealth.getStatuses,
     ]);
-    const statusByProvider = new Map<EngineKind, ServerProviderStatus>(
-      statuses.map((status) => [status.provider, status]),
+    const statusByEngine = new Map<EngineKind, ServerProviderStatus>(
+      statuses.map((status) => [status.engine, status]),
     );
-    return new Map<EngineKind, AgentGatewayProviderAvailability>(
-      ENGINE_KINDS.map((provider) => {
-        const status = statusByProvider.get(provider);
+    return new Map<EngineKind, AgentGatewayEngineAvailability>(
+      ENGINE_KINDS.map((engine) => {
+        const status = statusByEngine.get(engine);
         return [
-          provider,
+          engine,
           {
-            enabled: settings.providers[provider].enabled,
+            enabled: settings.engines[engine].enabled,
             ...(status
               ? {
                   available: status.available,
@@ -236,7 +236,7 @@ export const makeAgentGateway = Effect.gen(function* () {
   const readTools = makeThreadReadTools({
     snapshotQuery,
     projectionTurns,
-    providerDiscovery,
+    engineDiscovery,
     loadProviderAvailabilities,
     requireThreadShell,
     workspacePaths: {
@@ -248,7 +248,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     snapshotQuery,
     diagnostics,
     eventStore,
-    providerRuntimeEvents,
+    engineRuntimeEvents,
     eventDeliveries,
     requireThreadShell,
   });
@@ -259,11 +259,11 @@ export const makeAgentGateway = Effect.gen(function* () {
     snapshotQuery,
     orchestrationEngine,
     git,
-    providerDiscovery,
+    engineDiscovery,
     operationRepository,
     serverConfig,
     loadProviderAvailabilities,
-    getProviderExecutionCapabilities: providerExecutionCapabilities.get,
+    getProviderExecutionCapabilities: engineExecutionCapabilities.get,
     requireThreadShell,
   });
 
@@ -323,7 +323,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     },
     handler: (args, context) =>
       runCreateThreads(decodeCreateThreadsInput(args), {
-        kind: "provider-session",
+        kind: "engine-session",
         callerThreadId: context.callerThreadId,
         callerTurnId: context.callerTurnId,
         assertAuthority: context.assertCallerTurnActive,
@@ -345,7 +345,7 @@ export const makeAgentGateway = Effect.gen(function* () {
           target: {
             ...MODEL_SELECTION_INPUT_SCHEMA,
           },
-          provider: { type: "string", enum: [...ENGINE_KINDS] },
+          engine: { type: "string", enum: [...ENGINE_KINDS] },
           model: { type: "string" },
           options: {
             type: "object",
@@ -381,10 +381,10 @@ export const makeAgentGateway = Effect.gen(function* () {
         if (explicitTarget) {
           target = explicitTarget;
         } else {
-          const provider = parseProviderKind(readStringArg(args, "provider", { required: true })!);
-          const modelSelection = buildModelSelection(provider, readStringArg(args, "model"));
+          const engine = parseProviderKind(readStringArg(args, "engine", { required: true })!);
+          const engineSelection = buildEngineSelection(engine, readStringArg(args, "model"));
           const options = readRecordArg(args, "options");
-          target = { ...modelSelection, ...(options ? { options } : {}) };
+          target = { ...engineSelection, ...(options ? { options } : {}) };
         }
         const spec: Record<string, unknown> = {
           prompt: readStringArg(args, "prompt", { required: true })!,
@@ -408,7 +408,7 @@ export const makeAgentGateway = Effect.gen(function* () {
             threads: [spec],
           }),
           {
-            kind: "provider-session",
+            kind: "engine-session",
             callerThreadId: context.callerThreadId,
             callerTurnId: context.callerTurnId,
             assertAuthority: context.assertCallerTurnActive,
@@ -437,7 +437,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     definition: {
       name: "harnessos_send_message",
       description:
-        'Send a OmniMind follow-up message to an existing thread. mode "queue" (default) waits for the current turn; "steer" redirects a running turn where the provider supports it (otherwise it is queued).',
+        'Send a OmniMind follow-up message to an existing thread. mode "queue" (default) waits for the current turn; "steer" redirects a running turn where the engine supports it (otherwise it is queued).',
       inputSchema: {
         type: "object",
         properties: {
@@ -468,8 +468,8 @@ export const makeAgentGateway = Effect.gen(function* () {
         const caller = yield* requireThreadShell(context.callerThreadId);
         const target = yield* requireThreadShell(threadId);
         yield* assertCallerMayDriveThread(caller, target);
-        const executionCapabilities = yield* providerExecutionCapabilities.get(
-          target.modelSelection,
+        const executionCapabilities = yield* engineExecutionCapabilities.get(
+          target.engineSelection,
         );
         const runtimeModeCapability = executionCapabilities.runtimeModes[target.runtimeMode];
         if (!isProviderRuntimeModeExecutable(runtimeModeCapability)) {
@@ -482,7 +482,7 @@ export const makeAgentGateway = Effect.gen(function* () {
           );
         }
         // Pass the requested mode through unchanged: the reactor checks live
-        // provider state (authoritative, unlike this projection snapshot) and
+        // engine state (authoritative, unlike this projection snapshot) and
         // already downgrades steers whose turn is not actually live.
         const dispatchMode: TurnDispatchMode = modeArg;
         const suffix = randomUUID();
@@ -549,7 +549,7 @@ export const makeAgentGateway = Effect.gen(function* () {
             createdAt: isoNow(),
           })
           .pipe(Effect.mapError((error) => new ToolInputError(errorText(error))));
-        // The interrupt is only *requested* here: the provider settles the turn
+        // The interrupt is only *requested* here: the engine settles the turn
         // asynchronously. Reporting a constant `interrupted: true` told callers
         // the turn had stopped even when there was no turn to stop.
         return mcpToolResultJson({

@@ -18,7 +18,7 @@ function makeShellProject(
     kind: "chat",
     title: "Home",
     workspaceRoot: "/Users/tester",
-    defaultModelSelection: null,
+    defaultEngineSelection: null,
     scripts: [],
     isPinned: false,
     createdAt: NOW,
@@ -190,7 +190,7 @@ describe("isHomeChatContainerProject", () => {
       folderName: "Home",
       localName: null,
       cwd: "/Users/tester",
-      defaultModelSelection: null,
+      defaultEngineSelection: null,
       expanded: false,
       scripts: [],
     };

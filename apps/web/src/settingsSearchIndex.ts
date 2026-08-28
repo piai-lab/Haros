@@ -3,7 +3,7 @@
 // Layer: Route/UI support
 
 import type { MessageKey } from "./i18n";
-import { rankProviderDiscoveryItems } from "./lib/providerDiscovery";
+import { rankProviderDiscoveryItems } from "./lib/engineDiscovery";
 import {
   SETTINGS_NAV_ITEMS,
   SETTINGS_SECTION_BY_ID,

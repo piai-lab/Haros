@@ -1,6 +1,6 @@
 // FILE: goalMode.ts
-// Purpose: Injects OmniMind's provider-independent persistent task objective.
-// Layer: Provider prompt policy
+// Purpose: Injects OmniMind's engine-independent persistent task objective.
+// Layer: Engine prompt policy
 
 /** Exact Gateway closure named by the synthetic goal-continuation prompt. */
 export const GOAL_CONTINUATION_GATEWAY_TOOL_NAMES = ["harnessos_set_thread_goal"] as const;
@@ -16,7 +16,7 @@ function escapeXmlText(value: string): string {
 
 /**
  * The goal to inject for a thread, honoring pause: a paused goal stays
- * persisted but is withheld from provider prompts until resumed.
+ * persisted but is withheld from engine prompts until resumed.
  */
 export function activeThreadGoal(thread: {
   readonly goal?: string | undefined;

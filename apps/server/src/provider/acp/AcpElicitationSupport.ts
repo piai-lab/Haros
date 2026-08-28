@@ -1,9 +1,9 @@
 // FILE: AcpElicitationSupport.ts
-// Purpose: Bridges ACP form elicitation schemas to OmniMind's provider-neutral question UI.
-// Layer: Provider ACP protocol mapping
+// Purpose: Bridges ACP form elicitation schemas to OmniMind's engine-neutral question UI.
+// Layer: Engine ACP protocol mapping
 // Exports: question extraction and typed ACP response construction.
 
-import type { ProviderUserInputAnswers, UserInputQuestion } from "@harnessos/contracts";
+import type { EngineUserInputAnswers, UserInputQuestion } from "@harnessos/contracts";
 import type * as Acp from "@agentclientprotocol/sdk";
 
 type FormElicitationRequest = Acp.ElicitationFormMode & {
@@ -93,13 +93,13 @@ export function elicitationQuestionsFromRequest(
   }));
 }
 
-function firstAnswerValue(value: ProviderUserInputAnswers[string] | undefined): string | undefined {
+function firstAnswerValue(value: EngineUserInputAnswers[string] | undefined): string | undefined {
   return typeof value === "string" ? value : value?.[0];
 }
 
 function coerceElicitationAnswer(
   property: ElicitationProperty,
-  answer: ProviderUserInputAnswers[string] | undefined,
+  answer: EngineUserInputAnswers[string] | undefined,
 ): Acp.ElicitationContentValue | undefined {
   if (answer === null || answer === undefined) {
     return undefined;
@@ -130,7 +130,7 @@ function coerceElicitationAnswer(
 // Preserves the ACP property's primitive type instead of returning every UI answer as text.
 export function elicitationResponseFromAnswers(
   request: FormElicitationRequest,
-  answers: ProviderUserInputAnswers,
+  answers: EngineUserInputAnswers,
 ): Acp.CreateElicitationResponse {
   const content: Record<string, Acp.ElicitationContentValue> = {};
   for (const [id, property] of Object.entries(request.requestedSchema.properties ?? {})) {

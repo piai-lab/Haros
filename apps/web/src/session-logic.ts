@@ -44,10 +44,10 @@ export {
   type WorkLogOmniMindThreadCreation,
 } from "./workLog";
 
-export type ProviderPickerKind = EngineKind;
+export type EnginePickerKind = EngineKind;
 
-export const PROVIDER_OPTIONS: Array<{
-  value: ProviderPickerKind;
+export const ENGINE_OPTIONS: Array<{
+  value: EnginePickerKind;
   label: string;
 }> = ENGINE_DESCRIPTORS.map((descriptor) => ({
   value: descriptor.kind,
@@ -191,7 +191,7 @@ export function hasLiveLatestTurn(
  * Pending approval / user-input requests are only actionable while the session
  * that raised them can still receive the answer. Once the session is closed or
  * errored the request is dead — status surfaces (sidebar pill, kanban column)
- * must not present the thread as awaiting action forever after a provider
+ * must not present the thread as awaiting action forever after a engine
  * crash. A thread with no session yet keeps the request actionable: the flag
  * can arrive ahead of the session snapshot.
  */
@@ -291,9 +291,9 @@ export function deriveActiveTaskListState(
     return currentTurnTaskList.tasks.length > 0 ? currentTurnTaskList : null;
   }
 
-  // Task lists describe work state beyond the lifetime of one provider turn. Keep the
+  // Task lists describe work state beyond the lifetime of one engine turn. Keep the
   // latest unfinished list visible after completion, abort, reload, and follow-up turns
-  // until the provider completes every task or sends an explicit empty snapshot.
+  // until the engine completes every task or sends an explicit empty snapshot.
   const latestPriorTaskList =
     allTaskListActivities.map(toActiveTaskListState).findLast((taskList) => taskList !== null) ??
     null;
@@ -315,7 +315,7 @@ export function deriveVisibleActiveTaskListState(input: {
   latestTurnId: TurnId | undefined;
   latestTurnSettled: boolean;
 }): ActiveTaskListState | null {
-  // Providers may finish a turn without completing every task. The historical
+  // Engines may finish a turn without completing every task. The historical
   // task snapshot remains useful to derivation/recovery consumers, but the
   // Composer banner is live-turn UI and must leave once that turn settles.
   return input.latestTurnSettled
@@ -395,7 +395,7 @@ export function deriveActiveBackgroundTasksState(
     : null;
 }
 
-// Keeps the UI "working" while the provider still has visible assistant text or
+// Keeps the UI "working" while the engine still has visible assistant text or
 // background-task updates to finish for the latest turn.
 export function hasLiveTurnTailWork(input: {
   latestTurn: Pick<OrchestrationLatestTurn, "turnId" | "completedAt"> | null;
@@ -418,7 +418,7 @@ export function hasLiveTurnTailWork(input: {
     return input.latestTurn?.completedAt == null;
   }
 
-  // Some providers can leave task lifecycle bookkeeping behind after the turn
+  // Some engines can leave task lifecycle bookkeeping behind after the turn
   // has already closed. Once the session is no longer running, those stale
   // task rows should not keep the whole chat in a live state.
   if (input.session?.orchestrationStatus !== "running") {

@@ -472,7 +472,7 @@ export function getStreamDuplicateRetryDelayMs(
 
 /**
  * A visible local draft subscribes before its `thread.create` projection exists
- * so it cannot miss the first provider events. The event journal and projection
+ * so it cannot miss the first engine events. The event journal and projection
  * commit independently, leaving a short window where that valid subscription
  * receives THREAD_SNAPSHOT_NOT_FOUND. Retry only that admission race in place;
  * bounded attempts still surface genuinely missing or deleted thread ids.
@@ -1338,7 +1338,7 @@ export class WsTransport {
               if (event.type === "snapshot") {
                 this.emit(WS_CHANNELS.serverConfigUpdated, {
                   issues: event.config.issues,
-                  providers: event.config.providers,
+                  engines: event.config.engines,
                 });
               } else if (event.type === "configUpdated") {
                 this.emit(WS_CHANNELS.serverConfigUpdated, event.payload);
@@ -1349,7 +1349,7 @@ export class WsTransport {
         } else if (channel === WS_CHANNELS.serverProviderStatusesUpdated) {
           this.startStream(
             client,
-            "server.providers",
+            "server.engines",
             client[WS_METHODS.subscribeServerProviderStatuses]({}),
             (payload: ServerProviderStatusesUpdatedPayload) =>
               this.emit(WS_CHANNELS.serverProviderStatusesUpdated, payload),
@@ -1424,7 +1424,7 @@ export class WsTransport {
       if (!this.shouldKeepLifecycleStream()) this.stopStream("server.lifecycle");
     } else if (channel === WS_CHANNELS.serverConfigUpdated) this.stopStream("server.config");
     else if (channel === WS_CHANNELS.serverProviderStatusesUpdated)
-      this.stopStream("server.providers");
+      this.stopStream("server.engines");
     else if (channel === WS_CHANNELS.serverSettingsUpdated) this.stopStream("server.settings");
     else if (channel === WS_CHANNELS.terminalEvent) this.stopStream("terminal.events");
     else if (channel === WS_CHANNELS.projectDevServerEvent) this.stopStream("project.devServers");

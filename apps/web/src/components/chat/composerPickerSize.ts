@@ -2,7 +2,7 @@
 // Purpose: Size variant for composer picker open panels (density + opt-in fixed width).
 // Layer: UI styling config
 // Change COMPOSER_PICKER_SIZE to switch every composer picker between "small" and "normal".
-// Width is content-sized by default; only model/effort/provider pickers opt into a fixed width.
+// Width is content-sized by default; only model/effort/engine pickers opt into a fixed width.
 
 export type ComposerPickerSize = "small" | "normal";
 
@@ -24,7 +24,7 @@ export function composerPickerMenuShellClassName(
   return `composer-picker-menu composer-picker-menu--${resolved}`;
 }
 
-// Density shell + opt-in fixed width for the composer model/effort/provider pickers.
+// Density shell + opt-in fixed width for the composer model/effort/engine pickers.
 export function composerPickerMenuFixedShellClassName(
   size: ComposerPickerSize | undefined = COMPOSER_PICKER_SIZE,
 ): string {

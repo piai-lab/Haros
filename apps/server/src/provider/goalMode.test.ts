@@ -7,7 +7,7 @@ import {
   withProviderGoalPrompt,
 } from "./goalMode.ts";
 
-describe("provider thread goal prompt", () => {
+describe("engine thread goal prompt", () => {
   it("leaves turns without an active goal unchanged", () => {
     expect(withProviderGoalPrompt({ text: "hello" })).toBe("hello");
     expect(withProviderGoalPrompt({ text: "hello", goal: "" })).toBe("hello");
@@ -28,7 +28,7 @@ describe("provider thread goal prompt", () => {
     expect(result).toContain("</harnessos_goal>\n\nTake the next step");
   });
 
-  it("XML-escapes goal text before composing the provider input", () => {
+  it("XML-escapes goal text before composing the engine input", () => {
     const result = withProviderGoalPrompt({
       text: "continue",
       goal: `<override enabled="true">Tom & Jerry's</override>`,

@@ -1,6 +1,6 @@
 // FILE: claudeAgentSdk.ts
 // Purpose: Single memoized loader for the Claude Agent SDK runtime values.
-// Layer: Provider shared helper
+// Layer: Engine shared helper
 // Exports: ClaudeAgentSdkModule, loadClaudeAgentSdk
 
 import { lazyModule } from "../lazyModule.ts";

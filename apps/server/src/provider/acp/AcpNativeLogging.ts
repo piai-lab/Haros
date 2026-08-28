@@ -75,7 +75,7 @@ export function redactAcpLogSecrets(value: unknown): unknown {
 
 function writeNativeAcpLog(input: {
   readonly nativeEventLogger: EventNdjsonLogger | undefined;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly threadId: ThreadId;
   readonly kind: "request" | "protocol";
   readonly payload: unknown;
@@ -89,7 +89,7 @@ function writeNativeAcpLog(input: {
         event: {
           id: crypto.randomUUID(),
           kind: input.kind,
-          provider: input.provider,
+          engine: input.engine,
           createdAt: observedAt,
           threadId: input.threadId,
           payload: redactAcpLogSecrets(input.payload),
@@ -130,7 +130,7 @@ export function summarizeAcpLogPayload(payload: unknown, limit: number): string 
 export function makeAcpDebugLoggers(input: {
   readonly base: Pick<AcpSessionRuntimeOptions, "requestLogger" | "protocolLogging">;
   readonly enabled: boolean;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly marker: string;
   readonly payloadLimit: number;
   readonly shouldMirrorIncomingRaw: (payload: string) => boolean;
@@ -142,7 +142,7 @@ export function makeAcpDebugLoggers(input: {
           Effect.gen(function* () {
             if (input.base.requestLogger) yield* input.base.requestLogger(event);
             if (input.enabled && event.status === "failed") {
-              yield* Effect.logWarning(`${input.provider}.acp.request_failed`, {
+              yield* Effect.logWarning(`${input.engine}.acp.request_failed`, {
                 marker: input.marker,
                 method: event.method,
                 payload:
@@ -173,7 +173,7 @@ export function makeAcpDebugLoggers(input: {
               ) {
                 return;
               }
-              yield* Effect.logWarning(`${input.provider}.acp.protocol`, {
+              yield* Effect.logWarning(`${input.engine}.acp.protocol`, {
                 marker: input.marker,
                 direction: event.direction,
                 stage: event.stage,
@@ -191,14 +191,14 @@ export function makeAcpDebugLoggers(input: {
 
 export function makeAcpNativeLoggers(input: {
   readonly nativeEventLogger: EventNdjsonLogger | undefined;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly threadId: ThreadId;
 }): Pick<AcpSessionRuntimeOptions, "requestLogger" | "protocolLogging"> {
   return {
     requestLogger: (event) =>
       writeNativeAcpLog({
         nativeEventLogger: input.nativeEventLogger,
-        provider: input.provider,
+        engine: input.engine,
         threadId: input.threadId,
         kind: "request",
         payload: formatRequestLogPayload(event),
@@ -211,7 +211,7 @@ export function makeAcpNativeLoggers(input: {
             logger: (event: AcpProtocolLogEvent) =>
               writeNativeAcpLog({
                 nativeEventLogger: input.nativeEventLogger,
-                provider: input.provider,
+                engine: input.engine,
                 threadId: input.threadId,
                 kind: "protocol",
                 payload: event,

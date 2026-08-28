@@ -4,7 +4,7 @@
 
 import type { EngineKind } from "@harnessos/contracts";
 
-import type { ProviderRateLimit, RateLimitWindow } from "~/lib/rateLimits";
+import type { EngineRateLimit, RateLimitWindow } from "~/lib/rateLimits";
 import { normalizeRateLimitLabel } from "~/lib/rateLimits";
 
 interface OpenUsageProgressLine {
@@ -66,10 +66,10 @@ function toProviderKind(providerId: string | undefined): EngineKind | null {
 }
 
 export function openUsageProviderIdForProvider(
-  provider: EngineKind | null | undefined,
+  engine: EngineKind | null | undefined,
 ): string | null {
-  if (provider === "codex") return "codex";
-  if (provider === "claude") return "claude";
+  if (engine === "codex") return "codex";
+  if (engine === "claude") return "claude";
   return null;
 }
 
@@ -109,14 +109,14 @@ function normalizeTextLine(line: OpenUsageTextLine): OpenUsageUsageLine | null {
 export function normalizeOpenUsageSnapshot(
   snapshot: unknown,
   preferredProvider?: EngineKind | null,
-): ProviderRateLimit | null {
+): EngineRateLimit | null {
   const parsed = asRecord(snapshot) as OpenUsageSnapshot | null;
   if (!parsed) return null;
 
-  const provider =
+  const engine =
     toProviderKind(asString(parsed.providerId)) ??
     (preferredProvider !== undefined ? preferredProvider : null);
-  if (!provider) return null;
+  if (!engine) return null;
 
   const lines = Array.isArray(parsed.lines) ? parsed.lines : [];
   const limits = lines
@@ -126,7 +126,7 @@ export function normalizeOpenUsageSnapshot(
   if (limits.length === 0) return null;
 
   return {
-    provider,
+    engine,
     updatedAt: asString(parsed.fetchedAt) ?? new Date().toISOString(),
     limits,
   };

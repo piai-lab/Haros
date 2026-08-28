@@ -13,7 +13,7 @@ import {
   hasLiveLatestTurn,
   hasLiveTurnTailWork,
   isLatestTurnSettled,
-  PROVIDER_OPTIONS,
+  ENGINE_OPTIONS,
 } from "./session-logic";
 import { makeActivity } from "./storeTestFixtures";
 
@@ -874,7 +874,7 @@ describe("hasLiveTurnTailWork", () => {
     ).toBe(false);
   });
 
-  it("ignores stale background tasks once the provider session is idle", () => {
+  it("ignores stale background tasks once the engine session is idle", () => {
     expect(
       hasLiveTurnTailWork({
         latestTurn,
@@ -909,17 +909,17 @@ describe("hasLiveTurnTailWork", () => {
   });
 });
 
-describe("PROVIDER_OPTIONS", () => {
-  it("lists every discoverable provider without claiming runtime availability", () => {
-    const omnimind = PROVIDER_OPTIONS.find((option) => option.value === "oa");
-    const claude = PROVIDER_OPTIONS.find((option) => option.value === "claude");
-    const cursor = PROVIDER_OPTIONS.find((option) => option.value === "cursor");
-    const grok = PROVIDER_OPTIONS.find((option) => option.value === "grok");
-    const droid = PROVIDER_OPTIONS.find((option) => option.value === "droid");
-    const kilo = PROVIDER_OPTIONS.find((option) => option.value === "kilo");
-    const opencode = PROVIDER_OPTIONS.find((option) => option.value === "opencode");
-    const pi = PROVIDER_OPTIONS.find((option) => option.value === "pi");
-    expect(PROVIDER_OPTIONS).toEqual([
+describe("ENGINE_OPTIONS", () => {
+  it("lists every discoverable engine without claiming runtime availability", () => {
+    const omnimind = ENGINE_OPTIONS.find((option) => option.value === "oa");
+    const claude = ENGINE_OPTIONS.find((option) => option.value === "claude");
+    const cursor = ENGINE_OPTIONS.find((option) => option.value === "cursor");
+    const grok = ENGINE_OPTIONS.find((option) => option.value === "grok");
+    const droid = ENGINE_OPTIONS.find((option) => option.value === "droid");
+    const kilo = ENGINE_OPTIONS.find((option) => option.value === "kilo");
+    const opencode = ENGINE_OPTIONS.find((option) => option.value === "opencode");
+    const pi = ENGINE_OPTIONS.find((option) => option.value === "pi");
+    expect(ENGINE_OPTIONS).toEqual([
       { value: "oa", label: "OmniMind" },
       { value: "codex", label: "Codex" },
       { value: "claude", label: "Claude" },

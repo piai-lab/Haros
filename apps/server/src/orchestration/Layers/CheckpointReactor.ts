@@ -9,8 +9,8 @@ import {
   type OrchestrationEvent,
   type OrchestrationProjectShell,
   type OrchestrationThread,
-  type ProviderSession,
-  type ProviderRuntimeEvent,
+  type EngineSession,
+  type EngineRuntimeEvent,
 } from "@harnessos/contracts";
 import { Cause, Deferred, Effect, Fiber, Layer, Option, Schedule, Stream } from "effect";
 import {
@@ -34,7 +34,7 @@ import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import { CheckpointStore } from "../../checkpointing/Services/CheckpointStore.ts";
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
 import { ProjectionTurnRepositoryLive } from "../../persistence/Layers/ProjectionTurns.ts";
-import { ProviderService } from "../../provider/Services/ProviderService.ts";
+import { EngineService } from "../../provider/Services/EngineService.ts";
 import { CheckpointReactor, type CheckpointReactorShape } from "../Services/CheckpointReactor.ts";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
 import { ProjectionSnapshotQuery } from "../Services/ProjectionSnapshotQuery.ts";
@@ -53,7 +53,7 @@ import { resolveProviderSessionThread } from "../providerSessionThread.ts";
 type ReactorInput =
   | {
       readonly source: "runtime";
-      readonly event: ProviderRuntimeEvent;
+      readonly event: EngineRuntimeEvent;
     }
   | {
       readonly source: "domain";
@@ -75,7 +75,7 @@ function sameId(left: string | null | undefined, right: string | null | undefine
   return left === right;
 }
 
-function providerSessionHasInFlightTurn(session: ProviderSession | undefined): boolean {
+function providerSessionHasInFlightTurn(session: EngineSession | undefined): boolean {
   return (
     session?.status === "connecting" ||
     session?.status === "running" ||
@@ -134,7 +134,7 @@ function resolveExistingAssistantMessageIdForTurn(
 
 const make = Effect.gen(function* () {
   const orchestrationEngine = yield* OrchestrationEngineService;
-  const providerService = yield* ProviderService;
+  const providerService = yield* EngineService;
   const checkpointStore = yield* CheckpointStore;
   const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
   const projectionTurnRepository = yield* ProjectionTurnRepository;
@@ -146,19 +146,19 @@ const make = Effect.gen(function* () {
   // edit arriving during the git work re-schedules and captures the newest tree.
   const liveDiffScheduledThreads = new Set<ThreadId>();
 
-  // Providers that stream their own unified diff (e.g. Codex) update the live
-  // turn diff through ProviderRuntimeIngestion. For providers without that
+  // Engines that stream their own unified diff (e.g. Codex) update the live
+  // turn diff through EngineRuntimeIngestion. For engines without that
   // capability (e.g. Claude) we derive the live diff from git here instead.
   const supportsLiveTurnDiffPatch = Effect.fnUntraced(function* (
-    provider: ProviderRuntimeEvent["provider"],
+    engine: EngineRuntimeEvent["engine"],
   ) {
     const capabilities = yield* providerService
-      .getCapabilities(provider)
+      .getCapabilities(engine)
       .pipe(Effect.catch(() => Effect.succeed(null)));
     return capabilities?.supportsLiveTurnDiffPatch === true;
   });
 
-  // Wait a short time for ProviderRuntimeIngestion to persist the final
+  // Wait a short time for EngineRuntimeIngestion to persist the final
   // assistant message id when turn completion wins the subscriber race.
   const resolveAssistantMessageIdForTurn = Effect.fnUntraced(function* (input: {
     readonly threadId: ThreadId;
@@ -352,7 +352,7 @@ const make = Effect.gen(function* () {
   });
 
   // Resolves the workspace CWD for checkpoint operations, preferring the
-  // active provider session CWD and falling back to the thread/project config.
+  // active engine session CWD and falling back to the thread/project config.
   // Returns undefined when no CWD can be determined or the workspace is not
   // a git repository.
   //
@@ -555,7 +555,7 @@ const make = Effect.gen(function* () {
 
   // Captures a real git checkpoint when a turn completes via a runtime event.
   const captureCheckpointFromTurnCompletion = Effect.fnUntraced(function* (
-    event: Extract<ProviderRuntimeEvent, { type: "turn.completed" }>,
+    event: Extract<EngineRuntimeEvent, { type: "turn.completed" }>,
   ) {
     const turnId = toTurnId(event.turnId);
     if (!turnId) {
@@ -591,7 +591,7 @@ const make = Effect.gen(function* () {
     }
 
     // Only skip if a real (non-placeholder) checkpoint already exists for this turn.
-    // ProviderRuntimeIngestion may insert placeholder entries with status "missing"
+    // EngineRuntimeIngestion may insert placeholder entries with status "missing"
     // before this reactor runs; those must not prevent real git capture.
     if (
       thread.checkpoints.some(
@@ -643,17 +643,17 @@ const make = Effect.gen(function* () {
     });
   });
 
-  // Derives a live turn diff from git while a turn is still running, for providers
+  // Derives a live turn diff from git while a turn is still running, for engines
   // that do not stream their own unified diff (e.g. Claude). Snapshots the working
   // tree into a throwaway ref (isolated temp index — the real index/worktree are
   // untouched), diffs it against the turn-start baseline, and dispatches a
-  // provider-diff placeholder so the "files changed" strip shows live +N/-M.
+  // engine-diff placeholder so the "files changed" strip shows live +N/-M.
   //
   // The terminal git checkpoint from `turn.completed` stays authoritative: it
   // captures with a real ref and status "ready", which the projector refuses to
   // let a later "missing" placeholder overwrite.
   const captureLiveTurnDiff = Effect.fnUntraced(function* (
-    event: Extract<ProviderRuntimeEvent, { type: "item.completed" }>,
+    event: Extract<EngineRuntimeEvent, { type: "item.completed" }>,
   ) {
     const turnId = toTurnId(event.turnId);
     if (!turnId) {
@@ -740,9 +740,9 @@ const make = Effect.gen(function* () {
       threadId: thread.id,
       turnId,
       completedAt: event.createdAt,
-      // A provider-diff ref keeps the projector treating this as a live
+      // A engine-diff ref keeps the projector treating this as a live
       // placeholder (turn stays "running") instead of an interrupted turn.
-      checkpointRef: CheckpointRef.makeUnsafe(`provider-diff:${event.eventId}`),
+      checkpointRef: CheckpointRef.makeUnsafe(`engine-diff:${event.eventId}`),
       status: "missing",
       files,
       assistantMessageId: undefined,
@@ -771,7 +771,7 @@ const make = Effect.gen(function* () {
   });
 
   const ensurePreTurnBaselineFromTurnStart = Effect.fnUntraced(function* (
-    event: Extract<ProviderRuntimeEvent, { type: "turn.started" }>,
+    event: Extract<EngineRuntimeEvent, { type: "turn.started" }>,
   ) {
     const turnId = toTurnId(event.turnId);
     if (!turnId) {
@@ -818,7 +818,7 @@ const make = Effect.gen(function* () {
       if (!copied) {
         // Startup and domain-event backup paths can still leave the message
         // baseline missing. Capture it with first-writer-wins semantics before
-        // aliasing the provider turn-start ref.
+        // aliasing the engine turn-start ref.
         yield* checkpointStore.captureCheckpoint({
           cwd: checkpointCwd,
           checkpointRef: messageStartCheckpointRef,
@@ -898,7 +898,7 @@ const make = Effect.gen(function* () {
 
     if (event.type === "thread.turn-start-requested") {
       pendingMessageStartByThread.set(threadId, event.payload.messageId);
-      // Backup capture for startup paths that bypass ProviderCommandReactor's
+      // Backup capture for startup paths that bypass EngineCommandReactor's
       // pre-send hook, while the pre-send hook remains the deterministic path.
       const messageStartCheckpointRef = checkpointRefForThreadMessageStart(
         threadId,
@@ -1003,10 +1003,10 @@ const make = Effect.gen(function* () {
       return;
     }
 
-    // Both scopes resolve the workspace the same way: prefer a live provider
+    // Both scopes resolve the workspace the same way: prefer a live engine
     // session cwd, fall back to the thread/project workspace. Requiring a live
     // session here would make revert fail after an idle stop or a restart, even
-    // though the checkpoints and the provider binding both survive that.
+    // though the checkpoints and the engine binding both survive that.
     const project = yield* getProjectShell(thread.projectId);
     const checkpointCwd = project
       ? yield* resolveCheckpointCwd({
@@ -1223,7 +1223,7 @@ const make = Effect.gen(function* () {
     }
 
     // A revert mutates two systems that cannot be committed together: the
-    // worktree and the provider's conversation. Snapshot the pre-revert
+    // worktree and the engine's conversation. Snapshot the pre-revert
     // worktree first so failures can restore it.
     const rolledBackTurns = Math.max(0, currentTurnCount - event.payload.turnCount);
     const rescueCheckpointRef = revertRescueCheckpointRef(event.payload.threadId);
@@ -1343,7 +1343,7 @@ const make = Effect.gen(function* () {
           detail:
             compensationFailure === null
               ? `Conversation rollback failed and the workspace was put back: ${conversationRollbackFailure}`
-              : `Conversation rollback failed and the workspace could not be put back (${compensationFailure}). The pre-revert snapshot is kept at ${rescueCheckpointRef}. Provider error: ${conversationRollbackFailure}`,
+              : `Conversation rollback failed and the workspace could not be put back (${compensationFailure}). The pre-revert snapshot is kept at ${rescueCheckpointRef}. Engine error: ${conversationRollbackFailure}`,
           createdAt: now,
         }).pipe(Effect.catch(() => Effect.void));
         return;
@@ -1488,7 +1488,7 @@ const make = Effect.gen(function* () {
     }
   });
 
-  const processRuntimeEvent = Effect.fnUntraced(function* (event: ProviderRuntimeEvent) {
+  const processRuntimeEvent = Effect.fnUntraced(function* (event: EngineRuntimeEvent) {
     if (event.type === "turn.started") {
       yield* ensurePreTurnBaselineFromTurnStart(event);
       return;
@@ -1569,8 +1569,8 @@ const make = Effect.gen(function* () {
               if (liveDiffScheduledThreads.has(event.threadId)) {
                 return;
               }
-              // Skip providers that stream their own live diff (handled elsewhere).
-              if (yield* supportsLiveTurnDiffPatch(event.provider)) {
+              // Skip engines that stream their own live diff (handled elsewhere).
+              if (yield* supportsLiveTurnDiffPatch(event.engine)) {
                 return;
               }
               liveDiffScheduledThreads.add(event.threadId);

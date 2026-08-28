@@ -7,7 +7,7 @@ import {
   OrchestrationConsumerState,
   OrchestrationEventDelivery,
   OrchestrationEventDeliveryRepository,
-  ProviderBlockingDeliveryEvidence,
+  EngineBlockingDeliveryEvidence,
   type OrchestrationEventDeliveryRepositoryShape,
 } from "../Services/OrchestrationEventDeliveries.ts";
 
@@ -266,7 +266,7 @@ const makeRepository = Effect.gen(function* () {
         input.afterEventSequence === undefined
           ? sql``
           : sql`AND d.event_sequence > ${input.afterEventSequence}`;
-      return sql<ProviderBlockingDeliveryEvidence>`
+      return sql<EngineBlockingDeliveryEvidence>`
         SELECT
           d.consumer_name AS "consumerName",
           d.event_sequence AS "eventSequence",

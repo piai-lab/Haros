@@ -4,7 +4,7 @@
 // Exports: ChatMarkdown
 
 import { TriangleAlertIcon } from "~/lib/icons";
-import type { MessageId, ProviderMentionReference, ThreadMarker } from "@harnessos/contracts";
+import type { MessageId, EngineMentionReference, ThreadMarker } from "@harnessos/contracts";
 import { isLocalAbsolutePath } from "@harnessos/shared/path";
 import "katex/dist/katex.min.css";
 import React, {
@@ -138,7 +138,7 @@ interface ChatMarkdownProps {
    */
   variant?: "assistant" | "user";
   /** Mention metadata for chip icon resolution; only used by the user variant. */
-  mentionReferences?: ReadonlyArray<ProviderMentionReference> | undefined;
+  mentionReferences?: ReadonlyArray<EngineMentionReference> | undefined;
   /** Terminal selections rendered as inline chips inside user-message markdown. */
   terminalContexts?: ReadonlyArray<ParsedTerminalContextEntry> | undefined;
   /**
@@ -1166,7 +1166,7 @@ function OpenableFileChip(props: {
 function ComposerChipElement(props: {
   serializedSegment: string | undefined;
   theme: "light" | "dark";
-  mentionReferences: ReadonlyArray<ProviderMentionReference>;
+  mentionReferences: ReadonlyArray<EngineMentionReference>;
 }) {
   const segment = parseComposerChipSegment(props.serializedSegment);
   if (!segment) {

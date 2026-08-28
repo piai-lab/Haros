@@ -8,7 +8,7 @@
  */
 import {
   IsoDateTime,
-  ModelSelection,
+  EngineSelection,
   ProjectId,
   ProjectKind,
   ProjectScript,
@@ -24,7 +24,7 @@ export const ProjectionProject = Schema.Struct({
   kind: ProjectKind.pipe(Schema.withDecodingDefault(() => "project")),
   title: Schema.String,
   workspaceRoot: Schema.String,
-  defaultModelSelection: Schema.NullOr(ModelSelection),
+  defaultEngineSelection: Schema.NullOr(EngineSelection),
   scripts: Schema.Array(ProjectScript),
   isPinned: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
   spaceId: Schema.NullOr(SpaceId).pipe(Schema.withDecodingDefault(() => null)),

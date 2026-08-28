@@ -56,7 +56,7 @@ import {
 import { resolveStableMessageTurnId } from "./messageTurnId.ts";
 import { settleTurnStateFromSession } from "./turnLifecycle.ts";
 import {
-  deriveTurnStartModelSelection,
+  deriveTurnStartEngineSelection,
   deriveTurnStartSession,
   shouldDeferTurnStartBindingProjection,
 } from "./turnStartSession.ts";
@@ -82,11 +82,11 @@ function isTerminalLatestTurn(
 }
 
 // Turn lifecycle must settle with the session: once a session leaves "running",
-// no provider event will ever mark the turn complete on its own, so a running
+// no engine event will ever mark the turn complete on its own, so a running
 // latestTurn is settled here. Checkpoint diff events (thread.turn-diff-completed)
 // only enrich the terminal state afterwards — they are not the lifecycle authority.
 // A retained activeTurnId blocks settlement (except on error): stop-requested flows
-// deliberately emit "interrupted" while keeping the turn active until the provider's
+// deliberately emit "interrupted" while keeping the turn active until the engine's
 // terminal event decides the real outcome, and a premature settle here could never
 // be corrected because settlement only applies to running turns.
 function settleLatestTurnForSessionStatus(
@@ -424,7 +424,7 @@ export function projectEvent(
             kind: payload.kind,
             title: payload.title,
             workspaceRoot: payload.workspaceRoot,
-            defaultModelSelection: payload.defaultModelSelection,
+            defaultEngineSelection: payload.defaultEngineSelection,
             scripts: payload.scripts,
             isPinned: payload.isPinned ?? false,
             spaceId: payload.spaceId ?? null,
@@ -457,8 +457,8 @@ export function projectEvent(
                   ...(payload.workspaceRoot !== undefined
                     ? { workspaceRoot: payload.workspaceRoot }
                     : {}),
-                  ...(payload.defaultModelSelection !== undefined
-                    ? { defaultModelSelection: payload.defaultModelSelection }
+                  ...(payload.defaultEngineSelection !== undefined
+                    ? { defaultEngineSelection: payload.defaultEngineSelection }
                     : {}),
                   ...(payload.scripts !== undefined ? { scripts: payload.scripts } : {}),
                   ...(payload.isPinned !== undefined ? { isPinned: payload.isPinned } : {}),
@@ -503,7 +503,7 @@ export function projectEvent(
             projectId: payload.projectId,
             groupIds: [],
             title: payload.title,
-            modelSelection: payload.modelSelection,
+            engineSelection: payload.engineSelection,
             runtimeMode: payload.runtimeMode,
             interactionMode: payload.interactionMode,
             envMode: isStudio ? "local" : payload.envMode,
@@ -615,8 +615,8 @@ export function projectEvent(
             threads: updateThread(nextBase.threads, payload.threadId, {
               ...(payload.groupIds !== undefined ? { groupIds: payload.groupIds } : {}),
               ...(payload.title !== undefined ? { title: payload.title } : {}),
-              ...(payload.modelSelection !== undefined
-                ? { modelSelection: payload.modelSelection }
+              ...(payload.engineSelection !== undefined
+                ? { engineSelection: payload.engineSelection }
                 : {}),
               ...(isStudio
                 ? {
@@ -901,37 +901,37 @@ export function projectEvent(
           const canAdoptFirstTurnProvider =
             thread.latestTurn === null && thread.session === null && thread.messages.length <= 1;
           const deferBindingProjection = shouldDeferTurnStartBindingProjection({
-            currentModelSelection: thread.modelSelection,
+            currentEngineSelection: thread.engineSelection,
             currentRuntimeMode: thread.runtimeMode,
             currentInteractionMode: thread.interactionMode,
             currentSession: thread.session,
-            requestedModelSelection: payload.modelSelection,
+            requestedEngineSelection: payload.engineSelection,
             requestedRuntimeMode: payload.runtimeMode,
             requestedInteractionMode: payload.interactionMode,
             canAdoptRequestedProvider: canAdoptFirstTurnProvider,
           });
-          const projectedModelSelection = deferBindingProjection
-            ? thread.modelSelection
-            : deriveTurnStartModelSelection({
-                currentModelSelection: thread.modelSelection,
-                requestedModelSelection: payload.modelSelection,
+          const projectedEngineSelection = deferBindingProjection
+            ? thread.engineSelection
+            : deriveTurnStartEngineSelection({
+                currentEngineSelection: thread.engineSelection,
+                requestedEngineSelection: payload.engineSelection,
                 canAdoptRequestedProvider: canAdoptFirstTurnProvider,
               });
-          const modelSelectionPatch =
-            projectedModelSelection !== thread.modelSelection
-              ? { modelSelection: projectedModelSelection }
+          const engineSelectionPatch =
+            projectedEngineSelection !== thread.engineSelection
+              ? { engineSelection: projectedEngineSelection }
               : {};
           const turnStartSession = deriveTurnStartSession({
             threadId: thread.id,
             currentSession: thread.session,
-            providerName: projectedModelSelection.provider,
+            providerName: projectedEngineSelection.engine,
             requestedRuntimeMode: payload.runtimeMode,
             requestedAt: payload.createdAt,
           });
           const adoptTurnSettings =
             payload.dispatchOrigin !== "automation" && !deferBindingProjection;
           const turnProvenance =
-            payload.modelSelection === undefined
+            payload.engineSelection === undefined
               ? (thread.turnProvenance ?? [])
               : [
                   ...(thread.turnProvenance ?? []).filter(
@@ -940,14 +940,14 @@ export function projectEvent(
                   {
                     pendingMessageId: payload.messageId,
                     turnId: null,
-                    modelSelection: payload.modelSelection,
+                    engineSelection: payload.engineSelection,
                     requestedAt: payload.createdAt,
                   },
                 ].toSorted((left, right) => left.requestedAt.localeCompare(right.requestedAt));
           return {
             ...nextBase,
             threads: updateThread(nextBase.threads, payload.threadId, {
-              ...modelSelectionPatch,
+              ...engineSelectionPatch,
               ...(turnStartSession !== null ? { session: turnStartSession } : {}),
               ...(adoptTurnSettings
                 ? {
@@ -1184,7 +1184,7 @@ export function projectEvent(
 
         // Do not let a placeholder (status "missing") overwrite a checkpoint
         // that has already been captured with a real git ref (status "ready").
-        // ProviderRuntimeIngestion may fire multiple turn.diff.updated events
+        // EngineRuntimeIngestion may fire multiple turn.diff.updated events
         // per turn; without this guard later placeholders would clobber the
         // real capture dispatched by CheckpointReactor.
         const existing = thread.checkpoints.find((entry) => entry.turnId === checkpoint.turnId);
@@ -1221,7 +1221,7 @@ export function projectEvent(
           ? thread.latestTurn
           : matchingLatestTurn !== null
             ? {
-                // Checkpoints describe filesystem state; the provider session is
+                // Checkpoints describe filesystem state; the engine session is
                 // the lifecycle authority. In particular, a successful empty git
                 // capture must not turn an interrupted, answer-less turn into a
                 // completed one merely because both checkpoint commands and

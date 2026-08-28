@@ -2,7 +2,7 @@
  * OrchestrationEngineService - Service interface for orchestration command handling.
  *
  * Owns command validation/dispatch and lightweight command-state updates backed by
- * `OrchestrationEventStore` persistence. It does not own provider process
+ * `OrchestrationEventStore` persistence. It does not own engine process
  * management or transport concerns (e.g. websocket request parsing).
  *
  * Uses Effect `ServiceMap.Service` for dependency injection. Command dispatch,
@@ -28,7 +28,7 @@ import type { ManagedAttachmentPrincipal } from "../../managedAttachmentPrincipa
 
 export interface OrchestrationDispatchContext {
   readonly attachmentPrincipal?: ManagedAttachmentPrincipal;
-  /** Trusted Provider Runtime ingestion of a fact emitted before shutdown quiesced. */
+  /** Trusted Engine Runtime ingestion of a fact emitted before shutdown quiesced. */
   readonly admission?: "in-flight-runtime-fact";
 }
 

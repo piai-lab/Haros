@@ -20,7 +20,7 @@ import {
 } from "./checkpointing/Utils";
 import { ServerConfig } from "./config";
 import { SqlitePersistenceMemory } from "./persistence/Layers/Sqlite";
-import { PROVIDER_COMMAND_REACTOR_CONSUMER } from "./persistence/Services/OrchestrationEventDeliveries";
+import { ENGINE_COMMAND_REACTOR_CONSUMER } from "./persistence/Services/OrchestrationEventDeliveries";
 import { ProfileStatsQuery, ProfileStatsQueryLive } from "./profileStats";
 import {
   aggregateThreadTokenRows,
@@ -104,7 +104,7 @@ const seedTwoThreadsWithActivity = Effect.gen(function* () {
         'thread-keep',
         'project-archive',
         'Kept Thread',
-        '{"provider":"claude","model":"claude-sonnet-4-6","options":{"effort":"max"}}',
+        '{"engine":"claude","model":"claude-sonnet-4-6","options":{"effort":"max"}}',
         'full-access', 'default', 'local',
         '2026-06-13T08:00:00.000Z', '2026-06-13T08:00:00.000Z', NULL
       ),
@@ -112,7 +112,7 @@ const seedTwoThreadsWithActivity = Effect.gen(function* () {
         'thread-purge',
         'project-archive',
         'Purged Thread',
-        '{"provider":"codex","model":"gpt-5-codex","options":{"reasoningEffort":"high"}}',
+        '{"engine":"codex","model":"gpt-5-codex","options":{"reasoningEffort":"high"}}',
         'full-access', 'default', 'local',
         '2026-06-13T09:00:00.000Z', '2026-06-13T09:00:00.000Z', NULL
       )
@@ -158,7 +158,7 @@ const seedTwoThreadsWithActivity = Effect.gen(function* () {
       (
         'event-keep-1', 'thread', 'thread-keep', 1, 'thread.turn-start-requested',
         '2026-06-13T08:05:00.000Z', 'cmd-keep-turn', 'client',
-        '{"threadId":"thread-keep","modelSelection":{"provider":"claude","model":"claude-sonnet-4-6","options":{"effort":"max"}}}',
+        '{"threadId":"thread-keep","engineSelection":{"engine":"claude","model":"claude-sonnet-4-6","options":{"effort":"max"}}}',
         '{}'
       ),
       (
@@ -170,7 +170,7 @@ const seedTwoThreadsWithActivity = Effect.gen(function* () {
       (
         'event-purge-1', 'thread', 'thread-purge', 2, 'thread.turn-start-requested',
         '2026-06-13T09:05:00.000Z', 'cmd-purge-turn', 'client',
-        '{"threadId":"thread-purge","modelSelection":{"provider":"codex","model":"gpt-5-codex","options":{"reasoningEffort":"high"}}}',
+        '{"threadId":"thread-purge","engineSelection":{"engine":"codex","model":"gpt-5-codex","options":{"reasoningEffort":"high"}}}',
         '{}'
       ),
       (
@@ -255,7 +255,7 @@ const seedTwoThreadsWithActivity = Effect.gen(function* () {
         'thread-purge', 'turn-purge-2', 'message-purge-2', NULL, 'completed',
         '2026-06-14T10:05:00.000Z', '2026-06-14T10:05:10.000Z',
         '2026-06-14T10:06:00.000Z', 2,
-        'provider-diff:event-purge-2', 'captured', '[]'
+        'engine-diff:event-purge-2', 'captured', '[]'
       )
   `;
 });
@@ -267,7 +267,7 @@ const acknowledgeProviderCommandJournal = (sql: SqlClient.SqlClient) =>
       SELECT COALESCE(MAX(sequence), 0) FROM orchestration_events
     ),
     updated_at = '2026-07-14T00:00:00.000Z'
-    WHERE consumer_name = ${PROVIDER_COMMAND_REACTOR_CONSUMER}
+    WHERE consumer_name = ${ENGINE_COMMAND_REACTOR_CONSUMER}
   `;
 
 describe("ProfileStatsArchive", () => {
@@ -282,35 +282,35 @@ describe("ProfileStatsArchive", () => {
       {
         totalProcessedTokens: 2000,
         usedTokens: 1200,
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5-codex",
         createdAt: "2026-06-13T12:02:00.000Z",
       },
       {
         totalProcessedTokens: null,
         usedTokens: 300,
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5-codex",
         createdAt: "2026-06-13T12:03:00.000Z",
       },
       {
         totalProcessedTokens: 2500,
         usedTokens: 1500,
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5-codex",
         createdAt: "2026-06-13T12:04:00.000Z",
       },
       {
         totalProcessedTokens: null,
         usedTokens: 700,
-        provider: "claude",
+        engine: "claude",
         model: "claude-haiku-4-5",
         createdAt: "2026-06-13T12:11:00.000Z",
       },
       {
         totalProcessedTokens: null,
         usedTokens: 1700,
-        provider: "claude",
+        engine: "claude",
         model: "claude-haiku-4-5",
         createdAt: "2026-06-13T12:12:00.000Z",
       },
@@ -319,7 +319,7 @@ describe("ProfileStatsArchive", () => {
     expect(rows).toEqual([
       {
         createdAt: "2026-06-13T12:02:00.000Z",
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5-codex",
         tokens: 2000,
         cachedInputTokens: null,
@@ -328,7 +328,7 @@ describe("ProfileStatsArchive", () => {
       },
       {
         createdAt: "2026-06-13T12:04:00.000Z",
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5-codex",
         tokens: 500,
         cachedInputTokens: null,
@@ -337,7 +337,7 @@ describe("ProfileStatsArchive", () => {
       },
       {
         createdAt: "2026-06-13T12:11:00.000Z",
-        provider: "claude",
+        engine: "claude",
         model: "claude-haiku-4-5",
         tokens: 700,
         cachedInputTokens: null,
@@ -346,7 +346,7 @@ describe("ProfileStatsArchive", () => {
       },
       {
         createdAt: "2026-06-13T12:12:00.000Z",
-        provider: "claude",
+        engine: "claude",
         model: "claude-haiku-4-5",
         tokens: 1000,
         cachedInputTokens: null,
@@ -361,7 +361,7 @@ describe("ProfileStatsArchive", () => {
       {
         totalProcessedTokens: 1_000,
         usedTokens: null,
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5.5",
         dispatchOrigin: "user",
         createdAt: "2026-06-13T12:00:00.000Z",
@@ -369,7 +369,7 @@ describe("ProfileStatsArchive", () => {
       {
         totalProcessedTokens: 2_500,
         usedTokens: null,
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5.5",
         dispatchOrigin: "agent",
         createdAt: "2026-06-13T12:01:00.000Z",
@@ -377,7 +377,7 @@ describe("ProfileStatsArchive", () => {
       {
         totalProcessedTokens: 3_000,
         usedTokens: null,
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5.5",
         dispatchOrigin: "user",
         createdAt: "2026-06-13T12:02:00.000Z",
@@ -398,7 +398,7 @@ describe("ProfileStatsArchive", () => {
         totalUncachedInputTokens: 30,
         totalOutputTokens: 10,
         usedTokens: null,
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5.5",
         dispatchOrigin: "user",
         createdAt: "2026-06-13T12:00:00.000Z",
@@ -409,7 +409,7 @@ describe("ProfileStatsArchive", () => {
         totalUncachedInputTokens: 60,
         totalOutputTokens: 25,
         usedTokens: null,
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5.5",
         dispatchOrigin: "user",
         createdAt: "2026-06-13T12:01:00.000Z",
@@ -420,7 +420,7 @@ describe("ProfileStatsArchive", () => {
         totalUncachedInputTokens: 20,
         totalOutputTokens: 10,
         usedTokens: null,
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5.5",
         dispatchOrigin: "user",
         createdAt: "2026-06-13T12:02:00.000Z",
@@ -430,7 +430,7 @@ describe("ProfileStatsArchive", () => {
     expect(rows).toEqual([
       {
         createdAt: "2026-06-13T12:00:00.000Z",
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5.5",
         tokens: 100,
         cachedInputTokens: 60,
@@ -439,7 +439,7 @@ describe("ProfileStatsArchive", () => {
       },
       {
         createdAt: "2026-06-13T12:01:00.000Z",
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5.5",
         tokens: 100,
         cachedInputTokens: null,
@@ -448,7 +448,7 @@ describe("ProfileStatsArchive", () => {
       },
       {
         createdAt: "2026-06-13T12:02:00.000Z",
-        provider: "codex",
+        engine: "codex",
         model: "gpt-5.5",
         tokens: 40,
         cachedInputTokens: 10,
@@ -458,24 +458,24 @@ describe("ProfileStatsArchive", () => {
     ]);
   });
 
-  it("keeps a stamped activity provider instead of a mismatched thread fallback", () => {
+  it("keeps a stamped activity engine instead of a mismatched thread fallback", () => {
     const rows = aggregateThreadTokenRows(
       [
         {
           totalProcessedTokens: 1_500,
           usedTokens: null,
-          provider: "claude",
+          engine: "claude",
           model: null,
           createdAt: "2026-06-13T12:00:00.000Z",
         },
       ],
-      { provider: "codex", model: "gpt-5.5" },
+      { engine: "codex", model: "gpt-5.5" },
     );
 
     expect(rows).toEqual([
       {
         createdAt: "2026-06-13T12:00:00.000Z",
-        provider: "claude",
+        engine: "claude",
         model: null,
         tokens: 1_500,
         cachedInputTokens: null,
@@ -808,9 +808,9 @@ describe("ProfileStatsArchive", () => {
             claim_owner, claimed_at, claim_expires_at, attempt_count,
             last_error, completed_at, updated_at
           ) VALUES (
-            ${PROVIDER_COMMAND_REACTOR_CONSUMER}, ${sourceSequence}, 'thread-purge', 'uncertain',
+            ${ENGINE_COMMAND_REACTOR_CONSUMER}, ${sourceSequence}, 'thread-purge', 'uncertain',
             NULL, NULL, NULL, 1,
-            'Provider outcome requires reconciliation.', NULL, '2026-07-14T00:00:00.000Z'
+            'Engine outcome requires reconciliation.', NULL, '2026-07-14T00:00:00.000Z'
           )
         `;
 
@@ -832,7 +832,7 @@ describe("ProfileStatsArchive", () => {
           UPDATE orchestration_event_deliveries
           SET state = 'succeeded', completed_at = '2026-07-14T00:00:01.000Z',
               updated_at = '2026-07-14T00:00:01.000Z'
-          WHERE consumer_name = ${PROVIDER_COMMAND_REACTOR_CONSUMER}
+          WHERE consumer_name = ${ENGINE_COMMAND_REACTOR_CONSUMER}
             AND event_sequence = ${sourceSequence}
         `;
         yield* sql`
@@ -901,7 +901,7 @@ describe("ProfileStatsArchive", () => {
             'thread-empty-cleanup',
             'project-empty-cleanup',
             'Empty Cleanup',
-            '{"provider":"codex","model":"gpt-5-codex"}',
+            '{"engine":"codex","model":"gpt-5-codex"}',
             'full-access', 'default', 'local',
             '2026-06-13T09:00:00.000Z',
             '2026-06-13T09:00:00.000Z',
@@ -976,7 +976,7 @@ describe("ProfileStatsArchive", () => {
             'thread-message-checkpoint',
             'project-message-checkpoint',
             'Message Checkpoint',
-            '{"provider":"codex","model":"gpt-5-codex"}',
+            '{"engine":"codex","model":"gpt-5-codex"}',
             'full-access', 'default', 'local',
             '2026-06-13T09:00:00.000Z',
             '2026-06-13T09:00:00.000Z',
@@ -1079,7 +1079,7 @@ describe("ProfileStatsArchive", () => {
             'thread-stale-checkpoint',
             'project-stale-checkpoint',
             'Stale Checkpoint',
-            '{"provider":"codex","model":"gpt-5-codex"}',
+            '{"engine":"codex","model":"gpt-5-codex"}',
             'full-access', 'default', 'local',
             '2026-06-13T09:00:00.000Z',
             '2026-06-13T09:00:00.000Z',
@@ -1205,7 +1205,7 @@ describe("ProfileStatsArchive", () => {
             'thread-failed-purge',
             'project-failed-purge',
             'Failed Purge',
-            '{"provider":"codex","model":"gpt-5-codex"}',
+            '{"engine":"codex","model":"gpt-5-codex"}',
             'full-access', 'default', 'local',
             '2026-06-13T09:00:00.000Z',
             '2026-06-13T09:00:00.000Z',
@@ -1288,7 +1288,7 @@ describe("ProfileStatsArchive", () => {
             'thread-automation-purge',
             'project-automation-purge',
             'Automation Purge',
-            '{"provider":"codex","model":"gpt-5-codex"}',
+            '{"engine":"codex","model":"gpt-5-codex"}',
             'full-access', 'default', 'local',
             '2026-06-13T09:00:00.000Z',
             '2026-06-13T09:00:00.000Z',
@@ -1314,7 +1314,7 @@ describe("ProfileStatsArchive", () => {
             '{"type":"manual"}',
             1,
             NULL,
-            '{"provider":"codex","model":"gpt-5-codex"}',
+            '{"engine":"codex","model":"gpt-5-codex"}',
             NULL,
             'full-access',
             'default',
@@ -1434,19 +1434,19 @@ describe("ProfileStatsArchive", () => {
           )
           VALUES
             (
-              'thread-live', 'project-sweep', 'Live', '{"provider":"codex","model":"gpt-5-codex"}',
+              'thread-live', 'project-sweep', 'Live', '{"engine":"codex","model":"gpt-5-codex"}',
               'full-access', 'default', 'local',
               '2026-06-13T09:00:00.000Z', '2026-06-13T09:00:00.000Z', NULL
             ),
             (
               'thread-manual', 'project-sweep', 'Manual',
-              '{"provider":"codex","model":"gpt-5-codex"}',
+              '{"engine":"codex","model":"gpt-5-codex"}',
               'full-access', 'default', 'local',
               '2026-06-13T09:00:00.000Z', '2026-06-13T09:00:00.000Z', '2026-06-15T10:00:00.000Z'
             ),
             (
               'thread-retention', 'project-sweep', 'Retention',
-              '{"provider":"codex","model":"gpt-5-codex"}',
+              '{"engine":"codex","model":"gpt-5-codex"}',
               'full-access', 'default', 'local',
               '2026-06-08T09:00:00.000Z', '2026-06-08T09:00:00.000Z', '2026-06-15T09:00:00.000Z'
             )
@@ -1486,7 +1486,7 @@ describe("ProfileStatsArchive", () => {
               '{"threadId":"thread-retention","deletedAt":"2026-06-15T09:00:00.000Z"}', '{}'
             )
         `;
-        // The purge fence blocks while provider-intent events (thread.deleted
+        // The purge fence blocks while engine-intent events (thread.deleted
         // included) are still unconsumed; a real sweep only runs after the
         // reactor has acked them.
         yield* acknowledgeProviderCommandJournal(sql);

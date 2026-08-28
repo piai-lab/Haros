@@ -1,6 +1,6 @@
 import {
   CommandId,
-  DEFAULT_PROVIDER_INTERACTION_MODE,
+  DEFAULT_ENGINE_INTERACTION_MODE,
   ProjectId,
   ThreadId,
   type OrchestrationEvent,
@@ -28,12 +28,12 @@ function makeThread(input: {
     id: input.id,
     projectId: ProjectId.makeUnsafe("project-archive"),
     title: `Thread ${input.id}`,
-    modelSelection: {
-      provider: "claude",
+    engineSelection: {
+      engine: "claude",
       model: "claude-opus-4-6",
       supportsAutoMode: true,
     },
-    interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+    interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
     runtimeMode: "auto",
     branch: null,
     worktreePath: null,

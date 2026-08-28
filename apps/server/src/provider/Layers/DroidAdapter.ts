@@ -7,12 +7,12 @@ import {
   ApprovalRequestId,
   type CanonicalUserInputSettlement,
   EventId,
-  type ProviderApprovalDecision,
-  type ProviderInteractionMode,
-  type ProviderListCommandsResult,
-  type ProviderListModelsResult,
-  type ProviderRuntimeEvent,
-  type ProviderSession,
+  type EngineApprovalDecision,
+  type EngineInteractionMode,
+  type EngineListCommandsResult,
+  type EngineListModelsResult,
+  type EngineRuntimeEvent,
+  type EngineSession,
   RuntimeItemId,
   RuntimeRequestId,
   RuntimeTaskId,
@@ -44,7 +44,7 @@ import {
   takeOmniMindHarnessPolicyTextPartForProviderSession,
 } from "../../agentGateway/harnessPolicy.ts";
 import { AgentGatewayCredentials } from "../../agentGateway/Services/AgentGatewayCredentials.ts";
-import { PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY } from "../Services/ProviderAdapter.ts";
+import { ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY } from "../Services/EngineAdapter.ts";
 import {
   acquireAgentGatewaySessionLease,
   cancelAgentGatewayTurn,
@@ -60,11 +60,11 @@ import { listFactoryPlugins, readFactoryPlugin } from "../FactoryPluginDiscovery
 import { readFactorySessionHistory } from "../FactorySessionHistory.ts";
 import { appendProviderReferencesPromptBlock } from "../promptReferenceProjection.ts";
 import {
-  ProviderAdapterRequestError,
-  ProviderAdapterProcessError,
-  ProviderAdapterSessionClosedError,
-  ProviderAdapterSessionNotFoundError,
-  ProviderAdapterValidationError,
+  EngineAdapterRequestError,
+  EngineAdapterProcessError,
+  EngineAdapterSessionClosedError,
+  EngineAdapterSessionNotFoundError,
+  EngineAdapterValidationError,
 } from "../Errors.ts";
 import {
   classifyAcpPromptTurnCompletion,
@@ -109,7 +109,7 @@ import {
 } from "../acp/AcpTurnIdleWatchdog.ts";
 import {
   applyDroidAcpInteractionMode,
-  applyDroidAcpModelSelection,
+  applyDroidAcpEngineSelection,
   discoverDroidAcpModels,
   makeDroidAcpRuntime,
   type DroidAcpRuntimeSettings,
@@ -122,7 +122,7 @@ import {
   isFormElicitationRequest,
 } from "../acp/AcpElicitationSupport.ts";
 import { DroidAdapter, type DroidAdapterShape } from "../Services/DroidAdapter.ts";
-import { providerExecutionStructure } from "../providerExecutionStructure.ts";
+import { engineExecutionStructure } from "../engineExecutionStructure.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 
 const PROVIDER = "droid" as const;
@@ -171,9 +171,9 @@ const DROID_PLAN_MODE_PROMPT_PREFIX = [
   "When ready, create the final implementation plan.",
 ].join("\n");
 
-function droidAcpTimeoutError(method: string): ProviderAdapterRequestError {
-  return new ProviderAdapterRequestError({
-    provider: PROVIDER,
+function droidAcpTimeoutError(method: string): EngineAdapterRequestError {
+  return new EngineAdapterRequestError({
+    engine: PROVIDER,
     method,
     detail: `Droid ACP did not respond to ${method} within ${DROID_ACP_REQUEST_TIMEOUT_MS / 1000}s.`,
   });
@@ -191,7 +191,7 @@ export interface DroidAdapterLiveOptions {
 }
 
 interface PendingApproval {
-  readonly decision: Deferred.Deferred<ProviderApprovalDecision>;
+  readonly decision: Deferred.Deferred<EngineApprovalDecision>;
   readonly kind: string | "unknown";
 }
 
@@ -205,7 +205,7 @@ interface DroidSessionContext {
   readonly gatewaySessionLease?: AgentGatewaySessionLease;
   readonly threadId: ThreadId;
   readonly lifecycleGeneration?: string;
-  session: ProviderSession;
+  session: EngineSession;
   readonly scope: Scope.Closeable;
   readonly acp: AcpSessionRuntimeShape;
   notificationFiber: Fiber.Fiber<void, never> | undefined;
@@ -213,7 +213,7 @@ interface DroidSessionContext {
   readonly pendingUserInputs: Map<ApprovalRequestId, PendingUserInput>;
   readonly turns: Array<{ id: TurnId; items: Array<unknown> }>;
   lastPlanFingerprint: string | undefined;
-  activeInteractionMode: ProviderInteractionMode | undefined;
+  activeInteractionMode: EngineInteractionMode | undefined;
   activeTurnId: TurnId | undefined;
   activeTurnHadAssistantContent: boolean;
   readonly activeAssistantItemsWithContent: Set<string>;
@@ -224,7 +224,7 @@ interface DroidSessionContext {
   // Epoch-ms of the last inbound ACP activity for the active turn; drives the
   // idle-progress watchdog that force-fails a silently hung turn.
   lastTurnActivityAt: number | undefined;
-  // Provider tool-call ids seen during the most recent turn, mapped to that
+  // Engine tool-call ids seen during the most recent turn, mapped to that
   // turn. A backlogged consumer can process a queued ToolCallUpdated after the
   // prompt response cleared activeTurnId; this keeps the event attributed to
   // its originating turn instead of dropping it as an orphan. Cleared when the
@@ -239,7 +239,7 @@ interface DroidSessionContext {
   // Pending until startSession has applied the requested model/effort config.
   // The session is registered in `sessions` before the config RPCs run (so
   // replay keeps draining), which means sendTurn can route to it mid-startup;
-  // turns await this gate so the first prompt never runs with provider
+  // turns await this gate so the first prompt never runs with engine
   // defaults. Resolved by stopSessionInternal too, like resumeReplayReady, so
   // a failed startup never strands waiters.
   sessionConfigReady: Deferred.Deferred<void> | undefined;
@@ -308,7 +308,7 @@ export function isDroidNestedTaskToolCall(toolCall: AcpToolCallState): boolean {
 }
 
 // A turn-specific stop is valid only while that exact turn is active. During
-// startup no caller can know the new provider turn id yet, so a supplied id is stale.
+// startup no caller can know the new engine turn id yet, so a supplied id is stale.
 export function shouldIgnoreDroidInterrupt(
   requestedTurnId: TurnId | undefined,
   activeTurnId: TurnId | undefined,
@@ -399,16 +399,16 @@ export function makeDroidAdapter(
     const sessionTeardownGate = makeDroidSessionTeardownGate();
     const modelDiscoveryCache = new Map<
       string,
-      { readonly expiresAt: number; readonly result: ProviderListModelsResult }
+      { readonly expiresAt: number; readonly result: EngineListModelsResult }
     >();
     const commandDiscoveryCache = new Map<
       string,
-      { readonly expiresAt: number; readonly result: ProviderListCommandsResult }
+      { readonly expiresAt: number; readonly result: EngineListCommandsResult }
     >();
     const withThreadLock = yield* makeAcpThreadLock();
     const discoveryLock = yield* Semaphore.make(1);
-    const runtimeEventPubSub = yield* PubSub.bounded<ProviderRuntimeEvent>(
-      PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
+    const runtimeEventPubSub = yield* PubSub.bounded<EngineRuntimeEvent>(
+      ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
     );
 
     const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
@@ -417,7 +417,7 @@ export function makeDroidAdapter(
 
     const offerRuntimeEvent = (
       lifecycleGeneration: string | undefined,
-      event: ProviderRuntimeEvent,
+      event: EngineRuntimeEvent,
     ) =>
       PubSub.publish(
         runtimeEventPubSub,
@@ -450,7 +450,7 @@ export function makeDroidAdapter(
             event: {
               id: crypto.randomUUID(),
               kind: "notification",
-              provider: PROVIDER,
+              engine: PROVIDER,
               createdAt: observedAt,
               method,
               threadId,
@@ -478,7 +478,7 @@ export function makeDroidAdapter(
           ctx.lifecycleGeneration,
           makeAcpPlanUpdatedEvent({
             stamp: yield* makeEventStamp(),
-            provider: PROVIDER,
+            engine: PROVIDER,
             threadId: ctx.threadId,
             turnId: ctx.activeTurnId,
             payload,
@@ -509,7 +509,7 @@ export function makeDroidAdapter(
           yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
             type: "task.completed",
             ...(yield* makeEventStamp()),
-            provider: PROVIDER,
+            engine: PROVIDER,
             threadId: ctx.threadId,
             turnId,
             payload: {
@@ -537,7 +537,7 @@ export function makeDroidAdapter(
         yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
           type: "task.started",
           ...(yield* makeEventStamp()),
-          provider: PROVIDER,
+          engine: PROVIDER,
           threadId: ctx.threadId,
           turnId,
           payload: {
@@ -550,12 +550,10 @@ export function makeDroidAdapter(
 
     const requireSession = (
       threadId: ThreadId,
-    ): Effect.Effect<DroidSessionContext, ProviderAdapterSessionNotFoundError> => {
+    ): Effect.Effect<DroidSessionContext, EngineAdapterSessionNotFoundError> => {
       const ctx = sessions.get(threadId);
       if (!ctx || ctx.stopped) {
-        return Effect.fail(
-          new ProviderAdapterSessionNotFoundError({ provider: PROVIDER, threadId }),
-        );
+        return Effect.fail(new EngineAdapterSessionNotFoundError({ engine: PROVIDER, threadId }));
       }
       return Effect.succeed(ctx);
     };
@@ -600,7 +598,7 @@ export function makeDroidAdapter(
               yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
                 type: "session.exited",
                 ...(yield* makeEventStamp()),
-                provider: PROVIDER,
+                engine: PROVIDER,
                 threadId: ctx.threadId,
                 payload: {
                   exitKind: options?.exitKind ?? "graceful",
@@ -681,7 +679,7 @@ export function makeDroidAdapter(
         // could settle before a forked child executed its first instruction.
         yield* Effect.gen(function* () {
           // The expected rejected-tool update normally starts this immediately.
-          // The delayed capture path is a fallback for providers that omit it.
+          // The delayed capture path is a fallback for engines that omit it.
           if (delayMs > 0) {
             yield* Effect.sleep(delayMs);
           }
@@ -777,25 +775,25 @@ export function makeDroidAdapter(
       withThreadLock(
         input.threadId,
         Effect.gen(function* () {
-          if (input.provider !== undefined && input.provider !== PROVIDER) {
-            return yield* new ProviderAdapterValidationError({
-              provider: PROVIDER,
+          if (input.engine !== undefined && input.engine !== PROVIDER) {
+            return yield* new EngineAdapterValidationError({
+              engine: PROVIDER,
               operation: "startSession",
-              issue: `Expected provider '${PROVIDER}' but received '${input.provider}'.`,
+              issue: `Expected engine '${PROVIDER}' but received '${input.engine}'.`,
             });
           }
           yield* sessionTeardownGate.awaitPending(input.threadId);
           const cwd = resolveDroidSessionCwd(input.cwd, serverConfig);
           if (cwd === undefined) {
-            return yield* new ProviderAdapterValidationError({
-              provider: PROVIDER,
+            return yield* new EngineAdapterValidationError({
+              engine: PROVIDER,
               operation: "startSession",
               issue: "cwd is required and no server cwd fallback is available.",
             });
           }
 
-          const droidModelSelection =
-            input.modelSelection?.provider === PROVIDER ? input.modelSelection : undefined;
+          const droidEngineSelection =
+            input.engineSelection?.engine === PROVIDER ? input.engineSelection : undefined;
           const existing = sessions.get(input.threadId);
           if (existing && !existing.stopped) {
             yield* stopSessionInternal(existing);
@@ -823,18 +821,18 @@ export function makeDroidAdapter(
           const resumeSessionId = parseDroidResume(input.resumeCursor)?.sessionId;
           const acpNativeLoggers = makeAcpNativeLoggers({
             nativeEventLogger,
-            provider: PROVIDER,
+            engine: PROVIDER,
             threadId: input.threadId,
           });
           const acpRuntimeLoggers = makeAcpDebugLoggers({
             base: acpNativeLoggers,
             enabled: isDroidAcpDebugEnabled(),
-            provider: PROVIDER,
+            engine: PROVIDER,
             marker: DROID_ACP_TRANSPORT_DEBUG_MARKER,
             payloadLimit: DROID_ACP_LOG_PAYLOAD_LIMIT,
             shouldMirrorIncomingRaw: (payload) => payload.includes("droidShell"),
           });
-          const providerDroidOptions = input.providerOptions?.droid;
+          const providerDroidOptions = input.engineOptions?.droid;
           const effectiveDroidSettings: DroidAcpRuntimeSettings = {
             appendSystemPrompt: DROID_RESOURCE_DISCIPLINE_PROMPT,
             ...(droidSettings.binaryPath !== undefined
@@ -843,9 +841,9 @@ export function makeDroidAdapter(
             ...(providerDroidOptions?.binaryPath !== undefined
               ? { binaryPath: providerDroidOptions.binaryPath }
               : {}),
-            ...(droidModelSelection?.model ? { model: droidModelSelection.model } : {}),
-            ...(droidModelSelection?.options?.reasoningEffort
-              ? { reasoningEffort: droidModelSelection.options.reasoningEffort }
+            ...(droidEngineSelection?.model ? { model: droidEngineSelection.model } : {}),
+            ...(droidEngineSelection?.options?.reasoningEffort
+              ? { reasoningEffort: droidEngineSelection.options.reasoningEffort }
               : {}),
           };
 
@@ -923,13 +921,13 @@ export function makeDroidAdapter(
                 const permissionRequest = parsePermissionRequest(params);
                 const requestId = ApprovalRequestId.makeUnsafe(crypto.randomUUID());
                 const runtimeRequestId = RuntimeRequestId.makeUnsafe(requestId);
-                const decision = yield* Deferred.make<ProviderApprovalDecision>();
+                const decision = yield* Deferred.make<EngineApprovalDecision>();
                 pendingApprovals.set(requestId, { decision, kind: permissionRequest.kind });
                 yield* offerRuntimeEvent(
                   input.lifecycleGeneration,
                   makeAcpRequestOpenedEvent({
                     stamp: yield* makeEventStamp(),
-                    provider: PROVIDER,
+                    engine: PROVIDER,
                     threadId: input.threadId,
                     turnId: ctx?.activeTurnId,
                     requestId: runtimeRequestId,
@@ -947,7 +945,7 @@ export function makeDroidAdapter(
                   input.lifecycleGeneration,
                   makeAcpRequestResolvedEvent({
                     stamp: yield* makeEventStamp(),
-                    provider: PROVIDER,
+                    engine: PROVIDER,
                     threadId: input.threadId,
                     turnId: ctx?.activeTurnId,
                     requestId: runtimeRequestId,
@@ -992,7 +990,7 @@ export function makeDroidAdapter(
                 yield* offerRuntimeEvent(input.lifecycleGeneration, {
                   type: "user-input.requested",
                   ...(yield* makeEventStamp()),
-                  provider: PROVIDER,
+                  engine: PROVIDER,
                   threadId: input.threadId,
                   turnId: ctx?.activeTurnId,
                   requestId: runtimeRequestId,
@@ -1015,7 +1013,7 @@ export function makeDroidAdapter(
                   yield* offerRuntimeEvent(input.lifecycleGeneration, {
                     type: "user-input.resolved",
                     ...(yield* makeEventStamp()),
-                    provider: PROVIDER,
+                    engine: PROVIDER,
                     threadId: input.threadId,
                     turnId: ctx?.activeTurnId,
                     requestId: runtimeRequestId,
@@ -1039,15 +1037,15 @@ export function makeDroidAdapter(
             });
           }).pipe(
             Effect.mapError((error) =>
-              error instanceof ProviderAdapterRequestError
+              error instanceof EngineAdapterRequestError
                 ? error
                 : mapAcpToAdapterError(PROVIDER, input.threadId, "session/start", error),
             ),
           );
 
           if (resumeSessionId !== undefined && started.sessionSetupMethod === "new") {
-            return yield* new ProviderAdapterRequestError({
-              provider: PROVIDER,
+            return yield* new EngineAdapterRequestError({
+              engine: PROVIDER,
               method: "session/resume",
               detail:
                 "Droid could not resume the requested native session. OmniMind refused the fresh fallback to avoid silently losing conversation context.",
@@ -1061,12 +1059,12 @@ export function makeDroidAdapter(
           const sessionConfigReady = yield* Deferred.make<void>();
           const teardownComplete = yield* Deferred.make<void>();
           const now = yield* nowIso;
-          const session: ProviderSession = {
-            provider: PROVIDER,
+          const session: EngineSession = {
+            engine: PROVIDER,
             status: "ready",
             runtimeMode: input.runtimeMode,
             cwd,
-            model: droidModelSelection?.model,
+            model: droidEngineSelection?.model,
             threadId: input.threadId,
             resumeCursor: {
               schemaVersion: DROID_RESUME_VERSION,
@@ -1155,7 +1153,7 @@ export function makeDroidAdapter(
                         input.lifecycleGeneration,
                         makeAcpAssistantItemEvent({
                           stamp: yield* makeEventStamp(),
-                          provider: PROVIDER,
+                          engine: PROVIDER,
                           threadId: ctx.threadId,
                           turnId: activeTurnId,
                           itemId: scopedItemId,
@@ -1195,7 +1193,7 @@ export function makeDroidAdapter(
                           input.lifecycleGeneration,
                           makeAcpToolCallEvent({
                             stamp: yield* makeEventStamp(),
-                            provider: PROVIDER,
+                            engine: PROVIDER,
                             threadId: ctx.threadId,
                             turnId: lateTurnId,
                             toolCall: scopeDroidToolCallStateForTurn(lateTurnId, event.toolCall),
@@ -1217,7 +1215,7 @@ export function makeDroidAdapter(
                           yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
                             type: "turn.proposed.completed",
                             ...(yield* makeEventStamp()),
-                            provider: PROVIDER,
+                            engine: PROVIDER,
                             threadId: ctx.threadId,
                             turnId: activeTurnId,
                             itemId: RuntimeItemId.makeUnsafe(
@@ -1259,7 +1257,7 @@ export function makeDroidAdapter(
                         input.lifecycleGeneration,
                         makeAcpToolCallEvent({
                           stamp: yield* makeEventStamp(),
-                          provider: PROVIDER,
+                          engine: PROVIDER,
                           threadId: ctx.threadId,
                           turnId: activeTurnId,
                           toolCall: scopeDroidToolCallStateForTurn(activeTurnId, event.toolCall),
@@ -1288,7 +1286,7 @@ export function makeDroidAdapter(
                         input.lifecycleGeneration,
                         makeAcpContentDeltaEvent({
                           stamp: yield* makeEventStamp(),
-                          provider: PROVIDER,
+                          engine: PROVIDER,
                           threadId: ctx.threadId,
                           turnId: activeTurnId,
                           ...(scopedItemId ? { itemId: scopedItemId } : {}),
@@ -1311,7 +1309,7 @@ export function makeDroidAdapter(
                         input.lifecycleGeneration,
                         makeAcpTokenUsageEvent({
                           stamp: yield* makeEventStamp(),
-                          provider: PROVIDER,
+                          engine: PROVIDER,
                           threadId: ctx.threadId,
                           turnId: activeTurnId,
                           usage: event.usage,
@@ -1347,17 +1345,17 @@ export function makeDroidAdapter(
           // failure OR interruption of the remaining startup steps must tear the
           // session down explicitly instead of leaking a live child.
           yield* Effect.gen(function* () {
-            if (droidModelSelection?.model) {
-              yield* applyDroidAcpModelSelection({
+            if (droidEngineSelection?.model) {
+              yield* applyDroidAcpEngineSelection({
                 runtime: acp,
-                model: droidModelSelection.model,
-                reasoningEffort: droidModelSelection.options?.reasoningEffort,
+                model: droidEngineSelection.model,
+                reasoningEffort: droidEngineSelection.options?.reasoningEffort,
                 mapError: ({ cause, method }) =>
                   mapAcpToAdapterError(PROVIDER, input.threadId, method, cause),
               });
             }
             // The requested model/effort are applied; turns gated on this
-            // deferred can now prompt without inheriting provider defaults.
+            // deferred can now prompt without inheriting engine defaults.
             yield* Deferred.succeed(sessionConfigReady, undefined);
             ctx.sessionConfigReady = undefined;
 
@@ -1376,23 +1374,23 @@ export function makeDroidAdapter(
             yield* offerRuntimeEvent(input.lifecycleGeneration, {
               type: "session.started",
               ...(yield* makeEventStamp()),
-              provider: PROVIDER,
+              engine: PROVIDER,
               threadId: input.threadId,
               payload: { resume: started.initializeResult },
             });
             yield* offerRuntimeEvent(input.lifecycleGeneration, {
               type: "session.state.changed",
               ...(yield* makeEventStamp()),
-              provider: PROVIDER,
+              engine: PROVIDER,
               threadId: input.threadId,
               payload: { state: "ready", reason: "Droid ACP session ready" },
             });
             yield* offerRuntimeEvent(input.lifecycleGeneration, {
               type: "thread.started",
               ...(yield* makeEventStamp()),
-              provider: PROVIDER,
+              engine: PROVIDER,
               threadId: input.threadId,
-              payload: { providerThreadId: started.sessionId },
+              payload: { nativeThreadId: started.sessionId },
             });
           }).pipe(
             Effect.timeoutOption(DROID_ACP_REQUEST_TIMEOUT_MS),
@@ -1444,7 +1442,7 @@ export function makeDroidAdapter(
         yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
           type: "turn.completed",
           ...(yield* makeEventStamp()),
-          provider: PROVIDER,
+          engine: PROVIDER,
           threadId: ctx.threadId,
           turnId,
           payload: {
@@ -1471,8 +1469,8 @@ export function makeDroidAdapter(
         // clear that turn's pendingTurnInterrupted flag (letting a cancelled
         // turn dispatch anyway) and race two ACP prompts; reject it instead.
         if (ctx.turnStarting) {
-          return yield* new ProviderAdapterValidationError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterValidationError({
+            engine: PROVIDER,
             operation: "sendTurn",
             issue: "Another Droid turn is still starting for this thread.",
           });
@@ -1494,7 +1492,7 @@ export function makeDroidAdapter(
     ) =>
       Effect.gen(function* () {
         // Startup registers the session before its config RPCs settle; a turn
-        // routed in during that window must not prompt with provider defaults.
+        // routed in during that window must not prompt with engine defaults.
         if (ctx.sessionConfigReady !== undefined) {
           yield* Deferred.await(ctx.sessionConfigReady);
         }
@@ -1506,20 +1504,20 @@ export function makeDroidAdapter(
         // them must fail here instead of emitting lifecycle events for a dead
         // session.
         if (ctx.stopped) {
-          return yield* new ProviderAdapterSessionNotFoundError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterSessionNotFoundError({
+            engine: PROVIDER,
             threadId: input.threadId,
           });
         }
         const turnId = TurnId.makeUnsafe(crypto.randomUUID());
-        const turnModelSelection =
-          input.modelSelection?.provider === PROVIDER ? input.modelSelection : undefined;
-        const model = turnModelSelection?.model ?? ctx.session.model;
+        const turnEngineSelection =
+          input.engineSelection?.engine === PROVIDER ? input.engineSelection : undefined;
+        const model = turnEngineSelection?.model ?? ctx.session.model;
         const interactionMode = resolveAcpTurnInteractionMode(input.interactionMode);
         const runtimeMode = ctx.session.runtimeMode;
         if (runtimeMode === "auto") {
-          return yield* new ProviderAdapterValidationError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterValidationError({
+            engine: PROVIDER,
             operation: "sendTurn",
             issue: "Auto runtime mode is available only to Codex and Claude.",
           });
@@ -1529,10 +1527,10 @@ export function makeDroidAdapter(
         // shared runtime skips the RPC when the value already matches).
         yield* Effect.gen(function* () {
           if (model !== undefined) {
-            yield* applyDroidAcpModelSelection({
+            yield* applyDroidAcpEngineSelection({
               runtime: ctx.acp,
               model,
-              reasoningEffort: turnModelSelection?.options?.reasoningEffort,
+              reasoningEffort: turnEngineSelection?.options?.reasoningEffort,
               mapError: ({ cause, method }) =>
                 mapAcpToAdapterError(PROVIDER, input.threadId, method, cause),
             });
@@ -1585,15 +1583,15 @@ export function makeDroidAdapter(
           ...(yield* loadProviderPromptImageBlocks({
             attachments: input.attachments,
             attachmentsDir: serverConfig.attachmentsDir,
-            provider: PROVIDER,
+            engine: PROVIDER,
             method: "session/prompt",
             readFile: fileSystem.readFile,
           })),
         );
 
         if (promptParts.length === 0) {
-          return yield* new ProviderAdapterValidationError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterValidationError({
+            engine: PROVIDER,
             operation: "sendTurn",
             issue: "Turn requires non-empty text or attachments.",
           });
@@ -1610,8 +1608,8 @@ export function makeDroidAdapter(
         // in flight; opening the turn now would publish turn.started (and a
         // phantom cancelled completion) for a session that already exited.
         if (ctx.stopped) {
-          return yield* new ProviderAdapterSessionNotFoundError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterSessionNotFoundError({
+            engine: PROVIDER,
             threadId: input.threadId,
           });
         }
@@ -1638,7 +1636,7 @@ export function makeDroidAdapter(
         yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
           type: "turn.started",
           ...(yield* makeEventStamp()),
-          provider: PROVIDER,
+          engine: PROVIDER,
           threadId: input.threadId,
           turnId,
           payload: { ...(model ? { model } : {}) },
@@ -1650,7 +1648,7 @@ export function makeDroidAdapter(
           // registered sets pendingTurnInterrupted; honor it (and a concurrent
           // stop) here so a cancelled turn is never prompted. Self-interrupting
           // routes through the onInterrupt branch below, which completes the
-          // turn as cancelled rather than as a provider failure.
+          // turn as cancelled rather than as a engine failure.
           ctx.pendingTurnInterrupted || ctx.stopped
             ? Effect.interrupt
             : ctx.acp.prompt({ prompt: promptParts }),
@@ -1683,7 +1681,7 @@ export function makeDroidAdapter(
                 yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
                   type: "turn.completed",
                   ...(yield* makeEventStamp()),
-                  provider: PROVIDER,
+                  engine: PROVIDER,
                   threadId: input.threadId,
                   turnId,
                   payload: {
@@ -1694,7 +1692,7 @@ export function makeDroidAdapter(
                   },
                 });
                 // Transport/prompt failures make the ACP child unusable. Remove
-                // it from routing immediately so ProviderService can recover on
+                // it from routing immediately so EngineService can recover on
                 // the next send instead of reusing a dead session forever.
                 yield* stopSessionInternal(ctx, {
                   exitKind: "error",
@@ -1742,7 +1740,7 @@ export function makeDroidAdapter(
                 yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
                   type: "turn.completed",
                   ...(yield* makeEventStamp()),
-                  provider: PROVIDER,
+                  engine: PROVIDER,
                   threadId: input.threadId,
                   turnId,
                   payload: {
@@ -1775,7 +1773,7 @@ export function makeDroidAdapter(
               yield* offerRuntimeEvent(ctx.lifecycleGeneration, {
                 type: "turn.completed",
                 ...(yield* makeEventStamp()),
-                provider: PROVIDER,
+                engine: PROVIDER,
                 threadId: input.threadId,
                 turnId,
                 payload: {
@@ -1870,8 +1868,8 @@ export function makeDroidAdapter(
         const ctx = yield* requireSession(threadId);
         const pending = ctx.pendingApprovals.get(requestId);
         if (!pending) {
-          return yield* new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "session/request_permission",
             detail: `Unknown pending approval request: ${requestId}`,
           });
@@ -1888,8 +1886,8 @@ export function makeDroidAdapter(
         const ctx = yield* requireSession(threadId);
         const pending = ctx.pendingUserInputs.get(requestId);
         if (!pending) {
-          return yield* new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "session/elicitation",
             detail: `Unknown pending user-input request: ${requestId}`,
           });
@@ -1908,8 +1906,8 @@ export function makeDroidAdapter(
       Effect.tryPromise({
         try: () => readFactorySessionHistory(serverConfig.homeDir, input.externalThreadId),
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "thread/read",
             detail: cause instanceof Error ? cause.message : "Failed to read the Droid session.",
             cause,
@@ -1926,8 +1924,8 @@ export function makeDroidAdapter(
                 })),
               })
             : Effect.fail(
-                new ProviderAdapterRequestError({
-                  provider: PROVIDER,
+                new EngineAdapterRequestError({
+                  engine: PROVIDER,
                   method: "thread/read",
                   detail: `Droid session '${input.externalThreadId}' was not found locally.`,
                 }),
@@ -1939,14 +1937,14 @@ export function makeDroidAdapter(
       Effect.gen(function* () {
         yield* requireSession(threadId);
         if (!Number.isInteger(numTurns) || numTurns < 1) {
-          return yield* new ProviderAdapterValidationError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterValidationError({
+            engine: PROVIDER,
             operation: "rollbackThread",
             issue: "numTurns must be an integer >= 1.",
           });
         }
-        return yield* new ProviderAdapterValidationError({
-          provider: PROVIDER,
+        return yield* new EngineAdapterValidationError({
+          engine: PROVIDER,
           operation: "rollbackThread",
           issue:
             "Droid does not expose a native rewind cursor; rollback must restart the session with retained transcript context.",
@@ -1958,8 +1956,8 @@ export function makeDroidAdapter(
         const sourceCwd = resolveDroidSessionCwd(input.sourceCwd ?? input.cwd, serverConfig);
         const targetCwd = resolveDroidSessionCwd(input.cwd ?? input.sourceCwd, serverConfig);
         if (!sourceCwd || !targetCwd) {
-          return yield* new ProviderAdapterValidationError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterValidationError({
+            engine: PROVIDER,
             operation: "forkThread",
             issue: "A source and target cwd are required to fork a Droid session.",
           });
@@ -1967,7 +1965,7 @@ export function makeDroidAdapter(
 
         const forkRuntime = (runtime: AcpSessionRuntimeShape) =>
           forkViaAcpRuntime({
-            provider: PROVIDER,
+            engine: PROVIDER,
             runtime,
             targetCwd,
             unsupportedIssue:
@@ -1980,8 +1978,8 @@ export function makeDroidAdapter(
         // Forking mid-turn would branch from incomplete in-flight state, so
         // let the retained-transcript fallback handle busy sources.
         if (activeSource?.activeTurnId !== undefined) {
-          return yield* new ProviderAdapterValidationError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterValidationError({
+            engine: PROVIDER,
             operation: "forkThread",
             issue:
               "The source Droid session has a turn in flight; OmniMind will rebuild the fork from its retained transcript.",
@@ -1992,8 +1990,8 @@ export function makeDroidAdapter(
           : yield* Effect.gen(function* () {
               const sourceSessionId = parseDroidResume(input.sourceResumeCursor)?.sessionId;
               if (!sourceSessionId) {
-                return yield* new ProviderAdapterValidationError({
-                  provider: PROVIDER,
+                return yield* new EngineAdapterValidationError({
+                  engine: PROVIDER,
                   operation: "forkThread",
                   issue: "The source Droid session has no resumable native cursor.",
                 });
@@ -2001,8 +1999,8 @@ export function makeDroidAdapter(
               const runtime = yield* makeDroidAcpRuntime({
                 droidSettings: {
                   ...(droidSettings.binaryPath ? { binaryPath: droidSettings.binaryPath } : {}),
-                  ...(input.providerOptions?.droid?.binaryPath
-                    ? { binaryPath: input.providerOptions.droid.binaryPath }
+                  ...(input.engineOptions?.droid?.binaryPath
+                    ? { binaryPath: input.engineOptions.droid.binaryPath }
                     : {}),
                 },
                 childProcessSpawner,
@@ -2022,7 +2020,7 @@ export function makeDroidAdapter(
               return yield* forkRuntime(runtime);
             }).pipe(Effect.scoped);
 
-        // Return only the cursor: ProviderService registers the binding under
+        // Return only the cursor: EngineService registers the binding under
         // a committed lifecycle lease and the target's first turn resumes it
         // there. Starting the runtime here would capture an undefined
         // lifecycle generation, orphaning the fork's approval requests.
@@ -2035,11 +2033,11 @@ export function makeDroidAdapter(
         };
       }).pipe(
         Effect.mapError((cause) =>
-          cause instanceof ProviderAdapterRequestError ||
-          cause instanceof ProviderAdapterProcessError ||
-          cause instanceof ProviderAdapterSessionClosedError ||
-          cause instanceof ProviderAdapterSessionNotFoundError ||
-          cause instanceof ProviderAdapterValidationError
+          cause instanceof EngineAdapterRequestError ||
+          cause instanceof EngineAdapterProcessError ||
+          cause instanceof EngineAdapterSessionClosedError ||
+          cause instanceof EngineAdapterSessionNotFoundError ||
+          cause instanceof EngineAdapterValidationError
             ? cause
             : mapAcpToAdapterError(PROVIDER, input.sourceThreadId, "session/fork", cause),
         ),
@@ -2076,8 +2074,8 @@ export function makeDroidAdapter(
         Effect.gen(function* () {
           const cwd = resolveDroidSessionCwd(input.cwd, serverConfig);
           if (!cwd) {
-            return yield* new ProviderAdapterValidationError({
-              provider: PROVIDER,
+            return yield* new EngineAdapterValidationError({
+              engine: PROVIDER,
               operation: "listModels",
               issue: "cwd is required and no server cwd fallback is available.",
             });
@@ -2114,7 +2112,7 @@ export function makeDroidAdapter(
         }).pipe(
           Effect.scoped,
           Effect.mapError((cause) =>
-            cause instanceof ProviderAdapterValidationError
+            cause instanceof EngineAdapterValidationError
               ? cause
               : mapAcpToAdapterError(
                   PROVIDER,
@@ -2128,8 +2126,8 @@ export function makeDroidAdapter(
             Option.match({
               onNone: () =>
                 Effect.fail(
-                  new ProviderAdapterRequestError({
-                    provider: PROVIDER,
+                  new EngineAdapterRequestError({
+                    engine: PROVIDER,
                     method: "model/list",
                     detail: "Timed out while discovering Droid models over ACP.",
                   }),
@@ -2148,8 +2146,8 @@ export function makeDroidAdapter(
       return Effect.tryPromise({
         try: () => listFactoryPlugins(serverConfig.homeDir, cwd),
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "plugin/list",
             detail: cause instanceof Error ? cause.message : "Failed to read Factory plugins.",
             cause,
@@ -2171,8 +2169,8 @@ export function makeDroidAdapter(
             ...(cwd !== undefined ? { cwd } : {}),
           }),
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "plugin/read",
             detail: cause instanceof Error ? cause.message : "Failed to read the Factory plugin.",
             cause,
@@ -2182,8 +2180,8 @@ export function makeDroidAdapter(
           result
             ? Effect.succeed(result)
             : Effect.fail(
-                new ProviderAdapterRequestError({
-                  provider: PROVIDER,
+                new EngineAdapterRequestError({
+                  engine: PROVIDER,
                   method: "plugin/read",
                   detail: `Factory plugin '${input.pluginName}' was not found.`,
                 }),
@@ -2197,8 +2195,8 @@ export function makeDroidAdapter(
         Effect.gen(function* () {
           const cwd = resolveDroidSessionCwd(input.cwd, serverConfig);
           if (!cwd) {
-            return yield* new ProviderAdapterValidationError({
-              provider: PROVIDER,
+            return yield* new EngineAdapterValidationError({
+              engine: PROVIDER,
               operation: "listCommands",
               issue: "cwd is required and no server cwd fallback is available.",
             });
@@ -2227,7 +2225,7 @@ export function makeDroidAdapter(
             })),
             source: "droid-acp",
             cached: false,
-          } satisfies ProviderListCommandsResult;
+          } satisfies EngineListCommandsResult;
           setDroidDiscoveryCacheEntry(commandDiscoveryCache, cacheKey, {
             expiresAt: Date.now() + DROID_MODEL_DISCOVERY_CACHE_MS,
             result,
@@ -2236,7 +2234,7 @@ export function makeDroidAdapter(
         }).pipe(
           Effect.scoped,
           Effect.mapError((cause) =>
-            cause instanceof ProviderAdapterValidationError
+            cause instanceof EngineAdapterValidationError
               ? cause
               : mapAcpToAdapterError(
                   PROVIDER,
@@ -2250,8 +2248,8 @@ export function makeDroidAdapter(
             Option.match({
               onNone: () =>
                 Effect.fail(
-                  new ProviderAdapterRequestError({
-                    provider: PROVIDER,
+                  new EngineAdapterRequestError({
+                    engine: PROVIDER,
                     method: "command/list",
                     detail: "Timed out while discovering Droid commands over ACP.",
                   }),
@@ -2279,9 +2277,9 @@ export function makeDroidAdapter(
     const streamEvents = Stream.fromPubSub(runtimeEventPubSub);
 
     return {
-      provider: PROVIDER,
+      engine: PROVIDER,
       capabilities: {
-        ...providerExecutionStructure(PROVIDER),
+        ...engineExecutionStructure(PROVIDER),
         sessionModelSwitch: "restart-session",
         conversationRollback: "restart-session",
         supportsSkillMentions: false,

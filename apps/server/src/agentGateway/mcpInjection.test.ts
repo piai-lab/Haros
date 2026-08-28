@@ -227,7 +227,7 @@ describe("agent gateway MCP injection", () => {
     });
   });
 
-  it("loads and invokes the canonical gateway catalog for native-tool providers", async () => {
+  it("loads and invokes the canonical gateway catalog for native-tool engines", async () => {
     const requests: Array<{ readonly authorization: string | null; readonly body: unknown }> = [];
     const fetch = async (_input: string | URL | Request, init?: RequestInit) => {
       const body: unknown = JSON.parse(String(init?.body));

@@ -129,7 +129,7 @@ import { useThreadPullRequests, type ThreadPullRequest } from "../hooks/useThrea
 import {
   providerComposerCapabilitiesQueryOptions,
   supportsThreadImport,
-} from "../lib/providerDiscoveryReactQuery";
+} from "../lib/engineDiscoveryReactQuery";
 import {
   resolveCurrentProjectTargetId,
   resolveLatestProjectTargetIdWithFallback,
@@ -213,7 +213,7 @@ import {
 import { useHandleNewChat } from "../hooks/useHandleNewChat";
 import { useHandleNewStudioChat } from "../hooks/useHandleNewStudioChat";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
-import { useProviderStatusesForLocalConfig } from "../hooks/useProviderStatusesForLocalConfig";
+import { useEngineStatusesForLocalConfig } from "../hooks/useEngineStatusesForLocalConfig";
 import { useThreadHandoff } from "../hooks/useThreadHandoff";
 import { useFeedbackDialogStore } from "../feedbackDialogStore";
 import { openExternalLink } from "~/lib/linkChips";
@@ -300,7 +300,7 @@ import {
   runExclusiveProjectAddition,
   runProjectProvisionWithCancellationRecovery,
   resolvePullRequestReviewBadge,
-  resolveNewProjectDefaultModelSelection,
+  resolveNewProjectDefaultEngineSelection,
   DEBUG_FEATURE_FLAGS_MENU_STORAGE_KEY,
   resolveProjectEmptyState,
   resolveSettingsBackTarget,
@@ -643,7 +643,7 @@ function resolveThreadRowMetaChips(input: {
   >;
   includeHandoffBadge: boolean;
   /**
-   * When the leading provider avatar already renders the source → target handoff
+   * When the leading engine avatar already renders the source → target handoff
    * pair, the trailing handoff chip is a redundant double icon and is dropped.
    */
   handoffShownInAvatar?: boolean;
@@ -652,7 +652,7 @@ function resolveThreadRowMetaChips(input: {
   locale: "en" | "zh-CN";
   pausedLabel: string;
   forkedThreadLabel: string;
-  handoffFromLabel: (provider: string) => string;
+  handoffFromLabel: (engine: string) => string;
   worktreeLabel: string;
   worktreePendingLabel: string;
   formatAutomationCount: (count: number) => string;
@@ -1522,7 +1522,7 @@ export default function Sidebar() {
     select: (config) => config.keybindings,
   });
   const keybindings = keybindingsQuery.data ?? EMPTY_KEYBINDINGS;
-  const providerStatuses = useProviderStatusesForLocalConfig();
+  const providerStatuses = useEngineStatusesForLocalConfig();
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   // Declared next to `keybindings` (rather than further down) because the project-row render
   // helpers above read these labels. A const declared after the closure that captures it
@@ -2573,8 +2573,8 @@ export default function Sidebar() {
         const creationResult = await createOrRecoverProjectFromPath({
           api,
           workspaceRoot: cwd,
-          defaultModelSelection: resolveNewProjectDefaultModelSelection(
-            authoritativeSettings.defaultProvider,
+          defaultEngineSelection: resolveNewProjectDefaultEngineSelection(
+            authoritativeSettings.defaultEngine,
           ),
           ...(options.createIfMissing === undefined
             ? {}
@@ -2674,7 +2674,7 @@ export default function Sidebar() {
   }, [handleNewThread, handleStartAddProject, primaryNewThreadTarget, threadsHydrated]);
 
   const handleImportThread = useCallback(
-    async (provider: ImportProviderKind, externalId: string) => {
+    async (engine: ImportProviderKind, externalId: string) => {
       const api = readNativeApi();
       if (!api) {
         throw new Error(t("project.appServerUnavailable"));
@@ -2691,17 +2691,17 @@ export default function Sidebar() {
         throw new Error(t("import.projectUnresolved"));
       }
 
-      const providerDefaultModel = getDefaultModel(provider);
-      const modelSelection =
-        activeProject.defaultModelSelection?.provider === provider
-          ? activeProject.defaultModelSelection
+      const providerDefaultModel = getDefaultModel(engine);
+      const engineSelection =
+        activeProject.defaultEngineSelection?.engine === engine
+          ? activeProject.defaultEngineSelection
           : providerDefaultModel
             ? {
-                provider,
+                engine,
                 model: providerDefaultModel,
               }
             : null;
-      if (!modelSelection) {
+      if (!engineSelection) {
         throw new Error(t("import.piModelRequired"));
       }
       const threadId = newThreadId();
@@ -2710,17 +2710,17 @@ export default function Sidebar() {
       const trimmedExternalId = externalId.trim();
       const suffix = trimmedExternalId.slice(-8);
       const providerName =
-        provider === "claude"
+        engine === "claude"
           ? "Claude"
-          : provider === "cursor"
+          : engine === "cursor"
             ? "Cursor"
-            : provider === "kilo"
+            : engine === "kilo"
               ? "Kilo"
-              : provider === "opencode"
+              : engine === "opencode"
                 ? "OpenCode"
                 : "Codex";
       const title = t("import.taskTitle", {
-        provider: providerName,
+        engine: providerName,
         suffix: suffix ? ` ${suffix}` : "",
       });
       let createdThread = false;
@@ -2732,7 +2732,7 @@ export default function Sidebar() {
           threadId,
           projectId: activeProject.id,
           title,
-          modelSelection,
+          engineSelection,
           runtimeMode: "full-access",
           interactionMode: "default",
           envMode: resolveSidebarNewThreadEnvMode({
@@ -2927,14 +2927,14 @@ export default function Sidebar() {
       const threadStatus = threadSummary ? resolveThreadStatusForSidebar(threadSummary) : null;
       const handoffTargets = canHandoff
         ? resolveAvailableHandoffTargetProviders({
-            sourceProvider: thread.modelSelection.provider,
-            providerSettings: serverSettingsQuery.data?.providers,
+            sourceProvider: thread.engineSelection.engine,
+            engineSettings: serverSettingsQuery.data?.engines,
             providerStatuses,
           })
         : [];
-      const handoffItems = handoffTargets.map((provider, index) => ({
-        id: `handoff:${provider}`,
-        label: t("thread.handoffTo", { provider: ENGINE_DISPLAY_NAMES[provider] }),
+      const handoffItems = handoffTargets.map((engine, index) => ({
+        id: `handoff:${engine}`,
+        label: t("thread.handoffTo", { engine: ENGINE_DISPLAY_NAMES[engine] }),
         separatorBefore: index === 0,
       }));
       const threadWorkspacePath = resolveThreadWorkspaceCwd({
@@ -3137,7 +3137,7 @@ export default function Sidebar() {
       projectById,
       providerStatuses,
       resolveThreadStatusForSidebar,
-      serverSettingsQuery.data?.providers,
+      serverSettingsQuery.data?.engines,
       sidebarThreadSummaryById,
       setGroupPickerTarget,
       studioWorkspaceRoot,
@@ -3325,8 +3325,8 @@ export default function Sidebar() {
                     directoryName: value.directoryName,
                     commandId: newCommandId(),
                     projectId: requestedProjectId,
-                    defaultModelSelection: resolveNewProjectDefaultModelSelection(
-                      authoritativeSettings.defaultProvider,
+                    defaultEngineSelection: resolveNewProjectDefaultEngineSelection(
+                      authoritativeSettings.defaultEngine,
                     ),
                     createdAt: new Date().toISOString(),
                   },
@@ -4319,7 +4319,7 @@ export default function Sidebar() {
           sourceProjectName={hoverMetadata.sourceProjectName}
           branch={hoverMetadata.branch}
           worktreeName={hoverMetadata.worktreeName}
-          model={resolveThreadModelSummary(thread.modelSelection)}
+          model={resolveThreadModelSummary(thread.engineSelection)}
           status={hoverStatus}
           statusLabel={hoverStatus ? t(threadStatusMessageKey(hoverStatus.label)) : null}
         />
@@ -4376,7 +4376,7 @@ export default function Sidebar() {
       locale,
       pausedLabel: t("automation.paused"),
       forkedThreadLabel: t("thread.forked"),
-      handoffFromLabel: (provider) => t("thread.handoffFrom", { provider }),
+      handoffFromLabel: (engine) => t("thread.handoffFrom", { engine }),
       worktreeLabel: t("thread.worktree"),
       worktreePendingLabel: t("thread.worktreePending"),
       formatAutomationCount: (count) => t("automation.count", { count }),
@@ -4574,7 +4574,7 @@ export default function Sidebar() {
       locale,
       pausedLabel: t("automation.paused"),
       forkedThreadLabel: t("thread.forked"),
-      handoffFromLabel: (provider) => t("thread.handoffFrom", { provider }),
+      handoffFromLabel: (engine) => t("thread.handoffFrom", { engine }),
       worktreeLabel: t("thread.worktree"),
       worktreePendingLabel: t("thread.worktreePending"),
       formatAutomationCount: (count) => t("automation.count", { count }),
@@ -5475,7 +5475,7 @@ export default function Sidebar() {
       id: "usage-settings",
       label: t("search.usageSettings"),
       description: t("search.usageSettingsDescription"),
-      keywords: ["usage", "limits", "credits", "quota", "providers"],
+      keywords: ["usage", "limits", "credits", "quota", "engines"],
       shortcutLabel: usageSettingsShortcutLabel,
     },
     {
@@ -6630,15 +6630,15 @@ function SidebarSearchPaletteController(props: {
   onOpenFeedback: () => void;
   onOpenUsageSettings: () => void;
   onOpenProject: (projectId: string) => void;
-  onImportThread: (provider: ImportProviderKind, externalId: string) => Promise<void>;
+  onImportThread: (engine: ImportProviderKind, externalId: string) => Promise<void>;
   onOpenThread: (threadId: string) => void;
 }) {
   const { t } = useI18n();
   const selectAllThreads = useMemo(() => createAllThreadsSelector(), []);
   const selectSidebarDisplayThreads = useMemo(() => createSidebarDisplayThreadsSelector(), []);
   const importProviderCapabilityQueries = useQueries({
-    queries: (["codex", "claude", "cursor", "kilo", "opencode"] as const).map((provider) =>
-      providerComposerCapabilitiesQueryOptions(provider),
+    queries: (["codex", "claude", "cursor", "kilo", "opencode"] as const).map((engine) =>
+      providerComposerCapabilitiesQueryOptions(engine),
     ),
   });
   const threads = useStore(selectAllThreads);
@@ -6648,7 +6648,7 @@ function SidebarSearchPaletteController(props: {
   );
   const importProviders: ReadonlyArray<ImportProviderKind> = (
     ["codex", "claude", "cursor", "kilo", "opencode"] as const
-  ).filter((provider, index) => supportsThreadImport(importProviderCapabilityQueries[index]?.data));
+  ).filter((engine, index) => supportsThreadImport(importProviderCapabilityQueries[index]?.data));
   const searchPaletteThreads = useMemo<SidebarSearchThread[]>(() => {
     const threadById = new Map(threads.map((thread) => [thread.id, thread] as const));
     const searchProjectById = new Map(
@@ -6676,7 +6676,7 @@ function SidebarSearchPaletteController(props: {
           projectRemoteName:
             props.projectById.get(thread.projectId)?.remoteName ?? t("project.unknown"),
           sectionName: searchProjectById.get(thread.projectId)?.sectionName ?? t("nav.global"),
-          provider: thread.modelSelection.provider,
+          engine: thread.engineSelection.engine,
           createdAt: thread.createdAt,
           updatedAt: thread.updatedAt,
           messages: thread.messages.map((message) => ({

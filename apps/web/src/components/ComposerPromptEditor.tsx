@@ -61,7 +61,7 @@ import {
 import { parseBareComposerLink } from "~/lib/linkChips";
 import { type TerminalContextDraft } from "~/lib/terminalContext";
 import { shouldCollapsePastedText } from "~/lib/composerPastedText";
-import type { ProviderMentionReference } from "@harnessos/contracts";
+import type { EngineMentionReference } from "@harnessos/contracts";
 import { useStore } from "~/store";
 import { createComposerThreadMentionSourcesSelector } from "~/storeSelectors";
 import { resolveThreadDisplayProvider } from "~/lib/threadDisplayProvider";
@@ -113,7 +113,7 @@ function terminalContextSignature(contexts: ReadonlyArray<TerminalContextDraft>)
     .join("\u001e");
 }
 
-function mentionReferencesSignature(mentions: ReadonlyArray<ProviderMentionReference>): string {
+function mentionReferencesSignature(mentions: ReadonlyArray<EngineMentionReference>): string {
   return mentions.map((mention) => `${mention.name}\u0000${mention.path}`).join("\u0001");
 }
 
@@ -441,7 +441,7 @@ function $appendTextWithLineBreaks(parent: ElementNode, text: string): void {
 function $setComposerEditorPrompt(
   prompt: string,
   terminalContexts: ReadonlyArray<TerminalContextDraft>,
-  mentionReferences: ReadonlyArray<ProviderMentionReference> = [],
+  mentionReferences: ReadonlyArray<EngineMentionReference> = [],
 ): void {
   const root = $getRoot();
   root.clear();
@@ -454,9 +454,9 @@ function $setComposerEditorPrompt(
       const thread = segment.threadId
         ? useStore.getState().sidebarThreadSummaryById[segment.threadId]
         : undefined;
-      const provider = thread ? resolveThreadDisplayProvider(thread) : undefined;
+      const engine = thread ? resolveThreadDisplayProvider(thread) : undefined;
       paragraph.append(
-        $createComposerMentionNode(segment.path, segment.kind, provider, segment.threadId),
+        $createComposerMentionNode(segment.path, segment.kind, engine, segment.threadId),
       );
       continue;
     }
@@ -516,7 +516,7 @@ interface ComposerPromptEditorProps {
   value: string;
   cursor: number;
   terminalContexts: ReadonlyArray<TerminalContextDraft>;
-  mentionReferences?: ReadonlyArray<ProviderMentionReference>;
+  mentionReferences?: ReadonlyArray<EngineMentionReference>;
   disabled: boolean;
   placeholder: string;
   className?: string;
@@ -853,17 +853,17 @@ function ComposerLinkPastePlugin() {
   return null;
 }
 
-// Thread mention chips resolve their provider icon from the sidebar summaries,
+// Thread mention chips resolve their engine icon from the sidebar summaries,
 // which may not be loaded yet when a draft is restored (and can change after a
-// provider handoff). Refresh the stored provider on existing chips whenever the
+// engine handoff). Refresh the stored engine on existing chips whenever the
 // summaries change so the icon never stays stale.
-function ComposerThreadMentionProviderPlugin() {
+function ComposerThreadMentionEnginePlugin() {
   const [editor] = useLexicalComposerContext();
   const threadMentionSources = useStore(
     useMemo(() => createComposerThreadMentionSourcesSelector(), []),
   );
   const providerByThreadId = useMemo(
-    () => new Map(threadMentionSources.map((source) => [source.id as string, source.provider])),
+    () => new Map(threadMentionSources.map((source) => [source.id as string, source.engine])),
     [threadMentionSources],
   );
 
@@ -871,8 +871,8 @@ function ComposerThreadMentionProviderPlugin() {
     const staleProvider = (node: ComposerMentionNode): boolean => {
       const threadId = node.getMentionThreadId();
       if (!threadId) return false;
-      const provider = providerByThreadId.get(threadId);
-      return provider !== undefined && provider !== node.getMentionProvider();
+      const engine = providerByThreadId.get(threadId);
+      return engine !== undefined && engine !== node.getMentionEngine();
     };
     const needsUpdate = editor
       .getEditorState()
@@ -882,8 +882,8 @@ function ComposerThreadMentionProviderPlugin() {
       () => {
         for (const node of $nodesOfType(ComposerMentionNode)) {
           if (!staleProvider(node)) continue;
-          const provider = providerByThreadId.get(node.getMentionThreadId() ?? "");
-          if (provider) node.setMentionProvider(provider);
+          const engine = providerByThreadId.get(node.getMentionThreadId() ?? "");
+          if (engine) node.setMentionEngine(engine);
         }
       },
       { tag: "history-merge" },
@@ -1236,7 +1236,7 @@ function ComposerPromptEditorInner({
         <ComposerSlashCommandTransformPlugin />
         <ComposerLinkTransformPlugin />
         <ComposerLinkPastePlugin />
-        <ComposerThreadMentionProviderPlugin />
+        <ComposerThreadMentionEnginePlugin />
         {onCollapsePastedText ? (
           <ComposerBigPastePlugin onCollapsePastedText={onCollapsePastedText} />
         ) : null}

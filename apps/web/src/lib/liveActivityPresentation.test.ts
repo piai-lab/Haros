@@ -43,7 +43,7 @@ describe("live activity presentation", () => {
     ).toBe("No activity for 30s · 2m 14s elapsed");
   });
 
-  it("keeps progress and terminal states provider-agnostic", () => {
+  it("keeps progress and terminal states engine-agnostic", () => {
     const completed = runningActivity({
       state: "completed",
       lastActivityAt: "2026-07-26T14:02:14.000Z",

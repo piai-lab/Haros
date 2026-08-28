@@ -9,7 +9,7 @@
 //          terminal chip constants, ComposerChipSegment,
 //          createComposerChipsRemarkPlugin, parseComposerChipSegment
 
-import type { ProviderMentionReference } from "@harnessos/contracts";
+import type { EngineMentionReference } from "@harnessos/contracts";
 import {
   splitPromptIntoDisplaySegments,
   type ComposerPromptSegment,
@@ -110,7 +110,7 @@ export function parseComposerChipSegment(raw: unknown): ComposerChipSegment | nu
 }
 
 export function createComposerChipsRemarkPlugin(
-  mentionReferences: ReadonlyArray<ProviderMentionReference>,
+  mentionReferences: ReadonlyArray<EngineMentionReference>,
   terminalContextTokens: ReadonlyArray<TerminalContextChipToken> = [],
 ) {
   const splitComposerText = (value: string): MdastNode[] => {

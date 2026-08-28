@@ -106,8 +106,8 @@ const OUTPUT_ACK_LOW_WATERMARK = 5_000;
 const OUTPUT_ACK_RESUME_TIMEOUT_MS = 10_000;
 const DEFAULT_OPEN_COLS = 120;
 const DEFAULT_OPEN_ROWS = 30;
-const PROVIDER_INPUT_ACTIVITY_GRACE_MS = 120_000;
-const PROVIDER_OUTPUT_ACTIVITY_GRACE_MS = 30_000;
+const ENGINE_INPUT_ACTIVITY_GRACE_MS = 120_000;
+const ENGINE_OUTPUT_ACTIVITY_GRACE_MS = 30_000;
 const SHUTDOWN_ESCALATION_SETTLE_MS = 25;
 const TERMINAL_ENV_BLOCKLIST = new Set([
   "PORT",
@@ -182,7 +182,7 @@ function normalizeSubprocessActivity(
   return typeof result === "boolean"
     ? {
         cliKind: null,
-        hasNonProviderSubprocess: result,
+        hasNonEngineSubprocess: result,
         hasProviderDescendant: false,
         hasRunningSubprocess: result,
       }
@@ -197,9 +197,9 @@ function isProviderSessionBusy(session: TerminalSessionState, now: number): bool
     return false;
   }
   if (lastOutputAt >= lastInputAt) {
-    return now - lastOutputAt <= PROVIDER_OUTPUT_ACTIVITY_GRACE_MS;
+    return now - lastOutputAt <= ENGINE_OUTPUT_ACTIVITY_GRACE_MS;
   }
-  return now - lastInputAt <= PROVIDER_INPUT_ACTIVITY_GRACE_MS;
+  return now - lastInputAt <= ENGINE_INPUT_ACTIVITY_GRACE_MS;
 }
 
 function normalizeProviderOutputSignature(visibleText: string): string {
@@ -1449,7 +1449,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
       const normalizedSignature = normalizeProviderOutputSignature(sanitized.visibleText);
       if (normalizedSignature.length > 0 && normalizedSignature !== session.lastOutputSignature) {
         // Only refresh on genuinely new output. Repeated identical redraws (idle prompt
-        // repaints) are ignored so they do not pin the provider in a "busy" state forever.
+        // repaints) are ignored so they do not pin the engine in a "busy" state forever.
         // When hooks are active (managedAgentObserved), hooks are the source of truth anyway;
         // this heuristic only matters for unmanaged terminals.
         session.lastOutputAt = Date.now();
@@ -2155,7 +2155,7 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
             const providerDescendantObserved =
               session.providerDescendantObserved ||
               (session.detectedCliKind !== null && subprocessActivity.hasProviderDescendant);
-            // Process-tree provider matches affect busy-state only. Branding follows explicit
+            // Process-tree engine matches affect busy-state only. Branding follows explicit
             // env/input/hook signals so dev servers that spawn agents stay generic.
             shouldClearDetectedCliKind =
               session.detectedCliKind !== null &&
@@ -2164,13 +2164,13 @@ export class TerminalManagerRuntime extends EventEmitter<TerminalManagerEvents> 
             session.providerDescendantObserved = providerDescendantObserved;
             if (session.managedAgentObserved) {
               // Hooks have fired — trust them as the sole source of truth (superset model).
-              // Only override with non-provider subprocesses (e.g. user spawned a build).
+              // Only override with non-engine subprocesses (e.g. user spawned a build).
               hasRunningSubprocess =
-                session.managedAgentRunning || subprocessActivity.hasNonProviderSubprocess;
+                session.managedAgentRunning || subprocessActivity.hasNonEngineSubprocess;
             } else {
               // No hooks observed — fall back to process-tree + output heuristic.
               hasRunningSubprocess = subprocessActivity.hasProviderDescendant
-                ? subprocessActivity.hasNonProviderSubprocess ||
+                ? subprocessActivity.hasNonEngineSubprocess ||
                   isProviderSessionBusy(session, Date.now())
                 : subprocessActivity.hasRunningSubprocess;
             }

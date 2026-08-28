@@ -445,7 +445,7 @@ export function makeAgentGatewayAutomationTools(
             prompt,
             schedule,
             enabled: !suggested,
-            modelSelection: executionThread.modelSelection,
+            engineSelection: executionThread.engineSelection,
             runtimeMode: executionThread.runtimeMode,
             interactionMode: executionThread.interactionMode === "plan" ? "plan" : "default",
             mode,

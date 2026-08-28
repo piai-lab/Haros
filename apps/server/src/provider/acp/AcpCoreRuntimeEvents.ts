@@ -3,9 +3,9 @@ import {
   RuntimeItemId,
   type CanonicalRequestType,
   type EventId,
-  type ProviderApprovalDecision,
+  type EngineApprovalDecision,
   type EngineKind,
-  type ProviderRuntimeEvent,
+  type EngineRuntimeEvent,
   type RuntimeContentStreamKind,
   type RuntimeRequestId,
   type ThreadTokenUsageSnapshot,
@@ -29,9 +29,9 @@ interface AcpEventStamp {
 }
 
 export function stampAcpRuntimeEventLifecycleGeneration(
-  event: ProviderRuntimeEvent,
+  event: EngineRuntimeEvent,
   lifecycleGeneration: string | undefined,
-): ProviderRuntimeEvent {
+): EngineRuntimeEvent {
   return lifecycleGeneration === undefined ? event : { ...event, lifecycleGeneration };
 }
 
@@ -87,7 +87,7 @@ function runtimeItemLifecycleFromAcpToolStatus(
 
 export function makeAcpRequestOpenedEvent(input: {
   readonly stamp: AcpEventStamp;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly threadId: ThreadId;
   readonly turnId: TurnId | undefined;
   readonly requestId: RuntimeRequestId;
@@ -97,11 +97,11 @@ export function makeAcpRequestOpenedEvent(input: {
   readonly source: AcpAdapterRawSource;
   readonly method: string;
   readonly rawPayload: unknown;
-}): ProviderRuntimeEvent {
+}): EngineRuntimeEvent {
   return {
     type: "request.opened",
     ...input.stamp,
-    provider: input.provider,
+    engine: input.engine,
     threadId: input.threadId,
     turnId: input.turnId,
     requestId: input.requestId,
@@ -120,17 +120,17 @@ export function makeAcpRequestOpenedEvent(input: {
 
 export function makeAcpRequestResolvedEvent(input: {
   readonly stamp: AcpEventStamp;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly threadId: ThreadId;
   readonly turnId: TurnId | undefined;
   readonly requestId: RuntimeRequestId;
   readonly permissionRequest: AcpPermissionRequest;
-  readonly decision: ProviderApprovalDecision;
-}): ProviderRuntimeEvent {
+  readonly decision: EngineApprovalDecision;
+}): EngineRuntimeEvent {
   return {
     type: "request.resolved",
     ...input.stamp,
-    provider: input.provider,
+    engine: input.engine,
     threadId: input.threadId,
     turnId: input.turnId,
     requestId: input.requestId,
@@ -143,18 +143,18 @@ export function makeAcpRequestResolvedEvent(input: {
 
 export function makeAcpPlanUpdatedEvent(input: {
   readonly stamp: AcpEventStamp;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly threadId: ThreadId;
   readonly turnId: TurnId | undefined;
   readonly payload: AcpPlanUpdate;
   readonly source: AcpAdapterRawSource;
   readonly method: string;
   readonly rawPayload: unknown;
-}): ProviderRuntimeEvent {
+}): EngineRuntimeEvent {
   return {
     type: "turn.tasks.updated",
     ...input.stamp,
-    provider: input.provider,
+    engine: input.engine,
     threadId: input.threadId,
     turnId: input.turnId,
     payload: {
@@ -176,17 +176,17 @@ export function makeAcpPlanUpdatedEvent(input: {
 
 export function makeAcpToolCallEvent(input: {
   readonly stamp: AcpEventStamp;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly threadId: ThreadId;
   readonly turnId: TurnId | undefined;
   readonly toolCall: AcpToolCallState;
   readonly rawPayload: unknown;
-}): ProviderRuntimeEvent {
+}): EngineRuntimeEvent {
   const runtimeStatus = runtimeItemStatusFromAcpToolStatus(input.toolCall.status);
   return {
     type: runtimeItemLifecycleFromAcpToolStatus(input.toolCall.status),
     ...input.stamp,
-    provider: input.provider,
+    engine: input.engine,
     threadId: input.threadId,
     turnId: input.turnId,
     itemId: RuntimeItemId.makeUnsafe(input.toolCall.toolCallId),
@@ -207,16 +207,16 @@ export function makeAcpToolCallEvent(input: {
 
 export function makeAcpAssistantItemEvent(input: {
   readonly stamp: AcpEventStamp;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly threadId: ThreadId;
   readonly turnId: TurnId | undefined;
   readonly itemId: string;
   readonly lifecycle: "item.started" | "item.completed";
-}): ProviderRuntimeEvent {
+}): EngineRuntimeEvent {
   return {
     type: input.lifecycle,
     ...input.stamp,
-    provider: input.provider,
+    engine: input.engine,
     threadId: input.threadId,
     turnId: input.turnId,
     itemId: RuntimeItemId.makeUnsafe(input.itemId),
@@ -229,18 +229,18 @@ export function makeAcpAssistantItemEvent(input: {
 
 export function makeAcpContentDeltaEvent(input: {
   readonly stamp: AcpEventStamp;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly threadId: ThreadId;
   readonly turnId: TurnId | undefined;
   readonly itemId?: string;
   readonly text: string;
   readonly streamKind?: AcpTextStreamKind;
   readonly rawPayload: unknown;
-}): ProviderRuntimeEvent {
+}): EngineRuntimeEvent {
   return {
     type: "content.delta",
     ...input.stamp,
-    provider: input.provider,
+    engine: input.engine,
     threadId: input.threadId,
     turnId: input.turnId,
     ...(input.itemId ? { itemId: RuntimeItemId.makeUnsafe(input.itemId) } : {}),
@@ -258,17 +258,17 @@ export function makeAcpContentDeltaEvent(input: {
 
 export function makeAcpTokenUsageEvent(input: {
   readonly stamp: AcpEventStamp;
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly threadId: ThreadId;
   readonly turnId: TurnId | undefined;
   readonly usage: ThreadTokenUsageSnapshot;
   readonly method?: string;
   readonly rawPayload: unknown;
-}): ProviderRuntimeEvent {
+}): EngineRuntimeEvent {
   return {
     type: "thread.token-usage.updated",
     ...input.stamp,
-    provider: input.provider,
+    engine: input.engine,
     threadId: input.threadId,
     turnId: input.turnId,
     payload: {

@@ -1,15 +1,15 @@
 /**
- * CursorAdapter - Cursor CLI ACP implementation of the generic provider adapter contract.
+ * CursorAdapter - Cursor CLI ACP implementation of the generic engine adapter contract.
  *
  * @module CursorAdapter
  */
 import { ServiceMap } from "effect";
 
-import type { ProviderAdapterError } from "../Errors.ts";
-import type { ProviderAdapterShape } from "./ProviderAdapter.ts";
+import type { EngineAdapterError } from "../Errors.ts";
+import type { EngineAdapterShape } from "./EngineAdapter.ts";
 
-export interface CursorAdapterShape extends ProviderAdapterShape<ProviderAdapterError> {
-  readonly provider: "cursor";
+export interface CursorAdapterShape extends EngineAdapterShape<EngineAdapterError> {
+  readonly engine: "cursor";
 }
 
 export class CursorAdapter extends ServiceMap.Service<CursorAdapter, CursorAdapterShape>()(

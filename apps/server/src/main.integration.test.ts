@@ -334,7 +334,7 @@ it.layer(testLayer)("server CLI command", (it) => {
         path.join(stateDir, "secrets"),
         path.join(stateDir, "attachments"),
         path.join(stateDir, "logs"),
-        path.join(stateDir, "logs", "provider"),
+        path.join(stateDir, "logs", "engine"),
         path.join(stateDir, "logs", "terminals"),
       ]) {
         assert.equal(permissionMode(directoryPath), 0o700);
@@ -573,7 +573,7 @@ it.layer(testLayer)("server CLI command", (it) => {
         [
           "--browser",
           "--no-auto-bootstrap-project-from-cwd",
-          "--no-log-provider-events",
+          "--no-log-engine-events",
           "--no-log-websocket-events",
         ],
         {

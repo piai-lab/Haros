@@ -1,5 +1,5 @@
 // FILE: providerUsage/providers/codex.test.ts
-// Purpose: Proves Codex usage stays on the provider-native app-server path.
+// Purpose: Proves Codex usage stays on the engine-native app-server path.
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -39,7 +39,7 @@ describe("Codex app-server usage", () => {
     });
 
     expect(snapshot).toMatchObject({
-      provider: "codex",
+      engine: "codex",
       status: "ok",
       source: "codex-app-server-rate-limits",
       planName: "Plus",

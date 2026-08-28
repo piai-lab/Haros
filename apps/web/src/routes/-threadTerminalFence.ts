@@ -1,7 +1,7 @@
 // FILE: -threadTerminalFence.ts
 // Purpose: Decide when a terminal-session fence can be retired after projection reconcile.
 // Layer: Web EventRouter helper
-// Why: ProviderRuntimeIngestion settles the session before it flushes buffered
+// Why: EngineRuntimeIngestion settles the session before it flushes buffered
 //      assistant finals. A snapshot taken at the session-set sequence can look
 //      terminal while the reply text has not been projected yet. Clearing the
 //      fence there leaves the UI stuck on a spinner until a full reload (#548).

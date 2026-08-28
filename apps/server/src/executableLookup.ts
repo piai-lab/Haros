@@ -5,11 +5,11 @@
 // Layer: Server utility
 // Depends on: node:fs and node:path only.
 //
-// This used to live in three places (editor discovery, terminal wrappers, provider
+// This used to live in three places (editor discovery, terminal wrappers, engine
 // maintenance), each with its own PATHEXT fallback list, its own idea of whether PATH
 // entries could be quoted, and its own separator handling — so the same command could be
 // found by one and missed by another. The probe itself legitimately differs per caller
-// (sync executability here, an Effect `FileSystem` existence check in provider
+// (sync executability here, an Effect `FileSystem` existence check in engine
 // maintenance), which is why enumeration and probing are split: `executableCandidates`
 // yields the paths to try, in order, and each caller applies its own predicate.
 

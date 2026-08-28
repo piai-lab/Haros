@@ -33,7 +33,7 @@ const LONG_REASONING =
   "I am checking the canonical sequence before opening https://example.test/a/very/long/source/path?query=reasoning-timeline-layout and then validating SupercalifragilisticexpialidociousRepeatedWithoutABreakSupercalifragilisticexpialidociousRepeatedWithoutABreak at the narrowest supported width.";
 const LIVE_REASONING = Array.from(
   { length: 14 },
-  (_, index) => `Public reasoning paragraph ${index + 1} stays in the provider's original text.`,
+  (_, index) => `Public reasoning paragraph ${index + 1} stays in the engine's original text.`,
 ).join("\n\n");
 
 function ReasoningRow(props: {
@@ -56,7 +56,7 @@ function ReasoningRow(props: {
           : [
               {
                 id: "reasoning-1",
-                text: "First public paragraph from the provider.",
+                text: "First public paragraph from the engine.",
               },
               { id: "reasoning-2", text: LONG_REASONING },
             ],
@@ -1020,7 +1020,7 @@ describe("Timeline public reasoning disclosure", () => {
       expect(viewport.dataset.reasoningHeightState).toBe("compact");
 
       const providerText = document.querySelector<HTMLElement>(
-        "[data-reasoning-provider-text='true']",
+        "[data-reasoning-engine-text='true']",
       )!;
       await expect.poll(() => providerText.textContent).toContain("Public reasoning paragraph 14");
       const walker = document.createTreeWalker(providerText, NodeFilter.SHOW_TEXT);
@@ -1098,7 +1098,7 @@ describe("Timeline public reasoning disclosure", () => {
     }
   });
 
-  it("shows the localized reasoning truncation notice without altering provider text or overflowing at 480px", async () => {
+  it("shows the localized reasoning truncation notice without altering engine text or overflowing at 480px", async () => {
     const host = createNarrowHost();
     const screen = await render(
       <I18nProvider>
@@ -1114,7 +1114,7 @@ describe("Timeline public reasoning disclosure", () => {
       await settleLayout();
       const disclosure = document.querySelector<HTMLElement>("[data-reasoning-disclosure='true']");
       const providerText = document.querySelector<HTMLElement>(
-        "[data-reasoning-provider-text='true']",
+        "[data-reasoning-engine-text='true']",
       );
       const notice = document.querySelector<HTMLElement>(
         "[data-reasoning-truncation-notice='true']",

@@ -20,14 +20,14 @@ import {
 } from "./serverReactQuery";
 
 const READY_CODEX_STATUS = {
-  provider: "codex",
+  engine: "codex",
   status: "ready",
   available: true,
   authStatus: "authenticated",
   checkedAt: "2026-07-26T16:41:38.945Z",
 } satisfies ServerProviderStatus;
 
-function makeServerConfig(providers: readonly ServerProviderStatus[]): ServerConfig {
+function makeServerConfig(engines: readonly ServerProviderStatus[]): ServerConfig {
   return {
     cwd: "G:\\omnimind",
     homeDir: "C:\\Users\\tester",
@@ -37,12 +37,12 @@ function makeServerConfig(providers: readonly ServerProviderStatus[]): ServerCon
     keybindingsConfigPath: "C:\\OmniMindDev\\keybindings.json",
     keybindings: [],
     issues: [],
-    providers,
+    engines,
     availableEditors: [],
   };
 }
 
-describe("server provider status reconciliation", () => {
+describe("server engine status reconciliation", () => {
   it("distinguishes an authoritative empty refresh from an unobserved startup cache", async () => {
     const queryClient = new QueryClient();
     queryClient.setQueryData(serverQueryKeys.config(), makeServerConfig([]));
@@ -71,12 +71,12 @@ describe("server provider status reconciliation", () => {
     resolveConfig(makeServerConfig([]));
     await reconciliation;
 
-    expect(queryClient.getQueryData<ServerConfig>(serverQueryKeys.config())?.providers).toEqual([
+    expect(queryClient.getQueryData<ServerConfig>(serverQueryKeys.config())?.engines).toEqual([
       READY_CODEX_STATUS,
     ]);
   });
 
-  it("keeps the newest provider snapshot when hydration overlaps multiple events", async () => {
+  it("keeps the newest engine snapshot when hydration overlaps multiple events", async () => {
     const queryClient = new QueryClient();
     let resolveConfig!: (config: ServerConfig) => void;
     const configProjection = new Promise<ServerConfig>((resolve) => {
@@ -100,12 +100,12 @@ describe("server provider status reconciliation", () => {
     resolveConfig(makeServerConfig([]));
     await Promise.all([first, second]);
 
-    expect(queryClient.getQueryData<ServerConfig>(serverQueryKeys.config())?.providers).toEqual([
+    expect(queryClient.getQueryData<ServerConfig>(serverQueryKeys.config())?.engines).toEqual([
       READY_CODEX_STATUS,
     ]);
   });
 
-  it("keeps a provider snapshot that arrives during reconnect config refresh", async () => {
+  it("keeps a engine snapshot that arrives during reconnect config refresh", async () => {
     const queryClient = new QueryClient();
     const unavailableStatus = {
       ...READY_CODEX_STATUS,
@@ -127,12 +127,12 @@ describe("server provider status reconciliation", () => {
     resolveConfig(makeServerConfig([unavailableStatus]));
     await refresh;
 
-    expect(queryClient.getQueryData<ServerConfig>(serverQueryKeys.config())?.providers).toEqual([
+    expect(queryClient.getQueryData<ServerConfig>(serverQueryKeys.config())?.engines).toEqual([
       READY_CODEX_STATUS,
     ]);
   });
 
-  it("accepts reconnect config when no newer provider snapshot arrives", async () => {
+  it("accepts reconnect config when no newer engine snapshot arrives", async () => {
     const queryClient = new QueryClient();
     const unavailableStatus = {
       ...READY_CODEX_STATUS,
@@ -148,7 +148,7 @@ describe("server provider status reconciliation", () => {
       loadConfig: async () => makeServerConfig([READY_CODEX_STATUS]),
     });
 
-    expect(queryClient.getQueryData<ServerConfig>(serverQueryKeys.config())?.providers).toEqual([
+    expect(queryClient.getQueryData<ServerConfig>(serverQueryKeys.config())?.engines).toEqual([
       READY_CODEX_STATUS,
     ]);
   });
@@ -202,7 +202,7 @@ describe("serverLocalServersQueryOptions", () => {
 });
 
 describe("serverAllProviderUsageQueryOptions", () => {
-  it("can be disabled by provider-scoped usage surfaces", () => {
+  it("can be disabled by engine-scoped usage surfaces", () => {
     const options = serverAllProviderUsageQueryOptions(false);
 
     expect(options.enabled).toBe(false);

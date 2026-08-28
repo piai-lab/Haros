@@ -35,13 +35,13 @@ describe("OmniMind harness policy", () => {
     assert.notInclude(policy, "device_list");
   });
 
-  it("never advertises gateway mutation to providers without scoped MCP", () => {
+  it("never advertises gateway mutation to engines without scoped MCP", () => {
     const policy = renderOmniMindHarnessPolicy({ gatewayControlAvailable: false });
     assert.include(policy, "OmniMind MCP control is unavailable");
     assert.notInclude(policy, "canonical run envelope");
   });
 
-  it("delivers a private host-context block once per provider session", () => {
+  it("delivers a private host-context block once per engine session", () => {
     const state: { harnessPolicyDelivered?: boolean } = {};
     assert.include(
       takeOmniMindHarnessPolicyForSession(state, { gatewayControlAvailable: true }) ?? "",
@@ -69,7 +69,7 @@ describe("OmniMind harness policy", () => {
     }
   });
 
-  it("keeps a provider session identity-only until scoped setup succeeds", () => {
+  it("keeps a engine session identity-only until scoped setup succeeds", () => {
     const text =
       takeOmniMindHarnessPolicyForProviderSession(
         {},

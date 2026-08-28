@@ -3,7 +3,7 @@
 // Layer: Web lib test
 // Depends on: composerAutomation resolver and automation form helpers.
 
-import type { ModelSelection, ProjectId, ThreadId } from "@harnessos/contracts";
+import type { EngineSelection, ProjectId, ThreadId } from "@harnessos/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -14,8 +14,8 @@ import {
 
 const PROJECT_ID = "project-composer-automation" as ProjectId;
 const THREAD_ID = "thread-composer-automation" as ThreadId;
-const MODEL_SELECTION: ModelSelection = {
-  provider: "codex",
+const MODEL_SELECTION: EngineSelection = {
+  engine: "codex",
   model: "gpt-5",
 };
 const NOW_ISO = "2026-06-22T08:00:00.000Z";
@@ -239,8 +239,8 @@ describe("composerAutomation", () => {
     const draft = buildComposerAutomationDraft({
       resolution: decision.resolution,
       projectId: PROJECT_ID,
-      projectModelSelection: MODEL_SELECTION,
-      selectedModelSelection: MODEL_SELECTION,
+      projectEngineSelection: MODEL_SELECTION,
+      selectedEngineSelection: MODEL_SELECTION,
       targetThreadId: THREAD_ID,
       hasEphemeralContext: false,
     });
@@ -291,8 +291,8 @@ describe("composerAutomation", () => {
     const draft = buildComposerAutomationDraft({
       resolution: decision.resolution,
       projectId: PROJECT_ID,
-      projectModelSelection: MODEL_SELECTION,
-      selectedModelSelection: MODEL_SELECTION,
+      projectEngineSelection: MODEL_SELECTION,
+      selectedEngineSelection: MODEL_SELECTION,
       targetThreadId: THREAD_ID,
       hasEphemeralContext: false,
     });
@@ -340,8 +340,8 @@ describe("composerAutomation", () => {
     const draft = buildComposerAutomationDraft({
       resolution: decision.resolution,
       projectId: PROJECT_ID,
-      projectModelSelection: MODEL_SELECTION,
-      selectedModelSelection: MODEL_SELECTION,
+      projectEngineSelection: MODEL_SELECTION,
+      selectedEngineSelection: MODEL_SELECTION,
       targetThreadId: THREAD_ID,
       hasEphemeralContext: false,
     });
@@ -385,8 +385,8 @@ describe("composerAutomation", () => {
     const draft = buildComposerAutomationDraft({
       resolution: decision.resolution,
       projectId: PROJECT_ID,
-      projectModelSelection: MODEL_SELECTION,
-      selectedModelSelection: MODEL_SELECTION,
+      projectEngineSelection: MODEL_SELECTION,
+      selectedEngineSelection: MODEL_SELECTION,
       targetThreadId: null,
       hasEphemeralContext: false,
     });
@@ -437,8 +437,8 @@ describe("composerAutomation", () => {
     const draft = buildComposerAutomationDraft({
       resolution: decision.resolution,
       projectId: PROJECT_ID,
-      projectModelSelection: MODEL_SELECTION,
-      selectedModelSelection: MODEL_SELECTION,
+      projectEngineSelection: MODEL_SELECTION,
+      selectedEngineSelection: MODEL_SELECTION,
       targetThreadId: THREAD_ID,
       hasEphemeralContext: false,
     });

@@ -2,7 +2,7 @@ import {
   ThreadId,
   TurnId,
   type CanonicalUserInputSettlement,
-  type ProviderSession,
+  type EngineSession,
 } from "@harnessos/contracts";
 import { Deferred, Effect } from "effect";
 import { describe, expect, it } from "vitest";
@@ -124,7 +124,7 @@ describe("ACP adapter session support", () => {
     ).toBe("code");
   });
 
-  it("scopes reused runtime and tool ids while preserving the provider id", () => {
+  it("scopes reused runtime and tool ids while preserving the engine id", () => {
     const turnId = TurnId.makeUnsafe("turn-1");
     expect(scopeAcpRuntimeItemIdForTurn("grok", turnId, "item-1")).toBe("grok:turn-1:item-1");
     expect(
@@ -149,14 +149,14 @@ describe("ACP adapter session support", () => {
       activePromptFiber: { id: "fiber" } as { id: string } | undefined,
       activeInteractionMode: "plan" as "plan" | "default" | undefined,
       session: {
-        provider: "grok",
+        engine: "grok",
         status: "running",
         runtimeMode: "full-access",
         threadId: ThreadId.makeUnsafe("thread-1"),
         activeTurnId: turnId,
         createdAt: "2026-07-19T00:00:00.000Z",
         updatedAt: "2026-07-19T00:00:00.000Z",
-      } satisfies ProviderSession,
+      } satisfies EngineSession,
     };
 
     expect(clearAcpActiveTurn(context, TurnId.makeUnsafe("other-turn"))).toBe(false);

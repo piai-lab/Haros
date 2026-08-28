@@ -2,7 +2,7 @@
 // Purpose: Defines the composer attachment limit as one shared, commit-time invariant.
 // Layer: Web composer domain utility
 
-import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS } from "@harnessos/contracts";
+import { ENGINE_SEND_TURN_MAX_ATTACHMENTS } from "@harnessos/contracts";
 
 interface AttachmentIdCarrier {
   readonly id: string;
@@ -38,7 +38,7 @@ export function effectiveComposerAttachmentCount(
 export function availableComposerAttachmentSlots(
   draft: ComposerAttachmentCountDraft | undefined,
 ): number {
-  return Math.max(0, PROVIDER_SEND_TURN_MAX_ATTACHMENTS - effectiveComposerAttachmentCount(draft));
+  return Math.max(0, ENGINE_SEND_TURN_MAX_ATTACHMENTS - effectiveComposerAttachmentCount(draft));
 }
 
 export function composerImageConsumesAttachmentSlot(

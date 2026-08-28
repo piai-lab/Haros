@@ -1,6 +1,6 @@
 // FILE: claudeProcessEnv.ts
 // Purpose: Builds Claude subprocess environments that prefer valid local Claude CLI OAuth.
-// Layer: Provider utility shared by Claude runtime sessions and provider health probes.
+// Layer: Engine utility shared by Claude runtime sessions and engine health probes.
 // Exports: Claude credentials parsing, path resolution, and env sanitization helpers.
 import { readFileSync } from "node:fs";
 import OS from "node:os";
@@ -141,7 +141,7 @@ export function buildClaudeProcessEnv(input?: {
     input?.hasClaudeCliCredentials ?? hasUsableClaudeCliCredentials(credentialInput);
 
   if (!hasLocalClaudeAuth || hasClaudeExternalAuthEnv(env)) {
-    return buildProviderChildEnvironment({ provider: "claude", baseEnv: env });
+    return buildProviderChildEnvironment({ engine: "claude", baseEnv: env });
   }
 
   // Claude gives direct request credentials precedence over local OAuth. Drop stale
@@ -149,5 +149,5 @@ export function buildClaudeProcessEnv(input?: {
   for (const key of CLAUDE_DIRECT_CREDENTIAL_ENV_KEYS) {
     delete env[key];
   }
-  return buildProviderChildEnvironment({ provider: "claude", baseEnv: env });
+  return buildProviderChildEnvironment({ engine: "claude", baseEnv: env });
 }

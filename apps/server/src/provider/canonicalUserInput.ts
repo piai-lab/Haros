@@ -1,6 +1,6 @@
 // FILE: canonicalUserInput.ts
-// Purpose: Encode the product-owned structured answer envelope at legacy Provider boundaries.
-// Layer: Provider composition seam
+// Purpose: Encode the product-owned structured answer envelope at legacy Engine boundaries.
+// Layer: Engine composition seam
 
 import {
   CanonicalUserInputRequest,
@@ -8,8 +8,8 @@ import {
   CanonicalUserInputAnswer,
   CanonicalUserInputAnswers,
   CanonicalUserInputResponse,
-  ProviderUserInputAnswer,
-  ProviderUserInputAnswers,
+  EngineUserInputAnswer,
+  EngineUserInputAnswers,
 } from "@harnessos/contracts";
 import { Schema } from "effect";
 
@@ -18,7 +18,7 @@ function hasMeaningfulText(value: string | undefined): value is string {
 }
 
 /**
- * One Provider-owned seam upgrades native/legacy question arrays into the
+ * One Engine-owned seam upgrades native/legacy question arrays into the
  * versioned Product request and runs the canonical bounds/identity decoder.
  * Adapters must call this before publishing `user-input.requested`.
  */
@@ -76,7 +76,7 @@ export function canonicalUserInputRequestFromQuestions(
  */
 export function encodeCanonicalUserInputAnswer(
   answer: CanonicalUserInputAnswer,
-): ProviderUserInputAnswer {
+): EngineUserInputAnswer {
   const selectedOptionLabels = [...answer.selectedOptionLabels];
   const customText = hasMeaningfulText(answer.customText) ? answer.customText : undefined;
   if (customText !== undefined && selectedOptionLabels.length > 0) {
@@ -92,7 +92,7 @@ export function encodeCanonicalUserInputAnswer(
 
 export function encodeCanonicalUserInputAnswers(
   answers: CanonicalUserInputAnswers,
-): ProviderUserInputAnswers {
+): EngineUserInputAnswers {
   return Object.fromEntries(
     Object.entries(answers).map(([questionId, answer]) => [
       questionId,
@@ -102,7 +102,7 @@ export function encodeCanonicalUserInputAnswers(
 }
 
 export function encodeCanonicalUserInputResponse(response: CanonicalUserInputResponse): {
-  readonly answers: ProviderUserInputAnswers;
+  readonly answers: EngineUserInputAnswers;
   readonly cancelled: boolean;
 } {
   return response.status === "answered"

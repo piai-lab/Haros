@@ -104,8 +104,8 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
             stagedSummary: "M apps/server/src/git/Layers/CursorTextGeneration.ts",
             stagedPatch:
               "diff --git a/apps/server/src/git/Layers/CursorTextGeneration.ts b/apps/server/src/git/Layers/CursorTextGeneration.ts",
-            modelSelection: {
-              provider: "cursor",
+            engineSelection: {
+              engine: "cursor",
               model: "gpt-5.4",
               options: {
                 reasoningEffort: "xhigh",
@@ -113,7 +113,7 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
                 contextWindow: "1m",
               },
             },
-            providerOptions: {
+            engineOptions: {
               cursor: {
                 binaryPath: agentPath,
               },
@@ -187,11 +187,11 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
             branch: "feature/cursor-noisy-json",
             stagedSummary: "M README.md",
             stagedPatch: "diff --git a/README.md b/README.md",
-            modelSelection: {
-              provider: "cursor",
+            engineSelection: {
+              engine: "cursor",
               model: "composer-2",
             },
-            providerOptions: {
+            engineOptions: {
               cursor: {
                 binaryPath: agentPath,
               },
@@ -218,11 +218,11 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
           const generated = yield* textGeneration.generateDiffSummary({
             cwd: process.cwd(),
             patch: "diff --git a/file.ts b/file.ts",
-            modelSelection: {
-              provider: "cursor",
+            engineSelection: {
+              engine: "cursor",
               model: "composer-2",
             },
-            providerOptions: {
+            engineOptions: {
               cursor: {
                 binaryPath: agentPath,
               },
@@ -246,11 +246,11 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
           const generated = yield* textGeneration.generateThreadTitle({
             cwd: process.cwd(),
             message: "Improve sidebar thread row spacing and hover states.",
-            modelSelection: {
-              provider: "cursor",
+            engineSelection: {
+              engine: "cursor",
               model: "composer-2",
             },
-            providerOptions: {
+            engineOptions: {
               cursor: {
                 binaryPath: agentPath,
               },
@@ -274,11 +274,11 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
           const generated = yield* textGeneration.generateThreadTitle({
             cwd: process.cwd(),
             message: "Fix the websocket reconnect backoff.",
-            modelSelection: {
-              provider: "cursor",
+            engineSelection: {
+              engine: "cursor",
               model: "composer-2",
             },
-            providerOptions: {
+            engineOptions: {
               cursor: {
                 binaryPath: agentPath,
               },
@@ -304,11 +304,11 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
             .generateThreadTitle({
               cwd: process.cwd(),
               message: "Fix the websocket reconnect backoff.",
-              modelSelection: {
-                provider: "cursor",
+              engineSelection: {
+                engine: "cursor",
                 model: "composer-2",
               },
-              providerOptions: {
+              engineOptions: {
                 cursor: {
                   binaryPath: agentPath,
                 },
@@ -350,11 +350,11 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
           const generated = yield* textGeneration.generateThreadTitle({
             cwd: process.cwd(),
             message: "Fix the reconnect spinner after a resumed session.",
-            modelSelection: {
-              provider: "cursor",
+            engineSelection: {
+              engine: "cursor",
               model: "composer-2",
             },
-            providerOptions: {
+            engineOptions: {
               cursor: {
                 binaryPath: agentPath,
               },

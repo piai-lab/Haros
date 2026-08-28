@@ -27,7 +27,7 @@ import {
   titleCase,
   toUsedPercent,
 } from "../parse";
-import type { ProviderUsageContext, ProviderUsageFetcher } from "../types";
+import type { EngineUsageContext, EngineUsageFetcher } from "../types";
 
 const SOURCE = "antigravity-cloudcode";
 const LOAD_URL = "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist";
@@ -52,7 +52,7 @@ interface GeminiOAuthCreds {
   expiresAtMs?: number;
 }
 
-function geminiCredPaths(ctx: ProviderUsageContext): string[] {
+function geminiCredPaths(ctx: EngineUsageContext): string[] {
   const geminiHome = ctx.env.GEMINI_CONFIG_DIR?.trim() || nodePath.join(ctx.homeDir, ".gemini");
   return [
     nodePath.join(geminiHome, "antigravity-cli", "antigravity-oauth-token"),
@@ -98,7 +98,7 @@ function readGeminiCreds(path: string, value: unknown): GeminiOAuthCreds | null 
   };
 }
 
-async function resolveGeminiCreds(ctx: ProviderUsageContext): Promise<GeminiOAuthCreds | null> {
+async function resolveGeminiCreds(ctx: EngineUsageContext): Promise<GeminiOAuthCreds | null> {
   for (const credPath of geminiCredPaths(ctx)) {
     const creds = readGeminiCreds(credPath, await readJsonFile(credPath));
     if (creds) return creds;
@@ -113,7 +113,7 @@ function googleHeaders(accessToken: string): Record<string, string> {
   };
 }
 
-function geminiOAuthClient(ctx: ProviderUsageContext): { clientId: string; clientSecret: string } {
+function geminiOAuthClient(ctx: EngineUsageContext): { clientId: string; clientSecret: string } {
   return {
     clientId: ctx.env.GEMINI_OAUTH_CLIENT_ID?.trim() || GEMINI_OAUTH_CLIENT_ID,
     clientSecret: ctx.env.GEMINI_OAUTH_CLIENT_SECRET?.trim() || GEMINI_OAUTH_CLIENT_SECRET,
@@ -184,7 +184,7 @@ export function parseAntigravityQuota(input: {
   ].slice(0, MAX_QUOTA_WINDOWS);
 
   return buildSnapshot({
-    provider: "antigravity",
+    engine: "antigravity",
     nowMs: input.nowMs,
     status: "ok",
     source: SOURCE,
@@ -216,12 +216,12 @@ function applyRefreshedTokens(
 
 async function refreshGeminiCreds(
   creds: GeminiOAuthCreds,
-  ctx: ProviderUsageContext,
+  ctx: EngineUsageContext,
 ): Promise<GeminiOAuthCreds | "dead" | null> {
   if (!creds.refreshToken) return null;
   const client = geminiOAuthClient(ctx);
   const refreshed = await refreshOAuthAccessToken({
-    service: "provider-usage-antigravity-refresh",
+    service: "engine-usage-antigravity-refresh",
     refreshUrl: REFRESH_URL,
     allowedOrigins: [new URL(REFRESH_URL).origin],
     refreshToken: creds.refreshToken,
@@ -250,7 +250,7 @@ function credsNeedRefresh(creds: GeminiOAuthCreds, nowMs: number): boolean {
 
 function apiKeySnapshot(nowMs: number) {
   return buildSnapshot({
-    provider: "antigravity",
+    engine: "antigravity",
     nowMs,
     status: "ok",
     source: SOURCE,
@@ -265,8 +265,8 @@ function apiKeySnapshot(nowMs: number) {
   });
 }
 
-export const antigravityUsageFetcher: ProviderUsageFetcher = {
-  provider: "antigravity",
+export const antigravityUsageFetcher: EngineUsageFetcher = {
+  engine: "antigravity",
   async cacheKey(ctx) {
     const creds = await resolveGeminiCreds(ctx);
     if (creds) return credentialFingerprint(creds.accessToken);
@@ -300,7 +300,7 @@ export const antigravityUsageFetcher: ProviderUsageFetcher = {
 
     try {
       const loadResult = await fetchJson({
-        service: "provider-usage-antigravity",
+        service: "engine-usage-antigravity",
         url: LOAD_URL,
         allowedOrigins: [CLOUD_CODE_ORIGIN],
         method: "POST",
@@ -333,7 +333,7 @@ export const antigravityUsageFetcher: ProviderUsageFetcher = {
       let quotaJson: unknown;
       try {
         const quotaResult = await fetchJson({
-          service: "provider-usage-antigravity",
+          service: "engine-usage-antigravity",
           url: QUOTA_URL,
           allowedOrigins: [CLOUD_CODE_ORIGIN],
           method: "POST",

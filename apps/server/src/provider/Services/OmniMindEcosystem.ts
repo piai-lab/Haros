@@ -1,6 +1,6 @@
 // FILE: OmniMindEcosystem.ts
 // Purpose: Declares the OmniMind Agent native package/resource lifecycle owner.
-// Layer: Server provider service contract
+// Layer: Server engine service contract
 
 import type {
   OmniMindEcosystemInstallInput,

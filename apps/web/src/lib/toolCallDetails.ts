@@ -1,8 +1,8 @@
 // FILE: toolCallDetails.ts
-// Purpose: Extract bounded command/edit details from provider tool lifecycle payloads.
+// Purpose: Extract bounded command/edit details from engine tool lifecycle payloads.
 // Layer: Web transcript data utility
 // Exports: deriveWorkLogToolDetails, mergeWorkLogToolDetails
-// Depends on: provider runtime item metadata already truncated by server ingestion
+// Depends on: engine runtime item metadata already truncated by server ingestion
 
 import type { ToolLifecycleItemType } from "@harnessos/contracts";
 
@@ -375,7 +375,7 @@ const INSPECTABLE_WEB_ACCESS_INPUT_KEYS = new Set([
   "fetchContent",
   "recencyFilter",
   "domainFilter",
-  "provider",
+  "engine",
   "workflow",
   "url",
   "urls",

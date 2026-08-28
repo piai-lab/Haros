@@ -12,7 +12,7 @@ export type TerminalTurnApplicability =
 
 // A started event may confirm the current turn, but it must never transfer
 // lifecycle ownership from one active turn to another. Missing identity stays
-// applicable for providers that do not expose a turn id on every event.
+// applicable for engines that do not expose a turn id on every event.
 export function isStartedTurnApplicable(input: {
   readonly activeTurnId: string | null | undefined;
   readonly eventTurnId: string | null | undefined;

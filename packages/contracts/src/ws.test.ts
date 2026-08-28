@@ -185,8 +185,8 @@ it.effect("accepts automation create requests", () =>
         projectId: "project-1",
         prompt: "Check stale dependencies.",
         schedule: { type: "manual" },
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
       },

@@ -1,5 +1,5 @@
 // FILE: scratchWorkspaces.ts
-// Purpose: Per-thread scratch working directories for provider sessions that
+// Purpose: Per-thread scratch working directories for engine sessions that
 //          start before any project workspace exists (e.g. a chat's first
 //          turn). The root stays in the user's cache so it is outside project
 //          ancestry and outside temporary directories writable by agents.
@@ -137,7 +137,7 @@ function secureOwnedLegacyRoot(legacyWorkspaceRoot: string): boolean {
     const hasStickyBit = (openedStat.mode & 0o1000) !== 0;
     if (writableByOtherUsers && !hasStickyBit) {
       // Keep legacy multi-user access, but prevent other users from replacing
-      // an owned workspace entry between validation and provider startup.
+      // an owned workspace entry between validation and engine startup.
       fchmodSync(descriptor, (openedStat.mode & 0o7777) | 0o1000);
       // Bun currently reports success for directory fchmod on macOS while
       // silently dropping the sticky bit. Never reuse the shared legacy root

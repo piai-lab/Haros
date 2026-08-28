@@ -33,7 +33,7 @@ import {
 import {
   getGitTextGenerationModelOptions,
   isGitTextGenerationSettingsDirty,
-} from "../providerSettings";
+} from "../engineSettings";
 import { useServerSettings } from "../serverSettings";
 import { AdvancedSettingsPanel } from "~/components/settings/AdvancedSettingsPanel";
 import { AppIconPicker } from "~/components/settings/AppIconPicker";
@@ -50,12 +50,12 @@ import { WebSearchSettingsPanel } from "~/components/settings/WebSearchSettingsP
 import { PromptsSettingsPanel } from "~/components/settings/PromptsSettingsPanel";
 import {
   isProviderInstallSettingsDirty,
-  ProvidersSettingsPanel,
-} from "~/components/settings/ProvidersSettingsPanel";
-import { ProviderOptionLabel } from "../components/ProviderIcon";
+  EnginesSettingsPanel,
+} from "~/components/settings/EnginesSettingsPanel";
+import { EngineOptionLabel } from "../components/EngineIcon";
 import { KeyboardShortcutsSettingsPanel } from "../components/settings/KeyboardShortcutsSettingsPanel";
 import { ProfileSettingsPanel } from "../components/settings/ProfileSettingsPanel";
-import { ProviderUsageSettingsPanel } from "../components/settings/ProviderUsageSettingsPanel";
+import { EngineUsageSettingsPanel } from "../components/settings/EngineUsageSettingsPanel";
 import { ExternalConnectionsSettingsPanel } from "../components/settings/ExternalConnectionsSettingsPanel";
 import { BuiltInToolsSettingsPanel } from "../components/settings/BuiltInToolsSettingsPanel";
 import {
@@ -97,7 +97,7 @@ import { SidebarHeaderNavigationControls } from "../components/SidebarHeaderNavi
 import { useDesktopCustomTitleBarState } from "../hooks/useDesktopCustomTitleBar";
 import { useDesktopAppIcon } from "../hooks/useDesktopAppIcon";
 import { useDesktopTopBarTrafficLightGutterClassName } from "../hooks/useDesktopTopBarGutter";
-import { useProviderModelCatalog } from "../hooks/useProviderModelCatalog";
+import { useEngineModelCatalog } from "../hooks/useEngineModelCatalog";
 import { useTheme } from "../hooks/useTheme";
 import { isUiDensity } from "../lib/appDensity";
 import { isChatWidthMode, type ChatWidthMode } from "../lib/chatWidth";
@@ -113,7 +113,7 @@ import {
 } from "../lib/utils";
 import { ensureNativeApi, readNativeApi } from "../nativeApi";
 import { serverConfigQueryOptions } from "../lib/serverReactQuery";
-import { sameProviderOrder } from "../providerOrdering";
+import { sameEngineOrder } from "../engineOrdering";
 import {
   normalizeSettingsSection,
   SETTINGS_SECTION_BY_ID,
@@ -128,7 +128,7 @@ import { SETTINGS_PAGE_BACKGROUND_CLASS_NAME } from "../settingsPanelStyles";
 
 // ── Settings taxonomy ──────────────────────────────────────────────────────
 
-const PROVIDER_SELECT_OPTIONS = ENGINE_DESCRIPTORS.map((descriptor) => descriptor.kind);
+const ENGINE_SELECT_OPTIONS = ENGINE_DESCRIPTORS.map((descriptor) => descriptor.kind);
 const GIT_WRITING_DISCOVERY_PROVIDERS = ["codex", "kilo", "opencode"] as const;
 
 // ── Settings UI primitives ────────────────────────────────────────────────
@@ -136,7 +136,7 @@ const GIT_WRITING_DISCOVERY_PROVIDERS = ["codex", "kilo", "opencode"] as const;
 // Shared settings controls live in ~/components/settings/SettingControls.
 
 function isProviderSelectOption(value: string): value is EngineKind {
-  return PROVIDER_SELECT_OPTIONS.includes(value as EngineKind);
+  return ENGINE_SELECT_OPTIONS.includes(value as EngineKind);
 }
 
 // Keys of LocalPreferences whose value is a plain boolean — the only ones that can be
@@ -172,7 +172,7 @@ function SettingsRouteView() {
     settings: serverSettings,
     defaults: serverDefaults,
     updateServerSettings: mutateServerSettings,
-    updateProviderCredential: mutateProviderCredential,
+    updateEngineCredential: mutateEngineCredential,
     resetServerSettings,
   } = useServerSettings();
   const activeServerSettings = serverSettings ?? serverDefaults;
@@ -215,11 +215,8 @@ function SettingsRouteView() {
     }
     return result;
   };
-  const updateProviderCredential = async (
-    provider: "kilo" | "opencode",
-    serverPassword: string,
-  ) => {
-    const result = await mutateProviderCredential(provider, serverPassword);
+  const updateEngineCredential = async (engine: "kilo" | "opencode", serverPassword: string) => {
+    const result = await mutateEngineCredential(engine, serverPassword);
     if (result.state === "failed") {
       toastManager.add({
         type: "error",
@@ -230,50 +227,50 @@ function SettingsRouteView() {
     return result;
   };
   const activeSectionDescriptor = SETTINGS_SECTION_BY_ID.get(activeSection);
-  const currentGitTextGenerationProvider =
-    serverSettings?.textGenerationModelSelection.provider ??
-    serverDefaults.textGenerationModelSelection.provider;
+  const currentGitTextGenerationEngine =
+    serverSettings?.textGenerationEngineSelection.engine ??
+    serverDefaults.textGenerationEngineSelection.engine;
   const currentGitTextGenerationModel =
-    serverSettings?.textGenerationModelSelection.model ??
-    serverDefaults.textGenerationModelSelection.model ??
+    serverSettings?.textGenerationEngineSelection.model ??
+    serverDefaults.textGenerationEngineSelection.model ??
     DEFAULT_GIT_TEXT_GENERATION_MODEL;
   const serverConfigQuery = useQuery({
     ...serverConfigQueryOptions(),
     enabled: activeSection === "general",
   });
-  const gitWritingModelHintByProvider = useMemo<Partial<Record<EngineKind, string | null>>>(
+  const gitWritingModelHintByEngine = useMemo<Partial<Record<EngineKind, string | null>>>(
     () => ({
-      [currentGitTextGenerationProvider]: currentGitTextGenerationModel,
+      [currentGitTextGenerationEngine]: currentGitTextGenerationModel,
     }),
-    [currentGitTextGenerationModel, currentGitTextGenerationProvider],
+    [currentGitTextGenerationModel, currentGitTextGenerationEngine],
   );
-  const { modelOptionsByProvider: gitWritingCatalogOptionsByProvider } = useProviderModelCatalog({
-    selectedProvider: currentGitTextGenerationProvider,
+  const { modelOptionsByEngine: gitWritingCatalogOptionsByEngine } = useEngineModelCatalog({
+    selectedProvider: currentGitTextGenerationEngine,
     discoveryEnabled: activeSection === "general",
     selectedProviderDiscoveryEnabled: activeSection === "general",
     cwd: serverConfigQuery.data?.cwd ?? null,
-    modelHintByProvider: gitWritingModelHintByProvider,
+    modelHintByEngine: gitWritingModelHintByEngine,
     prefetchProviders: GIT_WRITING_DISCOVERY_PROVIDERS,
   });
   const gitTextGenerationModelOptions = useMemo(
     () =>
       getGitTextGenerationModelOptions(activeServerSettings, {
-        codex: gitWritingCatalogOptionsByProvider.codex,
-        kilo: gitWritingCatalogOptionsByProvider.kilo,
-        opencode: gitWritingCatalogOptionsByProvider.opencode,
+        codex: gitWritingCatalogOptionsByEngine.codex,
+        kilo: gitWritingCatalogOptionsByEngine.kilo,
+        opencode: gitWritingCatalogOptionsByEngine.opencode,
       }),
     [
-      gitWritingCatalogOptionsByProvider.codex,
-      gitWritingCatalogOptionsByProvider.kilo,
-      gitWritingCatalogOptionsByProvider.opencode,
+      gitWritingCatalogOptionsByEngine.codex,
+      gitWritingCatalogOptionsByEngine.kilo,
+      gitWritingCatalogOptionsByEngine.opencode,
       activeServerSettings,
     ],
   );
-  const currentGitTextGenerationValue = `${currentGitTextGenerationProvider}:${currentGitTextGenerationModel}`;
+  const currentGitTextGenerationValue = `${currentGitTextGenerationEngine}:${currentGitTextGenerationModel}`;
   const selectedGitTextGenerationModelLabel =
     gitTextGenerationModelOptions.find(
       (option) =>
-        option.provider === currentGitTextGenerationProvider &&
+        option.engine === currentGitTextGenerationEngine &&
         option.slug === currentGitTextGenerationModel,
     )?.name ?? currentGitTextGenerationModel;
   const uiDensityOptions = useMemo(
@@ -395,8 +392,8 @@ function SettingsRouteView() {
     serverSettings ?? serverDefaults,
     serverDefaults,
   );
-  const hiddenProviderCount = new Set(settings.hiddenProviders).size;
-  const isProviderOrderDirty = !sameProviderOrder(settings.providerOrder, defaults.providerOrder);
+  const hiddenProviderCount = new Set(settings.hiddenEngines).size;
+  const isEngineOrderDirty = !sameEngineOrder(settings.engineOrder, defaults.engineOrder);
 
   // Deep links and sidebar search targets all resolve to stable DOM ids in the active panel.
   useEffect(() => {
@@ -413,8 +410,8 @@ function SettingsRouteView() {
     ...(settings.localePreference !== defaults.localePreference ? [t("settings.language")] : []),
     ...(theme !== "system" ? [t("settings.theme")] : []),
     ...(!isDefaultActiveTheme ? [t("settings.theme")] : []),
-    ...((serverSettings ?? serverDefaults).defaultProvider !== serverDefaults.defaultProvider
-      ? [t("settings.defaultProvider")]
+    ...((serverSettings ?? serverDefaults).defaultEngine !== serverDefaults.defaultEngine
+      ? [t("settings.defaultEngine")]
       : []),
     ...((serverSettings ?? serverDefaults).defaultThreadEnvMode !==
     serverDefaults.defaultThreadEnvMode
@@ -464,8 +461,8 @@ function SettingsRouteView() {
     ...(settings.appSnapPlaySound !== defaults.appSnapPlaySound
       ? [t("settings.captureSound")]
       : []),
-    ...((serverSettings ?? serverDefaults).enableProviderUpdateChecks !==
-    serverDefaults.enableProviderUpdateChecks
+    ...((serverSettings ?? serverDefaults).enableEngineUpdateChecks !==
+    serverDefaults.enableEngineUpdateChecks
       ? [t("settings.automaticCliUpdates")]
       : []),
     ...(settings.diffWordWrap !== defaults.diffWordWrap ? [t("settings.diffLineWrapping")] : []),
@@ -482,14 +479,14 @@ function SettingsRouteView() {
       ? [t("settings.terminalCloseConfirmation")]
       : []),
     ...(isGitTextGenerationModelDirty ? [t("settings.gitWritingModel")] : []),
-    ...(Object.values((serverSettings ?? serverDefaults).providers).some(
-      (provider) => "customModels" in provider && provider.customModels.length > 0,
+    ...(Object.values((serverSettings ?? serverDefaults).engines).some(
+      (engine) => "customModels" in engine && engine.customModels.length > 0,
     )
       ? [t("settings.customModels")]
       : []),
     ...(isInstallSettingsDirty ? [t("settings.providerTools")] : []),
     ...(hiddenProviderCount > 0 ? [t("settings.visibleProviders")] : []),
-    ...(isProviderOrderDirty ? [t("settings.providerPicker")] : []),
+    ...(isEngineOrderDirty ? [t("settings.providerPicker")] : []),
   ];
 
   async function restoreDefaults() {
@@ -521,8 +518,8 @@ function SettingsRouteView() {
       titleBarResult,
     ] = await Promise.all([
       resetServerSettings(),
-      updateProviderCredential("kilo", ""),
-      updateProviderCredential("opencode", ""),
+      updateEngineCredential("kilo", ""),
+      updateEngineCredential("opencode", ""),
       isElectron ? updateDesktopAppIcon("default") : Promise.resolve({ state: "saved" as const }),
       customTitleBarPreferenceDirty
         ? persistCustomTitleBarPreference(true)
@@ -683,16 +680,16 @@ function SettingsRouteView() {
         />
 
         <SettingsRow
-          anchorId={GENERAL_SETTINGS_SEARCH.defaultProvider.target}
-          title={t("settings.defaultProvider")}
-          description={t("settings.defaultProviderDescription")}
+          anchorId={GENERAL_SETTINGS_SEARCH.defaultEngine.target}
+          title={t("settings.defaultEngine")}
+          description={t("settings.defaultEngineDescription")}
           status={serverSettingsStatus}
           resetAction={
-            activeServerSettings.defaultProvider !== serverDefaults.defaultProvider ? (
+            activeServerSettings.defaultEngine !== serverDefaults.defaultEngine ? (
               <SettingResetButton
-                label={t("settings.defaultProvider")}
+                label={t("settings.defaultEngine")}
                 onClick={() =>
-                  void updateServerSettings({ defaultProvider: serverDefaults.defaultProvider })
+                  void updateServerSettings({ defaultEngine: serverDefaults.defaultEngine })
                 }
               />
             ) : null
@@ -700,22 +697,22 @@ function SettingsRouteView() {
           control={
             <SettingsSelectControl
               disabled={!serverSettings}
-              value={activeServerSettings.defaultProvider}
+              value={activeServerSettings.defaultEngine}
               onValueChange={(value) => {
                 if (!isProviderSelectOption(value)) return;
-                void updateServerSettings({ defaultProvider: value });
+                void updateServerSettings({ defaultEngine: value });
               }}
-              ariaLabel={t("settings.defaultProvider")}
+              ariaLabel={t("settings.defaultEngine")}
               valueContent={
-                <ProviderOptionLabel
-                  provider={activeServerSettings.defaultProvider}
-                  label={ENGINE_DISPLAY_NAMES[activeServerSettings.defaultProvider]}
+                <EngineOptionLabel
+                  engine={activeServerSettings.defaultEngine}
+                  label={ENGINE_DISPLAY_NAMES[activeServerSettings.defaultEngine]}
                 />
               }
             >
-              {PROVIDER_SELECT_OPTIONS.map((provider) => (
-                <SelectItem hideIndicator key={provider} value={provider}>
-                  <ProviderOptionLabel provider={provider} label={ENGINE_DISPLAY_NAMES[provider]} />
+              {ENGINE_SELECT_OPTIONS.map((engine) => (
+                <SelectItem hideIndicator key={engine} value={engine}>
+                  <EngineOptionLabel engine={engine} label={ENGINE_DISPLAY_NAMES[engine]} />
                 </SelectItem>
               ))}
             </SettingsSelectControl>
@@ -900,9 +897,9 @@ function SettingsRouteView() {
                     label={t("settings.gitWritingModel")}
                     onClick={() =>
                       void updateServerSettings({
-                        textGenerationModelSelection: {
-                          provider: serverDefaults.textGenerationModelSelection.provider,
-                          model: serverDefaults.textGenerationModelSelection.model,
+                        textGenerationEngineSelection: {
+                          engine: serverDefaults.textGenerationEngineSelection.engine,
+                          model: serverDefaults.textGenerationEngineSelection.model,
                         },
                       })
                     }
@@ -916,11 +913,11 @@ function SettingsRouteView() {
                   onValueChange={(value) => {
                     const separatorIndex = value.indexOf(":");
                     if (separatorIndex <= 0 || separatorIndex === value.length - 1) return;
-                    const provider = value.slice(0, separatorIndex) as EngineKind;
+                    const engine = value.slice(0, separatorIndex) as EngineKind;
                     const model = value.slice(separatorIndex + 1);
-                    if (!PROVIDER_SELECT_OPTIONS.includes(provider)) return;
+                    if (!ENGINE_SELECT_OPTIONS.includes(engine)) return;
                     void updateServerSettings({
-                      textGenerationModelSelection: { provider, model },
+                      textGenerationEngineSelection: { engine, model },
                     });
                   }}
                   ariaLabel={t("settings.gitTextGenerationModel")}
@@ -930,10 +927,10 @@ function SettingsRouteView() {
                   {gitTextGenerationModelOptions.map((option) => (
                     <SelectItem
                       hideIndicator
-                      key={`${option.provider}:${option.slug}`}
-                      value={`${option.provider}:${option.slug}`}
+                      key={`${option.engine}:${option.slug}`}
+                      value={`${option.engine}:${option.slug}`}
                     >
-                      {ENGINE_DISPLAY_NAMES[option.provider]} / {option.name}
+                      {ENGINE_DISPLAY_NAMES[option.engine]} / {option.name}
                     </SelectItem>
                   ))}
                 </SettingsSelectControl>
@@ -1525,7 +1522,7 @@ function SettingsRouteView() {
       case "skills":
         return <SkillsSettingsPanel />;
       case "usage":
-        return <ProviderUsageSettingsPanel />;
+        return <EngineUsageSettingsPanel />;
       default:
         return null;
     }
@@ -1618,8 +1615,8 @@ function SettingsRouteView() {
                     });
                   }}
                 />
-                <ProvidersSettingsPanel
-                  active={activeSection === "providers"}
+                <EnginesSettingsPanel
+                  active={activeSection === "engines"}
                   resetEpoch={resetEpoch}
                 />
                 <BuiltInToolsSettingsPanel active={activeSection === "built-in-tools"} />

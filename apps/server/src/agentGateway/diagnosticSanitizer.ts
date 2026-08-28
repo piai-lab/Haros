@@ -1,5 +1,5 @@
 import { redactSensitiveProcessArgs } from "../processArgumentRedaction.ts";
-import { isProviderCredentialKey } from "../providerChildEnvironment.ts";
+import { isEngineCredentialKey } from "../providerChildEnvironment.ts";
 
 const EXACT_SENSITIVE_KEYS = new Set([
   "authorization",
@@ -38,7 +38,7 @@ function keyTokens(key: string): ReadonlyArray<string> {
 }
 
 function isSensitiveKey(key: string): boolean {
-  if (isProviderCredentialKey(key)) return true;
+  if (isEngineCredentialKey(key)) return true;
   const normalized = key.replace(/[^a-z0-9]/giu, "").toLowerCase();
   if (EXACT_SENSITIVE_KEYS.has(normalized)) return true;
   const tokens = keyTokens(key);

@@ -22,11 +22,11 @@ import { OrchestrationEngineService } from "../../orchestration/Services/Orchest
 import { ProjectionSnapshotQuery } from "../../orchestration/Services/ProjectionSnapshotQuery.ts";
 import { SqlitePersistenceMemory } from "../../persistence/Layers/Sqlite.ts";
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
-import { ProviderDiscoveryService } from "../../provider/Services/ProviderDiscoveryService.ts";
-import { ProviderHealth } from "../../provider/Services/ProviderHealth.ts";
-import { ProviderExecutionCapabilities } from "../../provider/Services/ProviderExecutionCapabilities.ts";
+import { EngineDiscoveryService } from "../../provider/Services/EngineDiscoveryService.ts";
+import { EngineHealth } from "../../provider/Services/EngineHealth.ts";
+import { EngineExecutionCapabilities } from "../../provider/Services/EngineExecutionCapabilities.ts";
 import { resolveProviderExecutionCapabilities } from "../../provider/executionCapabilityProjection.ts";
-import { providerExecutionStructure } from "../../provider/providerExecutionStructure.ts";
+import { engineExecutionStructure } from "../../provider/engineExecutionStructure.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { serveExternalMcpStdio, writeExternalMcpClientCredential } from "../bridge.ts";
 import {
@@ -51,7 +51,7 @@ function projectShell(workspaceRoot: string): OrchestrationProjectShell {
     kind: "project",
     title: "External MCP project",
     workspaceRoot,
-    defaultModelSelection: null,
+    defaultEngineSelection: null,
     scripts: [],
     isPinned: false,
     createdAt: NOW,
@@ -155,7 +155,7 @@ describe("external MCP gateway stdio flow", () => {
               id: command.threadId,
               projectId: command.projectId,
               title: command.title,
-              modelSelection: command.modelSelection,
+              engineSelection: command.engineSelection,
               runtimeMode: command.runtimeMode,
               interactionMode: command.interactionMode,
               envMode: command.envMode,
@@ -278,10 +278,10 @@ describe("external MCP gateway stdio flow", () => {
       deleteBranchIfUnchanged: () => Effect.void,
     } as never);
 
-    const providerDiscoveryLayer = Layer.succeed(ProviderDiscoveryService, {
-      listModels: ({ provider }: { readonly provider: string }) =>
+    const engineDiscoveryLayer = Layer.succeed(EngineDiscoveryService, {
+      listModels: ({ engine }: { readonly engine: string }) =>
         Effect.succeed({
-          models: provider === "codex" ? [{ slug: "gpt-5.5", name: "GPT-5.5" }] : [],
+          models: engine === "codex" ? [{ slug: "gpt-5.5", name: "GPT-5.5" }] : [],
           source: "test",
         }),
     } as never);
@@ -295,17 +295,17 @@ describe("external MCP gateway stdio flow", () => {
       "kilo",
       "opencode",
       "pi",
-    ].map((provider) => ({
-      provider: provider as ServerProviderStatus["provider"],
+    ].map((engine) => ({
+      engine: engine as ServerProviderStatus["engine"],
       status: "ready",
       available: true,
       authStatus: "authenticated",
       checkedAt: NOW,
     }));
-    const providerHealthLayer = Layer.succeed(ProviderHealth, {
+    const providerHealthLayer = Layer.succeed(EngineHealth, {
       getStatuses: Effect.succeed(providerStatuses),
       refresh: Effect.succeed(providerStatuses),
-      updateProvider: () => Effect.die("not used"),
+      updateEngine: () => Effect.die("not used"),
       streamChanges: Stream.empty,
     } as never);
     const projectionTurnsLayer = Layer.succeed(ProjectionTurnRepository, {
@@ -336,17 +336,17 @@ describe("external MCP gateway stdio flow", () => {
       Layer.provide(snapshotLayer),
       Layer.provide(engineLayer),
       Layer.provide(gitLayer),
-      Layer.provide(providerDiscoveryLayer),
+      Layer.provide(engineDiscoveryLayer),
       Layer.provide(providerHealthLayer),
       Layer.provide(
-        Layer.succeed(ProviderExecutionCapabilities, {
-          get: (modelSelection) =>
+        Layer.succeed(EngineExecutionCapabilities, {
+          get: (engineSelection) =>
             Effect.succeed(
               resolveProviderExecutionCapabilities({
-                modelSelection,
-                adapterCapabilities: providerExecutionStructure(modelSelection.provider),
+                engineSelection,
+                adapterCapabilities: engineExecutionStructure(engineSelection.engine),
                 providerStatus: {
-                  provider: modelSelection.provider,
+                  engine: engineSelection.engine,
                   status: "ready",
                   available: true,
                   authStatus: "authenticated",
@@ -463,7 +463,7 @@ describe("external MCP gateway stdio flow", () => {
               arguments: {
                 requestId: "external-e2e-request",
                 projectId: PROJECT_ID,
-                provider: "codex",
+                engine: "codex",
                 model: "gpt-5.5",
                 prompt,
               },

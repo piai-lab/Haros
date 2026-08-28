@@ -32,7 +32,7 @@ export interface GrokAcpRuntimeInput extends Omit<
   readonly runtimeMode: RuntimeMode;
 }
 
-export interface GrokAcpModelSelectionErrorContext {
+export interface GrokAcpEngineSelectionErrorContext {
   readonly cause: AcpErrors.AcpError;
   readonly method: "session/set_config_option";
 }
@@ -125,7 +125,7 @@ export function buildGrokAcpSpawnInput(
     command: grokSettings?.binaryPath || "grok",
     args,
     cwd,
-    env: buildProviderChildEnvironment({ provider: "grok" }),
+    env: buildProviderChildEnvironment({ engine: "grok" }),
   };
 }
 
@@ -213,14 +213,14 @@ export const makeGrokAcpRuntime = (
     return ServiceMap.getUnsafe(acpContext, AcpSessionRuntime);
   });
 
-export function applyGrokAcpModelSelection<E>(input: {
+export function applyGrokAcpEngineSelection<E>(input: {
   readonly runtime: Pick<
     AcpSessionRuntimeShape,
     "getConfigOptions" | "setConfigOption" | "setModel"
   >;
   readonly model: string;
   readonly options?: GrokModelOptions | null | undefined;
-  readonly mapError: (context: GrokAcpModelSelectionErrorContext) => E;
+  readonly mapError: (context: GrokAcpEngineSelectionErrorContext) => E;
 }): Effect.Effect<void, E> {
   void input;
   // Grok ACP 0.1.210 advertises models in initialize/session responses but does

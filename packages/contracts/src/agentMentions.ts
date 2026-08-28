@@ -1,7 +1,7 @@
 /**
  * Agent Mentions - @alias(task) syntax for subagent delegation.
  *
- * Provides provider-aware alias metadata used by the composer UI and provider runtimes.
+ * Provides engine-aware alias metadata used by the composer UI and engine runtimes.
  */
 
 import type { EngineKind } from "./orchestration";
@@ -10,19 +10,19 @@ import type { ModelSlug } from "./model";
 type AgentAliasColor = "violet" | "fuchsia" | "teal" | "cyan" | "amber" | "orange";
 
 interface BaseAgentAliasDefinition {
-  readonly provider: EngineKind;
+  readonly engine: EngineKind;
   readonly displayName: string;
   readonly color: AgentAliasColor;
 }
 
 export interface CodexAgentAliasDefinition extends BaseAgentAliasDefinition {
-  readonly provider: "codex";
+  readonly engine: "codex";
   readonly kind: "model";
   readonly model: ModelSlug;
 }
 
 export interface ClaudeSubagentAliasDefinition extends BaseAgentAliasDefinition {
-  readonly provider: "claude";
+  readonly engine: "claude";
   readonly kind: "claude-subagent";
   readonly agentName: string;
   readonly description: string;
@@ -42,70 +42,70 @@ const OPENCODE_AGENT_MENTION_ALIASES: Record<string, AgentAliasDefinition> = {};
 
 const CODEX_AGENT_MENTION_ALIASES: Record<string, CodexAgentAliasDefinition> = {
   "5.5": {
-    provider: "codex",
+    engine: "codex",
     kind: "model",
     model: "gpt-5.5",
     displayName: "GPT-5.5",
     color: "violet",
   },
   "5.4": {
-    provider: "codex",
+    engine: "codex",
     kind: "model",
     model: "gpt-5.4",
     displayName: "GPT-5.4",
     color: "violet",
   },
   mini: {
-    provider: "codex",
+    engine: "codex",
     kind: "model",
     model: "gpt-5.4-mini",
     displayName: "GPT-5.4 Mini",
     color: "fuchsia",
   },
   "5.4-mini": {
-    provider: "codex",
+    engine: "codex",
     kind: "model",
     model: "gpt-5.4-mini",
     displayName: "GPT-5.4 Mini",
     color: "fuchsia",
   },
   codex: {
-    provider: "codex",
+    engine: "codex",
     kind: "model",
     model: "gpt-5.3-codex",
     displayName: "GPT-5.3 Codex",
     color: "teal",
   },
   "5.3-codex": {
-    provider: "codex",
+    engine: "codex",
     kind: "model",
     model: "gpt-5.3-codex",
     displayName: "GPT-5.3 Codex",
     color: "teal",
   },
   spark: {
-    provider: "codex",
+    engine: "codex",
     kind: "model",
     model: "gpt-5.3-codex-spark",
     displayName: "GPT-5.3 Codex Spark",
     color: "cyan",
   },
   "5.3-spark": {
-    provider: "codex",
+    engine: "codex",
     kind: "model",
     model: "gpt-5.3-codex-spark",
     displayName: "GPT-5.3 Codex Spark",
     color: "cyan",
   },
   "5.2": {
-    provider: "codex",
+    engine: "codex",
     kind: "model",
     model: "gpt-5.2",
     displayName: "GPT-5.2",
     color: "amber",
   },
   "5.2-codex": {
-    provider: "codex",
+    engine: "codex",
     kind: "model",
     model: "gpt-5.2-codex",
     displayName: "GPT-5.2 Codex",
@@ -115,7 +115,7 @@ const CODEX_AGENT_MENTION_ALIASES: Record<string, CodexAgentAliasDefinition> = {
 
 const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition> = {
   explore: {
-    provider: "claude",
+    engine: "claude",
     kind: "claude-subagent",
     agentName: "explore",
     displayName: "Explore",
@@ -128,7 +128,7 @@ const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition
     model: "haiku",
   },
   review: {
-    provider: "claude",
+    engine: "claude",
     kind: "claude-subagent",
     agentName: "review",
     displayName: "Code Review",
@@ -141,7 +141,7 @@ const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition
     model: "sonnet",
   },
   reviewer: {
-    provider: "claude",
+    engine: "claude",
     kind: "claude-subagent",
     agentName: "review",
     displayName: "Code Review",
@@ -154,7 +154,7 @@ const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition
     model: "sonnet",
   },
   build: {
-    provider: "claude",
+    engine: "claude",
     kind: "claude-subagent",
     agentName: "build",
     displayName: "Implementer",
@@ -167,7 +167,7 @@ const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition
     model: "sonnet",
   },
   implement: {
-    provider: "claude",
+    engine: "claude",
     kind: "claude-subagent",
     agentName: "build",
     displayName: "Implementer",
@@ -180,7 +180,7 @@ const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition
     model: "sonnet",
   },
   plan: {
-    provider: "claude",
+    engine: "claude",
     kind: "claude-subagent",
     agentName: "plan",
     displayName: "Planner",
@@ -193,7 +193,7 @@ const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition
     model: "sonnet",
   },
   planner: {
-    provider: "claude",
+    engine: "claude",
     kind: "claude-subagent",
     agentName: "plan",
     displayName: "Planner",
@@ -249,12 +249,12 @@ function mapAgentEntries(input: Record<string, AgentAliasDefinition>): ResolvedA
 }
 
 /**
- * Get all available agent aliases for a provider. When no provider is passed,
+ * Get all available agent aliases for a engine. When no engine is passed,
  * returns the global union for parsing and validation helpers.
  */
-export function getAgentMentionAliases(provider?: EngineKind): ResolvedAgentAlias[] {
-  if (provider) {
-    return mapAgentEntries(AGENT_MENTION_ALIASES_BY_PROVIDER[provider]);
+export function getAgentMentionAliases(engine?: EngineKind): ResolvedAgentAlias[] {
+  if (engine) {
+    return mapAgentEntries(AGENT_MENTION_ALIASES_BY_PROVIDER[engine]);
   }
 
   return Object.values(AGENT_MENTION_ALIASES_BY_PROVIDER).flatMap((definitions) =>
@@ -263,13 +263,13 @@ export function getAgentMentionAliases(provider?: EngineKind): ResolvedAgentAlia
 }
 
 /**
- * Get the preferred aliases shown in autocomplete for a provider.
+ * Get the preferred aliases shown in autocomplete for a engine.
  */
-export function getAgentMentionAutocompleteAliases(provider: EngineKind): ResolvedAgentAlias[] {
-  return AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_PROVIDER[provider].map((alias) => {
-    const definition = AGENT_MENTION_ALIASES_BY_PROVIDER[provider][alias];
+export function getAgentMentionAutocompleteAliases(engine: EngineKind): ResolvedAgentAlias[] {
+  return AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_PROVIDER[engine].map((alias) => {
+    const definition = AGENT_MENTION_ALIASES_BY_PROVIDER[engine][alias];
     if (!definition) {
-      throw new Error(`Unknown autocomplete alias for ${provider}: ${alias}`);
+      throw new Error(`Unknown autocomplete alias for ${engine}: ${alias}`);
     }
 
     return Object.assign({ alias }, definition);
@@ -277,15 +277,12 @@ export function getAgentMentionAutocompleteAliases(provider: EngineKind): Resolv
 }
 
 /**
- * Resolve an agent alias. When a provider is passed, only provider-specific aliases are considered.
+ * Resolve an agent alias. When a engine is passed, only engine-specific aliases are considered.
  */
-export function resolveAgentAlias(
-  alias: string,
-  provider?: EngineKind,
-): AgentAliasDefinition | null {
+export function resolveAgentAlias(alias: string, engine?: EngineKind): AgentAliasDefinition | null {
   const normalized = alias.toLowerCase();
-  if (provider) {
-    return AGENT_MENTION_ALIASES_BY_PROVIDER[provider][normalized] ?? null;
+  if (engine) {
+    return AGENT_MENTION_ALIASES_BY_PROVIDER[engine][normalized] ?? null;
   }
 
   for (const definitions of Object.values(AGENT_MENTION_ALIASES_BY_PROVIDER)) {
@@ -297,13 +294,13 @@ export function resolveAgentAlias(
   return null;
 }
 
-export function isValidAgentAlias(alias: string, provider?: EngineKind): boolean {
-  return resolveAgentAlias(alias, provider) !== null;
+export function isValidAgentAlias(alias: string, engine?: EngineKind): boolean {
+  return resolveAgentAlias(alias, engine) !== null;
 }
 
-export function getAgentAliasNames(provider?: EngineKind): string[] {
-  if (provider) {
-    return Object.keys(AGENT_MENTION_ALIASES_BY_PROVIDER[provider]);
+export function getAgentAliasNames(engine?: EngineKind): string[] {
+  if (engine) {
+    return Object.keys(AGENT_MENTION_ALIASES_BY_PROVIDER[engine]);
   }
 
   return Object.values(AGENT_MENTION_ALIASES_BY_PROVIDER).flatMap((definitions) =>

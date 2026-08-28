@@ -28,7 +28,7 @@ export type FeedbackCategory = (typeof FEEDBACK_CATEGORIES)[number]["value"];
 const UNCATEGORIZED_LEAD = "I have some feedback";
 
 export interface FeedbackThreadContext {
-  provider: string | null;
+  engine: string | null;
   model: string | null;
   projectKind: string | null;
   environmentMode: string | null;
@@ -122,16 +122,16 @@ export function formatFeedbackSummary(input: {
   const { diagnostics } = input;
   const category = FEEDBACK_CATEGORIES.find((option) => option.value === input.category);
   const lead = category?.lead ?? UNCATEGORIZED_LEAD;
-  const usageContext = diagnostics.provider
+  const usageContext = diagnostics.engine
     ? diagnostics.model
-      ? `, using ${diagnostics.provider} with ${diagnostics.model}`
-      : `, using ${diagnostics.provider}`
+      ? `, using ${diagnostics.engine} with ${diagnostics.model}`
+      : `, using ${diagnostics.engine}`
     : " outside an active chat";
 
   const rows: Array<[string, string | null]> = [
     ["Report type", category?.label ?? "Unspecified"],
     ["App version", diagnostics.appVersion],
-    ["Provider", diagnostics.provider],
+    ["Engine", diagnostics.engine],
     ["Model", diagnostics.model],
     ["Project kind", diagnostics.projectKind],
     ["Environment mode", diagnostics.environmentMode],
@@ -186,7 +186,7 @@ export function buildFeedbackSubmission(input: {
     throw new TypeError("Contact email is invalid.");
   }
   const diagnostics: FeedbackDiagnostics = {
-    provider: input.context.provider,
+    engine: input.context.engine,
     model: input.context.model,
     projectKind: input.context.projectKind,
     environmentMode: input.context.environmentMode,
@@ -300,7 +300,7 @@ function normalizeFeedbackDiagnostics(value: unknown): FeedbackDiagnostics {
   }
 
   return {
-    provider: requireBoundedString(candidate.provider, "Provider", 128, { nullable: true }),
+    engine: requireBoundedString(candidate.engine, "Engine", 128, { nullable: true }),
     model: requireBoundedString(candidate.model, "Model", 256, { nullable: true }),
     projectKind: requireNullableEnum(candidate.projectKind, "projectKind"),
     environmentMode: requireNullableEnum(candidate.environmentMode, "environmentMode"),

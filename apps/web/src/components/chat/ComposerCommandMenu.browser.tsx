@@ -78,12 +78,12 @@ describe("ComposerCommandMenu empty states", () => {
     const menu = await mountMenu({
       isLoading: false,
       triggerKind: "slash-command",
-      emptyStateText: "No commands are available for this provider.",
+      emptyStateText: "No commands are available for this engine.",
     });
 
     try {
       await expect
-        .element(page.getByText("No commands are available for this provider.", { exact: true }))
+        .element(page.getByText("No commands are available for this engine.", { exact: true }))
         .toBeVisible();
       expect(document.body.textContent).not.toContain("Loading commands…");
     } finally {
@@ -128,12 +128,12 @@ describe("ComposerCommandMenu empty states", () => {
         description: "设置当前任务的持久目标",
       },
       ...(["status", "model", "compact"] as const).map((command) => ({
-        id: `provider-command:codex:${command}`,
-        type: "provider-native-command" as const,
-        provider: "codex" as const,
+        id: `engine-command:codex:${command}`,
+        type: "engine-native-command" as const,
+        engine: "codex" as const,
         command,
         label: `/${command}`,
-        description: `Provider native ${command}`,
+        description: `Engine native ${command}`,
       })),
     ];
     const menu = await mountMenu({

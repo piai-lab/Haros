@@ -9,8 +9,8 @@ import type { GitActionProgressEvent } from "@harnessos/contracts";
 import type {
   GitPullRequestCheck,
   GitPullRequestComment,
-  ModelSelection,
-  ProviderStartOptions,
+  EngineSelection,
+  EngineStartOptions,
 } from "@harnessos/contracts";
 
 import { GitCommandError, GitHubCliError, TextGenerationError } from "../Errors.ts";
@@ -38,10 +38,10 @@ interface FakeGitTextGeneration {
     stagedSummary: string;
     stagedPatch: string;
     codexHomePath?: string;
-    providerOptions?: ProviderStartOptions;
+    engineOptions?: EngineStartOptions;
     includeBranch?: boolean;
     model?: string;
-    modelSelection?: ModelSelection;
+    engineSelection?: EngineSelection;
   }) => Effect.Effect<
     { subject: string; body: string; branch?: string | undefined },
     TextGenerationError
@@ -55,31 +55,31 @@ interface FakeGitTextGeneration {
     diffPatch: string;
     prTemplate?: string | undefined;
     codexHomePath?: string;
-    providerOptions?: ProviderStartOptions;
+    engineOptions?: EngineStartOptions;
     model?: string;
-    modelSelection?: ModelSelection;
+    engineSelection?: EngineSelection;
   }) => Effect.Effect<{ title: string; body: string }, TextGenerationError>;
   generateDiffSummary: (input: {
     cwd: string;
     patch: string;
     codexHomePath?: string;
-    providerOptions?: ProviderStartOptions;
+    engineOptions?: EngineStartOptions;
     model?: string;
-    modelSelection?: ModelSelection;
+    engineSelection?: EngineSelection;
   }) => Effect.Effect<{ summary: string }, TextGenerationError>;
   generateBranchName: (input: {
     cwd: string;
     message: string;
-    providerOptions?: ProviderStartOptions;
+    engineOptions?: EngineStartOptions;
     model?: string;
-    modelSelection?: ModelSelection;
+    engineSelection?: EngineSelection;
   }) => Effect.Effect<{ branch: string }, TextGenerationError>;
   generateThreadTitle: (input: {
     cwd: string;
     message: string;
-    providerOptions?: ProviderStartOptions;
+    engineOptions?: EngineStartOptions;
     model?: string;
-    modelSelection?: ModelSelection;
+    engineSelection?: EngineSelection;
   }) => Effect.Effect<{ title: string }, TextGenerationError>;
   generateThreadRecap: (
     input: ThreadRecapGenerationInput,

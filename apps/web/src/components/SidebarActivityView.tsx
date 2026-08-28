@@ -1,6 +1,6 @@
 // FILE: SidebarActivityView.tsx
 // Purpose: Task-feed sidebar surface — every thread is a 2-line task row
-//          (provider + title / project + branch) grouped by status, with settle.
+//          (engine + title / project + branch) grouped by status, with settle.
 // Layer: Sidebar UI component
 // Exports: SidebarActivityView
 
@@ -42,7 +42,7 @@ import { resolveThreadPullRequestFallback } from "../hooks/useThreadPullRequests
 import type { Project, SidebarThreadSummary } from "../types";
 import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
 import { FolderClosed } from "./FolderClosed";
-import { ProviderIcon } from "./ProviderIcon";
+import { EngineIcon } from "./EngineIcon";
 import { PrStateChip } from "./pullRequest/PrStateChip";
 import {
   createSidebarThreadHoverAnchorId,
@@ -155,7 +155,7 @@ function ActivityThreadRow({
   renderHoverCard: (anchorId: string) => ReactNode;
 }) {
   const { t } = useI18n();
-  const provider = thread.session?.provider ?? thread.modelSelection.provider;
+  const engine = thread.session?.engine ?? thread.engineSelection.engine;
   const displayTitle = resolveThreadDisplayTitle({
     title: thread.title,
     isTerminal,
@@ -221,8 +221,8 @@ function ActivityThreadRow({
             {isTerminal ? (
               <TerminalIcon className="size-3 shrink-0" aria-hidden />
             ) : (
-              <ProviderIcon
-                provider={provider}
+              <EngineIcon
+                engine={engine}
                 className="size-3 shrink-0"
                 fallback={
                   <span className="size-3 shrink-0 rounded-full border border-dashed border-muted-foreground/40" />

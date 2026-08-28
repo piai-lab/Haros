@@ -69,7 +69,7 @@ import {
   OmniMindModelServices,
   type OmniMindModelServicesShape,
 } from "../Services/OmniMindModelServices.ts";
-import { ProviderService } from "../Services/ProviderService.ts";
+import { EngineService } from "../Services/EngineService.ts";
 
 const MAX_SAFE_LABEL_LENGTH = 256;
 const MAX_SAFE_MODEL_ID_LENGTH = 512;
@@ -261,9 +261,7 @@ function customProviderConfig(input: OmniMindCustomModelServiceConfigInput) {
 
 function clearOmittedCompatAfterApiChange(
   input: OmniMindCustomModelServiceConfigInput,
-  previous: ReturnType<
-    OARuntimeModule["ModelRuntime"]["prototype"]["getModelConfigProvider"]
-  >,
+  previous: ReturnType<OARuntimeModule["ModelRuntime"]["prototype"]["getModelConfigProvider"]>,
 ): OmniMindCustomModelServiceConfigInput {
   if (!previous || !isCustomApiProtocol(previous.api)) return input;
   const previousModels = new Map((previous.models ?? []).map((model) => [model.id, model]));
@@ -370,9 +368,7 @@ function isPublicCustomModelCost(cost: {
 
 function projectCustomConfig(
   serviceId: string,
-  provider: ReturnType<
-    OARuntimeModule["ModelRuntime"]["prototype"]["getModelConfigProvider"]
-  >,
+  provider: ReturnType<OARuntimeModule["ModelRuntime"]["prototype"]["getModelConfigProvider"]>,
   headerMetadata: ReturnType<
     OARuntimeModule["ModelRuntime"]["prototype"]["getModelConfigProviderHeaderMetadata"]
   >,
@@ -798,12 +794,8 @@ function environmentVariablesFromAuthStatus(input: {
     : undefined;
 }
 
-type OmniMindModelRuntime = Awaited<
-  ReturnType<OARuntimeModule["ModelRuntime"]["create"]>
->;
-type OmniMindExtensionServices = Awaited<
-  ReturnType<OARuntimeModule["createAgentSessionServices"]>
->;
+type OmniMindModelRuntime = Awaited<ReturnType<OARuntimeModule["ModelRuntime"]["create"]>>;
+type OmniMindExtensionServices = Awaited<ReturnType<OARuntimeModule["createAgentSessionServices"]>>;
 
 async function loadIntentScopedExtensionServices(input: {
   readonly sdk: OARuntimeModule;
@@ -1141,7 +1133,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
     OmniMindModelServices,
     Effect.gen(function* () {
       const config = yield* ServerConfig;
-      const providerService = yield* ProviderService;
+      const providerService = yield* EngineService;
       const authRequests = new Map<string, ModelServiceAuthRequest>();
       const oauthLogoDataUrl = loadOmniMindOAuthLogoDataUrl(config.staticDir);
       let mutationTail: Promise<void> = Promise.resolve();
@@ -2180,7 +2172,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 const modelPrefix = `${input.serviceId}/`;
                 const ownsLiveSession = sessions.some(
                   (session) =>
-                    session.provider === "oa" &&
+                    session.engine === "oa" &&
                     session.model?.startsWith(modelPrefix) === true &&
                     (session.status === "connecting" ||
                       session.status === "ready" ||

@@ -36,7 +36,7 @@ describe("dispatchKanbanDraftThread", () => {
         threadId,
         projectId,
         thread: null,
-        defaultProvider: "codex",
+        defaultEngine: "codex",
         assistantDeliveryMode: "streaming",
       }),
     ).resolves.toEqual({ kind: "open-thread", reason: "model-unavailable" });

@@ -39,15 +39,15 @@ describe("composerDraftStore queued model binding", () => {
       ...makeQueuedChatTurn("queued-claude"),
       selectedProvider: "claude",
       selectedModel: "claude-sonnet-4-6",
-      modelSelection: {
-        provider: "claude",
+      engineSelection: {
+        engine: "claude",
         model: "claude-sonnet-4-6",
         options: { effort: "high" },
       },
     });
 
-    store.setModelSelection(threadId, {
-      provider: "codex",
+    store.setEngineSelection(threadId, {
+      engine: "codex",
       model: "gpt-5.4",
       options: { reasoningEffort: "xhigh", fastMode: true },
     });
@@ -57,8 +57,8 @@ describe("composerDraftStore queued model binding", () => {
     ).toMatchObject({
       selectedProvider: "claude",
       selectedModel: "claude-sonnet-4-6",
-      modelSelection: {
-        provider: "claude",
+      engineSelection: {
+        engine: "claude",
         model: "claude-sonnet-4-6",
         options: { effort: "high" },
       },
@@ -110,7 +110,7 @@ describe("composerDraftStore clearComposerContent", () => {
     expect(revokeSpy).not.toHaveBeenCalledWith("blob:optimistic");
   });
 
-  it("clears selected provider references with composer content", () => {
+  it("clears selected engine references with composer content", () => {
     const store = useComposerDraftStore.getState();
 
     store.setPrompt(threadId, "Use @linear and /check-code");

@@ -252,8 +252,8 @@ describe("store projection", () => {
         id: threadId,
         projectId,
         title: "Stale project thread",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5.3-codex",
         },
         runtimeMode: DEFAULT_RUNTIME_MODE,
@@ -307,7 +307,7 @@ describe("store projection", () => {
         id: ProjectId.makeUnsafe("project-new"),
         title: "Server Name",
         workspaceRoot: "/tmp/shared-root",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         scripts: [],
         createdAt: "2026-02-27T00:00:00.000Z",
         updatedAt: "2026-02-27T00:05:00.000Z",
@@ -458,8 +458,8 @@ describe("store projection", () => {
         id: threadId,
         projectId: ProjectId.makeUnsafe("project-1"),
         title: "Thread",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5.3-codex",
         },
         runtimeMode: DEFAULT_RUNTIME_MODE,
@@ -568,8 +568,8 @@ describe("store projection", () => {
         id: threadId,
         projectId: ProjectId.makeUnsafe("project-1"),
         title: "Thread",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5.3-codex",
         },
         runtimeMode: DEFAULT_RUNTIME_MODE,
@@ -742,8 +742,8 @@ describe("store projection", () => {
     const initialState = makeState(makeThread());
     const readModel = makeReadModel(
       makeReadModelThread({
-        modelSelection: {
-          provider: "claude",
+        engineSelection: {
+          engine: "claude",
           model: "claude-opus-4-6",
         },
       }),
@@ -751,15 +751,15 @@ describe("store projection", () => {
 
     const next = syncServerReadModel(initialState, readModel);
 
-    expect(threadsOf(next)[0]?.modelSelection.model).toBe("claude-opus-4-6");
+    expect(threadsOf(next)[0]?.engineSelection.model).toBe("claude-opus-4-6");
   });
 
-  it("resolves claude aliases when session provider is claudeAgent", () => {
+  it("resolves claude aliases when session engine is claudeAgent", () => {
     const initialState = makeState(makeThread());
     const readModel = makeReadModel(
       makeReadModelThread({
-        modelSelection: {
-          provider: "claude",
+        engineSelection: {
+          engine: "claude",
           model: "sonnet",
         },
         session: {
@@ -776,15 +776,15 @@ describe("store projection", () => {
 
     const next = syncServerReadModel(initialState, readModel);
 
-    expect(threadsOf(next)[0]?.modelSelection.model).toBe("claude-sonnet-5");
+    expect(threadsOf(next)[0]?.engineSelection.model).toBe("claude-sonnet-5");
   });
 
-  it("preserves OmniMind Agent as the active session provider", () => {
+  it("preserves OmniMind Agent as the active session engine", () => {
     const initialState = makeState(makeThread());
     const readModel = makeReadModel(
       makeReadModelThread({
-        modelSelection: {
-          provider: "oa",
+        engineSelection: {
+          engine: "oa",
           model: "deepseek/deepseek-chat",
         },
         session: {
@@ -801,16 +801,16 @@ describe("store projection", () => {
 
     const next = syncServerReadModel(initialState, readModel);
 
-    expect(threadsOf(next)[0]?.modelSelection.provider).toBe("oa");
-    expect(threadsOf(next)[0]?.session?.provider).toBe("oa");
+    expect(threadsOf(next)[0]?.engineSelection.engine).toBe("oa");
+    expect(threadsOf(next)[0]?.session?.engine).toBe("oa");
   });
 
-  it("preserves OpenCode as the active session provider", () => {
+  it("preserves OpenCode as the active session engine", () => {
     const initialState = makeState(makeThread());
     const readModel = makeReadModel(
       makeReadModelThread({
-        modelSelection: {
-          provider: "opencode",
+        engineSelection: {
+          engine: "opencode",
           model: "openrouter/gpt-oss-120b:free",
         },
         session: {
@@ -827,16 +827,16 @@ describe("store projection", () => {
 
     const next = syncServerReadModel(initialState, readModel);
 
-    expect(threadsOf(next)[0]?.modelSelection.provider).toBe("opencode");
-    expect(threadsOf(next)[0]?.session?.provider).toBe("opencode");
+    expect(threadsOf(next)[0]?.engineSelection.engine).toBe("opencode");
+    expect(threadsOf(next)[0]?.session?.engine).toBe("opencode");
   });
 
-  it("preserves Pi as the active session provider", () => {
+  it("preserves Pi as the active session engine", () => {
     const initialState = makeState(makeThread());
     const readModel = makeReadModel(
       makeReadModelThread({
-        modelSelection: {
-          provider: "pi",
+        engineSelection: {
+          engine: "pi",
           model: "anthropic/claude-sonnet-4-5",
         },
         session: {
@@ -853,16 +853,16 @@ describe("store projection", () => {
 
     const next = syncServerReadModel(initialState, readModel);
 
-    expect(threadsOf(next)[0]?.modelSelection.provider).toBe("pi");
-    expect(threadsOf(next)[0]?.session?.provider).toBe("pi");
+    expect(threadsOf(next)[0]?.engineSelection.engine).toBe("pi");
+    expect(threadsOf(next)[0]?.session?.engine).toBe("pi");
   });
 
   it("preserves exact OpenCode thread model slugs from the read model", () => {
     const initialState = makeState(makeThread());
     const readModel = makeReadModel(
       makeReadModelThread({
-        modelSelection: {
-          provider: "opencode",
+        engineSelection: {
+          engine: "opencode",
           model: "openai/gpt-5.4",
         },
       }),
@@ -870,7 +870,7 @@ describe("store projection", () => {
 
     const next = syncServerReadModel(initialState, readModel);
 
-    expect(threadsOf(next)[0]?.modelSelection.model).toBe("openai/gpt-5.4");
+    expect(threadsOf(next)[0]?.engineSelection.model).toBe("openai/gpt-5.4");
   });
 
   it("preserves exact OpenCode project default model slugs from the read model", () => {
@@ -879,8 +879,8 @@ describe("store projection", () => {
       ...makeReadModel(makeReadModelThread({})),
       projects: [
         makeReadModelProject({
-          defaultModelSelection: {
-            provider: "opencode",
+          defaultEngineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         }),
@@ -889,7 +889,7 @@ describe("store projection", () => {
 
     const next = syncServerReadModel(initialState, readModel);
 
-    expect(next.projects[0]?.defaultModelSelection?.model).toBe("openai/gpt-5.4");
+    expect(next.projects[0]?.defaultEngineSelection?.model).toBe("openai/gpt-5.4");
   });
 
   it("preserves project and thread updatedAt timestamps from the read model", () => {
@@ -913,12 +913,12 @@ describe("store projection", () => {
     const liveState = makeState(
       makeThread({
         id: threadId,
-        modelSelection: {
-          provider: "claude",
+        engineSelection: {
+          engine: "claude",
           model: "claude-opus-4-7",
         },
         session: {
-          provider: "claude",
+          engine: "claude",
           status: "running",
           orchestrationStatus: "running",
           activeTurnId: turnId,
@@ -959,8 +959,8 @@ describe("store projection", () => {
       liveState,
       makeReadModelThread({
         id: threadId,
-        modelSelection: {
-          provider: "claude",
+        engineSelection: {
+          engine: "claude",
           model: "claude-opus-4-7",
         },
         latestTurn: {
@@ -1065,12 +1065,12 @@ describe("store projection", () => {
     const liveState = makeState(
       makeThread({
         id: threadId,
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "running",
           orchestrationStatus: "running",
           activeTurnId: turnId,
@@ -1112,8 +1112,8 @@ describe("store projection", () => {
       liveState,
       makeReadModelThread({
         id: threadId,
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         latestTurn: {
@@ -1175,12 +1175,12 @@ describe("store projection", () => {
     const liveState = makeState(
       makeThread({
         id: threadId,
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "running",
           orchestrationStatus: "running",
           activeTurnId: staleTurnId,
@@ -1214,8 +1214,8 @@ describe("store projection", () => {
       liveState,
       makeReadModelThread({
         id: threadId,
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         latestTurn: {
@@ -1258,12 +1258,12 @@ describe("store projection", () => {
     const liveState = makeState(
       makeThread({
         id: threadId,
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "running",
           orchestrationStatus: "running",
           activeTurnId: liveTurnId,
@@ -1296,8 +1296,8 @@ describe("store projection", () => {
       liveState,
       makeReadModelThread({
         id: threadId,
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         latestTurn: {
@@ -1595,8 +1595,8 @@ describe("store projection", () => {
         id: threadId,
         projectId: ProjectId.makeUnsafe("project-1"),
         title: "Stale resurrected thread",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5.3-codex",
         },
         runtimeMode: DEFAULT_RUNTIME_MODE,
@@ -1644,8 +1644,8 @@ describe("store projection", () => {
         id: threadId,
         projectId: ProjectId.makeUnsafe("project-1"),
         title: "Rehydrated shell removed thread",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5.3-codex",
         },
         runtimeMode: DEFAULT_RUNTIME_MODE,
@@ -1676,8 +1676,8 @@ describe("store projection", () => {
       spaces: [],
       projects: [
         makeReadModelProject({
-          defaultModelSelection: {
-            provider: "codex",
+          defaultEngineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           updatedAt: "2026-02-27T00:00:00.000Z",
@@ -1685,8 +1685,8 @@ describe("store projection", () => {
       ],
       threads: [
         makeReadModelThread({
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           createdAt: "2026-02-13T00:00:00.000Z",
@@ -1835,7 +1835,7 @@ describe("deletion tombstone retirement", () => {
         id: deletedThreadId,
         projectId,
         title,
-        modelSelection: { provider: "codex", model: "gpt-5.3-codex" },
+        engineSelection: { engine: "codex", model: "gpt-5.3-codex" },
         runtimeMode: DEFAULT_RUNTIME_MODE,
         interactionMode: DEFAULT_INTERACTION_MODE,
         envMode: "local",
@@ -2042,7 +2042,7 @@ describe("deletion tombstone retirement", () => {
       id: deletedThreadId,
       projectId,
       title: "Base",
-      modelSelection: { provider: "codex", model: "gpt-5.3-codex" },
+      engineSelection: { engine: "codex", model: "gpt-5.3-codex" },
       runtimeMode: DEFAULT_RUNTIME_MODE,
       interactionMode: DEFAULT_INTERACTION_MODE,
       envMode: "local",
@@ -2131,7 +2131,7 @@ describe("deletion tombstone retirement", () => {
       makeThread({
         id: threadId,
         session: {
-          provider: "codex",
+          engine: "codex",
           status: "running",
           orchestrationStatus: "running",
           createdAt: "2026-02-27T00:00:00.000Z",
@@ -2148,8 +2148,8 @@ describe("deletion tombstone retirement", () => {
         id: threadId,
         projectId: ProjectId.makeUnsafe("project-1"),
         title: "Thread",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5.3-codex",
         },
         runtimeMode: DEFAULT_RUNTIME_MODE,

@@ -6,8 +6,8 @@ import type {
   GitActionProgressEvent,
   GitActionProgressPhase,
   GitStackedAction,
-  ModelSelection,
-  ProviderStartOptions,
+  EngineSelection,
+  EngineStartOptions,
 } from "@harnessos/contracts";
 import {
   resolveAutoFeatureBranchName,
@@ -80,9 +80,9 @@ interface BranchHeadContext {
 
 interface GitTextGenerationParams {
   textGenerationModel?: string | undefined;
-  textGenerationModelSelection?: ModelSelection | undefined;
+  textGenerationEngineSelection?: EngineSelection | undefined;
   codexHomePath?: string | undefined;
-  providerOptions?: ProviderStartOptions | undefined;
+  engineOptions?: EngineStartOptions | undefined;
 }
 
 interface FailedLocalHandoffRecovery {
@@ -1460,9 +1460,9 @@ export const makeGitManager = Effect.gen(function* () {
       patch,
       ...buildGitTextGenerationCallInput({
         textGenerationModel: input.textGenerationModel,
-        textGenerationModelSelection: input.textGenerationModelSelection,
+        textGenerationEngineSelection: input.textGenerationEngineSelection,
         codexHomePath: input.codexHomePath,
-        providerOptions: input.providerOptions,
+        engineOptions: input.engineOptions,
       }),
     });
 
@@ -2615,9 +2615,9 @@ The local stash entry was kept for recovery.`,
         const initialStatus = yield* gitCore.statusDetails(input.cwd);
         const textGenerationParams: GitTextGenerationParams = {
           textGenerationModel: input.textGenerationModel,
-          textGenerationModelSelection: input.textGenerationModelSelection,
+          textGenerationEngineSelection: input.textGenerationEngineSelection,
           codexHomePath: input.codexHomePath,
-          providerOptions: input.providerOptions,
+          engineOptions: input.engineOptions,
         };
         const wantsCommit = isCommitAction(input.action);
         const wantsPush =

@@ -147,7 +147,7 @@ export const deriveServerPaths = Effect.fn(function* (
   const dbPath = join(stateDir, "state.sqlite");
   const attachmentsDir = join(stateDir, "attachments");
   const logsDir = join(stateDir, "logs");
-  const providerLogsDir = join(logsDir, "provider");
+  const providerLogsDir = join(logsDir, "engine");
   return {
     stateDir,
     secretsDir,

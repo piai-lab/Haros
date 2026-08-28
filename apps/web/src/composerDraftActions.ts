@@ -3,11 +3,11 @@
 // Exports: Zustand state creator consumed by the public facade.
 
 import {
-  type ModelSelection,
+  type EngineSelection,
   type EngineKind,
   ENGINE_KINDS,
-  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
-  ProviderInteractionMode,
+  ENGINE_SEND_TURN_MAX_ATTACHMENTS,
+  EngineInteractionMode,
   RuntimeMode,
   ThreadId,
 } from "@harnessos/contracts";
@@ -60,11 +60,11 @@ import {
   terminalContextDedupKey,
 } from "./composerDraftDomain";
 import {
-  makeModelSelection,
-  normalizeModelSelection,
+  makeEngineSelection,
+  normalizeEngineSelection,
   normalizeProviderKind,
   normalizeProviderModelOptions,
-  reconcileProviderScopedModelSelection,
+  reconcileProviderScopedEngineSelection,
   stripNonStickyModelOptions,
 } from "./composerDraftModels";
 import { isComposerAppSnapCaptureSource } from "./lib/composerImageSource";
@@ -80,7 +80,7 @@ import {
   composerImageConsumesAttachmentSlot,
   effectiveComposerAttachmentCount,
 } from "./lib/composerAttachmentCapacity";
-import { buildModelSelection } from "./providerModelOptions";
+import { buildEngineSelection } from "./providerModelOptions";
 import { DEFAULT_INTERACTION_MODE, DEFAULT_RUNTIME_MODE } from "./types";
 
 function removeDraftThreadIfUnmapped(input: {
@@ -129,7 +129,7 @@ export const createComposerDraftStoreState =
     draftsByThreadId: {},
     draftThreadsByThreadId: {},
     projectDraftThreadIdByProjectId: {},
-    stickyModelSelectionByProvider: {},
+    stickyEngineSelectionByEngine: {},
     stickyActiveProvider: null,
     getDraftThreadByProjectId: (projectId, entryPoint = "chat") => {
       if (projectId.length === 0) {
@@ -492,25 +492,25 @@ export const createComposerDraftStoreState =
         };
       });
     },
-    setStickyModelSelection: (modelSelection) => {
-      const rawNormalized = normalizeModelSelection(modelSelection);
+    setStickyEngineSelection: (engineSelection) => {
+      const rawNormalized = normalizeEngineSelection(engineSelection);
       const normalized = rawNormalized ? stripNonStickyModelOptions(rawNormalized) : null;
       set((state) => {
         if (!normalized) {
           return state;
         }
-        const nextMap: Partial<Record<EngineKind, ModelSelection>> = {
-          ...state.stickyModelSelectionByProvider,
-          [normalized.provider]: normalized,
+        const nextMap: Partial<Record<EngineKind, EngineSelection>> = {
+          ...state.stickyEngineSelectionByEngine,
+          [normalized.engine]: normalized,
         };
-        if (Equal.equals(state.stickyModelSelectionByProvider, nextMap)) {
-          return state.stickyActiveProvider === normalized.provider
+        if (Equal.equals(state.stickyEngineSelectionByEngine, nextMap)) {
+          return state.stickyActiveProvider === normalized.engine
             ? state
-            : { stickyActiveProvider: normalized.provider };
+            : { stickyActiveProvider: normalized.engine };
         }
         return {
-          stickyModelSelectionByProvider: nextMap,
-          stickyActiveProvider: normalized.provider,
+          stickyEngineSelectionByEngine: nextMap,
+          stickyActiveProvider: normalized.engine,
         };
       });
     },
@@ -519,30 +519,30 @@ export const createComposerDraftStoreState =
         return;
       }
       set((state) => {
-        const stickyMap = state.stickyModelSelectionByProvider;
+        const stickyMap = state.stickyEngineSelectionByEngine;
         const stickyActiveProvider = state.stickyActiveProvider;
         if (Object.keys(stickyMap).length === 0 && stickyActiveProvider === null) {
           return state;
         }
         const existing = state.draftsByThreadId[threadId];
         const base = existing ?? createEmptyThreadDraft();
-        const nextMap = { ...base.modelSelectionByProvider };
-        for (const [provider, selection] of Object.entries(stickyMap)) {
+        const nextMap = { ...base.engineSelectionByEngine };
+        for (const [engine, selection] of Object.entries(stickyMap)) {
           if (selection) {
-            const current = nextMap[provider as EngineKind];
-            nextMap[provider as EngineKind] =
+            const current = nextMap[engine as EngineKind];
+            nextMap[engine as EngineKind] =
               current && current.model !== selection.model ? current : selection;
           }
         }
         if (
-          Equal.equals(base.modelSelectionByProvider, nextMap) &&
+          Equal.equals(base.engineSelectionByEngine, nextMap) &&
           base.activeProvider === stickyActiveProvider
         ) {
           return state;
         }
         const nextDraft: ComposerThreadDraftState = {
           ...base,
-          modelSelectionByProvider: nextMap,
+          engineSelectionByEngine: nextMap,
           activeProvider: stickyActiveProvider,
         };
         const nextDraftsByThreadId = { ...state.draftsByThreadId };
@@ -778,32 +778,32 @@ export const createComposerDraftStoreState =
         return { draftsByThreadId: nextDraftsByThreadId };
       });
     },
-    setModelSelection: (threadId, modelSelection) => {
+    setEngineSelection: (threadId, engineSelection) => {
       if (threadId.length === 0) {
         return;
       }
-      const normalized = normalizeModelSelection(modelSelection);
+      const normalized = normalizeEngineSelection(engineSelection);
       set((state) => {
         const existing = state.draftsByThreadId[threadId];
         if (!existing && normalized === null) {
           return state;
         }
         const base = existing ?? createEmptyThreadDraft();
-        const nextMap = { ...base.modelSelectionByProvider };
+        const nextMap = { ...base.engineSelectionByEngine };
         if (normalized) {
-          const current = nextMap[normalized.provider];
-          nextMap[normalized.provider] = reconcileProviderScopedModelSelection(normalized, current);
+          const current = nextMap[normalized.engine];
+          nextMap[normalized.engine] = reconcileProviderScopedEngineSelection(normalized, current);
         }
-        const nextActiveProvider = normalized?.provider ?? base.activeProvider;
+        const nextActiveProvider = normalized?.engine ?? base.activeProvider;
         if (
-          Equal.equals(base.modelSelectionByProvider, nextMap) &&
+          Equal.equals(base.engineSelectionByEngine, nextMap) &&
           base.activeProvider === nextActiveProvider
         ) {
           return state;
         }
         const nextDraft: ComposerThreadDraftState = {
           ...base,
-          modelSelectionByProvider: nextMap,
+          engineSelectionByEngine: nextMap,
           activeProvider: nextActiveProvider,
         };
         const nextDraftsByThreadId = { ...state.draftsByThreadId };
@@ -815,11 +815,11 @@ export const createComposerDraftStoreState =
         return { draftsByThreadId: nextDraftsByThreadId };
       });
     },
-    setActiveProviderAndSticky: (threadId, provider) => {
+    setActiveProviderAndSticky: (threadId, engine) => {
       if (threadId.length === 0) {
         return;
       }
-      const normalizedProvider = normalizeProviderKind(provider);
+      const normalizedProvider = normalizeProviderKind(engine);
       if (!normalizedProvider) {
         return;
       }
@@ -845,11 +845,11 @@ export const createComposerDraftStoreState =
         };
       });
     },
-    setModelSelectionAndSticky: (threadId, modelSelection) => {
-      get().setModelSelection(threadId, modelSelection);
+    setEngineSelectionAndSticky: (threadId, engineSelection) => {
+      get().setEngineSelection(threadId, engineSelection);
       const correctedSelection =
-        get().draftsByThreadId[threadId]?.modelSelectionByProvider[modelSelection.provider];
-      get().setStickyModelSelection(correctedSelection ?? modelSelection);
+        get().draftsByThreadId[threadId]?.engineSelectionByEngine[engineSelection.engine];
+      get().setStickyEngineSelection(correctedSelection ?? engineSelection);
     },
     setModelOptions: (threadId, modelOptions) => {
       if (threadId.length === 0) {
@@ -862,37 +862,37 @@ export const createComposerDraftStoreState =
           return state;
         }
         const base = existing ?? createEmptyThreadDraft();
-        const nextMap = { ...base.modelSelectionByProvider };
-        for (const provider of ENGINE_KINDS) {
-          // Only touch providers explicitly present in the input
-          if (!normalizedOpts || !(provider in normalizedOpts)) continue;
-          const opts = normalizedOpts[provider];
-          const current = nextMap[provider];
+        const nextMap = { ...base.engineSelectionByEngine };
+        for (const engine of ENGINE_KINDS) {
+          // Only touch engines explicitly present in the input
+          if (!normalizedOpts || !(engine in normalizedOpts)) continue;
+          const opts = normalizedOpts[engine];
+          const current = nextMap[engine];
           if (opts) {
-            const model = current?.model ?? getDefaultModel(provider);
+            const model = current?.model ?? getDefaultModel(engine);
             if (!model) continue;
-            nextMap[provider] = makeModelSelection(
-              provider,
+            nextMap[engine] = makeEngineSelection(
+              engine,
               model,
               opts,
-              current?.provider === "claude" ? current.supportsAutoMode : undefined,
+              current?.engine === "claude" ? current.supportsAutoMode : undefined,
             );
           } else if (current?.options) {
             // Remove options but keep the selection
-            nextMap[provider] = buildModelSelection(
-              provider,
+            nextMap[engine] = buildEngineSelection(
+              engine,
               current.model,
               undefined,
-              current.provider === "claude" ? current.supportsAutoMode : undefined,
+              current.engine === "claude" ? current.supportsAutoMode : undefined,
             );
           }
         }
-        if (Equal.equals(base.modelSelectionByProvider, nextMap)) {
+        if (Equal.equals(base.engineSelectionByEngine, nextMap)) {
           return state;
         }
         const nextDraft: ComposerThreadDraftState = {
           ...base,
-          modelSelectionByProvider: nextMap,
+          engineSelectionByEngine: nextMap,
         };
         const nextDraftsByThreadId = { ...state.draftsByThreadId };
         if (shouldRemoveDraft(nextDraft)) {
@@ -903,15 +903,15 @@ export const createComposerDraftStoreState =
         return { draftsByThreadId: nextDraftsByThreadId };
       });
     },
-    setProviderModelOptions: (threadId, provider, nextProviderOptions, options) => {
+    setProviderModelOptions: (threadId, engine, nextProviderOptions, options) => {
       if (threadId.length === 0) {
         return;
       }
-      const normalizedProvider = normalizeProviderKind(provider);
+      const normalizedProvider = normalizeProviderKind(engine);
       if (normalizedProvider === null) {
         return;
       }
-      // Normalize just this provider's options
+      // Normalize just this engine's options
       const normalizedOpts = normalizeProviderModelOptions(
         { [normalizedProvider]: nextProviderOptions },
         normalizedProvider,
@@ -924,26 +924,26 @@ export const createComposerDraftStoreState =
         const existing = state.draftsByThreadId[threadId];
         const base = existing ?? createEmptyThreadDraft();
 
-        // Update the map entry for this provider
-        const nextMap = { ...base.modelSelectionByProvider };
+        // Update the map entry for this engine
+        const nextMap = { ...base.engineSelectionByEngine };
         const currentForProvider = nextMap[normalizedProvider];
         const nextModel = explicitModel ?? currentForProvider?.model ?? fallbackModel;
         const currentSupportsAutoMode =
-          currentForProvider?.provider === "claude" && currentForProvider.model === nextModel
+          currentForProvider?.engine === "claude" && currentForProvider.model === nextModel
             ? currentForProvider.supportsAutoMode
             : undefined;
         if (providerOpts) {
           if (!nextModel) {
             return state;
           }
-          nextMap[normalizedProvider] = makeModelSelection(
+          nextMap[normalizedProvider] = makeEngineSelection(
             normalizedProvider,
             nextModel,
             providerOpts,
             currentSupportsAutoMode,
           );
         } else if (nextModel && (explicitModel !== null || currentForProvider?.options)) {
-          nextMap[normalizedProvider] = buildModelSelection(
+          nextMap[normalizedProvider] = buildEngineSelection(
             normalizedProvider,
             nextModel,
             undefined,
@@ -952,50 +952,50 @@ export const createComposerDraftStoreState =
         }
 
         // Handle sticky persistence
-        let nextStickyMap = state.stickyModelSelectionByProvider;
+        let nextStickyMap = state.stickyEngineSelectionByEngine;
         let nextStickyActiveProvider = state.stickyActiveProvider;
         if (options?.persistSticky === true) {
-          nextStickyMap = { ...state.stickyModelSelectionByProvider };
+          nextStickyMap = { ...state.stickyEngineSelectionByEngine };
           const existingSticky = nextStickyMap[normalizedProvider];
           const stickyCandidate =
-            existingSticky ?? base.modelSelectionByProvider[normalizedProvider];
+            existingSticky ?? base.engineSelectionByEngine[normalizedProvider];
           const stickyBase = explicitModel
-            ? makeModelSelection(
+            ? makeEngineSelection(
                 normalizedProvider,
                 explicitModel,
                 undefined,
-                stickyCandidate?.provider === "claude" && stickyCandidate.model === explicitModel
+                stickyCandidate?.engine === "claude" && stickyCandidate.model === explicitModel
                   ? stickyCandidate.supportsAutoMode
                   : undefined,
               )
             : (stickyCandidate ??
-              (fallbackModel ? makeModelSelection(normalizedProvider, fallbackModel) : null));
+              (fallbackModel ? makeEngineSelection(normalizedProvider, fallbackModel) : null));
           if (!stickyBase) {
             return state;
           }
           if (providerOpts) {
             nextStickyMap[normalizedProvider] = stripNonStickyModelOptions(
-              makeModelSelection(
+              makeEngineSelection(
                 normalizedProvider,
                 stickyBase.model,
                 providerOpts,
-                stickyBase.provider === "claude" ? stickyBase.supportsAutoMode : undefined,
+                stickyBase.engine === "claude" ? stickyBase.supportsAutoMode : undefined,
               ),
             );
           } else if (explicitModel !== null || stickyBase.options) {
-            nextStickyMap[normalizedProvider] = buildModelSelection(
+            nextStickyMap[normalizedProvider] = buildEngineSelection(
               normalizedProvider,
               stickyBase.model,
               undefined,
-              stickyBase.provider === "claude" ? stickyBase.supportsAutoMode : undefined,
+              stickyBase.engine === "claude" ? stickyBase.supportsAutoMode : undefined,
             );
           }
           nextStickyActiveProvider = base.activeProvider ?? normalizedProvider;
         }
 
         if (
-          Equal.equals(base.modelSelectionByProvider, nextMap) &&
-          Equal.equals(state.stickyModelSelectionByProvider, nextStickyMap) &&
+          Equal.equals(base.engineSelectionByEngine, nextMap) &&
+          Equal.equals(state.stickyEngineSelectionByEngine, nextStickyMap) &&
           state.stickyActiveProvider === nextStickyActiveProvider
         ) {
           return state;
@@ -1003,7 +1003,7 @@ export const createComposerDraftStoreState =
 
         const nextDraft: ComposerThreadDraftState = {
           ...base,
-          modelSelectionByProvider: nextMap,
+          engineSelectionByEngine: nextMap,
         };
         const nextDraftsByThreadId = { ...state.draftsByThreadId };
         if (shouldRemoveDraft(nextDraft)) {
@@ -1016,7 +1016,7 @@ export const createComposerDraftStoreState =
           draftsByThreadId: nextDraftsByThreadId,
           ...(options?.persistSticky === true
             ? {
-                stickyModelSelectionByProvider: nextStickyMap,
+                stickyEngineSelectionByEngine: nextStickyMap,
                 stickyActiveProvider: nextStickyActiveProvider,
               }
             : {}),
@@ -1057,7 +1057,7 @@ export const createComposerDraftStoreState =
       const nextInteractionMode =
         interactionMode !== null &&
         interactionMode !== undefined &&
-        Schema.is(ProviderInteractionMode)(interactionMode)
+        Schema.is(EngineInteractionMode)(interactionMode)
           ? interactionMode
           : null;
       set((state) => {
@@ -1169,7 +1169,7 @@ export const createComposerDraftStoreState =
         let attachmentCount = effectiveComposerAttachmentCount(existing);
         for (const image of images) {
           const consumesSlot = composerImageConsumesAttachmentSlot(existing, image.id);
-          if (consumesSlot && attachmentCount >= PROVIDER_SEND_TURN_MAX_ATTACHMENTS) {
+          if (consumesSlot && attachmentCount >= ENGINE_SEND_TURN_MAX_ATTACHMENTS) {
             revokeObjectPreviewUrl(image.previewUrl);
             continue;
           }

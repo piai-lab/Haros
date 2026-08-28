@@ -4,14 +4,14 @@ import type { ThreadId } from "@harnessos/contracts";
 import { Duration, Effect, Option } from "effect";
 import * as Semaphore from "effect/Semaphore";
 
-export interface ProviderLifecycleLease {
+export interface EngineLifecycleLease {
   readonly generation: string;
   readonly isCurrent: () => boolean;
   /**
-   * Takes lasting ownership of {@link ProviderLifecycleLease.generation}.
+   * Takes lasting ownership of {@link EngineLifecycleLease.generation}.
    *
    * A run publishes its generation eagerly (runtime events emitted *while* a
-   * provider starts must not look stale), but that publication is provisional:
+   * engine starts must not look stale), but that publication is provisional:
    * it survives the run only if the run says it took ownership. Call this once
    * the generation is observable outside the coordinator — i.e. a session was
    * started with it or a binding was persisted with it.
@@ -21,23 +21,23 @@ export interface ProviderLifecycleLease {
   readonly adopt: (generation: string) => void;
   /** Mints a fresh generation for a new physical runtime started by this run. */
   readonly renewGeneration: () => string;
-  /** Takes lasting ownership of "this thread has no provider generation". */
+  /** Takes lasting ownership of "this thread has no engine generation". */
   readonly retire: () => void;
 }
 
-export interface ProviderLifecycleCoordinator {
+export interface EngineLifecycleCoordinator {
   readonly run: <A, E, R>(
     threadId: ThreadId,
-    operation: (lease: ProviderLifecycleLease) => Effect.Effect<A, E, R>,
+    operation: (lease: EngineLifecycleLease) => Effect.Effect<A, E, R>,
   ) => Effect.Effect<A, E, R>;
   readonly runCurrent: <A, E, R>(
     threadId: ThreadId,
     operation: (generation: string | undefined) => Effect.Effect<A, E, R>,
   ) => Effect.Effect<A, E, R>;
   /**
-   * Control-plane variant of {@link ProviderLifecycleCoordinator.runCurrent}:
+   * Control-plane variant of {@link EngineLifecycleCoordinator.runCurrent}:
    * waits a bounded time for the per-thread lock and then proceeds without it.
-   * A wedged lifecycle mutation (a provider start that never returns) must not
+   * A wedged lifecycle mutation (a engine start that never returns) must not
    * be able to hold an interrupt hostage forever; the operation still validates
    * the current generation, so a racing replacement is rejected downstream.
    */
@@ -53,8 +53,8 @@ export interface ProviderLifecycleCoordinator {
 const URGENT_LOCK_WAIT = Duration.seconds(5);
 const URGENT_LOCK_POLL = Duration.millis(25);
 
-/** Serializes provider lifecycle mutations per thread and gives each mutation a unique epoch. */
-export function makeProviderLifecycleCoordinator(): ProviderLifecycleCoordinator {
+/** Serializes engine lifecycle mutations per thread and gives each mutation a unique epoch. */
+export function makeProviderLifecycleCoordinator(): EngineLifecycleCoordinator {
   const locks = new Map<ThreadId, { readonly semaphore: Semaphore.Semaphore; users: number }>();
   const currentGenerations = new Map<ThreadId, string>();
 
@@ -109,7 +109,7 @@ export function makeProviderLifecycleCoordinator(): ProviderLifecycleCoordinator
                 return Effect.sleep(URGENT_LOCK_POLL).pipe(Effect.andThen(attempt));
               }
               return Effect.logWarning(
-                "provider lifecycle lock bypassed for an urgent control-plane operation",
+                "engine lifecycle lock bypassed for an urgent control-plane operation",
                 { threadId, waitedMs: Duration.toMillis(URGENT_LOCK_WAIT) },
               ).pipe(Effect.andThen(effect));
             }),
@@ -118,7 +118,7 @@ export function makeProviderLifecycleCoordinator(): ProviderLifecycleCoordinator
       return attempt.pipe(Effect.ensuring(releaseEntry(threadId, entry)));
     });
 
-  const run: ProviderLifecycleCoordinator["run"] = (threadId, operation) =>
+  const run: EngineLifecycleCoordinator["run"] = (threadId, operation) =>
     withThreadLock(
       threadId,
       Effect.suspend(() => {
@@ -129,7 +129,7 @@ export function makeProviderLifecycleCoordinator(): ProviderLifecycleCoordinator
         // Ownership is opt-in. The eagerly published generation is rewound on
         // exit unless the run explicitly committed/adopted/retired, so a run
         // that ends without changing anything — a successful no-op early
-        // return, a failure, an interrupt before the provider was touched —
+        // return, a failure, an interrupt before the engine was touched —
         // leaves the still-live session's generation exactly as it found it.
         // The inverse default is unsafe: an uncommitted generation nobody else
         // knows about silently invalidates every runtime event and every

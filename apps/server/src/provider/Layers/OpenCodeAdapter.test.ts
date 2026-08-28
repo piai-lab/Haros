@@ -1,4 +1,4 @@
-import { ApprovalRequestId, ProviderRuntimeEvent, ThreadId, TurnId } from "@harnessos/contracts";
+import { ApprovalRequestId, EngineRuntimeEvent, ThreadId, TurnId } from "@harnessos/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import type {
   Agent,
@@ -102,7 +102,7 @@ function createMockOpenCodeRuntime(options?: {
   let eventSubscribeCallCount = 0;
   const emptySubscription = {
     async *[Symbol.asyncIterator]() {
-      // No provider-side events needed for these adapter lifecycle tests.
+      // No engine-side events needed for these adapter lifecycle tests.
     },
   };
   const client = {
@@ -549,7 +549,7 @@ describe("normalizeOpenCodeTokenUsage", () => {
 });
 
 describe("OpenCode host policy delivery", () => {
-  const modelSelection = { provider: "opencode", model: "openai/gpt-5" } as const;
+  const engineSelection = { engine: "opencode", model: "openai/gpt-5" } as const;
 
   it("injects the host policy exactly once for a new native session", async () => {
     const runtime = createMockOpenCodeRuntime();
@@ -559,7 +559,7 @@ describe("OpenCode host policy delivery", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
         });
@@ -567,13 +567,13 @@ describe("OpenCode host policy delivery", () => {
           threadId,
           input: "first turn",
           attachments: [],
-          modelSelection,
+          engineSelection,
         });
         const second = yield* adapter.sendTurn({
           threadId,
           input: "second turn",
           attachments: [],
-          modelSelection,
+          engineSelection,
         });
         return [first.resumeCursor, second.resumeCursor];
       }).pipe(Effect.provide(makeOpenCodeAdapterTestLayer(runtime.runtime))),
@@ -600,7 +600,7 @@ describe("OpenCode host policy delivery", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
         });
@@ -608,10 +608,10 @@ describe("OpenCode host policy delivery", () => {
           threadId,
           input: "first turn",
           attachments: [],
-          modelSelection,
+          engineSelection,
         });
         const resumed = yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
           resumeCursor: first.resumeCursor,
@@ -620,7 +620,7 @@ describe("OpenCode host policy delivery", () => {
           threadId,
           input: "after restart",
           attachments: [],
-          modelSelection,
+          engineSelection,
         });
         return resumed;
       }).pipe(Effect.provide(makeOpenCodeAdapterTestLayer(runtime.runtime))),
@@ -654,7 +654,7 @@ describe("OpenCode host policy delivery", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
         });
@@ -663,12 +663,12 @@ describe("OpenCode host policy delivery", () => {
             threadId,
             input: "rejected turn",
             attachments: [],
-            modelSelection,
+            engineSelection,
           }),
         );
         const [failedSession] = yield* adapter.listSessions();
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
           resumeCursor: failedSession?.resumeCursor,
@@ -677,7 +677,7 @@ describe("OpenCode host policy delivery", () => {
           threadId,
           input: "retry turn",
           attachments: [],
-          modelSelection,
+          engineSelection,
         });
         return {
           firstFailed: Exit.isFailure(firstExit),
@@ -706,7 +706,7 @@ describe("OpenCode host policy delivery", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
         });
@@ -714,7 +714,7 @@ describe("OpenCode host policy delivery", () => {
           threadId,
           input: "first turn",
           attachments: [],
-          modelSelection,
+          engineSelection,
         });
         const firstCursor = first.resumeCursor as {
           readonly openCodeSessionId: string;
@@ -725,7 +725,7 @@ describe("OpenCode host policy delivery", () => {
           };
         };
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
           resumeCursor: {
@@ -740,7 +740,7 @@ describe("OpenCode host policy delivery", () => {
           threadId,
           input: "after policy update",
           attachments: [],
-          modelSelection,
+          engineSelection,
         });
         return second.resumeCursor;
       }).pipe(Effect.provide(makeOpenCodeAdapterTestLayer(runtime.runtime))),
@@ -763,7 +763,7 @@ describe("OpenCode host policy delivery", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
         });
@@ -771,11 +771,11 @@ describe("OpenCode host policy delivery", () => {
           threadId,
           input: "first turn",
           attachments: [],
-          modelSelection,
+          engineSelection,
         });
         const firstCursor = first.resumeCursor as Record<string, unknown>;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
           resumeCursor: {
@@ -787,7 +787,7 @@ describe("OpenCode host policy delivery", () => {
           threadId,
           input: "new native session",
           attachments: [],
-          modelSelection,
+          engineSelection,
         });
         return second.resumeCursor;
       }).pipe(Effect.provide(makeOpenCodeAdapterTestLayer(runtime.runtime))),
@@ -812,7 +812,7 @@ describe("OpenCode host policy delivery", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
         });
@@ -820,7 +820,7 @@ describe("OpenCode host policy delivery", () => {
           threadId,
           input: "before teardown",
           attachments: [],
-          modelSelection,
+          engineSelection,
         });
         return first.resumeCursor;
       }).pipe(Effect.provide(makeOpenCodeAdapterTestLayer(runtime.runtime))),
@@ -830,7 +830,7 @@ describe("OpenCode host policy delivery", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
           resumeCursor,
@@ -839,7 +839,7 @@ describe("OpenCode host policy delivery", () => {
           threadId,
           input: "after recreation",
           attachments: [],
-          modelSelection,
+          engineSelection,
         });
       }).pipe(Effect.provide(makeOpenCodeAdapterTestLayer(runtime.runtime))),
     );
@@ -900,7 +900,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           throw new Error("Expected OpenCode adapter to support runtime model listing.");
         }
         return yield* listModels({
-          provider: "opencode",
+          engine: "opencode",
           binaryPath: "opencode",
           cwd: "/repo/model-discovery-config",
         });
@@ -957,7 +957,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           throw new Error("Expected OpenCode adapter to support runtime model listing.");
         }
         return yield* listModels({
-          provider: "opencode",
+          engine: "opencode",
           binaryPath: "opencode",
           cwd: "/repo/server-startup-fails",
         });
@@ -1013,7 +1013,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           throw new Error("Expected OpenCode adapter to support runtime agent listing.");
         }
         return yield* listAgents({
-          provider: "opencode",
+          engine: "opencode",
           binaryPath: "opencode",
           cwd: "/repo/agent-discovery-config",
         });
@@ -1058,13 +1058,13 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         }
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-active"),
           runtimeMode: "full-access",
         });
 
         return yield* listCommands({
-          provider: "opencode",
+          engine: "opencode",
           cwd: process.cwd(),
         });
       }).pipe(
@@ -1094,7 +1094,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-managed-cwd"),
           runtimeMode: "full-access",
           cwd,
@@ -1126,7 +1126,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         for (const threadId of [firstThread, secondThread]) {
           yield* adapter.startSession({
-            provider: "opencode",
+            engine: "opencode",
             threadId,
             runtimeMode: "full-access",
             cwd: "/same/repo",
@@ -1135,7 +1135,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
             threadId,
             input: "coordinate work",
             attachments: [],
-            modelSelection: { provider: "opencode", model: "openai/gpt-5" },
+            engineSelection: { engine: "opencode", model: "openai/gpt-5" },
           });
         }
         yield* adapter.stopSession(firstThread);
@@ -1191,11 +1191,11 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         for (const threadId of [firstThread, secondThread]) {
           yield* adapter.startSession({
-            provider: "opencode",
+            engine: "opencode",
             threadId,
             runtimeMode: "full-access",
             cwd: "/same/external/repo",
-            providerOptions: {
+            engineOptions: {
               opencode: { serverUrl: "http://127.0.0.1:9999" },
             },
           });
@@ -1204,14 +1204,14 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: firstThread,
           input: "coordinate first",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5" },
         });
         const secondTurn = yield* adapter
           .sendTurn({
             threadId: secondThread,
             input: "coordinate second",
             attachments: [],
-            modelSelection: { provider: "opencode", model: "openai/gpt-5" },
+            engineSelection: { engine: "opencode", model: "openai/gpt-5" },
           })
           .pipe(Effect.forkChild);
         yield* Effect.sleep(20);
@@ -1277,7 +1277,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.stopSession(threadId);
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
           cwd: "/repo",
@@ -1320,11 +1320,11 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
           cwd: "/external/retry-repo",
-          providerOptions: {
+          engineOptions: {
             opencode: { serverUrl: "http://127.0.0.1:9998" },
           },
         });
@@ -1334,7 +1334,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
             threadId,
             input: "first attempt",
             attachments: [],
-            modelSelection: { provider: "opencode", model: "openai/gpt-5" },
+            engineSelection: { engine: "opencode", model: "openai/gpt-5" },
           })
           .pipe(Effect.exit);
         expect(Exit.isFailure(failed)).toBe(false);
@@ -1344,7 +1344,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId,
           input: "second attempt",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5" },
         });
         expect(runtime.promptCalls).toHaveLength(2);
         yield* adapter.interruptTurn(threadId);
@@ -1379,7 +1379,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-gateway-setup-failed");
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
         });
@@ -1387,7 +1387,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId,
           input: "coordinate work",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5" },
         });
       }).pipe(
         Effect.provide(
@@ -1416,7 +1416,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* KiloAdapter;
         yield* adapter.startSession({
-          provider: "kilo",
+          engine: "kilo",
           threadId,
           runtimeMode: "full-access",
           cwd: "/repo",
@@ -1454,7 +1454,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* KiloAdapter;
         yield* adapter.startSession({
-          provider: "kilo",
+          engine: "kilo",
           threadId,
           runtimeMode: "full-access",
           cwd: "/repo",
@@ -1463,7 +1463,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId,
           input: "perform a long-running task",
           attachments: [],
-          modelSelection: { provider: "kilo", model: "openai/gpt-5" },
+          engineSelection: { engine: "kilo", model: "openai/gpt-5" },
         });
         yield* adapter.stopSession(threadId);
       }).pipe(
@@ -1496,11 +1496,11 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* KiloAdapter;
         for (const threadId of [firstThread, secondThread]) {
           yield* adapter.startSession({
-            provider: "kilo",
+            engine: "kilo",
             threadId,
             runtimeMode: "full-access",
             cwd: "/same/external/kilo-repo",
-            providerOptions: {
+            engineOptions: {
               kilo: { serverUrl: "http://127.0.0.1:7777" },
             },
           });
@@ -1509,14 +1509,14 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: firstThread,
           input: "coordinate first",
           attachments: [],
-          modelSelection: { provider: "kilo", model: "openai/gpt-5" },
+          engineSelection: { engine: "kilo", model: "openai/gpt-5" },
         });
         const secondTurn = yield* adapter
           .sendTurn({
             threadId: secondThread,
             input: "coordinate second",
             attachments: [],
-            modelSelection: { provider: "kilo", model: "openai/gpt-5" },
+            engineSelection: { engine: "kilo", model: "openai/gpt-5" },
           })
           .pipe(Effect.forkChild);
         yield* Effect.sleep(20);
@@ -1581,7 +1581,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
         });
@@ -1620,7 +1620,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         return yield* Effect.exit(
           adapter.startSession({
-            provider: "opencode",
+            engine: "opencode",
             threadId: asThreadId("thread-gateway-failed-start"),
             runtimeMode: "full-access",
           }),
@@ -1659,7 +1659,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const startFiber = yield* adapter
           .startSession({
-            provider: "opencode",
+            engine: "opencode",
             threadId: asThreadId("thread-gateway-interrupted-start"),
             runtimeMode: "full-access",
           })
@@ -1702,7 +1702,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const startFiber = yield* adapter
           .startSession({
-            provider: "opencode",
+            engine: "opencode",
             threadId,
             runtimeMode: "full-access",
           })
@@ -1744,7 +1744,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         return yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-resume-cwd"),
           runtimeMode: "full-access",
           resumeCursor: { openCodeSessionId: "existing-session-1", cwd: "/repo/resume" },
@@ -1779,7 +1779,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-resume-permissions");
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
           resumeCursor: { openCodeSessionId: "existing-session-1", cwd: "/repo/resume" },
@@ -1789,7 +1789,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           input: "Implement the change",
           attachments: [],
           interactionMode: "default",
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
       }).pipe(
         Effect.provide(
@@ -1828,7 +1828,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         Effect.gen(function* () {
           const adapter = yield* OpenCodeAdapter;
           yield* adapter.startSession({
-            provider: "opencode",
+            engine: "opencode",
             threadId: asThreadId("thread-resume-plan-permission-failure"),
             runtimeMode: "full-access",
             resumeCursor: { openCodeSessionId: "existing-session-1", cwd: "/repo/resume" },
@@ -1920,7 +1920,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
 
     expect(runtime.forkCalls).toEqual([{ sessionID: "source-session-1" }]);
     // Only the scoped fork client connects: the target session starts later
-    // under a ProviderService lifecycle lease, not inside forkThread.
+    // under a EngineService lifecycle lease, not inside forkThread.
     expect(runtime.connectCalls).toHaveLength(1);
     expect(runtime.connectCalls[0]).toMatchObject({ cwd: "/repo/source" });
     expect(result.resumeCursor).toMatchObject({
@@ -1944,13 +1944,13 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         }
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
         });
 
         return yield* listCommands({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           cwd: process.cwd(),
         });
@@ -1985,7 +1985,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         }
 
         return yield* listCommands({
-          provider: "opencode",
+          engine: "opencode",
           cwd: process.cwd(),
         });
       }).pipe(
@@ -2014,11 +2014,11 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-model-pin"),
           runtimeMode: "full-access",
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "opencode/big-pickle",
             options: {
               agent: "build",
@@ -2060,7 +2060,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-1"),
           lifecycleGeneration: "generation-opencode-a",
           runtimeMode: "full-access",
@@ -2070,8 +2070,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-1"),
           input: "hello",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
             options: {
               variant: "high",
@@ -2117,7 +2117,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     expect(result.runningSession?.status).toBe("running");
     expect(result.runningSession?.activeTurnId).toBeDefined();
     expect(result.readySession).toMatchObject({
-      provider: "opencode",
+      engine: "opencode",
       status: "ready",
       model: "openai/gpt-5.4",
     });
@@ -2154,7 +2154,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "full-access",
         });
@@ -2162,7 +2162,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId,
           input: "wait in the visible browser",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
 
         const interruptFiber = yield* adapter
@@ -2220,7 +2220,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-ordered-events"),
           runtimeMode: "full-access",
         });
@@ -2229,8 +2229,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-ordered-events"),
           input: "hello",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -2357,7 +2357,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-role-late-delta"),
           runtimeMode: "full-access",
         });
@@ -2366,8 +2366,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-role-late-delta"),
           input: "hello",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -2478,7 +2478,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-synthetic-kilo-parts"),
           runtimeMode: "full-access",
         });
@@ -2487,8 +2487,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-synthetic-kilo-parts"),
           input: "hello",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -2616,7 +2616,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-plan-events"),
           runtimeMode: "full-access",
         });
@@ -2626,8 +2626,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           input: "plan this",
           interactionMode: "plan",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -2704,7 +2704,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-default-build-agent"),
           runtimeMode: "full-access",
         });
@@ -2714,8 +2714,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           input: "implement this",
           interactionMode: "default",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -2743,7 +2743,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-docx-attachment"),
           runtimeMode: "full-access",
         });
@@ -2761,8 +2761,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
               sizeBytes: 4_096,
             },
           ],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -2799,7 +2799,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-plan-agent"),
           runtimeMode: "full-access",
         });
@@ -2809,8 +2809,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           input: "plan this",
           interactionMode: "plan",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -2839,7 +2839,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-stale-plan-agent"),
           runtimeMode: "full-access",
         });
@@ -2849,8 +2849,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           input: "implement this",
           interactionMode: "default",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
             options: {
               agent: "plan",
@@ -2882,7 +2882,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-explicit-agent"),
           runtimeMode: "full-access",
         });
@@ -2892,8 +2892,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           input: "use custom agent",
           interactionMode: "default",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
             options: {
               agent: "reviewer",
@@ -2938,7 +2938,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-default-tagged-plan"),
           runtimeMode: "full-access",
         });
@@ -2948,8 +2948,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           input: "show an example tagged block",
           interactionMode: "default",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -3035,7 +3035,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-usage-events"),
           runtimeMode: "full-access",
         });
@@ -3044,8 +3044,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-usage-events"),
           input: "count tokens",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -3113,7 +3113,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-usage-dedup"),
           runtimeMode: "full-access",
         });
@@ -3122,8 +3122,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-usage-dedup"),
           input: "count tokens",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -3170,7 +3170,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-usage-unknown-limit"),
           runtimeMode: "full-access",
         });
@@ -3179,8 +3179,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-usage-unknown-limit"),
           input: "count tokens",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -3238,7 +3238,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-usage-zero"),
           runtimeMode: "full-access",
         });
@@ -3247,8 +3247,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-usage-zero"),
           input: "count tokens",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -3323,7 +3323,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-todo-updated"),
           runtimeMode: "full-access",
         });
@@ -3332,8 +3332,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-todo-updated"),
           input: "work through todos",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -3397,7 +3397,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-next-events"),
           runtimeMode: "full-access",
         });
@@ -3406,8 +3406,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-next-events"),
           input: "hello",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -3496,13 +3496,13 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-plan-permissions");
-        yield* adapter.startSession({ provider: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
         yield* adapter.sendTurn({
           threadId,
           input: "Plan the change",
           attachments: [],
           interactionMode: "plan",
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
         yield* adapter.interruptTurn(threadId);
         yield* adapter.sendTurn({
@@ -3510,7 +3510,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           input: "Implement the change",
           attachments: [],
           interactionMode: "debug",
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
       }).pipe(
         Effect.provide(
@@ -3555,12 +3555,12 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-child-permission");
-        yield* adapter.startSession({ provider: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
         yield* adapter.sendTurn({
           threadId,
           input: "Delegate a read-only check",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
         eventQueue.push({
           type: "permission.asked",
@@ -3614,7 +3614,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-resumed-child-permission"),
           runtimeMode: "full-access",
           resumeCursor: { openCodeSessionId: "existing-session-1", cwd: process.cwd() },
@@ -3664,7 +3664,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-partial-reconciliation"),
           runtimeMode: "full-access",
           resumeCursor: { openCodeSessionId: "existing-session-1", cwd: process.cwd() },
@@ -3704,7 +3704,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-event-reconnect"),
           runtimeMode: "full-access",
         });
@@ -3747,12 +3747,12 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           Effect.forkChild,
         );
         const threadId = asThreadId("thread-full-access-reply-failure");
-        yield* adapter.startSession({ provider: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
         yield* adapter.sendTurn({
           threadId,
           input: "Run a command",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
         eventQueue.push({
           type: "permission.asked",
@@ -3810,7 +3810,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-full-access-permission"),
           runtimeMode: "full-access",
         });
@@ -3819,8 +3819,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-full-access-permission"),
           input: "hello",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -3931,7 +3931,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-late-permission-echo"),
           runtimeMode: "full-access",
         });
@@ -3940,8 +3940,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-late-permission-echo"),
           input: "hello",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -4075,7 +4075,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
             Effect.forkChild,
           );
           yield* adapter.startSession({
-            provider: "opencode",
+            engine: "opencode",
             threadId: asThreadId("thread-opencode-question-cancel"),
             runtimeMode: "full-access",
           });
@@ -4137,7 +4137,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           Effect.forkChild,
         );
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-opencode-invalid-question"),
           runtimeMode: "full-access",
         });
@@ -4195,7 +4195,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-approval-required-permission"),
           runtimeMode: "approval-required",
         });
@@ -4204,8 +4204,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-approval-required-permission"),
           input: "hello",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -4277,7 +4277,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-human-permission-ack");
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "approval-required",
         });
@@ -4285,7 +4285,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId,
           input: "Search the web",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
 
         const openedFiber = yield* Stream.runCollect(Stream.take(adapter.streamEvents, 4)).pipe(
@@ -4451,7 +4451,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-human-permission-race");
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "approval-required",
         });
@@ -4459,7 +4459,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId,
           input: "Inspect status",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
         const openedFiber = yield* Stream.runCollect(Stream.take(adapter.streamEvents, 4)).pipe(
           Effect.forkChild,
@@ -4512,7 +4512,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     expect(result.conflictingResponse).toMatchObject({
       _tag: "Failure",
       failure: {
-        _tag: "ProviderAdapterRequestError",
+        _tag: "EngineAdapterRequestError",
         method: "permission.reply",
       },
     });
@@ -4551,7 +4551,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           Effect.forkChild,
         );
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "approval-required",
         });
@@ -4559,7 +4559,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId,
           input: "Inspect status",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
         eventQueue.push({ type: "permission.asked", properties: permission });
         yield* Fiber.join(openedFiber);
@@ -4636,7 +4636,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-human-permission-still-pending");
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "approval-required",
         });
@@ -4644,7 +4644,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId,
           input: "Inspect status",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
         const openedFiber = yield* Stream.runCollect(Stream.take(adapter.streamEvents, 4)).pipe(
           Effect.forkChild,
@@ -4685,7 +4685,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     expect(result.firstResponse._tag).toBe("Failure");
     if (result.firstResponse._tag === "Failure") {
       expect(result.firstResponse.failure).toMatchObject({
-        _tag: "ProviderAdapterRequestError",
+        _tag: "EngineAdapterRequestError",
         method: "permission.reply.acknowledge",
       });
     }
@@ -4734,7 +4734,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         const adapter = yield* OpenCodeAdapter;
         const threadId = asThreadId("thread-human-permission-list-failure");
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId,
           runtimeMode: "approval-required",
         });
@@ -4742,7 +4742,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId,
           input: "Search docs",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
         const openedFiber = yield* Stream.runCollect(Stream.take(adapter.streamEvents, 4)).pipe(
           Effect.forkChild,
@@ -4783,7 +4783,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     expect(result._tag).toBe("Failure");
     if (result._tag === "Failure") {
       expect(result.failure).toMatchObject({
-        _tag: "ProviderAdapterRequestError",
+        _tag: "EngineAdapterRequestError",
         method: "permission.reply.acknowledge",
       });
     }
@@ -4810,7 +4810,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-next-tool-call"),
           runtimeMode: "full-access",
         });
@@ -4819,8 +4819,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-next-tool-call"),
           input: "inspect files",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -4855,7 +4855,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
             input: {
               filePath: "README.md",
             },
-            provider: {
+            engine: {
               executed: true,
             },
           },
@@ -4913,7 +4913,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-child-session-tools"),
           runtimeMode: "full-access",
         });
@@ -4922,8 +4922,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-child-session-tools"),
           input: "inspect files",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -4971,7 +4971,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
                 title: " \n ",
                 input: {
                   description: "Inspect another task",
-                  prompt: "Continue after the blank provider title.",
+                  prompt: "Continue after the blank engine title.",
                 },
                 time: {
                   start: 2,
@@ -5055,7 +5055,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         detail: "  Found 18 matches\n",
       },
     });
-    const decodeProviderRuntimeEvent = Schema.decodeUnknownSync(ProviderRuntimeEvent);
+    const decodeProviderRuntimeEvent = Schema.decodeUnknownSync(EngineRuntimeEvent);
     expect(() => {
       for (const event of result.slice(3)) {
         decodeProviderRuntimeEvent(event);
@@ -5084,7 +5084,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-next-shell"),
           runtimeMode: "full-access",
         });
@@ -5093,8 +5093,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-next-shell"),
           input: "inspect files",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -5179,7 +5179,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-stalled-prompt-async"),
           runtimeMode: "full-access",
         });
@@ -5189,8 +5189,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
             threadId: asThreadId("thread-stalled-prompt-async"),
             input: "hello",
             attachments: [],
-            modelSelection: {
-              provider: "opencode",
+            engineSelection: {
+              engine: "opencode",
               model: "opencode/claude-opus-4-7",
             },
           })
@@ -5240,7 +5240,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-rejected-prompt-async"),
           runtimeMode: "full-access",
         });
@@ -5250,8 +5250,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
             threadId: asThreadId("thread-rejected-prompt-async"),
             input: "hello",
             attachments: [],
-            modelSelection: {
-              provider: "opencode",
+            engineSelection: {
+              engine: "opencode",
               model: "opencode/claude-opus-4-7",
             },
           }),
@@ -5311,7 +5311,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
 
         yield* adapter.startSession({
-          provider: "opencode",
+          engine: "opencode",
           threadId: asThreadId("thread-session-idle"),
           runtimeMode: "full-access",
         });
@@ -5320,8 +5320,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId: asThreadId("thread-session-idle"),
           input: "hello",
           attachments: [],
-          modelSelection: {
-            provider: "opencode",
+          engineSelection: {
+            engine: "opencode",
             model: "openai/gpt-5.4",
           },
         });
@@ -5415,12 +5415,12 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
         const threadId = asThreadId("thread-early-idle-final-assistant");
 
-        yield* adapter.startSession({ provider: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
         yield* adapter.sendTurn({
           threadId,
           input: "hello",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
 
         messageSnapshot = [
@@ -5460,7 +5460,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           },
         });
         // The stream part arrives after the grace period. OmniMind must first
-        // recover the provider snapshot, then ignore this duplicate late event.
+        // recover the engine snapshot, then ignore this duplicate late event.
         yield* Effect.sleep(30);
         eventQueue.push({
           type: "message.part.updated",
@@ -5546,12 +5546,12 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
         const threadId = asThreadId("thread-final-before-parts");
 
-        yield* adapter.startSession({ provider: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
         yield* adapter.sendTurn({
           threadId,
           input: "hello",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
 
         eventQueue.push({
@@ -5640,13 +5640,13 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
         const threadId = asThreadId("thread-late-multipart-plan");
 
-        yield* adapter.startSession({ provider: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
         yield* adapter.sendTurn({
           threadId,
           input: "plan this",
           interactionMode: "plan",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
 
         eventQueue.push({
@@ -5764,13 +5764,13 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
         const threadId = asThreadId("thread-mixed-final-snapshot");
 
-        yield* adapter.startSession({ provider: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
         yield* adapter.sendTurn({
           threadId,
           input: "plan this",
           interactionMode: "plan",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
 
         const finalInfo = {
@@ -5813,7 +5813,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         });
 
         // The first recovery sees one complete part and one open part. The turn
-        // must remain running until the provider snapshot closes the latter.
+        // must remain running until the engine snapshot closes the latter.
         yield* Effect.sleep(30);
         const [sessionWhilePlanPartOpen] = yield* adapter.listSessions();
         messageSnapshot = [
@@ -5906,12 +5906,12 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         );
         const threadId = asThreadId("thread-stale-recovery");
 
-        yield* adapter.startSession({ provider: "opencode", threadId, runtimeMode: "full-access" });
+        yield* adapter.startSession({ engine: "opencode", threadId, runtimeMode: "full-access" });
         const firstTurn = yield* adapter.sendTurn({
           threadId,
           input: "first",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
         eventQueue.push({
           type: "session.idle",
@@ -5936,7 +5936,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
           threadId,
           input: "second",
           attachments: [],
-          modelSelection: { provider: "opencode", model: "openai/gpt-5.4" },
+          engineSelection: { engine: "opencode", model: "openai/gpt-5.4" },
         });
 
         yield* Effect.sync(() => {
@@ -5998,7 +5998,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
 });
 
 describe("OpenCode incremental text assembly", () => {
-  it("preserves coincidental suffix/prefix overlap in raw provider deltas", () => {
+  it("preserves coincidental suffix/prefix overlap in raw engine deltas", () => {
     expect(appendOpenCodeAssistantTextDelta("reset", "ting")).toEqual({
       nextText: "resetting",
       deltaToEmit: "ting",

@@ -137,8 +137,8 @@ describe("assistant turn provenance hot-path merge", () => {
   const provenance = {
     pendingMessageId,
     turnId: null,
-    modelSelection: {
-      provider: "oa" as const,
+    engineSelection: {
+      engine: "oa" as const,
       model: "deepseek/deepseek-v4-pro",
     },
     requestedAt,
@@ -179,7 +179,7 @@ describe("assistant turn provenance hot-path merge", () => {
     const previous = previousWithLiveProvenance();
     const olderEntry = {
       ...provenance,
-      modelSelection: { provider: "codex" as const, model: "gpt-5.6" },
+      engineSelection: { engine: "codex" as const, model: "gpt-5.6" },
       requestedAt: "2026-08-27T02:20:00.000Z",
     };
     const merged = mergeReadModelThreadDetailWithLiveHotPath(

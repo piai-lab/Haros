@@ -765,11 +765,11 @@ describe("TerminalManager", () => {
     manager.dispose();
   });
 
-  it("does not brand generic terminals from provider descendants", async () => {
+  it("does not brand generic terminals from engine descendants", async () => {
     const { manager } = makeManager(5, {
       subprocessChecker: async () => ({
         cliKind: "codex",
-        hasNonProviderSubprocess: true,
+        hasNonEngineSubprocess: true,
         hasProviderDescendant: true,
         hasRunningSubprocess: true,
       }),
@@ -798,7 +798,7 @@ describe("TerminalManager", () => {
     manager.dispose();
   });
 
-  it("does not brand generic terminals from provider-looking output", async () => {
+  it("does not brand generic terminals from engine-looking output", async () => {
     const { manager, ptyAdapter } = makeManager();
     const events: TerminalEvent[] = [];
     manager.on("event", (event) => {
@@ -819,7 +819,7 @@ describe("TerminalManager", () => {
     manager.dispose();
   });
 
-  it("clears provider identity when a generic command is submitted", async () => {
+  it("clears engine identity when a generic command is submitted", async () => {
     const { manager } = makeManager();
     const events: TerminalEvent[] = [];
     manager.on("event", (event) => {
@@ -840,10 +840,10 @@ describe("TerminalManager", () => {
     manager.dispose();
   });
 
-  it("clears unmanaged provider identity as soon as an observed provider process disappears", async () => {
+  it("clears unmanaged engine identity as soon as an observed engine process disappears", async () => {
     let subprocessActivity: TerminalSubprocessActivity = {
       cliKind: null,
-      hasNonProviderSubprocess: false,
+      hasNonEngineSubprocess: false,
       hasProviderDescendant: false,
       hasRunningSubprocess: false,
     };
@@ -870,7 +870,7 @@ describe("TerminalManager", () => {
 
     subprocessActivity = {
       cliKind: "codex",
-      hasNonProviderSubprocess: false,
+      hasNonEngineSubprocess: false,
       hasProviderDescendant: true,
       hasRunningSubprocess: true,
     };
@@ -878,7 +878,7 @@ describe("TerminalManager", () => {
 
     subprocessActivity = {
       cliKind: null,
-      hasNonProviderSubprocess: false,
+      hasNonEngineSubprocess: false,
       hasProviderDescendant: false,
       hasRunningSubprocess: false,
     };

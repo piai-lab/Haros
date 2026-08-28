@@ -1,6 +1,6 @@
 import {
   ENGINE_KINDS,
-  type ModelSelection,
+  type EngineSelection,
   type OmniMindModelServicesListResult,
   type EngineKind,
 } from "@harnessos/contracts";
@@ -10,8 +10,8 @@ import { useMemo, useSyncExternalStore } from "react";
 import { useServerSettings } from "~/serverSettings";
 import { useComposerDraftStore } from "~/composerDraftStore";
 import { useFocusedChatContext } from "~/focusedChatContext";
-import { useProviderModelCatalog } from "~/hooks/useProviderModelCatalog";
-import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
+import { useEngineModelCatalog } from "~/hooks/useEngineModelCatalog";
+import { useEngineStatusesForLocalConfig } from "~/hooks/useEngineStatusesForLocalConfig";
 import {
   onNativeApiServerCapabilitiesChange,
   onNativeApiTransportStateChange,
@@ -58,16 +58,12 @@ export interface FirstRunReadinessController {
   readonly readiness: FirstRunReadinessState;
   readonly focusedThreadId: ReturnType<typeof useFocusedChatContext>["focusedThreadId"];
   readonly activeProject: ReturnType<typeof useFocusedChatContext>["activeProject"];
-  readonly providerStatuses: ReturnType<typeof useProviderStatusesForLocalConfig>;
-  readonly modelOptionsByProvider: ReturnType<
-    typeof useProviderModelCatalog
-  >["selectableModelOptionsByProvider"];
-  readonly catalogStateByProvider: ReturnType<
-    typeof useProviderModelCatalog
-  >["catalogStateByProvider"];
-  readonly loadingModelProviders: ReturnType<
-    typeof useProviderModelCatalog
-  >["loadingModelProviders"];
+  readonly providerStatuses: ReturnType<typeof useEngineStatusesForLocalConfig>;
+  readonly modelOptionsByEngine: ReturnType<
+    typeof useEngineModelCatalog
+  >["selectableModelOptionsByEngine"];
+  readonly catalogStateByEngine: ReturnType<typeof useEngineModelCatalog>["catalogStateByEngine"];
+  readonly loadingModelProviders: ReturnType<typeof useEngineModelCatalog>["loadingModelProviders"];
 }
 
 export function useFirstRunReadinessController(
@@ -81,12 +77,12 @@ export function useFirstRunReadinessController(
   const threadsHydrated = useStore((state) => state.threadsHydrated);
   const threadShells = useStore(useMemo(() => createThreadShellsSelector(), []));
   const draftsByThreadId = useComposerDraftStore((state) => state.draftsByThreadId);
-  const stickyModelSelectionByProvider = useComposerDraftStore(
-    (state) => state.stickyModelSelectionByProvider,
+  const stickyEngineSelectionByEngine = useComposerDraftStore(
+    (state) => state.stickyEngineSelectionByEngine,
   );
   const stickyActiveProvider = useComposerDraftStore((state) => state.stickyActiveProvider);
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const providerStatuses = useProviderStatusesForLocalConfig();
+  const providerStatuses = useEngineStatusesForLocalConfig();
   const modelServicesCapability = useSyncExternalStore(
     subscribeModelServicesCapability,
     readModelServicesCapability,
@@ -98,38 +94,37 @@ export function useFirstRunReadinessController(
     readServerModelServicesTransport,
   );
   const selectedModelHint =
-    stickyModelSelectionByProvider[selectedProvider]?.model ??
-    (focusedContext.activeThread?.modelSelection.provider === selectedProvider
-      ? focusedContext.activeThread.modelSelection.model
-      : focusedContext.activeProject?.defaultModelSelection?.provider === selectedProvider
-        ? focusedContext.activeProject.defaultModelSelection.model
+    stickyEngineSelectionByEngine[selectedProvider]?.model ??
+    (focusedContext.activeThread?.engineSelection.engine === selectedProvider
+      ? focusedContext.activeThread.engineSelection.model
+      : focusedContext.activeProject?.defaultEngineSelection?.engine === selectedProvider
+        ? focusedContext.activeProject.defaultEngineSelection.model
         : null);
-  const catalog = useProviderModelCatalog({
+  const catalog = useEngineModelCatalog({
     selectedProvider,
     discoveryEnabled: false,
-    // First-run classification is passive. OmniMind's provider catalog loads
+    // First-run classification is passive. OmniMind's engine catalog loads
     // Pi Extensions, so readiness must rely on the credential-blind Model
     // services projection until the user explicitly opens model discovery.
     selectedProviderDiscoveryEnabled: selectedProvider !== "oa",
     piDiscoveryRequested: selectedProvider === "pi",
     cwd: focusedContext.activeProject?.cwd ?? serverConfigQuery.data?.cwd ?? null,
-    modelHintByProvider: { [selectedProvider]: selectedModelHint },
+    modelHintByEngine: { [selectedProvider]: selectedModelHint },
   });
 
   const rememberedSelections = useMemo(() => {
-    const result: Partial<Record<EngineKind, ModelSelection>> = {};
-    for (const provider of ENGINE_KINDS) {
+    const result: Partial<Record<EngineKind, EngineSelection>> = {};
+    for (const engine of ENGINE_KINDS) {
       const selection =
-        stickyModelSelectionByProvider[provider] ??
-        threadShells.find((thread) => thread.modelSelection.provider === provider)
-          ?.modelSelection ??
-        projects.find((project) => project.defaultModelSelection?.provider === provider)
-          ?.defaultModelSelection ??
+        stickyEngineSelectionByEngine[engine] ??
+        threadShells.find((thread) => thread.engineSelection.engine === engine)?.engineSelection ??
+        projects.find((project) => project.defaultEngineSelection?.engine === engine)
+          ?.defaultEngineSelection ??
         null;
-      if (selection) result[provider] = selection;
+      if (selection) result[engine] = selection;
     }
     return result;
-  }, [projects, stickyModelSelectionByProvider, threadShells]);
+  }, [projects, stickyEngineSelectionByEngine, threadShells]);
   const exactSelections = useMemo(() => {
     const result = { ...rememberedSelections };
     const focusedDraft = focusedContext.focusedThreadId
@@ -137,49 +132,49 @@ export function useFirstRunReadinessController(
       : null;
     const focusedProvider =
       focusedDraft?.activeProvider ??
-      focusedContext.activeThread?.modelSelection.provider ??
-      focusedContext.activeProject?.defaultModelSelection?.provider ??
+      focusedContext.activeThread?.engineSelection.engine ??
+      focusedContext.activeProject?.defaultEngineSelection?.engine ??
       stickyActiveProvider ??
-      settingsSnapshot.defaultProvider;
+      settingsSnapshot.defaultEngine;
     const focusedSelection =
-      focusedDraft?.modelSelectionByProvider[focusedProvider] ??
-      (focusedContext.activeThread?.modelSelection.provider === focusedProvider
-        ? focusedContext.activeThread.modelSelection
+      focusedDraft?.engineSelectionByEngine[focusedProvider] ??
+      (focusedContext.activeThread?.engineSelection.engine === focusedProvider
+        ? focusedContext.activeThread.engineSelection
         : null) ??
-      (focusedContext.activeProject?.defaultModelSelection?.provider === focusedProvider
-        ? focusedContext.activeProject.defaultModelSelection
+      (focusedContext.activeProject?.defaultEngineSelection?.engine === focusedProvider
+        ? focusedContext.activeProject.defaultEngineSelection
         : null) ??
-      stickyModelSelectionByProvider[focusedProvider] ??
+      stickyEngineSelectionByEngine[focusedProvider] ??
       null;
     if (focusedSelection) result[focusedProvider] = focusedSelection;
-    for (const provider of ENGINE_KINDS) {
-      const status = providerStatuses.find((candidate) => candidate.provider === provider);
+    for (const engine of ENGINE_KINDS) {
+      const status = providerStatuses.find((candidate) => candidate.engine === engine);
       if (
-        result[provider] &&
+        result[engine] &&
         status?.authStatus === "unknown" &&
-        !catalog.selectableModelOptionsByProvider[provider].some(
-          (model) => model.slug === result[provider]?.model,
+        !catalog.selectableModelOptionsByEngine[engine].some(
+          (model) => model.slug === result[engine]?.model,
         )
       ) {
-        delete result[provider];
+        delete result[engine];
       }
     }
     return result;
   }, [
-    catalog.selectableModelOptionsByProvider,
+    catalog.selectableModelOptionsByEngine,
     draftsByThreadId,
     focusedContext.activeProject,
     focusedContext.activeThread,
     focusedContext.focusedThreadId,
     providerStatuses,
     rememberedSelections,
-    settingsSnapshot.defaultProvider,
+    settingsSnapshot.defaultEngine,
     stickyActiveProvider,
-    stickyModelSelectionByProvider,
+    stickyEngineSelectionByEngine,
   ]);
   const hasUsableIndependentBinding = hasUsableExactModelBinding({
     providerStatuses,
-    exactModelSelections: exactSelections,
+    exactEngineSelections: exactSelections,
   });
   const passiveQueryState = queryClient.getQueryState<OmniMindModelServicesListResult>(
     omniMindModelServicesQueryKeys.list(),
@@ -215,22 +210,22 @@ export function useFirstRunReadinessController(
     hasUsableOmniMindModelServiceBinding({
       selection: explicitOmniMindSelection,
       selectionIsExplicit: true,
-      catalogState: catalog.catalogStateByProvider.oa,
-      modelOptions: catalog.selectableModelOptionsByProvider.oa,
+      catalogState: catalog.catalogStateByEngine.oa,
+      modelOptions: catalog.selectableModelOptionsByEngine.oa,
       services: cachedPassiveServices.services,
     });
   const hasRememberedIndependentEngineBinding = hasRememberedExactModelBinding({
-    providers: ENGINE_KINDS.filter((provider) => provider !== "oa"),
-    explicitExactModelSelections: rememberedSelections,
+    engines: ENGINE_KINDS.filter((engine) => engine !== "oa"),
+    explicitExactEngineSelections: rememberedSelections,
   });
   const hasRememberedOmniMindBinding = hasRememberedExactModelBinding({
-    providers: ["oa"],
-    explicitExactModelSelections: rememberedSelections,
+    engines: ["oa"],
+    explicitExactEngineSelections: rememberedSelections,
   });
   const catalogsSettled = areUsableProviderCatalogsSettled({
     providerStatuses,
-    catalogStateByProvider: catalog.catalogStateByProvider,
-    explicitExactModelSelections: rememberedSelections,
+    catalogStateByEngine: catalog.catalogStateByEngine,
+    explicitExactEngineSelections: rememberedSelections,
   });
   const factsSettled =
     threadsHydrated &&
@@ -257,8 +252,8 @@ export function useFirstRunReadinessController(
     focusedThreadId: focusedContext.focusedThreadId,
     activeProject: focusedContext.activeProject,
     providerStatuses,
-    modelOptionsByProvider: catalog.selectableModelOptionsByProvider,
-    catalogStateByProvider: catalog.catalogStateByProvider,
+    modelOptionsByEngine: catalog.selectableModelOptionsByEngine,
+    catalogStateByEngine: catalog.catalogStateByEngine,
     loadingModelProviders: catalog.loadingModelProviders,
   };
 }

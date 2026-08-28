@@ -50,7 +50,7 @@ function readBalancedTask(
 
 export function parseAgentMentionInvocations(
   text: string,
-  provider: EngineKind,
+  engine: EngineKind,
 ): ReadonlyArray<ParsedAgentMentionInvocation> {
   const invocations: ParsedAgentMentionInvocation[] = [];
 
@@ -72,7 +72,7 @@ export function parseAgentMentionInvocations(
       continue;
     }
 
-    const resolved = resolveAgentAlias(alias, provider);
+    const resolved = resolveAgentAlias(alias, engine);
     if (!resolved) {
       continue;
     }

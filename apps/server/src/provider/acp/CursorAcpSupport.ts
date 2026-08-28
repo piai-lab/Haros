@@ -2,11 +2,11 @@
  * CursorAcpSupport - helpers for Cursor ACP sessions and model selection.
  *
  * Owns spawn input construction, model picker flattening, and ACP config
- * mutations used by the Cursor provider adapter.
+ * mutations used by the Cursor engine adapter.
  *
  * @module CursorAcpSupport
  */
-import { type CursorModelOptions, type ProviderModelDescriptor } from "@harnessos/contracts";
+import { type CursorModelOptions, type EngineModelDescriptor } from "@harnessos/contracts";
 import { formatModelDisplayName, parseCursorCliReasoningEffort } from "@harnessos/shared/model";
 import { Effect, Layer, Schema, Scope, ServiceMap } from "effect";
 import { ChildProcessSpawner } from "effect/unstable/process";
@@ -47,13 +47,13 @@ export interface CursorAcpRuntimeInput extends Omit<
   readonly cursorSettings: CursorAcpRuntimeCursorSettings | null | undefined;
 }
 
-export interface CursorAcpModelSelectionErrorContext {
+export interface CursorAcpEngineSelectionErrorContext {
   readonly cause: AcpErrors.AcpError;
   readonly step: "set-config-option" | "set-model";
   readonly configId?: string;
 }
 
-export interface CursorAcpModelSelectionNotice {
+export interface CursorAcpEngineSelectionNotice {
   readonly reason: "model-unavailable" | "model-rejected";
   readonly message: string;
   readonly requestedModel: string;
@@ -101,7 +101,7 @@ export function buildCursorAcpSpawnInput(
     cwd,
     // Keep ACP startup browserless without forcing CI/noninteractive flags onto user turns.
     env: buildProviderChildEnvironment({
-      provider: "cursor",
+      engine: "cursor",
       overrides: CURSOR_AGENT_BROWSERLESS_ENV,
     }),
   };
@@ -141,7 +141,7 @@ export const makeCursorAcpRuntime = (
     return ServiceMap.getUnsafe(acpContext, AcpSessionRuntime);
   });
 
-interface CursorAcpModelSelectionRuntime {
+interface CursorAcpEngineSelectionRuntime {
   readonly getConfigOptions: AcpSessionRuntimeShape["getConfigOptions"];
   readonly setConfigOption: (
     configId: string,
@@ -365,9 +365,9 @@ export function flattenCursorAcpModelChoices(
   return choices;
 }
 
-export function parseCursorCliModelList(stdout: string): ReadonlyArray<ProviderModelDescriptor> {
+export function parseCursorCliModelList(stdout: string): ReadonlyArray<EngineModelDescriptor> {
   const seen = new Set<string>();
-  const models: Array<ProviderModelDescriptor> = [];
+  const models: Array<EngineModelDescriptor> = [];
   for (const line of stdout.split(/\r?\n/u)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed === "Available models" || trimmed.startsWith("Tip:")) {
@@ -427,7 +427,7 @@ export function parseCursorCliModelList(stdout: string): ReadonlyArray<ProviderM
 // exposes. The richer per-model matrix lives behind the ACP extension method
 // `cursor/list_available_models`, which returns every model alongside its own
 // config options (context, effort/reasoning, thinking, fast). We project those
-// into ProviderModelDescriptors so the composer can offer the same selectors as
+// into EngineModelDescriptors so the composer can offer the same selectors as
 // the built-in Claude models.
 
 export const CURSOR_LIST_AVAILABLE_MODELS_METHOD = "cursor/list_available_models";
@@ -470,7 +470,7 @@ function findCursorFastConfigOption(
 
 function buildCursorAcpAvailableModelDescriptor(
   model: CursorAcpAvailableModel,
-): ProviderModelDescriptor | undefined {
+): EngineModelDescriptor | undefined {
   const rawSlug = model.value.trim();
   if (!rawSlug) {
     return undefined;
@@ -537,9 +537,9 @@ function buildCursorAcpAvailableModelDescriptor(
 
 export function buildCursorAcpModelDescriptorsFromAvailableModels(
   models: ReadonlyArray<CursorAcpAvailableModel>,
-): ReadonlyArray<ProviderModelDescriptor> {
+): ReadonlyArray<EngineModelDescriptor> {
   const seen = new Set<string>();
-  const descriptors: Array<ProviderModelDescriptor> = [];
+  const descriptors: Array<EngineModelDescriptor> = [];
   for (const model of models) {
     const descriptor = buildCursorAcpAvailableModelDescriptor(model);
     if (!descriptor || seen.has(descriptor.slug)) {
@@ -557,7 +557,7 @@ export function buildCursorAcpModelDescriptorsFromAvailableModels(
 export function fetchCursorAcpModelDescriptors(
   runtime: Pick<AcpSessionRuntimeShape, "request">,
   sessionId: string,
-): Effect.Effect<ReadonlyArray<ProviderModelDescriptor>, AcpErrors.AcpError> {
+): Effect.Effect<ReadonlyArray<EngineModelDescriptor>, AcpErrors.AcpError> {
   return runtime.request(CURSOR_LIST_AVAILABLE_MODELS_METHOD, { sessionId }).pipe(
     Effect.flatMap((raw) =>
       decodeCursorAcpListAvailableModelsResult(raw).pipe(
@@ -746,7 +746,7 @@ function cursorReasoningLabel(value: string): string {
 
 function cursorContextLabel(
   value: string,
-  contextWindowOptions: NonNullable<ProviderModelDescriptor["contextWindowOptions"]>,
+  contextWindowOptions: NonNullable<EngineModelDescriptor["contextWindowOptions"]>,
 ): string {
   return (
     contextWindowOptions.find((option) => option.value === value)?.label ?? value.toUpperCase()
@@ -792,7 +792,7 @@ function withCursorVariantName(
   defaultEffort: string | undefined,
   contextWindow: string | undefined,
   defaultContextWindow: string | undefined,
-  contextWindowOptions: NonNullable<ProviderModelDescriptor["contextWindowOptions"]>,
+  contextWindowOptions: NonNullable<EngineModelDescriptor["contextWindowOptions"]>,
   fastMode: boolean | undefined,
 ): string {
   const suffixes: Array<string> = [];
@@ -813,12 +813,12 @@ function buildCursorAcpModelDescriptor(input: {
   readonly slug: string;
   readonly name: string;
   readonly supportedReasoningEfforts: NonNullable<
-    ProviderModelDescriptor["supportedReasoningEfforts"]
+    EngineModelDescriptor["supportedReasoningEfforts"]
   >;
   readonly defaultReasoningEffort?: string;
-  readonly contextWindowOptions: NonNullable<ProviderModelDescriptor["contextWindowOptions"]>;
+  readonly contextWindowOptions: NonNullable<EngineModelDescriptor["contextWindowOptions"]>;
   readonly defaultContextWindow?: string;
-}): ProviderModelDescriptor {
+}): EngineModelDescriptor {
   return {
     slug: input.slug,
     name: input.name,
@@ -850,12 +850,12 @@ function buildCursorAcpModelDescriptor(input: {
 function expandCursorParameterizedModelDescriptors(input: {
   readonly choice: CursorAcpModelChoice;
   readonly supportedReasoningEfforts: NonNullable<
-    ProviderModelDescriptor["supportedReasoningEfforts"]
+    EngineModelDescriptor["supportedReasoningEfforts"]
   >;
   readonly defaultReasoningEffort?: string;
-  readonly contextWindowOptions: NonNullable<ProviderModelDescriptor["contextWindowOptions"]>;
+  readonly contextWindowOptions: NonNullable<EngineModelDescriptor["contextWindowOptions"]>;
   readonly defaultContextWindow?: string;
-}): ReadonlyArray<ProviderModelDescriptor> {
+}): ReadonlyArray<EngineModelDescriptor> {
   const params = cursorModelParametersToObject(input.choice.slug);
   const reasoningKey =
     params.reasoning !== undefined ? "reasoning" : params.effort !== undefined ? "effort" : null;
@@ -892,7 +892,7 @@ function expandCursorParameterizedModelDescriptors(input: {
   const fastValues = canExpandFast ? [false, true] : [undefined];
   const variantDefaultEffort = parameterReasoningEffort ?? input.defaultReasoningEffort;
   const variantDefaultContextWindow = parameterContextWindow ?? input.defaultContextWindow;
-  const descriptors: Array<ProviderModelDescriptor> = [];
+  const descriptors: Array<EngineModelDescriptor> = [];
   const seen = new Set<string>();
 
   for (const effort of reasoningValues.length > 0 ? reasoningValues : [undefined]) {
@@ -939,7 +939,7 @@ function expandCursorParameterizedModelDescriptors(input: {
 
 export function buildCursorAcpModelDescriptors(
   configOptions: ReadonlyArray<Acp.SessionConfigOption>,
-): ReadonlyArray<ProviderModelDescriptor> {
+): ReadonlyArray<EngineModelDescriptor> {
   const choices = flattenCursorAcpModelChoices(configOptions);
   if (choices.length === 0) {
     return [];
@@ -1380,18 +1380,18 @@ function resolveCursorSessionModelValue(
   return resolveCursorAutoModelValue(choices);
 }
 
-type CursorAcpModelSelectionOutcome =
+type CursorAcpEngineSelectionOutcome =
   /** Nothing to apply: no model requested, or the agent picks it ("auto"). */
   | { readonly _tag: "None" }
   | { readonly _tag: "Resolved"; readonly value: string }
   | { readonly _tag: "Fallback"; readonly value: string; readonly requested: string }
   | { readonly _tag: "Unavailable"; readonly requested: string };
 
-function resolveCursorAcpModelSelection(
+function resolveCursorAcpEngineSelection(
   configOptions: ReadonlyArray<Acp.SessionConfigOption>,
   model: string | null | undefined,
   options: CursorModelOptions | null | undefined,
-): CursorAcpModelSelectionOutcome {
+): CursorAcpEngineSelectionOutcome {
   const trimmed = model?.trim();
   if (!trimmed) {
     return { _tag: "None" };
@@ -1469,8 +1469,8 @@ function cursorModelLabel(model: string): string {
 }
 
 function makeCursorUnavailableModelNotice(
-  selection: Extract<CursorAcpModelSelectionOutcome, { _tag: "Fallback" | "Unavailable" }>,
-): CursorAcpModelSelectionNotice {
+  selection: Extract<CursorAcpEngineSelectionOutcome, { _tag: "Fallback" | "Unavailable" }>,
+): CursorAcpEngineSelectionNotice {
   const requested = cursorModelLabel(selection.requested);
   return {
     reason: "model-unavailable",
@@ -1487,7 +1487,7 @@ function makeCursorRejectedModelNotice(
   requestedModel: string | null | undefined,
   appliedModel: string,
   cause: AcpErrors.AcpError,
-): CursorAcpModelSelectionNotice {
+): CursorAcpEngineSelectionNotice {
   const requested = requestedModel?.trim() || appliedModel;
   return {
     reason: "model-rejected",
@@ -1523,15 +1523,15 @@ function resolveCursorMergedSessionOptions(input: {
   );
 }
 
-export function applyCursorAcpModelSelection<E>(input: {
-  readonly runtime: CursorAcpModelSelectionRuntime;
+export function applyCursorAcpEngineSelection<E>(input: {
+  readonly runtime: CursorAcpEngineSelectionRuntime;
   readonly model: string | null | undefined;
   readonly options: CursorModelOptions | null | undefined;
-  readonly mapError: (context: CursorAcpModelSelectionErrorContext) => E;
+  readonly mapError: (context: CursorAcpEngineSelectionErrorContext) => E;
   /** Model selection must degrade, never abort the session; notices go here. */
-  readonly onNotice?: (notice: CursorAcpModelSelectionNotice) => Effect.Effect<void>;
+  readonly onNotice?: (notice: CursorAcpEngineSelectionNotice) => Effect.Effect<void>;
 }): Effect.Effect<void, E> {
-  const notify = (notice: CursorAcpModelSelectionNotice): Effect.Effect<void> =>
+  const notify = (notice: CursorAcpEngineSelectionNotice): Effect.Effect<void> =>
     input.onNotice ? input.onNotice(notice) : Effect.void;
   return Effect.gen(function* () {
     const initialConfigOptions = yield* input.runtime.getConfigOptions;
@@ -1544,7 +1544,7 @@ export function applyCursorAcpModelSelection<E>(input: {
       model: input.model,
       options: input.options,
     });
-    const selection = resolveCursorAcpModelSelection(
+    const selection = resolveCursorAcpEngineSelection(
       initialConfigOptions,
       input.model,
       mergedOptions,

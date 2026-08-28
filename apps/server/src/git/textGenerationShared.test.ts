@@ -32,7 +32,7 @@ describe("textGenerationShared", () => {
           reason: "The run says the PR is ready.",
         }),
         operation: "automation completion evaluation",
-        providerLabel: "Test provider",
+        providerLabel: "Test engine",
       }),
     );
 

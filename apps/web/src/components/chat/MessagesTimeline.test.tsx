@@ -150,8 +150,8 @@ describe("MessagesTimeline", () => {
           {
             pendingMessageId,
             turnId,
-            modelSelection: {
-              provider: "oa",
+            engineSelection: {
+              engine: "oa",
               model: "deepseek/deepseek-v4-pro",
             },
             requestedAt: "2026-08-27T02:21:00.000Z",
@@ -2062,12 +2062,12 @@ describe("MessagesTimeline", () => {
 
   it.each([
     {
-      provider: "Anti-Gravity",
+      engine: "Anti-Gravity",
       expectedText: "Ran 1 command",
       activity: makeActivity({
         id: "antigravity-live-tool",
         createdAt: "2026-03-17T19:12:28.100Z",
-        turnId: "turn-provider-live-tool",
+        turnId: "turn-engine-live-tool",
         kind: "tool.started",
         summary: "run_command started",
         payload: {
@@ -2082,12 +2082,12 @@ describe("MessagesTimeline", () => {
       }),
     },
     {
-      provider: "Codex",
+      engine: "Codex",
       expectedText: "Ran 1 command git status",
       activity: makeActivity({
         id: "codex-live-tool",
         createdAt: "2026-03-17T19:12:28.100Z",
-        turnId: "turn-provider-live-tool",
+        turnId: "turn-engine-live-tool",
         kind: "tool.started",
         summary: "Ran command started",
         payload: {
@@ -2107,10 +2107,10 @@ describe("MessagesTimeline", () => {
       }),
     },
   ])(
-    "renders $provider tool activity beside the live wait row",
+    "renders $engine tool activity beside the live wait row",
     async ({ activity, expectedText }) => {
       const { MessagesTimeline } = await import("./MessagesTimeline");
-      const activeTurnId = TurnId.makeUnsafe("turn-provider-live-tool");
+      const activeTurnId = TurnId.makeUnsafe("turn-engine-live-tool");
       const markup = renderToStaticMarkup(
         <MessagesTimeline
           {...makeTimelineBaseProps()}
@@ -2979,11 +2979,11 @@ describe("MessagesTimeline", () => {
     expect(markup).toContain('data-tool-icon="mcp"');
   });
 
-  it("shows the OmniMind mark for every provider-specific tool row shape", async () => {
+  it("shows the OmniMind mark for every engine-specific tool row shape", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const baseProps = makeTimelineBaseProps();
 
-    // Provider-style server/tool identifier while the call is active.
+    // Engine-style server/tool identifier while the call is active.
     const claudeMarkup = renderToStaticMarkup(
       <MessagesTimeline
         {...baseProps}
@@ -3012,7 +3012,7 @@ describe("MessagesTimeline", () => {
     expect(claudeMarkup).toContain("OmniMind is creating a thread");
     expect(claudeMarkup).not.toContain("OmniMind__harnessos_create_thread");
 
-    // A provider may misclassify an MCP action containing "create" or "list"
+    // A engine may misclassify an MCP action containing "create" or "list"
     // as a file change. Tool identity still wins over that transport category.
     const codexMarkup = renderToStaticMarkup(
       <MessagesTimeline
@@ -3246,7 +3246,7 @@ describe("MessagesTimeline", () => {
               {
                 threadId: "thread-terra",
                 title: "Explain the repository with Terra",
-                provider: "codex",
+                engine: "codex",
                 model: "gpt-5.6-terra",
                 environment: "local",
                 status: "task_dispatched",
@@ -3254,7 +3254,7 @@ describe("MessagesTimeline", () => {
               {
                 threadId: "thread-claude",
                 title: "Explain the repository with Claude",
-                provider: "claude",
+                engine: "claude",
                 model: "claude-sonnet-5",
                 environment: "worktree",
                 status: "task_dispatched",
@@ -3494,7 +3494,7 @@ describe("MessagesTimeline", () => {
                 assistantMessageId,
                 files: [
                   {
-                    path: "apps/web/src/components/chat/ProviderHealth.ts",
+                    path: "apps/web/src/components/chat/EngineHealth.ts",
                     additions: 63,
                     deletions: 4,
                   },
@@ -3524,7 +3524,7 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain("Edited");
-    expect(markup).toContain("ProviderHealth.ts");
+    expect(markup).toContain("EngineHealth.ts");
     expect(markup).toContain("ChatView.tsx");
     expect(markup).toContain("+63");
     expect(markup).toContain("-4");

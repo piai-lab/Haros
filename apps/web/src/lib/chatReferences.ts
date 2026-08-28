@@ -72,7 +72,7 @@ export function formatSelectionLabel(reference: ChatFileReference): string | nul
 
 // `@path` mention token plus a parenthetical location suffix (e.g.
 // `@file (line 21:5-12)`). The range/columns live outside the mention token
-// itself so provider-side file resolution keeps working. References without
+// itself so engine-side file resolution keeps working. References without
 // line info but with a snippet quote the selected text as a fenced block
 // instead — the snippet is the precise reference there.
 export function formatChatFileReference(reference: ChatFileReference): string {
@@ -91,7 +91,7 @@ export function buildWhyChangedPrompt(path: string): string {
   return `Why did we implement the changes in ${formatComposerMentionToken(path)}?`;
 }
 
-// "Why" prompt for an arbitrary file or line range. Providers run in the
+// "Why" prompt for an arbitrary file or line range. Engines run in the
 // workspace, so the prompt steers them toward git blame/history for evidence.
 export function buildWhyLinesPrompt(reference: ChatFileReference): string {
   const token = formatComposerMentionToken(reference.path);

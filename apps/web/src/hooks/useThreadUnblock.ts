@@ -1,5 +1,5 @@
 // FILE: useThreadUnblock.ts
-// Purpose: Drives the "Unblock thread" recovery action for provider-delivery quarantines.
+// Purpose: Drives the "Unblock thread" recovery action for engine-delivery quarantines.
 // Layer: Web chat recovery hook
 // Exports: useThreadUnblock
 
@@ -50,7 +50,7 @@ export function useThreadUnblock(input: {
           description:
             error instanceof Error
               ? error.message
-              : "An unexpected error occurred while clearing the provider failure.",
+              : "An unexpected error occurred while clearing the engine failure.",
         });
       } finally {
         inFlightThreadIdRef.current = null;

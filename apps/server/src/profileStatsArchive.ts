@@ -24,15 +24,15 @@ import {
   isManagedCheckpointRefForThread,
   resolveProjectCwdForKind,
 } from "./checkpointing/Utils";
-import { aggregateProfileSkillUsageRows, turnModelSelectionCte } from "./profileStats";
-import { PROVIDER_COMMAND_REACTOR_CONSUMER } from "./persistence/Services/OrchestrationEventDeliveries";
+import { aggregateProfileSkillUsageRows, turnEngineSelectionCte } from "./profileStats";
+import { ENGINE_COMMAND_REACTOR_CONSUMER } from "./persistence/Services/OrchestrationEventDeliveries";
 import { isProviderIntentEventType } from "./orchestration/providerIntentClassification";
 import { THREAD_RETENTION_COMMAND_ID_PREFIX } from "./threadRetention";
 
 interface PurgeThreadRow {
   readonly projectId: string | null;
   readonly projectTitle: string | null;
-  readonly modelSelectionJson: string | null;
+  readonly engineSelectionJson: string | null;
   readonly deletedAt: string | null;
   readonly envMode: string | null;
   readonly worktreePath: string | null;
@@ -52,10 +52,10 @@ interface TokenActivityRow {
   // mirroring profileStats.queryTokenActivity.
   readonly totalProcessedTokens: number | bigint | null;
   readonly usedTokens: number | bigint | null;
-  // Per-turn attribution resolved in SQL (turn-start modelSelection); NULL when
+  // Per-turn attribution resolved in SQL (turn-start engineSelection); NULL when
   // the activity has no attributable turn, in which case the thread's own
   // selection applies as the fallback.
-  readonly provider: string | null;
+  readonly engine: string | null;
   readonly model: string | null;
   readonly dispatchOrigin?: string | null;
   readonly createdAt: string | null;
@@ -86,7 +86,7 @@ interface ThreadCheckpointCleanup {
 }
 
 export interface ThreadTurnSnapshotRow {
-  readonly provider: string | null;
+  readonly engine: string | null;
   readonly model: string | null;
   readonly reasoning: string | null;
   readonly turnCount: number;
@@ -94,7 +94,7 @@ export interface ThreadTurnSnapshotRow {
 
 export interface ThreadTokenSnapshotRow {
   readonly createdAt: string;
-  readonly provider: string | null;
+  readonly engine: string | null;
   readonly model: string | null;
   readonly tokens: number;
   readonly cachedInputTokens: number | null;
@@ -104,15 +104,15 @@ export interface ThreadTokenSnapshotRow {
 
 export interface ThreadTurnEventSnapshotRow {
   readonly createdAt: string;
-  readonly provider: string | null;
+  readonly engine: string | null;
   readonly model: string | null;
   readonly reasoning: string | null;
 }
 
 // ── Pure helpers ───────────────────────────────────────────────────────
 
-interface ModelSelectionLike {
-  readonly provider: string | null;
+interface EngineSelectionLike {
+  readonly engine: string | null;
   readonly model: string | null;
   readonly reasoning: string | null;
 }
@@ -121,28 +121,28 @@ function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value : null;
 }
 
-function parseModelSelection(value: unknown): ModelSelectionLike | null {
+function parseEngineSelection(value: unknown): EngineSelectionLike | null {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     return null;
   }
-  const record = value as { provider?: unknown; model?: unknown; options?: unknown };
+  const record = value as { engine?: unknown; model?: unknown; options?: unknown };
   const options =
     record.options !== null && typeof record.options === "object"
       ? (record.options as { reasoningEffort?: unknown; effort?: unknown })
       : null;
   return {
-    provider: readString(record.provider),
+    engine: readString(record.engine),
     model: readString(record.model),
     reasoning: readString(options?.reasoningEffort) ?? readString(options?.effort),
   };
 }
 
-function parseModelSelectionJson(json: string | null): ModelSelectionLike | null {
+function parseEngineSelectionJson(json: string | null): EngineSelectionLike | null {
   if (json === null || json.trim().length === 0) {
     return null;
   }
   try {
-    return parseModelSelection(JSON.parse(json));
+    return parseEngineSelection(JSON.parse(json));
   } catch {
     return null;
   }
@@ -215,25 +215,25 @@ function hasProfileStatsContribution(input: {
 }
 
 // Mirrors the per-turn extraction in profileStats.queryTurnInsights: the turn
-// event's own modelSelection wins, otherwise the thread's selection applies.
+// event's own engineSelection wins, otherwise the thread's selection applies.
 export function aggregateThreadTurnSnapshotRows(
   events: ReadonlyArray<TurnEventRow>,
-  threadModelSelectionJson: string | null,
+  threadEngineSelectionJson: string | null,
 ): ThreadTurnSnapshotRow[] {
-  const threadSelection = parseModelSelectionJson(threadModelSelectionJson);
+  const threadSelection = parseEngineSelectionJson(threadEngineSelectionJson);
   const counts = new Map<
     string,
-    { provider: string | null; model: string | null; reasoning: string | null; turnCount: number }
+    { engine: string | null; model: string | null; reasoning: string | null; turnCount: number }
   >();
 
   for (const event of events) {
-    let eventSelection: ModelSelectionLike | null = null;
+    let eventSelection: EngineSelectionLike | null = null;
     if (event.payloadJson !== null) {
       try {
         const payload: unknown = JSON.parse(event.payloadJson);
         if (payload !== null && typeof payload === "object") {
-          eventSelection = parseModelSelection(
-            (payload as { modelSelection?: unknown }).modelSelection,
+          eventSelection = parseEngineSelection(
+            (payload as { engineSelection?: unknown }).engineSelection,
           );
         }
       } catch {
@@ -241,15 +241,15 @@ export function aggregateThreadTurnSnapshotRows(
       }
     }
     const selection = eventSelection ?? threadSelection;
-    const provider = selection?.provider ?? null;
+    const engine = selection?.engine ?? null;
     const model = selection?.model ?? null;
     const reasoning = selection?.reasoning ?? null;
-    const key = `${provider ?? ""}\u0000${model ?? ""}\u0000${reasoning ?? ""}`;
+    const key = `${engine ?? ""}\u0000${model ?? ""}\u0000${reasoning ?? ""}`;
     const existing = counts.get(key);
     if (existing) {
       existing.turnCount += 1;
     } else {
-      counts.set(key, { provider, model, reasoning, turnCount: 1 });
+      counts.set(key, { engine, model, reasoning, turnCount: 1 });
     }
   }
 
@@ -258,18 +258,20 @@ export function aggregateThreadTurnSnapshotRows(
 
 export function collectThreadTurnEventSnapshotRows(
   events: ReadonlyArray<TurnEventRow>,
-  threadModelSelectionJson: string | null,
+  threadEngineSelectionJson: string | null,
 ): ThreadTurnEventSnapshotRow[] {
   const rows: ThreadTurnEventSnapshotRow[] = [];
-  const threadSelection = parseModelSelectionJson(threadModelSelectionJson);
+  const threadSelection = parseEngineSelectionJson(threadEngineSelectionJson);
   for (const event of events) {
     if (!event.createdAt) continue;
-    let selection: ModelSelectionLike | null = null;
+    let selection: EngineSelectionLike | null = null;
     if (event.payloadJson) {
       try {
         const payload: unknown = JSON.parse(event.payloadJson);
         if (payload !== null && typeof payload === "object") {
-          selection = parseModelSelection((payload as { modelSelection?: unknown }).modelSelection);
+          selection = parseEngineSelection(
+            (payload as { engineSelection?: unknown }).engineSelection,
+          );
         }
       } catch {
         // Keep the timestamped turn with unknown selection.
@@ -277,7 +279,7 @@ export function collectThreadTurnEventSnapshotRows(
     }
     rows.push({
       createdAt: event.createdAt,
-      provider: (selection ?? threadSelection)?.provider ?? null,
+      engine: (selection ?? threadSelection)?.engine ?? null,
       model: (selection ?? threadSelection)?.model ?? null,
       reasoning: (selection ?? threadSelection)?.reasoning ?? null,
     });
@@ -290,29 +292,29 @@ function tokenCounterValue(value: number | bigint | null | undefined): number | 
   return total !== null && total !== undefined && Number.isFinite(total) ? total : null;
 }
 
-function tokenProviderModelKey(provider: string | null, model: string | null): string {
-  return `${provider ?? ""}\u0000${model ?? ""}`;
+function tokenProviderModelKey(engine: string | null, model: string | null): string {
+  return `${engine ?? ""}\u0000${model ?? ""}`;
 }
 
 function resolveTokenProviderModel(
   row: TokenActivityRow,
-  fallbackSelection?: { readonly provider: string | null; readonly model: string | null },
-): { readonly provider: string | null; readonly model: string | null } {
-  const stampedProvider = readString(row.provider);
-  const provider = stampedProvider ?? fallbackSelection?.provider ?? null;
+  fallbackSelection?: { readonly engine: string | null; readonly model: string | null },
+): { readonly engine: string | null; readonly model: string | null } {
+  const stampedProvider = readString(row.engine);
+  const engine = stampedProvider ?? fallbackSelection?.engine ?? null;
   const model =
     readString(row.model) ??
-    (stampedProvider === null || stampedProvider === fallbackSelection?.provider
+    (stampedProvider === null || stampedProvider === fallbackSelection?.engine
       ? (fallbackSelection?.model ?? null)
       : null);
-  return { provider, model };
+  return { engine, model };
 }
 
 function addTokenSnapshotRow(
   rows: Map<string, ThreadTokenSnapshotRow>,
   row: ThreadTokenSnapshotRow,
 ): void {
-  const key = `${row.createdAt}\u0000${tokenProviderModelKey(row.provider, row.model)}`;
+  const key = `${row.createdAt}\u0000${tokenProviderModelKey(row.engine, row.model)}`;
   const existing = rows.get(key);
   if (existing) {
     rows.set(key, {
@@ -346,7 +348,7 @@ function addTokenSnapshotRow(
 // thread's own selection fills in rows without turn attribution).
 export function aggregateThreadTokenRows(
   rows: ReadonlyArray<TokenActivityRow>,
-  fallbackSelection?: { readonly provider: string | null; readonly model: string | null },
+  fallbackSelection?: { readonly engine: string | null; readonly model: string | null },
 ): ThreadTokenSnapshotRow[] {
   const tokensByKey = new Map<string, ThreadTokenSnapshotRow>();
   const cumulativeProviderModels = new Set<string>();
@@ -354,8 +356,8 @@ export function aggregateThreadTokenRows(
     if (tokenCounterValue(row.totalProcessedTokens) === null) {
       continue;
     }
-    const { provider, model } = resolveTokenProviderModel(row, fallbackSelection);
-    cumulativeProviderModels.add(tokenProviderModelKey(provider, model));
+    const { engine, model } = resolveTokenProviderModel(row, fallbackSelection);
+    cumulativeProviderModels.add(tokenProviderModelKey(engine, model));
   }
 
   let previousCumulativeTotal: number | null = null;
@@ -400,10 +402,10 @@ export function aggregateThreadTokenRows(
     ) {
       continue;
     }
-    const { provider, model } = resolveTokenProviderModel(row, fallbackSelection);
+    const { engine, model } = resolveTokenProviderModel(row, fallbackSelection);
     addTokenSnapshotRow(tokensByKey, {
       createdAt: row.createdAt,
-      provider,
+      engine,
       model,
       tokens: delta,
       cachedInputTokens: hasConsistentBreakdown ? cachedInputDelta : null,
@@ -415,8 +417,8 @@ export function aggregateThreadTokenRows(
   let previousUsedTotal: number | null = null;
   let previousUsedProviderModelKey: string | null = null;
   for (const row of rows) {
-    const { provider, model } = resolveTokenProviderModel(row, fallbackSelection);
-    const providerModelKey = tokenProviderModelKey(provider, model);
+    const { engine, model } = resolveTokenProviderModel(row, fallbackSelection);
+    const providerModelKey = tokenProviderModelKey(engine, model);
     if (cumulativeProviderModels.has(providerModelKey)) {
       continue;
     }
@@ -440,7 +442,7 @@ export function aggregateThreadTokenRows(
     }
     addTokenSnapshotRow(tokensByKey, {
       createdAt: row.createdAt,
-      provider,
+      engine,
       model,
       tokens: delta,
       cachedInputTokens: null,
@@ -454,7 +456,7 @@ export function aggregateThreadTokenRows(
 // ── Service ────────────────────────────────────────────────────────────
 
 export interface ProfileStatsArchiveShape {
-  /** True while hard deletion would erase unresolved provider delivery evidence. */
+  /** True while hard deletion would erase unresolved engine delivery evidence. */
   readonly hasThreadPurgeFence: (input: {
     readonly threadId: string;
   }) => Effect.Effect<boolean, unknown>;
@@ -495,7 +497,7 @@ const makeProfileStatsArchive = Effect.gen(function* () {
           EXISTS (
             SELECT 1
             FROM orchestration_event_deliveries
-            WHERE consumer_name = ${PROVIDER_COMMAND_REACTOR_CONSUMER}
+            WHERE consumer_name = ${ENGINE_COMMAND_REACTOR_CONSUMER}
               AND thread_id = ${threadId}
               AND state IN ('inflight', 'retry', 'dead', 'uncertain')
           )
@@ -516,7 +518,7 @@ const makeProfileStatsArchive = Effect.gen(function* () {
           (
             SELECT last_acked_sequence
             FROM orchestration_consumer_state
-            WHERE consumer_name = ${PROVIDER_COMMAND_REACTOR_CONSUMER}
+            WHERE consumer_name = ${ENGINE_COMMAND_REACTOR_CONSUMER}
           ),
           0
         )
@@ -535,7 +537,7 @@ const makeProfileStatsArchive = Effect.gen(function* () {
         SELECT
           t.project_id AS projectId,
           p.title AS projectTitle,
-          t.model_selection_json AS modelSelectionJson,
+          t.model_selection_json AS engineSelectionJson,
           t.deleted_at AS deletedAt,
           t.env_mode AS envMode,
           t.worktree_path AS worktreePath,
@@ -666,7 +668,7 @@ const makeProfileStatsArchive = Effect.gen(function* () {
         SELECT
           t.project_id AS projectId,
           p.title AS projectTitle,
-          t.model_selection_json AS modelSelectionJson,
+          t.model_selection_json AS engineSelectionJson,
           t.deleted_at AS deletedAt,
           t.env_mode AS envMode,
           t.worktree_path AS worktreePath,
@@ -707,13 +709,13 @@ const makeProfileStatsArchive = Effect.gen(function* () {
       // series, and the turn join pins each delta to the selected model.
       const tokenActivityRows = yield* sql<TokenActivityRow>`
         WITH turn_model AS (
-          ${turnModelSelectionCte(sql, { threadId })}
+          ${turnEngineSelectionCte(sql, { threadId })}
         )
         SELECT
           CAST(json_extract(a.payload_json, '$.totalProcessedTokens') AS INTEGER)
             AS totalProcessedTokens,
           CAST(json_extract(a.payload_json, '$.usedTokens') AS INTEGER) AS usedTokens,
-          COALESCE(tm.provider, json_extract(a.payload_json, '$.provider')) AS provider,
+          COALESCE(tm.engine, json_extract(a.payload_json, '$.engine')) AS engine,
           tm.model AS model,
           pm.dispatch_origin AS dispatchOrigin,
           a.created_at AS createdAt,
@@ -759,14 +761,14 @@ const makeProfileStatsArchive = Effect.gen(function* () {
         ORDER BY created_at ASC, message_id ASC
       `;
 
-      const turnRows = aggregateThreadTurnSnapshotRows(turnEventRows, thread.modelSelectionJson);
+      const turnRows = aggregateThreadTurnSnapshotRows(turnEventRows, thread.engineSelectionJson);
       const turnEventSnapshots = collectThreadTurnEventSnapshotRows(
         turnEventRows,
-        thread.modelSelectionJson,
+        thread.engineSelectionJson,
       );
-      const threadSelection = parseModelSelectionJson(thread.modelSelectionJson);
+      const threadSelection = parseEngineSelectionJson(thread.engineSelectionJson);
       const tokenRows = aggregateThreadTokenRows(tokenActivityRows, {
-        provider: threadSelection?.provider ?? null,
+        engine: threadSelection?.engine ?? null,
         model: threadSelection?.model ?? null,
       });
       const skillRows = aggregateProfileSkillUsageRows(skillMessageRows);
@@ -806,9 +808,9 @@ const makeProfileStatsArchive = Effect.gen(function* () {
           turnEventSnapshots,
           (row) => sql`
             INSERT INTO profile_stats_deleted_turn_events (
-              thread_id, created_at, provider, model, reasoning
+              thread_id, created_at, engine, model, reasoning
             )
-            VALUES (${threadId}, ${row.createdAt}, ${row.provider}, ${row.model}, ${row.reasoning})
+            VALUES (${threadId}, ${row.createdAt}, ${row.engine}, ${row.model}, ${row.reasoning})
           `,
           { concurrency: 1, discard: true },
         );
@@ -824,11 +826,11 @@ const makeProfileStatsArchive = Effect.gen(function* () {
           tokenRows,
           (row) => sql`
             INSERT INTO profile_stats_deleted_tokens (
-              thread_id, created_at, provider, model, tokens,
+              thread_id, created_at, engine, model, tokens,
               cached_input_tokens, uncached_input_tokens, output_tokens
             )
             VALUES (
-              ${threadId}, ${row.createdAt}, ${row.provider}, ${row.model}, ${row.tokens},
+              ${threadId}, ${row.createdAt}, ${row.engine}, ${row.model}, ${row.tokens},
               ${row.cachedInputTokens}, ${row.uncachedInputTokens}, ${row.outputTokens}
             )
           `,
@@ -846,7 +848,7 @@ const makeProfileStatsArchive = Effect.gen(function* () {
       // before their source events; unresolved rows were fenced above.
       yield* sql`
         DELETE FROM orchestration_event_deliveries
-        WHERE consumer_name = ${PROVIDER_COMMAND_REACTOR_CONSUMER}
+        WHERE consumer_name = ${ENGINE_COMMAND_REACTOR_CONSUMER}
           AND thread_id = ${threadId}
           AND state = 'succeeded'
       `;

@@ -1,13 +1,13 @@
 // FILE: TraitsPicker.tsx
 // Purpose: Renders composer trait controls for effort, thinking, and fast mode across menu surfaces.
 // Layer: Chat composer presentation
-// Depends on: shared trait resolution helpers, provider model option updates, and shared menu primitives.
+// Depends on: shared trait resolution helpers, engine model option updates, and shared menu primitives.
 
 import {
   type OpenCodeModelOptions,
-  type ProviderAgentDescriptor,
+  type EngineAgentDescriptor,
   type EngineKind,
-  type ProviderModelDescriptor,
+  type EngineModelDescriptor,
   type ThreadId,
 } from "@harnessos/contracts";
 import { applyClaudePromptEffortPrefix } from "@harnessos/shared/model";
@@ -28,7 +28,7 @@ import { useComposerDraftStore } from "../../composerDraftStore";
 import {
   buildNextProviderOptions,
   buildProviderOptionPatch,
-  type ProviderOptions,
+  type EngineOptions,
 } from "../../providerModelOptions";
 import { COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME } from "./composerPickerStyles";
 import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
@@ -45,32 +45,32 @@ import { useI18n } from "~/i18n";
 
 const ULTRATHINK_PROMPT_PREFIX = "Ultrathink:\n";
 
-function defaultAgentForProvider(provider: EngineKind): string | null {
-  if (provider === "kilo") return "code";
-  if (provider === "opencode") return "build";
+function defaultAgentForProvider(engine: EngineKind): string | null {
+  if (engine === "kilo") return "code";
+  if (engine === "opencode") return "build";
   return null;
 }
 
 function getAgentOptions(
-  provider: EngineKind,
-  runtimeAgents: ReadonlyArray<ProviderAgentDescriptor> | null | undefined,
-): ReadonlyArray<ProviderAgentDescriptor> {
-  if (provider !== "kilo" && provider !== "opencode") return [];
+  engine: EngineKind,
+  runtimeAgents: ReadonlyArray<EngineAgentDescriptor> | null | undefined,
+): ReadonlyArray<EngineAgentDescriptor> {
+  if (engine !== "kilo" && engine !== "opencode") return [];
   return runtimeAgents ?? [];
 }
 
 function getSelectedAgentValue(
-  provider: EngineKind,
-  modelOptions: ProviderOptions | null | undefined,
+  engine: EngineKind,
+  modelOptions: EngineOptions | null | undefined,
 ): string | null {
-  const defaultAgent = defaultAgentForProvider(provider);
+  const defaultAgent = defaultAgentForProvider(engine);
   if (!defaultAgent) return null;
   const selectedAgent = (modelOptions as OpenCodeModelOptions | undefined)?.agent?.trim();
   return selectedAgent && selectedAgent.length > 0 ? selectedAgent : defaultAgent;
 }
 
 function findAgentLabel(
-  agents: ReadonlyArray<ProviderAgentDescriptor>,
+  agents: ReadonlyArray<EngineAgentDescriptor>,
   value: string | null,
 ): string | null {
   if (!value) return null;
@@ -81,12 +81,12 @@ function findAgentLabel(
 // Mirrors the trigger label assembly so callers (e.g. the composer footer
 // width planner) can measure the summary without rendering the picker.
 export function resolveTraitsTriggerSummary(options: {
-  provider: EngineKind;
+  engine: EngineKind;
   model: string | null | undefined;
   prompt: string;
-  modelOptions: ProviderOptions | null | undefined;
-  runtimeModel?: ProviderModelDescriptor | undefined;
-  runtimeAgents: ReadonlyArray<ProviderAgentDescriptor> | null | undefined;
+  modelOptions: EngineOptions | null | undefined;
+  runtimeModel?: EngineModelDescriptor | undefined;
+  runtimeAgents: ReadonlyArray<EngineAgentDescriptor> | null | undefined;
   labels?: {
     readonly fast: string;
     readonly default: string;
@@ -101,7 +101,7 @@ export function resolveTraitsTriggerSummary(options: {
   summaryText: string;
 } {
   const selection = getComposerTraitSelection(
-    options.provider,
+    options.engine,
     options.model,
     options.prompt,
     options.modelOptions,
@@ -115,7 +115,7 @@ export function resolveTraitsTriggerSummary(options: {
     contextWindowOptions,
     defaultContextWindow,
   } = selection;
-  // Providers whose only trait control is the fast toggle surface it as the
+  // Engines whose only trait control is the fast toggle surface it as the
   // primary label ("Fast"/"Default") instead of the appended badge.
   const isFastOnlyControl =
     supportsComposerFastModeControl(selection) &&
@@ -136,13 +136,13 @@ export function resolveTraitsTriggerSummary(options: {
     contextWindowOptions.length > 1 && contextWindow !== defaultContextWindow
       ? (contextWindowOptions.find((option) => option.value === contextWindow)?.label ?? null)
       : null;
-  const agentOptions = getAgentOptions(options.provider, options.runtimeAgents);
+  const agentOptions = getAgentOptions(options.engine, options.runtimeAgents);
   const explicitAgent = (options.modelOptions as OpenCodeModelOptions | undefined)?.agent?.trim();
-  const selectedAgent = getSelectedAgentValue(options.provider, options.modelOptions);
+  const selectedAgent = getSelectedAgentValue(options.engine, options.modelOptions);
   const agentLabel = findAgentLabel(agentOptions, selectedAgent);
   // An explicit Agent/Mode choice is more informative than a default Variant.
   // Otherwise preserve the established primary-trait summary, falling back to
-  // the provider-owned default Agent/Mode when it is the only useful option.
+  // the engine-owned default Agent/Mode when it is the only useful option.
   const resolvedPrimaryLabel = explicitAgent ? agentLabel : (primaryLabel ?? agentLabel);
   const showsFastBadge = showsComposerFastModeBadge(selection) && !isFastOnlyControl;
   const summaryText = [
@@ -233,21 +233,21 @@ function TraitRadioSection({
 }
 
 export interface TraitsMenuContentProps {
-  provider: EngineKind;
+  engine: EngineKind;
   threadId: ThreadId;
   model: string | null | undefined;
-  runtimeModel?: ProviderModelDescriptor | undefined;
-  runtimeModels?: ReadonlyArray<ProviderModelDescriptor> | null | undefined;
-  runtimeAgents?: ReadonlyArray<ProviderAgentDescriptor> | null | undefined;
+  runtimeModel?: EngineModelDescriptor | undefined;
+  runtimeModels?: ReadonlyArray<EngineModelDescriptor> | null | undefined;
+  runtimeAgents?: ReadonlyArray<EngineAgentDescriptor> | null | undefined;
   prompt: string;
   onPromptChange: (prompt: string) => void;
   includeFastMode?: boolean;
-  modelOptions?: ProviderOptions | null | undefined;
+  modelOptions?: EngineOptions | null | undefined;
   onSelectionComplete?: () => void;
 }
 
 export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
-  provider,
+  engine,
   threadId,
   model,
   runtimeModel,
@@ -276,7 +276,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
     primarySelectDescriptor,
     fastModeDescriptor,
     promptInjectedValues,
-  } = getComposerTraitSelection(provider, model, prompt, modelOptions, runtimeModel);
+  } = getComposerTraitSelection(engine, model, prompt, modelOptions, runtimeModel);
   const hasVisibleControls = hasVisibleComposerTraitControls(
     { caps, effortLevels, thinkingEnabled, contextWindowOptions, fastModeDescriptor },
     { includeFastMode },
@@ -287,9 +287,9 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
   // standalone radio section instead.
   const showsFastModeEffortToggle =
     includeFastMode && supportsFastModeControl && effortLevels.length > 0;
-  const agentOptions = getAgentOptions(provider, runtimeAgents);
-  const defaultAgent = defaultAgentForProvider(provider);
-  const selectedAgent = getSelectedAgentValue(provider, modelOptions);
+  const agentOptions = getAgentOptions(engine, runtimeAgents);
+  const defaultAgent = defaultAgentForProvider(engine);
+  const selectedAgent = getSelectedAgentValue(engine, modelOptions);
   const hasAgentControls = agentOptions.length > 0 && defaultAgent !== null;
   const hasPriorContextWindowSection = thinkingEnabled !== null;
   // Both descriptor ids are resolved up here rather than inline. React Compiler cannot lower a `??`
@@ -301,22 +301,22 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
   const hasPriorFastModeSection =
     thinkingEnabled !== null || effortLevels.length > 0 || contextWindowOptions.length > 1;
 
-  // Single home for committing a trait change: merge the patch into the provider
+  // Single home for committing a trait change: merge the patch into the engine
   // options, persist it as sticky, and close the menu. Every section funnels here.
   // The fast-mode header toggle passes `keepMenuOpen` so its state flip stays visible.
   const commitTrait = useCallback(
     (patch: Record<string, unknown>, options?: { keepMenuOpen?: boolean }) => {
       setProviderModelOptions(
         threadId,
-        provider,
-        buildNextProviderOptions(provider, modelOptions, patch),
+        engine,
+        buildNextProviderOptions(engine, modelOptions, patch),
         { ...(model !== undefined ? { model } : {}), persistSticky: true },
       );
       if (!options?.keepMenuOpen) {
         onSelectionComplete?.();
       }
     },
-    [threadId, provider, modelOptions, model, setProviderModelOptions, onSelectionComplete],
+    [threadId, engine, modelOptions, model, setProviderModelOptions, onSelectionComplete],
   );
 
   // Deliberately not wrapped in `useCallback`: its inputs all come out of one
@@ -339,14 +339,14 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
     }
     const optionId =
       primarySelectDescriptorId ??
-      (provider === "kilo" || provider === "opencode"
+      (engine === "kilo" || engine === "opencode"
         ? "variant"
-        : provider === "pi" || provider === "oa"
+        : engine === "pi" || engine === "oa"
           ? "thinkingLevel"
-          : provider === "claude"
+          : engine === "claude"
             ? "effort"
             : "reasoningEffort");
-    commitTrait(buildProviderOptionPatch(provider, optionId, nextOption.value));
+    commitTrait(buildProviderOptionPatch(engine, optionId, nextOption.value));
   };
 
   if (!hasVisibleControls && !hasAgentControls) {
@@ -388,9 +388,9 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
           {hasPriorEffortSection ? <MenuDivider /> : null}
           <TraitRadioSection
             label={
-              provider === "kilo" || provider === "opencode"
+              engine === "kilo" || engine === "opencode"
                 ? t("composer.variant")
-                : provider === "pi" || provider === "oa"
+                : engine === "pi" || engine === "oa"
                   ? t("composer.thinkingLevel")
                   : t("composer.effort")
             }
@@ -457,7 +457,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
         <>
           {hasVisibleControls ? <MenuDivider /> : null}
           <TraitRadioSection
-            label={provider === "kilo" ? t("composer.mode") : t("composer.agent")}
+            label={engine === "kilo" ? t("composer.mode") : t("composer.agent")}
             value={selectedAgent ?? defaultAgent ?? ""}
             options={agentOptions.map((agent) => ({
               value: agent.name,
@@ -478,7 +478,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
 });
 
 export const TraitsPicker = memo(function TraitsPicker({
-  provider,
+  engine,
   threadId,
   model,
   runtimeModel,
@@ -538,13 +538,13 @@ export const TraitsPicker = memo(function TraitsPicker({
     scheduleSelectionCommitted();
   }, [scheduleSelectionCommitted, setMenuOpen]);
   const { caps, effortLevels, thinkingEnabled, contextWindowOptions, fastModeDescriptor } =
-    getComposerTraitSelection(provider, model, prompt, modelOptions, runtimeModel);
+    getComposerTraitSelection(engine, model, prompt, modelOptions, runtimeModel);
   const hasVisibleControls = hasVisibleComposerTraitControls(
     { caps, effortLevels, thinkingEnabled, contextWindowOptions, fastModeDescriptor },
     { includeFastMode },
   );
-  const agentOptions = getAgentOptions(provider, runtimeAgents);
-  const defaultAgent = defaultAgentForProvider(provider);
+  const agentOptions = getAgentOptions(engine, runtimeAgents);
+  const defaultAgent = defaultAgentForProvider(engine);
   const hasAgentControls = agentOptions.length > 0 && defaultAgent !== null;
 
   if (!hasVisibleControls && !hasAgentControls) {
@@ -557,7 +557,7 @@ export const TraitsPicker = memo(function TraitsPicker({
     showsFastBadge,
     summaryText: hiddenLabelTitle,
   } = resolveTraitsTriggerSummary({
-    provider,
+    engine,
     model,
     prompt,
     modelOptions,
@@ -572,7 +572,7 @@ export const TraitsPicker = memo(function TraitsPicker({
     },
   });
 
-  const isCodexStyle = provider === "codex";
+  const isCodexStyle = engine === "codex";
 
   const triggerButton = (
     <Button
@@ -673,7 +673,7 @@ export const TraitsPicker = memo(function TraitsPicker({
       )}
       <ComposerPickerMenuPopup align="start" fixedWidth>
         <TraitsMenuContent
-          provider={provider}
+          engine={engine}
           threadId={threadId}
           model={model}
           runtimeModel={runtimeModel}

@@ -258,7 +258,7 @@ describe("agent gateway stdio proxy", () => {
         }
       });
 
-      // The exchange is eager: by the time a provider command descendant can
+      // The exchange is eager: by the time a engine command descendant can
       // run, it inherits no real bearer and the ambient one-shot credential is
       // already spent.
       await withTimeout(bootstrapStarted.promise);

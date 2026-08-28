@@ -18,7 +18,7 @@ function isPlanBoundaryToolActivity(activity: OrchestrationThreadActivity): bool
 }
 
 /**
- * Whether a durable Provider activity can become an existing WorkLog/Timeline row.
+ * Whether a durable Engine activity can become an existing WorkLog/Timeline row.
  * Instance-specific collapsing still belongs to WorkLog; this only owns the
  * activity classes that every presentation path hides.
  */

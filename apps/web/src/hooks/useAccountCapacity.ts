@@ -1,5 +1,5 @@
 // FILE: useAccountCapacity.ts
-// Purpose: Provider-native account capacity only; never reads local history or thread signals.
+// Purpose: Engine-native account capacity only; never reads local history or thread signals.
 
 import type { EngineKind, ServerProviderUsageSnapshot } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
@@ -13,13 +13,13 @@ import { deriveProviderUsageLearnMoreHref, deriveRateLimitLearnMoreHref } from "
 import { serverAllProviderUsageQueryOptions } from "~/lib/serverReactQuery";
 
 export function useAccountCapacity(input: {
-  provider: EngineKind | null | undefined;
+  engine: EngineKind | null | undefined;
   providerSnapshot?: ServerProviderUsageSnapshot | undefined;
 }) {
-  const provider = input.provider ?? null;
-  const shouldFetch = provider !== null && input.providerSnapshot === undefined;
+  const engine = input.engine ?? null;
+  const shouldFetch = engine !== null && input.providerSnapshot === undefined;
   const query = useQuery(serverAllProviderUsageQueryOptions({ enabled: shouldFetch }));
-  const fetched = (query.data ?? []).find((snapshot) => snapshot.provider === provider);
+  const fetched = (query.data ?? []).find((snapshot) => snapshot.engine === engine);
   const snapshot = fetched ?? input.providerSnapshot ?? null;
   const unavailable = isProviderUsageSnapshotNonOk(snapshot);
   const liveRateLimit = unavailable ? null : normalizeServerProviderUsageRateLimit(snapshot);
@@ -30,7 +30,7 @@ export function useAccountCapacity(input: {
   return {
     isLoading: shouldFetch && query.isPending && !snapshot,
     learnMoreHref:
-      deriveRateLimitLearnMoreHref(rateLimits) ?? deriveProviderUsageLearnMoreHref(provider),
+      deriveRateLimitLearnMoreHref(rateLimits) ?? deriveProviderUsageLearnMoreHref(engine),
     rateLimits,
     usageLines,
     usageNotice: detail,

@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 
-import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS } from "@harnessos/contracts";
+import { ENGINE_SEND_TURN_MAX_ATTACHMENTS } from "@harnessos/contracts";
 import { HARNESSOS_DEVELOPMENT_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
 import { describe, expect, it, vi } from "vitest";
 
@@ -595,7 +595,7 @@ describe("AppSnap helper protocol", () => {
       checkChild.emit("close", 0, null);
       await enable;
 
-      for (let index = 0; index <= PROVIDER_SEND_TURN_MAX_ATTACHMENTS; index += 1) {
+      for (let index = 0; index <= ENGINE_SEND_TURN_MAX_ATTACHMENTS; index += 1) {
         const id = `capture-${index}`;
         const capturePath = join(captureDirectory, `${id}.png`);
         writeFileSync(
@@ -613,10 +613,10 @@ describe("AppSnap helper protocol", () => {
       }
 
       await vi.waitFor(() => {
-        expect(onCaptured).toHaveBeenCalledTimes(PROVIDER_SEND_TURN_MAX_ATTACHMENTS + 1);
+        expect(onCaptured).toHaveBeenCalledTimes(ENGINE_SEND_TURN_MAX_ATTACHMENTS + 1);
       });
       const pendingCaptures = await manager.listPendingCaptures();
-      expect(pendingCaptures).toHaveLength(PROVIDER_SEND_TURN_MAX_ATTACHMENTS);
+      expect(pendingCaptures).toHaveLength(ENGINE_SEND_TURN_MAX_ATTACHMENTS);
       expect(pendingCaptures[0]?.id).toBe("capture-1");
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({ code: "pending-capture-overflow" }),

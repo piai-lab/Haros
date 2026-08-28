@@ -1,17 +1,17 @@
 // FILE: FactoryPluginDiscovery.ts
-// Purpose: Reads Factory's local plugin marketplaces into OmniMind's provider discovery contracts.
-// Layer: Provider filesystem discovery
+// Purpose: Reads Factory's local plugin marketplaces into OmniMind's engine discovery contracts.
+// Layer: Engine filesystem discovery
 // Exports: listFactoryPlugins and readFactoryPlugin.
 
 import * as fs from "node:fs/promises";
 import * as nodePath from "node:path";
 
 import type {
-  ProviderListPluginsResult,
-  ProviderPluginDescriptor,
-  ProviderPluginMarketplaceDescriptor,
-  ProviderPluginMarketplaceLoadError,
-  ProviderReadPluginResult,
+  EngineListPluginsResult,
+  EnginePluginDescriptor,
+  EnginePluginMarketplaceDescriptor,
+  EnginePluginMarketplaceLoadError,
+  EngineReadPluginResult,
 } from "@harnessos/contracts";
 
 import { collectSkillsFromRoots } from "./skillsCatalog.ts";
@@ -131,7 +131,7 @@ async function pluginDescriptor(input: {
   readonly marketplacePath: string;
   readonly entry: FactoryMarketplacePlugin;
   readonly enabledPlugins: ReadonlyMap<string, boolean>;
-}): Promise<ProviderPluginDescriptor | null> {
+}): Promise<EnginePluginDescriptor | null> {
   const name = stringValue(input.entry.name);
   const source = stringValue(input.entry.source);
   if (!name || !source) return null;
@@ -164,12 +164,12 @@ async function pluginDescriptor(input: {
 export async function listFactoryPlugins(
   homeDir: string,
   cwd?: string,
-): Promise<ProviderListPluginsResult> {
+): Promise<EngineListPluginsResult> {
   const factoryDir = nodePath.join(homeDir, ".factory");
   const registrations = await marketplaceRegistrations(factoryDir);
   const enabledPlugins = await factoryEnabledPlugins(factoryDir, cwd);
-  const marketplaceLoadErrors: ProviderPluginMarketplaceLoadError[] = [];
-  const marketplaces: ProviderPluginMarketplaceDescriptor[] = [];
+  const marketplaceLoadErrors: EnginePluginMarketplaceLoadError[] = [];
+  const marketplaces: EnginePluginMarketplaceDescriptor[] = [];
   for (const registration of registrations) {
     const manifest = await readMarketplace(registration.path);
     if (!manifest) {
@@ -190,7 +190,7 @@ export async function listFactoryPlugins(
           }),
         ),
       )
-    ).filter((plugin): plugin is ProviderPluginDescriptor => plugin !== null);
+    ).filter((plugin): plugin is EnginePluginDescriptor => plugin !== null);
     marketplaces.push({
       name: registration.name,
       path: registration.path,
@@ -216,7 +216,7 @@ export async function readFactoryPlugin(input: {
   readonly marketplacePath: string;
   readonly pluginName: string;
   readonly cwd?: string;
-}): Promise<ProviderReadPluginResult | null> {
+}): Promise<EngineReadPluginResult | null> {
   const factoryDir = nodePath.join(input.homeDir, ".factory");
   const registration = (await marketplaceRegistrations(factoryDir)).find(
     (candidate) => candidate.path === nodePath.resolve(input.marketplacePath),

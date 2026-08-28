@@ -11,7 +11,7 @@ import {
   type AutomationStreamEvent,
   type AutomationUpdateInput,
   type AutomationWorktreeMode,
-  type ModelSelection,
+  type EngineSelection,
   type ModelPresentationIdentity,
   type EngineKind,
   type RuntimeMode,
@@ -28,7 +28,7 @@ import {
   ComposerPickerMenuPopup,
   ComposerPickerMenuSubPopup,
 } from "~/components/chat/ComposerPickerMenuPopup";
-import { ProviderModelPicker } from "~/components/chat/ProviderModelPicker";
+import { EngineModelPicker } from "~/components/chat/EngineModelPicker";
 import { RUNTIME_AUTO_ICON_ACCENT_CLASS_NAME } from "~/components/chat/composerPickerStyles";
 import {
   RuntimeModeAvailabilityHint,
@@ -67,7 +67,7 @@ import {
   buildAutomationFormWarnings,
   createInputFromForm,
   datetimeLocalFromIso,
-  defaultModelSelection,
+  defaultEngineSelection,
   formatCadence,
   formatCadenceLong,
   formatClockTime,
@@ -79,10 +79,10 @@ import {
   automationsForThread,
   isFormSubmittable,
   isoFromDatetimeLocal,
-  modelSelectionForProjectChange,
-  projectModelSelection,
-  providerOptionsForAutomationEdit,
-  providerOptionsForAutomationModelSelection,
+  engineSelectionForProjectChange,
+  projectEngineSelection,
+  engineOptionsForAutomationEdit,
+  engineOptionsForAutomationEngineSelection,
   scheduleFromForm,
   scheduleFromKind,
   scheduleKindFromSchedule,
@@ -99,16 +99,16 @@ import {
 import { SkillCubeIcon, WorktreeIcon } from "~/lib/icons";
 import { CentralIcon } from "~/lib/central-icons";
 import { resolveRuntimeModelDescriptor } from "~/components/chat/runtimeModelCapabilities";
-import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
-import { providerExecutionCapabilitiesQueryOptions } from "~/lib/providerDiscoveryReactQuery";
+import { resolveProviderDiscoveryCwd } from "~/lib/engineDiscovery";
+import { engineExecutionCapabilitiesQueryOptions } from "~/lib/engineDiscoveryReactQuery";
 import { cn } from "~/lib/utils";
 import type { AppLocale } from "~/locale";
 import { useI18n, type MessageKey } from "~/i18n";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { ensureNativeApi } from "~/nativeApi";
-import { buildModelSelection, resolveModelPresentationIdentity } from "~/providerModelOptions";
-import { useProviderModelCatalog } from "~/hooks/useProviderModelCatalog";
-import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
+import { buildEngineSelection, resolveModelPresentationIdentity } from "~/providerModelOptions";
+import { useEngineModelCatalog } from "~/hooks/useEngineModelCatalog";
+import { useEngineStatusesForLocalConfig } from "~/hooks/useEngineStatusesForLocalConfig";
 import { useStore } from "~/store";
 import { resolveThreadPickerTitle } from "./-chatThreadRoute.logic";
 
@@ -199,7 +199,7 @@ export {
   buildAutomationFormWarnings,
   createInputFromForm,
   datetimeLocalFromIso,
-  defaultModelSelection,
+  defaultEngineSelection,
   formatCadence,
   formatCadenceLong,
   formatClockTime,
@@ -211,10 +211,10 @@ export {
   automationsForThread,
   isFormSubmittable,
   isoFromDatetimeLocal,
-  modelSelectionForProjectChange,
-  projectModelSelection,
-  providerOptionsForAutomationEdit,
-  providerOptionsForAutomationModelSelection,
+  engineSelectionForProjectChange,
+  projectEngineSelection,
+  engineOptionsForAutomationEdit,
+  engineOptionsForAutomationEngineSelection,
   scheduleFromForm,
   scheduleFromKind,
   scheduleKindFromSchedule,
@@ -997,19 +997,19 @@ export function AutomationModelPicker({
   onChange,
   onAutoModeSupportChange,
 }: {
-  readonly value: ModelSelection;
+  readonly value: EngineSelection;
   readonly projectCwd: string | null;
-  readonly onChange: (value: ModelSelection, identity: ModelPresentationIdentity) => void;
+  readonly onChange: (value: EngineSelection, identity: ModelPresentationIdentity) => void;
   readonly onAutoModeSupportChange?: (supported: boolean) => void;
 }) {
   const { preferences: settings } = useLocalPreferences();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const providerStatuses = useProviderStatusesForLocalConfig();
+  const providerStatuses = useEngineStatusesForLocalConfig();
   const [open, setOpen] = useState(false);
   const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
   const [prefetchProviders, setPrefetchProviders] = useState<ReadonlyArray<EngineKind>>([]);
-  const modelHintByProvider: Partial<Record<EngineKind, string | null>> = {
-    [value.provider]: value.model,
+  const modelHintByEngine: Partial<Record<EngineKind, string | null>> = {
+    [value.engine]: value.model,
   };
   const providerModelDiscoveryCwd = resolveProviderDiscoveryCwd({
     activeThreadWorktreePath: null,
@@ -1017,24 +1017,24 @@ export function AutomationModelPicker({
     serverCwd: serverConfigQuery.data?.cwd ?? null,
   });
   const {
-    modelOptionsByProvider,
-    catalogStateByProvider,
+    modelOptionsByEngine,
+    catalogStateByEngine,
     loadingModelProviders,
-    runtimeModelsByProvider,
+    runtimeModelsByEngine,
     selectedRuntimeModel,
-  } = useProviderModelCatalog({
-    selectedProvider: value.provider,
+  } = useEngineModelCatalog({
+    selectedProvider: value.engine,
     discoveryEnabled: open,
     piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
-    modelHintByProvider,
+    modelHintByEngine,
     // The selected Engine is always discovered. Other Engine catalogs start
-    // only after their submenu is explicitly opened, avoiding a ten-provider
+    // only after their submenu is explicitly opened, avoiding a ten-engine
     // cold-start burst against the Server's bounded expensive-read admission.
     prefetchProviders,
   });
   const persistedRuntimeModel =
-    value.provider === "claude" && typeof value.supportsAutoMode === "boolean"
+    value.engine === "claude" && typeof value.supportsAutoMode === "boolean"
       ? {
           slug: value.model,
           name: value.model,
@@ -1042,24 +1042,24 @@ export function AutomationModelPicker({
         }
       : undefined;
   const autoModeSupported =
-    value.provider !== "claude" ||
+    value.engine !== "claude" ||
     (selectedRuntimeModel ?? persistedRuntimeModel)?.supportsAutoMode === true;
   useEffect(() => {
     onAutoModeSupportChange?.(autoModeSupported);
   }, [autoModeSupported, onAutoModeSupportChange]);
 
   return (
-    <ProviderModelPicker
+    <EngineModelPicker
       compact
-      provider={value.provider}
+      engine={value.engine}
       model={value.model}
       lockedProvider={null}
-      providers={providerStatuses}
-      modelOptionsByProvider={modelOptionsByProvider}
-      catalogStateByProvider={catalogStateByProvider}
+      engines={providerStatuses}
+      modelOptionsByEngine={modelOptionsByEngine}
+      catalogStateByEngine={catalogStateByEngine}
       loadingModelProviders={loadingModelProviders}
-      hiddenProviders={settings.hiddenProviders}
-      providerOrder={settings.providerOrder}
+      hiddenEngines={settings.hiddenEngines}
+      engineOrder={settings.engineOrder}
       open={open}
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
@@ -1068,20 +1068,20 @@ export function AutomationModelPicker({
           setPrefetchProviders([]);
         }
       }}
-      onProviderBrowse={(provider) => {
+      onEngineBrowse={(engine) => {
         setPrefetchProviders((current) =>
-          current.includes(provider) ? current : [...current, provider],
+          current.includes(engine) ? current : [...current, engine],
         );
-        if (provider === "pi") setPiDiscoveryRequested(true);
+        if (engine === "pi") setPiDiscoveryRequested(true);
       }}
-      onProviderModelChange={(provider, model) => {
+      onEngineModelChange={(engine, model) => {
         const runtimeModel = resolveRuntimeModelDescriptor({
-          provider,
+          engine,
           model,
-          runtimeModels: runtimeModelsByProvider[provider],
+          runtimeModels: runtimeModelsByEngine[engine],
         });
-        const selection = buildModelSelection(
-          provider,
+        const selection = buildEngineSelection(
+          engine,
           model,
           undefined,
           runtimeModel?.supportsAutoMode,
@@ -1090,7 +1090,7 @@ export function AutomationModelPicker({
           selection,
           resolveModelPresentationIdentity({
             selection,
-            options: modelOptionsByProvider[provider],
+            options: modelOptionsByEngine[engine],
           }),
         );
       }}
@@ -1102,11 +1102,11 @@ export function reconcileAutomationFormAutoModeSupport(
   form: AutomationFormState,
   supported: boolean,
 ): AutomationFormState {
-  const modelSelection =
-    form.modelSelection.provider === "claude" && form.modelSelection.supportsAutoMode !== supported
-      ? { ...form.modelSelection, supportsAutoMode: supported }
-      : form.modelSelection;
-  return modelSelection !== form.modelSelection ? { ...form, modelSelection } : form;
+  const engineSelection =
+    form.engineSelection.engine === "claude" && form.engineSelection.supportsAutoMode !== supported
+      ? { ...form.engineSelection, supportsAutoMode: supported }
+      : form.engineSelection;
+  return engineSelection !== form.engineSelection ? { ...form, engineSelection } : form;
 }
 
 export function AutomationDialog({
@@ -1145,7 +1145,7 @@ export function AutomationDialog({
   const projectThreads = threads.filter((thread) => thread.projectId === form.projectId);
   const selectedProject = projects.find((project) => project.id === form.projectId);
   const executionCapabilitiesQuery = useQuery(
-    providerExecutionCapabilitiesQueryOptions(form.modelSelection),
+    engineExecutionCapabilitiesQueryOptions(form.engineSelection),
   );
   const executionCapabilities = executionCapabilitiesQuery.data;
   const capabilityResolution = executionCapabilitiesQuery.isPending
@@ -1192,16 +1192,16 @@ export function AutomationDialog({
     const targetStillMatches =
       form.targetThreadId.length > 0 &&
       threads.some((thread) => thread.id === form.targetThreadId && thread.projectId === projectId);
-    const modelSelection = modelSelectionForProjectChange(
+    const engineSelection = engineSelectionForProjectChange(
       projects,
       form.projectId,
       projectId,
-      form.modelSelection,
+      form.engineSelection,
     );
     onFormChange({
       ...form,
       projectId,
-      modelSelection,
+      engineSelection,
       targetThreadId: targetStillMatches ? form.targetThreadId : "",
     });
   };
@@ -1387,12 +1387,12 @@ export function AutomationDialog({
             </Menu>
 
             <AutomationModelPicker
-              value={form.modelSelection}
+              value={form.engineSelection}
               projectCwd={selectedProject?.cwd ?? null}
               onChange={(value, modelPresentationIdentity) => {
                 onFormChange({
                   ...form,
-                  modelSelection: value,
+                  engineSelection: value,
                   modelPresentationIdentity,
                 });
               }}

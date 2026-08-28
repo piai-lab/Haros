@@ -3,7 +3,7 @@
  *
  * Owns hidden Git-ref checkpoint capture/restore and diff computation for a
  * workspace thread timeline. It does not store user-facing checkpoint metadata
- * and does not coordinate provider conversation rollback.
+ * and does not coordinate engine conversation rollback.
  *
  * Uses Effect `ServiceMap.Service` for dependency injection and exposes typed
  * domain errors for checkpoint storage operations.
@@ -83,7 +83,7 @@ export interface CheckpointStoreShape {
   /**
    * Copy an existing checkpoint commit to another hidden ref.
    *
-   * Used to bind a pre-send message snapshot to the provider turn id once known.
+   * Used to bind a pre-send message snapshot to the engine turn id once known.
    */
   readonly copyCheckpointRef: (
     input: CopyCheckpointRefInput,

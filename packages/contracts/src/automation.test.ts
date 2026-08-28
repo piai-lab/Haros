@@ -31,8 +31,8 @@ it.effect("defaults automation runtime mode to approval-required", () =>
       projectId: "project-1",
       prompt: "Check for stale dependencies.",
       schedule: { type: "manual" },
-      modelSelection: {
-        provider: "codex",
+      engineSelection: {
+        engine: "codex",
         model: "gpt-5-codex",
       },
     });
@@ -59,8 +59,8 @@ it.effect("rejects debug interaction mode for automations", () =>
         projectId: "project-1",
         prompt: "Investigate the latest failure.",
         schedule: { type: "manual" },
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         interactionMode: "debug",
@@ -82,8 +82,8 @@ it.effect("decodes legacy automation definitions without completion policies", (
       schedule: { type: "manual" },
       enabled: true,
       nextRunAt: null,
-      modelSelection: {
-        provider: "codex",
+      engineSelection: {
+        engine: "codex",
         model: "gpt-5-codex",
       },
       runtimeMode: "approval-required",
@@ -155,9 +155,9 @@ it.effect("accepts automation runs with immutable permission snapshots", () =>
       error: null,
       result: null,
       permissionSnapshot: {
-        provider: "codex",
-        modelSelection: {
-          provider: "codex",
+        engine: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         modelPresentationIdentity: {
@@ -330,9 +330,9 @@ it.effect("accepts automation stream run updates", () =>
         error: null,
         result: null,
         permissionSnapshot: {
-          provider: "codex",
-          modelSelection: {
-            provider: "codex",
+          engine: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           runtimeMode: "approval-required",

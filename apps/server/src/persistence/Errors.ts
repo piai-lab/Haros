@@ -139,11 +139,11 @@ export class MigrationSchemaTooNewError extends Schema.TaggedErrorClass<Migratio
 }
 
 // ===============================
-// Provider Session Repository Errors
+// Engine Session Repository Errors
 // ===============================
 
-export class ProviderSessionRepositoryValidationError extends Schema.TaggedErrorClass<ProviderSessionRepositoryValidationError>()(
-  "ProviderSessionRepositoryValidationError",
+export class EngineSessionRepositoryValidationError extends Schema.TaggedErrorClass<EngineSessionRepositoryValidationError>()(
+  "EngineSessionRepositoryValidationError",
   {
     operation: Schema.String,
     issue: Schema.String,
@@ -151,12 +151,12 @@ export class ProviderSessionRepositoryValidationError extends Schema.TaggedError
   },
 ) {
   override get message(): string {
-    return `Provider session repository validation failed in ${this.operation}: ${this.issue}`;
+    return `Engine session repository validation failed in ${this.operation}: ${this.issue}`;
   }
 }
 
-export class ProviderSessionRepositoryPersistenceError extends Schema.TaggedErrorClass<ProviderSessionRepositoryPersistenceError>()(
-  "ProviderSessionRepositoryPersistenceError",
+export class EngineSessionRepositoryPersistenceError extends Schema.TaggedErrorClass<EngineSessionRepositoryPersistenceError>()(
+  "EngineSessionRepositoryPersistenceError",
   {
     operation: Schema.String,
     detail: Schema.String,
@@ -164,21 +164,21 @@ export class ProviderSessionRepositoryPersistenceError extends Schema.TaggedErro
   },
 ) {
   override get message(): string {
-    return `Provider session repository persistence error in ${this.operation}: ${this.detail}`;
+    return `Engine session repository persistence error in ${this.operation}: ${this.detail}`;
   }
 }
 
 export type OrchestrationEventStoreError = PersistenceSqlError | PersistenceDecodeError;
 
-export type ProviderSessionRepositoryError =
-  | ProviderSessionRepositoryValidationError
-  | ProviderSessionRepositoryPersistenceError;
+export type EngineSessionRepositoryError =
+  | EngineSessionRepositoryValidationError
+  | EngineSessionRepositoryPersistenceError;
 
 export type OrchestrationCommandReceiptRepositoryError =
   | PersistenceSqlError
   | PersistenceDecodeError;
 
-export type ProviderSessionRuntimeRepositoryError = PersistenceSqlError | PersistenceDecodeError;
+export type EngineSessionRuntimeRepositoryError = PersistenceSqlError | PersistenceDecodeError;
 
 export type ProjectionRepositoryError =
   | PersistenceSqlError

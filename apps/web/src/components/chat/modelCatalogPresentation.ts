@@ -1,8 +1,8 @@
 import type { MessageKey } from "~/i18n";
-import type { ProviderModelCatalogState } from "../../hooks/useProviderModelCatalog";
+import type { EngineModelCatalogState } from "../../hooks/useEngineModelCatalog";
 
 export function resolveComposerModelFallbackMessageKey(
-  catalogState: ProviderModelCatalogState,
+  catalogState: EngineModelCatalogState,
 ): MessageKey {
   switch (catalogState) {
     case "checking":

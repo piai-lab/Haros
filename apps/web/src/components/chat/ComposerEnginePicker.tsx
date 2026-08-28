@@ -1,41 +1,41 @@
 // FILE: ComposerEnginePicker.tsx
 // Purpose: Flat Engine selector for the chat Composer.
 // Layer: Chat composer presentation
-// Depends on: canonical provider metadata, asset registry, live health, and shared menu primitives.
+// Depends on: canonical engine metadata, asset registry, live health, and shared menu primitives.
 
 import type { EngineKind, ServerProviderStatus } from "@harnessos/contracts";
 import { useState } from "react";
 
 import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";
-import { PROVIDER_OPTIONS } from "../../session-logic";
+import { ENGINE_OPTIONS } from "../../session-logic";
 import {
   deriveProviderPickerAvailability,
   findProviderStatus,
-  type ProviderPickerAvailabilityState,
-} from "../../lib/providerAvailability";
-import { compareProvidersByOrder, filterProviderOptionsByVisibility } from "../../providerOrdering";
+  type EnginePickerAvailabilityState,
+} from "../../lib/engineAvailability";
+import { compareProvidersByOrder, filterProviderOptionsByVisibility } from "../../engineOrdering";
 import { Button } from "../ui/button";
 import { Menu, MenuRadioGroup, MenuRadioItem, MenuTrigger } from "../ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
-import { ProviderIcon } from "../ProviderIcon";
+import { EngineIcon } from "../EngineIcon";
 import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 
 type ComposerEnginePickerProps = {
-  provider: EngineKind;
-  providers: ReadonlyArray<ServerProviderStatus>;
-  hiddenProviders?: ReadonlyArray<EngineKind>;
-  providerOrder?: ReadonlyArray<EngineKind>;
+  engine: EngineKind;
+  engines: ReadonlyArray<ServerProviderStatus>;
+  hiddenEngines?: ReadonlyArray<EngineKind>;
+  engineOrder?: ReadonlyArray<EngineKind>;
   disabled?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  onProviderChange: (provider: EngineKind) => void;
-  onProviderIntent?: (provider: EngineKind) => void;
+  onEngineChange: (engine: EngineKind) => void;
+  onEngineIntent?: (engine: EngineKind) => void;
   onSelectionCommitted?: () => void;
 };
 
 function statusLabel(
-  state: Exclude<ProviderPickerAvailabilityState, "ready"> | "coming_soon",
+  state: Exclude<EnginePickerAvailabilityState, "ready"> | "coming_soon",
   t: ReturnType<typeof useI18n>["t"],
 ): string {
   switch (state) {
@@ -65,17 +65,17 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
     props.onOpenChange?.(nextOpen);
   };
 
-  const hiddenProviders = new Set(props.hiddenProviders ?? []);
-  const protectedProviders = new Set<EngineKind>([props.provider]);
+  const hiddenEngines = new Set(props.hiddenEngines ?? []);
+  const protectedProviders = new Set<EngineKind>([props.engine]);
   const options = filterProviderOptionsByVisibility(
-    PROVIDER_OPTIONS.toSorted((left, right) =>
-      compareProvidersByOrder(props.providerOrder ?? [], left.value, right.value),
+    ENGINE_OPTIONS.toSorted((left, right) =>
+      compareProvidersByOrder(props.engineOrder ?? [], left.value, right.value),
     ),
-    hiddenProviders,
+    hiddenEngines,
     protectedProviders,
   );
   const currentEngineLabel =
-    PROVIDER_OPTIONS.find((option) => option.value === props.provider)?.label ?? props.provider;
+    ENGINE_OPTIONS.find((option) => option.value === props.engine)?.label ?? props.engine;
 
   const trigger = (
     <Button
@@ -86,7 +86,7 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
       aria-label={t("composer.changeEngineCurrent", { engine: currentEngineLabel })}
       className="shrink-0"
     >
-      <ProviderIcon provider={props.provider} className="size-3.5" />
+      <EngineIcon engine={props.engine} className="size-3.5" />
     </Button>
   );
 
@@ -111,22 +111,22 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
       </Tooltip>
       <ComposerPickerMenuPopup align="end" side="top" fixedWidth>
         <MenuRadioGroup
-          value={props.provider}
+          value={props.engine}
           onValueChange={(value) => {
             const nextProvider = options.find((option) => option.value === value)?.value;
-            if (!nextProvider || nextProvider === props.provider) {
+            if (!nextProvider || nextProvider === props.engine) {
               setOpen(false);
               props.onSelectionCommitted?.();
               return;
             }
-            props.onProviderIntent?.(nextProvider);
-            props.onProviderChange(nextProvider);
+            props.onEngineIntent?.(nextProvider);
+            props.onEngineChange(nextProvider);
             setOpen(false);
             props.onSelectionCommitted?.();
           }}
         >
           {options.map((option) => {
-            const liveStatus = findProviderStatus(props.providers, option.value);
+            const liveStatus = findProviderStatus(props.engines, option.value);
             const availability = deriveProviderPickerAvailability(liveStatus);
             const trailing =
               availability.state === "ready" ? null : (
@@ -144,8 +144,8 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
                 trailing={trailing}
               >
                 <span className="flex min-w-0 items-center gap-2">
-                  <ProviderIcon
-                    provider={option.value}
+                  <EngineIcon
+                    engine={option.value}
                     className={cn(
                       "size-3.5 shrink-0",
                       availability.disabled ? "opacity-60" : undefined,

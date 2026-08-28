@@ -1,32 +1,32 @@
 import type {
-  ModelSelection,
-  ProviderInteractionMode,
-  ProviderExecutionCapabilities,
-  ProviderExecutionCapabilityReason,
-  ProviderExecutionCapabilityStatus,
+  EngineSelection,
+  EngineInteractionMode,
+  EngineExecutionCapabilities,
+  EngineExecutionCapabilityReason,
+  EngineExecutionCapabilityStatus,
   RuntimeMode,
   ServerProviderStatus,
 } from "@harnessos/contracts";
-import { PROVIDER_INTERACTION_MODES } from "@harnessos/contracts";
+import { ENGINE_INTERACTION_MODES } from "@harnessos/contracts";
 
-import type { ProviderAdapterCapabilities } from "./Services/ProviderAdapter.ts";
+import type { EngineAdapterCapabilities } from "./Services/EngineAdapter.ts";
 
-type ProviderExecutionStructureCapabilities = Pick<
-  ProviderAdapterCapabilities,
+type EngineExecutionStructureCapabilities = Pick<
+  EngineAdapterCapabilities,
   "supportsTurnSteering" | "supportedRuntimeModes" | "supportedInteractionModes"
 >;
 
 const RUNTIME_MODES = ["full-access", "auto", "approval-required"] as const;
 
 function healthDisposition(status: ServerProviderStatus | undefined): {
-  readonly status: ProviderExecutionCapabilityStatus;
-  readonly reason?: ProviderExecutionCapabilityReason;
+  readonly status: EngineExecutionCapabilityStatus;
+  readonly reason?: EngineExecutionCapabilityReason;
 } {
   if (!status) {
     return { status: "unknown", reason: "runtime-health-unknown" };
   }
   if (status.unavailableReason === "not_installed") {
-    return { status: "unavailable", reason: "provider-not-installed" };
+    return { status: "unavailable", reason: "engine-not-installed" };
   }
   if (status.authStatus === "unauthenticated") {
     return { status: "unavailable", reason: "authentication-required" };
@@ -42,27 +42,27 @@ function healthDisposition(status: ServerProviderStatus | undefined): {
 
 function structuralModeReason(input: {
   readonly mode: RuntimeMode;
-  readonly modelSelection: ModelSelection;
-  readonly adapterCapabilities: ProviderExecutionStructureCapabilities;
-}): ProviderExecutionCapabilityReason | null {
+  readonly engineSelection: EngineSelection;
+  readonly adapterCapabilities: EngineExecutionStructureCapabilities;
+}): EngineExecutionCapabilityReason | null {
   if (!input.adapterCapabilities.supportedRuntimeModes?.has(input.mode)) {
     return "mode-unsupported";
   }
-  if (input.mode !== "auto" || input.modelSelection.provider !== "claude") {
+  if (input.mode !== "auto" || input.engineSelection.engine !== "claude") {
     return null;
   }
-  if (input.modelSelection.supportsAutoMode === false) {
+  if (input.engineSelection.supportsAutoMode === false) {
     return "model-unsupported";
   }
-  return input.modelSelection.supportsAutoMode === true ? null : "model-capability-unknown";
+  return input.engineSelection.supportsAutoMode === true ? null : "model-capability-unknown";
 }
 
 export function resolveProviderExecutionCapabilities(input: {
-  readonly modelSelection: ModelSelection;
-  readonly adapterCapabilities: ProviderExecutionStructureCapabilities | null;
+  readonly engineSelection: EngineSelection;
+  readonly adapterCapabilities: EngineExecutionStructureCapabilities | null;
   readonly providerStatus?: ServerProviderStatus | undefined;
-}): ProviderExecutionCapabilities {
-  const provider = input.modelSelection.provider;
+}): EngineExecutionCapabilities {
+  const engine = input.engineSelection.engine;
   if (!input.adapterCapabilities) {
     const unsupported = (mode: RuntimeMode) => ({
       mode,
@@ -70,15 +70,15 @@ export function resolveProviderExecutionCapabilities(input: {
       status: "unavailable" as const,
       reason: "adapter-unregistered" as const,
     });
-    const interactionUnsupported = (mode: ProviderInteractionMode) => ({
+    const interactionUnsupported = (mode: EngineInteractionMode) => ({
       mode,
       structurallySupported: false,
       status: "unavailable" as const,
       reason: "adapter-unregistered" as const,
     });
     return {
-      provider,
-      model: input.modelSelection.model,
+      engine,
+      model: input.engineSelection.model,
       supportsNativeTurnSteering: false,
       runtimeModes: {
         "full-access": unsupported("full-access"),
@@ -100,7 +100,7 @@ export function resolveProviderExecutionCapabilities(input: {
     RUNTIME_MODES.map((mode) => {
       const unsupportedReason = structuralModeReason({
         mode,
-        modelSelection: input.modelSelection,
+        engineSelection: input.engineSelection,
         adapterCapabilities: input.adapterCapabilities!,
       });
       if (unsupportedReason) {
@@ -150,9 +150,9 @@ export function resolveProviderExecutionCapabilities(input: {
         },
       ];
     }),
-  ) as ProviderExecutionCapabilities["runtimeModes"];
+  ) as EngineExecutionCapabilities["runtimeModes"];
   const interactionModes = Object.fromEntries(
-    PROVIDER_INTERACTION_MODES.map((mode) => {
+    ENGINE_INTERACTION_MODES.map((mode) => {
       if (!input.adapterCapabilities!.supportedInteractionModes?.has(mode)) {
         return [
           mode,
@@ -166,11 +166,11 @@ export function resolveProviderExecutionCapabilities(input: {
       }
       return [mode, { mode, structurallySupported: true, ...health }];
     }),
-  ) as ProviderExecutionCapabilities["interactionModes"];
+  ) as EngineExecutionCapabilities["interactionModes"];
 
   return {
-    provider,
-    model: input.modelSelection.model,
+    engine,
+    model: input.engineSelection.model,
     supportsNativeTurnSteering: input.adapterCapabilities.supportsTurnSteering === true,
     runtimeModes,
     interactionModes,

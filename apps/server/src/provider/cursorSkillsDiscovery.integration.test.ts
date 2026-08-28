@@ -1,6 +1,6 @@
 // FILE: cursorSkillsDiscovery.test.ts
 // Purpose: Verifies Cursor filesystem skill discovery without starting Cursor ACP.
-// Layer: Server provider tests
+// Layer: Server engine tests
 // Exports: Vitest cases for cursorSkillsDiscovery (frontmatter parsing is covered
 // in skillsCatalog.test.ts where the parser now lives).
 
@@ -73,7 +73,7 @@ description: Help globally
     }
   });
 
-  it("keeps the provider scope when the cwd lives under the home dir", async () => {
+  it("keeps the engine scope when the cwd lives under the home dir", async () => {
     const root = mkdtempSync(path.join(os.tmpdir(), "cursor-skills-home-"));
     const homeDir = path.join(root, "home");
     const cwd = path.join(homeDir, "projects", "app");

@@ -5,10 +5,10 @@ import {
 } from "../settingsSearchMetadata";
 
 export const GENERAL_SETTINGS_SEARCH = {
-  defaultProvider: defineSettingsSearchRow({
-    id: "general:default-provider",
-    titleKey: "settings.defaultProvider",
-    keywords: "Choose the provider used for new chats. agent codex claude",
+  defaultEngine: defineSettingsSearchRow({
+    id: "general:default-engine",
+    titleKey: "settings.defaultEngine",
+    keywords: "Choose the engine used for new chats. agent codex claude",
   }),
   newThreads: defineSettingsSearchRow({
     id: "general:new-threads",
@@ -36,7 +36,7 @@ export const GENERAL_SETTINGS_SEARCH = {
   environmentUsage: defineSettingsSearchRow({
     id: "general:environment-usage",
     titleKey: "settings.usageLabel",
-    keywords: "Show the provider usage row in the chat Environment panel.",
+    keywords: "Show the engine usage row in the chat Environment panel.",
   }),
   environmentRepository: defineSettingsSearchRow({
     id: "general:environment-repository",

@@ -12,15 +12,15 @@ import {
   type GrokModelOptions,
   type GrokReasoningEffort,
   type ModelCapabilities,
-  type ModelSelection,
+  type EngineSelection,
   type ModelSlug,
   type OpenCodeModelOptions,
-  type ProviderOptionDescriptor,
-  type ProviderOptionSelection,
+  type EngineOptionDescriptor,
+  type EngineOptionSelection,
   type PiModelOptions,
   type PiThinkingLevel,
   type EngineKind,
-  type ProviderWithDefaultModel,
+  type EngineWithDefaultModel,
   CodexReasoningEffort,
 } from "@harnessos/contracts";
 
@@ -59,19 +59,19 @@ export const EMPTY_MODEL_CAPABILITIES: ModelCapabilities = {
   promptInjectedEffortLevels: [],
   contextWindowOptions: [],
 };
-export function getModelOptions(provider: EngineKind = "codex") {
-  return MODEL_OPTIONS_BY_PROVIDER[provider];
+export function getModelOptions(engine: EngineKind = "codex") {
+  return MODEL_OPTIONS_BY_PROVIDER[engine];
 }
 
-function hasDefaultModel(provider: EngineKind): provider is ProviderWithDefaultModel {
-  return provider !== "oa" && provider !== "pi";
+function hasDefaultModel(engine: EngineKind): engine is EngineWithDefaultModel {
+  return engine !== "oa" && engine !== "pi";
 }
 
-export function getDefaultModel(provider: "oa" | "pi"): null;
-export function getDefaultModel(provider?: ProviderWithDefaultModel): ModelSlug;
-export function getDefaultModel(provider: EngineKind): ModelSlug | null;
-export function getDefaultModel(provider: EngineKind = "codex"): ModelSlug | null {
-  return hasDefaultModel(provider) ? DEFAULT_MODEL_BY_PROVIDER[provider] : null;
+export function getDefaultModel(engine: "oa" | "pi"): null;
+export function getDefaultModel(engine?: EngineWithDefaultModel): ModelSlug;
+export function getDefaultModel(engine: EngineKind): ModelSlug | null;
+export function getDefaultModel(engine: EngineKind = "codex"): ModelSlug | null {
+  return hasDefaultModel(engine) ? DEFAULT_MODEL_BY_PROVIDER[engine] : null;
 }
 
 const MODEL_NAME_BY_SLUG = new Map(
@@ -81,7 +81,7 @@ const MODEL_NAME_BY_SLUG = new Map(
 );
 
 // Turns a raw model slug into a readable label when no built-in name exists.
-// GPT slugs keep their canonical "GPT-x" casing; provider-scoped custom ids
+// GPT slugs keep their canonical "GPT-x" casing; engine-scoped custom ids
 // ("vendor/model") stay verbatim; everything else is title-cased on -/_ .
 export function humanizeModelSlug(slug: string): string {
   if (slug.toLowerCase().startsWith("gpt-")) {
@@ -176,15 +176,13 @@ export function resolveLabeledOptionValue(
   return options.find((option) => option.isDefault)?.value ?? options[0]?.value ?? null;
 }
 
-type ProviderOptionSelectionsInput =
-  | ReadonlyArray<ProviderOptionSelection>
+type EngineOptionSelectionsInput =
+  | ReadonlyArray<EngineOptionSelection>
   | Record<string, unknown>
   | null
   | undefined;
 
-function cloneProviderOptionDescriptor(
-  descriptor: ProviderOptionDescriptor,
-): ProviderOptionDescriptor {
+function cloneProviderOptionDescriptor(descriptor: EngineOptionDescriptor): EngineOptionDescriptor {
   if (descriptor.type === "select") {
     return {
       ...descriptor,
@@ -198,7 +196,7 @@ function cloneProviderOptionDescriptor(
 }
 
 function providerOptionSelectionValue(
-  selections: ProviderOptionSelectionsInput,
+  selections: EngineOptionSelectionsInput,
   id: string,
 ): string | boolean | undefined {
   if (!selections) {
@@ -216,43 +214,43 @@ function providerOptionSelectionValue(
 }
 
 export function getProviderOptionBooleanSelectionValue(
-  selections: ProviderOptionSelectionsInput,
+  selections: EngineOptionSelectionsInput,
   id: string,
 ): boolean | undefined {
   const value = providerOptionSelectionValue(selections, id);
   return typeof value === "boolean" ? value : undefined;
 }
 
-export function getModelSelectionOptionValue(
-  modelSelection: ModelSelection | null | undefined,
+export function getEngineSelectionOptionValue(
+  engineSelection: EngineSelection | null | undefined,
   id: string,
 ): string | boolean | undefined {
-  return providerOptionSelectionValue(modelSelection?.options as ProviderOptionSelectionsInput, id);
+  return providerOptionSelectionValue(engineSelection?.options as EngineOptionSelectionsInput, id);
 }
 
-export function getModelSelectionStringOptionValue(
-  modelSelection: ModelSelection | null | undefined,
+export function getEngineSelectionStringOptionValue(
+  engineSelection: EngineSelection | null | undefined,
   id: string,
 ): string | undefined {
   const value = providerOptionSelectionValue(
-    modelSelection?.options as ProviderOptionSelectionsInput,
+    engineSelection?.options as EngineOptionSelectionsInput,
     id,
   );
   return typeof value === "string" ? value : undefined;
 }
 
-export function getModelSelectionBooleanOptionValue(
-  modelSelection: ModelSelection | null | undefined,
+export function getEngineSelectionBooleanOptionValue(
+  engineSelection: EngineSelection | null | undefined,
   id: string,
 ): boolean | undefined {
   return getProviderOptionBooleanSelectionValue(
-    modelSelection?.options as ProviderOptionSelectionsInput,
+    engineSelection?.options as EngineOptionSelectionsInput,
     id,
   );
 }
 
 function resolveDescriptorChoiceValue(
-  descriptor: Extract<ProviderOptionDescriptor, { type: "select" }>,
+  descriptor: Extract<EngineOptionDescriptor, { type: "select" }>,
   rawValue: string | null | undefined,
 ): string | undefined {
   const trimmed = trimOrNull(rawValue);
@@ -263,9 +261,9 @@ function resolveDescriptorChoiceValue(
 }
 
 function withProviderOptionCurrentValue(
-  descriptor: ProviderOptionDescriptor,
+  descriptor: EngineOptionDescriptor,
   rawValue: string | boolean | undefined,
-): ProviderOptionDescriptor {
+): EngineOptionDescriptor {
   if (descriptor.type === "boolean") {
     return typeof rawValue === "boolean" ? { ...descriptor, currentValue: rawValue } : descriptor;
   }
@@ -280,33 +278,33 @@ function withProviderOptionCurrentValue(
   return { ...descriptor, currentValue };
 }
 
-function reasoningDescriptorId(provider: EngineKind): string {
-  if (provider === "claude") {
+function reasoningDescriptorId(engine: EngineKind): string {
+  if (engine === "claude") {
     return "effort";
   }
-  if (provider === "kilo" || provider === "opencode") {
+  if (engine === "kilo" || engine === "opencode") {
     return "variant";
   }
-  if (provider === "pi" || provider === "oa") {
+  if (engine === "pi" || engine === "oa") {
     return "thinkingLevel";
   }
   return "reasoningEffort";
 }
 
 function legacyCapabilityDescriptors(
-  provider: EngineKind,
+  engine: EngineKind,
   caps: ModelCapabilities,
-): ProviderOptionDescriptor[] {
+): EngineOptionDescriptor[] {
   const primaryOptions =
-    provider === "kilo" || provider === "opencode"
+    engine === "kilo" || engine === "opencode"
       ? (caps.variantOptions ?? [])
       : caps.reasoningEffortLevels;
-  const descriptors: ProviderOptionDescriptor[] = [];
+  const descriptors: EngineOptionDescriptor[] = [];
   if (primaryOptions.length > 0) {
     const defaultPrimaryOption = primaryOptions.find((option) => option.isDefault);
     descriptors.push({
-      id: reasoningDescriptorId(provider),
-      label: provider === "kilo" || provider === "opencode" ? "Variant" : "Reasoning",
+      id: reasoningDescriptorId(engine),
+      label: engine === "kilo" || engine === "opencode" ? "Variant" : "Reasoning",
       type: "select",
       options: primaryOptions.map((option) => ({
         id: option.value,
@@ -358,13 +356,13 @@ function legacyCapabilityDescriptors(
 }
 
 export function getProviderOptionDescriptors(input: {
-  provider: EngineKind;
+  engine: EngineKind;
   caps: ModelCapabilities;
-  selections?: ProviderOptionSelectionsInput;
-}): ReadonlyArray<ProviderOptionDescriptor> {
+  selections?: EngineOptionSelectionsInput;
+}): ReadonlyArray<EngineOptionDescriptor> {
   const descriptors =
     input.caps.optionDescriptors?.map(cloneProviderOptionDescriptor) ??
-    legacyCapabilityDescriptors(input.provider, input.caps);
+    legacyCapabilityDescriptors(input.engine, input.caps);
   return descriptors.map((descriptor) =>
     withProviderOptionCurrentValue(
       descriptor,
@@ -374,7 +372,7 @@ export function getProviderOptionDescriptors(input: {
 }
 
 export function getProviderOptionCurrentValue(
-  descriptor: ProviderOptionDescriptor | null | undefined,
+  descriptor: EngineOptionDescriptor | null | undefined,
 ): string | boolean | undefined {
   if (!descriptor) {
     return undefined;
@@ -386,7 +384,7 @@ export function getProviderOptionCurrentValue(
 }
 
 export function getProviderOptionCurrentLabel(
-  descriptor: ProviderOptionDescriptor | null | undefined,
+  descriptor: EngineOptionDescriptor | null | undefined,
 ): string | undefined {
   const value = getProviderOptionCurrentValue(descriptor);
   if (!descriptor) {
@@ -401,8 +399,8 @@ export function getProviderOptionCurrentLabel(
 }
 
 export function buildProviderOptionSelectionsFromDescriptors(
-  descriptors: ReadonlyArray<ProviderOptionDescriptor> | null | undefined,
-): ProviderOptionSelection[] | undefined {
+  descriptors: ReadonlyArray<EngineOptionDescriptor> | null | undefined,
+): EngineOptionSelection[] | undefined {
   if (!descriptors || descriptors.length === 0) {
     return undefined;
   }
@@ -418,15 +416,15 @@ export function buildProviderOptionSelectionsFromDescriptors(
 // ── Data-driven capability resolver ───────────────────────────────────
 
 export function getModelCapabilities(
-  provider: EngineKind,
+  engine: EngineKind,
   model: string | null | undefined,
 ): ModelCapabilities {
-  const slug = normalizeModelSlug(model, provider);
-  if (slug && MODEL_CAPABILITIES_INDEX[provider]?.[slug]) {
-    return MODEL_CAPABILITIES_INDEX[provider][slug];
+  const slug = normalizeModelSlug(model, engine);
+  if (slug && MODEL_CAPABILITIES_INDEX[engine]?.[slug]) {
+    return MODEL_CAPABILITIES_INDEX[engine][slug];
   }
-  if (provider === "grok" && slug) {
-    // Grok exposes reasoning effort as a provider-level CLI option, while its
+  if (engine === "grok" && slug) {
+    // Grok exposes reasoning effort as a engine-level CLI option, while its
     // runtime model catalog contains only model ids. New models inherit the
     // matching CLI ladder (grok-build vs Grok 4.5 vs Grok 4.6+) before discovery
     // returns a descriptor.
@@ -482,7 +480,7 @@ export function isClaudeUltrathinkPrompt(text: string | null | undefined): boole
 
 export function normalizeModelSlug(
   model: string | null | undefined,
-  provider: EngineKind = "codex",
+  engine: EngineKind = "codex",
 ): ModelSlug | null {
   if (typeof model !== "string") {
     return null;
@@ -493,8 +491,8 @@ export function normalizeModelSlug(
     return null;
   }
 
-  const providerScopedModel = provider === "claude" ? trimmed.replace(/\[[^\]]+\]$/u, "") : trimmed;
-  const aliases = MODEL_SLUG_ALIASES_BY_PROVIDER[provider] as Record<string, ModelSlug>;
+  const providerScopedModel = engine === "claude" ? trimmed.replace(/\[[^\]]+\]$/u, "") : trimmed;
+  const aliases = MODEL_SLUG_ALIASES_BY_PROVIDER[engine] as Record<string, ModelSlug>;
   const aliased = Object.prototype.hasOwnProperty.call(aliases, providerScopedModel)
     ? aliases[providerScopedModel]
     : undefined;
@@ -502,7 +500,7 @@ export function normalizeModelSlug(
 }
 
 export function resolveSelectableModel(
-  provider: EngineKind,
+  engine: EngineKind,
   value: string | null | undefined,
   options: ReadonlyArray<SelectableModelOption>,
 ): ModelSlug | null {
@@ -525,7 +523,7 @@ export function resolveSelectableModel(
     return byName.slug;
   }
 
-  const normalized = normalizeModelSlug(trimmed, provider);
+  const normalized = normalizeModelSlug(trimmed, engine);
   if (!normalized) {
     return null;
   }
@@ -536,26 +534,26 @@ export function resolveSelectableModel(
 
 export function resolveModelSlug(
   model: string | null | undefined,
-  provider: EngineKind = "codex",
+  engine: EngineKind = "codex",
 ): ModelSlug | null {
-  const normalized = normalizeModelSlug(model, provider);
-  if (!hasDefaultModel(provider)) {
+  const normalized = normalizeModelSlug(model, engine);
+  if (!hasDefaultModel(engine)) {
     return normalized;
   }
   if (!normalized) {
-    return DEFAULT_MODEL_BY_PROVIDER[provider];
+    return DEFAULT_MODEL_BY_PROVIDER[engine];
   }
 
-  return MODEL_SLUG_SET_BY_PROVIDER[provider].has(normalized)
+  return MODEL_SLUG_SET_BY_PROVIDER[engine].has(normalized)
     ? normalized
-    : DEFAULT_MODEL_BY_PROVIDER[provider];
+    : DEFAULT_MODEL_BY_PROVIDER[engine];
 }
 
 export function resolveModelSlugForProvider(
-  provider: EngineKind,
+  engine: EngineKind,
   model: string | null | undefined,
 ): ModelSlug | null {
-  return resolveModelSlug(model, provider);
+  return resolveModelSlug(model, engine);
 }
 
 /** Trim a string, returning null for empty/missing values. */
@@ -616,8 +614,8 @@ export function normalizeClaudeModelOptions(
   return Object.keys(nextOptions).length > 0 ? nextOptions : undefined;
 }
 
-export function resolveApiModelId(modelSelection: ModelSelection): string {
-  return modelSelection.model;
+export function resolveApiModelId(engineSelection: EngineSelection): string {
+  return engineSelection.model;
 }
 
 /**
@@ -643,7 +641,7 @@ interface ClaudeSpawnProfile {
 // the flag-settings `effortLevel` key caps at xhigh). Every other effort level
 // plus fastMode/ultracode are Settings keys applied live via the SDK's
 // flag-settings control, and model/context window switch via `setModel`.
-function claudeSpawnProfile(selection: Extract<ModelSelection, { provider: "claude" }>) {
+function claudeSpawnProfile(selection: Extract<EngineSelection, { engine: "claude" }>) {
   const caps = getModelCapabilities("claude", selection.model);
   const requestedEffort = trimOrNull(selection.options?.effort ?? null);
   const effort = requestedEffort && hasEffortLevel(caps, requestedEffort) ? requestedEffort : null;
@@ -662,10 +660,10 @@ function claudeSpawnProfile(selection: Extract<ModelSelection, { provider: "clau
  * SDK's live flag-settings control.
  */
 export function claudeSelectionRequiresRestart(
-  previous: ModelSelection | undefined,
-  next: ModelSelection,
+  previous: EngineSelection | undefined,
+  next: EngineSelection,
 ): boolean {
-  if (next.provider !== "claude") {
+  if (next.engine !== "claude") {
     return false;
   }
   if (previous === undefined) {
@@ -673,7 +671,7 @@ export function claudeSelectionRequiresRestart(
     // same selection source, so treat it as unchanged rather than replaying.
     return false;
   }
-  if (previous.provider !== "claude") {
+  if (previous.engine !== "claude") {
     return true;
   }
   // Normalize against each model before deciding a model-only switch is live:

@@ -15,7 +15,7 @@ import os from "node:os";
 import path from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import type { ProviderSession } from "@harnessos/contracts";
+import type { EngineSession } from "@harnessos/contracts";
 import { Effect, Layer } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -24,7 +24,7 @@ import { LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL } from "../../managedAttachmentPrin
 import { provideWsConnectionSession } from "../../wsConnectionSessions.ts";
 import type { OARuntimeModule } from "../oaRuntime.ts";
 import { OmniMindModelServices } from "../Services/OmniMindModelServices.ts";
-import { ProviderService, type ProviderServiceShape } from "../Services/ProviderService.ts";
+import { EngineService, type EngineServiceShape } from "../Services/EngineService.ts";
 import { makeOmniMindModelServicesLive } from "./OmniMindModelServices.ts";
 
 const roots: string[] = [];
@@ -167,9 +167,9 @@ function makeTestLayer(input: {
   readonly modelServiceRefreshTimeoutMs?: number;
   readonly customConnectionTestTimeoutMs?: number;
   readonly customModelDiscoveryTimeoutMs?: number;
-  readonly providerSessions?: ReadonlyArray<ProviderSession>;
-  readonly listProviderSessions?: NonNullable<ProviderServiceShape["listSessionsStrict"]>;
-  readonly withModelServiceMutationFence?: ProviderServiceShape["withModelServiceMutationFence"];
+  readonly engineSessions?: ReadonlyArray<EngineSession>;
+  readonly listEngineSessions?: NonNullable<EngineServiceShape["listSessionsStrict"]>;
+  readonly withModelServiceMutationFence?: EngineServiceShape["withModelServiceMutationFence"];
 }) {
   return makeOmniMindModelServicesLive({
     ...(input.loadModule ? { loadModule: input.loadModule } : {}),
@@ -188,14 +188,13 @@ function makeTestLayer(input: {
       : { customModelDiscoveryTimeoutMs: input.customModelDiscoveryTimeoutMs }),
   }).pipe(
     Layer.provide(
-      Layer.succeed(ProviderService, {
+      Layer.succeed(EngineService, {
         listSessionsStrict:
-          input.listProviderSessions ?? (() => Effect.succeed(input.providerSessions ?? [])),
+          input.listEngineSessions ?? (() => Effect.succeed(input.engineSessions ?? [])),
         withModelServiceMutationFence:
           input.withModelServiceMutationFence ??
-          (((_serviceId, effect) =>
-            effect) as ProviderServiceShape["withModelServiceMutationFence"]),
-      } as unknown as ProviderServiceShape),
+          (((_serviceId, effect) => effect) as EngineServiceShape["withModelServiceMutationFence"]),
+      } as unknown as EngineServiceShape),
     ),
     Layer.provideMerge(ServerConfig.layerTest(process.cwd(), input.root)),
     Layer.provideMerge(NodeServices.layer),
@@ -565,8 +564,7 @@ describe("OmniMindModelServicesLive", () => {
         Effect.provide(
           makeTestLayer({
             root,
-            loadModule: async () =>
-              ({ ...sdk, createAgentSessionServices }) as OARuntimeModule,
+            loadModule: async () => ({ ...sdk, createAgentSessionServices }) as OARuntimeModule,
           }),
         ),
       ),
@@ -820,8 +818,7 @@ describe("OmniMindModelServicesLive", () => {
         } as unknown as Awaited<ReturnType<typeof sdk.createAgentSessionServices>>;
       },
     );
-    const loadModule = async () =>
-      ({ ...sdk, createAgentSessionServices }) as OARuntimeModule;
+    const loadModule = async () => ({ ...sdk, createAgentSessionServices }) as OARuntimeModule;
     const layer = makeTestLayer({ root, loadModule });
 
     const result = await Effect.runPromise(
@@ -2849,28 +2846,28 @@ describe("OmniMindModelServicesLive", () => {
     const observationOrder: string[] = [];
     const providerSessions = [
       {
-        provider: "oa",
+        engine: "oa",
         status: "ready",
         runtimeMode: "full-access",
         model: "active-gateway/model-one",
         threadId: "thread-active-gateway",
         createdAt: "2026-08-14T00:00:00.000Z",
         updatedAt: "2026-08-14T00:00:01.000Z",
-      } as ProviderSession,
+      } as EngineSession,
       {
-        provider: "oa",
+        engine: "oa",
         status: "ready",
         runtimeMode: "full-access",
         model: "other-gateway/model-one",
         threadId: "thread-other-gateway",
         createdAt: "2026-08-14T00:00:00.000Z",
         updatedAt: "2026-08-14T00:00:01.000Z",
-      } as ProviderSession,
+      } as EngineSession,
     ];
     const layer = makeTestLayer({
       root,
       loadModule,
-      listProviderSessions: () =>
+      listEngineSessions: () =>
         Effect.sync(() => {
           observationOrder.push("strict-session-recheck");
           return providerSessions;
@@ -2878,7 +2875,7 @@ describe("OmniMindModelServicesLive", () => {
       withModelServiceMutationFence: ((serviceId, effect) =>
         Effect.sync(() => observationOrder.push(`fence:${serviceId}`)).pipe(
           Effect.andThen(effect),
-        )) as ProviderServiceShape["withModelServiceMutationFence"],
+        )) as EngineServiceShape["withModelServiceMutationFence"],
     });
 
     const removal = await Effect.runPromise(
@@ -2906,7 +2903,7 @@ describe("OmniMindModelServicesLive", () => {
     const layer = makeTestLayer({
       root,
       loadModule,
-      listProviderSessions: () => Effect.die(new Error("session snapshot unavailable")),
+      listEngineSessions: () => Effect.die(new Error("session snapshot unavailable")),
     });
 
     const removal = await Effect.runPromise(

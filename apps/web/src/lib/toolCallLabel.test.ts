@@ -179,7 +179,7 @@ describe("deriveOmniMindMcpToolTitle", () => {
     ).toBe("OmniMind stopped creating a thread");
   });
 
-  it("turns provider-specific create-thread identifiers into activity sentences", () => {
+  it("turns engine-specific create-thread identifiers into activity sentences", () => {
     expect(
       deriveOmniMindMcpToolTitle({
         toolName: "OmniMind__harnessos_create_thread",
@@ -263,7 +263,7 @@ describe("deriveOmniMindMcpToolTitle", () => {
     ).toBeNull();
     expect(
       deriveOmniMindMcpToolTitle({
-        fallbackLabel: "OmniMind restarted the provider session",
+        fallbackLabel: "OmniMind restarted the engine session",
         status: "running",
       }),
     ).toBeNull();
@@ -341,7 +341,7 @@ describe("deriveReadableToolTitle", () => {
     ).toBe("Bash");
   });
 
-  it("turns provider tool identifiers into readable labels", () => {
+  it("turns engine tool identifiers into readable labels", () => {
     for (const [identifier, label] of [
       ["Web_search", "Web search"],
       ["Fetch_content", "Fetch content"],
@@ -454,12 +454,12 @@ describe("deriveReadableCommandDisplay", () => {
   it("unwraps zsh shell wrappers around read commands", () => {
     expect(
       deriveReadableCommandDisplay(
-        `/bin/zsh -lc "sed -n '240,520p' src/components/provider-card.tsx"`,
+        `/bin/zsh -lc "sed -n '240,520p' src/components/engine-card.tsx"`,
       ),
     ).toEqual({
       verb: "Read",
-      target: "components/provider-card.tsx",
-      fullCommand: `/bin/zsh -lc "sed -n '240,520p' src/components/provider-card.tsx"`,
+      target: "components/engine-card.tsx",
+      fullCommand: `/bin/zsh -lc "sed -n '240,520p' src/components/engine-card.tsx"`,
     });
   });
 

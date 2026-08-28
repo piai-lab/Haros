@@ -1,6 +1,6 @@
 // FILE: providerUsage/index.ts
-// Purpose: Orchestrate the live provider-usage fetchers — defensive batch fetch (one failure never
-// blocks the others), per-provider snapshot caching with single-flight coalescing, and enrichment
+// Purpose: Orchestrate the live engine-usage fetchers — defensive batch fetch (one failure never
+// blocks the others), per-engine snapshot caching with single-flight coalescing, and enrichment
 // of Codex/Claude live snapshots with the locally-derived token-total usage lines. Exposes both a
 // plain async API (for tests) and an Effect that reads ServerConfig (for the WS RPC handler).
 
@@ -12,20 +12,20 @@ import type {
 } from "@harnessos/contracts";
 import { Effect } from "effect";
 
-import { PROVIDER_USAGE_PROVIDERS } from "@harnessos/shared/providerUsage";
+import { ENGINE_USAGE_PROVIDERS } from "@harnessos/shared/providerUsage";
 
 import { ServerConfig } from "../config";
-import { buildProviderChildEnvironment, type ProviderChildKind } from "../providerChildEnvironment";
+import { buildProviderChildEnvironment, type EngineChildKind } from "../providerChildEnvironment";
 import { ServerSettingsService } from "../serverSettings";
-import { ProviderAdapterRegistry } from "../provider/Services/ProviderAdapterRegistry";
+import { EngineAdapterRegistry } from "../provider/Services/EngineAdapterRegistry";
 import { errorSnapshot } from "./parse";
-import { PROVIDER_USAGE_FETCHERS } from "./registry";
-import type { ProviderUsageContext } from "./types";
+import { ENGINE_USAGE_FETCHERS } from "./registry";
+import type { EngineUsageContext } from "./types";
 
-const providerChildKind = (provider: EngineKind): ProviderChildKind =>
-  provider === "claude" ? "claude" : provider === "oa" ? "pi" : provider;
+const providerChildKind = (engine: EngineKind): EngineChildKind =>
+  engine === "claude" ? "claude" : engine === "oa" ? "pi" : engine;
 
-function buildContext(): ProviderUsageContext {
+function buildContext(): EngineUsageContext {
   return {
     homeDir: "",
     env: process.env,
@@ -35,10 +35,10 @@ function buildContext(): ProviderUsageContext {
 }
 
 async function fetchProviderUsage(
-  provider: EngineKind,
-  providerContext: ProviderUsageContext,
+  engine: EngineKind,
+  providerContext: EngineUsageContext,
 ): Promise<ServerProviderUsageSnapshot | null> {
-  const fetcher = PROVIDER_USAGE_FETCHERS[provider];
+  const fetcher = ENGINE_USAGE_FETCHERS[engine];
   if (!fetcher) {
     return null;
   }
@@ -47,7 +47,7 @@ async function fetchProviderUsage(
     .fetch(providerContext)
     .catch(() =>
       errorSnapshot(
-        provider,
+        engine,
         providerContext.nowMs,
         "live-usage",
         "Usage fetch failed unexpectedly.",
@@ -55,23 +55,20 @@ async function fetchProviderUsage(
     );
 }
 
-function buildProviderContext(
-  provider: EngineKind,
-  ctx: ProviderUsageContext,
-): ProviderUsageContext {
+function buildProviderContext(engine: EngineKind, ctx: EngineUsageContext): EngineUsageContext {
   return {
     ...ctx,
     env: buildProviderChildEnvironment({
-      provider: providerChildKind(provider),
+      engine: providerChildKind(engine),
       baseEnv: ctx.env,
     }),
   };
 }
 
 // Every UI surface (header chip, branch toolbar, settings panel) plus their periodic refetches
-// funnels through this cache, so one browser tab doesn't hammer provider endpoints — or spawn
+// funnels through this cache, so one browser tab doesn't hammer engine endpoints — or spawn
 // `claude auth status` processes — once per surface. Fresh snapshots are served from memory,
-// concurrent requests for the same provider coalesce into a single fetch, and `forceRefresh`
+// concurrent requests for the same engine coalesce into a single fetch, and `forceRefresh`
 // (the settings panel's explicit refresh button) bypasses the TTL but still joins an in-flight
 // fetch. Degraded snapshots (errors, re-served last-good data) expire faster so recovery is
 // picked up quickly. Keyed by EngineKind, so the cache is inherently bounded.
@@ -100,12 +97,12 @@ const snapshotCacheTtlMs = (snapshot: ServerProviderUsageSnapshot): number =>
       : SNAPSHOT_CACHE_TTL_MS;
 
 async function resolveCredentialKey(
-  provider: EngineKind,
-  ctx: ProviderUsageContext,
+  engine: EngineKind,
+  ctx: EngineUsageContext,
 ): Promise<string | null> {
-  const fetcher = PROVIDER_USAGE_FETCHERS[provider];
+  const fetcher = ENGINE_USAGE_FETCHERS[engine];
   if (!fetcher?.cacheKey) {
-    return provider;
+    return engine;
   }
   try {
     return await fetcher.cacheKey(ctx);
@@ -121,19 +118,19 @@ export function __resetProviderUsageCacheForTests(): void {
 }
 
 async function getProviderUsageSnapshot(
-  provider: EngineKind,
-  ctx: ProviderUsageContext,
+  engine: EngineKind,
+  ctx: EngineUsageContext,
   forceRefresh: boolean,
 ): Promise<ServerProviderUsageSnapshot | null> {
-  const providerContext = buildProviderContext(provider, ctx);
-  const credentialKey = await resolveCredentialKey(provider, providerContext);
-  const pending = inFlightFetches.get(provider);
+  const providerContext = buildProviderContext(engine, ctx);
+  const credentialKey = await resolveCredentialKey(engine, providerContext);
+  const pending = inFlightFetches.get(engine);
   if (credentialKey !== null && pending?.credentialKey === credentialKey) {
     return pending.promise;
   }
 
   if (!forceRefresh && credentialKey !== null) {
-    const cached = snapshotCache.get(provider);
+    const cached = snapshotCache.get(engine);
     if (
       cached &&
       cached.credentialKey === credentialKey &&
@@ -144,10 +141,10 @@ async function getProviderUsageSnapshot(
   }
 
   const fetchPromise = (async () => {
-    const snapshot = await fetchProviderUsage(provider, providerContext);
-    const refreshedCredentialKey = await resolveCredentialKey(provider, providerContext);
+    const snapshot = await fetchProviderUsage(engine, providerContext);
+    const refreshedCredentialKey = await resolveCredentialKey(engine, providerContext);
     if (snapshot && credentialKey !== null && refreshedCredentialKey === credentialKey) {
-      const current = snapshotCache.get(provider);
+      const current = snapshotCache.get(engine);
       const hasFreshHealthySnapshot =
         current?.credentialKey === credentialKey &&
         snapshotCacheTtlMs(current.snapshot) === SNAPSHOT_CACHE_TTL_MS &&
@@ -156,7 +153,7 @@ async function getProviderUsageSnapshot(
       if (fetchedFailedSnapshot && hasFreshHealthySnapshot && current) {
         return current.snapshot;
       }
-      snapshotCache.set(provider, {
+      snapshotCache.set(engine, {
         snapshot,
         fetchedAtMs: ctx.nowMs,
         credentialKey,
@@ -165,31 +162,27 @@ async function getProviderUsageSnapshot(
     return snapshot;
   })();
   if (credentialKey !== null) {
-    inFlightFetches.set(provider, { credentialKey, promise: fetchPromise });
+    inFlightFetches.set(engine, { credentialKey, promise: fetchPromise });
   }
   try {
     return await fetchPromise;
   } finally {
-    if (inFlightFetches.get(provider)?.promise === fetchPromise) {
-      inFlightFetches.delete(provider);
+    if (inFlightFetches.get(engine)?.promise === fetchPromise) {
+      inFlightFetches.delete(engine);
     }
   }
 }
 
-/** Plain async batch fetch for supported providers. Never throws. */
+/** Plain async batch fetch for supported engines. Never throws. */
 export async function collectProviderUsageSnapshots(
-  ctx: ProviderUsageContext,
-  options: { forceRefresh?: boolean; provider?: EngineKind } = {},
+  ctx: EngineUsageContext,
+  options: { forceRefresh?: boolean; engine?: EngineKind } = {},
 ): Promise<ServerProviderUsageSnapshot[]> {
-  const providers = options.provider
-    ? ([options.provider] as EngineKind[])
-    : PROVIDER_USAGE_PROVIDERS.filter(
-        (provider) => PROVIDER_USAGE_FETCHERS[provider] !== undefined,
-      );
+  const engines = options.engine
+    ? ([options.engine] as EngineKind[])
+    : ENGINE_USAGE_PROVIDERS.filter((engine) => ENGINE_USAGE_FETCHERS[engine] !== undefined);
   const settled = await Promise.allSettled(
-    providers.map((provider) =>
-      getProviderUsageSnapshot(provider, ctx, options.forceRefresh === true),
-    ),
+    engines.map((engine) => getProviderUsageSnapshot(engine, ctx, options.forceRefresh === true)),
   );
 
   return settled
@@ -200,16 +193,16 @@ export async function collectProviderUsageSnapshots(
 export const listProviderUsage = Effect.fn(function* (input: ServerListProviderUsageInput) {
   const serverConfig = yield* ServerConfig;
   const serverSettings = yield* ServerSettingsService;
-  const providerRegistry = yield* ProviderAdapterRegistry;
+  const providerRegistry = yield* EngineAdapterRegistry;
   const settings = yield* serverSettings.getSettings;
-  const codexAdapter = yield* providerRegistry.getByProvider("codex");
+  const codexAdapter = yield* providerRegistry.getByEngine("codex");
   return yield* Effect.tryPromise({
     try: () =>
       collectProviderUsageSnapshots(
         {
           ...buildContext(),
           homeDir: serverConfig.homeDir,
-          claudeBinaryPath: settings.providers.claude.binaryPath,
+          claudeBinaryPath: settings.engines.claude.binaryPath,
           ...(codexAdapter.readAccountRateLimits
             ? {
                 codexRateLimits: () => Effect.runPromise(codexAdapter.readAccountRateLimits!()),
@@ -218,7 +211,7 @@ export const listProviderUsage = Effect.fn(function* (input: ServerListProviderU
         },
         {
           forceRefresh: input.forceRefresh === true,
-          ...(input.provider ? { provider: input.provider } : {}),
+          ...(input.engine ? { engine: input.engine } : {}),
         },
       ),
     catch: () => [] as unknown as ServerListProviderUsageResult,

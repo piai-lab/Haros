@@ -1,6 +1,6 @@
 import {
   CommandId,
-  DEFAULT_PROVIDER_INTERACTION_MODE,
+  DEFAULT_ENGINE_INTERACTION_MODE,
   EventId,
   MessageId,
   ProjectId,
@@ -60,7 +60,7 @@ describe("decider project scripts", () => {
           projectId: asProjectId("project-stale-a"),
           title: "Stale A",
           workspaceRoot: "/tmp/recreate-root",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -83,7 +83,7 @@ describe("decider project scripts", () => {
           projectId: asProjectId("project-stale-b"),
           title: "Stale B",
           workspaceRoot: "/tmp/recreate-root",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -138,7 +138,7 @@ describe("decider project scripts", () => {
           projectId: asProjectId("project-mixed-stale"),
           title: "Mixed Stale",
           workspaceRoot: "/tmp/mixed-root",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -161,7 +161,7 @@ describe("decider project scripts", () => {
           projectId: asProjectId("project-mixed-active"),
           title: "Mixed Active",
           workspaceRoot: "/tmp/mixed-root",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -184,11 +184,11 @@ describe("decider project scripts", () => {
           threadId: ThreadId.makeUnsafe("thread-mixed-active"),
           projectId: asProjectId("project-mixed-active"),
           title: "Saved chat",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           branch: null,
           worktreePath: null,
@@ -236,7 +236,7 @@ describe("decider project scripts", () => {
           projectId: asProjectId("project-scripts"),
           title: "Scripts",
           workspaceRoot: "/tmp/scripts",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -292,7 +292,7 @@ describe("decider project scripts", () => {
             projectId: asProjectId(`project-pin-${index}`),
             title: `Project Pin ${index}`,
             workspaceRoot: `/tmp/project-pin-${index}`,
-            defaultModelSelection: null,
+            defaultEngineSelection: null,
             scripts: [],
             isPinned: index <= 3,
             createdAt: now,
@@ -351,7 +351,7 @@ describe("decider project scripts", () => {
           projectId: asProjectId("project-1"),
           title: "Project",
           workspaceRoot: "/tmp/project",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -374,11 +374,11 @@ describe("decider project scripts", () => {
           threadId: ThreadId.makeUnsafe("thread-1"),
           projectId: asProjectId("project-1"),
           title: "Thread",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           branch: null,
           worktreePath: null,
@@ -407,15 +407,15 @@ describe("decider project scripts", () => {
             serviceId: "openai",
             source: "builtin-catalog",
           },
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5.3-codex",
             options: {
               reasoningEffort: "high",
               fastMode: true,
             },
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           createdAt: now,
         },
@@ -437,8 +437,8 @@ describe("decider project scripts", () => {
     expect(turnStartEvent.payload).toMatchObject({
       threadId: ThreadId.makeUnsafe("thread-1"),
       messageId: asMessageId("message-user-1"),
-      modelSelection: {
-        provider: "codex",
+      engineSelection: {
+        engine: "codex",
         model: "gpt-5.3-codex",
         options: {
           reasoningEffort: "high",
@@ -466,14 +466,14 @@ describe("decider project scripts", () => {
             text: "discard stale presentation",
             attachments: [],
           },
-          modelSelection: { provider: "codex", model: "gpt-5.3-codex" },
+          engineSelection: { engine: "codex", model: "gpt-5.3-codex" },
           modelPresentationIdentity: {
             model: "claude-sonnet-4-5",
             displayName: "Wrong model",
             serviceId: "anthropic",
             source: "runtime-catalog",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           createdAt: now,
         },
@@ -485,7 +485,7 @@ describe("decider project scripts", () => {
       : [mismatchedIdentityResult];
     expect(mismatchedIdentityEvents[1]).toMatchObject({
       type: "thread.turn-start-requested",
-      payload: { modelSelection: { provider: "codex", model: "gpt-5.3-codex" } },
+      payload: { engineSelection: { engine: "codex", model: "gpt-5.3-codex" } },
     });
     expect("modelPresentationIdentity" in (mismatchedIdentityEvents[1]?.payload ?? {})).toBe(false);
 
@@ -501,7 +501,7 @@ describe("decider project scripts", () => {
             text: "freeze the current selection",
             attachments: [],
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           createdAt: now,
         },
@@ -514,8 +514,8 @@ describe("decider project scripts", () => {
     expect(omittedSelectionEvents[1]).toMatchObject({
       type: "thread.turn-start-requested",
       payload: {
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
       },
@@ -565,7 +565,7 @@ describe("decider project scripts", () => {
             serviceId: "openai",
             source: "builtin-catalog",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           createdAt: now,
         },
@@ -576,8 +576,8 @@ describe("decider project scripts", () => {
     expect(queuedEvents[1]).toMatchObject({
       type: "thread.turn-queued",
       payload: {
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         modelPresentationIdentity: {
@@ -602,13 +602,13 @@ describe("decider project scripts", () => {
             attachments: [],
           },
           dispatchMode: "steer",
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           createdAt: now,
         },
         readModel: runningReadModel,
         turnAdmissionCapabilities: {
-          provider: "codex",
+          engine: "codex",
           supportsNativeTurnSteering: true,
         },
       }),
@@ -634,13 +634,13 @@ describe("decider project scripts", () => {
             attachments: [],
           },
           dispatchMode: "steer",
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           createdAt: now,
         },
         readModel: runningReadModel,
         turnAdmissionCapabilities: {
-          provider: "codex",
+          engine: "codex",
           supportsNativeTurnSteering: false,
         },
       }),
@@ -660,8 +660,8 @@ describe("decider project scripts", () => {
           commandId: CommandId.makeUnsafe("cmd-dispatch-frozen-queued-turn"),
           threadId: ThreadId.makeUnsafe("thread-1"),
           messageId: asMessageId("message-user-queued-implicit-selection"),
-          modelSelection: {
-            provider: "claude",
+          engineSelection: {
+            engine: "claude",
             model: "claude-sonnet-4-5",
           },
           modelPresentationIdentity: {
@@ -670,7 +670,7 @@ describe("decider project scripts", () => {
             serviceId: "anthropic",
             source: "builtin-catalog",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           createdAt: now,
         },
@@ -680,8 +680,8 @@ describe("decider project scripts", () => {
     expect(promotedResult).toMatchObject({
       type: "thread.turn-start-requested",
       payload: {
-        modelSelection: {
-          provider: "claude",
+        engineSelection: {
+          engine: "claude",
           model: "claude-sonnet-4-5",
         },
         modelPresentationIdentity: {
@@ -701,7 +701,7 @@ describe("decider project scripts", () => {
             commandId: CommandId.makeUnsafe("cmd-dispatch-legacy-queued-turn"),
             threadId: ThreadId.makeUnsafe("thread-1"),
             messageId: asMessageId("message-user-queued-legacy"),
-            interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+            interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
             runtimeMode: "approval-required",
             createdAt: now,
           },
@@ -735,7 +735,7 @@ describe("decider project scripts", () => {
           projectId: asProjectId("project-1"),
           title: "Project",
           workspaceRoot: "/tmp/project",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -758,11 +758,11 @@ describe("decider project scripts", () => {
           threadId: ThreadId.makeUnsafe("thread-1"),
           projectId: asProjectId("project-1"),
           title: "Thread",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "full-access",
           branch: null,
           worktreePath: null,
@@ -818,7 +818,7 @@ describe("decider project scripts", () => {
           projectId: asProjectId("project-1"),
           title: "Project",
           workspaceRoot: "/tmp/project",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -841,11 +841,11 @@ describe("decider project scripts", () => {
           threadId: ThreadId.makeUnsafe("thread-1"),
           projectId: asProjectId("project-1"),
           title: "Thread",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           branch: null,
           worktreePath: null,
@@ -877,7 +877,7 @@ describe("decider project scripts", () => {
       type: "thread.interaction-mode-set",
       payload: {
         threadId: ThreadId.makeUnsafe("thread-1"),
-        previousInteractionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        previousInteractionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         interactionMode: "plan",
       },
     });
@@ -902,7 +902,7 @@ describe("decider project scripts", () => {
           projectId: asProjectId("project-handoff"),
           title: "Project",
           workspaceRoot: "/tmp/project",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -925,11 +925,11 @@ describe("decider project scripts", () => {
           threadId: ThreadId.makeUnsafe("thread-handoff"),
           projectId: asProjectId("project-handoff"),
           title: "Handoff",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "full-access",
           branch: null,
           worktreePath: null,
@@ -980,11 +980,11 @@ describe("decider project scripts", () => {
             sourceThreadId: ThreadId.makeUnsafe("thread-handoff"),
             projectId: asProjectId("project-handoff"),
             title: "Handoff Copy",
-            modelSelection: {
-              provider: "claude",
+            engineSelection: {
+              engine: "claude",
               model: "sonnet",
             },
-            interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+            interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
             runtimeMode: "full-access",
             branch: null,
             worktreePath: null,
@@ -1024,7 +1024,7 @@ describe("decider project scripts", () => {
           projectId: asProjectId("project-native-handoff"),
           title: "Project",
           workspaceRoot: "/tmp/project",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: now,
           updatedAt: now,
@@ -1047,11 +1047,11 @@ describe("decider project scripts", () => {
           threadId: ThreadId.makeUnsafe("thread-native-handoff"),
           projectId: asProjectId("project-native-handoff"),
           title: "Handoff",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "full-access",
           branch: null,
           worktreePath: null,
@@ -1126,11 +1126,11 @@ describe("decider project scripts", () => {
           sourceThreadId: ThreadId.makeUnsafe("thread-native-handoff"),
           projectId: asProjectId("project-native-handoff"),
           title: "Handoff Copy",
-          modelSelection: {
-            provider: "claude",
+          engineSelection: {
+            engine: "claude",
             model: "sonnet",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "full-access",
           branch: null,
           worktreePath: null,

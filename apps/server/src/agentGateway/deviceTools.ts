@@ -3,12 +3,12 @@
  *
  * Shaped exactly like `browserTools.ts`: one `ToolEntry` array appended to the
  * gateway's tool assembly, gated on the `device:control` capability, and
- * requiring a live turn so a detached provider cell cannot drive a simulator
+ * requiring a live turn so a detached engine cell cannot drive a simulator
  * after its turn ended.
  *
- * Consent must arrive as a verified fact from the existing provider approval
- * flow rather than being inferred from a provider name. Two things are
- * enforced here rather than left to the provider:
+ * Consent must arrive as a verified fact from the existing engine approval
+ * flow rather than being inferred from a engine name. Two things are
+ * enforced here rather than left to the engine:
  *
  * - `device_open_url` always requires approval. It is an exfiltration vector
  *   (an arbitrary URL opened in the device's browser), so it is refused
@@ -32,7 +32,7 @@ import {
 import { Effect } from "effect";
 
 import type { DeviceManager } from "../device/DeviceManager.ts";
-import { providerExecutionStructure } from "../provider/providerExecutionStructure.ts";
+import { engineExecutionStructure } from "../provider/engineExecutionStructure.ts";
 import { readTapRequest } from "../device/uiTreeTargeting.ts";
 import { mcpToolResultError, mcpToolResultJson, type McpToolCallResult } from "./protocol.ts";
 import {
@@ -173,7 +173,7 @@ function readBoundedIntegerArg(
 export interface AgentGatewayDeviceToolsOptions {
   readonly manager: DeviceManager;
   /**
-   * Returns true only after the provider path has supplied a verifiable approval
+   * Returns true only after the engine path has supplied a verifiable approval
    * fact for this exact active-turn invocation. Omission deliberately fails
    * closed; the current production gateway does not yet carry such receipts.
    */
@@ -203,7 +203,7 @@ export function makeAgentGatewayDeviceTools(
       Effect.gen(function* () {
         if (
           deviceToolRequiresApproval(name) &&
-          (!providerExecutionStructure(context.callerProvider).supportedRuntimeModes.has(
+          (!engineExecutionStructure(context.callerProvider).supportedRuntimeModes.has(
             "approval-required",
           ) ||
             !isExplicitlyApproved({ name, args, context }))

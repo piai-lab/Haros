@@ -1,13 +1,13 @@
 import {
   type ClientOrchestrationCommand,
-  type ModelSelection,
+  type EngineSelection,
   type MessageId,
   type NativeApi,
   type OrchestrationShellSnapshot,
-  type ProviderInteractionMode,
+  type EngineInteractionMode,
   type EngineKind,
-  type ProviderNativeCommandDescriptor,
-  type ProviderModelOptions,
+  type EngineNativeCommandDescriptor,
+  type EngineModelOptions,
   type RuntimeMode,
   THREAD_GOAL_MAX_CHARS,
   type ThreadId,
@@ -37,7 +37,7 @@ import {
 import {
   buildHistoryOnlyForkPayload,
   buildThreadHandoffImportedMessages,
-  resolveThreadHandoffModelSelection,
+  resolveThreadHandoffEngineSelection,
 } from "../lib/threadHandoff";
 import { toastManager } from "../components/ui/toast";
 import type { ComposerCommandItem } from "../components/chat/ComposerCommandMenu";
@@ -141,25 +141,25 @@ export function useComposerSlashCommands(input: {
   canOfferExportCommand: boolean;
   supportsTextNativeReviewCommand: boolean;
   fastModeEnabled: boolean;
-  providerNativeCommands: readonly ProviderNativeCommandDescriptor[];
+  providerNativeCommands: readonly EngineNativeCommandDescriptor[];
   providerCommandDiscoveryCwd: string | null;
   selectedProvider: EngineKind;
-  currentProviderModelOptions: ProviderModelOptions[EngineKind] | undefined;
-  selectedModelSelection: ModelSelection | null;
+  currentProviderModelOptions: EngineModelOptions[EngineKind] | undefined;
+  selectedEngineSelection: EngineSelection | null;
   environmentMode: string | null;
   runtimeMode: RuntimeMode;
-  interactionMode: ProviderInteractionMode;
+  interactionMode: EngineInteractionMode;
   threadId: ThreadId;
   syncServerShellSnapshot: (snapshot: OrchestrationShellSnapshot) => void;
   navigateToThread: (threadId: ThreadId, options?: { splitViewId?: SplitViewId }) => Promise<void>;
   handleClearConversation: () => Promise<void> | void;
-  handleInteractionModeChange: (mode: ProviderInteractionMode) => Promise<void> | void;
+  handleInteractionModeChange: (mode: EngineInteractionMode) => Promise<void> | void;
   openForkTargetPicker: () => void;
   openReviewTargetPicker: () => void;
   setComposerDraftProviderModelOptions: (
     threadId: ThreadId,
-    provider: EngineKind,
-    nextProviderOptions: ProviderModelOptions[EngineKind],
+    engine: EngineKind,
+    nextProviderOptions: EngineModelOptions[EngineKind],
     options?: { model?: string | null; persistSticky?: boolean },
   ) => void;
   editorActions: {
@@ -199,7 +199,7 @@ export function useComposerSlashCommands(input: {
     providerCommandDiscoveryCwd,
     selectedProvider,
     currentProviderModelOptions,
-    selectedModelSelection,
+    selectedEngineSelection,
     environmentMode,
     runtimeMode,
     interactionMode,
@@ -215,7 +215,7 @@ export function useComposerSlashCommands(input: {
   } = input;
   const providerNativeCommandNames = providerNativeCommands.map((command) => command.name);
   const availableBuiltInSlashCommands = getAvailableComposerSlashCommands({
-    provider: selectedProvider,
+    engine: selectedProvider,
     supportsFastSlashCommand,
     canOfferCompactCommand,
     canOfferReviewCommand: true,
@@ -243,7 +243,7 @@ export function useComposerSlashCommands(input: {
     }
 
     try {
-      void api.provider
+      void api.engine
         .compactThread({
           threadId: activeThread.id,
         })
@@ -278,14 +278,14 @@ export function useComposerSlashCommands(input: {
           fastMode: enabled,
         }),
         {
-          ...(selectedModelSelection ? { model: selectedModelSelection.model } : {}),
+          ...(selectedEngineSelection ? { model: selectedEngineSelection.model } : {}),
           persistSticky: true,
         },
       );
     },
     [
       currentProviderModelOptions,
-      selectedModelSelection,
+      selectedEngineSelection,
       selectedProvider,
       setComposerDraftProviderModelOptions,
       threadId,
@@ -444,7 +444,7 @@ export function useComposerSlashCommands(input: {
       historyOnlyFlight?: HistoryOnlyForkFlight;
     }) => {
       const retainedHistoryOnlyCommand = inputOptions?.historyOnlyFlight?.command;
-      if (!retainedHistoryOnlyCommand && !selectedModelSelection) {
+      if (!retainedHistoryOnlyCommand && !selectedEngineSelection) {
         toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
         return true;
       }
@@ -469,7 +469,7 @@ export function useComposerSlashCommands(input: {
       }
       // The retained-command branch above is the only path that can continue
       // after the current model selection disappears.
-      if (!selectedModelSelection) return true;
+      if (!selectedEngineSelection) return true;
       if (!activeProject || !activeThread || !isServerThread) {
         toastManager.add({
           type: "warning",
@@ -505,7 +505,7 @@ export function useComposerSlashCommands(input: {
         sourceThreadId: activeThread.id,
         projectId: activeProject.id,
         title: activeThread.title,
-        modelSelection: selectedModelSelection,
+        engineSelection: selectedEngineSelection,
         runtimeMode,
         interactionMode,
         envMode: resolvedTarget.envMode,
@@ -556,7 +556,7 @@ export function useComposerSlashCommands(input: {
       isServerThread,
       navigateToThread,
       runtimeMode,
-      selectedModelSelection,
+      selectedEngineSelection,
       syncServerShellSnapshot,
       t,
     ],
@@ -622,7 +622,7 @@ export function useComposerSlashCommands(input: {
   const sidechatCreationByKeyRef = useRef(new Map<string, SidechatCreationFlight>());
   const createSidechatFromSlashCommand = useCallback(
     (inputOptions?: { initialPrompt?: string; targetProvider?: EngineKind }): Promise<true> => {
-      if (!selectedModelSelection) {
+      if (!selectedEngineSelection) {
         toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
         return Promise.resolve(true);
       }
@@ -643,27 +643,27 @@ export function useComposerSlashCommands(input: {
       }
 
       const targetProvider = inputOptions?.targetProvider ?? null;
-      const sidechatModelSelection =
-        targetProvider && targetProvider !== selectedModelSelection.provider
-          ? resolveThreadHandoffModelSelection({
+      const sidechatEngineSelection =
+        targetProvider && targetProvider !== selectedEngineSelection.engine
+          ? resolveThreadHandoffEngineSelection({
               sourceThread: activeThread,
               targetProvider,
-              projectDefaultModelSelection: activeProject.defaultModelSelection,
-              stickyModelSelectionByProvider:
-                useComposerDraftStore.getState().stickyModelSelectionByProvider,
+              projectDefaultEngineSelection: activeProject.defaultEngineSelection,
+              stickyEngineSelectionByEngine:
+                useComposerDraftStore.getState().stickyEngineSelectionByEngine,
             })
-          : selectedModelSelection;
+          : selectedEngineSelection;
 
       return createOrJoinSidechat({
         inFlightByKey: sidechatCreationByKeyRef.current,
-        flightKey: `${activeThread.id}:${sidechatModelSelection.provider}`,
+        flightKey: `${activeThread.id}:${sidechatEngineSelection.engine}`,
         initialPrompt: inputOptions?.initialPrompt,
         startCreation: (initialPrompt) =>
           createSidechatThread({
             api,
             project: activeProject,
             sourceThread: activeThread,
-            selectedModelSelection: sidechatModelSelection,
+            selectedEngineSelection: sidechatEngineSelection,
             initialPrompt,
             openSidechat: (sidechatThreadId) => {
               useRightDockStore.getState().openPane(activeThread.id, {
@@ -677,7 +677,7 @@ export function useComposerSlashCommands(input: {
           sendSidechatPrompt({
             api,
             threadId: sidechatThreadId,
-            selectedModelSelection: sidechatModelSelection,
+            selectedEngineSelection: sidechatEngineSelection,
             prompt,
           }),
         onCreationResult: (result) => {
@@ -708,7 +708,7 @@ export function useComposerSlashCommands(input: {
       activeProject,
       activeThread,
       isServerThread,
-      selectedModelSelection,
+      selectedEngineSelection,
       syncServerShellSnapshot,
       t,
     ],
@@ -725,7 +725,7 @@ export function useComposerSlashCommands(input: {
 
   const runCodexReviewStart = useCallback(
     async (target: "changes" | "base-branch") => {
-      if (!selectedModelSelection) {
+      if (!selectedEngineSelection) {
         toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
         return false;
       }
@@ -783,7 +783,7 @@ export function useComposerSlashCommands(input: {
           threadId: nextThreadId,
           projectId: activeProject.id,
           title: nextThreadTitle,
-          modelSelection: selectedModelSelection,
+          engineSelection: selectedEngineSelection,
           runtimeMode,
           interactionMode: "default",
           envMode: nextEnvMode,
@@ -804,9 +804,9 @@ export function useComposerSlashCommands(input: {
             text: messageText,
             attachments: [],
           },
-          modelSelection: selectedModelSelection,
+          engineSelection: selectedEngineSelection,
           modelPresentationIdentity: resolveModelPresentationIdentity({
-            selection: selectedModelSelection,
+            selection: selectedEngineSelection,
           }),
           reviewTarget,
           dispatchMode: "queue",
@@ -834,7 +834,7 @@ export function useComposerSlashCommands(input: {
       activeThread,
       navigateToThread,
       runtimeMode,
-      selectedModelSelection,
+      selectedEngineSelection,
       syncServerShellSnapshot,
       t,
     ],
@@ -884,8 +884,8 @@ export function useComposerSlashCommands(input: {
     }
 
     try {
-      const result = await api.provider.listCommands({
-        provider: "claude",
+      const result = await api.engine.listCommands({
+        engine: "claude",
         cwd: providerCommandDiscoveryCwd,
         threadId,
         forceReload: true,
@@ -946,8 +946,8 @@ export function useComposerSlashCommands(input: {
 
   const openFeedbackDialog = useCallback(() => {
     openGlobalFeedbackDialog({
-      provider: selectedProvider,
-      model: selectedModelSelection?.model ?? null,
+      engine: selectedProvider,
+      model: selectedEngineSelection?.model ?? null,
       projectKind: activeProject?.kind ?? null,
       environmentMode,
       runtimeMode,
@@ -967,7 +967,7 @@ export function useComposerSlashCommands(input: {
     interactionMode,
     openGlobalFeedbackDialog,
     runtimeMode,
-    selectedModelSelection?.model,
+    selectedEngineSelection?.model,
     selectedProvider,
   ]);
 
@@ -1123,7 +1123,7 @@ export function useComposerSlashCommands(input: {
           toastManager.add({
             type: "warning",
             title: t("composer.sideProviderUnavailableTitle", {
-              provider: ENGINE_DISPLAY_NAMES[unavailableProvider],
+              engine: ENGINE_DISPLAY_NAMES[unavailableProvider],
             }),
             description: t("composer.sideProviderUnavailableDescription"),
           });

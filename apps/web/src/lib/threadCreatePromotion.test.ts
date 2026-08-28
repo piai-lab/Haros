@@ -45,8 +45,8 @@ function makeThreadCreateCommand(threadId = "thread-promote") {
     threadId: ThreadId.makeUnsafe(threadId),
     projectId: ProjectId.makeUnsafe("project-promote"),
     title: "Promoted thread",
-    modelSelection: {
-      provider: "codex",
+    engineSelection: {
+      engine: "codex",
       model: "gpt-5",
     },
     runtimeMode: "full-access",
@@ -69,7 +69,7 @@ function makeShellSnapshot(threadId?: ThreadId) {
         kind: "project" as const,
         title: "Project",
         workspaceRoot: "/tmp/project",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         scripts: [],
         createdAt: "2026-05-06T20:00:00.000Z",
         updatedAt: "2026-05-06T20:00:00.000Z",
@@ -81,7 +81,7 @@ function makeShellSnapshot(threadId?: ThreadId) {
             id: threadId,
             projectId,
             title: "Promoted thread",
-            modelSelection: { provider: "codex" as const, model: "gpt-5" },
+            engineSelection: { engine: "codex" as const, model: "gpt-5" },
             runtimeMode: "full-access" as const,
             interactionMode: "default" as const,
             envMode: "local" as const,
@@ -160,7 +160,7 @@ describe("threadCreatePromotion", () => {
           kind: "project",
           title: "Project",
           workspaceRoot: "/tmp/project",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           scripts: [],
           createdAt: "2026-05-06T20:00:00.000Z",
           updatedAt: "2026-05-06T20:00:00.000Z",
@@ -171,8 +171,8 @@ describe("threadCreatePromotion", () => {
           id: threadId,
           projectId,
           title: "Promoted thread",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5",
           },
           runtimeMode: "full-access",
@@ -230,7 +230,7 @@ describe("threadCreatePromotion", () => {
             kind: "project",
             title: "Project",
             workspaceRoot: "/tmp/project",
-            defaultModelSelection: null,
+            defaultEngineSelection: null,
             scripts: [],
             createdAt: "2026-05-06T20:00:00.000Z",
             updatedAt: "2026-05-06T20:00:00.000Z",
@@ -241,8 +241,8 @@ describe("threadCreatePromotion", () => {
             id: threadId,
             projectId,
             title: "Promoted thread",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5",
             },
             runtimeMode: "full-access",

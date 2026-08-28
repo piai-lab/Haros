@@ -1,8 +1,8 @@
 import {
   BUILT_IN_TOOL_SURFACES,
   type BuiltInToolGroupOverrides,
-  type ModelSelection,
-  type ProviderStartOptions,
+  type EngineSelection,
+  type EngineStartOptions,
   type ServerSettings,
   type ServerSettingsPatch,
   type ServerSettingsView,
@@ -11,24 +11,24 @@ import { deepMerge, type DeepPartial } from "./Struct";
 import { isBuiltInToolGroupId, resolveHostGroupSurfacePolicy } from "./hostToolSurfacePolicy";
 import { getDefaultModel } from "./model";
 
-function shouldReplaceTextGenerationModelSelection(
-  patch: ServerSettingsPatch["textGenerationModelSelection"] | undefined,
+function shouldReplaceTextGenerationEngineSelection(
+  patch: ServerSettingsPatch["textGenerationEngineSelection"] | undefined,
 ): boolean {
-  return Boolean(patch && (patch.provider !== undefined || patch.model !== undefined));
+  return Boolean(patch && (patch.engine !== undefined || patch.model !== undefined));
 }
 
 export function validateServerSettingsPatch(
   current: ServerSettings,
   patch: ServerSettingsPatch,
 ): string | null {
-  const selectionPatch = patch.textGenerationModelSelection;
+  const selectionPatch = patch.textGenerationEngineSelection;
   if (
-    selectionPatch?.provider !== undefined &&
-    selectionPatch.provider !== current.textGenerationModelSelection.provider &&
-    getDefaultModel(selectionPatch.provider) === null &&
+    selectionPatch?.engine !== undefined &&
+    selectionPatch.engine !== current.textGenerationEngineSelection.engine &&
+    getDefaultModel(selectionPatch.engine) === null &&
     selectionPatch.model === undefined
   ) {
-    return `text generation provider ${selectionPatch.provider} requires an explicit model when changing providers`;
+    return `text generation engine ${selectionPatch.engine} requires an explicit model when changing engines`;
   }
   const overrides = patch.agentTools?.builtInGroupOverrides;
   if (overrides !== undefined) {
@@ -88,7 +88,7 @@ export function applyServerSettingsPatch(
   current: ServerSettings,
   patch: ServerSettingsPatch,
 ): ServerSettings {
-  const selectionPatch = patch.textGenerationModelSelection;
+  const selectionPatch = patch.textGenerationEngineSelection;
   const merged = deepMerge(current, patch as DeepPartial<ServerSettings>);
   const next = normalizeServerSettings(
     patch.agentTools?.builtInGroupOverrides === undefined
@@ -107,74 +107,74 @@ export function applyServerSettingsPatch(
   if (validateServerSettingsPatch(current, patch) !== null) {
     return normalizeServerSettings({
       ...next,
-      textGenerationModelSelection: current.textGenerationModelSelection,
+      textGenerationEngineSelection: current.textGenerationEngineSelection,
     });
   }
 
-  const provider = selectionPatch.provider ?? current.textGenerationModelSelection.provider;
-  const providerDefaultModel = selectionPatch.provider
-    ? getDefaultModel(selectionPatch.provider)
+  const engine = selectionPatch.engine ?? current.textGenerationEngineSelection.engine;
+  const providerDefaultModel = selectionPatch.engine
+    ? getDefaultModel(selectionPatch.engine)
     : null;
   const model =
     selectionPatch.model ??
-    (selectionPatch.provider !== undefined &&
+    (selectionPatch.engine !== undefined &&
     providerDefaultModel !== null &&
-    selectionPatch.provider !== current.textGenerationModelSelection.provider
+    selectionPatch.engine !== current.textGenerationEngineSelection.engine
       ? providerDefaultModel
-      : current.textGenerationModelSelection.model);
-  const options = shouldReplaceTextGenerationModelSelection(selectionPatch)
+      : current.textGenerationEngineSelection.model);
+  const options = shouldReplaceTextGenerationEngineSelection(selectionPatch)
     ? selectionPatch.options
-    : (selectionPatch.options ?? current.textGenerationModelSelection.options);
+    : (selectionPatch.options ?? current.textGenerationEngineSelection.options);
 
   return normalizeServerSettings({
     ...next,
-    textGenerationModelSelection: {
-      provider,
+    textGenerationEngineSelection: {
+      engine,
       model,
       ...(options !== undefined ? { options } : {}),
-    } as ModelSelection,
+    } as EngineSelection,
   });
 }
 
 /** Server-owned launch options derived from the persisted non-secret settings snapshot. */
 export function providerStartOptionsFromServerSettings(
-  settings: Pick<ServerSettingsView, "providers">,
-): ProviderStartOptions {
-  const { providers } = settings;
+  settings: Pick<ServerSettingsView, "engines">,
+): EngineStartOptions {
+  const { engines } = settings;
   return {
     oa: {},
     codex: {
-      ...(providers.codex.binaryPath ? { binaryPath: providers.codex.binaryPath } : {}),
-      ...(providers.codex.homePath ? { homePath: providers.codex.homePath } : {}),
+      ...(engines.codex.binaryPath ? { binaryPath: engines.codex.binaryPath } : {}),
+      ...(engines.codex.homePath ? { homePath: engines.codex.homePath } : {}),
     },
     claude: {
-      ...(providers.claude.binaryPath ? { binaryPath: providers.claude.binaryPath } : {}),
+      ...(engines.claude.binaryPath ? { binaryPath: engines.claude.binaryPath } : {}),
     },
     cursor: {
-      ...(providers.cursor.binaryPath ? { binaryPath: providers.cursor.binaryPath } : {}),
-      ...(providers.cursor.apiEndpoint ? { apiEndpoint: providers.cursor.apiEndpoint } : {}),
+      ...(engines.cursor.binaryPath ? { binaryPath: engines.cursor.binaryPath } : {}),
+      ...(engines.cursor.apiEndpoint ? { apiEndpoint: engines.cursor.apiEndpoint } : {}),
     },
     antigravity: {
-      ...(providers.antigravity.binaryPath ? { binaryPath: providers.antigravity.binaryPath } : {}),
+      ...(engines.antigravity.binaryPath ? { binaryPath: engines.antigravity.binaryPath } : {}),
     },
     grok: {
-      ...(providers.grok.binaryPath ? { binaryPath: providers.grok.binaryPath } : {}),
+      ...(engines.grok.binaryPath ? { binaryPath: engines.grok.binaryPath } : {}),
     },
     droid: {
-      ...(providers.droid.binaryPath ? { binaryPath: providers.droid.binaryPath } : {}),
+      ...(engines.droid.binaryPath ? { binaryPath: engines.droid.binaryPath } : {}),
     },
     kilo: {
-      ...(providers.kilo.binaryPath ? { binaryPath: providers.kilo.binaryPath } : {}),
-      ...(providers.kilo.serverUrl ? { serverUrl: providers.kilo.serverUrl } : {}),
+      ...(engines.kilo.binaryPath ? { binaryPath: engines.kilo.binaryPath } : {}),
+      ...(engines.kilo.serverUrl ? { serverUrl: engines.kilo.serverUrl } : {}),
     },
     opencode: {
-      ...(providers.opencode.binaryPath ? { binaryPath: providers.opencode.binaryPath } : {}),
-      ...(providers.opencode.serverUrl ? { serverUrl: providers.opencode.serverUrl } : {}),
-      experimentalWebSockets: providers.opencode.experimentalWebSockets,
+      ...(engines.opencode.binaryPath ? { binaryPath: engines.opencode.binaryPath } : {}),
+      ...(engines.opencode.serverUrl ? { serverUrl: engines.opencode.serverUrl } : {}),
+      experimentalWebSockets: engines.opencode.experimentalWebSockets,
     },
     pi: {
-      ...(providers.pi.binaryPath ? { binaryPath: providers.pi.binaryPath } : {}),
-      ...(providers.pi.agentDir ? { agentDir: providers.pi.agentDir } : {}),
+      ...(engines.pi.binaryPath ? { binaryPath: engines.pi.binaryPath } : {}),
+      ...(engines.pi.agentDir ? { agentDir: engines.pi.agentDir } : {}),
     },
   };
 }

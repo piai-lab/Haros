@@ -67,7 +67,7 @@ describe("UsageHistory", () => {
     const layer = UsageHistoryLive.pipe(
       Layer.provideMerge(SqlitePersistenceMemory),
       Layer.provideMerge(
-        ServerSettingsService.layerTest({ providers: { codex: { homePath: codexHome } } }),
+        ServerSettingsService.layerTest({ engines: { codex: { homePath: codexHome } } }),
       ),
       Layer.provide(
         ServerConfig.layerTest(process.cwd(), { prefix: "omnimind-usage-history-test-" }),
@@ -127,7 +127,7 @@ describe("UsageHistory", () => {
     const layer = UsageHistoryLive.pipe(
       Layer.provideMerge(SqlitePersistenceMemory),
       Layer.provideMerge(
-        ServerSettingsService.layerTest({ providers: { codex: { homePath: codexHome } } }),
+        ServerSettingsService.layerTest({ engines: { codex: { homePath: codexHome } } }),
       ),
       Layer.provide(ServerConfig.layerTest(process.cwd(), { prefix: "omnimind-usage-tail-test-" })),
       Layer.provide(NodeServices.layer),
@@ -140,7 +140,7 @@ describe("UsageHistory", () => {
         const first = yield* Effect.promise(() => waitForSettled(history));
         expect(first.status).toBe("partial");
         expect(
-          first.providers.find((provider) => provider.provider === "codex")?.progress.skippedFiles,
+          first.engines.find((engine) => engine.engine === "codex")?.progress.skippedFiles,
         ).toBe(1);
         const bytesRead = first.progress.bytesRead;
         yield* Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 100)));
@@ -165,7 +165,7 @@ describe("UsageHistory", () => {
     const layer = UsageHistoryLive.pipe(
       Layer.provideMerge(SqlitePersistenceMemory),
       Layer.provideMerge(
-        ServerSettingsService.layerTest({ providers: { codex: { homePath: codexHome } } }),
+        ServerSettingsService.layerTest({ engines: { codex: { homePath: codexHome } } }),
       ),
       Layer.provide(
         ServerConfig.layerTest(process.cwd(), { prefix: "omnimind-usage-crash-test-" }),
@@ -179,7 +179,7 @@ describe("UsageHistory", () => {
         yield* history.command({ action: "authorize" });
         const settled = yield* Effect.promise(() => waitForSettled(history));
         expect(settled.status).toBe("paused");
-        expect(settled.providers.every((provider) => provider.status === "paused")).toBe(true);
+        expect(settled.engines.every((engine) => engine.status === "paused")).toBe(true);
         expect(settled.rows).toEqual([]);
         expect(process.pid).toBeGreaterThan(0);
       }).pipe(Effect.provide(layer), Effect.scoped),
@@ -214,7 +214,7 @@ describe("UsageHistory", () => {
     const layer = UsageHistoryLive.pipe(
       Layer.provideMerge(SqlitePersistenceMemory),
       Layer.provideMerge(
-        ServerSettingsService.layerTest({ providers: { codex: { homePath: codexHome } } }),
+        ServerSettingsService.layerTest({ engines: { codex: { homePath: codexHome } } }),
       ),
       Layer.provide(
         ServerConfig.layerTest(process.cwd(), { prefix: "omnimind-usage-cursor-test-" }),
@@ -237,7 +237,7 @@ describe("UsageHistory", () => {
           UPDATE usage_history_provider_state SET status = 'pending',
             discovery_cursor = 'session.jsonl', discovery_complete = 0,
             restart_attempts = 0, detail_code = NULL
-          WHERE provider = 'codex'
+          WHERE engine = 'codex'
         `;
         yield* sql`
           UPDATE usage_history_control SET status = 'indexing',
@@ -248,9 +248,7 @@ describe("UsageHistory", () => {
         yield* history.get({ range: "all", groupBy: "model" });
         const paused = yield* Effect.promise(() => waitForSettled(history));
         expect(paused.status).toBe("paused");
-        expect(paused.providers.find((provider) => provider.provider === "codex")?.status).toBe(
-          "paused",
-        );
+        expect(paused.engines.find((engine) => engine.engine === "codex")?.status).toBe("paused");
         expect(paused.rows[0]?.inputTokens).toBe(80);
         expect(paused.rows[0]?.outputTokens).toBe(8);
 
@@ -290,7 +288,7 @@ process.stdin.on("end", () => setTimeout(() => {
     const layer = UsageHistoryLive.pipe(
       Layer.provideMerge(SqlitePersistenceMemory),
       Layer.provideMerge(
-        ServerSettingsService.layerTest({ providers: { codex: { homePath: codexHome } } }),
+        ServerSettingsService.layerTest({ engines: { codex: { homePath: codexHome } } }),
       ),
       Layer.provide(
         ServerConfig.layerTest(process.cwd(), { prefix: "omnimind-usage-clear-race-test-" }),
@@ -306,10 +304,10 @@ process.stdin.on("end", () => setTimeout(() => {
         const cleared = yield* history.command({ action: "clear" });
         expect(cleared.status).toBe("idle");
         yield* Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 350)));
-        const after = yield* history.get({ range: "all", groupBy: "provider" });
+        const after = yield* history.get({ range: "all", groupBy: "engine" });
         expect(after.status).toBe("idle");
         expect(after.rows).toEqual([]);
-        expect(after.providers.every((provider) => provider.status === "pending")).toBe(true);
+        expect(after.engines.every((engine) => engine.status === "pending")).toBe(true);
       }).pipe(Effect.provide(layer), Effect.scoped),
     );
   });

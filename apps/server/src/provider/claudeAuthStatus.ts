@@ -4,7 +4,7 @@
  * Decides authenticated/unauthenticated/unknown from the CLI's JSON or text
  * output, detects the structured false negatives produced by refresh-token
  * rotation races, and derives subscription metadata labels. Pure functions
- * only; the health check in ProviderHealth owns spawning, locking, and
+ * only; the health check in EngineHealth owns spawning, locking, and
  * retries.
  */
 import type { ServerProviderAuthStatus, ServerProviderStatusState } from "@harnessos/contracts";

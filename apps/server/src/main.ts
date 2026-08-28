@@ -32,13 +32,13 @@ import { fixPath, resolveBaseDir } from "./os-jank";
 import { Open } from "./open";
 import { ServerAuth } from "./auth/Services/ServerAuth";
 import * as SqlitePersistence from "./persistence/Layers/Sqlite";
-import { ProviderRuntimeEventRepositoryLive } from "./persistence/Layers/ProviderRuntimeEvents";
+import { EngineRuntimeEventRepositoryLive } from "./persistence/Layers/EngineRuntimeEvents";
 import { makeServerApplicationLayers } from "./serverLayers";
 import { startServerMemoryDiagnostics } from "./memoryDiagnostics";
 import { startClaudeCredentialKeepalive } from "./provider/claudeCredentialKeepalive";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
-import { ProviderSessionReaperLive } from "./provider/Layers/ProviderSessionReaper";
-import { ProviderRuntimeReconcilerLive } from "./provider/Layers/ProviderRuntimeReconciler";
+import { EngineSessionReaperLive } from "./provider/Layers/EngineSessionReaper";
+import { EngineRuntimeReconcilerLive } from "./provider/Layers/EngineRuntimeReconciler";
 import { Server } from "./effectServer";
 import { ServerLoggerLive } from "./serverLogger";
 import { ServerSettingsService } from "./serverSettings";
@@ -239,7 +239,7 @@ const ServerConfigLive = (input: CliInput) =>
         env.autoBootstrapProjectFromCwd,
         mode === "web",
       );
-      // Provider event NDJSON logging is helpful for debugging, but it is too
+      // Engine event NDJSON logging is helpful for debugging, but it is too
       // expensive to keep enabled on the streaming hot path by default.
       const logProviderEvents = resolveBooleanConfig(
         input.logProviderEvents,
@@ -302,14 +302,14 @@ const ServerConfigLive = (input: CliInput) =>
 
 const LayerLive = (input: CliInput) => {
   const { runtimeServicesLayer, providerLayer } = makeServerApplicationLayers();
-  const providerSessionReaperLayer = ProviderSessionReaperLive.pipe(
-    // The reaper coordinates orchestration state with live provider sessions,
+  const providerSessionReaperLayer = EngineSessionReaperLive.pipe(
+    // The reaper coordinates orchestration state with live engine sessions,
     // so it belongs at the top level where both layers are available.
     Layer.provideMerge(runtimeServicesLayer),
     Layer.provideMerge(providerLayer),
   );
-  const providerRuntimeReconcilerLayer = ProviderRuntimeReconcilerLive.pipe(
-    Layer.provide(ProviderRuntimeEventRepositoryLive),
+  const engineRuntimeReconcilerLayer = EngineRuntimeReconcilerLive.pipe(
+    Layer.provide(EngineRuntimeEventRepositoryLive),
     Layer.provideMerge(runtimeServicesLayer),
     Layer.provideMerge(providerLayer),
   );
@@ -318,7 +318,7 @@ const LayerLive = (input: CliInput) => {
     Layer.provideMerge(runtimeServicesLayer),
     Layer.provideMerge(providerLayer),
     Layer.provideMerge(providerSessionReaperLayer),
-    Layer.provideMerge(providerRuntimeReconcilerLayer),
+    Layer.provideMerge(engineRuntimeReconcilerLayer),
     Layer.provideMerge(SqlitePersistence.layerConfig),
     Layer.provideMerge(ServerLoggerLive),
     Layer.provideMerge(ServerConfigLive(input)),
@@ -391,12 +391,12 @@ const makeServerProgram = (input: CliInput) =>
     yield* Effect.forkChild(
       Effect.gen(function* () {
         const settings = yield* serverSettings.getSettings;
-        if (settings.providers.claude.enabled === false) {
+        if (settings.engines.claude.enabled === false) {
           return;
         }
         yield* Effect.sync(() =>
           startClaudeCredentialKeepalive({
-            binaryPath: settings.providers.claude.binaryPath,
+            binaryPath: settings.engines.claude.binaryPath,
             homeDir: config.homeDir,
             log: (message) => Effect.runFork(Effect.logInfo(message)),
           }),
@@ -493,9 +493,9 @@ const authTokenFlag = Flag.string("auth-token").pipe(
 const autoBootstrapProjectFromCwdFlag = optionalBooleanFlag("auto-bootstrap-project-from-cwd", {
   description: "Create a project for the current working directory on startup when missing.",
 });
-const logProviderEventsFlag = optionalBooleanFlag("log-provider-events", {
+const logProviderEventsFlag = optionalBooleanFlag("log-engine-events", {
   description:
-    "Emit native/canonical provider NDJSON logs for debugging (equivalent to HARNESSOS_LOG_PROVIDER_EVENTS).",
+    "Emit native/canonical engine NDJSON logs for debugging (equivalent to HARNESSOS_LOG_PROVIDER_EVENTS).",
 });
 const logWebSocketEventsFlag = optionalBooleanFlag("log-websocket-events", {
   description:

@@ -121,7 +121,7 @@ export function buildExternalMcpExamplePrompt(projectTitle: string | null): stri
     projectTitle === null
       ? "Use OmniMind to create a new task: call harnessos_overview first, pick the most relevant project, and tell me which one you chose."
       : `Use OmniMind to create a new task in the project named ${JSON.stringify(projectTitle)}.`,
-    "First inspect OmniMind's capabilities and choose an exact available provider and model; do not guess model names.",
+    "First inspect OmniMind's capabilities and choose an exact available engine and model; do not guess model names.",
     "Use an isolated managed worktree and approval-required execution.",
     "Goal: [DESCRIBE THE WORK].",
     "Wait for the task to finish, then read the result and summarize it for me.",
@@ -163,7 +163,7 @@ export function buildExternalMcpSetupPrompt(input: {
       "For any other MCP app, merge this into its MCP configuration:",
       jsonConfiguration(input.stdio),
     ].join("\n"),
-    'Step 3 — Verify. Reload your MCP servers if needed, then call the "harnessos_overview" tool and summarize the projects, providers, and permissions it returns.',
+    'Step 3 — Verify. Reload your MCP servers if needed, then call the "harnessos_overview" tool and summarize the projects, engines, and permissions it returns.',
   );
   return sections.join("\n\n");
 }

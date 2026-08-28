@@ -5,10 +5,10 @@
 
 import type {
   ModelSlug,
-  ProviderInteractionMode,
+  EngineInteractionMode,
   EngineKind,
-  ProviderMentionReference,
-  ProviderSkillReference,
+  EngineMentionReference,
+  EngineSkillReference,
   ThreadId,
 } from "@harnessos/contracts";
 import { type Dispatch, type MutableRefObject, type RefObject, type SetStateAction } from "react";
@@ -54,12 +54,12 @@ interface UseKanbanTaskComposerEditorInput {
   readonly isLocalFolderBrowserOpen: boolean;
   readonly localFolderBrowseRootPath: string | null;
   readonly composerTerminalContexts: readonly TerminalContextDraft[];
-  readonly composerSkills: readonly ProviderSkillReference[];
-  readonly composerMentions: readonly ProviderMentionReference[];
+  readonly composerSkills: readonly EngineSkillReference[];
+  readonly composerMentions: readonly EngineMentionReference[];
   readonly scratchThreadId: ThreadId;
   readonly selectedProvider: EngineKind;
-  readonly handleProviderModelChange: (provider: EngineKind, model: ModelSlug) => void;
-  readonly setInteractionMode: Dispatch<SetStateAction<ProviderInteractionMode>>;
+  readonly handleProviderModelChange: (engine: EngineKind, model: ModelSlug) => void;
+  readonly setInteractionMode: Dispatch<SetStateAction<EngineInteractionMode>>;
   readonly onCreate: () => void;
 }
 
@@ -236,7 +236,7 @@ export function useKanbanTaskComposerEditor(input: UseKanbanTaskComposerEditorIn
       handleNavigateLocalFolder(localFolderBrowseRootPath ?? "/");
       return;
     }
-    if (item.type === "provider-native-command") {
+    if (item.type === "engine-native-command") {
       applyComposerTriggerReplacement({ snapshot, trigger, base: `/${item.command} ` });
       return;
     }
@@ -249,7 +249,7 @@ export function useKanbanTaskComposerEditor(input: UseKanbanTaskComposerEditorIn
           const nextSkill = {
             name: item.skill.name,
             path: item.skill.path,
-          } satisfies ProviderSkillReference;
+          } satisfies EngineSkillReference;
           const exists = composerSkills.some(
             (skill) => skill.name === nextSkill.name && skill.path === nextSkill.path,
           );
@@ -279,7 +279,7 @@ export function useKanbanTaskComposerEditor(input: UseKanbanTaskComposerEditorIn
       return;
     }
     if (item.type === "model") {
-      handleProviderModelChange(item.provider, item.model);
+      handleProviderModelChange(item.engine, item.model);
       applyComposerTriggerReplacement({ snapshot, trigger, base: "" });
       return;
     }

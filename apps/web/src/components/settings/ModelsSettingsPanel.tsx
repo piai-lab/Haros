@@ -20,7 +20,7 @@ import {
   type OmniMindCustomModelHeaderMetadata,
   type OmniMindCustomModelHeaderMutation,
   type OmniMindCustomModelServiceModelInput,
-  type ModelSelection,
+  type EngineSelection,
 } from "@harnessos/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
@@ -48,7 +48,7 @@ import {
   omniMindModelServiceDetailQueryOptions,
   omniMindModelServicesListQueryOptions,
 } from "~/lib/omnimindModelServicesReactQuery";
-import { providerDiscoveryQueryKeys } from "~/lib/providerDiscoveryReactQuery";
+import { engineDiscoveryQueryKeys } from "~/lib/engineDiscoveryReactQuery";
 import { cn } from "~/lib/utils";
 import { useI18n, type MessageKey } from "~/i18n";
 import { useStore } from "~/store";
@@ -388,38 +388,38 @@ function customModelServiceRiskFingerprint(editor: CustomModelServiceEditorState
   );
 }
 
-function modelSelectionUsesCustomService(
-  selection: ModelSelection | null | undefined,
+function engineSelectionUsesCustomService(
+  selection: EngineSelection | null | undefined,
   serviceId: string,
 ): boolean {
-  return selection?.provider === "oa" && selection.model.startsWith(`${serviceId}/`);
+  return selection?.engine === "oa" && selection.model.startsWith(`${serviceId}/`);
 }
 
 function countCustomServiceReferences(serviceId: string): number {
   const composerState = useComposerDraftStore.getState();
   const appState = useStore.getState();
   const draftReferences = Object.values(composerState.draftsByThreadId).filter((draft) =>
-    modelSelectionUsesCustomService(draft.modelSelectionByProvider.oa, serviceId),
+    engineSelectionUsesCustomService(draft.engineSelectionByEngine.oa, serviceId),
   ).length;
   const queuedTurnReferences = Object.values(composerState.draftsByThreadId).reduce(
     (count, draft) =>
       count +
       draft.queuedTurns.filter((turn) =>
-        modelSelectionUsesCustomService(turn.modelSelection, serviceId),
+        engineSelectionUsesCustomService(turn.engineSelection, serviceId),
       ).length,
     0,
   );
-  const stickyReference = modelSelectionUsesCustomService(
-    composerState.stickyModelSelectionByProvider.oa,
+  const stickyReference = engineSelectionUsesCustomService(
+    composerState.stickyEngineSelectionByEngine.oa,
     serviceId,
   )
     ? 1
     : 0;
   const projectReferences = appState.projects.filter((project) =>
-    modelSelectionUsesCustomService(project.defaultModelSelection, serviceId),
+    engineSelectionUsesCustomService(project.defaultEngineSelection, serviceId),
   ).length;
   const persistedThreadReferences = Object.values(appState.threadShellById ?? {}).filter((thread) =>
-    modelSelectionUsesCustomService(thread.modelSelection, serviceId),
+    engineSelectionUsesCustomService(thread.engineSelection, serviceId),
   ).length;
   return (
     draftReferences +
@@ -465,7 +465,7 @@ function customModelServiceCommandFingerprint(
   }
   for (const entry of editor.headers) {
     if (entry.mode === "preserve" && entry.existingSource === "command") {
-      commandSources.push(`provider:${entry.name.toLowerCase()}`);
+      commandSources.push(`engine:${entry.name.toLowerCase()}`);
     }
   }
   if (action === "test") {
@@ -505,7 +505,7 @@ function CustomHeaderEditor({
   onChange,
 }: {
   readonly entries: ReadonlyArray<CustomHeaderEditorEntry>;
-  readonly scope: "provider" | "model";
+  readonly scope: "engine" | "model";
   readonly onChange: (entries: ReadonlyArray<CustomHeaderEditorEntry>) => void;
 }) {
   const { t } = useI18n();
@@ -526,8 +526,8 @@ function CustomHeaderEditor({
           <h5 className="text-xs font-medium text-foreground">{t("settings.customApiHeaders")}</h5>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             {t(
-              scope === "provider"
-                ? "settings.customApiHeadersDescription.provider"
+              scope === "engine"
+                ? "settings.customApiHeadersDescription.engine"
                 : "settings.customApiHeadersDescription.model",
             )}
           </p>
@@ -537,8 +537,8 @@ function CustomHeaderEditor({
           size="xs"
           variant="outline"
           aria-label={t(
-            scope === "provider"
-              ? "settings.customApiHeaderAdd.provider"
+            scope === "engine"
+              ? "settings.customApiHeaderAdd.engine"
               : "settings.customApiHeaderAdd.model",
           )}
           disabled={entries.length >= HARNESSOS_CUSTOM_MODEL_HEADERS_MAX_COUNT}
@@ -579,8 +579,8 @@ function CustomHeaderEditor({
                       <Input
                         value={entry.name}
                         aria-label={t(
-                          scope === "provider"
-                            ? "settings.customApiHeaderName.provider"
+                          scope === "engine"
+                            ? "settings.customApiHeaderName.engine"
                             : "settings.customApiHeaderName.model",
                           { number: index + 1 },
                         )}
@@ -619,8 +619,8 @@ function CustomHeaderEditor({
                       <Input
                         value={entry.variableName}
                         aria-label={t(
-                          scope === "provider"
-                            ? "settings.customApiHeaderEnvironmentVariable.provider"
+                          scope === "engine"
+                            ? "settings.customApiHeaderEnvironmentVariable.engine"
                             : "settings.customApiHeaderEnvironmentVariable.model",
                           { number: index + 1 },
                         )}
@@ -690,8 +690,8 @@ function CustomHeaderEditor({
                       size="xs"
                       variant="ghost"
                       aria-label={t(
-                        scope === "provider"
-                          ? "settings.customApiHeaderRemove.provider"
+                        scope === "engine"
+                          ? "settings.customApiHeaderRemove.engine"
                           : "settings.customApiHeaderRemove.model",
                         { number: index + 1 },
                       )}
@@ -711,8 +711,8 @@ function CustomHeaderEditor({
                     <Input
                       value={entry.variableName}
                       aria-label={t(
-                        scope === "provider"
-                          ? "settings.customApiHeaderEnvironmentVariable.provider"
+                        scope === "engine"
+                          ? "settings.customApiHeaderEnvironmentVariable.engine"
                           : "settings.customApiHeaderEnvironmentVariable.model",
                         { number: index + 1 },
                       )}
@@ -756,8 +756,8 @@ function CustomHeaderEditor({
       {hasPreservedCommand ? (
         <p className="text-xs leading-relaxed text-muted-foreground">
           {t(
-            scope === "provider"
-              ? "settings.customApiHeaderCommandDescription.provider"
+            scope === "engine"
+              ? "settings.customApiHeaderCommandDescription.engine"
               : "settings.customApiHeaderCommandDescription.model",
           )}
         </p>
@@ -811,7 +811,7 @@ export function ModelsSettingsPanel({
   readonly startInAddFlow?: boolean;
   readonly presentation?: "settings" | "first-run";
   readonly onServicePrepared?: (prepared: PreparedModelService) => void;
-  readonly onSetupReady?: (selection: ModelSelection) => void;
+  readonly onSetupReady?: (selection: EngineSelection) => void;
 }) {
   if (!active) return null;
   return (
@@ -839,7 +839,7 @@ function ActiveModelsSettingsPanel({
   readonly startInAddFlow: boolean;
   readonly presentation: "settings" | "first-run";
   readonly onServicePrepared?: (prepared: PreparedModelService) => void;
-  readonly onSetupReady?: (selection: ModelSelection) => void;
+  readonly onSetupReady?: (selection: EngineSelection) => void;
 }) {
   const { locale, t } = useI18n();
   const queryClient = useQueryClient();
@@ -1008,7 +1008,7 @@ function ActiveModelsSettingsPanel({
           models: availableModels,
         });
         onSetupReady?.({
-          provider: "oa",
+          engine: "oa",
           model: `${service.serviceId}/${model.modelId}`,
         });
         return true;
@@ -1253,7 +1253,7 @@ function ActiveModelsSettingsPanel({
         queryKey: omniMindModelServicesQueryKeys.all,
       }),
       queryClient.invalidateQueries({
-        queryKey: providerDiscoveryQueryKeys.modelsForProvider("oa"),
+        queryKey: engineDiscoveryQueryKeys.modelsForProvider("oa"),
       }),
     ]);
   }, [queryClient]);
@@ -3039,7 +3039,7 @@ function ActiveModelsSettingsPanel({
                     ) : null}
 
                     <CustomHeaderEditor
-                      scope="provider"
+                      scope="engine"
                       entries={customServiceEditor.headers}
                       onChange={(headers) =>
                         updateCustomServiceEditor((current) => ({

@@ -1,19 +1,19 @@
 // FILE: providerUsage.test.ts
-// Purpose: Locks usage-provider metadata and the settings-panel visibility rule
-// that hides unsigned providers once any connected snapshot exists.
+// Purpose: Locks usage-engine metadata and the settings-panel visibility rule
+// that hides unsigned engines once any connected snapshot exists.
 
 import { describe, expect, it } from "vitest";
 
 import type { ServerProviderUsageSnapshot } from "@harnessos/contracts";
 
-import { PROVIDER_USAGE_PROVIDERS, selectVisibleProviderUsageSnapshots } from "./providerUsage";
+import { ENGINE_USAGE_PROVIDERS, selectVisibleProviderUsageSnapshots } from "./providerUsage";
 
 function snapshot(
-  provider: ServerProviderUsageSnapshot["provider"],
+  engine: ServerProviderUsageSnapshot["engine"],
   status: NonNullable<ServerProviderUsageSnapshot["status"]>,
 ): ServerProviderUsageSnapshot {
   return {
-    provider,
+    engine,
     updatedAt: "2026-08-19T00:00:00.000Z",
     limits: [],
     usageLines: [],
@@ -22,9 +22,9 @@ function snapshot(
   };
 }
 
-describe("provider usage metadata", () => {
-  it("exposes every provider with a safe live usage source", () => {
-    expect([...PROVIDER_USAGE_PROVIDERS]).toEqual([
+describe("engine usage metadata", () => {
+  it("exposes every engine with a safe live usage source", () => {
+    expect([...ENGINE_USAGE_PROVIDERS]).toEqual([
       "codex",
       "claude",
       "cursor",
@@ -42,21 +42,21 @@ describe("provider usage metadata", () => {
       snapshot("grok", "needs-auth"),
       snapshot("antigravity", "needs-auth"),
     ];
-    expect(selectVisibleProviderUsageSnapshots(snapshots).map((item) => item.provider)).toEqual([
+    expect(selectVisibleProviderUsageSnapshots(snapshots).map((item) => item.engine)).toEqual([
       "codex",
       "antigravity",
       "grok",
     ]);
   });
 
-  it("hides unsigned providers once any connected snapshot exists", () => {
+  it("hides unsigned engines once any connected snapshot exists", () => {
     const snapshots = [
       snapshot("codex", "ok"),
       snapshot("claude", "needs-auth"),
       snapshot("grok", "ok"),
       snapshot("antigravity", "needs-auth"),
     ];
-    expect(selectVisibleProviderUsageSnapshots(snapshots).map((item) => item.provider)).toEqual([
+    expect(selectVisibleProviderUsageSnapshots(snapshots).map((item) => item.engine)).toEqual([
       "codex",
       "grok",
     ]);
@@ -68,14 +68,14 @@ describe("provider usage metadata", () => {
       snapshot("claude", "needs-auth"),
       snapshot("opencode", "needs-auth"),
     ];
-    expect(selectVisibleProviderUsageSnapshots(snapshots).map((item) => item.provider)).toEqual([
+    expect(selectVisibleProviderUsageSnapshots(snapshots).map((item) => item.engine)).toEqual([
       "codex",
     ]);
   });
 
-  it("does not invent connected cards for providers absent from the payload", () => {
+  it("does not invent connected cards for engines absent from the payload", () => {
     const snapshots = [snapshot("codex", "ok")];
-    expect(selectVisibleProviderUsageSnapshots(snapshots).map((item) => item.provider)).toEqual([
+    expect(selectVisibleProviderUsageSnapshots(snapshots).map((item) => item.engine)).toEqual([
       "codex",
     ]);
   });

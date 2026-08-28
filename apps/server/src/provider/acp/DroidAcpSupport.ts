@@ -9,9 +9,9 @@ import * as nodePath from "node:path";
 
 import {
   type DroidModelOptions,
-  type ProviderListModelsResult,
-  type ProviderInteractionMode,
-  type ProviderModelDescriptor,
+  type EngineListModelsResult,
+  type EngineInteractionMode,
+  type EngineModelDescriptor,
 } from "@harnessos/contracts";
 import { Effect, Layer, Scope, ServiceMap } from "effect";
 import * as AcpErrors from "./AcpErrors.ts";
@@ -41,7 +41,7 @@ export interface DroidAcpRuntimeInput extends Omit<
   readonly droidSettings: DroidAcpRuntimeSettings | null | undefined;
 }
 
-export interface DroidAcpModelSelectionErrorContext {
+export interface DroidAcpEngineSelectionErrorContext {
   readonly cause: AcpErrors.AcpError;
   readonly method: "session/set_config_option";
 }
@@ -123,7 +123,7 @@ export function buildDroidAcpSpawnInput(
     command: resolveDroidCliBinaryPath(droidSettings?.binaryPath),
     args,
     cwd,
-    env: buildProviderChildEnvironment({ provider: "droid" }),
+    env: buildProviderChildEnvironment({ engine: "droid" }),
   };
 }
 
@@ -180,11 +180,11 @@ export const makeDroidAcpRuntime = (
  * shared runtime validates values against the advertised options and skips
  * the RPC when the current value already matches.
  */
-export function applyDroidAcpModelSelection<E>(input: {
+export function applyDroidAcpEngineSelection<E>(input: {
   readonly runtime: Pick<AcpSessionRuntimeShape, "setConfigOption">;
   readonly model: string;
   readonly reasoningEffort?: string | null | undefined;
-  readonly mapError: (context: DroidAcpModelSelectionErrorContext) => E;
+  readonly mapError: (context: DroidAcpEngineSelectionErrorContext) => E;
 }): Effect.Effect<void, E> {
   return Effect.gen(function* () {
     const mapError = (cause: AcpErrors.AcpError) =>
@@ -207,7 +207,7 @@ export function applyDroidAcpModelSelection<E>(input: {
 /** Applies Droid's native read-only spec mode before a Plan-mode prompt is dispatched. */
 export function applyDroidAcpInteractionMode<E>(input: {
   readonly runtime: Pick<AcpSessionRuntimeShape, "setConfigOption" | "setMode">;
-  readonly interactionMode?: ProviderInteractionMode;
+  readonly interactionMode?: EngineInteractionMode;
   readonly runtimeMode?: "approval-required" | "full-access";
   readonly mapError: (context: DroidAcpModeSelectionErrorContext) => E;
 }): Effect.Effect<void, E> {
@@ -244,7 +244,7 @@ function findDroidSelectConfig(
 function droidModelDescriptor(
   model: Acp.SessionConfigSelectOption,
   reasoning: Extract<Acp.SessionConfigOption, { readonly type: "select" }> | undefined,
-): ProviderModelDescriptor {
+): EngineModelDescriptor {
   const efforts = reasoning ? flattenDroidConfigOptions(reasoning.options) : [];
   const optionDescriptors = reasoning
     ? [
@@ -282,7 +282,7 @@ function droidModelDescriptor(
  */
 export function discoverDroidAcpModels(
   runtime: Pick<AcpSessionRuntimeShape, "getConfigOptions" | "setConfigOption">,
-): Effect.Effect<ProviderListModelsResult, AcpErrors.AcpError> {
+): Effect.Effect<EngineListModelsResult, AcpErrors.AcpError> {
   return Effect.gen(function* () {
     const initialOptions = yield* runtime.getConfigOptions;
     const modelConfig = findDroidSelectConfig(initialOptions, {
@@ -335,6 +335,6 @@ export function discoverDroidAcpModels(
       models: descriptors,
       source: "droid-acp",
       cached: false,
-    } satisfies ProviderListModelsResult;
+    } satisfies EngineListModelsResult;
   });
 }

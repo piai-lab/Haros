@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   MessageId,
   CommandId,
-  DEFAULT_PROVIDER_INTERACTION_MODE,
+  DEFAULT_ENGINE_INTERACTION_MODE,
   ProjectId,
   ThreadId,
   TurnId,
@@ -34,8 +34,8 @@ const readModel: OrchestrationReadModel = {
       id: ProjectId.makeUnsafe("project-a"),
       title: "Project A",
       workspaceRoot: "/tmp/project-a",
-      defaultModelSelection: {
-        provider: "codex",
+      defaultEngineSelection: {
+        engine: "codex",
         model: "gpt-5-codex",
       },
       scripts: [],
@@ -47,8 +47,8 @@ const readModel: OrchestrationReadModel = {
       id: ProjectId.makeUnsafe("project-b"),
       title: "Project B",
       workspaceRoot: "/tmp/project-b",
-      defaultModelSelection: {
-        provider: "codex",
+      defaultEngineSelection: {
+        engine: "codex",
         model: "gpt-5-codex",
       },
       scripts: [],
@@ -62,11 +62,11 @@ const readModel: OrchestrationReadModel = {
       id: ThreadId.makeUnsafe("thread-1"),
       projectId: ProjectId.makeUnsafe("project-a"),
       title: "Thread A",
-      modelSelection: {
-        provider: "codex",
+      engineSelection: {
+        engine: "codex",
         model: "gpt-5-codex",
       },
-      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
       runtimeMode: "full-access",
       branch: null,
       worktreePath: null,
@@ -85,11 +85,11 @@ const readModel: OrchestrationReadModel = {
       id: ThreadId.makeUnsafe("thread-2"),
       projectId: ProjectId.makeUnsafe("project-b"),
       title: "Thread B",
-      modelSelection: {
-        provider: "codex",
+      engineSelection: {
+        engine: "codex",
         model: "gpt-5-codex",
       },
-      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
       runtimeMode: "full-access",
       branch: null,
       worktreePath: null,
@@ -108,11 +108,11 @@ const readModel: OrchestrationReadModel = {
       id: ThreadId.makeUnsafe("thread-archived"),
       projectId: ProjectId.makeUnsafe("project-a"),
       title: "Archived Thread",
-      modelSelection: {
-        provider: "codex",
+      engineSelection: {
+        engine: "codex",
         model: "gpt-5-codex",
       },
-      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
       runtimeMode: "full-access",
       branch: null,
       worktreePath: null,
@@ -132,11 +132,11 @@ const readModel: OrchestrationReadModel = {
       id: ThreadId.makeUnsafe("thread-deleted"),
       projectId: ProjectId.makeUnsafe("project-a"),
       title: "Deleted Thread",
-      modelSelection: {
-        provider: "codex",
+      engineSelection: {
+        engine: "codex",
         model: "gpt-5-codex",
       },
-      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
       runtimeMode: "full-access",
       branch: null,
       worktreePath: null,
@@ -164,7 +164,7 @@ const messageSendCommand: OrchestrationCommand = {
     text: "hello",
     attachments: [],
   },
-  interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+  interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
   runtimeMode: "approval-required",
   createdAt: now,
 };
@@ -296,11 +296,11 @@ describe("commandInvariants", () => {
           threadId: ThreadId.makeUnsafe("thread-3"),
           projectId: ProjectId.makeUnsafe("project-a"),
           title: "new",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "full-access",
           branch: null,
           worktreePath: null,
@@ -320,11 +320,11 @@ describe("commandInvariants", () => {
             threadId: ThreadId.makeUnsafe("thread-1"),
             projectId: ProjectId.makeUnsafe("project-a"),
             title: "dup",
-            modelSelection: {
-              provider: "codex",
+            engineSelection: {
+              engine: "codex",
               model: "gpt-5-codex",
             },
-            interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+            interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
             runtimeMode: "full-access",
             branch: null,
             worktreePath: null,

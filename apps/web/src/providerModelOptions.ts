@@ -6,34 +6,34 @@ import {
 import {
   MODEL_OPTIONS_BY_PROVIDER,
   type AntigravityModelOptions,
-  type AntigravityModelSelection,
+  type AntigravityEngineSelection,
   type ClaudeModelOptions,
-  type ClaudeModelSelection,
+  type ClaudeEngineSelection,
   type CodexModelOptions,
-  type CodexModelSelection,
+  type CodexEngineSelection,
   type CursorModelOptions,
-  type CursorModelSelection,
+  type CursorEngineSelection,
   type DroidModelOptions,
-  type DroidModelSelection,
+  type DroidEngineSelection,
   type GrokModelOptions,
-  type GrokModelSelection,
-  type KiloModelSelection,
+  type GrokEngineSelection,
+  type KiloEngineSelection,
   type ModelPresentationIdentity,
   type ModelPresentationIdentitySource,
-  type ModelSelection,
+  type EngineSelection,
   type OpenCodeModelOptions,
-  type OpenCodeModelSelection,
+  type OpenCodeEngineSelection,
   type PiModelOptions,
-  type PiModelSelection,
+  type PiEngineSelection,
   type EngineKind,
-  type ProviderModelOptions,
+  type EngineModelOptions,
 } from "@harnessos/contracts";
 import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { normalizeCursorModelVariantBaseId } from "./cursorModelVariants";
 
-export type ProviderOptions = ProviderModelOptions[EngineKind];
+export type EngineOptions = EngineModelOptions[EngineKind];
 
-export interface ProviderModelOption {
+export interface EngineModelOption {
   slug: string;
   name: string;
   description?: string;
@@ -45,7 +45,7 @@ export interface ProviderModelOption {
 }
 
 function presentationSourceFromOrigin(
-  origin: ProviderModelOption["upstreamProviderOrigin"],
+  origin: EngineModelOption["upstreamProviderOrigin"],
 ): ModelPresentationIdentitySource {
   if (origin === "models_json") return "user-configured";
   if (origin === "extension") return "extension";
@@ -54,7 +54,7 @@ function presentationSourceFromOrigin(
 }
 
 function presentationSourceFromDiscovery(
-  origin: ProviderModelOption["upstreamProviderOrigin"],
+  origin: EngineModelOption["upstreamProviderOrigin"],
 ): ModelPresentationIdentitySource {
   if (origin === "models_json") return "user-configured";
   if (origin === "extension") return "extension";
@@ -63,12 +63,12 @@ function presentationSourceFromDiscovery(
 }
 
 export function resolveModelPresentationIdentity(input: {
-  selection: ModelSelection;
-  options?: ReadonlyArray<ProviderModelOption>;
+  selection: EngineSelection;
+  options?: ReadonlyArray<EngineModelOption>;
 }): ModelPresentationIdentity {
   const staticOptions = MODEL_OPTIONS_BY_PROVIDER[
-    input.selection.provider
-  ] as ReadonlyArray<ProviderModelOption>;
+    input.selection.engine
+  ] as ReadonlyArray<EngineModelOption>;
   const option =
     input.options?.find((entry) => entry.slug === input.selection.model) ??
     staticOptions.find((entry) => entry.slug === input.selection.model);
@@ -91,7 +91,7 @@ export function resolveModelPresentationIdentity(input: {
     displayName:
       option?.name.trim() ||
       formatProviderModelOptionName({
-        provider: input.selection.provider,
+        engine: input.selection.engine,
         slug: input.selection.model,
       }),
     ...(serviceId ? { serviceId } : {}),
@@ -100,19 +100,19 @@ export function resolveModelPresentationIdentity(input: {
   };
 }
 
-export interface ProviderModelOptionGroup {
+export interface EngineModelOptionGroup {
   key: string;
   label: string | null;
-  options: ProviderModelOption[];
+  options: EngineModelOption[];
 }
 
 /**
- * Returns the provider provenance shown when a model is detached from its
- * normal upstream-provider group (for example, inside Favourites).
+ * Returns the engine provenance shown when a model is detached from its
+ * normal upstream-engine group (for example, inside Favourites).
  */
 export function providerModelOptionProvenanceLabel(input: {
-  provider: EngineKind;
-  option: ProviderModelOption;
+  engine: EngineKind;
+  option: EngineModelOption;
 }): string {
   const upstreamProviderName = input.option.upstreamProviderName?.trim();
   if (upstreamProviderName) {
@@ -129,24 +129,21 @@ export function providerModelOptionProvenanceLabel(input: {
     return humanizeModelSlug(slugProvider);
   }
 
-  return ENGINE_DISPLAY_NAMES[input.provider];
+  return ENGINE_DISPLAY_NAMES[input.engine];
 }
 
-export function formatProviderModelOptionName(input: {
-  provider: EngineKind;
-  slug: string;
-}): string {
+export function formatProviderModelOptionName(input: { engine: EngineKind; slug: string }): string {
   const trimmedSlug =
-    input.provider === "cursor" ? input.slug.trim().replace(/\[[^\]]*\]$/u, "") : input.slug.trim();
+    input.engine === "cursor" ? input.slug.trim().replace(/\[[^\]]*\]$/u, "") : input.slug.trim();
   if (trimmedSlug.length === 0) {
     return trimmedSlug;
   }
 
   if (
-    input.provider === "kilo" ||
-    input.provider === "opencode" ||
-    input.provider === "pi" ||
-    input.provider === "oa"
+    input.engine === "kilo" ||
+    input.engine === "opencode" ||
+    input.engine === "pi" ||
+    input.engine === "oa"
   ) {
     const modelIdentifier = trimmedSlug.includes("/")
       ? trimmedSlug.slice(trimmedSlug.lastIndexOf("/") + 1)
@@ -157,25 +154,25 @@ export function formatProviderModelOptionName(input: {
   return formatModelDisplayName(trimmedSlug) ?? trimmedSlug;
 }
 
-function normalizeDynamicModelSlug(provider: EngineKind, slug: string): string {
-  if (provider === "claude") {
+function normalizeDynamicModelSlug(engine: EngineKind, slug: string): string {
+  if (engine === "claude") {
     const withoutContextSuffix = slug.replace(/\[[^\]]+\]$/u, "");
-    return normalizeModelSlug(withoutContextSuffix, provider) ?? withoutContextSuffix;
+    return normalizeModelSlug(withoutContextSuffix, engine) ?? withoutContextSuffix;
   }
-  if (provider === "grok") {
+  if (engine === "grok") {
     return slug.trim();
   }
-  if (provider === "cursor") {
+  if (engine === "cursor") {
     return normalizeCursorModelVariantBaseId(slug) ?? slug.trim();
   }
-  return normalizeModelSlug(slug, provider) ?? slug;
+  return normalizeModelSlug(slug, engine) ?? slug;
 }
 
 const CLAUDE_CATALOG_RANK_BY_SLUG: ReadonlyMap<string, number> = new Map(
   MODEL_OPTIONS_BY_PROVIDER.claude.map((model, index) => [model.slug as string, index]),
 );
 
-function orderClaudeModelOptions<T extends ProviderModelOption>(
+function orderClaudeModelOptions<T extends EngineModelOption>(
   options: ReadonlyArray<T>,
 ): ReadonlyArray<T> {
   return options.toSorted(
@@ -186,14 +183,14 @@ function orderClaudeModelOptions<T extends ProviderModelOption>(
 }
 
 /**
- * Folds runtime-discovered models into the static option list for a provider:
+ * Folds runtime-discovered models into the static option list for a engine:
  * discovered models lead (with display names recovered from the static list when
  * possible), static built-ins fill gaps unless discovery fully owns the catalog
  * (antigravity/kilo/opencode/cursor/grok), and user-defined custom models always survive.
  */
 export function mergeDynamicModelOptions(input: {
-  provider: EngineKind;
-  staticOptions: ReadonlyArray<ProviderModelOption & { isCustom?: boolean }>;
+  engine: EngineKind;
+  staticOptions: ReadonlyArray<EngineModelOption & { isCustom?: boolean }>;
   dynamicModels: ReadonlyArray<{
     slug: string;
     name?: string | null | undefined;
@@ -202,15 +199,15 @@ export function mergeDynamicModelOptions(input: {
     upstreamProviderName?: string | null | undefined;
     upstreamProviderOrigin?: "builtin" | "models_json" | "extension" | "unknown" | undefined;
   }>;
-}): ReadonlyArray<ProviderModelOption & { isCustom?: boolean }> {
+}): ReadonlyArray<EngineModelOption & { isCustom?: boolean }> {
   const staticNameBySlug = new Map(input.staticOptions.map((model) => [model.slug, model.name]));
   const dynamicNormalizedSlugs = new Set<string>();
-  const normalizedDynamicOptions: ProviderModelOption[] = [];
+  const normalizedDynamicOptions: EngineModelOption[] = [];
 
   for (const dynamicModel of input.dynamicModels) {
     const rawName = dynamicModel.name?.trim() ?? "";
     const isClaudeDefaultAlias =
-      input.provider === "claude" &&
+      input.engine === "claude" &&
       (rawName.toLowerCase() === "default (recommended)" ||
         rawName.toLowerCase() === "default recommended" ||
         dynamicModel.slug.trim().toLowerCase() === "default");
@@ -218,10 +215,10 @@ export function mergeDynamicModelOptions(input: {
       continue;
     }
 
-    const normalizedSlug = normalizeDynamicModelSlug(input.provider, dynamicModel.slug);
+    const normalizedSlug = normalizeDynamicModelSlug(input.engine, dynamicModel.slug);
     const rawSlug = dynamicModel.slug.trim().toLowerCase();
     const displayNameFallback = formatProviderModelOptionName({
-      provider: input.provider,
+      engine: input.engine,
       slug: normalizedSlug,
     });
     if (dynamicNormalizedSlugs.has(normalizedSlug)) {
@@ -254,29 +251,29 @@ export function mergeDynamicModelOptions(input: {
   // Droid validates model values against its live ACP select options, so an
   // arbitrary custom slug is guaranteed to fail at session configuration.
   const customOnlyModels =
-    input.provider === "droid"
+    input.engine === "droid"
       ? []
       : input.staticOptions.filter(
           (model) =>
             "isCustom" in model &&
             model.isCustom &&
-            !dynamicNormalizedSlugs.has(normalizeDynamicModelSlug(input.provider, model.slug)),
+            !dynamicNormalizedSlugs.has(normalizeDynamicModelSlug(input.engine, model.slug)),
         );
   const staticBuiltInModels = input.staticOptions.filter(
     (model) => !("isCustom" in model) || model.isCustom !== true,
   );
   const missingStaticBuiltIns =
-    (input.provider === "antigravity" ||
-      input.provider === "kilo" ||
-      input.provider === "opencode" ||
-      input.provider === "cursor" ||
-      input.provider === "droid" ||
-      input.provider === "grok") &&
+    (input.engine === "antigravity" ||
+      input.engine === "kilo" ||
+      input.engine === "opencode" ||
+      input.engine === "cursor" ||
+      input.engine === "droid" ||
+      input.engine === "grok") &&
     normalizedDynamicOptions.length > 0
       ? []
       : staticBuiltInModels.filter((model) => !dynamicNormalizedSlugs.has(model.slug));
 
-  if (input.provider === "claude") {
+  if (input.engine === "claude") {
     return [
       ...orderClaudeModelOptions([...normalizedDynamicOptions, ...missingStaticBuiltIns]),
       ...customOnlyModels,
@@ -286,16 +283,16 @@ export function mergeDynamicModelOptions(input: {
   return [...normalizedDynamicOptions, ...missingStaticBuiltIns, ...customOnlyModels];
 }
 
-/** Returns a compact label for provider descriptions that begin with an `Nx` cost multiplier. */
+/** Returns a compact label for engine descriptions that begin with an `Nx` cost multiplier. */
 export function providerModelCostMultiplierLabel(description?: string): string | null {
   const multiplier = description?.trim().match(/^(\d+(?:\.\d+)?)x(?:\s|$)/i)?.[1];
   return multiplier ? `${multiplier}×` : null;
 }
 
 export function groupProviderModelOptions(
-  options: ReadonlyArray<ProviderModelOption>,
-): ProviderModelOptionGroup[] {
-  const groupedOptions: ProviderModelOptionGroup[] = [];
+  options: ReadonlyArray<EngineModelOption>,
+): EngineModelOptionGroup[] {
+  const groupedOptions: EngineModelOptionGroup[] = [];
   const groupIndexByKey = new Map<string, number>();
 
   for (const option of options) {
@@ -307,7 +304,7 @@ export function groupProviderModelOptions(
         : upstreamProviderId && upstreamProviderId.length > 0
           ? upstreamProviderId
           : null;
-    // Pi provider ids are opaque and case-sensitive. Only presentation/search
+    // Pi engine ids are opaque and case-sensitive. Only presentation/search
     // text may be folded; grouping must retain the exact service identity.
     const groupKey = groupLabel ? (upstreamProviderId ?? groupLabel).trim() : "__ungrouped__";
     const existingIndex = groupIndexByKey.get(groupKey);
@@ -339,10 +336,10 @@ export function groupProviderModelOptions(
 }
 
 export function groupProviderModelOptionsWithFavorites(input: {
-  options: ReadonlyArray<ProviderModelOption>;
+  options: ReadonlyArray<EngineModelOption>;
   favoriteSlugs: ReadonlySet<string>;
   favoriteLabel?: string;
-}): ProviderModelOptionGroup[] {
+}): EngineModelOptionGroup[] {
   if (input.favoriteSlugs.size === 0) {
     return groupProviderModelOptions(input.options);
   }
@@ -365,7 +362,7 @@ export function groupProviderModelOptionsWithFavorites(input: {
   ];
 }
 
-/** Long grouped model lists collapse provider sections to keep submenus scannable. */
+/** Long grouped model lists collapse engine sections to keep submenus scannable. */
 export const COLLAPSIBLE_MODEL_GROUP_THRESHOLD = 3;
 
 export function shouldUseCollapsibleModelGroups(groupCount: number, isSearching: boolean): boolean {
@@ -374,7 +371,7 @@ export function shouldUseCollapsibleModelGroups(groupCount: number, isSearching:
 
 export function resolveModelGroupDefaultOpen(input: {
   groupKey: string;
-  options: ReadonlyArray<ProviderModelOption>;
+  options: ReadonlyArray<EngineModelOption>;
   activeModel: string;
   groupCount: number;
 }): boolean {
@@ -388,47 +385,47 @@ export function resolveModelGroupDefaultOpen(input: {
 }
 
 export function buildNextProviderOptions(
-  provider: EngineKind,
-  modelOptions: ProviderOptions | null | undefined,
+  engine: EngineKind,
+  modelOptions: EngineOptions | null | undefined,
   patch: Record<string, unknown>,
-): ProviderOptions {
-  if (provider === "codex") {
+): EngineOptions {
+  if (engine === "codex") {
     return {
       ...(modelOptions as CodexModelOptions | undefined),
       ...patch,
     } as CodexModelOptions;
   }
-  if (provider === "claude") {
+  if (engine === "claude") {
     return {
       ...(modelOptions as ClaudeModelOptions | undefined),
       ...patch,
     } as ClaudeModelOptions;
   }
-  if (provider === "cursor") {
+  if (engine === "cursor") {
     return {
       ...(modelOptions as CursorModelOptions | undefined),
       ...patch,
     } as CursorModelOptions;
   }
-  if (provider === "antigravity") {
+  if (engine === "antigravity") {
     return {
       ...(modelOptions as AntigravityModelOptions | undefined),
       ...patch,
     } as AntigravityModelOptions;
   }
-  if (provider === "grok") {
+  if (engine === "grok") {
     return {
       ...(modelOptions as GrokModelOptions | undefined),
       ...patch,
     } as GrokModelOptions;
   }
-  if (provider === "droid") {
+  if (engine === "droid") {
     return {
       ...(modelOptions as DroidModelOptions | undefined),
       ...patch,
     } as DroidModelOptions;
   }
-  if (provider === "opencode") {
+  if (engine === "opencode") {
     return {
       ...(modelOptions as OpenCodeModelOptions | undefined),
       ...patch,
@@ -441,95 +438,93 @@ export function buildNextProviderOptions(
 }
 
 export function buildProviderOptionPatch(
-  provider: EngineKind,
+  engine: EngineKind,
   optionId: string,
   value: string | boolean,
 ): Record<string, unknown> {
   return { [optionId]: value };
 }
 
-export function buildModelSelection(
-  provider: "codex",
+export function buildEngineSelection(
+  engine: "codex",
   model: string,
   options?: CodexModelOptions | null | undefined,
-): CodexModelSelection;
-export function buildModelSelection(
-  provider: "claude",
+): CodexEngineSelection;
+export function buildEngineSelection(
+  engine: "claude",
   model: string,
   options?: ClaudeModelOptions | null | undefined,
   supportsAutoMode?: boolean | undefined,
-): ClaudeModelSelection;
-export function buildModelSelection(
-  provider: "cursor",
+): ClaudeEngineSelection;
+export function buildEngineSelection(
+  engine: "cursor",
   model: string,
   options?: CursorModelOptions | null | undefined,
-): CursorModelSelection;
-export function buildModelSelection(
-  provider: "antigravity",
+): CursorEngineSelection;
+export function buildEngineSelection(
+  engine: "antigravity",
   model: string,
   options?: AntigravityModelOptions | null | undefined,
-): AntigravityModelSelection;
-export function buildModelSelection(
-  provider: "grok",
+): AntigravityEngineSelection;
+export function buildEngineSelection(
+  engine: "grok",
   model: string,
   options?: GrokModelOptions | null | undefined,
-): GrokModelSelection;
-export function buildModelSelection(
-  provider: "droid",
+): GrokEngineSelection;
+export function buildEngineSelection(
+  engine: "droid",
   model: string,
   options?: DroidModelOptions | null | undefined,
-): DroidModelSelection;
-export function buildModelSelection(
-  provider: "opencode",
+): DroidEngineSelection;
+export function buildEngineSelection(
+  engine: "opencode",
   model: string,
   options?: OpenCodeModelOptions | null | undefined,
-): OpenCodeModelSelection;
-export function buildModelSelection(
-  provider: "kilo",
+): OpenCodeEngineSelection;
+export function buildEngineSelection(
+  engine: "kilo",
   model: string,
   options?: OpenCodeModelOptions | null | undefined,
-): KiloModelSelection;
-export function buildModelSelection(
-  provider: "pi",
+): KiloEngineSelection;
+export function buildEngineSelection(
+  engine: "pi",
   model: string,
   options?: PiModelOptions | null | undefined,
-): PiModelSelection;
-export function buildModelSelection(
-  provider: EngineKind,
+): PiEngineSelection;
+export function buildEngineSelection(
+  engine: EngineKind,
   model: string,
-  options?: ProviderOptions | null | undefined,
+  options?: EngineOptions | null | undefined,
   supportsAutoMode?: boolean | undefined,
-): ModelSelection;
-export function buildModelSelection(
-  provider: EngineKind,
+): EngineSelection;
+export function buildEngineSelection(
+  engine: EngineKind,
   model: string,
-  options?: ProviderOptions | null | undefined,
+  options?: EngineOptions | null | undefined,
   supportsAutoMode?: boolean | undefined,
-): ModelSelection {
-  switch (provider) {
+): EngineSelection {
+  switch (engine) {
     case "oa":
-      return options
-        ? { provider, model, options: options as PiModelOptions }
-        : { provider, model };
+      return options ? { engine, model, options: options as PiModelOptions } : { engine, model };
     case "antigravity":
       return options
         ? {
-            provider,
+            engine,
             model,
             options: options as AntigravityModelOptions,
           }
-        : { provider, model };
+        : { engine, model };
     case "codex":
       return options
         ? {
-            provider,
+            engine,
             model,
             options: options as CodexModelOptions,
           }
-        : { provider, model };
+        : { engine, model };
     case "claude":
       return {
-        provider,
+        engine,
         model,
         ...(options ? { options: options as ClaudeModelOptions } : {}),
         ...(typeof supportsAutoMode === "boolean" ? { supportsAutoMode } : {}),
@@ -537,50 +532,50 @@ export function buildModelSelection(
     case "cursor":
       return options
         ? {
-            provider,
+            engine,
             model,
             options: options as CursorModelOptions,
           }
-        : { provider, model };
+        : { engine, model };
     case "grok":
       return options
         ? {
-            provider,
+            engine,
             model,
             options: options as GrokModelOptions,
           }
-        : { provider, model };
+        : { engine, model };
     case "droid":
       return options
         ? {
-            provider,
+            engine,
             model,
             options: options as DroidModelOptions,
           }
-        : { provider, model };
+        : { engine, model };
     case "kilo":
       return options
         ? {
-            provider,
+            engine,
             model,
             options: options as OpenCodeModelOptions,
           }
-        : { provider, model };
+        : { engine, model };
     case "opencode":
       return options
         ? {
-            provider,
+            engine,
             model,
             options: options as OpenCodeModelOptions,
           }
-        : { provider, model };
+        : { engine, model };
     case "pi":
       return options
         ? {
-            provider,
+            engine,
             model,
             options: options as PiModelOptions,
           }
-        : { provider, model };
+        : { engine, model };
   }
 }

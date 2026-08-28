@@ -116,7 +116,7 @@ const seedDurableState = Effect.gen(function* () {
       iteration_count, created_at, updated_at, archived_at
     ) VALUES (
       'replay-automation', 'replay-project', 'Replay automation', 'Keep state.',
-      '{"type":"manual"}', 0, NULL, '{"provider":"codex","model":"gpt-5"}',
+      '{"type":"manual"}', 0, NULL, '{"engine":"codex","model":"gpt-5"}',
       'approval-required', 'default', 'auto', 'standalone', NULL, 5, 1, 4, 3,
       'failures', '2026-07-24T10:00:04.000Z', 9, '{"type":"none"}', 1, 60, 3600,
       '{"type":"none"}', 'coalesce', '[]', 4,

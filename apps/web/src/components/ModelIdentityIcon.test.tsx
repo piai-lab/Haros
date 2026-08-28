@@ -6,7 +6,7 @@ import { ModelIdentityIcon, resolveModelIdentityPresentation } from "./ModelIden
 
 describe("ModelIdentityIcon", () => {
   it("renders DeepSeek for an OpenCode-selected DeepSeek model", () => {
-    const selection = { provider: "opencode" as const, model: "deepseek/deepseek-v4-flash" };
+    const selection = { engine: "opencode" as const, model: "deepseek/deepseek-v4-flash" };
     const markup = decodeURIComponent(
       renderToStaticMarkup(
         <ModelIdentityIcon
@@ -26,7 +26,7 @@ describe("ModelIdentityIcon", () => {
   });
 
   it("uses Kimi service identity for OpenCode without consumer-specific parsing", () => {
-    const selection = { provider: "opencode" as const, model: "kimi-for-coding/k3" };
+    const selection = { engine: "opencode" as const, model: "kimi-for-coding/k3" };
     const markup = renderToStaticMarkup(<ModelIdentityIcon selection={selection} />);
     expect(markup.toLowerCase()).toContain("%3ctitle%3ekimi%3c/title%3e");
     expect(markup).toContain('data-model-service-icon-render="contained-image"');
@@ -34,7 +34,7 @@ describe("ModelIdentityIcon", () => {
 
   it("prefers a trusted model family over an aggregate service", () => {
     const selection = {
-      provider: "opencode" as const,
+      engine: "opencode" as const,
       model: "openrouter/anthropic/claude-sonnet-4-6",
     };
     const resolved = resolveModelIdentityPresentation({
@@ -56,7 +56,7 @@ describe("ModelIdentityIcon", () => {
   });
 
   it("recognizes a trusted frozen model family without borrowing the fixed Engine icon", () => {
-    const selection = { provider: "codex" as const, model: "gpt-5.5" };
+    const selection = { engine: "codex" as const, model: "gpt-5.5" };
     const identity = resolveModelPresentationIdentity({ selection });
     const markup = renderToStaticMarkup(
       <ModelIdentityIcon selection={selection} identity={identity} historical />,
@@ -67,14 +67,14 @@ describe("ModelIdentityIcon", () => {
   });
 
   it("does not guess an unqualified legacy Turn without an admitted identity snapshot", () => {
-    const selection = { provider: "codex" as const, model: "gpt-5.6" };
+    const selection = { engine: "codex" as const, model: "gpt-5.6" };
     const markup = renderToStaticMarkup(<ModelIdentityIcon selection={selection} historical />);
     expect(markup).toContain('data-model-service-icon="generic"');
     expect(markup).not.toContain('data-model-service-icon-level="model"');
   });
 
   it("keeps an authoritative unknown snapshot generic even when its slug resembles a family", () => {
-    const selection = { provider: "codex" as const, model: "gpt-private" };
+    const selection = { engine: "codex" as const, model: "gpt-private" };
     const markup = renderToStaticMarkup(
       <ModelIdentityIcon
         selection={selection}
@@ -85,7 +85,7 @@ describe("ModelIdentityIcon", () => {
   });
 
   it("keeps custom, extension, unknown, and mismatched history safe", () => {
-    const selection = { provider: "opencode" as const, model: "private/model" };
+    const selection = { engine: "opencode" as const, model: "private/model" };
     for (const [source, expected] of [
       ["user-configured", 'data-model-service-icon="custom"'],
       ["extension", 'data-model-service-icon="extension"'],

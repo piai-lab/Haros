@@ -1,7 +1,7 @@
 import {
   CheckpointRef,
   CommandId,
-  DEFAULT_PROVIDER_INTERACTION_MODE,
+  DEFAULT_ENGINE_INTERACTION_MODE,
   EventId,
   MessageId,
   ProjectId,
@@ -158,7 +158,7 @@ describe("OrchestrationEngine", () => {
         projectId: asProjectId("project-engine-quiesce"),
         title: "Engine quiesce",
         workspaceRoot: "/tmp/engine-quiesce",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         createdAt,
       }),
     );
@@ -169,11 +169,11 @@ describe("OrchestrationEngine", () => {
         threadId,
         projectId: asProjectId("project-engine-quiesce"),
         title: "Engine quiesce thread",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "approval-required",
         branch: null,
         worktreePath: null,
@@ -250,7 +250,7 @@ describe("OrchestrationEngine", () => {
 
     // A turn start takes the priority `user` lane, but priority is not
     // admissibility: the WebSocket keeps serving while the engine quiesces, and
-    // starting a provider turn here would spawn a session the shutdown fences
+    // starting a engine turn here would spawn a session the shutdown fences
     // moments later, orphaning the turn.
     await expect(
       system.run(
@@ -264,7 +264,7 @@ describe("OrchestrationEngine", () => {
             text: "Rejected after quiesce",
             attachments: [],
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           createdAt,
         }),
@@ -312,7 +312,7 @@ describe("OrchestrationEngine", () => {
       projectId: asProjectId("project-fingerprint-retry"),
       title: "Fingerprint project",
       workspaceRoot: "/tmp/project-fingerprint-retry",
-      defaultModelSelection: null,
+      defaultEngineSelection: null,
       createdAt: "2026-07-14T00:00:00.000Z",
     };
 
@@ -349,8 +349,8 @@ describe("OrchestrationEngine", () => {
         projectId: asProjectId("project-1"),
         title: "Project 1",
         workspaceRoot: "/tmp/project-1",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         createdAt,
@@ -363,11 +363,11 @@ describe("OrchestrationEngine", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         projectId: asProjectId("project-1"),
         title: "Thread",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "approval-required",
         branch: null,
         worktreePath: null,
@@ -385,7 +385,7 @@ describe("OrchestrationEngine", () => {
           text: "hello",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt,
       }),
@@ -406,7 +406,7 @@ describe("OrchestrationEngine", () => {
       projectId: asProjectId("project-command-identity"),
       title: "Original identity",
       workspaceRoot: "/tmp/project-command-identity",
-      defaultModelSelection: null,
+      defaultEngineSelection: null,
       createdAt: now(),
     };
 
@@ -440,7 +440,7 @@ describe("OrchestrationEngine", () => {
         projectId: asProjectId("project-managed-attachment"),
         title: "Managed attachment project",
         workspaceRoot: "/tmp/project-managed-attachment",
-        defaultModelSelection: { provider: "codex", model: "gpt-5-codex" },
+        defaultEngineSelection: { engine: "codex", model: "gpt-5-codex" },
         createdAt,
       }),
     );
@@ -451,8 +451,8 @@ describe("OrchestrationEngine", () => {
         threadId,
         projectId: asProjectId("project-managed-attachment"),
         title: "Managed attachment thread",
-        modelSelection: { provider: "codex", model: "gpt-5-codex" },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        engineSelection: { engine: "codex", model: "gpt-5-codex" },
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "approval-required",
         branch: null,
         worktreePath: null,
@@ -532,7 +532,7 @@ describe("OrchestrationEngine", () => {
         ],
       },
       dispatchMode: "steer" as const,
-      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
       runtimeMode: "approval-required" as const,
       createdAt,
     };
@@ -592,7 +592,7 @@ describe("OrchestrationEngine", () => {
         projectId,
         title: "Fallback steer retry",
         workspaceRoot: "/tmp/project-fallback-steer-retry",
-        defaultModelSelection: { provider: "cursor", model: "cursor-default" },
+        defaultEngineSelection: { engine: "cursor", model: "cursor-default" },
         createdAt,
       }),
     );
@@ -603,8 +603,8 @@ describe("OrchestrationEngine", () => {
         threadId,
         projectId,
         title: "Fallback steer retry",
-        modelSelection: { provider: "cursor", model: "cursor-default" },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        engineSelection: { engine: "cursor", model: "cursor-default" },
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "approval-required",
         branch: null,
         worktreePath: null,
@@ -640,7 +640,7 @@ describe("OrchestrationEngine", () => {
         attachments: [],
       },
       dispatchMode: "steer" as const,
-      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
       runtimeMode: "approval-required" as const,
       createdAt,
     };
@@ -671,7 +671,7 @@ describe("OrchestrationEngine", () => {
         kind: "chat",
         title: "Chat",
         workspaceRoot: path.join(serverConfig.chatWorkspaceRoot, "fork-source"),
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         createdAt,
       }),
     );
@@ -683,7 +683,7 @@ describe("OrchestrationEngine", () => {
         kind: "chat",
         title: "Invalid target",
         workspaceRoot: path.join(serverConfig.chatWorkspaceRoot, "fork-invalid-target"),
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         createdAt,
       }),
     );
@@ -695,7 +695,7 @@ describe("OrchestrationEngine", () => {
         kind: "project",
         title: "Target",
         workspaceRoot: path.join(serverConfig.cwd, "fork-target"),
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         createdAt,
       }),
     );
@@ -706,8 +706,8 @@ describe("OrchestrationEngine", () => {
         threadId: sourceThreadId,
         projectId: sourceProjectId,
         title: "Canonical Chat title",
-        modelSelection: { provider: "oa", model: "local/model" },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        engineSelection: { engine: "oa", model: "local/model" },
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "full-access",
         branch: null,
         worktreePath: null,
@@ -816,7 +816,7 @@ describe("OrchestrationEngine", () => {
               },
             ],
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "full-access",
           createdAt,
         },
@@ -848,9 +848,9 @@ describe("OrchestrationEngine", () => {
       sourceThreadId,
       projectId: targetProjectId,
       title: "Client supplied title must not win",
-      modelSelection: { provider: "oa" as const, model: "local/model" },
+      engineSelection: { engine: "oa" as const, model: "local/model" },
       runtimeMode: "full-access" as const,
-      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
       envMode: "local" as const,
       branch: null,
       worktreePath: null,
@@ -1006,7 +1006,7 @@ describe("OrchestrationEngine", () => {
         kind: "chat",
         title: "Large Chat",
         workspaceRoot: path.join(serverConfig.chatWorkspaceRoot, "large-fork-source"),
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         createdAt,
       }),
     );
@@ -1018,7 +1018,7 @@ describe("OrchestrationEngine", () => {
         kind: "project",
         title: "Large Agent Target",
         workspaceRoot: path.join(serverConfig.cwd, "large-fork-target"),
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         createdAt,
       }),
     );
@@ -1029,8 +1029,8 @@ describe("OrchestrationEngine", () => {
         threadId: sourceThreadId,
         projectId: sourceProjectId,
         title: "Large canonical Chat",
-        modelSelection: { provider: "oa", model: "local/model" },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        engineSelection: { engine: "oa", model: "local/model" },
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "full-access",
         branch: null,
         worktreePath: null,
@@ -1070,9 +1070,9 @@ describe("OrchestrationEngine", () => {
       sourceThreadId,
       projectId: targetProjectId,
       title: "Client title",
-      modelSelection: { provider: "oa" as const, model: "local/model" },
+      engineSelection: { engine: "oa" as const, model: "local/model" },
       runtimeMode: "full-access" as const,
-      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
       envMode: "local" as const,
       branch: null,
       worktreePath: null,
@@ -1120,8 +1120,8 @@ describe("OrchestrationEngine", () => {
         projectId: asProjectId("project-replay"),
         title: "Replay Project",
         workspaceRoot: "/tmp/project-replay",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         createdAt,
@@ -1134,11 +1134,11 @@ describe("OrchestrationEngine", () => {
         threadId: ThreadId.makeUnsafe("thread-replay"),
         projectId: asProjectId("project-replay"),
         title: "replay",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "approval-required",
         branch: null,
         worktreePath: null,
@@ -1178,8 +1178,8 @@ describe("OrchestrationEngine", () => {
         projectId: asProjectId("project-stream"),
         title: "Stream Project",
         workspaceRoot: "/tmp/project-stream",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         createdAt,
@@ -1202,11 +1202,11 @@ describe("OrchestrationEngine", () => {
           threadId: ThreadId.makeUnsafe("thread-stream"),
           projectId: asProjectId("project-stream"),
           title: "domain-stream",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           branch: null,
           worktreePath: null,
@@ -1239,8 +1239,8 @@ describe("OrchestrationEngine", () => {
         projectId: asProjectId("project-turn-diff"),
         title: "Turn Diff Project",
         workspaceRoot: "/tmp/project-turn-diff",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         createdAt,
@@ -1253,11 +1253,11 @@ describe("OrchestrationEngine", () => {
         threadId: ThreadId.makeUnsafe("thread-turn-diff"),
         projectId: asProjectId("project-turn-diff"),
         title: "Turn diff thread",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "approval-required",
         branch: null,
         worktreePath: null,
@@ -1357,8 +1357,8 @@ describe("OrchestrationEngine", () => {
         projectId: asProjectId("project-flaky"),
         title: "Flaky Project",
         workspaceRoot: "/tmp/project-flaky",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         createdAt,
@@ -1373,11 +1373,11 @@ describe("OrchestrationEngine", () => {
           threadId: ThreadId.makeUnsafe("thread-flaky-fail"),
           projectId: asProjectId("project-flaky"),
           title: "flaky-fail",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           branch: null,
           worktreePath: null,
@@ -1393,11 +1393,11 @@ describe("OrchestrationEngine", () => {
         threadId: ThreadId.makeUnsafe("thread-flaky-ok"),
         projectId: asProjectId("project-flaky"),
         title: "flaky-ok",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "approval-required",
         branch: null,
         worktreePath: null,
@@ -1470,8 +1470,8 @@ describe("OrchestrationEngine", () => {
         projectId: asProjectId("project-atomic"),
         title: "Atomic Project",
         workspaceRoot: "/tmp/project-atomic",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         createdAt,
@@ -1484,11 +1484,11 @@ describe("OrchestrationEngine", () => {
         threadId: ThreadId.makeUnsafe("thread-atomic"),
         projectId: asProjectId("project-atomic"),
         title: "atomic",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "approval-required",
         branch: null,
         worktreePath: null,
@@ -1506,7 +1506,7 @@ describe("OrchestrationEngine", () => {
         text: "hello",
         attachments: [],
       },
-      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
       runtimeMode: "approval-required" as const,
       createdAt,
     };
@@ -1558,7 +1558,7 @@ describe("OrchestrationEngine", () => {
         updatedAt: createdAt,
       },
       binding: {
-        modelSelection: { provider: "claude" as const, model: "claude-opus-4-6" },
+        engineSelection: { engine: "claude" as const, model: "claude-opus-4-6" },
         runtimeMode: "full-access" as const,
         interactionMode: "plan" as const,
       },
@@ -1582,7 +1582,7 @@ describe("OrchestrationEngine", () => {
         (thread) => thread.id === bindingCommand.threadId,
       ),
     ).toMatchObject({
-      modelSelection: { provider: "codex", model: "gpt-5-codex" },
+      engineSelection: { engine: "codex", model: "gpt-5-codex" },
       runtimeMode: "approval-required",
       interactionMode: "default",
     });
@@ -1606,7 +1606,7 @@ describe("OrchestrationEngine", () => {
         (thread) => thread.id === bindingCommand.threadId,
       ),
     ).toMatchObject({
-      modelSelection: { provider: "claude", model: "claude-opus-4-6" },
+      engineSelection: { engine: "claude", model: "claude-opus-4-6" },
       runtimeMode: "full-access",
       interactionMode: "plan",
       session: { providerName: "claude", runtimeMode: "full-access" },
@@ -1685,8 +1685,8 @@ describe("OrchestrationEngine", () => {
           projectId: asProjectId("project-defect-1"),
           title: "Defective Project",
           workspaceRoot: "/tmp/project-defect-1",
-          defaultModelSelection: {
-            provider: "codex",
+          defaultEngineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           createdAt,
@@ -1702,8 +1702,8 @@ describe("OrchestrationEngine", () => {
           projectId: asProjectId("project-defect-2"),
           title: "Recovered Project",
           workspaceRoot: "/tmp/project-defect-2",
-          defaultModelSelection: {
-            provider: "codex",
+          defaultEngineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           createdAt,
@@ -1803,8 +1803,8 @@ describe("OrchestrationEngine", () => {
         projectId: asProjectId("project-sync"),
         title: "Sync Project",
         workspaceRoot: "/tmp/project-sync",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         createdAt,
@@ -1817,11 +1817,11 @@ describe("OrchestrationEngine", () => {
         threadId: ThreadId.makeUnsafe("thread-sync"),
         projectId: asProjectId("project-sync"),
         title: "sync-before",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "approval-required",
         branch: null,
         worktreePath: null,
@@ -1866,7 +1866,7 @@ describe("OrchestrationEngine", () => {
             text: "hello",
             attachments: [],
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           createdAt: now(),
         }),
@@ -1962,8 +1962,8 @@ describe("OrchestrationEngine", () => {
         projectId: asProjectId("project-deferred-recovery"),
         title: "Deferred Recovery Project",
         workspaceRoot: "/tmp/project-deferred-recovery",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         createdAt,
@@ -1976,11 +1976,11 @@ describe("OrchestrationEngine", () => {
         threadId: ThreadId.makeUnsafe("thread-deferred-recovery"),
         projectId: asProjectId("project-deferred-recovery"),
         title: "deferred-recovery",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "approval-required",
         branch: null,
         worktreePath: null,
@@ -1999,7 +1999,7 @@ describe("OrchestrationEngine", () => {
           text: "hello",
           attachments: [],
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "approval-required",
         createdAt,
       }),
@@ -2055,7 +2055,7 @@ describe("OrchestrationEngine", () => {
         projectId: asProjectId("project-missing-cursors"),
         title: "Missing cursors",
         workspaceRoot: "/tmp/project-missing-cursors",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         createdAt: now(),
       }),
     );
@@ -2107,7 +2107,7 @@ describe("OrchestrationEngine", () => {
         projectId: asProjectId("project-repair-fence"),
         title: "Repair Fence Project",
         workspaceRoot: "/tmp/project-repair-fence",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         createdAt,
       }),
     );
@@ -2189,8 +2189,8 @@ describe("OrchestrationEngine", () => {
         projectId: asProjectId("project-stale"),
         title: "Stale Project",
         workspaceRoot: "/tmp/readd-project",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         createdAt,
@@ -2205,8 +2205,8 @@ describe("OrchestrationEngine", () => {
           projectId: asProjectId("project-readd"),
           title: "Readded Project",
           workspaceRoot: "/tmp/readd-project",
-          defaultModelSelection: {
-            provider: "codex",
+          defaultEngineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           createdAt,
@@ -2237,8 +2237,8 @@ describe("OrchestrationEngine", () => {
         projectId: asProjectId("project-active"),
         title: "Active Project",
         workspaceRoot: "/tmp/active-project",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         createdAt,
@@ -2251,11 +2251,11 @@ describe("OrchestrationEngine", () => {
         threadId: ThreadId.makeUnsafe("thread-active"),
         projectId: asProjectId("project-active"),
         title: "active",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "approval-required",
         branch: null,
         worktreePath: null,
@@ -2271,8 +2271,8 @@ describe("OrchestrationEngine", () => {
           projectId: asProjectId("project-active-duplicate"),
           title: "Active Duplicate",
           workspaceRoot: "/tmp/active-project",
-          defaultModelSelection: {
-            provider: "codex",
+          defaultEngineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
           createdAt,
@@ -2296,7 +2296,7 @@ describe("OrchestrationEngine", () => {
         kind: "studio",
         title: "Studio",
         workspaceRoot: "/tmp/omnimind-studio",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         createdAt,
       }),
     );
@@ -2310,7 +2310,7 @@ describe("OrchestrationEngine", () => {
           kind: "studio",
           title: "Studio",
           workspaceRoot: "/tmp/omnimind-studio",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           createdAt,
         }),
       ),
@@ -2332,7 +2332,7 @@ describe("OrchestrationEngine", () => {
         kind: "studio",
         title: "Studio",
         workspaceRoot: "/tmp/omnimind-cross-kind-studio",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         createdAt,
       }),
     );
@@ -2344,7 +2344,7 @@ describe("OrchestrationEngine", () => {
         kind: "project",
         title: "App",
         workspaceRoot: "/tmp/omnimind-cross-kind-app",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         createdAt,
       }),
     );
@@ -2360,7 +2360,7 @@ describe("OrchestrationEngine", () => {
           kind: "project",
           title: "Studio folder",
           workspaceRoot: "/tmp/omnimind-cross-kind-studio",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           createdAt,
         }),
       ),
@@ -2376,7 +2376,7 @@ describe("OrchestrationEngine", () => {
           kind: "studio",
           title: "Studio",
           workspaceRoot: "/tmp/omnimind-cross-kind-app",
-          defaultModelSelection: null,
+          defaultEngineSelection: null,
           createdAt,
         }),
       ),
@@ -2425,7 +2425,7 @@ describe("OrchestrationEngine", () => {
         kind: "chat",
         title: "Home",
         workspaceRoot: "/tmp/omnimind-cross-kind-studio",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         createdAt,
       }),
     );
@@ -2456,7 +2456,7 @@ describe("OrchestrationEngine", () => {
         kind: "studio",
         title: "Studio",
         workspaceRoot: "/tmp/omnimind-studio-source",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         createdAt,
       }),
     );
@@ -2468,7 +2468,7 @@ describe("OrchestrationEngine", () => {
         kind: "studio",
         title: "Studio",
         workspaceRoot: "/tmp/omnimind-studio-target",
-        defaultModelSelection: null,
+        defaultEngineSelection: null,
         createdAt,
       }),
     );
@@ -2499,8 +2499,8 @@ describe("OrchestrationEngine", () => {
         projectId: asProjectId("project-duplicate"),
         title: "Duplicate Project",
         workspaceRoot: "/tmp/project-duplicate",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         createdAt,
@@ -2514,11 +2514,11 @@ describe("OrchestrationEngine", () => {
         threadId: ThreadId.makeUnsafe("thread-duplicate"),
         projectId: asProjectId("project-duplicate"),
         title: "duplicate",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "approval-required",
         branch: null,
         worktreePath: null,
@@ -2534,11 +2534,11 @@ describe("OrchestrationEngine", () => {
           threadId: ThreadId.makeUnsafe("thread-duplicate"),
           projectId: asProjectId("project-duplicate"),
           title: "duplicate",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5-codex",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "approval-required",
           branch: null,
           worktreePath: null,
@@ -2565,7 +2565,7 @@ describe("OrchestrationEngine", () => {
             projectId: asProjectId("project-engine-poison"),
             title: "Poisoned",
             workspaceRoot: "/tmp/engine-poison",
-            defaultModelSelection: null,
+            defaultEngineSelection: null,
             createdAt,
           }),
         ).pipe(Effect.timeoutOption("5 seconds")),
@@ -2589,7 +2589,7 @@ describe("OrchestrationEngine", () => {
             projectId: asProjectId("project-engine-poison-next"),
             title: "After poison",
             workspaceRoot: "/tmp/engine-poison-next",
-            defaultModelSelection: null,
+            defaultEngineSelection: null,
             createdAt,
           }),
         ),

@@ -13,7 +13,7 @@ import {
   useVoiceRecorder,
 } from "../../lib/voiceRecorder";
 import { readNativeApi } from "../../nativeApi";
-import type { RefreshProviderStatusesNow } from "../../hooks/useProviderStatusRefresh";
+import type { RefreshProviderStatusesNow } from "../../hooks/useEngineStatusRefresh";
 import { toastManager } from "../ui/toast";
 import {
   deriveComposerVoiceState,
@@ -211,7 +211,7 @@ export function useComposerVoiceController(
       const api = readNativeApi();
       void api?.server
         .prewarmVoice?.({
-          provider: "codex",
+          engine: "codex",
           cwd: activeProject.cwd,
           ...(activeThreadId ? { threadId: activeThreadId } : {}),
         })
@@ -272,7 +272,7 @@ export function useComposerVoiceController(
         }
         return api.server
           .transcribeVoice({
-            provider: "codex",
+            engine: "codex",
             cwd: activeProject.cwd,
             ...(activeThreadId ? { threadId: activeThreadId } : {}),
             ...payload,

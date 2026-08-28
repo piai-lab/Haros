@@ -41,7 +41,7 @@ export default Effect.gen(function* () {
   yield* sql`
     CREATE TABLE IF NOT EXISTS profile_stats_deleted_turns (
       thread_id TEXT NOT NULL,
-      provider TEXT,
+      engine TEXT,
       model TEXT,
       reasoning TEXT,
       turn_count INTEGER NOT NULL
@@ -75,7 +75,7 @@ export default Effect.gen(function* () {
     CREATE TABLE IF NOT EXISTS profile_stats_deleted_tokens (
       thread_id TEXT NOT NULL,
       created_at TEXT NOT NULL,
-      provider TEXT,
+      engine TEXT,
       tokens INTEGER NOT NULL
     )
   `;

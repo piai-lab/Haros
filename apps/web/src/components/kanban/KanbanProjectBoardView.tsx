@@ -18,14 +18,14 @@ import {
 } from "@dnd-kit/core";
 import { useRef, useState } from "react";
 
-import { getProviderStartOptions, resolveAssistantDeliveryMode } from "~/providerSettings";
+import { getEngineStartOptions, resolveAssistantDeliveryMode } from "~/engineSettings";
 import { useServerSettings } from "~/serverSettings";
 import { toastManager } from "~/components/ui/toast";
 import { runtimeModeAvailabilityMessageKeyFromError } from "~/components/chat/RuntimeModeAvailabilityHint";
-import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
-import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
+import { useEngineStatusesForLocalConfig } from "~/hooks/useEngineStatusesForLocalConfig";
+import { useRefreshProviderStatusesNow } from "~/hooks/useEngineStatusRefresh";
 import { useI18n } from "~/i18n";
-import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/providerAvailability";
+import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/engineAvailability";
 import { dispatchKanbanDraftCard } from "../../lib/kanbanDispatch";
 import { KanbanCardView, type KanbanCardPrLookup } from "./KanbanCardView";
 import { KanbanColumn, parseKanbanColumnDropId } from "./KanbanColumn";
@@ -71,7 +71,7 @@ export function KanbanProjectBoardView({
 }) {
   const { t } = useI18n();
   const { fetchSettings } = useServerSettings();
-  const providerStatuses = useProviderStatusesForLocalConfig();
+  const providerStatuses = useEngineStatusesForLocalConfig();
   const refreshProviderStatuses = useRefreshProviderStatusesNow();
   const setDraftOrder = useKanbanUiStore((state) => state.setDraftOrder);
   const [activeCard, setActiveCard] = useState<KanbanCard | null>(null);
@@ -103,9 +103,9 @@ export function KanbanProjectBoardView({
       });
       return;
     }
-    const targetProvider = card.provider ?? settingsSnapshot.defaultProvider;
+    const targetProvider = card.engine ?? settingsSnapshot.defaultEngine;
     const sendAvailability = await resolveProviderSendAvailabilityWithRefresh({
-      provider: targetProvider,
+      engine: targetProvider,
       statuses: providerStatuses,
       refreshStatuses: () => refreshProviderStatuses({ silent: true }),
     });
@@ -120,9 +120,9 @@ export function KanbanProjectBoardView({
     // to In Progress before any round-trip; failure results revert it.
     const result = await dispatchKanbanDraftCard({
       card,
-      defaultProvider: settingsSnapshot.defaultProvider,
+      defaultEngine: settingsSnapshot.defaultEngine,
       assistantDeliveryMode: resolveAssistantDeliveryMode(settingsSnapshot),
-      providerOptions: getProviderStartOptions(settingsSnapshot),
+      engineOptions: getEngineStartOptions(settingsSnapshot),
     });
     if (result.kind === "dispatched") {
       toastManager.add({

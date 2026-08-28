@@ -21,7 +21,7 @@ export interface ComposerSubagentStripItem {
   key: string;
   threadId: ThreadId;
   // Task tool_use_id: the handle for per-run task control (background/stop).
-  providerThreadId: string;
+  nativeThreadId: string;
   primaryLabel: string;
   fullLabel: string;
   role: string | null;
@@ -46,7 +46,7 @@ export interface ComposerSubagentStripParentItem {
 
 export type ComposerSubagentStripRow = ComposerSubagentStripItem | ComposerSubagentStripParentItem;
 
-// The provider thread id is present on every snapshot of a subagent, unlike
+// The engine thread id is present on every snapshot of a subagent, unlike
 // resolvedThreadId/agentId which can appear only once resolution catches up.
 function subagentKey(subagent: WorkLogSubagent): string {
   return subagent.threadId;
@@ -57,7 +57,7 @@ function subagentKey(subagent: WorkLogSubagent): string {
 function mergeSubagentSnapshots(previous: WorkLogSubagent, next: WorkLogSubagent): WorkLogSubagent {
   return {
     threadId: next.threadId ?? previous.threadId,
-    providerThreadId: next.providerThreadId ?? previous.providerThreadId,
+    nativeThreadId: next.nativeThreadId ?? previous.nativeThreadId,
     resolvedThreadId: next.resolvedThreadId ?? previous.resolvedThreadId,
     agentId: next.agentId ?? previous.agentId,
     nickname: next.nickname ?? previous.nickname,
@@ -99,7 +99,7 @@ function toStripItem(
     kind: "subagent",
     key,
     threadId,
-    providerThreadId: subagent.providerThreadId ?? subagent.threadId,
+    nativeThreadId: subagent.nativeThreadId ?? subagent.threadId,
     primaryLabel: presentation.nickname ?? presentation.primaryLabel,
     fullLabel: presentation.fullLabel,
     role: presentation.role,
@@ -115,7 +115,7 @@ function toStripItem(
     // background command dispatches with — which can differ from the row key.
     isBackground:
       subagent.background === true ||
-      backgroundedThreadIds.has(subagent.providerThreadId ?? subagent.threadId),
+      backgroundedThreadIds.has(subagent.nativeThreadId ?? subagent.threadId),
     accentColor: presentation.accentColor,
   };
 }
@@ -178,7 +178,7 @@ function withParentRow(
 export function deriveComposerSubagentStripItems(input: {
   workEntries: ReadonlyArray<WorkLogEntry>;
   liveTurnId: TurnId | null;
-  // Task tool_use_ids the provider confirmed as backgrounded (task_updated patches).
+  // Task tool_use_ids the engine confirmed as backgrounded (task_updated patches).
   backgroundedProviderThreadIds?: ReadonlySet<string>;
   // The open thread when it is one of the subagents (marks its row as viewed).
   viewedThreadId?: ThreadId | null;
@@ -200,7 +200,7 @@ export function deriveComposerSubagentStripItems(input: {
   if (liveTurnEntries.length > 0) {
     const liveTurnProviderThreadIds = new Set(
       collectStripItems(liveTurnEntries, backgroundedThreadIds, viewedThreadId).map(
-        (item) => item.providerThreadId,
+        (item) => item.nativeThreadId,
       ),
     );
     const visibleItems = collectStripItems(
@@ -209,7 +209,7 @@ export function deriveComposerSubagentStripItems(input: {
       viewedThreadId,
     ).filter(
       (item) =>
-        liveTurnProviderThreadIds.has(item.providerThreadId) ||
+        liveTurnProviderThreadIds.has(item.nativeThreadId) ||
         item.statusKind === "running" ||
         item.statusKind === "queued",
     );

@@ -13,7 +13,7 @@ import {
 } from "react";
 import { Schema } from "effect";
 
-import { ProviderIcon } from "../ProviderIcon";
+import { EngineIcon } from "../EngineIcon";
 import { ChatPaneDropOverlay } from "../chat-drop-overlay/ChatPaneDropOverlay";
 import { PanelStateMessage } from "./PanelStateMessage";
 import {
@@ -276,7 +276,7 @@ function SplitPaneEmptyState(props: {
     id: ThreadId;
     title: string | null;
     projectId: ProjectId;
-    modelSelection: { provider: EngineKind };
+    engineSelection: { engine: EngineKind };
   }[];
   projects: readonly { id: ProjectId; name: string }[];
   excludedThreadIds: ReadonlySet<ThreadId>;
@@ -315,10 +315,7 @@ function SplitPaneEmptyState(props: {
                   if (!isUsed) props.onSelectThread(thread.id);
                 }}
               >
-                <ProviderIcon
-                  provider={thread.modelSelection.provider}
-                  className="size-4 shrink-0"
-                />
+                <EngineIcon engine={thread.engineSelection.engine} className="size-4 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium text-foreground">
                     {resolveThreadPickerTitle(thread.title, t("nav.newChat"))}
@@ -564,7 +561,7 @@ function SplitPaneSurface(props: {
     id: ThreadId;
     title: string | null;
     projectId: ProjectId;
-    modelSelection: { provider: EngineKind };
+    engineSelection: { engine: EngineKind };
   }[];
   projects: readonly { id: ProjectId; name: string }[];
   onFocus: () => void;
@@ -1139,8 +1136,8 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
                     )}
                     onClick={() => chooseThreadForPane(thread.id)}
                   >
-                    <ProviderIcon
-                      provider={thread.modelSelection.provider}
+                    <EngineIcon
+                      engine={thread.engineSelection.engine}
                       className="size-4 shrink-0"
                     />
                     <div className="min-w-0 flex-1">

@@ -2,8 +2,8 @@ import {
   ChatAttachment,
   MessageDispatchOrigin,
   NonNegativeInt,
-  ProviderMentionReference,
-  ProviderSkillReference,
+  EngineMentionReference,
+  EngineSkillReference,
   TurnDispatchMode,
   type OrchestrationMessage,
 } from "@harnessos/contracts";
@@ -18,8 +18,8 @@ export const ProjectionThreadMessageDbRowSchema = ProjectionThreadMessage.mapFie
   Struct.assign({
     isStreaming: Schema.Number,
     attachments: Schema.NullOr(Schema.fromJsonString(Schema.Array(ChatAttachment))),
-    skills: Schema.NullOr(Schema.fromJsonString(Schema.Array(ProviderSkillReference))),
-    mentions: Schema.NullOr(Schema.fromJsonString(Schema.Array(ProviderMentionReference))),
+    skills: Schema.NullOr(Schema.fromJsonString(Schema.Array(EngineSkillReference))),
+    mentions: Schema.NullOr(Schema.fromJsonString(Schema.Array(EngineMentionReference))),
     dispatchMode: Schema.NullOr(TurnDispatchMode),
     dispatchOrigin: Schema.NullOr(MessageDispatchOrigin),
     sequence: Schema.NullOr(NonNegativeInt),

@@ -1,10 +1,10 @@
 // FILE: providerUsage/rateLimitResilience.ts
-// Purpose: Shared "keep last-good + back off" resilience for live usage fetchers. When a provider's
+// Purpose: Shared "keep last-good + back off" resilience for live usage fetchers. When a engine's
 // usage endpoint throttles (HTTP 429) or blips, blanking the panel is worse than showing slightly
 // stale numbers — so we remember the last clean snapshot per account and keep serving it (with a
 // staleness note) during a cooldown that honors Retry-After, while skipping live calls so we don't
 // pile on more 429s. Any fetcher can opt in via createRateLimitResilience; keeping the state
-// here avoids duplicating the bookkeeping per provider.
+// here avoids duplicating the bookkeeping per engine.
 
 import type { EngineKind, ServerProviderUsageSnapshot } from "@harnessos/contracts";
 
@@ -43,7 +43,7 @@ export interface RateLimitResilience {
 }
 
 export function createRateLimitResilience(options: {
-  provider: EngineKind;
+  engine: EngineKind;
   source: string;
   /** Builds the throttle note shown on the served snapshot, given the rounded minutes until retry. */
   detail: (retryMins: number) => string;
@@ -93,7 +93,7 @@ export function createRateLimitResilience(options: {
     const lastGood = entry.lastGoodSnapshot;
     return lastGood
       ? { ...lastGood, status: "ok", detail: detailFor(entry, nowMs), stale: true }
-      : errorSnapshot(options.provider, nowMs, options.source, detailFor(entry, nowMs));
+      : errorSnapshot(options.engine, nowMs, options.source, detailFor(entry, nowMs));
   };
 
   return {

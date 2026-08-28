@@ -1,5 +1,5 @@
 // FILE: providerUsage/http.ts
-// Purpose: Bounded JSON helper for provider usage, backed by the pinned outbound authority.
+// Purpose: Bounded JSON helper for engine usage, backed by the pinned outbound authority.
 
 import { decodeOutboundJson, outboundHttp } from "@harnessos/shared/outboundHttp";
 
@@ -62,7 +62,7 @@ export async function fetchJson(input: {
   };
 }
 
-/** Provider backends reject the access token once it is stale; treat that as "needs re-auth". */
+/** Engine backends reject the access token once it is stale; treat that as "needs re-auth". */
 export function isAuthFailureStatus(status: number): boolean {
   return status === 401 || status === 403;
 }

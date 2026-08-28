@@ -1,6 +1,6 @@
 // FILE: promptReferenceProjection.test.ts
-// Purpose: Verifies structured composer references remain meaningful in text-only provider prompts.
-// Layer: Provider prompt compatibility tests
+// Purpose: Verifies structured composer references remain meaningful in text-only engine prompts.
+// Layer: Engine prompt compatibility tests
 
 import { describe, expect, it } from "vitest";
 

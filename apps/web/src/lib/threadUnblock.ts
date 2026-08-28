@@ -1,13 +1,13 @@
 // FILE: threadUnblock.ts
-// Purpose: Abandons the provider delivery blockers that quarantine a thread.
+// Purpose: Abandons the engine delivery blockers that quarantine a thread.
 // Layer: Web orchestration helper
 // Exports: unblockThreadFromClient, describeThreadUnblockResult, isProviderDeliveryReconciliationConflict, type ThreadUnblockResult
 
 import type { NativeApi, ThreadId } from "@harnessos/contracts";
 
 /** Code the server returns when a blocker no longer matches the requested state. */
-export const PROVIDER_DELIVERY_RECONCILIATION_CONFLICT_CODE =
-  "PROVIDER_DELIVERY_RECONCILIATION_CONFLICT";
+export const ENGINE_DELIVERY_RECONCILIATION_CONFLICT_CODE =
+  "ENGINE_DELIVERY_RECONCILIATION_CONFLICT";
 
 const UNBLOCK_NOTE = "Abandoned from the thread error banner; the command was never confirmed.";
 
@@ -33,13 +33,13 @@ export function isProviderDeliveryReconciliationConflict(error: unknown): boolea
     typeof error === "object" &&
     error !== null &&
     "code" in error &&
-    (error as { readonly code?: unknown }).code === PROVIDER_DELIVERY_RECONCILIATION_CONFLICT_CODE
+    (error as { readonly code?: unknown }).code === ENGINE_DELIVERY_RECONCILIATION_CONFLICT_CODE
   );
 }
 
 /**
  * Settles every delivery that keeps a thread quarantined by abandoning it: the
- * ambiguous command is never replayed (it may have reached the provider), but
+ * ambiguous command is never replayed (it may have reached the engine), but
  * the server replays the side effects that were skipped after it, so messages
  * sent while the thread was blocked are dispatched again.
  *
@@ -103,8 +103,7 @@ export function describeThreadUnblockResult(result: ThreadUnblockResult): Thread
       return {
         type: "info",
         title: "Thread is already unblocked",
-        description:
-          "No provider failure is holding it back. Resend your last message to continue.",
+        description: "No engine failure is holding it back. Resend your last message to continue.",
       };
   }
 }

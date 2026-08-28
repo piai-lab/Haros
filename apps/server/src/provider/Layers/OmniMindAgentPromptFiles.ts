@@ -21,11 +21,7 @@ import { writeFileStringAtomically } from "../../atomicWrite.ts";
 import { ServerConfig } from "../../config.ts";
 import { PRIVATE_FILE_MODE } from "../../privatePathPermissions.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
-import {
-  loadOARuntimeModule,
-  resolveOAAgentDir,
-  type OARuntimeModule,
-} from "../oaRuntime.ts";
+import { loadOARuntimeModule, resolveOAAgentDir, type OARuntimeModule } from "../oaRuntime.ts";
 import {
   OmniMindAgentPromptFiles,
   type OmniMindAgentPromptFilesShape,
@@ -403,7 +399,7 @@ export function makeOmniMindAgentPromptFilesLive(
           ...current,
           homeDir: config.homeDir,
           factoryContent: current.sdk.DEFAULT_BASE_INSTRUCTIONS,
-          customizedContent: settings.providers.oa.defaultPrompt,
+          customizedContent: settings.engines.oa.defaultPrompt,
           hooks: options.safeReadHooks,
         });
       };

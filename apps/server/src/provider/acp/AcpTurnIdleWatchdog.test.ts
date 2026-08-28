@@ -155,7 +155,7 @@ describe("forkAcpTurnIdleWatchdog", () => {
     expect(fired).toBe(false);
   });
 
-  it("uses the live timeout override for provider work hidden from the parent stream", async () => {
+  it("uses the live timeout override for engine work hidden from the parent stream", async () => {
     const program = Effect.gen(function* () {
       const scope = yield* Scope.make();
       let fired = false;

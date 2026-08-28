@@ -21,7 +21,7 @@ layer("060_PendingApprovalLifecycleGeneration", (it) => {
           created_at,
           resolved_at
         ) VALUES (
-          'provider-request-legacy',
+          'engine-request-legacy',
           'thread-generation',
           'pending',
           NULL,
@@ -35,7 +35,7 @@ layer("060_PendingApprovalLifecycleGeneration", (it) => {
         SELECT lifecycle_generation AS "lifecycleGeneration"
         FROM projection_pending_approvals
         WHERE thread_id = 'thread-generation'
-          AND request_id = 'provider-request-legacy'
+          AND request_id = 'engine-request-legacy'
       `;
       assert.deepStrictEqual(legacy, [{ lifecycleGeneration: null }]);
 
@@ -43,13 +43,13 @@ layer("060_PendingApprovalLifecycleGeneration", (it) => {
         UPDATE projection_pending_approvals
         SET lifecycle_generation = 'generation-current'
         WHERE thread_id = 'thread-generation'
-          AND request_id = 'provider-request-legacy'
+          AND request_id = 'engine-request-legacy'
       `;
       const current = yield* sql<{ readonly lifecycleGeneration: string | null }>`
         SELECT lifecycle_generation AS "lifecycleGeneration"
         FROM projection_pending_approvals
         WHERE thread_id = 'thread-generation'
-          AND request_id = 'provider-request-legacy'
+          AND request_id = 'engine-request-legacy'
       `;
       assert.deepStrictEqual(current, [{ lifecycleGeneration: "generation-current" }]);
     }),

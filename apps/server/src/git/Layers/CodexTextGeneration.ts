@@ -280,8 +280,8 @@ const makeCodexTextGeneration = Effect.gen(function* () {
     cleanupPaths = [],
     codexHomePath,
     model,
-    modelSelection,
-    providerOptions,
+    engineSelection,
+    engineOptions,
   }: {
     operation: TextGenerationOperation;
     cwd: string;
@@ -291,12 +291,12 @@ const makeCodexTextGeneration = Effect.gen(function* () {
     cleanupPaths?: ReadonlyArray<string>;
     codexHomePath?: string;
     model?: string;
-    modelSelection?: BranchNameGenerationInput["modelSelection"];
-    providerOptions?: BranchNameGenerationInput["providerOptions"];
+    engineSelection?: BranchNameGenerationInput["engineSelection"];
+    engineOptions?: BranchNameGenerationInput["engineOptions"];
   }): Effect.Effect<S["Type"], TextGenerationError, S["DecodingServices"]> =>
     Effect.gen(function* () {
-      const codexBinaryPath = resolveCodexBinaryPath(providerOptions);
-      const resolvedCodexHomePath = resolveCodexHomePath(codexHomePath, providerOptions);
+      const codexBinaryPath = resolveCodexBinaryPath(engineOptions);
+      const resolvedCodexHomePath = resolveCodexHomePath(codexHomePath, engineOptions);
       const schemaPath = yield* writeTempFile(
         operation,
         "codex-schema",
@@ -332,7 +332,7 @@ const makeCodexTextGeneration = Effect.gen(function* () {
           "-s",
           "read-only",
           "--model",
-          resolveCodexModel(model, modelSelection) ?? DEFAULT_GIT_TEXT_GENERATION_MODEL,
+          resolveCodexModel(model, engineSelection) ?? DEFAULT_GIT_TEXT_GENERATION_MODEL,
           "--config",
           `model_reasoning_effort="${DEFAULT_GIT_TEXT_GENERATION_REASONING_EFFORT}"`,
           "--output-schema",
@@ -473,8 +473,8 @@ const makeCodexTextGeneration = Effect.gen(function* () {
       outputSchemaJson,
       ...(input.codexHomePath ? { codexHomePath: input.codexHomePath } : {}),
       ...(input.model ? { model: input.model } : {}),
-      ...(input.modelSelection ? { modelSelection: input.modelSelection } : {}),
-      ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+      ...(input.engineSelection ? { engineSelection: input.engineSelection } : {}),
+      ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
     }).pipe(
       Effect.map(
         (generated) =>
@@ -506,8 +506,8 @@ const makeCodexTextGeneration = Effect.gen(function* () {
       outputSchemaJson,
       ...(input.codexHomePath ? { codexHomePath: input.codexHomePath } : {}),
       ...(input.model ? { model: input.model } : {}),
-      ...(input.modelSelection ? { modelSelection: input.modelSelection } : {}),
-      ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+      ...(input.engineSelection ? { engineSelection: input.engineSelection } : {}),
+      ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
     }).pipe(
       Effect.map(
         (generated) =>
@@ -531,8 +531,8 @@ const makeCodexTextGeneration = Effect.gen(function* () {
       outputSchemaJson,
       ...(input.codexHomePath ? { codexHomePath: input.codexHomePath } : {}),
       ...(input.model ? { model: input.model } : {}),
-      ...(input.modelSelection ? { modelSelection: input.modelSelection } : {}),
-      ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+      ...(input.engineSelection ? { engineSelection: input.engineSelection } : {}),
+      ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
     }).pipe(
       Effect.map(
         (generated) =>
@@ -561,8 +561,8 @@ const makeCodexTextGeneration = Effect.gen(function* () {
         outputSchemaJson,
         imagePaths,
         ...(input.model ? { model: input.model } : {}),
-        ...(input.modelSelection ? { modelSelection: input.modelSelection } : {}),
-        ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+        ...(input.engineSelection ? { engineSelection: input.engineSelection } : {}),
+        ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
       });
 
       return {
@@ -589,8 +589,8 @@ const makeCodexTextGeneration = Effect.gen(function* () {
         outputSchemaJson,
         imagePaths,
         ...(input.model ? { model: input.model } : {}),
-        ...(input.modelSelection ? { modelSelection: input.modelSelection } : {}),
-        ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+        ...(input.engineSelection ? { engineSelection: input.engineSelection } : {}),
+        ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
       });
 
       return {
@@ -613,8 +613,8 @@ const makeCodexTextGeneration = Effect.gen(function* () {
       outputSchemaJson,
       ...(input.codexHomePath ? { codexHomePath: input.codexHomePath } : {}),
       ...(input.model ? { model: input.model } : {}),
-      ...(input.modelSelection ? { modelSelection: input.modelSelection } : {}),
-      ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+      ...(input.engineSelection ? { engineSelection: input.engineSelection } : {}),
+      ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
     }).pipe(
       Effect.map(
         (generated) =>
@@ -639,8 +639,8 @@ const makeCodexTextGeneration = Effect.gen(function* () {
       outputSchemaJson,
       ...(input.codexHomePath ? { codexHomePath: input.codexHomePath } : {}),
       ...(input.model ? { model: input.model } : {}),
-      ...(input.modelSelection ? { modelSelection: input.modelSelection } : {}),
-      ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+      ...(input.engineSelection ? { engineSelection: input.engineSelection } : {}),
+      ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
     });
   };
 
@@ -656,8 +656,8 @@ const makeCodexTextGeneration = Effect.gen(function* () {
       outputSchemaJson,
       ...(input.codexHomePath ? { codexHomePath: input.codexHomePath } : {}),
       ...(input.model ? { model: input.model } : {}),
-      ...(input.modelSelection ? { modelSelection: input.modelSelection } : {}),
-      ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+      ...(input.engineSelection ? { engineSelection: input.engineSelection } : {}),
+      ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
     });
   };
 
@@ -674,25 +674,25 @@ const makeCodexTextGeneration = Effect.gen(function* () {
 });
 
 function resolveCodexBinaryPath(
-  providerOptions: BranchNameGenerationInput["providerOptions"] | undefined,
+  engineOptions: BranchNameGenerationInput["engineOptions"] | undefined,
 ): string {
-  return providerOptions?.codex?.binaryPath?.trim() || "codex";
+  return engineOptions?.codex?.binaryPath?.trim() || "codex";
 }
 
 function resolveCodexHomePath(
   codexHomePath: string | undefined,
-  providerOptions: BranchNameGenerationInput["providerOptions"] | undefined,
+  engineOptions: BranchNameGenerationInput["engineOptions"] | undefined,
 ): string | undefined {
-  const resolved = codexHomePath?.trim() || providerOptions?.codex?.homePath?.trim();
+  const resolved = codexHomePath?.trim() || engineOptions?.codex?.homePath?.trim();
   return resolved && resolved.length > 0 ? resolved : undefined;
 }
 
 function resolveCodexModel(
   model: string | undefined,
-  modelSelection: BranchNameGenerationInput["modelSelection"] | undefined,
+  engineSelection: BranchNameGenerationInput["engineSelection"] | undefined,
 ): string | undefined {
-  if (modelSelection?.provider === "codex") {
-    return modelSelection.model;
+  if (engineSelection?.engine === "codex") {
+    return engineSelection.model;
   }
   return model;
 }

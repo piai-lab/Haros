@@ -284,7 +284,7 @@ describe("terminalStateStore actions", () => {
     });
   });
 
-  it("clears terminal provider identity when metadata cliKind is null", () => {
+  it("clears terminal engine identity when metadata cliKind is null", () => {
     const store = useTerminalStateStore.getState();
     store.newTerminal(THREAD_ID, "terminal-2");
     store.setTerminalMetadata(THREAD_ID, "terminal-2", {

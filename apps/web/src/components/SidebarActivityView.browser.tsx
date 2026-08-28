@@ -36,7 +36,7 @@ function makeProject(id: ProjectId, name: string): Project {
     folderName: name,
     localName: null,
     cwd: `/tmp/${id}`,
-    defaultModelSelection: null,
+    defaultEngineSelection: null,
     expanded: true,
     scripts: [],
   };
@@ -51,7 +51,7 @@ function makeThread(
     id: ThreadId.makeUnsafe(`activity-thread-${index}`),
     projectId: PROJECT_A,
     title: `Activity thread ${index}`,
-    modelSelection: { provider: "codex", model: "gpt-5" },
+    engineSelection: { engine: "codex", model: "gpt-5" },
     interactionMode: "default",
     branch: null,
     worktreePath: null,

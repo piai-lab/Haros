@@ -5,7 +5,7 @@
 
 import {
   DEFAULT_MODEL_BY_PROVIDER,
-  type ModelSelection,
+  type EngineSelection,
   type ThreadId,
   type TurnId,
 } from "@harnessos/contracts";
@@ -47,7 +47,7 @@ export function resolveDiffPanelThread(input: {
   threadId: ThreadId | null | undefined;
   serverThread: Thread | undefined;
   draftThread: DraftThreadState | null | undefined;
-  fallbackModelSelection: ModelSelection | null | undefined;
+  fallbackEngineSelection: EngineSelection | null | undefined;
 }): Thread | undefined {
   if (input.serverThread) {
     return input.serverThread;
@@ -59,8 +59,8 @@ export function resolveDiffPanelThread(input: {
   return buildLocalDraftThread(
     input.threadId,
     input.draftThread,
-    input.fallbackModelSelection ?? {
-      provider: "codex",
+    input.fallbackEngineSelection ?? {
+      engine: "codex",
       model: DEFAULT_MODEL_BY_PROVIDER.codex,
     },
     null,

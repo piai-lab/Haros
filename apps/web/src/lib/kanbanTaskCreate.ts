@@ -6,11 +6,11 @@
 
 import type {
   AssistantDeliveryMode,
-  ModelSelection,
+  EngineSelection,
   ProjectId,
-  ProviderInteractionMode,
+  EngineInteractionMode,
   EngineKind,
-  ProviderStartOptions,
+  EngineStartOptions,
   RuntimeMode,
   ThreadId,
 } from "@harnessos/contracts";
@@ -24,9 +24,9 @@ export interface KanbanDraftTaskInput {
   prompt: string;
   /** Optional scratch composer whose full transferable content seeds the new task. */
   sourceComposerThreadId?: ThreadId;
-  modelSelection: ModelSelection;
+  engineSelection: EngineSelection;
   runtimeMode: RuntimeMode;
-  interactionMode: ProviderInteractionMode;
+  interactionMode: EngineInteractionMode;
   envMode: DraftThreadEnvMode;
 }
 
@@ -49,7 +49,7 @@ export function createKanbanDraftTask(input: KanbanDraftTaskInput): ThreadId {
   } else {
     store.setPrompt(threadId, input.prompt);
   }
-  store.setModelSelection(threadId, input.modelSelection);
+  store.setEngineSelection(threadId, input.engineSelection);
   store.setRuntimeMode(threadId, input.runtimeMode);
   store.setInteractionMode(threadId, input.interactionMode);
   return threadId;
@@ -63,9 +63,9 @@ export function createKanbanDraftTask(input: KanbanDraftTaskInput): ThreadId {
  */
 export async function createAndSendKanbanTask(
   input: KanbanDraftTaskInput & {
-    defaultProvider: EngineKind;
+    defaultEngine: EngineKind;
     assistantDeliveryMode: AssistantDeliveryMode;
-    providerOptions?: ProviderStartOptions | undefined;
+    engineOptions?: EngineStartOptions | undefined;
   },
 ): Promise<{ threadId: ThreadId; result: KanbanDraftDispatchResult }> {
   const threadId = createKanbanDraftTask(input);
@@ -73,9 +73,9 @@ export async function createAndSendKanbanTask(
     threadId,
     projectId: input.projectId,
     thread: null,
-    defaultProvider: input.defaultProvider,
+    defaultEngine: input.defaultEngine,
     assistantDeliveryMode: input.assistantDeliveryMode,
-    providerOptions: input.providerOptions,
+    engineOptions: input.engineOptions,
   });
   return { threadId, result };
 }

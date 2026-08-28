@@ -1,5 +1,5 @@
 /**
- * Tracks the source thread for forked conversations so provider-native
+ * Tracks the source thread for forked conversations so engine-native
  * session forking can happen lazily when the target thread opens.
  */
 import * as SqlClient from "effect/unstable/sql/SqlClient";

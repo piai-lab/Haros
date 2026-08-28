@@ -2,8 +2,8 @@ import { Effect, Exit, Layer, ManagedRuntime, Scope } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { CheckpointReactor } from "../Services/CheckpointReactor.ts";
-import { ProviderCommandReactor } from "../Services/ProviderCommandReactor.ts";
-import { ProviderRuntimeIngestionService } from "../Services/ProviderRuntimeIngestion.ts";
+import { EngineCommandReactor } from "../Services/EngineCommandReactor.ts";
+import { EngineRuntimeIngestionService } from "../Services/EngineRuntimeIngestion.ts";
 import { StudioOutputReactor } from "../Services/StudioOutputReactor.ts";
 import { ThreadGitMetadataReactor } from "../Services/ThreadGitMetadataReactor.ts";
 import { OrchestrationReactor } from "../Services/OrchestrationReactor.ts";
@@ -19,7 +19,7 @@ describe("OrchestrationReactor", () => {
     runtime = null;
   });
 
-  it("starts runtime observers before provider command dispatch can begin", async () => {
+  it("starts runtime observers before engine command dispatch can begin", async () => {
     const started: string[] = [];
     const stopped: string[] = [];
     let reconciledOpenTurns = 0;
@@ -27,12 +27,12 @@ describe("OrchestrationReactor", () => {
     runtime = ManagedRuntime.make(
       Layer.effect(OrchestrationReactor, makeOrchestrationReactor).pipe(
         Layer.provideMerge(
-          Layer.succeed(ProviderRuntimeIngestionService, {
+          Layer.succeed(EngineRuntimeIngestionService, {
             start: Effect.acquireRelease(
               Effect.sync(() => {
-                started.push("provider-runtime-ingestion");
+                started.push("engine-runtime-ingestion");
               }),
-              () => Effect.sync(() => stopped.push("provider-runtime-ingestion")),
+              () => Effect.sync(() => stopped.push("engine-runtime-ingestion")),
             ),
             drain: Effect.void,
             reconcileSettledOpenTurns: Effect.sync(() => {
@@ -41,12 +41,12 @@ describe("OrchestrationReactor", () => {
           }),
         ),
         Layer.provideMerge(
-          Layer.succeed(ProviderCommandReactor, {
+          Layer.succeed(EngineCommandReactor, {
             start: Effect.acquireRelease(
               Effect.sync(() => {
-                started.push("provider-command-reactor");
+                started.push("engine-command-reactor");
               }),
-              () => Effect.sync(() => stopped.push("provider-command-reactor")),
+              () => Effect.sync(() => stopped.push("engine-command-reactor")),
             ),
             drain: Effect.void,
             reconcileQueuedTurns: Effect.void,
@@ -101,15 +101,15 @@ describe("OrchestrationReactor", () => {
       "studio-output-reactor",
       "checkpoint-reactor",
       "thread-git-metadata-reactor",
-      "provider-runtime-ingestion",
-      "provider-command-reactor",
+      "engine-runtime-ingestion",
+      "engine-command-reactor",
     ]);
     expect(reconciledOpenTurns).toBe(1);
 
     await Effect.runPromise(Scope.close(scope, Exit.void));
     expect(stopped).toEqual([
-      "provider-command-reactor",
-      "provider-runtime-ingestion",
+      "engine-command-reactor",
+      "engine-runtime-ingestion",
       "thread-git-metadata-reactor",
       "checkpoint-reactor",
       "studio-output-reactor",

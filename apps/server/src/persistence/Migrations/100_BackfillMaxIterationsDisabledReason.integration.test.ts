@@ -22,14 +22,14 @@ describe("100_BackfillMaxIterationsDisabledReason", () => {
         ) VALUES
           (
             'disabled-at-cap', 'project', 'Matching', 'Prompt', '{"type":"manual"}', 0,
-            '{"provider":"codex","model":"gpt-5-codex"}', 'approval-required',
+            '{"engine":"codex","model":"gpt-5-codex"}', 'approval-required',
             'default', 'auto', 'standalone', 3, 1, '{"type":"none"}', 0,
             60, '{"type":"none"}', 'coalesce', '[]', 3, NULL, NULL,
             '2026-08-12T10:00:00.000Z', '2026-08-12T10:00:00.000Z', NULL
           ),
           (
             'disabled-with-reason', 'project', 'Reasoned', 'Prompt', '{"type":"manual"}', 0,
-            '{"provider":"codex","model":"gpt-5-codex"}', 'approval-required',
+            '{"engine":"codex","model":"gpt-5-codex"}', 'approval-required',
             'default', 'auto', 'standalone', 3, 1, '{"type":"none"}', 0,
             60, '{"type":"none"}', 'coalesce', '[]', 3, 'user',
             '2026-08-12T10:01:00.000Z',
@@ -37,21 +37,21 @@ describe("100_BackfillMaxIterationsDisabledReason", () => {
           ),
           (
             'enabled-at-cap', 'project', 'Enabled', 'Prompt', '{"type":"manual"}', 1,
-            '{"provider":"codex","model":"gpt-5-codex"}', 'approval-required',
+            '{"engine":"codex","model":"gpt-5-codex"}', 'approval-required',
             'default', 'auto', 'standalone', 3, 1, '{"type":"none"}', 0,
             60, '{"type":"none"}', 'coalesce', '[]', 3, NULL, NULL,
             '2026-08-12T10:00:00.000Z', '2026-08-12T10:00:00.000Z', NULL
           ),
           (
             'disabled-below-cap', 'project', 'Below cap', 'Prompt', '{"type":"manual"}', 0,
-            '{"provider":"codex","model":"gpt-5-codex"}', 'approval-required',
+            '{"engine":"codex","model":"gpt-5-codex"}', 'approval-required',
             'default', 'auto', 'standalone', 3, 1, '{"type":"none"}', 0,
             60, '{"type":"none"}', 'coalesce', '[]', 2, NULL, NULL,
             '2026-08-12T10:00:00.000Z', '2026-08-12T10:00:00.000Z', NULL
           ),
           (
             'archived-at-cap', 'project', 'Archived', 'Prompt', '{"type":"manual"}', 0,
-            '{"provider":"codex","model":"gpt-5-codex"}', 'approval-required',
+            '{"engine":"codex","model":"gpt-5-codex"}', 'approval-required',
             'default', 'auto', 'standalone', 3, 1, '{"type":"none"}', 0,
             60, '{"type":"none"}', 'coalesce', '[]', 3, NULL, NULL,
             '2026-08-12T10:00:00.000Z', '2026-08-12T10:01:00.000Z',

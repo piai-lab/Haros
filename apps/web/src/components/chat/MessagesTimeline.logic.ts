@@ -356,7 +356,7 @@ function isVisibleGeneratedImageEntry(entry: WorkLogEntry): boolean {
 
 /**
  * Resolves the markdown body for an assistant row. A completed image-generation
- * work item is already visible non-text output, so an adjacent empty provider
+ * work item is already visible non-text output, so an adjacent empty engine
  * message must not add the misleading "(empty response)" placeholder. Truly
  * empty settled turns retain the placeholder, and live empty text stays blank.
  */
@@ -378,7 +378,7 @@ export function resolveAssistantMessageDisplayText(
 }
 
 // Builds the "Files changed" lookup keyed by the last assistant row in the
-// user-visible response segment. Provider mini-turns can emit diffs before the
+// user-visible response segment. Engine mini-turns can emit diffs before the
 // final answer, so the card follows the segment tail instead of the raw turn.
 export function buildTurnDiffSummaryByAssistantMessageId(input: {
   turnDiffSummaries: ReadonlyArray<TurnDiffSummary>;
@@ -420,7 +420,7 @@ export function buildTurnDiffSummaryByAssistantMessageId(input: {
   return byMessageId;
 }
 
-// Keeps multi-turn provider responses from losing earlier "Files changed" rows
+// Keeps multi-turn engine responses from losing earlier "Files changed" rows
 // when several turn-diff summaries anchor to the same final assistant message.
 function mergeTurnDiffSummaries(
   existing: TurnDiffSummary | undefined,
@@ -432,7 +432,7 @@ function mergeTurnDiffSummaries(
       summary.status === "missing" ||
       summary.status === "error" ||
       summary.checkpointRef === undefined ||
-      summary.checkpointRef.startsWith("provider-diff:")
+      summary.checkpointRef.startsWith("engine-diff:")
     ) {
       return [];
     }
@@ -931,7 +931,7 @@ function workLogSubagentsEqual(
     return (
       b !== undefined &&
       a.threadId === b.threadId &&
-      a.providerThreadId === b.providerThreadId &&
+      a.nativeThreadId === b.nativeThreadId &&
       a.resolvedThreadId === b.resolvedThreadId &&
       a.agentId === b.agentId &&
       a.nickname === b.nickname &&
@@ -979,7 +979,7 @@ function workLogOmniMindThreadCreationsEqual(
       other !== undefined &&
       thread.threadId === other.threadId &&
       thread.title === other.title &&
-      thread.provider === other.provider &&
+      thread.engine === other.engine &&
       thread.model === other.model &&
       thread.environment === other.environment &&
       thread.status === other.status

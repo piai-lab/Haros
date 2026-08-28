@@ -1,14 +1,14 @@
 /**
- * Shared plan-mode helpers for provider adapters.
+ * Shared plan-mode helpers for engine adapters.
  *
  * Adapters use this prompt shim when their native plan mode does not emit a
  * first-class proposed-plan event. The extraction helpers keep the UI path
- * provider-agnostic by converting tagged markdown into canonical runtime events.
+ * engine-agnostic by converting tagged markdown into canonical runtime events.
  */
 
-import type { ProviderInteractionMode } from "@harnessos/contracts";
+import type { EngineInteractionMode } from "@harnessos/contracts";
 
-export const PROVIDER_PLAN_MODE_PROMPT_PREFIX = [
+export const ENGINE_PLAN_MODE_PROMPT_PREFIX = [
   "OmniMind plan mode is active.",
   "Do not implement or mutate files in this turn. You may inspect or ask targeted questions as needed.",
   "When you are ready to present the final plan, wrap only the final plan markdown in these exact tags:",
@@ -22,15 +22,15 @@ const PROPOSED_PLAN_BLOCK_REGEX = /<proposed_plan>\s*([\s\S]*?)\s*<\/proposed_pl
 
 export function withProviderPlanModePrompt(input: {
   readonly text: string;
-  readonly interactionMode?: ProviderInteractionMode | undefined;
+  readonly interactionMode?: EngineInteractionMode | undefined;
 }): string {
   if (input.interactionMode !== "plan") {
     return input.text;
   }
   const text = input.text.trim();
   return text.length > 0
-    ? `User request:\n${text}\n\n${PROVIDER_PLAN_MODE_PROMPT_PREFIX}`
-    : PROVIDER_PLAN_MODE_PROMPT_PREFIX;
+    ? `User request:\n${text}\n\n${ENGINE_PLAN_MODE_PROMPT_PREFIX}`
+    : ENGINE_PLAN_MODE_PROMPT_PREFIX;
 }
 
 export function extractProposedPlanMarkdown(text: string | undefined): string | undefined {

@@ -4,10 +4,10 @@ import { AgentGatewayCredentialsWithSecretsLive } from "../agentGateway/Layers/A
 import { BrowserAutomationHostLive } from "../browserAutomation/Layers/BrowserAutomationHost";
 import { ServerConfig } from "../config";
 import {
-  makeProviderServerPasswordResolver,
-  ProviderCredentials,
-  ProviderCredentialsLive,
-} from "../providerCredentials";
+  makeEngineServerPasswordResolver,
+  EngineCredentials,
+  EngineCredentialsLive,
+} from "../engineCredentials";
 import { ServerSettingsLive } from "../serverSettings";
 import { makeClaudeAdapterLive } from "./Layers/ClaudeAdapter";
 import { makeCodexAdapterLive } from "./Layers/CodexAdapter";
@@ -18,16 +18,16 @@ import { makeDroidAdapterLive } from "./Layers/DroidAdapter";
 import { makeGrokAdapterLive } from "./Layers/GrokAdapter";
 import { makeKiloAdapterLive, makeOpenCodeAdapterLive } from "./Layers/OpenCodeAdapter";
 import { makeOmniMindAgentAdapterLive, makePiAdapterLive } from "./Layers/PiAdapter";
-import { ProviderAdapterRegistryLive } from "./Layers/ProviderAdapterRegistry";
-import { ProviderDiscoveryServiceLive } from "./Layers/ProviderDiscoveryService";
+import { EngineAdapterRegistryLive } from "./Layers/EngineAdapterRegistry";
+import { EngineDiscoveryServiceLive } from "./Layers/EngineDiscoveryService";
 import { OmniMindEcosystemLive } from "./Layers/OmniMindEcosystem";
 import { OmniMindAgentPromptFilesLive } from "./Layers/OmniMindAgentPromptFiles";
 import { OmniMindWebSearchSettingsLive } from "./Layers/OmniMindWebSearchSettings";
 import { OmniMindModelServicesLive } from "./Layers/OmniMindModelServices";
-import { makeDurableProviderServiceLive } from "./Layers/ProviderService";
-import { ProviderSessionDirectoryLive } from "./Layers/ProviderSessionDirectory";
-import { ProviderSessionRuntimeRepositoryLive } from "../persistence/Layers/ProviderSessionRuntime";
-import { ProviderRuntimeEventRepositoryLive } from "../persistence/Layers/ProviderRuntimeEvents";
+import { makeDurableProviderServiceLive } from "./Layers/EngineService";
+import { EngineSessionDirectoryLive } from "./Layers/EngineSessionDirectory";
+import { EngineSessionRuntimeRepositoryLive } from "../persistence/Layers/EngineSessionRuntime";
+import { EngineRuntimeEventRepositoryLive } from "../persistence/Layers/EngineRuntimeEvents";
 import { OrchestrationProjectionSnapshotQueryLive } from "../orchestration/Layers/ProjectionSnapshotQuery";
 
 export function makeServerProviderLayer(
@@ -36,8 +36,8 @@ export function makeServerProviderLayer(
   } = {},
 ) {
   return Effect.gen(function* () {
-    const credentials = yield* ProviderCredentials;
-    const resolveProviderServerPassword = makeProviderServerPasswordResolver(credentials);
+    const credentials = yield* EngineCredentials;
+    const resolveEngineServerPassword = makeEngineServerPasswordResolver(credentials);
     const { logProviderEvents, providerEventLogPath } = yield* ServerConfig;
     const nativeEventLogger = logProviderEvents
       ? yield* makeEventNdjsonLogger(providerEventLogPath, {
@@ -49,8 +49,8 @@ export function makeServerProviderLayer(
           stream: "canonical",
         })
       : undefined;
-    const providerSessionDirectoryLayer = ProviderSessionDirectoryLive.pipe(
-      Layer.provide(ProviderSessionRuntimeRepositoryLive),
+    const providerSessionDirectoryLayer = EngineSessionDirectoryLive.pipe(
+      Layer.provide(EngineSessionRuntimeRepositoryLive),
     );
     // Gives gateway-capable sessions their thread-scoped harnessos_* credentials.
     // OpenCode/Kilo isolate managed servers before installing MCP; Pi projects
@@ -65,11 +65,11 @@ export function makeServerProviderLayer(
     ).pipe(Layer.provide(agentGatewayCredentialsLayer));
     const openCodeAdapterLayer = makeOpenCodeAdapterLive({
       ...(nativeEventLogger ? { nativeEventLogger } : {}),
-      resolveServerPassword: resolveProviderServerPassword,
+      resolveServerPassword: resolveEngineServerPassword,
     }).pipe(Layer.provide(agentGatewayCredentialsLayer));
     const kiloAdapterLayer = makeKiloAdapterLive({
       ...(nativeEventLogger ? { nativeEventLogger } : {}),
-      resolveServerPassword: resolveProviderServerPassword,
+      resolveServerPassword: resolveEngineServerPassword,
     }).pipe(Layer.provide(agentGatewayCredentialsLayer));
     const antigravityAdapterLayer = makeAntigravityAdapterLive().pipe(
       Layer.provide(agentGatewayCredentialsLayer),
@@ -96,7 +96,7 @@ export function makeServerProviderLayer(
       Layer.provide(BrowserAutomationHostLive),
       Layer.provide(ServerSettingsLive),
     );
-    const adapterRegistryLayer = ProviderAdapterRegistryLive.pipe(
+    const adapterRegistryLayer = EngineAdapterRegistryLive.pipe(
       Layer.provide(codexAdapterLayer),
       Layer.provide(claudeAdapterLayer),
       Layer.provide(cursorAdapterLayer),
@@ -114,9 +114,9 @@ export function makeServerProviderLayer(
     ).pipe(
       Layer.provide(adapterRegistryLayer),
       Layer.provide(providerSessionDirectoryLayer),
-      Layer.provide(ProviderRuntimeEventRepositoryLive),
+      Layer.provide(EngineRuntimeEventRepositoryLive),
     );
-    const providerDiscoveryLayer = ProviderDiscoveryServiceLive.pipe(
+    const engineDiscoveryLayer = EngineDiscoveryServiceLive.pipe(
       Layer.provide(adapterRegistryLayer),
       Layer.provide(OrchestrationProjectionSnapshotQueryLive),
       // Skill toggles live in server settings; the shared ServerSettingsLive
@@ -132,7 +132,7 @@ export function makeServerProviderLayer(
     );
     return Layer.mergeAll(
       providerServiceLayer,
-      providerDiscoveryLayer,
+      engineDiscoveryLayer,
       omniMindEcosystemLayer,
       omniMindAgentPromptFilesLayer,
       OmniMindWebSearchSettingsLive,
@@ -140,5 +140,5 @@ export function makeServerProviderLayer(
       adapterRegistryLayer,
       providerSessionDirectoryLayer,
     );
-  }).pipe(Effect.provide(ProviderCredentialsLive.pipe(Layer.orDie)), Layer.unwrap);
+  }).pipe(Effect.provide(EngineCredentialsLive.pipe(Layer.orDie)), Layer.unwrap);
 }

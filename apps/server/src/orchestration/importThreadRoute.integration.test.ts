@@ -3,15 +3,15 @@ import {
   type OrchestrationCommand,
   type OrchestrationThread,
   ProjectId,
-  type ProviderSession,
+  type EngineSession,
   ThreadId,
 } from "@harnessos/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it, vi } from "@effect/vitest";
 import { Effect, FileSystem, Option, Path } from "effect";
 
-import type { ProviderAdapterRegistryShape } from "../provider/Services/ProviderAdapterRegistry";
-import type { ProviderServiceShape } from "../provider/Services/ProviderService";
+import type { EngineAdapterRegistryShape } from "../provider/Services/EngineAdapterRegistry";
+import type { EngineServiceShape } from "../provider/Services/EngineService";
 import type { OrchestrationEngineShape } from "./Services/OrchestrationEngine";
 import type { ProjectionSnapshotQueryShape } from "./Services/ProjectionSnapshotQuery";
 import { makeImportThreadHandler } from "./importThreadRoute";
@@ -25,7 +25,7 @@ function makeCodexThread(): OrchestrationThread {
     id: threadId,
     projectId,
     title: "Imported thread",
-    modelSelection: { provider: "codex", model: "gpt-5.5" },
+    engineSelection: { engine: "codex", model: "gpt-5.5" },
     runtimeMode: "full-access",
     interactionMode: "default",
     envMode: "local",
@@ -64,14 +64,14 @@ function makeCodexThread(): OrchestrationThread {
   };
 }
 
-it.effect("imports Codex history through a provider-owned fork", () =>
+it.effect("imports Codex history through a engine-owned fork", () =>
   Effect.gen(function* () {
     const fileSystem = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const externalId = "019fbe83-572e-7092-a84e-5ba7285ca2c5";
     const dispatchedCommands: OrchestrationCommand[] = [];
-    const session: ProviderSession = {
-      provider: "codex",
+    const session: EngineSession = {
+      engine: "codex",
       status: "ready",
       runtimeMode: "full-access",
       threadId,
@@ -103,15 +103,15 @@ it.effect("imports Codex history through a provider-owned fork", () =>
         getProjectShellById: () => Effect.succeed(Option.none()),
       } as unknown as ProjectionSnapshotQueryShape,
       providerAdapterRegistry: {
-        getByProvider: () =>
+        getByEngine: () =>
           Effect.succeed({
             readThread,
           } as never),
-      } as unknown as ProviderAdapterRegistryShape,
+      } as unknown as EngineAdapterRegistryShape,
       providerService: {
         startSession,
         stopSession: () => Effect.void,
-      } as unknown as ProviderServiceShape,
+      } as unknown as EngineServiceShape,
     });
 
     const result = yield* handler({ threadId, externalId });
@@ -121,8 +121,8 @@ it.effect("imports Codex history through a provider-owned fork", () =>
       threadId,
       {
         threadId,
-        provider: "codex",
-        modelSelection: { provider: "codex", model: "gpt-5.5" },
+        engine: "codex",
+        engineSelection: { engine: "codex", model: "gpt-5.5" },
         forkSourceResumeCursor: { threadId: externalId },
         runtimeMode: "full-access",
       },

@@ -1,11 +1,11 @@
 import { performance } from "node:perf_hooks";
 
-import { EventId, ThreadId, TurnId, type ProviderRuntimeEvent } from "@harnessos/contracts";
+import { EventId, ThreadId, TurnId, type EngineRuntimeEvent } from "@harnessos/contracts";
 import { Effect, Layer, ManagedRuntime } from "effect";
 
-import { ProviderRuntimeEventRepositoryLive } from "../src/persistence/Layers/ProviderRuntimeEvents.ts";
+import { EngineRuntimeEventRepositoryLive } from "../src/persistence/Layers/EngineRuntimeEvents.ts";
 import { SqlitePersistenceMemory } from "../src/persistence/Layers/Sqlite.ts";
-import { ProviderRuntimeEventRepository } from "../src/persistence/Services/ProviderRuntimeEvents.ts";
+import { EngineRuntimeEventRepository } from "../src/persistence/Services/EngineRuntimeEvents.ts";
 
 type BenchmarkMode = "once" | "duplicate";
 
@@ -64,18 +64,18 @@ function summary(values: ReadonlyArray<number>) {
   };
 }
 
-function runtimeEvent(index: number, threadCount: number): ProviderRuntimeEvent {
+function runtimeEvent(index: number, threadCount: number): EngineRuntimeEvent {
   const threadIndex = index % threadCount;
   return {
     type: "content.delta",
     eventId: EventId.makeUnsafe(`benchmark-event-${index}`),
-    provider: "codex",
+    engine: "codex",
     createdAt: "2026-08-07T00:00:00.000Z",
     threadId: ThreadId.makeUnsafe(`benchmark-thread-${threadIndex}`),
     turnId: TurnId.makeUnsafe(`benchmark-turn-${threadIndex}`),
     payload: {
       streamKind: "assistant_text",
-      delta: `provider-neutral streamed text ${index.toString().padStart(8, "0")}\n`,
+      delta: `engine-neutral streamed text ${index.toString().padStart(8, "0")}\n`,
     },
   };
 }
@@ -86,10 +86,10 @@ async function runSample(input: {
   readonly threadCount: number;
 }): Promise<Sample> {
   const runtime = ManagedRuntime.make(
-    ProviderRuntimeEventRepositoryLive.pipe(Layer.provide(SqlitePersistenceMemory)),
+    EngineRuntimeEventRepositoryLive.pipe(Layer.provide(SqlitePersistenceMemory)),
   );
   try {
-    const repository = await runtime.runPromise(Effect.service(ProviderRuntimeEventRepository));
+    const repository = await runtime.runPromise(Effect.service(EngineRuntimeEventRepository));
     forceGc();
     const before = process.memoryUsage();
     let maxObservedRssBytes = before.rss;
@@ -159,7 +159,7 @@ async function run(): Promise<void> {
       threadCount,
       warmups,
       samples: sampleCount,
-      payload: "provider-neutral assistant text delta",
+      payload: "engine-neutral assistant text delta",
       persistence: "SQLite in-memory with production migrations and repository",
     },
     summary: {

@@ -124,7 +124,7 @@ function createSendTurnHarness(runtimeMode: RuntimeMode = "full-access") {
   const manager = new CodexAppServerManager();
   const context = {
     session: {
-      provider: "codex",
+      engine: "codex",
       status: "ready",
       threadId: "thread_1",
       runtimeMode,
@@ -174,7 +174,7 @@ function createThreadControlHarness() {
   const context = {
     lifecycleGeneration: "generation-request-a",
     session: {
-      provider: "codex",
+      engine: "codex",
       status: "ready",
       threadId: "thread_1",
       runtimeMode: "full-access",
@@ -215,7 +215,7 @@ function createPendingUserInputHarness() {
   const manager = new CodexAppServerManager();
   const context = {
     session: {
-      provider: "codex",
+      engine: "codex",
       status: "ready",
       threadId: "thread_1",
       runtimeMode: "full-access",
@@ -265,7 +265,7 @@ function createPendingApprovalHarness(runtimeMode: RuntimeMode = "approval-requi
   const context = {
     lifecycleGeneration: "generation-request-a",
     session: {
-      provider: "codex",
+      engine: "codex",
       status: "ready",
       threadId: "thread_1",
       runtimeMode,
@@ -349,7 +349,7 @@ function createCollabNotificationHarness() {
   const manager = new CodexAppServerManager();
   const context = {
     session: {
-      provider: "codex",
+      engine: "codex",
       status: "running",
       threadId: asThreadId("thread_1"),
       runtimeMode: "full-access",
@@ -432,7 +432,7 @@ function createProcessOutputHarness() {
   const manager = new CodexAppServerManager();
   const context = {
     session: {
-      provider: "codex",
+      engine: "codex",
       status: "running",
       threadId: asThreadId("thread_1"),
       runtimeMode: "full-access",
@@ -466,7 +466,7 @@ describe("Codex app-server teardown", () => {
     const threadId = asThreadId("thread-codex-failed-turn");
     const context = {
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "error",
         threadId,
         runtimeMode: "full-access",
@@ -542,7 +542,7 @@ describe("Codex app-server teardown", () => {
     const context = {
       gatewaySessionLease,
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "ready",
         threadId,
         runtimeMode: "full-access",
@@ -612,7 +612,7 @@ describe("Codex app-server teardown", () => {
     const context = {
       gatewaySessionLease,
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "ready",
         threadId,
         runtimeMode: "full-access",
@@ -956,7 +956,7 @@ describe("codex CLI version gate", () => {
 });
 
 describe("buildCodexProcessEnv", () => {
-  it("hydrates the active custom provider env_key from the effective CODEX_HOME", async () => {
+  it("hydrates the active custom engine env_key from the effective CODEX_HOME", async () => {
     const tempDir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-env-"));
     try {
       writeFileSync(
@@ -999,7 +999,7 @@ describe("buildCodexProcessEnv", () => {
     }
   });
 
-  it("does not read shell env when the provider key is already present", async () => {
+  it("does not read shell env when the engine key is already present", async () => {
     const readEnvironment = vi.fn();
 
     const env = await buildCodexProcessEnv({
@@ -1393,7 +1393,7 @@ describe("buildCodexThreadOpenRequest", () => {
     sandbox: "danger-full-access" as const,
   };
 
-  it("forks an external thread into a new provider-owned thread", () => {
+  it("forks an external thread into a new engine-owned thread", () => {
     expect(
       buildCodexThreadOpenRequest({
         forkSourceThreadId: "external-thread",
@@ -1408,7 +1408,7 @@ describe("buildCodexThreadOpenRequest", () => {
     });
   });
 
-  it("resumes an existing provider thread without start-only options", () => {
+  it("resumes an existing engine thread without start-only options", () => {
     expect(
       buildCodexThreadOpenRequest({
         resumeThreadId: "existing-thread",
@@ -1591,10 +1591,10 @@ describe("startSession", () => {
       await expect(
         manager.startSession({
           threadId: asThreadId("thread-missing-cwd"),
-          provider: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
           cwd: missingCwd,
-          providerOptions: {
+          engineOptions: {
             codex: {
               binaryPath: process.execPath,
             },
@@ -1646,7 +1646,7 @@ describe("startSession", () => {
       await expect(
         manager.startSession({
           threadId: asThreadId("thread-1"),
-          provider: "codex",
+          engine: "codex",
           runtimeMode: "full-access",
         }),
       ).rejects.toThrow(
@@ -1690,7 +1690,7 @@ describe("startSession", () => {
       await expect(
         manager.startSession({
           threadId: asThreadId("thread-auto-version"),
-          provider: "codex",
+          engine: "codex",
           runtimeMode: "auto",
         }),
       ).rejects.toThrow("Codex Auto version gate");
@@ -2194,7 +2194,7 @@ describe("CodexAppServerManager discovery", () => {
     const manager = new CodexAppServerManager();
     const context = {
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "ready",
         threadId: "thread_1",
         runtimeMode: "full-access",
@@ -2233,7 +2233,7 @@ describe("CodexAppServerManager discovery", () => {
     const manager = new CodexAppServerManager();
     const context = {
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "ready",
         threadId: "thread_1",
         runtimeMode: "full-access",
@@ -2279,7 +2279,7 @@ describe("CodexAppServerManager discovery", () => {
     const manager = new CodexAppServerManager();
     const activeContext = {
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "ready",
         threadId: "thread_active",
         runtimeMode: "full-access",
@@ -2310,7 +2310,7 @@ describe("CodexAppServerManager discovery", () => {
     };
     const discoveryContext = {
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "ready",
         threadId: "__codex_discovery__:/repo-b",
         runtimeMode: "full-access",
@@ -2382,7 +2382,7 @@ describe("CodexAppServerManager discovery", () => {
     const manager = new CodexAppServerManager();
     const deadContext = {
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "closed",
         threadId: "thread_dead",
         runtimeMode: "full-access",
@@ -2497,7 +2497,7 @@ describe("CodexAppServerManager discovery", () => {
     const manager = new CodexAppServerManager();
     const context = {
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "ready",
         threadId: "thread_voice",
         runtimeMode: "full-access",
@@ -2566,7 +2566,7 @@ describe("CodexAppServerManager discovery", () => {
     const manager = new CodexAppServerManager();
     const connectingContext = {
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "connecting",
         threadId: "thread_connecting",
         runtimeMode: "full-access",
@@ -2636,7 +2636,7 @@ describe("CodexAppServerManager discovery", () => {
     const manager = new CodexAppServerManager();
     const context = {
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "ready",
         threadId: "thread_1",
         runtimeMode: "full-access",
@@ -2703,7 +2703,7 @@ describe("CodexAppServerManager discovery", () => {
     const manager = new CodexAppServerManager();
     const context = {
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "ready",
         threadId: "thread_1",
         runtimeMode: "full-access",
@@ -2757,7 +2757,7 @@ describe("CodexAppServerManager discovery", () => {
     const manager = new CodexAppServerManager();
     const context = {
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "ready",
         threadId: "thread_1",
         runtimeMode: "full-access",
@@ -2887,7 +2887,7 @@ describe("thread checkpoint control", () => {
     });
   });
 
-  it.skipIf(!process.env.CODEX_BINARY_PATH)("forks a provider thread via thread/fork", async () => {
+  it.skipIf(!process.env.CODEX_BINARY_PATH)("forks a engine thread via thread/fork", async () => {
     const { manager, sendRequest } = createThreadControlHarness();
     sendRequest.mockResolvedValue({
       thread: {
@@ -3054,14 +3054,14 @@ describe("thread checkpoint control", () => {
     await manager.interruptTurn(
       asThreadId("thread_1"),
       TurnId.makeUnsafe("turn-child"),
-      "provider-child",
+      "engine-child",
     );
 
     expect(cancelTurn).toHaveBeenCalledOnce();
     expect(cancelTurn).toHaveBeenCalledWith("turn-parent");
     expect(release).toHaveBeenCalledOnce();
     expect(sendRequest).toHaveBeenCalledWith(context, "turn/interrupt", {
-      threadId: "provider-child",
+      threadId: "engine-child",
       turnId: "turn-child",
     });
   });
@@ -3145,7 +3145,7 @@ describe("thread checkpoint control", () => {
       expect(emitEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           kind: "notification",
-          provider: "codex",
+          engine: "codex",
           threadId: "thread_1",
           method: "thread/compacting",
           message: "Compacting context",
@@ -3445,7 +3445,7 @@ describe("respondToUserInput", () => {
     const context = {
       session: {
         sessionId: "sess_1",
-        provider: "codex",
+        engine: "codex",
         status: "ready",
         threadId: asThreadId("thread_1"),
         resumeCursor: { threadId: "thread_1" },
@@ -3548,13 +3548,13 @@ describe("collab child conversation routing", () => {
         turnId: "turn_child_1",
         parentTurnId: "turn_parent",
         itemId: "msg_child_1",
-        providerThreadId: "child_provider_1",
-        providerParentThreadId: "provider_parent",
+        nativeThreadId: "child_provider_1",
+        nativeParentThreadId: "provider_parent",
       }),
     );
   });
 
-  it("routes unmapped child assistant notifications through the active provider thread", () => {
+  it("routes unmapped child assistant notifications through the active engine thread", () => {
     const { manager, context, emitEvent } = createCollabNotificationHarness();
 
     handleServerNotificationForTest(manager, context, {
@@ -3585,8 +3585,8 @@ describe("collab child conversation routing", () => {
         method: "item/agentMessage/delta",
         turnId: "turn_child_unmapped",
         itemId: "msg_child_unmapped",
-        providerThreadId: "child_provider_unmapped",
-        providerParentThreadId: "provider_parent",
+        nativeThreadId: "child_provider_unmapped",
+        nativeParentThreadId: "provider_parent",
       }),
     );
     expect(emitEvent).toHaveBeenNthCalledWith(
@@ -3595,13 +3595,13 @@ describe("collab child conversation routing", () => {
         method: "item/completed",
         turnId: "turn_child_unmapped",
         itemId: "msg_child_unmapped",
-        providerThreadId: "child_provider_unmapped",
-        providerParentThreadId: "provider_parent",
+        nativeThreadId: "child_provider_unmapped",
+        nativeParentThreadId: "provider_parent",
       }),
     );
   });
 
-  it("does not infer a provider parent for active-parent or inactive-session notifications", () => {
+  it("does not infer a engine parent for active-parent or inactive-session notifications", () => {
     const { manager, context, emitEvent } = createCollabNotificationHarness();
 
     handleServerNotificationForTest(manager, context, {
@@ -3626,13 +3626,13 @@ describe("collab child conversation routing", () => {
 
     const activeParentEvent = emitEvent.mock.calls[0]?.[0] as Record<string, unknown>;
     const inactiveSessionEvent = emitEvent.mock.calls[1]?.[0] as Record<string, unknown>;
-    expect(activeParentEvent.providerThreadId).toBe("provider_parent");
-    expect(activeParentEvent).not.toHaveProperty("providerParentThreadId");
-    expect(inactiveSessionEvent.providerThreadId).toBe("another_provider_thread");
-    expect(inactiveSessionEvent).not.toHaveProperty("providerParentThreadId");
+    expect(activeParentEvent.nativeThreadId).toBe("provider_parent");
+    expect(activeParentEvent).not.toHaveProperty("nativeParentThreadId");
+    expect(inactiveSessionEvent.nativeThreadId).toBe("another_provider_thread");
+    expect(inactiveSessionEvent).not.toHaveProperty("nativeParentThreadId");
   });
 
-  it("prefers a mapped provider parent over the active-provider fallback", () => {
+  it("prefers a mapped engine parent over the active-engine fallback", () => {
     const { manager, context, emitEvent } = createCollabNotificationHarness();
     context.collabReceiverParents.set("child_provider_1", "provider_mapped_parent");
 
@@ -3648,8 +3648,8 @@ describe("collab child conversation routing", () => {
 
     expect(emitEvent).toHaveBeenCalledWith(
       expect.objectContaining({
-        providerThreadId: "child_provider_1",
-        providerParentThreadId: "provider_mapped_parent",
+        nativeThreadId: "child_provider_1",
+        nativeParentThreadId: "provider_mapped_parent",
       }),
     );
   });
@@ -3671,8 +3671,8 @@ describe("collab child conversation routing", () => {
     const pendingRequest = Array.from(context.pendingApprovals.values())[0];
     expect(pendingRequest).toEqual(
       expect.objectContaining({
-        providerThreadId: "child_provider_unmapped",
-        providerParentThreadId: "provider_parent",
+        nativeThreadId: "child_provider_unmapped",
+        nativeParentThreadId: "provider_parent",
       }),
     );
     await manager.respondToRequest(asThreadId("thread_1"), pendingRequest.requestId, "accept");
@@ -3687,8 +3687,8 @@ describe("collab child conversation routing", () => {
         kind: "request",
         method: "item/commandExecution/requestApproval",
         turnId: "turn_child_unmapped",
-        providerThreadId: "child_provider_unmapped",
-        providerParentThreadId: "provider_parent",
+        nativeThreadId: "child_provider_unmapped",
+        nativeParentThreadId: "provider_parent",
       }),
     );
     expect(emitEvent).toHaveBeenNthCalledWith(
@@ -3697,8 +3697,8 @@ describe("collab child conversation routing", () => {
         kind: "notification",
         method: "item/requestApproval/decision",
         turnId: "turn_child_unmapped",
-        providerThreadId: "child_provider_unmapped",
-        providerParentThreadId: "provider_parent",
+        nativeThreadId: "child_provider_unmapped",
+        nativeParentThreadId: "provider_parent",
       }),
     );
   });
@@ -3804,8 +3804,8 @@ describe("collab child conversation routing", () => {
     const pendingRequest = Array.from(context.pendingUserInputs.values())[0];
     expect(pendingRequest).toEqual(
       expect.objectContaining({
-        providerThreadId: "child_provider_unmapped",
-        providerParentThreadId: "provider_parent",
+        nativeThreadId: "child_provider_unmapped",
+        nativeParentThreadId: "provider_parent",
       }),
     );
     await manager.respondToUserInput(asThreadId("thread_1"), pendingRequest.requestId, {
@@ -3825,8 +3825,8 @@ describe("collab child conversation routing", () => {
       expect.objectContaining({
         kind: "request",
         method: "item/tool/requestUserInput",
-        providerThreadId: "child_provider_unmapped",
-        providerParentThreadId: "provider_parent",
+        nativeThreadId: "child_provider_unmapped",
+        nativeParentThreadId: "provider_parent",
       }),
     );
     expect(emitEvent).toHaveBeenNthCalledWith(
@@ -3834,8 +3834,8 @@ describe("collab child conversation routing", () => {
       expect.objectContaining({
         kind: "notification",
         method: "item/tool/requestUserInput/answered",
-        providerThreadId: "child_provider_unmapped",
-        providerParentThreadId: "provider_parent",
+        nativeThreadId: "child_provider_unmapped",
+        nativeParentThreadId: "provider_parent",
       }),
     );
   });
@@ -3871,8 +3871,8 @@ describe("collab child conversation routing", () => {
         method: "item/requestApproval/decision",
         turnId: "turn_child_unmapped",
         itemId: "file_child_unmapped",
-        providerThreadId: "child_provider_unmapped",
-        providerParentThreadId: "provider_parent",
+        nativeThreadId: "child_provider_unmapped",
+        nativeParentThreadId: "provider_parent",
       }),
     );
   });
@@ -3949,7 +3949,7 @@ describe("collab child conversation routing", () => {
     expect(context.session.activeTurnId).toBe("turn_parent");
   });
 
-  it("keeps handling lifecycle notifications from the active provider thread", () => {
+  it("keeps handling lifecycle notifications from the active engine thread", () => {
     const { manager, context, emitEvent, updateSession } = createCollabNotificationHarness();
 
     (
@@ -3967,7 +3967,7 @@ describe("collab child conversation routing", () => {
     expect(emitEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         method: "turn/started",
-        providerThreadId: "provider_parent",
+        nativeThreadId: "provider_parent",
       }),
     );
     expect(updateSession).toHaveBeenCalledWith(
@@ -3976,7 +3976,7 @@ describe("collab child conversation routing", () => {
     );
   });
 
-  it("suppresses child lifecycle notifications when only the provider parent is known", () => {
+  it("suppresses child lifecycle notifications when only the engine parent is known", () => {
     const { manager, context, emitEvent, updateSession } = createCollabNotificationHarness();
     context.collabReceiverParents.set("child_provider_1", "provider_parent");
 
@@ -4064,7 +4064,7 @@ describe("collab child conversation routing", () => {
     );
   });
 
-  it("does not suppress provider-parent-only child notifications without a mapped parent turn", () => {
+  it("does not suppress engine-parent-only child notifications without a mapped parent turn", () => {
     const { manager, context, emitEvent, updateSession } = createCollabNotificationHarness();
     context.collabReceiverParents.set("child_provider_1", "provider_parent");
 
@@ -4085,8 +4085,8 @@ describe("collab child conversation routing", () => {
       expect.objectContaining({
         method: "turn/plan/updated",
         turnId: "turn_child_1",
-        providerThreadId: "child_provider_1",
-        providerParentThreadId: "provider_parent",
+        nativeThreadId: "child_provider_1",
+        nativeParentThreadId: "provider_parent",
       }),
     );
     expect(updateSession).not.toHaveBeenCalled();
@@ -4140,8 +4140,8 @@ describe("collab child conversation routing", () => {
         turnId: "turn_child_1",
         parentTurnId: "turn_parent",
         itemId: "call_child_1",
-        providerThreadId: "child_provider_1",
-        providerParentThreadId: "provider_parent",
+        nativeThreadId: "child_provider_1",
+        nativeParentThreadId: "provider_parent",
       }),
     );
   });
@@ -4285,7 +4285,7 @@ describe("handleServerNotification error normalization", () => {
           params: {
             threadId: "provider_parent",
             turnId: "turn-error",
-            error: { message: "terminal provider failure" },
+            error: { message: "terminal engine failure" },
             willRetry: false,
           },
         },
@@ -4497,7 +4497,7 @@ describe("CodexAppServerManager process teardown", () => {
     });
     const context = {
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "ready",
         threadId,
         runtimeMode: "full-access",
@@ -4572,7 +4572,7 @@ describe("CodexAppServerManager process teardown", () => {
     });
     const context = {
       session: {
-        provider: "codex",
+        engine: "codex",
         status: "ready",
         threadId,
         runtimeMode: "full-access",
@@ -4627,10 +4627,10 @@ describe.skipIf(!process.env.CODEX_BINARY_PATH)("startSession live Codex resume"
     try {
       const firstSession = await manager.startSession({
         threadId: asThreadId("thread-live"),
-        provider: "codex",
+        engine: "codex",
         cwd: workspaceDir,
         runtimeMode: "full-access",
-        providerOptions: {
+        engineOptions: {
           codex: {
             ...(process.env.CODEX_BINARY_PATH ? { binaryPath: process.env.CODEX_BINARY_PATH } : {}),
             ...(process.env.CODEX_HOME_PATH ? { homePath: process.env.CODEX_HOME_PATH } : {}),
@@ -4661,11 +4661,11 @@ describe.skipIf(!process.env.CODEX_BINARY_PATH)("startSession live Codex resume"
 
       const resumedSession = await manager.startSession({
         threadId: firstSession.threadId,
-        provider: "codex",
+        engine: "codex",
         cwd: workspaceDir,
         runtimeMode: "approval-required",
         resumeCursor: firstSession.resumeCursor,
-        providerOptions: {
+        engineOptions: {
           codex: {
             ...(process.env.CODEX_BINARY_PATH ? { binaryPath: process.env.CODEX_BINARY_PATH } : {}),
             ...(process.env.CODEX_HOME_PATH ? { homePath: process.env.CODEX_HOME_PATH } : {}),

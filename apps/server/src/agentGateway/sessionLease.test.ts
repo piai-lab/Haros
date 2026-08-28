@@ -11,7 +11,7 @@ import {
 } from "./sessionLease.ts";
 
 describe("AgentGatewaySessionLease", () => {
-  it("cancels one exact turn while the provider session lease is live", async () => {
+  it("cancels one exact turn while the engine session lease is live", async () => {
     const cancelSessionTurnRequests = vi.fn(() => Promise.resolve());
     const lease = acquireAgentGatewaySessionLease(
       {
@@ -61,7 +61,7 @@ describe("AgentGatewaySessionLease", () => {
     expect(revokeSessionToken).toHaveBeenCalledWith("gateway-token");
   });
 
-  it("starts provider and gateway interruption concurrently and waits for the gateway barrier", async () => {
+  it("starts engine and gateway interruption concurrently and waits for the gateway barrier", async () => {
     let releaseGateway!: () => void;
     const gatewayBarrier = new Promise<void>((resolve) => {
       releaseGateway = resolve;
@@ -103,7 +103,7 @@ describe("AgentGatewaySessionLease", () => {
     expect(settled).toBe(true);
   });
 
-  it("tombstones the turn and revokes its bearer before the provider interrupt starts", async () => {
+  it("tombstones the turn and revokes its bearer before the engine interrupt starts", async () => {
     let released = false;
     const cancellationObservedReleasedState: boolean[] = [];
     const lease = {
@@ -165,7 +165,7 @@ describe("AgentGatewaySessionLease", () => {
     expect(providerInterrupted).toHaveBeenCalledOnce();
   });
 
-  it("still interrupts the provider but fails closed when bearer revocation fails", async () => {
+  it("still interrupts the engine but fails closed when bearer revocation fails", async () => {
     const providerInterrupted = vi.fn();
     const lease = {
       connection: {
@@ -191,7 +191,7 @@ describe("AgentGatewaySessionLease", () => {
     expect(providerInterrupted).toHaveBeenCalledOnce();
   });
 
-  it("preserves a provider interruption failure after the gateway barrier settles", async () => {
+  it("preserves a engine interruption failure after the gateway barrier settles", async () => {
     let releaseGateway!: () => void;
     const gatewayBarrier = new Promise<void>((resolve) => {
       releaseGateway = resolve;
@@ -211,7 +211,7 @@ describe("AgentGatewaySessionLease", () => {
       withAgentGatewayTurnCancellation(
         lease,
         "turn-exact",
-        Effect.fail(new Error("provider stop failed")),
+        Effect.fail(new Error("engine stop failed")),
       ),
     ).catch((error: unknown) => {
       settled = true;
@@ -221,7 +221,7 @@ describe("AgentGatewaySessionLease", () => {
     await vi.waitFor(() => expect(lease.cancelTurn).toHaveBeenCalledWith("turn-exact"));
     expect(settled).toBe(false);
     releaseGateway();
-    await expect(interruption).rejects.toThrow("provider stop failed");
+    await expect(interruption).rejects.toThrow("engine stop failed");
   });
 
   it("does nothing when no exact turn is available", async () => {
@@ -320,7 +320,7 @@ describe("AgentGatewaySessionLease", () => {
     expect(revokeSessionToken).toHaveBeenCalledOnce();
   });
 
-  it("releases a live lease when the provider exits spontaneously", async () => {
+  it("releases a live lease when the engine exits spontaneously", async () => {
     const providerExited = Deferred.makeUnsafe<void>();
     const revokeSessionToken = vi.fn();
     const lease = acquireAgentGatewaySessionLease(
@@ -362,7 +362,7 @@ describe("AgentGatewaySessionLease", () => {
     expect(awaitedExit).toBe(false);
   });
 
-  it("releases an untransferred lease when provider startup is interrupted", async () => {
+  it("releases an untransferred lease when engine startup is interrupted", async () => {
     const startupBarrier = Deferred.makeUnsafe<void>();
     const startupEntered = Deferred.makeUnsafe<void>();
     const revokeSessionToken = vi.fn();

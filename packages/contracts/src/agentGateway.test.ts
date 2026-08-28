@@ -16,7 +16,7 @@ const decodeWait = Schema.decodeUnknownSync(OmniMindWaitForThreadsInput);
 const thread = {
   prompt: "Explain this repository",
   target: {
-    provider: "codex",
+    engine: "codex",
     model: "gpt-5.6-terra",
     options: { reasoningEffort: "low" },
   },
@@ -52,17 +52,17 @@ describe("agent gateway contracts", () => {
     assert.equal(decoded.threads[0]?.baseRef, "0123456789abcdef");
   });
 
-  it("decodes provider-specific model options without folding them into the slug", () => {
+  it("decodes engine-specific model options without folding them into the slug", () => {
     const decoded = decodeCreate({ requestId: "terra-low", threads: [thread] });
     assert.deepEqual(decoded.threads[0]?.target, thread.target);
     assert.throws(() =>
       decodeCreate({
-        requestId: "cross-provider-options",
+        requestId: "cross-engine-options",
         threads: [
           {
             prompt: "invalid",
             target: {
-              provider: "claude",
+              engine: "claude",
               model: "claude-sonnet-5",
               options: { reasoningEffort: "low" },
             },
@@ -83,16 +83,16 @@ describe("agent gateway contracts", () => {
       Schema.decodeUnknownSync(OmniMindCapabilitiesResult)({
         targetConstruction: {
           codex: {
-            modelValueSource: "providers[].models[].slug",
+            modelValueSource: "engines[].models[].slug",
             primaryOptionKey: "reasoningEffort",
             alternativeOptionKeys: [],
             optionSelectionRule: "Use the model-specific rules when present.",
-            providerOptions: [
+            engineOptions: [
               {
                 key: "reasoningEffort",
                 valueType: "string",
                 allowedValues: ["low", "medium", "high"],
-                allowedValuesSource: "provider-contract",
+                allowedValuesSource: "engine-contract",
               },
             ],
             optionsByModel: {
@@ -106,15 +106,15 @@ describe("agent gateway contracts", () => {
               ],
             },
             exampleTarget: {
-              provider: "codex",
+              engine: "codex",
               model: "gpt-5.5",
               options: { reasoningEffort: "low" },
             },
           },
         },
-        providers: [
+        engines: [
           {
-            provider: "codex",
+            engine: "codex",
             defaultModel: "gpt-5.5",
             models: [{ slug: "gpt-5.5", name: "GPT-5.5" }],
             enabled: true,
@@ -143,7 +143,7 @@ describe("agent gateway contracts", () => {
             projectId: "project-1",
             title: "Worker",
             target: thread.target,
-            provider: "codex",
+            engine: "codex",
             model: "gpt-5.6-terra",
             runtimeMode: "approval-required",
             environment: "local",

@@ -1,6 +1,6 @@
 import type { OrchestrationEvent } from "@harnessos/contracts";
 
-export type ProviderIntentEvent = Extract<
+export type EngineIntentEvent = Extract<
   OrchestrationEvent,
   {
     type:
@@ -25,7 +25,7 @@ export type ProviderIntentEvent = Extract<
   }
 >;
 
-const PROVIDER_INTENT_EVENT_TYPES = new Set<ProviderIntentEvent["type"]>([
+const ENGINE_INTENT_EVENT_TYPES = new Set<EngineIntentEvent["type"]>([
   "thread.created",
   "thread.deleted",
   "thread.archived",
@@ -48,27 +48,27 @@ const PROVIDER_INTENT_EVENT_TYPES = new Set<ProviderIntentEvent["type"]>([
 
 export const isProviderIntentEventType = (
   eventType: string,
-): eventType is ProviderIntentEvent["type"] =>
-  PROVIDER_INTENT_EVENT_TYPES.has(eventType as ProviderIntentEvent["type"]);
+): eventType is EngineIntentEvent["type"] =>
+  ENGINE_INTENT_EVENT_TYPES.has(eventType as EngineIntentEvent["type"]);
 
-export const isProviderIntentEvent = (event: OrchestrationEvent): event is ProviderIntentEvent =>
+export const isProviderIntentEvent = (event: OrchestrationEvent): event is EngineIntentEvent =>
   isProviderIntentEventType(event.type);
 
-export const isReplaySafeClaimedProviderIntent = (event: ProviderIntentEvent): boolean =>
+export const isReplaySafeClaimedProviderIntent = (event: EngineIntentEvent): boolean =>
   event.type === "thread.created" ||
   event.type === "thread.archived" ||
   // The claimed handler only performs the idempotent durable enqueue. Queue
-  // draining runs after the delivery settles, so replay never repeats provider
+  // draining runs after the delivery settles, so replay never repeats engine
   // dispatch as part of this claim.
   event.type === "thread.turn-queued";
 
-export const isProviderSideEffectIntent = (event: ProviderIntentEvent): boolean =>
+export const isProviderSideEffectIntent = (event: EngineIntentEvent): boolean =>
   event.type !== "thread.created" &&
   event.type !== "thread.deleted" &&
   event.type !== "thread.session-set" &&
   event.type !== "thread.turn-queued";
 
-export const isClaimedProviderIntent = (event: ProviderIntentEvent): boolean =>
+export const isClaimedProviderIntent = (event: EngineIntentEvent): boolean =>
   isReplaySafeClaimedProviderIntent(event) || isProviderSideEffectIntent(event);
 
 /**
@@ -76,5 +76,5 @@ export const isClaimedProviderIntent = (event: ProviderIntentEvent): boolean =>
  * delivery. Skipping an interrupt is never safe: the turn it would settle keeps
  * running (or keeps showing as running) with no other way out for the user.
  */
-export const isQuarantineExemptProviderIntent = (event: ProviderIntentEvent): boolean =>
+export const isQuarantineExemptProviderIntent = (event: EngineIntentEvent): boolean =>
   event.type === "thread.turn-interrupt-requested";

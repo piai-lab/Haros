@@ -15,10 +15,10 @@ import type {
   AutomationSchedule,
   AutomationUpdateInput,
   AutomationWorktreeMode,
-  ModelSelection,
+  EngineSelection,
   ModelPresentationIdentity,
   ProjectId,
-  ProviderStartOptions,
+  EngineStartOptions,
   RuntimeMode,
   ThreadId,
 } from "@harnessos/contracts";
@@ -45,8 +45,8 @@ import {
 } from "./automationDraft";
 import { resolveModelPresentationIdentity } from "../providerModelOptions";
 
-export const defaultModelSelection: ModelSelection = {
-  provider: "codex",
+export const defaultEngineSelection: EngineSelection = {
+  engine: "codex",
   model: "gpt-5-codex",
 };
 
@@ -95,7 +95,7 @@ export type AutomationFormState = {
   readonly timezone: string;
   readonly runtimeMode: RuntimeMode;
   readonly worktreeMode: AutomationWorktreeMode;
-  readonly modelSelection: ModelSelection;
+  readonly engineSelection: EngineSelection;
   readonly modelPresentationIdentity?: ModelPresentationIdentity;
   readonly mode: AutomationMode;
   readonly notificationPolicy: AutomationNotificationPolicy;
@@ -105,9 +105,9 @@ export type AutomationFormState = {
   readonly stopWhen: string;
 };
 
-export type AutomationProjectModelSelectionSource = {
+export type AutomationProjectEngineSelectionSource = {
   readonly id: string;
-  readonly defaultModelSelection?: ModelSelection | null;
+  readonly defaultEngineSelection?: EngineSelection | null;
 };
 
 function localTimezone(): string {
@@ -425,7 +425,7 @@ function intervalFormPartsFromSeconds(everySeconds: number): {
 export function formFromDefinition(
   definition: AutomationDefinition | null,
   fallbackProjectId: string,
-  fallbackModelSelection: ModelSelection = defaultModelSelection,
+  fallbackEngineSelection: EngineSelection = defaultEngineSelection,
 ): AutomationFormState {
   // New automations default to a daily schedule; existing definitions keep their saved cadence.
   const schedule = definition?.schedule ?? { type: "daily" as const, timeOfDay: "09:00" };
@@ -460,7 +460,7 @@ export function formFromDefinition(
     timezone,
     runtimeMode: definition?.runtimeMode ?? "approval-required",
     worktreeMode: definition?.worktreeMode ?? "auto",
-    modelSelection: definition?.modelSelection ?? fallbackModelSelection,
+    engineSelection: definition?.engineSelection ?? fallbackEngineSelection,
     ...(definition?.modelPresentationIdentity
       ? { modelPresentationIdentity: definition.modelPresentationIdentity }
       : {}),
@@ -556,78 +556,78 @@ export function automationFastIntervalLimitMessage(form: AutomationFormState): s
   return null;
 }
 
-export function projectModelSelection(
-  projects: readonly AutomationProjectModelSelectionSource[],
+export function projectEngineSelection(
+  projects: readonly AutomationProjectEngineSelectionSource[],
   projectId: string,
-): ModelSelection {
+): EngineSelection {
   return (
-    projects.find((project) => project.id === projectId)?.defaultModelSelection ??
-    defaultModelSelection
+    projects.find((project) => project.id === projectId)?.defaultEngineSelection ??
+    defaultEngineSelection
   );
 }
 
-function modelSelectionsMatch(left: ModelSelection, right: ModelSelection): boolean {
+function engineSelectionsMatch(left: EngineSelection, right: EngineSelection): boolean {
   const leftOptions = "options" in left ? left.options : undefined;
   const rightOptions = "options" in right ? right.options : undefined;
   return (
-    left.provider === right.provider &&
+    left.engine === right.engine &&
     left.model === right.model &&
     JSON.stringify(leftOptions ?? null) === JSON.stringify(rightOptions ?? null)
   );
 }
 
-function modelIdentityMatches(left: ModelSelection, right: ModelSelection): boolean {
-  return left.provider === right.provider && left.model === right.model;
+function modelIdentityMatches(left: EngineSelection, right: EngineSelection): boolean {
+  return left.engine === right.engine && left.model === right.model;
 }
 
-// Automation edits keep saved provider start options unless the provider/model identity changes.
-export function providerOptionsForAutomationModelSelection(
-  definition: Pick<AutomationDefinition, "modelSelection" | "providerOptions">,
-  nextModelSelection: ModelSelection,
-  currentProviderOptions?: ProviderStartOptions,
-): ProviderStartOptions | undefined {
-  return modelIdentityMatches(definition.modelSelection, nextModelSelection)
-    ? definition.providerOptions
+// Automation edits keep saved engine start options unless the engine/model identity changes.
+export function engineOptionsForAutomationEngineSelection(
+  definition: Pick<AutomationDefinition, "engineSelection" | "engineOptions">,
+  nextEngineSelection: EngineSelection,
+  currentProviderOptions?: EngineStartOptions,
+): EngineStartOptions | undefined {
+  return modelIdentityMatches(definition.engineSelection, nextEngineSelection)
+    ? definition.engineOptions
     : (currentProviderOptions ?? {});
 }
 
-export function providerOptionsForAutomationEdit(
-  definition: Pick<AutomationDefinition, "modelSelection" | "providerOptions">,
-  form: Pick<AutomationFormState, "modelSelection">,
-  currentProviderOptions?: ProviderStartOptions,
-): ProviderStartOptions | undefined {
-  return providerOptionsForAutomationModelSelection(
+export function engineOptionsForAutomationEdit(
+  definition: Pick<AutomationDefinition, "engineSelection" | "engineOptions">,
+  form: Pick<AutomationFormState, "engineSelection">,
+  currentProviderOptions?: EngineStartOptions,
+): EngineStartOptions | undefined {
+  return engineOptionsForAutomationEngineSelection(
     definition,
-    form.modelSelection,
+    form.engineSelection,
     currentProviderOptions,
   );
 }
 
-export function modelSelectionForProjectChange(
-  projects: readonly AutomationProjectModelSelectionSource[],
+export function engineSelectionForProjectChange(
+  projects: readonly AutomationProjectEngineSelectionSource[],
   currentProjectId: string,
   nextProjectId: string,
-  currentModelSelection: ModelSelection,
-): ModelSelection {
-  const currentDefaultModelSelection = projectModelSelection(projects, currentProjectId);
-  const nextDefaultModelSelection = projectModelSelection(projects, nextProjectId);
-  return modelSelectionsMatch(currentModelSelection, currentDefaultModelSelection)
-    ? nextDefaultModelSelection
-    : currentModelSelection;
+  currentEngineSelection: EngineSelection,
+): EngineSelection {
+  const currentDefaultEngineSelection = projectEngineSelection(projects, currentProjectId);
+  const nextDefaultEngineSelection = projectEngineSelection(projects, nextProjectId);
+  return engineSelectionsMatch(currentEngineSelection, currentDefaultEngineSelection)
+    ? nextDefaultEngineSelection
+    : currentEngineSelection;
 }
 
 export function createInputFromForm(
   form: AutomationFormState,
-  providerOptions?: ProviderStartOptions,
+  engineOptions?: EngineStartOptions,
   acknowledgedRisks?: AutomationCreateInput["acknowledgedRisks"],
   sourceThreadId?: ThreadId | null,
 ): AutomationCreateInput {
   const maxIterations = maxIterationsFromForm(form);
   const stopWhen = form.stopWhen.trim();
   const modelPresentationIdentity =
-    form.modelPresentationIdentity?.model === form.modelSelection.model
+    form.modelPresentationIdentity?.model === form.engineSelection.model
       ? form.modelPresentationIdentity
-      : resolveModelPresentationIdentity({ selection: form.modelSelection });
+      : resolveModelPresentationIdentity({ selection: form.engineSelection });
   return {
     name: form.name.trim(),
     projectId: form.projectId as ProjectId,
@@ -635,12 +635,12 @@ export function createInputFromForm(
     prompt: form.prompt.trim(),
     schedule: scheduleFromForm(form),
     enabled: form.enabled,
-    modelSelection: form.modelSelection,
+    engineSelection: form.engineSelection,
     modelPresentationIdentity,
     runtimeMode: form.runtimeMode,
     interactionMode: "default",
     worktreeMode: form.worktreeMode,
-    ...(providerOptions ? { providerOptions } : {}),
+    ...(engineOptions ? { engineOptions } : {}),
     mode: form.mode,
     notificationPolicy: form.notificationPolicy,
     // Only heartbeat carries a thread the user picked; a dedicated automation is given
@@ -660,14 +660,14 @@ export function createInputFromForm(
 export function updateInputFromForm(
   definition: AutomationDefinition,
   form: AutomationFormState,
-  providerOptions?: ProviderStartOptions,
+  engineOptions?: EngineStartOptions,
   acknowledgedRisks?: AutomationCreateInput["acknowledgedRisks"],
   expectedDefinitionRevision = definition.definitionRevision,
 ): AutomationUpdateInput {
   return {
     id: definition.id,
     expectedDefinitionRevision,
-    ...createInputFromForm(form, providerOptions, acknowledgedRisks),
+    ...createInputFromForm(form, engineOptions, acknowledgedRisks),
   };
 }
 

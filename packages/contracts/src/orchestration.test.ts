@@ -7,9 +7,9 @@ import {
   CanonicalUserInputResponse,
   CanonicalUserInputSettlement,
   ClientOrchestrationCommand,
-  DEFAULT_PROVIDER_INTERACTION_MODE,
+  DEFAULT_ENGINE_INTERACTION_MODE,
   DEFAULT_RUNTIME_MODE,
-  ModelSelection,
+  EngineSelection,
   OrchestrationCommand,
   OrchestrationEvent,
   OrchestrationGetFullThreadDiffInput,
@@ -21,9 +21,9 @@ import {
   OrchestrationProposedPlan,
   OrchestrationSession,
   OrchestrationThreadPullRequest,
-  PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
-  PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
-  ProviderStartOptions,
+  ENGINE_SEND_TURN_MAX_ATTACHMENTS,
+  ENGINE_SEND_TURN_MAX_INPUT_CHARS,
+  EngineStartOptions,
   ProjectCreateCommand,
   THREAD_NOTES_MAX_CHARS,
   THREAD_GOAL_MAX_CHARS,
@@ -62,8 +62,8 @@ const decodeOrchestrationProposedPlan = Schema.decodeUnknownEffect(Orchestration
 const decodeOrchestrationSession = Schema.decodeUnknownEffect(OrchestrationSession);
 const decodeThreadCreatedPayload = Schema.decodeUnknownEffect(ThreadCreatedPayload);
 const decodeThreadMetaUpdatedPayload = Schema.decodeUnknownEffect(ThreadMetaUpdatedPayload);
-const decodeModelSelection = Schema.decodeUnknownEffect(ModelSelection);
-const decodeProviderStartOptions = Schema.decodeUnknownEffect(ProviderStartOptions);
+const decodeEngineSelection = Schema.decodeUnknownEffect(EngineSelection);
+const decodeEngineStartOptions = Schema.decodeUnknownEffect(EngineStartOptions);
 const decodeClientOrchestrationCommand = Schema.decodeUnknownEffect(ClientOrchestrationCommand);
 const decodeOrchestrationCommand = Schema.decodeUnknownEffect(OrchestrationCommand);
 const decodeOrchestrationEvent = Schema.decodeUnknownEffect(OrchestrationEvent);
@@ -141,8 +141,8 @@ it.effect("preserves thread activity payloads through the RPC JSON codec", () =>
           codexThreadId: null,
           projectId: "project-1",
           title: "Thread 1",
-          modelSelection: {
-            provider: "codex",
+          engineSelection: {
+            engine: "codex",
             model: "gpt-5.5",
           },
           interactionMode: "default",
@@ -212,13 +212,13 @@ it.effect("preserves thread activity payloads through the RPC JSON codec", () =>
 
 it.effect("preserves Pi model selections when decoding model selections", () =>
   Effect.gen(function* () {
-    const parsed = yield* decodeModelSelection({
-      provider: "pi",
+    const parsed = yield* decodeEngineSelection({
+      engine: "pi",
       model: "openai/gpt-5.5",
     });
 
     assert.deepStrictEqual(parsed, {
-      provider: "pi",
+      engine: "pi",
       model: "openai/gpt-5.5",
     });
   }),
@@ -226,14 +226,14 @@ it.effect("preserves Pi model selections when decoding model selections", () =>
 
 it.effect("preserves Antigravity effort options separately from the model", () =>
   Effect.gen(function* () {
-    const parsed = yield* decodeModelSelection({
-      provider: "antigravity",
+    const parsed = yield* decodeEngineSelection({
+      engine: "antigravity",
       model: "Gemini 3.5 Flash",
       options: { reasoningEffort: "high" },
     });
 
     assert.deepStrictEqual(parsed, {
-      provider: "antigravity",
+      engine: "antigravity",
       model: "Gemini 3.5 Flash",
       options: { reasoningEffort: "high" },
     });
@@ -242,24 +242,24 @@ it.effect("preserves Antigravity effort options separately from the model", () =
 
 it.effect("preserves Pi model selections through the JSON codec", () =>
   Effect.gen(function* () {
-    const codec = Schema.fromJsonString(ModelSelection);
+    const codec = Schema.fromJsonString(EngineSelection);
     const parsed = yield* Schema.decodeUnknownEffect(codec)(
       JSON.stringify({
-        provider: "pi",
+        engine: "pi",
         model: "openai/gpt-5.5",
       }),
     );
 
     assert.deepStrictEqual(parsed, {
-      provider: "pi",
+      engine: "pi",
       model: "openai/gpt-5.5",
     });
   }),
 );
 
-it.effect("drops legacy provider passwords from decoded provider options", () =>
+it.effect("drops legacy engine passwords from decoded engine options", () =>
   Effect.gen(function* () {
-    const parsed = yield* decodeProviderStartOptions({
+    const parsed = yield* decodeEngineStartOptions({
       kilo: {
         binaryPath: "/custom/bin/kilo",
         serverUrl: "http://127.0.0.1:4095",
@@ -366,8 +366,8 @@ it.effect("trims branded ids and command string fields at decode boundaries", ()
       projectId: " project-1 ",
       title: " Project Title ",
       workspaceRoot: " /tmp/workspace ",
-      defaultModelSelection: {
-        provider: "codex",
+      defaultEngineSelection: {
+        engine: "codex",
         model: " gpt-5.2 ",
       },
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -376,8 +376,8 @@ it.effect("trims branded ids and command string fields at decode boundaries", ()
     assert.strictEqual(parsed.projectId, "project-1");
     assert.strictEqual(parsed.title, "Project Title");
     assert.strictEqual(parsed.workspaceRoot, "/tmp/workspace");
-    assert.deepStrictEqual(parsed.defaultModelSelection, {
-      provider: "codex",
+    assert.deepStrictEqual(parsed.defaultEngineSelection, {
+      engine: "codex",
       model: "gpt-5.2",
     });
   }),
@@ -417,37 +417,37 @@ it.effect("removes Project-to-Group assignment from the command boundary", () =>
   }),
 );
 
-it.effect("decodes historical project.created payloads with a default provider", () =>
+it.effect("decodes historical project.created payloads with a default engine", () =>
   Effect.gen(function* () {
     const parsed = yield* decodeProjectCreatedPayload({
       projectId: "project-1",
       title: "Project Title",
       workspaceRoot: "/tmp/workspace",
-      defaultModelSelection: {
-        provider: "codex",
+      defaultEngineSelection: {
+        engine: "codex",
         model: "gpt-5.4",
       },
       scripts: [],
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",
     });
-    assert.strictEqual(parsed.defaultModelSelection?.provider, "codex");
+    assert.strictEqual(parsed.defaultEngineSelection?.engine, "codex");
     assert.strictEqual(parsed.isPinned, false);
   }),
 );
 
-it.effect("decodes project.meta-updated payloads with explicit default provider", () =>
+it.effect("decodes project.meta-updated payloads with explicit default engine", () =>
   Effect.gen(function* () {
     const parsed = yield* decodeProjectMetaUpdatedPayload({
       projectId: "project-1",
-      defaultModelSelection: {
-        provider: "claude",
+      defaultEngineSelection: {
+        engine: "claude",
         model: "claude-opus-4-6",
       },
       isPinned: true,
       updatedAt: "2026-01-01T00:00:00.000Z",
     });
-    assert.strictEqual(parsed.defaultModelSelection?.provider, "claude");
+    assert.strictEqual(parsed.defaultEngineSelection?.engine, "claude");
     assert.strictEqual(parsed.isPinned, true);
   }),
 );
@@ -468,7 +468,7 @@ it.effect("rejects command fields that become empty after trim", () =>
   }),
 );
 
-it.effect("decodes thread.turn.start defaults for provider, runtime mode, and dispatch mode", () =>
+it.effect("decodes thread.turn.start defaults for engine, runtime mode, and dispatch mode", () =>
   Effect.gen(function* () {
     const parsed = yield* decodeThreadTurnStartCommand({
       type: "thread.turn.start",
@@ -482,9 +482,9 @@ it.effect("decodes thread.turn.start defaults for provider, runtime mode, and di
       },
       createdAt: "2026-01-01T00:00:00.000Z",
     });
-    assert.strictEqual(parsed.modelSelection, undefined);
+    assert.strictEqual(parsed.engineSelection, undefined);
     assert.strictEqual(parsed.runtimeMode, DEFAULT_RUNTIME_MODE);
-    assert.strictEqual(parsed.interactionMode, DEFAULT_PROVIDER_INTERACTION_MODE);
+    assert.strictEqual(parsed.interactionMode, DEFAULT_ENGINE_INTERACTION_MODE);
     assert.strictEqual(parsed.dispatchMode, "queue");
   }),
 );
@@ -505,7 +505,7 @@ it.effect("keeps atomic Session binding commits internal", () =>
         updatedAt: "2026-01-01T00:00:00.000Z",
       },
       binding: {
-        modelSelection: { provider: "claude", model: "claude-opus-4-6" },
+        engineSelection: { engine: "claude", model: "claude-opus-4-6" },
         runtimeMode: "approval-required",
         interactionMode: "plan",
       },
@@ -514,7 +514,7 @@ it.effect("keeps atomic Session binding commits internal", () =>
     const command = yield* decodeOrchestrationCommand(input);
     assert.strictEqual(command.type, "thread.session.set");
     if (command.type !== "thread.session.set") return;
-    assert.strictEqual(command.binding?.modelSelection.provider, "claude");
+    assert.strictEqual(command.binding?.engineSelection.engine, "claude");
     assert.strictEqual(command.binding?.runtimeMode, "approval-required");
     assert.strictEqual(command.binding?.interactionMode, "plan");
     assert.strictEqual(
@@ -575,12 +575,12 @@ it.effect("bounds initial turn text while preserving attachment-only turns", () 
     });
 
     const exact = yield* decodeThreadTurnStartCommand(
-      command("x".repeat(PROVIDER_SEND_TURN_MAX_INPUT_CHARS)),
+      command("x".repeat(ENGINE_SEND_TURN_MAX_INPUT_CHARS)),
     );
-    assert.strictEqual(exact.message.text.length, PROVIDER_SEND_TURN_MAX_INPUT_CHARS);
+    assert.strictEqual(exact.message.text.length, ENGINE_SEND_TURN_MAX_INPUT_CHARS);
 
     const overLimit = yield* Effect.exit(
-      decodeThreadTurnStartCommand(command("x".repeat(PROVIDER_SEND_TURN_MAX_INPUT_CHARS + 1))),
+      decodeThreadTurnStartCommand(command("x".repeat(ENGINE_SEND_TURN_MAX_INPUT_CHARS + 1))),
     );
     assert.strictEqual(overLimit._tag, "Failure");
 
@@ -602,7 +602,7 @@ it.effect("bounds initial turn text while preserving attachment-only turns", () 
   }),
 );
 
-it.effect("preserves explicit provider and runtime mode in thread.turn.start", () =>
+it.effect("preserves explicit engine and runtime mode in thread.turn.start", () =>
   Effect.gen(function* () {
     const parsed = yield* decodeThreadTurnStartCommand({
       type: "thread.turn.start",
@@ -614,16 +614,16 @@ it.effect("preserves explicit provider and runtime mode in thread.turn.start", (
         text: "hello",
         attachments: [],
       },
-      modelSelection: {
-        provider: "codex",
+      engineSelection: {
+        engine: "codex",
         model: "gpt-5.4",
       },
       runtimeMode: "full-access",
       createdAt: "2026-01-01T00:00:00.000Z",
     });
-    assert.strictEqual(parsed.modelSelection?.provider, "codex");
+    assert.strictEqual(parsed.engineSelection?.engine, "codex");
     assert.strictEqual(parsed.runtimeMode, "full-access");
-    assert.strictEqual(parsed.interactionMode, DEFAULT_PROVIDER_INTERACTION_MODE);
+    assert.strictEqual(parsed.interactionMode, DEFAULT_ENGINE_INTERACTION_MODE);
   }),
 );
 
@@ -633,8 +633,8 @@ it.effect("decodes thread.created runtime mode for historical events", () =>
       threadId: "thread-1",
       projectId: "project-1",
       title: "Thread title",
-      modelSelection: {
-        provider: "codex",
+      engineSelection: {
+        engine: "codex",
         model: "gpt-5.4",
       },
       interactionMode: "default",
@@ -645,7 +645,7 @@ it.effect("decodes thread.created runtime mode for historical events", () =>
     });
 
     assert.strictEqual(parsed.runtimeMode, DEFAULT_RUNTIME_MODE);
-    assert.strictEqual(parsed.modelSelection.provider, "codex");
+    assert.strictEqual(parsed.engineSelection.engine, "codex");
     assert.strictEqual(parsed.forkScope, null);
   }),
 );
@@ -659,7 +659,7 @@ it.effect("decodes the exact durable scope for a history-only fork", () =>
       sourceThreadId: "thread-source",
       projectId: "project-1",
       title: "Forked thread",
-      modelSelection: { provider: "codex", model: "gpt-5.4" },
+      engineSelection: { engine: "codex", model: "gpt-5.4" },
       runtimeMode: "full-access",
       interactionMode: "default",
       envMode: "local",
@@ -759,21 +759,21 @@ it.effect("decodes thread archived and unarchived events", () =>
   }),
 );
 
-it.effect("decodes thread.meta-updated payloads with explicit provider", () =>
+it.effect("decodes thread.meta-updated payloads with explicit engine", () =>
   Effect.gen(function* () {
     const parsed = yield* decodeThreadMetaUpdatedPayload({
       threadId: "thread-1",
-      modelSelection: {
-        provider: "claude",
+      engineSelection: {
+        engine: "claude",
         model: "claude-opus-4-6",
         supportsAutoMode: false,
       },
       updatedAt: "2026-01-01T00:00:00.000Z",
     });
-    assert.strictEqual(parsed.modelSelection?.provider, "claude");
+    assert.strictEqual(parsed.engineSelection?.engine, "claude");
     assert.strictEqual(
-      parsed.modelSelection?.provider === "claude"
-        ? parsed.modelSelection.supportsAutoMode
+      parsed.engineSelection?.engine === "claude"
+        ? parsed.engineSelection.supportsAutoMode
         : undefined,
       false,
     );
@@ -972,7 +972,7 @@ it.effect("rejects oversized thread goal payloads", () =>
   }),
 );
 
-it.effect("accepts provider-scoped model options in thread.turn.start", () =>
+it.effect("accepts engine-scoped model options in thread.turn.start", () =>
   Effect.gen(function* () {
     const parsed = yield* decodeThreadTurnStartCommand({
       type: "thread.turn.start",
@@ -984,8 +984,8 @@ it.effect("accepts provider-scoped model options in thread.turn.start", () =>
         text: "hello",
         attachments: [],
       },
-      modelSelection: {
-        provider: "codex",
+      engineSelection: {
+        engine: "codex",
         model: "gpt-5.3-codex",
         options: {
           reasoningEffort: "high",
@@ -994,9 +994,9 @@ it.effect("accepts provider-scoped model options in thread.turn.start", () =>
       },
       createdAt: "2026-01-01T00:00:00.000Z",
     });
-    assert.strictEqual(parsed.modelSelection?.provider, "codex");
-    assert.strictEqual(parsed.modelSelection?.options?.reasoningEffort, "high");
-    assert.strictEqual(parsed.modelSelection?.options?.fastMode, true);
+    assert.strictEqual(parsed.engineSelection?.engine, "codex");
+    assert.strictEqual(parsed.engineSelection?.options?.reasoningEffort, "high");
+    assert.strictEqual(parsed.engineSelection?.options?.fastMode, true);
   }),
 );
 
@@ -1035,7 +1035,7 @@ it.effect("rejects normalized thread.turn.start commands with too many attachmen
         messageId: "msg-too-many-attachments",
         role: "user",
         text: "hello",
-        attachments: Array.from({ length: PROVIDER_SEND_TURN_MAX_ATTACHMENTS + 1 }, (_, index) => ({
+        attachments: Array.from({ length: ENGINE_SEND_TURN_MAX_ATTACHMENTS + 1 }, (_, index) => ({
           type: "image",
           id: `attachment-${index}`,
           name: `image-${index}.png`,
@@ -1064,7 +1064,7 @@ it.effect("rejects client thread.turn.start commands with too many upload attach
         messageId: "msg-client-too-many-attachments",
         role: "user",
         text: "hello",
-        attachments: Array.from({ length: PROVIDER_SEND_TURN_MAX_ATTACHMENTS + 1 }, (_, index) => ({
+        attachments: Array.from({ length: ENGINE_SEND_TURN_MAX_ATTACHMENTS + 1 }, (_, index) => ({
           type: "image",
           id: `thread-1-00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
           name: `image-${index}.png`,
@@ -1086,7 +1086,7 @@ it.effect("rejects client thread.turn.start commands with too many upload attach
 );
 
 it.effect(
-  "decodes thread.turn-start-requested defaults for provider, runtime mode, and interaction mode",
+  "decodes thread.turn-start-requested defaults for engine, runtime mode, and interaction mode",
   () =>
     Effect.gen(function* () {
       const parsed = yield* decodeThreadTurnStartRequestedPayload({
@@ -1094,9 +1094,9 @@ it.effect(
         messageId: "msg-1",
         createdAt: "2026-01-01T00:00:00.000Z",
       });
-      assert.strictEqual(parsed.modelSelection, undefined);
+      assert.strictEqual(parsed.engineSelection, undefined);
       assert.strictEqual(parsed.runtimeMode, DEFAULT_RUNTIME_MODE);
-      assert.strictEqual(parsed.interactionMode, DEFAULT_PROVIDER_INTERACTION_MODE);
+      assert.strictEqual(parsed.interactionMode, DEFAULT_ENGINE_INTERACTION_MODE);
       assert.strictEqual(parsed.dispatchMode, "queue");
       assert.strictEqual(parsed.sourceProposedPlan, undefined);
     }),
@@ -1125,8 +1125,8 @@ it.effect("preserves an asset-free model presentation identity on turn admission
     const parsed = yield* decodeThreadTurnStartRequestedPayload({
       threadId: "thread-model-identity",
       messageId: "message-model-identity",
-      modelSelection: {
-        provider: "opencode",
+      engineSelection: {
+        engine: "opencode",
         model: "deepseek/deepseek-v4-flash",
       },
       modelPresentationIdentity: {
@@ -1176,7 +1176,7 @@ it.effect("decodes orchestration session runtime mode defaults", () =>
       status: "idle",
       providerName: null,
       providerSessionId: null,
-      providerThreadId: null,
+      nativeThreadId: null,
       activeTurnId: null,
       lastError: null,
       updatedAt: "2026-01-01T00:00:00.000Z",

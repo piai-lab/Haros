@@ -3,7 +3,7 @@ import type * as Acp from "@agentclientprotocol/sdk";
 import { describe, expect, it } from "vitest";
 
 import {
-  applyCursorAcpModelSelection,
+  applyCursorAcpEngineSelection,
   buildCursorCliModelListCommand,
   buildCursorAcpModelDescriptors,
   buildCursorAcpModelDescriptorsFromAvailableModels,
@@ -287,7 +287,7 @@ describe("flattenCursorAcpModelChoices", () => {
 });
 
 describe("parseCursorCliModelList", () => {
-  it("parses Cursor CLI model output with provider grouping metadata", () => {
+  it("parses Cursor CLI model output with engine grouping metadata", () => {
     expect(
       parseCursorCliModelList(`Available models
 
@@ -432,7 +432,7 @@ describe("buildCursorAcpModelDescriptors", () => {
   });
 });
 
-describe("applyCursorAcpModelSelection", () => {
+describe("applyCursorAcpEngineSelection", () => {
   it("selects Cursor auto explicitly when the ACP model picker exposes it", async () => {
     const calls: Array<
       | { readonly type: "model"; readonly value: string }
@@ -464,7 +464,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "auto",
         options: undefined,
@@ -506,7 +506,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "auto",
         options: undefined,
@@ -548,7 +548,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "composer-2",
         options: undefined,
@@ -590,7 +590,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "grok-4-20[thinking=false]",
         options: undefined,
@@ -620,7 +620,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "gpt-5.4-medium-fast[reasoning=medium,context=272k]",
         options: {
@@ -685,7 +685,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "gpt-5.4",
         options: {
@@ -724,7 +724,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "claude-opus-4-6[thinking=true,context=1m,effort=extra-high,fast=true]",
         options: undefined,
@@ -820,7 +820,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "claude-4.6-opus-max-thinking-fast",
         options: undefined,
@@ -828,7 +828,7 @@ describe("applyCursorAcpModelSelection", () => {
       }),
     );
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "gpt-5.3-codex-spark-preview-low",
         options: undefined,
@@ -884,7 +884,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "cursor-grok-4.5",
         options: { reasoningEffort: "high", fastMode: false },
@@ -934,7 +934,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "grok-4.6",
         options: { reasoningEffort: "high", fastMode: false },
@@ -983,7 +983,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "grok-4.6[effort=high,fast=true]",
         options: { fastMode: false },
@@ -1043,7 +1043,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "grok-4.6",
         options: undefined,
@@ -1093,7 +1093,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "grok-4.6",
         options: { fastMode: true },
@@ -1160,7 +1160,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "grok-4.6",
         options: { reasoningEffort: "high", fastMode: true },
@@ -1223,7 +1223,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "grok-4.6",
         options: { reasoningEffort: "high", fastMode: true },
@@ -1271,7 +1271,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "gpt-5.5-medium",
         options: undefined,
@@ -1328,7 +1328,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "gpt-5.1-codex-max-medium-fast",
         options: undefined,
@@ -1361,7 +1361,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "claude-opus-4-6",
         options: {
@@ -1422,7 +1422,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "claude-opus-4-7",
         options: {
@@ -1479,7 +1479,7 @@ describe("applyCursorAcpModelSelection", () => {
     };
 
     await Effect.runPromise(
-      applyCursorAcpModelSelection({
+      applyCursorAcpEngineSelection({
         runtime,
         model: "claude-opus-4-7[thinking=true,context=1m,effort=xhigh]",
         options: undefined,

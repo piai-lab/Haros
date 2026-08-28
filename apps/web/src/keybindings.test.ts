@@ -1128,7 +1128,7 @@ describe("chat/editor shortcuts", () => {
     );
   });
 
-  it("resolves provider-specific new chat shortcuts", () => {
+  it("resolves engine-specific new chat shortcuts", () => {
     assert.strictEqual(
       resolveShortcutCommand(event({ key: "c", metaKey: true, altKey: true }), DEFAULT_BINDINGS, {
         platform: "MacIntel",
@@ -1629,7 +1629,7 @@ describe("resolveShortcutCommand", () => {
     );
   });
 
-  it("falls back to provider-specific new chat defaults when runtime config is missing them", () => {
+  it("falls back to engine-specific new chat defaults when runtime config is missing them", () => {
     const legacyBindings = DEFAULT_BINDINGS.filter(
       (binding) =>
         binding.command !== "chat.newClaude" &&

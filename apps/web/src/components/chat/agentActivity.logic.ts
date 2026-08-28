@@ -40,7 +40,7 @@ export function isReasoningUpdateWorkEntry(
 }
 
 export function isCodexActivityStatusWorkEntry(entry: WorkLogEntry): boolean {
-  // A structured command fact is a real execution even when the provider did
+  // A structured command fact is a real execution even when the engine did
   // not include the raw shell string; it must keep the Terminal icon. Only a
   // generic lifecycle label without command semantics remains iconless.
   const isStatusOnlyCommand =
@@ -56,11 +56,11 @@ export function isAgentActivityWorkEntry(entry: WorkLogEntry): boolean {
   return entry.itemType === "collab_agent_tool_call";
 }
 
-// Unmapped provider events keep their native type as the title and a safe detail as preview.
+// Unmapped engine events keep their native type as the title and a safe detail as preview.
 export function isUnmappedProviderEventWorkEntry(
   entry: Pick<WorkLogEntry, "activityKind">,
 ): boolean {
-  return entry.activityKind === "provider.event.unmapped";
+  return entry.activityKind === "engine.event.unmapped";
 }
 
 export function formatAgentActivityEntryTitle(entry: WorkLogEntry): string {
@@ -96,7 +96,7 @@ export function formatAgentActivityEntryPreview(entry: WorkLogEntry): string | n
   return normalizeOptionalText(entry.preview) ?? normalizeOptionalText(entry.detail);
 }
 
-// Returns only provider/engine-authored reasoning already present in the public
+// Returns only engine/engine-authored reasoning already present in the public
 // activity payload. Canonical reasoning stays verbatim; the legacy branch only
 // removes old transport prefixes that were never part of the authored text.
 export function formatAgentActivityReasoningText(entry: WorkLogEntry): string | null {

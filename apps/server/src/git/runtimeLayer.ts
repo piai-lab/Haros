@@ -10,31 +10,31 @@ import {
   makeKiloTextGenerationServiceLive,
   makeOpenCodeTextGenerationServiceLive,
 } from "./Layers/OpenCodeTextGeneration";
-import { ProviderTextGenerationLive } from "./Layers/ProviderTextGeneration";
+import { EngineTextGenerationLive } from "./Layers/EngineTextGeneration";
 import { OpenCodeRuntimeLive } from "../provider/opencodeRuntime";
 import {
-  makeProviderServerPasswordResolver,
-  ProviderCredentials,
-  ProviderCredentialsLive,
-} from "../providerCredentials";
+  makeEngineServerPasswordResolver,
+  EngineCredentials,
+  EngineCredentialsLive,
+} from "../engineCredentials";
 
-const textGenerationProviderLayers = Effect.gen(function* () {
-  const credentials = yield* ProviderCredentials;
-  const resolveProviderServerPassword = makeProviderServerPasswordResolver(credentials);
+const textGenerationEngineLayers = Effect.gen(function* () {
+  const credentials = yield* EngineCredentials;
+  const resolveEngineServerPassword = makeEngineServerPasswordResolver(credentials);
   return Layer.mergeAll(
-    makeKiloTextGenerationServiceLive(resolveProviderServerPassword).pipe(
+    makeKiloTextGenerationServiceLive(resolveEngineServerPassword).pipe(
       Layer.provide(OpenCodeRuntimeLive),
     ),
-    makeOpenCodeTextGenerationServiceLive(resolveProviderServerPassword).pipe(
+    makeOpenCodeTextGenerationServiceLive(resolveEngineServerPassword).pipe(
       Layer.provide(OpenCodeRuntimeLive),
     ),
   );
-}).pipe(Effect.provide(ProviderCredentialsLive.pipe(Layer.orDie)), Layer.unwrap);
+}).pipe(Effect.provide(EngineCredentialsLive.pipe(Layer.orDie)), Layer.unwrap);
 
-export const TextGenerationLayerLive = ProviderTextGenerationLive.pipe(
+export const TextGenerationLayerLive = EngineTextGenerationLive.pipe(
   Layer.provide(CodexTextGenerationServiceLive),
   Layer.provide(CursorTextGenerationServiceLive),
-  Layer.provide(textGenerationProviderLayers),
+  Layer.provide(textGenerationEngineLayers),
 );
 
 export const GitManagerLayerLive = GitManagerLive.pipe(

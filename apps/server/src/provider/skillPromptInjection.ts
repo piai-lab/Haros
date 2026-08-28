@@ -1,14 +1,14 @@
 // FILE: skillPromptInjection.ts
-// Purpose: Inlines portable skill instructions into the outgoing prompt for providers
+// Purpose: Inlines portable skill instructions into the outgoing prompt for engines
 //          that cannot natively load the referenced skill files. This is the fallback
-//          that makes OmniMind catalog skills usable on every provider.
-// Layer: Server provider helper
+//          that makes OmniMind catalog skills usable on every engine.
+// Layer: Server engine helper
 // Exports: shouldInlineSkillForProvider, buildInlineSkillInstructions
 
 import * as fs from "node:fs/promises";
 import * as nodePath from "node:path";
 
-import type { EngineKind, ProviderSkillReference } from "@harnessos/contracts";
+import type { EngineKind, EngineSkillReference } from "@harnessos/contracts";
 
 // Per-skill cap keeps a single oversized SKILL.md from eating the turn budget.
 const MAX_INLINE_SKILL_CONTENT_CHARS = 24_000;
@@ -45,15 +45,15 @@ function pathSegments(path: string): Set<string> {
   return new Set(nodePath.normalize(path).split(/[\\/]+/));
 }
 
-export function shouldInlineSkillForProvider(provider: EngineKind, skillPath: string): boolean {
+export function shouldInlineSkillForProvider(engine: EngineKind, skillPath: string): boolean {
   const segments = pathSegments(skillPath);
-  switch (provider) {
+  switch (engine) {
     case "antigravity":
       return true;
     case "codex":
       // Codex injects structured skill items only from roots it knows: its own
       // folders plus `~/.harnessos/skills`, which OmniMind registers at session start
-      // via skills/extraRoots/set. Skills resolved from other providers' folders
+      // via skills/extraRoots/set. Skills resolved from other engines' folders
       // must be inlined.
       return [".claude", ".cursor", ".agents"].some((dir) => segments.has(dir));
     case "cursor":
@@ -64,7 +64,7 @@ export function shouldInlineSkillForProvider(provider: EngineKind, skillPath: st
       // Claude Code only loads skills from .claude/skills folders.
       return !segments.has(".claude");
     case "pi":
-      // Pi loads its own skill set; anything resolved from a cross-provider
+      // Pi loads its own skill set; anything resolved from a cross-engine
       // folder is portable and must be inlined.
       return CROSS_PROVIDER_SKILL_DIR_NAMES.some((dir) => segments.has(dir));
     case "oa":
@@ -80,14 +80,14 @@ export function shouldInlineSkillForProvider(provider: EngineKind, skillPath: st
 }
 
 export async function buildInlineSkillInstructions(input: {
-  readonly provider: EngineKind;
-  readonly skills: ReadonlyArray<ProviderSkillReference>;
+  readonly engine: EngineKind;
+  readonly skills: ReadonlyArray<EngineSkillReference>;
   readonly maxChars: number;
 }): Promise<InlineSkillInstructionsResult> {
   const deliveries: SkillInstructionDelivery[] = [];
   let text = "";
   for (const skill of input.skills) {
-    if (!shouldInlineSkillForProvider(input.provider, skill.path)) {
+    if (!shouldInlineSkillForProvider(input.engine, skill.path)) {
       deliveries.push({ name: skill.name, status: "delivered", mode: "reference" });
       continue;
     }

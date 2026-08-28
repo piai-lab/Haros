@@ -41,7 +41,7 @@ describe("resolveAllowedLocalPreviewFile", () => {
     const previousCodexHome = process.env.CODEX_HOME;
     process.env.CODEX_HOME = codexHome;
     try {
-      const imageDir = path.join(codexHome, "generated_images", "provider-thread");
+      const imageDir = path.join(codexHome, "generated_images", "engine-thread");
       const imagePath = path.join(imageDir, "call.png");
       mkdirSync(imageDir, { recursive: true });
       writeFileSync(imagePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));

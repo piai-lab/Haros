@@ -81,7 +81,7 @@ function toThreadShell(thread: Thread | ThreadShell): ThreadShell {
     projectId: thread.projectId,
     groupIds: thread.groupIds ?? [],
     title: thread.title,
-    modelSelection: thread.modelSelection,
+    engineSelection: thread.engineSelection,
     runtimeMode: thread.runtimeMode,
     interactionMode: thread.interactionMode,
     error: thread.error,
@@ -377,7 +377,7 @@ function sidebarThreadSummariesEqual(
     left.projectId === right.projectId &&
     deepEqualJson(left.groupIds ?? [], right.groupIds ?? []) &&
     left.title === right.title &&
-    left.modelSelection === right.modelSelection &&
+    left.engineSelection === right.engineSelection &&
     left.interactionMode === right.interactionMode &&
     left.envMode === right.envMode &&
     left.branch === right.branch &&
@@ -421,7 +421,7 @@ function buildSidebarThreadSummary(
     projectId: thread.projectId,
     groupIds: thread.groupIds ?? [],
     title: thread.title,
-    modelSelection: thread.modelSelection,
+    engineSelection: thread.engineSelection,
     interactionMode: thread.interactionMode,
     envMode: thread.envMode,
     branch: thread.branch,

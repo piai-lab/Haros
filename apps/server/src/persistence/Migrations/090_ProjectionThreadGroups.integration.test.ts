@@ -25,7 +25,7 @@ describe("090_ProjectionThreadGroups", () => {
           thread_id, project_id, title, model_selection_json, created_at, updated_at
         ) VALUES (
           'thread-existing', 'project-existing', 'Existing conversation',
-          '{"provider":"codex","model":"gpt-5"}',
+          '{"engine":"codex","model":"gpt-5"}',
           '2026-08-09T00:00:00.000Z', '2026-08-09T00:00:00.000Z'
         )
       `;

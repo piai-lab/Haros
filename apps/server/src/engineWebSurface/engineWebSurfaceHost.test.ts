@@ -122,7 +122,7 @@ describe("Engine web-surface host", () => {
     const unregister = registerEngineWebSurfaceIntent({
       url: TEST_CURATOR_URL,
       identity: {
-        provider: "pi",
+        engine: "pi",
         threadId: "thread-engine-web-surface" as never,
         toolCallId: "tool-engine-web-surface",
       },
@@ -147,7 +147,7 @@ describe("Engine web-surface host", () => {
     registerEngineWebSurfaceIntent({
       url: TEST_CURATOR_URL,
       identity: {
-        provider: "pi",
+        engine: "pi",
         threadId: "thread-glimpse-compat" as never,
         toolCallId: "tool-glimpse-compat",
       },

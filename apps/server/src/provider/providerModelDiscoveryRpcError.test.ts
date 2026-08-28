@@ -1,20 +1,20 @@
 import {
-  PROVIDER_MODEL_DISCOVERY_ERROR_CODES,
+  ENGINE_MODEL_DISCOVERY_ERROR_CODES,
   type EngineKind,
   type ServerProviderStatus,
 } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
-  ProviderAdapterProcessError,
-  ProviderAdapterRequestError,
-  ProviderAdapterValidationError,
+  EngineAdapterProcessError,
+  EngineAdapterRequestError,
+  EngineAdapterValidationError,
 } from "./Errors";
 import { toProviderModelDiscoveryRpcError } from "./providerModelDiscoveryRpcError";
 
-const provider = "codex" satisfies EngineKind;
+const engine = "codex" satisfies EngineKind;
 const readyStatus = {
-  provider,
+  engine,
   status: "ready",
   available: true,
   authStatus: "authenticated",
@@ -23,21 +23,21 @@ const readyStatus = {
 
 describe("toProviderModelDiscoveryRpcError", () => {
   it.each([
-    new ProviderAdapterRequestError({
-      provider,
+    new EngineAdapterRequestError({
+      engine,
       method: "model/list",
-      detail: "private provider detail",
+      detail: "private engine detail",
     }),
-    new ProviderAdapterProcessError({
-      provider,
+    new EngineAdapterProcessError({
+      engine,
       threadId: "model-discovery",
       detail: "private process detail",
     }),
-  ])("classifies a usable provider's cold failure as retryable startup", (cause) => {
+  ])("classifies a usable engine's cold failure as retryable startup", (cause) => {
     expect(
-      toProviderModelDiscoveryRpcError({ cause, provider, statuses: [readyStatus] }),
+      toProviderModelDiscoveryRpcError({ cause, engine, statuses: [readyStatus] }),
     ).toMatchObject({
-      code: PROVIDER_MODEL_DISCOVERY_ERROR_CODES.starting,
+      code: ENGINE_MODEL_DISCOVERY_ERROR_CODES.starting,
       retryable: true,
       retryAfterMs: 250,
     });
@@ -45,50 +45,50 @@ describe("toProviderModelDiscoveryRpcError", () => {
 
   it("keeps authentication failure deterministic", () => {
     const result = toProviderModelDiscoveryRpcError({
-      cause: new ProviderAdapterRequestError({
-        provider,
+      cause: new EngineAdapterRequestError({
+        engine,
         method: "model/list",
         detail: "token rejected",
       }),
-      provider,
+      engine,
       statuses: [{ ...readyStatus, authStatus: "unauthenticated" }],
     });
     expect(result).toMatchObject({
-      code: PROVIDER_MODEL_DISCOVERY_ERROR_CODES.authRequired,
+      code: ENGINE_MODEL_DISCOVERY_ERROR_CODES.authRequired,
       retryable: false,
     });
     expect(result.message).not.toContain("token rejected");
   });
 
   it("keeps unavailable and invalid configuration failures deterministic", () => {
-    const request = new ProviderAdapterRequestError({
-      provider,
+    const request = new EngineAdapterRequestError({
+      engine,
       method: "model/list",
       detail: "missing executable",
     });
     expect(
       toProviderModelDiscoveryRpcError({
         cause: request,
-        provider,
+        engine,
         statuses: [{ ...readyStatus, status: "error", available: false }],
       }),
     ).toMatchObject({
-      code: PROVIDER_MODEL_DISCOVERY_ERROR_CODES.unavailable,
+      code: ENGINE_MODEL_DISCOVERY_ERROR_CODES.unavailable,
       retryable: false,
     });
 
     expect(
       toProviderModelDiscoveryRpcError({
-        cause: new ProviderAdapterValidationError({
-          provider,
+        cause: new EngineAdapterValidationError({
+          engine,
           operation: "listModels",
           issue: "bad input",
         }),
-        provider,
+        engine,
         statuses: [readyStatus],
       }),
     ).toMatchObject({
-      code: PROVIDER_MODEL_DISCOVERY_ERROR_CODES.configuration,
+      code: ENGINE_MODEL_DISCOVERY_ERROR_CODES.configuration,
       retryable: false,
     });
   });
@@ -96,16 +96,16 @@ describe("toProviderModelDiscoveryRpcError", () => {
   it("treats missing health plus a typed adapter request as startup, not auth guesswork", () => {
     expect(
       toProviderModelDiscoveryRpcError({
-        cause: new ProviderAdapterRequestError({
-          provider,
+        cause: new EngineAdapterRequestError({
+          engine,
           method: "model/list",
           detail: "runtime not ready",
         }),
-        provider,
+        engine,
         statuses: [],
       }),
     ).toMatchObject({
-      code: PROVIDER_MODEL_DISCOVERY_ERROR_CODES.starting,
+      code: ENGINE_MODEL_DISCOVERY_ERROR_CODES.starting,
       retryable: true,
     });
   });
@@ -113,11 +113,11 @@ describe("toProviderModelDiscoveryRpcError", () => {
   it("fails unknown errors closed without serializing their details", () => {
     const result = toProviderModelDiscoveryRpcError({
       cause: new Error("secret upstream payload"),
-      provider,
+      engine,
       statuses: [readyStatus],
     });
     expect(result).toMatchObject({
-      code: PROVIDER_MODEL_DISCOVERY_ERROR_CODES.unavailable,
+      code: ENGINE_MODEL_DISCOVERY_ERROR_CODES.unavailable,
       retryable: false,
     });
     expect(result.message).not.toContain("secret upstream payload");

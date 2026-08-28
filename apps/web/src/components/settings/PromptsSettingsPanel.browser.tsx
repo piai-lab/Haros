@@ -1,5 +1,5 @@
 // FILE: PromptsSettingsPanel.browser.tsx
-// Purpose: Locks the provider-global two-card Prompt settings journey.
+// Purpose: Locks the engine-global two-card Prompt settings journey.
 // Layer: Browser UI test
 
 import "../../index.css";

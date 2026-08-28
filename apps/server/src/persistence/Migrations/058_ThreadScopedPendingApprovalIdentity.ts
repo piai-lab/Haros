@@ -3,7 +3,7 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import { primaryKeyColumns, tableExists } from "./schemaHelpers.ts";
 
-/** Scope provider request ids to their owning thread without discarding legacy rows. */
+/** Scope engine request ids to their owning thread without discarding legacy rows. */
 export default Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
 

@@ -1,7 +1,7 @@
 // FILE: skillPromptInjection.test.ts
-// Purpose: Verifies which providers receive inlined portable skill instructions
+// Purpose: Verifies which engines receive inlined portable skill instructions
 //          and that the inline text respects the turn character budget.
-// Layer: Server provider tests
+// Layer: Server engine tests
 
 import { mkdtempSync, rmSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -22,7 +22,7 @@ const cursorSkillPath = "/Users/me/.cursor/skills/reviewer/SKILL.md";
 const piSkillPath = "/Users/me/.pi/agent/skills/reviewer/SKILL.md";
 
 describe("shouldInlineSkillForProvider", () => {
-  it("skips codex-native and omnimind roots for codex but inlines foreign provider roots", () => {
+  it("skips codex-native and omnimind roots for codex but inlines foreign engine roots", () => {
     // Codex loads .codex roots natively and ~/.harnessos/skills via the extra
     // skill root registered at session start.
     expect(shouldInlineSkillForProvider("codex", omnimindSkillPath)).toBe(false);
@@ -43,22 +43,22 @@ describe("shouldInlineSkillForProvider", () => {
     expect(shouldInlineSkillForProvider("claude", codexSkillPath)).toBe(true);
   });
 
-  it("inlines cross-provider paths for pi but not pi-native skills", () => {
+  it("inlines cross-engine paths for pi but not pi-native skills", () => {
     expect(shouldInlineSkillForProvider("pi", omnimindSkillPath)).toBe(true);
     expect(shouldInlineSkillForProvider("pi", claudeSkillPath)).toBe(true);
     expect(shouldInlineSkillForProvider("pi", piSkillPath)).toBe(false);
   });
 
-  it("always inlines for providers without native skill support", () => {
-    for (const provider of ["antigravity", "grok", "kilo", "opencode"] as const) {
-      expect(shouldInlineSkillForProvider(provider, omnimindSkillPath)).toBe(true);
-      expect(shouldInlineSkillForProvider(provider, claudeSkillPath)).toBe(true);
+  it("always inlines for engines without native skill support", () => {
+    for (const engine of ["antigravity", "grok", "kilo", "opencode"] as const) {
+      expect(shouldInlineSkillForProvider(engine, omnimindSkillPath)).toBe(true);
+      expect(shouldInlineSkillForProvider(engine, claudeSkillPath)).toBe(true);
     }
   });
 });
 
 describe("buildInlineSkillInstructions", () => {
-  it("inlines skill content for non-native providers and skips unreadable paths", async () => {
+  it("inlines skill content for non-native engines and skips unreadable paths", async () => {
     const root = mkdtempSync(path.join(os.tmpdir(), "skill-inline-"));
     const skillDir = path.join(root, ".harnessos", "skills", "reviewer");
     try {
@@ -67,7 +67,7 @@ describe("buildInlineSkillInstructions", () => {
       await writeFile(skillPath, "# Reviewer\n\nAlways review carefully.");
 
       const result = await buildInlineSkillInstructions({
-        provider: "antigravity",
+        engine: "antigravity",
         skills: [
           { name: "reviewer", path: skillPath },
           { name: "missing", path: path.join(root, ".harnessos", "skills", "missing", "SKILL.md") },
@@ -96,7 +96,7 @@ describe("buildInlineSkillInstructions", () => {
       await writeFile(skillPath, "content".repeat(100));
 
       const result = await buildInlineSkillInstructions({
-        provider: "antigravity",
+        engine: "antigravity",
         skills: [{ name: "reviewer", path: skillPath }],
         maxChars: 50,
       });
@@ -114,7 +114,7 @@ describe("buildInlineSkillInstructions", () => {
 
   it("does not inline omnimind-rooted skills for codex (covered by the extra skill root)", async () => {
     const result = await buildInlineSkillInstructions({
-      provider: "codex",
+      engine: "codex",
       skills: [{ name: "reviewer", path: omnimindSkillPath }],
       maxChars: 10_000,
     });
@@ -137,7 +137,7 @@ describe("buildInlineSkillInstructions", () => {
       await writeFile(secondPath, "Keep this instruction.");
 
       const result = await buildInlineSkillInstructions({
-        provider: "oa",
+        engine: "oa",
         skills: [
           { name: "large", path: firstPath },
           { name: "small", path: secondPath },

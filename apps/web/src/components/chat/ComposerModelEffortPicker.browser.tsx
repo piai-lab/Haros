@@ -24,13 +24,13 @@ describe("ComposerModelEffortPicker", () => {
   it("shows the model list directly when the current Engine has no native options", async () => {
     const firstModel = "cursor/fast" as ModelSlug;
     const secondModel = "cursor/precise" as ModelSlug;
-    const onProviderModelChange = vi.fn();
+    const onEngineModelChange = vi.fn();
     const screen = await render(
       <ComposerModelEffortPicker
-        provider="cursor"
+        engine="cursor"
         model={firstModel}
         catalogState="ready"
-        modelOptionsByProvider={{
+        modelOptionsByEngine={{
           oa: [],
           claude: [],
           codex: [],
@@ -45,7 +45,7 @@ describe("ComposerModelEffortPicker", () => {
           opencode: [],
           pi: [],
         }}
-        onProviderModelChange={onProviderModelChange}
+        onEngineModelChange={onEngineModelChange}
         onRefreshModels={vi.fn()}
         onOpenSettings={vi.fn()}
         threadId={THREAD_ID}
@@ -71,7 +71,7 @@ describe("ComposerModelEffortPicker", () => {
 
       page.getByRole("menuitemradio", { name: "Cursor Precise" }).element().focus();
       await userEvent.keyboard("{Enter}");
-      expect(onProviderModelChange).toHaveBeenCalledWith("cursor", secondModel);
+      expect(onEngineModelChange).toHaveBeenCalledWith("cursor", secondModel);
     } finally {
       await screen.unmount();
     }
@@ -80,10 +80,10 @@ describe("ComposerModelEffortPicker", () => {
   it("keeps Grok 4.6 effort visible in compact layouts before runtime discovery", async () => {
     const screen = await render(
       <ComposerModelEffortPicker
-        provider="grok"
+        engine="grok"
         model={GROK_4_6}
         catalogState="ready"
-        modelOptionsByProvider={{
+        modelOptionsByEngine={{
           oa: [],
           claude: [],
           codex: [],
@@ -96,7 +96,7 @@ describe("ComposerModelEffortPicker", () => {
           pi: [],
         }}
         hideStatusLabel
-        onProviderModelChange={vi.fn()}
+        onEngineModelChange={vi.fn()}
         onRefreshModels={vi.fn()}
         onOpenSettings={vi.fn()}
         threadId={THREAD_ID}
@@ -127,10 +127,10 @@ describe("ComposerModelEffortPicker", () => {
     const model = "gpt-5.4" as ModelSlug;
     const screen = await render(
       <ComposerModelEffortPicker
-        provider="codex"
+        engine="codex"
         model={model}
         catalogState="ready"
-        modelOptionsByProvider={{
+        modelOptionsByEngine={{
           oa: [],
           claude: [],
           codex: [{ slug: model, name: "GPT-5.4" }],
@@ -142,7 +142,7 @@ describe("ComposerModelEffortPicker", () => {
           opencode: [],
           pi: [],
         }}
-        onProviderModelChange={vi.fn()}
+        onEngineModelChange={vi.fn()}
         onRefreshModels={vi.fn()}
         onOpenSettings={vi.fn()}
         threadId={THREAD_ID}
@@ -174,12 +174,12 @@ describe("ComposerModelEffortPicker", () => {
 
   it("separates an empty catalog from a failed catalog check", async () => {
     const callbacks = {
-      onProviderModelChange: vi.fn(),
+      onEngineModelChange: vi.fn(),
       onRefreshModels: vi.fn(),
       onOpenSettings: vi.fn(),
       onPromptChange: vi.fn(),
     };
-    const modelOptionsByProvider = {
+    const modelOptionsByEngine = {
       oa: [],
       claude: [],
       codex: [],
@@ -193,10 +193,10 @@ describe("ComposerModelEffortPicker", () => {
     };
     const emptyScreen = await render(
       <ComposerModelEffortPicker
-        provider="oa"
+        engine="oa"
         model={null}
         catalogState="empty"
-        modelOptionsByProvider={modelOptionsByProvider}
+        modelOptionsByEngine={modelOptionsByEngine}
         {...callbacks}
         threadId={THREAD_ID}
         modelOptions={undefined}
@@ -214,10 +214,10 @@ describe("ComposerModelEffortPicker", () => {
 
     const errorScreen = await render(
       <ComposerModelEffortPicker
-        provider="oa"
+        engine="oa"
         model={null}
         catalogState="error"
-        modelOptionsByProvider={modelOptionsByProvider}
+        modelOptionsByEngine={modelOptionsByEngine}
         {...callbacks}
         threadId={THREAD_ID}
         modelOptions={undefined}
@@ -244,10 +244,10 @@ describe("ComposerModelEffortPicker", () => {
   it("does not present an idle catalog as an empty catalog", async () => {
     const screen = await render(
       <ComposerModelEffortPicker
-        provider="oa"
+        engine="oa"
         model={null}
         catalogState="idle"
-        modelOptionsByProvider={{
+        modelOptionsByEngine={{
           oa: [],
           claude: [],
           codex: [],
@@ -259,7 +259,7 @@ describe("ComposerModelEffortPicker", () => {
           opencode: [],
           pi: [],
         }}
-        onProviderModelChange={vi.fn()}
+        onEngineModelChange={vi.fn()}
         onRefreshModels={vi.fn()}
         onOpenSettings={vi.fn()}
         threadId={THREAD_ID}
@@ -279,7 +279,7 @@ describe("ComposerModelEffortPicker", () => {
 
   it("keeps cold discovery and stale last-good catalogs distinct", async () => {
     const callbacks = {
-      onProviderModelChange: vi.fn(),
+      onEngineModelChange: vi.fn(),
       onRefreshModels: vi.fn(),
       onOpenSettings: vi.fn(),
       onPromptChange: vi.fn(),
@@ -298,10 +298,10 @@ describe("ComposerModelEffortPicker", () => {
     };
     const checkingScreen = await render(
       <ComposerModelEffortPicker
-        provider="oa"
+        engine="oa"
         model={null}
         catalogState="checking"
-        modelOptionsByProvider={emptyOptions}
+        modelOptionsByEngine={emptyOptions}
         {...callbacks}
         threadId={THREAD_ID}
         modelOptions={undefined}
@@ -325,10 +325,10 @@ describe("ComposerModelEffortPicker", () => {
 
     const staleScreen = await render(
       <ComposerModelEffortPicker
-        provider="grok"
+        engine="grok"
         model={GROK_4_5}
         catalogState="stale"
-        modelOptionsByProvider={{
+        modelOptionsByEngine={{
           ...emptyOptions,
           grok: [{ slug: GROK_4_5, name: "Grok 4.5" }],
         }}
@@ -353,10 +353,10 @@ describe("ComposerModelEffortPicker", () => {
   it("shows settings instead of endless checking when discovery is idle", async () => {
     const screen = await render(
       <ComposerModelEffortPicker
-        provider="opencode"
+        engine="opencode"
         model={null}
         catalogState="idle"
-        modelOptionsByProvider={{
+        modelOptionsByEngine={{
           oa: [],
           claude: [],
           codex: [],
@@ -368,7 +368,7 @@ describe("ComposerModelEffortPicker", () => {
           opencode: [],
           pi: [],
         }}
-        onProviderModelChange={vi.fn()}
+        onEngineModelChange={vi.fn()}
         onRefreshModels={vi.fn()}
         onOpenSettings={vi.fn()}
         threadId={THREAD_ID}
@@ -404,10 +404,10 @@ describe("ComposerModelEffortPicker", () => {
     const customModel = "custom/private-model" as ModelSlug;
     const screen = await render(
       <ComposerModelEffortPicker
-        provider="antigravity"
+        engine="antigravity"
         model={customModel}
         catalogState="error"
-        modelOptionsByProvider={{
+        modelOptionsByEngine={{
           oa: [],
           claude: [],
           codex: [],
@@ -419,7 +419,7 @@ describe("ComposerModelEffortPicker", () => {
           opencode: [],
           pi: [],
         }}
-        onProviderModelChange={vi.fn()}
+        onEngineModelChange={vi.fn()}
         onRefreshModels={vi.fn()}
         onOpenSettings={vi.fn()}
         threadId={THREAD_ID}
@@ -449,10 +449,10 @@ describe("ComposerModelEffortPicker", () => {
     const model = "openai/gpt-5.4" as ModelSlug;
     const screen = await render(
       <ComposerModelEffortPicker
-        provider="opencode"
+        engine="opencode"
         model={model}
         catalogState="ready"
-        modelOptionsByProvider={{
+        modelOptionsByEngine={{
           oa: [],
           claude: [],
           codex: [],
@@ -464,7 +464,7 @@ describe("ComposerModelEffortPicker", () => {
           opencode: [{ slug: model, name: "GPT-5.4" }],
           pi: [],
         }}
-        onProviderModelChange={vi.fn()}
+        onEngineModelChange={vi.fn()}
         onRefreshModels={vi.fn()}
         onOpenSettings={vi.fn()}
         threadId={THREAD_ID}
@@ -500,10 +500,10 @@ describe("ComposerModelEffortPicker", () => {
     const model = "claude-opus-4-6" as ModelSlug;
     const screen = await render(
       <ComposerModelEffortPicker
-        provider="claude"
+        engine="claude"
         model={model}
         catalogState="ready"
-        modelOptionsByProvider={{
+        modelOptionsByEngine={{
           oa: [],
           claude: [{ slug: model, name: "Claude Opus 4.6" }],
           codex: [],
@@ -515,7 +515,7 @@ describe("ComposerModelEffortPicker", () => {
           opencode: [],
           pi: [],
         }}
-        onProviderModelChange={vi.fn()}
+        onEngineModelChange={vi.fn()}
         onRefreshModels={vi.fn()}
         onOpenSettings={vi.fn()}
         threadId={THREAD_ID}
@@ -539,10 +539,10 @@ describe("ComposerModelEffortPicker", () => {
     const screen = await render(
       <I18nProvider>
         <ComposerModelEffortPicker
-          provider="oa"
+          engine="oa"
           model={null}
           catalogState="empty"
-          modelOptionsByProvider={{
+          modelOptionsByEngine={{
             oa: [],
             claude: [],
             codex: [],
@@ -554,7 +554,7 @@ describe("ComposerModelEffortPicker", () => {
             opencode: [],
             pi: [],
           }}
-          onProviderModelChange={vi.fn()}
+          onEngineModelChange={vi.fn()}
           onRefreshModels={vi.fn()}
           onOpenSettings={vi.fn()}
           threadId={THREAD_ID}
@@ -583,10 +583,10 @@ describe("ComposerModelEffortPicker", () => {
     const screen = await render(
       <I18nProvider>
         <ComposerModelEffortPicker
-          provider="oa"
+          engine="oa"
           model={null}
           catalogState="checking"
-          modelOptionsByProvider={{
+          modelOptionsByEngine={{
             oa: [],
             claude: [],
             codex: [],
@@ -598,7 +598,7 @@ describe("ComposerModelEffortPicker", () => {
             opencode: [],
             pi: [],
           }}
-          onProviderModelChange={vi.fn()}
+          onEngineModelChange={vi.fn()}
           onRefreshModels={vi.fn()}
           onOpenSettings={vi.fn()}
           threadId={THREAD_ID}

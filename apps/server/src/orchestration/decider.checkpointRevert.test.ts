@@ -1,6 +1,6 @@
 import {
   CommandId,
-  DEFAULT_PROVIDER_INTERACTION_MODE,
+  DEFAULT_ENGINE_INTERACTION_MODE,
   EventId,
   MessageId,
   ProjectId,
@@ -39,11 +39,11 @@ function makeReadModel(input: {
         id: THREAD_ID,
         projectId: ProjectId.makeUnsafe("project-checkpoint-revert"),
         title: "Checkpoint revert",
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
-        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
         runtimeMode: "full-access",
         branch: null,
         worktreePath: null,
@@ -99,7 +99,7 @@ function makeLatestTurn(state: OrchestrationLatestTurn["state"]): OrchestrationL
 }
 
 describe("checkpoint revert decider", () => {
-  it("rejects revert once a turn start request is committed, before provider activation", async () => {
+  it("rejects revert once a turn start request is committed, before engine activation", async () => {
     let readModel = makeReadModel({
       session: makeSession({ status: "ready" }),
       latestTurn: makeLatestTurn("completed"),
@@ -116,7 +116,7 @@ describe("checkpoint revert decider", () => {
             text: "start work",
             attachments: [],
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "full-access",
           createdAt: NOW,
         },
@@ -184,7 +184,7 @@ describe("checkpoint revert decider", () => {
               text: "race the revert",
               attachments: [],
             },
-            interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+            interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
             runtimeMode: "full-access",
             createdAt: NOW,
           },
@@ -247,7 +247,7 @@ describe("checkpoint revert decider", () => {
               text: "must remain blocked",
               attachments: [],
             },
-            interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+            interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
             runtimeMode: "full-access",
             createdAt: NOW,
           },
@@ -288,7 +288,7 @@ describe("checkpoint revert decider", () => {
             threadId: THREAD_ID,
             messageId: MessageId.makeUnsafe("message-during-revert"),
             text: "edited",
-            interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+            interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
             runtimeMode: "full-access",
             createdAt: NOW,
           },
@@ -360,7 +360,7 @@ describe("checkpoint revert decider", () => {
             text: "original",
             attachments: [],
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "full-access",
           createdAt: NOW,
         },
@@ -397,7 +397,7 @@ describe("checkpoint revert decider", () => {
             displayName: "GPT-5 Codex",
             source: "builtin-catalog",
           },
-          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          interactionMode: DEFAULT_ENGINE_INTERACTION_MODE,
           runtimeMode: "full-access",
           createdAt: NOW,
         },
@@ -412,8 +412,8 @@ describe("checkpoint revert decider", () => {
     expect(editEvents[1]).toMatchObject({
       type: "thread.message-edit-resend-requested",
       payload: {
-        modelSelection: {
-          provider: "codex",
+        engineSelection: {
+          engine: "codex",
           model: "gpt-5-codex",
         },
         modelPresentationIdentity: {
@@ -505,7 +505,7 @@ describe("checkpoint revert decider", () => {
       session: makeSession({ status: "ready" }),
       latestTurn: makeLatestTurn("running"),
     },
-  ])("rejects revert while the provider session is $name", async ({ session, latestTurn }) => {
+  ])("rejects revert while the engine session is $name", async ({ session, latestTurn }) => {
     const error = await Effect.runPromise(
       Effect.flip(
         decideOrchestrationCommand({

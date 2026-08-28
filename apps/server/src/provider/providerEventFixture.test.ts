@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   parseProviderEventFixture,
-  ProviderEventFixtureError,
+  EngineEventFixtureError,
   replayProviderEventFixture,
   sanitizeProviderEventFixtureEvents,
   serializeProviderEventFixture,
 } from "./providerEventFixture";
 
-describe("provider event fixtures", () => {
+describe("engine event fixtures", () => {
   it("redacts content and preserves deterministic identifier relationships", () => {
     const sanitized = sanitizeProviderEventFixtureEvents([
       {
@@ -95,7 +95,7 @@ describe("provider event fixtures", () => {
           },
         },
       ]),
-    ).toThrow(ProviderEventFixtureError);
+    ).toThrow(EngineEventFixtureError);
   });
 
   it("rejects unclassified object keys even when their values are not strings", () => {
@@ -133,7 +133,7 @@ describe("provider event fixtures", () => {
     }
   });
 
-  it("does not trust discriminator-looking strings inside provider payloads", () => {
+  it("does not trust discriminator-looking strings inside engine payloads", () => {
     expect(() =>
       serializeProviderEventFixture([{ type: "custom.event", status: "private-project-codename" }]),
     ).toThrow(/unclassified string field/u);
@@ -316,7 +316,7 @@ describe("provider event fixtures", () => {
   });
 
   it("rejects malformed, version-mismatched, out-of-order, and non-object events", () => {
-    expect(() => parseProviderEventFixture("not-json")).toThrow(ProviderEventFixtureError);
+    expect(() => parseProviderEventFixture("not-json")).toThrow(EngineEventFixtureError);
     expect(() =>
       parseProviderEventFixture(JSON.stringify({ version: 2, index: 0, event: {} })),
     ).toThrow(/unsupported version/u);

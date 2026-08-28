@@ -38,7 +38,7 @@ function pullRequestsEqual(
 }
 
 /**
- * Derives the durable thread metadata observed at a provider-turn boundary.
+ * Derives the durable thread metadata observed at a engine-turn boundary.
  *
  * A successful lookup may intentionally clear a prior PR when the current branch has none.
  * A transient lookup failure preserves a PR on an unchanged branch, but clears it when the

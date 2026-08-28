@@ -3,7 +3,7 @@ import * as SqlClient from "effect/unstable/sql/SqlClient";
 
 import { columnExists, tableExists } from "./schemaHelpers.ts";
 
-/** Bind a projected provider request to the exact runtime incarnation that emitted it. */
+/** Bind a projected engine request to the exact runtime incarnation that emitted it. */
 export default Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
   // Migration 62 retires this table; on a replay of the 54.. range the column

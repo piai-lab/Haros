@@ -36,9 +36,9 @@ import {
   resumeQuitInterruptedTasks,
 } from "./orchestration/quitResume";
 import { reconcileRestartStuckTurns } from "./orchestration/startupTurnReconciliation";
-import { ProviderSessionReaper } from "./provider/Services/ProviderSessionReaper";
-import { ProviderRuntimeReconciler } from "./provider/Services/ProviderRuntimeReconciler";
-import { ProviderService, type ProviderServiceShape } from "./provider/Services/ProviderService";
+import { EngineSessionReaper } from "./provider/Services/EngineSessionReaper";
+import { EngineRuntimeReconciler } from "./provider/Services/EngineRuntimeReconciler";
+import { EngineService, type EngineServiceShape } from "./provider/Services/EngineService";
 import { userInputPresenterRegistry } from "./provider/userInputPresenterRegistry";
 import { ServerLifecycleEvents } from "./serverLifecycleEvents";
 import { ServerRuntimeStartup } from "./serverRuntimeStartup";
@@ -72,9 +72,9 @@ export interface ServerShape {
     | OrchestrationEngineService
     | OrchestrationReactor
     | ProjectionSnapshotQuery
-    | ProviderSessionReaper
-    | ProviderRuntimeReconciler
-    | ProviderService
+    | EngineSessionReaper
+    | EngineRuntimeReconciler
+    | EngineService
     | ServerRuntimeStartup
     | ServerSettingsService
     | ThreadDeletionReactor
@@ -97,7 +97,7 @@ export class ServerLifecycleError extends Schema.TaggedErrorClass<ServerLifecycl
 
 export function closeServerRuntimePipeline(input: {
   readonly orchestrationEngine: Pick<OrchestrationEngineShape, "quiesce" | "drain" | "stop">;
-  readonly providerService: Pick<ProviderServiceShape, "closeRuntimeEvents">;
+  readonly providerService: Pick<EngineServiceShape, "closeRuntimeEvents">;
   readonly managedAttachmentCleanup: Pick<ManagedAttachmentCleanupShape, "drain">;
   readonly subscriptionsScope: Scope.Closeable;
   readonly sealUserInputPresenters: Effect.Effect<void>;
@@ -105,16 +105,16 @@ export function closeServerRuntimePipeline(input: {
 }): Effect.Effect<void> {
   return input.sealUserInputPresenters.pipe(
     // Presenter loss settles live native callbacks as `unavailable` while the
-    // provider event fanout and durable projectors are still accepting work.
+    // engine event fanout and durable projectors are still accepting work.
     Effect.andThen(input.orchestrationEngine.quiesce),
-    // Drain already-admitted commands while every subscriber is live. Provider
+    // Drain already-admitted commands while every subscriber is live. Engine
     // close then fences terminal runtime events into subscriber workers; scope
     // close drains those workers before the engine accepts its final stop.
     Effect.andThen(input.orchestrationEngine.drain),
     Effect.andThen(input.providerService.closeRuntimeEvents),
     Effect.andThen(input.drainUserInputPresenterHandoffs),
     Effect.andThen(Scope.close(input.subscriptionsScope, Exit.void)),
-    // Provider Runtime ingestion owns a trusted quiescing admission seam for
+    // Engine Runtime ingestion owns a trusted quiescing admission seam for
     // already-emitted facts. Once its scope is closed, this fence proves every
     // admitted terminal append completed before the engine enters draining.
     Effect.andThen(input.orchestrationEngine.drain),
@@ -142,9 +142,9 @@ export const createEffectServer = Effect.fn(function* (
   const lifecycleEvents = yield* ServerLifecycleEvents;
   const orchestrationEngine = yield* OrchestrationEngineService;
   const orchestrationReactor = yield* OrchestrationReactor;
-  const providerService = yield* ProviderService;
-  const providerSessionReaper = yield* ProviderSessionReaper;
-  const providerRuntimeReconciler = yield* ProviderRuntimeReconciler;
+  const providerService = yield* EngineService;
+  const providerSessionReaper = yield* EngineSessionReaper;
+  const engineRuntimeReconciler = yield* EngineRuntimeReconciler;
   const runtimeStartup = yield* ServerRuntimeStartup;
   const serverSettings = yield* ServerSettingsService;
   const threadDeletionReactor = yield* ThreadDeletionReactor;
@@ -239,7 +239,7 @@ export const createEffectServer = Effect.fn(function* (
   yield* Scope.provide(automationRunReactor.start(), subscriptionsScope);
   yield* Scope.provide(threadDeletionReactor.start(), subscriptionsScope);
   yield* Scope.provide(providerSessionReaper.start(), subscriptionsScope);
-  yield* Scope.provide(providerRuntimeReconciler.start(), subscriptionsScope);
+  yield* Scope.provide(engineRuntimeReconciler.start(), subscriptionsScope);
   yield* readiness.markOrchestrationSubscriptionsReady;
   yield* readiness.markTerminalSubscriptionsReady;
   // Heal turns orphaned by the previous process exit (their in-memory runtimes
@@ -247,7 +247,7 @@ export const createEffectServer = Effect.fn(function* (
   // the stale "Working" state.
   yield* reconcileRestartStuckTurns;
   // The reconciliation above terminalizes durable turn projections without a
-  // provider terminal event. Remove their replay-ledger rows now so the next
+  // engine terminal event. Remove their replay-ledger rows now so the next
   // process start cannot replay state-dependent commands against the terminal
   // projection.
   yield* orchestrationReactor.reconcileSettledOpenTurns;

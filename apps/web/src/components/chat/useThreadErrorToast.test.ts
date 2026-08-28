@@ -1,7 +1,7 @@
 // FILE: useThreadErrorToast.test.ts
 // Purpose: Guards the thread error toast payload and its quarantine recovery action.
 // Layer: Chat status presentation tests
-// Depends on: the toast option builder and the provider-delivery block format.
+// Depends on: the toast option builder and the engine-delivery block format.
 
 import { ThreadId } from "@harnessos/contracts";
 import { formatProviderDeliveryBlockDetail } from "@harnessos/shared/providerDeliveryBlock";
@@ -12,7 +12,7 @@ import { buildThreadErrorToastOptions, threadErrorToastId } from "./useThreadErr
 const threadId = ThreadId.makeUnsafe("11111111-1111-4111-8111-111111111111");
 
 const blockedError = formatProviderDeliveryBlockDetail(
-  "External provider command claim expired without a durable acceptance result; execution was not replayed.",
+  "External engine command claim expired without a durable acceptance result; execution was not replayed.",
 );
 
 function build(error: string, unblocking = false) {
@@ -27,19 +27,19 @@ function build(error: string, unblocking = false) {
 
 describe("buildThreadErrorToastOptions", () => {
   it("renders a persistent error toast scoped to its thread", () => {
-    const options = build("The provider rejected the prompt.");
+    const options = build("The engine rejected the prompt.");
 
     expect(options.id).toBe(threadErrorToastId(threadId));
     expect(options.type).toBe("error");
-    expect(options.title).toBe("The provider rejected the prompt.");
+    expect(options.title).toBe("The engine rejected the prompt.");
     expect(options.timeout).toBe(0);
     expect(options.data).toMatchObject({
-      copyText: "The provider rejected the prompt.",
+      copyText: "The engine rejected the prompt.",
       threadId,
     });
   });
 
-  it("offers the unblock action for a provider-delivery quarantine", () => {
+  it("offers the unblock action for a engine-delivery quarantine", () => {
     expect(build(blockedError).actionProps).toMatchObject({ children: "Unblock thread" });
   });
 
@@ -51,6 +51,6 @@ describe("buildThreadErrorToastOptions", () => {
   });
 
   it("hides the action for unrelated thread errors", () => {
-    expect(build("The provider rejected the prompt.").actionProps).toBeUndefined();
+    expect(build("The engine rejected the prompt.").actionProps).toBeUndefined();
   });
 });

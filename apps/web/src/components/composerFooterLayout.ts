@@ -13,12 +13,12 @@ export function shouldUseCompactComposerFooter(
 
 // Progressive degradation for the footer's picker cluster.
 // Degradation order (first thing to go first): context-window meter ->
-// traits/effort label (gear icon stays) -> model name (provider icon stays) ->
+// traits/effort label (gear icon stays) -> model name (engine icon stays) ->
 // relocate the leading controls (extras "+" menu, access-rules indicator) into
 // the row below the input, next to the branch toolbar.
 //
 // Visibility is driven by MEASURED overflow, not estimated widths: label
-// lengths vary per provider/model and the app supports UI font scaling, so any
+// lengths vary per engine/model and the app supports UI font scaling, so any
 // static pixel estimate eventually lies. Instead the footer renders a tier,
 // the caller re-measures, and the tier is demoted one step while the footer
 // still overflows (converging in <= COMPOSER_FOOTER_MAX_TIER synchronous

@@ -1,7 +1,7 @@
 /**
- * Provider status cache helpers.
+ * Engine status cache helpers.
  *
- * Keeps provider readiness snapshots durable across restarts without making
+ * Keeps engine readiness snapshots durable across restarts without making
  * the cache authoritative over fresh CLI probes.
  *
  * @module providerStatusCache
@@ -14,23 +14,23 @@ const decodeProviderStatusCache = Schema.decodeUnknownEffect(
   Schema.fromJsonString(ServerProviderStatus),
 );
 
-const providerOrderRank = (provider: ServerProviderStatus["provider"]): number => {
-  const rank = ENGINE_KINDS.indexOf(provider);
+const engineOrderRank = (engine: ServerProviderStatus["engine"]): number => {
+  const rank = ENGINE_KINDS.indexOf(engine);
   return rank === -1 ? Number.MAX_SAFE_INTEGER : rank;
 };
 
 export const orderProviderStatuses = (
-  providers: ReadonlyArray<ServerProviderStatus>,
+  engines: ReadonlyArray<ServerProviderStatus>,
 ): ReadonlyArray<ServerProviderStatus> =>
-  [...providers].toSorted(
-    (left, right) => providerOrderRank(left.provider) - providerOrderRank(right.provider),
+  [...engines].toSorted(
+    (left, right) => engineOrderRank(left.engine) - engineOrderRank(right.engine),
   );
 
 export function resolveProviderStatusCachePath(input: {
   readonly stateDir: string;
-  readonly provider: ServerProviderStatus["provider"];
+  readonly engine: ServerProviderStatus["engine"];
 }): string {
-  return `${input.stateDir}/provider-status/${input.provider}.json`;
+  return `${input.stateDir}/provider-status/${input.engine}.json`;
 }
 
 // Ignore unreadable or malformed cache entries so the server can still boot
@@ -52,7 +52,7 @@ export const readProviderStatusCache = (filePath: string) =>
     return yield* decodeProviderStatusCache(trimmed).pipe(
       Effect.matchCauseEffect({
         onFailure: (cause) =>
-          Effect.logWarning("failed to parse provider status cache, ignoring", {
+          Effect.logWarning("failed to parse engine status cache, ignoring", {
             path: filePath,
             issues: Cause.pretty(cause),
           }).pipe(Effect.as(undefined)),
@@ -63,10 +63,10 @@ export const readProviderStatusCache = (filePath: string) =>
 
 export const writeProviderStatusCache = (input: {
   readonly filePath: string;
-  readonly provider: ServerProviderStatus;
+  readonly engine: ServerProviderStatus;
 }) => {
   return writeFileStringAtomically({
     filePath: input.filePath,
-    contents: `${JSON.stringify(input.provider, null, 2)}\n`,
+    contents: `${JSON.stringify(input.engine, null, 2)}\n`,
   });
 };

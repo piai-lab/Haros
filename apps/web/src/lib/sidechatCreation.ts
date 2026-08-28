@@ -3,7 +3,7 @@
 // Layer: Chat orchestration
 
 import type {
-  ModelSelection,
+  EngineSelection,
   NativeApi,
   OrchestrationShellSnapshot,
   ThreadId,
@@ -185,7 +185,7 @@ export function clearSidechatPaneRetention(threadId: ThreadId): void {
 export async function sendSidechatPrompt(input: {
   api: NativeApi;
   threadId: ThreadId;
-  selectedModelSelection: ModelSelection;
+  selectedEngineSelection: EngineSelection;
   prompt: string;
 }): Promise<void> {
   const prompt = input.prompt.trim();
@@ -202,9 +202,9 @@ export async function sendSidechatPrompt(input: {
       text: prompt,
       attachments: [],
     },
-    modelSelection: input.selectedModelSelection,
+    engineSelection: input.selectedEngineSelection,
     modelPresentationIdentity: resolveModelPresentationIdentity({
-      selection: input.selectedModelSelection,
+      selection: input.selectedEngineSelection,
     }),
     runtimeMode: "approval-required",
     interactionMode: "default",
@@ -216,7 +216,7 @@ export async function createSidechatThread(input: {
   api: NativeApi;
   project: Project;
   sourceThread: Thread;
-  selectedModelSelection: ModelSelection;
+  selectedEngineSelection: EngineSelection;
   initialPrompt?: string | undefined;
   openSidechat: (threadId: ThreadId) => void;
   syncServerShellSnapshot: (snapshot: OrchestrationShellSnapshot) => void;
@@ -237,7 +237,7 @@ export async function createSidechatThread(input: {
     sidechatSourceThreadId: input.sourceThread.id,
     projectId: input.project.id,
     title: titleSeed,
-    modelSelection: input.selectedModelSelection,
+    engineSelection: input.selectedEngineSelection,
     runtimeMode: "approval-required",
     interactionMode: "default",
     envMode: input.sourceThread.envMode ?? (input.sourceThread.worktreePath ? "worktree" : "local"),
@@ -273,7 +273,7 @@ export async function createSidechatThread(input: {
       await sendSidechatPrompt({
         api: input.api,
         threadId: nextThreadId,
-        selectedModelSelection: input.selectedModelSelection,
+        selectedEngineSelection: input.selectedEngineSelection,
         prompt: initialPrompt,
       });
       return null;

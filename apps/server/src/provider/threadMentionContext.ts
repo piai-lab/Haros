@@ -1,11 +1,11 @@
 // FILE: threadMentionContext.ts
 // Purpose: Resolve thread:// composer references into bounded transcript prompt context.
-// Layer: Provider prompt compatibility
+// Layer: Engine prompt compatibility
 
 import {
   ThreadId,
   type OrchestrationThread,
-  type ProviderMentionReference,
+  type EngineMentionReference,
 } from "@harnessos/contracts";
 import {
   isThreadMentionPath,
@@ -28,11 +28,11 @@ const THREAD_MENTION_CONTEXT_SEPARATOR_CHARS = 2;
 const THREAD_MENTION_CONTEXT_CLOSE_TAG = "</mentioned_thread_context>";
 const THREAD_MENTION_BLOCK_TRUNCATION_MARKER = "\n[... context block truncated]\n";
 
-export function isThreadMentionReference(reference: ProviderMentionReference): boolean {
+export function isThreadMentionReference(reference: EngineMentionReference): boolean {
   return isThreadMentionPath(reference.path);
 }
 
-export function threadIdFromMentionReference(reference: ProviderMentionReference): string | null {
+export function threadIdFromMentionReference(reference: EngineMentionReference): string | null {
   return threadIdFromThreadMentionPath(reference.path);
 }
 
@@ -64,7 +64,7 @@ function fitContextBlockToMaxChars(block: string, maxChars: number): string {
 }
 
 export function formatThreadMentionContextBlock(input: {
-  readonly reference: ProviderMentionReference;
+  readonly reference: EngineMentionReference;
   readonly thread: OrchestrationThread | null;
   readonly maxChars?: number;
 }): string {
@@ -93,7 +93,7 @@ export function formatThreadMentionContextBlock(input: {
   const header = [
     "<mentioned_thread_context>",
     `Thread: ${JSON.stringify(title)}`,
-    `Provider: ${input.thread.modelSelection.provider}`,
+    `Engine: ${input.thread.engineSelection.engine}`,
     `Thread ID: ${threadId}`,
     "Recent transcript (newest last):",
   ].join("\n");
@@ -109,11 +109,11 @@ export function formatThreadMentionContextBlock(input: {
 
 export interface ResolvedThreadMentionPromptProjection {
   readonly contextBlocks: readonly string[];
-  readonly providerMentions: ReadonlyArray<ProviderMentionReference> | undefined;
+  readonly providerMentions: ReadonlyArray<EngineMentionReference> | undefined;
 }
 
 export function resolveThreadMentionPromptProjection(input: {
-  readonly mentions: ReadonlyArray<ProviderMentionReference> | undefined;
+  readonly mentions: ReadonlyArray<EngineMentionReference> | undefined;
   readonly snapshotQuery: Pick<ProjectionSnapshotQueryShape, "getThreadDetailById">;
   readonly maxTotalContextChars?: number;
 }): Effect.Effect<ResolvedThreadMentionPromptProjection> {
@@ -178,7 +178,7 @@ export function resolveThreadMentionPromptProjection(input: {
 }
 
 /**
- * Suffix appended after the provider input so mentioned-thread context never
+ * Suffix appended after the engine input so mentioned-thread context never
  * lands inside `<latest_user_message>` wrappers. Empty when nothing resolved.
  */
 export function threadMentionContextSuffix(contextBlocks: readonly string[]): string {

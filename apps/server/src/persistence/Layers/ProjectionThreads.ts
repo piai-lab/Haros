@@ -14,7 +14,7 @@ import {
   type ProjectionThreadRepositoryShape,
 } from "../Services/ProjectionThreads.ts";
 import {
-  ModelSelection,
+  EngineSelection,
   OrchestrationThreadPullRequest,
   ThreadPinnedMessages,
   ThreadMarkers,
@@ -40,7 +40,7 @@ const ProjectionThreadDbRow = ProjectionThread.mapFields(
     lastKnownPr: Schema.NullOr(Schema.fromJsonString(OrchestrationThreadPullRequest)),
     pinnedMessages: Schema.NullOr(Schema.fromJsonString(ThreadPinnedMessages)),
     threadMarkers: Schema.NullOr(Schema.fromJsonString(ThreadMarkers)),
-    modelSelection: Schema.fromJsonString(ModelSelection),
+    engineSelection: Schema.fromJsonString(EngineSelection),
   }),
 );
 type ProjectionThreadDbRow = typeof ProjectionThreadDbRow.Type;
@@ -105,7 +105,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           ${row.projectId},
           ${JSON.stringify(row.groupIds ?? [])},
           ${row.title},
-          ${JSON.stringify(row.modelSelection)},
+          ${JSON.stringify(row.engineSelection)},
           ${row.runtimeMode},
           ${row.interactionMode},
           ${row.envMode},
@@ -208,7 +208,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           project_id AS "projectId",
           group_ids_json AS "groupIds",
           title,
-          model_selection_json AS "modelSelection",
+          model_selection_json AS "engineSelection",
           runtime_mode AS "runtimeMode",
           interaction_mode AS "interactionMode",
           env_mode AS "envMode",
@@ -265,7 +265,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           project_id AS "projectId",
           group_ids_json AS "groupIds",
           title,
-          model_selection_json AS "modelSelection",
+          model_selection_json AS "engineSelection",
           runtime_mode AS "runtimeMode",
           interaction_mode AS "interactionMode",
           env_mode AS "envMode",

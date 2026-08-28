@@ -417,9 +417,9 @@ export function isOmniMindBrowserToolCall(input: OmniMindMcpToolTitleInput): boo
   );
 }
 
-// Every provider exposes OmniMind's MCP tools differently: MCP, dynamic, and even
+// Every engine exposes OmniMind's MCP tools differently: MCP, dynamic, and even
 // file-change rows can all represent the same gateway action. Normalize by tool
-// identity instead of provider item type so transport details never reach the UI.
+// identity instead of engine item type so transport details never reach the UI.
 export function deriveOmniMindMcpToolTitle(input: OmniMindMcpToolTitleInput): string | null {
   const presentation = resolveOmniMindMcpToolPresentation([
     input.toolName,

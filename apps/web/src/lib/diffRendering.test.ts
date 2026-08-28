@@ -333,9 +333,7 @@ describe("resolveFileDiffStatByChangedPath", () => {
     const stat = { additions: 1, deletions: 4 };
     const statsByPath = new Map([["src/generated-name.ts", stat]]);
 
-    expect(resolveFileDiffStatByChangedPath(statsByPath, "provider-reported-name.ts", 1)).toBe(
-      stat,
-    );
+    expect(resolveFileDiffStatByChangedPath(statsByPath, "engine-reported-name.ts", 1)).toBe(stat);
   });
 
   it("avoids ambiguous basename matches", () => {

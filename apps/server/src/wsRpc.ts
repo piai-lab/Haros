@@ -101,21 +101,21 @@ import { Open, resolveAvailableEditors } from "./open";
 import { makeDispatchCommandNormalizer } from "./orchestration/dispatchCommandNormalization";
 import { makeImportThreadHandler } from "./orchestration/importThreadRoute";
 import { OrchestrationEngineService } from "./orchestration/Services/OrchestrationEngine";
-import { ProviderCommandReactor } from "./orchestration/Services/ProviderCommandReactor";
+import { EngineCommandReactor } from "./orchestration/Services/EngineCommandReactor";
 import { ProjectionStateIncompleteError } from "./persistence/Errors";
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEvents";
-import { ProviderDiscoveryService } from "./provider/Services/ProviderDiscoveryService";
+import { EngineDiscoveryService } from "./provider/Services/EngineDiscoveryService";
 import { OmniMindEcosystem } from "./provider/Services/OmniMindEcosystem";
 import { OmniMindAgentPromptFiles } from "./provider/Services/OmniMindAgentPromptFiles";
 import { OmniMindWebSearchSettings } from "./provider/Services/OmniMindWebSearchSettings";
 import { OmniMindModelServices } from "./provider/Services/OmniMindModelServices";
 import { discoverSkillsCatalog, harnessosSkillsDir } from "./provider/skillsCatalog";
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
-import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
-import { ProviderExecutionCapabilities } from "./provider/Services/ProviderExecutionCapabilities";
-import { ProviderHealth } from "./provider/Services/ProviderHealth";
-import { ProviderService } from "./provider/Services/ProviderService";
+import { EngineAdapterRegistry } from "./provider/Services/EngineAdapterRegistry";
+import { EngineExecutionCapabilities } from "./provider/Services/EngineExecutionCapabilities";
+import { EngineHealth } from "./provider/Services/EngineHealth";
+import { EngineService } from "./provider/Services/EngineService";
 import { toProviderModelDiscoveryRpcError } from "./provider/providerModelDiscoveryRpcError";
 import { userInputPresenterRegistry } from "./provider/userInputPresenterRegistry";
 import { listProviderUsage } from "./providerUsage";
@@ -373,21 +373,21 @@ const makeWsRpcHandlersLayer = () =>
       const keybindings = yield* Keybindings;
       const open = yield* Open;
       const orchestrationEngine = yield* OrchestrationEngineService;
-      const providerCommandReactor = yield* ProviderCommandReactor;
+      const providerCommandReactor = yield* EngineCommandReactor;
       const path = yield* Path.Path;
       const pullRequests = yield* PullRequestService;
       const profileStatsQuery = yield* ProfileStatsQuery;
       const usageHistory = yield* UsageHistory;
       const projectionReadModelQuery = yield* ProjectionSnapshotQuery;
-      const providerAdapterRegistry = yield* ProviderAdapterRegistry;
-      const providerExecutionCapabilities = yield* ProviderExecutionCapabilities;
-      const providerDiscoveryService = yield* ProviderDiscoveryService;
+      const providerAdapterRegistry = yield* EngineAdapterRegistry;
+      const engineExecutionCapabilities = yield* EngineExecutionCapabilities;
+      const engineDiscoveryService = yield* EngineDiscoveryService;
       const omniMindEcosystem = yield* OmniMindEcosystem;
       const omniMindAgentPromptFiles = yield* OmniMindAgentPromptFiles;
       const omniMindWebSearchSettings = yield* OmniMindWebSearchSettings;
       const omniMindModelServices = yield* OmniMindModelServices;
-      const providerHealth = yield* ProviderHealth;
-      const providerService = yield* ProviderService;
+      const providerHealth = yield* EngineHealth;
+      const providerService = yield* EngineService;
       const lifecycleEvents = yield* ServerLifecycleEvents;
       const runtimeStartup = yield* ServerRuntimeStartup;
       const serverEnvironment = yield* ServerEnvironment;
@@ -398,10 +398,10 @@ const makeWsRpcHandlersLayer = () =>
       const workspaceFileSystem = yield* WorkspaceFileSystem;
       const threadDiagnostics = yield* ThreadDiagnosticsQuery;
       const requireExecutableRuntimeMode = (
-        modelSelection: OrchestrationThread["modelSelection"],
+        engineSelection: OrchestrationThread["engineSelection"],
         runtimeMode: OrchestrationThread["runtimeMode"],
       ) =>
-        providerExecutionCapabilities.get(modelSelection).pipe(
+        engineExecutionCapabilities.get(engineSelection).pipe(
           Effect.flatMap((capabilities) => {
             const capability = capabilities.runtimeModes[runtimeMode];
             if (isProviderRuntimeModeExecutable(capability)) {
@@ -411,7 +411,7 @@ const makeWsRpcHandlersLayer = () =>
             return Effect.fail(
               new WsRpcError({
                 message: permanentlyUnsupported
-                  ? "The selected runtime mode is not supported by this Provider and model."
+                  ? "The selected runtime mode is not supported by this Engine and model."
                   : "The selected runtime mode is temporarily unavailable.",
                 code: capability.reason ?? "runtime-health-unknown",
                 retryable: !permanentlyUnsupported,
@@ -429,7 +429,10 @@ const makeWsRpcHandlersLayer = () =>
             command.type === "thread.handoff.create" ||
             command.type === "thread.fork.create"
           ) {
-            return yield* requireExecutableRuntimeMode(command.modelSelection, command.runtimeMode);
+            return yield* requireExecutableRuntimeMode(
+              command.engineSelection,
+              command.runtimeMode,
+            );
           }
           if (
             command.type !== "thread.runtime-mode.set" &&
@@ -443,11 +446,11 @@ const makeWsRpcHandlersLayer = () =>
           if (!thread) {
             return;
           }
-          const modelSelection =
+          const engineSelection =
             command.type === "thread.runtime-mode.set"
-              ? thread.modelSelection
-              : (command.modelSelection ?? thread.modelSelection);
-          return yield* requireExecutableRuntimeMode(modelSelection, command.runtimeMode);
+              ? thread.engineSelection
+              : (command.engineSelection ?? thread.engineSelection);
+          return yield* requireExecutableRuntimeMode(engineSelection, command.runtimeMode);
         });
       // Optional so route-level tests and non-macOS builds can mount the RPC
       // group without a device engine; the handlers below then refuse cleanly
@@ -776,15 +779,15 @@ const makeWsRpcHandlersLayer = () =>
           keybindingsConfigPath: config.keybindingsConfigPath,
           keybindings: keybindingsConfig.keybindings,
           issues: keybindingsConfig.issues,
-          providers: providerStatuses,
+          engines: providerStatuses,
           availableEditors: resolveAvailableEditors(),
         };
       });
 
-      const providerStatusPayload = (providers: ReadonlyArray<ServerProviderStatus>) =>
+      const providerStatusPayload = (engines: ReadonlyArray<ServerProviderStatus>) =>
         providerHealth.getPassivePresence.pipe(
           Effect.map((recoverableProviders) => ({
-            providers,
+            engines,
             passivePresence: {
               state: "settled" as const,
               recoverableProviders,
@@ -1041,7 +1044,7 @@ const makeWsRpcHandlersLayer = () =>
               ...(input.threadId === undefined ? {} : { threadId: input.threadId }),
               limit: input.limit ?? 50,
             }),
-            "Failed to load provider delivery blockers",
+            "Failed to load engine delivery blockers",
           ),
         [ORCHESTRATION_WS_METHODS.reconcileProviderDelivery]: (input) =>
           rpcEffect(
@@ -1058,14 +1061,14 @@ const makeWsRpcHandlersLayer = () =>
               if (result === null) {
                 return yield* new WsRpcError({
                   message:
-                    "Provider delivery no longer matches the requested thread and blocking state.",
-                  code: "PROVIDER_DELIVERY_RECONCILIATION_CONFLICT",
+                    "Engine delivery no longer matches the requested thread and blocking state.",
+                  code: "ENGINE_DELIVERY_RECONCILIATION_CONFLICT",
                   retryable: false,
                 });
               }
               return result;
             }),
-            "Failed to reconcile provider delivery",
+            "Failed to reconcile engine delivery",
           ),
         [ORCHESTRATION_WS_METHODS.subscribeShell]: (_, { clientId }) =>
           streamAdmission.guard(
@@ -1355,7 +1358,7 @@ const makeWsRpcHandlersLayer = () =>
                         title: path.basename(checkout.workspaceRoot),
                         workspaceRoot: checkout.workspaceRoot,
                         createWorkspaceRootIfMissing: false,
-                        defaultModelSelection: input.defaultModelSelection,
+                        defaultEngineSelection: input.defaultEngineSelection,
                         createdAt: input.createdAt,
                       },
                     });
@@ -1769,17 +1772,17 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(serverSettings.updateSettingsView(input), "Failed to update server settings"),
         [WS_METHODS.serverResetSettings]: () =>
           rpcEffect(serverSettings.resetSettingsView, "Failed to reset server settings"),
-        [WS_METHODS.serverUpdateProviderCredential]: (input) =>
+        [WS_METHODS.serverUpdateEngineCredential]: (input) =>
           rpcEffect(
-            serverSettings.updateProviderCredential(input.provider, input.serverPassword),
-            "Failed to update provider credential",
+            serverSettings.updateEngineCredential(input.engine, input.serverPassword),
+            "Failed to update engine credential",
           ),
         [WS_METHODS.serverRefreshProviders]: () =>
           rpcEffect(
             providerHealth.refresh.pipe(Effect.flatMap(providerStatusPayload)),
-            "Failed to refresh providers",
+            "Failed to refresh engines",
           ),
-        [WS_METHODS.serverUpdateProvider]: (input) => providerHealth.updateProvider(input),
+        [WS_METHODS.serverUpdateProvider]: (input) => providerHealth.updateEngine(input),
         [WS_METHODS.serverListExternalMcpIntegrations]: () =>
           rpcEffect(
             requireOwner.pipe(Effect.andThen(externalMcp.listIntegrations())),
@@ -1823,7 +1826,7 @@ const makeWsRpcHandlersLayer = () =>
             "Failed to load profile token stats",
           ),
         [WS_METHODS.serverListProviderUsage]: (input) =>
-          rpcEffect(listProviderUsage(input), "Failed to load provider usage"),
+          rpcEffect(listProviderUsage(input), "Failed to load engine usage"),
         [WS_METHODS.serverGetUsageHistory]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(usageHistory.get(input))),
@@ -1870,14 +1873,14 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.serverPrewarmVoice]: (input) =>
           rpcEffect(
             providerAdapterRegistry
-              .getByProvider(input.provider)
+              .getByEngine(input.engine)
               .pipe(
                 Effect.flatMap((adapter) =>
                   adapter.prewarmVoice
                     ? adapter.prewarmVoice(input)
                     : Effect.fail(
                         new Error(
-                          `Voice transcription is unavailable for provider '${input.provider}'.`,
+                          `Voice transcription is unavailable for engine '${input.engine}'.`,
                         ),
                       ),
                 ),
@@ -1888,14 +1891,14 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(
             voiceUploadAdmissionGate.run(
               providerAdapterRegistry
-                .getByProvider(input.provider)
+                .getByEngine(input.engine)
                 .pipe(
                   Effect.flatMap((adapter) =>
                     adapter.transcribeVoice
                       ? adapter.transcribeVoice(input)
                       : Effect.fail(
                           new Error(
-                            `Voice transcription is unavailable for provider '${input.provider}'.`,
+                            `Voice transcription is unavailable for engine '${input.engine}'.`,
                           ),
                         ),
                   ),
@@ -1907,17 +1910,17 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(
             Effect.gen(function* () {
               const settings = yield* serverSettings.getSettings;
-              const modelSelection =
-                input.textGenerationModelSelection ?? settings.textGenerationModelSelection;
+              const engineSelection =
+                input.textGenerationEngineSelection ?? settings.textGenerationEngineSelection;
               return yield* textGeneration.generateThreadRecap({
                 cwd: input.cwd,
                 newMaterial: input.newMaterial,
                 ...(input.previousRecap ? { previousRecap: input.previousRecap } : {}),
                 ...(input.currentState ? { currentState: input.currentState } : {}),
                 ...(input.codexHomePath ? { codexHomePath: input.codexHomePath } : {}),
-                model: input.textGenerationModel ?? modelSelection.model,
-                modelSelection,
-                ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+                model: input.textGenerationModel ?? engineSelection.model,
+                engineSelection,
+                ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
               });
             }),
             "Failed to generate thread recap",
@@ -1926,17 +1929,17 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(
             Effect.gen(function* () {
               const settings = yield* serverSettings.getSettings;
-              const modelSelection =
-                input.textGenerationModelSelection ?? settings.textGenerationModelSelection;
+              const engineSelection =
+                input.textGenerationEngineSelection ?? settings.textGenerationEngineSelection;
               return yield* textGeneration.generateAutomationIntent({
                 cwd: input.cwd,
                 message: input.message,
                 ...(input.defaultMode ? { defaultMode: input.defaultMode } : {}),
                 nowIso: input.nowIso,
                 ...(input.codexHomePath ? { codexHomePath: input.codexHomePath } : {}),
-                model: input.textGenerationModel ?? modelSelection.model,
-                modelSelection,
-                ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+                model: input.textGenerationModel ?? engineSelection.model,
+                engineSelection,
+                ...(input.engineOptions ? { engineOptions: input.engineOptions } : {}),
               });
             }),
             "Failed to generate automation intent",
@@ -2002,17 +2005,17 @@ const makeWsRpcHandlersLayer = () =>
                 }).pipe(
                   Stream.map((event) => ({
                     type: "configUpdated" as const,
-                    payload: { issues: event.issues, providers: [] },
+                    payload: { issues: event.issues, engines: [] },
                   })),
                 ),
                 Stream.merge(
                   bufferLiveUiStream(providerHealth.streamChanges, {
-                    label: "server.provider-statuses",
+                    label: "server.engine-statuses",
                     onDroppedEvents: failLiveUiStreamForSnapshotResync,
                   }).pipe(
-                    Stream.map((providers) => ({
+                    Stream.map((engines) => ({
                       type: "providerStatuses" as const,
-                      payload: { providers },
+                      payload: { engines },
                     })),
                   ),
                   bufferLiveUiStream(serverSettings.streamViews, {
@@ -2031,13 +2034,13 @@ const makeWsRpcHandlersLayer = () =>
         [WS_METHODS.subscribeServerProviderStatuses]: (_, { clientId }) =>
           streamAdmission.guard(
             clientId,
-            { key: "server.provider-statuses" },
+            { key: "server.engine-statuses" },
             Stream.concat(
               Stream.fromEffect(
                 providerHealth.getStatuses.pipe(Effect.flatMap(providerStatusPayload)),
               ),
               bufferLiveUiStream(providerHealth.streamChanges, {
-                label: "server.provider-statuses",
+                label: "server.engine-statuses",
                 onDroppedEvents: failLiveUiStreamForSnapshotResync,
               }).pipe(Stream.mapEffect(providerStatusPayload)),
             ),
@@ -2061,20 +2064,20 @@ const makeWsRpcHandlersLayer = () =>
 
         [WS_METHODS.providerGetComposerCapabilities]: (input) =>
           rpcEffect(
-            providerDiscoveryService.getComposerCapabilities(input),
+            engineDiscoveryService.getComposerCapabilities(input),
             "Failed to get composer capabilities",
           ),
         [WS_METHODS.providerGetExecutionCapabilities]: (input) =>
           rpcEffect(
-            providerExecutionCapabilities.get(input.modelSelection),
-            "Failed to get provider execution capabilities",
+            engineExecutionCapabilities.get(input.engineSelection),
+            "Failed to get engine execution capabilities",
           ),
         [WS_METHODS.providerCompactThread]: (input) =>
           rpcEffect(providerService.compactThread(input), "Failed to compact thread"),
         [WS_METHODS.providerListCommands]: (input) =>
-          rpcEffect(providerDiscoveryService.listCommands(input), "Failed to list commands"),
+          rpcEffect(engineDiscoveryService.listCommands(input), "Failed to list commands"),
         [WS_METHODS.providerListSkills]: (input) =>
-          rpcEffect(providerDiscoveryService.listSkills(input), "Failed to list skills"),
+          rpcEffect(engineDiscoveryService.listSkills(input), "Failed to list skills"),
         [WS_METHODS.providerListSkillsCatalog]: (input) =>
           rpcEffect(
             Effect.tryPromise(() =>
@@ -2093,18 +2096,18 @@ const makeWsRpcHandlersLayer = () =>
             "Failed to list the skills catalog",
           ),
         [WS_METHODS.providerListPlugins]: (input) =>
-          rpcEffect(providerDiscoveryService.listPlugins(input), "Failed to list plugins"),
+          rpcEffect(engineDiscoveryService.listPlugins(input), "Failed to list plugins"),
         [WS_METHODS.providerReadPlugin]: (input) =>
-          rpcEffect(providerDiscoveryService.readPlugin(input), "Failed to read plugin"),
+          rpcEffect(engineDiscoveryService.readPlugin(input), "Failed to read plugin"),
         [WS_METHODS.providerListModels]: (input) =>
-          providerDiscoveryService.listModels(input).pipe(
+          engineDiscoveryService.listModels(input).pipe(
             Effect.catch((cause) =>
               providerHealth.getStatuses.pipe(
                 Effect.flatMap((statuses) =>
                   Effect.fail(
                     toProviderModelDiscoveryRpcError({
                       cause,
-                      provider: input.provider,
+                      engine: input.engine,
                       statuses,
                     }),
                   ),
@@ -2113,7 +2116,7 @@ const makeWsRpcHandlersLayer = () =>
             ),
           ),
         [WS_METHODS.providerListAgents]: (input) =>
-          rpcEffect(providerDiscoveryService.listAgents(input), "Failed to list agents"),
+          rpcEffect(engineDiscoveryService.listAgents(input), "Failed to list agents"),
         [WS_METHODS.omnimindEcosystemList]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.list(input))),
@@ -2179,7 +2182,7 @@ const makeWsRpcHandlersLayer = () =>
             requireOwnerRole.pipe(
               Effect.andThen(omniMindWebSearchSettings.testProvider(input, String(clientId))),
             ),
-            "Failed to test Web search Provider",
+            "Failed to test Web search Engine",
           ),
         [WS_METHODS.omnimindWebSearchRecheck]: (input, { clientId }) =>
           rpcEffect(

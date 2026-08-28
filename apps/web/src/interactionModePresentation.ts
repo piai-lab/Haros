@@ -2,7 +2,7 @@
 // Purpose: Own the exhaustive visible projection of active non-default interaction modes.
 // Layer: Web presentation
 
-import type { ProviderInteractionMode } from "@harnessos/contracts";
+import type { EngineInteractionMode } from "@harnessos/contracts";
 
 import type { MessageKey } from "./i18n";
 import { BugIcon, ConvergeIcon, LearnIcon, ListTodoIcon, type LucideIcon } from "./lib/icons";
@@ -35,12 +35,12 @@ const ACTIVE_INTERACTION_MODE_PRESENTATION = {
     icon: LearnIcon,
   },
 } as const satisfies Record<
-  Exclude<ProviderInteractionMode, "default">,
+  Exclude<EngineInteractionMode, "default">,
   ActiveInteractionModePresentation
 >;
 
 export function activeInteractionModePresentation(
-  interactionMode: ProviderInteractionMode,
+  interactionMode: EngineInteractionMode,
 ): ActiveInteractionModePresentation | null {
   return interactionMode === "default"
     ? null

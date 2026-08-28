@@ -1,6 +1,6 @@
 // FILE: AcpSessionRuntime.ts
 // Purpose: Owns one authenticated ACP process, session setup, configuration, and event stream.
-// Layer: Provider ACP runtime
+// Layer: Engine ACP runtime
 // Exports: AcpSessionRuntime and its typed runtime factory contracts.
 
 import { randomUUID } from "node:crypto";
@@ -196,7 +196,7 @@ export interface AcpFreshSessionRetryPolicy {
 }
 
 /**
- * Retries one fresh `session/new` request when the provider reports a failure
+ * Retries one fresh `session/new` request when the engine reports a failure
  * that is known to occur before a session exists. Resume/load requests must not
  * use this path because repeating them can make delivery ambiguous.
  */
@@ -223,7 +223,7 @@ export interface AcpSessionRuntimeOptions {
   readonly cwd: string;
   readonly resumeSessionId?: string;
   readonly clientCapabilities?: Acp.InitializeRequest["clientCapabilities"];
-  /** Provider-specific metadata sent on session/new, session/load, and session/resume. */
+  /** Engine-specific metadata sent on session/new, session/load, and session/resume. */
   readonly sessionMeta?: Record<string, unknown>;
   readonly clientInfo: {
     readonly name: string;
@@ -445,7 +445,7 @@ const makeOfficialSdkClient = Effect.fnUntraced(function* (
   let terminalRelease: TerminalReleaseHandler | undefined;
   const sessionUpdateHandlers: SessionUpdateHandler[] = [];
   const elicitationCompleteHandlers: ElicitationCompleteHandler[] = [];
-  // The ACP SDK is only needed once a provider process is actually spawned, so
+  // The ACP SDK is only needed once a engine process is actually spawned, so
   // it is imported here instead of at module scope (see AcpSdk.ts).
   const acpSdk = yield* Effect.promise(() => loadAcpSdk());
   const logProtocol = (
@@ -802,10 +802,10 @@ const makeAcpSessionRuntime = (
       );
 
     // A supplied environment is an exact capability set prepared by the
-    // provider boundary. Merging process.env here would silently restore
+    // engine boundary. Merging process.env here would silently restore
     // stripped control-plane credentials and launcher capabilities.
     const env = buildProviderChildEnvironment({
-      provider: "acp",
+      engine: "acp",
       baseEnv: options.spawn.env ? { ...options.spawn.env } : process.env,
     });
     const prepared = prepareWindowsSafeProcess(options.spawn.command, options.spawn.args, {
@@ -1391,7 +1391,7 @@ export function sessionConfigOptionsFromSetup(
   return response?.configOptions ?? fallback;
 }
 
-// Flattens grouped ACP select options so semantic configuration lookup stays provider-agnostic.
+// Flattens grouped ACP select options so semantic configuration lookup stays engine-agnostic.
 function flattenSessionConfigSelectOptions(
   options:
     | ReadonlyArray<Acp.SessionConfigSelectOption>

@@ -14,10 +14,10 @@ import {
   EventId,
   IsoDateTime,
   MessageId,
-  ModelSelection,
-  ProviderInteractionMode,
-  ProviderReviewTarget,
-  ProviderStartOptions,
+  EngineSelection,
+  EngineInteractionMode,
+  EngineReviewTarget,
+  EngineStartOptions,
   RuntimeMode,
   ThreadId,
   TrimmedNonEmptyString,
@@ -47,8 +47,8 @@ export interface DesktopQuitResumeIntent {
 }
 
 const QuitResumeBinding = Schema.Struct({
-  modelSelection: ModelSelection,
-  providerOptions: Schema.optional(
+  engineSelection: EngineSelection,
+  engineOptions: Schema.optional(
     Schema.Struct({
       claude: Schema.optional(
         Schema.Struct({
@@ -60,10 +60,10 @@ const QuitResumeBinding = Schema.Struct({
       ),
     }),
   ),
-  reviewTarget: Schema.optional(ProviderReviewTarget),
+  reviewTarget: Schema.optional(EngineReviewTarget),
   assistantDeliveryMode: AssistantDeliveryMode,
   runtimeMode: RuntimeMode,
-  interactionMode: ProviderInteractionMode,
+  interactionMode: EngineInteractionMode,
 });
 
 export const QuitResumeRecord = Schema.Struct({
@@ -90,13 +90,13 @@ export type QuitResumeRecordRead =
   | { readonly kind: "record"; readonly record: QuitResumeRecord };
 
 /**
- * Keep only behavior-bearing, non-location Claude options. Provider homes,
+ * Keep only behavior-bearing, non-location Claude options. Engine homes,
  * binary paths, agent directories and endpoints remain owned by the live
- * Provider Registry and never enter the one-shot recovery file.
+ * Engine Registry and never enter the one-shot recovery file.
  */
 export function sanitizeQuitResumeProviderOptions(
-  options: ProviderStartOptions | undefined,
-): QuitResumeRecord["threads"][number]["binding"]["providerOptions"] | undefined {
+  options: EngineStartOptions | undefined,
+): QuitResumeRecord["threads"][number]["binding"]["engineOptions"] | undefined {
   const claudeAgent = options?.claude;
   if (!claudeAgent) return undefined;
   const safeClaudeAgent = {
@@ -144,21 +144,21 @@ export async function readExactQuitResumeBinding(
   // `thread.turn-queued` until that turn settles. Therefore the newest start
   // admission at or before the active session's start fence is the active
   // turn's exact binding. The in-memory projector intentionally learns the
-  // provider turn id later and may use that session timestamp as requestedAt,
+  // engine turn id later and may use that session timestamp as requestedAt,
   // while the durable admission retains the earlier user-dispatch timestamp.
   const event = events[0];
   const activeTurnStartFence = latestTurn.startedAt ?? latestTurn.requestedAt;
   if (
     event?.type !== "thread.turn-start-requested" ||
     event.payload.createdAt > activeTurnStartFence ||
-    event.payload.modelSelection === undefined
+    event.payload.engineSelection === undefined
   ) {
     return null;
   }
-  const providerOptions = sanitizeQuitResumeProviderOptions(event.payload.providerOptions);
+  const engineOptions = sanitizeQuitResumeProviderOptions(event.payload.engineOptions);
   return {
-    modelSelection: event.payload.modelSelection,
-    ...(providerOptions !== undefined ? { providerOptions } : {}),
+    engineSelection: event.payload.engineSelection,
+    ...(engineOptions !== undefined ? { engineOptions } : {}),
     ...(event.payload.reviewTarget !== undefined
       ? { reviewTarget: event.payload.reviewTarget }
       : {}),
@@ -301,7 +301,7 @@ export async function quitResumeWorkspaceFailureReason(
   if (!project) return "project-unavailable";
   const cwd = resolveThreadWorkspaceCwd({ thread, projects: [project] });
   // A resumed turn must retain its exact workspace binding. Falling through here
-  // would let the provider resolve a default cwd (typically HOME), which is both
+  // would let the engine resolve a default cwd (typically HOME), which is both
   // surprising and unsafe for a one-shot recovery command.
   if (!cwd) return "workspace-unavailable";
   try {
@@ -358,9 +358,9 @@ export function makeQuitResumeTurnCommand(input: {
       text: input.record.continuationPrompt,
       attachments: [],
     },
-    modelSelection: input.entry.binding.modelSelection,
-    ...(input.entry.binding.providerOptions !== undefined
-      ? { providerOptions: input.entry.binding.providerOptions }
+    engineSelection: input.entry.binding.engineSelection,
+    ...(input.entry.binding.engineOptions !== undefined
+      ? { engineOptions: input.entry.binding.engineOptions }
       : {}),
     ...(input.entry.binding.reviewTarget !== undefined
       ? { reviewTarget: input.entry.binding.reviewTarget }

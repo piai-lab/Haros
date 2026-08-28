@@ -1,9 +1,9 @@
 import { defineMessageSlice } from "../messageCatalog";
 
 const EN_MESSAGES = {
-  "settings.providers": "Agent engines",
-  "settings.defaultProvider": "Default engine",
-  "settings.defaultProviderDescription": "Choose the engine used for new chats.",
+  "settings.engines": "Agent engines",
+  "settings.defaultEngine": "Default engine",
+  "settings.defaultEngineDescription": "Choose the engine used for new chats.",
   "settings.providersDescription":
     "Choose visible coding agents and manage their installed CLI tools.",
   "settings.serverSettingsUnavailable":
@@ -17,8 +17,8 @@ const EN_MESSAGES = {
   "settings.engineModelProvider": "Engine",
   "settings.engineModelSlug": "Engine model slug",
   "settings.add": "Add",
-  "settings.providerCopies": "Engine copies: {providers}",
-  "settings.providerCopy": "Engine copy: {providers}",
+  "settings.providerCopies": "Engine copies: {engines}",
+  "settings.providerCopy": "Engine copy: {engines}",
   "settings.manualSetup": "Set up by hand instead",
   "settings.manualSetupDescription":
     "For apps without a terminal or chat, like Claude Desktop: run the pairing command in Terminal, then add the JSON below to the app's MCP configuration.",
@@ -29,7 +29,7 @@ const EN_MESSAGES = {
   "settings.hooks": "Hooks",
   "settings.headless": "Headless",
   "settings.quickstart": "Quickstart",
-  "settings.binaryPath": "{provider} binary path",
+  "settings.binaryPath": "{engine} binary path",
   "settings.binaryPathDescription": "Leave blank to use {command} from your PATH.",
   "settings.cursorBinaryPlaceholder": "Cursor Agent or Cursor CLI path",
   "settings.cursorBinaryDescription":
@@ -39,20 +39,20 @@ const EN_MESSAGES = {
   "settings.cursorApiEndpoint": "Cursor API endpoint",
   "settings.cursorApiEndpointDescription":
     "Optional Cursor API endpoint override passed to cursor-agent -e.",
-  "settings.serverUrl": "{provider} server URL",
+  "settings.serverUrl": "{engine} server URL",
   "settings.serverUrlDescription":
-    "Optional existing {provider} server URL. Leave blank to spawn a local server.",
-  "settings.serverPassword": "{provider} server password",
+    "Optional existing {engine} server URL. Leave blank to spawn a local server.",
+  "settings.serverPassword": "{engine} server password",
   "settings.serverPasswordDescription":
-    "Optional password for an externally managed {provider} server.",
+    "Optional password for an externally managed {engine} server.",
   "settings.openCodeWebSockets": "OpenAI response WebSockets",
   "settings.openCodeWebSocketsDescription":
     "Use OpenCode's experimental OpenAI response WebSocket transport for managed local servers.",
   "settings.piAgentDirectory": "Pi agent directory",
   "settings.piAgentDirectoryDescription":
     "Optional custom Pi agent directory for auth, models, skills, and commands.",
-  "settings.reorderProvider": "Reorder {provider}",
-  "settings.showProvider": "Show {provider} in the engine picker",
+  "settings.reorderProvider": "Reorder {engine}",
+  "settings.showProvider": "Show {engine} in the engine picker",
   "settings.cliDocs": "CLI docs",
   "settings.updateQueued": "Update queued",
   "settings.updatingProvider": "Updating",
@@ -61,7 +61,7 @@ const EN_MESSAGES = {
   "settings.stillOutdated": "Still outdated",
   "settings.latestVersion": "Latest {version}",
   "settings.currentVersion": "Current {version}",
-  "settings.providerUpdateIncomplete": "The engine update did not complete.",
+  "settings.engineUpdateIncomplete": "The engine update did not complete.",
   "settings.runUpdateCommand": "Run {command}",
   "settings.configuredPassword": "Configured — enter a replacement or leave blank",
   "settings.custom": "Custom",
@@ -69,21 +69,21 @@ const EN_MESSAGES = {
   "settings.noSafeUpdateCommand":
     "A newer version is available, but OmniMind could not identify a safe one-click update command for this installation.",
   "settings.selfManagedUpdate":
-    "{provider} manages its own releases, so OmniMind cannot tell whether a newer version exists. Run the update to be sure.",
-  "settings.couldNotUpdateProvider": "Could not update {provider}",
+    "{engine} manages its own releases, so OmniMind cannot tell whether a newer version exists. Run the update to be sure.",
+  "settings.couldNotUpdateProvider": "Could not update {engine}",
   "settings.manualUpdateInstruction":
     "{failure}\n\nCopy the command below to update manually in a terminal.",
-  "settings.providerUpdateUnknownFailure": "The engine update failed.",
+  "settings.engineUpdateUnknownFailure": "The engine update failed.",
   "settings.updates": "Updates",
   "settings.automaticCliUpdates": "Automatic CLI update checks",
   "settings.automaticCliUpdatesDescription":
     "Check Codex, Claude, and other engine CLIs for newer versions in the background.",
-  "settings.providerUpdates": "Engine updates",
-  "settings.providerUpdatesDescription":
+  "settings.engineUpdates": "Engine updates",
+  "settings.engineUpdatesDescription":
     "Review installed engine tools that OmniMind can safely update.",
   "settings.automaticChecksOff": "Automatic checks off",
   "settings.updatesAvailable": "{count} updates available",
-  "settings.noProviderUpdates": "No engine updates detected",
+  "settings.noEngineUpdates": "No engine updates detected",
   "settings.manualUpdate": "Manual update",
   "settings.providerPicker": "Engine picker",
   "settings.visibleProviders": "Visible engines",
@@ -105,9 +105,9 @@ const EN_MESSAGES = {
 } as const;
 
 const ZH_CN_MESSAGES = {
-  "settings.providers": "Agent 引擎",
-  "settings.defaultProvider": "默认引擎",
-  "settings.defaultProviderDescription": "选择新 Chat 默认使用的引擎。",
+  "settings.engines": "Agent 引擎",
+  "settings.defaultEngine": "默认引擎",
+  "settings.defaultEngineDescription": "选择新 Chat 默认使用的引擎。",
   "settings.providersDescription": "选择可见的编码 Agent，并管理已安装的 CLI 工具。",
   "settings.serverSettingsUnavailable": "共享设置正在加载或暂时不可用。请重新连接后重试。",
   "settings.providerConfigSaveFailed": "无法保存此引擎设置",
@@ -119,8 +119,8 @@ const ZH_CN_MESSAGES = {
   "settings.engineModelProvider": "引擎",
   "settings.engineModelSlug": "引擎模型标识",
   "settings.add": "添加",
-  "settings.providerCopies": "引擎副本：{providers}",
-  "settings.providerCopy": "引擎副本：{providers}",
+  "settings.providerCopies": "引擎副本：{engines}",
+  "settings.providerCopy": "引擎副本：{engines}",
   "settings.manualSetup": "改为手动设置",
   "settings.manualSetupDescription":
     "对于 Claude Desktop 等没有终端或 Chat 的应用：先在终端运行配对命令，再把下方 JSON 加入该应用的 MCP 配置。",
@@ -131,7 +131,7 @@ const ZH_CN_MESSAGES = {
   "settings.hooks": "Hooks",
   "settings.headless": "无界面模式",
   "settings.quickstart": "快速开始",
-  "settings.binaryPath": "{provider} 可执行文件路径",
+  "settings.binaryPath": "{engine} 可执行文件路径",
   "settings.binaryPathDescription": "留空时使用 PATH 中的 {command}。",
   "settings.cursorBinaryPlaceholder": "Cursor Agent 或 Cursor CLI 路径",
   "settings.cursorBinaryDescription":
@@ -141,17 +141,17 @@ const ZH_CN_MESSAGES = {
   "settings.cursorApiEndpoint": "Cursor API endpoint",
   "settings.cursorApiEndpointDescription":
     "可选的 Cursor API endpoint 覆盖值，会传给 cursor-agent -e。",
-  "settings.serverUrl": "{provider} 服务 URL",
-  "settings.serverUrlDescription": "可选的现有 {provider} 服务 URL；留空会启动本地服务。",
-  "settings.serverPassword": "{provider} 服务密码",
-  "settings.serverPasswordDescription": "外部管理的 {provider} 服务可选密码。",
+  "settings.serverUrl": "{engine} 服务 URL",
+  "settings.serverUrlDescription": "可选的现有 {engine} 服务 URL；留空会启动本地服务。",
+  "settings.serverPassword": "{engine} 服务密码",
+  "settings.serverPasswordDescription": "外部管理的 {engine} 服务可选密码。",
   "settings.openCodeWebSockets": "OpenAI response WebSockets",
   "settings.openCodeWebSocketsDescription":
     "为托管本地服务使用 OpenCode 实验性的 OpenAI response WebSocket 传输。",
   "settings.piAgentDirectory": "Pi Agent 目录",
   "settings.piAgentDirectoryDescription": "用于认证、模型、技能与命令的可选自定义 Pi Agent 目录。",
-  "settings.reorderProvider": "调整 {provider} 顺序",
-  "settings.showProvider": "在引擎选择器中显示 {provider}",
+  "settings.reorderProvider": "调整 {engine} 顺序",
+  "settings.showProvider": "在引擎选择器中显示 {engine}",
   "settings.cliDocs": "CLI 文档",
   "settings.updateQueued": "更新已排队",
   "settings.updatingProvider": "正在更新",
@@ -160,25 +160,25 @@ const ZH_CN_MESSAGES = {
   "settings.stillOutdated": "仍为旧版本",
   "settings.latestVersion": "最新版本 {version}",
   "settings.currentVersion": "当前版本 {version}",
-  "settings.providerUpdateIncomplete": "引擎更新未完成。",
+  "settings.engineUpdateIncomplete": "引擎更新未完成。",
   "settings.runUpdateCommand": "运行 {command}",
   "settings.configuredPassword": "已配置——输入替代值或留空",
   "settings.custom": "自定义",
   "settings.commandLabel": "命令：",
   "settings.noSafeUpdateCommand": "有新版本可用，但 OmniMind 无法为此安装识别安全的一键更新命令。",
   "settings.selfManagedUpdate":
-    "{provider} 自行管理发行版本，OmniMind 无法判断是否有新版本；请运行更新以确认。",
-  "settings.couldNotUpdateProvider": "无法更新 {provider}",
+    "{engine} 自行管理发行版本，OmniMind 无法判断是否有新版本；请运行更新以确认。",
+  "settings.couldNotUpdateProvider": "无法更新 {engine}",
   "settings.manualUpdateInstruction": "{failure}\n\n请复制下方命令并在终端中手动更新。",
-  "settings.providerUpdateUnknownFailure": "引擎更新失败。",
+  "settings.engineUpdateUnknownFailure": "引擎更新失败。",
   "settings.updates": "更新",
   "settings.automaticCliUpdates": "自动检查 CLI 更新",
   "settings.automaticCliUpdatesDescription": "在后台检查 Codex、Claude 等引擎 CLI 的新版本。",
-  "settings.providerUpdates": "引擎更新",
-  "settings.providerUpdatesDescription": "查看 OmniMind 可安全更新的已安装引擎工具。",
+  "settings.engineUpdates": "引擎更新",
+  "settings.engineUpdatesDescription": "查看 OmniMind 可安全更新的已安装引擎工具。",
   "settings.automaticChecksOff": "自动检查已关闭",
   "settings.updatesAvailable": "{count} 个更新可用",
-  "settings.noProviderUpdates": "未检测到引擎更新",
+  "settings.noEngineUpdates": "未检测到引擎更新",
   "settings.manualUpdate": "手动更新",
   "settings.providerPicker": "引擎选择器",
   "settings.visibleProviders": "可见引擎",

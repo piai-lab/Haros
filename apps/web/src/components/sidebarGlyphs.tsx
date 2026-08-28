@@ -23,7 +23,7 @@ export const SIDEBAR_GLYPH = {
   chevron: "size-3 shrink-0",
   /** Compact archive control on subagent rows. */
   compact: "size-[11px] shrink-0",
-  /** Tiny overlay badges (terminal count on provider avatar). */
+  /** Tiny overlay badges (terminal count on engine avatar). */
   badge: "size-2.5 shrink-0",
 } as const;
 

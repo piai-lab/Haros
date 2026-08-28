@@ -1,12 +1,12 @@
 /**
- * providerCliOutput - Pure helpers for interpreting provider CLI probe output.
+ * providerCliOutput - Pure helpers for interpreting engine CLI probe output.
  *
- * Shared by the provider health checks in ProviderHealth: shapes captured
+ * Shared by the engine health checks in EngineHealth: shapes captured
  * process output and walks arbitrary auth-status JSON for common markers.
  * No process spawning and no effect dependencies live here.
  */
 
-export const PROVIDER_COMMAND_TIMEOUT_DETAIL = "Timed out while running command.";
+export const ENGINE_COMMAND_TIMEOUT_DETAIL = "Timed out while running command.";
 
 export interface CommandResult {
   readonly stdout: string;
@@ -66,7 +66,7 @@ export function isCommandMissingCause(error: unknown): boolean {
 export function detailFromResult(
   result: CommandResult & { readonly timedOut?: boolean },
 ): string | undefined {
-  if (result.timedOut) return PROVIDER_COMMAND_TIMEOUT_DETAIL;
+  if (result.timedOut) return ENGINE_COMMAND_TIMEOUT_DETAIL;
   const stderr = nonEmptyTrimmed(result.stderr);
   if (stderr) return stderr;
   const stdout = nonEmptyTrimmed(result.stdout);

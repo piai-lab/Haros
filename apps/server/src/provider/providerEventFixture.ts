@@ -1,4 +1,4 @@
-const PROVIDER_EVENT_FIXTURE_VERSION = 1 as const;
+const ENGINE_EVENT_FIXTURE_VERSION = 1 as const;
 const DEFAULT_MAX_FIXTURE_BYTES = 512 * 1024;
 const DEFAULT_MAX_FIXTURE_EVENTS = 2_000;
 
@@ -57,7 +57,7 @@ const SAFE_ROOT_METHOD_VALUES = new Set(["thread/started"]);
 
 const SAFE_STRING_KEYS = new Set([
   "type",
-  "provider",
+  "engine",
   "source",
   "method",
   "role",
@@ -106,7 +106,7 @@ const SAFE_UNTRUSTED_STRING_VALUES = new Set([
   "opencode",
   "pending",
   "pi",
-  "provider",
+  "engine",
   "ready",
   "reasoning",
   "reasoning_text",
@@ -177,21 +177,21 @@ const SAFE_CONTAINER_KEYS = new Set([
 
 const UNTRUSTED_STRING_CONTAINER_KEYS = new Set(SAFE_CONTAINER_KEYS);
 
-export interface ProviderEventFixtureRecord {
-  readonly version: typeof PROVIDER_EVENT_FIXTURE_VERSION;
+export interface EngineEventFixtureRecord {
+  readonly version: typeof ENGINE_EVENT_FIXTURE_VERSION;
   readonly index: number;
   readonly event: unknown;
 }
 
-export interface ProviderEventFixtureParseOptions {
+export interface EngineEventFixtureParseOptions {
   readonly maxBytes?: number;
   readonly maxEvents?: number;
 }
 
-export class ProviderEventFixtureError extends Error {
+export class EngineEventFixtureError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "ProviderEventFixtureError";
+    this.name = "EngineEventFixtureError";
   }
 }
 
@@ -207,7 +207,7 @@ type SanitizerContext = {
 
 function redactIdentifier(value: unknown, state: SanitizerState): string {
   if (typeof value !== "string" && typeof value !== "number") {
-    throw new ProviderEventFixtureError("Identifier fields must be strings or numbers.");
+    throw new EngineEventFixtureError("Identifier fields must be strings or numbers.");
   }
   const mapKey = `${typeof value}:${String(value)}`;
   const existing = state.ids.get(mapKey);
@@ -227,7 +227,7 @@ function normalizeTimestamp(value: unknown): string | number {
   if (typeof value === "number" && Number.isFinite(value)) {
     return 0;
   }
-  throw new ProviderEventFixtureError("Timestamp fields must be strings or finite numbers.");
+  throw new EngineEventFixtureError("Timestamp fields must be strings or finite numbers.");
 }
 
 function isClassifiedFixtureKey(key: string, context: SanitizerContext): boolean {
@@ -280,7 +280,7 @@ function sanitizeValue(
   }
   if (typeof value === "number") {
     if (!Number.isFinite(value)) {
-      throw new ProviderEventFixtureError("Fixture numbers must be finite.");
+      throw new EngineEventFixtureError("Fixture numbers must be finite.");
     }
     return value;
   }
@@ -295,7 +295,7 @@ function sanitizeValue(
     ) {
       return value;
     }
-    throw new ProviderEventFixtureError(
+    throw new EngineEventFixtureError(
       `Refusing to preserve unclassified string field${key ? ` "${key}"` : ""}.`,
     );
   }
@@ -303,7 +303,7 @@ function sanitizeValue(
     return value.map((entry) => sanitizeValue(entry, null, state, context));
   }
   if (typeof value !== "object") {
-    throw new ProviderEventFixtureError("Fixture values must be JSON-compatible.");
+    throw new EngineEventFixtureError("Fixture values must be JSON-compatible.");
   }
 
   const result = Object.create(null) as Record<string, unknown>;
@@ -318,7 +318,7 @@ function sanitizeValue(
   };
   for (const [childKey, childValue] of Object.entries(value)) {
     if (!isClassifiedFixtureKey(childKey, childContext)) {
-      throw new ProviderEventFixtureError(
+      throw new EngineEventFixtureError(
         `Refusing to preserve unclassified object key "${childKey}".`,
       );
     }
@@ -334,7 +334,7 @@ export function sanitizeProviderEventFixtureEvents(events: readonly unknown[]): 
   const state: SanitizerState = { ids: new Map(), nextId: 1 };
   return events.map((event) => {
     if (!event || typeof event !== "object" || Array.isArray(event)) {
-      throw new ProviderEventFixtureError("Fixture events must be objects.");
+      throw new EngineEventFixtureError("Fixture events must be objects.");
     }
     return sanitizeValue(event, null, state, {
       untrustedStrings: false,
@@ -345,59 +345,57 @@ export function sanitizeProviderEventFixtureEvents(events: readonly unknown[]): 
 
 export function serializeProviderEventFixture(events: readonly unknown[]): string {
   if (events.length > DEFAULT_MAX_FIXTURE_EVENTS) {
-    throw new ProviderEventFixtureError(
+    throw new EngineEventFixtureError(
       `Fixture exceeds ${String(DEFAULT_MAX_FIXTURE_EVENTS)} events.`,
     );
   }
   const serialized = sanitizeProviderEventFixtureEvents(events)
     .map((event, index) =>
       JSON.stringify({
-        version: PROVIDER_EVENT_FIXTURE_VERSION,
+        version: ENGINE_EVENT_FIXTURE_VERSION,
         index,
         event,
-      } satisfies ProviderEventFixtureRecord),
+      } satisfies EngineEventFixtureRecord),
     )
     .join("\n");
   if (Buffer.byteLength(serialized, "utf8") > DEFAULT_MAX_FIXTURE_BYTES) {
-    throw new ProviderEventFixtureError(
+    throw new EngineEventFixtureError(
       `Fixture exceeds ${String(DEFAULT_MAX_FIXTURE_BYTES)} bytes.`,
     );
   }
   return serialized;
 }
 
-function parseFixtureRecord(line: string, expectedIndex: number): ProviderEventFixtureRecord {
+function parseFixtureRecord(line: string, expectedIndex: number): EngineEventFixtureRecord {
   let value: unknown;
   try {
     value = JSON.parse(line);
   } catch (cause) {
-    throw new ProviderEventFixtureError(
+    throw new EngineEventFixtureError(
       `Fixture record ${String(expectedIndex)} is not valid JSON: ${String(cause)}`,
     );
   }
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new ProviderEventFixtureError(
-      `Fixture record ${String(expectedIndex)} must be an object.`,
-    );
+    throw new EngineEventFixtureError(`Fixture record ${String(expectedIndex)} must be an object.`);
   }
   const record = value as Record<string, unknown>;
-  if (record.version !== PROVIDER_EVENT_FIXTURE_VERSION) {
-    throw new ProviderEventFixtureError(
+  if (record.version !== ENGINE_EVENT_FIXTURE_VERSION) {
+    throw new EngineEventFixtureError(
       `Fixture record ${String(expectedIndex)} has unsupported version ${String(record.version)}.`,
     );
   }
   if (record.index !== expectedIndex) {
-    throw new ProviderEventFixtureError(
+    throw new EngineEventFixtureError(
       `Fixture record ${String(expectedIndex)} has out-of-order index ${String(record.index)}.`,
     );
   }
   if (!record.event || typeof record.event !== "object" || Array.isArray(record.event)) {
-    throw new ProviderEventFixtureError(
+    throw new EngineEventFixtureError(
       `Fixture record ${String(expectedIndex)} event must be an object.`,
     );
   }
   return {
-    version: PROVIDER_EVENT_FIXTURE_VERSION,
+    version: ENGINE_EVENT_FIXTURE_VERSION,
     index: expectedIndex,
     event: record.event,
   };
@@ -405,12 +403,12 @@ function parseFixtureRecord(line: string, expectedIndex: number): ProviderEventF
 
 export function parseProviderEventFixture(
   text: string,
-  options: ProviderEventFixtureParseOptions = {},
-): ProviderEventFixtureRecord[] {
+  options: EngineEventFixtureParseOptions = {},
+): EngineEventFixtureRecord[] {
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_FIXTURE_BYTES;
   const maxEvents = options.maxEvents ?? DEFAULT_MAX_FIXTURE_EVENTS;
   if (Buffer.byteLength(text, "utf8") > maxBytes) {
-    throw new ProviderEventFixtureError(`Fixture exceeds ${String(maxBytes)} bytes.`);
+    throw new EngineEventFixtureError(`Fixture exceeds ${String(maxBytes)} bytes.`);
   }
 
   const lines = text
@@ -418,13 +416,13 @@ export function parseProviderEventFixture(
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
   if (lines.length > maxEvents) {
-    throw new ProviderEventFixtureError(`Fixture exceeds ${String(maxEvents)} events.`);
+    throw new EngineEventFixtureError(`Fixture exceeds ${String(maxEvents)} events.`);
   }
   return lines.map((line, index) => parseFixtureRecord(line, index));
 }
 
 export async function replayProviderEventFixture(
-  records: readonly ProviderEventFixtureRecord[],
+  records: readonly EngineEventFixtureRecord[],
   consume: (event: unknown, index: number) => void | Promise<void>,
 ): Promise<void> {
   for (const record of records) {

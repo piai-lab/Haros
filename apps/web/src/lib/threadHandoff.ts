@@ -1,13 +1,13 @@
 // FILE: threadHandoff.ts
 // Purpose: Builds client-side handoff commands and imported transcript payloads.
 // Layer: Web handoff utilities
-// Exports: target-provider, title, transcript, and model-selection helpers.
+// Exports: target-engine, title, transcript, and model-selection helpers.
 
 import {
   EventId,
   MessageId,
   type OrchestrationThreadActivity,
-  type ModelSelection,
+  type EngineSelection,
   type EngineKind,
   type ServerProviderStatus,
   type ServerSettingsView,
@@ -18,8 +18,8 @@ import { getDefaultModel } from "@harnessos/shared/model";
 import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { sanitizeImportedUserMessageText } from "@harnessos/shared/importedTranscript";
 import { type Thread } from "../types";
-import { DEFAULT_PROVIDER_ORDER } from "../providerOrdering";
-import { findProviderStatus, isProviderUsable } from "./providerAvailability";
+import { DEFAULT_PROVIDER_ORDER } from "../engineOrdering";
+import { findProviderStatus, isProviderUsable } from "./engineAvailability";
 import { randomUUID } from "./utils";
 
 const IMPORTABLE_THREAD_ACTIVITY_KINDS = new Set([
@@ -51,21 +51,21 @@ export function isEligibleHandoffTargetProvider(input: {
   return (
     input.targetProvider !== input.sourceProvider &&
     input.targetProviderEnabled === true &&
-    input.targetProviderStatus?.provider === input.targetProvider &&
+    input.targetProviderStatus?.engine === input.targetProvider &&
     isProviderUsable(input.targetProviderStatus)
   );
 }
 
 export function resolveAvailableHandoffTargetProviders(input: {
   readonly sourceProvider: EngineKind;
-  readonly providerSettings: ServerSettingsView["providers"] | null | undefined;
+  readonly engineSettings: ServerSettingsView["engines"] | null | undefined;
   readonly providerStatuses: readonly ServerProviderStatus[];
 }): ReadonlyArray<EngineKind> {
   return DEFAULT_PROVIDER_ORDER.filter((targetProvider) =>
     isEligibleHandoffTargetProvider({
       sourceProvider: input.sourceProvider,
       targetProvider,
-      targetProviderEnabled: input.providerSettings?.[targetProvider].enabled,
+      targetProviderEnabled: input.engineSettings?.[targetProvider].enabled,
       targetProviderStatus: findProviderStatus(input.providerStatuses, targetProvider),
     }),
   );
@@ -231,34 +231,34 @@ export function canCreateThreadHandoff(input: {
   return true;
 }
 
-export function resolveThreadHandoffModelSelection(input: {
-  readonly sourceThread: Pick<Thread, "modelSelection">;
+export function resolveThreadHandoffEngineSelection(input: {
+  readonly sourceThread: Pick<Thread, "engineSelection">;
   readonly targetProvider: EngineKind;
-  readonly projectDefaultModelSelection: ModelSelection | null | undefined;
-  readonly stickyModelSelectionByProvider: Partial<Record<EngineKind, ModelSelection>>;
-}): ModelSelection {
+  readonly projectDefaultEngineSelection: EngineSelection | null | undefined;
+  readonly stickyEngineSelectionByEngine: Partial<Record<EngineKind, EngineSelection>>;
+}): EngineSelection {
   const isCompatibleSelection = (
-    selection: ModelSelection | null | undefined,
-  ): selection is ModelSelection => {
-    if (!selection || selection.provider !== input.targetProvider) {
+    selection: EngineSelection | null | undefined,
+  ): selection is EngineSelection => {
+    if (!selection || selection.engine !== input.targetProvider) {
       return false;
     }
     return input.targetProvider !== "kilo" || selection.model.startsWith("kilo/");
   };
 
-  const stickySelection = input.stickyModelSelectionByProvider[input.targetProvider];
+  const stickySelection = input.stickyEngineSelectionByEngine[input.targetProvider];
   if (isCompatibleSelection(stickySelection)) {
     return stickySelection;
   }
-  if (isCompatibleSelection(input.projectDefaultModelSelection)) {
-    return input.projectDefaultModelSelection;
+  if (isCompatibleSelection(input.projectDefaultEngineSelection)) {
+    return input.projectDefaultEngineSelection;
   }
   const defaultModel = getDefaultModel(input.targetProvider);
   if (!defaultModel) {
     throw new Error("Select a Pi model before handing off to Pi.");
   }
   return {
-    provider: input.targetProvider,
+    engine: input.targetProvider,
     model: defaultModel,
   };
 }

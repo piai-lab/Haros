@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import { TrimmedString } from "./baseSchemas";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
-import { ModelSelection, EngineKind, ThreadEnvironmentMode } from "./orchestration";
+import { EngineSelection, EngineKind, ThreadEnvironmentMode } from "./orchestration";
 import { isOmniMindAgentPromptContent, HARNESSOS_AGENT_PROMPT_MAX_BYTES } from "./editableText";
 import { BuiltInToolGroupOverrides } from "./agentTools";
 
@@ -10,13 +10,13 @@ const CustomModels = Schema.Array(Schema.String.check(Schema.isMaxLength(256))).
   Schema.withDecodingDefault(() => []),
 );
 
-const ProviderSettingsBase = {
+const EngineSettingsBase = {
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
   customModels: CustomModels,
 };
 
-export const OmniMindServerProviderSettings = Schema.Struct({
+export const OmniMindServerEngineSettings = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultPrompt: Schema.NullOr(
     Schema.String.check(
@@ -25,79 +25,79 @@ export const OmniMindServerProviderSettings = Schema.Struct({
     ),
   ).pipe(Schema.withDecodingDefault(() => null)),
 });
-export type OmniMindServerProviderSettings = typeof OmniMindServerProviderSettings.Type;
+export type OmniMindServerEngineSettings = typeof OmniMindServerEngineSettings.Type;
 
-export const CodexServerProviderSettings = Schema.Struct({
-  ...ProviderSettingsBase,
+export const CodexServerEngineSettings = Schema.Struct({
+  ...EngineSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "codex")),
   homePath: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
 });
-export type CodexServerProviderSettings = typeof CodexServerProviderSettings.Type;
+export type CodexServerEngineSettings = typeof CodexServerEngineSettings.Type;
 
-export const ClaudeServerProviderSettings = Schema.Struct({
-  ...ProviderSettingsBase,
+export const ClaudeServerEngineSettings = Schema.Struct({
+  ...EngineSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "claude")),
   launchArgs: Schema.String.check(Schema.isMaxLength(4096)).pipe(
     Schema.withDecodingDefault(() => ""),
   ),
 });
-export type ClaudeServerProviderSettings = typeof ClaudeServerProviderSettings.Type;
+export type ClaudeServerEngineSettings = typeof ClaudeServerEngineSettings.Type;
 
-export const AntigravityServerProviderSettings = Schema.Struct({
-  ...ProviderSettingsBase,
+export const AntigravityServerEngineSettings = Schema.Struct({
+  ...EngineSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "agy")),
 });
-export type AntigravityServerProviderSettings = typeof AntigravityServerProviderSettings.Type;
+export type AntigravityServerEngineSettings = typeof AntigravityServerEngineSettings.Type;
 
-export const GrokServerProviderSettings = Schema.Struct({
-  ...ProviderSettingsBase,
+export const GrokServerEngineSettings = Schema.Struct({
+  ...EngineSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "grok")),
 });
-export type GrokServerProviderSettings = typeof GrokServerProviderSettings.Type;
+export type GrokServerEngineSettings = typeof GrokServerEngineSettings.Type;
 
-export const DroidServerProviderSettings = Schema.Struct({
-  ...ProviderSettingsBase,
+export const DroidServerEngineSettings = Schema.Struct({
+  ...EngineSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "droid")),
 });
-export type DroidServerProviderSettings = typeof DroidServerProviderSettings.Type;
+export type DroidServerEngineSettings = typeof DroidServerEngineSettings.Type;
 
-export const CursorServerProviderSettings = Schema.Struct({
-  ...ProviderSettingsBase,
+export const CursorServerEngineSettings = Schema.Struct({
+  ...EngineSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "cursor-agent")),
   apiEndpoint: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
 });
-export type CursorServerProviderSettings = typeof CursorServerProviderSettings.Type;
+export type CursorServerEngineSettings = typeof CursorServerEngineSettings.Type;
 
-export const OpenCodeServerProviderSettings = Schema.Struct({
-  ...ProviderSettingsBase,
+export const OpenCodeServerEngineSettings = Schema.Struct({
+  ...EngineSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "opencode")),
   serverUrl: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
   serverPasswordConfigured: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
   experimentalWebSockets: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
 });
-export type OpenCodeServerProviderSettings = typeof OpenCodeServerProviderSettings.Type;
+export type OpenCodeServerEngineSettings = typeof OpenCodeServerEngineSettings.Type;
 
-export const KiloServerProviderSettings = Schema.Struct({
-  ...ProviderSettingsBase,
+export const KiloServerEngineSettings = Schema.Struct({
+  ...EngineSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "kilo")),
   serverUrl: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
   serverPasswordConfigured: Schema.Boolean.pipe(Schema.withDecodingDefault(() => false)),
 });
-export type KiloServerProviderSettings = typeof KiloServerProviderSettings.Type;
+export type KiloServerEngineSettings = typeof KiloServerEngineSettings.Type;
 
-export const PiServerProviderSettings = Schema.Struct({
-  ...ProviderSettingsBase,
+export const PiServerEngineSettings = Schema.Struct({
+  ...EngineSettingsBase,
   binaryPath: StringSetting.pipe(Schema.withDecodingDefault(() => "pi")),
   agentDir: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
 });
-export type PiServerProviderSettings = typeof PiServerProviderSettings.Type;
+export type PiServerEngineSettings = typeof PiServerEngineSettings.Type;
 
 const DisabledSkillNames = Schema.Array(Schema.String.check(Schema.isMaxLength(256))).pipe(
   Schema.withDecodingDefault(() => []),
 );
 
 // User-level skill toggles. Skills are keyed by lowercased name because the
-// unified catalog dedupes provider copies of the same skill by name.
+// unified catalog dedupes engine copies of the same skill by name.
 export const SkillsServerSettings = Schema.Struct({
   disabled: DisabledSkillNames,
 });
@@ -110,28 +110,28 @@ export const AgentToolsServerSettings = Schema.Struct({
 export type AgentToolsServerSettings = typeof AgentToolsServerSettings.Type;
 
 export const ServerSettings = Schema.Struct({
-  defaultProvider: EngineKind.pipe(Schema.withDecodingDefault(() => "oa")),
+  defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "oa")),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
-  enableProviderUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
+  enableEngineUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultThreadEnvMode: ThreadEnvironmentMode.pipe(Schema.withDecodingDefault(() => "local")),
   addProjectBaseDirectory: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
-  textGenerationModelSelection: ModelSelection.pipe(
+  textGenerationEngineSelection: EngineSelection.pipe(
     Schema.withDecodingDefault(() => ({
-      provider: "codex" as const,
+      engine: "codex" as const,
       model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
     })),
   ),
-  providers: Schema.Struct({
-    oa: OmniMindServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    codex: CodexServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    claude: ClaudeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    cursor: CursorServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    antigravity: AntigravityServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    grok: GrokServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    droid: DroidServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    kilo: KiloServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    opencode: OpenCodeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    pi: PiServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+  engines: Schema.Struct({
+    oa: OmniMindServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    codex: CodexServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    claude: ClaudeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    cursor: CursorServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    antigravity: AntigravityServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    grok: GrokServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    droid: DroidServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    kilo: KiloServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    opencode: OpenCodeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    pi: PiServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   }).pipe(Schema.withDecodingDefault(() => ({}))),
   skills: SkillsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   agentTools: AgentToolsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -140,35 +140,35 @@ export type ServerSettings = typeof ServerSettings.Type;
 
 export const DEFAULT_SERVER_SETTINGS: ServerSettings = Schema.decodeSync(ServerSettings)({});
 
-const OmniMindServerProviderSettingsView = Schema.Struct({
+const OmniMindServerEngineSettingsView = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
 });
 
 // Public settings deliberately omit the customized default prompt. Its only
 // projection and mutation authority is the dedicated OmniMind prompt contract.
 export const ServerSettingsView = Schema.Struct({
-  defaultProvider: EngineKind.pipe(Schema.withDecodingDefault(() => "oa")),
+  defaultEngine: EngineKind.pipe(Schema.withDecodingDefault(() => "oa")),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
-  enableProviderUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
+  enableEngineUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultThreadEnvMode: ThreadEnvironmentMode.pipe(Schema.withDecodingDefault(() => "local")),
   addProjectBaseDirectory: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
-  textGenerationModelSelection: ModelSelection.pipe(
+  textGenerationEngineSelection: EngineSelection.pipe(
     Schema.withDecodingDefault(() => ({
-      provider: "codex" as const,
+      engine: "codex" as const,
       model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
     })),
   ),
-  providers: Schema.Struct({
-    oa: OmniMindServerProviderSettingsView.pipe(Schema.withDecodingDefault(() => ({}))),
-    codex: CodexServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    claude: ClaudeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    cursor: CursorServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    antigravity: AntigravityServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    grok: GrokServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    droid: DroidServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    kilo: KiloServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    opencode: OpenCodeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
-    pi: PiServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+  engines: Schema.Struct({
+    oa: OmniMindServerEngineSettingsView.pipe(Schema.withDecodingDefault(() => ({}))),
+    codex: CodexServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    claude: ClaudeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    cursor: CursorServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    antigravity: AntigravityServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    grok: GrokServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    droid: DroidServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    kilo: KiloServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    opencode: OpenCodeServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    pi: PiServerEngineSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   }).pipe(Schema.withDecodingDefault(() => ({}))),
   skills: SkillsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   agentTools: AgentToolsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
@@ -179,26 +179,26 @@ export const DEFAULT_SERVER_SETTINGS_VIEW: ServerSettingsView = Schema.decodeSyn
   ServerSettingsView,
 )({});
 
-const ModelSelectionPatch = Schema.Struct({
-  provider: Schema.optionalKey(EngineKind),
+const EngineSelectionPatch = Schema.Struct({
+  engine: Schema.optionalKey(EngineKind),
   model: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(256))),
   options: Schema.optionalKey(Schema.Unknown),
 });
 
-const ProviderSettingsBasePatch = {
+const EngineSettingsBasePatch = {
   enabled: Schema.optionalKey(Schema.Boolean),
   binaryPath: Schema.optionalKey(StringSetting),
   customModels: Schema.optionalKey(CustomModels),
 };
 
 export const ServerSettingsPatch = Schema.Struct({
-  defaultProvider: Schema.optionalKey(EngineKind),
+  defaultEngine: Schema.optionalKey(EngineKind),
   enableAssistantStreaming: Schema.optionalKey(Schema.Boolean),
-  enableProviderUpdateChecks: Schema.optionalKey(Schema.Boolean),
+  enableEngineUpdateChecks: Schema.optionalKey(Schema.Boolean),
   defaultThreadEnvMode: Schema.optionalKey(ThreadEnvironmentMode),
   addProjectBaseDirectory: Schema.optionalKey(StringSetting),
-  textGenerationModelSelection: Schema.optionalKey(ModelSelectionPatch),
-  providers: Schema.optionalKey(
+  textGenerationEngineSelection: Schema.optionalKey(EngineSelectionPatch),
+  engines: Schema.optionalKey(
     Schema.Struct({
       oa: Schema.optionalKey(
         Schema.Struct({
@@ -207,35 +207,35 @@ export const ServerSettingsPatch = Schema.Struct({
       ),
       codex: Schema.optionalKey(
         Schema.Struct({
-          ...ProviderSettingsBasePatch,
+          ...EngineSettingsBasePatch,
           homePath: Schema.optionalKey(StringSetting),
         }),
       ),
       claude: Schema.optionalKey(
         Schema.Struct({
-          ...ProviderSettingsBasePatch,
+          ...EngineSettingsBasePatch,
           launchArgs: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(4096))),
         }),
       ),
       cursor: Schema.optionalKey(
         Schema.Struct({
-          ...ProviderSettingsBasePatch,
+          ...EngineSettingsBasePatch,
           apiEndpoint: Schema.optionalKey(StringSetting),
         }),
       ),
-      antigravity: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
-      grok: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
-      droid: Schema.optionalKey(Schema.Struct(ProviderSettingsBasePatch)),
+      antigravity: Schema.optionalKey(Schema.Struct(EngineSettingsBasePatch)),
+      grok: Schema.optionalKey(Schema.Struct(EngineSettingsBasePatch)),
+      droid: Schema.optionalKey(Schema.Struct(EngineSettingsBasePatch)),
       kilo: Schema.optionalKey(
         Schema.Struct({
-          ...ProviderSettingsBasePatch,
+          ...EngineSettingsBasePatch,
           serverUrl: Schema.optionalKey(StringSetting),
           serverPassword: Schema.optional(Schema.Never),
         }),
       ),
       opencode: Schema.optionalKey(
         Schema.Struct({
-          ...ProviderSettingsBasePatch,
+          ...EngineSettingsBasePatch,
           serverUrl: Schema.optionalKey(StringSetting),
           serverPassword: Schema.optional(Schema.Never),
           experimentalWebSockets: Schema.optionalKey(Schema.Boolean),
@@ -243,7 +243,7 @@ export const ServerSettingsPatch = Schema.Struct({
       ),
       pi: Schema.optionalKey(
         Schema.Struct({
-          ...ProviderSettingsBasePatch,
+          ...EngineSettingsBasePatch,
           binaryPath: Schema.optionalKey(StringSetting),
           agentDir: Schema.optionalKey(StringSetting),
         }),

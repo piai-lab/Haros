@@ -23,8 +23,8 @@ export function makeThread(overrides: Partial<Thread> = {}): Thread {
     codexThreadId: null,
     projectId: ProjectId.makeUnsafe("project-1"),
     title: "Thread",
-    modelSelection: {
-      provider: "codex",
+    engineSelection: {
+      engine: "codex",
       model: "gpt-5-codex",
     },
     runtimeMode: DEFAULT_RUNTIME_MODE,
@@ -172,8 +172,8 @@ export function makeProject(
     folderName: "project",
     localName: null,
     cwd: "/tmp/project",
-    defaultModelSelection: {
-      provider: "codex",
+    defaultEngineSelection: {
+      engine: "codex",
       model: "gpt-5-codex",
     },
     expanded: true,
@@ -188,8 +188,8 @@ export function makeReadModelThread(overrides: Partial<OrchestrationReadModel["t
     id: ThreadId.makeUnsafe("thread-1"),
     projectId: ProjectId.makeUnsafe("project-1"),
     title: "Thread",
-    modelSelection: {
-      provider: "codex",
+    engineSelection: {
+      engine: "codex",
       model: "gpt-5.3-codex",
     },
     runtimeMode: DEFAULT_RUNTIME_MODE,
@@ -227,8 +227,8 @@ export function makeReadModel(
         kind: "project",
         title: "Project",
         workspaceRoot: "/tmp/project",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5.3-codex",
         },
         createdAt: "2026-02-27T00:00:00.000Z",
@@ -252,8 +252,8 @@ export function makeShellSnapshot(thread: OrchestrationShellSnapshot["threads"][
         id: ProjectId.makeUnsafe("project-1"),
         title: "Project",
         workspaceRoot: "/tmp/project",
-        defaultModelSelection: {
-          provider: "codex",
+        defaultEngineSelection: {
+          engine: "codex",
           model: "gpt-5.3-codex",
         },
         createdAt: "2026-02-27T00:00:00.000Z",
@@ -274,8 +274,8 @@ export function makeReadModelProject(
     kind: "project",
     title: "Project",
     workspaceRoot: "/tmp/project",
-    defaultModelSelection: {
-      provider: "codex",
+    defaultEngineSelection: {
+      engine: "codex",
       model: "gpt-5.3-codex",
     },
     createdAt: "2026-02-27T00:00:00.000Z",

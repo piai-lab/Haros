@@ -7,9 +7,9 @@ import path from "node:path";
 import {
   type AntigravityModelOptions,
   EventId,
-  type ProviderListModelsResult,
-  type ProviderRuntimeEvent,
-  type ProviderSession,
+  type EngineListModelsResult,
+  type EngineRuntimeEvent,
+  type EngineSession,
   RuntimeItemId,
   RuntimeTaskId,
   ThreadId,
@@ -40,29 +40,29 @@ import {
 import { ServerConfig } from "../../config.ts";
 import { buildProviderChildEnvironment } from "../../providerChildEnvironment.ts";
 import {
-  ProviderAdapterRequestError,
-  ProviderAdapterSessionNotFoundError,
-  ProviderAdapterValidationError,
+  EngineAdapterRequestError,
+  EngineAdapterSessionNotFoundError,
+  EngineAdapterValidationError,
 } from "../Errors.ts";
 import {
   AntigravityAdapter,
   type AntigravityAdapterShape,
 } from "../Services/AntigravityAdapter.ts";
 import {
-  PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
-  type ProviderThreadSnapshot,
-} from "../Services/ProviderAdapter.ts";
+  ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
+  type EngineThreadSnapshot,
+} from "../Services/EngineAdapter.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { makeBoundedCallbackIngress } from "../boundedCallbackIngress.ts";
 import {
   compactProviderRuntimeEventForIngress,
   isTerminalProviderRuntimeEvent,
-  PROVIDER_RUNTIME_CALLBACK_BUFFER_MAX_BYTES,
-  PROVIDER_RUNTIME_CALLBACK_TERMINAL_RESERVE,
+  ENGINE_RUNTIME_CALLBACK_BUFFER_MAX_BYTES,
+  ENGINE_RUNTIME_CALLBACK_TERMINAL_RESERVE,
   type SizedProviderRuntimeEvent,
-} from "../providerRuntimeEventIngress.ts";
+} from "../engineRuntimeEventIngress.ts";
 import { teardownChildProcessTree } from "../supervisedProcessTeardown.ts";
-import { providerExecutionStructure } from "../providerExecutionStructure.ts";
+import { engineExecutionStructure } from "../engineExecutionStructure.ts";
 
 const PROVIDER = "antigravity" as const;
 const DEFAULT_MODEL = "Gemini 3.5 Flash";
@@ -120,7 +120,7 @@ type ForeignConversationState = ToolSurfaceCounters & {
 };
 
 type AntigravitySessionContext = ToolSurfaceCounters & {
-  session: ProviderSession;
+  session: EngineSession;
   gatewaySessionLease?: AgentGatewaySessionLease;
   harnessPolicyDelivered?: boolean;
   readonly lifecycleGeneration?: string;
@@ -154,7 +154,7 @@ type AntigravitySessionContext = ToolSurfaceCounters & {
    * pre-invocation/tool/stop events into this session's hook stream. Those
    * events describe a different process and conversation and must never
    * rebind the session; they are forwarded as child-thread events carrying
-   * `providerParentThreadId` so the ingestion layer materializes a visible
+   * `nativeParentThreadId` so the ingestion layer materializes a visible
    * subagent thread.
    */
   foreignConversations: Map<string, ForeignConversationState>;
@@ -200,7 +200,7 @@ function resumeConversationId(value: unknown): string | undefined {
   if (typeof value === "string") return trim(value);
   if (!value || typeof value !== "object") return undefined;
   const record = value as Record<string, unknown>;
-  for (const key of ["conversationId", "providerThreadId", "id"]) {
+  for (const key of ["conversationId", "nativeThreadId", "id"]) {
     if (typeof record[key] === "string" && record[key].trim()) return record[key].trim();
   }
   return undefined;
@@ -390,7 +390,7 @@ export async function runAntigravityHelperProcess(
   return await new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: options.cwd,
-      env: buildProviderChildEnvironment({ provider: PROVIDER }),
+      env: buildProviderChildEnvironment({ engine: PROVIDER }),
       stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
@@ -525,7 +525,7 @@ export function buildAntigravityTurnProcessEnvironment(input: {
       }
     : {};
   return buildProviderChildEnvironment({
-    provider: PROVIDER,
+    engine: PROVIDER,
     ...(input.baseEnv === undefined ? {} : { baseEnv: input.baseEnv }),
     inheritedOmniMindKeys: [
       "HARNESSOS_ANTIGRAVITY_EVENTS",
@@ -608,7 +608,7 @@ export function antigravityPromptCommandLineIssue(
   return `Antigravity prompts on Windows are limited to ${WINDOWS_PROMPT_MAX_CHARS.toLocaleString("en-US")} characters because the CLI accepts print-mode prompts as command-line arguments. Shorten the prompt or attach the content as files.`;
 }
 
-export function parseAntigravityModelLines(output: string): ProviderListModelsResult["models"] {
+export function parseAntigravityModelLines(output: string): EngineListModelsResult["models"] {
   const groups = new Map<string, string[]>();
   for (const line of output.split(/\r?\n/g)) {
     const parsed = parseAntigravityCliModelLabel(line);
@@ -660,7 +660,7 @@ export function resolveAntigravityCliModelLabel(
   return effort ? `${parsed.model} (${effortLabel(effort)})` : parsed.model;
 }
 
-function parseModelLines(output: string): ProviderListModelsResult["models"] {
+function parseModelLines(output: string): EngineListModelsResult["models"] {
   return parseAntigravityModelLines(output);
 }
 
@@ -878,7 +878,7 @@ export function makeAntigravityRuntimeEventBase(input: {
 }) {
   return {
     eventId: input.eventId ?? EventId.makeUnsafe(crypto.randomUUID()),
-    provider: PROVIDER,
+    engine: PROVIDER,
     threadId: input.threadId,
     createdAt: input.createdAt ?? new Date().toISOString(),
     ...(input.lifecycleGeneration !== undefined
@@ -911,8 +911,8 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
     const agentGatewayCredentials = Option.getOrUndefined(
       yield* Effect.serviceOption(AgentGatewayCredentials),
     );
-    const eventQueue = yield* Queue.bounded<ProviderRuntimeEvent>(
-      PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
+    const eventQueue = yield* Queue.bounded<EngineRuntimeEvent>(
+      ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
     );
     const sessions = new Map<ThreadId, AntigravitySessionContext>();
     const defaultEffortByModel = new Map(Object.entries(DEFAULT_EFFORT_BY_MODEL));
@@ -920,15 +920,15 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
     const eventIngress = yield* makeBoundedCallbackIngress<SizedProviderRuntimeEvent, never, never>(
       (item) => Queue.offer(eventQueue, item.event).pipe(Effect.asVoid),
       {
-        capacity: PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
-        maxBufferedBytes: PROVIDER_RUNTIME_CALLBACK_BUFFER_MAX_BYTES,
-        terminalReserve: PROVIDER_RUNTIME_CALLBACK_TERMINAL_RESERVE,
+        capacity: ENGINE_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
+        maxBufferedBytes: ENGINE_RUNTIME_CALLBACK_BUFFER_MAX_BYTES,
+        terminalReserve: ENGINE_RUNTIME_CALLBACK_TERMINAL_RESERVE,
         isTerminal: (item) => isTerminalProviderRuntimeEvent(item.event),
         sizeOf: (item) => item.bytes,
       },
     );
 
-    const offer = (event: ProviderRuntimeEvent) => {
+    const offer = (event: EngineRuntimeEvent) => {
       eventIngress.offer(compactProviderRuntimeEventForIngress(event));
     };
 
@@ -947,7 +947,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
         : {}),
       ...(options?.itemId ? { itemId: options.itemId } : {}),
       ...(context.conversationId
-        ? { providerRefs: { providerThreadId: context.conversationId } }
+        ? { providerRefs: { nativeThreadId: context.conversationId } }
         : {}),
     });
 
@@ -958,14 +958,14 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
     });
 
     const withForeignProviderRefs = (
-      event: ProviderRuntimeEvent,
+      event: EngineRuntimeEvent,
       conversationId: string,
       parentConversationId: string,
-    ): ProviderRuntimeEvent => ({
+    ): EngineRuntimeEvent => ({
       ...event,
       providerRefs: {
-        providerThreadId: conversationId,
-        providerParentThreadId: parentConversationId,
+        nativeThreadId: conversationId,
+        nativeParentThreadId: parentConversationId,
       },
     });
 
@@ -1005,7 +1005,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
                 name: pending.name,
                 state: input.state,
               }),
-            } satisfies ProviderRuntimeEvent,
+            } satisfies EngineRuntimeEvent,
             conversationId,
             parentConversationId,
           ),
@@ -1029,7 +1029,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
                     }
                   : { state: "completed", stopReason: "model_stop" },
             raw: input.raw,
-          } satisfies ProviderRuntimeEvent,
+          } satisfies EngineRuntimeEvent,
           conversationId,
           parentConversationId,
         ),
@@ -1054,11 +1054,11 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
 
     const requireSession = (
       threadId: ThreadId,
-    ): Effect.Effect<AntigravitySessionContext, ProviderAdapterSessionNotFoundError> => {
+    ): Effect.Effect<AntigravitySessionContext, EngineAdapterSessionNotFoundError> => {
       const context = sessions.get(threadId);
       return context
         ? Effect.succeed(context)
-        : Effect.fail(new ProviderAdapterSessionNotFoundError({ provider: PROVIDER, threadId }));
+        : Effect.fail(new EngineAdapterSessionNotFoundError({ engine: PROVIDER, threadId }));
     };
 
     const releaseTurnGatewayLease = (
@@ -1081,14 +1081,14 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
     const teardownActiveProcess = (
       context: AntigravitySessionContext,
       method: string,
-    ): Effect.Effect<void, ProviderAdapterRequestError> => {
+    ): Effect.Effect<void, EngineAdapterRequestError> => {
       const child = context.activeProcess;
       if (!child) return Effect.void;
       return Effect.tryPromise({
         try: () => teardownProcessTree(child),
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          new EngineAdapterRequestError({
+            engine: PROVIDER,
             method,
             detail: messageFromCause(cause, "Failed to stop the Antigravity process tree."),
             cause,
@@ -1110,7 +1110,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             status,
           },
           raw: raw(source, { taskId, tracked, status }),
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
       }
       context.pendingBackgroundTasks.clear();
       context.pendingAnonymousBackgroundTasks = 0;
@@ -1130,7 +1130,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             status: "killed",
           },
           raw: raw(source, { taskId, tracked }),
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
       }
       context.pendingBackgroundTasks.clear();
       context.pendingAnonymousBackgroundTasks = 0;
@@ -1161,7 +1161,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           systemMessage,
           tracked,
         }),
-      } satisfies ProviderRuntimeEvent);
+      } satisfies EngineRuntimeEvent);
       return true;
     };
 
@@ -1193,7 +1193,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           ...(start.description ? { description: start.description } : {}),
         },
         raw: raw("background-task-started", { taskId, ...source }),
-      } satisfies ProviderRuntimeEvent);
+      } satisfies EngineRuntimeEvent);
 
       const completionIndex = context.pendingBackgroundTaskCompletions.findIndex(
         (message) =>
@@ -1291,7 +1291,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
                 }
               : { state: "completed", stopReason: "model_stop" },
         ...(input.raw ? { raw: input.raw } : {}),
-      } satisfies ProviderRuntimeEvent);
+      } satisfies EngineRuntimeEvent);
       return true;
     };
 
@@ -1321,13 +1321,13 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           title: itemType === "reasoning" ? "Reasoning" : "Assistant",
         },
         raw: raw(step.type ?? "transcript", step),
-      } satisfies ProviderRuntimeEvent);
+      } satisfies EngineRuntimeEvent);
       offer({
         ...base(context, { itemId }),
         type: "content.delta",
         payload: { streamKind, delta: content },
         raw: raw(step.type ?? "transcript", step),
-      } satisfies ProviderRuntimeEvent);
+      } satisfies EngineRuntimeEvent);
       offer({
         ...base(context, { itemId }),
         type: "item.completed",
@@ -1339,7 +1339,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           data: step,
         },
         raw: raw(step.type ?? "transcript", step),
-      } satisfies ProviderRuntimeEvent);
+      } satisfies EngineRuntimeEvent);
       if (itemType === "assistant_message") context.sawAssistant = true;
     };
 
@@ -1381,7 +1381,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             data,
           },
           raw: raw("transcript-tool-call", { stepIdx: stepIndex, name, args }),
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
         offer({
           ...base(context, { itemId }),
           type: "item.completed",
@@ -1392,7 +1392,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             data,
           },
           raw: raw("transcript-tool-call", { stepIdx: stepIndex, name, args }),
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
       }
     };
 
@@ -1523,7 +1523,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
      * events into this session's hook stream. Those events describe a
      * different process and conversation: they must never rebind the session
      * (cursor, transcript, thread) — instead they are surfaced as child-thread
-     * events carrying `providerParentThreadId` so the ingestion layer
+     * events carrying `nativeParentThreadId` so the ingestion layer
      * materializes a visible subagent thread.
      */
     const handleForeignHookEvent = async (
@@ -1552,9 +1552,9 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             {
               ...base(context, { includeTurn: false }),
               type: "thread.started",
-              payload: { providerThreadId: conversationId },
+              payload: { nativeThreadId: conversationId },
               raw: raw(eventName, payload),
-            } satisfies ProviderRuntimeEvent,
+            } satisfies EngineRuntimeEvent,
             conversationId,
             ownConversationId,
           ),
@@ -1566,7 +1566,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
               type: "turn.started",
               payload: { model: modelName ?? context.modelName ?? DEFAULT_MODEL },
               raw: raw(eventName, payload),
-            } satisfies ProviderRuntimeEvent,
+            } satisfies EngineRuntimeEvent,
             conversationId,
             ownConversationId,
           ),
@@ -1621,7 +1621,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
                   name,
                   args: toolArgs,
                 }),
-              } satisfies ProviderRuntimeEvent,
+              } satisfies EngineRuntimeEvent,
               conversationId,
               ownConversationId,
             ),
@@ -1665,7 +1665,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
                   name: pending.name,
                   failed,
                 }),
-              } satisfies ProviderRuntimeEvent,
+              } satisfies EngineRuntimeEvent,
               conversationId,
               ownConversationId,
             ),
@@ -1746,9 +1746,9 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           offer({
             ...base(context, { includeTurn: false }),
             type: "thread.started",
-            payload: { providerThreadId: conversationId },
+            payload: { nativeThreadId: conversationId },
             raw: raw(eventName, payload),
-          } satisfies ProviderRuntimeEvent);
+          } satisfies EngineRuntimeEvent);
         }
         const stepIndex =
           typeof payload.stepIdx === "number" &&
@@ -1796,7 +1796,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
                 data: buildAntigravityToolItemData(name, itemType, itemId, toolArgs),
               },
               raw: raw("tool-lifecycle", { eventName, stepIdx: stepIndex, name, args: toolArgs }),
-            } satisfies ProviderRuntimeEvent);
+            } satisfies EngineRuntimeEvent);
           }
         } else if (eventName === "post-tool") {
           const toolCall =
@@ -1843,7 +1843,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
                 name: pending.name,
                 failed,
               }),
-            } satisfies ProviderRuntimeEvent);
+            } satisfies EngineRuntimeEvent);
           }
 
           if (!failed && toolName) {
@@ -1874,7 +1874,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
                     status: "killed",
                   },
                   raw: raw("background-task-killed", { taskId: matchedId }),
-                } satisfies ProviderRuntimeEvent);
+                } satisfies EngineRuntimeEvent);
               } else if (action === "kill" && targetTaskId) {
                 context.pendingAnonymousBackgroundTasks = Math.max(
                   0,
@@ -1927,14 +1927,14 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
     const startSession: AntigravityAdapterShape["startSession"] = (input) =>
       Effect.gen(function* () {
         if (input.runtimeMode !== "full-access") {
-          return yield* new ProviderAdapterValidationError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterValidationError({
+            engine: PROVIDER,
             operation: "session/start",
             issue:
-              "Antigravity CLI print mode cannot pause for interactive approvals. Select Full access to use this provider.",
+              "Antigravity CLI print mode cannot pause for interactive approvals. Select Full access to use this engine.",
           });
         }
-        const binaryPath = trim(input.providerOptions?.antigravity?.binaryPath) ?? "agy";
+        const binaryPath = trim(input.engineOptions?.antigravity?.binaryPath) ?? "agy";
         yield* Effect.tryPromise({
           try: () =>
             (dependencies.ensurePlugin ?? ensureCapturePlugin)(
@@ -1942,8 +1942,8 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
               agentGatewayCredentials?.stdioProxy,
             ),
           catch: (cause) =>
-            new ProviderAdapterRequestError({
-              provider: PROVIDER,
+            new EngineAdapterRequestError({
+              engine: PROVIDER,
               method: "plugin/install",
               detail: messageFromCause(cause, "Failed to install the OmniMind capture hook."),
               cause,
@@ -1966,11 +1966,11 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
         }
         const now = new Date().toISOString();
         const conversationId = resumeConversationId(input.resumeCursor);
-        const modelSelection =
-          input.modelSelection?.provider === PROVIDER ? input.modelSelection : undefined;
-        const model = modelSelection?.model ?? DEFAULT_MODEL;
-        const session: ProviderSession = {
-          provider: PROVIDER,
+        const engineSelection =
+          input.engineSelection?.engine === PROVIDER ? input.engineSelection : undefined;
+        const model = engineSelection?.model ?? DEFAULT_MODEL;
+        const session: EngineSession = {
+          engine: PROVIDER,
           status: "ready",
           runtimeMode: input.runtimeMode,
           cwd: trim(input.cwd) ?? serverConfig.cwd,
@@ -1988,7 +1988,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           binaryPath,
           turns: [],
           ...(conversationId ? { conversationId } : {}),
-          ...(modelSelection?.options ? { modelOptions: modelSelection.options } : {}),
+          ...(engineSelection?.options ? { modelOptions: engineSelection.options } : {}),
           ...(conversationId
             ? { transcriptPath: transcriptPathForConversation(conversationId) }
             : {}),
@@ -2017,12 +2017,12 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             message: "Antigravity CLI session started",
             ...(conversationId ? { resume: conversationId } : {}),
           },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
         offer({
           ...base(context, { includeTurn: false }),
           type: "thread.started",
-          payload: { ...(conversationId ? { providerThreadId: conversationId } : {}) },
-        } satisfies ProviderRuntimeEvent);
+          payload: { ...(conversationId ? { nativeThreadId: conversationId } : {}) },
+        } satisfies EngineRuntimeEvent);
         return session;
       });
 
@@ -2030,8 +2030,8 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
       Effect.gen(function* () {
         const context = yield* requireSession(input.threadId);
         if (context.activeProcess) {
-          return yield* new ProviderAdapterValidationError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterValidationError({
+            engine: PROVIDER,
             operation: "turn/start",
             issue: "An Antigravity turn is already active for this thread.",
           });
@@ -2044,8 +2044,8 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
         });
         const normalizedPrompt = trim(prompt);
         if (!normalizedPrompt) {
-          return yield* new ProviderAdapterValidationError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterValidationError({
+            engine: PROVIDER,
             operation: "turn/start",
             issue: "A prompt or file attachment is required.",
           });
@@ -2057,17 +2057,17 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
         });
         const promptIssue = antigravityPromptCommandLineIssue(providerPrompt);
         if (promptIssue) {
-          return yield* new ProviderAdapterValidationError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterValidationError({
+            engine: PROVIDER,
             operation: "turn/start",
             issue: promptIssue,
           });
         }
         const turnId = TurnId.makeUnsafe(crypto.randomUUID());
-        const modelSelection =
-          input.modelSelection?.provider === PROVIDER ? input.modelSelection : undefined;
-        const model = modelSelection?.model ?? context.session.model ?? DEFAULT_MODEL;
-        const modelOptions = modelSelection?.options ?? context.modelOptions;
+        const engineSelection =
+          input.engineSelection?.engine === PROVIDER ? input.engineSelection : undefined;
+        const model = engineSelection?.model ?? context.session.model ?? DEFAULT_MODEL;
+        const modelOptions = engineSelection?.options ?? context.modelOptions;
         const cliModel = resolveAntigravityCliModelLabel(
           model,
           modelOptions,
@@ -2076,8 +2076,8 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
         const runDir = yield* Effect.tryPromise({
           try: () => fs.mkdtemp(path.join(os.tmpdir(), "omnimind-antigravity-")),
           catch: (cause) =>
-            new ProviderAdapterRequestError({
-              provider: PROVIDER,
+            new EngineAdapterRequestError({
+              engine: PROVIDER,
               method: "turn/prepare",
               detail: messageFromCause(cause, "Failed to prepare Antigravity turn files."),
               cause,
@@ -2089,8 +2089,8 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
         yield* Effect.tryPromise({
           try: () => fs.writeFile(eventFile, ""),
           catch: (cause) =>
-            new ProviderAdapterRequestError({
-              provider: PROVIDER,
+            new EngineAdapterRequestError({
+              engine: PROVIDER,
               method: "turn/prepare",
               detail: messageFromCause(cause, "Failed to create the Antigravity hook stream."),
               cause,
@@ -2105,10 +2105,10 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
         if (gatewaySessionLease && !gatewayBootstrapToken) {
           gatewaySessionLease.release();
           yield* Effect.promise(() => cleanupTurnRunDirectory(context, runDir));
-          return yield* new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "turn/prepare",
-            detail: "The OmniMind gateway credential is no longer active for this provider turn.",
+            detail: "The OmniMind gateway credential is no longer active for this engine turn.",
           });
         }
         if (gatewaySessionLease) context.gatewaySessionLease = gatewaySessionLease;
@@ -2147,7 +2147,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           ...base(context),
           type: "turn.started",
           payload: { model },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
 
         const conversationId = context.conversationId;
         const args: string[] = [
@@ -2184,8 +2184,8 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
         } catch (cause) {
           releaseTurnGatewayLease(context, gatewaySessionLease);
           yield* Effect.promise(() => cleanupTurnRunDirectory(context, runDir));
-          return yield* new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          return yield* new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "turn/start",
             detail: messageFromCause(cause, "Failed to launch Antigravity CLI."),
             cause,
@@ -2216,7 +2216,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
               class: "transport_error",
             },
             raw: raw("process-error", cause),
-          } satisfies ProviderRuntimeEvent);
+          } satisfies EngineRuntimeEvent);
         });
         child.once("close", (code, signal) => {
           clearInterval(timer);
@@ -2278,7 +2278,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
                 type: "runtime.error",
                 payload: { message: stderr.trim(), class: "provider_error" },
                 raw: raw("stderr", { code, stderr }),
-              } satisfies ProviderRuntimeEvent);
+              } satisfies EngineRuntimeEvent);
             }
             // Completion is the caller-visible lifecycle boundary. Remove the
             // turn-owned hook directory before publishing that terminal event.
@@ -2328,7 +2328,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
                 Effect.catch((error) =>
                   Effect.gen(function* () {
                     const detail =
-                      error instanceof ProviderAdapterRequestError
+                      error instanceof EngineAdapterRequestError
                         ? error.detail
                         : messageFromCause(error, "interrupt teardown failed");
                     yield* Effect.logWarning("antigravity.interrupt_teardown_failed", {
@@ -2362,8 +2362,8 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
 
     const unsupported = (threadId: ThreadId, method: string) =>
       Effect.fail(
-        new ProviderAdapterRequestError({
-          provider: PROVIDER,
+        new EngineAdapterRequestError({
+          engine: PROVIDER,
           method,
           detail: `Antigravity CLI print mode does not expose interactive requests for ${threadId}.`,
         }),
@@ -2390,10 +2390,10 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
           ...base(context, { includeTurn: false }),
           type: "session.exited",
           payload: { reason: "stopped", exitKind: "graceful" },
-        } satisfies ProviderRuntimeEvent);
+        } satisfies EngineRuntimeEvent);
       });
 
-    const snapshot = (context: AntigravitySessionContext): ProviderThreadSnapshot => ({
+    const snapshot = (context: AntigravitySessionContext): EngineThreadSnapshot => ({
       threadId: context.session.threadId,
       ...(context.session.cwd ? { cwd: context.session.cwd } : {}),
       turns: context.turns.map((turn) => ({ id: turn.id, items: [...turn.items] })),
@@ -2403,7 +2403,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
       requireSession(threadId).pipe(
         Effect.map((context) => {
           context.turns.splice(Math.max(0, context.turns.length - Math.max(0, numTurns)));
-          // Antigravity has no rollback cursor; ProviderService will rebuild local context.
+          // Antigravity has no rollback cursor; EngineService will rebuild local context.
           delete context.conversationId;
           delete context.transcriptPath;
           delete context.processedTranscriptPath;
@@ -2437,11 +2437,11 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
             models,
             source: "antigravity.cli",
             cached: false,
-          } satisfies ProviderListModelsResult;
+          } satisfies EngineListModelsResult;
         },
         catch: (cause) =>
-          new ProviderAdapterRequestError({
-            provider: PROVIDER,
+          new EngineAdapterRequestError({
+            engine: PROVIDER,
             method: "model/list",
             detail: messageFromCause(cause, "Failed to list Antigravity models."),
             cause,
@@ -2463,14 +2463,14 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
     );
 
     return {
-      provider: PROVIDER,
+      engine: PROVIDER,
       capabilities: {
-        ...providerExecutionStructure(PROVIDER),
+        ...engineExecutionStructure(PROVIDER),
         sessionModelSwitch: "restart-session",
         conversationRollback: "restart-session",
         supportsSkillMentions: true,
         // Antigravity can consume the unified OmniMind skill projection, but it does
-        // not expose a provider-native listSkills() seam.
+        // not expose a engine-native listSkills() seam.
         supportsSkillDiscovery: false,
         supportsNativeSlashCommandDiscovery: false,
         supportsPluginMentions: false,

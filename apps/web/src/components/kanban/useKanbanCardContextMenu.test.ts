@@ -92,7 +92,7 @@ const CARD = {
   projectId: PROJECT_ID,
   column: "done",
   title: "Kanban thread",
-  provider: "codex",
+  engine: "codex",
   isTerminal: false,
   branch: null,
   envMode: "local",

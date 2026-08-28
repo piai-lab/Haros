@@ -25,7 +25,7 @@ function makeProject(id: string, title: string, workspaceRoot: string): Orchestr
     kind: "project",
     title,
     workspaceRoot,
-    defaultModelSelection: null,
+    defaultEngineSelection: null,
     scripts: [],
     isPinned: false,
     createdAt: now,

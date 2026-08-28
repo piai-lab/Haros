@@ -11,12 +11,12 @@ const layer = it.layer(
 );
 
 layer("ProjectionPendingInteractionRepository", (it) => {
-  it.effect("keeps equal provider request ids independent across threads and kinds", () =>
+  it.effect("keeps equal engine request ids independent across threads and kinds", () =>
     Effect.gen(function* () {
       const repository = yield* ProjectionPendingInteractionRepository;
-      const requestId = ApprovalRequestId.makeUnsafe("shared-provider-request");
-      const firstThreadId = ThreadId.makeUnsafe("thread-provider-request-a");
-      const secondThreadId = ThreadId.makeUnsafe("thread-provider-request-b");
+      const requestId = ApprovalRequestId.makeUnsafe("shared-engine-request");
+      const firstThreadId = ThreadId.makeUnsafe("thread-engine-request-a");
+      const secondThreadId = ThreadId.makeUnsafe("thread-engine-request-b");
       const base = {
         requestId,
         turnId: null,

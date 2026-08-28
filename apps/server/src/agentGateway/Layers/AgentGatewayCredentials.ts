@@ -1,7 +1,7 @@
 /**
  * AgentGatewayCredentialsLive - Live layer for agent gateway credentials.
  *
- * Issues opaque in-memory credentials. Tokens live for the provider session,
+ * Issues opaque in-memory credentials. Tokens live for the engine session,
  * can be revoked independently, and intentionally do not survive a OmniMind
  * restart.
  *
@@ -69,7 +69,7 @@ export function makeAgentGatewayStdioBootstrapRegistry(input: {
   };
 }
 
-// Providers run as local child processes, so they must target a host the HTTP
+// Engines run as local child processes, so they must target a host the HTTP
 // server actually listens on. Wildcard binds cover loopback; an explicit host
 // (e.g. `::1` or a LAN address) does not, so reuse it verbatim.
 export function resolveAgentGatewayEndpointHost(configHost: string | undefined): string {
@@ -106,10 +106,8 @@ export const makeAgentGatewayCredentials = Effect.gen(function* () {
     sessionIsActive: (token) => sessionRegistry.verify(token) !== null,
   });
 
-  const issueSessionToken: AgentGatewayCredentialsShape["issueSessionToken"] = (
-    threadId,
-    provider,
-  ) => sessionRegistry.issue(threadId, provider).token;
+  const issueSessionToken: AgentGatewayCredentialsShape["issueSessionToken"] = (threadId, engine) =>
+    sessionRegistry.issue(threadId, engine).token;
 
   const verifySessionToken: AgentGatewayCredentialsShape["verifySessionToken"] = (token) =>
     sessionRegistry.verify(token)?.threadId ?? null;
@@ -168,9 +166,9 @@ export const makeAgentGatewayCredentials = Effect.gen(function* () {
     cancelSessionTurnRequests,
     retireSessionTurn,
     revokeSessionToken,
-    connectionForThread: (threadId, provider) => ({
+    connectionForThread: (threadId, engine) => ({
       url: endpoint.url,
-      bearerToken: issueSessionToken(threadId, provider),
+      bearerToken: issueSessionToken(threadId, engine),
     }),
     stdioProxy: {
       command: process.execPath,
@@ -184,6 +182,6 @@ export const AgentGatewayCredentialsLive = Layer.effect(
   makeAgentGatewayCredentials,
 ).pipe(Layer.provide(AgentGatewaySessionRegistryLive));
 
-// Single shared composition so every consumer (HTTP gateway, provider
+// Single shared composition so every consumer (HTTP gateway, engine
 // adapters) reuses the same memoized in-memory session registry.
 export const AgentGatewayCredentialsWithSecretsLive = AgentGatewayCredentialsLive.pipe(Layer.orDie);

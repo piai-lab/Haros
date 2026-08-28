@@ -1,11 +1,11 @@
 // FILE: providerUsageSnapshot.ts
-// Purpose: Normalize provider usage snapshots returned by the server into the
+// Purpose: Normalize engine usage snapshots returned by the server into the
 // same shapes consumed by the shared usage/rate-limit UI in the web app.
 
 import type { ServerProviderUsageSnapshot } from "@harnessos/contracts";
 
 import type { OpenUsageUsageLine } from "./openUsageRateLimits";
-import type { ProviderRateLimit } from "./rateLimits";
+import type { EngineRateLimit } from "./rateLimits";
 
 export function isProviderUsageSnapshotNonOk(
   snapshot: ServerProviderUsageSnapshot | null | undefined,
@@ -15,13 +15,13 @@ export function isProviderUsageSnapshotNonOk(
 
 export function normalizeServerProviderUsageRateLimit(
   snapshot: ServerProviderUsageSnapshot | null | undefined,
-): ProviderRateLimit | null {
+): EngineRateLimit | null {
   if (!snapshot || snapshot.limits.length === 0) {
     return null;
   }
 
   return {
-    provider: snapshot.provider,
+    engine: snapshot.engine,
     updatedAt: snapshot.updatedAt,
     limits: snapshot.limits.map((limit) => ({
       window: limit.window,

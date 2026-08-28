@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ServerConfig } from "../../config.ts";
 import type { OARuntimeModule } from "../oaRuntime.ts";
 import { OmniMindEcosystem, type OmniMindEcosystemShape } from "../Services/OmniMindEcosystem.ts";
-import { ProviderService, type ProviderServiceShape } from "../Services/ProviderService.ts";
+import { EngineService, type EngineServiceShape } from "../Services/EngineService.ts";
 import { makeOmniMindEcosystemLive } from "./OmniMindEcosystem.ts";
 
 function makeHarness() {
@@ -62,7 +62,7 @@ function makeHarness() {
   const layer = makeOmniMindEcosystemLive({ loadModule: async () => sdk }).pipe(
     Layer.provideMerge(ServerConfig.layerTest(process.cwd(), "/tmp/omnimind-ecosystem-test")),
     Layer.provideMerge(
-      Layer.succeed(ProviderService, { reloadSessionResources } as unknown as ProviderServiceShape),
+      Layer.succeed(EngineService, { reloadSessionResources } as unknown as EngineServiceShape),
     ),
     Layer.provideMerge(NodeServices.layer),
   );

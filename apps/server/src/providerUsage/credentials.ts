@@ -90,7 +90,7 @@ function oauthErrorCode(json: unknown): string | undefined {
 }
 
 /**
- * Redeem a refresh token with the provider's token endpoint. Never logs secrets. Returns a
+ * Redeem a refresh token with the engine's token endpoint. Never logs secrets. Returns a
  * discriminated result so callers can tell a bad refresh token (`errorCode`, e.g.
  * `refresh_token_reused`) from a transient endpoint failure — the two demand opposite reactions
  * (re-read the CLI's rotated credential vs. retry later).

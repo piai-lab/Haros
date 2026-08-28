@@ -15,7 +15,7 @@ export default Effect.gen(function* () {
     CREATE TABLE IF NOT EXISTS profile_stats_deleted_turn_events (
       thread_id TEXT NOT NULL,
       created_at TEXT NOT NULL,
-      provider TEXT,
+      engine TEXT,
       model TEXT,
       reasoning TEXT
     )

@@ -1,6 +1,6 @@
 // FILE: agentGatewayHostExtension.test.ts
 // Purpose: Exact Pi conformance for the eager AgentGateway Host projection.
-// Layer: Provider Extension tests
+// Layer: Engine Extension tests
 
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

@@ -3,14 +3,14 @@
 // Layer: Web composer helper
 // Exports: mention token formatters plus regex helpers used by composer parsing and prompt sync.
 
-import type { ProviderMentionReference, ProviderSkillReference } from "@harnessos/contracts";
+import type { EngineMentionReference, EngineSkillReference } from "@harnessos/contracts";
 import {
   isThreadMentionPath,
   threadIdFromThreadMentionPath,
 } from "@harnessos/shared/threadMentions";
 
-export function skillMentionPrefix(provider: string): string {
-  return provider === "pi" ? "/skill:" : "/";
+export function skillMentionPrefix(engine: string): string {
+  return engine === "pi" ? "/skill:" : "/";
 }
 
 // The alternation must be unambiguous — a backslash may only match the escape
@@ -79,11 +79,11 @@ function escapeRegExp(value: string): string {
 export function promptIncludesSkillMention(
   prompt: string,
   skillName: string,
-  provider: string,
+  engine: string,
 ): boolean {
   const escapedSkillName = escapeRegExp(skillName);
   const prefixes =
-    provider === "pi" ? [skillMentionPrefix(provider)] : [skillMentionPrefix(provider), "$"];
+    engine === "pi" ? [skillMentionPrefix(engine)] : [skillMentionPrefix(engine), "$"];
   return prefixes.some((prefix) => {
     const pattern = new RegExp(`(^|\\s)${escapeRegExp(prefix)}${escapedSkillName}(?=\\s|$)`, "i");
     return pattern.test(prompt);
@@ -92,15 +92,15 @@ export function promptIncludesSkillMention(
 
 export function filterPromptSkillReferences(
   prompt: string,
-  skills: ReadonlyArray<ProviderSkillReference>,
-  provider: string,
-): ProviderSkillReference[] {
-  return skills.filter((skill) => promptIncludesSkillMention(prompt, skill.name, provider));
+  skills: ReadonlyArray<EngineSkillReference>,
+  engine: string,
+): EngineSkillReference[] {
+  return skills.filter((skill) => promptIncludesSkillMention(prompt, skill.name, engine));
 }
 
 export function providerSkillReferencesEqual(
-  left: ReadonlyArray<ProviderSkillReference>,
-  right: ReadonlyArray<ProviderSkillReference>,
+  left: ReadonlyArray<EngineSkillReference>,
+  right: ReadonlyArray<EngineSkillReference>,
 ): boolean {
   return (
     left.length === right.length &&
@@ -114,7 +114,7 @@ function normalizeMentionNameKey(name: string): string {
   return name.trim().toLowerCase();
 }
 
-function collectProviderMentionTokenKeys(mention: ProviderMentionReference): Set<string> {
+function collectProviderMentionTokenKeys(mention: EngineMentionReference): Set<string> {
   const keys = new Set<string>();
   const normalizedName = normalizeMentionNameKey(mention.name);
   if (normalizedName.length > 0) {
@@ -141,7 +141,7 @@ function collectProviderMentionTokenKeys(mention: ProviderMentionReference): Set
 }
 
 export function providerMentionMatchesToken(
-  mention: ProviderMentionReference,
+  mention: EngineMentionReference,
   token: string,
 ): boolean {
   const normalizedToken = normalizeMentionNameKey(token);
@@ -152,24 +152,24 @@ export function providerMentionMatchesToken(
 
 export type MentionChipKind = "path" | "plugin" | "thread";
 
-export function isPluginProviderMentionReference(mention: ProviderMentionReference): boolean {
+export function isPluginProviderMentionReference(mention: EngineMentionReference): boolean {
   return mention.path.startsWith("plugin://");
 }
 
-export function isThreadProviderMentionReference(mention: ProviderMentionReference): boolean {
+export function isThreadProviderMentionReference(mention: EngineMentionReference): boolean {
   return isThreadMentionPath(mention.path);
 }
 
 export function threadIdFromProviderMentionReference(
-  mention: ProviderMentionReference,
+  mention: EngineMentionReference,
 ): string | null {
   return threadIdFromThreadMentionPath(mention.path);
 }
 
 export function findThreadProviderMentionReferenceForToken(
   token: string,
-  mentions: ReadonlyArray<ProviderMentionReference> | undefined,
-): ProviderMentionReference | undefined {
+  mentions: ReadonlyArray<EngineMentionReference> | undefined,
+): EngineMentionReference | undefined {
   return mentions?.find(
     (mention) =>
       isThreadProviderMentionReference(mention) && providerMentionMatchesToken(mention, token),
@@ -180,7 +180,7 @@ export function resolveMentionChipKind(
   path: string,
   options?: {
     kind?: MentionChipKind;
-    mentionReferences?: ReadonlyArray<ProviderMentionReference>;
+    mentionReferences?: ReadonlyArray<EngineMentionReference>;
   },
 ): MentionChipKind {
   if (options?.kind === "thread" || isThreadMentionPath(path)) {
@@ -220,15 +220,15 @@ function collectPromptMentionNameKeys(prompt: string): Set<string> {
 
 export function filterPromptProviderMentionReferences(
   prompt: string,
-  mentions: ReadonlyArray<ProviderMentionReference>,
-): ProviderMentionReference[] {
+  mentions: ReadonlyArray<EngineMentionReference>,
+): EngineMentionReference[] {
   const promptMentionNames = collectPromptMentionNameKeys(prompt);
   if (promptMentionNames.size === 0) {
     return [];
   }
 
   const seenPaths = new Set<string>();
-  const matchedMentions: ProviderMentionReference[] = [];
+  const matchedMentions: EngineMentionReference[] = [];
   for (const mention of mentions) {
     const mentionKeys = collectProviderMentionTokenKeys(mention);
     if (!Array.from(mentionKeys).some((key) => promptMentionNames.has(key))) {
@@ -244,8 +244,8 @@ export function filterPromptProviderMentionReferences(
 }
 
 export function providerMentionReferencesEqual(
-  left: ReadonlyArray<ProviderMentionReference>,
-  right: ReadonlyArray<ProviderMentionReference>,
+  left: ReadonlyArray<EngineMentionReference>,
+  right: ReadonlyArray<EngineMentionReference>,
 ): boolean {
   return (
     left.length === right.length &&

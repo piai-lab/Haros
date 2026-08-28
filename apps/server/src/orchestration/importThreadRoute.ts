@@ -1,5 +1,5 @@
 // FILE: importThreadRoute.ts
-// Purpose: Imports provider-native sessions and binds them to OmniMind thread projections.
+// Purpose: Imports engine-native sessions and binds them to OmniMind thread projections.
 // Layer: Orchestration command handler
 // Exports: makeImportThreadHandler.
 
@@ -21,8 +21,8 @@ import { resolveThreadWorkspaceCwd } from "../checkpointing/Utils";
 import { loadClaudeAgentSdk } from "../provider/claudeAgentSdk.ts";
 import type { OrchestrationEngineShape } from "./Services/OrchestrationEngine";
 import type { ProjectionSnapshotQueryShape } from "./Services/ProjectionSnapshotQuery";
-import type { ProviderAdapterRegistryShape } from "../provider/Services/ProviderAdapterRegistry";
-import type { ProviderServiceShape } from "../provider/Services/ProviderService";
+import type { EngineAdapterRegistryShape } from "../provider/Services/EngineAdapterRegistry";
+import type { EngineServiceShape } from "../provider/Services/EngineService";
 import { parseManagedWorktreeWorkspaceRoot } from "../workspace/managedWorktree";
 import {
   mapClaudeSessionMessages,
@@ -41,8 +41,8 @@ function importMessagesError(message: string): ImportThreadError {
   return new ImportThreadError({ message });
 }
 
-function providerResumeCursorForImport(provider: EngineKind, externalId: string): unknown {
-  switch (provider) {
+function providerResumeCursorForImport(engine: EngineKind, externalId: string): unknown {
+  switch (engine) {
     case "claude":
       return { resume: externalId };
     case "droid":
@@ -79,8 +79,8 @@ export interface ImportThreadHandlerOptions {
   readonly path: Path.Path;
   readonly platform: NodeJS.Platform;
   readonly projectionSnapshotQuery: ProjectionSnapshotQueryShape;
-  readonly providerAdapterRegistry: ProviderAdapterRegistryShape;
-  readonly providerService: ProviderServiceShape;
+  readonly providerAdapterRegistry: EngineAdapterRegistryShape;
+  readonly providerService: EngineServiceShape;
 }
 
 export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
@@ -136,12 +136,12 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
   });
 
   const resolveImportedProviderThreadContext = Effect.fn(function* (input: {
-    readonly provider: "codex" | "droid" | "kilo" | "opencode";
+    readonly engine: "codex" | "droid" | "kilo" | "opencode";
     readonly externalId: string;
     readonly projectWorkspaceRoot: string;
     readonly fallbackCwd?: string;
   }) {
-    const adapter = yield* options.providerAdapterRegistry.getByProvider(input.provider);
+    const adapter = yield* options.providerAdapterRegistry.getByEngine(input.engine);
     if (!adapter.readExternalThread) return null;
 
     const snapshot = yield* adapter
@@ -225,7 +225,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
     readonly importedAt: string;
     readonly threadId: ThreadId;
   }) {
-    const adapter = yield* options.providerAdapterRegistry.getByProvider("codex");
+    const adapter = yield* options.providerAdapterRegistry.getByEngine("codex");
     const snapshot = yield* adapter
       .readThread(input.threadId)
       .pipe(
@@ -281,10 +281,10 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
 
   const importOpenCodeCompatibleThreadHistory = Effect.fn(function* (input: {
     readonly importedAt: string;
-    readonly provider: "kilo" | "opencode";
+    readonly engine: "kilo" | "opencode";
     readonly threadId: ThreadId;
   }) {
-    const adapter = yield* options.providerAdapterRegistry.getByProvider(input.provider);
+    const adapter = yield* options.providerAdapterRegistry.getByEngine(input.engine);
     const snapshot = yield* adapter
       .readThread(input.threadId)
       .pipe(
@@ -292,7 +292,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
           importMessagesError(
             cause instanceof Error && cause.message.length > 0
               ? cause.message
-              : `Failed to read ${input.provider === "kilo" ? "Kilo" : "OpenCode"} session history.`,
+              : `Failed to read ${input.engine === "kilo" ? "Kilo" : "OpenCode"} session history.`,
           ),
         ),
       );
@@ -313,7 +313,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
     readonly importedAt: string;
     readonly threadId: ThreadId;
   }) {
-    const adapter = yield* options.providerAdapterRegistry.getByProvider("droid");
+    const adapter = yield* options.providerAdapterRegistry.getByEngine("droid");
     if (!adapter.readExternalThread) {
       return yield* Effect.fail(importMessagesError("Droid session import is unavailable."));
     }
@@ -348,7 +348,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
 
     if (thread.session && thread.session.status !== "stopped") {
       return yield* Effect.fail(
-        importMessagesError(`Thread '${body.threadId}' already has an active provider session.`),
+        importMessagesError(`Thread '${body.threadId}' already has an active engine session.`),
       );
     }
 
@@ -371,13 +371,13 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
     const externalId = body.externalId.trim();
 
     const importedProviderContext =
-      (thread.modelSelection.provider === "codex" ||
-        thread.modelSelection.provider === "droid" ||
-        thread.modelSelection.provider === "kilo" ||
-        thread.modelSelection.provider === "opencode") &&
+      (thread.engineSelection.engine === "codex" ||
+        thread.engineSelection.engine === "droid" ||
+        thread.engineSelection.engine === "kilo" ||
+        thread.engineSelection.engine === "opencode") &&
       project
         ? yield* resolveImportedProviderThreadContext({
-            provider: thread.modelSelection.provider,
+            engine: thread.engineSelection.engine,
             externalId,
             projectWorkspaceRoot: project.workspaceRoot,
             ...(cwd ? { fallbackCwd: cwd } : {}),
@@ -393,7 +393,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
       });
     }
 
-    if (thread.modelSelection.provider === "claude") {
+    if (thread.engineSelection.engine === "claude") {
       yield* ensureClaudeThreadImportable({
         cwd,
         externalId,
@@ -401,47 +401,47 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
     }
 
     const importResumeCursor = providerResumeCursorForImport(
-      thread.modelSelection.provider,
+      thread.engineSelection.engine,
       externalId,
     );
     const session = yield* options.providerService.startSession(thread.id, {
       threadId: thread.id,
-      provider: thread.modelSelection.provider,
+      engine: thread.engineSelection.engine,
       ...((importedProviderContext?.runtimeCwd ?? cwd)
         ? { cwd: importedProviderContext?.runtimeCwd ?? cwd }
         : {}),
-      modelSelection: thread.modelSelection,
-      ...(thread.modelSelection.provider === "codex"
+      engineSelection: thread.engineSelection,
+      ...(thread.engineSelection.engine === "codex"
         ? { forkSourceResumeCursor: importResumeCursor }
         : { resumeCursor: importResumeCursor }),
       runtimeMode: thread.runtimeMode,
     });
 
     yield* Effect.gen(function* () {
-      if (thread.modelSelection.provider === "codex") {
+      if (thread.engineSelection.engine === "codex") {
         yield* importCodexThreadHistory({
           threadId: thread.id,
           importedAt: session.updatedAt,
         });
-      } else if (thread.modelSelection.provider === "claude") {
+      } else if (thread.engineSelection.engine === "claude") {
         yield* importClaudeThreadHistory({
           threadId: thread.id,
           externalId,
           cwd,
           importedAt: session.updatedAt,
         });
-      } else if (thread.modelSelection.provider === "droid") {
+      } else if (thread.engineSelection.engine === "droid") {
         yield* importDroidThreadHistory({
           threadId: thread.id,
           externalId,
           importedAt: session.updatedAt,
         });
       } else if (
-        thread.modelSelection.provider === "kilo" ||
-        thread.modelSelection.provider === "opencode"
+        thread.engineSelection.engine === "kilo" ||
+        thread.engineSelection.engine === "opencode"
       ) {
         yield* importOpenCodeCompatibleThreadHistory({
-          provider: thread.modelSelection.provider,
+          engine: thread.engineSelection.engine,
           threadId: thread.id,
           importedAt: session.updatedAt,
         });
@@ -449,7 +449,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
     }).pipe(
       Effect.onError(() =>
         // Startup precedes history materialization. Roll it back when import
-        // cannot finish so no provider child or persisted binding is orphaned.
+        // cannot finish so no engine child or persisted binding is orphaned.
         options.providerService.stopSession({ threadId: thread.id }).pipe(Effect.ignore),
       ),
     );
@@ -461,7 +461,7 @@ export function makeImportThreadHandler(options: ImportThreadHandlerOptions) {
       session: {
         threadId: thread.id,
         status: mapProviderSessionStatusToOrchestrationStatus(session.status),
-        providerName: session.provider,
+        providerName: session.engine,
         runtimeMode: thread.runtimeMode,
         activeTurnId: null,
         lastError: session.lastError ?? null,

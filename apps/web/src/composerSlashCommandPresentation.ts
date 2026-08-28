@@ -26,9 +26,9 @@ import {
   TemporaryThreadIcon,
 } from "./lib/icons";
 import {
-  PROVIDER_DISCOVERY_SECONDARY_FIELD_WEIGHT,
+  ENGINE_DISCOVERY_SECONDARY_FIELD_WEIGHT,
   rankProviderDiscoveryItems,
-} from "./lib/providerDiscovery";
+} from "./lib/engineDiscovery";
 
 interface BuiltInComposerSlashCommandPresentationDescriptor {
   readonly titleKey: MessageKey;
@@ -160,8 +160,8 @@ export function filterBuiltInComposerSlashCommands(
     const presentation = resolveBuiltInComposerSlashCommandPresentation(command, t);
     return [
       { value: command },
-      { value: presentation.title, weight: PROVIDER_DISCOVERY_SECONDARY_FIELD_WEIGHT },
-      { value: presentation.description, weight: PROVIDER_DISCOVERY_SECONDARY_FIELD_WEIGHT },
+      { value: presentation.title, weight: ENGINE_DISCOVERY_SECONDARY_FIELD_WEIGHT },
+      { value: presentation.description, weight: ENGINE_DISCOVERY_SECONDARY_FIELD_WEIGHT },
     ];
   });
 }

@@ -15,7 +15,7 @@ import {
   NOTIFICATIONS_SETTINGS_SEARCH,
 } from "./settingsMetadata/desktopSettings";
 import { PROMPTS_SETTINGS_SEARCH } from "./settingsMetadata/promptSettings";
-import { PROVIDERS_SETTINGS_SEARCH } from "./settingsMetadata/providerSettings";
+import { PROVIDERS_SETTINGS_SEARCH } from "./settingsMetadata/engineSettings";
 import { WEB_SEARCH_SETTINGS_SEARCH } from "./settingsMetadata/webSearchSettings";
 import {
   SETTINGS_TARGETS,
@@ -114,7 +114,7 @@ export const SETTINGS_NAV_ITEMS = [
       defineSettingsSearchPanel({
         id: "usage:usage",
         titleKey: "settings.usage",
-        keywords: "Remaining quota and credits for each signed-in provider. limits credits",
+        keywords: "Remaining quota and credits for each signed-in engine. limits credits",
       }),
     ],
   },
@@ -157,9 +157,9 @@ export const SETTINGS_NAV_ITEMS = [
     ],
   },
   {
-    id: "providers",
+    id: "engines",
     group: "coding",
-    labelKey: "settings.providers",
+    labelKey: "settings.engines",
     descriptionKey: "settings.providersDescription",
     icon: "puzzle",
     searchRecords: Object.values(PROVIDERS_SETTINGS_SEARCH),
@@ -175,7 +175,7 @@ export const SETTINGS_NAV_ITEMS = [
         id: "models:model-services",
         titleKey: "settings.models",
         keywords:
-          "Configure OmniMind model services credentials authentication available models catalog provider API key OAuth.",
+          "Configure OmniMind model services credentials authentication available models catalog engine API key OAuth.",
       }),
     ],
   },
@@ -197,7 +197,7 @@ export const SETTINGS_NAV_ITEMS = [
       defineSettingsSearchPanel({
         id: "skills:skills",
         titleKey: "settings.skills",
-        keywords: "Every skill found across providers, with toggles to control availability. agent",
+        keywords: "Every skill found across engines, with toggles to control availability. agent",
       }),
     ],
   },

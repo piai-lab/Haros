@@ -21,10 +21,10 @@ import {
   useComposerDraftStore,
   useComposerThreadDraft,
 } from "../../composerDraftStore";
-import { buildModelSelection } from "../../providerModelOptions";
+import { buildEngineSelection } from "../../providerModelOptions";
 import { toastManager } from "../ui/toast";
 
-export function useKanbanTaskScratchDraft(input: { readonly defaultProvider: EngineKind }) {
+export function useKanbanTaskScratchDraft(input: { readonly defaultEngine: EngineKind }) {
   // Scratch composer draft backing the dialog: model/effort/speed state lives in
   // the composer draft store under this throwaway thread id, exactly like chat.
   const [scratchThreadId] = useState(() => newThreadId());
@@ -50,23 +50,23 @@ export function useKanbanTaskScratchDraft(input: { readonly defaultProvider: Eng
   };
 
   const stickyActiveProvider = useComposerDraftStore((state) => state.stickyActiveProvider);
-  const stickyModelSelectionByProvider = useComposerDraftStore(
-    (state) => state.stickyModelSelectionByProvider,
+  const stickyEngineSelectionByEngine = useComposerDraftStore(
+    (state) => state.stickyEngineSelectionByEngine,
   );
   const selectedProvider: EngineKind =
-    scratchDraft.activeProvider ?? stickyActiveProvider ?? input.defaultProvider;
-  const draftModelSelection =
-    scratchDraft.modelSelectionByProvider[selectedProvider] ??
-    stickyModelSelectionByProvider[selectedProvider];
+    scratchDraft.activeProvider ?? stickyActiveProvider ?? input.defaultEngine;
+  const draftEngineSelection =
+    scratchDraft.engineSelectionByEngine[selectedProvider] ??
+    stickyEngineSelectionByEngine[selectedProvider];
   const selectedModel: ModelSlug | null =
-    draftModelSelection?.model ?? getDefaultModel(selectedProvider);
-  const selectedProviderModelOptions = draftModelSelection?.options;
+    draftEngineSelection?.model ?? getDefaultModel(selectedProvider);
+  const selectedProviderModelOptions = draftEngineSelection?.options;
   const selectedModelSupportsAutoMode =
-    draftModelSelection?.provider === "claude" ? draftModelSelection.supportsAutoMode : undefined;
+    draftEngineSelection?.engine === "claude" ? draftEngineSelection.supportsAutoMode : undefined;
 
   const previousSelectedProviderRef = useRef<{
     threadId: string;
-    provider: EngineKind;
+    engine: EngineKind;
   } | null>(null);
 
   useEffect(() => {
@@ -87,12 +87,12 @@ export function useKanbanTaskScratchDraft(input: { readonly defaultProvider: Eng
     const previous = previousSelectedProviderRef.current;
     previousSelectedProviderRef.current = {
       threadId: scratchThreadId,
-      provider: selectedProvider,
+      engine: selectedProvider,
     };
     if (
       !previous ||
       previous.threadId !== scratchThreadId ||
-      previous.provider === selectedProvider
+      previous.engine === selectedProvider
     ) {
       return;
     }
@@ -101,14 +101,14 @@ export function useKanbanTaskScratchDraft(input: { readonly defaultProvider: Eng
   }, [scratchThreadId, selectedProvider]);
 
   const handleProviderModelChange = (
-    provider: EngineKind,
+    engine: EngineKind,
     model: ModelSlug,
     supportsAutoMode?: boolean,
   ) => {
     const store = useComposerDraftStore.getState();
-    const nextSelection = buildModelSelection(provider, model, undefined, supportsAutoMode);
+    const nextSelection = buildEngineSelection(engine, model, undefined, supportsAutoMode);
     // Mirrors the composer: update the scratch draft and persist the sticky selection.
-    store.setModelSelectionAndSticky(scratchThreadId, nextSelection);
+    store.setEngineSelectionAndSticky(scratchThreadId, nextSelection);
   };
 
   const existingAttachmentCount = useCallback(
