@@ -1,4 +1,4 @@
-// FILE: engineUsage/providers/codex.test.ts
+// FILE: engineUsage/engines/codex.test.ts
 // Purpose: Proves Codex usage stays on the engine-native app-server path.
 
 import { describe, expect, it, vi } from "vitest";

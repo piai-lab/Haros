@@ -12,7 +12,7 @@ import {
 } from "@harnessos/shared/automationMode";
 import {
   getModelCapabilities,
-  getProviderOptionCurrentValue,
+  getEngineOptionCurrentValue,
   getEngineOptionDescriptors,
 } from "@harnessos/shared/model";
 import { useQuery } from "@tanstack/react-query";
@@ -1076,13 +1076,13 @@ function ModelOptionRows({
           return (
             <EditRow key={descriptor.id} label={descriptor.label}>
               <InlineToggle
-                value={getProviderOptionCurrentValue(descriptor) === true}
+                value={getEngineOptionCurrentValue(descriptor) === true}
                 onChange={(checked) => setOption(descriptor, checked)}
               />
             </EditRow>
           );
         }
-        const current = getProviderOptionCurrentValue(descriptor);
+        const current = getEngineOptionCurrentValue(descriptor);
         return (
           <EditRow key={descriptor.id} label={descriptor.label}>
             <InlineSelect

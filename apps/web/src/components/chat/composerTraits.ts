@@ -9,7 +9,7 @@ import {
   type EngineModelDescriptor,
 } from "@harnessos/contracts";
 import {
-  getProviderOptionCurrentValue,
+  getEngineOptionCurrentValue,
   getEngineOptionDescriptors,
   isClaudeUltrathinkPrompt,
   trimOrNull,
@@ -130,10 +130,10 @@ export function getComposerTraitSelection(
     contextWindowDescriptor?.options[0]?.id ??
     null;
   const resolvedEffort = trimOrNull(
-    getProviderOptionCurrentValue(primarySelectDescriptor) as string | undefined,
+    getEngineOptionCurrentValue(primarySelectDescriptor) as string | undefined,
   );
   const resolvedContextWindow = trimOrNull(
-    getProviderOptionCurrentValue(contextWindowDescriptor) as string | undefined,
+    getEngineOptionCurrentValue(contextWindowDescriptor) as string | undefined,
   );
   const promptInjectedValues = promptInjectedValuesForDescriptor(
     caps.promptInjectedEffortLevels,

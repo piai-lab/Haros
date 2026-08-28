@@ -207,7 +207,7 @@ const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition
   },
 };
 
-export const AGENT_MENTION_ALIASES_BY_PROVIDER: Record<
+export const AGENT_MENTION_ALIASES_BY_ENGINE: Record<
   EngineKind,
   Record<string, AgentAliasDefinition>
 > = {
@@ -223,13 +223,7 @@ export const AGENT_MENTION_ALIASES_BY_PROVIDER: Record<
   pi: {},
 } as const satisfies Record<EngineKind, Record<string, AgentAliasDefinition>>;
 
-// Backward compatibility for legacy call sites that still expect a flat alias table.
-export const AGENT_MENTION_ALIASES: Record<string, AgentAliasDefinition> = Object.assign(
-  {},
-  ...Object.values(AGENT_MENTION_ALIASES_BY_PROVIDER),
-);
-
-const AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_PROVIDER: Record<EngineKind, readonly string[]> = {
+const AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_ENGINE: Record<EngineKind, readonly string[]> = {
   oa: [],
   codex: ["5.5", "5.4", "mini", "5.3-codex", "spark", "5.2", "5.2-codex"],
   claude: ["explore", "review", "build", "plan"],
@@ -254,10 +248,10 @@ function mapAgentEntries(input: Record<string, AgentAliasDefinition>): ResolvedA
  */
 export function getAgentMentionAliases(engine?: EngineKind): ResolvedAgentAlias[] {
   if (engine) {
-    return mapAgentEntries(AGENT_MENTION_ALIASES_BY_PROVIDER[engine]);
+    return mapAgentEntries(AGENT_MENTION_ALIASES_BY_ENGINE[engine]);
   }
 
-  return Object.values(AGENT_MENTION_ALIASES_BY_PROVIDER).flatMap((definitions) =>
+  return Object.values(AGENT_MENTION_ALIASES_BY_ENGINE).flatMap((definitions) =>
     mapAgentEntries(definitions),
   );
 }
@@ -266,8 +260,8 @@ export function getAgentMentionAliases(engine?: EngineKind): ResolvedAgentAlias[
  * Get the preferred aliases shown in autocomplete for a engine.
  */
 export function getAgentMentionAutocompleteAliases(engine: EngineKind): ResolvedAgentAlias[] {
-  return AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_PROVIDER[engine].map((alias) => {
-    const definition = AGENT_MENTION_ALIASES_BY_PROVIDER[engine][alias];
+  return AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_ENGINE[engine].map((alias) => {
+    const definition = AGENT_MENTION_ALIASES_BY_ENGINE[engine][alias];
     if (!definition) {
       throw new Error(`Unknown autocomplete alias for ${engine}: ${alias}`);
     }
@@ -282,10 +276,10 @@ export function getAgentMentionAutocompleteAliases(engine: EngineKind): Resolved
 export function resolveAgentAlias(alias: string, engine?: EngineKind): AgentAliasDefinition | null {
   const normalized = alias.toLowerCase();
   if (engine) {
-    return AGENT_MENTION_ALIASES_BY_PROVIDER[engine][normalized] ?? null;
+    return AGENT_MENTION_ALIASES_BY_ENGINE[engine][normalized] ?? null;
   }
 
-  for (const definitions of Object.values(AGENT_MENTION_ALIASES_BY_PROVIDER)) {
+  for (const definitions of Object.values(AGENT_MENTION_ALIASES_BY_ENGINE)) {
     const resolved = definitions[normalized];
     if (resolved) {
       return resolved;
@@ -300,10 +294,10 @@ export function isValidAgentAlias(alias: string, engine?: EngineKind): boolean {
 
 export function getAgentAliasNames(engine?: EngineKind): string[] {
   if (engine) {
-    return Object.keys(AGENT_MENTION_ALIASES_BY_PROVIDER[engine]);
+    return Object.keys(AGENT_MENTION_ALIASES_BY_ENGINE[engine]);
   }
 
-  return Object.values(AGENT_MENTION_ALIASES_BY_PROVIDER).flatMap((definitions) =>
+  return Object.values(AGENT_MENTION_ALIASES_BY_ENGINE).flatMap((definitions) =>
     Object.keys(definitions),
   );
 }

@@ -1,4 +1,4 @@
-// FILE: engineUsage/providers/claude.ts
+// FILE: engineUsage/engines/claude.ts
 // Purpose: Live Claude (Anthropic) usage fetcher. Reads the Claude Code OAuth token from
 // ~/.claude/.credentials.json or the macOS keychain ("Claude Code-credentials", possibly
 // hex-encoded) read-only, and calls the OAuth usage endpoint, mapping the 5h/weekly/sonnet

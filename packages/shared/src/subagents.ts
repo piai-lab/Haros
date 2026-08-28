@@ -40,7 +40,7 @@ export interface ParsedSubagentIdentityHint {
 }
 
 export interface ParsedSubagentIdentityDirectory {
-  readonly byProviderThreadId: ReadonlyMap<string, ParsedSubagentIdentityHint>;
+  readonly byEngineThreadId: ReadonlyMap<string, ParsedSubagentIdentityHint>;
   readonly byAgentId: ReadonlyMap<string, ParsedSubagentIdentityHint>;
 }
 
@@ -397,7 +397,7 @@ export function decodeSubagentAgentStates(
   return decoded;
 }
 
-export function collectSubagentProviderThreadIds(
+export function collectSubagentEngineThreadIds(
   item: Record<string, unknown>,
 ): ReadonlyArray<string> {
   const orderedThreadIds: string[] = [];
@@ -582,7 +582,7 @@ function mergeSubagentIdentityHints(
 export function buildSubagentIdentityDirectory(
   hints: ReadonlyArray<ParsedSubagentIdentityHint>,
 ): ParsedSubagentIdentityDirectory {
-  const byProviderThreadId = new Map<string, ParsedSubagentIdentityHint>();
+  const byEngineThreadId = new Map<string, ParsedSubagentIdentityHint>();
   const byAgentId = new Map<string, ParsedSubagentIdentityHint>();
 
   const upsert = (hint: ParsedSubagentIdentityHint) => {
@@ -597,7 +597,7 @@ export function buildSubagentIdentityDirectory(
       return;
     }
 
-    const existingByThread = nativeThreadId ? byProviderThreadId.get(nativeThreadId) : undefined;
+    const existingByThread = nativeThreadId ? byEngineThreadId.get(nativeThreadId) : undefined;
     const existingByAgent = agentId ? byAgentId.get(agentId) : undefined;
     const existing =
       existingByAgent !== undefined
@@ -610,13 +610,13 @@ export function buildSubagentIdentityDirectory(
     });
 
     if (nativeThreadId) {
-      byProviderThreadId.set(nativeThreadId, merged);
+      byEngineThreadId.set(nativeThreadId, merged);
     }
     if (agentId) {
       byAgentId.set(agentId, merged);
     }
     if (merged.nativeThreadId && merged.agentId) {
-      byProviderThreadId.set(merged.nativeThreadId, merged);
+      byEngineThreadId.set(merged.nativeThreadId, merged);
       byAgentId.set(merged.agentId, merged);
     }
   };
@@ -626,7 +626,7 @@ export function buildSubagentIdentityDirectory(
   }
 
   return {
-    byProviderThreadId,
+    byEngineThreadId,
     byAgentId,
   };
 }
@@ -638,10 +638,10 @@ export function resolveSubagentIdentityFromDirectory(
     agentId?: string | null | undefined;
   },
 ): ParsedSubagentIdentityHint | undefined {
-  const normalizedProviderThreadId = asTrimmedString(input.nativeThreadId);
+  const normalizedEngineThreadId = asTrimmedString(input.nativeThreadId);
   const normalizedAgentId = asTrimmedString(input.agentId);
-  const threadEntry = normalizedProviderThreadId
-    ? directory.byProviderThreadId.get(normalizedProviderThreadId)
+  const threadEntry = normalizedEngineThreadId
+    ? directory.byEngineThreadId.get(normalizedEngineThreadId)
     : undefined;
   const agentEntry = normalizedAgentId ? directory.byAgentId.get(normalizedAgentId) : undefined;
   if (!threadEntry && !agentEntry) {
@@ -651,7 +651,7 @@ export function resolveSubagentIdentityFromDirectory(
   return mergeSubagentIdentityHints(agentEntry, {
     ...threadEntry,
     nativeThreadId:
-      threadEntry?.nativeThreadId ?? agentEntry?.nativeThreadId ?? normalizedProviderThreadId,
+      threadEntry?.nativeThreadId ?? agentEntry?.nativeThreadId ?? normalizedEngineThreadId,
     agentId: threadEntry?.agentId ?? agentEntry?.agentId ?? normalizedAgentId,
   });
 }

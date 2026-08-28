@@ -19,7 +19,7 @@ import { mcpToolResultError, mcpToolResultJson } from "./protocol.ts";
 import {
   HOST_GATEWAY_TARGET_OPTIONS_DESCRIPTION,
   hostGatewayTargetOptionGuidance,
-  loadHostGatewayProviderCatalog,
+  loadHostGatewayEngineCatalog,
   type HostGatewayEngineAvailability,
 } from "./targetResolver.ts";
 import {
@@ -141,7 +141,7 @@ export function makeThreadReadTools(input: ThreadReadToolsInput): ReadonlyArray<
         );
         const availabilities = yield* loadProviderAvailabilities;
         const engines = yield* Effect.forEach(ENGINE_KINDS, (engine) =>
-          loadHostGatewayProviderCatalog({
+          loadHostGatewayEngineCatalog({
             engine,
             discovery: engineDiscovery,
             ...(availabilities.get(engine) !== undefined

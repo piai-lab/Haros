@@ -1,8 +1,8 @@
 import {
-  DEFAULT_MODEL_BY_PROVIDER,
+  DEFAULT_MODEL_BY_ENGINE,
   MODEL_CAPABILITIES_INDEX,
-  MODEL_OPTIONS_BY_PROVIDER,
-  MODEL_SLUG_ALIASES_BY_PROVIDER,
+  MODEL_OPTIONS_BY_ENGINE,
+  MODEL_SLUG_ALIASES_BY_ENGINE,
   type AntigravityModelOptions,
   type ClaudeApiEffort,
   type ClaudeModelOptions,
@@ -24,17 +24,17 @@ import {
   CodexReasoningEffort,
 } from "@harnessos/contracts";
 
-const MODEL_SLUG_SET_BY_PROVIDER: Record<EngineKind, ReadonlySet<ModelSlug>> = {
+const MODEL_SLUG_SET_BY_ENGINE: Record<EngineKind, ReadonlySet<ModelSlug>> = {
   oa: new Set<ModelSlug>(),
-  claude: new Set(MODEL_OPTIONS_BY_PROVIDER.claude.map((option) => option.slug)),
-  codex: new Set(MODEL_OPTIONS_BY_PROVIDER.codex.map((option) => option.slug)),
-  cursor: new Set(MODEL_OPTIONS_BY_PROVIDER.cursor.map((option) => option.slug)),
+  claude: new Set(MODEL_OPTIONS_BY_ENGINE.claude.map((option) => option.slug)),
+  codex: new Set(MODEL_OPTIONS_BY_ENGINE.codex.map((option) => option.slug)),
+  cursor: new Set(MODEL_OPTIONS_BY_ENGINE.cursor.map((option) => option.slug)),
   // Antigravity's built-in list is intentionally empty; its CLI supplies the live catalog.
   antigravity: new Set<ModelSlug>(),
-  grok: new Set(MODEL_OPTIONS_BY_PROVIDER.grok.map((option) => option.slug)),
-  droid: new Set(MODEL_OPTIONS_BY_PROVIDER.droid.map((option) => option.slug)),
-  kilo: new Set(MODEL_OPTIONS_BY_PROVIDER.kilo.map((option) => option.slug)),
-  opencode: new Set(MODEL_OPTIONS_BY_PROVIDER.opencode.map((option) => option.slug)),
+  grok: new Set(MODEL_OPTIONS_BY_ENGINE.grok.map((option) => option.slug)),
+  droid: new Set(MODEL_OPTIONS_BY_ENGINE.droid.map((option) => option.slug)),
+  kilo: new Set(MODEL_OPTIONS_BY_ENGINE.kilo.map((option) => option.slug)),
+  opencode: new Set(MODEL_OPTIONS_BY_ENGINE.opencode.map((option) => option.slug)),
   pi: new Set<ModelSlug>(),
 };
 
@@ -59,8 +59,8 @@ export const EMPTY_MODEL_CAPABILITIES: ModelCapabilities = {
   promptInjectedEffortLevels: [],
   contextWindowOptions: [],
 };
-export function getModelOptions(engine: EngineKind = "codex") {
-  return MODEL_OPTIONS_BY_PROVIDER[engine];
+export function getModelOptions(engine: EngineKind) {
+  return MODEL_OPTIONS_BY_ENGINE[engine];
 }
 
 function hasDefaultModel(engine: EngineKind): engine is EngineWithDefaultModel {
@@ -68,14 +68,14 @@ function hasDefaultModel(engine: EngineKind): engine is EngineWithDefaultModel {
 }
 
 export function getDefaultModel(engine: "oa" | "pi"): null;
-export function getDefaultModel(engine?: EngineWithDefaultModel): ModelSlug;
+export function getDefaultModel(engine: EngineWithDefaultModel): ModelSlug;
 export function getDefaultModel(engine: EngineKind): ModelSlug | null;
-export function getDefaultModel(engine: EngineKind = "codex"): ModelSlug | null {
-  return hasDefaultModel(engine) ? DEFAULT_MODEL_BY_PROVIDER[engine] : null;
+export function getDefaultModel(engine: EngineKind): ModelSlug | null {
+  return hasDefaultModel(engine) ? DEFAULT_MODEL_BY_ENGINE[engine] : null;
 }
 
 const MODEL_NAME_BY_SLUG = new Map(
-  Object.values(MODEL_OPTIONS_BY_PROVIDER)
+  Object.values(MODEL_OPTIONS_BY_ENGINE)
     .flat()
     .map((option) => [option.slug.toLowerCase(), option.name] as const),
 );
@@ -195,7 +195,7 @@ function cloneEngineOptionDescriptor(descriptor: EngineOptionDescriptor): Engine
   return { ...descriptor };
 }
 
-function providerOptionSelectionValue(
+function engineOptionSelectionValue(
   selections: EngineOptionSelectionsInput,
   id: string,
 ): string | boolean | undefined {
@@ -213,11 +213,11 @@ function providerOptionSelectionValue(
   return typeof value === "string" || typeof value === "boolean" ? value : undefined;
 }
 
-export function getProviderOptionBooleanSelectionValue(
+export function getEngineOptionBooleanSelectionValue(
   selections: EngineOptionSelectionsInput,
   id: string,
 ): boolean | undefined {
-  const value = providerOptionSelectionValue(selections, id);
+  const value = engineOptionSelectionValue(selections, id);
   return typeof value === "boolean" ? value : undefined;
 }
 
@@ -225,14 +225,14 @@ export function getEngineSelectionOptionValue(
   engineSelection: EngineSelection | null | undefined,
   id: string,
 ): string | boolean | undefined {
-  return providerOptionSelectionValue(engineSelection?.options as EngineOptionSelectionsInput, id);
+  return engineOptionSelectionValue(engineSelection?.options as EngineOptionSelectionsInput, id);
 }
 
 export function getEngineSelectionStringOptionValue(
   engineSelection: EngineSelection | null | undefined,
   id: string,
 ): string | undefined {
-  const value = providerOptionSelectionValue(
+  const value = engineOptionSelectionValue(
     engineSelection?.options as EngineOptionSelectionsInput,
     id,
   );
@@ -243,7 +243,7 @@ export function getEngineSelectionBooleanOptionValue(
   engineSelection: EngineSelection | null | undefined,
   id: string,
 ): boolean | undefined {
-  return getProviderOptionBooleanSelectionValue(
+  return getEngineOptionBooleanSelectionValue(
     engineSelection?.options as EngineOptionSelectionsInput,
     id,
   );
@@ -260,7 +260,7 @@ function resolveDescriptorChoiceValue(
   return descriptor.currentValue ?? descriptor.options.find((option) => option.isDefault)?.id;
 }
 
-function withProviderOptionCurrentValue(
+function withEngineOptionCurrentValue(
   descriptor: EngineOptionDescriptor,
   rawValue: string | boolean | undefined,
 ): EngineOptionDescriptor {
@@ -364,14 +364,14 @@ export function getEngineOptionDescriptors(input: {
     input.caps.optionDescriptors?.map(cloneEngineOptionDescriptor) ??
     legacyCapabilityDescriptors(input.engine, input.caps);
   return descriptors.map((descriptor) =>
-    withProviderOptionCurrentValue(
+    withEngineOptionCurrentValue(
       descriptor,
-      providerOptionSelectionValue(input.selections, descriptor.id),
+      engineOptionSelectionValue(input.selections, descriptor.id),
     ),
   );
 }
 
-export function getProviderOptionCurrentValue(
+export function getEngineOptionCurrentValue(
   descriptor: EngineOptionDescriptor | null | undefined,
 ): string | boolean | undefined {
   if (!descriptor) {
@@ -383,10 +383,10 @@ export function getProviderOptionCurrentValue(
   return descriptor.currentValue ?? descriptor.options.find((option) => option.isDefault)?.id;
 }
 
-export function getProviderOptionCurrentLabel(
+export function getEngineOptionCurrentLabel(
   descriptor: EngineOptionDescriptor | null | undefined,
 ): string | undefined {
-  const value = getProviderOptionCurrentValue(descriptor);
+  const value = getEngineOptionCurrentValue(descriptor);
   if (!descriptor) {
     return undefined;
   }
@@ -398,14 +398,14 @@ export function getProviderOptionCurrentLabel(
     : undefined;
 }
 
-export function buildProviderOptionSelectionsFromDescriptors(
+export function buildEngineOptionSelectionsFromDescriptors(
   descriptors: ReadonlyArray<EngineOptionDescriptor> | null | undefined,
 ): EngineOptionSelection[] | undefined {
   if (!descriptors || descriptors.length === 0) {
     return undefined;
   }
   const selections = descriptors.flatMap((descriptor) => {
-    const value = getProviderOptionCurrentValue(descriptor);
+    const value = getEngineOptionCurrentValue(descriptor);
     return typeof value === "string" || typeof value === "boolean"
       ? [{ id: descriptor.id, value }]
       : [];
@@ -491,12 +491,12 @@ export function normalizeModelSlug(
     return null;
   }
 
-  const providerScopedModel = engine === "claude" ? trimmed.replace(/\[[^\]]+\]$/u, "") : trimmed;
-  const aliases = MODEL_SLUG_ALIASES_BY_PROVIDER[engine] as Record<string, ModelSlug>;
-  const aliased = Object.prototype.hasOwnProperty.call(aliases, providerScopedModel)
-    ? aliases[providerScopedModel]
+  const engineScopedModel = engine === "claude" ? trimmed.replace(/\[[^\]]+\]$/u, "") : trimmed;
+  const aliases = MODEL_SLUG_ALIASES_BY_ENGINE[engine] as Record<string, ModelSlug>;
+  const aliased = Object.prototype.hasOwnProperty.call(aliases, engineScopedModel)
+    ? aliases[engineScopedModel]
     : undefined;
-  return typeof aliased === "string" ? aliased : (providerScopedModel as ModelSlug);
+  return typeof aliased === "string" ? aliased : (engineScopedModel as ModelSlug);
 }
 
 export function resolveSelectableModel(
@@ -533,27 +533,20 @@ export function resolveSelectableModel(
 }
 
 export function resolveModelSlug(
+  engine: EngineKind,
   model: string | null | undefined,
-  engine: EngineKind = "codex",
 ): ModelSlug | null {
   const normalized = normalizeModelSlug(model, engine);
   if (!hasDefaultModel(engine)) {
     return normalized;
   }
   if (!normalized) {
-    return DEFAULT_MODEL_BY_PROVIDER[engine];
+    return DEFAULT_MODEL_BY_ENGINE[engine];
   }
 
-  return MODEL_SLUG_SET_BY_PROVIDER[engine].has(normalized)
+  return MODEL_SLUG_SET_BY_ENGINE[engine].has(normalized)
     ? normalized
-    : DEFAULT_MODEL_BY_PROVIDER[engine];
-}
-
-export function resolveModelSlugForProvider(
-  engine: EngineKind,
-  model: string | null | undefined,
-): ModelSlug | null {
-  return resolveModelSlug(model, engine);
+    : DEFAULT_MODEL_BY_ENGINE[engine];
 }
 
 /** Trim a string, returning null for empty/missing values. */

@@ -112,15 +112,13 @@ export function applyServerSettingsPatch(
   }
 
   const engine = selectionPatch.engine ?? current.textGenerationEngineSelection.engine;
-  const providerDefaultModel = selectionPatch.engine
-    ? getDefaultModel(selectionPatch.engine)
-    : null;
+  const engineDefaultModel = selectionPatch.engine ? getDefaultModel(selectionPatch.engine) : null;
   const model =
     selectionPatch.model ??
     (selectionPatch.engine !== undefined &&
-    providerDefaultModel !== null &&
+    engineDefaultModel !== null &&
     selectionPatch.engine !== current.textGenerationEngineSelection.engine
-      ? providerDefaultModel
+      ? engineDefaultModel
       : current.textGenerationEngineSelection.model);
   const options = shouldReplaceTextGenerationEngineSelection(selectionPatch)
     ? selectionPatch.options

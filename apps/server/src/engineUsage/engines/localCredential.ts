@@ -1,4 +1,4 @@
-// FILE: engineUsage/providers/localCredential.ts
+// FILE: engineUsage/engines/localCredential.ts
 // Purpose: Usage fetchers for engines that expose a local login but no
 // individual live quota API (Droid and Kilo). Connected accounts still appear
 // in Settings → Usage; unsigned ones stay needs-auth.

@@ -9,7 +9,7 @@ import type { EngineKind, ServerEngineUsageSnapshot } from "@harnessos/contracts
 import { ENGINE_DESCRIPTORS, ENGINE_DESCRIPTOR_BY_KIND } from "./engineMetadata";
 
 /** Engines, in display order, that expose a live usage source. */
-export const ENGINE_USAGE_PROVIDERS: ReadonlyArray<EngineKind> = ENGINE_DESCRIPTORS.flatMap(
+export const ENGINE_USAGE_ENGINES: ReadonlyArray<EngineKind> = ENGINE_DESCRIPTORS.flatMap(
   (descriptor) => (descriptor.usage ? [descriptor.kind] : []),
 );
 
@@ -54,9 +54,9 @@ export function engineUsageNeedsAuthDetail(engine: string | null | undefined): s
 export function selectVisibleEngineUsageSnapshots(
   snapshots: ReadonlyArray<ServerEngineUsageSnapshot>,
 ): ReadonlyArray<ServerEngineUsageSnapshot> {
-  const byProvider = new Map(snapshots.map((snapshot) => [snapshot.engine, snapshot]));
-  const ordered = ENGINE_USAGE_PROVIDERS.flatMap((engine) => {
-    const snapshot = byProvider.get(engine);
+  const byEngine = new Map(snapshots.map((snapshot) => [snapshot.engine, snapshot]));
+  const ordered = ENGINE_USAGE_ENGINES.flatMap((engine) => {
+    const snapshot = byEngine.get(engine);
     return snapshot ? [snapshot] : [];
   });
   const connected = ordered.filter((snapshot) => (snapshot.status ?? "ok") !== "needs-auth");

@@ -1,9 +1,9 @@
 import type { ServerEngineUsageSnapshot } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
-import { parseClaudeUsage } from "./providers/claude.ts";
-import { parseCodexAppServerRateLimits } from "./providers/codex.ts";
-import { parseCursorUsage } from "./providers/cursor.ts";
+import { parseClaudeUsage } from "./engines/claude.ts";
+import { parseCodexAppServerRateLimits } from "./engines/codex.ts";
+import { parseCursorUsage } from "./engines/cursor.ts";
 
 const NOW_MS = 1_738_000_000_000;
 

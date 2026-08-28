@@ -1,4 +1,4 @@
-// FILE: engineUsage/providers/codex.ts
+// FILE: engineUsage/engines/codex.ts
 // Purpose: Read Codex account limits through Codex's own app-server protocol. HarnessOS does not
 // parse, refresh, copy, or write Codex credentials; authentication remains native to Codex.
 

@@ -64,7 +64,7 @@ import { resolveThreadWorkspaceState } from "@harnessos/shared/threadEnvironment
 import { configuredHostGroupEnabled } from "@harnessos/shared/hostToolSurfacePolicy";
 import {
   projectKindToProductSurface,
-  productSurfaceToProviderWorkSurface,
+  productSurfaceToEngineWorkSurface,
 } from "@harnessos/shared/productSurface";
 
 import {
@@ -1537,7 +1537,7 @@ const make = Effect.gen(function* () {
       ...(effectiveCwd ? { cwd: effectiveCwd } : {}),
       ...(targetEngine === "oa"
         ? {
-            workSurface: productSurfaceToProviderWorkSurface(productSurface),
+            workSurface: productSurfaceToEngineWorkSurface(productSurface),
             ...(project.kind === "project"
               ? {
                   projectContextRoot:

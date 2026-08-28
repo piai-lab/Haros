@@ -1,4 +1,4 @@
-// FILE: engineUsage/providers/cursor.ts
+// FILE: engineUsage/engines/cursor.ts
 // Purpose: Live Cursor usage fetcher. Reads the Cursor access token from its VS Code-style
 // state.vscdb (key cursorAuth/accessToken) or the macOS keychain ("cursor-access-token")
 // read-only, then calls the Cursor DashboardService (Connect RPC) for the current billing

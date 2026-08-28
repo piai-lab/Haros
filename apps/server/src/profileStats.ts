@@ -423,7 +423,7 @@ function compareNullableText(
   return (left ?? "").localeCompare(right ?? "");
 }
 
-function normalizeProviderKind(value: unknown): EngineKind | "unknown" {
+function normalizeEngineKind(value: unknown): EngineKind | "unknown" {
   const engine = nonEmptyString(value);
   return engine && ENGINE_KIND_SET.has(engine as EngineKind) ? (engine as EngineKind) : "unknown";
 }
@@ -512,7 +512,7 @@ function buildHeatmap(countByDay: ReadonlyMap<string, number>, todayKey: string)
 
 // ── Shared SQL ─────────────────────────────────────────────────────────
 
-// Maps every turn to the provider/model selected when it was started: turn-start
+// Maps every turn to the engine/model selected when it was started: turn-start
 // events carry the pending messageId, which projection_turns links back to the
 // turn_id that token activities reference. Shared by the live token stats query
 // and the delete-time archive snapshot so both attribute token deltas the same
@@ -629,12 +629,12 @@ const makeProfileStatsQuery = Effect.gen(function* () {
   // ~/.codex/~/.claude archives, so it is engine-agnostic AND per-instance). Each
   // `context-window.updated` activity carries a running per-thread token counter;
   // the positive delta is the tokens processed in that step, bucketed by the
-  // caller's local day. Deltas are attributed to the provider/model selected for
+  // caller's local day. Deltas are attributed to the engine/model selected for
   // the turn that processed them (activity turn_id → turn's pending message →
   // turn-start engineSelection); the thread's current selection is only a fallback
   // for legacy rows, so switching models mid-thread keeps history accurate.
   // Counter scale: totalProcessedTokens is the preferred cumulative counter.
-  // Some provider/model groups only emit usedTokens; keep those as separate
+  // Some engine/model groups only emit usedTokens; keep those as separate
   // fallback series so a mixed-engine thread does not drop their tokens.
   const queryTokenActivity = (tz: string) =>
     legacyCompatibleQuery(
@@ -693,7 +693,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
               json_extract(a.payload_json, '$.usedTokens')
             ) IS NOT NULL
         ),
-        provider_model_scale AS (
+        engine_model_scale AS (
           SELECT thread_id, engine, model, MAX(tp IS NOT NULL) AS has_cumulative
           FROM ev
           GROUP BY thread_id, engine, model
@@ -752,7 +752,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
             ev.created_at AS created_at,
             ev.activity_id AS activity_id
           FROM ev
-          JOIN provider_model_scale pms
+          JOIN engine_model_scale pms
             ON pms.thread_id = ev.thread_id
            AND pms.engine = ev.engine
            AND pms.model = ev.model
@@ -769,7 +769,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
             CASE
               WHEN previous_tot IS NULL THEN tot
               WHEN tot < previous_tot
-                AND (engine != previous_provider OR model != previous_model)
+                AND (engine != previous_engine OR model != previous_model)
               THEN tot
               ELSE MAX(0, tot - previous_tot)
             END AS d
@@ -795,7 +795,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
                   sequence ASC,
                   created_at ASC,
                   activity_id ASC
-              ) AS previous_provider,
+              ) AS previous_engine,
               LAG(model) OVER (
                 PARTITION BY thread_id
                 ORDER BY
@@ -1240,7 +1240,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
       for (const row of recentTurnRows) {
         const count = num(row.count);
         recentTotalTurns += count;
-        const engine = normalizeProviderKind(row.engine);
+        const engine = normalizeEngineKind(row.engine);
         const model = nonEmptyString(row.model);
         const kind = model ? "model" : "unknown";
         const key = `${engine}\u0000${model ?? ""}`;
@@ -1434,7 +1434,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         string,
         { cachedInputTokens: number; uncachedInputTokens: number; outputTokens: number }
       >();
-      const breakdownProviders = new Set<EngineKind>();
+      const breakdownEngines = new Set<EngineKind>();
       for (const row of recentBreakdownRows) {
         const day = nonEmptyString(row.day);
         if (!day) continue;
@@ -1447,16 +1447,16 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         current.uncachedInputTokens += num(row.uncachedInputTokens);
         current.outputTokens += num(row.outputTokens);
         breakdownByDay.set(day, current);
-        const engine = normalizeProviderKind(row.engine);
-        if (engine !== "unknown") breakdownProviders.add(engine);
+        const engine = normalizeEngineKind(row.engine);
+        if (engine !== "unknown") breakdownEngines.add(engine);
       }
-      const recentTurnProviders = new Set<EngineKind>();
+      const recentTurnEngines = new Set<EngineKind>();
       for (const row of recentTurnRows) {
-        const engine = normalizeProviderKind(row.engine);
-        if (engine !== "unknown") recentTurnProviders.add(engine);
+        const engine = normalizeEngineKind(row.engine);
+        if (engine !== "unknown") recentTurnEngines.add(engine);
       }
-      const recentUnavailableProviders = [...recentTurnProviders]
-        .filter((engine) => !breakdownProviders.has(engine))
+      const recentUnavailableEngines = [...recentTurnEngines]
+        .filter((engine) => !breakdownEngines.has(engine))
         .toSorted();
       const recentTokenDays = recentDays.map((day) => ({
         day,
@@ -1479,7 +1479,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
       const hasRecentBreakdown = recentBreakdownRows.length > 0;
       const recentTokenCoverage = !hasRecentBreakdown
         ? "unavailable"
-        : num(recentUnknownRows[0]?.count) > 0 || recentUnavailableProviders.length > 0
+        : num(recentUnknownRows[0]?.count) > 0 || recentUnavailableEngines.length > 0
           ? "partial"
           : "complete";
 
@@ -1500,7 +1500,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
           cacheHitPercent:
             recentInputTokens > 0 ? percent1(recentCachedInputTokens, recentInputTokens) : null,
           coverage: recentTokenCoverage,
-          unavailableEngines: recentUnavailableProviders,
+          unavailableEngines: recentUnavailableEngines,
           days: recentTokenDays,
         },
       } satisfies ProfileTokenStats;

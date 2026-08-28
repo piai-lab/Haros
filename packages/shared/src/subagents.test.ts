@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSubagentIdentityDirectory,
-  collectSubagentProviderThreadIds,
+  collectSubagentEngineThreadIds,
   decodeSubagentAgentStates,
   decodeSubagentReceiverAgents,
   decodeSubagentReceiverThreadIds,
@@ -102,10 +102,10 @@ describe("decodeSubagentReceiverThreadIds", () => {
   });
 });
 
-describe("collectSubagentProviderThreadIds", () => {
+describe("collectSubagentEngineThreadIds", () => {
   it("includes thread ids discovered from receiverAgents, agentStates, and source thread_spawn payloads", () => {
     expect(
-      collectSubagentProviderThreadIds({
+      collectSubagentEngineThreadIds({
         receiverAgents: [
           {
             threadId: "child-provider-1",
@@ -317,7 +317,7 @@ describe("resolveSubagentIdentityHint", () => {
       },
     ]);
 
-    expect(directory.byProviderThreadId.get("child-provider-1")).toMatchObject({
+    expect(directory.byEngineThreadId.get("child-provider-1")).toMatchObject({
       nativeThreadId: "child-provider-1",
       agentId: "agent-1",
       nickname: "Harper",

@@ -536,10 +536,10 @@ type ModelDefinition = {
 };
 
 /**
- * TODO: This should not be a static array, each provider
- * should return its own model list over the WS API.
+ * Static fallbacks for Engines whose live model catalog is not yet available.
+ * Runtime discovery remains authoritative when an Engine supplies it.
  */
-export const MODEL_OPTIONS_BY_PROVIDER = {
+export const MODEL_OPTIONS_BY_ENGINE = {
   oa: [],
   codex: [
     {
@@ -1064,14 +1064,14 @@ export const MODEL_OPTIONS_BY_PROVIDER = {
     },
   ],
 } as const satisfies Record<EngineKind, readonly ModelDefinition[]>;
-export type ModelOptionsByEngine = typeof MODEL_OPTIONS_BY_PROVIDER;
+export type ModelOptionsByEngine = typeof MODEL_OPTIONS_BY_ENGINE;
 
-type BuiltInModelSlug = (typeof MODEL_OPTIONS_BY_PROVIDER)[EngineKind][number]["slug"];
+type BuiltInModelSlug = (typeof MODEL_OPTIONS_BY_ENGINE)[EngineKind][number]["slug"];
 export type ModelSlug = BuiltInModelSlug | (string & {});
 
 export type EngineWithDefaultModel = Exclude<EngineKind, "oa" | "pi">;
 
-export const DEFAULT_MODEL_BY_PROVIDER: Record<EngineWithDefaultModel, ModelSlug> = {
+export const DEFAULT_MODEL_BY_ENGINE: Record<EngineWithDefaultModel, ModelSlug> = {
   codex: "gpt-5.5",
   claude: "claude-sonnet-5",
   cursor: "auto",
@@ -1082,13 +1082,10 @@ export const DEFAULT_MODEL_BY_PROVIDER: Record<EngineWithDefaultModel, ModelSlug
   opencode: "openai/gpt-5",
 };
 
-// Backward compatibility for existing Codex-only call sites.
-export const MODEL_OPTIONS = MODEL_OPTIONS_BY_PROVIDER.codex;
-export const DEFAULT_MODEL = DEFAULT_MODEL_BY_PROVIDER.codex;
 export const DEFAULT_GIT_TEXT_GENERATION_MODEL = "gpt-5.6-luna" as const;
 export const DEFAULT_GIT_TEXT_GENERATION_REASONING_EFFORT = "high" as const;
 
-export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<EngineKind, Record<string, ModelSlug>> = {
+export const MODEL_SLUG_ALIASES_BY_ENGINE: Record<EngineKind, Record<string, ModelSlug>> = {
   oa: {},
   codex: {
     "5.5": "gpt-5.5",
@@ -1225,9 +1222,7 @@ export const MODEL_SLUG_ALIASES_BY_PROVIDER: Record<EngineKind, Record<string, M
 };
 
 // ── Agent mention aliases ─────────────────────────────────────────────
-// Re-exported from agentMentions.ts for backward compatibility
 export {
-  AGENT_MENTION_ALIASES,
   getAgentMentionAutocompleteAliases,
   getAgentMentionAliases,
   resolveAgentAlias,
@@ -1240,8 +1235,8 @@ export {
 // ── Model capabilities index ──────────────────────────────────────────
 
 export const MODEL_CAPABILITIES_INDEX = Object.fromEntries(
-  Object.entries(MODEL_OPTIONS_BY_PROVIDER).map(([provider, models]) => [
-    provider,
+  Object.entries(MODEL_OPTIONS_BY_ENGINE).map(([engine, models]) => [
+    engine,
     Object.fromEntries(models.map((m) => [m.slug, m.capabilities])),
   ]),
 ) as unknown as Record<EngineKind, Record<string, ModelCapabilities>>;

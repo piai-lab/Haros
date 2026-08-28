@@ -5,7 +5,7 @@ import {
   ApprovalRequestId,
   CommandId,
   DEFAULT_ENGINE_INTERACTION_MODE,
-  DEFAULT_MODEL_BY_PROVIDER,
+  DEFAULT_MODEL_BY_ENGINE,
   EventId,
   MessageId,
   ProjectId,
@@ -125,7 +125,7 @@ const seedProjectAndThread = (harness: OrchestrationIntegrationHarness) =>
     if (engine === "pi" || engine === "oa") {
       throw new Error("Pi-family integration tests require an explicit model selection.");
     }
-    const defaultModel = DEFAULT_MODEL_BY_PROVIDER[engine];
+    const defaultModel = DEFAULT_MODEL_BY_ENGINE[engine];
 
     yield* harness.engine.dispatch({
       type: "project.create",

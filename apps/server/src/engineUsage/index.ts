@@ -12,7 +12,7 @@ import type {
 } from "@harnessos/contracts";
 import { Effect } from "effect";
 
-import { ENGINE_USAGE_PROVIDERS } from "@harnessos/shared/engineUsage";
+import { ENGINE_USAGE_ENGINES } from "@harnessos/shared/engineUsage";
 
 import { ServerConfig } from "../config";
 import {
@@ -39,7 +39,7 @@ function buildContext(): EngineUsageContext {
 
 async function fetchEngineUsage(
   engine: EngineKind,
-  providerContext: EngineUsageContext,
+  engineContext: EngineUsageContext,
 ): Promise<ServerEngineUsageSnapshot | null> {
   const fetcher = ENGINE_USAGE_FETCHERS[engine];
   if (!fetcher) {
@@ -47,18 +47,13 @@ async function fetchEngineUsage(
   }
 
   return fetcher
-    .fetch(providerContext)
+    .fetch(engineContext)
     .catch(() =>
-      errorSnapshot(
-        engine,
-        providerContext.nowMs,
-        "live-usage",
-        "Usage fetch failed unexpectedly.",
-      ),
+      errorSnapshot(engine, engineContext.nowMs, "live-usage", "Usage fetch failed unexpectedly."),
     );
 }
 
-function buildProviderContext(engine: EngineKind, ctx: EngineUsageContext): EngineUsageContext {
+function buildEngineContext(engine: EngineKind, ctx: EngineUsageContext): EngineUsageContext {
   return {
     ...ctx,
     env: buildEngineChildEnvironment({
@@ -125,8 +120,8 @@ async function getEngineUsageSnapshot(
   ctx: EngineUsageContext,
   forceRefresh: boolean,
 ): Promise<ServerEngineUsageSnapshot | null> {
-  const providerContext = buildProviderContext(engine, ctx);
-  const credentialKey = await resolveCredentialKey(engine, providerContext);
+  const engineContext = buildEngineContext(engine, ctx);
+  const credentialKey = await resolveCredentialKey(engine, engineContext);
   const pending = inFlightFetches.get(engine);
   if (credentialKey !== null && pending?.credentialKey === credentialKey) {
     return pending.promise;
@@ -144,8 +139,8 @@ async function getEngineUsageSnapshot(
   }
 
   const fetchPromise = (async () => {
-    const snapshot = await fetchEngineUsage(engine, providerContext);
-    const refreshedCredentialKey = await resolveCredentialKey(engine, providerContext);
+    const snapshot = await fetchEngineUsage(engine, engineContext);
+    const refreshedCredentialKey = await resolveCredentialKey(engine, engineContext);
     if (snapshot && credentialKey !== null && refreshedCredentialKey === credentialKey) {
       const current = snapshotCache.get(engine);
       const hasFreshHealthySnapshot =
@@ -183,7 +178,7 @@ export async function collectEngineUsageSnapshots(
 ): Promise<ServerEngineUsageSnapshot[]> {
   const engines = options.engine
     ? ([options.engine] as EngineKind[])
-    : ENGINE_USAGE_PROVIDERS.filter((engine) => ENGINE_USAGE_FETCHERS[engine] !== undefined);
+    : ENGINE_USAGE_ENGINES.filter((engine) => ENGINE_USAGE_FETCHERS[engine] !== undefined);
   const settled = await Promise.allSettled(
     engines.map((engine) => getEngineUsageSnapshot(engine, ctx, options.forceRefresh === true)),
   );
@@ -196,9 +191,9 @@ export async function collectEngineUsageSnapshots(
 export const listEngineUsage = Effect.fn(function* (input: ServerListEngineUsageInput) {
   const serverConfig = yield* ServerConfig;
   const serverSettings = yield* ServerSettingsService;
-  const providerRegistry = yield* EngineAdapterRegistry;
+  const engineRegistry = yield* EngineAdapterRegistry;
   const settings = yield* serverSettings.getSettings;
-  const codexAdapter = yield* providerRegistry.getByEngine("codex");
+  const codexAdapter = yield* engineRegistry.getByEngine("codex");
   return yield* Effect.tryPromise({
     try: () =>
       collectEngineUsageSnapshots(

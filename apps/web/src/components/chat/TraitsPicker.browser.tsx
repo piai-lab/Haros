@@ -5,7 +5,7 @@ import {
   ClaudeModelOptions,
   CodexModelOptions,
   type CursorModelOptions,
-  DEFAULT_MODEL_BY_PROVIDER,
+  DEFAULT_MODEL_BY_ENGINE,
   type OpenCodeModelOptions,
   type EngineModelDescriptor,
   ProjectId,
@@ -343,7 +343,7 @@ describe("TraitsPicker (Claude)", () => {
 
 async function mountCodexPicker(props: { model?: string; options?: CodexModelOptions }) {
   const threadId = ThreadId.makeUnsafe("thread-codex-traits");
-  const model = props.model ?? DEFAULT_MODEL_BY_PROVIDER.codex;
+  const model = props.model ?? DEFAULT_MODEL_BY_ENGINE.codex;
   const draftsByThreadId: Record<ThreadId, ComposerThreadDraftState> = {
     [threadId]: {
       prompt: "",
@@ -386,7 +386,7 @@ async function mountCodexPicker(props: { model?: string; options?: CodexModelOpt
     <TraitsPicker
       engine="codex"
       threadId={threadId}
-      model={props.model ?? DEFAULT_MODEL_BY_PROVIDER.codex}
+      model={props.model ?? DEFAULT_MODEL_BY_ENGINE.codex}
       prompt=""
       modelOptions={props.options}
       onPromptChange={() => {}}
@@ -747,7 +747,7 @@ async function mountOpenCodePicker(props?: {
   locale?: "en" | "zh-CN";
 }) {
   i18nHarness.settings.localePreference = props?.locale ?? "en";
-  const model = props?.model ?? DEFAULT_MODEL_BY_PROVIDER.opencode;
+  const model = props?.model ?? DEFAULT_MODEL_BY_ENGINE.opencode;
   const draftsByThreadId: Record<ThreadId, ComposerThreadDraftState> = {
     [OPENCODE_THREAD_ID]: {
       prompt: "",

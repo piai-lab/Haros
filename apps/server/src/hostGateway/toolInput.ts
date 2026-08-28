@@ -1,5 +1,5 @@
 import {
-  DEFAULT_MODEL_BY_PROVIDER,
+  DEFAULT_MODEL_BY_ENGINE,
   HarnessOSCreateThreadsInput,
   HarnessOSWaitForThreadsInput,
   ENGINE_KINDS,
@@ -123,7 +123,7 @@ export function buildEngineSelection(
   model: string | undefined,
 ): EngineSelection {
   const effectiveModel =
-    model ?? (engine === "pi" || engine === "oa" ? undefined : DEFAULT_MODEL_BY_PROVIDER[engine]);
+    model ?? (engine === "pi" || engine === "oa" ? undefined : DEFAULT_MODEL_BY_ENGINE[engine]);
   if (!effectiveModel) {
     throw new ToolInputError(
       `Engine "${engine}" has no default model; pass an explicit "model" argument.`,

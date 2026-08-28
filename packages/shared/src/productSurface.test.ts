@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { productSurfaceToProviderWorkSurface, projectKindToProductSurface } from "./productSurface";
+import { productSurfaceToEngineWorkSurface, projectKindToProductSurface } from "./productSurface";
 
 describe("productSurface", () => {
   it.each([
@@ -12,9 +12,9 @@ describe("productSurface", () => {
   });
 
   it("keeps Studio and Chat outside the Agent provider trust surface", () => {
-    expect(productSurfaceToProviderWorkSurface("agent")).toBe("agent");
-    expect(productSurfaceToProviderWorkSurface("chat")).toBe("chat");
-    expect(productSurfaceToProviderWorkSurface("studio")).toBe("chat");
+    expect(productSurfaceToEngineWorkSurface("agent")).toBe("agent");
+    expect(productSurfaceToEngineWorkSurface("chat")).toBe("chat");
+    expect(productSurfaceToEngineWorkSurface("studio")).toBe("chat");
   });
 
   it("treats legacy shells without a kind as Projects", () => {

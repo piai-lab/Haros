@@ -27,7 +27,7 @@ import { isPotentiallyVisibleEngineRuntimeActivity } from "@harnessos/shared/eng
 import { buildStalePendingRequestFailureDetail } from "@harnessos/shared/threadSummary";
 import {
   buildSubagentIdentityDirectory,
-  collectSubagentProviderThreadIds,
+  collectSubagentEngineThreadIds,
   extractSubagentIdentityHints,
   resolveSubagentIdentityFromDirectory,
 } from "@harnessos/shared/subagents";
@@ -2407,7 +2407,7 @@ const make = Effect.gen(function* () {
         event.payload.itemType === "collab_agent_tool_call" &&
         collabItem !== undefined;
       if (isCollabToolEvent && collabItem) {
-        const receiverThreadIds = collectSubagentProviderThreadIds(collabItem);
+        const receiverThreadIds = collectSubagentEngineThreadIds(collabItem);
         const identityDirectory = buildSubagentIdentityDirectory(
           extractSubagentIdentityHints(collabItem),
         );

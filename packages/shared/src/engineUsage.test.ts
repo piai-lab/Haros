@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ServerEngineUsageSnapshot } from "@harnessos/contracts";
 
-import { ENGINE_USAGE_PROVIDERS, selectVisibleEngineUsageSnapshots } from "./engineUsage";
+import { ENGINE_USAGE_ENGINES, selectVisibleEngineUsageSnapshots } from "./engineUsage";
 
 function snapshot(
   engine: ServerEngineUsageSnapshot["engine"],
@@ -24,7 +24,7 @@ function snapshot(
 
 describe("engine usage metadata", () => {
   it("exposes every engine with a safe live usage source", () => {
-    expect([...ENGINE_USAGE_PROVIDERS]).toEqual([
+    expect([...ENGINE_USAGE_ENGINES]).toEqual([
       "codex",
       "claude",
       "cursor",

@@ -1,4 +1,4 @@
-// FILE: engineUsage/providers/grok.test.ts
+// FILE: engineUsage/engines/grok.test.ts
 // Purpose: Covers Grok SuperGrok CLI-proxy billing, auth.json identity, and API-key fallback.
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";

@@ -9,7 +9,7 @@ import {
   BUILT_IN_TOOL_GROUP_OVERRIDE_MAX_KEYS,
   BUILT_IN_TOOL_GROUP_IDS,
   BUILT_IN_TOOL_SURFACES,
-  DEFAULT_MODEL_BY_PROVIDER,
+  DEFAULT_MODEL_BY_ENGINE,
   DEFAULT_SERVER_SETTINGS,
   type EngineSelection,
   type EngineWithDefaultModel,
@@ -258,7 +258,7 @@ function resolveTextGenerationEngine(settings: ServerSettings): ServerSettings {
     ...settings,
     textGenerationEngineSelection: {
       engine: fallback,
-      model: DEFAULT_MODEL_BY_PROVIDER[fallback],
+      model: DEFAULT_MODEL_BY_ENGINE[fallback],
     } as EngineSelection,
   };
 }

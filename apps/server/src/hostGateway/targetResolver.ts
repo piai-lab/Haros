@@ -32,7 +32,7 @@ export class HostGatewayTargetError extends Error {
   }
 }
 
-export interface HostGatewayProviderCatalog {
+export interface HostGatewayEngineCatalog {
   readonly engine: EngineKind;
   readonly defaultModel: string | null;
   readonly models: ReadonlyArray<EngineModelDescriptor>;
@@ -77,13 +77,13 @@ export interface HostGatewayTargetOptionGuidance {
   } | null;
 }
 
-type EngineSelectionForProvider<P extends EngineKind> = Extract<
+type EngineSelectionForKind<P extends EngineKind> = Extract<
   EngineSelection,
   { readonly engine: P }
 >;
 
 type EngineTargetOptionKey<P extends EngineKind> = keyof NonNullable<
-  EngineSelectionForProvider<P>["options"]
+  EngineSelectionForKind<P>["options"]
 > &
   string;
 
@@ -101,7 +101,7 @@ interface EngineTargetOptionRuleSpec extends Omit<HostGatewayTargetOptionRule, "
   readonly validation: EngineOptionValidation;
 }
 
-interface ResolvedProviderTargetOptionRuleSpec extends EngineTargetOptionRuleSpec {
+interface ResolvedEngineTargetOptionRuleSpec extends EngineTargetOptionRuleSpec {
   readonly key: string;
 }
 
@@ -119,13 +119,13 @@ interface EngineTargetOptionConfig {
   readonly options: Readonly<Record<string, EngineTargetOptionRuleSpec>>;
 }
 
-function defineProviderOptionConfig<P extends EngineKind>(
+function defineEngineOptionConfig<P extends EngineKind>(
   config: EngineTargetOptionConfigInput<P>,
 ): EngineTargetOptionConfig {
   return config;
 }
 
-function providerOptionRule(
+function engineOptionRule(
   valueType: HostGatewayTargetOptionRule["valueType"],
   allowedValues: ReadonlyArray<HostGatewayTargetOptionValue>,
   allowedValuesSource: HostGatewayTargetOptionRule["allowedValuesSource"] = "engine-contract",
@@ -146,95 +146,95 @@ function providerOptionRule(
 }
 
 const ENGINE_TARGET_OPTION_RULES = {
-  codex: defineProviderOptionConfig<"codex">({
+  codex: defineEngineOptionConfig<"codex">({
     primaryOptionKey: "reasoningEffort",
     options: {
-      reasoningEffort: providerOptionRule("string", CODEX_REASONING_EFFORT_OPTIONS),
-      fastMode: providerOptionRule("boolean", [], "model-discovery", {
+      reasoningEffort: engineOptionRule("string", CODEX_REASONING_EFFORT_OPTIONS),
+      fastMode: engineOptionRule("boolean", [], "model-discovery", {
         advertised: false,
         validation: { kind: "boolean-capability", capability: "supportsFastMode" },
       }),
     },
   }),
-  cursor: defineProviderOptionConfig<"cursor">({
+  cursor: defineEngineOptionConfig<"cursor">({
     primaryOptionKey: "reasoningEffort",
     options: {
-      reasoningEffort: providerOptionRule("string", CODEX_REASONING_EFFORT_OPTIONS),
-      fastMode: providerOptionRule("boolean", [], "model-discovery", {
+      reasoningEffort: engineOptionRule("string", CODEX_REASONING_EFFORT_OPTIONS),
+      fastMode: engineOptionRule("boolean", [], "model-discovery", {
         advertised: false,
         validation: { kind: "boolean-capability", capability: "supportsFastMode" },
       }),
-      thinking: providerOptionRule("boolean", [], "model-discovery", {
+      thinking: engineOptionRule("boolean", [], "model-discovery", {
         advertised: false,
         validation: { kind: "boolean-capability", capability: "supportsThinkingToggle" },
       }),
-      contextWindow: providerOptionRule("string", [], "model-discovery", {
+      contextWindow: engineOptionRule("string", [], "model-discovery", {
         advertised: false,
         validation: { kind: "context-window" },
       }),
     },
   }),
-  grok: defineProviderOptionConfig<"grok">({
+  grok: defineEngineOptionConfig<"grok">({
     primaryOptionKey: "reasoningEffort",
     options: {
-      reasoningEffort: providerOptionRule("string", GROK_REASONING_EFFORT_OPTIONS),
+      reasoningEffort: engineOptionRule("string", GROK_REASONING_EFFORT_OPTIONS),
     },
   }),
-  droid: defineProviderOptionConfig<"droid">({
+  droid: defineEngineOptionConfig<"droid">({
     primaryOptionKey: "reasoningEffort",
     options: {
-      reasoningEffort: providerOptionRule("string", DROID_REASONING_EFFORT_OPTIONS),
+      reasoningEffort: engineOptionRule("string", DROID_REASONING_EFFORT_OPTIONS),
     },
   }),
-  claude: defineProviderOptionConfig<"claude">({
+  claude: defineEngineOptionConfig<"claude">({
     primaryOptionKey: "effort",
     options: {
-      effort: providerOptionRule("string", CLAUDE_CODE_EFFORT_OPTIONS),
-      fastMode: providerOptionRule("boolean", [], "model-discovery", {
+      effort: engineOptionRule("string", CLAUDE_CODE_EFFORT_OPTIONS),
+      fastMode: engineOptionRule("boolean", [], "model-discovery", {
         advertised: false,
         validation: { kind: "boolean-capability", capability: "supportsFastMode" },
       }),
-      thinking: providerOptionRule("boolean", [], "model-discovery", {
+      thinking: engineOptionRule("boolean", [], "model-discovery", {
         advertised: false,
         validation: { kind: "boolean-capability", capability: "supportsThinkingToggle" },
       }),
-      autoCompactWindow: providerOptionRule("string", [], "model-discovery", {
+      autoCompactWindow: engineOptionRule("string", [], "model-discovery", {
         advertised: false,
         validation: { kind: "context-window" },
       }),
-      contextWindow: providerOptionRule("string", [], "model-discovery", {
+      contextWindow: engineOptionRule("string", [], "model-discovery", {
         advertised: false,
         validation: { kind: "context-window" },
       }),
     },
   }),
-  pi: defineProviderOptionConfig<"pi">({
+  pi: defineEngineOptionConfig<"pi">({
     primaryOptionKey: "thinkingLevel",
-    options: { thinkingLevel: providerOptionRule("string", PI_THINKING_LEVEL_OPTIONS) },
+    options: { thinkingLevel: engineOptionRule("string", PI_THINKING_LEVEL_OPTIONS) },
   }),
-  oa: defineProviderOptionConfig<"oa">({
+  oa: defineEngineOptionConfig<"oa">({
     primaryOptionKey: "thinkingLevel",
-    options: { thinkingLevel: providerOptionRule("string", PI_THINKING_LEVEL_OPTIONS) },
+    options: { thinkingLevel: engineOptionRule("string", PI_THINKING_LEVEL_OPTIONS) },
   }),
-  antigravity: defineProviderOptionConfig<"antigravity">({
+  antigravity: defineEngineOptionConfig<"antigravity">({
     primaryOptionKey: "reasoningEffort",
-    options: { reasoningEffort: providerOptionRule("string", [], "model-discovery") },
+    options: { reasoningEffort: engineOptionRule("string", [], "model-discovery") },
   }),
-  kilo: defineProviderOptionConfig<"kilo">({
+  kilo: defineEngineOptionConfig<"kilo">({
     primaryOptionKey: "variant",
     options: {
-      variant: providerOptionRule("string", [], "model-discovery"),
-      agent: providerOptionRule("string", [], "model-discovery", {
+      variant: engineOptionRule("string", [], "model-discovery"),
+      agent: engineOptionRule("string", [], "model-discovery", {
         validation: { kind: "non-empty-string" },
         allowsCustomValue: true,
       }),
     },
   }),
-  opencode: defineProviderOptionConfig<"opencode">({
+  opencode: defineEngineOptionConfig<"opencode">({
     primaryOptionKey: "variant",
     options: {
-      variant: providerOptionRule("string", [], "model-discovery"),
-      agent: providerOptionRule("string", [], "model-discovery", {
+      variant: engineOptionRule("string", [], "model-discovery"),
+      agent: engineOptionRule("string", [], "model-discovery", {
         validation: { kind: "non-empty-string" },
         allowsCustomValue: true,
       }),
@@ -242,17 +242,17 @@ const ENGINE_TARGET_OPTION_RULES = {
   }),
 } as const satisfies Record<EngineKind, EngineTargetOptionConfig>;
 
-function providerDefaultModel(engine: EngineKind): string | null {
+function engineDefaultModel(engine: EngineKind): string | null {
   return getDefaultModel(engine);
 }
 
-export function loadHostGatewayProviderCatalog(input: {
+export function loadHostGatewayEngineCatalog(input: {
   readonly engine: EngineKind;
   readonly discovery: EngineDiscoveryServiceShape;
   readonly availability?: HostGatewayEngineAvailability;
   readonly cwd?: string;
-}): Effect.Effect<HostGatewayProviderCatalog> {
-  const defaultModel = providerDefaultModel(input.engine);
+}): Effect.Effect<HostGatewayEngineCatalog> {
+  const defaultModel = engineDefaultModel(input.engine);
   const availability = input.availability ?? { enabled: true };
   const unavailableReason =
     availability.enabled === false
@@ -299,7 +299,7 @@ export function loadHostGatewayProviderCatalog(input: {
     );
 }
 
-function providerTargetOptionRules(engine: EngineKind): ReadonlyArray<HostGatewayTargetOptionRule> {
+function engineTargetOptionRules(engine: EngineKind): ReadonlyArray<HostGatewayTargetOptionRule> {
   return Object.entries(ENGINE_TARGET_OPTION_RULES[engine].options)
     .filter(([, option]) => option.advertised)
     .map(([key, { valueType, allowedValues, allowedValuesSource, allowsCustomValue }]) => ({
@@ -311,7 +311,7 @@ function providerTargetOptionRules(engine: EngineKind): ReadonlyArray<HostGatewa
     }));
 }
 
-function providerPrimaryOptionKey(engine: EngineKind): string {
+function enginePrimaryOptionKey(engine: EngineKind): string {
   return ENGINE_TARGET_OPTION_RULES[engine].primaryOptionKey;
 }
 
@@ -333,7 +333,7 @@ function modelTargetOptionRules(
   engine: EngineKind,
   model: EngineModelDescriptor,
 ): ReadonlyArray<HostGatewayTargetOptionRule> {
-  const rules = providerTargetOptionRules(engine).map(
+  const rules = engineTargetOptionRules(engine).map(
     ({ key, valueType, allowedValues, allowedValuesSource, allowsCustomValue }) => ({
       key,
       valueType,
@@ -359,7 +359,7 @@ function modelTargetOptionRules(
   };
 
   const discoveredEfforts = model.supportedReasoningEfforts?.map((entry) => entry.value) ?? [];
-  replaceAllowedValues(providerPrimaryOptionKey(engine), discoveredEfforts);
+  replaceAllowedValues(enginePrimaryOptionKey(engine), discoveredEfforts);
 
   for (const descriptor of model.optionDescriptors ?? []) {
     const rule = rules.find((candidate) => candidate.key === descriptor.id);
@@ -409,10 +409,10 @@ function exampleOptionsForRules(
 
 /** Compact, typed construction guidance returned before the full model catalog. */
 export function hostGatewayTargetOptionGuidance(
-  catalog: HostGatewayProviderCatalog,
+  catalog: HostGatewayEngineCatalog,
 ): HostGatewayTargetOptionGuidance {
-  const primaryOptionKey = providerPrimaryOptionKey(catalog.engine);
-  const engineOptions = providerTargetOptionRules(catalog.engine);
+  const primaryOptionKey = enginePrimaryOptionKey(catalog.engine);
+  const engineOptions = engineTargetOptionRules(catalog.engine);
   const optionsByModel = Object.fromEntries(
     catalog.models.map((model) => [model.slug, modelTargetOptionRules(catalog.engine, model)]),
   );
@@ -462,10 +462,10 @@ const DISCOVERED_EFFORT_OPTION_IDS = new Set([
   "variant",
 ]);
 
-function providerOptionRuleSpec(
+function engineOptionRuleSpec(
   engine: EngineKind,
   optionId: string,
-): ResolvedProviderTargetOptionRuleSpec | undefined {
+): ResolvedEngineTargetOptionRuleSpec | undefined {
   const rule = ENGINE_TARGET_OPTION_RULES[engine].options[optionId];
   return rule ? { key: optionId, ...rule } : undefined;
 }
@@ -480,7 +480,7 @@ function validateOptionsWithoutCatalog(target: EngineSelection): void {
   const rawOptions = target.options as Record<string, unknown> | undefined;
   for (const [optionId, value] of Object.entries(rawOptions ?? {})) {
     if (value === undefined) continue;
-    const rule = providerOptionRuleSpec(target.engine, optionId);
+    const rule = engineOptionRuleSpec(target.engine, optionId);
     if (!rule) failUnavailableOption(target, optionId);
     switch (rule.validation.kind) {
       case "effort": {
@@ -526,7 +526,7 @@ function validateDiscoveredDescriptorOption(
 function validateEffortOption(
   target: EngineSelection,
   descriptor: EngineModelDescriptor,
-  rule: ResolvedProviderTargetOptionRuleSpec,
+  rule: ResolvedEngineTargetOptionRuleSpec,
   value: unknown,
 ): void {
   const effort = normalizedEffortValue(value);
@@ -554,10 +554,10 @@ function validateEffortOption(
   }
 }
 
-function validateKnownProviderOption(
+function validateKnownEngineOption(
   target: EngineSelection,
   descriptor: EngineModelDescriptor,
-  rule: ResolvedProviderTargetOptionRuleSpec,
+  rule: ResolvedEngineTargetOptionRuleSpec,
   value: unknown,
 ): void {
   switch (rule.validation.kind) {
@@ -595,9 +595,9 @@ function validateAdvertisedOption(
   const rawOptions = target.options as Record<string, unknown> | undefined;
   for (const [optionId, value] of Object.entries(rawOptions ?? {})) {
     if (value === undefined) continue;
-    const rule = providerOptionRuleSpec(target.engine, optionId);
+    const rule = engineOptionRuleSpec(target.engine, optionId);
     if (rule) {
-      validateKnownProviderOption(target, descriptor, rule, value);
+      validateKnownEngineOption(target, descriptor, rule, value);
     } else {
       validateDiscoveredDescriptorOption(target, descriptor, optionId, value);
     }
@@ -612,7 +612,7 @@ export function resolveHostGatewayTarget(input: {
   readonly cwd?: string;
 }): Effect.Effect<EngineSelection, HostGatewayTargetError> {
   return Effect.gen(function* () {
-    const catalog = yield* loadHostGatewayProviderCatalog({
+    const catalog = yield* loadHostGatewayEngineCatalog({
       engine: input.target.engine,
       discovery: input.discovery,
       ...(input.availability ? { availability: input.availability } : {}),

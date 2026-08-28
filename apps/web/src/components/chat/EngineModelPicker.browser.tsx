@@ -19,7 +19,7 @@ vi.mock("../../localPreferences", () => ({
   useLocalPreferences: () => ({ preferences: i18nHarness.settings }),
 }));
 
-const MODEL_OPTIONS_BY_PROVIDER = {
+const MODEL_OPTIONS_BY_ENGINE = {
   oa: [],
   claude: [
     { slug: "claude-opus-4-6", name: "Claude Opus 4.6" },
@@ -183,7 +183,7 @@ async function mountPicker(props: {
         engine={props.engine}
         model={props.model}
         lockedEngine={props.lockedEngine}
-        modelOptionsByEngine={props.modelOptionsByEngine ?? MODEL_OPTIONS_BY_PROVIDER}
+        modelOptionsByEngine={props.modelOptionsByEngine ?? MODEL_OPTIONS_BY_ENGINE}
         {...(props.loadingEngineModels ? { loadingEngineModels: props.loadingEngineModels } : {})}
         {...(props.catalogStateByEngine
           ? { catalogStateByEngine: props.catalogStateByEngine }
@@ -356,7 +356,7 @@ describe("EngineModelPicker", () => {
       model: "private-long-model",
       lockedEngine: "antigravity",
       modelOptionsByEngine: {
-        ...MODEL_OPTIONS_BY_PROVIDER,
+        ...MODEL_OPTIONS_BY_ENGINE,
         antigravity: [{ slug: "private-long-model", name: LONG_MODEL_NAME }],
       },
     });
@@ -382,7 +382,7 @@ describe("EngineModelPicker", () => {
       model: MANY_OPENCODE_MODELS[0]!.slug,
       lockedEngine: "opencode",
       modelOptionsByEngine: {
-        ...MODEL_OPTIONS_BY_PROVIDER,
+        ...MODEL_OPTIONS_BY_ENGINE,
         opencode: MANY_OPENCODE_MODELS.map((model, index) => ({
           ...model,
           name: `${LONG_MODEL_NAME} ${index + 1}`,
@@ -492,7 +492,7 @@ describe("EngineModelPicker", () => {
       model: MANY_OPENCODE_MODELS[0]!.slug,
       lockedEngine: "opencode",
       modelOptionsByEngine: {
-        ...MODEL_OPTIONS_BY_PROVIDER,
+        ...MODEL_OPTIONS_BY_ENGINE,
         opencode: MANY_OPENCODE_MODELS,
       },
     });
@@ -512,7 +512,7 @@ describe("EngineModelPicker", () => {
       model: MANY_OPENCODE_MODELS[0]!.slug,
       lockedEngine: "opencode",
       modelOptionsByEngine: {
-        ...MODEL_OPTIONS_BY_PROVIDER,
+        ...MODEL_OPTIONS_BY_ENGINE,
         opencode: MANY_OPENCODE_MODELS,
       },
     });
@@ -542,7 +542,7 @@ describe("EngineModelPicker", () => {
       model: "anthropic/claude-favorite-sort",
       lockedEngine: "opencode",
       modelOptionsByEngine: {
-        ...MODEL_OPTIONS_BY_PROVIDER,
+        ...MODEL_OPTIONS_BY_ENGINE,
         opencode: OPENCODE_FAVORITE_SORT_MODELS,
       },
     });
@@ -586,7 +586,7 @@ describe("EngineModelPicker", () => {
       model: OPENCODE_DUPLICATE_NAME_MODELS[0]!.slug,
       lockedEngine: "opencode",
       modelOptionsByEngine: {
-        ...MODEL_OPTIONS_BY_PROVIDER,
+        ...MODEL_OPTIONS_BY_ENGINE,
         opencode: OPENCODE_DUPLICATE_NAME_MODELS,
       },
     });
@@ -654,7 +654,7 @@ describe("EngineModelPicker", () => {
       model: MANY_CURSOR_MODELS[0]!.slug,
       lockedEngine: "cursor",
       modelOptionsByEngine: {
-        ...MODEL_OPTIONS_BY_PROVIDER,
+        ...MODEL_OPTIONS_BY_ENGINE,
         cursor: MANY_CURSOR_MODELS,
       },
     });
@@ -684,7 +684,7 @@ describe("EngineModelPicker", () => {
       model: "cursor-claude-favorite-sort",
       lockedEngine: "cursor",
       modelOptionsByEngine: {
-        ...MODEL_OPTIONS_BY_PROVIDER,
+        ...MODEL_OPTIONS_BY_ENGINE,
         cursor: CURSOR_FAVORITE_SORT_MODELS,
       },
     });
@@ -728,7 +728,7 @@ describe("EngineModelPicker", () => {
       model: "anthropic/claude-pi-favorite-sort",
       lockedEngine: "pi",
       modelOptionsByEngine: {
-        ...MODEL_OPTIONS_BY_PROVIDER,
+        ...MODEL_OPTIONS_BY_ENGINE,
         pi: PI_FAVORITE_SORT_MODELS,
       },
     });
@@ -773,7 +773,7 @@ describe("EngineModelPicker", () => {
       lockedEngine: "opencode",
       locale: "zh-CN",
       modelOptionsByEngine: {
-        ...MODEL_OPTIONS_BY_PROVIDER,
+        ...MODEL_OPTIONS_BY_ENGINE,
         opencode: OPENCODE_FAVORITE_SORT_MODELS,
       },
     });

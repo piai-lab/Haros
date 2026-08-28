@@ -1,4 +1,4 @@
-// FILE: engineUsage/providers/cursor.test.ts
+// FILE: engineUsage/engines/cursor.test.ts
 // Purpose: Cursor usage looks up state.vscdb with each OS's real Cursor user-data path.
 
 import nodePath from "node:path";

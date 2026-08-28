@@ -4,7 +4,7 @@
 // Depends on: ChatView.logic draft-thread normalization.
 
 import {
-  DEFAULT_MODEL_BY_PROVIDER,
+  DEFAULT_MODEL_BY_ENGINE,
   type EngineSelection,
   type ThreadId,
   type TurnId,
@@ -61,7 +61,7 @@ export function resolveDiffPanelThread(input: {
     input.draftThread,
     input.fallbackEngineSelection ?? {
       engine: "codex",
-      model: DEFAULT_MODEL_BY_PROVIDER.codex,
+      model: DEFAULT_MODEL_BY_ENGINE.codex,
     },
     null,
   );

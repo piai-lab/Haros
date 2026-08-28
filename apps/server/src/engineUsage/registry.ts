@@ -4,13 +4,13 @@
 
 import type { EngineKind } from "@harnessos/contracts";
 
-import { antigravityUsageFetcher } from "./providers/antigravity";
-import { claudeUsageFetcher } from "./providers/claude";
-import { codexUsageFetcher } from "./providers/codex";
-import { cursorUsageFetcher } from "./providers/cursor";
-import { grokUsageFetcher } from "./providers/grok";
-import { droidUsageFetcher, kiloUsageFetcher } from "./providers/localCredential";
-import { opencodeUsageFetcher } from "./providers/opencode";
+import { antigravityUsageFetcher } from "./engines/antigravity";
+import { claudeUsageFetcher } from "./engines/claude";
+import { codexUsageFetcher } from "./engines/codex";
+import { cursorUsageFetcher } from "./engines/cursor";
+import { grokUsageFetcher } from "./engines/grok";
+import { droidUsageFetcher, kiloUsageFetcher } from "./engines/localCredential";
+import { opencodeUsageFetcher } from "./engines/opencode";
 import type { EngineUsageFetcher } from "./types";
 
 export const ENGINE_USAGE_FETCHERS: Partial<Record<EngineKind, EngineUsageFetcher>> = {

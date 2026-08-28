@@ -14,7 +14,7 @@ import type {
 import { USAGE_HISTORY_UNKNOWN_MODEL, USAGE_HISTORY_UNKNOWN_WORKSPACE } from "@harnessos/contracts";
 import { formatBytes } from "@harnessos/shared/formatBytes";
 import {
-  ENGINE_USAGE_PROVIDERS,
+  ENGINE_USAGE_ENGINES,
   engineUsageDisplayName,
   selectVisibleEngineUsageSnapshots,
 } from "@harnessos/shared/engineUsage";
@@ -157,7 +157,7 @@ function mergeEngineUsageRefresh(
   }
   const previousByEngine = new Map(previous.map((snapshot) => [snapshot.engine, snapshot]));
   const nextByEngine = new Map(next.map((snapshot) => [snapshot.engine, snapshot]));
-  return ENGINE_USAGE_PROVIDERS.map(
+  return ENGINE_USAGE_ENGINES.map(
     (engine) => nextByEngine.get(engine) ?? previousByEngine.get(engine),
   ).filter((snapshot): snapshot is ServerEngineUsageSnapshot => snapshot !== undefined);
 }

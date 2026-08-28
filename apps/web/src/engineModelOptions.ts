@@ -4,7 +4,7 @@ import {
   normalizeModelSlug,
 } from "@harnessos/shared/model";
 import {
-  MODEL_OPTIONS_BY_PROVIDER,
+  MODEL_OPTIONS_BY_ENGINE,
   type AntigravityModelOptions,
   type AntigravityEngineSelection,
   type ClaudeModelOptions,
@@ -66,7 +66,7 @@ export function resolveModelPresentationIdentity(input: {
   selection: EngineSelection;
   options?: ReadonlyArray<EngineModelOption>;
 }): ModelPresentationIdentity {
-  const staticOptions = MODEL_OPTIONS_BY_PROVIDER[
+  const staticOptions = MODEL_OPTIONS_BY_ENGINE[
     input.selection.engine
   ] as ReadonlyArray<EngineModelOption>;
   const option =
@@ -169,7 +169,7 @@ function normalizeDynamicModelSlug(engine: EngineKind, slug: string): string {
 }
 
 const CLAUDE_CATALOG_RANK_BY_SLUG: ReadonlyMap<string, number> = new Map(
-  MODEL_OPTIONS_BY_PROVIDER.claude.map((model, index) => [model.slug as string, index]),
+  MODEL_OPTIONS_BY_ENGINE.claude.map((model, index) => [model.slug as string, index]),
 );
 
 function orderClaudeModelOptions<T extends EngineModelOption>(

@@ -54,23 +54,23 @@ const makeEngineAdapterRegistry = (options?: EngineAdapterRegistryLiveOptions) =
       assertEngineAdapterConformance(adapter);
     }
 
-    const byProvider = new Map(adapters.map((adapter) => [adapter.engine, adapter]));
-    if (byProvider.size !== adapters.length) {
+    const byEngine = new Map(adapters.map((adapter) => [adapter.engine, adapter]));
+    if (byEngine.size !== adapters.length) {
       return yield* Effect.die(new Error("Duplicate Engine adapter registration"));
     }
 
     const registeredEngines = ENGINE_DESCRIPTORS.map((descriptor) => descriptor.kind).filter(
-      (engine) => byProvider.has(engine),
+      (engine) => byEngine.has(engine),
     );
     if (options?.adapters === undefined && registeredEngines.length !== ENGINE_DESCRIPTORS.length) {
-      const missing = ENGINE_DESCRIPTORS.filter(
-        (descriptor) => !byProvider.has(descriptor.kind),
-      ).map((descriptor) => descriptor.kind);
+      const missing = ENGINE_DESCRIPTORS.filter((descriptor) => !byEngine.has(descriptor.kind)).map(
+        (descriptor) => descriptor.kind,
+      );
       return yield* Effect.die(new Error(`Missing Engine adapters: ${missing.join(", ")}`));
     }
 
     const getByEngine: EngineAdapterRegistryShape["getByEngine"] = (engine) => {
-      const adapter = byProvider.get(engine);
+      const adapter = byEngine.get(engine);
       if (!adapter) {
         return Effect.fail(new EngineUnsupportedError({ engine }));
       }

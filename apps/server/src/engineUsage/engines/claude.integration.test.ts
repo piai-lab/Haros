@@ -1,4 +1,4 @@
-// FILE: engineUsage/providers/claude.test.ts
+// FILE: engineUsage/engines/claude.test.ts
 // Purpose: Covers Claude's CLI-delegated token lifecycle — expired/rejected credentials trigger
 // a `claude auth status` nudge (never a direct OAuth token call, which would burn the CLI's
 // single-use rotating refresh token) — plus source fallthrough and rate-limit resilience.

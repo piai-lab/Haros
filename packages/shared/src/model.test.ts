@@ -5,10 +5,8 @@ import {
   CLAUDE_PROMPT_MODE_OPTIONS,
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_GIT_TEXT_GENERATION_REASONING_EFFORT,
-  DEFAULT_MODEL,
-  DEFAULT_MODEL_BY_PROVIDER,
-  MODEL_OPTIONS,
-  MODEL_OPTIONS_BY_PROVIDER,
+  DEFAULT_MODEL_BY_ENGINE,
+  MODEL_OPTIONS_BY_ENGINE,
   CODEX_REASONING_EFFORT_OPTIONS,
   GROK_4_5_REASONING_EFFORTS,
   GROK_4_6_REASONING_EFFORTS,
@@ -38,11 +36,10 @@ import {
   resolveApiModelId,
   resolveSelectableModel,
   resolveModelSlug,
-  resolveModelSlugForProvider,
   getDefaultEffort,
-  getProviderOptionCurrentLabel,
+  getEngineOptionCurrentLabel,
   getEngineOptionDescriptors,
-  buildProviderOptionSelectionsFromDescriptors,
+  buildEngineOptionSelectionsFromDescriptors,
   hasEffortLevel,
   resolveGrokEffortFamily,
 } from "./model";
@@ -113,35 +110,33 @@ describe("normalizeModelSlug", () => {
 
 describe("resolveModelSlug", () => {
   it("returns default only when the model is missing", () => {
-    expect(resolveModelSlug(undefined)).toBe(DEFAULT_MODEL);
-    expect(resolveModelSlug(null)).toBe(DEFAULT_MODEL);
+    expect(resolveModelSlug("codex", undefined)).toBe(DEFAULT_MODEL_BY_ENGINE.codex);
+    expect(resolveModelSlug("codex", null)).toBe(DEFAULT_MODEL_BY_ENGINE.codex);
   });
 
   it("preserves unknown custom models", () => {
-    expect(resolveModelSlug("gpt-4.1")).toBe(DEFAULT_MODEL);
-    expect(resolveModelSlug("custom/internal-model")).toBe(DEFAULT_MODEL);
+    expect(resolveModelSlug("codex", "gpt-4.1")).toBe(DEFAULT_MODEL_BY_ENGINE.codex);
+    expect(resolveModelSlug("codex", "custom/internal-model")).toBe(DEFAULT_MODEL_BY_ENGINE.codex);
   });
 
   it("resolves only supported model options", () => {
-    for (const model of MODEL_OPTIONS) {
-      expect(resolveModelSlug(model.slug)).toBe(model.slug);
+    for (const model of MODEL_OPTIONS_BY_ENGINE.codex) {
+      expect(resolveModelSlug("codex", model.slug)).toBe(model.slug);
     }
   });
 
   it("supports engine-aware resolution", () => {
-    expect(resolveModelSlugForProvider("claude", undefined)).toBe(DEFAULT_MODEL_BY_PROVIDER.claude);
-    expect(resolveModelSlugForProvider("claude", "sonnet")).toBe("claude-sonnet-5");
-    expect(resolveModelSlugForProvider("claude", "gpt-5.3-codex")).toBe(
-      DEFAULT_MODEL_BY_PROVIDER.claude,
-    );
+    expect(resolveModelSlug("claude", undefined)).toBe(DEFAULT_MODEL_BY_ENGINE.claude);
+    expect(resolveModelSlug("claude", "sonnet")).toBe("claude-sonnet-5");
+    expect(resolveModelSlug("claude", "gpt-5.3-codex")).toBe(DEFAULT_MODEL_BY_ENGINE.claude);
   });
 
-  it("keeps codex defaults for backward compatibility", () => {
-    expect(getDefaultModel()).toBe(DEFAULT_MODEL);
+  it("requires an explicit Engine for defaults and model options", () => {
+    expect(getDefaultModel("codex")).toBe(DEFAULT_MODEL_BY_ENGINE.codex);
     expect(getDefaultModel("oa")).toBeNull();
     expect(getDefaultModel("pi")).toBeNull();
-    expect(getModelOptions()).toEqual(MODEL_OPTIONS);
-    expect(getModelOptions("claude")).toEqual(MODEL_OPTIONS_BY_PROVIDER.claude);
+    expect(getModelOptions("codex")).toEqual(MODEL_OPTIONS_BY_ENGINE.codex);
+    expect(getModelOptions("claude")).toEqual(MODEL_OPTIONS_BY_ENGINE.claude);
   });
 });
 
@@ -239,7 +234,7 @@ describe("getModelCapabilities reasoningEffortLevels", () => {
   });
 
   it("models Droid fast mode as a separate GPT-5.5 slug, not a GPT-5.6 toggle", () => {
-    const droidSlugs = MODEL_OPTIONS_BY_PROVIDER.droid.map((model) => model.slug);
+    const droidSlugs = MODEL_OPTIONS_BY_ENGINE.droid.map((model) => model.slug);
 
     expect(droidSlugs).toContain("gpt-5.5-fast");
     expect(droidSlugs).not.toContain("gpt-5.6-fast");
@@ -454,7 +449,7 @@ describe("engine option descriptor helpers", () => {
       type: "select",
       currentValue: "xhigh",
     });
-    expect(getProviderOptionCurrentLabel(reasoning)).toBe("Extra High");
+    expect(getEngineOptionCurrentLabel(reasoning)).toBe("Extra High");
     expect(fastMode).toMatchObject({
       type: "boolean",
       currentValue: true,
@@ -483,9 +478,7 @@ describe("engine option descriptor helpers", () => {
       currentValue: "xhigh",
     });
     expect(
-      getProviderOptionCurrentLabel(
-        grok46.find((descriptor) => descriptor.id === "reasoningEffort"),
-      ),
+      getEngineOptionCurrentLabel(grok46.find((descriptor) => descriptor.id === "reasoningEffort")),
     ).toBe("Extra High");
   });
 
@@ -551,7 +544,7 @@ describe("engine option descriptor helpers", () => {
 
     expect(descriptors).toHaveLength(1);
     expect(descriptors[0]).toMatchObject({ id: "reasoningDepth", currentValue: "deep" });
-    expect(buildProviderOptionSelectionsFromDescriptors(descriptors)).toEqual([
+    expect(buildEngineOptionSelectionsFromDescriptors(descriptors)).toEqual([
       { id: "reasoningDepth", value: "deep" },
     ]);
   });

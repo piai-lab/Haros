@@ -1,4 +1,4 @@
-// FILE: engineUsage/providers/localCredential.test.ts
+// FILE: engineUsage/engines/localCredential.test.ts
 // Purpose: Local-login engines without a personal quota API still surface a
 // connected Settings card, and stay needs-auth when no credential file exists.
 

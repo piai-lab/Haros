@@ -50,7 +50,7 @@ import {
 import {
   HOST_GATEWAY_TARGET_OPTIONS_DESCRIPTION,
   hostGatewayTargetOptionGuidance,
-  loadHostGatewayProviderCatalog,
+  loadHostGatewayEngineCatalog,
   type HostGatewayEngineAvailability,
 } from "../../hostGateway/targetResolver.ts";
 import {
@@ -259,7 +259,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
           );
         const availabilities = yield* loadProviderAvailabilities;
         const engines = yield* Effect.forEach(ENGINE_KINDS, (engine) =>
-          loadHostGatewayProviderCatalog({
+          loadHostGatewayEngineCatalog({
             engine,
             discovery: engineDiscovery,
             ...(availabilities.get(engine) ? { availability: availabilities.get(engine)! } : {}),

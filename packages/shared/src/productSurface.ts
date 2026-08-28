@@ -2,7 +2,7 @@ import type { ProjectKind, EngineWorkSurface } from "@harnessos/contracts";
 
 /**
  * Product-facing workspaces are derived from the authoritative Project kind.
- * This value is deliberately not persisted as provider runtime state.
+ * This value is deliberately not persisted as engine runtime state.
  */
 export type ProductSurface = "agent" | "chat" | "studio";
 
@@ -19,11 +19,11 @@ export function projectKindToProductSurface(kind: ProjectKind | undefined): Prod
   }
 }
 
-/** Provider execution/trust remains a narrower two-surface contract. */
-export function productSurfaceToProviderWorkSurface(surface: ProductSurface): EngineWorkSurface {
+/** Engine execution/trust remains a narrower two-surface contract. */
+export function productSurfaceToEngineWorkSurface(surface: ProductSurface): EngineWorkSurface {
   return surface === "agent" ? "agent" : "chat";
 }
 
-export function projectKindToProviderWorkSurface(kind: ProjectKind | undefined): EngineWorkSurface {
-  return productSurfaceToProviderWorkSurface(projectKindToProductSurface(kind));
+export function projectKindToEngineWorkSurface(kind: ProjectKind | undefined): EngineWorkSurface {
+  return productSurfaceToEngineWorkSurface(projectKindToProductSurface(kind));
 }
