@@ -25,11 +25,8 @@ const buildSourcemap =
       ? "hidden"
       : false;
 
-const CENTRAL_ICON_DIR = "central-icons-reversed";
 const WEB_ACCESS_PROVIDER_ICON_DIR = "web-access/provider-icons";
 const WEB_ACCESS_PROVIDER_ICON_EXTENSIONS = new Set([".svg", ".png", ".ico"]);
-const CENTRAL_ICON_NAME_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
-const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"]);
 
 async function listFiles(root: string): Promise<string[]> {
   const entries = await fs.readdir(root, { withFileTypes: true }).catch(() => []);
@@ -43,66 +40,6 @@ async function listFiles(root: string): Promise<string[]> {
     }
   }
   return result;
-}
-
-// Finds literal icon basenames in source, then prunes the copied public icon set after build.
-function centralIconPrunePlugin(): Plugin {
-  let resolvedRoot = process.cwd();
-  let resolvedOutDir = "dist";
-  return {
-    name: "omnimind-central-icon-prune",
-    apply: "build",
-    configResolved(config) {
-      resolvedRoot = config.root;
-      resolvedOutDir = path.resolve(config.root, config.build.outDir);
-    },
-    async closeBundle() {
-      const publicIconDir = path.join(resolvedRoot, "public", CENTRAL_ICON_DIR);
-      const distIconDir = path.join(resolvedOutDir, CENTRAL_ICON_DIR);
-      const iconFiles = await fs.readdir(publicIconDir).catch(() => []);
-      const availableIcons = new Set(
-        iconFiles
-          .filter((name) => name.endsWith(".svg"))
-          .map((name) => name.slice(0, -".svg".length)),
-      );
-      if (availableIcons.size === 0) return;
-
-      const sourceFiles = (await listFiles(path.join(resolvedRoot, "src"))).filter((file) =>
-        SOURCE_EXTENSIONS.has(path.extname(file)),
-      );
-      const requiredIcons = new Set<string>();
-      const literalPattern = /["'`]([a-z0-9][a-z0-9-]*)["'`]/g;
-      for (const sourceFile of sourceFiles) {
-        const source = await fs.readFile(sourceFile, "utf8").catch(() => "");
-        for (const match of source.matchAll(literalPattern)) {
-          const iconName = match[1];
-          if (
-            iconName &&
-            CENTRAL_ICON_NAME_PATTERN.test(iconName) &&
-            availableIcons.has(iconName)
-          ) {
-            requiredIcons.add(iconName);
-          }
-        }
-      }
-
-      if (requiredIcons.size === 0) return;
-      const copiedIconFiles = await fs.readdir(distIconDir).catch(() => []);
-      let removedCount = 0;
-      await Promise.all(
-        copiedIconFiles.map(async (fileName) => {
-          if (!fileName.endsWith(".svg")) return;
-          const iconName = fileName.slice(0, -".svg".length);
-          if (requiredIcons.has(iconName)) return;
-          removedCount += 1;
-          await fs.rm(path.join(distIconDir, fileName), { force: true });
-        }),
-      );
-      console.info(
-        `[central-icons] kept ${requiredIcons.size}/${availableIcons.size} referenced SVGs, pruned ${removedCount}.`,
-      );
-    },
-  };
 }
 
 function webAccessProviderIconPlugin(): Plugin {
@@ -241,7 +178,6 @@ export default defineConfig({
       presets: [reactCompilerPreset()],
     }),
     tailwindcss(),
-    centralIconPrunePlugin(),
     webAccessProviderIconPlugin(),
     precompressPlugin(),
   ],
