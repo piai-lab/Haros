@@ -6,9 +6,9 @@
 - Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`, Git worktree for HarnessOS.
 - Repository identity: `github.com/piai-lab/HarnessOS`
 - Campaign origin revision: `f310080bfa1df72eade006d3d74143892c05f9b4`.
-- Last reconciled revision: `ab40bc8c16031fd4fd40b8a629c18aa56ef86d4d`.
+- Last reconciled revision: `b990aea8ea202b31702cd03883d0f31d261a89eb`.
 - Worktree state: dirty only under `missions/` while this canonical Campaign reconciliation is being recorded; no product path is dirty.
-- Last reconciled at: `2026-08-28T15:15:37+08:00`.
+- Last reconciled at: `2026-08-28T15:35:21+08:00`.
 - Active branch/worktree: `codex/harnessos-foundation` at `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`.
 - Applicable instructions: user-locked HarnessOS implementation plan; root `AGENTS.md`; public architecture in `docs/architecture.md`.
 - Superseded state sources: no competing state files remain; this Campaign directory is temporary and must be deleted before public push.
@@ -68,6 +68,7 @@
 | E-011 | task | focused | C-005 Sidebar project mutation ownership | `file:missions/evidence/harnessos-foundation/E-011-sidebar-project-pinning.txt#L1-L16` | revision `328409445d7f82abe403c8b116674d9e4d4465dd`; receipt sha256 `0b634775e79ef49cd0a318b76c5c18098d9293921ed330d822cfd83909a4eb00` | `(cd apps/web && bun run typecheck && bun run test:unit -- src/hooks/useSidebarProjectPinning.test.ts src/components/Sidebar.logic.test.ts src/components/Sidebar.import.test.ts src/hooks/useSidebarThreadActions.test.ts && bun run test:browser -- src/components/SidebarHeaderNavigationControls.browser.tsx src/components/SidebarActivityView.browser.tsx src/components/SidebarSectionLabel.browser.tsx src/components/SidebarSurfacePicker.browser.tsx src/components/SidebarThreadRowContent.browser.tsx) && bunx oxlint --quiet --report-unused-disable-directives apps/web/src/components/Sidebar.tsx apps/web/src/hooks/useSidebarProjectPinning.ts apps/web/src/hooks/useSidebarProjectPinning.test.ts && git diff --check` | current until Sidebar project pinning, ordering, or persistence changes |
 | E-012 | task | focused | C-005 Conversation Workbench Environment ownership | `file:missions/evidence/harnessos-foundation/E-012-workbench-environment-owner.txt#L1-L16` | revision `6b36a5debba3b0987f5fc4ddad85c6ab85a18865`; receipt sha256 `7074bfaa009ef93d96d32d4555706a630f07407208b668ba27271e94530822ac` | `(cd apps/web && bun run typecheck && bun run test:unit -- src/components/ChatView.logic.test.ts src/lib/responsiveWorkbench.test.ts && bun run test:browser -- src/components/ChatView.browser.tsx -t Environment && bun run test:browser -- src/components/ChatView.geometry.browser.tsx -t 'Environment|Plan sidebar') && git diff --check` | current until Workbench Environment/Plan presentation or focus lifecycle changes |
 | E-013 | task | focused | C-007 unused release publication control-plane removal | `file:missions/evidence/harnessos-foundation/E-013-release-control-plane-removal.txt#L1-L15` | revision `ab40bc8c16031fd4fd40b8a629c18aa56ef86d4d`; receipt sha256 `fc731d7c1cbc32acf7f2730c6113d19c0e44206809bdf8d0040c361a918a0dce` | `bunx oxfmt --write .github/workflows/packaged-proof.yml package.json scripts/packaged-proof-smoke.ts && bunx oxlint --quiet --report-unused-disable-directives scripts/packaged-proof-smoke.ts && bun run proof:packaged:smoke && (cd scripts && bun run typecheck && bun run test:unit) && git diff --check` | current until packaged proof or release-publication surface changes |
+| E-014 | task | focused | C-009 macOS unsigned packaged journey | `file:missions/evidence/harnessos-foundation/E-014-unsigned-macos-packaged-journey.txt#L1-L16` | revision `b990aea8ea202b31702cd03883d0f31d261a89eb`; receipt sha256 `d0fb7cca79d10ce0e334f730e0322d8b6993135993977d0f63bcca4d0c4f3d5d` | `set -euo pipefail; proof_output_dir=$(mktemp -d /tmp/harnessos-unsigned-dmg-XXXXXX); bun run dist:desktop:artifact -- --platform mac --target dmg --arch arm64 --build-version 0.1.0-alpha.0 --source-commit b990aea8ea202b31702cd03883d0f31d261a89eb --lockfile-sha256 1d568a6378808de0daeaf4f3228aa4391ac34a8fcc82895715b38d0ce7b49caa --output-dir "$proof_output_dir"; node scripts/verify-packaged-desktop.ts --assets-dir "$proof_output_dir" --platform mac --arch arm64 --version 0.1.0-alpha.0 --source-commit b990aea8ea202b31702cd03883d0f31d261a89eb --proof journey; find "$proof_output_dir" -maxdepth 1 -type f -print` | current only for macOS arm64 focused proof; final frozen cross-platform proof pending |
 
 ## 验收矩阵
 
@@ -81,16 +82,16 @@
 | C-006 | [required] selected HarnessOS/OA identity, all user surfaces and Chinese/English rendering pass real-shell visual and accessibility review | deterministic assets + browser/Electron rubric | open | E-007, E-010 partial; Electron and complete bilingual surface audit pending | `8e8ea265ac1c7ecf8271154644ad458849fff354` partial |
 | C-007 | [required] Apache-2.0 root, retained third-party rights, 12 source records, docs and clean repository surface are closed | legal/source/structure proof | open | E-013 partial; legal/source/complete structure proof pending | `ab40bc8c16031fd4fd40b8a629c18aa56ef86d4d` partial |
 | C-008 | [required] format, lint, typecheck, unit, integration, stable browser, Desktop build and legal checks pass | deterministic final gate | open | pending | pending |
-| C-009 | [required] frozen SHA passes isolated macOS packaged journey and Linux/Windows unsigned startup builds | packaged/CI proof | open | pending | pending |
+| C-009 | [required] frozen SHA passes isolated macOS packaged journey and Linux/Windows unsigned startup builds | packaged/CI proof | open | E-014 partial macOS arm64; final frozen macOS/Linux/Windows proof pending | `b990aea8ea202b31702cd03883d0f31d261a89eb` partial |
 | C-010 | [required] protected public GitHub surface and final OmniMind README pointer are applied only after C-001–C-009 | remote governance audit | open | pending | pending |
 
 ## 当前状态
 
-- Current checkpoint: source ancestry, HarnessOS/OA identity, Engine contract, HostGateway, clean persistence schema, Pi-family deep projections, public docs and selected constrained-loop brand are implemented locally. Sidebar project pinning and Workbench Environment/Plan presentation now have single controller owners. Unused formal-release publication tooling has been removed while unsigned packaged proof remains intact. Public push, lifecycle/state isolation, remaining owner cuts and final packaged gates remain open.
+- Current checkpoint: source ancestry, HarnessOS/OA identity, Engine contract, HostGateway, clean persistence schema, Pi-family deep projections, public docs and selected constrained-loop brand are implemented locally. Sidebar project pinning and Workbench Environment/Plan presentation now have single controller owners. Formal release/signing/feed build authority has been removed, and a real macOS arm64 unsigned DMG passed isolated startup, persistence, window-close, and relaunch journeys. Public push, complete lifecycle/state isolation, remaining owner cuts and final cross-platform packaged gates remain open.
 - Active Claim: C-005.
 - Next safe action: characterize and extract the remaining Conversation Workbench and Sidebar responsibilities into their existing domain hooks/controllers without creating a global store, manager or registry.
 - Blockers: none.
-- Last material change: commit `ab40bc8c16031fd4fd40b8a629c18aa56ef86d4d` removed the unused formal release-publication control plane while preserving the unsigned packaged proof; E-013 binds the focused proof.
+- Last material change: commit `b990aea8ea202b31702cd03883d0f31d261a89eb` made the packaged journey consume the canonical HarnessOS userData owner and dismiss normal startup overlays; E-014 binds the passing macOS arm64 proof.
 
 ## 已知问题与方向
 

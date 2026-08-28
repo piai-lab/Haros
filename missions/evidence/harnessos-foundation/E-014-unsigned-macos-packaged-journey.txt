@@ -1,0 +1,16 @@
+Campaign-ID: harnessos-foundation
+Evidence-ID: E-014
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/HarnessOS
+Repository-Identity: github.com/piai-lab/HarnessOS
+Candidate-Version: b990aea8ea202b31702cd03883d0f31d261a89eb
+Command: set -euo pipefail; proof_output_dir=$(mktemp -d /tmp/harnessos-unsigned-dmg-XXXXXX); bun run dist:desktop:artifact -- --platform mac --target dmg --arch arm64 --build-version 0.1.0-alpha.0 --source-commit b990aea8ea202b31702cd03883d0f31d261a89eb --lockfile-sha256 1d568a6378808de0daeaf4f3228aa4391ac34a8fcc82895715b38d0ce7b49caa --output-dir "$proof_output_dir"; node scripts/verify-packaged-desktop.ts --assets-dir "$proof_output_dir" --platform mac --arch arm64 --version 0.1.0-alpha.0 --source-commit b990aea8ea202b31702cd03883d0f31d261a89eb --proof journey; find "$proof_output_dir" -maxdepth 1 -type f -print
+Exit-Code: 0
+Result: PASS
+Claims: C-009 (focused macOS unsigned packaged journey; frozen final cross-platform Claim remains open)
+
+Observed output:
+- The output directory contained only HarnessOS-0.1.0-alpha.0-arm64.dmg; no debug, manifest, blockmap, update ZIP, or feed artifact was emitted.
+- The packaged archive disclosed and closed 537 production dependency identities.
+- Attempt 1 proved startup, fixture creation, Composer draft persistence, and macOS window-close isolation.
+- Attempt 2 proved state restoration after an isolated relaunch from temporary HOME, userData, and HarnessOS state roots.
