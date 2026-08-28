@@ -32,12 +32,12 @@ function runBuildScript(args: ReadonlyArray<string>) {
 }
 
 describe("desktop artifact candidate ownership", () => {
-  it("rejects a production candidate without an exact source commit", () => {
-    const result = runBuildScript([]);
+  it("rejects a candidate with a non-exact source commit", () => {
+    const result = runBuildScript(["--source-commit", "deadbeef"]);
 
     expect(result.status).not.toBe(0);
     expect(`${result.stdout}\n${result.stderr}`).toContain(
-      "Desktop candidate builds require --source-commit with the exact full Git SHA",
+      "Expected a full 40-character source commit",
     );
   });
 
@@ -46,7 +46,7 @@ describe("desktop artifact candidate ownership", () => {
     temporaryRoots.push(outputDirectory);
     writeFileSync(join(outputDirectory, "existing-artifact.zip"), "immutable");
 
-    const result = runBuildScript(["--mock-updates", "--output-dir", outputDirectory]);
+    const result = runBuildScript(["--output-dir", outputDirectory]);
 
     expect(result.status).not.toBe(0);
     expect(`${result.stdout}\n${result.stderr}`).toContain(

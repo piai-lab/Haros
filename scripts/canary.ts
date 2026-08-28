@@ -229,7 +229,6 @@ function checkout(paths: CanaryPaths, commit: string): void {
 function build(paths: CanaryPaths): void {
   run("bun", ["install", "--frozen-lockfile"], paths.source);
   run("bun", ["run", "build:desktop"], paths.source);
-  run("bun", ["run", "release:smoke"], paths.source);
 }
 
 function currentSourceCommit(paths: CanaryPaths): string | null {

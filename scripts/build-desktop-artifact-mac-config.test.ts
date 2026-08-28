@@ -21,18 +21,17 @@ describe("createDesktopPlatformBuildConfig", () => {
     const config = createDesktopPlatformBuildConfig({
       platform: "mac",
       target: "dmg",
-      signed: true,
     });
     const mac = config.mac as Record<string, unknown>;
     const dmg = config.dmg as Record<string, unknown>;
     const extendInfo = mac.extendInfo as Record<string, unknown>;
 
-    assert.deepStrictEqual(mac.target, ["dmg", "zip"]);
+    assert.deepStrictEqual(mac.target, ["dmg"]);
     assert.equal(mac.icon, "icon.icns");
     assert.deepStrictEqual(config.asarUnpack, ["node_modules/node-pty/**"]);
-    assert.equal(mac.hardenedRuntime, true);
-    assert.equal(mac.notarize, true);
-    assert.equal(dmg.sign, true);
+    assert.equal(mac.hardenedRuntime, false);
+    assert.equal(mac.notarize, false);
+    assert.equal(dmg.sign, false);
     assert.equal(dmg.writeUpdateInfo, false);
     assert.equal(mac.entitlements, MAC_ENTITLEMENTS_PATH);
     assert.equal(mac.entitlementsInherit, MAC_INHERITED_ENTITLEMENTS_PATH);
@@ -59,24 +58,13 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.equal(extendInfo.NSScreenCaptureUsageDescription, undefined);
   });
 
-  it("leaves the DMG container unsigned for build-only macOS artifacts", () => {
+  it("creates only an unsigned DMG without updater metadata", () => {
     const config = createDesktopPlatformBuildConfig({
       platform: "mac",
       target: "dmg",
-      signed: false,
     });
 
     assert.deepStrictEqual(config.dmg, { sign: false, writeUpdateInfo: false });
-  });
-
-  it("omits the updater ZIP when a build-only DMG has no feed authority", () => {
-    const config = createDesktopPlatformBuildConfig({
-      platform: "mac",
-      target: "dmg",
-      signed: false,
-      includeMacUpdateZip: false,
-    });
-
     assert.deepStrictEqual((config.mac as Record<string, unknown>).target, ["dmg"]);
   });
 
@@ -88,7 +76,6 @@ describe("createDesktopPlatformBuildConfig", () => {
     const win = createDesktopPlatformBuildConfig({
       platform: "win",
       target: "nsis",
-      windowsAzureSignOptions: { publisherName: "HarnessOS" },
     });
 
     assert.equal(linux.mac, undefined);
@@ -96,12 +83,12 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.deepStrictEqual(linux.asarUnpack, ["node_modules/node-pty/**"]);
     assert.deepStrictEqual(linux.linux, {
       target: ["AppImage"],
-      executableName: "oa",
+      executableName: "harnessos",
       icon: "icon.png",
       category: "Development",
       desktop: {
         entry: {
-          StartupWMClass: "oa",
+          StartupWMClass: "HarnessOS",
         },
       },
     });
@@ -109,25 +96,11 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.equal(win.mac, undefined);
     assert.equal(win.extraFiles, undefined);
     assert.deepStrictEqual(win.asarUnpack, ["node_modules/node-pty/**"]);
-    assert.equal(WINDOWS_INSTALLER_GUID, "368107a8-afe6-5db5-ab3b-d4f331684868");
+    assert.equal(WINDOWS_INSTALLER_GUID, "bf2c2d38-6ca0-58ef-892c-7b354a231883");
     assert.deepStrictEqual(win.nsis, {
       guid: WINDOWS_INSTALLER_GUID,
     });
     assert.deepStrictEqual(win.win, {
-      target: ["nsis"],
-      icon: "icon.ico",
-      publisherName: "HarnessOS",
-      azureSignOptions: { publisherName: "HarnessOS" },
-    });
-  });
-
-  it("omits Azure signing options for unsigned build-only artifacts", () => {
-    const config = createDesktopPlatformBuildConfig({
-      platform: "win",
-      target: "nsis",
-    });
-
-    assert.deepStrictEqual(config.win, {
       target: ["nsis"],
       icon: "icon.ico",
     });

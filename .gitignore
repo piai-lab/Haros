@@ -19,6 +19,7 @@ packages/*/dist
 build/
 .logs/
 release/
+artifacts/
 .harnessos
 /.harnessos/electron-dev
 /.harnessos/backups

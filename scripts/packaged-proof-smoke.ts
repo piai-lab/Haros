@@ -124,11 +124,7 @@ function verifyPackagerDeniesAmbientPublication(): void {
     "bun install --frozen-lockfile --ignore-scripts --linker hoisted",
     "Packaging must install immutable dependencies without lifecycle scripts.",
   );
-  assertContains(
-    buildScript,
-    "buildConfig.publish = null",
-    "Packager publication must be disabled.",
-  );
+  assertContains(buildScript, "publish: null", "Packager publication must be disabled.");
   assertContains(
     buildScript,
     "delete buildEnv.GITHUB_TOKEN",

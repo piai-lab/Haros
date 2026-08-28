@@ -1,6 +1,6 @@
 // FILE: desktop-platform-build-config.ts
 // Purpose: Builds platform-specific electron-builder config fragments for desktop artifacts.
-// Layer: Release/build helper
+// Layer: Desktop packaging helper
 // Depends on: Desktop packaging policy and electron-builder config shape.
 
 export const MICROPHONE_USAGE_DESCRIPTION =
@@ -14,7 +14,7 @@ export const MAC_APPSNAP_HELPER_ASAR_EXCLUSION = "!apps/desktop/native/appsnap/b
 export const MAC_APPSNAP_HELPER_BUNDLE_PATH = "Contents/Helpers/harnessos-appsnap-helper";
 export const MAC_DEVICE_HELPER_STAGE_PATH = "apps/server/dist/device-helper";
 export const MAC_DEVICE_HELPER_RESOURCE_PATH = "Resources/device-helper";
-export const WINDOWS_INSTALLER_GUID = "368107a8-afe6-5db5-ab3b-d4f331684868";
+export const WINDOWS_INSTALLER_GUID = "bf2c2d38-6ca0-58ef-892c-7b354a231883";
 const MAC_DMG_ICON_PATH = "icon.icns";
 export const NODE_PTY_ASAR_UNPACK_GLOBS = ["node_modules/node-pty/**"] as const;
 
@@ -32,9 +32,6 @@ export interface DesktopPlatformBuildConfig {
 export interface CreateDesktopPlatformBuildConfigInput {
   readonly platform: "linux" | "mac" | "win";
   readonly target: string;
-  readonly signed?: boolean;
-  readonly includeMacUpdateZip?: boolean;
-  readonly windowsAzureSignOptions?: Record<string, string>;
 }
 
 export interface DesktopNativeBuildHostInput {
@@ -48,7 +45,7 @@ export function validateDesktopNativeBuildHost(input: DesktopNativeBuildHostInpu
   if (input.platform === "mac" && input.hostPlatform !== "darwin") {
     return [
       "macOS desktop artifacts include the native Swift AppSnap helper.",
-      `Build mac/${input.arch} on macOS so the helper can be compiled and signed.`,
+      `Build mac/${input.arch} on macOS so the helper can be compiled for the target platform.`,
       `Current host is ${input.hostPlatform}/${input.hostArch}.`,
     ].join(" ");
   }
@@ -72,14 +69,11 @@ export function createDesktopPlatformBuildConfig(
 
   if (input.platform === "mac") {
     const mac = {
-      target:
-        input.target === "dmg" && input.includeMacUpdateZip !== false
-          ? [input.target, "zip"]
-          : [input.target],
+      target: [input.target],
       icon: MAC_DMG_ICON_PATH,
       category: "public.app-category.developer-tools",
-      hardenedRuntime: input.signed === true,
-      notarize: input.signed === true,
+      hardenedRuntime: false,
+      notarize: false,
       entitlements: MAC_ENTITLEMENTS_PATH,
       entitlementsInherit: MAC_INHERITED_ENTITLEMENTS_PATH,
       binaries: [MAC_APPSNAP_HELPER_BUNDLE_PATH],
@@ -94,10 +88,7 @@ export function createDesktopPlatformBuildConfig(
     return {
       ...nativePackaging,
       dmg: {
-        sign: input.signed === true,
-        // The signed release flow notarizes and staples the DMG after electron-builder exits.
-        // Do not emit a blockmap/update entry whose hashes would describe the pre-stapled image;
-        // macOS auto-updates use the separately finalized ZIP artifact.
+        sign: false,
         writeUpdateInfo: false,
       },
       files: ["**/*", MAC_APPSNAP_HELPER_ASAR_EXCLUSION],
@@ -120,12 +111,12 @@ export function createDesktopPlatformBuildConfig(
       ...nativePackaging,
       linux: {
         target: [input.target],
-        executableName: "oa",
+        executableName: "harnessos",
         icon: "icon.png",
         category: "Development",
         desktop: {
           entry: {
-            StartupWMClass: "oa",
+            StartupWMClass: "HarnessOS",
           },
         },
       },
@@ -134,20 +125,12 @@ export function createDesktopPlatformBuildConfig(
 
   return {
     ...nativePackaging,
-    // Keep the Windows product registration stable while the public app ID changes.
-    // This lets NSIS updates replace the existing installation and own its uninstaller.
     nsis: {
       guid: WINDOWS_INSTALLER_GUID,
     },
     win: {
       target: [input.target],
       icon: "icon.ico",
-      ...(input.windowsAzureSignOptions
-        ? {
-            publisherName: input.windowsAzureSignOptions.publisherName,
-            azureSignOptions: input.windowsAzureSignOptions,
-          }
-        : {}),
     },
   };
 }

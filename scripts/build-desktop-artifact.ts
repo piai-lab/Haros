@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // FILE: build-desktop-artifact.ts
-// Purpose: Stages and builds packaged desktop artifacts plus updater metadata for GitHub releases.
-// Layer: Release/build script
-// Depends on: apps/desktop package metadata, electron-builder, and GitHub release config.
+// Purpose: Stages and builds short-lived unsigned desktop artifacts for verification.
+// Layer: Desktop packaging script
+// Depends on: apps/desktop package metadata and electron-builder.
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -23,8 +23,6 @@ import {
 } from "./lib/desktop-platform-build-config.ts";
 import { HARNESSOS_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
 import { parseBooleanEnvValue } from "./lib/env-bool.ts";
-import { finalizeSignedMacDmg } from "./lib/mac-dmg-finalize.ts";
-import { finalizeMacUpdateZip } from "./lib/mac-update-zip-finalize.ts";
 import { verifyPackagedLegalClosure } from "./lib/packaged-legal-closure.ts";
 import { writeReleaseLegalMetadata } from "./lib/release-legal-metadata.ts";
 import {
@@ -109,15 +107,11 @@ interface BuildCliInput {
   readonly arch: Option.Option<typeof BuildArch.Type>;
   readonly buildVersion: Option.Option<string>;
   readonly sourceCommit: Option.Option<string>;
-  readonly sourceTag: Option.Option<string>;
   readonly lockfileSha256: Option.Option<string>;
   readonly outputDir: Option.Option<string>;
   readonly skipBuild: Option.Option<boolean>;
   readonly keepStage: Option.Option<boolean>;
-  readonly signed: Option.Option<boolean>;
   readonly verbose: Option.Option<boolean>;
-  readonly mockUpdates: Option.Option<boolean>;
-  readonly mockUpdateServerPort: Option.Option<string>;
 }
 
 function detectHostBuildPlatform(hostPlatform: string): typeof BuildPlatform.Type | undefined {
@@ -208,15 +202,11 @@ interface ResolvedBuildOptions {
   readonly arch: typeof BuildArch.Type;
   readonly version: string | undefined;
   readonly sourceCommit: string | undefined;
-  readonly sourceTag: string | undefined;
   readonly lockfileSha256: string | undefined;
   readonly outputDir: string;
   readonly skipBuild: boolean;
   readonly keepStage: boolean;
-  readonly signed: boolean;
   readonly verbose: boolean;
-  readonly mockUpdates: boolean;
-  readonly mockUpdateServerPort: string | undefined;
 }
 
 interface StagePackageJson {
@@ -225,8 +215,6 @@ interface StagePackageJson {
   readonly buildVersion: string;
   readonly harnessosCommitHash: string;
   readonly harnessosLockfileSha256: string;
-  readonly harnessosSourceTag: string | null;
-  readonly harnessosWindowsPublisherSubject: string | null;
   readonly private: true;
   readonly description: string;
   readonly author: string;
@@ -239,38 +227,17 @@ interface StagePackageJson {
   readonly overrides: Record<string, unknown>;
 }
 
-const AzureTrustedSigningOptionsConfig = Config.all({
-  publisherName: Config.string("AZURE_TRUSTED_SIGNING_PUBLISHER_NAME"),
-  subjectDistinguishedName: Config.string("AZURE_TRUSTED_SIGNING_SUBJECT_DN"),
-  endpoint: Config.string("AZURE_TRUSTED_SIGNING_ENDPOINT"),
-  certificateProfileName: Config.string("AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME"),
-  codeSigningAccountName: Config.string("AZURE_TRUSTED_SIGNING_ACCOUNT_NAME"),
-  fileDigest: Config.string("AZURE_TRUSTED_SIGNING_FILE_DIGEST").pipe(Config.withDefault("SHA256")),
-  timestampDigest: Config.string("AZURE_TRUSTED_SIGNING_TIMESTAMP_DIGEST").pipe(
-    Config.withDefault("SHA256"),
-  ),
-  timestampRfc3161: Config.string("AZURE_TRUSTED_SIGNING_TIMESTAMP_RFC3161").pipe(
-    Config.withDefault("http://timestamp.acs.microsoft.com"),
-  ),
-});
-
 const BuildEnvConfig = Config.all({
   platform: Config.schema(BuildPlatform, "HARNESSOS_DESKTOP_PLATFORM").pipe(Config.option),
   target: Config.string("HARNESSOS_DESKTOP_TARGET").pipe(Config.option),
   arch: Config.schema(BuildArch, "HARNESSOS_DESKTOP_ARCH").pipe(Config.option),
   version: Config.string("HARNESSOS_DESKTOP_VERSION").pipe(Config.option),
   sourceCommit: Config.string("HARNESSOS_SOURCE_COMMIT").pipe(Config.option),
-  sourceTag: Config.string("HARNESSOS_SOURCE_TAG").pipe(Config.option),
   lockfileSha256: Config.string("HARNESSOS_LOCKFILE_SHA256").pipe(Config.option),
   outputDir: Config.string("HARNESSOS_DESKTOP_OUTPUT_DIR").pipe(Config.option),
   skipBuild: Config.string("HARNESSOS_DESKTOP_SKIP_BUILD").pipe(Config.option),
   keepStage: Config.string("HARNESSOS_DESKTOP_KEEP_STAGE").pipe(Config.option),
-  signed: Config.string("HARNESSOS_DESKTOP_SIGNED").pipe(Config.option),
   verbose: Config.string("HARNESSOS_DESKTOP_VERBOSE").pipe(Config.option),
-  mockUpdates: Config.string("HARNESSOS_DESKTOP_MOCK_UPDATES").pipe(Config.option),
-  mockUpdateServerPort: Config.string("HARNESSOS_DESKTOP_MOCK_UPDATE_SERVER_PORT").pipe(
-    Config.option,
-  ),
 });
 
 const resolveBooleanFlag = (flag: Option.Option<boolean>, envValue: boolean) =>
@@ -313,23 +280,18 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
   const target = mergeOptions(input.target, env.target, PLATFORM_CONFIG[platform].defaultTarget);
   const arch = mergeOptions(input.arch, env.arch, getDefaultArch(platform));
   const version = mergeOptions(input.buildVersion, env.version, undefined);
-  const sourceCommit = mergeOptions(input.sourceCommit, env.sourceCommit, undefined);
-  const sourceTag = mergeOptions(input.sourceTag, env.sourceTag, undefined);
+  const sourceCommit = mergeOptions(
+    input.sourceCommit,
+    env.sourceCommit,
+    resolveGitCommitHash(repoRoot),
+  );
   const lockfileSha256 = mergeOptions(input.lockfileSha256, env.lockfileSha256, undefined);
   const envSkipBuild = yield* resolveBooleanEnv("HARNESSOS_DESKTOP_SKIP_BUILD", env.skipBuild);
   const envKeepStage = yield* resolveBooleanEnv("HARNESSOS_DESKTOP_KEEP_STAGE", env.keepStage);
-  const envSigned = yield* resolveBooleanEnv("HARNESSOS_DESKTOP_SIGNED", env.signed);
   const envVerbose = yield* resolveBooleanEnv("HARNESSOS_DESKTOP_VERBOSE", env.verbose);
-  const envMockUpdates = yield* resolveBooleanEnv(
-    "HARNESSOS_DESKTOP_MOCK_UPDATES",
-    env.mockUpdates,
-  );
-  const mockUpdates = resolveBooleanFlag(input.mockUpdates, envMockUpdates);
-  const defaultOutputDir = mockUpdates
-    ? "release-mock"
-    : sourceCommit
-      ? path.join("release", sourceCommit.toLowerCase(), `${platform}-${arch}`)
-      : "release";
+  const defaultOutputDir = sourceCommit
+    ? path.join("artifacts", sourceCommit.toLowerCase(), `${platform}-${arch}`)
+    : "artifacts";
   const outputDir = path.resolve(
     repoRoot,
     mergeOptions(input.outputDir, env.outputDir, defaultOutputDir),
@@ -337,13 +299,7 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
 
   const skipBuild = resolveBooleanFlag(input.skipBuild, envSkipBuild);
   const keepStage = resolveBooleanFlag(input.keepStage, envKeepStage);
-  const signed = resolveBooleanFlag(input.signed, envSigned);
   const verbose = resolveBooleanFlag(input.verbose, envVerbose);
-  const mockUpdateServerPort = mergeOptions(
-    input.mockUpdateServerPort,
-    env.mockUpdateServerPort,
-    undefined,
-  );
 
   return {
     platform,
@@ -351,15 +307,11 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
     arch,
     version,
     sourceCommit,
-    sourceTag,
     lockfileSha256,
     outputDir,
     skipBuild,
     keepStage,
-    signed,
     verbose,
-    mockUpdates,
-    mockUpdateServerPort,
   } satisfies ResolvedBuildOptions;
 });
 
@@ -543,28 +495,6 @@ function resolveDesktopRuntimeDependencies(
   return resolveCatalogDependencies(runtimeDependencies, catalog, "apps/desktop");
 }
 
-function resolveGitHubPublishConfig():
-  | {
-      readonly provider: "github";
-      readonly owner: string;
-      readonly repo: string;
-      readonly releaseType: "release";
-    }
-  | undefined {
-  const rawRepo = process.env.HARNESSOS_DESKTOP_UPDATE_REPOSITORY?.trim() || "";
-  if (!rawRepo) return undefined;
-
-  const [owner, repo, ...rest] = rawRepo.split("/");
-  if (!owner || !repo || rest.length > 0) return undefined;
-
-  return {
-    provider: "github",
-    owner,
-    repo,
-    releaseType: "release",
-  };
-}
-
 const verifyStagedNodePty = Effect.fn("verifyStagedNodePty")(function* (
   stageAppDir: string,
   verbose: boolean,
@@ -732,14 +662,11 @@ const installFrozenStageDependencies = Effect.fn("installFrozenStageDependencies
   yield* fs.remove(path.join(stageAppDir, HARNESSOS_OA_RUNTIME_PACKAGE_PATH));
 });
 
-const createBuildConfig = Effect.fn("createBuildConfig")(function* (
+function createBuildConfig(
   platform: typeof BuildPlatform.Type,
   target: string,
   productName: string,
-  signed: boolean,
-  mockUpdates: boolean,
-  mockUpdateServerPort: string | undefined,
-) {
+): Record<string, unknown> {
   const buildConfig: Record<string, unknown> = {
     appId: HARNESSOS_PRODUCTION_BUNDLE_ID,
     productName,
@@ -747,55 +674,15 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
     directories: {
       buildResources: "apps/desktop/resources",
     },
-    forceCodeSigning: signed,
+    forceCodeSigning: false,
+    // An unsigned proof has no publication or updater authority. Explicit null
+    // also prevents electron-builder from inferring a provider from ambient credentials.
+    publish: null,
   };
-  const publishConfig = resolveGitHubPublishConfig();
-  if (publishConfig) {
-    buildConfig.publish = [publishConfig];
-  } else if (mockUpdates) {
-    buildConfig.publish = [
-      {
-        provider: "generic",
-        url: `http://localhost:${mockUpdateServerPort ?? 3000}`,
-      },
-    ];
-  } else {
-    // Explicit null prevents electron-builder from inferring a provider from an
-    // unrelated ambient token. A build-only artifact has no update authority.
-    buildConfig.publish = null;
-  }
-  const macUpdateZipIncluded = platform === "mac" && Boolean(publishConfig || mockUpdates);
 
-  const windowsSigningConfig =
-    platform === "win" && signed ? yield* AzureTrustedSigningOptionsConfig : undefined;
-  const windowsAzureSignOptions = windowsSigningConfig
-    ? {
-        publisherName: windowsSigningConfig.publisherName,
-        endpoint: windowsSigningConfig.endpoint,
-        certificateProfileName: windowsSigningConfig.certificateProfileName,
-        codeSigningAccountName: windowsSigningConfig.codeSigningAccountName,
-        fileDigest: windowsSigningConfig.fileDigest,
-        timestampDigest: windowsSigningConfig.timestampDigest,
-        timestampRfc3161: windowsSigningConfig.timestampRfc3161,
-      }
-    : undefined;
-
-  const platformBuildConfigInput = {
-    platform,
-    target,
-    signed,
-    includeMacUpdateZip: macUpdateZipIncluded,
-    ...(windowsAzureSignOptions ? { windowsAzureSignOptions } : {}),
-  } as const;
-
-  Object.assign(buildConfig, createDesktopPlatformBuildConfig(platformBuildConfigInput));
-
-  return {
-    buildConfig,
-    macUpdateZipIncluded,
-    windowsPublisherSubject: windowsSigningConfig?.subjectDistinguishedName ?? null,
-  };
-});
+  Object.assign(buildConfig, createDesktopPlatformBuildConfig({ platform, target }));
+  return buildConfig;
+}
 
 const assertPlatformBuildResources = Effect.fn("assertPlatformBuildResources")(function* (
   platform: typeof BuildPlatform.Type,
@@ -954,19 +841,25 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   });
 
   const appVersion = options.version ?? serverPackageJson.version;
+  if (yield* fs.exists(options.outputDir)) {
+    const existingOutputs = yield* fs.readDirectory(options.outputDir);
+    if (existingOutputs.length > 0) {
+      return yield* new BuildScriptError({
+        message: `Desktop artifact output directory is not empty: ${options.outputDir}. Use a fresh --output-dir; candidate artifacts are immutable.`,
+      });
+    }
+  }
   const hasSourceCommit = options.sourceCommit !== undefined;
   const hasLockfileSha256 = options.lockfileSha256 !== undefined;
-  if (!options.mockUpdates && !hasSourceCommit) {
+  if (!hasSourceCommit) {
     return yield* new BuildScriptError({
-      message:
-        "Desktop candidate builds require --source-commit with the exact full Git SHA. Mock-update smoke builds are exempt.",
+      message: "Desktop candidate builds require --source-commit with the exact full Git SHA.",
     });
   }
-  const exactProvenanceRequested = hasLockfileSha256 || options.sourceTag !== undefined;
-  if (exactProvenanceRequested && (!hasSourceCommit || !hasLockfileSha256 || !options.version)) {
+  if (hasLockfileSha256 && (!hasSourceCommit || !options.version)) {
     return yield* new BuildScriptError({
       message:
-        "Exact release provenance requires an explicit build version, source commit, and lockfile SHA-256 together.",
+        "Exact packaged provenance requires an explicit build version, source commit, and lockfile SHA-256 together.",
     });
   }
 
@@ -978,7 +871,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   }
   if (options.sourceCommit && resolvedCommitHash !== options.sourceCommit.toLowerCase()) {
     return yield* new BuildScriptError({
-      message: `Release source commit mismatch: expected ${options.sourceCommit}, got ${resolvedCommitHash ?? "unknown"}.`,
+      message: `Packaged source commit mismatch: expected ${options.sourceCommit}, got ${resolvedCommitHash ?? "unknown"}.`,
     });
   }
   const commitHash = resolvedCommitHash ?? "unknown";
@@ -990,12 +883,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   }
   if (options.lockfileSha256 && resolvedLockfileSha256 !== options.lockfileSha256.toLowerCase()) {
     return yield* new BuildScriptError({
-      message: `Release lockfile digest mismatch: expected ${options.lockfileSha256}, got ${resolvedLockfileSha256}.`,
-    });
-  }
-  if (options.sourceTag && options.sourceTag !== `v${appVersion}`) {
-    return yield* new BuildScriptError({
-      message: `Release source tag ${options.sourceTag} does not match artifact version ${appVersion}.`,
+      message: `Packaged lockfile digest mismatch: expected ${options.lockfileSha256}, got ${resolvedLockfileSha256}.`,
     });
   }
   if (hasSourceCommit) {
@@ -1005,20 +893,12 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     });
     if (gitStatus.status !== 0) {
       return yield* new BuildScriptError({
-        message: `Unable to inspect release worktree: ${gitStatus.stderr.trim() || "git failed"}.`,
+        message: `Unable to inspect packaged source worktree: ${gitStatus.stderr.trim() || "git failed"}.`,
       });
     }
     if (gitStatus.stdout.trim().length > 0) {
       return yield* new BuildScriptError({
-        message: "Release source worktree is not clean; refusing to stage uncommitted bytes.",
-      });
-    }
-  }
-  if (yield* fs.exists(options.outputDir)) {
-    const existingOutputs = yield* fs.readDirectory(options.outputDir);
-    if (existingOutputs.length > 0) {
-      return yield* new BuildScriptError({
-        message: `Desktop artifact output directory is not empty: ${options.outputDir}. Use a fresh --output-dir; candidate artifacts are immutable.`,
+        message: "Packaged source worktree is not clean; refusing to stage uncommitted bytes.",
       });
     }
   }
@@ -1067,7 +947,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   yield* fs.makeDirectory(path.join(stageAppDir, "apps/desktop"), { recursive: true });
   yield* fs.makeDirectory(path.join(stageAppDir, "apps/server"), { recursive: true });
 
-  yield* Effect.log("[desktop-artifact] Staging release app...");
+  yield* Effect.log("[desktop-artifact] Staging packaged app...");
   yield* fs.copy(distDirs.desktopDist, path.join(stageAppDir, "apps/desktop/dist-electron"));
   yield* fs.copy(distDirs.desktopResources, stageResourcesDir);
   yield* fs.copy(distDirs.serverDist, path.join(stageAppDir, "apps/server/dist"));
@@ -1081,13 +961,10 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   // electron-builder is filtering out stageResourcesDir directory in the AppImage for production
   yield* fs.copy(stageResourcesDir, path.join(stageAppDir, "apps/desktop/prod-resources"));
 
-  const resolvedBuildConfig = yield* createBuildConfig(
+  const buildConfig = createBuildConfig(
     options.platform,
     options.target,
     desktopPackageJson.productName ?? "HarnessOS",
-    options.signed,
-    options.mockUpdates,
-    options.mockUpdateServerPort,
   );
 
   const stagePackageJson: StagePackageJson = {
@@ -1096,13 +973,11 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     buildVersion: appVersion,
     harnessosCommitHash: commitHash,
     harnessosLockfileSha256: resolvedLockfileSha256,
-    harnessosSourceTag: options.sourceTag ?? null,
-    harnessosWindowsPublisherSubject: resolvedBuildConfig.windowsPublisherSubject,
     private: true,
     description: "HarnessOS desktop build",
     author: "HarnessOS",
     main: "apps/desktop/dist-electron/main.js",
-    build: resolvedBuildConfig.buildConfig,
+    build: buildConfig,
     dependencies: {
       ...resolvedServerDependencies,
       ...resolvedDesktopRuntimeDependencies,
@@ -1156,21 +1031,17 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       delete buildEnv[key];
     }
   }
-  if (!options.signed) {
-    buildEnv.CSC_IDENTITY_AUTO_DISCOVERY = "false";
-    delete buildEnv.CSC_LINK;
-    delete buildEnv.CSC_KEY_PASSWORD;
-    delete buildEnv.APPLE_API_KEY;
-    delete buildEnv.APPLE_API_KEY_ID;
-    delete buildEnv.APPLE_API_ISSUER;
-  }
-  if (!resolveGitHubPublishConfig() && !options.mockUpdates) {
-    delete buildEnv.GH_TOKEN;
-    delete buildEnv.GITHUB_TOKEN;
-    delete buildEnv.GITLAB_TOKEN;
-    delete buildEnv.KEYGEN_TOKEN;
-    delete buildEnv.BITBUCKET_TOKEN;
-  }
+  buildEnv.CSC_IDENTITY_AUTO_DISCOVERY = "false";
+  delete buildEnv.CSC_LINK;
+  delete buildEnv.CSC_KEY_PASSWORD;
+  delete buildEnv.APPLE_API_KEY;
+  delete buildEnv.APPLE_API_KEY_ID;
+  delete buildEnv.APPLE_API_ISSUER;
+  delete buildEnv.GH_TOKEN;
+  delete buildEnv.GITHUB_TOKEN;
+  delete buildEnv.GITLAB_TOKEN;
+  delete buildEnv.KEYGEN_TOKEN;
+  delete buildEnv.BITBUCKET_TOKEN;
 
   if (process.platform === "win32") {
     const python = resolvePythonForNodeGyp();
@@ -1220,50 +1091,6 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
       stageDistDir,
       desktopPackageJson.productName ?? "HarnessOS",
     );
-  }
-
-  if (options.platform === "mac" && options.target === "dmg" && options.signed) {
-    yield* Effect.log("[desktop-artifact] Notarizing and validating signed macOS DMG...");
-    const finalizedDmg = yield* Effect.try({
-      try: () =>
-        finalizeSignedMacDmg({
-          stageDistDir,
-          appleApiKey: buildEnv.APPLE_API_KEY,
-          appleApiKeyId: buildEnv.APPLE_API_KEY_ID,
-          appleApiIssuer: buildEnv.APPLE_API_ISSUER,
-          verbose: options.verbose,
-        }),
-      catch: (cause) =>
-        new BuildScriptError({
-          message: "macOS DMG signing/notarization finalization failed.",
-          cause,
-        }),
-    });
-    yield* Effect.log(
-      `[desktop-artifact] Signed and notarized macOS DMG (${finalizedDmg.dmgFileName}).`,
-    );
-  }
-
-  if (options.platform === "mac" && resolvedBuildConfig.macUpdateZipIncluded) {
-    yield* Effect.log("[desktop-artifact] Repacking and validating macOS update zip...");
-    const finalizedZip = yield* Effect.tryPromise({
-      try: () =>
-        finalizeMacUpdateZip({
-          stageDistDir,
-          signed: options.signed,
-          verbose: options.verbose,
-        }),
-      catch: (cause) =>
-        new BuildScriptError({
-          message: "macOS update zip finalization failed.",
-          cause,
-        }),
-    });
-    if (finalizedZip.removedZipBlockmapPath) {
-      yield* Effect.log(
-        `[desktop-artifact] Removed stale macOS zip blockmap (${path.basename(finalizedZip.removedZipBlockmapPath)}).`,
-      );
-    }
   }
 
   const stageEntries = yield* fs.readDirectory(stageDistDir);
@@ -1320,10 +1147,6 @@ const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
     Flag.withDescription("Expected full source commit (env: HARNESSOS_SOURCE_COMMIT)."),
     Flag.optional,
   ),
-  sourceTag: Flag.string("source-tag").pipe(
-    Flag.withDescription("Exact source tag when building a release (env: HARNESSOS_SOURCE_TAG)."),
-    Flag.optional,
-  ),
   lockfileSha256: Flag.string("lockfile-sha256").pipe(
     Flag.withDescription("Expected bun.lock SHA-256 (env: HARNESSOS_LOCKFILE_SHA256)."),
     Flag.optional,
@@ -1342,24 +1165,8 @@ const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
     Flag.withDescription("Keep temporary staging files (env: HARNESSOS_DESKTOP_KEEP_STAGE)."),
     Flag.optional,
   ),
-  signed: Flag.boolean("signed").pipe(
-    Flag.withDescription(
-      "Enable signing/notarization discovery; Windows uses Azure Trusted Signing (env: HARNESSOS_DESKTOP_SIGNED).",
-    ),
-    Flag.optional,
-  ),
   verbose: Flag.boolean("verbose").pipe(
     Flag.withDescription("Stream subprocess stdout (env: HARNESSOS_DESKTOP_VERBOSE)."),
-    Flag.optional,
-  ),
-  mockUpdates: Flag.boolean("mock-updates").pipe(
-    Flag.withDescription("Enable mock updates (env: HARNESSOS_DESKTOP_MOCK_UPDATES)."),
-    Flag.optional,
-  ),
-  mockUpdateServerPort: Flag.string("mock-update-server-port").pipe(
-    Flag.withDescription(
-      "Mock update server port (env: HARNESSOS_DESKTOP_MOCK_UPDATE_SERVER_PORT).",
-    ),
     Flag.optional,
   ),
 }).pipe(
