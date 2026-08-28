@@ -1,0 +1,18 @@
+Campaign-ID: harnessos-foundation
+Evidence-ID: E-010
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/HarnessOS
+Repository-Identity: github.com/piai-lab/HarnessOS
+Candidate-Version: 8e8ea265ac1c7ecf8271154644ad458849fff354
+Command: bun run brand:check && (cd apps/web && bun run typecheck && bun run test:unit -- src/components/EngineIcon.test.tsx && bun run test:browser -- src/components/HarnessOSLogoButton.browser.tsx src/components/SidebarHeaderNavigationControls.browser.tsx && bun run build) && (cd apps/server && bun run typecheck && bun run test -- src/engine/harnessosOAuthCallbackPage.test.ts) && git diff --check
+Exit-Code: 0
+Result: PASS
+Claims: C-006 (focused deterministic assets and Web surfaces; full Claim remains open)
+
+Observed output:
+- The maintainer selected concept A, the four-point constrained loop.
+- `brand:check` verified 31 deterministic Web, PWA, and Desktop exports.
+- Web and Server typechecks passed.
+- Engine icon unit tests passed 2/2.
+- Real Chromium logo/focus/reduced-motion tests passed 6/6.
+- The production Web build completed and the focused OAuth callback tests passed 2/2.

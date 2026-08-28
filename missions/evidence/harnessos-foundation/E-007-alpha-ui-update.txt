@@ -12,7 +12,7 @@ Result: PASS
 Claims: C-006 (supporting source update only; Claim status remains open)
 
 Observed output:
-- The locked fork base and annotated tag remain at 698d305e63a600ff00bb1873e87b2cb825a6496d.
-- The two post-base UI fixes were replayed as independent HarnessOS commits without importing later OmniMind branch ancestry.
+- This receipt records the earlier tree-level replay only. E-009 supersedes its ancestry conclusion.
+- The exact `f310080bfa` source ancestry is now retained through a two-parent HarnessOS merge, and the local annotated fork tag identifies that final alpha boundary.
 - Vitest unit proof passed 65/65 tests across 2 files.
 - Browser proof passed 56/56 tests across 3 files.
