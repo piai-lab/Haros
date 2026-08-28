@@ -1,4 +1,4 @@
-import { type EngineModelDescriptor, ThreadId } from "@harnessos/contracts";
+import { type EngineKind, type EngineModelDescriptor, ThreadId } from "@harnessos/contracts";
 import { describe, expect, it, vi } from "vitest";
 import {
   getComposerEngineState,
@@ -102,6 +102,32 @@ const GROK_RUNTIME_4_5_WITH_REASONING: EngineModelDescriptor = {
 };
 
 describe("getComposerEngineState", () => {
+  it("uses the generic no-traits projection for an Engine without option metadata", () => {
+    const futureEngine = "fixture" as EngineKind;
+    expect(
+      getComposerEngineState({
+        engine: futureEngine,
+        model: "vendor/model",
+        prompt: "",
+        modelOptions: undefined,
+      }),
+    ).toEqual({
+      engine: futureEngine,
+      promptEffort: null,
+      modelOptionsForDispatch: undefined,
+    });
+    expect(
+      renderEngineTraitsPicker({
+        engine: futureEngine,
+        threadId: ThreadId.makeUnsafe("thread-future-engine"),
+        model: "vendor/model",
+        modelOptions: undefined,
+        prompt: "",
+        onPromptChange: vi.fn(),
+      }),
+    ).toBeNull();
+  });
+
   it("dispatches Antigravity effort separately from its base model", () => {
     const state = getComposerEngineState({
       engine: "antigravity",

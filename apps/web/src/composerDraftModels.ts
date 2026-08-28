@@ -25,6 +25,7 @@ import {
   resolveSelectableModel,
 } from "@harnessos/shared/model";
 import type { ComposerThreadDraftState } from "./composerDraftDomain";
+import type { EngineOptions } from "./engineModelOptions";
 import { classifyProviderReasoningEffortSupport } from "./lib/codexReasoningEffort";
 
 const isEngineKind = Schema.is(EngineKind);
@@ -49,7 +50,7 @@ export interface EffectiveComposerModelState {
 function mergeEngineModelOptionsFromSelections(
   ...selections: ReadonlyArray<EngineSelection | null | undefined>
 ): EngineModelOptions | null {
-  const result: Partial<Record<EngineKind, EngineModelOptions[EngineKind]>> = {};
+  const result: Partial<Record<EngineKind, EngineOptions>> = {};
   for (const selection of selections) {
     if (!selection) continue;
     if (selection.options) {
@@ -80,7 +81,7 @@ function deriveEffectiveComposerModelOptions(input: {
     return baseOptions;
   }
 
-  const result: Partial<Record<EngineKind, EngineModelOptions[EngineKind]>> = baseOptions
+  const result: Partial<Record<EngineKind, EngineOptions>> = baseOptions
     ? { ...baseOptions }
     : {};
   for (const [engine, selection] of Object.entries(draftSelections) as Array<
@@ -118,7 +119,7 @@ function isGrokReasoningEffort(value: unknown): value is GrokReasoningEffort {
 export function makeEngineSelection(
   engine: EngineKind,
   model: string,
-  options?: EngineModelOptions[EngineKind],
+  options?: EngineOptions,
   supportsAutoMode?: boolean,
 ): EngineSelection {
   switch (engine) {
@@ -642,7 +643,7 @@ export function legacyMergeEngineSelectionIntoProviderModelOptions(
 function legacyReplaceProviderModelOptions(
   currentModelOptions: EngineModelOptions | null | undefined,
   engine: EngineKind,
-  nextEngineOptions: EngineModelOptions[EngineKind] | null | undefined,
+  nextEngineOptions: EngineOptions | null | undefined,
 ): EngineModelOptions | null {
   const { [engine]: _discardedProviderModelOptions, ...otherProviderModelOptions } =
     currentModelOptions ?? {};

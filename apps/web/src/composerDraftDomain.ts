@@ -21,6 +21,7 @@ import {
 } from "@harnessos/contracts";
 import * as Equal from "effect/Equal";
 import * as Schema from "effect/Schema";
+import type { EngineOptions } from "./engineModelOptions";
 
 import { normalizeAssistantSelectionAttachment } from "./lib/assistantSelections";
 import { type BrowserAnnotationDraft, normalizeBrowserAnnotations } from "./lib/browserAnnotations";
@@ -354,7 +355,7 @@ export interface ComposerDraftStoreState {
   setEngineModelOptions: (
     threadId: ThreadId,
     engine: EngineKind,
-    nextEngineOptions: EngineModelOptions[EngineKind] | null | undefined,
+    nextEngineOptions: EngineOptions | null | undefined,
     options?: {
       model?: string | null;
       persistSticky?: boolean;

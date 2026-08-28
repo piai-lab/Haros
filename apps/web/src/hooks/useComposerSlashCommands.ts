@@ -7,12 +7,12 @@ import {
   type EngineInteractionMode,
   type EngineKind,
   type EngineNativeCommandDescriptor,
-  type EngineModelOptions,
   type RuntimeMode,
   THREAD_GOAL_MAX_CHARS,
   type ThreadId,
   WsRpcError,
 } from "@harnessos/contracts";
+import type { EngineOptions } from "../engineModelOptions";
 import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { deriveAssociatedWorktreeMetadata } from "@harnessos/shared/threadWorkspace";
 import { Schema } from "effect";
@@ -141,7 +141,7 @@ export function useComposerSlashCommands(input: {
   engineNativeCommands: readonly EngineNativeCommandDescriptor[];
   engineCommandDiscoveryCwd: string | null;
   selectedEngine: EngineKind;
-  currentEngineModelOptions: EngineModelOptions[EngineKind] | undefined;
+  currentEngineModelOptions: EngineOptions | undefined;
   selectedEngineSelection: EngineSelection | null;
   environmentMode: string | null;
   runtimeMode: RuntimeMode;
@@ -156,7 +156,7 @@ export function useComposerSlashCommands(input: {
   setComposerDraftEngineModelOptions: (
     threadId: ThreadId,
     engine: EngineKind,
-    nextEngineOptions: EngineModelOptions[EngineKind],
+    nextEngineOptions: EngineOptions,
     options?: { model?: string | null; persistSticky?: boolean },
   ) => void;
   editorActions: {

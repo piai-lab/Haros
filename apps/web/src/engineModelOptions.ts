@@ -31,7 +31,7 @@ import {
 import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { normalizeCursorModelVariantBaseId } from "./cursorModelVariants";
 
-export type EngineOptions = EngineModelOptions[EngineKind];
+export type EngineOptions = EngineModelOptions[keyof EngineModelOptions];
 
 export interface EngineModelOption {
   slug: string;

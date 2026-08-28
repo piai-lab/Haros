@@ -24,6 +24,7 @@ import {
   trimOrNull,
 } from "@harnessos/shared/model";
 import type { ReactNode } from "react";
+import type { EngineOptions } from "../../engineModelOptions";
 import { classifyCodexReasoningEffortSupport } from "../../lib/codexReasoningEffort";
 import { TraitsMenuContent, TraitsPicker } from "./TraitsPicker";
 import { getComposerTraitSelection, hasVisibleComposerTraitControls } from "./composerTraits";
@@ -40,7 +41,7 @@ export type ComposerEngineStateInput = {
 export type ComposerEngineState = {
   engine: EngineKind;
   promptEffort: string | null;
-  modelOptionsForDispatch: EngineModelOptions[EngineKind] | undefined;
+  modelOptionsForDispatch: EngineOptions | undefined;
   composerFrameClassName?: string;
   composerSurfaceClassName?: string;
   modelPickerIconClassName?: string;
@@ -52,7 +53,7 @@ type EngineTraitRenderInput = {
   runtimeModel?: EngineModelDescriptor | undefined;
   runtimeModels?: ReadonlyArray<EngineModelDescriptor> | null | undefined;
   runtimeAgents?: ReadonlyArray<EngineAgentDescriptor> | null | undefined;
-  modelOptions: EngineModelOptions[EngineKind] | undefined;
+  modelOptions: EngineOptions | undefined;
   prompt: string;
   includeFastMode?: boolean;
   onPromptChange: (prompt: string) => void;
@@ -63,12 +64,6 @@ type EngineTraitPickerRenderInput = EngineTraitRenderInput & {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   shortcutLabel?: string | null;
-};
-
-type EngineRegistryEntry = {
-  getState: (input: ComposerEngineStateInput) => ComposerEngineState;
-  renderTraitsMenuContent: (input: EngineTraitRenderInput) => ReactNode;
-  renderTraitsPicker: (input: EngineTraitPickerRenderInput) => ReactNode;
 };
 
 function renderTraitsMenuContentForEngine(
@@ -120,7 +115,7 @@ function getEngineStateFromCapabilities(input: ComposerEngineStateInput): Compos
   const caps = getRuntimeAwareModelCapabilities({ engine, model, runtimeModel });
 
   let rawEffort: string | null = null;
-  let normalizedOptions: EngineModelOptions[EngineKind] | undefined;
+  let normalizedOptions: EngineOptions | undefined;
 
   switch (engine) {
     case "codex": {
@@ -213,6 +208,8 @@ function getEngineStateFromCapabilities(input: ComposerEngineStateInput): Compos
       normalizedOptions = normalizePiModelOptions(engineOptions);
       break;
     }
+    default:
+      break;
   }
 
   const draftEffort = trimOrNull(rawEffort);
@@ -249,61 +246,8 @@ function getEngineStateFromCapabilities(input: ComposerEngineStateInput): Compos
   };
 }
 
-const composerEngineRegistry: Record<EngineKind, EngineRegistryEntry> = {
-  oa: {
-    getState: (input) => getEngineStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("oa", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForEngine("oa", input),
-  },
-  codex: {
-    getState: (input) => getEngineStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("codex", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForEngine("codex", input),
-  },
-  claude: {
-    getState: (input) => getEngineStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("claude", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForEngine("claude", input),
-  },
-  cursor: {
-    getState: (input) => getEngineStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("cursor", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForEngine("cursor", input),
-  },
-  antigravity: {
-    getState: (input) => getEngineStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("antigravity", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForEngine("antigravity", input),
-  },
-  grok: {
-    getState: (input) => getEngineStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("grok", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForEngine("grok", input),
-  },
-  droid: {
-    getState: (input) => getEngineStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("droid", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForEngine("droid", input),
-  },
-  kilo: {
-    getState: (input) => getEngineStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("kilo", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForEngine("kilo", input),
-  },
-  opencode: {
-    getState: (input) => getEngineStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("opencode", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForEngine("opencode", input),
-  },
-  pi: {
-    getState: (input) => getEngineStateFromCapabilities(input),
-    renderTraitsMenuContent: (input) => renderTraitsMenuContentForEngine("pi", input),
-    renderTraitsPicker: (input) => renderTraitsPickerForEngine("pi", input),
-  },
-};
-
 export function getComposerEngineState(input: ComposerEngineStateInput): ComposerEngineState {
-  return composerEngineRegistry[input.engine].getState(input);
+  return getEngineStateFromCapabilities(input);
 }
 
 export function renderEngineTraitsMenuContent(input: {
@@ -313,7 +257,7 @@ export function renderEngineTraitsMenuContent(input: {
   runtimeModel?: EngineModelDescriptor | undefined;
   runtimeModels?: ReadonlyArray<EngineModelDescriptor> | null | undefined;
   runtimeAgents?: ReadonlyArray<EngineAgentDescriptor> | null | undefined;
-  modelOptions: EngineModelOptions[EngineKind] | undefined;
+  modelOptions: EngineOptions | undefined;
   prompt: string;
   includeFastMode?: boolean;
   onPromptChange: (prompt: string) => void;
@@ -336,7 +280,7 @@ export function renderEngineTraitsMenuContent(input: {
   ) {
     return null;
   }
-  return composerEngineRegistry[input.engine].renderTraitsMenuContent(input);
+  return renderTraitsMenuContentForEngine(input.engine, input);
 }
 
 export function renderEngineTraitsPicker(input: {
@@ -346,7 +290,7 @@ export function renderEngineTraitsPicker(input: {
   runtimeModel?: EngineModelDescriptor | undefined;
   runtimeModels?: ReadonlyArray<EngineModelDescriptor> | null | undefined;
   runtimeAgents?: ReadonlyArray<EngineAgentDescriptor> | null | undefined;
-  modelOptions: EngineModelOptions[EngineKind] | undefined;
+  modelOptions: EngineOptions | undefined;
   prompt: string;
   includeFastMode?: boolean;
   open?: boolean;
@@ -371,5 +315,5 @@ export function renderEngineTraitsPicker(input: {
   ) {
     return null;
   }
-  return composerEngineRegistry[input.engine].renderTraitsPicker(input);
+  return renderTraitsPickerForEngine(input.engine, input);
 }

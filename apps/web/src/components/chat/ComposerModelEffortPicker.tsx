@@ -7,7 +7,6 @@ import {
   type EngineAgentDescriptor,
   type EngineKind,
   type EngineModelDescriptor,
-  type EngineModelOptions,
   type ThreadId,
 } from "@harnessos/contracts";
 import { useState } from "react";
@@ -16,7 +15,7 @@ import { useI18n } from "~/i18n";
 import { ChevronDownIcon, FastModeIcon, RefreshCwIcon, SettingsIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import type { EngineModelCatalogState } from "../../hooks/useEngineModelCatalog";
-import type { EngineModelOption } from "../../engineModelOptions";
+import type { EngineModelOption, EngineOptions } from "../../engineModelOptions";
 import { Button } from "../ui/button";
 import { Menu, MenuItem, MenuSeparator, MenuSub, MenuSubTrigger, MenuTrigger } from "../ui/menu";
 import { ShortcutKbd } from "../ui/shortcut-kbd";
@@ -50,7 +49,7 @@ type ComposerModelEffortPickerProps = {
   runtimeModel?: EngineModelDescriptor | undefined;
   runtimeModels?: ReadonlyArray<EngineModelDescriptor> | null | undefined;
   runtimeAgents?: ReadonlyArray<EngineAgentDescriptor> | null | undefined;
-  modelOptions: EngineModelOptions[EngineKind] | undefined;
+  modelOptions: EngineOptions | undefined;
   prompt: string;
   onPromptChange: (prompt: string) => void;
   open?: boolean;
