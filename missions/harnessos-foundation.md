@@ -6,8 +6,8 @@
 - Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`, Git worktree for HarnessOS.
 - Repository identity: `github.com/piai-lab/HarnessOS`
 - Campaign origin revision: `698d305e63a600ff00bb1873e87b2cb825a6496d`.
-- Last reconciled revision: `8e11cde58663594fa7385d895c64f592ff071686`.
-- Worktree state: clean.
+- Last reconciled revision: `712c829b3e768b9e6e5178997f8ec30e319fe83d`.
+- Worktree state: dirty only in `missions/harnessos-foundation.md` and `missions/evidence/harnessos-foundation/E-007-alpha-ui-update.txt` for this Campaign reconciliation.
 - Last reconciled at: `2026-08-28T11:30:19+08:00`.
 - Active branch/worktree: `codex/harnessos-foundation` at `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`.
 - Applicable instructions: user-locked HarnessOS implementation plan; root `AGENTS.md`; repository authority routes in `README.md` and `architecture/README.md`.
@@ -61,6 +61,7 @@
 | E-004 | core | source | K-003, K-004, K-007, C-003–C-006 | `file:architecture/execution.md#核心裁决` | revision `698d305e63a600ff00bb1873e87b2cb825a6496d` | `sed -n '1,409p' architecture/execution.md` | current until execution-owner rewrite |
 | E-005 | core | source | K-004, C-007 | `file:source-adoptions.json#L1-L311` | revision `698d305e63a600ff00bb1873e87b2cb825a6496d` | `node -e "JSON.parse(require('fs').readFileSync('source-adoptions.json','utf8')); console.log('valid')"` | current until adoption rewrite or source revision change |
 | E-006 | task | focused | C-002 partial package-scope cut | `file:missions/evidence/harnessos-foundation/E-006-package-scope.txt#L1-L18` | revision `5cd76f66ca5439b5d48eade3473453ae193d7767`; receipt sha256 `b32c9196fa51c132af524b134f696305d08ceb25ec6bb05df294caaff6d12db4` | `git rev-parse HEAD && test "$(rg -l -F '@omnimind/' --glob '!node_modules/**' --glob '!.git/**')" = 'bun.lock' && bun install --frozen-lockfile && bun run build:contracts && bun run typecheck && bun test test/workspace-package-identity.test.mjs scripts/lib/release-workspace-manifests.test.ts scripts/lib/release-legal-metadata.test.ts scripts/lib/packaged-legal-closure.test.ts` | current until workspace manifests, imports or vendored OA runtime identity change |
+| E-007 | task | focused | C-006 supporting post-base UI update requested by maintainer | `file:missions/evidence/harnessos-foundation/E-007-alpha-ui-update.txt#L1-L17` | revision `712c829b3e768b9e6e5178997f8ec30e319fe83d`; receipt sha256 `af23a6d2f387e6045ab276f9f2278aa94668d39839c95092acf42390568fa41e` | `cd apps/web && bun run test:unit -- src/components/ModelServiceIcon.test.tsx src/components/chat/MessagesTimeline.test.tsx && bun run test:browser -- src/components/ModelIdentityIcon.browser.tsx src/components/settings/ModelsSettingsPanel.browser.tsx src/components/chat/MessagesTimeline.turnProcess.browser.tsx` | current until the three affected UI owners change |
 
 ## 验收矩阵
 
@@ -79,11 +80,11 @@
 
 ## 当前状态
 
-- Current checkpoint: workspace manifests, imports, task filters and tests use `@harnessos/*`; the clean-clone typecheck graph now builds the declaration package it consumes. C-002 remains open because app/env/storage/MCP identities and the vendored runtime artifact have not yet been cut.
+- Current checkpoint: workspace manifests, imports, task filters and tests use `@harnessos/*`; the clean-clone typecheck graph now builds the declaration package it consumes. The two maintainer-requested post-base UI fixes are independently replayed and browser-verified. C-002 remains open because app/env/storage/MCP identities and the vendored runtime artifact have not yet been cut.
 - Active Claim: C-002.
 - Next safe action: cut canonical app, bundle, URI, environment and storage identities without adding migration or compatibility reads; regenerate the vendored runtime only in the later OA artifact cut.
 - Blockers: none.
-- Last material change: commit `5cd76f66ca5439b5d48eade3473453ae193d7767` moved all workspace packages and consumers to `@harnessos/*`, normalized the lockfile and made clean-clone server typecheck depend on the consumed Ask declarations; E-006 records the exact focused proof and its single known vendored-runtime residue.
+- Last material change: source commits `54a87840e6` and `f310080bfa` were replayed as HarnessOS commits `40ff9387` and `712c829b`; E-007 binds the source mapping to 65 unit and 56 browser passing tests without changing the locked fork base.
 
 ## 已知问题与方向
 
