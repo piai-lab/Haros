@@ -390,7 +390,13 @@ describe("MessagesTimeline turn process approval cases", () => {
           1,
         );
         expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth);
-        expect(avatarStyle.backgroundColor).toBe("rgb(77, 107, 254)");
+        expect(avatarStyle.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+        expect(avatarStyle.borderTopWidth).toBe("0px");
+        expect(avatarStyle.boxShadow).toBe("none");
+        expect(avatarStyle.borderTopLeftRadius).toBe("25%");
+        expect(avatarStyle.overflow).toBe("hidden");
+        const brandIcon = avatar.querySelector<HTMLElement>("[data-model-service-icon='brand']");
+        expect(brandIcon?.getBoundingClientRect().width).toBeCloseTo(expectedAvatar, 1);
       }
 
       expect(document.querySelectorAll("[data-assistant-turn-identity='visible']")).toHaveLength(1);

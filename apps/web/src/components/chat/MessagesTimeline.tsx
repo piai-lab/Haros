@@ -447,7 +447,7 @@ function AssistantTurnAvatar({
     <div
       aria-hidden="true"
       data-assistant-turn-avatar={selection ? "model" : "generic"}
-      className="flex size-[30px] shrink-0 items-center justify-center rounded-lg border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-secondary)] text-foreground/80 shadow-[0_1px_2px_rgba(15,23,42,0.08)] max-[560px]:size-7 max-[560px]:rounded-[7.5px]"
+      className="assistant-turn-avatar-surface flex size-[30px] shrink-0 items-center justify-center overflow-hidden rounded-[25%] text-foreground/80 max-[560px]:size-7"
     >
       {selection ? (
         <ModelIdentityIcon
@@ -456,7 +456,7 @@ function AssistantTurnAvatar({
           {...(provenance?.modelPresentationIdentity
             ? { identity: provenance.modelPresentationIdentity }
             : {})}
-          className="size-5 max-[560px]:size-[18px]"
+          className="size-full"
         />
       ) : (
         <BrainIcon className="size-[18px] max-[560px]:size-4" />
