@@ -50,7 +50,6 @@ import {
   resolveCommittedEngineModel,
   resolveComposerStripWorkLogEntries,
   resolveCycledModelSlug,
-  resolveEnvironmentPanelVisible,
   resolveGitRepoUiState,
   resolveSettledThreadBranchMismatch,
   resolveProjectScriptTerminalTarget,
@@ -75,6 +74,7 @@ import {
   shouldRenderTerminalWorkspace,
   worktreeSetupHasError,
 } from "./ChatView.logic";
+import { resolveEnvironmentPanelVisible } from "../lib/responsiveWorkbench";
 import { resolvePendingDirectTurnRecoveryMutation } from "../composerDraftDomain";
 
 describe("settled thread branch mismatch", () => {

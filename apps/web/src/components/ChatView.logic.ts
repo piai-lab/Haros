@@ -649,13 +649,6 @@ export function resolveCycledModelSlug(input: {
   return ordered[nextIndex] ?? null;
 }
 
-export function resolveEnvironmentPanelVisible(input: {
-  environmentEnabled: boolean;
-  environmentPanelOpen: boolean;
-}): boolean {
-  return input.environmentEnabled && input.environmentPanelOpen;
-}
-
 // Normal project toolbars stay stable while repository discovery is pending. Studio folders are
 // casual context, however, so they must opt into Git UI only after a positive repository result.
 export function resolveGitRepoUiState(input: {

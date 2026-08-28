@@ -202,7 +202,6 @@ import {
   resolveCommittedEngineModel,
   resolveComposerStripWorkLogEntries,
   resolveCycledModelSlug,
-  resolveEnvironmentPanelVisible,
   resolveGitRepoUiState,
   resolveSettledThreadBranchMismatch,
   resolveProjectScriptTerminalTarget,
@@ -379,12 +378,6 @@ import { useComposerFocusRequestStore } from "../composerFocusRequestStore";
 import { useWorkflowRunUiStore, useWorkflowRunUiThreadState } from "../workflowRunUiStore";
 import { appendComposerPromptText } from "../lib/chatReferences";
 import {
-  PLAN_SIDEBAR_WIDTH_PX,
-  resolveEnvironmentAutoSuppressed,
-  resolveEnvironmentPresentation,
-  resolvePlanSidebarPresentation,
-} from "../lib/responsiveWorkbench";
-import {
   appendOriginalComposerPromptBlocks,
   appendTerminalContextsToPrompt,
   IMAGE_ONLY_BOOTSTRAP_PROMPT,
@@ -443,6 +436,7 @@ import { ComposerPromptEditor, type ComposerPromptEditorHandle } from "./Compose
 import { PullRequestThreadDialog } from "./PullRequestThreadDialog";
 import { ChatHeader } from "./chat/ChatHeader";
 import { EnvironmentPanel, type EnvironmentPanelProps } from "./chat/environment/EnvironmentPanel";
+import { useWorkbenchEnvironmentController } from "./chat/environment/useWorkbenchEnvironmentController";
 import { usePinnedMessageActions } from "./chat/environment/usePinnedMessageActions";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
@@ -4716,154 +4710,16 @@ export default function ChatView({
   // Environment panel + header controls. "Temporary" is purely a sidebar badge +
   // auto-delete-on-leave concern, never a stripped-down chat UI.
   const environmentEnabled = !isEditorRail;
-  // Environment is an on-demand inspector, not startup chrome. Opening it is intentionally
-  // session-only: every App launch starts closed, regardless of an older stored setting.
-  const [environmentPanelPreferenceOpen, setEnvironmentPanelPreferenceOpen] = useState(false);
-  const [environmentPanelAutoSuppressed, setEnvironmentPanelAutoSuppressed] = useState(false);
-  const [environmentPanelTemporaryReveal, setEnvironmentPanelTemporaryReveal] = useState(false);
-  const responsiveContentRootRef = useRef<HTMLDivElement | null>(null);
-  const environmentObservedWidthRef = useRef<number | null>(null);
-  const environmentTemporaryFocusReturnRef = useRef<HTMLElement | null>(null);
-  const [planSidebarPresentation, setPlanSidebarPresentation] = useState(() =>
-    resolvePlanSidebarPresentation({
-      availableWidth: typeof window === "undefined" ? Number.POSITIVE_INFINITY : window.innerWidth,
-    }),
-  );
-  useLayoutEffect(() => {
-    const root = responsiveContentRootRef.current;
-    if (!root) return;
-    let frameId: number | null = null;
-    let nextWidth = root.getBoundingClientRect().width;
-    const update = () => {
-      frameId = null;
-      const previousWidth = environmentObservedWidthRef.current;
-      environmentObservedWidthRef.current = nextWidth;
-      if (planSidebarOpen) {
-        setPlanSidebarPresentation((previousPresentation) => {
-          const nextPresentation = resolvePlanSidebarPresentation({
-            availableWidth: nextWidth,
-          });
-          return nextPresentation === previousPresentation
-            ? previousPresentation
-            : nextPresentation;
-        });
-      } else {
-        setPlanSidebarPresentation((previousPresentation) =>
-          previousPresentation === "side-by-side" ? previousPresentation : "side-by-side",
-        );
-      }
-      if (previousWidth !== null && Math.abs(previousWidth - nextWidth) >= 1) {
-        setEnvironmentPanelTemporaryReveal(false);
-      }
-      const environmentAvailableWidth = Math.max(
-        0,
-        nextWidth - (planSidebarOpen ? PLAN_SIDEBAR_WIDTH_PX : 0),
-      );
-      if (environmentEnabled) {
-        setEnvironmentPanelAutoSuppressed((previouslySuppressed) =>
-          resolveEnvironmentAutoSuppressed({
-            availableWidth: environmentAvailableWidth,
-            previouslySuppressed,
-          }),
-        );
-      }
-    };
-    const observer = new ResizeObserver((entries) => {
-      nextWidth = entries[0]?.contentRect.width ?? root.getBoundingClientRect().width;
-      if (frameId !== null) return;
-      frameId = window.requestAnimationFrame(update);
-    });
-    observer.observe(root);
-    update();
-    return () => {
-      observer.disconnect();
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
-      environmentObservedWidthRef.current = null;
-    };
-  }, [environmentEnabled, planSidebarOpen]);
-  const setEnvironmentPanelOpenPreference = useCallback(
-    (open: boolean) => {
-      if (environmentPanelAutoSuppressed) {
-        if (open && document.activeElement instanceof HTMLElement) {
-          environmentTemporaryFocusReturnRef.current = document.activeElement;
-        }
-        setEnvironmentPanelTemporaryReveal(open);
-        return;
-      }
-      setEnvironmentPanelTemporaryReveal(false);
-      setEnvironmentPanelPreferenceOpen(open);
-    },
-    [environmentPanelAutoSuppressed],
-  );
-  const focusEnvironmentToggleAfterClose = useCallback(
-    (environmentPanel: HTMLElement | null, preferredTarget: HTMLElement | null = null) => {
-      const environmentToggle =
-        environmentPanel
-          ?.closest("[data-chat-primary-surface]")
-          ?.querySelector<HTMLButtonElement>("[data-environment-toggle]") ?? null;
-      const focusTarget =
-        preferredTarget?.isConnected &&
-        preferredTarget.getClientRects().length > 0 &&
-        !preferredTarget.closest("[inert], [aria-hidden='true']")
-          ? preferredTarget
-          : environmentToggle;
-      if (!focusTarget) return;
-      window.requestAnimationFrame(() => {
-        if (
-          !focusTarget.isConnected ||
-          focusTarget.getClientRects().length === 0 ||
-          focusTarget.closest("[inert], [aria-hidden='true']")
-        ) {
-          return;
-        }
-        focusTarget.focus({ preventScroll: true });
-      });
-    },
-    [],
-  );
-  const closeEnvironmentPanelAfterAction = useCallback(() => {
-    const activeElement = document.activeElement;
-    const environmentPanel =
-      activeElement instanceof HTMLElement
-        ? activeElement.closest<HTMLElement>("[data-environment-panel]")
-        : null;
-    setEnvironmentPanelTemporaryReveal(false);
-    setEnvironmentPanelPreferenceOpen(false);
-    focusEnvironmentToggleAfterClose(environmentPanel);
-  }, [focusEnvironmentToggleAfterClose]);
-  const dismissEnvironmentTemporaryReveal = useCallback((_environmentPanel: HTMLElement | null) => {
-    setEnvironmentPanelTemporaryReveal(false);
-  }, []);
-  const environmentPanelOpen = environmentPanelPreferenceOpen;
-  const environmentPanelPresentation = resolveEnvironmentPresentation({
-    manualOpen: environmentPanelOpen,
-    autoSuppressed: environmentPanelAutoSuppressed,
-    temporaryReveal: environmentPanelTemporaryReveal,
-  });
-  const environmentPanelVisible = resolveEnvironmentPanelVisible({
-    environmentEnabled,
-    environmentPanelOpen: environmentPanelPresentation !== "hidden",
-  });
-  const planSidebarExclusive = planSidebarOpen && planSidebarPresentation === "exclusive";
-  const previousEnvironmentPanelPresentationRef = useRef(environmentPanelPresentation);
-  useLayoutEffect(() => {
-    const previousPresentation = previousEnvironmentPanelPresentationRef.current;
-    previousEnvironmentPanelPresentationRef.current = environmentPanelPresentation;
-    if (previousPresentation === "hidden" || environmentPanelPresentation !== "hidden") return;
-    const activeElement = document.activeElement;
-    const environmentPanel = responsiveContentRootRef.current?.querySelector<HTMLElement>(
-      "[data-environment-panel]",
-    );
-    const preferredTarget = environmentTemporaryFocusReturnRef.current;
-    environmentTemporaryFocusReturnRef.current = null;
-    if (
-      environmentPanel &&
-      (preferredTarget ||
-        (activeElement instanceof HTMLElement && environmentPanel.contains(activeElement)))
-    ) {
-      focusEnvironmentToggleAfterClose(environmentPanel, preferredTarget);
-    }
-  }, [environmentPanelPresentation, focusEnvironmentToggleAfterClose]);
+  const {
+    closeAfterAction: closeEnvironmentPanelAfterAction,
+    dismissTemporaryReveal: dismissEnvironmentTemporaryReveal,
+    planSidebarExclusive,
+    planSidebarPresentation,
+    presentation: environmentPanelPresentation,
+    responsiveContentRootRef,
+    setOpenPreference: setEnvironmentPanelOpenPreference,
+    visible: environmentPanelVisible,
+  } = useWorkbenchEnvironmentController({ environmentEnabled, planSidebarOpen });
   const githubRepositoryQuery = useQuery(
     gitGithubRepositoryQueryOptions(gitBranchSourceCwd, environmentPanelVisible),
   );

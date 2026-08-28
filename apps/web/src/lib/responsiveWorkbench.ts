@@ -89,6 +89,13 @@ export function resolveEnvironmentPresentation(input: {
   return input.manualOpen ? "docked" : "hidden";
 }
 
+export function resolveEnvironmentPanelVisible(input: {
+  readonly environmentEnabled: boolean;
+  readonly environmentPanelOpen: boolean;
+}): boolean {
+  return input.environmentEnabled && input.environmentPanelOpen;
+}
+
 export function resolveWorkbenchAutoExclusive(input: {
   readonly availableWidth: number;
   readonly planSidebarOpen: boolean;
