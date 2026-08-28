@@ -11,8 +11,8 @@ import { closeSync, constants, fchmodSync, fstatSync, lstatSync, openSync } from
 import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 
-import type { ThreadId } from "@omnimind/contracts";
-import { SCRATCH_WORKSPACES_DIRNAME } from "@omnimind/shared/threadWorkspace";
+import type { ThreadId } from "@harnessos/contracts";
+import { SCRATCH_WORKSPACES_DIRNAME } from "@harnessos/shared/threadWorkspace";
 import { ensurePrivateDirectorySync } from "./privatePathPermissions";
 
 function scratchOwnerSegment(homeDirectory = homedir()): string {

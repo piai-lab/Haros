@@ -11,8 +11,8 @@ import {
   type CodexGeneratedImageArtifact,
   type ProviderRuntimeEvent,
   type ThreadId,
-} from "@omnimind/contracts";
-import { isSupportedLocalImagePath as isSupportedLocalImagePathShared } from "@omnimind/shared/localPreviewFiles";
+} from "@harnessos/contracts";
+import { isSupportedLocalImagePath as isSupportedLocalImagePathShared } from "@harnessos/shared/localPreviewFiles";
 
 import {
   resolveActiveCodexHomeWritePath,

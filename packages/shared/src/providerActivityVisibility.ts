@@ -1,7 +1,7 @@
 import {
   STUDIO_OUTPUTS_ACTIVITY_KIND,
   type OrchestrationThreadActivity,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 function isPlanBoundaryToolActivity(activity: OrchestrationThreadActivity): boolean {
   if (activity.kind !== "tool.updated" && activity.kind !== "tool.completed") {

@@ -21,8 +21,8 @@ import {
   type ProjectStopDevServerInput,
   type ProjectStopDevServerResult,
   type ServerLocalServerProcess,
-} from "@omnimind/contracts";
-import { localServerMatchesRun } from "@omnimind/shared/localServers";
+} from "@harnessos/contracts";
+import { localServerMatchesRun } from "@harnessos/shared/localServers";
 import { Effect, Layer, PubSub, Ref, ServiceMap, Stream } from "effect";
 
 import { TerminalManager, type TerminalError } from "./terminal/Services/Manager";

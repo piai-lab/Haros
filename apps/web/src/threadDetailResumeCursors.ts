@@ -3,7 +3,7 @@
 // Layer: Web subscription utility
 // Exports: Cursor read/advance/clear helpers and the subscribe-input builder.
 
-import type { OrchestrationSubscribeThreadInput, ThreadId } from "@omnimind/contracts";
+import type { OrchestrationSubscribeThreadInput, ThreadId } from "@harnessos/contracts";
 
 // Invariant: a cursor exists for a thread only while the store's cached detail
 // is coherent up to that sequence. The store projection layer enforces this

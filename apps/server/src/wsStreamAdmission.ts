@@ -1,6 +1,6 @@
 import * as Crypto from "node:crypto";
 
-import { WS_STREAM_LIMITS, WsRpcError } from "@omnimind/contracts";
+import { WS_STREAM_LIMITS, WsRpcError } from "@harnessos/contracts";
 import { Deferred, Effect, Ref, Stream } from "effect";
 
 export const MAX_STREAMS_PER_RPC_CLIENT = WS_STREAM_LIMITS.totalPerClient;

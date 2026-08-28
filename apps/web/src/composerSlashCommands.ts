@@ -3,15 +3,15 @@ import {
   type GitBranch,
   type ProviderInteractionMode,
   type ProviderKind,
-} from "@omnimind/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
+} from "@harnessos/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
 import { DEFAULT_PROVIDER_ORDER } from "./providerOrdering";
 import {
   BUILT_IN_COMPOSER_SLASH_COMMANDS,
   isBuiltInComposerSlashCommandName,
   normalizeComposerSlashCommandName,
   type BuiltInComposerSlashCommand,
-} from "@omnimind/shared/composerSlashCommands";
+} from "@harnessos/shared/composerSlashCommands";
 
 export { BUILT_IN_COMPOSER_SLASH_COMMANDS };
 

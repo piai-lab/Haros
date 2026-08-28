@@ -6,7 +6,7 @@
 // Why: Reuses the composer's trait resolution so a thread's model reads exactly
 //      the same wherever it is displayed.
 
-import type { ModelSelection, ProviderKind } from "@omnimind/contracts";
+import type { ModelSelection, ProviderKind } from "@harnessos/contracts";
 
 import {
   getComposerTraitSelection,

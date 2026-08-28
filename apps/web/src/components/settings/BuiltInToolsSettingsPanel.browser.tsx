@@ -11,7 +11,7 @@ import {
   type BuiltInToolGroupsResult,
   type NativeApi,
   type ServerSettingsView,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page } from "vitest/browser";

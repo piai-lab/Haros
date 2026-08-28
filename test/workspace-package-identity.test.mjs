@@ -8,13 +8,13 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const EXPECTED_WORKSPACE_PACKAGES = new Map([
-  ["package.json", "@omnimind/monorepo"],
-  ["apps/desktop/package.json", "@omnimind/desktop"],
-  ["apps/server/package.json", "@omnimind/server"],
-  ["apps/web/package.json", "@omnimind/web"],
-  ["packages/contracts/package.json", "@omnimind/contracts"],
-  ["packages/shared/package.json", "@omnimind/shared"],
-  ["scripts/package.json", "@omnimind/scripts"],
+  ["package.json", "@harnessos/monorepo"],
+  ["apps/desktop/package.json", "@harnessos/desktop"],
+  ["apps/server/package.json", "@harnessos/server"],
+  ["apps/web/package.json", "@harnessos/web"],
+  ["packages/contracts/package.json", "@harnessos/contracts"],
+  ["packages/shared/package.json", "@harnessos/shared"],
+  ["scripts/package.json", "@harnessos/scripts"],
 ]);
 
 async function readAdoptedDonorIdentity() {
@@ -27,7 +27,7 @@ async function readAdoptedDonorIdentity() {
   return repositoryName;
 }
 
-test("private workspace packages use the OmniMind namespace without aliases", async () => {
+test("private workspace packages use the HarnessOS namespace without aliases", async () => {
   for (const [relativePath, expectedName] of EXPECTED_WORKSPACE_PACKAGES) {
     const manifest = JSON.parse(await readFile(path.join(root, relativePath), "utf8"));
     assert.equal(manifest.name, expectedName, relativePath);

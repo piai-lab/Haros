@@ -3,7 +3,7 @@ import type {
   OmniMindAgentPromptMutationInput,
   OmniMindAgentPromptMutationResult,
   OmniMindAgentPromptSnapshot,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import type { Effect } from "effect";
 import { ServiceMap } from "effect";
 

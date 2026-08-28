@@ -12,7 +12,7 @@ import {
   type OrchestrationReadModel,
   type OrchestrationShellStreamEvent,
   type ThreadMarker,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {

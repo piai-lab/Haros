@@ -2,7 +2,7 @@ import {
   BUILT_IN_TOOL_GROUP_IDS,
   type BuiltInToolGroupId,
   type BuiltInToolGroupOverrides,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { ProductSurface } from "./productSurface";
 

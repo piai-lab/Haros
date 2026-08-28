@@ -1,4 +1,4 @@
-import type { BrowserAnnotationMarker } from "@omnimind/contracts";
+import type { BrowserAnnotationMarker } from "@harnessos/contracts";
 
 import type { AnnotationGuestCommand } from "./protocol";
 

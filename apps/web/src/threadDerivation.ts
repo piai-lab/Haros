@@ -2,7 +2,7 @@
 // Purpose: Rebuild stable Thread objects from normalized shell/detail slices.
 // Exports: cached collection helpers and thread derivation for the web store hot path.
 
-import type { MessageId, ThreadId, TurnId } from "@omnimind/contracts";
+import type { MessageId, ThreadId, TurnId } from "@harnessos/contracts";
 import type { AppState } from "./storeState";
 import type {
   ChatMessage,

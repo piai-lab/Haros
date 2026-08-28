@@ -2,7 +2,7 @@
 // Purpose: Characterizes shared active-thread deletion ordering and failure boundaries.
 // Layer: Web orchestration helper tests
 
-import { ProjectId, ThreadId } from "@omnimind/contracts";
+import { ProjectId, ThreadId } from "@harnessos/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const harness = vi.hoisted(() => ({

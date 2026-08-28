@@ -15,7 +15,7 @@ import {
   type ModelSlug,
   type PiThinkingLevel,
   type ProviderModelOptions,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import * as Schema from "effect/Schema";
 
 import {
@@ -23,7 +23,7 @@ import {
   normalizeGrokModelOptions,
   normalizeModelSlug,
   resolveSelectableModel,
-} from "@omnimind/shared/model";
+} from "@harnessos/shared/model";
 import type { ComposerThreadDraftState } from "./composerDraftDomain";
 import { classifyProviderReasoningEffortSupport } from "./lib/codexReasoningEffort";
 

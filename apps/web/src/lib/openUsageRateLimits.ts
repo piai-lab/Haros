@@ -2,7 +2,7 @@
 // Purpose: Normalizes OpenUsage local HTTP snapshots into the shared rate-limit
 // model consumed by the local toolbar popover.
 
-import type { ProviderKind } from "@omnimind/contracts";
+import type { ProviderKind } from "@harnessos/contracts";
 
 import type { ProviderRateLimit, RateLimitWindow } from "~/lib/rateLimits";
 import { normalizeRateLimitLabel } from "~/lib/rateLimits";

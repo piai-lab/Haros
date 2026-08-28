@@ -1,4 +1,4 @@
-import { CheckpointRef, IsoDateTime, NonNegativeInt, ThreadId, TurnId } from "@omnimind/contracts";
+import { CheckpointRef, IsoDateTime, NonNegativeInt, ThreadId, TurnId } from "@harnessos/contracts";
 import { Schema, ServiceMap } from "effect";
 import type { Effect, Stream } from "effect";
 

@@ -1,4 +1,4 @@
-import type { AuthClientSession, AuthPairingLink } from "@omnimind/contracts";
+import type { AuthClientSession, AuthPairingLink } from "@harnessos/contracts";
 import { DateTime, Effect, Layer } from "effect";
 
 import { BootstrapCredentialService } from "../Services/BootstrapCredentialService";

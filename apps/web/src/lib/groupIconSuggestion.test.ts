@@ -1,4 +1,4 @@
-import { SPACE_ICON_NAMES } from "@omnimind/contracts";
+import { SPACE_ICON_NAMES } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { suggestGroupIcon } from "./groupIconSuggestion";

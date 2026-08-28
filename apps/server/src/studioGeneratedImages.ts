@@ -16,8 +16,8 @@ import {
   type EventId as EventIdType,
   type ThreadId,
   type TurnId,
-} from "@omnimind/contracts";
-import { isSupportedLocalImagePath } from "@omnimind/shared/localPreviewFiles";
+} from "@harnessos/contracts";
+import { isSupportedLocalImagePath } from "@harnessos/shared/localPreviewFiles";
 import { Effect } from "effect";
 
 import { resolveCodexGeneratedImagesRoots } from "./codexGeneratedImages.ts";

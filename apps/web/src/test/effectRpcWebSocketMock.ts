@@ -10,7 +10,7 @@ import {
   WS_SERVER_CAPABILITIES,
   type OrchestrationReadModel,
   type OrchestrationShellSnapshot,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 export interface EffectRpcWebSocketClient {
   readonly send: (data: string) => void;

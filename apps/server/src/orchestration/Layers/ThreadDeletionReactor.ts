@@ -1,8 +1,8 @@
-import { ThreadId, type OrchestrationEvent } from "@omnimind/contracts";
+import { ThreadId, type OrchestrationEvent } from "@harnessos/contracts";
 import {
   makeDrainableWorker,
   startDrainableWorkerProducers,
-} from "@omnimind/shared/DrainableWorker";
+} from "@harnessos/shared/DrainableWorker";
 import { Cause, Effect, Layer, Option, Stream } from "effect";
 
 import { ServerConfig } from "../../config";

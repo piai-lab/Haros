@@ -9,7 +9,7 @@ import {
   type OrchestrationCommand,
   type OrchestrationReadModel,
   type OrchestrationShellSnapshot,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Effect, Layer, ServiceMap } from "effect";
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@harnessos/contracts";
 
 import { DeviceManager } from "./device/DeviceManager";
 import { FakeDeviceBackend } from "./device/FakeDeviceBackend";

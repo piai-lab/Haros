@@ -5,7 +5,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestCodeTab (default export for React.lazy)
 
-import type { PullRequestDetail, PullRequestDetailInput } from "@omnimind/contracts";
+import type { PullRequestDetail, PullRequestDetailInput } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 

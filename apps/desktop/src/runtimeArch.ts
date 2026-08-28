@@ -1,4 +1,4 @@
-import type { DesktopRuntimeArch, DesktopRuntimeInfo } from "@omnimind/contracts";
+import type { DesktopRuntimeArch, DesktopRuntimeInfo } from "@harnessos/contracts";
 
 interface ResolveDesktopRuntimeInfoInput {
   readonly platform: NodeJS.Platform;

@@ -1,4 +1,4 @@
-import { DEFAULT_SERVER_SETTINGS_VIEW } from "@omnimind/contracts";
+import { DEFAULT_SERVER_SETTINGS_VIEW } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

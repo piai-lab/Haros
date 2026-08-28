@@ -3,7 +3,7 @@
 // message-content hits while still surfacing a useful snippet for chat matches.
 import type { ComponentType } from "react";
 
-import type { ProviderKind } from "@omnimind/contracts";
+import type { ProviderKind } from "@harnessos/contracts";
 import { basenameOfPath } from "../file-icons";
 import type { ThemeMode, ThemeVariant } from "../theme/theme.logic";
 

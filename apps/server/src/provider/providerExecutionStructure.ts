@@ -3,7 +3,7 @@ import {
   type ProviderInteractionMode,
   type ProviderKind,
   type RuntimeMode,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 export interface ProviderExecutionStructure {
   readonly supportsTurnSteering: boolean;

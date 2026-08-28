@@ -3,15 +3,15 @@
 // Layer: Web domain helpers
 // Exports: thread env resolution + `/fork` target planning
 
-import type { ThreadEnvironmentMode } from "@omnimind/contracts";
+import type { ThreadEnvironmentMode } from "@harnessos/contracts";
 import {
   isPendingThreadWorktree,
   resolveThreadEnvironmentMode,
   resolveThreadWorkspaceCwd,
   resolveThreadWorkspaceState,
   type ResolvedThreadWorkspaceState,
-} from "@omnimind/shared/threadEnvironment";
-import { deriveAssociatedWorktreeMetadata } from "@omnimind/shared/threadWorkspace";
+} from "@harnessos/shared/threadEnvironment";
+import { deriveAssociatedWorktreeMetadata } from "@harnessos/shared/threadWorkspace";
 import type { Thread } from "../types";
 import type { MessageKey } from "../i18n";
 
@@ -31,7 +31,7 @@ export {
   isPendingThreadWorktree,
   resolveThreadEnvironmentMode,
   resolveThreadWorkspaceState,
-} from "@omnimind/shared/threadEnvironment";
+} from "@harnessos/shared/threadEnvironment";
 
 export interface ThreadEnvironmentPresentation {
   mode: ThreadEnvironmentMode;

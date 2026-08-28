@@ -2,7 +2,7 @@
 // Purpose: Pure grouping/sorting model for the sidebar Activity view (threads as tasks).
 // Exports: eligibility, status-group resolution, settle helpers, and the view-model builder.
 
-import type { ProjectId, ThreadId } from "@omnimind/contracts";
+import type { ProjectId, ThreadId } from "@harnessos/contracts";
 
 import { formatRelativeTime } from "~/lib/relativeTime";
 import type { TimestampFormat } from "../localPreferences";

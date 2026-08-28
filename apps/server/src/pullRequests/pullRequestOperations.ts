@@ -3,8 +3,8 @@ import type {
   PullRequestDetail,
   PullRequestMergeExpectation,
   PullRequestStack,
-} from "@omnimind/contracts";
-import { githubAvatarUrlForLogin } from "@omnimind/shared/githubAvatar";
+} from "@harnessos/contracts";
+import { githubAvatarUrlForLogin } from "@harnessos/shared/githubAvatar";
 import { Effect } from "effect";
 
 import type { GitHubCliShape } from "../git/Services/GitHubCli";

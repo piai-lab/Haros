@@ -8,7 +8,7 @@ import {
   resolveTerminalVisualIdentity,
   type TerminalCliKind,
   type TerminalVisualState,
-} from "@omnimind/shared/terminalThreads";
+} from "@harnessos/shared/terminalThreads";
 
 export interface RepresentativeTerminalVisualIdentity {
   terminalId: string;

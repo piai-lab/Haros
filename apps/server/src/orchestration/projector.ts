@@ -1,23 +1,23 @@
-import type { OrchestrationEvent, OrchestrationReadModel, ThreadId } from "@omnimind/contracts";
+import type { OrchestrationEvent, OrchestrationReadModel, ThreadId } from "@harnessos/contracts";
 import {
   OrchestrationCheckpointSummary,
   OrchestrationMessage,
   OrchestrationSession,
   OrchestrationThread,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   addPinnedMessage,
   removePinnedMessage,
   setPinnedMessageDone,
   setPinnedMessageLabel,
-} from "@omnimind/shared/pinnedMessages";
+} from "@harnessos/shared/pinnedMessages";
 import {
   addThreadMarker,
   removeThreadMarker,
   setThreadMarkerDone,
   setThreadMarkerLabel,
-} from "@omnimind/shared/threadMarkers";
-import { deriveNextMessageTextSegments } from "@omnimind/shared/threadMessageTextSegments";
+} from "@harnessos/shared/threadMarkers";
+import { deriveNextMessageTextSegments } from "@harnessos/shared/threadMessageTextSegments";
 import { Effect, Schema } from "effect";
 
 import { toProjectorDecodeError, type OrchestrationProjectorDecodeError } from "./Errors.ts";

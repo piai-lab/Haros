@@ -8,10 +8,10 @@ import {
   type ServerConfig,
   type ServerProviderStatus,
   type WsCompatibilityError,
-} from "@omnimind/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
-import { defaultTerminalTitleForCliKind } from "@omnimind/shared/terminalThreads";
-import { isThreadDetailEventFor } from "@omnimind/shared/threadDetailEvents";
+} from "@harnessos/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { defaultTerminalTitleForCliKind } from "@harnessos/shared/terminalThreads";
+import { isThreadDetailEventFor } from "@harnessos/shared/threadDetailEvents";
 import {
   Outlet,
   createRootRouteWithContext,

@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import * as product from "@omnimind/pi-coding-agent";
+import * as product from "@harnessos/pi-coding-agent";
 import * as stock from "@earendil-works/pi-coding-agent";
 import { afterEach, describe, expect, it } from "vitest";
 

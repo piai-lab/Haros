@@ -23,7 +23,7 @@ const REQUIRED_PI_PACKAGES = [
   "@earendil-works/pi-protocol",
   "@earendil-works/pi-telemetry",
   "@earendil-works/pi-tui",
-  "@omnimind/pi-coding-agent",
+  "@harnessos/pi-coding-agent",
 ] as const;
 
 function normalizedArchivePath(path: string): string {

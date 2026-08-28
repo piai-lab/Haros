@@ -1,4 +1,4 @@
-import { ProjectId, type ModelSelection, ThreadId } from "@omnimind/contracts";
+import { ProjectId, type ModelSelection, ThreadId } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 import { type ComposerThreadDraftState, type DraftThreadState } from "../composerDraftStore";
 import {

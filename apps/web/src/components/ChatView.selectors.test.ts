@@ -1,4 +1,4 @@
-import { EventId, MessageId, ThreadId, TurnId } from "@omnimind/contracts";
+import { EventId, MessageId, ThreadId, TurnId } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import type { AppState } from "../store";

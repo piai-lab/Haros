@@ -6,7 +6,7 @@ import {
   utf8ByteLength,
   type BrowserAutomationErrorInput,
   type BrowserErrorCode,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 

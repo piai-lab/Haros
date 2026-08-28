@@ -7,7 +7,7 @@ import {
   DEVICE_FRAME_VERSION,
   type DeviceFrameDecodeErrorReason,
   type DeviceFrameHeader,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 /**
  * Encoded video rides its own WebSocket rather than the JSON RPC socket: a
@@ -53,7 +53,7 @@ export class DeviceFrameEncodeError extends Error {}
 
 /**
  * Serializes one encoded video frame into the binary envelope described in
- * `@omnimind/contracts` (`DeviceFrameHeader`). Little-endian throughout.
+ * `@harnessos/contracts` (`DeviceFrameHeader`). Little-endian throughout.
  */
 export const encodeDeviceFrame = (frame: DeviceFrame): Uint8Array => {
   const deviceIdBytes = textEncoder.encode(frame.header.deviceId);

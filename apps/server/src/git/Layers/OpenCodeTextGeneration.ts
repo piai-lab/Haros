@@ -12,10 +12,10 @@ import type {
   OpenCodeModelSelection,
   OpenCodeModelOptions,
   ProviderStartOptions,
-} from "@omnimind/contracts";
-import { sanitizeGeneratedThreadTitle } from "@omnimind/shared/chatThreads";
-import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@omnimind/shared/git";
-import { getModelSelectionStringOptionValue } from "@omnimind/shared/model";
+} from "@harnessos/contracts";
+import { sanitizeGeneratedThreadTitle } from "@harnessos/shared/chatThreads";
+import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@harnessos/shared/git";
+import { getModelSelectionStringOptionValue } from "@harnessos/shared/model";
 
 import { resolveProviderAttachmentPath } from "../../provider/providerAttachmentPaths.ts";
 import { ServerConfig } from "../../config.ts";

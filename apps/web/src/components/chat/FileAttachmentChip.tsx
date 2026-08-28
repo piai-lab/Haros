@@ -3,7 +3,7 @@
 // Layer: Chat attachment presentation
 // Depends on: shared byte formatting, chat attachment types, and compact chip styles.
 
-import { formatBytes } from "@omnimind/shared/formatBytes";
+import { formatBytes } from "@harnessos/shared/formatBytes";
 
 import { basenameOfPath } from "~/file-icons";
 import { FileIcon } from "~/lib/icons";

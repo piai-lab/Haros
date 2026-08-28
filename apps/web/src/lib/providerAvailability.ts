@@ -1,5 +1,5 @@
-import { type ProviderKind, type ServerProviderStatus } from "@omnimind/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
+import { type ProviderKind, type ServerProviderStatus } from "@harnessos/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
 
 export interface ProviderSendAvailability {
   readonly provider: ProviderKind;

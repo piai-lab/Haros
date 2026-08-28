@@ -15,7 +15,7 @@
  * @module agentGateway/mcpInjection
  */
 import type * as Acp from "@agentclientprotocol/sdk";
-import { BUILT_IN_TOOL_GROUP_IDS, type BuiltInToolGroupId } from "@omnimind/contracts";
+import { BUILT_IN_TOOL_GROUP_IDS, type BuiltInToolGroupId } from "@harnessos/contracts";
 
 import type {
   AgentGatewayMcpConnection,

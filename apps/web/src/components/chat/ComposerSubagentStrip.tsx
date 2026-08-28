@@ -5,8 +5,8 @@
 // Layer: Chat composer UI
 // Exports: ComposerSubagentStrip
 
-import type { ThreadId } from "@omnimind/contracts";
-import { pluralize } from "@omnimind/shared/text";
+import type { ThreadId } from "@harnessos/contracts";
+import { pluralize } from "@harnessos/shared/text";
 
 import {
   BackgroundTrayIcon,

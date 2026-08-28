@@ -7,8 +7,8 @@
 //       thread cleanup, and split-view navigation, so it shares only the lower-level
 //       terminalSession helpers instead of this controller.
 
-import { type ThreadId } from "@omnimind/contracts";
-import { type TerminalCliKind } from "@omnimind/shared/terminalThreads";
+import { type ThreadId } from "@harnessos/contracts";
+import { type TerminalCliKind } from "@harnessos/shared/terminalThreads";
 import { useState } from "react";
 
 import { useLocalPreferences } from "~/localPreferences";

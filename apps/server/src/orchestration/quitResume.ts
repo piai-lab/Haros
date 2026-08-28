@@ -25,7 +25,7 @@ import {
   type OrchestrationCommand,
   type OrchestrationProject,
   type OrchestrationThread,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, FileSystem, Schema } from "effect";
 
 import { writeFileStringAtomically } from "../atomicWrite";

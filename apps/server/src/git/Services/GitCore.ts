@@ -29,7 +29,7 @@ import type {
   GitStatusInput,
   GitStatusResult,
   GitWorkingTreeDiffStatsResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { GitCheckoutDirtyWorktreeError, GitCommandError } from "../Errors.ts";
 

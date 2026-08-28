@@ -43,7 +43,7 @@ function fixture(
     "@earendil-works/pi-protocol",
     "@earendil-works/pi-telemetry",
     "@earendil-works/pi-tui",
-    "@omnimind/pi-coding-agent",
+    "@harnessos/pi-coding-agent",
   ];
   let targetManifest = "";
   for (const name of piNames) {
@@ -113,7 +113,7 @@ describe("release legal metadata", () => {
       JSON.stringify({
         dependencies: {
           "@earendil-works/pi-agent-core": "0.84.3",
-          "@omnimind/contracts": "workspace:*",
+          "@harnessos/contracts": "workspace:*",
           effect: "1.0.0",
         },
       }),
@@ -124,7 +124,7 @@ describe("release legal metadata", () => {
     );
     write(
       join(root, "apps/web/package.json"),
-      JSON.stringify({ dependencies: { "@omnimind/shared": "workspace:*", mermaid: "11.17.2" } }),
+      JSON.stringify({ dependencies: { "@harnessos/shared": "workspace:*", mermaid: "11.17.2" } }),
     );
 
     expect(resolveReleaseDependencyRoots(root)).toEqual([
@@ -271,11 +271,11 @@ describe("release legal metadata", () => {
       "@earendil-works/pi-protocol",
       "@earendil-works/pi-telemetry",
       "@earendil-works/pi-tui",
-      "@omnimind/pi-coding-agent",
+      "@harnessos/pi-coding-agent",
     ]) {
       expect(inventory.components.some((component) => component.name === name)).toBe(true);
     }
-    const ask = inventory.components.find((component) => component.name === "@omnimind/om-ask");
+    const ask = inventory.components.find((component) => component.name === "@harnessos/om-ask");
     expect(ask?.locations).toEqual(["bundled:apps/server/dist/index.mjs"]);
     expect(ask?.licenseFiles).toHaveLength(1);
     expect(ask?.licenseFiles[0]?.provenance).toMatchObject({

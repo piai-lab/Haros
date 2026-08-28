@@ -18,7 +18,7 @@ import {
   type ProviderStartOptions,
   type RuntimeMode,
   type ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import * as Equal from "effect/Equal";
 import * as Schema from "effect/Schema";
 

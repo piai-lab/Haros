@@ -1,5 +1,5 @@
-import type { ThreadMarker } from "@omnimind/contracts";
-import { MessageId, ThreadMarkerId } from "@omnimind/contracts";
+import type { ThreadMarker } from "@harnessos/contracts";
+import { MessageId, ThreadMarkerId } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

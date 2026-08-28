@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { DeviceEvent } from "@omnimind/contracts";
+import type { DeviceEvent } from "@harnessos/contracts";
 
 import type { BootOwnershipStore } from "./bootOwnership.ts";
 import { DeviceBackendError } from "./DeviceBackend.ts";

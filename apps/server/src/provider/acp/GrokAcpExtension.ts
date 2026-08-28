@@ -1,4 +1,4 @@
-import type { ProviderUserInputAnswers, UserInputQuestion } from "@omnimind/contracts";
+import type { ProviderUserInputAnswers, UserInputQuestion } from "@harnessos/contracts";
 import { Schema } from "effect";
 
 export const GROK_ASK_USER_QUESTION_METHODS = [

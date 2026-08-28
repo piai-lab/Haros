@@ -2,13 +2,13 @@ import {
   encodeOutboundMultipart,
   invokePinnedDnsLookup,
   OutboundHttpError,
-} from "@omnimind/shared/outboundHttp";
+} from "@harnessos/shared/outboundHttp";
 import {
   assertJsonWithinLimits,
   assertOutboundUrlAllowed,
   isPublicIpAddress,
   OutboundPolicyError,
-} from "@omnimind/shared/outboundHttpPolicy";
+} from "@harnessos/shared/outboundHttpPolicy";
 import { describe, expect, it } from "vitest";
 
 describe("outbound HTTP policy", () => {

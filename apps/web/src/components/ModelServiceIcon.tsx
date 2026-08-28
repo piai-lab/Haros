@@ -41,7 +41,7 @@ import xAIIconUrl from "@lobehub/icons-static-svg/icons/xai.svg";
 import xiaomiIconUrl from "@lobehub/icons-static-svg/icons/xiaomimimo.svg";
 import zaiIconUrl from "@lobehub/icons-static-svg/icons/zai.svg";
 import zhipuIconUrl from "@lobehub/icons-static-svg/icons/zhipu-color.svg";
-import type { OmniMindModelServiceOrigin } from "@omnimind/contracts";
+import type { OmniMindModelServiceOrigin } from "@harnessos/contracts";
 
 import { BrainIcon, LinkIcon, PluginIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";

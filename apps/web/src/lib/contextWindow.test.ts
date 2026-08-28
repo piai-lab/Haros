@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EventId, type OrchestrationThreadActivity, TurnId } from "@omnimind/contracts";
+import { EventId, type OrchestrationThreadActivity, TurnId } from "@harnessos/contracts";
 
 import {
   deriveContextWindowSelectionStatus,

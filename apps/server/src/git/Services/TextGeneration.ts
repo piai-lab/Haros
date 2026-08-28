@@ -14,7 +14,7 @@ import type {
   ModelSelection,
   ProviderStartOptions,
   ServerGenerateAutomationIntentResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { TextGenerationError } from "../Errors.ts";
 

@@ -12,7 +12,7 @@ import type {
   PullRequestDetailInput,
   PullRequestMergeExpectation,
   PullRequestMergeMethod,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { lazy, Suspense, useRef, useState } from "react";
 

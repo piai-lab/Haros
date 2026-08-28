@@ -12,7 +12,7 @@ import {
   type ProviderListModelsResult,
   type ProviderInteractionMode,
   type ProviderModelDescriptor,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Layer, Scope, ServiceMap } from "effect";
 import * as AcpErrors from "./AcpErrors.ts";
 import type * as Acp from "@agentclientprotocol/sdk";

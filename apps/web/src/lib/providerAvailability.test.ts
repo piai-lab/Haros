@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ServerProviderStatus } from "@omnimind/contracts";
+import type { ServerProviderStatus } from "@harnessos/contracts";
 import {
   deriveProviderPickerAvailability,
   isProviderUsable,

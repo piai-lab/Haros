@@ -23,7 +23,7 @@ import type {
   ThreadId,
   ThreadEnvironmentMode,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Option } from "effect";
 

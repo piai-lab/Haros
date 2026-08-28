@@ -12,8 +12,8 @@ import {
   type ThreadGoalAchievement,
   type ThreadMarker,
   type TurnId,
-} from "@omnimind/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
+} from "@harnessos/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
 import { LegendList, type AnchoredEndSpaceConfig, type LegendListRef } from "@legendapp/list/react";
 import {
   memo,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@harnessos/contracts";
 import { canApplyThreadSnapshot, selectOrphanedThreadDetailIds } from "./-threadDetailOwnership";
 
 const threadId = (value: string) => ThreadId.makeUnsafe(value);

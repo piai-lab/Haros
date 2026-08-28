@@ -12,7 +12,7 @@ import type {
   ProviderSkillReference,
   ProviderStartOptions,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   useEffect,
   useState,

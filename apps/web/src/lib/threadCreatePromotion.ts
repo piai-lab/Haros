@@ -8,7 +8,7 @@ import {
   type ClientOrchestrationCommand,
   type NativeApi,
   type ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Schema } from "effect";
 import { markPromotedDraftThreads } from "../composerDraftStore";
 import { readNativeApi } from "../nativeApi";

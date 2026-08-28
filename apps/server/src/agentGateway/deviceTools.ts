@@ -28,7 +28,7 @@ import {
   DEVICE_SWIPE_DURATION_MIN_MS,
   type DeviceHardwareButton,
   type DeviceOpenPaneReason,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect } from "effect";
 
 import type { DeviceManager } from "../device/DeviceManager.ts";

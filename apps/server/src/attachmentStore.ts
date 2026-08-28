@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 
-import type { ChatAttachment } from "@omnimind/contracts";
+import type { ChatAttachment } from "@harnessos/contracts";
 
 import {
   normalizeAttachmentRelativePath,

@@ -1,4 +1,4 @@
-import type { ProjectScript } from "@omnimind/contracts";
+import type { ProjectScript } from "@harnessos/contracts";
 
 import { runProcess } from "./processRunner.ts";
 

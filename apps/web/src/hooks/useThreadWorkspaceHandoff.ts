@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   resolveWorktreeHandoffIntent,
   resolveWorktreeHandoffWorkspaceMetadata,
-} from "@omnimind/shared/worktreeHandoff";
+} from "@harnessos/shared/worktreeHandoff";
 import { useCallback, useState } from "react";
 import { gitHandoffThreadMutationOptions } from "~/lib/gitReactQuery";
 import { buildSuggestedWorktreeName } from "../components/ChatView.logic";

@@ -1,4 +1,4 @@
-import { ProjectId } from "@omnimind/contracts";
+import { ProjectId } from "@harnessos/contracts";
 import { assert, it } from "@effect/vitest";
 import { Effect, Exit, Layer } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";

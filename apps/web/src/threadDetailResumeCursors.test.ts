@@ -2,7 +2,7 @@
 // Purpose: Verifies resume-cursor bookkeeping behind delta-capable thread resubscribes.
 // Layer: Web subscription utility test
 
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@harnessos/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   advanceThreadDetailResumeCursor,

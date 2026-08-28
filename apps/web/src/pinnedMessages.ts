@@ -7,7 +7,7 @@ import {
   type MessageId,
   type PinnedMessage,
   type ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   addPinnedMessage,
   clampThreadNotes,
@@ -18,7 +18,7 @@ import {
   setPinnedMessageLabel,
   togglePinnedMessage,
   togglePinnedMessageDone,
-} from "@omnimind/shared/pinnedMessages";
+} from "@harnessos/shared/pinnedMessages";
 
 import { newCommandId } from "./lib/utils";
 import { readNativeApi } from "./nativeApi";

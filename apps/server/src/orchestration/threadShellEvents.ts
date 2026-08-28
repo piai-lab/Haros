@@ -1,4 +1,4 @@
-import type { OrchestrationEvent } from "@omnimind/contracts";
+import type { OrchestrationEvent } from "@harnessos/contracts";
 
 const THREAD_SHELL_SUMMARY_ACTIVITY_KINDS = new Set([
   "approval.requested",

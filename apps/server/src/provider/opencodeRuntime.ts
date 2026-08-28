@@ -5,7 +5,7 @@
 
 import { pathToFileURL } from "node:url";
 
-import type { ChatAttachment, ProviderApprovalDecision, RuntimeMode } from "@omnimind/contracts";
+import type { ChatAttachment, ProviderApprovalDecision, RuntimeMode } from "@harnessos/contracts";
 import {
   type ConsoleState,
   createOpencodeClient,
@@ -36,8 +36,8 @@ import {
 import * as Semaphore from "effect/Semaphore";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
-import { NetService, type NetServiceShape } from "@omnimind/shared/Net";
-import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
+import { NetService, type NetServiceShape } from "@harnessos/shared/Net";
+import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
 import { buildProviderChildEnvironment } from "../providerChildEnvironment.ts";
 import {
   readOpenCodeAuthFileUtf8,

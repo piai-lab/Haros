@@ -25,7 +25,7 @@ import type {
   DeviceScreenshotResult,
   DeviceStartRecordingResult,
   DeviceStopRecordingResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 /**
  * One encoded video frame as the backend produces it. `sequence` is owned by

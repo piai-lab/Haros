@@ -14,7 +14,7 @@ import type {
   ProviderKind,
   ServerProviderStatus,
   ThreadId as ThreadIdType,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   AutomationId,
   DEFAULT_AUTOMATION_STOP_CONFIDENCE_THRESHOLD,
@@ -25,8 +25,8 @@ import {
   ProjectId,
   ThreadId,
   TurnId,
-} from "@omnimind/contracts";
-import { isTemporaryWorktreeBranch } from "@omnimind/shared/git";
+} from "@harnessos/contracts";
+import { isTemporaryWorktreeBranch } from "@harnessos/shared/git";
 import { realpathSync } from "node:fs";
 import { homedir } from "node:os";
 

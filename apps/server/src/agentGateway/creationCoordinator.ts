@@ -15,15 +15,15 @@ import {
   type ProviderExecutionCapabilities,
   type OmniMindCreateThreadsInput,
   type OmniMindCreateThreadsResult,
-} from "@omnimind/contracts";
-import { buildPromptThreadTitleFallback } from "@omnimind/shared/chatThreads";
-import { WORKTREE_BRANCH_PREFIX } from "@omnimind/shared/git";
-import { parseGitHubRepositoryNameWithOwnerFromPullRequestUrl } from "@omnimind/shared/githubRepository";
+} from "@harnessos/contracts";
+import { buildPromptThreadTitleFallback } from "@harnessos/shared/chatThreads";
+import { WORKTREE_BRANCH_PREFIX } from "@harnessos/shared/git";
+import { parseGitHubRepositoryNameWithOwnerFromPullRequestUrl } from "@harnessos/shared/githubRepository";
 import {
   isProviderRuntimeModeExecutable,
   isProviderRuntimeModePermanentlyUnsupported,
   runtimeModeEscalatesPrivilege,
-} from "@omnimind/shared/runtimeMode";
+} from "@harnessos/shared/runtimeMode";
 import { Cause, Effect, Option, Semaphore } from "effect";
 
 import type { ServerConfigShape } from "../config.ts";

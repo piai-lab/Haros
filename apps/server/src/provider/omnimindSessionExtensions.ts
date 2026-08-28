@@ -1,9 +1,9 @@
 import type { InlineExtension, ToolDefinition } from "@earendil-works/pi-coding-agent";
-import type { ProviderWorkSurface, TurnTasksUpdatedPayload } from "@omnimind/contracts";
-import type { AskUserProductInteractionPort } from "@omnimind/om-ask";
-import { makeOmniMindWebAccessInlineExtension } from "@omnimind/om-web-access";
-import type { CuratorPresenter } from "@omnimind/om-web-access/curator-presentation";
-import { getWebSearchConfigService } from "@omnimind/om-web-access/config-service";
+import type { ProviderWorkSurface, TurnTasksUpdatedPayload } from "@harnessos/contracts";
+import type { AskUserProductInteractionPort } from "@harnessos/om-ask";
+import { makeOmniMindWebAccessInlineExtension } from "@harnessos/om-web-access";
+import type { CuratorPresenter } from "@harnessos/om-web-access/curator-presentation";
+import { getWebSearchConfigService } from "@harnessos/om-web-access/config-service";
 
 import type { AgentGatewayMcpFetch } from "../agentGateway/mcpInjection.ts";
 import type { AgentGatewayMcpConnection } from "../agentGateway/Services/AgentGatewayCredentials.ts";

@@ -7,8 +7,8 @@ import {
   extractSubagentIdentityHints as extractParsedSubagentIdentityHints,
   isWorkerTierSubagentRole,
   resolveSubagentIdentityFromDirectory,
-} from "@omnimind/shared/subagents";
-import { formatModelDisplayName } from "@omnimind/shared/model";
+} from "@harnessos/shared/subagents";
+import { formatModelDisplayName } from "@harnessos/shared/model";
 
 const SUBAGENT_ACCENT_PALETTE = [
   "#b84e44",

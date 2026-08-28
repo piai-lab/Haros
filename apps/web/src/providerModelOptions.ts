@@ -2,7 +2,7 @@ import {
   formatModelDisplayName,
   humanizeModelSlug,
   normalizeModelSlug,
-} from "@omnimind/shared/model";
+} from "@harnessos/shared/model";
 import {
   MODEL_OPTIONS_BY_PROVIDER,
   type AntigravityModelOptions,
@@ -27,8 +27,8 @@ import {
   type PiModelSelection,
   type ProviderKind,
   type ProviderModelOptions,
-} from "@omnimind/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
+} from "@harnessos/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
 import { normalizeCursorModelVariantBaseId } from "./cursorModelVariants";
 
 export type ProviderOptions = ProviderModelOptions[ProviderKind];

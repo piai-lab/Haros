@@ -13,8 +13,8 @@ import {
   LOCAL_IMAGE_ROUTE_PATH,
   isSupportedLocalImagePath,
   isSupportedLocalPreviewFilePath,
-} from "@omnimind/shared/localPreviewFiles";
-import { SCRATCH_WORKSPACES_DIRNAME } from "@omnimind/shared/threadWorkspace";
+} from "@harnessos/shared/localPreviewFiles";
+import { SCRATCH_WORKSPACES_DIRNAME } from "@harnessos/shared/threadWorkspace";
 
 import { resolveCodexGeneratedImagesRoots } from "./codexGeneratedImages.ts";
 

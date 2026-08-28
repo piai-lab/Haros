@@ -6,7 +6,7 @@ import type {
   ServerProviderStatus,
   ServerStopLocalServerInput,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { mutationOptions, queryOptions, type QueryClient } from "@tanstack/react-query";
 import { ensureNativeApi } from "~/nativeApi";
 

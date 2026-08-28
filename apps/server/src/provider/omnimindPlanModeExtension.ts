@@ -1,7 +1,7 @@
 import type { InlineExtension } from "@earendil-works/pi-coding-agent";
-import { ASK_USER_TOOL_NAME } from "@omnimind/om-ask";
-import { OMNIMIND_WEB_ACCESS_PLAN_TOOL_NAMES } from "@omnimind/om-web-access";
-import type { TurnId } from "@omnimind/contracts";
+import { ASK_USER_TOOL_NAME } from "@harnessos/om-ask";
+import { OMNIMIND_WEB_ACCESS_PLAN_TOOL_NAMES } from "@harnessos/om-web-access";
+import type { TurnId } from "@harnessos/contracts";
 
 import { OMNIMIND_TASK_LIST_TOOL_NAME } from "./omnimindTaskListExtension.ts";
 

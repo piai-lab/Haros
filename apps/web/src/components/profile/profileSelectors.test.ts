@@ -3,7 +3,7 @@
 // token telemetry.
 // Layer: web profile feature tests.
 
-import type { ProfileStats, ProfileTokenStats } from "@omnimind/contracts";
+import type { ProfileStats, ProfileTokenStats } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { selectProfileHeatmap } from "./profileSelectors";

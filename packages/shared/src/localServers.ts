@@ -3,7 +3,7 @@
 // Layer: Shared runtime utility (consumed by web UI surfaces).
 // Depends on: ServerLocalServerProcess contract shape.
 
-import type { ServerLocalServerProcess } from "@omnimind/contracts";
+import type { ServerLocalServerProcess } from "@harnessos/contracts";
 
 import { isWorkspaceRootWithin } from "./threadWorkspace";
 

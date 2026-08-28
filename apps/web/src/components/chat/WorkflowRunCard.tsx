@@ -10,9 +10,9 @@
 // Layer: Chat composer UI
 // Exports: WorkflowRunCard
 
-import type { ThreadId } from "@omnimind/contracts";
-import { getModelCapabilities } from "@omnimind/shared/model";
-import { pluralize } from "@omnimind/shared/text";
+import type { ThreadId } from "@harnessos/contracts";
+import { getModelCapabilities } from "@harnessos/shared/model";
+import { pluralize } from "@harnessos/shared/text";
 import { useState } from "react";
 
 import { formatContextWindowTokens } from "~/lib/contextWindow";

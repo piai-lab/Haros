@@ -4,7 +4,7 @@ import type {
   PullRequestComment,
   PullRequestCommit,
   PullRequestDetailInput,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { RightDockPane } from "~/rightDockStore.logic";
 

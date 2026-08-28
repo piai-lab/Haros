@@ -3,7 +3,7 @@
 // Layer: Web utility tests
 // Exports: Vitest suites for providerUpdates.ts
 
-import type { ProviderKind, ServerProviderStatus, ServerSettingsView } from "@omnimind/contracts";
+import type { ProviderKind, ServerProviderStatus, ServerSettingsView } from "@harnessos/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {

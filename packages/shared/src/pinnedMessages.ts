@@ -7,7 +7,7 @@ import {
   THREAD_NOTES_MAX_CHARS,
   type MessageId,
   type PinnedMessage,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 // Preserve no-op references while keeping mutation helpers typed as mutable-array outputs.
 function keepExistingPins(pins: readonly PinnedMessage[]): PinnedMessage[] {

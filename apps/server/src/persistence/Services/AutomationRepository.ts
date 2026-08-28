@@ -20,8 +20,8 @@ import {
   ProjectId,
   ThreadId,
   TurnId,
-} from "@omnimind/contracts";
-import type { AutomationRunResult as AutomationRunResultType } from "@omnimind/contracts";
+} from "@harnessos/contracts";
+import type { AutomationRunResult as AutomationRunResultType } from "@harnessos/contracts";
 import { Option, Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
 

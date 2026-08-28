@@ -5,13 +5,13 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it } from "@effect/vitest";
 import { Effect, FileSystem, Layer, PlatformError, Scope } from "effect";
 import { expect } from "vitest";
-import type { GitActionProgressEvent } from "@omnimind/contracts";
+import type { GitActionProgressEvent } from "@harnessos/contracts";
 import type {
   GitPullRequestCheck,
   GitPullRequestComment,
   ModelSelection,
   ProviderStartOptions,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import { GitCommandError, GitHubCliError, TextGenerationError } from "../Errors.ts";
 import { type GitManagerShape } from "../Services/GitManager.ts";

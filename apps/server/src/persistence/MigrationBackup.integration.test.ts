@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Effect, Layer } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
-import { MIGRATION_RECOVERY_MAX_RESUME_ATTEMPTS } from "@omnimind/shared/migrationRecovery";
+import { MIGRATION_RECOVERY_MAX_RESUME_ATTEMPTS } from "@harnessos/shared/migrationRecovery";
 
 import {
   FAILED_MIGRATION_BUNDLE_RETENTION,

@@ -1,7 +1,7 @@
 // FILE: providerUsage/http.ts
 // Purpose: Bounded JSON helper for provider usage, backed by the pinned outbound authority.
 
-import { decodeOutboundJson, outboundHttp } from "@omnimind/shared/outboundHttp";
+import { decodeOutboundJson, outboundHttp } from "@harnessos/shared/outboundHttp";
 
 export interface FetchJsonResult {
   readonly status: number;

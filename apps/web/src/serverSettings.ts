@@ -6,8 +6,8 @@ import type {
   ServerProviderCredentialProvider,
   ServerSettingsPatch,
   ServerSettingsView,
-} from "@omnimind/contracts";
-import { DEFAULT_SERVER_SETTINGS_VIEW } from "@omnimind/contracts";
+} from "@harnessos/contracts";
+import { DEFAULT_SERVER_SETTINGS_VIEW } from "@harnessos/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";

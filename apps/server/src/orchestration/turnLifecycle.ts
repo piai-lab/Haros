@@ -1,4 +1,4 @@
-import type { OrchestrationSession } from "@omnimind/contracts";
+import type { OrchestrationSession } from "@harnessos/contracts";
 
 type TurnState = "pending" | "running" | "completed" | "interrupted" | "error";
 

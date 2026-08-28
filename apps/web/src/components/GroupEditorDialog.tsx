@@ -2,7 +2,7 @@ import {
   SPACE_ICON_NAMES,
   SPACE_NAME_MAX_LENGTH,
   type SpaceIconName,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   useCallback,
   useEffect,

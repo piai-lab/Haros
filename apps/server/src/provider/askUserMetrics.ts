@@ -1,4 +1,4 @@
-import type { AskUserResultStatus } from "@omnimind/om-ask";
+import type { AskUserResultStatus } from "@harnessos/om-ask";
 
 export interface AskUserMetricsSnapshot {
   readonly counters: Readonly<Record<string, number>>;

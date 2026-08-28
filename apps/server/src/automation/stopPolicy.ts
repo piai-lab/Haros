@@ -4,7 +4,7 @@
 import {
   DEFAULT_AUTOMATION_STOP_AFTER_CONSECUTIVE_FAILURES,
   type AutomationDefinition,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 export function resolveAutomationStopAfterConsecutiveFailures(input: {
   readonly stopAfterConsecutiveFailures?: number | null | undefined;

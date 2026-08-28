@@ -1,4 +1,4 @@
-import type { OrchestrationThread, ProviderMentionReference } from "@omnimind/contracts";
+import type { OrchestrationThread, ProviderMentionReference } from "@harnessos/contracts";
 import { Effect, Option } from "effect";
 import { describe, expect, it, vi } from "vitest";
 

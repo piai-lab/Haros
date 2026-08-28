@@ -8,7 +8,7 @@ import "../index.css";
 import { page, userEvent } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
-import { MessageId } from "@omnimind/contracts";
+import { MessageId } from "@harnessos/contracts";
 import type { CSSProperties } from "react";
 
 import { DEFAULT_THEME_STATE, serializeThemeState } from "../theme/theme.logic";

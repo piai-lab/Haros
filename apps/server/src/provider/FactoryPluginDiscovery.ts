@@ -12,7 +12,7 @@ import type {
   ProviderPluginMarketplaceDescriptor,
   ProviderPluginMarketplaceLoadError,
   ProviderReadPluginResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import { collectSkillsFromRoots } from "./skillsCatalog.ts";
 

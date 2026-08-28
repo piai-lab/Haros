@@ -3,13 +3,13 @@
 // Layer: Web utility
 // Exports: local image URL detection and builders
 // Depends on: wsHttpUrl (so desktop requests carry the legacy startup token used by attachments)
-//             and @omnimind/shared/localPreviewFiles for the canonical route + extension allowlist.
+//             and @harnessos/shared/localPreviewFiles for the canonical route + extension allowlist.
 
 import {
   LOCAL_IMAGE_ROUTE_PATH,
   SUPPORTED_LOCAL_IMAGE_EXTENSION_REGEX,
-} from "@omnimind/shared/localPreviewFiles";
-import { isWindowsAbsolutePath } from "@omnimind/shared/path";
+} from "@harnessos/shared/localPreviewFiles";
+import { isWindowsAbsolutePath } from "@harnessos/shared/path";
 
 import { resolveWsHttpUrl } from "./wsHttpUrl";
 

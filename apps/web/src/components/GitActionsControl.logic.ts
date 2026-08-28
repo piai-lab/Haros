@@ -2,8 +2,8 @@ import type {
   GitRunStackedActionResult,
   GitStackedAction,
   GitStatusResult,
-} from "@omnimind/contracts";
-import { isTemporaryWorktreeBranch, resolveUniqueOmniMindBranchName } from "@omnimind/shared/git";
+} from "@harnessos/contracts";
+import { isTemporaryWorktreeBranch, resolveUniqueOmniMindBranchName } from "@harnessos/shared/git";
 
 export type GitActionIconName = "commit" | "push" | "pr";
 
@@ -967,4 +967,4 @@ export function resolveLiveThreadBranchUpdate(input: {
 }
 
 // Re-export from shared for backwards compatibility in this module's exports
-export { resolveAutoFeatureBranchName } from "@omnimind/shared/git";
+export { resolveAutoFeatureBranchName } from "@harnessos/shared/git";

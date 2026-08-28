@@ -3,7 +3,7 @@ import type {
   AuthClientSession,
   AuthPairingLink,
   AuthSessionId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Data, DateTime, Duration, Effect, ServiceMap } from "effect";
 import type { SessionRole } from "./SessionCredentialService";
 

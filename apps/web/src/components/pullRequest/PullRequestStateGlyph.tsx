@@ -6,7 +6,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestStateGlyph
 
-import type { GitPullRequestMergeability, PullRequestState } from "@omnimind/contracts";
+import type { GitPullRequestMergeability, PullRequestState } from "@harnessos/contracts";
 
 import { cn } from "~/lib/utils";
 import {

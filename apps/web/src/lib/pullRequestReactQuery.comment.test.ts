@@ -1,4 +1,4 @@
-import type { ProjectId } from "@omnimind/contracts";
+import type { ProjectId } from "@harnessos/contracts";
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 

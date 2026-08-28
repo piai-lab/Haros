@@ -1,5 +1,5 @@
 {
-  "name": "@omnimind/web",
+  "name": "@harnessos/web",
   "version": "0.1.0-alpha.0",
   "private": true,
   "type": "module",
@@ -31,8 +31,8 @@
     "@legendapp/list": "3.3.3",
     "@lexical/react": "^0.41.0",
     "@lobehub/icons-static-svg": "1.94.0",
-    "@omnimind/contracts": "workspace:*",
-    "@omnimind/shared": "workspace:*",
+    "@harnessos/contracts": "workspace:*",
+    "@harnessos/shared": "workspace:*",
     "@pierre/diffs": "^1.2.12",
     "@tabler/icons-react": "^3.44.0",
     "@tanstack/react-pacer": "^0.19.4",

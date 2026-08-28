@@ -1,4 +1,4 @@
-import type { ProjectId, PullRequestListEntry, PullRequestProjectContext } from "@omnimind/contracts";
+import type { ProjectId, PullRequestListEntry, PullRequestProjectContext } from "@harnessos/contracts";
 
 type ProjectAwarePullRequestEntry = Pick<
   PullRequestListEntry,

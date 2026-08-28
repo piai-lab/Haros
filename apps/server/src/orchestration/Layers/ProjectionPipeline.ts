@@ -1,17 +1,17 @@
-import { ApprovalRequestId, CommandId, type OrchestrationEvent } from "@omnimind/contracts";
+import { ApprovalRequestId, CommandId, type OrchestrationEvent } from "@harnessos/contracts";
 import {
   addPinnedMessage,
   removePinnedMessage,
   setPinnedMessageDone,
   setPinnedMessageLabel,
-} from "@omnimind/shared/pinnedMessages";
+} from "@harnessos/shared/pinnedMessages";
 import {
   addThreadMarker,
   removeThreadMarker,
   setThreadMarkerDone,
   setThreadMarkerLabel,
-} from "@omnimind/shared/threadMarkers";
-import { isStalePendingRequestFailureDetail } from "@omnimind/shared/threadSummary";
+} from "@harnessos/shared/threadMarkers";
+import { isStalePendingRequestFailureDetail } from "@harnessos/shared/threadSummary";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, FileSystem, Layer, Option, Path, Stream } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";

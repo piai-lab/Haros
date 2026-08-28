@@ -10,8 +10,8 @@ import {
   ProviderInteractionMode,
   RuntimeMode,
   ThreadId,
-} from "@omnimind/contracts";
-import { getDefaultModel, normalizeModelSlug } from "@omnimind/shared/model";
+} from "@harnessos/contracts";
+import { getDefaultModel, normalizeModelSlug } from "@harnessos/shared/model";
 import * as Equal from "effect/Equal";
 import * as Schema from "effect/Schema";
 import type { StateCreator } from "zustand";

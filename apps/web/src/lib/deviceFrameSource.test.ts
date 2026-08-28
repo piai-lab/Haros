@@ -1,5 +1,5 @@
-import type { DeviceUdid } from "@omnimind/contracts";
-import { encodeDeviceFrame } from "@omnimind/shared/deviceFrame";
+import type { DeviceUdid } from "@harnessos/contracts";
+import { encodeDeviceFrame } from "@harnessos/shared/deviceFrame";
 import { describe, expect, it, vi } from "vitest";
 
 import {

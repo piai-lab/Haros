@@ -1,5 +1,5 @@
 {
-  "name": "@omnimind/shared",
+  "name": "@harnessos/shared",
   "version": "0.0.0-alpha.1",
   "private": true,
   "type": "module",
@@ -317,7 +317,7 @@
     "test:related": "vitest related --passWithNoTests"
   },
   "dependencies": {
-    "@omnimind/contracts": "workspace:*",
+    "@harnessos/contracts": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

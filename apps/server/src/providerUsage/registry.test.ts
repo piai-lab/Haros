@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { PROVIDER_USAGE_PROVIDERS } from "@omnimind/shared/providerUsage";
+import { PROVIDER_USAGE_PROVIDERS } from "@harnessos/shared/providerUsage";
 
 import { PROVIDER_USAGE_FETCHERS } from "./registry";
 

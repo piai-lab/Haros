@@ -22,7 +22,7 @@ import type {
   PullRequestStack,
   PullRequestStackSummary,
   PullRequestState,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { ProcessRunResult } from "../../processRunner";
 import type { GitHubCliError } from "../Errors.ts";

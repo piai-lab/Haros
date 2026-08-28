@@ -13,7 +13,7 @@ import type {
   PullRequestDetailInput,
   PullRequestMergeExpectation,
   PullRequestState,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { RightDockPane } from "~/rightDockStore.logic";
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { decodeDeviceFrame } from "@omnimind/shared/deviceFrame";
+import { decodeDeviceFrame } from "@harnessos/shared/deviceFrame";
 
 import type { DeviceStreamFrame } from "./DeviceBackend.ts";
 import { DeviceFrameTransport, type DeviceFrameSink } from "./deviceFrameTransport.ts";

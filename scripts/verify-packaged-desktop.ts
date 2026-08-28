@@ -23,7 +23,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { extractFile } from "@electron/asar";
-import type { CommandId, ProjectId, ThreadId } from "@omnimind/contracts";
+import type { CommandId, ProjectId, ThreadId } from "@harnessos/contracts";
 
 import {
   connectPackagedRendererCdp,

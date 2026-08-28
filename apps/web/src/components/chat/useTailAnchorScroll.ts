@@ -21,7 +21,7 @@
 //      instead of easing, so the message is rigidly held rather than drifting
 //      back into place.
 
-import { type MessageId } from "@omnimind/contracts";
+import { type MessageId } from "@harnessos/contracts";
 import { type LegendListRef } from "@legendapp/list/react";
 import { useLayoutEffect, useRef, type RefObject } from "react";
 

@@ -1,4 +1,4 @@
-import type { TerminalEvent } from "@omnimind/contracts";
+import type { TerminalEvent } from "@harnessos/contracts";
 
 import { readNativeApi } from "~/nativeApi";
 

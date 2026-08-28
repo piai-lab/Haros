@@ -35,13 +35,13 @@ import type {
   OrchestrationSession,
   RuntimeMode,
   ThreadId,
-} from "@omnimind/contracts";
-import { CommandId, EventId } from "@omnimind/contracts";
+} from "@harnessos/contracts";
+import { CommandId, EventId } from "@harnessos/contracts";
 import {
   buildStalePendingRequestFailureDetail,
   derivePendingThreadRequestIds,
   type PendingThreadRequestKind,
-} from "@omnimind/shared/threadSummary";
+} from "@harnessos/shared/threadSummary";
 import { Effect, Option } from "effect";
 
 import {

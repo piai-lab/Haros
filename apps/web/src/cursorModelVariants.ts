@@ -1,5 +1,5 @@
-import type { ProviderModelDescriptor } from "@omnimind/contracts";
-import { parseCursorCliReasoningEffort } from "@omnimind/shared/model";
+import type { ProviderModelDescriptor } from "@harnessos/contracts";
+import { parseCursorCliReasoningEffort } from "@harnessos/shared/model";
 
 function uniqueByValue<T extends { readonly value: string }>(values: ReadonlyArray<T>): T[] {
   const seen = new Set<string>();

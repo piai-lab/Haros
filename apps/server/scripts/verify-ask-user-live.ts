@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { ApprovalRequestId, ThreadId, type ProviderRuntimeEvent } from "@omnimind/contracts";
+import { ApprovalRequestId, ThreadId, type ProviderRuntimeEvent } from "@harnessos/contracts";
 import { Effect, Fiber, Layer, Stream } from "effect";
 
 import { ServerConfig } from "../src/config.ts";

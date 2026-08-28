@@ -2,7 +2,7 @@
 // Purpose: Verifies short-lived prewarming for fast thread-detail navigation.
 // Layer: Web subscription utility test
 
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@harnessos/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createThreadDetailPrewarmController } from "./threadDetailPrewarm";
 import {

@@ -1,4 +1,4 @@
-import { EventId, ThreadId, TurnId, type ProviderEvent } from "@omnimind/contracts";
+import { EventId, ThreadId, TurnId, type ProviderEvent } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

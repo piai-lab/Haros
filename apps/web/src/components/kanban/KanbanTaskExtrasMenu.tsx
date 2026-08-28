@@ -3,7 +3,7 @@
 // Layer: Kanban UI component
 // Exports: KanbanTaskExtrasMenu
 
-import type { ProviderInteractionMode } from "@omnimind/contracts";
+import type { ProviderInteractionMode } from "@harnessos/contracts";
 
 import { ComposerPickerMenuPopup } from "~/components/chat/ComposerPickerMenuPopup";
 import { Button } from "~/components/ui/button";

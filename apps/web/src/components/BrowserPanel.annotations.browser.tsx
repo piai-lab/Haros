@@ -10,7 +10,7 @@ import {
   type BrowserAnnotationEvent,
   type BrowserAnnotationMethods,
   type BrowserAnnotationSession,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 

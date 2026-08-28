@@ -16,7 +16,7 @@ import type {
   ProviderStartReviewInput,
   ProviderSteerTurnInput,
   ProviderTurnStartResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   ApprovalRequestId,
   EventId,
@@ -24,7 +24,7 @@ import {
   ProviderSessionStartInput,
   ThreadId,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { it, assert, vi } from "@effect/vitest";
 import { assertFailure } from "@effect/vitest/utils";
 

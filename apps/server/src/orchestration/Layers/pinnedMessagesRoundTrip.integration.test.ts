@@ -9,7 +9,7 @@ import {
   ProjectId,
   ThreadId,
   ThreadMarkerId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Layer, ManagedRuntime, Option } from "effect";
 import { describe, expect, it } from "vitest";
 

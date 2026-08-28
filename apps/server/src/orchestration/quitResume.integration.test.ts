@@ -10,7 +10,7 @@ import {
   type OrchestrationEvent,
   type OrchestrationProject,
   type OrchestrationThread,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 

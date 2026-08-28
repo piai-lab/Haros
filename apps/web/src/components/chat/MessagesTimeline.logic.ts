@@ -3,7 +3,7 @@
 // Layer: Web chat presentation helpers
 // Exports: row derivation, structural sharing, copy/timer helpers
 
-import { type MessageId, type OrchestrationTurnProvenance, type TurnId } from "@omnimind/contracts";
+import { type MessageId, type OrchestrationTurnProvenance, type TurnId } from "@harnessos/contracts";
 import { type TimelineEntry, type WorkLogEntry, elapsedMilliseconds } from "../../session-logic";
 import { normalizeCompactToolLabel as normalizeCompactToolLabelValue } from "../../lib/toolCallLabel";
 import {

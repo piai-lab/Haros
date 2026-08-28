@@ -1,8 +1,8 @@
 import type {
   ProviderExecutionCapabilityReason,
   ProviderRuntimeModeCapability,
-} from "@omnimind/contracts";
-import { isProviderRuntimeModeExecutable } from "@omnimind/shared/runtimeMode";
+} from "@harnessos/contracts";
+import { isProviderRuntimeModeExecutable } from "@harnessos/shared/runtimeMode";
 
 import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";

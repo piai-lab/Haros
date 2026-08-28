@@ -1,4 +1,4 @@
-import type { OrchestrationProject, ProjectId, PullRequestsListResult } from "@omnimind/contracts";
+import type { OrchestrationProject, ProjectId, PullRequestsListResult } from "@harnessos/contracts";
 import { Effect } from "effect";
 
 import type {

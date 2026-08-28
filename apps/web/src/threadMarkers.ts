@@ -10,8 +10,8 @@ import {
   type ThreadMarkerColor,
   type ThreadMarkerId,
   type ThreadMarkerStyle,
-} from "@omnimind/contracts";
-import { normalizeThreadMarkerLabel } from "@omnimind/shared/threadMarkers";
+} from "@harnessos/contracts";
+import { normalizeThreadMarkerLabel } from "@harnessos/shared/threadMarkers";
 
 import { newCommandId } from "./lib/utils";
 import { readNativeApi } from "./nativeApi";

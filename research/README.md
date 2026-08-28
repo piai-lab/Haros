@@ -35,9 +35,9 @@
 | [`chat-work-surface-contract-review.md`](chat-work-surface-contract-review.md)                                   | ProductSurface 与 Provider execution/trust surface 的历史对照                                                 |
 | [`model-services-composer-product-design.md`](model-services-composer-product-design.md)                         | Model services/Composer 的完整设计来源与旧 snapshot；不按其中阶段表施工                                       |
 | [`omnimind-prompt-management-review.md`](omnimind-prompt-management-review.md)                                   | default prompt + custom rules 的 source precedence 与失败证据                                                 |
-| [`pi-web-access-intake.md`](pi-web-access-intake.md)                                                             | `@omnimind/om-web-access` exact lineage、P1–P6、rights、更新与删除边界                                        |
+| [`pi-web-access-intake.md`](pi-web-access-intake.md)                                                             | `@harnessos/om-web-access` exact lineage、P1–P6、rights、更新与删除边界                                        |
 | [`omnimind-ask-user-cognition.md`](omnimind-ask-user-cognition.md)                                               | canonical Ask User 产品裁决、fork decision、生命周期反证与证据                                                |
-| [`pi-ask-user-intake.md`](pi-ask-user-intake.md)                                                                 | `@omnimind/om-ask` exact baseline、P1–P7 patch inventory、反证与 revalidation trigger                         |
+| [`pi-ask-user-intake.md`](pi-ask-user-intake.md)                                                                 | `@harnessos/om-ask` exact baseline、P1–P7 patch inventory、反证与 revalidation trigger                         |
 
 公共 Gate 与 proof 只见根 [`SOURCE-INTAKE.md`](../SOURCE-INTAKE.md)；Pi runtime 默认、source type 与按风险读取的专项检查只见 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md)。
 

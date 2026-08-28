@@ -6,7 +6,7 @@
  *
  * @module providerStatusCache
  */
-import { PROVIDER_KINDS, ServerProviderStatus } from "@omnimind/contracts";
+import { PROVIDER_KINDS, ServerProviderStatus } from "@harnessos/contracts";
 import { Cause, Effect, FileSystem, Schema } from "effect";
 import { writeFileStringAtomically } from "../atomicWrite";
 

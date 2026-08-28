@@ -6,7 +6,7 @@
 import {
   DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS,
   DEFAULT_AUTOMATION_MINIMUM_INTERVAL_SECONDS,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import type {
   AutomationCreateInput,
   AutomationDefinition,
@@ -21,16 +21,16 @@ import type {
   ProviderStartOptions,
   RuntimeMode,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import {
   completionPolicyFromStopWhen,
   stopWhenFromCompletionPolicy,
-} from "@omnimind/shared/automationCompletionPolicy";
+} from "@harnessos/shared/automationCompletionPolicy";
 import {
   automationContinuationThreadId,
   automationRequiresTargetThread,
-} from "@omnimind/shared/automationMode";
+} from "@harnessos/shared/automationMode";
 import type { AppLocale } from "../locale";
 import {
   automationFailurePolicyValue,

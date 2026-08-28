@@ -12,11 +12,11 @@ import type {
   BrowserAnnotationSource,
   BrowserAnnotationTheme,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   browserAnnotationDocumentIdentityUrl,
   sanitizeBrowserAnnotationUrl,
-} from "@omnimind/shared/browserAnnotations";
+} from "@harnessos/shared/browserAnnotations";
 
 import { BROWSER_ANNOTATION_GUEST_COMMAND_CHANNEL } from "../ipcChannels";
 import {

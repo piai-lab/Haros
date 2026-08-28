@@ -3,7 +3,7 @@
 // Layer: Chat composer presentation
 // Depends on: canonical provider metadata, asset registry, live health, and shared menu primitives.
 
-import type { ProviderKind, ServerProviderStatus } from "@omnimind/contracts";
+import type { ProviderKind, ServerProviderStatus } from "@harnessos/contracts";
 import { useState } from "react";
 
 import { useI18n } from "~/i18n";

@@ -10,7 +10,7 @@ import {
   CanonicalUserInputResponse,
   ProviderUserInputAnswer,
   ProviderUserInputAnswers,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Schema } from "effect";
 
 function hasMeaningfulText(value: string | undefined): value is string {

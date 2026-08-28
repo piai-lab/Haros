@@ -1,4 +1,4 @@
-import { PROVIDER_KINDS } from "@omnimind/contracts";
+import { PROVIDER_KINDS } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { resolveProviderExecutionCapabilities } from "./executionCapabilityProjection.ts";

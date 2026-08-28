@@ -3,8 +3,8 @@
 // Layer: Chat status presentation tests
 // Depends on: the toast option builder and the provider-delivery block format.
 
-import { ThreadId } from "@omnimind/contracts";
-import { formatProviderDeliveryBlockDetail } from "@omnimind/shared/providerDeliveryBlock";
+import { ThreadId } from "@harnessos/contracts";
+import { formatProviderDeliveryBlockDetail } from "@harnessos/shared/providerDeliveryBlock";
 import { describe, expect, it } from "vitest";
 
 import { buildThreadErrorToastOptions, threadErrorToastId } from "./useThreadErrorToast";

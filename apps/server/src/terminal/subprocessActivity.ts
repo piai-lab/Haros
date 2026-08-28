@@ -7,7 +7,7 @@ import path from "node:path";
 import {
   deriveTerminalProcessIdentity,
   type TerminalCliKind,
-} from "@omnimind/shared/terminalThreads";
+} from "@harnessos/shared/terminalThreads";
 
 import { runProcess } from "../processRunner";
 import { parseProcessChildrenMap, type ProcessChildrenMap } from "./processTreeKiller";

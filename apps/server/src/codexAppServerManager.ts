@@ -31,11 +31,11 @@ import {
   type ServerVoiceTranscriptionInput,
   type ServerVoiceTranscriptionResult,
   type UserInputQuestion,
-} from "@omnimind/contracts";
-import { prewarmChatGptVoiceTranscriptionConnection } from "@omnimind/shared/chatGptVoiceTranscription";
-import { getModelSelectionBooleanOptionValue, normalizeModelSlug } from "@omnimind/shared/model";
-import { decodeSubagentReceiverThreadIds } from "@omnimind/shared/subagents";
-import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
+} from "@harnessos/contracts";
+import { prewarmChatGptVoiceTranscriptionConnection } from "@harnessos/shared/chatGptVoiceTranscription";
+import { getModelSelectionBooleanOptionValue, normalizeModelSlug } from "@harnessos/shared/model";
+import { decodeSubagentReceiverThreadIds } from "@harnessos/shared/subagents";
+import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
 import { Effect, ServiceMap } from "effect";
 
 import {

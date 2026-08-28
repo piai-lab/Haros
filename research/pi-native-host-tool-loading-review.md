@@ -4,7 +4,7 @@
 >
 > upstream/stock Pi exact source：`@earendil-works/pi-coding-agent@0.84.2`，commit `914cf1472e715297caa30db4b9535d534a9eb718`
 >
-> OmniMind Agent产品runtime：`@omnimind/pi-coding-agent@0.84.2`，由同一exact source加产品窄patch生成；本文不宣称两个artifact byte-identical
+> OmniMind Agent产品runtime：`@harnessos/pi-coding-agent@0.84.2`，由同一exact source加产品窄patch生成；本文不宣称两个artifact byte-identical
 >
 > production-adopted Synara：`8f9f60045ea652db7d4a6822e2f723dde073f40a`；只读对照：clean `c79fab498de1a911a14ff8b05bf83d0528ec54fa`
 >

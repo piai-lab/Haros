@@ -1,4 +1,4 @@
-import type { ProviderEvent } from "@omnimind/contracts";
+import type { ProviderEvent } from "@harnessos/contracts";
 
 import { isProviderCredentialKey } from "../providerChildEnvironment.ts";
 

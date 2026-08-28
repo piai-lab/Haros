@@ -3,7 +3,7 @@
 // Layer: Web browser tests
 // Depends on: useDockPaneRuntimeActivation and a real React/browser event loop.
 
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@harnessos/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
 

@@ -1,4 +1,4 @@
-import type { OrchestrationThreadPullRequest } from "@omnimind/contracts";
+import type { OrchestrationThreadPullRequest } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { deriveThreadGitMetadataPatch } from "./threadGitMetadata.ts";

@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import * as StockPi from "@earendil-works/pi-coding-agent";
-import * as ProductPi from "@omnimind/pi-coding-agent";
+import * as ProductPi from "@harnessos/pi-coding-agent";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { AgentGatewayMcpToolDescriptor } from "../agentGateway/mcpInjection.ts";

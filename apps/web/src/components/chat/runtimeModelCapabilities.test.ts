@@ -1,4 +1,4 @@
-import type { ProviderModelDescriptor } from "@omnimind/contracts";
+import type { ProviderModelDescriptor } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

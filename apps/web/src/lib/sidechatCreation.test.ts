@@ -1,5 +1,5 @@
-import type { NativeApi, OrchestrationShellSnapshot } from "@omnimind/contracts";
-import { ProjectId, ThreadId } from "@omnimind/contracts";
+import type { NativeApi, OrchestrationShellSnapshot } from "@harnessos/contracts";
+import { ProjectId, ThreadId } from "@harnessos/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Project, Thread } from "../types";

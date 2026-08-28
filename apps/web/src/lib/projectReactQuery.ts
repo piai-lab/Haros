@@ -8,9 +8,9 @@ import type {
   ProjectSearchContentResult,
   ProjectSearchEntriesResult,
   ProjectSearchLocalEntriesResult,
-} from "@omnimind/contracts";
-import { PROJECT_SEARCH_CONTENT_MIN_QUERY_LENGTH } from "@omnimind/contracts";
-import { isLocalAbsolutePath } from "@omnimind/shared/path";
+} from "@harnessos/contracts";
+import { PROJECT_SEARCH_CONTENT_MIN_QUERY_LENGTH } from "@harnessos/contracts";
+import { isLocalAbsolutePath } from "@harnessos/shared/path";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { ensureNativeApi } from "~/nativeApi";
 

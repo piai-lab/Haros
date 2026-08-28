@@ -1,4 +1,4 @@
-import type { DeviceScreenshotResult } from "@omnimind/contracts";
+import type { DeviceScreenshotResult } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { deviceScreenshotAttachmentName, promptLooksLikeDeviceTask } from "./devicePromptContext";

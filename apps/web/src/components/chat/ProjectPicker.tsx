@@ -12,7 +12,7 @@ import {
   useState,
   type ReactElement,
 } from "react";
-import { type ProjectDirectoryEntry, type ProjectId } from "@omnimind/contracts";
+import { type ProjectDirectoryEntry, type ProjectId } from "@harnessos/contracts";
 import { readNativeApi } from "../../nativeApi";
 import { useStore } from "../../store";
 import { createSidebarDisplayThreadsSelector } from "../../storeSelectors";

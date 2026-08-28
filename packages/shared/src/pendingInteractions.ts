@@ -3,7 +3,7 @@
 // Layer: Cross-package orchestration utility
 // Exports: reclaim timing and status predicates used by server persistence and web projection.
 
-import type { OrchestrationPendingInteraction } from "@omnimind/contracts";
+import type { OrchestrationPendingInteraction } from "@harnessos/contracts";
 
 export const RESPONDING_INTERACTION_RECLAIM_GRACE_MS = 30_000;
 

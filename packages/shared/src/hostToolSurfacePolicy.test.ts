@@ -1,4 +1,4 @@
-import { BUILT_IN_TOOL_GROUP_IDS, BUILT_IN_TOOL_SURFACES } from "@omnimind/contracts";
+import { BUILT_IN_TOOL_GROUP_IDS, BUILT_IN_TOOL_SURFACES } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

@@ -1,4 +1,4 @@
-import type { RuntimeTaskListItem, RuntimeTaskStatus } from "@omnimind/contracts";
+import type { RuntimeTaskListItem, RuntimeTaskStatus } from "@harnessos/contracts";
 
 export function normalizeRuntimeTaskStatus(value: unknown): RuntimeTaskStatus {
   if (value === "completed") {

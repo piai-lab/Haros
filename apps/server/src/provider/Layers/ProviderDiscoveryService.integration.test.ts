@@ -16,8 +16,8 @@ import type {
   ProviderKind,
   ProviderListModelsResult,
   ProviderListSkillsResult,
-} from "@omnimind/contracts";
-import { ProjectId, ThreadId } from "@omnimind/contracts";
+} from "@harnessos/contracts";
+import { ProjectId, ThreadId } from "@harnessos/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, Layer, Option } from "effect";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

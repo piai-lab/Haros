@@ -5,7 +5,7 @@ import type {
   BrowserLogsOutput,
   BrowserNetworkLogEntry,
   BrowserTabId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import type { WebContents } from "electron";
 
 import type { BrowserAutomationVisibleRuntime } from "../browserManager";

@@ -1,5 +1,5 @@
 {
-  "name": "@omnimind/desktop",
+  "name": "@harnessos/desktop",
   "version": "0.1.0-alpha.0",
   "private": true,
   "main": "dist-electron/main.js",
@@ -21,8 +21,8 @@
     "electron-updater": "^6.6.2"
   },
   "devDependencies": {
-    "@omnimind/contracts": "workspace:*",
-    "@omnimind/shared": "workspace:*",
+    "@harnessos/contracts": "workspace:*",
+    "@harnessos/shared": "workspace:*",
     "@types/node": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",

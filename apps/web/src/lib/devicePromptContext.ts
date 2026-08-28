@@ -13,7 +13,7 @@ import type {
   NativeApi,
   ThreadDeviceState,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { ComposerImageAttachment } from "../composerDraftStore";
 import { prepareComposerImageAttachmentsFromFiles } from "./composerSend";

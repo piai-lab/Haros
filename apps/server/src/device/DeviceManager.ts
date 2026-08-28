@@ -45,7 +45,7 @@ import {
   type DeviceStopRecordingResult,
   type DeviceUiNode,
   type ThreadDeviceState,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import {
   DeviceBackendError,

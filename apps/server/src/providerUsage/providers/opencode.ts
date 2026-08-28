@@ -3,7 +3,7 @@
 // even on Windows (`~/.local/share/opencode`), reads the `opencode-go` API key, and calls
 // GET https://opencode.ai/zen/go/v1/usage for the 5h / weekly / monthly Go plan windows.
 
-import type { ServerProviderUsageLimit } from "@omnimind/contracts";
+import type { ServerProviderUsageLimit } from "@harnessos/contracts";
 
 import { resolveOpenCodeCompatibleAuthPaths } from "../../provider/openCodeAuthPaths";
 import { credentialFingerprint, readJsonFile } from "../credentials";

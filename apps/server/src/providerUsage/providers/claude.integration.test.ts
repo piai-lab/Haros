@@ -9,7 +9,7 @@ import nodePath from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { outboundHttp } from "@omnimind/shared/outboundHttp";
+import { outboundHttp } from "@harnessos/shared/outboundHttp";
 import {
   __resetClaudeUsageRateLimitState,
   __setClaudeAuthNudgeDepsForTests,

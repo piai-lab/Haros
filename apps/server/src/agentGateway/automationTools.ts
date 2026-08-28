@@ -13,11 +13,11 @@ import {
   type AutomationSchedule as AutomationScheduleType,
   type AutomationWorktreeMode,
   type OrchestrationThreadShell,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   automationContinuesThread,
   automationRequiresTargetThread,
-} from "@omnimind/shared/automationMode";
+} from "@harnessos/shared/automationMode";
 import { Effect, Option, Schema } from "effect";
 
 import type { AutomationServiceShape } from "../automation/Services/AutomationService.ts";

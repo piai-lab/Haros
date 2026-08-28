@@ -9,18 +9,18 @@ import { app, ipcMain } from "electron";
 import type {
   ServerVoiceTranscriptionInput,
   ServerVoiceTranscriptionResult,
-} from "@omnimind/contracts";
-import { SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES } from "@omnimind/contracts";
+} from "@harnessos/contracts";
+import { SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES } from "@harnessos/contracts";
 import {
   CHATGPT_VOICE_TRANSCRIPTION_URL,
   requestChatGptVoiceTranscription,
-} from "@omnimind/shared/chatGptVoiceTranscription";
+} from "@harnessos/shared/chatGptVoiceTranscription";
 import {
   decodeOutboundJson,
   decodeOutboundText,
   type OutboundHttpResponse,
-} from "@omnimind/shared/outboundHttp";
-import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
+} from "@harnessos/shared/outboundHttp";
+import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
 import { SERVER_TRANSCRIBE_VOICE_CHANNEL } from "./ipcChannels";
 
 const MAX_VOICE_DURATION_MS = 120_000;

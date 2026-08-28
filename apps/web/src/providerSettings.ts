@@ -7,15 +7,15 @@ import type {
   ProviderStartOptions,
   ServerSettingsPatch,
   ServerSettingsView,
-} from "@omnimind/contracts";
-import { DEFAULT_SERVER_SETTINGS_VIEW } from "@omnimind/contracts";
-import { providerStartOptionsFromServerSettings } from "@omnimind/shared/serverSettings";
+} from "@harnessos/contracts";
+import { DEFAULT_SERVER_SETTINGS_VIEW } from "@harnessos/contracts";
+import { providerStartOptionsFromServerSettings } from "@harnessos/shared/serverSettings";
 import {
   getDefaultModel,
   getModelOptions,
   normalizeModelSlug,
   resolveSelectableModel,
-} from "@omnimind/shared/model";
+} from "@harnessos/shared/model";
 import { normalizeCursorModelVariantBaseId } from "./cursorModelVariants";
 import { formatProviderModelOptionName, type ProviderModelOption } from "./providerModelOptions";
 

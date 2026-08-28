@@ -12,7 +12,7 @@ import {
   ProviderKind,
   ThreadId,
   ModelSelection,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { assert, it } from "@effect/vitest";
 import { Effect, Option, Schema } from "effect";
 

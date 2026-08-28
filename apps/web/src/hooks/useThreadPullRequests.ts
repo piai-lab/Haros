@@ -10,8 +10,8 @@ import type {
   OrchestrationThreadPullRequest,
   ProjectId,
   ThreadId,
-} from "@omnimind/contracts";
-import { resolveThreadWorkspaceCwd } from "@omnimind/shared/threadEnvironment";
+} from "@harnessos/contracts";
+import { resolveThreadWorkspaceCwd } from "@harnessos/shared/threadEnvironment";
 import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 

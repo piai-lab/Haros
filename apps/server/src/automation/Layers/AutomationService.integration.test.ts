@@ -19,8 +19,8 @@ import {
   type OrchestrationProjectShell,
   type OrchestrationThreadShell,
   type ServerProviderStatus,
-} from "@omnimind/contracts";
-import { isTemporaryWorktreeBranch } from "@omnimind/shared/git";
+} from "@harnessos/contracts";
+import { isTemporaryWorktreeBranch } from "@harnessos/shared/git";
 import { Deferred, Duration, Effect, Fiber, Layer, Option, Stream } from "effect";
 import { TestClock } from "effect/testing";
 

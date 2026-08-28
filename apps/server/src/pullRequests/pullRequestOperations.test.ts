@@ -3,7 +3,7 @@ import {
   type OrchestrationProject,
   type PullRequestMergeExpectation,
   type PullRequestStack,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Deferred, Effect, Fiber, Semaphore } from "effect";
 import { describe, expect, it, vi } from "vitest";
 

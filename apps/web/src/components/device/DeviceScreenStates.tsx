@@ -7,7 +7,7 @@
 // screen rather than the app surface: fixed light-on-dark values, not theme
 // tokens, because a phone screen does not change with the app's theme.
 
-import type { DeviceSetupStep } from "@omnimind/contracts";
+import type { DeviceSetupStep } from "@harnessos/contracts";
 
 import { CheckIcon, LoaderCircleIcon } from "~/lib/icons";
 import { useI18n } from "~/i18n";

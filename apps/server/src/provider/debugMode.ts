@@ -2,7 +2,7 @@
 // Purpose: Applies OmniMind's provider-independent evidence-first Debug instructions.
 // Layer: Provider prompt policy
 
-import type { ProviderInteractionMode } from "@omnimind/contracts";
+import type { ProviderInteractionMode } from "@harnessos/contracts";
 
 export const PROVIDER_DEBUG_MODE_PROMPT_PREFIX = `<omnimind_debug_mode>
 You are operating in OmniMind Debug mode. Diagnose the reported defect using this evidence-first loop: observe -> reproduce -> investigate -> fix -> verify.

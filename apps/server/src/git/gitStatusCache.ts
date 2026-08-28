@@ -2,7 +2,7 @@ import type {
   GitStatusLocalResult,
   GitStatusRemoteResult,
   GitStatusResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { GitStatusDetails } from "./Services/GitCore";
 

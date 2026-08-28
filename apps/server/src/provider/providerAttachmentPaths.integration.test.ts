@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { ProviderSendTurnInput, ThreadId, type ChatAttachment } from "@omnimind/contracts";
+import { ProviderSendTurnInput, ThreadId, type ChatAttachment } from "@harnessos/contracts";
 import { Effect, Option, Schema } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 

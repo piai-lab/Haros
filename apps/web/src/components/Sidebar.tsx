@@ -86,11 +86,11 @@ import {
   ThreadId,
   type ResolvedKeybindingsConfig,
   WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
-} from "@omnimind/contracts";
-import { isGenericChatThreadTitle } from "@omnimind/shared/chatThreads";
-import { getDefaultModel } from "@omnimind/shared/model";
-import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
-import { resolveThreadWorkspaceCwd } from "@omnimind/shared/threadEnvironment";
+} from "@harnessos/contracts";
+import { isGenericChatThreadTitle } from "@harnessos/shared/chatThreads";
+import { getDefaultModel } from "@harnessos/shared/model";
+import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { resolveThreadWorkspaceCwd } from "@harnessos/shared/threadEnvironment";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {

@@ -4,7 +4,7 @@ import type {
   ToolDefinition,
   ToolInfo,
 } from "@earendil-works/pi-coding-agent";
-import { type RuntimeTaskListItem, type TurnTasksUpdatedPayload } from "@omnimind/contracts";
+import { type RuntimeTaskListItem, type TurnTasksUpdatedPayload } from "@harnessos/contracts";
 
 import { makeRuntimeTaskListItem } from "./runtimeTaskList.ts";
 

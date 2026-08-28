@@ -1,4 +1,4 @@
-import type { ModelSelection, ProviderKind } from "@omnimind/contracts";
+import type { ModelSelection, ProviderKind } from "@harnessos/contracts";
 
 export type PassiveModelServicesState = "unknown" | "empty" | "configured" | "error";
 

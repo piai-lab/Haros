@@ -3,7 +3,7 @@
 // Layer: Web UI state helper
 // Depends on: Desktop update IPC contracts.
 
-import type { DesktopUpdateActionResult, DesktopUpdateState } from "@omnimind/contracts";
+import type { DesktopUpdateActionResult, DesktopUpdateState } from "@harnessos/contracts";
 
 export type DesktopUpdateButtonAction = "check" | "download" | "install" | "none";
 

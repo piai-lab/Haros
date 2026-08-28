@@ -1,4 +1,4 @@
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@harnessos/contracts";
 import { assert, it } from "@effect/vitest";
 import { Deferred, Effect, Fiber, Ref } from "effect";
 

@@ -1,4 +1,4 @@
-import { normalizeWorkspaceEntrySearchQuery } from "@omnimind/shared/searchQuery";
+import { normalizeWorkspaceEntrySearchQuery } from "@harnessos/shared/searchQuery";
 import { describe, expect, it } from "vitest";
 
 import { buildMatchSegments } from "./matchHighlight";

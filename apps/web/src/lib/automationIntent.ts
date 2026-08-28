@@ -9,10 +9,10 @@ import type {
   AutomationMode,
   AutomationSchedule,
   ServerGenerateAutomationIntentResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
-import { completionPolicyFromStopWhen } from "@omnimind/shared/automationCompletionPolicy";
-import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
+import { completionPolicyFromStopWhen } from "@harnessos/shared/automationCompletionPolicy";
+import { automationRequiresTargetThread } from "@harnessos/shared/automationMode";
 
 export interface ChatAutomationIntent {
   readonly name: string;

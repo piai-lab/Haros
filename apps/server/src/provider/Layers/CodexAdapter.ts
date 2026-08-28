@@ -31,7 +31,7 @@ import {
   ProviderItemId,
   ThreadId,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Cause, Effect, Layer, Option, Queue, Schema, ServiceMap, Stream } from "effect";
 
 import {

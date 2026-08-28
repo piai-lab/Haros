@@ -14,7 +14,7 @@ import {
   type ProviderSkillDiscoveryWarning,
   type ProviderSkillDescriptor,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Layer, Option, Schema, SchemaIssue } from "effect";
 
 import { ServerConfig } from "../../config.ts";

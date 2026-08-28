@@ -3,7 +3,7 @@
 // Layer: Web subscription retention utility
 // Exports: retain/release helpers, the connection lease selector, and a React listener.
 
-import { WS_STREAM_LIMITS, type ThreadId } from "@omnimind/contracts";
+import { WS_STREAM_LIMITS, type ThreadId } from "@harnessos/contracts";
 import { useSyncExternalStore } from "react";
 import { useStore } from "./store";
 import type { AppState } from "./storeState";

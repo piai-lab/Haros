@@ -3,7 +3,7 @@
 //          file search, file/diff preview, and chat.
 // Layer: Chat route presentation
 
-import type { ProjectId } from "@omnimind/contracts";
+import type { ProjectId } from "@harnessos/contracts";
 import type { FileDiffMetadata } from "@pierre/diffs/react";
 import {
   type CSSProperties,

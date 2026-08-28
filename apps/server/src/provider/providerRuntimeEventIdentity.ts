@@ -1,4 +1,4 @@
-import { EventId, type ProviderRuntimeEvent } from "@omnimind/contracts";
+import { EventId, type ProviderRuntimeEvent } from "@harnessos/contracts";
 
 /**
  * One provider-native notification may expand into multiple canonical events.

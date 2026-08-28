@@ -12,7 +12,7 @@ import type {
   OmniMindEcosystemReloadResult,
   OmniMindEcosystemResourceToggleInput,
   OmniMindEcosystemSnapshot,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import type { Effect } from "effect";
 import { ServiceMap } from "effect";
 

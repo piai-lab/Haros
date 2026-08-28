@@ -4,7 +4,7 @@
 // Exports: composer automation resolver plus draft builder for ChatView.
 // Depends on: automationIntent parsing and automation form helpers.
 
-import { DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS } from "@omnimind/contracts";
+import { DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS } from "@harnessos/contracts";
 import type {
   AutomationMode,
   ModelSelection,
@@ -13,7 +13,7 @@ import type {
   ServerGenerateAutomationIntentInput,
   ServerGenerateAutomationIntentResult,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import {
   applyScheduleToForm,
@@ -21,8 +21,8 @@ import {
   isFormSubmittable,
   type AutomationFormState,
 } from "./automationForm";
-import { stopWhenFromCompletionPolicy } from "@omnimind/shared/automationCompletionPolicy";
-import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
+import { stopWhenFromCompletionPolicy } from "@harnessos/shared/automationCompletionPolicy";
+import { automationRequiresTargetThread } from "@harnessos/shared/automationMode";
 import {
   acknowledgedWarningIdsForAutomaticChatAutomation,
   buildAutomationDraftWarnings,

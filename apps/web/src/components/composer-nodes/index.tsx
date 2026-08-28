@@ -19,7 +19,7 @@ import {
   type SerializedTextNode,
   type Spread,
 } from "lexical";
-import type { ProviderKind } from "@omnimind/contracts";
+import type { ProviderKind } from "@harnessos/contracts";
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 

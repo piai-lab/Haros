@@ -9,10 +9,10 @@ import type {
   ProjectContentMatch,
   ProjectEntry,
   ProjectFileSystemEntry,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { normalizeWorkspaceEntrySearchQuery } from "@omnimind/shared/searchQuery";
+import { normalizeWorkspaceEntrySearchQuery } from "@harnessos/shared/searchQuery";
 import {
   type ComponentPropsWithoutRef,
   type DragEvent as ReactDragEvent,

@@ -3,7 +3,7 @@
 // Layer: UI logic helper
 // Depends on: Native dialog contract from the app shell.
 
-import type { NativeApi } from "@omnimind/contracts";
+import type { NativeApi } from "@harnessos/contracts";
 
 function formatTerminalCloseSubject(terminalTitle: string | null | undefined): string {
   const trimmedTitle = terminalTitle?.trim();

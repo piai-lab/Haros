@@ -1,4 +1,4 @@
-import type { ProviderRuntimeEvent } from "@omnimind/contracts";
+import type { ProviderRuntimeEvent } from "@harnessos/contracts";
 
 export const PROVIDER_INTERRUPT_EVENT_ID_PREFIX = "provider-interrupt:";
 export const PROVIDER_INTERRUPT_REASON = "Turn interrupted by user.";

@@ -12,15 +12,15 @@ import { WebglAddon } from "@xterm/addon-webgl";
 import {
   defaultTerminalTitleForCliKind,
   consumeTerminalIdentityInput,
-} from "@omnimind/shared/terminalThreads";
-import { describeErrorMessage } from "@omnimind/shared/errorMessages";
+} from "@harnessos/shared/terminalThreads";
+import { describeErrorMessage } from "@harnessos/shared/errorMessages";
 import {
   TERMINAL_MAX_COLS,
   TERMINAL_MAX_ROWS,
   TERMINAL_MIN_COLS,
   TERMINAL_MIN_ROWS,
-} from "@omnimind/contracts";
-import type { TerminalSessionSnapshot } from "@omnimind/contracts";
+} from "@harnessos/contracts";
+import type { TerminalSessionSnapshot } from "@harnessos/contracts";
 import { Terminal } from "@xterm/xterm";
 
 import { readNativeApi } from "~/nativeApi";

@@ -13,8 +13,8 @@ import {
   ProviderStartOptions,
   ProjectId,
   TurnId,
-} from "@omnimind/contracts";
-import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
+} from "@harnessos/contracts";
+import { automationRequiresTargetThread } from "@harnessos/shared/automationMode";
 import { Effect, Layer, Option, Schema } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";

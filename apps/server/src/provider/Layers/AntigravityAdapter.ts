@@ -14,7 +14,7 @@ import {
   RuntimeTaskId,
   ThreadId,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Layer, Option, Queue, Stream } from "effect";
 
 import {

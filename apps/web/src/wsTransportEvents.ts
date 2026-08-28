@@ -3,7 +3,7 @@
 // Layer: Web transport utility
 // Exports: event helpers used by wsNativeApi and terminal runtime recovery.
 
-import type { WsCompatibilityError } from "@omnimind/contracts";
+import type { WsCompatibilityError } from "@harnessos/contracts";
 
 export type WsTransportState = "connecting" | "open" | "closed" | "incompatible" | "disposed";
 

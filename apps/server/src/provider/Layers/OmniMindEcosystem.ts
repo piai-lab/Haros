@@ -7,7 +7,7 @@ import type {
   OmniMindEcosystemMutationResult,
   OmniMindEcosystemSnapshot,
   OmniMindPackageDescriptor,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Layer } from "effect";
 
 import { ServerConfig } from "../../config.ts";

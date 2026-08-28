@@ -7,7 +7,7 @@ import {
   PROVIDER_MODEL_DISCOVERY_ERROR_CODES,
   type NativeApi,
   type ProviderListModelsResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

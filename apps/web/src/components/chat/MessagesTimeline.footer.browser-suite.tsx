@@ -4,7 +4,7 @@
 
 import "../../index.css";
 
-import { MessageId } from "@omnimind/contracts";
+import { MessageId } from "@harnessos/contracts";
 import { afterEach, describe, expect, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { userEvent } from "vitest/browser";

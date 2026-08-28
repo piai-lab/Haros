@@ -1,4 +1,4 @@
-import { CHAT_ASSISTANT_SELECTION_TEXT_MAX_CHARS } from "@omnimind/contracts";
+import { CHAT_ASSISTANT_SELECTION_TEXT_MAX_CHARS } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

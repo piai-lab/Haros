@@ -10,9 +10,9 @@ import {
   type OrchestrationShellStreamEvent,
   type SpaceId,
   type ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Debouncer } from "@tanstack/react-pacer";
-import { resolveThreadBranchRegressionGuard } from "@omnimind/shared/git";
+import { resolveThreadBranchRegressionGuard } from "@harnessos/shared/git";
 import { create } from "zustand";
 
 import { resolveCreateBranchFlowCompletedMerge } from "./storeNormalization";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { DesktopUpdateState } from "@omnimind/contracts";
+import type { DesktopUpdateState } from "@harnessos/contracts";
 
 import { getDesktopUpdateButtonPresentation } from "./desktopUpdate.logic";
 

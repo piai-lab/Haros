@@ -7,7 +7,7 @@ import {
   type OrchestrationSession,
   type OrchestrationThreadShell,
   type ProviderSession,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 

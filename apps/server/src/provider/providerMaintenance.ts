@@ -2,7 +2,7 @@ import type {
   ProviderKind,
   ServerProviderStatus,
   ServerProviderVersionAdvisory,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";

@@ -3,7 +3,7 @@
 // Layer: Web orchestration helper
 // Exports: deleteActiveThreadFromClient
 
-import type { ThreadId } from "@omnimind/contracts";
+import type { ThreadId } from "@harnessos/contracts";
 
 import { toastManager } from "../components/ui/toast";
 import { readNativeApi } from "../nativeApi";

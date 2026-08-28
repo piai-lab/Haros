@@ -9,7 +9,7 @@ import {
   ThreadId,
   TurnId,
   type AutomationCreateInput,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Layer, Option } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 

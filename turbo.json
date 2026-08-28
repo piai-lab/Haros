@@ -65,14 +65,20 @@
       "outputLogs": "errors-only",
       "outputs": []
     },
-    "@omnimind/server#test": {
-      "dependsOn": ["@omnimind/om-ask#build"],
+    "@harnessos/server#test": {
+      "dependsOn": ["@harnessos/om-ask#build"],
       "cache": false,
       "outputLogs": "errors-only",
       "outputs": []
     },
-    "@omnimind/server#test:unit": {
-      "dependsOn": ["@omnimind/om-ask#build"],
+    "@harnessos/server#typecheck": {
+      "dependsOn": ["^typecheck", "@harnessos/om-ask#build"],
+      "outputs": [],
+      "outputLogs": "errors-only",
+      "cache": true
+    },
+    "@harnessos/server#test:unit": {
+      "dependsOn": ["@harnessos/om-ask#build"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/apps/web/public/**",
@@ -84,8 +90,8 @@
       "outputLogs": "errors-only",
       "outputs": []
     },
-    "@omnimind/server#test:integration": {
-      "dependsOn": ["@omnimind/om-ask#build"],
+    "@harnessos/server#test:integration": {
+      "dependsOn": ["@harnessos/om-ask#build"],
       "cache": false,
       "outputLogs": "errors-only",
       "outputs": []

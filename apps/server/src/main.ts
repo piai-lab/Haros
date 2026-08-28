@@ -9,13 +9,13 @@
 import OS from "node:os";
 import { Config, Data, Effect, FileSystem, Layer, Option, Path, Schema, ServiceMap } from "effect";
 import { Command, Flag } from "effect/unstable/cli";
-import { NetService } from "@omnimind/shared/Net";
+import { NetService } from "@harnessos/shared/Net";
 import {
   optionalBooleanEnvironmentConfig,
   optionalBooleanFlag,
   resolveBooleanConfig,
   type BooleanFlagInput,
-} from "@omnimind/shared/cli";
+} from "@harnessos/shared/cli";
 import {
   DEFAULT_PORT,
   deriveServerPaths,

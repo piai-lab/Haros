@@ -1,5 +1,5 @@
-import { CommandId, type ProviderRuntimeEvent, type ThreadId } from "@omnimind/contracts";
-import { makeDrainableWorker, startDrainableWorkerProducers } from "@omnimind/shared/DrainableWorker";
+import { CommandId, type ProviderRuntimeEvent, type ThreadId } from "@harnessos/contracts";
+import { makeDrainableWorker, startDrainableWorkerProducers } from "@harnessos/shared/DrainableWorker";
 import { Cause, Effect, Layer, Option, Stream } from "effect";
 
 import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";

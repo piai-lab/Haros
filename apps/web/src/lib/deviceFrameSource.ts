@@ -2,7 +2,7 @@
 // Purpose: Deliver encoded device video frames from the server to a pane's decoder.
 // Layer: Web transport helper
 // Exports: DeviceFrameSource contract, the WebSocket-backed implementation, and the pane-facing factory
-// Depends on: @omnimind/shared/deviceFrame for the binary envelope, wsTransport for URL resolution
+// Depends on: @harnessos/shared/deviceFrame for the binary envelope, wsTransport for URL resolution
 
 import {
   DEVICE_FRAME_RESYNC_MESSAGE,
@@ -10,8 +10,8 @@ import {
   DEVICE_FRAME_WS_UDID_PARAM,
   decodeDeviceFrame,
   type DeviceFrame,
-} from "@omnimind/shared/deviceFrame";
-import type { DeviceUdid } from "@omnimind/contracts";
+} from "@harnessos/shared/deviceFrame";
+import type { DeviceUdid } from "@harnessos/contracts";
 
 import { makeSocketUrl } from "../wsTransport";
 

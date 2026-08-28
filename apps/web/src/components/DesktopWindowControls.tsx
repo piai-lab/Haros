@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 
-import type { DesktopWindowState } from "@omnimind/contracts";
+import type { DesktopWindowState } from "@harnessos/contracts";
 
 import { useDesktopCustomTitleBarActive } from "~/hooks/useDesktopCustomTitleBar";
 import { isElectron } from "~/env";

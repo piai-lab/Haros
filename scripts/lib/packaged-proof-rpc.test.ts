@@ -2,8 +2,8 @@ import {
   WS_CLIENT_REQUIRED_CAPABILITIES,
   WS_COMPATIBILITY_QUERY,
   WS_NEGOTIATE_QUERY,
-} from "@omnimind/contracts";
-import * as runtimeContracts from "@omnimind/contracts";
+} from "@harnessos/contracts";
+import * as runtimeContracts from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

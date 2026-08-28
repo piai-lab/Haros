@@ -6,8 +6,8 @@ import type {
   ProviderExecutionCapabilityStatus,
   RuntimeMode,
   ServerProviderStatus,
-} from "@omnimind/contracts";
-import { PROVIDER_INTERACTION_MODES } from "@omnimind/contracts";
+} from "@harnessos/contracts";
+import { PROVIDER_INTERACTION_MODES } from "@harnessos/contracts";
 
 import type { ProviderAdapterCapabilities } from "./Services/ProviderAdapter.ts";
 

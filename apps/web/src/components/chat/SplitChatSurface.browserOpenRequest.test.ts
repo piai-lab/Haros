@@ -1,4 +1,4 @@
-import { ProjectId, ThreadId } from "@omnimind/contracts";
+import { ProjectId, ThreadId } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import type { SplitView } from "../../splitViewStore";

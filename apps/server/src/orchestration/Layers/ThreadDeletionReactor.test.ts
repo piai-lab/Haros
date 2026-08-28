@@ -1,4 +1,4 @@
-import { EventId, ThreadId, type OrchestrationEvent } from "@omnimind/contracts";
+import { EventId, ThreadId, type OrchestrationEvent } from "@harnessos/contracts";
 import { Cause, Effect, Exit } from "effect";
 import { describe, expect, it } from "vitest";
 

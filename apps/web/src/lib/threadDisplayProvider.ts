@@ -3,7 +3,7 @@
 // Layer: Web display helper
 // Exports: resolveThreadDisplayProvider
 
-import type { ProviderKind } from "@omnimind/contracts";
+import type { ProviderKind } from "@harnessos/contracts";
 
 /** The live session's provider wins over the configured model selection. */
 export function resolveThreadDisplayProvider(thread: {

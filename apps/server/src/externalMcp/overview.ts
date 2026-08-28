@@ -1,4 +1,4 @@
-import type { ExternalMcpCapability } from "@omnimind/contracts";
+import type { ExternalMcpCapability } from "@harnessos/contracts";
 
 interface OverviewProjectInput {
   readonly id: string;

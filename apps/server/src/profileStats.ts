@@ -12,9 +12,9 @@ import type {
   ProviderKind,
   StatsGetProfileStatsInput,
   StatsGetProfileTokenStatsInput,
-} from "@omnimind/contracts";
-import { PROVIDER_KINDS } from "@omnimind/contracts";
-import { isBuiltInComposerSlashCommandName } from "@omnimind/shared/composerSlashCommands";
+} from "@harnessos/contracts";
+import { PROVIDER_KINDS } from "@harnessos/contracts";
+import { isBuiltInComposerSlashCommandName } from "@harnessos/shared/composerSlashCommands";
 import { Effect, Layer, ServiceMap } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 

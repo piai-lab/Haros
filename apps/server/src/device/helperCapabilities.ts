@@ -16,7 +16,7 @@ import {
   type DeviceCapabilityId,
   type DeviceCapabilityStatus,
   type DeviceToolchain,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 /** Every capability, in the order the pane should list them. */
 export const DEVICE_CAPABILITY_IDS = [

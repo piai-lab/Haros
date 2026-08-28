@@ -7,7 +7,7 @@ import type {
   ProviderListAgentsResult,
   ProviderListCommandsResult,
   ProviderListModelsResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import type { Agent, OpencodeClient } from "@opencode-ai/sdk/v2";
 
 import { type OpenCodeCliModelDescriptor, type OpenCodeRuntimeError } from "./opencodeRuntime.ts";

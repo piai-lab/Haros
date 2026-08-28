@@ -1,7 +1,7 @@
 // FILE: storeNormalization.test.ts
 // Purpose: Pins the incremental activity accumulator to the `normalizeActivities` fold it replaces.
 
-import { MessageId } from "@omnimind/contracts";
+import { MessageId } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

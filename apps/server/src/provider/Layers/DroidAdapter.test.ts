@@ -1,4 +1,4 @@
-import { TurnId } from "@omnimind/contracts";
+import { TurnId } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 import { OMNIMIND_HARNESS_POLICY_MARKER } from "../../agentGateway/harnessPolicy.ts";
 

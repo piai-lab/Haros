@@ -15,8 +15,8 @@ import {
   type BrowserAnnotationMarker,
   type BrowserAnnotationSource,
   type BrowserAnnotationTheme,
-} from "@omnimind/contracts";
-import { sanitizeBrowserAnnotationPageTitle } from "@omnimind/shared/browserAnnotations";
+} from "@harnessos/contracts";
+import { sanitizeBrowserAnnotationPageTitle } from "@harnessos/shared/browserAnnotations";
 
 export const BROWSER_ANNOTATION_PROTOCOL_VERSION = 1 as const;
 

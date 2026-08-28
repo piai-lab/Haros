@@ -4,8 +4,8 @@ import {
   ThreadId,
   type BrowserAnnotationEvent,
   type BrowserAnnotationTheme,
-} from "@omnimind/contracts";
-import { sanitizeBrowserAnnotationUrl } from "@omnimind/shared/browserAnnotations";
+} from "@harnessos/contracts";
+import { sanitizeBrowserAnnotationUrl } from "@harnessos/shared/browserAnnotations";
 import type { WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
 

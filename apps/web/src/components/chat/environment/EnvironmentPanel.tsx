@@ -18,7 +18,7 @@ import type {
   ThreadId,
   ThreadMarker,
   ThreadMarkerId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import {
   useCallback,

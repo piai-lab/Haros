@@ -6,7 +6,7 @@
 // Layer: Routing
 // Depends on: sidebar UI persistence plus caller-supplied restore/fresh-chat policy.
 
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@harnessos/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 

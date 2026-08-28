@@ -1,4 +1,4 @@
-import type { OrchestrationReadModel, OrchestrationShellSnapshot } from "@omnimind/contracts";
+import type { OrchestrationReadModel, OrchestrationShellSnapshot } from "@harnessos/contracts";
 
 type EmptyRouteRestoreRefreshHandler = () => Promise<boolean>;
 

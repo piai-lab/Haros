@@ -1,4 +1,4 @@
-import type { BrowserToolName } from "@omnimind/contracts";
+import type { BrowserToolName } from "@harnessos/contracts";
 
 export const BROWSER_TOOL_TITLES = {
   browser_status: "Check browser status",

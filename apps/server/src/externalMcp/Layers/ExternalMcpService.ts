@@ -8,7 +8,7 @@ import {
   type ExternalMcpIntegration,
   type ExternalMcpPairResult,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Layer, Option } from "effect";
 
 import { ServerConfig } from "../../config.ts";

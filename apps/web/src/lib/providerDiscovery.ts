@@ -3,13 +3,13 @@
 // Layer: Web lib
 // Exports: cwd resolution, search normalization, and provider skill/plugin display helpers.
 
-import { resolveThreadBranchSourceCwd } from "@omnimind/shared/threadEnvironment";
+import { resolveThreadBranchSourceCwd } from "@harnessos/shared/threadEnvironment";
 import type {
   ProviderNativeCommandDescriptor,
   ProviderPluginDescriptor,
   ProviderSkillDiscoveryWarning,
   ProviderSkillDescriptor,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import type { AppLocale } from "~/locale";
 
 // Prefer the most specific workspace context so discovery reflects the active thread first.

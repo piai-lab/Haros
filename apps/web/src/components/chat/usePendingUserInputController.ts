@@ -9,9 +9,9 @@ import {
   type OrchestrationThreadActivity,
   type ThreadId,
   type TurnId,
-} from "@omnimind/contracts";
-import { respondingInteractionReclaimAt } from "@omnimind/shared/pendingInteractions";
-import { pendingRequestInstanceKey } from "@omnimind/shared/threadSummary";
+} from "@harnessos/contracts";
+import { respondingInteractionReclaimAt } from "@harnessos/shared/pendingInteractions";
+import { pendingRequestInstanceKey } from "@harnessos/shared/threadSummary";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useI18n } from "../../i18n";

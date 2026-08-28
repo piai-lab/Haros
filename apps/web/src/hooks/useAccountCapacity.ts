@@ -1,7 +1,7 @@
 // FILE: useAccountCapacity.ts
 // Purpose: Provider-native account capacity only; never reads local history or thread signals.
 
-import type { ProviderKind, ServerProviderUsageSnapshot } from "@omnimind/contracts";
+import type { ProviderKind, ServerProviderUsageSnapshot } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
 
 import {

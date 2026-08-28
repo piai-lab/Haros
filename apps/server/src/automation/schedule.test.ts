@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AutomationId } from "@omnimind/contracts";
+import { AutomationId } from "@harnessos/contracts";
 
 import {
   computeAutomationScheduleSpacingSeconds,

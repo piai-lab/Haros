@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { OrchestrationEvent } from "@omnimind/contracts";
+import type { OrchestrationEvent } from "@harnessos/contracts";
 
 import {
   decodeDiagnosticCursor,

@@ -5,16 +5,16 @@ import {
   type AutomationWorktreeMode,
   type ModelSelection,
   type ProviderOptionDescriptor,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   automationContinuationThreadId,
   automationRequiresTargetThread,
-} from "@omnimind/shared/automationMode";
+} from "@harnessos/shared/automationMode";
 import {
   getModelCapabilities,
   getProviderOptionCurrentValue,
   getProviderOptionDescriptors,
-} from "@omnimind/shared/model";
+} from "@harnessos/shared/model";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -42,7 +42,7 @@ import {
 import {
   completionPolicyFromStopWhen,
   stopWhenFromCompletionPolicy,
-} from "@omnimind/shared/automationCompletionPolicy";
+} from "@harnessos/shared/automationCompletionPolicy";
 import { automationLifecycleState, canPauseAutomation } from "~/lib/automationStatus";
 import {
   useDesktopTopBarTrafficLightGutterClassName,

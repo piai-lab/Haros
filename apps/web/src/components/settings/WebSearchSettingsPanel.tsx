@@ -8,7 +8,7 @@ import type {
   OmniMindWebSearchReadResult,
   OmniMindWebSearchSettingsSnapshot,
   OmniMindWebSearchWorkflow,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 

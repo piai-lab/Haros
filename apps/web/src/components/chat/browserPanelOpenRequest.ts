@@ -1,4 +1,4 @@
-import type { ThreadId } from "@omnimind/contracts";
+import type { ThreadId } from "@harnessos/contracts";
 
 import { findLeafPaneById } from "../../splitView.logic";
 import type { PaneId, SplitView } from "../../splitViewStore";

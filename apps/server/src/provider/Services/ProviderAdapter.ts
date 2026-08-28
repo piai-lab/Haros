@@ -42,10 +42,10 @@ import type {
   ThreadId,
   ProviderTurnStartResult,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import type { Effect } from "effect";
 import type { Stream } from "effect";
-import type { ProductSurface } from "@omnimind/shared/productSurface";
+import type { ProductSurface } from "@harnessos/shared/productSurface";
 
 export type ProviderSessionModelSwitchMode = "in-session" | "restart-session" | "unsupported";
 

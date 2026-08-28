@@ -28,7 +28,7 @@ import {
   type ProviderSession,
   type RuntimeMode,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   Cache,
   Cause,
@@ -47,25 +47,25 @@ import {
 import {
   buildPromptThreadTitleFallback,
   isGenericChatThreadTitle,
-} from "@omnimind/shared/chatThreads";
+} from "@harnessos/shared/chatThreads";
 import {
   collectTailTurnIds,
   resolveTailUserMessageEditTarget,
-} from "@omnimind/shared/conversationEdit";
-import { isTemporaryWorktreeBranch, WORKTREE_BRANCH_PREFIX } from "@omnimind/shared/git";
-import { claudeSelectionRequiresRestart } from "@omnimind/shared/model";
+} from "@harnessos/shared/conversationEdit";
+import { isTemporaryWorktreeBranch, WORKTREE_BRANCH_PREFIX } from "@harnessos/shared/git";
+import { claudeSelectionRequiresRestart } from "@harnessos/shared/model";
 import {
   formatProviderDeliveryBlockDetail,
   PROVIDER_DELIVERY_BLOCK_SUMMARY,
-} from "@omnimind/shared/providerDeliveryBlock";
-import { buildStalePendingRequestFailureDetail } from "@omnimind/shared/threadSummary";
+} from "@harnessos/shared/providerDeliveryBlock";
+import { buildStalePendingRequestFailureDetail } from "@harnessos/shared/threadSummary";
 import { turnStartBindingMatchesCommitted } from "../turnStartSession.ts";
-import { resolveThreadWorkspaceState } from "@omnimind/shared/threadEnvironment";
-import { configuredHostGroupEnabled } from "@omnimind/shared/hostToolSurfacePolicy";
+import { resolveThreadWorkspaceState } from "@harnessos/shared/threadEnvironment";
+import { configuredHostGroupEnabled } from "@harnessos/shared/hostToolSurfacePolicy";
 import {
   projectKindToProductSurface,
   productSurfaceToProviderWorkSurface,
-} from "@omnimind/shared/productSurface";
+} from "@harnessos/shared/productSurface";
 
 import {
   checkpointRefForThreadMessageStart,
@@ -127,7 +127,7 @@ import { QueuedTurnPromotionRepository } from "../../persistence/Services/Queued
 import { ManagedAttachmentRepository } from "../../persistence/Services/ManagedAttachments.ts";
 import { ServerConfig } from "../../config.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
-import { providerStartOptionsFromServerSettings } from "@omnimind/shared/serverSettings";
+import { providerStartOptionsFromServerSettings } from "@harnessos/shared/serverSettings";
 import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import {
   buildPriorTranscriptBootstrapText,

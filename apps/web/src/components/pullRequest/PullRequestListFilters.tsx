@@ -5,7 +5,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestFilterPillGroup, PullRequestProjectFilterPopover
 
-import type { ProjectId } from "@omnimind/contracts";
+import type { ProjectId } from "@harnessos/contracts";
 import { useState } from "react";
 
 import { CHAT_SURFACE_CONTROL_ACTIVE_CLASS_NAME } from "~/components/chat/chatHeaderControls";

@@ -22,13 +22,13 @@ export const OMNIMIND_PI_RUNTIME_PACKAGE_PATH = "vendor/omnimind-pi-coding-agent
 
 export const SERVER_BUNDLED_WORKSPACE_COMPONENTS = [
   {
-    name: "@omnimind/om-ask",
+    name: "@harnessos/om-ask",
     manifestPath: "packages/om-ask/package.json",
     runtimePath: "apps/server/dist/index.mjs",
     includeInLegalClosure: true,
   },
   {
-    name: "@omnimind/om-web-access",
+    name: "@harnessos/om-web-access",
     manifestPath: "packages/om-web-access/package.json",
     runtimePath: "apps/server/dist/index.mjs",
     includeInLegalClosure: false,

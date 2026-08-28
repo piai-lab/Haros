@@ -3,7 +3,7 @@
 // The simulator posts display updates via a damage-rectangle callback. Each
 // update is read out of the device IOSurface, encoded by VideoToolbox (hardware
 // where available), and written to the socket in the envelope defined by
-// `@omnimind/contracts` (see HEADER.md).
+// `@harnessos/contracts` (see HEADER.md).
 //
 // Backpressure is a hard requirement: the pane must never be the reason RPC
 // traffic stalls. The encoder drops frames while busy, and the writer drops

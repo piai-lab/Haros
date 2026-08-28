@@ -8,7 +8,7 @@
 
 import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 
-import type { ThreadId } from "@omnimind/contracts";
+import type { ThreadId } from "@harnessos/contracts";
 
 export type SidebarRowContextMenuPosition = { x: number; y: number };
 

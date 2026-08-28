@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { MessageId, ThreadId } from "@omnimind/contracts";
+import type { MessageId, ThreadId } from "@harnessos/contracts";
 import type { ChatMessage, Thread } from "~/types";
 import {
   DEFAULT_INITIAL_THREAD_RECAP_IDLE_MS,

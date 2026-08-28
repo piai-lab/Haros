@@ -3,8 +3,8 @@
 // Layer: Chat status presentation
 // Exports: ProviderHealthBanner
 
-import type { ServerProviderStatus } from "@omnimind/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
+import type { ServerProviderStatus } from "@harnessos/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "../ui/alert";
 import { IconButton } from "../ui/icon-button";
 import {

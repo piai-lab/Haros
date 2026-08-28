@@ -4,7 +4,7 @@
 // Layer: Web chat composer tests
 // Depends on: deriveComposerSubagentStripItems
 
-import { EventId, ThreadId, TurnId, type OrchestrationThreadActivity } from "@omnimind/contracts";
+import { EventId, ThreadId, TurnId, type OrchestrationThreadActivity } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

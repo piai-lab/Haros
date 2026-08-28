@@ -13,7 +13,7 @@ import {
   type OmniMindModelServiceDescriptor,
   type OmniMindModelServicesGetResult,
   type OmniMindModelServicesListResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   RouterContextProvider,

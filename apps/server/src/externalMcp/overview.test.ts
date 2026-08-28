@@ -1,4 +1,4 @@
-import type { ExternalMcpCapability } from "@omnimind/contracts";
+import type { ExternalMcpCapability } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { buildExternalMcpOverviewNextSteps, buildExternalMcpOverviewProjects } from "./overview.ts";

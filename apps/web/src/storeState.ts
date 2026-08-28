@@ -2,7 +2,7 @@
 // Purpose: Defines the normalized web-store state shape and stable empty slice sentinels.
 // Exports: AppState, its initial value, and immutable empty normalized records.
 
-import type { MessageId, ThreadId, TurnId } from "@omnimind/contracts";
+import type { MessageId, ThreadId, TurnId } from "@harnessos/contracts";
 
 import type {
   ChatMessage,

@@ -1,5 +1,5 @@
 {
-  "name": "@omnimind/om-ask",
+  "name": "@harnessos/om-ask",
   "version": "5.0.0-omnimind.1",
   "private": true,
   "description": "Host-neutral Ask User runtime fork for OmniMind's canonical user-input product.",

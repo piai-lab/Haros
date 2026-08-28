@@ -1,4 +1,4 @@
-import type { EngineWebSurfaceThemeSnapshot } from "@omnimind/contracts/engineWebSurfaceTheme";
+import type { EngineWebSurfaceThemeSnapshot } from "@harnessos/contracts/engineWebSurfaceTheme";
 
 export interface CuratorPresentationSnapshot {
 	readonly locale: "en" | "zh-CN";

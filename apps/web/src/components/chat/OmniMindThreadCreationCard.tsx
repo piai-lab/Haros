@@ -2,8 +2,8 @@
 // Purpose: End-of-turn recap for threads created through the OmniMind MCP harness.
 // Layer: Chat transcript UI
 
-import { formatModelDisplayName } from "@omnimind/shared/model";
-import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
+import { formatModelDisplayName } from "@harnessos/shared/model";
+import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
 import { memo } from "react";
 
 import type { WorkLogOmniMindThreadCreation } from "../../session-logic";

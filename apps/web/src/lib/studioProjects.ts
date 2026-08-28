@@ -3,8 +3,8 @@
 // Layer: Web orchestration helper
 // Exports: Studio project lookup, creation, and prewarm helpers.
 
-import { type ProjectId, type ThreadId } from "@omnimind/contracts";
-import { isWorkspaceRootWithin, workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
+import { type ProjectId, type ThreadId } from "@harnessos/contracts";
+import { isWorkspaceRootWithin, workspaceRootsEqual } from "@harnessos/shared/threadWorkspace";
 import type { DraftThreadState } from "../composerDraftStore";
 import { readNativeApi } from "../nativeApi";
 import {

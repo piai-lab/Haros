@@ -5,7 +5,7 @@
 
 import zlib from "node:zlib";
 
-import type { OrchestrationThread } from "@omnimind/contracts";
+import type { OrchestrationThread } from "@harnessos/contracts";
 import { describe, expect, it } from "@effect/vitest";
 
 import {

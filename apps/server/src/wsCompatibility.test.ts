@@ -6,7 +6,7 @@ import {
   WS_OMNIMIND_MODEL_SERVICES_CAPABILITY,
   WS_OMNIMIND_ECOSYSTEM_CAPABILITY,
   WS_SERVER_CAPABILITIES,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 

@@ -1,4 +1,4 @@
-import { type AutomationStreamEvent } from "@omnimind/contracts";
+import { type AutomationStreamEvent } from "@harnessos/contracts";
 import { Cause, Duration, Effect, Layer, Queue, Stream } from "effect";
 
 import { AutomationRepository } from "../../persistence/Services/AutomationRepository.ts";

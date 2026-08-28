@@ -1,11 +1,11 @@
 // FILE: runEnvelope.ts
 // Purpose: Builds the single canonical synthetic message sent to automation runs.
 
-import type { AutomationDefinition, AutomationRun } from "@omnimind/contracts";
+import type { AutomationDefinition, AutomationRun } from "@harnessos/contracts";
 import {
   automationContinuesThread,
   automationOwnsItsThread,
-} from "@omnimind/shared/automationMode";
+} from "@harnessos/shared/automationMode";
 
 export const AUTOMATION_MEMORY_INJECTION_MAX_BYTES = 8 * 1_024;
 export const AUTOMATION_MEMORY_TRUNCATION_MARKER = "[... older automation memory truncated ...]\n";

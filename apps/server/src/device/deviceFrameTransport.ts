@@ -19,7 +19,7 @@
  *
  * @module device/deviceFrameTransport
  */
-import { encodeDeviceFrame } from "@omnimind/shared/deviceFrame";
+import { encodeDeviceFrame } from "@harnessos/shared/deviceFrame";
 
 import type { DeviceStreamFrame } from "./DeviceBackend.ts";
 

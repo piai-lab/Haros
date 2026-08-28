@@ -7,7 +7,7 @@
 //          ToolCallGroupSummary, isSummarizableToolCallEntry,
 //          classifyToolCallSummaryCategory, summarizeToolCallGroup
 
-import { pluralize } from "@omnimind/shared/text";
+import { pluralize } from "@harnessos/shared/text";
 import { isFileChangeWorkLogEntry, type WorkLogEntry } from "../../session-logic";
 import { deriveReadableCommandDisplay } from "../../lib/toolCallLabel";
 

@@ -15,7 +15,7 @@ import type {
   BrowserTabId,
   BrowserTypeInput,
   BrowserTypeOutput,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import { type ActionableTarget, waitForActionableTarget } from "./actionability";

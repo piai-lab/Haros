@@ -3,7 +3,7 @@ import type {
   EngineWebSurfacePresentationContext,
   ProviderKind,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { ServiceMap, type Effect } from "effect";
 
 import type { BrowserHostRpcError } from "../browserHostRpcClient.ts";

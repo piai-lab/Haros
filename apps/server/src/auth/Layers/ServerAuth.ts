@@ -5,7 +5,7 @@ import type {
   AuthPairingCredentialResult,
   AuthSessionState,
   AuthWebSocketTokenResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { DateTime, Effect, Layer } from "effect";
 
 import { AuthControlPlane } from "../Services/AuthControlPlane";

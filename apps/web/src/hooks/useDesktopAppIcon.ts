@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { DesktopAppIcon } from "@omnimind/contracts";
+import type { DesktopAppIcon } from "@harnessos/contracts";
 export type DesktopAppIconMutationResult =
   | { readonly state: "saved"; readonly icon: DesktopAppIcon }
   | { readonly state: "failed"; readonly icon: DesktopAppIcon; readonly error: unknown };

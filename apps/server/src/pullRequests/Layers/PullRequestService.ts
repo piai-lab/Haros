@@ -6,8 +6,8 @@ import {
   type PullRequestInvolvement,
   type PullRequestListEntry,
   type PullRequestsListResult,
-} from "@omnimind/contracts";
-import { coalescePullRequestListEntries } from "@omnimind/shared/githubRepository";
+} from "@harnessos/contracts";
+import { coalescePullRequestListEntries } from "@harnessos/shared/githubRepository";
 import { Effect, Layer, Scope, Semaphore } from "effect";
 
 import { ServerConfig } from "../../config";

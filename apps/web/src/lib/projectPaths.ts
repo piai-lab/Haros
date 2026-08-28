@@ -3,7 +3,7 @@ import {
   isUncPath,
   isWindowsAbsolutePath,
   isWindowsDrivePath,
-} from "@omnimind/shared/path";
+} from "@harnessos/shared/path";
 import { isWindowsPlatform } from "./utils";
 
 function isRootPath(value: string): boolean {

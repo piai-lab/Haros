@@ -8,7 +8,7 @@ import {
   type MessageId,
   type PinnedMessage,
   type ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useEffect, useRef } from "react";
 
 import { toastManager } from "~/components/ui/toast";

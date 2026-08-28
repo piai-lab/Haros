@@ -8,7 +8,7 @@ import type {
   GitStashInfoResult,
   GitStatusResult,
   NativeApi,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronDownIcon, PlusIcon } from "~/lib/icons";

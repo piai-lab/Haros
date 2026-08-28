@@ -4,7 +4,7 @@
 // Layer: Kanban UI component
 // Exports: KanbanTaskProjectPicker
 
-import type { ProjectId } from "@omnimind/contracts";
+import type { ProjectId } from "@harnessos/contracts";
 
 import { ProjectMenuPicker } from "~/components/ProjectMenuPicker";
 import { Button } from "~/components/ui/button";

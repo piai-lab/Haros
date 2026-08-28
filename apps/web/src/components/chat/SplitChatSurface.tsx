@@ -1,4 +1,4 @@
-import { type ProjectId, type ProviderKind, type ThreadId, type TurnId } from "@omnimind/contracts";
+import { type ProjectId, type ProviderKind, type ThreadId, type TurnId } from "@harnessos/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import {
   type CSSProperties,

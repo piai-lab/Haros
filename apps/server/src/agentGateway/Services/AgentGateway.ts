@@ -11,7 +11,7 @@
  */
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
-import type { BuiltInToolGroupsResult } from "@omnimind/contracts";
+import type { BuiltInToolGroupsResult } from "@harnessos/contracts";
 
 export interface AgentGatewayHttpResult {
   readonly status: number;

@@ -10,8 +10,8 @@ import type {
   ProviderListPluginsResult,
   ProviderListSkillsResult,
   ProviderSkillsCatalogResult,
-} from "@omnimind/contracts";
-import { PROVIDER_MODEL_DISCOVERY_ERROR_CODES } from "@omnimind/contracts";
+} from "@harnessos/contracts";
+import { PROVIDER_MODEL_DISCOVERY_ERROR_CODES } from "@harnessos/contracts";
 import { queryOptions } from "@tanstack/react-query";
 import { ensureNativeApi } from "~/nativeApi";
 

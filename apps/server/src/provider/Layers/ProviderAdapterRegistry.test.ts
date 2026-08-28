@@ -1,4 +1,4 @@
-import { PROVIDER_KINDS, type ProviderKind } from "@omnimind/contracts";
+import { PROVIDER_KINDS, type ProviderKind } from "@harnessos/contracts";
 import { it, assert, vi } from "@effect/vitest";
 import { assertFailure } from "@effect/vitest/utils";
 

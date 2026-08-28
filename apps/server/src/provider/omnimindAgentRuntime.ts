@@ -7,18 +7,18 @@ import { lstat, open, realpath } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import type { ModelConfigReader } from "@omnimind/pi-coding-agent";
+import type { ModelConfigReader } from "@harnessos/pi-coding-agent";
 
 import { lazyModule } from "../lazyModule.ts";
 
-export type OmniMindCodingAgentModule = typeof import("@omnimind/pi-coding-agent");
+export type OmniMindCodingAgentModule = typeof import("@harnessos/pi-coding-agent");
 
 // Keep this lazy because the SDK includes native modules that should not load at
 // Server startup. The package is rebuilt from the same pinned source; this
 // product-owned package now publishes its exact enhanced types, so this loader
 // does not cast through the stock module or maintain a parallel API description.
 export const loadOmniMindCodingAgentModule: () => Promise<OmniMindCodingAgentModule> = lazyModule(
-  () => import("@omnimind/pi-coding-agent"),
+  () => import("@harnessos/pi-coding-agent"),
 );
 
 const MAX_PRIVATE_RUNTIME_FILE_BYTES = 4 * 1024 * 1024;

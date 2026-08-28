@@ -1,4 +1,4 @@
-import { EventId, IsoDateTime, NonNegativeInt, ThreadId } from "@omnimind/contracts";
+import { EventId, IsoDateTime, NonNegativeInt, ThreadId } from "@harnessos/contracts";
 import { Option, Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
 

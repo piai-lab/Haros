@@ -1,4 +1,4 @@
-import type { OrchestrationReadModel, OrchestrationShellSnapshot } from "@omnimind/contracts";
+import type { OrchestrationReadModel, OrchestrationShellSnapshot } from "@harnessos/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {

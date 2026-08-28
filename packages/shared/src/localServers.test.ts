@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ServerLocalServerProcess } from "@omnimind/contracts";
+import type { ServerLocalServerProcess } from "@harnessos/contracts";
 
 import {
   localServerAddressLabel,

@@ -12,7 +12,7 @@ import {
   ThreadId,
   TurnId,
   ProviderKind,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, PubSub, Stream } from "effect";
 
 import {

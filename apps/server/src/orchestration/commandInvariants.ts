@@ -13,13 +13,13 @@ import type {
   SpaceId,
   ThreadId,
   TurnId,
-} from "@omnimind/contracts";
-import { THREAD_NOT_ARCHIVED_INVARIANT_MARKER } from "@omnimind/shared/errorMessages";
+} from "@harnessos/contracts";
+import { THREAD_NOT_ARCHIVED_INVARIANT_MARKER } from "@harnessos/shared/errorMessages";
 import {
   isLegacyHomeChatContainerRow as isSharedLegacyHomeChatContainerRow,
   isOrdinaryProjectRow as isSharedOrdinaryProjectRow,
-} from "@omnimind/shared/projectContainers";
-import { normalizeWorkspaceRootForComparison } from "@omnimind/shared/threadWorkspace";
+} from "@harnessos/shared/projectContainers";
+import { normalizeWorkspaceRootForComparison } from "@harnessos/shared/threadWorkspace";
 import { Effect } from "effect";
 
 import { OrchestrationCommandInvariantError } from "./Errors.ts";

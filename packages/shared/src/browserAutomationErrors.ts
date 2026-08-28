@@ -4,7 +4,7 @@ import {
   BrowserFixedAutomationErrorInvariants,
   type BrowserAutomationErrorInput,
   type BrowserMcpToolErrorEnvelope,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Schema } from "effect";
 
 type BrowserFixedAutomationErrorCode = keyof typeof BrowserFixedAutomationErrorInvariants;

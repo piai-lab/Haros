@@ -11,11 +11,11 @@ import type {
   PullRequestInvolvement,
   PullRequestListEntry,
   PullRequestSetPinnedInput,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   pullRequestListProjectContexts,
   pullRequestListRepositoryIdentity,
-} from "@omnimind/shared/githubRepository";
+} from "@harnessos/shared/githubRepository";
 
 export type PullRequestListGroupKey = "pinned" | "reviewRequested" | "authored" | "others";
 

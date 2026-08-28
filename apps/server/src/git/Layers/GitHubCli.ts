@@ -14,12 +14,12 @@ import {
   type PullRequestMergeExpectation,
   type PullRequestStack,
   type PullRequestStackSummary,
-} from "@omnimind/contracts";
-import { githubAvatarUrlForLogin } from "@omnimind/shared/githubAvatar";
+} from "@harnessos/contracts";
+import { githubAvatarUrlForLogin } from "@harnessos/shared/githubAvatar";
 import {
   isValidGitHubRepositoryNameWithOwner,
   parseGitHubRepositoryNameWithOwnerFromRemoteUrl,
-} from "@omnimind/shared/githubRepository";
+} from "@harnessos/shared/githubRepository";
 
 import { runProcess } from "../../processRunner";
 import { GitHubCliError } from "../Errors.ts";

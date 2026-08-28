@@ -6,11 +6,11 @@ import type {
   ProviderExecutionCapabilities,
   ThreadId,
   RuntimeMode,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { CheckIcon, ChevronDownIcon, HandoffIcon, WorktreeIcon } from "~/lib/icons";
 import { HiOutlineHandRaised } from "react-icons/hi2";
 import { CentralIcon } from "~/lib/central-icons";
-import { isProviderRuntimeModeExecutable } from "@omnimind/shared/runtimeMode";
+import { isProviderRuntimeModeExecutable } from "@harnessos/shared/runtimeMode";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "~/i18n";

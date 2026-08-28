@@ -1,9 +1,9 @@
 import { Effect, Layer, Option, Ref, Schema } from "effect";
 import { ChildProcessSpawner } from "effect/unstable/process";
 
-import type { CursorModelSelection, ProviderStartOptions } from "@omnimind/contracts";
-import { sanitizeGeneratedThreadTitle } from "@omnimind/shared/chatThreads";
-import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@omnimind/shared/git";
+import type { CursorModelSelection, ProviderStartOptions } from "@harnessos/contracts";
+import { sanitizeGeneratedThreadTitle } from "@harnessos/shared/chatThreads";
+import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@harnessos/shared/git";
 
 import {
   applyCursorAcpModelSelection,

@@ -18,7 +18,7 @@ import {
   type Api,
   type Model,
 } from "@earendil-works/pi-ai";
-import { ApprovalRequestId, type ProviderRuntimeEvent, ThreadId } from "@omnimind/contracts";
+import { ApprovalRequestId, type ProviderRuntimeEvent, ThreadId } from "@harnessos/contracts";
 import { Cause, Effect, Fiber, Layer, Stream } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import { ServerConfig } from "../../config.ts";

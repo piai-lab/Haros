@@ -10,7 +10,7 @@ import {
   type ProviderModelDescriptor,
   ProjectId,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { page, userEvent } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";

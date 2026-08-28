@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { OMNIMIND_PRODUCTION_BUNDLE_ID } from "@omnimind/shared/desktopIdentity";
+import { OMNIMIND_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
 
 import {
   OMNIMIND_PI_RUNTIME_PACKAGE_PATH,
@@ -88,9 +88,9 @@ function verifyCanonicalIdentity(): void {
   const serverPackage = JSON.parse(
     readFileSync(resolve(repoRoot, "apps/server/package.json"), "utf8"),
   ) as { name?: string; bin?: Record<string, string> };
-  if (serverPackage.name !== "@omnimind/server") {
+  if (serverPackage.name !== "@harnessos/server") {
     throw new Error(
-      `Expected CLI package @omnimind/server, got ${serverPackage.name ?? "<missing>"}.`,
+      `Expected CLI package @harnessos/server, got ${serverPackage.name ?? "<missing>"}.`,
     );
   }
   const expectedBinaries = {
@@ -350,7 +350,7 @@ function verifyDesktopStageLockAuthority(): void {
   );
   assertNotContains(
     buildScript,
-    "--filter @omnimind/",
+    "--filter @harnessos/",
     "Desktop staging must not use Bun workspace filters because filtered hoisted installs can diverge from bun.lock.",
   );
   assertContains(

@@ -1,5 +1,5 @@
-import type { AskUserResult, AskUserToolInput } from "@omnimind/om-ask";
-import type { CanonicalUserInputRequest, CanonicalUserInputResponse } from "@omnimind/contracts";
+import type { AskUserResult, AskUserToolInput } from "@harnessos/om-ask";
+import type { CanonicalUserInputRequest, CanonicalUserInputResponse } from "@harnessos/contracts";
 
 export interface AskUserHostProjection {
   readonly request: CanonicalUserInputRequest;

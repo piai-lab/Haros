@@ -1,4 +1,4 @@
-import type { DesktopRuntimeInfo, DesktopUpdateState } from "@omnimind/contracts";
+import type { DesktopRuntimeInfo, DesktopUpdateState } from "@harnessos/contracts";
 
 import { getCanRetryAfterDownloadFailure, nextStatusAfterDownloadFailure } from "./updateState";
 

@@ -16,11 +16,11 @@ import type {
   ServerProviderStatus,
   ServerProviderStatusState,
   ServerProviderUpdateState,
-} from "@omnimind/contracts";
-import { PROVIDER_KINDS, ServerProviderUpdateError } from "@omnimind/contracts";
-import { parseCodexConfigModelProvider } from "@omnimind/shared/codexConfig";
-import { decodeJsonResult } from "@omnimind/shared/schemaJson";
-import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
+} from "@harnessos/contracts";
+import { PROVIDER_KINDS, ServerProviderUpdateError } from "@harnessos/contracts";
+import { parseCodexConfigModelProvider } from "@harnessos/shared/codexConfig";
+import { decodeJsonResult } from "@harnessos/shared/schemaJson";
+import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
 import type { SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import {
   Array,

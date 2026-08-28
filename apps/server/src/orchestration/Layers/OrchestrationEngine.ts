@@ -6,7 +6,7 @@ import type {
   ProjectId,
   SpaceId,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   EventId,
   MessageId,
@@ -14,9 +14,9 @@ import {
   ORCHESTRATION_WS_METHODS,
   ProviderKind,
   type ThreadHandoffImportedMessage,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { createHash, randomUUID } from "node:crypto";
-import { sanitizeImportedUserMessageText } from "@omnimind/shared/importedTranscript";
+import { sanitizeImportedUserMessageText } from "@harnessos/shared/importedTranscript";
 import {
   Cause,
   Deferred,

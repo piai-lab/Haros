@@ -6,7 +6,7 @@
 
 import * as nodePath from "node:path";
 
-import type { ProviderSkillDescriptor } from "@omnimind/contracts";
+import type { ProviderSkillDescriptor } from "@harnessos/contracts";
 
 import { collectSkillsFromRoots, providerNativeSkillRoots } from "./skillsCatalog.ts";
 

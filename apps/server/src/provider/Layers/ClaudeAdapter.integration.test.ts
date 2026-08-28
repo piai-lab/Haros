@@ -19,7 +19,7 @@ import {
   ProviderRuntimeEvent,
   ThreadId,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { assert, describe, it } from "@effect/vitest";
 import { Effect, Exit, Fiber, Layer, Random, Stream } from "effect";
 import { afterEach, beforeEach } from "vitest";

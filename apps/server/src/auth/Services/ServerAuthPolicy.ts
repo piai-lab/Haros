@@ -1,4 +1,4 @@
-import type { ServerAuthDescriptor } from "@omnimind/contracts";
+import type { ServerAuthDescriptor } from "@harnessos/contracts";
 import { Effect, ServiceMap } from "effect";
 
 export interface ServerAuthPolicyShape {

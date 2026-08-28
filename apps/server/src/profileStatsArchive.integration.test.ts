@@ -5,7 +5,7 @@
 // Exports: Vitest coverage for ProfileStatsArchive.
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { MessageId, ThreadId, TurnId } from "@omnimind/contracts";
+import { MessageId, ThreadId, TurnId } from "@harnessos/contracts";
 import { Effect, Layer } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { beforeEach, describe, expect, it } from "vitest";

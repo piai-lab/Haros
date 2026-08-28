@@ -1,5 +1,5 @@
-import type { TerminalEvent } from "@omnimind/contracts";
-import type { TerminalActivityState } from "@omnimind/shared/terminalThreads";
+import type { TerminalEvent } from "@harnessos/contracts";
+import type { TerminalActivityState } from "@harnessos/shared/terminalThreads";
 
 export interface TerminalActivityUpdate {
   agentState: TerminalActivityState | null;

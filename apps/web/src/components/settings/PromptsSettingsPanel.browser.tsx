@@ -8,7 +8,7 @@ import {
   OMNIMIND_AGENT_PROMPT_MAX_BYTES,
   type NativeApi,
   type OmniMindAgentPromptSnapshot,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";

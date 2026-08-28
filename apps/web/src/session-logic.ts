@@ -5,8 +5,8 @@ import {
   type ProviderKind,
   type ThreadId,
   type TurnId,
-} from "@omnimind/contracts";
-import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
+} from "@harnessos/contracts";
+import { PROVIDER_DESCRIPTORS } from "@harnessos/shared/providerMetadata";
 
 import { orderedActivities, parseTaskListTasks } from "./workLog";
 

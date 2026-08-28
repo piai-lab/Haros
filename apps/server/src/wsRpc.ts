@@ -33,7 +33,7 @@ import {
   type ServerDiagnosticsResult,
   type ServerLifecycleStreamEvent,
   type ServerProviderStatus,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { clamp } from "effect/Number";
 import { Effect, FileSystem, Layer, Option, Path, Queue, Schema, Scope, Stream } from "effect";
 import { Headers, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/unstable/http";
@@ -57,15 +57,15 @@ import {
 } from "./pullRequests/pullRequestOperations";
 import { ServerConfig, type ServerConfigShape } from "./config";
 import { realpathNearestExisting } from "./realpathNearestExisting";
-import { workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
+import { workspaceRootsEqual } from "@harnessos/shared/threadWorkspace";
 import {
   isProviderRuntimeModeExecutable,
   isProviderRuntimeModePermanentlyUnsupported,
-} from "@omnimind/shared/runtimeMode";
+} from "@harnessos/shared/runtimeMode";
 import {
   isThreadDetailEventFor,
   THREAD_DETAIL_EVENT_TYPES,
-} from "@omnimind/shared/threadDetailEvents";
+} from "@harnessos/shared/threadDetailEvents";
 import { listStudioThreadOutputs } from "./studioOutputs";
 import {
   ensureStudioWorkspaceInstructionsFiles,

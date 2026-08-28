@@ -7,7 +7,7 @@
  *
  * @module ProviderAdapterRegistry
  */
-import type { ProviderKind } from "@omnimind/contracts";
+import type { ProviderKind } from "@harnessos/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
 

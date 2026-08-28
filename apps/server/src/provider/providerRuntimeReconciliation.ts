@@ -13,8 +13,8 @@ import {
   type OrchestrationThreadShell,
   type ProviderSession,
   type ThreadId,
-} from "@omnimind/contracts";
-import { nonEmptyTrimmed } from "@omnimind/shared/text";
+} from "@harnessos/contracts";
+import { nonEmptyTrimmed } from "@harnessos/shared/text";
 
 import type { ProviderRuntimeEventPumpHealth } from "./Services/ProviderService.ts";
 import type { ProviderRuntimeBinding } from "./Services/ProviderSessionDirectory.ts";

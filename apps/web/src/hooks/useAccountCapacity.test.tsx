@@ -1,7 +1,7 @@
 // FILE: useAccountCapacity.test.tsx
 // Purpose: Account capacity stays provider-native and never falls back to local history.
 
-import type { ServerProviderUsageSnapshot } from "@omnimind/contracts";
+import type { ServerProviderUsageSnapshot } from "@harnessos/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";

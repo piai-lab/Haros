@@ -7,12 +7,12 @@
 import * as fs from "node:fs/promises";
 import path from "node:path";
 
-import { readActiveCodexProviderEnvKey } from "@omnimind/shared/codexConfig";
+import { readActiveCodexProviderEnvKey } from "@harnessos/shared/codexConfig";
 import {
   readEnvironmentFromLoginShell,
   resolveLoginShell,
   type ShellEnvironmentReader,
-} from "@omnimind/shared/shell";
+} from "@harnessos/shared/shell";
 
 import { resolveBaseCodexHomePath, resolveOmniMindCodexHomeOverlayPath } from "./codexHomePaths.ts";
 import {

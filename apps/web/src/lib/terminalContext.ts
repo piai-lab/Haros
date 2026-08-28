@@ -1,4 +1,4 @@
-import { type MessageId, type ThreadId } from "@omnimind/contracts";
+import { type MessageId, type ThreadId } from "@harnessos/contracts";
 import {
   extractTrailingAssistantSelections,
   type ParsedAssistantSelectionEntry,

@@ -1,4 +1,4 @@
-import type { ModelSelection, ProviderKind, ThreadId } from "@omnimind/contracts";
+import type { ModelSelection, ProviderKind, ThreadId } from "@harnessos/contracts";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 

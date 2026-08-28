@@ -5,7 +5,7 @@ import {
   EventId,
   ProjectId,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 

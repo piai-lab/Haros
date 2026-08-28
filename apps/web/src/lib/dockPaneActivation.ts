@@ -3,7 +3,7 @@
 // Layer: Web UI lifecycle helper
 // Depends on: rightDockStore pane kind taxonomy
 
-import type { ThreadId } from "@omnimind/contracts";
+import type { ThreadId } from "@harnessos/contracts";
 
 import type { RightDockPaneKind } from "~/rightDockStore.logic";
 

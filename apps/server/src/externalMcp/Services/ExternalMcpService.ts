@@ -4,7 +4,7 @@ import type {
   ExternalMcpIntegration,
   ExternalMcpPairResult,
   ExternalMcpRefreshPairingInput,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Data, ServiceMap } from "effect";
 import type { Effect } from "effect";
 

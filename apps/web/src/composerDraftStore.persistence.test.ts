@@ -4,7 +4,7 @@ import {
   OrchestrationProposedPlanId,
   ProjectId,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   partializeComposerDraftStoreState,

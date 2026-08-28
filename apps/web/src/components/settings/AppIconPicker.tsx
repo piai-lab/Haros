@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 
-import type { DesktopAppIcon } from "@omnimind/contracts";
+import type { DesktopAppIcon } from "@harnessos/contracts";
 import { Spinner } from "~/components/ui/spinner";
 import { cn, isMacPlatform } from "~/lib/utils";
 import { useI18n, type MessageKey } from "~/i18n";

@@ -6,7 +6,7 @@ import type {
   ModelPresentationIdentity,
   ModelSelection,
   OmniMindModelServiceOrigin,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { ProviderModelOption } from "~/providerModelOptions";
 import { resolveModelPresentationIdentity } from "~/providerModelOptions";

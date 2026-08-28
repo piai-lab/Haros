@@ -9,8 +9,8 @@ import type {
   OrchestrationThread,
   OrchestrationThreadShell,
   ServerProviderStatus,
-} from "@omnimind/contracts";
-import { MessageId, ProjectId, TurnId } from "@omnimind/contracts";
+} from "@harnessos/contracts";
+import { MessageId, ProjectId, TurnId } from "@harnessos/contracts";
 import { Effect, Fiber, Layer, Option, Stream } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { afterEach, describe, expect, it } from "vitest";

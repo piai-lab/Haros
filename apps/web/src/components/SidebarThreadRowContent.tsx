@@ -4,8 +4,8 @@
 
 import { useMemo, type ReactNode } from "react";
 
-import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
-import { isGenericChatThreadTitle } from "@omnimind/shared/chatThreads";
+import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { isGenericChatThreadTitle } from "@harnessos/shared/chatThreads";
 
 import { useI18n } from "../i18n";
 import { createThreadSelector } from "../storeSelectors";

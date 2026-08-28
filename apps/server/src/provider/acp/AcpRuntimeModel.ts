@@ -3,8 +3,8 @@ import type {
   RuntimeContentStreamKind,
   ThreadTokenUsageSnapshot,
   ToolLifecycleItemType,
-} from "@omnimind/contracts";
-import { summarizeToolRawOutput } from "@omnimind/shared/toolOutputSummary";
+} from "@harnessos/contracts";
+import { summarizeToolRawOutput } from "@harnessos/shared/toolOutputSummary";
 
 import { computeUsagePercent, nonNegativeInteger, positiveInteger } from "../tokenUsage.ts";
 import { canonicalItemTypeFromAcpToolKind } from "./AcpAdapterSupport.ts";

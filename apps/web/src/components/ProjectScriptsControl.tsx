@@ -2,7 +2,7 @@ import type {
   ProjectScript,
   ProjectScriptIcon,
   ResolvedKeybindingsConfig,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   BugIcon,
   ChevronDownIcon,

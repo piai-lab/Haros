@@ -2,7 +2,7 @@
 // Purpose: Characterize the shared desktop browser-panel menu and open-request subscriptions.
 // Layer: Web hook test
 
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@harnessos/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const reactHarness = vi.hoisted(() => {

@@ -16,7 +16,7 @@ import {
   ProjectId,
   SpaceId,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Option, Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
 

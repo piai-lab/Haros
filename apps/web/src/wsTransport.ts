@@ -46,7 +46,7 @@ import {
   type WsPushChannel,
   type WsPushMessage,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   Cause,
   Data,

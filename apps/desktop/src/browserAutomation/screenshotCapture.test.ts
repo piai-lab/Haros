@@ -1,4 +1,4 @@
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@harnessos/contracts";
 import type { WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
 

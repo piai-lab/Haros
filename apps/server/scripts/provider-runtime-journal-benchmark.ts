@@ -1,6 +1,6 @@
 import { performance } from "node:perf_hooks";
 
-import { EventId, ThreadId, TurnId, type ProviderRuntimeEvent } from "@omnimind/contracts";
+import { EventId, ThreadId, TurnId, type ProviderRuntimeEvent } from "@harnessos/contracts";
 import { Effect, Layer, ManagedRuntime } from "effect";
 
 import { ProviderRuntimeEventRepositoryLive } from "../src/persistence/Layers/ProviderRuntimeEvents.ts";

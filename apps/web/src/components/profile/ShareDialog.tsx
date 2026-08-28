@@ -2,7 +2,7 @@
 // Purpose: Preview and locally copy/save the complete Usage Insights PNG.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ProfileStats, ProfileTokenStats } from "@omnimind/contracts";
+import type { ProfileStats, ProfileTokenStats } from "@harnessos/contracts";
 
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogPopup, DialogTitle } from "~/components/ui/dialog";

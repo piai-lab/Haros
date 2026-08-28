@@ -5,15 +5,15 @@ import {
   ThreadId,
   type BrowserAutomationError,
   type BrowserToolName,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   BROWSER_TOOL_CATALOGUE,
   BROWSER_TOOL_DEFINITIONS_BY_NAME,
   stableJsonStringify,
   type BrowserToolDefinition,
-} from "@omnimind/shared/browserAutomationCatalogue";
-import { makeBrowserAutomationError } from "@omnimind/shared/browserAutomationErrors";
-import { encodeBrowserMcpToolError } from "@omnimind/shared/browserAutomationMcpError";
+} from "@harnessos/shared/browserAutomationCatalogue";
+import { makeBrowserAutomationError } from "@harnessos/shared/browserAutomationErrors";
+import { encodeBrowserMcpToolError } from "@harnessos/shared/browserAutomationMcpError";
 import { Effect, Schema } from "effect";
 
 import type { BrowserAutomationHostShape } from "../browserAutomation/Services/BrowserAutomationHost.ts";

@@ -1,7 +1,7 @@
 import { performance } from "node:perf_hooks";
 
-import { EventId, ThreadId, type OrchestrationEvent } from "@omnimind/contracts";
-import { THREAD_DETAIL_EVENT_TYPES } from "@omnimind/shared/threadDetailEvents";
+import { EventId, ThreadId, type OrchestrationEvent } from "@harnessos/contracts";
+import { THREAD_DETAIL_EVENT_TYPES } from "@harnessos/shared/threadDetailEvents";
 import { Effect, Layer, ManagedRuntime, Stream } from "effect";
 
 import { OrchestrationEventStoreLive } from "../src/persistence/Layers/OrchestrationEventStore.ts";

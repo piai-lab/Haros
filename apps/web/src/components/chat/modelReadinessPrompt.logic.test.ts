@@ -1,4 +1,4 @@
-import type { ModelSelection, ServerProviderStatus } from "@omnimind/contracts";
+import type { ModelSelection, ServerProviderStatus } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

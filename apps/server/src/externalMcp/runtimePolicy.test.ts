@@ -1,4 +1,4 @@
-import { EXTERNAL_MCP_MAX_PROMPT_CHARS, ExternalMcpCreateTaskInput } from "@omnimind/contracts";
+import { EXTERNAL_MCP_MAX_PROMPT_CHARS, ExternalMcpCreateTaskInput } from "@harnessos/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 

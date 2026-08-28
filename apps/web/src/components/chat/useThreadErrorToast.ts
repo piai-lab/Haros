@@ -3,8 +3,8 @@
 // Layer: Chat status presentation
 // Exports: useThreadErrorToast, buildThreadErrorToastOptions, threadErrorToastId
 
-import type { ThreadId } from "@omnimind/contracts";
-import { isProviderDeliveryBlockDetail } from "@omnimind/shared/providerDeliveryBlock";
+import type { ThreadId } from "@harnessos/contracts";
+import { isProviderDeliveryBlockDetail } from "@harnessos/shared/providerDeliveryBlock";
 import { useEffect, useRef, type RefObject } from "react";
 
 import { toastManager } from "../ui/toast";

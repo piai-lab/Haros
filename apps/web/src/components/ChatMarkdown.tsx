@@ -4,8 +4,8 @@
 // Exports: ChatMarkdown
 
 import { TriangleAlertIcon } from "~/lib/icons";
-import type { MessageId, ProviderMentionReference, ThreadMarker } from "@omnimind/contracts";
-import { isLocalAbsolutePath } from "@omnimind/shared/path";
+import type { MessageId, ProviderMentionReference, ThreadMarker } from "@harnessos/contracts";
+import { isLocalAbsolutePath } from "@harnessos/shared/path";
 import "katex/dist/katex.min.css";
 import React, {
   Children,

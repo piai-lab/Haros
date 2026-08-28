@@ -2,7 +2,7 @@ import {
   USAGE_HISTORY_UNKNOWN_MODEL,
   USAGE_HISTORY_UNKNOWN_WORKSPACE,
   type UsageHistoryRow,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { historyStatusKey, usageHistoryDimensionLabel } from "./ProviderUsageSettingsPanel";

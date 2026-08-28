@@ -1,4 +1,4 @@
-import { MessageId, ProjectId, ThreadId } from "@omnimind/contracts";
+import { MessageId, ProjectId, ThreadId } from "@harnessos/contracts";
 import { assert, it } from "@effect/vitest";
 import { Effect, Layer, Option } from "effect";
 

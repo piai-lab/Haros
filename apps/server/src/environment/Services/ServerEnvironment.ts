@@ -1,4 +1,4 @@
-import type { EnvironmentId, ExecutionEnvironmentDescriptor } from "@omnimind/contracts";
+import type { EnvironmentId, ExecutionEnvironmentDescriptor } from "@harnessos/contracts";
 import { Effect, ServiceMap } from "effect";
 
 export interface ServerEnvironmentShape {

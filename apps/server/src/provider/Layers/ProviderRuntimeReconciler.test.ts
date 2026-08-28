@@ -5,7 +5,7 @@ import {
   type OrchestrationCommand,
   type OrchestrationShellSnapshot,
   type ProviderSession,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Layer, Option } from "effect";
 import { describe, expect, it, vi } from "vitest";
 

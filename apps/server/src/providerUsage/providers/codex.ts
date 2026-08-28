@@ -5,7 +5,7 @@
 import type {
   ServerProviderUsageLimit,
   ServerProviderUsageLine,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import { createLogger } from "../../logger";
 import {

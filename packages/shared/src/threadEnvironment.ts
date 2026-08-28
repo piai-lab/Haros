@@ -1,4 +1,4 @@
-import type { ThreadEnvironmentMode } from "@omnimind/contracts";
+import type { ThreadEnvironmentMode } from "@harnessos/contracts";
 
 export type ResolvedThreadWorkspaceState = "local" | "worktree-pending" | "worktree-ready";
 

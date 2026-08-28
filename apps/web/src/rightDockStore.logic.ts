@@ -3,7 +3,7 @@
 // Layer: UI state helpers
 // Exports: dock pane types, default-state factory, and immutable open/close/activate helpers.
 
-import type { ProjectId, ThreadId, TurnId } from "@omnimind/contracts";
+import type { ProjectId, ThreadId, TurnId } from "@harnessos/contracts";
 import { isPlainObject, sanitizeStringKeyedRecord } from "./persistedRecord";
 
 // Single source of truth for the dock pane kinds. The union type, the runtime

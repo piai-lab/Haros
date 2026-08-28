@@ -2,7 +2,7 @@
 // Purpose: Owns the bounded, isolated lifecycle for settled Mermaid Markdown projections.
 // Layer: Web chat presentation internals
 
-import type { EngineWebSurfaceThemeSnapshot } from "@omnimind/contracts";
+import type { EngineWebSurfaceThemeSnapshot } from "@harnessos/contracts";
 import type { MermaidConfig } from "mermaid";
 
 export const MERMAID_PRESENTATION_VERSION = "mermaid-presentation-v4";

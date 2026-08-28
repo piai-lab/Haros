@@ -29,7 +29,7 @@ export default defineConfig({
   external: [/^bun:/u, /^jsonc-parser(?:\/|$)/u],
   sourcemap: buildSourcemap,
   clean: true,
-  noExternal: (id) => id.startsWith("@omnimind/"),
+  noExternal: (id) => id.startsWith("@harnessos/"),
   inlineOnly: false,
   banner: {
     js: "#!/usr/bin/env node\n",

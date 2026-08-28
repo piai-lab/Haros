@@ -1,4 +1,4 @@
-import { DEFAULT_SERVER_SETTINGS, ProviderSessionStartInput } from "@omnimind/contracts";
+import { DEFAULT_SERVER_SETTINGS, ProviderSessionStartInput } from "@harnessos/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import {

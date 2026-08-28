@@ -1,4 +1,4 @@
-import { EventId, RuntimeRequestId } from "@omnimind/contracts";
+import { EventId, RuntimeRequestId } from "@harnessos/contracts";
 import type { LegacyProviderRuntimeEvent } from "../TestProviderAdapter.integration.ts";
 
 const PROVIDER = "codex" as const;

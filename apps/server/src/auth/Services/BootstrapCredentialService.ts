@@ -1,4 +1,4 @@
-import type { AuthPairingLink, ServerAuthBootstrapMethod } from "@omnimind/contracts";
+import type { AuthPairingLink, ServerAuthBootstrapMethod } from "@harnessos/contracts";
 import { Data, DateTime, Duration, ServiceMap } from "effect";
 import type { Effect, Stream } from "effect";
 

@@ -9,10 +9,10 @@ import { Buffer } from "node:buffer";
 import type {
   ServerVoiceTranscriptionInput,
   ServerVoiceTranscriptionResult,
-} from "@omnimind/contracts";
-import { SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES } from "@omnimind/contracts";
-import { requestChatGptVoiceTranscription } from "@omnimind/shared/chatGptVoiceTranscription";
-import { decodeOutboundJson, type OutboundHttpResponse } from "@omnimind/shared/outboundHttp";
+} from "@harnessos/contracts";
+import { SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES } from "@harnessos/contracts";
+import { requestChatGptVoiceTranscription } from "@harnessos/shared/chatGptVoiceTranscription";
+import { decodeOutboundJson, type OutboundHttpResponse } from "@harnessos/shared/outboundHttp";
 
 const MAX_DURATION_MS = 120_000;
 

@@ -1,5 +1,5 @@
-import { EventId, MessageId, ThreadId } from "@omnimind/contracts";
-import type { OrchestrationEvent } from "@omnimind/contracts";
+import { EventId, MessageId, ThreadId } from "@harnessos/contracts";
+import type { OrchestrationEvent } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

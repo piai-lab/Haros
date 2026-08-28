@@ -3,11 +3,11 @@
 // Layer: Web composer helper
 // Exports: mention token formatters plus regex helpers used by composer parsing and prompt sync.
 
-import type { ProviderMentionReference, ProviderSkillReference } from "@omnimind/contracts";
+import type { ProviderMentionReference, ProviderSkillReference } from "@harnessos/contracts";
 import {
   isThreadMentionPath,
   threadIdFromThreadMentionPath,
-} from "@omnimind/shared/threadMentions";
+} from "@harnessos/shared/threadMentions";
 
 export function skillMentionPrefix(provider: string): string {
   return provider === "pi" ? "/skill:" : "/";

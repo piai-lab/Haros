@@ -3,11 +3,11 @@
 // Layer: UI state logic
 // Exports: recent view types plus MRU update, pruning, and display derivation helpers
 
-import type { ProjectId, ProviderKind, ThreadId } from "@omnimind/contracts";
+import type { ProjectId, ProviderKind, ThreadId } from "@harnessos/contracts";
 import type {
   ResolvedTerminalVisualIdentity,
   TerminalIconKey,
-} from "@omnimind/shared/terminalThreads";
+} from "@harnessos/shared/terminalThreads";
 import type { Project, SidebarThreadSummary } from "./types";
 import { resolveThreadDisplayTitle } from "./lib/threadDisplayTitle";
 

@@ -1,7 +1,7 @@
 import {
   type EngineWebSurfacePresentationContext,
   parseEngineWebSurfaceThemeSnapshot,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Layer } from "effect";
 
 import {

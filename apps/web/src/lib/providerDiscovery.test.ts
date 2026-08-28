@@ -3,7 +3,7 @@
 // Layer: Web lib tests
 // Exports: Vitest cases for composer/plugin discovery helpers.
 
-import type { ProviderSkillDescriptor } from "@omnimind/contracts";
+import type { ProviderSkillDescriptor } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 import {
   buildSkillSearchFields,

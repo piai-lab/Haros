@@ -30,7 +30,7 @@ async function archiveFixture(
     "@earendil-works/pi-protocol",
     "@earendil-works/pi-telemetry",
     "@earendil-works/pi-tui",
-    "@omnimind/pi-coding-agent",
+    "@harnessos/pi-coding-agent",
   ];
   for (const name of extraPackage ? [...packages, "undisclosed"] : packages) {
     write(
@@ -40,8 +40,8 @@ async function archiveFixture(
   }
   const components = packages.map((name) => ({ id: `${name}@0.84.3` }));
   components.push({
-    id: "@omnimind/om-ask@5.0.0-omnimind.1",
-    name: "@omnimind/om-ask",
+    id: "@harnessos/om-ask@5.0.0-omnimind.1",
+    name: "@harnessos/om-ask",
     locations: ["bundled:apps/server/dist/index.mjs"],
   } as (typeof components)[number]);
   components.push({

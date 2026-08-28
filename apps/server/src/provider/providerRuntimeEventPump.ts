@@ -7,7 +7,7 @@
  *
  * @module providerRuntimeEventPump
  */
-import type { ProviderKind, ProviderRuntimeEvent } from "@omnimind/contracts";
+import type { ProviderKind, ProviderRuntimeEvent } from "@harnessos/contracts";
 import { Cause, Effect, Stream } from "effect";
 
 import type {

@@ -2,7 +2,7 @@
 // Purpose: Characterizes Sidebar pin races, archive serialization/undo, and batch deletion.
 // Layer: Web hook tests
 
-import { ProjectId, ThreadId } from "@omnimind/contracts";
+import { ProjectId, ThreadId } from "@harnessos/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const reactHarness = vi.hoisted(() => {

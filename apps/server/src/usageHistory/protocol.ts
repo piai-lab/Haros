@@ -1,7 +1,7 @@
 // FILE: usageHistory/protocol.ts
 // Purpose: Bounded one-request/one-response protocol for the archive reader child process.
 
-import type { UsageHistoryProvider } from "@omnimind/contracts";
+import type { UsageHistoryProvider } from "@harnessos/contracts";
 
 export const USAGE_HISTORY_PARSER_VERSION = 2;
 export const USAGE_HISTORY_DISCOVERY_BATCH_FILES = 128;

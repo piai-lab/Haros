@@ -11,7 +11,7 @@ import type {
   DeviceHardwareButton,
   DeviceUdid,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { type MessageKey, useI18n } from "~/i18n";
@@ -96,12 +96,12 @@ const DEVICE_SETUP_LABEL_KEYS = {
   "accept-xcode-license": "device.step.acceptLicense",
   "install-ios-runtime": "device.step.installRuntime",
   "build-device-helper": "device.step.buildHelper",
-} as const satisfies Record<import("@omnimind/contracts").DeviceSetupStepId, MessageKey>;
+} as const satisfies Record<import("@harnessos/contracts").DeviceSetupStepId, MessageKey>;
 
 function localizeDeviceSetupSteps(
-  steps: readonly import("@omnimind/contracts").DeviceSetupStep[],
+  steps: readonly import("@harnessos/contracts").DeviceSetupStep[],
   t: DeviceTranslate,
-): readonly import("@omnimind/contracts").DeviceSetupStep[] {
+): readonly import("@harnessos/contracts").DeviceSetupStep[] {
   return steps.map((step) => ({
     ...step,
     label: t(DEVICE_SETUP_LABEL_KEYS[step.id]),

@@ -6,8 +6,8 @@ import {
   type ProviderRuntimeEvent,
   ThreadId,
   TurnId,
-} from "@omnimind/contracts";
-import { nonEmptyTrimmed } from "@omnimind/shared/text";
+} from "@harnessos/contracts";
+import { nonEmptyTrimmed } from "@harnessos/shared/text";
 
 import {
   sanitizeUnmappedProviderData,

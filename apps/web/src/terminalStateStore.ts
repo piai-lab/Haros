@@ -5,8 +5,8 @@
  * API constrained to store actions/selectors.
  */
 
-import { type TerminalActivityState, type TerminalCliKind } from "@omnimind/shared/terminalThreads";
-import type { ThreadId } from "@omnimind/contracts";
+import { type TerminalActivityState, type TerminalCliKind } from "@harnessos/shared/terminalThreads";
+import type { ThreadId } from "@harnessos/contracts";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createDeferredPersistStorage, flushStorageBeforePageHide } from "./lib/storage";

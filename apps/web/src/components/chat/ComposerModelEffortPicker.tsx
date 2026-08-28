@@ -9,7 +9,7 @@ import {
   type ProviderModelDescriptor,
   type ProviderModelOptions,
   type ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useState } from "react";
 
 import { useI18n } from "~/i18n";

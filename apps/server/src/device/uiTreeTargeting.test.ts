@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { DeviceUiNode } from "@omnimind/contracts";
+import type { DeviceUiNode } from "@harnessos/contracts";
 
 import {
   DeviceUiTargetError,

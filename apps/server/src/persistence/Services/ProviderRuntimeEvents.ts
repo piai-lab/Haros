@@ -1,4 +1,4 @@
-import type { ProviderRuntimeEvent } from "@omnimind/contracts";
+import type { ProviderRuntimeEvent } from "@harnessos/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
 

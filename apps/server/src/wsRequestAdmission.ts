@@ -1,6 +1,6 @@
 import * as Crypto from "node:crypto";
 
-import { ORCHESTRATION_WS_METHODS, WS_METHODS, WsRpcError } from "@omnimind/contracts";
+import { ORCHESTRATION_WS_METHODS, WS_METHODS, WsRpcError } from "@harnessos/contracts";
 import { Effect, Ref } from "effect";
 
 export type WsRequestClass = "control" | "standard" | "provider-discovery" | "expensive-read";

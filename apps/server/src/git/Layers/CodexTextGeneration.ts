@@ -6,11 +6,11 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import {
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   DEFAULT_GIT_TEXT_GENERATION_REASONING_EFFORT,
-} from "@omnimind/contracts";
-import { sanitizeGeneratedThreadTitle } from "@omnimind/shared/chatThreads";
-import { resolveCodexHome } from "@omnimind/shared/codexConfig";
-import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@omnimind/shared/git";
-import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
+} from "@harnessos/contracts";
+import { sanitizeGeneratedThreadTitle } from "@harnessos/shared/chatThreads";
+import { resolveCodexHome } from "@harnessos/shared/codexConfig";
+import { sanitizeBranchFragment, sanitizeFeatureBranchName } from "@harnessos/shared/git";
+import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
 
 import { resolveProviderAttachmentPath } from "../../provider/providerAttachmentPaths.ts";
 import { buildCodexProcessEnv } from "../../codexProcessEnv.ts";

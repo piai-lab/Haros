@@ -5,8 +5,8 @@
 import {
   PROVIDER_KINDS,
   type ProviderSkillDescriptor,
-} from "@omnimind/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
+} from "@harnessos/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
 import { describe, expect, it } from "vitest";
 
 import {

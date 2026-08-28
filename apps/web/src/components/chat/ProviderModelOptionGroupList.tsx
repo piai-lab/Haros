@@ -17,7 +17,7 @@ import {
   type ProviderModelOption,
   type ProviderModelOptionGroup,
 } from "../../providerModelOptions";
-import type { ProviderKind } from "@omnimind/contracts";
+import type { ProviderKind } from "@harnessos/contracts";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
 import { ModelIdentityIcon } from "../ModelIdentityIcon";

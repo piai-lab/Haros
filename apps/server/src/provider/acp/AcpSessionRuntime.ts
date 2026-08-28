@@ -8,7 +8,7 @@ import type * as Acp from "@agentclientprotocol/sdk";
 import {
   parseWindowsWslUncPath,
   prepareWindowsSafeProcess,
-} from "@omnimind/shared/windowsProcess";
+} from "@harnessos/shared/windowsProcess";
 import {
   Cause,
   Deferred,

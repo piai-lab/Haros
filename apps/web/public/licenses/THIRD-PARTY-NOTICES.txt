@@ -8388,7 +8388,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-@omnimind/om-ask@5.0.0-omnimind.1
+@harnessos/om-ask@5.0.0-omnimind.1
 ---------------------------------
 License: MIT
 Packaged location(s): bundled:apps/server/dist/index.mjs
@@ -8420,12 +8420,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 
-@omnimind/pi-coding-agent@0.84.3
+@harnessos/pi-coding-agent@0.84.3
 --------------------------------
 License: MIT
 Author/copyright attribution: Mario Zechner
 Source: https://github.com/earendil-works/pi.git
-Packaged location(s): node_modules/.bun/@omnimind+pi-coding-agent@..+..+vendor+omnimind-pi-coding-agent-0.84.3.tgz+bfb712a8fa2951a7/node_modules/@omnimind/pi-coding-agent
+Packaged location(s): node_modules/.bun/@omnimind+pi-coding-agent@..+..+vendor+omnimind-pi-coding-agent-0.84.3.tgz+bfb712a8fa2951a7/node_modules/@harnessos/pi-coding-agent
 
 Legal text provenance: packaged
 Legal source: packaged LICENSE

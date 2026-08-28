@@ -1,6 +1,6 @@
 import { runInNewContext } from "node:vm";
 
-import type { BrowserNodeTarget } from "@omnimind/contracts";
+import type { BrowserNodeTarget } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { browserTargetLocatorBody } from "./targets";

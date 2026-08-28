@@ -1,5 +1,5 @@
-import { type ProjectId, ThreadId } from "@omnimind/contracts";
-import { getDefaultModel } from "@omnimind/shared/model";
+import { type ProjectId, ThreadId } from "@harnessos/contracts";
+import { getDefaultModel } from "@harnessos/shared/model";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { startTransition } from "react";

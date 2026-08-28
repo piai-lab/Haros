@@ -1,4 +1,4 @@
-import type { OrchestrationMessageTextSegment } from "@omnimind/contracts";
+import type { OrchestrationMessageTextSegment } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { deriveNextMessageTextSegments } from "./threadMessageTextSegments";

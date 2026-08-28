@@ -1,7 +1,7 @@
 // FILE: providerMetadata.ts
 // Purpose: Exhaustive credential-blind provider presentation metadata.
 
-import type { ProviderKind } from "@omnimind/contracts";
+import type { ProviderKind } from "@harnessos/contracts";
 
 export interface ProviderDescriptor {
   readonly kind: ProviderKind;

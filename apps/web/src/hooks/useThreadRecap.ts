@@ -3,7 +3,7 @@
 // Layer: React hook
 // Exports: useThreadRecap for the Environment panel.
 
-import type { ProviderStartOptions, ThreadId } from "@omnimind/contracts";
+import type { ProviderStartOptions, ThreadId } from "@harnessos/contracts";
 import { useEffect, useRef, useState } from "react";
 
 import {

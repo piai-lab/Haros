@@ -4,8 +4,8 @@
 // Exports: Vitest cases
 // Depends on: voiceTranscription utility and mocked fetch responses.
 
-import type { ServerVoiceTranscriptionInput } from "@omnimind/contracts";
-import { outboundHttp, type OutboundHttpResponse } from "@omnimind/shared/outboundHttp";
+import type { ServerVoiceTranscriptionInput } from "@harnessos/contracts";
+import { outboundHttp, type OutboundHttpResponse } from "@harnessos/shared/outboundHttp";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { transcribeVoiceWithChatGptSession } from "./voiceTranscription";

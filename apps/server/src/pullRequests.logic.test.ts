@@ -14,7 +14,7 @@ import {
   shouldLoadReviewingCompanion,
 } from "./pullRequests.logic";
 
-import type { PullRequestListEntry } from "@omnimind/contracts";
+import type { PullRequestListEntry } from "@harnessos/contracts";
 
 function makeEntry(overrides: Partial<PullRequestListEntry> = {}): PullRequestListEntry {
   return {

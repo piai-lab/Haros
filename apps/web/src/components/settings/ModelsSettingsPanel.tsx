@@ -21,7 +21,7 @@ import {
   type OmniMindCustomModelHeaderMutation,
   type OmniMindCustomModelServiceModelInput,
   type ModelSelection,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
 import {

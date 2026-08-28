@@ -1,4 +1,4 @@
-import type { PullRequestDetail, PullRequestStack, PullRequestStackEntry } from "@omnimind/contracts";
+import type { PullRequestDetail, PullRequestStack, PullRequestStackEntry } from "@harnessos/contracts";
 
 export type PullRequestStackBlocker =
   | { readonly kind: "closed"; readonly number: number }

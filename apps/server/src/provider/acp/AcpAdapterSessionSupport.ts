@@ -13,7 +13,7 @@ import type {
   ProviderUserInputAnswers,
   RuntimeMode,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Deferred, Effect, Option, Semaphore, SynchronizedRef } from "effect";
 import type * as Acp from "@agentclientprotocol/sdk";
 import { encodeCanonicalUserInputResponse } from "../canonicalUserInput.ts";

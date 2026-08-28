@@ -40,14 +40,14 @@ import type {
   OmniMindModelServicesExtensionProjectionState,
   OmniMindModelServicesListResult,
   OmniMindModelServicesProjectionIntent,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API,
   OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT,
   OMNIMIND_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT,
   OMNIMIND_MODEL_SERVICE_MODELS_MAX_COUNT,
   OMNIMIND_MODEL_SERVICES_MAX_COUNT,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Layer } from "effect";
 
 import { ServerConfig } from "../../config.ts";
@@ -291,7 +291,7 @@ function customProviderDiscoveryConfig(input: OmniMindCustomModelServiceDiscover
 
 function headerReferencesForMutation(
   input: OmniMindCustomModelServiceConfigInput | OmniMindCustomModelServiceDiscoveryConfigInput,
-): ReadonlyArray<import("@omnimind/pi-coding-agent").ModelConfigHeaderReferenceMutation> {
+): ReadonlyArray<import("@harnessos/pi-coding-agent").ModelConfigHeaderReferenceMutation> {
   const providerReferences = (input.headerMutations ?? []).map((mutation) => ({
     scope: { type: "provider" as const },
     name: mutation.name,

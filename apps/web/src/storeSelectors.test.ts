@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { MessageId, ProjectId, ThreadId } from "@omnimind/contracts";
+import type { MessageId, ProjectId, ThreadId } from "@harnessos/contracts";
 
 import type { AppState } from "./store";
 import {

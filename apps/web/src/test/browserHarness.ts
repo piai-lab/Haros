@@ -1,4 +1,4 @@
-import type { ServerConfig } from "@omnimind/contracts";
+import type { ServerConfig } from "@harnessos/contracts";
 
 export function createBrowserTestServerConfig(checkedAt: string): ServerConfig {
   return {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ThreadId, TurnId, WS_STREAM_LIMITS } from "@omnimind/contracts";
+import { ThreadId, TurnId, WS_STREAM_LIMITS } from "@harnessos/contracts";
 import { useStore } from "./store";
 import {
   MAX_CACHED_THREAD_DETAIL_SUBSCRIPTIONS,

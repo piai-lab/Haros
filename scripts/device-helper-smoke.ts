@@ -22,12 +22,12 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
-import { decodeDeviceFrame } from "@omnimind/shared/deviceFrame";
+import { decodeDeviceFrame } from "@harnessos/shared/deviceFrame";
 import {
   DEVICE_HELPER_CACHE_SEGMENTS,
   deviceHelperCacheKey,
   readDeviceHelperSourceRevision,
-} from "@omnimind/shared/deviceHelperCache";
+} from "@harnessos/shared/deviceHelperCache";
 import { sandboxedHelperCommand } from "../apps/server/src/device/helperSandbox.ts";
 
 const execFileAsync = promisify(execFile);
@@ -322,7 +322,7 @@ async function main(): Promise<void> {
   step("Compiling the helper");
   // Cached by Xcode version: private API surface moves with the toolchain, so a
   // binary built against one Xcode must not be reused after an upgrade. The key
-  // comes from @omnimind/shared so this build lands in the same directory the
+  // comes from @harnessos/shared so this build lands in the same directory the
   // server reads; deriving it here separately meant a passing smoke run
   // populated a directory the server never looked in. Because the key is
   // derived from the *overridden* toolchain, sweeping Xcodes fills one cache

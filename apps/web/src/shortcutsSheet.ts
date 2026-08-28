@@ -8,7 +8,7 @@ import {
   type KeybindingCommand,
   type ResolvedKeybindingRule,
   type ResolvedKeybindingsConfig,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { isMacPlatform } from "./lib/utils";
 import { formatShortcutLabel, resolveKeybindingForCommand } from "./keybindings";
 import { commandForProjectScript } from "./projectScripts";

@@ -2,7 +2,7 @@
 // Purpose: Verifies hidden Studio container detection and creation dispatches.
 // Layer: Web orchestration tests
 
-import { type ProjectId, type ThreadId } from "@omnimind/contracts";
+import { type ProjectId, type ThreadId } from "@harnessos/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useStore } from "../store";

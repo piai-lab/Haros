@@ -1,4 +1,4 @@
-import type { ServerProviderUsageSnapshot } from "@omnimind/contracts";
+import type { ServerProviderUsageSnapshot } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { parseClaudeUsage } from "./providers/claude.ts";

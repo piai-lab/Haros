@@ -3,8 +3,8 @@
 // Layer: Web orchestration helper tests
 // Depends on: threadUnblock helpers with a stubbed orchestration API.
 
-import type { OrchestrationListProviderDeliveryBlockersResult } from "@omnimind/contracts";
-import { ThreadId } from "@omnimind/contracts";
+import type { OrchestrationListProviderDeliveryBlockersResult } from "@harnessos/contracts";
+import { ThreadId } from "@harnessos/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import {

@@ -10,7 +10,7 @@ import {
   type ProviderModelDescriptor,
   type ProviderModelOptions,
   type ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   getDefaultEffort,
   hasEffortLevel,
@@ -22,7 +22,7 @@ import {
   normalizePiModelOptions,
   resolveLabeledOptionValue,
   trimOrNull,
-} from "@omnimind/shared/model";
+} from "@harnessos/shared/model";
 import type { ReactNode } from "react";
 import { classifyCodexReasoningEffortSupport } from "../../lib/codexReasoningEffort";
 import { TraitsMenuContent, TraitsPicker } from "./TraitsPicker";

@@ -7,7 +7,7 @@ import {
   WsRpcError,
   type ProviderKind,
   type ServerProviderStatus,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Schema } from "effect";
 
 import {

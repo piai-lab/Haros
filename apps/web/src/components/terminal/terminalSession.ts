@@ -8,7 +8,7 @@
 // Note: the id factory lives in `terminalIds.ts` so eager consumers can import
 //       it without anchoring xterm into the initial bundle.
 
-import { type NativeApi } from "@omnimind/contracts";
+import { type NativeApi } from "@harnessos/contracts";
 
 // The terminal runtime pulls in xterm and its addons (~223 KB gzip). Importing
 // the registry statically anchored the whole terminal stack into the eager

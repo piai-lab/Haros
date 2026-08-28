@@ -9,11 +9,11 @@ import {
   type ProviderKind,
   type ThreadHandoffImportedMessage,
   type ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   deriveAssociatedWorktreeMetadata,
   workspaceRootsEqual,
-} from "@omnimind/shared/threadWorkspace";
+} from "@harnessos/shared/threadWorkspace";
 import type { FileSystem, Path } from "effect";
 import { Data, Effect, Option } from "effect";
 

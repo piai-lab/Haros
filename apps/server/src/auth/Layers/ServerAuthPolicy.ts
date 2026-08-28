@@ -1,4 +1,4 @@
-import type { ServerAuthDescriptor } from "@omnimind/contracts";
+import type { ServerAuthDescriptor } from "@harnessos/contracts";
 import { Effect, Layer } from "effect";
 
 import { ServerConfig } from "../../config";

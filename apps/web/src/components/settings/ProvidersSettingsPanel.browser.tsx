@@ -8,7 +8,7 @@ import {
   DEFAULT_SERVER_SETTINGS_VIEW,
   type NativeApi,
   type ServerProviderStatus,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";

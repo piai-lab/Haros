@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BrowserTabState } from "@omnimind/contracts";
+import type { BrowserTabState } from "@harnessos/contracts";
 
 import {
   resolveBrowserTabPresentationTitle,

@@ -13,7 +13,7 @@ import {
   type ServerLocalServerProcess,
   type ThreadBrowserState,
   type ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -29,14 +29,14 @@ import {
   XIcon,
 } from "~/lib/icons";
 
-import { localServerPrimaryLabel } from "@omnimind/shared/localServers";
-import { resolveDesktopDipRectFromCssRect } from "@omnimind/shared/desktopChrome";
+import { localServerPrimaryLabel } from "@harnessos/shared/localServers";
+import { resolveDesktopDipRectFromCssRect } from "@harnessos/shared/desktopChrome";
 import {
   BROWSER_BLANK_URL,
   isBlankBrowserTabUrl,
   resolveCopyableBrowserTabUrl,
-} from "@omnimind/shared/browserSession";
-import { isBrowserCopyLinkChord } from "@omnimind/shared/browserShortcuts";
+} from "@harnessos/shared/browserSession";
+import { isBrowserCopyLinkChord } from "@harnessos/shared/browserShortcuts";
 
 import { isElectron } from "~/env";
 import { useI18n } from "~/i18n";

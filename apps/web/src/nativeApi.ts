@@ -4,7 +4,7 @@ import {
   WS_OMNIMIND_ECOSYSTEM_CAPABILITY,
   WS_OMNIMIND_MODEL_SERVICES_CAPABILITY,
   type NativeApi,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import {
   createWsNativeApi,

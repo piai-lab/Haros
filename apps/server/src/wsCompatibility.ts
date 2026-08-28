@@ -11,7 +11,7 @@ import {
   type WsBootstrapNegotiateInput,
   type WsBootstrapNegotiateResult,
   type WsCompatibilityAction,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect } from "effect";
 
 import { version as serverBuild } from "../package.json" with { type: "json" };

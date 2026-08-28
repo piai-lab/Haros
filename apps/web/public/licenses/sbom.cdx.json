@@ -3099,7 +3099,7 @@
     },
     {
       "type": "library",
-      "name": "@omnimind/om-ask",
+      "name": "@harnessos/om-ask",
       "version": "5.0.0-omnimind.1",
       "bom-ref": "pkg:npm/%40omnimind/om-ask@5.0.0-omnimind.1",
       "purl": "pkg:npm/%40omnimind/om-ask@5.0.0-omnimind.1",
@@ -3125,7 +3125,7 @@
     },
     {
       "type": "library",
-      "name": "@omnimind/pi-coding-agent",
+      "name": "@harnessos/pi-coding-agent",
       "version": "0.84.3",
       "bom-ref": "pkg:npm/%40omnimind/pi-coding-agent@0.84.3",
       "purl": "pkg:npm/%40omnimind/pi-coding-agent@0.84.3",
@@ -3152,7 +3152,7 @@
       "properties": [
         {
           "name": "omnimind:artifact-location",
-          "value": "node_modules/.bun/@omnimind+pi-coding-agent@..+..+vendor+omnimind-pi-coding-agent-0.84.3.tgz+bfb712a8fa2951a7/node_modules/@omnimind/pi-coding-agent"
+          "value": "node_modules/.bun/@omnimind+pi-coding-agent@..+..+vendor+omnimind-pi-coding-agent-0.84.3.tgz+bfb712a8fa2951a7/node_modules/@harnessos/pi-coding-agent"
         }
       ]
     },

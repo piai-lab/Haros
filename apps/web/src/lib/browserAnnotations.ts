@@ -16,11 +16,11 @@ import {
   BROWSER_ANNOTATION_MAX_URL_LENGTH,
   type BrowserAnnotation,
   type MessageId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   sanitizeBrowserAnnotationPageTitle,
   sanitizeBrowserAnnotationUrl,
-} from "@omnimind/shared/browserAnnotations";
+} from "@harnessos/shared/browserAnnotations";
 
 export const BROWSER_ANNOTATIONS_VERSION = 2 as const;
 export const BROWSER_ANNOTATION_MAX_COUNT = 32;

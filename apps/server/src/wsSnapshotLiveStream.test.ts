@@ -1,4 +1,4 @@
-import type { OrchestrationEvent } from "@omnimind/contracts";
+import type { OrchestrationEvent } from "@harnessos/contracts";
 import { Duration, Effect, PubSub, Stream } from "effect";
 import { describe, expect, it } from "vitest";
 

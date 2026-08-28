@@ -1,5 +1,5 @@
 import { assert, describe, it } from "@effect/vitest";
-import type { ModelSelection, ProviderKind, ProviderModelDescriptor } from "@omnimind/contracts";
+import type { ModelSelection, ProviderKind, ProviderModelDescriptor } from "@harnessos/contracts";
 import { Effect } from "effect";
 
 import type { ProviderDiscoveryServiceShape } from "../provider/Services/ProviderDiscoveryService.ts";

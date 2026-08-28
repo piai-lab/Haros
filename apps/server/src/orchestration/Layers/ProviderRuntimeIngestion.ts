@@ -16,21 +16,21 @@ import {
   type OrchestrationThreadShell,
   type ProviderKind,
   type ProviderRuntimeEvent,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Cache, Cause, Deferred, Duration, Effect, Layer, Option, Ref, Stream } from "effect";
 import * as Semaphore from "effect/Semaphore";
 import {
   makeDrainableWorker,
   startDrainableWorkerProducers,
-} from "@omnimind/shared/DrainableWorker";
-import { isPotentiallyVisibleProviderRuntimeActivity } from "@omnimind/shared/providerActivityVisibility";
-import { buildStalePendingRequestFailureDetail } from "@omnimind/shared/threadSummary";
+} from "@harnessos/shared/DrainableWorker";
+import { isPotentiallyVisibleProviderRuntimeActivity } from "@harnessos/shared/providerActivityVisibility";
+import { buildStalePendingRequestFailureDetail } from "@harnessos/shared/threadSummary";
 import {
   buildSubagentIdentityDirectory,
   collectSubagentProviderThreadIds,
   extractSubagentIdentityHints,
   resolveSubagentIdentityFromDirectory,
-} from "@omnimind/shared/subagents";
+} from "@harnessos/shared/subagents";
 
 import {
   generatedImageMarkdown,

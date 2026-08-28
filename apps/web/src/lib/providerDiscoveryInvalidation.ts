@@ -7,7 +7,7 @@ import {
   PROVIDER_KINDS,
   type ProviderKind,
   type ServerProviderStatus,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 type ProviderModelDiscoveryFingerprintEntry = readonly [
   provider: ServerProviderStatus["provider"],

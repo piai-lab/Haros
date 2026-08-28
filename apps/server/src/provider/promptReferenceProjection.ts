@@ -3,7 +3,7 @@
 // Layer: Provider prompt compatibility
 // Exports: appendProviderReferencesPromptBlock.
 
-import type { ProviderMentionReference } from "@omnimind/contracts";
+import type { ProviderMentionReference } from "@harnessos/contracts";
 
 function referenceLine(reference: ProviderMentionReference): string {
   const kind = reference.path.startsWith("plugin://") ? "Factory plugin" : "local path";

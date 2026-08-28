@@ -8,7 +8,7 @@ import {
   type ModelSelection,
   type ModelSlug,
   type RuntimeMode,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import type { WorkLogEntry } from "../session-logic";

@@ -3,7 +3,7 @@
 //          OmniMind's canonical built-in composer slash commands.
 // Layer: Web presentation
 
-import type { BuiltInComposerSlashCommand } from "@omnimind/shared/composerSlashCommands";
+import type { BuiltInComposerSlashCommand } from "@harnessos/shared/composerSlashCommands";
 
 import type { MessageKey } from "./i18n";
 import {

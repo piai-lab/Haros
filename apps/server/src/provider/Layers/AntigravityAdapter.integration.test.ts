@@ -7,7 +7,7 @@ import path from "node:path";
 import { PassThrough } from "node:stream";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@harnessos/contracts";
 import { Deferred, Effect, Fiber, Layer, Stream } from "effect";
 import { describe, expect, it } from "vitest";
 

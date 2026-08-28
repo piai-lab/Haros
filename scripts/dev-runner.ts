@@ -5,14 +5,14 @@ import { delimiter as pathDelimiter, join as pathJoin } from "node:path";
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { NetService } from "@omnimind/shared/Net";
+import { NetService } from "@harnessos/shared/Net";
 import {
   getBooleanFlagValue,
   optionalBooleanEnvironmentConfig,
   optionalBooleanFlag,
   type BooleanFlagInput,
-} from "@omnimind/shared/cli";
-import { applyShellEnvironmentHydrationMarker } from "@omnimind/shared/shell";
+} from "@harnessos/shared/cli";
+import { applyShellEnvironmentHydrationMarker } from "@harnessos/shared/shell";
 import { Config, Data, Effect, Hash, Layer, Logger, Option, Path, Schema } from "effect";
 import * as ConfigProvider from "effect/ConfigProvider";
 import { Argument, Command, Flag } from "effect/unstable/cli";
@@ -32,14 +32,14 @@ const MODE_ARGS = {
     "run",
     "dev",
     "--ui=tui",
-    "--filter=@omnimind/contracts",
-    "--filter=@omnimind/web",
-    "--filter=@omnimind/server",
+    "--filter=@harnessos/contracts",
+    "--filter=@harnessos/web",
+    "--filter=@harnessos/server",
     "--parallel",
   ],
-  "dev:server": ["run", "dev", "--filter=@omnimind/server"],
-  "dev:web": ["run", "dev", "--filter=@omnimind/web"],
-  "dev:desktop": ["run", "dev", "--filter=@omnimind/desktop", "--filter=@omnimind/web", "--parallel"],
+  "dev:server": ["run", "dev", "--filter=@harnessos/server"],
+  "dev:web": ["run", "dev", "--filter=@harnessos/web"],
+  "dev:desktop": ["run", "dev", "--filter=@harnessos/desktop", "--filter=@harnessos/web", "--parallel"],
 } as const satisfies Record<string, ReadonlyArray<string>>;
 
 type DevMode = keyof typeof MODE_ARGS;

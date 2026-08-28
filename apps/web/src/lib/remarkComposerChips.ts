@@ -9,7 +9,7 @@
 //          terminal chip constants, ComposerChipSegment,
 //          createComposerChipsRemarkPlugin, parseComposerChipSegment
 
-import type { ProviderMentionReference } from "@omnimind/contracts";
+import type { ProviderMentionReference } from "@harnessos/contracts";
 import {
   splitPromptIntoDisplaySegments,
   type ComposerPromptSegment,

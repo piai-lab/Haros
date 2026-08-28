@@ -23,7 +23,7 @@ import type {
   BrowserTabInput,
   BrowserThreadInput,
   ThreadBrowserState,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { DesktopBrowserManager } from "./browserManager";
 import { BROWSER_IPC_CHANNELS } from "./ipcChannels";

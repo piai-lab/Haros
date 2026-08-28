@@ -1,6 +1,6 @@
 ## OmniMind distribution note
 
-This directory is the private workspace package `@omnimind/om-web-access`, adopted from Nico Bailon's MIT-licensed `pi-web-access@0.25.0` at exact commit `08e347f4fe6bea807882c2363527118cce6eb539`. The upstream structure, legal text, mature Provider/fetch/Curator implementation, and author tests remain here; OmniMind's bounded P1–P6 lifecycle differences are tracked in [`research/pi-web-access-intake.md`](../../research/pi-web-access-intake.md).
+This directory is the private workspace package `@harnessos/om-web-access`, adopted from Nico Bailon's MIT-licensed `pi-web-access@0.25.0` at exact commit `08e347f4fe6bea807882c2363527118cce6eb539`. The upstream structure, legal text, mature Provider/fetch/Curator implementation, and author tests remain here; OmniMind's bounded P1–P6 lifecycle differences are tracked in [`research/pi-web-access-intake.md`](../../research/pi-web-access-intake.md).
 
 It is composed only into the bundled OmniMind Agent. It is not a Host capability, AgentGateway backend, npm release, or supported stock Pi package, and it never reads or synchronizes stock Pi's `.pi` state. The exact source adoption is recorded in [`source-adoptions.json`](../../source-adoptions.json); packaged and release evidence are intentionally not duplicated in this package README.
 

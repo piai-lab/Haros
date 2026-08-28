@@ -3,7 +3,7 @@
 // Layer: UI state store test
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { ProjectId } from "@omnimind/contracts";
+import { ProjectId } from "@harnessos/contracts";
 import { usePinnedProjectsStore } from "./pinnedProjectsStore";
 
 describe("usePinnedProjectsStore", () => {

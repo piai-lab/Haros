@@ -7,7 +7,7 @@ import {
   ThreadId,
   type OrchestrationEvent,
   type OrchestrationThread,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   Effect,
   Exit,

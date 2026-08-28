@@ -27,12 +27,12 @@ import {
   type RuntimeMode,
   type ServerProviderStatus,
   type TurnDispatchMode,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   isProviderRuntimeModeExecutable,
   isProviderRuntimeModePermanentlyUnsupported,
   runtimeModeEscalatesPrivilege,
-} from "@omnimind/shared/runtimeMode";
+} from "@harnessos/shared/runtimeMode";
 import { Effect, Layer, Option } from "effect";
 
 import { GitCore } from "../../git/Services/GitCore.ts";

@@ -1,4 +1,4 @@
-import { parseGitHubRepositoryNameWithOwnerFromRemoteUrl } from "@omnimind/shared/githubRepository";
+import { parseGitHubRepositoryNameWithOwnerFromRemoteUrl } from "@harnessos/shared/githubRepository";
 import { Effect } from "effect";
 
 import type { GitCoreShape } from "../git/Services/GitCore";

@@ -1,4 +1,4 @@
-import { ThreadId, type OrchestrationSession } from "@omnimind/contracts";
+import { ThreadId, type OrchestrationSession } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

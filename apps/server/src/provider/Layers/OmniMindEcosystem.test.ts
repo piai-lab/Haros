@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@harnessos/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import { ServerConfig } from "../../config.ts";

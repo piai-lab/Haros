@@ -36,7 +36,7 @@ import type {
   RuntimeMode,
   ThreadCreationSource,
   ThreadEnvironmentMode,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 export type SessionPhase = "disconnected" | "connecting" | "ready" | "running";
 export const DEFAULT_RUNTIME_MODE: RuntimeMode = "full-access";

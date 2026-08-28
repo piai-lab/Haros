@@ -8,7 +8,7 @@ import {
   hasUnpairedUtf16Surrogate,
   type OmniMindAgentPromptMutationResult,
   type OmniMindAgentPromptSnapshot,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useEffect, useState } from "react";
 
 import {

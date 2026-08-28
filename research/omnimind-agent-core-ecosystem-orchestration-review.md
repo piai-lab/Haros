@@ -17,7 +17,7 @@
 >
 > **当前议题 supersession（2026-08-19）**：正文中任何“优先采用第三方Pi Todo Extension”、把lazy MCP或第三方MCP Settings纳入首版、建立Host/global Tool Search、让Host active set按每回合重算，或把Host dynamic loading视为确定终态的表述均为历史proposal，不能作为当前准入。Todo现行证据只看[`pi-native-todo-extension-review.md`](pi-native-todo-extension-review.md)；Extension Architecture 1.0、Host Projection eager-active、strong Host parity与owner-local dynamic边界只看[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)及`architecture/execution.md`；第三方MCP管理继续退出首版。本文中的Chat Todo、六组taxonomy、Device full-access、Browser download、approval/auto与Marketplace建议也不能借当前Host裁决自动采用。
 >
-> **Web Access supersession（2026-08-22）**：正文 §8.4 与 package 表中的 `pi-web-access@0.22.0`、默认 headless/按需 Curator、旧版本与旧接入建议只作历史研究。当前 exact source、`@omnimind/om-web-access` fork、bundled-only support、非 Host 边界、默认 Right Dock Curator、配置/availability/`source_check` 和长期维护合同只看 [`pi-web-access-intake.md`](pi-web-access-intake.md)。
+> **Web Access supersession（2026-08-22）**：正文 §8.4 与 package 表中的 `pi-web-access@0.22.0`、默认 headless/按需 Curator、旧版本与旧接入建议只作历史研究。当前 exact source、`@harnessos/om-web-access` fork、bundled-only support、非 Host 边界、默认 Right Dock Curator、配置/availability/`source_check` 和长期维护合同只看 [`pi-web-access-intake.md`](pi-web-access-intake.md)。
 
 ## 0. 为什么存在这份文档
 
@@ -316,7 +316,7 @@ ModelRuntime.create({
 - `pi-coding-agent` 已统计 cache waste，区分首次请求、从未报告 cache 的 provider、合法 compaction/branch summary 与真实重复计费；
 - tool set 变化会重建 system prompt；resource reload、Skill/Prompt expansion 与 per-turn extension modification 都是 Pi 已存在的 lifecycle，而不是 OmniMind 需要另造的概念。
 
-当前仓库还同时装有本地 `@omnimind/pi-coding-agent@0.84.1` bundle。它不是另一套 Agent 实现：对 installed `dist` 排除 source maps 的目录比较未发现差异，产品差异集中在 package metadata——包名、`.omnimind` config root、product name、移除 CLI bin、锁定依赖与发行文件。`PiRuntimeIsolation.test.ts` 进一步验证 stock family 与 product family 具有独立 module identity、project/global resources、Session 和 package roots。这种 **相同 Runtime 字节 + 最小 metadata 隔离** 正是未来应保持的理想形态；不能让 branded bundle 逐步吸收无关私有逻辑，悄悄变成难以升级的第二 Pi core。
+当前仓库还同时装有本地 `@harnessos/pi-coding-agent@0.84.1` bundle。它不是另一套 Agent 实现：对 installed `dist` 排除 source maps 的目录比较未发现差异，产品差异集中在 package metadata——包名、`.omnimind` config root、product name、移除 CLI bin、锁定依赖与发行文件。`PiRuntimeIsolation.test.ts` 进一步验证 stock family 与 product family 具有独立 module identity、project/global resources、Session 和 package roots。这种 **相同 Runtime 字节 + 最小 metadata 隔离** 正是未来应保持的理想形态；不能让 branded bundle 逐步吸收无关私有逻辑，悄悄变成难以升级的第二 Pi core。
 
 因此 **Pi Runtime 本身应被视为成熟 substrate，而不是待补齐的空壳**。OmniMind 的第一责任是保持这些语义穿过 Host bridge 后仍可用、可观测、可取消、可恢复；若 Host injection、UI bridge、usage normalization 或 Product Thread projection 丢失了 Pi 原生能力，这叫 integration regression，不叫 Pi 缺功能。
 
@@ -386,7 +386,7 @@ ModelRuntime.create({
 | Host heterogeneous Delegate     | OmniMind 薄编排                         | Pi 只知道内部 Model services，无法拥有独立 Host Engines         |
 | Dynamic Workflow/Product UX     | OmniMind owner，吸收 Pi 算法            | package 自带 owner 与 Product Thread/Workbench 冲突             |
 
-这里还隐含一条发布约束：`@omnimind/pi-coding-agent` 只应承担命名、配置根、物理模块隔离和发行封装。若要改变 Runtime 行为，优先在 Host public injection point 完成；任何进入 branded `dist` 的行为差异都按 Pi core patch 的最高门槛处理。
+这里还隐含一条发布约束：`@harnessos/pi-coding-agent` 只应承担命名、配置根、物理模块隔离和发行封装。若要改变 Runtime 行为，优先在 Host public injection point 完成；任何进入 branded `dist` 的行为差异都按 Pi core patch 的最高门槛处理。
 
 这不是保守主义。恰恰因为项目有 fork 和二次开发能力，才更应把开发能力花在真实差异上，而不是重写已经成熟、未来还会继续进化的 Pi 内核。
 
@@ -1371,7 +1371,7 @@ Fork 后代码只保留一个明确 owner。若为了“未来兼容”同时保
 
 这是同一个纵向基础切片，不建设独立 preservation 平台：
 
-- 保持 `@omnimind/pi-coding-agent` shared Runtime bytes 与锁定 Pi revision 等价，只允许已披露的 package identity/config root/archive 差异；
+- 保持 `@harnessos/pi-coding-agent` shared Runtime bytes 与锁定 Pi revision 等价，只允许已披露的 package identity/config root/archive 差异；
 - 只有 Pi revision、PiAdapter、Host Harness、Resource/Tool/Session bridge 或 packaging 变化时，重跑受影响的 public-family vs product-family 差分 journey；
 - Model services 继续由 task-local Pi ModelRuntime、Pi login/logout/catalog lifecycle 与稳定 provider instance id 拥有；
 - 修复 static default/auth unknown 被误投影为 executable 的路径，send admission 再验证 exact target；
@@ -1627,7 +1627,7 @@ Fork 后代码只保留一个明确 owner。若为了“未来兼容”同时保
 - `packages/contracts/src/model.ts`：ModelSelection/descriptor/default 与 Engine-private options 的 contract。
 - `apps/server/src/provider/Layers/ProviderHealth.ts`：bundled/ready/auth unknown 等健康事实如何进入 UI 与 capabilities。
 - `apps/server/src/provider/Layers/PiAdapter.ts`：per-agent-dir Pi ModelRuntime、Host prompt/tool injection、UI bridge/unsupported API。
-- `bun.lock` 与 bundled Pi 0.84.1：当前 exact `@earendil-works/pi-ai` / `pi-coding-agent` revision，以及本地 `@omnimind/pi-coding-agent` product bundle；升级、patch 与 preservation baseline 必须绑定该 revision。
+- `bun.lock` 与 bundled Pi 0.84.1：当前 exact `@earendil-works/pi-ai` / `pi-coding-agent` revision，以及本地 `@harnessos/pi-coding-agent` product bundle；升级、patch 与 preservation baseline 必须绑定该 revision。
 - `apps/server/src/provider/Layers/PiRuntimeIsolation.test.ts`：public-SDK family 与 product family 的 module identity、`.pi`/`.omnimind` resources、Session 和 package roots 物理隔离。
 - bundled `pi-ai` public types/adapters：`cacheRetention`、`sessionId`、provider compat、cache read/write/cost、OpenAI/Anthropic/Bedrock/Gemini/Mistral 等 wire mapping。
 - bundled `pi-coding-agent` AgentSession/ResourceLoader/cache-stats：Session、tools、steer/follow-up、Skills/Prompts/Extensions reload、compaction/branch summary 与 cache miss diagnostics。

@@ -8,7 +8,7 @@ import path from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it } from "@effect/vitest";
-import { summarizeUnifiedPatchTotals } from "@omnimind/shared/unifiedPatchStats";
+import { summarizeUnifiedPatchTotals } from "@harnessos/shared/unifiedPatchStats";
 import { Effect, Exit, FileSystem, Layer, PlatformError, Schema, Scope, Stream } from "effect";
 import { describe, expect, vi } from "vitest";
 

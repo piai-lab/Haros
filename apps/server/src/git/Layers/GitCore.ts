@@ -26,9 +26,9 @@ import { createReadStream } from "node:fs";
 import * as nodeFs from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as nodePath from "node:path";
-import { isTemporaryWorktreeBranch } from "@omnimind/shared/git";
-import { parseGitHubRepositoryNameWithOwnerFromRemoteUrl } from "@omnimind/shared/githubRepository";
-import { decodeJsonResult } from "@omnimind/shared/schemaJson";
+import { isTemporaryWorktreeBranch } from "@harnessos/shared/git";
+import { parseGitHubRepositoryNameWithOwnerFromRemoteUrl } from "@harnessos/shared/githubRepository";
+import { decodeJsonResult } from "@harnessos/shared/schemaJson";
 
 import { GitCheckoutDirtyWorktreeError, GitCommandError } from "../Errors.ts";
 import {

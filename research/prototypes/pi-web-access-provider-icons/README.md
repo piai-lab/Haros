@@ -6,7 +6,7 @@
 
 本目录把此前只嵌在临时HTML中的Provider图标拆成可复核的本地文件，避免下一会话重新搜索。26个Provider identity映射到25份物理文件；`parallel-mcp`有意复用`parallel.svg`，因为它是同一Parallel品牌的另一连接方式，不应制造第二份品牌资产。
 
-这些文件不得被Web或fork直接批量导入。production admission仍需逐项闭合exact source URL/revision、文件hash、license与trademark disposition，再把获准资产复制进`@omnimind/om-web-access`的shipped asset owner。未闭合项使用中性provider fallback；能力级`Web search`继续使用OmniMind现有`globe`。
+这些文件不得被Web或fork直接批量导入。production admission仍需逐项闭合exact source URL/revision、文件hash、license与trademark disposition，再把获准资产复制进`@harnessos/om-web-access`的shipped asset owner。未闭合项使用中性provider fallback；能力级`Web search`继续使用OmniMind现有`globe`。
 
 ## 来源分组
 

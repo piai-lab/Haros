@@ -6,7 +6,7 @@ import {
   type ServerSettings,
   type ServerSettingsPatch,
   type ServerSettingsView,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { deepMerge, type DeepPartial } from "./Struct";
 import { isBuiltInToolGroupId, resolveHostGroupSurfacePolicy } from "./hostToolSurfacePolicy";
 import { getDefaultModel } from "./model";

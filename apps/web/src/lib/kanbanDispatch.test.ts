@@ -1,4 +1,4 @@
-import { ProjectId, ThreadId } from "@omnimind/contracts";
+import { ProjectId, ThreadId } from "@harnessos/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { resetComposerDraftStore } from "../composerDraftStoreTestFixtures";

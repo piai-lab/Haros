@@ -10,11 +10,11 @@ import {
   readWindowsPersistentEnvironment,
   type ShellEnvironmentReader,
   type WindowsEnvironmentReader,
-} from "@omnimind/shared/shell";
+} from "@harnessos/shared/shell";
 import {
   createCachedLoginShellEnvironmentReader,
   LOGIN_SHELL_ENVIRONMENT_NAMES,
-} from "@omnimind/shared/loginShellEnvironment";
+} from "@harnessos/shared/loginShellEnvironment";
 
 function logShellEnvironmentWarning(message: string, error?: unknown): void {
   console.warn(`[desktop] ${message}`, error instanceof Error ? error.message : (error ?? ""));

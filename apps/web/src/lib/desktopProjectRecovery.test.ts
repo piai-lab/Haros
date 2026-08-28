@@ -6,7 +6,7 @@ import {
   ThreadId,
   type OrchestrationReadModel,
   type OrchestrationShellSnapshot,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

@@ -3,7 +3,7 @@
 // Layer: Web project-run logic
 // Exports: selectPrimaryProjectRunCommand and labels for sidebar run actions.
 
-import type { ProjectDiscoveredScriptTarget, ProjectScript } from "@omnimind/contracts";
+import type { ProjectDiscoveredScriptTarget, ProjectScript } from "@harnessos/contracts";
 
 import { nextProjectScriptId, primaryProjectScript } from "./projectScripts";
 

@@ -6,7 +6,7 @@ import {
   OrchestrationProposedPlan,
   OrchestrationThreadActivity,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { approvalRequestKindFromRequestType, deriveThreadSummaryMetadata } from "./threadSummary";

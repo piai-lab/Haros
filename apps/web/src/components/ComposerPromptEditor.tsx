@@ -61,7 +61,7 @@ import {
 import { parseBareComposerLink } from "~/lib/linkChips";
 import { type TerminalContextDraft } from "~/lib/terminalContext";
 import { shouldCollapsePastedText } from "~/lib/composerPastedText";
-import type { ProviderMentionReference } from "@omnimind/contracts";
+import type { ProviderMentionReference } from "@harnessos/contracts";
 import { useStore } from "~/store";
 import { createComposerThreadMentionSourcesSelector } from "~/storeSelectors";
 import { resolveThreadDisplayProvider } from "~/lib/threadDisplayProvider";

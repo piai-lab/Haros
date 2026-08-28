@@ -14,7 +14,7 @@ import {
   type OmniMindAgentPromptMutationInput,
   type OmniMindAgentPromptMutationResult,
   type OmniMindAgentPromptSnapshot,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Layer } from "effect";
 
 import { writeFileStringAtomically } from "../../atomicWrite.ts";

@@ -1,4 +1,4 @@
-import { MessageId } from "@omnimind/contracts";
+import { MessageId } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 import type { TimelineEntry } from "../../session-logic";
 import {

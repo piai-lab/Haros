@@ -1,4 +1,4 @@
-import { THREAD_GOAL_MAX_CHARS } from "@omnimind/contracts";
+import { THREAD_GOAL_MAX_CHARS } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

@@ -1,6 +1,6 @@
 import { assert, describe, it } from "@effect/vitest";
-import type { OrchestrationMessage } from "@omnimind/contracts";
-import { MessageId, ThreadId, TurnId } from "@omnimind/contracts";
+import type { OrchestrationMessage } from "@harnessos/contracts";
+import { MessageId, ThreadId, TurnId } from "@harnessos/contracts";
 
 import { deriveAgentThreadStatus, paginateThreadMessages } from "./threadSummary.ts";
 

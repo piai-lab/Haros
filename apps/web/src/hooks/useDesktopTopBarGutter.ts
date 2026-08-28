@@ -6,7 +6,7 @@
 import {
   DESKTOP_TOP_BAR_TRAFFIC_LIGHT_GUTTER_CSS_VAR,
   resolveMacDesktopTopBarTrafficLightGutterCssPx,
-} from "@omnimind/shared/desktopChrome";
+} from "@harnessos/shared/desktopChrome";
 import { useLayoutEffect } from "react";
 
 import { isElectron } from "~/env";

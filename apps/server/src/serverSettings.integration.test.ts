@@ -1,7 +1,7 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { chmod } from "node:fs/promises";
 import { basename, dirname } from "node:path";
-import { DEFAULT_GIT_TEXT_GENERATION_MODEL, DEFAULT_MODEL_BY_PROVIDER } from "@omnimind/contracts";
+import { DEFAULT_GIT_TEXT_GENERATION_MODEL, DEFAULT_MODEL_BY_PROVIDER } from "@harnessos/contracts";
 import { Effect, Fiber, FileSystem, Layer, Option, Stream } from "effect";
 import { describe, expect, it } from "vitest";
 import { ServerConfig } from "./config";

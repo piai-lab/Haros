@@ -1,4 +1,4 @@
-import { SPACE_ICON_NAMES, type SpaceIconName } from "@omnimind/contracts";
+import { SPACE_ICON_NAMES, type SpaceIconName } from "@harnessos/contracts";
 
 const ICON_KEYWORDS: ReadonlyArray<
   readonly [SpaceIconName, ReadonlyArray<string>]

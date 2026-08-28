@@ -5,7 +5,7 @@
 
 import "../../index.css";
 
-import { ProjectId, type PullRequestDetail } from "@omnimind/contracts";
+import { ProjectId, type PullRequestDetail } from "@harnessos/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";

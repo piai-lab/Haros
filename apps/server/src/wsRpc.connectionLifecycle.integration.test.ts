@@ -11,7 +11,7 @@ import {
   WS_PROTOCOL_MIN_REVISION,
   type AuthSessionId,
   type WsBootstrapNegotiateResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Duration, Effect, Exit, Layer, Schema, Scope } from "effect";
 import { HttpRouter, HttpServerRequest } from "effect/unstable/http";

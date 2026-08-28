@@ -3,7 +3,7 @@
 // Layer: Chat shell overlay
 // Depends on: shared dialog UI, shortcut label builder, and current project script metadata.
 
-import type { ResolvedKeybindingsConfig } from "@omnimind/contracts";
+import type { ResolvedKeybindingsConfig } from "@harnessos/contracts";
 import { useEffect, useRef, useState } from "react";
 import {
   Dialog,

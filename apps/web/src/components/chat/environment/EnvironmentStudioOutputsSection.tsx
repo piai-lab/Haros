@@ -8,8 +8,8 @@
 // Layer: Environment panel section
 // Depends on: studio.listThreadOutputs WS method + shell.showInFolder.
 
-import type { StudioOutputEntry, ThreadId } from "@omnimind/contracts";
-import { isSupportedLocalImagePath } from "@omnimind/shared/localPreviewFiles";
+import type { StudioOutputEntry, ThreadId } from "@harnessos/contracts";
+import { isSupportedLocalImagePath } from "@harnessos/shared/localPreviewFiles";
 import { useQuery } from "@tanstack/react-query";
 
 import { formatRelativeTime } from "~/lib/relativeTime";

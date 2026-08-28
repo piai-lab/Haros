@@ -2,7 +2,7 @@ import {
   ThreadId,
   type OrchestrationEvent,
   type OrchestrationThreadShell,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Option } from "effect";
 
 import type { ProjectionSnapshotQueryShape } from "../orchestration/Services/ProjectionSnapshotQuery.ts";

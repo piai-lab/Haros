@@ -2,7 +2,7 @@
 import type {
   DesktopQuitConfirmationRequest,
   DesktopQuitConfirmationResponse,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 const DEFAULT_READY_TIMEOUT_MS = 3_000;
 const MAX_CONTINUATION_PROMPT_CHARS = 2_000;

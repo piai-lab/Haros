@@ -1,4 +1,4 @@
-import type { ResolvedKeybindingsConfig } from "@omnimind/contracts";
+import type { ResolvedKeybindingsConfig } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { Outlet, createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import {

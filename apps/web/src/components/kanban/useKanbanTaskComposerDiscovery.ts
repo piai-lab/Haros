@@ -13,7 +13,7 @@ import type {
   ProviderSkillDescriptor,
   ProviderStartOptions,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useDebouncedValue } from "@tanstack/react-pacer";
 

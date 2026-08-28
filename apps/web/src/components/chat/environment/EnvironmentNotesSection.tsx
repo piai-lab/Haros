@@ -2,7 +2,7 @@
 // Purpose: "Notes" section of the Environment panel — a per-thread freeform scratchpad.
 // Layer: Environment panel section
 
-import { THREAD_NOTES_MAX_CHARS, type ThreadId } from "@omnimind/contracts";
+import { THREAD_NOTES_MAX_CHARS, type ThreadId } from "@harnessos/contracts";
 
 import { Textarea } from "~/components/ui/textarea";
 import { useI18n } from "~/i18n";

@@ -1,5 +1,5 @@
-import type { ClientOrchestrationCommand, OrchestrationCommand } from "@omnimind/contracts";
-import { isWorkspaceRootWithin, workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
+import type { ClientOrchestrationCommand, OrchestrationCommand } from "@harnessos/contracts";
+import { isWorkspaceRootWithin, workspaceRootsEqual } from "@harnessos/shared/threadWorkspace";
 import type { FileSystem, Path } from "effect";
 import { Effect, Schedule } from "effect";
 

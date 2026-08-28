@@ -1,4 +1,4 @@
-import type { AutomationSchedule } from "@omnimind/contracts";
+import type { AutomationSchedule } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

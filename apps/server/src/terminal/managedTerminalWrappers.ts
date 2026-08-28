@@ -12,7 +12,7 @@ import {
   OMNIMIND_TERMINAL_CLI_KIND_ENV_KEY,
   type TerminalAgentHookEventType,
   type ManagedTerminalCliKind,
-} from "@omnimind/shared/terminalThreads";
+} from "@harnessos/shared/terminalThreads";
 
 import { envPathKeyFor, resolveExecutable } from "../executableLookup.ts";
 import {

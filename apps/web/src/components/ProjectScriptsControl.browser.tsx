@@ -4,7 +4,7 @@
 
 import "../index.css";
 
-import { type ProjectScript, type ResolvedKeybindingsConfig } from "@omnimind/contracts";
+import { type ProjectScript, type ResolvedKeybindingsConfig } from "@harnessos/contracts";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";

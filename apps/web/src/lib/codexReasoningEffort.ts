@@ -1,5 +1,5 @@
-import type { ProviderKind, ProviderModelDescriptor } from "@omnimind/contracts";
-import { getModelCapabilities, hasEffortLevel, trimOrNull } from "@omnimind/shared/model";
+import type { ProviderKind, ProviderModelDescriptor } from "@harnessos/contracts";
+import { getModelCapabilities, hasEffortLevel, trimOrNull } from "@harnessos/shared/model";
 
 export type CodexReasoningEffortSupport = "supported" | "unsupported" | "unknown";
 

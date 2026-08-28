@@ -1,6 +1,6 @@
 import "../../index.css";
 
-import { type ModelSlug, type ProviderKind, type ServerProviderStatus } from "@omnimind/contracts";
+import { type ModelSlug, type ProviderKind, type ServerProviderStatus } from "@harnessos/contracts";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";

@@ -11,7 +11,7 @@ import type {
   ServerProviderUpdateInput,
   ServerProviderUpdateResult,
   ServerProviderUpdateError,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Stream } from "effect";
 

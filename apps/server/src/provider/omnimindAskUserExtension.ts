@@ -8,7 +8,7 @@ import {
   ASK_USER_TOOL_NAME,
   buildAskUserTool,
   type AskUserProductInteractionPort,
-} from "@omnimind/om-ask";
+} from "@harnessos/om-ask";
 
 export const OMNIMIND_ASK_USER_EXTENSION_NAME = "omnimind-agent-ask-user";
 export const OMNIMIND_ASK_USER_EXTENSION_PATH = `<inline:${OMNIMIND_ASK_USER_EXTENSION_NAME}>`;

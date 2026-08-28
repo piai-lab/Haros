@@ -14,8 +14,8 @@ import {
   SettingsIcon,
   SunIcon,
 } from "~/lib/icons";
-import { type FilesystemBrowseResult, type ProviderKind } from "@omnimind/contracts";
-import { isGenericChatThreadTitle } from "@omnimind/shared/chatThreads";
+import { type FilesystemBrowseResult, type ProviderKind } from "@harnessos/contracts";
+import { isGenericChatThreadTitle } from "@harnessos/shared/chatThreads";
 import { BsChat } from "react-icons/bs";
 import { HiOutlineFolderOpen } from "react-icons/hi2";
 import { LuArrowDownToLine, LuArrowLeft, LuCornerLeftUp, LuFolderPlus } from "react-icons/lu";

@@ -1,4 +1,4 @@
-import type { KeybindingShortcut } from "@omnimind/contracts";
+import type { KeybindingShortcut } from "@harnessos/contracts";
 
 import { isMacPlatform } from "~/lib/utils";
 

@@ -1,4 +1,4 @@
-import type { ProviderMentionReference, ProviderSkillReference } from "@omnimind/contracts";
+import type { ProviderMentionReference, ProviderSkillReference } from "@harnessos/contracts";
 
 export type CodexImageInputItem =
   | { readonly type: "image"; readonly url: string }

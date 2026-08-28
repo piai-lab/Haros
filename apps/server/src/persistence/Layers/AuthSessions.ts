@@ -1,4 +1,4 @@
-import { AuthSessionId } from "@omnimind/contracts";
+import { AuthSessionId } from "@harnessos/contracts";
 import { DateTime, Effect, Layer, Option, Schema } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";

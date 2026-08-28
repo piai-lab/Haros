@@ -4,7 +4,7 @@
 
 import "../../../index.css";
 
-import { MessageId, type PinnedMessage } from "@omnimind/contracts";
+import { MessageId, type PinnedMessage } from "@harnessos/contracts";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";

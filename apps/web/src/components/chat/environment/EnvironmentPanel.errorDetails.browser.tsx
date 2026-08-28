@@ -4,7 +4,7 @@
 
 import "../../../index.css";
 
-import { ThreadId, type NativeApi } from "@omnimind/contracts";
+import { ThreadId, type NativeApi } from "@harnessos/contracts";
 import type { EnvironmentPanelProps } from "./EnvironmentPanel";
 import {
   RouterProvider,

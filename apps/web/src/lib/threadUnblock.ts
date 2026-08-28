@@ -3,7 +3,7 @@
 // Layer: Web orchestration helper
 // Exports: unblockThreadFromClient, describeThreadUnblockResult, isProviderDeliveryReconciliationConflict, type ThreadUnblockResult
 
-import type { NativeApi, ThreadId } from "@omnimind/contracts";
+import type { NativeApi, ThreadId } from "@harnessos/contracts";
 
 /** Code the server returns when a blocker no longer matches the requested state. */
 export const PROVIDER_DELIVERY_RECONCILIATION_CONFLICT_CODE =

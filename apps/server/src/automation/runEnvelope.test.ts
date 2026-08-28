@@ -4,7 +4,7 @@ import {
   ProjectId,
   type AutomationDefinition,
   type AutomationRun,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

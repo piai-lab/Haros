@@ -13,8 +13,8 @@ import {
   type RuntimeMode,
   type ThreadEnvironmentMode,
   type ThreadId,
-} from "@omnimind/contracts";
-import { resolveThreadEnvironmentMode } from "@omnimind/shared/threadEnvironment";
+} from "@harnessos/contracts";
+import { resolveThreadEnvironmentMode } from "@harnessos/shared/threadEnvironment";
 import {
   type ComposerThreadDraftState,
   type DraftThreadEnvMode,

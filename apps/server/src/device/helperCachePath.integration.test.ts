@@ -6,7 +6,7 @@ import {
   DEVICE_HELPER_BINARY_NAME,
   DEVICE_HELPER_CACHE_SEGMENTS,
   deviceHelperCacheKey,
-} from "@omnimind/shared/deviceHelperCache";
+} from "@harnessos/shared/deviceHelperCache";
 
 import type { ProcessRunResult } from "../processRunner.ts";
 import { DEVICE_HELPER_CACHE_ROOT, IosSimulatorBackend } from "./IosSimulatorBackend.ts";

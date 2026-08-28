@@ -8,7 +8,7 @@ import {
   ProjectId,
   ThreadId,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
 import { Effect, FileSystem, Layer, Path, Stream } from "effect";

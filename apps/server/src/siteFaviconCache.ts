@@ -7,7 +7,7 @@
 //          Effect.promise). Follows the Map + TTL + max-size eviction pattern
 //          used by other bounded server-side caches such as workspaceEntries.ts.
 
-import { outboundHttp } from "@omnimind/shared/outboundHttp";
+import { outboundHttp } from "@harnessos/shared/outboundHttp";
 
 const FAVICON_CACHE_MAX = 500;
 const FAVICON_SUCCESS_TTL_MS = 24 * 60 * 60 * 1000; // 24 h

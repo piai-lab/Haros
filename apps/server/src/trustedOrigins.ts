@@ -8,7 +8,7 @@
 import {
   OMNIMIND_CANARY_DESKTOP_ORIGIN,
   OMNIMIND_DESKTOP_ORIGIN,
-} from "@omnimind/shared/desktopIdentity";
+} from "@harnessos/shared/desktopIdentity";
 
 import type { ServerConfigShape } from "./config";
 import { isLoopbackHost, isWildcardHost } from "./startupAccess";

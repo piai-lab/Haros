@@ -1,4 +1,4 @@
-import type { OrchestrationEvent } from "@omnimind/contracts";
+import type { OrchestrationEvent } from "@harnessos/contracts";
 import { Effect, Option } from "effect";
 
 import type { ProjectionRepositoryError } from "../persistence/Errors.ts";

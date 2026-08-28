@@ -8,7 +8,7 @@
 // update", never to a thrown error.
 
 import { Effect, FileSystem } from "effect";
-import type { WorkflowAgentRuntimeSnapshot } from "@omnimind/contracts";
+import type { WorkflowAgentRuntimeSnapshot } from "@harnessos/contracts";
 
 import { WORKFLOW_PROMPT_PREVIEW_CHARS } from "./claudeWorkflowScript.ts";
 

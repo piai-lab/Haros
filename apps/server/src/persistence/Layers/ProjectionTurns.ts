@@ -1,4 +1,4 @@
-import { OrchestrationCheckpointFile, ThreadId, TurnId } from "@omnimind/contracts";
+import { OrchestrationCheckpointFile, ThreadId, TurnId } from "@harnessos/contracts";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";
 import { Effect, Layer, Option, Schema, Struct } from "effect";

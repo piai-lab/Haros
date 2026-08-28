@@ -9,8 +9,8 @@ import { pathToFileURL } from "node:url";
 import { Duration, Effect, Exit, Fiber, Layer, Scope, Sink, Stream } from "effect";
 import { type ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { TestClock } from "effect/testing";
-import type { ChatAttachment } from "@omnimind/contracts";
-import { resolveWindowsComSpec } from "@omnimind/shared/windowsProcess";
+import type { ChatAttachment } from "@harnessos/contracts";
+import { resolveWindowsComSpec } from "@harnessos/shared/windowsProcess";
 import { describe, expect, it, vi } from "vitest";
 
 import {

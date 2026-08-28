@@ -2,8 +2,8 @@
 // Purpose: Centralizes duplicate `project.create` error parsing and recovery helpers.
 // Exports: duplicate-create error guards plus snapshot matching for import recovery.
 
-import type { OrchestrationReadModel } from "@omnimind/contracts";
-import { workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
+import type { OrchestrationReadModel } from "@harnessos/contracts";
+import { workspaceRootsEqual } from "@harnessos/shared/threadWorkspace";
 
 const DUPLICATE_PROJECT_CREATE_ERROR_PREFIX =
   "Orchestration command invariant failed (project.create): Project '";

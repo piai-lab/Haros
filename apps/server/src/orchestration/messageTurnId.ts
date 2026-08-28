@@ -1,4 +1,4 @@
-import type { TurnId } from "@omnimind/contracts";
+import type { TurnId } from "@harnessos/contracts";
 
 export function resolveStableMessageTurnId(input: {
   readonly existingTurnId?: TurnId | null | undefined;

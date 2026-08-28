@@ -3,7 +3,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestStackPosition, PullRequestStackNavigation
 
-import type { PullRequestStackSummary } from "@omnimind/contracts";
+import type { PullRequestStackSummary } from "@harnessos/contracts";
 
 import { Badge } from "~/components/ui/badge";
 import { IconButton } from "~/components/ui/icon-button";

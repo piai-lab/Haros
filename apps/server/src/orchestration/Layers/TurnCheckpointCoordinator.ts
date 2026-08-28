@@ -1,4 +1,4 @@
-import type { ThreadId } from "@omnimind/contracts";
+import type { ThreadId } from "@harnessos/contracts";
 import { Effect, Layer, Semaphore } from "effect";
 
 import {

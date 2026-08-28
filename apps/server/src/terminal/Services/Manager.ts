@@ -17,8 +17,8 @@ import {
   TerminalSessionSnapshot,
   TerminalSessionStatus,
   TerminalWriteInput,
-} from "@omnimind/contracts";
-import type { TerminalActivityState, TerminalCliKind } from "@omnimind/shared/terminalThreads";
+} from "@harnessos/contracts";
+import type { TerminalActivityState, TerminalCliKind } from "@harnessos/shared/terminalThreads";
 import { PtyProcess } from "./PTY";
 import { Effect, Schema, ServiceMap } from "effect";
 import type { TerminalModeReplayTracker } from "../terminalModeReplay";

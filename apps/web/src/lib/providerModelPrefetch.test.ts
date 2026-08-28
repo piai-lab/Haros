@@ -8,7 +8,7 @@ import {
   type NativeApi,
   type ProviderKind,
   type ServerSettingsView,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

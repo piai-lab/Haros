@@ -12,11 +12,11 @@ import {
   ProviderKind,
   ThreadId,
   type TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Schema } from "effect";
-import { resolveThreadBranchRegressionGuard } from "@omnimind/shared/git";
-import { normalizeModelSlug } from "@omnimind/shared/model";
-import { deriveThreadSummaryMetadata } from "@omnimind/shared/threadSummary";
+import { resolveThreadBranchRegressionGuard } from "@harnessos/shared/git";
+import { normalizeModelSlug } from "@harnessos/shared/model";
+import { deriveThreadSummaryMetadata } from "@harnessos/shared/threadSummary";
 
 import { isStalePendingRequestFailureDetail } from "./lib/pendingInteraction";
 import { toAttachmentPreviewUrl } from "./lib/wsHttpUrl";

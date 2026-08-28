@@ -1,4 +1,4 @@
-import { SpaceId } from "@omnimind/contracts";
+import { SpaceId } from "@harnessos/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import {

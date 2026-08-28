@@ -8,8 +8,8 @@ import type {
   OmniMindWebSearchReadResult,
   OmniMindWebSearchRecheckInput,
   OmniMindWebSearchRefreshInput,
-} from "@omnimind/contracts";
-import type { EditorId } from "@omnimind/contracts";
+} from "@harnessos/contracts";
+import type { EditorId } from "@harnessos/contracts";
 import type { Effect } from "effect";
 import { ServiceMap } from "effect";
 

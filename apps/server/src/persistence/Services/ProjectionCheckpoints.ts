@@ -15,7 +15,7 @@ import {
   OrchestrationCheckpointStatus,
   ThreadId,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Option, ServiceMap, Schema } from "effect";
 import type { Effect } from "effect";
 

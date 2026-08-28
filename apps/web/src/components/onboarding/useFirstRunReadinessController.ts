@@ -3,7 +3,7 @@ import {
   type ModelSelection,
   type OmniMindModelServicesListResult,
   type ProviderKind,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useSyncExternalStore } from "react";
 
@@ -28,7 +28,7 @@ import {
 } from "~/lib/serverReactQuery";
 import { useStore } from "~/store";
 import { createThreadShellsSelector } from "~/storeSelectors";
-import { WS_OMNIMIND_MODEL_SERVICES_CAPABILITY } from "@omnimind/contracts";
+import { WS_OMNIMIND_MODEL_SERVICES_CAPABILITY } from "@harnessos/contracts";
 
 import {
   areUsableProviderCatalogsSettled,

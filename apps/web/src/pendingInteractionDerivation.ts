@@ -4,12 +4,12 @@ import {
   type OrchestrationThreadActivity,
   type TurnId,
   type UserInputQuestion,
-} from "@omnimind/contracts";
-import { isPendingInteractionResponseClaimable } from "@omnimind/shared/pendingInteractions";
+} from "@harnessos/contracts";
+import { isPendingInteractionResponseClaimable } from "@harnessos/shared/pendingInteractions";
 import {
   approvalRequestKindFromRequestType,
   pendingRequestInstanceKey,
-} from "@omnimind/shared/threadSummary";
+} from "@harnessos/shared/threadSummary";
 
 import { isStalePendingRequestFailureDetail } from "./lib/pendingInteraction";
 import { orderedActivities } from "./workLog";

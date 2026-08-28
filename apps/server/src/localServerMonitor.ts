@@ -13,7 +13,7 @@ import type {
   ServerLocalServerProcess,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import { redactSensitiveProcessArgs } from "./processArgumentRedaction";
 

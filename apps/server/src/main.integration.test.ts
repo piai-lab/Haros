@@ -15,7 +15,7 @@ import * as Command from "effect/unstable/cli/Command";
 import { FetchHttpClient } from "effect/unstable/http";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { afterEach, beforeEach, vi } from "vitest";
-import { NetService } from "@omnimind/shared/Net";
+import { NetService } from "@harnessos/shared/Net";
 
 import { ServerConfig, type ServerConfigShape } from "./config";
 import {

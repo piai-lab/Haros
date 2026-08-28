@@ -6,7 +6,7 @@
 // pile on more 429s. Any fetcher can opt in via createRateLimitResilience; keeping the state
 // here avoids duplicating the bookkeeping per provider.
 
-import type { ProviderKind, ServerProviderUsageSnapshot } from "@omnimind/contracts";
+import type { ProviderKind, ServerProviderUsageSnapshot } from "@harnessos/contracts";
 
 import { errorSnapshot } from "./parse";
 

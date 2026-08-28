@@ -5,7 +5,7 @@ import type {
   BrowserWaitCondition,
   BrowserWaitInput,
   BrowserWaitOutput,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import {

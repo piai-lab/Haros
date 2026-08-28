@@ -26,7 +26,7 @@ import type {
   OmniMindModelServicesGetResult,
   OmniMindModelServicesListInput,
   OmniMindModelServicesListResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import type { Effect } from "effect";
 import { ServiceMap } from "effect";
 

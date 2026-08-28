@@ -1,4 +1,4 @@
-import { ProjectId } from "@omnimind/contracts";
+import { ProjectId } from "@harnessos/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useComposerDraftStore } from "../composerDraftStore";

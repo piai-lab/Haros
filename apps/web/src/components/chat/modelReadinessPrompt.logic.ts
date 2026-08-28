@@ -4,7 +4,7 @@ import {
   PROVIDER_KINDS,
   type ProviderKind,
   type ServerProviderStatus,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { ProviderModelCatalogState } from "~/hooks/useProviderModelCatalog";
 import { findProviderStatus, isProviderUsable } from "~/lib/providerAvailability";

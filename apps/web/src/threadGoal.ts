@@ -1,4 +1,4 @@
-import { type ThreadGoalStartBehavior, type ThreadId } from "@omnimind/contracts";
+import { type ThreadGoalStartBehavior, type ThreadId } from "@harnessos/contracts";
 
 import { newCommandId } from "./lib/utils";
 import { readNativeApi } from "./nativeApi";

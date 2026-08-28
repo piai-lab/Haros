@@ -17,17 +17,17 @@ import {
   ServerSettingsError,
   type ServerSettingsPatch,
   type ServerSettingsView,
-} from "@omnimind/contracts";
-import { deepMerge, type DeepPartial } from "@omnimind/shared/Struct";
+} from "@harnessos/contracts";
+import { deepMerge, type DeepPartial } from "@harnessos/shared/Struct";
 import {
   applyServerSettingsPatch,
   normalizeServerSettings,
   validateServerSettingsPatch,
-} from "@omnimind/shared/serverSettings";
+} from "@harnessos/shared/serverSettings";
 import {
   isBuiltInToolGroupId,
   resolveHostGroupSurfacePolicy,
-} from "@omnimind/shared/hostToolSurfacePolicy";
+} from "@harnessos/shared/hostToolSurfacePolicy";
 import {
   Cause,
   Deferred,

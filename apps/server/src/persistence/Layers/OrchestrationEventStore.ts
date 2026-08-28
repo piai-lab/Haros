@@ -10,7 +10,7 @@ import {
   ProjectId,
   SpaceId,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";
 import { Effect, Layer, Option, Schema, Stream } from "effect";

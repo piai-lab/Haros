@@ -10,11 +10,11 @@ import {
   migrationBackupDirectory,
   migrationRecoveryMarkerPath,
   parseMigrationRecoveryResumeState,
-} from "@omnimind/shared/migrationRecovery";
+} from "@harnessos/shared/migrationRecovery";
 export {
   migrationBackupDirectory,
   migrationRecoveryMarkerPath,
-} from "@omnimind/shared/migrationRecovery";
+} from "@harnessos/shared/migrationRecovery";
 
 import { ensurePrivateDirectorySync, repairPrivateFile } from "../privatePathPermissions.ts";
 import { withDatabaseLifecycleLock } from "./DatabaseLifecycleLock.ts";

@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { DesktopCustomTitleBarState } from "@omnimind/contracts";
+import type { DesktopCustomTitleBarState } from "@harnessos/contracts";
 
 import { isElectron } from "~/env";
 import { getNavigatorPlatform, isLinuxPlatform, isWindowsPlatform } from "~/lib/utils";

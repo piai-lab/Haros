@@ -4,7 +4,7 @@ import {
   TurnId,
   type OrchestrationPendingInteraction,
   type OrchestrationThreadActivity,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { derivePendingApprovals, derivePendingUserInputs } from "./pendingInteractionDerivation";

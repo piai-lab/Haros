@@ -5,7 +5,7 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import path from "node:path";
 
-import { resolveWindowsSystemRoot } from "@omnimind/shared/windowsProcess";
+import { resolveWindowsSystemRoot } from "@harnessos/shared/windowsProcess";
 
 import type { ProcessChildrenMap } from "./processTreeKiller";
 

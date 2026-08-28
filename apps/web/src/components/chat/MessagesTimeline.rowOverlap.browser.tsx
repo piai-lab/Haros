@@ -8,7 +8,7 @@
 
 import "../../index.css";
 
-import { MessageId } from "@omnimind/contracts";
+import { MessageId } from "@harnessos/contracts";
 import { type LegendListRef } from "@legendapp/list/react";
 import { useCallback, useRef, useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";

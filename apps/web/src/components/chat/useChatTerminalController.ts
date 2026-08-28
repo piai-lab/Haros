@@ -1,4 +1,4 @@
-import { type ThreadId } from "@omnimind/contracts";
+import { type ThreadId } from "@harnessos/contracts";
 import { useCallback, useEffect, useState } from "react";
 
 import { resolveTerminalNewAction } from "../../lib/terminalNewAction";

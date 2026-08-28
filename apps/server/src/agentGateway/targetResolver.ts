@@ -9,8 +9,8 @@ import {
   type ProviderListModelsResult,
   type ProviderModelDescriptor,
   type ServerProviderAuthStatus,
-} from "@omnimind/contracts";
-import { getDefaultModel } from "@omnimind/shared/model";
+} from "@harnessos/contracts";
+import { getDefaultModel } from "@harnessos/shared/model";
 import { Effect } from "effect";
 
 import type { ProviderDiscoveryServiceShape } from "../provider/Services/ProviderDiscoveryService.ts";

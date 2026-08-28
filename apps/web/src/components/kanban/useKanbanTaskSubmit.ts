@@ -12,7 +12,7 @@ import type {
   ServerProviderStatus,
   ServerSettingsView,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 

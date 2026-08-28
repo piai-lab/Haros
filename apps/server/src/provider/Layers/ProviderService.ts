@@ -32,7 +32,7 @@ import {
   TurnId,
   type ProviderRuntimeEvent,
   type ProviderSession,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { createHash, randomUUID } from "node:crypto";
 import {
   Cause,
@@ -47,7 +47,7 @@ import {
   Scope,
   Stream,
 } from "effect";
-import { nonEmptyTrimmed } from "@omnimind/shared/text";
+import { nonEmptyTrimmed } from "@harnessos/shared/text";
 import { providerExecutionStructure } from "../providerExecutionStructure.ts";
 
 import {
@@ -1617,7 +1617,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
     const recoverSessionForThread = (input: {
       readonly binding: ProviderRuntimeBinding;
       readonly operation: string;
-      readonly productSurface?: import("@omnimind/shared/productSurface").ProductSurface;
+      readonly productSurface?: import("@harnessos/shared/productSurface").ProductSurface;
     }) =>
       Effect.gen(function* () {
         const threadId = input.binding.threadId;
@@ -1925,7 +1925,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
       readonly threadId: ThreadId;
       readonly operation: string;
       readonly allowRecovery: boolean;
-      readonly productSurface?: import("@omnimind/shared/productSurface").ProductSurface;
+      readonly productSurface?: import("@harnessos/shared/productSurface").ProductSurface;
     }) =>
       Effect.gen(function* () {
         const binding = Option.getOrUndefined(yield* directory.getBinding(input.threadId));

@@ -7,7 +7,7 @@ import nodePath from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { outboundHttp } from "@omnimind/shared/outboundHttp";
+import { outboundHttp } from "@harnessos/shared/outboundHttp";
 
 import { antigravityUsageFetcher, parseAntigravityQuota } from "./antigravity";
 

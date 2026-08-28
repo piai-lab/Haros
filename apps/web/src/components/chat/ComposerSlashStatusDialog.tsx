@@ -1,5 +1,5 @@
-import type { ResolvedThreadWorkspaceState } from "@omnimind/shared/threadEnvironment";
-import type { ProviderInteractionMode } from "@omnimind/contracts";
+import type { ResolvedThreadWorkspaceState } from "@harnessos/shared/threadEnvironment";
+import type { ProviderInteractionMode } from "@harnessos/contracts";
 import type { DraftThreadEnvMode } from "../../composerDraftStore";
 import {
   type ContextWindowSnapshot,

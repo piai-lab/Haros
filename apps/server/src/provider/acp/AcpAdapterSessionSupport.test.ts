@@ -3,7 +3,7 @@ import {
   TurnId,
   type CanonicalUserInputSettlement,
   type ProviderSession,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Deferred, Effect } from "effect";
 import { describe, expect, it } from "vitest";
 import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";

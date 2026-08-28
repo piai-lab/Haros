@@ -3,7 +3,7 @@
 // Layer: Web appearance domain logic
 // Exports: Theme types, normalization helpers, import/export utilities, and CSS variable builders.
 
-import type { EngineWebSurfaceThemeSnapshot } from "@omnimind/contracts";
+import type { EngineWebSurfaceThemeSnapshot } from "@harnessos/contracts";
 import {
   normalizeFontFamilyCssValue,
   normalizeMonospaceFontFamilyCssValue,

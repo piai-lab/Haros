@@ -6,8 +6,8 @@ import type {
   GitStatusRemoteResult,
   GitStatusResult,
   GitStatusStreamEvent,
-} from "@omnimind/contracts";
-import { mergeGitStatusParts } from "@omnimind/shared/git";
+} from "@harnessos/contracts";
+import { mergeGitStatusParts } from "@harnessos/shared/git";
 
 import { GitCore } from "../Services/GitCore";
 import { GitManager } from "../Services/GitManager";

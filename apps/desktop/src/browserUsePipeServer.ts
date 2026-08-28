@@ -8,7 +8,7 @@ import * as Net from "node:net";
 import * as OS from "node:os";
 import * as Path from "node:path";
 
-import type { BrowserToolName, ThreadId } from "@omnimind/contracts";
+import type { BrowserToolName, ThreadId } from "@harnessos/contracts";
 
 import {
   DesktopBrowserAutomationHost,

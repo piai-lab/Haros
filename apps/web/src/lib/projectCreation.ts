@@ -8,7 +8,7 @@ import {
   type ModelSelection,
   type OrchestrationShellSnapshot,
   type ProjectId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import {
   extractDuplicateProjectCreateProjectId,

@@ -11,7 +11,7 @@ import type {
   PullRequestSetPinnedResult,
   PullRequestsListInput,
   PullRequestsListResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
 

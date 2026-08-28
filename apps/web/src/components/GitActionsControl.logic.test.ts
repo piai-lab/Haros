@@ -1,4 +1,4 @@
-import type { GitStatusResult } from "@omnimind/contracts";
+import type { GitStatusResult } from "@harnessos/contracts";
 import { assert, describe, it } from "vitest";
 import {
   buildGitActionProgressStages,

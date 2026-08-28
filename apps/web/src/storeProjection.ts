@@ -10,8 +10,8 @@ import {
   type OrchestrationSpaceShell,
   type ThreadId,
   type TurnId,
-} from "@omnimind/contracts";
-import { deriveThreadSummaryMetadata } from "@omnimind/shared/threadSummary";
+} from "@harnessos/contracts";
+import { deriveThreadSummaryMetadata } from "@harnessos/shared/threadSummary";
 
 import {
   clearThreadDetailResumeCursor,

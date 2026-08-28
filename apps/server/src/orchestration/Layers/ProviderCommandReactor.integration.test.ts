@@ -15,7 +15,7 @@ import type {
   ProviderForkThreadResult,
   ProviderRuntimeEvent,
   ProviderSession,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   ApprovalRequestId,
   type ChatAttachment,
@@ -28,8 +28,8 @@ import {
   ProjectId,
   ThreadId,
   TurnId,
-} from "@omnimind/contracts";
-import { PROVIDER_DELIVERY_BLOCK_SUMMARY } from "@omnimind/shared/providerDeliveryBlock";
+} from "@harnessos/contracts";
+import { PROVIDER_DELIVERY_BLOCK_SUMMARY } from "@harnessos/shared/providerDeliveryBlock";
 import {
   Duration,
   Effect,

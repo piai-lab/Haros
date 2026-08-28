@@ -10,7 +10,7 @@ import type {
   ProviderKind,
   ProviderRuntimeEvent,
   ProviderSession,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   ApprovalRequestId,
   CommandId,
@@ -21,7 +21,7 @@ import {
   RuntimeItemId,
   ThreadId,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Exit, Layer, ManagedRuntime, PubSub, Scope, Stream } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 

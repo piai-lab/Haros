@@ -30,11 +30,11 @@ import {
   type EngineWebSurfacePresentationContext,
   type ThreadBrowserState,
   type ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   BROWSER_TOOL_DEFINITIONS_BY_NAME,
   stableJsonStringify,
-} from "@omnimind/shared/browserAutomationCatalogue";
+} from "@harnessos/shared/browserAutomationCatalogue";
 import { Schema } from "effect";
 
 import type {

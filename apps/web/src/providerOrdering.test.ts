@@ -3,8 +3,8 @@
 // Layer: Web settings tests
 // Depends on: provider display metadata from contracts and providerOrdering helpers.
 
-import { PROVIDER_KINDS, type ProviderKind } from "@omnimind/contracts";
-import { PROVIDER_DESCRIPTORS, PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
+import { PROVIDER_KINDS, type ProviderKind } from "@harnessos/contracts";
+import { PROVIDER_DESCRIPTORS, PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
 import { describe, expect, it } from "vitest";
 
 import {

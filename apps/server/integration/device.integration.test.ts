@@ -22,7 +22,7 @@ import {
   DEVICE_FRAME_WS_PATH,
   DEVICE_FRAME_WS_UDID_PARAM,
   decodeDeviceFrame,
-} from "@omnimind/shared/deviceFrame";
+} from "@harnessos/shared/deviceFrame";
 import {
   DEVICE_WS_METHODS,
   WS_COMPATIBILITY_QUERY,
@@ -37,7 +37,7 @@ import {
   type DeviceScreenshotResult,
   type ThreadDeviceState,
   type WsBootstrapNegotiateResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readFile, rm } from "node:fs/promises";

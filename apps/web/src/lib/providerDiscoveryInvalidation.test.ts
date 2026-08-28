@@ -2,7 +2,7 @@
 // Purpose: Verifies provider-discovery invalidation ignores provider-status metadata noise.
 // Layer: Web UI provider discovery tests
 
-import { PROVIDER_KINDS, type ServerProviderStatus } from "@omnimind/contracts";
+import { PROVIDER_KINDS, type ServerProviderStatus } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

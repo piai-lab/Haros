@@ -38,7 +38,7 @@ import type {
   DeviceStopRecordingResult,
   DeviceUiNode,
   DeviceUiPoint,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import {
   DEVICE_HELPER_BINARY_NAME,
@@ -46,7 +46,7 @@ import {
   DEVICE_HELPER_SOURCE_DIR_ENV,
   deviceHelperCacheKey,
   readDeviceHelperSourceRevision,
-} from "@omnimind/shared/deviceHelperCache";
+} from "@harnessos/shared/deviceHelperCache";
 
 import { runProcess, type ProcessRunResult } from "../processRunner.ts";
 import {

@@ -2,7 +2,7 @@ import { constants, type Stats } from "node:fs";
 import { chmod, lstat, mkdir, mkdtemp, open, realpath, rm, stat } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 
-import type { BrowserTabId, BrowserUploadInput, BrowserUploadOutput } from "@omnimind/contracts";
+import type { BrowserTabId, BrowserUploadInput, BrowserUploadOutput } from "@harnessos/contracts";
 import { app, type WebContents } from "electron";
 
 import type { BrowserAutomationVisibleRuntime } from "../browserManager";

@@ -3,7 +3,7 @@ import type {
   GitStatusLocalResult,
   GitStatusResult,
   GitStatusStreamEvent,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Stream } from "effect";
 import type { GitManagerServiceError } from "../Errors";

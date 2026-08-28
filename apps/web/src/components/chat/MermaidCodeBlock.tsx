@@ -2,7 +2,7 @@
 // Purpose: Projects settled canonical assistant Mermaid fences into isolated reading UI.
 // Layer: Web chat presentation internals
 
-import type { EngineWebSurfaceThemeSnapshot, MessageId } from "@omnimind/contracts";
+import type { EngineWebSurfaceThemeSnapshot, MessageId } from "@harnessos/contracts";
 import { Maximize2, MinusIcon, PanelExpandIcon, PlusIcon, RotateCcwIcon } from "~/lib/icons";
 import type { CSSProperties, RefObject } from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";

@@ -4,7 +4,7 @@
 // Exports: Vitest coverage for theme.logic.
 
 import { describe, expect, it } from "vitest";
-import { parseEngineWebSurfaceThemeSnapshot } from "@omnimind/contracts";
+import { parseEngineWebSurfaceThemeSnapshot } from "@harnessos/contracts";
 import {
   THEME_PRESET_OPTIONS,
   DEFAULT_CHROME_THEME_BY_VARIANT,

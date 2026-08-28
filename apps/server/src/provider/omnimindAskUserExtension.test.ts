@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ASK_USER_TOOL_NAME } from "@omnimind/om-ask";
+import { ASK_USER_TOOL_NAME } from "@harnessos/om-ask";
 import {
   inspectOmniMindAskUserRegistration,
   makeOmniMindAskUserExtension,

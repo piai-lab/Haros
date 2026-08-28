@@ -2,7 +2,7 @@ import type {
   ProviderExecutionCapabilityReason,
   ProviderRuntimeModeCapability,
   RuntimeMode,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 const RUNTIME_MODE_PRIVILEGE = {
   "approval-required": 0,

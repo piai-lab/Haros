@@ -1,4 +1,4 @@
-import type { PullRequestDetailInput, PullRequestSetPinnedInput } from "@omnimind/contracts";
+import type { PullRequestDetailInput, PullRequestSetPinnedInput } from "@harnessos/contracts";
 import type { QueryClient } from "@tanstack/react-query";
 
 import type {

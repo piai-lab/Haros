@@ -1,7 +1,7 @@
 // FILE: ProjectMenuPicker.tsx
 // Purpose: Shared searchable project picker over the complete Project list.
 
-import type { ProjectId } from "@omnimind/contracts";
+import type { ProjectId } from "@harnessos/contracts";
 import { type ReactElement, type ReactNode, useMemo, useState } from "react";
 
 import { ComposerPickerMenuPopup } from "~/components/chat/ComposerPickerMenuPopup";

@@ -5,7 +5,7 @@ import type {
   ServerCommandUsageHistoryInput,
   UsageHistoryGroupBy,
   UsageHistoryRange,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { serverQueryKeys, serverUsageHistoryQueryOptions } from "~/lib/serverReactQuery";

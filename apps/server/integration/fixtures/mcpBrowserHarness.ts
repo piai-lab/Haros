@@ -3,7 +3,7 @@ import {
   type BrowserToolName,
   type OrchestrationThreadShell,
   type ProviderKind,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Option } from "effect";
 
 import { makeAgentGatewayBrowserTools } from "../../src/agentGateway/browserTools";

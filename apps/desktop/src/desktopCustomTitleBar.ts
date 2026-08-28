@@ -10,7 +10,7 @@ import {
   defaultCustomTitleBarPreference,
   resolveCustomTitleBarActive,
   supportsCustomTitleBar,
-} from "@omnimind/shared/desktopTitleBar";
+} from "@harnessos/shared/desktopTitleBar";
 
 export interface PersistedCustomTitleBarPreference {
   readonly version: 1;

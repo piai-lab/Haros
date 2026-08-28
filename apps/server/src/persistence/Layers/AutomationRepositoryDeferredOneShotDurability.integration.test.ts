@@ -2,7 +2,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { AutomationId, AutomationRunId, ProjectId, ThreadId } from "@omnimind/contracts";
+import { AutomationId, AutomationRunId, ProjectId, ThreadId } from "@harnessos/contracts";
 import { Effect, Layer, Option } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { afterEach, expect, it } from "vitest";

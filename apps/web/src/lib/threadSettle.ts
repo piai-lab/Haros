@@ -3,7 +3,7 @@
 // Layer: Web orchestration helper
 // Exports: setThreadSettledFromClient
 
-import type { NativeApi, ThreadId } from "@omnimind/contracts";
+import type { NativeApi, ThreadId } from "@harnessos/contracts";
 
 import { newCommandId } from "./utils";
 

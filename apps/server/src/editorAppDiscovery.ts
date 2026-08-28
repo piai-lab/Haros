@@ -9,7 +9,7 @@ import { execFileSync } from "node:child_process";
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-import { EDITORS } from "@omnimind/contracts";
+import { EDITORS } from "@harnessos/contracts";
 
 export type EditorDefinition = (typeof EDITORS)[number];
 

@@ -4,7 +4,7 @@
 
 import "../index.css";
 
-import { ThreadId, type BrowserAnnotationMethods } from "@omnimind/contracts";
+import { ThreadId, type BrowserAnnotationMethods } from "@harnessos/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 

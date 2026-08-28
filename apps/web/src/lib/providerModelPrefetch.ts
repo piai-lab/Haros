@@ -6,7 +6,7 @@
 // Layer: Web lib
 // Exports: resolve + prefetch helpers that mirror ChatView's listModels query keys.
 
-import type { ProviderKind, ServerSettingsView } from "@omnimind/contracts";
+import type { ProviderKind, ServerSettingsView } from "@harnessos/contracts";
 import type { QueryClient } from "@tanstack/react-query";
 
 import { resolveProviderDiscoveryCwd } from "./providerDiscovery";

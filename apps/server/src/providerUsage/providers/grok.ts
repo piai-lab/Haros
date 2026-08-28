@@ -6,7 +6,7 @@
 
 import nodePath from "node:path";
 
-import type { ServerProviderUsageLine, ServerProviderUsageLimit } from "@omnimind/contracts";
+import type { ServerProviderUsageLine, ServerProviderUsageLimit } from "@harnessos/contracts";
 
 import { getGrokApiKeyEnv } from "../../provider/acp/GrokAcpSupport";
 import {

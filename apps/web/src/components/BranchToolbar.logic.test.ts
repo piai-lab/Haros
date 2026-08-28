@@ -1,4 +1,4 @@
-import type { GitBranch } from "@omnimind/contracts";
+import type { GitBranch } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 import {
   dedupeRemoteBranchesWithLocalMatches,

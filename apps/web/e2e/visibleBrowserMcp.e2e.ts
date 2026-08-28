@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { BROWSER_TOOL_NAMES } from "@omnimind/contracts";
+import { BROWSER_TOOL_NAMES } from "@harnessos/contracts";
 import { _electron as electron, expect, test, type ElectronApplication } from "playwright/test";
 
 import { createBrowserMcpHarness } from "../../server/integration/fixtures/mcpBrowserHarness";

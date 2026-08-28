@@ -1,4 +1,4 @@
-import type { NativeApi, SpaceIconName, SpaceId } from "@omnimind/contracts";
+import type { NativeApi, SpaceIconName, SpaceId } from "@harnessos/contracts";
 
 import { newCommandId, newSpaceId } from "./utils";
 

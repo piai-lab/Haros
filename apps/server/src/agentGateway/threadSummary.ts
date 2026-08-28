@@ -12,7 +12,7 @@ import type {
   OrchestrationMessage,
   OrchestrationThread,
   OrchestrationThreadShell,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 export type AgentThreadStatus =
   | "working"

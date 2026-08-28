@@ -1,4 +1,4 @@
-import { CheckpointRef, ProjectId, ThreadId, TurnId, type ProjectKind } from "@omnimind/contracts";
+import { CheckpointRef, ProjectId, ThreadId, TurnId, type ProjectKind } from "@harnessos/contracts";
 import { Effect, Layer, Option } from "effect";
 import { describe, expect, it } from "vitest";
 

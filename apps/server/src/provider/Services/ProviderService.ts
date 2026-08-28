@@ -32,10 +32,10 @@ import type {
   ProviderStopTaskInput,
   ThreadId,
   ProviderTurnStartResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Stream } from "effect";
-import type { ProductSurface } from "@omnimind/shared/productSurface";
+import type { ProductSurface } from "@harnessos/shared/productSurface";
 
 import type { ProviderServiceError } from "../Errors.ts";
 import type { PersistedProviderRuntimeEvent } from "../../persistence/Services/ProviderRuntimeEvents.ts";

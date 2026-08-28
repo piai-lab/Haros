@@ -4,7 +4,7 @@
 
 import "../index.css";
 
-import type { NativeApi, ProjectReadFileResult } from "@omnimind/contracts";
+import type { NativeApi, ProjectReadFileResult } from "@harnessos/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { page } from "vitest/browser";
 import { afterEach, expect, it, vi } from "vitest";

@@ -2,7 +2,7 @@
 // Purpose: Fixed, identity-free Usage Insights summary rendered locally to PNG.
 
 import { forwardRef, type ReactNode } from "react";
-import type { ProfileStats, ProfileTokenStats } from "@omnimind/contracts";
+import type { ProfileStats, ProfileTokenStats } from "@harnessos/contracts";
 
 import { OmniMindLogo } from "~/components/OmniMindLogo";
 import { useI18n } from "~/i18n";

@@ -6,8 +6,8 @@ import {
   type ResolvedKeybindingsConfig,
   THREAD_JUMP_KEYBINDING_COMMANDS,
   type ThreadJumpKeybindingCommand,
-} from "@omnimind/contracts";
-import { isKeyboardShortcutsHelpChord } from "@omnimind/shared/browserShortcuts";
+} from "@harnessos/contracts";
+import { isKeyboardShortcutsHelpChord } from "@harnessos/shared/browserShortcuts";
 import { isMacPlatform, isWindowsPlatform } from "./lib/utils";
 
 export interface ShortcutEventLike {

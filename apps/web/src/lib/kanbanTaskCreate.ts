@@ -13,7 +13,7 @@ import type {
   ProviderStartOptions,
   RuntimeMode,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import { useComposerDraftStore, type DraftThreadEnvMode } from "../composerDraftStore";
 import { dispatchKanbanDraftThread, type KanbanDraftDispatchResult } from "./kanbanDispatch";

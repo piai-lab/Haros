@@ -4,7 +4,7 @@
 
 import "../../index.css";
 
-import { ThreadId, type GitStatusResult } from "@omnimind/contracts";
+import { ThreadId, type GitStatusResult } from "@harnessos/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";

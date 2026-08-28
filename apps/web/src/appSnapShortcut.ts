@@ -6,8 +6,8 @@ import type {
   KeybindingCommand,
   KeybindingShortcut,
   ResolvedKeybindingsConfig,
-} from "@omnimind/contracts";
-import { appSnapShortcutKeyLabel } from "@omnimind/shared/appSnapShortcut";
+} from "@harnessos/contracts";
+import { appSnapShortcutKeyLabel } from "@harnessos/shared/appSnapShortcut";
 
 import { DEFAULT_SHORTCUT_FALLBACKS } from "./keybindings";
 

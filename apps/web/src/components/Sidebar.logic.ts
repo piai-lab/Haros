@@ -10,11 +10,11 @@ import {
   type ProviderKind,
   type PullRequestReviewRequestCountResult,
   type ThreadId,
-} from "@omnimind/contracts";
-import { getDefaultModel } from "@omnimind/shared/model";
-import { pluralize } from "@omnimind/shared/text";
-import { resolveThreadEnvironmentMode } from "@omnimind/shared/threadEnvironment";
-import { isWorkspaceRootWithin, workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
+} from "@harnessos/contracts";
+import { getDefaultModel } from "@harnessos/shared/model";
+import { pluralize } from "@harnessos/shared/text";
+import { resolveThreadEnvironmentMode } from "@harnessos/shared/threadEnvironment";
+import { isWorkspaceRootWithin, workspaceRootsEqual } from "@harnessos/shared/threadWorkspace";
 import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "../localPreferences";
 import { resolveRestorableThreadRoute, type LastThreadRoute } from "../chatRouteRestore";
 import type { ChatMessage, Project, SidebarThreadSummary, Thread } from "../types";

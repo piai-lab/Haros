@@ -6,12 +6,12 @@ import {
   type BuiltInToolGroupsResult,
   type ServerSettings,
   type ProjectKind,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   configuredHostGroupEnabled,
   resolveHostGroupSurfacePolicy,
-} from "@omnimind/shared/hostToolSurfacePolicy";
-import { projectKindToProductSurface } from "@omnimind/shared/productSurface";
+} from "@harnessos/shared/hostToolSurfacePolicy";
+import { projectKindToProductSurface } from "@harnessos/shared/productSurface";
 import type { ServerSettingsSnapshot } from "../serverSettings.ts";
 
 import type { AgentGatewayCatalogToolEntry, ToolEntry } from "./toolRuntime.ts";

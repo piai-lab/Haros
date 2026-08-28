@@ -2,7 +2,7 @@ import Path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { OMNIMIND_PRODUCTION_BUNDLE_ID } from "@omnimind/shared/desktopIdentity";
+import { OMNIMIND_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
 import type { BrowserWindow } from "electron";
 
 import {

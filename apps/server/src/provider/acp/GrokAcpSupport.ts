@@ -3,7 +3,7 @@
  *
  * @module GrokAcpSupport
  */
-import { type GrokModelOptions, type RuntimeMode } from "@omnimind/contracts";
+import { type GrokModelOptions, type RuntimeMode } from "@harnessos/contracts";
 import { Effect, Layer, Scope, ServiceMap } from "effect";
 import * as AcpErrors from "./AcpErrors.ts";
 import type * as Acp from "@agentclientprotocol/sdk";

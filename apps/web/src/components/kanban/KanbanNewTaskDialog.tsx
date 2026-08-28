@@ -13,7 +13,7 @@ import type {
   ProviderInteractionMode,
   ProviderKind,
   RuntimeMode,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 

@@ -1,5 +1,5 @@
-import type { OrchestrationThreadPullRequest } from "@omnimind/contracts";
-import { resolveThreadBranchRegressionGuard } from "@omnimind/shared/git";
+import type { OrchestrationThreadPullRequest } from "@harnessos/contracts";
+import { resolveThreadBranchRegressionGuard } from "@harnessos/shared/git";
 
 export type ThreadPullRequestLookup =
   | {

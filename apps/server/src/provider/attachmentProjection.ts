@@ -3,8 +3,8 @@
 // Layer: Provider adapter utility
 // Depends on: attachmentStore path resolution and shared byte formatting.
 
-import type { ChatAttachment, ChatFileAttachment, ChatImageAttachment } from "@omnimind/contracts";
-import { formatBytes } from "@omnimind/shared/formatBytes";
+import type { ChatAttachment, ChatFileAttachment, ChatImageAttachment } from "@harnessos/contracts";
+import { formatBytes } from "@harnessos/shared/formatBytes";
 
 import { resolveProviderAttachmentPath } from "./providerAttachmentPaths.ts";
 

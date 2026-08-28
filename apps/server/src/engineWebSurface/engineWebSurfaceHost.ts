@@ -7,8 +7,8 @@ import type {
   EngineWebSurfacePresentationContext,
   ProviderKind,
   ThreadId,
-} from "@omnimind/contracts";
-import { parseEngineWebSurfaceThemeSnapshot } from "@omnimind/contracts";
+} from "@harnessos/contracts";
+import { parseEngineWebSurfaceThemeSnapshot } from "@harnessos/contracts";
 
 const ENGINE_WEB_SURFACE_PRESENTER_SYMBOL = Symbol.for(
   "omnimind.engineWebSurface.presenter.v1",

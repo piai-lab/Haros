@@ -3,8 +3,8 @@ import { constants as NodeFsConstants, type BigIntStats } from "node:fs";
 import * as NodeFs from "node:fs/promises";
 import * as NodePath from "node:path";
 
-import { isLocalAbsolutePath } from "@omnimind/shared/path";
-import { EDITABLE_TEXT_FILE_MAX_BYTES } from "@omnimind/contracts";
+import { isLocalAbsolutePath } from "@harnessos/shared/path";
+import { EDITABLE_TEXT_FILE_MAX_BYTES } from "@harnessos/contracts";
 import { Effect, Layer, Path } from "effect";
 
 import { resolveLocalPreviewGrantRealPath } from "../../localImageFiles";

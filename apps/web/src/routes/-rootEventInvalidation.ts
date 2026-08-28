@@ -7,8 +7,8 @@ import {
   STUDIO_OUTPUTS_ACTIVITY_KIND,
   type OrchestrationEvent,
   type ThreadId,
-} from "@omnimind/contracts";
-import { resolveThreadWorkspaceCwd } from "@omnimind/shared/threadEnvironment";
+} from "@harnessos/contracts";
+import { resolveThreadWorkspaceCwd } from "@harnessos/shared/threadEnvironment";
 
 import type { AppState } from "../storeState";
 import { getThreadFromState } from "../threadDerivation";

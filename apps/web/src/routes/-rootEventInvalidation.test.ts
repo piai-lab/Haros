@@ -3,7 +3,7 @@
 // Layer: Route utility unit tests
 // Depends on: rootEventInvalidation predicates and Vitest assertions.
 
-import { ProjectId, ThreadId, type OrchestrationEvent } from "@omnimind/contracts";
+import { ProjectId, ThreadId, type OrchestrationEvent } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

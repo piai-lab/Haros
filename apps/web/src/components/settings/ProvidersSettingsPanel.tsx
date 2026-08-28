@@ -7,9 +7,9 @@ import {
   type ServerProviderStatus,
   type ServerSettingsPatch,
   type ServerSettingsView,
-} from "@omnimind/contracts";
-import { PROVIDER_DESCRIPTORS, PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
-import { deepMerge } from "@omnimind/shared/Struct";
+} from "@harnessos/contracts";
+import { PROVIDER_DESCRIPTORS, PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { deepMerge } from "@harnessos/shared/Struct";
 import {
   closestCenter,
   DndContext,
@@ -44,7 +44,7 @@ import {
   normalizeProviderStatusForLocalConfig,
   type ProviderPickerAvailabilityState,
 } from "~/lib/providerAvailability";
-import { getModelOptions, normalizeModelSlug } from "@omnimind/shared/model";
+import { getModelOptions, normalizeModelSlug } from "@harnessos/shared/model";
 import { CentralIcon } from "~/lib/central-icons";
 import { DownloadIcon, ExternalLinkIcon, Loader2Icon, PlusIcon, XIcon } from "~/lib/icons";
 import {

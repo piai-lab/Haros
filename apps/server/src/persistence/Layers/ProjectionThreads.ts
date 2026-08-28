@@ -21,7 +21,7 @@ import {
   ThreadHandoff,
   ThreadForkScope,
   SpaceId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 const SqliteBoolean = Schema.Number.pipe(
   Schema.decodeTo(Schema.Boolean, {

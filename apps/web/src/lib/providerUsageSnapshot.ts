@@ -2,7 +2,7 @@
 // Purpose: Normalize provider usage snapshots returned by the server into the
 // same shapes consumed by the shared usage/rate-limit UI in the web app.
 
-import type { ServerProviderUsageSnapshot } from "@omnimind/contracts";
+import type { ServerProviderUsageSnapshot } from "@harnessos/contracts";
 
 import type { OpenUsageUsageLine } from "./openUsageRateLimits";
 import type { ProviderRateLimit } from "./rateLimits";

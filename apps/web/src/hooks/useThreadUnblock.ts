@@ -3,7 +3,7 @@
 // Layer: Web chat recovery hook
 // Exports: useThreadUnblock
 
-import type { ThreadId } from "@omnimind/contracts";
+import type { ThreadId } from "@harnessos/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { toastManager } from "../components/ui/toast";

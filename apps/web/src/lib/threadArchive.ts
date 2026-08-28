@@ -3,11 +3,11 @@
 // Layer: Web orchestration helper
 // Exports: archiveThreadFromClient, unarchiveThreadFromClient, isThreadAlreadyUnarchivedError
 
-import type { NativeApi, ThreadId } from "@omnimind/contracts";
+import type { NativeApi, ThreadId } from "@harnessos/contracts";
 import {
   collectErrorMessages,
   THREAD_NOT_ARCHIVED_INVARIANT_MARKER,
-} from "@omnimind/shared/errorMessages";
+} from "@harnessos/shared/errorMessages";
 
 import { newCommandId } from "./utils";
 

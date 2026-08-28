@@ -17,8 +17,8 @@ import {
   TerminalWriteInput,
   type TerminalEvent,
   type TerminalSessionSnapshot,
-} from "@omnimind/contracts";
-import { describeErrorMessage } from "@omnimind/shared/errorMessages";
+} from "@harnessos/contracts";
+import { describeErrorMessage } from "@harnessos/shared/errorMessages";
 import {
   consumeTerminalIdentityInput,
   terminalCliKindFromValue,
@@ -27,7 +27,7 @@ import {
   type TerminalActivityState,
   type TerminalAgentHookEventType,
   type TerminalCliKind,
-} from "@omnimind/shared/terminalThreads";
+} from "@harnessos/shared/terminalThreads";
 import { Effect, Encoding, Layer, Schema } from "effect";
 
 import { createLogger } from "../../logger";

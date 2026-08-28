@@ -37,7 +37,7 @@ test("packed installs include typebox without peer dependencies", async () => {
 		const packageRequire = createRequire(
 			join(tempDir, "node_modules", "@omnimind", "om-web-access", "package.json"),
 		);
-		const installedManifest = packageRequire("@omnimind/om-web-access/package.json");
+		const installedManifest = packageRequire("@harnessos/om-web-access/package.json");
 		assert.equal(installedManifest.peerDependencies?.typebox, undefined);
 		assert.match(installedManifest.dependencies?.typebox, /^\^1\./);
 		assert.match(packageRequire.resolve("typebox").replaceAll("\\", "/"), /node_modules\/typebox\//);

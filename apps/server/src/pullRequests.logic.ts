@@ -5,10 +5,10 @@ import type {
   PullRequestMergeCapabilities,
   PullRequestMergeMethod,
   PullRequestState,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { GitHubPullRequestListItem } from "./git/Services/GitHubCli.ts";
-export { isValidGitHubRepositoryNameWithOwner } from "@omnimind/shared/githubRepository";
+export { isValidGitHubRepositoryNameWithOwner } from "@harnessos/shared/githubRepository";
 
 export function pullRequestListCacheKey(
   repository: string,

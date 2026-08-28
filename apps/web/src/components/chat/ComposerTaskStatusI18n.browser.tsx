@@ -1,6 +1,6 @@
 import "../../index.css";
 
-import { TurnId, type OrchestrationThreadActivity } from "@omnimind/contracts";
+import { TurnId, type OrchestrationThreadActivity } from "@harnessos/contracts";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";

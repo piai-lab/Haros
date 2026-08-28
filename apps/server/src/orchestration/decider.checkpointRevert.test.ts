@@ -10,7 +10,7 @@ import {
   type OrchestrationLatestTurn,
   type OrchestrationReadModel,
   type OrchestrationSession,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 

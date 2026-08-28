@@ -8,7 +8,7 @@ import {
   AutomationId,
   type AutomationDefinition,
   type AutomationStreamEvent,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Layer, PubSub, Stream } from "effect";
 
 import { AutomationRepository } from "../../persistence/Services/AutomationRepository.ts";

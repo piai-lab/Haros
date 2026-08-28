@@ -8,7 +8,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestCommentComposer
 
-import type { PullRequestDetail } from "@omnimind/contracts";
+import type { PullRequestDetail } from "@harnessos/contracts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 

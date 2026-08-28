@@ -16,9 +16,9 @@ import {
   type ProviderKind,
   type RuntimeMode,
   type ThreadId,
-} from "@omnimind/contracts";
-import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
-import { isProviderRuntimeModeExecutable } from "@omnimind/shared/runtimeMode";
+} from "@harnessos/contracts";
+import { automationRequiresTargetThread } from "@harnessos/shared/automationMode";
+import { isProviderRuntimeModeExecutable } from "@harnessos/shared/runtimeMode";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 

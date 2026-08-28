@@ -3,7 +3,7 @@
 // Layer: Web UI logic
 // Depends on: Thread identity only; no React or desktop APIs.
 
-import type { ThreadId } from "@omnimind/contracts";
+import type { ThreadId } from "@harnessos/contracts";
 
 import { isComposerAppSnapCaptureSource } from "./lib/composerImageSource";
 

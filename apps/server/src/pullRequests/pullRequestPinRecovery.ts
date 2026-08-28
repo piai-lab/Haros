@@ -5,7 +5,7 @@ import type {
   PullRequestListEntry,
   PullRequestState,
   PullRequestsListResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect } from "effect";
 
 import type { GitHubCliError } from "../git/Errors";

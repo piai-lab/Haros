@@ -6,8 +6,8 @@ import type {
   ProviderMentionReference,
   ProviderPluginDescriptor,
   ProviderSkillDescriptor,
-} from "@omnimind/contracts";
-import { getAgentMentionAutocompleteAliases } from "@omnimind/contracts";
+} from "@harnessos/contracts";
+import { getAgentMentionAutocompleteAliases } from "@harnessos/contracts";
 import {
   buildCommandSearchFields,
   buildPluginSearchFields,
@@ -31,7 +31,7 @@ import {
   filterBuiltInComposerSlashCommands,
   resolveBuiltInComposerSlashCommandPresentation,
 } from "../composerSlashCommandPresentation";
-import { threadMentionPathForThreadId } from "@omnimind/shared/threadMentions";
+import { threadMentionPathForThreadId } from "@harnessos/shared/threadMentions";
 
 import type { ComposerCommandItem } from "../components/chat/ComposerCommandMenu";
 import type { ProviderModelOption } from "../providerModelOptions";

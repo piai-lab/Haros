@@ -18,7 +18,7 @@ import type {
   DeviceToolchain,
   DeviceUdid,
   ThreadDeviceState,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { MessageKey } from "../i18n";
 

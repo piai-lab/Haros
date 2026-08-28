@@ -5,7 +5,7 @@
  * move between Xcode releases, so a compiled binary is only valid for the
  * toolchain that produced it and the cache is keyed on that toolchain.
  *
- * This lives in `@omnimind/shared` because two independent callers derive the
+ * This lives in `@harnessos/shared` because two independent callers derive the
  * same path: `IosSimulatorBackend` (which builds the helper on first attach)
  * and `scripts/device-helper-smoke.ts` (which builds it to verify a release).
  * They previously derived it separately and disagreed, so a passing smoke test

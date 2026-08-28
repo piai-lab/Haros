@@ -9,7 +9,7 @@ import {
   ThreadId,
   type GitRunStackedActionResult,
   type GitStatusResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";

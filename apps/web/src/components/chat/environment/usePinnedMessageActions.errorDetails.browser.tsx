@@ -4,7 +4,7 @@
 
 import "../../../index.css";
 
-import { MessageId, ThreadId } from "@omnimind/contracts";
+import { MessageId, ThreadId } from "@harnessos/contracts";
 import {
   RouterProvider,
   createMemoryHistory,

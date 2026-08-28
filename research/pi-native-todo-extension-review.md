@@ -28,7 +28,7 @@ pre-Gate-B源码与当时已安装产品把Todo definition、prompt、`provider/
 
 ## 3. Exact Pi `0.84.2` 事实
 
-锁定artifact为bundled `@omnimind/pi-coding-agent@0.84.2`，对应upstream `914cf147…`：
+锁定artifact为bundled `@harnessos/pi-coding-agent@0.84.2`，对应upstream `914cf147…`：
 
 - public `DefaultResourceLoaderOptions.extensionFactories`接受named/hidden `InlineExtension`，并形成可检查的`<inline:name>` source path；
 - `AgentSession`初始`_buildRuntime({ includeAllExtensionTools: true })`会让Extension tools进入active set，因此Todo保持initial-active不需要另建loader或激活控制器；

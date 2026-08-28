@@ -2,7 +2,7 @@
 // Purpose: Characterizes automation draft restoration and edit-dialog initialization.
 // Layer: Chat automation setup hook tests
 
-import { ThreadId, type AutomationDefinition } from "@omnimind/contracts";
+import { ThreadId, type AutomationDefinition } from "@harnessos/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const reactHarness = vi.hoisted(() => {

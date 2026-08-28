@@ -1,8 +1,8 @@
-# `@omnimind/om-ask`：exact lineage、P1–P7 与更新反证
+# `@harnessos/om-ask`：exact lineage、P1–P7 与更新反证
 
 > 固定观察日期：2026-08-25
 >
-> 本文是 package-specific evidence owner，只保存 `@omnimind/om-ask` 的 exact lineage、减法 fork 边界、P1–P7 patch inventory、作者回归、stop-loss 和 revalidation trigger。它不定义公共 Gate，不维护当前分支、安装、发布或下一动作。
+> 本文是 package-specific evidence owner，只保存 `@harnessos/om-ask` 的 exact lineage、减法 fork 边界、P1–P7 patch inventory、作者回归、stop-loss 和 revalidation trigger。它不定义公共 Gate，不维护当前分支、安装、发布或下一动作。
 
 未来 intake 先读根 [`SOURCE-INTAKE.md`](../SOURCE-INTAKE.md) 与 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md)，再只用本文回答 Ask 的 package-specific delta。canonical 产品合同、UI 和生命周期认知唯一见 [`omnimind-ask-user-cognition.md`](omnimind-ask-user-cognition.md)；exact production adoption 只由根 [`source-adoptions.json`](../source-adoptions.json) 决定。
 
@@ -11,7 +11,7 @@
 | 角色                         | Exact identity                                                                                                           | 用途                                                            |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
 | conditional runtime lineage  | `@mrclrchtr/supi-ask-user@5.0.0`；`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`       | 当前减法 fork 的 controller/domain 来源；禁止 direct install    |
-| OmniMind fork                | `@omnimind/om-ask@5.0.0-omnimind.1`                                                                                      | bundled OmniMind Agent Ask Tool；source-adopted private package |
+| OmniMind fork                | `@harnessos/om-ask@5.0.0-omnimind.1`                                                                                      | bundled OmniMind Agent Ask Tool；source-adopted private package |
 | feasibility checkpoint       | `a96c60256bd6e391af57f4d2994b4a12d32aa6a5`                                                                               | 证明减法 fork 可行的固定观察                                    |
 | source activation checkpoint | `36e3bec7e789122c731028c1a8b791a68a6c1fea`                                                                               | 证明 composition/activation 形状的固定观察                      |
 | primary UX/test donor        | `@geoqiao/pi-ask@1.3.0`；`eko24ive/pi-ask` ancestry；commit `26496c809870e349429bc2cae72d61b46d0e2bc3`                   | 只提供 UX 与 regression insight，不承担 runtime lineage         |
@@ -176,7 +176,7 @@ conditional_runtime_lineage:
   direct_install: forbidden
   fork_shape: subtractive_not_narrow
 current_fork_snapshot:
-  package: "@omnimind/om-ask@5.0.0-omnimind.1"
+  package: "@harnessos/om-ask@5.0.0-omnimind.1"
   feasibility_commit: a96c60256bd6e391af57f4d2994b4a12d32aa6a5
   activation_commit: 36e3bec7e789122c731028c1a8b791a68a6c1fea
   runtime_dependencies_at_observation: 0

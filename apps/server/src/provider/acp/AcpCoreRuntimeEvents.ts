@@ -11,7 +11,7 @@ import {
   type ThreadTokenUsageSnapshot,
   type ThreadId,
   type TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import { canonicalItemTypeFromAcpToolKind } from "./AcpAdapterSupport.ts";
 import type { AcpPermissionRequest, AcpPlanUpdate, AcpToolCallState } from "./AcpRuntimeModel.ts";

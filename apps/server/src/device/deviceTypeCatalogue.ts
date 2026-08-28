@@ -18,7 +18,7 @@
  */
 import * as path from "node:path";
 
-import type { DeviceFamily, DeviceGeometry } from "@omnimind/contracts";
+import type { DeviceFamily, DeviceGeometry } from "@harnessos/contracts";
 
 import type { runProcess } from "../processRunner.ts";
 

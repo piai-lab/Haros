@@ -16,7 +16,7 @@
 // screen, so the pane reads as one object instead of a rectangle with chrome
 // stacked above and below it.
 
-import type { DeviceFamily, DeviceHardwareButton } from "@omnimind/contracts";
+import type { DeviceFamily, DeviceHardwareButton } from "@harnessos/contracts";
 import { memo, useId, useMemo, type CSSProperties, type ReactNode } from "react";
 
 import { type MessageKey, useI18n } from "~/i18n";

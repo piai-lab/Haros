@@ -21,7 +21,7 @@ import type {
   DeviceScreenshotResult,
   DeviceStartRecordingResult,
   DeviceStopRecordingResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import {
   DeviceBackendError,

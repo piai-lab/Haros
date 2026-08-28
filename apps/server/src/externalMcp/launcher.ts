@@ -1,4 +1,4 @@
-import type { ExternalMcpStdioConfiguration } from "@omnimind/contracts";
+import type { ExternalMcpStdioConfiguration } from "@harnessos/contracts";
 
 import { quoteExternalMcpShellArgument } from "./shell.ts";
 

@@ -1,4 +1,4 @@
-import { MessageId, TurnId } from "@omnimind/contracts";
+import { MessageId, TurnId } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 import type { WorkLogEntry } from "../../session-logic";
 import { makeActivity } from "../../storeTestFixtures";

@@ -6,7 +6,7 @@ import type {
   CanonicalUserInputAnswer,
   CanonicalUserInputAnswers,
   UserInputQuestion,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 export interface PendingUserInputDraftAnswer {
   selectedOptionLabels?: string[];

@@ -1,4 +1,4 @@
-import { EnvironmentId, type ExecutionEnvironmentDescriptor } from "@omnimind/contracts";
+import { EnvironmentId, type ExecutionEnvironmentDescriptor } from "@harnessos/contracts";
 import { Effect, FileSystem, Layer, Path, Random } from "effect";
 
 import packageJson from "../../../package.json" with { type: "json" };

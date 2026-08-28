@@ -8,8 +8,8 @@ import type {
   ProviderAgentDescriptor,
   ProviderKind,
   ProviderModelDescriptor,
-} from "@omnimind/contracts";
-import { PROVIDER_KINDS } from "@omnimind/contracts";
+} from "@harnessos/contracts";
+import { PROVIDER_KINDS } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 

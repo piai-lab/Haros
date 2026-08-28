@@ -1,4 +1,4 @@
-import { type ThreadId } from "@omnimind/contracts";
+import { type ThreadId } from "@harnessos/contracts";
 import { create } from "zustand";
 
 interface TemporaryThreadStoreState {

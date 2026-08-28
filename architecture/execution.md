@@ -279,7 +279,7 @@ Provider MCP transport在HTTP ingress把整个request/batch绑定到当时同一
 
 PiAdapter只负责创建Pi Session、组装明确的product-bundled inline Extensions、接入supervised Bash与Gateway connection，并把可信Pi事件薄投影为canonical events。它不拥有Extension definition、全局搜索、Built-in group policy、permission、Todo validation、Goal/Automation lifecycle、collision策略、active set或完整prompt catalog。Pi built-ins、Todo、supervised Bash、团队/第三方Extension及Skills/Packages始终是非Host owner；Host Projection不得盘点、保留、移除或控制它们。
 
-`@omnimind/om-web-access`是bundled OmniMind Agent专用的Pi-native Extension，不是第七组Host capability，也不进入AgentGateway或跨Engine投影。它保留自己的source、maintenance、configuration、Provider routing、Tool、Curator与Session cleanup责任；Pi `ResourceLoader`、Tool Registry / active set仍唯一拥有registered/active与Session lifecycle。产品不安装、注册、测试或承诺该fork对stock Pi可用，stock Pi继续使用上游package及其原生生命周期。
+`@harnessos/om-web-access`是bundled OmniMind Agent专用的Pi-native Extension，不是第七组Host capability，也不进入AgentGateway或跨Engine投影。它保留自己的source、maintenance、configuration、Provider routing、Tool、Curator与Session cleanup责任；Pi `ResourceLoader`、Tool Registry / active set仍唯一拥有registered/active与Session lifecycle。产品不安装、注册、测试或承诺该fork对stock Pi可用，stock Pi继续使用上游package及其原生生命周期。
 
 该fork集中内置为OmniMind monorepo私有workspace package，不建立独立GitHub fork、npm发布或第二tgz/sync控制面。来源管理记录exact upstream commit/version/license、保留原目录与作者测试，并以独立untouched baseline和可重复P1–P6 diff证明修改；不得把这种可追溯性写成不存在的GitHub fork ancestry。
 

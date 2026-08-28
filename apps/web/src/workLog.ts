@@ -8,21 +8,21 @@ import {
   ProviderKind,
   type ToolLifecycleItemType,
   type TurnId,
-} from "@omnimind/contracts";
-import { isPotentiallyVisibleProviderRuntimeActivity } from "@omnimind/shared/providerActivityVisibility";
+} from "@harnessos/contracts";
+import { isPotentiallyVisibleProviderRuntimeActivity } from "@harnessos/shared/providerActivityVisibility";
 import { Schema } from "effect";
 import {
   decodeSubagentAgentStates,
   extractSubagentIdentityHints,
   decodeSubagentReceiverAgents,
   decodeSubagentReceiverThreadIds,
-} from "@omnimind/shared/subagents";
+} from "@harnessos/shared/subagents";
 import {
   approvalRequestKindFromRequestType,
   type ApprovalRequestKind,
-} from "@omnimind/shared/threadSummary";
-import { summarizeToolRawOutput } from "@omnimind/shared/toolOutputSummary";
-import { pluralize } from "@omnimind/shared/text";
+} from "@harnessos/shared/threadSummary";
+import { summarizeToolRawOutput } from "@harnessos/shared/toolOutputSummary";
+import { pluralize } from "@harnessos/shared/text";
 import {
   deriveReadableToolTitle,
   deriveOmniMindMcpToolTitle,

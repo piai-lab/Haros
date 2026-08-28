@@ -1,4 +1,4 @@
-import type { OrchestrationMessageTextSegment } from "@omnimind/contracts";
+import type { OrchestrationMessageTextSegment } from "@harnessos/contracts";
 
 export interface MessageTextSegmentProjectionInput {
   readonly text: string;

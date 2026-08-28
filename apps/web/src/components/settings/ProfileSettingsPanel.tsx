@@ -4,7 +4,7 @@
 
 import { useRef, useState, type KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { ProfileHeatmapCell, ProfileStats, ProfileTokenStats } from "@omnimind/contracts";
+import type { ProfileHeatmapCell, ProfileStats, ProfileTokenStats } from "@harnessos/contracts";
 
 import { ModelIdentityIcon } from "~/components/ModelIdentityIcon";
 import { Button } from "~/components/ui/button";

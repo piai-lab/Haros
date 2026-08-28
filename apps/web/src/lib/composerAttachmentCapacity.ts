@@ -2,7 +2,7 @@
 // Purpose: Defines the composer attachment limit as one shared, commit-time invariant.
 // Layer: Web composer domain utility
 
-import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS } from "@omnimind/contracts";
+import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS } from "@harnessos/contracts";
 
 interface AttachmentIdCarrier {
   readonly id: string;

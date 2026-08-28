@@ -8,14 +8,14 @@ import {
   BROWSER_BLANK_URL,
   BROWSER_SEARCH_URL_PREFIX,
   normalizeBrowserUrlInput,
-} from "@omnimind/shared/browserSession";
+} from "@harnessos/shared/browserSession";
 import type {
   BrowserAnnotationEvent,
   BrowserAnnotationMarker,
   BrowserAnnotationTheme,
   BrowserTabState,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import type { BrowserHistoryEntry } from "../browserStateStore";
 import type { BrowserAnnotationDraft } from "../lib/browserAnnotations";
 

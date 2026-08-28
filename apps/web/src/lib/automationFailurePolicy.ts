@@ -1,7 +1,7 @@
 // FILE: automationFailurePolicy.ts
 // Purpose: Single vocabulary for the "stop after N consecutive failures" policy.
 
-import { DEFAULT_AUTOMATION_STOP_AFTER_CONSECUTIVE_FAILURES } from "@omnimind/contracts";
+import { DEFAULT_AUTOMATION_STOP_AFTER_CONSECUTIVE_FAILURES } from "@harnessos/contracts";
 
 export type AutomationFailurePolicyValue = string;
 

@@ -6,7 +6,7 @@
 
 import { useEffect } from "react";
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
-import type { ProviderKind, ServerProviderStatus } from "@omnimind/contracts";
+import type { ProviderKind, ServerProviderStatus } from "@harnessos/contracts";
 import { toastManager } from "../components/ui/toast";
 import { readNativeApi } from "../nativeApi";
 import { reconcileServerProviderStatuses } from "../lib/serverReactQuery";

@@ -10,7 +10,7 @@ import {
   type BuiltInToolGroupOverrides,
   type BuiltInToolGroupsResult,
   type BuiltInToolSurface,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 

@@ -18,7 +18,7 @@ import {
   RuntimeTaskId,
   ThreadId,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   Cause,
   DateTime,

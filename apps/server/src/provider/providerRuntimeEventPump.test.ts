@@ -1,6 +1,6 @@
 import { Cause, Deferred, Effect, Fiber, Option, Queue, Stream } from "effect";
 import { describe, expect, it } from "vitest";
-import { EventId, ThreadId, TurnId, type ProviderRuntimeEvent } from "@omnimind/contracts";
+import { EventId, ThreadId, TurnId, type ProviderRuntimeEvent } from "@harnessos/contracts";
 
 import {
   makeProviderRuntimeEventPumpHealthRegistry,

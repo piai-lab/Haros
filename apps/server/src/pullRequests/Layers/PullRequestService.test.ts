@@ -1,5 +1,5 @@
-import { ProjectId } from "@omnimind/contracts";
-import type { OrchestrationProject } from "@omnimind/contracts";
+import { ProjectId } from "@harnessos/contracts";
+import type { OrchestrationProject } from "@harnessos/contracts";
 import { Deferred, Effect, Fiber } from "effect";
 import { describe, expect, it } from "vitest";
 

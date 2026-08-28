@@ -7,8 +7,8 @@ import {
   type ProjectDiscoveredScriptTarget,
   type ProjectId,
   type ServerLocalServerProcess,
-} from "@omnimind/contracts";
-import { localServerAddressLabel, localServerMatchesRun } from "@omnimind/shared/localServers";
+} from "@harnessos/contracts";
+import { localServerAddressLabel, localServerMatchesRun } from "@harnessos/shared/localServers";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 

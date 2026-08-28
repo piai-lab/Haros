@@ -4,7 +4,7 @@ import * as Path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { MIGRATION_RECOVERY_MAX_RESUME_ATTEMPTS } from "@omnimind/shared/migrationRecovery";
+import { MIGRATION_RECOVERY_MAX_RESUME_ATTEMPTS } from "@harnessos/shared/migrationRecovery";
 
 import {
   hasPendingDesktopMigrationRecovery,

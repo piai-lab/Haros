@@ -9,7 +9,7 @@ import {
   OmniMindAgentPromptMutationInput,
   OmniMindAgentPromptSnapshot,
   WS_METHODS,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Layer, Schema } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

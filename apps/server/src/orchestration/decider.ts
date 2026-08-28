@@ -9,7 +9,7 @@ import type {
   ProjectKind,
   ThreadGoalAchievement,
   ThreadMarker,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   EventId,
   MAX_PINNED_PROJECTS,
@@ -19,19 +19,19 @@ import {
   THREAD_GOAL_ACHIEVEMENTS_MAX_COUNT,
   THREAD_MARKERS_MAX_COUNT,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   deriveAssociatedWorktreeMetadata,
   deriveAssociatedWorktreeMetadataPatch,
   workspaceRootsEqual,
-} from "@omnimind/shared/threadWorkspace";
-import { doThreadMarkerRangesOverlap } from "@omnimind/shared/threadMarkers";
-import { collectSubagentDescendants } from "@omnimind/shared/threadHierarchy";
+} from "@harnessos/shared/threadWorkspace";
+import { doThreadMarkerRangesOverlap } from "@harnessos/shared/threadMarkers";
+import { collectSubagentDescendants } from "@harnessos/shared/threadHierarchy";
 import { providerExecutionStructure } from "../provider/providerExecutionStructure.ts";
 import {
   collectTailTurnIds,
   resolveTailUserMessageEditTarget,
-} from "@omnimind/shared/conversationEdit";
+} from "@harnessos/shared/conversationEdit";
 import { Effect } from "effect";
 
 import { OrchestrationCommandInvariantError } from "./Errors.ts";

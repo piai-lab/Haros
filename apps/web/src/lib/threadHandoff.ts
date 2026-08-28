@@ -13,10 +13,10 @@ import {
   type ServerSettingsView,
   type ThreadHandoffImportedMessage,
   type ThreadForkScope,
-} from "@omnimind/contracts";
-import { getDefaultModel } from "@omnimind/shared/model";
-import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
-import { sanitizeImportedUserMessageText } from "@omnimind/shared/importedTranscript";
+} from "@harnessos/contracts";
+import { getDefaultModel } from "@harnessos/shared/model";
+import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
+import { sanitizeImportedUserMessageText } from "@harnessos/shared/importedTranscript";
 import { type Thread } from "../types";
 import { DEFAULT_PROVIDER_ORDER } from "../providerOrdering";
 import { findProviderStatus, isProviderUsable } from "./providerAvailability";

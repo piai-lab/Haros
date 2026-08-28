@@ -9,7 +9,7 @@
 
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 
-import type { ResolvedTerminalVisualIdentity } from "@omnimind/shared/terminalThreads";
+import type { ResolvedTerminalVisualIdentity } from "@harnessos/shared/terminalThreads";
 
 import { IconButton } from "~/components/ui/icon-button";
 import { useI18n } from "~/i18n";

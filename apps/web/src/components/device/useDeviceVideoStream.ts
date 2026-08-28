@@ -4,8 +4,8 @@
 // Exports: useDeviceVideoStream
 // Depends on: DevicePanel.logic frame gate, deviceFrameSource transport
 
-import type { DeviceUdid } from "@omnimind/contracts";
-import type { DeviceFrame } from "@omnimind/shared/deviceFrame";
+import type { DeviceUdid } from "@harnessos/contracts";
+import type { DeviceFrame } from "@harnessos/shared/deviceFrame";
 import { useEffect, useRef, useState } from "react";
 
 import { useI18n } from "~/i18n";

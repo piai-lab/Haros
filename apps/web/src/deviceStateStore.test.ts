@@ -1,5 +1,5 @@
-import type { DeviceUdid, ThreadDeviceState } from "@omnimind/contracts";
-import { ThreadId } from "@omnimind/contracts";
+import type { DeviceUdid, ThreadDeviceState } from "@harnessos/contracts";
+import { ThreadId } from "@harnessos/contracts";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { selectThreadDeviceState, useDeviceStateStore } from "./deviceStateStore";

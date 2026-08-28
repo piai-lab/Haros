@@ -1,6 +1,6 @@
 import "../../index.css";
 
-import { ApprovalRequestId } from "@omnimind/contracts";
+import { ApprovalRequestId } from "@harnessos/contracts";
 import { page } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";

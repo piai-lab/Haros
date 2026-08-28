@@ -9,8 +9,8 @@ import {
   type ProviderKind,
   type ProviderModelDescriptor,
   type ThreadId,
-} from "@omnimind/contracts";
-import { applyClaudePromptEffortPrefix } from "@omnimind/shared/model";
+} from "@harnessos/contracts";
+import { applyClaudePromptEffortPrefix } from "@harnessos/shared/model";
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronDownIcon, FastModeIcon, FastModeOutlineIcon, SettingsIcon } from "~/lib/icons";
 import { Button } from "../ui/button";

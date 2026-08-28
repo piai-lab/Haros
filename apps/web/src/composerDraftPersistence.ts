@@ -18,7 +18,7 @@ import {
   ProviderStartOptions,
   RuntimeMode,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import * as Schema from "effect/Schema";
 import type { DeepMutable } from "effect/Types";
 

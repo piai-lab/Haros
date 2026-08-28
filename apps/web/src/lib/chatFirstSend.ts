@@ -1,4 +1,4 @@
-import { type ModelSelection } from "@omnimind/contracts";
+import { type ModelSelection } from "@harnessos/contracts";
 
 import type { Project } from "../types";
 import { buildChatWorkspaceFolderPath } from "./chatWorkspaceFolders";

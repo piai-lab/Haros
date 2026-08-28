@@ -1,4 +1,4 @@
-import { ThreadId, type ModelSelection, type ProviderModelOptions } from "@omnimind/contracts";
+import { ThreadId, type ModelSelection, type ProviderModelOptions } from "@harnessos/contracts";
 import {
   useComposerDraftStore,
   type ComposerFileAttachment,

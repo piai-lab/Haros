@@ -1,4 +1,4 @@
-import type { NativeApi } from "@omnimind/contracts";
+import type { NativeApi } from "@harnessos/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { refreshEmptyRouteRestoreSnapshot } from "./chatRouteRecovery";

@@ -6,7 +6,7 @@
  *
  * @module OrchestrationProjectionPipeline
  */
-import type { OrchestrationEvent } from "@omnimind/contracts";
+import type { OrchestrationEvent } from "@harnessos/contracts";
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
 

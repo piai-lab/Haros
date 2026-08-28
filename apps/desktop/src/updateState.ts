@@ -1,4 +1,4 @@
-import type { DesktopUpdateState } from "@omnimind/contracts";
+import type { DesktopUpdateState } from "@harnessos/contracts";
 
 export type DownloadProgressSample = {
   readonly percent?: number | null;

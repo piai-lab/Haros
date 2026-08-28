@@ -1,6 +1,6 @@
 import "../../index.css";
 
-import type { ProviderKind, ServerProviderStatus } from "@omnimind/contracts";
+import type { ProviderKind, ServerProviderStatus } from "@harnessos/contracts";
 import { page, userEvent } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";

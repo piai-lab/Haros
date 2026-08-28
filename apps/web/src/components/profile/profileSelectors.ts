@@ -3,7 +3,7 @@
 // token telemetry for profile surfaces and export cards.
 // Layer: web profile feature (pure selection logic, no I/O).
 
-import type { ProfileHeatmapCell, ProfileStats, ProfileTokenStats } from "@omnimind/contracts";
+import type { ProfileHeatmapCell, ProfileStats, ProfileTokenStats } from "@harnessos/contracts";
 
 export interface ProfileHeatmapSelection {
   readonly cells: ReadonlyArray<ProfileHeatmapCell>;

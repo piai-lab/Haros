@@ -13,7 +13,7 @@
 // these predicates instead of comparing the mode literal, so adding a mode cannot leave
 // one dispatch site behind.
 
-import type { AutomationMode, ThreadId } from "@omnimind/contracts";
+import type { AutomationMode, ThreadId } from "@harnessos/contracts";
 
 /** Runs append a turn to a thread that already exists instead of creating one. */
 export function automationContinuesThread(mode: AutomationMode): boolean {

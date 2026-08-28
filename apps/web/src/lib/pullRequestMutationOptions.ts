@@ -4,7 +4,7 @@ import type {
   PullRequestCommentInput,
   PullRequestSetPinnedInput,
   PullRequestState,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { mutationOptions, type QueryClient } from "@tanstack/react-query";
 
 import { ensureNativeApi } from "~/nativeApi";

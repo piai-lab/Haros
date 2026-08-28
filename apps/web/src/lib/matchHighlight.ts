@@ -6,7 +6,7 @@
 //          left-to-right subsequence walk) — it is NOT guaranteed to reproduce
 //          the exact runs that earned the server score. Callers searching file
 //          entries must pass a query normalized with
-//          `normalizeWorkspaceEntrySearchQuery` (@omnimind/shared/searchQuery),
+//          `normalizeWorkspaceEntrySearchQuery` (@harnessos/shared/searchQuery),
 //          matching what the server actually matched against.
 // Layer: Web UI utility
 // Exports: MatchSegment, buildMatchSegments

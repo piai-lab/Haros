@@ -1,4 +1,4 @@
-import type { BrowserCssSelector } from "@omnimind/contracts";
+import type { BrowserCssSelector } from "@harnessos/contracts";
 import type { WebContents } from "electron";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

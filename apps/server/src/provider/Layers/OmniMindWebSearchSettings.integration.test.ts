@@ -4,7 +4,7 @@ import path from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, Layer } from "effect";
-import { MAX_WEB_SEARCH_CONFIG_BYTES } from "@omnimind/om-web-access/config-service";
+import { MAX_WEB_SEARCH_CONFIG_BYTES } from "@harnessos/om-web-access/config-service";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ServerConfig } from "../../config.ts";

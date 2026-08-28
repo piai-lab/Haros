@@ -9,12 +9,12 @@ import {
   mergePathEntries,
   readPathFromLaunchctl,
   readPathFromLoginShell,
-} from "@omnimind/shared/shell";
-import { createCachedLoginShellPathReader } from "@omnimind/shared/loginShellEnvironment";
+} from "@harnessos/shared/shell";
+import { createCachedLoginShellPathReader } from "@harnessos/shared/loginShellEnvironment";
 import {
   expandHomePath as expandHomePathSync,
   resolveOmniMindHomeDirectory,
-} from "@omnimind/shared/omnimindHome";
+} from "@harnessos/shared/omnimindHome";
 
 function logPathHydrationWarning(message: string, error?: unknown): void {
   console.warn(`[server] ${message}`, error instanceof Error ? error.message : (error ?? ""));

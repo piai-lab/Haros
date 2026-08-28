@@ -1,4 +1,4 @@
-import { ThreadId, type BrowserElementRef, type BrowserSnapshotId } from "@omnimind/contracts";
+import { ThreadId, type BrowserElementRef, type BrowserSnapshotId } from "@harnessos/contracts";
 import type { WebContents } from "electron";
 import { describe, expect, it, vi } from "vitest";
 

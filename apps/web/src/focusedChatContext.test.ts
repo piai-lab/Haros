@@ -1,4 +1,4 @@
-import { ProjectId, ThreadId, TurnId } from "@omnimind/contracts";
+import { ProjectId, ThreadId, TurnId } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { type DraftThreadState } from "./composerDraftStore";

@@ -9,8 +9,8 @@ import {
   APP_SNAP_SHORTCUT_KEYS,
   APP_SNAP_SHORTCUT_MODIFIERS,
   DEFAULT_APP_SNAP_SHORTCUT,
-} from "@omnimind/shared/appSnapShortcut";
-import { ProviderKind } from "@omnimind/contracts";
+} from "@harnessos/shared/appSnapShortcut";
+import { ProviderKind } from "@harnessos/contracts";
 import { DEFAULT_LOCALE_PREFERENCE, LocalePreference } from "./locale";
 import {
   DEFAULT_PROVIDER_ORDER,

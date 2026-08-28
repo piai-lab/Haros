@@ -16,7 +16,7 @@ import {
   resolveBrowserAddressSync,
   shouldOccludeBrowserWebview,
 } from "./BrowserPanel.logic";
-import { ThreadId, type BrowserAnnotationEvent } from "@omnimind/contracts";
+import { ThreadId, type BrowserAnnotationEvent } from "@harnessos/contracts";
 import type { BrowserAnnotationDraft } from "../lib/browserAnnotations";
 
 const THREAD_A = ThreadId.makeUnsafe("thread-a");

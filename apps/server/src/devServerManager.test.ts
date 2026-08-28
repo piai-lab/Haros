@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { ProjectId, type ProjectDevServer, type ServerLocalServerProcess } from "@omnimind/contracts";
+import { ProjectId, type ProjectDevServer, type ServerLocalServerProcess } from "@harnessos/contracts";
 
 import { findProjectDevServerForLocalServer } from "./devServerManager";
 

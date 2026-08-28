@@ -1,4 +1,4 @@
-import type { BuiltInToolGroupId, ProviderKind } from "@omnimind/contracts";
+import type { BuiltInToolGroupId, ProviderKind } from "@harnessos/contracts";
 import type { Effect } from "effect";
 
 import type { AgentGatewayTargetError } from "./targetResolver.ts";

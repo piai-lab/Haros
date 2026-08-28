@@ -1,4 +1,4 @@
-import { NonNegativeInt, ProviderRuntimeEvent } from "@omnimind/contracts";
+import { NonNegativeInt, ProviderRuntimeEvent } from "@harnessos/contracts";
 import { Effect, Layer, Schema } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 

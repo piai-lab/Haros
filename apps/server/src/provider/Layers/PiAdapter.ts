@@ -19,13 +19,13 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { Api, ImageContent, Model, TextContent } from "@earendil-works/pi-ai";
-import type { PromptOutcome as OmniMindPromptOutcome } from "@omnimind/pi-coding-agent";
+import type { PromptOutcome as OmniMindPromptOutcome } from "@harnessos/pi-coding-agent";
 import {
   ASK_USER_TOOL_NAME,
   type AskUserProductInteractionPort,
   type AskUserResult,
   type AskUserToolInput,
-} from "@omnimind/om-ask";
+} from "@harnessos/om-ask";
 import {
   ApprovalRequestId,
   type BuiltInToolGroupId,
@@ -50,9 +50,9 @@ import {
   type TurnTasksUpdatedPayload,
   TurnId,
   type UserInputQuestion,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, FileSystem, Layer, Option, Queue, Stream } from "effect";
-import type { ProductSurface } from "@omnimind/shared/productSurface";
+import type { ProductSurface } from "@harnessos/shared/productSurface";
 
 import { renderOmniMindHarnessPolicy } from "../../agentGateway/harnessPolicy.ts";
 import {
@@ -91,8 +91,8 @@ import {
 import { PiAdapter, type PiAdapterShape } from "../Services/PiAdapter.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
 import { buildAgentGatewayPiToolDefinitions } from "../agentGatewayPiProjection.ts";
-import { inspectOmniMindWebAccessRegistration } from "@omnimind/om-web-access";
-import type { CuratorPresenter } from "@omnimind/om-web-access/curator-presentation";
+import { inspectOmniMindWebAccessRegistration } from "@harnessos/om-web-access";
+import type { CuratorPresenter } from "@harnessos/om-web-access/curator-presentation";
 import { type AgentGatewayHostExtensionHandle } from "../agentGatewayHostExtension.ts";
 import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "../goalMode.ts";
 import { AUTOMATION_RUN_GATEWAY_TOOL_NAMES } from "../../automation/runEnvelope.ts";

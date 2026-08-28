@@ -22,7 +22,7 @@ import {
   type ProviderKind,
   type ProviderWithDefaultModel,
   CodexReasoningEffort,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 const MODEL_SLUG_SET_BY_PROVIDER: Record<ProviderKind, ReadonlySet<ModelSlug>> = {
   omnimind: new Set<ModelSlug>(),

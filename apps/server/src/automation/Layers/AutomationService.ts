@@ -24,21 +24,21 @@ import {
   type ProviderStartOptions,
   type ThreadEnvironmentMode,
   type TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   automationContinuationThreadId,
   automationContinuesThread,
   automationOwnsItsThread,
   automationRequiresTargetThread,
-} from "@omnimind/shared/automationMode";
-import { buildTemporaryWorktreeBranchName } from "@omnimind/shared/git";
-import { configuredHostGroupEnabled } from "@omnimind/shared/hostToolSurfacePolicy";
-import { projectKindToProductSurface } from "@omnimind/shared/productSurface";
+} from "@harnessos/shared/automationMode";
+import { buildTemporaryWorktreeBranchName } from "@harnessos/shared/git";
+import { configuredHostGroupEnabled } from "@harnessos/shared/hostToolSurfacePolicy";
+import { projectKindToProductSurface } from "@harnessos/shared/productSurface";
 import {
   isProviderRuntimeModeExecutable,
   isProviderRuntimeModePermanentlyUnsupported,
-} from "@omnimind/shared/runtimeMode";
-import { providerStartOptionsFromServerSettings } from "@omnimind/shared/serverSettings";
+} from "@harnessos/shared/runtimeMode";
+import { providerStartOptionsFromServerSettings } from "@harnessos/shared/serverSettings";
 import { Cause, Effect, Layer, Option, PubSub, Queue, Stream } from "effect";
 
 import { GitCore } from "../../git/Services/GitCore.ts";

@@ -2,7 +2,7 @@
 // Purpose: Identify the source thread for conversations created by another OmniMind agent.
 // Layer: Chat transcript UI
 
-import { type ProviderKind, type ThreadId } from "@omnimind/contracts";
+import { type ProviderKind, type ThreadId } from "@harnessos/contracts";
 import { memo, type ReactNode } from "react";
 
 import { OmniMindLogo } from "../OmniMindLogo";

@@ -19,7 +19,7 @@
 
 import "../src/index.css";
 
-import { MessageId, ThreadId, TurnId } from "@omnimind/contracts";
+import { MessageId, ThreadId, TurnId } from "@harnessos/contracts";
 import type { LegendListRef } from "@legendapp/list/react";
 import {
   Profiler,

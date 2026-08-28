@@ -3,7 +3,7 @@ import {
   type ClaudeSubagentAliasDefinition,
   type ProviderKind,
   type ResolvedAgentAlias,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 export interface ParsedAgentMentionInvocation {
   readonly alias: string;

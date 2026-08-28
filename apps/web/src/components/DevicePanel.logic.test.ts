@@ -1,4 +1,4 @@
-import type { DeviceDescriptor, DeviceUdid } from "@omnimind/contracts";
+import type { DeviceDescriptor, DeviceUdid } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 import { translate } from "../i18n";
 

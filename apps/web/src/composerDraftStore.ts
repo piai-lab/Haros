@@ -7,7 +7,7 @@ import {
   type ModelSlug,
   type ProviderKind,
   type ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 

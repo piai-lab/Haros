@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { ServerProviderUsageSnapshot } from "@omnimind/contracts";
+import type { ServerProviderUsageSnapshot } from "@harnessos/contracts";
 
 import { PROVIDER_USAGE_PROVIDERS, selectVisibleProviderUsageSnapshots } from "./providerUsage";
 

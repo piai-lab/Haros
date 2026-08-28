@@ -4,7 +4,7 @@
 // Layer: Pull request presentation
 // Exports: PullRequestCheckStatusIcon
 
-import type { PullRequestCheckStatus } from "@omnimind/contracts";
+import type { PullRequestCheckStatus } from "@harnessos/contracts";
 
 import { CentralIcon } from "~/lib/central-icons";
 import { Loader2Icon } from "~/lib/icons";

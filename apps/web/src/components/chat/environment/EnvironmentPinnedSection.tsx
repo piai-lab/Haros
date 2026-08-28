@@ -4,7 +4,7 @@
 //          inline rename (double-click), and unpin. Pins are per-thread, server-synced.
 // Layer: Environment panel section
 
-import type { MessageId, PinnedMessage } from "@omnimind/contracts";
+import type { MessageId, PinnedMessage } from "@harnessos/contracts";
 import { displayLabelFor } from "~/pinnedMessages";
 import { useI18n } from "~/i18n";
 

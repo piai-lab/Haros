@@ -10,14 +10,14 @@ import type {
   UsageHistoryRow,
   UsageHistoryGroupBy,
   UsageHistoryRange,
-} from "@omnimind/contracts";
-import { USAGE_HISTORY_UNKNOWN_MODEL, USAGE_HISTORY_UNKNOWN_WORKSPACE } from "@omnimind/contracts";
-import { formatBytes } from "@omnimind/shared/formatBytes";
+} from "@harnessos/contracts";
+import { USAGE_HISTORY_UNKNOWN_MODEL, USAGE_HISTORY_UNKNOWN_WORKSPACE } from "@harnessos/contracts";
+import { formatBytes } from "@harnessos/shared/formatBytes";
 import {
   PROVIDER_USAGE_PROVIDERS,
   providerUsageDisplayName,
   selectVisibleProviderUsageSnapshots,
-} from "@omnimind/shared/providerUsage";
+} from "@harnessos/shared/providerUsage";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 

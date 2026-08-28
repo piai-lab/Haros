@@ -3,8 +3,8 @@
 // Layer: Web lib test
 // Exports: Vitest cases for threadArchive helpers
 
-import { ThreadId } from "@omnimind/contracts";
-import { THREAD_NOT_ARCHIVED_INVARIANT_MARKER } from "@omnimind/shared/errorMessages";
+import { ThreadId } from "@harnessos/contracts";
+import { THREAD_NOT_ARCHIVED_INVARIANT_MARKER } from "@harnessos/shared/errorMessages";
 import { assert, describe, expect, it, vi } from "vitest";
 
 import {

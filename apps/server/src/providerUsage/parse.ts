@@ -9,8 +9,8 @@ import type {
   ServerProviderUsageLimit,
   ServerProviderUsageLine,
   ServerProviderUsageSnapshot,
-} from "@omnimind/contracts";
-import { providerUsageNeedsAuthDetail } from "@omnimind/shared/providerUsage";
+} from "@harnessos/contracts";
+import { providerUsageNeedsAuthDetail } from "@harnessos/shared/providerUsage";
 
 export function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : null;

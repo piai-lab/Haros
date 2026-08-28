@@ -6,7 +6,7 @@ import {
   DEFAULT_SERVER_SETTINGS_VIEW,
   type ProviderKind,
   type ProviderModelDescriptor,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";

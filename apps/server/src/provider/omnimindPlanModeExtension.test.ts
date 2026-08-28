@@ -1,5 +1,5 @@
 import type { ToolCallEvent, ToolCallEventResult } from "@earendil-works/pi-coding-agent";
-import { TurnId } from "@omnimind/contracts";
+import { TurnId } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

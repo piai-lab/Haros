@@ -3,7 +3,7 @@
 // Exports: useThreadActivationController
 
 import type { useNavigate } from "@tanstack/react-router";
-import type { ThreadId } from "@omnimind/contracts";
+import type { ThreadId } from "@harnessos/contracts";
 import type { LastThreadRoute } from "../chatRouteRestore";
 import {
   resolveSplitViewThreadIds,

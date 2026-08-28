@@ -1,4 +1,4 @@
-import type { AutomationDefinition, AutomationSchedule } from "@omnimind/contracts";
+import type { AutomationDefinition, AutomationSchedule } from "@harnessos/contracts";
 
 /**
  * Lifecycle state of an automation, independent of any in-flight or unreviewed run. Single

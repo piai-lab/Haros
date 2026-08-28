@@ -4,8 +4,8 @@
 // Depends on: Existing thread-local Browser state and BrowserPanel chrome styles
 
 import { useLayoutEffect, useRef } from "react";
-import type { BrowserTabState } from "@omnimind/contracts";
-import { isBlankBrowserTabUrl } from "@omnimind/shared/browserSession";
+import type { BrowserTabState } from "@harnessos/contracts";
+import { isBlankBrowserTabUrl } from "@harnessos/shared/browserSession";
 
 import { useI18n } from "~/i18n";
 import { GlobeIcon, PlusIcon, XIcon } from "~/lib/icons";

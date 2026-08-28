@@ -7,7 +7,7 @@ import {
   type TerminalEvent,
   type TerminalOpenInput,
   type TerminalRestartInput,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {

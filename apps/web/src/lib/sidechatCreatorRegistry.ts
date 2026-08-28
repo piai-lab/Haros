@@ -8,7 +8,7 @@
 // of duplicating that flow we let the composer publish its creator keyed by host
 // thread id and have the dock invoke it. Only threads that can offer /side register.
 
-import type { ThreadId } from "@omnimind/contracts";
+import type { ThreadId } from "@harnessos/contracts";
 
 export type SidechatCreator = (options?: { initialPrompt?: string }) => Promise<unknown>;
 

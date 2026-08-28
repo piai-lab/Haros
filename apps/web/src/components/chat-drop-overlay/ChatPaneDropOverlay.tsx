@@ -4,7 +4,7 @@
 // Exports: ChatPaneDropOverlay component, drag MIME constant, drop-zone helpers used by tests
 
 import { useEffect, useRef, type DragEvent as ReactDragEvent, type ReactNode } from "react";
-import { type ThreadId } from "@omnimind/contracts";
+import { type ThreadId } from "@harnessos/contracts";
 
 import { type SplitDirection, type SplitDropSide } from "../../splitViewStore";
 import { cn } from "../../lib/utils";

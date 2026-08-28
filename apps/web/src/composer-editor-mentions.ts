@@ -15,9 +15,9 @@ import {
   normalizeComposerLinkUrl,
   trimTrailingLinkPunctuation,
 } from "./lib/linkChips";
-import { resolveAgentAlias } from "@omnimind/contracts";
-import type { ProviderMentionReference } from "@omnimind/contracts";
-import { threadIdFromThreadMentionPath } from "@omnimind/shared/threadMentions";
+import { resolveAgentAlias } from "@harnessos/contracts";
+import type { ProviderMentionReference } from "@harnessos/contracts";
+import { threadIdFromThreadMentionPath } from "@harnessos/shared/threadMentions";
 
 export type ComposerPromptSegment =
   | {

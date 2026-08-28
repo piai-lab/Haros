@@ -13,11 +13,11 @@ import {
   type RuntimeMode,
   type ServerProviderAuthStatus,
   type ThreadId as ThreadIdType,
-} from "@omnimind/contracts";
-import { normalizeModelSlug } from "@omnimind/shared/model";
-import { buildOmniMindBranchName } from "@omnimind/shared/git";
-import { isGenericChatThreadTitle } from "@omnimind/shared/chatThreads";
-import { isGenericTerminalThreadTitle } from "@omnimind/shared/terminalThreads";
+} from "@harnessos/contracts";
+import { normalizeModelSlug } from "@harnessos/shared/model";
+import { buildOmniMindBranchName } from "@harnessos/shared/git";
+import { isGenericChatThreadTitle } from "@harnessos/shared/chatThreads";
+import { isGenericTerminalThreadTitle } from "@harnessos/shared/terminalThreads";
 import {
   type ChatMessage,
   type SessionPhase,

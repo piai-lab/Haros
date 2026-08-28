@@ -1,6 +1,6 @@
 import http from "node:http";
 
-import type { ServerSettingsError } from "@omnimind/contracts";
+import type { ServerSettingsError } from "@harnessos/contracts";
 import { Effect, Exit, FileSystem, Layer, Path, Schema, Scope, ServiceMap } from "effect";
 import { HttpRouter } from "effect/unstable/http";
 import * as SqlClient from "effect/unstable/sql/SqlClient";

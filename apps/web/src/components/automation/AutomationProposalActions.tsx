@@ -1,4 +1,4 @@
-import { AutomationId, type AutomationProposalState } from "@omnimind/contracts";
+import { AutomationId, type AutomationProposalState } from "@harnessos/contracts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "~/components/ui/button";

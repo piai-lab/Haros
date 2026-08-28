@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Effect, Exit } from "effect";
 
-import { DEVICE_WS_METHODS, ThreadId } from "@omnimind/contracts";
+import { DEVICE_WS_METHODS, ThreadId } from "@harnessos/contracts";
 
 import { DeviceManager } from "./DeviceManager.ts";
 import { FakeDeviceBackend } from "./FakeDeviceBackend.ts";

@@ -13,7 +13,7 @@ import type {
   GitPullRequestComment,
   PullRequestMergeCapabilities,
   PullRequestStack,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import { GitHubCliError } from "../Errors.ts";
 import {

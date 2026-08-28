@@ -4,7 +4,7 @@ import {
   MessageId,
   ThreadId,
   type OrchestrationCommand,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { fingerprintOrchestrationCommand } from "./commandFingerprint";

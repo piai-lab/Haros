@@ -1,4 +1,4 @@
-import type { OrchestrationThreadActivity, ProviderRuntimeEvent } from "@omnimind/contracts";
+import type { OrchestrationThreadActivity, ProviderRuntimeEvent } from "@harnessos/contracts";
 import {
   ApprovalRequestId,
   CommandId,
@@ -7,10 +7,10 @@ import {
   RuntimeItemId,
   ThreadId,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import { isPotentiallyVisibleProviderRuntimeActivity } from "@omnimind/shared/providerActivityVisibility";
+import { isPotentiallyVisibleProviderRuntimeActivity } from "@harnessos/shared/providerActivityVisibility";
 
 import {
   MAX_REASONING_ACTIVITY_DETAIL_CHARS,

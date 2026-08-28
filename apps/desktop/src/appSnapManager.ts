@@ -21,14 +21,14 @@ import {
   type DesktopAppSnapShortcutAvailability,
   type DesktopAppSnapShortcutUpdateResult,
   type DesktopAppSnapState,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   DEFAULT_APP_SNAP_SHORTCUT,
   appSnapShortcutAccelerator,
   appSnapShortcutSystemConflict,
   isAppSnapShortcut,
   sameAppSnapShortcut,
-} from "@omnimind/shared/appSnapShortcut";
+} from "@harnessos/shared/appSnapShortcut";
 
 const MAX_PENDING_CAPTURES = PROVIDER_SEND_TURN_MAX_ATTACHMENTS;
 const MAX_HELPER_STDERR_CHARS = 4_096;

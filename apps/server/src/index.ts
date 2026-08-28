@@ -8,7 +8,7 @@ import { OpenLive } from "./open";
 import { Command } from "effect/unstable/cli";
 import { version } from "../package.json" with { type: "json" };
 import { ServerLive } from "./effectServer";
-import { NetService } from "@omnimind/shared/Net";
+import { NetService } from "@harnessos/shared/Net";
 import { FetchHttpClient } from "effect/unstable/http";
 
 import { installServerEnvProxyDispatcher } from "./serverHttpProxy";

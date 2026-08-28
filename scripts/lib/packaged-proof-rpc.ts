@@ -8,7 +8,7 @@ import type {
   ClientOrchestrationCommand,
   DispatchResult,
   WsBootstrapNegotiateResult as WsBootstrapNegotiateResultValue,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Exit, Layer, ManagedRuntime, Schema, Scope } from "effect";
 import { RpcClient, RpcSerialization } from "effect/unstable/rpc";
 import * as Socket from "effect/unstable/socket/Socket";
@@ -18,7 +18,7 @@ import { redactPackagedProofSecrets } from "./packaged-proof-secrets.ts";
 const RPC_CONNECT_TIMEOUT_MS = 5_000;
 const RPC_COMMAND_TIMEOUT_MS = 5_000;
 
-type ContractsModule = typeof import("@omnimind/contracts");
+type ContractsModule = typeof import("@harnessos/contracts");
 export type PackagedProofRuntimeContracts = Pick<
   ContractsModule,
   | "ORCHESTRATION_WS_METHODS"
@@ -42,10 +42,10 @@ function loadPackagedProofRuntimeContracts(): PackagedProofRuntimeContracts {
     // Node cannot execute the package's extensionless TypeScript source graph.
     // The packaged build already emits the canonical CJS contract artifact;
     // require selects that declared package export without copying wire facts.
-    return createRequire(import.meta.url)("@omnimind/contracts") as PackagedProofRuntimeContracts;
+    return createRequire(import.meta.url)("@harnessos/contracts") as PackagedProofRuntimeContracts;
   } catch {
     throw new Error(
-      "Packaged journey requires the built @omnimind/contracts runtime from the artifact build.",
+      "Packaged journey requires the built @harnessos/contracts runtime from the artifact build.",
     );
   }
 }

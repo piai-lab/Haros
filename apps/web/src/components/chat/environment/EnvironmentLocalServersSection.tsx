@@ -5,9 +5,9 @@
 
 import type { ReactNode } from "react";
 
-import type { ServerLocalServerProcess } from "@omnimind/contracts";
+import type { ServerLocalServerProcess } from "@harnessos/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { localServerPrimaryLabel } from "@omnimind/shared/localServers";
+import { localServerPrimaryLabel } from "@harnessos/shared/localServers";
 
 import { LocalServerIdentity } from "../../LocalServerIdentity";
 import { ComposerPickerMenuPopup } from "../ComposerPickerMenuPopup";

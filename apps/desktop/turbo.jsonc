@@ -7,16 +7,16 @@
       "outputs": ["dist-electron/**"],
     },
     "dev": {
-      "dependsOn": ["@omnimind/server#build"],
+      "dependsOn": ["@harnessos/server#build"],
       "persistent": true,
     },
     "start": {
-      "dependsOn": ["build", "@omnimind/web#build", "@omnimind/server#build"],
+      "dependsOn": ["build", "@harnessos/web#build", "@harnessos/server#build"],
       "cache": false,
       "persistent": true,
     },
     "smoke-test": {
-      "dependsOn": ["build", "@omnimind/web#build", "@omnimind/server#build"],
+      "dependsOn": ["build", "@harnessos/web#build", "@harnessos/server#build"],
       "cache": false,
       "outputs": [],
     },

@@ -1,4 +1,4 @@
-import { ApprovalRequestId, ProviderRuntimeEvent, ThreadId, TurnId } from "@omnimind/contracts";
+import { ApprovalRequestId, ProviderRuntimeEvent, ThreadId, TurnId } from "@harnessos/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import type {
   Agent,

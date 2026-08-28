@@ -1,5 +1,5 @@
-import type { PinnedMessage } from "@omnimind/contracts";
-import { MessageId } from "@omnimind/contracts";
+import type { PinnedMessage } from "@harnessos/contracts";
+import { MessageId } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

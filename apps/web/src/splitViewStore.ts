@@ -3,7 +3,7 @@
 // Layer: UI state store
 // Exports: pane/split types, tree-aware selectors, and id-based mutation helpers used by sidebar and route surfaces
 
-import { type ProjectId, type ThreadId, type TurnId } from "@omnimind/contracts";
+import { type ProjectId, type ThreadId, type TurnId } from "@harnessos/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 

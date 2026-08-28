@@ -1,4 +1,4 @@
-import { outboundHttp, type OutboundHttpResponse } from "@omnimind/shared/outboundHttp";
+import { outboundHttp, type OutboundHttpResponse } from "@harnessos/shared/outboundHttp";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", () => ({

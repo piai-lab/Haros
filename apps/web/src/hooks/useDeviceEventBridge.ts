@@ -8,7 +8,7 @@
 // lives in apps/server, so the equivalent signal is a WebSocket push and this
 // works in a plain browser tab as well as the desktop app.
 
-import type { DeviceOpenPaneRequestedEvent } from "@omnimind/contracts";
+import type { DeviceOpenPaneRequestedEvent } from "@harnessos/contracts";
 import { useEffect, useEffectEvent } from "react";
 
 import { ensureNativeApi } from "~/nativeApi";

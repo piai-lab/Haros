@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { decodeDeviceFrame, encodeDeviceFrame } from "@omnimind/shared/deviceFrame";
+import { decodeDeviceFrame, encodeDeviceFrame } from "@harnessos/shared/deviceFrame";
 
 import {
   DeviceFramePrefixParser,

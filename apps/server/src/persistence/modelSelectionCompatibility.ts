@@ -3,7 +3,7 @@
 // Layer: Persistence compatibility helper
 // Exports: normalizeLegacyModelSelection, normalizePersistedModelSelection
 
-import { MODEL_OPTIONS_BY_PROVIDER, ProviderKind } from "@omnimind/contracts";
+import { MODEL_OPTIONS_BY_PROVIDER, ProviderKind } from "@harnessos/contracts";
 import { Schema } from "effect";
 
 type ModelProviderKind = ProviderKind;

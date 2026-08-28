@@ -1,5 +1,5 @@
 {
-  "name": "@omnimind/om-web-access",
+  "name": "@harnessos/om-web-access",
   "version": "0.25.0-omnimind.0",
   "private": true,
   "description": "Bundled Pi-native web access for OmniMind Agent.",
@@ -80,10 +80,10 @@
     "@earendil-works/pi-ai": "0.84.3",
     "@earendil-works/pi-coding-agent": "0.84.3",
     "@earendil-works/pi-tui": "0.84.3",
-    "@omnimind/contracts": "0.1.0-alpha.0"
+    "@harnessos/contracts": "0.1.0-alpha.0"
   },
   "peerDependenciesMeta": {
-    "@omnimind/contracts": {
+    "@harnessos/contracts": {
       "optional": true
     }
   }

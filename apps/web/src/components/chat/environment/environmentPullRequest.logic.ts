@@ -9,8 +9,8 @@ import type {
   GitPullRequestComment,
   PullRequestCheck,
   PullRequestComment,
-} from "@omnimind/contracts";
-import { pluralize } from "@omnimind/shared/text";
+} from "@harnessos/contracts";
+import { pluralize } from "@harnessos/shared/text";
 import type { AppLocale } from "~/locale";
 
 export type PullRequestChecksTone = "pending" | "success" | "failure" | "none";

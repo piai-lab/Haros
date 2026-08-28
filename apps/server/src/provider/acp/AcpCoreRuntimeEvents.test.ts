@@ -1,4 +1,4 @@
-import { RuntimeRequestId, TurnId } from "@omnimind/contracts";
+import { RuntimeRequestId, TurnId } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

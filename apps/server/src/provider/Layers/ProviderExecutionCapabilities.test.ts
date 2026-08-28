@@ -1,4 +1,4 @@
-import type { ProviderKind, ServerProviderStatus } from "@omnimind/contracts";
+import type { ProviderKind, ServerProviderStatus } from "@harnessos/contracts";
 import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vitest";
 

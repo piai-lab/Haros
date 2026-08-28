@@ -5,7 +5,7 @@
 
 import nodePath from "node:path";
 
-import type { ServerProviderUsageLimit } from "@omnimind/contracts";
+import type { ServerProviderUsageLimit } from "@harnessos/contracts";
 
 import {
   credentialFingerprint,

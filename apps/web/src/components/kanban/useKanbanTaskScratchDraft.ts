@@ -3,8 +3,8 @@
 // Layer: Kanban UI hook
 // Exports: useKanbanTaskScratchDraft
 
-import type { ModelSlug, ProviderKind } from "@omnimind/contracts";
-import { getDefaultModel } from "@omnimind/shared/model";
+import type { ModelSlug, ProviderKind } from "@harnessos/contracts";
+import { getDefaultModel } from "@harnessos/shared/model";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {

@@ -1,4 +1,4 @@
-import type { ProviderKind, ThreadId } from "@omnimind/contracts";
+import type { ProviderKind, ThreadId } from "@harnessos/contracts";
 import { ServiceMap } from "effect";
 
 export type AgentGatewayCapability =

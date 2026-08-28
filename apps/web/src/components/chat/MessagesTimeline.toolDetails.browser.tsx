@@ -4,7 +4,7 @@
 
 import "../../index.css";
 
-import { TurnId } from "@omnimind/contracts";
+import { TurnId } from "@harnessos/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 

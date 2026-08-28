@@ -26,8 +26,8 @@
     "@legendapp/list",
     "@lexical/react",
     "@lobehub/icons-static-svg",
-    "@omnimind/om-ask",
-    "@omnimind/pi-coding-agent",
+    "@harnessos/om-ask",
+    "@harnessos/pi-coding-agent",
     "@opencode-ai/sdk",
     "@pierre/diffs",
     "@tabler/icons-react",
@@ -3098,9 +3098,9 @@
       ]
     },
     {
-      "name": "@omnimind/om-ask",
+      "name": "@harnessos/om-ask",
       "version": "5.0.0-omnimind.1",
-      "id": "@omnimind/om-ask@5.0.0-omnimind.1",
+      "id": "@harnessos/om-ask@5.0.0-omnimind.1",
       "license": "MIT",
       "author": null,
       "repository": null,
@@ -3126,16 +3126,16 @@
       "dependencies": []
     },
     {
-      "name": "@omnimind/pi-coding-agent",
+      "name": "@harnessos/pi-coding-agent",
       "version": "0.84.3",
-      "id": "@omnimind/pi-coding-agent@0.84.3",
+      "id": "@harnessos/pi-coding-agent@0.84.3",
       "license": "MIT",
       "author": "Mario Zechner",
       "repository": "https://github.com/earendil-works/pi.git",
       "homepage": null,
       "manifestSha256": "01211b92f0004f677cdb63d83ad84bcdc20d3bb8e481f1ccce3c81814089c033",
       "locations": [
-        "node_modules/.bun/@omnimind+pi-coding-agent@..+..+vendor+omnimind-pi-coding-agent-0.84.3.tgz+bfb712a8fa2951a7/node_modules/@omnimind/pi-coding-agent"
+        "node_modules/.bun/@omnimind+pi-coding-agent@..+..+vendor+omnimind-pi-coding-agent-0.84.3.tgz+bfb712a8fa2951a7/node_modules/@harnessos/pi-coding-agent"
       ],
       "licenseFiles": [
         {

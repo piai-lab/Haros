@@ -1,4 +1,4 @@
-import { BUILT_IN_COMPOSER_SLASH_COMMANDS } from "@omnimind/shared/composerSlashCommands";
+import { BUILT_IN_COMPOSER_SLASH_COMMANDS } from "@harnessos/shared/composerSlashCommands";
 import { describe, expect, it } from "vitest";
 
 import {

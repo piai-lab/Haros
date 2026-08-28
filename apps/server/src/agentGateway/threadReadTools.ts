@@ -4,7 +4,7 @@ import {
   TurnId,
   type OrchestrationThreadShell,
   type ProviderKind,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect, Option } from "effect";
 
 import {

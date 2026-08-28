@@ -4,7 +4,7 @@
 // Exports: AutomationCreationDraft plus pure warning/skill helpers.
 // Depends on: automation contracts shared with the native API.
 
-import { DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS } from "@omnimind/contracts";
+import { DEFAULT_AUTOMATION_FAST_INTERVAL_MAX_ITERATIONS } from "@harnessos/contracts";
 import type {
   AutomationMode,
   AutomationSchedule,
@@ -14,8 +14,8 @@ import type {
   ProjectId,
   RuntimeMode,
   ThreadId,
-} from "@omnimind/contracts";
-import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
+} from "@harnessos/contracts";
+import { automationRequiresTargetThread } from "@harnessos/shared/automationMode";
 
 import type { ChatAutomationExecutionScope } from "./automationIntent";
 

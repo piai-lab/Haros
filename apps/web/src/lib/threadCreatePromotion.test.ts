@@ -6,7 +6,7 @@ import {
   WsRpcError,
   type ClientOrchestrationCommand,
   type NativeApi,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useStore } from "../store";

@@ -7,7 +7,7 @@ import {
   ThreadId,
   TurnId,
   type OrchestrationPendingInteraction,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   buildInputNeededCopy,
   buildTaskCompletionCopy,

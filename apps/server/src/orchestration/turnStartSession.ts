@@ -4,7 +4,7 @@ import type {
   ProviderInteractionMode,
   RuntimeMode,
   ThreadId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Equal } from "effect";
 
 export function deriveTurnStartModelSelection(input: {

@@ -18,18 +18,18 @@ import {
   RuntimeRequestId,
   type ThreadId,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   getDefaultEffort,
   getModelCapabilities,
   normalizeGrokModelOptions,
-} from "@omnimind/shared/model";
+} from "@harnessos/shared/model";
 import {
   decodeOutboundJson,
   decodeOutboundText,
   outboundHttp,
-} from "@omnimind/shared/outboundHttp";
-import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
+} from "@harnessos/shared/outboundHttp";
+import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
 import {
   Cause,
   DateTime,

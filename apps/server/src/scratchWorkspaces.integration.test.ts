@@ -17,8 +17,8 @@ import {
 import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 
-import { ThreadId } from "@omnimind/contracts";
-import { SCRATCH_WORKSPACES_DIRNAME } from "@omnimind/shared/threadWorkspace";
+import { ThreadId } from "@harnessos/contracts";
+import { SCRATCH_WORKSPACES_DIRNAME } from "@harnessos/shared/threadWorkspace";
 import { afterAll, describe, expect, it } from "vitest";
 
 import {

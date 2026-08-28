@@ -9,9 +9,9 @@ import type {
   GitPullRequestComment,
   ProjectId,
   ThreadId,
-} from "@omnimind/contracts";
-import { githubAvatarUrlForLogin } from "@omnimind/shared/githubAvatar";
-import { parseGitHubRepositoryNameWithOwnerFromPullRequestUrl } from "@omnimind/shared/githubRepository";
+} from "@harnessos/contracts";
+import { githubAvatarUrlForLogin } from "@harnessos/shared/githubAvatar";
+import { parseGitHubRepositoryNameWithOwnerFromPullRequestUrl } from "@harnessos/shared/githubRepository";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 

@@ -4,7 +4,7 @@ import type {
   BrowserNodeTarget,
   BrowserPointerTarget,
   BrowserTabId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import type { BrowserAutomationVisibleRuntime } from "../browserManager";
 import {

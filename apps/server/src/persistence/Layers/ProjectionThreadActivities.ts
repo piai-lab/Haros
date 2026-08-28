@@ -1,6 +1,6 @@
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";
-import { NonNegativeInt } from "@omnimind/contracts";
+import { NonNegativeInt } from "@harnessos/contracts";
 import { Effect, Layer, Schema, Struct } from "effect";
 
 import { toPersistenceSqlError, toPersistenceSqlOrDecodeError } from "../Errors.ts";

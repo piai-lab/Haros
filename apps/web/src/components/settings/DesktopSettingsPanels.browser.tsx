@@ -4,7 +4,7 @@
 
 import "../../index.css";
 
-import type { DesktopAppSnapState } from "@omnimind/contracts";
+import type { DesktopAppSnapState } from "@harnessos/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

@@ -1,4 +1,4 @@
-import { ProviderExecutionCapabilityReason } from "@omnimind/contracts";
+import { ProviderExecutionCapabilityReason } from "@harnessos/contracts";
 import { Schema } from "effect";
 
 export class AutomationServiceError extends Schema.TaggedErrorClass<AutomationServiceError>()(

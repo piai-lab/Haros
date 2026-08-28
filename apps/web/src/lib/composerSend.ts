@@ -13,12 +13,12 @@ import {
   type ClaudeCodeEffort,
   type ProviderKind,
   type UploadChatAttachment,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   ATTACHMENT_CANCEL_ROUTE_PATH,
   ATTACHMENT_UPLOAD_ROUTE_PATH,
-} from "@omnimind/shared/binaryTransfer";
-import { applyClaudePromptEffortPrefix, getModelCapabilities } from "@omnimind/shared/model";
+} from "@harnessos/shared/binaryTransfer";
+import { applyClaudePromptEffortPrefix, getModelCapabilities } from "@harnessos/shared/model";
 
 import {
   cloneComposerImageAttachment,

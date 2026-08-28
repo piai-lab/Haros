@@ -17,8 +17,8 @@ import type {
   UsageHistoryProviderSummary,
   UsageHistoryProgress,
   UsageHistoryRow,
-} from "@omnimind/contracts";
-import { USAGE_HISTORY_UNKNOWN_MODEL, USAGE_HISTORY_UNKNOWN_WORKSPACE } from "@omnimind/contracts";
+} from "@harnessos/contracts";
+import { USAGE_HISTORY_UNKNOWN_MODEL, USAGE_HISTORY_UNKNOWN_WORKSPACE } from "@harnessos/contracts";
 import { Effect, Exit, Layer, ServiceMap } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 

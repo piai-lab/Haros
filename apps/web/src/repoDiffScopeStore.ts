@@ -3,7 +3,7 @@
 // Layer: Web UI state store
 // Exports: repo diff scope labels, validation, and a persisted Zustand store.
 
-import type { GitReadWorkingTreeDiffInput } from "@omnimind/contracts";
+import type { GitReadWorkingTreeDiffInput } from "@harnessos/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 

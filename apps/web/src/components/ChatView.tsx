@@ -36,28 +36,28 @@ import {
   OrchestrationThreadActivity,
   ProviderInteractionMode,
   RuntimeMode,
-} from "@omnimind/contracts";
-import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
-import { getDefaultModel, normalizeModelSlug } from "@omnimind/shared/model";
+} from "@harnessos/contracts";
+import { automationRequiresTargetThread } from "@harnessos/shared/automationMode";
+import { getDefaultModel, normalizeModelSlug } from "@harnessos/shared/model";
 import {
   resolveLatestTailUserMessageEditTarget,
   resolveTailUserMessageEditTarget,
-} from "@omnimind/shared/conversationEdit";
-import { threadExportBlockedReason } from "@omnimind/shared/threadExport";
-import { pendingRequestInstanceKey } from "@omnimind/shared/threadSummary";
+} from "@harnessos/shared/conversationEdit";
+import { threadExportBlockedReason } from "@harnessos/shared/threadExport";
+import { pendingRequestInstanceKey } from "@harnessos/shared/threadSummary";
 import {
   buildPromptThreadTitleFallback,
   GENERIC_CHAT_THREAD_TITLE,
-} from "@omnimind/shared/chatThreads";
+} from "@harnessos/shared/chatThreads";
 import {
   resolveThreadWorkspaceState,
   resolveThreadBranchSourceCwd,
   resolveThreadWorkspaceCwd as resolveSharedThreadWorkspaceCwd,
-} from "@omnimind/shared/threadEnvironment";
+} from "@harnessos/shared/threadEnvironment";
 import {
   deriveAssociatedWorktreeMetadata,
   workspaceRootsEqual,
-} from "@omnimind/shared/threadWorkspace";
+} from "@harnessos/shared/threadWorkspace";
 import {
   lazy,
   Suspense,
@@ -77,7 +77,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Debouncer, useDebouncedValue } from "@tanstack/react-pacer";
 import { useNavigate } from "@tanstack/react-router";
 import { type LegendListRef } from "@legendapp/list/react";
-import { buildTemporaryWorktreeBranchName } from "@omnimind/shared/git";
+import { buildTemporaryWorktreeBranchName } from "@harnessos/shared/git";
 import {
   GIT_WORKING_TREE_DIFF_LIVE_REFETCH_INTERVAL_MS,
   gitCreateDetachedWorktreeMutationOptions,

@@ -2,7 +2,7 @@
 // Purpose: Serializes image preparation, exposes pending UI state, and cancels stale draft work.
 // Layer: Web composer hook
 
-import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS, type ThreadId } from "@omnimind/contracts";
+import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS, type ThreadId } from "@harnessos/contracts";
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 
 import type { ComposerImageAttachment } from "../composerDraftStore";

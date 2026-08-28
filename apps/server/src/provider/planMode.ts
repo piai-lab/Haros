@@ -6,7 +6,7 @@
  * provider-agnostic by converting tagged markdown into canonical runtime events.
  */
 
-import type { ProviderInteractionMode } from "@omnimind/contracts";
+import type { ProviderInteractionMode } from "@harnessos/contracts";
 
 export const PROVIDER_PLAN_MODE_PROMPT_PREFIX = [
   "OmniMind plan mode is active.",

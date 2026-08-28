@@ -3,7 +3,7 @@
 // Layer: Web hook
 // Depends on: server config query, app settings, and provider availability normalization.
 
-import type { ServerProviderStatus } from "@omnimind/contracts";
+import type { ServerProviderStatus } from "@harnessos/contracts";
 import { useQuery } from "@tanstack/react-query";
 
 import { getCustomBinaryPathForProvider } from "../providerSettings";

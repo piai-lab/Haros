@@ -50,20 +50,20 @@ describe("release workspace manifests", () => {
     expect(RELEASE_WORKSPACE_MANIFEST_PATHS).toContain("packages/om-ask/package.json");
     const desktop = await readPackage("apps/desktop/package.json");
     const server = await readPackage("apps/server/package.json");
-    expect(desktop.dependencies?.["@omnimind/om-ask"]).toBeUndefined();
-    expect(server.dependencies?.["@omnimind/om-ask"]).toBe("workspace:*");
+    expect(desktop.dependencies?.["@harnessos/om-ask"]).toBeUndefined();
+    expect(server.dependencies?.["@harnessos/om-ask"]).toBe("workspace:*");
   });
 
   it("omits only the exact workspace package proven to be bundled into the Server", () => {
     expect(
       omitBundledServerWorkspaceDependencies({
-        "@omnimind/om-ask": "workspace:*",
-        "@omnimind/om-web-access": "workspace:*",
+        "@harnessos/om-ask": "workspace:*",
+        "@harnessos/om-web-access": "workspace:*",
         marked: "15.0.12",
       }),
     ).toEqual({ marked: "15.0.12" });
     expect(() =>
-      omitBundledServerWorkspaceDependencies({ "@omnimind/future-runtime": "workspace:*" }),
+      omitBundledServerWorkspaceDependencies({ "@harnessos/future-runtime": "workspace:*" }),
     ).toThrow("not proven to be bundled");
   });
 });

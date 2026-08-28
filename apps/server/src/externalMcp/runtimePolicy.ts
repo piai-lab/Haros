@@ -1,4 +1,4 @@
-import type { ExternalMcpCapability, RuntimeMode } from "@omnimind/contracts";
+import type { ExternalMcpCapability, RuntimeMode } from "@harnessos/contracts";
 
 import { GatewayToolError } from "../agentGateway/toolRuntime.ts";
 

@@ -15,7 +15,7 @@ import type {
   ProjectSearchEntriesResult,
   ProjectSearchLocalEntriesInput,
   ProjectSearchLocalEntriesResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 export interface WorkspaceEntriesShape {
   readonly browse: (

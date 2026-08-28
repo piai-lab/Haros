@@ -16,7 +16,7 @@ import {
   ResolvedKeybindingRule,
   ResolvedKeybindingsConfig,
   type ServerConfigIssue,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Mutable } from "effect/Types";
 import {
   Array,

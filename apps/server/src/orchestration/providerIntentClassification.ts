@@ -1,4 +1,4 @@
-import type { OrchestrationEvent } from "@omnimind/contracts";
+import type { OrchestrationEvent } from "@harnessos/contracts";
 
 export type ProviderIntentEvent = Extract<
   OrchestrationEvent,

@@ -1,4 +1,4 @@
-import type { BuiltInToolGroupId } from "@omnimind/contracts";
+import type { BuiltInToolGroupId } from "@harnessos/contracts";
 
 /** Canonical, versioned host policy delivered to every supported provider. */
 export const OMNIMIND_HARNESS_POLICY_VERSION = "2026-08-21.1";

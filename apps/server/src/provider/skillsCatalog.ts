@@ -10,7 +10,7 @@ import { existsSync, realpathSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as nodePath from "node:path";
 
-import type { ProviderKind, ProviderSkillDescriptor } from "@omnimind/contracts";
+import type { ProviderKind, ProviderSkillDescriptor } from "@harnessos/contracts";
 import { discoverClaudePluginSkillRoots } from "./claudePluginSkills.ts";
 
 type FrontmatterValue = string | boolean;

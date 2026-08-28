@@ -17,7 +17,7 @@ import {
   DEVICE_HELPER_BINARY_NAME,
   deviceHelperCacheKey,
   deviceHelperSourceRevision,
-} from "@omnimind/shared/deviceHelperCache";
+} from "@harnessos/shared/deviceHelperCache";
 import { IosSimulatorBackend } from "./IosSimulatorBackend.ts";
 import type { HelperClient } from "./helperClient.ts";
 

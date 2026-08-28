@@ -1,4 +1,4 @@
-import type { OrchestrationMessage, OrchestrationThread } from "@omnimind/contracts";
+import type { OrchestrationMessage, OrchestrationThread } from "@harnessos/contracts";
 
 const RECENT_MESSAGE_COUNT = 6;
 const EARLIER_MESSAGE_CHAR_LIMIT = 320;

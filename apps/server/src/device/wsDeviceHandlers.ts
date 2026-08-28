@@ -41,7 +41,7 @@ import {
   type DeviceThreadInput,
   type DeviceTypeTextInput,
   type ThreadDeviceState,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect } from "effect";
 
 import type { DeviceServiceShape } from "./Services/DeviceService.ts";

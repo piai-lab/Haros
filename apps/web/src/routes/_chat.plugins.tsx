@@ -3,7 +3,7 @@
 // Layer: Route
 // Exports: Route
 
-import { ThreadId } from "@omnimind/contracts";
+import { ThreadId } from "@harnessos/contracts";
 import { createFileRoute } from "@tanstack/react-router";
 import { PluginLibrary } from "~/components/PluginLibrary";
 

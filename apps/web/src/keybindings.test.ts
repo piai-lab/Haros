@@ -5,7 +5,7 @@ import {
   type KeybindingShortcut,
   type KeybindingWhenNode,
   type ResolvedKeybindingsConfig,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   formatKeybindingWhenExpression,
   formatShortcutLabel,

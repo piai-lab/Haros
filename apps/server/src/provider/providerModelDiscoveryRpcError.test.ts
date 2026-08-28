@@ -2,7 +2,7 @@ import {
   PROVIDER_MODEL_DISCOVERY_ERROR_CODES,
   type ProviderKind,
   type ServerProviderStatus,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import {

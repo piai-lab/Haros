@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   CANONICAL_USER_INPUT_MAX_NODES,
   CANONICAL_USER_INPUT_MAX_UTF8_BYTES,
-} from "@omnimind/contracts";
-import { ASK_USER_MAX_NODES, ASK_USER_MAX_UTF8_BYTES } from "@omnimind/om-ask";
+} from "@harnessos/contracts";
+import { ASK_USER_MAX_NODES, ASK_USER_MAX_UTF8_BYTES } from "@harnessos/om-ask";
 
 import {
   canonicalUserInputRequestFromQuestions,

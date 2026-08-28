@@ -6,8 +6,8 @@ import {
   ThreadId,
   type OrchestrationThread,
   type ProviderMentionReference,
-} from "@omnimind/contracts";
-import { isThreadMentionPath, threadIdFromThreadMentionPath } from "@omnimind/shared/threadMentions";
+} from "@harnessos/contracts";
+import { isThreadMentionPath, threadIdFromThreadMentionPath } from "@harnessos/shared/threadMentions";
 import { Effect, Option } from "effect";
 
 import { paginateThreadMessages } from "../agentGateway/threadSummary.ts";

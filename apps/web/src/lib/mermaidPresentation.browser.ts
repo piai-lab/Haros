@@ -1,4 +1,4 @@
-import type { EngineWebSurfaceThemeSnapshot } from "@omnimind/contracts";
+import type { EngineWebSurfaceThemeSnapshot } from "@harnessos/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   parseOfficialMermaidSandboxOutput,

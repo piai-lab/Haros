@@ -12,7 +12,7 @@
  * - Frames: the server listens on a unix socket and passes its path to
  *   `stream.start`; the helper connects as a client and writes
  *   `u32 little-endian length` followed by that many bytes. Those bytes are
- *   already the `@omnimind/contracts` device-frame envelope, so this module only
+ *   already the `@harnessos/contracts` device-frame envelope, so this module only
  *   removes the length prefix and hands the envelope on untouched.
  *
  * Two protocol facts that shape callers:
@@ -30,7 +30,7 @@ import { createServer, type Server, type Socket } from "node:net";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 
-import { decodeDeviceFrame } from "@omnimind/shared/deviceFrame";
+import { decodeDeviceFrame } from "@harnessos/shared/deviceFrame";
 
 import type { DeviceStreamFrame } from "./DeviceBackend.ts";
 import { describeSandboxSuspicion, type HelperSandboxCommand } from "./helperSandbox.ts";

@@ -6,8 +6,8 @@
  *
  * @module CursorAcpSupport
  */
-import { type CursorModelOptions, type ProviderModelDescriptor } from "@omnimind/contracts";
-import { formatModelDisplayName, parseCursorCliReasoningEffort } from "@omnimind/shared/model";
+import { type CursorModelOptions, type ProviderModelDescriptor } from "@harnessos/contracts";
+import { formatModelDisplayName, parseCursorCliReasoningEffort } from "@harnessos/shared/model";
 import { Effect, Layer, Schema, Scope, ServiceMap } from "effect";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import * as AcpErrors from "./AcpErrors.ts";

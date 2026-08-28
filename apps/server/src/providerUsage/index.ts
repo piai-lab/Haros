@@ -9,10 +9,10 @@ import type {
   ServerListProviderUsageInput,
   ServerListProviderUsageResult,
   ServerProviderUsageSnapshot,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect } from "effect";
 
-import { PROVIDER_USAGE_PROVIDERS } from "@omnimind/shared/providerUsage";
+import { PROVIDER_USAGE_PROVIDERS } from "@harnessos/shared/providerUsage";
 
 import { ServerConfig } from "../config";
 import { buildProviderChildEnvironment, type ProviderChildKind } from "../providerChildEnvironment";

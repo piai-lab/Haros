@@ -3,7 +3,7 @@ import type {
   OrchestrationMessage,
   OrchestrationProposedPlan,
   OrchestrationThreadActivity,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 export interface ThreadSummaryMetadata {
   latestUserMessageAt: string | null;

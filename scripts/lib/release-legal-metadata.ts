@@ -28,7 +28,7 @@ const PI_PACKAGE_NAMES = [
   "@earendil-works/pi-protocol",
   "@earendil-works/pi-telemetry",
   "@earendil-works/pi-tui",
-  "@omnimind/pi-coding-agent",
+  "@harnessos/pi-coding-agent",
 ] as const;
 
 interface PackageManifest {

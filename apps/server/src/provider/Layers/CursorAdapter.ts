@@ -20,8 +20,8 @@ import {
   type RuntimeMode,
   type ThreadId,
   TurnId,
-} from "@omnimind/contracts";
-import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
+} from "@harnessos/contracts";
+import { prepareWindowsSafeProcess } from "@harnessos/shared/windowsProcess";
 import {
   DateTime,
   Deferred,

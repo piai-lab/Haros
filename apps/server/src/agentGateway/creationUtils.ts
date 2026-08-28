@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { CommandId, MessageId, ThreadId } from "@omnimind/contracts";
+import { CommandId, MessageId, ThreadId } from "@harnessos/contracts";
 
 export function slugifyAgentTask(value: string): string {
   return (

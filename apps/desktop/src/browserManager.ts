@@ -35,15 +35,15 @@ import type {
   BrowserThreadInput,
   ThreadBrowserState,
   ThreadId,
-} from "@omnimind/contracts";
-import { isBrowserCopyLinkChord } from "@omnimind/shared/browserShortcuts";
+} from "@harnessos/contracts";
+import { isBrowserCopyLinkChord } from "@harnessos/shared/browserShortcuts";
 import {
   BROWSER_BLANK_URL as ABOUT_BLANK_URL,
   classifyBrowserWindowOpen,
   isBlankBrowserTabUrl,
   normalizeBrowserUrlInput as normalizeUrlInput,
   resolveCopyableBrowserTabUrl,
-} from "@omnimind/shared/browserSession";
+} from "@harnessos/shared/browserSession";
 import {
   BROWSER_SESSION_PARTITION,
   BrowserSessionPolicy,

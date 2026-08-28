@@ -2,7 +2,7 @@
 // Purpose: Link a forked transcript back to the immediate source chat.
 // Layer: Chat transcript UI
 
-import { type ThreadId } from "@omnimind/contracts";
+import { type ThreadId } from "@harnessos/contracts";
 import { memo, type MouseEvent } from "react";
 
 import { useI18n } from "~/i18n";

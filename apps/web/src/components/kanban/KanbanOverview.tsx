@@ -4,7 +4,7 @@
 // Layer: UI component (read-only; drag & drop lives in the project board)
 // Exports: KanbanOverview
 
-import type { ProjectId } from "@omnimind/contracts";
+import type { ProjectId } from "@harnessos/contracts";
 import { Button } from "~/components/ui/button";
 import { ChevronRightIcon, PlusIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";

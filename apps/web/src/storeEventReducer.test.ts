@@ -13,7 +13,7 @@ import {
   ThreadId,
   ThreadMarkerId,
   TurnId,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
 import { applyOrchestrationEvents, applyOrchestrationEventsHotPath } from "./storeEventReducer";

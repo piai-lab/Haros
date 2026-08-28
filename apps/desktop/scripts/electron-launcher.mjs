@@ -15,7 +15,7 @@ import { createRequire } from "node:module";
 import {
   resolveOmniMindDesktopFlavor,
   omnimindDesktopIdentity,
-} from "@omnimind/shared/desktopIdentity";
+} from "@harnessos/shared/desktopIdentity";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 

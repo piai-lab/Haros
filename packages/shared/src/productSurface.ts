@@ -1,4 +1,4 @@
-import type { ProjectKind, ProviderWorkSurface } from "@omnimind/contracts";
+import type { ProjectKind, ProviderWorkSurface } from "@harnessos/contracts";
 
 /**
  * Product-facing workspaces are derived from the authoritative Project kind.

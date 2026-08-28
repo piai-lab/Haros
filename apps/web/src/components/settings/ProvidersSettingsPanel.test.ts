@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_SERVER_SETTINGS_VIEW, type ServerProviderStatus } from "@omnimind/contracts";
+import { DEFAULT_SERVER_SETTINGS_VIEW, type ServerProviderStatus } from "@harnessos/contracts";
 
 import {
   createProviderInstallResetPatch,

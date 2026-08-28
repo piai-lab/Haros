@@ -1,4 +1,4 @@
-import { type AutomationDefinition, type MessageId, type ThreadId } from "@omnimind/contracts";
+import { type AutomationDefinition, type MessageId, type ThreadId } from "@harnessos/contracts";
 import {
   type MutableRefObject,
   useCallback,

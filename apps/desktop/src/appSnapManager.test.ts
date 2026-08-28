@@ -6,8 +6,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 
-import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS } from "@omnimind/contracts";
-import { OMNIMIND_DEVELOPMENT_BUNDLE_ID } from "@omnimind/shared/desktopIdentity";
+import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS } from "@harnessos/contracts";
+import { OMNIMIND_DEVELOPMENT_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
 import { describe, expect, it, vi } from "vitest";
 
 import {

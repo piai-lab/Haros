@@ -5,7 +5,7 @@
  * state to render tabs/toolbars and survive thread switches predictably.
  */
 
-import type { ThreadBrowserState, ThreadId } from "@omnimind/contracts";
+import type { ThreadBrowserState, ThreadId } from "@harnessos/contracts";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { isPlainObject, sanitizeStringKeyedRecord } from "./persistedRecord";

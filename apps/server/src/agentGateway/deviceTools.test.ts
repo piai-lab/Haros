@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Effect } from "effect";
 
-import type { ProviderKind } from "@omnimind/contracts";
+import type { ProviderKind } from "@harnessos/contracts";
 
 import { DeviceBackendError } from "../device/DeviceBackend.ts";
 import { DeviceManager } from "../device/DeviceManager.ts";

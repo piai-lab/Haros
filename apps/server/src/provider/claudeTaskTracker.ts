@@ -1,4 +1,4 @@
-import type { RuntimeTaskListItem } from "@omnimind/contracts";
+import type { RuntimeTaskListItem } from "@harnessos/contracts";
 
 import {
   makeRuntimeTaskListItem,

@@ -11,7 +11,7 @@
  * session would render a picker that lies.
  */
 
-import type { ThreadDeviceState, ThreadId } from "@omnimind/contracts";
+import type { ThreadDeviceState, ThreadId } from "@harnessos/contracts";
 import { create } from "zustand";
 
 interface DeviceStateStore {

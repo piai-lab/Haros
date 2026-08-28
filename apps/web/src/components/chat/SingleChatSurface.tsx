@@ -1,6 +1,6 @@
 import type { FileDiffMetadata } from "@pierre/diffs/react";
-import { isWorkspaceRelativePathSafe } from "@omnimind/shared/path";
-import type { ProjectId, ThreadId, TurnId } from "@omnimind/contracts";
+import { isWorkspaceRelativePathSafe } from "@harnessos/shared/path";
+import type { ProjectId, ThreadId, TurnId } from "@harnessos/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {

@@ -16,7 +16,7 @@ import {
   WS_PROTOCOL_MIN_REVISION,
   WsCompatibilityError,
   type WsBootstrapNegotiateResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 import {
   shouldKeepServerLifecycleStream,

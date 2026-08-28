@@ -2,19 +2,19 @@ import type {
   OmniMindWebSearchMutationResult,
   OmniMindWebSearchRecoverySnapshot,
   OmniMindWebSearchReadResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   WebSearchConfigConflictError,
   WebSearchConfigError,
   getWebSearchConfigService,
-} from "@omnimind/om-web-access/config-service";
+} from "@harnessos/om-web-access/config-service";
 import {
   diagnoseGeminiWebAccount,
   mutateWebSearchSettings,
   projectWebSearchSettings,
   recheckWebSearchRoute,
   testWebSearchProvider,
-} from "@omnimind/om-web-access/settings-runtime";
+} from "@harnessos/om-web-access/settings-runtime";
 import { Effect, Layer } from "effect";
 
 import { ServerConfig } from "../../config.ts";

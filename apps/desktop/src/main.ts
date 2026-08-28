@@ -42,7 +42,7 @@ import type {
   DesktopTheme,
   DesktopUpdateActionResult,
   DesktopUpdateState,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   autoUpdater,
   BaseUpdater,
@@ -50,18 +50,18 @@ import {
   type UpdateDownloadedEvent,
 } from "electron-updater";
 
-import type { ContextMenuItem } from "@omnimind/contracts";
-import { isKeyboardShortcutsHelpChord } from "@omnimind/shared/browserShortcuts";
-import { getMacTrafficLightPosition } from "@omnimind/shared/desktopChrome";
-import { DEVICE_HELPER_SOURCE_DIR_ENV } from "@omnimind/shared/deviceHelperCache";
+import type { ContextMenuItem } from "@harnessos/contracts";
+import { isKeyboardShortcutsHelpChord } from "@harnessos/shared/browserShortcuts";
+import { getMacTrafficLightPosition } from "@harnessos/shared/desktopChrome";
+import { DEVICE_HELPER_SOURCE_DIR_ENV } from "@harnessos/shared/deviceHelperCache";
 import {
   resolveOmniMindDesktopFlavor,
   omnimindDesktopIdentity,
-} from "@omnimind/shared/desktopIdentity";
-import { NetService } from "@omnimind/shared/Net";
-import { applyShellEnvironmentHydrationMarker } from "@omnimind/shared/shell";
-import { RotatingFileSink } from "@omnimind/shared/logging";
-import { ensureStaticSnapshot, findAsarArchivePath } from "@omnimind/shared/staticSnapshot";
+} from "@harnessos/shared/desktopIdentity";
+import { NetService } from "@harnessos/shared/Net";
+import { applyShellEnvironmentHydrationMarker } from "@harnessos/shared/shell";
+import { RotatingFileSink } from "@harnessos/shared/logging";
+import { ensureStaticSnapshot, findAsarArchivePath } from "@harnessos/shared/staticSnapshot";
 import { isBackendReadinessAborted, waitForHttpReady } from "./backendReadiness";
 import { resolveBackendNodeArgs } from "./backendNodeOptions";
 import {
@@ -4451,7 +4451,7 @@ function getTitleBarOptions(): BrowserWindowConstructorOptions {
   if (process.platform === "darwin") {
     return {
       titleBarStyle: "hiddenInset",
-      // Derived from the shared chat-surface header geometry (@omnimind/shared/desktopChrome)
+      // Derived from the shared chat-surface header geometry (@harnessos/shared/desktopChrome)
       // so the native lights and the renderer's leading toggle/arrow controls always share
       // the same vertical center. Tune the height/radius there, never the raw px here.
       trafficLightPosition: getMacTrafficLightPosition(),

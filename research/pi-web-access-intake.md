@@ -10,7 +10,7 @@
 
 ## 1. Scope、authority 与阅读规则
 
-本文只保存 `pi-web-access` / `@omnimind/om-web-access` 的 package-specific 固定证据：
+本文只保存 `pi-web-access` / `@harnessos/om-web-access` 的 package-specific 固定证据：
 
 - exact source、artifact、rights 与 provenance；
 - 为什么采用 narrow fork，而不是 Host capability、原装接入或重写；

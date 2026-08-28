@@ -5,7 +5,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ServerProviderUsageSnapshot } from "@omnimind/contracts";
+import type { ServerProviderUsageSnapshot } from "@harnessos/contracts";
 
 import { __resetProviderUsageCacheForTests, collectProviderUsageSnapshots } from "./index";
 import type { ProviderUsageContext, ProviderUsageFetcher } from "./types";

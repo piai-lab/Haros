@@ -9,18 +9,18 @@ import type {
   ProjectFileEncoding,
   ProjectFileLineEnding,
   ProjectReadFileResult,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import {
   isSupportedLocalImagePath,
   isSupportedLocalPdfPath,
   lowerCaseExtensionOf,
-} from "@omnimind/shared/localPreviewFiles";
+} from "@harnessos/shared/localPreviewFiles";
 import {
   isLocalAbsolutePath,
   isWorkspaceRelativePathSafe,
   joinWorkspaceRelativePath,
-} from "@omnimind/shared/path";
-import { isScratchWorkspacePath } from "@omnimind/shared/threadWorkspace";
+} from "@harnessos/shared/path";
+import { isScratchWorkspacePath } from "@harnessos/shared/threadWorkspace";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Component,

@@ -3,7 +3,7 @@ import type {
   ExternalMcpClientKind,
   ExternalMcpProjectScope,
   ExternalMcpStdioConfiguration,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 export interface ExternalMcpClientConfiguration {
   readonly format: "command" | "json";

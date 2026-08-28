@@ -1,4 +1,4 @@
-import type { OrchestrationEvent, ThreadId } from "@omnimind/contracts";
+import type { OrchestrationEvent, ThreadId } from "@harnessos/contracts";
 
 export const THREAD_DETAIL_EVENT_TYPES = [
   "thread.message-sent",

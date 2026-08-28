@@ -5,7 +5,7 @@ import {
   PROVIDER_KINDS,
   type ModelSelection,
   type ProviderKind,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Schema } from "effect";
 
 import { AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION } from "./targetResolver.ts";

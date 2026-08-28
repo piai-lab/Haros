@@ -125,7 +125,7 @@ async function prepareGeneratedModelData(worktree, temporaryRoot) {
 async function writeProductManifest(worktree) {
   const manifestPath = path.join(worktree, "packages", "coding-agent", "package.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  manifest.name = "@omnimind/pi-coding-agent";
+  manifest.name = "@harnessos/pi-coding-agent";
   manifest.description = `OmniMind product-owned Pi ${PI_VERSION} runtime`;
   manifest.piConfig = { configDir: ".omnimind", name: "omnimind" };
   manifest.files = ["dist", "LICENSE"];

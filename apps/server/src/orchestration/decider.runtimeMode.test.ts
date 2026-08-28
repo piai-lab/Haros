@@ -5,7 +5,7 @@ import {
   ProjectId,
   ThreadId,
   type OrchestrationReadModel,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 

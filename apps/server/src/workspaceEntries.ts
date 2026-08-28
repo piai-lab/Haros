@@ -28,9 +28,9 @@ import {
   PROJECT_SEARCH_CONTENT_MAX_LIMIT,
   PROJECT_SEARCH_CONTENT_MAX_LINE_LENGTH,
   PROJECT_SEARCH_CONTENT_MIN_QUERY_LENGTH,
-} from "@omnimind/contracts";
-import { isExplicitRelativePath, isWindowsAbsolutePath } from "@omnimind/shared/path";
-import { normalizeWorkspaceEntrySearchQuery } from "@omnimind/shared/searchQuery";
+} from "@harnessos/contracts";
+import { isExplicitRelativePath, isWindowsAbsolutePath } from "@harnessos/shared/path";
+import { normalizeWorkspaceEntrySearchQuery } from "@harnessos/shared/searchQuery";
 import { isContainedPath, resolveRealPathWithinRoot } from "./workspace/realPathContainment";
 
 const WORKSPACE_CACHE_TTL_MS = 15_000;

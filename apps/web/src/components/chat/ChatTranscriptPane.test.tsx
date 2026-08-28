@@ -1,4 +1,4 @@
-import { MessageId, ThreadId } from "@omnimind/contracts";
+import { MessageId, ThreadId } from "@harnessos/contracts";
 import type { LegendListRef } from "@legendapp/list/react";
 import { createRef, type ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";

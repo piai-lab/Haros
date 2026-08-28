@@ -11,7 +11,7 @@
 import {
   DEFAULT_AUTOMATION_STOP_CONFIDENCE_THRESHOLD,
   type AutomationCompletionPolicy,
-} from "@omnimind/contracts";
+} from "@harnessos/contracts";
 
 export function completionPolicyFromStopWhen(stopWhen: string): AutomationCompletionPolicy {
   const normalized = stopWhen.trim();

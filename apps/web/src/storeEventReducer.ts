@@ -6,22 +6,22 @@ import {
   type OrchestrationEvent,
   type OrchestrationPendingInteraction,
   type ThreadId,
-} from "@omnimind/contracts";
-import { resolveThreadBranchRegressionGuard } from "@omnimind/shared/git";
+} from "@harnessos/contracts";
+import { resolveThreadBranchRegressionGuard } from "@harnessos/shared/git";
 import {
   addPinnedMessage,
   removePinnedMessage,
   setPinnedMessageDone,
   setPinnedMessageLabel,
-} from "@omnimind/shared/pinnedMessages";
-import { isPendingInteractionResponseClaimable } from "@omnimind/shared/pendingInteractions";
+} from "@harnessos/shared/pinnedMessages";
+import { isPendingInteractionResponseClaimable } from "@harnessos/shared/pendingInteractions";
 import {
   addThreadMarker,
   removeThreadMarker,
   setThreadMarkerDone,
   setThreadMarkerLabel,
-} from "@omnimind/shared/threadMarkers";
-import { deriveNextMessageTextSegments } from "@omnimind/shared/threadMessageTextSegments";
+} from "@harnessos/shared/threadMarkers";
+import { deriveNextMessageTextSegments } from "@harnessos/shared/threadMessageTextSegments";
 
 import { isSessionRunningTurn } from "./session-logic";
 import {
@@ -72,7 +72,7 @@ export type ApplyOrchestrationEventOptions = {
   updateSidebarSummary?: boolean;
 };
 
-type ReadModelThread = import("@omnimind/contracts").OrchestrationReadModel["threads"][number];
+type ReadModelThread = import("@harnessos/contracts").OrchestrationReadModel["threads"][number];
 
 const THREAD_SUMMARY_ACTIVITY_KINDS = new Set([
   "approval.requested",

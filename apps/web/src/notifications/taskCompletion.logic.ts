@@ -7,8 +7,8 @@ import {
   defaultTerminalTitleForCliKind,
   type TerminalCliKind,
   type TerminalVisualState,
-} from "@omnimind/shared/terminalThreads";
-import { pendingRequestInstanceKey } from "@omnimind/shared/threadSummary";
+} from "@harnessos/shared/terminalThreads";
+import { pendingRequestInstanceKey } from "@harnessos/shared/threadSummary";
 import type { Thread, ThreadSession } from "../types";
 import {
   derivePendingApprovals,
