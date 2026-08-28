@@ -1,0 +1,19 @@
+Campaign-ID: harnessos-foundation
+Evidence-ID: E-006
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/HarnessOS
+Repository-Identity: github.com/piai-lab/HarnessOS
+Candidate-Version: 5cd76f66ca5439b5d48eade3473453ae193d7767
+Command: git rev-parse HEAD && test "$(rg -l -F '@omnimind/' --glob '!node_modules/**' --glob '!.git/**')" = 'bun.lock' && bun install --frozen-lockfile && bun run build:contracts && bun run typecheck && bun test test/workspace-package-identity.test.mjs scripts/lib/release-workspace-manifests.test.ts scripts/lib/release-legal-metadata.test.ts scripts/lib/packaged-legal-closure.test.ts
+Exit-Code: 0
+Result: PASS
+Claims: C-002 (partial; Claim remains open)
+
+Observed output:
+- Exact candidate SHA: 5cd76f66ca5439b5d48eade3473453ae193d7767.
+- Every workspace manifest and source import uses the @harnessos scope.
+- The sole remaining @omnimind scope occurrence is the internal package identity encoded by the not-yet-regenerated vendored Pi runtime entry in bun.lock; final C-002 absence is not claimed.
+- Frozen install reported no changes across 1,337 installs and 1,503 packages.
+- Contracts build passed.
+- Turbo typecheck passed 9/9 tasks across 8 workspaces.
+- 19 focused workspace-manifest and packaged-legal tests passed with 0 failures.
