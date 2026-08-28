@@ -1,4 +1,9 @@
-import { CheckpointRef, MessageId, OrchestrationProposedPlanId, TurnId } from "@harnessos/contracts";
+import {
+  CheckpointRef,
+  MessageId,
+  OrchestrationProposedPlanId,
+  TurnId,
+} from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 import {
   buildTurnDiffSummaryByAssistantMessageId,
@@ -1652,7 +1657,7 @@ describe("deriveMessagesTimelineRows", () => {
         createdAt: "2026-01-01T00:00:02Z",
         label: "Created 2 OmniMind threads",
         tone: "info",
-        omnimindThreadCreation: {
+        harnessosThreadCreation: {
           operationId: "gateway:create:two",
           requestedCount: 2,
           createdCount: 2,

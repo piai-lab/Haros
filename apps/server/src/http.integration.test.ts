@@ -323,7 +323,7 @@ describe("production Effect HTTP routes", () => {
           { method: "POST", headers: { Authorization: `Bearer ${"b".repeat(64)}` } },
           { method: "POST", headers: { Authorization: "Basic browser-token" } },
           { method: "POST", headers: { Authorization: "Bearer browser-token" } },
-          { method: "POST", headers: { Cookie: "omnimind_session=browser-session" } },
+          { method: "POST", headers: { Cookie: "harnessos_session=browser-session" } },
         ];
 
         for (const request of requests) {

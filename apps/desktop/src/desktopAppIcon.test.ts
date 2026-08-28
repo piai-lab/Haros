@@ -60,7 +60,7 @@ describe("desktop app icons", () => {
     ).toBe("icon.icns");
   });
 
-  it("uses OmniMind dark artwork for macOS dark appearance and explicit preference", () => {
+  it("uses HarnessOS dark artwork for macOS dark appearance and explicit preference", () => {
     expect(
       desktopAppIconResourceName({
         icon: "default",
@@ -106,5 +106,4 @@ describe("desktop app icons", () => {
     expect(shouldUpdateDesktopAppIcon("dark", "dark")).toBe(false);
     expect(shouldUpdateDesktopAppIcon("default", "dark")).toBe(true);
   });
-
 });

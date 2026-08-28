@@ -29,7 +29,7 @@ describe("windowsShellIco", () => {
     expect(ico.readUInt32LE(22)).toBe(40);
   });
 
-  it("recognizes OmniMind's packaged Windows ICO as shell-ready BMP artwork", () => {
+  it("recognizes HarnessOS's packaged Windows ICO as shell-ready BMP artwork", () => {
     const ico = FS.readFileSync(appIconWindowsIco);
     const pngs = extractIcoPngImages(ico);
     expect(inspectIcoEntries(ico)).toEqual([

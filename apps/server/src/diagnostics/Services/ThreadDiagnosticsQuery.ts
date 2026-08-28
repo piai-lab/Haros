@@ -64,4 +64,4 @@ export interface ThreadDiagnosticsQueryShape {
 export class ThreadDiagnosticsQuery extends ServiceMap.Service<
   ThreadDiagnosticsQuery,
   ThreadDiagnosticsQueryShape
->()("omnimind/diagnostics/Services/ThreadDiagnosticsQuery") {}
+>()("harnessos/diagnostics/Services/ThreadDiagnosticsQuery") {}

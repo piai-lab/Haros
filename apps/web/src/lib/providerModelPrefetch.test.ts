@@ -32,10 +32,12 @@ type ProviderOverrides = {
   >;
 };
 
-function makeSettings(overrides: {
-  defaultProvider?: ProviderKind;
-  providers?: ProviderOverrides;
-} = {}): ProviderModelPrefetchSettings {
+function makeSettings(
+  overrides: {
+    defaultProvider?: ProviderKind;
+    providers?: ProviderOverrides;
+  } = {},
+): ProviderModelPrefetchSettings {
   return {
     defaultProvider: overrides.defaultProvider ?? "codex",
     providers: {

@@ -324,7 +324,7 @@ describe("WsTransport", () => {
         worktree: {
           path: "/repo/.codex/worktrees/generated/omnimind",
           ref: "0123456789abcdef0123456789abcdef01234567",
-          branch: "omnimind/abcd1234",
+          branch: "harnessos/abcd1234",
         },
       },
     };

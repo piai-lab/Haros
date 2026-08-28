@@ -7,4 +7,4 @@ export interface ProviderSessionReaperShape {
 export class ProviderSessionReaper extends ServiceMap.Service<
   ProviderSessionReaper,
   ProviderSessionReaperShape
->()("omnimind/provider/Services/ProviderSessionReaper") {}
+>()("harnessos/provider/Services/ProviderSessionReaper") {}

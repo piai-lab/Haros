@@ -8,14 +8,14 @@ import { describe, expect, it, vi } from "vitest";
 import { BrowserAutomationHostError } from "./browserAutomation/hostErrors";
 import {
   BrowserHostPipeServer,
-  OMNIMIND_BROWSER_HOST_CAPABILITY_FD_ENV,
-  OMNIMIND_BROWSER_HOST_PIPE_ENV,
+  HARNESSOS_BROWSER_HOST_CAPABILITY_FD_ENV,
+  HARNESSOS_BROWSER_HOST_PIPE_ENV,
   resolveBrowserHostPipeBackendEnv,
   resolveConfiguredBrowserHostPipePath,
   resolveDefaultBrowserHostPipePath,
 } from "./browserUsePipeServer";
 
-const TEST_CAPABILITY = "omnimind-browser-host-test-capability-0123456789";
+const TEST_CAPABILITY = "harnessos-browser-host-test-capability-0123456789";
 
 const encodeRequest = (message: unknown): Buffer => {
   const payload = Buffer.from(JSON.stringify(message));
@@ -70,7 +70,7 @@ async function withPipeServer(
   },
   run: (socket: Socket) => Promise<void>,
 ): Promise<void> {
-  const directory = await mkdtemp(join(tmpdir(), "omnimind-browser-host-test-"));
+  const directory = await mkdtemp(join(tmpdir(), "harnessos-browser-host-test-"));
   const pipePath = join(directory, "browser.sock");
   const server = new BrowserHostPipeServer({} as never, {
     pipePath,
@@ -99,7 +99,7 @@ describe("canonical browser host pipe resolution", () => {
     const first = resolveDefaultBrowserHostPipePath("darwin", 123);
     const second = resolveDefaultBrowserHostPipePath("darwin", 123);
     const uidSuffix = process.getuid ? `-${process.getuid()}` : "";
-    expect(dirname(first)).toBe(`/tmp/omnimind-browser-host${uidSuffix}`);
+    expect(dirname(first)).toBe(`/tmp/harnessos-browser-host${uidSuffix}`);
     expect(basename(first)).toMatch(/^123-[0-9a-f-]{36}\.sock$/);
     expect(Buffer.byteLength(first, "utf8")).toBeLessThanOrEqual(103);
     expect(first).not.toBe(second);
@@ -107,7 +107,7 @@ describe("canonical browser host pipe resolution", () => {
 
   it("creates an unguessable per-process Windows named pipe", () => {
     const pipePath = resolveDefaultBrowserHostPipePath("win32", 456);
-    expect(pipePath).toMatch(/^\\\\\.\\pipe\\omnimind-browser-host-456-[0-9a-f-]{36}$/);
+    expect(pipePath).toMatch(/^\\\\\.\\pipe\\harnessos-browser-host-456-[0-9a-f-]{36}$/);
     expect(pipePath).not.toBe(resolveDefaultBrowserHostPipePath("win32", 456));
   });
 
@@ -115,7 +115,7 @@ describe("canonical browser host pipe resolution", () => {
     expect(
       resolveConfiguredBrowserHostPipePath(
         {
-          [OMNIMIND_BROWSER_HOST_PIPE_ENV]: "/canonical.sock",
+          [HARNESSOS_BROWSER_HOST_PIPE_ENV]: "/canonical.sock",
         },
         "darwin",
       ),
@@ -125,18 +125,18 @@ describe("canonical browser host pipe resolution", () => {
   it("publishes the canonical env only while a listener is active", () => {
     const inherited = {
       KEEP_ME: "yes",
-      [OMNIMIND_BROWSER_HOST_PIPE_ENV]: "/stale-canonical.sock",
+      [HARNESSOS_BROWSER_HOST_PIPE_ENV]: "/stale-canonical.sock",
     };
     expect(resolveBrowserHostPipeBackendEnv(inherited, null, null)).toEqual({ KEEP_ME: "yes" });
     expect(resolveBrowserHostPipeBackendEnv(inherited, "/active.sock", 3)).toEqual({
       KEEP_ME: "yes",
-      [OMNIMIND_BROWSER_HOST_PIPE_ENV]: "/active.sock",
-      [OMNIMIND_BROWSER_HOST_CAPABILITY_FD_ENV]: "3",
+      [HARNESSOS_BROWSER_HOST_PIPE_ENV]: "/active.sock",
+      [HARNESSOS_BROWSER_HOST_CAPABILITY_FD_ENV]: "3",
     });
   });
 
   it("rejects a non-private configured parent without changing its permissions", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "omnimind-browser-host-public-test-"));
+    const directory = await mkdtemp(join(tmpdir(), "harnessos-browser-host-public-test-"));
     await chmod(directory, 0o755);
     const server = new BrowserHostPipeServer({} as never, {
       pipePath: join(directory, "browser.sock"),
@@ -155,7 +155,7 @@ describe("canonical browser host pipe resolution", () => {
 
 describe("canonical browser host RPC", () => {
   it("accepts every client in a maximum-size gateway batch", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "omnimind-browser-host-capacity-test-"));
+    const directory = await mkdtemp(join(tmpdir(), "hos-browser-cap-"));
     const pipePath = join(directory, "browser.sock");
     const server = new BrowserHostPipeServer({} as never, {
       pipePath,
@@ -236,7 +236,7 @@ describe("canonical browser host RPC", () => {
       ).resolves.toMatchObject({
         id: 1,
         result: {
-          type: "omnimind-browser-host",
+          type: "harnessos-browser-host",
           metadata: { sessionId: "session-1", physicalScope: "visible-shared-electron-webview" },
         },
       });
@@ -293,83 +293,94 @@ describe("canonical browser host RPC", () => {
       textMuted: "rgba(46, 35, 21, 0.65)",
       warning: "#d97706",
     };
-    await withPipeServer({
-      automationHost: {
-        executeTool: async () => ({}),
-        getEngineWebSurfaceContext: () => ({
-          locale: "zh-CN",
-          theme: "light",
-          themeSnapshot,
-        }),
-        presentEngineWebSurface,
-        settleEngineWebSurface,
+    await withPipeServer(
+      {
+        automationHost: {
+          executeTool: async () => ({}),
+          getEngineWebSurfaceContext: () => ({
+            locale: "zh-CN",
+            theme: "light",
+            themeSnapshot,
+          }),
+          presentEngineWebSurface,
+          settleEngineWebSurface,
+        },
       },
-    }, async (socket) => {
-      await request(socket, {
-        jsonrpc: "2.0",
-        id: 1,
-        method: "getInfo",
-        params: { session_id: "surface-session", capability: TEST_CAPABILITY },
-      });
-      await expect(request(socket, {
-        jsonrpc: "2.0",
-        id: 2,
-        method: "getEngineWebSurfaceContext",
-        params: { session_id: "surface-session" },
-      })).resolves.toMatchObject({
-        result: {
-          locale: "zh-CN",
-          theme: "light",
-          themeSnapshot,
-        },
-      });
-      await expect(request(socket, {
-        jsonrpc: "2.0",
-        id: 3,
-        method: "presentEngineWebSurface",
-        params: {
-          session_id: "surface-session",
-          thread_id: "surface-thread",
-          surface_id: "surface-opaque-123",
-          url: "http://127.0.0.1:43123/?session=private-token",
-          title: "OmniMind 网络搜索",
-          expires_at: Date.now() + 60_000,
-        },
-      })).resolves.toMatchObject({ result: { tabId: "tab-internal" } });
-      await expect(request(socket, {
-        jsonrpc: "2.0",
-        id: 4,
-        method: "settleEngineWebSurface",
-        params: {
-          session_id: "surface-session",
-          thread_id: "surface-thread",
-          surface_id: "surface-opaque-123",
-          preserve_tab: true,
-        },
-      })).resolves.toMatchObject({ result: { settled: true } });
-      await expect(request(socket, {
-        jsonrpc: "2.0",
-        id: 5,
-        method: "presentEngineWebSurface",
-        params: {
-          session_id: "surface-session",
-          thread_id: "other-thread",
-          surface_id: "surface-other-123",
-          url: "http://127.0.0.1:43124/?session=other-private-token",
-          title: "OmniMind 网络搜索",
-          expires_at: Date.now() + 60_000,
-        },
-      })).resolves.toMatchObject({
-        error: { data: { error: { code: "BrowserTabScopeViolation" } } },
-      });
-    });
+      async (socket) => {
+        await request(socket, {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "getInfo",
+          params: { session_id: "surface-session", capability: TEST_CAPABILITY },
+        });
+        await expect(
+          request(socket, {
+            jsonrpc: "2.0",
+            id: 2,
+            method: "getEngineWebSurfaceContext",
+            params: { session_id: "surface-session" },
+          }),
+        ).resolves.toMatchObject({
+          result: {
+            locale: "zh-CN",
+            theme: "light",
+            themeSnapshot,
+          },
+        });
+        await expect(
+          request(socket, {
+            jsonrpc: "2.0",
+            id: 3,
+            method: "presentEngineWebSurface",
+            params: {
+              session_id: "surface-session",
+              thread_id: "surface-thread",
+              surface_id: "surface-opaque-123",
+              url: "http://127.0.0.1:43123/?session=private-token",
+              title: "HarnessOS 网络搜索",
+              expires_at: Date.now() + 60_000,
+            },
+          }),
+        ).resolves.toMatchObject({ result: { tabId: "tab-internal" } });
+        await expect(
+          request(socket, {
+            jsonrpc: "2.0",
+            id: 4,
+            method: "settleEngineWebSurface",
+            params: {
+              session_id: "surface-session",
+              thread_id: "surface-thread",
+              surface_id: "surface-opaque-123",
+              preserve_tab: true,
+            },
+          }),
+        ).resolves.toMatchObject({ result: { settled: true } });
+        await expect(
+          request(socket, {
+            jsonrpc: "2.0",
+            id: 5,
+            method: "presentEngineWebSurface",
+            params: {
+              session_id: "surface-session",
+              thread_id: "other-thread",
+              surface_id: "surface-other-123",
+              url: "http://127.0.0.1:43124/?session=other-private-token",
+              title: "HarnessOS 网络搜索",
+              expires_at: Date.now() + 60_000,
+            },
+          }),
+        ).resolves.toMatchObject({
+          error: { data: { error: { code: "BrowserTabScopeViolation" } } },
+        });
+      },
+    );
 
     expect(presentEngineWebSurface).toHaveBeenCalledOnce();
     expect(presentEngineWebSurface).toHaveBeenCalledWith({
       threadId: "surface-thread",
       surfaceId: "surface-opaque-123",
       url: "http://127.0.0.1:43123/?session=private-token",
-      title: "OmniMind 网络搜索",
+      title: "HarnessOS 网络搜索",
       expiresAt: expect.any(Number),
     });
     expect(settleEngineWebSurface).toHaveBeenCalledWith({
@@ -445,7 +456,7 @@ describe("canonical browser host RPC", () => {
         error: {
           code: -32_010,
           data: {
-            type: "omnimind_browser_error",
+            type: "harnessos_browser_error",
             version: 1,
             error: { code: "BrowserAuthorizationDenied", phase: "auth" },
           },

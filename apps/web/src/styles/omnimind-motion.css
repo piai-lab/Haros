@@ -1,10 +1,10 @@
 :root {
   --omnimind-motion-duration: 650ms;
-  --omnimind-motion-easing: cubic-bezier(.22, 1, .36, 1);
+  --omnimind-motion-easing: cubic-bezier(0.22, 1, 0.36, 1);
   --omnimind-motion-hit-area: 44px;
 }
 
-.omnimind-logo-trigger {
+.harnessos-logo-trigger {
   display: inline-grid;
   min-width: var(--omnimind-motion-hit-area);
   min-height: var(--omnimind-motion-hit-area);
@@ -18,23 +18,23 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.omnimind-logo-trigger:focus-visible {
+.harnessos-logo-trigger:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 3px;
 }
 
-.omnimind-logo-trigger:disabled {
+.harnessos-logo-trigger:disabled {
   cursor: default;
-  opacity: .45;
+  opacity: 0.45;
 }
 
-.omnimind-logo-motion-target {
+.harnessos-logo-motion-target {
   display: block;
   transform-box: fill-box;
   transform-origin: 50% 50%;
 }
 
-.omnimind-logo-motion-target > svg,
-.omnimind-logo-motion-target > img {
+.harnessos-logo-motion-target > svg,
+.harnessos-logo-motion-target > img {
   display: block;
 }

@@ -41,7 +41,7 @@ describe("ServerAuthPolicyLive", () => {
 
     expect(descriptor.policy).toBe("desktop-managed-local");
     expect(descriptor.bootstrapMethods).toEqual(["desktop-bootstrap"]);
-    expect(descriptor.sessionCookieName).toBe("omnimind_session_3773");
+    expect(descriptor.sessionCookieName).toBe("harnessos_session_3773");
   });
 
   it("uses remote-reachable policy for wildcard desktop mode", async () => {
@@ -64,7 +64,7 @@ describe("ServerAuthPolicyLive", () => {
 
     expect(descriptor.policy).toBe("loopback-browser");
     expect(descriptor.bootstrapMethods).toEqual(["one-time-token"]);
-    expect(descriptor.sessionCookieName).toBe("omnimind_session");
+    expect(descriptor.sessionCookieName).toBe("harnessos_session");
   });
 
   it("uses remote-reachable policy for non-loopback web mode", async () => {

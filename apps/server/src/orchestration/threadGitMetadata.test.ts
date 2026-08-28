@@ -6,7 +6,7 @@ import { deriveThreadGitMetadataPatch } from "./threadGitMetadata.ts";
 const pullRequest: OrchestrationThreadPullRequest = {
   number: 574,
   title: "Cache provider usage",
-  url: "https://github.com/Emanuele-web04/omnimind/pull/574",
+  url: "https://github.com/Emanuele-web04/harnessos/pull/574",
   baseBranch: "main",
   headBranch: "feat/provider-usage-snapshot-cache",
   state: "open",
@@ -21,7 +21,7 @@ describe("deriveThreadGitMetadataPatch", () => {
   it("adopts the observed branch and its pull request", () => {
     expect(
       deriveThreadGitMetadataPatch({
-        currentBranch: "omnimind/old-branch",
+        currentBranch: "harnessos/old-branch",
         currentPullRequest: null,
         observedBranch: "feat/provider-usage-snapshot-cache",
         pullRequestLookup: { status: "resolved", pullRequest },
@@ -81,7 +81,7 @@ describe("deriveThreadGitMetadataPatch", () => {
       deriveThreadGitMetadataPatch({
         currentBranch: pullRequest.headBranch,
         currentPullRequest: pullRequest,
-        observedBranch: "omnimind/deadbeef",
+        observedBranch: "harnessos/deadbeef",
         pullRequestLookup: { status: "resolved", pullRequest: null },
       }),
     ).toBeNull();
@@ -108,7 +108,7 @@ describe("deriveThreadGitMetadataPatch", () => {
         dedicatedWorktree: {
           cwd: "/repo/.worktrees/thread",
           currentPath: "/repo/.worktrees/thread",
-          currentBranch: "omnimind/stale-branch",
+          currentBranch: "harnessos/stale-branch",
         },
       }),
     ).toEqual({

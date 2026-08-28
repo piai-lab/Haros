@@ -29,7 +29,7 @@ interface RepoDiffScopeStore {
   setScope: (scope: RepoDiffScope) => void;
 }
 
-const REPO_DIFF_SCOPE_STORAGE_KEY = "omnimind:repo-diff-scope:v1";
+const REPO_DIFF_SCOPE_STORAGE_KEY = "harnessos:repo-diff-scope:v1";
 
 export const useRepoDiffScopeStore = create<RepoDiffScopeStore>()(
   persist(

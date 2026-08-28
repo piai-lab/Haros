@@ -411,7 +411,7 @@ describe("externalMcpRouteLayer", () => {
         id: 2,
         method: "tools/call",
         params: {
-          name: "omnimind_create_task",
+          name: "harnessos_create_task",
           arguments: { prompt: "\u0000".repeat(100_000) },
         },
       };

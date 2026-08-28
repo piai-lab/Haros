@@ -47,5 +47,5 @@ export interface ProviderHealthShape {
 }
 
 export class ProviderHealth extends ServiceMap.Service<ProviderHealth, ProviderHealthShape>()(
-  "omnimind/provider/Services/ProviderHealth",
+  "harnessos/provider/Services/ProviderHealth",
 ) {}

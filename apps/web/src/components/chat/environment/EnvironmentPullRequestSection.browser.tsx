@@ -24,7 +24,7 @@ const threadId = ThreadId.makeUnsafe("thread-pr-fix-actions");
 const pullRequest = {
   number: 321,
   title: "Keep PR context visible",
-  url: "https://github.com/example/omnimind/pull/321",
+  url: "https://github.com/example/harnessos/pull/321",
   baseBranch: "main",
   headBranch: "fix/pr-panel",
   state: "open",

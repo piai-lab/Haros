@@ -1,55 +1,55 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  resolveOmniMindDesktopFlavor,
-  OMNIMIND_CANARY_BUNDLE_ID,
-  OMNIMIND_CANARY_DESKTOP_ENTRY_URL,
-  OMNIMIND_CANARY_DESKTOP_ORIGIN,
-  OMNIMIND_DESKTOP_ENTRY_URL,
-  OMNIMIND_DESKTOP_ORIGIN,
-  OMNIMIND_DEVELOPMENT_BUNDLE_ID,
-  OMNIMIND_PRODUCTION_BUNDLE_ID,
-  omnimindBundleId,
-  omnimindDesktopIdentity,
+  resolveHarnessOSDesktopFlavor,
+  HARNESSOS_CANARY_BUNDLE_ID,
+  HARNESSOS_CANARY_DESKTOP_ENTRY_URL,
+  HARNESSOS_CANARY_DESKTOP_ORIGIN,
+  HARNESSOS_DESKTOP_ENTRY_URL,
+  HARNESSOS_DESKTOP_ORIGIN,
+  HARNESSOS_DEVELOPMENT_BUNDLE_ID,
+  HARNESSOS_PRODUCTION_BUNDLE_ID,
+  harnessOSBundleId,
+  harnessOSDesktopIdentity,
 } from "./desktopIdentity";
 
 describe("desktopIdentity", () => {
   it("uses the exact canonical production and development bundle IDs", () => {
-    expect(OMNIMIND_PRODUCTION_BUNDLE_ID).toBe("app.omnimind.desktop");
-    expect(OMNIMIND_DEVELOPMENT_BUNDLE_ID).toBe("app.omnimind.desktop.dev");
-    expect(omnimindBundleId(false)).toBe(OMNIMIND_PRODUCTION_BUNDLE_ID);
-    expect(omnimindBundleId(true)).toBe(OMNIMIND_DEVELOPMENT_BUNDLE_ID);
+    expect(HARNESSOS_PRODUCTION_BUNDLE_ID).toBe("ai.piai.harnessos");
+    expect(HARNESSOS_DEVELOPMENT_BUNDLE_ID).toBe("ai.piai.harnessos.dev");
+    expect(harnessOSBundleId(false)).toBe(HARNESSOS_PRODUCTION_BUNDLE_ID);
+    expect(harnessOSBundleId(true)).toBe(HARNESSOS_DEVELOPMENT_BUNDLE_ID);
   });
 
   it("uses the exact packaged renderer origin and entry URL", () => {
-    expect(OMNIMIND_DESKTOP_ORIGIN).toBe("omnimind://app");
-    expect(OMNIMIND_DESKTOP_ENTRY_URL).toBe("omnimind://app/index.html");
+    expect(HARNESSOS_DESKTOP_ORIGIN).toBe("harnessos://app");
+    expect(HARNESSOS_DESKTOP_ENTRY_URL).toBe("harnessos://app/index.html");
   });
 
   it("gives Canary a fully separate desktop identity and storage profile", () => {
-    expect(OMNIMIND_CANARY_BUNDLE_ID).toBe("app.omnimind.desktop.canary");
-    expect(OMNIMIND_CANARY_DESKTOP_ORIGIN).toBe("omnimind-canary://app");
-    expect(OMNIMIND_CANARY_DESKTOP_ENTRY_URL).toBe("omnimind-canary://app/index.html");
-    expect(omnimindDesktopIdentity("canary")).toEqual({
+    expect(HARNESSOS_CANARY_BUNDLE_ID).toBe("ai.piai.harnessos.canary");
+    expect(HARNESSOS_CANARY_DESKTOP_ORIGIN).toBe("harnessos-canary://app");
+    expect(HARNESSOS_CANARY_DESKTOP_ENTRY_URL).toBe("harnessos-canary://app/index.html");
+    expect(harnessOSDesktopIdentity("canary")).toEqual({
       flavor: "canary",
-      displayName: "OmniMind Canary",
-      bundleId: OMNIMIND_CANARY_BUNDLE_ID,
-      scheme: "omnimind-canary",
-      origin: OMNIMIND_CANARY_DESKTOP_ORIGIN,
-      entryUrl: OMNIMIND_CANARY_DESKTOP_ENTRY_URL,
-      userDataDirectoryName: "omnimind-canary",
-      defaultHomeDirectoryName: ".omnimind-canary",
+      displayName: "HarnessOS Canary",
+      bundleId: HARNESSOS_CANARY_BUNDLE_ID,
+      scheme: "harnessos-canary",
+      origin: HARNESSOS_CANARY_DESKTOP_ORIGIN,
+      entryUrl: HARNESSOS_CANARY_DESKTOP_ENTRY_URL,
+      userDataDirectoryName: "harnessos-canary",
+      defaultHomeDirectoryName: ".harnessos-canary",
       usesScriptedUpdates: true,
     });
   });
 
   it("selects Canary explicitly without changing normal dev and production defaults", () => {
-    expect(resolveOmniMindDesktopFlavor({ isDevelopment: false })).toBe("production");
-    expect(resolveOmniMindDesktopFlavor({ isDevelopment: true })).toBe("development");
+    expect(resolveHarnessOSDesktopFlavor({ isDevelopment: false })).toBe("production");
+    expect(resolveHarnessOSDesktopFlavor({ isDevelopment: true })).toBe("development");
     expect(
-      resolveOmniMindDesktopFlavor({ isDevelopment: false, requestedFlavor: " canary " }),
+      resolveHarnessOSDesktopFlavor({ isDevelopment: false, requestedFlavor: " canary " }),
     ).toBe("canary");
-    expect(resolveOmniMindDesktopFlavor({ isDevelopment: true, requestedFlavor: "canary" })).toBe(
+    expect(resolveHarnessOSDesktopFlavor({ isDevelopment: true, requestedFlavor: "canary" })).toBe(
       "canary",
     );
   });

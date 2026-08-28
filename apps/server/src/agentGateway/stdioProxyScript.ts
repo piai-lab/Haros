@@ -18,9 +18,9 @@ export const AGENT_GATEWAY_STDIO_PROXY_FILE_NAME = "agent-gateway-mcp-proxy.mjs"
 // Kept dependency-free and ES2022-compatible: it must run on whichever
 // node/bun binary happens to back `process.execPath`.
 const STDIO_PROXY_SCRIPT = `// OmniMind agent gateway stdio<->HTTP MCP proxy (generated file, do not edit).
-const url = process.env.OMNIMIND_AGENT_GATEWAY_URL;
-let token = process.env.OMNIMIND_AGENT_GATEWAY_TOKEN;
-let bootstrapToken = process.env.OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN;
+const url = process.env.HARNESSOS_AGENT_GATEWAY_URL;
+let token = process.env.HARNESSOS_AGENT_GATEWAY_TOKEN;
+let bootstrapToken = process.env.HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN;
 const active = Boolean(url && (token || bootstrapToken));
 const BOOTSTRAP_TIMEOUT_MS = 5000;
 let tokenResolution;
@@ -129,7 +129,7 @@ async function resolveToken() {
       }
       token = payload.bearerToken;
       bootstrapToken = undefined;
-      delete process.env.OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN;
+      delete process.env.HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN;
       return token;
     })().finally(() => {
       if (bootstrapController === controller) bootstrapController = undefined;

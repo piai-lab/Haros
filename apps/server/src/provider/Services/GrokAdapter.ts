@@ -13,5 +13,5 @@ export interface GrokAdapterShape extends ProviderAdapterShape<ProviderAdapterEr
 }
 
 export class GrokAdapter extends ServiceMap.Service<GrokAdapter, GrokAdapterShape>()(
-  "omnimind/provider/Services/GrokAdapter",
+  "harnessos/provider/Services/GrokAdapter",
 ) {}

@@ -59,16 +59,16 @@ describe("ThinkingStatus", () => {
     expect(canvas).toBeInstanceOf(HTMLCanvasElement);
     expect((canvas as HTMLCanvasElement).width).toBeLessThanOrEqual(40);
     expect((canvas as HTMLCanvasElement).height).toBeLessThanOrEqual(40);
-    expect(status.element().querySelectorAll(".omnimind-thinking-status__dots i")).toHaveLength(3);
-    const hint = status.element().querySelector(".omnimind-thinking-status__hint");
-    const dots = status.element().querySelector(".omnimind-thinking-status__dots");
+    expect(status.element().querySelectorAll(".harnessos-thinking-status__dots i")).toHaveLength(3);
+    const hint = status.element().querySelector(".harnessos-thinking-status__hint");
+    const dots = status.element().querySelector(".harnessos-thinking-status__dots");
     expect(hint?.textContent).toBe("First");
     expect(getComputedStyle(hint as Element).animation).toContain("0.4s");
     expect(getComputedStyle(hint as Element).animation).toContain("1.6s");
     expect(getComputedStyle(dots as Element).transform).toBe("matrix(1, 0, 0, 1, 0, -1)");
 
     await expect
-      .poll(() => status.element().querySelector(".omnimind-thinking-status__hint")?.textContent, {
+      .poll(() => status.element().querySelector(".harnessos-thinking-status__hint")?.textContent, {
         timeout: THINKING_HINT_ROTATION_MS + 2_000,
       })
       .toBe("Second");
@@ -90,7 +90,7 @@ describe("ThinkingStatus", () => {
     );
     const status = mounted.getByTestId("thinking-status");
     await vi.advanceTimersByTimeAsync(THINKING_HINT_ROTATION_MS * 2);
-    expect(status.element().querySelector(".omnimind-thinking-status__hint")?.textContent).toBe(
+    expect(status.element().querySelector(".harnessos-thinking-status__hint")?.textContent).toBe(
       "First",
     );
     mounted.unmount();

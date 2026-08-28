@@ -87,7 +87,7 @@ function cleanupStaleDevApps() {
 }
 
 function listStaleComputerUsePids() {
-  // Only macOS exposes a verifiable OmniMind (Dev) executable path for these
+  // Only macOS exposes a verifiable HarnessOS (Dev) executable path for these
   // helpers. Linux process command lines do not currently carry a dev-owner
   // marker, so reaping by the generic script name could kill another install.
   if (process.platform !== "darwin") {
@@ -98,7 +98,7 @@ function listStaleComputerUsePids() {
 
   return candidatePids.filter((pid) => {
     const command = readProcessCommand(pid);
-    if (!/OmniMind \(Dev\)\.app\/Contents\/MacOS\/Electron/.test(command)) {
+    if (!/HarnessOS \(Dev\)\.app\/Contents\/MacOS\/Electron/.test(command)) {
       return false;
     }
     if (!/computerUseMcp\.mjs\s+mcp(?:\s|$)/.test(command)) {
@@ -120,7 +120,7 @@ function cleanupStaleComputerUseApps() {
   }
 
   console.error(
-    `[desktop-dev] Cleaning up ${stalePids.length} stale OmniMind (Dev) Computer Use helper process${stalePids.length === 1 ? "" : "es"} from other worktrees.`,
+    `[desktop-dev] Cleaning up ${stalePids.length} stale HarnessOS (Dev) Computer Use helper process${stalePids.length === 1 ? "" : "es"} from other worktrees.`,
   );
 
   for (const pid of stalePids) {
@@ -139,17 +139,17 @@ function warnIfAlphaAppRunning() {
     return;
   }
 
-  const pids = listPidsByExactProcessName("OmniMind").filter((pid) =>
-    readProcessCommand(pid).startsWith("/Applications/OmniMind.app/Contents/MacOS/OmniMind"),
+  const pids = listPidsByExactProcessName("HarnessOS").filter((pid) =>
+    readProcessCommand(pid).startsWith("/Applications/HarnessOS.app/Contents/MacOS/HarnessOS"),
   );
   if (pids.length === 0) {
     return;
   }
 
   console.error(
-    "[desktop-dev] OmniMind is still running. Close it before testing voice in OmniMind (Dev), or you may be looking at the wrong app/runtime.",
+    "[desktop-dev] HarnessOS is still running. Close it before testing voice in HarnessOS (Dev), or you may be looking at the wrong app/runtime.",
   );
-  console.error(`[desktop-dev] Running OmniMind process IDs: ${pids.join(", ")}`);
+  console.error(`[desktop-dev] Running HarnessOS process IDs: ${pids.join(", ")}`);
 }
 
 function startApp() {

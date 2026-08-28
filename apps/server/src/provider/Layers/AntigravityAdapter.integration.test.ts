@@ -309,13 +309,13 @@ describe("Antigravity CLI integration helpers", () => {
           });
 
           yield* adapter.sendTurn({ threadId, input: "turn A", attachments: [] });
-          const bootstrapA = spawnedEnvironments[0]?.OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN;
+          const bootstrapA = spawnedEnvironments[0]?.HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN;
           expect(bootstrapA).toBe("turn-bootstrap-1");
           yield* waitUntilReady;
           expect(revokedTokens).toEqual(["turn-session-1"]);
 
           yield* adapter.sendTurn({ threadId, input: "turn B", attachments: [] });
-          const bootstrapB = spawnedEnvironments[1]?.OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN;
+          const bootstrapB = spawnedEnvironments[1]?.HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN;
           expect(bootstrapB).toBe("turn-bootstrap-2");
           expect(credentials.exchangeStdioBootstrapToken(bootstrapA!)).toBeNull();
           expect(credentials.exchangeStdioBootstrapToken(bootstrapB!)).toBe("turn-session-2");
@@ -387,8 +387,8 @@ describe("Antigravity CLI integration helpers", () => {
             command: stdioProxy.command,
             args: stdioProxy.args,
             env: {
-              OMNIMIND_AGENT_GATEWAY_URL: "$OMNIMIND_AGENT_GATEWAY_URL",
-              OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN: "$OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN",
+              HARNESSOS_AGENT_GATEWAY_URL: "$HARNESSOS_AGENT_GATEWAY_URL",
+              HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN: "$HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN",
               ELECTRON_RUN_AS_NODE: "1",
             },
             disabled: false,
@@ -415,12 +415,12 @@ describe("Antigravity CLI integration helpers", () => {
         PATH: "/usr/bin",
         HOME: "/home/test",
         GEMINI_API_KEY: "gemini-key",
-        OMNIMIND_AGENT_GATEWAY_URL: "http://127.0.0.1:9999/stale",
-        OMNIMIND_AGENT_GATEWAY_TOKEN: "stale-token",
-        OMNIMIND_AUTH_TOKEN: "host-control-plane-token",
-        OMNIMIND_BROWSER_HOST_PIPE_PATH: "/tmp/desktop.sock",
-        OMNIMIND_BROWSER_HOST_CAPABILITY: "desktop-capability",
-        OMNIMIND_BROWSER_HOST_CAPABILITY_FD: "3",
+        HARNESSOS_AGENT_GATEWAY_URL: "http://127.0.0.1:9999/stale",
+        HARNESSOS_AGENT_GATEWAY_TOKEN: "stale-token",
+        HARNESSOS_AUTH_TOKEN: "host-control-plane-token",
+        HARNESSOS_BROWSER_HOST_PIPE_PATH: "/tmp/desktop.sock",
+        HARNESSOS_BROWSER_HOST_CAPABILITY: "desktop-capability",
+        HARNESSOS_BROWSER_HOST_CAPABILITY_FD: "3",
         NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS: "/tmp/desktop.sock",
       },
     });
@@ -429,10 +429,10 @@ describe("Antigravity CLI integration helpers", () => {
       PATH: "/usr/bin",
       HOME: "/home/test",
       GEMINI_API_KEY: "gemini-key",
-      OMNIMIND_AGENT_GATEWAY_URL: "http://127.0.0.1:3773/mcp",
-      OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN: "thread-a-bootstrap",
-      OMNIMIND_ANTIGRAVITY_EVENTS: "/tmp/thread-a-hooks.ndjson",
-      OMNIMIND_ANTIGRAVITY_HOOK_DECISION: "allow",
+      HARNESSOS_AGENT_GATEWAY_URL: "http://127.0.0.1:3773/mcp",
+      HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN: "thread-a-bootstrap",
+      HARNESSOS_ANTIGRAVITY_EVENTS: "/tmp/thread-a-hooks.ndjson",
+      HARNESSOS_ANTIGRAVITY_HOOK_DECISION: "allow",
     });
   });
 
@@ -463,14 +463,14 @@ describe("Antigravity CLI integration helpers", () => {
     const envWithoutLease = buildAntigravityTurnProcessEnvironment({
       eventFile: "/tmp/thread-b-hooks.ndjson",
       baseEnv: {
-        OMNIMIND_AGENT_GATEWAY_URL: "http://127.0.0.1:9999/stale",
-        OMNIMIND_AGENT_GATEWAY_TOKEN: "stale-token",
-        OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN: "stale-bootstrap",
+        HARNESSOS_AGENT_GATEWAY_URL: "http://127.0.0.1:9999/stale",
+        HARNESSOS_AGENT_GATEWAY_TOKEN: "stale-token",
+        HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN: "stale-bootstrap",
       },
     });
-    expect(envWithoutLease.OMNIMIND_AGENT_GATEWAY_URL).toBeUndefined();
-    expect(envWithoutLease.OMNIMIND_AGENT_GATEWAY_TOKEN).toBeUndefined();
-    expect(envWithoutLease.OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN).toBeUndefined();
+    expect(envWithoutLease.HARNESSOS_AGENT_GATEWAY_URL).toBeUndefined();
+    expect(envWithoutLease.HARNESSOS_AGENT_GATEWAY_TOKEN).toBeUndefined();
+    expect(envWithoutLease.HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN).toBeUndefined();
   });
 
   it("propagates the owning lifecycle generation into runtime events", () => {
@@ -492,7 +492,7 @@ describe("Antigravity CLI integration helpers", () => {
 
   it("keeps the globally installed hook neutral outside OmniMind sessions", () => {
     const command = buildAntigravityCaptureCommand(
-      "__omnimind_gui_must_not_launch__",
+      "__harnessos_gui_must_not_launch__",
       "__capture_script_must_not_run__",
       "pre-tool",
     );
@@ -502,7 +502,7 @@ describe("Antigravity CLI integration helpers", () => {
       // while writing multi-megabyte stdin on macOS, which tests Node rather
       // than the hook's simple drain-and-return behavior.
       JSON.stringify({ payload: "x".repeat(32 * 1024) }),
-      { OMNIMIND_ANTIGRAVITY_EVENTS: "" },
+      { HARNESSOS_ANTIGRAVITY_EVENTS: "" },
     );
 
     expect(result.error).toBeUndefined();
@@ -514,12 +514,12 @@ describe("Antigravity CLI integration helpers", () => {
 
     const postToolResult = runCaptureCommand(
       buildAntigravityCaptureCommand(
-        "__omnimind_gui_must_not_launch__",
+        "__harnessos_gui_must_not_launch__",
         "__capture_script_must_not_run__",
         "post-tool",
       ),
       JSON.stringify({ payload: "x" }),
-      { OMNIMIND_ANTIGRAVITY_EVENTS: "" },
+      { HARNESSOS_ANTIGRAVITY_EVENTS: "" },
     );
     expect(postToolResult.error).toBeUndefined();
     expect(postToolResult.status).toBe(0);
@@ -536,7 +536,7 @@ describe("Antigravity CLI integration helpers", () => {
         "pre-invocation",
       ),
       JSON.stringify({ payload: "x" }),
-      { OMNIMIND_ANTIGRAVITY_EVENTS: "" },
+      { HARNESSOS_ANTIGRAVITY_EVENTS: "" },
     );
     expect(preInvocationResult.error).toBeUndefined();
     expect(preInvocationResult.status).toBe(0);
@@ -552,7 +552,7 @@ describe("Antigravity CLI integration helpers", () => {
       // fallback is defense in depth for a caller that runs the script without
       // a capture target, and must answer PreToolUse with a decision too.
       const result = spawnSync(process.execPath, [scriptPath, "pre-tool"], {
-        env: { ...process.env, OMNIMIND_ANTIGRAVITY_EVENTS: "" },
+        env: { ...process.env, HARNESSOS_ANTIGRAVITY_EVENTS: "" },
         input: JSON.stringify({ tool: "shell" }),
         encoding: "utf8",
         timeout: 5_000,
@@ -583,8 +583,8 @@ describe("Antigravity CLI integration helpers", () => {
         },
       });
       const result = runCaptureCommand(command, payload, {
-        OMNIMIND_ANTIGRAVITY_EVENTS: eventPath,
-        OMNIMIND_ANTIGRAVITY_HOOK_DECISION: "allow",
+        HARNESSOS_ANTIGRAVITY_EVENTS: eventPath,
+        HARNESSOS_ANTIGRAVITY_HOOK_DECISION: "allow",
       });
 
       expect(result.error).toBeUndefined();
@@ -609,7 +609,7 @@ describe("Antigravity CLI integration helpers", () => {
         "darwin",
       ),
     ).toBe(
-      `if [ -z "\${OMNIMIND_ANTIGRAVITY_EVENTS:-}" ]; then cat >/dev/null 2>&1 || :; printf '%s\\n' '{"decision":"ask"}'; else ELECTRON_RUN_AS_NODE=1 '/Applications/OmniMind.app/Contents/MacOS/OmniMind' '/tmp/omnimind-capture/capture.cjs' 'pre-tool'; fi`,
+      `if [ -z "\${HARNESSOS_ANTIGRAVITY_EVENTS:-}" ]; then cat >/dev/null 2>&1 || :; printf '%s\\n' '{"decision":"ask"}'; else ELECTRON_RUN_AS_NODE=1 '/Applications/OmniMind.app/Contents/MacOS/OmniMind' '/tmp/omnimind-capture/capture.cjs' 'pre-tool'; fi`,
     );
     expect(
       buildAntigravityCaptureCommand(
@@ -623,7 +623,7 @@ describe("Antigravity CLI integration helpers", () => {
       // escapes intact, so `"` arrives as `\"` and quoted paths fail to
       // execute ("not recognized as an internal or external command"). The
       // win32 command must stay free of double quotes.
-      String.raw`if not defined OMNIMIND_ANTIGRAVITY_EVENTS (more >nul 2>nul & echo {"decision":"ask"}) else (set ELECTRON_RUN_AS_NODE=1&& C:\Users\test\AppData\Local\Programs\OmniMind\OmniMind.exe C:\Users\test\.gemini\capture.cjs pre-tool)`,
+      String.raw`if not defined HARNESSOS_ANTIGRAVITY_EVENTS (more >nul 2>nul & echo {"decision":"ask"}) else (set ELECTRON_RUN_AS_NODE=1&& C:\Users\test\AppData\Local\Programs\OmniMind\OmniMind.exe C:\Users\test\.gemini\capture.cjs pre-tool)`,
     );
     // PreInvocation gates the LLM invocation: answer allow so subagent
     // launches are not denied (which would make the parent CLI exit 1).
@@ -635,7 +635,7 @@ describe("Antigravity CLI integration helpers", () => {
         "win32",
       ),
     ).toBe(
-      String.raw`if not defined OMNIMIND_ANTIGRAVITY_EVENTS (more >nul 2>nul & echo {"decision":"allow"}) else (set ELECTRON_RUN_AS_NODE=1&& C:\Users\test\AppData\Local\Programs\OmniMind\OmniMind.exe C:\Users\test\.gemini\capture.cjs pre-invocation)`,
+      String.raw`if not defined HARNESSOS_ANTIGRAVITY_EVENTS (more >nul 2>nul & echo {"decision":"allow"}) else (set ELECTRON_RUN_AS_NODE=1&& C:\Users\test\AppData\Local\Programs\OmniMind\OmniMind.exe C:\Users\test\.gemini\capture.cjs pre-invocation)`,
     );
     expect(
       buildAntigravityCaptureCommand(
@@ -645,7 +645,7 @@ describe("Antigravity CLI integration helpers", () => {
         "darwin",
       ),
     ).toBe(
-      `if [ -z "\${OMNIMIND_ANTIGRAVITY_EVENTS:-}" ]; then cat >/dev/null 2>&1 || :; printf '%s\\n' '{"decision":"allow"}'; else ELECTRON_RUN_AS_NODE=1 '/Applications/OmniMind.app/Contents/MacOS/OmniMind' '/tmp/omnimind-capture/capture.cjs' 'pre-invocation'; fi`,
+      `if [ -z "\${HARNESSOS_ANTIGRAVITY_EVENTS:-}" ]; then cat >/dev/null 2>&1 || :; printf '%s\\n' '{"decision":"allow"}'; else ELECTRON_RUN_AS_NODE=1 '/Applications/OmniMind.app/Contents/MacOS/OmniMind' '/tmp/omnimind-capture/capture.cjs' 'pre-invocation'; fi`,
     );
   });
 
@@ -704,7 +704,7 @@ describe("Antigravity CLI integration helpers", () => {
       _args: readonly string[],
       options: { readonly env?: NodeJS.ProcessEnv },
     ) => {
-      eventFile = options.env?.OMNIMIND_ANTIGRAVITY_EVENTS;
+      eventFile = options.env?.HARNESSOS_ANTIGRAVITY_EVENTS;
       const spawned = new EventEmitter() as ChildProcess;
       Object.assign(spawned, {
         stdout: new PassThrough(),
@@ -861,7 +861,7 @@ describe("Antigravity CLI integration helpers", () => {
       _args: readonly string[],
       options: { readonly env?: NodeJS.ProcessEnv },
     ) => {
-      eventFile = options.env?.OMNIMIND_ANTIGRAVITY_EVENTS;
+      eventFile = options.env?.HARNESSOS_ANTIGRAVITY_EVENTS;
       const spawned = new EventEmitter() as ChildProcess;
       Object.assign(spawned, {
         stdout: new PassThrough(),
@@ -1011,7 +1011,7 @@ describe("Antigravity CLI integration helpers", () => {
       _args: readonly string[],
       options: { readonly env?: NodeJS.ProcessEnv },
     ) => {
-      eventFile = options.env?.OMNIMIND_ANTIGRAVITY_EVENTS;
+      eventFile = options.env?.HARNESSOS_ANTIGRAVITY_EVENTS;
       const spawned = new EventEmitter() as ChildProcess;
       Object.assign(spawned, {
         stdout: new PassThrough(),
@@ -1052,7 +1052,7 @@ describe("Antigravity CLI integration helpers", () => {
           });
           expect(eventFile).toBeTruthy();
 
-          // The subagent CLI inherits OMNIMIND_ANTIGRAVITY_EVENTS, so its hooks
+          // The subagent CLI inherits HARNESSOS_ANTIGRAVITY_EVENTS, so its hooks
           // land in this session's stream with the subagent's conversation id.
           yield* Effect.promise(() =>
             fs.appendFile(
@@ -1191,7 +1191,7 @@ describe("Antigravity CLI integration helpers", () => {
       _args: readonly string[],
       options: { readonly env?: NodeJS.ProcessEnv },
     ) => {
-      eventFile = options.env?.OMNIMIND_ANTIGRAVITY_EVENTS;
+      eventFile = options.env?.HARNESSOS_ANTIGRAVITY_EVENTS;
       const spawned = new EventEmitter() as ChildProcess;
       Object.assign(spawned, {
         stdout: new PassThrough(),
@@ -1307,7 +1307,7 @@ describe("Antigravity CLI integration helpers", () => {
     try {
       await fs.writeFile(scriptPath, hookScriptSource(), { mode: 0o700 });
       const result = spawnSync(process.execPath, [scriptPath, "stop"], {
-        env: { ...process.env, OMNIMIND_ANTIGRAVITY_EVENTS: eventPath },
+        env: { ...process.env, HARNESSOS_ANTIGRAVITY_EVENTS: eventPath },
         input: JSON.stringify({ stop: true }),
         encoding: "utf8",
         timeout: 5_000,
@@ -1515,14 +1515,14 @@ describe("Antigravity turn settle on cancel (#465)", () => {
       const preInvResult = runCaptureCommand(
         buildAntigravityCaptureCommand(process.execPath, scriptPath, "pre-invocation"),
         multilinePayload,
-        { OMNIMIND_ANTIGRAVITY_EVENTS: eventPath },
+        { HARNESSOS_ANTIGRAVITY_EVENTS: eventPath },
       );
       expect(preInvResult.status).toBe(0);
 
       const stopResult = runCaptureCommand(
         buildAntigravityCaptureCommand(process.execPath, scriptPath, "stop"),
         multilinePayload,
-        { OMNIMIND_ANTIGRAVITY_EVENTS: eventPath },
+        { HARNESSOS_ANTIGRAVITY_EVENTS: eventPath },
       );
       expect(stopResult.status).toBe(0);
 
@@ -1562,7 +1562,7 @@ describe("Antigravity turn settle on cancel (#465)", () => {
       _args: readonly string[],
       options: { readonly env?: NodeJS.ProcessEnv },
     ) => {
-      eventFile = options.env?.OMNIMIND_ANTIGRAVITY_EVENTS;
+      eventFile = options.env?.HARNESSOS_ANTIGRAVITY_EVENTS;
       const spawned = new EventEmitter() as ChildProcess;
       Object.assign(spawned, {
         stdout: new PassThrough(),
@@ -1891,7 +1891,7 @@ describe("Antigravity background task helpers (#752)", () => {
       _args: readonly string[],
       options: { readonly env?: NodeJS.ProcessEnv },
     ) => {
-      eventFile = options.env?.OMNIMIND_ANTIGRAVITY_EVENTS;
+      eventFile = options.env?.HARNESSOS_ANTIGRAVITY_EVENTS;
       const spawned = new EventEmitter() as ChildProcess;
       Object.assign(spawned, {
         stdout: new PassThrough(),
@@ -2033,7 +2033,7 @@ describe("Antigravity background task helpers (#752)", () => {
       _args: readonly string[],
       options: { readonly env?: NodeJS.ProcessEnv },
     ) => {
-      eventFile = options.env?.OMNIMIND_ANTIGRAVITY_EVENTS;
+      eventFile = options.env?.HARNESSOS_ANTIGRAVITY_EVENTS;
       const spawned = new EventEmitter() as ChildProcess;
       Object.assign(spawned, {
         stdout: new PassThrough(),
@@ -2165,7 +2165,7 @@ describe("Antigravity background task helpers (#752)", () => {
       _args: readonly string[],
       options: { readonly env?: NodeJS.ProcessEnv },
     ) => {
-      eventFile = options.env?.OMNIMIND_ANTIGRAVITY_EVENTS;
+      eventFile = options.env?.HARNESSOS_ANTIGRAVITY_EVENTS;
       const spawned = new EventEmitter() as ChildProcess;
       Object.assign(spawned, {
         stdout: new PassThrough(),
@@ -2262,7 +2262,7 @@ describe("Antigravity background task helpers (#752)", () => {
       _args: readonly string[],
       options: { readonly env?: NodeJS.ProcessEnv },
     ) => {
-      eventFile = options.env?.OMNIMIND_ANTIGRAVITY_EVENTS;
+      eventFile = options.env?.HARNESSOS_ANTIGRAVITY_EVENTS;
       const spawned = new EventEmitter() as ChildProcess;
       Object.assign(spawned, {
         stdout: new PassThrough(),

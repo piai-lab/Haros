@@ -18,4 +18,4 @@ export interface ExternalMcpGatewayShape {
 export class ExternalMcpGateway extends ServiceMap.Service<
   ExternalMcpGateway,
   ExternalMcpGatewayShape
->()("omnimind/externalMcp/Services/ExternalMcpGateway") {}
+>()("harnessos/externalMcp/Services/ExternalMcpGateway") {}

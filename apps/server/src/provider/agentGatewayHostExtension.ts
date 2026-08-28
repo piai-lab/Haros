@@ -140,12 +140,12 @@ export function renderDeliveredAgentGatewayHostGuidance(input: {
   );
   if (deliveredGroups.size === 0) return "";
   return [
-    "<omnimind_host_context>",
+    "<harnessos_host_context>",
     renderOmniMindHarnessPolicy({
       gatewayControlAvailable: true,
       projection: { mode: "direct", enabledGroups: [...deliveredGroups] },
     }),
-    "</omnimind_host_context>",
+    "</harnessos_host_context>",
   ].join("\n");
 }
 

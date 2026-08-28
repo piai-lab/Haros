@@ -41,9 +41,7 @@ export function shouldUpdateDesktopAppIcon(
   return currentIcon !== requestedIcon;
 }
 
-export function desktopAppIconResourceName(
-  input: DesktopAppIconResourceInput,
-): string {
+export function desktopAppIconResourceName(input: DesktopAppIconResourceInput): string {
   if (input.platform === "darwin" && input.icon === "default") {
     if (input.isDarkAppearance) return "dock-icon-dark.png";
     if (input.useLegacyMacDefault) return "dock-icon.png";

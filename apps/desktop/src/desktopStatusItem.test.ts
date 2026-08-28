@@ -6,11 +6,13 @@ import {
   type DesktopStatusItemWindow,
 } from "./desktopStatusItem";
 
-function makeWindow(input: {
-  readonly destroyed?: boolean;
-  readonly minimized?: boolean;
-  readonly visible?: boolean;
-} = {}): DesktopStatusItemWindow {
+function makeWindow(
+  input: {
+    readonly destroyed?: boolean;
+    readonly minimized?: boolean;
+    readonly visible?: boolean;
+  } = {},
+): DesktopStatusItemWindow {
   return {
     isDestroyed: vi.fn(() => input.destroyed ?? false),
     isMinimized: vi.fn(() => input.minimized ?? false),

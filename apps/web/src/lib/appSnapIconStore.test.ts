@@ -9,13 +9,13 @@ import {
 describe("AppSnap icon cache guards", () => {
   it("evicts the oldest icons once the cache exceeds its cap", () => {
     const entries = Array.from({ length: 102 }, (_, index) => ({
-      bundleIdentifier: `dev.omnimind.test-${index}`,
+      bundleIdentifier: `ai.piai.harnessos.test-${index}`,
       updatedAt: index,
     }));
 
     expect(selectAppSnapIconEvictionKeys(entries)).toEqual([
-      "dev.omnimind.test-0",
-      "dev.omnimind.test-1",
+      "ai.piai.harnessos.test-0",
+      "ai.piai.harnessos.test-1",
     ]);
   });
 

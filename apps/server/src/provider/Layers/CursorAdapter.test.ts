@@ -2,7 +2,7 @@
 // Purpose: Characterizes Cursor's private OmniMind host-policy delivery.
 // Layer: Provider adapter tests
 
-import { OMNIMIND_HARNESS_POLICY_MARKER } from "../../agentGateway/harnessPolicy.ts";
+import { HARNESSOS_HARNESS_POLICY_MARKER } from "../../agentGateway/harnessPolicy.ts";
 import { describe, expect, it } from "vitest";
 
 import { takeCursorOmniMindHarnessPolicyTextPart } from "./CursorAdapter.ts";
@@ -12,9 +12,9 @@ describe("Cursor OmniMind harness policy", () => {
     for (const lifecycle of ["fresh", "load", "fork"] as const) {
       const state: { harnessPolicyDelivered?: boolean } = {};
       const first = takeCursorOmniMindHarnessPolicyTextPart(state, true);
-      expect(first?.text, lifecycle).toContain(OMNIMIND_HARNESS_POLICY_MARKER);
+      expect(first?.text, lifecycle).toContain(HARNESSOS_HARNESS_POLICY_MARKER);
       expect(first?.text, lifecycle).toContain("tools actually available");
-      expect(first?.text, lifecycle).not.toContain("omnimind_create_threads");
+      expect(first?.text, lifecycle).not.toContain("harnessos_create_threads");
       expect(takeCursorOmniMindHarnessPolicyTextPart(state, true), lifecycle).toBeNull();
     }
   });

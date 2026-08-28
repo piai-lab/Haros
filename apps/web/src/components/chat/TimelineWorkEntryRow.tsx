@@ -310,10 +310,10 @@ function isGitHubMcpToolCall(workEntry: TimelineWorkEntry): boolean {
   return Boolean(toolName?.startsWith("mcp__codex_apps__github"));
 }
 
-// OmniMind's own agent-gateway tools (omnimind_list_threads, omnimind_create_thread,
+// OmniMind's own agent-gateway tools (harnessos_list_threads, harnessos_create_thread,
 // ...) get the OmniMind mark instead of the generic MCP glyph. Providers report
-// the call differently: Claude prefixes the MCP server (mcp__omnimind__*), ACP
-// agents surface the bare tool name (omnimind_*), and Codex reports server/tool
+// the call differently: Claude prefixes the MCP server (mcp__harnessos__*), ACP
+// agents surface the bare tool name (harnessos_*), and Codex reports server/tool
 // pairs that the label humanizer renders as "OmniMind: ...".
 function toolWorkEntryStatus(workEntry: TimelineWorkEntry): OmniMindMcpToolStatus {
   if (workEntry.toolStatus) return workEntry.toolStatus;

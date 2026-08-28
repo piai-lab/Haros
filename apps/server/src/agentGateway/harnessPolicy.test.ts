@@ -3,7 +3,7 @@ import { assert, describe, it } from "@effect/vitest";
 import {
   renderOmniMindHarnessPolicy,
   renderAgentGatewayMcpInstructions,
-  OMNIMIND_HARNESS_POLICY_MARKER,
+  HARNESSOS_HARNESS_POLICY_MARKER,
   takeOmniMindHarnessPolicyForProviderSession,
   takeOmniMindHarnessPolicyTextPartForProviderSession,
   takeOmniMindHarnessPolicyForSession,
@@ -18,7 +18,7 @@ describe("OmniMind harness policy", () => {
         enabledGroups: ["tasks", "diagnostics", "goals", "automations", "browser", "device"],
       },
     });
-    assert.include(policy, OMNIMIND_HARNESS_POLICY_MARKER);
+    assert.include(policy, HARNESSOS_HARNESS_POLICY_MARKER);
     assert.include(policy, "OmniMind is the host and harness");
     assert.include(policy, "do not create OmniMind threads");
     assert.include(policy, "canonical run envelope");
@@ -30,7 +30,7 @@ describe("OmniMind harness policy", () => {
     assert.include(policy, "exact thread-scoped simulator surface");
     assert.include(policy, "full-access mode");
     assert.include(policy, "do not create OmniMind threads");
-    assert.notInclude(policy, "omnimind_create_threads");
+    assert.notInclude(policy, "harnessos_create_threads");
     assert.notInclude(policy, "browser_open");
     assert.notInclude(policy, "device_list");
   });
@@ -45,7 +45,7 @@ describe("OmniMind harness policy", () => {
     const state: { harnessPolicyDelivered?: boolean } = {};
     assert.include(
       takeOmniMindHarnessPolicyForSession(state, { gatewayControlAvailable: true }) ?? "",
-      "<omnimind_host_context>",
+      "<harnessos_host_context>",
     );
     assert.isNull(takeOmniMindHarnessPolicyForSession(state, { gatewayControlAvailable: true }));
   });
@@ -57,7 +57,7 @@ describe("OmniMind harness policy", () => {
         takeOmniMindHarnessPolicyTextPartForProviderSession(state, {
           scopedGatewayConnectionAvailable: true,
         })?.text ?? "";
-      assert.include(first, OMNIMIND_HARNESS_POLICY_MARKER, lifecycle);
+      assert.include(first, HARNESSOS_HARNESS_POLICY_MARKER, lifecycle);
       assert.include(first, "tools actually available", lifecycle);
       assert.notInclude(first, "canonical run envelope", lifecycle);
       assert.isNull(
@@ -75,7 +75,7 @@ describe("OmniMind harness policy", () => {
         {},
         { scopedGatewayConnectionAvailable: false },
       ) ?? "";
-    assert.include(text, OMNIMIND_HARNESS_POLICY_MARKER);
+    assert.include(text, HARNESSOS_HARNESS_POLICY_MARKER);
     assert.include(text, "OmniMind MCP control is unavailable");
     assert.notInclude(text, "canonical run envelope");
   });

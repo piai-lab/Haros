@@ -56,7 +56,7 @@ static id OmniMindJSONValue(id value) {
     // requests from inside a completion handler, and each one blocks waiting for
     // its own completion. On a serial queue that nesting deadlocks the moment a
     // tree needs more than one round-trip.
-    _callbackQueue = dispatch_queue_create("dev.omnimind.device-helper.ax", DISPATCH_QUEUE_CONCURRENT);
+    _callbackQueue = dispatch_queue_create("ai.piai.harnessos.device-helper.ax", DISPATCH_QUEUE_CONCURRENT);
     _requestTimeout = 5.0;
   }
   return self;
@@ -138,7 +138,7 @@ static id OmniMindJSONValue(id value) {
 - (nullable NSDictionary *)frontmostTreeWithMaxDepth:(NSInteger)maxDepth error:(NSError **)error {
   if (_translator == nil) {
     if (error) {
-      *error = [NSError errorWithDomain:@"dev.omnimind.device-helper.ax"
+      *error = [NSError errorWithDomain:@"ai.piai.harnessos.device-helper.ax"
                                    code:1
                                userInfo:@{NSLocalizedDescriptionKey: @"accessibility translator unavailable"}];
     }
@@ -164,7 +164,7 @@ static id OmniMindJSONValue(id value) {
   dispatch_semaphore_wait(resolved, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(30 * NSEC_PER_SEC)));
   if (translation == nil) {
     if (error) {
-      *error = [NSError errorWithDomain:@"dev.omnimind.device-helper.ax"
+      *error = [NSError errorWithDomain:@"ai.piai.harnessos.device-helper.ax"
                                    code:2
                                userInfo:@{NSLocalizedDescriptionKey: @"no frontmost application (SpringBoard may still be starting)"}];
     }
@@ -180,7 +180,7 @@ static id OmniMindJSONValue(id value) {
   id element = ((id (*)(id, SEL, id))objc_msgSend)(_translator, elementSelector, translation);
   if (element == nil) {
     if (error) {
-      *error = [NSError errorWithDomain:@"dev.omnimind.device-helper.ax"
+      *error = [NSError errorWithDomain:@"ai.piai.harnessos.device-helper.ax"
                                    code:3
                                userInfo:@{NSLocalizedDescriptionKey: @"translation produced no platform element"}];
     }

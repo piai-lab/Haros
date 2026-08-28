@@ -460,27 +460,27 @@ function makeIsolatedServerEnvironment(input: {
 }): NodeJS.ProcessEnv {
   const environment: NodeJS.ProcessEnv = { ...process.env };
   for (const key of [
-    "OMNIMIND_ALLOW_INSECURE_REMOTE",
-    "OMNIMIND_AUTH_TOKEN",
-    "OMNIMIND_HOME",
-    "OMNIMIND_HOST",
-    "OMNIMIND_MODE",
-    "OMNIMIND_PORT",
-    "OMNIMIND_PUBLIC_URL",
+    "HARNESSOS_ALLOW_INSECURE_REMOTE",
+    "HARNESSOS_AUTH_TOKEN",
+    "HARNESSOS_HOME",
+    "HARNESSOS_HOST",
+    "HARNESSOS_MODE",
+    "HARNESSOS_PORT",
+    "HARNESSOS_PUBLIC_URL",
     "VITE_DEV_SERVER_URL",
   ]) {
     delete environment[key];
   }
   return {
     ...environment,
-    OMNIMIND_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "0",
-    OMNIMIND_CLAUDE_KEEPALIVE: "0",
-    OMNIMIND_DESKTOP_SHUTDOWN_TOKEN: input.shutdownToken,
-    OMNIMIND_HOME: input.homeDir,
-    OMNIMIND_HOST: "127.0.0.1",
-    OMNIMIND_MODE: "desktop",
-    OMNIMIND_NO_BROWSER: "1",
-    OMNIMIND_PORT: String(input.port),
+    HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "0",
+    HARNESSOS_CLAUDE_KEEPALIVE: "0",
+    HARNESSOS_DESKTOP_SHUTDOWN_TOKEN: input.shutdownToken,
+    HARNESSOS_HOME: input.homeDir,
+    HARNESSOS_HOST: "127.0.0.1",
+    HARNESSOS_MODE: "desktop",
+    HARNESSOS_NO_BROWSER: "1",
+    HARNESSOS_PORT: String(input.port),
   };
 }
 

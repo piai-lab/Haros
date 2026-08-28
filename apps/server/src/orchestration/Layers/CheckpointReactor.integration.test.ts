@@ -2319,11 +2319,11 @@ describe("CheckpointReactor", () => {
     const createdAt = new Date().toISOString();
     const threadId = ThreadId.makeUnsafe("thread-1");
     const historicalTurnZeroRef = checkpointRefForThreadTurn(threadId, 0).replace(
-      "refs/omnimind/",
+      "refs/harnessos/",
       "refs/historical/",
     );
     const historicalTurnOneRef = CheckpointRef.makeUnsafe(
-      checkpointRefForThreadTurn(threadId, 1).replace("refs/omnimind/", "refs/historical/"),
+      checkpointRefForThreadTurn(threadId, 1).replace("refs/harnessos/", "refs/historical/"),
     );
 
     runGit(harness.cwd, ["update-ref", historicalTurnZeroRef, "HEAD"]);

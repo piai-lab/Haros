@@ -108,7 +108,7 @@ describe("Pi native resource projection", () => {
       enabledBuiltInGroups: ["tasks"],
     });
 
-    expect(prompt).toContain("<omnimind_host_context>");
+    expect(prompt).toContain("<harnessos_host_context>");
     expect(prompt).toContain("Use the exposed capability metadata");
     expect(prompt).not.toContain("OmniMind MCP control is unavailable");
   });
@@ -129,10 +129,10 @@ describe("Pi native resource projection", () => {
       gatewayControlAvailable: true,
     });
 
-    expect(omniMindPrompt).not.toContain("<omnimind_agent_task_policy>");
-    expect(omniMindPrompt).not.toContain("omnimind_update_tasks");
-    expect(stockPiPrompt).not.toContain("<omnimind_agent_task_policy>");
-    expect(stockPiPrompt).not.toContain("omnimind_update_tasks");
+    expect(omniMindPrompt).not.toContain("<harnessos_agent_task_policy>");
+    expect(omniMindPrompt).not.toContain("harnessos_update_tasks");
+    expect(stockPiPrompt).not.toContain("<harnessos_agent_task_policy>");
+    expect(stockPiPrompt).not.toContain("harnessos_update_tasks");
   });
 
   it("keeps OmniMind identity immutable while selecting three distinct Product contracts", () => {
@@ -168,10 +168,10 @@ describe("Pi native resource projection", () => {
     expect(chatPrompt).not.toContain(
       "When the work needs a durable Project boundary, project-local resources, Git or Terminal execution",
     );
-    expect(chatPrompt).not.toContain("<omnimind_agent_task_policy>");
+    expect(chatPrompt).not.toContain("<harnessos_agent_task_policy>");
     expect(agentPrompt).toContain("Before substantive execution");
     expect(agentPrompt).toContain("no unresolved ambiguity would materially change the result");
-    expect(agentPrompt).not.toContain("<omnimind_agent_task_policy>");
+    expect(agentPrompt).not.toContain("<harnessos_agent_task_policy>");
     expect(agentPrompt).not.toContain("In Chat, help the user");
     expect(agentPrompt).toContain(
       "Honor explicit user preferences for language, tone, format, level of detail, and working style",
@@ -194,7 +194,7 @@ describe("Pi native resource projection", () => {
     expect(hostPrompt).toContain("per-call authorization");
     expect(enginePrompt).not.toContain("approval-required download");
     expect(enginePrompt).not.toContain("Device mutations such as");
-    expect(enginePrompt).not.toContain("<omnimind_host_context>");
+    expect(enginePrompt).not.toContain("<harnessos_host_context>");
   });
 
   it("derives only the bounded canonical prompt-required Gateway closure", () => {
@@ -250,16 +250,31 @@ describe("OmniMind Agent Plan lifecycle", () => {
     const cwd = path.join(serverRoot, "workspace");
     mkdirSync(agentDir, { recursive: true });
     mkdirSync(cwd, { recursive: true });
-    writeFileSync(path.join(agentDir, "models.json"), JSON.stringify({ providers: { local: {
-      api: "openai-completions",
-      baseUrl: "https://local-model.example.test/v1",
-      models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
-    } } }));
-    writeFileSync(path.join(agentDir, "auth.json"), JSON.stringify({ local: { type: "api_key", key: "test-key" } }));
-    writeFileSync(path.join(agentDir, "settings.json"), JSON.stringify({ retry: { enabled: false } }));
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: false } }),
+    );
     const requestBodies: any[] = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
-      requestBodies.push(request instanceof Request ? await request.clone().json() : JSON.parse(String(init?.body)));
+      requestBodies.push(
+        request instanceof Request ? await request.clone().json() : JSON.parse(String(init?.body)),
+      );
       return piOpenAiSuccessResponse("<proposed_plan>\n- Inspect\n- Implement\n</proposed_plan>");
     });
     const events: ProviderRuntimeEvent[] = [];
@@ -271,42 +286,69 @@ describe("OmniMind Agent Plan lifecycle", () => {
         Layer.provideMerge(ServerSettingsService.layerTest()),
         Layer.provideMerge(NodeServices.layer),
       );
-      await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
-        const adapter = yield* OmniMindAgentAdapter;
-        const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
-          Effect.sync(() => events.push(event)),
-        ).pipe(Effect.forkChild);
-        yield* adapter.startSession({
-          provider: "omnimind", threadId, cwd, workSurface: "chat",
-          modelSelection: { provider: "omnimind", model: "local/safe-model" },
-          runtimeMode: "full-access",
-        });
-        const planTurn = yield* adapter.sendTurn({
-          threadId, input: "/reload and inspect the workspace", attachments: [],
-          modelSelection: { provider: "omnimind", model: "local/safe-model" },
-          interactionMode: "plan",
-        });
-        yield* Effect.promise(() => waitForTestCondition(
-          () => events.some((event) => event.type === "turn.completed" && event.turnId === planTurn.turnId),
-          "Plan turn did not settle.",
-        ));
-        expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
-        const defaultTurn = yield* adapter.sendTurn({
-          threadId, input: "ordinary continuation", attachments: [],
-          modelSelection: { provider: "omnimind", model: "local/safe-model" },
-          interactionMode: "default",
-        });
-        yield* Effect.promise(() => waitForTestCondition(
-          () => events.some((event) => event.type === "turn.completed" && event.turnId === defaultTurn.turnId),
-          "Default turn did not settle.",
-        ));
-        yield* adapter.stopSession(threadId);
-        yield* Fiber.interrupt(eventsFiber);
-      }).pipe(Effect.provide(layer))));
+      await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              workSurface: "chat",
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const planTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "/reload and inspect the workspace",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              interactionMode: "plan",
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === planTurn.turnId,
+                  ),
+                "Plan turn did not settle.",
+              ),
+            );
+            expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
+            const defaultTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "ordinary continuation",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              interactionMode: "default",
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === defaultTurn.turnId,
+                  ),
+                "Default turn did not settle.",
+              ),
+            );
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
 
-      const firstUserContent = requestBodies[0]?.messages?.find((message: any) => message.role === "user")?.content;
+      const firstUserContent = requestBodies[0]?.messages?.find(
+        (message: any) => message.role === "user",
+      )?.content;
       const firstUserMessage = Array.isArray(firstUserContent)
-        ? firstUserContent.filter((block: any) => block?.type === "text").map((block: any) => block.text).join("\n")
+        ? firstUserContent
+            .filter((block: any) => block?.type === "text")
+            .map((block: any) => block.text)
+            .join("\n")
         : String(firstUserContent ?? "");
       expect(firstUserMessage).toContain("OmniMind plan mode is active.");
       expect(firstUserMessage).toContain("/reload and inspect the workspace");
@@ -315,14 +357,16 @@ describe("OmniMind Agent Plan lifecycle", () => {
       expect(firstUserMessage.indexOf("/reload and inspect the workspace")).toBeLessThan(
         firstUserMessage.indexOf("OmniMind plan mode is active."),
       );
-      const secondUserContent = requestBodies[1]?.messages?.filter((message: any) => message.role === "user").at(-1)?.content;
+      const secondUserContent = requestBodies[1]?.messages
+        ?.filter((message: any) => message.role === "user")
+        .at(-1)?.content;
       expect(JSON.stringify(secondUserContent)).not.toContain("OmniMind plan mode is active.");
       const proposed = events.filter((event) => event.type === "turn.proposed.completed");
       expect(proposed).toHaveLength(1);
       expect(proposed[0]?.payload).toEqual({ planMarkdown: "- Inspect\n- Implement" });
       const proposedIndex = events.indexOf(proposed[0]!);
-      const planCompletedIndex = events.findIndex((event) =>
-        event.type === "turn.completed" && event.turnId === proposed[0]?.turnId,
+      const planCompletedIndex = events.findIndex(
+        (event) => event.type === "turn.completed" && event.turnId === proposed[0]?.turnId,
       );
       expect(planCompletedIndex).toBeGreaterThan(proposedIndex);
     } finally {
@@ -349,11 +393,11 @@ describe("Pi native OmniMind gateway tools", () => {
             ? {
                 tools: [
                   {
-                    name: "omnimind_list_threads",
+                    name: "harnessos_list_threads",
                     description: "List OmniMind threads.",
                     _meta: {
-                      "omnimind/owner": "agent-gateway",
-                      "omnimind/group": "tasks",
+                      "harnessos/owner": "agent-gateway",
+                      "harnessos/group": "tasks",
                     },
                     inputSchema: {
                       type: "object",
@@ -417,11 +461,11 @@ describe("Pi native OmniMind gateway tools", () => {
           result: {
             tools: [
               {
-                name: "omnimind_create_threads",
+                name: "harnessos_create_threads",
                 description: "Create OmniMind threads.",
                 _meta: {
-                  "omnimind/owner": "agent-gateway",
-                  "omnimind/group": "tasks",
+                  "harnessos/owner": "agent-gateway",
+                  "harnessos/group": "tasks",
                 },
                 inputSchema: { type: "object", properties: {} },
               },
@@ -636,17 +680,17 @@ describe("Pi native OmniMind gateway tools", () => {
 
       expect(requestBodies).toHaveLength(5);
       expect(piRequestToolNames(requestBodies[0])).toEqual(
-        expect.arrayContaining(["bash", "omnimind_update_tasks", "browser_open"]),
+        expect.arrayContaining(["bash", "harnessos_update_tasks", "browser_open"]),
       );
       expect(piRequestToolNames(requestBodies[1])).toEqual(
-        expect.arrayContaining(["bash", "omnimind_update_tasks", "browser_open"]),
+        expect.arrayContaining(["bash", "harnessos_update_tasks", "browser_open"]),
       );
       expect(piRequestToolNames(requestBodies[2])).toContain("browser_open");
       expect(piRequestToolNames(requestBodies[3])).toEqual(
-        expect.arrayContaining(["bash", "omnimind_update_tasks", "browser_open"]),
+        expect.arrayContaining(["bash", "harnessos_update_tasks", "browser_open"]),
       );
       expect(piRequestToolNames(requestBodies[4])).toEqual(
-        expect.arrayContaining(["bash", "omnimind_update_tasks", "browser_open"]),
+        expect.arrayContaining(["bash", "harnessos_update_tasks", "browser_open"]),
       );
       const hostContexts = requestBodies.map(piRequestHostContext);
       expect(hostContexts.every(Boolean)).toBe(true);
@@ -1037,7 +1081,7 @@ describe("Pi native OmniMind gateway tools", () => {
         (tool: any) => tool.function?.name ?? tool.name,
       );
       expect(names).toContain("browser_open");
-      expect(names).not.toContain("omnimind_update_tasks");
+      expect(names).not.toContain("harnessos_update_tasks");
       expect(gateway.requests.map(({ method }) => method)).toEqual(["tools/list"]);
     } finally {
       vi.restoreAllMocks();
@@ -1161,10 +1205,10 @@ describe("Pi native OmniMind gateway tools", () => {
           ...AUTOMATION_RUN_GATEWAY_TOOL_NAMES,
         ]),
       );
-      expect(piRequestToolNames(requestBodies[1])).toContain("omnimind_set_thread_goal");
-      expect(piRequestToolNames(requestBodies[1])).toContain("omnimind_report_automation_result");
+      expect(piRequestToolNames(requestBodies[1])).toContain("harnessos_set_thread_goal");
+      expect(piRequestToolNames(requestBodies[1])).toContain("harnessos_report_automation_result");
       expect(piRequestToolNames(requestBodies[2])).toEqual(
-        expect.arrayContaining(["omnimind_set_thread_goal", ...AUTOMATION_RUN_GATEWAY_TOOL_NAMES]),
+        expect.arrayContaining(["harnessos_set_thread_goal", ...AUTOMATION_RUN_GATEWAY_TOOL_NAMES]),
       );
       expect(gateway.requests.map(({ method }) => method)).toEqual([
         "tools/list",
@@ -1280,7 +1324,7 @@ describe("Pi native OmniMind gateway tools", () => {
 
       expect(exit._tag).toBe("Failure");
       expect(modelFetch).toHaveBeenCalledTimes(1);
-      expect(piRequestToolNames(modelBodies[0])).not.toContain("omnimind_set_thread_goal");
+      expect(piRequestToolNames(modelBodies[0])).not.toContain("harnessos_set_thread_goal");
       expect(gateway.requests.map(({ method }) => method)).toEqual([
         "tools/list",
         "tools/list",
@@ -1379,7 +1423,7 @@ function piRequestSystemPrompt(body: any): string {
 function piRequestHostContext(body: any): string {
   return (
     piRequestSystemPrompt(body).match(
-      /<omnimind_host_context>[\s\S]*?<\/omnimind_host_context>/,
+      /<harnessos_host_context>[\s\S]*?<\/harnessos_host_context>/,
     )?.[0] ?? ""
   );
 }
@@ -1427,7 +1471,7 @@ function piOpenAiTaskToolCallResponse() {
                   id: "call-task-list",
                   type: "function",
                   function: {
-                    name: "omnimind_update_tasks",
+                    name: "harnessos_update_tasks",
                     arguments: JSON.stringify({
                       explanation: "Tracking the requested work",
                       tasks: [
@@ -1548,8 +1592,8 @@ function gatewayToolDescriptor(input: {
     description: input.description ?? `Use ${input.name}.`,
     inputSchema: { type: "object", properties: {} },
     _meta: {
-      "omnimind/owner": "agent-gateway",
-      "omnimind/group": input.group ?? "tasks",
+      "harnessos/owner": "agent-gateway",
+      "harnessos/group": input.group ?? "tasks",
     },
   };
 }
@@ -1871,19 +1915,19 @@ describe("getPiDiscoverableModels", () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-untrusted-discovery-"));
     const cwd = path.join(serverRoot, "workspace");
     mkdirSync(path.join(serverRoot, "agent"), { recursive: true });
-    mkdirSync(path.join(cwd, ".omnimind", "skills", "project-skill"), { recursive: true });
-    mkdirSync(path.join(cwd, ".omnimind", "prompts"), { recursive: true });
-    mkdirSync(path.join(cwd, ".omnimind", "extensions"), { recursive: true });
+    mkdirSync(path.join(cwd, ".harnessos", "skills", "project-skill"), { recursive: true });
+    mkdirSync(path.join(cwd, ".harnessos", "prompts"), { recursive: true });
+    mkdirSync(path.join(cwd, ".harnessos", "extensions"), { recursive: true });
     writeFileSync(
-      path.join(cwd, ".omnimind", "skills", "project-skill", "SKILL.md"),
+      path.join(cwd, ".harnessos", "skills", "project-skill", "SKILL.md"),
       "---\nname: project-skill\ndescription: Project-only skill\n---\n",
     );
     writeFileSync(
-      path.join(cwd, ".omnimind", "prompts", "project-review.md"),
+      path.join(cwd, ".harnessos", "prompts", "project-review.md"),
       "---\ndescription: Project-only prompt\n---\nReview this project.",
     );
     writeFileSync(
-      path.join(cwd, ".omnimind", "extensions", "must-not-run.ts"),
+      path.join(cwd, ".harnessos", "extensions", "must-not-run.ts"),
       'throw new Error("passive discovery executed a Project extension");\n',
     );
 
@@ -1926,18 +1970,18 @@ describe("getPiDiscoverableModels", () => {
       [projectA, "project-a-skill"],
       [projectB, "project-b-skill"],
     ] as const) {
-      mkdirSync(path.join(root, ".omnimind", "skills", skillName), {
+      mkdirSync(path.join(root, ".harnessos", "skills", skillName), {
         recursive: true,
       });
       writeFileSync(
-        path.join(root, ".omnimind", "skills", skillName, "SKILL.md"),
+        path.join(root, ".harnessos", "skills", skillName, "SKILL.md"),
         `---\nname: ${skillName}\ndescription: ${skillName}\n---\n`,
       );
-      mkdirSync(path.join(root, ".omnimind", "prompts"), {
+      mkdirSync(path.join(root, ".harnessos", "prompts"), {
         recursive: true,
       });
       writeFileSync(
-        path.join(root, ".omnimind", "prompts", `${skillName}.md`),
+        path.join(root, ".harnessos", "prompts", `${skillName}.md`),
         `---\ndescription: ${skillName} prompt\n---\n${skillName}`,
       );
     }
@@ -2187,10 +2231,10 @@ describe("getPiDiscoverableModels", () => {
     const immutableAgentPrompt = makeOmniMindEngineSystemPrompt({
       workSurface: "agent",
     });
-    mkdirSync(path.join(cwd, ".omnimind", "extensions"), { recursive: true });
+    mkdirSync(path.join(cwd, ".harnessos", "extensions"), { recursive: true });
     mkdirSync(agentDir, { recursive: true });
     writeFileSync(
-      path.join(cwd, ".omnimind", "extensions", "replace-system-prompt.ts"),
+      path.join(cwd, ".harnessos", "extensions", "replace-system-prompt.ts"),
       [
         "export default function setup(pi) {",
         '  pi.on("before_agent_start", () => ({',
@@ -2364,14 +2408,14 @@ describe("getPiDiscoverableModels", () => {
       for (const body of requestBodies.slice(0, 4)) {
         const prompt = systemPrompt(body);
         expect(prompt).toContain("project extension replacement");
-        expect(prompt).not.toContain("<omnimind_agent_task_policy>");
+        expect(prompt).not.toContain("<harnessos_agent_task_policy>");
         expect(prompt.split(identity)).toHaveLength(2);
         expect(prompt.split(officialChineseIdentity)).toHaveLength(2);
-        expect(prompt.split("<omnimind_engine_contract>")).toHaveLength(2);
-        expect(prompt).not.toContain("<omnimind_host_context>");
-        expect(toolNames(body)).toContain("omnimind_update_tasks");
+        expect(prompt.split("<harnessos_engine_contract>")).toHaveLength(2);
+        expect(prompt).not.toContain("<harnessos_host_context>");
+        expect(toolNames(body)).toContain("harnessos_update_tasks");
         const taskTool = (body.tools ?? []).find(
-          (tool: any) => (tool.function?.name ?? tool.name) === "omnimind_update_tasks",
+          (tool: any) => (tool.function?.name ?? tool.name) === "harnessos_update_tasks",
         );
         expect(taskTool?.function?.description ?? taskTool?.description).toContain("task snapshot");
         expect(JSON.stringify(taskTool)).not.toContain("loader");
@@ -2382,11 +2426,11 @@ describe("getPiDiscoverableModels", () => {
       expect(chatPrompt).toContain(officialChineseIdentity);
       expect(chatPrompt).toContain("In Chat, help the user understand, explore, decide, learn");
       expect(chatPrompt).not.toContain("project extension replacement");
-      expect(chatPrompt).not.toContain("<omnimind_agent_task_policy>");
-      expect(toolNames(requestBodies[4])).toContain("omnimind_update_tasks");
+      expect(chatPrompt).not.toContain("<harnessos_agent_task_policy>");
+      expect(toolNames(requestBodies[4])).toContain("harnessos_update_tasks");
       expect(systemPrompt(requestBodies[5])).not.toContain(identity);
       expect(systemPrompt(requestBodies[5])).not.toContain(officialChineseIdentity);
-      expect(toolNames(requestBodies[5])).not.toContain("omnimind_update_tasks");
+      expect(toolNames(requestBodies[5])).not.toContain("harnessos_update_tasks");
     } finally {
       vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });
@@ -2517,7 +2561,7 @@ describe("getPiDiscoverableModels", () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-native-prompt-reload-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
-    const projectAgentDir = path.join(cwd, ".omnimind");
+    const projectAgentDir = path.join(cwd, ".harnessos");
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000064");
     mkdirSync(agentDir, { recursive: true });
     mkdirSync(projectAgentDir, { recursive: true });
@@ -2656,7 +2700,7 @@ describe("getPiDiscoverableModels", () => {
       expect(prompt(requestBodies[3])).toContain("replacement-base-v1");
       expect(prompt(requestBodies[3])).not.toContain("customized-default-v1");
       expect(prompt(requestBodies[3])).toContain("global-context-v2");
-      expect(prompt(requestBodies[3])).toContain("<omnimind_engine_contract>");
+      expect(prompt(requestBodies[3])).toContain("<harnessos_engine_contract>");
       expect(prompt(requestBodies[4])).toContain(
         "Help users by reading files, executing commands, editing code, and writing new files.",
       );
@@ -2768,7 +2812,7 @@ describe("getPiDiscoverableModels", () => {
         'import { Type } from "typebox";',
         "export default function setup(pi) {",
         "  pi.registerTool({",
-        '    name: "omnimind_update_tasks",',
+        '    name: "harnessos_update_tasks",',
         '    label: "Third-party same-name tool",',
         '    description: "A third-party tool that does not own OmniMind Agent tasks.",',
         "    parameters: Type.Object({}),",
@@ -2872,7 +2916,7 @@ describe("getPiDiscoverableModels", () => {
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000065");
-    mkdirSync(path.join(cwd, ".omnimind", "extensions"), { recursive: true });
+    mkdirSync(path.join(cwd, ".harnessos", "extensions"), { recursive: true });
     mkdirSync(path.join(agentDir, "extensions"), { recursive: true });
     writeFileSync(
       path.join(agentDir, "extensions", "same-named-task-tool.ts"),
@@ -2880,7 +2924,7 @@ describe("getPiDiscoverableModels", () => {
         'import { Type } from "typebox";',
         "export default function setup(pi) {",
         "  pi.registerTool({",
-        '    name: "omnimind_update_tasks",',
+        '    name: "harnessos_update_tasks",',
         '    label: "Global same-name tool",',
         '    description: "Must remain a normal global Extension tool.",',
         "    parameters: Type.Object({}),",
@@ -2890,12 +2934,12 @@ describe("getPiDiscoverableModels", () => {
       ].join("\n"),
     );
     writeFileSync(
-      path.join(cwd, ".omnimind", "extensions", "same-named-task-tool.ts"),
+      path.join(cwd, ".harnessos", "extensions", "same-named-task-tool.ts"),
       [
         'import { Type } from "typebox";',
         "export default function setup(pi) {",
         "  pi.registerTool({",
-        '    name: "omnimind_update_tasks",',
+        '    name: "harnessos_update_tasks",',
         '    label: "Project same-name tool",',
         '    description: "Must not acquire Product Todo authority.",',
         "    parameters: Type.Object({}),",
@@ -3057,14 +3101,14 @@ describe("getPiDiscoverableModels", () => {
               runtimeMode: "full-access",
             });
             yield* Effect.sync(() => {
-              mkdirSync(path.join(cwd, ".omnimind", "extensions"), { recursive: true });
+              mkdirSync(path.join(cwd, ".harnessos", "extensions"), { recursive: true });
               writeFileSync(
-                path.join(cwd, ".omnimind", "extensions", "same-named-task-tool.ts"),
+                path.join(cwd, ".harnessos", "extensions", "same-named-task-tool.ts"),
                 [
                   'import { Type } from "typebox";',
                   "export default function setup(pi) {",
                   "  pi.registerTool({",
-                  '    name: "omnimind_update_tasks",',
+                  '    name: "harnessos_update_tasks",',
                   '    label: "Reload collision",',
                   '    description: "Must not close the Product Session.",',
                   "    parameters: Type.Object({}),",
@@ -3936,7 +3980,7 @@ describe("getPiDiscoverableModels", () => {
       // This fixture intentionally starts without a thread-scoped Gateway
       // connection, so mutable Host guidance stays absent while immutable
       // Product identity survives the compaction continuation.
-      expect(finalContinuationPrompt).not.toContain("<omnimind_host_context>");
+      expect(finalContinuationPrompt).not.toContain("<harnessos_host_context>");
       expect(result.terminalsBeforeContinuation).toEqual([]);
       expect(result.duringCompactionContinuation).toContainEqual(
         expect.objectContaining({ activeTurnId: result.turn.turnId, status: "running" }),

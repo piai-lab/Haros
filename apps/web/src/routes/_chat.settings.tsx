@@ -178,23 +178,21 @@ function SettingsRouteView() {
   const activeServerSettings = serverSettings ?? serverDefaults;
   const { icon: desktopAppIcon, updateIcon: updateDesktopAppIcon } = useDesktopAppIcon();
   const { t } = useI18n();
-  const serverSettingsStatus = serverSettings
-    ? undefined
-    : serverSettingsQuery.isError
-      ? (
-          <span className="inline-flex items-center gap-2">
-            <span>{t("settings.unavailable")}</span>
-            <Button
-              type="button"
-              size="xs"
-              variant="outline"
-              onClick={() => void serverSettingsQuery.refetch()}
-            >
-              {t("common.retry")}
-            </Button>
-          </span>
-        )
-      : t("common.loading");
+  const serverSettingsStatus = serverSettings ? undefined : serverSettingsQuery.isError ? (
+    <span className="inline-flex items-center gap-2">
+      <span>{t("settings.unavailable")}</span>
+      <Button
+        type="button"
+        size="xs"
+        variant="outline"
+        onClick={() => void serverSettingsQuery.refetch()}
+      >
+        {t("common.retry")}
+      </Button>
+    </span>
+  ) : (
+    t("common.loading")
+  );
   const updateSettings = (patch: Partial<LocalPreferences>) => {
     const result = updatePreferences(patch);
     if (result.state === "failed") {
@@ -323,8 +321,7 @@ function SettingsRouteView() {
     isElectron && (isWindowsPlatform(platform) || isLinuxPlatform(platform));
   const customTitleBarState = useDesktopCustomTitleBarState();
   const customTitleBarRestartRequired =
-    customTitleBarState.supported &&
-    customTitleBarState.preference !== customTitleBarState.active;
+    customTitleBarState.supported && customTitleBarState.preference !== customTitleBarState.active;
   const customTitleBarPreferenceDirty =
     supportsCustomTitleBarSetting &&
     customTitleBarState.supported &&
@@ -516,18 +513,21 @@ function SettingsRouteView() {
       appearanceResetFailed = true;
     }
     const localResult = resetPreferences();
-    const [serverResult, kiloCredentialResult, openCodeCredentialResult, iconResult, titleBarResult] =
-      await Promise.all([
-        resetServerSettings(),
-        updateProviderCredential("kilo", ""),
-        updateProviderCredential("opencode", ""),
-        isElectron
-          ? updateDesktopAppIcon("default")
-          : Promise.resolve({ state: "saved" as const }),
-        customTitleBarPreferenceDirty
-          ? persistCustomTitleBarPreference(true)
-          : Promise.resolve({ restartRequired: false }),
-      ]);
+    const [
+      serverResult,
+      kiloCredentialResult,
+      openCodeCredentialResult,
+      iconResult,
+      titleBarResult,
+    ] = await Promise.all([
+      resetServerSettings(),
+      updateProviderCredential("kilo", ""),
+      updateProviderCredential("opencode", ""),
+      isElectron ? updateDesktopAppIcon("default") : Promise.resolve({ state: "saved" as const }),
+      customTitleBarPreferenceDirty
+        ? persistCustomTitleBarPreference(true)
+        : Promise.resolve({ restartRequired: false }),
+    ]);
 
     const applyDefaultAppSnapRuntime = async (): Promise<boolean> => {
       const appSnapBridge = window.desktopBridge?.appSnap;

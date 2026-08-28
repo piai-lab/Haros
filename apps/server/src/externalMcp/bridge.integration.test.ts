@@ -98,7 +98,7 @@ describe("external MCP stdio bridge", () => {
 
     expect(invocation.args).toContain("-EncodedCommand");
     expect(invocation.args.join(" ")).not.toContain(targetPath);
-    expect(invocation.options.env.OMNIMIND_RUNTIME_ACL_TARGET).toBe(targetPath);
+    expect(invocation.options.env.HARNESSOS_RUNTIME_ACL_TARGET).toBe(targetPath);
     expect(invocation.options.timeout).toBe(5_000);
   });
 
@@ -109,7 +109,7 @@ describe("external MCP stdio bridge", () => {
           jsonrpc: "2.0",
           id: 1,
           method: "tools/call",
-          params: { name: "omnimind_wait_for_task", arguments: { threadId: "thread-1" } },
+          params: { name: "harnessos_wait_for_task", arguments: { threadId: "thread-1" } },
         }),
       ),
     ).toBe(35_000);
@@ -120,7 +120,7 @@ describe("external MCP stdio bridge", () => {
           id: 2,
           method: "tools/call",
           params: {
-            name: "omnimind_wait_for_task",
+            name: "harnessos_wait_for_task",
             arguments: { threadId: "thread-1", timeoutMs: 60_000 },
           },
         }),
@@ -133,13 +133,13 @@ describe("external MCP stdio bridge", () => {
             jsonrpc: "2.0",
             id: 3,
             method: "tools/call",
-            params: { name: "omnimind_wait_for_task", arguments: { threadId: "thread-1" } },
+            params: { name: "harnessos_wait_for_task", arguments: { threadId: "thread-1" } },
           },
           {
             jsonrpc: "2.0",
             id: 4,
             method: "tools/call",
-            params: { name: "omnimind_wait_for_task", arguments: { threadId: "thread-2" } },
+            params: { name: "harnessos_wait_for_task", arguments: { threadId: "thread-2" } },
           },
         ]),
       ),
@@ -150,7 +150,7 @@ describe("external MCP stdio bridge", () => {
           jsonrpc: "2.0",
           id: 5,
           method: "tools/call",
-          params: { name: "omnimind_create_task", arguments: {} },
+          params: { name: "harnessos_create_task", arguments: {} },
         }),
       ),
     ).toBe(605_000);
@@ -403,7 +403,7 @@ describe("external MCP stdio bridge", () => {
     await serveExternalMcpStdio({
       baseDir,
       stdin: Readable.from([
-        `${JSON.stringify({ jsonrpc: "2.0", id: "slow", method: "tools/call", params: { name: "omnimind_wait_for_task", arguments: { timeoutMs: 100 } } })}\n`,
+        `${JSON.stringify({ jsonrpc: "2.0", id: "slow", method: "tools/call", params: { name: "harnessos_wait_for_task", arguments: { timeoutMs: 100 } } })}\n`,
         `${JSON.stringify({ jsonrpc: "2.0", id: "fast", method: "ping" })}\n`,
       ]),
       stdout: new Writable({
@@ -461,7 +461,7 @@ describe("external MCP stdio bridge", () => {
       },
     });
     stdin.write(
-      `${JSON.stringify({ jsonrpc: "2.0", id: "slow", method: "tools/call", params: { name: "omnimind_wait_for_task", arguments: { threadId: "thread-1" } } })}\n`,
+      `${JSON.stringify({ jsonrpc: "2.0", id: "slow", method: "tools/call", params: { name: "harnessos_wait_for_task", arguments: { threadId: "thread-1" } } })}\n`,
     );
     while (!requestStarted) await new Promise((resolve) => setTimeout(resolve, 1));
     stdin.write(
@@ -514,7 +514,7 @@ describe("external MCP stdio bridge", () => {
           jsonrpc: "2.0",
           id: "slow",
           method: "tools/call",
-          params: { name: "omnimind_wait_for_task", arguments: { threadId: "thread-1" } },
+          params: { name: "harnessos_wait_for_task", arguments: { threadId: "thread-1" } },
         },
         { jsonrpc: "2.0", id: "fast", method: "ping" },
       ])}\n`,

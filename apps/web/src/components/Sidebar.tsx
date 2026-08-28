@@ -1122,7 +1122,7 @@ function SortableProjectItem({
  * Header Activity toggle: a bell that lights up in the accent tone while the
  * Activity view is on, with an unread dot when completions are waiting.
  */
-const ACTIVITY_ONBOARDING_STORAGE_KEY = "omnimind:activity-onboarding:v1";
+const ACTIVITY_ONBOARDING_STORAGE_KEY = "harnessos:activity-onboarding:v1";
 const ACTIVITY_ONBOARDING_DURATION_MS = 8_000;
 
 function shouldShowActivityOnboarding(): boolean {
@@ -2136,11 +2136,7 @@ export default function Sidebar() {
       void handleNewThread(projectId).catch(() => undefined);
       return true;
     },
-    [
-      preferences.sidebarThreadSortOrder,
-      handleNewThread,
-      navigate,
-    ],
+    [preferences.sidebarThreadSortOrder, handleNewThread, navigate],
   );
 
   const openExistingProjectFromSnapshot = useCallback(
@@ -2176,12 +2172,7 @@ export default function Sidebar() {
       void handleNewThread(projectId).catch(() => undefined);
       return true;
     },
-    [
-      preferences.sidebarThreadSortOrder,
-      handleNewThread,
-      navigate,
-      setProjectExpanded,
-    ],
+    [preferences.sidebarThreadSortOrder, handleNewThread, navigate, setProjectExpanded],
   );
 
   // Poll the server read model briefly after project.create so we only recover from fresh state.
@@ -2295,11 +2286,7 @@ export default function Sidebar() {
 
       void handleNewThread(typedProjectId);
     },
-    [
-      focusMostRecentThreadForProject,
-      handleNewThread,
-      sidebarThreads,
-    ],
+    [focusMostRecentThreadForProject, handleNewThread, sidebarThreads],
   );
 
   // Shared resolver behind resolveBackToStudioTarget/resolveBackToThreadsTarget (and the
@@ -2684,12 +2671,7 @@ export default function Sidebar() {
       return;
     }
     handleStartAddProject();
-  }, [
-    handleNewThread,
-    handleStartAddProject,
-    primaryNewThreadTarget,
-    threadsHydrated,
-  ]);
+  }, [handleNewThread, handleStartAddProject, primaryNewThreadTarget, threadsHydrated]);
 
   const handleImportThread = useCallback(
     async (provider: ImportProviderKind, externalId: string) => {

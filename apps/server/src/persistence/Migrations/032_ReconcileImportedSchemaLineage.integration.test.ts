@@ -23,7 +23,7 @@ const projectionProjectsColumnNames = (sql: SqlClient.SqlClient) =>
   `.pipe(Effect.map((rows) => rows.map((row) => row.name)));
 
 layer("032_ReconcileImportedSchemaLineage", (it) => {
-  // Simulates a legacy ~/.omnimind import where the imported `effect_sql_migrations`
+  // Simulates a legacy ~/.harnessos import where the imported `effect_sql_migrations`
   // tracker has IDs 17-31 recorded under unrelated OmniMind names. The 17-31
   // body never ran, so the columns those migrations would have added are
   // missing. Without #032, the server crashes on the first SELECT that

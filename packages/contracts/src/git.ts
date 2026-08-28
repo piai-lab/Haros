@@ -253,7 +253,7 @@ export const GitRemoveWorktreeInput = Schema.Struct({
   cwd: TrimmedNonEmptyStringSchema,
   path: TrimmedNonEmptyStringSchema,
   force: Schema.optional(Schema.Boolean),
-  // Managed worktrees are born on temporary omnimind/* branches. When set, a
+  // Managed worktrees are born on temporary harnessos/* branches. When set, a
   // removal also deletes that branch so retiring the worktree cannot strand it;
   // user-named branches are never touched. Handoff flows leave this unset
   // because they re-home the branch into the root checkout instead.

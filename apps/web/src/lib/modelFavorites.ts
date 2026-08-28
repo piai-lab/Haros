@@ -6,10 +6,10 @@ import type { ProviderKind } from "@harnessos/contracts";
 import { Schema } from "effect";
 
 export const FAVORITE_MODEL_STORAGE_KEYS = {
-  cursor: "omnimind:cursor-favourite-models:v1",
-  kilo: "omnimind:kilo-favourite-models:v1",
-  opencode: "omnimind:opencode-favourite-models:v1",
-  pi: "omnimind:pi-favourite-models:v1",
+  cursor: "harnessos:cursor-favourite-models:v1",
+  kilo: "harnessos:kilo-favourite-models:v1",
+  opencode: "harnessos:opencode-favourite-models:v1",
+  pi: "harnessos:pi-favourite-models:v1",
 } as const;
 
 export type FavoriteModelProvider = keyof typeof FAVORITE_MODEL_STORAGE_KEYS;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Schema } from "effect";
 
-import { OMNIMIND_AGENT_PROMPT_MAX_BYTES } from "./editableText";
+import { HARNESSOS_AGENT_PROMPT_MAX_BYTES } from "./editableText";
 import { BUILT_IN_TOOL_GROUP_OVERRIDE_MAX_KEYS } from "./agentTools";
 import { DEFAULT_SERVER_SETTINGS, ServerSettings, ServerSettingsPatch } from "./settings";
 
@@ -92,7 +92,7 @@ describe("server-only OmniMind default prompt settings", () => {
 
   it("uses the same UTF-8 byte boundary as the prompt contract", () => {
     const emoji = "😀";
-    const withinLimit = emoji.repeat(OMNIMIND_AGENT_PROMPT_MAX_BYTES / 4);
+    const withinLimit = emoji.repeat(HARNESSOS_AGENT_PROMPT_MAX_BYTES / 4);
     const decodeSettings = (defaultPrompt: string) =>
       Schema.decodeUnknownSync(ServerSettings)({
         providers: { omnimind: { defaultPrompt } },

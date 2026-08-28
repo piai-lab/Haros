@@ -102,4 +102,4 @@ export interface OrchestrationEventStoreShape {
 export class OrchestrationEventStore extends ServiceMap.Service<
   OrchestrationEventStore,
   OrchestrationEventStoreShape
->()("omnimind/persistence/Services/OrchestrationEventStore") {}
+>()("harnessos/persistence/Services/OrchestrationEventStore") {}

@@ -6,16 +6,16 @@
 //          shouldRejectUntrustedRequestOrigin
 
 import {
-  OMNIMIND_CANARY_DESKTOP_ORIGIN,
-  OMNIMIND_DESKTOP_ORIGIN,
+  HARNESSOS_CANARY_DESKTOP_ORIGIN,
+  HARNESSOS_DESKTOP_ORIGIN,
 } from "@harnessos/shared/desktopIdentity";
 
 import type { ServerConfigShape } from "./config";
 import { isLoopbackHost, isWildcardHost } from "./startupAccess";
 
 export const DESKTOP_APP_CORS_ORIGINS: ReadonlySet<string> = new Set([
-  OMNIMIND_DESKTOP_ORIGIN,
-  OMNIMIND_CANARY_DESKTOP_ORIGIN,
+  HARNESSOS_DESKTOP_ORIGIN,
+  HARNESSOS_CANARY_DESKTOP_ORIGIN,
 ]);
 
 export function normalizeCorsOrigin(rawOrigin: string | ReadonlyArray<string> | undefined) {

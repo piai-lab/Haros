@@ -9,7 +9,7 @@ import {
 } from "@harnessos/contracts";
 import { resolveThreadWorkspaceCwd as resolveSharedThreadWorkspaceCwd } from "@harnessos/shared/threadEnvironment";
 
-export const CHECKPOINT_REFS_PREFIX = "refs/omnimind/checkpoints";
+export const CHECKPOINT_REFS_PREFIX = "refs/harnessos/checkpoints";
 
 const MANAGED_CHECKPOINT_REF_PATTERN =
   /^refs\/([A-Za-z0-9._-]+)\/checkpoints\/([A-Za-z0-9_-]+)\/(turn|message-start|turn-start|turn-live|revert-rescue)\/([A-Za-z0-9_-]+)$/;

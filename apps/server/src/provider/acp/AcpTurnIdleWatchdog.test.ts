@@ -62,7 +62,7 @@ describe("evaluateAcpTurnIdleTick", () => {
 });
 
 describe("resolveAcpTurnIdleTimeoutMs", () => {
-  const envVar = "OMNIMIND_TEST_TURN_IDLE_TIMEOUT_MS";
+  const envVar = "HARNESSOS_TEST_TURN_IDLE_TIMEOUT_MS";
   const defaultMs = 600_000;
 
   it("falls back to the default when unset, blank, or non-numeric", () => {

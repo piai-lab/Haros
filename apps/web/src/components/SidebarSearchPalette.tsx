@@ -800,7 +800,9 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                           }}
                         >
                           <LuCornerLeftUp className="size-3.5 text-muted-foreground/60" />
-                          <span className="min-w-0 flex-1 truncate text-sm text-foreground">..</span>
+                          <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+                            ..
+                          </span>
                         </CommandItem>
                       ) : null}
                       {filteredBrowseEntries.map((entry) => (

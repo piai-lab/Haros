@@ -38,7 +38,7 @@ import {
 import { ChildProcessSpawner } from "effect/unstable/process";
 import type * as Acp from "@agentclientprotocol/sdk";
 
-import { buildAcpOmniMindMcpServers } from "../../agentGateway/mcpInjection.ts";
+import { buildAcpHarnessOSMcpServers } from "../../agentGateway/mcpInjection.ts";
 import {
   type OmniMindHarnessPolicyDeliveryState,
   takeOmniMindHarnessPolicyTextPartForProviderSession,
@@ -137,7 +137,7 @@ export const takeDroidOmniMindHarnessPolicyTextPart = (
 const DROID_RESUME_VERSION = 1 as const;
 const DROID_ACP_TRANSPORT_DEBUG_MARKER = "droid-acp-meta-stripper-v2";
 const DROID_ACP_LOG_PAYLOAD_LIMIT = 4_000;
-const DROID_ACP_DEBUG_ENV = "OMNIMIND_DROID_ACP_DEBUG";
+const DROID_ACP_DEBUG_ENV = "HARNESSOS_DROID_ACP_DEBUG";
 const LEGACY_DROID_ACP_DEBUG_ENV = "DP_DROID_ACP_DEBUG";
 const DROID_RESUME_REPLAY_QUIET_MS = 350;
 // Bounds how long startSession blocks on the replay settling; the background
@@ -149,9 +149,9 @@ const DROID_TURN_SETTLE_DRAIN_POLL_MS = 25;
 // Backstop for an alive-but-silent droid child: if a turn produces no ACP
 // activity for this long, force-fail it instead of showing "Working" forever.
 // Generous by design so legitimate long, quiet tool runs are not killed;
-// override with OMNIMIND_DROID_TURN_IDLE_TIMEOUT_MS when a workload needs longer.
+// override with HARNESSOS_DROID_TURN_IDLE_TIMEOUT_MS when a workload needs longer.
 const DROID_TURN_IDLE_TIMEOUT_MS = resolveAcpTurnIdleTimeoutMs({
-  envVar: "OMNIMIND_DROID_TURN_IDLE_TIMEOUT_MS",
+  envVar: "HARNESSOS_DROID_TURN_IDLE_TIMEOUT_MS",
   defaultMs: 600_000,
 });
 const DROID_TURN_WATCHDOG_INTERVAL_MS = 15_000;
@@ -870,7 +870,7 @@ export function makeDroidAdapter(
             ...(agentGatewayCredentials
               ? {
                   buildMcpServers: (initializeResult: Acp.InitializeResponse) =>
-                    buildAcpOmniMindMcpServers({
+                    buildAcpHarnessOSMcpServers({
                       connection: gatewaySessionLease!.connection,
                       initializeResult,
                       stdioProxy: agentGatewayCredentials.stdioProxy,

@@ -12,17 +12,17 @@ export default Effect.gen(function* () {
   // A correlated lookup over a materialized CTE becomes quadratic on large
   // histories. Build an indexed temporary lookup once, then backfill each
   // projection row through its primary key.
-  yield* sql`DROP TABLE IF EXISTS temp_omnimind_activity_sequences`;
+  yield* sql`DROP TABLE IF EXISTS temp_harnessos_activity_sequences`;
 
   yield* sql`
-    CREATE TEMP TABLE temp_omnimind_activity_sequences (
+    CREATE TEMP TABLE temp_harnessos_activity_sequences (
       activity_id TEXT PRIMARY KEY,
       sequence INTEGER NOT NULL
     ) WITHOUT ROWID
   `;
 
   yield* sql`
-    INSERT INTO temp_omnimind_activity_sequences (activity_id, sequence)
+    INSERT INTO temp_harnessos_activity_sequences (activity_id, sequence)
     SELECT
       json_extract(payload_json, '$.activity.id') AS activity_id,
       MAX(sequence) AS sequence
@@ -35,17 +35,17 @@ export default Effect.gen(function* () {
   yield* sql`
     UPDATE projection_thread_activities
     SET sequence = (
-      SELECT temp_omnimind_activity_sequences.sequence
-      FROM temp_omnimind_activity_sequences
-      WHERE temp_omnimind_activity_sequences.activity_id = projection_thread_activities.activity_id
+      SELECT temp_harnessos_activity_sequences.sequence
+      FROM temp_harnessos_activity_sequences
+      WHERE temp_harnessos_activity_sequences.activity_id = projection_thread_activities.activity_id
     )
     WHERE sequence IS NULL
       AND EXISTS (
         SELECT 1
-        FROM temp_omnimind_activity_sequences
-        WHERE temp_omnimind_activity_sequences.activity_id = projection_thread_activities.activity_id
+        FROM temp_harnessos_activity_sequences
+        WHERE temp_harnessos_activity_sequences.activity_id = projection_thread_activities.activity_id
       )
   `;
 
-  yield* sql`DROP TABLE temp_omnimind_activity_sequences`;
+  yield* sql`DROP TABLE temp_harnessos_activity_sequences`;
 });

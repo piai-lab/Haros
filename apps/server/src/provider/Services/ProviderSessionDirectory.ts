@@ -66,4 +66,4 @@ export interface ProviderSessionDirectoryShape {
 export class ProviderSessionDirectory extends ServiceMap.Service<
   ProviderSessionDirectory,
   ProviderSessionDirectoryShape
->()("omnimind/provider/Services/ProviderSessionDirectory") {}
+>()("harnessos/provider/Services/ProviderSessionDirectory") {}

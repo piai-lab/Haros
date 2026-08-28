@@ -10,7 +10,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { isPlainObject, sanitizeStringKeyedRecord } from "./persistedRecord";
 
-const BROWSER_STATE_STORAGE_KEY = "omnimind:browser-state:v1";
+const BROWSER_STATE_STORAGE_KEY = "harnessos:browser-state:v1";
 const BROWSER_HISTORY_LIMIT = 12;
 const EMPTY_BROWSER_HISTORY: BrowserHistoryEntry[] = [];
 
@@ -48,7 +48,7 @@ function isTemporaryEngineSurfaceUrl(url: string): boolean {
       parsed.searchParams.has("session")
     );
   } catch {
-    return url === "omnimind://temporary-page";
+    return url === "harnessos://temporary-page";
   }
 }
 

@@ -244,7 +244,7 @@ describe("OmniMindModelServicesLive", () => {
     },
   );
 
-  it("projects exact .omnimind built-in service facts without commands, network, or mutation", async () => {
+  it("projects exact .harnessos built-in service facts without commands, network, or mutation", async () => {
     const root = await makeRoot();
     const providerHome = await isolateProviderEnvironment(root);
     const agentDir = path.join(root, "agent");
@@ -395,7 +395,7 @@ describe("OmniMindModelServicesLive", () => {
           name: "Extension Service",
           baseUrl: "https://extension.invalid/v1",
           api: "openai-responses",
-          apiKey: "$OMNIMIND_EXTENSION_TEST_KEY",
+          apiKey: "$HARNESSOS_EXTENSION_TEST_KEY",
           models: [
             {
               id: "extension-model",
@@ -613,7 +613,7 @@ describe("OmniMindModelServicesLive", () => {
           name: "Extension Auth",
           baseUrl: "https://extension.invalid/v1",
           api: "openai-responses",
-          apiKey: "$OMNIMIND_EXTENSION_TEST_KEY",
+          apiKey: "$HARNESSOS_EXTENSION_TEST_KEY",
           oauth: {
             name: "Extension OAuth",
             login: async () => ({
@@ -732,7 +732,7 @@ describe("OmniMindModelServicesLive", () => {
           name: "Configured Extension",
           baseUrl: "https://extension.invalid/v1",
           api: "openai-responses",
-          apiKey: "$OMNIMIND_CONFIGURED_EXTENSION_KEY",
+          apiKey: "$HARNESSOS_CONFIGURED_EXTENSION_KEY",
           models: [],
         });
         await options.modelRuntime!.setRuntimeApiKey(

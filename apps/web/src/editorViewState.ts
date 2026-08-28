@@ -6,8 +6,8 @@
 import type { ProjectId, ProviderKind, ThreadId } from "@harnessos/contracts";
 import { isProviderKind } from "./providerOrdering";
 
-const EDITOR_VIEW_STATE_STORAGE_KEY = "omnimind.editor.viewStateByThreadId";
-const EDITOR_RAIL_CHAT_TABS_STORAGE_KEY = "omnimind.editor.railChatTabsByProjectId";
+const EDITOR_VIEW_STATE_STORAGE_KEY = "harnessos:editor:view-state-by-thread:v1";
+const EDITOR_RAIL_CHAT_TABS_STORAGE_KEY = "harnessos:editor:rail-chat-tabs-by-project:v1";
 const MAX_PERSISTED_THREADS = 50;
 const MAX_EDITOR_RAIL_CHAT_TABS = 8;
 

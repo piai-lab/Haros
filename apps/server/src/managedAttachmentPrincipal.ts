@@ -15,7 +15,7 @@ export const LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL: ManagedAttachmentPrincipal = {
  * persisted orchestration events.
  */
 export const CurrentManagedAttachmentPrincipal = ServiceMap.Reference<ManagedAttachmentPrincipal>(
-  "omnimind/attachments/CurrentManagedAttachmentPrincipal",
+  "harnessos/attachments/CurrentManagedAttachmentPrincipal",
   { defaultValue: () => LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL },
 );
 

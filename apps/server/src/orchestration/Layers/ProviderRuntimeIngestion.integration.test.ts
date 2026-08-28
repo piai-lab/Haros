@@ -3175,8 +3175,7 @@ describe("ProviderRuntimeIngestion", () => {
     const thread = await waitForThread(harness.engine, (entry) =>
       entry.activities.some(
         (activity: ProviderRuntimeTestActivity) =>
-          activity.id.startsWith(stableActivityIdPrefix) &&
-          activity.kind === "reasoning.completed",
+          activity.id.startsWith(stableActivityIdPrefix) && activity.kind === "reasoning.completed",
       ),
     );
 
@@ -3259,8 +3258,7 @@ describe("ProviderRuntimeIngestion", () => {
     const thread = await waitForThread(harness.engine, (entry) =>
       entry.activities.some(
         (activity: ProviderRuntimeTestActivity) =>
-          activity.id.startsWith(stableActivityIdPrefix) &&
-          activity.kind === "reasoning.completed",
+          activity.id.startsWith(stableActivityIdPrefix) && activity.kind === "reasoning.completed",
       ),
     );
     const reasoningActivities = thread.activities.filter((activity: ProviderRuntimeTestActivity) =>

@@ -89,4 +89,4 @@ export interface SessionCredentialServiceShape {
 export class SessionCredentialService extends ServiceMap.Service<
   SessionCredentialService,
   SessionCredentialServiceShape
->()("omnimind/auth/Services/SessionCredentialService") {}
+>()("harnessos/auth/Services/SessionCredentialService") {}

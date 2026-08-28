@@ -836,7 +836,7 @@ layer("ExternalMcpRepository", (it) => {
         repository.beginAudit({
           auditId,
           integrationId: "integration-rate",
-          tool: "omnimind_list_allowed_projects",
+          tool: "harnessos_list_allowed_projects",
           requestId: null,
           projectId: null,
           runtimeMode: null,
@@ -871,7 +871,7 @@ layer("ExternalMcpRepository", (it) => {
         yield* repository.beginAudit({
           auditId: `bounded-audit-${index}`,
           integrationId: "integration-bounded-rate",
-          tool: "omnimind_list_allowed_projects",
+          tool: "harnessos_list_allowed_projects",
           requestId: null,
           projectId: null,
           runtimeMode: null,

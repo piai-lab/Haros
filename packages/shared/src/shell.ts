@@ -5,8 +5,8 @@
 import * as OS from "node:os";
 import { execFileSync } from "node:child_process";
 
-const PATH_CAPTURE_START = "__OMNIMIND_PATH_START__";
-const PATH_CAPTURE_END = "__OMNIMIND_PATH_END__";
+const PATH_CAPTURE_START = "__HARNESSOS_PATH_START__";
+const PATH_CAPTURE_END = "__HARNESSOS_PATH_END__";
 const SHELL_ENV_NAME_PATTERN = /^[A-Z0-9_]+$/;
 
 type ExecFileSyncLike = (
@@ -29,7 +29,7 @@ function trimNonEmpty(value: string | null | undefined): string | undefined {
  * it spawns the backend, and the backend inherits the result — so without this marker
  * the same probe is serialized a second time before the server ever starts listening.
  */
-export const SHELL_ENVIRONMENT_HYDRATED_ENV_NAME = "OMNIMIND_PATH_HYDRATED";
+export const SHELL_ENVIRONMENT_HYDRATED_ENV_NAME = "HARNESSOS_PATH_HYDRATED";
 export const SHELL_ENVIRONMENT_HYDRATED_ENV_VALUE = "1";
 
 /**
@@ -169,11 +169,11 @@ export function mergePathEntries(
 }
 
 function envCaptureStart(name: string): string {
-  return `__OMNIMIND_ENV_${name}_START__`;
+  return `__HARNESSOS_ENV_${name}_START__`;
 }
 
 function envCaptureEnd(name: string): string {
-  return `__OMNIMIND_ENV_${name}_END__`;
+  return `__HARNESSOS_ENV_${name}_END__`;
 }
 
 function buildEnvironmentCaptureCommand(names: ReadonlyArray<string>): string {

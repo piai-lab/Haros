@@ -28,7 +28,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 
-const APP_SNAP_WELCOME_STORAGE_KEY = "omnimind:appsnap-welcome:v1";
+const APP_SNAP_WELCOME_STORAGE_KEY = "harnessos:appsnap-welcome:v1";
 
 const AppSnapWelcomeStorageSchema = Schema.Struct({
   acknowledged: Schema.Boolean,

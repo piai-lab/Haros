@@ -22,13 +22,13 @@ describe("bundleSignatureFromStats", () => {
 
 describe("isWatchableBundlePath", () => {
   it("accepts a packaged asar app path", () => {
-    expect(isWatchableBundlePath("/Applications/OmniMind.app/Contents/Resources/app.asar")).toBe(
+    expect(isWatchableBundlePath("/Applications/HarnessOS.app/Contents/Resources/app.asar")).toBe(
       true,
     );
   });
 
   it("rejects an unpackaged directory app path", () => {
-    expect(isWatchableBundlePath("/Users/me/dev/omnimind/apps/desktop")).toBe(false);
+    expect(isWatchableBundlePath("/Users/me/dev/harnessos/apps/desktop")).toBe(false);
   });
 });
 

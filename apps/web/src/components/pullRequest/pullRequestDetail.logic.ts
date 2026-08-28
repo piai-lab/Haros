@@ -61,7 +61,9 @@ export function pullRequestMergeExpectation(
   const stack = detail.stack;
   if (!stack) return { kind: "standalone", baseBranch: detail.baseBranch };
   if (!pullRequestStackNavigation(detail)) return null;
-  const targetPullRequestNumbers = pullRequestStackTargetEntries(stack).map((entry) => entry.number);
+  const targetPullRequestNumbers = pullRequestStackTargetEntries(stack).map(
+    (entry) => entry.number,
+  );
   if (targetPullRequestNumbers.at(-1) !== detail.number) return null;
   return {
     kind: "stack",

@@ -67,7 +67,7 @@ describe("localServerFolderLabel", () => {
   });
 
   it("ignores a trailing separator", () => {
-    expect(localServerFolderLabel(makeServer({ cwd: "/Users/me/Developer/omnimind/" }))).toBe(
+    expect(localServerFolderLabel(makeServer({ cwd: "/Users/me/Developer/harnessos/" }))).toBe(
       "omnimind",
     );
   });

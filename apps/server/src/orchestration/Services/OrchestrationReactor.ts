@@ -34,4 +34,4 @@ export interface OrchestrationReactorShape {
 export class OrchestrationReactor extends ServiceMap.Service<
   OrchestrationReactor,
   OrchestrationReactorShape
->()("omnimind/orchestration/Services/OrchestrationReactor") {}
+>()("harnessos/orchestration/Services/OrchestrationReactor") {}

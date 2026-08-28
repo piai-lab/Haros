@@ -88,9 +88,7 @@ export function AgentActivityDetailView({
                 </h2>
                 <span className="rounded-full border border-border/45 px-2 py-0.5 text-[10px] font-medium text-muted-foreground/56">
                   {t(
-                    detail.entries.length === 1
-                      ? "agentActivity.update"
-                      : "agentActivity.updates",
+                    detail.entries.length === 1 ? "agentActivity.update" : "agentActivity.updates",
                     { count: detail.entries.length },
                   )}
                 </span>

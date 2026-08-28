@@ -35,7 +35,7 @@ const descriptors = [
     provenance: "agent-gateway",
   },
   {
-    name: "omnimind_list_threads",
+    name: "harnessos_list_threads",
     description: "List OmniMind threads.",
     inputSchema: { type: "object", properties: {} },
     group: "tasks",
@@ -113,7 +113,7 @@ describe.each([
     });
 
     expect(session.getActiveToolNames()).toEqual(
-      expect.arrayContaining(["team_tool", "browser_open", "omnimind_list_threads"]),
+      expect.arrayContaining(["team_tool", "browser_open", "harnessos_list_threads"]),
     );
     const inspection = inspectAgentGatewayHostExtensionRegistration({
       extensions: resourceLoader.getExtensions(),
@@ -121,7 +121,7 @@ describe.each([
     });
     expect(inspection).toMatchObject({
       available: true,
-      deliveredToolNames: ["browser_open", "omnimind_list_threads"],
+      deliveredToolNames: ["browser_open", "harnessos_list_threads"],
       collidedToolNames: [],
     });
   });
@@ -148,7 +148,7 @@ describe.each([
 
     expect(factoryCalls).toBe(2);
     expect(handle.requiresReload(catalog)).toBe(false);
-    expect(session.getActiveToolNames()).toContain("omnimind_list_threads");
+    expect(session.getActiveToolNames()).toContain("harnessos_list_threads");
     expect(session.getAllTools().map(({ name }) => name)).not.toContain("browser_open");
   });
 
@@ -180,14 +180,14 @@ describe.each([
     await session.reload();
 
     expect(session.getActiveToolNames()).toEqual(
-      expect.arrayContaining(["team_tool", "browser_open", "omnimind_list_threads"]),
+      expect.arrayContaining(["team_tool", "browser_open", "harnessos_list_threads"]),
     );
     expect(
       handle.inspectRegistration({
         extensions: resourceLoader.getExtensions(),
         tools: session.getAllTools(),
       }).deliveredToolNames,
-    ).toEqual(["browser_open", "omnimind_list_threads"]);
+    ).toEqual(["browser_open", "harnessos_list_threads"]);
   });
 
   it("keeps a foreign same-name winner and degrades only the collided Host capability", async () => {
@@ -205,7 +205,7 @@ describe.each([
       tools: session.getAllTools(),
     });
 
-    expect(inspection.deliveredToolNames).toEqual(["omnimind_list_threads"]);
+    expect(inspection.deliveredToolNames).toEqual(["harnessos_list_threads"]);
     expect(inspection.collidedToolNames).toEqual(["browser_open"]);
     expect(
       renderDeliveredAgentGatewayHostGuidance({

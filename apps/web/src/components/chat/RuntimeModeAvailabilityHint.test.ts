@@ -53,8 +53,8 @@ describe("runtime mode availability presentation", () => {
     expect(runtimeModeAvailabilityMessageKeyFromError({ code: "provider-not-installed" })).toBe(
       "composer.runtimeModeProviderNotInstalled",
     );
-    expect(runtimeModeAvailabilityMessageKeyFromError({ code: "runtime-version-unsupported" })).toBe(
-      "composer.runtimeModeVersionUnsupported",
-    );
+    expect(
+      runtimeModeAvailabilityMessageKeyFromError({ code: "runtime-version-unsupported" }),
+    ).toBe("composer.runtimeModeVersionUnsupported");
   });
 });

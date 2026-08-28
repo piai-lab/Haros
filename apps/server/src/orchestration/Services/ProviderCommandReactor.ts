@@ -68,4 +68,4 @@ export interface ProviderCommandReactorShape {
 export class ProviderCommandReactor extends ServiceMap.Service<
   ProviderCommandReactor,
   ProviderCommandReactorShape
->()("omnimind/orchestration/Services/ProviderCommandReactor") {}
+>()("harnessos/orchestration/Services/ProviderCommandReactor") {}

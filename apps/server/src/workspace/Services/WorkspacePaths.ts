@@ -66,5 +66,5 @@ export interface WorkspacePathsShape {
 }
 
 export class WorkspacePaths extends ServiceMap.Service<WorkspacePaths, WorkspacePathsShape>()(
-  "omnimind/workspace/Services/WorkspacePaths",
+  "harnessos/workspace/Services/WorkspacePaths",
 ) {}

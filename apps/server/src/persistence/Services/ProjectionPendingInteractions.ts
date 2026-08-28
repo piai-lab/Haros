@@ -89,5 +89,5 @@ export class ProjectionPendingInteractionRepository extends ServiceMap.Service<
   ProjectionPendingInteractionRepository,
   ProjectionPendingInteractionRepositoryShape
 >()(
-  "omnimind/persistence/Services/ProjectionPendingInteractions/ProjectionPendingInteractionRepository",
+  "harnessos/persistence/Services/ProjectionPendingInteractions/ProjectionPendingInteractionRepository",
 ) {}

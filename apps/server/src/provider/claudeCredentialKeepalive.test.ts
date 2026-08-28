@@ -22,14 +22,14 @@ describe("claudeCredentialKeepalive", () => {
     assert.equal(
       isClaudeCredentialKeepaliveEnabled({
         platform: "darwin",
-        env: { OMNIMIND_CLAUDE_KEEPALIVE: "1" },
+        env: { HARNESSOS_CLAUDE_KEEPALIVE: "1" },
       }),
       true,
     );
     assert.equal(
       isClaudeCredentialKeepaliveEnabled({
         platform: "linux",
-        env: { OMNIMIND_CLAUDE_KEEPALIVE: "1" },
+        env: { HARNESSOS_CLAUDE_KEEPALIVE: "1" },
       }),
       false,
     );
@@ -51,13 +51,13 @@ describe("claudeCredentialKeepalive", () => {
   it("clamps keepalive intervals to Node's maximum timer delay", () => {
     assert.equal(
       resolveClaudeCredentialKeepaliveIntervalMs({
-        OMNIMIND_CLAUDE_KEEPALIVE_MINUTES: "60",
+        HARNESSOS_CLAUDE_KEEPALIVE_MINUTES: "60",
       }),
       60 * 60 * 1000,
     );
     assert.equal(
       resolveClaudeCredentialKeepaliveIntervalMs({
-        OMNIMIND_CLAUDE_KEEPALIVE_MINUTES: "999999999",
+        HARNESSOS_CLAUDE_KEEPALIVE_MINUTES: "999999999",
       }),
       CLAUDE_CREDENTIAL_KEEPALIVE_MAX_INTERVAL_MS,
     );
@@ -66,7 +66,7 @@ describe("claudeCredentialKeepalive", () => {
   it("falls back to the default interval for invalid tuning values", () => {
     assert.equal(
       resolveClaudeCredentialKeepaliveIntervalMs({
-        OMNIMIND_CLAUDE_KEEPALIVE_MINUTES: "0",
+        HARNESSOS_CLAUDE_KEEPALIVE_MINUTES: "0",
       }),
       30 * 60 * 1000,
     );

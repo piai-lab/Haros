@@ -22,9 +22,7 @@ export function useProviderStatusesForLocalConfig(): readonly ServerProviderStat
       normalizeProviderStatusForLocalConfig({
         provider: status.provider,
         status,
-        customBinaryPath: settings
-          ? getCustomBinaryPathForProvider(settings, status.provider)
-          : "",
+        customBinaryPath: settings ? getCustomBinaryPathForProvider(settings, status.provider) : "",
       }),
     )
     .flatMap((status) => (status ? [status] : []));

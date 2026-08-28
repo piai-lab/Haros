@@ -755,7 +755,7 @@ describe("wsNativeApi", () => {
             policy: "loopback-browser",
             bootstrapMethods: ["one-time-token"],
             sessionMethods: ["browser-session-cookie", "bearer-session-token"],
-            sessionCookieName: "omnimind_session",
+            sessionCookieName: "harnessos_session",
           },
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },

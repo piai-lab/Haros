@@ -109,7 +109,7 @@ function makeBackend() {
   // The helper is normally compiled on first attach; the fake stands in for the
   // compiled binary so these tests never touch the toolchain.
   Object.defineProperty(backend, "compileHelperIfNeeded", {
-    value: async () => "/tmp/omnimind-device-test-cache/omnimind-device-helper",
+    value: async () => "/tmp/omnimind-device-test-cache/harnessos-device-helper",
   });
   return { backend, helper };
 }

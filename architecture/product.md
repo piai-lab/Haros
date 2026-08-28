@@ -50,7 +50,7 @@ Agent 是 folder-backed 工作方式：使用现有 Project、Thread、File/View
 
 Agent 不是 durable entity。Provider 默认是 bundled OmniMind Agent，也可以选择 stock Pi、Codex、Claude、OpenCode 等；产品中的 “Agent” 顶层入口不等于 runtime 中的 Provider 或 Session。
 
-OmniMind Agent 可以在当前 Root turn 内创建 bounded child Session；Root 始终对最终任务负责。child identity、状态和结果通过既有 Provider runtime event/Thread projection进入产品，不形成第二 Agent/Run registry。child 默认继承 Root exact model，也可明确选择同一 `.omnimind` Model/Auth authority 中已配置的 exact provider/model；不可用时准确失败，不 silent fallback。App/Server crash 后 active child 只恢复为 `interrupted` truth，不自动 mid-flight replay。
+OmniMind Agent 可以在当前 Root turn 内创建 bounded child Session；Root 始终对最终任务负责。child identity、状态和结果通过既有 Provider runtime event/Thread projection进入产品，不形成第二 Agent/Run registry。child 默认继承 Root exact model，也可明确选择同一 `.harnessos` Model/Auth authority 中已配置的 exact provider/model；不可用时准确失败，不 silent fallback。App/Server crash 后 active child 只恢复为 `interrupted` truth，不自动 mid-flight replay。
 
 ### Chat
 
@@ -91,7 +91,7 @@ Conversation/Thread 不是 Provider Session。一条可见 Thread 可以按 turn
 
 Provider runtime 启动成功后，Product 对该次接纳所拥有的 Session 投影、exact `ModelSelection`、runtime mode 与 interaction mode 必须由同一个 internal Orchestration command 在同一 SQLite transaction 中提交；不得先单独提交 Session 再以多个 command 补写 binding metadata。事务内任一 event/projection/receipt 失败时整组保持旧值，safe retry 可重新提交整组但不得重复启动 runtime 或发送 prompt。Provider native Session 的启动/恢复与 Product SQLite transaction 属于两个不同 authority，无法伪装成跨进程原子事务；若进程在两者之间退出，只能按既有 unknown/quarantine 与 no-replay 边界恢复，不能把 native 成功推断为 Product binding 已提交。
 
-OmniMind Agent 使用独立 `omnimind` Provider identity；stock Pi 保持 `pi` identity。二者可以共享经过证明同构的 Pi-family adapter core，但各自拥有 Session、version、configuration、state root、Package install state 与 diagnostics。OmniMind Agent 的全局和 project-local private state 都属于 `.omnimind`；stock Pi 的对应 native state 属于 `.pi`。任何 binding、resume cursor、native reference 或 filesystem state 都不能跨两者复用。
+OmniMind Agent 使用独立 `omnimind` Provider identity；stock Pi 保持 `pi` identity。二者可以共享经过证明同构的 Pi-family adapter core，但各自拥有 Session、version、configuration、state root、Package install state 与 diagnostics。OmniMind Agent 的全局和 project-local private state 都属于 `.harnessos`；stock Pi 的对应 native state 属于 `.pi`。任何 binding、resume cursor、native reference 或 filesystem state 都不能跨两者复用。
 
 OmniMind Agent 提示词设置必须区分三类持久输入与 runtime snapshot：安装版本随附的 factory default 是 bundled runtime truth；用户 customized default 是 Server settings truth，未定制时不存在；global custom rules 是 runtime-active candidate 的文件 truth。设置页只修改前述 provider-global 持久事实，不拥有或选择任何 Conversation/Thread。已创建 Session 和已准入 operation 的 system prompt、messages 与 tools snapshot 已冻结，不能被保存追溯热切；新的或正常重建的 Session 读取当时当前的全局值。产品不保存 `pending prompt`、generation、LKG、history、rollback 或 cache dashboard 来把这些事实伪装成一个事务。
 
@@ -146,7 +146,7 @@ V1 没有跨 Provider Package authority：
 
 公开 Alpha 前，旧开发状态不是 migration input，也不是 deletion target。外层 inherited orchestration 使用新的 first-public namespace；旧 Product/service/draft 与此前自建 Package product state 保持原样、零读取、零修改。
 
-Provider native state、credentials、stock Pi settings/packages/session files、用户 workspace、Git、global config 与未知路径始终不动。OmniMind Agent 使用新的 `.omnimind` 全局与 project-local namespace，不读取或写入 `.pi`。只有用户显式选择 stock Pi Provider 后，stock Pi 自己才可按其原生 contract 使用 `.pi`；这不构成 OmniMind Agent 的迁移、同步或共享。若当前未发布 namespace 与旧字节碰撞，改变当前 namespace。
+Provider native state、credentials、stock Pi settings/packages/session files、用户 workspace、Git、global config 与未知路径始终不动。OmniMind Agent 使用新的 `.harnessos` 全局与 project-local namespace，不读取或写入 `.pi`。只有用户显式选择 stock Pi Provider 后，stock Pi 自己才可按其原生 contract 使用 `.pi`；这不构成 OmniMind Agent 的迁移、同步或共享。若当前未发布 namespace 与旧字节碰撞，改变当前 namespace。
 
 已退休的 Synara `Project instructions` 不属于 first-public 产品状态：不再有 Project 级 store、reader、writer、autosave、手动 copy 或新 Thread/Automation promotion 预填。Notepad 仍由当前 Thread 的既有 notes authority 拥有；由于历史 notes 没有可证明的来源标记，退休动作不扫描、不删除也不重写已有 Thread notes。旧 Project instructions 不迁移到 `AGENTS.md`、Notepad 或其他 Prompt 资源，产品也不为没有用户的开发期 key 保留 migration/cleanup rail。
 

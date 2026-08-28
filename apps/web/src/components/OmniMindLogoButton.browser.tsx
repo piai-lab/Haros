@@ -29,7 +29,7 @@ describe("OmniMindLogoButton", () => {
       />,
     );
     const button = screen.getByRole("button", { name: "Focus composer" });
-    const mark = button.element().querySelector<HTMLElement>(".omnimind-logo-motion-target");
+    const mark = button.element().querySelector<HTMLElement>(".harnessos-logo-motion-target");
     if (!mark) throw new Error("Soft Orbit target is missing");
 
     expect(button.element().getBoundingClientRect().width).toBeGreaterThanOrEqual(44);
@@ -45,7 +45,8 @@ describe("OmniMindLogoButton", () => {
     expect(onClick).toHaveBeenCalledTimes(1);
 
     const buttonElement = button.element();
-    if (!(buttonElement instanceof HTMLButtonElement)) throw new Error("Logo trigger is not a button");
+    if (!(buttonElement instanceof HTMLButtonElement))
+      throw new Error("Logo trigger is not a button");
     buttonElement.click();
     buttonElement.click();
     buttonElement.click();
@@ -60,7 +61,7 @@ describe("OmniMindLogoButton", () => {
       <OmniMindLogoButton aria-label="Focus composer" reducedMotion={false} onClick={onClick} />,
     );
     const button = screen.getByRole("button", { name: "Focus composer" });
-    const mark = button.element().querySelector<HTMLElement>(".omnimind-logo-motion-target");
+    const mark = button.element().querySelector<HTMLElement>(".harnessos-logo-motion-target");
     if (!mark) throw new Error("Soft Orbit target is missing");
 
     button.element().dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
@@ -69,9 +70,11 @@ describe("OmniMindLogoButton", () => {
     expect(pressTiming?.easing).toBe("cubic-bezier(0.22, 1, 0.36, 1)");
     await new Promise((resolve) => window.setTimeout(resolve, 90));
     expect(getComputedStyle(mark).transform).not.toBe("none");
-    button.element().dispatchEvent(
-      new PointerEvent("pointerout", { bubbles: true, relatedTarget: document.body }),
-    );
+    button
+      .element()
+      .dispatchEvent(
+        new PointerEvent("pointerout", { bubbles: true, relatedTarget: document.body }),
+      );
     expect(getComputedStyle(mark).transform).toBe("none");
 
     button.element().dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
@@ -95,7 +98,7 @@ describe("OmniMindLogoButton", () => {
       />,
     );
     const button = screen.getByRole("button", { name: "Focus composer" });
-    const mark = button.element().querySelector<HTMLElement>(".omnimind-logo-motion-target");
+    const mark = button.element().querySelector<HTMLElement>(".harnessos-logo-motion-target");
     if (!mark) throw new Error("Soft Orbit target is missing");
 
     await button.click();

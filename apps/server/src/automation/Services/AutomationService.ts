@@ -103,4 +103,4 @@ export interface AutomationServiceShape {
 export class AutomationService extends ServiceMap.Service<
   AutomationService,
   AutomationServiceShape
->()("omnimind/automation/Services/AutomationService") {}
+>()("harnessos/automation/Services/AutomationService") {}

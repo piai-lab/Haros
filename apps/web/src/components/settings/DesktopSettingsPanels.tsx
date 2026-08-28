@@ -170,7 +170,7 @@ export function NotificationsSettingsPanel({ active }: { readonly active: boolea
       return;
     }
 
-    const notification = new Notification(title, { body, tag: "omnimind:test-notification" });
+    const notification = new Notification(title, { body, tag: "harnessos:test-notification" });
     notification.addEventListener("click", () => {
       window.focus();
     });

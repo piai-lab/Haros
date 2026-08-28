@@ -21,14 +21,14 @@ import {
   MAC_DEVICE_HELPER_RESOURCE_PATH,
   validateDesktopNativeBuildHost,
 } from "./lib/desktop-platform-build-config.ts";
-import { OMNIMIND_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
+import { HARNESSOS_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
 import { parseBooleanEnvValue } from "./lib/env-bool.ts";
 import { finalizeSignedMacDmg } from "./lib/mac-dmg-finalize.ts";
 import { finalizeMacUpdateZip } from "./lib/mac-update-zip-finalize.ts";
 import { verifyPackagedLegalClosure } from "./lib/packaged-legal-closure.ts";
 import { writeReleaseLegalMetadata } from "./lib/release-legal-metadata.ts";
 import {
-  OMNIMIND_PI_RUNTIME_PACKAGE_PATH,
+  HARNESSOS_PI_RUNTIME_PACKAGE_PATH,
   omitBundledServerWorkspaceDependencies,
   RELEASE_LOCKFILE_PATH,
   RELEASE_PATCHES_PATH,
@@ -223,7 +223,7 @@ interface StagePackageJson {
   readonly name: string;
   readonly version: string;
   readonly buildVersion: string;
-  readonly omnimindCommitHash: string;
+  readonly harnessosCommitHash: string;
   readonly omnimindLockfileSha256: string;
   readonly omnimindSourceTag: string | null;
   readonly omnimindWindowsPublisherSubject: string | null;
@@ -255,20 +255,20 @@ const AzureTrustedSigningOptionsConfig = Config.all({
 });
 
 const BuildEnvConfig = Config.all({
-  platform: Config.schema(BuildPlatform, "OMNIMIND_DESKTOP_PLATFORM").pipe(Config.option),
-  target: Config.string("OMNIMIND_DESKTOP_TARGET").pipe(Config.option),
-  arch: Config.schema(BuildArch, "OMNIMIND_DESKTOP_ARCH").pipe(Config.option),
-  version: Config.string("OMNIMIND_DESKTOP_VERSION").pipe(Config.option),
-  sourceCommit: Config.string("OMNIMIND_SOURCE_COMMIT").pipe(Config.option),
-  sourceTag: Config.string("OMNIMIND_SOURCE_TAG").pipe(Config.option),
-  lockfileSha256: Config.string("OMNIMIND_LOCKFILE_SHA256").pipe(Config.option),
-  outputDir: Config.string("OMNIMIND_DESKTOP_OUTPUT_DIR").pipe(Config.option),
-  skipBuild: Config.string("OMNIMIND_DESKTOP_SKIP_BUILD").pipe(Config.option),
-  keepStage: Config.string("OMNIMIND_DESKTOP_KEEP_STAGE").pipe(Config.option),
-  signed: Config.string("OMNIMIND_DESKTOP_SIGNED").pipe(Config.option),
-  verbose: Config.string("OMNIMIND_DESKTOP_VERBOSE").pipe(Config.option),
-  mockUpdates: Config.string("OMNIMIND_DESKTOP_MOCK_UPDATES").pipe(Config.option),
-  mockUpdateServerPort: Config.string("OMNIMIND_DESKTOP_MOCK_UPDATE_SERVER_PORT").pipe(
+  platform: Config.schema(BuildPlatform, "HARNESSOS_DESKTOP_PLATFORM").pipe(Config.option),
+  target: Config.string("HARNESSOS_DESKTOP_TARGET").pipe(Config.option),
+  arch: Config.schema(BuildArch, "HARNESSOS_DESKTOP_ARCH").pipe(Config.option),
+  version: Config.string("HARNESSOS_DESKTOP_VERSION").pipe(Config.option),
+  sourceCommit: Config.string("HARNESSOS_SOURCE_COMMIT").pipe(Config.option),
+  sourceTag: Config.string("HARNESSOS_SOURCE_TAG").pipe(Config.option),
+  lockfileSha256: Config.string("HARNESSOS_LOCKFILE_SHA256").pipe(Config.option),
+  outputDir: Config.string("HARNESSOS_DESKTOP_OUTPUT_DIR").pipe(Config.option),
+  skipBuild: Config.string("HARNESSOS_DESKTOP_SKIP_BUILD").pipe(Config.option),
+  keepStage: Config.string("HARNESSOS_DESKTOP_KEEP_STAGE").pipe(Config.option),
+  signed: Config.string("HARNESSOS_DESKTOP_SIGNED").pipe(Config.option),
+  verbose: Config.string("HARNESSOS_DESKTOP_VERBOSE").pipe(Config.option),
+  mockUpdates: Config.string("HARNESSOS_DESKTOP_MOCK_UPDATES").pipe(Config.option),
+  mockUpdateServerPort: Config.string("HARNESSOS_DESKTOP_MOCK_UPDATE_SERVER_PORT").pipe(
     Config.option,
   ),
 });
@@ -316,11 +316,14 @@ export const resolveBuildOptions = Effect.fn("resolveBuildOptions")(function* (
   const sourceCommit = mergeOptions(input.sourceCommit, env.sourceCommit, undefined);
   const sourceTag = mergeOptions(input.sourceTag, env.sourceTag, undefined);
   const lockfileSha256 = mergeOptions(input.lockfileSha256, env.lockfileSha256, undefined);
-  const envSkipBuild = yield* resolveBooleanEnv("OMNIMIND_DESKTOP_SKIP_BUILD", env.skipBuild);
-  const envKeepStage = yield* resolveBooleanEnv("OMNIMIND_DESKTOP_KEEP_STAGE", env.keepStage);
-  const envSigned = yield* resolveBooleanEnv("OMNIMIND_DESKTOP_SIGNED", env.signed);
-  const envVerbose = yield* resolveBooleanEnv("OMNIMIND_DESKTOP_VERBOSE", env.verbose);
-  const envMockUpdates = yield* resolveBooleanEnv("OMNIMIND_DESKTOP_MOCK_UPDATES", env.mockUpdates);
+  const envSkipBuild = yield* resolveBooleanEnv("HARNESSOS_DESKTOP_SKIP_BUILD", env.skipBuild);
+  const envKeepStage = yield* resolveBooleanEnv("HARNESSOS_DESKTOP_KEEP_STAGE", env.keepStage);
+  const envSigned = yield* resolveBooleanEnv("HARNESSOS_DESKTOP_SIGNED", env.signed);
+  const envVerbose = yield* resolveBooleanEnv("HARNESSOS_DESKTOP_VERBOSE", env.verbose);
+  const envMockUpdates = yield* resolveBooleanEnv(
+    "HARNESSOS_DESKTOP_MOCK_UPDATES",
+    env.mockUpdates,
+  );
   const mockUpdates = resolveBooleanFlag(input.mockUpdates, envMockUpdates);
   const defaultOutputDir = mockUpdates
     ? "release-mock"
@@ -548,7 +551,7 @@ function resolveGitHubPublishConfig():
       readonly releaseType: "release";
     }
   | undefined {
-  const rawRepo = process.env.OMNIMIND_DESKTOP_UPDATE_REPOSITORY?.trim() || "";
+  const rawRepo = process.env.HARNESSOS_DESKTOP_UPDATE_REPOSITORY?.trim() || "";
   if (!rawRepo) return undefined;
 
   const [owner, repo, ...rest] = rawRepo.split("/");
@@ -573,7 +576,7 @@ const verifyStagedNodePty = Effect.fn("verifyStagedNodePty")(function* (
       cwd: stageAppDir,
       env: {
         ...process.env,
-        OMNIMIND_NODE_PTY_SMOKE_REQUIRE_ROOT: stageAppDir,
+        HARNESSOS_NODE_PTY_SMOKE_REQUIRE_ROOT: stageAppDir,
       },
       ...commandOutputOptions(verbose),
       shell: process.platform === "win32",
@@ -669,12 +672,12 @@ const installFrozenStageDependencies = Effect.fn("installFrozenStageDependencies
     path.join(repoRoot, RELEASE_PATCHES_PATH),
     path.join(stageAppDir, RELEASE_PATCHES_PATH),
   );
-  yield* fs.makeDirectory(path.dirname(path.join(stageAppDir, OMNIMIND_PI_RUNTIME_PACKAGE_PATH)), {
+  yield* fs.makeDirectory(path.dirname(path.join(stageAppDir, HARNESSOS_PI_RUNTIME_PACKAGE_PATH)), {
     recursive: true,
   });
   yield* fs.copyFile(
-    path.join(repoRoot, OMNIMIND_PI_RUNTIME_PACKAGE_PATH),
-    path.join(stageAppDir, OMNIMIND_PI_RUNTIME_PACKAGE_PATH),
+    path.join(repoRoot, HARNESSOS_PI_RUNTIME_PACKAGE_PATH),
+    path.join(stageAppDir, HARNESSOS_PI_RUNTIME_PACKAGE_PATH),
   );
 
   yield* Effect.log(
@@ -726,7 +729,7 @@ const installFrozenStageDependencies = Effect.fn("installFrozenStageDependencies
   }
   yield* fs.remove(path.join(stageAppDir, RELEASE_LOCKFILE_PATH));
   yield* fs.remove(path.join(stageAppDir, RELEASE_PATCHES_PATH), { recursive: true });
-  yield* fs.remove(path.join(stageAppDir, OMNIMIND_PI_RUNTIME_PACKAGE_PATH));
+  yield* fs.remove(path.join(stageAppDir, HARNESSOS_PI_RUNTIME_PACKAGE_PATH));
 });
 
 const createBuildConfig = Effect.fn("createBuildConfig")(function* (
@@ -738,9 +741,9 @@ const createBuildConfig = Effect.fn("createBuildConfig")(function* (
   mockUpdateServerPort: string | undefined,
 ) {
   const buildConfig: Record<string, unknown> = {
-    appId: OMNIMIND_PRODUCTION_BUNDLE_ID,
+    appId: HARNESSOS_PRODUCTION_BUNDLE_ID,
     productName,
-    artifactName: "OmniMind-${version}-${arch}.${ext}",
+    artifactName: "HarnessOS-${version}-${arch}.${ext}",
     directories: {
       buildResources: "apps/desktop/resources",
     },
@@ -1021,7 +1024,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   }
   const mkdir = options.keepStage ? fs.makeTempDirectory : fs.makeTempDirectoryScoped;
   const stageRoot = yield* mkdir({
-    prefix: `omnimind-desktop-${options.platform}-stage-`,
+    prefix: `harnessos-desktop-${options.platform}-stage-`,
   });
 
   const stageAppDir = path.join(stageRoot, "app");
@@ -1081,23 +1084,23 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   const resolvedBuildConfig = yield* createBuildConfig(
     options.platform,
     options.target,
-    desktopPackageJson.productName ?? "OmniMind",
+    desktopPackageJson.productName ?? "HarnessOS",
     options.signed,
     options.mockUpdates,
     options.mockUpdateServerPort,
   );
 
   const stagePackageJson: StagePackageJson = {
-    name: "omnimind-desktop",
+    name: "harnessos-desktop",
     version: appVersion,
     buildVersion: appVersion,
-    omnimindCommitHash: commitHash,
+    harnessosCommitHash: commitHash,
     omnimindLockfileSha256: resolvedLockfileSha256,
     omnimindSourceTag: options.sourceTag ?? null,
     omnimindWindowsPublisherSubject: resolvedBuildConfig.windowsPublisherSubject,
     private: true,
-    description: "OmniMind desktop build",
-    author: "OmniMind",
+    description: "HarnessOS desktop build",
+    author: "HarnessOS",
     main: "apps/desktop/dist-electron/main.js",
     build: resolvedBuildConfig.buildConfig,
     dependencies: {
@@ -1215,7 +1218,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   if (options.platform === "mac") {
     yield* assertPackagedMacDeviceHelper(
       stageDistDir,
-      desktopPackageJson.productName ?? "OmniMind",
+      desktopPackageJson.productName ?? "HarnessOS",
     );
   }
 
@@ -1294,73 +1297,73 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
 
 const buildDesktopArtifactCli = Command.make("build-desktop-artifact", {
   platform: Flag.choice("platform", BuildPlatform.literals).pipe(
-    Flag.withDescription("Build platform (env: OMNIMIND_DESKTOP_PLATFORM)."),
+    Flag.withDescription("Build platform (env: HARNESSOS_DESKTOP_PLATFORM)."),
     Flag.optional,
   ),
   target: Flag.string("target").pipe(
     Flag.withDescription(
-      "Artifact target, for example dmg/AppImage/nsis (env: OMNIMIND_DESKTOP_TARGET).",
+      "Artifact target, for example dmg/AppImage/nsis (env: HARNESSOS_DESKTOP_TARGET).",
     ),
     Flag.optional,
   ),
   arch: Flag.choice("arch", BuildArch.literals).pipe(
     Flag.withDescription(
-      "Build arch, for example arm64/x64/universal (env: OMNIMIND_DESKTOP_ARCH).",
+      "Build arch, for example arm64/x64/universal (env: HARNESSOS_DESKTOP_ARCH).",
     ),
     Flag.optional,
   ),
   buildVersion: Flag.string("build-version").pipe(
-    Flag.withDescription("Artifact version metadata (env: OMNIMIND_DESKTOP_VERSION)."),
+    Flag.withDescription("Artifact version metadata (env: HARNESSOS_DESKTOP_VERSION)."),
     Flag.optional,
   ),
   sourceCommit: Flag.string("source-commit").pipe(
-    Flag.withDescription("Expected full source commit (env: OMNIMIND_SOURCE_COMMIT)."),
+    Flag.withDescription("Expected full source commit (env: HARNESSOS_SOURCE_COMMIT)."),
     Flag.optional,
   ),
   sourceTag: Flag.string("source-tag").pipe(
-    Flag.withDescription("Exact source tag when building a release (env: OMNIMIND_SOURCE_TAG)."),
+    Flag.withDescription("Exact source tag when building a release (env: HARNESSOS_SOURCE_TAG)."),
     Flag.optional,
   ),
   lockfileSha256: Flag.string("lockfile-sha256").pipe(
-    Flag.withDescription("Expected bun.lock SHA-256 (env: OMNIMIND_LOCKFILE_SHA256)."),
+    Flag.withDescription("Expected bun.lock SHA-256 (env: HARNESSOS_LOCKFILE_SHA256)."),
     Flag.optional,
   ),
   outputDir: Flag.string("output-dir").pipe(
-    Flag.withDescription("Output directory for artifacts (env: OMNIMIND_DESKTOP_OUTPUT_DIR)."),
+    Flag.withDescription("Output directory for artifacts (env: HARNESSOS_DESKTOP_OUTPUT_DIR)."),
     Flag.optional,
   ),
   skipBuild: Flag.boolean("skip-build").pipe(
     Flag.withDescription(
-      "Skip `bun run build:desktop` and use existing dist artifacts (env: OMNIMIND_DESKTOP_SKIP_BUILD).",
+      "Skip `bun run build:desktop` and use existing dist artifacts (env: HARNESSOS_DESKTOP_SKIP_BUILD).",
     ),
     Flag.optional,
   ),
   keepStage: Flag.boolean("keep-stage").pipe(
-    Flag.withDescription("Keep temporary staging files (env: OMNIMIND_DESKTOP_KEEP_STAGE)."),
+    Flag.withDescription("Keep temporary staging files (env: HARNESSOS_DESKTOP_KEEP_STAGE)."),
     Flag.optional,
   ),
   signed: Flag.boolean("signed").pipe(
     Flag.withDescription(
-      "Enable signing/notarization discovery; Windows uses Azure Trusted Signing (env: OMNIMIND_DESKTOP_SIGNED).",
+      "Enable signing/notarization discovery; Windows uses Azure Trusted Signing (env: HARNESSOS_DESKTOP_SIGNED).",
     ),
     Flag.optional,
   ),
   verbose: Flag.boolean("verbose").pipe(
-    Flag.withDescription("Stream subprocess stdout (env: OMNIMIND_DESKTOP_VERBOSE)."),
+    Flag.withDescription("Stream subprocess stdout (env: HARNESSOS_DESKTOP_VERBOSE)."),
     Flag.optional,
   ),
   mockUpdates: Flag.boolean("mock-updates").pipe(
-    Flag.withDescription("Enable mock updates (env: OMNIMIND_DESKTOP_MOCK_UPDATES)."),
+    Flag.withDescription("Enable mock updates (env: HARNESSOS_DESKTOP_MOCK_UPDATES)."),
     Flag.optional,
   ),
   mockUpdateServerPort: Flag.string("mock-update-server-port").pipe(
     Flag.withDescription(
-      "Mock update server port (env: OMNIMIND_DESKTOP_MOCK_UPDATE_SERVER_PORT).",
+      "Mock update server port (env: HARNESSOS_DESKTOP_MOCK_UPDATE_SERVER_PORT).",
     ),
     Flag.optional,
   ),
 }).pipe(
-  Command.withDescription("Build a desktop artifact for OmniMind."),
+  Command.withDescription("Build a desktop artifact for HarnessOS."),
   Command.withHandler((input) => Effect.flatMap(resolveBuildOptions(input), buildDesktopArtifact)),
 );
 

@@ -22,7 +22,7 @@ import {
   updatePaneInState,
 } from "./rightDockStore.logic";
 
-const RIGHT_DOCK_STORAGE_KEY = "omnimind:right-dock-state:v1";
+const RIGHT_DOCK_STORAGE_KEY = "harnessos:right-dock-state:v1";
 
 interface RightDockStore {
   dockStateByThreadId: Record<string, RightDockThreadState | undefined>;

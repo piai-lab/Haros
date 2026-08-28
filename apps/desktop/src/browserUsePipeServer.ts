@@ -28,12 +28,12 @@ const MAX_CLIENTS = 64;
 const MAX_IN_FLIGHT_REQUESTS = 16;
 const MAX_QUEUED_OUTPUT_BYTES = 1024 * 1024;
 const MAX_WORKSPACE_ROOT_BYTES = 4_096;
-const PIPE_DIR = "omnimind-browser-host";
-const PIPE_NAME_PREFIX = "omnimind-browser-host";
+const PIPE_DIR = "harnessos-browser-host";
+const PIPE_NAME_PREFIX = "harnessos-browser-host";
 
-export const OMNIMIND_BROWSER_HOST_PIPE_ENV = "OMNIMIND_BROWSER_HOST_PIPE_PATH";
-export const OMNIMIND_BROWSER_HOST_CAPABILITY_ENV = "OMNIMIND_BROWSER_HOST_CAPABILITY";
-export const OMNIMIND_BROWSER_HOST_CAPABILITY_FD_ENV = "OMNIMIND_BROWSER_HOST_CAPABILITY_FD";
+export const HARNESSOS_BROWSER_HOST_PIPE_ENV = "HARNESSOS_BROWSER_HOST_PIPE_PATH";
+export const HARNESSOS_BROWSER_HOST_CAPABILITY_ENV = "HARNESSOS_BROWSER_HOST_CAPABILITY";
+export const HARNESSOS_BROWSER_HOST_CAPABILITY_FD_ENV = "HARNESSOS_BROWSER_HOST_CAPABILITY_FD";
 
 type RpcId = string | number;
 type WriteResult = "written" | "overflow" | "closed";
@@ -58,9 +58,7 @@ type BrowserHostAutomationShape = Pick<DesktopBrowserAutomationHost, "executeToo
   Partial<
     Pick<
       DesktopBrowserAutomationHost,
-      | "getEngineWebSurfaceContext"
-      | "presentEngineWebSurface"
-      | "settleEngineWebSurface"
+      "getEngineWebSurfaceContext" | "presentEngineWebSurface" | "settleEngineWebSurface"
     >
   >;
 
@@ -127,11 +125,11 @@ export function resolveConfiguredBrowserHostPipePath(
   env: NodeJS.ProcessEnv = process.env,
   platform = process.platform,
 ): string {
-  const configured = env[OMNIMIND_BROWSER_HOST_PIPE_ENV]?.trim();
+  const configured = env[HARNESSOS_BROWSER_HOST_PIPE_ENV]?.trim();
   return configured || resolveDefaultBrowserHostPipePath(platform);
 }
 
-export const OMNIMIND_BROWSER_HOST_PIPE_PATH = resolveConfiguredBrowserHostPipePath();
+export const HARNESSOS_BROWSER_HOST_PIPE_PATH = resolveConfiguredBrowserHostPipePath();
 
 export function resolveBrowserHostPipeBackendEnv(
   inheritedEnv: NodeJS.ProcessEnv,
@@ -139,13 +137,13 @@ export function resolveBrowserHostPipeBackendEnv(
   capabilityFd?: number | null,
 ): NodeJS.ProcessEnv {
   const backendEnv = { ...inheritedEnv };
-  delete backendEnv[OMNIMIND_BROWSER_HOST_PIPE_ENV];
-  delete backendEnv[OMNIMIND_BROWSER_HOST_CAPABILITY_ENV];
-  delete backendEnv[OMNIMIND_BROWSER_HOST_CAPABILITY_FD_ENV];
+  delete backendEnv[HARNESSOS_BROWSER_HOST_PIPE_ENV];
+  delete backendEnv[HARNESSOS_BROWSER_HOST_CAPABILITY_ENV];
+  delete backendEnv[HARNESSOS_BROWSER_HOST_CAPABILITY_FD_ENV];
   const pipePath = activePipePath?.trim();
   if (pipePath && Number.isInteger(capabilityFd) && (capabilityFd ?? 0) >= 3) {
-    backendEnv[OMNIMIND_BROWSER_HOST_PIPE_ENV] = pipePath;
-    backendEnv[OMNIMIND_BROWSER_HOST_CAPABILITY_FD_ENV] = String(capabilityFd);
+    backendEnv[HARNESSOS_BROWSER_HOST_PIPE_ENV] = pipePath;
+    backendEnv[HARNESSOS_BROWSER_HOST_CAPABILITY_FD_ENV] = String(capabilityFd);
   }
   return backendEnv;
 }
@@ -228,11 +226,11 @@ export class BrowserHostPipeServer {
 
   constructor(
     browserManager: DesktopBrowserManager,
-    options: BrowserHostPipeServerOptions | string = OMNIMIND_BROWSER_HOST_PIPE_PATH,
+    options: BrowserHostPipeServerOptions | string = HARNESSOS_BROWSER_HOST_PIPE_PATH,
   ) {
     const normalized = typeof options === "string" ? { pipePath: options } : options;
     this.platform = normalized.platform ?? process.platform;
-    this.pipePath = normalized.pipePath ?? OMNIMIND_BROWSER_HOST_PIPE_PATH;
+    this.pipePath = normalized.pipePath ?? HARNESSOS_BROWSER_HOST_PIPE_PATH;
     const capability = normalized.capability?.trim();
     if (!capability || Buffer.byteLength(capability, "utf8") < 32) {
       throw new Error("Browser host requires a private backend capability.");
@@ -427,9 +425,9 @@ export class BrowserHostPipeServer {
     }
     client.sessionId = sessionId;
     return {
-      name: "OmniMind Browser Host",
+      name: "HarnessOS Browser Host",
       version: "1.0.0",
-      type: "omnimind-browser-host",
+      type: "harnessos-browser-host",
       metadata: {
         sessionId,
         protocolVersion: 1,
@@ -474,7 +472,10 @@ export class BrowserHostPipeServer {
     } satisfies BrowserAutomationToolRequest);
   }
 
-  private requireBoundSession(client: PipeClient, params?: unknown): {
+  private requireBoundSession(
+    client: PipeClient,
+    params?: unknown,
+  ): {
     readonly sessionId: string;
     readonly request: Record<string, unknown>;
   } {

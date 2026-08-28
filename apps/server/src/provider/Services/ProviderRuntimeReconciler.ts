@@ -9,4 +9,4 @@ export interface ProviderRuntimeReconcilerShape {
 export class ProviderRuntimeReconciler extends ServiceMap.Service<
   ProviderRuntimeReconciler,
   ProviderRuntimeReconcilerShape
->()("omnimind/provider/Services/ProviderRuntimeReconciler") {}
+>()("harnessos/provider/Services/ProviderRuntimeReconciler") {}

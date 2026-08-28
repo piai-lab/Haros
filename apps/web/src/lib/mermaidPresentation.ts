@@ -392,10 +392,10 @@ function assertNotAborted(signal: AbortSignal): void {
 
 function loadMermaid() {
   if (!mermaidModulePromise) {
-    performance.mark("omnimind:mermaid-import");
+    performance.mark("harnessos:mermaid-import");
     const startedAt = performance.now();
     mermaidModulePromise = import("mermaid").then((module) => {
-      performance.measure("omnimind:mermaid-import-duration", {
+      performance.measure("harnessos:mermaid-import-duration", {
         start: startedAt,
         end: performance.now(),
       });
@@ -460,13 +460,13 @@ export async function renderMermaidPresentation(input: {
     mermaid.initialize(buildMermaidConfig(input.theme, cacheKey));
 
     try {
-      performance.mark("omnimind:mermaid-render-attempt");
+      performance.mark("harnessos:mermaid-render-attempt");
       const renderStartedAt = performance.now();
       const rendered = await mermaid.render(
         `omnimind-mermaid-${cacheKey.slice(0, 16)}`,
         input.source,
       );
-      performance.measure("omnimind:mermaid-render-duration", {
+      performance.measure("harnessos:mermaid-render-duration", {
         start: renderStartedAt,
         end: performance.now(),
       });

@@ -7,4 +7,4 @@ export interface ProjectFaviconResolverShape {
 export class ProjectFaviconResolver extends ServiceMap.Service<
   ProjectFaviconResolver,
   ProjectFaviconResolverShape
->()("omnimind/project/Services/ProjectFaviconResolver") {}
+>()("harnessos/project/Services/ProjectFaviconResolver") {}

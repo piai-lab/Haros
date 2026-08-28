@@ -8,13 +8,13 @@ import { type RuntimeTaskListItem, type TurnTasksUpdatedPayload } from "@harness
 
 import { makeRuntimeTaskListItem } from "./runtimeTaskList.ts";
 
-export const OMNIMIND_TASK_LIST_TOOL_NAME = "omnimind_update_tasks";
-export const OMNIMIND_TASK_LIST_EXTENSION_NAME = "omnimind-agent-task-list";
-export const OMNIMIND_TASK_LIST_EXTENSION_PATH = `<inline:${OMNIMIND_TASK_LIST_EXTENSION_NAME}>`;
+export const HARNESSOS_TASK_LIST_TOOL_NAME = "harnessos_update_tasks";
+export const HARNESSOS_TASK_LIST_EXTENSION_NAME = "omnimind-agent-task-list";
+export const HARNESSOS_TASK_LIST_EXTENSION_PATH = `<inline:${HARNESSOS_TASK_LIST_EXTENSION_NAME}>`;
 
-const OMNIMIND_TASK_LIST_MAX_ITEMS = 50;
-const OMNIMIND_TASK_TEXT_MAX_LENGTH = 1_000;
-const OMNIMIND_TASK_EXPLANATION_MAX_LENGTH = 2_000;
+const HARNESSOS_TASK_LIST_MAX_ITEMS = 50;
+const HARNESSOS_TASK_TEXT_MAX_LENGTH = 1_000;
+const HARNESSOS_TASK_EXPLANATION_MAX_LENGTH = 2_000;
 
 function record(value: unknown): Record<string, unknown> | undefined {
   return typeof value === "object" && value !== null
@@ -35,7 +35,7 @@ export function decodeOmniMindTaskListUpdate(args: unknown): TurnTasksUpdatedPay
   if (
     !Array.isArray(rawTasks) ||
     rawTasks.length === 0 ||
-    rawTasks.length > OMNIMIND_TASK_LIST_MAX_ITEMS
+    rawTasks.length > HARNESSOS_TASK_LIST_MAX_ITEMS
   ) {
     return null;
   }
@@ -44,7 +44,7 @@ export function decodeOmniMindTaskListUpdate(args: unknown): TurnTasksUpdatedPay
   let inProgressCount = 0;
   for (const rawTask of rawTasks) {
     const taskInput = record(rawTask);
-    const task = boundedTrimmedString(taskInput?.task, OMNIMIND_TASK_TEXT_MAX_LENGTH);
+    const task = boundedTrimmedString(taskInput?.task, HARNESSOS_TASK_TEXT_MAX_LENGTH);
     const status = taskInput?.status;
     if (
       task === undefined ||
@@ -64,7 +64,7 @@ export function decodeOmniMindTaskListUpdate(args: unknown): TurnTasksUpdatedPay
 
   const rawExplanation = input?.explanation;
   if (rawExplanation !== undefined && typeof rawExplanation !== "string") return null;
-  const explanation = boundedTrimmedString(rawExplanation, OMNIMIND_TASK_EXPLANATION_MAX_LENGTH);
+  const explanation = boundedTrimmedString(rawExplanation, HARNESSOS_TASK_EXPLANATION_MAX_LENGTH);
   if (typeof rawExplanation === "string" && rawExplanation.trim().length > 0 && !explanation) {
     return null;
   }
@@ -79,7 +79,7 @@ export function buildOmniMindTaskListTool(input: {
   readonly onValidatedPayload?: (payload: TurnTasksUpdatedPayload) => void;
 }): ToolDefinition {
   return input.defineTool({
-    name: OMNIMIND_TASK_LIST_TOOL_NAME,
+    name: HARNESSOS_TASK_LIST_TOOL_NAME,
     label: "Update OmniMind tasks",
     description:
       "Replace the current OmniMind Agent task snapshot. Use it when non-trivial work benefits from visible progress, and send the complete current snapshot with at most one task in progress.",
@@ -92,17 +92,17 @@ export function buildOmniMindTaskListTool(input: {
       properties: {
         explanation: {
           type: "string",
-          maxLength: OMNIMIND_TASK_EXPLANATION_MAX_LENGTH,
+          maxLength: HARNESSOS_TASK_EXPLANATION_MAX_LENGTH,
           description: "Optional concise reason for the task-list update.",
         },
         tasks: {
           type: "array",
           minItems: 1,
-          maxItems: OMNIMIND_TASK_LIST_MAX_ITEMS,
+          maxItems: HARNESSOS_TASK_LIST_MAX_ITEMS,
           items: {
             type: "object",
             properties: {
-              task: { type: "string", minLength: 1, maxLength: OMNIMIND_TASK_TEXT_MAX_LENGTH },
+              task: { type: "string", minLength: 1, maxLength: HARNESSOS_TASK_TEXT_MAX_LENGTH },
               status: {
                 type: "string",
                 enum: ["pending", "in_progress", "completed"],
@@ -140,7 +140,7 @@ export function buildOmniMindTaskListTool(input: {
 
 function hasProductSource(tool: ToolInfo | undefined): boolean {
   return (
-    tool?.sourceInfo.path === OMNIMIND_TASK_LIST_EXTENSION_PATH &&
+    tool?.sourceInfo.path === HARNESSOS_TASK_LIST_EXTENSION_PATH &&
     tool.sourceInfo.source === "inline" &&
     tool.sourceInfo.scope === "temporary" &&
     tool.sourceInfo.origin === "top-level"
@@ -153,14 +153,15 @@ export function inspectOmniMindTaskListExtensionRegistration(input: {
   readonly tools: ReadonlyArray<ToolInfo>;
   readonly activeToolNames: ReadonlyArray<string>;
 }): { readonly available: boolean; readonly diagnostics: ReadonlyArray<string> } {
-  const registeredTool = input.tools.find((tool) => tool.name === OMNIMIND_TASK_LIST_TOOL_NAME);
+  const registeredTool = input.tools.find((tool) => tool.name === HARNESSOS_TASK_LIST_TOOL_NAME);
   const available =
     hasProductSource(registeredTool) &&
-    input.activeToolNames.includes(OMNIMIND_TASK_LIST_TOOL_NAME);
+    input.activeToolNames.includes(HARNESSOS_TASK_LIST_TOOL_NAME);
   const diagnostics = input.extensions.errors
     .filter(
       ({ path, error }) =>
-        path === OMNIMIND_TASK_LIST_EXTENSION_PATH || error.includes(OMNIMIND_TASK_LIST_TOOL_NAME),
+        path === HARNESSOS_TASK_LIST_EXTENSION_PATH ||
+        error.includes(HARNESSOS_TASK_LIST_TOOL_NAME),
     )
     .map(({ error }) => error);
   return {
@@ -180,7 +181,7 @@ export function makeOmniMindTaskListExtension(input: {
   }) => void;
 }): InlineExtension {
   return {
-    name: OMNIMIND_TASK_LIST_EXTENSION_NAME,
+    name: HARNESSOS_TASK_LIST_EXTENSION_NAME,
     hidden: true,
     factory: (pi) => {
       const trustedPayloads = new WeakSet<object>();
@@ -191,7 +192,7 @@ export function makeOmniMindTaskListExtension(input: {
         }),
       );
       pi.on("tool_execution_end", (event) => {
-        if (event.isError || event.toolName !== OMNIMIND_TASK_LIST_TOOL_NAME) return;
+        if (event.isError || event.toolName !== HARNESSOS_TASK_LIST_TOOL_NAME) return;
         const details = record(record(event.result)?.details);
         if (!details || !trustedPayloads.delete(details)) return;
         input.onTasksUpdated({

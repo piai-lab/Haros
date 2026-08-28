@@ -90,4 +90,4 @@ export interface ProjectionCheckpointRepositoryShape {
 export class ProjectionCheckpointRepository extends ServiceMap.Service<
   ProjectionCheckpointRepository,
   ProjectionCheckpointRepositoryShape
->()("omnimind/persistence/Services/ProjectionCheckpoints/ProjectionCheckpointRepository") {}
+>()("harnessos/persistence/Services/ProjectionCheckpoints/ProjectionCheckpointRepository") {}

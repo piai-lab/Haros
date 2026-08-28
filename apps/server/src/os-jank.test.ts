@@ -80,7 +80,7 @@ describe("fixPath", () => {
     const env: NodeJS.ProcessEnv = {
       SHELL: "/bin/zsh",
       PATH: "/opt/homebrew/bin:/usr/bin",
-      OMNIMIND_PATH_HYDRATED: "1",
+      HARNESSOS_PATH_HYDRATED: "1",
     };
     const readPath = vi.fn(() => "/should/not/run");
     const readLaunchctlPath = vi.fn(() => "/should/not/run");
@@ -115,7 +115,7 @@ describe("fixPath", () => {
     const env: NodeJS.ProcessEnv = {
       SHELL: "/bin/zsh",
       PATH: "/usr/bin",
-      OMNIMIND_PATH_HYDRATED: "0",
+      HARNESSOS_PATH_HYDRATED: "0",
     };
     const readPath = vi.fn(() => "/opt/homebrew/bin");
 
@@ -129,7 +129,7 @@ describe("fixPath", () => {
     const env: NodeJS.ProcessEnv = {
       SHELL: "/bin/zsh",
       PATH: "",
-      OMNIMIND_PATH_HYDRATED: "1",
+      HARNESSOS_PATH_HYDRATED: "1",
     };
     const readPath = vi.fn(() => "/opt/homebrew/bin");
 

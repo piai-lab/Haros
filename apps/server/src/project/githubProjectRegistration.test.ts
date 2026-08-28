@@ -10,7 +10,7 @@ function checkout(kind: "created" | "reused"): GitHubProjectCheckoutResult {
     repository: "openai/codex",
     workspaceRoot: "/repos/codex",
     checkout: kind,
-    recoveryPath: kind === "created" ? "/repos/.omnimind-clone-1" : null,
+    recoveryPath: kind === "created" ? "/repos/.harnessos-clone-1" : null,
   };
 }
 
@@ -27,7 +27,7 @@ describe("recoverUnregisteredGitHubCheckout", () => {
       }),
     );
 
-    expect(moves).toEqual([["/repos/codex", "/repos/.omnimind-clone-1"]]);
+    expect(moves).toEqual([["/repos/codex", "/repos/.harnessos-clone-1"]]);
   });
 
   it.each([

@@ -2,19 +2,19 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { externalMcpLauncher, externalMcpShellCommand } from "./launcher.ts";
 
-const originalServerEntry = process.env.OMNIMIND_SERVER_ENTRY;
+const originalServerEntry = process.env.HARNESSOS_SERVER_ENTRY;
 const originalElectronNodeMode = process.env.ELECTRON_RUN_AS_NODE;
 
 afterEach(() => {
-  if (originalServerEntry === undefined) delete process.env.OMNIMIND_SERVER_ENTRY;
-  else process.env.OMNIMIND_SERVER_ENTRY = originalServerEntry;
+  if (originalServerEntry === undefined) delete process.env.HARNESSOS_SERVER_ENTRY;
+  else process.env.HARNESSOS_SERVER_ENTRY = originalServerEntry;
   if (originalElectronNodeMode === undefined) delete process.env.ELECTRON_RUN_AS_NODE;
   else process.env.ELECTRON_RUN_AS_NODE = originalElectronNodeMode;
 });
 
 describe("external MCP launcher", () => {
   it("uses the packaged backend entry instead of assuming a global omnimind command", () => {
-    process.env.OMNIMIND_SERVER_ENTRY =
+    process.env.HARNESSOS_SERVER_ENTRY =
       "/Applications/OmniMind.app/Contents/Resources/server/index.js";
     process.env.ELECTRON_RUN_AS_NODE = "1";
     const launcher = externalMcpLauncher(["mcp", "serve", "--integration", "integration-1"]);

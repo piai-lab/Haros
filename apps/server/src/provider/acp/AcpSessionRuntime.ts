@@ -722,7 +722,7 @@ const makeOfficialSdkClient = Effect.fnUntraced(function* (
 export class AcpSessionRuntime extends ServiceMap.Service<
   AcpSessionRuntime,
   AcpSessionRuntimeShape
->()("omnimind/provider/acp/AcpSessionRuntime") {
+>()("harnessos/provider/acp/AcpSessionRuntime") {
   static layer(
     options: AcpSessionRuntimeOptions,
   ): Layer.Layer<AcpSessionRuntime, AcpErrors.AcpError, ChildProcessSpawner.ChildProcessSpawner> {

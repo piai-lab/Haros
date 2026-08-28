@@ -16,5 +16,5 @@ export interface OpenCodeAdapterShape extends ProviderAdapterShape<ProviderAdapt
 }
 
 export class OpenCodeAdapter extends ServiceMap.Service<OpenCodeAdapter, OpenCodeAdapterShape>()(
-  "omnimind/provider/Services/OpenCodeAdapter",
+  "harnessos/provider/Services/OpenCodeAdapter",
 ) {}

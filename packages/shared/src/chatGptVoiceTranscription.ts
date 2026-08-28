@@ -16,7 +16,7 @@ const DEFAULT_VOICE_UPLOAD_USER_AGENT =
 const VOICE_UPLOAD_USER_AGENT = resolveVoiceUploadUserAgent();
 
 function resolveVoiceUploadUserAgent(): string {
-  const override = process.env.OMNIMIND_VOICE_UPLOAD_USER_AGENT?.trim();
+  const override = process.env.HARNESSOS_VOICE_UPLOAD_USER_AGENT?.trim();
   return override && !/[\r\n]/u.test(override) ? override : DEFAULT_VOICE_UPLOAD_USER_AGENT;
 }
 

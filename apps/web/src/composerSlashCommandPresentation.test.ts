@@ -58,10 +58,7 @@ describe("built-in composer slash command presentation", () => {
       "fast",
       "default",
     ]);
-    expect(filterBuiltInComposerSlashCommands("", ["goal", "debug"], t)).toEqual([
-      "goal",
-      "debug",
-    ]);
+    expect(filterBuiltInComposerSlashCommands("", ["goal", "debug"], t)).toEqual(["goal", "debug"]);
   });
 
   it("searches the currently resolved Chinese title and description", () => {

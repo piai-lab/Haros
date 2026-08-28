@@ -6,7 +6,7 @@
 import { TurnId } from "@harnessos/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import { OMNIMIND_HARNESS_POLICY_MARKER } from "../../agentGateway/harnessPolicy.ts";
+import { HARNESSOS_HARNESS_POLICY_MARKER } from "../../agentGateway/harnessPolicy.ts";
 import {
   extractGrokUserInputQuestions,
   extractGrokExitPlanMarkdown,
@@ -62,7 +62,7 @@ describe("Grok OmniMind harness policy", () => {
   it("delivers private scoped host context once", () => {
     const state: { harnessPolicyDelivered?: boolean } = {};
     expect(takeGrokOmniMindHarnessPolicyTextPart(state, true)?.text).toContain(
-      OMNIMIND_HARNESS_POLICY_MARKER,
+      HARNESSOS_HARNESS_POLICY_MARKER,
     );
     expect(takeGrokOmniMindHarnessPolicyTextPart(state, true)).toBeNull();
   });

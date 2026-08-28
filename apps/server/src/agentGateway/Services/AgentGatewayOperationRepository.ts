@@ -95,4 +95,4 @@ export interface AgentGatewayOperationRepositoryShape {
 export class AgentGatewayOperationRepository extends ServiceMap.Service<
   AgentGatewayOperationRepository,
   AgentGatewayOperationRepositoryShape
->()("omnimind/agentGateway/Services/AgentGatewayOperationRepository") {}
+>()("harnessos/agentGateway/Services/AgentGatewayOperationRepository") {}

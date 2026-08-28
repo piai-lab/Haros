@@ -19,7 +19,8 @@ const cleanups: string[] = [];
 
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const directory of cleanups.splice(0)) fs.rmSync(directory, { recursive: true, force: true });
+  for (const directory of cleanups.splice(0))
+    fs.rmSync(directory, { recursive: true, force: true });
 });
 
 function harness() {
@@ -30,13 +31,17 @@ function harness() {
   const openInEditor = vi.fn(() => Effect.void);
   const layer = OmniMindWebSearchSettingsLive.pipe(
     Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
-    Layer.provideMerge(Layer.succeed(Open, {
-      openBrowser: () => Effect.void,
-      openInEditor,
-    } satisfies OpenShape)),
+    Layer.provideMerge(
+      Layer.succeed(Open, {
+        openBrowser: () => Effect.void,
+        openInEditor,
+      } satisfies OpenShape),
+    ),
     Layer.provideMerge(NodeServices.layer),
   );
-  const run = <A>(operation: (service: OmniMindWebSearchSettingsShape) => Effect.Effect<A, Error>) =>
+  const run = <A>(
+    operation: (service: OmniMindWebSearchSettingsShape) => Effect.Effect<A, Error>,
+  ) =>
     Effect.runPromise(
       Effect.gen(function* () {
         return yield* operation(yield* OmniMindWebSearchSettings);
@@ -65,20 +70,30 @@ describe("OmniMindWebSearchSettingsLive", () => {
     const opened = await test.run((service) => service.open());
     if (opened.state !== "ready") throw new Error("expected ready snapshot");
     const configPath = path.join(test.agentDir, "web-search.json");
-    fs.writeFileSync(configPath, JSON.stringify({ schemaVersion: 1, provider: "exa", workflow: "none", external: true }) + "\n", { mode: 0o600 });
+    fs.writeFileSync(
+      configPath,
+      JSON.stringify({ schemaVersion: 1, provider: "exa", workflow: "none", external: true }) +
+        "\n",
+      { mode: 0o600 },
+    );
 
-    const result = await test.run((service) => service.mutate({
-      expectedRevision: opened.revision,
-      draft: {
-        provider: "tavily",
-        workflow: "auto-summary",
-        autoShowSearchProcess: false,
-        fields: [],
-      },
-    }));
+    const result = await test.run((service) =>
+      service.mutate({
+        expectedRevision: opened.revision,
+        draft: {
+          provider: "tavily",
+          workflow: "auto-summary",
+          autoShowSearchProcess: false,
+          fields: [],
+        },
+      }),
+    );
 
     expect(result.state).toBe("conflict");
-    expect(JSON.parse(fs.readFileSync(configPath, "utf8"))).toMatchObject({ provider: "exa", external: true });
+    expect(JSON.parse(fs.readFileSync(configPath, "utf8"))).toMatchObject({
+      provider: "exa",
+      external: true,
+    });
   });
 
   it("single-flights duplicate explicit Provider test identities within one client", async () => {

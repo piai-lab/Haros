@@ -17,7 +17,7 @@ const MAX_PERSISTED_RECAPS = 80;
 const MAX_PERSISTED_RECAP_TEXT_CHARS = 280;
 export const DEFAULT_INITIAL_THREAD_RECAP_IDLE_MS = 12_000;
 export const DEFAULT_REFRESH_THREAD_RECAP_IDLE_MS = 35_000;
-export const THREAD_RECAP_STORAGE_KEY = "omnimind:thread-recaps:v1";
+export const THREAD_RECAP_STORAGE_KEY = "harnessos:thread-recaps:v1";
 
 interface ThreadRecapStorage {
   getItem: (key: string) => string | null;

@@ -7,8 +7,8 @@ import type { WsCompatibilityError } from "@harnessos/contracts";
 
 export type WsTransportState = "connecting" | "open" | "closed" | "incompatible" | "disposed";
 
-export const OMNIMIND_WS_TRANSPORT_STATE_EVENT = "omnimind:ws-transport-state";
-export const OMNIMIND_WS_COMPATIBILITY_ISSUE_EVENT = "omnimind:ws-compatibility-issue";
+export const HARNESSOS_WS_TRANSPORT_STATE_EVENT = "harnessos:ws-transport-state";
+export const HARNESSOS_WS_COMPATIBILITY_ISSUE_EVENT = "harnessos:ws-compatibility-issue";
 
 let latestCompatibilityIssue: WsCompatibilityError | null = null;
 let latestTransportState: WsTransportState | null = null;
@@ -33,7 +33,7 @@ export function emitWsTransportState(state: WsTransportState): void {
   }
 
   window.dispatchEvent(
-    new CustomEvent<WsTransportStateEventDetail>(OMNIMIND_WS_TRANSPORT_STATE_EVENT, {
+    new CustomEvent<WsTransportStateEventDetail>(HARNESSOS_WS_TRANSPORT_STATE_EVENT, {
       detail: { state },
     }),
   );
@@ -61,9 +61,9 @@ export function addWsTransportStateListener(
     listener(detail.state);
   };
 
-  window.addEventListener(OMNIMIND_WS_TRANSPORT_STATE_EVENT, handleStateChange);
+  window.addEventListener(HARNESSOS_WS_TRANSPORT_STATE_EVENT, handleStateChange);
   return () => {
-    window.removeEventListener(OMNIMIND_WS_TRANSPORT_STATE_EVENT, handleStateChange);
+    window.removeEventListener(HARNESSOS_WS_TRANSPORT_STATE_EVENT, handleStateChange);
   };
 }
 
@@ -81,7 +81,7 @@ export function emitWsCompatibilityIssue(issue: WsCompatibilityError | null): vo
     return;
   }
   window.dispatchEvent(
-    new CustomEvent<WsCompatibilityIssueEventDetail>(OMNIMIND_WS_COMPATIBILITY_ISSUE_EVENT, {
+    new CustomEvent<WsCompatibilityIssueEventDetail>(HARNESSOS_WS_COMPATIBILITY_ISSUE_EVENT, {
       detail: { issue },
     }),
   );
@@ -100,8 +100,8 @@ export function addWsCompatibilityIssueListener(
     if (!detail) return;
     listener(detail.issue);
   };
-  window.addEventListener(OMNIMIND_WS_COMPATIBILITY_ISSUE_EVENT, handleIssue);
+  window.addEventListener(HARNESSOS_WS_COMPATIBILITY_ISSUE_EVENT, handleIssue);
   return () => {
-    window.removeEventListener(OMNIMIND_WS_COMPATIBILITY_ISSUE_EVENT, handleIssue);
+    window.removeEventListener(HARNESSOS_WS_COMPATIBILITY_ISSUE_EVENT, handleIssue);
   };
 }

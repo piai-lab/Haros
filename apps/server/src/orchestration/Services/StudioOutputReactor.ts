@@ -53,4 +53,4 @@ export interface StudioOutputReactorShape {
 export class StudioOutputReactor extends ServiceMap.Service<
   StudioOutputReactor,
   StudioOutputReactorShape
->()("omnimind/orchestration/Services/StudioOutputReactor") {}
+>()("harnessos/orchestration/Services/StudioOutputReactor") {}

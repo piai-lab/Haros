@@ -1543,7 +1543,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           'project-pr',
           'Thread with PR',
           '{"provider":"codex","model":"gpt-5-codex"}',
-          '{"number":1,"title":"Add placeholder temp files","url":"https://github.com/Emanuele-web04/openclap/pull/1","baseBranch":"main","headBranch":"omnimind/greeting-1","state":"open"}',
+          '{"number":1,"title":"Add placeholder temp files","url":"https://github.com/Emanuele-web04/openclap/pull/1","baseBranch":"main","headBranch":"harnessos/greeting-1","state":"open"}',
           '2026-02-25T00:00:02.000Z',
           '2026-02-25T00:00:03.000Z',
           NULL
@@ -1556,7 +1556,7 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
 
       const shellSnapshot = yield* snapshotQuery.getShellSnapshot();
       assert.equal(shellSnapshot.threads[0]?.lastKnownPr?.number, 1);
-      assert.equal(shellSnapshot.threads[0]?.lastKnownPr?.headBranch, "omnimind/greeting-1");
+      assert.equal(shellSnapshot.threads[0]?.lastKnownPr?.headBranch, "harnessos/greeting-1");
     }),
   );
 

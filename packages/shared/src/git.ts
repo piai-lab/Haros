@@ -52,7 +52,7 @@ export function sanitizeFeatureBranchName(raw: string): string {
 }
 
 const AUTO_FEATURE_BRANCH_FALLBACK = "feature/update";
-const OMNIMIND_BRANCH_FALLBACK = "update";
+const HARNESSOS_BRANCH_FALLBACK = "update";
 
 function resolveUniqueBranchName(
   existingBranchNames: readonly string[],
@@ -99,7 +99,7 @@ export function buildOmniMindBranchName(preferredBranch?: string | null): string
       ? preferred.slice(separatorIndex + 1)
       : preferred;
   return `${WORKTREE_BRANCH_PREFIX}/${sanitizeBranchFragment(
-    normalizedExisting || OMNIMIND_BRANCH_FALLBACK,
+    normalizedExisting || HARNESSOS_BRANCH_FALLBACK,
   )}`;
 }
 

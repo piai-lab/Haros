@@ -8,7 +8,7 @@ import {
   editableTextByteLength,
   hasDisallowedEditableTextControl,
   isOmniMindAgentPromptContent,
-  OMNIMIND_AGENT_PROMPT_MAX_BYTES,
+  HARNESSOS_AGENT_PROMPT_MAX_BYTES,
   type OmniMindAgentCustomRulesSourceId,
   type OmniMindAgentPromptGetSnapshotInput,
   type OmniMindAgentPromptMutationInput,
@@ -123,7 +123,7 @@ function encodeForExisting(content: string, existing?: SafeFile): Buffer {
 function assertEditableContent(content: string): void {
   if (
     !isOmniMindAgentPromptContent(content) ||
-    editableTextByteLength(content) > OMNIMIND_AGENT_PROMPT_MAX_BYTES
+    editableTextByteLength(content) > HARNESSOS_AGENT_PROMPT_MAX_BYTES
   ) {
     throw new Error("Prompt content is not editable text");
   }
@@ -185,7 +185,7 @@ async function safeRead(
   if (!rootBefore) throw new PromptConflict("state_changed");
   const leafBefore = await validateLeaf(agentDir, sourceId);
   if (!leafBefore) throw new PromptConflict("state_changed");
-  if (leafBefore.size > OMNIMIND_AGENT_PROMPT_MAX_BYTES)
+  if (leafBefore.size > HARNESSOS_AGENT_PROMPT_MAX_BYTES)
     throw new PromptUnavailable("too_large", sourceId);
   await hooks.afterLeafValidation?.({ agentDir, sourceId });
   const filePath = path.join(agentDir, sourceId);
@@ -195,7 +195,7 @@ async function safeRead(
     if (!handleStat.isFile() || handleStat.nlink !== 1 || !sameIdentity(handleStat, leafBefore)) {
       throw new PromptConflict("state_changed");
     }
-    if (handleStat.size > OMNIMIND_AGENT_PROMPT_MAX_BYTES) {
+    if (handleStat.size > HARNESSOS_AGENT_PROMPT_MAX_BYTES) {
       throw new PromptUnavailable("too_large", sourceId);
     }
     await hooks.afterHandleStat?.({ agentDir, sourceId });
@@ -367,7 +367,7 @@ async function makeSnapshot(input: {
               version: null,
               content: "",
             },
-    maxBytes: OMNIMIND_AGENT_PROMPT_MAX_BYTES,
+    maxBytes: HARNESSOS_AGENT_PROMPT_MAX_BYTES,
   };
 }
 

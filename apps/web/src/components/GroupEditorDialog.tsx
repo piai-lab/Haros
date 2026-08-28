@@ -1,16 +1,5 @@
-import {
-  SPACE_ICON_NAMES,
-  SPACE_NAME_MAX_LENGTH,
-  type SpaceIconName,
-} from "@harnessos/contracts";
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { SPACE_ICON_NAMES, SPACE_NAME_MAX_LENGTH, type SpaceIconName } from "@harnessos/contracts";
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 
 import { useI18n, type MessageKey } from "../i18n";
 import { CentralIcon } from "../lib/central-icons";
@@ -67,15 +56,10 @@ export function GroupEditorDialog(props: {
 
   const trimmedName = name.trim();
   const duplicate = props.existingNames.some(
-    (candidate) =>
-      candidate.trim().toLocaleLowerCase() === trimmedName.toLocaleLowerCase(),
+    (candidate) => candidate.trim().toLocaleLowerCase() === trimmedName.toLocaleLowerCase(),
   );
   const nameError =
-    trimmedName.length === 0
-      ? t("groups.nameRequired")
-      : duplicate
-        ? t("groups.nameTaken")
-        : null;
+    trimmedName.length === 0 ? t("groups.nameRequired") : duplicate ? t("groups.nameTaken") : null;
 
   const submit = async () => {
     if (nameError || submitting) return;
@@ -85,59 +69,46 @@ export function GroupEditorDialog(props: {
       await props.onSubmit({ name: trimmedName, icon });
       props.onOpenChange(false);
     } catch (cause) {
-      setSubmitError(
-        cause instanceof Error ? cause.message : t("groups.saveGroupFailed"),
-      );
+      setSubmitError(cause instanceof Error ? cause.message : t("groups.saveGroupFailed"));
       setSubmitting(false);
     }
   };
 
-  const handleIconKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLDivElement>) => {
-      const stepByKey: Record<string, number | "first" | "last"> = {
-        ArrowLeft: -1,
-        ArrowUp: -1,
-        ArrowRight: 1,
-        ArrowDown: 1,
-        Home: "first",
-        End: "last",
-      };
-      const step = stepByKey[event.key];
-      if (step === undefined) return;
-      const cells = Array.from(
-        event.currentTarget.querySelectorAll<HTMLButtonElement>(
-          "[data-group-icon]",
-        ),
-      );
-      if (cells.length === 0) return;
-      const currentIndex = cells.indexOf(
-        document.activeElement as HTMLButtonElement,
-      );
-      const nextIndex =
-        step === "first"
-          ? 0
-          : step === "last"
-            ? cells.length - 1
-            : (Math.max(currentIndex, 0) + step + cells.length) % cells.length;
-      event.preventDefault();
-      cells[nextIndex]?.focus();
-      cells[nextIndex]?.click();
-    },
-    [],
-  );
+  const handleIconKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    const stepByKey: Record<string, number | "first" | "last"> = {
+      ArrowLeft: -1,
+      ArrowUp: -1,
+      ArrowRight: 1,
+      ArrowDown: 1,
+      Home: "first",
+      End: "last",
+    };
+    const step = stepByKey[event.key];
+    if (step === undefined) return;
+    const cells = Array.from(
+      event.currentTarget.querySelectorAll<HTMLButtonElement>("[data-group-icon]"),
+    );
+    if (cells.length === 0) return;
+    const currentIndex = cells.indexOf(document.activeElement as HTMLButtonElement);
+    const nextIndex =
+      step === "first"
+        ? 0
+        : step === "last"
+          ? cells.length - 1
+          : (Math.max(currentIndex, 0) + step + cells.length) % cells.length;
+    event.preventDefault();
+    cells[nextIndex]?.focus();
+    cells[nextIndex]?.click();
+  }, []);
 
   const editing = props.initialName !== undefined;
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogPopup className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>
-            {editing ? t("groups.editTitle") : t("groups.createTitle")}
-          </DialogTitle>
+          <DialogTitle>{editing ? t("groups.editTitle") : t("groups.createTitle")}</DialogTitle>
           <DialogDescription>
-            {editing
-              ? t("groups.editDescription")
-              : t("groups.createDescription")}
+            {editing ? t("groups.editDescription") : t("groups.createDescription")}
           </DialogDescription>
         </DialogHeader>
         <DialogPanel className="space-y-4">
@@ -151,9 +122,7 @@ export function GroupEditorDialog(props: {
               value={name}
               maxLength={SPACE_NAME_MAX_LENGTH}
               aria-invalid={Boolean(name.length > 0 && nameError)}
-              aria-describedby={
-                name.length > 0 && nameError ? errorId : undefined
-              }
+              aria-describedby={name.length > 0 && nameError ? errorId : undefined}
               placeholder={t("groups.namePlaceholder")}
               onChange={(event) => {
                 setName(event.target.value);
@@ -172,9 +141,7 @@ export function GroupEditorDialog(props: {
             ) : null}
           </div>
           <fieldset>
-            <legend className={cn("mb-2", dialogFieldLabelClassName)}>
-              {t("groups.icon")}
-            </legend>
+            <legend className={cn("mb-2", dialogFieldLabelClassName)}>{t("groups.icon")}</legend>
             <div
               role="radiogroup"
               aria-label={t("groups.icon")}
@@ -216,22 +183,11 @@ export function GroupEditorDialog(props: {
           ) : null}
         </DialogPanel>
         <DialogFooter>
-          <Button
-            variant="ghost"
-            onClick={() => props.onOpenChange(false)}
-            disabled={submitting}
-          >
+          <Button variant="ghost" onClick={() => props.onOpenChange(false)} disabled={submitting}>
             {t("groups.cancel")}
           </Button>
-          <Button
-            onClick={() => void submit()}
-            disabled={Boolean(nameError) || submitting}
-          >
-            {submitting
-              ? t("groups.saving")
-              : editing
-                ? t("groups.save")
-                : t("groups.create")}
+          <Button onClick={() => void submit()} disabled={Boolean(nameError) || submitting}>
+            {submitting ? t("groups.saving") : editing ? t("groups.save") : t("groups.create")}
           </Button>
         </DialogFooter>
       </DialogPopup>

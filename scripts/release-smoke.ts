@@ -9,10 +9,10 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { OMNIMIND_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
+import { HARNESSOS_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
 
 import {
-  OMNIMIND_PI_RUNTIME_PACKAGE_PATH,
+  HARNESSOS_PI_RUNTIME_PACKAGE_PATH,
   RELEASE_LOCKFILE_PATH,
   RELEASE_PATCHES_PATH,
   RELEASE_WORKSPACE_MANIFEST_PATHS,
@@ -31,9 +31,9 @@ function copyWorkspaceManifestFixture(targetRoot: string): void {
   cpSync(resolve(repoRoot, RELEASE_PATCHES_PATH), resolve(targetRoot, RELEASE_PATCHES_PATH), {
     recursive: true,
   });
-  const runtimePackageDestination = resolve(targetRoot, OMNIMIND_PI_RUNTIME_PACKAGE_PATH);
+  const runtimePackageDestination = resolve(targetRoot, HARNESSOS_PI_RUNTIME_PACKAGE_PATH);
   mkdirSync(dirname(runtimePackageDestination), { recursive: true });
-  cpSync(resolve(repoRoot, OMNIMIND_PI_RUNTIME_PACKAGE_PATH), runtimePackageDestination);
+  cpSync(resolve(repoRoot, HARNESSOS_PI_RUNTIME_PACKAGE_PATH), runtimePackageDestination);
 }
 
 function writeMacManifestFixtures(targetRoot: string): { arm64Path: string; x64Path: string } {
@@ -47,10 +47,10 @@ function writeMacManifestFixtures(targetRoot: string): { arm64Path: string; x64P
     arm64Path,
     `version: 9.9.9-smoke.0
 files:
-  - url: OmniMind-9.9.9-smoke.0-arm64.zip
+  - url: HarnessOS-9.9.9-smoke.0-arm64.zip
     sha512: arm64zip
     size: 125621344
-path: OmniMind-9.9.9-smoke.0-arm64.zip
+path: HarnessOS-9.9.9-smoke.0-arm64.zip
 sha512: arm64zip
 releaseDate: '2026-03-08T10:32:14.587Z'
 `,
@@ -60,10 +60,10 @@ releaseDate: '2026-03-08T10:32:14.587Z'
     x64Path,
     `version: 9.9.9-smoke.0
 files:
-  - url: OmniMind-9.9.9-smoke.0-x64.zip
+  - url: HarnessOS-9.9.9-smoke.0-x64.zip
     sha512: x64zip
     size: 132000112
-path: OmniMind-9.9.9-smoke.0-x64.zip
+path: HarnessOS-9.9.9-smoke.0-x64.zip
 sha512: x64zip
 releaseDate: '2026-03-08T10:36:07.540Z'
 `,
@@ -95,15 +95,15 @@ function verifyCanonicalIdentity(): void {
   }
   const expectedBinaries = {
     omnimind: "dist/index.mjs",
-    "omnimind-restore-migration-backup": "dist/restoreMigrationBackup.mjs",
+    "harnessos-restore-migration-backup": "dist/restoreMigrationBackup.mjs",
   };
   if (JSON.stringify(serverPackage.bin ?? {}) !== JSON.stringify(expectedBinaries)) {
     throw new Error(
-      "Expected the CLI to expose only the OmniMind entry point and migration recovery binary.",
+      "Expected the CLI to expose only the HarnessOS entry point and migration recovery binary.",
     );
   }
-  if (OMNIMIND_PRODUCTION_BUNDLE_ID !== "app.omnimind.desktop") {
-    throw new Error(`Unexpected production bundle ID: ${OMNIMIND_PRODUCTION_BUNDLE_ID}.`);
+  if (HARNESSOS_PRODUCTION_BUNDLE_ID !== "ai.piai.harnessos") {
+    throw new Error(`Unexpected production bundle ID: ${HARNESSOS_PRODUCTION_BUNDLE_ID}.`);
   }
 }
 
@@ -390,7 +390,7 @@ function verifyDesktopStageLockAuthority(): void {
   );
   assertContains(
     buildScript,
-    "omnimindCommitHash: commitHash",
+    "harnessosCommitHash: commitHash",
     "Expected the staged package to carry its exact source commit.",
   );
   assertContains(
@@ -475,12 +475,12 @@ try {
   const mergedManifest = readFileSync(arm64Path, "utf8");
   assertContains(
     mergedManifest,
-    "OmniMind-9.9.9-smoke.0-arm64.zip",
+    "HarnessOS-9.9.9-smoke.0-arm64.zip",
     "Merged manifest is missing the arm64 asset.",
   );
   assertContains(
     mergedManifest,
-    "OmniMind-9.9.9-smoke.0-x64.zip",
+    "HarnessOS-9.9.9-smoke.0-x64.zip",
     "Merged manifest is missing the x64 asset.",
   );
   assertNotContains(

@@ -6,7 +6,7 @@
 import { normalizeWorkspaceRootForComparison } from "@harnessos/shared/threadWorkspace";
 import type { LastThreadRoute } from "../chatRouteRestore";
 
-const SIDEBAR_UI_STATE_STORAGE_KEY = "omnimind:sidebar-ui:v1";
+const SIDEBAR_UI_STATE_STORAGE_KEY = "harnessos:sidebar-ui:v1";
 
 export type SidebarUiState = {
   projectThreadListExtraPagesByCwd: Record<string, number>;
@@ -187,7 +187,9 @@ export function persistSidebarUiState(input: SidebarUiState): void {
           : null,
         activityViewEnabled: input.activityViewEnabled,
         groupsSectionExpanded: input.groupsSectionExpanded,
-        expandedGroupIds: [...new Set(input.expandedGroupIds.filter((groupId) => groupId.length > 0))],
+        expandedGroupIds: [
+          ...new Set(input.expandedGroupIds.filter((groupId) => groupId.length > 0)),
+        ],
       }),
     );
   } catch {

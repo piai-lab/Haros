@@ -89,10 +89,10 @@ export function projectScriptRuntimeEnv(
   input: ProjectScriptRuntimeEnvInput,
 ): Record<string, string> {
   const env: Record<string, string> = {
-    OMNIMIND_PROJECT_ROOT: input.project.cwd,
+    HARNESSOS_PROJECT_ROOT: input.project.cwd,
   };
   if (input.worktreePath) {
-    env.OMNIMIND_WORKTREE_PATH = input.worktreePath;
+    env.HARNESSOS_WORKTREE_PATH = input.worktreePath;
   }
   if (input.extraEnv) {
     return { ...env, ...input.extraEnv };

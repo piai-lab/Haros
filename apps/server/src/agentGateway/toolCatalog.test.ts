@@ -35,8 +35,8 @@ describe("AgentGateway tool catalog", () => {
       provenance: "agent-gateway",
       definition: {
         _meta: {
-          "omnimind/owner": "agent-gateway",
-          "omnimind/group": "browser",
+          "harnessos/owner": "agent-gateway",
+          "harnessos/group": "browser",
         },
       },
     });
@@ -50,7 +50,7 @@ describe("AgentGateway tool catalog", () => {
       tagAgentGatewayTools({
         group: "tasks",
         available: true,
-        tools: [makeTool("omnimind_read_thread")],
+        tools: [makeTool("harnessos_read_thread")],
       }),
       tagAgentGatewayTools({
         group: "browser",
@@ -99,12 +99,12 @@ describe("AgentGateway tool catalog", () => {
       tagAgentGatewayTools({
         group: "tasks",
         available: true,
-        tools: [makeTool("omnimind_read_thread")],
+        tools: [makeTool("harnessos_read_thread")],
       }),
       tagAgentGatewayTools({
         group: "goals",
         available: true,
-        tools: [makeTool("omnimind_set_goal")],
+        tools: [makeTool("harnessos_set_goal")],
       }),
       tagAgentGatewayTools({
         group: "browser",
@@ -118,14 +118,14 @@ describe("AgentGateway tool catalog", () => {
       );
 
     expect(namesFor("project")).toEqual([
-      "omnimind_read_thread",
-      "omnimind_set_goal",
+      "harnessos_read_thread",
+      "harnessos_set_goal",
       "browser_click",
     ]);
     expect(namesFor("chat")).toEqual(["browser_click"]);
     expect(namesFor("studio")).toEqual([
-      "omnimind_read_thread",
-      "omnimind_set_goal",
+      "harnessos_read_thread",
+      "harnessos_set_goal",
       "browser_click",
     ]);
 
@@ -133,12 +133,12 @@ describe("AgentGateway tool catalog", () => {
       ...DEFAULT_SERVER_SETTINGS,
       agentTools: { builtInGroupOverrides: { chat: { goals: true } } },
     };
-    expect(namesFor("chat", chatOptIn)).toEqual(["omnimind_set_goal", "browser_click"]);
+    expect(namesFor("chat", chatOptIn)).toEqual(["harnessos_set_goal", "browser_click"]);
 
     const maliciousUnsupported = {
       ...DEFAULT_SERVER_SETTINGS,
       agentTools: { builtInGroupOverrides: { chat: { tasks: true } } },
     };
-    expect(namesFor("chat", maliciousUnsupported)).not.toContain("omnimind_read_thread");
+    expect(namesFor("chat", maliciousUnsupported)).not.toContain("harnessos_read_thread");
   });
 });

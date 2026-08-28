@@ -55,4 +55,4 @@ export interface AgentGatewaySessionRegistryShape {
 export class AgentGatewaySessionRegistry extends ServiceMap.Service<
   AgentGatewaySessionRegistry,
   AgentGatewaySessionRegistryShape
->()("omnimind/agentGateway/Services/AgentGatewaySessionRegistry") {}
+>()("harnessos/agentGateway/Services/AgentGatewaySessionRegistry") {}

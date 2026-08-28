@@ -161,4 +161,4 @@ export interface OrchestrationEngineShape {
 export class OrchestrationEngineService extends ServiceMap.Service<
   OrchestrationEngineService,
   OrchestrationEngineShape
->()("omnimind/orchestration/Services/OrchestrationEngine/OrchestrationEngineService") {}
+>()("harnessos/orchestration/Services/OrchestrationEngine/OrchestrationEngineService") {}

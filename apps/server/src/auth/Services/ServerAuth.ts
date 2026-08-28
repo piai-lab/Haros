@@ -89,5 +89,5 @@ export interface ServerAuthShape {
 }
 
 export class ServerAuth extends ServiceMap.Service<ServerAuth, ServerAuthShape>()(
-  "omnimind/auth/Services/ServerAuth",
+  "harnessos/auth/Services/ServerAuth",
 ) {}

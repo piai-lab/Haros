@@ -253,7 +253,7 @@ const RAW_FACT_ALLOWLIST = [
   "ProjectScriptsControl.tsx:text:Backspace",
   "ProjectSourceSegmentedPicker.tsx:text:GitHub",
   "PullRequestThreadDialog.tsx:attribute:https://github.com/owner/repo/pull/42 or #42",
-  "ThreadWorktreeHandoffDialog.tsx:attribute:omnimind/feature-name",
+  "ThreadWorktreeHandoffDialog.tsx:attribute:harnessos/feature-name",
   "workspaceExplorer.tsx:attribute:`${match.path}, ${lineLabel}: ${match.lineText}`",
   "workspaceExplorer.tsx:attribute:`${match.path}:${match.lineNumber}`",
   "PullRequestRow.tsx:attribute:`${entry.headBranch} → ${entry.baseBranch}`",

@@ -69,57 +69,57 @@ function makeFakeCodexBinary(dir: string) {
         "  shift",
         "done",
         'stdin_content="$(cat)"',
-        'if [ "$OMNIMIND_FAKE_CODEX_REQUIRE_IMAGE" = "1" ] && [ "$seen_image" != "1" ]; then',
+        'if [ "$HARNESSOS_FAKE_CODEX_REQUIRE_IMAGE" = "1" ] && [ "$seen_image" != "1" ]; then',
         '  printf "%s\\n" "missing --image input" >&2',
         "  exit 2",
         "fi",
-        'if [ "$OMNIMIND_FAKE_CODEX_REQUIRE_SKIP_GIT_REPO_CHECK" = "1" ] && [ "$seen_skip_git_repo_check" != "1" ]; then',
+        'if [ "$HARNESSOS_FAKE_CODEX_REQUIRE_SKIP_GIT_REPO_CHECK" = "1" ] && [ "$seen_skip_git_repo_check" != "1" ]; then',
         '  printf "%s\\n" "missing --skip-git-repo-check" >&2',
         "  exit 9",
         "fi",
-        'if [ "$OMNIMIND_FAKE_CODEX_REQUIRE_APPROVAL_NEVER" = "1" ] && [ "$seen_approval_never" != "1" ]; then',
+        'if [ "$HARNESSOS_FAKE_CODEX_REQUIRE_APPROVAL_NEVER" = "1" ] && [ "$seen_approval_never" != "1" ]; then',
         '  printf "%s\\n" "missing approval_policy=never" >&2',
         "  exit 10",
         "fi",
-        'if [ -n "$OMNIMIND_FAKE_CODEX_STDIN_MUST_CONTAIN" ]; then',
-        '  printf "%s" "$stdin_content" | grep -F -- "$OMNIMIND_FAKE_CODEX_STDIN_MUST_CONTAIN" >/dev/null || {',
+        'if [ -n "$HARNESSOS_FAKE_CODEX_STDIN_MUST_CONTAIN" ]; then',
+        '  printf "%s" "$stdin_content" | grep -F -- "$HARNESSOS_FAKE_CODEX_STDIN_MUST_CONTAIN" >/dev/null || {',
         '    printf "%s\\n" "stdin missing expected content" >&2',
         "    exit 3",
         "  }",
         "fi",
-        'if [ -n "$OMNIMIND_FAKE_CODEX_STDIN_MUST_NOT_CONTAIN" ]; then',
-        '  if printf "%s" "$stdin_content" | grep -F -- "$OMNIMIND_FAKE_CODEX_STDIN_MUST_NOT_CONTAIN" >/dev/null; then',
+        'if [ -n "$HARNESSOS_FAKE_CODEX_STDIN_MUST_NOT_CONTAIN" ]; then',
+        '  if printf "%s" "$stdin_content" | grep -F -- "$HARNESSOS_FAKE_CODEX_STDIN_MUST_NOT_CONTAIN" >/dev/null; then',
         '    printf "%s\\n" "stdin contained forbidden content" >&2',
         "    exit 4",
         "  fi",
         "fi",
-        'if [ "$OMNIMIND_FAKE_CODEX_REQUIRE_CODEX_HOME" = "1" ] && [ -z "$CODEX_HOME" ]; then',
+        'if [ "$HARNESSOS_FAKE_CODEX_REQUIRE_CODEX_HOME" = "1" ] && [ -z "$CODEX_HOME" ]; then',
         '  printf "%s\\n" "missing CODEX_HOME" >&2',
         "  exit 5",
         "fi",
-        'if [ "$OMNIMIND_FAKE_CODEX_REQUIRE_AUTH_JSON" = "1" ] && [ ! -f "$CODEX_HOME/auth.json" ]; then',
+        'if [ "$HARNESSOS_FAKE_CODEX_REQUIRE_AUTH_JSON" = "1" ] && [ ! -f "$CODEX_HOME/auth.json" ]; then',
         '  printf "%s\\n" "missing auth.json in CODEX_HOME" >&2',
         "  exit 6",
         "fi",
-        'if [ -n "$OMNIMIND_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_CONTAIN" ]; then',
-        '  grep -F -- "$OMNIMIND_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_CONTAIN" "$CODEX_HOME/config.toml" >/dev/null || {',
+        'if [ -n "$HARNESSOS_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_CONTAIN" ]; then',
+        '  grep -F -- "$HARNESSOS_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_CONTAIN" "$CODEX_HOME/config.toml" >/dev/null || {',
         '    printf "%s\\n" "CODEX_HOME config missing expected content" >&2',
         "    exit 7",
         "  }",
         "fi",
-        'if [ -n "$OMNIMIND_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_NOT_CONTAIN" ]; then',
-        '  if grep -F -- "$OMNIMIND_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_NOT_CONTAIN" "$CODEX_HOME/config.toml" >/dev/null; then',
+        'if [ -n "$HARNESSOS_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_NOT_CONTAIN" ]; then',
+        '  if grep -F -- "$HARNESSOS_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_NOT_CONTAIN" "$CODEX_HOME/config.toml" >/dev/null; then',
         '    printf "%s\\n" "CODEX_HOME config contained forbidden content" >&2',
         "    exit 8",
         "  fi",
         "fi",
-        'if [ -n "$OMNIMIND_FAKE_CODEX_STDERR" ]; then',
-        '  printf "%s\\n" "$OMNIMIND_FAKE_CODEX_STDERR" >&2',
+        'if [ -n "$HARNESSOS_FAKE_CODEX_STDERR" ]; then',
+        '  printf "%s\\n" "$HARNESSOS_FAKE_CODEX_STDERR" >&2',
         "fi",
         'if [ -n "$output_path" ]; then',
-        '  node -e \'const fs=require("node:fs"); const value=process.argv[2] ?? ""; fs.writeFileSync(process.argv[1], Buffer.from(value, "base64"));\' "$output_path" "${OMNIMIND_FAKE_CODEX_OUTPUT_B64:-e30=}"',
+        '  node -e \'const fs=require("node:fs"); const value=process.argv[2] ?? ""; fs.writeFileSync(process.argv[1], Buffer.from(value, "base64"));\' "$output_path" "${HARNESSOS_FAKE_CODEX_OUTPUT_B64:-e30=}"',
         "fi",
-        'exit "${OMNIMIND_FAKE_CODEX_EXIT_CODE:-0}"',
+        'exit "${HARNESSOS_FAKE_CODEX_EXIT_CODE:-0}"',
         "",
       ].join("\n"),
     );
@@ -152,96 +152,96 @@ function withFakeCodexEnv<A, E, R>(
       const tempDir = yield* fs.makeTempDirectoryScoped({ prefix: "omnimind-codex-text-" });
       const binDir = yield* makeFakeCodexBinary(tempDir);
       const previousPath = process.env.PATH;
-      const previousOmniMindHome = process.env.OMNIMIND_HOME;
-      const previousOutput = process.env.OMNIMIND_FAKE_CODEX_OUTPUT_B64;
-      const previousExitCode = process.env.OMNIMIND_FAKE_CODEX_EXIT_CODE;
-      const previousStderr = process.env.OMNIMIND_FAKE_CODEX_STDERR;
-      const previousRequireImage = process.env.OMNIMIND_FAKE_CODEX_REQUIRE_IMAGE;
-      const previousStdinMustContain = process.env.OMNIMIND_FAKE_CODEX_STDIN_MUST_CONTAIN;
-      const previousStdinMustNotContain = process.env.OMNIMIND_FAKE_CODEX_STDIN_MUST_NOT_CONTAIN;
-      const previousRequireCodexHome = process.env.OMNIMIND_FAKE_CODEX_REQUIRE_CODEX_HOME;
-      const previousRequireAuthJson = process.env.OMNIMIND_FAKE_CODEX_REQUIRE_AUTH_JSON;
+      const previousOmniMindHome = process.env.HARNESSOS_HOME;
+      const previousOutput = process.env.HARNESSOS_FAKE_CODEX_OUTPUT_B64;
+      const previousExitCode = process.env.HARNESSOS_FAKE_CODEX_EXIT_CODE;
+      const previousStderr = process.env.HARNESSOS_FAKE_CODEX_STDERR;
+      const previousRequireImage = process.env.HARNESSOS_FAKE_CODEX_REQUIRE_IMAGE;
+      const previousStdinMustContain = process.env.HARNESSOS_FAKE_CODEX_STDIN_MUST_CONTAIN;
+      const previousStdinMustNotContain = process.env.HARNESSOS_FAKE_CODEX_STDIN_MUST_NOT_CONTAIN;
+      const previousRequireCodexHome = process.env.HARNESSOS_FAKE_CODEX_REQUIRE_CODEX_HOME;
+      const previousRequireAuthJson = process.env.HARNESSOS_FAKE_CODEX_REQUIRE_AUTH_JSON;
       const previousRequireSkipGitRepoCheck =
-        process.env.OMNIMIND_FAKE_CODEX_REQUIRE_SKIP_GIT_REPO_CHECK;
-      const previousRequireApprovalNever = process.env.OMNIMIND_FAKE_CODEX_REQUIRE_APPROVAL_NEVER;
+        process.env.HARNESSOS_FAKE_CODEX_REQUIRE_SKIP_GIT_REPO_CHECK;
+      const previousRequireApprovalNever = process.env.HARNESSOS_FAKE_CODEX_REQUIRE_APPROVAL_NEVER;
       const previousCodexHomeConfigMustContain =
-        process.env.OMNIMIND_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_CONTAIN;
+        process.env.HARNESSOS_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_CONTAIN;
       const previousCodexHomeConfigMustNotContain =
-        process.env.OMNIMIND_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_NOT_CONTAIN;
+        process.env.HARNESSOS_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_NOT_CONTAIN;
 
       yield* Effect.sync(() => {
         process.env.PATH = `${binDir}:${previousPath ?? ""}`;
-        process.env.OMNIMIND_HOME = tempDir;
-        process.env.OMNIMIND_FAKE_CODEX_OUTPUT_B64 = Buffer.from(input.output, "utf8").toString(
+        process.env.HARNESSOS_HOME = tempDir;
+        process.env.HARNESSOS_FAKE_CODEX_OUTPUT_B64 = Buffer.from(input.output, "utf8").toString(
           "base64",
         );
 
         if (input.exitCode !== undefined) {
-          process.env.OMNIMIND_FAKE_CODEX_EXIT_CODE = String(input.exitCode);
+          process.env.HARNESSOS_FAKE_CODEX_EXIT_CODE = String(input.exitCode);
         } else {
-          delete process.env.OMNIMIND_FAKE_CODEX_EXIT_CODE;
+          delete process.env.HARNESSOS_FAKE_CODEX_EXIT_CODE;
         }
 
         if (input.stderr !== undefined) {
-          process.env.OMNIMIND_FAKE_CODEX_STDERR = input.stderr;
+          process.env.HARNESSOS_FAKE_CODEX_STDERR = input.stderr;
         } else {
-          delete process.env.OMNIMIND_FAKE_CODEX_STDERR;
+          delete process.env.HARNESSOS_FAKE_CODEX_STDERR;
         }
 
         if (input.requireImage) {
-          process.env.OMNIMIND_FAKE_CODEX_REQUIRE_IMAGE = "1";
+          process.env.HARNESSOS_FAKE_CODEX_REQUIRE_IMAGE = "1";
         } else {
-          delete process.env.OMNIMIND_FAKE_CODEX_REQUIRE_IMAGE;
+          delete process.env.HARNESSOS_FAKE_CODEX_REQUIRE_IMAGE;
         }
 
         if (input.stdinMustContain !== undefined) {
-          process.env.OMNIMIND_FAKE_CODEX_STDIN_MUST_CONTAIN = input.stdinMustContain;
+          process.env.HARNESSOS_FAKE_CODEX_STDIN_MUST_CONTAIN = input.stdinMustContain;
         } else {
-          delete process.env.OMNIMIND_FAKE_CODEX_STDIN_MUST_CONTAIN;
+          delete process.env.HARNESSOS_FAKE_CODEX_STDIN_MUST_CONTAIN;
         }
 
         if (input.stdinMustNotContain !== undefined) {
-          process.env.OMNIMIND_FAKE_CODEX_STDIN_MUST_NOT_CONTAIN = input.stdinMustNotContain;
+          process.env.HARNESSOS_FAKE_CODEX_STDIN_MUST_NOT_CONTAIN = input.stdinMustNotContain;
         } else {
-          delete process.env.OMNIMIND_FAKE_CODEX_STDIN_MUST_NOT_CONTAIN;
+          delete process.env.HARNESSOS_FAKE_CODEX_STDIN_MUST_NOT_CONTAIN;
         }
 
         if (input.requireCodexHome) {
-          process.env.OMNIMIND_FAKE_CODEX_REQUIRE_CODEX_HOME = "1";
+          process.env.HARNESSOS_FAKE_CODEX_REQUIRE_CODEX_HOME = "1";
         } else {
-          delete process.env.OMNIMIND_FAKE_CODEX_REQUIRE_CODEX_HOME;
+          delete process.env.HARNESSOS_FAKE_CODEX_REQUIRE_CODEX_HOME;
         }
 
         if (input.requireAuthJson) {
-          process.env.OMNIMIND_FAKE_CODEX_REQUIRE_AUTH_JSON = "1";
+          process.env.HARNESSOS_FAKE_CODEX_REQUIRE_AUTH_JSON = "1";
         } else {
-          delete process.env.OMNIMIND_FAKE_CODEX_REQUIRE_AUTH_JSON;
+          delete process.env.HARNESSOS_FAKE_CODEX_REQUIRE_AUTH_JSON;
         }
 
         if (input.requireSkipGitRepoCheck) {
-          process.env.OMNIMIND_FAKE_CODEX_REQUIRE_SKIP_GIT_REPO_CHECK = "1";
+          process.env.HARNESSOS_FAKE_CODEX_REQUIRE_SKIP_GIT_REPO_CHECK = "1";
         } else {
-          delete process.env.OMNIMIND_FAKE_CODEX_REQUIRE_SKIP_GIT_REPO_CHECK;
+          delete process.env.HARNESSOS_FAKE_CODEX_REQUIRE_SKIP_GIT_REPO_CHECK;
         }
 
         if (input.requireApprovalNever) {
-          process.env.OMNIMIND_FAKE_CODEX_REQUIRE_APPROVAL_NEVER = "1";
+          process.env.HARNESSOS_FAKE_CODEX_REQUIRE_APPROVAL_NEVER = "1";
         } else {
-          delete process.env.OMNIMIND_FAKE_CODEX_REQUIRE_APPROVAL_NEVER;
+          delete process.env.HARNESSOS_FAKE_CODEX_REQUIRE_APPROVAL_NEVER;
         }
 
         if (input.codexHomeConfigMustContain !== undefined) {
-          process.env.OMNIMIND_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_CONTAIN =
+          process.env.HARNESSOS_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_CONTAIN =
             input.codexHomeConfigMustContain;
         } else {
-          delete process.env.OMNIMIND_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_CONTAIN;
+          delete process.env.HARNESSOS_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_CONTAIN;
         }
 
         if (input.codexHomeConfigMustNotContain !== undefined) {
-          process.env.OMNIMIND_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_NOT_CONTAIN =
+          process.env.HARNESSOS_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_NOT_CONTAIN =
             input.codexHomeConfigMustNotContain;
         } else {
-          delete process.env.OMNIMIND_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_NOT_CONTAIN;
+          delete process.env.HARNESSOS_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_NOT_CONTAIN;
         }
       });
 
@@ -268,85 +268,85 @@ function withFakeCodexEnv<A, E, R>(
       Effect.sync(() => {
         process.env.PATH = previous.previousPath;
         if (previous.previousOmniMindHome === undefined) {
-          delete process.env.OMNIMIND_HOME;
+          delete process.env.HARNESSOS_HOME;
         } else {
-          process.env.OMNIMIND_HOME = previous.previousOmniMindHome;
+          process.env.HARNESSOS_HOME = previous.previousOmniMindHome;
         }
 
         if (previous.previousOutput === undefined) {
-          delete process.env.OMNIMIND_FAKE_CODEX_OUTPUT_B64;
+          delete process.env.HARNESSOS_FAKE_CODEX_OUTPUT_B64;
         } else {
-          process.env.OMNIMIND_FAKE_CODEX_OUTPUT_B64 = previous.previousOutput;
+          process.env.HARNESSOS_FAKE_CODEX_OUTPUT_B64 = previous.previousOutput;
         }
 
         if (previous.previousExitCode === undefined) {
-          delete process.env.OMNIMIND_FAKE_CODEX_EXIT_CODE;
+          delete process.env.HARNESSOS_FAKE_CODEX_EXIT_CODE;
         } else {
-          process.env.OMNIMIND_FAKE_CODEX_EXIT_CODE = previous.previousExitCode;
+          process.env.HARNESSOS_FAKE_CODEX_EXIT_CODE = previous.previousExitCode;
         }
 
         if (previous.previousStderr === undefined) {
-          delete process.env.OMNIMIND_FAKE_CODEX_STDERR;
+          delete process.env.HARNESSOS_FAKE_CODEX_STDERR;
         } else {
-          process.env.OMNIMIND_FAKE_CODEX_STDERR = previous.previousStderr;
+          process.env.HARNESSOS_FAKE_CODEX_STDERR = previous.previousStderr;
         }
 
         if (previous.previousRequireImage === undefined) {
-          delete process.env.OMNIMIND_FAKE_CODEX_REQUIRE_IMAGE;
+          delete process.env.HARNESSOS_FAKE_CODEX_REQUIRE_IMAGE;
         } else {
-          process.env.OMNIMIND_FAKE_CODEX_REQUIRE_IMAGE = previous.previousRequireImage;
+          process.env.HARNESSOS_FAKE_CODEX_REQUIRE_IMAGE = previous.previousRequireImage;
         }
 
         if (previous.previousStdinMustContain === undefined) {
-          delete process.env.OMNIMIND_FAKE_CODEX_STDIN_MUST_CONTAIN;
+          delete process.env.HARNESSOS_FAKE_CODEX_STDIN_MUST_CONTAIN;
         } else {
-          process.env.OMNIMIND_FAKE_CODEX_STDIN_MUST_CONTAIN = previous.previousStdinMustContain;
+          process.env.HARNESSOS_FAKE_CODEX_STDIN_MUST_CONTAIN = previous.previousStdinMustContain;
         }
 
         if (previous.previousStdinMustNotContain === undefined) {
-          delete process.env.OMNIMIND_FAKE_CODEX_STDIN_MUST_NOT_CONTAIN;
+          delete process.env.HARNESSOS_FAKE_CODEX_STDIN_MUST_NOT_CONTAIN;
         } else {
-          process.env.OMNIMIND_FAKE_CODEX_STDIN_MUST_NOT_CONTAIN =
+          process.env.HARNESSOS_FAKE_CODEX_STDIN_MUST_NOT_CONTAIN =
             previous.previousStdinMustNotContain;
         }
 
         if (previous.previousRequireCodexHome === undefined) {
-          delete process.env.OMNIMIND_FAKE_CODEX_REQUIRE_CODEX_HOME;
+          delete process.env.HARNESSOS_FAKE_CODEX_REQUIRE_CODEX_HOME;
         } else {
-          process.env.OMNIMIND_FAKE_CODEX_REQUIRE_CODEX_HOME = previous.previousRequireCodexHome;
+          process.env.HARNESSOS_FAKE_CODEX_REQUIRE_CODEX_HOME = previous.previousRequireCodexHome;
         }
 
         if (previous.previousRequireAuthJson === undefined) {
-          delete process.env.OMNIMIND_FAKE_CODEX_REQUIRE_AUTH_JSON;
+          delete process.env.HARNESSOS_FAKE_CODEX_REQUIRE_AUTH_JSON;
         } else {
-          process.env.OMNIMIND_FAKE_CODEX_REQUIRE_AUTH_JSON = previous.previousRequireAuthJson;
+          process.env.HARNESSOS_FAKE_CODEX_REQUIRE_AUTH_JSON = previous.previousRequireAuthJson;
         }
 
         if (previous.previousRequireSkipGitRepoCheck === undefined) {
-          delete process.env.OMNIMIND_FAKE_CODEX_REQUIRE_SKIP_GIT_REPO_CHECK;
+          delete process.env.HARNESSOS_FAKE_CODEX_REQUIRE_SKIP_GIT_REPO_CHECK;
         } else {
-          process.env.OMNIMIND_FAKE_CODEX_REQUIRE_SKIP_GIT_REPO_CHECK =
+          process.env.HARNESSOS_FAKE_CODEX_REQUIRE_SKIP_GIT_REPO_CHECK =
             previous.previousRequireSkipGitRepoCheck;
         }
 
         if (previous.previousRequireApprovalNever === undefined) {
-          delete process.env.OMNIMIND_FAKE_CODEX_REQUIRE_APPROVAL_NEVER;
+          delete process.env.HARNESSOS_FAKE_CODEX_REQUIRE_APPROVAL_NEVER;
         } else {
-          process.env.OMNIMIND_FAKE_CODEX_REQUIRE_APPROVAL_NEVER =
+          process.env.HARNESSOS_FAKE_CODEX_REQUIRE_APPROVAL_NEVER =
             previous.previousRequireApprovalNever;
         }
 
         if (previous.previousCodexHomeConfigMustContain === undefined) {
-          delete process.env.OMNIMIND_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_CONTAIN;
+          delete process.env.HARNESSOS_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_CONTAIN;
         } else {
-          process.env.OMNIMIND_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_CONTAIN =
+          process.env.HARNESSOS_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_CONTAIN =
             previous.previousCodexHomeConfigMustContain;
         }
 
         if (previous.previousCodexHomeConfigMustNotContain === undefined) {
-          delete process.env.OMNIMIND_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_NOT_CONTAIN;
+          delete process.env.HARNESSOS_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_NOT_CONTAIN;
         } else {
-          process.env.OMNIMIND_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_NOT_CONTAIN =
+          process.env.HARNESSOS_FAKE_CODEX_CODEX_HOME_CONFIG_MUST_NOT_CONTAIN =
             previous.previousCodexHomeConfigMustNotContain;
         }
 

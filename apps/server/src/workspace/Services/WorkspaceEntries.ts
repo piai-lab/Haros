@@ -50,7 +50,7 @@ export interface WorkspaceEntriesShape {
 }
 
 export class WorkspaceEntries extends ServiceMap.Service<WorkspaceEntries, WorkspaceEntriesShape>()(
-  "omnimind/workspace/Services/WorkspaceEntries",
+  "harnessos/workspace/Services/WorkspaceEntries",
 ) {}
 
 export class WorkspaceEntriesError extends Data.TaggedError("WorkspaceEntriesError")<{

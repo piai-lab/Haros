@@ -46,4 +46,4 @@ export interface CheckpointDiffQueryShape {
 export class CheckpointDiffQuery extends ServiceMap.Service<
   CheckpointDiffQuery,
   CheckpointDiffQueryShape
->()("omnimind/checkpointing/Services/CheckpointDiffQuery") {}
+>()("harnessos/checkpointing/Services/CheckpointDiffQuery") {}

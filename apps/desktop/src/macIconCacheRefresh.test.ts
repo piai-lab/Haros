@@ -10,8 +10,8 @@ import {
 
 describe("resolveLaunchVersionRecordPath", () => {
   it("places the record file inside the userData directory", () => {
-    expect(resolveLaunchVersionRecordPath("/home/me/AppData/OmniMind")).toBe(
-      "/home/me/AppData/OmniMind/last-launch-version.json",
+    expect(resolveLaunchVersionRecordPath("/home/me/AppData/HarnessOS")).toBe(
+      "/home/me/AppData/HarnessOS/last-launch-version.json",
     );
   });
 });
@@ -58,13 +58,13 @@ describe("shouldRefreshIconCache", () => {
 describe("resolveMacAppBundlePath", () => {
   it("resolves the .app bundle from the Electron executable on macOS", () => {
     expect(
-      resolveMacAppBundlePath("/Applications/OmniMind.app/Contents/MacOS/OmniMind", "darwin"),
-    ).toBe("/Applications/OmniMind.app");
+      resolveMacAppBundlePath("/Applications/HarnessOS.app/Contents/MacOS/HarnessOS", "darwin"),
+    ).toBe("/Applications/HarnessOS.app");
   });
 
   it("returns null off macOS", () => {
     expect(
-      resolveMacAppBundlePath("/Applications/OmniMind.app/Contents/MacOS/OmniMind", "linux"),
+      resolveMacAppBundlePath("/Applications/HarnessOS.app/Contents/MacOS/HarnessOS", "linux"),
     ).toBeNull();
   });
 

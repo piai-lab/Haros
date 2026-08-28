@@ -84,7 +84,7 @@ export const GrokExitPlanModeRequest = Schema.Struct({
   planContent: Schema.NullOr(Schema.String),
 });
 
-const OMNIMIND_PLAN_REVIEW_FEEDBACK =
+const HARNESSOS_PLAN_REVIEW_FEEDBACK =
   "OmniMind captured this plan for user review. Do not revise or implement it now. End this turn and wait for the user's next message.";
 
 export function extractGrokExitPlanMarkdown(
@@ -105,7 +105,7 @@ export function makeGrokExitPlanModeCapturedResponse(): {
 } {
   return {
     outcome: "cancelled",
-    feedback: OMNIMIND_PLAN_REVIEW_FEEDBACK,
+    feedback: HARNESSOS_PLAN_REVIEW_FEEDBACK,
   };
 }
 

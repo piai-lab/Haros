@@ -4,7 +4,7 @@ export function createBrowserTestServerConfig(checkedAt: string): ServerConfig {
   return {
     cwd: "/repo/project",
     worktreesDir: "/repo/.codex/worktrees",
-    keybindingsConfigPath: "/repo/project/.omnimind-keybindings.json",
+    keybindingsConfigPath: "/repo/project/.harnessos-keybindings.json",
     keybindings: [],
     issues: [],
     providers: [

@@ -2,10 +2,7 @@
 // Purpose: Locks down Settings -> Skills grouping for duplicate provider skill copies.
 // Layer: Web settings logic tests
 
-import {
-  PROVIDER_KINDS,
-  type ProviderSkillDescriptor,
-} from "@harnessos/contracts";
+import { PROVIDER_KINDS, type ProviderSkillDescriptor } from "@harnessos/contracts";
 import { PROVIDER_DISPLAY_NAMES } from "@harnessos/shared/providerMetadata";
 import { describe, expect, it } from "vitest";
 
@@ -81,7 +78,7 @@ describe("isOmniMindSkillSource", () => {
   it("distinguishes OmniMind-owned assets from Engine-native homes", () => {
     expect(
       isOmniMindSkillSource(
-        skill({ path: "/Users/test/.omnimind/skills/reviewer/SKILL.md", scope: "project" }),
+        skill({ path: "/Users/test/.harnessos/skills/reviewer/SKILL.md", scope: "project" }),
       ),
     ).toBe(true);
     expect(

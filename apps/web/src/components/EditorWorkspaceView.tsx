@@ -69,9 +69,9 @@ import { useI18n } from "~/i18n";
 type EditorCenterMode = "file" | "diff";
 type EditorActivityBarItem = EditorCenterMode | "search";
 
-const EDITOR_CHAT_PANE_STORAGE_KEY = "omnimind.editor.chatPaneWidth";
-const EDITOR_SIDEBAR_VISIBLE_STORAGE_KEY = "omnimind.editor.sidebarVisible";
-const EDITOR_CHAT_PANE_VISIBLE_STORAGE_KEY = "omnimind.editor.chatPaneVisible";
+const EDITOR_CHAT_PANE_STORAGE_KEY = "harnessos:editor:chat-pane-width";
+const EDITOR_SIDEBAR_VISIBLE_STORAGE_KEY = "harnessos:editor:sidebar-visible";
+const EDITOR_CHAT_PANE_VISIBLE_STORAGE_KEY = "harnessos:editor:chat-pane-visible";
 const EDITOR_CHAT_PANE_DEFAULT_WIDTH = 384;
 const EDITOR_CHAT_PANE_MIN_WIDTH = 320;
 const EDITOR_CHAT_PANE_MAX_WIDTH = 600;

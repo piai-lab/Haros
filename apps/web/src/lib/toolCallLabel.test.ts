@@ -66,7 +66,7 @@ describe("deriveOmniMindMcpToolTitle", () => {
     for (const status of ["running", "completed", "failed"] as const) {
       expect(
         deriveOmniMindMcpToolTitle({
-          toolName: "mcp__omnimind__browser_open",
+          toolName: "mcp__harnessos__browser_open",
           status,
         }),
       ).toBe("Open browser tab");
@@ -82,82 +82,82 @@ describe("deriveOmniMindMcpToolTitle", () => {
 
   it("has intentional running and completed copy for every OmniMind gateway action", () => {
     const cases = [
-      ["omnimind_context", "OmniMind is checking its context", "OmniMind checked its context"],
+      ["harnessos_context", "OmniMind is checking its context", "OmniMind checked its context"],
       [
-        "omnimind_capabilities",
+        "harnessos_capabilities",
         "OmniMind is checking available agents",
         "OmniMind checked available agents",
       ],
-      ["omnimind_list_projects", "OmniMind is listing projects", "OmniMind listed projects"],
-      ["omnimind_list_threads", "OmniMind is listing threads", "OmniMind listed threads"],
-      ["omnimind_read_thread", "OmniMind is reading a thread", "OmniMind read a thread"],
+      ["harnessos_list_projects", "OmniMind is listing projects", "OmniMind listed projects"],
+      ["harnessos_list_threads", "OmniMind is listing threads", "OmniMind listed threads"],
+      ["harnessos_read_thread", "OmniMind is reading a thread", "OmniMind read a thread"],
       [
-        "omnimind_read_thread_activity",
+        "harnessos_read_thread_activity",
         "OmniMind is reading thread activity",
         "OmniMind read thread activity",
       ],
       [
-        "omnimind_read_thread_events",
+        "harnessos_read_thread_events",
         "OmniMind is reading thread events",
         "OmniMind read thread events",
       ],
       [
-        "omnimind_read_thread_runtime_events",
+        "harnessos_read_thread_runtime_events",
         "OmniMind is reading thread runtime events",
         "OmniMind read thread runtime events",
       ],
       [
-        "omnimind_diagnose_thread",
+        "harnessos_diagnose_thread",
         "OmniMind is diagnosing a thread",
         "OmniMind diagnosed a thread",
       ],
-      ["omnimind_create_thread", "OmniMind is creating a thread", "OmniMind created a thread"],
-      ["omnimind_create_threads", "OmniMind is creating threads", "OmniMind created threads"],
+      ["harnessos_create_thread", "OmniMind is creating a thread", "OmniMind created a thread"],
+      ["harnessos_create_threads", "OmniMind is creating threads", "OmniMind created threads"],
       [
-        "omnimind_wait_for_threads",
+        "harnessos_wait_for_threads",
         "OmniMind is waiting for threads",
         "OmniMind finished waiting for threads",
       ],
-      ["omnimind_send_message", "OmniMind is sending a message", "OmniMind sent a message"],
+      ["harnessos_send_message", "OmniMind is sending a message", "OmniMind sent a message"],
       [
-        "omnimind_interrupt_thread",
+        "harnessos_interrupt_thread",
         "OmniMind is interrupting a thread",
         "OmniMind interrupted a thread",
       ],
-      ["omnimind_set_thread_title", "OmniMind is renaming a thread", "OmniMind renamed a thread"],
+      ["harnessos_set_thread_title", "OmniMind is renaming a thread", "OmniMind renamed a thread"],
       [
-        "omnimind_set_thread_archived",
+        "harnessos_set_thread_archived",
         "OmniMind is updating a thread",
         "OmniMind updated a thread",
       ],
       [
-        "omnimind_create_automation",
+        "harnessos_create_automation",
         "OmniMind is creating an automation",
         "OmniMind created an automation",
       ],
       [
-        "omnimind_list_automations",
+        "harnessos_list_automations",
         "OmniMind is listing automations",
         "OmniMind listed automations",
       ],
       [
-        "omnimind_cancel_automation",
+        "harnessos_cancel_automation",
         "OmniMind is stopping an automation",
         "OmniMind stopped an automation",
       ],
-      ["omnimind_overview", "OmniMind is gathering an overview", "OmniMind gathered an overview"],
+      ["harnessos_overview", "OmniMind is gathering an overview", "OmniMind gathered an overview"],
       [
-        "omnimind_list_allowed_projects",
+        "harnessos_list_allowed_projects",
         "OmniMind is listing allowed projects",
         "OmniMind listed allowed projects",
       ],
-      ["omnimind_create_task", "OmniMind is creating a task", "OmniMind created a task"],
+      ["harnessos_create_task", "OmniMind is creating a task", "OmniMind created a task"],
       [
-        "omnimind_wait_for_task",
+        "harnessos_wait_for_task",
         "OmniMind is waiting for a task",
         "OmniMind finished waiting for a task",
       ],
-      ["omnimind_read_task", "OmniMind is reading a task", "OmniMind read a task"],
+      ["harnessos_read_task", "OmniMind is reading a task", "OmniMind read a task"],
     ] as const;
 
     for (const [toolName, running, completed] of cases) {
@@ -167,13 +167,13 @@ describe("deriveOmniMindMcpToolTitle", () => {
 
     expect(
       deriveOmniMindMcpToolTitle({
-        toolName: "omnimind_create_threads",
+        toolName: "harnessos_create_threads",
         status: "failed",
       }),
     ).toBe("OmniMind couldn't create threads");
     expect(
       deriveOmniMindMcpToolTitle({
-        toolName: "omnimind_create_thread",
+        toolName: "harnessos_create_thread",
         status: "cancelled",
       }),
     ).toBe("OmniMind stopped creating a thread");
@@ -182,13 +182,13 @@ describe("deriveOmniMindMcpToolTitle", () => {
   it("turns provider-specific create-thread identifiers into activity sentences", () => {
     expect(
       deriveOmniMindMcpToolTitle({
-        toolName: "OmniMind__omnimind_create_thread",
+        toolName: "OmniMind__harnessos_create_thread",
         status: "running",
       }),
     ).toBe("OmniMind is creating a thread");
     expect(
       deriveOmniMindMcpToolTitle({
-        toolName: "mcp__omnimind__omnimind_create_thread",
+        toolName: "mcp__harnessos__harnessos_create_thread",
         status: "completed",
       }),
     ).toBe("OmniMind created a thread");
@@ -196,7 +196,7 @@ describe("deriveOmniMindMcpToolTitle", () => {
 
   it("recognizes bare and already-humanized OmniMind tool names", () => {
     expect(
-      deriveOmniMindMcpToolTitle({ toolName: "omnimind_send_message", status: "running" }),
+      deriveOmniMindMcpToolTitle({ toolName: "harnessos_send_message", status: "running" }),
     ).toBe("OmniMind is sending a message");
     expect(
       deriveOmniMindMcpToolTitle({ title: "OmniMind: OmniMind List Threads", status: "completed" }),
@@ -215,19 +215,19 @@ describe("deriveOmniMindMcpToolTitle", () => {
   it("keeps future OmniMind actions branded without exposing raw identifiers", () => {
     expect(
       deriveOmniMindMcpToolTitle({
-        toolName: "mcp__omnimind__omnimind_delete_project",
+        toolName: "mcp__harnessos__harnessos_delete_project",
         status: "running",
       }),
     ).toBe("OmniMind is handling delete project");
     expect(
       deriveOmniMindMcpToolTitle({
-        toolName: "OmniMind__omnimind_delete_project",
+        toolName: "OmniMind__harnessos_delete_project",
         status: "completed",
       }),
     ).toBe("OmniMind handled delete project");
     expect(
       deriveOmniMindMcpToolTitle({
-        toolName: "omnimind_is_handling_delete_project",
+        toolName: "harnessos_is_handling_delete_project",
         status: "completed",
       }),
     ).toBe("OmniMind handled delete project");
@@ -272,7 +272,7 @@ describe("deriveOmniMindMcpToolTitle", () => {
   it("removes transport identifiers without hiding meaningful OmniMind details", () => {
     expect(
       sanitizeOmniMindMcpToolPreview({
-        preview: "OmniMind__omnimind_create_threads",
+        preview: "OmniMind__harnessos_create_threads",
         heading: "OmniMind created threads",
         status: "completed",
       }),
@@ -490,13 +490,14 @@ describe("deriveReadableCommandDisplay", () => {
   it("removes env and timeout wrappers from inline command summaries", () => {
     expect(
       deriveReadableCommandDisplay(
-        "env -u OMNIMIND_AUTH_TOKEN OMNIMIND_PORT_OFFSET=3158 timeout 180s bun run dev",
+        "env -u HARNESSOS_AUTH_TOKEN HARNESSOS_PORT_OFFSET=3158 timeout 180s bun run dev",
         true,
       ),
     ).toEqual({
       verb: "Running",
       target: "bun run dev",
-      fullCommand: "env -u OMNIMIND_AUTH_TOKEN OMNIMIND_PORT_OFFSET=3158 timeout 180s bun run dev",
+      fullCommand:
+        "env -u HARNESSOS_AUTH_TOKEN HARNESSOS_PORT_OFFSET=3158 timeout 180s bun run dev",
     });
   });
 

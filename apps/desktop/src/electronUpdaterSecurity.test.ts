@@ -31,9 +31,9 @@ describe("electronUpdaterSecurity", () => {
   });
 
   it("parses distinguished names the same way as builder-util-runtime", () => {
-    const parsed = parseDistinguishedName('CN=OmniMind, O="Acme, Inc.", OU=Tools\\2C Desktop');
+    const parsed = parseDistinguishedName('CN=HarnessOS, O="Acme, Inc.", OU=Tools\\2C Desktop');
 
-    expect(parsed.get("CN")).toBe("OmniMind");
+    expect(parsed.get("CN")).toBe("HarnessOS");
     expect(parsed.get("O")).toBe("Acme, Inc.");
     expect(parsed.get("OU")).toBe("Tools, Desktop");
   });
@@ -42,9 +42,9 @@ describe("electronUpdaterSecurity", () => {
     expect(
       resolveWindowsUpdatePublisherNames(
         ["CN=Feed Controlled, O=Unexpected"],
-        [" CN=OmniMind, O=Acme Tools ", "CN=Only", ""],
+        [" CN=HarnessOS, O=Acme Tools ", "CN=Only", ""],
       ),
-    ).toEqual(["CN=OmniMind, O=Acme Tools"]);
+    ).toEqual(["CN=HarnessOS, O=Acme Tools"]);
     expect(resolveWindowsUpdatePublisherNames(["CN=Feed Controlled, O=Unexpected"], null)).toEqual([
       "CN=Feed Controlled, O=Unexpected",
     ]);
@@ -56,9 +56,9 @@ describe("electronUpdaterSecurity", () => {
         null,
         JSON.stringify({
           Status: 0,
-          Path: "C:\\Users\\test\\AppData\\Local\\Temp\\OmniMindSetup.exe",
+          Path: "C:\\Users\\test\\AppData\\Local\\Temp\\HarnessOSSetup.exe",
           SignerCertificate: {
-            Subject: "CN=OmniMind, O=Acme Tools",
+            Subject: "CN=HarnessOS, O=Acme Tools",
           },
         }),
         "",
@@ -66,8 +66,8 @@ describe("electronUpdaterSecurity", () => {
     });
 
     const result = await verifyWindowsUpdateCodeSignature(
-      ["CN=OmniMind, O=Acme Tools"],
-      "C:\\Users\\test\\AppData\\Local\\Temp\\OmniMindSetup.exe",
+      ["CN=HarnessOS, O=Acme Tools"],
+      "C:\\Users\\test\\AppData\\Local\\Temp\\HarnessOSSetup.exe",
       { info: vi.fn(), warn: vi.fn() },
       {
         env: { SystemRoot: "C:\\Windows" },
@@ -92,8 +92,8 @@ describe("electronUpdaterSecurity", () => {
   it("rejects a CN-only publisher allowlist", async () => {
     const logger = { info: vi.fn(), warn: vi.fn() };
     const result = await verifyWindowsUpdateCodeSignature(
-      ["CN=OmniMind"],
-      "C:\\Temp\\OmniMindSetup.exe",
+      ["CN=HarnessOS"],
+      "C:\\Temp\\HarnessOSSetup.exe",
       logger,
       {
         env: { SystemRoot: "C:\\Windows" },
@@ -102,8 +102,8 @@ describe("electronUpdaterSecurity", () => {
             null,
             JSON.stringify({
               Status: 0,
-              Path: "C:\\Temp\\OmniMindSetup.exe",
-              SignerCertificate: { Subject: "CN=OmniMind, O=Acme Tools" },
+              Path: "C:\\Temp\\HarnessOSSetup.exe",
+              SignerCertificate: { Subject: "CN=HarnessOS, O=Acme Tools" },
             }),
             "",
           );
@@ -111,7 +111,7 @@ describe("electronUpdaterSecurity", () => {
       },
     );
 
-    expect(result).toContain("publisherNames: CN=OmniMind");
+    expect(result).toContain("publisherNames: CN=HarnessOS");
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining("signed with incorrect certificate"),
     );
@@ -119,8 +119,8 @@ describe("electronUpdaterSecurity", () => {
 
   it("fails closed when PowerShell cannot verify the signature", async () => {
     const result = await verifyWindowsUpdateCodeSignature(
-      ["CN=OmniMind, O=Acme Tools"],
-      "C:\\Temp\\OmniMindSetup.exe",
+      ["CN=HarnessOS, O=Acme Tools"],
+      "C:\\Temp\\HarnessOSSetup.exe",
       { info: vi.fn(), warn: vi.fn() },
       {
         env: { SystemRoot: "C:\\Windows" },
@@ -136,8 +136,8 @@ describe("electronUpdaterSecurity", () => {
 
   it("fails closed when signature output is malformed", async () => {
     const result = await verifyWindowsUpdateCodeSignature(
-      ["CN=OmniMind, O=Acme Tools"],
-      "C:\\Temp\\OmniMindSetup.exe",
+      ["CN=HarnessOS, O=Acme Tools"],
+      "C:\\Temp\\HarnessOSSetup.exe",
       { info: vi.fn(), warn: vi.fn() },
       {
         env: { SystemRoot: "C:\\Windows" },
@@ -152,8 +152,8 @@ describe("electronUpdaterSecurity", () => {
 
   it("fails closed when signature output omits the signed file path", async () => {
     const result = await verifyWindowsUpdateCodeSignature(
-      ["CN=OmniMind, O=Acme Tools"],
-      "C:\\Temp\\OmniMindSetup.exe",
+      ["CN=HarnessOS, O=Acme Tools"],
+      "C:\\Temp\\HarnessOSSetup.exe",
       { info: vi.fn(), warn: vi.fn() },
       {
         env: { SystemRoot: "C:\\Windows" },
@@ -162,7 +162,7 @@ describe("electronUpdaterSecurity", () => {
             null,
             JSON.stringify({
               Status: 0,
-              SignerCertificate: { Subject: "CN=OmniMind, O=Acme Tools" },
+              SignerCertificate: { Subject: "CN=HarnessOS, O=Acme Tools" },
             }),
             "",
           );
@@ -176,8 +176,8 @@ describe("electronUpdaterSecurity", () => {
 
   it("returns a mismatch summary for an unexpected publisher", async () => {
     const result = await verifyWindowsUpdateCodeSignature(
-      ["CN=OmniMind, O=Acme Tools"],
-      "C:\\Temp\\OmniMindSetup.exe",
+      ["CN=HarnessOS, O=Acme Tools"],
+      "C:\\Temp\\HarnessOSSetup.exe",
       { info: vi.fn(), warn: vi.fn() },
       {
         env: { SystemRoot: "C:\\Windows" },
@@ -186,7 +186,7 @@ describe("electronUpdaterSecurity", () => {
             null,
             JSON.stringify({
               Status: 0,
-              Path: "C:\\Temp\\OmniMindSetup.exe",
+              Path: "C:\\Temp\\HarnessOSSetup.exe",
               SignerCertificate: { Subject: "CN=Someone Else, O=Acme Tools" },
             }),
             "",
@@ -195,7 +195,7 @@ describe("electronUpdaterSecurity", () => {
       },
     );
 
-    expect(result).toContain("publisherNames: CN=OmniMind, O=Acme Tools");
+    expect(result).toContain("publisherNames: CN=HarnessOS, O=Acme Tools");
     expect(result).toContain("Someone Else");
   });
 
@@ -243,7 +243,7 @@ describe("electronUpdaterSecurity", () => {
 
     const result = await updater.verifyUpdateCodeSignature(
       ["CN=Feed Publisher, O=Acme Tools"],
-      "C:\\Temp\\OmniMindSetup.exe",
+      "C:\\Temp\\HarnessOSSetup.exe",
     );
     expect(result).not.toContain("no valid embedded publisher subject DN");
     expect(result).toContain("signature verification could not be completed");
@@ -261,7 +261,7 @@ describe("electronUpdaterSecurity", () => {
     await expect(
       updater.verifyUpdateCodeSignature(
         ["CN=Feed Controlled, O=Unexpected"],
-        "C:\\Temp\\OmniMindSetup.exe",
+        "C:\\Temp\\HarnessOSSetup.exe",
       ),
     ).resolves.toContain("no valid embedded publisher subject DN");
   });

@@ -22,7 +22,7 @@ export async function discoverCursorSkills(
     providerNativeSkillRoots({
       cwd: input.cwd,
       homeDir: input.homeDir,
-      omnimindBaseDir: nodePath.join(input.homeDir, ".omnimind"),
+      harnessosBaseDir: nodePath.join(input.homeDir, ".harnessos"),
       provider: "cursor",
     }),
   );

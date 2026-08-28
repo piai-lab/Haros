@@ -18,7 +18,7 @@ import { ApprovalRequestId, ThreadId, TurnId, type RuntimeMode } from "@harnesso
 import {
   buildCodexProcessEnv,
   disableCodexConfigSections,
-  OMNIMIND_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS,
+  HARNESSOS_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS,
 } from "./codexProcessEnv";
 import {
   buildCodexInitializeParams,
@@ -41,7 +41,7 @@ import {
 } from "./codexWorkingDirectory";
 import { CodexJsonlFramer, CodexJsonlWriter } from "./codexAppServerTransport";
 import { ensureIsolatedScratchWorkspace } from "./scratchWorkspaces";
-import { OMNIMIND_HARNESS_POLICY_MARKER } from "./agentGateway/harnessPolicy.ts";
+import { HARNESSOS_HARNESS_POLICY_MARKER } from "./agentGateway/harnessPolicy.ts";
 import {
   AGENT_GATEWAY_TURN_AUTHORITY_RETIRED,
   acquireAgentGatewaySessionLease,
@@ -71,11 +71,11 @@ describe("Codex OmniMind harness policy", () => {
       CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS,
       CODEX_PLAN_MODE_DEVELOPER_INSTRUCTIONS,
     ]) {
-      expect(instructions).toContain(OMNIMIND_HARNESS_POLICY_MARKER);
-      expect(instructions.split(OMNIMIND_HARNESS_POLICY_MARKER)).toHaveLength(2);
+      expect(instructions).toContain(HARNESSOS_HARNESS_POLICY_MARKER);
+      expect(instructions.split(HARNESSOS_HARNESS_POLICY_MARKER)).toHaveLength(2);
       expect(instructions).toContain("OmniMind is the host and harness");
       expect(instructions).toContain("tools actually available");
-      expect(instructions).not.toContain("omnimind_create_threads");
+      expect(instructions).not.toContain("harnessos_create_threads");
       expect(instructions).not.toContain("browser_open");
       expect(instructions).not.toContain("device_list");
     }
@@ -83,8 +83,8 @@ describe("Codex OmniMind harness policy", () => {
 
   it("resolves the gateway endpoint when each session environment is built", async () => {
     const homePath = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-gateway-endpoint-"));
-    const previousOmniMindHome = process.env.OMNIMIND_HOME;
-    process.env.OMNIMIND_HOME = path.join(homePath, "omnimind-home");
+    const previousOmniMindHome = process.env.HARNESSOS_HOME;
+    process.env.HARNESSOS_HOME = path.join(homePath, "omnimind-home");
     let endpointUrl = "http://127.0.0.1:0/mcp";
     try {
       const manager = new CodexAppServerManager(undefined, {
@@ -111,9 +111,9 @@ describe("Codex OmniMind harness policy", () => {
       expect(readFileSync(configPath, "utf8")).toContain('url = "http://127.0.0.1:48123/mcp"');
     } finally {
       if (previousOmniMindHome === undefined) {
-        delete process.env.OMNIMIND_HOME;
+        delete process.env.HARNESSOS_HOME;
       } else {
-        process.env.OMNIMIND_HOME = previousOmniMindHome;
+        process.env.HARNESSOS_HOME = previousOmniMindHome;
       }
       rmSync(homePath, { recursive: true, force: true });
     }
@@ -698,7 +698,7 @@ describe("codex CLI version gate", () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-version-"));
     const homePath = path.join(dir, "codex-home");
     mkdirSync(homePath, { recursive: true });
-    vi.stubEnv("OMNIMIND_HOME", path.join(dir, "runtime"));
+    vi.stubEnv("HARNESSOS_HOME", path.join(dir, "runtime"));
 
     const isWindows = process.platform === "win32";
     const counterPath = path.join(dir, "calls.log");
@@ -757,7 +757,7 @@ describe("codex CLI version gate", () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-version-auto-floor-"));
     const homePath = path.join(dir, "codex-home");
     mkdirSync(homePath, { recursive: true });
-    vi.stubEnv("OMNIMIND_HOME", path.join(dir, "runtime"));
+    vi.stubEnv("HARNESSOS_HOME", path.join(dir, "runtime"));
 
     const isWindows = process.platform === "win32";
     const counterPath = path.join(dir, "calls.log");
@@ -801,7 +801,7 @@ describe("codex CLI version gate", () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-version-auto-unknown-"));
     const homePath = path.join(dir, "codex-home");
     mkdirSync(homePath, { recursive: true });
-    vi.stubEnv("OMNIMIND_HOME", path.join(dir, "runtime"));
+    vi.stubEnv("HARNESSOS_HOME", path.join(dir, "runtime"));
 
     const isWindows = process.platform === "win32";
     const binaryPath = path.join(dir, isWindows ? "codex.cmd" : "codex.sh");
@@ -837,7 +837,7 @@ describe("codex CLI version gate", () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-version-swap-"));
     const homePath = path.join(dir, "codex-home");
     mkdirSync(homePath, { recursive: true });
-    vi.stubEnv("OMNIMIND_HOME", path.join(dir, "runtime"));
+    vi.stubEnv("HARNESSOS_HOME", path.join(dir, "runtime"));
 
     const isWindows = process.platform === "win32";
     const binaryPath = path.join(dir, isWindows ? "codex.cmd" : "codex.sh");
@@ -879,7 +879,7 @@ describe("codex CLI version gate", () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-version-path-"));
     const homePath = path.join(dir, "codex-home");
     mkdirSync(homePath, { recursive: true });
-    vi.stubEnv("OMNIMIND_HOME", path.join(dir, "runtime"));
+    vi.stubEnv("HARNESSOS_HOME", path.join(dir, "runtime"));
 
     const isWindows = process.platform === "win32";
     const binaryPath = path.join(dir, isWindows ? "codex.cmd" : "codex");
@@ -916,7 +916,7 @@ describe("codex CLI version gate", () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), "omnimind-codex-version-old-"));
     const homePath = path.join(dir, "codex-home");
     mkdirSync(homePath, { recursive: true });
-    vi.stubEnv("OMNIMIND_HOME", path.join(dir, "runtime"));
+    vi.stubEnv("HARNESSOS_HOME", path.join(dir, "runtime"));
 
     const isWindows = process.platform === "win32";
     const counterPath = path.join(dir, "calls.log");
@@ -1025,18 +1025,18 @@ describe("buildCodexProcessEnv", () => {
       const env = await buildCodexProcessEnv({
         env: {
           CODEX_HOME: codexHome,
-          OMNIMIND_HOME: tempDir,
-          OMNIMIND_BROWSER_HOST_PIPE_PATH: "/tmp/omnimind-browser-host.sock",
-          OMNIMIND_BROWSER_HOST_CAPABILITY: "desktop-capability",
-          OMNIMIND_BROWSER_HOST_CAPABILITY_FD: "3",
+          HARNESSOS_HOME: tempDir,
+          HARNESSOS_BROWSER_HOST_PIPE_PATH: "/tmp/harnessos-browser-host.sock",
+          HARNESSOS_BROWSER_HOST_CAPABILITY: "desktop-capability",
+          HARNESSOS_BROWSER_HOST_CAPABILITY_FD: "3",
           NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS: "/tmp/existing.sock",
         },
         platform: "darwin",
       });
 
-      expect(env.OMNIMIND_BROWSER_HOST_PIPE_PATH).toBeUndefined();
-      expect(env.OMNIMIND_BROWSER_HOST_CAPABILITY).toBeUndefined();
-      expect(env.OMNIMIND_BROWSER_HOST_CAPABILITY_FD).toBeUndefined();
+      expect(env.HARNESSOS_BROWSER_HOST_PIPE_PATH).toBeUndefined();
+      expect(env.HARNESSOS_BROWSER_HOST_CAPABILITY).toBeUndefined();
+      expect(env.HARNESSOS_BROWSER_HOST_CAPABILITY_FD).toBeUndefined();
       expect(env.NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS).toBeUndefined();
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
@@ -1053,7 +1053,7 @@ describe("buildCodexProcessEnv", () => {
           '[plugins."github@openai-curated"]',
           "enabled = true",
           "",
-          ...OMNIMIND_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS.flatMap((header) => [
+          ...HARNESSOS_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS.flatMap((header) => [
             header,
             "enabled = true",
             "",
@@ -1076,7 +1076,7 @@ describe("buildCodexProcessEnv", () => {
       );
 
       const env = await buildCodexProcessEnv({
-        env: { OMNIMIND_HOME: runtimeHome },
+        env: { HARNESSOS_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -1089,7 +1089,7 @@ describe("buildCodexProcessEnv", () => {
       expect(readFileSync(path.join(codexHome, "config.toml"), "utf8")).toContain(
         '[plugins."historical-plugin@local"]\nenabled = false',
       );
-      for (const header of OMNIMIND_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS) {
+      for (const header of HARNESSOS_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS) {
         expect(readFileSync(path.join(codexHome, "config.toml"), "utf8")).toContain(
           `${header}\nenabled = false`,
         );
@@ -1121,7 +1121,7 @@ describe("buildCodexProcessEnv", () => {
 
       const overlayHome = path.join(runtimeHome, "codex-home-overlay");
       const env = await buildCodexProcessEnv({
-        env: { OMNIMIND_HOME: runtimeHome },
+        env: { HARNESSOS_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -1161,7 +1161,7 @@ describe("buildCodexProcessEnv", () => {
       );
 
       const env = await buildCodexProcessEnv({
-        env: { OMNIMIND_HOME: runtimeHome },
+        env: { HARNESSOS_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -1196,7 +1196,7 @@ describe("buildCodexProcessEnv", () => {
       writeFileSync(overlayMemoryPath, "stale-overlay-db", "utf8");
 
       const env = await buildCodexProcessEnv({
-        env: { OMNIMIND_HOME: runtimeHome },
+        env: { HARNESSOS_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -1224,7 +1224,7 @@ describe("buildCodexProcessEnv", () => {
       writeFileSync(overlayAuthPath, '{"tokens":{"access_token":"stale"}}', "utf8");
 
       const env = await buildCodexProcessEnv({
-        env: { OMNIMIND_HOME: runtimeHome },
+        env: { HARNESSOS_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -1255,7 +1255,7 @@ describe("buildCodexProcessEnv", () => {
       writeFileSync(overlayImagePath, "overlay-image", "utf8");
 
       const env = await buildCodexProcessEnv({
-        env: { OMNIMIND_HOME: runtimeHome },
+        env: { HARNESSOS_HOME: runtimeHome },
         homePath: tempDir,
         platform: "darwin",
       });
@@ -1530,7 +1530,7 @@ describe("startSession", () => {
   it("enables Codex experimental api capabilities during initialize", () => {
     expect(buildCodexInitializeParams()).toEqual({
       clientInfo: {
-        name: "omnimind_desktop",
+        name: "harnessos_desktop",
         title: "OmniMind Desktop",
         version: "0.1.0",
       },

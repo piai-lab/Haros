@@ -6,7 +6,7 @@
 import {
   PROVIDER_KINDS,
   type ThreadId,
-  WS_OMNIMIND_ECOSYSTEM_CAPABILITY,
+  WS_HARNESSOS_ECOSYSTEM_CAPABILITY,
   type OmniMindPackageDescriptor,
   type OmniMindPackageResourceDescriptor,
   type ProviderKind,
@@ -138,7 +138,7 @@ function subscribeToEcosystemCapability(listener: () => void): () => void {
 }
 
 function readEcosystemCapability(): boolean {
-  return readNativeApiServerCapabilityState(WS_OMNIMIND_ECOSYSTEM_CAPABILITY) === true;
+  return readNativeApiServerCapabilityState(WS_HARNESSOS_ECOSYSTEM_CAPABILITY) === true;
 }
 
 function readServerEcosystemCapability(): boolean {
@@ -400,7 +400,7 @@ function skillSourceLabel(
   t: ReturnType<typeof useI18n>["t"],
 ): string {
   const segments = new Set(skill.path.split(/[\\/]+/));
-  if (skill.scope === "omnimind" || segments.has(".omnimind")) {
+  if (skill.scope === "omnimind" || segments.has(".harnessos")) {
     return t("library.omnimindLibrary");
   }
   if (skill.scope === "agents") {

@@ -12,25 +12,25 @@ import { BROWSER_IPC_CHANNELS } from "../../../desktop/src/ipcChannels";
 import { hardenBrowserAnnotationWebviewPreferences } from "../../../desktop/src/browserAnnotations/webviewSecurity";
 import { createBrowserPanelHideScheduler } from "../../src/components/BrowserPanel.logic";
 
-const pipePath = process.env.OMNIMIND_BROWSER_HOST_PIPE_PATH;
-const capability = process.env.OMNIMIND_BROWSER_HOST_CAPABILITY;
-const shellPath = process.env.OMNIMIND_E2E_SHELL_PATH;
-const threadId = process.env.OMNIMIND_E2E_THREAD_ID as ThreadId | undefined;
-const omnimindHome = process.env.OMNIMIND_HOME;
-const annotationPreloadPath = process.env.OMNIMIND_E2E_BROWSER_ANNOTATION_PRELOAD;
+const pipePath = process.env.HARNESSOS_BROWSER_HOST_PIPE_PATH;
+const capability = process.env.HARNESSOS_BROWSER_HOST_CAPABILITY;
+const shellPath = process.env.HARNESSOS_E2E_SHELL_PATH;
+const threadId = process.env.HARNESSOS_E2E_THREAD_ID as ThreadId | undefined;
+const harnessosHome = process.env.HARNESSOS_HOME;
+const annotationPreloadPath = process.env.HARNESSOS_E2E_BROWSER_ANNOTATION_PRELOAD;
 
 if (
   !pipePath ||
   !capability ||
   !shellPath ||
   !threadId ||
-  !omnimindHome ||
+  !harnessosHome ||
   !annotationPreloadPath
 ) {
   throw new Error("The visible-browser Electron fixture requires its isolated E2E environment.");
 }
 
-app.setPath("userData", path.join(omnimindHome, "electron-userdata"));
+app.setPath("userData", path.join(harnessosHome, "electron-userdata"));
 
 const browserManager = new DesktopBrowserManager({ annotationPreloadPath });
 let mainWindow: BrowserWindow | null = null;

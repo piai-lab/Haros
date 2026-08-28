@@ -7,4 +7,4 @@ export interface AutomationSchedulerShape {
 export class AutomationScheduler extends ServiceMap.Service<
   AutomationScheduler,
   AutomationSchedulerShape
->()("omnimind/automation/Services/AutomationScheduler") {}
+>()("harnessos/automation/Services/AutomationScheduler") {}

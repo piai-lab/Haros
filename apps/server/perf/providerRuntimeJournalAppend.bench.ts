@@ -3,8 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { Database } from "bun:sqlite";
 
-const EVENT_COUNT = readPositiveInteger("OMNIMIND_BENCH_EVENTS", 10_000);
-const SAMPLE_COUNT = readPositiveInteger("OMNIMIND_BENCH_SAMPLES", 8);
+const EVENT_COUNT = readPositiveInteger("HARNESSOS_BENCH_EVENTS", 10_000);
+const SAMPLE_COUNT = readPositiveInteger("HARNESSOS_BENCH_SAMPLES", 8);
 
 type Strategy = "legacy-select-transaction-insert" | "insert-on-conflict-returning";
 type AppendRuntimeEvent = (params: Record<string, string>) => unknown;

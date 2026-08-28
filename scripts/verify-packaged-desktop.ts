@@ -126,7 +126,7 @@ export function acquirePackagedProofLease(
         ? `pid=${existingOwner.pid}, source=${existingOwner.sourceCommit.slice(0, 12)}`
         : "owner metadata is not yet available";
       throw new Error(
-        `Another OmniMind packaged proof owns this host (${ownerDescription}). Wait for it to finish; do not terminate unrelated OmniMind processes.`,
+        `Another HarnessOS packaged proof owns this host (${ownerDescription}). Wait for it to finish; do not terminate unrelated HarnessOS processes.`,
       );
     }
 
@@ -142,7 +142,7 @@ export function acquirePackagedProofLease(
     }
     rmSync(staleDirectory, { recursive: true, force: true });
     if (!acquire()) {
-      throw new Error("Another OmniMind packaged proof acquired this host concurrently.");
+      throw new Error("Another HarnessOS packaged proof acquired this host concurrently.");
     }
   }
 
@@ -436,10 +436,10 @@ function prepareWindowsLaunch(assetsDirectory: string, extractionRoot: string): 
   }
   runCommand("7z", ["x", "-y", `-o${applicationRoot}`, applicationArchives[0]!]);
   const executables = findFiles(applicationRoot, (candidate) =>
-    /[/\\]OmniMind\.exe$/i.test(candidate),
+    /[/\\]HarnessOS\.exe$/i.test(candidate),
   );
   if (executables.length !== 1) {
-    throw new Error(`Expected one extracted OmniMind.exe, found ${executables.length}.`);
+    throw new Error(`Expected one extracted HarnessOS.exe, found ${executables.length}.`);
   }
   return {
     command: executables[0]!,
@@ -454,11 +454,11 @@ export function assertPackagedSourceCommit(
   expectedSourceCommit: string,
 ): void {
   const packageJson = JSON.parse(packageJsonContents) as {
-    omnimindCommitHash?: unknown;
+    harnessosCommitHash?: unknown;
   };
-  if (packageJson.omnimindCommitHash !== expectedSourceCommit) {
+  if (packageJson.harnessosCommitHash !== expectedSourceCommit) {
     throw new Error(
-      `Packaged source commit mismatch: expected ${expectedSourceCommit}, got ${String(packageJson.omnimindCommitHash ?? "missing")}.`,
+      `Packaged source commit mismatch: expected ${expectedSourceCommit}, got ${String(packageJson.harnessosCommitHash ?? "missing")}.`,
     );
   }
 }
@@ -491,13 +491,13 @@ export function createPackagedDesktopEnvironment(
     XDG_CONFIG_HOME: join(root, "xdg-config"),
     XDG_CACHE_HOME: join(root, "xdg-cache"),
     XDG_DATA_HOME: join(root, "xdg-data"),
-    OMNIMIND_HOME: join(root, "omnimind-home"),
+    HARNESSOS_HOME: join(root, "omnimind-home"),
     CODEX_HOME: join(root, "provider-home", "codex"),
     CLAUDE_CONFIG_DIR: join(root, "provider-home", "claude"),
     TEMP: isolatedTemp,
     TMP: isolatedTemp,
     TMPDIR: isolatedTemp,
-    OMNIMIND_DISABLE_AUTO_UPDATE: "1",
+    HARNESSOS_DISABLE_AUTO_UPDATE: "1",
     ELECTRON_ENABLE_LOGGING: "1",
   };
   for (const path of [
@@ -507,7 +507,7 @@ export function createPackagedDesktopEnvironment(
     env.XDG_CONFIG_HOME,
     env.XDG_CACHE_HOME,
     env.XDG_DATA_HOME,
-    env.OMNIMIND_HOME,
+    env.HARNESSOS_HOME,
     env.CODEX_HOME,
     env.CLAUDE_CONFIG_DIR,
     env.TMPDIR,
@@ -526,7 +526,7 @@ export function createPackagedDesktopEnvironment(
 }
 
 export function resolvePackagedProofUserDataPath(env: NodeJS.ProcessEnv): string {
-  const productHome = env.OMNIMIND_HOME;
+  const productHome = env.HARNESSOS_HOME;
   if (!productHome) throw new Error("Packaged proof environment has no isolated product home.");
   return join(productHome, "electron", "omnimind");
 }
@@ -644,11 +644,11 @@ interface PackagedRuntimeProcessTree {
 }
 
 function assertBundledServerRuntime(
-  omnimindHome: string,
+  harnessosHome: string,
   launchPid: number,
   platform: PackagedDesktopPlatform,
 ): PackagedRuntimeProcessTree {
-  const runtimeStatePath = join(omnimindHome, "userdata", "server-runtime.json");
+  const runtimeStatePath = join(harnessosHome, "userdata", "server-runtime.json");
   let state: BundledServerRuntimeState;
   try {
     state = JSON.parse(readFileSync(runtimeStatePath, "utf8")) as BundledServerRuntimeState;
@@ -1091,7 +1091,7 @@ async function runPackagedJourney(input: {
     try {
       if (!session.child.pid) throw new Error("Packaged Main process has no PID.");
       const runtimeState = assertBundledServerRuntime(
-        input.env.OMNIMIND_HOME!,
+        input.env.HARNESSOS_HOME!,
         session.child.pid,
         "mac",
       );
@@ -1174,7 +1174,7 @@ export async function verifyPackagedDesktop(options: PackagedDesktopProofOptions
       options.sourceCommit,
     );
     const env = createPackagedDesktopEnvironment(join(temporaryRoot, "state"), options);
-    const logPath = join(env.OMNIMIND_HOME!, "userdata", "logs", "desktop-main.log");
+    const logPath = join(env.HARNESSOS_HOME!, "userdata", "logs", "desktop-main.log");
     if (options.proof === "journey") {
       await runPackagedJourney({
         launch,
@@ -1197,7 +1197,7 @@ export async function verifyPackagedDesktop(options: PackagedDesktopProofOptions
         try {
           if (!session.child.pid) throw new Error("Packaged Main process has no PID.");
           const runtimeState = assertBundledServerRuntime(
-            env.OMNIMIND_HOME!,
+            env.HARNESSOS_HOME!,
             session.child.pid,
             options.platform,
           );

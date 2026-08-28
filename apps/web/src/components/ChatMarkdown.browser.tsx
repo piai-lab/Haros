@@ -33,7 +33,7 @@ describe("ChatMarkdown table overflow", () => {
     vi.restoreAllMocks();
     document.body.innerHTML = "";
     document.documentElement.classList.remove("dark");
-    localStorage.removeItem("omnimind:theme");
+    localStorage.removeItem("harnessos:theme");
   });
 
   it("keeps the page width stable and makes only an overflowing table keyboard reachable", async () => {
@@ -149,10 +149,10 @@ describe("ChatMarkdown table overflow", () => {
 
     const darkState = { ...DEFAULT_THEME_STATE, mode: "dark" as const };
     const serializedDarkState = serializeThemeState(darkState);
-    localStorage.setItem("omnimind:theme", serializedDarkState);
+    localStorage.setItem("harnessos:theme", serializedDarkState);
     window.dispatchEvent(
       new StorageEvent("storage", {
-        key: "omnimind:theme",
+        key: "harnessos:theme",
         newValue: serializedDarkState,
       }),
     );
@@ -202,7 +202,7 @@ describe("ChatMarkdown Mermaid presentation", () => {
     vi.restoreAllMocks();
     document.body.innerHTML = "";
     document.documentElement.classList.remove("dark");
-    localStorage.removeItem("omnimind:theme");
+    localStorage.removeItem("harnessos:theme");
   });
 
   const diagramSource = [
@@ -225,9 +225,9 @@ describe("ChatMarkdown Mermaid presentation", () => {
 
   it("does not import or render Mermaid while the message is streaming", async () => {
     const before = mermaidResourceCount();
-    const importMarksBefore = performance.getEntriesByName("omnimind:mermaid-import").length;
+    const importMarksBefore = performance.getEntriesByName("harnessos:mermaid-import").length;
     const renderMeasuresBefore = performance.getEntriesByName(
-      "omnimind:mermaid-render-duration",
+      "harnessos:mermaid-render-duration",
     ).length;
     const digest = vi.spyOn(crypto.subtle, "digest");
     const mounted = await render(
@@ -247,8 +247,10 @@ describe("ChatMarkdown Mermaid presentation", () => {
     expect(host.textContent).not.toContain("flowchart TD");
     expect(host.textContent).not.toContain("mermaid");
     expect(mermaidResourceCount()).toBe(before);
-    expect(performance.getEntriesByName("omnimind:mermaid-import")).toHaveLength(importMarksBefore);
-    expect(performance.getEntriesByName("omnimind:mermaid-render-duration")).toHaveLength(
+    expect(performance.getEntriesByName("harnessos:mermaid-import")).toHaveLength(
+      importMarksBefore,
+    );
+    expect(performance.getEntriesByName("harnessos:mermaid-render-duration")).toHaveLength(
       renderMeasuresBefore,
     );
     expect(digest).not.toHaveBeenCalled();
@@ -398,10 +400,10 @@ describe("ChatMarkdown Mermaid presentation", () => {
     const lightSrcDoc = frame.srcdoc;
     const darkState = { ...DEFAULT_THEME_STATE, mode: "dark" as const };
     const serializedDarkState = serializeThemeState(darkState);
-    localStorage.setItem("omnimind:theme", serializedDarkState);
+    localStorage.setItem("harnessos:theme", serializedDarkState);
     window.dispatchEvent(
       new StorageEvent("storage", {
-        key: "omnimind:theme",
+        key: "harnessos:theme",
         newValue: serializedDarkState,
       }),
     );
@@ -505,12 +507,12 @@ describe("ChatMarkdown Mermaid presentation", () => {
     );
     expect(mounted.container.textContent).not.toContain(invalidSource);
     const retry = page.getByRole("button", { name: "Retry" });
-    const rendersBefore = performance.getEntriesByName("omnimind:mermaid-render-attempt").length;
+    const rendersBefore = performance.getEntriesByName("harnessos:mermaid-render-attempt").length;
     await userEvent.click(retry);
     await vi.waitFor(
       () =>
         expect(
-          performance.getEntriesByName("omnimind:mermaid-render-attempt").length,
+          performance.getEntriesByName("harnessos:mermaid-render-attempt").length,
         ).toBeGreaterThan(rendersBefore),
       { timeout: 5000 },
     );

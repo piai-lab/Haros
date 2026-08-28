@@ -71,4 +71,4 @@ export interface ProjectionThreadSessionRepositoryShape {
 export class ProjectionThreadSessionRepository extends ServiceMap.Service<
   ProjectionThreadSessionRepository,
   ProjectionThreadSessionRepositoryShape
->()("omnimind/persistence/Services/ProjectionThreadSessions/ProjectionThreadSessionRepository") {}
+>()("harnessos/persistence/Services/ProjectionThreadSessions/ProjectionThreadSessionRepository") {}

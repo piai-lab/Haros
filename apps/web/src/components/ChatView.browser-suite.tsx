@@ -3286,7 +3286,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     "starts Environment closed and centers Chat in the usable canvas at $width px with legacy default=$storedLegacyDefaultOpen",
     async ({ width, storedLegacyDefaultOpen }) => {
       localStorage.setItem(
-        "omnimind:app-settings:v1",
+        "harnessos:app-settings:v1",
         JSON.stringify({ environmentPanelDefaultOpen: storedLegacyDefaultOpen }),
       );
       const mounted = await mountChatView({
@@ -6648,7 +6648,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             threadId: THREAD_ID,
             cwd: "/repo/project",
             env: {
-              OMNIMIND_PROJECT_ROOT: "/repo/project",
+              HARNESSOS_PROJECT_ROOT: "/repo/project",
             },
           });
         },
@@ -6745,8 +6745,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
             threadId: THREAD_ID,
             cwd: "/repo/worktrees/feature-draft",
             env: {
-              OMNIMIND_PROJECT_ROOT: "/repo/project",
-              OMNIMIND_WORKTREE_PATH: "/repo/worktrees/feature-draft",
+              HARNESSOS_PROJECT_ROOT: "/repo/project",
+              HARNESSOS_WORKTREE_PATH: "/repo/worktrees/feature-draft",
             },
           });
         },
@@ -10889,8 +10889,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         _tag: WS_METHODS.terminalOpen,
         cwd: worktreePath,
         env: {
-          OMNIMIND_PROJECT_ROOT: "/repo/project",
-          OMNIMIND_WORKTREE_PATH: worktreePath,
+          HARNESSOS_PROJECT_ROOT: "/repo/project",
+          HARNESSOS_WORKTREE_PATH: worktreePath,
         },
       });
 

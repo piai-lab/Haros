@@ -173,9 +173,9 @@ describe("Mermaid sandbox output", () => {
   it.each(["-->", "---", "===", "-.-", "~~~", "->", "..>", "--"])(
     "rejects the 101st %s connector before importing or rendering Mermaid",
     async (connector) => {
-      const importMarksBefore = performance.getEntriesByName("omnimind:mermaid-import").length;
+      const importMarksBefore = performance.getEntriesByName("harnessos:mermaid-import").length;
       const renderMeasuresBefore = performance.getEntriesByName(
-        "omnimind:mermaid-render-duration",
+        "harnessos:mermaid-render-duration",
       ).length;
       const source = `flowchart TD\n${`A${connector}B;`.repeat(101)}`;
       const result = await renderMermaidPresentation({
@@ -184,10 +184,10 @@ describe("Mermaid sandbox output", () => {
         signal: new AbortController().signal,
       });
       expect(result).toMatchObject({ kind: "fallback", reason: "budget" });
-      expect(performance.getEntriesByName("omnimind:mermaid-import")).toHaveLength(
+      expect(performance.getEntriesByName("harnessos:mermaid-import")).toHaveLength(
         importMarksBefore,
       );
-      expect(performance.getEntriesByName("omnimind:mermaid-render-duration")).toHaveLength(
+      expect(performance.getEntriesByName("harnessos:mermaid-render-duration")).toHaveLength(
         renderMeasuresBefore,
       );
     },

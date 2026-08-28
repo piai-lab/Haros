@@ -86,4 +86,4 @@ export interface AgentGatewayCredentialsShape {
 export class AgentGatewayCredentials extends ServiceMap.Service<
   AgentGatewayCredentials,
   AgentGatewayCredentialsShape
->()("omnimind/agentGateway/Services/AgentGatewayCredentials") {}
+>()("harnessos/agentGateway/Services/AgentGatewayCredentials") {}

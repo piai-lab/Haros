@@ -12,4 +12,4 @@ export interface ThreadGitMetadataReactorShape {
 export class ThreadGitMetadataReactor extends ServiceMap.Service<
   ThreadGitMetadataReactor,
   ThreadGitMetadataReactorShape
->()("omnimind/orchestration/Services/ThreadGitMetadataReactor") {}
+>()("harnessos/orchestration/Services/ThreadGitMetadataReactor") {}

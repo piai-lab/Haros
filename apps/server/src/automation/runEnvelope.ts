@@ -12,10 +12,10 @@ export const AUTOMATION_MEMORY_TRUNCATION_MARKER = "[... older automation memory
 
 /** Exact Gateway closure named by the canonical automation run envelope. */
 export const AUTOMATION_RUN_GATEWAY_TOOL_NAMES = [
-  "omnimind_report_automation_result",
-  "omnimind_update_automation_memory",
-  "omnimind_cancel_automation",
-  "omnimind_view_automation",
+  "harnessos_report_automation_result",
+  "harnessos_update_automation_memory",
+  "harnessos_cancel_automation",
+  "harnessos_view_automation",
 ] as const;
 
 export function automationMemoryForEnvelope(content: string): string {
@@ -39,22 +39,22 @@ function iterationLabel(definition: AutomationDefinition, run: AutomationRun): s
 }
 
 // Every mode may retire its own automation: the run-scoped authorization in
-// omnimind_cancel_automation covers standalone runs, whose per-run thread owns nothing else.
+// harnessos_cancel_automation covers standalone runs, whose per-run thread owns nothing else.
 const SELF_CANCEL_INSTRUCTION =
-  "You may call omnimind_cancel_automation on this automation when it is no longer needed.";
+  "You may call harnessos_cancel_automation on this automation when it is no longer needed.";
 
 function reportingInstructions(mode: AutomationDefinition["mode"]): string {
   // A run that continues a thread leaves its work visible in that thread, so it reports
   // only what the user still needs to see. A run with a thread to itself reports fully.
   if (automationContinuesThread(mode)) {
     return [
-      "Before finishing, call omnimind_report_automation_result.",
+      "Before finishing, call harnessos_report_automation_result.",
       'Use decision "silent" when nothing needs the user\'s attention; otherwise use "notify".',
       SELF_CANCEL_INSTRUCTION,
     ].join(" ");
   }
   return [
-    "Before finishing, call omnimind_report_automation_result with a concise title and summary.",
+    "Before finishing, call harnessos_report_automation_result with a concise title and summary.",
     'Use decision "notify" unless the successful run genuinely requires no user attention.',
     SELF_CANCEL_INSTRUCTION,
   ].join(" ");
@@ -86,7 +86,7 @@ export function buildAutomationRunEnvelope(input: {
     }, iteration ${iterationLabel(definition, run)})`,
     "Turn scope: this user message is the automation-dispatched turn. These automation-only completion duties do not carry into later manual follow-up turns.",
     ...(threadScope ? [threadScope] : []),
-    'Memory (persistent across runs — replace it via omnimind_update_automation_memory {"memory": "..."} before finishing):',
+    'Memory (persistent across runs — replace it via harnessos_update_automation_memory {"memory": "..."} before finishing):',
     automationMemoryForEnvelope(input.memoryContent),
     "",
     reportingInstructions(definition.mode),

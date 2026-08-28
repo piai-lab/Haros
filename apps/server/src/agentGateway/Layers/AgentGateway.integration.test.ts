@@ -1338,20 +1338,20 @@ describe("AgentGateway", () => {
 
       const chatDefaultNames = listedToolNames(chatDefaultResponse);
       assert.strictEqual(chatDefaultNames.size, 0);
-      assert.isFalse(chatDefaultNames.has("omnimind_set_thread_goal"));
-      assert.isFalse(chatDefaultNames.has("omnimind_create_automation"));
-      assert.isFalse(chatDefaultNames.has("omnimind_set_thread_title"));
+      assert.isFalse(chatDefaultNames.has("harnessos_set_thread_goal"));
+      assert.isFalse(chatDefaultNames.has("harnessos_create_automation"));
+      assert.isFalse(chatDefaultNames.has("harnessos_set_thread_title"));
 
       const chatOptInNames = listedToolNames(chatOptInResponse);
-      assert.isTrue(chatOptInNames.has("omnimind_set_thread_goal"));
-      assert.isTrue(chatOptInNames.has("omnimind_create_automation"));
-      assert.isFalse(chatOptInNames.has("omnimind_set_thread_title"));
+      assert.isTrue(chatOptInNames.has("harnessos_set_thread_goal"));
+      assert.isTrue(chatOptInNames.has("harnessos_create_automation"));
+      assert.isFalse(chatOptInNames.has("harnessos_set_thread_title"));
 
       const studioDefaultNames = listedToolNames(studioDefaultResponse);
-      assert.isTrue(studioDefaultNames.has("omnimind_set_thread_goal"));
-      assert.isTrue(studioDefaultNames.has("omnimind_create_automation"));
-      assert.isTrue(studioDefaultNames.has("omnimind_set_thread_title"));
-      assert.isTrue(studioDefaultNames.has("omnimind_diagnose_thread"));
+      assert.isTrue(studioDefaultNames.has("harnessos_set_thread_goal"));
+      assert.isTrue(studioDefaultNames.has("harnessos_create_automation"));
+      assert.isTrue(studioDefaultNames.has("harnessos_set_thread_title"));
+      assert.isTrue(studioDefaultNames.has("harnessos_diagnose_thread"));
       assert.isFalse(studioDefaultNames.has("device_list"));
     });
   });
@@ -1371,11 +1371,11 @@ describe("AgentGateway", () => {
       });
       const called = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_set_thread_title",
+        name: "harnessos_set_thread_title",
         args: { title: "Must not run" },
       });
 
-      assert.isFalse(listedToolNames(listed).has("omnimind_set_thread_title"));
+      assert.isFalse(listedToolNames(listed).has("harnessos_set_thread_title"));
       assert.isTrue(isToolError(called.result));
       assert.match(toolErrorText(called.result), /disabled or unavailable/);
       assert.strictEqual(harness.dispatched.length, 0);
@@ -1409,7 +1409,7 @@ describe("AgentGateway", () => {
           jsonrpc: "2.0",
           id: true,
           method: "tools/call",
-          params: { name: "omnimind_set_thread_title", arguments: { title: "Must not run" } },
+          params: { name: "harnessos_set_thread_title", arguments: { title: "Must not run" } },
         },
       });
       assert.equal((response.body as { error?: { code: number } }).error?.code, -32600);
@@ -1466,7 +1466,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent-readonly",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args: {
           requestId: "readonly-create",
           threads: [
@@ -1491,7 +1491,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent-readonly",
-        name: "omnimind_diagnose_thread",
+        name: "harnessos_diagnose_thread",
         args: { threadId: "thread-parent" },
       });
       const error = toolResultJson(response.result).error as {
@@ -1512,7 +1512,7 @@ describe("AgentGateway", () => {
         id,
         method: "tools/call",
         params: {
-          name: "omnimind_create_threads",
+          name: "harnessos_create_threads",
           arguments: {
             requestId,
             threads: [
@@ -1579,31 +1579,31 @@ describe("AgentGateway", () => {
       ).result.tools;
       const names = tools.map((tool) => tool.name);
       assert.includeMembers(names, [
-        "omnimind_context",
-        "omnimind_capabilities",
-        "omnimind_list_projects",
-        "omnimind_list_threads",
-        "omnimind_read_thread",
-        "omnimind_read_thread_activity",
-        "omnimind_read_thread_events",
-        "omnimind_read_thread_runtime_events",
-        "omnimind_diagnose_thread",
-        "omnimind_wait_for_threads",
-        "omnimind_create_threads",
-        "omnimind_create_thread",
-        "omnimind_send_message",
-        "omnimind_interrupt_thread",
-        "omnimind_set_thread_title",
-        "omnimind_set_thread_archived",
-        "omnimind_create_automation",
-        "omnimind_list_automations",
-        "omnimind_view_automation",
-        "omnimind_update_automation",
-        "omnimind_cancel_automation",
-        "omnimind_update_automation_memory",
-        "omnimind_report_automation_result",
+        "harnessos_context",
+        "harnessos_capabilities",
+        "harnessos_list_projects",
+        "harnessos_list_threads",
+        "harnessos_read_thread",
+        "harnessos_read_thread_activity",
+        "harnessos_read_thread_events",
+        "harnessos_read_thread_runtime_events",
+        "harnessos_diagnose_thread",
+        "harnessos_wait_for_threads",
+        "harnessos_create_threads",
+        "harnessos_create_thread",
+        "harnessos_send_message",
+        "harnessos_interrupt_thread",
+        "harnessos_set_thread_title",
+        "harnessos_set_thread_archived",
+        "harnessos_create_automation",
+        "harnessos_list_automations",
+        "harnessos_view_automation",
+        "harnessos_update_automation",
+        "harnessos_cancel_automation",
+        "harnessos_update_automation_memory",
+        "harnessos_report_automation_result",
       ]);
-      const createThreadProperties = tools.find((tool) => tool.name === "omnimind_create_thread")
+      const createThreadProperties = tools.find((tool) => tool.name === "harnessos_create_thread")
         ?.inputSchema.properties;
       assert.property(createThreadProperties, "baseRef");
       assert.notProperty(createThreadProperties, "baseBranch");
@@ -1612,7 +1612,7 @@ describe("AgentGateway", () => {
         (createThreadProperties?.runtimeMode as { enum?: string[] } | undefined)?.enum,
         ["approval-required", "full-access"],
       );
-      const createThreadsTool = tools.find((tool) => tool.name === "omnimind_create_threads");
+      const createThreadsTool = tools.find((tool) => tool.name === "harnessos_create_threads");
       const createThreadsItems = (
         createThreadsTool?.inputSchema.properties?.threads as
           | {
@@ -1627,7 +1627,7 @@ describe("AgentGateway", () => {
         ["approval-required", "full-access"],
       );
 
-      const createAutomation = tools.find((tool) => tool.name === "omnimind_create_automation");
+      const createAutomation = tools.find((tool) => tool.name === "harnessos_create_automation");
       assert.include(createAutomation?.description ?? "", "self-contained brief");
       assert.deepEqual(createAutomation?.inputSchema.required, [
         "name",
@@ -1673,7 +1673,7 @@ describe("AgentGateway", () => {
       ]);
       assert.include(scheduleSchema?.description ?? "", "weekly requires dayOfWeek and timeOfDay");
       const updateAutomationMemory = tools.find(
-        (tool) => tool.name === "omnimind_update_automation_memory",
+        (tool) => tool.name === "harnessos_update_automation_memory",
       );
       const updateAutomationMemorySchema = updateAutomationMemory?.inputSchema as
         | {
@@ -1684,7 +1684,7 @@ describe("AgentGateway", () => {
       assert.notProperty(updateAutomationMemorySchema?.properties ?? {}, "content");
       assert.deepEqual(updateAutomationMemorySchema?.required, ["memory"]);
       const reportAutomationResult = tools.find(
-        (tool) => tool.name === "omnimind_report_automation_result",
+        (tool) => tool.name === "harnessos_report_automation_result",
       );
       assert.include(
         updateAutomationMemory?.description ?? "",
@@ -1696,7 +1696,7 @@ describe("AgentGateway", () => {
       );
 
       const updateAutomationProperties = tools.find(
-        (tool) => tool.name === "omnimind_update_automation",
+        (tool) => tool.name === "harnessos_update_automation",
       )?.inputSchema.properties as Record<string, { description?: string }> | undefined;
       assert.equal(
         updateAutomationProperties?.name?.description,
@@ -1742,7 +1742,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_list_projects",
+        name: "harnessos_list_projects",
         args: {},
       });
       const payload = toolResultJson(response.result);
@@ -1760,7 +1760,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_capabilities",
+        name: "harnessos_capabilities",
         args: {},
       });
       const payload = toolResultJson(response.result);
@@ -1855,7 +1855,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_list_threads",
+        name: "harnessos_list_threads",
         args: {},
       });
       const payload = toolResultJson(response.result);
@@ -1873,7 +1873,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_list_threads",
+        name: "harnessos_list_threads",
         args: { limit: 1 },
       });
       const payload = toolResultJson(response.result);
@@ -1889,7 +1889,7 @@ describe("AgentGateway", () => {
       const threads = [
         makeThreadShell("thread-parent", {
           title: "Investigate stream gap",
-          creationSource: "omnimind_mcp",
+          creationSource: "harnessos_mcp",
           updatedAt: "2026-03-02T10:00:00.000Z",
           latestTurn: {
             turnId: TurnId.makeUnsafe("turn-running"),
@@ -1911,12 +1911,12 @@ describe("AgentGateway", () => {
         const harness = yield* makeHarness;
         const response = yield* harness.callTool({
           token: "token-parent",
-          name: "omnimind_list_threads",
+          name: "harnessos_list_threads",
           args: {
             provider: "codex",
             status: "working",
             titleContains: "STREAM",
-            creationSource: "omnimind_mcp",
+            creationSource: "harnessos_mcp",
             updatedAfter: "2026-03-01T00:00:00.000Z",
             updatedBefore: "2026-03-03T00:00:00.000Z",
           },
@@ -1951,7 +1951,7 @@ describe("AgentGateway", () => {
       const first = toolResultJson(
         (yield* harness.callTool({
           token: "token-parent",
-          name: "omnimind_read_thread_activity",
+          name: "harnessos_read_thread_activity",
           args: { threadId: "thread-parent", limit: 1, includeDetails: true },
         })).result,
       );
@@ -1960,7 +1960,7 @@ describe("AgentGateway", () => {
       const second = toolResultJson(
         (yield* harness.callTool({
           token: "token-parent",
-          name: "omnimind_read_thread_activity",
+          name: "harnessos_read_thread_activity",
           args: { threadId: "thread-parent", limit: 1, cursor: first.nextCursor },
         })).result,
       );
@@ -1971,7 +1971,7 @@ describe("AgentGateway", () => {
       });
       const changedFilter = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_read_thread_activity",
+        name: "harnessos_read_thread_activity",
         args: {
           threadId: "thread-parent",
           limit: 1,
@@ -2032,7 +2032,7 @@ describe("AgentGateway", () => {
       const first = toolResultJson(
         (yield* harness.callTool({
           token: "token-parent",
-          name: "omnimind_read_thread_events",
+          name: "harnessos_read_thread_events",
           args: { threadId, limit: 1 },
         })).result,
       );
@@ -2045,7 +2045,7 @@ describe("AgentGateway", () => {
       const second = toolResultJson(
         (yield* harness.callTool({
           token: "token-parent",
-          name: "omnimind_read_thread_events",
+          name: "harnessos_read_thread_events",
           args: { threadId, limit: 1, cursor: first.nextCursor },
         })).result,
       );
@@ -2125,7 +2125,7 @@ describe("AgentGateway", () => {
       const payload = toolResultJson(
         (yield* harness.callTool({
           token: "token-parent",
-          name: "omnimind_diagnose_thread",
+          name: "harnessos_diagnose_thread",
           args: { threadId: "thread-parent" },
         })).result,
       );
@@ -2146,7 +2146,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_thread",
+        name: "harnessos_create_thread",
         args: { requestId: "create-grok", prompt: "analyze the feature", provider: "grok" },
       });
       assert.isFalse(isToolError(response.result), toolErrorText(response.result));
@@ -2201,7 +2201,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_thread",
+        name: "harnessos_create_thread",
         args: { requestId: "create-unsupported-mode", prompt: "analyze", provider: "grok" },
       });
       assert.isTrue(isToolError(response.result));
@@ -2216,7 +2216,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args: {
           requestId: "create-provider-plan-agents",
           threads: [
@@ -2260,7 +2260,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_thread",
+        name: "harnessos_create_thread",
         args: {
           requestId: "create-worktree",
           prompt: "refactor module X",
@@ -2298,7 +2298,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_thread",
+        name: "harnessos_create_thread",
         args: {
           requestId: "explicit-head-from-caller-worktree",
           prompt: "continue from this checkout",
@@ -2323,7 +2323,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_thread",
+        name: "harnessos_create_thread",
         args: {
           requestId: "github-pr-head",
           prompt: "review the pull request",
@@ -2337,7 +2337,7 @@ describe("AgentGateway", () => {
       assert.deepEqual(harness.fetchedPullRequests, [425]);
       assert.deepEqual(harness.fetchedPullRequestRepositories, ["example/repo"]);
       assert.equal(harness.worktreeCreates[0]?.ref, "fedcba9876543210fedcba9876543210fedcba98");
-      // The worktree is born on a temporary omnimind/* branch, but no branch is
+      // The worktree is born on a temporary harnessos/* branch, but no branch is
       // ever created for the pull request itself.
       assert.isTrue(isTemporaryWorktreeBranch(harness.worktreeCreates[0]?.newBranch ?? ""));
     }).pipe(Effect.provide(gatewayLayer));
@@ -2349,7 +2349,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_thread",
+        name: "harnessos_create_thread",
         args: {
           requestId: "local-pull-path-ref",
           prompt: "continue from the local ref",
@@ -2379,7 +2379,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_thread",
+        name: "harnessos_create_thread",
         args: { requestId: "create-crowded", prompt: "one more", provider: "codex" },
       });
       assert.isFalse(isToolError(response.result), toolErrorText(response.result));
@@ -2419,7 +2419,7 @@ describe("AgentGateway", () => {
       [
         ...baseThreads,
         makeThreadShell("agent:restart-child", {
-          creationSource: "omnimind_mcp",
+          creationSource: "harnessos_mcp",
           sourceThreadId: ThreadId.makeUnsafe("thread-parent"),
           sourceTurnId: TurnId.makeUnsafe("turn-parent-active"),
           gatewayOperationId: "gateway:create:restart",
@@ -2805,7 +2805,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args: {
           requestId: "pre-existing-branch",
           threads: [
@@ -2844,7 +2844,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args: {
           requestId: "detached-attempt",
           threads: [
@@ -2882,7 +2882,7 @@ describe("AgentGateway", () => {
             id: 1,
             method: "tools/call",
             params: {
-              name: "omnimind_create_threads",
+              name: "harnessos_create_threads",
               arguments: {
                 requestId: "turn-a-plan",
                 threads: [
@@ -2900,7 +2900,7 @@ describe("AgentGateway", () => {
             id: 2,
             method: "tools/call",
             params: {
-              name: "omnimind_create_threads",
+              name: "harnessos_create_threads",
               arguments: {
                 requestId: "must-not-use-turn-b",
                 threads: [
@@ -2965,35 +2965,35 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const attempts = [
         {
-          name: "omnimind_create_threads",
+          name: "harnessos_create_threads",
           args: {
             requestId: "late-batch",
             threads: [{ prompt: "late", target: { provider: "codex", model: "gpt-5.5" } }],
           },
         },
         {
-          name: "omnimind_create_thread",
+          name: "harnessos_create_thread",
           args: { requestId: "late-single", prompt: "late", provider: "codex" },
         },
         {
-          name: "omnimind_send_message",
+          name: "harnessos_send_message",
           args: { threadId: "thread-child", message: "late" },
         },
-        { name: "omnimind_interrupt_thread", args: { threadId: "thread-child" } },
+        { name: "harnessos_interrupt_thread", args: { threadId: "thread-child" } },
         {
-          name: "omnimind_set_thread_title",
+          name: "harnessos_set_thread_title",
           args: { threadId: "thread-child", title: "Late rename" },
         },
         {
-          name: "omnimind_set_thread_archived",
+          name: "harnessos_set_thread_archived",
           args: { threadId: "thread-child", archived: true },
         },
         {
-          name: "omnimind_create_automation",
+          name: "harnessos_create_automation",
           args: { name: "late monitor", prompt: "late" },
         },
         {
-          name: "omnimind_cancel_automation",
+          name: "harnessos_cancel_automation",
           args: { automationId: "automation-1" },
         },
       ];
@@ -3013,7 +3013,7 @@ describe("AgentGateway", () => {
 
       const read = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_list_threads",
+        name: "harnessos_list_threads",
         args: {},
       });
       assert.equal(
@@ -3039,7 +3039,7 @@ describe("AgentGateway", () => {
       };
       const first = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args,
       });
       harness.setProviderStatuses([
@@ -3062,7 +3062,7 @@ describe("AgentGateway", () => {
       ]);
       const replay = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args,
       });
       assert.isFalse(isToolError(first.result), toolErrorText(first.result));
@@ -3091,14 +3091,14 @@ describe("AgentGateway", () => {
         assert.equal(creationRecap.threadId, ThreadId.makeUnsafe("thread-parent"));
         assert.equal(creationRecap.activity.turnId, TurnId.makeUnsafe("turn-parent-active"));
         assert.deepInclude(creationRecap.activity.payload as Record<string, unknown>, {
-          source: "omnimind_mcp",
+          source: "harnessos_mcp",
           requestedCount: 2,
           createdCount: 2,
         });
       }
       const conflict = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args: {
           ...args,
           threads: [
@@ -3125,7 +3125,7 @@ describe("AgentGateway", () => {
           parentThreadId: command.parentThreadId,
         })),
         [0, 1].map((index) => ({
-          creationSource: "omnimind_mcp" as const,
+          creationSource: "harnessos_mcp" as const,
           sourceThreadId: ThreadId.makeUnsafe("thread-parent"),
           sourceTurnId: TurnId.makeUnsafe("turn-parent-active"),
           gatewayOperationId: operationId,
@@ -3145,7 +3145,7 @@ describe("AgentGateway", () => {
       const call = () =>
         harness.callTool({
           token: "token-parent",
-          name: "omnimind_create_threads",
+          name: "harnessos_create_threads",
           args: {
             requestId: "concurrent-exact-plan",
             threads: [
@@ -3186,7 +3186,7 @@ describe("AgentGateway", () => {
       const create = (requestId: string, prompt: string) =>
         harness.callTool({
           token: "token-parent",
-          name: "omnimind_create_threads",
+          name: "harnessos_create_threads",
           args: {
             requestId,
             threads: [{ prompt, target: { provider: "codex", model: "gpt-5.5" } }],
@@ -3195,7 +3195,7 @@ describe("AgentGateway", () => {
       yield* create("first-plan", "first");
       const second = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args: {
           requestId: "second-plan",
           threads: [
@@ -3224,7 +3224,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args: {
           requestId: "bad-terra",
           threads: [
@@ -3261,7 +3261,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args: {
           requestId: "unavailable-provider",
           threads: [
@@ -3287,7 +3287,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args: {
           requestId: "terra-low",
           threads: [
@@ -3321,7 +3321,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args: {
           requestId: "atomic-preflight",
           threads: [
@@ -3348,7 +3348,7 @@ describe("AgentGateway", () => {
         const harness = yield* makeHarness;
         const response = yield* harness.callTool({
           token: "token-parent",
-          name: "omnimind_create_threads",
+          name: "harnessos_create_threads",
           args: {
             requestId: "ownership-marker-failure",
             threads: [
@@ -3386,7 +3386,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args: {
           requestId: "ownership-marker-and-cleanup-failure",
           threads: [
@@ -3427,7 +3427,7 @@ describe("AgentGateway", () => {
       const requestFiber = yield* harness
         .callTool({
           token: "token-parent",
-          name: "omnimind_create_threads",
+          name: "harnessos_create_threads",
           args: {
             requestId: "interrupt-after-reservation",
             threads: [
@@ -3469,7 +3469,7 @@ describe("AgentGateway", () => {
       const requestFiber = yield* harness
         .callTool({
           token: "token-parent",
-          name: "omnimind_create_threads",
+          name: "harnessos_create_threads",
           args: {
             requestId: "interrupt-after-worktree-create",
             threads: [
@@ -3532,7 +3532,7 @@ describe("AgentGateway", () => {
       const requestFiber = yield* harness
         .callTool({
           token: "token-parent",
-          name: "omnimind_create_threads",
+          name: "harnessos_create_threads",
           args: {
             requestId: "interrupt-during-setup-script",
             threads: [
@@ -3580,7 +3580,7 @@ describe("AgentGateway", () => {
       const requestFiber = yield* harness
         .callTool({
           token: "token-parent",
-          name: "omnimind_create_threads",
+          name: "harnessos_create_threads",
           args: {
             requestId: "interrupt-after-thread-create",
             threads: [
@@ -3629,7 +3629,7 @@ describe("AgentGateway", () => {
     });
     const request = {
       token: "token-parent",
-      name: "omnimind_create_threads",
+      name: "harnessos_create_threads",
       args: {
         requestId: "interrupt-after-operation-complete",
         threads: [
@@ -3686,7 +3686,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args: {
           requestId: "compensated-batch",
           threads: [
@@ -3733,7 +3733,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args: {
           requestId: "completion-persistence-failure",
           threads: [
@@ -3770,7 +3770,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args: {
           requestId: "cleanup-failure",
           threads: [
@@ -3861,7 +3861,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_wait_for_threads",
+        name: "harnessos_wait_for_threads",
         args: { threadIds: ["thread-result-a", "thread-result-b"], timeoutMs: 0 },
       });
       assert.isFalse(isToolError(response.result), toolErrorText(response.result));
@@ -3920,7 +3920,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_wait_for_threads",
+        name: "harnessos_wait_for_threads",
         args: { threadIds: ["thread-long-result"], timeoutMs: 0 },
       });
       const result = (
@@ -3930,7 +3930,7 @@ describe("AgentGateway", () => {
       assert.match(result.summary as string, /\[\.\.\. truncated \d+ chars\]$/);
       assert.equal((result.summary as string).length, 2_000);
       assert.deepEqual(result.readThread, {
-        tool: "omnimind_read_thread",
+        tool: "harnessos_read_thread",
         arguments: { threadId: "thread-long-result" },
       });
     }).pipe(Effect.provide(gatewayLayer));
@@ -3959,7 +3959,7 @@ describe("AgentGateway", () => {
         const harness = yield* makeHarness;
         const response = yield* harness.callTool({
           token: "token-parent",
-          name: "omnimind_wait_for_threads",
+          name: "harnessos_wait_for_threads",
           args: { threadIds: pending.map((thread) => thread.id), timeoutMs: 0 },
         });
         assert.equal(toolResultJson(response.result).timedOut, true);
@@ -3988,7 +3988,7 @@ describe("AgentGateway", () => {
       const fiber = yield* harness
         .callTool({
           token: "token-parent",
-          name: "omnimind_wait_for_threads",
+          name: "harnessos_wait_for_threads",
           args: { threadIds: ["thread-deleted-during-wait"], timeoutMs: 5_000 },
         })
         .pipe(Effect.forkChild);
@@ -4028,12 +4028,12 @@ describe("AgentGateway", () => {
       };
       const created = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args,
       });
       const replay = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args,
       });
       assert.isFalse(isToolError(created.result), toolErrorText(created.result));
@@ -4082,7 +4082,7 @@ describe("AgentGateway", () => {
 
       const waited = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_wait_for_threads",
+        name: "harnessos_wait_for_threads",
         args: { threadIds, timeoutMs: 0 },
       });
       assert.deepEqual(
@@ -4108,7 +4108,7 @@ describe("AgentGateway", () => {
       );
       const detachedFallback = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_threads",
+        name: "harnessos_create_threads",
         args: {
           requestId: "detached-opencode-fallback",
           threads: [
@@ -4180,7 +4180,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const first = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_wait_for_threads",
+        name: "harnessos_wait_for_threads",
         args: {
           threadIds: ["thread-wait-idle", "thread-wait-failed", "thread-wait-running"],
           timeoutMs: 0,
@@ -4235,7 +4235,7 @@ describe("AgentGateway", () => {
       });
       const second = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_wait_for_threads",
+        name: "harnessos_wait_for_threads",
         args: {
           threadIds: ["thread-wait-running"],
           runIds: ["turn-wait-pinned"],
@@ -4274,7 +4274,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_send_message",
+        name: "harnessos_send_message",
         args: { threadId: "thread-child", message: "status check please", mode: "steer" },
       });
       assert.isFalse(isToolError(response.result), toolErrorText(response.result));
@@ -4307,7 +4307,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_send_message",
+        name: "harnessos_send_message",
         args: { threadId: "thread-child", message: "status check" },
       });
       assert.isTrue(isToolError(response.result));
@@ -4322,7 +4322,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_send_message",
+        name: "harnessos_send_message",
         args: { threadId: "thread-child", message: "status check please", mode: "steer" },
       });
       assert.isFalse(isToolError(response.result), toolErrorText(response.result));
@@ -4346,7 +4346,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_send_message",
+        name: "harnessos_send_message",
         args: { threadId: "thread-full-access", message: "run something dangerous" },
       });
       assert.isTrue(isToolError(response.result));
@@ -4364,7 +4364,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_interrupt_thread",
+        name: "harnessos_interrupt_thread",
         args: { threadId: "thread-full-access" },
       });
       assert.isTrue(isToolError(response.result));
@@ -4382,7 +4382,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_automation",
+        name: "harnessos_create_automation",
         args: {
           name: "escalate",
           prompt: "keep running privileged work",
@@ -4410,7 +4410,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_send_message",
+        name: "harnessos_send_message",
         args: { threadId: "thread-local", message: "edit the main checkout" },
       });
       assert.isTrue(isToolError(response.result));
@@ -4444,7 +4444,7 @@ describe("AgentGateway", () => {
 
       const rejected = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_thread",
+        name: "harnessos_create_thread",
         args: {
           requestId: "create-local-rejected",
           prompt: "touch the main checkout",
@@ -4459,7 +4459,7 @@ describe("AgentGateway", () => {
       // Omitting environment defaults to an isolated worktree, not local.
       const defaulted = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_thread",
+        name: "harnessos_create_thread",
         args: { requestId: "create-isolated", prompt: "do isolated work", provider: "codex" },
       });
       assert.isFalse(isToolError(defaulted.result), toolErrorText(defaulted.result));
@@ -4478,7 +4478,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_thread",
+        name: "harnessos_create_thread",
         args: {
           requestId: "create-escalated",
           prompt: "escalate please",
@@ -4498,7 +4498,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const missingMode = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_automation",
+        name: "harnessos_create_automation",
         args: {
           name: "monitor children",
           prompt: "check the child threads",
@@ -4507,7 +4507,7 @@ describe("AgentGateway", () => {
       });
       const missingSchedule = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_automation",
+        name: "harnessos_create_automation",
         args: {
           name: "monitor children",
           prompt: "check the child threads",
@@ -4529,7 +4529,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const encodedObject = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_automation",
+        name: "harnessos_create_automation",
         args: {
           name: "Daily review",
           prompt: "Review the project.",
@@ -4539,7 +4539,7 @@ describe("AgentGateway", () => {
       });
       const incompleteBranch = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_automation",
+        name: "harnessos_create_automation",
         args: {
           name: "Weekly review",
           prompt: "Review the project.",
@@ -4562,7 +4562,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_automation",
+        name: "harnessos_create_automation",
         args: {
           name: "monitor children",
           prompt: "check the child threads",
@@ -4592,7 +4592,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_automation",
+        name: "harnessos_create_automation",
         args: {
           name: "monitor children",
           prompt: "check the child threads",
@@ -4612,7 +4612,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_automation",
+        name: "harnessos_create_automation",
         args: {
           name: "Daily review",
           prompt: "Review the project.",
@@ -4647,7 +4647,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_automation",
+        name: "harnessos_create_automation",
         args: {
           name: "Release watch",
           prompt: "Track the release branch.",
@@ -4674,7 +4674,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_automation",
+        name: "harnessos_create_automation",
         args: {
           name: "Release watch",
           prompt: "Track the release branch.",
@@ -4696,7 +4696,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_automation",
+        name: "harnessos_create_automation",
         args: {
           name: "Cross-project review",
           prompt: "Review another project.",
@@ -4720,7 +4720,7 @@ describe("AgentGateway", () => {
         const harness = yield* makeHarness;
         const rejected = yield* harness.callTool({
           token: "token-parent",
-          name: "omnimind_create_automation",
+          name: "harnessos_create_automation",
           args: {
             name: "Fast monitor",
             prompt: "Check quickly.",
@@ -4733,7 +4733,7 @@ describe("AgentGateway", () => {
 
         const accepted = yield* harness.callTool({
           token: "token-parent",
-          name: "omnimind_create_automation",
+          name: "harnessos_create_automation",
           args: {
             name: "Fast monitor",
             prompt: "Check quickly.",
@@ -4759,17 +4759,17 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const implicit = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_update_automation_memory",
+        name: "harnessos_update_automation_memory",
         args: { memory: "Iteration 1 complete." },
       });
       const retired = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_update_automation_memory",
+        name: "harnessos_update_automation_memory",
         args: { automationId: "automation-1", content: "Retired payload." },
       });
       const missing = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_update_automation_memory",
+        name: "harnessos_update_automation_memory",
         args: { automationId: "automation-1", expectedDefinitionRevision: 0 },
       });
 
@@ -4790,7 +4790,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_automation",
+        name: "harnessos_create_automation",
         args: {
           name: "Suggested monitor",
           prompt: "Watch the build.",
@@ -4833,7 +4833,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_view_automation",
+        name: "harnessos_view_automation",
         args: { automationId: definition.id, runLimit: 1 },
       });
 
@@ -4852,7 +4852,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_cancel_automation",
+        name: "harnessos_cancel_automation",
         args: { automationId: "automation-1", expectedDefinitionRevision: 0 },
       });
       assert.isFalse(isToolError(response.result), toolErrorText(response.result));
@@ -4891,7 +4891,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_cancel_automation",
+        name: "harnessos_cancel_automation",
         args: { automationId: "automation-standalone", expectedDefinitionRevision: 0 },
       });
       assert.isFalse(isToolError(response.result), toolErrorText(response.result));
@@ -4928,7 +4928,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_cancel_automation",
+        name: "harnessos_cancel_automation",
         args: { automationId: "automation-standalone" },
       });
       assert.isTrue(isToolError(response.result));
@@ -4942,7 +4942,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_create_automation",
+        name: "harnessos_create_automation",
         args: {
           name: "Watch PR 142 CI",
           prompt: "Watch PR 142 and report when CI finishes.",
@@ -4983,7 +4983,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_cancel_automation",
+        name: "harnessos_cancel_automation",
         args: { automationId: "automation-elevated", expectedDefinitionRevision: 0 },
       });
       assert.isTrue(isToolError(response.result));
@@ -5001,7 +5001,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_update_automation",
+        name: "harnessos_update_automation",
         args: {
           automationId: "automation-1",
           expectedDefinitionRevision: 0,
@@ -5022,7 +5022,7 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_update_automation",
+        name: "harnessos_update_automation",
         args: {
           automationId: "automation-1",
           expectedDefinitionRevision: 0,
@@ -5058,12 +5058,12 @@ describe("AgentGateway", () => {
       const harness = yield* makeHarness;
       yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_set_thread_title",
+        name: "harnessos_set_thread_title",
         args: { threadId: "thread-child", title: "Renamed worker" },
       });
       yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_set_thread_archived",
+        name: "harnessos_set_thread_archived",
         args: { threadId: "thread-child", archived: true },
       });
       assert.equal(harness.dispatched[0]?.type, "thread.meta.update");
@@ -5081,7 +5081,7 @@ describe("AgentGateway", () => {
 
       const rename = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_set_thread_title",
+        name: "harnessos_set_thread_title",
         args: { threadId: "thread-elevated", title: "Hidden work" },
       });
       assert.isTrue(isToolError(rename.result));
@@ -5089,7 +5089,7 @@ describe("AgentGateway", () => {
 
       const archive = yield* harness.callTool({
         token: "token-parent",
-        name: "omnimind_set_thread_archived",
+        name: "harnessos_set_thread_archived",
         args: { threadId: "thread-elevated", archived: true },
       });
       assert.isTrue(isToolError(archive.result));
@@ -5108,7 +5108,7 @@ describe("AgentGateway", () => {
           jsonrpc: "2.0",
           id: 9,
           method: "tools/call",
-          params: { name: "omnimind_unknown" },
+          params: { name: "harnessos_unknown" },
         },
       });
       const error = (response.body as { error?: { code: number } }).error;

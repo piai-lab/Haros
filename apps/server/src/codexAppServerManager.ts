@@ -47,9 +47,9 @@ import {
 } from "./provider/codexCliVersion";
 import {
   buildCodexMcpConfigToml,
-  OMNIMIND_AGENT_GATEWAY_TOKEN_ENV,
+  HARNESSOS_AGENT_GATEWAY_TOKEN_ENV,
 } from "./agentGateway/mcpInjection.ts";
-import { OMNIMIND_GATEWAY_HARNESS_POLICY } from "./agentGateway/harnessPolicy.ts";
+import { HARNESSOS_GATEWAY_HARNESS_POLICY } from "./agentGateway/harnessPolicy.ts";
 import {
   AGENT_GATEWAY_TURN_AUTHORITY_RETIRED,
   type AgentGatewaySessionLease,
@@ -537,7 +537,7 @@ plan content should be human and agent digestible. The final plan must be plan-o
 Do not ask "should I proceed?" in the final output. The user can easily switch out of Plan mode and request implementation if you have included a \`<proposed_plan>\` block in your response. Alternatively, they can decide to stay in Plan mode and continue refining the plan.
 
 Only produce at most one \`<proposed_plan>\` block per turn, and only when you are presenting a complete spec.
-</collaboration_mode>\n\n${OMNIMIND_GATEWAY_HARNESS_POLICY}`;
+</collaboration_mode>\n\n${HARNESSOS_GATEWAY_HARNESS_POLICY}`;
 
 export const CODEX_DEFAULT_MODE_DEVELOPER_INSTRUCTIONS = `<collaboration_mode># Collaboration Mode: Default
 
@@ -550,7 +550,7 @@ Your active mode changes only when new developer instructions with a different \
 The \`request_user_input\` tool is unavailable in Default mode. If you call it while in Default mode, it will return an error.
 
 In Default mode, strongly prefer making reasonable assumptions and executing the user's request rather than stopping to ask questions. If you absolutely must ask a question because the answer cannot be discovered from local context and a reasonable assumption would be risky, ask the user directly with a concise plain-text question. Never write a multiple choice question as a textual assistant message.
-</collaboration_mode>\n\n${OMNIMIND_GATEWAY_HARNESS_POLICY}`;
+</collaboration_mode>\n\n${HARNESSOS_GATEWAY_HARNESS_POLICY}`;
 
 // Maps OmniMind's simple runtime toggle to Codex thread-level permission overrides.
 function mapCodexRuntimeMode(runtimeMode: RuntimeMode): {
@@ -723,7 +723,7 @@ export function normalizeCodexModelSlug(
 export function buildCodexInitializeParams() {
   return {
     clientInfo: {
-      name: "omnimind_desktop",
+      name: "harnessos_desktop",
       title: "OmniMind Desktop",
       version: "0.1.0",
     },
@@ -944,7 +944,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   private readonly modelCache = new Map<string, ProviderListModelsResult>();
 
   private runPromise: (effect: Effect.Effect<unknown, never>) => Promise<unknown>;
-  private readonly omnimindSkillsDir: string | undefined;
+  private readonly harnessosSkillsDir: string | undefined;
   private readonly agentGatewayMcp:
     | {
         readonly endpointUrl: () => string;
@@ -957,7 +957,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   constructor(
     services?: ServiceMap.ServiceMap<never>,
     options?: {
-      readonly omnimindSkillsDir?: string;
+      readonly harnessosSkillsDir?: string;
       readonly agentGatewayMcp?: {
         readonly endpointUrl: () => string;
         readonly acquireSessionLease: (threadId: ThreadId) => AgentGatewaySessionLease;
@@ -969,7 +969,7 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
   ) {
     super();
     this.runPromise = services ? Effect.runPromiseWith(services) : Effect.runPromise;
-    this.omnimindSkillsDir = options?.omnimindSkillsDir;
+    this.harnessosSkillsDir = options?.harnessosSkillsDir;
     this.agentGatewayMcp = options?.agentGatewayMcp;
     this.teardownProcessTree = options?.teardownProcessTree ?? teardownProviderProcessTree;
     this.taskCompleteFallbackGraceMs = Math.max(0, options?.taskCompleteFallbackGraceMs ?? 750);
@@ -993,22 +993,22 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
         : {}),
     });
     if (gatewayBearerToken) {
-      env[OMNIMIND_AGENT_GATEWAY_TOKEN_ENV] = gatewayBearerToken;
+      env[HARNESSOS_AGENT_GATEWAY_TOKEN_ENV] = gatewayBearerToken;
     }
     return env;
   }
 
-  // Registers `~/.omnimind/skills` as a codex skill root so portable skills are
+  // Registers `~/.harnessos/skills` as a codex skill root so portable skills are
   // first-class: skills/list returns them and turn/start `skill` items inject
   // their instructions. Verified live: skill items with paths outside known
   // roots are silently ignored by codex app-server, so this call is required.
   private async registerOmniMindSkillsRoot(context: CodexSessionContext): Promise<void> {
-    if (!this.omnimindSkillsDir) {
+    if (!this.harnessosSkillsDir) {
       return;
     }
     try {
       await this.sendRequest(context, "skills/extraRoots/set", {
-        extraRoots: [this.omnimindSkillsDir],
+        extraRoots: [this.harnessosSkillsDir],
       });
     } catch (error) {
       // Older codex builds (< extra-roots support) keep working; OmniMind-only

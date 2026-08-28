@@ -13,5 +13,5 @@ export interface CursorAdapterShape extends ProviderAdapterShape<ProviderAdapter
 }
 
 export class CursorAdapter extends ServiceMap.Service<CursorAdapter, CursorAdapterShape>()(
-  "omnimind/provider/Services/CursorAdapter",
+  "harnessos/provider/Services/CursorAdapter",
 ) {}

@@ -58,17 +58,17 @@ describe("isTrustedMediaPermissionRequest", () => {
     );
   });
 
-  it("rejects subframes and origins other than the live OmniMind renderer", () => {
+  it("rejects subframes and origins other than the live HarnessOS renderer", () => {
     const trusted = {
       isDestroyed: () => false,
-      getURL: () => "omnimind://app/index.html",
+      getURL: () => "harnessos://app/index.html",
     };
 
     expect(
       isTrustedMediaPermissionRequest(trusted, trusted, {
         mediaTypes: ["audio"],
         isMainFrame: true,
-        requestingUrl: "omnimind://app/chat",
+        requestingUrl: "harnessos://app/chat",
       }),
     ).toBe(true);
     expect(

@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import { isPlainObject } from "../../persistedRecord";
 
-export const FIRST_RUN_READINESS_PREFERENCE_KEY = "omnimind:first-run-readiness:v1";
+export const FIRST_RUN_READINESS_PREFERENCE_KEY = "harnessos:first-run-readiness:v1";
 
 export const FirstRunReadinessPreferenceSchema = Schema.Struct({
   disposition: Schema.Literal("deferred"),

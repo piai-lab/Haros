@@ -10,7 +10,7 @@ import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
 const ROOT_CWD = "/repo/project";
-const WORKTREE_CWD = "/repo/project/.omnimind/worktrees/feature";
+const WORKTREE_CWD = "/repo/project/.harnessos/worktrees/feature";
 
 const harness = vi.hoisted(() => ({
   branchesReady: true,

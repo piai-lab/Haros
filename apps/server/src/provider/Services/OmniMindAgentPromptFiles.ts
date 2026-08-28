@@ -19,4 +19,4 @@ export interface OmniMindAgentPromptFilesShape {
 export class OmniMindAgentPromptFiles extends ServiceMap.Service<
   OmniMindAgentPromptFiles,
   OmniMindAgentPromptFilesShape
->()("omnimind/provider/Services/OmniMindAgentPromptFiles") {}
+>()("harnessos/provider/Services/OmniMindAgentPromptFiles") {}

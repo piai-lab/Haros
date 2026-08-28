@@ -45,7 +45,8 @@ export function ToolCallGroupSummaryRow(props: {
 
   const shouldRenderChildren = open || keepChildrenMounted;
 
-  const iconWebFetchUrl = summary.iconKind === "mixed" ? null : extractWebFetchUrl(summary.iconEntry);
+  const iconWebFetchUrl =
+    summary.iconKind === "mixed" ? null : extractWebFetchUrl(summary.iconEntry);
   const localizedLabel = summary.parts
     .map((part) =>
       t(`toolGroup.${part.category}` as Parameters<typeof t>[0], { count: part.count }),
@@ -67,10 +68,10 @@ export function ToolCallGroupSummaryRow(props: {
         <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden>
           {iconWebFetchUrl ? (
             <LinkChipIcon url={iconWebFetchUrl} className="size-3.5" />
+          ) : summary.iconKind === "mixed" ? (
+            renderWorkEntryIcon(HammerIcon, "size-3.5")
           ) : (
-            summary.iconKind === "mixed"
-              ? renderWorkEntryIcon(HammerIcon, "size-3.5")
-              : renderWorkEntryIcon(workEntryLeftIcon(summary.iconEntry), "size-3.5")
+            renderWorkEntryIcon(workEntryLeftIcon(summary.iconEntry), "size-3.5")
           )}
         </span>
         <span>{localizedLabel}</span>

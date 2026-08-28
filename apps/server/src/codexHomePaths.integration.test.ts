@@ -19,40 +19,40 @@ describe("Codex home paths", () => {
     assert.ok(resolveBaseCodexHomePath({}).endsWith(`${path.sep}.codex`));
   });
 
-  it("anchors the overlay under OMNIMIND_HOME", () => {
+  it("anchors the overlay under HARNESSOS_HOME", () => {
     assert.equal(
       resolveOmniMindCodexHomeOverlayPath(
-        { OMNIMIND_HOME: "/omnimind/runtime" },
+        { HARNESSOS_HOME: "/harnessos/runtime" },
         "/users/me/.codex",
       ),
-      path.join("/omnimind/runtime", "codex-home-overlay"),
+      path.join("/harnessos/runtime", "codex-home-overlay"),
     );
   });
 
   it("derives a default overlay beside the source home", () => {
     assert.equal(
       resolveOmniMindCodexHomeOverlayPath({}, "/users/me/.codex"),
-      path.join("/users/me", ".omnimind", "runtime", "codex-home-overlay"),
+      path.join("/users/me", ".harnessos", "runtime", "codex-home-overlay"),
     );
   });
 
   it("uses the isolated overlay as Codex's write home", () => {
     assert.equal(
       resolveActiveCodexHomeWritePath({
-        env: { OMNIMIND_HOME: "/omnimind/runtime" },
+        env: { HARNESSOS_HOME: "/harnessos/runtime" },
         homePath: "/users/me/.codex",
       }),
-      path.join("/omnimind/runtime", "codex-home-overlay"),
+      path.join("/harnessos/runtime", "codex-home-overlay"),
     );
   });
 
   it("allowlists source and overlay homes when distinct", () => {
     assert.deepEqual(
       resolveCodexHomeAllowlistCandidates({
-        env: { OMNIMIND_HOME: "/omnimind/runtime" },
+        env: { HARNESSOS_HOME: "/harnessos/runtime" },
         homePath: "/users/me/.codex",
       }),
-      ["/users/me/.codex", path.join("/omnimind/runtime", "codex-home-overlay")],
+      ["/users/me/.codex", path.join("/harnessos/runtime", "codex-home-overlay")],
     );
   });
 });

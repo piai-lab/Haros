@@ -201,9 +201,7 @@ describe("AppSnapSettingsPanel", () => {
     await vi.waitFor(() => {
       expect(setEnabled).toHaveBeenNthCalledWith(1, true);
       expect(setEnabled).toHaveBeenNthCalledWith(2, false);
-      expect(harness.toastAdd).toHaveBeenCalledWith(
-        expect.objectContaining({ type: "error" }),
-      );
+      expect(harness.toastAdd).toHaveBeenCalledWith(expect.objectContaining({ type: "error" }));
     });
     await mounted.unmount();
   });

@@ -33,7 +33,7 @@ describe("remote access policy", () => {
         authToken: undefined,
         publicUrl: new URL("https://omnimind.example.test/"),
       }),
-    ).toContain("without OMNIMIND_AUTH_TOKEN");
+    ).toContain("without HARNESSOS_AUTH_TOKEN");
   });
 
   it("rejects invalid public URLs in the shared embedded-server policy", () => {

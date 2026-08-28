@@ -88,8 +88,8 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
 
     return withFakeAcpAgent(
       {
-        OMNIMIND_ACP_REQUEST_LOG_PATH: requestLogPath,
-        OMNIMIND_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({
+        HARNESSOS_ACP_REQUEST_LOG_PATH: requestLogPath,
+        HARNESSOS_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({
           subject: "Add generated commit message",
           body: "- verify cursor acp model config path",
         }),
@@ -175,7 +175,7 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
   it.effect("accepts json objects with extra assistant text around them", () =>
     withFakeAcpAgent(
       {
-        OMNIMIND_ACP_PROMPT_RESPONSE_TEXT:
+        HARNESSOS_ACP_PROMPT_RESPONSE_TEXT:
           'Sure, here is the JSON:\n```json\n{\n  "subject": "Update README dummy comment with attribution and date",\n  "body": ""\n}\n```\nDone.',
       },
       (agentPath) =>
@@ -207,7 +207,7 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
   it.effect("generates diff summaries through Cursor ACP text generation", () =>
     withFakeAcpAgent(
       {
-        OMNIMIND_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({
+        HARNESSOS_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({
           summary: "## Summary\n- Route git summaries through Cursor.",
         }),
       },
@@ -237,7 +237,7 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
   it.effect("falls back to raw text when Cursor replies without JSON for a thread title", () =>
     withFakeAcpAgent(
       {
-        OMNIMIND_ACP_PROMPT_RESPONSE_TEXT: "Sidebar Thread Row Spacing",
+        HARNESSOS_ACP_PROMPT_RESPONSE_TEXT: "Sidebar Thread Row Spacing",
       },
       (agentPath) =>
         Effect.gen(function* () {
@@ -265,7 +265,7 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
   it.effect("recovers a thread title from a wrong-key JSON payload", () =>
     withFakeAcpAgent(
       {
-        OMNIMIND_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({ name: "Reconnect Backoff Fix" }),
+        HARNESSOS_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({ name: "Reconnect Backoff Fix" }),
       },
       (agentPath) =>
         Effect.gen(function* () {
@@ -293,7 +293,7 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
   it.effect("rejects sentence-length prose instead of using it as a title", () =>
     withFakeAcpAgent(
       {
-        OMNIMIND_ACP_PROMPT_RESPONSE_TEXT:
+        HARNESSOS_ACP_PROMPT_RESPONSE_TEXT:
           "I'm sorry, but I cannot generate a concise title for this particular request right now.",
       },
       (agentPath) =>
@@ -338,8 +338,8 @@ it.layer(CursorTextGenerationTestLayer)("CursorTextGenerationLive", (it) => {
 
     return withFakeAcpAgent(
       {
-        OMNIMIND_ACP_EXIT_LOG_PATH: exitLogPath,
-        OMNIMIND_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({
+        HARNESSOS_ACP_EXIT_LOG_PATH: exitLogPath,
+        HARNESSOS_ACP_PROMPT_RESPONSE_TEXT: JSON.stringify({
           title: '"Trim reconnect spinner status after resume."',
         }),
       },

@@ -81,5 +81,5 @@ export class ProjectionThreadActivityRepository extends ServiceMap.Service<
   ProjectionThreadActivityRepository,
   ProjectionThreadActivityRepositoryShape
 >()(
-  "omnimind/persistence/Services/ProjectionThreadActivities/ProjectionThreadActivityRepository",
+  "harnessos/persistence/Services/ProjectionThreadActivities/ProjectionThreadActivityRepository",
 ) {}

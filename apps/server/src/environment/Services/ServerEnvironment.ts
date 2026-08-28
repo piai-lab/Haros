@@ -9,4 +9,4 @@ export interface ServerEnvironmentShape {
 export class ServerEnvironment extends ServiceMap.Service<
   ServerEnvironment,
   ServerEnvironmentShape
->()("omnimind/environment/Services/ServerEnvironment") {}
+>()("harnessos/environment/Services/ServerEnvironment") {}

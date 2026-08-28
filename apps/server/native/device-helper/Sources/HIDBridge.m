@@ -230,7 +230,7 @@ static const uint32_t kUsageLeftShift = 225;
 }
 
 - (BOOL)attachToDevice:(id)device error:(NSError **)error {
-  NSString *developerDir = NSProcessInfo.processInfo.environment[@"OMNIMIND_DEVELOPER_DIR"];
+  NSString *developerDir = NSProcessInfo.processInfo.environment[@"HARNESSOS_DEVELOPER_DIR"];
   if (developerDir.length == 0) {
     developerDir = @"/Applications/Xcode.app/Contents/Developer";
   }
@@ -250,7 +250,7 @@ static const uint32_t kUsageLeftShift = 225;
   }
   if (kit == NULL) {
     if (error) {
-      *error = [NSError errorWithDomain:@"dev.omnimind.device-helper.hid"
+      *error = [NSError errorWithDomain:@"ai.piai.harnessos.device-helper.hid"
                                    code:1
                                userInfo:@{NSLocalizedDescriptionKey:
                                             [NSString stringWithFormat:@"cannot load SimulatorKit at %@",
@@ -265,7 +265,7 @@ static const uint32_t kUsageLeftShift = 225;
   _mouseFn = (OmniMindIndigoMouseFn)dlsym(kit, "IndigoHIDMessageForMouseNSEvent");
   if (_buttonFn == NULL || _keyboardFn == NULL || _mouseFn == NULL || _arbitraryFn == NULL) {
     if (error) {
-      *error = [NSError errorWithDomain:@"dev.omnimind.device-helper.hid"
+      *error = [NSError errorWithDomain:@"ai.piai.harnessos.device-helper.hid"
                                    code:2
                                userInfo:@{NSLocalizedDescriptionKey: @"SimulatorKit Indigo symbols missing"}];
     }
@@ -278,7 +278,7 @@ static const uint32_t kUsageLeftShift = 225;
   }
   if (clientClass == nil) {
     if (error) {
-      *error = [NSError errorWithDomain:@"dev.omnimind.device-helper.hid"
+      *error = [NSError errorWithDomain:@"ai.piai.harnessos.device-helper.hid"
                                    code:3
                                userInfo:@{NSLocalizedDescriptionKey: @"SimDeviceLegacyHIDClient class missing"}];
     }
@@ -291,7 +291,7 @@ static const uint32_t kUsageLeftShift = 225;
   id client = ((id (*)(id, SEL, id, NSError **))objc_msgSend)(allocated, initSelector, device, &initError);
   if (client == nil) {
     if (error) {
-      *error = initError ?: [NSError errorWithDomain:@"dev.omnimind.device-helper.hid"
+      *error = initError ?: [NSError errorWithDomain:@"ai.piai.harnessos.device-helper.hid"
                                                 code:4
                                             userInfo:@{NSLocalizedDescriptionKey: @"HID client init failed"}];
     }
@@ -299,7 +299,7 @@ static const uint32_t kUsageLeftShift = 225;
   }
 
   _client = client;
-  _sendQueue = dispatch_queue_create("dev.omnimind.device-helper.hid", DISPATCH_QUEUE_SERIAL);
+  _sendQueue = dispatch_queue_create("ai.piai.harnessos.device-helper.hid", DISPATCH_QUEUE_SERIAL);
   return YES;
 }
 

@@ -22,16 +22,16 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
     const globalEnv = new Set(turboConfig.globalEnv ?? []);
 
     for (const name of [
-      "OMNIMIND_MODE",
-      "OMNIMIND_PORT",
-      "OMNIMIND_HOME",
-      "OMNIMIND_NO_BROWSER",
-      "OMNIMIND_AUTH_TOKEN",
-      "OMNIMIND_PUBLIC_URL",
-      "OMNIMIND_ALLOW_INSECURE_REMOTE",
-      "OMNIMIND_HOST",
-      "OMNIMIND_LOG_WS_EVENTS",
-      "OMNIMIND_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
+      "HARNESSOS_MODE",
+      "HARNESSOS_PORT",
+      "HARNESSOS_HOME",
+      "HARNESSOS_NO_BROWSER",
+      "HARNESSOS_AUTH_TOKEN",
+      "HARNESSOS_PUBLIC_URL",
+      "HARNESSOS_ALLOW_INSECURE_REMOTE",
+      "HARNESSOS_HOST",
+      "HARNESSOS_LOG_WS_EVENTS",
+      "HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
       "VITE_WS_URL",
       "VITE_DEV_SERVER_URL",
     ]) {
@@ -40,12 +40,12 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
   });
 
   describe("resolveOffset", () => {
-    it.effect("uses explicit OMNIMIND_PORT_OFFSET when provided", () =>
+    it.effect("uses explicit HARNESSOS_PORT_OFFSET when provided", () =>
       Effect.sync(() => {
         const result = resolveOffset({ portOffset: 12, devInstance: undefined });
         assert.deepStrictEqual(result, {
           offset: 12,
-          source: "OMNIMIND_PORT_OFFSET=12",
+          source: "HARNESSOS_PORT_OFFSET=12",
         });
       }),
     );
@@ -67,7 +67,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           }),
         );
 
-        assert.ok(error.includes("Invalid OMNIMIND_PORT_OFFSET"));
+        assert.ok(error.includes("Invalid HARNESSOS_PORT_OFFSET"));
       }),
     );
   });
@@ -122,7 +122,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
     it.effect("rejects invalid boolean environment values", () =>
       Effect.gen(function* () {
         const error = yield* Effect.flip(
-          readDevRunnerBooleanEnvironment({ OMNIMIND_LOG_WS_EVENTS: "sometimes" }),
+          readDevRunnerBooleanEnvironment({ HARNESSOS_LOG_WS_EVENTS: "sometimes" }),
         );
 
         assert.match(String(error), /Failed to read boolean development-runner configuration/);
@@ -138,7 +138,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           baseEnv: { PATH: "/opt/homebrew/bin:/usr/bin" },
           serverOffset: 0,
           webOffset: 0,
-          omnimindHome: undefined,
+          harnessosHome: undefined,
           authToken: undefined,
           noBrowser: undefined,
           autoBootstrapProjectFromCwd: undefined,
@@ -148,19 +148,19 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: undefined,
         });
 
-        assert.equal(env.OMNIMIND_PATH_HYDRATED, "1");
+        assert.equal(env.HARNESSOS_PATH_HYDRATED, "1");
         assert.match(env.PATH ?? "", /\/opt\/homebrew\/bin/);
       }),
     );
 
-    it.effect("defaults OMNIMIND_HOME to ~/.omnimind when not provided", () =>
+    it.effect("defaults HARNESSOS_HOME to ~/.harnessos when not provided", () =>
       Effect.gen(function* () {
         const env = yield* createDevRunnerEnv({
           mode: "dev",
           baseEnv: {},
           serverOffset: 0,
           webOffset: 0,
-          omnimindHome: undefined,
+          harnessosHome: undefined,
           authToken: undefined,
           noBrowser: undefined,
           autoBootstrapProjectFromCwd: undefined,
@@ -170,8 +170,8 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: undefined,
         });
 
-        assert.equal(env.OMNIMIND_HOME, resolve(homedir(), ".omnimind"));
-        assert.equal(env.OMNIMIND_HOST, "127.0.0.1");
+        assert.equal(env.HARNESSOS_HOME, resolve(homedir(), ".harnessos"));
+        assert.equal(env.HARNESSOS_HOST, "127.0.0.1");
         assert.equal(env.VITE_WS_URL, "ws://127.0.0.1:3773");
       }),
     );
@@ -183,7 +183,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           baseEnv: {},
           serverOffset: 0,
           webOffset: 0,
-          omnimindHome: undefined,
+          harnessosHome: undefined,
           authToken: undefined,
           noBrowser: undefined,
           autoBootstrapProjectFromCwd: undefined,
@@ -193,7 +193,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: undefined,
         });
 
-        assert.equal(env.OMNIMIND_HOST, "::1");
+        assert.equal(env.HARNESSOS_HOST, "::1");
         assert.equal(env.VITE_WS_URL, "ws://[::1]:3773");
       }),
     );
@@ -205,7 +205,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           baseEnv: {},
           serverOffset: 0,
           webOffset: 0,
-          omnimindHome: "/tmp/custom-omnimind",
+          harnessosHome: "/tmp/custom-omnimind",
           authToken: "secret",
           noBrowser: true,
           autoBootstrapProjectFromCwd: false,
@@ -215,12 +215,12 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: new URL("http://localhost:7331"),
         });
 
-        assert.equal(env.OMNIMIND_HOME, resolve("/tmp/custom-omnimind"));
-        assert.equal(env.OMNIMIND_PORT, "4222");
-        assert.equal(env.OMNIMIND_NO_BROWSER, "1");
-        assert.equal(env.OMNIMIND_AUTO_BOOTSTRAP_PROJECT_FROM_CWD, "0");
-        assert.equal(env.OMNIMIND_LOG_WS_EVENTS, "1");
-        assert.equal(env.OMNIMIND_HOST, "0.0.0.0");
+        assert.equal(env.HARNESSOS_HOME, resolve("/tmp/custom-omnimind"));
+        assert.equal(env.HARNESSOS_PORT, "4222");
+        assert.equal(env.HARNESSOS_NO_BROWSER, "1");
+        assert.equal(env.HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD, "0");
+        assert.equal(env.HARNESSOS_LOG_WS_EVENTS, "1");
+        assert.equal(env.HARNESSOS_HOST, "0.0.0.0");
         assert.equal(env.VITE_WS_URL, "ws://127.0.0.1:4222");
         assert.equal(env.VITE_DEV_SERVER_URL, "http://localhost:7331/");
       }),
@@ -231,11 +231,11 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
         const env = yield* createDevRunnerEnv({
           mode: "dev",
           baseEnv: {
-            OMNIMIND_LOG_WS_EVENTS: "keep-me-out",
+            HARNESSOS_LOG_WS_EVENTS: "keep-me-out",
           },
           serverOffset: 0,
           webOffset: 0,
-          omnimindHome: undefined,
+          harnessosHome: undefined,
           authToken: undefined,
           noBrowser: undefined,
           autoBootstrapProjectFromCwd: undefined,
@@ -245,8 +245,8 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: undefined,
         });
 
-        assert.equal(env.OMNIMIND_MODE, "web");
-        assert.equal(env.OMNIMIND_LOG_WS_EVENTS, undefined);
+        assert.equal(env.HARNESSOS_MODE, "web");
+        assert.equal(env.HARNESSOS_LOG_WS_EVENTS, undefined);
       }),
     );
 
@@ -257,7 +257,7 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           baseEnv: {},
           serverOffset: 0,
           webOffset: 0,
-          omnimindHome: undefined,
+          harnessosHome: undefined,
           authToken: undefined,
           noBrowser: undefined,
           autoBootstrapProjectFromCwd: undefined,
@@ -267,18 +267,18 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: undefined,
         });
 
-        assert.equal(env.OMNIMIND_LOG_WS_EVENTS, "0");
+        assert.equal(env.HARNESSOS_LOG_WS_EVENTS, "0");
       }),
     );
 
-    it.effect("uses custom omnimindHome when provided", () =>
+    it.effect("uses custom harnessosHome when provided", () =>
       Effect.gen(function* () {
         const env = yield* createDevRunnerEnv({
           mode: "dev",
           baseEnv: {},
           serverOffset: 0,
           webOffset: 0,
-          omnimindHome: "/tmp/my-omnimind",
+          harnessosHome: "/tmp/my-omnimind",
           authToken: undefined,
           noBrowser: undefined,
           autoBootstrapProjectFromCwd: undefined,
@@ -288,9 +288,9 @@ it.layer(NodeServices.layer)("dev-runner", (it) => {
           devUrl: undefined,
         });
 
-        assert.equal(env.OMNIMIND_HOME, resolve("/tmp/my-omnimind"));
-        assert.equal(env.OMNIMIND_HOME, resolve("/tmp/my-omnimind"));
-        assert.equal(env.OMNIMIND_HOME, resolve("/tmp/my-omnimind"));
+        assert.equal(env.HARNESSOS_HOME, resolve("/tmp/my-omnimind"));
+        assert.equal(env.HARNESSOS_HOME, resolve("/tmp/my-omnimind"));
+        assert.equal(env.HARNESSOS_HOME, resolve("/tmp/my-omnimind"));
       }),
     );
   });

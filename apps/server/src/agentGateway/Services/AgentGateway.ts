@@ -1,7 +1,7 @@
 /**
  * AgentGateway - OmniMind app-control tool surface for provider agents.
  *
- * Serves the `omnimind_*` MCP tools that let any provider session (Codex,
+ * Serves the `harnessos_*` MCP tools that let any provider session (Codex,
  * Claude, Grok, ...) inspect and control OmniMind itself: list projects and
  * threads, read thread status, spawn child threads, send messages, and manage
  * heartbeat automations. The HTTP route delegates every `POST /mcp` request
@@ -33,5 +33,5 @@ export interface AgentGatewayShape {
 }
 
 export class AgentGateway extends ServiceMap.Service<AgentGateway, AgentGatewayShape>()(
-  "omnimind/agentGateway/Services/AgentGateway",
+  "harnessos/agentGateway/Services/AgentGateway",
 ) {}

@@ -28,7 +28,7 @@ import {
 } from "~/lib/serverReactQuery";
 import { useStore } from "~/store";
 import { createThreadShellsSelector } from "~/storeSelectors";
-import { WS_OMNIMIND_MODEL_SERVICES_CAPABILITY } from "@harnessos/contracts";
+import { WS_HARNESSOS_MODEL_SERVICES_CAPABILITY } from "@harnessos/contracts";
 
 import {
   areUsableProviderCatalogsSettled,
@@ -47,7 +47,7 @@ import { readFirstRunReadinessPreference } from "./firstRunReadinessPreference";
 const subscribeModelServicesCapability = (listener: () => void) =>
   onNativeApiServerCapabilitiesChange(listener);
 const readModelServicesCapability = () =>
-  readNativeApiServerCapabilityState(WS_OMNIMIND_MODEL_SERVICES_CAPABILITY);
+  readNativeApiServerCapabilityState(WS_HARNESSOS_MODEL_SERVICES_CAPABILITY);
 const readServerModelServicesCapability = () => null;
 const subscribeModelServicesTransport = (listener: () => void) =>
   onNativeApiTransportStateChange(listener);

@@ -90,4 +90,4 @@ export interface AuthSessionRepositoryShape {
 export class AuthSessionRepository extends ServiceMap.Service<
   AuthSessionRepository,
   AuthSessionRepositoryShape
->()("omnimind/persistence/Services/AuthSessions/AuthSessionRepository") {}
+>()("harnessos/persistence/Services/AuthSessions/AuthSessionRepository") {}

@@ -4,8 +4,8 @@ import { NonNegativeInt, TrimmedNonEmptyString } from "./baseSchemas";
 import { EditorId } from "./editor";
 
 const Revision = Schema.String.check(
-	Schema.isMinLength(64),
-	Schema.isMaxLength(64),
+  Schema.isMinLength(64),
+  Schema.isMaxLength(64),
   Schema.isPattern(/^[a-f0-9]{64}$/u),
 );
 const ProviderId = TrimmedNonEmptyString.check(Schema.isMaxLength(64));
@@ -24,8 +24,7 @@ export const OmniMindWebSearchProviderSelection = Schema.Union([
   ProviderId,
   Schema.Array(ProviderId).check(Schema.isMinLength(1), Schema.isMaxLength(64)),
 ]);
-export type OmniMindWebSearchProviderSelection =
-  typeof OmniMindWebSearchProviderSelection.Type;
+export type OmniMindWebSearchProviderSelection = typeof OmniMindWebSearchProviderSelection.Type;
 
 export const OmniMindWebSearchDraftField = Schema.Struct({
   configKey: ConfigKey,
@@ -130,8 +129,7 @@ export const OmniMindWebSearchSettingsSnapshot = Schema.Struct({
   }),
   providers: Schema.Array(OmniMindWebSearchProvider).check(Schema.isMaxLength(64)),
 });
-export type OmniMindWebSearchSettingsSnapshot =
-  typeof OmniMindWebSearchSettingsSnapshot.Type;
+export type OmniMindWebSearchSettingsSnapshot = typeof OmniMindWebSearchSettingsSnapshot.Type;
 
 export const OmniMindWebSearchRecoverySnapshot = Schema.Struct({
   state: Schema.Literal("recovery"),
@@ -144,8 +142,7 @@ export const OmniMindWebSearchRecoverySnapshot = Schema.Struct({
   ]),
   message: Schema.String.check(Schema.isMaxLength(1_024)),
 });
-export type OmniMindWebSearchRecoverySnapshot =
-  typeof OmniMindWebSearchRecoverySnapshot.Type;
+export type OmniMindWebSearchRecoverySnapshot = typeof OmniMindWebSearchRecoverySnapshot.Type;
 
 export const OmniMindWebSearchReadResult = Schema.Union([
   OmniMindWebSearchSettingsSnapshot,
@@ -185,8 +182,7 @@ export const OmniMindWebSearchProviderTestInput = Schema.Struct({
   providerId: ProviderId,
   draft: OmniMindWebSearchDraft,
 });
-export type OmniMindWebSearchProviderTestInput =
-  typeof OmniMindWebSearchProviderTestInput.Type;
+export type OmniMindWebSearchProviderTestInput = typeof OmniMindWebSearchProviderTestInput.Type;
 
 export const OmniMindWebSearchRecheckInput = Schema.Struct({
   requestId: RequestIdentity,

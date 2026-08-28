@@ -8,8 +8,8 @@ import { PROTOCOL_VERSION, agent, methods, ndJsonStream } from "@agentclientprot
 import { z } from "zod";
 
 const sessionId = "official-sdk-session-1";
-const logPath = process.env.OMNIMIND_ACP_CONFORMANCE_LOG_PATH;
-const malformedPrefix = process.env.OMNIMIND_ACP_CONFORMANCE_MALFORMED_PREFIX === "1";
+const logPath = process.env.HARNESSOS_ACP_CONFORMANCE_LOG_PATH;
+const malformedPrefix = process.env.HARNESSOS_ACP_CONFORMANCE_MALFORMED_PREFIX === "1";
 
 function log(type: string, payload: unknown): void {
   if (logPath) {

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Compiles omnimind-device-helper with the user's own Xcode toolchain.
+# Compiles harnessos-device-helper with the user's own Xcode toolchain.
 #
 # Everything is resolved through `xcrun`, and no private framework is linked at
 # build time (they are dlopen'd at runtime), so the output binary is relocatable
@@ -7,15 +7,15 @@
 #
 # Usage:
 #   build.sh [output-directory]
-#   OMNIMIND_DEVICE_HELPER_OUT=/path build.sh
+#   HARNESSOS_DEVICE_HELPER_OUT=/path build.sh
 #
 # Defaults to ./build next to this script.
 
 set -euo pipefail
 
 SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OUT_DIR="${1:-${OMNIMIND_DEVICE_HELPER_OUT:-$SOURCE_DIR/build}}"
-BINARY_NAME="omnimind-device-helper"
+OUT_DIR="${1:-${HARNESSOS_DEVICE_HELPER_OUT:-$SOURCE_DIR/build}}"
+BINARY_NAME="harnessos-device-helper"
 
 if ! command -v xcrun >/dev/null 2>&1; then
   echo "error: xcrun not found; install the Xcode command line tools" >&2

@@ -75,7 +75,7 @@ import {
 import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
 import { extractProposedPlanMarkdown } from "../planMode.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
-import { omnimindSkillsDir } from "../skillsCatalog.ts";
+import { harnessosSkillsDir } from "../skillsCatalog.ts";
 import { makeBoundedCallbackIngress } from "../boundedCallbackIngress.ts";
 import { assignDerivedProviderRuntimeEventIds } from "../providerRuntimeEventIdentity.ts";
 import { providerExecutionStructure } from "../providerExecutionStructure.ts";
@@ -101,9 +101,9 @@ const PROVIDER = "codex" as const;
 // activity at all for this long, abort it instead of showing "Working" forever.
 // Every turn-scoped event (reasoning, tool output, deltas) resets the clock and
 // a pending question/approval pauses it, so only a wedged child trips this.
-// Generous by design; override with OMNIMIND_CODEX_TURN_IDLE_TIMEOUT_MS.
+// Generous by design; override with HARNESSOS_CODEX_TURN_IDLE_TIMEOUT_MS.
 const CODEX_TURN_IDLE_TIMEOUT_MS = resolveAcpTurnIdleTimeoutMs({
-  envVar: "OMNIMIND_CODEX_TURN_IDLE_TIMEOUT_MS",
+  envVar: "HARNESSOS_CODEX_TURN_IDLE_TIMEOUT_MS",
   defaultMs: 900_000,
 });
 const CODEX_TURN_WATCHDOG_INTERVAL_MS = 15_000;
@@ -1736,7 +1736,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
   Effect.gen(function* () {
     const serverConfig = yield* Effect.service(ServerConfig);
     // Optional so adapter tests can run without the gateway layer; when
-    // present, every session gets the omnimind_* MCP tools.
+    // present, every session gets the harnessos_* MCP tools.
     const agentGatewayCredentials = Option.getOrUndefined(
       yield* Effect.serviceOption(AgentGatewayCredentials),
     );
@@ -1757,7 +1757,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         return (
           options?.makeManager?.(services) ??
           new CodexAppServerManager(services, {
-            omnimindSkillsDir: omnimindSkillsDir(serverConfig.baseDir),
+            harnessosSkillsDir: harnessosSkillsDir(serverConfig.baseDir),
             ...(agentGatewayCredentials
               ? {
                   agentGatewayMcp: {

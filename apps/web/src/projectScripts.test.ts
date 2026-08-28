@@ -53,8 +53,8 @@ describe("projectScripts helpers", () => {
     });
 
     expect(env).toMatchObject({
-      OMNIMIND_PROJECT_ROOT: "/repo",
-      OMNIMIND_WORKTREE_PATH: "/repo/worktree-a",
+      HARNESSOS_PROJECT_ROOT: "/repo",
+      HARNESSOS_WORKTREE_PATH: "/repo/worktree-a",
     });
   });
 
@@ -62,14 +62,14 @@ describe("projectScripts helpers", () => {
     const env = projectScriptRuntimeEnv({
       project: { cwd: "/repo" },
       extraEnv: {
-        OMNIMIND_PROJECT_ROOT: "/custom-root",
+        HARNESSOS_PROJECT_ROOT: "/custom-root",
         CUSTOM_FLAG: "1",
       },
     });
 
-    expect(env.OMNIMIND_PROJECT_ROOT).toBe("/custom-root");
+    expect(env.HARNESSOS_PROJECT_ROOT).toBe("/custom-root");
     expect(env.CUSTOM_FLAG).toBe("1");
-    expect(env.OMNIMIND_WORKTREE_PATH).toBeUndefined();
+    expect(env.HARNESSOS_WORKTREE_PATH).toBeUndefined();
   });
 
   it("prefers the worktree path for script cwd resolution", () => {

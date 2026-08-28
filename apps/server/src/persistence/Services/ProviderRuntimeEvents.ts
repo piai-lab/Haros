@@ -73,4 +73,4 @@ export interface ProviderRuntimeEventRepositoryShape {
 export class ProviderRuntimeEventRepository extends ServiceMap.Service<
   ProviderRuntimeEventRepository,
   ProviderRuntimeEventRepositoryShape
->()("omnimind/persistence/Services/ProviderRuntimeEvents/ProviderRuntimeEventRepository") {}
+>()("harnessos/persistence/Services/ProviderRuntimeEvents/ProviderRuntimeEventRepository") {}

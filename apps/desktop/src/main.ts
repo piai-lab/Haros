@@ -55,8 +55,8 @@ import { isKeyboardShortcutsHelpChord } from "@harnessos/shared/browserShortcuts
 import { getMacTrafficLightPosition } from "@harnessos/shared/desktopChrome";
 import { DEVICE_HELPER_SOURCE_DIR_ENV } from "@harnessos/shared/deviceHelperCache";
 import {
-  resolveOmniMindDesktopFlavor,
-  omnimindDesktopIdentity,
+  resolveHarnessOSDesktopFlavor,
+  harnessOSDesktopIdentity,
 } from "@harnessos/shared/desktopIdentity";
 import { NetService } from "@harnessos/shared/Net";
 import { applyShellEnvironmentHydrationMarker } from "@harnessos/shared/shell";
@@ -222,7 +222,7 @@ import {
 } from "./browserIpc";
 import {
   BrowserHostPipeServer,
-  OMNIMIND_BROWSER_HOST_PIPE_PATH,
+  HARNESSOS_BROWSER_HOST_PIPE_PATH,
   resolveBrowserHostPipeBackendEnv,
 } from "./browserUsePipeServer";
 import { normalizeDesktopWsUrl, resolveDesktopWsUrlFromEnv } from "./desktopWsBridge";
@@ -265,7 +265,7 @@ const startupBundleIdentity = captureStartupBundleIdentity();
 // The reads a few lines below decide where this install's data lives, and two of them
 // depend on what this probe brings in: `resolveUserDataPath()` takes the Electron profile
 // directory from XDG_CONFIG_HOME on Linux, which the login-shell probe captures, and
-// `BASE_DIR` prefers OMNIMIND_HOME, which the Windows registry read hydrates whenever the
+// `BASE_DIR` prefers HARNESSOS_HOME, which the Windows registry read hydrates whenever the
 // user set it persistently. Resolving either against an unhydrated environment would
 // silently relocate an existing user's profile and data directory.
 // (The probe also carries PATH, SSH_AUTH_SOCK and HOMEBREW_* for later provider spawns.
@@ -276,13 +276,13 @@ const IPC = DESKTOP_IPC_CHANNELS;
 const startupPresentationOwner = makeStartupPresentationOwner();
 const MAX_CLIPBOARD_IMAGE_DATA_URL_LENGTH = 16 * 1024 * 1024;
 const isDevelopment = Boolean(process.env.VITE_DEV_SERVER_URL);
-const desktopFlavor = resolveOmniMindDesktopFlavor({
+const desktopFlavor = resolveHarnessOSDesktopFlavor({
   isDevelopment,
-  requestedFlavor: process.env.OMNIMIND_DESKTOP_FLAVOR,
+  requestedFlavor: process.env.HARNESSOS_DESKTOP_FLAVOR,
 });
-const desktopIdentity = omnimindDesktopIdentity(desktopFlavor);
+const desktopIdentity = harnessOSDesktopIdentity(desktopFlavor);
 const BASE_DIR =
-  process.env.OMNIMIND_HOME?.trim() ||
+  process.env.HARNESSOS_HOME?.trim() ||
   Path.join(OS.homedir(), desktopIdentity.defaultHomeDirectoryName);
 const STATE_DIR = Path.join(BASE_DIR, "userdata");
 const DESKTOP_WINDOW_STATE_PATH = Path.join(STATE_DIR, "desktop-window-state.json");
@@ -330,15 +330,15 @@ const UPDATE_CHECK_REASON_MIGRATION_RECOVERY = "migration recovery";
 const UPDATE_INSTALL_MARKER_FILE_NAME = "pending-update-install.json";
 const BACKEND_FORCE_KILL_DELAY_MS = 8_000;
 const BACKEND_SHUTDOWN_TIMEOUT_MS = 10_000;
-const BACKEND_MAX_OLD_SPACE_ENV_KEYS = ["OMNIMIND_BACKEND_MAX_OLD_SPACE_MB"] as const;
+const BACKEND_MAX_OLD_SPACE_ENV_KEYS = ["HARNESSOS_BACKEND_MAX_OLD_SPACE_MB"] as const;
 const DESKTOP_UPDATE_ALLOW_PRERELEASE = false;
 const BROWSER_PERF_SAMPLE_INTERVAL_MS = 5_000;
 const DESKTOP_MENU_ZOOM_FACTOR_STEP = 1.1;
 const DESKTOP_MENU_MIN_ZOOM_FACTOR = 0.25;
 const DESKTOP_MENU_MAX_ZOOM_FACTOR = 5;
-const OMNIMIND_BROWSER_LABEL = "OmniMind browser";
+const HARNESSOS_BROWSER_LABEL = "HarnessOS browser";
 const DESKTOP_STATUS_ITEM_GUID = "3f07c178-5d42-4f43-8ae4-6c8d7ed286b2";
-const browserPerfLoggingEnabled = process.env.OMNIMIND_BROWSER_PERF === "1";
+const browserPerfLoggingEnabled = process.env.HARNESSOS_BROWSER_PERF === "1";
 
 type DesktopUpdateErrorContext = DesktopUpdateState["errorContext"];
 
@@ -448,7 +448,7 @@ function startBrowserPerformanceLogging(): void {
         name: metric.name,
       }));
 
-    console.info(`[${OMNIMIND_BROWSER_LABEL} perf]`, {
+    console.info(`[${HARNESSOS_BROWSER_LABEL} perf]`, {
       ...snapshot.counters,
       trackedProcessIds: snapshot.trackedProcessIds,
       processes: processMetrics,
@@ -458,7 +458,7 @@ function startBrowserPerformanceLogging(): void {
 }
 
 async function ensureBrowserHostPipeServer(): Promise<void> {
-  if (browserHostPipeServer || !OMNIMIND_BROWSER_HOST_PIPE_PATH) {
+  if (browserHostPipeServer || !HARNESSOS_BROWSER_HOST_PIPE_PATH) {
     return;
   }
   const server = new BrowserHostPipeServer(browserManager, {
@@ -630,7 +630,7 @@ async function reserveBackendEndpoint(reason: string): Promise<void> {
   );
   backendHttpUrl = `http://127.0.0.1:${backendPort}`;
   backendWsUrl = `ws://127.0.0.1:${backendPort}/?token=${encodeURIComponent(backendAuthToken)}`;
-  process.env.OMNIMIND_DESKTOP_WS_URL = backendWsUrl;
+  process.env.HARNESSOS_DESKTOP_WS_URL = backendWsUrl;
   writeDesktopLogHeader(`${reason} resolved backend endpoint port=${backendPort}`);
 }
 
@@ -1054,21 +1054,21 @@ function resolveEmbeddedCommitHash(): string | null {
 
   try {
     const raw = FS.readFileSync(packageJsonPath, "utf8");
-    const parsed = JSON.parse(raw) as { omnimindCommitHash?: unknown };
-    return normalizeCommitHash(parsed.omnimindCommitHash);
+    const parsed = JSON.parse(raw) as { harnessosCommitHash?: unknown };
+    return normalizeCommitHash(parsed.harnessosCommitHash);
   } catch {
     return null;
   }
 }
 
-declare const __OMNIMIND_WINDOWS_UPDATER_PUBLISHER__: string;
+declare const __HARNESSOS_WINDOWS_UPDATER_PUBLISHER__: string;
 
 function resolveEmbeddedWindowsPublisherSubjects(): string[] {
   if (!app.isPackaged || process.platform !== "win32") {
     return [];
   }
 
-  const subject = __OMNIMIND_WINDOWS_UPDATER_PUBLISHER__.trim();
+  const subject = __HARNESSOS_WINDOWS_UPDATER_PUBLISHER__.trim();
   return subject ? [subject] : [];
 }
 
@@ -1077,7 +1077,7 @@ function resolveAboutCommitHash(): string | null {
     return aboutCommitHashCache;
   }
 
-  const envCommitHash = normalizeCommitHash(process.env.OMNIMIND_COMMIT_HASH);
+  const envCommitHash = normalizeCommitHash(process.env.HARNESSOS_COMMIT_HASH);
   if (envCommitHash) {
     aboutCommitHashCache = envCommitHash;
     return aboutCommitHashCache;
@@ -1143,7 +1143,7 @@ async function handleDesktopMigrationRecovery(): Promise<DesktopMigrationRecover
     requiresRecovery: () => requiresDesktopMigrationRecovery(paths),
     markerRemains: () => hasPendingDesktopMigrationRecovery(paths),
     choose: async ({ previousFailure }) => {
-      // The user is here because OmniMind cannot open its database, so the
+      // The user is here because HarnessOS cannot open its database, so the
       // in-app update button is unreachable by definition. A newer build is
       // often the actual fix, and this dialog is the only surface left to
       // offer it from: installing it in place when the updater can reach the
@@ -1170,15 +1170,15 @@ async function handleDesktopMigrationRecovery(): Promise<DesktopMigrationRecover
       ];
       if (canInstallUpdate) {
         choices.push({
-          label: "Update OmniMind and restart",
-          detail: "install the newest OmniMind release, which may already contain the fix",
+          label: "Update HarnessOS and restart",
+          detail: "install the newest HarnessOS release, which may already contain the fix",
           decision: "install-update",
         });
       }
       if (releaseUrl !== null) {
         choices.push({
           label: "Download latest release",
-          detail: `${canInstallUpdate ? "download that release" : "download the latest OmniMind release"} in a browser`,
+          detail: `${canInstallUpdate ? "download that release" : "download the latest HarnessOS release"} in a browser`,
           decision: "open-release-page",
         });
       }
@@ -1193,16 +1193,16 @@ async function handleDesktopMigrationRecovery(): Promise<DesktopMigrationRecover
         type: previousFailure === null ? "warning" : "error",
         title:
           previousFailure === null
-            ? "OmniMind needs to recover its database"
+            ? "HarnessOS needs to recover its database"
             : restoreFailed
               ? "Migration recovery failed"
-              : "OmniMind could not update itself",
+              : "HarnessOS could not update itself",
         message:
           previousFailure === null
-            ? "OmniMind stopped a database migration before it could finish safely."
+            ? "HarnessOS stopped a database migration before it could finish safely."
             : restoreFailed
               ? "The saved database backup could not be restored."
-              : "The newest OmniMind release could not be installed.",
+              : "The newest HarnessOS release could not be installed.",
         detail: `${previousFailure === null ? "" : `${previousFailure.message}\n\n`}You can ${options}. No provider or chat process will start until recovery succeeds.`,
         buttons: choices.map((choice) => choice.label),
         defaultId: 0,
@@ -1286,7 +1286,7 @@ let servedStaticRootCache: ServedStaticRoot | null | undefined;
 // being replaced beneath the running app (Electron caches the header per process,
 // so every later read returns bytes from the wrong offsets). Extract the client
 // to a per-archive snapshot on real disk and serve that instead — both for the
-// omnimind:// protocol here and, via OMNIMIND_STATIC_DIR, for the backend's HTTP static
+// harnessos:// protocol here and, via HARNESSOS_STATIC_DIR, for the backend's HTTP static
 // route. Memoized so one app run serves one coherent asset generation.
 function resolveServedStaticRoot(): ServedStaticRoot | null {
   if (servedStaticRootCache === undefined) {
@@ -1377,7 +1377,7 @@ function handleFatalStartupError(stage: string, error: unknown): void {
   console.error(`[desktop] fatal startup error (${stage})`, error);
   if (!isQuitting) {
     isQuitting = true;
-    dialog.showErrorBox("OmniMind failed to start", `Stage: ${stage}\n${message}${detail}`);
+    dialog.showErrorBox("HarnessOS failed to start", `Stage: ${stage}\n${message}${detail}`);
   }
   if (process.platform === "win32") {
     requestGracefulAppQuit(`fatal startup (${stage})`);
@@ -1499,7 +1499,7 @@ function adjustWindowZoomFromMenu(multiplier: number): void {
 // A configured app-update.yml (or the mock-updates flag) is the prerequisite for any
 // auto-update activity; centralized so the menu and the enable check stay in lockstep.
 function hasConfiguredUpdateFeed(): boolean {
-  return readAppUpdateYml() !== null || Boolean(process.env.OMNIMIND_DESKTOP_MOCK_UPDATES);
+  return readAppUpdateYml() !== null || Boolean(process.env.HARNESSOS_DESKTOP_MOCK_UPDATES);
 }
 
 function resolveAutoUpdateDisabledReason(): string | null {
@@ -1509,7 +1509,7 @@ function resolveAutoUpdateDisabledReason(): string | null {
     platform: process.platform,
     appImage: process.env.APPIMAGE,
     disabledByEnv:
-      desktopIdentity.usesScriptedUpdates || process.env.OMNIMIND_DISABLE_AUTO_UPDATE === "1",
+      desktopIdentity.usesScriptedUpdates || process.env.HARNESSOS_DISABLE_AUTO_UPDATE === "1",
     hasUpdateFeedConfig: hasConfiguredUpdateFeed(),
   });
 }
@@ -1541,14 +1541,14 @@ async function checkForUpdatesFromMenu(): Promise<void> {
     void dialog.showMessageBox({
       type: "info",
       title: "You're up to date!",
-      message: `OmniMind ${updateState.currentVersion} is currently the newest version available.`,
+      message: `HarnessOS ${updateState.currentVersion} is currently the newest version available.`,
       buttons: ["OK"],
     });
   } else if (updateState.status === "downloading" || updateState.status === "available") {
     void dialog.showMessageBox({
       type: "info",
       title: "Update found",
-      message: "OmniMind is preparing the update in the background.",
+      message: "HarnessOS is preparing the update in the background.",
       buttons: ["OK"],
     });
   } else if (updateState.status === "downloaded") {
@@ -1725,9 +1725,9 @@ function resolveNotificationIconPath(): string | null {
 
 function resolveAppSnapHelperPath(): string {
   if (app.isPackaged) {
-    return Path.resolve(process.resourcesPath, "..", "Helpers", "omnimind-appsnap-helper");
+    return Path.resolve(process.resourcesPath, "..", "Helpers", "harnessos-appsnap-helper");
   }
-  return Path.resolve(__dirname, "..", ".electron-runtime", "appsnap", "omnimind-appsnap-helper");
+  return Path.resolve(__dirname, "..", ".electron-runtime", "appsnap", "harnessos-appsnap-helper");
 }
 
 function ensureMainWindowForAppSnap(): BrowserWindow | null {
@@ -1892,7 +1892,7 @@ function initializeDesktopStatusItem(): void {
       image,
       process.platform === "darwin" ? DESKTOP_STATUS_ITEM_GUID : undefined,
     );
-    nextStatusItem.setToolTip("OmniMind");
+    nextStatusItem.setToolTip("HarnessOS");
     if (process.platform === "darwin") {
       nextStatusItem.setIgnoreDoubleClickEvents(true);
     }
@@ -1952,14 +1952,14 @@ function showDesktopNotification(input: {
  * Resolve the Electron userData directory path.
  *
  * Electron derives the default userData path from `productName` in
- * package.json. We override it to a clean lowercase OmniMind name.
+ * package.json. We override it to a clean lowercase HarnessOS name.
  */
 function resolveUserDataPath(): string {
   const appDataBase = resolveDesktopAppDataBase();
   return resolveDesktopUserDataPath({
     appDataBase,
     userDataDirectoryName: desktopIdentity.userDataDirectoryName,
-    ...(process.env.OMNIMIND_HOME ? { productHome: process.env.OMNIMIND_HOME } : {}),
+    ...(process.env.HARNESSOS_HOME ? { productHome: process.env.HARNESSOS_HOME } : {}),
   });
 }
 
@@ -1970,7 +1970,7 @@ function configureAppIdentity(): void {
     applicationName: APP_DISPLAY_NAME,
     applicationVersion: app.getVersion(),
     version: commitHash ?? "unknown",
-    copyright: `© ${new Date().getFullYear()} OmniMind`,
+    copyright: `© ${new Date().getFullYear()} HarnessOS`,
   });
 
   if (process.platform === "win32") {
@@ -2433,11 +2433,11 @@ function restartAfterStartupBundleSwap(error: BundleChangedDuringStartupError): 
   void dialog
     .showMessageBox({
       type: "warning",
-      title: "OmniMind needs to restart",
-      message: "OmniMind changed while it was opening.",
+      title: "HarnessOS needs to restart",
+      message: "HarnessOS changed while it was opening.",
       detail:
-        "The current process cannot safely read the replaced application bundle. Restart OmniMind to finish opening with one consistent version.",
-      buttons: ["Restart OmniMind"],
+        "The current process cannot safely read the replaced application bundle. Restart HarnessOS to finish opening with one consistent version.",
+      buttons: ["Restart HarnessOS"],
       defaultId: 0,
     })
     .catch(() => undefined)
@@ -2449,7 +2449,7 @@ function restartAfterStartupBundleSwap(error: BundleChangedDuringStartupError): 
 
 // Electron caches the asar header per process, so once app.asar changes on disk
 // (updater retry racing a relaunch, a reinstall, a build copied over the bundle)
-// every archive read in this process — the omnimind:// protocol, the backend's static
+// every archive read in this process — the harnessos:// protocol, the backend's static
 // files, lazily-loaded renderer chunks — resolves to stale offsets and silently
 // returns the wrong bytes. Detect the swap and offer a restart; continuing is
 // never safe.
@@ -2489,8 +2489,8 @@ function startBundleSwapWatcher(): void {
     void dialog
       .showMessageBox({
         type: "warning",
-        title: "OmniMind was replaced on disk",
-        message: "The installed OmniMind app changed while it was running.",
+        title: "HarnessOS was replaced on disk",
+        message: "The installed HarnessOS app changed while it was running.",
         detail:
           "The interface keeps running from a safeguarded copy, but parts of the app loaded later can still read the replaced file. Restart now to pick up the new version safely.",
         buttons: ["Restart Now", "Later"],
@@ -2659,7 +2659,7 @@ function processInstallMarkerOnStartup(): void {
   }
 
   automaticUpdateActivitySuppressed = true;
-  const message = `OmniMind restarted, but update ${marker.toVersion} was not installed. Try again.`;
+  const message = `HarnessOS restarted, but update ${marker.toVersion} was not installed. Try again.`;
   setUpdateState(
     reduceDesktopUpdateStateOnInstallRestartFailure(
       updateState,
@@ -3089,7 +3089,7 @@ async function installLatestUpdateForMigrationRecovery(): Promise<string | null>
   }
 
   if (updateState.status === "up-to-date") {
-    return `OmniMind ${app.getVersion()} is already the newest release, so updating cannot repair this database.`;
+    return `HarnessOS ${app.getVersion()} is already the newest release, so updating cannot repair this database.`;
   }
   if (updateState.status !== "downloaded") {
     return updateState.message ?? "The update could not be downloaded.";
@@ -3450,7 +3450,7 @@ function configureAutoUpdater(): void {
 
   scheduleUpdatePoll();
 }
-// Builds process-local Node args so provider/tool children do not inherit OmniMind's heap guard.
+// Builds process-local Node args so provider/tool children do not inherit HarnessOS's heap guard.
 function backendNodeArgs(): string[] {
   const configuredMaxOldSpaceMb =
     BACKEND_MAX_OLD_SPACE_ENV_KEYS.map((key) => process.env[key]).find(
@@ -3472,22 +3472,22 @@ function backendEnv(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     ...resolveBrowserHostPipeBackendEnv(
       process.env,
-      browserHostPipeServer ? OMNIMIND_BROWSER_HOST_PIPE_PATH : null,
+      browserHostPipeServer ? HARNESSOS_BROWSER_HOST_PIPE_PATH : null,
       browserHostPipeServer ? DESKTOP_BROWSER_HOST_CAPABILITY_FD : null,
     ),
     ...backendProxyEnvironment,
     // Point the backend's HTTP static route at the same swap-immune snapshot the
-    // omnimind:// protocol serves, so both surfaces survive app.asar being replaced.
-    ...(servedStaticRoot?.snapshotted ? { OMNIMIND_STATIC_DIR: servedStaticRoot.dir } : {}),
+    // harnessos:// protocol serves, so both surfaces survive app.asar being replaced.
+    ...(servedStaticRoot?.snapshotted ? { HARNESSOS_STATIC_DIR: servedStaticRoot.dir } : {}),
     ...(app.isPackaged
       ? { [DEVICE_HELPER_SOURCE_DIR_ENV]: Path.join(process.resourcesPath, "device-helper") }
       : {}),
-    OMNIMIND_MODE: "desktop",
-    OMNIMIND_NO_BROWSER: "1",
-    OMNIMIND_PORT: String(backendPort),
-    OMNIMIND_HOME: BASE_DIR,
-    OMNIMIND_AUTH_TOKEN: backendAuthToken,
-    OMNIMIND_DESKTOP_SHUTDOWN_TOKEN: DESKTOP_BACKEND_SHUTDOWN_TOKEN,
+    HARNESSOS_MODE: "desktop",
+    HARNESSOS_NO_BROWSER: "1",
+    HARNESSOS_PORT: String(backendPort),
+    HARNESSOS_HOME: BASE_DIR,
+    HARNESSOS_AUTH_TOKEN: backendAuthToken,
+    HARNESSOS_DESKTOP_SHUTDOWN_TOKEN: DESKTOP_BACKEND_SHUTDOWN_TOKEN,
     NODE_PATH: process.env.NODE_PATH
       ? `${engineWebSurfaceModuleRoot}${Path.delimiter}${process.env.NODE_PATH}`
       : engineWebSurfaceModuleRoot,
@@ -3558,7 +3558,7 @@ function backendFailureDialogDetail(reason: string): string {
   const cause = summary.length > 0 ? summary : reason;
   return [
     cause,
-    "OmniMind paused automatic restarts so a failing backend can't keep respawning in the background.",
+    "HarnessOS paused automatic restarts so a failing backend can't keep respawning in the background.",
     `Log file:\n${Path.join(LOG_DIR, BACKEND_LOG_FILE_NAME)}`,
   ].join("\n\n");
 }
@@ -3587,8 +3587,8 @@ function presentBackendStartupGiveUp(reason: string): void {
     for (;;) {
       const result = await dialog.showMessageBox({
         type: "error",
-        title: "OmniMind's backend didn't start",
-        message: `OmniMind's backend failed to start ${BACKEND_MAX_CONSECUTIVE_START_FAILURES} times in a row.`,
+        title: "HarnessOS's backend didn't start",
+        message: `HarnessOS's backend failed to start ${BACKEND_MAX_CONSECUTIVE_START_FAILURES} times in a row.`,
         detail,
         buttons: ["Try again", "Open logs", "Quit"],
         defaultId: 0,
@@ -3627,10 +3627,10 @@ function handleBackendStartupBlock(block: BackendStartupBlock): void {
     if (block.kind === "migration-recovery-required") {
       const result = await dialog.showMessageBox({
         type: "warning",
-        title: "OmniMind needs to recover its database",
+        title: "HarnessOS needs to recover its database",
         message: "A database migration did not finish safely.",
         detail:
-          "Restart OmniMind to open the verified backup recovery flow. Provider and chat processes will remain stopped until recovery completes.",
+          "Restart HarnessOS to open the verified backup recovery flow. Provider and chat processes will remain stopped until recovery completes.",
         buttons: ["Restart and recover", "Quit"],
         defaultId: 0,
         cancelId: 1,
@@ -3647,13 +3647,13 @@ function handleBackendStartupBlock(block: BackendStartupBlock): void {
 
     const processDetail =
       block.ownerPid === null
-        ? "Another OmniMind server is already using this database."
-        : `Another OmniMind server (process ${block.ownerPid}) is already using this database.`;
+        ? "Another HarnessOS server is already using this database."
+        : `Another HarnessOS server (process ${block.ownerPid}) is already using this database.`;
     const result = await dialog.showMessageBox({
       type: "warning",
-      title: "OmniMind is already running elsewhere",
-      message: "Your local OmniMind data is in use by another process.",
-      detail: `${processDetail}\n\nStop the other OmniMind app or development server, then try again. Your data has not been changed.`,
+      title: "HarnessOS is already running elsewhere",
+      message: "Your local HarnessOS data is in use by another process.",
+      detail: `${processDetail}\n\nStop the other HarnessOS app or development server, then try again. Your data has not been changed.`,
       buttons: ["Try again", "Quit"],
       defaultId: 0,
       cancelId: 1,
@@ -3740,7 +3740,7 @@ function startBackend(): void {
     env: {
       ...backendEnv(),
       ELECTRON_RUN_AS_NODE: "1",
-      OMNIMIND_SERVER_ENTRY: backendEntry,
+      HARNESSOS_SERVER_ENTRY: backendEntry,
     },
     // Keep output piped in every environment so startup blockers and readiness
     // are observable even when packaged log setup is unavailable. The fourth
@@ -4738,13 +4738,13 @@ function presentRendererCrashRecovery(
 
   const message =
     response.cause === "reload-budget-exhausted"
-      ? `OmniMind's window crashed ${response.crashes} times in a row.`
-      : "OmniMind's window stopped unexpectedly.";
+      ? `HarnessOS's window crashed ${response.crashes} times in a row.`
+      : "HarnessOS's window stopped unexpectedly.";
   const detail = [
     `The window's renderer process exited (${reason}).`,
     response.cause === "reload-budget-exhausted"
-      ? "OmniMind paused automatic reloads so a repeating crash can't keep reloading in the background."
-      : "This exit reason repeats on reload, so OmniMind did not retry automatically.",
+      ? "HarnessOS paused automatic reloads so a repeating crash can't keep reloading in the background."
+      : "This exit reason repeats on reload, so HarnessOS did not retry automatically.",
     `Log file:\n${Path.join(LOG_DIR, DESKTOP_LOG_FILE_NAME)}`,
   ].join("\n\n");
 
@@ -4752,7 +4752,7 @@ function presentRendererCrashRecovery(
     for (;;) {
       const result = await dialog.showMessageBox({
         type: "error",
-        title: "OmniMind's window stopped",
+        title: "HarnessOS's window stopped",
         message,
         detail,
         buttons: ["Reload", "Open logs", "Quit"],
@@ -4798,7 +4798,7 @@ function configureMediaPermissions(): void {
     },
     {
       // Browser pages are untrusted web origins. They must never inherit the
-      // microphone grant used by OmniMind's own voice-composer renderer.
+      // microphone grant used by HarnessOS's own voice-composer renderer.
       targetSession: session.fromPartition(BROWSER_SESSION_PARTITION),
       trustedRequester: () => null,
     },
@@ -4890,7 +4890,7 @@ async function bootstrap(): Promise<void> {
   try {
     await ensureBrowserHostPipeServer();
   } catch (error) {
-    console.warn("[OmniMind browser] Failed to start browser host pipe", error);
+    console.warn("[HarnessOS browser] Failed to start browser host pipe", error);
   }
   startBackend();
   writeDesktopLogHeader("bootstrap backend start requested");

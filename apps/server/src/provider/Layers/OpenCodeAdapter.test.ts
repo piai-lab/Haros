@@ -13,8 +13,8 @@ import { describe, it, expect, vi } from "vitest";
 
 import { ServerConfig } from "../../config.ts";
 import {
-  OMNIMIND_HARNESS_POLICY_MARKER,
-  OMNIMIND_HARNESS_POLICY_VERSION,
+  HARNESSOS_HARNESS_POLICY_MARKER,
+  HARNESSOS_HARNESS_POLICY_VERSION,
 } from "../../agentGateway/harnessPolicy.ts";
 import {
   AgentGatewayCredentials,
@@ -295,7 +295,7 @@ function makeOpenCodeAdapterTestLayer(runtime: OpenCodeRuntimeShape) {
 }
 
 function promptContainsHarnessPolicy(prompt: Record<string, unknown> | undefined): boolean {
-  return JSON.stringify(prompt).includes(OMNIMIND_HARNESS_POLICY_MARKER);
+  return JSON.stringify(prompt).includes(HARNESSOS_HARNESS_POLICY_MARKER);
 }
 
 function makeGatewayCredentials(options?: {
@@ -587,7 +587,7 @@ describe("OpenCode host policy delivery", () => {
         openCodeSessionId: "opencode-session-1",
         harnessPolicyDelivery: {
           sessionId: "opencode-session-1",
-          policyVersion: OMNIMIND_HARNESS_POLICY_VERSION,
+          policyVersion: HARNESSOS_HARNESS_POLICY_VERSION,
           gatewayControlAvailable: false,
         },
       });
@@ -633,7 +633,7 @@ describe("OpenCode host policy delivery", () => {
       openCodeSessionId: "opencode-session-1",
       harnessPolicyDelivery: {
         sessionId: "opencode-session-1",
-        policyVersion: OMNIMIND_HARNESS_POLICY_VERSION,
+        policyVersion: HARNESSOS_HARNESS_POLICY_VERSION,
         gatewayControlAvailable: false,
       },
     });
@@ -695,7 +695,7 @@ describe("OpenCode host policy delivery", () => {
     expect(result.retryCursor).toMatchObject({
       harnessPolicyDelivery: {
         sessionId: "opencode-session-1",
-        policyVersion: OMNIMIND_HARNESS_POLICY_VERSION,
+        policyVersion: HARNESSOS_HARNESS_POLICY_VERSION,
       },
     });
   });
@@ -752,7 +752,7 @@ describe("OpenCode host policy delivery", () => {
     expect(secondCursor).toMatchObject({
       harnessPolicyDelivery: {
         sessionId: "opencode-session-1",
-        policyVersion: OMNIMIND_HARNESS_POLICY_VERSION,
+        policyVersion: HARNESSOS_HARNESS_POLICY_VERSION,
       },
     });
   });
@@ -800,7 +800,7 @@ describe("OpenCode host policy delivery", () => {
       openCodeSessionId: "opencode-session-2",
       harnessPolicyDelivery: {
         sessionId: "opencode-session-2",
-        policyVersion: OMNIMIND_HARNESS_POLICY_VERSION,
+        policyVersion: HARNESSOS_HARNESS_POLICY_VERSION,
         gatewayControlAvailable: false,
       },
     });
@@ -1177,7 +1177,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     expect(runtime.promptCalls).toHaveLength(2);
     for (const prompt of runtime.promptCalls) {
       expect(JSON.stringify(prompt)).toContain("tools actually available");
-      expect(JSON.stringify(prompt)).not.toContain("omnimind_create_threads");
+      expect(JSON.stringify(prompt)).not.toContain("harnessos_create_threads");
     }
     expect(gateway.revoked).toEqual(["gateway-token-1", "gateway-token-2"]);
   });
@@ -2105,7 +2105,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     const firstPromptText = (
       runtime.promptCalls[0]?.parts as ReadonlyArray<{ readonly text?: string }> | undefined
     )?.[0]?.text;
-    expect(firstPromptText).toContain(OMNIMIND_HARNESS_POLICY_MARKER);
+    expect(firstPromptText).toContain(HARNESSOS_HARNESS_POLICY_MARKER);
     expect(firstPromptText).toContain("OmniMind MCP control is unavailable");
     expect(runtime.promptCalls[0]).toMatchObject({
       model: {

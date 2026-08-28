@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { PassThrough } from "node:stream";
 
 import { PROVIDER_SEND_TURN_MAX_ATTACHMENTS } from "@harnessos/contracts";
-import { OMNIMIND_DEVELOPMENT_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
+import { HARNESSOS_DEVELOPMENT_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -43,9 +43,9 @@ describe("desktop AppSnap platform state", () => {
     const onState = vi.fn();
     const manager = new DesktopAppSnapManager({
       platform: "win32",
-      helperPath: "C:\\missing\\omnimind-appsnap-helper.exe",
+      helperPath: "C:\\missing\\harnessos-appsnap-helper.exe",
       captureDirectory: "C:\\tmp\\appsnap",
-      excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+      excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       onState,
       onCaptured: vi.fn(),
       onError: vi.fn(),
@@ -66,9 +66,9 @@ describe("desktop AppSnap platform state", () => {
   it("preserves a missing-helper error instead of reporting a permission problem", async () => {
     const manager = new DesktopAppSnapManager({
       platform: "darwin",
-      helperPath: "/tmp/omnimind-appsnap-helper-that-does-not-exist",
+      helperPath: "/tmp/harnessos-appsnap-helper-that-does-not-exist",
       captureDirectory: "/tmp/omnimind-appsnap-test",
-      excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+      excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       onState: vi.fn(),
       onCaptured: vi.fn(),
       onError: vi.fn(),
@@ -90,7 +90,7 @@ describe("AppSnap shortcut availability", () => {
       platform: "darwin",
       helperPath: "/tmp/missing-appsnap-helper",
       captureDirectory: "/tmp/omnimind-appsnap-test",
-      excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+      excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       shortcutRegistry: { register, unregister },
       onState: vi.fn(),
       onCaptured: vi.fn(),
@@ -112,7 +112,7 @@ describe("AppSnap shortcut availability", () => {
       platform: "darwin",
       helperPath: "/tmp/missing-appsnap-helper",
       captureDirectory: "/tmp/omnimind-appsnap-test",
-      excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+      excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       shortcutRegistry: { register: () => false, unregister: vi.fn() },
       onState: vi.fn(),
       onCaptured: vi.fn(),
@@ -146,7 +146,7 @@ describe("AppSnap shortcut availability", () => {
       platform: "darwin",
       helperPath: process.execPath,
       captureDirectory: "/tmp/omnimind-appsnap-test",
-      excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+      excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       shortcutRegistry: { register, unregister },
       onState: vi.fn(),
@@ -176,7 +176,7 @@ describe("AppSnap shortcut availability", () => {
         "--output-dir",
         "/tmp/omnimind-appsnap-test",
         "--excluded-bundle-id",
-        OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+        HARNESSOS_DEVELOPMENT_BUNDLE_ID,
         "--external-trigger",
       ],
       expect.any(Object),
@@ -251,7 +251,7 @@ describe("AppSnap helper protocol", () => {
       platform: "darwin",
       helperPath: process.execPath,
       captureDirectory: "/tmp/omnimind-appsnap-test",
-      excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+      excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       onState: vi.fn(),
       onCaptured: vi.fn(),
@@ -324,7 +324,7 @@ describe("AppSnap helper protocol", () => {
       platform: "darwin",
       helperPath: process.execPath,
       captureDirectory: "/tmp/omnimind-appsnap-test",
-      excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+      excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       shortcutRegistry: { register, unregister },
       onState: vi.fn(),
@@ -395,7 +395,7 @@ describe("AppSnap helper protocol", () => {
       platform: "darwin",
       helperPath: process.execPath,
       captureDirectory: "/tmp/omnimind-appsnap-test",
-      excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+      excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       onState: vi.fn(),
       onCaptured: vi.fn(),
@@ -439,7 +439,7 @@ describe("AppSnap helper protocol", () => {
       platform: "darwin",
       helperPath: process.execPath,
       captureDirectory: "/tmp/omnimind-appsnap-test",
-      excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+      excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       shortcutRegistry: { register, unregister },
       onState: vi.fn(),
@@ -503,7 +503,7 @@ describe("AppSnap helper protocol", () => {
       platform: "darwin",
       helperPath: process.execPath,
       captureDirectory,
-      excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+      excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       onState: vi.fn(),
       onCaptured: vi.fn(),
@@ -548,7 +548,7 @@ describe("AppSnap helper protocol", () => {
           "--output-dir",
           captureDirectory,
           "--excluded-bundle-id",
-          OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+          HARNESSOS_DEVELOPMENT_BUNDLE_ID,
         ],
         expect.any(Object),
       );
@@ -574,7 +574,7 @@ describe("AppSnap helper protocol", () => {
       platform: "darwin",
       helperPath: process.execPath,
       captureDirectory,
-      excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+      excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       onState: vi.fn(),
       onCaptured,
@@ -640,7 +640,7 @@ describe("AppSnap helper protocol", () => {
       platform: "darwin",
       helperPath: process.execPath,
       captureDirectory: "/tmp/omnimind-appsnap-test",
-      excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+      excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       onState: vi.fn(),
       onCaptured: vi.fn(),
@@ -707,7 +707,7 @@ describe("AppSnap helper protocol", () => {
       platform: "darwin",
       helperPath: process.execPath,
       captureDirectory,
-      excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+      excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       onState: vi.fn(),
       onCaptured,
@@ -774,7 +774,7 @@ describe("AppSnap helper protocol", () => {
       platform: "darwin",
       helperPath: process.execPath,
       captureDirectory,
-      excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+      excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       spawn,
       onState: vi.fn(),
       onCaptured,
@@ -807,7 +807,7 @@ describe("AppSnap helper protocol", () => {
           name: "restart-capture.png",
           sourceAppName: "Safari",
           sourceBundleIdentifier: "com.apple.Safari",
-          sourceWindowTitle: "OmniMind",
+          sourceWindowTitle: "HarnessOS",
         })}\n`,
       );
       await vi.waitFor(() => expect(onCaptured).toHaveBeenCalledTimes(1));
@@ -817,7 +817,7 @@ describe("AppSnap helper protocol", () => {
         platform: "darwin",
         helperPath: process.execPath,
         captureDirectory,
-        excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+        excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
         onState: vi.fn(),
         onCaptured: vi.fn(),
         onError: vi.fn(),
@@ -829,7 +829,7 @@ describe("AppSnap helper protocol", () => {
         name: "restart-capture.png",
         sourceAppName: "Safari",
         sourceBundleIdentifier: "com.apple.Safari",
-        sourceWindowTitle: "OmniMind",
+        sourceWindowTitle: "HarnessOS",
       });
       expect(Buffer.from(restored[0]!.bytes)).toEqual(captureBytes);
 
@@ -841,7 +841,7 @@ describe("AppSnap helper protocol", () => {
         platform: "darwin",
         helperPath: process.execPath,
         captureDirectory,
-        excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+        excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
         onState: vi.fn(),
         onCaptured: vi.fn(),
         onError: vi.fn(),
@@ -855,7 +855,7 @@ describe("AppSnap helper protocol", () => {
   });
 
   it("recovers a helper PNG left behind before pending metadata was persisted", async () => {
-    const captureDirectory = mkdtempSync(join(tmpdir(), "omnimind-appsnap-helper-recovery-"));
+    const captureDirectory = mkdtempSync(join(tmpdir(), "harnessos-appsnap-helper-recovery-"));
     const captureId = "6b981032-c848-4d0b-94f1-6de335391aa2";
     const helperPath = join(captureDirectory, `appsnap-${captureId}.png`);
     const captureBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x01]);
@@ -865,7 +865,7 @@ describe("AppSnap helper protocol", () => {
       platform: "darwin",
       helperPath: process.execPath,
       captureDirectory,
-      excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+      excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       onState: vi.fn(),
       onCaptured: vi.fn(),
       onError: vi.fn(),
@@ -889,7 +889,7 @@ describe("AppSnap helper protocol", () => {
         platform: "darwin",
         helperPath: process.execPath,
         captureDirectory,
-        excludedBundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
+        excludedBundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
         onState: vi.fn(),
         onCaptured: vi.fn(),
         onError: vi.fn(),

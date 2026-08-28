@@ -229,7 +229,7 @@ export function makeDesktopShutdownEffectRouteLayer(shutdownController: ServerSh
           {
             status: authorization.status,
             ...(authorization.status === 401
-              ? { headers: { "WWW-Authenticate": 'Bearer realm="omnimind-desktop-shutdown"' } }
+              ? { headers: { "WWW-Authenticate": 'Bearer realm="harnessos-desktop-shutdown"' } }
               : {}),
           },
         );
@@ -747,7 +747,7 @@ const threadExportEffectRouteLayer = HttpRouter.add(
     }
 
     // Error responses need the trusted-origin CORS headers too: the desktop
-    // app fetches cross-origin (omnimind://app), and without them the browser masks
+    // app fetches cross-origin (harnessos://app), and without them the browser masks
     // a 400/404/409 body as an opaque network failure.
     const corsHeaders = localPreviewCorsHeaders({ config, request, url });
 

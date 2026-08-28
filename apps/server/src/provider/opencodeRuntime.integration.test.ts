@@ -224,14 +224,14 @@ describe("buildOpenCodeServerProcessEnv", () => {
     const env = buildOpenCodeServerProcessEnv({
       baseEnv: {
         OPENAI_API_KEY: "provider-key",
-        OMNIMIND_AUTH_TOKEN: "server-secret",
-        OMNIMIND_BROWSER_HOST_PIPE_PATH: "/tmp/browser.sock",
+        HARNESSOS_AUTH_TOKEN: "server-secret",
+        HARNESSOS_BROWSER_HOST_PIPE_PATH: "/tmp/browser.sock",
       },
     });
 
     expect(env.OPENAI_API_KEY).toBe("provider-key");
-    expect(env.OMNIMIND_AUTH_TOKEN).toBeUndefined();
-    expect(env.OMNIMIND_BROWSER_HOST_PIPE_PATH).toBeUndefined();
+    expect(env.HARNESSOS_AUTH_TOKEN).toBeUndefined();
+    expect(env.HARNESSOS_BROWSER_HOST_PIPE_PATH).toBeUndefined();
   });
 });
 

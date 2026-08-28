@@ -119,158 +119,158 @@ interface OmniMindMcpToolPresentation {
   readonly failed: string;
 }
 
-type OmniMindBrowserToolName = `omnimind_${BrowserToolName}`;
+type OmniMindBrowserToolName = `harnessos_${BrowserToolName}`;
 const BROWSER_TOOL_NAME_SET = new Set<string>(BROWSER_TOOL_NAMES);
 
-const OMNIMIND_BROWSER_TOOL_PRESENTATIONS = Object.fromEntries(
+const HARNESSOS_BROWSER_TOOL_PRESENTATIONS = Object.fromEntries(
   BROWSER_TOOL_NAMES.map((toolName) => {
     const title = BROWSER_TOOL_TITLES[toolName];
-    return [`omnimind_${toolName}`, { running: title, completed: title, failed: title }];
+    return [`harnessos_${toolName}`, { running: title, completed: title, failed: title }];
   }),
 ) as Record<OmniMindBrowserToolName, OmniMindMcpToolPresentation>;
 
-const OMNIMIND_MCP_TOOL_PRESENTATIONS = {
-  omnimind_context: {
+const HARNESSOS_MCP_TOOL_PRESENTATIONS = {
+  harnessos_context: {
     running: "OmniMind is checking its context",
     completed: "OmniMind checked its context",
     failed: "OmniMind couldn't check its context",
   },
-  omnimind_capabilities: {
+  harnessos_capabilities: {
     running: "OmniMind is checking available agents",
     completed: "OmniMind checked available agents",
     failed: "OmniMind couldn't check available agents",
   },
-  omnimind_overview: {
+  harnessos_overview: {
     running: "OmniMind is gathering an overview",
     completed: "OmniMind gathered an overview",
     failed: "OmniMind couldn't gather an overview",
   },
-  omnimind_list_allowed_projects: {
+  harnessos_list_allowed_projects: {
     running: "OmniMind is listing allowed projects",
     completed: "OmniMind listed allowed projects",
     failed: "OmniMind couldn't list allowed projects",
   },
-  omnimind_create_task: {
+  harnessos_create_task: {
     running: "OmniMind is creating a task",
     completed: "OmniMind created a task",
     failed: "OmniMind couldn't create a task",
   },
-  omnimind_wait_for_task: {
+  harnessos_wait_for_task: {
     running: "OmniMind is waiting for a task",
     completed: "OmniMind finished waiting for a task",
     failed: "OmniMind couldn't wait for a task",
   },
-  omnimind_read_task: {
+  harnessos_read_task: {
     running: "OmniMind is reading a task",
     completed: "OmniMind read a task",
     failed: "OmniMind couldn't read a task",
   },
-  omnimind_list_projects: {
+  harnessos_list_projects: {
     running: "OmniMind is listing projects",
     completed: "OmniMind listed projects",
     failed: "OmniMind couldn't list projects",
   },
-  omnimind_list_threads: {
+  harnessos_list_threads: {
     running: "OmniMind is listing threads",
     completed: "OmniMind listed threads",
     failed: "OmniMind couldn't list threads",
   },
-  omnimind_read_thread: {
+  harnessos_read_thread: {
     running: "OmniMind is reading a thread",
     completed: "OmniMind read a thread",
     failed: "OmniMind couldn't read a thread",
   },
-  omnimind_read_thread_activity: {
+  harnessos_read_thread_activity: {
     running: "OmniMind is reading thread activity",
     completed: "OmniMind read thread activity",
     failed: "OmniMind couldn't read thread activity",
   },
-  omnimind_read_thread_events: {
+  harnessos_read_thread_events: {
     running: "OmniMind is reading thread events",
     completed: "OmniMind read thread events",
     failed: "OmniMind couldn't read thread events",
   },
-  omnimind_read_thread_runtime_events: {
+  harnessos_read_thread_runtime_events: {
     running: "OmniMind is reading thread runtime events",
     completed: "OmniMind read thread runtime events",
     failed: "OmniMind couldn't read thread runtime events",
   },
-  omnimind_diagnose_thread: {
+  harnessos_diagnose_thread: {
     running: "OmniMind is diagnosing a thread",
     completed: "OmniMind diagnosed a thread",
     failed: "OmniMind couldn't diagnose a thread",
   },
-  omnimind_create_thread: {
+  harnessos_create_thread: {
     running: "OmniMind is creating a thread",
     completed: "OmniMind created a thread",
     failed: "OmniMind couldn't create a thread",
   },
-  omnimind_create_threads: {
+  harnessos_create_threads: {
     running: "OmniMind is creating threads",
     completed: "OmniMind created threads",
     failed: "OmniMind couldn't create threads",
   },
-  omnimind_wait_for_threads: {
+  harnessos_wait_for_threads: {
     running: "OmniMind is waiting for threads",
     completed: "OmniMind finished waiting for threads",
     failed: "OmniMind couldn't wait for threads",
   },
-  omnimind_send_message: {
+  harnessos_send_message: {
     running: "OmniMind is sending a message",
     completed: "OmniMind sent a message",
     failed: "OmniMind couldn't send a message",
   },
-  omnimind_interrupt_thread: {
+  harnessos_interrupt_thread: {
     running: "OmniMind is interrupting a thread",
     completed: "OmniMind interrupted a thread",
     failed: "OmniMind couldn't interrupt a thread",
   },
-  omnimind_set_thread_title: {
+  harnessos_set_thread_title: {
     running: "OmniMind is renaming a thread",
     completed: "OmniMind renamed a thread",
     failed: "OmniMind couldn't rename a thread",
   },
-  omnimind_set_thread_archived: {
+  harnessos_set_thread_archived: {
     running: "OmniMind is updating a thread",
     completed: "OmniMind updated a thread",
     failed: "OmniMind couldn't update a thread",
   },
-  omnimind_create_automation: {
+  harnessos_create_automation: {
     running: "OmniMind is creating an automation",
     completed: "OmniMind created an automation",
     failed: "OmniMind couldn't create an automation",
   },
-  omnimind_list_automations: {
+  harnessos_list_automations: {
     running: "OmniMind is listing automations",
     completed: "OmniMind listed automations",
     failed: "OmniMind couldn't list automations",
   },
-  omnimind_view_automation: {
+  harnessos_view_automation: {
     running: "OmniMind is viewing an automation",
     completed: "OmniMind viewed an automation",
     failed: "OmniMind couldn't view an automation",
   },
-  omnimind_update_automation: {
+  harnessos_update_automation: {
     running: "OmniMind is updating an automation",
     completed: "OmniMind updated an automation",
     failed: "OmniMind couldn't update an automation",
   },
-  omnimind_update_automation_memory: {
+  harnessos_update_automation_memory: {
     running: "OmniMind is updating automation memory",
     completed: "OmniMind updated automation memory",
     failed: "OmniMind couldn't update automation memory",
   },
-  omnimind_report_automation_result: {
+  harnessos_report_automation_result: {
     running: "OmniMind is reporting an automation result",
     completed: "OmniMind reported an automation result",
     failed: "OmniMind couldn't report an automation result",
   },
-  omnimind_cancel_automation: {
+  harnessos_cancel_automation: {
     running: "OmniMind is stopping an automation",
     completed: "OmniMind stopped an automation",
     failed: "OmniMind couldn't stop an automation",
   },
-  ...OMNIMIND_BROWSER_TOOL_PRESENTATIONS,
+  ...HARNESSOS_BROWSER_TOOL_PRESENTATIONS,
 } as const satisfies Record<string, OmniMindMcpToolPresentation>;
 
 function normalizeOmniMindMcpIdentifier(value: string): string {
@@ -280,37 +280,37 @@ function normalizeOmniMindMcpIdentifier(value: string): string {
     .replace(/^_+|_+$/g, "");
 }
 
-const OMNIMIND_BROWSER_TOOL_NAME_BY_PRESENTATION = new Map<string, OmniMindBrowserToolName>(
+const HARNESSOS_BROWSER_TOOL_NAME_BY_PRESENTATION = new Map<string, OmniMindBrowserToolName>(
   BROWSER_TOOL_NAMES.map((toolName) => [
     normalizeOmniMindMcpIdentifier(BROWSER_TOOL_TITLES[toolName]),
-    `omnimind_${toolName}`,
+    `harnessos_${toolName}`,
   ]),
 );
 
-const OMNIMIND_MCP_TOOL_PRESENTATION_ENTRIES = Object.entries(OMNIMIND_MCP_TOOL_PRESENTATIONS).map(
-  ([toolName, presentation]) => ({
-    toolName,
-    presentation,
-    normalizedRunning: normalizeOmniMindMcpIdentifier(presentation.running),
-    normalizedCompleted: normalizeOmniMindMcpIdentifier(presentation.completed),
-    normalizedFailed: normalizeOmniMindMcpIdentifier(presentation.failed),
-  }),
-);
+const HARNESSOS_MCP_TOOL_PRESENTATION_ENTRIES = Object.entries(
+  HARNESSOS_MCP_TOOL_PRESENTATIONS,
+).map(([toolName, presentation]) => ({
+  toolName,
+  presentation,
+  normalizedRunning: normalizeOmniMindMcpIdentifier(presentation.running),
+  normalizedCompleted: normalizeOmniMindMcpIdentifier(presentation.completed),
+  normalizedFailed: normalizeOmniMindMcpIdentifier(presentation.failed),
+}));
 
 function extractOmniMindMcpToolName(normalizedCandidate: string): string | null {
   if (BROWSER_TOOL_NAME_SET.has(normalizedCandidate)) {
-    return `omnimind_${normalizedCandidate}`;
+    return `harnessos_${normalizedCandidate}`;
   }
-  if (normalizedCandidate.startsWith("mcp_omnimind_omnimind_")) {
-    return normalizedCandidate.slice("mcp_omnimind_".length);
+  if (normalizedCandidate.startsWith("mcp_harnessos_harnessos_")) {
+    return normalizedCandidate.slice("mcp_harnessos_".length);
   }
-  if (normalizedCandidate.startsWith("mcp_omnimind_")) {
-    return `omnimind_${normalizedCandidate.slice("mcp_omnimind_".length)}`;
+  if (normalizedCandidate.startsWith("mcp_harnessos_")) {
+    return `harnessos_${normalizedCandidate.slice("mcp_harnessos_".length)}`;
   }
-  if (normalizedCandidate.startsWith("omnimind_omnimind_")) {
-    return normalizedCandidate.slice("omnimind_".length);
+  if (normalizedCandidate.startsWith("harnessos_harnessos_")) {
+    return normalizedCandidate.slice("harnessos_".length);
   }
-  if (normalizedCandidate.startsWith("omnimind_")) {
+  if (normalizedCandidate.startsWith("harnessos_")) {
     return normalizedCandidate;
   }
   return null;
@@ -325,9 +325,9 @@ function resolveOmniMindBrowserToolName(
     const extractedToolName = extractOmniMindMcpToolName(normalizedCandidate);
     const candidateToolName =
       extractedToolName ??
-      OMNIMIND_BROWSER_TOOL_NAME_BY_PRESENTATION.get(normalizedCandidate) ??
+      HARNESSOS_BROWSER_TOOL_NAME_BY_PRESENTATION.get(normalizedCandidate) ??
       normalizedCandidate;
-    if (candidateToolName in OMNIMIND_BROWSER_TOOL_PRESENTATIONS) {
+    if (candidateToolName in HARNESSOS_BROWSER_TOOL_PRESENTATIONS) {
       return candidateToolName as OmniMindBrowserToolName;
     }
   }
@@ -337,7 +337,7 @@ function resolveOmniMindBrowserToolName(
 function fallbackOmniMindMcpToolPresentation(toolName: string): OmniMindMcpToolPresentation {
   const action =
     toolName
-      .replace(/^omnimind_/, "")
+      .replace(/^harnessos_/, "")
       .replace(/_+/g, " ")
       .trim() || "an action";
   return {
@@ -355,7 +355,7 @@ function resolveOmniMindMcpToolPresentation(
       continue;
     }
     const normalizedCandidate = normalizeOmniMindMcpIdentifier(candidate);
-    for (const entry of OMNIMIND_MCP_TOOL_PRESENTATION_ENTRIES) {
+    for (const entry of HARNESSOS_MCP_TOOL_PRESENTATION_ENTRIES) {
       if (
         normalizedCandidate === entry.normalizedRunning ||
         normalizedCandidate === entry.normalizedCompleted ||
@@ -366,8 +366,8 @@ function resolveOmniMindMcpToolPresentation(
     }
     const toolName = extractOmniMindMcpToolName(normalizedCandidate);
     const knownPresentation = toolName
-      ? (OMNIMIND_MCP_TOOL_PRESENTATIONS[
-          toolName as keyof typeof OMNIMIND_MCP_TOOL_PRESENTATIONS
+      ? (HARNESSOS_MCP_TOOL_PRESENTATIONS[
+          toolName as keyof typeof HARNESSOS_MCP_TOOL_PRESENTATIONS
         ] as OmniMindMcpToolPresentation | undefined)
       : undefined;
     if (knownPresentation) {
@@ -379,19 +379,19 @@ function resolveOmniMindMcpToolPresentation(
     if (/\s/.test(candidate.trim())) {
       continue;
     }
-    if (normalizedCandidate.startsWith("omnimind_is_handling_")) {
+    if (normalizedCandidate.startsWith("harnessos_is_handling_")) {
       return fallbackOmniMindMcpToolPresentation(
-        `omnimind_${normalizedCandidate.slice("omnimind_is_handling_".length)}`,
+        `harnessos_${normalizedCandidate.slice("harnessos_is_handling_".length)}`,
       );
     }
-    if (normalizedCandidate.startsWith("omnimind_handled_")) {
+    if (normalizedCandidate.startsWith("harnessos_handled_")) {
       return fallbackOmniMindMcpToolPresentation(
-        `omnimind_${normalizedCandidate.slice("omnimind_handled_".length)}`,
+        `harnessos_${normalizedCandidate.slice("harnessos_handled_".length)}`,
       );
     }
-    if (normalizedCandidate.startsWith("omnimind_couldn_t_handle_")) {
+    if (normalizedCandidate.startsWith("harnessos_couldn_t_handle_")) {
       return fallbackOmniMindMcpToolPresentation(
-        `omnimind_${normalizedCandidate.slice("omnimind_couldn_t_handle_".length)}`,
+        `harnessos_${normalizedCandidate.slice("harnessos_couldn_t_handle_".length)}`,
       );
     }
     if (!toolName) {

@@ -54,7 +54,7 @@ describe("browser automation error factories", () => {
         utf8ByteLength(candidate.message) > utf8ByteLength(largest.message) ? candidate : largest,
       );
     const envelope = Schema.decodeUnknownSync(BrowserMcpToolErrorEnvelope)({
-      type: "omnimind_browser_error",
+      type: "harnessos_browser_error",
       version: 1,
       error: {
         ...largestError,
@@ -156,7 +156,7 @@ describe("browser automation error factories", () => {
     const envelope = makeBrowserMcpToolErrorEnvelope(unsafeInput);
 
     expect(envelope).toEqual({
-      type: "omnimind_browser_error",
+      type: "harnessos_browser_error",
       version: 1,
       error: {
         code: "BrowserInputUnsupported",

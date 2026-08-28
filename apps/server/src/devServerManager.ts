@@ -70,7 +70,7 @@ export interface DevServerManagerShape {
 }
 
 export class DevServerManager extends ServiceMap.Service<DevServerManager, DevServerManagerShape>()(
-  "omnimind/devServerManager",
+  "harnessos/devServerManager",
 ) {}
 
 export const DevServerManagerLive = Layer.effect(

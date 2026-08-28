@@ -2,13 +2,7 @@
 // Purpose: Implement the canonical OmniMind Soft Orbit click feedback.
 // Layer: Brand interaction behavior
 
-export type SoftOrbitState =
-  | "idle"
-  | "pressed"
-  | "running"
-  | "queued"
-  | "reduced"
-  | "cancelled";
+export type SoftOrbitState = "idle" | "pressed" | "running" | "queued" | "reduced" | "cancelled";
 
 export interface SoftOrbitSnapshot {
   readonly state: SoftOrbitState;
@@ -82,10 +76,10 @@ export function createSoftOrbitController(
     running = true;
     emit("reduced");
     element.style.willChange = "transform";
-    activeAnimation = element.animate(
-      [{ transform: "scale(.96)" }, { transform: "scale(1)" }],
-      { duration: 180, easing: EASING },
-    );
+    activeAnimation = element.animate([{ transform: "scale(.96)" }, { transform: "scale(1)" }], {
+      duration: 180,
+      easing: EASING,
+    });
     activeAnimation.onfinish = () => {
       activeAnimation = null;
       running = false;
@@ -147,10 +141,11 @@ export function createSoftOrbitController(
     if (destroyed || running || isReduced()) return;
     pressAnimation?.cancel();
     element.style.willChange = "transform";
-    pressAnimation = element.animate(
-      [{ transform: "scale(1)" }, { transform: "scale(.96)" }],
-      { duration: 80, easing: EASING, fill: "forwards" },
-    );
+    pressAnimation = element.animate([{ transform: "scale(1)" }, { transform: "scale(.96)" }], {
+      duration: 80,
+      easing: EASING,
+      fill: "forwards",
+    });
     emit("pressed");
   };
 

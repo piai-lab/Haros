@@ -1,7 +1,7 @@
 import type { AuthClientMetadata, AuthClientMetadataDeviceType } from "@harnessos/contracts";
 import * as Crypto from "node:crypto";
 
-const SESSION_COOKIE_NAME = "omnimind_session";
+const SESSION_COOKIE_NAME = "harnessos_session";
 
 export function resolveSessionCookieName(input: {
   readonly mode: "web" | "desktop";

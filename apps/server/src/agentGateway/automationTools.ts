@@ -271,7 +271,7 @@ export function makeAgentGatewayAutomationTools(
   const createAutomation: ToolEntry = {
     requiredCapability: "automation:write",
     definition: {
-      name: "omnimind_create_automation",
+      name: "harnessos_create_automation",
       description: `Create a heartbeat, standalone, or dedicated OmniMind automation with an explicit execution mode and schedule. ${AUTOMATION_AUTHORING_GUIDANCE} Prefer suggested:true unless the user explicitly requested creation.`,
       inputSchema: {
         type: "object",
@@ -489,7 +489,7 @@ export function makeAgentGatewayAutomationTools(
   const listAutomations: ToolEntry = {
     requiredCapability: "thread:read",
     definition: {
-      name: "omnimind_list_automations",
+      name: "harnessos_list_automations",
       description:
         "List OmniMind automations (id, name, mode, schedule, target thread, enabled, next run).",
       inputSchema: {
@@ -528,9 +528,9 @@ export function makeAgentGatewayAutomationTools(
   const viewAutomation: ToolEntry = {
     requiredCapability: "thread:read",
     definition: {
-      name: "omnimind_view_automation",
+      name: "harnessos_view_automation",
       description:
-        "View a complete automation definition, recent runs, next run, and persistent-memory excerpt. Call this immediately before omnimind_update_automation and resend every unchanged mutable field.",
+        "View a complete automation definition, recent runs, next run, and persistent-memory excerpt. Call this immediately before harnessos_update_automation and resend every unchanged mutable field.",
       inputSchema: {
         type: "object",
         properties: {
@@ -580,8 +580,8 @@ export function makeAgentGatewayAutomationTools(
   const updateAutomation: ToolEntry = {
     requiredCapability: "automation:write",
     definition: {
-      name: "omnimind_update_automation",
-      description: `Fully replace an automation's mutable configuration. ${AUTOMATION_AUTHORING_GUIDANCE} You MUST call omnimind_view_automation first, then resend definition.definitionRevision as expectedDefinitionRevision plus name, prompt, schedule, enabled, maxIterations, notificationPolicy, and completionPolicy, including every unchanged field. Stale revisions and partial updates are rejected.`,
+      name: "harnessos_update_automation",
+      description: `Fully replace an automation's mutable configuration. ${AUTOMATION_AUTHORING_GUIDANCE} You MUST call harnessos_view_automation first, then resend definition.definitionRevision as expectedDefinitionRevision plus name, prompt, schedule, enabled, maxIterations, notificationPolicy, and completionPolicy, including every unchanged field. Stale revisions and partial updates are rejected.`,
       inputSchema: {
         type: "object",
         properties: {
@@ -678,9 +678,9 @@ export function makeAgentGatewayAutomationTools(
   const cancelAutomation: ToolEntry = {
     requiredCapability: "automation:write",
     definition: {
-      name: "omnimind_cancel_automation",
+      name: "harnessos_cancel_automation",
       description:
-        'Stop a OmniMind automation using the definition revision returned by omnimind_view_automation. mode "disable" (default) pauses it and keeps history; "delete" archives it. An automation-dispatched run may always stop its own automation, whatever its mode. Prefer a completionPolicy stop clause for conditions known when the automation is created.',
+        'Stop a OmniMind automation using the definition revision returned by harnessos_view_automation. mode "disable" (default) pauses it and keeps history; "delete" archives it. An automation-dispatched run may always stop its own automation, whatever its mode. Prefer a completionPolicy stop clause for conditions known when the automation is created.',
       inputSchema: {
         type: "object",
         properties: {
@@ -725,7 +725,7 @@ export function makeAgentGatewayAutomationTools(
   const updateMemory: ToolEntry = {
     requiredCapability: "automation:write",
     definition: {
-      name: "omnimind_update_automation_memory",
+      name: "harnessos_update_automation_memory",
       description:
         'Fully replace an automation\'s DB-backed persistent memory. Maximum UTF-8 size: 32 KiB. Omit automationId only when the current user message is the automation run envelope. A later manual follow-up such as "continue" is not part of that run and must not call this tool as completion bookkeeping.',
       inputSchema: {
@@ -765,7 +765,7 @@ export function makeAgentGatewayAutomationTools(
   const reportResult: ToolEntry = {
     requiredCapability: "automation:write",
     definition: {
-      name: "omnimind_report_automation_result",
+      name: "harnessos_report_automation_result",
       description:
         'Report the structured result only when the current user message is the automation run envelope. Automation status never carries into a later manual follow-up such as "continue"; never call this tool for that turn. Use decision "silent" only when a successful run needs no user attention. Failures always remain visible.',
       inputSchema: {

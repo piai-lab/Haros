@@ -2998,9 +2998,9 @@ describe("MessagesTimeline", () => {
               label: "MCP tool call",
               tone: "tool",
               itemType: "dynamic_tool_call",
-              toolTitle: "OmniMind__omnimind_create_thread",
-              toolName: "OmniMind__omnimind_create_thread",
-              detail: "OmniMind__omnimind_create_thread",
+              toolTitle: "OmniMind__harnessos_create_thread",
+              toolName: "OmniMind__harnessos_create_thread",
+              detail: "OmniMind__harnessos_create_thread",
               activityKind: "tool.started",
             },
           },
@@ -3010,7 +3010,7 @@ describe("MessagesTimeline", () => {
     expect(claudeMarkup).toContain('data-tool-icon="omnimind"');
     expect(claudeMarkup).not.toContain('data-tool-icon="mcp"');
     expect(claudeMarkup).toContain("OmniMind is creating a thread");
-    expect(claudeMarkup).not.toContain("OmniMind__omnimind_create_thread");
+    expect(claudeMarkup).not.toContain("OmniMind__harnessos_create_thread");
 
     // A provider may misclassify an MCP action containing "create" or "list"
     // as a file change. Tool identity still wins over that transport category.
@@ -3028,8 +3028,8 @@ describe("MessagesTimeline", () => {
               label: "MCP tool call",
               tone: "tool",
               itemType: "file_change",
-              toolTitle: "mcp__OmniMind__omnimind_list_threads",
-              detail: "mcp__OmniMind__omnimind_list_threads",
+              toolTitle: "mcp__OmniMind__harnessos_list_threads",
+              detail: "mcp__OmniMind__harnessos_list_threads",
             },
           },
         ]}
@@ -3037,7 +3037,7 @@ describe("MessagesTimeline", () => {
     );
     expect(codexMarkup).toContain('data-tool-icon="omnimind"');
     expect(codexMarkup).toContain("OmniMind listed threads");
-    expect(codexMarkup).not.toContain("mcp__OmniMind__omnimind_list_threads");
+    expect(codexMarkup).not.toContain("mcp__OmniMind__harnessos_list_threads");
 
     const failedMarkup = renderToStaticMarkup(
       <MessagesTimeline
@@ -3053,7 +3053,7 @@ describe("MessagesTimeline", () => {
               label: "MCP tool call",
               tone: "tool",
               itemType: "mcp_tool_call",
-              toolName: "mcp__omnimind__omnimind_create_threads",
+              toolName: "mcp__harnessos__harnessos_create_threads",
               toolStatus: "failed",
               detail: "Claude rejected reasoningEffort",
               activityKind: "tool.completed",
@@ -3084,7 +3084,7 @@ describe("MessagesTimeline", () => {
               label: "MCP tool call",
               tone: "tool",
               itemType: "mcp_tool_call",
-              toolName: "mcp__omnimind__browser_open",
+              toolName: "mcp__harnessos__browser_open",
               toolStatus: "completed",
               liveActivity: {
                 state: "completed",
@@ -3156,12 +3156,12 @@ describe("MessagesTimeline", () => {
       label: "MCP tool call",
       tone: "tool",
       itemType: "mcp_tool_call",
-      toolName: "mcp__omnimind__omnimind_read_thread",
-      detail: 'mcp__omnimind__omnimind_read_thread: {"threadId":"c357d8c5-b4c1-47d0"}',
+      toolName: "mcp__harnessos__harnessos_read_thread",
+      detail: 'mcp__harnessos__harnessos_read_thread: {"threadId":"c357d8c5-b4c1-47d0"}',
       activityKind: "tool.completed",
     });
     expect(readThreadMarkup).toContain("OmniMind read a thread");
-    expect(readThreadMarkup).not.toContain("mcp__omnimind__omnimind_read_thread:");
+    expect(readThreadMarkup).not.toContain("mcp__harnessos__harnessos_read_thread:");
     expect(readThreadMarkup).not.toContain("threadId");
 
     const diagnoseMarkup = renderSingleToolRow({
@@ -3170,12 +3170,12 @@ describe("MessagesTimeline", () => {
       label: "MCP tool call",
       tone: "tool",
       itemType: "mcp_tool_call",
-      toolName: "mcp__omnimind__omnimind_diagnose_thread",
-      detail: 'mcp__omnimind__omnimind_diagnose_thread: {"threadId":"09a1615d-084f-40b9"}',
+      toolName: "mcp__harnessos__harnessos_diagnose_thread",
+      detail: 'mcp__harnessos__harnessos_diagnose_thread: {"threadId":"09a1615d-084f-40b9"}',
       activityKind: "tool.completed",
     });
     expect(diagnoseMarkup).toContain("OmniMind diagnosed a thread");
-    expect(diagnoseMarkup).not.toContain("mcp__omnimind__omnimind_diagnose_thread:");
+    expect(diagnoseMarkup).not.toContain("mcp__harnessos__harnessos_diagnose_thread:");
     expect(diagnoseMarkup).not.toContain("threadId");
 
     const dynamicToolMarkup = renderSingleToolRow({
@@ -3186,7 +3186,7 @@ describe("MessagesTimeline", () => {
       itemType: "dynamic_tool_call",
       toolName: "ToolSearch",
       toolTitle: "ToolSearch",
-      detail: 'ToolSearch: {"query":"select:mcp__omnimind__omnimind_read_thread_events"}',
+      detail: 'ToolSearch: {"query":"select:mcp__harnessos__harnessos_read_thread_events"}',
       activityKind: "tool.completed",
     });
     expect(dynamicToolMarkup).toContain("ToolSearch");
@@ -3200,7 +3200,7 @@ describe("MessagesTimeline", () => {
       label: "MCP tool call",
       tone: "tool",
       itemType: "mcp_tool_call",
-      toolName: "mcp__omnimind__omnimind_create_threads",
+      toolName: "mcp__harnessos__harnessos_create_threads",
       toolStatus: "failed",
       detail: 'McpError: {"code":-32602,"message":"Invalid params"}',
       activityKind: "tool.completed",
@@ -3223,7 +3223,7 @@ describe("MessagesTimeline", () => {
           label: "MCP tool call",
           tone: "tool",
           itemType: "mcp_tool_call",
-          toolName: "mcp__omnimind__omnimind_create_threads",
+          toolName: "mcp__harnessos__harnessos_create_threads",
           toolTitle: "OmniMind created threads",
           activityKind: "tool.completed",
         },
@@ -3238,7 +3238,7 @@ describe("MessagesTimeline", () => {
           label: "Created 2 OmniMind threads",
           tone: "info",
           activityKind: "omnimind.threads.created",
-          omnimindThreadCreation: {
+          harnessosThreadCreation: {
             operationId: "gateway:create:two-workers",
             requestedCount: 2,
             createdCount: 2,
@@ -3294,7 +3294,7 @@ describe("MessagesTimeline", () => {
                 checkpointTurnCount: 1,
                 checkpointTurnCounts: [1],
                 checkpointRef: CheckpointRef.makeUnsafe(
-                  "refs/omnimind/checkpoints/thread/turn/recap",
+                  "refs/harnessos/checkpoints/thread/turn/recap",
                 ),
                 status: "ready",
                 completedAt: "2026-03-17T19:12:31.000Z",
@@ -3565,7 +3565,7 @@ describe("MessagesTimeline", () => {
                 turnId: TurnId.makeUnsafe("turn-diff-1"),
                 checkpointTurnCount: 1,
                 checkpointTurnCounts: [1],
-                checkpointRef: CheckpointRef.makeUnsafe("refs/omnimind/checkpoints/thread/turn/1"),
+                checkpointRef: CheckpointRef.makeUnsafe("refs/harnessos/checkpoints/thread/turn/1"),
                 status: "ready",
                 completedAt: "2026-03-17T19:12:30.000Z",
                 assistantMessageId,

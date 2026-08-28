@@ -54,4 +54,4 @@ export interface BootstrapCredentialServiceShape {
 export class BootstrapCredentialService extends ServiceMap.Service<
   BootstrapCredentialService,
   BootstrapCredentialServiceShape
->()("omnimind/auth/Services/BootstrapCredentialService") {}
+>()("harnessos/auth/Services/BootstrapCredentialService") {}

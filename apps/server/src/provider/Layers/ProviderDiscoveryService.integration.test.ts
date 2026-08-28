@@ -138,7 +138,7 @@ beforeEach(async () => {
   clearSkillsCatalogCacheForTests();
   root = mkdtempSync(path.join(os.tmpdir(), "discovery-service-"));
   homeDir = path.join(root, "home");
-  baseDir = path.join(homeDir, ".omnimind");
+  baseDir = path.join(homeDir, ".harnessos");
   cwd = path.join(root, "repo");
   await mkdir(cwd, { recursive: true });
 });

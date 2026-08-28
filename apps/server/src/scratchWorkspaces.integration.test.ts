@@ -45,7 +45,7 @@ describe("ensureIsolatedScratchWorkspace", () => {
     try {
       expect(path.relative(process.cwd(), root).startsWith("..")).toBe(true);
       expect(path.relative(homedir(), root).startsWith("..")).toBe(false);
-      expect(path.dirname(root)).toMatch(/\.omnimind-[a-f0-9]{16}$/);
+      expect(path.dirname(root)).toMatch(/\.harnessos-[a-f0-9]{16}$/);
       expect(workspace.startsWith(`${root}${path.sep}`)).toBe(true);
     } finally {
       rmSync(workspace, { recursive: true, force: true });

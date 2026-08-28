@@ -665,7 +665,7 @@ export function renderReleaseLegalMetadata(
   string
 > {
   const inventoryText = `${JSON.stringify(inventory, null, 2)}\n`;
-  const appRef = `pkg:npm/omnimind-desktop@${appVersion}`;
+  const appRef = `pkg:npm/harnessos-desktop@${appVersion}`;
   const sbom = {
     $schema: "https://cyclonedx.org/schema/bom-1.6.schema.json",
     bomFormat: "CycloneDX",
@@ -674,11 +674,11 @@ export function renderReleaseLegalMetadata(
     metadata: {
       component: { type: "application", name: "OmniMind", version: appVersion, "bom-ref": appRef },
       properties: [
-        { name: "omnimind:derivation", value: inventory.derivation },
-        { name: "omnimind:target-kind", value: inventory.target.kind },
-        { name: "omnimind:target-platform", value: inventory.target.platform },
-        { name: "omnimind:target-arch", value: inventory.target.arch },
-        { name: "omnimind:inventory-sha256", value: sha256(inventoryText) },
+        { name: "harnessos:derivation", value: inventory.derivation },
+        { name: "harnessos:target-kind", value: inventory.target.kind },
+        { name: "harnessos:target-platform", value: inventory.target.platform },
+        { name: "harnessos:target-arch", value: inventory.target.arch },
+        { name: "harnessos:inventory-sha256", value: sha256(inventoryText) },
       ],
     },
     components: inventory.components.map((component) => ({
@@ -696,7 +696,7 @@ export function renderReleaseLegalMetadata(
         ? { externalReferences: [{ type: "vcs", url: component.repository }] }
         : {}),
       properties: component.locations.map((location) => ({
-        name: "omnimind:artifact-location",
+        name: "harnessos:artifact-location",
         value: location,
       })),
     })),

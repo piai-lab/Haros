@@ -185,4 +185,4 @@ export interface ProjectionTurnRepositoryShape {
 export class ProjectionTurnRepository extends ServiceMap.Service<
   ProjectionTurnRepository,
   ProjectionTurnRepositoryShape
->()("omnimind/persistence/Services/ProjectionTurns/ProjectionTurnRepository") {}
+>()("harnessos/persistence/Services/ProjectionTurns/ProjectionTurnRepository") {}

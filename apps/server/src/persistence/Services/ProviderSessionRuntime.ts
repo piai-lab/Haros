@@ -79,4 +79,4 @@ export interface ProviderSessionRuntimeRepositoryShape {
 export class ProviderSessionRuntimeRepository extends ServiceMap.Service<
   ProviderSessionRuntimeRepository,
   ProviderSessionRuntimeRepositoryShape
->()("omnimind/persistence/Services/ProviderSessionRuntime/ProviderSessionRuntimeRepository") {}
+>()("harnessos/persistence/Services/ProviderSessionRuntime/ProviderSessionRuntimeRepository") {}

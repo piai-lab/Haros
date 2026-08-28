@@ -444,12 +444,12 @@ describe("external MCP gateway stdio flow", () => {
           outputLines[0]!.result as { tools: Array<{ name: string }> }
         ).tools.map((tool) => tool.name);
         expect(listedTools).toEqual([
-          "omnimind_overview",
-          "omnimind_capabilities",
-          "omnimind_list_allowed_projects",
-          "omnimind_create_task",
-          "omnimind_wait_for_task",
-          "omnimind_read_task",
+          "harnessos_overview",
+          "harnessos_capabilities",
+          "harnessos_list_allowed_projects",
+          "harnessos_create_task",
+          "harnessos_wait_for_task",
+          "harnessos_read_task",
         ]);
 
         const prompt = "Implement the external MCP end-to-end proof.";
@@ -459,7 +459,7 @@ describe("external MCP gateway stdio flow", () => {
             id: 2,
             method: "tools/call",
             params: {
-              name: "omnimind_create_task",
+              name: "harnessos_create_task",
               arguments: {
                 requestId: "external-e2e-request",
                 projectId: PROJECT_ID,
@@ -495,7 +495,7 @@ describe("external MCP gateway stdio flow", () => {
             id: 3,
             method: "tools/call",
             params: {
-              name: "omnimind_wait_for_task",
+              name: "harnessos_wait_for_task",
               arguments: { threadId, timeoutMs: 1_000 },
             },
           })}\n`,
@@ -515,7 +515,7 @@ describe("external MCP gateway stdio flow", () => {
             jsonrpc: "2.0",
             id: 4,
             method: "tools/call",
-            params: { name: "omnimind_read_task", arguments: { threadId } },
+            params: { name: "harnessos_read_task", arguments: { threadId } },
           })}\n`,
         );
         stdin.end();
@@ -533,7 +533,7 @@ describe("external MCP gateway stdio flow", () => {
               id: "interrupted-wait",
               method: "tools/call",
               params: {
-                name: "omnimind_wait_for_task",
+                name: "harnessos_wait_for_task",
                 arguments: { threadId, runId: "turn-not-projected", timeoutMs: 60_000 },
               },
             },
@@ -556,7 +556,7 @@ describe("external MCP gateway stdio flow", () => {
             jsonrpc: "2.0",
             id: "denied",
             method: "tools/call",
-            params: { name: "omnimind_create_task", arguments: {} },
+            params: { name: "harnessos_create_task", arguments: {} },
           },
         });
         expect(JSON.stringify(denied.body)).toContain("capability_denied");
@@ -567,7 +567,7 @@ describe("external MCP gateway stdio flow", () => {
             jsonrpc: "2.0",
             id: "overview",
             method: "tools/call",
-            params: { name: "omnimind_overview", arguments: {} },
+            params: { name: "harnessos_overview", arguments: {} },
           },
         });
         const overviewJson = JSON.stringify(overview.body);
@@ -580,7 +580,7 @@ describe("external MCP gateway stdio flow", () => {
         expect(overviewJson).not.toContain("recentThreads");
         const overviewPayload = toolPayload(overview.body as Record<string, unknown>);
         expect(overviewPayload.nextSteps).toEqual([
-          "Call omnimind_capabilities with a projectId to list the exact provider/model targets available to this integration.",
+          "Call harnessos_capabilities with a projectId to list the exact provider/model targets available to this integration.",
         ]);
 
         const auditRows = yield* sql<{
@@ -629,7 +629,7 @@ describe("external MCP gateway stdio flow", () => {
             jsonrpc: "2.0",
             id: "audit-failure-does-not-replace-result",
             method: "tools/call",
-            params: { name: "omnimind_list_allowed_projects", arguments: {} },
+            params: { name: "harnessos_list_allowed_projects", arguments: {} },
           },
         });
         expect(successfulDespiteAuditFailure.status).toBe(200);

@@ -10,12 +10,7 @@ describe("GroupEditorDialog", () => {
   it("suggests a bilingual icon and submits it through the existing Space owner", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     await render(
-      <GroupEditorDialog
-        open
-        existingNames={[]}
-        onOpenChange={vi.fn()}
-        onSubmit={onSubmit}
-      />,
+      <GroupEditorDialog open existingNames={[]} onOpenChange={vi.fn()} onSubmit={onSubmit} />,
     );
 
     await page.getByRole("textbox", { name: "Name" }).fill("研究计划");
@@ -32,20 +27,13 @@ describe("GroupEditorDialog", () => {
   it("keeps an explicitly selected icon while the name changes", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     await render(
-      <GroupEditorDialog
-        open
-        existingNames={[]}
-        onOpenChange={vi.fn()}
-        onSubmit={onSubmit}
-      />,
+      <GroupEditorDialog open existingNames={[]} onOpenChange={vi.fn()} onSubmit={onSubmit} />,
     );
 
     await page.getByRole("radio", { name: "Favorite" }).click();
     await page.getByRole("textbox", { name: "Name" }).fill("Work");
     await page.getByRole("button", { name: "Create group" }).click();
 
-    await vi.waitFor(() =>
-      expect(onSubmit).toHaveBeenCalledWith({ name: "Work", icon: "star" }),
-    );
+    await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledWith({ name: "Work", icon: "star" }));
   });
 });

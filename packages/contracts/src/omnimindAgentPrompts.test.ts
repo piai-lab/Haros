@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 
-import { OMNIMIND_AGENT_PROMPT_MAX_BYTES } from "./editableText";
+import { HARNESSOS_AGENT_PROMPT_MAX_BYTES } from "./editableText";
 import {
   OmniMindAgentPromptGetSnapshotInput,
   OmniMindAgentPromptMutationInput,
@@ -60,13 +60,13 @@ describe("OmniMind Agent prompt contracts", () => {
         availability: "available",
         unavailableReason: null,
         sourceId: "AGENTS.md",
-        displayPath: "~/.omnimind/agent/AGENTS.md",
-        revealPath: "/private/example/.omnimind/agent/AGENTS.md",
+        displayPath: "~/.harnessos/agent/AGENTS.md",
+        revealPath: "/private/example/.harnessos/agent/AGENTS.md",
         exists: true,
         version: "b".repeat(64),
         content: "Be concise.",
       },
-      maxBytes: OMNIMIND_AGENT_PROMPT_MAX_BYTES,
+      maxBytes: HARNESSOS_AGENT_PROMPT_MAX_BYTES,
     });
     expect(snapshot.defaultPrompt.customized).toBe(true);
     expect(snapshot.customRules.content).toBe("Be concise.");
@@ -84,13 +84,13 @@ describe("OmniMind Agent prompt contracts", () => {
           availability: "available",
           unavailableReason: null,
           sourceId: "AGENTS.md",
-          displayPath: "~/.omnimind/agent/AGENTS.md",
-          revealPath: "/private/example/.omnimind/agent/AGENTS.md",
+          displayPath: "~/.harnessos/agent/AGENTS.md",
+          revealPath: "/private/example/.harnessos/agent/AGENTS.md",
           exists: false,
           version: null,
           content: "",
         },
-        maxBytes: OMNIMIND_AGENT_PROMPT_MAX_BYTES,
+        maxBytes: HARNESSOS_AGENT_PROMPT_MAX_BYTES,
       }),
     ).toThrow();
   });
@@ -102,7 +102,7 @@ describe("OmniMind Agent prompt contracts", () => {
       expect(() =>
         Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
           ...base,
-          content: "x".repeat(OMNIMIND_AGENT_PROMPT_MAX_BYTES + 1),
+          content: "x".repeat(HARNESSOS_AGENT_PROMPT_MAX_BYTES + 1),
         }),
       ).toThrow();
       for (const content of ["before\0after", "before\u0001after", "before\u000cafter"]) {
@@ -130,7 +130,7 @@ describe("OmniMind Agent prompt contracts", () => {
 
   it("enforces the prompt byte boundary for multibyte content", () => {
     const emoji = "😀";
-    const withinLimit = emoji.repeat(OMNIMIND_AGENT_PROMPT_MAX_BYTES / 4);
+    const withinLimit = emoji.repeat(HARNESSOS_AGENT_PROMPT_MAX_BYTES / 4);
     const overLimit = `${withinLimit}${emoji}`;
     expect(() =>
       Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)(defaultPromptInput(withinLimit)),

@@ -3,8 +3,8 @@ import {
   WS_PROTOCOL_EPOCH,
   WS_PROTOCOL_MAX_REVISION,
   WS_PROTOCOL_MIN_REVISION,
-  WS_OMNIMIND_MODEL_SERVICES_CAPABILITY,
-  WS_OMNIMIND_ECOSYSTEM_CAPABILITY,
+  WS_HARNESSOS_MODEL_SERVICES_CAPABILITY,
+  WS_HARNESSOS_ECOSYSTEM_CAPABILITY,
   WS_SERVER_CAPABILITIES,
 } from "@harnessos/contracts";
 import { Effect } from "effect";
@@ -37,10 +37,10 @@ describe("WebSocket compatibility bootstrap", () => {
     expect(result.capabilities).toContain("orchestration.cursor-safe-streams");
     expect(result.capabilities).toContain("orchestration.thread-detail-snapshot");
     expect(result.capabilities).toContain("projects.github-provisioning");
-    expect(result.capabilities).toContain(WS_OMNIMIND_MODEL_SERVICES_CAPABILITY);
-    expect(result.capabilities).toContain(WS_OMNIMIND_ECOSYSTEM_CAPABILITY);
+    expect(result.capabilities).toContain(WS_HARNESSOS_MODEL_SERVICES_CAPABILITY);
+    expect(result.capabilities).toContain(WS_HARNESSOS_ECOSYSTEM_CAPABILITY);
     expect(WS_CLIENT_REQUIRED_CAPABILITIES).not.toContain("projects.github-provisioning");
-    expect(WS_CLIENT_REQUIRED_CAPABILITIES).not.toContain(WS_OMNIMIND_MODEL_SERVICES_CAPABILITY);
+    expect(WS_CLIENT_REQUIRED_CAPABILITIES).not.toContain(WS_HARNESSOS_MODEL_SERVICES_CAPABILITY);
   });
 
   it("returns terminal update guidance and rejects feature calls without negotiated query data", async () => {

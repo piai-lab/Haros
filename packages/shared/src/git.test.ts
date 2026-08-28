@@ -72,25 +72,25 @@ describe("resolveThreadBranchRegressionGuard", () => {
 
 describe("buildOmniMindBranchName", () => {
   it("uses omnimind as the branch namespace", () => {
-    expect(buildOmniMindBranchName("fix toast copy")).toBe("omnimind/fix-toast-copy");
+    expect(buildOmniMindBranchName("fix toast copy")).toBe("harnessos/fix-toast-copy");
   });
 
   it("keeps non-OmniMind namespaces inside the OmniMind branch", () => {
     expect(buildOmniMindBranchName("feature/refine-toolbar-actions")).toBe(
-      "omnimind/feature/refine-toolbar-actions",
+      "harnessos/feature/refine-toolbar-actions",
     );
   });
 
   it("normalizes legacy prefixes before rebuilding the branch", () => {
     for (const namespace of PRE_CUTOVER_NAMESPACE_FIXTURES) {
       expect(buildOmniMindBranchName(`${namespace}/refine toolbar actions`)).toBe(
-        "omnimind/refine-toolbar-actions",
+        "harnessos/refine-toolbar-actions",
       );
     }
   });
 
-  it("falls back to omnimind/update when no preferred name is provided", () => {
-    expect(buildOmniMindBranchName()).toBe("omnimind/update");
+  it("falls back to harnessos/update when no preferred name is provided", () => {
+    expect(buildOmniMindBranchName()).toBe("harnessos/update");
   });
 });
 
@@ -98,9 +98,9 @@ describe("resolveUniqueOmniMindBranchName", () => {
   it("increments suffix when the OmniMind branch already exists", () => {
     expect(
       resolveUniqueOmniMindBranchName(
-        ["main", "omnimind/fix-toast-copy", "omnimind/fix-toast-copy-2"],
+        ["main", "harnessos/fix-toast-copy", "harnessos/fix-toast-copy-2"],
         "fix toast copy",
       ),
-    ).toBe("omnimind/fix-toast-copy-3");
+    ).toBe("harnessos/fix-toast-copy-3");
   });
 });

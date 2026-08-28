@@ -886,7 +886,7 @@ describe("OrchestrationEngine", () => {
     expect(findClaimedById).not.toHaveBeenCalled();
     findClaimedById.mockRestore();
     const rejectedCloneId = `att_v2_${createHash("sha256")
-      .update("omnimind:chat-to-agent:attachment:v1\0")
+      .update("harnessos:chat-to-agent:attachment:v1\0")
       .update(rejectedCommandId)
       .update("\0")
       .update(sourceMessageId)
@@ -1271,7 +1271,7 @@ describe("OrchestrationEngine", () => {
         threadId: ThreadId.makeUnsafe("thread-turn-diff"),
         turnId: asTurnId("turn-1"),
         completedAt: createdAt,
-        checkpointRef: asCheckpointRef("refs/omnimind/checkpoints/thread-turn-diff/turn/1"),
+        checkpointRef: asCheckpointRef("refs/harnessos/checkpoints/thread-turn-diff/turn/1"),
         status: "ready",
         files: [],
         checkpointTurnCount: 1,
@@ -1286,7 +1286,7 @@ describe("OrchestrationEngine", () => {
       {
         turnId: asTurnId("turn-1"),
         checkpointTurnCount: 1,
-        checkpointRef: asCheckpointRef("refs/omnimind/checkpoints/thread-turn-diff/turn/1"),
+        checkpointRef: asCheckpointRef("refs/harnessos/checkpoints/thread-turn-diff/turn/1"),
         status: "ready",
         files: [],
         assistantMessageId: null,

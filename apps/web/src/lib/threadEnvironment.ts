@@ -39,10 +39,7 @@ export interface ThreadEnvironmentPresentation {
   shortLabelKey: "threadEnvironment.local" | "threadEnvironment.worktree";
   localOptionLabelKey: "threadEnvironment.local";
   worktreeOptionLabelKey: "threadEnvironment.worktree";
-  worktreeBadgeLabelKey:
-    | "threadEnvironment.worktree"
-    | "threadEnvironment.worktreePending"
-    | null;
+  worktreeBadgeLabelKey: "threadEnvironment.worktree" | "threadEnvironment.worktreePending" | null;
 }
 
 export function resolveThreadEnvironmentPresentation(input: {
@@ -55,8 +52,7 @@ export function resolveThreadEnvironmentPresentation(input: {
   return {
     mode,
     workspaceState,
-    shortLabelKey:
-      mode === "worktree" ? "threadEnvironment.worktree" : "threadEnvironment.local",
+    shortLabelKey: mode === "worktree" ? "threadEnvironment.worktree" : "threadEnvironment.local",
     localOptionLabelKey: "threadEnvironment.local",
     worktreeOptionLabelKey: "threadEnvironment.worktree",
     worktreeBadgeLabelKey:

@@ -1,7 +1,7 @@
 /**
  * AgentGatewayLive - OmniMind app-control MCP tool surface.
  *
- * Implements the `omnimind_*` tools served over `POST /mcp` (streamable HTTP,
+ * Implements the `harnessos_*` tools served over `POST /mcp` (streamable HTTP,
  * stateless JSON responses). Every provider session gets this endpoint plus a
  * thread-bound bearer token injected at session start, so any agent running in
  * a OmniMind thread can list/read/create/steer threads and manage heartbeat
@@ -19,7 +19,7 @@ import {
   CommandId,
   type BuiltInToolGroupId,
   type OrchestrationThreadShell,
-  OMNIMIND_GATEWAY_MAX_THREADS_PER_OPERATION,
+  HARNESSOS_GATEWAY_MAX_THREADS_PER_OPERATION,
   MessageId,
   THREAD_GOAL_MAX_CHARS,
   ThreadId,
@@ -270,7 +270,7 @@ export const makeAgentGateway = Effect.gen(function* () {
   const createThreads: ToolEntry = {
     requiredCapability: "thread:write",
     definition: {
-      name: "omnimind_create_threads",
+      name: "harnessos_create_threads",
       description:
         "Create an exact batch of 1–20 standalone OmniMind threads. Worktree threads start on a OmniMind-managed temporary branch pinned at baseRef (or the selected checkout's HEAD) and copy local checkout changes plus .worktreeinclude files when the ref is that checkout's HEAD; on the first turn OmniMind may rename the branch after the prompt and publish it. Validation/preflight failures create nothing and may be corrected with the same requestId; durable retries replay the exact operation.",
       inputSchema: {
@@ -284,7 +284,7 @@ export const makeAgentGateway = Effect.gen(function* () {
           threads: {
             type: "array",
             minItems: 1,
-            maxItems: OMNIMIND_GATEWAY_MAX_THREADS_PER_OPERATION,
+            maxItems: HARNESSOS_GATEWAY_MAX_THREADS_PER_OPERATION,
             items: {
               type: "object",
               properties: {
@@ -333,9 +333,9 @@ export const makeAgentGateway = Effect.gen(function* () {
   const createThread: ToolEntry = {
     requiredCapability: "thread:write",
     definition: {
-      name: "omnimind_create_thread",
+      name: "harnessos_create_thread",
       description:
-        "Create exactly one standalone OmniMind thread. Worktree threads start on a OmniMind-managed temporary branch pinned at baseRef; on the first turn OmniMind may rename the branch after the prompt and publish it. For two or more threads use one omnimind_create_threads call instead.",
+        "Create exactly one standalone OmniMind thread. Worktree threads start on a OmniMind-managed temporary branch pinned at baseRef; on the first turn OmniMind may rename the branch after the prompt and publish it. For two or more threads use one harnessos_create_threads call instead.",
       inputSchema: {
         type: "object",
         properties: {
@@ -435,7 +435,7 @@ export const makeAgentGateway = Effect.gen(function* () {
   const sendMessage: ToolEntry = {
     requiredCapability: "thread:write",
     definition: {
-      name: "omnimind_send_message",
+      name: "harnessos_send_message",
       description:
         'Send a OmniMind follow-up message to an existing thread. mode "queue" (default) waits for the current turn; "steer" redirects a running turn where the provider supports it (otherwise it is queued).',
       inputSchema: {
@@ -514,7 +514,7 @@ export const makeAgentGateway = Effect.gen(function* () {
   const interruptThread: ToolEntry = {
     requiredCapability: "thread:write",
     definition: {
-      name: "omnimind_interrupt_thread",
+      name: "harnessos_interrupt_thread",
       description: "Interrupt the running turn of a OmniMind thread.",
       inputSchema: {
         type: "object",
@@ -565,7 +565,7 @@ export const makeAgentGateway = Effect.gen(function* () {
   const setThreadTitle: ToolEntry = {
     requiredCapability: "thread:write",
     definition: {
-      name: "omnimind_set_thread_title",
+      name: "harnessos_set_thread_title",
       description: "Rename a OmniMind thread.",
       inputSchema: {
         type: "object",
@@ -603,7 +603,7 @@ export const makeAgentGateway = Effect.gen(function* () {
   const setThreadArchived: ToolEntry = {
     requiredCapability: "thread:write",
     definition: {
-      name: "omnimind_set_thread_archived",
+      name: "harnessos_set_thread_archived",
       description:
         "Archive or unarchive a OmniMind thread. Defaults to your own thread when threadId is omitted.",
       inputSchema: {
@@ -666,7 +666,7 @@ export const makeAgentGateway = Effect.gen(function* () {
   const setThreadGoal: ToolEntry = {
     requiredCapability: "thread:write",
     definition: {
-      name: "omnimind_set_thread_goal",
+      name: "harnessos_set_thread_goal",
       description:
         "Set a persistent goal for a thread. Only set a goal when the user has explicitly asked for one (for example, 'keep working until X' or 'the goal of this thread is Y') or when dispatching a thread explicitly created to pursue a stated objective. Do NOT infer or invent goals from ordinary tasks or set one as a side effect of normal work. Clearing requires the same explicit user intent. When the active goal's objective has been accomplished, pass achieved: true instead of clearing: OmniMind records the achievement (with the time it took) and clears the goal. If the same external blocker prevents meaningful progress for three consecutive goal turns, pass blocked: true to pause the goal. Do not mark a goal blocked merely because the work is difficult, incomplete, or would benefit from clarification.",
       inputSchema: {

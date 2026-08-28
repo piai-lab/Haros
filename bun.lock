@@ -34,8 +34,8 @@
       "name": "@harnessos/server",
       "version": "0.1.0-alpha.0",
       "bin": {
-        "omnimind": "dist/index.mjs",
-        "omnimind-restore-migration-backup": "dist/restoreMigrationBackup.mjs",
+        "harnessos": "dist/index.mjs",
+        "harnessos-restore-migration-backup": "dist/restoreMigrationBackup.mjs",
       },
       "dependencies": {
         "@agentclientprotocol/sdk": "1.2.1",

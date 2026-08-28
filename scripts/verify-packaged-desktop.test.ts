@@ -108,14 +108,14 @@ describe("packaged desktop verification", () => {
   it("rejects an artifact whose embedded commit differs from the requested source", () => {
     expect(() =>
       assertPackagedSourceCommit(
-        JSON.stringify({ omnimindCommitHash: sourceCommit }),
+        JSON.stringify({ harnessosCommitHash: sourceCommit }),
         sourceCommit,
       ),
     ).not.toThrow();
     expect(() =>
       assertPackagedSourceCommit(
         JSON.stringify({
-          omnimindCommitHash: "abcdefabcdefabcdefabcdefabcdefabcdefabcd",
+          harnessosCommitHash: "abcdefabcdefabcdefabcdefabcdefabcdefabcd",
         }),
         sourceCommit,
       ),
@@ -123,13 +123,13 @@ describe("packaged desktop verification", () => {
   });
 
   it("selects the runnable macOS payload emitted by the release matrix", () => {
-    expect(selectMacPackagedPayload(["/assets/OmniMind.dmg"])).toEqual({
+    expect(selectMacPackagedPayload(["/assets/HarnessOS.dmg"])).toEqual({
       kind: "dmg",
-      path: "/assets/OmniMind.dmg",
+      path: "/assets/HarnessOS.dmg",
     });
-    expect(selectMacPackagedPayload(["/assets/OmniMind.dmg", "/assets/OmniMind.zip"])).toEqual({
+    expect(selectMacPackagedPayload(["/assets/HarnessOS.dmg", "/assets/HarnessOS.zip"])).toEqual({
       kind: "zip",
-      path: "/assets/OmniMind.zip",
+      path: "/assets/HarnessOS.zip",
     });
     expect(() => selectMacPackagedPayload(["/assets/first.dmg", "/assets/second.dmg"])).toThrow(
       "at most one macOS ZIP and one DMG",
@@ -177,7 +177,7 @@ describe("packaged desktop verification", () => {
 
     const firstLease = acquirePackagedProofLease(sourceCommit, root);
     expect(() => acquirePackagedProofLease(sourceCommit, root)).toThrow(
-      `Another OmniMind packaged proof owns this host (pid=${process.pid}, source=${sourceCommit.slice(0, 12)})`,
+      `Another HarnessOS packaged proof owns this host (pid=${process.pid}, source=${sourceCommit.slice(0, 12)})`,
     );
 
     firstLease.release();
@@ -215,14 +215,14 @@ describe("packaged desktop verification", () => {
       {
         PATH: process.env.PATH,
         LANG: "zh_CN.UTF-8",
-        OMNIMIND_AUTH_TOKEN: "must-not-leak",
+        HARNESSOS_AUTH_TOKEN: "must-not-leak",
         OPENAI_API_KEY: "must-not-leak",
         PROVIDER_ACCESS_TOKEN: "must-not-leak",
         ELECTRON_RUN_AS_NODE: "1",
       },
     );
 
-    expect(env.OMNIMIND_AUTH_TOKEN).toBeUndefined();
+    expect(env.HARNESSOS_AUTH_TOKEN).toBeUndefined();
     expect(env.ELECTRON_RUN_AS_NODE).toBeUndefined();
     expect(env.OPENAI_API_KEY).toBeUndefined();
     expect(env.PROVIDER_ACCESS_TOKEN).toBeUndefined();
@@ -236,7 +236,7 @@ describe("packaged desktop verification", () => {
       "XDG_CONFIG_HOME",
       "XDG_CACHE_HOME",
       "XDG_DATA_HOME",
-      "OMNIMIND_HOME",
+      "HARNESSOS_HOME",
       "CODEX_HOME",
       "CLAUDE_CONFIG_DIR",
       "TEMP",
@@ -247,14 +247,14 @@ describe("packaged desktop verification", () => {
       expect(existsSync(env[name]!)).toBe(true);
     }
     expect(resolvePackagedProofUserDataPath(env)).toBe(
-      join(env.OMNIMIND_HOME!, "electron", "omnimind"),
+      join(env.HARNESSOS_HOME!, "electron", "omnimind"),
     );
   });
 
   it("adds ephemeral loopback CDP arguments only to the journey launch", () => {
     expect(
       withPackagedJourneyDebugging({
-        command: "/payload/OmniMind",
+        command: "/payload/HarnessOS",
         args: ["--existing"],
         cwd: "/payload",
         appArchivePath: "/payload/resources/app.asar",

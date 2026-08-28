@@ -185,5 +185,5 @@ export interface TerminalManagerShape {
  * TerminalManager - Service tag for terminal session orchestration.
  */
 export class TerminalManager extends ServiceMap.Service<TerminalManager, TerminalManagerShape>()(
-  "omnimind/terminal/Services/Manager/TerminalManager",
+  "harnessos/terminal/Services/Manager/TerminalManager",
 ) {}

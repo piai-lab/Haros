@@ -138,7 +138,7 @@ describe("store facade", () => {
     );
 
     const next = setThreadWorkspace(state, ThreadId.makeUnsafe("thread-1"), {
-      branch: "omnimind/abc123ef",
+      branch: "harnessos/abc123ef",
     });
 
     expect(threadsOf(next)[0]?.branch).toBe("feature/semantic-branch");
@@ -150,11 +150,11 @@ describe("store facade", () => {
       makeState(
         makeThread({
           envMode: "worktree",
-          branch: "omnimind/tmp-working",
+          branch: "harnessos/tmp-working",
           worktreePath: "/tmp/project/.worktrees/tmp-working",
           associatedWorktreePath: "/tmp/project/.worktrees/tmp-working",
-          associatedWorktreeBranch: "omnimind/tmp-working",
-          associatedWorktreeRef: "omnimind/tmp-working",
+          associatedWorktreeBranch: "harnessos/tmp-working",
+          associatedWorktreeRef: "harnessos/tmp-working",
         }),
       ),
       threadId,
@@ -168,11 +168,11 @@ describe("store facade", () => {
       makeReadModel(
         makeReadModelThread({
           envMode: "worktree",
-          branch: "omnimind/tmp-working",
+          branch: "harnessos/tmp-working",
           worktreePath: "/tmp/project/.worktrees/tmp-working",
           associatedWorktreePath: "/tmp/project/.worktrees/tmp-working",
-          associatedWorktreeBranch: "omnimind/tmp-working",
-          associatedWorktreeRef: "omnimind/tmp-working",
+          associatedWorktreeBranch: "harnessos/tmp-working",
+          associatedWorktreeRef: "harnessos/tmp-working",
           createBranchFlowCompleted: false,
           updatedAt: "2026-02-27T00:05:00.000Z",
         }),
@@ -488,7 +488,7 @@ describe("store facade", () => {
       addEventListener: vi.fn(),
     };
     storage.set(
-      "omnimind:renderer-state:v8",
+      "harnessos:renderer-state:v8",
       JSON.stringify({
         projectNamesByCwd: {
           "/tmp/project": "omnimind",
@@ -574,7 +574,7 @@ describe("store facade", () => {
       freshStore.useStore.getState().renameProjectLocally(projectId, "omnimind");
 
       expect(setItem).toHaveBeenCalled();
-      expect(JSON.parse(storage.get("omnimind:renderer-state:v8") ?? "{}")).toMatchObject({
+      expect(JSON.parse(storage.get("harnessos:renderer-state:v8") ?? "{}")).toMatchObject({
         projectNamesByCwd: {
           "/tmp/project": "omnimind",
         },

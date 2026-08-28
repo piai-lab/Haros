@@ -352,7 +352,7 @@ export class DesktopBrowserAutomationHost {
   settleEngineWebSurface(input: {
     readonly threadId: ThreadId;
     readonly surfaceId: string;
-	readonly preserveTab?: boolean;
+    readonly preserveTab?: boolean;
   }): ThreadBrowserState {
     return this.browserManager.settleEngineWebSurface(input);
   }
@@ -785,10 +785,7 @@ export class DesktopBrowserAutomationHost {
   private resolveTabId(affinity: SessionAffinity, requested: unknown): string {
     const state = this.browserManager.getState({ threadId: affinity.threadId });
     const tabId = typeof requested === "string" ? requested : (affinity.tabId ?? state.activeTabId);
-    if (
-      !tabId ||
-      !state.tabs.some((tab) => tab.id === tabId && !tab.presentation?.internalOnly)
-    ) {
+    if (!tabId || !state.tabs.some((tab) => tab.id === tabId && !tab.presentation?.internalOnly)) {
       browserHostError({
         code: "BrowserTabNotFound",
         retryable: false,
@@ -871,7 +868,7 @@ export class DesktopBrowserAutomationHost {
       reconcile: (timeoutMs, signal) => {
         if (observedEvent) return Promise.resolve(observedEvent);
         // CDP announces link/window activation before Electron reconciles the
-        // denied child into OmniMind's visible tab model. Only that path waits;
+        // denied child into HarnessOS's visible tab model. Only that path waits;
         // ordinary clicks return immediately with no fixed grace period.
         if (!pageAnnouncedWindowOpen) {
           return waitOneTurnForWindowOpenEvent(eventPromise, signal);
@@ -1291,9 +1288,7 @@ export class DesktopBrowserAutomationHost {
   private tabs(affinity: SessionAffinity): BrowserTabsOutput {
     const state = this.browserManager.getState({ threadId: affinity.threadId });
     const tabs = state.tabs.filter((tab) => !tab.presentation?.internalOnly);
-    const activeTabId = tabs.some((tab) => tab.id === state.activeTabId)
-      ? state.activeTabId
-      : null;
+    const activeTabId = tabs.some((tab) => tab.id === state.activeTabId) ? state.activeTabId : null;
     const assignedTabId = tabs.some((tab) => tab.id === affinity.tabId) ? affinity.tabId : null;
     return {
       tabs: tabs.slice(0, 24).map((tab) => ({
@@ -1325,9 +1320,7 @@ export class DesktopBrowserAutomationHost {
     const hiddenTabId =
       !show &&
       (input.reuse ?? true) &&
-      before.tabs.some(
-        (tab) => tab.id === before.activeTabId && !tab.presentation?.internalOnly,
-      )
+      before.tabs.some((tab) => tab.id === before.activeTabId && !tab.presentation?.internalOnly)
         ? before.activeTabId
         : null;
     if (!show) {

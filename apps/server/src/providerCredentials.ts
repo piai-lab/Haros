@@ -28,7 +28,7 @@ export interface ProviderCredentialsShape {
 export class ProviderCredentials extends ServiceMap.Service<
   ProviderCredentials,
   ProviderCredentialsShape
->()("omnimind/providerCredentials/ProviderCredentials") {}
+>()("harnessos/providerCredentials/ProviderCredentials") {}
 
 export const resolveProviderServerPassword = (provider: ExternalProviderServer) =>
   Effect.gen(function* () {

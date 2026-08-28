@@ -561,7 +561,7 @@ export interface ProfileStatsQueryShape {
 export class ProfileStatsQuery extends ServiceMap.Service<
   ProfileStatsQuery,
   ProfileStatsQueryShape
->()("omnimind/profileStats/ProfileStatsQuery") {}
+>()("harnessos/profileStats/ProfileStatsQuery") {}
 
 const makeProfileStatsQuery = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;

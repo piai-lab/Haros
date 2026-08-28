@@ -15,7 +15,10 @@ import {
   matchesDistinguishedName,
   parseDistinguishedName,
 } from "@harnessos/shared/windowsCertificate";
-import { prepareWindowsSafeProcess, resolveWindowsSystemRoot } from "@harnessos/shared/windowsProcess";
+import {
+  prepareWindowsSafeProcess,
+  resolveWindowsSystemRoot,
+} from "@harnessos/shared/windowsProcess";
 
 export { parseDistinguishedName } from "@harnessos/shared/windowsCertificate";
 

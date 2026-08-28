@@ -104,7 +104,7 @@ describe("updateMachine", () => {
       },
       "1.1.0",
       2,
-      "OmniMind restarted before the update was installed.",
+      "HarnessOS restarted before the update was installed.",
     );
 
     expect(state).toMatchObject({
@@ -112,7 +112,7 @@ describe("updateMachine", () => {
       availableVersion: "1.1.0",
       downloadedVersion: null,
       installFailureCount: 2,
-      message: "OmniMind restarted before the update was installed.",
+      message: "HarnessOS restarted before the update was installed.",
       errorContext: "install",
       canRetry: true,
     });

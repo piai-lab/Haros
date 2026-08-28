@@ -11,7 +11,10 @@ import { render } from "vitest-browser-react";
 
 import { ComposerExtrasMenu } from "./ComposerExtrasMenu";
 
-async function mountMenu(props?: { interactionMode?: "default" | "plan"; planModeAvailable?: boolean }) {
+async function mountMenu(props?: {
+  interactionMode?: "default" | "plan";
+  planModeAvailable?: boolean;
+}) {
   const onAddAttachments = vi.fn();
   const onSetPlanMode = vi.fn();
   const host = document.createElement("div");
@@ -98,7 +101,10 @@ describe("ComposerExtrasMenu", () => {
       expect(document.body.textContent).not.toContain("Plan mode");
     }
     {
-      await using preserved = await mountMenu({ interactionMode: "plan", planModeAvailable: false });
+      await using preserved = await mountMenu({
+        interactionMode: "plan",
+        planModeAvailable: false,
+      });
       await page.getByLabelText("Message box options").click();
       await page.getByText("Plan mode").click();
       expect(preserved.onSetPlanMode).toHaveBeenCalledWith(false);

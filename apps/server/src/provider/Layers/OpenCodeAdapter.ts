@@ -44,12 +44,12 @@ import {
   ProviderAdapterValidationError,
 } from "../Errors.ts";
 import {
-  OMNIMIND_HARNESS_POLICY_VERSION,
+  HARNESSOS_HARNESS_POLICY_VERSION,
   takeOmniMindHarnessPolicyForProviderSession,
 } from "../../agentGateway/harnessPolicy.ts";
 import {
   buildOpenCodeMcpServer,
-  OMNIMIND_MCP_SERVER_NAME,
+  HARNESSOS_MCP_SERVER_NAME,
 } from "../../agentGateway/mcpInjection.ts";
 import { AgentGatewayCredentials } from "../../agentGateway/Services/AgentGatewayCredentials.ts";
 import {
@@ -250,11 +250,11 @@ const installOpenCodeGatewayMcp = Effect.fn("installOpenCodeGatewayMcp")(functio
   const result = yield* runOpenCodeSdk("mcp.add", () =>
     input.client.mcp.add({
       directory: input.directory,
-      name: OMNIMIND_MCP_SERVER_NAME,
+      name: HARNESSOS_MCP_SERVER_NAME,
       config: buildOpenCodeMcpServer(input.connection),
     }),
   );
-  const status = result.data?.[OMNIMIND_MCP_SERVER_NAME];
+  const status = result.data?.[HARNESSOS_MCP_SERVER_NAME];
   if (status?.status === "connected") {
     return;
   }
@@ -1006,7 +1006,7 @@ function isMatchingHarnessPolicyDelivery(
 ): boolean {
   return (
     delivery?.sessionId === input.sessionId &&
-    delivery.policyVersion === OMNIMIND_HARNESS_POLICY_VERSION &&
+    delivery.policyVersion === HARNESSOS_HARNESS_POLICY_VERSION &&
     delivery.gatewayControlAvailable === input.gatewayControlAvailable
   );
 }
@@ -1024,7 +1024,7 @@ function buildOpenCodeResumeCursor(input: {
       ? {
           harnessPolicyDelivery: {
             sessionId: input.openCodeSessionId,
-            policyVersion: OMNIMIND_HARNESS_POLICY_VERSION,
+            policyVersion: HARNESSOS_HARNESS_POLICY_VERSION,
             gatewayControlAvailable: input.gatewayControlAvailable,
           },
         }

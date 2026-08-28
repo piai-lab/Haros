@@ -1668,7 +1668,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             // Creation milestones are reserved for the end-of-turn recap card.
             // The provider's actual OmniMind MCP tool rows remain visible here.
             const groupedEntries = row.groupedEntries.filter(
-              (workEntry) => !workEntry.omnimindThreadCreation,
+              (workEntry) => !workEntry.harnessosThreadCreation,
             );
             if (groupedEntries.length === 0) {
               return null;
@@ -2046,14 +2046,14 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 ? (goalAchievementByTurnId.get(row.message.turnId) ?? null)
                 : null;
             const allTurnWorkEntries = row.turnWorkEntries ?? [];
-            const omnimindThreadCreationRecaps = [
+            const harnessosThreadCreationRecaps = [
               ...new Map(
                 allTurnWorkEntries.flatMap((entry) =>
-                  entry.omnimindThreadCreation
+                  entry.harnessosThreadCreation
                     ? [
                         [
-                          entry.omnimindThreadCreation.operationId,
-                          entry.omnimindThreadCreation,
+                          entry.harnessosThreadCreation.operationId,
+                          entry.harnessosThreadCreation,
                         ] as const,
                       ]
                     : [],
@@ -2078,7 +2078,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     </div>
                   ) : null}
                   {!row.assistantTurnInProgress && row.showAssistantCopyButton
-                    ? omnimindThreadCreationRecaps.map((creation) => (
+                    ? harnessosThreadCreationRecaps.map((creation) => (
                         <div key={creation.operationId} className="mt-2 mb-1">
                           <OmniMindThreadCreationCard
                             creation={creation}

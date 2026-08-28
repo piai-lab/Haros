@@ -89,7 +89,7 @@ describe("099_BackfillAutomationRunThreadSource", () => {
           (
             'event-normal', 'thread', ${normalThreadId}, 1, 'thread.created',
             '2026-08-01T10:00:00.000Z', 'command-normal', 'client',
-            ${`{"threadId":"${normalThreadId}","title":"Normal","creationSource":"omnimind_mcp"}`}, '{}'
+            ${`{"threadId":"${normalThreadId}","title":"Normal","creationSource":"harnessos_mcp"}`}, '{}'
           )
       `;
 
@@ -127,7 +127,7 @@ describe("099_BackfillAutomationRunThreadSource", () => {
         })),
         [
           { eventId: "event-dedicated", creationSource: undefined },
-          { eventId: "event-normal", creationSource: "omnimind_mcp" },
+          { eventId: "event-normal", creationSource: "harnessos_mcp" },
           { eventId: "event-run", creationSource: "automation_run" },
         ],
       );

@@ -60,7 +60,7 @@ export class StartupError extends Data.TaggedError("StartupError")<{
   readonly cause?: unknown;
 }> {}
 
-const DESKTOP_SHUTDOWN_TOKEN_ENV_KEY = "OMNIMIND_DESKTOP_SHUTDOWN_TOKEN";
+const DESKTOP_SHUTDOWN_TOKEN_ENV_KEY = "HARNESSOS_DESKTOP_SHUTDOWN_TOKEN";
 
 function consumeDesktopShutdownTokenFromProcessEnvironment(): string | undefined {
   const matchingKeys =
@@ -83,7 +83,7 @@ interface CliInput {
   readonly mode: Option.Option<RuntimeMode>;
   readonly port: Option.Option<number>;
   readonly host: Option.Option<string>;
-  readonly omnimindHome: Option.Option<string>;
+  readonly harnessosHome: Option.Option<string>;
   readonly devUrl: Option.Option<URL>;
   readonly publicUrl: Option.Option<URL>;
   readonly allowInsecureRemote: BooleanFlagInput;
@@ -118,7 +118,7 @@ export interface CliConfigShape {
  * CliConfig - Service tag for startup CLI/runtime helpers.
  */
 export class CliConfig extends ServiceMap.Service<CliConfig, CliConfigShape>()(
-  "omnimind/main/CliConfig",
+  "harnessos/main/CliConfig",
 ) {
   static readonly layer = Layer.effect(
     CliConfig,
@@ -138,7 +138,7 @@ export class CliConfig extends ServiceMap.Service<CliConfig, CliConfigShape>()(
 }
 
 const CliEnvConfig = Config.all({
-  mode: Config.string("OMNIMIND_MODE").pipe(
+  mode: Config.string("HARNESSOS_MODE").pipe(
     Config.option,
     Config.map(
       Option.match<RuntimeMode, string>({
@@ -147,32 +147,32 @@ const CliEnvConfig = Config.all({
       }),
     ),
   ),
-  port: Config.port("OMNIMIND_PORT").pipe(Config.option, Config.map(Option.getOrUndefined)),
-  host: Config.string("OMNIMIND_HOST").pipe(Config.option, Config.map(Option.getOrUndefined)),
-  omnimindHome: Config.string("OMNIMIND_HOME").pipe(
+  port: Config.port("HARNESSOS_PORT").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  host: Config.string("HARNESSOS_HOST").pipe(Config.option, Config.map(Option.getOrUndefined)),
+  harnessosHome: Config.string("HARNESSOS_HOME").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
   devUrl: Config.url("VITE_DEV_SERVER_URL").pipe(Config.option, Config.map(Option.getOrUndefined)),
-  publicUrl: Config.url("OMNIMIND_PUBLIC_URL").pipe(
+  publicUrl: Config.url("HARNESSOS_PUBLIC_URL").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  allowInsecureRemote: optionalBooleanEnvironmentConfig("OMNIMIND_ALLOW_INSECURE_REMOTE"),
-  noBrowser: optionalBooleanEnvironmentConfig("OMNIMIND_NO_BROWSER"),
-  authToken: Config.string("OMNIMIND_AUTH_TOKEN").pipe(
+  allowInsecureRemote: optionalBooleanEnvironmentConfig("HARNESSOS_ALLOW_INSECURE_REMOTE"),
+  noBrowser: optionalBooleanEnvironmentConfig("HARNESSOS_NO_BROWSER"),
+  authToken: Config.string("HARNESSOS_AUTH_TOKEN").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
-  desktopShutdownToken: Config.string("OMNIMIND_DESKTOP_SHUTDOWN_TOKEN").pipe(
+  desktopShutdownToken: Config.string("HARNESSOS_DESKTOP_SHUTDOWN_TOKEN").pipe(
     Config.option,
     Config.map(Option.getOrUndefined),
   ),
   autoBootstrapProjectFromCwd: optionalBooleanEnvironmentConfig(
-    "OMNIMIND_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
+    "HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
   ),
-  logProviderEvents: optionalBooleanEnvironmentConfig("OMNIMIND_LOG_PROVIDER_EVENTS"),
-  logWebSocketEvents: optionalBooleanEnvironmentConfig("OMNIMIND_LOG_WS_EVENTS"),
+  logProviderEvents: optionalBooleanEnvironmentConfig("HARNESSOS_LOG_PROVIDER_EVENTS"),
+  logWebSocketEvents: optionalBooleanEnvironmentConfig("HARNESSOS_LOG_WS_EVENTS"),
 });
 
 const ServerConfigLive = (input: CliInput) =>
@@ -214,7 +214,7 @@ const ServerConfigLive = (input: CliInput) =>
       if (configuredPublicUrl && publicUrl === undefined) {
         return yield* new StartupError({
           message:
-            "OMNIMIND_PUBLIC_URL/--public-url must be an HTTPS root origin without credentials, path, query, or fragment (for example https://omnimind.example.com).",
+            "HARNESSOS_PUBLIC_URL/--public-url must be an HTTPS root origin without credentials, path, query, or fragment (for example https://omnimind.example.com).",
         });
       }
       const allowInsecureRemote = resolveBooleanConfig(
@@ -222,7 +222,7 @@ const ServerConfigLive = (input: CliInput) =>
         env.allowInsecureRemote,
         false,
       );
-      const configuredHome = Option.getOrUndefined(input.omnimindHome) ?? env.omnimindHome;
+      const configuredHome = Option.getOrUndefined(input.harnessosHome) ?? env.harnessosHome;
       const baseDir = yield* resolveBaseDir(configuredHome);
       const userHomeDir = OS.homedir();
       const derivedPaths = yield* deriveServerPaths(baseDir, devUrl);
@@ -387,7 +387,7 @@ const makeServerProgram = (input: CliInput) =>
     yield* startThreadRetentionJob(orchestrationEngine, projectionSnapshotQuery);
     // Optional Claude OAuth keepalive. Disabled by default because it touches
     // Claude Code auth data in the background; users can opt in with
-    // OMNIMIND_CLAUDE_KEEPALIVE=1.
+    // HARNESSOS_CLAUDE_KEEPALIVE=1.
     yield* Effect.forkChild(
       Effect.gen(function* () {
         const settings = yield* serverSettings.getSettings;
@@ -411,7 +411,7 @@ const makeServerProgram = (input: CliInput) =>
           "INSECURE REMOTE ACCESS ENABLED: credentials and session traffic are unencrypted",
           {
             pairingUrl: startupPairingUrl,
-            hint: "Use only on a trusted LAN. Configure OMNIMIND_PUBLIC_URL behind HTTPS for protected remote access.",
+            hint: "Use only on a trusted LAN. Configure HARNESSOS_PUBLIC_URL behind HTTPS for protected remote access.",
           },
         );
       }
@@ -460,8 +460,8 @@ const hostFlag = Flag.string("host").pipe(
   Flag.withDescription("Host/interface to bind (for example 127.0.0.1, 0.0.0.0, or a Tailnet IP)."),
   Flag.optional,
 );
-const omnimindHomeFlag = Flag.string("home-dir").pipe(
-  Flag.withDescription("Base directory for all OmniMind data (equivalent to OMNIMIND_HOME)."),
+const harnessosHomeFlag = Flag.string("home-dir").pipe(
+  Flag.withDescription("Base directory for all OmniMind data (equivalent to HARNESSOS_HOME)."),
   Flag.optional,
 );
 const devUrlFlag = Flag.string("dev-url").pipe(
@@ -472,13 +472,13 @@ const devUrlFlag = Flag.string("dev-url").pipe(
 const publicUrlFlag = Flag.string("public-url").pipe(
   Flag.withSchema(Schema.URLFromString),
   Flag.withDescription(
-    "HTTPS public root origin provided by a TLS-terminating reverse proxy (equivalent to OMNIMIND_PUBLIC_URL).",
+    "HTTPS public root origin provided by a TLS-terminating reverse proxy (equivalent to HARNESSOS_PUBLIC_URL).",
   ),
   Flag.optional,
 );
 const allowInsecureRemoteFlag = optionalBooleanFlag("allow-insecure-remote", {
   description:
-    "Explicitly allow unencrypted authenticated remote access on a trusted LAN (equivalent to OMNIMIND_ALLOW_INSECURE_REMOTE).",
+    "Explicitly allow unencrypted authenticated remote access on a trusted LAN (equivalent to HARNESSOS_ALLOW_INSECURE_REMOTE).",
 });
 const noBrowserFlag = optionalBooleanFlag("no-browser", {
   description: "Disable automatic browser opening.",
@@ -495,11 +495,11 @@ const autoBootstrapProjectFromCwdFlag = optionalBooleanFlag("auto-bootstrap-proj
 });
 const logProviderEventsFlag = optionalBooleanFlag("log-provider-events", {
   description:
-    "Emit native/canonical provider NDJSON logs for debugging (equivalent to OMNIMIND_LOG_PROVIDER_EVENTS).",
+    "Emit native/canonical provider NDJSON logs for debugging (equivalent to HARNESSOS_LOG_PROVIDER_EVENTS).",
 });
 const logWebSocketEventsFlag = optionalBooleanFlag("log-websocket-events", {
   description:
-    "Emit server-side logs for outbound WebSocket push traffic (equivalent to OMNIMIND_LOG_WS_EVENTS).",
+    "Emit server-side logs for outbound WebSocket push traffic (equivalent to HARNESSOS_LOG_WS_EVENTS).",
   aliases: ["log-ws-events"],
 });
 
@@ -511,7 +511,7 @@ const mcpIntegrationFlag = Flag.string("integration").pipe(
 );
 
 // Base `omnimind` command defined before the MCP subcommands so they can yield
-// its parsed input (notably `--home-dir` / `omnimindHome`) via Effect's command
+// its parsed input (notably `--home-dir` / `harnessosHome`) via Effect's command
 // context. This avoids a duplicate `--home-dir` flag between the root command
 // and its MCP subcommands, which the Effect CLI assigns to the parent and
 // leaves the subcommand flag unset.
@@ -519,7 +519,7 @@ const baseServerCommand = Command.make("omnimind", {
   mode: modeFlag,
   port: portFlag,
   host: hostFlag,
-  omnimindHome: omnimindHomeFlag,
+  harnessosHome: harnessosHomeFlag,
   devUrl: devUrlFlag,
   publicUrl: publicUrlFlag,
   allowInsecureRemote: allowInsecureRemoteFlag,
@@ -536,7 +536,7 @@ const mcpServeCommand = Command.make(
   ({ integration }) =>
     Effect.gen(function* () {
       const parent = yield* baseServerCommand;
-      const baseDir = resolveExternalMcpBaseDir(Option.getOrUndefined(parent.omnimindHome));
+      const baseDir = resolveExternalMcpBaseDir(Option.getOrUndefined(parent.harnessosHome));
       yield* Effect.tryPromise({
         try: () =>
           serveExternalMcpStdio({
@@ -563,7 +563,7 @@ const mcpPairCommand = Command.make(
   ({ code }) =>
     Effect.gen(function* () {
       const parent = yield* baseServerCommand;
-      const baseDir = resolveExternalMcpBaseDir(Option.getOrUndefined(parent.omnimindHome));
+      const baseDir = resolveExternalMcpBaseDir(Option.getOrUndefined(parent.harnessosHome));
       const paired = yield* Effect.tryPromise({
         try: () =>
           pairExternalMcpClient({
@@ -601,7 +601,7 @@ const serverStatusCommand = Command.make(
       const discovered = Option.isSome(url)
         ? { url: url.value }
         : (() => {
-            const baseDir = resolveExternalMcpBaseDir(Option.getOrUndefined(parent.omnimindHome));
+            const baseDir = resolveExternalMcpBaseDir(Option.getOrUndefined(parent.harnessosHome));
             try {
               const runtime = discoverServerRuntime(baseDir);
               return { url: runtime.state.origin, runtime };

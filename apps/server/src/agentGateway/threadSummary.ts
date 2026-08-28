@@ -3,8 +3,8 @@
  *
  * Converts full orchestration read-model shapes into compact, token-friendly
  * summaries: a derived one-word thread status, shell summaries for
- * `omnimind_list_threads`, and truncated/paginated message views for
- * `omnimind_read_thread`. Kept pure so the shaping rules are unit-testable.
+ * `harnessos_list_threads`, and truncated/paginated message views for
+ * `harnessos_read_thread`. Kept pure so the shaping rules are unit-testable.
  *
  * @module agentGateway/threadSummary
  */

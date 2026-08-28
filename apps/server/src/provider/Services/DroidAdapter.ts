@@ -13,5 +13,5 @@ export interface DroidAdapterShape extends ProviderAdapterShape<ProviderAdapterE
 }
 
 export class DroidAdapter extends ServiceMap.Service<DroidAdapter, DroidAdapterShape>()(
-  "omnimind/provider/Services/DroidAdapter",
+  "harnessos/provider/Services/DroidAdapter",
 ) {}

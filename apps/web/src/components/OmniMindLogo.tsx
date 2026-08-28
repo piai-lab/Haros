@@ -15,20 +15,21 @@ export interface OmniMindLogoProps extends Omit<SVGProps<SVGSVGElement>, "childr
   readonly title?: string;
 }
 
-const LOGO_ASSETS: Record<OmniMindLogoVariant, { readonly light: string; readonly dark: string }> = {
-  satin: {
-    light: "/brand/omnimind-logo-satin.svg",
-    dark: "/brand/omnimind-logo-satin-dark.svg",
-  },
-  flat: {
-    light: "/brand/omnimind-logo-flat.svg",
-    dark: "/brand/omnimind-logo-flat-dark.svg",
-  },
-  mono: {
-    light: "/brand/omnimind-logo-mono-brand.svg",
-    dark: "/brand/omnimind-logo-mono-brand.svg",
-  },
-};
+const LOGO_ASSETS: Record<OmniMindLogoVariant, { readonly light: string; readonly dark: string }> =
+  {
+    satin: {
+      light: "/brand/omnimind-logo-satin.svg",
+      dark: "/brand/omnimind-logo-satin-dark.svg",
+    },
+    flat: {
+      light: "/brand/omnimind-logo-flat.svg",
+      dark: "/brand/omnimind-logo-flat-dark.svg",
+    },
+    mono: {
+      light: "/brand/omnimind-logo-mono-brand.svg",
+      dark: "/brand/omnimind-logo-mono-brand.svg",
+    },
+  };
 
 export function OmniMindLogo({
   size = 32,
@@ -43,9 +44,8 @@ export function OmniMindLogo({
   const titleId = `omnimind-logo-${useId().replace(/:/g, "")}`;
   const effectiveVariant = responsive && size <= 48 && variant === "satin" ? "flat" : variant;
   const assets = LOGO_ASSETS[effectiveVariant];
-  const microTransform = size <= 32
-    ? "translate(256 256) scale(1.12) translate(-256 -256)"
-    : undefined;
+  const microTransform =
+    size <= 32 ? "translate(256 256) scale(1.12) translate(-256 -256)" : undefined;
   const isNamed = Boolean(title || ariaLabel);
 
   return (

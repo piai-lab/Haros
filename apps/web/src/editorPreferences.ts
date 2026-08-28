@@ -1,7 +1,7 @@
 import { EDITORS, EditorId, NativeApi } from "@harnessos/contracts";
 import { getLocalStorageItem, setLocalStorageItem, useLocalStorage } from "./hooks/useLocalStorage";
 
-const LAST_EDITOR_KEY = "omnimind:last-editor";
+const LAST_EDITOR_KEY = "harnessos:last-editor";
 
 export function usePreferredEditor(availableEditors: ReadonlyArray<EditorId>) {
   const [lastEditor, setLastEditor] = useLocalStorage(LAST_EDITOR_KEY, null, EditorId);

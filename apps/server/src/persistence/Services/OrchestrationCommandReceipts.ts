@@ -85,5 +85,5 @@ export class OrchestrationCommandReceiptRepository extends ServiceMap.Service<
   OrchestrationCommandReceiptRepository,
   OrchestrationCommandReceiptRepositoryShape
 >()(
-  "omnimind/persistence/Services/OrchestrationCommandReceipts/OrchestrationCommandReceiptRepository",
+  "harnessos/persistence/Services/OrchestrationCommandReceipts/OrchestrationCommandReceiptRepository",
 ) {}

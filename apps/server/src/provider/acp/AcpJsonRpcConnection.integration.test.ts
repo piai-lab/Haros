@@ -135,7 +135,7 @@ describe("AcpSessionRuntime", () => {
             args: [mockAgentPath],
             env: {
               VITEST: "true",
-              OMNIMIND_ACP_FAIL_SESSION_NEW_ONCE: "1",
+              HARNESSOS_ACP_FAIL_SESSION_NEW_ONCE: "1",
             },
           },
           cwd: process.cwd(),
@@ -255,7 +255,7 @@ describe("AcpSessionRuntime", () => {
           spawn: {
             command: bunExe,
             args: [mockAgentPath],
-            env: { VITEST: "true", OMNIMIND_ACP_SUPPORT_SESSION_RESUME: "1" },
+            env: { VITEST: "true", HARNESSOS_ACP_SUPPORT_SESSION_RESUME: "1" },
           },
           cwd: process.cwd(),
           resumeSessionId: "mock-session-1",
@@ -287,7 +287,7 @@ describe("AcpSessionRuntime", () => {
           spawn: {
             command: bunExe,
             args: [mockAgentPath],
-            env: { VITEST: "true", OMNIMIND_ACP_SUPPORT_SESSION_LOAD: "0" },
+            env: { VITEST: "true", HARNESSOS_ACP_SUPPORT_SESSION_LOAD: "0" },
           },
           cwd: process.cwd(),
           resumeSessionId: "mock-session-1",
@@ -331,9 +331,9 @@ describe("AcpSessionRuntime", () => {
             args: [mockAgentPath],
             env: {
               VITEST: "true",
-              OMNIMIND_ACP_SUPPORT_SESSION_FORK: "1",
-              OMNIMIND_ACP_EMIT_AVAILABLE_COMMANDS: "1",
-              OMNIMIND_ACP_MODE_CONFIG_ID: "autonomy_level",
+              HARNESSOS_ACP_SUPPORT_SESSION_FORK: "1",
+              HARNESSOS_ACP_EMIT_AVAILABLE_COMMANDS: "1",
+              HARNESSOS_ACP_MODE_CONFIG_ID: "autonomy_level",
             },
           },
           cwd: process.cwd(),
@@ -384,8 +384,8 @@ describe("AcpSessionRuntime", () => {
             args: [mockAgentPath],
             env: {
               VITEST: "true",
-              OMNIMIND_ACP_SUPPORT_SESSION_FORK: "1",
-              OMNIMIND_ACP_SUPPORT_SESSION_LOAD: "0",
+              HARNESSOS_ACP_SUPPORT_SESSION_FORK: "1",
+              HARNESSOS_ACP_SUPPORT_SESSION_LOAD: "0",
             },
           },
           cwd: process.cwd(),
@@ -542,7 +542,7 @@ describe("AcpSessionRuntime", () => {
             args: [mockAgentPath],
             env: {
               VITEST: "true",
-              OMNIMIND_ACP_EMIT_INTERLEAVED_ASSISTANT_TOOL_CALLS: "1",
+              HARNESSOS_ACP_EMIT_INTERLEAVED_ASSISTANT_TOOL_CALLS: "1",
             },
           },
           cwd: process.cwd(),
@@ -588,7 +588,7 @@ describe("AcpSessionRuntime", () => {
             args: [mockAgentPath],
             env: {
               VITEST: "true",
-              OMNIMIND_ACP_EMIT_UPSTREAM_ASSISTANT_MESSAGE_IDS: "1",
+              HARNESSOS_ACP_EMIT_UPSTREAM_ASSISTANT_MESSAGE_IDS: "1",
             },
           },
           cwd: process.cwd(),
@@ -637,7 +637,7 @@ describe("AcpSessionRuntime", () => {
             args: [mockAgentPath],
             env: {
               VITEST: "true",
-              OMNIMIND_ACP_EMIT_GENERIC_TOOL_PLACEHOLDERS: "1",
+              HARNESSOS_ACP_EMIT_GENERIC_TOOL_PLACEHOLDERS: "1",
             },
           },
           cwd: process.cwd(),
@@ -680,7 +680,7 @@ describe("AcpSessionRuntime", () => {
             args: [mockAgentPath],
             env: {
               VITEST: "true",
-              OMNIMIND_ACP_EMIT_REASONING_THEN_TOOL_CALL: "1",
+              HARNESSOS_ACP_EMIT_REASONING_THEN_TOOL_CALL: "1",
             },
           },
           cwd: process.cwd(),
@@ -865,7 +865,7 @@ describe("AcpSessionRuntime", () => {
             args: [mockAgentPath],
             env: {
               VITEST: "true",
-              OMNIMIND_ACP_REQUEST_LOG_PATH: requestLogPath,
+              HARNESSOS_ACP_REQUEST_LOG_PATH: requestLogPath,
             },
           },
           cwd: process.cwd(),

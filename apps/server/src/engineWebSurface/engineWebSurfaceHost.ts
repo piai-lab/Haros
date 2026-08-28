@@ -10,9 +10,7 @@ import type {
 } from "@harnessos/contracts";
 import { parseEngineWebSurfaceThemeSnapshot } from "@harnessos/contracts";
 
-const ENGINE_WEB_SURFACE_PRESENTER_SYMBOL = Symbol.for(
-  "omnimind.engineWebSurface.presenter.v1",
-);
+const ENGINE_WEB_SURFACE_PRESENTER_SYMBOL = Symbol.for("omnimind.engineWebSurface.presenter.v1");
 const ENGINE_WEB_SURFACE_INTENT_TTL_MS = 10 * 60 * 1_000;
 const MAX_ENGINE_WEB_SURFACE_URL_LENGTH = 2_048;
 const MIN_SESSION_TOKEN_LENGTH = 8;
@@ -227,8 +225,7 @@ export function extractTypedEngineWebSurface(
     typeof surfaceId !== "string" ||
     surfaceId.length < 8 ||
     surfaceId.length > 128 ||
-    surface?.status !== "pending" &&
-    surface?.status !== "observing"
+    (surface?.status !== "pending" && surface?.status !== "observing")
   ) {
     return undefined;
   }

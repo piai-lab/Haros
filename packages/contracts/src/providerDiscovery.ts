@@ -116,7 +116,7 @@ export type ProviderSkillsCatalogInput = typeof ProviderSkillsCatalogInput.Type;
 
 export const ProviderSkillsCatalogResult = Schema.Struct({
   skills: Schema.Array(ProviderSkillDescriptor),
-  omnimindSkillsDir: Schema.optional(TrimmedNonEmptyString),
+  harnessosSkillsDir: Schema.optional(TrimmedNonEmptyString),
 });
 export type ProviderSkillsCatalogResult = typeof ProviderSkillsCatalogResult.Type;
 

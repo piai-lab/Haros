@@ -2,7 +2,7 @@ import { Schema } from "effect";
 import { TrimmedString } from "./baseSchemas";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
 import { ModelSelection, ProviderKind, ThreadEnvironmentMode } from "./orchestration";
-import { isOmniMindAgentPromptContent, OMNIMIND_AGENT_PROMPT_MAX_BYTES } from "./editableText";
+import { isOmniMindAgentPromptContent, HARNESSOS_AGENT_PROMPT_MAX_BYTES } from "./editableText";
 import { BuiltInToolGroupOverrides } from "./agentTools";
 
 const StringSetting = TrimmedString.check(Schema.isMaxLength(4096));
@@ -20,7 +20,7 @@ export const OmniMindServerProviderSettings = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultPrompt: Schema.NullOr(
     Schema.String.check(
-      Schema.isMaxLength(OMNIMIND_AGENT_PROMPT_MAX_BYTES),
+      Schema.isMaxLength(HARNESSOS_AGENT_PROMPT_MAX_BYTES),
       Schema.makeFilter(isOmniMindAgentPromptContent),
     ),
   ).pipe(Schema.withDecodingDefault(() => null)),

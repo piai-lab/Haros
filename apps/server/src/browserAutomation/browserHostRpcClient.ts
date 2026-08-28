@@ -279,7 +279,7 @@ function assertCompatibleHostInfo(
   const methods = metadata?.methods;
   if (
     protocolVersion !== 1 ||
-    (info?.type !== undefined && info.type !== "omnimind-browser-host") ||
+    (info?.type !== undefined && info.type !== "harnessos-browser-host") ||
     (sessionId !== undefined && sessionId !== expectedSessionId) ||
     (methods !== undefined && (!Array.isArray(methods) || !methods.includes(requiredMethod)))
   ) {
@@ -298,11 +298,10 @@ export interface BrowserHostEngineWebSurfaceContextCall {
   readonly signal?: AbortSignal;
 }
 
-export interface BrowserHostEngineWebSurfaceCall
-  extends BrowserHostEngineWebSurfaceContextCall {
+export interface BrowserHostEngineWebSurfaceCall extends BrowserHostEngineWebSurfaceContextCall {
   readonly threadId: ThreadId;
   readonly surfaceId: string;
-	readonly preserveTab?: boolean;
+  readonly preserveTab?: boolean;
 }
 
 async function callAuthenticatedBrowserHostMethod(
@@ -363,7 +362,7 @@ export function settleBrowserHostEngineWebSurface(
   return callAuthenticatedBrowserHostMethod(input, "settleEngineWebSurface", {
     thread_id: input.threadId,
     surface_id: input.surfaceId,
-	...(input.preserveTab === true ? { preserve_tab: true } : {}),
+    ...(input.preserveTab === true ? { preserve_tab: true } : {}),
   });
 }
 
@@ -408,16 +407,16 @@ export async function callBrowserHostTool(input: BrowserHostToolCall): Promise<u
 }
 
 export function resolveBrowserHostPipePath(env: NodeJS.ProcessEnv = process.env): string | null {
-  return env.OMNIMIND_BROWSER_HOST_PIPE_PATH?.trim() || null;
+  return env.HARNESSOS_BROWSER_HOST_PIPE_PATH?.trim() || null;
 }
 
 let inheritedCapabilityFromFd: string | null | undefined;
 
 export function resolveBrowserHostCapability(env: NodeJS.ProcessEnv = process.env): string | null {
-  const direct = env.OMNIMIND_BROWSER_HOST_CAPABILITY?.trim();
+  const direct = env.HARNESSOS_BROWSER_HOST_CAPABILITY?.trim();
   if (direct && Buffer.byteLength(direct, "utf8") >= 32) return direct;
 
-  const rawFd = env.OMNIMIND_BROWSER_HOST_CAPABILITY_FD?.trim();
+  const rawFd = env.HARNESSOS_BROWSER_HOST_CAPABILITY_FD?.trim();
   if (!rawFd || !/^\d+$/.test(rawFd)) return null;
   const fd = Number(rawFd);
   if (!Number.isSafeInteger(fd) || fd < 3 || fd > 255) return null;

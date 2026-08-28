@@ -109,8 +109,8 @@ describe("agent gateway stdio proxy", () => {
       child = spawn(process.execPath, [scriptPath], {
         env: {
           ...process.env,
-          OMNIMIND_AGENT_GATEWAY_URL: `http://127.0.0.1:${address.port}/mcp`,
-          OMNIMIND_AGENT_GATEWAY_TOKEN: "test-token",
+          HARNESSOS_AGENT_GATEWAY_URL: `http://127.0.0.1:${address.port}/mcp`,
+          HARNESSOS_AGENT_GATEWAY_TOKEN: "test-token",
         },
         stdio: ["pipe", "pipe", "pipe"],
       });
@@ -236,8 +236,8 @@ describe("agent gateway stdio proxy", () => {
       );
       const providerEnvironment = {
         PATH: process.env.PATH,
-        OMNIMIND_AGENT_GATEWAY_URL: `http://127.0.0.1:${address.port}/mcp`,
-        OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN: "one-shot-bootstrap",
+        HARNESSOS_AGENT_GATEWAY_URL: `http://127.0.0.1:${address.port}/mcp`,
+        HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN: "one-shot-bootstrap",
       };
       child = spawn(process.execPath, [scriptPath], {
         env: providerEnvironment,
@@ -267,9 +267,9 @@ describe("agent gateway stdio proxy", () => {
           process.execPath,
           [
             "-e",
-            `const url = process.env.OMNIMIND_AGENT_GATEWAY_URL + "/bootstrap";
-             fetch(url, { method: "POST", headers: { Authorization: "Bearer " + process.env.OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN } })
-               .then((response) => process.stdout.write(JSON.stringify({ status: response.status, bearer: process.env.OMNIMIND_AGENT_GATEWAY_TOKEN ?? null })))
+            `const url = process.env.HARNESSOS_AGENT_GATEWAY_URL + "/bootstrap";
+             fetch(url, { method: "POST", headers: { Authorization: "Bearer " + process.env.HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN } })
+               .then((response) => process.stdout.write(JSON.stringify({ status: response.status, bearer: process.env.HARNESSOS_AGENT_GATEWAY_TOKEN ?? null })))
                .catch((error) => { console.error(error); process.exitCode = 1; });`,
           ],
           { env: providerEnvironment, stdio: ["ignore", "pipe", "pipe"] },
@@ -337,8 +337,8 @@ describe("agent gateway stdio proxy", () => {
       child = spawn(process.execPath, [scriptPath], {
         env: {
           PATH: process.env.PATH,
-          OMNIMIND_AGENT_GATEWAY_URL: `http://127.0.0.1:${address.port}/mcp`,
-          OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN: "hung-bootstrap",
+          HARNESSOS_AGENT_GATEWAY_URL: `http://127.0.0.1:${address.port}/mcp`,
+          HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN: "hung-bootstrap",
         },
         stdio: ["pipe", "pipe", "pipe"],
       });

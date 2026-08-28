@@ -1,4 +1,4 @@
-// omnimind-device-helper — the native side of OmniMind's Device Pane.
+// harnessos-device-helper — the native side of OmniMind's Device Pane.
 //
 // Protocol: newline-delimited JSON-RPC 2.0 over stdio (one object per line).
 // Frames do not travel on stdio; they go to the Unix socket given to
@@ -592,7 +592,7 @@ var signalSources: [DispatchSourceSignal] = []
 // Requests are served on a background queue: several handlers block (HID holds,
 // synchronous accessibility XPC), and the main run loop must stay free to
 // service the display callbacks that drive the frame stream.
-let requestQueue = DispatchQueue(label: "dev.omnimind.device-helper.rpc")
+let requestQueue = DispatchQueue(label: "ai.piai.harnessos.device-helper.rpc")
 
 func handleLine(_ line: Data) {
   guard !line.isEmpty else { return }

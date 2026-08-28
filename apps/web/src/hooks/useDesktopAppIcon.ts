@@ -9,10 +9,7 @@ export type DesktopAppIconMutationResult =
   | { readonly state: "saved"; readonly icon: DesktopAppIcon }
   | { readonly state: "failed"; readonly icon: DesktopAppIcon; readonly error: unknown };
 
-type DesktopAppIconBridge = Pick<
-  NonNullable<Window["desktopBridge"]>,
-  "getAppIcon" | "setAppIcon"
->;
+type DesktopAppIconBridge = Pick<NonNullable<Window["desktopBridge"]>, "getAppIcon" | "setAppIcon">;
 
 export async function readDesktopAppIconFromNative(
   bridge: DesktopAppIconBridge | undefined,

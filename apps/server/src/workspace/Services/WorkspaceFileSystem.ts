@@ -68,4 +68,4 @@ export interface WorkspaceFileSystemShape {
 export class WorkspaceFileSystem extends ServiceMap.Service<
   WorkspaceFileSystem,
   WorkspaceFileSystemShape
->()("omnimind/workspace/Services/WorkspaceFileSystem") {}
+>()("harnessos/workspace/Services/WorkspaceFileSystem") {}

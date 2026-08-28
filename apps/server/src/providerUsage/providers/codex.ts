@@ -2,10 +2,7 @@
 // Purpose: Read Codex account limits through Codex's own app-server protocol. OmniMind does not
 // parse, refresh, copy, or write Codex credentials; authentication remains native to Codex.
 
-import type {
-  ServerProviderUsageLimit,
-  ServerProviderUsageLine,
-} from "@harnessos/contracts";
+import type { ServerProviderUsageLimit, ServerProviderUsageLine } from "@harnessos/contracts";
 
 import { createLogger } from "../../logger";
 import {
@@ -101,12 +98,7 @@ export const codexUsageFetcher: ProviderUsageFetcher = {
   },
   async fetch(ctx) {
     if (!ctx.codexRateLimits) {
-      return errorSnapshot(
-        "codex",
-        ctx.nowMs,
-        SOURCE,
-        "Codex app-server usage is unavailable.",
-      );
+      return errorSnapshot("codex", ctx.nowMs, SOURCE, "Codex app-server usage is unavailable.");
     }
 
     try {
@@ -120,12 +112,7 @@ export const codexUsageFetcher: ProviderUsageFetcher = {
       });
       return isCodexAuthenticationError(cause)
         ? needsAuthSnapshot("codex", ctx.nowMs, SOURCE)
-        : errorSnapshot(
-            "codex",
-            ctx.nowMs,
-            SOURCE,
-            "Codex could not report account limits.",
-          );
+        : errorSnapshot("codex", ctx.nowMs, SOURCE, "Codex could not report account limits.");
     }
   },
 };

@@ -280,7 +280,7 @@ export type ThreadDeviceState = typeof ThreadDeviceState.Type;
 // ── Control-plane inputs and results ─────────────────────────────────
 
 /** Devices OmniMind itself booted are capped globally; viewing already-booted devices is not. */
-export const DEVICE_OMNIMIND_BOOT_LIMIT = 3;
+export const DEVICE_HARNESSOS_BOOT_LIMIT = 3;
 
 const DeviceTargetInput = Schema.Struct({ udid: DeviceUdid });
 
@@ -300,7 +300,7 @@ export const DeviceBootInput = DeviceTargetInput;
 export type DeviceBootInput = typeof DeviceBootInput.Type;
 
 /**
- * Boot is refusable rather than fatal: past DEVICE_OMNIMIND_BOOT_LIMIT the caller
+ * Boot is refusable rather than fatal: past DEVICE_HARNESSOS_BOOT_LIMIT the caller
  * is handed the shutdown candidates so the pane can prompt instead of erroring.
  */
 export const DeviceBootResult = Schema.Union([

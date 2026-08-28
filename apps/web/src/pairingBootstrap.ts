@@ -35,7 +35,8 @@ export function createPairingFailureMarkup(locale: StartupSurfaceLocale = "en"):
       ? {
           eyebrow: "安全配对已中断",
           title: "此配对链接无法使用",
-          message: "链接可能不完整、已过期或已被使用。请从 OmniMind Server 生成新的配对链接后重试。",
+          message:
+            "链接可能不完整、已过期或已被使用。请从 OmniMind Server 生成新的配对链接后重试。",
         }
       : {
           eyebrow: "Secure pairing interrupted",

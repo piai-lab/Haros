@@ -15,7 +15,7 @@
  * @module deviceHelperCache
  */
 
-/** `~/Library/Caches/omnimind/device-helper` — callers pass their own home dir. */
+/** `~/Library/Caches/harnessos/device-helper` — callers pass their own home dir. */
 export const DEVICE_HELPER_CACHE_SEGMENTS = [
   "Library",
   "Caches",
@@ -23,10 +23,10 @@ export const DEVICE_HELPER_CACHE_SEGMENTS = [
   "device-helper",
 ] as const;
 
-export const DEVICE_HELPER_BINARY_NAME = "omnimind-device-helper";
+export const DEVICE_HELPER_BINARY_NAME = "harnessos-device-helper";
 
 /** Physical helper source directory passed from packaged desktop to its backend child. */
-export const DEVICE_HELPER_SOURCE_DIR_ENV = "OMNIMIND_DEVICE_HELPER_SOURCE_DIR";
+export const DEVICE_HELPER_SOURCE_DIR_ENV = "HARNESSOS_DEVICE_HELPER_SOURCE_DIR";
 
 /**
  * Derive the cache key from `xcodebuild -version` output, which looks like:

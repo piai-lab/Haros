@@ -105,7 +105,7 @@ jobs:
         shell: bash
         env:
           NODE_OPTIONS: --max-old-space-size=4096
-          OMNIMIND_PUBLISH_RELEASE: "false"
+          HARNESSOS_PUBLISH_RELEASE: "false"
           VITE_PUBLIC_SITE_ORIGIN: https://omnimind.wisdomeyes.cn
           VITE_FEEDBACK_ENDPOINT: https://omnimind.wisdomeyes.cn/api/v1/feedback
           SOURCE_COMMIT: ${{ needs.preflight.outputs.source_commit }}

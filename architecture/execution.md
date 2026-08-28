@@ -118,7 +118,7 @@ OmniMind Agent runtime 拥有：
 - Pi-compatible PackageManager/ResourceLoader、Extensions、Skills、Prompts、Tools、MCP 与独立 private state；
 - OmniMind Agent native error、raw event 与 UI request。
 
-其当前代码与 ecosystem compatibility baseline 是 Pi stable `v0.84.3`，但产物使用 OmniMind Agent 自身 version、bundle identity、configuration 与 state root，并随应用发布。为了同时隔离 global 与 project-local state，OmniMind Agent 必须使用独立 Pi-derived build/package，或让 upstream config-dir 在 runtime instance 上显式可配置；仅传入另一 global `agentDir` 不足以证明隔离。其 global settings/session/package 与 project-local settings/resources 都使用 `.omnimind`。后续优化不受 stock Pi release cadence 约束；Pi lineage、license 与修改边界必须可追踪。
+其当前代码与 ecosystem compatibility baseline 是 Pi stable `v0.84.3`，但产物使用 OmniMind Agent 自身 version、bundle identity、configuration 与 state root，并随应用发布。为了同时隔离 global 与 project-local state，OmniMind Agent 必须使用独立 Pi-derived build/package，或让 upstream config-dir 在 runtime instance 上显式可配置；仅传入另一 global `agentDir` 不足以证明隔离。其 global settings/session/package 与 project-local settings/resources 都使用 `.harnessos`。后续优化不受 stock Pi release cadence 约束；Pi lineage、license 与修改边界必须可追踪。
 
 stock Pi 继续由 inherited `pi` adapter 拥有其 Session、Pi version、configuration、PackageManager/ResourceLoader 和 `.pi` native state。只有用户显式选择 stock Pi 后，该 Provider 才可按原生 contract 访问自己的 state；OmniMind Agent、产品 reset 与后台 discovery 都不得读取、迁移、同步或改写它。两者可共享窄的 Pi-family transport/event bridge，只要行为确实同构；不得共享 Provider identity、Session cursor、agentDir/state root、Package install state 或 diagnostics。
 
@@ -153,7 +153,7 @@ OmniMind Agent 提示词设置包含两个不同且唯一的持久 authority。�
 
 这两项设置属于 canonical `provider === "omnimind"`，因此对该 Engine 的 Chat 与 Agent Session 同样进入 Session snapshot；`workSurface` 只选择 Chat/Agent contract、Project trust 与工具投影，不过滤 default/custom rules。其他 Provider 一律不读取这些值。初始 Session 必须在首个 request 前把当前 customized default 传入 service-based native creation；保存只更新 provider-global 持久事实，不解析或操作任何 Thread。已经存在的 Session 保持创建时的旧 snapshot，新的或由正常 Provider 生命周期重建的 Session 才读取当前值。底层 resource reload seam 继续归 Session/Extension 生命周期使用，但 Prompt Settings 不暴露逐对话 reload，也不在保存后批量重建 Session。
 
-自定义规则继续在既有 `.omnimind/agent` owner 上使用安全文件投影与 mutation seam。Host 必须复用 bundled runtime 的公开 discovery 来确定五个 global context candidate 中当前实际选中的 source，并继续让该 runtime 唯一拥有 precedence、`SYSTEM.md` / `APPEND_SYSTEM.md` 组合、Project shadow、Session resource snapshot 与 reload；Host 不复制选择或组合算法，不做每轮动态注入，不建立 Prompt registry/profile/history/cache、第二 loader 或跨 Engine 同步。固定候选 allowlist 只用于 typed contract、安全校验和选择 exact active source，不能反向成为 precedence authority。Settings 不再投影或 mutate `SYSTEM.md` / `APPEND_SYSTEM.md`，但高级用户手工文件的原生 discovery、replacement/append 与 Project shadow 语义保持不变。
+自定义规则继续在既有 `.harnessos/agent` owner 上使用安全文件投影与 mutation seam。Host 必须复用 bundled runtime 的公开 discovery 来确定五个 global context candidate 中当前实际选中的 source，并继续让该 runtime 唯一拥有 precedence、`SYSTEM.md` / `APPEND_SYSTEM.md` 组合、Project shadow、Session resource snapshot 与 reload；Host 不复制选择或组合算法，不做每轮动态注入，不建立 Prompt registry/profile/history/cache、第二 loader 或跨 Engine 同步。固定候选 allowlist 只用于 typed contract、安全校验和选择 exact active source，不能反向成为 precedence authority。Settings 不再投影或 mutate `SYSTEM.md` / `APPEND_SYSTEM.md`，但高级用户手工文件的原生 discovery、replacement/append 与 Project shadow 语义保持不变。
 
 Renderer 对自定义规则只提交 opaque source id、expected version 与 create/update/remove intent；绝对路径或 `displayPath` 不能成为写入 authority。Server 从唯一 `resolveOmniMindAgentDir` 根解析目标，只对 global context candidate 执行 containment、symlink/regular-file/identity、UTF-8、bounded-size 与并发版本检查，再以现有 atomic-write owner 完成 mutation。通用 editable-text 的 1 MiB 只作为调用 bundled discovery 前的 allocation guard；bundled helper 决定 active source 后，只有 active source 应用 contracts-owned 8 KiB/segment Prompt 编辑边界与文本规则。active 不可编辑时 snapshot 返回该资源 unavailable 和安全路径，默认提示词仍可用；被遮蔽的 9 KiB 候选不得阻断更高优先级的可编辑 active source。两段最大设置正文合计 16 KiB，按保守一 byte 至多一 token 的工程估计不超过当前最小 32k context window 的一半；这是为 native builder/tools/context/skills/messages 留余量的稳定跨模型边界，不是任意 tokenizer 的数学保证。读取 snapshot 不创建文件；no-op 不写、不 reload。OmniMind 进程内 mutation 串行化，update/remove 在 commit 前重新检查 source、identity 与 expected version；这是对非协作外部 editor 的乐观冲突检测，不是严格的跨进程 compare-and-replace/remove。Node 公开 `fs` 没有把 inode/version 条件与 `rename` 或 `unlink` 组成单个原子操作的 seam，最终检查与 commit 之间仍有极窄 TOCTOU 窗口；不得以 native addon、第二 writer、协作锁或 rollback 子系统填补。首次 create 继续由 shared atomic writer 的 link/`EEXIST` no-clobber 语义保证不覆盖 raced target。若未来 Node 或既有 owner 暴露真实 CAS，只在保持既有调用方行为不变时重新评估。
 
@@ -167,7 +167,7 @@ product-owned OmniMind Pi build 的默认 base 必须删除 Pi coding-assistant 
 
 `Model services / 模型服务` 只配置 OmniMind Agent 内置 Pi ModelRuntime 的 provider、authentication、model catalog 与 Pi-compatible custom provider；它不是跨 Engine credential center。Codex、Claude、OpenCode、stock Pi 等独立 Engine 继续由各自 adapter/native configuration 拥有登录、目录和 Session，凭据不得迁入 OmniMind Agent 的 private home。
 
-Server 通过 OmniMind-Agent-scoped typed surface 把 Pi 的 provider/auth/catalog capability 安全投影给 Web，authority 仍是锁定 Pi package 与 `.omnimind` 下的 Pi-compatible state：
+Server 通过 OmniMind-Agent-scoped typed surface 把 Pi 的 provider/auth/catalog capability 安全投影给 Web，authority 仍是锁定 Pi package 与 `.harnessos` 下的 Pi-compatible state：
 
 - provider、auth method/status、known/available model 与 network-refresh capability 来自 Pi ModelRuntime，不由 OmniMind 维护静态供应商/模型 capability 镜像；
 - Model-service discovery 的主入口只消费 Pi runtime 已暴露的 built-in/extension metadata；built-in 与经用户显式 intent、由 Pi 既有 ResourceLoader/Session owner 安全加载的 Extension provider 都是 V1 必达结果。被动页面不执行第三方 Extension，“通过 API 地址连接”只是低频 presentation 分支，Host 不为任何一条路径建立另一套 discovery、registry 或 catalog authority；
@@ -180,7 +180,7 @@ Server 通过 OmniMind-Agent-scoped typed surface 把 Pi 的 provider/auth/catal
 - custom provider 持久化优先采用 Pi 公开的 provider-config mutation API。锁定版本尚无该 API，维护者已授权在既有 product-owned Pi ModelConfig/ModelRuntime owner 内增加窄、typed、可删除的 mutation seam；它必须保证 locked read-modify-write、unknown-field preservation、原子替换和 Pi reload validation，待上游 API adopted 后删除。该授权不允许建立 `model-services.json`、Channel store、renderer/Host 文件写入或第二 parser/schema authority。
 - OmniMind model identity 只来自 exact user selection 或当前 Pi runtime catalog。Project、Terminal、Kanban、Automation 与其他 direct consumer 在没有 exact selection 时必须保持 null/fail closed；不得用 `DEFAULT_MODEL_BY_PROVIDER`、供应商品牌或退役 slug 合成 OmniMind binding。
 
-被动 Settings 投影还有更窄的安全门：Server 必须解析并证明 `.omnimind` agent root 的物理 containment，也必须把存在的 stock `.pi` root 解析为物理路径并拒绝 candidate 与该 root 或其子树重合；只比较 lexical `~/.pi` 不能排除 symlink/junction alias。这个隔离检查只允许读取 root path metadata，不得枚举、打开或读取 `.pi` 内的 credential、config、catalog、package 或 Session。所有 `.omnimind` 本地 config/cache read 都由同一个 no-follow、hard byte bound、caller-cancellable reader 完成；字符串路径正确或先检查再让 runtime 重新打开文件都不构成证明。不得用含 credential/header 的临时副本或 OmniMind 自建 `models.json` parser/schema 绕开此门。锁定 Pi API 无法注入该 reader 时，受影响的 projection 必须 typed fail，不能偷偷降级或读取。被动 mount 不加载/执行 extension；`origin: extension` 只可来自已经由显式 intent scope 加载并提供 provenance 的 Pi runtime。
+被动 Settings 投影还有更窄的安全门：Server 必须解析并证明 `.harnessos` agent root 的物理 containment，也必须把存在的 stock `.pi` root 解析为物理路径并拒绝 candidate 与该 root 或其子树重合；只比较 lexical `~/.pi` 不能排除 symlink/junction alias。这个隔离检查只允许读取 root path metadata，不得枚举、打开或读取 `.pi` 内的 credential、config、catalog、package 或 Session。所有 `.harnessos` 本地 config/cache read 都由同一个 no-follow、hard byte bound、caller-cancellable reader 完成；字符串路径正确或先检查再让 runtime 重新打开文件都不构成证明。不得用含 credential/header 的临时副本或 OmniMind 自建 `models.json` parser/schema 绕开此门。锁定 Pi API 无法注入该 reader 时，受影响的 projection 必须 typed fail，不能偷偷降级或读取。被动 mount 不加载/执行 extension；`origin: extension` 只可来自已经由显式 intent scope 加载并提供 provenance 的 Pi runtime。
 
 Model-service projection 不拥有 Composer/Project reference。需要把被引用但未配置的 service 加入列表时，只接受 Product State owner 给出的 exact stable service id，不能从品牌、产品默认或 model slug 推导。离线观察到 OAuth access token 到期只能投影 `refresh_required`；只有 provider-owned login/refresh 的明确失败证据才能称 `sign_in_expired`。
 
@@ -350,7 +350,7 @@ Package lifecycle 不跨 Provider归一：
 
 ## First-public storage
 
-V1 只保留 inherited orchestration 对 Project/Thread/Space command/event/projection 的一份 canonical product truth，并继续允许各 Provider 使用自己的 native/private state。OmniMind Agent 使用新的 `.omnimind` global/project-local namespace；stock Pi 的 `.pi` settings/packages/sessions 保持原样，不被产品或 OmniMind Agent 读取、迁移或写入。
+V1 只保留 inherited orchestration 对 Project/Thread/Space command/event/projection 的一份 canonical product truth，并继续允许各 Provider 使用自己的 native/private state。OmniMind Agent 使用新的 `.harnessos` global/project-local namespace；stock Pi 的 `.pi` settings/packages/sessions 保持原样，不被产品或 OmniMind Agent 读取、迁移或写入。
 
 不得为不同 Provider 建平行 Product databases，也不得为了清理历史发布 destructive rebuild。Provider native state 可以不同，但 Project/Thread/Space/Timeline 只有 inherited 一份。
 

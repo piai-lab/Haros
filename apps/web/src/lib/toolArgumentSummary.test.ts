@@ -9,7 +9,7 @@ import {
 describe("isPrefixedToolArgumentSummary", () => {
   it("recognizes `ToolName: {json}` and `ToolName: [json]` details", () => {
     expect(
-      isPrefixedToolArgumentSummary('mcp__omnimind__omnimind_read_thread: {"threadId":"c357"}'),
+      isPrefixedToolArgumentSummary('mcp__harnessos__harnessos_read_thread: {"threadId":"c357"}'),
     ).toBe(true);
     expect(isPrefixedToolArgumentSummary('ToolSearch: {"query":"select:Read"}')).toBe(true);
     expect(isPrefixedToolArgumentSummary('Edit: [{"old":"a","new":"b"}]')).toBe(true);
@@ -28,8 +28,8 @@ describe("toolArgumentSummaryToolName", () => {
     expect(toolArgumentSummaryToolName('ExitPlanMode: {"plan":"Ship it"}')).toBe("ExitPlanMode");
     expect(toolArgumentSummaryToolName("ExitPlanMode: truncated args…")).toBe("ExitPlanMode");
     expect(
-      toolArgumentSummaryToolName('mcp__omnimind__omnimind_read_thread: {"threadId":"c3"}'),
-    ).toBe("mcp__omnimind__omnimind_read_thread");
+      toolArgumentSummaryToolName('mcp__harnessos__harnessos_read_thread: {"threadId":"c3"}'),
+    ).toBe("mcp__harnessos__harnessos_read_thread");
   });
 
   it("returns null when there is no identifier prefix", () => {

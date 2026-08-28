@@ -28,7 +28,7 @@ interface KanbanUiStoreState {
   ) => Array<[string, KanbanOptimisticDispatchSnapshot]>;
 }
 
-const KANBAN_UI_STORAGE_KEY = "omnimind:kanban-ui:v1";
+const KANBAN_UI_STORAGE_KEY = "harnessos:kanban-ui:v1";
 // Stale card ids are harmless (ordering ignores unknown ids) but should not grow unbounded.
 const MAX_DRAFT_ORDER_LENGTH = 200;
 

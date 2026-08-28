@@ -8,7 +8,7 @@ import * as PlatformError from "effect/PlatformError";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import { vi } from "vitest";
 
-import { OMNIMIND_CODEX_HOME_OVERLAY_DIR } from "../../codexHomePaths";
+import { HARNESSOS_CODEX_HOME_OVERLAY_DIR } from "../../codexHomePaths";
 import { ServerConfig } from "../../config";
 import { ServerSettingsService } from "../../serverSettings";
 import { ProviderHealth } from "../Services/ProviderHealth";
@@ -216,7 +216,7 @@ function withTempCodexHome(configContent?: string) {
         // the resolved CODEX_HOME during this test.
         const overrides: Record<string, string> = {
           CODEX_HOME: tmpDir,
-          OMNIMIND_HOME: runtimeDir,
+          HARNESSOS_HOME: runtimeDir,
         };
 
         const restore: Record<string, string | undefined> = {};
@@ -1038,7 +1038,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           path.join(configuredHome, "config.toml"),
           'model_provider = "openai"\n',
         );
-        expectedCodexHome = path.join(runtimeDir, OMNIMIND_CODEX_HOME_OVERLAY_DIR);
+        expectedCodexHome = path.join(runtimeDir, HARNESSOS_CODEX_HOME_OVERLAY_DIR);
 
         const status = yield* makeCheckCodexProviderStatus("codex", configuredHome);
         assert.strictEqual(status.status, "ready");

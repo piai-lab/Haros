@@ -47,7 +47,7 @@ function makeCookieRequest(sessionToken: string): AuthRequest {
   return {
     headers: {},
     cookies: {
-      omnimind_session: sessionToken,
+      harnessos_session: sessionToken,
     },
   };
 }
@@ -220,7 +220,7 @@ describe("ServerAuthLive", () => {
 
         const authenticated = yield* serverAuth.authenticateHttpRequest({
           headers: { authorization: `Bearer ${bearerSession.sessionToken}` },
-          cookies: { omnimind_session: cookieSession.sessionToken },
+          cookies: { harnessos_session: cookieSession.sessionToken },
         });
 
         expect(authenticated.credentialSource).toBe("bearer");

@@ -19,7 +19,7 @@ export const MODEL_SELECTION_INPUT_SCHEMA = {
     provider: { type: "string", enum: [...PROVIDER_KINDS] },
     model: {
       type: "string",
-      description: "Exact model slug from omnimind_capabilities providers[].models[].slug.",
+      description: "Exact model slug from harnessos_capabilities providers[].models[].slug.",
     },
     options: {
       type: "object",

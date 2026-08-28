@@ -8,4 +8,4 @@ export interface AutomationRunReactorShape {
 export class AutomationRunReactor extends ServiceMap.Service<
   AutomationRunReactor,
   AutomationRunReactorShape
->()("omnimind/automation/Services/AutomationRunReactor") {}
+>()("harnessos/automation/Services/AutomationRunReactor") {}

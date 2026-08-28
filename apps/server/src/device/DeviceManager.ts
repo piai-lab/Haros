@@ -9,7 +9,7 @@
  * - Boot source. The backend cannot tell who booted a device, so the manager
  *   records the devices it booted itself. Only those are ever auto-shut-down;
  *   anything the user started (pane picker, Simulator.app) outlives us.
- * - The OmniMind boot cap (`DEVICE_OMNIMIND_BOOT_LIMIT`). Boot past the cap is
+ * - The OmniMind boot cap (`DEVICE_HARNESSOS_BOOT_LIMIT`). Boot past the cap is
  *   refusable rather than fatal: the caller is handed the shutdown candidates
  *   so the pane can prompt.
  * - Shutdown triggers: app quit (`dispose`), thread removal
@@ -27,7 +27,7 @@ import {
   type BootOwnershipStore,
 } from "./bootOwnership.ts";
 import {
-  DEVICE_OMNIMIND_BOOT_LIMIT,
+  DEVICE_HARNESSOS_BOOT_LIMIT,
   ThreadId,
   type DeviceAttachPhase,
   type DeviceAvailability,
@@ -175,7 +175,7 @@ export class DeviceManager {
     this.backend = options.backend;
     this.transport = options.transport ?? new DeviceFrameTransport();
     this.idleShutdownMs = options.idleShutdownMs ?? DEVICE_IDLE_SHUTDOWN_MS;
-    this.bootLimit = options.bootLimit ?? DEVICE_OMNIMIND_BOOT_LIMIT;
+    this.bootLimit = options.bootLimit ?? DEVICE_HARNESSOS_BOOT_LIMIT;
     this.bootOwnership = options.bootOwnership ?? NULL_BOOT_OWNERSHIP;
     this.attachDeadlineMs = options.attachDeadlineMs ?? DEVICE_ATTACH_DEADLINE_MS;
     this.attachRetryMs = options.attachRetryMs ?? DEVICE_ATTACH_RETRY_MS;

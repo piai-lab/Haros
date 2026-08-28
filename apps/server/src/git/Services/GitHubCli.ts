@@ -318,5 +318,5 @@ export interface GitHubCliShape {
  * GitHubCli - Service tag for GitHub CLI process execution.
  */
 export class GitHubCli extends ServiceMap.Service<GitHubCli, GitHubCliShape>()(
-  "omnimind/git/Services/GitHubCli",
+  "harnessos/git/Services/GitHubCli",
 ) {}

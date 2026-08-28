@@ -39,7 +39,7 @@ import {
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import type * as Acp from "@agentclientprotocol/sdk";
 
-import { buildAcpOmniMindMcpServers } from "../../agentGateway/mcpInjection.ts";
+import { buildAcpHarnessOSMcpServers } from "../../agentGateway/mcpInjection.ts";
 import {
   type OmniMindHarnessPolicyDeliveryState,
   takeOmniMindHarnessPolicyTextPartForProviderSession,
@@ -156,9 +156,9 @@ const CURSOR_ACP_STARTUP_TIMEOUTS = {
 } as const satisfies AcpSessionStartupTimeouts;
 // Backstop for an alive-but-silent cursor-agent child: if a turn produces no
 // ACP activity for this long, force-fail it instead of showing "Working"
-// forever. Generous by design; override with OMNIMIND_CURSOR_TURN_IDLE_TIMEOUT_MS.
+// forever. Generous by design; override with HARNESSOS_CURSOR_TURN_IDLE_TIMEOUT_MS.
 const CURSOR_TURN_IDLE_TIMEOUT_MS = resolveAcpTurnIdleTimeoutMs({
-  envVar: "OMNIMIND_CURSOR_TURN_IDLE_TIMEOUT_MS",
+  envVar: "HARNESSOS_CURSOR_TURN_IDLE_TIMEOUT_MS",
   defaultMs: 600_000,
 });
 const CURSOR_TURN_WATCHDOG_INTERVAL_MS = 15_000;
@@ -429,7 +429,7 @@ export function makeCursorAdapter(
     const childProcessSpawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const serverConfig = yield* Effect.service(ServerConfig);
     // Optional so adapter tests can run without the gateway layer; when
-    // present, every session gets the omnimind_* MCP tools.
+    // present, every session gets the harnessos_* MCP tools.
     const agentGatewayCredentials = Option.getOrUndefined(
       yield* Effect.serviceOption(AgentGatewayCredentials),
     );
@@ -747,7 +747,7 @@ export function makeCursorAdapter(
             ...(agentGatewayCredentials
               ? {
                   buildMcpServers: (initializeResult) =>
-                    buildAcpOmniMindMcpServers({
+                    buildAcpHarnessOSMcpServers({
                       connection: gatewaySessionLease!.connection,
                       initializeResult,
                       stdioProxy: agentGatewayCredentials.stdioProxy,

@@ -138,7 +138,7 @@ const MAX_BUFFERED_TOOL_OUTPUT_CHARS = 24_000;
 const MAX_BUFFERED_REASONING_SUMMARY_PARTS = 24;
 const BUFFERED_TEXT_TRUNCATION_MARKER = "... [truncated]";
 const STRICT_PROVIDER_LIFECYCLE_GUARD =
-  process.env.OMNIMIND_STRICT_PROVIDER_LIFECYCLE_GUARD !== "0";
+  process.env.HARNESSOS_STRICT_PROVIDER_LIFECYCLE_GUARD !== "0";
 
 function isCanonicalWorkspaceFileChangeEvent(event: ProviderRuntimeEvent): boolean {
   return (

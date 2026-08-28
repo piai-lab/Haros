@@ -43,21 +43,21 @@ export function useWorkspaceFileOpener(): WorkspaceFileOpener | null {
 // Trailing `:line` / `:line:col` suffix carried by resolved markdown file links.
 // The in-app viewer previews whole files, so the position is dropped.
 const FILE_POSITION_SUFFIX_PATTERN = /:\d+(?::\d+)?$/;
-const OMNIMIND_PUBLIC_ASSET_PATH_PREFIXES = [
+const HARNESSOS_PUBLIC_ASSET_PATH_PREFIXES = [
   "/central-icons-reversed/",
   "/central-icons-fill/",
 ] as const;
-const OMNIMIND_WEB_PUBLIC_WORKSPACE_DIR = "apps/web/public";
+const HARNESSOS_WEB_PUBLIC_WORKSPACE_DIR = "apps/web/public";
 
 function resolveOmniMindPublicAssetOpenTarget(path: string, workspaceRoot: string | null) {
   if (!workspaceRoot) {
     return null;
   }
   const normalizedPath = path.replace(/\\/g, "/");
-  if (!OMNIMIND_PUBLIC_ASSET_PATH_PREFIXES.some((prefix) => normalizedPath.startsWith(prefix))) {
+  if (!HARNESSOS_PUBLIC_ASSET_PATH_PREFIXES.some((prefix) => normalizedPath.startsWith(prefix))) {
     return null;
   }
-  const relativePath = `${OMNIMIND_WEB_PUBLIC_WORKSPACE_DIR}${normalizedPath}`;
+  const relativePath = `${HARNESSOS_WEB_PUBLIC_WORKSPACE_DIR}${normalizedPath}`;
   return isWorkspaceRelativePathSafe(relativePath) ? relativePath : null;
 }
 

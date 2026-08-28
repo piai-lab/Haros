@@ -349,8 +349,8 @@ export interface SkillsCatalogDiscoveryInput {
   /** Optional workspace cwd; when present, project-level skill folders are included. */
   readonly cwd?: string | null;
   readonly homeDir: string;
-  /** OmniMind base dir (usually `~/.omnimind`); skills live in `{base}/skills`. */
-  readonly omnimindBaseDir: string;
+  /** OmniMind base dir (usually `~/.harnessos`); skills live in `{base}/skills`. */
+  readonly harnessosBaseDir: string;
   /** Provider whose native copies should win when the same skill exists in several roots. */
   readonly provider?: ProviderKind | null;
   /** Settings needs every origin; composer/provider pickers keep one winner by name. */
@@ -398,13 +398,13 @@ export function clearSkillsCatalogCacheForTests(): void {
   ensuredOmniMindSkillsDirs.clear();
 }
 
-export function omnimindSkillsDir(omnimindBaseDir: string): string {
-  return nodePath.join(omnimindBaseDir, "skills");
+export function harnessosSkillsDir(harnessosBaseDir: string): string {
+  return nodePath.join(harnessosBaseDir, "skills");
 }
 
 // Creates the portable skills folder on first use so users have a drop-in target.
-export async function ensureOmniMindSkillsDir(omnimindBaseDir: string): Promise<string> {
-  const dir = omnimindSkillsDir(omnimindBaseDir);
+export async function ensureOmniMindSkillsDir(harnessosBaseDir: string): Promise<string> {
+  const dir = harnessosSkillsDir(harnessosBaseDir);
   if (ensuredOmniMindSkillsDirs.has(dir)) {
     return dir;
   }
@@ -426,8 +426,8 @@ interface SkillOriginRootSpec {
 
 const SKILL_ORIGIN_ROOTS = {
   omnimind: {
-    homeRoots: (input) => [omnimindSkillsDir(input.omnimindBaseDir)],
-    projectRootNames: [".omnimind"],
+    homeRoots: (input) => [harnessosSkillsDir(input.harnessosBaseDir)],
+    projectRootNames: [".harnessos"],
   },
   codex: {
     // Keep OmniMind's existing Codex-local root. Official Codex discovery uses
@@ -600,7 +600,7 @@ export async function discoverSkillsCatalog(
     input.cwd?.trim() ?? "",
     input.provider ?? "",
     input.homeDir,
-    input.omnimindBaseDir,
+    input.harnessosBaseDir,
     input.includeDuplicateOrigins ? "all-origins" : "deduped",
   ].join("\u0000");
 
@@ -617,7 +617,7 @@ export async function discoverSkillsCatalog(
   }
 
   const scan = (async () => {
-    await ensureOmniMindSkillsDir(input.omnimindBaseDir);
+    await ensureOmniMindSkillsDir(input.harnessosBaseDir);
     const includesClaudeNativeRoots =
       input.provider === null ||
       input.provider === undefined ||
@@ -682,7 +682,7 @@ export function isOmniMindLibrarySkill(skill: ProviderSkillDescriptor): boolean 
   if (skill.scope === "omnimind") {
     return true;
   }
-  return skill.path.split(/[\\/]+/).includes(".omnimind");
+  return skill.path.split(/[\\/]+/).includes(".harnessos");
 }
 
 export function filterDisabledSkills(

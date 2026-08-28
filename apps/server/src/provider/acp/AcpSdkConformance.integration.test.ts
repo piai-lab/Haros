@@ -90,7 +90,7 @@ function runtimeLayer(logPath: string, env: Record<string, string> = {}) {
       args: [fixturePath],
       env: {
         VITEST: "true",
-        OMNIMIND_ACP_CONFORMANCE_LOG_PATH: logPath,
+        HARNESSOS_ACP_CONFORMANCE_LOG_PATH: logPath,
         ...env,
       },
     },
@@ -230,7 +230,7 @@ describe("official ACP SDK conformance at the current OmniMind boundary", () => 
     }).pipe(
       Effect.provide(
         runtimeLayer(logPath, {
-          OMNIMIND_ACP_CONFORMANCE_MALFORMED_PREFIX: "1",
+          HARNESSOS_ACP_CONFORMANCE_MALFORMED_PREFIX: "1",
         }),
       ),
       Effect.scoped,
@@ -349,9 +349,9 @@ describe("official ACP SDK client against the official SDK mock agent", () => {
       cwd: process.cwd(),
       env: {
         ...process.env,
-        OMNIMIND_ACP_REQUEST_LOG_PATH: requestLogPath,
-        OMNIMIND_ACP_EXIT_LOG_PATH: exitLogPath,
-        OMNIMIND_ACP_PROMPT_RESPONSE_TEXT: "mock says héllo 👋",
+        HARNESSOS_ACP_REQUEST_LOG_PATH: requestLogPath,
+        HARNESSOS_ACP_EXIT_LOG_PATH: exitLogPath,
+        HARNESSOS_ACP_PROMPT_RESPONSE_TEXT: "mock says héllo 👋",
       },
       stdio: ["pipe", "pipe", "pipe"],
     });

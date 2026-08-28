@@ -17,7 +17,7 @@ export interface ServerRuntimeStartupShape {
 export class ServerRuntimeStartup extends ServiceMap.Service<
   ServerRuntimeStartup,
   ServerRuntimeStartupShape
->()("omnimind/serverRuntimeStartup") {}
+>()("harnessos/serverRuntimeStartup") {}
 
 type CommandReadinessState = "pending" | "ready" | ServerRuntimeStartupError;
 

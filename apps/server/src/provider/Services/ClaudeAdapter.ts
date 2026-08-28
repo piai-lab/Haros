@@ -32,5 +32,5 @@ export interface ClaudeAdapterShape extends ProviderAdapterShape<ProviderAdapter
  * ClaudeAdapter - Service tag for Claude Agent provider adapter operations.
  */
 export class ClaudeAdapter extends ServiceMap.Service<ClaudeAdapter, ClaudeAdapterShape>()(
-  "omnimind/provider/Services/ClaudeAdapter",
+  "harnessos/provider/Services/ClaudeAdapter",
 ) {}

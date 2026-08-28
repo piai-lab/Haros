@@ -10,15 +10,15 @@ import type {
 
 export const ACP_LOG_REDACTED_VALUE = "[REDACTED]";
 
-const SENSITIVE_ENTRY_NAMES = new Set(["authorization", "omnimind_agent_gateway_token"]);
+const SENSITIVE_ENTRY_NAMES = new Set(["authorization", "harnessos_agent_gateway_token"]);
 
 function redactSecretString(value: string): string {
   return value
     .replace(/(\bBearer\s+)[^\s"',}\]]+/gi, `$1${ACP_LOG_REDACTED_VALUE}`)
-    .replace(/(OMNIMIND_AGENT_GATEWAY_TOKEN\s*=\s*)[^\s"',}\]]+/g, `$1${ACP_LOG_REDACTED_VALUE}`)
-    .replace(/("OMNIMIND_AGENT_GATEWAY_TOKEN"\s*:\s*")[^"]*/g, `$1${ACP_LOG_REDACTED_VALUE}`)
+    .replace(/(HARNESSOS_AGENT_GATEWAY_TOKEN\s*=\s*)[^\s"',}\]]+/g, `$1${ACP_LOG_REDACTED_VALUE}`)
+    .replace(/("HARNESSOS_AGENT_GATEWAY_TOKEN"\s*:\s*")[^"]*/g, `$1${ACP_LOG_REDACTED_VALUE}`)
     .replace(
-      /("name"\s*:\s*"OMNIMIND_AGENT_GATEWAY_TOKEN"\s*,\s*"value"\s*:\s*")[^"]*/g,
+      /("name"\s*:\s*"HARNESSOS_AGENT_GATEWAY_TOKEN"\s*,\s*"value"\s*:\s*")[^"]*/g,
       `$1${ACP_LOG_REDACTED_VALUE}`,
     );
 }

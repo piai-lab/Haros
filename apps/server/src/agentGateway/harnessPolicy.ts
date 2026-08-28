@@ -1,8 +1,8 @@
 import type { BuiltInToolGroupId } from "@harnessos/contracts";
 
 /** Canonical, versioned host policy delivered to every supported provider. */
-export const OMNIMIND_HARNESS_POLICY_VERSION = "2026-08-21.1";
-export const OMNIMIND_HARNESS_POLICY_MARKER = `[OmniMind harness policy ${OMNIMIND_HARNESS_POLICY_VERSION}]`;
+export const HARNESSOS_HARNESS_POLICY_VERSION = "2026-08-21.1";
+export const HARNESSOS_HARNESS_POLICY_MARKER = `[OmniMind harness policy ${HARNESSOS_HARNESS_POLICY_VERSION}]`;
 
 export interface OmniMindHarnessCapabilities {
   readonly gatewayControlAvailable: boolean;
@@ -85,18 +85,18 @@ export function renderOmniMindHarnessPolicy(capabilities: OmniMindHarnessCapabil
       ];
 
   return [
-    OMNIMIND_HARNESS_POLICY_MARKER,
+    HARNESSOS_HARNESS_POLICY_MARKER,
     "You are running inside OmniMind. OmniMind is the host and harness for this session.",
     ...controlPolicy,
   ].join("\n");
 }
 
-export const OMNIMIND_GATEWAY_HARNESS_POLICY = renderOmniMindHarnessPolicy({
+export const HARNESSOS_GATEWAY_HARNESS_POLICY = renderOmniMindHarnessPolicy({
   gatewayControlAvailable: true,
   projection: { mode: "direct", enabledGroups: [] },
 });
 
-export const OMNIMIND_IDENTITY_ONLY_HARNESS_POLICY = renderOmniMindHarnessPolicy({
+export const HARNESSOS_IDENTITY_ONLY_HARNESS_POLICY = renderOmniMindHarnessPolicy({
   gatewayControlAvailable: false,
   projection: { mode: "direct", enabledGroups: [] },
 });
@@ -113,9 +113,9 @@ export function takeOmniMindHarnessPolicyForSession(
   if (state.harnessPolicyDelivered === true) return null;
   state.harnessPolicyDelivered = true;
   return [
-    "<omnimind_host_context>",
+    "<harnessos_host_context>",
     renderOmniMindHarnessPolicy(capabilities),
-    "</omnimind_host_context>",
+    "</harnessos_host_context>",
   ].join("\n");
 }
 

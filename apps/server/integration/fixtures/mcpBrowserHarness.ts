@@ -61,8 +61,8 @@ export function createBrowserMcpHarness(input: {
   } as never;
   const tools = makeAgentGatewayBrowserTools(
     makeBrowserAutomationHost({
-      OMNIMIND_BROWSER_HOST_PIPE_PATH: input.pipePath,
-      OMNIMIND_BROWSER_HOST_CAPABILITY: input.capability,
+      HARNESSOS_BROWSER_HOST_PIPE_PATH: input.pipePath,
+      HARNESSOS_BROWSER_HOST_CAPABILITY: input.capability,
     }),
     { resolveWorkspaceRoot: () => Effect.succeed(input.workspaceRoot) },
   );

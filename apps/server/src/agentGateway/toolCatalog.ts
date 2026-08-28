@@ -32,8 +32,8 @@ export function tagAgentGatewayTools(input: {
       ...tool.definition,
       _meta: {
         ...tool.definition._meta,
-        "omnimind/owner": AGENT_GATEWAY_OWNER,
-        "omnimind/group": input.group,
+        "harnessos/owner": AGENT_GATEWAY_OWNER,
+        "harnessos/group": input.group,
       },
     },
   }));

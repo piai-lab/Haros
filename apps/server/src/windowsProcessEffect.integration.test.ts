@@ -34,13 +34,13 @@ it.runIf(process.platform === "win32")(
         scriptPath,
         [
           'import { writeFileSync } from "node:fs";',
-          "writeFileSync(process.env.OMNIMIND_CAPTURE_PATH, JSON.stringify(process.argv.slice(2)));",
+          "writeFileSync(process.env.HARNESSOS_CAPTURE_PATH, JSON.stringify(process.argv.slice(2)));",
           "",
         ].join("\n"),
       );
       writeFileSync(commandPath, `@echo off\r\n"${process.execPath}" "%~dp0capture.mjs" %*\r\n`);
 
-      const env = { ...process.env, OMNIMIND_CAPTURE_PATH: outputPath };
+      const env = { ...process.env, HARNESSOS_CAPTURE_PATH: outputPath };
       const prepared = prepareWindowsSafeProcess(commandPath, expectedArgs, {
         platform: "win32",
         env,

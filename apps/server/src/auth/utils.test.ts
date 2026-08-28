@@ -11,8 +11,10 @@ import {
 
 describe("auth utils", () => {
   it("resolves stable web and port-scoped desktop cookie names", () => {
-    expect(resolveSessionCookieName({ mode: "web", port: 3773 })).toBe("omnimind_session");
-    expect(resolveSessionCookieName({ mode: "desktop", port: 3773 })).toBe("omnimind_session_3773");
+    expect(resolveSessionCookieName({ mode: "web", port: 3773 })).toBe("harnessos_session");
+    expect(resolveSessionCookieName({ mode: "desktop", port: 3773 })).toBe(
+      "harnessos_session_3773",
+    );
   });
 
   it("round-trips base64url text", () => {

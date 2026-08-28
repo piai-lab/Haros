@@ -161,7 +161,7 @@ describe("browser automation errors", () => {
   it("accepts only the versioned provider-safe MCP error shape", () => {
     expect(
       Schema.is(BrowserMcpToolErrorEnvelope)({
-        type: "omnimind_browser_error",
+        type: "harnessos_browser_error",
         version: 1,
         error: validError,
       }),
@@ -175,7 +175,7 @@ describe("browser automation errors", () => {
     ).toBe(false);
     expect(
       Schema.is(BrowserMcpToolErrorEnvelope)({
-        type: "omnimind_browser_error",
+        type: "harnessos_browser_error",
         version: 2,
         error: validError,
       }),
@@ -201,7 +201,7 @@ describe("browser automation errors", () => {
         utf8ByteLength(candidate.message) > utf8ByteLength(largest.message) ? candidate : largest,
       );
     const largestEnvelope = Schema.decodeUnknownSync(BrowserMcpToolErrorEnvelope)({
-      type: "omnimind_browser_error",
+      type: "harnessos_browser_error",
       version: 1,
       error: {
         ...largestError,
@@ -254,7 +254,7 @@ describe("browser automation errors", () => {
 
   it("strips arbitrary provider details from canonical decoded envelopes", () => {
     const decoded = Schema.decodeUnknownSync(BrowserMcpToolErrorEnvelope)({
-      type: "omnimind_browser_error",
+      type: "harnessos_browser_error",
       version: 1,
       stack: "secret stack",
       error: {
@@ -265,7 +265,7 @@ describe("browser automation errors", () => {
     });
 
     expect(decoded).toEqual({
-      type: "omnimind_browser_error",
+      type: "harnessos_browser_error",
       version: 1,
       error: validError,
     });

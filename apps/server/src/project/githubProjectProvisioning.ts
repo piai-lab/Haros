@@ -488,7 +488,7 @@ export const makeGitHubProjectProvisioner = Effect.fn(function* (
           );
           const stagingPath = path.join(
             parent,
-            `.omnimind-clone-${process.pid}-${randomUUID().replace(/-/g, "")}`,
+            `.harnessos-clone-${process.pid}-${randomUUID().replace(/-/g, "")}`,
           );
           let promoted = false;
 

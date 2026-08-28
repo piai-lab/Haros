@@ -1237,7 +1237,7 @@ describe("deriveWorkLogEntries", () => {
     ];
 
     const [entry] = deriveWorkLogEntries(activities, TurnId.makeUnsafe("turn-1"));
-    expect(entry?.omnimindThreadCreation).toEqual({
+    expect(entry?.harnessosThreadCreation).toEqual({
       operationId: "gateway:create:two-workers",
       requestedCount: 2,
       createdCount: 2,
@@ -2182,7 +2182,7 @@ describe("deriveWorkLogEntries", () => {
                   type: "read",
                   command: "sed -n '1,220p' README.md",
                   name: "README.md",
-                  path: "/Users/emanueledipietro/Developer/Testing/omnimind/README.md",
+                  path: "/Users/emanueledipietro/Developer/Testing/harnessos/README.md",
                 },
               ],
             },
@@ -3215,7 +3215,7 @@ describe("deriveWorkLogEntries", () => {
             title: "OmniMind create thread",
             data: {
               toolCallId: "cancelled-omnimind-call",
-              toolName: "mcp__omnimind__omnimind_create_thread",
+              toolName: "mcp__harnessos__harnessos_create_thread",
             },
           },
         }),
@@ -3250,7 +3250,7 @@ describe("deriveWorkLogEntries", () => {
             status: "interrupted",
             data: {
               toolCallId: "interrupted-omnimind-call",
-              toolName: "mcp__omnimind__omnimind_create_thread",
+              toolName: "mcp__harnessos__harnessos_create_thread",
             },
           },
         }),
@@ -3521,7 +3521,7 @@ describe("deriveWorkLogEntries", () => {
           title: "MCP tool call",
           data: {
             toolCallId: "omnimind-mcp-create",
-            toolName: "mcp__omnimind__omnimind_create_thread",
+            toolName: "mcp__harnessos__harnessos_create_thread",
           },
         },
       }),
@@ -3531,7 +3531,7 @@ describe("deriveWorkLogEntries", () => {
         summary: "Tool call",
         payload: {
           itemType: "dynamic_tool_call",
-          title: "OmniMind__omnimind_send_message",
+          title: "OmniMind__harnessos_send_message",
           data: {
             toolCallId: "omnimind-dynamic-send",
           },
@@ -3543,7 +3543,7 @@ describe("deriveWorkLogEntries", () => {
         summary: "File change",
         payload: {
           itemType: "file_change",
-          title: "mcp__OmniMind__omnimind_list_threads",
+          title: "mcp__OmniMind__harnessos_list_threads",
           data: {
             toolCallId: "omnimind-file-change-list",
           },
@@ -3568,13 +3568,13 @@ describe("deriveWorkLogEntries", () => {
         makeActivity({
           id: "omnimind-create-threads-failed",
           kind: "tool.completed",
-          summary: "omnimind__omnimind_create_threads",
+          summary: "harnessos__harnessos_create_threads",
           payload: {
             itemType: "mcp_tool_call",
             status: "failed",
             data: {
               toolCallId: "omnimind-create-failed",
-              toolName: "mcp__omnimind__omnimind_create_threads",
+              toolName: "mcp__harnessos__harnessos_create_threads",
               rawOutput: {
                 is_error: 1,
                 output: {

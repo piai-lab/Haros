@@ -1,4 +1,8 @@
-import type { ProjectId, PullRequestListEntry, PullRequestProjectContext } from "@harnessos/contracts";
+import type {
+  ProjectId,
+  PullRequestListEntry,
+  PullRequestProjectContext,
+} from "@harnessos/contracts";
 
 type ProjectAwarePullRequestEntry = Pick<
   PullRequestListEntry,

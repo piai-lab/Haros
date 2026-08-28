@@ -955,10 +955,10 @@ export function WebSearchSettingsPanel({
                       ? t("settings.webSearch.routeAuto")
                       : draft.provider === "broad"
                         ? t("settings.webSearch.routeBroad")
-                      : draft.provider === "all"
-                        ? t("settings.webSearch.routeAll")
-                        : (base.providers.find((provider) => provider.id === draft.provider)
-                            ?.displayName ?? draft.provider)}
+                        : draft.provider === "all"
+                          ? t("settings.webSearch.routeAll")
+                          : (base.providers.find((provider) => provider.id === draft.provider)
+                              ?.displayName ?? draft.provider)}
                 </SelectValue>
               </SelectTrigger>
               <SettingsSelectPopup>

@@ -1,10 +1,7 @@
 import { BUILT_IN_TOOL_GROUP_IDS, BUILT_IN_TOOL_SURFACES } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
 
-import {
-  configuredHostGroupEnabled,
-  HOST_GROUP_SURFACE_POLICY,
-} from "./hostToolSurfacePolicy";
+import { configuredHostGroupEnabled, HOST_GROUP_SURFACE_POLICY } from "./hostToolSurfacePolicy";
 
 describe("Host tool product-surface policy", () => {
   it("exhaustively defines the locked eighteen-cell support/default matrix", () => {

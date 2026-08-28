@@ -16,7 +16,7 @@ import {
 } from "./browserHostRpcClient.ts";
 
 const HEADER_BYTES = 4;
-const TEST_CAPABILITY = "omnimind-browser-host-client-test-capability-0123456789";
+const TEST_CAPABILITY = "harnessos-browser-host-client-test-capability-0123456789";
 
 function pipePathForTest(name: string): string {
   return process.platform === "win32"
@@ -124,7 +124,11 @@ describe("browser host RPC client", () => {
           };
         }
         if (request.method === "presentEngineWebSurface") {
-          return { jsonrpc: "2.0", id, result: { surfaceId: "surface-opaque-123", tabId: "tab-1" } };
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: { surfaceId: "surface-opaque-123", tabId: "tab-1" },
+          };
         }
         return { jsonrpc: "2.0", id, result: { settled: true } };
       },
@@ -161,23 +165,25 @@ describe("browser host RPC client", () => {
       },
     );
 
-    expect(requests.filter(request => request.method !== "getInfo").map(request => request.method)).toEqual([
-      "getEngineWebSurfaceContext",
-      "presentEngineWebSurface",
-      "settleEngineWebSurface",
-    ]);
-    expect(requests.find(request => request.method === "presentEngineWebSurface")?.params).toMatchObject({
+    expect(
+      requests.filter((request) => request.method !== "getInfo").map((request) => request.method),
+    ).toEqual(["getEngineWebSurfaceContext", "presentEngineWebSurface", "settleEngineWebSurface"]);
+    expect(
+      requests.find((request) => request.method === "presentEngineWebSurface")?.params,
+    ).toMatchObject({
       session_id: "engine-surface-session",
       thread_id: "thread-engine-surface",
       surface_id: "surface-opaque-123",
       url: "http://127.0.0.1:43123/?session=private-token",
     });
-	expect(requests.find(request => request.method === "settleEngineWebSurface")?.params).toMatchObject({
-	  session_id: "engine-surface-session",
-	  thread_id: "thread-engine-surface",
-	  surface_id: "surface-opaque-123",
-	  preserve_tab: true,
-	});
+    expect(
+      requests.find((request) => request.method === "settleEngineWebSurface")?.params,
+    ).toMatchObject({
+      session_id: "engine-surface-session",
+      thread_id: "thread-engine-surface",
+      surface_id: "surface-opaque-123",
+      preserve_tab: true,
+    });
   });
 
   it("routes the authenticated provider identity through getInfo and executeTool", async () => {
@@ -226,7 +232,7 @@ describe("browser host RPC client", () => {
 
   it("preserves canonical error data returned by the desktop host", async () => {
     const envelope = {
-      type: "omnimind_browser_error",
+      type: "harnessos_browser_error",
       version: 1,
       error: { code: "BrowserAuthorizationDenied" },
     };
@@ -270,7 +276,7 @@ describe("browser host RPC client", () => {
           jsonrpc: "2.0",
           id: request.id,
           result: {
-            type: "omnimind-browser-host",
+            type: "harnessos-browser-host",
             metadata: {
               sessionId: "gateway-session:protocol",
               protocolVersion: 2,
@@ -412,7 +418,7 @@ describe("browser host RPC client", () => {
   it("accepts only the canonical host path", () => {
     expect(
       resolveBrowserHostPipePath({
-        OMNIMIND_BROWSER_HOST_PIPE_PATH: "/tmp/canonical.sock",
+        HARNESSOS_BROWSER_HOST_PIPE_PATH: "/tmp/canonical.sock",
       }),
     ).toBe("/tmp/canonical.sock");
     expect(resolveBrowserHostPipePath({})).toBeNull();
@@ -421,12 +427,12 @@ describe("browser host RPC client", () => {
   it("accepts only a bounded private desktop capability from direct test environments", () => {
     expect(
       resolveBrowserHostCapability({
-        OMNIMIND_BROWSER_HOST_CAPABILITY: TEST_CAPABILITY,
+        HARNESSOS_BROWSER_HOST_CAPABILITY: TEST_CAPABILITY,
       }),
     ).toBe(TEST_CAPABILITY);
     expect(
       resolveBrowserHostCapability({
-        OMNIMIND_BROWSER_HOST_CAPABILITY: "too-short",
+        HARNESSOS_BROWSER_HOST_CAPABILITY: "too-short",
       }),
     ).toBeNull();
   });

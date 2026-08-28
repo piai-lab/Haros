@@ -12,9 +12,9 @@ import { ModelSelection, ProviderKind } from "./orchestration";
 import { ProviderModelDescriptor } from "./providerDiscovery";
 import { ServerProviderAuthStatus } from "./server";
 
-export const OMNIMIND_GATEWAY_MAX_THREADS_PER_OPERATION = 20;
-export const OMNIMIND_GATEWAY_MAX_REQUEST_ID_LENGTH = 256;
-export const OMNIMIND_GATEWAY_MAX_WAIT_MS = 60_000;
+export const HARNESSOS_GATEWAY_MAX_THREADS_PER_OPERATION = 20;
+export const HARNESSOS_GATEWAY_MAX_REQUEST_ID_LENGTH = 256;
+export const HARNESSOS_GATEWAY_MAX_WAIT_MS = 60_000;
 
 export const OmniMindGatewayErrorCode = Schema.Literals([
   "caller_session_inactive",
@@ -81,14 +81,14 @@ export const OmniMindCreateThreadSpec = Schema.Struct({
 export type OmniMindCreateThreadSpec = typeof OmniMindCreateThreadSpec.Type;
 
 const OmniMindGatewayRequestId = Schema.String.check(Schema.isNonEmpty()).check(
-  Schema.isMaxLength(OMNIMIND_GATEWAY_MAX_REQUEST_ID_LENGTH),
+  Schema.isMaxLength(HARNESSOS_GATEWAY_MAX_REQUEST_ID_LENGTH),
 );
 
 export const OmniMindCreateThreadsInput = Schema.Struct({
   requestId: OmniMindGatewayRequestId,
   threads: Schema.Array(OmniMindCreateThreadSpec)
     .check(Schema.isMinLength(1))
-    .check(Schema.isMaxLength(OMNIMIND_GATEWAY_MAX_THREADS_PER_OPERATION)),
+    .check(Schema.isMaxLength(HARNESSOS_GATEWAY_MAX_THREADS_PER_OPERATION)),
 }).annotate({ parseOptions: { onExcessProperty: "error" } });
 export type OmniMindCreateThreadsInput = typeof OmniMindCreateThreadsInput.Type;
 
@@ -170,15 +170,15 @@ export type OmniMindCreateThreadsResult = typeof OmniMindCreateThreadsResult.Typ
 export const OmniMindWaitForThreadsInput = Schema.Struct({
   threadIds: Schema.Array(ThreadId)
     .check(Schema.isMinLength(1))
-    .check(Schema.isMaxLength(OMNIMIND_GATEWAY_MAX_THREADS_PER_OPERATION)),
+    .check(Schema.isMaxLength(HARNESSOS_GATEWAY_MAX_THREADS_PER_OPERATION)),
   runIds: Schema.optional(
     Schema.Array(Schema.NullOr(TurnId)).check(
-      Schema.isMaxLength(OMNIMIND_GATEWAY_MAX_THREADS_PER_OPERATION),
+      Schema.isMaxLength(HARNESSOS_GATEWAY_MAX_THREADS_PER_OPERATION),
     ),
   ),
   timeoutMs: Schema.optional(
     Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)).check(
-      Schema.isLessThanOrEqualTo(OMNIMIND_GATEWAY_MAX_WAIT_MS),
+      Schema.isLessThanOrEqualTo(HARNESSOS_GATEWAY_MAX_WAIT_MS),
     ),
   ),
 }).annotate({ parseOptions: { onExcessProperty: "error" } });
@@ -194,7 +194,7 @@ export const OmniMindWaitedThreadResult = Schema.Struct({
   summaryTruncated: Schema.Boolean,
   error: Schema.NullOr(Schema.String),
   readThread: Schema.Struct({
-    tool: Schema.Literal("omnimind_read_thread"),
+    tool: Schema.Literal("harnessos_read_thread"),
     arguments: Schema.Struct({ threadId: ThreadId }),
   }),
 });

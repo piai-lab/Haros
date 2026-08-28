@@ -146,5 +146,5 @@ export class OrchestrationEventDeliveryRepository extends ServiceMap.Service<
   OrchestrationEventDeliveryRepository,
   OrchestrationEventDeliveryRepositoryShape
 >()(
-  "omnimind/persistence/Services/OrchestrationEventDeliveries/OrchestrationEventDeliveryRepository",
+  "harnessos/persistence/Services/OrchestrationEventDeliveries/OrchestrationEventDeliveryRepository",
 ) {}

@@ -42,11 +42,11 @@ import type {
   OmniMindModelServicesProjectionIntent,
 } from "@harnessos/contracts";
 import {
-  OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API,
-  OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT,
-  OMNIMIND_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT,
-  OMNIMIND_MODEL_SERVICE_MODELS_MAX_COUNT,
-  OMNIMIND_MODEL_SERVICES_MAX_COUNT,
+  HARNESSOS_CUSTOM_MODEL_COMPAT_FIELDS_BY_API,
+  HARNESSOS_CUSTOM_MODEL_COST_TIERS_MAX_COUNT,
+  HARNESSOS_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT,
+  HARNESSOS_MODEL_SERVICE_MODELS_MAX_COUNT,
+  HARNESSOS_MODEL_SERVICES_MAX_COUNT,
 } from "@harnessos/contracts";
 import { Effect, Layer } from "effect";
 
@@ -181,7 +181,7 @@ function normalizedCustomBaseUrl(value: string): string {
 }
 
 type CustomCompatField =
-  (typeof OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API)[keyof typeof OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API][number];
+  (typeof HARNESSOS_CUSTOM_MODEL_COMPAT_FIELDS_BY_API)[keyof typeof HARNESSOS_CUSTOM_MODEL_COMPAT_FIELDS_BY_API][number];
 
 function projectCustomCompat(
   api: OmniMindCustomModelServiceApi,
@@ -189,7 +189,7 @@ function projectCustomCompat(
 ): Record<string, boolean | string> | undefined {
   if (!compat) return undefined;
   const projected: Record<string, boolean | string> = {};
-  for (const field of OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API[
+  for (const field of HARNESSOS_CUSTOM_MODEL_COMPAT_FIELDS_BY_API[
     api
   ] as readonly CustomCompatField[]) {
     const value = compat[field];
@@ -209,7 +209,7 @@ function customCompatForMutation(
   compat: Readonly<Record<string, boolean | string | undefined>> | undefined,
 ): Record<string, boolean | string> | undefined {
   if (!compat) return undefined;
-  const allowed = new Set<string>(OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API[api]);
+  const allowed = new Set<string>(HARNESSOS_CUSTOM_MODEL_COMPAT_FIELDS_BY_API[api]);
   if (Object.keys(compat).some((field) => !allowed.has(field))) {
     throw new InvalidCustomServiceEditError();
   }
@@ -360,7 +360,7 @@ function isPublicCustomModelCost(cost: {
 }): boolean {
   const rates = [cost.input, cost.output, cost.cacheRead, cost.cacheWrite];
   if (rates.some((rate) => !Number.isFinite(rate) || rate < 0)) return false;
-  if ((cost.tiers?.length ?? 0) > OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT) return false;
+  if ((cost.tiers?.length ?? 0) > HARNESSOS_CUSTOM_MODEL_COST_TIERS_MAX_COUNT) return false;
   return (cost.tiers ?? []).every((tier) =>
     [tier.inputTokensAbove, tier.input, tier.output, tier.cacheRead, tier.cacheWrite].every(
       (value) => Number.isFinite(value) && value >= 0,
@@ -641,7 +641,7 @@ class StaticCredentialStore implements CredentialStore {
 
     const credentials = new Map<string, Credential>();
     const rawCredentials = Object.entries(raw);
-    if (rawCredentials.length > OMNIMIND_MODEL_SERVICES_MAX_COUNT) {
+    if (rawCredentials.length > HARNESSOS_MODEL_SERVICES_MAX_COUNT) {
       throw new Error("Model-services credential storage is too large");
     }
     for (const [providerId, rawCredential] of rawCredentials) {
@@ -1012,7 +1012,7 @@ async function projectModelServices(input: {
           },
         ];
       });
-    if (projectedModels.length > OMNIMIND_MODEL_SERVICE_MODELS_MAX_COUNT) {
+    if (projectedModels.length > HARNESSOS_MODEL_SERVICE_MODELS_MAX_COUNT) {
       throw new Error("OmniMind model-service catalog is too large");
     }
     modelsByServiceId.set(providerId, projectedModels);
@@ -1102,7 +1102,7 @@ async function projectModelServices(input: {
   const sorted = descriptors.sort((left, right) =>
     left.displayName.localeCompare(right.displayName, "en"),
   );
-  if (sorted.length > OMNIMIND_MODEL_SERVICES_MAX_COUNT) {
+  if (sorted.length > HARNESSOS_MODEL_SERVICES_MAX_COUNT) {
     throw new Error("OmniMind model-services projection is too large");
   }
   return {
@@ -1888,7 +1888,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                   if (!modelId) return [];
                   return [{ modelId, displayName: safeDisplayName(name, modelId) }];
                 })
-                .slice(0, OMNIMIND_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT);
+                .slice(0, HARNESSOS_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT);
               if (models.length === 0) {
                 return {
                   state: "failed",

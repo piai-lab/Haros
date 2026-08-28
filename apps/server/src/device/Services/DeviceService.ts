@@ -14,5 +14,5 @@ export interface DeviceServiceShape {
 }
 
 export class DeviceService extends ServiceMap.Service<DeviceService, DeviceServiceShape>()(
-  "omnimind/device/Services/DeviceService",
+  "harnessos/device/Services/DeviceService",
 ) {}

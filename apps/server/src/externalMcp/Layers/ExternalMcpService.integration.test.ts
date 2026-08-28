@@ -175,7 +175,7 @@ describe("ExternalMcpService", () => {
         const paired = yield* service.pair(created.pairingCode, "syn_mcp_v1_audit-failure-secret");
         const client = yield* service.verifyCredential(paired.credential);
         const auditId = yield* service.beginAudit(client, {
-          tool: "omnimind_list_allowed_projects",
+          tool: "harnessos_list_allowed_projects",
         });
         yield* sql`
           CREATE TRIGGER reject_external_mcp_audit_finish

@@ -11,25 +11,26 @@ import * as OfficialAcp from "@agentclientprotocol/sdk";
 import * as Effect from "effect/Effect";
 import type * as AcpSchema from "@agentclientprotocol/sdk";
 
-const requestLogPath = process.env.OMNIMIND_ACP_REQUEST_LOG_PATH;
-const exitLogPath = process.env.OMNIMIND_ACP_EXIT_LOG_PATH;
-const emitToolCalls = process.env.OMNIMIND_ACP_EMIT_TOOL_CALLS === "1";
+const requestLogPath = process.env.HARNESSOS_ACP_REQUEST_LOG_PATH;
+const exitLogPath = process.env.HARNESSOS_ACP_EXIT_LOG_PATH;
+const emitToolCalls = process.env.HARNESSOS_ACP_EMIT_TOOL_CALLS === "1";
 const emitInterleavedAssistantToolCalls =
-  process.env.OMNIMIND_ACP_EMIT_INTERLEAVED_ASSISTANT_TOOL_CALLS === "1";
+  process.env.HARNESSOS_ACP_EMIT_INTERLEAVED_ASSISTANT_TOOL_CALLS === "1";
 const emitUpstreamAssistantMessageIds =
-  process.env.OMNIMIND_ACP_EMIT_UPSTREAM_ASSISTANT_MESSAGE_IDS === "1";
-const emitReasoningThenToolCall = process.env.OMNIMIND_ACP_EMIT_REASONING_THEN_TOOL_CALL === "1";
-const emitGenericToolPlaceholders = process.env.OMNIMIND_ACP_EMIT_GENERIC_TOOL_PLACEHOLDERS === "1";
-const emitAskQuestion = process.env.OMNIMIND_ACP_EMIT_ASK_QUESTION === "1";
-const failSessionNewOnce = process.env.OMNIMIND_ACP_FAIL_SESSION_NEW_ONCE === "1";
-const failSetConfigOption = process.env.OMNIMIND_ACP_FAIL_SET_CONFIG_OPTION === "1";
-const exitOnSetConfigOption = process.env.OMNIMIND_ACP_EXIT_ON_SET_CONFIG_OPTION === "1";
-const promptResponseText = process.env.OMNIMIND_ACP_PROMPT_RESPONSE_TEXT;
-const supportsSessionResume = process.env.OMNIMIND_ACP_SUPPORT_SESSION_RESUME === "1";
-const supportsSessionLoad = process.env.OMNIMIND_ACP_SUPPORT_SESSION_LOAD !== "0";
-const supportsSessionFork = process.env.OMNIMIND_ACP_SUPPORT_SESSION_FORK === "1";
-const emitAvailableCommands = process.env.OMNIMIND_ACP_EMIT_AVAILABLE_COMMANDS === "1";
-const modeConfigId = process.env.OMNIMIND_ACP_MODE_CONFIG_ID || "mode";
+  process.env.HARNESSOS_ACP_EMIT_UPSTREAM_ASSISTANT_MESSAGE_IDS === "1";
+const emitReasoningThenToolCall = process.env.HARNESSOS_ACP_EMIT_REASONING_THEN_TOOL_CALL === "1";
+const emitGenericToolPlaceholders =
+  process.env.HARNESSOS_ACP_EMIT_GENERIC_TOOL_PLACEHOLDERS === "1";
+const emitAskQuestion = process.env.HARNESSOS_ACP_EMIT_ASK_QUESTION === "1";
+const failSessionNewOnce = process.env.HARNESSOS_ACP_FAIL_SESSION_NEW_ONCE === "1";
+const failSetConfigOption = process.env.HARNESSOS_ACP_FAIL_SET_CONFIG_OPTION === "1";
+const exitOnSetConfigOption = process.env.HARNESSOS_ACP_EXIT_ON_SET_CONFIG_OPTION === "1";
+const promptResponseText = process.env.HARNESSOS_ACP_PROMPT_RESPONSE_TEXT;
+const supportsSessionResume = process.env.HARNESSOS_ACP_SUPPORT_SESSION_RESUME === "1";
+const supportsSessionLoad = process.env.HARNESSOS_ACP_SUPPORT_SESSION_LOAD !== "0";
+const supportsSessionFork = process.env.HARNESSOS_ACP_SUPPORT_SESSION_FORK === "1";
+const emitAvailableCommands = process.env.HARNESSOS_ACP_EMIT_AVAILABLE_COMMANDS === "1";
+const modeConfigId = process.env.HARNESSOS_ACP_MODE_CONFIG_ID || "mode";
 const sessionId = "mock-session-1";
 
 let currentModeId = "ask";

@@ -120,11 +120,7 @@ function detail(overrides: Partial<PullRequestDetail> = {}): PullRequestDetail {
       size: 3,
       position: 2,
       baseBranch: "main",
-      entries: [
-        stackEntry(1, 41),
-        stackEntry(2, 42),
-        stackEntry(3, 43),
-      ],
+      entries: [stackEntry(1, 41), stackEntry(2, 42), stackEntry(3, 43)],
     },
     stackMetadataIncomplete: false,
     ...overrides,
@@ -166,11 +162,7 @@ describe("PullRequestDetailPanel merge confirmation", () => {
         size: 3,
         position: 2,
         baseBranch: "release",
-        entries: [
-          stackEntry(1, 40),
-          stackEntry(2, 42),
-          stackEntry(3, 43),
-        ],
+        entries: [stackEntry(1, 40), stackEntry(2, 42), stackEntry(3, 43)],
       },
     });
     await queryClient.refetchQueries({ queryKey: pullRequestQueryKeys.detail(input), exact: true });
@@ -235,11 +227,7 @@ describe("PullRequestDetailPanel merge confirmation", () => {
         size: 3,
         position: 2,
         baseBranch: "main",
-        entries: [
-          { ...stackEntry(1, 41), isDraft: true },
-          stackEntry(2, 42),
-          stackEntry(3, 43),
-        ],
+        entries: [{ ...stackEntry(1, 41), isDraft: true }, stackEntry(2, 42), stackEntry(3, 43)],
       },
     });
     const queryClient = makeQueryClient();

@@ -161,7 +161,7 @@ describe("buildResolveConflictsPrompt", () => {
   });
 
   it("points at the current checkout instead of asserting the local branch name", () => {
-    // Fork threads check the PR out under `omnimind/pr-N/<branch>`, so the prompt must not
+    // Fork threads check the PR out under `harnessos/pr-N/<branch>`, so the prompt must not
     // claim the local branch is named after the GitHub head branch.
     const prompt = buildResolveConflictsPrompt({
       prNumber: 488,

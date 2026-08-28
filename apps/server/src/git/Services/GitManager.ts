@@ -125,5 +125,5 @@ export interface GitManagerShape {
  * GitManager - Service tag for stacked Git workflow orchestration.
  */
 export class GitManager extends ServiceMap.Service<GitManager, GitManagerShape>()(
-  "omnimind/git/Services/GitManager",
+  "harnessos/git/Services/GitManager",
 ) {}

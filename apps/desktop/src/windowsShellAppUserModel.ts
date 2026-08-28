@@ -14,7 +14,7 @@ export const WINDOWS_SHELL_APPUSERMODEL_SOURCE = `
 using System;
 using System.Runtime.InteropServices;
 
-namespace OmniMind {
+namespace HarnessOS {
   public static class ShellAppUserModel {
     const ushort VT_LPWSTR = 31;
     const int GPS_READWRITE = 2;
@@ -290,7 +290,7 @@ export function ensureWindowsShellAppUserModelHelper(cacheDirectory: string): st
       "/nologo",
       "/target:exe",
       "/platform:x64",
-      `/main:OmniMind.ShellAppUserModel`,
+      `/main:HarnessOS.ShellAppUserModel`,
       `/out:${exePath}`,
       csPath,
     ],

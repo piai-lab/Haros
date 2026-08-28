@@ -27,7 +27,7 @@ const { browserSession, fromId, webContentsViewConstructor, willDownloadListener
 );
 vi.mock("electron", () => ({
   app: {
-    getName: () => "OmniMind",
+    getName: () => "HarnessOS",
     getPreferredSystemLanguages: () => ["en-US"],
     userAgentFallback: "Mozilla/5.0 Electron/40.0.0",
   },
@@ -123,13 +123,13 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
       threadId: THREAD_ID,
       surfaceId: "surface-a",
       url: tokenUrl,
-      title: "OmniMind 网络访问",
+      title: "HarnessOS 网络访问",
       expiresAt,
     });
     const firstTabId = first.activeTabId!;
     expect(firstTabId).not.toBe(ordinaryTabId);
     expect(JSON.stringify(first)).not.toContain("secret-token");
-    expect(first.tabs.find((tab) => tab.id === firstTabId)?.title).toBe("OmniMind 网络访问");
+    expect(first.tabs.find((tab) => tab.id === firstTabId)?.title).toBe("HarnessOS 网络访问");
     expect(first.tabs.find((tab) => tab.id === firstTabId)?.presentation).toMatchObject({
       kind: "engine-web-surface",
       surfaceId: "surface-a",
@@ -142,15 +142,15 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
       threadId: THREAD_ID,
       surfaceId: "surface-b",
       url: "http://127.0.0.1:43124/?session=another-secret",
-      title: "OmniMind Web Access",
+      title: "HarnessOS Web Access",
       expiresAt,
     });
     const secondTabId = second.activeTabId!;
     expect(secondTabId).not.toBe(firstTabId);
 
-    expect(() =>
-      manager.selectAutomationTab({ threadId: THREAD_ID, tabId: secondTabId }),
-    ).toThrow(/not available/i);
+    expect(() => manager.selectAutomationTab({ threadId: THREAD_ID, tabId: secondTabId })).toThrow(
+      /not available/i,
+    );
     expect(() =>
       manager.prepareAutomationNavigation({
         threadId: THREAD_ID,
@@ -174,12 +174,12 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
     expect(presentExistingSurface).toHaveBeenLastCalledWith(
       expect.objectContaining({
         surfaceId: "surface-a",
-        title: "OmniMind 网络访问",
+        title: "HarnessOS 网络访问",
         url: tokenUrl,
       }),
     );
     expect(reopened.tabs.find((tab) => tab.presentation?.surfaceId === "surface-a")?.title).toBe(
-      "OmniMind 网络访问",
+      "HarnessOS 网络访问",
     );
     expect(reopened.activeTabId).not.toBe(firstTabId);
     expect(reopened.tabs.some((tab) => tab.presentation?.surfaceId === "surface-b")).toBe(true);
@@ -195,7 +195,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
       threadId: THREAD_ID,
       surfaceId: "surface-observer",
       url: "http://127.0.0.1:43125/?session=observer-private-token",
-      title: "OmniMind Web Access",
+      title: "HarnessOS Web Access",
       expiresAt: Date.now() + 60_000,
     });
     const observerSettled = manager.settleEngineWebSurface({
@@ -203,12 +203,18 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
       surfaceId: "surface-observer",
       preserveTab: true,
     });
-    expect(observerSettled.tabs.some((tab) => tab.presentation?.surfaceId === "surface-observer")).toBe(true);
-    expect(observerSettled.tabs.find((tab) => tab.presentation?.surfaceId === "surface-observer")?.url).toBe("omnimind://temporary-page");
-    expect(() => manager.reopenEngineWebSurface({
-      threadId: THREAD_ID,
-      surfaceId: "surface-observer",
-    })).toThrow(/no longer pending/i);
+    expect(
+      observerSettled.tabs.some((tab) => tab.presentation?.surfaceId === "surface-observer"),
+    ).toBe(true);
+    expect(
+      observerSettled.tabs.find((tab) => tab.presentation?.surfaceId === "surface-observer")?.url,
+    ).toBe("harnessos://temporary-page");
+    expect(() =>
+      manager.reopenEngineWebSurface({
+        threadId: THREAD_ID,
+        surfaceId: "surface-observer",
+      }),
+    ).toThrow(/no longer pending/i);
 
     manager.close({ threadId: THREAD_ID });
     const afterPaneClose = manager.reopenEngineWebSurface({
@@ -219,13 +225,13 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
     expect(afterPaneClose.tabs[0]?.presentation?.surfaceId).toBe("surface-b");
   });
 
-  it("opens a Curator source link as an ordinary OmniMind Browser tab", async () => {
+  it("opens a Curator source link as an ordinary HarnessOS Browser tab", async () => {
     const manager = new DesktopBrowserManager();
     const presented = manager.presentEngineWebSurface({
       threadId: THREAD_ID,
       surfaceId: "surface-source-link",
       url: "http://127.0.0.1:43123/?session=private-token",
-      title: "OmniMind Web Access",
+      title: "HarnessOS Web Access",
       expiresAt: Date.now() + 60_000,
     });
     const internalTabId = presented.activeTabId!;
@@ -246,19 +252,23 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
     access.runtimes.set(runtime.key, runtime);
     access.configureRuntimeWebContents(runtime);
 
-    expect(webContents.windowOpenHandler?.({
-      url: "https://source.example/article",
-      frameName: "",
-      features: "",
-      disposition: "foreground-tab",
-    })).toEqual({ action: "deny" });
+    expect(
+      webContents.windowOpenHandler?.({
+        url: "https://source.example/article",
+        frameName: "",
+        features: "",
+        disposition: "foreground-tab",
+      }),
+    ).toEqual({ action: "deny" });
     await new Promise<void>((resolve) => setImmediate(resolve));
 
     const state = manager.getState({ threadId: THREAD_ID });
     const sourceTab = state.tabs.find((tab) => tab.url === "https://source.example/article");
     expect(sourceTab).toBeDefined();
     expect(sourceTab?.presentation).toBeUndefined();
-    expect(state.tabs.find((tab) => tab.id === internalTabId)?.presentation?.internalOnly).toBe(true);
+    expect(state.tabs.find((tab) => tab.id === internalTabId)?.presentation?.internalOnly).toBe(
+      true,
+    );
   });
 
   it("refuses a detached native fallback and returns an adopted renderer webview", () => {
@@ -332,7 +342,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
     ).toThrow(/not ready yet/i);
   });
 
-  it("adopts only a webview owned by the exact OmniMind window and browser partition", () => {
+  it("adopts only a webview owned by the exact HarnessOS window and browser partition", () => {
     const manager = new DesktopBrowserManager();
     const state = manager.open({ threadId: THREAD_ID });
     const tabId = state.activeTabId!;

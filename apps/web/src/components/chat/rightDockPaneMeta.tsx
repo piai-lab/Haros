@@ -66,10 +66,7 @@ export function getRightDockPaneMeta(kind: RightDockPaneKind): RightDockPaneMeta
 }
 
 /** Catalog key for a pane's visible label; `fallback` preserves launcher-specific wording. */
-export function rightDockPaneLabelKey(
-  kind: RightDockPaneKind,
-  fallback: string,
-): MessageKey {
+export function rightDockPaneLabelKey(kind: RightDockPaneKind, fallback: string): MessageKey {
   switch (kind) {
     case "browser":
       return "workbench.browser";

@@ -52,16 +52,16 @@ describe("claudeProcessEnv", () => {
     const result = buildClaudeProcessEnv({
       env: {
         ANTHROPIC_API_KEY: "api-key-auth",
-        OMNIMIND_AUTH_TOKEN: "server-secret",
-        OMNIMIND_BROWSER_HOST_PIPE_PATH: "/tmp/browser.sock",
+        HARNESSOS_AUTH_TOKEN: "server-secret",
+        HARNESSOS_BROWSER_HOST_PIPE_PATH: "/tmp/browser.sock",
         NODE_OPTIONS: "--require=/tmp/inject.js",
       },
       hasClaudeCliCredentials: false,
     });
 
     assert.equal(result.ANTHROPIC_API_KEY, "api-key-auth");
-    assert.equal(result.OMNIMIND_AUTH_TOKEN, undefined);
-    assert.equal(result.OMNIMIND_BROWSER_HOST_PIPE_PATH, undefined);
+    assert.equal(result.HARNESSOS_AUTH_TOKEN, undefined);
+    assert.equal(result.HARNESSOS_BROWSER_HOST_PIPE_PATH, undefined);
     assert.equal(result.NODE_OPTIONS, undefined);
   });
 

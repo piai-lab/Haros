@@ -66,4 +66,4 @@ export interface QueuedTurnPromotionRepositoryShape {
 export class QueuedTurnPromotionRepository extends ServiceMap.Service<
   QueuedTurnPromotionRepository,
   QueuedTurnPromotionRepositoryShape
->()("omnimind/persistence/Services/QueuedTurnPromotions/QueuedTurnPromotionRepository") {}
+>()("harnessos/persistence/Services/QueuedTurnPromotions/QueuedTurnPromotionRepository") {}

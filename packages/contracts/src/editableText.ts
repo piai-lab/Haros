@@ -10,7 +10,7 @@ export const EDITABLE_TEXT_FILE_MAX_BYTES = 1_000_000;
 // native builder, tools, project context, skills, and conversation. It also
 // leaves ample headroom below the existing 2 MiB WebSocket ceiling. This is a
 // conservative cross-tokenizer engineering boundary, not a token-count claim.
-export const OMNIMIND_AGENT_PROMPT_MAX_BYTES = 8 * 1024;
+export const HARNESSOS_AGENT_PROMPT_MAX_BYTES = 8 * 1024;
 
 export function editableTextByteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
@@ -52,6 +52,6 @@ export function isOmniMindAgentPromptContent(value: string): boolean {
   return (
     !hasDisallowedEditableTextControl(value) &&
     !hasUnpairedUtf16Surrogate(value) &&
-    editableTextByteLength(value) <= OMNIMIND_AGENT_PROMPT_MAX_BYTES
+    editableTextByteLength(value) <= HARNESSOS_AGENT_PROMPT_MAX_BYTES
   );
 }

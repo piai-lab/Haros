@@ -3,9 +3,9 @@ import { ASK_USER_TOOL_NAME } from "@harnessos/om-ask";
 import { OMNIMIND_WEB_ACCESS_PLAN_TOOL_NAMES } from "@harnessos/om-web-access";
 import type { TurnId } from "@harnessos/contracts";
 
-import { OMNIMIND_TASK_LIST_TOOL_NAME } from "./omnimindTaskListExtension.ts";
+import { HARNESSOS_TASK_LIST_TOOL_NAME } from "./omnimindTaskListExtension.ts";
 
-export const OMNIMIND_PLAN_MODE_EXTENSION_NAME = "omnimind-agent-plan-guard";
+export const HARNESSOS_PLAN_MODE_EXTENSION_NAME = "omnimind-agent-plan-guard";
 
 const PLAN_ALLOWED_TOOL_NAMES = new Set([
   "read",
@@ -13,7 +13,7 @@ const PLAN_ALLOWED_TOOL_NAMES = new Set([
   "find",
   "ls",
   ASK_USER_TOOL_NAME,
-  OMNIMIND_TASK_LIST_TOOL_NAME,
+  HARNESSOS_TASK_LIST_TOOL_NAME,
   ...OMNIMIND_WEB_ACCESS_PLAN_TOOL_NAMES,
 ]);
 
@@ -42,7 +42,7 @@ export function makeOmniMindPlanModeExtension(
   controller: OmniMindPlanModeController,
 ): InlineExtension {
   return {
-    name: OMNIMIND_PLAN_MODE_EXTENSION_NAME,
+    name: HARNESSOS_PLAN_MODE_EXTENSION_NAME,
     hidden: true,
     factory: (pi) => {
       pi.on("tool_call", (event) => {

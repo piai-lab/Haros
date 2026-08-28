@@ -39,11 +39,11 @@ export interface BrowserAutomationHostShape {
     readonly sessionKey: string;
     readonly threadId: ThreadId;
     readonly surfaceId: string;
-	readonly preserveTab?: boolean;
+    readonly preserveTab?: boolean;
   }) => Effect.Effect<void, BrowserHostRpcError>;
 }
 
 export class BrowserAutomationHost extends ServiceMap.Service<
   BrowserAutomationHost,
   BrowserAutomationHostShape
->()("omnimind/browserAutomation/Services/BrowserAutomationHost") {}
+>()("harnessos/browserAutomation/Services/BrowserAutomationHost") {}

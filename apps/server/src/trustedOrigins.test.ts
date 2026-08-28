@@ -35,14 +35,14 @@ describe("trustedOrigins", () => {
     ).toBe(true);
     expect(
       isTrustedAppOrigin({
-        origin: "omnimind://app",
+        origin: "harnessos://app",
         requestOrigin: "http://127.0.0.1:58090",
         config,
       }),
     ).toBe(true);
     expect(
       isTrustedAppOrigin({
-        origin: "omnimind-canary://app",
+        origin: "harnessos-canary://app",
         requestOrigin: "http://127.0.0.1:58090",
         config,
       }),
@@ -113,8 +113,8 @@ describe("trustedOrigins", () => {
   });
 
   it("normalizes desktop origins with trailing slashes", () => {
-    expect(normalizeCorsOrigin("omnimind://app/")).toBe("omnimind://app");
-    expect(normalizeCorsOrigin("omnimind-canary://app/")).toBe("omnimind-canary://app");
+    expect(normalizeCorsOrigin("harnessos://app/")).toBe("harnessos://app");
+    expect(normalizeCorsOrigin("harnessos-canary://app/")).toBe("harnessos-canary://app");
   });
 
   it("rejects present but untrusted request origins for websocket-style gates", () => {

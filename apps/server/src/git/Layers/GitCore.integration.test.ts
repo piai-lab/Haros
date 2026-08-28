@@ -822,7 +822,7 @@ it.layer(TestLayer)("git integration", (it) => {
 
         const stashList = yield* git(tmp, ["stash", "list"]);
         expect(stashList).toContain("pre-existing stash");
-        expect(stashList).not.toContain("omnimind: stash before switching to feature");
+        expect(stashList).not.toContain("harnessos: stash before switching to feature");
         expect(yield* readTextFile(path.join(tmp, "README.md"))).toBe("dirty changes\n");
       }),
     );
@@ -852,7 +852,7 @@ it.layer(TestLayer)("git integration", (it) => {
         expect(yield* readTextFile(path.join(tmp, "README.md"))).toBe("conflicting content\n");
         expect((yield* git(tmp, ["status", "--short"])).trim()).toBe("");
         expect(yield* git(tmp, ["stash", "list"])).toContain(
-          "omnimind: stash before switching to conflicting",
+          "harnessos: stash before switching to conflicting",
         );
       }),
     );
@@ -1034,26 +1034,26 @@ it.layer(TestLayer)("git integration", (it) => {
       Effect.gen(function* () {
         const tmp = yield* makeTmpDir();
         yield* initRepoWithCommit(tmp);
-        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "omnimind/feat/session" });
-        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "omnimind/tmp-working" });
-        yield* (yield* GitCore).checkoutBranch({ cwd: tmp, branch: "omnimind/tmp-working" });
+        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "harnessos/feat/session" });
+        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "harnessos/tmp-working" });
+        yield* (yield* GitCore).checkoutBranch({ cwd: tmp, branch: "harnessos/tmp-working" });
 
         const renamed = yield* (yield* GitCore).renameBranch({
           cwd: tmp,
-          oldBranch: "omnimind/tmp-working",
-          newBranch: "omnimind/feat/session",
+          oldBranch: "harnessos/tmp-working",
+          newBranch: "harnessos/feat/session",
         });
 
-        expect(renamed.branch).toBe("omnimind/feat/session-1");
+        expect(renamed.branch).toBe("harnessos/feat/session-1");
         const branches = yield* (yield* GitCore).listBranches({ cwd: tmp });
-        expect(branches.branches.some((branch) => branch.name === "omnimind/feat/session")).toBe(
+        expect(branches.branches.some((branch) => branch.name === "harnessos/feat/session")).toBe(
           true,
         );
-        expect(branches.branches.some((branch) => branch.name === "omnimind/feat/session-1")).toBe(
+        expect(branches.branches.some((branch) => branch.name === "harnessos/feat/session-1")).toBe(
           true,
         );
         const current = branches.branches.find((branch) => branch.current);
-        expect(current?.name).toBe("omnimind/feat/session-1");
+        expect(current?.name).toBe("harnessos/feat/session-1");
       }),
     );
 
@@ -1061,18 +1061,18 @@ it.layer(TestLayer)("git integration", (it) => {
       Effect.gen(function* () {
         const tmp = yield* makeTmpDir();
         yield* initRepoWithCommit(tmp);
-        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "omnimind/feat/session" });
-        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "omnimind/feat/session-1" });
-        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "omnimind/tmp-working" });
-        yield* (yield* GitCore).checkoutBranch({ cwd: tmp, branch: "omnimind/tmp-working" });
+        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "harnessos/feat/session" });
+        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "harnessos/feat/session-1" });
+        yield* (yield* GitCore).createBranch({ cwd: tmp, branch: "harnessos/tmp-working" });
+        yield* (yield* GitCore).checkoutBranch({ cwd: tmp, branch: "harnessos/tmp-working" });
 
         const renamed = yield* (yield* GitCore).renameBranch({
           cwd: tmp,
-          oldBranch: "omnimind/tmp-working",
-          newBranch: "omnimind/feat/session",
+          oldBranch: "harnessos/tmp-working",
+          newBranch: "harnessos/feat/session",
         });
 
-        expect(renamed.branch).toBe("omnimind/feat/session-2");
+        expect(renamed.branch).toBe("harnessos/feat/session-2");
       }),
     );
 
@@ -1274,16 +1274,16 @@ it.layer(TestLayer)("git integration", (it) => {
           cwd: tmp,
           ref: "HEAD",
           path: wtPath,
-          newBranch: "omnimind/abcd1234",
+          newBranch: "harnessos/abcd1234",
         });
 
         expect(result.worktree).toEqual({
           path: wtPath,
           ref: expectedHead,
-          branch: "omnimind/abcd1234",
+          branch: "harnessos/abcd1234",
         });
-        expect(yield* git(wtPath, ["symbolic-ref", "--short", "HEAD"])).toBe("omnimind/abcd1234");
-        expect(yield* git(tmp, ["rev-parse", "refs/heads/omnimind/abcd1234"])).toBe(expectedHead);
+        expect(yield* git(wtPath, ["symbolic-ref", "--short", "HEAD"])).toBe("harnessos/abcd1234");
+        expect(yield* git(tmp, ["rev-parse", "refs/heads/harnessos/abcd1234"])).toBe(expectedHead);
 
         yield* core.removeWorktree({
           cwd: tmp,
@@ -1291,7 +1291,7 @@ it.layer(TestLayer)("git integration", (it) => {
           force: true,
           reclaimTemporaryBranch: true,
         });
-        const remainingBranches = yield* git(tmp, ["branch", "--list", "omnimind/abcd1234"]);
+        const remainingBranches = yield* git(tmp, ["branch", "--list", "harnessos/abcd1234"]);
         expect(remainingBranches).toBe("");
       }),
     );
@@ -1309,7 +1309,7 @@ it.layer(TestLayer)("git integration", (it) => {
             cwd: tmp,
             ref: "HEAD",
             path: wtPath,
-            newBranch: "omnimind/ph123456",
+            newBranch: "harnessos/ph123456",
             copyChangesFrom: tmp,
           },
           {
@@ -1343,7 +1343,7 @@ it.layer(TestLayer)("git integration", (it) => {
               cwd: tmp,
               ref: "refs/heads/missing",
               path: path.join(tmp, "wt-invalid-ref"),
-              newBranch: "omnimind/notstarted",
+              newBranch: "harnessos/notstarted",
             },
             {
               onPhase: (phase) =>
@@ -1356,7 +1356,7 @@ it.layer(TestLayer)("git integration", (it) => {
 
         expect(Exit.isFailure(result)).toBe(true);
         expect(phases).toEqual([]);
-        expect(yield* git(tmp, ["branch", "--list", "omnimind/notstarted"])).toBe("");
+        expect(yield* git(tmp, ["branch", "--list", "harnessos/notstarted"])).toBe("");
       }),
     );
 
@@ -1375,12 +1375,12 @@ it.layer(TestLayer)("git integration", (it) => {
             cwd: tmp,
             ref: "HEAD",
             path: wtPath,
-            newBranch: "omnimind/rollback1",
+            newBranch: "harnessos/rollback1",
           }),
         );
 
         expect(Exit.isFailure(result)).toBe(true);
-        expect(yield* git(tmp, ["branch", "--list", "omnimind/rollback1"])).toBe("");
+        expect(yield* git(tmp, ["branch", "--list", "harnessos/rollback1"])).toBe("");
       }),
     );
 
@@ -2447,7 +2447,7 @@ it.layer(TestLayer)("git integration", (it) => {
           yield* git(tmp, [
             "checkout",
             "-b",
-            "omnimind/pr-488/statemachine",
+            "harnessos/pr-488/statemachine",
             "--track",
             "jasonLaster/statemachine",
           ]);
@@ -2473,7 +2473,7 @@ it.layer(TestLayer)("git integration", (it) => {
               "ls-remote",
               "--heads",
               "jasonLaster",
-              "omnimind/pr-488/statemachine",
+              "harnessos/pr-488/statemachine",
             ]),
           ).toBe("");
         }),

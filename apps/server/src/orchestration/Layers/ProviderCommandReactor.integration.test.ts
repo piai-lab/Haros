@@ -642,7 +642,7 @@ describe("ProviderCommandReactor", () => {
         worktreePath: null,
         ...(input?.gatewayOperationId
           ? {
-              creationSource: "omnimind_mcp" as const,
+              creationSource: "harnessos_mcp" as const,
               gatewayOperationId: input.gatewayOperationId,
               gatewayOperationIndex: 0,
             }
@@ -3263,7 +3263,7 @@ describe("ProviderCommandReactor", () => {
 
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
     const providerInput = harness.sendTurn.mock.calls[0]?.[0].input;
-    expect(providerInput).toContain("<omnimind_goal>");
+    expect(providerInput).toContain("<harnessos_goal>");
     expect(providerInput).toContain("Finish the complete implementation");
     expect(providerInput).toContain("Continue working toward the active thread goal");
     expect(harness.sendTurn.mock.calls[0]?.[1]).toMatchObject({
@@ -5352,9 +5352,9 @@ describe("ProviderCommandReactor", () => {
       runtimeMode: "approval-required",
     });
     const providerInput = harness.sendTurn.mock.calls[0]?.[0].input;
-    expect(providerInput).toContain("<omnimind_goal>");
+    expect(providerInput).toContain("<harnessos_goal>");
     expect(providerInput).toContain("Deliver &lt;all&gt; providers safely");
-    expect(providerInput).toContain("</omnimind_goal>\n\nhello reactor");
+    expect(providerInput).toContain("</harnessos_goal>\n\nhello reactor");
 
     const thread = await readHarnessThread(harness);
     expect(thread?.session?.threadId).toBe("thread-1");
@@ -5394,7 +5394,7 @@ describe("ProviderCommandReactor", () => {
     expect(convergeInput).toContain("implementation Skill");
     const afterConverge = await readHarnessThread(harness, threadId);
     expect(afterConverge?.messages.at(-1)?.text).toBe("Do not ask; modify the implementation now");
-    expect(afterConverge?.messages.at(-1)?.text).not.toContain("omnimind_interaction_mode");
+    expect(afterConverge?.messages.at(-1)?.text).not.toContain("harnessos_interaction_mode");
 
     harness.startSession.mockClear();
     await Effect.runPromise(
@@ -5529,9 +5529,9 @@ describe("ProviderCommandReactor", () => {
 
     await waitFor(() => harness.steerSubagent.mock.calls.length === 1);
     const steerInput = harness.steerSubagent.mock.calls[0]?.[0].input;
-    expect(steerInput).toContain("<omnimind_goal>");
+    expect(steerInput).toContain("<harnessos_goal>");
     expect(steerInput).toContain("Finish &lt;all&gt; tests");
-    expect(steerInput).toContain("</omnimind_goal>\n\ncontinue");
+    expect(steerInput).toContain("</harnessos_goal>\n\ncontinue");
   });
 
   it("dispatches thread.task.background to the provider service", async () => {
@@ -6607,11 +6607,11 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-thread-worktree-bootstrap"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         envMode: "worktree",
-        branch: "omnimind/cb661f0d",
+        branch: "harnessos/cb661f0d",
         worktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
         associatedWorktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
-        associatedWorktreeBranch: "omnimind/cb661f0d",
-        associatedWorktreeRef: "omnimind/cb661f0d",
+        associatedWorktreeBranch: "harnessos/cb661f0d",
+        associatedWorktreeRef: "harnessos/cb661f0d",
       }),
     );
 
@@ -6646,19 +6646,19 @@ describe("ProviderCommandReactor", () => {
     await waitFor(async () => {
       const thread = await readHarnessThread(harness);
       return (
-        thread?.branch === "omnimind/app-startup-crash" &&
-        thread.associatedWorktreeBranch === "omnimind/app-startup-crash" &&
-        thread.associatedWorktreeRef === "omnimind/app-startup-crash"
+        thread?.branch === "harnessos/app-startup-crash" &&
+        thread.associatedWorktreeBranch === "harnessos/app-startup-crash" &&
+        thread.associatedWorktreeRef === "harnessos/app-startup-crash"
       );
     });
 
     const thread = await readHarnessThread(harness);
     expect(thread).toMatchObject({
-      branch: "omnimind/app-startup-crash",
+      branch: "harnessos/app-startup-crash",
       worktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
       associatedWorktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
-      associatedWorktreeBranch: "omnimind/app-startup-crash",
-      associatedWorktreeRef: "omnimind/app-startup-crash",
+      associatedWorktreeBranch: "harnessos/app-startup-crash",
+      associatedWorktreeRef: "harnessos/app-startup-crash",
     });
   });
 
@@ -6678,11 +6678,11 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-gateway-worktree-bootstrap"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         envMode: "worktree",
-        branch: "omnimind/cb661f0d",
+        branch: "harnessos/cb661f0d",
         worktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
         associatedWorktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
-        associatedWorktreeBranch: "omnimind/cb661f0d",
-        associatedWorktreeRef: "omnimind/cb661f0d",
+        associatedWorktreeBranch: "harnessos/cb661f0d",
+        associatedWorktreeRef: "harnessos/cb661f0d",
       }),
     );
     await Effect.runPromise(
@@ -6723,11 +6723,11 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-missing-gateway-worktree-bootstrap"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         envMode: "worktree",
-        branch: "omnimind/cb661f0d",
+        branch: "harnessos/cb661f0d",
         worktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
         associatedWorktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
-        associatedWorktreeBranch: "omnimind/cb661f0d",
-        associatedWorktreeRef: "omnimind/cb661f0d",
+        associatedWorktreeBranch: "harnessos/cb661f0d",
+        associatedWorktreeRef: "harnessos/cb661f0d",
       }),
     );
     await Effect.runPromise(
@@ -6771,11 +6771,11 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-thread-worktree-bootstrap-antigravity"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         envMode: "worktree",
-        branch: "omnimind/cb661f0d",
+        branch: "harnessos/cb661f0d",
         worktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
         associatedWorktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
-        associatedWorktreeBranch: "omnimind/cb661f0d",
-        associatedWorktreeRef: "omnimind/cb661f0d",
+        associatedWorktreeBranch: "harnessos/cb661f0d",
+        associatedWorktreeRef: "harnessos/cb661f0d",
       }),
     );
 
@@ -6809,13 +6809,13 @@ describe("ProviderCommandReactor", () => {
       },
     });
     expect(harness.renameBranch.mock.calls[0]?.[0]).toMatchObject({
-      oldBranch: "omnimind/cb661f0d",
-      newBranch: "omnimind/provider-startup-timeouts",
+      oldBranch: "harnessos/cb661f0d",
+      newBranch: "harnessos/provider-startup-timeouts",
     });
 
     await waitFor(
       async () =>
-        (await readHarnessThread(harness))?.branch === "omnimind/provider-startup-timeouts",
+        (await readHarnessThread(harness))?.branch === "harnessos/provider-startup-timeouts",
     );
   });
 
@@ -6838,11 +6838,11 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-thread-worktree-keep-temporary"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         envMode: "worktree",
-        branch: "omnimind/cb661f0d",
+        branch: "harnessos/cb661f0d",
         worktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
         associatedWorktreePath: "/tmp/provider-project/.worktrees/cb661f0d",
-        associatedWorktreeBranch: "omnimind/cb661f0d",
-        associatedWorktreeRef: "omnimind/cb661f0d",
+        associatedWorktreeBranch: "harnessos/cb661f0d",
+        associatedWorktreeRef: "harnessos/cb661f0d",
       }),
     );
 
@@ -6874,9 +6874,9 @@ describe("ProviderCommandReactor", () => {
 
     const thread = await readHarnessThread(harness);
     expect(thread).toMatchObject({
-      branch: "omnimind/cb661f0d",
-      associatedWorktreeBranch: "omnimind/cb661f0d",
-      associatedWorktreeRef: "omnimind/cb661f0d",
+      branch: "harnessos/cb661f0d",
+      associatedWorktreeBranch: "harnessos/cb661f0d",
+      associatedWorktreeRef: "harnessos/cb661f0d",
     });
   });
 

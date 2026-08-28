@@ -36,19 +36,19 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.equal(dmg.writeUpdateInfo, false);
     assert.equal(mac.entitlements, MAC_ENTITLEMENTS_PATH);
     assert.equal(mac.entitlementsInherit, MAC_INHERITED_ENTITLEMENTS_PATH);
-    assert.equal(MAC_APPSNAP_HELPER_BUNDLE_PATH, "Contents/Helpers/omnimind-appsnap-helper");
-    assert.deepStrictEqual(mac.binaries, ["Contents/Helpers/omnimind-appsnap-helper"]);
-    assert.equal(mac.x64ArchFiles, "Contents/Helpers/omnimind-appsnap-helper");
+    assert.equal(MAC_APPSNAP_HELPER_BUNDLE_PATH, "Contents/Helpers/harnessos-appsnap-helper");
+    assert.deepStrictEqual(mac.binaries, ["Contents/Helpers/harnessos-appsnap-helper"]);
+    assert.equal(mac.x64ArchFiles, "Contents/Helpers/harnessos-appsnap-helper");
     assert.equal(
       MAC_APPSNAP_HELPER_STAGE_PATH,
-      "apps/desktop/native/appsnap/build/omnimind-appsnap-helper",
+      "apps/desktop/native/appsnap/build/harnessos-appsnap-helper",
     );
     assert.equal(MAC_APPSNAP_HELPER_ASAR_EXCLUSION, "!apps/desktop/native/appsnap/build/**");
     assert.deepStrictEqual(config.files, ["**/*", MAC_APPSNAP_HELPER_ASAR_EXCLUSION]);
     assert.deepStrictEqual(config.extraFiles, [
       {
-        from: "apps/desktop/native/appsnap/build/omnimind-appsnap-helper",
-        to: "Helpers/omnimind-appsnap-helper",
+        from: "apps/desktop/native/appsnap/build/harnessos-appsnap-helper",
+        to: "Helpers/harnessos-appsnap-helper",
       },
       {
         from: MAC_DEVICE_HELPER_STAGE_PATH,

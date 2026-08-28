@@ -19,10 +19,33 @@ afterAll(async () => {
 
 const availability = Object.fromEntries(
   [
-    "all", "openai", "brave", "parallel", "parallel-mcp", "tinyfish", "search1api",
-    "searchinfinity", "querit", "tavily", "firecrawl", "jina", "serpdive", "kagi",
-    "bocha", "ollama", "searxng", "duckduckgo", "perplexity", "exa", "gemini",
-    "anysearch", "xai", "brightdata", "serpbase", "serper", "valyu",
+    "all",
+    "openai",
+    "brave",
+    "parallel",
+    "parallel-mcp",
+    "tinyfish",
+    "search1api",
+    "searchinfinity",
+    "querit",
+    "tavily",
+    "firecrawl",
+    "jina",
+    "serpdive",
+    "kagi",
+    "bocha",
+    "ollama",
+    "searxng",
+    "duckduckgo",
+    "perplexity",
+    "exa",
+    "gemini",
+    "anysearch",
+    "xai",
+    "brightdata",
+    "serpbase",
+    "serper",
+    "valyu",
   ].map((id) => [id, id === "all" || id === "exa" || id === "tavily"]),
 ) as Parameters<typeof startCuratorServer>[0]["availableProviders"];
 
@@ -58,11 +81,13 @@ async function runSwitch(input: {
       async onAddSearch(query, provider) {
         searchCount += 1;
         if (input.failQueries?.has(query)) throw new Error("synthetic search failure");
-        return [{
-          answer: `answer for ${query}`,
-          results: [{ title: "Result", url: "https://example.com", domain: "example.com" }],
-          provider: provider ?? "tavily",
-        }];
+        return [
+          {
+            answer: `answer for ${query}`,
+            results: [{ title: "Result", url: "https://example.com", domain: "example.com" }],
+            provider: provider ?? "tavily",
+          },
+        ];
       },
       onAddSearchResults() {},
       async onSummarize() {
@@ -135,7 +160,9 @@ test("Curator Provider switch tells the truth for persistence and search outcome
         await playwrightExpect(result.page.locator("#error-banner")).toHaveText(item.recovery);
       }
       if (item.failedCount) {
-        await playwrightExpect(result.page.locator(".result-card.error")).toHaveCount(item.failedCount);
+        await playwrightExpect(result.page.locator(".result-card.error")).toHaveCount(
+          item.failedCount,
+        );
       }
       expect(result.searchCount()).toBe(item.input.queries.length);
     } finally {
@@ -185,16 +212,28 @@ async function openInteractivePage(mode: "observer" | "review") {
     {
       onSubmit() {},
       onCancel() {},
-      async onProviderChange() { return { state: "saved" }; },
-      async onAddSearch() { return []; },
+      async onProviderChange() {
+        return { state: "saved" };
+      },
+      async onAddSearch() {
+        return [];
+      },
       onAddSearchResults() {},
       async onSummarize() {
         return {
           summary: "Synthetic summary",
-          meta: { model: "synthetic", durationMs: 1, tokenEstimate: 2, fallbackUsed: false, edited: false },
+          meta: {
+            model: "synthetic",
+            durationMs: 1,
+            tokenEstimate: 2,
+            fallbackUsed: false,
+            edited: false,
+          },
         };
       },
-      async onRewriteQuery(query) { return query; },
+      async onRewriteQuery(query) {
+        return query;
+      },
     },
   );
   const page = await browser.newPage({ viewport: { width: 360, height: 700 } });
@@ -217,10 +256,18 @@ test("observer and review results expose keyboard expansion without horizontal o
       await playwrightExpect(expand).toHaveAttribute("aria-expanded", "true");
       await expand.focus();
       await page.keyboard.press("Enter");
-      await playwrightExpect(page.getByRole("button", { name: "Expand search result" })).toHaveAttribute("aria-expanded", "false");
+      await playwrightExpect(
+        page.getByRole("button", { name: "Expand search result" }),
+      ).toHaveAttribute("aria-expanded", "false");
       await page.keyboard.press("Space");
-      await playwrightExpect(page.getByRole("button", { name: "Collapse search result" })).toHaveAttribute("aria-expanded", "true");
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+      await playwrightExpect(
+        page.getByRole("button", { name: "Collapse search result" }),
+      ).toHaveAttribute("aria-expanded", "true");
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+        ),
+      ).toBe(true);
 
       const consequence = page.locator(".provider-switch-consequence");
       if (mode === "review") {
@@ -240,19 +287,33 @@ test("summary inspector removes background settlement controls from focus and ac
   try {
     await playwrightExpect(page.locator("#summary-input")).toHaveValue("Synthetic summary");
     await playwrightExpect(page.locator("#summary-heading")).toBeFocused();
-    expect(await page.locator("#summary-panel").evaluate((panel) => panel.contains(document.activeElement))).toBe(true);
+    expect(
+      await page
+        .locator("#summary-panel")
+        .evaluate((panel) => panel.contains(document.activeElement)),
+    ).toBe(true);
     const actionBar = page.locator(".action-bar");
     await playwrightExpect(actionBar).toBeHidden();
     await playwrightExpect(actionBar).toHaveAttribute("aria-hidden", "true");
-    expect(await actionBar.evaluate((element) => (element as HTMLElement & { inert: boolean }).inert)).toBe(true);
+    expect(
+      await actionBar.evaluate((element) => (element as HTMLElement & { inert: boolean }).inert),
+    ).toBe(true);
     await playwrightExpect(page.locator("#btn-send")).not.toBeFocused();
 
     await page.locator("#btn-summary-back").click();
     await playwrightExpect(actionBar).toBeVisible();
-    expect(await actionBar.evaluate((element) => (element as HTMLElement & { inert: boolean }).inert)).toBe(false);
+    expect(
+      await actionBar.evaluate((element) => (element as HTMLElement & { inert: boolean }).inert),
+    ).toBe(false);
     await playwrightExpect(actionBar).not.toHaveAttribute("aria-hidden", "true");
     await playwrightExpect(page.locator("#btn-send")).toBeFocused();
-    expect(await page.evaluate(() => document.activeElement !== document.body && !(document.activeElement as HTMLElement).hidden)).toBe(true);
+    expect(
+      await page.evaluate(
+        () =>
+          document.activeElement !== document.body &&
+          !(document.activeElement as HTMLElement).hidden,
+      ),
+    ).toBe(true);
   } finally {
     await page.close();
     handle.close();

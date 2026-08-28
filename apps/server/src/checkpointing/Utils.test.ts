@@ -20,7 +20,7 @@ describe("managed checkpoint refs", () => {
 
   it("recognizes a structurally valid persisted ref for the same thread", () => {
     const canonical = checkpointRefForThreadTurn(threadId, 4);
-    const historical = canonical.replace("refs/omnimind/", "refs/historical/");
+    const historical = canonical.replace("refs/harnessos/", "refs/historical/");
     expect(parseManagedCheckpointRef(historical)?.namespace).toBe("historical");
     expect(isManagedCheckpointRefForThread(historical, threadId)).toBe(true);
   });
@@ -37,7 +37,7 @@ describe("managed checkpoint refs", () => {
 
   it("reconstructs turn and turn-start refs in an existing managed family", () => {
     const historical = checkpointRefForThreadTurn(threadId, 4).replace(
-      "refs/omnimind/",
+      "refs/harnessos/",
       "refs/historical/",
     );
 

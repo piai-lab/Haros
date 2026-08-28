@@ -141,11 +141,11 @@ describe("desktop shutdown authorization", () => {
       provider: "codex",
       baseEnv: {
         PATH: process.env.PATH,
-        OMNIMIND_DESKTOP_SHUTDOWN_TOKEN: SHUTDOWN_TOKEN,
+        HARNESSOS_DESKTOP_SHUTDOWN_TOKEN: SHUTDOWN_TOKEN,
       },
     });
 
     expect(providerEnvironment.PATH).toBe(process.env.PATH);
-    expect(providerEnvironment.OMNIMIND_DESKTOP_SHUTDOWN_TOKEN).toBeUndefined();
+    expect(providerEnvironment.HARNESSOS_DESKTOP_SHUTDOWN_TOKEN).toBeUndefined();
   });
 });

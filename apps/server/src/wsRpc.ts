@@ -110,7 +110,7 @@ import { OmniMindEcosystem } from "./provider/Services/OmniMindEcosystem";
 import { OmniMindAgentPromptFiles } from "./provider/Services/OmniMindAgentPromptFiles";
 import { OmniMindWebSearchSettings } from "./provider/Services/OmniMindWebSearchSettings";
 import { OmniMindModelServices } from "./provider/Services/OmniMindModelServices";
-import { discoverSkillsCatalog, omnimindSkillsDir } from "./provider/skillsCatalog";
+import { discoverSkillsCatalog, harnessosSkillsDir } from "./provider/skillsCatalog";
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
 import { ProviderExecutionCapabilities } from "./provider/Services/ProviderExecutionCapabilities";
@@ -192,7 +192,7 @@ const THREAD_DETAIL_SNAPSHOT_BOOTSTRAP_TIMEOUT_MS = 5_000;
 const THREAD_DETAIL_SNAPSHOT_BOOTSTRAP_POLL_MS = 100;
 
 class WsRequestAdmissionMiddleware extends RpcMiddleware.Service<WsRequestAdmissionMiddleware>()(
-  "omnimind/WsRequestAdmissionMiddleware",
+  "harnessos/WsRequestAdmissionMiddleware",
   { error: WsRpcError, requiredForClient: false },
 ) {}
 
@@ -2081,13 +2081,13 @@ const makeWsRpcHandlersLayer = () =>
               discoverSkillsCatalog({
                 cwd: input.cwd ?? null,
                 homeDir: config.homeDir,
-                omnimindBaseDir: config.baseDir,
+                harnessosBaseDir: config.baseDir,
                 includeDuplicateOrigins: true,
               }),
             ).pipe(
               Effect.map((skills) => ({
                 skills,
-                omnimindSkillsDir: omnimindSkillsDir(config.baseDir),
+                harnessosSkillsDir: harnessosSkillsDir(config.baseDir),
               })),
             ),
             "Failed to list the skills catalog",
@@ -2566,7 +2566,7 @@ function makeWsNegotiateHttpRouteLayer() {
               headers: { "Cache-Control": "no-store", Vary: "Origin" },
             });
           }
-          // The desktop app fetches cross-origin (omnimind://app); reflect only
+          // The desktop app fetches cross-origin (harnessos://app); reflect only
           // origins the WS upgrade itself would trust.
           const origin = normalizeCorsOrigin(request.headers.origin);
           const corsHeaders =

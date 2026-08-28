@@ -53,6 +53,6 @@ describe("helper cache path agreement", () => {
   });
 
   it("names the binary the build script produces", () => {
-    expect(DEVICE_HELPER_BINARY_NAME).toBe("omnimind-device-helper");
+    expect(DEVICE_HELPER_BINARY_NAME).toBe("harnessos-device-helper");
   });
 });

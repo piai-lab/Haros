@@ -24,4 +24,4 @@ export interface GitStatusBroadcasterShape {
 export class GitStatusBroadcaster extends ServiceMap.Service<
   GitStatusBroadcaster,
   GitStatusBroadcasterShape
->()("omnimind/git/Services/GitStatusBroadcaster") {}
+>()("harnessos/git/Services/GitStatusBroadcaster") {}

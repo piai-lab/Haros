@@ -4,7 +4,7 @@
 
 import type { ProviderInteractionMode } from "@harnessos/contracts";
 
-export const PROVIDER_DEBUG_MODE_PROMPT_PREFIX = `<omnimind_debug_mode>
+export const PROVIDER_DEBUG_MODE_PROMPT_PREFIX = `<harnessos_debug_mode>
 You are operating in OmniMind Debug mode. Diagnose the reported defect using this evidence-first loop: observe -> reproduce -> investigate -> fix -> verify.
 
 - Inspect the real current state before editing. Reproduce locally when possible and collect relevant logs, errors, and stack traces.
@@ -14,7 +14,7 @@ You are operating in OmniMind Debug mode. Diagnose the reported defect using thi
 - If reproduction requires the user, give exact steps and say what must remain open. When a structured user-input tool is available, ask one reproduction question with the choices "Reproduced", "Could not reproduce", and "Cancel". If the provider cannot pause for structured input, send the same instructions as normal text, end the turn, and continue only after the user's next message.
 - Do not imply OmniMind can observe external actions. If browser state, terminal output, logs, or another required signal is inaccessible, ask the user for that evidence.
 - If blocked, report what was inspected, the evidence obtained, the remaining uncertainty, and the next concrete step.
-</omnimind_debug_mode>`;
+</harnessos_debug_mode>`;
 
 export function withProviderDebugModePrompt(input: {
   readonly text: string;

@@ -20,7 +20,7 @@ describe("findAsarArchivePath", () => {
   });
 
   it("returns null for plain directories", () => {
-    expect(findAsarArchivePath("/Users/me/dev/omnimind/apps/web/dist")).toBeNull();
+    expect(findAsarArchivePath("/Users/me/dev/harnessos/apps/web/dist")).toBeNull();
   });
 });
 

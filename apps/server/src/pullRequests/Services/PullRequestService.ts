@@ -36,4 +36,4 @@ export interface PullRequestServiceShape {
 export class PullRequestService extends ServiceMap.Service<
   PullRequestService,
   PullRequestServiceShape
->()("omnimind/pullRequests/Services/PullRequestService/PullRequestService") {}
+>()("harnessos/pullRequests/Services/PullRequestService/PullRequestService") {}

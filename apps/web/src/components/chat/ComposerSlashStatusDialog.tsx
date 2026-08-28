@@ -125,9 +125,7 @@ export function ComposerSlashStatusDialog(props: {
             </div>
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">{t("git.pr.branch")}</p>
-              <p className="font-medium text-foreground">
-                {branch ?? t("taskStatus.unknown")}
-              </p>
+              <p className="font-medium text-foreground">{branch ?? t("taskStatus.unknown")}</p>
             </div>
           </div>
 

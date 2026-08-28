@@ -110,7 +110,7 @@ describe("localServerMonitor", () => {
     expect(
       isLikelyDevServerProcess({
         command: "node",
-        args: "node /Users/emanueledipietro/Developer/omnimind/apps/web/node_modules/.bin/vite",
+        args: "node /Users/emanueledipietro/Developer/harnessos/apps/web/node_modules/.bin/vite",
         ports: [5733],
       }),
     ).toBe(true);

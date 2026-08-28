@@ -73,7 +73,7 @@ describe("external MCP overview", () => {
     expect(
       buildExternalMcpOverviewNextSteps(new Set<ExternalMcpCapability>(["projects:read"])),
     ).toEqual([
-      "Call omnimind_capabilities with a projectId to list the exact provider/model targets available to this integration.",
+      "Call harnessos_capabilities with a projectId to list the exact provider/model targets available to this integration.",
     ]);
     expect(
       buildExternalMcpOverviewNextSteps(
@@ -85,10 +85,10 @@ describe("external MCP overview", () => {
         ]),
       ),
     ).toEqual([
-      "Call omnimind_capabilities with a projectId to list the exact provider/model targets available to this integration.",
-      "Create work with omnimind_create_task.",
-      "Follow permitted work with omnimind_wait_for_task.",
-      "Read permitted task results with omnimind_read_task.",
+      "Call harnessos_capabilities with a projectId to list the exact provider/model targets available to this integration.",
+      "Create work with harnessos_create_task.",
+      "Follow permitted work with harnessos_wait_for_task.",
+      "Read permitted task results with harnessos_read_task.",
     ]);
   });
 });

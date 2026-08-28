@@ -9,7 +9,7 @@ import { render } from "vitest-browser-react";
 
 import { useLocalStorage } from "../hooks/useLocalStorage";
 
-const TEST_KEY = "omnimind:test:shared-local-storage";
+const TEST_KEY = "harnessos:test:shared-local-storage";
 const SharedValue = Schema.Struct({ typography: Schema.Number, width: Schema.Number });
 const INITIAL_VALUE = { typography: 12, width: 208 };
 

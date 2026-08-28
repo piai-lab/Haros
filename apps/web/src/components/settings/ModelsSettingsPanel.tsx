@@ -3,10 +3,10 @@
 // Layer: Settings panel
 
 import {
-  OMNIMIND_CUSTOM_MODEL_HEADERS_MAX_COUNT,
-  OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT,
-  OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API,
-  WS_OMNIMIND_MODEL_SERVICES_CAPABILITY,
+  HARNESSOS_CUSTOM_MODEL_HEADERS_MAX_COUNT,
+  HARNESSOS_CUSTOM_MODEL_COST_TIERS_MAX_COUNT,
+  HARNESSOS_CUSTOM_MODEL_COMPAT_FIELDS_BY_API,
+  WS_HARNESSOS_MODEL_SERVICES_CAPABILITY,
   type OmniMindModelServiceAuthEvent,
   type OmniMindModelServiceAuthPrompt,
   type OmniMindModelServiceAuthResult,
@@ -246,7 +246,7 @@ function customHeaderMutations(
 }
 
 function customHeaderEntriesValid(entries: ReadonlyArray<CustomHeaderEditorEntry>): boolean {
-  if (entries.length > OMNIMIND_CUSTOM_MODEL_HEADERS_MAX_COUNT) return false;
+  if (entries.length > HARNESSOS_CUSTOM_MODEL_HEADERS_MAX_COUNT) return false;
   const names = new Set<string>();
   for (const entry of entries) {
     const name = entry.name.trim();
@@ -541,7 +541,7 @@ function CustomHeaderEditor({
               ? "settings.customApiHeaderAdd.provider"
               : "settings.customApiHeaderAdd.model",
           )}
-          disabled={entries.length >= OMNIMIND_CUSTOM_MODEL_HEADERS_MAX_COUNT}
+          disabled={entries.length >= HARNESSOS_CUSTOM_MODEL_HEADERS_MAX_COUNT}
           onClick={() =>
             onChange([
               ...entries,
@@ -778,7 +778,7 @@ function stableModelServiceInstanceSuffix(serviceId: string): string {
 const subscribeModelServicesCapability = (listener: () => void) =>
   onNativeApiServerCapabilitiesChange(listener);
 const readModelServicesCapability = () =>
-  readNativeApiServerCapabilityState(WS_OMNIMIND_MODEL_SERVICES_CAPABILITY);
+  readNativeApiServerCapabilityState(WS_HARNESSOS_MODEL_SERVICES_CAPABILITY);
 const readServerModelServicesCapability = () => null;
 const subscribeModelServicesTransport = (listener: () => void) =>
   onNativeApiTransportStateChange(listener);
@@ -3420,7 +3420,7 @@ function ActiveModelsSettingsPanel({
                                   variant="outline"
                                   disabled={
                                     (model.cost.tiers?.length ?? 0) >=
-                                    OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT
+                                    HARNESSOS_CUSTOM_MODEL_COST_TIERS_MAX_COUNT
                                   }
                                   onClick={() =>
                                     updateCustomServiceEditor((current) => ({
@@ -3720,7 +3720,7 @@ function ActiveModelsSettingsPanel({
                       </div>
                       {(() => {
                         const effectiveApi = model.api ?? customServiceEditor.api;
-                        const fields = OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API[
+                        const fields = HARNESSOS_CUSTOM_MODEL_COMPAT_FIELDS_BY_API[
                           effectiveApi
                         ].filter(
                           (field): field is CustomModelBooleanCompatField =>

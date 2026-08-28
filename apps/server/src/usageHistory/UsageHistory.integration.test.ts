@@ -17,13 +17,13 @@ import { UsageHistory, UsageHistoryLive, type UsageHistoryShape } from "./UsageH
 
 const tempRoots: string[] = [];
 const previousClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
-const previousWorkerOverride = process.env.OMNIMIND_USAGE_HISTORY_WORKER;
+const previousWorkerOverride = process.env.HARNESSOS_USAGE_HISTORY_WORKER;
 
 afterEach(async () => {
   if (previousClaudeConfigDir === undefined) delete process.env.CLAUDE_CONFIG_DIR;
   else process.env.CLAUDE_CONFIG_DIR = previousClaudeConfigDir;
-  if (previousWorkerOverride === undefined) delete process.env.OMNIMIND_USAGE_HISTORY_WORKER;
-  else process.env.OMNIMIND_USAGE_HISTORY_WORKER = previousWorkerOverride;
+  if (previousWorkerOverride === undefined) delete process.env.HARNESSOS_USAGE_HISTORY_WORKER;
+  else process.env.HARNESSOS_USAGE_HISTORY_WORKER = previousWorkerOverride;
   await Promise.all(tempRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
@@ -160,7 +160,7 @@ describe("UsageHistory", () => {
     process.env.CLAUDE_CONFIG_DIR = claudeHome;
     const crashWorker = path.join(root, "crash-worker.mjs");
     await writeFile(crashWorker, "process.kill(process.pid, 'SIGKILL');\n");
-    process.env.OMNIMIND_USAGE_HISTORY_WORKER = crashWorker;
+    process.env.HARNESSOS_USAGE_HISTORY_WORKER = crashWorker;
 
     const layer = UsageHistoryLive.pipe(
       Layer.provideMerge(SqlitePersistenceMemory),
@@ -285,7 +285,7 @@ process.stdin.on("end", () => setTimeout(() => {
 }, 250));
 `,
     );
-    process.env.OMNIMIND_USAGE_HISTORY_WORKER = slowWorker;
+    process.env.HARNESSOS_USAGE_HISTORY_WORKER = slowWorker;
 
     const layer = UsageHistoryLive.pipe(
       Layer.provideMerge(SqlitePersistenceMemory),

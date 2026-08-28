@@ -98,7 +98,7 @@ import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "../goalMode.ts";
 import { AUTOMATION_RUN_GATEWAY_TOOL_NAMES } from "../../automation/runEnvelope.ts";
 import {
   inspectOmniMindTaskListExtensionRegistration,
-  OMNIMIND_TASK_LIST_TOOL_NAME,
+  HARNESSOS_TASK_LIST_TOOL_NAME,
 } from "../omnimindTaskListExtension.ts";
 import { inspectOmniMindAskUserRegistration } from "../omnimindAskUserExtension.ts";
 import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
@@ -155,7 +155,7 @@ import { askUserMetrics } from "../askUserMetrics.ts";
 
 type PiFamilyProvider = Extract<ProviderKind, "pi" | "omnimind">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
-const OMNIMIND_IDENTITY_AND_COGNITIVE_CONTRACT = [
+const HARNESSOS_IDENTITY_AND_COGNITIVE_CONTRACT = [
   "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).",
   "The academy's official Chinese name is 广东智慧医学国际研究院.",
   "",
@@ -172,7 +172,7 @@ const OMNIMIND_IDENTITY_AND_COGNITIVE_CONTRACT = [
   "By default, communicate naturally in the user's language, lead with the outcome, and stay concise but complete; expand when complexity, risk, learning, or evidence requires it. If asked who you are, answer directly without unnecessary preamble.",
   "Honor explicit user preferences for language, tone, format, level of detail, and working style when they do not conflict with identity, work-surface boundaries, alignment and task-completion policy, truthfulness, or safety.",
 ].join("\n");
-const OMNIMIND_CHAT_CONTRACT = [
+const HARNESSOS_CHAT_CONTRACT = [
   "In Chat, help the user understand, explore, decide, learn, and produce useful work.",
   "",
   "Give a clear, usable starting answer whenever it can be done without misleading the user, and clarify in parallel. Ask before answering when different plausible intents would reverse the answer, create material risk, or waste substantial effort.",
@@ -186,7 +186,7 @@ const OMNIMIND_CHAT_CONTRACT = [
   "When you produce ordinary file results without an explicit destination, use the managed Chat workspace already provided by OmniMind.",
   "Use available tools when they materially improve accuracy, timeliness, or completeness. When the work naturally needs a durable Project boundary, sustained project execution, or trusted project-local context and resources, explain that boundary and suggest Send to Agent.",
 ].join("\n");
-const OMNIMIND_AGENT_CONTRACT = [
+const HARNESSOS_AGENT_CONTRACT = [
   "In Agent, understand the user's actual desired outcome and carry aligned work through to a verified result.",
   "",
   "Before substantive execution, ensure the intended outcome, material boundaries, important constraints, and success criteria are sufficiently aligned. Alignment is sufficient when no unresolved ambiguity would materially change the result; it does not require the user to specify every low-risk implementation detail.",
@@ -197,7 +197,7 @@ const OMNIMIND_AGENT_CONTRACT = [
   "",
   "Inspect existing state and applicable project rules, preserve existing work, execute the necessary steps, verify the result proportionately, and close the loop. Do not stop after superficial steps or hand back work that can be completed within available capabilities. If blocked, explain the exact cause, what is complete, and the smallest decision needed.",
 ].join("\n");
-const OMNIMIND_STUDIO_CONTRACT = [
+const HARNESSOS_STUDIO_CONTRACT = [
   "In Studio, work inside OmniMind's managed creative workspace and its established workspace instructions, drafts, files, and outputs.",
   "Create, edit, and organize the requested work in that managed Studio environment, and make useful results visible through its existing outputs and file surfaces.",
   "Studio is not an Agent Project trust root. Do not infer project-local resources or broader filesystem authority from its managed working directory.",
@@ -491,7 +491,7 @@ const STOCK_PI_FAMILY = {
     createPiModelRuntime(agentDir, await loadPiCodingAgentModule()),
 } satisfies PiFamilyAdapterConfig<"pi">;
 
-const OMNIMIND_AGENT_FAMILY = {
+const HARNESSOS_AGENT_FAMILY = {
   provider: "omnimind",
   displayName: "OmniMind",
   loadModule: loadOmniMindAdapterModule,
@@ -1095,7 +1095,7 @@ export function makePiHostSystemPrompt(input: {
   readonly enabledBuiltInGroups?: ReadonlyArray<BuiltInToolGroupId>;
 }): string {
   return [
-    "<omnimind_host_context>",
+    "<harnessos_host_context>",
     renderOmniMindHarnessPolicy({
       gatewayControlAvailable: input.gatewayControlAvailable,
       projection: {
@@ -1103,7 +1103,7 @@ export function makePiHostSystemPrompt(input: {
         enabledGroups: input.enabledBuiltInGroups ?? [],
       },
     }),
-    "</omnimind_host_context>",
+    "</harnessos_host_context>",
   ].join("\n");
 }
 
@@ -1128,16 +1128,16 @@ export function makeOmniMindEngineSystemPrompt(input: {
   const surface = input.productSurface ?? (input.workSurface === "agent" ? "agent" : "chat");
   const surfaceContract =
     surface === "agent"
-      ? OMNIMIND_AGENT_CONTRACT
+      ? HARNESSOS_AGENT_CONTRACT
       : surface === "studio"
-        ? OMNIMIND_STUDIO_CONTRACT
-        : OMNIMIND_CHAT_CONTRACT;
+        ? HARNESSOS_STUDIO_CONTRACT
+        : HARNESSOS_CHAT_CONTRACT;
   return [
-    "<omnimind_engine_contract>",
-    OMNIMIND_IDENTITY_AND_COGNITIVE_CONTRACT,
+    "<harnessos_engine_contract>",
+    HARNESSOS_IDENTITY_AND_COGNITIVE_CONTRACT,
     "",
     surfaceContract,
-    "</omnimind_engine_contract>",
+    "</harnessos_engine_contract>",
   ].join("\n");
 }
 
@@ -3525,7 +3525,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                           payload,
                           raw: {
                             source: "pi.sdk.event",
-                            messageType: OMNIMIND_TASK_LIST_TOOL_NAME,
+                            messageType: HARNESSOS_TASK_LIST_TOOL_NAME,
                             payload: { toolCallId },
                           },
                         } satisfies ProviderRuntimeEvent);
@@ -4696,9 +4696,9 @@ export function makePiAdapterLive(options?: PiAdapterLiveOptions) {
 
 export const OmniMindAgentAdapterLive = Layer.effect(
   OmniMindAgentAdapter,
-  makePiAdapter(OMNIMIND_AGENT_FAMILY),
+  makePiAdapter(HARNESSOS_AGENT_FAMILY),
 );
 
 export function makeOmniMindAgentAdapterLive(options?: PiAdapterLiveOptions) {
-  return Layer.effect(OmniMindAgentAdapter, makePiAdapter(OMNIMIND_AGENT_FAMILY, options));
+  return Layer.effect(OmniMindAgentAdapter, makePiAdapter(HARNESSOS_AGENT_FAMILY, options));
 }

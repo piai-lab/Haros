@@ -519,7 +519,7 @@ describe("OmniMind model-services contracts", () => {
   it("rejects path-shaped get inputs and invalid counts", () => {
     expect(() =>
       Schema.decodeUnknownSync(OmniMindModelServicesGetInput)({
-        serviceId: "/private/.omnimind/agent/auth.json",
+        serviceId: "/private/.harnessos/agent/auth.json",
       }),
     ).toThrow();
     expect(
@@ -595,7 +595,7 @@ describe("OmniMind model-services contracts", () => {
       apiKey: "sk-secret",
       endpoint: "https://secret.example.test/v1",
       headers: { Authorization: "Bearer secret" },
-      authPath: "/private/.omnimind/agent/auth.json",
+      authPath: "/private/.harnessos/agent/auth.json",
     } as typeof descriptor);
     const serialized = JSON.stringify(encoded);
 
@@ -671,7 +671,7 @@ describe("OmniMind model-services contracts", () => {
     ).toEqual({ state: "unavailable", reason: "not_stored_api_key" });
     expect(() =>
       Schema.decodeUnknownSync(OmniMindModelServiceRevealApiKeyInput)({
-        serviceId: "/private/.omnimind/agent/auth.json",
+        serviceId: "/private/.harnessos/agent/auth.json",
       }),
     ).toThrow();
     expect(() =>

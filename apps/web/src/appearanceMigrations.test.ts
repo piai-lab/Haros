@@ -11,7 +11,7 @@ import {
   THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
 } from "./appearanceMigrations";
 
-const LEGACY_MIXED_APP_SETTINGS_STORAGE_KEY = "omnimind:app-settings:v1";
+const LEGACY_MIXED_APP_SETTINGS_STORAGE_KEY = "harnessos:app-settings:v1";
 
 function createMemoryStorage(initial: Record<string, string> = {}): Storage {
   const entries = new Map(Object.entries(initial));
@@ -40,7 +40,7 @@ describe("appearance migrations", () => {
 
     expect(migratePersistedAppearanceDefaults(storage, "MacIntel").typography).toBe("preserved");
     expect(storage.getItem(LEGACY_MIXED_APP_SETTINGS_STORAGE_KEY)).toBe(legacyBytes);
-    expect(storage.getItem("omnimind:typography-defaults-migrated:v2")).toBeNull();
+    expect(storage.getItem("harnessos:typography-defaults-migrated:v2")).toBeNull();
   });
 
   it("does not touch retired bytes even when storage writes fail", () => {
@@ -54,7 +54,7 @@ describe("appearance migrations", () => {
 
     expect(migratePersistedAppearanceDefaults(storage, "MacIntel").typography).toBe("preserved");
     expect(storage.getItem(LEGACY_MIXED_APP_SETTINGS_STORAGE_KEY)).toBe(legacyBytes);
-    expect(storage.getItem("omnimind:typography-defaults-migrated:v2")).toBeNull();
+    expect(storage.getItem("harnessos:typography-defaults-migrated:v2")).toBeNull();
   });
 
   it("preserves every usable compact width and only repairs values below the resize floor", () => {
@@ -70,14 +70,14 @@ describe("appearance migrations", () => {
   it("supersedes the rejected wide-floor migration without rewriting a compact preference", () => {
     const storage = createMemoryStorage({
       [THREAD_SIDEBAR_WIDTH_STORAGE_KEY]: JSON.stringify(213.57421875),
-      "omnimind:sidebar-width-defaults-migrated:v2": "1",
+      "harnessos:sidebar-width-defaults-migrated:v2": "1",
     });
 
     expect(migratePersistedAppearanceDefaults(storage, "MacIntel").sidebarWidth).toBe("preserved");
     expect(JSON.parse(storage.getItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY) ?? "null")).toBe(
       213.57421875,
     );
-    expect(storage.getItem("omnimind:sidebar-width-defaults-migrated:v3")).toBe("1");
+    expect(storage.getItem("harnessos:sidebar-width-defaults-migrated:v3")).toBe("1");
   });
 
   it("preserves a legitimate custom sidebar width and records the decision", () => {
@@ -89,6 +89,6 @@ describe("appearance migrations", () => {
     expect(JSON.parse(storage.getItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY) ?? "null")).toBe(
       338.30859375,
     );
-    expect(storage.getItem("omnimind:sidebar-width-defaults-migrated:v3")).toBe("1");
+    expect(storage.getItem("harnessos:sidebar-width-defaults-migrated:v3")).toBe("1");
   });
 });

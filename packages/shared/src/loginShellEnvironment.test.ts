@@ -325,7 +325,7 @@ describe("createCachedLoginShellEnvironmentReader", () => {
     const fixture = makeFixture();
     // Pointed at the fixture root, so a spy that failed to apply writes here (and fails the
     // call-count assertion below) instead of touching the developer's real OmniMind home.
-    const env = { OMNIMIND_HOME: Path.dirname(Path.dirname(fixture.cachePath)) };
+    const env = { HARNESSOS_HOME: Path.dirname(Path.dirname(fixture.cachePath)) };
     homeDirectoryFailure.active = true;
 
     try {
@@ -360,11 +360,11 @@ describe("createCachedLoginShellEnvironmentReader", () => {
 
 describe("loginShellEnvironmentCachePath", () => {
   it("anchors the cache in the OmniMind home both processes resolve", () => {
-    expect(loginShellEnvironmentCachePath({ env: { OMNIMIND_HOME: "/tmp/omnimind-home" } })).toBe(
+    expect(loginShellEnvironmentCachePath({ env: { HARNESSOS_HOME: "/tmp/omnimind-home" } })).toBe(
       Path.join("/tmp/omnimind-home", "cache", "login-shell-environment.json"),
     );
     expect(loginShellEnvironmentCachePath({ env: {}, homeDirectory: "/users/test" })).toBe(
-      Path.join("/users/test", ".omnimind", "cache", "login-shell-environment.json"),
+      Path.join("/users/test", ".harnessos", "cache", "login-shell-environment.json"),
     );
   });
 });

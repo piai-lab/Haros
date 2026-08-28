@@ -500,7 +500,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         yield* runGit(repoDir, ["add", "fork-pr.txt"]);
         yield* runGit(repoDir, ["commit", "-m", "Fork PR branch"]);
         yield* runGit(repoDir, ["push", "-u", "fork-seed", "statemachine"]);
-        yield* runGit(repoDir, ["checkout", "-b", "omnimind/pr-488/statemachine"]);
+        yield* runGit(repoDir, ["checkout", "-b", "harnessos/pr-488/statemachine"]);
         yield* runGit(repoDir, ["branch", "--set-upstream-to", "fork-seed/statemachine"]);
         yield* runGit(repoDir, [
           "config",
@@ -529,7 +529,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         });
 
         const status = yield* manager.status({ cwd: repoDir });
-        expect(status.branch).toBe("omnimind/pr-488/statemachine");
+        expect(status.branch).toBe("harnessos/pr-488/statemachine");
         expect(status.pr).toEqual({
           number: 488,
           title: "Rebase this PR on latest main",
@@ -1736,7 +1736,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         const forkDir = yield* createBareRemote();
         yield* runGit(repoDir, ["remote", "add", "fork-seed", forkDir]);
         yield* runGit(repoDir, ["push", "-u", "fork-seed", "statemachine"]);
-        yield* runGit(repoDir, ["checkout", "-b", "omnimind/pr-142/statemachine"]);
+        yield* runGit(repoDir, ["checkout", "-b", "harnessos/pr-142/statemachine"]);
         yield* runGit(repoDir, ["branch", "--set-upstream-to", "fork-seed/statemachine"]);
         yield* runGit(repoDir, [
           "config",
@@ -1747,7 +1747,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         const { manager, ghCalls } = yield* makeManager({
           ghScenario: {
             prListByHeadSelector: {
-              "omnimind/pr-142/statemachine": JSON.stringify([]),
+              "harnessos/pr-142/statemachine": JSON.stringify([]),
               statemachine: JSON.stringify([
                 {
                   number: 41,
@@ -1798,7 +1798,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
         const forkDir = yield* createBareRemote();
         yield* runGit(repoDir, ["remote", "add", "fork-seed", forkDir]);
         yield* runGit(repoDir, ["push", "-u", "fork-seed", "statemachine"]);
-        yield* runGit(repoDir, ["checkout", "-b", "omnimind/pr-142/statemachine"]);
+        yield* runGit(repoDir, ["checkout", "-b", "harnessos/pr-142/statemachine"]);
         yield* runGit(repoDir, ["branch", "--set-upstream-to", "fork-seed/statemachine"]);
         yield* runGit(repoDir, [
           "config",
@@ -1819,7 +1819,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
                 },
               ]),
               "fork-seed:statemachine": JSON.stringify([]),
-              "omnimind/pr-142/statemachine": JSON.stringify([]),
+              "harnessos/pr-142/statemachine": JSON.stringify([]),
               statemachine: JSON.stringify([]),
             },
           },
@@ -1976,7 +1976,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
       yield* runGit(repoDir, ["add", "changes.txt"]);
       yield* runGit(repoDir, ["commit", "-m", "Feature commit"]);
       yield* runGit(repoDir, ["push", "-u", "fork-seed", "statemachine"]);
-      yield* runGit(repoDir, ["checkout", "-b", "omnimind/pr-91/statemachine"]);
+      yield* runGit(repoDir, ["checkout", "-b", "harnessos/pr-91/statemachine"]);
       yield* runGit(repoDir, ["branch", "--set-upstream-to", "fork-seed/statemachine"]);
       yield* runGit(repoDir, [
         "config",
@@ -2496,7 +2496,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           pullRequest: {
             number: 642,
             title: "fix: use commit as the default git action without origin",
-            url: "https://github.com/example-org/omnimind/pull/642",
+            url: "https://github.com/example-org/harnessos/pull/642",
             baseRefName: "main",
             headRefName: "fix/git-action-default-without-origin",
             state: "open",
@@ -2614,7 +2614,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           mode: "worktree",
         });
 
-        expect(result.branch).toBe("omnimind/pr-91/main");
+        expect(result.branch).toBe("harnessos/pr-91/main");
         expect(result.worktreePath).not.toBeNull();
         expect((yield* runGit(repoDir, ["branch", "--show-current"])).stdout.trim()).toBe("main");
         expect((yield* runGit(repoDir, ["rev-parse", "main"])).stdout.trim()).toBe(mainBefore);
@@ -2623,7 +2623,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
             "branch",
             "--show-current",
           ])).stdout.trim(),
-        ).toBe("omnimind/pr-91/main");
+        ).toBe("harnessos/pr-91/main");
       }),
   );
 
@@ -2675,7 +2675,7 @@ it.layer(GitManagerTestLayer)("GitManager", (it) => {
           mode: "worktree",
         });
 
-        expect(result.branch).toBe("omnimind/pr-92/main");
+        expect(result.branch).toBe("harnessos/pr-92/main");
         expect((yield* runGit(repoDir, ["rev-parse", "main"])).stdout.trim()).toBe(localMainBefore);
         expect(
           (yield* runGit(result.worktreePath as string, [

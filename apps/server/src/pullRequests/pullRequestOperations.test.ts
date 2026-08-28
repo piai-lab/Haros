@@ -149,10 +149,7 @@ describe("makePullRequestOperations", () => {
       size: 2,
       position: 2,
       baseBranch: "main",
-      entries: [
-        stackEntry(1, 41),
-        stackEntry(2, 42),
-      ],
+      entries: [stackEntry(1, 41), stackEntry(2, 42)],
     };
     const makeOperations = (pullRequestStack: PullRequestStack | null, fail = false) => {
       const fake = createGitHubCliWithFakeGh({
@@ -212,11 +209,7 @@ describe("makePullRequestOperations", () => {
       size: 3,
       position: 2,
       baseBranch: "main",
-      entries: [
-        stackEntry(1, 41),
-        stackEntry(2, 42),
-        stackEntry(3, 43),
-      ],
+      entries: [stackEntry(1, 41), stackEntry(2, 42), stackEntry(3, 43)],
     };
     const expectation: PullRequestMergeExpectation = {
       kind: "stack",

@@ -5,7 +5,7 @@
 // Electron WebContentsViews render above the DOM regardless of CSS z-index. DOM overlays
 // broadcast this event so BrowserPanel can hide or restore its native surface after the
 // overlay has been committed.
-export const NATIVE_SURFACE_OCCLUSION_SYNC_EVENT = "omnimind:native-surface-occlusion-sync";
+export const NATIVE_SURFACE_OCCLUSION_SYNC_EVENT = "harnessos:native-surface-occlusion-sync";
 
 export function notifyNativeSurfaceOcclusionChange(): void {
   if (typeof window === "undefined") {

@@ -106,7 +106,9 @@ describe("searchWorkspaceEntries", () => {
     const cwd = makeTempDir("omnimind-workspace-prewarm-");
     writeFile(cwd, "src/prewarmed.ts");
     expect(prewarmWorkspaceSearchIndex({ cwd })).toEqual({ started: true });
-    await expect(searchWorkspaceEntries({ cwd, query: "prewarmed", limit: 10 })).resolves.toMatchObject({
+    await expect(
+      searchWorkspaceEntries({ cwd, query: "prewarmed", limit: 10 }),
+    ).resolves.toMatchObject({
       entries: [expect.objectContaining({ path: "src/prewarmed.ts" })],
     });
   });
@@ -714,7 +716,7 @@ describe("searchWorkspaceContent", () => {
     writeFile(cwd, "src/visible.ts", "visible needle\n");
     writeFile(cwd, ".env", "hidden needle\n");
     writeFile(cwd, ".hidden/secret.ts", "hidden needle\n");
-    writeFile(cwd, ".omnimind-cache/secret.ts", "hidden needle\n");
+    writeFile(cwd, ".harnessos-cache/secret.ts", "hidden needle\n");
     writeFile(cwd, "packages/app/node_modules/pkg/index.js", "ignored needle\n");
     writeFile(cwd, ".gitignore", "ignored/**\n");
     writeFile(cwd, "ignored/secret.ts", "ignored needle\n");
@@ -743,7 +745,7 @@ describe("searchWorkspaceContent", () => {
     const cwd = makeTempDir("omnimind-content-search-non-git-ignore-");
     writeFile(cwd, "src/visible.ts", "visible needle\n");
     writeFile(cwd, ".hidden/secret.ts", "hidden needle\n");
-    writeFile(cwd, ".omnimind-cache/secret.ts", "hidden needle\n");
+    writeFile(cwd, ".harnessos-cache/secret.ts", "hidden needle\n");
     writeFile(cwd, "node_modules/pkg/index.js", "ignored needle\n");
     writeFile(cwd, "dist/output.js", "ignored needle\n");
 
@@ -813,13 +815,13 @@ describe("searchWorkspaceContent", () => {
       const cwd = makeTempDir("omnimind-content-search-symlink-");
       const outside = makeTempDir("omnimind-content-search-outside-");
       writeFile(cwd, "docs/inside.txt", "inside needle\n");
-      writeFile(cwd, ".omnimind/secret.txt", "hidden needle\n");
+      writeFile(cwd, ".harnessos/secret.txt", "hidden needle\n");
       writeFile(cwd, "private/secret.txt", "ignored needle\n");
       writeFile(cwd, ".gitignore", "private/**\n");
       writeFile(outside, "secret.txt", "outside needle\n");
       fs.symlinkSync(path.join(cwd, "docs/inside.txt"), path.join(cwd, "inside-link.txt"));
       fs.symlinkSync(path.join(outside, "secret.txt"), path.join(cwd, "outside-link.txt"));
-      fs.symlinkSync(path.join(cwd, ".omnimind/secret.txt"), path.join(cwd, "hidden-link.txt"));
+      fs.symlinkSync(path.join(cwd, ".harnessos/secret.txt"), path.join(cwd, "hidden-link.txt"));
       fs.symlinkSync(path.join(cwd, "private/secret.txt"), path.join(cwd, "ignored-link.txt"));
       runGit(cwd, ["init"]);
       runGit(cwd, [
@@ -1016,7 +1018,7 @@ describe("searchWorkspaceContent", () => {
       const cwd = makeTempDir("omnimind-content-search-hidden-swap-");
       const linkPath = path.join(cwd, "visible-link.txt");
       writeFile(cwd, "safe.txt", "safe needle\n");
-      writeFile(cwd, ".omnimind/secret.txt", "hidden needle\n");
+      writeFile(cwd, ".harnessos/secret.txt", "hidden needle\n");
       fs.symlinkSync(path.join(cwd, "safe.txt"), linkPath);
       await searchWorkspaceEntries({ cwd, query: "", limit: 100 });
       const originalRealpath = fsPromises.realpath.bind(fsPromises);
@@ -1026,7 +1028,7 @@ describe("searchWorkspaceContent", () => {
           linkRealpathCalls += 1;
           if (linkRealpathCalls === 2) {
             fs.unlinkSync(linkPath);
-            fs.symlinkSync(path.join(cwd, ".omnimind/secret.txt"), linkPath);
+            fs.symlinkSync(path.join(cwd, ".harnessos/secret.txt"), linkPath);
           }
         }
         return originalRealpath(args[0]);

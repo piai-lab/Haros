@@ -24,7 +24,7 @@ import { pathIsWithin } from "./claudePluginSkills.ts";
 
 let root: string;
 let homeDir: string;
-let omnimindBaseDir: string;
+let harnessosBaseDir: string;
 
 async function writeSkill(skillDir: string, name: string, description: string): Promise<void> {
   await mkdir(skillDir, { recursive: true });
@@ -56,7 +56,7 @@ beforeEach(() => {
   clearSkillsCatalogCacheForTests();
   root = mkdtempSync(path.join(os.tmpdir(), "omnimind-skills-catalog-"));
   homeDir = path.join(root, "home");
-  omnimindBaseDir = path.join(homeDir, ".omnimind");
+  harnessosBaseDir = path.join(homeDir, ".harnessos");
 });
 
 afterEach(() => {
@@ -93,13 +93,13 @@ describe("pathIsWithin", () => {
 
 describe("discoverSkillsCatalog", () => {
   it("creates the OmniMind skills folder on first discovery", async () => {
-    await discoverSkillsCatalog({ homeDir, omnimindBaseDir });
-    await expect(access(path.join(omnimindBaseDir, "skills"))).resolves.toBeUndefined();
+    await discoverSkillsCatalog({ homeDir, harnessosBaseDir });
+    await expect(access(path.join(harnessosBaseDir, "skills"))).resolves.toBeUndefined();
   });
 
   it("aggregates shared provider homes without touching stock Pi state", async () => {
     await writeSkill(
-      path.join(omnimindBaseDir, "skills", "portable"),
+      path.join(harnessosBaseDir, "skills", "portable"),
       "portable",
       "OmniMind skill",
     );
@@ -123,7 +123,7 @@ describe("discoverSkillsCatalog", () => {
     );
     await writeSkill(path.join(homeDir, ".pi", "agent", "skills", "pi-only"), "pi-only", "Pi");
 
-    const skills = await discoverSkillsCatalog({ homeDir, omnimindBaseDir });
+    const skills = await discoverSkillsCatalog({ homeDir, harnessosBaseDir });
     const byName = new Map(skills.map((skill) => [skill.name, skill]));
 
     expect(byName.get("portable")?.scope).toBe("omnimind");
@@ -137,25 +137,25 @@ describe("discoverSkillsCatalog", () => {
   });
 
   it("includes stock Pi roots only after Pi is explicitly selected", () => {
-    const neutralRoots = skillsCatalogRoots({ homeDir, omnimindBaseDir });
+    const neutralRoots = skillsCatalogRoots({ homeDir, harnessosBaseDir });
     expect(neutralRoots.some((root) => root.path.includes(`${path.sep}.pi${path.sep}`))).toBe(
       false,
     );
 
-    const piRoots = skillsCatalogRoots({ homeDir, omnimindBaseDir, provider: "pi" });
+    const piRoots = skillsCatalogRoots({ homeDir, harnessosBaseDir, provider: "pi" });
     expect(piRoots.some((root) => root.path.includes(`${path.sep}.pi${path.sep}`))).toBe(true);
   });
 
   it("does not scan unrelated Engine homes for a selected provider", () => {
     const codexRoots = skillsCatalogRoots({
       homeDir,
-      omnimindBaseDir,
+      harnessosBaseDir,
       provider: "codex",
     });
     const paths = codexRoots.map((root) => root.path);
 
     expect(paths.some((rootPath) => rootPath.includes(`${path.sep}.codex${path.sep}`))).toBe(true);
-    expect(paths.some((rootPath) => rootPath.includes(`${path.sep}.omnimind${path.sep}`))).toBe(
+    expect(paths.some((rootPath) => rootPath.includes(`${path.sep}.harnessos${path.sep}`))).toBe(
       true,
     );
     expect(paths.some((rootPath) => rootPath.includes(`${path.sep}.claude${path.sep}`))).toBe(
@@ -189,7 +189,7 @@ describe("discoverSkillsCatalog", () => {
 
     const skills = await discoverSkillsCatalog({
       homeDir,
-      omnimindBaseDir,
+      harnessosBaseDir,
       provider: "grok",
     });
 
@@ -214,7 +214,7 @@ describe("discoverSkillsCatalog", () => {
 
     const skills = await discoverSkillsCatalog({
       homeDir,
-      omnimindBaseDir,
+      harnessosBaseDir,
       includeDuplicateOrigins: true,
     });
 
@@ -243,7 +243,7 @@ describe("discoverSkillsCatalog", () => {
       "workflow-kit@alpha": [{ scope: "user", installPath: alphaInstallPath }],
     });
 
-    const skills = await discoverSkillsCatalog({ homeDir, omnimindBaseDir });
+    const skills = await discoverSkillsCatalog({ homeDir, harnessosBaseDir });
     const featureDelivery = skills.find((skill) => skill.name === "workflow-kit:feature-delivery");
 
     expect(featureDelivery?.description).toBe("Alpha copy");
@@ -276,7 +276,7 @@ describe("discoverSkillsCatalog", () => {
       ],
     });
 
-    const skills = await discoverSkillsCatalog({ cwd, homeDir, omnimindBaseDir });
+    const skills = await discoverSkillsCatalog({ cwd, homeDir, harnessosBaseDir });
     expect(skills.map((skill) => skill.name)).toEqual(
       expect.arrayContaining(["user-tools:user-skill", "project-tools:project-skill"]),
     );
@@ -307,7 +307,7 @@ describe("discoverSkillsCatalog", () => {
       ],
     });
 
-    const skills = await discoverSkillsCatalog({ cwd, homeDir, omnimindBaseDir });
+    const skills = await discoverSkillsCatalog({ cwd, homeDir, harnessosBaseDir });
     expect(skills.map((skill) => skill.name)).toContain("workflow-kit:project-only");
     expect(skills.map((skill) => skill.name)).not.toContain("workflow-kit:user-only");
   });
@@ -335,7 +335,7 @@ describe("discoverSkillsCatalog", () => {
       "wrong-shape@plugins": { scope: "user", installPath: validInstallPath },
     });
 
-    const skills = await discoverSkillsCatalog({ homeDir, omnimindBaseDir });
+    const skills = await discoverSkillsCatalog({ homeDir, harnessosBaseDir });
     expect(skills.map((skill) => skill.name)).toContain("valid:valid-skill");
     expect(skills.some((skill) => skill.name.includes("outside-skill"))).toBe(false);
     expect(skills.filter((skill) => skill.name === "valid:valid-skill")).toHaveLength(1);
@@ -349,7 +349,7 @@ describe("discoverSkillsCatalog", () => {
 
     const skills = await discoverSkillsCatalog({
       homeDir,
-      omnimindBaseDir,
+      harnessosBaseDir,
       includeDuplicateOrigins: true,
     });
 
@@ -362,13 +362,13 @@ describe("discoverSkillsCatalog", () => {
     await writeSkill(path.join(homeDir, ".codex", "skills", "reviewer"), "reviewer", "Codex");
     await writeSkill(path.join(homeDir, ".claude", "skills", "reviewer"), "reviewer", "Claude");
 
-    const defaultCatalog = await discoverSkillsCatalog({ homeDir, omnimindBaseDir });
+    const defaultCatalog = await discoverSkillsCatalog({ homeDir, harnessosBaseDir });
     expect(defaultCatalog.filter((skill) => skill.name === "reviewer")).toHaveLength(1);
     expect(defaultCatalog.find((skill) => skill.name === "reviewer")?.scope).toBe("codex");
 
     const settingsCatalog = await discoverSkillsCatalog({
       homeDir,
-      omnimindBaseDir,
+      harnessosBaseDir,
       includeDuplicateOrigins: true,
     });
     expect(settingsCatalog.filter((skill) => skill.name === "reviewer")).toHaveLength(2);
@@ -376,15 +376,15 @@ describe("discoverSkillsCatalog", () => {
   });
 
   it("prefers the provider-native copy and falls back to OmniMind for that provider", async () => {
-    await writeSkill(path.join(omnimindBaseDir, "skills", "shared"), "shared", "OmniMind copy");
+    await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "OmniMind copy");
     await writeSkill(path.join(homeDir, ".codex", "skills", "shared"), "shared", "Codex copy");
     await writeSkill(
-      path.join(omnimindBaseDir, "skills", "only-omnimind"),
+      path.join(harnessosBaseDir, "skills", "only-omnimind"),
       "only-omnimind",
       "Fallback",
     );
 
-    const codexView = await discoverSkillsCatalog({ homeDir, omnimindBaseDir, provider: "codex" });
+    const codexView = await discoverSkillsCatalog({ homeDir, harnessosBaseDir, provider: "codex" });
     const codexShared = codexView.find((skill) => skill.name === "shared");
     expect(codexShared?.scope).toBe("codex");
     expect(codexShared?.path).toContain(path.join(".codex", "skills"));
@@ -393,7 +393,7 @@ describe("discoverSkillsCatalog", () => {
     // A provider without its own copy resolves the OmniMind fallback.
     const claudeView = await discoverSkillsCatalog({
       homeDir,
-      omnimindBaseDir,
+      harnessosBaseDir,
       provider: "claudeAgent",
     });
     const claudeShared = claudeView.find((skill) => skill.name === "shared");
@@ -401,11 +401,11 @@ describe("discoverSkillsCatalog", () => {
   });
 
   it("uses documented provider alias roots before OmniMind fallbacks", async () => {
-    await writeSkill(path.join(omnimindBaseDir, "skills", "shared"), "shared", "OmniMind copy");
+    await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "OmniMind copy");
     await writeSkill(path.join(homeDir, ".agents", "skills", "shared"), "shared", "Agents alias");
     const antigravityView = await discoverSkillsCatalog({
       homeDir,
-      omnimindBaseDir,
+      harnessosBaseDir,
       provider: "antigravity",
     });
 
@@ -413,19 +413,19 @@ describe("discoverSkillsCatalog", () => {
   });
 
   it("uses provider-native roots before shared aliases for Grok and Pi", async () => {
-    await writeSkill(path.join(omnimindBaseDir, "skills", "shared"), "shared", "OmniMind copy");
+    await writeSkill(path.join(harnessosBaseDir, "skills", "shared"), "shared", "OmniMind copy");
     await writeSkill(path.join(homeDir, ".agents", "skills", "shared"), "shared", "Agents alias");
     await writeSkill(path.join(homeDir, ".grok", "skills", "shared"), "shared", "Grok copy");
     await writeSkill(path.join(homeDir, ".pi", "agent", "skills", "shared"), "shared", "Pi copy");
 
     const grokView = await discoverSkillsCatalog({
       homeDir,
-      omnimindBaseDir,
+      harnessosBaseDir,
       provider: "grok",
     });
     const piView = await discoverSkillsCatalog({
       homeDir,
-      omnimindBaseDir,
+      harnessosBaseDir,
       provider: "pi",
     });
 
@@ -447,7 +447,7 @@ description: Direct Pi markdown skill
 `,
     );
 
-    const skills = await discoverSkillsCatalog({ homeDir, omnimindBaseDir, provider: "pi" });
+    const skills = await discoverSkillsCatalog({ homeDir, harnessosBaseDir, provider: "pi" });
 
     const directSkill = skills.find((skill) => skill.name === "direct-review");
     expect(directSkill?.scope).toBe("pi");
@@ -455,32 +455,32 @@ description: Direct Pi markdown skill
   });
 
   it("serves cached results within the TTL and rescans on forceReload", async () => {
-    await writeSkill(path.join(omnimindBaseDir, "skills", "first"), "first", "First skill");
+    await writeSkill(path.join(harnessosBaseDir, "skills", "first"), "first", "First skill");
 
-    const initial = await discoverSkillsCatalog({ homeDir, omnimindBaseDir });
+    const initial = await discoverSkillsCatalog({ homeDir, harnessosBaseDir });
     expect(initial.map((skill) => skill.name)).toEqual(["first"]);
 
     // A skill added after the first scan is invisible to the cached entry...
-    await writeSkill(path.join(omnimindBaseDir, "skills", "second"), "second", "Second skill");
-    const cached = await discoverSkillsCatalog({ homeDir, omnimindBaseDir });
+    await writeSkill(path.join(harnessosBaseDir, "skills", "second"), "second", "Second skill");
+    const cached = await discoverSkillsCatalog({ homeDir, harnessosBaseDir });
     expect(cached.map((skill) => skill.name)).toEqual(["first"]);
 
     // ...but forceReload bypasses the cache and refreshes it.
-    const reloaded = await discoverSkillsCatalog({ homeDir, omnimindBaseDir, forceReload: true });
+    const reloaded = await discoverSkillsCatalog({ homeDir, harnessosBaseDir, forceReload: true });
     expect(reloaded.map((skill) => skill.name).sort()).toEqual(["first", "second"]);
   });
 
-  it("includes project-level .omnimind skills when a cwd is provided", async () => {
+  it("includes project-level .harnessos skills when a cwd is provided", async () => {
     const cwd = path.join(root, "repo", "packages", "web");
     await mkdir(cwd, { recursive: true });
     await mkdir(path.join(root, "repo", ".git"));
     await writeSkill(
-      path.join(root, "repo", ".omnimind", "skills", "repo-skill"),
+      path.join(root, "repo", ".harnessos", "skills", "repo-skill"),
       "repo-skill",
       "Project skill",
     );
 
-    const skills = await discoverSkillsCatalog({ cwd, homeDir, omnimindBaseDir });
+    const skills = await discoverSkillsCatalog({ cwd, homeDir, harnessosBaseDir });
     expect(skills.find((skill) => skill.name === "repo-skill")?.scope).toBe("project");
   });
 
@@ -489,17 +489,17 @@ description: Direct Pi markdown skill
     await mkdir(cwd, { recursive: true });
     await mkdir(path.join(root, "repo", ".git"));
     await writeSkill(
-      path.join(root, ".omnimind", "skills", "outside-repo"),
+      path.join(root, ".harnessos", "skills", "outside-repo"),
       "outside-repo",
       "Must stay outside the selected project",
     );
     await writeSkill(
-      path.join(root, "repo", ".omnimind", "skills", "inside-repo"),
+      path.join(root, "repo", ".harnessos", "skills", "inside-repo"),
       "inside-repo",
       "Selected project skill",
     );
 
-    const skills = await discoverSkillsCatalog({ cwd, homeDir, omnimindBaseDir });
+    const skills = await discoverSkillsCatalog({ cwd, homeDir, harnessosBaseDir });
     expect(skills.some((skill) => skill.name === "outside-repo")).toBe(false);
     expect(skills.find((skill) => skill.name === "inside-repo")?.scope).toBe("project");
   });
@@ -510,9 +510,9 @@ description: Direct Pi markdown skill
     const cwd = path.join(homeDir, "projects", "app");
     await mkdir(cwd, { recursive: true });
     await writeSkill(path.join(homeDir, ".codex", "skills", "from-codex"), "from-codex", "Codex");
-    await writeSkill(path.join(omnimindBaseDir, "skills", "portable"), "portable", "OmniMind");
+    await writeSkill(path.join(harnessosBaseDir, "skills", "portable"), "portable", "OmniMind");
 
-    const skills = await discoverSkillsCatalog({ cwd, homeDir, omnimindBaseDir });
+    const skills = await discoverSkillsCatalog({ cwd, homeDir, harnessosBaseDir });
 
     const names = skills.map((skill) => skill.name);
     expect(names.filter((name) => name === "from-codex")).toHaveLength(1);
@@ -521,10 +521,10 @@ description: Direct Pi markdown skill
   });
 
   it("dedupes same-named skills within a root deterministically", async () => {
-    await writeSkill(path.join(omnimindBaseDir, "skills", "zeta"), "twin", "Copy in zeta");
-    await writeSkill(path.join(omnimindBaseDir, "skills", "alpha"), "twin", "Copy in alpha");
+    await writeSkill(path.join(harnessosBaseDir, "skills", "zeta"), "twin", "Copy in zeta");
+    await writeSkill(path.join(harnessosBaseDir, "skills", "alpha"), "twin", "Copy in alpha");
 
-    const skills = await discoverSkillsCatalog({ homeDir, omnimindBaseDir });
+    const skills = await discoverSkillsCatalog({ homeDir, harnessosBaseDir });
     const twins = skills.filter((skill) => skill.name === "twin");
     expect(twins).toHaveLength(1);
     expect(twins[0]?.path).toContain(path.join("skills", "alpha"));
@@ -587,7 +587,7 @@ describe("filterDisabledSkills", () => {
     const skills: ProviderSkillDescriptor[] = [
       {
         name: "Reviewer",
-        path: "/Users/test/.omnimind/skills/reviewer/SKILL.md",
+        path: "/Users/test/.harnessos/skills/reviewer/SKILL.md",
         enabled: true,
         scope: "omnimind",
       },
@@ -599,14 +599,14 @@ describe("filterDisabledSkills", () => {
       },
       {
         name: "writer",
-        path: "/Users/test/.omnimind/skills/writer/SKILL.md",
+        path: "/Users/test/.harnessos/skills/writer/SKILL.md",
         enabled: true,
         scope: "omnimind",
       },
     ];
     expect(filterDisabledSkills(skills, ["reviewer"]).map((skill) => skill.path)).toEqual([
       "/Users/test/.codex/skills/reviewer/SKILL.md",
-      "/Users/test/.omnimind/skills/writer/SKILL.md",
+      "/Users/test/.harnessos/skills/writer/SKILL.md",
     ]);
     expect(filterDisabledSkills(skills, [])).toHaveLength(3);
   });

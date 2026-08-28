@@ -12,10 +12,10 @@ describe("buildProviderChildEnvironment", () => {
         PATH: "/usr/bin",
         HOME: "/home/test",
         GEMINI_API_KEY: "provider-key",
-        OMNIMIND_AUTH_TOKEN: "control-plane-secret",
-        OMNIMIND_BROWSER_HOST_PIPE_PATH: "/tmp/browser.sock",
-        OMNIMIND_BROWSER_HOST_CAPABILITY: "private-desktop-capability",
-        OMNIMIND_BROWSER_HOST_CAPABILITY_FD: "3",
+        HARNESSOS_AUTH_TOKEN: "control-plane-secret",
+        HARNESSOS_BROWSER_HOST_PIPE_PATH: "/tmp/browser.sock",
+        HARNESSOS_BROWSER_HOST_CAPABILITY: "private-desktop-capability",
+        HARNESSOS_BROWSER_HOST_CAPABILITY_FD: "3",
         NODE_OPTIONS: "--require=/tmp/inject.js",
         NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS: "/tmp/other.sock",
       },
@@ -32,16 +32,16 @@ describe("buildProviderChildEnvironment", () => {
     const env = buildProviderChildEnvironment({
       provider: "codex",
       baseEnv: {
-        OMNIMIND_AUTH_TOKEN: "control-plane-secret",
-        OMNIMIND_ALLOWED_CAPABILITY: "allowed",
+        HARNESSOS_AUTH_TOKEN: "control-plane-secret",
+        HARNESSOS_ALLOWED_CAPABILITY: "allowed",
         NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS: "/tmp/browser.sock",
       },
-      inheritedOmniMindKeys: ["OMNIMIND_ALLOWED_CAPABILITY"],
+      inheritedOmniMindKeys: ["HARNESSOS_ALLOWED_CAPABILITY"],
       inheritedNativeCapabilityKeys: ["NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS"],
     });
 
     expect(env).toEqual({
-      OMNIMIND_ALLOWED_CAPABILITY: "allowed",
+      HARNESSOS_ALLOWED_CAPABILITY: "allowed",
       NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS: "/tmp/browser.sock",
     });
   });
@@ -52,7 +52,7 @@ describe("buildProviderChildEnvironment", () => {
       baseEnv: { PATH: "/usr/bin" },
       overrides: {
         OPENCODE_EXPERIMENTAL_WEBSOCKETS: "true",
-        OMNIMIND_AUTH_TOKEN: "overlaid-control-plane-secret",
+        HARNESSOS_AUTH_TOKEN: "overlaid-control-plane-secret",
         NODE_OPTIONS: "--require=/tmp/inject.js",
       },
     });
@@ -138,11 +138,11 @@ describe("buildProviderChildEnvironment", () => {
       baseEnv: {
         XAI_API_KEY: "grok-secret",
         ANTHROPIC_API_KEY: "unrelated-secret",
-        OMNIMIND_AUTH_TOKEN: "control-plane-secret",
+        HARNESSOS_AUTH_TOKEN: "control-plane-secret",
       },
     });
     const descendantScript =
-      "process.stdout.write(JSON.stringify({ xai: process.env.XAI_API_KEY, anthropic: process.env.ANTHROPIC_API_KEY, omnimind: process.env.OMNIMIND_AUTH_TOKEN }))";
+      "process.stdout.write(JSON.stringify({ xai: process.env.XAI_API_KEY, anthropic: process.env.ANTHROPIC_API_KEY, omnimind: process.env.HARNESSOS_AUTH_TOKEN }))";
     const parentScript = `const { spawnSync } = require("node:child_process"); const result = spawnSync(process.execPath, ["-e", ${JSON.stringify(descendantScript)}], { env: process.env, encoding: "utf8" }); process.stdout.write(result.stdout); process.stderr.write(result.stderr); process.exit(result.status ?? 1);`;
     const result = spawnSync(process.execPath, ["-e", parentScript], {
       env,

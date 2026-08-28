@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 import { TrimmedNonEmptyString } from "./baseSchemas";
-import { isOmniMindAgentPromptContent, OMNIMIND_AGENT_PROMPT_MAX_BYTES } from "./editableText";
+import { isOmniMindAgentPromptContent, HARNESSOS_AGENT_PROMPT_MAX_BYTES } from "./editableText";
 
 export const OmniMindAgentCustomRulesSourceId = Schema.Literals([
   "AGENTS.override.md",
@@ -20,7 +20,7 @@ const PromptVersion = TrimmedNonEmptyString.check(
 const DisplayPath = TrimmedNonEmptyString.check(Schema.isMaxLength(4_096));
 const RevealPath = TrimmedNonEmptyString.check(Schema.isMaxLength(16_384));
 const PromptContent = Schema.String.check(
-  Schema.isMaxLength(OMNIMIND_AGENT_PROMPT_MAX_BYTES),
+  Schema.isMaxLength(HARNESSOS_AGENT_PROMPT_MAX_BYTES),
   Schema.makeFilter(isOmniMindAgentPromptContent),
 );
 
@@ -68,7 +68,7 @@ export type OmniMindAgentCustomRulesSnapshot = typeof OmniMindAgentCustomRulesSn
 export const OmniMindAgentPromptSnapshot = Schema.Struct({
   defaultPrompt: OmniMindAgentDefaultPromptSnapshot,
   customRules: OmniMindAgentCustomRulesSnapshot,
-  maxBytes: Schema.Literal(OMNIMIND_AGENT_PROMPT_MAX_BYTES),
+  maxBytes: Schema.Literal(HARNESSOS_AGENT_PROMPT_MAX_BYTES),
 });
 export type OmniMindAgentPromptSnapshot = typeof OmniMindAgentPromptSnapshot.Type;
 

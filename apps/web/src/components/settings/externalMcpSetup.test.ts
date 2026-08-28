@@ -76,7 +76,7 @@ describe("external MCP guided setup", () => {
     expect(prompt).toContain("codex mcp add omnimind");
     expect(prompt).toContain("claude mcp add --scope user omnimind");
     expect(prompt).toContain('"mcpServers"');
-    expect(prompt).toContain("omnimind_overview");
+    expect(prompt).toContain("harnessos_overview");
     expect(prompt).not.toContain("syn_mcp_v1_");
   });
 
@@ -85,13 +85,13 @@ describe("external MCP guided setup", () => {
 
     expect(prompt).toContain("already completed");
     expect(prompt).not.toContain("syn_pair_v1_");
-    expect(prompt).toContain("omnimind_overview");
+    expect(prompt).toContain("harnessos_overview");
   });
 
   it("builds a discovery-first example prompt for all-projects connections", () => {
     const prompt = buildExternalMcpExamplePrompt(null);
 
-    expect(prompt).toContain("omnimind_overview");
+    expect(prompt).toContain("harnessos_overview");
     expect(prompt).toContain("managed worktree");
   });
 

@@ -129,7 +129,7 @@ describe("workspacePathsStore", () => {
   it("migrates cached paths without retaining legacy workspace pages", async () => {
     installMemoryLocalStorage();
     localStorage.setItem(
-      "omnimind:workspace-pages:v2",
+      "harnessos:workspace-pages:v2",
       JSON.stringify({
         state: {
           homeDir: "/Users/legacy",
@@ -150,7 +150,7 @@ describe("workspacePathsStore", () => {
     expect(useWorkspacePathsStore.getState()).not.toHaveProperty("workspacePages");
 
     useWorkspacePathsStore.getState().setHomeDir("/Users/current");
-    expect(localStorage.getItem("omnimind:workspace-pages:v2")).toBeNull();
-    expect(localStorage.getItem("omnimind:workspace-paths:v1")).not.toBeNull();
+    expect(localStorage.getItem("harnessos:workspace-pages:v2")).toBeNull();
+    expect(localStorage.getItem("harnessos:workspace-paths:v1")).not.toBeNull();
   });
 });

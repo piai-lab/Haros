@@ -8,7 +8,7 @@ import * as OS from "node:os";
 import * as Path from "node:path";
 
 import { readEnvironmentFromLoginShell, type ShellEnvironmentReader } from "./shell";
-import { resolveOmniMindHomeDirectory } from "./omnimindHome";
+import { resolveOmniMindHomeDirectory } from "./harnessosHome";
 
 /**
  * The variables every probe captures, regardless of what the caller asked for.

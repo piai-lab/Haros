@@ -1,6 +1,6 @@
 // FILE: SkillsSettingsPanel.tsx
 // Purpose: Settings → Skills panel. Lists every skill from the unified cross-provider
-// catalog (~/.omnimind/skills plus each provider's skills folder), shows which provider
+// catalog (~/.harnessos/skills plus each provider's skills folder), shows which provider
 // a skill comes from, and lets the user enable/disable each one. Disabled skills are
 // hidden from the composer skill picker on every provider.
 
@@ -108,7 +108,7 @@ export function SkillsSettingsPanel() {
   const enabledOmniMindSkills = omnimindSkillGroups.filter(
     (group) => !disabledSkillNames.has(group.key),
   ).length;
-  const omnimindSkillsDir = catalogQuery.data?.omnimindSkillsDir;
+  const harnessosSkillsDir = catalogQuery.data?.harnessosSkillsDir;
 
   return (
     <div className="space-y-8">
@@ -117,9 +117,9 @@ export function SkillsSettingsPanel() {
           title={t("settings.skillsFolder")}
           description={t("settings.skillsFolderDescription")}
           status={
-            omnimindSkillsDir ? (
+            harnessosSkillsDir ? (
               <code className="break-all text-[11px] text-muted-foreground">
-                {omnimindSkillsDir}
+                {harnessosSkillsDir}
               </code>
             ) : null
           }

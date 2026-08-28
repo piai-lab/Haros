@@ -2,7 +2,7 @@ import Path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { OMNIMIND_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
+import { HARNESSOS_PRODUCTION_BUNDLE_ID } from "@harnessos/shared/desktopIdentity";
 import type { BrowserWindow } from "electron";
 
 import {
@@ -36,9 +36,9 @@ function makeWindow({ destroyed = false, visible = true }: FakeWindowState = {})
 }
 
 const identity = {
-  appId: OMNIMIND_PRODUCTION_BUNDLE_ID,
-  relaunchCommand: "C:\\Program Files\\OmniMind\\OmniMind.exe",
-  relaunchDisplayName: "OmniMind",
+  appId: HARNESSOS_PRODUCTION_BUNDLE_ID,
+  relaunchCommand: "C:\\Program Files\\HarnessOS\\HarnessOS.exe",
+  relaunchDisplayName: "HarnessOS",
 } as const;
 
 const iconPath = "C:\\Users\\omnimind\\userdata\\taskbar-icons\\taskbar-icon.ico";
@@ -79,10 +79,10 @@ describe("windowsShellIconCachePath", () => {
   it("prefers the packaged executable directory over userdata so Explorer loads a trusted ICO", () => {
     expect(
       resolveWindowsShellIconCacheDirectory({
-        executablePath: Path.join("Programs", "omnimind-desktop", "OmniMind.exe"),
+        executablePath: Path.join("Programs", "harnessos-desktop", "HarnessOS.exe"),
         fallbackDirectory: Path.join("userdata", "taskbar-icons"),
       }),
-    ).toBe(Path.join("Programs", "omnimind-desktop"));
+    ).toBe(Path.join("Programs", "harnessos-desktop"));
     expect(
       resolveWindowsShellIconCacheDirectory({
         executablePath: Path.join("node_modules", "electron", "electron.exe"),
@@ -95,8 +95,8 @@ describe("windowsShellIconCachePath", () => {
 describe("collectWindowsShortcutPaths", () => {
   it("includes Start Menu and nested program-folder shortcuts while skipping missing roots", () => {
     const files: Record<string, string[]> = {
-      [Path.join("Start Menu", "Programs")]: ["OmniMind.lnk", "Other", "Readme.txt"],
-      [Path.join("Start Menu", "Programs", "Other")]: ["OmniMind Dev.lnk"],
+      [Path.join("Start Menu", "Programs")]: ["HarnessOS.lnk", "Other", "Readme.txt"],
+      [Path.join("Start Menu", "Programs", "Other")]: ["HarnessOS Dev.lnk"],
     };
 
     expect(
@@ -110,8 +110,8 @@ describe("collectWindowsShortcutPaths", () => {
         isDirectory: (path) => path === Path.join("Start Menu", "Programs", "Other"),
       }),
     ).toEqual([
-      Path.join("Start Menu", "Programs", "OmniMind.lnk"),
-      Path.join("Start Menu", "Programs", "Other", "OmniMind Dev.lnk"),
+      Path.join("Start Menu", "Programs", "HarnessOS.lnk"),
+      Path.join("Start Menu", "Programs", "Other", "HarnessOS Dev.lnk"),
     ]);
   });
 });
@@ -122,21 +122,21 @@ describe("syncWindowsShortcutIcons", () => {
 
     const result = syncWindowsShortcutIcons({
       iconPath: Path.join("cache", "taskbar-icon.ico"),
-      appId: OMNIMIND_PRODUCTION_BUNDLE_ID,
-      executablePath: Path.join("Program Files", "OmniMind", "OmniMind.exe"),
+      appId: HARNESSOS_PRODUCTION_BUNDLE_ID,
+      executablePath: Path.join("Program Files", "HarnessOS", "HarnessOS.exe"),
       shortcutPaths: ["omnimind.lnk", "other.lnk", "already.lnk"],
       readShortcut: (shortcutPath) => {
         if (shortcutPath === "omnimind.lnk") {
           return {
-            appUserModelId: OMNIMIND_PRODUCTION_BUNDLE_ID,
-            target: Path.join("Program Files", "OmniMind", "OmniMind.exe"),
-            icon: Path.join("Program Files", "OmniMind", "OmniMind.exe"),
+            appUserModelId: HARNESSOS_PRODUCTION_BUNDLE_ID,
+            target: Path.join("Program Files", "HarnessOS", "HarnessOS.exe"),
+            icon: Path.join("Program Files", "HarnessOS", "HarnessOS.exe"),
             iconIndex: 0,
           };
         }
         if (shortcutPath === "already.lnk") {
           return {
-            appUserModelId: OMNIMIND_PRODUCTION_BUNDLE_ID,
+            appUserModelId: HARNESSOS_PRODUCTION_BUNDLE_ID,
             icon: Path.join("cache", "taskbar-icon.ico"),
             iconIndex: 0,
           };
@@ -161,7 +161,7 @@ describe("syncWindowsShortcutIcons", () => {
 
     const result = syncWindowsShortcutIcons({
       iconPath: Path.join("cache", "taskbar-icon.ico"),
-      appId: OMNIMIND_PRODUCTION_BUNDLE_ID,
+      appId: HARNESSOS_PRODUCTION_BUNDLE_ID,
       executablePath: Path.join("node_modules", "electron", "electron.exe"),
       shortcutPaths: ["electron.lnk"],
       readShortcut: () => ({
@@ -178,13 +178,13 @@ describe("syncWindowsShortcutIcons", () => {
   it("reports every matching shortcut even when the icon is already current", () => {
     const result = syncWindowsShortcutIcons({
       iconPath: Path.join("cache", "taskbar-icon.ico"),
-      appId: OMNIMIND_PRODUCTION_BUNDLE_ID,
-      executablePath: Path.join("Program Files", "OmniMind", "OmniMind.exe"),
+      appId: HARNESSOS_PRODUCTION_BUNDLE_ID,
+      executablePath: Path.join("Program Files", "HarnessOS", "HarnessOS.exe"),
       shortcutPaths: ["already.lnk", "other.lnk"],
       readShortcut: (shortcutPath) => {
         if (shortcutPath === "already.lnk") {
           return {
-            appUserModelId: OMNIMIND_PRODUCTION_BUNDLE_ID,
+            appUserModelId: HARNESSOS_PRODUCTION_BUNDLE_ID,
             icon: Path.join("cache", "taskbar-icon.ico"),
             iconIndex: 0,
           };
@@ -203,15 +203,15 @@ describe("syncWindowsShortcutIcons", () => {
 
     const result = syncWindowsShortcutIcons({
       iconPath: Path.join("cache", "taskbar-icon.ico"),
-      appId: OMNIMIND_PRODUCTION_BUNDLE_ID,
+      appId: HARNESSOS_PRODUCTION_BUNDLE_ID,
       executablePath: Path.join(
         "Users",
         "omnimind",
         "AppData",
         "Local",
         "Programs",
-        "omnimind-desktop",
-        "OmniMind.exe",
+        "harnessos-desktop",
+        "HarnessOS.exe",
       ),
       shortcutPaths: ["omnimind.lnk"],
       readShortcut: () => ({
@@ -222,8 +222,8 @@ describe("syncWindowsShortcutIcons", () => {
           "AppData",
           "Local",
           "Programs",
-          "omnimind-desktop",
-          "OmniMind.exe",
+          "harnessos-desktop",
+          "HarnessOS.exe",
         ),
       }),
       updateShortcut,

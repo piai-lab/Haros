@@ -70,7 +70,7 @@ function makeFakeServerAuth(): ServerAuthShape {
     policy: "loopback-browser" as const,
     bootstrapMethods: ["one-time-token" as const],
     sessionMethods: ["browser-session-cookie" as const, "bearer-session-token" as const],
-    sessionCookieName: "omnimind_session",
+    sessionCookieName: "harnessos_session",
   };
   const session = {
     sessionId: "session-id" as never,
@@ -215,14 +215,14 @@ describe("localImageEffectRouteLayer", () => {
     await withEffectServer(config, localImageEffectRouteLayer, async (origin) => {
       const params = new URLSearchParams({ path: pdfPath, cwd: workspace });
       const response = await fetch(`${origin}/api/local-image?${params}`, {
-        headers: { Origin: "omnimind://app" },
+        headers: { Origin: "harnessos://app" },
       });
       expect(response.status).toBe(200);
       expect(response.headers.get("content-type")).toContain("application/pdf");
       expect(response.headers.get("x-content-type-options")).toBe("nosniff");
       // The in-app viewer fetches bytes cross-origin, but only trusted app
       // origins should get a CORS-readable response.
-      expect(response.headers.get("access-control-allow-origin")).toBe("omnimind://app");
+      expect(response.headers.get("access-control-allow-origin")).toBe("harnessos://app");
       expect(response.headers.get("vary")).toBe("Origin");
       // Streamed responses must still advertise their size so the browser's
       // PDF viewer can show load progress.

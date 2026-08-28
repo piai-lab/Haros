@@ -8,7 +8,7 @@
 import { PROVIDER_KINDS, type ProviderKind } from "@harnessos/contracts";
 import { isPlainObject } from "./persistedRecord";
 
-const STORAGE_KEY = "omnimind:confirmed-custom-binary-paths:v1";
+const STORAGE_KEY = "harnessos:confirmed-custom-binary-paths:v1";
 
 const PROVIDER_KIND_SET: ReadonlySet<ProviderKind> = new Set(PROVIDER_KINDS);
 

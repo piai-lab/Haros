@@ -85,7 +85,7 @@ export function skillDisplayName(skill: ProviderSkillDescriptor): string {
 }
 
 export function isOmniMindSkillSource(skill: ProviderSkillDescriptor): boolean {
-  return skill.scope === "omnimind" || skill.path.split(/[\\/]+/).includes(".omnimind");
+  return skill.scope === "omnimind" || skill.path.split(/[\\/]+/).includes(".harnessos");
 }
 
 export function providerDisplayName(provider: ProviderKind): string {

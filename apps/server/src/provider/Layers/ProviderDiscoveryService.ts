@@ -219,7 +219,7 @@ const make = Effect.gen(function* () {
         discoverSkillsCatalog({
           ...(scope.resourceScope.kind === "project" ? { cwd: scope.cwd } : {}),
           homeDir: serverConfig.homeDir,
-          omnimindBaseDir: serverConfig.baseDir,
+          harnessosBaseDir: serverConfig.baseDir,
           provider: parsed.provider,
           includeDuplicateOrigins: true,
           ...(parsed.forceReload !== undefined ? { forceReload: parsed.forceReload } : {}),

@@ -231,4 +231,4 @@ export interface ManagedAttachmentRepositoryShape {
 export class ManagedAttachmentRepository extends ServiceMap.Service<
   ManagedAttachmentRepository,
   ManagedAttachmentRepositoryShape
->()("omnimind/persistence/Services/ManagedAttachments/ManagedAttachmentRepository") {}
+>()("harnessos/persistence/Services/ManagedAttachments/ManagedAttachmentRepository") {}

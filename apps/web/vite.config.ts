@@ -16,7 +16,7 @@ import { configDefaults, defineConfig } from "vitest/config";
 import pkg from "./package.json" with { type: "json" };
 
 const port = Number(process.env.PORT ?? 5733);
-const sourcemapEnv = process.env.OMNIMIND_WEB_SOURCEMAP?.trim().toLowerCase();
+const sourcemapEnv = process.env.HARNESSOS_WEB_SOURCEMAP?.trim().toLowerCase();
 
 const buildSourcemap =
   sourcemapEnv === "1" || sourcemapEnv === "true"
@@ -124,7 +124,9 @@ function webAccessProviderIconPlugin(): Plugin {
         WEB_ACCESS_PROVIDER_ICON_EXTENSIONS.has(path.extname(name).toLowerCase()),
       );
       await Promise.all(
-        assetNames.map((name) => fs.copyFile(path.join(sourceDir, name), path.join(targetDir, name))),
+        assetNames.map((name) =>
+          fs.copyFile(path.join(sourceDir, name), path.join(targetDir, name)),
+        ),
       );
       await fs.copyFile(
         path.resolve(import.meta.dirname, "../../LICENSES/lobe-icons-MIT.txt"),

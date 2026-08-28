@@ -60,7 +60,7 @@ describe("normalizeComposerLinkUrl", () => {
 
 describe("describeLinkChip", () => {
   it("shortens GitHub pull request URLs to owner/repo#number", () => {
-    expect(describeLinkChip("https://github.com/Emanuele-web04/omnimind/pull/155")).toEqual({
+    expect(describeLinkChip("https://github.com/Emanuele-web04/harnessos/pull/155")).toEqual({
       label: "Emanuele-web04/omnimind#155",
       isGitHub: true,
     });

@@ -19,12 +19,12 @@ import {
 export type WsSessionRole = "owner" | "client";
 
 export const CurrentWsSessionRole = ServiceMap.Reference<WsSessionRole>(
-  "omnimind/ws/CurrentSessionRole",
+  "harnessos/ws/CurrentSessionRole",
   { defaultValue: () => "client" },
 );
 const detachedConnectionSignal = new AbortController().signal;
 export const CurrentWsConnectionSignal = ServiceMap.Reference<AbortSignal>(
-  "omnimind/ws/CurrentConnectionSignal",
+  "harnessos/ws/CurrentConnectionSignal",
   { defaultValue: () => detachedConnectionSignal },
 );
 
@@ -50,7 +50,7 @@ export interface WsConnectionSessionsShape {
 export class WsConnectionSessions extends ServiceMap.Service<
   WsConnectionSessions,
   WsConnectionSessionsShape
->()("omnimind/ws/WsConnectionSessions") {}
+>()("harnessos/ws/WsConnectionSessions") {}
 
 export const makeWsConnectionSessions = Effect.sync(() => {
   const sessions = new Map<string, WsConnectionSession>();

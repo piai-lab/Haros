@@ -54,7 +54,7 @@ describe("desktop migration recovery", () => {
   });
 
   it("continues only when the server-owned command clears the durable marker", async () => {
-    const directory = await FS.mkdtemp(Path.join(OS.tmpdir(), "omnimind-desktop-recovery-"));
+    const directory = await FS.mkdtemp(Path.join(OS.tmpdir(), "harnessos-desktop-recovery-"));
     const dbPath = Path.join(directory, "state.sqlite");
     const paths: DesktopMigrationRecoveryPaths = {
       dbPath,
@@ -81,7 +81,7 @@ describe("desktop migration recovery", () => {
   });
 
   it("fails closed when a successful command leaves the recovery marker behind", async () => {
-    const directory = await FS.mkdtemp(Path.join(OS.tmpdir(), "omnimind-desktop-recovery-"));
+    const directory = await FS.mkdtemp(Path.join(OS.tmpdir(), "harnessos-desktop-recovery-"));
     const dbPath = Path.join(directory, "state.sqlite");
     const paths: DesktopMigrationRecoveryPaths = {
       dbPath,

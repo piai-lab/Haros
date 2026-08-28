@@ -46,7 +46,7 @@ import {
   type ThreadPrimarySurface,
 } from "./types";
 
-export const COMPOSER_DRAFT_STORAGE_KEY = "omnimind:composer-drafts:v1";
+export const COMPOSER_DRAFT_STORAGE_KEY = "harnessos:composer-drafts:v1";
 export const COMPOSER_DRAFT_STORAGE_VERSION = 7;
 export type DraftThreadEnvMode = "local" | "worktree";
 const TERMINAL_DRAFT_THREAD_MAPPING_SUFFIX = "::terminal";

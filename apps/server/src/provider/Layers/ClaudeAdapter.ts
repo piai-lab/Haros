@@ -1750,7 +1750,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
     const fileSystem = yield* FileSystem.FileSystem;
     const serverConfig = yield* ServerConfig;
     // Optional so adapter tests can run without the gateway layer; when
-    // present, every session gets the omnimind_* MCP tools.
+    // present, every session gets the harnessos_* MCP tools.
     const agentGatewayCredentials = Option.getOrUndefined(
       yield* Effect.serviceOption(AgentGatewayCredentials),
     );

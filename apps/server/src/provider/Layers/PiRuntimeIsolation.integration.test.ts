@@ -40,14 +40,14 @@ describe("Pi runtime physical isolation", () => {
     expect(stock.VERSION).toBe("0.84.3");
     expect(product.VERSION).toBe("0.84.3");
     expect(stock.CONFIG_DIR_NAME).toBe(".pi");
-    expect(product.CONFIG_DIR_NAME).toBe(".omnimind");
+    expect(product.CONFIG_DIR_NAME).toBe(".harnessos");
     expect(stock.SessionManager).not.toBe(product.SessionManager);
     expect(stock.DefaultPackageManager).not.toBe(product.DefaultPackageManager);
 
     writeSkill(path.join(stockAgentDir, "skills"), "stock-global");
     writeSkill(path.join(productAgentDir, "skills"), "product-global");
     writeSkill(path.join(cwd, ".pi", "skills"), "stock-project");
-    writeSkill(path.join(cwd, ".omnimind", "skills"), "product-project");
+    writeSkill(path.join(cwd, ".harnessos", "skills"), "product-project");
 
     const stockLoader = new stock.DefaultResourceLoader({
       cwd,
@@ -67,14 +67,18 @@ describe("Pi runtime physical isolation", () => {
     });
     await Promise.all([stockLoader.reload(), productLoader.reload()]);
 
-    expect(stockLoader.getSkills().skills.map((skill) => skill.name).toSorted()).toEqual([
-      "stock-global",
-      "stock-project",
-    ]);
-    expect(productLoader.getSkills().skills.map((skill) => skill.name).toSorted()).toEqual([
-      "product-global",
-      "product-project",
-    ]);
+    expect(
+      stockLoader
+        .getSkills()
+        .skills.map((skill) => skill.name)
+        .toSorted(),
+    ).toEqual(["stock-global", "stock-project"]);
+    expect(
+      productLoader
+        .getSkills()
+        .skills.map((skill) => skill.name)
+        .toSorted(),
+    ).toEqual(["product-global", "product-project"]);
 
     const stockSessionDir = path.join(stockAgentDir, "sessions", "test");
     const productSessionDir = path.join(productAgentDir, "sessions", "test");
@@ -84,7 +88,7 @@ describe("Pi runtime physical isolation", () => {
     expect(productSession.getSessionFile()).toContain(productSessionDir);
 
     const stockPackagePath = path.join(cwd, ".pi", "npm", "node_modules", "example");
-    const productPackagePath = path.join(cwd, ".omnimind", "npm", "node_modules", "example");
+    const productPackagePath = path.join(cwd, ".harnessos", "npm", "node_modules", "example");
     mkdirSync(stockPackagePath, { recursive: true });
     mkdirSync(productPackagePath, { recursive: true });
     const stockPackages = new stock.DefaultPackageManager({

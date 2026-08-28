@@ -378,7 +378,7 @@ function MermaidSettledCodeBlock({
     const settledAt = performance.now();
     void waitForMermaidPresentationIdle(controller.signal)
       .then(() => {
-        performance.mark("omnimind:mermaid-queued");
+        performance.mark("harnessos:mermaid-queued");
         return renderMermaidPresentation({
           source: code,
           theme: themeRef.current,
@@ -390,7 +390,7 @@ function MermaidSettledCodeBlock({
       })
       .then((result) => {
         if (!controller.signal.aborted) {
-          performance.measure("omnimind:mermaid-settled-to-ready", {
+          performance.measure("harnessos:mermaid-settled-to-ready", {
             start: settledAt,
             end: performance.now(),
           });

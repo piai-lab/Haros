@@ -29,7 +29,7 @@ export function recoverInterruptedAgentGatewayOperations(input: {
       Error
     >;
   };
-  readonly creationSource?: "omnimind_mcp" | "external_mcp";
+  readonly creationSource?: "harnessos_mcp" | "external_mcp";
   readonly retainOnMissingThreadProjection?: boolean;
   readonly snapshotQuery: ProjectionSnapshotQueryShape;
   readonly orchestrationEngine: OrchestrationEngineShape;
@@ -75,7 +75,7 @@ export function recoverInterruptedAgentGatewayOperations(input: {
                 );
                 if (Option.isSome(projected)) {
                   if (
-                    projected.value.creationSource !== (input.creationSource ?? "omnimind_mcp") ||
+                    projected.value.creationSource !== (input.creationSource ?? "harnessos_mcp") ||
                     projected.value.gatewayOperationId !== operation.operationId
                   ) {
                     return yield* Effect.fail(

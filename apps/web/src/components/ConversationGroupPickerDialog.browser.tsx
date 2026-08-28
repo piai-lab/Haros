@@ -81,10 +81,9 @@ describe("ConversationGroupPickerDialog", () => {
       />,
     );
 
-    await expect.element(page.getByRole("checkbox", { name: "Research" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
+    await expect
+      .element(page.getByRole("checkbox", { name: "Research" }))
+      .toHaveAttribute("aria-checked", "true");
     await page.getByRole("checkbox", { name: "Release" }).click();
     await page.getByRole("button", { name: "Save", exact: true }).click();
 

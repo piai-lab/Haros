@@ -4,7 +4,12 @@
 // Layer: UI logic (no React, no stores) so the board math stays unit-testable.
 // Exports: deriveKanbanColumn, buildKanbanBoard, ordering + drop-action helpers.
 
-import type { ProjectId, ProviderKind, ThreadEnvironmentMode, ThreadId } from "@harnessos/contracts";
+import type {
+  ProjectId,
+  ProviderKind,
+  ThreadEnvironmentMode,
+  ThreadId,
+} from "@harnessos/contracts";
 import { buildPromptThreadTitleFallback } from "@harnessos/shared/chatThreads";
 import { isPendingThreadWorktree } from "@harnessos/shared/threadEnvironment";
 import type { ComposerThreadDraftState } from "../../composerDraftStore";

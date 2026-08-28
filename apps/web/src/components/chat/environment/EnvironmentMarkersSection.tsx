@@ -87,18 +87,12 @@ function MarkerRow({
       available={available}
       displayLabel={displayLabel}
       initialEditLabel={marker.label ?? resolvedLabel}
-      checkboxAriaLabel={
-        marker.done ? t("environment.markNotDone") : t("environment.markDone")
-      }
+      checkboxAriaLabel={marker.done ? t("environment.markNotDone") : t("environment.markDone")}
       labelAriaLabel={
-        available
-          ? t("environment.jumpMarkerAria")
-          : t("environment.markerUnavailableAria")
+        available ? t("environment.jumpMarkerAria") : t("environment.markerUnavailableAria")
       }
       labelTitle={
-        available
-          ? t("environment.jumpMarkerTooltip")
-          : t("environment.markerUnavailableTooltip")
+        available ? t("environment.jumpMarkerTooltip") : t("environment.markerUnavailableTooltip")
       }
       removeLabel={t("environment.removeMarker")}
       removeTooltip={t("environment.remove")}

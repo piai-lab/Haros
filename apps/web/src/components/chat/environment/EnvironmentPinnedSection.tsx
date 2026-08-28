@@ -82,14 +82,10 @@ const PinnedMessageRow = function PinnedMessageRow({
       editPlaceholder={available ? "" : t("environment.labelPlaceholder")}
       checkboxAriaLabel={pin.done ? t("environment.markNotDone") : t("environment.markDone")}
       labelAriaLabel={
-        available
-          ? t("environment.jumpPinnedAria")
-          : t("environment.pinnedUnavailableAria")
+        available ? t("environment.jumpPinnedAria") : t("environment.pinnedUnavailableAria")
       }
       labelTitle={
-        available
-          ? t("environment.jumpPinnedTooltip")
-          : t("environment.pinnedUnavailableTooltip")
+        available ? t("environment.jumpPinnedTooltip") : t("environment.pinnedUnavailableTooltip")
       }
       removeLabel={t("environment.unpinMessage")}
       removeTooltip={t("environment.unpin")}

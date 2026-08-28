@@ -176,8 +176,8 @@ export function FirstRunReadinessDialog() {
       setFlowStarted(false);
       startFlow();
     };
-    window.addEventListener("omnimind:first-run-readiness:resume", resume);
-    return () => window.removeEventListener("omnimind:first-run-readiness:resume", resume);
+    window.addEventListener("harnessos:first-run-readiness:resume", resume);
+    return () => window.removeEventListener("harnessos:first-run-readiness:resume", resume);
   }, [startFlow]);
 
   const deferFlow = useCallback(() => {
@@ -597,5 +597,5 @@ export function FirstRunReadinessDialog() {
 }
 
 export function requestFirstRunReadinessResume(): void {
-  window.dispatchEvent(new Event("omnimind:first-run-readiness:resume"));
+  window.dispatchEvent(new Event("harnessos:first-run-readiness:resume"));
 }

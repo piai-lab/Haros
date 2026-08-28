@@ -3,7 +3,11 @@
 // Layer: Web helper tests
 // Depends on: projectCreation helper plus mocked NativeApi orchestration calls.
 
-import { type NativeApi, type OrchestrationShellSnapshot, type ProjectId } from "@harnessos/contracts";
+import {
+  type NativeApi,
+  type OrchestrationShellSnapshot,
+  type ProjectId,
+} from "@harnessos/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import { createOrRecoverProjectFromPath } from "./projectCreation";

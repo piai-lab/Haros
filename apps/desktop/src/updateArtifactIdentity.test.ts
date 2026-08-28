@@ -15,7 +15,7 @@ const temporaryDirectories: string[] = [];
 function createPayload(contents = "signed update bytes"): string {
   const directory = FS.mkdtempSync(Path.join(OS.tmpdir(), "omnimind-update-artifact-"));
   temporaryDirectories.push(directory);
-  const filePath = Path.join(directory, "OmniMind-update.zip");
+  const filePath = Path.join(directory, "HarnessOS-update.zip");
   FS.writeFileSync(filePath, contents);
   return filePath;
 }

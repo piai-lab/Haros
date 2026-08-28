@@ -114,7 +114,7 @@ describe("store projection", () => {
       makeState(initialThread),
       makeReadModel(
         makeReadModelThread({
-          branch: "omnimind/abc123ef",
+          branch: "harnessos/abc123ef",
           updatedAt: "2026-02-27T00:05:00.000Z",
         }),
       ),
@@ -612,7 +612,7 @@ describe("store projection", () => {
     const initialState = makeState(makeThread());
     const readModel = makeReadModel(
       makeReadModelThread({
-        creationSource: "omnimind_mcp",
+        creationSource: "harnessos_mcp",
         sourceThreadId,
       }),
     );
@@ -620,7 +620,7 @@ describe("store projection", () => {
     const next = syncServerReadModel(initialState, readModel);
     const thread = getThreadFromState(next, ThreadId.makeUnsafe("thread-1"));
 
-    expect(thread?.creationSource).toBe("omnimind_mcp");
+    expect(thread?.creationSource).toBe("harnessos_mcp");
     expect(thread?.sourceThreadId).toBe(sourceThreadId);
   });
 
@@ -663,7 +663,7 @@ describe("store projection", () => {
   it("adds the desktop bridge token to server attachment preview URLs", () => {
     const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
     const testWindow = {
-      location: { origin: "omnimind://app" },
+      location: { origin: "harnessos://app" },
       desktopBridge: {
         getWsUrl: () => "ws://127.0.0.1:53036/?token=desktop-secret",
       },
@@ -1392,7 +1392,7 @@ describe("store projection", () => {
     const liveState = makeState(
       makeThread({
         id: threadId,
-        branch: "omnimind/tmp-working",
+        branch: "harnessos/tmp-working",
         worktreePath: "/tmp/worktrees/thread-hot-path-branch-flow",
         createBranchFlowCompleted: true,
       }),
@@ -1402,7 +1402,7 @@ describe("store projection", () => {
       liveState,
       makeReadModelThread({
         id: threadId,
-        branch: "omnimind/tmp-working",
+        branch: "harnessos/tmp-working",
         worktreePath: "/tmp/worktrees/thread-hot-path-branch-flow",
         createBranchFlowCompleted: false,
       }),

@@ -1,5 +1,11 @@
 /** Durable projection repository for custom Spaces. Void remains virtual (`spaceId = null`). */
-import { IsoDateTime, NonNegativeInt, SpaceIconName, SpaceId, SpaceName } from "@harnessos/contracts";
+import {
+  IsoDateTime,
+  NonNegativeInt,
+  SpaceIconName,
+  SpaceId,
+  SpaceName,
+} from "@harnessos/contracts";
 import { Option, Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
 
@@ -30,4 +36,4 @@ export interface ProjectionSpaceRepositoryShape {
 export class ProjectionSpaceRepository extends ServiceMap.Service<
   ProjectionSpaceRepository,
   ProjectionSpaceRepositoryShape
->()("omnimind/persistence/Services/ProjectionSpaces/ProjectionSpaceRepository") {}
+>()("harnessos/persistence/Services/ProjectionSpaces/ProjectionSpaceRepository") {}

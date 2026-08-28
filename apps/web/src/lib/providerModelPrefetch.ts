@@ -17,7 +17,10 @@ import {
   providerModelsQueryOptions,
 } from "./providerDiscoveryReactQuery";
 
-export type ProviderModelPrefetchSettings = Pick<ServerSettingsView, "defaultProvider" | "providers">;
+export type ProviderModelPrefetchSettings = Pick<
+  ServerSettingsView,
+  "defaultProvider" | "providers"
+>;
 
 export function resolveNewThreadModelPrefetchProvider(input: {
   providerOverride?: ProviderKind | null | undefined;

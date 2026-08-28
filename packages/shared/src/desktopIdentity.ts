@@ -1,20 +1,20 @@
 // FILE: desktopIdentity.ts
 // Purpose: Defines the canonical desktop application identity across packaging and runtime.
 
-export const OMNIMIND_DESKTOP_SCHEME = "omnimind";
-export const OMNIMIND_DESKTOP_ORIGIN = `${OMNIMIND_DESKTOP_SCHEME}://app`;
-export const OMNIMIND_DESKTOP_ENTRY_URL = `${OMNIMIND_DESKTOP_ORIGIN}/index.html`;
-export const OMNIMIND_PRODUCTION_BUNDLE_ID = "app.omnimind.desktop";
-export const OMNIMIND_DEVELOPMENT_BUNDLE_ID = `${OMNIMIND_PRODUCTION_BUNDLE_ID}.dev`;
-export const OMNIMIND_CANARY_BUNDLE_ID = `${OMNIMIND_PRODUCTION_BUNDLE_ID}.canary`;
-export const OMNIMIND_CANARY_DESKTOP_SCHEME = "omnimind-canary";
-export const OMNIMIND_CANARY_DESKTOP_ORIGIN = `${OMNIMIND_CANARY_DESKTOP_SCHEME}://app`;
-export const OMNIMIND_CANARY_DESKTOP_ENTRY_URL = `${OMNIMIND_CANARY_DESKTOP_ORIGIN}/index.html`;
+export const HARNESSOS_DESKTOP_SCHEME = "harnessos";
+export const HARNESSOS_DESKTOP_ORIGIN = `${HARNESSOS_DESKTOP_SCHEME}://app`;
+export const HARNESSOS_DESKTOP_ENTRY_URL = `${HARNESSOS_DESKTOP_ORIGIN}/index.html`;
+export const HARNESSOS_PRODUCTION_BUNDLE_ID = "ai.piai.harnessos";
+export const HARNESSOS_DEVELOPMENT_BUNDLE_ID = `${HARNESSOS_PRODUCTION_BUNDLE_ID}.dev`;
+export const HARNESSOS_CANARY_BUNDLE_ID = `${HARNESSOS_PRODUCTION_BUNDLE_ID}.canary`;
+export const HARNESSOS_CANARY_DESKTOP_SCHEME = "harnessos-canary";
+export const HARNESSOS_CANARY_DESKTOP_ORIGIN = `${HARNESSOS_CANARY_DESKTOP_SCHEME}://app`;
+export const HARNESSOS_CANARY_DESKTOP_ENTRY_URL = `${HARNESSOS_CANARY_DESKTOP_ORIGIN}/index.html`;
 
-export type OmniMindDesktopFlavor = "production" | "development" | "canary";
+export type HarnessOSDesktopFlavor = "production" | "development" | "canary";
 
-export interface OmniMindDesktopIdentity {
-  readonly flavor: OmniMindDesktopFlavor;
+export interface HarnessOSDesktopIdentity {
+  readonly flavor: HarnessOSDesktopFlavor;
   readonly displayName: string;
   readonly bundleId: string;
   readonly scheme: string;
@@ -25,56 +25,56 @@ export interface OmniMindDesktopIdentity {
   readonly usesScriptedUpdates: boolean;
 }
 
-export function resolveOmniMindDesktopFlavor(input: {
+export function resolveHarnessOSDesktopFlavor(input: {
   readonly isDevelopment: boolean;
   readonly requestedFlavor?: string | undefined;
-}): OmniMindDesktopFlavor {
+}): HarnessOSDesktopFlavor {
   if (input.requestedFlavor?.trim().toLowerCase() === "canary") {
     return "canary";
   }
   return input.isDevelopment ? "development" : "production";
 }
 
-export function omnimindDesktopIdentity(flavor: OmniMindDesktopFlavor): OmniMindDesktopIdentity {
+export function harnessOSDesktopIdentity(flavor: HarnessOSDesktopFlavor): HarnessOSDesktopIdentity {
   if (flavor === "canary") {
     return {
       flavor,
-      displayName: "OmniMind Canary",
-      bundleId: OMNIMIND_CANARY_BUNDLE_ID,
-      scheme: OMNIMIND_CANARY_DESKTOP_SCHEME,
-      origin: OMNIMIND_CANARY_DESKTOP_ORIGIN,
-      entryUrl: OMNIMIND_CANARY_DESKTOP_ENTRY_URL,
-      userDataDirectoryName: "omnimind-canary",
-      defaultHomeDirectoryName: ".omnimind-canary",
+      displayName: "HarnessOS Canary",
+      bundleId: HARNESSOS_CANARY_BUNDLE_ID,
+      scheme: HARNESSOS_CANARY_DESKTOP_SCHEME,
+      origin: HARNESSOS_CANARY_DESKTOP_ORIGIN,
+      entryUrl: HARNESSOS_CANARY_DESKTOP_ENTRY_URL,
+      userDataDirectoryName: "harnessos-canary",
+      defaultHomeDirectoryName: ".harnessos-canary",
       usesScriptedUpdates: true,
     };
   }
   if (flavor === "development") {
     return {
       flavor,
-      displayName: "OmniMind (Dev)",
-      bundleId: OMNIMIND_DEVELOPMENT_BUNDLE_ID,
-      scheme: OMNIMIND_DESKTOP_SCHEME,
-      origin: OMNIMIND_DESKTOP_ORIGIN,
-      entryUrl: OMNIMIND_DESKTOP_ENTRY_URL,
-      userDataDirectoryName: "omnimind-dev",
-      defaultHomeDirectoryName: ".omnimind",
+      displayName: "HarnessOS (Dev)",
+      bundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
+      scheme: HARNESSOS_DESKTOP_SCHEME,
+      origin: HARNESSOS_DESKTOP_ORIGIN,
+      entryUrl: HARNESSOS_DESKTOP_ENTRY_URL,
+      userDataDirectoryName: "harnessos-dev",
+      defaultHomeDirectoryName: ".harnessos",
       usesScriptedUpdates: false,
     };
   }
   return {
     flavor,
-    displayName: "OmniMind",
-    bundleId: OMNIMIND_PRODUCTION_BUNDLE_ID,
-    scheme: OMNIMIND_DESKTOP_SCHEME,
-    origin: OMNIMIND_DESKTOP_ORIGIN,
-    entryUrl: OMNIMIND_DESKTOP_ENTRY_URL,
-    userDataDirectoryName: "omnimind",
-    defaultHomeDirectoryName: ".omnimind",
+    displayName: "HarnessOS",
+    bundleId: HARNESSOS_PRODUCTION_BUNDLE_ID,
+    scheme: HARNESSOS_DESKTOP_SCHEME,
+    origin: HARNESSOS_DESKTOP_ORIGIN,
+    entryUrl: HARNESSOS_DESKTOP_ENTRY_URL,
+    userDataDirectoryName: "harnessos",
+    defaultHomeDirectoryName: ".harnessos",
     usesScriptedUpdates: false,
   };
 }
 
-export function omnimindBundleId(isDevelopment: boolean): string {
-  return omnimindDesktopIdentity(isDevelopment ? "development" : "production").bundleId;
+export function harnessOSBundleId(isDevelopment: boolean): string {
+  return harnessOSDesktopIdentity(isDevelopment ? "development" : "production").bundleId;
 }

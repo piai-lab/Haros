@@ -307,7 +307,7 @@ function AlignedActivityRowsTimeline(props: { theme: "light" | "dark" }) {
         turnId,
         label: "OmniMind sent a message",
         toolTitle: "OmniMind sent a message",
-        toolName: "mcp__omnimind__omnimind_send_message",
+        toolName: "mcp__harnessos__harnessos_send_message",
         tone: "tool",
         itemType: "mcp_tool_call",
       },

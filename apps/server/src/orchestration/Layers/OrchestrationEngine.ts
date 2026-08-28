@@ -130,7 +130,7 @@ type CommittedCommandResult = {
 
 function deterministicForkMessageId(commandId: string, sourceMessageId: string): MessageId {
   const digest = createHash("sha256")
-    .update("omnimind:chat-to-agent:message:v1\0")
+    .update("harnessos:chat-to-agent:message:v1\0")
     .update(commandId)
     .update("\0")
     .update(sourceMessageId)
@@ -145,7 +145,7 @@ function deterministicForkAttachmentId(
   sourceAttachmentId: string,
 ): string {
   const digest = createHash("sha256")
-    .update("omnimind:chat-to-agent:attachment:v1\0")
+    .update("harnessos:chat-to-agent:attachment:v1\0")
     .update(commandId)
     .update("\0")
     .update(sourceMessageId)

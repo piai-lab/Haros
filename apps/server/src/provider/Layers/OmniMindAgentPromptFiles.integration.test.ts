@@ -5,7 +5,7 @@ import path from "node:path";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import {
   EDITABLE_TEXT_FILE_MAX_BYTES,
-  OMNIMIND_AGENT_PROMPT_MAX_BYTES,
+  HARNESSOS_AGENT_PROMPT_MAX_BYTES,
   OmniMindAgentPromptMutationInput,
   OmniMindAgentPromptSnapshot,
   WS_METHODS,
@@ -361,7 +361,11 @@ describe("OmniMindAgentPromptFilesLive", () => {
 
   it("localizes oversized and binary-like custom rules without weakening unsafe path failures", async () => {
     const oversized = harness();
-    write(oversized.agentDir, "AGENTS.md", Buffer.alloc(OMNIMIND_AGENT_PROMPT_MAX_BYTES + 1, 0x61));
+    write(
+      oversized.agentDir,
+      "AGENTS.md",
+      Buffer.alloc(HARNESSOS_AGENT_PROMPT_MAX_BYTES + 1, 0x61),
+    );
     const oversizedSnapshot = await oversized.run((service) => service.getSnapshot());
     expect(oversizedSnapshot.defaultPrompt.content).toBe("Factory instructions");
     expect(oversizedSnapshot.customRules).toMatchObject({
@@ -393,7 +397,7 @@ describe("OmniMindAgentPromptFilesLive", () => {
     write(
       shadowedOversized.agentDir,
       "CLAUDE.md",
-      Buffer.alloc(OMNIMIND_AGENT_PROMPT_MAX_BYTES + 1, 0x61),
+      Buffer.alloc(HARNESSOS_AGENT_PROMPT_MAX_BYTES + 1, 0x61),
     );
     const shadowedSnapshot = await shadowedOversized.run((service) => service.getSnapshot());
     expect(shadowedSnapshot.customRules).toMatchObject({
@@ -435,7 +439,7 @@ describe("OmniMindAgentPromptFilesLive", () => {
           expanded = true;
           fs.appendFileSync(
             path.join(agentDir, sourceId),
-            Buffer.alloc(OMNIMIND_AGENT_PROMPT_MAX_BYTES, 0x61),
+            Buffer.alloc(HARNESSOS_AGENT_PROMPT_MAX_BYTES, 0x61),
           );
         },
       },
@@ -448,7 +452,7 @@ describe("OmniMindAgentPromptFilesLive", () => {
       unavailableReason: "too_large",
     });
     expect(fs.statSync(path.join(test.agentDir, "AGENTS.md")).size).toBe(
-      OMNIMIND_AGENT_PROMPT_MAX_BYTES + 1,
+      HARNESSOS_AGENT_PROMPT_MAX_BYTES + 1,
     );
   });
 
@@ -472,7 +476,7 @@ describe("OmniMindAgentPromptFilesLive", () => {
   });
 
   it("keeps the largest legal escaped request and response below the existing WS ceiling", async () => {
-    const content = "\\".repeat(OMNIMIND_AGENT_PROMPT_MAX_BYTES);
+    const content = "\\".repeat(HARNESSOS_AGENT_PROMPT_MAX_BYTES);
     for (const payload of [
       Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
         action: "createCustomRules",

@@ -37,4 +37,4 @@ export interface CheckpointReactorShape {
 export class CheckpointReactor extends ServiceMap.Service<
   CheckpointReactor,
   CheckpointReactorShape
->()("omnimind/orchestration/Services/CheckpointReactor") {}
+>()("harnessos/orchestration/Services/CheckpointReactor") {}

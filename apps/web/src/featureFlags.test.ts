@@ -9,7 +9,7 @@ vi.mock("react", () => ({
 
 import { setFeatureFlagEnabled, useFeatureFlags } from "./featureFlags";
 
-const FEATURE_FLAG_STORAGE_KEY = "omnimind:feature-flags";
+const FEATURE_FLAG_STORAGE_KEY = "harnessos:feature-flags";
 
 function createLocalStorage(): Pick<Storage, "getItem" | "setItem" | "removeItem"> {
   const values = new Map<string, string>();

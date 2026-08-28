@@ -14,7 +14,7 @@ import { createCachedLoginShellPathReader } from "@harnessos/shared/loginShellEn
 import {
   expandHomePath as expandHomePathSync,
   resolveOmniMindHomeDirectory,
-} from "@harnessos/shared/omnimindHome";
+} from "@harnessos/shared/harnessosHome";
 
 function logPathHydrationWarning(message: string, error?: unknown): void {
   console.warn(`[server] ${message}`, error instanceof Error ? error.message : (error ?? ""));

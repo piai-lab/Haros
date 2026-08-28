@@ -21,7 +21,7 @@ import { homedir, tmpdir } from "node:os";
 import * as path from "node:path";
 
 /** Set to skip confinement entirely. Logged loudly wherever it is honoured. */
-export const SANDBOX_OPT_OUT_ENV = "OMNIMIND_DEVICE_HELPER_NO_SANDBOX";
+export const SANDBOX_OPT_OUT_ENV = "HARNESSOS_DEVICE_HELPER_NO_SANDBOX";
 
 export const SANDBOX_PROFILE_NAME = "device-helper.sb";
 

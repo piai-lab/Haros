@@ -445,12 +445,7 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
         <CentralIcon name="sidebar-hidden-left-wide" />
         <span className="sr-only">{t("nav.toggleSidebar")}</span>
       </TooltipTrigger>
-      <TooltipPopup
-        align="start"
-        side="bottom"
-        sideOffset={7}
-        className="before:hidden"
-      >
+      <TooltipPopup align="start" side="bottom" sideOffset={7} className="before:hidden">
         <span className="inline-flex items-center gap-2 whitespace-nowrap px-0.5 py-0.5 text-xs font-medium">
           <span>{t("nav.toggleSidebar")}</span>
           {toggleShortcutLabel ? (

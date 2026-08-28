@@ -93,9 +93,7 @@ function formatDuration(durationMs: number, locale: "en" | "zh" = "en"): string 
   const seconds = Math.round((durationMs % 60_000) / 1_000);
   if (seconds === 0) return unit(minutes, "m", "分");
   if (seconds === 60) return unit(minutes + 1, "m", "分");
-  return locale === "zh"
-    ? `${minutes}分${seconds}秒`
-    : `${minutes}m ${seconds}s`;
+  return locale === "zh" ? `${minutes}分${seconds}秒` : `${minutes}m ${seconds}s`;
 }
 
 export function formatClockDuration(durationMs: number, locale: "en" | "zh" = "en"): string {

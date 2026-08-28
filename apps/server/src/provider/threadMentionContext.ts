@@ -7,7 +7,10 @@ import {
   type OrchestrationThread,
   type ProviderMentionReference,
 } from "@harnessos/contracts";
-import { isThreadMentionPath, threadIdFromThreadMentionPath } from "@harnessos/shared/threadMentions";
+import {
+  isThreadMentionPath,
+  threadIdFromThreadMentionPath,
+} from "@harnessos/shared/threadMentions";
 import { Effect, Option } from "effect";
 
 import { paginateThreadMessages } from "../agentGateway/threadSummary.ts";

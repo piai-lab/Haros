@@ -25,14 +25,14 @@ export interface DeviceServiceLiveOptions {
 
 /**
  * Where the boot record lives, derived the way the server derives its state
- * directory so both land in the same place under a custom OMNIMIND_HOME.
+ * directory so both land in the same place under a custom HARNESSOS_HOME.
  *
  * Resolved here rather than taken from ServerConfig because this layer is built
  * before that config is in scope, and getting the path wrong only costs the
  * crash-recovery, not the feature.
  */
 function defaultBootOwnershipPath(): string {
-  const baseDir = process.env.OMNIMIND_HOME?.trim() || path.join(homedir(), ".omnimind");
+  const baseDir = process.env.HARNESSOS_HOME?.trim() || path.join(homedir(), ".harnessos");
   const stateDir = path.join(baseDir, process.env.VITE_DEV_SERVER_URL ? "dev" : "userdata");
   return path.join(stateDir, "device-boot-ownership.json");
 }

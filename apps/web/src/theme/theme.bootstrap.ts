@@ -14,7 +14,7 @@ import {
   resolveThemeVariant,
 } from "./theme.logic";
 
-export const THEME_STORAGE_KEY = "omnimind:theme";
+export const THEME_STORAGE_KEY = "harnessos:theme";
 const MEDIA_QUERY = "(prefers-color-scheme: dark)";
 let lastDesktopTheme: ThemeMode | null = null;
 

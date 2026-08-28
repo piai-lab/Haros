@@ -20,8 +20,8 @@ import { Effect, Layer, Option, Queue, Stream } from "effect";
 import {
   type AcpStdioProxySpawn,
   buildAntigravityMcpPluginConfig,
-  OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN_ENV,
-  OMNIMIND_AGENT_GATEWAY_URL_ENV,
+  HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN_ENV,
+  HARNESSOS_AGENT_GATEWAY_URL_ENV,
 } from "../../agentGateway/mcpInjection.ts";
 import {
   type OmniMindHarnessPolicyDeliveryState,
@@ -150,7 +150,7 @@ type AntigravitySessionContext = ToolSurfaceCounters & {
   /**
    * Conversations owned by spawned subagents, keyed by conversation id.
    * The capture hook is installed globally, so a subagent CLI spawned by the
-   * session's own CLI inherits `OMNIMIND_ANTIGRAVITY_EVENTS` and writes its
+   * session's own CLI inherits `HARNESSOS_ANTIGRAVITY_EVENTS` and writes its
    * pre-invocation/tool/stop events into this session's hook stream. Those
    * events describe a different process and conversation and must never
    * rebind the session; they are forwarded as child-thread events carrying
@@ -270,10 +270,10 @@ export function buildAntigravityCaptureCommand(
     // paths are space-free in every supported install layout (dev bun/electron
     // binaries and packaged apps under %LOCALAPPDATA%\Programs).
     const invocation = `${executablePath} ${scriptPath} ${event}`;
-    return `if not defined OMNIMIND_ANTIGRAVITY_EVENTS (more >nul 2>nul & echo ${fallback}) else (set ELECTRON_RUN_AS_NODE=1&& ${invocation})`;
+    return `if not defined HARNESSOS_ANTIGRAVITY_EVENTS (more >nul 2>nul & echo ${fallback}) else (set ELECTRON_RUN_AS_NODE=1&& ${invocation})`;
   }
   const invocation = `${shellQuote(executablePath, platform)} ${shellQuote(scriptPath, platform)} ${shellQuote(event, platform)}`;
-  return `if [ -z "\${OMNIMIND_ANTIGRAVITY_EVENTS:-}" ]; then cat >/dev/null 2>&1 || :; printf '%s\\n' '${fallback}'; else ELECTRON_RUN_AS_NODE=1 ${invocation}; fi`;
+  return `if [ -z "\${HARNESSOS_ANTIGRAVITY_EVENTS:-}" ]; then cat >/dev/null 2>&1 || :; printf '%s\\n' '${fallback}'; else ELECTRON_RUN_AS_NODE=1 ${invocation}; fi`;
 }
 
 export function hookScriptSource(): string {
@@ -283,7 +283,7 @@ let payload = "";
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { payload += chunk; });
 process.stdin.on("end", () => {
-  const target = process.env.OMNIMIND_ANTIGRAVITY_EVENTS;
+  const target = process.env.HARNESSOS_ANTIGRAVITY_EVENTS;
   if (!target) {
     // Mirrors the shell wrapper's inactive fallback: PreToolUse must carry a
     // decision or Antigravity denies the tool call with an empty reason, and
@@ -341,7 +341,7 @@ process.stdin.on("end", () => {
   }
   fs.appendFileSync(target, event + "\\t" + capturedPayload + "\\n");
   if (event === "pre-tool") {
-    const decision = process.env.OMNIMIND_ANTIGRAVITY_HOOK_DECISION === "allow" ? "allow" : "ask";
+    const decision = process.env.HARNESSOS_ANTIGRAVITY_HOOK_DECISION === "allow" ? "allow" : "ask";
     process.stdout.write(JSON.stringify({ decision }) + "\\n");
   } else if (event === "pre-invocation") {
     // PreInvocation vetoes the upcoming LLM invocation; OmniMind-managed
@@ -516,25 +516,25 @@ export function buildAntigravityTurnProcessEnvironment(input: {
   const hasGatewayBootstrap =
     input.gatewayConnection !== undefined && input.gatewayBootstrapToken !== undefined;
   const gatewayKeys = hasGatewayBootstrap
-    ? [OMNIMIND_AGENT_GATEWAY_URL_ENV, OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN_ENV]
+    ? [HARNESSOS_AGENT_GATEWAY_URL_ENV, HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN_ENV]
     : [];
   const gatewayEnvironment = hasGatewayBootstrap
     ? {
-        [OMNIMIND_AGENT_GATEWAY_URL_ENV]: input.gatewayConnection!.url,
-        [OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN_ENV]: input.gatewayBootstrapToken!,
+        [HARNESSOS_AGENT_GATEWAY_URL_ENV]: input.gatewayConnection!.url,
+        [HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN_ENV]: input.gatewayBootstrapToken!,
       }
     : {};
   return buildProviderChildEnvironment({
     provider: PROVIDER,
     ...(input.baseEnv === undefined ? {} : { baseEnv: input.baseEnv }),
     inheritedOmniMindKeys: [
-      "OMNIMIND_ANTIGRAVITY_EVENTS",
-      "OMNIMIND_ANTIGRAVITY_HOOK_DECISION",
+      "HARNESSOS_ANTIGRAVITY_EVENTS",
+      "HARNESSOS_ANTIGRAVITY_HOOK_DECISION",
       ...gatewayKeys,
     ],
     overrides: {
-      OMNIMIND_ANTIGRAVITY_EVENTS: input.eventFile,
-      OMNIMIND_ANTIGRAVITY_HOOK_DECISION: "allow",
+      HARNESSOS_ANTIGRAVITY_EVENTS: input.eventFile,
+      HARNESSOS_ANTIGRAVITY_HOOK_DECISION: "allow",
       ...gatewayEnvironment,
     },
   });
@@ -1519,7 +1519,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
     /**
      * Forward a hook event that belongs to a subagent conversation spawned by
      * the session's own CLI. The capture hook is installed globally, so the
-     * subagent CLI inherits `OMNIMIND_ANTIGRAVITY_EVENTS` and writes its
+     * subagent CLI inherits `HARNESSOS_ANTIGRAVITY_EVENTS` and writes its
      * events into this session's hook stream. Those events describe a
      * different process and conversation: they must never rebind the session
      * (cursor, transcript, thread) — instead they are surfaced as child-thread

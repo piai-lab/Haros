@@ -109,7 +109,12 @@ export function ComposerGoalHeader({
           ) : null}
         </ComposerStackedPanelRowMain>
         <div className="flex shrink-0 items-center gap-0">
-          <IconButton variant="ghost" size="icon-chip" label={t("composer.goalEdit")} onClick={onEdit}>
+          <IconButton
+            variant="ghost"
+            size="icon-chip"
+            label={t("composer.goalEdit")}
+            onClick={onEdit}
+          >
             <PencilIcon />
           </IconButton>
           {canPause ? (

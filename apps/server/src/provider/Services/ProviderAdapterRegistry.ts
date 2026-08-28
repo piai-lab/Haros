@@ -37,6 +37,6 @@ export interface ProviderAdapterRegistryShape {
 export class ProviderAdapterRegistry extends ServiceMap.Service<
   ProviderAdapterRegistry,
   ProviderAdapterRegistryShape
->()("omnimind/provider/Services/ProviderAdapterRegistry") {}
+>()("harnessos/provider/Services/ProviderAdapterRegistry") {}
 
 // Dummy comment for workflow testing.

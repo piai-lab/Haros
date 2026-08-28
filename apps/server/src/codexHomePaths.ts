@@ -10,7 +10,7 @@
 import { homedir } from "node:os";
 import path from "node:path";
 
-export const OMNIMIND_CODEX_HOME_OVERLAY_DIR = "codex-home-overlay";
+export const HARNESSOS_CODEX_HOME_OVERLAY_DIR = "codex-home-overlay";
 
 export interface CodexHomePathsInput {
   readonly env?: NodeJS.ProcessEnv;
@@ -28,10 +28,10 @@ export function resolveOmniMindCodexHomeOverlayPath(
   env: NodeJS.ProcessEnv,
   sourceHomePath: string,
 ): string {
-  const runtimeHome = env.OMNIMIND_HOME?.trim();
+  const runtimeHome = env.HARNESSOS_HOME?.trim();
   const overlayRoot =
-    runtimeHome || path.join(path.dirname(sourceHomePath), ".omnimind", "runtime");
-  return path.join(overlayRoot, OMNIMIND_CODEX_HOME_OVERLAY_DIR);
+    runtimeHome || path.join(path.dirname(sourceHomePath), ".harnessos", "runtime");
+  return path.join(overlayRoot, HARNESSOS_CODEX_HOME_OVERLAY_DIR);
 }
 
 /**

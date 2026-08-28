@@ -25,7 +25,7 @@ import { Effect, Exit, Fiber, Layer, Random, Stream } from "effect";
 import { afterEach, beforeEach } from "vitest";
 
 import { attachmentRelativePath } from "../../attachmentStore.ts";
-import { OMNIMIND_HARNESS_POLICY_MARKER } from "../../agentGateway/harnessPolicy.ts";
+import { HARNESSOS_HARNESS_POLICY_MARKER } from "../../agentGateway/harnessPolicy.ts";
 import {
   AgentGatewayCredentials,
   type AgentGatewayCredentialsShape,
@@ -420,15 +420,15 @@ const RESUME_THREAD_ID = ThreadId.makeUnsafe("thread-claude-resume");
 describe("Claude OmniMind harness policy", () => {
   it("advertises scoped MCP additively when credentials are available", () => {
     const text = buildEmbeddedClaudeSystemPromptAppend(true);
-    assert.include(text, OMNIMIND_HARNESS_POLICY_MARKER);
+    assert.include(text, HARNESSOS_HARNESS_POLICY_MARKER);
     assert.include(text, "tools actually available");
-    assert.notInclude(text, "omnimind_create_threads");
+    assert.notInclude(text, "harnessos_create_threads");
     assert.notInclude(text, "OmniMind MCP control is unavailable");
   });
 
   it("stays truthful when scoped MCP credentials are absent", () => {
     const text = buildEmbeddedClaudeSystemPromptAppend(false);
-    assert.include(text, OMNIMIND_HARNESS_POLICY_MARKER);
+    assert.include(text, HARNESSOS_HARNESS_POLICY_MARKER);
     assert.include(text, "OmniMind MCP control is unavailable");
   });
 });
@@ -609,7 +609,7 @@ describe("ClaudeAdapterLive", () => {
       assert.equal(systemPrompt.excludeDynamicSections, true);
       assert.include(systemPrompt.append ?? "", "When spawning subagents");
       assert.include(systemPrompt.append ?? "", "worker-<tier>");
-      assert.include(systemPrompt.append ?? "", OMNIMIND_HARNESS_POLICY_MARKER);
+      assert.include(systemPrompt.append ?? "", HARNESSOS_HARNESS_POLICY_MARKER);
       assert.include(systemPrompt.append ?? "", "OmniMind is the host and harness");
       // This characterization harness intentionally omits gateway credentials.
       assert.include(systemPrompt.append ?? "", "OmniMind MCP control is unavailable");

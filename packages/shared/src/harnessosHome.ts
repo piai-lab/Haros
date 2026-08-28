@@ -1,13 +1,13 @@
-// FILE: omnimindHome.ts
+// FILE: harnessosHome.ts
 // Purpose: Resolves the user-level OmniMind base directory without Effect, so the backend
 // server and the Electron main process agree on one location during early startup.
-// Exports: expandHomePath, resolveOmniMindHomeDirectory, OMNIMIND_HOME_ENV_NAME.
+// Exports: expandHomePath, resolveOmniMindHomeDirectory, HARNESSOS_HOME_ENV_NAME.
 
 import * as OS from "node:os";
 import * as Path from "node:path";
 
-export const OMNIMIND_HOME_ENV_NAME = "OMNIMIND_HOME";
-export const DEFAULT_OMNIMIND_HOME_DIRECTORY_NAME = ".omnimind";
+export const HARNESSOS_HOME_ENV_NAME = "HARNESSOS_HOME";
+export const DEFAULT_HARNESSOS_HOME_DIRECTORY_NAME = ".harnessos";
 
 /** Expands a leading `~` against the user's home directory; other inputs pass through. */
 export function expandHomePath(input: string, homeDirectory: string = OS.homedir()): string {
@@ -29,20 +29,20 @@ export function expandHomePath(input: string, homeDirectory: string = OS.homedir
  */
 export function resolveOmniMindHomeDirectory(
   options: {
-    /** Explicit override; falls back to `OMNIMIND_HOME` from `env`. */
+    /** Explicit override; falls back to `HARNESSOS_HOME` from `env`. */
     readonly configuredHome?: string | undefined;
     readonly env?: NodeJS.ProcessEnv;
     readonly homeDirectory?: string;
-    /** Flavor-specific default (`.omnimind-canary`), used only when nothing is configured. */
+    /** Flavor-specific default (`.harnessos-canary`), used only when nothing is configured. */
     readonly directoryName?: string;
   } = {},
 ): string {
   const homeDirectory = options.homeDirectory ?? OS.homedir();
   const configured = (
-    options.configuredHome ?? (options.env ?? process.env)[OMNIMIND_HOME_ENV_NAME]
+    options.configuredHome ?? (options.env ?? process.env)[HARNESSOS_HOME_ENV_NAME]
   )?.trim();
   if (!configured) {
-    return Path.join(homeDirectory, options.directoryName ?? DEFAULT_OMNIMIND_HOME_DIRECTORY_NAME);
+    return Path.join(homeDirectory, options.directoryName ?? DEFAULT_HARNESSOS_HOME_DIRECTORY_NAME);
   }
   return Path.resolve(expandHomePath(configured, homeDirectory));
 }

@@ -355,8 +355,8 @@ describe("CheckpointStoreLive", () => {
   });
 
   it("fails when a checkpoint ref cannot be deleted", async () => {
-    const lockedRef = CheckpointRef.makeUnsafe("refs/omnimind/checkpoints/thread/turn/locked");
-    const deletableRef = CheckpointRef.makeUnsafe("refs/omnimind/checkpoints/thread/turn/ok");
+    const lockedRef = CheckpointRef.makeUnsafe("refs/harnessos/checkpoints/thread/turn/locked");
+    const deletableRef = CheckpointRef.makeUnsafe("refs/harnessos/checkpoints/thread/turn/ok");
     const execute = vi.fn<GitCoreShape["execute"]>((input) => {
       const args = input.args.join(" ");
       if (args === `update-ref -d ${lockedRef}`) {
@@ -396,7 +396,7 @@ describe("CheckpointStoreLive", () => {
   it("tolerates deleting checkpoint refs that are already absent", async () => {
     // `git update-ref -d` exits 0 for a ref that does not exist, so the
     // exit-code check must not turn best-effort cleanup into a hard failure.
-    const missingRef = CheckpointRef.makeUnsafe("refs/omnimind/checkpoints/thread/turn/gone");
+    const missingRef = CheckpointRef.makeUnsafe("refs/harnessos/checkpoints/thread/turn/gone");
     const execute = vi.fn<GitCoreShape["execute"]>(() =>
       Effect.succeed({ code: 0, stdout: "", stderr: "" }),
     );

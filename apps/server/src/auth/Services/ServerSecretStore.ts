@@ -18,4 +18,4 @@ export interface ServerSecretStoreShape {
 export class ServerSecretStore extends ServiceMap.Service<
   ServerSecretStore,
   ServerSecretStoreShape
->()("omnimind/auth/Services/ServerSecretStore") {}
+>()("harnessos/auth/Services/ServerSecretStore") {}

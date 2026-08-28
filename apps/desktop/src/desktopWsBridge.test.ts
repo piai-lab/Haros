@@ -14,10 +14,10 @@ describe("desktopWsBridge", () => {
     expect(normalizeDesktopWsUrl(null)).toBeNull();
   });
 
-  it("reads only the canonical OmniMind desktop URL environment value", () => {
+  it("reads only the canonical HarnessOS desktop URL environment value", () => {
     expect(
       resolveDesktopWsUrlFromEnv({
-        OMNIMIND_DESKTOP_WS_URL: "ws://127.0.0.1:6000/?token=omnimind",
+        HARNESSOS_DESKTOP_WS_URL: "ws://127.0.0.1:6000/?token=omnimind",
         UNRELATED_DESKTOP_WS_URL: "ws://127.0.0.1:5000/?token=ignored",
       }),
     ).toBe("ws://127.0.0.1:6000/?token=omnimind");

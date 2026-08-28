@@ -37,7 +37,7 @@ const WINDOWS_TRUSTED_RUNTIME_ACL_SIDS = new Set([
 ]);
 const WINDOWS_RUNTIME_ACL_SCRIPT = [
   "$ErrorActionPreference = 'Stop'",
-  "$target = $env:OMNIMIND_RUNTIME_ACL_TARGET",
+  "$target = $env:HARNESSOS_RUNTIME_ACL_TARGET",
   "$item = Get-Item -LiteralPath $target -Force",
   "$acl = Get-Acl -LiteralPath $target",
   "$currentSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value",
@@ -62,7 +62,7 @@ export function makeWindowsRuntimeAclPowerShellInvocation(targetPath: string) {
       windowsHide: true,
       maxBuffer: 1024 * 1024,
       timeout: 5_000,
-      env: { ...process.env, OMNIMIND_RUNTIME_ACL_TARGET: targetPath },
+      env: { ...process.env, HARNESSOS_RUNTIME_ACL_TARGET: targetPath },
     },
   };
 }
@@ -132,8 +132,8 @@ export type ExternalMcpFetch = (
 ) => Promise<Response>;
 
 export function resolveExternalMcpBaseDir(homeDir?: string): string {
-  const configured = homeDir?.trim() || process.env.OMNIMIND_HOME?.trim();
-  if (!configured) return path.join(os.homedir(), ".omnimind");
+  const configured = homeDir?.trim() || process.env.HARNESSOS_HOME?.trim();
+  if (!configured) return path.join(os.homedir(), ".harnessos");
   if (configured === "~") return os.homedir();
   if (configured.startsWith(`~${path.sep}`) || configured.startsWith("~/")) {
     return path.resolve(os.homedir(), configured.slice(2));
@@ -638,11 +638,11 @@ export function requestTimeoutForBody(body: string): number {
         params?: { name?: unknown; arguments?: { timeoutMs?: unknown } };
       };
       if (request.method !== "tools/call") continue;
-      if (request.params?.name === "omnimind_create_task") {
+      if (request.params?.name === "harnessos_create_task") {
         serverWorkMs += EXTERNAL_MCP_CREATE_TIMEOUT_MS;
         continue;
       }
-      if (request.params?.name !== "omnimind_wait_for_task") continue;
+      if (request.params?.name !== "harnessos_wait_for_task") continue;
       const requestedWaitMs = request.params.arguments?.timeoutMs;
       const waitMs =
         typeof requestedWaitMs === "number" && Number.isFinite(requestedWaitMs)

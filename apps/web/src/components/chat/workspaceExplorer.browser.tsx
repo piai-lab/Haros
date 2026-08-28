@@ -223,10 +223,7 @@ describe("workspace search", () => {
     const onSelectDirectory = vi.fn();
     try {
       await render(
-        <SearchHarness
-          onSelectFile={onSelectFile}
-          onSelectDirectory={onSelectDirectory}
-        />,
+        <SearchHarness onSelectFile={onSelectFile} onSelectDirectory={onSelectDirectory} />,
       );
       const input = page.getByRole("textbox", { name: "Search workspace" });
       await userEvent.type(input, "components");

@@ -147,7 +147,7 @@ describe("shouldUseLivePullRequestForSidebarThread", () => {
   it("trusts the checked-out branch for a dedicated worktree when persisted metadata is stale", () => {
     expect(
       shouldUseLivePullRequestForSidebarThread({
-        threadBranch: "omnimind/original-branch",
+        threadBranch: "harnessos/original-branch",
         liveBranch: "feat/agent-created-branch",
         hasDedicatedWorktree: true,
       }),
@@ -174,7 +174,7 @@ describe("shouldUseLivePullRequestForSidebarThread", () => {
   it("does not use live PR data for a detached worktree", () => {
     expect(
       shouldUseLivePullRequestForSidebarThread({
-        threadBranch: "omnimind/original-branch",
+        threadBranch: "harnessos/original-branch",
         liveBranch: null,
         hasDedicatedWorktree: true,
       }),
@@ -217,12 +217,12 @@ describe("resolveSidebarThreadPullRequest", () => {
     const live = openPr(575, "feat/current-branch");
     expect(
       resolveSidebarThreadPullRequest({
-        threadBranch: "omnimind/stale-branch",
+        threadBranch: "harnessos/stale-branch",
         liveBranch: "feat/current-branch",
         hasLiveStatus: true,
         hasDedicatedWorktree: true,
         livePullRequest: live,
-        persistedPullRequest: openPr(574, "omnimind/stale-branch"),
+        persistedPullRequest: openPr(574, "harnessos/stale-branch"),
       }),
     ).toBe(live);
   });
@@ -486,7 +486,7 @@ describe("resolveThreadHoverCardMetadata", () => {
       envMode: "worktree",
       branch: "feat/current-branch",
       worktreePath: "/repo/.worktrees/thread",
-      associatedWorktreeBranch: "omnimind/stale-branch",
+      associatedWorktreeBranch: "harnessos/stale-branch",
     });
 
     expect(resolveThreadDisplayBranch(thread)).toBe("feat/current-branch");

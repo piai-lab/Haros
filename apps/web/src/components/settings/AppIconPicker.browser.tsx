@@ -21,20 +21,13 @@ function readTopLeftAlpha(image: HTMLImageElement): number {
 it("uses the OmniMind icon variants and selects the alternate", async () => {
   const onValueChange = vi.fn();
   const mounted = await render(
-    <AppIconPicker
-      platform="MacIntel"
-      value="default"
-      onValueChange={onValueChange}
-    />,
+    <AppIconPicker platform="MacIntel" value="default" onValueChange={onValueChange} />,
   );
 
-  await expect
-    .element(mounted.getByRole("button", { name: "Default icon" }))
-    .toBeVisible();
+  await expect.element(mounted.getByRole("button", { name: "Default icon" })).toBeVisible();
   const iconButton = mounted.getByRole("button", { name: "Icon", exact: true });
   const artwork = iconButton.element().querySelector("img");
-  if (!(artwork instanceof HTMLImageElement))
-    throw new Error("Icon artwork is missing");
+  if (!(artwork instanceof HTMLImageElement)) throw new Error("Icon artwork is missing");
   await vi.waitFor(() => expect(artwork.complete).toBe(true));
   const buttonRect = iconButton.element().getBoundingClientRect();
   const artworkRect = artwork.getBoundingClientRect();
@@ -108,9 +101,7 @@ it("offers the dark artwork only on macOS", async () => {
   const mac = await render(
     <AppIconPicker platform="MacIntel" value="default" onValueChange={onValueChange} />,
   );
-  await expect
-    .element(mac.getByRole("button", { name: "Dark icon" }))
-    .toBeVisible();
+  await expect.element(mac.getByRole("button", { name: "Dark icon" })).toBeVisible();
   expect(
     mac
       .getByRole("button", { name: "Dark icon" })

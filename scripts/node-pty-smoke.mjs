@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, "..");
 const requireRoot =
-  process.env.OMNIMIND_NODE_PTY_SMOKE_REQUIRE_ROOT?.trim() || resolve(repoRoot, "apps/server");
+  process.env.HARNESSOS_NODE_PTY_SMOKE_REQUIRE_ROOT?.trim() || resolve(repoRoot, "apps/server");
 const requireFromTarget = createRequire(resolve(requireRoot, "package.json"));
 const expectedOutput = "omnimind-node-pty-smoke";
 

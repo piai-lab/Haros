@@ -16,5 +16,5 @@ export interface PiAdapterShape extends ProviderAdapterShape<ProviderAdapterErro
 }
 
 export class PiAdapter extends ServiceMap.Service<PiAdapter, PiAdapterShape>()(
-  "omnimind/provider/Services/PiAdapter",
+  "harnessos/provider/Services/PiAdapter",
 ) {}

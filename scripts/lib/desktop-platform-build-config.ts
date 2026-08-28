@@ -9,9 +9,9 @@ export const MAC_ENTITLEMENTS_PATH = "apps/desktop/resources/entitlements.mac.pl
 export const MAC_INHERITED_ENTITLEMENTS_PATH =
   "apps/desktop/resources/entitlements.mac.inherit.plist";
 export const MAC_APPSNAP_HELPER_STAGE_PATH =
-  "apps/desktop/native/appsnap/build/omnimind-appsnap-helper";
+  "apps/desktop/native/appsnap/build/harnessos-appsnap-helper";
 export const MAC_APPSNAP_HELPER_ASAR_EXCLUSION = "!apps/desktop/native/appsnap/build/**";
-export const MAC_APPSNAP_HELPER_BUNDLE_PATH = "Contents/Helpers/omnimind-appsnap-helper";
+export const MAC_APPSNAP_HELPER_BUNDLE_PATH = "Contents/Helpers/harnessos-appsnap-helper";
 export const MAC_DEVICE_HELPER_STAGE_PATH = "apps/server/dist/device-helper";
 export const MAC_DEVICE_HELPER_RESOURCE_PATH = "Resources/device-helper";
 export const WINDOWS_INSTALLER_GUID = "368107a8-afe6-5db5-ab3b-d4f331684868";
@@ -104,7 +104,7 @@ export function createDesktopPlatformBuildConfig(
       extraFiles: [
         {
           from: MAC_APPSNAP_HELPER_STAGE_PATH,
-          to: "Helpers/omnimind-appsnap-helper",
+          to: "Helpers/harnessos-appsnap-helper",
         },
         {
           from: MAC_DEVICE_HELPER_STAGE_PATH,

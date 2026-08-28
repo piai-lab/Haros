@@ -94,19 +94,22 @@ export const OmniMindWebSearchSettingsLive = Layer.effect(
           }
         }),
       testProvider: (input, requestScope) =>
-        singleFlight(`${requestScope}:provider:${input.providerId}:${input.requestId}`, async (signal) => {
-          const provider = projectWebSearchSettings(service.readSnapshot()).providers.find(
-            ({ id }) => id === input.providerId,
-          );
-          if (!provider) throw new Error("Unknown Web search Provider");
-          return testWebSearchProvider({
-            service,
-            provider: provider.id,
-            draft: input.draft,
-            signal,
-            requestId: input.requestId,
-          });
-        }),
+        singleFlight(
+          `${requestScope}:provider:${input.providerId}:${input.requestId}`,
+          async (signal) => {
+            const provider = projectWebSearchSettings(service.readSnapshot()).providers.find(
+              ({ id }) => id === input.providerId,
+            );
+            if (!provider) throw new Error("Unknown Web search Provider");
+            return testWebSearchProvider({
+              service,
+              provider: provider.id,
+              draft: input.draft,
+              signal,
+              requestId: input.requestId,
+            });
+          },
+        ),
       recheck: (input, requestScope) =>
         singleFlight(`${requestScope}:route:${input.requestId}`, (signal) =>
           recheckWebSearchRoute({ service, signal, requestId: input.requestId }),
@@ -117,9 +120,9 @@ export const OmniMindWebSearchSettingsLive = Layer.effect(
           catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
         }),
       openConfig: (editor) =>
-        open.openInEditor({ cwd: service.configPath, editor }).pipe(
-          Effect.mapError(() => new Error("Failed to open Web search configuration")),
-        ),
+        open
+          .openInEditor({ cwd: service.configPath, editor })
+          .pipe(Effect.mapError(() => new Error("Failed to open Web search configuration"))),
     } satisfies OmniMindWebSearchSettingsShape;
   }),
 );

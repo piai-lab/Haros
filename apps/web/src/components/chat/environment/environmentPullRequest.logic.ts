@@ -371,7 +371,7 @@ export function buildFixFindingsPrompt(input: {
 
 // Handed to the agent by the conflicts row's "Fix" button. The prompt names the PR branch
 // as it exists on GitHub but points the agent at the current checkout: fork threads check
-// the PR out under a different local branch name (e.g. `omnimind/pr-N/<branch>`).
+// the PR out under a different local branch name (e.g. `harnessos/pr-N/<branch>`).
 export function buildResolveConflictsPrompt(input: {
   prNumber: number;
   prUrl: string;

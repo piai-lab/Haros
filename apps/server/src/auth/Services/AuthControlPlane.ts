@@ -65,5 +65,5 @@ export interface AuthControlPlaneShape {
 }
 
 export class AuthControlPlane extends ServiceMap.Service<AuthControlPlane, AuthControlPlaneShape>()(
-  "omnimind/auth/Services/AuthControlPlane",
+  "harnessos/auth/Services/AuthControlPlane",
 ) {}

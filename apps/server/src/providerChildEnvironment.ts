@@ -74,7 +74,7 @@ const INHERITED_NATIVE_CAPABILITY_KEYS = new Set([
 ]);
 
 const isTestHarnessKey = (key: string, env: NodeJS.ProcessEnv): boolean =>
-  Boolean(env.VITEST) && (key.startsWith("OMNIMIND_FAKE_") || key.startsWith("OMNIMIND_ACP_"));
+  Boolean(env.VITEST) && (key.startsWith("HARNESSOS_FAKE_") || key.startsWith("HARNESSOS_ACP_"));
 
 export function buildProviderChildEnvironment(input: {
   readonly provider: ProviderChildKind;
@@ -94,7 +94,7 @@ export function buildProviderChildEnvironment(input: {
 
   for (const [key, value] of Object.entries(baseEnv)) {
     if (
-      key.startsWith("OMNIMIND_") &&
+      key.startsWith("HARNESSOS_") &&
       !allowedOmniMindKeys.has(key) &&
       !isTestHarnessKey(key, baseEnv)
     ) {

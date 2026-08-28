@@ -142,7 +142,7 @@ vi.mock("../lib/serverReactQuery", () => ({
 }));
 vi.mock("../projectScripts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../projectScripts")>()),
-  projectScriptRuntimeEnv: () => ({ OMNIMIND_PROJECT_ROOT: "/repo" }),
+  projectScriptRuntimeEnv: () => ({ HARNESSOS_PROJECT_ROOT: "/repo" }),
 }));
 
 import type { Project } from "../types";
@@ -177,7 +177,7 @@ function render() {
     projects: [PROJECT],
     projectById,
     homeDir: "/Users/test",
-    chatWorkspaceRoot: "/Users/test/.omnimind/chats",
+    chatWorkspaceRoot: "/Users/test/.harnessos/chats",
   });
 }
 
@@ -250,7 +250,7 @@ describe("useSidebarProjectRunController", () => {
       projectId: PROJECT_ID,
       command: "bun custom",
       cwd: "/repo",
-      env: { OMNIMIND_PROJECT_ROOT: "/repo" },
+      env: { HARNESSOS_PROJECT_ROOT: "/repo" },
     });
     expect(harness.upsertRun).toHaveBeenCalledTimes(2);
     expect(harness.invalidateQueries).toHaveBeenCalledWith({
@@ -306,7 +306,7 @@ describe("useSidebarProjectRunController", () => {
         [nestedId, nested],
       ]),
       homeDir: "/Users/test",
-      chatWorkspaceRoot: "/Users/test/.omnimind/chats",
+      chatWorkspaceRoot: "/Users/test/.harnessos/chats",
     });
 
     expect(controller.projectRunServerByProjectId.get(nestedId)).toMatchObject({
@@ -352,7 +352,7 @@ describe("useSidebarProjectRunController", () => {
         [nestedId, nested],
       ]),
       homeDir: "/Users/test",
-      chatWorkspaceRoot: "/Users/test/.omnimind/chats",
+      chatWorkspaceRoot: "/Users/test/.harnessos/chats",
     });
 
     expect(controller.projectRunServerByProjectId.get(PROJECT_ID)).toMatchObject({
@@ -448,7 +448,7 @@ describe("useSidebarProjectRunController", () => {
         [secondId, secondProject],
       ]),
       homeDir: "/Users/test",
-      chatWorkspaceRoot: "/Users/test/.omnimind/chats",
+      chatWorkspaceRoot: "/Users/test/.harnessos/chats",
     });
     controller.openProjectRunDialog(secondId);
     reactHarness.beginRender();
@@ -459,7 +459,7 @@ describe("useSidebarProjectRunController", () => {
         [secondId, secondProject],
       ]),
       homeDir: "/Users/test",
-      chatWorkspaceRoot: "/Users/test/.omnimind/chats",
+      chatWorkspaceRoot: "/Users/test/.harnessos/chats",
     });
     reactHarness.beginRender();
     controller = useSidebarProjectRunController({
@@ -469,7 +469,7 @@ describe("useSidebarProjectRunController", () => {
         [secondId, secondProject],
       ]),
       homeDir: "/Users/test",
-      chatWorkspaceRoot: "/Users/test/.omnimind/chats",
+      chatWorkspaceRoot: "/Users/test/.harnessos/chats",
     });
 
     expect(controller.projectRunDialogCommandDraft).toBe("bun second");

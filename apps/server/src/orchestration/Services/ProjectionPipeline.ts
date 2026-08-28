@@ -75,4 +75,4 @@ export interface OrchestrationProjectionPipelineShape {
 export class OrchestrationProjectionPipeline extends ServiceMap.Service<
   OrchestrationProjectionPipeline,
   OrchestrationProjectionPipelineShape
->()("omnimind/orchestration/Services/ProjectionPipeline/OrchestrationProjectionPipeline") {}
+>()("harnessos/orchestration/Services/ProjectionPipeline/OrchestrationProjectionPipeline") {}

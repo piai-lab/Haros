@@ -43,4 +43,4 @@ export interface ProviderRuntimeIngestionShape {
 export class ProviderRuntimeIngestionService extends ServiceMap.Service<
   ProviderRuntimeIngestionService,
   ProviderRuntimeIngestionShape
->()("omnimind/orchestration/Services/ProviderRuntimeIngestion/ProviderRuntimeIngestionService") {}
+>()("harnessos/orchestration/Services/ProviderRuntimeIngestion/ProviderRuntimeIngestionService") {}

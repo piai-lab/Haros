@@ -26,7 +26,7 @@ interface WorkflowRunUiStoreState {
   clearThread: (threadId: ThreadId) => void;
 }
 
-const WORKFLOW_RUN_UI_STORAGE_KEY = "omnimind:workflow-run-ui:v1";
+const WORKFLOW_RUN_UI_STORAGE_KEY = "harnessos:workflow-run-ui:v1";
 // Workflow task ids accumulate one per run; a thread re-running workflows for
 // months should still not grow this without bound. Keep the newest entries.
 const MAX_ENTRIES_PER_LIST = 50;

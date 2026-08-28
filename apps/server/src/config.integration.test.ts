@@ -20,7 +20,7 @@ import {
 } from "./config";
 
 const tempDirs = new Set<string>();
-const originalOmniMindStaticDir = process.env.OMNIMIND_STATIC_DIR;
+const originalOmniMindStaticDir = process.env.HARNESSOS_STATIC_DIR;
 
 function makeTempDir(prefix = "omnimind-config-test-"): string {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -34,9 +34,9 @@ afterEach(() => {
   }
   tempDirs.clear();
   if (originalOmniMindStaticDir === undefined) {
-    delete process.env.OMNIMIND_STATIC_DIR;
+    delete process.env.HARNESSOS_STATIC_DIR;
   } else {
-    process.env.OMNIMIND_STATIC_DIR = originalOmniMindStaticDir;
+    process.env.HARNESSOS_STATIC_DIR = originalOmniMindStaticDir;
   }
 });
 
@@ -44,7 +44,7 @@ describe("resolveStaticDir", () => {
   it("uses the desktop static snapshot exposed through the OmniMind environment", async () => {
     const snapshotDir = makeTempDir("omnimind-static-snapshot-test-");
     fs.writeFileSync(path.join(snapshotDir, "index.html"), "<main>OmniMind</main>");
-    process.env.OMNIMIND_STATIC_DIR = snapshotDir;
+    process.env.HARNESSOS_STATIC_DIR = snapshotDir;
 
     const resolved = await Effect.runPromise(
       resolveStaticDir().pipe(Effect.provide(NodeServices.layer)),

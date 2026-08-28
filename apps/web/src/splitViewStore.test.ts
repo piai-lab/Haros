@@ -114,9 +114,9 @@ describe("splitViewStore", () => {
       ownerProjectId: PROJECT_ID,
     });
 
-    const persisted = globalThis.localStorage.getItem("omnimind:split-view-state:v1");
+    const persisted = globalThis.localStorage.getItem("harnessos:split-view-state:v1");
     expect(persisted).not.toBeNull();
-    expect(globalThis.localStorage.getItem("omnimind:split-view-state:v2")).toBeNull();
+    expect(globalThis.localStorage.getItem("harnessos:split-view-state:v2")).toBeNull();
     expect(JSON.parse(persisted ?? "{}")).toMatchObject({ version: 2 });
   });
 
@@ -149,7 +149,7 @@ describe("splitViewStore", () => {
     vi.resetModules();
     globalThis.localStorage = createMemoryStorage();
     globalThis.localStorage.setItem(
-      "omnimind:split-view-state:v1",
+      "harnessos:split-view-state:v1",
       JSON.stringify({
         state: {
           splitViewsById: {

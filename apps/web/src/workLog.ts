@@ -71,7 +71,7 @@ export interface WorkLogEntry {
   subagents?: ReadonlyArray<WorkLogSubagent>;
   subagentAction?: WorkLogSubagentAction;
   automation?: WorkLogAutomation;
-  omnimindThreadCreation?: WorkLogOmniMindThreadCreation;
+  harnessosThreadCreation?: WorkLogOmniMindThreadCreation;
   engineWebSurface?: {
     status: "waiting-for-user" | "unavailable" | "completed";
     provenance: "engine-native";
@@ -857,9 +857,9 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     }
   }
   if (activity.kind === "omnimind.threads.created") {
-    const omnimindThreadCreation = extractWorkLogOmniMindThreadCreation(payload);
-    if (omnimindThreadCreation) {
-      entry.omnimindThreadCreation = omnimindThreadCreation;
+    const harnessosThreadCreation = extractWorkLogOmniMindThreadCreation(payload);
+    if (harnessosThreadCreation) {
+      entry.harnessosThreadCreation = harnessosThreadCreation;
     }
   }
   const readableTitle =
@@ -1460,7 +1460,7 @@ function mergeDerivedWorkLogEntries(
     : (next.requestKind ?? previous.requestKind);
   const subagents = next.subagents ?? previous.subagents;
   const subagentAction = next.subagentAction ?? previous.subagentAction;
-  const omnimindThreadCreation = next.omnimindThreadCreation ?? previous.omnimindThreadCreation;
+  const harnessosThreadCreation = next.harnessosThreadCreation ?? previous.harnessosThreadCreation;
   const collapseKey = next.collapseKey ?? previous.collapseKey;
   const toolName = next.toolName ?? previous.toolName;
   const toolCallId = next.toolCallId ?? previous.toolCallId;
@@ -1489,7 +1489,7 @@ function mergeDerivedWorkLogEntries(
     ...(requestKind ? { requestKind } : {}),
     ...(subagents ? { subagents } : {}),
     ...(subagentAction ? { subagentAction } : {}),
-    ...(omnimindThreadCreation ? { omnimindThreadCreation } : {}),
+    ...(harnessosThreadCreation ? { harnessosThreadCreation } : {}),
     ...(collapseKey ? { collapseKey } : {}),
     ...(toolName ? { toolName } : {}),
     ...(toolCallId ? { toolCallId } : {}),

@@ -18,7 +18,7 @@ import {
   resolveTerminalFontFamilyStack,
 } from "./localPreferences";
 
-const LEGACY_MIXED_APP_SETTINGS_STORAGE_KEY = "omnimind:app-settings:v1";
+const LEGACY_MIXED_APP_SETTINGS_STORAGE_KEY = "harnessos:app-settings:v1";
 
 function createMemoryStorage(initial: Record<string, string> = {}): Storage {
   const entries = new Map(Object.entries(initial));

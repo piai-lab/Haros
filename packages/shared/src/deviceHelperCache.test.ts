@@ -80,6 +80,6 @@ describe("device helper cache key", () => {
       "omnimind",
       "device-helper",
     ]);
-    expect(DEVICE_HELPER_BINARY_NAME).toBe("omnimind-device-helper");
+    expect(DEVICE_HELPER_BINARY_NAME).toBe("harnessos-device-helper");
   });
 });

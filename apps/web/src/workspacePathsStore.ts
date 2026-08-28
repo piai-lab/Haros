@@ -21,8 +21,8 @@ interface WorkspacePathsStoreState {
   setServerWorkspacePaths: (paths: ServerWorkspacePaths) => void;
 }
 
-const WORKSPACE_PATHS_STORAGE_KEY = "omnimind:workspace-paths:v1";
-const LEGACY_WORKSPACE_PAGES_STORAGE_KEY = "omnimind:workspace-pages:v2";
+const WORKSPACE_PATHS_STORAGE_KEY = "harnessos:workspace-paths:v1";
+const LEGACY_WORKSPACE_PAGES_STORAGE_KEY = "harnessos:workspace-pages:v2";
 
 function createWorkspacePathsStorage(): StateStorage {
   return {

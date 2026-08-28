@@ -22,11 +22,11 @@ const BoundedDisplayName = TrimmedNonEmptyString.check(
     /^(?!\/)(?![A-Za-z]:[\\/])(?!\\\\)(?!(?:file|https?):\/\/)[^\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]+$/iu,
   ),
 );
-export const OMNIMIND_MODEL_SERVICES_MAX_COUNT = 512;
-export const OMNIMIND_MODEL_SERVICE_MODELS_MAX_COUNT = 4_096;
-export const OMNIMIND_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT = 256;
-export const OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT = 256;
-export const OMNIMIND_CUSTOM_MODEL_HEADERS_MAX_COUNT = 64;
+export const HARNESSOS_MODEL_SERVICES_MAX_COUNT = 512;
+export const HARNESSOS_MODEL_SERVICE_MODELS_MAX_COUNT = 4_096;
+export const HARNESSOS_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT = 256;
+export const HARNESSOS_CUSTOM_MODEL_COST_TIERS_MAX_COUNT = 256;
+export const HARNESSOS_CUSTOM_MODEL_HEADERS_MAX_COUNT = 64;
 
 const BoundedModelId = TrimmedNonEmptyString.check(
   Schema.isMaxLength(512),
@@ -45,7 +45,7 @@ export const OmniMindModelServiceModel = Schema.Struct({
 export type OmniMindModelServiceModel = typeof OmniMindModelServiceModel.Type;
 
 const BoundedServiceModels = Schema.Array(OmniMindModelServiceModel).check(
-  Schema.isMaxLength(OMNIMIND_MODEL_SERVICE_MODELS_MAX_COUNT),
+  Schema.isMaxLength(HARNESSOS_MODEL_SERVICE_MODELS_MAX_COUNT),
 );
 
 export const OmniMindCustomModelServiceApi = Schema.Literals([
@@ -89,12 +89,12 @@ const OmniMindCustomModelCost = Schema.Struct({
   ...OmniMindCustomModelCostRates,
   tiers: Schema.optional(
     Schema.Array(OmniMindCustomModelCostTier).check(
-      Schema.isMaxLength(OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT),
+      Schema.isMaxLength(HARNESSOS_CUSTOM_MODEL_COST_TIERS_MAX_COUNT),
     ),
   ),
 });
 
-export const OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API = {
+export const HARNESSOS_CUSTOM_MODEL_COMPAT_FIELDS_BY_API = {
   "openai-completions": [
     "supportsDeveloperRole",
     "supportsReasoningEffort",
@@ -157,7 +157,7 @@ export const OmniMindCustomModelHeaderMetadata = Schema.Struct({
 });
 export type OmniMindCustomModelHeaderMetadata = typeof OmniMindCustomModelHeaderMetadata.Type;
 const BoundedHeaderMetadata = Schema.Array(OmniMindCustomModelHeaderMetadata).check(
-  Schema.isMaxLength(OMNIMIND_CUSTOM_MODEL_HEADERS_MAX_COUNT),
+  Schema.isMaxLength(HARNESSOS_CUSTOM_MODEL_HEADERS_MAX_COUNT),
 );
 
 const HeaderEnvironmentVariableName = Schema.String.check(
@@ -173,7 +173,7 @@ export const OmniMindCustomModelHeaderMutation = Schema.Union([
 ]);
 export type OmniMindCustomModelHeaderMutation = typeof OmniMindCustomModelHeaderMutation.Type;
 const BoundedHeaderMutations = Schema.Array(OmniMindCustomModelHeaderMutation).check(
-  Schema.isMaxLength(OMNIMIND_CUSTOM_MODEL_HEADERS_MAX_COUNT),
+  Schema.isMaxLength(HARNESSOS_CUSTOM_MODEL_HEADERS_MAX_COUNT),
 );
 
 const OmniMindCustomModelServiceModelFields = {
@@ -207,7 +207,7 @@ const OmniMindCustomModelServiceModelConfig = Schema.Struct({
 
 const BoundedCustomModels = Schema.Array(OmniMindCustomModelServiceModelInput)
   .check(Schema.isMinLength(1))
-  .check(Schema.isMaxLength(OMNIMIND_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT));
+  .check(Schema.isMaxLength(HARNESSOS_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT));
 
 export const OmniMindCustomModelServiceConfigInput = Schema.Struct({
   serviceId: Schema.NullOr(BoundedIdentifier),
@@ -230,7 +230,7 @@ export const OmniMindCustomModelServiceConfig = Schema.Struct({
   configuredHeaders: Schema.optional(BoundedHeaderMetadata),
   models: Schema.Array(OmniMindCustomModelServiceModelConfig)
     .check(Schema.isMinLength(1))
-    .check(Schema.isMaxLength(OMNIMIND_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT)),
+    .check(Schema.isMaxLength(HARNESSOS_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT)),
 });
 export type OmniMindCustomModelServiceConfig = typeof OmniMindCustomModelServiceConfig.Type;
 
@@ -342,7 +342,7 @@ export const OmniMindModelServicesListInput = Schema.Struct({
 export type OmniMindModelServicesListInput = typeof OmniMindModelServicesListInput.Type;
 
 const BoundedModelServices = Schema.Array(OmniMindModelServiceDescriptor).check(
-  Schema.isMaxLength(OMNIMIND_MODEL_SERVICES_MAX_COUNT),
+  Schema.isMaxLength(HARNESSOS_MODEL_SERVICES_MAX_COUNT),
 );
 const BoundedNonEmptyModelServices = BoundedModelServices.check(Schema.isMinLength(1));
 
@@ -595,7 +595,7 @@ export type OmniMindCustomModelServiceDiscoveredModel =
 
 const BoundedDiscoveredModels = Schema.Array(OmniMindCustomModelServiceDiscoveredModel)
   .check(Schema.isMinLength(1))
-  .check(Schema.isMaxLength(OMNIMIND_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT));
+  .check(Schema.isMaxLength(HARNESSOS_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT));
 
 export const OmniMindCustomModelServiceDiscoverInput = Schema.Struct({
   config: OmniMindCustomModelServiceDiscoveryConfigInput,

@@ -39,7 +39,7 @@ export const makeBrowserAutomationError = (
 export const makeBrowserMcpToolErrorEnvelope = (
   input: BrowserAutomationErrorInput,
 ): BrowserMcpToolErrorEnvelope => ({
-  type: "omnimind_browser_error",
+  type: "harnessos_browser_error",
   version: 1,
   error: makeBrowserAutomationError(input),
 });

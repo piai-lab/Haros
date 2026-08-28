@@ -49,8 +49,8 @@ async function closeElectronApplication(application: ElectronApplication): Promi
 }
 
 test("a real Electron guest commits and reprojects a continuous annotation session", async () => {
-  const mainPath = process.env.OMNIMIND_E2E_ELECTRON_MAIN;
-  const annotationPreloadPath = process.env.OMNIMIND_E2E_BROWSER_ANNOTATION_PRELOAD;
+  const mainPath = process.env.HARNESSOS_E2E_ELECTRON_MAIN;
+  const annotationPreloadPath = process.env.HARNESSOS_E2E_BROWSER_ANNOTATION_PRELOAD;
   if (!mainPath || !annotationPreloadPath) {
     throw new Error("Electron annotation E2E bundles were not prepared.");
   }
@@ -71,12 +71,12 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
     env: {
       ...process.env,
       HOME: home,
-      OMNIMIND_HOME: home,
-      OMNIMIND_BROWSER_HOST_PIPE_PATH: pipePath,
-      OMNIMIND_BROWSER_HOST_CAPABILITY: capability,
-      OMNIMIND_E2E_SHELL_PATH: shellPath,
-      OMNIMIND_E2E_THREAD_ID: threadId,
-      OMNIMIND_E2E_BROWSER_ANNOTATION_PRELOAD: annotationPreloadPath,
+      HARNESSOS_HOME: home,
+      HARNESSOS_BROWSER_HOST_PIPE_PATH: pipePath,
+      HARNESSOS_BROWSER_HOST_CAPABILITY: capability,
+      HARNESSOS_E2E_SHELL_PATH: shellPath,
+      HARNESSOS_E2E_THREAD_ID: threadId,
+      HARNESSOS_E2E_BROWSER_ANNOTATION_PRELOAD: annotationPreloadPath,
     },
   });
 

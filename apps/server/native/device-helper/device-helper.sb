@@ -1,4 +1,4 @@
-;; Seatbelt profile for omnimind-device-helper.
+;; Seatbelt profile for harnessos-device-helper.
 ;;
 ;; The helper dlopens Apple's private CoreSimulator, SimulatorKit and
 ;; AccessibilityPlatformTranslation frameworks, drives a booted simulator over
@@ -58,7 +58,7 @@
 ;;
 ;; A missing rule usually does NOT fail loudly: CoreSimulator turns a denial
 ;; into a hang or an opaque error. `helperSandbox.ts` names this profile in the
-;; timeout message for that reason, and `OMNIMIND_DEVICE_HELPER_NO_SANDBOX=1`
+;; timeout message for that reason, and `HARNESSOS_DEVICE_HELPER_NO_SANDBOX=1`
 ;; skips the wrapper entirely so a user on an unusual setup still has a working
 ;; pane. Re-validate with `bun run test:device` after any change here, and after
 ;; an Xcode or macOS bump.

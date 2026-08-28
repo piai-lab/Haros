@@ -49,7 +49,7 @@ import {
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import type * as Acp from "@agentclientprotocol/sdk";
 
-import { buildAcpOmniMindMcpServers } from "../../agentGateway/mcpInjection.ts";
+import { buildAcpHarnessOSMcpServers } from "../../agentGateway/mcpInjection.ts";
 import {
   type OmniMindHarnessPolicyDeliveryState,
   takeOmniMindHarnessPolicyTextPartForProviderSession,
@@ -154,8 +154,8 @@ const GROK_MODEL_DISCOVERY_TIMEOUT_MS = 15_000;
 const GROK_ACP_FORK_TIMEOUT_MS = 30_000;
 const GROK_ACP_TRANSPORT_DEBUG_MARKER = "grok-acp-meta-stripper-v2";
 const GROK_ACP_LOG_PAYLOAD_LIMIT = 4_000;
-const GROK_ACP_DEBUG_ENV = "OMNIMIND_GROK_ACP_DEBUG";
-const OMNIMIND_GROK_ACP_DEBUG_ENV = "OMNIMIND_GROK_ACP_DEBUG";
+const GROK_ACP_DEBUG_ENV = "HARNESSOS_GROK_ACP_DEBUG";
+const HARNESSOS_GROK_ACP_DEBUG_ENV = "HARNESSOS_GROK_ACP_DEBUG";
 const LEGACY_GROK_ACP_DEBUG_ENV = "DP_GROK_ACP_DEBUG";
 const GROK_RESUME_REPLAY_QUIET_MS = 200;
 // Longest that startSession blocks waiting for the resume replay to settle.
@@ -168,9 +168,9 @@ const GROK_RESUME_REPLAY_HARD_TIMEOUT_MS = 30_000;
 // Backstop for an alive-but-silent grok child: if a turn produces no ACP
 // activity for this long, force-fail it instead of showing "Working" forever.
 // Generous by design so legitimate long, quiet tool runs are not killed;
-// override with OMNIMIND_GROK_TURN_IDLE_TIMEOUT_MS when a workload needs longer.
+// override with HARNESSOS_GROK_TURN_IDLE_TIMEOUT_MS when a workload needs longer.
 const GROK_TURN_IDLE_TIMEOUT_MS = resolveAcpTurnIdleTimeoutMs({
-  envVar: "OMNIMIND_GROK_TURN_IDLE_TIMEOUT_MS",
+  envVar: "HARNESSOS_GROK_TURN_IDLE_TIMEOUT_MS",
   defaultMs: 600_000,
 });
 const GROK_TURN_WATCHDOG_INTERVAL_MS = 15_000;
@@ -318,7 +318,7 @@ const collectStreamAsString = <E>(stream: Stream.Stream<Uint8Array, E>): Effect.
 function isGrokAcpDebugEnabled(): boolean {
   return (
     process.env[GROK_ACP_DEBUG_ENV] === "1" ||
-    process.env[OMNIMIND_GROK_ACP_DEBUG_ENV] === "1" ||
+    process.env[HARNESSOS_GROK_ACP_DEBUG_ENV] === "1" ||
     process.env[LEGACY_GROK_ACP_DEBUG_ENV] === "1"
   );
 }
@@ -724,7 +724,7 @@ export function makeGrokAdapter(
     const childProcessSpawner = yield* ChildProcessSpawner.ChildProcessSpawner;
     const serverConfig = yield* Effect.service(ServerConfig);
     // Optional so adapter tests can run without the gateway layer; when
-    // present, every session gets the omnimind_* MCP tools.
+    // present, every session gets the harnessos_* MCP tools.
     const agentGatewayCredentials = Option.getOrUndefined(
       yield* Effect.serviceOption(AgentGatewayCredentials),
     );
@@ -1158,7 +1158,7 @@ export function makeGrokAdapter(
             ...(agentGatewayCredentials
               ? {
                   buildMcpServers: (initializeResult) =>
-                    buildAcpOmniMindMcpServers({
+                    buildAcpHarnessOSMcpServers({
                       connection: gatewaySessionLease!.connection,
                       initializeResult,
                       stdioProxy: agentGatewayCredentials.stdioProxy,

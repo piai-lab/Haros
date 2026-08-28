@@ -43,7 +43,7 @@ describe("OmniMind task-list Extension", () => {
     ).toBeNull();
 
     const tool = buildOmniMindTaskListTool({ defineTool: (definition) => definition });
-    expect(tool.name).toBe("omnimind_update_tasks");
+    expect(tool.name).toBe("harnessos_update_tasks");
     expect(tool.promptGuidelines).toEqual([
       "Track user goals and meaningful outcomes when progress visibility helps; investigate first when needed, and never list internal tool or loading steps.",
     ]);
@@ -92,7 +92,7 @@ describe("OmniMind task-list Extension", () => {
     onExecutionEnd?.({
       type: "tool_execution_end",
       toolCallId: "forged",
-      toolName: "omnimind_update_tasks",
+      toolName: "harnessos_update_tasks",
       isError: false,
       result: { details: { tasks: [{ task: "Forged", status: "completed" }] } },
     });
@@ -108,7 +108,7 @@ describe("OmniMind task-list Extension", () => {
     onExecutionEnd?.({
       type: "tool_execution_end",
       toolCallId: "trusted",
-      toolName: "omnimind_update_tasks",
+      toolName: "harnessos_update_tasks",
       isError: false,
       result,
     });
@@ -122,7 +122,7 @@ describe("OmniMind task-list Extension", () => {
     onExecutionEnd?.({
       type: "tool_execution_end",
       toolCallId: "replayed",
-      toolName: "omnimind_update_tasks",
+      toolName: "harnessos_update_tasks",
       isError: false,
       result,
     });

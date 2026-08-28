@@ -19,4 +19,4 @@ export interface TurnCheckpointCoordinatorShape {
 export class TurnCheckpointCoordinator extends ServiceMap.Service<
   TurnCheckpointCoordinator,
   TurnCheckpointCoordinatorShape
->()("omnimind/orchestration/Services/TurnCheckpointCoordinator") {}
+>()("harnessos/orchestration/Services/TurnCheckpointCoordinator") {}

@@ -12,7 +12,10 @@ import { dirname, extname } from "node:path";
 import pathWin32 from "node:path/win32";
 
 import { EDITORS, type EditorId } from "@harnessos/contracts";
-import { prepareWindowsSafeProcess, resolveWindowsSystemRoot } from "@harnessos/shared/windowsProcess";
+import {
+  prepareWindowsSafeProcess,
+  resolveWindowsSystemRoot,
+} from "@harnessos/shared/windowsProcess";
 import { ServiceMap, Schema, Effect, Layer } from "effect";
 import {
   getEditorMacApplications,
@@ -328,7 +331,7 @@ export interface OpenShape {
 /**
  * Open - Service tag for browser/editor launch operations.
  */
-export class Open extends ServiceMap.Service<Open, OpenShape>()("omnimind/open") {}
+export class Open extends ServiceMap.Service<Open, OpenShape>()("harnessos/open") {}
 
 // ==============================
 // Implementations

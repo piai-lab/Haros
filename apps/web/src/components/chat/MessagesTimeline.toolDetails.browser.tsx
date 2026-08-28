@@ -287,7 +287,7 @@ describe("MessagesTimeline tool details", () => {
 
   it("opens a Codex image-view row in the shared local image preview", async () => {
     const onImageExpand = vi.fn();
-    const imagePath = "/private/tmp/omnimind/image-preview.png";
+    const imagePath = "/private/tmp/harnessos/image-preview.png";
     const screen = await render(
       <TimelineWorkEntryRow
         workEntry={{

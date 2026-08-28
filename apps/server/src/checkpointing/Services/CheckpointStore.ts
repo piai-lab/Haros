@@ -137,5 +137,5 @@ export interface CheckpointStoreShape {
  * CheckpointStore - Service tag for checkpoint persistence and restore operations.
  */
 export class CheckpointStore extends ServiceMap.Service<CheckpointStore, CheckpointStoreShape>()(
-  "omnimind/checkpointing/Services/CheckpointStore",
+  "harnessos/checkpointing/Services/CheckpointStore",
 ) {}

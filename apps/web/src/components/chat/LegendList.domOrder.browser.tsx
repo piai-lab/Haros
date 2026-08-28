@@ -69,9 +69,7 @@ describe("LegendList DOM-order seam", () => {
 
     try {
       await expect.poll(itemOrder).toEqual(["answer"]);
-      const answer = document.querySelector<HTMLButtonElement>(
-        '[data-dom-order-item="answer"]',
-      );
+      const answer = document.querySelector<HTMLButtonElement>('[data-dom-order-item="answer"]');
       expect(answer).not.toBeNull();
       answer!.focus();
       expect(document.activeElement).toBe(answer);

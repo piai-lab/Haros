@@ -123,7 +123,7 @@ const DROID_PROVIDER = "droid" as const;
 const KILO_PROVIDER = "kilo" as const;
 const OPENCODE_PROVIDER = "opencode" as const;
 const PI_PROVIDER = "pi" as const;
-const OMNIMIND_AGENT_PROVIDER = "omnimind" as const;
+const HARNESSOS_AGENT_PROVIDER = "omnimind" as const;
 const BUNDLED_PI_VERSION = "0.84.3";
 type ProviderStatuses = ReadonlyArray<ServerProviderStatus>;
 const DISABLED_PROVIDER_STATUS_MESSAGE = "Provider is disabled in OmniMind settings.";
@@ -134,7 +134,7 @@ const PROVIDERS = PROVIDER_KINDS;
 const providerChildKind = (provider: ProviderKind): ProviderChildKind =>
   provider === CLAUDE_AGENT_PROVIDER
     ? "claude"
-    : provider === OMNIMIND_AGENT_PROVIDER
+    : provider === HARNESSOS_AGENT_PROVIDER
       ? "pi"
       : provider;
 
@@ -1590,7 +1590,7 @@ export const checkOmniMindAgentProviderStatus = (): Effect.Effect<ServerProvider
   Effect.sync(
     () =>
       ({
-        provider: OMNIMIND_AGENT_PROVIDER,
+        provider: HARNESSOS_AGENT_PROVIDER,
         status: "ready",
         available: true,
         authStatus: "unknown",
@@ -2017,7 +2017,7 @@ export function resolvePassiveProviderPresence(
   const recoverable: ProviderKind[] = [];
   for (const provider of PROVIDERS) {
     if (!isProviderEnabledForSettings(provider, settings)) continue;
-    if (provider === OMNIMIND_AGENT_PROVIDER || provider === PI_PROVIDER) {
+    if (provider === HARNESSOS_AGENT_PROVIDER || provider === PI_PROVIDER) {
       recoverable.push(provider);
       continue;
     }
@@ -2433,7 +2433,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
               [
                 checkProviderWhenEnabled(
                   settings,
-                  OMNIMIND_AGENT_PROVIDER,
+                  HARNESSOS_AGENT_PROVIDER,
                   checkOmniMindAgentProviderStatus(),
                 ),
                 checkProviderWhenEnabled(

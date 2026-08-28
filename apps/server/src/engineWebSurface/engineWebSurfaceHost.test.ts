@@ -168,7 +168,8 @@ describe("Engine web-surface host", () => {
     handle.on("closed", () => undefined);
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(presentations).toBe(1);
-    expect(() => glimpse.open("<script>window.location.replace(\"http://localhost:3000/\");</script>"))
-      .toThrow("No matching OmniMind Engine web-surface intent is active.");
+    expect(() =>
+      glimpse.open('<script>window.location.replace("http://localhost:3000/");</script>'),
+    ).toThrow("No matching OmniMind Engine web-surface intent is active.");
   });
 });

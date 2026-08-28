@@ -43,4 +43,4 @@ export interface OmniMindEcosystemShape {
 export class OmniMindEcosystem extends ServiceMap.Service<
   OmniMindEcosystem,
   OmniMindEcosystemShape
->()("omnimind/provider/Services/OmniMindEcosystem") {}
+>()("harnessos/provider/Services/OmniMindEcosystem") {}

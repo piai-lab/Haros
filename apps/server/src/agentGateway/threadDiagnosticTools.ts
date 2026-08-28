@@ -54,7 +54,7 @@ export function makeThreadDiagnosticTools(input: {
   const readActivity: ToolEntry = {
     requiredCapability: "diagnostics:read",
     definition: {
-      name: "omnimind_read_thread_activity",
+      name: "harnessos_read_thread_activity",
       description:
         "Read a stable, paginated page of projected thread activity. Returns newest-last rows and an opaque cursor for older evidence.",
       inputSchema: {
@@ -143,7 +143,7 @@ export function makeThreadDiagnosticTools(input: {
   const readEvents: ToolEntry = {
     requiredCapability: "diagnostics:read",
     definition: {
-      name: "omnimind_read_thread_events",
+      name: "harnessos_read_thread_events",
       description:
         "Read a stable, paginated page from the durable orchestration event journal. Consecutive updates for the same message are coalesced without crossing intervening events.",
       inputSchema: {
@@ -248,7 +248,7 @@ export function makeThreadDiagnosticTools(input: {
   const readRuntimeEvents: ToolEntry = {
     requiredCapability: "diagnostics:read",
     definition: {
-      name: "omnimind_read_thread_runtime_events",
+      name: "harnessos_read_thread_runtime_events",
       description:
         "Read retained provider-runtime events for one thread. This source has a global accepted-event retention cap; inspect coverage before treating absence as evidence.",
       inputSchema: {
@@ -340,7 +340,7 @@ export function makeThreadDiagnosticTools(input: {
   const diagnoseThread: ToolEntry = {
     requiredCapability: "diagnostics:read",
     definition: {
-      name: "omnimind_diagnose_thread",
+      name: "harnessos_diagnose_thread",
       description:
         "Build one bounded forensic snapshot from projected status/messages/activity, durable events, provider delivery blockers, and operational stream incidents.",
       inputSchema: {

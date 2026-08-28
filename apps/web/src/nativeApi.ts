@@ -1,8 +1,8 @@
 import {
   WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
-  WS_OMNIMIND_AGENT_PROMPTS_CAPABILITY,
-  WS_OMNIMIND_ECOSYSTEM_CAPABILITY,
-  WS_OMNIMIND_MODEL_SERVICES_CAPABILITY,
+  WS_HARNESSOS_AGENT_PROMPTS_CAPABILITY,
+  WS_HARNESSOS_ECOSYSTEM_CAPABILITY,
+  WS_HARNESSOS_MODEL_SERVICES_CAPABILITY,
   type NativeApi,
 } from "@harnessos/contracts";
 
@@ -45,19 +45,19 @@ export function readNativeApiServerCapabilityState(capability: string): boolean 
     if (capability === WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY) {
       return typeof window.nativeApi.projects?.provisionFromGitHub === "function";
     }
-    if (capability === WS_OMNIMIND_MODEL_SERVICES_CAPABILITY) {
+    if (capability === WS_HARNESSOS_MODEL_SERVICES_CAPABILITY) {
       return (
         typeof window.nativeApi.omnimindModelServices?.list === "function" &&
         typeof window.nativeApi.omnimindModelServices?.get === "function"
       );
     }
-    if (capability === WS_OMNIMIND_ECOSYSTEM_CAPABILITY) {
+    if (capability === WS_HARNESSOS_ECOSYSTEM_CAPABILITY) {
       return (
         typeof window.nativeApi.omnimindEcosystem?.list === "function" &&
         typeof window.nativeApi.omnimindEcosystem?.listResources === "function"
       );
     }
-    if (capability === WS_OMNIMIND_AGENT_PROMPTS_CAPABILITY) {
+    if (capability === WS_HARNESSOS_AGENT_PROMPTS_CAPABILITY) {
       return (
         typeof window.nativeApi.omnimindAgentPrompts?.getSnapshot === "function" &&
         typeof window.nativeApi.omnimindAgentPrompts?.mutate === "function"

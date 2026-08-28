@@ -5,7 +5,7 @@
 
 import { awaitIdbRequest, openIndexedDbDatabase, waitForIdbTransaction } from "./indexedDb";
 
-const DATABASE_NAME = "omnimind-appsnap-icons";
+const DATABASE_NAME = "harnessos:appsnap-icons:v1";
 const DATABASE_VERSION = 1;
 const ICON_STORE_NAME = "icons";
 const MAX_BUNDLE_IDENTIFIER_LENGTH = 512;

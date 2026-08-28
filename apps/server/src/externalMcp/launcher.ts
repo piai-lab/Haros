@@ -3,7 +3,7 @@ import type { ExternalMcpStdioConfiguration } from "@harnessos/contracts";
 import { quoteExternalMcpShellArgument } from "./shell.ts";
 
 function executableEntry(): { readonly command: string; readonly prefix: ReadonlyArray<string> } {
-  const entry = process.env.OMNIMIND_SERVER_ENTRY?.trim() || process.argv[1];
+  const entry = process.env.HARNESSOS_SERVER_ENTRY?.trim() || process.argv[1];
   return entry
     ? { command: process.execPath, prefix: [entry] }
     : { command: process.execPath, prefix: [] };

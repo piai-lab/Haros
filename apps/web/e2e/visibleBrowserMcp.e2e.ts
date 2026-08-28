@@ -61,7 +61,7 @@ function targetByName(
 }
 
 test("production MCP controls one persistent Electron page across visibility changes", async () => {
-  const mainPath = process.env.OMNIMIND_E2E_ELECTRON_MAIN;
+  const mainPath = process.env.HARNESSOS_E2E_ELECTRON_MAIN;
   if (!mainPath) throw new Error("Electron E2E main bundle was not prepared.");
   const site = await startVisibleBrowserFixtureSite();
   const home = mkdtempSync(join(tmpdir(), "omnimind-visible-browser-e2e-"));
@@ -82,11 +82,11 @@ test("production MCP controls one persistent Electron page across visibility cha
     env: {
       ...process.env,
       HOME: home,
-      OMNIMIND_HOME: home,
-      OMNIMIND_BROWSER_HOST_PIPE_PATH: pipePath,
-      OMNIMIND_BROWSER_HOST_CAPABILITY: capability,
-      OMNIMIND_E2E_SHELL_PATH: shellPath,
-      OMNIMIND_E2E_THREAD_ID: threadId,
+      HARNESSOS_HOME: home,
+      HARNESSOS_BROWSER_HOST_PIPE_PATH: pipePath,
+      HARNESSOS_BROWSER_HOST_CAPABILITY: capability,
+      HARNESSOS_E2E_SHELL_PATH: shellPath,
+      HARNESSOS_E2E_THREAD_ID: threadId,
     },
   });
 

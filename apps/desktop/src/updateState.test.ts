@@ -222,7 +222,7 @@ describe("getAutoUpdateDisabledReason", () => {
         disabledByEnv: true,
         hasUpdateFeedConfig: true,
       }),
-    ).toContain("OMNIMIND_DISABLE_AUTO_UPDATE");
+    ).toContain("HARNESSOS_DISABLE_AUTO_UPDATE");
   });
 
   it("reports linux non-AppImage builds as disabled", () => {

@@ -1,4 +1,8 @@
-import { AuthSessionId, type AuthClientMetadata, type AuthClientSession } from "@harnessos/contracts";
+import {
+  AuthSessionId,
+  type AuthClientMetadata,
+  type AuthClientSession,
+} from "@harnessos/contracts";
 import * as Crypto from "node:crypto";
 import {
   Clock,

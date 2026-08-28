@@ -34,7 +34,9 @@ describe("release workspace manifests", () => {
     );
 
     expect([...new Set(requiredWorkspaceDependencies)].sort()).toEqual(
-      [...new Set(requiredWorkspaceDependencies.filter((name) => stagedPackageNames.has(name)))].sort(),
+      [
+        ...new Set(requiredWorkspaceDependencies.filter((name) => stagedPackageNames.has(name))),
+      ].sort(),
     );
   });
 

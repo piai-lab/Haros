@@ -171,7 +171,7 @@ describe("agent gateway contracts", () => {
             summaryTruncated: false,
             error: null,
             readThread: {
-              tool: "omnimind_read_thread",
+              tool: "harnessos_read_thread",
               arguments: { threadId: "thread-1" },
             },
           },

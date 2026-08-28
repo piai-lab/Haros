@@ -55,7 +55,7 @@ describe("the opt-out", () => {
 
 describe("sandboxedHelperCommand", () => {
   const context = {
-    binaryPath: "/tmp/helper-cache/omnimind-device-helper",
+    binaryPath: "/tmp/helper-cache/harnessos-device-helper",
     helperSourceDir: HELPER_SOURCE_DIR,
     developerDir: "/Applications/Xcode.app/Contents/Developer",
   };

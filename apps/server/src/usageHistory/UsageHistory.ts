@@ -127,11 +127,11 @@ export interface UsageHistoryShape {
 }
 
 export class UsageHistory extends ServiceMap.Service<UsageHistory, UsageHistoryShape>()(
-  "omnimind/usageHistory/UsageHistory",
+  "harnessos/usageHistory/UsageHistory",
 ) {}
 
 function workerEntryPath(): string {
-  const override = process.env.OMNIMIND_USAGE_HISTORY_WORKER?.trim();
+  const override = process.env.HARNESSOS_USAGE_HISTORY_WORKER?.trim();
   if (override) return override;
   const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
   const built = path.resolve(moduleDirectory, "usageHistoryIndexer.mjs");

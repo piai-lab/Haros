@@ -73,4 +73,4 @@ export interface AuthPairingLinkRepositoryShape {
 export class AuthPairingLinkRepository extends ServiceMap.Service<
   AuthPairingLinkRepository,
   AuthPairingLinkRepositoryShape
->()("omnimind/persistence/Services/AuthPairingLinks/AuthPairingLinkRepository") {}
+>()("harnessos/persistence/Services/AuthPairingLinks/AuthPairingLinkRepository") {}

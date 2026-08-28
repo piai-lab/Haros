@@ -14,12 +14,12 @@ describe("agent gateway MCP protocol", () => {
       jsonrpc: "2.0",
       id: 1,
       method: "tools/call",
-      params: { name: "omnimind_list_threads" },
+      params: { name: "harnessos_list_threads" },
     });
     assert.equal(parsed.kind, "request");
     if (parsed.kind !== "request") return;
     assert.equal(parsed.request.method, "tools/call");
-    assert.equal(parsed.request.params.name, "omnimind_list_threads");
+    assert.equal(parsed.request.params.name, "harnessos_list_threads");
   });
 
   it("classifies notifications by missing id", () => {
@@ -84,7 +84,7 @@ describe("agent gateway MCP protocol", () => {
 
   it("supports MCP tool annotations without changing protocol shaping", () => {
     const tool: McpToolDefinition = {
-      name: "omnimind_context",
+      name: "harnessos_context",
       description: "Inspect the current OmniMind harness context.",
       inputSchema: { type: "object" },
       annotations: {

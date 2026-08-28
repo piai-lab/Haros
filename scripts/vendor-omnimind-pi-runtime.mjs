@@ -127,7 +127,7 @@ async function writeProductManifest(worktree) {
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   manifest.name = "@harnessos/pi-coding-agent";
   manifest.description = `OmniMind product-owned Pi ${PI_VERSION} runtime`;
-  manifest.piConfig = { configDir: ".omnimind", name: "omnimind" };
+  manifest.piConfig = { configDir: ".harnessos", name: "omnimind" };
   manifest.files = ["dist", "LICENSE"];
   delete manifest.bin;
   delete manifest.scripts;

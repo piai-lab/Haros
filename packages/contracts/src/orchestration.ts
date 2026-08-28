@@ -252,7 +252,7 @@ export const DEFAULT_TURN_DISPATCH_MODE: TurnDispatchMode = "queue";
 export const MessageDispatchOrigin = Schema.Literals(["user", "automation", "agent"]);
 export type MessageDispatchOrigin = typeof MessageDispatchOrigin.Type;
 export const ThreadCreationSource = Schema.Literals([
-  "omnimind_mcp",
+  "harnessos_mcp",
   "external_mcp",
   "provider_native",
 ]);

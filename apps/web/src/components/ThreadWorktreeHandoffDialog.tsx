@@ -88,7 +88,7 @@ export function ThreadWorktreeHandoffDialog({
                     onOpenChange(false);
                   }
                 }}
-                placeholder="omnimind/feature-name"
+                placeholder="harnessos/feature-name"
               />
             </label>
           </form>

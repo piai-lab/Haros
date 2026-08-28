@@ -4,7 +4,7 @@ import { Effect } from "effect";
 
 import { restoreMarkedMigrationBackup } from "./persistence/MigrationBackup.ts";
 
-const USAGE = "Usage: omnimind-restore-migration-backup <absolute-database-path>";
+const USAGE = "Usage: harnessos-restore-migration-backup <absolute-database-path>";
 const STOP_PROCESSES_WARNING =
   "WARNING: Stop every OmniMind process before restoring a migration backup.";
 
@@ -44,7 +44,7 @@ const entryPointNames = new Set([
   "restoreMigrationBackup.ts",
   "restoreMigrationBackup.mjs",
   "restoreMigrationBackup.cjs",
-  "omnimind-restore-migration-backup",
+  "harnessos-restore-migration-backup",
 ]);
 
 if (process.argv[1] && entryPointNames.has(path.basename(process.argv[1]))) {

@@ -15,7 +15,7 @@ interface PinnedProjectsStoreState {
   prunePinnedProjects: (projectIds: readonly ProjectId[]) => void;
 }
 
-const PINNED_PROJECTS_STORAGE_KEY = "omnimind:pinned-projects:v1";
+const PINNED_PROJECTS_STORAGE_KEY = "harnessos:pinned-projects:v1";
 const PINNED_PROJECTS_OPTIONS = { maxCount: MAX_PINNED_PROJECTS } as const;
 
 export const usePinnedProjectsStore = create<PinnedProjectsStoreState>()(

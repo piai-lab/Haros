@@ -35,12 +35,14 @@ export function ComposerInputBanners({
 }: ComposerInputBannersProps) {
   let content: ReactNode = null;
   if (interactionModeUnavailable) {
-    content = <div className="flex items-center justify-between gap-3 px-3 py-2 text-xs text-muted-foreground">
-      <span>{interactionModeUnavailable.message}</span>
-      <Button type="button" size="sm" variant="ghost" onClick={interactionModeUnavailable.onExit}>
-        {interactionModeUnavailable.exitLabel}
-      </Button>
-    </div>;
+    content = (
+      <div className="flex items-center justify-between gap-3 px-3 py-2 text-xs text-muted-foreground">
+        <span>{interactionModeUnavailable.message}</span>
+        <Button type="button" size="sm" variant="ghost" onClick={interactionModeUnavailable.onExit}>
+          {interactionModeUnavailable.exitLabel}
+        </Button>
+      </div>
+    );
   } else if (planFollowUp) {
     content = <ComposerPlanFollowUpBanner key={planFollowUp.id} planTitle={planFollowUp.title} />;
   } else if (automationSetup) {

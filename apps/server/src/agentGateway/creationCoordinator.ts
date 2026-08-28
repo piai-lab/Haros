@@ -289,7 +289,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
           kind: "omnimind.threads.created",
           summary: `Created ${input.result.createdCount} OmniMind ${threadLabel}`,
           payload: {
-            source: "omnimind_mcp",
+            source: "harnessos_mcp",
             operationId: input.result.operationId,
             requestId: input.result.requestId,
             requestedCount: input.result.requestedCount,
@@ -650,7 +650,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
             copyChangesFrom,
             // Deterministic like the planned path: an exact-plan retry must
             // resolve to the same branch, and recovery reclaims it by name.
-            // The 8-hex-digit token keeps it a temporary omnimind/* branch.
+            // The 8-hex-digit token keeps it a temporary harnessos/* branch.
             newBranch:
               environment === "worktree"
                 ? `${WORKTREE_BRANCH_PREFIX}/${stableGatewayDigest({ operationId, index, resource: "worktree-branch" }, 8)}`
@@ -752,7 +752,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
                             worktree.branch === null
                               ? Effect.void
                               : // The branch is this operation's own deterministic
-                                // omnimind/* name and its worktree was just force-removed.
+                                // harnessos/* name and its worktree was just force-removed.
                                 // A non-forced delete would fail whenever the pinned
                                 // ref is not merged into the root HEAD (e.g. PR heads),
                                 // stranding the name and blocking exact-plan retries.
@@ -1104,7 +1104,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
                       branch,
                       worktreePath,
                       creationSource:
-                        context.kind === "external-client" ? "external_mcp" : "omnimind_mcp",
+                        context.kind === "external-client" ? "external_mcp" : "harnessos_mcp",
                       ...(context.kind === "provider-session"
                         ? {
                             sourceThreadId: ThreadId.makeUnsafe(context.callerThreadId),

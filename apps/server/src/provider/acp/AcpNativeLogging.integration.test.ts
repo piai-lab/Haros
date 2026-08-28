@@ -6,7 +6,7 @@ import { ThreadId } from "@harnessos/contracts";
 import { assert, describe, it } from "@effect/vitest";
 import { Effect } from "effect";
 
-import { OMNIMIND_AGENT_GATEWAY_TOKEN_ENV } from "../../agentGateway/mcpInjection.ts";
+import { HARNESSOS_AGENT_GATEWAY_TOKEN_ENV } from "../../agentGateway/mcpInjection.ts";
 import { makeEventNdjsonLogger } from "../Layers/EventNdjsonLogger.ts";
 import { ACP_LOG_REDACTED_VALUE, makeAcpNativeLoggers } from "./AcpNativeLogging.ts";
 
@@ -51,7 +51,7 @@ describe("AcpNativeLogging", () => {
               },
               {
                 env: [
-                  { name: OMNIMIND_AGENT_GATEWAY_TOKEN_ENV, value: sentinelToken },
+                  { name: HARNESSOS_AGENT_GATEWAY_TOKEN_ENV, value: sentinelToken },
                   { name: "SAFE_ENV", value: "kept" },
                 ],
               },
@@ -64,7 +64,7 @@ describe("AcpNativeLogging", () => {
           stage: "raw",
           payload: JSON.stringify({
             headers: [{ name: "Authorization", value: `Bearer ${sentinelToken}` }],
-            env: [{ name: OMNIMIND_AGENT_GATEWAY_TOKEN_ENV, value: sentinelToken }],
+            env: [{ name: HARNESSOS_AGENT_GATEWAY_TOKEN_ENV, value: sentinelToken }],
           }),
         });
         yield* nativeEventLogger.close();

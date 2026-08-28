@@ -73,13 +73,13 @@ export function buildExternalMcpOverviewNextSteps(
   capabilities: ReadonlySet<ExternalMcpCapability>,
 ): ReadonlyArray<string> {
   return [
-    "Call omnimind_capabilities with a projectId to list the exact provider/model targets available to this integration.",
-    ...(capabilities.has("tasks:create") ? ["Create work with omnimind_create_task."] : []),
+    "Call harnessos_capabilities with a projectId to list the exact provider/model targets available to this integration.",
+    ...(capabilities.has("tasks:create") ? ["Create work with harnessos_create_task."] : []),
     ...(capabilities.has("tasks:wait")
-      ? ["Follow permitted work with omnimind_wait_for_task."]
+      ? ["Follow permitted work with harnessos_wait_for_task."]
       : []),
     ...(capabilities.has("tasks:read")
-      ? ["Read permitted task results with omnimind_read_task."]
+      ? ["Read permitted task results with harnessos_read_task."]
       : []),
   ];
 }

@@ -28,10 +28,14 @@ describe("provider execution capability projection", () => {
       providerStatus: readyStatus(provider),
     });
     expect(result.interactionModes.default).toMatchObject({
-      mode: "default", structurallySupported: true, status: "ready",
+      mode: "default",
+      structurallySupported: true,
+      status: "ready",
     });
     expect(result.interactionModes.debug).toMatchObject({
-      mode: "debug", structurallySupported: true, status: "ready",
+      mode: "debug",
+      structurallySupported: true,
+      status: "ready",
     });
     expect(result.interactionModes.plan).toMatchObject(
       provider === "pi" || provider === "antigravity"

@@ -96,9 +96,9 @@ interface BrowserPanelProps {
 
 const BROWSER_BOUNDS_SYNC_BURST_FRAMES = 30;
 const BROWSER_BOUNDS_SYNC_STABLE_FRAME_TARGET = 2;
-const BROWSER_WEBVIEW_PARTITION = "persist:omnimind-browser";
+const BROWSER_WEBVIEW_PARTITION = "persist:harnessos-browser";
 const BROWSER_PERF_SAMPLE_INTERVAL_MS = 5_000;
-const OMNIMIND_BROWSER_LABEL = "OmniMind browser";
+const HARNESSOS_BROWSER_LABEL = "OmniMind browser";
 const browserPanelHideScheduler = createBrowserPanelHideScheduler();
 const BROWSER_ACTION_MENU_PANEL_CLASS_NAME = "w-52 min-w-52";
 const BROWSER_ACTION_MENU_ITEM_CLASS_NAME =
@@ -364,7 +364,7 @@ function isBrowserPerfLoggingEnabled(): boolean {
   }
 
   try {
-    return window.localStorage.getItem("omnimind:browser-perf") === "1";
+    return window.localStorage.getItem("harnessos:browser-perf") === "1";
   } catch {
     return false;
   }
@@ -1078,7 +1078,7 @@ export function BrowserPanel({
     }
 
     const intervalId = window.setInterval(() => {
-      console.info(`[${OMNIMIND_BROWSER_LABEL} panel perf]`, {
+      console.info(`[${HARNESSOS_BROWSER_LABEL} panel perf]`, {
         threadId,
         ...perfCountersRef.current,
       });

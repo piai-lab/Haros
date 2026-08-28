@@ -263,4 +263,4 @@ export interface ProjectionSnapshotQueryShape {
 export class ProjectionSnapshotQuery extends ServiceMap.Service<
   ProjectionSnapshotQuery,
   ProjectionSnapshotQueryShape
->()("omnimind/orchestration/Services/ProjectionSnapshotQuery") {}
+>()("harnessos/orchestration/Services/ProjectionSnapshotQuery") {}

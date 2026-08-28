@@ -387,8 +387,7 @@ export function PullRequestDetailPanel({
   // Preserve the existing fail-closed confirmation journey for unavailable metadata: it remains
   // keyboard reachable and explains how to recover, but cannot dispatch. Verified lifecycle
   // blockers inside a complete stack stay inert at the primary button.
-  const actionMergeBlocker =
-    mergeBlocker?.kind === "metadata-incomplete" ? null : mergeBlocker;
+  const actionMergeBlocker = mergeBlocker?.kind === "metadata-incomplete" ? null : mergeBlocker;
   const mergeBlockerText = (() => {
     if (!mergeBlocker) return null;
     if (mergeBlocker.kind === "metadata-incomplete") {
@@ -406,7 +405,9 @@ export function PullRequestDetailPanel({
       : t("pullRequest.stackNotReady");
   })();
   const currentMergeExpectation =
-    detail && !detailQuery.isError && !actionMergeBlocker ? pullRequestMergeExpectation(detail) : null;
+    detail && !detailQuery.isError && !actionMergeBlocker
+      ? pullRequestMergeExpectation(detail)
+      : null;
   const mergeConfirmation = isCurrentPanelState ? panelState.mergeConfirmation : null;
   const mergeConfirmationStale =
     confirmAction === "merge" &&

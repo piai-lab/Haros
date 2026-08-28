@@ -19,10 +19,7 @@ const INLINE_SKILLS_HEADER =
   '"dir" attribute.';
 
 export type SkillInstructionDeliveryMode = "inline" | "reference";
-export type SkillInstructionFailureReason =
-  | "unreadable"
-  | "oversized"
-  | "budget_exceeded";
+export type SkillInstructionFailureReason = "unreadable" | "oversized" | "budget_exceeded";
 
 export interface SkillInstructionDelivery {
   readonly name: string;
@@ -37,7 +34,7 @@ export interface InlineSkillInstructionsResult {
 }
 
 const CROSS_PROVIDER_SKILL_DIR_NAMES = [
-  ".omnimind",
+  ".harnessos",
   ".codex",
   ".cursor",
   ".claude",
@@ -55,14 +52,14 @@ export function shouldInlineSkillForProvider(provider: ProviderKind, skillPath: 
       return true;
     case "codex":
       // Codex injects structured skill items only from roots it knows: its own
-      // folders plus `~/.omnimind/skills`, which OmniMind registers at session start
+      // folders plus `~/.harnessos/skills`, which OmniMind registers at session start
       // via skills/extraRoots/set. Skills resolved from other providers' folders
       // must be inlined.
       return [".claude", ".cursor", ".agents"].some((dir) => segments.has(dir));
     case "cursor":
       // cursor-agent natively scans .cursor/.agents/.claude/.codex skill roots;
       // only OmniMind-owned paths need inlining.
-      return segments.has(".omnimind");
+      return segments.has(".harnessos");
     case "claudeAgent":
       // Claude Code only loads skills from .claude/skills folders.
       return !segments.has(".claude");

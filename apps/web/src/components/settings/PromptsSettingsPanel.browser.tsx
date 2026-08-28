@@ -5,7 +5,7 @@
 import "../../index.css";
 
 import {
-  OMNIMIND_AGENT_PROMPT_MAX_BYTES,
+  HARNESSOS_AGENT_PROMPT_MAX_BYTES,
   type NativeApi,
   type OmniMindAgentPromptSnapshot,
 } from "@harnessos/contracts";
@@ -41,8 +41,8 @@ function snapshot(
           availability: "unavailable",
           unavailableReason: input.customUnavailableReason,
           sourceId: customSource,
-          displayPath: `~/.omnimind/agent/${customSource}`,
-          revealPath: `/private/example/.omnimind/agent/${customSource}`,
+          displayPath: `~/.harnessos/agent/${customSource}`,
+          revealPath: `/private/example/.harnessos/agent/${customSource}`,
           exists: true,
           version: null,
           content: "",
@@ -62,13 +62,13 @@ function snapshot(
             availability: "available",
             unavailableReason: null,
             sourceId: customSource,
-            displayPath: `~/.omnimind/agent/${customSource}`,
-            revealPath: `/private/example/.omnimind/agent/${customSource}`,
+            displayPath: `~/.harnessos/agent/${customSource}`,
+            revealPath: `/private/example/.harnessos/agent/${customSource}`,
             exists: true,
             version: input.customVersion ?? "b".repeat(64),
             content: customRules,
           },
-    maxBytes: OMNIMIND_AGENT_PROMPT_MAX_BYTES,
+    maxBytes: HARNESSOS_AGENT_PROMPT_MAX_BYTES,
   };
 }
 
@@ -190,7 +190,7 @@ describe("PromptsSettingsPanel", () => {
         ),
       )
       .toBeVisible();
-    await expect.element(screen.getByText("~/.omnimind/agent/AGENTS.md")).toBeVisible();
+    await expect.element(screen.getByText("~/.harnessos/agent/AGENTS.md")).toBeVisible();
     await expect.element(screen.getByRole("button", { name: "Open" })).not.toBeInTheDocument();
     await screen.unmount();
   });
@@ -310,11 +310,11 @@ describe("PromptsSettingsPanel", () => {
       content: "Be concise.",
     });
     expect(JSON.stringify(mutate.mock.calls)).not.toContain("revealPath");
-    await expect.element(screen.getByText("~/.omnimind/agent/AGENTS.md")).toBeVisible();
+    await expect.element(screen.getByText("~/.harnessos/agent/AGENTS.md")).toBeVisible();
     expect(document.body.textContent).not.toContain("SYSTEM.md");
     expect(document.body.textContent).not.toContain("APPEND_SYSTEM.md");
     await screen.getByRole("button", { name: "Open" }).click();
-    expect(showInFolder).toHaveBeenCalledWith("/private/example/.omnimind/agent/AGENTS.md");
+    expect(showInFolder).toHaveBeenCalledWith("/private/example/.harnessos/agent/AGENTS.md");
 
     await editor.fill("Mine");
     await screen.getByRole("button", { name: "Save" }).nth(1).click();
@@ -398,12 +398,12 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(screen.getByRole("textbox", { name: "Custom rules" }))
       .toHaveValue("Rules from A");
-    await expect.element(screen.getByText("~/.omnimind/agent/AGENTS.md")).toBeVisible();
+    await expect.element(screen.getByText("~/.harnessos/agent/AGENTS.md")).toBeVisible();
     await expect
-      .element(screen.getByText("~/.omnimind/agent/AGENTS.override.md"))
+      .element(screen.getByText("~/.harnessos/agent/AGENTS.override.md"))
       .not.toBeInTheDocument();
     await screen.getByRole("button", { name: "Open" }).click();
-    expect(showInFolder).toHaveBeenCalledWith("/private/example/.omnimind/agent/AGENTS.md");
+    expect(showInFolder).toHaveBeenCalledWith("/private/example/.harnessos/agent/AGENTS.md");
     await screen.unmount();
   });
 

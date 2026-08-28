@@ -11,11 +11,11 @@ import {
 describe("canary tooling", () => {
   it("keeps managed source and Canary data separate from Stable", () => {
     expect(resolveCanaryPaths({}, "/Users/tester")).toEqual({
-      home: "/Users/tester/.omnimind-canary",
-      source: "/Users/tester/.cache/omnimind-canary/source",
-      state: "/Users/tester/.omnimind-canary/canary-state.json",
-      pid: "/Users/tester/.omnimind-canary/canary.pid",
-      log: "/Users/tester/.omnimind-canary/canary.log",
+      home: "/Users/tester/.harnessos-canary",
+      source: "/Users/tester/.cache/harnessos-canary/source",
+      state: "/Users/tester/.harnessos-canary/canary-state.json",
+      pid: "/Users/tester/.harnessos-canary/canary.pid",
+      log: "/Users/tester/.harnessos-canary/canary.log",
     });
   });
 
@@ -23,8 +23,8 @@ describe("canary tooling", () => {
     expect(
       resolveCanaryPaths(
         {
-          OMNIMIND_CANARY_HOME: "/tmp/canary-data",
-          OMNIMIND_CANARY_SOURCE: "/tmp/canary-source",
+          HARNESSOS_CANARY_HOME: "/tmp/canary-data",
+          HARNESSOS_CANARY_SOURCE: "/tmp/canary-source",
         },
         "/Users/tester",
       ),
@@ -39,9 +39,9 @@ describe("canary tooling", () => {
 
   it("tracks main by default and accepts a stacked PR ref", () => {
     expect(parseCanaryArgs(["update"])).toEqual({ command: "update", ref: null });
-    expect(parseCanaryArgs(["setup", "--ref", "codex/omnimind-canary"])).toEqual({
+    expect(parseCanaryArgs(["setup", "--ref", "codex/harnessos-canary"])).toEqual({
       command: "setup",
-      ref: "codex/omnimind-canary",
+      ref: "codex/harnessos-canary",
     });
   });
 
@@ -60,8 +60,8 @@ describe("canary tooling", () => {
 
   it("keeps updating the selected stacked ref until explicitly moved to main", () => {
     expect(resolveCanaryRef(parseCanaryArgs(["setup"]), null)).toBe("main");
-    expect(resolveCanaryRef(parseCanaryArgs(["update"]), "codex/omnimind-canary")).toBe(
-      "codex/omnimind-canary",
+    expect(resolveCanaryRef(parseCanaryArgs(["update"]), "codex/harnessos-canary")).toBe(
+      "codex/harnessos-canary",
     );
     expect(resolveCanaryRef(parseCanaryArgs(["update", "--ref", "main"]), "old-ref")).toBe("main");
   });

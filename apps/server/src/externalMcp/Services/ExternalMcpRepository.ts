@@ -204,4 +204,4 @@ export interface ExternalMcpRepositoryShape {
 export class ExternalMcpRepository extends ServiceMap.Service<
   ExternalMcpRepository,
   ExternalMcpRepositoryShape
->()("omnimind/externalMcp/Services/ExternalMcpRepository") {}
+>()("harnessos/externalMcp/Services/ExternalMcpRepository") {}

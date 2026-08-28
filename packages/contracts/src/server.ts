@@ -191,8 +191,8 @@ export const UsageHistoryGroupBy = Schema.Literals(["provider", "model", "worksp
 export type UsageHistoryGroupBy = typeof UsageHistoryGroupBy.Type;
 
 // Language-neutral values cross the RPC boundary; the Web catalog owns their display copy.
-export const USAGE_HISTORY_UNKNOWN_MODEL = "__omnimind_usage_unknown_model__";
-export const USAGE_HISTORY_UNKNOWN_WORKSPACE = "__omnimind_usage_unknown_workspace__";
+export const USAGE_HISTORY_UNKNOWN_MODEL = "__harnessos_usage_unknown_model__";
+export const USAGE_HISTORY_UNKNOWN_WORKSPACE = "__harnessos_usage_unknown_workspace__";
 
 export const UsageHistoryStatus = Schema.Literals([
   "not-authorized",
@@ -596,14 +596,12 @@ export const ServerUpdateProviderCredentialInput = Schema.Struct({
   provider: ServerProviderCredentialProvider,
   serverPassword: Schema.String.check(Schema.isMaxLength(4096)),
 });
-export type ServerUpdateProviderCredentialInput =
-  typeof ServerUpdateProviderCredentialInput.Type;
+export type ServerUpdateProviderCredentialInput = typeof ServerUpdateProviderCredentialInput.Type;
 
 // Credential bytes never cross back to Web. The result is the fresh, credential-blind
 // settings projection emitted to every existing settings subscriber.
 export const ServerUpdateProviderCredentialResult = ServerSettingsView;
-export type ServerUpdateProviderCredentialResult =
-  typeof ServerUpdateProviderCredentialResult.Type;
+export type ServerUpdateProviderCredentialResult = typeof ServerUpdateProviderCredentialResult.Type;
 
 export const ServerResetSettingsResult = ServerSettingsView;
 export type ServerResetSettingsResult = typeof ServerResetSettingsResult.Type;

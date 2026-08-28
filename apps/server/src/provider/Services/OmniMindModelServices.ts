@@ -79,4 +79,4 @@ export interface OmniMindModelServicesShape {
 export class OmniMindModelServices extends ServiceMap.Service<
   OmniMindModelServices,
   OmniMindModelServicesShape
->()("omnimind/provider/Services/OmniMindModelServices") {}
+>()("harnessos/provider/Services/OmniMindModelServices") {}

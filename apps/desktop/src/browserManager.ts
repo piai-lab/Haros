@@ -287,11 +287,10 @@ function cloneThreadState(state: ThreadBrowserState): ThreadBrowserState {
       tab.presentation?.internalOnly
         ? {
             ...tab,
-            url: "omnimind://temporary-page",
+            url: "harnessos://temporary-page",
             title: tab.title,
             faviconUrl: null,
-            lastCommittedUrl:
-              tab.lastCommittedUrl === null ? null : "omnimind://temporary-page",
+            lastCommittedUrl: tab.lastCommittedUrl === null ? null : "harnessos://temporary-page",
           }
         : { ...tab },
     ),
@@ -843,7 +842,7 @@ export class DesktopBrowserManager {
     if (this.disposed) return;
     const key = buildRuntimeKey(input.threadId, input.sourceTabId);
     // One native activation can surface duplicate callbacks in embedded guest
-    // runtimes. Only the first decision may create a canonical OmniMind tab.
+    // runtimes. Only the first decision may create a canonical HarnessOS tab.
     if (
       this.pendingWindowOpenTasksByRuntimeKey.has(key) ||
       this.pendingAutomationWindowOpenCommitsByRuntimeKey.has(key)
@@ -1414,11 +1413,9 @@ export class DesktopBrowserManager {
     ) {
       throw new Error("The temporary web surface is not available in this thread.");
     }
-    return this.getAutomationRuntimeForTab(
-      { threadId: input.threadId, tabId: tab.id },
-      tab,
-      { restore: true },
-    );
+    return this.getAutomationRuntimeForTab({ threadId: input.threadId, tabId: tab.id }, tab, {
+      restore: true,
+    });
   }
 
   private async getAutomationRuntimeForTab(
@@ -1682,7 +1679,7 @@ export class DesktopBrowserManager {
   settleEngineWebSurface(input: {
     readonly threadId: ThreadId;
     readonly surfaceId: string;
-	readonly preserveTab?: boolean;
+    readonly preserveTab?: boolean;
   }): ThreadBrowserState {
     const surface = this.engineWebSurfaces.get(input.surfaceId);
     if (!surface || surface.threadId !== input.threadId) {
@@ -1691,11 +1688,11 @@ export class DesktopBrowserManager {
     this.engineWebSurfaces.delete(input.surfaceId);
     const state = this.states.get(input.threadId);
     const tab = state && surface.tabId ? this.getTab(state, surface.tabId) : null;
-	if (state && tab && input.preserveTab) {
-		this.markThreadStateChanged(input.threadId);
-		this.emitState(input.threadId);
-		return this.snapshotThreadState(input.threadId, state);
-	}
+    if (state && tab && input.preserveTab) {
+      this.markThreadStateChanged(input.threadId);
+      this.emitState(input.threadId);
+      return this.snapshotThreadState(input.threadId, state);
+    }
     if (state && tab) {
       this.destroyRuntime(input.threadId, tab.id);
       state.tabs = state.tabs.filter((candidate) => candidate.id !== tab.id);
@@ -1808,7 +1805,9 @@ export class DesktopBrowserManager {
       (this.window !== null && hostWebContentsId !== this.window.webContents.id) ||
       webContents.session !== electronSession.fromPartition(BROWSER_SESSION_PARTITION)
     ) {
-      throw new Error("The browser webview does not belong to this OmniMind window and partition.");
+      throw new Error(
+        "The browser webview does not belong to this HarnessOS window and partition.",
+      );
     }
 
     const key = buildRuntimeKey(input.threadId, tab.id);

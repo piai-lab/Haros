@@ -113,10 +113,10 @@ interface SplitViewStore {
 }
 
 // Keep the v1 suffix stable while using the OmniMind namespace; legacy
-// `omnimind:*` and `omnimind:*` keys are copied over by
+// `harnessos:*` and `harnessos:*` keys are copied over by
 // `storageKeyMigration` before this store hydrates, so older payloads still
 // flow through the v1 -> v2 schema migration below.
-const SPLIT_VIEW_STORAGE_KEY = "omnimind:split-view-state:v1";
+const SPLIT_VIEW_STORAGE_KEY = "harnessos:split-view-state:v1";
 const SPLIT_VIEW_STORAGE_VERSION = 2;
 const DEFAULT_RATIO = 0.5;
 const MIN_RATIO = 0.25;

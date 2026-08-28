@@ -143,4 +143,4 @@ export interface ProjectionThreadMessageRepositoryShape {
 export class ProjectionThreadMessageRepository extends ServiceMap.Service<
   ProjectionThreadMessageRepository,
   ProjectionThreadMessageRepositoryShape
->()("omnimind/persistence/Services/ProjectionThreadMessages/ProjectionThreadMessageRepository") {}
+>()("harnessos/persistence/Services/ProjectionThreadMessages/ProjectionThreadMessageRepository") {}

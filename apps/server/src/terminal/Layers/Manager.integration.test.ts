@@ -331,7 +331,7 @@ describe("TerminalManager", () => {
     if (!process) return;
 
     const snapshot = await manager.open(
-      openInput({ cwd: logsDir, env: { OMNIMIND_TERMINAL_TEST: "changed" } }),
+      openInput({ cwd: logsDir, env: { HARNESSOS_TERMINAL_TEST: "changed" } }),
     );
 
     expect(snapshot.cwd).toBe(globalThis.process.cwd());
@@ -1387,7 +1387,7 @@ describe("TerminalManager", () => {
     };
 
     setEnv("PORT", "5173");
-    setEnv("OMNIMIND_PORT", "3773");
+    setEnv("HARNESSOS_PORT", "3773");
     setEnv("VITE_DEV_SERVER_URL", "http://localhost:5173");
     setEnv("TEST_TERMINAL_KEEP", "keep-me");
 
@@ -1399,7 +1399,7 @@ describe("TerminalManager", () => {
       if (!spawnInput) return;
 
       expect(spawnInput.env.PORT).toBeUndefined();
-      expect(spawnInput.env.OMNIMIND_PORT).toBeUndefined();
+      expect(spawnInput.env.HARNESSOS_PORT).toBeUndefined();
       expect(spawnInput.env.VITE_DEV_SERVER_URL).toBeUndefined();
       expect(spawnInput.env.TEST_TERMINAL_KEEP).toBe("keep-me");
 
@@ -1502,8 +1502,8 @@ describe("TerminalManager", () => {
     await manager.open(
       openInput({
         env: {
-          OMNIMIND_PROJECT_ROOT: "/repo",
-          OMNIMIND_WORKTREE_PATH: "/repo/worktree-a",
+          HARNESSOS_PROJECT_ROOT: "/repo",
+          HARNESSOS_WORKTREE_PATH: "/repo/worktree-a",
           CUSTOM_FLAG: "1",
         },
       }),
@@ -1512,8 +1512,8 @@ describe("TerminalManager", () => {
     expect(spawnInput).toBeDefined();
     if (!spawnInput) return;
 
-    expect(spawnInput.env.OMNIMIND_PROJECT_ROOT).toBe("/repo");
-    expect(spawnInput.env.OMNIMIND_WORKTREE_PATH).toBe("/repo/worktree-a");
+    expect(spawnInput.env.HARNESSOS_PROJECT_ROOT).toBe("/repo");
+    expect(spawnInput.env.HARNESSOS_WORKTREE_PATH).toBe("/repo/worktree-a");
     expect(spawnInput.env.CUSTOM_FLAG).toBe("1");
 
     manager.dispose();

@@ -109,8 +109,8 @@ const runCli = (args: ReadonlyArray<string>, env: Record<string, string> = {}) =
       ConfigProvider.layer(
         ConfigProvider.fromEnv({
           env: {
-            OMNIMIND_HOME: defaultOmniMindHome,
-            OMNIMIND_NO_BROWSER: "true",
+            HARNESSOS_HOME: defaultOmniMindHome,
+            HARNESSOS_NO_BROWSER: "true",
             ...env,
           },
         }),
@@ -368,14 +368,14 @@ it.layer(testLayer)("server CLI command", (it) => {
       const envHome = makeTempHome("omnimind-main-env-");
 
       yield* runCli([], {
-        OMNIMIND_MODE: "desktop",
-        OMNIMIND_PORT: "4999",
-        OMNIMIND_HOST: "127.0.0.1",
-        OMNIMIND_HOME: envHome,
+        HARNESSOS_MODE: "desktop",
+        HARNESSOS_PORT: "4999",
+        HARNESSOS_HOST: "127.0.0.1",
+        HARNESSOS_HOME: envHome,
         VITE_DEV_SERVER_URL: "http://localhost:5173",
-        OMNIMIND_NO_BROWSER: "true",
-        OMNIMIND_AUTH_TOKEN: "env-token",
-        OMNIMIND_DESKTOP_SHUTDOWN_TOKEN: "shutdown-token",
+        HARNESSOS_NO_BROWSER: "true",
+        HARNESSOS_AUTH_TOKEN: "env-token",
+        HARNESSOS_DESKTOP_SHUTDOWN_TOKEN: "shutdown-token",
       });
 
       assert.equal(start.mock.calls.length, 1);
@@ -397,7 +397,7 @@ it.layer(testLayer)("server CLI command", (it) => {
 
   it.effect("consumes desktop shutdown authority before generic child launches", () =>
     Effect.gen(function* () {
-      const canonicalKey = "OMNIMIND_DESKTOP_SHUTDOWN_TOKEN";
+      const canonicalKey = "HARNESSOS_DESKTOP_SHUTDOWN_TOKEN";
       const mixedCaseKey = "oMnImInD_dEsKtOp_ShUtDoWn_ToKeN";
       const liveToken = "live-process-shutdown-token";
       const injectedToken = "injected-shutdown-token";
@@ -441,7 +441,7 @@ it.layer(testLayer)("server CLI command", (it) => {
         assert.equal(descendant.stdout, "missing");
 
         resolvedConfig = null;
-        yield* runCli([], { OMNIMIND_DESKTOP_SHUTDOWN_TOKEN: injectedToken });
+        yield* runCli([], { HARNESSOS_DESKTOP_SHUTDOWN_TOKEN: injectedToken });
         assert.equal(getResolvedConfig()?.desktopShutdownToken, injectedToken);
         assert.deepEqual(matchingLiveKeys(), []);
       } finally {
@@ -525,8 +525,8 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("omits both server authority secrets from startup log data", () =>
     Effect.gen(function* () {
       yield* runCli([], {
-        OMNIMIND_AUTH_TOKEN: "browser-secret",
-        OMNIMIND_DESKTOP_SHUTDOWN_TOKEN: "shutdown-secret",
+        HARNESSOS_AUTH_TOKEN: "browser-secret",
+        HARNESSOS_DESKTOP_SHUTDOWN_TOKEN: "shutdown-secret",
       });
       const config = resolvedConfig;
       if (!config) throw new Error("Expected resolved server config");
@@ -540,12 +540,12 @@ it.layer(testLayer)("server CLI command", (it) => {
     }),
   );
 
-  it.effect("prefers --mode over OMNIMIND_MODE", () =>
+  it.effect("prefers --mode over HARNESSOS_MODE", () =>
     Effect.gen(function* () {
       findAvailablePort.mockImplementation((_preferred: number) => Effect.succeed(4666));
       yield* runCli(["--mode", "web"], {
-        OMNIMIND_MODE: "desktop",
-        OMNIMIND_NO_BROWSER: "true",
+        HARNESSOS_MODE: "desktop",
+        HARNESSOS_NO_BROWSER: "true",
       });
 
       assert.deepStrictEqual(findAvailablePort.mock.calls, [[3773]]);
@@ -556,10 +556,10 @@ it.layer(testLayer)("server CLI command", (it) => {
     }),
   );
 
-  it.effect("prefers --no-browser over OMNIMIND_NO_BROWSER", () =>
+  it.effect("prefers --no-browser over HARNESSOS_NO_BROWSER", () =>
     Effect.gen(function* () {
       yield* runCli(["--no-browser"], {
-        OMNIMIND_NO_BROWSER: "false",
+        HARNESSOS_NO_BROWSER: "false",
       });
 
       assert.equal(start.mock.calls.length, 1);
@@ -577,11 +577,11 @@ it.layer(testLayer)("server CLI command", (it) => {
           "--no-log-websocket-events",
         ],
         {
-          OMNIMIND_MODE: "desktop",
-          OMNIMIND_NO_BROWSER: "true",
-          OMNIMIND_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
-          OMNIMIND_LOG_PROVIDER_EVENTS: "true",
-          OMNIMIND_LOG_WS_EVENTS: "true",
+          HARNESSOS_MODE: "desktop",
+          HARNESSOS_NO_BROWSER: "true",
+          HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "true",
+          HARNESSOS_LOG_PROVIDER_EVENTS: "true",
+          HARNESSOS_LOG_WS_EVENTS: "true",
         },
       );
 
@@ -608,8 +608,8 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("uses fixed localhost defaults in desktop mode", () =>
     Effect.gen(function* () {
       yield* runCli([], {
-        OMNIMIND_MODE: "desktop",
-        OMNIMIND_NO_BROWSER: "true",
+        HARNESSOS_MODE: "desktop",
+        HARNESSOS_NO_BROWSER: "true",
       });
 
       assert.equal(findAvailablePort.mock.calls.length, 0);
@@ -625,8 +625,8 @@ it.layer(testLayer)("server CLI command", (it) => {
       yield* runCli(
         ["--host", "0.0.0.0", "--auth-token", "remote-secret", "--allow-insecure-remote"],
         {
-          OMNIMIND_MODE: "desktop",
-          OMNIMIND_NO_BROWSER: "true",
+          HARNESSOS_MODE: "desktop",
+          HARNESSOS_NO_BROWSER: "true",
         },
       );
 
@@ -640,8 +640,8 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("honors insecure remote opt-in from the environment when the CLI flag is absent", () =>
     Effect.gen(function* () {
       yield* runCli(["--host", "0.0.0.0", "--auth-token", "remote-secret"], {
-        OMNIMIND_ALLOW_INSECURE_REMOTE: "true",
-        OMNIMIND_NO_BROWSER: "true",
+        HARNESSOS_ALLOW_INSECURE_REMOTE: "true",
+        HARNESSOS_NO_BROWSER: "true",
       });
 
       assert.equal(start.mock.calls.length, 1);
@@ -655,8 +655,8 @@ it.layer(testLayer)("server CLI command", (it) => {
         runCli(
           ["--host", "0.0.0.0", "--auth-token", "remote-secret", "--no-allow-insecure-remote"],
           {
-            OMNIMIND_ALLOW_INSECURE_REMOTE: "true",
-            OMNIMIND_NO_BROWSER: "true",
+            HARNESSOS_ALLOW_INSECURE_REMOTE: "true",
+            HARNESSOS_NO_BROWSER: "true",
           },
         ),
       );
@@ -688,7 +688,7 @@ it.layer(testLayer)("server CLI command", (it) => {
           "--public-url",
           "https://omnimind.example.test",
         ],
-        { OMNIMIND_NO_BROWSER: "false" },
+        { HARNESSOS_NO_BROWSER: "false" },
       );
 
       assert.equal(resolvedConfig?.publicUrl?.origin, "https://omnimind.example.test");
@@ -703,9 +703,9 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("supports the HTTPS public origin through environment configuration", () =>
     Effect.gen(function* () {
       yield* runCli([], {
-        OMNIMIND_HOST: "192.168.1.50",
-        OMNIMIND_AUTH_TOKEN: "remote-secret",
-        OMNIMIND_PUBLIC_URL: "https://omnimind.example.test",
+        HARNESSOS_HOST: "192.168.1.50",
+        HARNESSOS_AUTH_TOKEN: "remote-secret",
+        HARNESSOS_PUBLIC_URL: "https://omnimind.example.test",
       });
 
       assert.equal(start.mock.calls.length, 1);
@@ -725,7 +725,7 @@ it.layer(testLayer)("server CLI command", (it) => {
           "--public-url",
           "https://proxy.example.test",
         ],
-        { OMNIMIND_NO_BROWSER: "false" },
+        { HARNESSOS_NO_BROWSER: "false" },
       );
 
       assert.equal(openBrowser.mock.calls.length, 1);
@@ -775,8 +775,8 @@ it.layer(testLayer)("server CLI command", (it) => {
     Effect.gen(function* () {
       const error = yield* Effect.flip(
         runCli(["--host", "0.0.0.0"], {
-          OMNIMIND_MODE: "web",
-          OMNIMIND_NO_BROWSER: "true",
+          HARNESSOS_MODE: "web",
+          HARNESSOS_NO_BROWSER: "true",
         }),
       );
 
@@ -799,8 +799,8 @@ it.layer(testLayer)("server CLI command", (it) => {
             "http://localhost:5173",
           ],
           {
-            OMNIMIND_MODE: "web",
-            OMNIMIND_NO_BROWSER: "true",
+            HARNESSOS_MODE: "web",
+            HARNESSOS_NO_BROWSER: "true",
           },
         ),
       );
@@ -817,11 +817,11 @@ it.layer(testLayer)("server CLI command", (it) => {
   it.effect("supports CLI and env for bootstrap/provider-log/websocket toggles", () =>
     Effect.gen(function* () {
       yield* runCli(["--auto-bootstrap-project-from-cwd"], {
-        OMNIMIND_MODE: "desktop",
-        OMNIMIND_LOG_PROVIDER_EVENTS: "true",
-        OMNIMIND_LOG_WS_EVENTS: "false",
-        OMNIMIND_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
-        OMNIMIND_NO_BROWSER: "true",
+        HARNESSOS_MODE: "desktop",
+        HARNESSOS_LOG_PROVIDER_EVENTS: "true",
+        HARNESSOS_LOG_WS_EVENTS: "false",
+        HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD: "false",
+        HARNESSOS_NO_BROWSER: "true",
       });
 
       assert.equal(start.mock.calls.length, 1);
@@ -835,7 +835,7 @@ it.layer(testLayer)("server CLI command", (it) => {
     Effect.gen(function* () {
       const error = yield* Effect.flip(
         runCli([], {
-          OMNIMIND_LOG_PROVIDER_EVENTS: "sometimes",
+          HARNESSOS_LOG_PROVIDER_EVENTS: "sometimes",
         }),
       );
 

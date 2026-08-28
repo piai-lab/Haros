@@ -686,11 +686,11 @@ describe("store event reducer", () => {
       makeThread({
         title: "Old title",
         envMode: "worktree",
-        branch: "omnimind/tmp-working",
+        branch: "harnessos/tmp-working",
         worktreePath: "/tmp/project/.worktrees/tmp-working",
         associatedWorktreePath: "/tmp/project/.worktrees/tmp-working",
-        associatedWorktreeBranch: "omnimind/tmp-working",
-        associatedWorktreeRef: "omnimind/tmp-working",
+        associatedWorktreeBranch: "harnessos/tmp-working",
+        associatedWorktreeRef: "harnessos/tmp-working",
         session: {
           provider: "codex",
           status: "ready",
@@ -705,22 +705,22 @@ describe("store event reducer", () => {
       makeDomainEvent("thread.meta-updated", {
         threadId: ThreadId.makeUnsafe("thread-1"),
         title: "New title",
-        branch: "omnimind/app-startup-crash",
+        branch: "harnessos/app-startup-crash",
         worktreePath: "/tmp/project/.worktrees/app-startup-crash",
         associatedWorktreePath: "/tmp/project/.worktrees/app-startup-crash",
-        associatedWorktreeBranch: "omnimind/app-startup-crash",
-        associatedWorktreeRef: "omnimind/app-startup-crash",
+        associatedWorktreeBranch: "harnessos/app-startup-crash",
+        associatedWorktreeRef: "harnessos/app-startup-crash",
         updatedAt: "2026-02-27T00:01:00.000Z",
       }),
     ]);
 
     expect(threadsOf(next)[0]).toMatchObject({
       title: "New title",
-      branch: "omnimind/app-startup-crash",
+      branch: "harnessos/app-startup-crash",
       worktreePath: "/tmp/project/.worktrees/app-startup-crash",
       associatedWorktreePath: "/tmp/project/.worktrees/app-startup-crash",
-      associatedWorktreeBranch: "omnimind/app-startup-crash",
-      associatedWorktreeRef: "omnimind/app-startup-crash",
+      associatedWorktreeBranch: "harnessos/app-startup-crash",
+      associatedWorktreeRef: "harnessos/app-startup-crash",
       session: null,
       updatedAt: "2026-02-27T00:01:00.000Z",
     });

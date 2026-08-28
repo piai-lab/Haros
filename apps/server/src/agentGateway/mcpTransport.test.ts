@@ -199,7 +199,7 @@ describe("makeAgentGatewayMcpTransport exposure policy", () => {
         const thread = { ...makeThread("thread-no-turn"), latestTurn: null };
         const tool: ToolEntry = {
           definition: {
-            name: "omnimind_read_thread",
+            name: "harnessos_read_thread",
             description: "read-only diagnostic",
             inputSchema: { type: "object" },
           },
@@ -234,7 +234,7 @@ describe("makeAgentGatewayMcpTransport exposure policy", () => {
           jsonrpc: "2.0",
           id: "read-without-turn",
           method: "tools/call",
-          params: { name: "omnimind_read_thread", arguments: {} },
+          params: { name: "harnessos_read_thread", arguments: {} },
         });
         const result = (
           denied.body as {

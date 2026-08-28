@@ -3,7 +3,11 @@
 // Layer: Web chat presentation helpers
 // Exports: row derivation, structural sharing, copy/timer helpers
 
-import { type MessageId, type OrchestrationTurnProvenance, type TurnId } from "@harnessos/contracts";
+import {
+  type MessageId,
+  type OrchestrationTurnProvenance,
+  type TurnId,
+} from "@harnessos/contracts";
 import { type TimelineEntry, type WorkLogEntry, elapsedMilliseconds } from "../../session-logic";
 import { normalizeCompactToolLabel as normalizeCompactToolLabelValue } from "../../lib/toolCallLabel";
 import {
@@ -499,7 +503,7 @@ export function deriveTerminalAssistantMessageIds(
 function isOutsideTurnProcessWork(entry: WorkLogEntry): boolean {
   return Boolean(
     entry.automation ||
-    entry.omnimindThreadCreation ||
+    entry.harnessosThreadCreation ||
     isVisibleGeneratedImageEntry(entry) ||
     entry.attachmentTransferFailures ||
     entry.engineWebSurface?.status === "waiting-for-user",
@@ -718,7 +722,7 @@ export function deriveMessagesTimelineRows(input: {
       latestTimestamp = entry.createdAt;
       if (entry.kind === "work") {
         allWorkEntries.push(entry.entry);
-        if (entry.entry.omnimindThreadCreation) {
+        if (entry.entry.harnessosThreadCreation) {
           // The structured creation recap is a final result rendered beside
           // the terminal answer; its milestone is metadata, not a second row.
         } else if (isOutsideTurnProcessWork(entry.entry)) {
@@ -956,8 +960,8 @@ function workLogAutomationsEqual(a: WorkLogEntry["automation"], b: WorkLogEntry[
 }
 
 function workLogOmniMindThreadCreationsEqual(
-  a: WorkLogEntry["omnimindThreadCreation"],
-  b: WorkLogEntry["omnimindThreadCreation"],
+  a: WorkLogEntry["harnessosThreadCreation"],
+  b: WorkLogEntry["harnessosThreadCreation"],
 ) {
   if (a === b) return true;
   if (!a || !b) return false;
@@ -1120,7 +1124,7 @@ function workLogEntryContentEqual(a: WorkLogEntry, b: WorkLogEntry): boolean {
     workLogSubagentActionsEqual(a.subagentAction, b.subagentAction) &&
     workLogSubagentsEqual(a.subagents, b.subagents) &&
     workLogAutomationsEqual(a.automation, b.automation) &&
-    workLogOmniMindThreadCreationsEqual(a.omnimindThreadCreation, b.omnimindThreadCreation) &&
+    workLogOmniMindThreadCreationsEqual(a.harnessosThreadCreation, b.harnessosThreadCreation) &&
     workLogLiveActivitiesEqual(a.liveActivity, b.liveActivity) &&
     workLogToolDetailsEqual(a.toolDetails, b.toolDetails)
   );

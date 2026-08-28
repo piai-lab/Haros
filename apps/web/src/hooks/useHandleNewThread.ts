@@ -66,8 +66,7 @@ export function useHandleNewThread() {
     requestedOptions?: NewThreadOptions,
     navigation?: NewThreadNavigationOptions,
   ): Promise<ThreadId | null> => {
-    const authoritativeSettings =
-      settings ?? (await fetchAuthoritativeServerSettings(queryClient));
+    const authoritativeSettings = settings ?? (await fetchAuthoritativeServerSettings(queryClient));
     const options: NewThreadOptions = {
       ...requestedOptions,
       envMode: requestedOptions?.envMode ?? authoritativeSettings.defaultThreadEnvMode,

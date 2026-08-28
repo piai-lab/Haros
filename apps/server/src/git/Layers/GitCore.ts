@@ -2952,7 +2952,7 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
       Effect.gen(function* () {
         // Resolve the branch and its HEAD before removal: afterwards the
         // worktree checkout is gone and can no longer answer. Only temporary
-        // omnimind/* branches qualify for reclamation; detached HEADs and
+        // harnessos/* branches qualify for reclamation; detached HEADs and
         // user-named branches resolve to null.
         const temporaryBranch = input.reclaimTemporaryBranch
           ? yield* executeGit(
@@ -3224,7 +3224,7 @@ export const makeGitCore = (options?: { executeOverride?: GitCoreShape["execute"
         yield* executeGit(
           "GitCore.stashAndCheckout.stashPush",
           input.cwd,
-          ["stash", "push", "-u", "-m", `omnimind: stash before switching to ${input.branch}`],
+          ["stash", "push", "-u", "-m", `harnessos: stash before switching to ${input.branch}`],
           {
             timeoutMs: 30_000,
             fallbackErrorMessage: "git stash failed",

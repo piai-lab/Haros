@@ -436,8 +436,8 @@ describe("DesktopBrowserAutomationHost", () => {
         },
         {
           id: internalTabId,
-          url: "omnimind://temporary-page",
-          title: "OmniMind Web Access",
+          url: "harnessos://temporary-page",
+          title: "HarnessOS Web Access",
           status: "live" as const,
           isLoading: false,
           canGoBack: false,
@@ -915,8 +915,8 @@ describe("DesktopBrowserAutomationHost", () => {
         values: ["primary"],
       }),
     ).resolves.toMatchObject({ selectedValues: ["primary"] });
-    const workspaceRoot = await mkdtemp(join(tmpdir(), "omnimind-browser-host-upload-"));
-    const uploadUserDataRoot = await mkdtemp(join(tmpdir(), "omnimind-browser-host-user-data-"));
+    const workspaceRoot = await mkdtemp(join(tmpdir(), "harnessos-browser-host-upload-"));
+    const uploadUserDataRoot = await mkdtemp(join(tmpdir(), "harnessos-browser-host-user-data-"));
     configureWorkspaceUploadForTests(webContents, { userDataRoot: uploadUserDataRoot });
     await writeFile(join(workspaceRoot, "avatar.txt"), "avatar");
     try {

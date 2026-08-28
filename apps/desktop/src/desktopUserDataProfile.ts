@@ -1,5 +1,5 @@
 // FILE: desktopUserDataProfile.ts
-// Purpose: Resolves OmniMind's first-public Electron userData path without predecessor reads.
+// Purpose: Resolves HarnessOS's first-public Electron userData path without predecessor reads.
 
 import * as OS from "node:os";
 import * as Path from "node:path";

@@ -335,7 +335,7 @@ function mermaidResourceCount(): number {
 }
 
 function mermaidImportMarkCount(): number {
-  return performance.getEntriesByName("omnimind:mermaid-import", "mark").length;
+  return performance.getEntriesByName("harnessos:mermaid-import", "mark").length;
 }
 
 function diagramFrameCount(): number {

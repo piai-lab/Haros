@@ -91,7 +91,7 @@ describe("GitHub project provisioning", () => {
         "clone",
         "--no-upstream",
         "openai/codex",
-        expect.stringContaining(".omnimind-clone-"),
+        expect.stringContaining(".harnessos-clone-"),
         "--",
         "--progress",
       ],

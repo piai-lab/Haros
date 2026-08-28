@@ -39,4 +39,4 @@ export interface OmniMindWebSearchSettingsShape {
 export class OmniMindWebSearchSettings extends ServiceMap.Service<
   OmniMindWebSearchSettings,
   OmniMindWebSearchSettingsShape
->()("omnimind/provider/Services/OmniMindWebSearchSettings") {}
+>()("harnessos/provider/Services/OmniMindWebSearchSettings") {}

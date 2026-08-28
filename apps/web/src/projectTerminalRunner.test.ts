@@ -38,8 +38,8 @@ describe("runProjectCommandInTerminal", () => {
       terminalId: "terminal-1",
       cwd: "/repo/apps/web",
       env: {
-        OMNIMIND_PROJECT_ROOT: "/repo",
-        OMNIMIND_WORKTREE_PATH: "/repo-worktree",
+        HARNESSOS_PROJECT_ROOT: "/repo",
+        HARNESSOS_WORKTREE_PATH: "/repo-worktree",
         EXTRA: "1",
       },
       cols: 120,

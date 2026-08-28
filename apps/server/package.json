@@ -4,8 +4,8 @@
   "private": true,
   "license": "MIT",
   "bin": {
-    "omnimind": "dist/index.mjs",
-    "omnimind-restore-migration-backup": "dist/restoreMigrationBackup.mjs"
+    "harnessos": "dist/index.mjs",
+    "harnessos-restore-migration-backup": "dist/restoreMigrationBackup.mjs"
   },
   "files": [
     "dist"

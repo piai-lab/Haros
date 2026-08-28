@@ -22,9 +22,9 @@ import {
 
 const CODEX_PROCESS_SHELL_ENV_NAMES = ["PATH", "SSH_AUTH_SOCK"] as const;
 const CODEX_OVERLAY_SHARED_STATE_FILES = new Set(["auth.json"]);
-const OMNIMIND_CONFIG_SUPPRESSIONS_FILE = "omnimind-config-suppressions-v1.json";
-const OMNIMIND_MANAGED_MCP_TABLE_HEADER = "[mcp_servers.omnimind]";
-export const OMNIMIND_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS = [
+const HARNESSOS_CONFIG_SUPPRESSIONS_FILE = "omnimind-config-suppressions-v1.json";
+const HARNESSOS_MANAGED_MCP_TABLE_HEADER = "[mcp_servers.harnessos]";
+export const HARNESSOS_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS = [
   '[plugins."browser@openai-bundled"]',
   '[plugins."chrome@openai-bundled"]',
   '[plugins."computer-use@openai-bundled"]',
@@ -237,16 +237,16 @@ export function appendCodexConfigSection(config: string, section: string): strin
   return base.length > 0 ? `${base}\n\n${trimmedSection}\n` : `${trimmedSection}\n`;
 }
 
-export const OMNIMIND_MANAGED_CODEX_CONFIG_BEGIN = "# >>> omnimind managed config >>>";
-export const OMNIMIND_MANAGED_CODEX_CONFIG_END = "# <<< omnimind managed config <<<";
+export const HARNESSOS_MANAGED_CODEX_CONFIG_BEGIN = "# >>> omnimind managed config >>>";
+export const HARNESSOS_MANAGED_CODEX_CONFIG_END = "# <<< omnimind managed config <<<";
 
 export function extractManagedCodexConfigSection(config: string): string | undefined {
-  const begin = config.indexOf(OMNIMIND_MANAGED_CODEX_CONFIG_BEGIN);
+  const begin = config.indexOf(HARNESSOS_MANAGED_CODEX_CONFIG_BEGIN);
   if (begin === -1) {
     return undefined;
   }
-  const contentStart = begin + OMNIMIND_MANAGED_CODEX_CONFIG_BEGIN.length;
-  const end = config.indexOf(OMNIMIND_MANAGED_CODEX_CONFIG_END, contentStart);
+  const contentStart = begin + HARNESSOS_MANAGED_CODEX_CONFIG_BEGIN.length;
+  const end = config.indexOf(HARNESSOS_MANAGED_CODEX_CONFIG_END, contentStart);
   if (end === -1) {
     return undefined;
   }
@@ -556,7 +556,7 @@ export function mergeShellEnvPolicyExclude(config: string, envVarName: string): 
 
 function appendManagedCodexConfigSection(config: string, section: string): string {
   let overlayConfig = config;
-  const managedMcpTableName = normalizeTomlTableHeaderName(OMNIMIND_MANAGED_MCP_TABLE_HEADER);
+  const managedMcpTableName = normalizeTomlTableHeaderName(HARNESSOS_MANAGED_MCP_TABLE_HEADER);
   const tables: string[] = [];
 
   for (const table of splitTomlTables(section.trim())) {
@@ -568,7 +568,7 @@ function appendManagedCodexConfigSection(config: string, section: string): strin
     if (normalizeTomlTableHeaderName(header) === managedMcpTableName) {
       // The session-scoped gateway entry is authoritative inside OmniMind's
       // overlay. The user's source config remains untouched.
-      overlayConfig = removeTomlTableNamespace(overlayConfig, OMNIMIND_MANAGED_MCP_TABLE_HEADER);
+      overlayConfig = removeTomlTableNamespace(overlayConfig, HARNESSOS_MANAGED_MCP_TABLE_HEADER);
       tables.push(table);
       continue;
     }
@@ -582,7 +582,7 @@ function appendManagedCodexConfigSection(config: string, section: string): strin
   }
   return appendCodexConfigSection(
     overlayConfig,
-    `${OMNIMIND_MANAGED_CODEX_CONFIG_BEGIN}\n${tables.join("\n\n")}\n${OMNIMIND_MANAGED_CODEX_CONFIG_END}`,
+    `${HARNESSOS_MANAGED_CODEX_CONFIG_BEGIN}\n${tables.join("\n\n")}\n${HARNESSOS_MANAGED_CODEX_CONFIG_END}`,
   );
 }
 
@@ -648,10 +648,10 @@ async function prepareOmniMindCodexHomeOverlayUnlocked(input: {
     }
     throw cause;
   });
-  const suppressionMarkerPath = path.join(overlayHomePath, OMNIMIND_CONFIG_SUPPRESSIONS_FILE);
+  const suppressionMarkerPath = path.join(overlayHomePath, HARNESSOS_CONFIG_SUPPRESSIONS_FILE);
   const suppressedSections = [
     ...new Set([
-      ...OMNIMIND_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS,
+      ...HARNESSOS_COMPETING_BROWSER_PLUGIN_SECTION_HEADERS,
       ...findConflictingLocalBrowserPluginSections(sourceConfig),
       ...(await readOmniMindConfigSuppressions(suppressionMarkerPath)),
     ]),

@@ -26,7 +26,7 @@ describe("migration backup recovery CLI", () => {
       await fs.readFile(new URL("../package.json", import.meta.url), "utf8"),
     ) as { readonly bin?: Record<string, string> };
 
-    expect(packageJson.bin?.["omnimind-restore-migration-backup"]).toBe(
+    expect(packageJson.bin?.["harnessos-restore-migration-backup"]).toBe(
       "dist/restoreMigrationBackup.mjs",
     );
   });
@@ -38,7 +38,7 @@ describe("migration backup recovery CLI", () => {
 
     expect(exitCode).toBe(2);
     expect(capture.errors.join("\n")).toContain("Database path must be absolute");
-    expect(capture.errors.join("\n")).toContain("omnimind-restore-migration-backup");
+    expect(capture.errors.join("\n")).toContain("harnessos-restore-migration-backup");
     expect(capture.warnings.join("\n")).toContain("Stop every OmniMind process");
     expect(capture.logs).toEqual([]);
   });

@@ -40,9 +40,9 @@
       "types": "./src/loginShellEnvironment.ts",
       "import": "./src/loginShellEnvironment.ts"
     },
-    "./omnimindHome": {
-      "types": "./src/omnimindHome.ts",
-      "import": "./src/omnimindHome.ts"
+    "./harnessosHome": {
+      "types": "./src/harnessosHome.ts",
+      "import": "./src/harnessosHome.ts"
     },
     "./staticSnapshot": {
       "types": "./src/staticSnapshot.ts",

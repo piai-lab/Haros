@@ -38,7 +38,7 @@ export function resolveScratchWorkspacesRoot(
   const homeDirectory = options.homeDirectory ?? homedir();
   const ownerContainer = path.join(
     scratchCacheRoot(homeDirectory, options.platform ?? process.platform),
-    `.omnimind-${scratchOwnerSegment(homeDirectory)}`,
+    `.harnessos-${scratchOwnerSegment(homeDirectory)}`,
   );
   return path.join(ownerContainer, SCRATCH_WORKSPACES_DIRNAME);
 }

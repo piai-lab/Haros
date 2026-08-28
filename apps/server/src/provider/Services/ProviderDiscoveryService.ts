@@ -55,4 +55,4 @@ export interface ProviderDiscoveryServiceShape {
 export class ProviderDiscoveryService extends ServiceMap.Service<
   ProviderDiscoveryService,
   ProviderDiscoveryServiceShape
->()("omnimind/provider/Services/ProviderDiscoveryService") {}
+>()("harnessos/provider/Services/ProviderDiscoveryService") {}

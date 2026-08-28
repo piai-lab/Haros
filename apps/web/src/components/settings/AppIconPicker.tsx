@@ -46,60 +46,60 @@ export function AppIconPicker({
       aria-label={t("settings.appIcon")}
       aria-busy={busy}
     >
-      {APP_ICON_OPTIONS.filter(
-        (option) => option.value !== "dark" || isMacPlatform(platform),
-      ).map((option) => {
-        const selected = value === option.value;
-        const applying = pendingIcon === option.value;
-        const label = t(option.labelKey);
-        return (
-          <button
-            key={option.value}
-            type="button"
-            title={label}
-            aria-label={label}
-            aria-pressed={selected}
-            disabled={busy}
-            className={cn(
-              // Same selection language as ThemeModePicker: the artwork is the whole
-              // control, so no filled tile — just a stroke that appears when selected.
-              "relative grid place-items-center rounded-[14px] border-2 p-[3px] transition-colors motion-reduce:transition-none",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-              "disabled:pointer-events-none",
-              selected || applying
-                ? "border-foreground"
-                : "border-transparent hover:border-foreground/25",
-            )}
-            onClick={() => {
-              if (busy) return;
-              setPendingIcon(option.value);
-              void (async () => {
-                try {
-                  await onValueChange(option.value);
-                } catch {
-                  // Native preference synchronization owns rollback. The picker
-                  // only owns its transient loading state.
-                } finally {
-                  setPendingIcon((current) => (current === option.value ? null : current));
-                }
-              })();
-            }}
-          >
-            <img
-              src={option.src}
-              alt=""
-              draggable={false}
-              className={cn("size-10 object-contain", applying && "opacity-40")}
-            />
-            {applying ? (
-              <Spinner
-                aria-label={t("settings.updatingAppIcon")}
-                className="absolute size-4 text-foreground motion-reduce:animate-none"
+      {APP_ICON_OPTIONS.filter((option) => option.value !== "dark" || isMacPlatform(platform)).map(
+        (option) => {
+          const selected = value === option.value;
+          const applying = pendingIcon === option.value;
+          const label = t(option.labelKey);
+          return (
+            <button
+              key={option.value}
+              type="button"
+              title={label}
+              aria-label={label}
+              aria-pressed={selected}
+              disabled={busy}
+              className={cn(
+                // Same selection language as ThemeModePicker: the artwork is the whole
+                // control, so no filled tile — just a stroke that appears when selected.
+                "relative grid place-items-center rounded-[14px] border-2 p-[3px] transition-colors motion-reduce:transition-none",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                "disabled:pointer-events-none",
+                selected || applying
+                  ? "border-foreground"
+                  : "border-transparent hover:border-foreground/25",
+              )}
+              onClick={() => {
+                if (busy) return;
+                setPendingIcon(option.value);
+                void (async () => {
+                  try {
+                    await onValueChange(option.value);
+                  } catch {
+                    // Native preference synchronization owns rollback. The picker
+                    // only owns its transient loading state.
+                  } finally {
+                    setPendingIcon((current) => (current === option.value ? null : current));
+                  }
+                })();
+              }}
+            >
+              <img
+                src={option.src}
+                alt=""
+                draggable={false}
+                className={cn("size-10 object-contain", applying && "opacity-40")}
               />
-            ) : null}
-          </button>
-        );
-      })}
+              {applying ? (
+                <Spinner
+                  aria-label={t("settings.updatingAppIcon")}
+                  className="absolute size-4 text-foreground motion-reduce:animate-none"
+                />
+              ) : null}
+            </button>
+          );
+        },
+      )}
     </div>
   );
 }

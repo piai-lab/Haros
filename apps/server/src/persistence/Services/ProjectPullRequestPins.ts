@@ -70,4 +70,4 @@ export interface ProjectPullRequestPinsShape {
 export class ProjectPullRequestPins extends ServiceMap.Service<
   ProjectPullRequestPins,
   ProjectPullRequestPinsShape
->()("omnimind/persistence/Services/ProjectPullRequestPins/ProjectPullRequestPins") {}
+>()("harnessos/persistence/Services/ProjectPullRequestPins/ProjectPullRequestPins") {}

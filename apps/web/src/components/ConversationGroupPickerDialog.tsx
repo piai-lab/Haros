@@ -37,9 +37,7 @@ export function ConversationGroupPickerDialog(props: {
 }) {
   const { t } = useI18n();
   const [query, setQuery] = useState("");
-  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(() => new Set());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const seededTargetRef = useRef<string | null>(null);
@@ -61,17 +59,14 @@ export function ConversationGroupPickerDialog(props: {
     const initialIds: string[] =
       target.kind === "group"
         ? props.threads
-            .filter((thread) =>
-              (thread.groupIds ?? []).includes(target.group.id),
-            )
+            .filter((thread) => (thread.groupIds ?? []).includes(target.group.id))
             .map((thread) => thread.id)
         : [...(target.thread.groupIds ?? [])];
     setSelectedIds(new Set(initialIds));
   }, [props.open, props.target, props.threads]);
 
   const projectById = useMemo(
-    () =>
-      new Map(props.projects.map((project) => [project.id, project] as const)),
+    () => new Map(props.projects.map((project) => [project.id, project] as const)),
     [props.projects],
   );
   const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -92,8 +87,7 @@ export function ConversationGroupPickerDialog(props: {
     () =>
       props.groups.filter(
         (group) =>
-          normalizedQuery.length === 0 ||
-          group.name.toLocaleLowerCase().includes(normalizedQuery),
+          normalizedQuery.length === 0 || group.name.toLocaleLowerCase().includes(normalizedQuery),
       ),
     [normalizedQuery, props.groups],
   );
@@ -119,16 +113,12 @@ export function ConversationGroupPickerDialog(props: {
       if (target.kind === "thread") {
         await props.onSubmitThreadGroups(
           target.thread.id,
-          props.groups
-            .filter((group) => selectedIds.has(group.id))
-            .map((group) => group.id),
+          props.groups.filter((group) => selectedIds.has(group.id)).map((group) => group.id),
         );
       } else {
         confirmedSelection = new Set(
           props.threads
-            .filter((thread) =>
-              (thread.groupIds ?? []).includes(target.group.id),
-            )
+            .filter((thread) => (thread.groupIds ?? []).includes(target.group.id))
             .map((thread) => thread.id),
         );
         const pendingChanges = props.threads.filter((thread) => {
@@ -155,8 +145,7 @@ export function ConversationGroupPickerDialog(props: {
       props.onOpenChange(false);
     } catch (cause) {
       if (confirmedSelection) setSelectedIds(confirmedSelection);
-      const detail =
-        cause instanceof Error ? cause.message : t("groups.saveFailed");
+      const detail = cause instanceof Error ? cause.message : t("groups.saveFailed");
       setError(
         savedChanges > 0
           ? t("groups.partialSaveFailed", {
@@ -176,9 +165,7 @@ export function ConversationGroupPickerDialog(props: {
       <DialogPopup className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {target?.kind === "group"
-              ? t("groups.addConversations")
-              : t("groups.addToGroups")}
+            {target?.kind === "group" ? t("groups.addConversations") : t("groups.addToGroups")}
           </DialogTitle>
           <DialogDescription>
             {target?.kind === "group"
@@ -193,14 +180,10 @@ export function ConversationGroupPickerDialog(props: {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={
-              target?.kind === "group"
-                ? t("groups.searchConversations")
-                : t("groups.searchGroups")
+              target?.kind === "group" ? t("groups.searchConversations") : t("groups.searchGroups")
             }
             aria-label={
-              target?.kind === "group"
-                ? t("groups.searchConversations")
-                : t("groups.searchGroups")
+              target?.kind === "group" ? t("groups.searchConversations") : t("groups.searchGroups")
             }
           />
           <div className="max-h-72 space-y-1 overflow-y-auto">
@@ -216,10 +199,7 @@ export function ConversationGroupPickerDialog(props: {
                       detail={project?.name}
                       icon={
                         project ? (
-                          <ProjectSidebarIcon
-                            cwd={project.cwd}
-                            expanded={false}
-                          />
+                          <ProjectSidebarIcon cwd={project.cwd} expanded={false} />
                         ) : undefined
                       }
                       onClick={() => toggle(thread.id)}
@@ -235,12 +215,9 @@ export function ConversationGroupPickerDialog(props: {
                     onClick={() => toggle(group.id)}
                   />
                 ))}
-            {(target?.kind === "group" ? visibleThreads : visibleGroups)
-              .length === 0 ? (
+            {(target?.kind === "group" ? visibleThreads : visibleGroups).length === 0 ? (
               <p className="px-2 py-8 text-center text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/60">
-                {target?.kind === "group"
-                  ? t("groups.noConversations")
-                  : t("groups.noGroups")}
+                {target?.kind === "group" ? t("groups.noConversations") : t("groups.noGroups")}
               </p>
             ) : null}
           </div>
@@ -251,17 +228,10 @@ export function ConversationGroupPickerDialog(props: {
           ) : null}
         </DialogPanel>
         <DialogFooter>
-          <Button
-            variant="ghost"
-            onClick={() => props.onOpenChange(false)}
-            disabled={submitting}
-          >
+          <Button variant="ghost" onClick={() => props.onOpenChange(false)} disabled={submitting}>
             {t("groups.cancel")}
           </Button>
-          <Button
-            onClick={() => void submit()}
-            disabled={!target || submitting}
-          >
+          <Button onClick={() => void submit()} disabled={!target || submitting}>
             {submitting ? t("groups.saving") : t("groups.save")}
           </Button>
         </DialogFooter>

@@ -190,8 +190,8 @@ async function resolveDesktopVoiceAuth(
         method: "initialize",
         params: {
           clientInfo: {
-            name: "omnimind-desktop",
-            title: "OmniMind Desktop",
+            name: "harnessos-desktop",
+            title: "HarnessOS Desktop",
             version: app.getVersion(),
           },
           capabilities: { experimentalApi: true },

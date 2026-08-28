@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  readDesktopAppIconFromNative,
-  writeDesktopAppIconToNative,
-} from "./useDesktopAppIcon";
+import { readDesktopAppIconFromNative, writeDesktopAppIconToNative } from "./useDesktopAppIcon";
 
 describe("desktop app icon native owner", () => {
   it("reads the durable native preference without writing a renderer mirror", async () => {

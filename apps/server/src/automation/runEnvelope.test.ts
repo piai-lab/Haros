@@ -65,9 +65,9 @@ describe("buildAutomationRunEnvelope", () => {
     expect(envelope).toContain(
       "These automation-only completion duties do not carry into later manual follow-up turns.",
     );
-    expect(envelope).toContain("call omnimind_report_automation_result");
+    expect(envelope).toContain("call harnessos_report_automation_result");
     expect(envelope).toContain('decision "silent"');
-    expect(envelope).toContain("omnimind_cancel_automation");
+    expect(envelope).toContain("harnessos_cancel_automation");
     expect(envelope.endsWith("---\n\nInspect the latest build.")).toBe(true);
   });
 
@@ -81,7 +81,7 @@ describe("buildAutomationRunEnvelope", () => {
       lastRunAt: null,
     });
 
-    expect(envelope).toContain("omnimind_cancel_automation");
+    expect(envelope).toContain("harnessos_cancel_automation");
     expect(envelope).toContain('decision "notify"');
   });
 

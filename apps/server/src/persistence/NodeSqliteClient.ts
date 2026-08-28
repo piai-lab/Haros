@@ -33,7 +33,7 @@ export type TypeId = "~local/sqlite-node/SqliteClient";
  * SqliteClient - Effect service tag for the sqlite SQL client.
  */
 export const SqliteClient = ServiceMap.Service<Client.SqlClient>(
-  "omnimind/persistence/NodeSqliteClient",
+  "harnessos/persistence/NodeSqliteClient",
 );
 
 export interface SqliteClientConfig {

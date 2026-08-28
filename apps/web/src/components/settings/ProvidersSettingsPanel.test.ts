@@ -67,17 +67,18 @@ describe("isProviderInstallSettingsDirty", () => {
   });
 
   it("uses configured flags instead of unreadable password values", () => {
+    expect(isProviderInstallSettingsDirty(defaults, defaults)).toBe(false);
     expect(
-      isProviderInstallSettingsDirty(defaults, defaults),
-    ).toBe(false);
-    expect(
-      isProviderInstallSettingsDirty({
-        ...defaults,
-        providers: {
-          ...defaults.providers,
-          kilo: { ...defaults.providers.kilo, serverPasswordConfigured: true },
+      isProviderInstallSettingsDirty(
+        {
+          ...defaults,
+          providers: {
+            ...defaults.providers,
+            kilo: { ...defaults.providers.kilo, serverPasswordConfigured: true },
+          },
         },
-      }, defaults),
+        defaults,
+      ),
     ).toBe(true);
     expect(
       isProviderInstallSettingsDirty(

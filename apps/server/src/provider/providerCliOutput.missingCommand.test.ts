@@ -24,6 +24,8 @@ describe("provider CLI missing-command classification", () => {
 
   it("does not classify unrelated failures as missing commands", () => {
     expect(isCommandMissingCause(new Error("Authentication failed"))).toBe(false);
-    expect(isCommandMissingCause(new Error("Permission denied: /tools/notfound/codex"))).toBe(false);
+    expect(isCommandMissingCause(new Error("Permission denied: /tools/notfound/codex"))).toBe(
+      false,
+    );
   });
 });

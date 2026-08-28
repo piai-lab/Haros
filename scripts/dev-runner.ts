@@ -23,8 +23,8 @@ const BASE_WEB_PORT = 5733;
 const MAX_HASH_OFFSET = 3000;
 const MAX_PORT = 65535;
 
-export const DEFAULT_OMNIMIND_HOME = Effect.map(Effect.service(Path.Path), (path) =>
-  path.join(homedir(), ".omnimind"),
+export const DEFAULT_HARNESSOS_HOME = Effect.map(Effect.service(Path.Path), (path) =>
+  path.join(homedir(), ".harnessos"),
 );
 
 const MODE_ARGS = {
@@ -39,7 +39,13 @@ const MODE_ARGS = {
   ],
   "dev:server": ["run", "dev", "--filter=@harnessos/server"],
   "dev:web": ["run", "dev", "--filter=@harnessos/web"],
-  "dev:desktop": ["run", "dev", "--filter=@harnessos/desktop", "--filter=@harnessos/web", "--parallel"],
+  "dev:desktop": [
+    "run",
+    "dev",
+    "--filter=@harnessos/desktop",
+    "--filter=@harnessos/web",
+    "--parallel",
+  ],
 } as const satisfies Record<string, ReadonlyArray<string>>;
 
 type DevMode = keyof typeof MODE_ARGS;
@@ -74,16 +80,16 @@ const optionalUrlConfig = (name: string): Config.Config<URL | undefined> =>
   );
 
 const OffsetConfig = Config.all({
-  portOffset: optionalIntegerConfig("OMNIMIND_PORT_OFFSET"),
-  devInstance: optionalStringConfig("OMNIMIND_DEV_INSTANCE"),
+  portOffset: optionalIntegerConfig("HARNESSOS_PORT_OFFSET"),
+  devInstance: optionalStringConfig("HARNESSOS_DEV_INSTANCE"),
 });
-const HomeConfig = optionalStringConfig("OMNIMIND_HOME");
+const HomeConfig = optionalStringConfig("HARNESSOS_HOME");
 const BooleanEnvConfig = Config.all({
-  noBrowser: optionalBooleanEnvironmentConfig("OMNIMIND_NO_BROWSER"),
+  noBrowser: optionalBooleanEnvironmentConfig("HARNESSOS_NO_BROWSER"),
   autoBootstrapProjectFromCwd: optionalBooleanEnvironmentConfig(
-    "OMNIMIND_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
+    "HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD",
   ),
-  logWebSocketEvents: optionalBooleanEnvironmentConfig("OMNIMIND_LOG_WS_EVENTS"),
+  logWebSocketEvents: optionalBooleanEnvironmentConfig("HARNESSOS_LOG_WS_EVENTS"),
 });
 
 export const readDevRunnerBooleanEnvironment = (environment: NodeJS.ProcessEnv) => {
@@ -109,11 +115,11 @@ export function resolveOffset(config: {
 }): { readonly offset: number; readonly source: string } {
   if (config.portOffset !== undefined) {
     if (config.portOffset < 0) {
-      throw new Error(`Invalid OMNIMIND_PORT_OFFSET: ${config.portOffset}`);
+      throw new Error(`Invalid HARNESSOS_PORT_OFFSET: ${config.portOffset}`);
     }
     return {
       offset: config.portOffset,
-      source: `OMNIMIND_PORT_OFFSET=${config.portOffset}`,
+      source: `HARNESSOS_PORT_OFFSET=${config.portOffset}`,
     };
   }
 
@@ -123,11 +129,11 @@ export function resolveOffset(config: {
   }
 
   if (/^\d+$/.test(seed)) {
-    return { offset: Number(seed), source: `numeric OMNIMIND_DEV_INSTANCE=${seed}` };
+    return { offset: Number(seed), source: `numeric HARNESSOS_DEV_INSTANCE=${seed}` };
   }
 
   const offset = ((Hash.string(seed) >>> 0) % MAX_HASH_OFFSET) + 1;
-  return { offset, source: `hashed OMNIMIND_DEV_INSTANCE=${seed}` };
+  return { offset, source: `hashed HARNESSOS_DEV_INSTANCE=${seed}` };
 }
 
 function resolveBaseDir(baseDir: string | undefined): Effect.Effect<string, never, Path.Path> {
@@ -139,7 +145,7 @@ function resolveBaseDir(baseDir: string | undefined): Effect.Effect<string, neve
       return path.resolve(configured);
     }
 
-    return yield* DEFAULT_OMNIMIND_HOME;
+    return yield* DEFAULT_HARNESSOS_HOME;
   });
 }
 
@@ -148,7 +154,7 @@ interface CreateDevRunnerEnvInput {
   readonly baseEnv: NodeJS.ProcessEnv;
   readonly serverOffset: number;
   readonly webOffset: number;
-  readonly omnimindHome: string | undefined;
+  readonly harnessosHome: string | undefined;
   readonly authToken: string | undefined;
   readonly noBrowser: boolean | undefined;
   readonly autoBootstrapProjectFromCwd: boolean | undefined;
@@ -163,7 +169,7 @@ export function createDevRunnerEnv({
   baseEnv,
   serverOffset,
   webOffset,
-  omnimindHome,
+  harnessosHome,
   authToken,
   noBrowser,
   autoBootstrapProjectFromCwd,
@@ -175,7 +181,7 @@ export function createDevRunnerEnv({
   return Effect.gen(function* () {
     const serverPort = port ?? BASE_SERVER_PORT + serverOffset;
     const webPort = BASE_WEB_PORT + webOffset;
-    const resolvedBaseDir = yield* resolveBaseDir(omnimindHome);
+    const resolvedBaseDir = yield* resolveBaseDir(harnessosHome);
     const configuredHost = host ?? "127.0.0.1";
     // Brackets are URL syntax, not valid listen-host syntax. Keep the bind host
     // portable while adding brackets back only when constructing an IPv6 URL.
@@ -188,13 +194,13 @@ export function createDevRunnerEnv({
 
     const output: NodeJS.ProcessEnv = {
       ...baseEnv,
-      OMNIMIND_PORT: String(serverPort),
+      HARNESSOS_PORT: String(serverPort),
       PORT: String(webPort),
       ELECTRON_RENDERER_PORT: String(webPort),
       VITE_WS_URL: `ws://${formattedClientHost}:${serverPort}`,
       VITE_DEV_SERVER_URL: devUrl?.toString() ?? `http://localhost:${webPort}`,
-      OMNIMIND_HOME: resolvedBaseDir,
-      OMNIMIND_HOST: serverHost,
+      HARNESSOS_HOME: resolvedBaseDir,
+      HARNESSOS_HOST: serverHost,
     };
 
     const pathKey = process.platform === "win32" ? "Path" : "PATH";
@@ -217,37 +223,37 @@ export function createDevRunnerEnv({
     applyShellEnvironmentHydrationMarker(output, inheritedPathIsUsable);
 
     if (authToken !== undefined) {
-      output.OMNIMIND_AUTH_TOKEN = authToken;
+      output.HARNESSOS_AUTH_TOKEN = authToken;
     } else {
-      delete output.OMNIMIND_AUTH_TOKEN;
+      delete output.HARNESSOS_AUTH_TOKEN;
     }
 
     if (noBrowser !== undefined) {
-      output.OMNIMIND_NO_BROWSER = noBrowser ? "1" : "0";
+      output.HARNESSOS_NO_BROWSER = noBrowser ? "1" : "0";
     } else {
-      delete output.OMNIMIND_NO_BROWSER;
+      delete output.HARNESSOS_NO_BROWSER;
     }
 
     if (autoBootstrapProjectFromCwd !== undefined) {
-      output.OMNIMIND_AUTO_BOOTSTRAP_PROJECT_FROM_CWD = autoBootstrapProjectFromCwd ? "1" : "0";
+      output.HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD = autoBootstrapProjectFromCwd ? "1" : "0";
     } else {
-      delete output.OMNIMIND_AUTO_BOOTSTRAP_PROJECT_FROM_CWD;
+      delete output.HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD;
     }
 
     if (logWebSocketEvents !== undefined) {
-      output.OMNIMIND_LOG_WS_EVENTS = logWebSocketEvents ? "1" : "0";
+      output.HARNESSOS_LOG_WS_EVENTS = logWebSocketEvents ? "1" : "0";
     } else {
-      delete output.OMNIMIND_LOG_WS_EVENTS;
+      delete output.HARNESSOS_LOG_WS_EVENTS;
     }
 
     if (mode === "dev") {
-      output.OMNIMIND_MODE = "web";
-      delete output.OMNIMIND_DESKTOP_WS_URL;
+      output.HARNESSOS_MODE = "web";
+      delete output.HARNESSOS_DESKTOP_WS_URL;
     }
 
     if (mode === "dev:server" || mode === "dev:web") {
-      output.OMNIMIND_MODE = "web";
-      delete output.OMNIMIND_DESKTOP_WS_URL;
+      output.HARNESSOS_MODE = "web";
+      delete output.HARNESSOS_DESKTOP_WS_URL;
     }
 
     return output;
@@ -388,7 +394,7 @@ export function resolveModePortOffsets<R = NetService>({
 
 interface DevRunnerCliInput {
   readonly mode: DevMode;
-  readonly omnimindHome: string | undefined;
+  readonly harnessosHome: string | undefined;
   readonly authToken: string | undefined;
   readonly noBrowser: BooleanFlagInput;
   readonly autoBootstrapProjectFromCwd: BooleanFlagInput;
@@ -429,7 +435,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       Effect.mapError(
         (cause) =>
           new DevRunnerError({
-            message: "Failed to read OMNIMIND_PORT_OFFSET/OMNIMIND_DEV_INSTANCE configuration.",
+            message: "Failed to read HARNESSOS_PORT_OFFSET/HARNESSOS_DEV_INSTANCE configuration.",
             cause,
           }),
       ),
@@ -459,7 +465,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
       baseEnv: process.env,
       serverOffset,
       webOffset,
-      omnimindHome: input.omnimindHome,
+      harnessosHome: input.harnessosHome,
       authToken: input.authToken,
       noBrowser: booleanOverrides.noBrowser,
       autoBootstrapProjectFromCwd: booleanOverrides.autoBootstrapProjectFromCwd,
@@ -475,7 +481,7 @@ export function runDevRunnerWithInput(input: DevRunnerCliInput) {
         : "";
 
     yield* Effect.logInfo(
-      `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.OMNIMIND_PORT)} webPort=${String(env.PORT)} baseDir=${String(env.OMNIMIND_HOME)}`,
+      `[dev-runner] mode=${input.mode} source=${source}${selectionSuffix} serverPort=${String(env.HARNESSOS_PORT)} webPort=${String(env.PORT)} baseDir=${String(env.HARNESSOS_HOME)}`,
     );
 
     if (input.dryRun) {
@@ -523,36 +529,36 @@ const devRunnerCli = Command.make("dev-runner", {
   mode: Argument.choice("mode", DEV_RUNNER_MODES).pipe(
     Argument.withDescription("Development mode to run."),
   ),
-  omnimindHome: Flag.string("home-dir").pipe(
-    Flag.withDescription("Base directory for all OmniMind data (equivalent to OMNIMIND_HOME)."),
+  harnessosHome: Flag.string("home-dir").pipe(
+    Flag.withDescription("Base directory for all HarnessOS data (equivalent to HARNESSOS_HOME)."),
     Flag.withFallbackConfig(HomeConfig),
   ),
   authToken: Flag.string("auth-token").pipe(
-    Flag.withDescription("Auth token (forwards to OMNIMIND_AUTH_TOKEN)."),
+    Flag.withDescription("Auth token (forwards to HARNESSOS_AUTH_TOKEN)."),
     Flag.withAlias("token"),
-    Flag.withFallbackConfig(optionalStringConfig("OMNIMIND_AUTH_TOKEN")),
+    Flag.withFallbackConfig(optionalStringConfig("HARNESSOS_AUTH_TOKEN")),
   ),
   noBrowser: optionalBooleanFlag("no-browser", {
-    description: "Disable browser auto-open (equivalent to OMNIMIND_NO_BROWSER).",
+    description: "Disable browser auto-open (equivalent to HARNESSOS_NO_BROWSER).",
     negativeName: "browser",
     negativeDescription: "Enable browser auto-open.",
   }),
   autoBootstrapProjectFromCwd: optionalBooleanFlag("auto-bootstrap-project-from-cwd", {
     description:
-      "Enable project auto-bootstrap (equivalent to OMNIMIND_AUTO_BOOTSTRAP_PROJECT_FROM_CWD).",
+      "Enable project auto-bootstrap (equivalent to HARNESSOS_AUTO_BOOTSTRAP_PROJECT_FROM_CWD).",
   }),
   logWebSocketEvents: optionalBooleanFlag("log-websocket-events", {
-    description: "Enable WebSocket event logging (equivalent to OMNIMIND_LOG_WS_EVENTS).",
+    description: "Enable WebSocket event logging (equivalent to HARNESSOS_LOG_WS_EVENTS).",
     aliases: ["log-ws-events"],
   }),
   host: Flag.string("host").pipe(
-    Flag.withDescription("Server host/interface override (forwards to OMNIMIND_HOST)."),
-    Flag.withFallbackConfig(optionalStringConfig("OMNIMIND_HOST")),
+    Flag.withDescription("Server host/interface override (forwards to HARNESSOS_HOST)."),
+    Flag.withFallbackConfig(optionalStringConfig("HARNESSOS_HOST")),
   ),
   port: Flag.integer("port").pipe(
     Flag.withSchema(Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 }))),
-    Flag.withDescription("Server port override (forwards to OMNIMIND_PORT)."),
-    Flag.withFallbackConfig(optionalPortConfig("OMNIMIND_PORT")),
+    Flag.withDescription("Server port override (forwards to HARNESSOS_PORT)."),
+    Flag.withFallbackConfig(optionalPortConfig("HARNESSOS_PORT")),
   ),
   devUrl: Flag.string("dev-url").pipe(
     Flag.withSchema(Schema.URLFromString),

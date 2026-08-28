@@ -19,7 +19,7 @@ const { browserSession, rendererWebContentsById, rendererWebContentsFromId } = v
 
 vi.mock("electron", () => ({
   app: {
-    getName: () => "OmniMind",
+    getName: () => "HarnessOS",
     getPreferredSystemLanguages: () => ["en-US"],
     userAgentFallback:
       "Mozilla/5.0 AppleWebKit/537.36 Chrome/140.0.0.0 Electron/40.0.0 Safari/537.36",
@@ -303,7 +303,7 @@ describe("DesktopBrowserManager repeated workflow characterization", () => {
       const beforeSchemeDenial = afterTabOpen.tabs.length;
       expect(
         handler({
-          url: "omnimind://unsafe",
+          url: "harnessos://unsafe",
           frameName: "",
           features: "",
           disposition: "foreground-tab",

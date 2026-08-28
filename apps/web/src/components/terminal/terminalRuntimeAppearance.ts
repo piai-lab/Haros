@@ -5,11 +5,7 @@
 import type { ISearchOptions } from "@xterm/addon-search";
 import { Terminal, type ITheme } from "@xterm/xterm";
 
-import {
-  buildResolvedThemeTokens,
-  type ThemePack,
-  type ThemeVariant,
-} from "~/theme/theme.logic";
+import { buildResolvedThemeTokens, type ThemePack, type ThemeVariant } from "~/theme/theme.logic";
 
 const FALLBACK_MONO_FONT_FAMILY =
   '"JetBrains Mono", "JetBrainsMono NFM", "JetBrainsMono NF", monospace';
@@ -202,14 +198,11 @@ export function terminalThemeFromApp(): ITheme {
         "var(--color-token-terminal-ansi-bright-blue, var(--color-accent-blue, var(--color-text-accent)))",
       brightCyan:
         "var(--color-token-terminal-ansi-bright-cyan, var(--color-accent-blue, var(--color-text-accent)))",
-      brightGreen:
-        "var(--color-token-terminal-ansi-bright-green, var(--color-decoration-added))",
+      brightGreen: "var(--color-token-terminal-ansi-bright-green, var(--color-decoration-added))",
       brightMagenta:
         "var(--color-token-terminal-ansi-bright-magenta, var(--color-accent-purple, var(--color-text-accent)))",
-      brightRed:
-        "var(--color-token-terminal-ansi-bright-red, var(--color-decoration-deleted))",
-      brightWhite:
-        "var(--color-token-terminal-ansi-bright-white, var(--color-text-foreground))",
+      brightRed: "var(--color-token-terminal-ansi-bright-red, var(--color-decoration-deleted))",
+      brightWhite: "var(--color-token-terminal-ansi-bright-white, var(--color-text-foreground))",
       brightYellow: "var(--color-token-terminal-ansi-bright-yellow, var(--warning))",
       cursor:
         "var(--color-token-terminal-foreground, var(--color-text-foreground, var(--foreground)))",
@@ -220,8 +213,7 @@ export function terminalThemeFromApp(): ITheme {
       magenta:
         "var(--color-token-terminal-ansi-magenta, var(--color-accent-purple, var(--color-text-accent)))",
       red: "var(--color-token-terminal-ansi-red, var(--color-decoration-deleted))",
-      scrollbarSliderActiveBackground:
-        "var(--color-token-scrollbar-slider-active-background)",
+      scrollbarSliderActiveBackground: "var(--color-token-scrollbar-slider-active-background)",
       scrollbarSliderBackground: "var(--color-token-scrollbar-slider-background)",
       scrollbarSliderHoverBackground: "var(--color-token-scrollbar-slider-hover-background)",
       selectionBackground: "color-mix(in srgb, var(--color-text-accent) 26%, transparent)",

@@ -19,4 +19,4 @@ export interface ProviderExecutionCapabilitiesShape {
 export class ProviderExecutionCapabilities extends ServiceMap.Service<
   ProviderExecutionCapabilities,
   ProviderExecutionCapabilitiesShape
->()("omnimind/provider/Services/ProviderExecutionCapabilities") {}
+>()("harnessos/provider/Services/ProviderExecutionCapabilities") {}

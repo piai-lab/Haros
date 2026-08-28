@@ -46,4 +46,4 @@ export interface RuntimeReceiptBusShape {
 export class RuntimeReceiptBus extends ServiceMap.Service<
   RuntimeReceiptBus,
   RuntimeReceiptBusShape
->()("omnimind/orchestration/Services/RuntimeReceiptBus") {}
+>()("harnessos/orchestration/Services/RuntimeReceiptBus") {}

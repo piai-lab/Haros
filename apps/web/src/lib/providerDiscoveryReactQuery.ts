@@ -154,8 +154,10 @@ export function providerExecutionCapabilitiesMatchSelection(
 export function isProviderInteractionModeExecutable(
   capability: ProviderInteractionModeCapability | undefined,
 ): capability is ProviderInteractionModeCapability & { readonly structurallySupported: true } {
-  return capability?.structurallySupported === true &&
-    (capability.status === "ready" || capability.status === "degraded");
+  return (
+    capability?.structurallySupported === true &&
+    (capability.status === "ready" || capability.status === "degraded")
+  );
 }
 
 export function providerSkillsQueryOptions(input: {
@@ -323,10 +325,7 @@ export function providerCatalogDiscoveryRetryDelay(attemptIndex: number, error: 
       return retryAfterMs;
     }
   }
-  if (
-    code === WS_REQUEST_TIMEOUT_CODE ||
-    code === PROVIDER_MODEL_DISCOVERY_ERROR_CODES.starting
-  ) {
+  if (code === WS_REQUEST_TIMEOUT_CODE || code === PROVIDER_MODEL_DISCOVERY_ERROR_CODES.starting) {
     const baseDelay =
       isExplicitlyRetryableDiscoveryError(error) &&
       typeof error.retryAfterMs === "number" &&

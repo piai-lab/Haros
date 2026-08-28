@@ -42,10 +42,7 @@ export const HOST_GROUP_SURFACE_POLICY = {
     chat: { supported: true, defaultEnabled: false },
     studio: { supported: true, defaultEnabled: false },
   },
-} as const satisfies Record<
-  BuiltInToolGroupId,
-  Record<ProductSurface, HostGroupSurfacePolicy>
->;
+} as const satisfies Record<BuiltInToolGroupId, Record<ProductSurface, HostGroupSurfacePolicy>>;
 
 export function isBuiltInToolGroupId(value: string): value is BuiltInToolGroupId {
   return (BUILT_IN_TOOL_GROUP_IDS as readonly string[]).includes(value);

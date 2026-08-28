@@ -85,7 +85,7 @@ describe("Sidebar.uiState", () => {
 
   it("ignores malformed persisted thread list paging entries", () => {
     window.localStorage.setItem(
-      "omnimind:sidebar-ui:v1",
+      "harnessos:sidebar-ui:v1",
       JSON.stringify({
         projectThreadListExtraPagesByCwd: {
           "/Users/tester/Code/demo": 2,
@@ -124,7 +124,7 @@ describe("Sidebar.uiState", () => {
 
   it("migrates legacy all-or-nothing show-more state to one extra page", () => {
     window.localStorage.setItem(
-      "omnimind:sidebar-ui:v1",
+      "harnessos:sidebar-ui:v1",
       JSON.stringify({
         expandedProjectThreadListCwds: ["/Users/tester/Code/demo", "/Users/tester/Code/other"],
       }),
@@ -140,7 +140,7 @@ describe("Sidebar.uiState", () => {
 
   it("drops malformed persisted last thread routes", () => {
     window.localStorage.setItem(
-      "omnimind:sidebar-ui:v1",
+      "harnessos:sidebar-ui:v1",
       JSON.stringify({
         lastThreadRoute: {
           threadId: 42,

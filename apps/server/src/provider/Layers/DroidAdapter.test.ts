@@ -1,6 +1,6 @@
 import { TurnId } from "@harnessos/contracts";
 import { describe, expect, it } from "vitest";
-import { OMNIMIND_HARNESS_POLICY_MARKER } from "../../agentGateway/harnessPolicy.ts";
+import { HARNESSOS_HARNESS_POLICY_MARKER } from "../../agentGateway/harnessPolicy.ts";
 
 import {
   classifyDroidPromptTurnCompletion,
@@ -19,7 +19,7 @@ describe("Droid OmniMind harness policy", () => {
   it("delivers private scoped host context once", () => {
     const state: { harnessPolicyDelivered?: boolean } = {};
     expect(takeDroidOmniMindHarnessPolicyTextPart(state, true)?.text).toContain(
-      OMNIMIND_HARNESS_POLICY_MARKER,
+      HARNESSOS_HARNESS_POLICY_MARKER,
     );
     expect(takeDroidOmniMindHarnessPolicyTextPart(state, true)).toBeNull();
   });

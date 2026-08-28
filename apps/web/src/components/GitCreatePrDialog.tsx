@@ -154,9 +154,7 @@ export function GitCreatePrDialog({
       >
         <DialogHeader className="gap-0.5">
           <DialogTitle className="font-normal font-sans text-muted-foreground text-xs">
-            {view.isNewBranch ? t("git.pr.newBranch") : t("git.pr.branch")} →{
-              view.baseBranchName
-            }
+            {view.isNewBranch ? t("git.pr.newBranch") : t("git.pr.branch")} →{view.baseBranchName}
           </DialogTitle>
           <DialogDescription
             className={cn(

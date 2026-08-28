@@ -61,10 +61,10 @@ describe("resolveAllowedLocalPreviewFile", () => {
     }
   });
 
-  it("allows images written to the OMNIMIND_HOME codex-home-overlay generated_images root", async () => {
+  it("allows images written to the HARNESSOS_HOME codex-home-overlay generated_images root", async () => {
     // Codex app-server is launched with CODEX_HOME pointing at a OmniMind overlay
     // directory (see resolveOmniMindCodexHomeOverlayPath). Generated images therefore
-    // live under <OMNIMIND_HOME>/codex-home-overlay/generated_images/<thread>/<call>.png,
+    // live under <HARNESSOS_HOME>/codex-home-overlay/generated_images/<thread>/<call>.png,
     // which sits outside both the user's `~/.codex` source home and any workspace
     // root. The allowlist must still serve them.
     //
@@ -73,9 +73,9 @@ describe("resolveAllowedLocalPreviewFile", () => {
     // way only the overlay candidate can satisfy the allowlist.
     const fakeRoot = path.join(process.cwd(), `.test-codex-overlay-${process.pid}-${Date.now()}`);
     const sourceHome = path.join(fakeRoot, "source", ".codex");
-    const omnimindHome = path.join(fakeRoot, "omnimind", "runtime");
+    const harnessosHome = path.join(fakeRoot, "omnimind", "runtime");
     const overlayImageDir = path.join(
-      omnimindHome,
+      harnessosHome,
       "codex-home-overlay",
       "generated_images",
       "thread-overlay",
@@ -84,8 +84,8 @@ describe("resolveAllowedLocalPreviewFile", () => {
     mkdirSync(overlayImageDir, { recursive: true });
     writeFileSync(imagePath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
 
-    const previousOmniMindHome = process.env.OMNIMIND_HOME;
-    process.env.OMNIMIND_HOME = omnimindHome;
+    const previousOmniMindHome = process.env.HARNESSOS_HOME;
+    process.env.HARNESSOS_HOME = harnessosHome;
     try {
       const result = await resolveAllowedLocalPreviewFile({
         requestedPath: imagePath,
@@ -96,9 +96,9 @@ describe("resolveAllowedLocalPreviewFile", () => {
       assert.equal(result?.path, realpathSync(imagePath));
     } finally {
       if (previousOmniMindHome === undefined) {
-        delete process.env.OMNIMIND_HOME;
+        delete process.env.HARNESSOS_HOME;
       } else {
-        process.env.OMNIMIND_HOME = previousOmniMindHome;
+        process.env.HARNESSOS_HOME = previousOmniMindHome;
       }
       rmSync(fakeRoot, { recursive: true, force: true });
     }

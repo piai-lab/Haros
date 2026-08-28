@@ -560,7 +560,7 @@ describe("when: branch is clean, up to date, and has no open PR", () => {
   it("resolveQuickAction keeps disabled commit when the branch tracks the default branch", () => {
     const quick = resolveQuickAction(
       status({
-        branch: "omnimind/pi-cleanup",
+        branch: "harnessos/pi-cleanup",
         upstreamBranch: "main",
         aheadCount: 0,
         behindCount: 0,
@@ -584,7 +584,7 @@ describe("when: branch is clean, up to date, and has no open PR", () => {
   it("resolveCreatePrActionAvailability blocks stale create-pr calls for default upstream", () => {
     const availability = resolveCreatePrActionAvailability({
       gitStatus: status({
-        branch: "omnimind/pi-cleanup",
+        branch: "harnessos/pi-cleanup",
         upstreamBranch: "main",
         aheadCount: 0,
         behindCount: 0,
@@ -644,7 +644,7 @@ describe("when: branch is clean, up to date, and has no open PR", () => {
   it("buildMenuItems disables create PR when the branch tracks the default branch", () => {
     const items = buildMenuItems(
       status({
-        branch: "omnimind/pi-cleanup",
+        branch: "harnessos/pi-cleanup",
         upstreamBranch: "main",
         aheadCount: 0,
         behindCount: 0,
@@ -1605,7 +1605,7 @@ describe("resolveCreatePrExecution", () => {
     const execution = resolveCreatePrExecution({
       ...baseInput,
       gitStatus: status({
-        branch: "omnimind/pi-cleanup",
+        branch: "harnessos/pi-cleanup",
         upstreamBranch: "main",
         aheadCount: 0,
       }),
@@ -2146,30 +2146,30 @@ describe("resolveAutoFeatureBranchName", () => {
 describe("resolveDefaultCreateBranchName", () => {
   it("uses OmniMind as the default namespace", () => {
     const branch = resolveDefaultCreateBranchName(["main"], "fix toast copy");
-    assert.equal(branch, "omnimind/fix-toast-copy");
+    assert.equal(branch, "harnessos/fix-toast-copy");
   });
 
   it("normalizes an existing legacy omnimind namespace", () => {
-    const branch = resolveDefaultCreateBranchName(["main"], "omnimind/refine-toolbar-actions");
-    assert.equal(branch, "omnimind/refine-toolbar-actions");
+    const branch = resolveDefaultCreateBranchName(["main"], "harnessos/refine-toolbar-actions");
+    assert.equal(branch, "harnessos/refine-toolbar-actions");
   });
 
   it("preserves nested namespaces under OmniMind", () => {
     const branch = resolveDefaultCreateBranchName(["main"], "feature/refine-toolbar-actions");
-    assert.equal(branch, "omnimind/feature/refine-toolbar-actions");
+    assert.equal(branch, "harnessos/feature/refine-toolbar-actions");
   });
 
   it("increments suffix when the OmniMind branch already exists", () => {
     const branch = resolveDefaultCreateBranchName(
-      ["main", "omnimind/fix-toast-copy", "omnimind/fix-toast-copy-2"],
+      ["main", "harnessos/fix-toast-copy", "harnessos/fix-toast-copy-2"],
       "fix toast copy",
     );
-    assert.equal(branch, "omnimind/fix-toast-copy-3");
+    assert.equal(branch, "harnessos/fix-toast-copy-3");
   });
 
-  it("falls back to omnimind/update when no preferred name is provided", () => {
+  it("falls back to harnessos/update when no preferred name is provided", () => {
     const branch = resolveDefaultCreateBranchName(["main"]);
-    assert.equal(branch, "omnimind/update");
+    assert.equal(branch, "harnessos/update");
   });
 });
 
@@ -2177,7 +2177,7 @@ describe("resolveLiveThreadBranchUpdate", () => {
   it("does not regress a semantic thread branch back to a temporary worktree branch", () => {
     const update = resolveLiveThreadBranchUpdate({
       threadBranch: "feature/semantic-branch",
-      gitStatus: status({ branch: "omnimind/deadbeef" }),
+      gitStatus: status({ branch: "harnessos/deadbeef" }),
     });
 
     assert.equal(update, null);
@@ -2203,7 +2203,7 @@ describe("resolveLiveThreadBranchUpdate", () => {
 });
 
 describe("shouldOfferCreateBranchPrompt", () => {
-  const temporaryBranch = "omnimind/deadbeef";
+  const temporaryBranch = "harnessos/deadbeef";
 
   it("shows the create-branch prompt for detached managed worktrees", () => {
     assert.isTrue(

@@ -1,5 +1,5 @@
 // FILE: canary.ts
-// Purpose: Maintains and launches an isolated, frozen OmniMind Canary checkout.
+// Purpose: Maintains and launches an isolated, frozen HarnessOS Canary checkout.
 // Layer: Local developer tooling
 
 import { spawn, spawnSync } from "node:child_process";
@@ -40,11 +40,11 @@ export function resolveCanaryPaths(
   homeDirectory = OS.homedir(),
 ): CanaryPaths {
   const home = Path.resolve(
-    env.OMNIMIND_CANARY_HOME?.trim() || Path.join(homeDirectory, ".omnimind-canary"),
+    env.HARNESSOS_CANARY_HOME?.trim() || Path.join(homeDirectory, ".harnessos-canary"),
   );
   const cacheBase = env.XDG_CACHE_HOME?.trim() || Path.join(homeDirectory, ".cache");
   const source = Path.resolve(
-    env.OMNIMIND_CANARY_SOURCE?.trim() || Path.join(cacheBase, "omnimind-canary", "source"),
+    env.HARNESSOS_CANARY_SOURCE?.trim() || Path.join(cacheBase, "harnessos-canary", "source"),
   );
   return {
     home,
@@ -210,7 +210,7 @@ function assertManagedSourceIsClean(paths: CanaryPaths): void {
   const status = capture("git", ["status", "--porcelain", "--untracked-files=no"], paths.source);
   if (status.length > 0) {
     throw new Error(
-      `OmniMind Canary's managed source has tracked local changes. Refusing to overwrite ${paths.source}.`,
+      `HarnessOS Canary's managed source has tracked local changes. Refusing to overwrite ${paths.source}.`,
     );
   }
 }
@@ -245,7 +245,7 @@ function currentSourceCommit(paths: CanaryPaths): string | null {
 function startCanary(paths: CanaryPaths): void {
   const existingPid = readPid(paths);
   if (existingPid !== null && isRunning(existingPid)) {
-    console.log(`OmniMind Canary is already running (pid ${String(existingPid)}).`);
+    console.log(`HarnessOS Canary is already running (pid ${String(existingPid)}).`);
     return;
   }
   const commit = currentSourceCommit(paths);
@@ -253,18 +253,18 @@ function startCanary(paths: CanaryPaths): void {
     commit === null ||
     !FS.existsSync(Path.join(paths.source, "apps/desktop/dist-electron/main.js"))
   ) {
-    throw new Error("OmniMind Canary is not built. Run `bun run canary:setup` first.");
+    throw new Error("HarnessOS Canary is not built. Run `bun run canary:setup` first.");
   }
   FS.mkdirSync(paths.home, { recursive: true });
   const env = { ...process.env };
   delete env.VITE_DEV_SERVER_URL;
   delete env.ELECTRON_RENDERER_PORT;
-  delete env.OMNIMIND_AUTH_TOKEN;
+  delete env.HARNESSOS_AUTH_TOKEN;
   Object.assign(env, {
-    OMNIMIND_DESKTOP_FLAVOR: "canary",
-    OMNIMIND_DISABLE_AUTO_UPDATE: "1",
-    OMNIMIND_HOME: paths.home,
-    OMNIMIND_COMMIT_HASH: commit,
+    HARNESSOS_DESKTOP_FLAVOR: "canary",
+    HARNESSOS_DISABLE_AUTO_UPDATE: "1",
+    HARNESSOS_HOME: paths.home,
+    HARNESSOS_COMMIT_HASH: commit,
   });
   const logDescriptor = FS.openSync(paths.log, "a", 0o600);
   try {
@@ -277,11 +277,11 @@ function startCanary(paths: CanaryPaths): void {
       shell: process.platform === "win32",
     });
     if (child.pid === undefined) {
-      throw new Error("OmniMind Canary failed to return a process id.");
+      throw new Error("HarnessOS Canary failed to return a process id.");
     }
     child.unref();
     FS.writeFileSync(paths.pid, `${String(child.pid)}\n`, { mode: 0o600 });
-    console.log(`Started OmniMind Canary at ${commit.slice(0, 12)} (pid ${String(child.pid)}).`);
+    console.log(`Started HarnessOS Canary at ${commit.slice(0, 12)} (pid ${String(child.pid)}).`);
     console.log(`Log: ${paths.log}`);
   } finally {
     FS.closeSync(logDescriptor);
@@ -336,7 +336,7 @@ function updateCanary(paths: CanaryPaths, ref: string): void {
 function rollbackCanary(paths: CanaryPaths): void {
   const state = readState(paths);
   if (state?.previousCommit === null || state?.previousCommit === undefined) {
-    throw new Error("OmniMind Canary has no previous successful commit to restore.");
+    throw new Error("HarnessOS Canary has no previous successful commit to restore.");
   }
   assertManagedSourceIsClean(paths);
   stopCanary(paths);
@@ -364,7 +364,7 @@ function printStatus(paths: CanaryPaths): void {
   const state = readState(paths);
   const pid = readPid(paths);
   const running = pid !== null && isRunning(pid);
-  console.log(`OmniMind Canary: ${running ? `running (pid ${String(pid)})` : "stopped"}`);
+  console.log(`HarnessOS Canary: ${running ? `running (pid ${String(pid)})` : "stopped"}`);
   console.log(`Source: ${paths.source}`);
   console.log(`Data: ${paths.home}`);
   console.log(`Log: ${paths.log}`);

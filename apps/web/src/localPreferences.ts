@@ -20,7 +20,7 @@ import {
 import { DEFAULT_UI_DENSITY, UI_DENSITY_MODES, normalizeUiDensity } from "./lib/appDensity";
 import { DEFAULT_CHAT_WIDTH, CHAT_WIDTH_MODES, normalizeChatWidthMode } from "./lib/chatWidth";
 
-export const LOCAL_PREFERENCES_STORAGE_KEY = "omnimind:local-preferences:v1";
+export const LOCAL_PREFERENCES_STORAGE_KEY = "harnessos:local-preferences:v1";
 
 export const MIN_CHAT_FONT_SIZE_PX = 11;
 export const MAX_CHAT_FONT_SIZE_PX = 18;
@@ -207,7 +207,7 @@ export function normalizeLocalPreferences(preferences: LocalPreferences): LocalP
 
 const decodePreferences = Schema.decodeSync(Schema.fromJsonString(LocalPreferencesSchema));
 const encodePreferences = Schema.encodeSync(Schema.fromJsonString(LocalPreferencesSchema));
-const LOCAL_PREFERENCES_CHANGE_EVENT = "omnimind:local-preferences-change";
+const LOCAL_PREFERENCES_CHANGE_EVENT = "harnessos:local-preferences-change";
 
 function readBrowserLocalStorage(): Storage | undefined {
   try {

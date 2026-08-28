@@ -1,11 +1,11 @@
 /**
- * Provider-facing config builders for the OmniMind agent gateway.
+ * Provider-facing config builders for the HarnessOS agent gateway.
  *
  * One shared module shapes the same MCP connection (endpoint URL + per-thread
  * bearer token) into every provider's native MCP configuration format so the
  * injection rules cannot drift between adapters:
  *
- * - Codex: `[mcp_servers.omnimind]` TOML block (streamable HTTP +
+ * - Codex: `[mcp_servers.harnessos]` TOML block (streamable HTTP +
  *   `bearer_token_env_var` resolved from the per-session process env).
  * - Claude Agent SDK: `mcpServers` record with an HTTP entry.
  * - ACP agents (cursor/grok/droid): `mcpServers` session entries; HTTP when
@@ -22,10 +22,11 @@ import type {
   AgentGatewayStdioProxySpawn,
 } from "./Services/AgentGatewayCredentials.ts";
 
-export const OMNIMIND_MCP_SERVER_NAME = "omnimind";
-export const OMNIMIND_AGENT_GATEWAY_TOKEN_ENV = "OMNIMIND_AGENT_GATEWAY_TOKEN";
-export const OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN_ENV = "OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN";
-export const OMNIMIND_AGENT_GATEWAY_URL_ENV = "OMNIMIND_AGENT_GATEWAY_URL";
+export const HARNESSOS_MCP_SERVER_NAME = "harnessos";
+export const HARNESSOS_AGENT_GATEWAY_TOKEN_ENV = "HARNESSOS_AGENT_GATEWAY_TOKEN";
+export const HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN_ENV =
+  "HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN";
+export const HARNESSOS_AGENT_GATEWAY_URL_ENV = "HARNESSOS_AGENT_GATEWAY_URL";
 
 function authorizationHeader(connection: AgentGatewayMcpConnection): string {
   return `Bearer ${connection.bearerToken}`;
@@ -34,7 +35,7 @@ function authorizationHeader(connection: AgentGatewayMcpConnection): string {
 /**
  * Codex reads MCP servers from `config.toml`; the config file is shared by all
  * sessions of one Codex home, so the token is never written into it. Instead
- * the block references an env var that OmniMind sets per app-server process.
+ * the block references an env var that HarnessOS sets per app-server process.
  *
  * The shell_environment_policy table keeps that env var out of exec tool
  * subprocesses: codex defaults to `ignore_default_excludes = true`, so the
@@ -44,12 +45,12 @@ function authorizationHeader(connection: AgentGatewayMcpConnection): string {
  */
 export function buildCodexMcpConfigToml(endpointUrl: string): string {
   return [
-    `[mcp_servers.${OMNIMIND_MCP_SERVER_NAME}]`,
+    `[mcp_servers.${HARNESSOS_MCP_SERVER_NAME}]`,
     `url = ${JSON.stringify(endpointUrl)}`,
-    `bearer_token_env_var = ${JSON.stringify(OMNIMIND_AGENT_GATEWAY_TOKEN_ENV)}`,
+    `bearer_token_env_var = ${JSON.stringify(HARNESSOS_AGENT_GATEWAY_TOKEN_ENV)}`,
     "",
     "[shell_environment_policy]",
-    `exclude = [${JSON.stringify(OMNIMIND_AGENT_GATEWAY_TOKEN_ENV)}]`,
+    `exclude = [${JSON.stringify(HARNESSOS_AGENT_GATEWAY_TOKEN_ENV)}]`,
   ].join("\n");
 }
 
@@ -70,7 +71,7 @@ export interface OpenCodeMcpRemoteServerConfig {
 /**
  * OpenCode's dynamic `mcp.add` endpoint is server/directory scoped rather
  * than session scoped. Callers must install this config through either a
- * provider process dedicated to the owning OmniMind thread or an exclusive
+ * provider process dedicated to the owning HarnessOS thread or an exclusive
  * external-server/directory lock held for the full agent turn.
  */
 export function buildOpenCodeMcpServer(
@@ -107,8 +108,8 @@ function readAgentGatewayToolMetadata(value: Record<string, unknown>): {
   readonly provenance?: "agent-gateway";
 } {
   const metadata = isRecord(value._meta) ? value._meta : undefined;
-  const owner = metadata?.["omnimind/owner"];
-  const group = metadata?.["omnimind/group"];
+  const owner = metadata?.["harnessos/owner"];
+  const group = metadata?.["harnessos/group"];
   if (
     owner !== "agent-gateway" ||
     typeof group !== "string" ||
@@ -144,18 +145,18 @@ async function postAgentGatewayJsonRpc(input: {
     ...(input.signal === undefined ? {} : { signal: input.signal }),
   });
   if (!response.ok) {
-    throw new Error(`OmniMind MCP request failed with HTTP ${String(response.status)}.`);
+    throw new Error(`HarnessOS MCP request failed with HTTP ${String(response.status)}.`);
   }
   const payload: unknown = await response.json();
   if (!isRecord(payload) || payload.jsonrpc !== "2.0") {
-    throw new Error("OmniMind MCP returned an invalid JSON-RPC response.");
+    throw new Error("HarnessOS MCP returned an invalid JSON-RPC response.");
   }
   if ("error" in payload) {
     const failure = isRecord(payload.error) ? payload.error : null;
-    throw new Error(failure?.message ? String(failure.message) : "OmniMind MCP request failed.");
+    throw new Error(failure?.message ? String(failure.message) : "HarnessOS MCP request failed.");
   }
   if (payload.id !== id || !("result" in payload)) {
-    throw new Error("OmniMind MCP returned a mismatched JSON-RPC response.");
+    throw new Error("HarnessOS MCP returned a mismatched JSON-RPC response.");
   }
   return payload.result;
 }
@@ -171,7 +172,7 @@ export async function listAgentGatewayMcpTools(input: {
     method: "tools/list",
   });
   if (!isRecord(result) || !Array.isArray(result.tools)) {
-    throw new Error("OmniMind MCP tools/list returned an invalid tool catalog.");
+    throw new Error("HarnessOS MCP tools/list returned an invalid tool catalog.");
   }
   return result.tools.map((value) => {
     if (
@@ -180,7 +181,7 @@ export async function listAgentGatewayMcpTools(input: {
       typeof value.description !== "string" ||
       !isRecord(value.inputSchema)
     ) {
-      throw new Error("OmniMind MCP tools/list returned an invalid tool descriptor.");
+      throw new Error("HarnessOS MCP tools/list returned an invalid tool descriptor.");
     }
     const metadata = readAgentGatewayToolMetadata(value);
     return metadata.group === undefined
@@ -241,7 +242,7 @@ export function buildClaudeMcpServers(
   connection: AgentGatewayMcpConnection,
 ): Record<string, ClaudeMcpHttpServerConfig> {
   return {
-    [OMNIMIND_MCP_SERVER_NAME]: {
+    [HARNESSOS_MCP_SERVER_NAME]: {
       type: "http",
       url: connection.url,
       headers: { Authorization: authorizationHeader(connection) },
@@ -265,7 +266,7 @@ export interface AntigravityMcpPluginConfig {
 }
 
 /**
- * Build the secret-free MCP fragment installed with OmniMind's Antigravity
+ * Build the secret-free MCP fragment installed with HarnessOS's Antigravity
  * plugin. Antigravity expands the endpoint plus a one-shot bootstrap value
  * from each `agy` process. The stdio proxy consumes that value during MCP
  * initialization and keeps the exchanged session bearer in its own memory,
@@ -280,12 +281,12 @@ export function buildAntigravityMcpPluginConfig(
 ): AntigravityMcpPluginConfig {
   return {
     mcpServers: {
-      [OMNIMIND_MCP_SERVER_NAME]: {
+      [HARNESSOS_MCP_SERVER_NAME]: {
         command: stdioProxy.command,
         args: [...stdioProxy.args],
         env: {
-          [OMNIMIND_AGENT_GATEWAY_URL_ENV]: `$${OMNIMIND_AGENT_GATEWAY_URL_ENV}`,
-          [OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN_ENV]: `$${OMNIMIND_AGENT_GATEWAY_BOOTSTRAP_TOKEN_ENV}`,
+          [HARNESSOS_AGENT_GATEWAY_URL_ENV]: `$${HARNESSOS_AGENT_GATEWAY_URL_ENV}`,
+          [HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN_ENV]: `$${HARNESSOS_AGENT_GATEWAY_BOOTSTRAP_TOKEN_ENV}`,
           ELECTRON_RUN_AS_NODE: "1",
         },
         disabled: false,
@@ -311,7 +312,7 @@ export interface AcpInitializeCapabilitiesView {
  * falls back to the stdio->HTTP proxy script otherwise (stdio is the ACP
  * baseline every agent must accept).
  */
-export function buildAcpOmniMindMcpServers(input: {
+export function buildAcpHarnessOSMcpServers(input: {
   readonly connection: AgentGatewayMcpConnection;
   readonly initializeResult: AcpInitializeCapabilitiesView;
   readonly stdioProxy: AcpStdioProxySpawn;
@@ -321,7 +322,7 @@ export function buildAcpOmniMindMcpServers(input: {
     return [
       {
         type: "http",
-        name: OMNIMIND_MCP_SERVER_NAME,
+        name: HARNESSOS_MCP_SERVER_NAME,
         url: input.connection.url,
         headers: [{ name: "Authorization", value: authorizationHeader(input.connection) }],
       },
@@ -329,12 +330,12 @@ export function buildAcpOmniMindMcpServers(input: {
   }
   return [
     {
-      name: OMNIMIND_MCP_SERVER_NAME,
+      name: HARNESSOS_MCP_SERVER_NAME,
       command: input.stdioProxy.command,
       args: [...input.stdioProxy.args],
       env: [
-        { name: OMNIMIND_AGENT_GATEWAY_URL_ENV, value: input.connection.url },
-        { name: OMNIMIND_AGENT_GATEWAY_TOKEN_ENV, value: input.connection.bearerToken },
+        { name: HARNESSOS_AGENT_GATEWAY_URL_ENV, value: input.connection.url },
+        { name: HARNESSOS_AGENT_GATEWAY_TOKEN_ENV, value: input.connection.bearerToken },
       ],
     },
   ];

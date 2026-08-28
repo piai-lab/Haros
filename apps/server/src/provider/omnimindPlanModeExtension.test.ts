@@ -40,7 +40,7 @@ describe("OmniMind Plan mode tool guard", () => {
       "find",
       "ls",
       "ask_user",
-      "omnimind_update_tasks",
+      "harnessos_update_tasks",
       "web_search",
       "source_check",
       "fetch_content",

@@ -7,7 +7,7 @@ import { normalizeWorkspaceRootForComparison } from "@harnessos/shared/threadWor
 import type { AppState } from "./storeState";
 import type { Project } from "./types";
 
-const PERSISTED_STATE_KEY = "omnimind:renderer-state:v8";
+const PERSISTED_STATE_KEY = "harnessos:renderer-state:v8";
 const persistedExpandedProjectCwds = new Set<string>();
 const persistedProjectOrderCwds: string[] = [];
 const persistedProjectOrderByCwd = new Map<string, number>();

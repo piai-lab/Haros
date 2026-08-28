@@ -562,7 +562,7 @@ interface ProviderCommandReactorConfigShape {
 class ProviderCommandReactorConfig extends ServiceMap.Service<
   ProviderCommandReactorConfig,
   ProviderCommandReactorConfigShape
->()("omnimind/orchestration/Layers/ProviderCommandReactorConfig") {}
+>()("harnessos/orchestration/Layers/ProviderCommandReactorConfig") {}
 
 const make = Effect.gen(function* () {
   const { commandEventTimeout } = yield* ProviderCommandReactorConfig;

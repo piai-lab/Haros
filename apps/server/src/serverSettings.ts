@@ -88,8 +88,8 @@ export interface ServerSettingsSnapshot {
 }
 
 const SERVER_SETTINGS_MIGRATION_VERSION = 4;
-const LEGACY_OMNIMIND_BUILT_IN_GROUP = "omnimind";
-const OMNIMIND_FINE_GRAINED_BUILT_IN_GROUPS = [
+const LEGACY_HARNESSOS_BUILT_IN_GROUP = "omnimind";
+const HARNESSOS_FINE_GRAINED_BUILT_IN_GROUPS = [
   "tasks",
   "diagnostics",
   "goals",
@@ -110,7 +110,7 @@ export function toServerSettingsView(settings: ServerSettings): ServerSettingsVi
 export class ServerSettingsService extends ServiceMap.Service<
   ServerSettingsService,
   ServerSettingsShape
->()("omnimind/serverSettings/ServerSettingsService") {
+>()("harnessos/serverSettings/ServerSettingsService") {
   static readonly layerTest = (overrides: DeepPartial<ServerSettings> = {}) =>
     Layer.effect(
       ServerSettingsService,
@@ -371,7 +371,7 @@ function migrateLegacyBuiltInGroupIntent(
 
   if (migrationVersion < 3 && Array.isArray(disabledBuiltInGroups)) {
     const expanded = disabledBuiltInGroups.flatMap((group) =>
-      group === LEGACY_OMNIMIND_BUILT_IN_GROUP ? OMNIMIND_FINE_GRAINED_BUILT_IN_GROUPS : [group],
+      group === LEGACY_HARNESSOS_BUILT_IN_GROUP ? HARNESSOS_FINE_GRAINED_BUILT_IN_GROUPS : [group],
     );
     if (expanded.length !== disabledBuiltInGroups.length) migrated = true;
     disabledBuiltInGroups = expanded;

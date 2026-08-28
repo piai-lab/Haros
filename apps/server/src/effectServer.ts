@@ -84,7 +84,7 @@ export interface ServerShape {
 }
 
 export class Server extends ServiceMap.Service<Server, ServerShape>()(
-  "omnimind/effectServer/Server",
+  "harnessos/effectServer/Server",
 ) {}
 
 export class ServerLifecycleError extends Schema.TaggedErrorClass<ServerLifecycleError>()(

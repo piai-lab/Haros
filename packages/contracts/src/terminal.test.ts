@@ -91,12 +91,12 @@ describe("TerminalOpenInput", () => {
       cols: 100,
       rows: 24,
       env: {
-        OMNIMIND_PROJECT_ROOT: "/tmp/project",
+        HARNESSOS_PROJECT_ROOT: "/tmp/project",
         CUSTOM_FLAG: "1",
       },
     });
     expect(parsed.env).toMatchObject({
-      OMNIMIND_PROJECT_ROOT: "/tmp/project",
+      HARNESSOS_PROJECT_ROOT: "/tmp/project",
       CUSTOM_FLAG: "1",
     });
   });

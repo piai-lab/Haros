@@ -2,12 +2,7 @@
 // Purpose: Expose the canonical OmniMind mark as an accessible Soft Orbit button.
 // Layer: Shared app branding primitive
 
-import {
-  useEffect,
-  useRef,
-  type ButtonHTMLAttributes,
-  type PointerEvent,
-} from "react";
+import { useEffect, useRef, type ButtonHTMLAttributes, type PointerEvent } from "react";
 
 import {
   createSoftOrbitController,
@@ -16,8 +11,10 @@ import {
 } from "~/motion/softOrbit";
 import { OmniMindLogo, type OmniMindLogoVariant } from "./OmniMindLogo";
 
-export interface OmniMindLogoButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
+export interface OmniMindLogoButtonProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  "children"
+> {
   readonly size?: number;
   readonly variant?: OmniMindLogoVariant;
   readonly duration?: number;

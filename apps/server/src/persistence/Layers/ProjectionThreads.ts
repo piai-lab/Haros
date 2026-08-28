@@ -37,9 +37,7 @@ const ProjectionThreadDbRow = ProjectionThread.mapFields(
     groupIds: Schema.fromJsonString(Schema.Array(SpaceId)),
     handoff: Schema.NullOr(Schema.fromJsonString(ThreadHandoff)),
     forkScope: Schema.NullOr(Schema.fromJsonString(ThreadForkScope)),
-    lastKnownPr: Schema.NullOr(
-      Schema.fromJsonString(OrchestrationThreadPullRequest),
-    ),
+    lastKnownPr: Schema.NullOr(Schema.fromJsonString(OrchestrationThreadPullRequest)),
     pinnedMessages: Schema.NullOr(Schema.fromJsonString(ThreadPinnedMessages)),
     threadMarkers: Schema.NullOr(Schema.fromJsonString(ThreadMarkers)),
     modelSelection: Schema.fromJsonString(ModelSelection),
@@ -348,41 +346,27 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
 
   const upsert: ProjectionThreadRepositoryShape["upsert"] = (row) =>
     upsertProjectionThreadRow(row).pipe(
-      Effect.mapError(
-        toPersistenceSqlError("ProjectionThreadRepository.upsert:query"),
-      ),
+      Effect.mapError(toPersistenceSqlError("ProjectionThreadRepository.upsert:query")),
     );
 
   const getById: ProjectionThreadRepositoryShape["getById"] = (input) =>
     getProjectionThreadRow(input).pipe(
-      Effect.mapError(
-        toPersistenceSqlError("ProjectionThreadRepository.getById:query"),
-      ),
+      Effect.mapError(toPersistenceSqlError("ProjectionThreadRepository.getById:query")),
     );
 
-  const listByProjectId: ProjectionThreadRepositoryShape["listByProjectId"] = (
-    input,
-  ) =>
+  const listByProjectId: ProjectionThreadRepositoryShape["listByProjectId"] = (input) =>
     listProjectionThreadRows(input).pipe(
-      Effect.mapError(
-        toPersistenceSqlError(
-          "ProjectionThreadRepository.listByProjectId:query",
-        ),
-      ),
+      Effect.mapError(toPersistenceSqlError("ProjectionThreadRepository.listByProjectId:query")),
     );
 
   const deleteById: ProjectionThreadRepositoryShape["deleteById"] = (input) =>
     deleteProjectionThreadRow(input).pipe(
-      Effect.mapError(
-        toPersistenceSqlError("ProjectionThreadRepository.deleteById:query"),
-      ),
+      Effect.mapError(toPersistenceSqlError("ProjectionThreadRepository.deleteById:query")),
     );
 
   const removeGroup: ProjectionThreadRepositoryShape["removeGroup"] = (input) =>
     removeProjectionThreadGroup(input).pipe(
-      Effect.mapError(
-        toPersistenceSqlError("ProjectionThreadRepository.removeGroup:query"),
-      ),
+      Effect.mapError(toPersistenceSqlError("ProjectionThreadRepository.removeGroup:query")),
     );
 
   return {

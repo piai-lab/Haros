@@ -1,6 +1,6 @@
 /**
  * Optional integration check against a real `cursor-agent acp` install.
- * Enable with: OMNIMIND_CURSOR_ACP_PROBE=1 bun run test --filter CursorAcpCliProbe
+ * Enable with: HARNESSOS_CURSOR_ACP_PROBE=1 bun run test --filter CursorAcpCliProbe
  */
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { it } from "@effect/vitest";
@@ -20,7 +20,7 @@ function flattenSelectOptionValues(
   );
 }
 
-describe.runIf(process.env.OMNIMIND_CURSOR_ACP_PROBE === "1")("Cursor ACP CLI probe", () => {
+describe.runIf(process.env.HARNESSOS_CURSOR_ACP_PROBE === "1")("Cursor ACP CLI probe", () => {
   it.effect("initialize and authenticate against real cursor-agent acp", () =>
     Effect.gen(function* () {
       const runtime = yield* AcpSessionRuntime;

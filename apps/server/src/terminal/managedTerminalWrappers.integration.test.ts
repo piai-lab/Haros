@@ -106,6 +106,6 @@ describeOnPosix("prepareManagedTerminalWrappers", () => {
 
     expect(env.Path?.split(path.delimiter)[0]).toBe(rootDir);
     expect(env.PATH).toBeUndefined();
-    expect(env.OMNIMIND_MANAGED_BIN_DIR).toBe(rootDir);
+    expect(env.HARNESSOS_MANAGED_BIN_DIR).toBe(rootDir);
   });
 });

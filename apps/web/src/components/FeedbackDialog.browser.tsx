@@ -69,9 +69,7 @@ describe("FeedbackDialog", () => {
 
     await expect.element(page.getByRole("heading", { name: "提交反馈" })).toBeVisible();
     await expect.element(page.getByRole("button", { name: /任务/ })).toBeVisible();
-    await expect
-      .element(page.getByText(/绝不会发送提示、消息、代码或文件内容/))
-      .toBeVisible();
+    await expect.element(page.getByText(/绝不会发送提示、消息、代码或文件内容/)).toBeVisible();
     await expect.element(page.getByRole("button", { name: "提交" })).toBeDisabled();
   });
 

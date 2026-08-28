@@ -9,7 +9,7 @@ export const DEFAULT_THREAD_SIDEBAR_WIDTH_PX = 23 * 16;
 // narrow but usable preference must never be expanded back to the authored default.
 export const THREAD_SIDEBAR_MIN_WIDTH_PX = 13 * 16;
 
-const SIDEBAR_WIDTH_DEFAULTS_MIGRATION_STORAGE_KEY = "omnimind:sidebar-width-defaults-migrated:v3";
+const SIDEBAR_WIDTH_DEFAULTS_MIGRATION_STORAGE_KEY = "harnessos:sidebar-width-defaults-migrated:v3";
 
 export type AppearanceMigrationDisposition = "already-complete" | "migrated" | "preserved";
 

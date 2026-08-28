@@ -20,8 +20,8 @@ describe("ServerLifecycleEvents", () => {
           payload: {
             cwd: "/one",
             homeDir: "/home/tester",
-            chatWorkspaceRoot: "/home/tester/.omnimind/chats",
-            studioWorkspaceRoot: "/home/tester/.omnimind/chats/Studio",
+            chatWorkspaceRoot: "/home/tester/.harnessos/chats",
+            studioWorkspaceRoot: "/home/tester/.harnessos/chats/Studio",
             projectName: "one",
           },
         });
@@ -36,8 +36,8 @@ describe("ServerLifecycleEvents", () => {
           payload: {
             cwd: "/two",
             homeDir: "/home/tester",
-            chatWorkspaceRoot: "/home/tester/.omnimind/chats",
-            studioWorkspaceRoot: "/home/tester/.omnimind/chats/Studio",
+            chatWorkspaceRoot: "/home/tester/.harnessos/chats",
+            studioWorkspaceRoot: "/home/tester/.harnessos/chats/Studio",
             projectName: "two",
           },
         });

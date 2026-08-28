@@ -16,7 +16,7 @@ describe("resolveDraftEnvModeAfterBranchChange", () => {
     expect(
       resolveDraftEnvModeAfterBranchChange({
         nextWorktreePath: null,
-        currentWorktreePath: "/repo/.omnimind/worktrees/feature-a",
+        currentWorktreePath: "/repo/.harnessos/worktrees/feature-a",
         effectiveEnvMode: "worktree",
       }),
     ).toBe("local");
@@ -35,17 +35,17 @@ describe("resolveDraftEnvModeAfterBranchChange", () => {
   it("uses worktree mode when selecting a branch already attached to a worktree", () => {
     expect(
       resolveDraftEnvModeAfterBranchChange({
-        nextWorktreePath: "/repo/.omnimind/worktrees/feature-a",
+        nextWorktreePath: "/repo/.harnessos/worktrees/feature-a",
         currentWorktreePath: null,
         effectiveEnvMode: "local",
       }),
     ).toBe("worktree");
   });
 
-  it("keeps legacy .omnimind worktree paths working for migrated threads", () => {
+  it("keeps legacy .harnessos worktree paths working for migrated threads", () => {
     expect(
       resolveDraftEnvModeAfterBranchChange({
-        nextWorktreePath: "/repo/.omnimind/worktrees/feature-a",
+        nextWorktreePath: "/repo/.harnessos/worktrees/feature-a",
         currentWorktreePath: null,
         effectiveEnvMode: "local",
       }),
@@ -140,7 +140,7 @@ describe("shouldSyncLocalThreadBranch", () => {
       shouldSyncLocalThreadBranch({
         envMode: "local",
         activeWorktreePath: null,
-        activeThreadBranch: "omnimind/pi",
+        activeThreadBranch: "harnessos/pi",
         currentGitBranch: "main",
         hasServerThread: true,
         isThreadSettled: false,
@@ -154,7 +154,7 @@ describe("shouldSyncLocalThreadBranch", () => {
       shouldSyncLocalThreadBranch({
         envMode: "local",
         activeWorktreePath: null,
-        activeThreadBranch: "omnimind/pi",
+        activeThreadBranch: "harnessos/pi",
         currentGitBranch: "main",
         hasServerThread: true,
         isThreadSettled: false,
@@ -227,13 +227,13 @@ describe("resolveAssociatedWorktreeMetadataAfterWorkspacePatch", () => {
         branch: "main",
         worktreePath: null,
         existingAssociatedWorktreePath: "/repo/.worktrees/omnimind-pi",
-        existingAssociatedWorktreeBranch: "omnimind/pi",
-        existingAssociatedWorktreeRef: "omnimind/pi",
+        existingAssociatedWorktreeBranch: "harnessos/pi",
+        existingAssociatedWorktreeRef: "harnessos/pi",
       }),
     ).toEqual({
       associatedWorktreePath: "/repo/.worktrees/omnimind-pi",
-      associatedWorktreeBranch: "omnimind/pi",
-      associatedWorktreeRef: "omnimind/pi",
+      associatedWorktreeBranch: "harnessos/pi",
+      associatedWorktreeRef: "harnessos/pi",
     });
   });
 
@@ -259,8 +259,8 @@ describe("resolveAssociatedWorktreeMetadataAfterWorkspacePatch", () => {
         branch: "main",
         worktreePath: null,
         existingAssociatedWorktreePath: "/repo/.worktrees/omnimind-pi",
-        existingAssociatedWorktreeBranch: "omnimind/pi",
-        existingAssociatedWorktreeRef: "omnimind/pi",
+        existingAssociatedWorktreeBranch: "harnessos/pi",
+        existingAssociatedWorktreeRef: "harnessos/pi",
         patchAssociatedWorktreeBranch: "feature/new-pair",
       }),
     ).toEqual({
@@ -399,15 +399,15 @@ describe("resolveBranchSelectionTarget", () => {
     expect(
       resolveBranchSelectionTarget({
         activeProjectCwd: "/repo",
-        activeWorktreePath: "/repo/.omnimind/worktrees/feature-a",
+        activeWorktreePath: "/repo/.harnessos/worktrees/feature-a",
         branch: {
           isDefault: false,
-          worktreePath: "/repo/.omnimind/worktrees/feature-b",
+          worktreePath: "/repo/.harnessos/worktrees/feature-b",
         },
       }),
     ).toEqual({
-      checkoutCwd: "/repo/.omnimind/worktrees/feature-b",
-      nextWorktreePath: "/repo/.omnimind/worktrees/feature-b",
+      checkoutCwd: "/repo/.harnessos/worktrees/feature-b",
+      nextWorktreePath: "/repo/.harnessos/worktrees/feature-b",
       reuseExistingWorktree: true,
     });
   });
@@ -416,7 +416,7 @@ describe("resolveBranchSelectionTarget", () => {
     expect(
       resolveBranchSelectionTarget({
         activeProjectCwd: "/repo",
-        activeWorktreePath: "/repo/.omnimind/worktrees/feature-a",
+        activeWorktreePath: "/repo/.harnessos/worktrees/feature-a",
         branch: {
           isDefault: true,
           worktreePath: "/repo",
@@ -433,7 +433,7 @@ describe("resolveBranchSelectionTarget", () => {
     expect(
       resolveBranchSelectionTarget({
         activeProjectCwd: "/repo",
-        activeWorktreePath: "/repo/.omnimind/worktrees/feature-a",
+        activeWorktreePath: "/repo/.harnessos/worktrees/feature-a",
         branch: {
           isDefault: true,
           worktreePath: null,
@@ -450,15 +450,15 @@ describe("resolveBranchSelectionTarget", () => {
     expect(
       resolveBranchSelectionTarget({
         activeProjectCwd: "/repo",
-        activeWorktreePath: "/repo/.omnimind/worktrees/feature-a",
+        activeWorktreePath: "/repo/.harnessos/worktrees/feature-a",
         branch: {
           isDefault: false,
           worktreePath: null,
         },
       }),
     ).toEqual({
-      checkoutCwd: "/repo/.omnimind/worktrees/feature-a",
-      nextWorktreePath: "/repo/.omnimind/worktrees/feature-a",
+      checkoutCwd: "/repo/.harnessos/worktrees/feature-a",
+      nextWorktreePath: "/repo/.harnessos/worktrees/feature-a",
       reuseExistingWorktree: false,
     });
   });

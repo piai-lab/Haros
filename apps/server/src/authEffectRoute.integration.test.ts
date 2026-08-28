@@ -34,7 +34,7 @@ const otherSessionId = AuthSessionId.makeUnsafe("22222222-2222-4222-8222-2222222
 
 function makeSessionCredentialService(): SessionCredentialServiceShape {
   return {
-    cookieName: "omnimind_session",
+    cookieName: "harnessos_session",
   } as SessionCredentialServiceShape;
 }
 
@@ -44,7 +44,7 @@ function makeServerAuth(sideEffects: { count: number }): ServerAuthShape {
     policy: "remote-reachable" as const,
     bootstrapMethods: ["one-time-token" as const],
     sessionMethods: ["browser-session-cookie" as const, "bearer-session-token" as const],
-    sessionCookieName: "omnimind_session",
+    sessionCookieName: "harnessos_session",
   };
   const mutate = <A>(value: A) =>
     Effect.sync(() => {
@@ -82,7 +82,7 @@ function makeServerAuth(sideEffects: { count: number }): ServerAuthShape {
     logoutSession: () => mutate(true),
     authenticateHttpRequest: (request) => {
       const bearer = request.headers.authorization === "Bearer bearer-token";
-      const cookie = request.cookies.omnimind_session === "cookie-token";
+      const cookie = request.cookies.harnessos_session === "cookie-token";
       if (!bearer && !cookie) {
         return Effect.fail(new AuthError({ message: "Authentication required.", status: 401 }));
       }
@@ -177,7 +177,7 @@ function mutationRequest(input: {
       ...(input.origin === undefined ? {} : { Origin: input.origin }),
       ...(input.credential === "bearer"
         ? { Authorization: "Bearer bearer-token" }
-        : { Cookie: "omnimind_session=cookie-token" }),
+        : { Cookie: "harnessos_session=cookie-token" }),
       ...(input.body === undefined ? {} : { "Content-Type": "application/json" }),
     },
     ...(input.body === undefined ? {} : { body: JSON.stringify(input.body) }),
@@ -329,7 +329,7 @@ describe("authEffectRouteLayer", () => {
       expect(response.status).toBe(200);
       await expect(response.json()).resolves.toEqual({ revoked: true });
       const cookie = response.headers.get("set-cookie") ?? "";
-      expect(cookie).toContain("omnimind_session=");
+      expect(cookie).toContain("harnessos_session=");
       expect(cookie).toContain("Expires=Thu, 01 Jan 1970 00:00:00 GMT");
       expect(cookie).toContain("Max-Age=0");
       expect(cookie).toContain("HttpOnly");
@@ -355,14 +355,16 @@ describe("binaryUploadEffectRouteLayer", () => {
           const response = await fetch(`${serverOrigin}${ATTACHMENT_UPLOAD_ROUTE_PATH}`, {
             method: "OPTIONS",
             headers: {
-              Origin: "omnimind-canary://app",
+              Origin: "harnessos-canary://app",
               "Access-Control-Request-Method": "POST",
               "Access-Control-Request-Headers": "content-type",
             },
           });
 
           expect(response.status).toBe(204);
-          expect(response.headers.get("access-control-allow-origin")).toBe("omnimind-canary://app");
+          expect(response.headers.get("access-control-allow-origin")).toBe(
+            "harnessos-canary://app",
+          );
           expect(response.headers.get("access-control-allow-credentials")).toBe("true");
           expect(response.headers.get("access-control-allow-methods")).toContain("POST");
           expect(response.headers.get("access-control-allow-headers")?.toLowerCase()).toContain(
@@ -397,7 +399,7 @@ describe("binaryUploadEffectRouteLayer", () => {
           const url = `${serverOrigin}${ATTACHMENT_UPLOAD_ROUTE_PATH}?${params.toString()}`;
           const cookieResponse = await fetch(url, {
             method: "POST",
-            headers: { Cookie: "omnimind_session=cookie-token" },
+            headers: { Cookie: "harnessos_session=cookie-token" },
             body: Uint8Array.from([1]),
           });
           expect(cookieResponse.status).toBe(403);

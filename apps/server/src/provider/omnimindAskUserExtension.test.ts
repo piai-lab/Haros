@@ -4,7 +4,7 @@ import { ASK_USER_TOOL_NAME } from "@harnessos/om-ask";
 import {
   inspectOmniMindAskUserRegistration,
   makeOmniMindAskUserExtension,
-  OMNIMIND_ASK_USER_EXTENSION_PATH,
+  HARNESSOS_ASK_USER_EXTENSION_PATH,
 } from "./omnimindAskUserExtension.ts";
 
 describe("bundled Ask User Extension", () => {
@@ -35,7 +35,7 @@ describe("bundled Ask User Extension", () => {
   it("accepts only the bundled inline winner provenance", () => {
     const bundledExtension = {
       sourceInfo: {
-        path: OMNIMIND_ASK_USER_EXTENSION_PATH,
+        path: HARNESSOS_ASK_USER_EXTENSION_PATH,
         source: "inline",
         scope: "temporary",
         origin: "top-level",
@@ -53,7 +53,7 @@ describe("bundled Ask User Extension", () => {
           {
             name: ASK_USER_TOOL_NAME,
             sourceInfo: {
-              path: OMNIMIND_ASK_USER_EXTENSION_PATH,
+              path: HARNESSOS_ASK_USER_EXTENSION_PATH,
               source: "inline",
               scope: "temporary",
               origin: "top-level",
