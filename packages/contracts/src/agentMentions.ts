@@ -207,34 +207,35 @@ const CLAUDE_AGENT_MENTION_ALIASES: Record<string, ClaudeSubagentAliasDefinition
   },
 };
 
-export const AGENT_MENTION_ALIASES_BY_ENGINE: Record<
-  EngineKind,
-  Record<string, AgentAliasDefinition>
-> = {
-  oa: {},
+const EMPTY_AGENT_MENTION_ALIASES: Readonly<Record<string, AgentAliasDefinition>> = {};
+const EMPTY_AGENT_MENTION_AUTOCOMPLETE_ALIASES: readonly string[] = [];
+
+export const AGENT_MENTION_ALIASES_BY_ENGINE = {
   codex: CODEX_AGENT_MENTION_ALIASES,
   claude: CLAUDE_AGENT_MENTION_ALIASES,
-  cursor: {},
-  antigravity: {},
-  grok: {},
-  droid: {},
   kilo: OPENCODE_AGENT_MENTION_ALIASES,
   opencode: OPENCODE_AGENT_MENTION_ALIASES,
-  pi: {},
-} as const satisfies Record<EngineKind, Record<string, AgentAliasDefinition>>;
+} as const satisfies Partial<Record<EngineKind, Record<string, AgentAliasDefinition>>>;
 
-const AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_ENGINE: Record<EngineKind, readonly string[]> = {
-  oa: [],
+const AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_ENGINE = {
   codex: ["5.5", "5.4", "mini", "5.3-codex", "spark", "5.2", "5.2-codex"],
   claude: ["explore", "review", "build", "plan"],
-  cursor: [],
-  antigravity: [],
-  grok: [],
-  droid: [],
-  kilo: [],
-  opencode: [],
-  pi: [],
-};
+} as const satisfies Partial<Record<EngineKind, readonly string[]>>;
+
+function agentMentionAliasesForEngine(
+  engine: EngineKind,
+): Readonly<Record<string, AgentAliasDefinition>> {
+  return AGENT_MENTION_ALIASES_BY_ENGINE[engine as keyof typeof AGENT_MENTION_ALIASES_BY_ENGINE] ??
+    EMPTY_AGENT_MENTION_ALIASES;
+}
+
+function agentMentionAutocompleteAliasesForEngine(engine: EngineKind): readonly string[] {
+  return (
+    AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_ENGINE[
+      engine as keyof typeof AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_ENGINE
+    ] ?? EMPTY_AGENT_MENTION_AUTOCOMPLETE_ALIASES
+  );
+}
 
 function mapAgentEntries(input: Record<string, AgentAliasDefinition>): ResolvedAgentAlias[] {
   return Object.entries(input)
@@ -248,7 +249,7 @@ function mapAgentEntries(input: Record<string, AgentAliasDefinition>): ResolvedA
  */
 export function getAgentMentionAliases(engine?: EngineKind): ResolvedAgentAlias[] {
   if (engine) {
-    return mapAgentEntries(AGENT_MENTION_ALIASES_BY_ENGINE[engine]);
+    return mapAgentEntries(agentMentionAliasesForEngine(engine));
   }
 
   return Object.values(AGENT_MENTION_ALIASES_BY_ENGINE).flatMap((definitions) =>
@@ -260,8 +261,9 @@ export function getAgentMentionAliases(engine?: EngineKind): ResolvedAgentAlias[
  * Get the preferred aliases shown in autocomplete for a engine.
  */
 export function getAgentMentionAutocompleteAliases(engine: EngineKind): ResolvedAgentAlias[] {
-  return AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_ENGINE[engine].map((alias) => {
-    const definition = AGENT_MENTION_ALIASES_BY_ENGINE[engine][alias];
+  const definitions = agentMentionAliasesForEngine(engine);
+  return agentMentionAutocompleteAliasesForEngine(engine).map((alias) => {
+    const definition = definitions[alias];
     if (!definition) {
       throw new Error(`Unknown autocomplete alias for ${engine}: ${alias}`);
     }
@@ -276,7 +278,7 @@ export function getAgentMentionAutocompleteAliases(engine: EngineKind): Resolved
 export function resolveAgentAlias(alias: string, engine?: EngineKind): AgentAliasDefinition | null {
   const normalized = alias.toLowerCase();
   if (engine) {
-    return AGENT_MENTION_ALIASES_BY_ENGINE[engine][normalized] ?? null;
+    return agentMentionAliasesForEngine(engine)[normalized] ?? null;
   }
 
   for (const definitions of Object.values(AGENT_MENTION_ALIASES_BY_ENGINE)) {
@@ -294,7 +296,7 @@ export function isValidAgentAlias(alias: string, engine?: EngineKind): boolean {
 
 export function getAgentAliasNames(engine?: EngineKind): string[] {
   if (engine) {
-    return Object.keys(AGENT_MENTION_ALIASES_BY_ENGINE[engine]);
+    return Object.keys(agentMentionAliasesForEngine(engine));
   }
 
   return Object.values(AGENT_MENTION_ALIASES_BY_ENGINE).flatMap((definitions) =>

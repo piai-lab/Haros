@@ -1063,15 +1063,13 @@ export const MODEL_OPTIONS_BY_ENGINE = {
       capabilities: cursorCapabilities({ efforts: ["high", "max"] }),
     },
   ],
-} as const satisfies Record<EngineKind, readonly ModelDefinition[]>;
+} as const satisfies Partial<Record<EngineKind, readonly ModelDefinition[]>>;
 export type ModelOptionsByEngine = typeof MODEL_OPTIONS_BY_ENGINE;
 
-type BuiltInModelSlug = (typeof MODEL_OPTIONS_BY_ENGINE)[EngineKind][number]["slug"];
+type BuiltInModelSlug = (typeof MODEL_OPTIONS_BY_ENGINE)[keyof ModelOptionsByEngine][number]["slug"];
 export type ModelSlug = BuiltInModelSlug | (string & {});
 
-export type EngineWithDefaultModel = Exclude<EngineKind, "oa" | "pi">;
-
-export const DEFAULT_MODEL_BY_ENGINE: Record<EngineWithDefaultModel, ModelSlug> = {
+export const DEFAULT_MODEL_BY_ENGINE = {
   codex: "gpt-5.5",
   claude: "claude-sonnet-5",
   cursor: "auto",
@@ -1080,12 +1078,13 @@ export const DEFAULT_MODEL_BY_ENGINE: Record<EngineWithDefaultModel, ModelSlug> 
   droid: "claude-opus-4-8",
   kilo: "kilo/kilo-auto/free",
   opencode: "openai/gpt-5",
-};
+} as const satisfies Partial<Record<EngineKind, ModelSlug>>;
+export type EngineWithDefaultModel = keyof typeof DEFAULT_MODEL_BY_ENGINE;
 
 export const DEFAULT_GIT_TEXT_GENERATION_MODEL = "gpt-5.6-luna" as const;
 export const DEFAULT_GIT_TEXT_GENERATION_REASONING_EFFORT = "high" as const;
 
-export const MODEL_SLUG_ALIASES_BY_ENGINE: Record<EngineKind, Record<string, ModelSlug>> = {
+export const MODEL_SLUG_ALIASES_BY_ENGINE = {
   oa: {},
   codex: {
     "5.5": "gpt-5.5",
@@ -1219,7 +1218,7 @@ export const MODEL_SLUG_ALIASES_BY_ENGINE: Record<EngineKind, Record<string, Mod
   kilo: {},
   opencode: {},
   pi: {},
-};
+} as const satisfies Partial<Record<EngineKind, Record<string, ModelSlug>>>;
 
 // ── Agent mention aliases ─────────────────────────────────────────────
 export {
@@ -1239,9 +1238,9 @@ export const MODEL_CAPABILITIES_INDEX = Object.fromEntries(
     engine,
     Object.fromEntries(models.map((m) => [m.slug, m.capabilities])),
   ]),
-) as unknown as Record<EngineKind, Record<string, ModelCapabilities>>;
+) as unknown as Partial<Record<EngineKind, Record<string, ModelCapabilities>>>;
 
-Object.assign(MODEL_CAPABILITIES_INDEX.grok, {
+Object.assign(MODEL_CAPABILITIES_INDEX.grok!, {
   "grok-build-0.1": GROK_BUILD_CAPABILITIES,
   "grok-build": GROK_BUILD_CAPABILITIES,
   "grok-4.5": GROK_4_5_CAPABILITIES,

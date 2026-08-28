@@ -11,6 +11,7 @@ import {
   GROK_4_5_REASONING_EFFORTS,
   GROK_4_6_REASONING_EFFORTS,
   GROK_BUILD_REASONING_EFFORTS,
+  type EngineKind,
 } from "@harnessos/contracts";
 
 import {
@@ -109,6 +110,14 @@ describe("normalizeModelSlug", () => {
 });
 
 describe("resolveModelSlug", () => {
+  it("uses empty metadata and preserves an explicit model for a future Engine", () => {
+    const futureEngine = "fixture" as EngineKind;
+    expect(getModelOptions(futureEngine)).toEqual([]);
+    expect(getDefaultModel(futureEngine)).toBeNull();
+    expect(normalizeModelSlug("vendor/model", futureEngine)).toBe("vendor/model");
+    expect(resolveModelSlug(futureEngine, "vendor/model")).toBe("vendor/model");
+  });
+
   it("returns default only when the model is missing", () => {
     expect(resolveModelSlug("codex", undefined)).toBe(DEFAULT_MODEL_BY_ENGINE.codex);
     expect(resolveModelSlug("codex", null)).toBe(DEFAULT_MODEL_BY_ENGINE.codex);

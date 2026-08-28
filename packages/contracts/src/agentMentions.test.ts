@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { EngineKind } from "./engineIdentity";
 
 import {
   getAgentMentionAliases,
@@ -7,6 +8,13 @@ import {
 } from "./agentMentions";
 
 describe("agentMentions", () => {
+  it("projects no aliases for an Engine without alias metadata", () => {
+    const futureEngine = "fixture" as EngineKind;
+    expect(getAgentMentionAliases(futureEngine)).toEqual([]);
+    expect(getAgentMentionAutocompleteAliases(futureEngine)).toEqual([]);
+    expect(resolveAgentAlias("anything", futureEngine)).toBeNull();
+  });
+
   it("shows one preferred alias per Codex model in autocomplete", () => {
     expect(getAgentMentionAutocompleteAliases("codex")).toEqual([
       {

@@ -24,19 +24,12 @@ import {
   CodexReasoningEffort,
 } from "@harnessos/contracts";
 
-const MODEL_SLUG_SET_BY_ENGINE: Record<EngineKind, ReadonlySet<ModelSlug>> = {
-  oa: new Set<ModelSlug>(),
-  claude: new Set(MODEL_OPTIONS_BY_ENGINE.claude.map((option) => option.slug)),
-  codex: new Set(MODEL_OPTIONS_BY_ENGINE.codex.map((option) => option.slug)),
-  cursor: new Set(MODEL_OPTIONS_BY_ENGINE.cursor.map((option) => option.slug)),
-  // Antigravity's built-in list is intentionally empty; its CLI supplies the live catalog.
-  antigravity: new Set<ModelSlug>(),
-  grok: new Set(MODEL_OPTIONS_BY_ENGINE.grok.map((option) => option.slug)),
-  droid: new Set(MODEL_OPTIONS_BY_ENGINE.droid.map((option) => option.slug)),
-  kilo: new Set(MODEL_OPTIONS_BY_ENGINE.kilo.map((option) => option.slug)),
-  opencode: new Set(MODEL_OPTIONS_BY_ENGINE.opencode.map((option) => option.slug)),
-  pi: new Set<ModelSlug>(),
-};
+const MODEL_SLUG_SET_BY_ENGINE = Object.fromEntries(
+  Object.entries(MODEL_OPTIONS_BY_ENGINE).map(([engine, options]) => [
+    engine,
+    new Set<ModelSlug>(options.map((option) => option.slug)),
+  ]),
+) as Partial<Record<EngineKind, ReadonlySet<ModelSlug>>>;
 
 export interface SelectableModelOption {
   slug: string;
@@ -60,11 +53,14 @@ export const EMPTY_MODEL_CAPABILITIES: ModelCapabilities = {
   contextWindowOptions: [],
 };
 export function getModelOptions(engine: EngineKind) {
-  return MODEL_OPTIONS_BY_ENGINE[engine];
+  return (
+    MODEL_OPTIONS_BY_ENGINE[engine as keyof typeof MODEL_OPTIONS_BY_ENGINE] ??
+    ([] as readonly never[])
+  );
 }
 
 function hasDefaultModel(engine: EngineKind): engine is EngineWithDefaultModel {
-  return engine !== "oa" && engine !== "pi";
+  return Object.prototype.hasOwnProperty.call(DEFAULT_MODEL_BY_ENGINE, engine);
 }
 
 export function getDefaultModel(engine: "oa" | "pi"): null;
@@ -464,7 +460,7 @@ export function resolveGrokEffortFamily(model: string): "build" | "4.5" | "4.6" 
 }
 
 function grokCapabilitiesForFamily(family: "build" | "4.5" | "4.6"): ModelCapabilities {
-  const grokCaps = MODEL_CAPABILITIES_INDEX.grok;
+  const grokCaps = MODEL_CAPABILITIES_INDEX.grok ?? {};
   if (family === "build") {
     return grokCaps["grok-build"] ?? EMPTY_MODEL_CAPABILITIES;
   }
@@ -492,7 +488,9 @@ export function normalizeModelSlug(
   }
 
   const engineScopedModel = engine === "claude" ? trimmed.replace(/\[[^\]]+\]$/u, "") : trimmed;
-  const aliases = MODEL_SLUG_ALIASES_BY_ENGINE[engine] as Record<string, ModelSlug>;
+  const aliases = (MODEL_SLUG_ALIASES_BY_ENGINE[
+    engine as keyof typeof MODEL_SLUG_ALIASES_BY_ENGINE
+  ] ?? {}) as Readonly<Record<string, ModelSlug>>;
   const aliased = Object.prototype.hasOwnProperty.call(aliases, engineScopedModel)
     ? aliases[engineScopedModel]
     : undefined;
@@ -544,7 +542,7 @@ export function resolveModelSlug(
     return DEFAULT_MODEL_BY_ENGINE[engine];
   }
 
-  return MODEL_SLUG_SET_BY_ENGINE[engine].has(normalized)
+  return MODEL_SLUG_SET_BY_ENGINE[engine]?.has(normalized)
     ? normalized
     : DEFAULT_MODEL_BY_ENGINE[engine];
 }
