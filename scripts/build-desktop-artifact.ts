@@ -101,6 +101,12 @@ const PLATFORM_CONFIG: Record<typeof BuildPlatform.Type, PlatformConfig> = {
   },
 };
 
+const PACKAGED_ARTIFACT_SUFFIX: Record<typeof BuildPlatform.Type, string> = {
+  mac: ".dmg",
+  linux: ".AppImage",
+  win: ".exe",
+};
+
 interface BuildCliInput {
   readonly platform: Option.Option<typeof BuildPlatform.Type>;
   readonly target: Option.Option<string>;
@@ -1098,15 +1104,12 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
 
   const copiedArtifacts: string[] = [];
   for (const entry of stageEntries) {
+    if (!entry.endsWith(PACKAGED_ARTIFACT_SUFFIX[options.platform])) continue;
     const from = path.join(stageDistDir, entry);
     const stat = yield* fs.stat(from).pipe(Effect.catch(() => Effect.succeed(null)));
     if (!stat || stat.type !== "File") continue;
 
-    const outputEntry =
-      options.platform === "mac" && options.arch !== "arm64" && entry === "latest-mac.yml"
-        ? `latest-mac-${options.arch}.yml`
-        : entry;
-    const to = path.join(options.outputDir, outputEntry);
+    const to = path.join(options.outputDir, entry);
     yield* fs.copyFile(from, to);
     copiedArtifacts.push(to);
   }
