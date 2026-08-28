@@ -88,7 +88,7 @@ import {
 } from "@harnessos/contracts";
 import { isGenericChatThreadTitle } from "@harnessos/shared/chatThreads";
 import { getDefaultModel } from "@harnessos/shared/model";
-import { ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
+import { ENGINE_DESCRIPTORS, ENGINE_DISPLAY_NAMES } from "@harnessos/shared/engineMetadata";
 import { resolveThreadWorkspaceCwd } from "@harnessos/shared/threadEnvironment";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useParams, useSearch } from "@tanstack/react-router";
@@ -127,7 +127,6 @@ import { derivePendingApprovals, derivePendingUserInputs } from "../session-logi
 import { useThreadPullRequests, type ThreadPullRequest } from "../hooks/useThreadPullRequests";
 import {
   engineComposerCapabilitiesQueryOptions,
-  supportsThreadImport,
 } from "../lib/engineDiscoveryReactQuery";
 import {
   resolveCurrentProjectTargetId,
@@ -283,6 +282,7 @@ import {
   buildProjectThreadTree,
   derivePinnedProjectIdsForSidebar,
   deriveSidebarProjectData,
+  deriveSidebarImportEngines,
   createSidebarThreadHoverAnchorId,
   findWorkspaceRootMatch,
   getPinnedThreadsForSidebar,
@@ -5287,7 +5287,16 @@ export default function Sidebar() {
       id: "import-thread",
       label: t("search.importThread"),
       description: t("search.importThreadDescription"),
-      keywords: ["import", "resume", "thread", "session", "codex", "claude", "cursor", "opencode"],
+      keywords: [
+        "import",
+        "resume",
+        "thread",
+        "session",
+        ...ENGINE_DESCRIPTORS.flatMap((descriptor) => [
+          descriptor.kind,
+          descriptor.displayName.toLowerCase(),
+        ]),
+      ],
       shortcutLabel: importThreadShortcutLabel,
     },
     {
@@ -6480,8 +6489,8 @@ function SidebarSearchPaletteController(props: {
   const selectAllThreads = useMemo(() => createAllThreadsSelector(), []);
   const selectSidebarDisplayThreads = useMemo(() => createSidebarDisplayThreadsSelector(), []);
   const importEngineCapabilityQueries = useQueries({
-    queries: (["codex", "claude", "cursor", "kilo", "opencode"] as const).map((engine) =>
-      engineComposerCapabilitiesQueryOptions(engine),
+    queries: ENGINE_DESCRIPTORS.map((descriptor) =>
+      engineComposerCapabilitiesQueryOptions(descriptor.kind),
     ),
   });
   const threads = useStore(selectAllThreads);
@@ -6489,9 +6498,10 @@ function SidebarSearchPaletteController(props: {
   const searchTerminalStateByThreadId = useTerminalStateStore(
     (state) => state.terminalStateByThreadId,
   );
-  const importEngines: ReadonlyArray<ImportEngineKind> = (
-    ["codex", "claude", "cursor", "kilo", "opencode"] as const
-  ).filter((engine, index) => supportsThreadImport(importEngineCapabilityQueries[index]?.data));
+  const importEngines: ReadonlyArray<ImportEngineKind> = deriveSidebarImportEngines({
+    descriptors: ENGINE_DESCRIPTORS,
+    capabilities: importEngineCapabilityQueries.map((query) => query.data),
+  });
   const searchPaletteThreads = useMemo<SidebarSearchThread[]>(() => {
     const threadById = new Map(threads.map((thread) => [thread.id, thread] as const));
     const searchProjectById = new Map(

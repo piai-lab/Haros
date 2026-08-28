@@ -94,8 +94,7 @@ export const ENGINE_DESCRIPTORS = defineEngineDescriptors([
   {
     kind: "pi",
     displayName: "Pi",
-    // Stock Pi private state is intentionally isolated. HarnessOS must not discover or read
-    // ~/.pi merely to populate a background settings panel.
+    // This independent Engine does not opt into background usage discovery.
     usage: null,
   },
 ] as const satisfies readonly EngineDescriptor[]);

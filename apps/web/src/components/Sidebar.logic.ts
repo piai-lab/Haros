@@ -51,6 +51,19 @@ export const SIDEBAR_THREAD_PREWARM_LIMIT = 10;
 export const DEBUG_FEATURE_FLAGS_MENU_STORAGE_KEY = "harnessos:show-debug-feature-flags-menu";
 export type SidebarNewThreadEnvMode = "local" | "worktree";
 export type SidebarView = "agent" | "chat" | "studio";
+
+export function deriveSidebarImportEngines<Engine extends string>(input: {
+  readonly descriptors: readonly { readonly kind: Engine }[];
+  readonly capabilities: readonly (
+    | { readonly supportsThreadImport?: boolean | undefined }
+    | undefined
+  )[];
+}): Engine[] {
+  return input.descriptors.flatMap((descriptor, index) =>
+    input.capabilities[index]?.supportsThreadImport === true ? [descriptor.kind] : [],
+  );
+}
+
 export type SidebarActionBadge = {
   readonly text: string;
   readonly accessibleLabel: string;

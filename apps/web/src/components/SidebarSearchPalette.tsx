@@ -96,10 +96,7 @@ interface SidebarSearchPaletteProps {
   onImportThread: (engine: ImportEngineKind, externalId: string) => Promise<void>;
 }
 
-export type ImportEngineKind = Extract<
-  EngineKind,
-  "codex" | "claude" | "cursor" | "kilo" | "opencode"
->;
+export type ImportEngineKind = EngineKind;
 
 function actionHandler(
   actionId: string,

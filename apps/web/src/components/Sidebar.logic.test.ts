@@ -6,6 +6,7 @@ import {
   derivePinnedProjectIdsForSidebar,
   derivePinnedThreadIdsForSidebar,
   deriveSidebarProjectData,
+  deriveSidebarImportEngines,
   describeAddProjectError,
   extractDuplicateProjectCreateProjectId,
   findDeepestWorkspaceRootMatch,
@@ -65,6 +66,21 @@ import {
   type SidebarThreadSummary,
   type Thread,
 } from "../types";
+
+describe("deriveSidebarImportEngines", () => {
+  it("projects a newly described Engine only when its runtime capability allows import", () => {
+    expect(
+      deriveSidebarImportEngines({
+        descriptors: [{ kind: "existing" }, { kind: "fixture" }, { kind: "unsupported" }],
+        capabilities: [
+          { supportsThreadImport: true },
+          { supportsThreadImport: true },
+          { supportsThreadImport: false },
+        ],
+      }),
+    ).toEqual(["existing", "fixture"]);
+  });
+});
 
 function makeLatestTurn(overrides?: {
   completedAt?: string | null;
