@@ -11,10 +11,15 @@ export function ShortcutKbd(props: {
 
   return (
     <KbdGroup className={cn("gap-1", props.groupClassName)}>
-      {parts.map((part) => (
-        <Kbd key={part} className={props.className}>
-          {part}
-        </Kbd>
+      {parts.map((part, index) => (
+        <span key={`${part}-${index}`} className="inline-flex items-center gap-1">
+          {index > 0 && props.shortcutLabel.includes("+") ? (
+            <span aria-hidden className="text-muted-foreground/60">
+              +
+            </span>
+          ) : null}
+          <Kbd className={props.className}>{part}</Kbd>
+        </span>
       ))}
     </KbdGroup>
   );

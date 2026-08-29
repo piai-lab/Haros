@@ -206,7 +206,8 @@ function ResolvableSetupTimeline({
 
 const setupRow = () =>
   document.querySelector<HTMLElement>('[data-timeline-row-kind="worktree-setup"]');
-const workingRow = () => document.querySelector<HTMLElement>('[data-timeline-row-kind="working"]');
+const workingRow = () =>
+  document.querySelector<HTMLElement>('[data-timeline-row-kind="turn-process"]');
 
 describe("MessagesTimeline worktree setup card", () => {
   afterEach(() => {

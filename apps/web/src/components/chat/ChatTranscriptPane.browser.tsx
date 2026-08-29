@@ -377,7 +377,7 @@ describe("ChatTranscriptPane", () => {
       selection.addRange(range);
 
       expect(selection.toString()).toContain("docs/architecture.md");
-      expect(selection.toString()).toContain("Campaign");
+      expect(selection.toString()).toContain("Project note");
       expect(selection.toString()).toContain("Prompt 设计稿");
       const fileChip = transcript.querySelector<HTMLElement>('a[title*="docs/architecture.md"]')!;
       const selectedContextMenuEvent = new MouseEvent("contextmenu", {
@@ -430,7 +430,9 @@ describe("ChatTranscriptPane", () => {
         }),
       );
       await page.getByRole("button", { name: "Add to Chat" }).click();
-      expect(addedSelections).toEqual(["参考： docs/architecture.md · Campaign · Prompt 设计稿"]);
+      expect(addedSelections).toEqual([
+        "参考： docs/architecture.md · Project note · Prompt 设计稿",
+      ]);
     } finally {
       if (originalNativeApi) {
         window.nativeApi = originalNativeApi;
@@ -509,7 +511,7 @@ describe("ChatTranscriptPane", () => {
 
       const campaignTextNode = Array.from(
         transcript.querySelectorAll<HTMLElement>("[data-transcript-source-start]"),
-      ).find((element) => element.textContent === "Campaign")?.firstChild;
+      ).find((element) => element.textContent === "Project note")?.firstChild;
       expect(campaignTextNode).toBeInstanceOf(Text);
       const touchRange = document.createRange();
       touchRange.selectNodeContents(campaignTextNode!);
@@ -518,7 +520,7 @@ describe("ChatTranscriptPane", () => {
       transcript.dispatchEvent(new Event("touchend", { bubbles: true }));
       await expect.element(page.getByRole("button", { name: "Add to Chat" })).toBeVisible();
       await page.getByRole("button", { name: "Add to Chat" }).click();
-      expect(addedSelections).toEqual(["Prompt 设计稿", "Campaign"]);
+      expect(addedSelections).toEqual(["Prompt 设计稿", "Project note"]);
     } finally {
       window.getSelection()?.removeAllRanges();
       await screen.unmount();

@@ -48,7 +48,8 @@ function humanizeRateLimitLabel(label: string): string {
     .split(/[_\s-]+/)
     .filter(Boolean)
     .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`)
-    .join(" ");
+    .join(" ")
+    .replace(/\bProvider\b/g, "Engine");
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

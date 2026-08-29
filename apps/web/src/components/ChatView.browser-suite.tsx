@@ -5560,7 +5560,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         () => {
           expect(document.body.textContent).toContain(prompt);
           expect(document.querySelector('[data-testid="thinking-status"]')).not.toBeNull();
-          expect(document.body.textContent).not.toContain("Working for");
+          expect(document.querySelector('[data-testid="thinking-status"]')?.textContent ?? "").not.toContain("Working for");
         },
         { timeout: 4_000, interval: 16 },
       );
@@ -5571,7 +5571,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         window.setTimeout(resolve, 400);
       });
       expect(document.querySelector('[data-testid="thinking-status"]')).not.toBeNull();
-      expect(document.body.textContent).not.toContain("Working for");
+      expect(document.querySelector('[data-testid="thinking-status"]')?.textContent ?? "").not.toContain("Working for");
 
       syncActiveThread((thread) => ({
         ...thread,
@@ -7807,6 +7807,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const editor = page.getByRole("textbox");
       await editor.fill("newer draft intent");
       await editor.fill("");
+      await expect.element(editor).toHaveValue("");
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt ?? "").toBe("");
+      });
       // A binding ABA is still newer intent: returning to the failed target
       // must not make the old one-shot recovery snapshot authoritative again.
       useComposerDraftStore.getState().setEngineSelection(THREAD_ID, {

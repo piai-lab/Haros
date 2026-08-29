@@ -1453,7 +1453,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
             toastManager.update(toastId, {
               type: "error",
               title: t("settings.couldNotUpdateEngine", {
-                engine: engine,
+                engine: engineLabel,
               }),
               description: manualCommand
                 ? t("settings.manualUpdateInstruction", { failure: failureMessage })
@@ -1470,7 +1470,7 @@ export function EnginesSettingsPanel({ active, resetEpoch }: EnginesSettingsPane
           if (progressToastDismissed) return;
           toastManager.update(toastId, {
             type: "success",
-            title: t("updater.engineUpdated", { engine: engine }),
+            title: t("updater.engineUpdated", { engine: engineLabel }),
             description: t("updater.refreshedDescription"),
             data: createEngineUpdateToastData({
               stage: "success",

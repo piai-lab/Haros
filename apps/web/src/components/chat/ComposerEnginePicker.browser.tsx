@@ -241,13 +241,13 @@ describe("ComposerEnginePicker", () => {
     }
   });
 
-  it("names HarnessOS explicitly in the trigger and tooltip", async () => {
+  it("names OA explicitly in the trigger and tooltip", async () => {
     const mounted = await mountPicker({ engine: "oa" });
     try {
-      const trigger = page.getByRole("button", { name: "Change engine. Current: HarnessOS" });
+      const trigger = page.getByRole("button", { name: "Change engine. Current: OA" });
       await expect.element(trigger).toBeVisible();
       await userEvent.hover(trigger);
-      await expect.element(page.getByText("Engine · HarnessOS")).toBeVisible();
+      await expect.element(page.getByText("Engine · OA")).toBeVisible();
     } finally {
       await mounted.cleanup();
     }
