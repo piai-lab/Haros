@@ -2,13 +2,17 @@
   "schemaVersion": 1,
   "entries": [
     {
-      "packageIds": ["@napi-rs/canvas-darwin-arm64@0.1.100"],
+      "packageIds": [
+        "@napi-rs/canvas-darwin-arm64@0.1.100",
+        "@napi-rs/canvas-win32-x64-msvc@0.1.100"
+      ],
       "license": "MIT",
       "kind": "exact-upstream",
       "assetPath": "assets/licenses/napi-rs-canvas-MIT.txt",
       "sha256": "da8423778f50a960eeaf44ef1c4742e9d883f4d7235259603d676a8dc7f51936",
       "manifestSha256ByPackageId": {
-        "@napi-rs/canvas-darwin-arm64@0.1.100": "612e133d91d7367657657ff68f4bd011e6ce8b167093442e0fe2b5733da74814"
+        "@napi-rs/canvas-darwin-arm64@0.1.100": "612e133d91d7367657657ff68f4bd011e6ce8b167093442e0fe2b5733da74814",
+        "@napi-rs/canvas-win32-x64-msvc@0.1.100": "59e9517011b1bc19b7a001e04d5523437f2d9e4167c08c1f1df8eaf971229185"
       },
       "revision": "db337893b9b53483050ca7b24c6d306e4da06741",
       "sourcePath": "LICENSE",
