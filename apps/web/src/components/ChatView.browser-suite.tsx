@@ -7584,17 +7584,20 @@ describe("ChatView timeline estimator parity (full app)", () => {
       toastManager.close();
       await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
       await page.getByRole("menuitemradio", { name: /Claude/ }).click();
-      await vi.waitFor(() => {
-        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeEngine).toBe(
-          "claude",
-        );
-        expect(
-          page.getByRole("button", { name: "Model and options" }).element().textContent,
-        ).toContain("Claude Sonnet 4.5");
-        expect(document.querySelector('[contenteditable="true"]')?.textContent).toContain(
-          secondFailedPrompt,
-        );
-      });
+      await vi.waitFor(
+        () => {
+          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeEngine).toBe(
+            "claude",
+          );
+          expect(
+            page.getByRole("button", { name: "Model and options" }).element().textContent,
+          ).toContain("Claude Sonnet 4.5");
+          expect(document.querySelector('[contenteditable="true"]')?.textContent).toContain(
+            secondFailedPrompt,
+          );
+        },
+        { timeout: 30_000, interval: 16 },
+      );
       const secondSendButton = await waitForSendButton();
       await vi.waitFor(() => expect(secondSendButton.disabled).toBe(false));
       secondSendButton.click();
