@@ -676,7 +676,7 @@ function createBuildConfig(
   const buildConfig: Record<string, unknown> = {
     appId: HARNESSOS_PRODUCTION_BUNDLE_ID,
     productName,
-    artifactName: "HarnessOS-${version}-${arch}.${ext}",
+    artifactName: "Haros-${version}-${arch}.${ext}",
     directories: {
       buildResources: "apps/desktop/resources",
     },
@@ -980,8 +980,8 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
     harnessosCommitHash: commitHash,
     harnessosLockfileSha256: resolvedLockfileSha256,
     private: true,
-    description: "HarnessOS desktop build",
-    author: "HarnessOS",
+    description: "Haros desktop build",
+    author: "Haros",
     main: "apps/desktop/dist-electron/main.js",
     build: buildConfig,
     dependencies: {
