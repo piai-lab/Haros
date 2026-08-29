@@ -4,7 +4,7 @@
 
 import { extractFile, listPackage } from "@electron/asar";
 import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 
 import {
   DEPENDENCY_INVENTORY_FILE,
@@ -37,7 +37,8 @@ function readArchiveFile(archivePath: string, path: string): Buffer {
   // `listPackage` returns entries without one after normalization. Try both
   // canonical forms so legal verification is identical on every runner.
   let firstError: unknown;
-  for (const candidate of [normalized, `/${normalized}`]) {
+  const native = normalized.replaceAll("/", sep);
+  for (const candidate of [normalized, `/${normalized}`, native, `${sep}${native}`]) {
     try {
       return extractFile(archivePath, candidate);
     } catch (error) {
