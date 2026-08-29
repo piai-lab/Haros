@@ -1892,7 +1892,7 @@ function initializeDesktopStatusItem(): void {
       image,
       process.platform === "darwin" ? DESKTOP_STATUS_ITEM_GUID : undefined,
     );
-    nextStatusItem.setToolTip("HarnessOS");
+    nextStatusItem.setToolTip("Haros");
     if (process.platform === "darwin") {
       nextStatusItem.setIgnoreDoubleClickEvents(true);
     }
