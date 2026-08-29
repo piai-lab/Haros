@@ -29,18 +29,18 @@ describe("windowsShellIco", () => {
     expect(ico.readUInt32LE(22)).toBe(40);
   });
 
-  it("recognizes HarnessOS's packaged Windows ICO as shell-ready BMP artwork", () => {
+  it("recognizes Haros's packaged Windows ICO source artwork", () => {
     const ico = FS.readFileSync(appIconWindowsIco);
     const pngs = extractIcoPngImages(ico);
     expect(inspectIcoEntries(ico)).toEqual([
-      { width: 256, height: 256, encoding: "bmp" },
-      { width: 128, height: 128, encoding: "bmp" },
-      { width: 64, height: 64, encoding: "bmp" },
-      { width: 48, height: 48, encoding: "bmp" },
-      { width: 32, height: 32, encoding: "bmp" },
-      { width: 16, height: 16, encoding: "bmp" },
+      { width: 16, height: 16, encoding: "png" },
+      { width: 32, height: 32, encoding: "png" },
+      { width: 48, height: 48, encoding: "png" },
+      { width: 64, height: 64, encoding: "png" },
+      { width: 128, height: 128, encoding: "png" },
+      { width: 256, height: 256, encoding: "png" },
     ]);
-    expect(pngs).toEqual([]);
+    expect(pngs.map((image) => image.width)).toEqual([16, 32, 48, 64, 128, 256]);
   });
 
   it("rebuilds a PNG ICO as BMP sizes used by the Win11 taskbar", () => {
