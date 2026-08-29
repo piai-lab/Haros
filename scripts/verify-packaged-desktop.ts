@@ -436,10 +436,10 @@ function prepareWindowsLaunch(assetsDirectory: string, extractionRoot: string): 
   }
   runCommand("7z", ["x", "-y", `-o${applicationRoot}`, applicationArchives[0]!]);
   const executables = findFiles(applicationRoot, (candidate) =>
-    /[/\\]HarnessOS\.exe$/i.test(candidate),
+    /[/\\]Haros\.exe$/i.test(candidate),
   );
   if (executables.length !== 1) {
-    throw new Error(`Expected one extracted HarnessOS.exe, found ${executables.length}.`);
+    throw new Error(`Expected one extracted Haros.exe, found ${executables.length}.`);
   }
   return {
     command: executables[0]!,
