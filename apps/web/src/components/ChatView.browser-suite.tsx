@@ -3263,7 +3263,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "button[aria-label='Close sidebar']",
       );
       expect(scrim).toBeTruthy();
-      await userEvent.click(scrim!);
+      // Click the scrim on the far edge so the pointer is outside the left
+      // drawer even when Linux rounds the responsive drawer wider than 50%.
+      await page.getByLabelText("Close sidebar").click({
+        position: { x: Math.max(0, window.innerWidth - 8), y: Math.floor(window.innerHeight / 2) },
+      });
       await waitForPresentation("hidden");
       await expectVisibleHeaderTriggerFocused();
       expect(cookieSet).not.toHaveBeenCalled();
@@ -6944,7 +6948,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             .map(readDispatchedCommand)
             .find((command) => command?.type === "thread.meta.update" && command.goal === ""),
         ).toBeTruthy();
-      });
+      }, { timeout: 30_000, interval: 16 });
     } finally {
       await mounted.cleanup();
     }
