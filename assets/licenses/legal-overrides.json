@@ -165,7 +165,8 @@
     {
       "packageIds": [
         "@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.3",
-        "@msgpackr-extract/msgpackr-extract-linux-x64@3.0.3"
+        "@msgpackr-extract/msgpackr-extract-linux-x64@3.0.3",
+        "@msgpackr-extract/msgpackr-extract-win32-x64@3.0.3"
       ],
       "license": "MIT",
       "kind": "exact-upstream",
@@ -173,7 +174,8 @@
       "sha256": "2b41a50a006ffc7770db2450283956e4cb1aae567c193aeb1e65e8aef6c9f1f6",
       "manifestSha256ByPackageId": {
         "@msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.3": "2e29113880e01d2bbdd5b73acfe868c4c1e8e33895141dbf30ae746cc00b2118",
-        "@msgpackr-extract/msgpackr-extract-linux-x64@3.0.3": "8705b75402556a9449bbcb9c95cf344e59649ca69d2780a06ab31f679269ca0f"
+        "@msgpackr-extract/msgpackr-extract-linux-x64@3.0.3": "8705b75402556a9449bbcb9c95cf344e59649ca69d2780a06ab31f679269ca0f",
+        "@msgpackr-extract/msgpackr-extract-win32-x64@3.0.3": "6d0ac08c66b9ba9f428bf78ddc1f08eb1a5bb477db35a102b16af19776d40127"
       },
       "revision": "db8f5b97e7aaab0bcad95f10582915d417153689",
       "sourcePath": "LICENSE",
