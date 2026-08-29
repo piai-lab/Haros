@@ -2405,8 +2405,15 @@ async function mountChatView(options: {
     // Existing-thread journeys begin with a previously known exact catalog,
     // without authorizing any mount-time discovery. Mark it stale so a real
     // engine intent still refreshes through the production query owner.
+    // Include the effective binary path in the key: production discovery uses
+    // the configured executable identity, and omitting it would seed a
+    // different query that leaves a cold remount vulnerable to a transient
+    // "catalog unavailable" state.
     router.options.context.queryClient.setQueryData(
-      engineModelsQueryOptions({ engine }).queryKey,
+      engineModelsQueryOptions({
+        engine,
+        binaryPath: fixture.serverSettings.engines[engine].binaryPath,
+      }).queryKey,
       knownCatalog,
       { updatedAt: 0 },
     );
