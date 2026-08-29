@@ -1,0 +1,27 @@
+Claim: Chat sends render the admitted model identity on the first visible response frame.
+Observed: 2026-08-29 (Asia/Shanghai)
+Revision: f31e9487 (fix(chat): render admitted model identity on first frame)
+
+Focused proof:
+- `bunx vitest run apps/web/src/storeEventReducer.test.ts apps/web/src/components/chat/MessagesTimeline.test.tsx`
+  — 2 files passed, 114 tests passed.
+- `(cd apps/web && bun run test:browser:stable -- src/components/chat/MessagesTimeline.turnProcess.browser.tsx)`
+  — 1 file passed, 8 tests passed.
+- `bunx oxfmt --check apps/web/src/components/ChatView.tsx apps/web/src/storeEventReducer.ts apps/web/src/storeEventReducer.test.ts`
+  — all files formatted.
+- `bunx oxlint --report-unused-disable-directives apps/web/src/components/ChatView.tsx apps/web/src/storeEventReducer.ts apps/web/src/storeEventReducer.test.ts`
+  — 0 errors (existing warnings only).
+
+Behavior covered:
+- The local optimistic message carries the exact admitted Engine/model and presentation identity,
+  so the timeline can render it before any server round-trip.
+- The event reducer retains the server-provided presentation identity when its model matches the
+  admitted selection; mismatched identities remain ignored.
+- Server provenance wins once present, while a missing optional identity can be filled from the
+  same local admission without a visible identity swap.
+
+Known unrelated baseline failures:
+- The full unit gate still has the pre-existing `apps/desktop/src/windowsShellIco.test.ts` failure
+  because the committed Windows ICO is PNG-encoded while that test expects BMP entries.
+- `apps/web` typecheck still reports the pre-existing always-nullish expression in
+  `apps/web/src/lib/threadBootstrap.ts:347`.
