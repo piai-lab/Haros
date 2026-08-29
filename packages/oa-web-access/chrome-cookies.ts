@@ -484,9 +484,12 @@ function readLinuxPassword(secretToolApp: string | undefined): Promise<{ passwor
 	if (!secretToolApp) return Promise.resolve({ password: "peanuts", cacheable: true });
 	return new Promise((resolve) => {
 		execFile("secret-tool", ["lookup", "application", secretToolApp], { timeout: 5000 }, (err, stdout) => {
-			if (err) { resolve({ password: "peanuts", cacheable: false }); return; }
+			// A failed lookup is a failed credential read, not permission to try
+			// the legacy fallback. Keep it non-cacheable so a later call can retry
+			// after the keyring becomes available.
+			if (err) { resolve({ password: "", cacheable: false }); return; }
 			const password = stdout.trim();
-			resolve(password ? { password, cacheable: true } : { password: "peanuts", cacheable: false });
+			resolve(password ? { password, cacheable: true } : { password: "", cacheable: false });
 		});
 	});
 }

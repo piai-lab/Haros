@@ -341,6 +341,10 @@ describe("Keybindings update toast", () => {
       quiet: true,
       serviceWorker: { url: "/mockServiceWorker.js" },
     });
+    // Prewarm the route's largest lazy bundle before the first test starts.
+    // This keeps the assertion timeout about the keybinding stream, rather
+    // than charging a cold Vite transform to the first browser test.
+    await import("./ChatView");
   });
 
   afterAll(async () => {

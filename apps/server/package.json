@@ -20,7 +20,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --maxWorkers=4",
     "test:unit": "vitest run --project unit --maxWorkers=4",
-    "test:integration": "vitest run --project integration --project git-integration --maxWorkers=4",
+    "test:integration": "vitest run --project integration --project git-integration --maxWorkers=1 --fileParallelism=false",
     "test:related": "vitest related --maxWorkers=4"
   },
   "dependencies": {
