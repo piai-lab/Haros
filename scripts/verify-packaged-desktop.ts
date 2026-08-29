@@ -834,13 +834,13 @@ async function closePackagedStartupSession(input: {
   readonly runtimeState: PackagedRuntimeProcessTree;
 }): Promise<void> {
   if (input.platform === "win") {
-    const result = spawnSync("taskkill", ["/pid", String(input.runtimeState.mainPid), "/t"], {
+    // The packaged main process may finish its own close handler before
+    // taskkill observes the tree. In that race taskkill returns non-zero even
+    // though shutdown succeeded; the process-tree wait below is authoritative.
+    spawnSync("taskkill", ["/pid", String(input.runtimeState.mainPid), "/t"], {
       stdio: "ignore",
       windowsHide: true,
     });
-    if (result.status !== 0) {
-      throw new Error("Packaged Main rejected the native graceful close request.");
-    }
   } else {
     process.kill(input.runtimeState.mainPid, "SIGTERM");
   }
