@@ -305,12 +305,16 @@ async function mountApp(): Promise<{ cleanup: () => Promise<void> }> {
 
   const screen = await render(<RouterProvider router={router} />, { container: host });
   try {
+    // The first full-app mount in a fresh browser process has to transform the
+    // lazily loaded ChatView bundle before React can subscribe. Subsequent
+    // tests reuse that Vite graph; this bound covers cold compilation, not a
+    // runtime reconnect retry.
     await vi.waitFor(
       () => {
         expect(serverConfigStreamRequestId).toBeTruthy();
         expect(serverConfigStreamClient).toBeTruthy();
       },
-      { timeout: 20_000, interval: 16 },
+      { timeout: 60_000, interval: 16 },
     );
   } catch (cause) {
     await screen.unmount();
@@ -348,6 +352,8 @@ describe("Keybindings update toast", () => {
     await resetWsNativeApiForTest();
     localStorage.clear();
     document.body.innerHTML = "";
+    delete window.nativeApi;
+    delete window.desktopBridge;
     serverConfigStreamClient = null;
     serverConfigStreamRequestId = null;
     useComposerDraftStore.setState({
@@ -376,6 +382,8 @@ describe("Keybindings update toast", () => {
 
   afterEach(() => {
     document.body.innerHTML = "";
+    delete window.nativeApi;
+    delete window.desktopBridge;
   });
 
   it("does not show success toasts for passive keybinding reloads", async () => {

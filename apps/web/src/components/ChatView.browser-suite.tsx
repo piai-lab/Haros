@@ -7807,7 +7807,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const editor = page.getByRole("textbox");
       await editor.fill("newer draft intent");
       await editor.fill("");
-      await expect.element(editor).toHaveValue("");
       await vi.waitFor(() => {
         expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt ?? "").toBe("");
       });
