@@ -548,6 +548,12 @@ describe("store event reducer", () => {
           engine: "oa",
           model: "deepseek/deepseek-v4-pro",
         },
+        modelPresentationIdentity: {
+          model: "deepseek/deepseek-v4-pro",
+          displayName: "DeepSeek V4 Pro",
+          serviceId: "deepseek",
+          source: "runtime-catalog",
+        },
         runtimeMode: DEFAULT_RUNTIME_MODE,
         interactionMode: DEFAULT_INTERACTION_MODE,
         dispatchMode: "queue",
@@ -563,6 +569,12 @@ describe("store event reducer", () => {
           engine: "oa",
           model: "deepseek/deepseek-v4-pro",
         },
+        modelPresentationIdentity: {
+          model: "deepseek/deepseek-v4-pro",
+          displayName: "DeepSeek V4 Pro",
+          serviceId: "deepseek",
+          source: "runtime-catalog",
+        },
         requestedAt: "2026-08-27T02:21:00.000Z",
       },
     ]);
@@ -571,6 +583,12 @@ describe("store event reducer", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         messageId,
         engineSelection: { engine: "codex", model: "gpt-5.6" },
+        modelPresentationIdentity: {
+          model: "gpt-5.6",
+          displayName: "GPT-5.6",
+          serviceId: "openai",
+          source: "builtin-catalog",
+        },
         runtimeMode: DEFAULT_RUNTIME_MODE,
         interactionMode: DEFAULT_INTERACTION_MODE,
         dispatchMode: "queue",
@@ -582,6 +600,12 @@ describe("store event reducer", () => {
         pendingMessageId: messageId,
         turnId: null,
         engineSelection: { engine: "codex", model: "gpt-5.6" },
+        modelPresentationIdentity: {
+          model: "gpt-5.6",
+          displayName: "GPT-5.6",
+          serviceId: "openai",
+          source: "builtin-catalog",
+        },
         requestedAt: "2026-08-27T02:22:00.000Z",
       },
     ]);

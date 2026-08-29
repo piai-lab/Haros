@@ -30,6 +30,7 @@ import {
   type ThreadMarker,
   type ThreadMarkerColor,
   type ThreadMarkerStyle,
+  type OrchestrationTurnProvenance,
   type TurnId,
   type EditorId,
   type KeybindingCommand,
@@ -284,6 +285,11 @@ import {
   type Thread,
   type WorktreeSetupResolutionAction,
 } from "../types";
+
+type OptimisticChatMessage = ChatMessage & {
+  /** The admitted model is known locally before the first server event round-trip. */
+  readonly optimisticTurnProvenance?: OrchestrationTurnProvenance;
+};
 import { useTheme } from "../hooks/useTheme";
 import { useThreadWorkspaceHandoff } from "../hooks/useThreadWorkspaceHandoff";
 import {
@@ -1573,7 +1579,7 @@ export default function ChatView({
   const promptRef = useRef(prompt);
   const [isDragOverComposer, setIsDragOverComposer] = useState(false);
   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
-  const [optimisticUserMessages, setOptimisticUserMessages] = useState<ChatMessage[]>([]);
+  const [optimisticUserMessages, setOptimisticUserMessages] = useState<OptimisticChatMessage[]>([]);
   const optimisticUserMessagesRef = useRef(optimisticUserMessages);
   const pendingDirectTurnRecoveryMaterializationRef = useRef<string | null>(null);
   // A fork can be accepted before shell refresh or navigation fails. Keep the
@@ -3475,6 +3481,35 @@ export default function ChatView({
       ),
     [activeThread?.proposedPlans, agentActivityTimelineState.timelineWorkEntries, timelineMessages],
   );
+  const timelineTurnProvenance = useMemo(() => {
+    const byPendingMessageId = new Map(
+      (activeThread?.turnProvenance ?? []).map((entry) => [entry.pendingMessageId, entry]),
+    );
+    for (const message of optimisticUserMessages) {
+      const optimistic = message.optimisticTurnProvenance;
+      if (!optimistic) continue;
+      const existing = byPendingMessageId.get(optimistic.pendingMessageId);
+      if (!existing) {
+        byPendingMessageId.set(optimistic.pendingMessageId, optimistic);
+        continue;
+      }
+      // Keep the authoritative server entry, but fill its presentation identity
+      // from the local admission if the first event omitted that optional field.
+      if (
+        existing.modelPresentationIdentity === undefined &&
+        optimistic.modelPresentationIdentity !== undefined &&
+        existing.engineSelection.model === optimistic.engineSelection.model
+      ) {
+        byPendingMessageId.set(existing.pendingMessageId, {
+          ...existing,
+          modelPresentationIdentity: optimistic.modelPresentationIdentity,
+        });
+      }
+    }
+    return [...byPendingMessageId.values()].toSorted((left, right) =>
+      left.requestedAt.localeCompare(right.requestedAt),
+    );
+  }, [activeThread?.turnProvenance, optimisticUserMessages]);
   const enteringUserMessageIds = useMemo<ReadonlySet<MessageId>>(
     () => new Set(optimisticUserMessages.map((message) => message.id)),
     [optimisticUserMessages],
@@ -8486,6 +8521,15 @@ export default function ChatView({
         ...(mentionedPluginMentionsForSend.length > 0
           ? { mentions: mentionedPluginMentionsForSend }
           : {}),
+        optimisticTurnProvenance: {
+          pendingMessageId: messageIdForSend,
+          turnId: null,
+          engineSelection: selectedEngineSelectionForSend,
+          ...(modelPresentationIdentityForSend
+            ? { modelPresentationIdentity: modelPresentationIdentityForSend }
+            : {}),
+          requestedAt: messageCreatedAt,
+        },
         createdAt: messageCreatedAt,
         streaming: false,
         source: "native",
@@ -12563,7 +12607,7 @@ export default function ChatView({
                     forkSource={forkSource}
                     isTemporaryThread={isThreadTemporary}
                     timelineEntries={timelineEntries}
-                    turnProvenance={activeThread.turnProvenance ?? []}
+                    turnProvenance={timelineTurnProvenance}
                     turnDiffSummaryByAssistantMessageId={turnDiffSummaryByAssistantMessageId}
                     onOpenTurnDiff={onOpenTurnDiff}
                     onOpenThread={onNavigateToThread}

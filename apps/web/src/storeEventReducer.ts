@@ -1369,6 +1369,9 @@ function applyOrchestrationEvent(
                   pendingMessageId: event.payload.messageId,
                   turnId: null,
                   engineSelection,
+                  ...(event.payload.modelPresentationIdentity?.model === engineSelection.model
+                    ? { modelPresentationIdentity: event.payload.modelPresentationIdentity }
+                    : {}),
                   requestedAt: event.payload.createdAt,
                 });
           if (
