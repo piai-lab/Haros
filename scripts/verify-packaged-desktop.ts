@@ -844,9 +844,19 @@ async function closePackagedStartupSession(input: {
   } else {
     process.kill(input.runtimeState.mainPid, "SIGTERM");
   }
-  if (!(await waitForProcessesExit(input.runtimeState.processIds, 10_000))) {
-    throw new Error("Packaged process tree did not finish graceful shutdown within 10 seconds.");
+  if (await waitForProcessesExit(input.runtimeState.processIds, 10_000)) return;
+
+  if (input.platform === "win") {
+    // Windows can keep a renderer/helper alive after the main process accepts
+    // the close request. Force-kill only after the bounded graceful window so
+    // CI never leaks a packaged process into the next proof.
+    spawnSync("taskkill", ["/pid", String(input.runtimeState.mainPid), "/t", "/f"], {
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    if (await waitForProcessesExit(input.runtimeState.processIds, 5_000)) return;
   }
+  throw new Error("Packaged process tree did not finish graceful shutdown within 10 seconds.");
 }
 
 const JOURNEY_THREAD_TITLE_PREFIX = "Packaged proof task";
