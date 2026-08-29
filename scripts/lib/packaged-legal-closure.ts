@@ -31,7 +31,20 @@ function normalizedArchivePath(path: string): string {
 }
 
 function readArchiveFile(archivePath: string, path: string): Buffer {
-  return extractFile(archivePath, normalizedArchivePath(path));
+  const normalized = normalizedArchivePath(path);
+  // `@electron/asar` resolves archive paths through the host platform's
+  // `path` implementation. Windows can require the root marker even though
+  // `listPackage` returns entries without one after normalization. Try both
+  // canonical forms so legal verification is identical on every runner.
+  let firstError: unknown;
+  for (const candidate of [normalized, `/${normalized}`]) {
+    try {
+      return extractFile(archivePath, candidate);
+    } catch (error) {
+      firstError ??= error;
+    }
+  }
+  throw firstError;
 }
 
 export function packageIdsInArchive(archivePath: string): ReadonlySet<string> {
