@@ -6,9 +6,9 @@
 - Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`, Git worktree for HarnessOS.
 - Repository identity: `github.com/piai-lab/HarnessOS`
 - Campaign origin revision: `f310080bfa1df72eade006d3d74143892c05f9b4`.
-- Last reconciled revision: `79e5b9d9bd64a2bc854a8b73a3e90f2cdc891787`.
-- Worktree state: dirty only under `missions/` while this canonical Campaign reconciliation is being recorded; no product path is dirty.
-- Last reconciled at: `2026-08-28T16:28:17+08:00`.
+- Last reconciled revision: `f6378671`.
+- Worktree state: clean.
+- Last reconciled at: `2026-08-29T09:18:00+08:00`.
 - Active branch/worktree: `codex/harnessos-foundation` at `/Users/liuzaoqu/Desktop/Develop/independent/HarnessOS`.
 - Applicable instructions: user-locked HarnessOS implementation plan; root `AGENTS.md`; public architecture in `docs/architecture.md`.
 - Superseded state sources: no competing state files remain; this Campaign directory is temporary and must be deleted before public push.
