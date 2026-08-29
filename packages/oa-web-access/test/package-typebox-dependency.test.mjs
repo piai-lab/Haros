@@ -23,8 +23,8 @@ test("packed installs include typebox without peer dependencies", async () => {
     const [{ filename, files }] = JSON.parse(packOutput);
     const packedFiles = files.map((file) => file.path);
     assert.ok(packedFiles.includes("index.ts"));
-    assert.ok(packedFiles.includes("CHANGELOG.md"));
-    assert.ok(packedFiles.includes("SECURITY.md"));
+	assert.ok(!packedFiles.includes("CHANGELOG.md"));
+	assert.ok(!packedFiles.includes("SECURITY.md"));
     assert.ok(!packedFiles.some((path) => path.startsWith("skills/")));
     assert.ok(!packedFiles.some((path) => path.startsWith("test/")));
     const tarball = join(tempDir, filename);

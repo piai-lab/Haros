@@ -41,7 +41,7 @@ function availability() {
 
 function page(presentation) {
   return generateCuratorPage(
-    ["HarnessOS Agent web access"],
+    ["Haros Agent web access"],
     "opaque-test-token",
     20,
     availability(),
@@ -81,13 +81,13 @@ const warmLightThemeSnapshot = {
   warning: "rgb(180, 105, 16)",
 };
 
-test("Curator freezes HarnessOS locale/theme and ships executable self-contained bilingual UI", () => {
+test("Curator freezes Haros locale/theme and ships executable self-contained bilingual UI", () => {
   const english = page({ locale: "en", theme: "dark" });
   const chinese = page({ locale: "zh-CN", theme: "light" });
 
   assert.match(english, /<html lang="en" data-theme="dark" data-surface-mode="review">/);
   assert.match(chinese, /<html lang="zh-CN" data-theme="light" data-surface-mode="review">/);
-  assert.match(chinese, /HarnessOS 网络访问/);
+  assert.match(chinese, /Haros 网络访问/);
   assert.match(chinese, /直接发送所选结果，不生成摘要/);
   assert.match(chinese, />全部<\/button>/);
   assert.match(chinese, /勾选要采用的结果/);
@@ -120,7 +120,7 @@ test("Curator freezes HarnessOS locale/theme and ships executable self-contained
   }
 });
 
-test("HarnessOS presentation projects one resolved custom palette instead of re-owning theme presets", () => {
+test("Haros presentation projects one resolved custom palette instead of re-owning theme presets", () => {
   const custom = page({
     locale: "zh-CN",
     theme: "light",
@@ -137,7 +137,7 @@ test("HarnessOS presentation projects one resolved custom palette instead of re-
 
 test("observer uses the same bilingual page but removes review settlement controls", () => {
   const observer = generateCuratorPage(
-    ["HarnessOS Agent web access"],
+    ["Haros Agent web access"],
     "opaque-observer-token",
     20,
     availability(),

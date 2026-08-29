@@ -31,7 +31,8 @@ test("auto-summary skips curator and reuses summary model fallback plumbing", ()
   assert.match(indexSrc, /workflow: workflow === "auto-summary" \? "auto-summary" : undefined/);
 });
 
-test("README documents auto-summary", () => {
-  assert.match(readmeSrc, /workflow: "auto-summary"/);
-  assert.match(readmeSrc, /generate a summary without opening the curator/);
+test("README keeps workflow details behind the package boundary", () => {
+	assert.match(readmeSrc, /credential-blind settings contract/);
+	assert.match(readmeSrc, /HarnessOS owns the Timeline presentation and Session lifecycle/);
+	assert.doesNotMatch(readmeSrc, /JINA_API_KEY|PI_CODING_AGENT_DIR|summaryGenerationDeadlineMs/);
 });

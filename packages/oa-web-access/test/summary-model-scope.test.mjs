@@ -363,8 +363,9 @@ test("summary generation deadline config defaults, validates, caps, and reaches 
 	assert.match(indexSrc, /const MAX_SUMMARY_GENERATION_DEADLINE_MS = 600_000/);
 	assert.match(indexSrc, /generateSummaryDraft\(\s*selectedResults,\s*summaryContext,\s*signal,\s*modelOverride,\s*feedback,\s*undefined,\s*getSummaryGenerationDeadlineMs\(\),\s*\)/);
 	assert.equal((indexSrc.match(/getSummaryGenerationDeadlineMs\(\)/g) ?? []).length, 3);
-	assert.match(readmeSrc, /"summaryGenerationDeadlineMs": 30000/);
-	assert.match(readmeSrc, /summaryGenerationDeadlineMs.*capped at `600000`/);
+	assert.match(readmeSrc, /bounded result storage/);
+	assert.match(readmeSrc, /credential-blind settings contract/);
+	assert.doesNotMatch(readmeSrc, /summaryGenerationDeadlineMs/);
 });
 
 test("summary generation no longer uses catalog fallback or first available model", () => {

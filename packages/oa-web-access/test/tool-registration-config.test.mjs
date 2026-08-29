@@ -174,9 +174,8 @@ test("webSearch.enabled false registers only fetch tools and ignores disabled-na
 	}), /duplicates/);
 });
 
-test("README documents registration gates and toolNames", () => {
-	assert.match(readmeSrc, /"tools": \{/);
-	assert.match(readmeSrc, /"commands": \{/);
-	assert.match(readmeSrc, /Pi restart is required for tool and command registration changes/);
-	assert.match(readmeSrc, /`toolNames` can opt into alternate public tool names/);
+test("README documents the explicit registration boundary", () => {
+	assert.match(readmeSrc, /composed explicitly when an OA Session starts/);
+	assert.match(readmeSrc, /not registered in other Engines/);
+	assert.match(readmeSrc, /does not expose an npm release, install command, global state root, or ambient runtime\s+registration/);
 });

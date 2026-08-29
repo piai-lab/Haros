@@ -459,10 +459,8 @@ test("curator page exposes Jina Search as a manual provider", async () => {
 	assert.match(page, /provider-tag\.provider-jina/);
 });
 
-test("README documents Jina Search credentials and routing", async () => {
+test("README keeps provider credentials behind the typed settings boundary", async () => {
 	const readme = await readFile(readmeUrl, "utf8");
-	assert.match(readme, /JINA_API_KEY/);
-	assert.match(readme, /jinaApiKey/);
-	assert.match(readme, /`jina`/);
-	assert.match(readme, /s\.jina\.ai/);
+	assert.match(readme, /credential-blind settings contract/);
+	assert.doesNotMatch(readme, /JINA_API_KEY|jinaApiKey|s\.jina\.ai/);
 });

@@ -73,8 +73,8 @@ test("Linux curator browser launch detaches xdg-open but keeps immediate failure
 	assert.match(indexSrc, /child\.unref\(\);/);
 });
 
-test("README documents manual browser fallback", () => {
-	assert.match(readmeSrc, /Docker, WSL, SSH, or headless environments/);
-	assert.match(readmeSrc, /Copy it into a browser that can reach the Pi host/);
-	assert.match(readmeSrc, /Remote curator sessions print the URL instead of trying to open a browser by default/);
+test("README keeps browser transport details behind the package boundary", () => {
+	assert.match(readmeSrc, /HostGateway remains the authority for local system capabilities/);
+	assert.match(readmeSrc, /does not expose an npm release, install command, global state root/);
+	assert.doesNotMatch(readmeSrc, /Docker|WSL|SSH|Pi host/);
 });

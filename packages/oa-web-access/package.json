@@ -28,9 +28,7 @@
     "url": "git+https://github.com/nicobailon/pi-web-access.git"
   },
   "files": [
-    "*.ts",
-    "CHANGELOG.md",
-    "SECURITY.md"
+    "*.ts"
   ],
   "type": "module",
   "exports": {
