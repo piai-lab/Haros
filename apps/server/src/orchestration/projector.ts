@@ -941,6 +941,9 @@ export function projectEvent(
                     pendingMessageId: payload.messageId,
                     turnId: null,
                     engineSelection: payload.engineSelection,
+                    ...(payload.modelPresentationIdentity?.model === payload.engineSelection.model
+                      ? { modelPresentationIdentity: payload.modelPresentationIdentity }
+                      : {}),
                     requestedAt: payload.createdAt,
                   },
                 ].toSorted((left, right) => left.requestedAt.localeCompare(right.requestedAt));

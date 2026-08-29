@@ -409,4 +409,48 @@ describe("MessagesTimeline turn process approval cases", () => {
       host.remove();
     }
   });
+
+  it("9. renders the admitted model on the first live frame before turn-id projection", async () => {
+    const host = createHost();
+    const pendingMessageId = MessageId.makeUnsafe("user-first-live-frame");
+    const screen = await render(
+      <MessagesTimeline
+        {...baseProps}
+        isWorking
+        activeTurnInProgress
+        activeTurnId={TURN_ID}
+        activeTurnStartedAt={STARTED_AT}
+        turnProvenance={[
+          {
+            pendingMessageId,
+            turnId: null,
+            engineSelection: {
+              engine: "oa",
+              model: "deepseek/deepseek-v4-pro",
+            },
+            modelPresentationIdentity: {
+              model: "deepseek/deepseek-v4-pro",
+              displayName: "DeepSeek V4 Pro",
+              serviceId: "deepseek",
+              source: "runtime-catalog",
+            },
+            requestedAt: STARTED_AT,
+          },
+        ]}
+        timelineEntries={[userEntry("user-first-live-frame")]}
+      />,
+      { container: host },
+    );
+
+    try {
+      expect(document.querySelector("[data-assistant-turn-identity='visible']")).not.toBeNull();
+      expect(document.querySelector("[data-assistant-turn-model='true']")?.textContent).toBe(
+        "DeepSeek V4 Pro",
+      );
+      expect(document.querySelector("[data-assistant-turn-avatar='model']")).not.toBeNull();
+    } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
 });

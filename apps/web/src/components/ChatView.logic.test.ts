@@ -7,6 +7,7 @@ import {
   type GitWorktreeSetupProgressEvent,
   type EngineSelection,
   type ModelSlug,
+  type OrchestrationTurnProvenance,
   type RuntimeMode,
 } from "@harnessos/contracts";
 import { describe, expect, it, vi } from "vitest";
@@ -73,9 +74,133 @@ import {
   shouldStartActiveTurnLayoutGrace,
   shouldRenderTerminalWorkspace,
   worktreeSetupHasError,
+  createOptimisticTurnProvenance,
+  mergeTimelineTurnProvenance,
+  shouldReconcileOptimisticMessage,
 } from "./ChatView.logic";
 import { resolveEnvironmentPanelVisible } from "../lib/responsiveWorkbench";
 import { resolvePendingDirectTurnRecoveryMutation } from "../composerDraftDomain";
+
+describe("mergeTimelineTurnProvenance", () => {
+  const selection = {
+    engine: "oa",
+    model: "deepseek/deepseek-v4-pro",
+  } satisfies EngineSelection;
+  const identity = {
+    model: selection.model,
+    displayName: "DeepSeek V4 Pro",
+    serviceId: "deepseek",
+    source: "runtime-catalog",
+  } satisfies NonNullable<OrchestrationTurnProvenance["modelPresentationIdentity"]>;
+  const optimistic = {
+    optimisticTurnProvenance: {
+      pendingMessageId: MessageId.makeUnsafe("pending-1"),
+      turnId: null,
+      engineSelection: selection,
+      modelPresentationIdentity: identity,
+      requestedAt: "2026-08-29T02:00:00.000Z",
+    },
+  };
+
+  it("keeps the local identity available before the server projection arrives", () => {
+    expect(mergeTimelineTurnProvenance({ persisted: [], optimistic: [optimistic] })).toEqual([
+      optimistic.optimisticTurnProvenance,
+    ]);
+  });
+
+  it("fills only an absent presentation identity for the exact same engine/model", () => {
+    const persisted = {
+      pendingMessageId: MessageId.makeUnsafe("pending-1"),
+      turnId: null,
+      engineSelection: selection,
+      requestedAt: "2026-08-29T02:00:00.000Z",
+    } satisfies OrchestrationTurnProvenance;
+    expect(
+      mergeTimelineTurnProvenance({ persisted: [persisted], optimistic: [optimistic] }),
+    ).toEqual([{ ...persisted, modelPresentationIdentity: identity }]);
+
+    expect(
+      mergeTimelineTurnProvenance({
+        persisted: [{ ...persisted, engineSelection: { engine: "pi", model: selection.model } }],
+        optimistic: [optimistic],
+      }),
+    ).toEqual([{ ...persisted, engineSelection: { engine: "pi", model: selection.model } }]);
+  });
+});
+
+describe("createOptimisticTurnProvenance", () => {
+  it("creates the same immutable admission snapshot for every send path", () => {
+    const provenance = createOptimisticTurnProvenance({
+      pendingMessageId: MessageId.makeUnsafe("pending-plan-follow-up"),
+      engineSelection: { engine: "oa", model: "deepseek/deepseek-v4-pro" },
+      modelPresentationIdentity: {
+        model: "deepseek/deepseek-v4-pro",
+        displayName: "DeepSeek V4 Pro",
+        serviceId: "deepseek",
+        source: "runtime-catalog",
+      },
+      requestedAt: "2026-08-29T02:00:00.000Z",
+    });
+
+    expect(provenance).toEqual({
+      pendingMessageId: MessageId.makeUnsafe("pending-plan-follow-up"),
+      turnId: null,
+      engineSelection: { engine: "oa", model: "deepseek/deepseek-v4-pro" },
+      modelPresentationIdentity: {
+        model: "deepseek/deepseek-v4-pro",
+        displayName: "DeepSeek V4 Pro",
+        serviceId: "deepseek",
+        source: "runtime-catalog",
+      },
+      requestedAt: "2026-08-29T02:00:00.000Z",
+    });
+  });
+
+  it("rejects a presentation identity for a different model", () => {
+    expect(
+      createOptimisticTurnProvenance({
+        pendingMessageId: MessageId.makeUnsafe("pending-mismatch"),
+        engineSelection: { engine: "oa", model: "deepseek/deepseek-v4-pro" },
+        modelPresentationIdentity: {
+          model: "openai/gpt-5.5",
+          displayName: "GPT-5.5",
+          serviceId: "openai",
+          source: "builtin-catalog",
+        },
+        requestedAt: "2026-08-29T02:00:00.000Z",
+      }),
+    ).not.toHaveProperty("modelPresentationIdentity");
+  });
+});
+
+describe("shouldReconcileOptimisticMessage", () => {
+  it("waits for turn provenance after the server echoes the user message", () => {
+    const messageId = MessageId.makeUnsafe("pending-1");
+    const provenance = createOptimisticTurnProvenance({
+      pendingMessageId: messageId,
+      engineSelection: { engine: "oa", model: "deepseek/deepseek-v4-pro" },
+      requestedAt: "2026-08-29T02:00:00.000Z",
+    });
+    const serverMessageIds = new Set([messageId]);
+
+    expect(
+      shouldReconcileOptimisticMessage({
+        messageId,
+        optimisticTurnProvenance: provenance,
+        serverMessageIds,
+        serverProvenanceIds: new Set(),
+      }),
+    ).toBe(false);
+    expect(
+      shouldReconcileOptimisticMessage({
+        messageId,
+        optimisticTurnProvenance: provenance,
+        serverMessageIds,
+        serverProvenanceIds: new Set([messageId]),
+      }),
+    ).toBe(true);
+  });
+});
 
 describe("settled thread branch mismatch", () => {
   it("only describes a settled local thread on a different concrete branch", () => {

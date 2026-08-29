@@ -483,7 +483,7 @@ function AssistantTurnRowFrame({
           engine: selection.engine,
           slug: selection.model,
         })
-      : "HarnessOS");
+      : "Haros");
   const engineName = selection ? ENGINE_DISPLAY_NAMES[selection.engine] : null;
   return (
     <div

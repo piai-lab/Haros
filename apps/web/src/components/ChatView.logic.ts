@@ -10,6 +10,7 @@ import {
   type EngineApprovalDecision,
   type EngineInteractionMode,
   type EngineRequestKind,
+  type OrchestrationTurnProvenance,
   type RuntimeMode,
   type ServerEngineAuthStatus,
   type ThreadId as ThreadIdType,
@@ -58,6 +59,77 @@ export const PROMPT_HISTORY_MAX_ENTRIES = 100;
 
 export const LastInvokedScriptByProjectSchema = Schema.Record(ProjectId, Schema.String);
 export const DismissedEngineHealthBannersSchema = Schema.Array(Schema.String);
+
+export interface OptimisticTurnProvenanceCarrier {
+  readonly optimisticTurnProvenance?: OrchestrationTurnProvenance;
+}
+
+export function createOptimisticTurnProvenance(input: {
+  pendingMessageId: MessageId;
+  engineSelection: EngineSelection;
+  modelPresentationIdentity?: OrchestrationTurnProvenance["modelPresentationIdentity"];
+  requestedAt: string;
+}): OrchestrationTurnProvenance {
+  return {
+    pendingMessageId: input.pendingMessageId,
+    turnId: null,
+    engineSelection: input.engineSelection,
+    ...(input.modelPresentationIdentity?.model === input.engineSelection.model
+      ? { modelPresentationIdentity: input.modelPresentationIdentity }
+      : {}),
+    requestedAt: input.requestedAt,
+  };
+}
+
+export function shouldReconcileOptimisticMessage(input: {
+  messageId: MessageId;
+  optimisticTurnProvenance?: OrchestrationTurnProvenance;
+  serverMessageIds: ReadonlySet<MessageId>;
+  serverProvenanceIds: ReadonlySet<MessageId>;
+}): boolean {
+  if (!input.serverMessageIds.has(input.messageId)) return false;
+  const pendingProvenance = input.optimisticTurnProvenance;
+  return pendingProvenance === undefined
+    ? true
+    : input.serverProvenanceIds.has(pendingProvenance.pendingMessageId);
+}
+
+/**
+ * Keeps the local admission snapshot visible until the canonical thread projection catches up.
+ * The server entry remains authoritative; the optimistic value only fills an absent presentation
+ * identity for the exact same engine/model binding.
+ */
+export function mergeTimelineTurnProvenance(input: {
+  persisted: ReadonlyArray<OrchestrationTurnProvenance>;
+  optimistic: ReadonlyArray<OptimisticTurnProvenanceCarrier>;
+}): OrchestrationTurnProvenance[] {
+  const byPendingMessageId = new Map(
+    input.persisted.map((entry) => [entry.pendingMessageId, entry] as const),
+  );
+  for (const carrier of input.optimistic) {
+    const optimistic = carrier.optimisticTurnProvenance;
+    if (!optimistic) continue;
+    const existing = byPendingMessageId.get(optimistic.pendingMessageId);
+    if (!existing) {
+      byPendingMessageId.set(optimistic.pendingMessageId, optimistic);
+      continue;
+    }
+    if (
+      existing.modelPresentationIdentity === undefined &&
+      optimistic.modelPresentationIdentity !== undefined &&
+      existing.engineSelection.engine === optimistic.engineSelection.engine &&
+      existing.engineSelection.model === optimistic.engineSelection.model
+    ) {
+      byPendingMessageId.set(existing.pendingMessageId, {
+        ...existing,
+        modelPresentationIdentity: optimistic.modelPresentationIdentity,
+      });
+    }
+  }
+  return [...byPendingMessageId.values()].toSorted((left, right) =>
+    left.requestedAt.localeCompare(right.requestedAt),
+  );
+}
 
 export interface PendingFileUndo {
   readonly threadId: ThreadIdType;

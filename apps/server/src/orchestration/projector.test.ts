@@ -254,6 +254,12 @@ describe("orchestration projector", () => {
               engine: "pi",
               model: "openai/gpt-5.5",
             },
+            modelPresentationIdentity: {
+              model: "openai/gpt-5.5",
+              displayName: "GPT-5.5",
+              serviceId: "openai",
+              source: "builtin-catalog",
+            },
             runtimeMode: "approval-required",
             interactionMode: "default",
             createdAt: turnRequestedAt,
@@ -275,6 +281,12 @@ describe("orchestration projector", () => {
         engineSelection: {
           engine: "pi",
           model: "openai/gpt-5.5",
+        },
+        modelPresentationIdentity: {
+          model: "openai/gpt-5.5",
+          displayName: "GPT-5.5",
+          serviceId: "openai",
+          source: "builtin-catalog",
         },
         requestedAt: turnRequestedAt,
       },

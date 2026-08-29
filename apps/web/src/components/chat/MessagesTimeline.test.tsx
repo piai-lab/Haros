@@ -139,6 +139,36 @@ beforeAll(() => {
 });
 
 describe("MessagesTimeline", () => {
+  it("uses the current Haros identity when a legacy turn has no model provenance", async () => {
+    const { MessagesTimeline } = await import("./MessagesTimeline");
+    const createdAt = "2026-08-29T02:21:00.000Z";
+    const markup = renderToStaticMarkup(
+      <MessagesTimeline
+        {...makeTimelineBaseProps()}
+        isWorking
+        activeTurnInProgress
+        activeTurnStartedAt={createdAt}
+        timelineEntries={[
+          {
+            id: "entry-user-without-provenance",
+            kind: "message",
+            createdAt,
+            message: {
+              id: MessageId.makeUnsafe("user-without-provenance"),
+              role: "user",
+              text: "Please inspect this.",
+              createdAt,
+              streaming: false,
+            },
+          },
+        ]}
+      />,
+    );
+
+    expect(markup).toContain(">Haros<");
+    expect(markup).not.toContain(">HarnessOS<");
+  });
+
   it("renders one model-first identity header and keeps later assistant rows in its content column", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const pendingMessageId = MessageId.makeUnsafe("user-deepseek");

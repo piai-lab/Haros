@@ -208,6 +208,9 @@ import {
   resolvePromptHistoryNavigation,
   resolveTurnStartRecoveryDisposition,
   resolveThreadDetailHydration,
+  createOptimisticTurnProvenance,
+  mergeTimelineTurnProvenance,
+  shouldReconcileOptimisticMessage,
   shouldHandlePromptHistoryNavigationKey,
   shouldEnableComposerPastedTextCollapse,
   shouldConsumePendingCustomBinaryConfirmation,
@@ -3482,33 +3485,10 @@ export default function ChatView({
     [activeThread?.proposedPlans, agentActivityTimelineState.timelineWorkEntries, timelineMessages],
   );
   const timelineTurnProvenance = useMemo(() => {
-    const byPendingMessageId = new Map(
-      (activeThread?.turnProvenance ?? []).map((entry) => [entry.pendingMessageId, entry]),
-    );
-    for (const message of optimisticUserMessages) {
-      const optimistic = message.optimisticTurnProvenance;
-      if (!optimistic) continue;
-      const existing = byPendingMessageId.get(optimistic.pendingMessageId);
-      if (!existing) {
-        byPendingMessageId.set(optimistic.pendingMessageId, optimistic);
-        continue;
-      }
-      // Keep the authoritative server entry, but fill its presentation identity
-      // from the local admission if the first event omitted that optional field.
-      if (
-        existing.modelPresentationIdentity === undefined &&
-        optimistic.modelPresentationIdentity !== undefined &&
-        existing.engineSelection.model === optimistic.engineSelection.model
-      ) {
-        byPendingMessageId.set(existing.pendingMessageId, {
-          ...existing,
-          modelPresentationIdentity: optimistic.modelPresentationIdentity,
-        });
-      }
-    }
-    return [...byPendingMessageId.values()].toSorted((left, right) =>
-      left.requestedAt.localeCompare(right.requestedAt),
-    );
+    return mergeTimelineTurnProvenance({
+      persisted: activeThread?.turnProvenance ?? [],
+      optimistic: optimisticUserMessages,
+    });
   }, [activeThread?.turnProvenance, optimisticUserMessages]);
   const enteringUserMessageIds = useMemo<ReadonlySet<MessageId>>(
     () => new Set(optimisticUserMessages.map((message) => message.id)),
@@ -5836,13 +5816,35 @@ export default function ChatView({
       return;
     }
     const serverIds = new Set(activeThread.messages.map((message) => message.id));
-    const removedMessages = optimisticUserMessages.filter((message) => serverIds.has(message.id));
+    const serverProvenanceIds = new Set(
+      (activeThread.turnProvenance ?? []).map((entry) => entry.pendingMessageId),
+    );
+    const removedMessages = optimisticUserMessages.filter((message) =>
+      shouldReconcileOptimisticMessage({
+        messageId: message.id,
+        serverMessageIds: serverIds,
+        serverProvenanceIds,
+        ...(message.optimisticTurnProvenance
+          ? { optimisticTurnProvenance: message.optimisticTurnProvenance }
+          : {}),
+      }),
+    );
     if (removedMessages.length === 0) {
       return;
     }
     const timer = window.setTimeout(() => {
       setOptimisticUserMessages((existing) =>
-        existing.filter((message) => !serverIds.has(message.id)),
+        existing.filter(
+          (message) =>
+            !shouldReconcileOptimisticMessage({
+              messageId: message.id,
+              serverMessageIds: serverIds,
+              serverProvenanceIds,
+              ...(message.optimisticTurnProvenance
+                ? { optimisticTurnProvenance: message.optimisticTurnProvenance }
+                : {}),
+            }),
+        ),
       );
     }, 0);
     for (const removedMessage of removedMessages) {
@@ -5856,7 +5858,13 @@ export default function ChatView({
     return () => {
       window.clearTimeout(timer);
     };
-  }, [activeThread?.id, activeThread?.messages, handoffAttachmentPreviews, optimisticUserMessages]);
+  }, [
+    activeThread?.id,
+    activeThread?.messages,
+    activeThread?.turnProvenance,
+    handoffAttachmentPreviews,
+    optimisticUserMessages,
+  ]);
 
   useEffect(() => {
     promptRef.current = prompt;
@@ -8521,15 +8529,12 @@ export default function ChatView({
         ...(mentionedPluginMentionsForSend.length > 0
           ? { mentions: mentionedPluginMentionsForSend }
           : {}),
-        optimisticTurnProvenance: {
+        optimisticTurnProvenance: createOptimisticTurnProvenance({
           pendingMessageId: messageIdForSend,
-          turnId: null,
           engineSelection: selectedEngineSelectionForSend,
-          ...(modelPresentationIdentityForSend
-            ? { modelPresentationIdentity: modelPresentationIdentityForSend }
-            : {}),
+          modelPresentationIdentity: modelPresentationIdentityForSend,
           requestedAt: messageCreatedAt,
-        },
+        }),
         createdAt: messageCreatedAt,
         streaming: false,
         source: "native",
@@ -9210,6 +9215,12 @@ export default function ChatView({
         role: "user",
         text: outgoingMessageText,
         dispatchMode,
+        optimisticTurnProvenance: createOptimisticTurnProvenance({
+          pendingMessageId: messageIdForSend,
+          engineSelection: engineSelectionForPlanDispatch,
+          modelPresentationIdentity: modelPresentationIdentityForPlanDispatch,
+          requestedAt: messageCreatedAt,
+        }),
         createdAt: messageCreatedAt,
         streaming: false,
         source: "native",
