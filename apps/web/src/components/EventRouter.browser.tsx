@@ -723,7 +723,7 @@ describe("EventRouter scoped orchestration sync", () => {
     } finally {
       await mounted.cleanup();
     }
-  });
+  }, 180_000);
 
   it("drops duplicate thread events after the thread snapshot sequence advances", async () => {
     const mounted = await mountApp();

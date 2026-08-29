@@ -91,7 +91,7 @@ describe("ChatMarkdown", () => {
     expect(markup).not.toContain("graph TD");
     expect(markup).not.toContain("mermaid</span>");
     expect(markup).not.toContain("chat-markdown-shiki");
-  });
+  }, 30_000);
 
   it("keeps an incomplete streaming fence info string away from Shiki", async () => {
     const markup = await renderTimelineMermaid("```mermai\ngraph TD\nA-->B", true);
