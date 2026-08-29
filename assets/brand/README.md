@@ -1,6 +1,6 @@
-# HarnessOS identity
+# Haros identity
 
-The HarnessOS mark is the four-point constrained loop in this directory. The
+The Haros mark is the four-point constrained loop in this directory. The
 double-ring form is the product mark. `oa-badge.svg` is its small-size Engine
 projection, not a separate brand.
 

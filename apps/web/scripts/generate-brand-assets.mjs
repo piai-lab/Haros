@@ -59,6 +59,14 @@ for (const size of [16, 32, 48]) {
   markPng.set(size, await render(sourceText.mark, size));
 }
 
+// macOS menu-bar templates are monochrome alpha masks. Keep them derived from
+// the same canonical mark as the web and desktop icons so the status item can
+// never drift back to an older product symbol.
+const statusTemplatePng = new Map();
+for (const size of [16, 32]) {
+  statusTemplatePng.set(size, await render(sourceText.markMono, size));
+}
+
 await browser.close();
 
 function makeIco(images) {
@@ -147,6 +155,8 @@ const outputs = new Map([
   [path.join(desktopRoot, "icon.png"), appPng.get(512)],
   [path.join(desktopRoot, "icon.ico"), appIco],
   [path.join(desktopRoot, "icon.icns"), appIcns],
+  [path.join(desktopRoot, "harnessos-statusTemplate.png"), statusTemplatePng.get(16)],
+  [path.join(desktopRoot, "harnessos-statusTemplate@2x.png"), statusTemplatePng.get(32)],
 ]);
 
 if (checkOnly) {
@@ -161,8 +171,8 @@ if (checkOnly) {
   if (mismatches.length > 0) {
     throw new Error(`Brand assets are stale:\n${mismatches.join("\n")}`);
   }
-  console.log(`Verified ${outputs.size} HarnessOS brand assets.`);
+  console.log(`Verified ${outputs.size} Haros brand assets.`);
 } else {
   await Promise.all([...outputs].map(([target, contents]) => writeFile(target, contents)));
-  console.log(`Generated ${outputs.size} HarnessOS brand assets.`);
+  console.log(`Generated ${outputs.size} Haros brand assets.`);
 }
