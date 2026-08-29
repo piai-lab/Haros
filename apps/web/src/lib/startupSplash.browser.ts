@@ -28,6 +28,7 @@ describe("Desktop startup splash", () => {
     const splash = createStartupSplashDom();
 
     expect(splash.querySelectorAll(".startup-splash__dot")).toHaveLength(64);
+    expect(splash.querySelector(".startup-splash__word")?.textContent).toBe("HAROS");
     expect(splash.querySelector(".startup-splash__visual")?.getAttribute("aria-hidden")).toBe(
       "true",
     );
