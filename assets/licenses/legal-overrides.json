@@ -278,6 +278,126 @@
       "upstreamLegalTextAbsent": true
     },
     {
+      "packageIds": ["@mariozechner/clipboard-darwin-x64@0.3.9"],
+      "license": "MIT",
+      "kind": "canonical-spdx-recovery",
+      "assetPath": "assets/licenses/canonical-MIT.txt",
+      "sha256": "07c7993a082dd28479b2f48dd4ab9fac71bd97aeeecaa4cd89ef863fb3867c67",
+      "revision": "3a0f58eb7250a9a46ad77863bc4618eee099a248",
+      "sourcePath": "npm/darwin-x64/package.json",
+      "sourceUrl": "https://github.com/badlogic/clipboard/tree/3a0f58eb7250a9a46ad77863bc4618eee099a248/npm/darwin-x64",
+      "manifestSha256ByPackageId": {
+        "@mariozechner/clipboard-darwin-x64@0.3.9": "e7db3f68060b1917e91bae1c1c133ccc25b8e69c96e77b037414a20daaa70cc3"
+      },
+      "canonicalTextSource": "https://github.com/spdx/license-list-data/blob/c4a7237ec8f4654e867546f9f409749300f1bf4c/text/MIT.txt",
+      "upstreamLegalTextAbsent": true
+    },
+    {
+      "packageIds": ["@mariozechner/clipboard-linux-arm64-gnu@0.3.9"],
+      "license": "MIT",
+      "kind": "canonical-spdx-recovery",
+      "assetPath": "assets/licenses/canonical-MIT.txt",
+      "sha256": "07c7993a082dd28479b2f48dd4ab9fac71bd97aeeecaa4cd89ef863fb3867c67",
+      "revision": "3a0f58eb7250a9a46ad77863bc4618eee099a248",
+      "sourcePath": "npm/linux-arm64-gnu/package.json",
+      "sourceUrl": "https://github.com/badlogic/clipboard/tree/3a0f58eb7250a9a46ad77863bc4618eee099a248/npm/linux-arm64-gnu",
+      "manifestSha256ByPackageId": {
+        "@mariozechner/clipboard-linux-arm64-gnu@0.3.9": "6dd1fa106974f9f9d59df8e5b373ddc4e15e073e2b9480333434e55e3791d35f"
+      },
+      "canonicalTextSource": "https://github.com/spdx/license-list-data/blob/c4a7237ec8f4654e867546f9f409749300f1bf4c/text/MIT.txt",
+      "upstreamLegalTextAbsent": true
+    },
+    {
+      "packageIds": ["@mariozechner/clipboard-linux-arm64-musl@0.3.9"],
+      "license": "MIT",
+      "kind": "canonical-spdx-recovery",
+      "assetPath": "assets/licenses/canonical-MIT.txt",
+      "sha256": "07c7993a082dd28479b2f48dd4ab9fac71bd97aeeecaa4cd89ef863fb3867c67",
+      "revision": "3a0f58eb7250a9a46ad77863bc4618eee099a248",
+      "sourcePath": "npm/linux-arm64-musl/package.json",
+      "sourceUrl": "https://github.com/badlogic/clipboard/tree/3a0f58eb7250a9a46ad77863bc4618eee099a248/npm/linux-arm64-musl",
+      "manifestSha256ByPackageId": {
+        "@mariozechner/clipboard-linux-arm64-musl@0.3.9": "5610bd8ce1c15a03f8e07d51ff3b9b843ef476f74a9b33f86a0de0d621a5d072"
+      },
+      "canonicalTextSource": "https://github.com/spdx/license-list-data/blob/c4a7237ec8f4654e867546f9f409749300f1bf4c/text/MIT.txt",
+      "upstreamLegalTextAbsent": true
+    },
+    {
+      "packageIds": ["@mariozechner/clipboard-linux-riscv64-gnu@0.3.9"],
+      "license": "MIT",
+      "kind": "canonical-spdx-recovery",
+      "assetPath": "assets/licenses/canonical-MIT.txt",
+      "sha256": "07c7993a082dd28479b2f48dd4ab9fac71bd97aeeecaa4cd89ef863fb3867c67",
+      "revision": "3a0f58eb7250a9a46ad77863bc4618eee099a248",
+      "sourcePath": "npm/linux-riscv64-gnu/package.json",
+      "sourceUrl": "https://github.com/badlogic/clipboard/tree/3a0f58eb7250a9a46ad77863bc4618eee099a248/npm/linux-riscv64-gnu",
+      "manifestSha256ByPackageId": {
+        "@mariozechner/clipboard-linux-riscv64-gnu@0.3.9": "7c14ced7ec6bc6dac144545f3c3c0936de780f3266b19a649a29c49c72fdf9b5"
+      },
+      "canonicalTextSource": "https://github.com/spdx/license-list-data/blob/c4a7237ec8f4654e867546f9f409749300f1bf4c/text/MIT.txt",
+      "upstreamLegalTextAbsent": true
+    },
+    {
+      "packageIds": ["@mariozechner/clipboard-linux-x64-gnu@0.3.9"],
+      "license": "MIT",
+      "kind": "canonical-spdx-recovery",
+      "assetPath": "assets/licenses/canonical-MIT.txt",
+      "sha256": "07c7993a082dd28479b2f48dd4ab9fac71bd97aeeecaa4cd89ef863fb3867c67",
+      "revision": "3a0f58eb7250a9a46ad77863bc4618eee099a248",
+      "sourcePath": "npm/linux-x64-gnu/package.json",
+      "sourceUrl": "https://github.com/badlogic/clipboard/tree/3a0f58eb7250a9a46ad77863bc4618eee099a248/npm/linux-x64-gnu",
+      "manifestSha256ByPackageId": {
+        "@mariozechner/clipboard-linux-x64-gnu@0.3.9": "ac256de47c8d1f3fffa3caa9ab93ceb0b97229b97d417462b8644e730eded567"
+      },
+      "canonicalTextSource": "https://github.com/spdx/license-list-data/blob/c4a7237ec8f4654e867546f9f409749300f1bf4c/text/MIT.txt",
+      "upstreamLegalTextAbsent": true
+    },
+    {
+      "packageIds": ["@mariozechner/clipboard-linux-x64-musl@0.3.9"],
+      "license": "MIT",
+      "kind": "canonical-spdx-recovery",
+      "assetPath": "assets/licenses/canonical-MIT.txt",
+      "sha256": "07c7993a082dd28479b2f48dd4ab9fac71bd97aeeecaa4cd89ef863fb3867c67",
+      "revision": "3a0f58eb7250a9a46ad77863bc4618eee099a248",
+      "sourcePath": "npm/linux-x64-musl/package.json",
+      "sourceUrl": "https://github.com/badlogic/clipboard/tree/3a0f58eb7250a9a46ad77863bc4618eee099a248/npm/linux-x64-musl",
+      "manifestSha256ByPackageId": {
+        "@mariozechner/clipboard-linux-x64-musl@0.3.9": "69a868a0ebb08f108f9f25e4fc2bd05ec01357f72ec90c1b61bf80467f2c2095"
+      },
+      "canonicalTextSource": "https://github.com/spdx/license-list-data/blob/c4a7237ec8f4654e867546f9f409749300f1bf4c/text/MIT.txt",
+      "upstreamLegalTextAbsent": true
+    },
+    {
+      "packageIds": ["@mariozechner/clipboard-win32-arm64-msvc@0.3.9"],
+      "license": "MIT",
+      "kind": "canonical-spdx-recovery",
+      "assetPath": "assets/licenses/canonical-MIT.txt",
+      "sha256": "07c7993a082dd28479b2f48dd4ab9fac71bd97aeeecaa4cd89ef863fb3867c67",
+      "revision": "3a0f58eb7250a9a46ad77863bc4618eee099a248",
+      "sourcePath": "npm/win32-arm64-msvc/package.json",
+      "sourceUrl": "https://github.com/badlogic/clipboard/tree/3a0f58eb7250a9a46ad77863bc4618eee099a248/npm/win32-arm64-msvc",
+      "manifestSha256ByPackageId": {
+        "@mariozechner/clipboard-win32-arm64-msvc@0.3.9": "509f9577d5784d451c1606a10fedcbd3d81303de021a2bf3d4b8307f1a4a7edc"
+      },
+      "canonicalTextSource": "https://github.com/spdx/license-list-data/blob/c4a7237ec8f4654e867546f9f409749300f1bf4c/text/MIT.txt",
+      "upstreamLegalTextAbsent": true
+    },
+    {
+      "packageIds": ["@mariozechner/clipboard-win32-x64-msvc@0.3.9"],
+      "license": "MIT",
+      "kind": "canonical-spdx-recovery",
+      "assetPath": "assets/licenses/canonical-MIT.txt",
+      "sha256": "07c7993a082dd28479b2f48dd4ab9fac71bd97aeeecaa4cd89ef863fb3867c67",
+      "revision": "3a0f58eb7250a9a46ad77863bc4618eee099a248",
+      "sourcePath": "npm/win32-x64-msvc/package.json",
+      "sourceUrl": "https://github.com/badlogic/clipboard/tree/3a0f58eb7250a9a46ad77863bc4618eee099a248/npm/win32-x64-msvc",
+      "manifestSha256ByPackageId": {
+        "@mariozechner/clipboard-win32-x64-msvc@0.3.9": "9424a6383cd5b431548af82da91638255a7bf85620d9c5324663ea3afa718063"
+      },
+      "canonicalTextSource": "https://github.com/spdx/license-list-data/blob/c4a7237ec8f4654e867546f9f409749300f1bf4c/text/MIT.txt",
+      "upstreamLegalTextAbsent": true
+    },
+    {
       "packageIds": ["kubernetes-types@1.30.0"],
       "license": "Apache-2.0",
       "kind": "canonical-spdx-recovery",
