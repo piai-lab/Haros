@@ -35,6 +35,25 @@ const LIVE_ACTIVITY_STATE_KEYS = {
   cancelled: "toolDetails.stateCancelled",
 } as const;
 
+const TERMINAL_ACTIVITY_STATES = new Set<WorkLogLiveActivity["state"]>([
+  "completed",
+  "failed",
+  "cancelled",
+]);
+
+function normalizeOutputForComparison(value: string): string {
+  return value.replace(/\r\n?/g, "\n").trim();
+}
+
+function hasDistinctStdout(output: WorkLogToolOutputDetails): boolean {
+  if (!output.stdout || !output.output) {
+    return false;
+  }
+  return (
+    normalizeOutputForComparison(output.stdout) !== normalizeOutputForComparison(output.output)
+  );
+}
+
 export function ToolCallDetailsContent({
   details,
   activity,
@@ -168,6 +187,61 @@ function LiveActivityMetadata({
   const progress =
     activity.progress !== undefined ? formatLiveActivityProgress(activity.progress) : null;
 
+  if (TERMINAL_ACTIVITY_STATES.has(activity.state)) {
+    return (
+      <ToolDetailSection title={t("toolDetails.activity")}>
+        <div
+          className="flex items-center gap-2 px-0.5 py-0.5 text-[11px] text-muted-foreground/72"
+          data-tool-activity-summary="true"
+        >
+          <span
+            aria-hidden="true"
+            className={cn(
+              "size-1.5 shrink-0 rounded-full",
+              activity.state === "completed"
+                ? "bg-emerald-400/70"
+                : activity.state === "failed"
+                  ? "bg-rose-400/75"
+                  : "bg-amber-300/70",
+            )}
+          />
+          <span className="text-foreground/72">{stateLabel}</span>
+          {elapsed ? <span className="tabular-nums">· {elapsed}</span> : null}
+          {progress ? <span className="tabular-nums">· {progress}</span> : null}
+          <details className="ml-auto">
+            <summary className="cursor-pointer list-none text-muted-foreground/56 hover:text-muted-foreground/82 [&::-webkit-details-marker]:hidden">
+              {t("toolDetails.detail")}
+            </summary>
+            <dl className="mt-2 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1.5 rounded-lg border border-border/45 bg-background/60 px-3 py-2.5 text-[11px]">
+              {activity.startedAt ? (
+                <>
+                  <dt className="text-muted-foreground/56">{t("toolDetails.started")}</dt>
+                  <dd className="text-foreground/84">
+                    <time dateTime={activity.startedAt} title={activity.startedAt}>
+                      {formatActivityTimestamp(activity.startedAt, timestampFormat)}
+                    </time>
+                  </dd>
+                </>
+              ) : null}
+              <dt className="text-muted-foreground/56">{t("toolDetails.lastActivity")}</dt>
+              <dd className="text-foreground/84">
+                <time dateTime={activity.lastActivityAt} title={activity.lastActivityAt}>
+                  {formatActivityTimestamp(activity.lastActivityAt, timestampFormat)}
+                </time>
+              </dd>
+              {activity.detail ? (
+                <>
+                  <dt className="text-muted-foreground/56">{t("toolDetails.detail")}</dt>
+                  <dd className="break-words text-foreground/84">{activity.detail}</dd>
+                </>
+              ) : null}
+            </dl>
+          </details>
+        </div>
+      </ToolDetailSection>
+    );
+  }
+
   return (
     <ToolDetailSection title={t("toolDetails.activity")}>
       <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1.5 rounded-lg border border-border/45 bg-background/60 px-3 py-2.5 text-[11px]">
@@ -254,16 +328,36 @@ function ToolOutputMetadata({ output }: { output: WorkLogToolOutputDetails }) {
 
 function ToolOutputSection({ output }: { output: WorkLogToolOutputDetails }) {
   const { t } = useI18n();
+  const primaryOutput = output.output ?? output.stdout;
+  const stdout = output.stdout;
+  const showStdout = hasDistinctStdout(output);
   return (
     <ToolDetailSection title={t("toolDetails.output")}>
       <div className="space-y-3">
-        {output.output ? (
-          <MarkdownToolCodeBlock language="text">{output.output}</MarkdownToolCodeBlock>
+        {primaryOutput ? (
+          <div data-tool-output-primary="true">
+            <MarkdownToolCodeBlock language="text">{primaryOutput}</MarkdownToolCodeBlock>
+          </div>
         ) : null}
-        {output.stdout ? (
+        {showStdout && stdout ? (
           <LabeledCodeBlock title={t("toolDetails.stdout")} tone="output">
-            {output.stdout}
+            {stdout}
           </LabeledCodeBlock>
+        ) : null}
+        {stdout && output.output && !showStdout ? (
+          <details
+            className="rounded-lg border border-border/45 bg-background/45 px-3 py-2"
+            data-tool-output-raw="true"
+          >
+            <summary className="cursor-pointer list-none text-[11px] text-muted-foreground/62 hover:text-muted-foreground/84 [&::-webkit-details-marker]:hidden">
+              {t("toolDetails.rawStdout")}
+            </summary>
+            <div className="mt-2">
+              <LabeledCodeBlock title={t("toolDetails.stdout")} tone="output">
+                {stdout}
+              </LabeledCodeBlock>
+            </div>
+          </details>
         ) : null}
         {output.stderr ? (
           <LabeledCodeBlock title={t("toolDetails.stderr")} tone="error">

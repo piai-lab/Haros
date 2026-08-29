@@ -93,6 +93,47 @@ function LiveActivityTimeline() {
   );
 }
 
+function DuplicateToolOutputTimeline() {
+  return (
+    <TimelineWorkEntryRow
+      workEntry={{
+        id: "work-duplicate-output",
+        createdAt: "2026-03-17T19:12:28.000Z",
+        label: "读取网页内容",
+        tone: "tool",
+        itemType: "web_search",
+        toolName: "fetch_content",
+        toolTitle: "读取网页内容",
+        preview: "https://example.test/items",
+        liveActivity: {
+          state: "completed",
+          label: "读取网页内容",
+          startedAt: "2026-03-17T19:12:28.000Z",
+          lastActivityAt: "2026-03-17T19:12:28.800Z",
+          detail: "Fetching URL(s)…",
+          elapsedSeconds: 0.8,
+        },
+        toolDetails: {
+          kind: "tool",
+          title: "读取网页内容",
+          toolName: "fetch_content",
+          input: '{\n  "mode": "raw"\n}',
+          output: {
+            output: '{"items":[{"title":"Example"}]}',
+            stdout: '{"items":[{"title":"Example"}]}',
+          },
+        },
+      }}
+      chatMetaFontSizePx={12}
+      textFontSizePx={13}
+      density="compact"
+      onImageExpand={() => {}}
+      markdownCwd={undefined}
+      timestampFormat="locale"
+    />
+  );
+}
+
 function createTimelineHost(): HTMLDivElement {
   const host = document.createElement("div");
   host.style.cssText = "display:flex;width:600px;height:520px;overflow:hidden;";
@@ -278,6 +319,36 @@ describe("MessagesTimeline tool details", () => {
       expect(document.body.textContent ?? "").toContain("web_search");
       expect(document.body.textContent ?? "").toContain("AI agent memory frameworks");
       expect(document.body.textContent ?? "").toContain("Search completed with three sources");
+    } finally {
+      await screen.unmount();
+      host.remove();
+      await settleLayout();
+    }
+  });
+
+  it("shows equal tool output once while keeping raw stdout available", async () => {
+    const host = createTimelineHost();
+    const screen = await render(<DuplicateToolOutputTimeline />, { container: host });
+
+    try {
+      const trigger = document.querySelector<HTMLButtonElement>(
+        '[data-tool-detail-trigger="true"]',
+      );
+      expect(trigger).not.toBeNull();
+      trigger?.click();
+
+      await expect.poll(() => document.body.textContent ?? "").toContain("Technical name");
+      expect(document.querySelector("[data-tool-activity-summary='true']")).not.toBeNull();
+      expect(document.querySelectorAll("[data-tool-output-primary='true']")).toHaveLength(1);
+      expect(document.body.textContent ?? "").toContain("View raw standard output");
+      const rawDetails = document.querySelector<HTMLDetailsElement>(
+        "[data-tool-output-raw='true']",
+      );
+      expect(rawDetails).not.toBeNull();
+      expect(rawDetails?.open).toBe(false);
+
+      rawDetails?.setAttribute("open", "");
+      expect(document.body.textContent ?? "").toContain('{"items":[{"title":"Example"}]}');
     } finally {
       await screen.unmount();
       host.remove();
