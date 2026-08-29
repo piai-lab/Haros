@@ -331,6 +331,10 @@ function StartupSplashShellBridge() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const configQuery = useQuery(serverConfigQueryOptions());
   const settingsQuery = useQuery(serverSettingsQueryOptions());
+  // The desktop shell owns the first paint. Engine model discovery can remain
+  // pending on a fresh install (for example before any provider is configured),
+  // but it must not keep the entire workbench behind the startup overlay.
+  const isDesktopShell = window.desktopBridge?.startupPresentation === "full";
   const [transportState, setTransportState] = useState<WsTransportState | null>(() =>
     readLatestWsTransportState(),
   );
@@ -341,11 +345,13 @@ function StartupSplashShellBridge() {
     const deterministicRecovery = configQuery.isError || settingsQuery.isError;
     reportStartupShellReadiness({
       settled: transportState === "open" && snapshotsSettled,
-      expectsComposer: !deterministicRecovery && startupRouteExpectsComposer(pathname),
+      expectsComposer:
+        !isDesktopShell && !deterministicRecovery && startupRouteExpectsComposer(pathname),
     });
   }, [
     configQuery.isError,
     configQuery.isPending,
+    isDesktopShell,
     pathname,
     settingsQuery.isError,
     settingsQuery.isPending,
