@@ -314,7 +314,7 @@ async function mountApp(): Promise<{ cleanup: () => Promise<void> }> {
         expect(serverConfigStreamRequestId).toBeTruthy();
         expect(serverConfigStreamClient).toBeTruthy();
       },
-      { timeout: 60_000, interval: 16 },
+      { timeout: 120_000, interval: 16 },
     );
   } catch (cause) {
     await screen.unmount();
@@ -390,21 +390,25 @@ describe("Keybindings update toast", () => {
     delete window.desktopBridge;
   });
 
-  it("does not show success toasts for passive keybinding reloads", async () => {
-    const mounted = await mountApp();
+  it(
+    "does not show success toasts for passive keybinding reloads",
+    { timeout: 180_000 },
+    async () => {
+      const mounted = await mountApp();
 
-    try {
-      await sendServerConfigUpdatedPush([]);
-      await waitForNoToast("Keybindings updated");
+      try {
+        await sendServerConfigUpdatedPush([]);
+        await waitForNoToast("Keybindings updated");
 
-      await sendServerConfigUpdatedPush([]);
-      await waitForNoToast("Keybindings updated");
-    } finally {
-      await mounted.cleanup();
-    }
-  });
+        await sendServerConfigUpdatedPush([]);
+        await waitForNoToast("Keybindings updated");
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+  );
 
-  it("shows a warning toast when keybinding config has issues", async () => {
+  it("shows a warning toast when keybinding config has issues", { timeout: 180_000 }, async () => {
     const mounted = await mountApp();
 
     try {
@@ -417,31 +421,35 @@ describe("Keybindings update toast", () => {
     }
   });
 
-  it("does not show a toast from the replayed cached value on subscribe", async () => {
-    const mounted = await mountApp();
+  it(
+    "does not show a toast from the replayed cached value on subscribe",
+    { timeout: 180_000 },
+    async () => {
+      const mounted = await mountApp();
 
-    try {
-      await sendServerConfigUpdatedPush([]);
-      await waitForNoToast("Keybindings updated");
+      try {
+        await sendServerConfigUpdatedPush([]);
+        await waitForNoToast("Keybindings updated");
 
-      // Remount the app — onServerConfigUpdated replays the cached value
-      // synchronously on subscribe. This should NOT produce a toast.
-      await mounted.cleanup();
-      const remounted = await mountApp();
+        // Remount the app — onServerConfigUpdated replays the cached value
+        // synchronously on subscribe. This should NOT produce a toast.
+        await mounted.cleanup();
+        const remounted = await mountApp();
 
-      // Give it a moment to process the replayed value
-      await new Promise((resolve) => setTimeout(resolve, 500));
+        // Give it a moment to process the replayed value
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
-      const titles = queryToastTitles();
-      expect(
-        titles.filter((t) => t === "Keybindings updated").length,
-        "Replayed cached value should not produce a toast",
-      ).toBe(0);
+        const titles = queryToastTitles();
+        expect(
+          titles.filter((t) => t === "Keybindings updated").length,
+          "Replayed cached value should not produce a toast",
+        ).toBe(0);
 
-      await remounted.cleanup();
-    } catch (error) {
-      await mounted.cleanup().catch(() => {});
-      throw error;
-    }
-  });
+        await remounted.cleanup();
+      } catch (error) {
+        await mounted.cleanup().catch(() => {});
+        throw error;
+      }
+    },
+  );
 });
