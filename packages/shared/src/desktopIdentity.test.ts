@@ -32,7 +32,7 @@ describe("desktopIdentity", () => {
     expect(HARNESSOS_CANARY_DESKTOP_ENTRY_URL).toBe("harnessos-canary://app/index.html");
     expect(harnessOSDesktopIdentity("canary")).toEqual({
       flavor: "canary",
-      displayName: "HarnessOS Canary",
+      displayName: "Haros Canary",
       bundleId: HARNESSOS_CANARY_BUNDLE_ID,
       scheme: "harnessos-canary",
       origin: HARNESSOS_CANARY_DESKTOP_ORIGIN,

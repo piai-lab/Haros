@@ -117,7 +117,7 @@ export async function fetchHarnessOSServerStatus(
         reachable: false,
         ready: false,
         url: healthUrl.displayUrl,
-        error: "Health response did not match the HarnessOS health shape.",
+        error: "Health response did not match the Haros health shape.",
       };
     }
 
@@ -140,13 +140,13 @@ export async function fetchHarnessOSServerStatus(
 
 export function formatHarnessOSServerStatus(result: HarnessOSServerStatusResult): string {
   if (!result.reachable) {
-    return `HarnessOS server: unreachable\nURL: ${result.url}\nError: ${result.error}`;
+    return `Haros server: unreachable\nURL: ${result.url}\nError: ${result.error}`;
   }
 
   const projectionState = result.health.projection?.state;
   const status = result.ready ? "ready" : result.health.startupReady ? "not ready" : "starting";
   return [
-    `HarnessOS server: ${status}`,
+    `Haros server: ${status}`,
     `URL: ${result.url}`,
     ...(projectionState ? [`Projection: ${projectionState}`] : []),
   ].join("\n");

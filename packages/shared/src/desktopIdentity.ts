@@ -39,7 +39,7 @@ export function harnessOSDesktopIdentity(flavor: HarnessOSDesktopFlavor): Harnes
   if (flavor === "canary") {
     return {
       flavor,
-      displayName: "HarnessOS Canary",
+      displayName: "Haros Canary",
       bundleId: HARNESSOS_CANARY_BUNDLE_ID,
       scheme: HARNESSOS_CANARY_DESKTOP_SCHEME,
       origin: HARNESSOS_CANARY_DESKTOP_ORIGIN,
@@ -52,7 +52,7 @@ export function harnessOSDesktopIdentity(flavor: HarnessOSDesktopFlavor): Harnes
   if (flavor === "development") {
     return {
       flavor,
-      displayName: "HarnessOS (Dev)",
+      displayName: "Haros (Dev)",
       bundleId: HARNESSOS_DEVELOPMENT_BUNDLE_ID,
       scheme: HARNESSOS_DESKTOP_SCHEME,
       origin: HARNESSOS_DESKTOP_ORIGIN,
@@ -64,7 +64,7 @@ export function harnessOSDesktopIdentity(flavor: HarnessOSDesktopFlavor): Harnes
   }
   return {
     flavor,
-    displayName: "HarnessOS",
+    displayName: "Haros",
     bundleId: HARNESSOS_PRODUCTION_BUNDLE_ID,
     scheme: HARNESSOS_DESKTOP_SCHEME,
     origin: HARNESSOS_DESKTOP_ORIGIN,

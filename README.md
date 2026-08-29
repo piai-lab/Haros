@@ -1,13 +1,13 @@
-# HarnessOS
+# Haros
 
-HarnessOS is a local-first desktop workbench for agentic work. It keeps projects, conversations,
+Haros is a local-first desktop workbench for agentic work. It keeps projects, conversations,
 queues, recovery, and system capabilities in one coherent product while execution Engines remain
 replaceable and isolated.
 
 [简体中文](docs/README.zh-CN.md) · [Architecture](docs/architecture.md) ·
 [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-> HarnessOS is currently a source alpha. There are no official installers, releases, or update
+> Haros is currently a source alpha. There are no official installers, releases, or update
 > feeds yet.
 
 ## Three work surfaces, one product
@@ -15,23 +15,23 @@ replaceable and isolated.
 | Surface | Built for                                   | Workspace                                  |
 | ------- | ------------------------------------------- | ------------------------------------------ |
 | Agent   | Long-running work on a real project         | A folder you choose                        |
-| Chat    | Focused conversations without project setup | A HarnessOS-managed workspace              |
+| Chat    | Focused conversations without project setup | A Haros-managed workspace                  |
 | Studio  | Artifact-oriented creation and iteration    | An isolated managed workspace with outputs |
 
 All three surfaces share the same Project, Thread, Queue, Timeline, and recovery model. Moving
 between them does not create a second product state or pretend that one Engine's native session is
 another Engine's continuation.
 
-## What makes HarnessOS different
+## What makes Haros different
 
 - **OA by default.** A fresh setup has one clear starting point.
 - **Engine boundaries stay honest.** Each Engine owns its native session and private configuration;
-  HarnessOS owns the product conversation, queue, recovery, and presentation.
+  Haros owns the product conversation, queue, recovery, and presentation.
 - **System capabilities have one authority.** File, Git, terminal, browser, and device operations
   pass through HostGateway for cataloging, permission, cancellation, idempotency, and receipts.
 - **Local-first state.** Projects and product state remain on the machine unless an explicitly
   selected service is used.
-- **Failure is a first-class state.** Prompts and queued work survive launch failures; HarnessOS
+- **Failure is a first-class state.** Prompts and queued work survive launch failures; Haros
   reports the actual failing boundary instead of silently switching execution paths.
 - **One owner per fact.** Engine descriptors, product state, settings projections, and UI catalogs
   each have one canonical source.
@@ -47,8 +47,8 @@ Requirements:
 - macOS, Linux, or Windows
 
 ```bash
-git clone https://github.com/piai-lab/HarnessOS.git
-cd HarnessOS
+git clone https://github.com/piai-lab/Haros.git
+cd Haros
 bun install --frozen-lockfile
 bun run dev
 ```
@@ -83,12 +83,12 @@ The current version is `0.1.0-alpha.0`. The public-source baseline must pass for
 typechecking, unit and integration tests, stable browser tests, desktop builds, legal checks, and
 unsigned packaged smoke tests. Passing those checks does not constitute an official release.
 
-Please use [GitHub Issues](https://github.com/piai-lab/HarnessOS/issues) for bugs and focused
-proposals, and [GitHub Discussions](https://github.com/piai-lab/HarnessOS/discussions) for broader
+Please use [GitHub Issues](https://github.com/piai-lab/Haros/issues) for bugs and focused
+proposals, and [GitHub Discussions](https://github.com/piai-lab/Haros/discussions) for broader
 questions. Security reports must follow [SECURITY.md](SECURITY.md).
 
 ## License
 
-HarnessOS is licensed under the [Apache License 2.0](LICENSE). Third-party code and assets retain
+Haros is licensed under the [Apache License 2.0](LICENSE). Third-party code and assets retain
 their original licenses and required notices; see [NOTICE](NOTICE), [LICENSES](LICENSES), and the
 machine-readable [source adoption record](source-adoptions.json).

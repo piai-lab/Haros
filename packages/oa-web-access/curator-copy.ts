@@ -1,5 +1,5 @@
 export const CURATOR_COPY = {
-  brand: { en: "HarnessOS Web Access", "zh-CN": "HarnessOS 网络访问" },
+  brand: { en: "Haros Web Access", "zh-CN": "Haros 网络访问" },
   all: { en: "All", "zh-CN": "全部" },
   clickToAdjust: { en: "Click to adjust", "zh-CN": "点击调整" },
   secondsShort: { en: "sec", "zh-CN": "秒" },
@@ -19,12 +19,12 @@ export const CURATOR_COPY = {
     "zh-CN": "搜索结果会实时显示在这里，Agent 将自动继续。",
   },
   observerDisplaying: {
-    en: "Showing the live search process in HarnessOS Browser. The agent will continue automatically.",
-    "zh-CN": "正在 HarnessOS 浏览器中显示实时搜索过程，Agent 将自动继续。",
+    en: "Showing the live search process in Haros Browser. The agent will continue automatically.",
+    "zh-CN": "正在 Haros 浏览器中显示实时搜索过程，Agent 将自动继续。",
   },
   observerDisplayFailed: {
-    en: "Search is continuing, but HarnessOS could not display the live search process.",
-    "zh-CN": "搜索仍在继续，但 HarnessOS 无法显示实时搜索过程。",
+    en: "Search is continuing, but Haros could not display the live search process.",
+    "zh-CN": "搜索仍在继续，但 Haros 无法显示实时搜索过程。",
   },
   observerSummarySent: {
     en: "Summary sent to the agent. The run is continuing.",

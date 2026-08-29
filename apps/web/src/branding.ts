@@ -1,8 +1,8 @@
-export const APP_BASE_NAME = "HarnessOS";
+export const APP_BASE_NAME = "Haros";
 const isCanaryDesktop =
   typeof window !== "undefined" && window.location?.protocol === "harnessos-canary:";
 export const APP_DISPLAY_NAME = isCanaryDesktop
-  ? "HarnessOS Canary"
+  ? "Haros Canary"
   : import.meta.env.DEV
     ? `${APP_BASE_NAME} (Dev)`
     : APP_BASE_NAME;

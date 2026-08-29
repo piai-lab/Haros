@@ -29,7 +29,7 @@ describe("server status CLI probe", () => {
       },
     });
     expect(formatHarnessOSServerStatus(result)).toBe(
-      "HarnessOS server: ready\nURL: http://127.0.0.1:3773\nProjection: healthy",
+      "Haros server: ready\nURL: http://127.0.0.1:3773\nProjection: healthy",
     );
   });
 
@@ -44,7 +44,7 @@ describe("server status CLI probe", () => {
     });
 
     expect(result).toMatchObject({ reachable: true, ready: false });
-    expect(formatHarnessOSServerStatus(result)).toContain("HarnessOS server: starting");
+    expect(formatHarnessOSServerStatus(result)).toContain("Haros server: starting");
   });
 
   it("distinguishes an unhealthy projection from a server that is still starting", async () => {
@@ -58,7 +58,7 @@ describe("server status CLI probe", () => {
     });
 
     expect(result).toMatchObject({ reachable: true, ready: false });
-    expect(formatHarnessOSServerStatus(result)).toContain("HarnessOS server: not ready");
+    expect(formatHarnessOSServerStatus(result)).toContain("Haros server: not ready");
   });
 
   it("treats an unknown or missing projection health state as not ready", async () => {
@@ -121,7 +121,7 @@ describe("server status CLI probe", () => {
     ).resolves.toMatchObject({
       reachable: false,
       ready: false,
-      error: "Health response did not match the HarnessOS health shape.",
+      error: "Health response did not match the Haros health shape.",
     });
   });
 
@@ -146,6 +146,6 @@ describe("server status CLI probe", () => {
       ready: false,
       error: "connection refused",
     });
-    expect(formatHarnessOSServerStatus(result)).toContain("HarnessOS server: unreachable");
+    expect(formatHarnessOSServerStatus(result)).toContain("Haros server: unreachable");
   });
 });
