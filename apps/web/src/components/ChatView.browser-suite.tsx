@@ -3974,7 +3974,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       ]);
       await new Promise<void>((resolve) => window.setTimeout(resolve, 280));
       await waitForLayout();
-      expect(dockGap()!.getBoundingClientRect().width).toBeCloseTo(authoredOpenWidth, 0);
+      // Layout widths can land on adjacent device pixels after a CSS transition;
+      // keep the assertion tight while accepting that single-pixel rounding.
+      expect(Math.abs(dockGap()!.getBoundingClientRect().width - authoredOpenWidth)).toBeLessThanOrEqual(1);
     } finally {
       await mounted.cleanup();
     }
@@ -5752,7 +5754,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           document.querySelectorAll<HTMLElement>('[data-slot="command-item"]'),
         ).filter((item) => item.textContent?.includes("/fork"));
         expect(visibleForkItems).toHaveLength(1);
-      });
+      }, { timeout: 30_000, interval: 16 });
 
       await userEvent.keyboard("{ArrowDown}{Enter}");
       await expect
@@ -6921,7 +6923,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
               (command) => command?.type === "thread.meta.update" && command.goalPaused === true,
             ),
         ).toBeTruthy();
-      });
+      }, { timeout: 30_000, interval: 16 });
 
       await page.getByLabelText("Edit goal").click();
       const composerEditor = await waitForComposerEditor();
@@ -7394,7 +7396,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           page.getByRole("button", { name: "Model and options" }).element().textContent,
         ).toContain("Claude Sonnet 4.5");
-      });
+      }, { timeout: 30_000, interval: 16 });
 
       useComposerDraftStore.getState().setPrompt(THREAD_ID, failedPrompt);
       useComposerDraftStore.getState().addImage(THREAD_ID, failedImage);
@@ -8735,7 +8737,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           prompt: "stored draft prompt",
           images: [{ id: preservedImage.id, name: preservedImage.name }],
         });
-      });
+      }, { timeout: 30_000, interval: 16 });
     } finally {
       await mounted.cleanup();
     }

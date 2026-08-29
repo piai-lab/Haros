@@ -550,7 +550,9 @@ async function mountApp(options?: {
       },
       // The first Chromium/MSW mount can spend more than 40 seconds compiling
       // the full desktop route graph on a cold Windows dev cache.
-      { timeout: 60_000, interval: 16 },
+      // The full desktop route graph can be cold on a constrained CI runner;
+      // keep waiting for the real stream handshake instead of racing it.
+      { timeout: 120_000, interval: 16 },
     );
   } catch (cause) {
     await screen.unmount();

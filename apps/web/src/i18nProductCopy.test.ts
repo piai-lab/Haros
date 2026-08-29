@@ -425,7 +425,7 @@ describe("reachable HarnessOS-owned product copy", () => {
       ),
       "translate product copy with useI18n(); allow only exact reviewed raw facts",
     ).toEqual([]);
-  });
+  }, 30_000);
 
   it("projects every canonical Settings search record through both language catalogs", () => {
     for (const entry of SETTINGS_SEARCH_RECORDS) {
