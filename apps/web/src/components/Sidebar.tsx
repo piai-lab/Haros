@@ -125,9 +125,7 @@ import {
 } from "../storeSelectors";
 import { derivePendingApprovals, derivePendingUserInputs } from "../session-logic";
 import { useThreadPullRequests, type ThreadPullRequest } from "../hooks/useThreadPullRequests";
-import {
-  engineComposerCapabilitiesQueryOptions,
-} from "../lib/engineDiscoveryReactQuery";
+import { engineComposerCapabilitiesQueryOptions } from "../lib/engineDiscoveryReactQuery";
 import {
   resolveCurrentProjectTargetId,
   resolveLatestProjectTargetIdWithFallback,

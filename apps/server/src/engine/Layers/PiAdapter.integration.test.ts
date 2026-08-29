@@ -2297,7 +2297,10 @@ describe("getPiDiscoverableModels", () => {
       JSON.stringify({ retry: { enabled: false } }),
     );
     for (const filename of ["models.json", "auth.json", "settings.json"] as const) {
-      writeFileSync(path.join(stockAgentDir, filename), readFileSync(path.join(agentDir, filename)));
+      writeFileSync(
+        path.join(stockAgentDir, filename),
+        readFileSync(path.join(agentDir, filename)),
+      );
     }
     const requestBodies: any[] = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {

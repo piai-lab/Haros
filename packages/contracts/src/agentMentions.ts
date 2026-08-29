@@ -225,8 +225,10 @@ const AGENT_MENTION_AUTOCOMPLETE_ALIASES_BY_ENGINE = {
 function agentMentionAliasesForEngine(
   engine: EngineKind,
 ): Readonly<Record<string, AgentAliasDefinition>> {
-  return AGENT_MENTION_ALIASES_BY_ENGINE[engine as keyof typeof AGENT_MENTION_ALIASES_BY_ENGINE] ??
-    EMPTY_AGENT_MENTION_ALIASES;
+  return (
+    AGENT_MENTION_ALIASES_BY_ENGINE[engine as keyof typeof AGENT_MENTION_ALIASES_BY_ENGINE] ??
+    EMPTY_AGENT_MENTION_ALIASES
+  );
 }
 
 function agentMentionAutocompleteAliasesForEngine(engine: EngineKind): readonly string[] {
