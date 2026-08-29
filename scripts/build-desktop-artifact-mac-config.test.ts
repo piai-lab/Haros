@@ -11,6 +11,7 @@ import {
   MAC_INHERITED_ENTITLEMENTS_PATH,
   MICROPHONE_USAGE_DESCRIPTION,
   NODE_PTY_ASAR_UNPACK_GLOBS,
+  PACKAGED_LEGAL_FILES_GLOB,
   validateDesktopNativeBuildHost,
   WINDOWS_INSTALLER_GUID,
 } from "./lib/desktop-platform-build-config.ts";
@@ -96,6 +97,7 @@ describe("createDesktopPlatformBuildConfig", () => {
     assert.equal(win.mac, undefined);
     assert.equal(win.extraFiles, undefined);
     assert.deepStrictEqual(win.asarUnpack, ["node_modules/node-pty/**"]);
+    assert.deepStrictEqual(win.files, ["**/*", PACKAGED_LEGAL_FILES_GLOB]);
     assert.equal(WINDOWS_INSTALLER_GUID, "bf2c2d38-6ca0-58ef-892c-7b354a231883");
     assert.deepStrictEqual(win.nsis, {
       guid: WINDOWS_INSTALLER_GUID,

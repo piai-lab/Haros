@@ -17,6 +17,10 @@ export const MAC_DEVICE_HELPER_RESOURCE_PATH = "Resources/device-helper";
 export const WINDOWS_INSTALLER_GUID = "bf2c2d38-6ca0-58ef-892c-7b354a231883";
 const MAC_DMG_ICON_PATH = "icon.icns";
 export const NODE_PTY_ASAR_UNPACK_GLOBS = ["node_modules/node-pty/**"] as const;
+// electron-builder applies platform-specific default exclusions. Keep the
+// generated legal closure explicit so every platform archive carries the same
+// audit files, even when the Windows packager prunes non-runtime metadata.
+export const PACKAGED_LEGAL_FILES_GLOB = "apps/server/dist/client/licenses/**";
 
 export interface DesktopPlatformBuildConfig {
   readonly asarUnpack?: ReadonlyArray<string>;
@@ -125,6 +129,7 @@ export function createDesktopPlatformBuildConfig(
 
   return {
     ...nativePackaging,
+    files: ["**/*", PACKAGED_LEGAL_FILES_GLOB],
     nsis: {
       guid: WINDOWS_INSTALLER_GUID,
     },
