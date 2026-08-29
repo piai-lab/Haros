@@ -1,6 +1,15 @@
-Claim: Chat sends render the admitted model identity on the first visible response frame.
-Observed: 2026-08-29 (Asia/Shanghai)
-Revision: f31e9487 (fix(chat): render admitted model identity on first frame)
+Campaign-ID: harnessos-foundation
+Evidence-ID: E-021
+Role: focused
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/HarnessOS
+Repository-Identity: github.com/piai-lab/HarnessOS
+Candidate-Version: bdab02c3
+Command: bunx vitest run apps/web/src/storeEventReducer.test.ts apps/web/src/components/chat/MessagesTimeline.test.tsx && (cd apps/web && bun run test:browser:stable -- src/components/chat/MessagesTimeline.turnProcess.browser.tsx) && bunx oxfmt --check apps/web/src/components/ChatView.tsx apps/web/src/storeEventReducer.ts apps/web/src/storeEventReducer.test.ts && bunx oxlint --report-unused-disable-directives apps/web/src/components/ChatView.tsx apps/web/src/storeEventReducer.ts apps/web/src/storeEventReducer.test.ts
+Exit-Code: 0
+Result: PASS
+Claims: C-005 (Chat/Conversation Workbench first-frame model identity)
+
+Observed: 2026-08-29 (Asia/Shanghai), revision bdab02c3.
 
 Focused proof:
 - `bunx vitest run apps/web/src/storeEventReducer.test.ts apps/web/src/components/chat/MessagesTimeline.test.tsx`
