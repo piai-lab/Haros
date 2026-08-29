@@ -30,6 +30,20 @@
       "upstreamLegalTextAbsent": false
     },
     {
+      "packageIds": ["@napi-rs/canvas-linux-x64-musl@0.1.100"],
+      "license": "MIT",
+      "kind": "exact-upstream",
+      "assetPath": "assets/licenses/napi-rs-canvas-MIT.txt",
+      "sha256": "da8423778f50a960eeaf44ef1c4742e9d883f4d7235259603d676a8dc7f51936",
+      "manifestSha256ByPackageId": {
+        "@napi-rs/canvas-linux-x64-musl@0.1.100": "5199c41a525ec15defe339789e6f7d5291911fe25041debccc829f4e46a889f1"
+      },
+      "revision": "db337893b9b53483050ca7b24c6d306e4da06741",
+      "sourcePath": "LICENSE",
+      "sourceUrl": "https://github.com/Brooooooklyn/canvas/blob/db337893b9b53483050ca7b24c6d306e4da06741/LICENSE",
+      "upstreamLegalTextAbsent": false
+    },
+    {
       "packageIds": ["strictdom@1.0.1"],
       "license": "MIT",
       "kind": "exact-upstream",
