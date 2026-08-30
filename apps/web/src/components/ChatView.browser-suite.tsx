@@ -1511,6 +1511,7 @@ function installDeterministicSendNativeApi(options?: {
   rejectRemoveWorktree?: Error;
   rejectProjectMeta?: Error;
   forkCreateBarrier?: Promise<void>;
+  turnStartBarrier?: Promise<void>;
   recoverRejectedForkCreateInShell?: boolean;
   rejectForkCreateAttempts?: number;
   rejectShellSnapshotAttempts?: number;
@@ -1603,6 +1604,9 @@ function installDeterministicSendNativeApi(options?: {
           });
           if (options?.rejectTurnStart && command.type === "thread.turn.start") {
             throw options.rejectTurnStart;
+          }
+          if (command.type === "thread.turn.start") {
+            await options?.turnStartBarrier;
           }
           if (options?.rejectProjectMeta && command.type === "project.meta.update") {
             throw options.rejectProjectMeta;
@@ -5382,6 +5386,92 @@ describe("ChatView timeline estimator parity (full app)", () => {
     } finally {
       restoreNativeApi();
       await mounted.cleanup();
+    }
+  });
+
+  it("shows the admitted model before the turn-start acknowledgement or server projection", async () => {
+    let releaseTurnStart!: () => void;
+    const turnStartBarrier = new Promise<void>((resolve) => {
+      releaseTurnStart = resolve;
+    });
+    const restoreNativeApi = installDeterministicSendNativeApi({ turnStartBarrier });
+    const prompt = "show the selected model without waiting";
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-first-model-frame" as MessageId,
+        targetText: "first model frame baseline",
+      }),
+      configureFixture: (nextFixture) => {
+        nextFixture.providerModelsByEngine.oa = {
+          source: "browser.fixture",
+          models: [
+            {
+              slug: "deepseek/deepseek-v4-flash",
+              name: "DeepSeek V4 Flash",
+              upstreamProviderName: "DeepSeek",
+            },
+          ],
+        };
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          engines: [
+            ...nextFixture.serverConfig.engines.filter((entry) => entry.engine !== "oa"),
+            {
+              engine: "oa",
+              status: "ready",
+              available: true,
+              authStatus: "authenticated",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+      },
+    });
+
+    try {
+      await waitForServerConfigToApply();
+      useComposerDraftStore.getState().setEngineSelection(THREAD_ID, {
+        engine: "oa",
+        model: "deepseek/deepseek-v4-flash",
+      });
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, prompt);
+
+      await vi.waitFor(
+        () => {
+          expect(
+            page.getByRole("button", { name: "Model and options" }).element().textContent,
+          ).toContain("DeepSeek V4 Flash");
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+      const sendButton = await waitForSendButton();
+      expect(sendButton.disabled).toBe(false);
+      sendButton.click();
+
+      // The command is intentionally still awaiting its acknowledgement and no server snapshot is
+      // changed. The local admission snapshot must therefore be the sole source of this first row.
+      await vi.waitFor(
+        () => {
+          expect(
+            wsRequests
+              .map(readDispatchedCommand)
+              .some((command) => command?.type === "thread.turn.start"),
+          ).toBe(true);
+          const modelLabels = Array.from(
+            document.querySelectorAll<HTMLElement>("[data-assistant-turn-model='true']"),
+            (element) => element.textContent,
+          );
+          expect(modelLabels.at(-1)).toBe("DeepSeek V4 Flash");
+          expect(document.body.textContent).toContain(prompt);
+        },
+        { timeout: 1_000, interval: 16 },
+      );
+    } finally {
+      releaseTurnStart();
+      await mounted.cleanup();
+      restoreNativeApi();
     }
   });
 
