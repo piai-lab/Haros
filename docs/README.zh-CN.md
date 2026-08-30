@@ -57,5 +57,5 @@ bun run build:desktop
 ## 许可证
 
 Haros 使用 [Apache License 2.0](../LICENSE)。第三方代码与资产保留各自许可证及必要
-归属，集中放在 [NOTICE](../NOTICE)、[LICENSES](../LICENSES) 和机器可读的
+归属，集中放在 [NOTICE](../NOTICE) 和机器可读的
 [source adoption record](../source-adoptions.json) 中，不进入普通产品叙事。

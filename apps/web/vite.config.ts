@@ -65,10 +65,6 @@ function webAccessProviderIconPlugin(): Plugin {
           fs.copyFile(path.join(sourceDir, name), path.join(targetDir, name)),
         ),
       );
-      await fs.copyFile(
-        path.resolve(import.meta.dirname, "../../LICENSES/lobe-icons-MIT.txt"),
-        path.join(targetDir, "LOBEHUB-LICENSE.txt"),
-      );
     },
   };
 }

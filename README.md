@@ -91,5 +91,5 @@ questions. Security reports must follow [SECURITY.md](SECURITY.md).
 ## License
 
 Haros is licensed under the [Apache License 2.0](LICENSE). Third-party code and assets retain
-their original licenses and required notices; see [NOTICE](NOTICE), [LICENSES](LICENSES), and the
-machine-readable [source adoption record](source-adoptions.json).
+their original licenses and required notices; see [NOTICE](NOTICE) and the machine-readable
+[source adoption record](source-adoptions.json).

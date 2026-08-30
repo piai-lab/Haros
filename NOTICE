@@ -1,8 +1,8 @@
 Haros
 
 This distribution includes third-party software and adapted source. The corresponding copyright
-notices and license terms are retained in LICENSES/, package-local LICENSE files, and the
-machine-readable source-adoptions.json record.
+notices and license terms are retained in package-local LICENSE files and the machine-readable
+source-adoptions.json record.
 
 Product and service names referenced by optional Engines or model services belong to their
 respective owners. Their presence identifies interoperability only and does not imply endorsement
