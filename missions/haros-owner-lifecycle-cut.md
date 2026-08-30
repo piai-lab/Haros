@@ -6,9 +6,9 @@
 - Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut`, Git worktree for Haros.
 - Repository identity: `git@github.com:piai-lab/Haros.git`
 - Campaign origin revision: `29b2b39c49ebba20aa38f95d76acd2284e91b1cc`
-- Last reconciled revision: `ff1b103d74da65b581c240de8b9230b237f209a4`
-- Worktree state: dirty only in the canonical spec, Goal, and dedicated E-016–E-020 receipt schema repairs; product candidate and protected paths are unchanged. This state will be committed and reconciled before the machine-contract check.
-- Last reconciled at: `2026-08-30T15:50:48+08:00`
+- Last reconciled revision: `dc7c8900e138454bd9edfebb0fa9d10bb2c76654`
+- Worktree state: clean after the zq-goal machine-contract repair commit; product candidate and protected paths are unchanged. Last reconciled revision follows the zq-goal control-file self-reference rule.
+- Last reconciled at: `2026-08-30T15:54:48+08:00`
 - Active branch/worktree: `codex/haros-owner-lifecycle-cut` at `/Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut`
 - Applicable instructions: root `AGENTS.md`, then the user's Campaign authority recorded in K-004 through K-011.
 - Superseded state sources: none for this Campaign after repository and shared-checkout scan. `/Users/liuzaoqu/Desktop/Develop/independent/Haros/missions/haros-guidebook.md` is a separate active Campaign and is protected, not superseded.
@@ -121,11 +121,11 @@ Taste rubric: positive evidence is one survivor, fewer writers/entries/state, co
 
 ## 当前状态
 
-- Current checkpoint: the owner cut remains unchanged; Main authority narrowed formatting to affected files and removed the prior gate blocker without authorizing changes to the three unchanged-origin files. Goal/spec/receipts are being repaired to the fixed zq-goal schema.
+- Current checkpoint: the owner cut remains unchanged; Main authority narrowed formatting to affected files; Goal/spec/receipts now conform to the fixed zq-goal schema and are committed.
 - Active Claim: C-007.
-- Next safe action: commit and reconcile the machine-contract repair, obtain a clean-worktree PASS from the exact zq-goal checker, then freeze that HEAD and run the revised exact Final gate once.
+- Next safe action: commit this control-only reconciliation, obtain a clean-worktree PASS from the exact zq-goal checker, then freeze that HEAD and run the revised exact Final gate once.
 - Blockers: none. E-019/E-020 remain stale historical failure/diagnostic evidence and do not represent the revised Final gate.
-- Last material change: Main authority replaced the over-broad repository-wide format stage with the affected-file format command; C-007/C-009 returned from blocked to open, while the owner-cut implementation and protected files remain unchanged.
+- Last material change: machine-contract schema repair committed at `dc7c8900e138454bd9edfebb0fa9d10bb2c76654`; no product or protected file changed.
 
 ## 已知问题与方向
 
