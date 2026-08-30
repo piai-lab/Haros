@@ -1,0 +1,11 @@
+Campaign-ID: HAROS-OWNER-CUT-2026-08-30
+Evidence-ID: E-022
+Role: final_gate
+Workspace: /Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut
+Repository-Identity: git@github.com:piai-lab/Haros.git
+Candidate-Version: b75e5d227b1818a25d3d60c4000f33050479b137
+Command: bun run fmt:check -- apps/server/src/engine/Layers/EngineHealth.ts apps/server/src/engine/engineChildEnvironment.integration.test.ts apps/server/src/engine/engineChildEnvironment.ts apps/server/src/engineUsage/index.ts missions/haros-owner-lifecycle-cut.md && bun run lint && bun run typecheck && bun run build:desktop && bun run test:focused -- apps/server/src/engine/engineChildEnvironment.integration.test.ts apps/server/src/engineUsage/index.test.ts apps/server/src/engine/Layers/EngineHealth.integration.test.ts
+Exit-Code: 2
+Result: FAIL
+Observed: scoped formatting passed; lint completed with warnings; @harnessos/server typecheck failed on unchanged packages/oa-web-access sources; build and final focused tests did not run.
+Claims: C-007, C-009
