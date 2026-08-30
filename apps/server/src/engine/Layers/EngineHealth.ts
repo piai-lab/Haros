@@ -54,7 +54,7 @@ import {
   parseCodexCliVersion,
 } from "../codexCliVersion";
 import { ServerConfig } from "../../config";
-import { buildEngineChildEnvironment, type EngineChildKind } from "../engineChildEnvironment.ts";
+import { buildEngineChildEnvironment } from "../engineChildEnvironment.ts";
 import { ServerSettingsService } from "../../serverSettings";
 import { isWindowsShellCommandMissingResult } from "../../shell-command-detection";
 import {
@@ -129,11 +129,8 @@ const MINIMUM_ANTIGRAVITY_CLI_VERSION = "1.0.12";
 
 const ENGINES = ENGINE_KINDS;
 
-const engineChildKind = (engine: EngineKind): EngineChildKind =>
-  engine === CLAUDE_ENGINE ? "claude" : engine === OA_ENGINE ? "pi" : engine;
-
 const engineCommandEnv = (engine: EngineKind): NodeJS.ProcessEnv =>
-  buildEngineChildEnvironment({ engine: engineChildKind(engine) });
+  buildEngineChildEnvironment({ engine });
 
 const UPDATE_OUTPUT_MAX_BYTES = 10_000;
 export const ENGINE_UPDATE_TIMEOUT_MS = 2 * 60_000;

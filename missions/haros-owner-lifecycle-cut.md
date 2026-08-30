@@ -6,9 +6,9 @@
 - Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut`, Git worktree for Haros.
 - Repository identity: `git@github.com:piai-lab/Haros.git`
 - Campaign origin revision: `29b2b39c49ebba20aa38f95d76acd2284e91b1cc`
-- Last reconciled revision: `b2d4dea080aead5d84c7dd929ad56c273cdcad69`
-- Worktree state: clean at zero-memory Executor orientation; the Campaign control baseline contains only this spec, Goal, and dedicated receipts, with no product changes. Last reconciled revision follows the zq-goal control-file self-reference rule.
-- Last reconciled at: `2026-08-30T15:38:53+08:00`
+- Last reconciled revision: `315dbfc5e7df94c037b4d0c572c693628d041214`
+- Worktree state: scoped owner-cut implementation is present in four product/test files; no protected or unrelated paths are modified. Last reconciled revision follows the zq-goal control-file self-reference rule.
+- Last reconciled at: `2026-08-30T15:43:22+08:00`
 - Active branch/worktree: `codex/haros-owner-lifecycle-cut` at `/Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut`
 - Applicable instructions: root `AGENTS.md`, then the user's Campaign authority recorded in K-004 through K-011.
 - Superseded state sources: none for this Campaign after repository and shared-checkout scan. `/Users/liuzaoqu/Desktop/Develop/independent/Haros/missions/haros-guidebook.md` is a separate active Campaign and is protected, not superseded.
@@ -45,7 +45,7 @@
 ## 系统模型
 
 - Entrypoints: `EngineHealth` builds an environment before Engine health/maintenance CLI processes; `engineUsage` builds an environment before each usage fetcher/credential probe (E-008, E-009).
-- Control/data flow: product `EngineKind` → two duplicate consumer-local `engineChildKind` projections → `buildEngineChildEnvironment` → static credential grant selection + Haros/native-capability filtering → per-call child environment → health/maintenance process or usage fetcher. The survivor owns no process: it builds a fresh object per call; only the registered credential-key set is mutable (E-007–E-010).
+- Control/data flow: product `EngineKind` or direct `acp` → `buildEngineChildEnvironment` → private child security-profile resolution → static credential grant selection + Haros/native-capability filtering → per-call child environment → health/maintenance process or usage fetcher. The survivor owns no process: it builds a fresh object per call; only the registered credential-key set is mutable (E-007–E-010, E-018).
 - External dependencies: none authorized for candidate selection or ordinary implementation; local Git, Bun/Node, and repository dependencies only.
 - Invariants: Haros is sole product identity; `ENGINE_DESCRIPTORS` remains sole Engine identity/registration/capability/Settings authority; Product Threads differ from native Engine Sessions; product state/Queue/Timeline/recovery stay shared; local capabilities stay behind HostGateway; retired namespaces and compatibility dual tracks are forbidden.
 - Environment boundary: local source/tests/build can prove repository behavior and static/runtime-local lifecycle only; packaged bytes, dynamic external consumers, real services, and platform-specific behavior remain unknown unless the selected cut directly crosses them and the minimum corresponding proof is run.
@@ -73,6 +73,7 @@
 | K-017 | decision | Strongest falsifier: a current consumer requires a different Engine→security-profile rule, or direct non-product child kinds such as `acp` cannot coexist with product Engine inputs. Current sources show identical rules and the survivor can preserve direct child kinds. | E-007–E-009 | If implementation evidence contradicts this, set C-001/C-002 blocked and do not alter policy. |
 | K-018 | decision | Proof scenario: introduce a hypothetical new Engine profile. After consolidation, only Engine identity/new implementation and `engineChildEnvironment` require edits; Health and Usage compile and consume the projection unchanged. | E-003, E-007–E-009 | Any remaining consumer mapping/list requires further consolidation before candidate freeze. |
 | K-019 | decision | Orchestration entry is expected to choose `DIRECT_EXECUTION`: one fresh task is the sole writer/integrator; no Worker, Supervisor, or semantic Sentinel is justified. One fresh read-only Judge appears only after candidate freeze. | E-013, user authority | Continuity comes from the independent task; orchestration cannot create a second state owner or expand scope. |
+| K-020 | fact | The scoped implementation has one private `oa → pi` profile resolution in `engineChildEnvironment`; Health and Usage pass product `EngineKind` directly, and direct `acp` remains admitted. | E-017, E-018 | C-002/C-003/C-005/C-006 are producer candidates; final gate and fresh audit remain required. |
 
 Taste rubric: positive evidence is one survivor, fewer writers/entries/state, consumer use of a narrow projection, complete old support-graph removal, and a real radius scenario. Forbidden evidence substitutes are LOC decrease, zero references alone, renamed/moved files, shallow facades, parallel registries, checklists as owner, compatibility dual tracks, speculative caching, or tests that copy production truth. Conflict priority is user authority → preserved observable effect → project ownership rules → implementation convenience.
 
@@ -95,28 +96,31 @@ Taste rubric: positive evidence is one survivor, fewer writers/entries/state, co
 | E-013 | core | source | K-019, execution continuity | `file:/Users/liuzaoqu/.codex/skills/zq-orchestrate/SKILL.md#先决定是否拒绝编排` | `sha256:5a156d8d848a59aa6f82835596e8e397931b36d88f3ca4e054f075608d0ab295`; `2026-08-30` | `sed -n '1,420p' /Users/liuzaoqu/.codex/skills/zq-orchestrate/SKILL.md` | current while SHA matches |
 | E-014 | task | focused | C-001, K-010, K-016 | `file:missions/evidence/haros-owner-lifecycle-cut/E-014-candidate-selection.txt#L1-L10` | candidate `29b2b39c49ebba20aa38f95d76acd2284e91b1cc`; receipt `sha256:2e44193e7c83109e1a14479c4f397cbdbdf86b8ad20fdccd71788ffd5f5112b3`; `2026-08-30T15:31:47+08:00` | `test "$(git grep -n 'const engineChildKind' -- apps/server/src/engine/Layers/EngineHealth.ts apps/server/src/engineUsage/index.ts | wc -l | tr -d ' ')" = 2` | current only at origin revision before consolidation |
 | E-015 | task | bootstrap | zero-memory orientation | `file:missions/evidence/haros-owner-lifecycle-cut/E-015-bootstrap-orientation.txt#L1-L10` | candidate `b2d4dea080aead5d84c7dd929ad56c273cdcad69`; receipt `sha256:c7169c4587b7469863ae78323aa4ae681e8d118f27185e5d778d336b5a39f005`; `2026-08-30T15:38:53+08:00` | `bun run public-surface:check` | current until candidate, command, or relevant source changes |
+| E-016 | task | focused | proof environment diagnosis | `file:missions/evidence/haros-owner-lifecycle-cut/E-016-focused-environment-failure.txt#L1-L10` | worktree based on `315dbfc5e7df94c037b4d0c572c693628d041214`; receipt `sha256:eb8d5ca476b5ce894af460b6d8d1357fad42f63080afb0bb7451454815f9fec2`; `2026-08-30T15:40:42+08:00` | exact focused proof command | failed before EngineUsage/EngineHealth collection; not Claim evidence |
+| E-017 | task | focused | C-004 | `file:missions/evidence/haros-owner-lifecycle-cut/E-017-focused-pass.txt#L1-L10` | worktree based on `315dbfc5e7df94c037b4d0c572c693628d041214`; receipt `sha256:57de1da651e1162a49e76f9ea9c36992b1f8775a8bd7199f5aa7d92e729026b3`; `2026-08-30T15:41:30+08:00` | exact focused proof command | current until product/test candidate changes |
+| E-018 | task | structural | C-002, C-003, C-005, C-006, C-008 | `file:missions/evidence/haros-owner-lifecycle-cut/E-018-structural-proof.txt#L1-L10` | worktree based on `315dbfc5e7df94c037b4d0c572c693628d041214`; receipt `sha256:d2ec0472ddf080803479d93f6a0148ce26fdda948a6ebf9114d63b5717cf6ac8`; `2026-08-30T15:43:22+08:00` | consumer residue + owner mapping + direct-call + scoped diff audit | current until product candidate changes |
 
 ## 验收矩阵
 
 | ID | Claim | Proof type | Status | Evidence | SHA/Version |
 |---|---|---|---|---|---|
 | C-001 | [required] Candidate selection: one highest-value closable lifecycle responsibility is selected from real call/lifecycle evidence; seven construction facts and strongest falsifier are frozen without an unresolved product fork. | read-only portfolio evidence + independent audit at final candidate | candidate | E-003, E-007, E-008, E-009, E-014 | `29b2b39c49ebba20aa38f95d76acd2284e91b1cc` |
-| C-002 | [required] Sole survivor: one semantic owner holds the selected fact/state/lifecycle and every current consumer uses its narrowest contract. | focused source/call-graph proof + tests | open | pending | pending |
-| C-003 | [required] Complete removal: old owner/writer/listener/cache/registry/fallback/adapter/config/test/script/doc/artifact support graph is absent. | residue search + lifecycle graph proof | open | pending | pending |
-| C-004 | [required] Lifecycle preservation: relevant normal, failure, cancellation, concurrency, restart, recovery, and shutdown semantics remain. | focused unit/integration/journey proof selected by C-001 | open | pending | pending |
-| C-005 | [required] Radius reduction: a real change scenario touches only the survivor and genuinely new implementation/assets, not parallel consumer truth. | reproducible radius scenario + diff/source audit | open | pending | pending |
-| C-006 | [required] No new owner: no competing state/registry/writer/control plane/cache lifecycle/permanent dual track or compatibility obligation was added. | source/diff audit + residue search | open | pending | pending |
+| C-002 | [required] Sole survivor: one semantic owner holds the selected fact/state/lifecycle and every current consumer uses its narrowest contract. | focused source/call-graph proof + tests | candidate | E-017, E-018 | worktree based on `315dbfc5e7df94c037b4d0c572c693628d041214` |
+| C-003 | [required] Complete removal: old owner/writer/listener/cache/registry/fallback/adapter/config/test/script/doc/artifact support graph is absent. | residue search + lifecycle graph proof | candidate | E-018 | worktree based on `315dbfc5e7df94c037b4d0c572c693628d041214` |
+| C-004 | [required] Lifecycle preservation: relevant normal, failure, cancellation, concurrency, restart, recovery, and shutdown semantics remain. | focused unit/integration/journey proof selected by C-001 | candidate | E-017 | worktree based on `315dbfc5e7df94c037b4d0c572c693628d041214` |
+| C-005 | [required] Radius reduction: a real change scenario touches only the survivor and genuinely new implementation/assets, not parallel consumer truth. | reproducible radius scenario + diff/source audit | candidate | E-018 | worktree based on `315dbfc5e7df94c037b4d0c572c693628d041214` |
+| C-006 | [required] No new owner: no competing state/registry/writer/control plane/cache lifecycle/permanent dual track or compatibility obligation was added. | source/diff audit + residue search | candidate | E-018 | worktree based on `315dbfc5e7df94c037b4d0c572c693628d041214` |
 | C-007 | [required] Boundary correctness: affected format, lint, typecheck, build, unit/integration tests, and one representative journey pass on one candidate. | deterministic final gate + focused proof | open | pending | pending |
-| C-008 | [required] Performance honesty: no global speed claim without same-basis data; if no performance path changes, relevant proofs show no known regression only. | diff inspection; benchmark only if a performance claim is made | open | pending | pending |
+| C-008 | [required] Performance honesty: no global speed claim without same-basis data; if no performance path changes, relevant proofs show no known regression only. | diff inspection; benchmark only if a performance claim is made | candidate | E-018 | worktree based on `315dbfc5e7df94c037b4d0c572c693628d041214` |
 | C-009 | [required] Independent completion: C-001–C-008, final gate, and one fresh read-only completion audit bind the same immutable candidate with no material finding. | host-provenanced fresh evaluator audit | open | pending | pending |
 
 ## 当前状态
 
-- Current checkpoint: zero-memory orientation reconciled; `zq-orchestrate` selected `DIRECT_EXECUTION`; seven construction facts remain frozen; C-001 is a producer candidate; product code remains untouched.
-- Active Claim: C-002.
-- Next safe action: consolidate the mapping inside the survivor and delete both consumer copies, then run the single focused proof.
+- Current checkpoint: owner cut implemented; exact focused proof and structural proof PASS; C-002–C-006 and C-008 are producer candidates.
+- Active Claim: C-007.
+- Next safe action: freeze the scoped product candidate commit, then run the exact Final gate once on that immutable product candidate.
 - Blockers: none. Any falsifier in K-017, protected-work overlap, or policy/behavior change blocks C-001/C-002 before further writes.
-- Last material change: Executor orientation reconciled at `b2d4dea080aead5d84c7dd929ad56c273cdcad69`; exact Bootstrap PASS recorded as E-015; orchestration entry resolved to `DIRECT_EXECUTION`.
+- Last material change: residue/radius/no-new-owner audit passed: consumer mappings are absent, the owner holds the sole private projection, direct `acp` remains supported, and the product diff adds no owner/state/process/performance path; recorded as E-018.
 
 ## 已知问题与方向
 

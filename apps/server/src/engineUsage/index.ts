@@ -15,18 +15,12 @@ import { Effect } from "effect";
 import { ENGINE_USAGE_ENGINES } from "@harnessos/shared/engineUsage";
 
 import { ServerConfig } from "../config";
-import {
-  buildEngineChildEnvironment,
-  type EngineChildKind,
-} from "../engine/engineChildEnvironment";
+import { buildEngineChildEnvironment } from "../engine/engineChildEnvironment";
 import { ServerSettingsService } from "../serverSettings";
 import { EngineAdapterRegistry } from "../engine/Services/EngineAdapterRegistry";
 import { errorSnapshot } from "./parse";
 import { ENGINE_USAGE_FETCHERS } from "./registry";
 import type { EngineUsageContext } from "./types";
-
-const engineChildKind = (engine: EngineKind): EngineChildKind =>
-  engine === "claude" ? "claude" : engine === "oa" ? "pi" : engine;
 
 function buildContext(): EngineUsageContext {
   return {
@@ -57,7 +51,7 @@ function buildEngineContext(engine: EngineKind, ctx: EngineUsageContext): Engine
   return {
     ...ctx,
     env: buildEngineChildEnvironment({
-      engine: engineChildKind(engine),
+      engine,
       baseEnv: ctx.env,
     }),
   };

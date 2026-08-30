@@ -101,7 +101,7 @@ describe("buildEngineChildEnvironment", () => {
     },
   );
 
-  it.each(["codex", "kilo", "opencode", "pi"] as const)(
+  it.each(["oa", "acp", "codex", "kilo", "opencode", "pi"] as const)(
     "preserves upstream credential discovery for multi-engine %s",
     (engine) => {
       const env = buildEngineChildEnvironment({
@@ -118,6 +118,25 @@ describe("buildEngineChildEnvironment", () => {
       expect(env.OPENAI_API_KEY).toBe("openai-secret");
     },
   );
+
+  it("rebuilds the oa security profile without retaining child environment state", () => {
+    const baseEnv = {
+      PATH: "/usr/bin",
+      ANTHROPIC_API_KEY: "anthropic-secret",
+      OPENAI_API_KEY: "openai-secret",
+      HARNESSOS_AUTH_TOKEN: "control-plane-secret",
+    };
+    const first = buildEngineChildEnvironment({ engine: "oa", baseEnv });
+    first.OPENAI_API_KEY = "mutated-child-secret";
+    const second = buildEngineChildEnvironment({ engine: "oa", baseEnv });
+
+    expect(second).not.toBe(first);
+    expect(second).toEqual({
+      PATH: "/usr/bin",
+      ANTHROPIC_API_KEY: "anthropic-secret",
+      OPENAI_API_KEY: "openai-secret",
+    });
+  });
 
   it("matches declared engine credential grants case-insensitively", () => {
     const env = buildEngineChildEnvironment({

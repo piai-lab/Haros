@@ -2,17 +2,9 @@
 // Purpose: Builds engine child environments without Haros control-plane authority.
 // Layer: Server engine process security
 
-export type EngineChildKind =
-  | "acp"
-  | "antigravity"
-  | "claude"
-  | "codex"
-  | "cursor"
-  | "droid"
-  | "grok"
-  | "kilo"
-  | "opencode"
-  | "pi";
+import type { EngineKind } from "@harnessos/contracts";
+
+type EngineChildKind = Exclude<EngineKind, "oa"> | "acp";
 
 const ENGINE_CREDENTIAL_KEYS = new Set([
   "ANTHROPIC_API_KEY",
@@ -77,7 +69,7 @@ const isTestHarnessKey = (key: string, env: NodeJS.ProcessEnv): boolean =>
   Boolean(env.VITEST) && (key.startsWith("HARNESSOS_FAKE_") || key.startsWith("HARNESSOS_ACP_"));
 
 export function buildEngineChildEnvironment(input: {
-  readonly engine: EngineChildKind;
+  readonly engine: EngineKind | "acp";
   readonly baseEnv?: NodeJS.ProcessEnv;
   readonly inheritedHarosKeys?: ReadonlyArray<string>;
   readonly inheritedNativeCapabilityKeys?: ReadonlyArray<string>;
@@ -89,7 +81,7 @@ export function buildEngineChildEnvironment(input: {
   };
   const allowedHarosKeys = new Set(input.inheritedHarosKeys ?? []);
   const allowedNativeCapabilities = new Set(input.inheritedNativeCapabilityKeys ?? []);
-  const credentialGrants = ENGINE_CREDENTIAL_GRANTS[input.engine];
+  const credentialGrants = ENGINE_CREDENTIAL_GRANTS[input.engine === "oa" ? "pi" : input.engine];
   const childEnv: NodeJS.ProcessEnv = {};
 
   for (const [key, value] of Object.entries(baseEnv)) {
