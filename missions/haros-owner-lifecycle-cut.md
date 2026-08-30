@@ -6,9 +6,9 @@
 - Workspace identity: `/Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut`, Git worktree for Haros.
 - Repository identity: `git@github.com:piai-lab/Haros.git`
 - Campaign origin revision: `29b2b39c49ebba20aa38f95d76acd2284e91b1cc`
-- Last reconciled revision: `b75e5d227b1818a25d3d60c4000f33050479b137`
-- Worktree state: dirty only in `missions/haros-owner-lifecycle-cut.md` and `missions/evidence/haros-owner-lifecycle-cut/E-022-final-gate-typecheck-failure.txt` while reconciling the failed gate; product candidate and protected paths are unchanged.
-- Last reconciled at: `2026-08-30T15:57:24+08:00`
+- Last reconciled revision: `97dbb71866dff860f5033d492c2fb1421a5e6f78`
+- Worktree state: clean after committing the E-022 gate receipt and blocked-state reconciliation; product candidate and protected paths are unchanged. Last reconciled revision follows the zq-goal control-file self-reference rule.
+- Last reconciled at: `2026-08-30T15:57:58+08:00`
 - Active branch/worktree: `codex/haros-owner-lifecycle-cut` at `/Users/liuzaoqu/Desktop/Develop/independent/Haros-owner-lifecycle-cut`
 - Applicable instructions: root `AGENTS.md`, then the user's Campaign authority recorded in K-004 through K-011.
 - Superseded state sources: none for this Campaign after repository and shared-checkout scan. `/Users/liuzaoqu/Desktop/Develop/independent/Haros/missions/haros-guidebook.md` is a separate active Campaign and is protected, not superseded.
@@ -127,7 +127,7 @@ Taste rubric: positive evidence is one survivor, fewer writers/entries/state, co
 - Active Claim: C-007.
 - Next safe action: Main must resolve the unchanged `packages/oa-web-access/**` typecheck baseline or explicitly revise the gate/scope; candidate is otherwise frozen and must not be re-gated unchanged.
 - Blockers: C-007/C-009. E-022 records the revised Final gate failure in `@harnessos/server` typecheck on unchanged `packages/oa-web-access/**`; no fresh Judge may be created.
-- Last material change: revised exact Final gate ran once on `b75e5d227b1818a25d3d60c4000f33050479b137` and failed at typecheck after scoped format PASS and lint completion.
+- Last material change: E-022 and the precise C-007/C-009 blocked state were committed at `97dbb71866dff860f5033d492c2fb1421a5e6f78`; no product or protected file changed.
 
 ## 已知问题与方向
 
